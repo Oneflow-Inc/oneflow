@@ -77,20 +77,40 @@ class TestGraphActivationCheckpoint(flow.unittest.TestCase):
                 return loss
 
         linear_graph = LinearTrainGraph()
-        linear_graph.debug()
         x = flow.randn(10, 3)
         y = flow.randn(10)
         linear_graph._compile(x, y)
 
-        graph_proto = linear_graph._graph_proto
+        graph_proto = linear_graph._full_graph_proto
         for op in graph_proto.net.op:
             # Check flatten gradient operator take checkpoiting as input
             if re.search("flatten.*grad", op.name, re.I) is not None:
                 find_check_point = False
                 for value in op.user_conf.input.values():
-                    if re.search("checkpointing", str(value), re.I) is not None:
+                    if (
+                        re.search(
+                            "OneFlow-System-Checkpointing-Fake-Fw-Op", str(value), re.I
+                        )
+                        is not None
+                    ):
                         find_check_point = True
+                        print(value)
                 test_case.assertTrue(find_check_point)
+            # Check having insert identity op and first fake op of a segment has indentity grad as it's ctrl in op
+            if (
+                re.search(
+                    "OneFlow-System-Checkpointing-Fake-Fw-Op_model.model.0-matmul*",
+                    op.name,
+                    re.I,
+                )
+                is not None
+            ):
+                find_ctrl = False
+                for name in op.ctrl_in_op_name:
+                    if re.search("identity_.*_grad", str(name), re.I) is not None:
+                        find_ctrl = True
+                        print(name)
+                test_case.assertTrue(find_ctrl)
 
 
 if __name__ == "__main__":
