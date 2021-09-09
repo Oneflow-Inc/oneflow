@@ -108,6 +108,7 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
   struct NcclDeviceCtx : public DeviceCtx {
     cudaStream_t cuda_stream() const override { return stream; }
     void AddCallBack(std::function<void()>) const override { UNIMPLEMENTED(); }
+    DeviceType device_type() const override { return DeviceType::kGPU; }
 
     cudaStream_t stream = nullptr;
     char* fusion_buffer = nullptr;

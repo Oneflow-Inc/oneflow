@@ -144,7 +144,7 @@ class RunLazyJobInstructionType final : public InstructionType {
       const auto& PushCb = [blob](int64_t of_blob_ptr) {
         OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
         of_blob->mut_blob()->CopyHeaderFrom(of_blob->mut_device_ctx(), blob);
-        of_blob->mut_blob()->CopyDataContentFrom(of_blob->mut_device_ctx(), blob);
+        AutoMemcpy(of_blob->mut_device_ctx(), of_blob->mut_blob(), blob);
       };
       CHECK(push_cbs.emplace(op_name, PushCb).second);
     }
@@ -157,7 +157,7 @@ class RunLazyJobInstructionType final : public InstructionType {
       const auto& PullCb = [mut_blob](int64_t of_blob_ptr) {
         OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
         mut_blob->CopyHeaderFrom(of_blob->mut_device_ctx(), &of_blob->blob());
-        mut_blob->CopyDataContentFrom(of_blob->mut_device_ctx(), &of_blob->blob());
+        AutoMemcpy(of_blob->mut_device_ctx(), mut_blob, &of_blob->blob());
       };
       CHECK(pull_cbs.emplace(op_name, PullCb).second);
     }
