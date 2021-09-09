@@ -78,13 +78,10 @@ class OFRecordDataLoader(flow.nn.Module):
 
 D = "cuda"
 B = [flow.sbp.broadcast]
-P = flow.placement("cuda", {0: [0, 1, 2, 3]})
 P0 = flow.placement("cuda", {0: [0]})
-P0C = flow.placement("cpu", {0: [0]})
 P1 = flow.placement("cuda", {0: [1]})
 P2 = flow.placement("cuda", {0: [2]})
 P3 = flow.placement("cuda", {0: [3]})
-P3C = flow.placement("cpu", {0: [3]})
 
 
 def _get_ppm_and_opt():
@@ -97,75 +94,41 @@ def _get_ppm_and_opt():
         sbp=B,
     )
 
-    class Stage0Module(flow.nn.Module):
+    class StageModule(flow.nn.Module):
         def __init__(self):
-            super().__init__()
-            self.train_data_loader = train_data_loader
-            self.linear = flow.nn.Linear(1452, 8, False)
-            self.linear.to_consistent(placement=P0, sbp=B)
-            flow.nn.init.constant_(self.linear.weight, 0.023)
-
-        def forward(self):
-            image, label = self.train_data_loader()
-            image = image.to(D)
-            label = label.to(D)
-            out0 = self.linear(image)
-            return out0, label, image
-
-    class Stage1Module(flow.nn.Module):
-        def __init__(self):
-            super().__init__()
-            self.linear = flow.nn.Linear(8, 8, False)
-            self.linear.to_consistent(placement=P1, sbp=B)
+            super().__init__(linear_args, placement)
+            self.linear = flow.nn.Linear(*linear_args)
+            self.linear.to_consistent(placement=placement, sbp=B)
             flow.nn.init.constant_(self.linear.weight, 0.023)
 
         def forward(self, input):
-            out0 = input.to_consistent(placement=P1, sbp=input.sbp)
-            out1 = self.linear(out0)
-            return out1
-
-    class Stage2Module(flow.nn.Module):
-        def __init__(self):
-            super().__init__()
-            self.linear = flow.nn.Linear(8, 8, False)
-            self.linear.to_consistent(placement=P2, sbp=B)
-            flow.nn.init.constant_(self.linear.weight, 0.023)
-
-        def forward(self, input):
-            out0 = input.to_consistent(placement=P2, sbp=input.sbp)
-            out1 = self.linear(out0)
-            return out1
-
-    class Stage3Module(flow.nn.Module):
-        def __init__(self):
-            super().__init__()
-            self.linear = flow.nn.Linear(8, 2, False)
-            self.linear.to_consistent(placement=P3, sbp=B)
-            flow.nn.init.constant_(self.linear.weight, 0.023)
-
-        def forward(self, out0, label):
-            out0 = out0.to_consistent(placement=P3, sbp=out0.sbp)
-            label = label.to_consistent(placement=P3, sbp=out0.sbp)
-            out1 = self.linear(out0)
-            loss = out1.sum()
-            return loss
+            out = self.linear(input)
+            return out
 
     class PipelineModule(flow.nn.Module):
         def __init__(self):
             super().__init__()
-            self.stage_0_m = Stage0Module()
-            self.stage_1_m = Stage1Module()
-            self.stage_2_m = Stage2Module()
-            self.stage_3_m = Stage3Module()
+            self.train_data_loader = train_data_loader
+            self.stage_0_m = StageModule((1452, 8, False), P0)
+            self.stage_1_m = StageModule((8, 8, False), P1)
+            self.stage_2_m = StageModule((8, 8, False), P2)
+            self.stage_3_m = StageModule((8, 2, False), P3)
 
         def forward(self):
-            out0, label, image = self.stage_0_m()
-            out1 = self.stage_1_m(out0)
-            out2 = self.stage_2_m(out1)
-            out3 = self.stage_3_m(out2, label)
+            image, _ = self.train_data_loader()
+            image = image.to(D)
+            out = self.stage_0_m(image)
+            out = out.to_consistent(placement=P1, sbp=B)
+            out = self.stage_1_m(out)
+            out = out.to_consistent(placement=P2, sbp=B)
+            out = self.stage_2_m(out)
+            out = out.to_consistent(placement=P3, sbp=B)
+            out = self.stage_3_m(out)
+            loss = out.sum()
+
+            # retun image just for re-using data in eager test
             image = image.to_consistent(placement=P3, sbp=B)
-            label = label.to_consistent(placement=P3, sbp=B)
-            return out3, image, label
+            return loss, image
 
     pp_m = PipelineModule()
     of_sgd = flow.optim.SGD(pp_m.parameters(), lr=0.0001)
@@ -191,21 +154,20 @@ def _test_graph_pipeline(test_case):
 
             def build(self):
                 pp_m.train()
-                out, image, label = self.pp_m()
-                out.backward()
-                return out, image, label
+                loss, image = self.pp_m()
+                loss.backward()
+                return loss, image
 
         pp_g = PipelineGraph()
 
         def one_iter(iter_idx):
-            of_graph_out, image, label = pp_g()
+            loss, image = pp_g()
             if rank == 3:
-                of_graph_out = of_graph_out.to_local()
-                of_graph_out_np = of_graph_out.numpy()
-                print("out numpy \n", of_graph_out_np)
-                label = label.to_local()
-                image = image.to_local()
-                return of_graph_out_np, image.numpy(), label.numpy()
+                loss = loss.to_local()
+                loss_np = loss.numpy()
+                print("loss numpy \n", loss)
+                image = image.to_local().numpy()
+                return loss, image.numpy()
 
         check_list = []
         data_list = []
@@ -213,7 +175,7 @@ def _test_graph_pipeline(test_case):
             out = one_iter(i)
             if rank == 3:
                 check_list.append(out[0])
-                data_list.append((out[1], out[2]))
+                data_list.append(out[1])
         return check_list, data_list
 
     def train_with_module(iter_num=3, data=None):
@@ -224,23 +186,18 @@ def _test_graph_pipeline(test_case):
                 self.idx = 0
                 for tuple_pair in data:
                     image = tuple_pair[0]
-                    label = tuple_pair[1]
                     for i in range(4):
                         s = i * 4
                         e = s + 4
                         micro_batch_image = image[s:e]
-                        micro_batch_label = label[s:e]
                         self.data_list.append(
-                            (
-                                flow.Tensor(micro_batch_image).to("cuda:3"),
-                                flow.Tensor(micro_batch_label).to("cuda:3"),
-                            )
+                            flow.Tensor(micro_batch_image).to("cuda:3"),
                         )
 
             def forward(self):
-                image, label = self.data_list[self.idx]
+                image = self.data_list[self.idx]
                 self.idx += 1
-                return image, label
+                return image
 
         class TrainModule(flow.nn.Module):
             def __init__(self):
@@ -258,13 +215,13 @@ def _test_graph_pipeline(test_case):
                 flow.nn.init.constant_(self.linear3.weight, 0.023)
                 self.linear3.to("cuda:3")
 
-            def forward(self, image, label):
-                out0 = self.linear(image)
-                out1 = self.linear1(out0)
-                out2 = self.linear2(out1)
-                out3 = self.linear3(out2)
-                loss = out3.sum()
-                return loss, image, label
+            def forward(self, image):
+                out = self.linear(image)
+                out = self.linear1(out)
+                out = self.linear2(out)
+                out = self.linear3(out)
+                loss = out.sum()
+                return loss
 
         if rank == 3:
             d_m = DataModule(data)
@@ -272,18 +229,18 @@ def _test_graph_pipeline(test_case):
             of_sgd = flow.optim.SGD(t_m.parameters(), lr=0.0001)
 
             def one_iter(iter_idx):
-                image, label = d_m()
+                image = d_m()
                 if rank == 3:
-                    loss, image, label = t_m(image, label)
-                    out_np = loss.numpy()
-                    print("eager out numpy \n", out_np)
+                    loss = t_m(image, label)
+                    loss_np = loss.numpy()
+                    print("eager loss numpy \n", loss_np)
                     loss = loss * 0.25
                     loss.backward()
                     if iter_idx % 4 == 3:
                         print(f"iter index: {iter_idx}")
                         of_sgd.step()
                         of_sgd.zero_grad()
-                    return out_np
+                    return loss_np
 
             check_list = []
             for i in range(iter_num):
