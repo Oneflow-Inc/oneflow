@@ -99,7 +99,12 @@ def pad_op(input, paddings: Sequence[int] = 0, constant_value: Union[int, float]
         .Build()
     )
 
-    return _op(input)[0]
+    output =  _op(input)[0]
+    print("\ninput.shape >>>>>>>  ", input.shape)
+    print("output.shape >>>>>>> ", output.shape)
+    print("padding_before >>>>>>> ", padding_before)
+    print("padding_after >>>>>>> ", padding_after)
+    return output
 
 
 
@@ -296,10 +301,9 @@ class ConstantPad1d(Module):
     def __init__(self, padding: Union[int, tuple, list], value: Union[int, float] = 0):
         super().__init__()
         if isinstance(padding, (tuple, list)):
-            assert len(padding) == 2, ValueError("Length of padding must be 4")
-            boundary = [padding[0], padding[1]]
+            boundary = padding
         elif isinstance(padding, int):
-            boundary = [padding, padding]
+            boundary = [padding] * 2
         else:
             raise ValueError("padding must be int or list or tuple!")
         self.padding = boundary
@@ -380,10 +384,9 @@ class ConstantPad2d(Module):
     def __init__(self, padding: Union[int, tuple, list], value: Union[int, float] = 0):
         super().__init__()
         if isinstance(padding, (tuple, list)):
-            assert len(padding) == 4, ValueError("Length of padding must be 4")
-            boundary = [padding[0], padding[1], padding[2], padding[3]]
+            boundary = padding
         elif isinstance(padding, int):
-            boundary = [padding, padding, padding, padding]
+            boundary = [padding] * 4
         else:
             raise ValueError("padding must be int or list or tuple!")
         self.padding = boundary
@@ -456,17 +459,9 @@ class ConstantPad3d(Module):
     def __init__(self, padding: Union[int, tuple, list], value: Union[int, float] = 0):
         super().__init__()
         if isinstance(padding, (tuple, list)):
-            assert len(padding) == 6, ValueError("Length of padding must be 6")
-            boundary = [
-                padding[0],
-                padding[1],
-                padding[2],
-                padding[3],
-                padding[4],
-                padding[5],
-            ]
+            boundary = padding
         elif isinstance(padding, int):
-            boundary = [padding, padding, padding, padding, padding, padding]
+            boundary = [padding] * 4
         else:
             raise ValueError("padding must be int or list or tuple!")
         self.padding = boundary
