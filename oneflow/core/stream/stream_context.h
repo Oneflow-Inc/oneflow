@@ -21,8 +21,6 @@ limitations under the License.
 
 namespace oneflow {
 
-class DeviceCtx;
-
 class StreamContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StreamContext);

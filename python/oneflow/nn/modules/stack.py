@@ -45,7 +45,7 @@ def stack(inputs: Tensor, dim: int = 0) -> None:
         >>> y = flow.Tensor(np.random.rand(1, 3, 5))
         >>> out = flow.stack([x, y], dim = -1)
         >>> out.shape
-        flow.Size([1, 3, 5, 2])
+        oneflow.Size([1, 3, 5, 2])
     """
 
     assert isinstance(inputs, (List, Tuple))
