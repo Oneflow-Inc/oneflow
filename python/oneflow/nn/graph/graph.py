@@ -348,7 +348,8 @@ class Graph(object):
     def _graph_proto(self):
         if not self._is_compiled:
             self._rank0_print(
-                f"[WARNING]{self._shallow_repr} has not been compiled, it's graph proto is None. You can call the graph to trigger it's compilation."
+                f"[ERROR]{self._shallow_repr()} has not been compiled, so it's graph proto is None."
+                " You can call the graph to trigger it's compilation."
             )
         return self._forward_job_proto
 
@@ -356,7 +357,8 @@ class Graph(object):
     def _full_graph_proto(self):
         if not self._is_compiled:
             self._rank0_print(
-                f"[WARNING]{self._shallow_repr} has not been compiled, it's full graph proto is None. You can call the graph to trigger it's compilation."
+                f"[ERROR]{self._shallow_repr()} has not been compiled, so it's full graph proto is None."
+                " You can call the graph to trigger it's compilation."
             )
         return self._full_job_proto
 
@@ -398,41 +400,41 @@ class Graph(object):
             )
 
     def _compile(self, *args):
-        # Build forward graph
+        # Build graph
         try:
             if self._debug:
-                print(self._shallow_repr() + " start building forward graph.")
+                print(self._shallow_repr() + " start building graph.")
             assert not self._is_compiled, (
                 "nn.Graph " + self._name + " has already been compiled."
             )
 
-            eager_outputs = self._build_forward_graph(*args)
+            eager_outputs = self._build_graph(*args)
 
             if self._debug:
-                print(self._shallow_repr() + " end building forward graph.")
+                print(self._shallow_repr() + " end building graph.")
         except:
             print(
                 "[ERROR]"
                 + self._shallow_repr()
-                + " build forward graph got error: "
+                + " build graph got error: "
                 + sys_exc_error_msg()
             )
             raise
 
-        # Complie and init Runtime
+        # Complie graph to execution plan and init Runtime
         try:
             if self._debug:
-                print(self._shallow_repr() + " start compiling and init graph runtime.")
+                print(self._shallow_repr() + " start compiling plan and init graph runtime.")
 
             self._c_nn_graph.complie_and_init_runtime()
 
             if self._debug:
-                print(self._shallow_repr() + " end compiling and init graph rumtime.")
+                print(self._shallow_repr() + " end compiling plan and init graph rumtime.")
         except:
             print(
                 "[ERROR]"
                 + self._shallow_repr()
-                + " compiling and initialing graph runtime got error : ",
+                + " compiling plan or initialing graph runtime got error : ",
                 sys_exc_error_msg(),
             )
             raise
@@ -440,7 +442,7 @@ class Graph(object):
         self._is_compiled = True
         return eager_outputs
 
-    def _build_forward_graph(self, *args):
+    def _build_graph(self, *args):
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
 
@@ -473,72 +475,18 @@ class Graph(object):
                 self._outs_repr,
                 out2name,
             ) = self._build_io("output", graph_build_util.build_graph_output, *outputs)
-            # Save job proto for debug
-            self._job_proto = c_api_util.GetCurrentJob()
 
+            # Save forward graph job proto
+            self._forward_job_proto = c_api_util.GetCurrentJob()
+            # Complete the graph job proto
             oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
-
-            # Save job proto after job Complete for find real output blob shape and build it.
+            # Save full graph job proto after job Complete for find real output blob shape and build it.
             self._full_job_proto = c_api_util.GetCurrentJob()
 
-            # NOTE(chengcheng):
-            #   Lazy build output eager tensors.
-            #
-            #   After JobBuildAndInferCtxt.Complete, the output tensor shape
-            #   could be changed by JobPass, such as GradientAccumulationRewritePass.
-            def build_real_output(fake_eager_out):
-                lbn = out2name[fake_eager_out] + "/out"
-                assert lbn in self._full_job_proto.helper.lbn2logical_blob_desc
-                blob_conf = self._full_job_proto.helper.lbn2logical_blob_desc[lbn]
+            # Re-build outputs accoring to full graph and outputs buffer config.
+            self._rebuild_outputs(out2name)
 
-                shape = tuple(blob_conf.shape.dim)
-                dtype = fake_eager_out.dtype
-
-                with oneflow._oneflow_internal.lazy_mode.guard(False):
-                    if fake_eager_out.is_consistent:
-                        eager_out = oneflow.empty(
-                            shape,
-                            dtype=dtype,
-                            placement=fake_eager_out.placement,
-                            sbp=fake_eager_out.sbp,
-                        )
-                    else:
-                        eager_out = oneflow.empty(
-                            shape, dtype=dtype, device=fake_eager_out.device
-                        )
-
-                return eager_out
-
-            self._eager_outputs = self._mapping_io(
-                "output", build_real_output, *self._eager_outputs
-            )
-
-            self._outputs_tensor_tuple = convert_to_tensor_tuple(
-                self._flatten_io("output", *self._eager_outputs)
-            )
-            self._eager_outputs_buffer = [
-                self._eager_outputs,
-            ]
-            self._outputs_tensor_tuple_buffer = [
-                self._outputs_tensor_tuple,
-            ]
-
-            # Make outputs buffer
-            if self._outputs_buffer_size >= 2:
-                for i in range(self._outputs_buffer_size - 1):
-                    outputs_buffer_item = self._zero_like_io(
-                        "output", *self._eager_outputs
-                    )
-                    self._eager_outputs_buffer.append(outputs_buffer_item)
-                    outputs_tensor_tuple_buffer_item = convert_to_tensor_tuple(
-                        self._flatten_io("output", *outputs_buffer_item)
-                    )
-                    self._outputs_tensor_tuple_buffer.append(
-                        outputs_tensor_tuple_buffer_item
-                    )
-            self._check_outputs_buffer()
-
-            # Register input/output/variable to _c_nn_graph
+            # Register input/output/variable/buffer to _c_nn_graph
             self._c_nn_graph.register_input_op_names(arg_op_names)
             self._c_nn_graph.register_output_op_names(output_op_names)
             self._c_nn_graph.register_variable_op_names_and_tensors(
@@ -546,6 +494,64 @@ class Graph(object):
             )
 
         return list_to_func_return(self._eager_outputs_buffer[0])
+
+    def _rebuild_outputs(self, out2name=None):
+        # NOTE(chengcheng):
+        #   Lazy build output eager tensors.
+        #
+        #   After JobBuildAndInferCtxt.Complete, the output tensor shape
+        #   could be changed by JobPass, such as GradientAccumulationRewritePass.
+        def build_real_output(fake_eager_out):
+            lbn = out2name[fake_eager_out] + "/out"
+            assert lbn in self._full_job_proto.helper.lbn2logical_blob_desc
+            blob_conf = self._full_job_proto.helper.lbn2logical_blob_desc[lbn]
+
+            shape = tuple(blob_conf.shape.dim)
+            dtype = fake_eager_out.dtype
+
+            with oneflow._oneflow_internal.lazy_mode.guard(False):
+                if fake_eager_out.is_consistent:
+                    eager_out = oneflow.empty(
+                        shape,
+                        dtype=dtype,
+                        placement=fake_eager_out.placement,
+                        sbp=fake_eager_out.sbp,
+                    )
+                else:
+                    eager_out = oneflow.empty(
+                        shape, dtype=dtype, device=fake_eager_out.device
+                    )
+
+            return eager_out
+
+        self._eager_outputs = self._mapping_io(
+            "output", build_real_output, *self._eager_outputs
+        )
+
+        self._outputs_tensor_tuple = convert_to_tensor_tuple(
+            self._flatten_io("output", *self._eager_outputs)
+        )
+        self._eager_outputs_buffer = [
+            self._eager_outputs,
+        ]
+        self._outputs_tensor_tuple_buffer = [
+            self._outputs_tensor_tuple,
+        ]
+
+        # Make outputs buffer
+        if self._outputs_buffer_size >= 2:
+            for i in range(self._outputs_buffer_size - 1):
+                outputs_buffer_item = self._zero_like_io(
+                    "output", *self._eager_outputs
+                )
+                self._eager_outputs_buffer.append(outputs_buffer_item)
+                outputs_tensor_tuple_buffer_item = convert_to_tensor_tuple(
+                    self._flatten_io("output", *outputs_buffer_item)
+                )
+                self._outputs_tensor_tuple_buffer.append(
+                    outputs_tensor_tuple_buffer_item
+                )
+        self._check_outputs_buffer()
 
     def _check_outputs_buffer(self):
         has_len = len(self._outputs_tensor_tuple_buffer)

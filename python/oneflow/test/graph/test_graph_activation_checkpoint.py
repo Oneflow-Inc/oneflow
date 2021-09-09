@@ -59,12 +59,11 @@ class TestGraphActivationCheckpoint(flow.unittest.TestCase):
                 return loss
 
         linear_graph = LinearTrainGraph()
-        linear_graph.debug()
         x = flow.randn(10, 3)
         y = flow.randn(10)
         linear_graph._compile(x, y)
 
-        graph_proto = linear_graph._full_graph_proto
+        graph_proto = linear_graph._graph_proto
         for op in graph_proto.net.op:
             # Check flatten gradient operator take checkpoiting as input
             if re.search("flatten.*grad", op.name, re.I) is not None:
