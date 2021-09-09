@@ -33,12 +33,11 @@ class IBVerbsMessagePool final {
     FreeMemory();
   }
 
-  IBVerbsMessagePool(ibv_pd* pd, uint32_t number_of_message);
-  void RegisterMessagePool();
+  IBVerbsMessagePool(ibv_pd* pd, uint32_t actor_msg_mr_num);
+  void RegisterIBMemoryForMessagePool();
   ActorMsgMR* GetMessage();
   ActorMsgMR* GetMessageFromBuf();
   void PutMessage(ActorMsgMR* msg_mr);
-  bool IsEmpty();
 
  private:
   void FreeMr() {
@@ -57,7 +56,7 @@ class IBVerbsMessagePool final {
   }
 
   ibv_pd* pd_;
-  size_t num_of_message_;
+  size_t actor_msg_mr_num_;
   std::mutex message_buf_mutex_;
   std::deque<ActorMsgMR*> message_buf_;
   std::deque<ibv_mr*> ibv_mr_buf_;

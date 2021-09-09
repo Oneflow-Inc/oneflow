@@ -45,8 +45,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   CHECK_EQ(ibv::wrapper.ibv_query_device(ctx, &device_attr), 0);
   const int64_t user_queue_depth =
       ParseIntegerFromEnv("ONEFLOW_COMM_NET_IB_QUEUE_DEPTH", kDefaultQueueDepth);
-  const uint32_t queue_depth = std::min<uint32_t>(device_attr.max_qp_wr, user_queue_depth);
-  queue_depth_ = queue_depth;
+  queue_depth_ = std::min<uint32_t>(device_attr.max_qp_wr, user_queue_depth);
   ibv_qp_init_attr qp_init_attr{};
   qp_init_attr.qp_context = nullptr;
   qp_init_attr.send_cq = send_cq;

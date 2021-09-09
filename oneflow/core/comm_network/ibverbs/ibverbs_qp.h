@@ -29,9 +29,9 @@ class ActorMsgMR final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgMR);
   ActorMsgMR() = delete;
-  ActorMsgMR(ibv_mr* mr, char* addr, size_t actor_msg_size) {
-    CHECK(actor_msg_size >= sizeof(ActorMsg));
-    actor_msg_size_ = actor_msg_size;
+  ActorMsgMR(ibv_mr* mr, char* addr, size_t msg_size) {
+    CHECK(msg_size >= sizeof(ActorMsg));
+    msg_size_ = msg_size;
     message_ = reinterpret_cast<ActorMsg*>(addr);
     mr_ = mr;
   }
@@ -41,10 +41,10 @@ class ActorMsgMR final {
   uint32_t lkey() const { return mr_->lkey; }
   ActorMsg msg() const { return *message_; }
   void set_msg(const ActorMsg& val) { *message_ = val; }
-  size_t actor_msg_size() const { return actor_msg_size_; }
+  size_t msg_size() const { return msg_size_; }
 
  private:
-  size_t actor_msg_size_;
+  size_t msg_size_;
   ibv_mr* mr_;
   ActorMsg* message_;
 };
