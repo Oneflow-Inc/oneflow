@@ -34,10 +34,10 @@ def affine_grid(theta, size: List[int], align_corners: bool = False):
         theta (Tensor): input batch of affine matrices with shape
             (:math:`N, 2, 3`) for 2D or
             (:math:`N, 3, 4`) for 3D
-        size (flow.Size): the target output image size.
+        size (oneflow.Size): the target output image size.
             (:math:`N, C, H, W` for 2D or
             :math:`N, C, D, H, W` for 3D)
-            Example: flow.Size((32, 3, 24, 24))
+            Example: oneflow.Size((32, 3, 24, 24))
         align_corners (bool): if ``True``, consider ``-1`` and ``1``
             to refer to the centers of the corner pixels rather than the image corners.
             Refer to :func:`grid_sample` for a more complete description.

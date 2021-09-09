@@ -72,8 +72,6 @@ REGISTER_USER_OP("prelu_grad")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-      const user_op::TensorDesc& alpha_tensor =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("alpha", 0);
       ctx->NewBuilder()
           .Split(user_op::OpArg("dy", 0), 0)
           .Split(user_op::OpArg("x", 0), 0)

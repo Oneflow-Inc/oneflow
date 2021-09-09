@@ -47,7 +47,7 @@ def gather_op(input, index, dim=0, sparse_grad=False):
         >>> index = np.random.choice(np.arange(3), size=180, replace=True).reshape((3, 4, 3, 5))
         >>> output = flow.gather(flow.Tensor(input), flow.tensor(index, dtype=flow.int), dim=1)
         >>> output.shape
-        flow.Size([3, 4, 3, 5])
+        oneflow.Size([3, 4, 3, 5])
 
     """
 
@@ -93,7 +93,7 @@ def gather_nd_op(input, index):
         >>> index_1 = flow.tensor(np.array([[0], [2]]), dtype=flow.int)
         >>> out_1 = flow.gather_nd(input,index_1)
         >>> print(out_1.shape)
-        flow.Size([2, 3])
+        oneflow.Size([2, 3])
         >>> out_1
         tensor([[1., 2., 3.],
                 [7., 8., 9.]], dtype=oneflow.float32)
