@@ -75,15 +75,13 @@ int64_t GetStageIdHint(const OpNode* node) {
 
 std::string ParallelDesc2HashString(const ParallelDesc& parallel_desc) {
   std::string ret = parallel_desc.device_tag() + ",{";
-  for(int64_t m : parallel_desc.sorted_machine_ids()) {
+  for (int64_t m : parallel_desc.sorted_machine_ids()) {
     ret += (std::to_string(m) + ":[");
-    for (int64_t d : parallel_desc.sorted_dev_phy_ids(m)) {
-      ret += (std::to_string(d) + ",");
-    }
+    for (int64_t d : parallel_desc.sorted_dev_phy_ids(m)) { ret += (std::to_string(d) + ","); }
     ret += "],";
   }
   ret += "}";
-  std::cout << " cclog: parallel_desc hash str: \n" << ret << "\n\n";
+  // std::cout << " cclog: parallel_desc hash str: \n" << ret << "\n\n";
   return ret;
 }
 
@@ -107,8 +105,6 @@ Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* j
       LOG(WARNING) << " op : " << this_node->op().op_conf().DebugString() << " has NOT scope!";
       return;
     }
-    int64_t new_scope =
-        CHECK_JUST(NewScopeWithStageId(this_node->op().op_conf().scope_symbol_id(), 99));
     max_stage_id = std::max(max_stage_id, GetStageIdHint(this_node));
   });
 
@@ -121,7 +117,7 @@ Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* j
   HashMap<std::string, std::string> op_name2placement;
   HashMap<std::string, int64_t> op_name2stage_id;
   HashMap<std::string, int64_t> op_name2new_stage_id;
-  HashMap<std::string, HashSet<std::string> placement2op_names;
+  HashMap<std::string, HashSet<std::string>> placement2op_names;
 
   // NOTE(chengcheng): group op by placement.
   op_graph.ForEachNode([&](const OpNode* this_node) {
@@ -135,23 +131,45 @@ Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* j
     placement2op_names[placement].insert(op_name);
   });
 
-  for(auto& pair : placement2op_names) {
-    std::cout << "cclog: placement = " << placement2op_names << "\n";
+  for (auto& placement_op_names_pair : placement2op_names) {
+    std::cout << "cclog: placement = " << placement_op_names_pair.first << "\n";
     HashMap<int64_t, HashSet<std::string>> stage_id2op_names;
-    for(const auto& op_name : pair.second) {
+    for (const auto& op_name : placement_op_names_pair.second) {
       stage_id2op_names[op_name2stage_id.at(op_name)].insert(op_name);
     }
     int64_t max_group_stage_id = -1;
     int64_t max_group_op_size = -1;
-    for(auto& stage_id_op_names_pair : stage_id2op_names) {
-      if (pair.second.size() > max_group_op_size) {
-        max_group_stage_id = pair.first;
-        max_group_op_size = pair.second.size();
+    for (auto& stage_id_op_names_pair : stage_id2op_names) {
+      int64_t this_group_op_size = stage_id_op_names_pair.second.size();
+      std::cout << "this_stage_id: " << stage_id_op_names_pair.first
+                << " , size = " << this_group_op_size << "\n";
+      if (this_group_op_size > max_group_op_size) {
+        max_group_stage_id = stage_id_op_names_pair.first;
+        max_group_op_size = this_group_op_size;
+        std::cout << "max_group_stage_id: " << max_group_stage_id
+                  << " , max_group_op_size: " << max_group_op_size << "\n\n";
       }
     }
+    CHECK_GE_OR_RETURN(max_group_stage_id, 0);
+    CHECK_GE_OR_RETURN(max_group_op_size, 0);
 
-    for(auto& stage_id_op_names_pair : stage_id2op_names) {
-      if (pair.first != )
+    for (auto& stage_id_op_names_pair : stage_id2op_names) {
+      if (stage_id_op_names_pair.first != max_group_stage_id) {
+        for (const auto& op_name : stage_id_op_names_pair.second) {
+          LOG(INFO) << " In FixPipelineStageIdPass, op_name: " << op_name
+                    << " origin_stage_id = " << stage_id_op_names_pair.first
+                    << "(group size: " << stage_id_op_names_pair.second.size()
+                    << ") is different with same placement : " << placement_op_names_pair.first
+                    << " max group size: " << max_group_op_size
+                    << " stage_id: " << max_group_stage_id
+                    << " , so change this op to the max_group stage id.\n";
+          OperatorConf new_op_conf = op_name2conf.at(op_name);
+          int64_t new_scope_symbol_id =
+              JUST(NewScopeWithStageId(new_op_conf.scope_symbol_id(), max_group_stage_id));
+          new_op_conf.set_scope_symbol_id(new_scope_symbol_id);
+          CHECK_OR_RETURN(mut_op_name2conf.emplace(op_name, new_op_conf).second);
+        }
+      }
     }
   }
 
