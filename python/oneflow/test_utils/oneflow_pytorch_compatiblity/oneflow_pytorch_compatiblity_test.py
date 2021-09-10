@@ -260,7 +260,7 @@ def test_train_loss_oneflow_pytorch(
     log_path: str = "./model_test_output/default",
 ):
     batch_size = 16
-    if 'densenet' in module_name:
+    if "densenet" in module_name:
         batch_size = 1
     image_nd = np.random.rand(batch_size, 3, 299, 299).astype(
         np.float32
