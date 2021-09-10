@@ -167,7 +167,7 @@ jobs:
         if: steps.changes.outputs.should_run_single_client_tests == '1'
         run: |
           echo "yes"
-  build:
+  build-cuda:
     name: Build
     needs:
       [
@@ -180,9 +180,8 @@ jobs:
     continue-on-error: ${{ matrix.allow_fail }}
     runs-on: ${{ matrix.os }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'fmt-only') == false
-    strategy:
-      max-parallel: 5
-      matrix: ${{ fromJson(needs.set-initial-variables.outputs.build_matrix) }}
+    outputs:
+      pip-index-url: ${{ steps.build-oneflow.outputs.pip-index-url }}
     steps:
       - name: Fix permissions
         run: |
@@ -191,161 +190,28 @@ jobs:
         uses: actions/checkout@v2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-        if: env.is_built != '1'
-      - name: Install Conda
-        run: |
-          CONDA=$HOME/miniconda3-prefixes/py39_4.10.3
-          echo "CONDA=${CONDA}" >> $GITHUB_ENV
-          if ! command -v $CONDA/bin/conda &> /dev/null
-          then
-              rm -rf $CONDA
-              wget https://oneflow-static.oss-cn-beijing.aliyuncs.com/downloads/conda-installers/Miniconda3-py39_4.10.3-Linux-x86_64.sh
-              bash Miniconda3-py39_4.10.3-Linux-x86_64.sh -b -u -s -p ${CONDA}
-          fi
-          cp ci/conda/tuna.condarc $HOME/.condarc
-          cat $HOME/.condarc
-          export PATH=$PATH:$CONDA/bin
-          conda clean -i
-          conda config --set auto_activate_base false
-          conda init
-      - name: Download conda environment.yml # TODO: remove this step if migrated to generated matrix
-        if: matrix.test_suite == 'cpu-clang'
-        run: |
-          wget https://raw.githubusercontent.com/Oneflow-Inc/conda-env/9cd37571cbd6cc6a81fc87faa7f6a43be772ae31/dev/clang10/environment-v2.yml -O environment.yml
-      - name: Update Conda env
-        if: matrix.test_suite == 'cpu-clang'
-        run: |
-          export PATH=$PATH:$CONDA/bin
-          conda env update -f environment.yml --prune
-      - name: Set environments from secrets
-        if: contains(${{ github.repository }}, "Oneflow-Inc")
-        run: |
-          echo "CI_STATIC_HOST=${{ secrets.CI_STATIC_HOST }}" >> $GITHUB_ENV
-          echo "CI_STATIC_PATH=${{ secrets.CI_STATIC_PATH }}" >> $GITHUB_ENV
-      - name: Set environments for forks
-        run: |
-          CI_STATIC_HOST=${CI_STATIC_HOST:-"192.168.1.13"}
-          CI_STATIC_PATH=${CI_STATIC_PATH:-"/tank/ci-static"}
-          echo "CI_STATIC_HOST=${CI_STATIC_HOST}" >> $GITHUB_ENV
-          echo "CI_STATIC_PATH=${CI_STATIC_PATH}" >> $GITHUB_ENV
-      - name: Set environment variables
-        env:
-          test_suite: ${{ matrix.test_suite }}
-        run: |
-          set -x
-          echo "test_suite=${test_suite}" >> $GITHUB_ENV
-          export ci_tmp_dir=$HOME/ci-cache/test_suite/${test_suite}
-          mkdir -p $ci_tmp_dir
-          echo "ci_tmp_dir=${ci_tmp_dir}" >> $GITHUB_ENV
-          echo "wheelhouse_dir=${ci_tmp_dir}/wheelhouse" >> $GITHUB_ENV
-          sha_dir="${CI_STATIC_PATH}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}"
-          echo "sha_dir=${sha_dir}" >> $GITHUB_ENV
-          if ssh -o StrictHostKeyChecking=no ${CI_STATIC_HOST} "test -d $sha_dir"; then
-              echo "is_built=1" >> $GITHUB_ENV
-          fi
-          if [ "$test_suite" == "cuda" ]; then
-            echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2-gcc7/build-oneflow/bin" >> $GITHUB_ENV
-          elif [ "$test_suite" == "cpu" ]; then
-            echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2-gcc7-cpu/build-oneflow/bin" >> $GITHUB_ENV
-          fi
-          extra_docker_args=""
-          extra_docker_args+=" --cap-add=SYS_PTRACE --security-opt seccomp=unconfined"
-
-          container_name=pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${test_suite}-build
-          echo "container_name=${container_name}" >> $GITHUB_ENV
-          extra_docker_args+=" --name ${container_name}"
-          if [ "$test_suite" == "cpu" ]; then
-            extra_docker_args+=" --env ONEFLOW_TEST_CPU_ONLY=1"
-            extra_docker_args+=" --env CUDA_VISIBLE_DEVICES=''"
-          fi
-          echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
-
-          img_cache_base_dir="$HOME/ci-cache/${{ github.repository }}/oneflow-manylinux2014-cuda10.2/0.1"
-          pip_cache_docker_args="-v ${img_cache_base_dir}/dotcache/pip:/root/.cache/pip"
-          echo "pip_cache_docker_args=${pip_cache_docker_args}" >> $GITHUB_ENV
-
-          echo "pip_index_mirror=https://pypi.tuna.tsinghua.edu.cn/simple" >> $GITHUB_ENV
-      - name: Build with Conda
-        if: matrix.test_suite == 'cpu-clang'
-        run: |
-          set -x
-          export PATH=$PATH:$CONDA/bin
-          bash -i ci/conda/build-clang.sh
       - name: Build OneFlow
-        timeout-minutes: 45
-        if: env.is_built != '1' && ((contains(fromJson('["cuda", "cpu"]'), matrix.test_suite) || (contains(fromJson('["xla", "xla_cpu"]'), matrix.test_suite) && needs.changed_files.outputs.should_run_single_client_tests == '1')))
-        uses: ./.github/actions/whl
+        id: build-oneflow
+        uses: Oneflow-Inc/get-oneflow@v1
+        if: ${{ matrix.oneflow-build-env == 'manylinux'}}
         with:
-          tmp_dir: ${ci_tmp_dir}
-          extra_flags: ${{ matrix.extra_flags }}
-          cuda_version: ${{ matrix.cuda_version }}
-          extra_docker_args: $extra_docker_args
-          python_version: ${{ matrix.python_version }}
-      - name: Single client custom Op test (run by oneflow build docker)
-        timeout-minutes: 45
-        if: matrix.test_suite == 'cpu' && env.is_built != '1' && needs.changed_files.outputs.should_run_single_client_tests == '1'
-        run: |
-          set -x
-          docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro \
-            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
-            -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
-            oneflow-manylinux2014-cuda10.2:0.1 \
-            bash -c "export PATH=/opt/python/cp36-cp36m/bin:$PATH && source scl_source enable devtoolset-7 && python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_custom_op_test.sh"
-      - name: Remove cache (remove tmp caches like a tmp wheel if failed)
-        if: ${{ failure() }}
-        run: |
-          set -x
-          cache_parent_dir=$(dirname ${ci_tmp_dir})
-          if [ "$cache_parent_dir" == "/" ] || [ -z "$cache_parent_dir" ]; then
-            exit 1
-          fi
-          docker run --rm -v $cache_parent_dir:$cache_parent_dir busybox rm -rf ${ci_tmp_dir}
-      - name: Upload wheel via SSH
-        if: env.is_built != '1'
-        uses: ./.github/actions/upload_ssh
-        with:
-          src_path: ${wheelhouse_dir}
-          dst_host: ${{ env.CI_STATIC_HOST }}
-          dst_path: ${{ env.CI_STATIC_PATH }}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/whl
-      - name: Upload bin via SSH
-        if: contains(fromJson('["cuda", "cpu"]'), matrix.test_suite) && env.is_built != '1'
-        uses: ./.github/actions/upload_ssh
-        with:
-          src_path: ${bin_dir}
-          dst_host: ${{ env.CI_STATIC_HOST }}
-          dst_path: ${{ env.CI_STATIC_PATH }}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/bin
-      - name: Upload wheel to cloud, enable by adding label 'upload-wheel'
-        if: contains(github.event.pull_request.labels.*.name, 'upload-wheel')
-        uses: ./.github/actions/upload_oss
-        with:
-          src_path: ${wheelhouse_dir}
-          oss_dst_path: oss://oneflow-staging/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/whl
-          oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-      - name: Remove container
-        if: always()
-        run: |
-          set -x
-          docker rm -f ${container_name} || true
-      - name: Reverse conda init
-        if: always()
-        run: |
-          export PATH=$PATH:$CONDA/bin
-          conda init --reverse
-      - name: Save shared env
-        run: |
-          set -x
-          echo "builder_host=${CI_STATIC_HOST}" >> build.${{ matrix.test_suite }}.env
-          echo "sha_dir=${sha_dir}" >> build.${{ matrix.test_suite }}.env
-          echo "remote_whl_dir=${CI_STATIC_HOST}:$sha_dir/whl" >> build.${{ matrix.test_suite }}.env
-          if [ "$test_suite" == "cuda" ] || [  "$test_suite" == "cpu" ]; then
-            echo "remote_bin_dir=${CI_STATIC_HOST}:$sha_dir/bin" >> build.${{ matrix.test_suite }}.env
-          fi
-      - name: Upload shared env
-        uses: actions/upload-artifact@v2
-        with:
-          name: build.${{ matrix.test_suite }}.env
-          path: build.${{ matrix.test_suite }}.env
+          action: build-oneflow
+          cmake-init-cache: cmake/caches/ci/cuda.cmake
+          build-script: ci/manylinux/build.sh
+          oneflow-src: .
+          oneflow-build-env: manylinux
+          wheelhouse-dir: manylinux-wheelhouse
+          self-hosted: ${{ contains(matrix.os, 'self-hosted') }}
+          cuda-version: 11.4
+          manylinux-cache-dir: ~/manylinux-cache-dir/cuda-11.4
+          docker-run-use-system-http-proxy: false
+          docker-run-use-lld: true
+          cache-key-prefixes: |
+            ${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}
+            ${{ github.repository }}/digest/${{ hashFiles('**/*.cpp') }}
+          python-versions: |
+            3.6
+            3.7
 
   test:
     name: Test suite
