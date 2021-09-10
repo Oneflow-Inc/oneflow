@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/cuda/atomic.cuh"
 #include <cub/cub.cuh>
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include <cuda.h>
 
 namespace oneflow {
 
@@ -57,40 +58,6 @@ class LayerNormCudnnBnCtx final {
   std::unique_ptr<CudnnTensorDesc> param_tensor_desc_;
   cudnnBatchNormMode_t mode_;
 };
-
-// template<typename T> 
-// __device__ void WelfordOnlineSumVariance(const T current_val, T& mean_val, T& m2, int64_t count){
-//   // Use Welford Online algorithem to compute mean and variance
-//   // For more details you can refer to: https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
-//   count = count + 1; 
-//   T delta1 = current_val - mean_val; 
-//   printf("count is: %d \n", count); 
-//   T updated_mean_val = mean_val + delta1 / count; 
-//   mean_val = updated_mean_val;
-//   T delta2 = current_val - updated_mean_val; 
-//   printf("delta1 is: %f \n", delta1);
-//   printf("Current val is: %f \n", current_val);
-//   printf("updated_mean_val is: %f \n", updated_mean_val);
-
-//   printf("delta2 is: %f \n", delta2);
-//   m2 = m2 + delta1 * delta2; // For numerical instability, we update m2 = m2 + (x-mean)*(x-updated_mean), and finally variance = m2 / n, n is the count. 
-// }
-
-// template<typename U> __device__
-// void WelfordOnlineSumVariance(
-//   const U curr,
-//   U& mu,
-//   U& sigma2,
-//   int& count)
-// {
-//   count = count + 1;
-//   U delta = curr - mu;
-//   U lmean = mu + delta / count;
-//   mu = lmean;
-//   U delta2 = curr - lmean;
-//   sigma2 = sigma2 + delta * delta2;
-// }
-
 
 template<typename T, bool do_scale, bool do_center>
 __global__ void InstanceScaleCenterGpu(const int64_t elem_cnt, const int64_t instance_size,
@@ -206,93 +173,6 @@ int GetLayerNormForwardNumBlocks(const int num_instances) {
   return std::min(static_cast<int>(num_instances), kCudaMaxBlocksNum);
 }
 
-// template<typename T, typename ComputeType>
-// __global__ void LayerNormForwardImpl(const int num_instances, const int norm_size,
-//                                      const double epsilon, const T* x, const T* gamma,
-//                                      const T* beta, ComputeType* mean, ComputeType* inv_variance,
-//                                      T* normalized, T* y) {
-//   using LU = LayerNormUtil<T>;
-//   extern __shared__ __align__(sizeof(double)) unsigned char fw_shared_buf[];
-//   auto* compute_buf = reinterpret_cast<ComputeType*>(fw_shared_buf);
-//   __shared__ ComputeType row_mean_shared;
-//   __shared__ ComputeType row_inv_var_shared;
-//   typedef cub::BlockReduce<ComputeType, kLayerNormForwardGpuBlockSize> BlockReduce;
-//   __shared__ typename BlockReduce::TempStorage cub_mean_reduce_tmp_storage;
-//   __shared__ typename BlockReduce::TempStorage cub_variance_reduce_tmp_storage;
-//   ComputeType inv_norm_size = static_cast<ComputeType>(1.0) / static_cast<ComputeType>(norm_size);
-//   for (int row = blockIdx.x; row < num_instances; row += gridDim.x) {
-//     const int row_offset = row * norm_size;
-//     const T* x_row = x + row_offset;
-//     ComputeType thread_sum = 0;
-//     ComputeType thread_square_sum = 0;
-//     const int tid = threadIdx.x;
-//     for (int col = tid; col < norm_size; col += blockDim.x) {
-//       const ComputeType val = LU::ToComputeType(x_row[col]);
-//       compute_buf[col] = val;
-//       thread_sum += val;
-//       thread_square_sum += val * val;
-//     }
-//     __syncthreads();
-//     ComputeType block_sum = BlockReduce(cub_mean_reduce_tmp_storage).Reduce(thread_sum, cub::Sum());
-//     ComputeType block_square_sum =
-//         BlockReduce(cub_variance_reduce_tmp_storage).Reduce(thread_square_sum, cub::Sum());
-//     if (tid == 0) {
-//       ComputeType row_mean = block_sum * inv_norm_size;
-//       row_mean_shared = row_mean;
-//       mean[row] = row_mean;
-//       ComputeType row_variance =
-//           max(block_square_sum * inv_norm_size - row_mean * row_mean, static_cast<ComputeType>(0));
-//       ComputeType row_inv_var = rsqrt(row_variance + static_cast<ComputeType>(epsilon));
-//       row_inv_var_shared = row_inv_var;
-//       inv_variance[row] = row_inv_var;
-//     }
-//     __syncthreads();
-//     ComputeType mean = row_mean_shared;
-//     ComputeType inv_var = row_inv_var_shared;
-//     for (int col = threadIdx.x; col < norm_size; col += blockDim.x) {
-//       int offset = row_offset + col;
-//       ComputeType val = compute_buf[col];
-//       val = (val - mean) * inv_var;
-//       if (gamma != nullptr || beta != nullptr) {
-//         int elem_id = col;
-//         if (gamma != nullptr) {
-//           normalized[offset] = LU::FromComputeType(val);
-//           val *= LU::ToComputeType(gamma[elem_id]);
-//         }
-//         if (beta != nullptr) { val += LU::ToComputeType(beta[elem_id]); }
-//       }
-//       y[offset] = LU::FromComputeType(val);
-//     }
-//   }
-// }
-
-// template<typename T> 
-// __device__ void WelfordOnlineSumVariance(const T current_val, T& mean_val, T& m2, T& count){
-//   // Use Welford Online algorithem to compute mean and variance
-//   // For more details you can refer to: https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
-//   count = count + T(1); 
-//   T delta = current_val - mean; 
-//   T updated_mean_val = mean + delta / count; 
-//   mean_val = updated_mean_val;
-//   T delta2 = current_val - updated_mean_val; 
-//   m2 += delta1 * delta2; // For numerical instability, we update m2 = m2 + (x-mean)*(x-updated_mean), and finally variance = m2 / n, n is the count. 
-// }
-
-template<typename U> __device__
-void WelfordOnlineSumVariance(
-  const U curr,
-  U& mu,
-  U& sigma2,
-  int count)
-{
-  U delta = curr - mu;
-  U lmean = mu + delta / count;
-  mu = lmean;
-  U delta2 = curr - lmean;
-  sigma2 = sigma2 + delta * delta2;
-  // sigma2 = delta;
-}
-
 template<typename T, typename ComputeType>
 __global__ void LayerNormForwardImpl(const int num_instances, const int norm_size,
                                      const double epsilon, const T* x, const T* gamma,
@@ -310,46 +190,189 @@ __global__ void LayerNormForwardImpl(const int num_instances, const int norm_siz
   for (int row = blockIdx.x; row < num_instances; row += gridDim.x) {
     const int row_offset = row * norm_size;
     const T* x_row = x + row_offset;
+    ComputeType thread_sum = 0;
+    ComputeType thread_square_sum = 0;
+    const int tid = threadIdx.x;
+    for (int col = tid; col < norm_size; col += blockDim.x) {
+      const ComputeType val = LU::ToComputeType(x_row[col]);
+      compute_buf[col] = val;
+      thread_sum += val;
+      thread_square_sum += val * val;
+    }
+    __syncthreads();
+    ComputeType block_sum = BlockReduce(cub_mean_reduce_tmp_storage).Reduce(thread_sum, cub::Sum());
+    ComputeType block_square_sum =
+        BlockReduce(cub_variance_reduce_tmp_storage).Reduce(thread_square_sum, cub::Sum());
+    if (tid == 0) {
+      ComputeType row_mean = block_sum * inv_norm_size;
+      row_mean_shared = row_mean;
+      mean[row] = row_mean;
+      ComputeType row_variance =
+          max(block_square_sum * inv_norm_size - row_mean * row_mean, static_cast<ComputeType>(0));
+      ComputeType row_inv_var = rsqrt(row_variance + static_cast<ComputeType>(epsilon));
+      row_inv_var_shared = row_inv_var;
+      inv_variance[row] = row_inv_var;
+    }
+    __syncthreads();
+    ComputeType mean = row_mean_shared;
+    ComputeType inv_var = row_inv_var_shared;
+    for (int col = threadIdx.x; col < norm_size; col += blockDim.x) {
+      int offset = row_offset + col;
+      ComputeType val = compute_buf[col];
+      val = (val - mean) * inv_var;
+      if (gamma != nullptr || beta != nullptr) {
+        int elem_id = col;
+        if (gamma != nullptr) {
+          normalized[offset] = LU::FromComputeType(val);
+          val *= LU::ToComputeType(gamma[elem_id]);
+        }
+        if (beta != nullptr) { val += LU::ToComputeType(beta[elem_id]); }
+      }
+      y[offset] = LU::FromComputeType(val);
+    }
+  }
+}
+
+template <typename T, class ReduceOp>
+__inline__ __device__ T WelfordWarpReduce(T val, ReduceOp& op) {
+#pragma unroll
+  for (int offset = (32 >> 1); offset > 0; offset >>= 1) {
+    val = op.combine(val, op.warp_shfl_down(val, offset));
+  }
+  return val;
+}
+
+template <typename T, class ReduceOp>
+__inline__ __device__ T
+WelfordBlockReduce(T val, ReduceOp& op, const T& identity_element, T* shared) {
+  const int lid = threadIdx.x % 32;
+  const int wid = threadIdx.x / 32;
+  val = WelfordWarpReduce(val, op);
+  __syncthreads();
+  if (lid == 0) {
+    shared[wid] = val;
+  }
+  __syncthreads();
+  val = (threadIdx.x < blockDim.x / 32) ? shared[lid]
+                                                   : identity_element;
+  if (wid == 0) {
+    val = WelfordWarpReduce(val, op);
+  }
+  return val;
+}
+
+template<typename T, typename IDX_T>
+struct WelfordData{
+  T mean; 
+  T m2; 
+  IDX_T n; 
+  IDX_T nf; 
+  __host__ __device__ WelfordData(): mean(0), m2(0), n(0), nf(0){}
+  __host__ __device__ WelfordData(T mean, T m2, IDX_T n, IDX_T nf): mean(mean), m2(m2), n(n), nf(nf){}
+
+}; 
+
+template<typename T, typename IDX_T>
+struct WelfordOps{
+  IDX_T correction;
+  bool take_sqrt;
+  using acc_t = WelfordData<T, IDX_T>; 
+
+  inline __device__ acc_t reduce(acc_t acc, T data) {
+    // Use Welford Online algorithem to compute mean and variance
+    // For more details you can refer to: https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
+    T delta1 = data - acc.mean; 
+    T updated_mean = acc.mean + delta1 / (acc.n+1); 
+    T delta2 = data - updated_mean; 
+    return {
+      updated_mean,
+      acc.m2 + delta1 * delta2, // For numerical instability, we update m2 = m2 + (x-mean)*(x-updated_mean), and finally variance = m2 / n, n is the count
+      acc.n + 1,
+      acc.n + 1 // Not used. 
+    };
+  }
+
+  inline __device__ T project(acc_t& acc) {
+    return acc.m2 / acc.nf; 
+  }
+
+  inline __device__ acc_t combine(acc_t a, acc_t b){
+    if (a.nf == 0) {
+      return b;
+    }
+    if (b.nf == 0) {
+      return a;
+    }
+    T delta = b.mean - a.mean;
+    IDX_T new_count = a.nf + b.nf;
+    IDX_T nb_over_n = b.nf / new_count;
+    return {
+      a.mean + delta * nb_over_n,
+      a.m2 + b.m2 + delta * delta * a.nf * nb_over_n,
+      // setting acc.n as -1 since acc.n might not be able to represent the count
+      // correctly within its range, setting it to -1 to avoid confusion
+      -1,
+      new_count
+    };
+  }
+
+  inline __device__ acc_t warp_shfl_down(acc_t acc, int offset) const {
+    return {
+      __shfl_down_sync(0xffffffff, acc.mean, offset)
+      , __shfl_down_sync(0xffffffff, acc.m2, offset)
+      , __shfl_down_sync(0xffffffff, acc.n, offset)
+      , __shfl_down_sync(0xffffffff, acc.nf, offset)
+    };
+  }
+
+  __host__ __device__ WelfordOps(IDX_T correction, bool take_sqrt): correction(correction), take_sqrt(take_sqrt) {}
+}; 
+
+template<typename T, typename ComputeType>
+__global__ void LayerNormWelfordForwardImpl(const int num_instances, const int norm_size,
+                                     const double epsilon, const T* x, const T* gamma,
+                                     const T* beta, ComputeType* mean, ComputeType* inv_variance,
+                                     T* normalized, T* y) {
+  using LU = LayerNormUtil<T>;
+  extern __shared__ __align__(sizeof(double)) unsigned char fw_shared_buf[];
+  auto* compute_buf = reinterpret_cast<ComputeType*>(fw_shared_buf);
+  __shared__ ComputeType row_mean_shared;
+  __shared__ ComputeType row_inv_var_shared;
+  typedef cub::BlockReduce<ComputeType, kLayerNormForwardGpuBlockSize> BlockReduce;
+  using WelfordType = WelfordData<ComputeType, int64_t>;
+  using WelfordOp = WelfordOps<ComputeType, int64_t>;
+  
+  __shared__
+      typename std::aligned_storage<sizeof(WelfordType), alignof(WelfordType)>::
+          type val_shared[32];
+  WelfordType* val_shared_ptr = reinterpret_cast<WelfordType*>(val_shared);
+  WelfordOp welop(0, 0); 
+  WelfordType weldata(0.0, 0.0, 0, 0); 
+  for (int row = blockIdx.x; row < num_instances; row += gridDim.x) {
+    const int row_offset = row * norm_size;
+    const T* x_row = x + row_offset;
     ComputeType thread_mean = static_cast<ComputeType>(0.0);
     ComputeType thread_m2 = static_cast<ComputeType>(0.0);
-    ComputeType row_mean = static_cast<ComputeType>(10.0); 
     const int tid = threadIdx.x;
     int count = 0; 
     for (int col = tid; col < norm_size; col += blockDim.x) {
-      count += 1; 
       const ComputeType val = LU::ToComputeType(x_row[col]);
       compute_buf[col] = val;
-      WelfordOnlineSumVariance<ComputeType>(val, thread_mean, thread_m2, count); 
+      weldata = welop.reduce(weldata, val); 
     }
 
     __syncthreads();
-    ComputeType block_mean_sum = BlockReduce(cub_mean_reduce_tmp_storage).Reduce(thread_mean, cub::Sum());
-    ComputeType block_m2_sum =
-        BlockReduce(cub_variance_reduce_tmp_storage).Reduce(thread_m2, cub::Sum());
+    WelfordType wel_reduce = WelfordBlockReduce<WelfordType, WelfordOp>(weldata,
+                                                welop,
+                                                /*identity_element=*/WelfordType(0.0, 0.0, 0, 0),
+                                                val_shared_ptr); 
+    
     if (tid == 0) {
-      printf("Normsize is: %d \n", norm_size);
-      printf("num instances is: %d \n", num_instances);
-      printf("thread mean is: %f \n", thread_mean);
-      printf("block mean sum is: %f \n", block_mean_sum); 
-
-      if (norm_size < kLayerNormForwardGpuBlockSize){
-        printf("enterhere!"); 
-        row_mean = block_mean_sum * inv_norm_size; 
-      }
-      else{
-        printf("enter else"); 
-        row_mean = block_mean_sum / kLayerNormForwardGpuBlockSize;
-      }
-
-      printf("Here row mean is: %f \n", row_mean); 
-      row_mean_shared = row_mean;
-
-      mean[row] = row_mean;
-      ComputeType row_variance =
-          max(block_m2_sum * inv_norm_size, static_cast<ComputeType>(0.0));
-      printf("thread_m2_sum is: %f \n", thread_m2); 
-      printf("block_m2_sum is: %f \n", block_m2_sum); 
-      printf("Here row var is: %f \n", row_variance); 
+      ComputeType mean = wel_reduce.mean; 
+      ComputeType var = welop.project(weldata); 
+      row_mean_shared = mean;
+      printf("Here row mean is: %f \n", row_mean_shared); 
+      ComputeType row_variance = max(var, static_cast<ComputeType>(0.0));
       ComputeType row_inv_var = rsqrt(row_variance + static_cast<ComputeType>(epsilon));
       row_inv_var_shared = row_inv_var;
       inv_variance[row] = row_inv_var;
@@ -379,29 +402,39 @@ void LayerNormForwardGpu(DeviceCtx* ctx, const int num_instances, const int norm
                          const double epsilon, const T* x_ptr, const T* gamma_ptr,
                          const T* beta_ptr, T* normalized_ptr, T* y_ptr, user_op::Tensor* mean,
                          user_op::Tensor* inv_variance) {
-  LayerNormForwardImpl<T, typename LayerNormUtil<T>::ComputeType>
+  if (norm_size < kLayerNormForwardGpuBlockSize){
+    LayerNormForwardImpl<T, typename LayerNormUtil<T>::ComputeType>
       <<<GetLayerNormForwardNumBlocks(num_instances), GetLayerNormForwardBlockSize(),
          GetForwardDynamicSharedMemorySize<T>(norm_size), ctx->cuda_stream()>>>(
           num_instances, norm_size, epsilon, x_ptr, gamma_ptr, beta_ptr,
           mean->mut_dptr<typename LayerNormUtil<T>::ComputeType>(),
           inv_variance->mut_dptr<typename LayerNormUtil<T>::ComputeType>(), normalized_ptr, y_ptr);
+  }else{
+    LayerNormWelfordForwardImpl<T, typename LayerNormUtil<T>::ComputeType>
+      <<<GetLayerNormForwardNumBlocks(num_instances), GetLayerNormForwardBlockSize(),
+         GetForwardDynamicSharedMemorySize<T>(norm_size), ctx->cuda_stream()>>>(
+          num_instances, norm_size, epsilon, x_ptr, gamma_ptr, beta_ptr,
+          mean->mut_dptr<typename LayerNormUtil<T>::ComputeType>(),
+          inv_variance->mut_dptr<typename LayerNormUtil<T>::ComputeType>(), normalized_ptr, y_ptr);
+  }
+  
 }
 
-template<>
-void LayerNormForwardGpu<float16>(DeviceCtx* ctx, const int num_instances, const int norm_size,
-                                  const double epsilon, const float16* x_ptr,
-                                  const float16* gamma_ptr, const float16* beta_ptr,
-                                  float16* normalized_ptr, float16* y_ptr, user_op::Tensor* mean,
-                                  user_op::Tensor* inv_variance) {
-  LayerNormForwardImpl<half, typename LayerNormUtil<half>::ComputeType>
-      <<<GetLayerNormForwardNumBlocks(num_instances), GetLayerNormForwardBlockSize(),
-         GetForwardDynamicSharedMemorySize<half>(norm_size), ctx->cuda_stream()>>>(
-          num_instances, norm_size, epsilon, reinterpret_cast<const half*>(x_ptr),
-          reinterpret_cast<const half*>(gamma_ptr), reinterpret_cast<const half*>(beta_ptr),
-          mean->mut_dptr<typename LayerNormUtil<half>::ComputeType>(),
-          inv_variance->mut_dptr<typename LayerNormUtil<half>::ComputeType>(),
-          reinterpret_cast<half*>(normalized_ptr), reinterpret_cast<half*>(y_ptr));
-}
+// template<>
+// void LayerNormForwardGpu<float16>(DeviceCtx* ctx, const int num_instances, const int norm_size,
+//                                   const double epsilon, const float16* x_ptr,
+//                                   const float16* gamma_ptr, const float16* beta_ptr,
+//                                   float16* normalized_ptr, float16* y_ptr, user_op::Tensor* mean,
+//                                   user_op::Tensor* inv_variance) {
+//   LayerNormForwardImpl<half, typename LayerNormUtil<half>::ComputeType>
+//       <<<GetLayerNormForwardNumBlocks(num_instances), GetLayerNormForwardBlockSize(),
+//          GetForwardDynamicSharedMemorySize<half>(norm_size), ctx->cuda_stream()>>>(
+//           num_instances, norm_size, epsilon, reinterpret_cast<const half*>(x_ptr),
+//           reinterpret_cast<const half*>(gamma_ptr), reinterpret_cast<const half*>(beta_ptr),
+//           mean->mut_dptr<typename LayerNormUtil<half>::ComputeType>(),
+//           inv_variance->mut_dptr<typename LayerNormUtil<half>::ComputeType>(),
+//           reinterpret_cast<half*>(normalized_ptr), reinterpret_cast<half*>(y_ptr));
+// }
 
 int GetForwardFusedKernelMinNormSize() { return 64; }
 
@@ -606,7 +639,7 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
 
 REGISTER_LAYER_NORM_GPU_KERNEL(float, float)
 REGISTER_LAYER_NORM_GPU_KERNEL(double, double)
-REGISTER_LAYER_NORM_GPU_KERNEL(float16, float)
+// REGISTER_LAYER_NORM_GPU_KERNEL(float16, float)
 
 template<typename T, typename BNParamT>
 class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
