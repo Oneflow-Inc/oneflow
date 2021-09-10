@@ -23,7 +23,6 @@ import oneflow as flow
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.unittest
 
-
 class SubModule(flow.nn.Module):
     def __init__(self):
         super().__init__()
@@ -103,3 +102,6 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
         print("optimization conf: \n", g._optimization_conf_proto)
         g._generate_config_proto()
         print("graph conf: \n", g._config_proto)
+
+if __name__ == "__main__":
+    unittest.main()
