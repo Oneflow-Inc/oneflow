@@ -22,8 +22,6 @@ limitations under the License.
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/functional/functional.h"
 
-#include "oneflow/core/framework/instructions_builder.h"
-
 namespace oneflow {
 namespace one {
 
@@ -53,17 +51,6 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& tensor, const std::vector<int
     return Error::RuntimeError() << "view::Slice(): input should be eager local tensor, but is "
                                  << (tensor->is_lazy() ? "lazy" : "consistent");
   }
-
-  // const auto& callback =
-  //     std::make_shared<std::function<void(uint64_t)>>([](uint64_t of_blob_ptr) {});
-  // CHECK_JUST(SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void>
-  // {
-  //   return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-  //     return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
-  //                                              "const");
-  //   });
-  // }));
-
   const auto& shape = tensor->shape();
   const auto& strides = JUST(tensor->stride());
   int size = starts.size();
