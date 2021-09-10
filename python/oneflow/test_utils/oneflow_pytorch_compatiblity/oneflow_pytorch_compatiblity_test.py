@@ -55,11 +55,13 @@ def import_file(source):
         spec.loader.exec_module(mod)
         return mod
 
+
 def sync(x, test_pytorch):
     if test_pytorch:
         x.cpu()
     else:
         x.numpy()
+
 
 def get_loss(
     image_nd,
@@ -149,12 +151,12 @@ def get_loss(
         if verbose:
             print(
                 "pytorch traning loop avg time : {}".format(
-                   ((end_t - start_t) ) / bp_iters
+                    ((end_t - start_t)) / bp_iters
                 )
             )
-            print("forward avg time : {}".format((for_time ) / bp_iters))
-            print("backward avg time : {}".format((bp_time ) / bp_iters))
-            print("update parameters avg time : {}".format((update_time ) / bp_iters))
+            print("forward avg time : {}".format((for_time) / bp_iters))
+            print("backward avg time : {}".format((bp_time) / bp_iters))
+            print("update parameters avg time : {}".format((update_time) / bp_iters))
     else:
         with open(model_path) as f:
             buf = f.read()
@@ -230,34 +232,58 @@ def get_loss(
         if verbose:
             print(
                 "oneflow traning loop avg time : {}".format(
-                    ((end_t - start_t) ) / bp_iters
+                    ((end_t - start_t)) / bp_iters
                 )
             )
-            print("forward avg time : {}".format((for_time ) / bp_iters))
-            print("backward avg time : {}".format((bp_time ) / bp_iters))
-            print("update parameters avg time : {}".format((update_time ) / bp_iters))
+            print("forward avg time : {}".format((for_time) / bp_iters))
+            print("backward avg time : {}".format((bp_time) / bp_iters))
+            print("update parameters avg time : {}".format((update_time) / bp_iters))
 
-    training_loop_avg_time = (end_t - start_t)  / bp_iters
-    forward_avg_time = (for_time ) / bp_iters
-    backward_avg_time = (bp_time ) / bp_iters
-    update_parameters_avg_time = (update_time ) / bp_iters
-    return model_loss, training_loop_avg_time, forward_avg_time, backward_avg_time, update_parameters_avg_time
+    training_loop_avg_time = (end_t - start_t) / bp_iters
+    forward_avg_time = (for_time) / bp_iters
+    backward_avg_time = (bp_time) / bp_iters
+    update_parameters_avg_time = (update_time) / bp_iters
+    return (
+        model_loss,
+        training_loop_avg_time,
+        forward_avg_time,
+        backward_avg_time,
+        update_parameters_avg_time,
+    )
 
 
 def test_train_loss_oneflow_pytorch(
-    test_case, model_path: str, module_name: str, device: str = "cuda", log_path: str = "./model_test_output/default",
+    test_case,
+    model_path: str,
+    module_name: str,
+    device: str = "cuda",
+    log_path: str = "./model_test_output/default",
 ):
     batch_size = 16
-    image_nd = np.random.rand(batch_size, 3, 299, 299).astype(np.float32)  # change to (batch_size, 3, 299, 299) when testing inception_v3 model
+    image_nd = np.random.rand(batch_size, 3, 299, 299).astype(
+        np.float32
+    )  # change to (batch_size, 3, 299, 299) when testing inception_v3 model
     label_nd = np.array([e for e in range(batch_size)], dtype=np.int32)
     oneflow_model_loss = []
     pytorch_model_loss = []
 
     with tempfile.TemporaryDirectory() as tmpdirname:
-        pytorch_model_loss, pytorch_train_avg_time, pytorch_for_avg_time, pytorch_bp_avg_time, pytorch_update_avg_time = get_loss(
+        (
+            pytorch_model_loss,
+            pytorch_train_avg_time,
+            pytorch_for_avg_time,
+            pytorch_bp_avg_time,
+            pytorch_update_avg_time,
+        ) = get_loss(
             image_nd, label_nd, model_path, module_name, True, "cuda", tmpdirname
         )
-        oneflow_model_loss, of_train_avg_time, of_for_avg_time, of_bp_avg_time, of_update_avg_time = get_loss(
+        (
+            oneflow_model_loss,
+            of_train_avg_time,
+            of_for_avg_time,
+            of_bp_avg_time,
+            of_update_avg_time,
+        ) = get_loss(
             image_nd, label_nd, model_path, module_name, False, "cuda", tmpdirname
         )
 
@@ -267,10 +293,22 @@ def test_train_loss_oneflow_pytorch(
             file.write("")
             file.write("Test Model: %s \n" % module_name)
             file.write("| test info                    | pytorch   | oneflow   |\n")
-            file.write("| train avg time               | %.4f    | %.4f    |\n" % (pytorch_train_avg_time, of_train_avg_time))
-            file.write("| forward avg time             | %.4f    | %.4f    |\n" % (pytorch_for_avg_time, of_for_avg_time))
-            file.write("| backward avg time            | %.4f    | %.4f    |\n" % (pytorch_bp_avg_time, of_bp_avg_time))
-            file.write("| update parameters avg time   | %.4f    | %.4f    |\n\n" % (pytorch_update_avg_time, of_update_avg_time))
+            file.write(
+                "| train avg time               | %.4f    | %.4f    |\n"
+                % (pytorch_train_avg_time, of_train_avg_time)
+            )
+            file.write(
+                "| forward avg time             | %.4f    | %.4f    |\n"
+                % (pytorch_for_avg_time, of_for_avg_time)
+            )
+            file.write(
+                "| backward avg time            | %.4f    | %.4f    |\n"
+                % (pytorch_bp_avg_time, of_bp_avg_time)
+            )
+            file.write(
+                "| update parameters avg time   | %.4f    | %.4f    |\n\n"
+                % (pytorch_update_avg_time, of_update_avg_time)
+            )
 
     if verbose:
         if not os.path.exists("./loss_compare"):
@@ -292,7 +330,7 @@ def test_train_loss_oneflow_pytorch(
         # Display a figure.
         plt.savefig("./loss_compare" + "/" + module_name + "_loss_compare.png")
         plt.show()
-        plt.close() # 防止将所有数据画到一张图上
+        plt.close()  # 防止将所有数据画到一张图上
 
     test_case.assertTrue(
         np.allclose(cos_sim(oneflow_model_loss, pytorch_model_loss), 1.0, 1e-1, 1e-1)
