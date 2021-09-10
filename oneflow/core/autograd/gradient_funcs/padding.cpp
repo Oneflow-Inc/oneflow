@@ -49,6 +49,7 @@ class Pad2d : public OpExprGradFunction<Pad2dCaptureState> {
   AttrMap base_attrs_;
 };
 
+
 class ReflectionPad2d : public Pad2d {
  public:
   Maybe<void> Apply(const Pad2dCaptureState* ctx, const TensorTuple& out_grads,
@@ -102,9 +103,9 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->paddings = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("padding"));
     if (IsFloatingDataType(inputs.at(0)->dtype()->data_type())) {
-      ctx->padding_value = JUST(composed_attrs.GetAttr<double>("floating_value"));
+      ctx->padding_value = JUST(composed_attrs.GetAttr<double>("floating_constant_value"));
     } else if (IsIntegralDataType(inputs.at(0)->dtype()->data_type())) {
-      ctx->padding_value = JUST(composed_attrs.GetAttr<int64_t>("integral_value"));
+      ctx->padding_value = JUST(composed_attrs.GetAttr<int64_t>("integral_constant_value"));
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
     }
@@ -127,66 +128,11 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
 };
 
 
-struct LegacyPad2dCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  std::vector<int64_t> padding_before;
-  std::vector<int64_t> padding_after;
-  functional::Scalar floating_constant_value;
-  functional::Scalar integral_constant_value;
-};
 
-class LegacyPad2dGrad : public OpExprGradFunction<LegacyPad2dCaptureState> {
- public:
-  Maybe<void> Init(const OpExpr& op) override {
-    const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> Capture(LegacyPad2dCaptureState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
-    ctx->requires_grad = inputs.at(0)->requires_grad();
-    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-
-    ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->padding_before = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("padding_before"));
-    ctx->padding_after = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("padding_after"));
-    if (IsFloatingDataType(inputs.at(0)->dtype()->data_type())) {
-      ctx->floating_constant_value = JUST(composed_attrs.GetAttr<double>("floating_constant_value"));
-      ctx->integral_constant_value = 0;
-    } else if (IsIntegralDataType(inputs.at(0)->dtype()->data_type())) {
-      ctx->floating_constant_value = 0;
-      ctx->integral_constant_value = JUST(composed_attrs.GetAttr<int64_t>("integral_constant_value"));
-    } else {
-      UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
-    }
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> Apply(const LegacyPad2dCaptureState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-    in_grads->resize(1);
-    if (ctx->requires_grad) {
-      in_grads->at(0) =
-          JUST(functional::LegacyPadGrad(out_grads.at(0), ctx->padding_before, ctx->padding_after, ctx->floating_constant_value, ctx->integral_constant_value));
-    }
-    return Maybe<void>::Ok();
-  }
-
- private:
-  AttrMap base_attrs_;
-};
-
-REGISTER_OP_EXPR_GRAD_FUNCTION("pad", LegacyPad2dGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("pad", ConstantPadNd);
 REGISTER_OP_EXPR_GRAD_FUNCTION("reflection_pad2d", ReflectionPad2d);
 REGISTER_OP_EXPR_GRAD_FUNCTION("replication_pad2d", ReplicationPad2d);
-REGISTER_OP_EXPR_GRAD_FUNCTION("constant_pad1d", ConstantPadNd);
-REGISTER_OP_EXPR_GRAD_FUNCTION("constant_pad2d", ConstantPadNd);
-REGISTER_OP_EXPR_GRAD_FUNCTION("constant_pad3d", ConstantPadNd);
+
 
 }  // namespace one
 }  // namespace oneflow

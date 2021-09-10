@@ -917,10 +917,6 @@
   signature: 'Tensor (Tensor dy, Int64List pad, String mode="constant", Scalar value=0) => PadGrad'
   bind_python: False
 
-- name: "legacy_pad_grad"
-  signature: "Tensor (Tensor dy, Int64List padding_before, Int64List padding_after, Scalar floating_constant_value=0, Scalar integral_constant_value=0) => LegacyPadGrad"
-  bind_python: False
-
 - name: "silu"
   signature: "Tensor (Tensor x) => Silu"
   bind_python: True

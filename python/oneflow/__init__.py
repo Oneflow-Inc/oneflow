@@ -118,6 +118,7 @@ from oneflow._C import round
 from oneflow._C import softplus
 from oneflow._C import tril
 from oneflow._C import triu
+from oneflow._C import pad
 
 from . import sbp
 import atexit
@@ -346,7 +347,6 @@ from . import (
 )  # , saved_model NOTE(chengcheng): unavailable now
 import oneflow.utils.data
 import oneflow.utils.vision
-from oneflow.nn.modules.padding import pad_op as pad
 from oneflow.nn.modules.relu import relu_op as relu
 import oneflow.comm
 import oneflow.framework.docstr as docstr
