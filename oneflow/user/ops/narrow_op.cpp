@@ -47,7 +47,6 @@ REGISTER_USER_OP("narrow")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       const int64_t& dim = ctx->Attr<int64_t>("dim");
-      const int64_t& start = ctx->Attr<int64_t>("start");
       const int64_t& length = ctx->Attr<int64_t>("length");
       FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
         if (i != dim) {

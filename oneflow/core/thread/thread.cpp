@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/actor/actor.h"
 #include "oneflow/core/actor/light_actor.h"
 #include "oneflow/core/stream/stream_context.h"
+#include "oneflow/core/stream/execution_context_hook.h"
 #include "oneflow/core/graph/id_serialization.h"
 
 namespace oneflow {
@@ -32,9 +33,10 @@ Thread::Thread(const StreamId& stream_id) : thrd_id_(SerializeStreamIdToInt64(st
       NewObj<int, StreamContext, const StreamId&>(stream_id.device_id().device_type(), stream_id);
   stream_ctx_.reset(stream_ctx);
   actor_thread_ = std::thread([this]() {
-    CHECK_JUST(stream_ctx_->OnActorThreadSetup());
+    auto* hook = dynamic_cast<ExecutionContextHook*>(stream_ctx_.get());
+    if (hook != nullptr) { CHECK_JUST(hook->OnExecutionContextSetup()); }
     PollMsgChannel();
-    CHECK_JUST(stream_ctx_->OnActorThreadTeardown());
+    if (hook != nullptr) { CHECK_JUST(hook->OnExecutionContextTeardown()); }
   });
 }
 
