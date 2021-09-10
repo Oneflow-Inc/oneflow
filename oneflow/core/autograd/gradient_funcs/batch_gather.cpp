@@ -32,7 +32,6 @@ class BatchGather : public OpExprGradFunction<BatchGatherCaptureState> {
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
   Maybe<void> Apply(const BatchGatherCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
-
 };
 
 Maybe<void> BatchGather::Init(const OpExpr& op) {
@@ -57,7 +56,8 @@ Maybe<void> BatchGather::Apply(const BatchGatherCaptureState* ctx, const TensorT
   in_grads->resize(2);
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   const auto& indices = ctx->SavedTensors().at(0);
-  in_grads->at(0) = JUST(functional::UnsortedBatchSegmentSum(out_grads.at(0), indices, ctx->num_segments)); 
+  in_grads->at(0) =
+      JUST(functional::UnsortedBatchSegmentSum(out_grads.at(0), indices, ctx->num_segments));
   return Maybe<void>::Ok();
 }
 

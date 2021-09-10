@@ -1618,14 +1618,11 @@ class SplitWithSizeFunctor {
 
 class BatchGatherFunctor {
  public:
-  BatchGatherFunctor(){
-    op_ = CHECK_JUST(one::OpBuilder("batch_gather")
-                         .Input("in")
-                         .Input("indices")
-                         .Output("out")
-                         .Build());
+  BatchGatherFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("batch_gather").Input("in").Input("indices").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, 
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
                            const std::shared_ptr<one::Tensor>& indices) const {
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in, indices});
   }
@@ -1634,26 +1631,26 @@ class BatchGatherFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class UnsortedBatchSegmentSumFunctor{
-  public: 
-  UnsortedBatchSegmentSumFunctor(){
+class UnsortedBatchSegmentSumFunctor {
+ public:
+  UnsortedBatchSegmentSumFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("unsorted_batch_segment_sum")
-                        .Input("data")
-                        .Input("segment_ids")
-                        .Output("out")
-                        .Build()); 
+                         .Input("data")
+                         .Input("segment_ids")
+                         .Output("out")
+                         .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& data, 
-                           const std::shared_ptr<one::Tensor>& segment_ids, 
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& data,
+                           const std::shared_ptr<one::Tensor>& segment_ids,
                            const int64_t& num_segments) const {
-    MutableAttrMap attrs; 
-    JUST(attrs.SetAttr<int64_t>("num_segments", num_segments)); 
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("num_segments", num_segments));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {data, segment_ids}, attrs);
   }
-  protected: 
-    std::shared_ptr<OpExpr> op_; 
-}; 
 
+ protected:
+  std::shared_ptr<OpExpr> op_;
+};
 
 }  // namespace impl
 

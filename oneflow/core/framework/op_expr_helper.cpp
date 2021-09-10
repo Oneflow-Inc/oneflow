@@ -380,7 +380,6 @@ Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t
       .Build();
 }
 
-
 Maybe<one::UserOpExpr> ScalarAddByTensorOp() {
   return ScalarAddByTensorOp(UniqueOpName("scalar_add_by_tensor"));
 }
