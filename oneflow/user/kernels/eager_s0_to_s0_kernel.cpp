@@ -116,7 +116,7 @@ class EagerNaiveSToSOpKernelState final : public user_op::OpKernelState {
   std::unique_ptr<MemoryCopier> memory_copier_;
 };
 
-size_t InferEagerS0ToS0KernelTmpBufferSize(user_op::InferContext* ctx) {
+size_t InferNaiveSToSKernelTmpBufferSize(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
   const Shape& shape = ctx->Attr<Shape>("shape");
   const std::string& out_parallel_conf_txt = ctx->Attr<std::string>("out_parallel_conf");
@@ -189,6 +189,6 @@ class EagerNaiveSToSKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("eager_naive_s_to_s")
     .SetCreateFn<EagerNaiveSToSKernel>()
     .SetIsMatchedHob(user_op::HobDeviceTag() == "cpu")
-    .SetInferTmpSizeFn(InferEagerS0ToS0KernelTmpBufferSize);
+    .SetInferTmpSizeFn(InferNaiveSToSKernelTmpBufferSize);
 
 }  // namespace oneflow
