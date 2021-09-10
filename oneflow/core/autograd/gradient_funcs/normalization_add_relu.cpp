@@ -22,15 +22,15 @@ namespace oneflow {
 namespace one {
 
 struct NormalizationAddReluGradCaptureState : public AutoGradCaptureState {
-  int32_t axis;
-  float epsilon;
-  bool track_running_stats;
-  bool is_training;
-  bool has_addend;
-  bool x_requires_grad;
-  bool addend_requires_grad;
-  bool gamma_requires_grad;
-  bool beta_requires_grad;
+  int32_t axis = 1;
+  float epsilon = 1e-5;
+  bool track_running_stats = true;
+  bool is_training = true;
+  bool has_addend = false;
+  bool x_requires_grad = true;
+  bool addend_requires_grad = true;
+  bool gamma_requires_grad = true;
+  bool beta_requires_grad = true;
 };
 
 // training:
