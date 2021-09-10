@@ -182,6 +182,7 @@ jobs:
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'fmt-only') == false
     outputs:
       pip-index-url: ${{ steps.build-oneflow.outputs.pip-index-url }}
+      oneflow-testexe-url: ${{ steps.build-oneflow.outputs.oneflow-testexe-url }}
     steps:
       - name: Fix permissions
         run: |
