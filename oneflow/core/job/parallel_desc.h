@@ -161,8 +161,6 @@ std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
 ParallelConf GenParallelConfOfCpuZeroOnMaster();
 ParallelConf GenParallelConfOfCpuZeroOnAllMachines();
 
-bool IsMirroredParallelContext(const ParallelContext& parallel_ctx);
-
 namespace private_details {
 
 Maybe<Symbol<ParallelDesc>> RawReplaceDeviceType(Symbol<ParallelDesc>, DeviceType);
