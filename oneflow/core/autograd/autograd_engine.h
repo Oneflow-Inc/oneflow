@@ -48,13 +48,14 @@ class FunctionNode {
   const std::shared_ptr<std::vector<std::shared_ptr<FunctionNode>>>& GetNextFunctions() const {
     return next_functions_;
   }
-  const std::string& GetOpTypeName() const { return op_name_; }
+  const std::string& GetOpTypeName() const { return op_type_name_; }
 
  protected:
   explicit FunctionNode(const std::string& op_type_name)
-      : op_name_(op_type_name), next_functions_(new std::vector<std::shared_ptr<FunctionNode>>{}) {}
+      : op_type_name_(op_type_name),
+        next_functions_(new std::vector<std::shared_ptr<FunctionNode>>{}) {}
 
-  const std::string op_name_;
+  const std::string op_type_name_;
   std::shared_ptr<std::vector<std::shared_ptr<FunctionNode>>> next_functions_;
 
   std::vector<std::shared_ptr<AutogradMeta>> input_meta_datas_;
