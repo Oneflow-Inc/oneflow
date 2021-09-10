@@ -111,7 +111,6 @@ class TestApiCompatiblity(flow.unittest.TestCase):
         )
 
     # vgg test
-<<<<<<< HEAD
     # TODO: debug VGG 
     # def test_vgg11_compatiblity(test_case):
     #     test_train_loss_oneflow_pytorch(
@@ -146,48 +145,6 @@ class TestApiCompatiblity(flow.unittest.TestCase):
     #         test_case, "pytorch_vgg.py", "vgg19_bn", "cuda", RESULT_PATH
     #     )
     
-=======
-    def test_vgg11_compatiblity(test_case):
-        test_train_loss_oneflow_pytorch(
-            test_case, "pytorch_vgg.py", "vgg11", "cuda", RESULT_PATH
-        )
-
-    def test_vgg13_compatiblity(test_case):
-        test_train_loss_oneflow_pytorch(
-            test_case, "pytorch_vgg.py", "vgg13", "cuda", RESULT_PATH
-        )
-
-    def test_vgg16_compatiblity(test_case):
-        test_train_loss_oneflow_pytorch(
-            test_case, "pytorch_vgg.py", "vgg16", "cuda", RESULT_PATH
-        )
-
-    def test_vgg19_compatiblity(test_case):
-        test_train_loss_oneflow_pytorch(
-            test_case, "pytorch_vgg.py", "vgg19", "cuda", RESULT_PATH
-        )
-
-    def test_vgg11_bn_compatiblity(test_case):
-        test_train_loss_oneflow_pytorch(
-            test_case, "pytorch_vgg.py", "vgg11_bn", "cuda", RESULT_PATH
-        )
-
-    def test_vgg13_bn_compatiblity(test_case):
-        test_train_loss_oneflow_pytorch(
-            test_case, "pytorch_vgg.py", "vgg13_bn", "cuda", RESULT_PATH
-        )
-
-    def test_vgg16_bn_compatiblity(test_case):
-        test_train_loss_oneflow_pytorch(
-            test_case, "pytorch_vgg.py", "vgg16_bn", "cuda", RESULT_PATH
-        )
-
-    def test_vgg19_bn_compatiblity(test_case):
-        test_train_loss_oneflow_pytorch(
-            test_case, "pytorch_vgg.py", "vgg19_bn", "cuda", RESULT_PATH
-        )
-
->>>>>>> f1e8b9eb58106cbc38d81e9cdbc21735fdbf304f
     # squeezenet test
     def test_squeezenet1_0_compatiblity(test_case):
         test_train_loss_oneflow_pytorch(
