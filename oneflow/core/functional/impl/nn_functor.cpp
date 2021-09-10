@@ -578,12 +578,13 @@ class PadFunctor {
                            const std::string& mode, const Scalar& value) const {
     const int64_t ndim = x->shape()->NumAxes();
     CHECK_LE_OR_RETURN(ndim, 5) << "Dimension of input tensor should less than or equal to 5";
-    CHECK_LE_OR_RETURN(pad.size(), 2*ndim)
+    CHECK_LE_OR_RETURN(pad.size(), 2 * ndim)
         << "Pad size should less than or equal to input axes * 2.";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
     if (mode == "constant") {
-      CHECK_EQ_OR_RETURN(pad.size() % 2, 0) << "Length of pad must be even but instead it equals " << pad.size();
+      CHECK_EQ_OR_RETURN(pad.size() % 2, 0)
+          << "Length of pad must be even but instead it equals " << pad.size();
       if (IsFloatingDataType(x->dtype()->data_type())) {
         JUST(attrs.SetAttr<double>("floating_constant_value", JUST(value.As<double>())));
         JUST(attrs.SetAttr<int64_t>("integral_constant_value", 0));
@@ -596,10 +597,10 @@ class PadFunctor {
 
       std::vector<int64_t> pad_before(ndim, 0);
       std::vector<int64_t> pad_after(ndim, 0);
-      const int64_t pad_pair = pad.size() / 2;  
-      for(int64_t i=0; i < pad_pair; ++i){
-        pad_before[ndim-i-1] = pad[2*i];
-        pad_after[ndim-i-1] = pad[2*i + 1];
+      const int64_t pad_pair = pad.size() / 2;
+      for (int64_t i = 0; i < pad_pair; ++i) {
+        pad_before[ndim - i - 1] = pad[2 * i];
+        pad_after[ndim - i - 1] = pad[2 * i + 1];
       }
       JUST(attrs.SetAttr<std::vector<int64_t>>("padding_before", pad_before));
       JUST(attrs.SetAttr<std::vector<int64_t>>("padding_after", pad_after));

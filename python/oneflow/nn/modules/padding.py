@@ -46,8 +46,8 @@ class ReplicationPad2d(Module):
         >>> import oneflow as flow
         >>> import numpy as np
         >>> replicationpad_layer_0 = flow.nn.ReplicationPad2d((2, 2, 1, 1))
-        >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
-        >>> input_int = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))
+        >>> input = flow.tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
+        >>> input_int = flow.tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))
         >>> output = replicationpad_layer_0(input)
         >>> output.shape
         oneflow.Size([1, 2, 5, 7])
@@ -125,7 +125,7 @@ class ReflectionPad2d(Module):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
+        >>> input = flow.tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
         >>> m = flow.nn.ReflectionPad2d((2, 2, 1, 1))
         >>> out = m(input)
         >>> out
@@ -260,10 +260,10 @@ class ConstantPad2d(Module):
         >>> import oneflow as flow
         >>> import numpy as np
 
-        >>> constantpad_layer_0 = flow.nn.ConstantPad2d((2, 2, 1, 1), 1)
-        >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
-        >>> input_int = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))
-        >>> output = constantpad_layer_0(input)
+        >>> m = flow.nn.ConstantPad2d((2, 2, 1, 1), 1)
+        >>> input = flow.tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
+        >>> input_int = flow.tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))
+        >>> output = m(input)
         >>> output.shape
         oneflow.Size([1, 2, 5, 7])
         >>> output
@@ -412,13 +412,13 @@ class ZeroPad2d(Module):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> zeropad_layer_int = flow.nn.ZeroPad2d(2)
-        >>> zeropad_layer_tuple = flow.nn.ZeroPad2d((1,2,2,0))
-        >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
-        >>> output_int = zeropad_layer_int(input)
-        >>> output_int.shape
+        >>> m1 = flow.nn.ZeroPad2d(2)
+        >>> m2 = flow.nn.ZeroPad2d((1,2,2,0))
+        >>> input = flow.tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
+        >>> output = m1(input)
+        >>> output.shape
         oneflow.Size([1, 2, 7, 7])
-        >>> output_int
+        >>> output
         tensor([[[[ 0.,  0.,  0.,  0.,  0.,  0.,  0.],
                   [ 0.,  0.,  0.,  0.,  0.,  0.,  0.],
                   [ 0.,  0.,  0.,  1.,  2.,  0.,  0.],
@@ -434,8 +434,8 @@ class ZeroPad2d(Module):
                   [ 0.,  0., 15., 16., 17.,  0.,  0.],
                   [ 0.,  0.,  0.,  0.,  0.,  0.,  0.],
                   [ 0.,  0.,  0.,  0.,  0.,  0.,  0.]]]], dtype=oneflow.float32)
-        >>> output_tuple = zeropad_layer_tuple(input)
-        >>> output_tuple
+        >>> output = m2(input)
+        >>> output
         tensor([[[[ 0.,  0.,  0.,  0.,  0.,  0.],
                   [ 0.,  0.,  0.,  0.,  0.,  0.],
                   [ 0.,  0.,  1.,  2.,  0.,  0.],
@@ -465,7 +465,7 @@ class ZeroPad2d(Module):
             self.value = float(self.value)
         else:
             self.value = int(self.value)
-        
+
         return flow._C.pad(x, pad=self.padding, mode="constant", value=self.value)
 
 

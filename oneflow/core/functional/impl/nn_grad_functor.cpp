@@ -323,8 +323,7 @@ class GridSampleGradFunctor {
 class PadGradFunctor {
  public:
   PadGradFunctor() {
-    pad_grad_ =
-        CHECK_JUST(one::OpBuilder("pad_grad").Input("dy").Output("dx").Build());
+    pad_grad_ = CHECK_JUST(one::OpBuilder("pad_grad").Input("dy").Output("dx").Build());
     reflect_pad_grad_ =
         CHECK_JUST(one::OpBuilder("reflection_pad2d_grad").Input("dy").Output("dx").Build());
     replicate_pad_grad_ =
@@ -341,18 +340,18 @@ class PadGradFunctor {
     if (mode == "constant") {
       std::vector<int64_t> pad_before(ndim, 0);
       std::vector<int64_t> pad_after(ndim, 0);
-      const int64_t pad_pair = pad.size() / 2;  
-      for(int64_t i=0; i < pad_pair; ++i){
-        pad_before[ndim-i-1] = pad[2*i];
-        pad_after[ndim-i-1] = pad[2*i + 1];
+      const int64_t pad_pair = pad.size() / 2;
+      for (int64_t i = 0; i < pad_pair; ++i) {
+        pad_before[ndim - i - 1] = pad[2 * i];
+        pad_after[ndim - i - 1] = pad[2 * i + 1];
       }
       JUST(attrs.SetAttr<std::vector<int64_t>>("padding_before", pad_before));
       JUST(attrs.SetAttr<std::vector<int64_t>>("padding_after", pad_after));
 
       if (IsFloatingDataType(dy->dtype()->data_type())) {
-          JUST(attrs.SetAttr<double>("floating_constant_value", JUST(value.As<double>())));
-          JUST(attrs.SetAttr<int64_t>("integral_constant_value", 0));
-      } else if(IsIntegralDataType(dy->dtype()->data_type())) {
+        JUST(attrs.SetAttr<double>("floating_constant_value", JUST(value.As<double>())));
+        JUST(attrs.SetAttr<int64_t>("integral_constant_value", 0));
+      } else if (IsIntegralDataType(dy->dtype()->data_type())) {
         JUST(attrs.SetAttr<double>("floating_constant_value", 0));
         JUST(attrs.SetAttr<int64_t>("integral_constant_value", JUST(value.As<int64_t>())));
       }
@@ -372,7 +371,6 @@ class PadGradFunctor {
   std::shared_ptr<OpExpr> reflect_pad_grad_;
   std::shared_ptr<OpExpr> replicate_pad_grad_;
 };
-
 
 class AvgPoolingNdGradFunctor {
  public:
