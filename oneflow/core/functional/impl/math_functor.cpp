@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
+#include<iostream>
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -272,17 +272,17 @@ class TransposeFunctor {
 class MovedimVecFunctor {
  public:
   MovedimVecFunctor() = default;
-  Maybe<void> CheckNoRepeat(const std::vector<int32_t>& perm, std::vector<int32_t> &perm_out) const{  
-    std::vector<bool> is_used(perm.size(), false);
+  Maybe<void> CheckNoRepeat(const std::vector<int32_t>& perm, std::vector<int32_t> &perm_out,int32_t indim) const{  
+    std::vector<bool> is_used(indim, false);
     FOR_RANGE(size_t, i, 0, perm.size()) {
       int32_t item = perm[i];
       if(item<0){
-        item += perm.size();
+        item += indim;
       }
       CHECK_GE_OR_RETURN(item, 0);
-      CHECK_LT_OR_RETURN(item, perm.size());
+      CHECK_LT_OR_RETURN(item, indim);
       CHECK_EQ_OR_RETURN(is_used[item], false);
-      is_used[perm[i]] = true;
+      is_used[item] = true;
       perm_out[i] = item;
     }
     return Maybe<void>::Ok();
@@ -293,26 +293,26 @@ class MovedimVecFunctor {
                            const std::vector<int32_t>& destination ) const {
     int32_t indim = x->shape()->NumAxes();
     int32_t dim = source.size();
- 
+
     CHECK_EQ_OR_RETURN(source.size(),destination.size());
     std::vector<int32_t> source_nopeat(dim);
     std::vector<int32_t> destination_nopeat(dim);
 
-    CheckNoRepeat(source,source_nopeat);
-    CheckNoRepeat(destination,destination_nopeat);
+    CheckNoRepeat(source,source_nopeat,indim);
+    CheckNoRepeat(destination,destination_nopeat,indim);
 
     std::map<int,int> source_map;
     std::map<int,int> destination_map;
     std::vector<int32_t> perm(indim);
-    for(int32_t i=0; i< dim; i++){
+    FOR_RANGE(size_t, i, 0, dim){
       source_map.insert(std::pair<int,int>(source_nopeat[i],0));
       destination_map.insert(std::pair<int,int>(destination_nopeat[i],0));
-      perm[destination_nopeat[i]] = perm[source_nopeat[i]];
+      perm[destination_nopeat[i]] = source_nopeat[i];
     }
-    
+
     std::vector<int> item_list;
     std::vector<int> index_list;
-    for(int32_t i=0; i<indim; i++){
+    FOR_RANGE(size_t, i, 0, indim){
       if(source_map.find(i)==source_map.end()){
          item_list.push_back(i);
       }
@@ -321,7 +321,7 @@ class MovedimVecFunctor {
       }
     }
 
-    for(int32_t i=0; i<item_list.size();i++){
+    FOR_RANGE(size_t, i, 0, indim-dim){
       perm[index_list[i]] = item_list[i];
     }
     return Transpose(x, perm);
