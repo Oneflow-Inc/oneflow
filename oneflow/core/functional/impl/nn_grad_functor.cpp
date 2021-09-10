@@ -479,7 +479,7 @@ class NormalizationAddReluGradFunctor {
 
  private:
   std::shared_ptr<OpExpr> addend_op_;
-}; 
+};
 
 class LayerNormGradFunctor {
  public:

@@ -285,7 +285,7 @@ def _test_bn_relu_track_running_states_false(test_case, channel, height, width):
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
 class TestBnAddRelu(flow.unittest.TestCase):
-    def test_gather(test_case):
+    def test_bn_add_relu2d(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_bn_add_relu,
