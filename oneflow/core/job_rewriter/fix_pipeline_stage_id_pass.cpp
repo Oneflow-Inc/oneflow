@@ -77,11 +77,13 @@ std::string ParallelDesc2HashString(const ParallelDesc& parallel_desc) {
 }
 
 Maybe<int64_t> NewScopeWithStageId(int64_t old_scope_symbol_id, int64_t stage_id) {
-  return NewScopeSymbolId(old_scope_symbol_id,
-                          [stage_id](std::shared_ptr<cfg::ScopeProto> new_scope) {
-                            auto* attr_map = new_scope->mutable_attr_name2attr_value();
-                            (*attr_map)["pipeline_stage_id_hint"].set_at_int64(stage_id);
-                          });
+  return NewScopeSymbolId(
+      old_scope_symbol_id,
+      [stage_id](std::shared_ptr<cfg::ScopeProto>
+                     new_scope) {  // NOLINT(performance-unnecessary-value-param)
+        auto* attr_map = new_scope->mutable_attr_name2attr_value();
+        (*attr_map)["pipeline_stage_id_hint"].set_at_int64(stage_id);
+      });
 }
 
 Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
