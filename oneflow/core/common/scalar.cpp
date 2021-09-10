@@ -14,11 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/functional/scalar.h"
+#include "oneflow/core/common/scalar.h"
 
 namespace oneflow {
-namespace one {
-namespace functional {
 
 #define DEFINE_SCALAR_BINARY_OP(op)                                               \
   Scalar& Scalar::operator op##=(const Scalar& other) {                           \
@@ -46,6 +44,4 @@ DEFINE_SCALAR_BINARY_OP(*);
 DEFINE_SCALAR_BINARY_OP(/);
 #undef DEFINE_SCALAR_BINARY_OP
 
-}  // namespace functional
-}  // namespace one
 }  // namespace oneflow
