@@ -449,37 +449,24 @@ class ZeroPad2d(Module):
                   [ 0., 15., 16., 17.,  0.,  0.]]]], dtype=oneflow.float32)
     """
 
-    def __init__(self, padding: Union[int, tuple]):
+    def __init__(self, padding: Union[int, tuple, list]):
         super().__init__()
-        if isinstance(padding, tuple):
-            assert len(padding) == 4, ValueError("Length of padding must be 4")
-            boundary = [padding[0], padding[1], padding[2], padding[3]]
+        if isinstance(padding, (tuple, list)):
+            boundary = padding
         elif isinstance(padding, int):
-            boundary = [padding, padding, padding, padding]
+            boundary = [padding] * 4
         else:
-            raise ValueError("padding must be int  or tuple!")
+            raise ValueError("padding must be int or list or tuple!")
         self.padding = boundary
         self.value = 0.0
 
     def forward(self, x):
-        (_, _, h, w) = x.shape
-        if x.dtype in [flow.float32, flow.float16, flow.float64]:
-            floating_value = float(self.value)
-            integral_value = int(0)
+        if x.dtype in (flow.float32, flow.float16, flow.float64):
+            self.value = float(self.value)
         else:
-            floating_value = float(0)
-            integral_value = int(self.value)
-        self._op = (
-            flow.builtin_op("constant_pad2d")
-            .Input("x")
-            .Output("y")
-            .Attr("padding", self.padding)
-            .Attr("floating_value", floating_value)
-            .Attr("integral_value", integral_value)
-            .Build()
-        )
-        res = self._op(x)[0]
-        return res
+            self.value = int(self.value)
+        
+        return flow._C.pad(x, pad=self.padding, mode="constant", value=self.value)
 
 
 if __name__ == "__main__":
