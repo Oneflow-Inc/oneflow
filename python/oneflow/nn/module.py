@@ -490,7 +490,7 @@ class Module(object):
             if can_use_assign_copy(param_applied, param):
                 self._parameters[key].data = param_applied
             else:
-                self._parameters[key] = param_applied
+                self._parameters[key] = Parameter(param_applied, param.requires_grad)
 
         for (key, buf) in self._buffers.items():
             if buf is not None:
