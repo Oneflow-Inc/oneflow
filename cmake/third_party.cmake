@@ -99,7 +99,7 @@ if (BUILD_CUDA)
     endif()
   endif()
   set(CMAKE_CUDA_COMPILER ${CUDA_NVCC_EXECUTABLE})
-  set(CMAKE_CUDA_STANDARD 11)
+  set(CMAKE_CUDA_STANDARD 14)
   find_package(CUDNN REQUIRED)
 endif()
 
