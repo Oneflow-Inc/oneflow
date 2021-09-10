@@ -543,14 +543,17 @@ void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_node
   }
 }
 
-void TaskGraph::AddCtrlEdgeBetweenSrcTickAndInputOutputInSameRank() {
+void TaskGraph::AddCtrlEdgeBetweenSrcDstTickAndInputOutputInSameRank() {
   if (!CHECK_JUST(GlobalMultiClientEnv())) { return; }
-  HashMap<int64_t, TaskNode*> rank_id2src_wait_ids;
+  HashMap<int64_t, TaskNode*> rank_id2src_tick;
+  HashMap<int64_t, TaskNode*> rank_id2dst_tick;
   HashMap<int64_t, HashSet<TaskNode*>> rank_id2input_output_nodes;
 
   ForEachNode([&](TaskNode* node) {
     if (node->GetTaskType() == TaskType::kSrcSubsetTick) {
-      CHECK(rank_id2src_wait_ids.emplace(node->machine_id(), node).second);
+      CHECK(rank_id2src_tick.emplace(node->machine_id(), node).second);
+    } else if (node->GetTaskType() == TaskType::kDstSubsetTick) {
+      CHECK(rank_id2dst_tick.emplace(node->machine_id(), node).second);
     } else if (node->GetTaskType() == TaskType::kNormalForward) {
       auto* forward_node = reinterpret_cast<NormalForwardCompTaskNode*>(node);
       CHECK(forward_node);
@@ -569,10 +572,16 @@ void TaskGraph::AddCtrlEdgeBetweenSrcTickAndInputOutputInSameRank() {
     src->BindEdgeWithProducedRegst(edge, ctrl_regst_name);
   };
 
-  for (auto& pair : rank_id2src_wait_ids) {
+  for (auto& pair : rank_id2src_tick) {
     int64_t rank_id = pair.first;
     TaskNode* src = pair.second;
     for (TaskNode* io_task : rank_id2input_output_nodes[rank_id]) { AddCtrlEdge(src, io_task); }
+  }
+
+  for (auto& pair : rank_id2dst_tick) {
+    int64_t rank_id = pair.first;
+    TaskNode* dst = pair.second;
+    for (TaskNode* io_task : rank_id2input_output_nodes[rank_id]) { AddCtrlEdge(io_task, dst); }
   }
 }
 
