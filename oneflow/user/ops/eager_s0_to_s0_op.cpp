@@ -43,7 +43,7 @@ Maybe<void> TensorDescInfer(user_op::InferContext* ctx) {
 }  // namespace
 
 // Can only be called in mirrored
-REGISTER_NO_GRAD_USER_OP("eager_s0_to_s0")
+REGISTER_NO_GRAD_USER_OP("eager_naive_s_to_s")
     .Input("in")
     .Output("out")
     .Attr<int64_t>("in_split_axis", -1)
@@ -53,11 +53,11 @@ REGISTER_NO_GRAD_USER_OP("eager_s0_to_s0")
     .Attr<Shape>("shape")
     .SetTensorDescInferFn(TensorDescInfer)
     .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
-      return Error::TypeError() << "eager_s0_to_s0 op doesn't support consistent tensor!";
+      return Error::TypeError() << "eager_naive_s_to_s op doesn't support consistent tensor!";
     })
     .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      return Error::TypeError() << "eager_s0_to_s0 op doesn't support consistent tensor!";
+      return Error::TypeError() << "eager_naive_s_to_s op doesn't support consistent tensor!";
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);

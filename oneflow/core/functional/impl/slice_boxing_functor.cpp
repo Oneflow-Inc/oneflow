@@ -40,11 +40,11 @@ bool IsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
   return sbp_parallel->has_split_parallel();
 }
 
-Maybe<one::UserOpExpr> EagerS0ToS0(Symbol<ParallelDesc> in_parallel_desc,
-                                   Symbol<ParallelDesc> out_parallel_desc,
-                                   Symbol<cfg::SbpParallel> src_sbp,
-                                   Symbol<cfg::SbpParallel> dst_sbp, const Shape& shape) {
-  return one::OpBuilder("eager_s0_to_s0", *JUST(UniqueStr("eager_s0_to_s0")))
+Maybe<one::UserOpExpr> EagerNaiveSToS(Symbol<ParallelDesc> in_parallel_desc,
+                                      Symbol<ParallelDesc> out_parallel_desc,
+                                      Symbol<cfg::SbpParallel> src_sbp,
+                                      Symbol<cfg::SbpParallel> dst_sbp, const Shape& shape) {
+  return one::OpBuilder("eager_naive_s_to_s", *JUST(UniqueStr("eager_naive_s_to_s")))
       .Input("in")
       .Output("out")
       .Attr<int64_t>("in_split_axis", src_sbp->split_parallel().axis())
@@ -56,13 +56,13 @@ Maybe<one::UserOpExpr> EagerS0ToS0(Symbol<ParallelDesc> in_parallel_desc,
       .Build();
 }
 
-static constexpr auto* CachedEagerS0ToS0OpExpr = DECORATE(&EagerS0ToS0, ThreadLocalCopiable);
+static constexpr auto* CachedEagerNaiveSToSOpExpr = DECORATE(&EagerNaiveSToS, ThreadLocalCopiable);
 
 }  // namespace
 
-class EagerS0ToS0Functor {
+class EagerNaiveSToSFunctor {
  public:
-  EagerS0ToS0Functor() = default;
+  EagerNaiveSToSFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> in_parallel_desc,
                            Symbol<ParallelDesc> out_parallel_desc,
@@ -80,7 +80,7 @@ class EagerS0ToS0Functor {
       CHECK_EQ_OR_RETURN(out_nd_sbp->sbp_parallel_size(), 1);
       CHECK_OR_RETURN(IsSplitSbp(out_nd_sbp->sbp_parallel(0)));
     }
-    std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerS0ToS0OpExpr(
+    std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerNaiveSToSOpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(in_nd_sbp->sbp_parallel(0)),
         SymbolOf(out_nd_sbp->sbp_parallel(0)), shape));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
@@ -89,7 +89,7 @@ class EagerS0ToS0Functor {
 
 }  // namespace impl
 
-ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::EagerS0ToS0Functor>("EagerS0ToS0"); };
+ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::EagerNaiveSToSFunctor>("EagerNaiveSToS"); };
 
 }  // namespace functional
 }  // namespace one

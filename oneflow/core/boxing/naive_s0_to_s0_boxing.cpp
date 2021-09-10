@@ -30,7 +30,7 @@ bool RawIsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
 
 static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocal);
 
-Maybe<void> RawCheckCclS0ToS0(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckNaiveSToS(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
 
@@ -43,11 +43,11 @@ Maybe<void> RawCheckCclS0ToS0(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckCclS0ToS0 = DECORATE(&RawCheckCclS0ToS0, ThreadLocal);
+static constexpr auto* CheckNaiveSToS = DECORATE(&RawCheckNaiveSToS, ThreadLocal);
 
 }  // namespace
 
-Maybe<one::Tensor> CclS0ToS0(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
+Maybe<one::Tensor> NaiveSToS(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
                              Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
@@ -62,8 +62,8 @@ Maybe<one::Tensor> CclS0ToS0(const std::shared_ptr<one::Tensor>& tensor, Symbol<
     const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out->placement()));
     if (in_parallel_id->has_value() || out_parallel_id->has_value()) {
       local_tensor =
-          JUST(one::functional::EagerS0ToS0(local_tensor, tensor_placement, out->placement(),
-                                            *in_sbp_list, *out_sbp_list, *tensor->shape()));
+          JUST(one::functional::EagerNaiveSToS(local_tensor, tensor_placement, out->placement(),
+                                               *in_sbp_list, *out_sbp_list, *tensor->shape()));
     }
   }
 
@@ -71,6 +71,6 @@ Maybe<one::Tensor> CclS0ToS0(const std::shared_ptr<one::Tensor>& tensor, Symbol<
                                                  *tensor->shape(), tensor->dtype()));
 }
 
-COMMAND(RegisterBoxingFunction("ccl-s0-to-s0", CheckCclS0ToS0, &CclS0ToS0));
+COMMAND(RegisterBoxingFunction("naive-s-to-s", CheckNaiveSToS, &NaiveSToS));
 
 }  // namespace oneflow

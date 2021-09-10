@@ -186,7 +186,7 @@ class EagerCclS0ToS0Kernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("eager_s0_to_s0")
+REGISTER_USER_KERNEL("eager_naive_s_to_s")
     .SetCreateFn<EagerCclS0ToS0Kernel>()
     .SetIsMatchedHob(user_op::HobDeviceTag() == "cpu")
     .SetInferTmpSizeFn(InferEagerS0ToS0KernelTmpBufferSize);
