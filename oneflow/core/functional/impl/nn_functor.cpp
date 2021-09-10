@@ -494,19 +494,14 @@ class TripletMarginLossFunctor {
     
     auto da_p=JUST(Norm(JUST(ScalarAdd2(eps, JUST(Sub(anchor, positive)))), p));
     auto da_n=JUST(Norm(JUST(ScalarAdd2(eps, JUST(Sub(anchor, negative)))), p));
-    std::cout<<"da_p:"<<da_p<<std::endl;
-    std::cout<<"da_n:"<<da_p<<std::endl;
     std::cout<<"swap:"<<swap<<std::endl;
     if(swap)
     {
       auto distance_swap = JUST(Norm(JUST(ScalarAdd2(eps, JUST(Sub(positive, negative)))), p));
       da_n = JUST(Minimum(distance_swap, da_n));
-      std::cout<<"2da_n:"<<da_p<<std::endl;
-    }
-    const Optional<Scalar>& max(nullptr);
-
+    }   
+    const Optional<Scalar> max;
     auto triplet_loss_tmp = JUST(Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n)), margin, false)), 0.0, max));
-    std::cout<<"triplet_loss_tmp:"<<triplet_loss_tmp<<std::endl;
     int32_t ndim = triplet_loss_tmp->ndim()-1;
     std::cout<<"tmp_ndim:"<<ndim<<std::endl;
     std::vector<int32_t> axis(1, ndim);
@@ -523,7 +518,6 @@ class TripletMarginLossFunctor {
     {
       triplet_loss_tmp=triplet_loss_tmp;
     }
-    std::cout<<"triplet_loss:"<<triplet_loss_tmp<<std::endl;
     return triplet_loss_tmp;
 
   }
