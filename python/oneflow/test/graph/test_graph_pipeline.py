@@ -30,6 +30,7 @@ P2 = flow.placement("cuda", {0: [2]})
 P3 = flow.placement("cuda", {0: [3]})
 rank = flow.env.get_rank()
 
+
 class OFRecordDataLoader(flow.nn.Module):
     def __init__(
         self,
@@ -83,12 +84,13 @@ class OFRecordDataLoader(flow.nn.Module):
 
         return image, label
 
+
 def _get_ppm_and_opt():
     class StageModule(flow.nn.Module):
         def __init__(self, *linear_args):
             super().__init__()
             self.linear = flow.nn.Linear(*linear_args)
-            #self.linear.to_consistent(placement=placement, sbp=B)
+            # self.linear.to_consistent(placement=placement, sbp=B)
             flow.nn.init.constant_(self.linear.weight, 0.023)
 
         def forward(self, input):
@@ -98,7 +100,9 @@ def _get_ppm_and_opt():
     class PipelineModule(flow.nn.Module):
         def __init__(self):
             super().__init__()
-            self.stage_0_m = StageModule(1452, 8, False).to_consistent(placement=P0, sbp=B)
+            self.stage_0_m = StageModule(1452, 8, False).to_consistent(
+                placement=P0, sbp=B
+            )
             self.stage_1_m = StageModule(8, 8, False).to_consistent(placement=P1, sbp=B)
             self.stage_2_m = StageModule(8, 8, False).to_consistent(placement=P2, sbp=B)
             self.stage_3_m = StageModule(8, 1, False).to_consistent(placement=P3, sbp=B)
@@ -128,7 +132,6 @@ def _train_with_graph(iter_num=3):
         sbp=B,
     )
     pp_m, of_sgd = _get_ppm_and_opt()
-
 
     class PipelineGraph(flow.nn.Graph):
         def __init__(self):
@@ -195,9 +198,7 @@ def _train_with_module(iter_num=3, data=None):
                     e = s + 4
                     micro_batch_image = pair[0][s:e]
                     micro_batch_label = pair[1][s:e]
-                    self.data_list.append(
-                        flow.Tensor(micro_batch_image).to("cuda:3"),
-                    )
+                    self.data_list.append(flow.Tensor(micro_batch_image).to("cuda:3"),)
 
         def forward(self):
             image = self.data_list[self.idx]
@@ -252,12 +253,13 @@ def _train_with_module(iter_num=3, data=None):
             check_list.append(one_iter(i))
         return check_list
 
+
 def _test_graph_pipeline(test_case):
     iter_num = 3
     graph_check_list, data = _train_with_graph(iter_num)
-    #module_check_list = _train_with_module(iter_num * 4, data)
+    # module_check_list = _train_with_module(iter_num * 4, data)
 
-    #if rank == 3:
+    # if rank == 3:
     #    for i in range(iter_num * 4):
     #        # check equal on loss
     #        test_case.assertTrue(
@@ -265,8 +267,8 @@ def _test_graph_pipeline(test_case):
     #        )
 
 
-#@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-#@flow.unittest.skip_unless_1n4d()
+# @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+# @flow.unittest.skip_unless_1n4d()
 class TestGraphPipeline(oneflow.unittest.TestCase):
     def test_graph_pipeline(test_case):
         _test_graph_pipeline(test_case)

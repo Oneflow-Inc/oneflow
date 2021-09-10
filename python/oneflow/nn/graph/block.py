@@ -217,34 +217,30 @@ class Block(object):
 
     def _pre_forward_mapping_out_scope(self, *args):
         # Insert identity op when doing activation checkpointing or pipeline execution.
-        if self.config.activation_checkpointing or (self.config.stage_id is not None and self.config.stage_id >= 0):
+        if self.config.activation_checkpointing or (
+            self.config.stage_id is not None and self.config.stage_id >= 0
+        ):
 
             def insert_identity(t):
                 assert isinstance(t, Tensor)
                 return oneflow._C.identity(t)
 
-            args = self._mapping_io(
-                "input",
-                insert_identity,
-                "insert_identity",
-                *args,
-            )
+            args = self._mapping_io("input", insert_identity, "insert_identity", *args,)
 
         return args
 
     def _post_forward_mapping_out_scope(self, *args):
         # Insert identity op when doing activation checkpointing or pipeline execution.
-        if self.config.activation_checkpointing or (self.config.stage_id is not None and self.config.stage_id >= 0):
+        if self.config.activation_checkpointing or (
+            self.config.stage_id is not None and self.config.stage_id >= 0
+        ):
 
             def insert_identity(t):
                 assert isinstance(t, Tensor)
                 return oneflow._C.identity(t)
 
             args = self._mapping_io(
-                "output",
-                insert_identity,
-                "insert_identity",
-                *args,
+                "output", insert_identity, "insert_identity", *args,
             )
         return args
 
