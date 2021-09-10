@@ -24,8 +24,6 @@ limitations under the License.
 
 namespace oneflow {
 
-class CpuStreamContext;
-
 class CpuStreamContext : public StreamContext,
                          public KernelObserverProvider,
                          public DeviceCtxProvider {
@@ -38,6 +36,7 @@ class CpuStreamContext : public StreamContext,
   Maybe<void> Sync() override;
   std::shared_ptr<DeviceCtx> GetDeviceCtx() override;
   KernelObserver* GetKernelObserver() override;
+  DeviceType device_type() const override { return DeviceType::kCPU; }
 
  private:
   std::shared_ptr<DeviceCtx> device_ctx_;
@@ -60,6 +59,8 @@ class DeviceCtxImpl final : public DeviceCtx {
   void AddCallBack(std::function<void()> callback) const override { callback(); }
 
   vm::Allocator* mut_allocator() override { return Global<vm::CpuAllocator>::Get(); }
+
+  DeviceType device_type() const override { return stream_ctx_->device_type(); }
 
  private:
   CpuStreamContext* stream_ctx_;

@@ -15,9 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/stream/stream_context_adapter.h"
 #include "oneflow/core/stream/cuda_stream_context.h"
-#include "oneflow/core/vm/cuda_copy_d2h_device_context.h"
-#include "oneflow/core/vm/cuda_stream_handle_device_context.h"
-#include "oneflow/core/device/cuda_device_context.h"
 
 namespace oneflow {
 
@@ -38,6 +35,8 @@ class DeviceCtxStreamContextAdapter : public StreamContext {
     device_ctx_->SyncDevice();
     return Maybe<void>::Ok();
   }
+
+  DeviceType device_type() const override { return device_ctx_->device_type(); }
 
  private:
   DeviceCtx* device_ctx_;
@@ -61,6 +60,8 @@ class CudaDeviceCtxStreamContextAdapter : public CudaStreamContext {
     return Maybe<void>::Ok();
   }
 
+  DeviceType device_type() const override { return device_ctx_->device_type(); }
+
   cudaStream_t cuda_stream() const override { return device_ctx_->cuda_stream(); }
 
   cublasHandle_t cublas_pmh_handle() const override { return device_ctx_->cublas_pmh_handle(); }
@@ -81,14 +82,16 @@ class CudaDeviceCtxStreamContextAdapter : public CudaStreamContext {
 }  // namespace
 
 StreamContext* NewStreamContextAdapter(DeviceCtx* ctx) {
+  if (ctx->device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
-  if (dynamic_cast<CudaDeviceCtx*>(ctx) != nullptr
-      || dynamic_cast<vm::CudaCopyD2HDeviceCtx*>(ctx) != nullptr
-      || dynamic_cast<vm::CudaStreamHandleDeviceCtx*>(ctx) != nullptr) {
     return new CudaDeviceCtxStreamContextAdapter(ctx);
+#else
+    UNIMPLEMENTED();
+    return nullptr;
+#endif  // WITH_CUDA
+  } else {
+    return new DeviceCtxStreamContextAdapter(ctx);
   }
-#endif
-  return new DeviceCtxStreamContextAdapter(ctx);
 }
 
 }  // namespace oneflow
