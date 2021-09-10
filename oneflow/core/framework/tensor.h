@@ -344,7 +344,7 @@ class Parameter final : public TensorIf<Parameter> {
   user_op::TensorDesc* mut_tensor_meta() override { return tensor_->mut_tensor_meta(); }
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
     std::shared_ptr<Tensor> tensor = other;
-    while (auto parameter = std::dynamic_pointer_cast<Parameter>(other)) {
+    while (auto parameter = std::dynamic_pointer_cast<Parameter>(tensor)) {
       tensor = parameter->tensor_;
     }
     CHECK_OR_RETURN(is_local() == tensor->is_local() && is_eager() == tensor->is_eager())

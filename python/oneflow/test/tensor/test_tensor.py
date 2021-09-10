@@ -169,7 +169,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(not x.is_cuda)
 
     @flow.unittest.skip_unless_1n1d()
-    def test_tensor_assign_copy(test_case):
+    def test_tensor_set_data(test_case):
         a = flow.ones(2, 3, requires_grad=False)
         b = flow.ones(4, 5, requires_grad=True).to("cuda")
         old_id = id(a)
