@@ -128,6 +128,7 @@ size_t InferNaiveSToSKernelTmpBufferSize(user_op::InferContext* ctx) {
 
 }  // namespace
 
+template<DeviceType device_type>
 class EagerNaiveSToSKernel final : public user_op::OpKernel {
  public:
   EagerNaiveSToSKernel() = default;
@@ -168,16 +169,16 @@ class EagerNaiveSToSKernel final : public user_op::OpKernel {
         const auto& elem_cnt = elem_cnt2tensor_slice_copier_pair.first;
         const auto& tensor_slice_copier = elem_cnt2tensor_slice_copier_pair.second;
         tensor_slice_copier->Copy(ctx->device_ctx(), *memory_copier, tmp_buffer_ptr, in_ptr);
-        CHECK_JUST(Send<DeviceType::kCPU>(reinterpret_cast<const void*>(tmp_buffer_ptr), elem_cnt,
-                                          in->data_type(), dst, ctx->device_ctx()));
+        CHECK_JUST(Send<device_type>(reinterpret_cast<const void*>(tmp_buffer_ptr), elem_cnt,
+                                     in->data_type(), dst, ctx->device_ctx()));
       }
       if (GlobalProcessCtx::Rank() == dst) {
         const auto& elem_cnt2tensor_slice_copier_pair =
             sorted_elem_cnt2out_tensor_slice_copier_pair.at(i);
         const auto& elem_cnt = elem_cnt2tensor_slice_copier_pair.first;
         const auto& tensor_slice_copier = elem_cnt2tensor_slice_copier_pair.second;
-        CHECK_JUST(Recv<DeviceType::kCPU>(tmp_buffer_ptr, elem_cnt, out->data_type(), src,
-                                          ctx->device_ctx()));
+        CHECK_JUST(
+            Recv<device_type>(tmp_buffer_ptr, elem_cnt, out->data_type(), src, ctx->device_ctx()));
         tensor_slice_copier->Copy(ctx->device_ctx(), *memory_copier, out_ptr,
                                   reinterpret_cast<const void*>(tmp_buffer_ptr));
       }
@@ -186,9 +187,15 @@ class EagerNaiveSToSKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("eager_naive_s_to_s")
-    .SetCreateFn<EagerNaiveSToSKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "cpu")
-    .SetInferTmpSizeFn(InferNaiveSToSKernelTmpBufferSize);
+#define REGISTER_EAGER_NAIVE_S_TO_S_KERNEL(device)        \
+  REGISTER_USER_KERNEL("eager_naive_s_to_s")              \
+      .SetCreateFn<EagerNaiveSToSKernel<device>>()        \
+      .SetIsMatchedHob(user_op::HobDeviceTag() == device) \
+      .SetInferTmpSizeFn(InferNaiveSToSKernelTmpBufferSize);
+
+REGISTER_EAGER_NAIVE_S_TO_S_KERNEL(DeviceType::kCPU)
+#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+REGISTER_EAGER_NAIVE_S_TO_S_KERNEL(DeviceType::kGPU)
+#endif
 
 }  // namespace oneflow

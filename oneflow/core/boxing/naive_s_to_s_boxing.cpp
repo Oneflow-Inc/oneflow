@@ -39,7 +39,6 @@ Maybe<void> RawCheckNaiveSToS(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
 
   CHECK_OR_RETURN(in->placement() != out->placement());
   CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());
-  CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCPU);
   return Maybe<void>::Ok();
 }
 

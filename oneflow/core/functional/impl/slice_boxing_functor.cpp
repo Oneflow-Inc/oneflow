@@ -74,7 +74,6 @@ class EagerNaiveSToSFunctor {
     {
       CHECK_OR_RETURN(x->is_local());
       CHECK_OR_RETURN(x->is_eager());
-      CHECK_OR_RETURN(!x->is_cuda());
       CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(), 1);
       CHECK_OR_RETURN(IsSplitSbp(in_nd_sbp->sbp_parallel(0)));
       CHECK_EQ_OR_RETURN(out_nd_sbp->sbp_parallel_size(), 1);
