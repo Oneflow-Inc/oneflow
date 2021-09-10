@@ -14,16 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_FUNCTIONAL_SCALAR_H_
-#define ONEFLOW_CORE_FUNCTIONAL_SCALAR_H_
+#ifndef ONEFLOW_CORE_COMMON_SCALAR_H_
+#define ONEFLOW_CORE_COMMON_SCALAR_H_
 
 #include <type_traits>
 
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
-namespace one {
-namespace functional {
 
 class Scalar {
  public:
@@ -86,8 +84,6 @@ class Scalar {
   enum { HAS_S, HAS_U, HAS_D, HAS_NONE } active_tag_;
 };
 
-}  // namespace functional
-}  // namespace one
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FUNCTIONAL_SCALAR_H_
+#endif  // ONEFLOW_CORE_COMMON_SCALAR_H_
