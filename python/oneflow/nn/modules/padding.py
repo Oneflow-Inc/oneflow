@@ -45,26 +45,13 @@ class ReplicationPad2d(Module):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> replicationpad_layer_0 = flow.nn.ReplicationPad2d((2, 2, 1, 1))
+        >>> m = flow.nn.ReplicationPad2d((2, 2, 1, 1))
         >>> input = flow.tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
         >>> input_int = flow.tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))
-        >>> output = replicationpad_layer_0(input)
+        >>> output = m(input)
         >>> output.shape
         oneflow.Size([1, 2, 5, 7])
         >>> output
-        tensor([[[[ 0.,  0.,  0.,  1.,  2.,  2.,  2.],
-                  [ 0.,  0.,  0.,  1.,  2.,  2.,  2.],
-                  [ 3.,  3.,  3.,  4.,  5.,  5.,  5.],
-                  [ 6.,  6.,  6.,  7.,  8.,  8.,  8.],
-                  [ 6.,  6.,  6.,  7.,  8.,  8.,  8.]],
-        <BLANKLINE>
-                 [[ 9.,  9.,  9., 10., 11., 11., 11.],
-                  [ 9.,  9.,  9., 10., 11., 11., 11.],
-                  [12., 12., 12., 13., 14., 14., 14.],
-                  [15., 15., 15., 16., 17., 17., 17.],
-                  [15., 15., 15., 16., 17., 17., 17.]]]], dtype=oneflow.float32)
-        >>> output_int = replicationpad_layer_0(input_int)
-        >>> output_int
         tensor([[[[ 0.,  0.,  0.,  1.,  2.,  2.,  2.],
                   [ 0.,  0.,  0.,  1.,  2.,  2.,  2.],
                   [ 3.,  3.,  3.,  4.,  5.,  5.,  5.],
@@ -262,24 +249,10 @@ class ConstantPad2d(Module):
 
         >>> m = flow.nn.ConstantPad2d((2, 2, 1, 1), 1)
         >>> input = flow.tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
-        >>> input_int = flow.tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))
         >>> output = m(input)
         >>> output.shape
         oneflow.Size([1, 2, 5, 7])
         >>> output
-        tensor([[[[ 1.,  1.,  1.,  1.,  1.,  1.,  1.],
-                  [ 1.,  1.,  0.,  1.,  2.,  1.,  1.],
-                  [ 1.,  1.,  3.,  4.,  5.,  1.,  1.],
-                  [ 1.,  1.,  6.,  7.,  8.,  1.,  1.],
-                  [ 1.,  1.,  1.,  1.,  1.,  1.,  1.]],
-        <BLANKLINE>
-                 [[ 1.,  1.,  1.,  1.,  1.,  1.,  1.],
-                  [ 1.,  1.,  9., 10., 11.,  1.,  1.],
-                  [ 1.,  1., 12., 13., 14.,  1.,  1.],
-                  [ 1.,  1., 15., 16., 17.,  1.,  1.],
-                  [ 1.,  1.,  1.,  1.,  1.,  1.,  1.]]]], dtype=oneflow.float32)
-        >>> output_int = constantpad_layer_0(input_int)
-        >>> output_int
         tensor([[[[ 1.,  1.,  1.,  1.,  1.,  1.,  1.],
                   [ 1.,  1.,  0.,  1.,  2.,  1.,  1.],
                   [ 1.,  1.,  3.,  4.,  5.,  1.,  1.],
@@ -374,7 +347,7 @@ class ConstantPad3d(Module):
         if isinstance(padding, (tuple, list)):
             boundary = padding
         elif isinstance(padding, int):
-            boundary = [padding] * 4
+            boundary = [padding] * 6
         else:
             raise ValueError("padding must be int or list or tuple!")
         self.padding = boundary
