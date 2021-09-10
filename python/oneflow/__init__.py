@@ -118,6 +118,7 @@ from oneflow._C import round
 from oneflow._C import softplus
 from oneflow._C import tril
 from oneflow._C import triu
+from oneflow._C import pad
 
 from . import sbp
 import atexit

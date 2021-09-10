@@ -103,3 +103,7 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
         print("optimization conf: \n", g._optimization_conf_proto)
         g._generate_config_proto()
         print("graph conf: \n", g._config_proto)
+
+
+if __name__ == "__main__":
+    unittest.main()
