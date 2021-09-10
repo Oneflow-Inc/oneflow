@@ -105,7 +105,7 @@ class Tensor {
   virtual void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) = 0;
 
   virtual user_op::TensorDesc* mut_tensor_meta() = 0;
-  virtual Maybe<void> assign_copy(const std::shared_ptr<Tensor>& other) = 0;
+  virtual Maybe<void> set_data(const std::shared_ptr<Tensor>& other) = 0;
 
   virtual Maybe<MirroredTensor> AsMirroredTensor() = 0;
   virtual Maybe<ConsistentTensor> AsConsistentTensor() = 0;
@@ -223,7 +223,7 @@ class StaticZerosTensor final : public Tensor {
     PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
-  Maybe<void> assign_copy(const std::shared_ptr<Tensor>& other) override {
+  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
 
@@ -342,7 +342,7 @@ class Parameter final : public TensorIf<Parameter> {
   }
 
   user_op::TensorDesc* mut_tensor_meta() override { return tensor_->mut_tensor_meta(); }
-  Maybe<void> assign_copy(const std::shared_ptr<Tensor>& other) override {
+  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
     std::shared_ptr<Tensor> tensor = other;
     while (auto parameter = std::dynamic_pointer_cast<Parameter>(other)) {
       tensor = parameter->tensor_;
@@ -458,7 +458,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
     return impl_->mut_eager_mirrored_tensor_impl();
   }
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
-  Maybe<void> assign_copy(const std::shared_ptr<Tensor>& other) override {
+  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
     const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(other);
     CHECK_NOTNULL_OR_RETURN(mirrored_tensor);
     impl_ = mirrored_tensor->impl_;
@@ -564,7 +564,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   }
 
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
-  Maybe<void> assign_copy(const std::shared_ptr<Tensor>& other) override {
+  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
     const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(other);
     CHECK_NOTNULL_OR_RETURN(consistent_tensor);
     impl_ = consistent_tensor->impl_;

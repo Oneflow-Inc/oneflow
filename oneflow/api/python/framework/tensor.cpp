@@ -153,9 +153,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
           })
       .def_property(
           "data", [](Tensor& t) { return t.data().GetPtrOrThrow(); },
-          [](Tensor& t, const std::shared_ptr<Tensor>& other) {
-            t.assign_copy(other).GetOrThrow();
-          })
+          [](Tensor& t, const std::shared_ptr<Tensor>& other) { t.set_data(other).GetOrThrow(); })
       .def("storage_offset", [](const Tensor& t) { return t.storage_offset().GetOrThrow(); })
       .def("stride",
            [](const Tensor& t) {

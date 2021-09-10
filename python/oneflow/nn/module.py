@@ -15,8 +15,7 @@ limitations under the License.
 """
 import itertools
 from collections import OrderedDict, namedtuple
-from typing import (Callable, Dict, Iterator, List, Optional, Set, Tuple,
-                    TypeVar, Union)
+from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple, TypeVar, Union
 
 import numpy as np
 import oneflow as flow
@@ -487,7 +486,7 @@ class Module(object):
                     grad_applied = fn(param.grad)
                 grad_applied.requires_grad = param.grad.requires_grad
                 param_applied.grad = grad_applied
-            
+
             if can_use_assign_copy(param_applied, param):
                 self._parameters[key].data = param_applied
             else:
