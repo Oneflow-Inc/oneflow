@@ -24,8 +24,8 @@ namespace oneflow {
 
 namespace {
 
-bool RawIsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel, int64_t axis) {
-  return sbp_parallel->has_split_parallel() && sbp_parallel->split_parallel().axis() == axis;
+bool RawIsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
+  return sbp_parallel->has_split_parallel();
 }
 
 static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocal);
@@ -34,8 +34,8 @@ Maybe<void> RawCheckCclS0ToS0(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
 
-  CHECK_OR_RETURN(IsSplitSbp(in->nd_sbp()->sbp_parallel(0), 0));
-  CHECK_OR_RETURN(IsSplitSbp(out->nd_sbp()->sbp_parallel(0), 0));
+  CHECK_OR_RETURN(IsSplitSbp(in->nd_sbp()->sbp_parallel(0)));
+  CHECK_OR_RETURN(IsSplitSbp(out->nd_sbp()->sbp_parallel(0)));
 
   CHECK_OR_RETURN(in->placement() != out->placement());
   CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());
@@ -53,18 +53,21 @@ Maybe<one::Tensor> CclS0ToS0(const std::shared_ptr<one::Tensor>& tensor, Symbol<
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
+  const auto& in_sbp_list = JUST(GetSbpList(tensor_nd_sbp));
+  const auto& out_sbp_list = JUST(GetSbpList(out->nd_sbp()));
+
   std::shared_ptr<one::Tensor> local_tensor = JUST(tensor->cur_rank_phy_tensor());
   {
     const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(tensor_placement));
     const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out->placement()));
     if (in_parallel_id->has_value() || out_parallel_id->has_value()) {
-      local_tensor = JUST(one::functional::EagerS0ToS0(local_tensor, tensor_placement,
-                                                       out->placement(), *tensor->shape()));
+      local_tensor =
+          JUST(one::functional::EagerS0ToS0(local_tensor, tensor_placement, out->placement(),
+                                            *in_sbp_list, *out_sbp_list, *tensor->shape()));
     }
   }
 
-  const auto& sbp_list = JUST(GetSbpList(out->nd_sbp()));
-  return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(), *sbp_list,
+  return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(), *out_sbp_list,
                                                  *tensor->shape(), tensor->dtype()));
 }
 
