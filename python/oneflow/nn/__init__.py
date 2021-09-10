@@ -18,6 +18,7 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.activation import (
     ELU,
     GELU,
+    GLU,
     Hardsigmoid,
     Hardswish,
     Hardtanh,
@@ -126,3 +127,5 @@ from oneflow.nn import utils
 from . import functional
 
 from . import parallel
+
+from oneflow.nn.modules.rnn import RNN, LSTM, GRU

@@ -270,11 +270,6 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     int64_t regst_main_size = rt_regst_desc.TotalMainByteSize4AllRegst();
     int64_t regst_separated_size = rt_regst_desc.TotalSeparatedHeaderByteSize4AllRegst();
 
-    if (is_variable_regst) {
-      CHECK_GT(regst_separated_size,
-               0);  // NOTE(chengcheng): variable regst header ALWAYS separated
-    }
-
     if (mem_block_id2mem_block.find(mem_block_id) == mem_block_id2mem_block.end()) {
       MemBlockProto mem_block;
       mem_block.set_mem_block_id(mem_block_id);

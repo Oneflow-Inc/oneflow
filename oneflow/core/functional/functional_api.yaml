@@ -251,6 +251,10 @@
   signature: "Tensor (Tensor dy, Tensor x) => GeluGrad"
   bind_python: False
 
+- name: "glu"
+  signature: "Tensor (Tensor input, Int64 dim=-1) => Glu"
+  bind_python: True
+
 - name: "sigmoid"
   signature: "Tensor (Tensor x) => Sigmoid"
   bind_python: True
@@ -1046,7 +1050,7 @@
   bind_python: True
 
 - name: "broadcast"
-  signature: "Tensor (Tensor x, *, Bool inplace=True) => Broadcast"
+  signature: "Tensor (Tensor x, *, Int64 src_rank=0, Bool inplace=True) => Broadcast"
   bind_python: True
 
 - name: "local_all_reduce"
