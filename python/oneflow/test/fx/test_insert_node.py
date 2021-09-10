@@ -93,16 +93,6 @@ class TestAlexNet(flow.unittest.TestCase):
                     neg : flow.fx.Node = gm.graph.call_function(the_function=flow.neg, args=(x, ))
                     _, *nxt_args = y.args
                     y.args = (neg, *nxt_args)
-        
-        w = m.state_dict()
-        new_parameters = dict()
-        for k, v in w.items():
-            if "num_batches_tracked" not in k:
-                new_parameters[k] = flow.tensor(w[k].detach().numpy())
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            flow.save(new_parameters, tmpdirname)
-            params = flow.load(tmpdirname)
-            gm.load_state_dict(params)
 
         gm.recompile()
         assert np.allclose(gm(input).numpy(), m.forward_inplace(input).numpy(), equal_nan=True)
