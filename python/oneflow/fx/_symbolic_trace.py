@@ -336,7 +336,7 @@ class Tracer(TracerBase):
             setattr(self.root, qualname, a)
 
             return self.create_node("get_attr", qualname, (), {})
-        
+
         return super().create_arg(a)
 
     def is_leaf_module(self, m: oneflow.nn.Module, module_qualified_name: str) -> bool:
@@ -630,7 +630,6 @@ class Tracer(TracerBase):
             )
             return self.call_module(mod, forward, args, kwargs)
 
-
         with _Patcher() as patcher:
             # allow duplicate patches to support the case of nested calls
             patcher.patch_method(
@@ -694,6 +693,7 @@ for funcs_name in oneflow_funcs:
 
 # TODO(BBuf) fix bug
 _wrapped_methods_to_patch.append((oneflow.Tensor, "__getitem__"))
+
 
 def _find_proxy(*objects_to_search):
     """

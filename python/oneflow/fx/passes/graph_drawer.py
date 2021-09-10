@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 
@@ -54,7 +69,9 @@ class FxGraphDrawer:
             f.write(g.get_main_dot_graph().create_svg())
     """
 
-    def __init__(self, graph_module: flow.fx.GraphModule, name: str, ignore_getattr: bool = False):
+    def __init__(
+        self, graph_module: flow.fx.GraphModule, name: str, ignore_getattr: bool = False
+    ):
         self._name = name
         self._dot_graphs = {name: self._to_dot(graph_module, name, ignore_getattr)}
 
@@ -67,7 +84,9 @@ class FxGraphDrawer:
             if not isinstance(leaf_node, flow.fx.GraphModule):
                 continue
 
-            self._dot_graphs[f"{name}_{node.target}"] = self._to_dot(leaf_node, f"{name}_{node.target}", ignore_getattr)
+            self._dot_graphs[f"{name}_{node.target}"] = self._to_dot(
+                leaf_node, f"{name}_{node.target}", ignore_getattr
+            )
 
     def get_main_dot_graph(self) -> pydot.Dot:
         return self._dot_graphs[self._name]
@@ -132,7 +151,7 @@ class FxGraphDrawer:
         else:
             label += "|" + self._typename(node.target) + r"\l"
 
-        tensor_meta = node.meta.get('tensor_meta')
+        tensor_meta = node.meta.get("tensor_meta")
         label += self._tensor_meta_to_label(tensor_meta)
 
         return label + "}"
@@ -172,7 +191,9 @@ class FxGraphDrawer:
     def _get_tensor_label(self, t: flow.Tensor) -> str:
         return str(t.dtype) + str(list(t.shape)) + r"\l"
 
-    def _to_dot(self, graph_module: flow.fx.GraphModule, name: str, ignore_getattr: bool) -> pydot.Dot:
+    def _to_dot(
+        self, graph_module: flow.fx.GraphModule, name: str, ignore_getattr: bool
+    ) -> pydot.Dot:
         """
         Actual interface to visualize a fx.Graph. Note that it takes in the GraphModule instead of the Graph
         """

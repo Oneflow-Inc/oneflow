@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from typing import List, Tuple, Union, Dict, Any, Set
 from dataclasses import dataclass
 
@@ -13,19 +28,24 @@ NodeSet = Set[flow.fx.Node]
 Names = List[str]
 CALLABLE_NODE_OPS = {"call_module", "call_function", "call_method"}
 
+
 def typename(o):
     if isinstance(o, flow.Tensor):
         return o.type()
 
-    module = ''
-    class_name = ''
-    if hasattr(o, '__module__') and o.__module__ != 'builtins' \
-            and o.__module__ != '__builtin__' and o.__module__ is not None:
-        module = o.__module__ + '.'
+    module = ""
+    class_name = ""
+    if (
+        hasattr(o, "__module__")
+        and o.__module__ != "builtins"
+        and o.__module__ != "__builtin__"
+        and o.__module__ is not None
+    ):
+        module = o.__module__ + "."
 
-    if hasattr(o, '__qualname__'):
+    if hasattr(o, "__qualname__"):
         class_name = o.__qualname__
-    elif hasattr(o, '__name__'):
+    elif hasattr(o, "__name__"):
         class_name = o.__name__
     else:
         class_name = o.__class__.__name__
@@ -76,4 +96,3 @@ def is_node_output_tensor(node: flow.fx.Node) -> bool:
     """
     type_ = node.meta.get("type", None)
     return type_ is not None and issubclass(type_, flow.Tensor)
-

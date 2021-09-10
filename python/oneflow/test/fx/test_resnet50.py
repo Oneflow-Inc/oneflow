@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import oneflow as flow
 import oneflow.nn as nn
 import unittest
@@ -6,6 +21,7 @@ from oneflow.fx import symbolic_trace
 
 from oneflow import Tensor
 from typing import Type, Any, Callable, Union, List, Optional
+
 
 def conv3x3(
     in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, dilation: int = 1
@@ -280,14 +296,16 @@ def resnet50(**kwargs: Any) -> ResNet:
     """
     return _resnet("resnet50", Bottleneck, [3, 4, 6, 3], **kwargs)
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestResNet(flow.unittest.TestCase):
     def test_resnet(test_case):
         m = resnet50()
         m = m.eval()
-        gm : flow.fx.GraphModule = symbolic_trace(m)
+        gm: flow.fx.GraphModule = symbolic_trace(m)
         input = flow.randn(1, 3, 224, 224)
-        assert(np.allclose(gm(input).numpy(), m(input).numpy(), equal_nan=True))
+        assert np.allclose(gm(input).numpy(), m(input).numpy(), equal_nan=True)
+
 
 if __name__ == "__main__":
     unittest.main()

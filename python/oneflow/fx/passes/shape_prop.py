@@ -1,8 +1,24 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import oneflow as flow
 import oneflow.fx
 from oneflow.fx.node import Node, map_aggregate
 from typing import Any, Tuple, NamedTuple, Optional
 from oneflow.fx._compatibility import compatibility
+
 
 @compatibility(is_backward_compatible=True)
 class TensorMetadata(NamedTuple):
@@ -10,15 +26,16 @@ class TensorMetadata(NamedTuple):
     # about a tensor within a OneFlow program.
 
     # General Tensor metadata
-    shape : flow.Size
-    dtype : flow.dtype
-    requires_grad : bool
+    shape: flow.Size
+    dtype: flow.dtype
+    requires_grad: bool
     # stride : Tuple[int]
     # memory_format : Optional[flow.memory_format]
 
     # TODO(BBuf) Add Quantization metadata
 
-def _extract_tensor_metadata(result : flow.Tensor) -> TensorMetadata:
+
+def _extract_tensor_metadata(result: flow.Tensor) -> TensorMetadata:
     """
     Extract a TensorMetadata NamedTuple describing `result`.
     """
@@ -26,8 +43,8 @@ def _extract_tensor_metadata(result : flow.Tensor) -> TensorMetadata:
     dtype = result.dtype
     requires_grad = result.requires_grad
 
-    return TensorMetadata(
-        shape, dtype, requires_grad)
+    return TensorMetadata(shape, dtype, requires_grad)
+
 
 @compatibility(is_backward_compatible=True)
 class ShapeProp(flow.fx.Interpreter):
@@ -75,7 +92,8 @@ class ShapeProp(flow.fx.Interpreter):
          module (GraphModule): The module to be executed
 
     """
-    def run_node(self, n : Node) -> Any:
+
+    def run_node(self, n: Node) -> Any:
         result = super().run_node(n)
 
         found_tensor = False
@@ -90,9 +108,9 @@ class ShapeProp(flow.fx.Interpreter):
 
         meta = map_aggregate(result, extract_tensor_meta)
         if found_tensor:
-            n.meta['tensor_meta'] = meta
+            n.meta["tensor_meta"] = meta
 
-        n.meta['type'] = type(result)
+        n.meta["type"] = type(result)
         return result
 
     def propagate(self, *args):

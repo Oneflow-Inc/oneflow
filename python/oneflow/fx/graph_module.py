@@ -128,6 +128,7 @@ def _addindent(s_, numSpaces):
     s = first + "\n" + s
     return s
 
+
 @compatibility(is_backward_compatible=True)
 class GraphModule(oneflow.nn.Module):
     """
@@ -535,5 +536,3 @@ class {module_name}(oneflow.nn.Module):
         cls.__call__ = wrapped_call
 
         return python_code
-
-    
