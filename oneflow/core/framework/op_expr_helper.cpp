@@ -380,17 +380,6 @@ Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t
       .Build();
 }
 
-Maybe<one::UserOpExpr> UnsortedBatchSegmentSumOp(const int& num_segments) {
-  return UnsortedBatchSegmentSumOp(num_segments, UniqueOpName("unsorted_batch_segment_sum"));
-}
-Maybe<one::UserOpExpr> UnsortedBatchSegmentSumOp(const int& num_segments, const std::string& name) {
-  return one::OpBuilder("unsorted_batch_segment_sum", name)
-      .Input("data")
-      .Input("segment_ids")
-      .Output("out")
-      .Attr<int32_t>("num_segments", num_segments)
-      .Build();
-}
 
 Maybe<one::UserOpExpr> ScalarAddByTensorOp() {
   return ScalarAddByTensorOp(UniqueOpName("scalar_add_by_tensor"));
