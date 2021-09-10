@@ -28,15 +28,23 @@ namespace vm {
 
 class TensorBuffer {
  public:
+  TensorBuffer() : non_pod_allocator_(std::make_unique<MemoryAllocator>()) {}
+
+  size_t blob_bytes() const { return blob_bytes_; }
+
   char* blob_dptr() { return blob_dptr_.get(); }
-  void set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>&& blob_dptr) {
+
+  MemoryAllocator* non_pod_allocator() { return non_pod_allocator_.get(); }
+
+  void set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>&& blob_dptr, size_t bytes) {
     blob_dptr_ = std::move(blob_dptr);
+    blob_bytes_ = bytes;
   }
 
-  void reset() { blob_dptr_.reset(); }
-
  private:
+  size_t blob_bytes_;
   std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
+  std::unique_ptr<MemoryAllocator> non_pod_allocator_;
 };
 
 class EagerBlobObject final : public BlobObject {
@@ -54,7 +62,6 @@ class EagerBlobObject final : public BlobObject {
                         Optional<LocalDepObject*>(dep_object)) {}
 
   ~EagerBlobObject() override {
-    non_pod_initer_.reset();
     tensor_buffer_.reset();
     header_buffer_.reset();
     blob_.reset();
@@ -77,8 +84,7 @@ class EagerBlobObject final : public BlobObject {
 
   Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
   Maybe<void> DeallocateBlobDataPtr() override {
-    non_pod_initer_.reset();
-    tensor_buffer_->reset();
+    tensor_buffer_.reset(new TensorBuffer);
     return Maybe<void>::Ok();
   }
 
@@ -100,8 +106,6 @@ class EagerBlobObject final : public BlobObject {
   std::unique_ptr<Blob> blob_;
   std::unique_ptr<char[]> header_buffer_;
   std::shared_ptr<TensorBuffer> tensor_buffer_;
-  std::size_t blob_body_bytes_;
-  std::unique_ptr<MemoryAllocator> non_pod_initer_;
   std::atomic<bool> is_shape_synced_;
   Optional<LocalDepObject*> compute_local_dep_object_;
 };

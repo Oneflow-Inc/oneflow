@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_methods.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
@@ -705,6 +706,9 @@ class SliceBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
+    if (x->is_eager() && x->is_local()) {
+      return ToContiguous(JUST(view::Slice(x, start, stop, step)));
+    }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
@@ -1308,19 +1312,7 @@ class TensorGetItemFunctor {
       end[i] = slice.end();
       step[i] = slice.step();
     }
-    bool is_identity = [&]() {
-      if (target_shape.NumAxes() == 0) { return false; }
-      for (int i = 0; i < ndims; ++i) {
-        if (start[i] != 0 || end[i] != x->shape()->At(i) || step[i] != 1) { return false; }
-      }
-      return true;
-    }();
-    std::shared_ptr<one::Tensor> result;
-    if (is_identity) {
-      result = JUST(Copy(x, JUST(x->device())->type(), JUST(x->device())->device_id()));
-    } else {
-      result = JUST(Slice(x, start, end, step));
-    }
+    auto result = JUST(Slice(x, start, end, step));
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
     if (shape.NumAxes() != 0 && shape != *(result->shape())) {

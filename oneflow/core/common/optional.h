@@ -146,12 +146,8 @@ class OptionalBase<
   explicit OptionalBase(const T& value) : value_(std::make_shared<T>(value)) {}
   explicit OptionalBase(T&& value) : value_(std::make_shared<T>(std::move(value))) {}
 
-  explicit OptionalBase(const std::shared_ptr<T>& value) : value_(value) {
-    std::cout << "shared_ptr" << std::endl;
-  }
-  explicit OptionalBase(std::shared_ptr<T>&& value) : value_(std::move(value)) {
-    std::cout << "shared_ptr&&" << std::endl;
-  }
+  explicit OptionalBase(const std::shared_ptr<T>& value) : value_(value) {}
+  explicit OptionalBase(std::shared_ptr<T>&& value) : value_(std::move(value)) {}
 
   OptionalBase(const OptionalBase&) = default;
   OptionalBase(OptionalBase&&) noexcept = default;

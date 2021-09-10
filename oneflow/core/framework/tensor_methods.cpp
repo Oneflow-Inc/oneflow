@@ -22,6 +22,8 @@ limitations under the License.
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/functional/functional.h"
 
+#include "oneflow/core/framework/instructions_builder.h"
+
 namespace oneflow {
 namespace one {
 
@@ -51,6 +53,17 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& tensor, const std::vector<int
     return Error::RuntimeError() << "view::Slice(): input should be eager local tensor, but is "
                                  << (tensor->is_lazy() ? "lazy" : "consistent");
   }
+
+  // const auto& callback =
+  //     std::make_shared<std::function<void(uint64_t)>>([](uint64_t of_blob_ptr) {});
+  // CHECK_JUST(SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void>
+  // {
+  //   return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+  //     return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
+  //                                              "const");
+  //   });
+  // }));
+
   const auto& shape = tensor->shape();
   const auto& strides = JUST(tensor->stride());
   int size = starts.size();
@@ -79,6 +92,8 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& tensor, const std::vector<int
     target_strides[i] = step * strides->At(i);
     storage_offset += start * strides->At(i);
   }
+  // Slice 1-d tensor maybe generate 0-dim tensor.
+  if (size == 1 && target_dims.at(0) == 1) { target_dims = DimVector{}; }
   auto tensor_meta = std::make_shared<MirroredTensorMeta>(
       std::make_shared<Shape>(target_dims), tensor->dtype()->data_type(), JUST(tensor->device()),
       std::make_shared<Stride>(target_strides), storage_offset);
@@ -86,10 +101,9 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& tensor, const std::vector<int
   JUST(tensor->has_eager_blob_object());
   const auto& blob_object = JUST(tensor->eager_blob_object());
 
-  auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(tensor_meta, tensor->requires_grad(),
-                                                               tensor->is_leaf());
-  tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()),
-                                   blob_object->tensor_buffer());
+  auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(
+      tensor_meta, JUST(tensor->tensor_storage()), tensor->requires_grad(), tensor->is_leaf());
+  tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()));
   JUST(JUST(tensor_impl->eager_blob_object())->TryInitBlob());
   JUST(tensor_impl->eager_blob_object())->set_is_shape_synced(true);
   std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
@@ -99,9 +113,10 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& tensor, const std::vector<int
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                 bool create_graph) -> Maybe<void> {
               autograd::AutoGradMode mode(create_graph);
+              CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+              in_grads->resize(1);
               in_grads->at(0) =
-                  JUST(functional::Constant(*shape, 0, tensor->dtype(), JUST(tensor->device())));
-              // TODO(): slice update grad
+                  JUST(functional::SliceGrad(out_grads.at(0), tensor, starts, ends, steps));
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};
