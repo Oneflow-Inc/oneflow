@@ -76,7 +76,6 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(x.placement == y_placement)
         test_case.assertTrue(x.sbp[0] == y_sbp)
 
-
     @flow.unittest.skip_unless_1n1d()
     def test_consistent_tensor_autograd_related_methods(test_case):
         placement = flow.placement("cuda", {0: 0})
