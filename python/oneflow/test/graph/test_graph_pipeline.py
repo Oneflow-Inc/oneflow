@@ -197,7 +197,12 @@ def _train_with_module(iter_num=3, data=None):
                     e = s + 4
                     micro_batch_image = pair[0][s:e]
                     micro_batch_label = pair[1][s:e]
-                    self.data_list.append((flow.Tensor(micro_batch_image).to("cuda:3"), flow.Tensor(micro_batch_label).to("cuda:3")))
+                    self.data_list.append(
+                        (
+                            flow.Tensor(micro_batch_image).to("cuda:3"),
+                            flow.Tensor(micro_batch_label).to("cuda:3"),
+                        )
+                    )
 
         def forward(self):
             image = self.data_list[self.idx][0]
@@ -264,11 +269,11 @@ def _test_graph_pipeline(test_case):
     module_check_list = _train_with_module(iter_num * 4, data)
 
     if rank == 3:
-       for i in range(iter_num * 4):
-           # check equal on loss
-           test_case.assertTrue(
-               np.array_equal(module_check_list[i], graph_check_list[i // 4][i % 4])
-           )
+        for i in range(iter_num * 4):
+            # check equal on loss
+            test_case.assertTrue(
+                np.array_equal(module_check_list[i], graph_check_list[i // 4][i % 4])
+            )
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
