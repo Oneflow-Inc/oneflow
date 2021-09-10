@@ -91,7 +91,7 @@ def _get_ppm_and_opt():
             super().__init__()
             self.linear = flow.nn.Linear(*linear_args)
             # self.linear.to_consistent(placement=placement, sbp=B)
-            flow.nn.init.constant_(self.linear.weight, 0.023)
+            flow.nn.init.constant_(self.linear.weight, 0.00023)
 
         def forward(self, input):
             out = self.linear(input)
@@ -118,8 +118,8 @@ def _get_ppm_and_opt():
             return out
 
     pp_m = PipelineModule()
-    of_sgd = flow.optim.SGD(pp_m.parameters(), lr=0.0001)
-    return pp_m, of_sgd
+    sgd = flow.optim.SGD(pp_m.parameters(), lr=0.0001)
+    return pp_m, sgd
 
 
 def _train_with_graph(iter_num=3):
@@ -131,7 +131,7 @@ def _train_with_graph(iter_num=3):
         placement=P0,
         sbp=B,
     )
-    pp_m, of_sgd = _get_ppm_and_opt()
+    pp_m, sgd = _get_ppm_and_opt()
 
     class PipelineGraph(flow.nn.Graph):
         def __init__(self):
@@ -143,7 +143,7 @@ def _train_with_graph(iter_num=3):
             self.pp_m.stage_2_m.config.stage_id = 2
             self.pp_m.stage_3_m.config.stage_id = 3
             self.mseloss = flow.nn.MSELoss("sum")
-            self.add_optimizer(of_sgd)
+            self.add_optimizer(sgd)
             self.config.set_gradient_accumulation_steps(4)
 
         def build(self):
@@ -167,13 +167,12 @@ def _train_with_graph(iter_num=3):
     def one_iter(iter_idx):
         loss, image, label = pp_g()
         if rank == 3:
-            if iter_idx == 0:
-                print(pp_g)
+            # loss on other rank are empty
             loss = loss.to_local()
             loss_np = loss.numpy()
             print("loss numpy \n", loss)
             image = image.to_local().numpy()
-            label = image.to_local().numpy()
+            label = label.to_local().numpy()
             return loss, image, label
 
     check_list = []
@@ -198,54 +197,59 @@ def _train_with_module(iter_num=3, data=None):
                     e = s + 4
                     micro_batch_image = pair[0][s:e]
                     micro_batch_label = pair[1][s:e]
-                    self.data_list.append(flow.Tensor(micro_batch_image).to("cuda:3"),)
+                    self.data_list.append((flow.Tensor(micro_batch_image).to("cuda:3"), flow.Tensor(micro_batch_label).to("cuda:3")))
 
         def forward(self):
-            image = self.data_list[self.idx]
+            image = self.data_list[self.idx][0]
+            label = self.data_list[self.idx][1]
             self.idx += 1
-            return image
+            return image, label
 
     class TrainModule(flow.nn.Module):
         def __init__(self):
             super().__init__()
             self.linear = flow.nn.Linear(1452, 8, False)
-            flow.nn.init.constant_(self.linear.weight, 0.023)
+            flow.nn.init.constant_(self.linear.weight, 0.00023)
             self.linear.to("cuda:3")
             self.linear1 = flow.nn.Linear(8, 8, False)
-            flow.nn.init.constant_(self.linear1.weight, 0.023)
+            flow.nn.init.constant_(self.linear1.weight, 0.00023)
             self.linear1.to("cuda:3")
             self.linear2 = flow.nn.Linear(8, 8, False)
-            flow.nn.init.constant_(self.linear2.weight, 0.023)
+            flow.nn.init.constant_(self.linear2.weight, 0.00023)
             self.linear2.to("cuda:3")
-            self.linear3 = flow.nn.Linear(8, 2, False)
-            flow.nn.init.constant_(self.linear3.weight, 0.023)
+            self.linear3 = flow.nn.Linear(8, 1, False)
+            flow.nn.init.constant_(self.linear3.weight, 0.00023)
             self.linear3.to("cuda:3")
+            self.mseloss = flow.nn.MSELoss("sum")
 
-        def forward(self, image):
+        def forward(self, image, label):
             out = self.linear(image)
             out = self.linear1(out)
             out = self.linear2(out)
             out = self.linear3(out)
-            loss = out.sum()
+            loss = self.mseloss(out, label)
             return loss
 
     if rank == 3:
-        d_m = DataModule(data)
-        t_m = TrainModule()
-        of_sgd = flow.optim.SGD(t_m.parameters(), lr=0.0001)
+        data_m = DataModule(data)
+        train_m = TrainModule()
+        sgd = flow.optim.SGD(train_m.parameters(), lr=0.0001)
 
         def one_iter(iter_idx):
-            image = d_m()
             if rank == 3:
-                loss = t_m(image)
+                image, label = data_m()
+                loss = train_m(image, label)
+
                 loss_np = loss.numpy()
                 print("eager loss numpy \n", loss_np)
+
                 loss = loss * 0.25
                 loss.backward()
                 if iter_idx % 4 == 3:
                     print(f"iter index: {iter_idx}")
-                    of_sgd.step()
-                    of_sgd.zero_grad()
+                    # eager gradient accumulatioin
+                    sgd.step()
+                    sgd.zero_grad()
                 return loss_np
 
         check_list = []
@@ -257,18 +261,18 @@ def _train_with_module(iter_num=3, data=None):
 def _test_graph_pipeline(test_case):
     iter_num = 3
     graph_check_list, data = _train_with_graph(iter_num)
-    # module_check_list = _train_with_module(iter_num * 4, data)
+    module_check_list = _train_with_module(iter_num * 4, data)
 
-    # if rank == 3:
-    #    for i in range(iter_num * 4):
-    #        # check equal on loss
-    #        test_case.assertTrue(
-    #            np.array_equal(module_check_list[i], graph_check_list[i // 4][i % 4])
-    #        )
+    if rank == 3:
+       for i in range(iter_num * 4):
+           # check equal on loss
+           test_case.assertTrue(
+               np.array_equal(module_check_list[i], graph_check_list[i // 4][i % 4])
+           )
 
 
-# @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-# @flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n4d()
 class TestGraphPipeline(oneflow.unittest.TestCase):
     def test_graph_pipeline(test_case):
         _test_graph_pipeline(test_case)
