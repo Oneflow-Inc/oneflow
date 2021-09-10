@@ -71,6 +71,7 @@ def _copy_attr(
     from_module: oneflow.nn.Module, to_module: oneflow.nn.Module, target: str
 ):
     *prefix, field = target.split(".")
+
     for item in prefix:
         f = getattr(from_module, item)
         t = getattr(to_module, item, None)
