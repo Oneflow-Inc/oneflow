@@ -52,8 +52,12 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
 
     // NOTE(zwx): OFRecordDataset is not consistent since attr nd_sbp is empty,
     // we assume that it works in DDP
-    auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
-    if (nd_sbp_str_vec.empty()) {
+    bool is_local = false;
+    if (ctx->op_type_name() == "OFRecordReader") {
+      auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
+      if (nd_sbp_str_vec.empty()) { is_local = true; }
+    }
+    if (is_local) {
       parallel_id_ = GlobalProcessCtx::Rank();
       parallel_num_ = GlobalProcessCtx::WorldSize();
     } else {
