@@ -42,10 +42,10 @@ Maybe<Symbol<cfg::NdSbp>> GetAllSplitNdSbp(int64_t axis, int64_t ndim) {
 
 auto* CachedGetAllSplitNdSbp = DECORATE(&GetAllSplitNdSbp, ThreadLocal);
 
-class EagerCclS0ToS0OpKernelState final : public user_op::OpKernelState {
+class EagerNaiveSToSOpKernelState final : public user_op::OpKernelState {
  public:
-  explicit EagerCclS0ToS0OpKernelState(user_op::KernelInitContext* ctx) { Init(ctx); }
-  ~EagerCclS0ToS0OpKernelState() override = default;
+  explicit EagerNaiveSToSOpKernelState(user_op::KernelInitContext* ctx) { Init(ctx); }
+  ~EagerNaiveSToSOpKernelState() override = default;
 
   MemoryCopier* memory_copier() const { return memory_copier_.get(); }
 
@@ -128,19 +128,19 @@ size_t InferEagerS0ToS0KernelTmpBufferSize(user_op::InferContext* ctx) {
 
 }  // namespace
 
-class EagerCclS0ToS0Kernel final : public user_op::OpKernel {
+class EagerNaiveSToSKernel final : public user_op::OpKernel {
  public:
-  EagerCclS0ToS0Kernel() = default;
-  ~EagerCclS0ToS0Kernel() override = default;
+  EagerNaiveSToSKernel() = default;
+  ~EagerNaiveSToSKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EagerCclS0ToS0OpKernelState>(ctx);
+    return std::make_shared<EagerNaiveSToSOpKernelState>(ctx);
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* kernel_state = dynamic_cast<EagerCclS0ToS0OpKernelState*>(state);
+    auto* kernel_state = dynamic_cast<EagerNaiveSToSOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -187,7 +187,7 @@ class EagerCclS0ToS0Kernel final : public user_op::OpKernel {
 };
 
 REGISTER_USER_KERNEL("eager_naive_s_to_s")
-    .SetCreateFn<EagerCclS0ToS0Kernel>()
+    .SetCreateFn<EagerNaiveSToSKernel>()
     .SetIsMatchedHob(user_op::HobDeviceTag() == "cpu")
     .SetInferTmpSizeFn(InferEagerS0ToS0KernelTmpBufferSize);
 
