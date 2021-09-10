@@ -16,6 +16,8 @@ limitations under the License.
 #include <algorithm>
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/env_desc.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #ifdef WITH_CUDA
 #include <nccl.h>
 #endif
@@ -56,7 +58,14 @@ int32_t ResourceDesc::ComputeThreadPoolSize() const {
     CHECK_GT(resource_.compute_thread_pool_size(), 0);
     return resource_.compute_thread_pool_size();
   } else {
-    return CpuDeviceNum();
+    // NOTE(chengcheng): set default compute thread pool size for Single-Client and Multi-Client
+    if (CHECK_JUST(GlobalMultiClientEnv())) {
+      return std::max<int32_t>(static_cast<int32_t>(std::thread::hardware_concurrency()
+                                                    / GlobalProcessCtx::NumOfProcessPerNode()),
+                               1);
+    } else {
+      return std::thread::hardware_concurrency();
+    }
   }
 }
 
