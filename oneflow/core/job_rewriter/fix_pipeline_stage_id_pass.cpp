@@ -101,61 +101,43 @@ Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* j
   const int64_t total_stage_num = max_stage_id + 1;
   LOG(INFO) << "total stage num = " << total_stage_num;
 
-  HashMap<std::string, OperatorConf> mut_op_name2conf;
-  HashMap<std::string, OperatorConf> op_name2conf;
-  HashMap<std::string, int64_t> op_name2stage_id;
-  HashMap<std::string, HashSet<std::string>> placement2op_names;
+  HashMap<std::string, const OpNode*> op_name2node;
+  HashMap<std::string, std::vector<const OpNode*>> placement2op_nodes;
+  std::vector<OperatorConf> fix_stage_op_confs;
 
   // NOTE(chengcheng): group op by placement.
   op_graph.ForEachNode([&](const OpNode* this_node) {
     if (!OpNodeHasScope(this_node)) { return; }
     const std::string& op_name = this_node->op().op_name();
-    op_name2conf.emplace(op_name, this_node->op().op_conf());
+    op_name2node.emplace(op_name, this_node);
     std::string placement = ParallelDesc2HashString(this_node->parallel_desc());
-    int64_t stage_id = GetStageIdHint(this_node);
-    op_name2stage_id.emplace(op_name, stage_id);
-    placement2op_names[placement].insert(op_name);
+    placement2op_nodes[placement].push_back(this_node);
   });
 
-  for (auto& placement_op_names_pair : placement2op_names) {
-    HashMap<int64_t, HashSet<std::string>> stage_id2op_names;
-    for (const auto& op_name : placement_op_names_pair.second) {
-      stage_id2op_names[op_name2stage_id.at(op_name)].insert(op_name);
+  for (auto& pair : placement2op_nodes) {
+    int64_t max_stage_id = -1;
+    for (const OpNode* this_node : pair.second) {
+      max_stage_id = std::max(max_stage_id, GetStageIdHint(this_node));
     }
-    int64_t max_group_stage_id = -1;
-    int64_t max_group_op_size = -1;
-    for (auto& stage_id_op_names_pair : stage_id2op_names) {
-      int64_t this_group_op_size = stage_id_op_names_pair.second.size();
-      if (this_group_op_size > max_group_op_size) {
-        max_group_stage_id = stage_id_op_names_pair.first;
-        max_group_op_size = this_group_op_size;
-      }
-    }
-    CHECK_GE_OR_RETURN(max_group_stage_id, 0);
-    CHECK_GE_OR_RETURN(max_group_op_size, 0);
-
-    for (auto& stage_id_op_names_pair : stage_id2op_names) {
-      if (stage_id_op_names_pair.first != max_group_stage_id) {
-        for (const auto& op_name : stage_id_op_names_pair.second) {
-          LOG(INFO) << " In FixPipelineStageIdPass, op_name: " << op_name
-                    << " origin_stage_id = " << stage_id_op_names_pair.first
-                    << "(group size: " << stage_id_op_names_pair.second.size()
-                    << ") is different with same placement : " << placement_op_names_pair.first
-                    << " max group size: " << max_group_op_size
-                    << " stage_id: " << max_group_stage_id
-                    << " , so change this op to the max_group stage id.\n";
-          OperatorConf new_op_conf = op_name2conf.at(op_name);
-          int64_t new_scope_symbol_id =
-              JUST(NewScopeWithStageId(new_op_conf.scope_symbol_id(), max_group_stage_id));
-          new_op_conf.set_scope_symbol_id(new_scope_symbol_id);
-          CHECK_OR_RETURN(mut_op_name2conf.emplace(op_name, new_op_conf).second);
-        }
+    CHECK_GE_OR_RETURN(max_stage_id, 0);
+    for (const OpNode* this_node : pair.second) {
+      int64_t this_stage_id = GetStageIdHint(this_node);
+      if (this_stage_id != max_stage_id) {
+        LOG(INFO) << " In FixPipelineStageIdPass, op_name: " << this_node->op().op_name()
+                  << " origin_stage_id = " << this_stage_id
+                  << " is different with same placement : " << pair.first
+                  << " max_stage_id: " << max_stage_id
+                  << " , so change this op to the max stage id.\n";
+        OperatorConf new_op_conf = this_node->op().op_conf();
+        int64_t new_scope_symbol_id =
+            JUST(NewScopeWithStageId(new_op_conf.scope_symbol_id(), max_stage_id));
+        new_op_conf.set_scope_symbol_id(new_scope_symbol_id);
+        fix_stage_op_confs.push_back(std::move(new_op_conf));
       }
     }
   }
 
-  for (auto& pair : mut_op_name2conf) { JUST(job_builder->MutOpOnlyOnce(pair.second)); }
-
+  for (const auto& op : fix_stage_op_confs) { JUST(job_builder->MutOpOnlyOnce(op)); }
   return Maybe<void>::Ok();
 }
 
