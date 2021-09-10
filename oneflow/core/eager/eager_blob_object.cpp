@@ -30,7 +30,8 @@ EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
       tensor_buffer_(tensor_buffer),
       blob_body_bytes_(0),
       is_shape_synced_(true),
-      compute_local_dep_object_(dep_object) {
+      compute_local_dep_object_(dep_object),
+      last_used_device_() {
   CHECK(static_cast<bool>(shape));
   CHECK(static_cast<bool>(tensor_buffer));
   non_pod_initer_ = std::make_unique<MemoryAllocator>();

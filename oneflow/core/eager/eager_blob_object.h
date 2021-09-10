@@ -60,13 +60,12 @@ class EagerBlobObject final : public BlobObject {
     blob_.reset();
   }
 
+  // used in scheduler thread or worker thread
   BlobDesc* mut_blob_desc() override { return &blob_desc_; }
-
   const Blob& blob() const override { return *blob_; }
   Blob* mut_blob() override { return blob_.get(); }
   Maybe<void> TryInitBlob() override;
   Maybe<void> InitBlob();
-
   Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
   Maybe<void> DeallocateBlobDataPtr() override {
     non_pod_initer_.reset();
@@ -84,6 +83,9 @@ class EagerBlobObject final : public BlobObject {
 
   void set_is_shape_synced(bool val) { is_shape_synced_ = val; }
 
+  const Optional<Symbol<Device>>& last_used_device() const { return last_used_device_; }
+  void set_last_used_device(Symbol<Device> last_used_device) { last_used_device_ = last_used_device; }
+
  private:
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
@@ -96,6 +98,7 @@ class EagerBlobObject final : public BlobObject {
   std::unique_ptr<MemoryAllocator> non_pod_initer_;
   std::atomic<bool> is_shape_synced_;
   Optional<LocalDepObject*> compute_local_dep_object_;
+  Optional<Symbol<Device>> last_used_device_;
 };
 
 }  // namespace vm

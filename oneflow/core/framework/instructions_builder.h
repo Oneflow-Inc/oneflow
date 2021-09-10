@@ -132,7 +132,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                             const std::shared_ptr<const ParallelDesc>& parallel_desc);
 
   Maybe<void> SoftSyncStream(LocalDepObject* compute_local_dep_object, const std::string& modifier,
-                             const std::shared_ptr<const ParallelDesc>& parallel_desc);
+                             Symbol<Device> op_device);
 
   template<typename T>
   Maybe<void> SyncAccessBlobByCallback(const T tensor,
@@ -263,7 +263,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                                 const one::EagerBlobObjectListPtr& input_eager_blob_objects,
                                 const one::EagerBlobObjectListPtr& output_eager_blob_objects,
                                 const one::OpExprInterpContext& ctx,
-                                const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
+                                Symbol<Device> op_device,
                                 const std::string& instr_type_name);
 
   Maybe<void> LocalCallOpKernel(
@@ -272,7 +272,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const one::EagerBlobObjectListPtr& output_eager_blob_objects,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
       const one::OpExprInterpContext& ctx,
-      const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
+      Symbol<Device> op_device,
       const std::string& instr_type_name);
 
  private:

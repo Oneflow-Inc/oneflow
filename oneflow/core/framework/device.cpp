@@ -125,6 +125,14 @@ Maybe<const std::string&> Device::GetSharedScheduleDeviceType() const {
   return MapAt(type2type_for_shared_local_dep_object, type());
 }
 
+Maybe<bool> Device::is_primary_device() const {
+  static const HashMap<std::string, bool> type2is_primary_device{
+      {"cpu", true}, {"gpu", true}, {"cuda", true}, {"cuda_h2d", false}, {"cuda_d2h", false},
+      {"comm_net", false}, {"sync_launched_nccl", false}, {"async_launched_nccl", false},
+  };
+  return JUST(MapAt(type2is_primary_device, type));
+}
+
 Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
   // gpu.LocalCallOpKernel is shared between device `cuda` and device `cuda_h2d`.
   static const HashMap<std::string, std::string> type2instr_name{

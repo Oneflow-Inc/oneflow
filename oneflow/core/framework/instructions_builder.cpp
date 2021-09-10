@@ -669,10 +669,10 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const one::EagerBlobObjectListPtr& input_eager_blob_objects,
     const one::EagerBlobObjectListPtr& output_eager_blob_objects,
     const one::OpExprInterpContext& ctx,
-    const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
+    Symbol<Device> op_device,
     const std::string& instr_type_name) {
   return LocalCallOpKernel(opkernel, input_eager_blob_objects, output_eager_blob_objects, nullptr,
-                           ctx, parallel_desc_sym, instr_type_name);
+                           ctx, op_device, instr_type_name);
 }
 
 Maybe<void> InstructionsBuilder::LocalCallOpKernel(
@@ -680,15 +680,26 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const one::EagerBlobObjectListPtr& input_eager_blob_objects,
     const one::EagerBlobObjectListPtr& output_eager_blob_objects,
     const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
-    const one::OpExprInterpContext& ctx,
-    const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
-    const std::string& instr_type_name) {
+    const one::OpExprInterpContext& ctx, Symbol<Device> op_device) {
+  const auto& instr_type_name = JUST(op_device->local_call_instruction_name());
+  for (const auto& input : *input_eager_blob_objects) {
+    CHECK_OR_RETURN(input->last_used_device().has_value());
+    const auto& blob_last_used_device = JUST(input->last_used_device().value());
+    if (JUST(blob_last_used_device->is_primary_device()) && blob_last_used_device != op_device) {
+      auto* dep_object = JUST(input->compute_local_dep_object());
+      JUST(SoftSyncStream(dep_object, "mut", blob_last_used_device));
+    }
+  }
+  for (const auto& output : *output_eager_blob_objects) {
+    output->set_last_used_device(op_device);
+  }
+  op_parallel_desc = JUST(Placement4Device(op_device)).shared_from_symbol();
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
   auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
       opkernel, input_eager_blob_objects, output_eager_blob_objects, consistent_tensor_infer_result,
       ctx, *one::CurrentDevVmDepObjectConsumeMode());
-  *instruction->mut_parallel_desc() = parallel_desc_sym;
+  *instruction->mut_parallel_desc() = op_parallel_desc;
   *instruction->mutable_phy_instr_operand() = phy_instr_operand;
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
@@ -918,7 +929,9 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
 
 Maybe<void> InstructionsBuilder::SoftSyncStream(
     LocalDepObject* compute_local_dep_object, const std::string& modifier,
-    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+    Symbol<Device> op_device) {
+  const auto& instr_type_name = JUST(op_device->soft_sync_instruction_name());
+  parallel_desc = JUST(Placement4Device(op_device)).shared_from_symbol();
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(parallel_desc->device_tag() + ".SoftSyncStream");
   *instruction->mutable_phy_instr_operand() =

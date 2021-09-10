@@ -64,6 +64,7 @@ class Device final {
   Maybe<const Optional<std::string>&> GetSharedTransportDeviceType() const;
   Maybe<const std::string&> GetSharedScheduleDeviceType() const;
 
+  Maybe<bool> is_primary_device() const;
   Maybe<const std::string&> local_call_instruction_name() const;
   const Optional<LocalDepObject*>& mut_transport_local_dep_object() const {
     return transport_local_dep_object_;
