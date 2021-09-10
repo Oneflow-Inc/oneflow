@@ -111,7 +111,7 @@ class TestApiCompatiblity(flow.unittest.TestCase):
         )
 
     # vgg test
-    # TODO: debug VGG 
+    # TODO: debug VGG
     # def test_vgg11_compatiblity(test_case):
     #     test_train_loss_oneflow_pytorch(
     #         test_case, "pytorch_vgg.py", "vgg11", "cuda", RESULT_PATH
@@ -144,7 +144,7 @@ class TestApiCompatiblity(flow.unittest.TestCase):
     #     test_train_loss_oneflow_pytorch(
     #         test_case, "pytorch_vgg.py", "vgg19_bn", "cuda", RESULT_PATH
     #     )
-    
+
     # squeezenet test
     def test_squeezenet1_0_compatiblity(test_case):
         test_train_loss_oneflow_pytorch(
