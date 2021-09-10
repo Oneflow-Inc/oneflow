@@ -190,7 +190,18 @@ Scheduler::Impl::Impl() {
   coordinator->Init(request_store, executor);
 }
 
-std::shared_ptr<const SchedulerPlanToken> Scheduler::AddPlan(const Plan& plan) {
+class SchedulerPlanToken {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SchedulerPlanToken);
+  SchedulerPlanToken(const std::vector<int64_t>& job_ids) : job_ids_(job_ids) {}
+  ~SchedulerPlanToken() = default;
+  const std::vector<int64_t>& job_ids() const { return job_ids_; }
+
+ private:
+  std::vector<int64_t> job_ids_;
+};
+
+SchedulerPlanToken* Scheduler::AddPlan(const Plan& plan) {
   std::vector<int64_t> job_ids;
   for (const auto& job_id7request_set : plan.collective_boxing_plan().job_id2request_set()) {
     const int64_t job_id = job_id7request_set.first;
@@ -199,14 +210,15 @@ std::shared_ptr<const SchedulerPlanToken> Scheduler::AddPlan(const Plan& plan) {
   impl_->request_store->AddPlan(plan.collective_boxing_plan());
   impl_->executor->AddPlan(job_ids);
   impl_->coordinator->AddPlan(job_ids);
-  return std::make_shared<SchedulerPlanToken>(job_ids);
+  return new SchedulerPlanToken(job_ids);
 }
 
-void Scheduler::DeletePlan(const std::shared_ptr<const SchedulerPlanToken> plan_token) {
+void Scheduler::DeletePlan(SchedulerPlanToken* plan_token) {
   const std::vector<int64_t>& job_ids = plan_token->job_ids();
   impl_->coordinator->DeletePlan(job_ids);
   impl_->executor->DeletePlan(job_ids);
   impl_->request_store->DeletePlan(job_ids);
+  delete plan_token;
 }
 
 Scheduler::Scheduler() { impl_.reset(new Impl()); }

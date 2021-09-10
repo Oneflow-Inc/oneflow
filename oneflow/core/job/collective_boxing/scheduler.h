@@ -27,17 +27,7 @@ namespace boxing {
 namespace collective {
 
 class RequestHandle;
-
-class SchedulerPlanToken {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(SchedulerPlanToken);
-  SchedulerPlanToken(const std::vector<int64_t>& job_ids) : job_ids_(job_ids) {}
-  ~SchedulerPlanToken() = default;
-  const std::vector<int64_t>& job_ids() const { return job_ids_; }
-
- private:
-  std::vector<int64_t> job_ids_;
-};
+class SchedulerPlanToken;
 
 class Scheduler final {
  public:
@@ -47,8 +37,8 @@ class Scheduler final {
   RequestHandle* CreateRequestHandle(const RankDesc& rank_desc);
   void DestroyRequestHandle(RequestHandle*);
   void Schedule(RequestHandle* handle, std::shared_ptr<const RuntimeRequestInfo> request_info);
-  std::shared_ptr<const SchedulerPlanToken> AddPlan(const Plan& plan);
-  void DeletePlan(const std::shared_ptr<const SchedulerPlanToken> plan_token);
+  SchedulerPlanToken* AddPlan(const Plan& plan);
+  void DeletePlan(SchedulerPlanToken* plan_token);
 
  private:
   friend class Global<Scheduler>;

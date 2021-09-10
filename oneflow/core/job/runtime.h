@@ -35,8 +35,7 @@ class Runtime final {
  private:
   HashMap<int64_t, int64_t> job_id2actor_size_;
 
-  std::shared_ptr<const boxing::collective::SchedulerPlanToken>
-      collective_boxing_scheduler_plan_token_;
+  boxing::collective::SchedulerPlanToken* collective_boxing_scheduler_plan_token_;
 };
 
 }  // namespace oneflow
