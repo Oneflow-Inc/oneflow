@@ -469,8 +469,7 @@ class Module(object):
             module._apply(fn)
 
         def can_use_assign_copy(tensor, tensor_applied):
-            return tensor.is_local == tensor_applied.is_local and \
-                   tensor.is_eager == tensor_applied.is_eager
+            return tensor.is_local == tensor_applied.is_local
 
         for (key, param) in self._parameters.items():
             if param is None:
