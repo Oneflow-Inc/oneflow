@@ -39,7 +39,7 @@ add_docstr(
         >>> input = flow.tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
         >>> output = flow._C.pad(input, pad, mode = "replicate")
         >>> output.shape
-        flow.Size([1, 2, 5, 7])
+        oneflow.Size([1, 2, 5, 7])
         >>> output
         tensor([[[[ 0.,  0.,  0.,  1.,  2.,  2.,  2.],
                   [ 0.,  0.,  0.,  1.,  2.,  2.,  2.],

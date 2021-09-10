@@ -13,16 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/sync_check_kernel_observer.h"
-#include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/device/cuda_device_context.h"
-#include "oneflow/core/stream/stream_context.h"
+#ifndef ONEFLOW_CORE_STREAM_EXECUTION_CONTEXT_HOOK_H_
+#define ONEFLOW_CORE_STREAM_EXECUTION_CONTEXT_HOOK_H_
+
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/auto_registration_factory.h"
 
 namespace oneflow {
 
-void SyncCheckKernelObserver::DidForwardDataContent(KernelContext* kernel_ctx,
-                                                    const Kernel* kernel) {
-  CHECK_JUST_MSG(kernel_ctx->stream_ctx()->Sync(), kernel->op_conf().name());
-}
+class ExecutionContextHook {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ExecutionContextHook);
+  ExecutionContextHook() = default;
+  virtual ~ExecutionContextHook() = default;
+
+  virtual Maybe<void> OnExecutionContextSetup() = 0;
+  virtual Maybe<void> OnExecutionContextTeardown() = 0;
+};
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_STREAM_EXECUTION_CONTEXT_HOOK_H_
