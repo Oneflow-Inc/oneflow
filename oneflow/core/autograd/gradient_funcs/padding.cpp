@@ -81,7 +81,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("replication_pad2d", ReplicationPad2d);
 struct ConstantPadNdCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   std::vector<int64_t> paddings;
-  functional::Scalar padding_value;
+  Scalar padding_value;
 };
 
 class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {

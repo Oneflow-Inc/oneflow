@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -26,7 +27,6 @@ limitations under the License.
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
-#include "oneflow/core/functional/scalar.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
 
 namespace oneflow {
