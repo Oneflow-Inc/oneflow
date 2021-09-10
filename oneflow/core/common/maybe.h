@@ -381,6 +381,15 @@ std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>& e
                                                                                   ": "
 #define RETURN_ERROR_WITH_BUG_PROMPT() OF_RUNTIME_ERROR() << kOfBugIssueUploadPrompt
 
+#define OF_LOG_ONCE(x)          \
+  {                             \
+    static bool warned = false; \
+    if (!warned) {              \
+      warned = true;            \
+      x;                        \
+    }                           \
+  }
+
 #define OF_COMPLIE_OPTION_ERROR()                                                         \
   return Error::CompileOptionWrongError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \
          << " Compile option wrong: "
