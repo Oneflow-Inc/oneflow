@@ -33,6 +33,7 @@ def compare_with_numpy_adam(
     weight_decay,
     eps,
     do_bias_correction,
+    amsgrad,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -61,9 +62,10 @@ def compare_with_numpy_adam(
                 "betas": betas,
                 "eps": eps,
                 "weight_decay": weight_decay,
+                "do_bias_correction": do_bias_correction,
+                "amsgrad": amsgrad,
             }
-        ],
-        do_bias_correction=do_bias_correction,
+        ]
     )
 
     class CustomAdamGraph(flow.nn.Graph):
@@ -81,8 +83,11 @@ def compare_with_numpy_adam(
     adam_graph = CustomAdamGraph()
 
     for i in range(train_iters):
-        mask_tensor = flow.Tensor(
-            random_grad_seq[i], requires_grad=False, device=flow.device(device)
+        mask_tensor = flow.tensor(
+            random_grad_seq[i],
+            dtype=flow.float32,
+            requires_grad=False,
+            device=flow.device(device),
         )
         adam_x = adam_graph(mask_tensor)
 
@@ -94,28 +99,35 @@ def compare_with_numpy_adam(
         x = init_value
         vt = np.zeros_like(x)
         st = np.zeros_like(x)
+        max_st = np.zeros_like(x)
         beta1 = betas[0]
         beta2 = betas[1]
 
-        def np_train_one_iter(iter, grad):
+        def np_train_one_iter(step, grad):
             grad = grad + weight_decay * x
 
+            bias_correction1 = 1.0
+            bias_correction2 = 1.0
+
             if do_bias_correction:
-                lr = (
-                    learning_rate
-                    * np.sqrt(1 - beta2 ** (iter + 1))
-                    / (1 - beta1 ** (iter + 1))
-                )
-            else:
-                lr = learning_rate
+                bias_correction1 = 1.0 - np.power(beta1, step)
+                bias_correction2 = 1.0 - np.power(beta2, step)
 
             v = beta1 * vt + (1 - beta1) * grad
             s = beta2 * st + (1 - beta2) * grad * grad
-            param = x - lr * (v / (np.sqrt(s) + eps))
-            return (param, v, s)
+            max_s = np.zeros_like(x)
 
-        for i in range(train_iters):
-            (x, vt, st) = np_train_one_iter(i, random_grad_seq[i])
+            if amsgrad:
+                max_s = np.maximum(s, max_st)
+                denom = np.sqrt(max_s) / np.sqrt(bias_correction2) + eps
+            else:
+                denom = np.sqrt(s) / np.sqrt(bias_correction2) + eps
+
+            param = x - ((learning_rate / bias_correction1) * v / denom)
+            return (param, v, s, max_s)
+
+        for i in range(1, train_iters + 1):
+            (x, vt, st, max_st) = np_train_one_iter(i, random_grad_seq[i - 1])
             np_res_list.append(x)
         return x
 
@@ -134,6 +146,7 @@ def compare_with_numpy_adam_clip_grad(
     weight_decay,
     eps,
     do_bias_correction,
+    amsgrad,
     clip_grad_max_norm,
     clip_grad_norm_type,
 ):
@@ -146,7 +159,7 @@ def compare_with_numpy_adam_clip_grad(
         def __init__(self):
             super().__init__()
             self.para0 = flow.nn.Parameter(
-                flow.Tensor(init_value, device=flow.device(device))
+                flow.tensor(init_value, device=flow.device(device))
             )
 
         def forward(self, mask):
@@ -164,11 +177,12 @@ def compare_with_numpy_adam_clip_grad(
                 "betas": betas,
                 "eps": eps,
                 "weight_decay": weight_decay,
+                "do_bias_correction": do_bias_correction,
+                "amsgrad": amsgrad,
                 "clip_grad_max_norm": clip_grad_max_norm,
                 "clip_grad_norm_type": clip_grad_norm_type,
             }
-        ],
-        do_bias_correction=do_bias_correction,
+        ]
     )
 
     class CustomAdamGraph(flow.nn.Graph):
@@ -186,7 +200,7 @@ def compare_with_numpy_adam_clip_grad(
     adam_graph = CustomAdamGraph()
 
     for i in range(train_iters):
-        mask_tensor = flow.Tensor(
+        mask_tensor = flow.tensor(
             random_grad_seq[i], requires_grad=False, device=flow.device(device)
         )
         adam_x = adam_graph(mask_tensor)
@@ -199,37 +213,43 @@ def compare_with_numpy_adam_clip_grad(
         x = init_value
         vt = np.zeros_like(x)
         st = np.zeros_like(x)
+        max_st = np.zeros_like(x)
         beta1 = betas[0]
         beta2 = betas[1]
 
-        def np_train_one_iter(iter, grad):
-            norm, grad = clip_grad_norm_np(
+        def np_train_one_iter(step, grad):
+            total_norm, grad = clip_grad_norm_np(
                 grad, clip_grad_max_norm, clip_grad_norm_type
             )
             grad = grad + weight_decay * x
 
+            bias_correction1 = 1.0
+            bias_correction2 = 1.0
+
             if do_bias_correction:
-                lr = (
-                    learning_rate
-                    * np.sqrt(1 - beta2 ** (iter + 1))
-                    / (1 - beta1 ** (iter + 1))
-                )
-            else:
-                lr = learning_rate
+                bias_correction1 = 1.0 - np.power(beta1, step)
+                bias_correction2 = 1.0 - np.power(beta2, step)
 
             v = beta1 * vt + (1 - beta1) * grad
             s = beta2 * st + (1 - beta2) * grad * grad
-            param = x - lr * (v / (np.sqrt(s) + eps))
-            return (param, v, s)
+            max_s = np.zeros_like(x)
 
-        for i in range(train_iters):
-            (x, vt, st) = np_train_one_iter(i, random_grad_seq[i])
+            if amsgrad:
+                max_s = np.maximum(s, max_st)
+                denom = np.sqrt(max_s) / np.sqrt(bias_correction2) + eps
+            else:
+                denom = np.sqrt(s) / np.sqrt(bias_correction2) + eps
+
+            param = x - ((learning_rate / bias_correction1) * v / denom)
+            return (param, v, s, max_s)
+
+        for i in range(1, train_iters + 1):
+            (x, vt, st, max_st) = np_train_one_iter(i, random_grad_seq[i - 1])
             np_res_list.append(x)
         return x
 
     train_by_numpy()
-
-    test_case.assertTrue(np.allclose(of_res_list, np_res_list, rtol=0.001, atol=0.001))
+    test_case.assertTrue(np.allclose(of_res_list, np_res_list, rtol=1e-3, atol=1e-3))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -244,6 +264,8 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict["weight_decay"] = [0.001, 0.0]
         arg_dict["eps"] = [1e-8]
         arg_dict["do_bias_correction"] = [True, False]
+        arg_dict["amsgrad"] = [True, False]
+
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adam(test_case, *arg)
 
@@ -259,6 +281,7 @@ class TestAdam(flow.unittest.TestCase):
         ]  # NOTE(Liang Depeng): test will fail when weight_decay > 0
         arg_dict["eps"] = [1e-8]
         arg_dict["do_bias_correction"] = [True, False]
+        arg_dict["amsgrad"] = [True, False]
         arg_dict["clip_grad_max_norm"] = [1.0]
         arg_dict["clip_grad_norm_type"] = [2.0]
         for arg in GenArgList(arg_dict):

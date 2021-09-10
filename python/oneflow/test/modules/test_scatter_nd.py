@@ -25,10 +25,10 @@ import oneflow.unittest
 
 
 def _test_scatter_nd(test_case, device):
-    indices = flow.Tensor(
+    indices = flow.tensor(
         np.array([[1], [6], [4]]), dtype=flow.int, device=flow.device(device)
     )
-    update = flow.Tensor(
+    update = flow.tensor(
         np.array([10.2, 5.1, 12.7]), dtype=flow.float, device=flow.device(device)
     )
     np_out = np.array([0.0, 10.2, 0.0, 0.0, 12.7, 0.0, 5.1, 0.0])
@@ -37,10 +37,10 @@ def _test_scatter_nd(test_case, device):
 
 
 def _test_scatter_nd_t(test_case, device):
-    indices = flow.Tensor(
+    indices = flow.tensor(
         np.array([[0], [4], [2]]), dtype=flow.int, device=flow.device(device)
     )
-    update = flow.Tensor(
+    update = flow.tensor(
         np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]]),
         dtype=flow.float,
         device=flow.device(device),
@@ -59,10 +59,10 @@ def _test_scatter_nd_t(test_case, device):
 
 
 def _test_scatter_nd_backward(test_case, device):
-    indices = flow.Tensor(
+    indices = flow.tensor(
         np.array([[1], [6], [4]]), dtype=flow.int, device=flow.device(device)
     )
-    of_update = flow.Tensor(
+    of_update = flow.tensor(
         np.array([10.2, 5.1, 12.7]),
         requires_grad=True,
         dtype=flow.float,

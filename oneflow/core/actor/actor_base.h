@@ -23,7 +23,7 @@ namespace oneflow {
 
 class JobDesc;
 class TaskProto;
-class ThreadCtx;
+class StreamContext;
 class ActorMsg;
 
 class ActorBase {
@@ -32,14 +32,14 @@ class ActorBase {
   ActorBase() = default;
   virtual ~ActorBase() = default;
 
-  virtual void Init(const JobDesc* job_desc, const TaskProto&, const ThreadCtx&) = 0;
+  virtual void Init(const JobDesc* job_desc, const TaskProto&, StreamContext* stream_ctx) = 0;
 
   // 1: success, and actor finish
   // 0: success, and actor not finish
   virtual int ProcessMsg(const ActorMsg& msg) = 0;
 };
 
-std::unique_ptr<ActorBase> NewActor(const TaskProto&, const ThreadCtx&);
+std::unique_ptr<ActorBase> NewActor(const TaskProto&, StreamContext* stream_ctx);
 
 #define REGISTER_ACTOR(task_type, ActorType) \
   REGISTER_CLASS(int32_t, task_type, ActorBase, ActorType)

@@ -32,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
@@ -203,6 +204,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
+    PlanUtil::PlanMemoryLog(&plan_, name_);
   }
   if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name = "plan:" + job_name();
@@ -237,10 +239,10 @@ void NNGraph::NewRuntimeBuffers() {
   buffer_mgr->NewBuffer(GetSourceTickBufferName(name_), concurrency_width);
   buffer_mgr->NewBuffer(GetCallbackNotifierBufferName(name_), concurrency_width);
   for (const std::string& input_op_name : input_op_names_) {
-    buffer_mgr->NewBuffer(GetInputBufferName(name_, input_op_name), 2);
+    buffer_mgr->NewBuffer(GetInputBufferName(name_, input_op_name), concurrency_width);
   }
   for (const std::string& output_op_name : output_op_names_) {
-    buffer_mgr->NewBuffer(GetOutputBufferName(name_, output_op_name), 2);
+    buffer_mgr->NewBuffer(GetOutputBufferName(name_, output_op_name), concurrency_width);
   }
 }
 

@@ -29,7 +29,7 @@ from automated_test_util import *
 def _test_triu(test_case, diagonal, device):
     arr_shape = (4, 4, 8)
     np_arr = np.random.randn(*arr_shape)
-    input_tensor = flow.Tensor(
+    input_tensor = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     output = flow.triu(input_tensor, diagonal=diagonal)

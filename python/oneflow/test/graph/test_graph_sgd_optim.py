@@ -35,7 +35,7 @@ def compare_with_numpy_sgd(
         def __init__(self):
             super().__init__()
             self.para0 = flow.nn.Parameter(
-                flow.Tensor(init_value, device=flow.device(device))
+                flow.tensor(init_value, device=flow.device(device))
             )
 
         def forward(self, mask):
@@ -70,7 +70,7 @@ def compare_with_numpy_sgd(
     of_res_list = []
     sgd_graph = CustomSGDGraph()
     for i in range(train_iters):
-        mask_tensor = flow.Tensor(
+        mask_tensor = flow.tensor(
             random_grad_seq[i], requires_grad=False, device=flow.device(device)
         )
         sgd_x = sgd_graph(mask_tensor)
@@ -116,7 +116,7 @@ def compare_with_numpy_sgd_clip_grad(
         def __init__(self):
             super().__init__()
             self.para0 = flow.nn.Parameter(
-                flow.Tensor(init_value, device=flow.device(device))
+                flow.tensor(init_value, device=flow.device(device))
             )
 
         def forward(self, mask):
@@ -153,7 +153,7 @@ def compare_with_numpy_sgd_clip_grad(
     of_res_list = []
     sgd_graph = CustomSGDGraph()
     for i in range(train_iters):
-        mask_tensor = flow.Tensor(
+        mask_tensor = flow.tensor(
             random_grad_seq[i], requires_grad=False, device=flow.device(device)
         )
         sgd_x = sgd_graph(mask_tensor)

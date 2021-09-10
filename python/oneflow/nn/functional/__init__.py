@@ -20,12 +20,12 @@ from oneflow.nn.modules.grid_sample import grid_sample
 from oneflow._C import conv1d
 from oneflow._C import conv2d
 from oneflow._C import conv3d
-from oneflow._C import avgpool_1d
-from oneflow._C import avgpool_2d
-from oneflow._C import avgpool_3d
-from oneflow._C import maxpool_1d
-from oneflow._C import maxpool_2d
-from oneflow._C import maxpool_3d
+from oneflow._C import avg_pool1d
+from oneflow._C import avg_pool2d
+from oneflow._C import avg_pool3d
+from .functional_maxpool import max_pool1d
+from .functional_maxpool import max_pool2d
+from .functional_maxpool import max_pool3d
 from oneflow._C import adaptive_avg_pool1d
 from oneflow._C import adaptive_avg_pool2d
 from oneflow._C import adaptive_avg_pool3d
@@ -39,6 +39,7 @@ from oneflow._C import selu
 from oneflow._C import sigmoid
 from oneflow._C import prelu
 from oneflow._C import gelu
+from oneflow._C import glu
 from oneflow._C import log_sigmoid as logsigmoid
 from oneflow._C import log_sigmoid
 from oneflow._C import softsign

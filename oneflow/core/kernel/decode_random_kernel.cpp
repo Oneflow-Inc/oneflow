@@ -24,9 +24,9 @@ class DecodeRandomKernel final : public Kernel {
   DecodeRandomKernel() : is_init_(false){};
   ~DecodeRandomKernel() = default;
 
-  void Forward(const KernelContext* ctx) const override { ForwardDataContent(ctx); }
+  void Forward(KernelContext* ctx) const override { ForwardDataContent(ctx); }
 
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 
  private:
   void VirtualKernelInit(KernelContext* ctx) override;
@@ -70,7 +70,7 @@ uint32_t DecodeRandomKernel<device_type>::GenNextRandomSeed() const {
 }
 
 template<DeviceType device_type>
-void DecodeRandomKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
+void DecodeRandomKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
   const DecodeRandomOpConf& conf = this->op_conf().decode_random_conf();
   if (is_init_ == false) {
     RandomFillBlob(ctx->device_ctx(), device_type, conf.data_initializer(),

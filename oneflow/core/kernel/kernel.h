@@ -33,8 +33,7 @@ class Kernel {
   virtual ~Kernel();
 
   void Init(const KernelConf& kernel_conf, KernelContext* ctx);
-  virtual void DestroyState(void* state) const;
-  void Launch(const KernelContext* ctx) const;
+  void Launch(KernelContext* ctx) const;
 
   const OperatorConf& op_conf() const { return op_attribute().op_conf(); }
   const OpAttribute& op_attribute() const { return kernel_conf().op_attribute(); }
@@ -46,19 +45,19 @@ class Kernel {
    */
   virtual bool IsKernelLaunchSynchronized() const { return true; }
 
-  void SystemForwardHeader(const KernelContext* ctx) const { ForwardHeader(ctx); }
-  void SystemForwardDataContent(const KernelContext* ctx) const { ForwardDataContent(ctx); }
-  virtual void Forward(const KernelContext* ctx) const;
+  void SystemForwardHeader(KernelContext* ctx) const { ForwardHeader(ctx); }
+  void SystemForwardDataContent(KernelContext* ctx) const { ForwardDataContent(ctx); }
+  virtual void Forward(KernelContext* ctx) const;
 
  protected:
   Kernel();
-  void InitBase(const JobDesc* job_desc, const KernelConf&);
+  void InitBase(const KernelConf&);
   virtual void VirtualKernelInit(KernelContext* ctx) {}
 
-  virtual void ForwardHeader(const KernelContext* ctx) const;
-  virtual void ForwardShape(const KernelContext* ctx) const;
+  virtual void ForwardHeader(KernelContext* ctx) const;
+  virtual void ForwardShape(KernelContext* ctx) const;
   // TODO(niuchong) : rename ForwardDataContent to ForwardBody
-  virtual void ForwardDataContent(const KernelContext* ctx) const = 0;
+  virtual void ForwardDataContent(KernelContext* ctx) const = 0;
   virtual bool IsStateless() const { return false; }
 
  private:

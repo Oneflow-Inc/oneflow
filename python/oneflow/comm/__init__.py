@@ -13,5 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.comm.primitive import all_reduce
+from oneflow.comm.comm_ops import all_reduce
+from oneflow.comm.comm_ops import all_gather
+from oneflow.comm.comm_ops import broadcast
 from oneflow._C import send, recv
