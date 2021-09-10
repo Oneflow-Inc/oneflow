@@ -50,7 +50,6 @@ void Thread::AddTask(const TaskProto& task) {
 }
 
 void Thread::PollMsgChannel() {
-  auto lazy_mode_enabled_guard = LazyMode::Guard(/* is_enabled */ true);
   while (true) {
     if (local_msg_queue_.empty()) {
       CHECK_EQ(msg_channel_.ReceiveMany(&local_msg_queue_), kChannelStatusSuccess);
