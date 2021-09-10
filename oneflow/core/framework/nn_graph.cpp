@@ -199,6 +199,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
               << " , compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.\n";
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
+      PlanUtil::ToDotFile(plan_, "/dot/job_" + name_ + "_plan.dot");
     }
     // TODO(chengcheng): test collective boxing for multi-job.
     PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);

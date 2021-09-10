@@ -22,6 +22,14 @@ import oneflow as flow
 import oneflow.unittest
 
 
+D = "cuda"
+B = [flow.sbp.broadcast]
+P0 = flow.placement("cuda", {0: [0]})
+P1 = flow.placement("cuda", {0: [1]})
+P2 = flow.placement("cuda", {0: [2]})
+P3 = flow.placement("cuda", {0: [3]})
+rank = flow.env.get_rank()
+
 class OFRecordDataLoader(flow.nn.Module):
     def __init__(
         self,
@@ -75,15 +83,6 @@ class OFRecordDataLoader(flow.nn.Module):
 
         return image, label
 
-
-D = "cuda"
-B = [flow.sbp.broadcast]
-P0 = flow.placement("cuda", {0: [0]})
-P1 = flow.placement("cuda", {0: [1]})
-P2 = flow.placement("cuda", {0: [2]})
-P3 = flow.placement("cuda", {0: [3]})
-
-
 def _get_ppm_and_opt():
     train_data_loader = OFRecordDataLoader(
         ofrecord_root="/dataset/ImageNet/ofrecord",
@@ -135,120 +134,119 @@ def _get_ppm_and_opt():
     return pp_m, of_sgd
 
 
-def _test_graph_pipeline(test_case):
-    rank = flow.env.get_rank()
+def _train_with_graph(iter_num=3):
+    pp_m, of_sgd = _get_ppm_and_opt()
 
-    def train_with_graph(iter_num=3):
-        pp_m, of_sgd = _get_ppm_and_opt()
+    class PipelineGraph(flow.nn.Graph):
+        def __init__(self):
+            super().__init__()
+            self.pp_m = pp_m
+            self.pp_m.stage_0_m.config.stage_id = 0
+            self.pp_m.stage_1_m.config.stage_id = 1
+            self.pp_m.stage_2_m.config.stage_id = 2
+            self.pp_m.stage_3_m.config.stage_id = 3
+            self.config.set_gradient_accumulation_steps(4)
+            self.add_optimizer(of_sgd)
 
-        class PipelineGraph(flow.nn.Graph):
-            def __init__(self):
-                super().__init__()
-                self.pp_m = pp_m
-                self.pp_m.stage_0_m.config.stage_id = 0
-                self.pp_m.stage_1_m.config.stage_id = 1
-                self.pp_m.stage_2_m.config.stage_id = 2
-                self.pp_m.stage_3_m.config.stage_id = 3
-                self.config.set_gradient_accumulation_steps(4)
-                self.add_optimizer(of_sgd)
+        def build(self):
+            pp_m.train()
+            loss, image = self.pp_m()
+            loss.backward()
+            return loss, image
 
-            def build(self):
-                pp_m.train()
-                loss, image = self.pp_m()
-                loss.backward()
-                return loss, image
+    pp_g = PipelineGraph()
 
-        pp_g = PipelineGraph()
+    def one_iter(iter_idx):
+        loss, image = pp_g()
+        if rank == 3:
+            loss = loss.to_local()
+            loss_np = loss.numpy()
+            print("loss numpy \n", loss)
+            image = image.to_local().numpy()
+            return loss, image
+
+    check_list = []
+    data_list = []
+    for i in range(iter_num):
+        out = one_iter(i)
+        if rank == 3:
+            check_list.append(out[0])
+            data_list.append(out[1])
+    return check_list, data_list
+
+
+def _train_with_module(iter_num=3, data=None):
+    class DataModule(flow.nn.Module):
+        def __init__(self, data):
+            super().__init__()
+            self.data_list = []
+            self.idx = 0
+            for image in data:
+                for i in range(4):
+                    s = i * 4
+                    e = s + 4
+                    micro_batch_image = image[s:e]
+                    self.data_list.append(
+                        flow.Tensor(micro_batch_image).to("cuda:3"),
+                    )
+
+        def forward(self):
+            image = self.data_list[self.idx]
+            self.idx += 1
+            return image
+
+    class TrainModule(flow.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.linear = flow.nn.Linear(1452, 8, False)
+            flow.nn.init.constant_(self.linear.weight, 0.023)
+            self.linear.to("cuda:3")
+            self.linear1 = flow.nn.Linear(8, 8, False)
+            flow.nn.init.constant_(self.linear1.weight, 0.023)
+            self.linear1.to("cuda:3")
+            self.linear2 = flow.nn.Linear(8, 8, False)
+            flow.nn.init.constant_(self.linear2.weight, 0.023)
+            self.linear2.to("cuda:3")
+            self.linear3 = flow.nn.Linear(8, 2, False)
+            flow.nn.init.constant_(self.linear3.weight, 0.023)
+            self.linear3.to("cuda:3")
+
+        def forward(self, image):
+            out = self.linear(image)
+            out = self.linear1(out)
+            out = self.linear2(out)
+            out = self.linear3(out)
+            loss = out.sum()
+            return loss
+
+    if rank == 3:
+        d_m = DataModule(data)
+        t_m = TrainModule()
+        of_sgd = flow.optim.SGD(t_m.parameters(), lr=0.0001)
 
         def one_iter(iter_idx):
-            loss, image = pp_g()
+            image = d_m()
             if rank == 3:
-                loss = loss.to_local()
+                loss = t_m(image)
                 loss_np = loss.numpy()
-                print("loss numpy \n", loss)
-                image = image.to_local().numpy()
-                return loss, image
+                print("eager loss numpy \n", loss_np)
+                loss = loss * 0.25
+                loss.backward()
+                if iter_idx % 4 == 3:
+                    print(f"iter index: {iter_idx}")
+                    of_sgd.step()
+                    of_sgd.zero_grad()
+                return loss_np
 
         check_list = []
-        data_list = []
         for i in range(iter_num):
-            out = one_iter(i)
-            if rank == 3:
-                check_list.append(out[0])
-                data_list.append(out[1])
-        return check_list, data_list
+            check_list.append(one_iter(i))
+        return check_list
 
-    def train_with_module(iter_num=3, data=None):
-        class DataModule(flow.nn.Module):
-            def __init__(self, data):
-                super().__init__()
-                self.data_list = []
-                self.idx = 0
-                for image in data:
-                    for i in range(4):
-                        s = i * 4
-                        e = s + 4
-                        micro_batch_image = image[s:e]
-                        self.data_list.append(
-                            flow.Tensor(micro_batch_image).to("cuda:3"),
-                        )
-
-            def forward(self):
-                image = self.data_list[self.idx]
-                self.idx += 1
-                return image
-
-        class TrainModule(flow.nn.Module):
-            def __init__(self):
-                super().__init__()
-                self.linear = flow.nn.Linear(1452, 8, False)
-                flow.nn.init.constant_(self.linear.weight, 0.023)
-                self.linear.to("cuda:3")
-                self.linear1 = flow.nn.Linear(8, 8, False)
-                flow.nn.init.constant_(self.linear1.weight, 0.023)
-                self.linear1.to("cuda:3")
-                self.linear2 = flow.nn.Linear(8, 8, False)
-                flow.nn.init.constant_(self.linear2.weight, 0.023)
-                self.linear2.to("cuda:3")
-                self.linear3 = flow.nn.Linear(8, 2, False)
-                flow.nn.init.constant_(self.linear3.weight, 0.023)
-                self.linear3.to("cuda:3")
-
-            def forward(self, image):
-                out = self.linear(image)
-                out = self.linear1(out)
-                out = self.linear2(out)
-                out = self.linear3(out)
-                loss = out.sum()
-                return loss
-
-        if rank == 3:
-            d_m = DataModule(data)
-            t_m = TrainModule()
-            of_sgd = flow.optim.SGD(t_m.parameters(), lr=0.0001)
-
-            def one_iter(iter_idx):
-                image = d_m()
-                if rank == 3:
-                    loss = t_m(image)
-                    loss_np = loss.numpy()
-                    print("eager loss numpy \n", loss_np)
-                    loss = loss * 0.25
-                    loss.backward()
-                    if iter_idx % 4 == 3:
-                        print(f"iter index: {iter_idx}")
-                        of_sgd.step()
-                        of_sgd.zero_grad()
-                    return loss_np
-
-            check_list = []
-            for i in range(iter_num):
-                check_list.append(one_iter(i))
-            return check_list
-
+def _test_graph_pipeline(test_case):
     iter_num = 3
-    graph_check_list, data = train_with_graph(iter_num)
-    module_check_list = train_with_module(iter_num * 4, data)
+    graph_check_list, data = _train_with_graph(iter_num)
+    module_check_list = _train_with_module(iter_num * 4, data)
 
     if rank == 3:
         for i in range(iter_num * 4):
@@ -258,8 +256,8 @@ def _test_graph_pipeline(test_case):
             )
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-@flow.unittest.skip_unless_1n4d()
+#@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+#@flow.unittest.skip_unless_1n4d()
 class TestGraphPipeline(oneflow.unittest.TestCase):
     def test_graph_pipeline(test_case):
         _test_graph_pipeline(test_case)
