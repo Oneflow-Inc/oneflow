@@ -407,7 +407,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   bool is_cuda() const override;
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
   Maybe<Tensor> data() override {
-    LOG(WARNING) << "You shouldn't call `.data` for a LocalTensor.";
+    OF_LOG_ONCE(LOG(WARNING) << "You shouldn't call `.data` for a LocalTensor.");
     return std::static_pointer_cast<Tensor>(shared_from_this());
   }
 
@@ -504,7 +504,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   }
   bool is_cuda() const override;
   Maybe<Tensor> data() override {
-    LOG(WARNING) << "You shouldn't call `.data` for a ConsistentTensor.";
+    OF_LOG_ONCE(LOG(WARNING) << "You shouldn't call `.data` for a ConsistentTensor.");
     return std::static_pointer_cast<Tensor>(shared_from_this());
   }
 
