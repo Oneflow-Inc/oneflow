@@ -84,7 +84,8 @@ void RegstMgr::AddPlan(const Plan& plan,
         CHECK(mem_block_id2ptr_.emplace(mem_block_id, var_blob->mut_header_ptr()).second);
         CHECK(mem_block.mem_case().has_host_mem());
       } else {
-        CHECK_GE(var_blob->blob_desc().AlignedByteSizeOfBlobBody(), mem_block.mem_size());
+        CHECK_GE(var_blob->blob_desc().AlignedByteSizeOfBlobBody(), mem_block.mem_size())
+            << "var_name: " << var_name << " in rank: " << this_machine_id;
         CHECK_GE(mem_block.mem_size(), var_blob->blob_desc().ByteSizeOfBlobBody());
         CHECK(mem_block_id2ptr_.emplace(mem_block_id, var_blob->ForceMutDptr<char>()).second);
         CHECK(mem_block.mem_case() == var_blob->mem_case());

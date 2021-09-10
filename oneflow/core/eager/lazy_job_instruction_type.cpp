@@ -29,10 +29,23 @@ limitations under the License.
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
 
 namespace {
+
+bool IsEmptyComponentEagerBlobObject(
+    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+  Blob* blob = eager_blob_object->mut_blob();
+  if (blob && blob->shape().elem_cnt() > 0 && blob->dptr()) {
+    // NOTE(chengcheng):
+    //   Scalar shape has elem_cnt == 1;
+    //   0-Size shape has NumAxes > 0 and has dim value 0.
+    return false;
+  }
+  return true;
+}
 
 class LazyJobInstance final : public JobInstance {
  public:
@@ -67,6 +80,24 @@ class LazyJobInstance final : public JobInstance {
   void PushBlob(uint64_t ofblob_ptr) const override { UNIMPLEMENTED(); }
   void PullBlob(uint64_t ofblob_ptr) const override { UNIMPLEMENTED(); }
 
+  bool HasPushCbOpName(const std::string& op_name) const {
+    int64_t this_rank = GlobalProcessCtx::Rank();
+    LOG(ERROR) << "rank = " << this_rank << " push_cbs_.size = " << push_cbs_.size() << "\n";
+    for (auto& pair : push_cbs_) {
+      LOG(ERROR) << "rank = " << this_rank << " : input_op_name = " << pair.first << "\n";
+    }
+    return push_cbs_.find(op_name) != push_cbs_.end();
+  }
+
+  bool HasPullCbOpName(const std::string& op_name) const {
+    int64_t this_rank = GlobalProcessCtx::Rank();
+    LOG(ERROR) << "rank = " << this_rank << " pull_cbs_.size = " << pull_cbs_.size() << "\n";
+    for (auto& pair : pull_cbs_) {
+      LOG(ERROR) << "rank = " << this_rank << " : output_op_name = " << pair.first << "\n";
+    }
+    return pull_cbs_.find(op_name) != pull_cbs_.end();
+  }
+
  private:
   const std::string job_name_;
   const HashMap<std::string, std::function<void(int64_t)>> push_cbs_;
@@ -99,12 +130,27 @@ class RunLazyJobInstructionType final : public InstructionType {
       OF_PROFILER_RANGE_POP();  // MakeJobInstance
       OF_PROFILER_RANGE_PUSH("Send all buffers to BufferMgr");
       const auto& job_name = job_instance->job_name();
+      int64_t this_rank = GlobalProcessCtx::Rank();
       auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
       for (const auto& op_name : cur_nn_graph->inputs_op_names()) {
-        buffer_mgr->Get(GetInputBufferName(job_name, op_name))->Send(job_instance);
+        if (job_instance->HasPushCbOpName(op_name)) {
+          LOG(ERROR) << "cclog: in rank: " << this_rank << " has input with op name: " << op_name
+                     << " so send push cb.\n";
+          buffer_mgr->Get(GetInputBufferName(job_name, op_name))->Send(job_instance);
+        } else {
+          LOG(ERROR) << "cclog: in rank: " << this_rank
+                     << " has NOT input with op name: " << op_name << " so NOT send push cb.\n";
+        }
       }
       for (const auto& op_name : cur_nn_graph->outputs_op_names()) {
-        buffer_mgr->Get(GetOutputBufferName(job_name, op_name))->Send(job_instance);
+        if (job_instance->HasPullCbOpName(op_name)) {
+          LOG(ERROR) << "cclog: in rank: " << this_rank << " has output with op name: " << op_name
+                     << " so send pull cb.\n";
+          buffer_mgr->Get(GetOutputBufferName(job_name, op_name))->Send(job_instance);
+        } else {
+          LOG(ERROR) << "cclog: in rank: " << this_rank
+                     << " has NOT output with op name: " << op_name << " so NOT send pull cb.\n";
+        }
       }
       buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Send(job_instance);
       buffer_mgr->Get(GetSourceTickBufferName(job_name))->Send(job_instance);
@@ -131,6 +177,7 @@ class RunLazyJobInstructionType final : public InstructionType {
   }
 
   std::shared_ptr<LazyJobInstance> MakeJobInstance(Instruction* instruction) const {
+    int64_t this_rank = GlobalProcessCtx::Rank();
     const auto* ptr = instruction->instr_msg().phy_instr_operand().get();
     const auto* phy_instr_operand = dynamic_cast<const RunLazyJobPhyInstrOperand*>(ptr);
     CHECK_NOTNULL(phy_instr_operand);
@@ -138,27 +185,51 @@ class RunLazyJobInstructionType final : public InstructionType {
     HashMap<std::string, std::function<void(int64_t)>> push_cbs;
     CHECK_EQ(nn_graph->inputs_op_names().size(), phy_instr_operand->inputs()->size());
     for (int i = 0; i < nn_graph->inputs_op_names().size(); ++i) {
-      const auto* blob = &phy_instr_operand->inputs()->at(i)->blob();
-      if (!blob) { continue; }
+      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object =
+          phy_instr_operand->inputs()->at(i);
+      const auto* blob = &eager_blob_object->blob();
       const auto& op_name = nn_graph->inputs_op_names().at(i);
+      if (IsEmptyComponentEagerBlobObject(eager_blob_object)) {
+        LOG(ERROR) << " in rank = " << this_rank << ", op_name: " << op_name
+                   << " SKIP build push cb.";
+        continue;
+      }
       const auto& PushCb = [blob](int64_t of_blob_ptr) {
         OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+        std::cout << "cclog: in PushCb, input tensor blob: header_size = "
+                  << blob->blob_desc().ByteSizeOfBlobHeader()
+                  << " header_shape = " << blob->shape().ToString()
+                  << " aligned header size = " << blob->blob_desc().AlignedByteSizeOfBlobHeader()
+                  << " \n input regst blob: header_size = "
+                  << of_blob->mut_blob()->blob_desc().ByteSizeOfBlobHeader()
+                  << " header_shape = " << of_blob->mut_blob()->shape().ToString()
+                  << ": aligned header size = "
+                  << of_blob->mut_blob()->blob_desc().AlignedByteSizeOfBlobHeader() << "\n";
         of_blob->mut_blob()->CopyHeaderFrom(of_blob->mut_device_ctx(), blob);
         of_blob->mut_blob()->CopyDataContentFrom(of_blob->mut_device_ctx(), blob);
       };
       CHECK(push_cbs.emplace(op_name, PushCb).second);
+      LOG(ERROR) << " in rank = " << this_rank << ", op_name: " << op_name << " build push cb.";
     }
     HashMap<std::string, std::function<void(int64_t)>> pull_cbs;
     CHECK_EQ(nn_graph->outputs_op_names().size(), phy_instr_operand->outputs()->size());
     for (int i = 0; i < nn_graph->outputs_op_names().size(); ++i) {
-      auto* mut_blob = phy_instr_operand->outputs()->at(i)->mut_blob();
-      if (!mut_blob) { continue; }
+      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object =
+          phy_instr_operand->outputs()->at(i);
       const auto& op_name = nn_graph->outputs_op_names().at(i);
+      auto* mut_blob = eager_blob_object->mut_blob();
+      if (IsEmptyComponentEagerBlobObject(eager_blob_object)) {
+        LOG(ERROR) << " in rank = " << this_rank << ", op_name: " << op_name
+                   << " SKIP build pull cb.";
+        continue;
+      }
       const auto& PullCb = [mut_blob](int64_t of_blob_ptr) {
         OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
         mut_blob->CopyHeaderFrom(of_blob->mut_device_ctx(), &of_blob->blob());
         mut_blob->CopyDataContentFrom(of_blob->mut_device_ctx(), &of_blob->blob());
       };
+
+      LOG(ERROR) << " in rank = " << this_rank << ", op_name: " << op_name << " build pull cb.";
       CHECK(pull_cbs.emplace(op_name, PullCb).second);
     }
     const auto& FinishCb = [this, instruction]() {
