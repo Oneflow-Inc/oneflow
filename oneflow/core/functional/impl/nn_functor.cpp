@@ -567,6 +567,140 @@ class NormalizationFunctor {
   std::shared_ptr<OpExpr> norm_training_no_stats_op_;
 };
 
+class NormalizationAddReluFunctor {
+ public:
+  NormalizationAddReluFunctor() {
+    norm_eval_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
+                                   .Input("x")
+                                   .Input("moving_mean")
+                                   .Input("moving_variance")
+                                   .Input("gamma")
+                                   .Input("beta")
+                                   .Output("y")
+                                   .Output("reserve_space")
+                                   .Attr("training", false)
+                                   .Build());
+    norm_training_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
+                                             .Input("x")
+                                             .Input("moving_mean")
+                                             .Input("moving_variance")
+                                             .Input("gamma")
+                                             .Input("beta")
+                                             .Output("y")
+                                             .Output("reserve_space")
+                                             .Output("mean")
+                                             .Output("inv_variance")
+                                             .Attr("training", true)
+                                             .Build());
+    norm_training_no_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
+                                                .Input("x")
+                                                .Input("gamma")
+                                                .Input("beta")
+                                                .Output("y")
+                                                .Output("reserve_space")
+                                                .Output("mean")
+                                                .Output("inv_variance")
+                                                .Attr("training", true)
+                                                .Build());
+
+    addend_norm_eval_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
+                                          .Input("x")
+                                          .Input("addend")
+                                          .Input("moving_mean")
+                                          .Input("moving_variance")
+                                          .Input("gamma")
+                                          .Input("beta")
+                                          .Output("y")
+                                          .Output("reserve_space")
+                                          .Attr("training", false)
+                                          .Build());
+    addend_norm_training_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
+                                                    .Input("x")
+                                                    .Input("addend")
+                                                    .Input("moving_mean")
+                                                    .Input("moving_variance")
+                                                    .Input("gamma")
+                                                    .Input("beta")
+                                                    .Output("y")
+                                                    .Output("reserve_space")
+                                                    .Output("mean")
+                                                    .Output("inv_variance")
+                                                    .Attr("training", true)
+                                                    .Build());
+    addend_norm_training_no_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
+                                                       .Input("x")
+                                                       .Input("addend")
+                                                       .Input("gamma")
+                                                       .Input("beta")
+                                                       .Output("y")
+                                                       .Output("reserve_space")
+                                                       .Output("mean")
+                                                       .Output("inv_variance")
+                                                       .Attr("training", true)
+                                                       .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<one::Tensor>& addend,
+                           const Optional<one::Tensor>& moving_mean,
+                           const Optional<one::Tensor>& moving_variance,
+                           const std::shared_ptr<one::Tensor>& gamma,
+                           const std::shared_ptr<one::Tensor>& beta, const int32_t& axis,
+                           const float& epsilon, const float& momentum,
+                           const bool& is_training) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    JUST(attrs.SetAttr<float>("epsilon", epsilon));
+    // convert torch momentum to tensorflow momentum
+    JUST(attrs.SetAttr<float>("momentum", 1 - momentum));
+
+    CHECK_OR_RETURN((moving_mean && moving_variance) || (!moving_mean && !moving_variance))
+        << "Both moving_mean and moving_variance should be None or Tensor.";
+    if (!is_training) {
+      CHECK_OR_RETURN(moving_mean && moving_variance)
+          << "Must have moving_mean and moving_variance in eval mode.";
+      if (addend) {
+        return OpInterpUtil::Dispatch<one::Tensor>(
+            *addend_norm_eval_op_,
+            {x, JUST(addend.value()), JUST(moving_mean.value()), JUST(moving_variance.value()),
+             gamma, beta},
+            attrs);
+      } else {
+        return OpInterpUtil::Dispatch<one::Tensor>(
+            *norm_eval_op_,
+            {x, JUST(moving_mean.value()), JUST(moving_variance.value()), gamma, beta}, attrs);
+      }
+    } else if (moving_mean) {
+      if (addend) {
+        return OpInterpUtil::Dispatch<one::Tensor>(
+            *addend_norm_training_stats_op_,
+            {x, JUST(addend.value()), JUST(moving_mean.value()), JUST(moving_variance.value()),
+             gamma, beta},
+            attrs);
+      } else {
+        return OpInterpUtil::Dispatch<one::Tensor>(
+            *norm_training_stats_op_,
+            {x, JUST(moving_mean.value()), JUST(moving_variance.value()), gamma, beta}, attrs);
+      }
+    } else {
+      if (addend) {
+        return OpInterpUtil::Dispatch<one::Tensor>(*addend_norm_training_no_stats_op_,
+                                                   {x, JUST(addend.value()), gamma, beta}, attrs);
+      } else {
+        return OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_, {x, gamma, beta},
+                                                   attrs);
+      }
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> norm_eval_op_;
+  std::shared_ptr<OpExpr> norm_training_stats_op_;
+  std::shared_ptr<OpExpr> norm_training_no_stats_op_;
+  std::shared_ptr<OpExpr> addend_norm_eval_op_;
+  std::shared_ptr<OpExpr> addend_norm_training_stats_op_;
+  std::shared_ptr<OpExpr> addend_norm_training_no_stats_op_;
+};
+
 class PadFunctor {
  public:
   PadFunctor() {
@@ -1043,6 +1177,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AffineGridFunctor>("AffineGrid");
   m.add_functor<impl::GridSampleFunctor>("GridSample");
   m.add_functor<impl::NormalizationFunctor>("Normalization");
+  m.add_functor<impl::NormalizationAddReluFunctor>("NormalizationAddRelu");
   m.add_functor<impl::PadFunctor>("Pad");
   m.add_functor<impl::DropoutFunctor>("Dropout");
   m.add_functor<impl::DropoutGradFunctor>("DropoutGrad");
