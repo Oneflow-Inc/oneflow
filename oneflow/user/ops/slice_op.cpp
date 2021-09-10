@@ -39,7 +39,7 @@ Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
 
   // slice a 1-dim tensor will return a 0-dim or 1-dim tensor
-  if (x_shape.NumAxes() == 1 && !LazyMode::is_enabled()) {
+  if (x_shape.NumAxes() == 1) {
     const int64_t dim_size = x_shape.At(0);
     int64_t start = start_vec.at(0);
     int64_t stop = stop_vec.at(0);
@@ -55,12 +55,9 @@ Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
     CHECK_GE_OR_RETURN(len, 1);
     if (len == 1) {
       // return a 0-dim tensor
-      DimVector zero_dim_vec(0);
-      *ctx->OutputShape("y", 0) = Shape(zero_dim_vec);
+      *ctx->OutputShape("y", 0) = Shape({});
     } else {
-      DimVector one_dim_vec(1);
-      one_dim_vec[0] = len;
-      *ctx->OutputShape("y", 0) = Shape(one_dim_vec);
+      *ctx->OutputShape("y", 0) = Shape({len});
     }
     return Maybe<void>::Ok();
   }
