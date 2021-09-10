@@ -36,8 +36,8 @@ class Executor {
   virtual ~Executor() = default;
 
   virtual void Init(std::shared_ptr<RequestStore> request_store) = 0;
-  virtual void AddPlan(const std::vector<int64_t>& job_ids) = 0;
-  virtual void DeletePlan(const std::vector<int64_t>& job_ids) = 0;
+  virtual void InitJob(int64_t job_id) = 0;
+  virtual void DeinitJob(int64_t job_id) = 0;
   virtual void GroupRequests(
       int64_t job_id, const std::vector<int32_t>& request_ids,
       const std::function<void(int64_t, std::vector<int32_t>&&)>& Handler) = 0;

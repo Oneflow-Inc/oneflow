@@ -34,8 +34,8 @@ class NcclExecutorBackend : public ExecutorBackend {
 
  private:
   void Init(std::shared_ptr<RequestStore> request_store) override;
-  void AddPlan(const std::vector<int64_t>& job_ids) override;
-  void DeletePlan(const std::vector<int64_t>& job_ids) override;
+  void InitJob(int64_t job_id) override;
+  void DeinitJob(int64_t job_id) override;
   void GroupRequests(int64_t job_id, const std::vector<int32_t>& request_ids,
                      const std::function<void(int64_t, std::vector<int32_t>&&)>& Handler) override;
   void ExecuteRequests(int64_t job_id, const std::vector<int32_t>& request_ids,

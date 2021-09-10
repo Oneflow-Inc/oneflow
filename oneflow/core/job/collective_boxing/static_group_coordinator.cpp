@@ -57,48 +57,44 @@ void StaticGroupCoordinator::DestroyRequestToken(void* request_token) {
   delete token;
 }
 
-void StaticGroupCoordinator::AddPlan(const std::vector<int64_t>& job_ids) {
+void StaticGroupCoordinator::InitJob(int64_t job_id) {
   const auto& GetRequestDesc = [&](int64_t job_id, int32_t request_id) -> const RequestDesc& {
     return request_store_->MutRequestEntry(job_id, request_id)->desc();
   };
-
-  for (const auto& job_id : job_ids) {
-    std::vector<int32_t> request_ids;
-    request_store_->ForEachMutRequestEntryInJob(
-        job_id, [&](RequestEntry* request_entry, int32_t i, int32_t request_id) {
-          if (request_entry->HasRankOnThisNode()) { request_ids.push_back(request_id); }
-        });
-    SortRequestIdsByOrder(job_id, request_store_.get(), &request_ids);
-    CHECK(std::adjacent_find(request_ids.begin(), request_ids.end(),
-                             [&](int32_t a, int32_t b) {
-                               return GetRequestDesc(job_id, a).dependency_depth()
-                                      > GetRequestDesc(job_id, b).dependency_depth();
-                             })
-          == request_ids.end());
-    StaticGroupRequestsInfo info;
-    std::vector<GroupState>& group_states = info.group_states;
-    std::vector<RequestIndex>& request_id2index = info.request_id2index;
-    std::vector<std::vector<int32_t>>& group_id2request_ids = info.group_id2request_ids;
-    const int32_t request_count = request_store_->RequestCount4Job(job_id);
-    request_id2index.resize(request_count);
-    executor_->GroupRequests(
-        job_id, request_ids, [&](int64_t job_id, std::vector<int32_t>&& group) {
-          const int32_t group_id = group_states.size();
-          group_states.emplace_back(group.size());
-          for (int32_t idx_in_group = 0; idx_in_group < group.size(); ++idx_in_group) {
-            const int32_t request_id = group.at(idx_in_group);
-            request_id2index.at(request_id).group_id = group_id;
-            request_id2index.at(request_id).index_in_group = idx_in_group;
-          }
-          group_id2request_ids.push_back(group);
-        });
-    CHECK(job_id2static_group_requests_info_.emplace(job_id, info).second);
-    if (group_states.size() != 0) { DumpSummary(job_id); }
-  }
+  std::vector<int32_t> request_ids;
+  request_store_->ForEachMutRequestEntryInJob(
+      job_id, [&](RequestEntry* request_entry, int32_t i, int32_t request_id) {
+        if (request_entry->HasRankOnThisNode()) { request_ids.push_back(request_id); }
+      });
+  SortRequestIdsByOrder(job_id, request_store_.get(), &request_ids);
+  CHECK(std::adjacent_find(request_ids.begin(), request_ids.end(),
+                           [&](int32_t a, int32_t b) {
+                             return GetRequestDesc(job_id, a).dependency_depth()
+                                    > GetRequestDesc(job_id, b).dependency_depth();
+                           })
+        == request_ids.end());
+  StaticGroupRequestsInfo info;
+  std::vector<GroupState>& group_states = info.group_states;
+  std::vector<RequestIndex>& request_id2index = info.request_id2index;
+  std::vector<std::vector<int32_t>>& group_id2request_ids = info.group_id2request_ids;
+  const int32_t request_count = request_store_->RequestCount4Job(job_id);
+  request_id2index.resize(request_count);
+  executor_->GroupRequests(job_id, request_ids, [&](int64_t job_id, std::vector<int32_t>&& group) {
+    const int32_t group_id = group_states.size();
+    group_states.emplace_back(group.size());
+    for (int32_t idx_in_group = 0; idx_in_group < group.size(); ++idx_in_group) {
+      const int32_t request_id = group.at(idx_in_group);
+      request_id2index.at(request_id).group_id = group_id;
+      request_id2index.at(request_id).index_in_group = idx_in_group;
+    }
+    group_id2request_ids.push_back(group);
+  });
+  CHECK(job_id2static_group_requests_info_.emplace(job_id, info).second);
+  if (group_states.size() != 0) { DumpSummary(job_id); }
 }
 
-void StaticGroupCoordinator::DeletePlan(const std::vector<int64_t>& job_ids) {
-  for (const auto& job_id : job_ids) { job_id2static_group_requests_info_.erase(job_id); }
+void StaticGroupCoordinator::DeinitJob(int64_t job_id) {
+  job_id2static_group_requests_info_.erase(job_id);
 }
 
 void StaticGroupCoordinator::AddRequest(void* request_token, void* executor_token) {

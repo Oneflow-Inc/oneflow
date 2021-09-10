@@ -445,27 +445,25 @@ struct NcclExecutorBackend::Impl {
     device_set2stream_id2comm_group.clear();
   }
 
-  void InitCommGroup(const std::vector<int64_t>& job_ids) {
+  void InitCommGroup(int64_t job_id) {
     std::set<int64_t> local_device_ids;
-    for (const auto& job_id : job_ids) {
-      request_store->ForEachMutRequestEntryInJob(
-          job_id, [&](RequestEntry* request_entry, int32_t i, int32_t request_id) {
-            const auto& request = request_entry->desc();
-            if (request.op_desc().backend() != Backend::kBackendNCCL) { return; }
-            if (!request_entry->HasRankOnThisNode()) { return; }
-            const DeviceSet& device_set = request.device_set();
-            if (device_set2stream_id2comm_group.count(device_set) > 0) { return; }
-            auto& stream_id2comm_group = device_set2stream_id2comm_group[device_set];
-            stream_id2comm_group.resize(num_streams);
-            for (int32_t stream_id = 0; stream_id < num_streams; ++stream_id) {
-              stream_id2comm_group.at(stream_id).InitGroup(
-                  device_set, GetNcclUniqueIdRpcKey(request.op_desc().name(), stream_id));
-            }
-            for (int32_t j = 0; j < stream_id2comm_group.at(0).local_rank_count(); ++j) {
-              local_device_ids.emplace(stream_id2comm_group.at(0).GetCommRank(j).device_id());
-            }
-          });
-    }
+    request_store->ForEachMutRequestEntryInJob(
+        job_id, [&](RequestEntry* request_entry, int32_t i, int32_t request_id) {
+          const auto& request = request_entry->desc();
+          if (request.op_desc().backend() != Backend::kBackendNCCL) { return; }
+          if (!request_entry->HasRankOnThisNode()) { return; }
+          const DeviceSet& device_set = request.device_set();
+          if (device_set2stream_id2comm_group.count(device_set) > 0) { return; }
+          auto& stream_id2comm_group = device_set2stream_id2comm_group[device_set];
+          stream_id2comm_group.resize(num_streams);
+          for (int32_t stream_id = 0; stream_id < num_streams; ++stream_id) {
+            stream_id2comm_group.at(stream_id).InitGroup(
+                device_set, GetNcclUniqueIdRpcKey(request.op_desc().name(), stream_id));
+          }
+          for (int32_t j = 0; j < stream_id2comm_group.at(0).local_rank_count(); ++j) {
+            local_device_ids.emplace(stream_id2comm_group.at(0).GetCommRank(j).device_id());
+          }
+        });
     for (int32_t stream_id = 0; stream_id < num_streams; ++stream_id) {
       for (const int64_t device_id : local_device_ids) {
         if (stream_id2device_id2stream_ctx.at(stream_id).at(device_id) == nullptr) {
@@ -476,27 +474,25 @@ struct NcclExecutorBackend::Impl {
     }
   }
 
-  void InitJobsRequestIdCommGroupIndex(const std::vector<int64_t>& job_ids) {
-    for (const auto& job_id : job_ids) {
-      std::vector<std::vector<CommGroup>*> request_id2stream_id2comm_group;
-      request_id2stream_id2comm_group.resize(request_store->RequestCount4Job(job_id));
-      request_store->ForEachMutRequestEntryInJob(
-          job_id, [&](RequestEntry* request_entry, int32_t i, int32_t request_id) {
-            const DeviceSet& device_set = request_entry->desc().device_set();
-            auto it = device_set2stream_id2comm_group.find(device_set);
-            if (it != device_set2stream_id2comm_group.end()) {
-              request_id2stream_id2comm_group.at(request_id) = &it->second;
-            } else {
-              request_id2stream_id2comm_group.at(request_id) = nullptr;
-            }
-          });
-      CHECK(job_id2request_id2stream_id2comm_group.emplace(job_id, request_id2stream_id2comm_group)
-                .second);
-    }
+  void InitJobRequestIdCommGroupIndex(int64_t job_id) {
+    std::vector<std::vector<CommGroup>*> request_id2stream_id2comm_group;
+    request_id2stream_id2comm_group.resize(request_store->RequestCount4Job(job_id));
+    request_store->ForEachMutRequestEntryInJob(
+        job_id, [&](RequestEntry* request_entry, int32_t i, int32_t request_id) {
+          const DeviceSet& device_set = request_entry->desc().device_set();
+          auto it = device_set2stream_id2comm_group.find(device_set);
+          if (it != device_set2stream_id2comm_group.end()) {
+            request_id2stream_id2comm_group.at(request_id) = &it->second;
+          } else {
+            request_id2stream_id2comm_group.at(request_id) = nullptr;
+          }
+        });
+    CHECK(job_id2request_id2stream_id2comm_group.emplace(job_id, request_id2stream_id2comm_group)
+              .second);
   }
 
-  void DeleteJobsRequestIdCommGroupIndex(const std::vector<int64_t>& job_ids) {
-    for (const auto& job_id : job_ids) { job_id2request_id2stream_id2comm_group.erase(job_id); }
+  void DeleteJobRequestIdCommGroupIndex(int64_t job_id) {
+    job_id2request_id2stream_id2comm_group.erase(job_id);
   }
 
   void InitStreamCtx() {
@@ -646,14 +642,14 @@ void NcclExecutorBackend::Init(std::shared_ptr<RequestStore> request_store) {
                                  request_store);
 }
 
-void NcclExecutorBackend::AddPlan(const std::vector<int64_t>& job_ids) {
+void NcclExecutorBackend::InitJob(int64_t job_id) {
   CudaCurrentDeviceGuard guard;
-  impl_->InitCommGroup(job_ids);
-  impl_->InitJobsRequestIdCommGroupIndex(job_ids);
+  impl_->InitCommGroup(job_id);
+  impl_->InitJobRequestIdCommGroupIndex(job_id);
 }
 
-void NcclExecutorBackend::DeletePlan(const std::vector<int64_t>& job_ids) {
-  impl_->DeleteJobsRequestIdCommGroupIndex(job_ids);
+void NcclExecutorBackend::DeinitJob(int64_t job_id) {
+  impl_->DeleteJobRequestIdCommGroupIndex(job_id);
 }
 
 void NcclExecutorBackend::GroupRequests(

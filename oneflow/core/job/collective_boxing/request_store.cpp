@@ -72,45 +72,37 @@ std::vector<std::shared_ptr<const RuntimeRequestInfo>> RequestEntry::ResetRuntim
   return ret;
 }
 
-void RequestStore::AddPlan(const CollectiveBoxingPlan& collective_boxing_plan) {
-  for (const auto& job_id7request_set : collective_boxing_plan.job_id2request_set()) {
-    const int64_t job_id = job_id7request_set.first;
-    const RequestSet& request_set = job_id7request_set.second;
-    std::vector<std::unique_ptr<RequestEntry>>& request_entry_vec =
-        job_id2request_entry_vec_[job_id];
-    CHECK_EQ(request_entry_vec.size(), 0);
-    for (const RequestDesc& desc : request_set.request()) {
-      request_entry_vec.emplace_back(std::make_unique<RequestEntry>(desc));
-    }
-    std::sort(request_entry_vec.begin(), request_entry_vec.end(),
-              [](const std::unique_ptr<RequestEntry>& a, const std::unique_ptr<RequestEntry>& b) {
-                return a->NodeCount() == b->NodeCount()
-                           ? a->desc().op_desc().name() < b->desc().op_desc().name()
-                           : a->NodeCount() > b->NodeCount();
-              });
-    int32_t max_multi_node_request_id = 0;
-    for (int32_t i = 0; i < request_entry_vec.size(); ++i) {
-      const std::unique_ptr<RequestEntry>& entry = request_entry_vec.at(i);
-      CHECK(
-          name2job_id7request_id_.emplace(entry->desc().op_desc().name(), std::make_pair(job_id, i))
-              .second);
-      if (entry->NodeCount() > 1) { max_multi_node_request_id = i + 1; }
-    }
-    CHECK(job_id2max_multi_node_request_id_.emplace(job_id, max_multi_node_request_id).second);
+void RequestStore::InitJobRequests(int64_t job_id, const RequestSet& request_set) {
+  std::vector<std::unique_ptr<RequestEntry>>& request_entry_vec = job_id2request_entry_vec_[job_id];
+  CHECK_EQ(request_entry_vec.size(), 0);
+  for (const RequestDesc& desc : request_set.request()) {
+    request_entry_vec.emplace_back(std::make_unique<RequestEntry>(desc));
   }
+  std::sort(request_entry_vec.begin(), request_entry_vec.end(),
+            [](const std::unique_ptr<RequestEntry>& a, const std::unique_ptr<RequestEntry>& b) {
+              return a->NodeCount() == b->NodeCount()
+                         ? a->desc().op_desc().name() < b->desc().op_desc().name()
+                         : a->NodeCount() > b->NodeCount();
+            });
+  int32_t max_multi_node_request_id = 0;
+  for (int32_t i = 0; i < request_entry_vec.size(); ++i) {
+    const std::unique_ptr<RequestEntry>& entry = request_entry_vec.at(i);
+    CHECK(name2job_id7request_id_.emplace(entry->desc().op_desc().name(), std::make_pair(job_id, i))
+              .second);
+    if (entry->NodeCount() > 1) { max_multi_node_request_id = i + 1; }
+  }
+  CHECK(job_id2max_multi_node_request_id_.emplace(job_id, max_multi_node_request_id).second);
 }
 
-void RequestStore::DeletePlan(const std::vector<int64_t>& job_ids) {
-  for (const auto& job_id : job_ids) {
-    const auto& it = job_id2request_entry_vec_.find(job_id);
-    CHECK(it != job_id2request_entry_vec_.end());
-    const auto& request_entry_vec = it->second;
-    for (const auto& request_entry : request_entry_vec) {
-      name2job_id7request_id_.erase(request_entry->desc().op_desc().name());
-    }
-    job_id2request_entry_vec_.erase(job_id);
-    job_id2max_multi_node_request_id_.erase(job_id);
+void RequestStore::DeinitJobRequests(int64_t job_id) {
+  const auto& it = job_id2request_entry_vec_.find(job_id);
+  CHECK(it != job_id2request_entry_vec_.end());
+  const auto& request_entry_vec = it->second;
+  for (const auto& request_entry : request_entry_vec) {
+    name2job_id7request_id_.erase(request_entry->desc().op_desc().name());
   }
+  job_id2request_entry_vec_.erase(job_id);
+  job_id2max_multi_node_request_id_.erase(job_id);
 }
 
 struct RequestEntryToken {

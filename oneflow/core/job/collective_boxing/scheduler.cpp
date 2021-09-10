@@ -62,8 +62,8 @@ class ExecutorImpl : public Executor {
   ~ExecutorImpl() override = default;
 
   void Init(std::shared_ptr<RequestStore> request_store) override;
-  void AddPlan(const std::vector<int64_t>& job_ids) override;
-  void DeletePlan(const std::vector<int64_t>& job_ids) override;
+  void InitJob(int64_t job_id) override;
+  void DeinitJob(int64_t job_id) override;
   void GroupRequests(const int64_t job_id, const std::vector<int32_t>& request_ids,
                      const std::function<void(int64_t, std::vector<int32_t>&&)>& Handler) override;
   void ExecuteGroupedRequests(const int64_t job_id, const std::vector<int32_t>& request_ids,
@@ -90,12 +90,10 @@ void ExecutorImpl::Init(std::shared_ptr<RequestStore> request_store) {
 #endif
 }
 
-void ExecutorImpl::AddPlan(const std::vector<int64_t>& job_ids) {
-  backends_.at(Backend::kBackendNCCL)->AddPlan(job_ids);
-}
+void ExecutorImpl::InitJob(int64_t job_id) { backends_.at(Backend::kBackendNCCL)->InitJob(job_id); }
 
-void ExecutorImpl::DeletePlan(const std::vector<int64_t>& job_ids) {
-  backends_.at(Backend::kBackendNCCL)->DeletePlan(job_ids);
+void ExecutorImpl::DeinitJob(int64_t job_id) {
+  backends_.at(Backend::kBackendNCCL)->DeinitJob(job_id);
 }
 
 void* ExecutorImpl::CreateExecutorToken(int64_t job_id, int32_t request_id) {
@@ -206,18 +204,20 @@ SchedulerPlanToken* Scheduler::AddPlan(const Plan& plan) {
   for (const auto& job_id7request_set : plan.collective_boxing_plan().job_id2request_set()) {
     const int64_t job_id = job_id7request_set.first;
     job_ids.push_back(job_id);
+    impl_->request_store->InitJobRequests(job_id, job_id7request_set.second);
+    impl_->executor->InitJob(job_id);
+    impl_->coordinator->InitJob(job_id);
   }
-  impl_->request_store->AddPlan(plan.collective_boxing_plan());
-  impl_->executor->AddPlan(job_ids);
-  impl_->coordinator->AddPlan(job_ids);
   return new SchedulerPlanToken(job_ids);
 }
 
 void Scheduler::DeletePlan(SchedulerPlanToken* plan_token) {
   const std::vector<int64_t>& job_ids = plan_token->job_ids();
-  impl_->coordinator->DeletePlan(job_ids);
-  impl_->executor->DeletePlan(job_ids);
-  impl_->request_store->DeletePlan(job_ids);
+  for (const auto& job_id : job_ids) {
+    impl_->coordinator->DeinitJob(job_id);
+    impl_->executor->DeinitJob(job_id);
+    impl_->request_store->DeinitJobRequests(job_id);
+  }
   delete plan_token;
 }
 

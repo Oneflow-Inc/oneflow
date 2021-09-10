@@ -84,8 +84,8 @@ class RequestStore {
   RequestStore() = default;
   ~RequestStore() = default;
 
-  void AddPlan(const CollectiveBoxingPlan& collective_boxing_plan);
-  void DeletePlan(const std::vector<int64_t>& job_ids);
+  void InitJobRequests(int64_t job_id, const RequestSet& request_set);
+  void DeinitJobRequests(int64_t job_id);
 
   RequestEntry* MutRequestEntry(int64_t job_id, int32_t request_id) {
     auto it = job_id2request_entry_vec_.find(job_id);
