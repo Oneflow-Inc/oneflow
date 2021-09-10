@@ -19,13 +19,16 @@ namespace oneflow {
 namespace user_op {
 
 class KernelInitContext;
+class OpKernelState;
 
 class CudaGraphSupport {
  public:
   CudaGraphSupport() = default;
   virtual ~CudaGraphSupport() = default;
 
-  virtual bool IsCudaGraphSupported(KernelInitContext* ctx) const { return true; }
+  virtual bool IsCudaGraphSupported(KernelInitContext* ctx, OpKernelState* state) const {
+    return true;
+  }
 };
 
 }  // namespace user_op
