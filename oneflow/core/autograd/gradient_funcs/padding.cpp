@@ -49,7 +49,6 @@ class Pad2d : public OpExprGradFunction<Pad2dCaptureState> {
   AttrMap base_attrs_;
 };
 
-
 class ReflectionPad2d : public Pad2d {
  public:
   Maybe<void> Apply(const Pad2dCaptureState* ctx, const TensorTuple& out_grads,
@@ -76,13 +75,11 @@ class ReplicationPad2d : public Pad2d {
   }
 };
 
-
 struct ConstantPadNdCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   std::vector<int64_t> paddings;
   functional::Scalar padding_value;
 };
-
 
 class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
  public:
@@ -127,12 +124,9 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
   AttrMap base_attrs_;
 };
 
-
-
 REGISTER_OP_EXPR_GRAD_FUNCTION("pad", ConstantPadNd);
 REGISTER_OP_EXPR_GRAD_FUNCTION("reflection_pad2d", ReflectionPad2d);
 REGISTER_OP_EXPR_GRAD_FUNCTION("replication_pad2d", ReplicationPad2d);
-
 
 }  // namespace one
 }  // namespace oneflow

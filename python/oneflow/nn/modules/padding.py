@@ -465,7 +465,7 @@ class ZeroPad2d(Module):
             self.value = float(self.value)
         else:
             self.value = int(self.value)
-        
+
         return flow._C.pad(x, pad=self.padding, mode="constant", value=self.value)
 
 
