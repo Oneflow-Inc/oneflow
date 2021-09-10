@@ -50,13 +50,19 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
           JoinPath(data_dir, part_name_prefix + std::string(zero_count, '0') + num));
     }
 
-    // NOTE(zwx): dataset infer the part of the files needed to be read by
-    //     1) ddp, when parallel_id == 0 and parallel_num == 1 and world_size > 1,
-    //        according to rank and world size.
-    //     2) consistent, when parallel_num > 1 or
-    //                         parallel_id == 0 and parallel_num == 1 and world_size == 1,
-    //        according to parallel_ctx.parallel_id and parallel_ctx.parallel_num.
-    if (IsMirroredParallelContext(ctx->parallel_ctx())) {
+    bool is_local = false;
+    // NOTE(zwx): OFRecordDataset is used by OFRecordDataReader and
+    // OFRecordImageClassificationDataReader both, the latter has no attr nd_sbp,
+    // so it couldn't work in DDP for now. The If condition here could be removed when
+    // OFRecordImageClassificationDataReader had supported DDP (add attr nd_sbp)
+    // or been deprecated.
+    if (ctx->op_type_name() == "OFRecordReader") {
+      auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
+      // NOTE(zwx): OFRecordDataset is not consistent since attr nd_sbp is empty,
+      // we assume that it works in DDP
+      if (nd_sbp_str_vec.empty()) { is_local = true; }
+    }
+    if (is_local) {
       parallel_id_ = GlobalProcessCtx::Rank();
       parallel_num_ = GlobalProcessCtx::WorldSize();
     } else {
