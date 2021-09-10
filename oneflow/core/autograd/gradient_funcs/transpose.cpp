@@ -60,11 +60,9 @@ Maybe<void> Transpose::Apply(const TransposeCaptureState* ctx, const TensorTuple
                              TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-  MutableAttrMap attrs;
   std::vector<int32_t> grad_perm;
   grad_perm.resize(ctx->perm.size());
   FOR_RANGE(int32_t, i, 0, ctx->perm.size()) { grad_perm.at(ctx->perm.at(i)) = i; }
-  JUST(attrs.SetAttr<std::vector<int32_t>>("perm", grad_perm));
   in_grads->at(0) = JUST(functional::Transpose(out_grads.at(0), grad_perm));
   return Maybe<void>::Ok();
 }

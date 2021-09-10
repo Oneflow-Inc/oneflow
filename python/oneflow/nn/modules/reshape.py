@@ -53,7 +53,7 @@ def reshape_op(input, shape: Sequence[int] = None):
 
         >>> y = flow.reshape(input, shape=[2, 2, 2, -1]).shape
         >>> y
-        flow.Size([2, 2, 2, 2])
+        oneflow.Size([2, 2, 2, 2])
 
     """
     return flow._C.reshape(input, shape)
@@ -84,7 +84,7 @@ def reshape_tensor_op(input, *shape):
 
         >>> y = input.reshape(2, 2, 2, -1).shape
         >>> y
-        flow.Size([2, 2, 2, 2])
+        oneflow.Size([2, 2, 2, 2])
 
     """
     if _input_args_is_int(shape):
