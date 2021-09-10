@@ -268,7 +268,16 @@ Maybe<void> MakeEagerBlobObjectList(std::vector<std::shared_ptr<vm::EagerBlobObj
   for (const auto& tensor : tensor_list) {
     CHECK_OR_RETURN(tensor->is_eager());
     if (tensor->is_consistent()) {
-      blob_list->push_back(JUST(JUST(tensor->cur_rank_phy_tensor())->eager_blob_object()));
+      const auto& parallel_id =
+          JUST(GetParallelId4CurrentProcessCtx(JUST(tensor->parallel_desc())));
+      if (parallel_id->has_value()) {
+        blob_list->push_back(JUST(JUST(tensor->cur_rank_phy_tensor())->eager_blob_object()));
+      } else {
+        // NOTE(chengcheng):
+        //   ConsistentTensor has NO phy tensor in current rank, so RunLazyJobInstrucntion
+        //   should filter this tensor and NOT send JobInstance for this pull/push callback.
+        blob_list->push_back(std::shared_ptr<vm::EagerBlobObject>());
+      }
     } else {
       blob_list->push_back(JUST(tensor->eager_blob_object()));
     }

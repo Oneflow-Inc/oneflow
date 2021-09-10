@@ -67,6 +67,13 @@ class LazyJobInstance final : public JobInstance {
   void PushBlob(uint64_t ofblob_ptr) const override { UNIMPLEMENTED(); }
   void PullBlob(uint64_t ofblob_ptr) const override { UNIMPLEMENTED(); }
 
+  bool HasPushCallbackOpName(const std::string& op_name) const {
+    return push_cbs_.find(op_name) != push_cbs_.end();
+  }
+  bool HasPullCallbackOpName(const std::string& op_name) const {
+    return pull_cbs_.find(op_name) != pull_cbs_.end();
+  }
+
  private:
   const std::string job_name_;
   const HashMap<std::string, std::function<void(int64_t)>> push_cbs_;
@@ -101,10 +108,14 @@ class RunLazyJobInstructionType final : public InstructionType {
       const auto& job_name = job_instance->job_name();
       auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
       for (const auto& op_name : cur_nn_graph->inputs_op_names()) {
-        buffer_mgr->Get(GetInputBufferName(job_name, op_name))->Send(job_instance);
+        if (job_instance->HasPushCallbackOpName(op_name)) {
+          buffer_mgr->Get(GetInputBufferName(job_name, op_name))->Send(job_instance);
+        }
       }
       for (const auto& op_name : cur_nn_graph->outputs_op_names()) {
-        buffer_mgr->Get(GetOutputBufferName(job_name, op_name))->Send(job_instance);
+        if (job_instance->HasPullCallbackOpName(op_name)) {
+          buffer_mgr->Get(GetOutputBufferName(job_name, op_name))->Send(job_instance);
+        }
       }
       buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Send(job_instance);
       buffer_mgr->Get(GetSourceTickBufferName(job_name))->Send(job_instance);
@@ -138,7 +149,9 @@ class RunLazyJobInstructionType final : public InstructionType {
     HashMap<std::string, std::function<void(int64_t)>> push_cbs;
     CHECK_EQ(nn_graph->inputs_op_names().size(), phy_instr_operand->inputs()->size());
     for (int i = 0; i < nn_graph->inputs_op_names().size(); ++i) {
-      const auto* blob = &phy_instr_operand->inputs()->at(i)->blob();
+      const auto& eager_blob_object = phy_instr_operand->inputs()->at(i);
+      if (!eager_blob_object) { continue; }
+      const auto* blob = &eager_blob_object->blob();
       if (!blob) { continue; }
       const auto& op_name = nn_graph->inputs_op_names().at(i);
       const auto& PushCb = [blob](int64_t of_blob_ptr) {
@@ -151,7 +164,9 @@ class RunLazyJobInstructionType final : public InstructionType {
     HashMap<std::string, std::function<void(int64_t)>> pull_cbs;
     CHECK_EQ(nn_graph->outputs_op_names().size(), phy_instr_operand->outputs()->size());
     for (int i = 0; i < nn_graph->outputs_op_names().size(); ++i) {
-      auto* mut_blob = phy_instr_operand->outputs()->at(i)->mut_blob();
+      const auto& eager_blob_object = phy_instr_operand->outputs()->at(i);
+      if (!eager_blob_object) { continue; }
+      auto* mut_blob = eager_blob_object->mut_blob();
       if (!mut_blob) { continue; }
       const auto& op_name = nn_graph->outputs_op_names().at(i);
       const auto& PullCb = [mut_blob](int64_t of_blob_ptr) {
