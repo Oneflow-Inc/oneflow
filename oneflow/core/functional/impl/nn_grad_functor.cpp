@@ -374,33 +374,6 @@ class PadGradFunctor {
 };
 
 
-class LegacyPadGradFunctor {
- public:
-  LegacyPadGradFunctor() {
-    legacy_pad2d_grad =
-        CHECK_JUST(one::OpBuilder("pad_grad").Input("dy").Output("dx").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy, const std::vector<int64_t>& padding_before,
-                           const std::vector<int64_t>& padding_after,
-                           const Scalar& floating_constant_value, const Scalar& integral_constant_value) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int64_t>>("padding_before", padding_before));
-    JUST(attrs.SetAttr<std::vector<int64_t>>("padding_after", padding_after));
-    if (IsFloatingDataType(dy->dtype()->data_type())) {
-        JUST(attrs.SetAttr<double>("floating_constant_value", JUST(floating_constant_value.As<double>())));
-        JUST(attrs.SetAttr<int64_t>("integral_constant_value", JUST(integral_constant_value.As<int64_t>())));
-    } else if(IsIntegralDataType(dy->dtype()->data_type())) {
-      JUST(attrs.SetAttr<double>("floating_constant_value", JUST(floating_constant_value.As<double>())));
-      JUST(attrs.SetAttr<int64_t>("integral_constant_value", JUST(integral_constant_value.As<int64_t>())));
-    }
-    return OpInterpUtil::Dispatch<Tensor>(*legacy_pad2d_grad, {dy}, attrs);
-
-  }
-
- private:
-  std::shared_ptr<OpExpr> legacy_pad2d_grad;
-};
-
 class AvgPoolingNdGradFunctor {
  public:
   AvgPoolingNdGradFunctor() {
@@ -572,7 +545,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GridSampleGradFunctor>("GridSampleGrad");
   m.add_functor<impl::PoolingNdGradFunctor>("PoolingNdGrad");
   m.add_functor<impl::PadGradFunctor>("PadGrad");
-  // m.add_functor<impl::LegacyPadGradFunctor>("LegacyPadGrad");
   m.add_functor<impl::AvgPoolingNdGradFunctor>("AvgPoolingNdGrad");
   m.add_functor<impl::NormalizationGradFunctor>("NormalizationGrad");
   m.add_functor<impl::LayerNormGradFunctor>("LayerNormGrad");
