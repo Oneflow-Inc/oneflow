@@ -50,11 +50,16 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
           JoinPath(data_dir, part_name_prefix + std::string(zero_count, '0') + num));
     }
 
-    // NOTE(zwx): OFRecordDataset is not consistent since attr nd_sbp is empty,
-    // we assume that it works in DDP
     bool is_local = false;
+    // NOTE(zwx): OFRecordDataset is used by OFRecordDataReader and
+    // OFRecordImageClassificationDataReader both, the latter has no attr nd_sbp,
+    // so it couldn't work in DDP for now. The If condition here could be removed when
+    // OFRecordImageClassificationDataReader had supported DDP (add attr nd_sbp)
+    // or been deprecated.
     if (ctx->op_type_name() == "OFRecordReader") {
       auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
+      // NOTE(zwx): OFRecordDataset is not consistent since attr nd_sbp is empty,
+      // we assume that it works in DDP
       if (nd_sbp_str_vec.empty()) { is_local = true; }
     }
     if (is_local) {
