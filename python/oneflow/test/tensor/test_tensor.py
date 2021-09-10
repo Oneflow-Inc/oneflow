@@ -18,10 +18,10 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
-
 import oneflow as flow
 import oneflow.unittest
+
+from automated_test_util import *
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -167,6 +167,18 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(x.is_cuda)
         x = flow.Tensor(*shape, device=flow.device("cpu"))
         test_case.assertTrue(not x.is_cuda)
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_tensor_assign_copy(test_case):
+        a = flow.ones(2, 3, requires_grad=False)
+        b = flow.ones(4, 5, requires_grad=True).to("cuda")
+        old_id = id(a)
+        a.data = b
+        test_case.assertEqual(old_id, id(a))
+        test_case.assertTrue(a.shape == (4, 5))
+        test_case.assertTrue(a.device == flow.device("cuda"))
+        test_case.assertTrue(a.requires_grad)
+        test_case.assertFalse(a.is_leaf)
 
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_unsupported_property(test_case):
