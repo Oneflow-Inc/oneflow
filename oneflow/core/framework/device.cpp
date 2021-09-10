@@ -130,7 +130,7 @@ Maybe<bool> Device::is_primary_device() const {
       {"cpu", true}, {"gpu", true}, {"cuda", true}, {"cuda_h2d", false}, {"cuda_d2h", false},
       {"comm_net", false}, {"sync_launched_nccl", false}, {"async_launched_nccl", false},
   };
-  return JUST(MapAt(type2is_primary_device, type));
+  return JUST(MapAt(type2is_primary_device, type()));
 }
 
 Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {

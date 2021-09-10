@@ -669,10 +669,9 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const one::EagerBlobObjectListPtr& input_eager_blob_objects,
     const one::EagerBlobObjectListPtr& output_eager_blob_objects,
     const one::OpExprInterpContext& ctx,
-    Symbol<Device> op_device,
-    const std::string& instr_type_name) {
+    Symbol<Device> op_device) {
   return LocalCallOpKernel(opkernel, input_eager_blob_objects, output_eager_blob_objects, nullptr,
-                           ctx, op_device, instr_type_name);
+                           ctx, op_device);
 }
 
 Maybe<void> InstructionsBuilder::LocalCallOpKernel(
@@ -693,7 +692,7 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
   for (const auto& output : *output_eager_blob_objects) {
     output->set_last_used_device(op_device);
   }
-  op_parallel_desc = JUST(Placement4Device(op_device)).shared_from_symbol();
+  const auto& op_parallel_desc = JUST(Placement4Device(op_device)).shared_from_symbol();
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
   auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
@@ -930,8 +929,7 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
 Maybe<void> InstructionsBuilder::SoftSyncStream(
     LocalDepObject* compute_local_dep_object, const std::string& modifier,
     Symbol<Device> op_device) {
-  const auto& instr_type_name = JUST(op_device->soft_sync_instruction_name());
-  parallel_desc = JUST(Placement4Device(op_device)).shared_from_symbol();
+  const auto& parallel_desc = JUST(Placement4Device(op_device)).shared_from_symbol();
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(parallel_desc->device_tag() + ".SoftSyncStream");
   *instruction->mutable_phy_instr_operand() =
