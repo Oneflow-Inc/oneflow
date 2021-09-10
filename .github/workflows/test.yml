@@ -178,7 +178,7 @@ jobs:
         changed_files,
       ]
     continue-on-error: ${{ matrix.allow_fail }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ["self-hosted", "linux", "build"]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'fmt-only') == false
     outputs:
       pip-index-url: ${{ steps.build-oneflow.outputs.pip-index-url }}
@@ -202,7 +202,7 @@ jobs:
           oneflow-src: .
           oneflow-build-env: manylinux
           wheelhouse-dir: manylinux-wheelhouse
-          self-hosted: ${{ contains(matrix.os, 'self-hosted') }}
+          self-hosted: true
           cuda-version: 11.4
           manylinux-cache-dir: ~/manylinux-cache-dir/cuda-11.4
           docker-run-use-system-http-proxy: false
