@@ -28,19 +28,9 @@ class IBVerbsMessagePool final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsMessagePool);
   IBVerbsMessagePool() = delete;
-  ~IBVerbsMessagePool() {
-    while (ibv_mr_buf_.empty() == false) {
-      ibv_mr* mr = ibv_mr_buf_.front();
-      ibv_mr_buf_.pop_front();
-      CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
-    }
-    while (memory_buf_.empty() == false) {
-      free(memory_buf_.front());
-      memory_buf_.pop_front();
-    }
-  }
-
+  ~IBVerbsMessagePool();
   IBVerbsMessagePool(ibv_pd* pd, uint32_t actor_msg_mr_num);
+  
   void RegisterIBMemoryForMessagePool();
   ActorMsgMR* GetMessage();
   void PutMessage(ActorMsgMR* msg_mr);
