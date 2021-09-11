@@ -66,7 +66,7 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   OBJECT_MSG_DEFINE_MAP_HEAD(LogicalObject, logical_object_id, id2logical_object);
   OBJECT_MSG_DEFINE_LIST_HEAD(LogicalObject, delete_link, delete_logical_object_list);
 
-  OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(InstructionMsg, instr_msg_link, pending_msg_list);
+  OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(InstructionMsg, pending_instr_msg_link, pending_msg_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, waiting_instruction_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, ready_instruction_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, vm_stat_running_instruction_link,
@@ -75,7 +75,7 @@ OBJECT_MSG_BEGIN(VirtualMachine);
 
   // methods
  private:
-  using TmpPendingInstrMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
+  using TmpPendingInstrMsgList = OBJECT_MSG_LIST(InstructionMsg, pending_instr_msg_link);
   using NewInstructionList = OBJECT_MSG_LIST(Instruction, instruction_link);
   using PrescheduledInstructionList = OBJECT_MSG_LIST(Instruction, instruction_link);
   using WaitingInstructionList = VirtualMachine::waiting_instruction_list_ObjectMsgListType;

@@ -41,7 +41,7 @@ int64_t GetObjectId<kInfer>(int64_t val) {
 }
 
 template<typename T>
-void InitFromProto(InstructionMsg* that, const T& proto) {
+void InitFromProto(BuiltinInstructionMsg* that, const T& proto) {
   that->__Init__(proto.instr_type_name());
   that->mutable_operand()->resize(proto.operand_size());
   if (proto.has_parallel_desc_symbol_id()) {
@@ -54,27 +54,27 @@ void InitFromProto(InstructionMsg* that, const T& proto) {
 
 }  // namespace
 
-InstructionOperand* InstructionMsg::add_instr_operand() {
+InstructionOperand* BuiltinInstructionMsg::add_instr_operand() {
   auto* operand_vec = mutable_operand();
   operand_vec->emplace_back();
   return operand_vec->back().Mutable();
 }
 
-void InstructionMsg::__Init__() {
+void BuiltinInstructionMsg::__Init__() {
   *mutable_instr_type_name() = "";
   mutable_operand_list()->mut_operand()->reserve(kReservedOperandVecSize);
 }
 
-void InstructionMsg::__Init__(const std::string& instr_type_name) {
+void BuiltinInstructionMsg::__Init__(const std::string& instr_type_name) {
   __Init__();
   mutable_instr_type_id()->CopyFrom(LookupInstrTypeId(instr_type_name));
   *mutable_instr_type_name() = instr_type_name;
 }
 
-void InstructionMsg::__Init__(const InstructionProto& proto) { InitFromProto(this, proto); }
-void InstructionMsg::__Init__(const cfg::InstructionProto& proto) { InitFromProto(this, proto); }
+void BuiltinInstructionMsg::__Init__(const InstructionProto& proto) { InitFromProto(this, proto); }
+void BuiltinInstructionMsg::__Init__(const cfg::InstructionProto& proto) { InitFromProto(this, proto); }
 
-void InstructionMsg::__Init__(const InstructionMsg& instr_msg) {
+void BuiltinInstructionMsg::__Init__(const BuiltinInstructionMsg& instr_msg) {
   __Init__();
   mutable_instr_type_id()->CopyFrom(instr_msg.instr_type_id());
   *mutable_instr_type_name() = instr_msg.instr_type_name();
@@ -86,7 +86,7 @@ void InstructionMsg::__Init__(const InstructionMsg& instr_msg) {
   *mutable_phy_instr_operand() = instr_msg.phy_instr_operand();
 }
 
-void InstructionMsg::ToProto(InstructionProto* proto) const {
+void BuiltinInstructionMsg::ToProto(InstructionProto* proto) const {
   proto->set_instr_type_name(instr_type_name());
   if (has_parallel_desc_symbol_id()) {
     proto->set_parallel_desc_symbol_id(parallel_desc_symbol_id());
@@ -97,121 +97,103 @@ void InstructionMsg::ToProto(InstructionProto* proto) const {
   }
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_parallel_desc(int64_t symbol_id) {
+void BuiltinInstructionMsg::add_parallel_desc(int64_t symbol_id) {
   set_parallel_desc_symbol_id(symbol_id);
-  return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_double_operand(double double_operand) {
+void BuiltinInstructionMsg::add_double_operand(double double_operand) {
   add_instr_operand()->set_double_operand(double_operand);
-  return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_int64_operand(int64_t int64_operand) {
+void BuiltinInstructionMsg::add_int64_operand(int64_t int64_operand) {
   add_instr_operand()->set_int64_operand(int64_operand);
-  return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_uint64_operand(uint64_t uint64_operand) {
+void BuiltinInstructionMsg::add_uint64_operand(uint64_t uint64_operand) {
   add_instr_operand()->set_uint64_operand(uint64_operand);
-  return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_bool_operand(bool bool_operand) {
+void BuiltinInstructionMsg::add_bool_operand(bool bool_operand) {
   add_instr_operand()->set_bool_operand(bool_operand);
-  return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_separator() {
+void BuiltinInstructionMsg::add_separator() {
   add_instr_operand()->mutable_separator();
-  return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_operand(ObjectId logical_object_id) {
+void BuiltinInstructionMsg::add_const_operand(ObjectId logical_object_id) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_const_operand()->mutable_operand()->__Init__(logical_object_id);
-  return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_operand(
+void BuiltinInstructionMsg::add_const_operand(
     ObjectId logical_object_id, const SoleMirroredObject& sole_mirrored_object) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_const_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                             sole_mirrored_object);
-  return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_operand(
+void BuiltinInstructionMsg::add_const_operand(
     ObjectId logical_object_id, const AllMirroredObject& all_mirrored_object) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_const_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                             all_mirrored_object);
-  return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_symbol_operand(ObjectId logical_object_id) {
+void BuiltinInstructionMsg::add_symbol_operand(ObjectId logical_object_id) {
   CHECK(IdUtil::IsSymbolId(logical_object_id));
   add_instr_operand()->mutable_symbol_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                              SoleMirroredObject());
-  return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(ObjectId logical_object_id) {
+void BuiltinInstructionMsg::add_mut_operand(ObjectId logical_object_id) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_mut_operand()->mutable_operand()->__Init__(logical_object_id);
-  return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(
+void BuiltinInstructionMsg::add_mut_operand(
     ObjectId logical_object_id, const SoleMirroredObject& sole_mirrored_object) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_mut_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                           sole_mirrored_object);
-  return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(
+void BuiltinInstructionMsg::add_mut_operand(
     ObjectId logical_object_id, const AllMirroredObject& all_mirrored_object) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_mut_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                           all_mirrored_object);
-  return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_init_symbol_operand(ObjectId logical_object_id) {
+void BuiltinInstructionMsg::add_init_symbol_operand(ObjectId logical_object_id) {
   CHECK(IdUtil::IsSymbolId(logical_object_id));
   add_instr_operand()->mutable_init_symbol_operand()->mutable_operand()->__Init__(
       logical_object_id, SoleMirroredObject());
-  return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(ObjectId logical_object_id) {
+void BuiltinInstructionMsg::add_mut2_operand(ObjectId logical_object_id) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id);
-  return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(
+void BuiltinInstructionMsg::add_mut2_operand(
     ObjectId logical_object_id, const SoleMirroredObject& sole_mirrored_object) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                            sole_mirrored_object);
-  return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(
+void BuiltinInstructionMsg::add_mut2_operand(
     ObjectId logical_object_id, const AllMirroredObject& all_mirrored_object) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                            all_mirrored_object);
-  return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_del_operand(ObjectId logical_object_id) {
+void BuiltinInstructionMsg::add_del_operand(ObjectId logical_object_id) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   auto* operand = add_instr_operand()->mutable_del_operand()->mutable_operand();
   operand->__Init__(logical_object_id, AllMirroredObject());
-  return this;
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::Clone() const {

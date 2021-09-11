@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/stream_desc.msg.h"
-#include "oneflow/core/object_msg/object_msg_reflection.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -38,13 +37,6 @@ TEST(VirtualMachine, __Init__) {
   auto vm = ObjectMsgPtr<VirtualMachine>::New(vm_desc.Get());
   ASSERT_EQ(vm->thread_ctx_list().size(), 2 * 2);
   ASSERT_EQ(vm->stream_type_id2stream_rt_desc().size(), 2 * 2);
-}
-
-TEST(VirtualMachine, ToDot) {
-  std::string dot_str = ObjectMsgListReflection<VirtualMachine>().ToDot("VirtualMachine");
-  // std::cout << std::endl;
-  // std::cout << dot_str << std::endl;
-  // std::cout << std::endl;
 }
 
 }  // namespace

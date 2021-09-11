@@ -128,7 +128,7 @@ class TestReceiveBlobInstructionType : public ReceiveBlobInstructionType {
 COMMAND(vm::RegisterInstructionType<TestReceiveBlobInstructionType>("TestReceiveBlob"));
 #endif  // __linux__
 
-using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_link);
+using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, pending_instr_msg_link);
 
 int64_t NewJobDescSymbol(InstructionMsgList* list,
                          const std::shared_ptr<JobConfigProto>& job_conf) {

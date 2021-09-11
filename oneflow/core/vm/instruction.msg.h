@@ -39,33 +39,39 @@ OBJECT_MSG_BEGIN(InstructionOperandList);
   OBJECT_MSG_DEFINE_STRUCT(std::vector<FlatMsg<InstructionOperand>>, operand);
 OBJECT_MSG_END(InstructionOperandList);
 
-OBJECT_MSG_BEGIN(InstructionMsg);
-  // methods
-  OF_PUBLIC void __Init__();
+OBJECT_MSG_BEGIN(BuiltinInstructionMsg);
   OF_PUBLIC void __Init__(const std::string& instr_type_name);
+  // fields
+  OBJECT_MSG_DEFINE_STRUCT(InstrTypeId, instr_type_id);
+  // instr_type_name is a necessary reduandant field for method ToProto
+  OBJECT_MSG_DEFINE_STRUCT(std::string, instr_type_name);
+  OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<PhyInstrOperand>, phy_instr_operand);
+
+  // deprecated methods and fields
+  OF_PUBLIC void __Init__();
   OF_PUBLIC void __Init__(const InstructionProto& proto);
   OF_PUBLIC void __Init__(const cfg::InstructionProto& proto); 
-  OF_PUBLIC void __Init__(const InstructionMsg& instr_msg);
+  OF_PUBLIC void __Init__(const BuiltinInstructionMsg& instr_msg);
 
   OF_PUBLIC void ToProto(InstructionProto* proto) const;
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_parallel_desc(int64_t symbol_id);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_double_operand(double double_operand);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_int64_operand(int64_t int64_operand);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_uint64_operand(uint64_t uint64_operand);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_bool_operand(bool bool_operand);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_separator();
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id, const SoleMirroredObject&);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id, const AllMirroredObject&);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_symbol_operand(ObjectId logical_object_id);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id, const SoleMirroredObject&);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id, const AllMirroredObject&);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_init_symbol_operand(ObjectId logical_object_id);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const SoleMirroredObject&);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const AllMirroredObject&);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_del_operand(ObjectId logical_object_id);
+  OF_PUBLIC void add_parallel_desc(int64_t symbol_id);
+  OF_PUBLIC void add_double_operand(double double_operand);
+  OF_PUBLIC void add_int64_operand(int64_t int64_operand);
+  OF_PUBLIC void add_uint64_operand(uint64_t uint64_operand);
+  OF_PUBLIC void add_bool_operand(bool bool_operand);
+  OF_PUBLIC void add_separator();
+  OF_PUBLIC void add_const_operand(ObjectId logical_object_id);
+  OF_PUBLIC void add_const_operand(ObjectId logical_object_id, const SoleMirroredObject&);
+  OF_PUBLIC void add_const_operand(ObjectId logical_object_id, const AllMirroredObject&);
+  OF_PUBLIC void add_symbol_operand(ObjectId logical_object_id);
+  OF_PUBLIC void add_mut_operand(ObjectId logical_object_id);
+  OF_PUBLIC void add_mut_operand(ObjectId logical_object_id, const SoleMirroredObject&);
+  OF_PUBLIC void add_mut_operand(ObjectId logical_object_id, const AllMirroredObject&);
+  OF_PUBLIC void add_init_symbol_operand(ObjectId logical_object_id);
+  OF_PUBLIC void add_mut2_operand(ObjectId logical_object_id);
+  OF_PUBLIC void add_mut2_operand(ObjectId logical_object_id, const SoleMirroredObject&);
+  OF_PUBLIC void add_mut2_operand(ObjectId logical_object_id, const AllMirroredObject&);
+  OF_PUBLIC void add_del_operand(ObjectId logical_object_id);
   OF_PUBLIC const std::vector<FlatMsg<InstructionOperand>>& operand() const {
     return operand_list().operand();
   }
@@ -75,28 +81,212 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OF_PUBLIC std::vector<FlatMsg<InstructionOperand>>* mutable_operand() {
     return mutable_operand_list()->mut_operand();
   }
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> Clone() const;
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> MakeInferInstrMsg() const;
 
-  // fields
-  OBJECT_MSG_DEFINE_STRUCT(InstrTypeId, instr_type_id);
-  // instr_type_name is a necessary reduandant field for method ToProto
-  OBJECT_MSG_DEFINE_STRUCT(std::string, instr_type_name);
+  OF_PRIVATE InstructionOperand* add_instr_operand();
+
   OBJECT_MSG_DEFINE_OPTIONAL(int64_t, parallel_desc_symbol_id);
   OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<const ParallelDesc>, parallel_desc);
   OBJECT_MSG_DEFINE_OPTIONAL(InstructionOperandList, operand_list);
-  OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<PhyInstrOperand>, phy_instr_operand);
+OBJECT_MSG_END(BuiltinInstructionMsg);
 
+// ComposableInstructionMsg should be regarded as:
+//    1. wrapper of BuiltinInstructionMsg when compose_link is empty
+//    2. element of List<BuiltinInstructionMsg> when compose_link is not empty
+//    3. container of List<BuiltinInstructionMsg> when !compose_list.empty()
+
+// e.g. memory layout and pointer links:
+// 
+//        --------------        --------------        --------------        -------------- 
+//       |   builtin    |      |   builtin    |      |   builtin    |      |   builtin    |
+//       |--------------|      |--------------|      |--------------|      |--------------|
+//   |<->| compose_link |<---->| compose_link |<---->| compose_link |<---->| compose_link |<->|
+//   |   |--------------|      |--------------|      |--------------|      |--------------|   |
+//   |<->| compose_list |<->|  | compose_list |      | compose_list |      | compose_list |   |
+//        --------------    |   --------------        --------------        --------------    |
+//                          |<--------------------------------------------------------------->| 
+// 
+//  Q: What is the design motivation?
+//  A: to make procedures (lists of instructions) and atomic instructions share the same dispatching api.
+// 
+//  Q: Why not replaced with std::varient<BuiltinInstructionMsg, std::list<BuiltinInstructionMsg>>?
+//  A: We prefer intrusive design when related to vm objects for all memory blocks are considered.
+//  
+//  Q: Why BuiltinInstructionMsg are embeded in ComposableInstructionMsg?
+//  A: Cached BuiltinInstructionMsg objects are shared among ComposableInstructionMsg objects.
+OBJECT_MSG_BEGIN(ComposableInstructionMsg);
+  // fields
+  OBJECT_MSG_DEFINE_OPTIONAL(BuiltinInstructionMsg, builtin);
+
+  // self-contained link
+  OBJECT_MSG_DEFINE_LIST_LINK(compose_link);
+
+  // self-contained head
+  // Don't worry about memory leak, it get handled in class object_msg/object_msg_list.h:292
+  OBJECT_MSG_DEFINE_LIST_HEAD(ComposableInstructionMsg, compose_link, compose_list);
+OBJECT_MSG_END(ComposableInstructionMsg);
+
+// List<InstructionMsg> should be regarded as:
+//    1. List<BuiltinInstructionMsg> when composable.compose_link is empty
+//    1. List<List<BuiltinInstructionMsg>> when !composable.compose_list.empty() 
+OBJECT_MSG_BEGIN(InstructionMsg);
+  // accessors
+  OF_PUBLIC const std::shared_ptr<PhyInstrOperand>& phy_instr_operand() const {
+    return composable().builtin().phy_instr_operand();
+  }
+  OF_PUBLIC std::shared_ptr<PhyInstrOperand>* mut_phy_instr_operand() {
+    return mut_composable()->mut_builtin()->mut_phy_instr_operand();
+  }
+  OF_PUBLIC std::shared_ptr<PhyInstrOperand>* mutable_phy_instr_operand() {
+    return mut_composable()->mut_builtin()->mutable_phy_instr_operand();
+  }
+
+  // fields
+  OBJECT_MSG_DEFINE_OPTIONAL(ComposableInstructionMsg, composable);
 
   // links
-  OBJECT_MSG_DEFINE_LIST_LINK(instr_msg_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(pending_instr_msg_link);
 
-  // private methods
-  OF_PRIVATE InstructionOperand* add_instr_operand();
+  // deprecated methods
+  OF_PUBLIC void __Init__(const std::string& instr_type_name) {
+    return mutable_composable()->mutable_builtin()->__Init__(instr_type_name);
+  }
+  OF_PUBLIC void __Init__() {
+    return mutable_composable()->mutable_builtin()->__Init__();
+  }
+  OF_PUBLIC void __Init__(const InstructionProto& proto) {
+    return mutable_composable()->mutable_builtin()->__Init__(proto);
+  }
+  OF_PUBLIC void __Init__(const cfg::InstructionProto& proto) {
+    return mutable_composable()->mutable_builtin()->__Init__(proto);
+  }
+  OF_PUBLIC void __Init__(const InstructionMsg& instr_msg) {
+    return mutable_composable()->mutable_builtin()->__Init__(instr_msg.composable().builtin());
+  }
+
+  OF_PUBLIC void ToProto(InstructionProto* proto) const {
+    composable().builtin().ToProto(proto);
+  }
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_parallel_desc(int64_t symbol_id) {
+    mut_composable()->mut_builtin()->add_parallel_desc(symbol_id);
+    return this;
+  }
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_double_operand(double double_operand) {
+    mut_composable()->mut_builtin()->add_double_operand(double_operand);
+    return this;
+  }
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_int64_operand(int64_t int64_operand) {
+    mut_composable()->mut_builtin()->add_int64_operand(int64_operand);
+    return this;
+  }
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_uint64_operand(uint64_t uint64_operand) {
+    mut_composable()->mut_builtin()->add_uint64_operand(uint64_operand);
+    return this;
+  }
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_bool_operand(bool bool_operand) {
+    mut_composable()->mut_builtin()->add_bool_operand(bool_operand);
+    return this;
+  }
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_separator() {
+    mut_composable()->mut_builtin()->add_separator();
+    return this;
+  }
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id) {
+    mut_composable()->mut_builtin()->add_const_operand(logical_object_id);
+    return this;
+  }
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id, const SoleMirroredObject&) {
+    mut_composable()->mut_builtin()->add_const_operand(logical_object_id, SoleMirroredObject());
+    return this;
+  }
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id, const AllMirroredObject&) {
+    mut_composable()->mut_builtin()->add_const_operand(logical_object_id, AllMirroredObject());
+    return this;
+  }
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_symbol_operand(ObjectId logical_object_id) {
+    mut_composable()->mut_builtin()->add_symbol_operand(logical_object_id);
+    return this;
+  }
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id) {
+    mut_composable()->mut_builtin()->add_mut_operand(logical_object_id);
+    return this;
+  }
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id, const SoleMirroredObject&) {
+    mut_composable()->mut_builtin()->add_mut_operand(logical_object_id, SoleMirroredObject());
+    return this;
+  }
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id, const AllMirroredObject&) {
+    mut_composable()->mut_builtin()->add_mut_operand(logical_object_id, AllMirroredObject());
+    return this;
+  }
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_init_symbol_operand(ObjectId logical_object_id) {
+    mut_composable()->mut_builtin()->add_init_symbol_operand(logical_object_id);
+    return this;
+  }
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id) {
+    mut_composable()->mut_builtin()->add_mut2_operand(logical_object_id);
+    return this;
+  }
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const SoleMirroredObject&) {
+    mut_composable()->mut_builtin()->add_mut2_operand(logical_object_id, SoleMirroredObject());
+    return this;
+  }
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const AllMirroredObject&) {
+    mut_composable()->mut_builtin()->add_mut2_operand(logical_object_id, AllMirroredObject());
+    return this;
+  }
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_del_operand(ObjectId logical_object_id) {
+    mut_composable()->mut_builtin()->add_del_operand(logical_object_id);
+    return this;
+  }
+  OF_PUBLIC const std::vector<FlatMsg<InstructionOperand>>& operand() const {
+    return operand_list().operand();
+  }
+  OF_PUBLIC std::vector<FlatMsg<InstructionOperand>>* mut_operand() {
+    return mut_operand_list()->mut_operand();
+  }
+  OF_PUBLIC std::vector<FlatMsg<InstructionOperand>>* mutable_operand() {
+    return mut_operand_list()->mut_operand();
+  }
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> Clone() const;
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> MakeInferInstrMsg() const;
+
+  OF_PUBLIC const InstrTypeId& instr_type_id() const {
+    return composable().builtin().instr_type_id();
+  }
+  OF_PUBLIC InstrTypeId* mut_instr_type_id() {
+    return mut_composable()->mut_builtin()->mut_instr_type_id();
+  }
+  OF_PUBLIC const std::string& instr_type_name() const {
+    return composable().builtin().instr_type_name();
+  }
+  OF_PUBLIC bool has_parallel_desc_symbol_id() const {
+    return composable().builtin().has_parallel_desc_symbol_id();
+  }
+  OF_PUBLIC int64_t parallel_desc_symbol_id() const {
+    return composable().builtin().parallel_desc_symbol_id();
+  }
+  OF_PUBLIC void set_parallel_desc_symbol_id(int64_t val) {
+    return mut_composable()->mut_builtin()->set_parallel_desc_symbol_id(val);
+  }
+  OF_PUBLIC const std::shared_ptr<const ParallelDesc>& parallel_desc() const {
+    return composable().builtin().parallel_desc();
+  }
+  OF_PUBLIC std::shared_ptr<const ParallelDesc>* mut_parallel_desc() {
+    return mut_composable()->mut_builtin()->mut_parallel_desc();
+  }
+  OF_PUBLIC const InstructionOperandList& operand_list() const {
+    return composable().builtin().operand_list();
+  }
+  OF_PUBLIC InstructionOperandList* mut_operand_list() {
+    return mut_composable()->mut_builtin()->mut_operand_list();
+  }
+  OF_PUBLIC InstructionOperandList* mutable_operand_list() {
+    return mut_composable()->mut_builtin()->mut_operand_list();
+  }
 OBJECT_MSG_END(InstructionMsg);
 // clang-format on
 
-using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
+using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, pending_instr_msg_link);
 
 template<OperandMemZoneModifier mem_zone_modifier>
 void CheckOperand(const Operand& operand);
