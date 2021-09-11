@@ -360,7 +360,12 @@ class AdaptiveAvgPool3DFunctor : public AdaptivePoolNDFunctor {
 class NllFunctor {
  public:
   NllFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("nll").Input("input").Input("target").Output("out").Build());
+    op_ = CHECK_JUST(one::OpBuilder("nll")
+                         .Input("input")
+                         .Input("target")
+                         .Output("out")
+                         .Output("total_weight")
+                         .Build());
     op_weight_ = CHECK_JUST(one::OpBuilder("nll")
                                 .Input("input")
                                 .Input("target")
@@ -373,27 +378,29 @@ class NllFunctor {
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight, const int64_t& ignore_index,
                            const Optional<std::string>& reduction) const {
+    std::string reduction_v = reduction ? *JUST(reduction.value()) : "none";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
-    const auto dispathch = [&]() -> Maybe<Tensor> {
-      const auto res = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs));
-      if (reduction) {
-        const auto reduction_v = JUST(reduction.value());
-        if (*reduction_v == "mean") {
-          return functional::ReduceMean(res, {0}, false);
-        } else if (*reduction_v == "sum") {
-          return functional::ReduceSum(res, {0}, false);
-        } else {
-          UNIMPLEMENTED_THEN_RETURN();
-        }
-      }
-      return res;
-    };
-    const auto dispathch_with_weight = [&]() -> Maybe<Tensor> {
-      return OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input, target, JUST(weight.value())},
-                                            attrs);
-    };
-    return weight ? dispathch_with_weight() : dispathch();
+    JUST(attrs.SetAttr<std::string>("reduction", reduction_v));
+
+    std::vector<int> input_perm(input->shape()->dim_vec().size(), 0);
+    input_perm[input_perm.size() - 1] = 1;
+    for (size_t i = 1; i < input_perm.size() - 1; ++i) { input_perm[i] = i + 1; }
+    auto input_ = JUST(functional::Transpose(input, input_perm));
+    input_ =
+        JUST(functional::Reshape(input_, {-1, input_->shape()->At(input->shape()->NumAxes() - 1)}));
+    const auto target_shape = target->shape();
+    auto target_ = JUST(functional::Flatten(target, 0, target->shape()->NumAxes() - 1));
+
+    std::shared_ptr<Tensor> result;
+    if (weight) {
+      result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_weight_,
+                                                   {input_, target_, JUST(weight.value())}, attrs));
+    } else {
+      result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input_, target_}, attrs));
+    }
+    if (reduction_v == "none") { result = JUST(functional::Reshape(result, *target_shape)); }
+    return result;
   }
 
  private:

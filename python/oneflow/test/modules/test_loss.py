@@ -43,6 +43,9 @@ def generate_necessity_for_cross_entropy_or_nll_loss(dim: int):
             dtype=int,
             requires_grad=False,
         ).to(device),
+        random_pytorch_tensor(1, num_classes, low=0, high=3, requires_grad=False).to(
+            device
+        ),
         ignore_index,
         device,
     )
@@ -77,6 +80,7 @@ def test_cross_entropy_loss(dim=int):
     (
         x,
         target,
+        weight,
         ignore_index,
         device,
     ) = generate_necessity_for_cross_entropy_or_nll_loss(dim)
@@ -113,11 +117,14 @@ def test_nll_loss(dim=int):
     (
         x,
         target,
+        weight,
         ignore_index,
         device,
     ) = generate_necessity_for_cross_entropy_or_nll_loss(dim)
     m = torch.nn.NLLLoss(
-        reduction=oneof("none", "sum", "mean", nothing()), ignore_index=ignore_index,
+        weight=oneof(weight, nothing()),
+        reduction=oneof("none", "sum", "mean", nothing()),
+        ignore_index=ignore_index,
     )
     m.train(random())
     m.to(device)
@@ -130,19 +137,19 @@ def test_nll_loss(dim=int):
 class TestNLLLossModule(flow.unittest.TestCase):
     @autotest()
     def test_nll_loss_with_random_data_dim_2(test_case):
-        test_nll_loss(2)
+        return test_nll_loss(2)
 
     @autotest()
     def test_nll_loss_with_random_data_dim_3(test_case):
-        test_nll_loss(3)
+        return test_nll_loss(3)
 
     @autotest()
     def test_nll_loss_with_random_data_dim_4(test_case):
-        test_nll_loss(4)
+        return test_nll_loss(4)
 
     @autotest()
     def test_nll_loss_with_random_data_dim_5(test_case):
-        test_nll_loss(5)
+        return test_nll_loss(5)
 
 
 def test_bce_loss(dim=int, with_logits: bool = False):

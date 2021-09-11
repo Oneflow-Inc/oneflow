@@ -21,7 +21,7 @@ namespace oneflow {
 namespace one {
 struct NllCaptureState : public AutoGradCaptureState {
   int64_t ignore_index;
-  bool has_weight;
+  std::string reduction;
 };
 
 class Nll : public OpExprGradFunction<NllCaptureState> {
@@ -45,12 +45,14 @@ Maybe<void> Nll::Init(const OpExpr& op) {
   grad_op_ = JUST(one::OpBuilder("nll_grad", GradientOpName(op_name))
                       .Input("input")
                       .Input("target")
+                      .Input("total_weight")
                       .Input("dy")
                       .Output("dx")
                       .Build());
   grad_op_weight_ = JUST(one::OpBuilder("nll_grad", GradientOpName(op_name))
                              .Input("input")
                              .Input("target")
+                             .Input("total_weight")
                              .Input("weight")
                              .Input("dy")
                              .Output("dx")
@@ -60,38 +62,34 @@ Maybe<void> Nll::Init(const OpExpr& op) {
 Maybe<void> Nll::Capture(NllCaptureState* ctx, const TensorTuple& inputs,
                          const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->has_weight = JUST(composed_attrs.GetAttr<bool>("has_weight"));
   ctx->ignore_index = JUST(composed_attrs.GetAttr<int64_t>("ignore_index"));
-  if (ctx->has_weight) {
-    CHECK_EQ_OR_RETURN(inputs.size(), 3);
-    CHECK_EQ_OR_RETURN(outputs.size(), 2);
-  } else {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
-  }
-  ctx->SaveTensorForBackward(inputs.at(0));  // input
-  ctx->SaveTensorForBackward(inputs.at(1));  // target
-  if (ctx->has_weight) {
+  ctx->reduction = JUST(composed_attrs.GetAttr<std::string>("reduction"));
+  ctx->SaveTensorForBackward(inputs.at(0));   // input
+  ctx->SaveTensorForBackward(inputs.at(1));   // target
+  ctx->SaveTensorForBackward(outputs.at(1));  // total_weight
+  if (inputs.size() == 3) {
     ctx->SaveTensorForBackward(inputs.at(2));  // weight
   }
   return Maybe<void>::Ok();
 }
 Maybe<void> Nll::Apply(const NllCaptureState* ctx, const TensorTuple& out_grads,
                        TensorTuple* in_grads) const {
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 2);
   const auto& dy = out_grads.at(0);
   const auto& input = ctx->SavedTensors().at(0);
   const auto& target = ctx->SavedTensors().at(1);
+  const auto& total_weight = ctx->SavedTensors().at(2);
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<int64_t>("ignore_index", ctx->ignore_index));
-  JUST(attrs.SetAttr<bool>("has_weight", ctx->has_weight));
-  in_grads->resize(2);
-  if (ctx->has_weight) {
-    const auto& weight = ctx->SavedTensors().at(2);
-    in_grads->at(0) =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_weight_, {input, target, weight, dy}, attrs));
+  JUST(attrs.SetAttr<std::string>("reduction", ctx->reduction));
+  in_grads->resize(ctx->SavedTensors().size() - 1);
+  if (ctx->SavedTensors().size() == 4) {
+    const auto& weight = ctx->SavedTensors().at(3);
+    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *grad_op_weight_, {input, target, total_weight, weight, dy}, attrs));
   } else {
-    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {input, target, dy}, attrs));
+    in_grads->at(0) =
+        JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {input, target, total_weight, dy}, attrs));
   }
   return Maybe<void>::Ok();
 }

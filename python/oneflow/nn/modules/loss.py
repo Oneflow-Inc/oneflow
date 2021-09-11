@@ -383,25 +383,18 @@ class NLLLoss(Module):
     """
 
     def __init__(
-        self, weight=None, ignore_index: int = None, reduction: str = "mean"
+        self, weight=None, ignore_index: int = -100, reduction: str = "mean"
     ) -> None:
         super().__init__()
-        if weight != None:
-            raise ValueError("Argument weight is not supported yet")
         assert reduction in [
             "sum",
             "none",
             "mean",
             None,
         ], "only 'sum', 'mean' and None supported by now"
+        self.weight = weight
         self.ignore_index = ignore_index
         self.reduction = reduction
-
-    def nllloss_1d(self, input, target):
-        target = flow._C.reshape(target, shape=(target.shape[0], 1))
-        res = flow._C.dim_gather(input, target, dim=1)
-        res = flow._C.squeeze(res, dim=[1])
-        return res
 
     def forward(self, input, target):
         assert len(input.shape) <= 5
@@ -409,33 +402,10 @@ class NLLLoss(Module):
         assert input.shape[0] == target.shape[0]
         for i in range(2, len(input.shape)):
             assert input.shape[i] == target.shape[i - 1]
-        input = input.negative()
 
-        input = flow._C.transpose(
-            input, perm=(0,) + tuple(range(2, len(input.shape))) + (1,)
+        return flow._C.nll(
+            input, target, self.weight, self.ignore_index, self.reduction
         )
-        input = flow.reshape(input, shape=[-1, input.shape[-1]])
-        target_shape = target.shape
-        target = target.flatten()
-        out = self.nllloss_1d(input, target)
-        if self.ignore_index is not None:
-            zeros = flow.zeros(out.shape, dtype=out.dtype, device=out.device)
-            condition = flow.eq(target, self.ignore_index)
-            ones = flow.ones(
-                condition.shape, dtype=condition.dtype, device=condition.device
-            )
-            condition = flow.reshape(ones.sub(condition), tuple(out.shape))
-            out = flow.where(condition, out, zeros)
-            if self.reduction == "mean":
-                out = out.sum()
-                reduce_count = condition.argwhere().shape[0]
-                out = flow.mul(out, 1.0 / reduce_count)
-        if self.reduction == "mean":
-            return out.mean()
-        elif self.reduction == "sum":
-            return out.sum()
-        else:
-            return out.reshape(*target_shape)
 
 
 class KLDivLoss(Module):
