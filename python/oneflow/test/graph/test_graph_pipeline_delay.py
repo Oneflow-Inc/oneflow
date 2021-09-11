@@ -58,7 +58,7 @@ def _test_graph_pipeline_delay_output(test_case):
             in1 = out0.to_consistent(P1, B)
             out1 = self.layer_1(in1)
             return out1
- 
+
     pp_m = PipelineModule()
     pp_m.train()
     of_sgd = flow.optim.SGD(pp_m.parameters(), lr=0.001)

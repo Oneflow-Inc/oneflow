@@ -90,7 +90,6 @@ def _get_ppm_and_opt():
         def __init__(self, *linear_args):
             super().__init__()
             self.linear = flow.nn.Linear(*linear_args)
-            # self.linear.to_consistent(placement=placement, sbp=B)
             flow.nn.init.constant_(self.linear.weight, 0.00023)
 
         def forward(self, input):
@@ -100,6 +99,7 @@ def _get_ppm_and_opt():
     class PipelineModule(flow.nn.Module):
         def __init__(self):
             super().__init__()
+            # Initlize module and move each module to the right placement of its pipeline stage.
             self.stage_0_m = StageModule(1452, 8, False).to_consistent(
                 placement=P0, sbp=B
             )
@@ -109,6 +109,7 @@ def _get_ppm_and_opt():
 
         def forward(self, image):
             out = self.stage_0_m(image)
+            # Move tensor between different pipeline stages.
             out = out.to_consistent(placement=P1, sbp=B)
             out = self.stage_1_m(out)
             out = out.to_consistent(placement=P2, sbp=B)
@@ -138,27 +139,32 @@ def _train_with_graph(iter_num=3):
             super().__init__()
             self.train_data_loader = train_data_loader
             self.pp_m = pp_m
+            # Set different module's stage id to hint the graph preparing right num of buffers in pipeline.
             self.pp_m.stage_0_m.config.stage_id = 0
             self.pp_m.stage_1_m.config.stage_id = 1
             self.pp_m.stage_2_m.config.stage_id = 2
             self.pp_m.stage_3_m.config.stage_id = 3
             self.mseloss = flow.nn.MSELoss("sum")
             self.add_optimizer(sgd)
+            # Let graph to do gradient accumulatioin, pipline execution depends on gradient accumulatioin.
             self.config.set_gradient_accumulation_steps(4)
 
         def build(self):
             image, label = self.train_data_loader()
 
+            # Dataloader's outputs are on host memory, so move it to device 0.
             image = image.to(D)
             pp_m.train()
             out = self.pp_m(image)
 
+            # Dataloader's outputs are on host memory, so move it to device 0.
             label = label.to(D)
+            # loss is calculated on device 3, so move label to device 4.
             label = label.to_consistent(placement=P3, sbp=B)
             loss = self.mseloss(out, label.to(dtype=flow.float32))
             loss.backward()
 
-            # retun image and label just for re-using data in eager test
+            # Returning image and label is just for re-using data in eager test
             image = image.to_consistent(placement=P3, sbp=B)
             return loss, image, label
 
@@ -167,7 +173,7 @@ def _train_with_graph(iter_num=3):
     def one_iter(iter_idx):
         loss, image, label = pp_g()
         if rank == 3:
-            # loss on other rank are empty
+            # loss on other rank are 0-Size tensor
             loss = loss.to_local()
             loss_np = loss.numpy()
             print("loss numpy \n", loss)
