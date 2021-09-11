@@ -217,6 +217,9 @@ class Block(object):
 
     def _pre_forward_mapping_out_scope(self, *args):
         # Insert identity op when doing activation checkpointing or pipeline execution.
+        # Identity op outside activation checkpointing scope will be the endpoint of an activation checkpointing segment.
+        # Identity op as the first op of a pipeline stage will make backward op depends on the identity op within the stage,
+        # otherwise the backward op may depends the op in former stage which will make graph creates unnessary buffers.
         if self.config.activation_checkpointing or (
             self.config.stage_id is not None and self.config.stage_id >= 0
         ):
@@ -522,6 +525,7 @@ class BlockConfig(object):
     @stage_id.setter
     def stage_id(self, value: int = None):
         r"""Set stage id of Block in pipeline parallelism.
+        Set different module's stage id to hint the graph preparing right num of buffers in pipeline.
         """
         self._is_null = False
         self._stage_id = value

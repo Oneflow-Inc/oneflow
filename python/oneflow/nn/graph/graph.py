@@ -219,6 +219,7 @@ class Graph(object):
             ), "lr_scheduler's optimizer must be the same optimizer in add_optimizer."
             opt_dict["lr_sch"] = lr_sch
         self._opts.append(opt_dict)
+        # Set the training config if there is an optimizer add in graph.
         if len(self._opts) == 1:
             self.config._train(True)
 
