@@ -72,7 +72,9 @@ void BuiltinInstructionMsg::__Init__(const std::string& instr_type_name) {
 }
 
 void BuiltinInstructionMsg::__Init__(const InstructionProto& proto) { InitFromProto(this, proto); }
-void BuiltinInstructionMsg::__Init__(const cfg::InstructionProto& proto) { InitFromProto(this, proto); }
+void BuiltinInstructionMsg::__Init__(const cfg::InstructionProto& proto) {
+  InitFromProto(this, proto);
+}
 
 void BuiltinInstructionMsg::__Init__(const BuiltinInstructionMsg& instr_msg) {
   __Init__();
@@ -117,24 +119,22 @@ void BuiltinInstructionMsg::add_bool_operand(bool bool_operand) {
   add_instr_operand()->set_bool_operand(bool_operand);
 }
 
-void BuiltinInstructionMsg::add_separator() {
-  add_instr_operand()->mutable_separator();
-}
+void BuiltinInstructionMsg::add_separator() { add_instr_operand()->mutable_separator(); }
 
 void BuiltinInstructionMsg::add_const_operand(ObjectId logical_object_id) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_const_operand()->mutable_operand()->__Init__(logical_object_id);
 }
 
-void BuiltinInstructionMsg::add_const_operand(
-    ObjectId logical_object_id, const SoleMirroredObject& sole_mirrored_object) {
+void BuiltinInstructionMsg::add_const_operand(ObjectId logical_object_id,
+                                              const SoleMirroredObject& sole_mirrored_object) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_const_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                             sole_mirrored_object);
 }
 
-void BuiltinInstructionMsg::add_const_operand(
-    ObjectId logical_object_id, const AllMirroredObject& all_mirrored_object) {
+void BuiltinInstructionMsg::add_const_operand(ObjectId logical_object_id,
+                                              const AllMirroredObject& all_mirrored_object) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_const_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                             all_mirrored_object);
@@ -151,15 +151,15 @@ void BuiltinInstructionMsg::add_mut_operand(ObjectId logical_object_id) {
   add_instr_operand()->mutable_mut_operand()->mutable_operand()->__Init__(logical_object_id);
 }
 
-void BuiltinInstructionMsg::add_mut_operand(
-    ObjectId logical_object_id, const SoleMirroredObject& sole_mirrored_object) {
+void BuiltinInstructionMsg::add_mut_operand(ObjectId logical_object_id,
+                                            const SoleMirroredObject& sole_mirrored_object) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_mut_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                           sole_mirrored_object);
 }
 
-void BuiltinInstructionMsg::add_mut_operand(
-    ObjectId logical_object_id, const AllMirroredObject& all_mirrored_object) {
+void BuiltinInstructionMsg::add_mut_operand(ObjectId logical_object_id,
+                                            const AllMirroredObject& all_mirrored_object) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_mut_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                           all_mirrored_object);
@@ -176,15 +176,15 @@ void BuiltinInstructionMsg::add_mut2_operand(ObjectId logical_object_id) {
   add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id);
 }
 
-void BuiltinInstructionMsg::add_mut2_operand(
-    ObjectId logical_object_id, const SoleMirroredObject& sole_mirrored_object) {
+void BuiltinInstructionMsg::add_mut2_operand(ObjectId logical_object_id,
+                                             const SoleMirroredObject& sole_mirrored_object) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                            sole_mirrored_object);
 }
 
-void BuiltinInstructionMsg::add_mut2_operand(
-    ObjectId logical_object_id, const AllMirroredObject& all_mirrored_object) {
+void BuiltinInstructionMsg::add_mut2_operand(ObjectId logical_object_id,
+                                             const AllMirroredObject& all_mirrored_object) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                            all_mirrored_object);
