@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -94,6 +95,8 @@ class RunLazyJobInstructionType final : public InstructionType {
   using stream_type = LazyJobStreamType;
   void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
   void Compute(vm::Instruction* instruction) const override {
+    int64_t this_rank = GlobalProcessCtx::Rank();
+    LOG(ERROR) << "cclog: in rank: " << this_rank << " RunLazyJobInstructionType::Compute .\n";
     const auto& cur_nn_graph = GetCurNNGraph(instruction);
     auto* device_ctx = GetLazyJobDeviceCtx(instruction);
 
@@ -102,6 +105,7 @@ class RunLazyJobInstructionType final : public InstructionType {
     OF_PROFILER_RANGE_POP();  // WaitUntilQueueEmptyIfFrontNNGraphNotEquals
     {
       OF_PROFILER_RANGE_PUSH("MakeJobInstance");
+      LOG(ERROR) << "cclog: in rank: " << this_rank << " GetJobInstance .\n";
       const auto& job_instance = MakeJobInstance(instruction);
       OF_PROFILER_RANGE_POP();  // MakeJobInstance
       OF_PROFILER_RANGE_PUSH("Send all buffers to BufferMgr");
@@ -109,11 +113,15 @@ class RunLazyJobInstructionType final : public InstructionType {
       auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
       for (const auto& op_name : cur_nn_graph->inputs_op_names()) {
         if (job_instance->HasPushCallbackOpName(op_name)) {
+          LOG(ERROR) << "cclog: in rank: " << this_rank << " has input with op name: " << op_name
+                     << " so send push cb.\n";
           buffer_mgr->Get(GetInputBufferName(job_name, op_name))->Send(job_instance);
         }
       }
       for (const auto& op_name : cur_nn_graph->outputs_op_names()) {
         if (job_instance->HasPullCallbackOpName(op_name)) {
+          LOG(ERROR) << "cclog: in rank: " << this_rank << " has output with op name: " << op_name
+                     << " so send pull cb.\n";
           buffer_mgr->Get(GetOutputBufferName(job_name, op_name))->Send(job_instance);
         }
       }
@@ -142,6 +150,7 @@ class RunLazyJobInstructionType final : public InstructionType {
   }
 
   std::shared_ptr<LazyJobInstance> MakeJobInstance(Instruction* instruction) const {
+    int64_t this_rank = GlobalProcessCtx::Rank();
     const auto* ptr = instruction->instr_msg().phy_instr_operand().get();
     const auto* phy_instr_operand = dynamic_cast<const RunLazyJobPhyInstrOperand*>(ptr);
     CHECK_NOTNULL(phy_instr_operand);
@@ -160,6 +169,8 @@ class RunLazyJobInstructionType final : public InstructionType {
         of_blob->mut_blob()->CopyDataContentFrom(of_blob->mut_device_ctx(), blob);
       };
       CHECK(push_cbs.emplace(op_name, PushCb).second);
+      LOG(ERROR) << "cclog: in rank: " << this_rank << " Add input op: " << op_name
+                 << " to push cbs.\n";
     }
     HashMap<std::string, std::function<void(int64_t)>> pull_cbs;
     CHECK_EQ(nn_graph->outputs_op_names().size(), phy_instr_operand->outputs()->size());
@@ -175,6 +186,8 @@ class RunLazyJobInstructionType final : public InstructionType {
         mut_blob->CopyDataContentFrom(of_blob->mut_device_ctx(), &of_blob->blob());
       };
       CHECK(pull_cbs.emplace(op_name, PullCb).second);
+      LOG(ERROR) << "cclog: in rank: " << this_rank << " Add output op: " << op_name
+                 << " to pull cbs.\n";
     }
     const auto& FinishCb = [this, instruction]() {
       auto* device_ctx = GetLazyJobDeviceCtx(instruction);

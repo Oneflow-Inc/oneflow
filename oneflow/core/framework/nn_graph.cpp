@@ -277,6 +277,7 @@ Maybe<void> MakeEagerBlobObjectList(std::vector<std::shared_ptr<vm::EagerBlobObj
         //   ConsistentTensor has NO phy tensor in current rank, so RunLazyJobInstrucntion
         //   should filter this tensor and NOT send JobInstance for this pull/push callback.
         blob_list->push_back(std::shared_ptr<vm::EagerBlobObject>());
+        // blob_list->push_back(JUST(JUST(tensor->cur_rank_phy_tensor())->eager_blob_object()));
       }
     } else {
       blob_list->push_back(JUST(tensor->eager_blob_object()));
@@ -303,6 +304,22 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
   JUST(MakeEagerBlobObjectList(&input_blobs, inputs));
   JUST(MakeEagerBlobObjectList(&output_blobs, outputs));
   JUST(MakeEagerBlobObjectList(&var_blobs, parameters));
+  int64_t this_rank = GlobalProcessCtx::Rank();
+  for (const auto& input : input_blobs) {
+    if (input) {
+      LOG(ERROR) << " cclog: in rank " << this_rank << " input has phy tensor. ";
+    } else {
+      LOG(ERROR) << " cclog: in rank " << this_rank << " input has NO phy tensor. ";
+    }
+  }
+  for (const auto& output : output_blobs) {
+    if (output) {
+      LOG(ERROR) << " cclog: in rank " << this_rank << " output has phy tensor. ";
+    } else {
+      LOG(ERROR) << " cclog: in rank " << this_rank << " output has NO phy tensor. ";
+    }
+  }
+
   const auto& input_blob_list_ptr =
       std::make_shared<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>(
           std::move(input_blobs));
