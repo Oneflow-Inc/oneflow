@@ -20,6 +20,18 @@ limitations under the License.
 
 namespace oneflow {
 
+IBVerbsMessagePool::~IBVerbsMessagePool() {
+    while (ibv_mr_buf_.empty() == false) {
+      ibv_mr* mr = ibv_mr_buf_.front();
+      ibv_mr_buf_.pop_front();
+      CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
+    }
+    while (memory_buf_.empty() == false) {
+      free(memory_buf_.front());
+      memory_buf_.pop_front();
+    }
+}
+
 IBVerbsMessagePool::IBVerbsMessagePool(ibv_pd* pd, uint32_t  actor_msg_mr_num)
     : pd_(pd),  actor_msg_mr_num_( actor_msg_mr_num) {}
 
@@ -32,11 +44,11 @@ void IBVerbsMessagePool::RegisterIBMemoryForMessagePool() {
       IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
   CHECK(mr);
   ibv_mr_buf_.push_back(mr);
-  memory_buf_.push_front(addr);
+  memory_buf_.push_back(addr);
   for (size_t i = 0; i <  actor_msg_mr_num_; i++) {
     char* split_addr = addr + message_size * i;
     ActorMsgMR* msg_mr = new ActorMsgMR(mr, split_addr, message_size);
-    message_buf_.push_front(msg_mr);
+    message_buf_.push_back(msg_mr);
   }
 }
 
@@ -58,7 +70,7 @@ ActorMsgMR* IBVerbsMessagePool::GetMessageFromBuf() {
 
 void IBVerbsMessagePool::PutMessage(ActorMsgMR* msg_mr) {
   std::unique_lock<std::mutex> msg_buf_lck(message_buf_mutex_);
-  message_buf_.push_front(msg_mr);
+  message_buf_.push_back(msg_mr);
 }
 
 }  // namespace oneflow
