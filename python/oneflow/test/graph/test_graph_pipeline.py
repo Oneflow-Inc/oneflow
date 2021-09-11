@@ -153,13 +153,11 @@ def _train_with_graph(iter_num=3):
             image, label = self.train_data_loader()
 
             # Dataloader's outputs are on host memory, so move it to device 0.
-            image = image.to(D)
+            image = image.to_consistent(placement=P0, sbp=B)
             pp_m.train()
             out = self.pp_m(image)
 
-            # Dataloader's outputs are on host memory, so move it to device 0.
-            label = label.to(D)
-            # loss is calculated on device 3, so move label to device 4.
+            # Dataloader's outputs are on host memory, so move it to device 3.
             label = label.to_consistent(placement=P3, sbp=B)
             loss = self.mseloss(out, label.to(dtype=flow.float32))
             loss.backward()
