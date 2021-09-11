@@ -111,7 +111,7 @@ OBJECT_MSG_END(BuiltinInstructionMsg);
 //  Q: Why not replaced with std::varient<BuiltinInstructionMsg, std::list<BuiltinInstructionMsg>>?
 //  A: We prefer intrusive design when related to vm objects for all memory blocks are considered.
 //  
-//  Q: Why BuiltinInstructionMsg are embeded in ComposableInstructionMsg?
+//  Q: Why struct BuiltinInstructionMsg not embeded in ComposableInstructionMsg?
 //  A: Cached BuiltinInstructionMsg objects are shared among ComposableInstructionMsg objects.
 OBJECT_MSG_BEGIN(ComposableInstructionMsg);
   // fields
