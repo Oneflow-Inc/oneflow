@@ -19,7 +19,7 @@ import oneflow.nn as nn
 import unittest
 import numpy as np
 from oneflow.fx import symbolic_trace
-from oneflow.fx.passes.quantization import QuantizationAwareTraining
+from oneflow.fx.passes.quantization import GetInsertNode
 
 class AlexNet(nn.Module):
     def __init__(self, num_classes: int = 1000) -> None:
@@ -85,7 +85,7 @@ class TestAlexNet(flow.unittest.TestCase):
         m = AlexNet()
         gm: flow.fx.GraphModule = symbolic_trace(m)
         input = flow.randn(1, 3, 224, 224)
-        insert_place = QuantizationAwareTraining(gm).propagate(input)
+        insert_place, conv_weight = GetInsertNode(gm).propagate(input)
         for x in gm.graph.nodes:
             if x.target in insert_place:
                 y = x._next
