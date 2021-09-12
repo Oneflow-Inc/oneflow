@@ -119,34 +119,34 @@ add_docstr(
 
     .. code-block:: python
 
-        import oneflow as flow 
-        import numpy as np 
+        >>> import oneflow as flow 
+        >>> import numpy as np 
 
-        x = flow.Tensor(np.array([[1, 2, 3], 
-                          [4, 5, 6]]))
-        indices = flow.tensor(np.array([1, 0]).astype(np.int64))
-        out = flow.batch_gather(x, indices)
+        >>> x = flow.Tensor(np.array([[1, 2, 3], 
+        ...                           [4, 5, 6]]))
+        >>> indices = flow.tensor(np.array([1, 0]).astype(np.int64))
+        >>> out = flow.batch_gather(x, indices)
 
-        # out: tensor([[4., 5., 6.],
-        #              [1., 2., 3.]], dtype=oneflow.float32)
+        tensor([[4., 5., 6.],
+                [1., 2., 3.]], dtype=oneflow.float32)
 
     Example 2: 
 
     .. code-block:: python
 
-        import oneflow as flow 
-        import numpy as np 
+        >>> import oneflow as flow 
+        >>> import numpy as np 
 
-        x = flow.Tensor(np.array([[[1, 2, 3], [4, 5, 6]], 
-                          [[1, 2, 3], [4, 5, 6]]]))
-        indices = flow.tensor(np.array([[1, 0], 
-                                        [0, 1]]).astype(np.int64))
-        out = flow.batch_gather(x, indices)
+        >>> x = flow.Tensor(np.array([[[1, 2, 3], [4, 5, 6]], 
+        ...                           [[1, 2, 3], [4, 5, 6]]]))
+        >>> indices = flow.tensor(np.array([[1, 0], 
+        ...                                 [0, 1]]).astype(np.int64))
+        >>> out = flow.batch_gather(x, indices)
 
-        # out: tensor([[[4., 5., 6.],
-        #               [1., 2., 3.]],
-        #              [[1., 2., 3.],
-        #               [4., 5., 6.]]], dtype=oneflow.float32)
+        tensor([[[4., 5., 6.],
+                 [1., 2., 3.]],
+                [[1., 2., 3.],
+                 [4., 5., 6.]]], dtype=oneflow.float32)
 
     """,
 )

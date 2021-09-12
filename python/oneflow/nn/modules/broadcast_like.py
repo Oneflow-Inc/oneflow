@@ -67,7 +67,8 @@ def broadcast_like_op(x, like_tensor, broadcast_axes: Optional[Sequence] = None)
         >>> x = flow.randn(3, 1, 1)
         >>> like_tensor = flow.randn(3, 4, 5)
         >>> broadcast_tensor = flow.broadcast_like(x, like_tensor, broadcast_axes=[1, 2]) 
-        # broadcast_tensor shape is [3, 4, 5]
+        >>> broadcast_tensor.shape
+        oneflow.Size([3, 4, 5])
 
     """
     return BroadCastLike(broadcast_axes=broadcast_axes)(x, like_tensor)
