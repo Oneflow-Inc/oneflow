@@ -33,12 +33,12 @@ class NNGraph final : public NNGraphIf {
       : name_(name), runtime_inited_(false), is_closed_(false) {}
   ~NNGraph();
 
-  const std::string& job_name() const { return name_; }
+  const std::string& job_name() const override { return name_; }
   const std::vector<std::string>& inputs_op_names() const override;
   const std::vector<std::string>& outputs_op_names() const override;
-  int64_t variable_op_size() const;
   const std::vector<bool>& inputs_valid() const override;
   const std::vector<bool>& outputs_valid() const override;
+  int64_t variable_op_size() const;
 
   Maybe<void> RegisterInputOpNamesAndTensors(
       const std::vector<std::string>& input_op_names,
