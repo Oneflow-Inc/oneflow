@@ -361,10 +361,10 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
     std::string tensor_meta_str = *JUST(GetTensorMetaString(inputs.at(i)));
     const std::string& static_meta_str = nn_graph->inputs_tensor_meta_str().at(i);
     CHECK_OR_RETURN(static_meta_str == tensor_meta_str)
-        << "nn.Graph ONLY accepts static inputs tensor meta, please check whether your input \n"
-        << "tensor meta each step is the same as the input of first call graph, the excepted \n"
-        << "tensor meta is : ( \n " << static_meta_str << ") , but the actual tensor meta is : ( \n"
-        << tensor_meta_str;
+        << "\n  nn.Graph ONLY accepts static inputs tensor meta, please check whether your input "
+        << "tensor meta each step is the same as the input of first call graph. \n  The excepted "
+        << "tensor meta is : ( \n  " << static_meta_str
+        << " \n) , but the actual tensor meta is : ( \n  " << tensor_meta_str << " \n)";
   }
   for (int i = 0; i < outputs.size(); ++i) {
     CHECK_OR_RETURN(nn_graph->outputs_tensor_meta_str().at(i)
