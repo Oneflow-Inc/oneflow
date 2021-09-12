@@ -122,7 +122,8 @@ void Shape::Set(int64_t index, int64_t val) {
   CHECK_GE(index, 0);
   CHECK_LT(index, this->NumAxes()) << " Shape: " << DebugStr() << " visit index: " << index
                                    << " > num_axes: " << this->NumAxes();
-  CHECK_GE(val, 0);
+  // NOTE(chengcheng): ONLY support set dim 0 need infer axis as -1
+  CHECK(val >= 0 || (index == 0 && val == -1));
   dim_vec_.at(index) = val;
   UpdateElemCnt();
 }
