@@ -22,12 +22,6 @@ import oneflow as flow
 import oneflow.unittest
 
 
-D = "cuda"
-B = [flow.sbp.broadcast]
-P0 = flow.placement("cuda", {0: [0]})
-P1 = flow.placement("cuda", {0: [1]})
-P2 = flow.placement("cuda", {0: [2]})
-P3 = flow.placement("cuda", {0: [3]})
 rank = flow.env.get_rank()
 
 
@@ -85,45 +79,13 @@ class OFRecordDataLoader(flow.nn.Module):
         return image, label
 
 
-def _get_ppm_and_opt():
-    class StageModule(flow.nn.Module):
-        def __init__(self, *linear_args):
-            super().__init__()
-            self.linear = flow.nn.Linear(*linear_args)
-            flow.nn.init.constant_(self.linear.weight, 0.00023)
-
-        def forward(self, input):
-            out = self.linear(input)
-            return out
-
-    class PipelineModule(flow.nn.Module):
-        def __init__(self):
-            super().__init__()
-            # Initlize module and move each module to the right placement of its pipeline stage.
-            self.stage_0_m = StageModule(1452, 8, False).to_consistent(
-                placement=P0, sbp=B
-            )
-            self.stage_1_m = StageModule(8, 8, False).to_consistent(placement=P1, sbp=B)
-            self.stage_2_m = StageModule(8, 8, False).to_consistent(placement=P2, sbp=B)
-            self.stage_3_m = StageModule(8, 1, False).to_consistent(placement=P3, sbp=B)
-
-        def forward(self, image):
-            out = self.stage_0_m(image)
-            # Move tensor between different pipeline stages.
-            out = out.to_consistent(placement=P1, sbp=B)
-            out = self.stage_1_m(out)
-            out = out.to_consistent(placement=P2, sbp=B)
-            out = self.stage_2_m(out)
-            out = out.to_consistent(placement=P3, sbp=B)
-            out = self.stage_3_m(out)
-            return out
-
-    pp_m = PipelineModule()
-    sgd = flow.optim.SGD(pp_m.parameters(), lr=0.0001)
-    return pp_m, sgd
-
-
 def _train_with_graph(iter_num=3):
+    B = [flow.sbp.broadcast]
+    P0 = flow.placement("cuda", {0: [0]})
+    P1 = flow.placement("cuda", {0: [1]})
+    P2 = flow.placement("cuda", {0: [2]})
+    P3 = flow.placement("cuda", {0: [3]})
+
     train_data_loader = OFRecordDataLoader(
         ofrecord_root="/dataset/ImageNet/ofrecord",
         mode="train",
@@ -132,6 +94,50 @@ def _train_with_graph(iter_num=3):
         placement=P0,
         sbp=B,
     )
+
+    def _get_ppm_and_opt():
+        class StageModule(flow.nn.Module):
+            def __init__(self, *linear_args):
+                super().__init__()
+                self.linear = flow.nn.Linear(*linear_args)
+                flow.nn.init.constant_(self.linear.weight, 0.00023)
+
+            def forward(self, input):
+                out = self.linear(input)
+                return out
+
+        class PipelineModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                # Initlize module and move each module to the right placement of its pipeline stage.
+                self.stage_0_m = StageModule(1452, 8, False).to_consistent(
+                    placement=P0, sbp=B
+                )
+                self.stage_1_m = StageModule(8, 8, False).to_consistent(
+                    placement=P1, sbp=B
+                )
+                self.stage_2_m = StageModule(8, 8, False).to_consistent(
+                    placement=P2, sbp=B
+                )
+                self.stage_3_m = StageModule(8, 1, False).to_consistent(
+                    placement=P3, sbp=B
+                )
+
+            def forward(self, image):
+                out = self.stage_0_m(image)
+                # Move tensor between different pipeline stages.
+                out = out.to_consistent(placement=P1, sbp=B)
+                out = self.stage_1_m(out)
+                out = out.to_consistent(placement=P2, sbp=B)
+                out = self.stage_2_m(out)
+                out = out.to_consistent(placement=P3, sbp=B)
+                out = self.stage_3_m(out)
+                return out
+
+        pp_m = PipelineModule()
+        sgd = flow.optim.SGD(pp_m.parameters(), lr=0.0001)
+        return pp_m, sgd
+
     pp_m, sgd = _get_ppm_and_opt()
 
     class PipelineGraph(flow.nn.Graph):
