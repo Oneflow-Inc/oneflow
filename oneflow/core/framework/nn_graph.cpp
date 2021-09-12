@@ -51,6 +51,16 @@ Maybe<bool> GetTensorValidInCurRank(const std::shared_ptr<one::Tensor>& tensor) 
   }
 }
 
+Maybe<std::string> GetTensorMetaString(const std::shared_ptr<one::Tensor>& tensor) {
+  std::string ret = "shape=" + tensor->shape()->ToString() + ", dtype=" + tensor->dtype()->name();
+  if (tensor->is_consistent()) {
+    ret += ", placement=" + *JUST(PlacementToString(JUST(tensor->parallel_desc())));
+  } else {
+    ret += ", device=" + JUST(tensor->device())->ToString();
+  }
+  return ret;
+}
+
 }  // namespace
 
 NNGraph::~NNGraph() {
@@ -78,12 +88,12 @@ const std::vector<bool>& NNGraph::inputs_valid() const { return input_tensors_va
 
 const std::vector<bool>& NNGraph::outputs_valid() const { return output_tensors_valid_; }
 
-const std::vector<one::TensorMeta>& NNGraph::inputs_tensor_meta() const {
-  return inputs_tensor_meta_;
+const std::vector<std::string>& NNGraph::inputs_tensor_meta_str() const {
+  return inputs_tensor_meta_str_;
 }
 
-const std::vector<one::TensorMeta>& NNGraph::outputs_tensor_meta() const {
-  return outputs_tensor_meta_;
+const std::vector<std::string>& NNGraph::outputs_tensor_meta_str() const {
+  return outputs_tensor_meta_str_;
 }
 
 int64_t NNGraph::variable_op_size() const { return variable_op_name2eager_blob_.size(); }
@@ -95,13 +105,13 @@ Maybe<void> NNGraph::RegisterInputOpNamesAndTensors(
   CHECK_OR_RETURN(input_op_names_.empty())
       << " The input tensors of nn.Graph " << name_ << " are register repeatedly.";
   CHECK_OR_RETURN(input_tensors_valid_.empty());
-  CHECK_OR_RETURN(inputs_tensor_meta_.empty());
+  CHECK_OR_RETURN(inputs_tensor_meta_str_.empty());
   input_op_names_.assign(input_op_names.begin(), input_op_names.end());
   input_tensors_valid_.reserve(input_tensors.size());
-  inputs_tensor_meta_.reserve(input_tensors.size());
+  inputs_tensor_meta_str_.reserve(input_tensors.size());
   for (const auto& input_tensor : input_tensors) {
     input_tensors_valid_.push_back(JUST(GetTensorValidInCurRank(input_tensor)));
-    inputs_tensor_meta_.push_back(input_tensor->tensor_meta());
+    inputs_tensor_meta_str_.push_back(*JUST(GetTensorMetaString(input_tensor)));
   }
   CHECK_EQ_OR_RETURN(input_tensors_valid_.size(), input_tensors.size());
   return Maybe<void>::Ok();
@@ -114,13 +124,13 @@ Maybe<void> NNGraph::RegisterOutputOpNamesAndTensors(
   CHECK_OR_RETURN(output_op_names_.empty())
       << " The output tensors of nn.Graph " << name_ << " are register repeatedly.";
   CHECK_OR_RETURN(output_tensors_valid_.empty());
-  CHECK_OR_RETURN(outputs_tensor_meta_.empty());
+  CHECK_OR_RETURN(outputs_tensor_meta_str_.empty());
   output_op_names_.assign(output_op_names.begin(), output_op_names.end());
   output_tensors_valid_.reserve(output_tensors.size());
-  outputs_tensor_meta_.reserve(output_tensors.size());
+  outputs_tensor_meta_str_.reserve(output_tensors.size());
   for (const auto& output_tensor : output_tensors) {
     output_tensors_valid_.push_back(JUST(GetTensorValidInCurRank(output_tensor)));
-    outputs_tensor_meta_.push_back(output_tensor->tensor_meta());
+    outputs_tensor_meta_str_.push_back(*JUST(GetTensorMetaString(output_tensor)));
   }
   CHECK_EQ_OR_RETURN(output_tensors_valid_.size(), output_tensors.size());
   return Maybe<void>::Ok();
@@ -333,40 +343,6 @@ Maybe<void> MakeEagerBlobObjectList(std::vector<std::shared_ptr<vm::EagerBlobObj
   return Maybe<void>::Ok();
 }
 
-Maybe<std::string> TensorMetaToString(const one::TensorMeta& tensor_meta) {
-  const one::MirroredTensorMeta* mirrored_meta =
-      reinterpret_cast<const one::MirroredTensorMeta*>(&tensor_meta);
-  const one::ConsistentTensorMeta* consistent_meta =
-      reinterpret_cast<const one::ConsistentTensorMeta*>(&tensor_meta);
-  CHECK_OR_RETURN(mirrored_meta || consistent_meta);
-  DType dtype(tensor_meta.dtype());
-  std::string ret = "shape=" + tensor_meta.shape().ToString() + ", dtype=" + dtype.name();
-  if (mirrored_meta) {
-    ret += ", device=" + mirrored_meta->device()->ToString();
-    return ret;
-  }
-  if (consistent_meta) {
-    ret += ", placement=";
-    ret += *JUST(PlacementToString(consistent_meta->parallel_desc()));
-    return ret;
-  }
-  OF_UNIMPLEMENTED();
-}
-
-Maybe<void> CheckStaticTensorMeta(const one::TensorMeta& tensor_meta,
-                                  const std::shared_ptr<one::Tensor>& tensor) {
-  // TODO(chengcheng, liufengwei):
-  //   use TensorMeta.to_string and equal.
-  std::string static_meta_str = *JUST(TensorMetaToString(tensor_meta));
-  std::string tensor_meta_str = *JUST(TensorMetaToString(tensor->tensor_meta()));
-  CHECK(static_meta_str == tensor_meta_str)
-      << "nn.Graph ONLY accepts static inputs tensor meta, please check whether your input \n"
-      << "tensor meta each step is the same as the input of first call graph, the excepted \n"
-      << "tensor meta is : ( \n " << static_meta_str << ") , but the actual tensor meta is : ( \n"
-      << tensor_meta_str;
-  return Maybe<void>::Ok();
-}
-
 }  // namespace
 
 Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTuple& outputs,
@@ -380,14 +356,19 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
   //   but the NNGraph::variable_op_size may has FreeEagerTensor as sepcial variable op.
   CHECK_LE_OR_RETURN(parameters.size(), nn_graph->variable_op_size());
   for (int i = 0; i < inputs.size(); ++i) {
-    const auto& tensor = inputs.at(i);
-    const auto& tensor_meta = nn_graph->inputs_tensor_meta().at(i);
-    JUST(CheckStaticTensorMeta(tensor_meta, tensor));
+    // TODO(chengcheng, liufengwei):
+    //   use TensorMeta.to_string and equal.
+    std::string tensor_meta_str = *JUST(GetTensorMetaString(inputs.at(i)));
+    const std::string& static_meta_str = nn_graph->inputs_tensor_meta_str().at(i);
+    CHECK_OR_RETURN(static_meta_str == tensor_meta_str)
+        << "nn.Graph ONLY accepts static inputs tensor meta, please check whether your input \n"
+        << "tensor meta each step is the same as the input of first call graph, the excepted \n"
+        << "tensor meta is : ( \n " << static_meta_str << ") , but the actual tensor meta is : ( \n"
+        << tensor_meta_str;
   }
   for (int i = 0; i < outputs.size(); ++i) {
-    const auto& tensor = outputs.at(i);
-    const auto& tensor_meta = nn_graph->outputs_tensor_meta().at(i);
-    JUST(CheckStaticTensorMeta(tensor_meta, tensor));
+    CHECK_OR_RETURN(nn_graph->outputs_tensor_meta_str().at(i)
+                    == *JUST(GetTensorMetaString(outputs.at(i))));
   }
   std::vector<std::shared_ptr<vm::EagerBlobObject>> input_blobs;
   std::vector<std::shared_ptr<vm::EagerBlobObject>> output_blobs;
