@@ -134,7 +134,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   }
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      result, ctx, result->op_device());
+                                      result, ctx, result->op_device(), "");
   }));
   return Maybe<void>::Ok();
 }

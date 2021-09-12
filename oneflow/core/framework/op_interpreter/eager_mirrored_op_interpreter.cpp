@@ -165,7 +165,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
 
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      ctx, op_device);
+                                      ctx, op_device, user_op_expr.op_type_name());
   }));
   return Maybe<void>::Ok();
 }

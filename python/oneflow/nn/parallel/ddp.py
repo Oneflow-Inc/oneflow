@@ -44,6 +44,7 @@ def DistributedDataParallel(
     module: "flow.nn.Module", *, broadcast_buffers: bool = True
 ):
     world_size = flow.env.get_world_size()
+    tmp = flow.tensor([world_size]).cuda().float()
     with flow.no_grad():
         for x in module.parameters():
             requires_grad = x.requires_grad
@@ -57,7 +58,7 @@ def DistributedDataParallel(
     )
     module._ddp_state_for_reversed_params = ddp_state_for_reversed_params
     for param in module.parameters():
-        param.register_hook(lambda grad: grad / world_size)
+        param.register_hook(lambda grad: grad / tmp)
         param.register_hook(allreduce_fn(ddp_state_for_reversed_params, param))
 
     def post_forward_hook(module, input, output):
