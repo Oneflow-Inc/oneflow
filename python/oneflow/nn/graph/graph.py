@@ -219,6 +219,9 @@ class Graph(object):
             ), "lr_scheduler's optimizer must be the same optimizer in add_optimizer."
             opt_dict["lr_sch"] = lr_sch
         self._opts.append(opt_dict)
+        # Set the training config if there is an optimizer add in graph.
+        if len(self._opts) == 1:
+            self.config._train(True)
 
     def set_grad_scaler(self, grad_scaler: GradScaler = None):
         r"""Set the GradScaler for gradient and loss scaling.
@@ -303,6 +306,7 @@ class Graph(object):
 
         """
         child_lines = []
+        child_lines.append(add_indent(repr(self.config), 2))
         if len(self._args_repr) > 0:
             for in_str in self._args_repr:
                 input_str = add_indent(in_str, 2)
@@ -386,8 +390,6 @@ class Graph(object):
                 self.config.proto.mutable_train_conf()
             )
 
-        if len(self._opts) > 0:
-            self.config._train(True)
         for state_block in self._state():
             if state_block.type == BlockType.PARAMETER:
                 self._variables_conf[state_block.origin] = VariableConfig(
@@ -550,7 +552,9 @@ class Graph(object):
         # Make outputs buffer
         if self._outputs_buffer_size >= 2:
             for i in range(self._outputs_buffer_size - 1):
-                outputs_buffer_item = self._zero_like_io("output", *self._eager_outputs)
+                outputs_buffer_item = self._empty_like_io(
+                    "output", *self._eager_outputs
+                )
                 self._eager_outputs_buffer.append(outputs_buffer_item)
                 outputs_tensor_tuple_buffer_item = convert_to_tensor_tuple(
                     self._flatten_io("output", *outputs_buffer_item)
@@ -691,11 +695,20 @@ class Graph(object):
 
         return mapped_args
 
-    def _zero_like_io(self, io_type, *args):
-        def func(tensor):
+    def _empty_like_io(self, io_type, *args):
+        def func(t):
+            shape = t.shape
+            dtype = t.dtype
+
             with oneflow._oneflow_internal.lazy_mode.guard(False):
-                build_arg = oneflow.zeros_like(tensor)
-                return build_arg
+                if t.is_consistent:
+                    eager_out = oneflow.empty(
+                        shape, dtype=dtype, placement=t.placement, sbp=t.sbp,
+                    )
+                else:
+                    eager_out = oneflow.empty(shape, dtype=dtype, device=t.device)
+
+            return eager_out
 
         return self._mapping_io(io_type, func, *args)
 
