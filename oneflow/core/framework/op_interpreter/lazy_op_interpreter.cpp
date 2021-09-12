@@ -109,7 +109,7 @@ Maybe<Scope> NewScopeWithParallelConfAndCurScope(
     return Maybe<void>::Ok();
   }));
   // NOTE(chengcheng): need sync vm for get scope right now
-  JUST(vm::MultiClientSync());
+  JUST(vm::CurrentRankSync());
   CHECK_OR_RETURN(new_scope);
   return new_scope;
 }
@@ -647,7 +647,6 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
   CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   const auto& input_tensor = inputs[0];
-  CHECK_OR_RETURN(input_tensor->is_lazy());
   CHECK_OR_RETURN(input_tensor->is_consistent());
 
   CHECK_OR_RETURN(ctx.parallel_desc.has_value());
@@ -675,6 +674,21 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
     TensorNameScope::Global()->Record(input_proxy, input_lbn);
   }
 
+  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
+  CHECK_EQ_OR_RETURN(outputs->size(), 1);
+  CHECK_OR_RETURN(!(*outputs)[0]);
+
+  if (!op_expr.grad_nd_sbp().has_value() && sbp_sym == JUST(input_tensor->nd_sbp())) {
+    // NOTE(chengcheng):  if to_consistent ONLY change placement (nd_sbp and grad_nd_sbp is same),
+    //    there is no need to build hierarchical_parallel_cast op.
+    if (input_proxy) {
+      (*outputs)[0] = input_proxy;
+    } else {
+      (*outputs)[0] = input_tensor;
+    }
+    return Maybe<void>::Ok();
+  }
+
   // build parallel cast op expr
   std::shared_ptr<std::vector<std::string>> sbp_list_ptr = JUST(GetNdSbpStrList(sbp_sym));
   std::string grad_mode;
@@ -694,9 +708,6 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
                .Attr<std::vector<std::string>>("grad_nd_sbp", grad_sbp_str_list)
                .Build());
 
-  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
-  CHECK_EQ_OR_RETURN(outputs->size(), 1);
-  CHECK_OR_RETURN(!(*outputs)[0]);
   if (input_proxy) {
     (*outputs)[0] =
         JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_cast_op_expr, {input_proxy}));

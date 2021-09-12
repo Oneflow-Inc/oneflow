@@ -109,7 +109,7 @@ def _np_matrix_norm_backward(x, ord="fro"):
 
 
 def _test_norm_1d(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(10), dtype=flow.float32, device=flow.device(device)
     )
     of_out_1 = flow.linalg.norm(input)
@@ -130,7 +130,7 @@ def _test_norm_1d(test_case, device):
 
 
 def _test_norm_2d(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(5, 4), dtype=flow.float32, device=flow.device(device)
     )
     of_out_1 = flow.linalg.norm(input)
@@ -151,10 +151,10 @@ def _test_norm_2d(test_case, device):
 
 
 def _test_norm_Nd(test_case, device):
-    input1 = flow.Tensor(
+    input1 = flow.tensor(
         np.random.randn(3, 4, 3), dtype=flow.float32, device=flow.device(device)
     )
-    input2 = flow.Tensor(
+    input2 = flow.tensor(
         np.random.randn(3, 4, 3, 5), dtype=flow.float32, device=flow.device(device)
     )
     of_out_1 = flow.linalg.norm(input1)
@@ -169,7 +169,7 @@ def _test_norm_Nd(test_case, device):
 
 
 def _test_fro_order_norm_backward(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(5, 4),
         dtype=flow.float32,
         device=flow.device(device),
@@ -183,7 +183,7 @@ def _test_fro_order_norm_backward(test_case, device):
 
 def _test_1d_inf_order_norm_backward(test_case, device):
     for ord in [float("inf"), -float("inf")]:
-        input = flow.Tensor(
+        input = flow.tensor(
             np.random.randn(5),
             dtype=flow.float32,
             device=flow.device(device),
@@ -197,7 +197,7 @@ def _test_1d_inf_order_norm_backward(test_case, device):
 
 def _test_2d_inf_order_norm_backward(test_case, device):
     for ord in [float("inf"), -float("inf")]:
-        input = flow.Tensor(
+        input = flow.tensor(
             np.random.randn(5, 4),
             dtype=flow.float32,
             device=flow.device(device),
@@ -211,7 +211,7 @@ def _test_2d_inf_order_norm_backward(test_case, device):
 
 def _test_1d_digits_order_norm_backward(test_case, device):
     for ord in [1, -1, 2, -2, 5]:
-        input = flow.Tensor(
+        input = flow.tensor(
             np.random.randn(5),
             dtype=flow.float32,
             device=flow.device(device),
@@ -225,7 +225,7 @@ def _test_1d_digits_order_norm_backward(test_case, device):
 
 def _test_2d_digits_order_norm_backward(test_case, device):
     for ord in [1, -1]:
-        input = flow.Tensor(
+        input = flow.tensor(
             np.random.randn(4, 5),
             dtype=flow.float32,
             device=flow.device(device),

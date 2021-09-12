@@ -500,6 +500,35 @@ jobs:
         run: |
           wget ${{ env.image_url }}
           docker load -i $(basename "${{ env.image_url }}")
+      - name: Checkout Oneflow-Inc/models
+        if: matrix.test_suite == 'cuda_new_interface'
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/models
+          ref: 7a6845f7d7133c02a01a75b9ca525e6c40e99639
+          path: oneflow-models
+      - name: Speed test
+        id: speed
+        if: matrix.test_suite == 'cuda_new_interface'
+        continue-on-error: true
+        run: |
+          docker run \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
+            -e ONEFLOW_MODELS_DIR=$PWD/oneflow-models \
+            ${{ env.image_tag }} \
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/test_speed_multi_client.sh"
+      - name: Post speed stats
+        if: matrix.test_suite == 'cuda_new_interface'
+        continue-on-error: true
+        uses: actions/github-script@v4
+        with:
+          script: |
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: "<details>\n <summary>Speed stats:</summary>\n\n ``` \n${{ steps.speed.outputs.stats }}\n ``` \n\n</details>".replace(/\\n/g, '\n')
+            })
       - name: Module API test
         timeout-minutes: 45
         if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
@@ -569,34 +598,6 @@ jobs:
             -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/graph \
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test_multi_client.sh"
-      - name: Checkout Oneflow-Inc/models
-        if: matrix.test_suite == 'cuda_new_interface'
-        uses: actions/checkout@v2
-        with:
-          repository: Oneflow-Inc/models
-          ref: 7a6845f7d7133c02a01a75b9ca525e6c40e99639
-          path: oneflow-models
-      - name: Speed test
-        id: speed
-        if: matrix.test_suite == 'cuda_new_interface'
-        run: |
-          docker run \
-            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
-            -e ONEFLOW_MODELS_DIR=$PWD/oneflow-models \
-            ${{ env.image_tag }} \
-            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/test_speed_multi_client.sh"
-      - name: Post speed stats
-        if: matrix.test_suite == 'cuda_new_interface'
-        continue-on-error: true
-        uses: actions/github-script@v4
-        with:
-          script: |
-            github.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: "<details>\n <summary>Speed stats:</summary>\n\n ``` \n${{ steps.speed.outputs.stats }}\n ``` \n\n</details>".replace(/\\n/g, '\n')
-            })
       - name: Single client op test
         timeout-minutes: 45
         if: contains(fromJson('["cuda_op", "cpu"]'), matrix.test_suite) && needs.changed_files.outputs.should_run_single_client_tests == '1'
@@ -740,7 +741,7 @@ jobs:
             -DBUILD_TESTING=ON \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-          cmake --build . -j$(nproc) --target oneflow_deps of_cfgobj of_protoobj of_functional_obj
+          cmake --build . -j$(nproc) --target oneflow_deps of_cfgobj of_protoobj of_functional_obj of_functional_tensor_obj
       - name: Fetch upstream
         if: github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
         run: |

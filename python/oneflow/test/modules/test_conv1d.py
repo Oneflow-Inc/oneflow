@@ -27,7 +27,7 @@ import oneflow.unittest
 
 def _test_conv1d_bias_false(test_case, device):
     np_arr = np.array([[[1.28795946, -0.2921792, 0.20338029, 0.78604293, -1.89607573]]])
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     weight = np.array(
@@ -68,7 +68,7 @@ def _test_conv1d_bias_true(test_case, device):
             ]
         ]
     )
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     weight = np.array(
@@ -125,7 +125,7 @@ def _test_conv1d_dilation(test_case, device):
     np_arr = np.array(
         [[[-0.43016902, 1.74619496, -0.57338119, 0.25563857, 0.12575546]]]
     )
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     weight = np.array(
@@ -161,7 +161,7 @@ def _test_conv1d_stride(test_case, device):
     np_arr = np.array(
         [[[-1.01312506, -0.40687919, 1.5985316, 0.53594196, -1.89935565]]]
     )
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     weight = np.array(
@@ -202,7 +202,7 @@ def _test_conv1d_group_bias_true(test_case, device):
             ]
         ]
     )
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     weight = np.array(
@@ -252,7 +252,7 @@ def _test_conv1d_group_large_out_bias_true(test_case, device):
             ]
         ]
     )
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     weight = np.array(
@@ -310,7 +310,7 @@ def _test_conv1d_group_large_in_bias_true(test_case, device):
             ]
         ]
     )
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     weight = np.array(
@@ -361,7 +361,7 @@ def _test_conv1d_compilcate(test_case, device):
             ]
         ]
     )
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     weight = np.array(

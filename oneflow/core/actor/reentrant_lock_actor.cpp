@@ -55,8 +55,8 @@ class ReentrantLockActor final : public Actor {
 
 void ReentrantLockActor::VirtualActorInit(const TaskProto& task_proto) {
   CHECK_EQ(1, exec_kernel_vec().size());
-  reentrant_lock_status_ =
-      static_cast<ReentrantLockStatus*>(exec_kernel_vec().at(0).kernel_ctx->state());
+  reentrant_lock_status_ = CHECK_NOTNULL(
+      dynamic_cast<ReentrantLockStatus*>(exec_kernel_vec().at(0).kernel_ctx->state().get()));
   act_id_ = 0;
   const auto& kernel_conf = task_proto.exec_sequence().exec_node().Get(0).kernel_conf();
   const auto& ibns = kernel_conf.op_attribute().input_bns();

@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import collections
-from itertools import chain
 import warnings
 from copy import deepcopy
+from itertools import chain
 from typing import Any, Callable, Dict, Union
 
 from oneflow.framework.tensor import Tensor
@@ -108,13 +108,13 @@ class Optimizer(object):
         }
 
         def cast(param, value):
-            r"""Make a deep copy of value, casting all tensors to device of param."""
+            r"""Make a deep copy of value, casting all tensors to device or placement of param."""
             if isinstance(value, Tensor):
                 if value.is_local:
                     value = value.to(param.device)
                 else:
                     value = value.to_consistent(
-                        placement=value.placement, sbp=value.sbp
+                        placement=param.placement, sbp=param.sbp
                     )
                 return value
             elif isinstance(value, dict):
@@ -232,25 +232,14 @@ class Optimizer(object):
             3. Optimizers have a different behavior if the gradient is 0 or None
             (in one case it does the step with a gradient of 0 and in the other
             it skips the step altogether).
-
-        Returns:
-            None
-
         """
-        all_grad_is_none = True
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 if param.grad is not None:
-                    all_grad_is_none = False
                     if set_to_none:
                         param.grad = None
                     else:
                         param.grad.zeros_()
-        if all_grad_is_none:
-            warnings.warn(
-                "\nParameters in optimizer do not have gradient.\nPlease check `loss.backward()` is called"
-                "or not,\nor try to declare optimizer after calling `module.to()`"
-            )
 
     def _parse_input_parameters(self, parameters):
         """
