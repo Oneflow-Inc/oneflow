@@ -391,12 +391,14 @@ def _test_cpu_p2b_with_random_parameter(test_case, device_list):
         flow.float64,
         flow.double,
     ]
+
     def choose_shape_and_dtype(seed):
         rng = np.random.default_rng(seed)
         kdtype = rng.integers(low=1, high=len(dtype_list), size=1)
         ndim = rng.integers(low=1, high=4, size=1)
         shape = rng.integers(low=1, high=10, size=ndim)
         return kdtype, shape
+
     for _ in range(10):
         seed = flow.tensor(gen_int(1, 1000, 1))
         seed = seed.to_consistent(
@@ -444,7 +446,6 @@ class TestConsistentCast(flow.unittest.TestCase):
                 np.array([4, 6, 7, 8], dtype=np.float32),
             )
         )
-        
 
     @flow.unittest.skip_unless_1n4d()
     def test_cpu_p2b_with_random_parameter(test_case):
@@ -452,7 +453,6 @@ class TestConsistentCast(flow.unittest.TestCase):
         arg_dict["device_list"] = [[0, 1], [1, 2, 3], [0, 1, 2, 3]]
         for arg in GenArgList(arg_dict):
             _test_cpu_p2b_with_random_parameter(test_case, *arg)
-
 
     @flow.unittest.skip_unless_1n4d()
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
