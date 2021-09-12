@@ -39,7 +39,7 @@ class CPPJobInstance : public JobInstance {
   void PushBlob(uint64_t ofblob_ptr) const override;
   void PullBlob(uint64_t ofblob_ptr) const override;
   void Finish() const override;
-  void AddPostFinishCallback(std::function<void(JobInstance*)> cb);
+  void AddPostFinishCallback(std::function<void(const JobInstance*)> cb);
 
  private:
   int thisown;
@@ -49,26 +49,26 @@ class CPPJobInstance : public JobInstance {
   std::function<void(OfBlob*)> push_cb_;
   std::function<void(OfBlob*)> pull_cb_;
   std::function<void()> finish_cb_;
-  std::vector<std::function<void(CPPJobInstance*)>> post_finish_cbs_;
+  std::vector<std::function<void(const CPPJobInstance*)>> post_finish_cbs_;
 };
 
 std::shared_ptr<CPPJobInstance> MakeUserJobInstance(
   std::string job_name, 
-  std::function<void()> finish_cb = std::function<void()>()
+  std::function<void()> finish_cb = [](){}
 );
 
 std::shared_ptr<CPPJobInstance> MakePullJobInstance(
   std::string job_name, 
   std::string op_name,
   std::function<void(OfBlob*)> pull_cb,
-  std::function<void()> finish_cb = std::function<void()>()
+  std::function<void()> finish_cb = [](){}
 );
 
 std::shared_ptr<CPPJobInstance> MakePushJobInstance(
   std::string job_name, 
   std::string op_name,
   std::function<void(OfBlob*)> push_cb,
-  std::function<void()> finish_cb = std::function<void()>()
+  std::function<void()> finish_cb = [](){}
 );
 
 std::shared_ptr<CPPJobInstance> MakeArgPassJobInstance(

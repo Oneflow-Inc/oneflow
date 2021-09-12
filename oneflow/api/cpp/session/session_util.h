@@ -10,6 +10,11 @@
 
 namespace oneflow {
 
+inline void OpenDefaultSession() {
+  int64_t session_id = oneflow::NewSessionId();
+  oneflow::RegsiterSession(session_id);
+}
+
 ConfigProto GetDefaultConfigProto() {
     ConfigProto config_proto;
     config_proto.mutable_resource()->set_machine_num(0);

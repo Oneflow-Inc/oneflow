@@ -37,7 +37,7 @@ class Tensor {
   Shape shape() const { return this->shape_; }
   DataType dtype() const { return this->dtype_; }
   
-  void CopyFrom(char* blob_data);
+  void CopyFrom(const char* blob_data);
   
   static std::shared_ptr<Tensor> fromBlob(char* blob_data, 
                                           Shape shape, 

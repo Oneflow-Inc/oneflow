@@ -17,6 +17,9 @@ limitations under the License.
 #define ONEFLOW_API_CPP_INFERENCE_SESSION_H_
 
 #include <future>
+#include "oneflow/api/cpp/job_instance.h"
+#include "oneflow/api/cpp/tensor/tensor.h"
+#include "oneflow/core/serving/saved_model.pb.h"
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
 #include "oneflow/api/python/job_build/job_build_and_infer_api.h"
 
@@ -29,11 +32,12 @@ struct ModelVersionPolicy {
 
 struct SessionOption {
   SessionOption() : device_tag("gpu"), device_num(1), 
-                    is_mirrored_view(false) {}
+                    is_mirrored_view(false), ctrl_port(11235) {}
 
   std::string device_tag;
   int device_num;
   bool is_mirrored_view;
+  int ctrl_port;
 };
 
 class InferenceSession {

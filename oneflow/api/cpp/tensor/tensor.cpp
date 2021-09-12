@@ -20,24 +20,24 @@ namespace oneflow {
 
 Tensor::Tensor(Shape shape, DataType dtype)
   : shape_(shape), dtype_(dtype){
-  int64_t num_elems = shape.elem_cnt();
+  int64_t num_elems = shape_.elem_cnt();
   size_t num_bytes = DType::Get(dtype).GetOrThrow()->bytes().GetOrThrow();
-  this->data_ = new char[num_items*num_bytes];
+  this->data_ = new char[num_elems*num_bytes];
 }
 
 Tensor::~Tensor() { 
   delete this->data_;
 }
 
-Tensor::CopyFrom(const char* data) {
+void Tensor::CopyFrom(const char* data) {
   int64_t num_elems = this->shape_.elem_cnt();
   size_t num_bytes = DType::Get(this->dtype_).GetOrThrow()->bytes().GetOrThrow();
   std::copy(data, data + num_elems * num_bytes, this->data_);
 }
 
-static std::shared_ptr<Tensor> Tensor::fromBlob(char* blob_data, 
-                                                Shape shape, 
-                                                DataType dtype) {
+std::shared_ptr<Tensor> Tensor::fromBlob(char* blob_data, 
+                                          Shape shape, 
+                                          DataType dtype) {
   std::shared_ptr<Tensor> tensor = std::make_shared<Tensor>(shape, dtype);
   tensor->CopyFrom(blob_data);
   return tensor;

@@ -47,7 +47,7 @@ inline int FindModelLatestVersion(std::string saved_model_dir) {
         versions.push_back(std::stoi(f));
       } catch (...) {}
     }
-    return *(std::max(std::begin(versions), std::end(versions)));
+    return *(std::max_element(std::begin(versions), std::end(versions)));
 }
 
 inline bool NeedCheckDeviceTag(OperatorConf& op_conf) {
@@ -70,11 +70,17 @@ InferenceSession::~InferenceSession() {
 }
 
 Maybe<void> InferenceSession::Init() {
+  OpenDefaultSession();
+
   // env init
   if(!IsEnvInited().GetOrThrow()) {
-    // TODO: set env - machine id, ctrl port, data port
     EnvProto env_proto;
-    // FIXME: multi-client should be true or false?
+    auto* machine = env_proto.add_machine();
+    machine->set_id(0);
+    machine->set_addr("127.0.0.1");
+    env_proto.set_ctrl_port(option_.ctrl_port);
+    
+    SetIsMultiClient(false);
     JUST(InitEnv(env_proto, false));
 
     // scope init
@@ -227,10 +233,12 @@ Maybe<void> InferenceSession::LoadModel_(std::string saved_model_dir,
   SavedModel saved_model_proto;
   if (std::find(std::begin(subfiles), std::end(subfiles), 
       saved_model_meta_pb_filename) != std::end(subfiles)) {
-      CHECK_OR_RETURN(TryParseProtoFromPbFile(saved_model_meta_pb_filename, &saved_model_proto));
+      std::string file_path = JoinPath(saved_model_path, saved_model_meta_pb_filename);
+      CHECK_OR_RETURN(TryParseProtoFromPbFile(file_path, &saved_model_proto));
   } else if (std::find(std::begin(subfiles), std::end(subfiles), 
       saved_model_meta_prototxt_filename) != std::end(subfiles)) {
-      CHECK_OR_RETURN(TryParseProtoFromTextFile(saved_model_meta_prototxt_filename, &saved_model_proto));
+      std::string file_path = JoinPath(saved_model_path, saved_model_meta_prototxt_filename);
+      CHECK_OR_RETURN(TryParseProtoFromTextFile(file_path, &saved_model_proto));
   } else {
       CHECK_OR_RETURN(false) << Error::ValueError("saved model meta file" + 
         saved_model_meta_file_basename + " do not exist in " + saved_model_path);
@@ -362,7 +370,7 @@ std::shared_ptr<JobConfigProto> InferenceSession::GetJobConf(std::string job_nam
 
 Maybe<void> InferenceSession::RunJob(std::shared_ptr<CPPJobInstance> job_inst) {
   std::shared_ptr<std::promise<void>> job_promise = std::make_shared<std::promise<void>>();
-  auto job_finish_cb = [&job_promise](JobInstance*){ job_promise->set_value(); };
+  auto job_finish_cb = [job_promise](const JobInstance*){ job_promise->set_value(); };
   job_inst->AddPostFinishCallback(job_finish_cb);
   JUST(LaunchJob(job_inst));
   this->job_promises_.push_back(job_promise);
@@ -380,7 +388,7 @@ Maybe<void> InferenceSession::RunPushJobs(std::map<std::string, std::shared_ptr<
 
     std::shared_ptr<Tensor> input_tensor = input_tensors[input_name];
 
-    auto push_fn = [&input_tensor](OfBlob* ofblob){
+    auto push_fn = [input_tensor](OfBlob* ofblob){
       ofblob->CopyShapeFrom(input_tensor->shape().dim_vec().data(), input_tensor->num_axes());
       int64_t num_elems = input_tensor->num_elems();
       DataType dtype = input_tensor->dtype();
@@ -434,7 +442,7 @@ Maybe<void> InferenceSession::RunLoadCheckpointJob() {
   auto copy_model_load_path = [this](OfBlob* ofblob) -> void {
     int64_t* shape = new int64_t[1]{this->checkpoint_path_.size()};
     ofblob->CopyShapeFrom(shape, 1);
-    ofblob->AutoMemCopyFrom(this->checkpoint_path_.data(), this->checkpoint_path_.size());
+    ofblob->AutoMemCopyFrom((const int8_t*) this->checkpoint_path_.data(), this->checkpoint_path_.size());
     delete[] shape;
   };
 

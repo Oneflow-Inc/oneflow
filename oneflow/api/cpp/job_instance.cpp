@@ -31,40 +31,40 @@ CPPJobInstance::CPPJobInstance(std::string job_name,
       pull_cb_(pull_cb),
       finish_cb_(finish_cb) {}
 
-~CPPJobInstance::CPPJobInstance(){}
+CPPJobInstance::~CPPJobInstance(){}
 
-std::string CPPJobInstance::job_name() const override { return this->job_name_; }
+std::string CPPJobInstance::job_name() const { return this->job_name_; }
 
-std::string CPPJobInstance::sole_input_op_name_in_user_job() const override {
+std::string CPPJobInstance::sole_input_op_name_in_user_job() const {
   return this->sole_input_op_name_in_user_job_;
 }
 
-std::string CPPJobInstance::sole_output_op_name_in_user_job() const override {
+std::string CPPJobInstance::sole_output_op_name_in_user_job() const {
   return this->sole_output_op_name_in_user_job_;
 }
 
-void CPPJobInstance::PushBlob(uint64_t ofblob_ptr) const override {
-  this->push_cb_(reinterpret_cast<OfBlob*>(of_blob_ptr));
+void CPPJobInstance::PushBlob(uint64_t ofblob_ptr) const {
+  this->push_cb_(reinterpret_cast<OfBlob*>(ofblob_ptr));
 }
 
-void CPPJobInstance::PullBlob(uint64_t ofblob_ptr) const override {
-  this->pull_cb_(reinterpret_cast<OfBlob*>(of_blob_ptr));
+void CPPJobInstance::PullBlob(uint64_t ofblob_ptr) const {
+  this->pull_cb_(reinterpret_cast<OfBlob*>(ofblob_ptr));
 }
 
-void CPPJobInstance::Finish() const override {
+void CPPJobInstance::Finish() const {
   this->finish_cb_();
 
   for (auto& post_finish_cb : this->post_finish_cbs_)
       post_finish_cb(this);
 }
 
-void CPPJobInstance::AddPostFinishCallback(std::function<void(JobInstance*)> cb) {
+void CPPJobInstance::AddPostFinishCallback(std::function<void(const JobInstance*)> cb) {
   this->post_finish_cbs_.push_back(cb);
 }
 
 std::shared_ptr<CPPJobInstance> MakeUserJobInstance(
   std::string job_name, 
-  std::function<void()> finish_cb = std::function<void()>()) {
+  std::function<void()> finish_cb) {
   return std::make_shared<CPPJobInstance>(job_name, "", "",
     std::function<void(OfBlob*)>(), std::function<void(OfBlob*)>(),
     finish_cb);
@@ -74,7 +74,7 @@ std::shared_ptr<CPPJobInstance> MakePullJobInstance(
   std::string job_name, 
   std::string op_name,
   std::function<void(OfBlob*)> pull_cb,
-  std::function<void()> finish_cb = std::function<void()>()) {
+  std::function<void()> finish_cb) {
   return std::make_shared<CPPJobInstance>(
       job_name, op_name, "", std::function<void(OfBlob*)>(), pull_cb, finish_cb);
 }
@@ -83,16 +83,16 @@ std::shared_ptr<CPPJobInstance> MakePushJobInstance(
   std::string job_name, 
   std::string op_name,
   std::function<void(OfBlob*)> push_cb,
-  std::function<void()> finish_cb = std::function<void()>()) {
+  std::function<void()> finish_cb) {
   return std::make_shared<CPPJobInstance>(
       job_name, "", op_name, push_cb, std::function<void(OfBlob*)>(), finish_cb);
 }
 
 std::shared_ptr<CPPJobInstance> MakeArgPassJobInstance(
   std::string job_name,
-  std::string src_op_name;
-  std::string dst_op_name;
-  std::function<void()> finish_cb = std::function<void()>()) {
+  std::string src_op_name,
+  std::string dst_op_name,
+  std::function<void()> finish_cb) {
   return std::make_shared<CPPJobInstance>(job_name, src_op_name, dst_op_name,
     std::function<void(OfBlob*)>(), std::function<void(OfBlob*)>(),
     finish_cb);
