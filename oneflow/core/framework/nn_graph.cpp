@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/eager/eager_blob_object.h"
@@ -22,7 +23,6 @@ limitations under the License.
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
@@ -140,7 +140,7 @@ Maybe<void> NNGraph::CreateAndRegisterNewVariableOpInJobPass() {
       DType dtype(blob_desc.data_type());
       std::shared_ptr<std::vector<Symbol<cfg::SbpParallel>>> sbp_tuple =
           JUST(GetSbpList(Symbol<cfg::NdSbp>(nd_sbp)));
-      one::functional::Scalar value;
+      Scalar value;
       if (var_conf.initializer().has_constant_conf()) {
         value = var_conf.initializer().constant_conf().value();
       } else if (var_conf.initializer().has_constant_int_conf()) {
@@ -199,6 +199,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
               << " , compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.\n";
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
+      PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
     }
     // TODO(chengcheng): test collective boxing for multi-job.
     PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);

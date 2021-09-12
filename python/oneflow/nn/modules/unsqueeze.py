@@ -42,7 +42,7 @@ def unsqueeze_op(input, dim):
         >>> x = flow.Tensor(np.random.rand(2, 3, 4))
         >>> y = x.unsqueeze(2)
         >>> y.shape
-        flow.Size([2, 3, 1, 4])
+        oneflow.Size([2, 3, 1, 4])
     """
     assert (
         -(1 + input.ndimension()) <= dim <= input.ndimension()

@@ -56,6 +56,8 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx {
 
   vm::Allocator* mut_allocator() override { return cuda_allocator_.get(); }
 
+  DeviceType device_type() const override { return DeviceType::kGPU; }
+
  protected:
   std::unique_ptr<CudaStreamHandle> cuda_handler_;
   CallbackMsgListPtr callback_msg_list_;
