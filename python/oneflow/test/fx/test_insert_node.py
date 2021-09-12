@@ -21,6 +21,7 @@ import numpy as np
 from oneflow.fx import symbolic_trace
 from oneflow.fx.passes.quantization import GetInsertNode
 
+
 class AlexNet(nn.Module):
     def __init__(self, num_classes: int = 1000) -> None:
         super(AlexNet, self).__init__()
@@ -79,23 +80,28 @@ class AlexNet(nn.Module):
         x = self.classifier(x)
         return x
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestAlexNet(flow.unittest.TestCase):
     def test_alexnet(test_case):
         m = AlexNet()
         gm: flow.fx.GraphModule = symbolic_trace(m)
         input = flow.randn(1, 3, 224, 224)
-        insert_place, conv_weight = GetInsertNode(gm).propagate(input)
+        insert_place, _ = GetInsertNode(gm).propagate(input)
         for x in gm.graph.nodes:
             if x.target in insert_place:
                 y = x._next
                 with gm.graph.inserting_after(x):
-                    neg : flow.fx.Node = gm.graph.call_function(the_function=flow.neg, args=(x, ))
+                    neg: flow.fx.Node = gm.graph.call_function(
+                        the_function=flow.neg, args=(x,)
+                    )
                     _, *nxt_args = y.args
                     y.args = (neg, *nxt_args)
 
         gm.recompile()
-        assert np.allclose(gm(input).numpy(), m.forward_inplace(input).numpy(), equal_nan=True)
+        assert np.allclose(
+            gm(input).numpy(), m.forward_inplace(input).numpy(), equal_nan=True
+        )
 
 
 if __name__ == "__main__":

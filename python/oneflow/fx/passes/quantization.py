@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import oneflow as flow
 from typing import Dict
 import oneflow.fx
@@ -10,11 +25,11 @@ from ..node import Argument, Target
 
 @compatibility(is_backward_compatible=True)
 class GetInsertNode(flow.fx.Interpreter):
-    
-    insert_place = []
-    conv_weight = []
 
-    def run_node(self, n : Node) -> Any:
+    insert_place = []
+    conv_state = []
+
+    def run_node(self, n: Node) -> Any:
         args, kwargs = self.fetch_args_kwargs_from_env(n)
         assert isinstance(args, tuple)
         assert isinstance(kwargs, dict)
@@ -33,7 +48,7 @@ class GetInsertNode(flow.fx.Interpreter):
         """
         self.insert_place.clear()
         super().run(*args)
-        return (self.insert_place, self.conv_weight)
+        return (self.insert_place, self.conv_state)
 
     def call_module(
         self, target: "Target", args: Tuple[Argument, ...], kwargs: Dict[str, Any]
@@ -42,12 +57,17 @@ class GetInsertNode(flow.fx.Interpreter):
         submod = self.fetch_attr(target)
         if isinstance(submod, flow.nn.Conv2d):
             self.insert_place.append(target)
-            self.conv_weight.append(submod.weight)
+            self.conv_state.append(submod)
         return submod(*args, **kwargs)
 
+
 class QConv2d(flow.nn.Conv2d):
-    def __init__(self, in_channels, out_channels, kernel_size) -> None:
-        super(QConv2d, self).__init__(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size)
+    def __init__(
+        self, in_channels, out_channels, kernel_size, stride, padding, dilation, groups
+    ) -> None:
+        super(QConv2d, self).__init__(
+            in_channels, out_channels, kernel_size, stride, padding, dilation, groups
+        )
         self.min_max_observer = flow.nn.MinMaxObserver()
         self.fake_quantization = flow.nn.FakeQuantization()
 
@@ -55,7 +75,9 @@ class QConv2d(flow.nn.Conv2d):
         scale, zero_point = self.min_max_observer(x)
         x = self.fake_quantization(x, scale, zero_point)
         weight_scale, weight_zero_point = self.min_max_observer(self.weight)
-        self.weight = self.fake_quantization(self.weight, weight_scale, weight_zero_point)
+        self.weight = self.fake_quantization(
+            self.weight, weight_scale, weight_zero_point
+        )
         return flow.nn.functional.conv2d(
             x,
             self.weight,
@@ -66,21 +88,30 @@ class QConv2d(flow.nn.Conv2d):
             groups=self.groups,
         )
 
-def qat(gm : GraphModule, input) -> GraphModule:
-    insert_place, conv_weight = GetInsertNode(gm).propagate(input)
-    print(conv_weight)
-    
+
+def qat(gm: GraphModule, input) -> GraphModule:
+    insert_place, conv_state = GetInsertNode(gm).propagate(input)
+
     cnt = 0
     for x in gm.graph.nodes:
         if x.target in insert_place:
-            y = x._next
             with gm.graph.inserting_after(x):
-                gm.add_submodule("features.conv2d", QConv2d(24, 48, 3))
-                # fake_weight : flow.fx.Node = gm.graph.call_module("flow.", args=(x, ), )
-                # # fake_weight : flow.fx.Node = gm.graph.call_function(the_function=flow.neg, args=(x, ))
-                # _, *nxt_args = y.args
-                # y.args = (fake_weight, *nxt_args)
-                qconv = gm.graph.call_module(module_name="features.conv2d", args=x.args)
+                gm.add_submodule(
+                    f"{x.target.split('.')[0]}.fake_conv2d",
+                    QConv2d(
+                        conv_state[cnt].in_channels,
+                        conv_state[cnt].out_channels,
+                        conv_state[cnt].kernel_size,
+                        conv_state[cnt].stride,
+                        conv_state[cnt].padding,
+                        conv_state[cnt].dilation,
+                        conv_state[cnt].groups,
+                    ),
+                )
+                qconv = gm.graph.call_module(
+                    module_name=f"{x.target.split('.')[0]}.fake_conv2d", args=x.args
+                )
+                cnt = cnt + 1
             x.replace_all_uses_with(qconv)
             gm.graph.erase_node(x)
 
