@@ -494,8 +494,12 @@ class Graph(object):
             self._rebuild_outputs(out2name)
 
             # Register input/output/variable/buffer to _c_nn_graph
-            self._c_nn_graph.register_input_op_names(arg_op_names)
-            self._c_nn_graph.register_output_op_names(output_op_names)
+            self._c_nn_graph.register_input_op_names_and_tensors(
+                arg_op_names, convert_to_tensor_tuple(self._flatten_io("input", *args))
+            )
+            self._c_nn_graph.register_output_op_names_and_tensors(
+                output_op_names, self._outputs_tensor_tuple
+            )
             self._c_nn_graph.register_variable_op_names_and_tensors(
                 state_op_names, self._states_tensor_tuple
             )
