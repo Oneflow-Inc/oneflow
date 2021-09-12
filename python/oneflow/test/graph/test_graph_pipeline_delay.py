@@ -91,6 +91,13 @@ def _test_graph_pipeline_delay_output(test_case):
             time.sleep(2)
         loss_pack_4, free_out = pp_g(x, y)
         if rank == 1:
+            # NOTE(chengcheng): Before Oneflow-Inc/oneflow#6221 fix src/dst tick order with input/output,
+            #   this case use sleep in rank 1 will expose this BUG:
+            #   free_out is output only on rank 1, but NOT control in rank 1 src/dst tick, so if manual sleep
+            #   on rank 1, free out pull callback must exec before rank 1 src tick exec, so will meet BUG of
+            #   output_kernel buffer status empty.
+            #   After this PR fix, this test case ensure that src/dst tick and input/output cb exec order on
+            #   each rank is as expected.
             time.sleep(2)
             print(
                 "rank: ",
