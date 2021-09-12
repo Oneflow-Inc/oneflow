@@ -1297,7 +1297,7 @@ class TensorGetItemFunctor {
     }();
     std::shared_ptr<one::Tensor> result;
     if (is_identity) {
-      result = JUST(Copy(x, JUST(x->device())->type(), JUST(x->device())->device_id()));
+      result = JUST(Identity(x));
     } else {
       result = JUST(Slice(x, start, end, step));
     }
