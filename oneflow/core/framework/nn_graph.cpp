@@ -36,6 +36,23 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+Maybe<bool> GetTensorValidInCurRank(const std::shared_ptr<one::Tensor>& tensor) {
+  if (tensor->is_consistent()) {
+    const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(JUST(tensor->parallel_desc())));
+    if (parallel_id->has_value()) {
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    return true;
+  }
+}
+
+}  // namespace
+
 NNGraph::~NNGraph() {
   VLOG(2) << "graph destructor Try to close c nn graph name " << name_ << "." << std::endl;
   CHECK_JUST(Close());
@@ -73,17 +90,7 @@ Maybe<void> NNGraph::RegisterInputOpNamesAndTensors(
   input_op_names_.assign(input_op_names.begin(), input_op_names.end());
   input_tensors_valid_.reserve(input_tensors.size());
   for (const auto& input_tensor : input_tensors) {
-    if (input_tensor->is_consistent()) {
-      const auto& parallel_id =
-          JUST(GetParallelId4CurrentProcessCtx(JUST(input_tensor->parallel_desc())));
-      if (parallel_id->has_value()) {
-        input_tensors_valid_.push_back(true);
-      } else {
-        input_tensors_valid_.push_back(false);
-      }
-    } else {
-      input_tensors_valid_.push_back(true);
-    }
+    input_tensors_valid_.push_back(JUST(GetTensorValidInCurRank(input_tensor)));
   }
   CHECK_EQ_OR_RETURN(input_tensors_valid_.size(), input_tensors.size());
   return Maybe<void>::Ok();
@@ -99,17 +106,7 @@ Maybe<void> NNGraph::RegisterOutputOpNamesAndTensors(
   output_op_names_.assign(output_op_names.begin(), output_op_names.end());
   output_tensors_valid_.reserve(output_tensors.size());
   for (const auto& output_tensor : output_tensors) {
-    if (output_tensor->is_consistent()) {
-      const auto& parallel_id =
-          JUST(GetParallelId4CurrentProcessCtx(JUST(output_tensor->parallel_desc())));
-      if (parallel_id->has_value()) {
-        output_tensors_valid_.push_back(true);
-      } else {
-        output_tensors_valid_.push_back(false);
-      }
-    } else {
-      output_tensors_valid_.push_back(true);
-    }
+    output_tensors_valid_.push_back(JUST(GetTensorValidInCurRank(output_tensor)));
   }
   CHECK_EQ_OR_RETURN(output_tensors_valid_.size(), output_tensors.size());
   return Maybe<void>::Ok();
