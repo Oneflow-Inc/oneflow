@@ -64,19 +64,19 @@ class ExecutorImpl : public Executor {
   void Init(std::shared_ptr<RequestStore> request_store) override;
   void InitJob(int64_t job_id) override;
   void DeinitJob(int64_t job_id) override;
-  void GroupRequests(const int64_t job_id, const std::vector<int32_t>& request_ids,
-                     const std::function<void(int64_t, std::vector<int32_t>&&)>& Handler) override;
-  void ExecuteGroupedRequests(const int64_t job_id, const std::vector<int32_t>& request_ids,
+  void GroupRequests(const std::vector<RequestId>& request_ids,
+                     const std::function<void(std::vector<RequestId>&&)>& Handler) override;
+  void ExecuteGroupedRequests(const std::vector<RequestId>& request_ids,
                               void* executor_token) override;
-  void* CreateExecutorToken(int64_t job_id, int32_t request_id) override;
+  void* CreateExecutorToken(const RequestId& request_id) override;
   void DestroyExecutorToken(void* executor_token) override;
 
  private:
-  Backend GetUniqueBackend(int64_t job_id, const std::vector<int32_t>& request_ids);
+  Backend GetUniqueBackend(const std::vector<RequestId>& request_ids);
 
   std::vector<std::unique_ptr<ExecutorBackend>> backends_;
   std::shared_ptr<RequestStore> request_store_;
-  std::vector<int32_t> group_buffer_;
+  std::vector<RequestId> group_buffer_;
   int64_t group_buffer_job_id_;
 };
 
@@ -96,44 +96,40 @@ void ExecutorImpl::DeinitJob(int64_t job_id) {
   backends_.at(Backend::kBackendNCCL)->DeinitJob(job_id);
 }
 
-void* ExecutorImpl::CreateExecutorToken(int64_t job_id, int32_t request_id) {
-  return backends_.at(Backend::kBackendNCCL)->CreateExecutorToken(job_id, request_id);
+void* ExecutorImpl::CreateExecutorToken(const RequestId& request_id) {
+  return backends_.at(Backend::kBackendNCCL)->CreateExecutorToken(request_id);
 }
 
 void ExecutorImpl::DestroyExecutorToken(void* executor_token) {
   backends_.at(Backend::kBackendNCCL)->DestroyExecutorToken(executor_token);
 }
 
-void ExecutorImpl::GroupRequests(
-    const int64_t job_id, const std::vector<int32_t>& request_ids,
-    const std::function<void(int64_t, std::vector<int32_t>&&)>& Handler) {
+void ExecutorImpl::GroupRequests(const std::vector<RequestId>& request_ids,
+                                 const std::function<void(std::vector<RequestId>&&)>& Handler) {
   if (request_ids.empty()) { return; }
   const CollectiveBoxingConf& conf =
       Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf();
   if (!conf.enable_fusion()) {
-    for (int32_t request_id : request_ids) { Handler(job_id, std::vector<int32_t>({request_id})); }
+    for (auto request_id : request_ids) { Handler(std::vector<RequestId>({request_id})); }
     return;
   }
   auto HandleGroup = [&]() {
     if (group_buffer_.empty()) { return; }
     if (group_buffer_.size() == 1) {
-      Handler(group_buffer_job_id_, std::vector<int32_t>({group_buffer_.front()}));
+      Handler(std::vector<RequestId>({group_buffer_.front()}));
     } else {
       const auto backend =
-          request_store_->MutRequestEntry(group_buffer_job_id_, group_buffer_.front())
-              ->desc()
-              .op_desc()
-              .backend();
-      backends_.at(backend)->GroupRequests(group_buffer_job_id_, group_buffer_, Handler);
+          request_store_->MutRequestEntry(group_buffer_.front())->desc().op_desc().backend();
+      backends_.at(backend)->GroupRequests(group_buffer_, Handler);
     }
     group_buffer_.clear();
   };
   request_store_->ForEachMutRequestEntryForIdsInJob(
-      job_id, request_ids, [&](RequestEntry* request_entry, int32_t i, int32_t request_id) {
+      request_ids, [&](RequestEntry* request_entry, int32_t i, RequestId request_id) {
+        const int64_t job_id = request_id.job_id;
         if (!group_buffer_.empty()) {
           const auto* cur_entry = request_entry;
-          const auto* group_entry =
-              request_store_->MutRequestEntry(group_buffer_job_id_, group_buffer_.front());
+          const auto* group_entry = request_store_->MutRequestEntry(group_buffer_.front());
           if (job_id != group_buffer_job_id_
               || cur_entry->desc().dependency_depth() != group_entry->desc().dependency_depth()
               || cur_entry->desc().op_desc().backend() != group_entry->desc().op_desc().backend()
@@ -147,20 +143,18 @@ void ExecutorImpl::GroupRequests(
   HandleGroup();
 }
 
-void ExecutorImpl::ExecuteGroupedRequests(const int64_t job_id,
-                                          const std::vector<int32_t>& request_ids,
+void ExecutorImpl::ExecuteGroupedRequests(const std::vector<RequestId>& request_ids,
                                           void* executor_token) {
   if (request_ids.empty()) { return; }
-  const Backend backend = GetUniqueBackend(job_id, request_ids);
-  backends_.at(backend)->ExecuteRequests(job_id, request_ids, executor_token);
+  const Backend backend = GetUniqueBackend(request_ids);
+  backends_.at(backend)->ExecuteRequests(request_ids, executor_token);
 }
 
-Backend ExecutorImpl::GetUniqueBackend(const int64_t job_id,
-                                       const std::vector<int32_t>& request_ids) {
+Backend ExecutorImpl::GetUniqueBackend(const std::vector<RequestId>& request_ids) {
   const Backend backend =
-      request_store_->MutRequestEntry(job_id, request_ids.front())->desc().op_desc().backend();
+      request_store_->MutRequestEntry(request_ids.front())->desc().op_desc().backend();
   request_store_->ForEachMutRequestEntryForIdsInJob(
-      job_id, request_ids, [&](RequestEntry* request_entry, int32_t i, int32_t request_id) {
+      request_ids, [&](RequestEntry* request_entry, int32_t i, RequestId request_id) {
         CHECK_EQ(request_entry->desc().op_desc().backend(), backend);
       });
   return backend;
@@ -226,16 +220,14 @@ Scheduler::Scheduler() { impl_.reset(new Impl()); }
 Scheduler::~Scheduler() = default;
 
 RequestHandle* Scheduler::CreateRequestHandle(const RankDesc& rank_desc) {
-  const std::pair<int64_t, int32_t> pair =
-      impl_->request_store->GetJobId7RequestIdByName(rank_desc.op_desc().name());
-  const int64_t job_id = pair.first;
-  const int32_t request_id = pair.second;
-  auto* request_entry = impl_->request_store->MutRequestEntry(job_id, request_id);
+  const RequestId& request_id =
+      impl_->request_store->GetRequestIdByName(rank_desc.op_desc().name());
+  auto* request_entry = impl_->request_store->MutRequestEntry(request_id);
   CHECK(rank_desc.op_desc() == request_entry->desc().op_desc());
   const int32_t local_rank = request_entry->GlobalRankToLocalRank(rank_desc.rank());
-  void* request_entry_token = impl_->request_store->CreateRequestEntryToken(job_id, request_id);
-  void* request_token = impl_->coordinator->CreateRequestToken(job_id, request_id);
-  void* executor_token = impl_->executor->CreateExecutorToken(job_id, request_id);
+  void* request_entry_token = impl_->request_store->CreateRequestEntryToken(request_id);
+  void* request_token = impl_->coordinator->CreateRequestToken(request_id);
+  void* executor_token = impl_->executor->CreateExecutorToken(request_id);
   return new RequestHandle(local_rank, request_entry_token, request_token, executor_token);
 }
 

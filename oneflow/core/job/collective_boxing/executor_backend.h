@@ -28,6 +28,8 @@ namespace collective {
 
 class RequestStore;
 
+struct RequestId;
+
 class ExecutorBackend {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ExecutorBackend);
@@ -37,12 +39,10 @@ class ExecutorBackend {
   virtual void Init(std::shared_ptr<RequestStore> request_store){};
   virtual void InitJob(int64_t job_id) = 0;
   virtual void DeinitJob(int64_t job_id) = 0;
-  virtual void GroupRequests(
-      int64_t job_id, const std::vector<int32_t>& request_ids,
-      const std::function<void(int64_t, std::vector<int32_t>&&)>& Handler) = 0;
-  virtual void ExecuteRequests(int64_t job_id, const std::vector<int32_t>& request_ids,
-                               void* executor_token) = 0;
-  virtual void* CreateExecutorToken(int64_t job_id, int32_t request_id) = 0;
+  virtual void GroupRequests(const std::vector<RequestId>& request_ids,
+                             const std::function<void(std::vector<RequestId>&&)>& Handler) = 0;
+  virtual void ExecuteRequests(const std::vector<RequestId>& request_ids, void* executor_token) = 0;
+  virtual void* CreateExecutorToken(const RequestId& request_id) = 0;
   virtual void DestroyExecutorToken(void* executor_token) = 0;
 };
 

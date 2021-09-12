@@ -87,8 +87,7 @@ void RequestStore::InitJobRequests(int64_t job_id, const RequestSet& request_set
   int32_t max_multi_node_request_id = 0;
   for (int32_t i = 0; i < request_entry_vec.size(); ++i) {
     const std::unique_ptr<RequestEntry>& entry = request_entry_vec.at(i);
-    CHECK(name2job_id7request_id_.emplace(entry->desc().op_desc().name(), std::make_pair(job_id, i))
-              .second);
+    CHECK(name2request_id_.emplace(entry->desc().op_desc().name(), RequestId(job_id, i)).second);
     if (entry->NodeCount() > 1) { max_multi_node_request_id = i + 1; }
   }
   CHECK(job_id2max_multi_node_request_id_.emplace(job_id, max_multi_node_request_id).second);
@@ -99,7 +98,7 @@ void RequestStore::DeinitJobRequests(int64_t job_id) {
   CHECK(it != job_id2request_entry_vec_.end());
   const auto& request_entry_vec = it->second;
   for (const auto& request_entry : request_entry_vec) {
-    name2job_id7request_id_.erase(request_entry->desc().op_desc().name());
+    name2request_id_.erase(request_entry->desc().op_desc().name());
   }
   job_id2request_entry_vec_.erase(job_id);
   job_id2max_multi_node_request_id_.erase(job_id);
@@ -109,10 +108,10 @@ struct RequestEntryToken {
   RequestEntry* request_entry;
 };
 
-void* RequestStore::CreateRequestEntryToken(int64_t job_id, int32_t request_id) {
-  auto it = job_id2request_entry_vec_.find(job_id);
+void* RequestStore::CreateRequestEntryToken(const RequestId& request_id) {
+  auto it = job_id2request_entry_vec_.find(request_id.job_id);
   CHECK(it != job_id2request_entry_vec_.end());
-  return new RequestEntryToken{it->second.at(request_id).get()};
+  return new RequestEntryToken{it->second.at(request_id.request_index).get()};
 }
 
 void RequestStore::DestroyRequestEntryToken(void* request_entry_token) {

@@ -78,6 +78,12 @@ class RequestEntry final {
   State state_;
 };
 
+struct RequestId {
+  RequestId(int64_t job_id, int32_t request_index) : job_id(job_id), request_index(request_index) {}
+  int64_t job_id;
+  int32_t request_index;
+};
+
 class RequestStore {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RequestStore);
@@ -87,50 +93,51 @@ class RequestStore {
   void InitJobRequests(int64_t job_id, const RequestSet& request_set);
   void DeinitJobRequests(int64_t job_id);
 
-  RequestEntry* MutRequestEntry(int64_t job_id, int32_t request_id) {
-    auto it = job_id2request_entry_vec_.find(job_id);
+  RequestEntry* MutRequestEntry(const RequestId& request_id) {
+    auto it = job_id2request_entry_vec_.find(request_id.job_id);
     CHECK(it != job_id2request_entry_vec_.end());
-    return it->second.at(request_id).get();
+    return it->second.at(request_id.request_index).get();
   }
 
   void ForEachMutRequestEntryForIdsInJob(
-      int64_t job_id, const std::vector<int32_t>& request_ids,
-      const std::function<void(RequestEntry*, int32_t i, int32_t request_id)>& Handler) {
+      const std::vector<RequestId>& request_ids,
+      const std::function<void(RequestEntry*, int32_t i, RequestId request_id)>& Handler) {
+    if (request_ids.size() == 0) { return; }
+    int64_t job_id = request_ids.front().job_id;
     auto it = job_id2request_entry_vec_.find(job_id);
     CHECK(it != job_id2request_entry_vec_.end());
     for (int32_t i = 0; i < request_ids.size(); ++i) {
-      Handler(it->second.at(request_ids.at(i)).get(), i, request_ids.at(i));
+      CHECK_EQ(request_ids.at(i).job_id, job_id);
+      Handler(it->second.at(request_ids.at(i).request_index).get(), i, request_ids.at(i));
     }
   }
 
   void ForEachMutRequestEntryInJob(
       int64_t job_id,
-      const std::function<void(RequestEntry*, int32_t i, int32_t request_id)>& Handler) {
+      const std::function<void(RequestEntry*, int32_t i, RequestId request_id)>& Handler) {
     auto it = job_id2request_entry_vec_.find(job_id);
     CHECK(it != job_id2request_entry_vec_.end());
     for (int32_t i = 0; i < it->second.size(); ++i) {
-      int32_t request_id = i;
-      Handler(it->second.at(request_id).get(), i, request_id);
+      RequestId request_id(job_id, i);
+      Handler(it->second.at(i).get(), i, request_id);
     }
   }
 
-  int32_t RequestCount4Job(int64_t job_id) const {
+  int32_t RequestCountForJob(int64_t job_id) const {
     const auto& it = job_id2request_entry_vec_.find(job_id);
     CHECK(it != job_id2request_entry_vec_.end());
     return it->second.size();
   }
 
-  int32_t MaxMultiNodeRequestId4Job(int64_t job_id) const {
+  int32_t MaxMultiNodeRequestIdForJob(int64_t job_id) const {
     const auto& it = job_id2max_multi_node_request_id_.find(job_id);
     CHECK(it != job_id2max_multi_node_request_id_.end());
     return it->second;
   }
 
-  std::pair<int64_t, int32_t> GetJobId7RequestIdByName(const std::string& name) const {
-    return name2job_id7request_id_.at(name);
-  }
+  RequestId GetRequestIdByName(const std::string& name) const { return name2request_id_.at(name); }
 
-  void* CreateRequestEntryToken(int64_t job_id, int32_t request_id);
+  void* CreateRequestEntryToken(const RequestId& request_id);
 
   void DestroyRequestEntryToken(void* token);
 
@@ -139,7 +146,7 @@ class RequestStore {
  private:
   HashMap<int64_t, std::vector<std::unique_ptr<RequestEntry>>> job_id2request_entry_vec_;
   HashMap<int64_t, int32_t> job_id2max_multi_node_request_id_;
-  HashMap<std::string, std::pair<int64_t, int32_t>> name2job_id7request_id_;
+  HashMap<std::string, RequestId> name2request_id_;
 };
 
 }  // namespace collective

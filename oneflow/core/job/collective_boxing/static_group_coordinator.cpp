@@ -30,26 +30,71 @@ namespace collective {
 
 namespace {
 
-void SortRequestIdsByOrder(const int64_t job_id, RequestStore* request_store,
-                           std::vector<int32_t>* requests) {
-  std::sort(requests->begin(), requests->end(), [job_id, request_store](int32_t a, int32_t b) {
-    return request_store->MutRequestEntry(job_id, a)->desc().order()
-           < request_store->MutRequestEntry(job_id, b)->desc().order();
+void SortRequestIdsByOrder(RequestStore* request_store, std::vector<RequestId>* requests) {
+  std::sort(requests->begin(), requests->end(), [request_store](RequestId a, RequestId b) {
+    return request_store->MutRequestEntry(a)->desc().order()
+           < request_store->MutRequestEntry(b)->desc().order();
   });
 }
 
 }  // namespace
 
-void StaticGroupCoordinator::Init(std::shared_ptr<RequestStore> request_store,
-                                  std::shared_ptr<Executor> executor) {
+struct GroupState {
+  explicit GroupState(int32_t group_size) : index2is_ready(group_size), ready_request_count(0) {}
+
+  void AddReadyRequest(int32_t index);
+  bool IsReady() const;
+  void Reset();
+
+  std::vector<bool> index2is_ready;
+  int32_t ready_request_count;
+};
+std::mutex mutex_;
+int64_t current_job_id_ = -1;
+int64_t current_group_idx_in_job_ = -1;
+
+struct RequestGroupIndex {
+  int32_t group_id;
+  int32_t index_in_group;
+};
+
+struct StaticGroupRequestsInfo {
+  std::vector<RequestGroupIndex> request_index2request_group_index;
+  std::vector<GroupState> group_states;
+  std::vector<std::vector<RequestId>> group_id2request_ids;
+};
+
+struct StaticGroupRequestsInfoToken {
+  RequestId request_id;
+  StaticGroupRequestsInfo* info;
+};
+
+struct StaticGroupCoordinator::Impl {
+  Impl(std::shared_ptr<RequestStore> request_store, std::shared_ptr<Executor> executor);
+  std::shared_ptr<RequestStore> request_store_;
+  std::shared_ptr<Executor> executor_;
+  HashMap<int64_t, StaticGroupRequestsInfo> job_id2static_group_requests_info_;
+};
+
+StaticGroupCoordinator::Impl::Impl(std::shared_ptr<RequestStore> request_store,
+                                   std::shared_ptr<Executor> executor) {
   request_store_ = request_store;
   executor_ = executor;
 }
 
-void* StaticGroupCoordinator::CreateRequestToken(int64_t job_id, int32_t request_id) {
-  auto it = job_id2static_group_requests_info_.find(job_id);
-  CHECK(it != job_id2static_group_requests_info_.end());
-  return new StaticGroupRequestsInfoToken{job_id, request_id, &it->second};
+StaticGroupCoordinator::StaticGroupCoordinator() = default;
+
+StaticGroupCoordinator::~StaticGroupCoordinator() { impl_.reset(); }
+
+void StaticGroupCoordinator::Init(std::shared_ptr<RequestStore> request_store,
+                                  std::shared_ptr<Executor> executor) {
+  impl_ = std::make_unique<Impl>(request_store, executor);
+}
+
+void* StaticGroupCoordinator::CreateRequestToken(const RequestId& request_id) {
+  auto it = impl_->job_id2static_group_requests_info_.find(request_id.job_id);
+  CHECK(it != impl_->job_id2static_group_requests_info_.end());
+  return new StaticGroupRequestsInfoToken{request_id, &it->second};
 }
 
 void StaticGroupCoordinator::DestroyRequestToken(void* request_token) {
@@ -58,65 +103,67 @@ void StaticGroupCoordinator::DestroyRequestToken(void* request_token) {
 }
 
 void StaticGroupCoordinator::InitJob(int64_t job_id) {
-  const auto& GetRequestDesc = [&](int64_t job_id, int32_t request_id) -> const RequestDesc& {
-    return request_store_->MutRequestEntry(job_id, request_id)->desc();
+  const auto& GetRequestDesc = [&](const RequestId& request_id) -> const RequestDesc& {
+    return impl_->request_store_->MutRequestEntry(request_id)->desc();
   };
-  std::vector<int32_t> request_ids;
-  request_store_->ForEachMutRequestEntryInJob(
-      job_id, [&](RequestEntry* request_entry, int32_t i, int32_t request_id) {
+  std::vector<RequestId> request_ids;
+  impl_->request_store_->ForEachMutRequestEntryInJob(
+      job_id, [&](RequestEntry* request_entry, int32_t i, RequestId request_id) {
         if (request_entry->HasRankOnThisNode()) { request_ids.push_back(request_id); }
       });
-  SortRequestIdsByOrder(job_id, request_store_.get(), &request_ids);
+  SortRequestIdsByOrder(impl_->request_store_.get(), &request_ids);
   CHECK(std::adjacent_find(request_ids.begin(), request_ids.end(),
-                           [&](int32_t a, int32_t b) {
-                             return GetRequestDesc(job_id, a).dependency_depth()
-                                    > GetRequestDesc(job_id, b).dependency_depth();
+                           [&](RequestId a, RequestId b) {
+                             return GetRequestDesc(a).dependency_depth()
+                                    > GetRequestDesc(b).dependency_depth();
                            })
         == request_ids.end());
   StaticGroupRequestsInfo info;
   std::vector<GroupState>& group_states = info.group_states;
-  std::vector<RequestIndex>& request_id2index = info.request_id2index;
-  std::vector<std::vector<int32_t>>& group_id2request_ids = info.group_id2request_ids;
-  const int32_t request_count = request_store_->RequestCount4Job(job_id);
-  request_id2index.resize(request_count);
-  executor_->GroupRequests(job_id, request_ids, [&](int64_t job_id, std::vector<int32_t>&& group) {
+  std::vector<RequestGroupIndex>& request_index2request_group_index =
+      info.request_index2request_group_index;
+  std::vector<std::vector<RequestId>>& group_id2request_ids = info.group_id2request_ids;
+  const int32_t request_count = impl_->request_store_->RequestCountForJob(job_id);
+  request_index2request_group_index.resize(request_count);
+  impl_->executor_->GroupRequests(request_ids, [&](std::vector<RequestId>&& group) {
     const int32_t group_id = group_states.size();
     group_states.emplace_back(group.size());
     for (int32_t idx_in_group = 0; idx_in_group < group.size(); ++idx_in_group) {
-      const int32_t request_id = group.at(idx_in_group);
-      request_id2index.at(request_id).group_id = group_id;
-      request_id2index.at(request_id).index_in_group = idx_in_group;
+      const RequestId request_id = group.at(idx_in_group);
+      RequestGroupIndex request_group_index{group_id, idx_in_group};
+      request_index2request_group_index.at(request_id.request_index) = request_group_index;
     }
     group_id2request_ids.push_back(group);
   });
-  CHECK(job_id2static_group_requests_info_.emplace(job_id, info).second);
+  CHECK(impl_->job_id2static_group_requests_info_.emplace(job_id, info).second);
   if (group_states.size() != 0) { DumpSummary(job_id); }
 }
 
 void StaticGroupCoordinator::DeinitJob(int64_t job_id) {
-  job_id2static_group_requests_info_.erase(job_id);
+  impl_->job_id2static_group_requests_info_.erase(job_id);
 }
 
 void StaticGroupCoordinator::AddRequest(void* request_token, void* executor_token) {
   std::unique_lock<std::mutex> lock(mutex_);
   StaticGroupRequestsInfoToken* token = static_cast<StaticGroupRequestsInfoToken*>(request_token);
+  const RequestId& request_id = token->request_id;
   if (current_job_id_ == -1) {
-    current_job_id_ = token->job_id;
+    current_job_id_ = request_id.job_id;
     current_group_idx_in_job_ = 0;
   } else {
-    CHECK_EQ(current_job_id_, token->job_id);
+    CHECK_EQ(current_job_id_, request_id.job_id);
   }
-  const int32_t request_id = token->request_id;
   StaticGroupRequestsInfo* info = token->info;
-  info->group_states.at(info->request_id2index.at(request_id).group_id)
-      .AddReadyRequest(info->request_id2index.at(request_id).index_in_group);
+  info->group_states
+      .at(info->request_index2request_group_index.at(request_id.request_index).group_id)
+      .AddReadyRequest(
+          info->request_index2request_group_index.at(request_id.request_index).index_in_group);
   int64_t num_launched_groups = 0;
   while (true) {
     auto& group_state = info->group_states.at(current_group_idx_in_job_);
     if (group_state.IsReady()) {
-      executor_->ExecuteGroupedRequests(current_job_id_,
-                                        info->group_id2request_ids.at(current_group_idx_in_job_),
-                                        executor_token);
+      impl_->executor_->ExecuteGroupedRequests(
+          info->group_id2request_ids.at(current_group_idx_in_job_), executor_token);
       group_state.Reset();
       current_group_idx_in_job_ = (current_group_idx_in_job_ + 1) % info->group_states.size();
       num_launched_groups += 1;
@@ -133,31 +180,29 @@ void StaticGroupCoordinator::AddRequest(void* request_token, void* executor_toke
 void StaticGroupCoordinator::DumpSummary(const int64_t job_id) const {
   if (!Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { return; }
   auto group_ls = TeePersistentLogStream::Create(StrCat("boxing/collective/job_", job_id));
-  const auto& it = job_id2static_group_requests_info_.find(job_id);
+  const auto& it = impl_->job_id2static_group_requests_info_.find(job_id);
 
-  CHECK(it != job_id2static_group_requests_info_.end());
+  CHECK(it != impl_->job_id2static_group_requests_info_.end());
   const auto& group_id2request_ids = it->second.group_id2request_ids;
   for (int32_t group_id = 0; group_id < group_id2request_ids.size(); ++group_id) {
     group_ls << "group id: " << std::to_string(group_id) << "\n";
-    request_store_->ForEachMutRequestEntryForIdsInJob(
-        job_id, group_id2request_ids.at(group_id),
-        [&](RequestEntry* request_entry, int32_t i, int32_t request_id) {
+    impl_->request_store_->ForEachMutRequestEntryForIdsInJob(
+        group_id2request_ids.at(group_id),
+        [&](RequestEntry* request_entry, int32_t i, RequestId request_id) {
           group_ls->Write(request_entry->desc());
         });
   }
 }
 
-void StaticGroupCoordinator::GroupState::AddReadyRequest(int32_t index) {
+void GroupState::AddReadyRequest(int32_t index) {
   CHECK(!index2is_ready.at(index));
   CHECK(index2is_ready.at(index) = true);
   ready_request_count += 1;
 }
 
-bool StaticGroupCoordinator::GroupState::IsReady() const {
-  return ready_request_count == index2is_ready.size();
-}
+bool GroupState::IsReady() const { return ready_request_count == index2is_ready.size(); }
 
-void StaticGroupCoordinator::GroupState::Reset() {
+void GroupState::Reset() {
   ready_request_count = 0;
   std::fill(index2is_ready.begin(), index2is_ready.end(), false);
 }

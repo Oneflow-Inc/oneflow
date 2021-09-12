@@ -30,6 +30,8 @@ struct RuntimeRequestInfo;
 
 class RequestStore;
 
+struct RequestId;
+
 class Executor {
  public:
   Executor() = default;
@@ -38,15 +40,13 @@ class Executor {
   virtual void Init(std::shared_ptr<RequestStore> request_store) = 0;
   virtual void InitJob(int64_t job_id) = 0;
   virtual void DeinitJob(int64_t job_id) = 0;
-  virtual void GroupRequests(
-      int64_t job_id, const std::vector<int32_t>& request_ids,
-      const std::function<void(int64_t, std::vector<int32_t>&&)>& Handler) = 0;
-  virtual void ExecuteGroupedRequests(int64_t job_id, const std::vector<int32_t>& request_ids,
+  virtual void GroupRequests(const std::vector<RequestId>& request_ids,
+                             const std::function<void(std::vector<RequestId>&&)>& Handler) = 0;
+  virtual void ExecuteGroupedRequests(const std::vector<RequestId>& request_ids,
                                       void* executor_token) = 0;
 
-  virtual void ExecuteRequests(int64_t job_id, const std::vector<int32_t>& request_ids,
-                               void* executor_token);
-  virtual void* CreateExecutorToken(int64_t job_id, int32_t request_id) = 0;
+  virtual void ExecuteRequests(const std::vector<RequestId>& request_ids, void* executor_token);
+  virtual void* CreateExecutorToken(const RequestId& request_id) = 0;
   virtual void DestroyExecutorToken(void* executor_token) = 0;
 };
 

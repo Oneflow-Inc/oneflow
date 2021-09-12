@@ -266,10 +266,10 @@ class StreamCtx {
 
 void LaunchFusedAllReduce(const CommGroup& comm_group,
                           const std::vector<std::unique_ptr<StreamCtx>>& device_id2stream_ctx,
-                          const std::shared_ptr<RequestStore>& request_store, const int64_t job_id,
-                          const std::vector<int32_t>& request_ids) {
+                          const std::shared_ptr<RequestStore>& request_store,
+                          const std::vector<RequestId>& request_ids) {
   CHECK_LE(request_ids.size(), kMultiCopyParamsMaxSize);
-  RequestEntry* first_request_entry = request_store->MutRequestEntry(job_id, request_ids.front());
+  RequestEntry* first_request_entry = request_store->MutRequestEntry(request_ids.front());
   const ncclDataType_t nccl_data_type =
       GetNcclDataType(first_request_entry->desc().op_desc().data_type());
   const ncclRedOp_t nccl_reduce_op =
@@ -280,7 +280,7 @@ void LaunchFusedAllReduce(const CommGroup& comm_group,
   offset_vec.reserve(request_ids.size());
   int64_t offset = 0;
   request_store->ForEachMutRequestEntryForIdsInJob(
-      job_id, request_ids, [&](RequestEntry* request_entry, int32_t i, int32_t request_id) {
+      request_ids, [&](RequestEntry* request_entry, int32_t i, RequestId request_id) {
         offset_vec.emplace_back(offset);
         offset += GetMultiCopyAlignedSize(request_entry->size_in_bytes());
       });
@@ -291,7 +291,7 @@ void LaunchFusedAllReduce(const CommGroup& comm_group,
     const StreamCtx* stream_ctx = device_id2stream_ctx.at(comm_rank.device_id()).get();
     CHECK_LE(offset, stream_ctx->fusion_buffer_size());
     request_store->ForEachMutRequestEntryForIdsInJob(
-        job_id, request_ids, [&](RequestEntry* request_entry, int32_t i, int32_t request_id) {
+        request_ids, [&](RequestEntry* request_entry, int32_t i, RequestId request_id) {
           copy_in_params.Add(stream_ctx->fusion_buffer() + offset_vec.at(i),
                              request_entry->GetRuntimeRequest(local_rank)->send_buff,
                              request_entry->size_in_bytes());
@@ -316,7 +316,7 @@ void LaunchFusedAllReduce(const CommGroup& comm_group,
     const CommRank& comm_rank = comm_group.GetCommRank(local_rank);
     const StreamCtx* stream_ctx = device_id2stream_ctx.at(comm_rank.device_id()).get();
     request_store->ForEachMutRequestEntryForIdsInJob(
-        job_id, request_ids, [&](RequestEntry* request_entry, int32_t i, int32_t request_id) {
+        request_ids, [&](RequestEntry* request_entry, int32_t i, RequestId request_id) {
           copy_out_params.Add(request_entry->GetRuntimeRequest(local_rank)->recv_buff,
                               stream_ctx->fusion_buffer() + offset_vec.at(i),
                               request_entry->size_in_bytes());
@@ -328,8 +328,8 @@ void LaunchFusedAllReduce(const CommGroup& comm_group,
 
 void LaunchAggregatedOps(const CommGroup& comm_group,
                          const std::vector<std::unique_ptr<StreamCtx>>& device_id2stream_ctx,
-                         const std::shared_ptr<RequestStore>& request_store, const int64_t job_id,
-                         const std::vector<int32_t>& request_ids) {
+                         const std::shared_ptr<RequestStore>& request_store,
+                         const std::vector<RequestId>& request_ids) {
   OF_NCCL_CHECK(ncclGroupStart());
   for (int32_t local_rank = 0; local_rank < comm_group.local_rank_count(); ++local_rank) {
     const CommRank& comm_rank = comm_group.GetCommRank(local_rank);
@@ -337,7 +337,7 @@ void LaunchAggregatedOps(const CommGroup& comm_group,
     const StreamCtx* stream_ctx = device_id2stream_ctx.at(comm_rank.device_id()).get();
     OF_CUDA_CHECK(cudaSetDevice(comm_rank.device_id()));
     request_store->ForEachMutRequestEntryForIdsInJob(
-        job_id, request_ids, [&](RequestEntry* request_entry, int32_t i, int32_t request_id) {
+        request_ids, [&](RequestEntry* request_entry, int32_t i, RequestId request_id) {
           const auto& op_desc = request_entry->desc().op_desc();
           const std::shared_ptr<const RuntimeRequestInfo>& runtime_request_info =
               request_entry->GetRuntimeRequest(local_rank);
@@ -396,12 +396,11 @@ void LaunchAggregatedOps(const CommGroup& comm_group,
 void AddCallbackAndResetRuntimeRequest(
     const CommGroup& comm_group,
     const std::vector<std::unique_ptr<StreamCtx>>& device_id2stream_ctx,
-    const std::shared_ptr<RequestStore>& request_store, const int64_t job_id,
-    const std::vector<int32_t>& request_ids) {
+    const std::shared_ptr<RequestStore>& request_store, const std::vector<RequestId>& request_ids) {
   std::vector<std::vector<std::shared_ptr<const RuntimeRequestInfo>>> saved_runtime_request_info(
       request_ids.size());
   request_store->ForEachMutRequestEntryForIdsInJob(
-      job_id, request_ids, [&](RequestEntry* request_entry, int32_t i, int32_t request_id) {
+      request_ids, [&](RequestEntry* request_entry, int32_t i, RequestId request_id) {
         saved_runtime_request_info.at(i) = std::move(request_entry->ResetRuntimeRequest());
       });
   for (int32_t local_rank = 0; local_rank < comm_group.local_rank_count(); ++local_rank) {
@@ -411,7 +410,7 @@ void AddCallbackAndResetRuntimeRequest(
         std::make_shared<std::vector<std::shared_ptr<const RuntimeRequestInfo>>>();
     runtime_request_info_vec->reserve(request_ids.size());
     request_store->ForEachMutRequestEntryForIdsInJob(
-        job_id, request_ids, [&](RequestEntry* request_entry, int32_t i, int32_t request_id) {
+        request_ids, [&](RequestEntry* request_entry, int32_t i, RequestId request_id) {
           runtime_request_info_vec->emplace_back(
               std::move(saved_runtime_request_info.at(i).at(local_rank)));
         });
@@ -440,7 +439,7 @@ struct NcclExecutorBackend::Impl {
     InitIsOpTypeFusionEnabled();
   }
   ~Impl() {
-    job_id2request_id2stream_id2comm_group.clear();
+    job_id2request_index2stream_id2comm_group.clear();
     stream_id2device_id2stream_ctx.clear();
     device_set2stream_id2comm_group.clear();
   }
@@ -448,7 +447,7 @@ struct NcclExecutorBackend::Impl {
   void InitCommGroup(int64_t job_id) {
     std::set<int64_t> local_device_ids;
     request_store->ForEachMutRequestEntryInJob(
-        job_id, [&](RequestEntry* request_entry, int32_t i, int32_t request_id) {
+        job_id, [&](RequestEntry* request_entry, int32_t i, RequestId request_id) {
           const auto& request = request_entry->desc();
           if (request.op_desc().backend() != Backend::kBackendNCCL) { return; }
           if (!request_entry->HasRankOnThisNode()) { return; }
@@ -475,24 +474,25 @@ struct NcclExecutorBackend::Impl {
   }
 
   void InitJobRequestIdCommGroupIndex(int64_t job_id) {
-    std::vector<std::vector<CommGroup>*> request_id2stream_id2comm_group;
-    request_id2stream_id2comm_group.resize(request_store->RequestCount4Job(job_id));
+    std::vector<std::vector<CommGroup>*> request_index2stream_id2comm_group;
+    request_index2stream_id2comm_group.resize(request_store->RequestCountForJob(job_id));
     request_store->ForEachMutRequestEntryInJob(
-        job_id, [&](RequestEntry* request_entry, int32_t i, int32_t request_id) {
+        job_id, [&](RequestEntry* request_entry, int32_t i, RequestId request_id) {
           const DeviceSet& device_set = request_entry->desc().device_set();
           auto it = device_set2stream_id2comm_group.find(device_set);
           if (it != device_set2stream_id2comm_group.end()) {
-            request_id2stream_id2comm_group.at(request_id) = &it->second;
+            request_index2stream_id2comm_group.at(request_id.request_index) = &it->second;
           } else {
-            request_id2stream_id2comm_group.at(request_id) = nullptr;
+            request_index2stream_id2comm_group.at(request_id.request_index) = nullptr;
           }
         });
-    CHECK(job_id2request_id2stream_id2comm_group.emplace(job_id, request_id2stream_id2comm_group)
+    CHECK(job_id2request_index2stream_id2comm_group
+              .emplace(job_id, request_index2stream_id2comm_group)
               .second);
   }
 
   void DeleteJobRequestIdCommGroupIndex(int64_t job_id) {
-    job_id2request_id2stream_id2comm_group.erase(job_id);
+    job_id2request_index2stream_id2comm_group.erase(job_id);
   }
 
   void InitStreamCtx() {
@@ -514,13 +514,15 @@ struct NcclExecutorBackend::Impl {
     op_type2fusion_enabled.at(OpType::kOpTypeAll2All) = false;
   }
 
-  const CommGroup& GetCommGroup(const int64_t job_id, const std::vector<int32_t>& request_ids,
-                                int32_t stream_id, void* executor_token) const {
+  const CommGroup& GetCommGroup(const std::vector<RequestId>& request_ids, int32_t stream_id,
+                                void* executor_token) const {
     ExecutorToken* token = static_cast<ExecutorToken*>(executor_token);
-    const auto request_id2stream_id2comm_group = token->request_id2stream_id2comm_group;
-    const auto* stream_id2comm_group = request_id2stream_id2comm_group->at(request_ids.at(0));
+    const auto request_index2stream_id2comm_group = token->request_index2stream_id2comm_group;
+    const auto* stream_id2comm_group =
+        request_index2stream_id2comm_group->at(request_ids.at(0).request_index);
     for (int64_t i = 0; i < request_ids.size(); ++i) {
-      CHECK_EQ(request_id2stream_id2comm_group->at(request_ids.at(i)), stream_id2comm_group);
+      CHECK_EQ(request_index2stream_id2comm_group->at(request_ids.at(i).request_index),
+               stream_id2comm_group);
     }
     return stream_id2comm_group->at(stream_id);
   }
@@ -564,21 +566,20 @@ struct NcclExecutorBackend::Impl {
     }
   }
 
-  void GroupRequests(const int64_t job_id, const std::vector<int32_t>& request_ids,
-                     const std::function<void(int64_t, std::vector<int32_t>&&)>& Handler) {
-    std::vector<int32_t> group;
+  void GroupRequests(const std::vector<RequestId>& request_ids,
+                     const std::function<void(std::vector<RequestId>&&)>& Handler) {
+    std::vector<RequestId> group;
     int64_t group_size = 0;
     const int64_t fusion_max_ops = std::min(conf.nccl_fusion_max_ops(), kMultiCopyParamsMaxSize);
     request_store->ForEachMutRequestEntryForIdsInJob(
-        job_id, request_ids, [&](RequestEntry* request_entry, int32_t i, int32_t request_id) {
+        request_ids, [&](RequestEntry* request_entry, int32_t i, RequestId request_id) {
           const auto& request = request_entry->desc();
           const int64_t size = GetMultiCopyAlignedSize(request_entry->size_in_bytes());
           if (group.empty()
-              || !CanRequestEntryFuse(request_store->MutRequestEntry(job_id, group.back()),
-                                      request_entry)
+              || !CanRequestEntryFuse(request_store->MutRequestEntry(group.back()), request_entry)
               || group_size + size > fusion_threshold || group.size() >= fusion_max_ops) {
             if (!group.empty()) {
-              Handler(job_id, std::move(group));
+              Handler(std::move(group));
               group.clear();
               group_size = 0;
             }
@@ -586,16 +587,16 @@ struct NcclExecutorBackend::Impl {
           group.push_back(request_id);
           group_size += size;
         });
-    if (!group.empty()) { Handler(job_id, std::move(group)); }
+    if (!group.empty()) { Handler(std::move(group)); }
   }
 
   struct ExecutorToken {
-    std::vector<std::vector<CommGroup>*>* request_id2stream_id2comm_group;
+    std::vector<std::vector<CommGroup>*>* request_index2stream_id2comm_group;
   };
 
-  void* CreateExecutorToken(int64_t job_id, int32_t request_id) {
-    auto it = job_id2request_id2stream_id2comm_group.find(job_id);
-    CHECK(it != job_id2request_id2stream_id2comm_group.end());
+  void* CreateExecutorToken(const RequestId& request_id) {
+    auto it = job_id2request_index2stream_id2comm_group.find(request_id.job_id);
+    CHECK(it != job_id2request_index2stream_id2comm_group.end());
     return new ExecutorToken{&it->second};
   }
 
@@ -604,21 +605,19 @@ struct NcclExecutorBackend::Impl {
     delete token;
   }
 
-  void ExecuteRequests(const int64_t job_id, const std::vector<int32_t>& request_ids,
-                       void* executor_token) {
+  void ExecuteRequests(const std::vector<RequestId>& request_ids, void* executor_token) {
     const int32_t stream_id = NextStreamId();
     CudaCurrentDeviceGuard device_guard;
-    auto& comm_group = GetCommGroup(job_id, request_ids, stream_id, executor_token);
+    auto& comm_group = GetCommGroup(request_ids, stream_id, executor_token);
     auto& device_id2stream_ctx = stream_id2device_id2stream_ctx.at(stream_id);
-    if (request_store->MutRequestEntry(job_id, request_ids.front())->desc().op_desc().op_type()
+    if (request_store->MutRequestEntry(request_ids.front())->desc().op_desc().op_type()
             == OpType::kOpTypeAllReduce
         && conf.nccl_fusion_all_reduce_use_buffer() && request_ids.size() > 1) {
-      LaunchFusedAllReduce(comm_group, device_id2stream_ctx, request_store, job_id, request_ids);
+      LaunchFusedAllReduce(comm_group, device_id2stream_ctx, request_store, request_ids);
     } else {
-      LaunchAggregatedOps(comm_group, device_id2stream_ctx, request_store, job_id, request_ids);
+      LaunchAggregatedOps(comm_group, device_id2stream_ctx, request_store, request_ids);
     }
-    AddCallbackAndResetRuntimeRequest(comm_group, device_id2stream_ctx, request_store, job_id,
-                                      request_ids);
+    AddCallbackAndResetRuntimeRequest(comm_group, device_id2stream_ctx, request_store, request_ids);
   }
 
   CollectiveBoxingConf conf;
@@ -630,7 +629,7 @@ struct NcclExecutorBackend::Impl {
   std::shared_ptr<RequestStore> request_store;
   HashMap<DeviceSet, std::vector<CommGroup>> device_set2stream_id2comm_group;
   std::vector<std::vector<std::unique_ptr<StreamCtx>>> stream_id2device_id2stream_ctx;
-  HashMap<int64_t, std::vector<std::vector<CommGroup>*>> job_id2request_id2stream_id2comm_group;
+  HashMap<int64_t, std::vector<std::vector<CommGroup>*>> job_id2request_index2stream_id2comm_group;
 };
 
 NcclExecutorBackend::NcclExecutorBackend() = default;
@@ -653,23 +652,22 @@ void NcclExecutorBackend::DeinitJob(int64_t job_id) {
 }
 
 void NcclExecutorBackend::GroupRequests(
-    const int64_t job_id, const std::vector<int32_t>& request_ids,
-    const std::function<void(int64_t, std::vector<int32_t>&&)>& Handler) {
-  impl_->GroupRequests(job_id, request_ids, Handler);
+    const std::vector<RequestId>& request_ids,
+    const std::function<void(std::vector<RequestId>&&)>& Handler) {
+  impl_->GroupRequests(request_ids, Handler);
 }
 
-void* NcclExecutorBackend::CreateExecutorToken(int64_t job_id, int32_t request_id) {
-  return impl_->CreateExecutorToken(job_id, request_id);
+void* NcclExecutorBackend::CreateExecutorToken(const RequestId& request_id) {
+  return impl_->CreateExecutorToken(request_id);
 }
 
 void NcclExecutorBackend::DestroyExecutorToken(void* executor_token) {
   return impl_->DestroyExecutorToken(executor_token);
 }
 
-void NcclExecutorBackend::ExecuteRequests(const int64_t job_id,
-                                          const std::vector<int32_t>& request_ids,
+void NcclExecutorBackend::ExecuteRequests(const std::vector<RequestId>& request_ids,
                                           void* executor_token) {
-  impl_->ExecuteRequests(job_id, request_ids, executor_token);
+  impl_->ExecuteRequests(request_ids, executor_token);
 }
 
 }  // namespace collective

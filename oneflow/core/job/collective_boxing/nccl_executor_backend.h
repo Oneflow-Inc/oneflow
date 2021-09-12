@@ -26,6 +26,8 @@ namespace boxing {
 
 namespace collective {
 
+struct RequestId;
+
 class NcclExecutorBackend : public ExecutorBackend {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NcclExecutorBackend);
@@ -36,11 +38,10 @@ class NcclExecutorBackend : public ExecutorBackend {
   void Init(std::shared_ptr<RequestStore> request_store) override;
   void InitJob(int64_t job_id) override;
   void DeinitJob(int64_t job_id) override;
-  void GroupRequests(int64_t job_id, const std::vector<int32_t>& request_ids,
-                     const std::function<void(int64_t, std::vector<int32_t>&&)>& Handler) override;
-  void ExecuteRequests(int64_t job_id, const std::vector<int32_t>& request_ids,
-                       void* executor_token) override;
-  void* CreateExecutorToken(int64_t job_id, int32_t request_id) override;
+  void GroupRequests(const std::vector<RequestId>& request_ids,
+                     const std::function<void(std::vector<RequestId>&&)>& Handler) override;
+  void ExecuteRequests(const std::vector<RequestId>& request_ids, void* executor_token) override;
+  void* CreateExecutorToken(const RequestId& request_id) override;
   void DestroyExecutorToken(void* executor_token) override;
 
   struct Impl;

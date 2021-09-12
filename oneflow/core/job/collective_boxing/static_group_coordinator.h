@@ -32,55 +32,22 @@ class Executor;
 class StaticGroupCoordinator : public Coordinator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StaticGroupCoordinator);
-  StaticGroupCoordinator() = default;
-  ~StaticGroupCoordinator() override = default;
+  StaticGroupCoordinator();
+  ~StaticGroupCoordinator() override;
 
   void Init(std::shared_ptr<RequestStore> request_store,
             std::shared_ptr<Executor> executor) override;
   void InitJob(int64_t job_id) override;
   void DeinitJob(int64_t job_id) override;
   void AddRequest(void* request_token, void* executor_token) override;
-  void* CreateRequestToken(int64_t job_id, int32_t request_id) override;
+  void* CreateRequestToken(const RequestId& request_id) override;
   void DestroyRequestToken(void* token);
 
  private:
   void DumpSummary(const int64_t job_id) const;
 
-  std::shared_ptr<RequestStore> request_store_;
-  std::shared_ptr<Executor> executor_;
-
-  struct GroupState {
-    explicit GroupState(int32_t group_size) : index2is_ready(group_size), ready_request_count(0) {}
-
-    void AddReadyRequest(int32_t index);
-    bool IsReady() const;
-    void Reset();
-
-    std::vector<bool> index2is_ready;
-    int32_t ready_request_count;
-  };
-  std::mutex mutex_;
-  int64_t current_job_id_ = -1;
-  int64_t current_group_idx_in_job_ = -1;
-
-  struct RequestIndex {
-    int32_t group_id;
-    int32_t index_in_group;
-  };
-
-  struct StaticGroupRequestsInfo {
-    std::vector<RequestIndex> request_id2index;
-    std::vector<GroupState> group_states;
-    std::vector<std::vector<int32_t>> group_id2request_ids;
-  };
-
-  struct StaticGroupRequestsInfoToken {
-    int64_t job_id;
-    int32_t request_id;
-    StaticGroupRequestsInfo* info;
-  };
-
-  HashMap<int64_t, StaticGroupRequestsInfo> job_id2static_group_requests_info_;
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
 };
 
 }  // namespace collective
