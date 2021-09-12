@@ -70,10 +70,10 @@ class GPTDataLoader final : public OpKernelState {
 
     batch_size_ = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().At(0);
 
-    // NOTE(zwx): If GPTDataLoader works by DDP, we use world size and rank
-    //     as num_shards and shard_index, otherwise use parallel_hierarchy
-    //     and nd_sbp to infer num_shards and shard_index.
-    if (IsMirroredParallelContext(ctx->parallel_ctx())) {
+    // NOTE(zwx): GPTDataLoader is not consistent since attr nd_sbp is empty,
+    // we assume that it works in DDP
+    auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
+    if (nd_sbp_str_vec.empty()) {
       num_shards_ = GlobalProcessCtx::WorldSize();
       shard_index_ = GlobalProcessCtx::Rank();
     } else {
