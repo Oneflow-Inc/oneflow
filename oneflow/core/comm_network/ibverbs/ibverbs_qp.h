@@ -37,7 +37,7 @@ class ActorMsgMR final {
   }
   ~ActorMsgMR() = default;
 
-  void* addr() { return (void*)message_; }
+  void* addr() { return static_cast<void*>(message_); }
   uint32_t lkey() const { return mr_->lkey; }
   ActorMsg message() const { return *message_; }
   void set_message(const ActorMsg& val) { *message_ = val; }
