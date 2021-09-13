@@ -238,13 +238,13 @@ add_docstr(
         >>> input = flow.tensor(np.array([-0.5,  0.8, 1.0,  -0.8]), dtype=flow.float32)
         >>> output = flow.asin(input)
         >>> output.shape
-        flow.Size([4])
+        oneflow.Size([4])
         >>> output
         tensor([-0.5236,  0.9273,  1.5708, -0.9273], dtype=oneflow.float32)
         >>> input1 = flow.tensor(np.array([[0.8, 1.0], [-0.6, -1.0]]), dtype=flow.float32)
         >>> output1 = input1.asin()
         >>> output1.shape
-        flow.Size([2, 2])
+        oneflow.Size([2, 2])
         >>> output1
         tensor([[ 0.9273,  1.5708],
                 [-0.6435, -1.5708]], dtype=oneflow.float32)
@@ -271,14 +271,14 @@ add_docstr(
         >>> input = flow.tensor(np.array([2, 3, 4]), dtype=flow.float32)
         >>> output = flow.asinh(input)
         >>> output.shape
-        flow.Size([3])
+        oneflow.Size([3])
         >>> output
         tensor([1.4436, 1.8184, 2.0947], dtype=oneflow.float32)
 
         >>> input1 = flow.tensor(np.array([[-1, 0, -0.4], [5, 7, 0.8]]), dtype=flow.float32)
         >>> output1 = input1.asinh()
         >>> output1.shape
-        flow.Size([2, 3])
+        oneflow.Size([2, 3])
         >>> output1
         tensor([[-0.8814,  0.0000, -0.3900],
                 [ 2.3124,  2.6441,  0.7327]], dtype=oneflow.float32)
@@ -306,7 +306,7 @@ add_docstr(
         >>> input = flow.tensor(np.array([0.5, 0.6, 0.7]), dtype=flow.float32)
         >>> output = flow.atan(input)
         >>> output.shape
-        flow.Size([3])
+        oneflow.Size([3])
         
     """,
 )
@@ -337,20 +337,20 @@ add_docstr(
         >>> x = flow.tensor(np.array([0.1, -2, 3.4]).astype(np.float32))
         >>> y = flow.ceil(x)
         >>> y.shape
-        flow.Size([3])
+        oneflow.Size([3])
         >>> y
         tensor([ 1., -2.,  4.], dtype=oneflow.float32)
         >>> x = flow.tensor(np.array([[2.5, 4.6, 0.6],[7.8, 8.3, 9.2]]).astype(np.float32))
         >>> y = x.ceil()
         >>> y.shape
-        flow.Size([2, 3])
+        oneflow.Size([2, 3])
         >>> y
         tensor([[ 3.,  5.,  1.],
                 [ 8.,  9., 10.]], dtype=oneflow.float32)
         >>> x = flow.tensor(np.array([[[2.2, 4.4, 6.5],[7.1, 8.2, 9.3]],[[10.6,11.2,12.2],[13.5,14.8,15.9]]]).astype(np.float32))
         >>> y = flow.ceil(x)
         >>> y.shape
-        flow.Size([2, 2, 3])
+        oneflow.Size([2, 2, 3])
         >>> y
         tensor([[[ 3.,  5.,  7.],
                  [ 8.,  9., 10.]],
@@ -736,14 +736,14 @@ add_docstr(
         >>> x = flow.tensor(np.array([0, -1., 10.]), dtype=flow.float32)
         >>> out = flow.erf(x)
         >>> out.shape
-        flow.Size([3])
+        oneflow.Size([3])
         >>> out.numpy()
         array([ 0.       , -0.8427008,  1.       ], dtype=float32)
 
         >>> x = flow.tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
         >>> out = flow.erf(x)
         >>> out.shape
-        flow.Size([2, 3])
+        oneflow.Size([2, 3])
         >>> out.numpy()
         array([[ 0.        , -0.8427008 ,  1.        ],
                [ 1.        ,  1.        ,  0.74210095]], dtype=float32)
@@ -751,7 +751,7 @@ add_docstr(
         >>> x = flow.tensor(np.array([[0, -1., 10.], [5, 7, 0.8], [2, 3, 4]]), dtype=flow.float32)
         >>> out = x.erf()
         >>> out.shape
-        flow.Size([3, 3])
+        oneflow.Size([3, 3])
         >>> out.numpy()
         array([[ 0.        , -0.8427008 ,  1.        ],
                [ 1.        ,  1.        ,  0.74210095],
@@ -821,14 +821,14 @@ add_docstr(
         >>> x = flow.tensor(np.array([1, 2, 3]).astype(np.float32))
         >>> y = flow.expm1(x)
         >>> y.shape
-        flow.Size([3])
+        oneflow.Size([3])
         >>> y
         tensor([ 1.7183,  6.3891, 19.0855], dtype=oneflow.float32)
 
         >>> x = flow.tensor(np.array([[[2, 4, 6],[7, 8, 9]],[[10,11,12],[13,14,15]]]).astype(np.float32))
         >>> y = flow.expm1(x)
         >>> print(y.shape)
-        flow.Size([2, 2, 3])
+        oneflow.Size([2, 2, 3])
         >>> print(y.numpy())
         [[[6.3890562e+00 5.3598152e+01 4.0242880e+02]
           [1.0956332e+03 2.9799580e+03 8.1020840e+03]]
@@ -1082,7 +1082,7 @@ add_docstr(
         >>> input2 = flow.tensor(np.random.randn(6, 5), dtype=flow.float32)
         >>> of_out = flow.matmul(input1, input2)
         >>> of_out.shape
-        flow.Size([2, 5])
+        oneflow.Size([2, 5])
 
     """,
 )
