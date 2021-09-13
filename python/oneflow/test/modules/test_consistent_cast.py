@@ -224,11 +224,29 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
         z = y.to_local()
         if int(os.getenv("RANK")) == 0:
             test_case.assertTrue(
-                np.array_equal(z.numpy(), np.ones((32, 16), dtype=np.int32))
+                np.array_equal(
+                    z.numpy(),
+                    np.concatenate(
+                        (
+                            np.ones((16, 16), dtype=np.int32),
+                            np.zeros((16, 16), dtype=np.int32),
+                        ),
+                        axis=0,
+                    ),
+                )
             )
         else:
             test_case.assertTrue(
-                np.array_equal(z.numpy(), np.zeros((32, 16), dtype=np.int32))
+                np.array_equal(
+                    z.numpy(),
+                    np.concatenate(
+                        (
+                            np.zeros((16, 16), dtype=np.int32),
+                            np.ones((16, 16), dtype=np.int32),
+                        ),
+                        axis=0,
+                    ),
+                )
             )
 
     def test_cuda_consistent_to_consistent_s2p(test_case):
@@ -244,11 +262,29 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
         z = y.to_local()
         if int(os.getenv("RANK")) == 0:
             test_case.assertTrue(
-                np.array_equal(z.numpy(), np.ones((32, 16), dtype=np.int32))
+                np.array_equal(
+                    z.numpy(),
+                    np.concatenate(
+                        (
+                            np.ones((16, 16), dtype=np.int32),
+                            np.zeros((16, 16), dtype=np.int32),
+                        ),
+                        axis=0,
+                    ),
+                )
             )
         else:
             test_case.assertTrue(
-                np.array_equal(z.numpy(), np.zeros((32, 16), dtype=np.int32))
+                np.array_equal(
+                    z.numpy(),
+                    np.concatenate(
+                        (
+                            np.zeros((16, 16), dtype=np.int32),
+                            np.ones((16, 16), dtype=np.int32),
+                        ),
+                        axis=0,
+                    ),
+                )
             )
 
     def test_cuda_consistent_to_consistent_b2p(test_case):
