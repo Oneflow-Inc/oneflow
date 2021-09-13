@@ -74,7 +74,7 @@ class MinMaxObserver(Module):
 
         >>> weight = (np.random.random((2, 3, 4, 5)) - 0.5).astype(np.float32)
         
-        >>> input_tensor = flow.Tensor(
+        >>> input_tensor = flow.tensor(
         ...    weight, dtype=flow.float32
         ... )
         
@@ -105,7 +105,7 @@ class MinMaxObserver(Module):
         self.per_layer_quantization = per_layer_quantization
 
     def forward(self, input):
-        return flow.F.min_max_observer(
+        return flow._C.min_max_observer(
             input,
             self.quantization_formula,
             self.quantization_bit,

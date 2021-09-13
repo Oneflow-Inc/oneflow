@@ -69,7 +69,7 @@ class DataLoaderGraph(flow.nn.Graph):
 @flow.unittest.skip_unless_1n2d()
 class COCODataLoaderDistributedTestCase(oneflow.unittest.TestCase):
     def test_case1(test_case):
-        rank = flow.distributed.get_rank()
+        rank = flow.env.get_rank()
         # pid = os.getpid()
         # print(f"[{pid}][{rank}] COCODataLoaderDistributedTestCase.test_case1")
 

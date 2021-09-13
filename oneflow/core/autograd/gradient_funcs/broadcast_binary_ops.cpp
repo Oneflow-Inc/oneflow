@@ -69,7 +69,7 @@ class BroadcastSub : public BroadcastBinaryGrad {
       in_grads->at(0) = JUST(functional::BroadcastReduceSumLike(out_grads.at(0), x));
     }
     if (y->requires_grad()) {
-      const auto& grad = JUST(functional::ScalarMul(out_grads.at(0), functional::Scalar(-1.f)));
+      const auto& grad = JUST(functional::ScalarMul(out_grads.at(0), Scalar(-1.f)));
       in_grads->at(1) = JUST(functional::BroadcastReduceSumLike(grad, y));
     }
     return Maybe<void>::Ok();
@@ -86,11 +86,11 @@ class BroadcastMul : public BroadcastBinaryGrad {
     const auto& y = ctx->SavedTensors().at(1);
     in_grads->resize(2);
     if (x->requires_grad()) {
-      const auto& x_grad = JUST(functional::BroadcastMul(out_grads.at(0), y));
+      const auto& x_grad = JUST(functional::Mul(out_grads.at(0), y));
       in_grads->at(0) = JUST(functional::BroadcastReduceSumLike(x_grad, x));
     }
     if (y->requires_grad()) {
-      const auto& y_grad = JUST(functional::BroadcastMul(out_grads.at(0), x));
+      const auto& y_grad = JUST(functional::Mul(out_grads.at(0), x));
       in_grads->at(1) = JUST(functional::BroadcastReduceSumLike(y_grad, y));
     }
     return Maybe<void>::Ok();
@@ -108,17 +108,35 @@ class BroadcastDiv : public BroadcastBinaryGrad {
     const auto& z = ctx->SavedTensors().at(2);
     in_grads->resize(2);
     if (x->requires_grad()) {
-      const auto& x_grad = JUST(functional::BroadcastDiv(out_grads.at(0), y));
+      const auto& x_grad = JUST(functional::Div(out_grads.at(0), y));
       in_grads->at(0) = JUST(functional::BroadcastReduceSumLike(x_grad, x));
     }
-    if (y->requires_grad()) {
-      in_grads->at(1) = JUST(functional::BroadcastDivGrad(out_grads.at(0), z, y));
-    }
+    if (y->requires_grad()) { in_grads->at(1) = JUST(functional::DivGrad(out_grads.at(0), z, y)); }
     return Maybe<void>::Ok();
   }
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_div", BroadcastDiv);
+
+class BroadcastPow : public BroadcastBinaryGrad {
+ public:
+  Maybe<void> Apply(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    const auto& x = ctx->SavedTensors().at(0);
+    const auto& y = ctx->SavedTensors().at(1);
+    const auto& z = ctx->SavedTensors().at(2);
+    in_grads->resize(2);
+    if (x->requires_grad()) {
+      in_grads->at(0) = JUST(functional::BroadcastPowXGrad(out_grads.at(0), x, y, z));
+    }
+    if (y->requires_grad()) {
+      in_grads->at(1) = JUST(functional::BroadcastPowYGrad(out_grads.at(0), x, y, z));
+    }
+    return Maybe<void>::Ok();
+  }
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_pow", BroadcastPow);
 
 class BroadcastMinMax : public BroadcastBinaryGrad {
  public:

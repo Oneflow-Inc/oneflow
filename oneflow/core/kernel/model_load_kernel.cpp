@@ -16,6 +16,8 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/str_util.h"
 #include <iostream>
+#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/persistence/snapshot.h"
 
 namespace oneflow {
 
@@ -35,27 +37,22 @@ struct InitializeWithConfUtil final {
 
 }  // namespace
 
-class ModelLoadKernel final : public KernelIf<DeviceType::kCPU> {
+class ModelLoadKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ModelLoadKernel);
   ModelLoadKernel() = default;
   ~ModelLoadKernel() override = default;
 
  private:
-  void Forward(const KernelCtx& ctx,
-               const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
-    ForwardDataContent(ctx, BnInOp2Blob);
-  }
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
+  void Forward(KernelContext* ctx) const override { ForwardDataContent(ctx); }
+  void ForwardDataContent(KernelContext* ctx) const override {
     const ModelLoadOpConf& conf = this->op_conf().model_load_conf();
-    const Blob* path_blob = BnInOp2Blob("path");
+    const Blob* path_blob = ctx->BnInOp2Blob("path");
     const std::string path(path_blob->dptr<char>(), path_blob->shape_view().elem_cnt());
     SnapshotReader reader(path);
     FOR_RANGE(int64_t, i, 0, conf.out_size()) {
       const VariableOpConf& original_variable_conf = conf.original_variable_conf(i);
-      Blob* out_i = BnInOp2Blob(GenRepeatedBn("out", i));
+      Blob* out_i = ctx->BnInOp2Blob(GenRepeatedBn("out", i));
       const std::string key =
           GenLogicalBlobName(conf.variable_op_name(i), original_variable_conf.out());
       if (reader.HasKey(key)) {

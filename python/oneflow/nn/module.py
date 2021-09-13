@@ -67,16 +67,10 @@ class Module(object):
     def consistent(self):
         return self._consistent
 
-    def forward(self, *args):
+    def forward(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def consistent_forward(self, *args):
-        return self.forward(*args)
-
-    def force_mirrored_forward(self, *args):
-        raise NotImplementedError()
-
-    def __call__(self, *args):
+    def __call__(self, *args, **kwargs):
         for hook in itertools.chain(self._forward_pre_hooks.values()):
             result = hook(self, args)
             if result is not None:
@@ -84,7 +78,7 @@ class Module(object):
                     result = (result,)
                 args = result
 
-        res = self.forward(*args)
+        res = self.forward(*args, **kwargs)
 
         for hook in itertools.chain(self._forward_hooks.values()):
             result = hook(self, args, res)
@@ -472,20 +466,32 @@ class Module(object):
     def _apply(self, fn):
         for module in self.children():
             module._apply(fn)
+
+        def can_use_assign_copy(tensor, tensor_applied):
+            return tensor.is_local == tensor_applied.is_local
+
         for (key, param) in self._parameters.items():
-            if param is not None:
-                assert isinstance(param, Parameter)
-                assert param.is_leaf
+            if param is None:
+                continue
+
+            assert isinstance(param, Parameter)
+            assert param.is_leaf
+            with flow.no_grad():
+                param_applied = fn(param)
+            param_applied.requires_grad = param.requires_grad
+
+            if param.grad is not None:
+                assert param.grad.is_leaf
                 with flow.no_grad():
-                    param_applied = fn(param)
+                    grad_applied = fn(param.grad)
+                grad_applied.requires_grad = param.grad.requires_grad
+                param_applied.grad = grad_applied
+
+            if can_use_assign_copy(param_applied, param):
+                self._parameters[key].data = param_applied
+            else:
                 self._parameters[key] = Parameter(param_applied, param.requires_grad)
-                if param.grad is not None:
-                    assert param.grad.is_leaf
-                    with flow.no_grad():
-                        grad_applied = fn(param.grad)
-                    self._parameters[key].grad = grad_applied.requires_grad_(
-                        param.grad.requires_grad
-                    )
+
         for (key, buf) in self._buffers.items():
             if buf is not None:
                 self._buffers[key] = fn(buf)
@@ -508,6 +514,58 @@ class Module(object):
             return t.to_consistent(placement=placement, sbp=sbp)
 
         return self._apply(convert)
+
+    def cpu(self: T) -> T:
+        r"""Moves all model parameters and buffers to the CPU.
+
+        .. note::
+            This method modifies the module in-place.
+
+        Returns:
+            Module: self
+        """
+        return self._apply(lambda t: t.cpu())
+
+    def cuda(self: T, device: Optional[Union[int, flow.device]] = None) -> T:
+        r"""Moves all model parameters and buffers to the GPU.
+
+        This also makes associated parameters and buffers different objects. So
+        it should be called before constructing optimizer if the module will
+        live on GPU while being optimized.
+
+        .. note::
+            This method modifies the module in-place.
+
+        Args:
+            device (int, optional): if specified, all parameters will be
+                copied to that device
+
+        Returns:
+            Module: self
+        """
+        return self._apply(lambda t: t.cuda(device))
+
+    def float(self: T) -> T:
+        r"""Casts all floating point parameters and buffers to ``float`` datatype.
+
+        .. note::
+            This method modifies the module in-place.
+
+        Returns:
+            Module: self
+        """
+        return self._apply(lambda t: t.float() if t.is_floating_point() else t)
+
+    def double(self: T) -> T:
+        r"""Casts all floating point parameters and buffers to ``double`` datatype.
+
+        .. note::
+            This method modifies the module in-place.
+
+        Returns:
+            Module: self
+        """
+        return self._apply(lambda t: t.double() if t.is_floating_point() else t)
 
     def _get_name(self):
         return self.__class__.__name__

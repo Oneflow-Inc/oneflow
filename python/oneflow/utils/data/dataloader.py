@@ -517,7 +517,7 @@ class _BaseDataLoaderIter(object):
         self._timeout = loader.timeout
         self._collate_fn = loader.collate_fn
         self._sampler_iter = iter(self._index_sampler)
-        self._base_seed = flow.Tensor([0], dtype=flow.int64).uniform_().numpy().item()
+        self._base_seed = flow.tensor([0], dtype=flow.int64).uniform_().numpy().item()
         # TODO: flow.empty()
         # self._base_seed = flow.empty((), dtype=flow.int64).random_(generator=loader.generator).item()
         self._persistent_workers = loader.persistent_workers

@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -48,12 +49,14 @@ Maybe<one::TensorTuple> Interpret(const one::OpExpr& op,
 }
 
 Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const Symbol<ParallelDesc>& placement,
+                                  const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
                                   const AttrMap& attrs) {
   CHECK_EQ_OR_RETURN(op.input_size(), 0)
       << " the op :  " << op.op_type_name()
       << " is NOT source op with input_size = " << op.input_size();
+  const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
   return JUST(one::OpInterpUtil::Dispatch<one::TensorTuple>(
-      op, {}, one::OpExprInterpContext(attrs, placement)));
+      op, {}, one::OpExprInterpContext(attrs, placement, nd_sbp)));
 }
 
 Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const Symbol<Device>& device,
@@ -102,8 +105,9 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
            })
       .def("apply",
            [](const one::OpExpr& op_expr, const Symbol<ParallelDesc>& placement,
+              const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
               const MutableCfgAttrMap& attrs) {
-             return Interpret(op_expr, placement, attrs).GetPtrOrThrow();
+             return Interpret(op_expr, placement, sbp_tuple, attrs).GetPtrOrThrow();
            })
       .def("apply", [](const one::OpExpr& op_expr, const Symbol<Device>& device,
                        const MutableCfgAttrMap& attrs) {
@@ -124,6 +128,9 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
   PybindExportOpExpr<one::FeedInputOpExpr, cfg::FeedInputOpConf>(m, "FeedInputOpExpr");
   PybindExportOpExpr<one::FeedVariableOpExpr, cfg::FeedVariableOpConf>(m, "FeedVariableOpExpr");
   PybindExportOpExpr<one::FetchOutputOpExpr, cfg::FetchOutputOpConf>(m, "FetchOutputOpExpr");
+  PybindExportOpExpr<one::ImageDecoderRandomCropResizeOpExpr,
+                     cfg::ImageDecoderRandomCropResizeOpConf>(m,
+                                                              "ImageDecoderRandomCropResizeOpExpr");
 }
 
 }  // namespace oneflow

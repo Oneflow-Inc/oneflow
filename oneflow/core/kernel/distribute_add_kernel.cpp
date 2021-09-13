@@ -27,30 +27,27 @@ void CheckSizeAndCopyBlob(DeviceCtx* ctx, Blob* dst, const Blob* src) {
 }  // namespace
 
 template<DeviceType device_type>
-class DistributeAddKernel final : public KernelIf<device_type> {
+class DistributeAddKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DistributeAddKernel);
   DistributeAddKernel() = default;
   ~DistributeAddKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelCtx&,
-                          const std::function<Blob*(const std::string&)>&) const override;
-  const Blob* GetInBlob(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void ForwardDataContent(KernelContext* ctx) const override;
+  const Blob* GetInBlob(KernelContext* ctx) const;
 };
 
 template<DeviceType device_type>
-void DistributeAddKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  CheckSizeAndCopyBlob(ctx.device_ctx, BnInOp2Blob("out"), GetInBlob(BnInOp2Blob));
+void DistributeAddKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
+  CheckSizeAndCopyBlob(ctx->device_ctx(), ctx->BnInOp2Blob("out"), GetInBlob(ctx));
 }
 
 template<DeviceType device_type>
-const Blob* DistributeAddKernel<device_type>::GetInBlob(
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+const Blob* DistributeAddKernel<device_type>::GetInBlob(KernelContext* ctx) const {
   const Blob* in_blob = nullptr;
   FOR_RANGE(int, i, 0, this->op_attribute().input_bns().size()) {
-    const Blob* cur_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(i));
+    const Blob* cur_blob = ctx->BnInOp2Blob(this->op_attribute().input_bns().Get(i));
     if (cur_blob != nullptr && cur_blob != in_blob) {
       CHECK_ISNULL(in_blob);
       in_blob = cur_blob;

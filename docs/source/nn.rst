@@ -33,6 +33,7 @@ Operators for neural networks
         Embedding,
         Flatten,
         GELU,
+        GLU,
         GroupNorm,
         Hardsigmoid,
         Hardswish,
@@ -53,12 +54,14 @@ Operators for neural networks
         MaxPool1d,
         MaxPool2d,
         MaxPool3d,
+        ModuleDict,
+        ModuleList,
         Mish,
         NLLLoss,
         OFRecordImageDecoder,
         OFRecordImageDecoderRandomCrop,
-        OfrecordRawDecoder,
-        OfrecordReader,
+        OFRecordRawDecoder,
+        OFRecordReader,
         OFRecordBytesDecoder,
         PReLU,
         Parameter,
@@ -87,3 +90,7 @@ Operators for neural networks
         FakeQuantization,
         Quantization
 
+.. autofunction:: oneflow.nn.parallel.DistributedDataParallel
+
+.. currentmodule:: oneflow.nn.utils
+.. autofunction:: oneflow.nn.utils.clip_grad_norm_

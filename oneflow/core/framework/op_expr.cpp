@@ -44,6 +44,7 @@ BuiltinOpExpr::BuiltinOpExpr(const std::string& op_name,
 DEFINE_OPEXPR_OP_TYPE_NAME(FeedInputOpConf, "feed_input");
 DEFINE_OPEXPR_OP_TYPE_NAME(FeedVariableOpConf, "feed_variable");
 DEFINE_OPEXPR_OP_TYPE_NAME(FetchOutputOpConf, "fetch_output");
+DEFINE_OPEXPR_OP_TYPE_NAME(ImageDecoderRandomCropResizeOpConf, "image_gpu_decode");
 DEFINE_OPEXPR_OP_TYPE_NAME(VariableOpConf, "variable");
 DEFINE_OPEXPR_OP_TYPE_NAME(CastToMirroredOpConf, "cast_to_mirrored");
 DEFINE_OPEXPR_OP_TYPE_NAME(CastFromMirroredOpConf, "cast_from_mirrored");
@@ -84,6 +85,7 @@ DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(FeedInputOpConf, true);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(FeedVariableOpConf, true);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(FetchOutputOpConf, true);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(VariableOpConf, true);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(ImageDecoderRandomCropResizeOpConf, true);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(CastToMirroredOpConf, false);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(CastFromMirroredOpConf, false);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(DistributeSplitOpConf, false);
@@ -107,17 +109,16 @@ Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
   return Maybe<void>::Ok();
 }
 
-Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(const Device& device) const {
+Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(Symbol<Device> device) const {
   const auto& it = device2kernel_.find(device);
   if (it != device2kernel_.end()) { return it->second; }
 
   std::shared_ptr<OperatorConf> op_conf = std::make_shared<OperatorConf>();
   JUST(BuildOpConf(op_conf.get(), {}));
-  op_conf->set_device_tag(JUST(device.of_type()));
-  std::shared_ptr<const ParallelDesc> parallel_desc = device.parallel_desc_ptr();
-  const auto& opkernel =
-      JUST(StatefulLocalOpKernel::New(op_conf, SymbolOf(device), base_attrs(), parallel_desc,
-                                      input_arg_tuple(), output_arg_tuple()));
+  op_conf->set_device_tag(JUST(device->of_type()));
+  auto parallel_desc = JUST(Placement4Device(device)).shared_from_symbol();
+  const auto& opkernel = JUST(StatefulLocalOpKernel::New(
+      op_conf, device, base_attrs(), parallel_desc, input_arg_tuple(), output_arg_tuple()));
   device2kernel_.emplace(device, opkernel);
   return opkernel;
 }
@@ -298,10 +299,7 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
     UNIMPLEMENTED();
     return *(const cfg::NdSbp*)nullptr;
   }
-  int64_t parallel_num() const override {
-    UNIMPLEMENTED();
-    return 1;
-  }
+  int64_t parallel_num() const override { return 1; }
 };
 
 class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
@@ -465,6 +463,21 @@ Maybe<void> BuiltinOpExprImpl<FetchOutputOpConf>::BuildOpConf(OperatorConf* op_c
 
 template<>
 Maybe<OpExprGradClosure> BuiltinOpExprImpl<FetchOutputOpConf>::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+template<>
+Maybe<void> BuiltinOpExprImpl<ImageDecoderRandomCropResizeOpConf>::BuildOpConf(
+    OperatorConf* op_conf, const AttrMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_image_decoder_random_crop_resize_conf()) = op_proto_;
+  return Maybe<void>::Ok();
+}
+
+template<>
+Maybe<OpExprGradClosure>
+BuiltinOpExprImpl<ImageDecoderRandomCropResizeOpConf>::GetOrCreateOpGradClosure() const {
   UNIMPLEMENTED_THEN_RETURN();
 }
 

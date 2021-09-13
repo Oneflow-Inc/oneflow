@@ -23,6 +23,8 @@ class AccActor final : public Actor {
   AccActor() = default;
   ~AccActor() override = default;
 
+  using Actor::Init;
+
  private:
   void Act() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
@@ -65,16 +67,15 @@ void AccActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt) {
 void AccActor::Act() {
   Regst* out_regst = GetNaiveCurWriteable("out");
   Regst* in_regst = GetNaiveCurReadable("in");
-  KernelCtx kernel_ctx = GenDefaultKernelCtx();
   if (acc_cnt_ == 0) {
     const Blob* in_blob = in_regst->GetMutSoleBlob();
     Blob* out_blob = out_regst->GetMutSoleBlob();
     if (GetDeviceType() == DeviceType::kCPU) {
-      Memcpy<DeviceType::kCPU>(kernel_ctx.device_ctx, out_blob->ForceMutDptr(), in_blob->dptr(),
+      Memcpy<DeviceType::kCPU>(mut_device_ctx().get(), out_blob->ForceMutDptr(), in_blob->dptr(),
                                out_blob->ByteSizeOfBlobBody());
     } else if (GetDeviceType() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
-      Memcpy<DeviceType::kGPU>(kernel_ctx.device_ctx, out_blob->ForceMutDptr(), in_blob->dptr(),
+      Memcpy<DeviceType::kGPU>(mut_device_ctx().get(), out_blob->ForceMutDptr(), in_blob->dptr(),
                                out_blob->ByteSizeOfBlobBody());
 #else
       UNIMPLEMENTED();
@@ -83,7 +84,7 @@ void AccActor::Act() {
       UNIMPLEMENTED();
     }
   } else {
-    AsyncLaunchKernel(kernel_ctx);
+    AsyncLaunchKernel();
   }
   acc_cnt_ += 1;
 }

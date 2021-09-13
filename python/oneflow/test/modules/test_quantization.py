@@ -121,7 +121,7 @@ def _check_quantize(
         )
         out_np = quant_per_layer_cambricon(input_flatten, quantization_bit, scale_np[0])
     rmse = np.sqrt(np.mean((out_of - out_np) ** 2))
-    assert rmse <= 1.0, "quantization op has bug!"
+    assert rmse <= 2.0, "quantization op has bug!"
 
 
 def _run_test_quantize(
@@ -135,7 +135,9 @@ def _run_test_quantize(
     per_layer_quantization,
 ):
     input = (np.random.random(in_shape) - 0.5).astype(type_name_to_np_type[dtype])
-    input_tensor = flow.Tensor(input, device=flow.device(device_type))
+    input_tensor = flow.tensor(
+        input, dtype=flow.float32, device=flow.device(device_type)
+    )
     min_max_observer = flow.nn.MinMaxObserver(
         quantization_formula=quantization_formula,
         quantization_bit=quantization_bit,

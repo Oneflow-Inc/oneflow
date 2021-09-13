@@ -21,5 +21,6 @@ from oneflow.compatible.single_client.framework.sysconfig import (
     has_rpc_backend_grpc,
     has_rpc_backend_local,
     with_cuda,
+    get_cuda_version,
     with_xla,
 )

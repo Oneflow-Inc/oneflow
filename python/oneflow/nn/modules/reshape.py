@@ -53,10 +53,10 @@ def reshape_op(input, shape: Sequence[int] = None):
 
         >>> y = flow.reshape(input, shape=[2, 2, 2, -1]).shape
         >>> y
-        flow.Size([2, 2, 2, 2])
+        oneflow.Size([2, 2, 2, 2])
 
     """
-    return flow.F.reshape(input, shape)
+    return flow._C.reshape(input, shape)
 
 
 @register_tensor_op("reshape")
@@ -84,14 +84,14 @@ def reshape_tensor_op(input, *shape):
 
         >>> y = input.reshape(2, 2, 2, -1).shape
         >>> y
-        flow.Size([2, 2, 2, 2])
+        oneflow.Size([2, 2, 2, 2])
 
     """
     if _input_args_is_int(shape):
         new_shape = _single(shape)
     else:
         raise ValueError("the input shape parameter of reshape is not illegal!")
-    return flow.F.reshape(input, new_shape)
+    return flow._C.reshape(input, new_shape)
 
 
 @register_tensor_op("view")
@@ -149,7 +149,7 @@ def view_op(input, *shape):
         new_shape = _single(*shape)
     else:
         raise ValueError("the input shape parameter of view is not illegal!")
-    return flow.F.reshape(input, new_shape)
+    return flow._C.reshape(input, new_shape)
 
 
 if __name__ == "__main__":

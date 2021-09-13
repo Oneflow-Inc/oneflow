@@ -64,7 +64,7 @@ class Quantization(Module):
 
         >>> weight = (np.random.random((2, 3, 4, 5)) - 0.5).astype(np.float32)
         
-        >>> input_tensor = flow.Tensor(
+        >>> input_tensor = flow.tensor(
         ...    weight, dtype=flow.float32
         ... )
         
@@ -102,7 +102,7 @@ class Quantization(Module):
         self.quantization_scheme = quantization_scheme
 
     def forward(self, input, scale, zero_point):
-        return flow.F.quantization(
+        return flow._C.quantization(
             input,
             scale,
             zero_point,

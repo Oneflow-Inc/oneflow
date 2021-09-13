@@ -57,12 +57,22 @@ class NoArgNoRetMockNNGraph : public NNGraphIf {
     return empty;
   }
 
+  const std::vector<bool>& inputs_valid() const override {
+    static std::vector<bool> empty;
+    return empty;
+  }
+
+  const std::vector<bool>& outputs_valid() const override {
+    static std::vector<bool> empty;
+    return empty;
+  }
+
  private:
   const std::string job_name_;
 };
 
 TEST(RunLazyJobInstructionType, simple) {
-  vm::TestResourceDescScope resource_scope(0, 1);
+  vm::TestResourceDescScope resource_scope(1, 1);
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"RunLazyJob"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
@@ -113,7 +123,7 @@ TEST(RunLazyJobInstructionType, simple) {
 }
 
 TEST(RunLazyJobInstructionType, wait_for_another_job_finished) {
-  vm::TestResourceDescScope resource_scope(0, 1);
+  vm::TestResourceDescScope resource_scope(1, 1);
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"RunLazyJob"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());

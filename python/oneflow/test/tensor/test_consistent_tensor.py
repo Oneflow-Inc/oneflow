@@ -18,10 +18,10 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
-
 import oneflow as flow
 import oneflow.unittest
+
+from automated_test_util import *
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -56,13 +56,28 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.Tensor(*shape, placement=placement, sbp=sbp)
         test_case.assertTrue(x.is_consistent)
         # ConsistentTensor -> LocalTensor
-        y = flow.Tensor(x)
+        y = flow.Tensor(x, device="cpu")
         test_case.assertTrue(y.is_local)
         y = flow.Tensor(x, device="cuda")
         test_case.assertTrue(y.is_local)
 
     @flow.unittest.skip_unless_1n1d()
-    def test_tensor_autograd_related_methods(test_case):
+    def test_consistent_set_data(test_case):
+        x_placement = flow.placement("cpu", {0: 0})
+        x_sbp = flow.sbp.broadcast
+        x = flow.ones(2, 3, placement=x_placement, sbp=x_sbp)
+        y_placement = flow.placement("cuda", {0: 0})
+        y_sbp = flow.sbp.split(0)
+        y = flow.ones(4, 5, placement=y_placement, sbp=y_sbp)
+        old_id = id(x)
+        x.data = y
+        test_case.assertEqual(old_id, id(x))
+        test_case.assertTrue(x.shape == (4, 5))
+        test_case.assertTrue(x.placement == y_placement)
+        test_case.assertTrue(x.sbp[0] == y_sbp)
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_consistent_tensor_autograd_related_methods(test_case):
         placement = flow.placement("cuda", {0: 0})
         sbp = flow.sbp.split(0)
         shape = (2, 3, 4, 5)
@@ -70,7 +85,8 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertFalse(l_x.requires_grad)
         test_case.assertTrue(l_x.is_leaf)
 
-        l_y = flow.Tensor(*shape, requires_grad=True)
+        l_y = flow.Tensor(*shape)
+        l_y.requires_grad = True
         test_case.assertTrue(l_y.requires_grad)
         test_case.assertTrue(l_y.is_leaf)
 
@@ -89,7 +105,8 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(m.is_leaf)
         test_case.assertFalse(m.requires_grad)
 
-        l_v = flow.Tensor(*shape, requires_grad=True)
+        l_v = flow.Tensor(*shape)
+        l_v.requires_grad = True
         v = l_v.to_consistent(placement=placement, sbp=sbp)
 
         z.retain_grad()
@@ -114,6 +131,26 @@ class TestTensor(flow.unittest.TestCase):
             )
         )
         test_case.assertIsNone(l_x.grad)
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_consistent_tensor_unsupported_property(test_case):
+
+        shape = (2, 3)
+        placement = flow.placement("cuda", {0: 0})
+        sbp = flow.sbp.split(0)
+        a = flow.Tensor(*shape)
+        b = a.to_consistent(placement=placement, sbp=sbp)
+        test_case.assertTrue(b.is_consistent)
+
+        with test_case.assertRaises(
+            oneflow._oneflow_internal.exception.RuntimeException
+        ):
+            b.device()
+
+        with test_case.assertRaises(
+            oneflow._oneflow_internal.exception.RuntimeException
+        ):
+            b._tensor_buffer_shapes_and_dtypes
 
 
 if __name__ == "__main__":

@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/common/id_util.h"
 
 namespace oneflow {
 
@@ -37,12 +38,16 @@ struct PlanUtil {
   static void SetForceInplaceMemBlock(Plan* plan);
   static void DumpCtrlRegstInfoToPlan(Plan* plan);
   static void GenCollectiveBoxingPlan(Job* job, Plan* plan);
+  static void GenRegisterHint(Plan* plan);
+  static void PlanMemoryLog(Plan* plan, const std::string& plan_name);
   static const oneflow::OpAttribute& GetOpAttribute(const Plan* plan, int64_t job_id,
                                                     const oneflow::KernelConf& kernel_conf);
   // NOTE(chengcheng): recovery op_attr
   static void PopulateOpAttibute(
       Plan* plan,
       const PbMap<int64_t, ::oneflow::OpAttributeRefTable>& job_id2op_attribute_ref_table);
+  static StreamId GetStreamId(const TaskProto& task);
+  static int64_t GetDeviceIndex(const TaskProto& task);
 };
 
 }  // namespace oneflow

@@ -85,12 +85,15 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CAST_KERNEL(device)                                              \
-  REGISTER_USER_KERNEL("cast").SetCreateFn<CastKernel<device>>().SetIsMatchedHob( \
-      user_op::HobDeviceTag() == device);                                         \
-  REGISTER_USER_KERNEL("cast_like")                                               \
-      .SetCreateFn<CastKernel<device>>()                                          \
-      .SetIsMatchedHob(user_op::HobDeviceTag() == device);
+#define REGISTER_CAST_KERNEL(device)                                                               \
+  REGISTER_USER_KERNEL("cast").SetCreateFn<CastKernel<device>>().SetIsMatchedHob(                  \
+      (user_op::HobDeviceTag() == device) & (user_op::HobDataType("in", 0) != DataType::kBFloat16) \
+      & (user_op::HobDataType("out", 0) != DataType::kBFloat16));                                  \
+  REGISTER_USER_KERNEL("cast_like")                                                                \
+      .SetCreateFn<CastKernel<device>>()                                                           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                         \
+                       & (user_op::HobDataType("in", 0) != DataType::kBFloat16)                    \
+                       & (user_op::HobDataType("out", 0) != DataType::kBFloat16));
 
 REGISTER_CAST_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA

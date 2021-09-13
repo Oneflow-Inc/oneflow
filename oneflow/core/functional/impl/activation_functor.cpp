@@ -24,8 +24,8 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/function_library.h"
-#include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -164,11 +164,47 @@ class GeluGradFunctor : public BinaryFunctor {
   }
 };
 
-class HardSigmoidFunctor : public UnaryFunctor {
+class GluFunctor {
+ public:
+  GluFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
+    auto ndim = input->ndim();
+    CHECK_GT_OR_RETURN(ndim, 0) << "glu does not support 0-dimensional tensors";
+    CHECK_OR_RETURN(dim >= -ndim && dim < ndim)
+        << ", Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got " << dim << ")";
+    if (dim < 0) { dim += ndim; }
+    int64_t nc = input->dim(dim);
+    CHECK_EQ_OR_RETURN(nc % 2, 0) << "Halving dimension must be even, but dimension " << dim
+                                  << " is size " << nc;
+    nc = nc / 2;
+    std::vector<int64_t> split_sizes(2, nc);
+    auto split_x = JUST(SplitWithSize(input, split_sizes, dim));
+    auto sgmd_x1 = JUST(Sigmoid(split_x->at(1)));
+    return Mul(split_x->at(0), sgmd_x1);
+  }
+};
+
+class HardSigmoidFunctor {
  public:
   HardSigmoidFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("hardsigmoid").Input("in").Output("out").Build());
   }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, bool inplace) const {
+    if (inplace) {
+      JUST(CheckInplaceValid(input));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = input;
+      JUST(OpInterpUtil::Dispatch(*op_, {input}, outputs.get(), AttrMap{}));
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {input});
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class HardSigmoidGradFunctor : public BinaryFunctor {
@@ -307,6 +343,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::EluGradFunctor>("EluGrad");
   m.add_functor<impl::GeluFunctor>("Gelu");
   m.add_functor<impl::GeluGradFunctor>("GeluGrad");
+  m.add_functor<impl::GluFunctor>("Glu");
   m.add_functor<impl::HardSigmoidFunctor>("HardSigmoid");
   m.add_functor<impl::HardSigmoidGradFunctor>("HardSigmoidGrad");
   m.add_functor<impl::SoftmaxFunctor>("Softmax");

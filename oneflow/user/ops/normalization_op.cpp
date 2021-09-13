@@ -243,17 +243,22 @@ REGISTER_USER_OP("normalization_add_relu")
     .OptionalOutput("inv_variance")
     .Attr<int32_t>("axis")
     .Attr<float>("epsilon")
+    .Attr<bool>("training")
     .Attr<float>("momentum")
     .SetInputArgModifyFn(FwInputArgModifyFn)
     .SetLogicalTensorDescInferFn(
         MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
                                    user_op::TensorDesc* reserve_space) -> Maybe<void> {
           const auto& x_desc = ctx->InputTensorDesc("x", 0);
-          const auto& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
           size_t reserve_space_bits = x_desc.shape().elem_cnt();
-          if (x_sbp.has_split_parallel()) {
-            CHECK_EQ_OR_RETURN(x_sbp.split_parallel().axis(), 0);
-            reserve_space_bits = reserve_space_bits / ctx->parallel_num();
+          int64_t parallel_num = ctx->parallel_num();
+          if (parallel_num != 1) {
+            // There no need to call SbpParallel4ArgNameAndIndex when parallel_num = 1 in local.
+            const cfg::SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
+            if (x_sbp.has_split_parallel()) {
+              CHECK_EQ_OR_RETURN(x_sbp.split_parallel().axis(), 0);
+              reserve_space_bits = reserve_space_bits / ctx->parallel_num();
+            }
           }
           *reserve_space->mut_shape() =
               Shape({static_cast<int64_t>(RoundUp(reserve_space_bits, 32) / 32)});
@@ -635,26 +640,6 @@ REGISTER_USER_OP_GRAD("normalization")
                           .Build();
                     });
 
-      // TODO(liujuncheng): delete identity op when boxing support separated regsts
-      const auto gamma_identity_op_name = ctx->FwOp().op_name() + "_grad_gamma_diff_identity";
-      ctx->DefineOp(gamma_identity_op_name,
-                    [&ctx, &grad_op_name](user_op::BackwardOpBuilder& builder) {
-                      return builder.OpTypeName("identity")
-                          .InputBind("in", ctx->GetOp(grad_op_name).output("gamma_diff", 0))
-                          .Output("out")
-                          .Build();
-                    });
-
-      // TODO(liujuncheng): delete identity op when boxing support separated regsts
-      const auto beta_identity_op_name = ctx->FwOp().op_name() + "_grad_beta_diff_identity";
-      ctx->DefineOp(beta_identity_op_name,
-                    [&ctx, &grad_op_name](user_op::BackwardOpBuilder& builder) {
-                      return builder.OpTypeName("identity")
-                          .InputBind("in", ctx->GetOp(grad_op_name).output("beta_diff", 0))
-                          .Output("out")
-                          .Build();
-                    });
-
       ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
                                 [&ctx, &is_training, &is_fp16, &grad_op_name, &dx_f2h_cast_op_name,
                                  &dy_mul_inv_var_op_name]() -> const std::string& {
@@ -670,12 +655,12 @@ REGISTER_USER_OP_GRAD("normalization")
                                 });
 
       ctx->FwOp().InputGradBind(user_op::OpArg("gamma", 0),
-                                [&ctx, &gamma_identity_op_name]() -> const std::string& {
-                                  return ctx->GetOp(gamma_identity_op_name).output("out", 0);
+                                [&ctx, &grad_op_name]() -> const std::string& {
+                                  return ctx->GetOp(grad_op_name).output("gamma_diff", 0);
                                 });
       ctx->FwOp().InputGradBind(user_op::OpArg("beta", 0),
-                                [&ctx, &beta_identity_op_name]() -> const std::string& {
-                                  return ctx->GetOp(beta_identity_op_name).output("out", 0);
+                                [&ctx, &grad_op_name]() -> const std::string& {
+                                  return ctx->GetOp(grad_op_name).output("beta_diff", 0);
                                 });
       return Maybe<void>::Ok();
     });
@@ -702,26 +687,6 @@ REGISTER_USER_OP_GRAD("normalization_add_relu")
         return builder.Build();
       });
 
-      // TODO(liujuncheng): delete identity op when boxing support separated regsts
-      const auto gamma_identity_op_name = ctx->FwOp().op_name() + "_grad_gamma_diff_identity";
-      ctx->DefineOp(gamma_identity_op_name,
-                    [&ctx, &grad_op_name](user_op::BackwardOpBuilder& builder) {
-                      return builder.OpTypeName("identity")
-                          .InputBind("in", ctx->GetOp(grad_op_name).output("gamma_diff", 0))
-                          .Output("out")
-                          .Build();
-                    });
-
-      // TODO(liujuncheng): delete identity op when boxing support separated regsts
-      const auto beta_identity_op_name = ctx->FwOp().op_name() + "_grad_beta_diff_identity";
-      ctx->DefineOp(beta_identity_op_name,
-                    [&ctx, &grad_op_name](user_op::BackwardOpBuilder& builder) {
-                      return builder.OpTypeName("identity")
-                          .InputBind("in", ctx->GetOp(grad_op_name).output("beta_diff", 0))
-                          .Output("out")
-                          .Build();
-                    });
-
       ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
                                 [&ctx, &grad_op_name]() -> const std::string& {
                                   return ctx->GetOp(grad_op_name).output("dx", 0);
@@ -733,12 +698,12 @@ REGISTER_USER_OP_GRAD("normalization_add_relu")
                                   });
       }
       ctx->FwOp().InputGradBind(user_op::OpArg("gamma", 0),
-                                [&ctx, &gamma_identity_op_name]() -> const std::string& {
-                                  return ctx->GetOp(gamma_identity_op_name).output("out", 0);
+                                [&ctx, &grad_op_name]() -> const std::string& {
+                                  return ctx->GetOp(grad_op_name).output("gamma_diff", 0);
                                 });
       ctx->FwOp().InputGradBind(user_op::OpArg("beta", 0),
-                                [&ctx, &beta_identity_op_name]() -> const std::string& {
-                                  return ctx->GetOp(beta_identity_op_name).output("out", 0);
+                                [&ctx, &grad_op_name]() -> const std::string& {
+                                  return ctx->GetOp(grad_op_name).output("beta_diff", 0);
                                 });
       return Maybe<void>::Ok();
     });

@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
@@ -89,21 +90,35 @@ class RunLazyJobInstructionType final : public InstructionType {
     const auto& cur_nn_graph = GetCurNNGraph(instruction);
     auto* device_ctx = GetLazyJobDeviceCtx(instruction);
 
+    OF_PROFILER_RANGE_PUSH("WaitUntilQueueEmptyIfFrontNNGraphNotEquals");
     device_ctx->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(cur_nn_graph);
+    OF_PROFILER_RANGE_POP();  // WaitUntilQueueEmptyIfFrontNNGraphNotEquals
     {
+      OF_PROFILER_RANGE_PUSH("MakeJobInstance");
       const auto& job_instance = MakeJobInstance(instruction);
+      OF_PROFILER_RANGE_POP();  // MakeJobInstance
+      OF_PROFILER_RANGE_PUSH("Send all buffers to BufferMgr");
       const auto& job_name = job_instance->job_name();
       auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
-      for (const auto& op_name : cur_nn_graph->inputs_op_names()) {
-        buffer_mgr->Get(GetInputBufferName(job_name, op_name))->Send(job_instance);
+      for (int i = 0; i < cur_nn_graph->inputs_op_names().size(); ++i) {
+        if (cur_nn_graph->inputs_valid().at(i)) {
+          const std::string& input_op_name = cur_nn_graph->inputs_op_names().at(i);
+          buffer_mgr->Get(GetInputBufferName(job_name, input_op_name))->Send(job_instance);
+        }
       }
-      for (const auto& op_name : cur_nn_graph->outputs_op_names()) {
-        buffer_mgr->Get(GetOutputBufferName(job_name, op_name))->Send(job_instance);
+      for (int i = 0; i < cur_nn_graph->outputs_op_names().size(); ++i) {
+        if (cur_nn_graph->outputs_valid().at(i)) {
+          const std::string& output_op_name = cur_nn_graph->outputs_op_names().at(i);
+          buffer_mgr->Get(GetOutputBufferName(job_name, output_op_name))->Send(job_instance);
+        }
       }
       buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Send(job_instance);
       buffer_mgr->Get(GetSourceTickBufferName(job_name))->Send(job_instance);
+      OF_PROFILER_RANGE_POP();  // BufferMgr
     }
+    OF_PROFILER_RANGE_PUSH("EnqueueNNGraph");
     device_ctx->EnqueueNNGraph(cur_nn_graph);
+    OF_PROFILER_RANGE_POP();  // EnqueueNNGraph
   }
 
  private:
@@ -129,26 +144,32 @@ class RunLazyJobInstructionType final : public InstructionType {
     HashMap<std::string, std::function<void(int64_t)>> push_cbs;
     CHECK_EQ(nn_graph->inputs_op_names().size(), phy_instr_operand->inputs()->size());
     for (int i = 0; i < nn_graph->inputs_op_names().size(); ++i) {
-      const auto& op_name = nn_graph->inputs_op_names().at(i);
-      const auto* blob = &phy_instr_operand->inputs()->at(i)->blob();
-      const auto& PushCb = [blob](int64_t of_blob_ptr) {
-        OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-        of_blob->mut_blob()->CopyHeaderFrom(of_blob->mut_device_ctx(), blob);
-        of_blob->mut_blob()->CopyDataContentFrom(of_blob->mut_device_ctx(), blob);
-      };
-      CHECK(push_cbs.emplace(op_name, PushCb).second);
+      if (nn_graph->inputs_valid().at(i)) {
+        const auto* blob = &phy_instr_operand->inputs()->at(i)->blob();
+        CHECK(blob != nullptr);
+        const auto& op_name = nn_graph->inputs_op_names().at(i);
+        const auto& PushCb = [blob](int64_t of_blob_ptr) {
+          OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+          of_blob->mut_blob()->CopyHeaderFrom(of_blob->mut_device_ctx(), blob);
+          of_blob->mut_blob()->CopyDataContentFrom(of_blob->mut_device_ctx(), blob);
+        };
+        CHECK(push_cbs.emplace(op_name, PushCb).second);
+      }
     }
     HashMap<std::string, std::function<void(int64_t)>> pull_cbs;
     CHECK_EQ(nn_graph->outputs_op_names().size(), phy_instr_operand->outputs()->size());
     for (int i = 0; i < nn_graph->outputs_op_names().size(); ++i) {
-      const auto& op_name = nn_graph->outputs_op_names().at(i);
-      auto* mut_blob = phy_instr_operand->outputs()->at(i)->mut_blob();
-      const auto& PullCb = [mut_blob](int64_t of_blob_ptr) {
-        OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-        mut_blob->CopyHeaderFrom(of_blob->mut_device_ctx(), &of_blob->blob());
-        mut_blob->CopyDataContentFrom(of_blob->mut_device_ctx(), &of_blob->blob());
-      };
-      CHECK(pull_cbs.emplace(op_name, PullCb).second);
+      if (nn_graph->outputs_valid().at(i)) {
+        auto* mut_blob = phy_instr_operand->outputs()->at(i)->mut_blob();
+        CHECK(mut_blob != nullptr);
+        const auto& op_name = nn_graph->outputs_op_names().at(i);
+        const auto& PullCb = [mut_blob](int64_t of_blob_ptr) {
+          OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+          mut_blob->CopyHeaderFrom(of_blob->mut_device_ctx(), &of_blob->blob());
+          mut_blob->CopyDataContentFrom(of_blob->mut_device_ctx(), &of_blob->blob());
+        };
+        CHECK(pull_cbs.emplace(op_name, PullCb).second);
+      }
     }
     const auto& FinishCb = [this, instruction]() {
       auto* device_ctx = GetLazyJobDeviceCtx(instruction);

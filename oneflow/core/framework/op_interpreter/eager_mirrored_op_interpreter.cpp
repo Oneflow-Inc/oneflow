@@ -119,7 +119,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   printf("\neager_mirrored_op_interpreter.cpp >> NaiveInterpret() >> Infer devices\n");
   if (!user_op_expr.has_device_infer_fn()) {
     op_device = default_device;
-    op_parallel_desc = op_device->parallel_desc_ptr();
+    op_parallel_desc = JUST(Placement4Device(op_device)).shared_from_symbol();
     for (int i = 0; i < outputs->size(); i++) {
       auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
       *JUST(tensor_impl->mut_device()) = default_device;
@@ -131,7 +131,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       const auto& input_device = JUST(input_tensor->device());
       need_event_record = need_event_record || !(*op_device == *input_device);
     }
-    op_parallel_desc = op_device->parallel_desc_ptr();
+    op_parallel_desc = JUST(Placement4Device(op_device)).shared_from_symbol();
   }
 
   // Infer shapes and dtypes
@@ -152,7 +152,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
     if (!output_eager_blob_objects->at(i)) {
       tensor_impl->mut_tensor_meta()->set_stride(std::make_shared<Stride>(*tensor_impl->shape()));
-      const auto& dep_object = JUST(GetLocalDepObject(op_device));
+      const auto& dep_object = JUST(GetLocalDepObjectFromDevicePool(op_device));
       JUST(tensor_impl->InitEagerBlobObject(dep_object));
       output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
     } else {
@@ -163,7 +163,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
   }
 
-  const auto& kernel = JUST(user_op_expr.MutKernel4Device(*op_device));
+  const auto& kernel = JUST(user_op_expr.MutKernel4Device(op_device));
   kernel->set_need_check_mem_case(need_check_mem_case);
 
   for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
@@ -179,8 +179,10 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
         CHECK_OR_RETURN(static_cast<bool>(tensor));
         // Instruction `SoftSyncStream` records event which can be used to synchronize cuda
         // stream
+        const auto& tensor_device = JUST(tensor->device());
+        const auto& tensor_placement = JUST(Placement4Device(tensor_device));
         JUST(builder->SoftSyncStream(JUST(tensor->compute_local_dep_object()), "mut",
-                                     JUST(tensor->device())->parallel_desc_ptr()));
+                                     tensor_placement.shared_from_symbol()));
       }
     }
     printf("\neager_mirrored_op_interpreter.cpp >> builder->LocalCallOpKernel()\n");
@@ -244,25 +246,17 @@ Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, in
       .Build();
 }
 
-Maybe<one::UserOpExpr> FindOrCreatEagerNcclBroadcastOpExpr(Symbol<ParallelDesc> parallel_desc) {
-  static thread_local HashMap<Symbol<ParallelDesc>, std::shared_ptr<one::UserOpExpr>>
-      parallel_desc2eager_nccl_broadcast;
-  auto iter = parallel_desc2eager_nccl_broadcast.find(parallel_desc);
-  if (iter == parallel_desc2eager_nccl_broadcast.end()) {
-    int64_t root = JUST(parallel_desc->MachineId4ParallelId(0));
-    std::shared_ptr<UserOpExpr> op_expr = JUST(EagerNcclBroadcast(parallel_desc, root));
-    iter = parallel_desc2eager_nccl_broadcast.emplace(parallel_desc, op_expr).first;
-  }
-  return iter->second;
-}
+auto* CachedEagerNcclBroadcastOpExpr = DECORATE(&EagerNcclBroadcast, ThreadLocal);
+
 }  // namespace
 
-Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, Symbol<ParallelDesc> parallel_desc) {
+Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
+                        Symbol<ParallelDesc> parallel_desc, bool inplace) {
   CHECK_OR_RETURN(parallel_desc->containing_current_rank());
   if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
-  std::shared_ptr<UserOpExpr> op_expr = JUST(FindOrCreatEagerNcclBroadcastOpExpr(parallel_desc));
-  if (JUST(parallel_desc->MachineId4ParallelId(0)) == GlobalProcessCtx::Rank()) {
-    // inplace.
+  int64_t root = JUST(parallel_desc->MachineId4ParallelId(src_rank));
+  std::shared_ptr<UserOpExpr> op_expr = JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, root));
+  if (root == GlobalProcessCtx::Rank() || inplace) {
     TensorTuple outputs{tensor};
     JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs,
                                 one::OpExprInterpContext(AttrMap{}, parallel_desc)));
@@ -279,10 +273,10 @@ Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
                                          Symbol<ParallelDesc> parallel_desc,
                                          Symbol<cfg::NdSbp> nd_sbp) {
   Optional<int64_t> parallel_id;
-  JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
+  JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   if (!parallel_id.has_value()) { return tensor; }
   const auto& broadcast_parallel_desc = JUST(GetBroadcastSubParallelDesc(parallel_desc, nd_sbp));
-  return Broadcast(tensor, broadcast_parallel_desc);
+  return Broadcast(tensor, /* root */ 0, broadcast_parallel_desc, false);
 }
 
 Maybe<Shape> CalcPhysicalShape(Symbol<ConsistentTensorMeta> consistent_tensor_meta) {
@@ -323,7 +317,7 @@ Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const Te
     CHECK_OR_RETURN(!inputs.at(0)->is_consistent());
     const auto& input_tensor = JUST(inputs.at(0)->detach());
     input_mirrored_tensor = JUST(input_tensor->AsMirroredTensor());
-    CHECK_OR_RETURN(input_mirrored_tensor) << Error::ValueError("Tensor Cast Error");
+    CHECK_OR_RETURN(input_mirrored_tensor) << Error::InvalidValueError("Tensor Cast Error");
     bool requires_grad = autograd::GradMode::is_enabled() && inputs.at(0)->requires_grad();
     input_mirrored_tensor->set_requires_grad(requires_grad);
     input_mirrored_tensor->set_is_leaf(!requires_grad);
@@ -339,13 +333,13 @@ Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const Te
     ConsistentTensorMeta tensor_meta(std::make_shared<const Shape>(logical_shape), dtype, nd_sbp,
                                      parallel_desc);
     Optional<int64_t> parallel_id{};
-    const auto& device = JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
+    const auto& device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
     const auto& consistent_tensor_impl = JUST(EagerConsistentTensorImpl::New(
         SymbolOf(tensor_meta), device, parallel_id, input_mirrored_tensor->requires_grad(),
         !input_mirrored_tensor->requires_grad()));
     consistent_tensor = std::make_shared<ConsistentTensor>(consistent_tensor_impl);
     if (parallel_id.has_value()) {
-      CHECK_EQ_OR_RETURN(dtype, input_mirrored_tensor->dtype()->data_type());
+      CHECK_OR_RETURN(dtype == input_mirrored_tensor->dtype()->data_type());
       consistent_tensor_impl->reset_cur_rank_phy_tensor(input_mirrored_tensor);
     }
   }
