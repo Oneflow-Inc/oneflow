@@ -16,8 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_LOSS_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_LOSS_KERNEL_UTIL_H_
 
-#include <string>
-#include <oneflow/core/common/util.h>
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 namespace user_op {
@@ -25,7 +24,7 @@ namespace loss {
 
 enum class ReductionType { kNone, kSum, kMean, kNotImplemented };
 
-ReductionType GetReductionType(const std::string& reduction) {
+inline ReductionType GetReductionType(const std::string& reduction) {
   if (reduction == "mean") {
     return ReductionType::kMean;
   } else if (reduction == "none") {
@@ -35,6 +34,18 @@ ReductionType GetReductionType(const std::string& reduction) {
   }
   UNIMPLEMENTED();
   return ReductionType::kNotImplemented;
+}
+
+template<typename T>
+void ApplyLossReductionCpu(int64_t elem_cnt, const T* tmp_out, T* out,
+                           const ReductionType reduction_type) {
+  if ((reduction_type != ReductionType::kMean) && (reduction_type != ReductionType::kSum)) {
+    UNIMPLEMENTED();
+    return;
+  }
+  *out = static_cast<T>(0);
+  FOR_RANGE(int64_t, i, 0, elem_cnt) { *out += tmp_out[i]; }
+  if (reduction_type == ReductionType::kMean) { *out /= elem_cnt; }
 }
 
 }  // namespace loss

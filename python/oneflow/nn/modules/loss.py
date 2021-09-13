@@ -285,25 +285,7 @@ class BCELoss(Module):
         self.reduction = reduction
 
     def forward(self, input, target):
-        assert (
-            input.shape == target.shape
-        ), "The Input shape must be the same as Target shape"
-        _cross_entropy_loss = flow.negative(
-            target * flow.log(input) + (1 - target) * flow.log(1 - input)
-        )
-        if self.weight is not None:
-            assert (
-                self.weight.shape == input.shape
-            ), "The weight shape must be the same as Input shape"
-            _weighted_loss = self.weight * _cross_entropy_loss
-        else:
-            _weighted_loss = _cross_entropy_loss
-        if self.reduction == "mean":
-            return flow.mean(_weighted_loss)
-        elif self.reduction == "sum":
-            return flow.sum(_weighted_loss)
-        else:
-            return _weighted_loss
+        return flow._C.binary_cross_entropy(input, target, self.weight, self.reduction)
 
 
 class NLLLoss(Module):

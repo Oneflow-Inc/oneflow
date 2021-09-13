@@ -175,19 +175,19 @@ def test_bce_loss(dim=int, with_logits: bool = False):
 class TestBCELossModule(flow.unittest.TestCase):
     @autotest()
     def test_bce_loss_with_random_data_dim_2(test_case):
-        test_bce_loss(2)
+        return test_bce_loss(2)
 
     @autotest()
     def test_bce_loss_with_random_data_dim_3(test_case):
-        test_bce_loss(3)
+        return test_bce_loss(3)
 
     @autotest()
     def test_bce_loss_with_random_data_dim_4(test_case):
-        test_bce_loss(4)
+        return test_bce_loss(4)
 
     @autotest()
     def test_bce_loss_with_random_data_dim_5(test_case):
-        test_bce_loss(5)
+        return test_bce_loss(5)
 
 
 @flow.unittest.skip_unless_1n1d()
