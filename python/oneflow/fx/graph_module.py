@@ -15,6 +15,7 @@ limitations under the License.
 """
 import oneflow
 from oneflow.framework.tensor import Tensor
+from oneflow.fx.node import Target
 import oneflow.nn as nn
 import linecache
 from typing import Type, Dict, List, Any, Union, Optional, Set
@@ -151,8 +152,12 @@ internal_oneflow_funcs = [
 oneflow_funcs = dir(oneflow)
 for funcs_name in oneflow_funcs:
     if not funcs_name.startswith("_") and funcs_name not in internal_oneflow_funcs:
-        # _wrapped_methods_to_patch.append((oneflow, funcs_name))
         callable_dict[funcs_name] = getattr(oneflow, funcs_name)
+
+oneflow_nn_funcs = dir(oneflow.nn.functional)
+for funcs_name in oneflow_nn_funcs:
+    if not funcs_name.startswith("_"):
+        callable_dict[funcs_name] = getattr(oneflow.nn.functional, funcs_name)
 
 @compatibility(is_backward_compatible=True)
 class GraphModule(oneflow.nn.Module):
@@ -263,13 +268,17 @@ class GraphModule(oneflow.nn.Module):
         """
         assert isinstance(g, Graph), f"Expected a Graph instance, but got {type(g)}"
         for x in g.nodes:
-            if type(x.target) is str and (not hasattr(oneflow.Tensor, x.target)) and x.op=="call_method":
+            if type(x.target) is str and (x.target[:2] != "nn") and (not hasattr(oneflow.Tensor, x.target)) and hasattr(oneflow, x.target) and x.op=="call_method":
                 with g.inserting_after(x):
-                    # y = g.call_function("oneflow.nn.functional.avg_pool2d" ,args=x.args, kwargs=x.kwargs)
                     y = g.create_node("call_function", callable_dict[x.target], args=x.args, kwargs=x.kwargs)
                 x.replace_all_uses_with(y)
                 g.erase_node(x)
-        
+            elif type(x.target) is str and (x.target[:2] == "nn"):
+                with g.inserting_after(x):
+                    y = g.create_nn_function_node("call_function", callable_dict[x.target.split('.')[-1]], args=x.args, kwargs=x.kwargs)
+                x.replace_all_uses_with(y)
+                g.erase_node(x)
+
         self._graph = g
         g.owning_module = self
         self.recompile()

@@ -467,6 +467,32 @@ class Graph:
         self._len += 1
         return n
 
+    def create_nn_function_node(
+        self,
+        op: str,
+        target: "Target",
+        args: Optional[Tuple["Argument", ...]] = None,
+        kwargs: Optional[Dict[str, "Argument"]] = None,
+        name: Optional[str] = None,
+        type_expr: Optional[Any] = None,
+    ) -> Node:
+        assert op in (
+            "call_function",
+        )
+        args = () if args is None else args
+        kwargs = {} if kwargs is None else kwargs
+        assert isinstance(args, tuple), "args must be a tuple"
+        assert isinstance(kwargs, dict), "kwargs must be a dict"
+        candidate = name if name is not None else self._target_to_str(target)
+        name = self._graph_namespace.create_name(candidate, None)
+        n = Node(self, name, op, target, args, kwargs, type_expr)
+
+        self._graph_namespace.associate_name_with_obj(name, n)
+
+        self._insert(n)
+        self._len += 1
+        return n
+
     @compatibility(is_backward_compatible=True)
     def erase_node(self, to_erase: Node) -> None:
         """
@@ -921,6 +947,7 @@ class Graph:
 
             # normalize the name hint to get a proper identifier
             global_name = namespace.create_name(name_hint, obj)
+            
 
             if global_name in globals_:
                 assert globals_[global_name] is obj
@@ -1012,6 +1039,12 @@ class Graph:
             elif node.op == "call_function":
                 assert callable(node.target)
                 # pretty print operators
+                
+                if hasattr(oneflow, node.target.__name__) == False and hasattr(oneflow.nn.functional, node.target.__name__):
+                    qualified_name = "oneflow.nn.functional." + node.target.__name__
+                else:
+                    qualified_name = _get_qualified_name(node.target)
+
                 if (
                     node.target.__module__ == "_operator"
                     and node.target.__name__ in magic_methods
@@ -1022,8 +1055,12 @@ class Graph:
                         f"{magic_methods[node.target.__name__].format(*(repr(a) for a in node.args))}"
                     )
                     return
-                qualified_name = _get_qualified_name(node.target)
-                global_name = add_global(qualified_name, node.target)
+                
+                if qualified_name.startswith("oneflow.nn.functional") != None:
+                    global_name = qualified_name
+                else:
+                    global_name = add_global(qualified_name, node.target)
+
                 if (
                     global_name == "getattr"
                     and isinstance(node.args, tuple)
