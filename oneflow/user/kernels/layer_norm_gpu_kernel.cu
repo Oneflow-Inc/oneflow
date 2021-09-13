@@ -175,7 +175,7 @@ int GetLayerNormForwardNumBlocks(const int num_instances) {
 // Using Naive algorithem to calculate mean and var.  
 // For more information you can check this: https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Na%C3%AFve_algorithm
 template<typename T, typename ComputeType>
-__global__ void LayerNormNativeForwardImpl(const int num_instances, const int norm_size,
+__global__ void LayerNormForwardImpl(const int num_instances, const int norm_size,
                                      const double epsilon, const T* x, const T* gamma,
                                      const T* beta, ComputeType* mean, ComputeType* inv_variance,
                                      T* normalized, T* y) {
