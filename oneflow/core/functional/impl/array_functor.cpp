@@ -690,7 +690,7 @@ class ReshapeFunctor {
         CHECK_GE_OR_RETURN(x_count, count);
         remark_infer_shape.Set(need_infer_axis, x_count / count);
         CHECK_EQ_OR_RETURN(remark_infer_shape.Count(0), x_count)
-            << "Shape " << shape.ToString() << " is invalid for input of shape "
+            << "\n Shape " << shape.ToString() << " is invalid for input shape "
             << x->shape()->ToString();
       }
       if (remark_infer_shape.NumAxes() > 0 && x->shape()->NumAxes() > 0
@@ -703,14 +703,14 @@ class ReshapeFunctor {
     } else {
       if (need_infer_axis == -1) {
         CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
-            << "Shape " << shape.ToString() << " is invalid for input of shape "
+            << "\n Shape " << shape.ToString() << " is invalid for input shape "
             << x->shape()->ToString();
         JUST(attrs.SetAttr<Shape>("shape", shape));
       } else {
         Shape infered_shape = shape;
         infered_shape.Set(need_infer_axis, x_count / count);
         CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
-            << "Shape " << shape.ToString() << " is invalid for input of shape "
+            << "\n Shape " << shape.ToString() << " is invalid for input shape "
             << x->shape()->ToString();
         JUST(attrs.SetAttr<Shape>("shape", infered_shape));
       }
