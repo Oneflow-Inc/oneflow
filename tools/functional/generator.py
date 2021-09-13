@@ -17,7 +17,6 @@ import os
 import re
 import argparse
 import yaml
-import hashlib
 
 types_allowed = {
     "Void",
@@ -76,9 +75,9 @@ mangled_name = {
     "TensorIndex": "Ti",
     "Device": "De",
     "Placement": "P",
-    "Sbp": "Sb",
-    "SbpList": "Sbl",
-    "PyObject*": "Po",
+    "Sbp": "Sbp",
+    "SbpList": "Sbpl",
+    "PyObject*": "Pyo",
 }
 
 generic_type_aliases = {
