@@ -222,16 +222,17 @@ class Argument:
         sp = self._name.find("=")
         if sp != -1:
             self._default_value = _normalize(self._name[sp + 1 :])
-            if self._type.endswith("List"):
-                _value_list = [
-                    self._default_value for i in range(self._size)
-                ]  # For int32List[2] = 1, _value_list will be [1, 1]
-                self._default_cpp_value = (
-                    "{" + ", ".join(_value_list) + "}"
-                )  # [1, 1] -> "{1, 1}"
-            elif self._default_value == "None":
+            if self._default_value == "None":
                 self._optional = True
                 self._default_cpp_value = ""
+            elif self._type.endswith("List"):
+                if self._default_value != "None":
+                    _value_list = [
+                        self._default_value for i in range(self._size)
+                    ]  # For int32List[2] = 2, _value_list will be ["2", "2"]
+                    self._default_cpp_value = (
+                        "{" + ", ".join(_value_list) + "}"
+                    )  # ["2", "2"] -> "{2, 2}"
             elif self._default_value in value_aliases:
                 self._default_cpp_value = value_aliases[self._default_value]
             else:
