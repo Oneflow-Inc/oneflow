@@ -29,16 +29,16 @@ class IBVerbsMessagePool final {
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsMessagePool);
   IBVerbsMessagePool() = delete;
   ~IBVerbsMessagePool();
-  IBVerbsMessagePool(ibv_pd* pd, uint32_t actor_msg_mr_num);
+  IBVerbsMessagePool(ibv_pd* pd, uint32_t num_msg_per_bluk_allocation);
   
-  void RegisterIBMemoryForMessagePool();
   ActorMsgMR* GetMessage();
   void PutMessage(ActorMsgMR* msg_mr);
 
  private:
+  void BulkAllocMessage();
   ActorMsgMR* GetMessageFromBuf();
   ibv_pd* pd_;
-  size_t actor_msg_mr_num_;
+  size_t num_msg_per_bluk_allocation_;
   std::mutex message_buf_mutex_;
   std::deque<ActorMsgMR*> message_buf_;
   std::deque<ibv_mr*> ibv_mr_buf_;

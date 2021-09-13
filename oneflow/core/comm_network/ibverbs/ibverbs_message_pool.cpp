@@ -31,12 +31,12 @@ IBVerbsMessagePool::~IBVerbsMessagePool() {
     memory_buf_.clear();
 }
 
-IBVerbsMessagePool::IBVerbsMessagePool(ibv_pd* pd, uint32_t  actor_msg_mr_num)
-    : pd_(pd),  actor_msg_mr_num_( actor_msg_mr_num) {}
+IBVerbsMessagePool::IBVerbsMessagePool(ibv_pd* pd, uint32_t  num_msg_per_bluk_allocation)
+    : pd_(pd),  num_msg_per_bluk_allocation_(num_msg_per_bluk_allocation) {}
 
-void IBVerbsMessagePool::RegisterIBMemoryForMessagePool() {
+void IBVerbsMessagePool::BulkAllocMessage() {
   size_t message_size = sizeof(ActorMsg);
-  size_t register_memory_size = message_size *  actor_msg_mr_num_;
+  size_t register_memory_size = message_size *  num_msg_per_bluk_allocation_;
   char* addr = (char*)malloc(register_memory_size);
   ibv_mr* mr = ibv::wrapper.ibv_reg_mr_wrap(
       pd_, addr, register_memory_size,
@@ -44,7 +44,7 @@ void IBVerbsMessagePool::RegisterIBMemoryForMessagePool() {
   CHECK(mr);
   ibv_mr_buf_.push_back(mr);
   memory_buf_.push_back(addr);
-  for (size_t i = 0; i <  actor_msg_mr_num_; i++) {
+  for (size_t i = 0; i <  num_msg_per_bluk_allocation_; i++) {
     char* split_addr = addr + message_size * i;
     ActorMsgMR* msg_mr = new ActorMsgMR(mr, split_addr, message_size);
     message_buf_.push_back(msg_mr);
@@ -53,17 +53,17 @@ void IBVerbsMessagePool::RegisterIBMemoryForMessagePool() {
 
 ActorMsgMR* IBVerbsMessagePool::GetMessage() {
   std::unique_lock<std::mutex> msg_buf_lck(message_buf_mutex_);
-  if (message_buf_.empty() == false) {
+  if (!message_buf_.empty()) {
     return GetMessageFromBuf();
   } else {
-    RegisterIBMemoryForMessagePool();
+    BulkAllocMessage();
     return GetMessageFromBuf();
   }
 }
 
 ActorMsgMR* IBVerbsMessagePool::GetMessageFromBuf() {
-  ActorMsgMR* msg_mr = message_buf_.front();
-  message_buf_.pop_front();
+  ActorMsgMR* msg_mr = message_buf_.back();
+  message_buf_.pop_back();
   return msg_mr;
 }
 
