@@ -78,8 +78,6 @@ def _test_graph_reshape_acc(test_case):
         def build(self, x, y):
             out = self.pp_m(x)
             y = y.to_consistent(P1, B)
-            print(out.shape)
-            print(y.shape)
             loss = self.loss_fn(out, y)
             loss.backward()
             return loss
@@ -92,7 +90,6 @@ def _test_graph_reshape_acc(test_case):
         x = x.to_consistent(P0, B)
         y = y.to_consistent(P1, B)
         out = pp_g(x, y)
-        print(out.to_local())
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
