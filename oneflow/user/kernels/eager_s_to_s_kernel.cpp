@@ -121,8 +121,14 @@ size_t InferNaiveSToSKernelTmpBufferSize(user_op::InferContext* ctx) {
   const Shape& shape = ctx->Attr<Shape>("shape");
   const std::string& out_parallel_conf_txt = ctx->Attr<std::string>("out_parallel_conf");
   Symbol<ParallelDesc> out_parallel_desc = CHECK_JUST(TxtStringToPlacement(out_parallel_conf_txt));
-  size_t tensor_byte_size = shape.elem_cnt() / out_parallel_desc->parallel_num()
-                            * GetSizeOfDataType(in_tensor.data_type());
+  const std::string& in_parallel_conf_txt = ctx->Attr<std::string>("in_parallel_conf");
+  Symbol<ParallelDesc> in_parallel_desc = CHECK_JUST(TxtStringToPlacement(in_parallel_conf_txt));
+  int64_t maximum_parallel_num =
+      out_parallel_desc->parallel_num() > in_parallel_desc->parallel_num()
+          ? out_parallel_desc->parallel_num()
+          : in_parallel_desc->parallel_num();
+  size_t tensor_byte_size =
+      shape.elem_cnt() / maximum_parallel_num * GetSizeOfDataType(in_tensor.data_type());
   return tensor_byte_size;
 }
 
