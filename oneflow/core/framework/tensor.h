@@ -257,15 +257,7 @@ class TensorIf : public Tensor {
 
 class Parameter final : public TensorIf<Parameter> {
  public:
-  Parameter(std::shared_ptr<Tensor> tensor, bool requires_grad) {
-    while (auto parameter = std::dynamic_pointer_cast<Parameter>(tensor)) {
-      tensor = parameter->tensor_;
-    }
-    this->tensor_ = std::move(tensor);
-    // TODO: in `y = flow.nn.Parameter(x)`, y should have its own "requires_grad" field
-    // (align with PyTorch) instead of sharing it with x
-    this->tensor_->set_requires_grad(requires_grad);
-  }
+  Parameter(std::shared_ptr<Tensor> tensor, bool requires_grad);
 
   const std::shared_ptr<const Shape>& shape() const override { return tensor_->shape(); }
   Symbol<DType> dtype() const override { return tensor_->dtype(); }

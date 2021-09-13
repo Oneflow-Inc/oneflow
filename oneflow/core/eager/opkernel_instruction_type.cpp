@@ -665,6 +665,9 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
     JUST(ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
       // pin inputs
       dtr_blob_object->pin();
+      return Maybe<void>::Ok();
+    }));
+    JUST(ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
       if (!dtr_blob_object->is_in_memory()) {
         CHECK_GT_OR_RETURN(dtr_blob_object->input_size(), 0);
         // TODO: recursive recompute the inputs

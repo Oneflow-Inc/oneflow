@@ -95,6 +95,7 @@ Maybe<void> DTREagerBlobObject::InitBlobAttrs(std::shared_ptr<vm::LocalCallOpKer
   // last_access_time_ = Global<one::DTRTensorPool>::Get()->duration();
 
   compute_op_ = operand;
+  could_evict_ = (input_size() > 0) && could_evict_;
 
   return Maybe<void>::Ok();
 }
@@ -137,9 +138,9 @@ Maybe<double> DTREagerBlobObject::child_cost() {
   for (auto operand: user_ops_) {
     auto* ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(operand.get());
     CHECK_NOTNULL_OR_RETURN(ptr);
-    for (const auto& input : *ptr->outputs()) {
-      CHECK_OR_RETURN(static_cast<bool>(input.get()));
-      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(input.get());
+    for (const auto& output : *ptr->outputs()) {
+      CHECK_OR_RETURN(static_cast<bool>(output.get()));
+      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(output.get());
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
       if (!dtr_blob_object->is_in_memory()) {
         auto com_time = dtr_blob_object->compute_time();

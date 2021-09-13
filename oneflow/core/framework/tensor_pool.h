@@ -43,7 +43,9 @@ struct DTRTensorPool {
 private:
     // shared_ptr or not?
     // downcast to DTREagerBlobObject*, could use unique interfaces
-    std::unordered_set<vm::DTREagerBlobObject*> candidates_;
+    // At first, we use unordered_set for efficiency. Now use vector to view id of candidates in order.
+    // std::unordered_set<vm::DTREagerBlobObject*> candidates_;
+    std::vector<vm::DTREagerBlobObject*> candidates_;
     std::chrono::steady_clock::time_point start_time_;
 
 };

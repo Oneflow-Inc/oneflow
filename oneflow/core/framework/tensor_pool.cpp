@@ -27,17 +27,21 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
     double min_cost = -1;
     vm::DTREagerBlobObject* best(nullptr);
     int tensor_id = 0;
+    int evict_tensor_id = -1;
+    std::cout << "Finding best tensor to evict..." << std::endl;
     for (auto tensor : candidates_) {
-        tensor_id++;
-        std::cout << "Is_in_memory: " << static_cast<bool>(tensor->is_in_memory()) << " " << "Is pinned: " << (tensor->is_pinned()) << std::endl;
-        if (static_cast<bool>(tensor->compute_op()) && !tensor->is_pinned() && (tensor->input_size()>0) && tensor->is_in_memory()) {
+        std::cout << "Is_in_memory: " << static_cast<bool>(tensor->is_in_memory()) << " " << "Is pinned: " << (tensor->num_pinned()) << std::endl;
+        if (static_cast<bool>(tensor->compute_op()) && !tensor->is_pinned() && (tensor->is_evictable()) && tensor->is_in_memory()) {
             auto cur_cost = JUST(tensor->cost());
             if (min_cost < 0 || min_cost > cur_cost) {
                 best = tensor;
                 min_cost = cur_cost;
+                evict_tensor_id = tensor_id;
             }
         }
+        tensor_id++;
     }
+    std::cout << "Evict " << evict_tensor_id << "th tensor." << std::endl;
     return best;
 }
 
@@ -50,15 +54,23 @@ Maybe<void> DTRTensorPool::find_best_tensor_and_evict() {
 
 Maybe<void> DTRTensorPool::insert(vm::DTREagerBlobObject* blob_object, size_t thres) {
     CHECK_NOTNULL_OR_RETURN(blob_object);
-    if ((blob_object->input_size() > 0) && (blob_object->memory() > thres)) {
-        candidates_.insert(blob_object);
+    if ((blob_object->is_evictable()) && (blob_object->memory() > thres)) {
+        // for unordered_set version
+        // candidates_.insert(blob_object);
+        // for vector version
+        if (std::find(candidates_.begin(), candidates_.end(), blob_object) == candidates_.end()) {
+            candidates_.emplace_back(blob_object);
+        }
     }
     return Maybe<void>::Ok();
 }
 
 Maybe<void> DTRTensorPool::evict(vm::DTREagerBlobObject* blob_object) {
     CHECK_NOTNULL_OR_RETURN(blob_object);
-    candidates_.erase(blob_object);
+    // for unordered_set version
+    // candidates_.erase(blob_object);
+    // for vector version
+    candidates_.erase(std::remove(candidates_.begin(), candidates_.end(), blob_object), candidates_.end());
     return Maybe<void>::Ok();
 }
 
@@ -72,12 +84,13 @@ double DTRTensorPool::duration() {
 }
 
 void DTRTensorPool::display() {
-    std::cout << "Info of current tensor pool:" << std::endl;
+    std::cout << "===== Info of current tensor pool =====" << std::endl;
     std::cout << "Number of candidates: " << candidates_.size() << std::endl;
     size_t id = 0;
     for (const auto& candidate : candidates_) {
-        std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", input size: " << candidate->input_size() << std::endl;
+        std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", input size: " << candidate->input_size() << ", is_evictable: " << candidate->is_evictable() << ", number of user_ops: " << candidate->num_user_ops() << std::endl;
     }
+    std::cout << "===== End info =====" << std::endl;
 }
 
 }   // namespace one

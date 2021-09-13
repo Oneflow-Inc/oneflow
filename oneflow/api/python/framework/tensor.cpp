@@ -41,6 +41,20 @@ namespace oneflow {
 
 namespace one {
 
+Parameter::Parameter(std::shared_ptr<Tensor> tensor, bool requires_grad) {
+  while (auto parameter = std::dynamic_pointer_cast<Parameter>(tensor)) {
+    tensor = parameter->tensor_;
+  }
+  this->tensor_ = std::move(tensor);
+  // TODO: in `y = flow.nn.Parameter(x)`, y should have its own "requires_grad" field
+  // (align with PyTorch) instead of sharing it with x
+  this->tensor_->set_requires_grad(requires_grad);
+  auto blob_object = CHECK_JUST(tensor_->eager_blob_object());
+  if (auto* dtr_eager_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(blob_object.get())) {
+    dtr_eager_blob_object->set_evict_attr(false);
+  }
+}
+
 namespace {
 
 const Symbol<DType>* GetTensorDType(const Tensor& tensor) {

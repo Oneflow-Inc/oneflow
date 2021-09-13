@@ -132,6 +132,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
         compute_op_ = nullptr;
         node_ = nullptr;
         user_ops_ = std::vector<std::shared_ptr<LocalCallOpKernelPhyInstrOperand>>();
+        could_evict_ = true;
       }
   DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
@@ -142,6 +143,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
                     compute_op_ = nullptr;
                     node_ = nullptr;
                     user_ops_ = std::vector<std::shared_ptr<LocalCallOpKernelPhyInstrOperand>>();
+                    could_evict_ = true;
                   }
   ~DTREagerBlobObject() override {
     non_pod_initer_.reset();
@@ -165,10 +167,14 @@ class DTREagerBlobObject final : public EagerBlobObject {
     // std::cout << "Compute time: " << compute_time_ << std::endl;
   }
   void set_last_access_time(double val) { last_access_time_ = val; }
+  void set_evict_attr(bool val) { could_evict_ = val; }
 
   // DTR Strategy
   bool is_in_memory();
   bool is_pinned() { return (pinned_ > 0); }
+  int num_pinned() { return pinned_; }
+  int num_user_ops() { return user_ops_.size(); }
+  bool is_evictable() {return could_evict_; }
   void pin() { pinned_++; std::cout << "pinned" << std::endl; }
   void unpin() { pinned_--; std::cout << "unpinned" << std::endl; }
   void update_access_time();
@@ -192,6 +198,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
 
  private:
   bool evict_flag_ = false;
+  bool could_evict_;
   double compute_time_;
   double last_access_time_;
   size_t pinned_;
