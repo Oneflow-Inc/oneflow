@@ -84,7 +84,7 @@ if __name__ == "__main__":
                 {
                     "test_suite": "cpu",
                     "cuda_version": 10.2,
-                    "extra_flags": "--extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=OFF --extra_oneflow_cmake_args=-DRPC_BACKEND=LOCAL --cpu",
+                    "extra_flags": "--extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=OFF --extra_oneflow_cmake_args=-DRPC_BACKEND=LOCAL --extra_oneflow_cmake_args=-DWITH_ASAN=ON --cpu",
                     "os": ["self-hosted", "linux", "build"],
                     "allow_fail": False,
                     "python_version": "3.6,3.7",
