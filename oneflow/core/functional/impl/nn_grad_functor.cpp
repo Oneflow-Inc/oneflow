@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -23,7 +24,6 @@ limitations under the License.
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
-#include "oneflow/core/functional/scalar.h"
 
 namespace oneflow {
 namespace one {
@@ -441,6 +441,41 @@ class NormalizationGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class NormalizationAddReluGradFunctor {
+ public:
+  NormalizationAddReluGradFunctor() {
+    addend_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu_grad")
+                                .Input("x")
+                                .Input("dy")
+                                .Input("mean")
+                                .Input("inv_variance")
+                                .Input("gamma")
+                                .Input("beta")
+                                .Input("reserve_space")
+                                .Input("y")
+                                .Output("dx")
+                                .Output("gamma_diff")
+                                .Output("beta_diff")
+                                .Output("addend_diff")
+                                .Build());
+  }
+  Maybe<TensorTuple> operator()(
+      const std::shared_ptr<one::Tensor>& x, const std::shared_ptr<one::Tensor>& grad,
+      const std::shared_ptr<one::Tensor>& mean, const std::shared_ptr<one::Tensor>& inv_variance,
+      const std::shared_ptr<one::Tensor>& gamma, const std::shared_ptr<one::Tensor>& beta,
+      const std::shared_ptr<one::Tensor>& reserve_space, const std::shared_ptr<one::Tensor>& y,
+      const int32_t& axis, const float& epsilon) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    JUST(attrs.SetAttr<float>("epsilon", epsilon));
+    return OpInterpUtil::Dispatch<TensorTuple>(
+        *addend_op_, {x, grad, mean, inv_variance, gamma, beta, reserve_space, y}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> addend_op_;
+};
+
 class LayerNormGradFunctor {
  public:
   LayerNormGradFunctor() {
@@ -545,6 +580,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PadGradFunctor>("PadGrad");
   m.add_functor<impl::AvgPoolingNdGradFunctor>("AvgPoolingNdGrad");
   m.add_functor<impl::NormalizationGradFunctor>("NormalizationGrad");
+  m.add_functor<impl::NormalizationAddReluGradFunctor>("NormalizationAddReluGrad");
   m.add_functor<impl::LayerNormGradFunctor>("LayerNormGrad");
   m.add_functor<impl::LayerNormParamGradFunctor>("LayerNormParamGrad");
   m.add_functor<impl::LayerNormAffineParamGradFunctor>("LayerNormAffineParamGrad");

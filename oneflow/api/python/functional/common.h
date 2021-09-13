@@ -23,12 +23,12 @@ limitations under the License.
 #include "oneflow/api/python/framework/throw.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/random_generator.h"
-#include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/functional/tensor_index.h"
 
 namespace py = pybind11;

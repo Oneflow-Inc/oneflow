@@ -299,10 +299,7 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
     UNIMPLEMENTED();
     return *(const cfg::NdSbp*)nullptr;
   }
-  int64_t parallel_num() const override {
-    UNIMPLEMENTED();
-    return 1;
-  }
+  int64_t parallel_num() const override { return 1; }
 };
 
 class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
