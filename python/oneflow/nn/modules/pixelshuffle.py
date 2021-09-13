@@ -72,13 +72,13 @@ class PixelShufflev2(Module):
         >>> x = flow.Tensor(np.random.randn(3, 4, 5, 5))
         >>> y = m(x)
         >>> y.shape
-        flow.Size([3, 1, 10, 10])
+        oneflow.Size([3, 1, 10, 10])
 
         >>> m = flow.nn.PixelShuffle(h_upscale_factor=3, w_upscale_factor=4)
         >>> x = flow.Tensor(np.random.randn(1, 24, 2, 2))
         >>> y = m(x)
         >>> y.shape
-        flow.Size([1, 2, 6, 8])
+        oneflow.Size([1, 2, 6, 8])
 
     .. _Real-Time Single Image and Video Super-Resolution Using an Efficient Sub-Pixel Convolutional Neural Network:
         https://arxiv.org/abs/1609.05158

@@ -589,7 +589,7 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
 
 UserKernel::~UserKernel() = default;
 
-void UserKernel::InitUserKernel(DeviceCtx* device_ctx) {
+void UserKernel::InitUserKernel(StreamContext* stream_ctx, DeviceCtx* device_ctx) {
   ctx_.reset(new UserKernelComputeContext(device_ctx, kernel_conf()));
   infer_ctx_.reset(new UserKernelInferContext(device_ctx, kernel_conf()));
   infer_cache_.reset(new user_op::OpKernelInferCache(kernel_conf(), this));
@@ -603,27 +603,6 @@ void UserKernel::InitUserKernel(DeviceCtx* device_ctx) {
     KernelCreateContext create_ctx(kernel_conf());
     kernel_.reset(kernel_reg_val->create_fn(&create_ctx));
   }
-
-#ifdef WITH_CUDA_GRAPHS
-  if (ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
-    UserKernelInitContext init_ctx(device_ctx, kernel_conf());
-    auto* provider = dynamic_cast<StreamContextProvider*>(device_ctx);
-    if (provider) {
-      cuda_graph_ctx_ = dynamic_cast<CudaGraphContext*>(provider->GetStreamContext());
-    }
-    const auto* cuda_graph_support = dynamic_cast<const user_op::CudaGraphSupport*>(kernel_.get());
-    if (cuda_graph_ctx_ != nullptr) {
-      if (cuda_graph_support != nullptr && cuda_graph_support->IsCudaGraphSupported(&init_ctx)) {
-        cuda_graph_exec_.reset(new CudaGraphExecutable());
-        LOG(INFO) << "CUDA Graphs Kernel: " << op_conf().name() << " ("
-                  << op_conf().user_conf().op_type_name() << ")";
-      } else {
-        LOG(INFO) << "CUDA Graphs not supported: " << op_conf().name() << " ("
-                  << op_conf().user_conf().op_type_name() << ")";
-      }
-    }
-  }
-#endif  // WITH_CUDA_GRAPHS
 }
 
 std::shared_ptr<user_op::OpKernelState> UserKernel::CreateOpKernelState(DeviceCtx* device_ctx) {
@@ -672,9 +651,27 @@ bool UserKernel::IsCudaGraphSupported() const {
 }
 
 void UserKernel::VirtualKernelInit(KernelContext* ctx) {
-  InitUserKernel(ctx->device_ctx());
+  InitUserKernel(ctx->stream_ctx(), ctx->device_ctx());
   CHECK(opkernel_state_.get() == nullptr);
   opkernel_state_ = CreateOpKernelState(ctx->device_ctx());
+#ifdef WITH_CUDA_GRAPHS
+  if (ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
+    UserKernelInitContext init_ctx(ctx->device_ctx(), kernel_conf());
+    cuda_graph_ctx_ = dynamic_cast<CudaGraphContext*>(ctx->stream_ctx());
+    const auto* cuda_graph_support = dynamic_cast<const user_op::CudaGraphSupport*>(kernel_.get());
+    if (cuda_graph_ctx_ != nullptr) {
+      if (cuda_graph_support != nullptr
+          && cuda_graph_support->IsCudaGraphSupported(&init_ctx, opkernel_state_.get())) {
+        cuda_graph_exec_.reset(new CudaGraphExecutable());
+        LOG(INFO) << "CUDA Graphs Kernel: " << op_conf().name() << " ("
+                  << op_conf().user_conf().op_type_name() << ")";
+      } else {
+        LOG(INFO) << "CUDA Graphs not supported: " << op_conf().name() << " ("
+                  << op_conf().user_conf().op_type_name() << ")";
+      }
+    }
+  }
+#endif  // WITH_CUDA_GRAPHS
 }
 
 void UserKernel::ForwardDataContent(KernelContext* ctx) const {

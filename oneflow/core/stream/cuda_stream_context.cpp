@@ -68,6 +68,7 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
 
   Maybe<void> AddCallback(std::function<void()> callback) override;
   Maybe<void> Sync() override;
+  DeviceType device_type() const override { return DeviceType::kGPU; }
   std::shared_ptr<DeviceCtx> GetDeviceCtx() override;
   KernelObserver* GetKernelObserver() override;
 
@@ -109,7 +110,7 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
 #endif  // WITH_CUDA_GRAPHS
 };
 
-class DeviceCtxImpl : public DeviceCtx, public StreamContextProvider {
+class DeviceCtxImpl : public DeviceCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DeviceCtxImpl);
   explicit DeviceCtxImpl(CudaStreamContextImpl* stream_ctx) : stream_ctx_(stream_ctx) {}
@@ -129,7 +130,7 @@ class DeviceCtxImpl : public DeviceCtx, public StreamContextProvider {
     CHECK_JUST(stream_ctx_->AddCallback(std::move(callback)));
   }
 
-  StreamContext* GetStreamContext() override { return stream_ctx_; }
+  DeviceType device_type() const override { return stream_ctx_->device_type(); }
 
  protected:
   CudaStreamContextImpl* stream_ctx_;
