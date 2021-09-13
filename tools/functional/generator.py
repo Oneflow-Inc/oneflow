@@ -17,6 +17,7 @@ import os
 import re
 import argparse
 import yaml
+import hashlib
 
 types_allowed = {
     "Void",
@@ -319,7 +320,9 @@ class FunctionSignature:
         return fmt
 
     def get_type_hash(self):
-        return hex(hash(self.to_string(drop_name=True)))[2:]
+        sha = hashlib.sha256()
+        sha.update(self.to_string(drop_name=True).encode())
+        return sha.hexdigest()[:16]
 
     def get_schema_name(self):
         return "{0}Schema_{1}".format(self._name, self.get_type_hash())
