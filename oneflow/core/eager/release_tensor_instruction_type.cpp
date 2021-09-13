@@ -18,6 +18,8 @@ limitations under the License.
 #include "oneflow/core/vm/release_tensor_arg_phy_instr_operand.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/vm/cuda_stream_type.h"
+#include "oneflow/core/vm/async_cuda_stream_type.h"
+#include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
 #include "oneflow/core/vm/cpu_stream_type.h"
 
 namespace oneflow {
@@ -43,6 +45,7 @@ class CpuReleaseTensorInstructionType final : public ReleaseTensorInstructionTyp
   using stream_type = vm::CpuStreamType;
 };
 COMMAND(vm::RegisterInstructionType<CpuReleaseTensorInstructionType>("cpu.ReleaseTensor"));
+COMMAND(vm::RegisterInstructionType<CpuReleaseTensorInstructionType>("comm_net.ReleaseTensor"));
 
 #ifdef WITH_CUDA
 class GpuReleaseTensorInstructionType final : public ReleaseTensorInstructionType {
@@ -52,6 +55,25 @@ class GpuReleaseTensorInstructionType final : public ReleaseTensorInstructionTyp
   using stream_type = vm::CudaStreamType;
 };
 COMMAND(vm::RegisterInstructionType<GpuReleaseTensorInstructionType>("gpu.ReleaseTensor"));
+COMMAND(vm::RegisterInstructionType<GpuReleaseTensorInstructionType>("cuda.ReleaseTensor"));
+COMMAND(vm::RegisterInstructionType<GpuReleaseTensorInstructionType>("cuda_h2d.ReleaseTensor"));
+COMMAND(vm::RegisterInstructionType<GpuReleaseTensorInstructionType>("sync_launched_nccl.ReleaseTensor"));
+
+class CudaCopyD2HReleaseTensorInstructionType final : public ReleaseTensorInstructionType {
+ public:
+  CudaCopyD2HReleaseTensorInstructionType() = default;
+  ~CudaCopyD2HReleaseTensorInstructionType() override = default;
+  using stream_type = vm::CudaCopyD2HStreamType;
+};
+COMMAND(vm::RegisterInstructionType<CudaCopyD2HReleaseTensorInstructionType>("cuda_d2h.ReleaseTensor"));
+
+class AsyncGpuReleaseTensorInstructionType final : public ReleaseTensorInstructionType {
+ public:
+  AsyncGpuReleaseTensorInstructionType() = default;
+  ~AsyncGpuReleaseTensorInstructionType() override = default;
+  using stream_type = vm::AsyncCudaStreamType;
+};
+COMMAND(vm::RegisterInstructionType<AsyncGpuReleaseTensorInstructionType>("async_launched_nccl.ReleaseTensor"));
 #endif
 
 }  // namespace vm

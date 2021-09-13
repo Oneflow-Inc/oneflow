@@ -669,10 +669,9 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const one::EagerBlobObjectListPtr& input_eager_blob_objects,
     const one::EagerBlobObjectListPtr& output_eager_blob_objects,
     const one::OpExprInterpContext& ctx,
-    const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
-    const std::string& instr_type_name) {
+    Symbol<Device> op_device) {
   return LocalCallOpKernel(opkernel, input_eager_blob_objects, output_eager_blob_objects, nullptr,
-                           ctx, parallel_desc_sym, instr_type_name);
+                           ctx, op_device);
 }
 
 Maybe<void> InstructionsBuilder::LocalCallOpKernel(
@@ -681,8 +680,9 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const one::EagerBlobObjectListPtr& output_eager_blob_objects,
     const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
     const one::OpExprInterpContext& ctx,
-    const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
-    const std::string& instr_type_name) {
+    Symbol<Device> op_device) {
+  const auto& parallel_desc_sym = JUST(Placement4Device(op_device)).shared_from_symbol();
+  const std::string& instr_type_name = JUST(op_device->local_call_instruction_name());
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
   auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
@@ -691,6 +691,11 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
   *instruction->mut_parallel_desc() = parallel_desc_sym;
   *instruction->mutable_phy_instr_operand() = phy_instr_operand;
   instruction_list_->EmplaceBack(std::move(instruction));
+  for (const auto& output : *output_eager_blob_objects) {
+    if (!output->producer_op_device().has_value()) {
+      JUST(output->init_producer_op_device(op_device));
+    }
+  }
   return Maybe<void>::Ok();
 }
 
@@ -906,7 +911,8 @@ Maybe<void> InstructionsBuilder::FeedBlob(
 Maybe<void> InstructionsBuilder::ReleaseTensor(
     const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-  std::string instr_name = parallel_desc->device_tag() + ".ReleaseTensor";
+  const auto& producer_op_device = JUST(eager_blob_object->producer_op_device().value());
+  const auto& instr_name = JUST(producer_op_device->release_instruction_name());
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   LocalDepObject* compute_local_dep_object = JUST(eager_blob_object->compute_local_dep_object());
   *instruction->mutable_phy_instr_operand() = std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(

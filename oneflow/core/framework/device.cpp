@@ -125,6 +125,20 @@ Maybe<const std::string&> Device::GetSharedScheduleDeviceType() const {
   return MapAt(type2type_for_shared_local_dep_object, type());
 }
 
+Maybe<const std::string&> Device::release_instruction_name() const {
+  static const HashMap<std::string, std::string> type2instr_name{
+      {"cpu", "cpu.ReleaseTensor"},
+      {"gpu", "gpu.ReleaseTensor"},
+      {"cuda", "cuda.ReleaseTensor"},
+      {"cuda_h2d", "cuda_h2d.ReleaseTensor"},
+      {"cuda_d2h", "cuda_d2h.ReleaseTensor"},
+      {"comm_net", "comm_net.ReleaseTensor"},
+      {"sync_launched_nccl", "sync_launched_nccl.ReleaseTensor"},
+      {"async_launched_nccl", "async_launched_nccl.ReleaseTensor"},
+  };
+  return MapAt(type2instr_name, type());
+}
+
 Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
   // gpu.LocalCallOpKernel is shared between device `cuda` and device `cuda_h2d`.
   static const HashMap<std::string, std::string> type2instr_name{
@@ -146,7 +160,7 @@ Maybe<size_t> Device::instr_local_dep_object_pool_size() const {
       {"cpu", GetInstructionHighWaterMark()},        {"gpu", GetInstructionHighWaterMark()},
       {"cuda", GetInstructionHighWaterMark()},       {"cuda_h2d", kDoubleBufferPoolSize},
       {"cuda_d2h", kDoubleBufferPoolSize},           {"comm_net", kDoubleBufferPoolSize},
-      {"sync_launched_nccl", kDoubleBufferPoolSize}, {"async_launched_nccl", kDoubleBufferPoolSize},
+      {"sync_launched_nccl", GetInstructionHighWaterMark()}, {"async_launched_nccl", GetInstructionHighWaterMark()},
   };
   return MapAt(type2pool_size, type());
 }

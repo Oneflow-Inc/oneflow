@@ -419,6 +419,7 @@ class StatefulLocalOpKernel final {
   }
 
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
+  const std::string& op_type_name() const { return op_conf_->user_conf().op_type_name(); }
 
  private:
   friend struct vm::LocalCallOpKernelUtil;

@@ -111,14 +111,12 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
   }
   Symbol<Device> op_device;
-  std::shared_ptr<const ParallelDesc> op_parallel_desc;
   bool need_check_mem_case = true;
   bool need_event_record = false;
 
   // Infer devices
   if (!user_op_expr.has_device_infer_fn()) {
     op_device = default_device;
-    op_parallel_desc = JUST(Placement4Device(op_device)).shared_from_symbol();
     for (int i = 0; i < outputs->size(); i++) {
       auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
       *JUST(tensor_impl->mut_device()) = default_device;
@@ -130,7 +128,6 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       const auto& input_device = JUST(input_tensor->device());
       need_event_record = need_event_record || !(*op_device == *input_device);
     }
-    op_parallel_desc = JUST(Placement4Device(op_device)).shared_from_symbol();
   }
 
   // Infer shapes and dtypes
@@ -183,7 +180,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       }
     }
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      ctx, op_parallel_desc, instr_type_name);
+                                      ctx, op_device);
   }));
   return Maybe<void>::Ok();
 }
