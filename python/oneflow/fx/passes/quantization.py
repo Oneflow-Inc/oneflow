@@ -75,9 +75,9 @@ class QConv2d(flow.nn.Conv2d):
         scale, zero_point = self.min_max_observer(x)
         x = self.fake_quantization(x, scale, zero_point)
         weight_scale, weight_zero_point = self.min_max_observer(self.weight)
-        self.weight = self.fake_quantization(
+        self.weight = flow.nn.Parameter(self.fake_quantization(
             self.weight, weight_scale, weight_zero_point
-        )
+        ))
         return flow.nn.functional.conv2d(
             x,
             self.weight,
@@ -88,16 +88,24 @@ class QConv2d(flow.nn.Conv2d):
             groups=self.groups,
         )
 
+def get_current_module_space(mod : str):
+    x = mod.split(".")
+    x_len = len(x)
+    y = ""
+    for _ in range(x_len - 1):
+        y += x[_]
+        if _ < x_len - 2:
+            y += "."
+    return y
 
 def qat(gm: GraphModule, input) -> GraphModule:
     insert_place, conv_state = GetInsertNode(gm).propagate(input)
-
     cnt = 0
     for x in gm.graph.nodes:
         if x.target in insert_place:
             with gm.graph.inserting_after(x):
                 gm.add_submodule(
-                    f"{x.target.split('.')[0]}.fake_conv2d",
+                    f"{get_current_module_space(x.target)}.fake_conv2d.{cnt}",
                     QConv2d(
                         conv_state[cnt].in_channels,
                         conv_state[cnt].out_channels,
@@ -109,7 +117,7 @@ def qat(gm: GraphModule, input) -> GraphModule:
                     ),
                 )
                 qconv = gm.graph.call_module(
-                    module_name=f"{x.target.split('.')[0]}.fake_conv2d", args=x.args
+                    module_name=f"{get_current_module_space(x.target)}.fake_conv2d.{cnt}", args=x.args
                 )
                 cnt = cnt + 1
             x.replace_all_uses_with(qconv)
