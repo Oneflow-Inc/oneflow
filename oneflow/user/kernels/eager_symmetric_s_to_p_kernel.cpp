@@ -73,19 +73,16 @@ class EagerSymmetricSToPOpKernelState final : public user_op::OpKernelState {
     CHECK(TxtString2PbMessage(parallel_conf_txt, &parallel_conf));
     Symbol<ParallelDesc> parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
 
-    const std::vector<TensorSliceView> in_slices = GetTensorSliceView(
+    const TensorSliceView& in_slice = GetTensorSliceView4ParallelId(
         *parallel_desc->hierarchy(),
         *CHECK_JUST(CachedGetAllSplitNdSbp(in_split_axis, parallel_desc->hierarchy()->NumAxes())),
-        shape);
-    CHECK(!ContainsEmptySlice(in_slices));
-    const std::vector<TensorSliceView> out_slices = GetTensorSliceView(
+        shape, ctx->parallel_ctx().parallel_id());
+    CHECK(!in_slice.IsEmpty());
+    const TensorSliceView& out_slice = GetTensorSliceView4ParallelId(
         *parallel_desc->hierarchy(),
-        *CHECK_JUST(CachedGetAllPartialSumNdSbp(parallel_desc->hierarchy()->NumAxes())), shape);
-    CHECK(!ContainsEmptySlice(out_slices));
-
-    int64_t rank = GlobalProcessCtx::Rank();
-    const TensorSliceView& out_slice = out_slices.at(rank);
-    const TensorSliceView& in_slice = in_slices.at(rank);
+        *CHECK_JUST(CachedGetAllPartialSumNdSbp(parallel_desc->hierarchy()->NumAxes())), shape,
+        ctx->parallel_ctx().parallel_id());
+    CHECK(!out_slice.IsEmpty());
     const TensorSliceView& intersection = out_slice.Intersect(in_slice);
     CHECK(!intersection.IsEmpty());
     tensor_slice_copier_ = std::make_shared<TensorSliceCopier>(out_slice, in_slice, data_type);
@@ -130,9 +127,9 @@ class EagerSymmetricSToPKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EAGER_SYMMETRIC_S_TO_P_KERNEL(device)        \
-  REGISTER_USER_KERNEL("eager_symmetric_s_to_p")              \
-      .SetCreateFn<EagerSymmetricSToPKernel<device>>()        \
+#define REGISTER_EAGER_SYMMETRIC_S_TO_P_KERNEL(device) \
+  REGISTER_USER_KERNEL("eager_symmetric_s_to_p")       \
+      .SetCreateFn<EagerSymmetricSToPKernel<device>>() \
       .SetIsMatchedHob(user_op::HobDeviceTag() == device);
 
 REGISTER_EAGER_SYMMETRIC_S_TO_P_KERNEL(DeviceType::kCPU)
