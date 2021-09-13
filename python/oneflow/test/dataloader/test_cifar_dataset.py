@@ -88,7 +88,7 @@ def test(test_case):
         download=True,
         transform=transform,
         source_url="https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/cifar/cifar-10-python.tar.gz",
-        num_workers=0,
+        num_workers=1,
     )
 
     final_loss = 0
