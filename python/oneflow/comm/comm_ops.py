@@ -26,7 +26,7 @@ def all_reduce(tensor):
     After the call ``tensor`` is going to be bitwise identical in all processes.
 
     Args:
-        input (Tensor): the input tensor
+        tensor (Tensor): the input tensor
 
     For example:
 
@@ -36,9 +36,11 @@ def all_reduce(tensor):
         >>> import oneflow as flow
 
         >>> input = flow.tensor([[1, 2], [3, 4]], device="cuda") + flow.env.get_local_rank()
+        >>> # input on rank0
         >>> input # doctest: +ONLY_CHECK_RANK_0
         tensor([[1, 2],
                 [3, 4]], device='cuda:0', dtype=oneflow.int64)
+        >>> # input on rank1
         >>> input # doctest: +ONLY_CHECK_RANK_1
         tensor([[2, 3],
                 [4, 5]], device='cuda:1', dtype=oneflow.int64)
@@ -46,6 +48,7 @@ def all_reduce(tensor):
         >>> out.numpy()
         array([[3, 5],
                [7, 9]])
+
     """
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
     assert tensor.device.index == flow.env.get_local_rank()
@@ -65,7 +68,8 @@ def all_gather(tensor_list, tensor):
 
     Args:
         tensor_list (list[Tensor]): Output list. It should contain
-        correctly-sized tensors to be used for output of the collective.
+            correctly-sized tensors to be used for output of the collective.
+        tensor (Tensor): Tensor to be broadcast from current process.
 
     For example:
 
@@ -75,22 +79,27 @@ def all_gather(tensor_list, tensor):
         >>> import oneflow as flow
 
         >>> input = flow.tensor([[1, 2], [3, 4]], device="cuda") + flow.env.get_local_rank()
+        >>> # input on rank0
         >>> input # doctest: +ONLY_CHECK_RANK_0
         tensor([[1, 2],
                 [3, 4]], device='cuda:0', dtype=oneflow.int64)
+        >>> # input on rank1
         >>> input # doctest: +ONLY_CHECK_RANK_1
         tensor([[2, 3],
                 [4, 5]], device='cuda:1', dtype=oneflow.int64)
         >>> tensor_list = [flow.zeros(2, 2, dtype=flow.int64) for _ in range(2)]
         >>> flow.comm.all_gather(tensor_list, input)
+        >>> # result on rank0
         >>> tensor_list # doctest: +ONLY_CHECK_RANK_0
         [tensor([[1, 2],
                 [3, 4]], device='cuda:0', dtype=oneflow.int64), tensor([[2, 3],
                 [4, 5]], device='cuda:0', dtype=oneflow.int64)]
+        >>> # result on rank1
         >>> tensor_list # doctest: +ONLY_CHECK_RANK_1
         [tensor([[1, 2],
                 [3, 4]], device='cuda:1', dtype=oneflow.int64), tensor([[2, 3],
                 [4, 5]], device='cuda:1', dtype=oneflow.int64)]
+
     """
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
     assert isinstance(tensor_list, list)
@@ -110,27 +119,31 @@ def broadcast(tensor, src):
     Broadcasts the tensor to the whole group.
     ``tensor`` must have the same number of elements in all processes
     participating in the collective.
+
     Args:
         tensor (Tensor): Data to be sent if ``src`` is the rank of current
             process, and tensor to be used to save received data otherwise.
         src (int): Source rank.
+
     .. code-block:: python
+
         >>> # We have 1 process groups, 2 ranks.
         >>> import oneflow as flow
         >>> tensor = flow.tensor([[1, 2], [3, 4]], device="cuda") + flow.env.get_local_rank()
+        >>> # input on rank0
         >>> tensor # doctest: +ONLY_CHECK_RANK_0
         tensor([[1, 2],
                 [3, 4]], device='cuda:0', dtype=oneflow.int64)
+        >>> # input on rank1
         >>> tensor # doctest: +ONLY_CHECK_RANK_1
         tensor([[2, 3],
                 [4, 5]], device='cuda:1', dtype=oneflow.int64)
         >>> flow.comm.broadcast(tensor, 0)
+        >>> # result on rank0
         >>> tensor # doctest: +ONLY_CHECK_RANK_0
         tensor([[1, 2],
                 [3, 4]], device='cuda:0', dtype=oneflow.int64)
-        >>> tensor # doctest: +ONLY_CHECK_RANK_1
-        tensor([[1, 2],
-                [3, 4]], device='cuda:1', dtype=oneflow.int64)
+
     """
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
     assert isinstance(src, int)
