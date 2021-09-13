@@ -135,3 +135,32 @@ def broadcast(tensor, src):
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
     assert isinstance(src, int)
     flow._C.broadcast(tensor, src_rank=src, inplace=True)
+
+
+def scatter(tensor, tensor_list=None, src=0):
+    """
+    Scatters a list of tensors to all processes in a group.
+
+    Each process will receive exactly one tensor and store its data in the
+    ``tensor`` argument.
+
+    Args:
+        tensor (Tensor): Output tensor.
+        scatter_list (list[Tensor]): List of tensors to scatter (default is
+            None, must be specified on the source rank)
+        src (int): Source rank (default is 0)
+    """
+    assert isinstance(src, int)
+    assert isinstance(tensor, flow._oneflow_internal.Tensor)
+    out_shape = tensor.shape
+    if flow.env.get_rank() == src:
+        tensor.data(tensor_list[src])
+        assert isinstance(tensor_list, list)
+        assert len(tensor_list) == flow.env.get_world_size()
+        for i in range(len(tensor_list)):
+            if i == src: continue
+            assert isinstance(tensor_list[i], flow._oneflow_internal.Tensor)
+            assert tensor_list[i].shape == out_shape, f"invalid tensor size at index {i}: {out_shape} vs {tensor_list[i].shape}"
+            flow.comm.send(tensor_list[i], i)
+    if flow.env.get_rank() != src:
+        flow.comm.recv(src, out=tensor)
