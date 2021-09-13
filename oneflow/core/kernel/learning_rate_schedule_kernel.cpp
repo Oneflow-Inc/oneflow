@@ -148,6 +148,20 @@ double CosineDecayedLearningRate(const CosineDecayConf& conf, double lr, int64_t
   return lr * decayed;
 }
 
+double CosineAnnealingDecayedLearningRate(const CosineAnnealingDecayConf& conf, double lr,
+                                          int64_t cur_batch_num) {
+  CHECK_GT(conf.t_max(), 0);
+  if (0 == cur_batch_num) { return lr; }
+
+  const double PI = std::atan(1.0) * 4.0;
+  const double eta_min = conf.eta_min();
+  CHECK_LT(eta_min, lr);
+  const double t_max_d = static_cast<double>(conf.t_max());
+  const double cur_batch_num_d = static_cast<double>(cur_batch_num);
+
+  return eta_min + (((lr - eta_min) * (1 + std::cos(PI * (cur_batch_num_d / t_max_d)))) / 2);
+}
+
 double LinearCosineDecayedLearningRate(const LinearCosineDecayConf& conf, double lr,
                                        int64_t cur_batch_num) {
   CHECK_GT(conf.decay_batches(), 0);
@@ -174,7 +188,19 @@ double PiecewiseScalingLearningRate(const PiecewiseScalingConf& conf, double lr,
   return scales[i] * lr;
 }
 
-double MultistepLearningRate(const MultiStepConf& conf, double lr, int64_t cur_batch_num) {
+double StepLearningRate(const StepConf& conf, double lr, int64_t cur_batch_num) {
+  const int64_t step_size = conf.step_size();
+  CHECK_GE(step_size, 1);
+  const double gamma = conf.gamma();
+
+  double cur_batch = static_cast<double>(cur_batch_num);
+  double step = static_cast<double>(step_size);
+  size_t i = std::floor(cur_batch / step);
+
+  return lr * std::pow(gamma, i);
+}
+
+double MultiStepLearningRate(const MultiStepConf& conf, double lr, int64_t cur_batch_num) {
   const PbRf<int64_t>& milestones = conf.milestones();
   CHECK_GE(milestones.size(), 1);
   const double gamma = conf.gamma();
@@ -204,12 +230,16 @@ double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int6
     return PolynomialDecayedLearningRate(conf.polynomial_conf(), lr, cur_batch_num);
   } else if (conf.has_cosine_conf()) {
     return CosineDecayedLearningRate(conf.cosine_conf(), lr, cur_batch_num);
+  } else if (conf.has_cosine_annealing_conf()) {
+    return CosineAnnealingDecayedLearningRate(conf.cosine_annealing_conf(), lr, cur_batch_num);
   } else if (conf.has_linear_cosine_conf()) {
     return LinearCosineDecayedLearningRate(conf.linear_cosine_conf(), lr, cur_batch_num);
   } else if (conf.has_piecewise_scaling_conf()) {
     return PiecewiseScalingLearningRate(conf.piecewise_scaling_conf(), lr, cur_batch_num);
+  } else if (conf.has_step_conf()) {
+    return StepLearningRate(conf.step_conf(), lr, cur_batch_num);
   } else if (conf.has_multi_step_conf()) {
-    return MultistepLearningRate(conf.multi_step_conf(), lr, cur_batch_num);
+    return MultiStepLearningRate(conf.multi_step_conf(), lr, cur_batch_num);
   } else {
     UNIMPLEMENTED();
   }

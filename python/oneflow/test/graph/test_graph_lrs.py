@@ -141,25 +141,42 @@ def _test_linear_graph_train_with_lr_sch(
         )
 
 
-def _multistep_lr_fn(parameters):
-    of_sgd = flow.optim.SGD(parameters, lr=0.001)
-
-    multistep_lr = flow.optim.lr_scheduler.MultiStepLR(
-        of_sgd, milestones=[10, 15], gamma=0.1
-    )
-    return of_sgd, multistep_lr
-
-
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestGraphLRs(flow.unittest.TestCase):
+    def test_step_lr(test_case):
+        def _lr_fn(parameters):
+            of_sgd = flow.optim.SGD(parameters, lr=0.001)
+
+            step_lr = flow.optim.lr_scheduler.StepLR(of_sgd, step_size=7, gamma=0.1)
+            return of_sgd, step_lr
+
+        _test_linear_graph_train_with_lr_sch(test_case, 21, flow.device("cuda"), _lr_fn)
+        _test_linear_graph_train_with_lr_sch(test_case, 21, flow.device("cpu"), _lr_fn)
+
     def test_multistep_lr(test_case):
-        _test_linear_graph_train_with_lr_sch(
-            test_case, 21, flow.device("cuda"), _multistep_lr_fn
-        )
-        _test_linear_graph_train_with_lr_sch(
-            test_case, 21, flow.device("cpu"), _multistep_lr_fn
-        )
+        def _lr_fn(parameters):
+            of_sgd = flow.optim.SGD(parameters, lr=0.001)
+
+            multistep_lr = flow.optim.lr_scheduler.MultiStepLR(
+                of_sgd, milestones=[10, 15], gamma=0.1
+            )
+            return of_sgd, multistep_lr
+
+        _test_linear_graph_train_with_lr_sch(test_case, 21, flow.device("cuda"), _lr_fn)
+        _test_linear_graph_train_with_lr_sch(test_case, 21, flow.device("cpu"), _lr_fn)
+
+    def test_cosine_annealing_lr(test_case):
+        def _lr_fn(parameters):
+            of_sgd = flow.optim.SGD(parameters, lr=0.001)
+
+            lr = flow.optim.lr_scheduler.CosineAnnealingLR(
+                of_sgd, T_max=5, eta_min=0.0001
+            )
+            return of_sgd, lr
+
+        _test_linear_graph_train_with_lr_sch(test_case, 21, flow.device("cuda"), _lr_fn)
+        _test_linear_graph_train_with_lr_sch(test_case, 21, flow.device("cpu"), _lr_fn)
 
 
 if __name__ == "__main__":
