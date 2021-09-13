@@ -368,10 +368,11 @@ __global__ void LayerNormWelfordForwardImpl(const int num_instances, const int n
                                                 val_shared_ptr); 
     __syncthreads(); 
     if (tid == 0) {
-      ComputeType mean = weldata.mean; 
-      ComputeType var = welop.project(weldata); 
-      row_mean_shared = mean;
-      ComputeType row_variance = max(var, static_cast<ComputeType>(0.0));
+      ComputeType row_mean = weldata.mean; 
+      ComputeType row_var = welop.project(weldata); 
+      row_mean_shared = row_mean;
+      mean[row] = row_mean;
+      ComputeType row_variance = max(row_var, static_cast<ComputeType>(0.0));
       ComputeType row_inv_var = rsqrt(row_variance + static_cast<ComputeType>(epsilon));
       row_inv_var_shared = row_inv_var;
       inv_variance[row] = row_inv_var;
