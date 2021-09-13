@@ -702,7 +702,9 @@ class ReshapeFunctor {
       JUST(attrs.SetAttr<Shape>("shape", remark_infer_shape));
     } else {
       if (need_infer_axis == -1) {
-        CHECK_EQ_OR_RETURN(shape.Count(0), x_count);
+        CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
+            << "Shape " << shape.ToString() << " is invalid for input of shape "
+            << x->shape()->ToString();
         JUST(attrs.SetAttr<Shape>("shape", shape));
       } else {
         Shape infered_shape = shape;
