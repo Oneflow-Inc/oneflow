@@ -70,6 +70,21 @@ class TestBroadCast(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(tensor.numpy(), np.array([[1, 2], [3, 4]])))
 
 
+class TestReduce(flow.unittest.TestCase):
+    @flow.unittest.skip_unless_1n2d()
+    def test_reduce_1n2d(test_case):
+        if flow.env.get_rank() == 0:
+            np_arr = np.array([[1, 2], [3, 4]])
+        elif flow.env.get_rank() == 1:
+            np_arr = np.array([[4, 5], [6, 7]])
+        tensor = flow.tensor(np_arr, device="cuda", dtype=flow.int32)
+        flow.comm.reduce(tensor, 0)
+        if flow.env.get_rank() == 0:
+            test_case.assertTrue(np.allclose(tensor.numpy(), np.array([[5, 7], [9, 11]])))
+        else:
+            test_case.assertTrue(np.allclose(tensor.numpy(), np.array([[1, 2], [3, 4]])))    
+
+
 @flow.unittest.skip_unless_1n2d()
 class TestDocs(flow.unittest.TestCase):
     def test_docs(test_case):

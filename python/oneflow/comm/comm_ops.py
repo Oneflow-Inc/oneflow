@@ -135,3 +135,24 @@ def broadcast(tensor, src):
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
     assert isinstance(src, int)
     flow._C.broadcast(tensor, src_rank=src, inplace=True)
+
+
+def reduce(tensor, dst):
+    """
+    Reduces the tensor data across all machines.
+
+    Only the process with rank ``dst`` is going to receive the final result.
+
+    Args:
+        tensor (Tensor): Input and output of the collective. The function
+            operates in-place.
+        dst (int): Destination rank
+
+    """
+    assert isinstance(tensor, flow._oneflow_internal.Tensor)
+    assert tensor.is_local
+    assert isinstance(dst, int)
+    result = flow.comm.all_reduce(tensor)
+    if flow.env.get_rank() == dst:
+        tensor.data = result
+    
