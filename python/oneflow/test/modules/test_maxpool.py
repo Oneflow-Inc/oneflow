@@ -28,7 +28,7 @@ def unpack_indices(dual_object):
 
 @flow.unittest.skip_unless_1n1d()
 class TestMaxPooling(flow.unittest.TestCase):
-    @autotest(n=100, auto_backward=False)
+    @autotest(auto_backward=False)
     def test_maxpool1d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         m = torch.nn.MaxPool1d(
@@ -50,7 +50,7 @@ class TestMaxPooling(flow.unittest.TestCase):
         else:
             return y, y.sum().backward()
 
-    @autotest(n=100, auto_backward=False)
+    @autotest(auto_backward=False)
     def test_maxpool2d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         m = torch.nn.MaxPool2d(
@@ -74,7 +74,7 @@ class TestMaxPooling(flow.unittest.TestCase):
         else:
             return y, y.sum().backward()
 
-    @autotest(n=100, auto_backward=False)
+    @autotest(auto_backward=False)
     def test_maxpool3d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         m = torch.nn.MaxPool3d(
@@ -101,7 +101,7 @@ class TestMaxPooling(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestMaxPoolingFunctional(flow.unittest.TestCase):
-    @autotest(n=100, auto_backward=False)
+    @autotest(auto_backward=False)
     def test_maxpool1d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         device = random_device()
@@ -121,7 +121,7 @@ class TestMaxPoolingFunctional(flow.unittest.TestCase):
         else:
             return y, y.sum().backward()
 
-    @autotest(n=100, auto_backward=False)
+    @autotest(auto_backward=False)
     def test_maxpool2d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         device = random_device()
@@ -143,7 +143,7 @@ class TestMaxPoolingFunctional(flow.unittest.TestCase):
         else:
             return y, y.sum().backward()
 
-    @autotest(n=100, auto_backward=False)
+    @autotest(auto_backward=False)
     def test_maxpool3d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         device = random_device()
