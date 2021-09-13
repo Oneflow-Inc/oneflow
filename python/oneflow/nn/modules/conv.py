@@ -681,6 +681,156 @@ class Conv3d(Module):
         return s.format(**self.__dict__)
 
 
+class ConvTranspose1d(Module):
+    r"""
+    
+    Applies a 1D transposed convolution operator over an input image composed of several input planes.
+
+    This module can be seen as the gradient of Conv1d with respect to its input.
+    It is also known as a fractionally-strided convolution or
+    a deconvolution (although it is not an actual deconvolution operation as it does not compute a true inverse of convolution). 
+    For more information, see the visualizations here and the Deconvolutional Networks paper.
+
+    This module supports TensorFloat32.
+
+    Args:
+        stride: controls the stride for the cross-correlation.
+        padding: controls the amount of implicit zero padding on both sides for dilation * (kernel_size - 1) - padding number of points.
+                 See note below for details.
+        output_padding: controls the additional size added to one side of the output shape. See note below for details.
+        dilation: controls the spacing between the kernel points; also known as the à trous algorithm. It is harder to describe, 
+                  but the link here has a nice visualization of what dilation does.
+        groups: controls the connections between inputs and outputs. in_channels and out_channels must both be divisible by groups. 
+        divisible by groups. For example,
+            At groups=1, all inputs are convolved to all outputs.
+            At groups=2, the operation becomes equivalent to having two conv layers side by side, each seeing half the input channels and
+            producing half the output channels, and both subsequently concatenated.
+            At groups= in_channels, each input channel is convolved with its own 
+            set of filters (of size out_channelsin_channels\frac{\text{out\_channels}}{\text{in\_channels}}in_channelsout_channels​).
+
+    .. note::
+        The padding argument effectively adds dilation * (kernel_size - 1) - padding amount of zero padding to both sizes of the input.
+        This is set so that when a Conv1d and a ConvTranspose1d are initialized with same parameters, they are inverses of each other in 
+        regard to the input and output shapes. However, when stride > 1, Conv1d maps multiple input shapes to the same output shape. 
+        output_padding is provided to resolve this ambiguity by effectively increasing the calculated output shape on one side. 
+        Note that output_padding is only used to find output shape, but does not actually add zero-padding to output.
+    
+    .. note::
+        In some circumstances when using the CUDA backend with CuDNN, this operator may select a nondeterministic algorithm to increase 
+        performance. If this is undesirable, you can try to make the operation deterministic (potentially at a performance cost) by 
+        setting torch.backends.cudnn.deterministic = True. Please see the notes on Reproducibility for background.
+    
+
+    Shape:
+        Input: (N,Cin,Lin)(N, C_{in}, L_{in})(N,Cin​,Lin​)
+        Output: (N,Cout,Lout)(N, C_{out}, L_{out})(N,Cout​,Lout​) where
+        Lout​=(Lin​−1)×stride−2×padding+dilation×(kernel_size−1)+output_padding+1
+
+    Variables
+
+        ~ConvTranspose1d.weight (Tensor) – the learnable weights of the module of shape 
+        (in_channels,out_channelsgroups,(\text{in\_channels}, \frac{\text{out\_channels}}{\text{groups}},(in_channels,groupsout_channels​, kernel_size)\text{kernel\_size})kernel_size). 
+        The values of these weights are sampled from U(−k,k)\mathcal{U}(-\sqrt{k}, \sqrt{k})U(−k​,k) 
+        where k=groupsCout∗kernel_sizek = \frac{groups}{C_\text{out} * \text{kernel\_size}}k=Cout​∗kernel_sizegroups​
+        ~ConvTranspose1d.bias (Tensor) – the learnable bias of the module of shape (out_channels). 
+        If bias is True, then the values of these weights are sampled from U(−k,k)\mathcal{U}(-\sqrt{k}, \sqrt{k})U(−k,k) 
+        where k=groupsCout∗kernel_sizek = \frac{groups}{C_\text{out} * \text{kernel\_size}}k=Cout​∗kernel_sizegroups​
+    """
+
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: _size_1_t,
+        stride: _size_1_t = 1,
+        padding: _size_1_t = 0,
+        output_padding: _size_1_t = 0,
+        groups: int = 1,
+        bias: bool = True,
+        dilation: _size_1_t = 1,
+        padding_mode: str = "zeros",
+    ) -> None:
+        super().__init__()
+        assert (
+            padding_mode == "zeros"
+        ), "Only `zeros` padding mode is supported for ConvTranspose1d"
+        kernel_size = _single(kernel_size)
+        stride = _single(stride)
+        padding = _single(padding)
+        dilation = _single(dilation)
+        output_padding = _single(output_padding)
+        self.groups = groups
+        assert in_channels % groups == 0
+        assert out_channels % groups == 0
+        self.weight = flow.nn.Parameter(
+            flow.Tensor(in_channels, out_channels // groups, *kernel_size)
+        )
+        self.in_channel_groups = in_channels // groups
+        self.bias = None
+        self._bias_add_op = None
+        if bias:
+            self.bias = flow.nn.Parameter(flow.Tensor(out_channels))
+            self._bias_add_op = (
+                flow.builtin_op("bias_add")
+                .Input("a")
+                .Input("b")
+                .Output("out")
+                .Attr("axis", 1)
+                .Build()
+            )
+        self._op = (
+            flow.builtin_op("deconv1d")
+            .Input("in")
+            .Input("weight")
+            .Attr("filters", out_channels // groups)
+            .Attr("padding_before", padding)
+            .Attr("data_format", "channels_first")
+            .Attr("kernel_size", kernel_size)
+            .Attr("strides", stride)
+            .Attr("dilation_rate", dilation)
+            .Attr("output_padding", output_padding)
+            .Attr("groups", 1)
+            .Output("out")
+            .Build()
+        )
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        if self.bias is not None:
+            (fan_in, _) = init._calculate_fan_in_and_fan_out(self.weight)
+            bound = 1 / math.sqrt(fan_in)
+            init.uniform_(self.bias, -bound, bound)
+
+    def forward(self, x):
+        if self.groups > 1:
+            in_channel_axis = 1
+            in_split_list = ConvUtil.split(
+                x, axis=in_channel_axis, split_num=self.groups
+            )
+            out_list = []
+            for i in range(len(in_split_list)):
+                out_list.append(
+                    self._op(
+                        in_split_list[i],
+                        self.weight[
+                            i
+                            * self.in_channel_groups : (i + 1)
+                            * self.in_channel_groups,
+                            :,
+                            :,
+                            :,
+                        ],
+                    )[0]
+                )
+            res = flow.cat(out_list, dim=in_channel_axis)
+        else:
+            res = self._op(x, self.weight)[0]
+        if self._bias_add_op is not None:
+            res = self._bias_add_op(res, self.bias)[0]
+        return res
+
+
 class ConvTranspose2d(Module):
     """
     
@@ -690,7 +840,7 @@ class ConvTranspose2d(Module):
     It is also known as a fractionally-strided convolution or
     a deconvolution (although it is not an actual deconvolution operation).
 
-    Args:
+    Args:  
         in_channels (int): Number of channels in the input image
         out_channels (int): Number of channels produced by the convolution
         kernel_size (int or tuple): Size of the convolving kernel
