@@ -62,12 +62,12 @@ Maybe<void> Recv(void* out, size_t elem_cnt, DataType dtype, int64_t src, Device
 template Maybe<void> Send<DeviceType::kCPU>(const void* in, size_t elem_cnt, DataType dtype,
                                             int64_t dst, DeviceCtx* ctx);
 
-template Maybe<void> Send<DeviceType::kGPU>(const void* in, size_t elem_cnt, DataType dtype,
-                                            int64_t dst, DeviceCtx* ctx);
-
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 template Maybe<void> Recv<DeviceType::kCPU>(void* out, size_t elem_cnt, DataType dtype, int64_t src,
                                             DeviceCtx* ctx);
+
+#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+template Maybe<void> Send<DeviceType::kGPU>(const void* in, size_t elem_cnt, DataType dtype,
+                                            int64_t dst, DeviceCtx* ctx);
 
 template Maybe<void> Recv<DeviceType::kGPU>(void* out, size_t elem_cnt, DataType dtype, int64_t src,
                                             DeviceCtx* ctx);
