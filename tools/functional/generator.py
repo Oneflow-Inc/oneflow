@@ -50,6 +50,37 @@ types_allowed = {
     "PyObject*",
 }
 
+mangled_name = {
+    "Void": "V",
+    "Tensor": "T",
+    "TensorTuple": "Tt",
+    "Scalar": "Sc",
+    "Int": "I",
+    "Int32": "I32",
+    "Int64": "I64",
+    "Float": "F",
+    "Double": "D",
+    "String": "S",
+    "Bool": "B",
+    "ScalarList": "Scl",
+    "IntList": "Il",
+    "Int32List": "I32l",
+    "Int64List": "I64l",
+    "FloatList": "Fl",
+    "DoubleList": "Dl",
+    "StringList": "Sl",
+    "BoolList": "Bl",
+    "DataType": "Dt",
+    "Shape": "Sh",
+    "Generator": "G",
+    "TensorIndex": "Ti",
+    "Device": "De",
+    "Placement": "P",
+    "Sbp": "Sb",
+    "SbpList": "Sbl",
+    "PyObject*": "Po",
+}
+
 generic_type_aliases = {
     "Int": "int32_t",
     "Int32": "int32_t",
@@ -319,13 +350,14 @@ class FunctionSignature:
         fmt += ")"
         return fmt
 
-    def get_type_hash(self):
-        sha = hashlib.sha256()
-        sha.update(self.to_string(drop_name=True).encode())
-        return sha.hexdigest()[:16]
+    def get_mangled_type(self):
+        fmt = mangled_name[self._ret._type]
+        for _, arg in enumerate(self._args):
+            fmt += mangled_name[arg._type]
+        return fmt
 
     def get_schema_name(self):
-        return "{0}Schema_{1}".format(self._name, self.get_type_hash())
+        return "{0}Schema_{1}".format(self._name, self.get_mangled_type())
 
 
 class Block:
