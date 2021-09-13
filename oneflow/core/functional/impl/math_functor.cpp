@@ -677,8 +677,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceMeanFunctor>("ReduceMean");
   m.add_functor<TransposeFunctor>("Transpose");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
-  m.add_functor<ConsistentArangeFunctor>("ConsistentArange");
-  m.add_functor<ConsistentArange2Functor>("ConsistentArange2");
+  m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<ArgMaxFunctor>("ArgMax");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
