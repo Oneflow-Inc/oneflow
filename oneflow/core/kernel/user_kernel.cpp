@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <oneflow/core/stream/stream_context_adapter.h>
 #include "oneflow/core/kernel/user_kernel.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/op_kernel.h"
@@ -129,9 +130,11 @@ class KernelCreateContext final : public user_op::KernelCreateContext {
 
 class UserKernelInitContext final : public user_op::KernelInitContext {
  public:
-  explicit UserKernelInitContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf)
+  explicit UserKernelInitContext(DeviceCtx* device_ctx, StreamContext* stream_ctx,
+                                 const KernelConf& kernel_conf)
       : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         device_ctx_(device_ctx),
+        stream_ctx_(stream_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf)),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
     nd_sbp_signature_ = new cfg::NdSbpSignature(kernel_conf.op_attribute().nd_sbp_signature());
@@ -147,6 +150,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   ~UserKernelInitContext() override = default;
 
   DeviceCtx* device_ctx() override { return device_ctx_; }
+  StreamContext* stream_ctx() override { return stream_ctx_; }
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
   const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); }
@@ -196,6 +200,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
 
   user_op::UserOpConfWrapper user_op_conf_;
   DeviceCtx* device_ctx_;
+  StreamContext* stream_ctx_;
   UserKernelBaseContext base_ctx_;
   const cfg::SbpSignature* sbp_signature_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2logical_tensor_desc_;
@@ -365,9 +370,11 @@ class UserKernelOpInferContext : public user_op::InferContext {
 
 class UserKernelInferContext final : public user_op::KernelInferContext {
  public:
-  explicit UserKernelInferContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf)
+  explicit UserKernelInferContext(DeviceCtx* device_ctx, StreamContext* stream_ctx,
+                                  const KernelConf& kernel_conf)
       : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         device_ctx_(device_ctx),
+        stream_ctx_(stream_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf)),
         op_infer_ctx_(kernel_conf) {
     auto InitArg2Blob = [this](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
@@ -402,6 +409,7 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
   DeviceCtx* device_ctx() override { return device_ctx_; }
+  StreamContext* stream_ctx() override { return stream_ctx_; }
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) override {
     auto it = arg2tensor_.find(std::make_pair(arg_name, arg_index));
     CHECK(it != arg2tensor_.end()) << "Arg (" << arg_name << "," << arg_index << ") is not found";
@@ -448,6 +456,7 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
 
   user_op::UserOpConfWrapper user_op_conf_;
   DeviceCtx* device_ctx_;
+  StreamContext* stream_ctx_;
   UserKernelBaseContext base_ctx_;
   UserKernelOpInferContext op_infer_ctx_;
   user_op::TensorDescInferFn tensor_desc_infer_fn_;
@@ -479,9 +488,11 @@ BnTensorPair MakeBnTensorPair(const std::string& bn,
 
 class UserKernelComputeContext final : public user_op::KernelComputeContext {
  public:
-  explicit UserKernelComputeContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf)
+  explicit UserKernelComputeContext(DeviceCtx* device_ctx, StreamContext* stream_ctx,
+                                    const KernelConf& kernel_conf)
       : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         device_ctx_(device_ctx),
+        stream_ctx_(stream_ctx),
         base_ctx_(kernel_conf) {
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
       for (const auto& it : arg_map) {
@@ -510,6 +521,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
     return it->second.tensor.get();
   }
   DeviceCtx* device_ctx() override { return device_ctx_; }
+  StreamContext* stream_ctx() override { return stream_ctx_; }
 
   bool UpdateTensorWithCorrBlob(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
     bool updated = false;
@@ -554,6 +566,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
 
   user_op::UserOpConfWrapper user_op_conf_;
   DeviceCtx* device_ctx_;
+  StreamContext* stream_ctx_;
   HashMap<std::pair<std::string, int32_t>, BnTensorPair> arg2bn_tensor_pair_;
   UserKernelBaseContext base_ctx_;
 };
@@ -590,8 +603,8 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
 UserKernel::~UserKernel() = default;
 
 void UserKernel::InitUserKernel(StreamContext* stream_ctx, DeviceCtx* device_ctx) {
-  ctx_.reset(new UserKernelComputeContext(device_ctx, kernel_conf()));
-  infer_ctx_.reset(new UserKernelInferContext(device_ctx, kernel_conf()));
+  ctx_.reset(new UserKernelComputeContext(device_ctx, stream_ctx, kernel_conf()));
+  infer_ctx_.reset(new UserKernelInferContext(device_ctx, stream_ctx, kernel_conf()));
   infer_cache_.reset(new user_op::OpKernelInferCache(kernel_conf(), this));
   {
     const std::string& op_type_name =
@@ -605,8 +618,8 @@ void UserKernel::InitUserKernel(StreamContext* stream_ctx, DeviceCtx* device_ctx
   }
 }
 
-std::shared_ptr<user_op::OpKernelState> UserKernel::CreateOpKernelState(DeviceCtx* device_ctx) {
-  UserKernelInitContext init_ctx(device_ctx, kernel_conf());
+std::shared_ptr<user_op::OpKernelState> UserKernel::CreateOpKernelState(KernelContext* ctx) {
+  UserKernelInitContext init_ctx(ctx->device_ctx(), ctx->stream_ctx(), kernel_conf());
   return kernel_->CreateOpKernelState(&init_ctx);
 }
 
@@ -653,10 +666,10 @@ bool UserKernel::IsCudaGraphSupported() const {
 void UserKernel::VirtualKernelInit(KernelContext* ctx) {
   InitUserKernel(ctx->stream_ctx(), ctx->device_ctx());
   CHECK(opkernel_state_.get() == nullptr);
-  opkernel_state_ = CreateOpKernelState(ctx->device_ctx());
+  opkernel_state_ = CreateOpKernelState(ctx);
 #ifdef WITH_CUDA_GRAPHS
   if (ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
-    UserKernelInitContext init_ctx(ctx->device_ctx(), kernel_conf());
+    UserKernelInitContext init_ctx(ctx->device_ctx(), ctx->stream_ctx(), kernel_conf());
     cuda_graph_ctx_ = dynamic_cast<CudaGraphContext*>(ctx->stream_ctx());
     const auto* cuda_graph_support = dynamic_cast<const user_op::CudaGraphSupport*>(kernel_.get());
     if (cuda_graph_ctx_ != nullptr) {
@@ -733,7 +746,7 @@ void EagerKernel::InitOpKernel(const KernelConf& kernel_conf) {
 
 void EagerKernel::Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (kernel_conf().all_blobs_are_static()) { return; }
-  UserKernelInferContext infer_ctx(nullptr, kernel_conf());
+  UserKernelInferContext infer_ctx(nullptr, nullptr, kernel_conf());
   infer_ctx.UpdateArg2Tensor(BnInOp2Blob);
   auto* op_infer_ctx = dynamic_cast<UserKernelOpInferContext*>(infer_ctx.MutOpInferContext());
   if (op_infer_ctx) { op_infer_ctx->UpdateArg2TensorDesc(BnInOp2Blob); }
@@ -744,10 +757,12 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
     const std::shared_ptr<user_op::OpKernelState>& old_opkernel_state, DeviceCtx* device_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   std::shared_ptr<user_op::OpKernelState> new_opkernel_state;
+  CHECK_NOTNULL(device_ctx);
+  std::unique_ptr<StreamContext> stream_ctx(NewStreamContextAdapter(device_ctx));
   if (old_opkernel_state) {
     new_opkernel_state = old_opkernel_state;
   } else {
-    UserKernelInitContext init_ctx(device_ctx, kernel_conf());
+    UserKernelInitContext init_ctx(device_ctx, stream_ctx.get(), kernel_conf());
     new_opkernel_state = kernel_->CreateOpKernelState(&init_ctx);
   }
 
@@ -757,7 +772,7 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   }
 
   // TODO(lixinqi): refactor to a lightweight KernelComputeContext
-  UserKernelComputeContext compute_ctx(device_ctx, kernel_conf());
+  UserKernelComputeContext compute_ctx(device_ctx, stream_ctx.get(), kernel_conf());
   compute_ctx.UpdateTensorWithCorrBlob(BnInOp2Blob);
   kernel_->Compute(&compute_ctx, new_opkernel_state.get());
   return new_opkernel_state;
