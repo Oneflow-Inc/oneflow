@@ -325,11 +325,9 @@ target_compile_options(of_ccobj PRIVATE -Werror=return-type)
 target_treat_warnings_as_errors(of_ccobj)
 target_compile_options(of_ccobj PRIVATE -DGOOGLE_LOGGING)
 
-if(CMAKE_BUILD_TYPE MATCHES Debug)
-  if(WITH_ASAN)
-    target_compile_options(of_ccobj PUBLIC -fno-omit-frame-pointer -fsanitize=address)
-    target_link_options(of_ccobj PUBLIC -fsanitize=address)
-  endif()
+if(WITH_ASAN)
+  target_compile_options(of_ccobj PUBLIC -fno-omit-frame-pointer -fsanitize=address)
+  target_link_options(of_ccobj PUBLIC -fno-omit-frame-pointer -fsanitize=address)
 endif()
 
 # py ext lib
