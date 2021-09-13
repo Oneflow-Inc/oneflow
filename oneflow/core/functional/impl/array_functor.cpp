@@ -1629,6 +1629,42 @@ class SplitWithSizeFunctor {
   }
 };
 
+class BatchGatherFunctor {
+ public:
+  BatchGatherFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("batch_gather").Input("in").Input("indices").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
+                           const std::shared_ptr<one::Tensor>& indices) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in, indices});
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UnsortedBatchSegmentSumFunctor {
+ public:
+  UnsortedBatchSegmentSumFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("unsorted_batch_segment_sum")
+                         .Input("data")
+                         .Input("segment_ids")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& data,
+                           const std::shared_ptr<one::Tensor>& segment_ids,
+                           const int64_t& num_segments) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("num_segments", num_segments));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {data, segment_ids}, attrs);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -1708,6 +1744,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SplitFunctor>("Split");
   m.add_functor<impl::SplitLikeFunctor>("SplitLike");
   m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");
+  m.add_functor<impl::BatchGatherFunctor>("BatchGather");
+  m.add_functor<impl::UnsortedBatchSegmentSumFunctor>("UnsortedBatchSegmentSum");
 };
 
 }  // namespace functional
