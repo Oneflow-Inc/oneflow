@@ -25,11 +25,6 @@ namespace oneflow {
 
 namespace {
 
-bool ContainsEmptySlice(const std::vector<TensorSliceView>& slices) {
-  return std::any_of(slices.cbegin(), slices.cend(),
-                     [](const TensorSliceView& slice) { return slice.IsEmpty(); });
-}
-
 Maybe<Symbol<cfg::NdSbp>> GetAllSplitNdSbp(int64_t axis, int64_t ndim) {
   cfg::NdSbp split_nd_sbp;
   for (int64_t i = 0; i < ndim; ++i) {
