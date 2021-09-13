@@ -304,6 +304,19 @@
     Tensor gamma, Float epsilon, Int32 axis) => NormalizationGrad"
   bind_python: False
 
+- name: "normalization_add_relu"
+  signature:
+    "Tensor (Tensor x, Tensor addend=None, Tensor moving_mean=None, Tensor moving_variance=None,
+             Tensor gamma, Tensor beta, Int32 axis=1, Float epsilon=1e-5,
+             Float momentum=0.9, Bool is_training=False) => NormalizationAddRelu"
+  bind_python: True
+
+- name: "normalization_add_relu_grad"
+  signature:
+    "TensorTuple (Tensor x, Tensor dy, Tensor moving_mean, Tensor moving_variance,
+             Tensor gamma, Tensor beta, Tensor reserve_space, Tensor y, Int32 axis=1, Float epsilon=1e-5) => NormalizationAddReluGrad"
+  bind_python: False
+
 - name: "arange"
   signature: [
       "Tensor (Int64 start, Int64 end, Int64 step=1, *, DataType dtype=kInt64,
@@ -1077,6 +1090,10 @@
   signature: "Tensor (Tensor in) => Identity"
   bind_python: True
 
+- name: "amp_white_identity"
+  signature: "Tensor (Tensor in) => AmpWhiteIdentity"
+  bind_python: True
+
 - name: "reshape_like"
   signature: "Tensor (Tensor in, Tensor like) => ReshapeLike"
   bind_python: True
@@ -1204,3 +1221,18 @@
 - name: "recv"
   signature: "Tensor (Int64 src, Shape shape=None, DataType dtype=None, Device device=None, *, Tensor out=None) => Recv"
   bind_python: True
+
+- name: "batch_gather"
+  signature:
+    "Tensor (Tensor in, Tensor indices) => BatchGather"
+  bind_python: True
+
+- name: "batch_gather"
+  signature:
+    "Tensor (Tensor in, Tensor indices) => BatchGather"
+  bind_python: True
+
+- name: "unsorted_batch_segment_sum"
+  signature:
+    "Tensor (Tensor data, Tensor segment_ids, Int64 num_segments) => UnsortedBatchSegmentSum"
+  bind_python: False
