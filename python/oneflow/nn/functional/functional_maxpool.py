@@ -20,7 +20,7 @@ import oneflow
 def max_pool1d(
     x,
     kernel_size,
-    stride=1,
+    stride=None,
     padding=0,
     dilation=1,
     return_indices=False,
@@ -46,7 +46,7 @@ def max_pool1d(
 def max_pool2d(
     x,
     kernel_size,
-    stride=1,
+    stride=None,
     padding=0,
     dilation=1,
     return_indices=False,
@@ -72,7 +72,7 @@ def max_pool2d(
 def max_pool3d(
     x,
     kernel_size,
-    stride=1,
+    stride=None,
     padding=0,
     dilation=1,
     return_indices=False,
