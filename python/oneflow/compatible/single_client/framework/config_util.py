@@ -19,7 +19,6 @@ import oneflow._oneflow_internal
 from oneflow.compatible.single_client.framework import hob as hob
 from oneflow.compatible.single_client.framework import session_context as session_ctx
 from oneflow.compatible.single_client.support import enable_if as enable_if
-from abc import ABC, abstractmethod
 
 
 def api_load_library(val: str) -> None:
@@ -341,29 +340,6 @@ def num_callback_threads(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is int
     sess.config_proto.resource.collective_boxing_conf.num_callback_threads = val
-
-
-class CollectiveBoxingCoordinator(ABC):
-    @abstractmethod
-    def SetFieldsInCollectiveBoxingConf(self, conf) -> None:
-        pass
-
-
-class StaticGroupCoordinator(CollectiveBoxingCoordinator):
-    def SetFieldsInCollectiveBoxingConf(self, conf) -> None:
-        conf.static_group_coordinator_conf.SetInParent()
-
-
-def api_coordinator(coordinator: CollectiveBoxingCoordinator) -> None:
-    return enable_if.unique([set_coordinator, do_nothing])(coordinator)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def set_coordinator(coordinator):
-    sess = session_ctx.GetDefaultSession()
-    coordinator.SetFieldsInCollectiveBoxingConf(
-        sess.config_proto.resource.collective_boxing_conf
-    )
 
 
 def api_enable_tensor_float_32_compute(val: bool = True) -> None:
