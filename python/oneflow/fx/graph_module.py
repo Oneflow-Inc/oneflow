@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow
+from oneflow.framework.tensor import Tensor
 import oneflow.nn as nn
 import linecache
 from typing import Type, Dict, List, Any, Union, Optional, Set
@@ -129,6 +130,29 @@ def _addindent(s_, numSpaces):
     s = first + "\n" + s
     return s
 
+callable_dict = {}
+
+internal_oneflow_funcs = [
+    "FunctionConfig",
+    "Generator",
+    "INVALID_SPLIT_AXIS",
+    "MultiClientSession",
+    "Tensor",
+    "builtin_op",
+    "distributed",
+    "default_generator",
+    "docstr",
+    "eager",
+    "enable_eager_execution",
+    "env",
+    "framework",
+]
+
+oneflow_funcs = dir(oneflow)
+for funcs_name in oneflow_funcs:
+    if not funcs_name.startswith("_") and funcs_name not in internal_oneflow_funcs:
+        # _wrapped_methods_to_patch.append((oneflow, funcs_name))
+        callable_dict[funcs_name] = getattr(oneflow, funcs_name)
 
 @compatibility(is_backward_compatible=True)
 class GraphModule(oneflow.nn.Module):
@@ -238,6 +262,14 @@ class GraphModule(oneflow.nn.Module):
         corresponds to ``g``
         """
         assert isinstance(g, Graph), f"Expected a Graph instance, but got {type(g)}"
+        for x in g.nodes:
+            if type(x.target) is str and (not hasattr(oneflow.Tensor, x.target)) and x.op=="call_method":
+                with g.inserting_after(x):
+                    # y = g.call_function("oneflow.nn.functional.avg_pool2d" ,args=x.args, kwargs=x.kwargs)
+                    y = g.create_node("call_function", callable_dict[x.target], args=x.args, kwargs=x.kwargs)
+                x.replace_all_uses_with(y)
+                g.erase_node(x)
+        
         self._graph = g
         g.owning_module = self
         self.recompile()
@@ -522,7 +554,8 @@ class {module_name}(oneflow.nn.Module):
                 if cls_call is not None:
                     return cls_call(self, *args, **kwargs)
                 else:
-                    return super(type(self), self).__call__(*args, **kwargs)
+                    res =  super(type(self), self).__call__(*args, **kwargs)
+                    return res
             except Exception as e:
                 assert e.__traceback__
                 topmost_framesummary: traceback.FrameSummary = traceback.StackSummary.extract(

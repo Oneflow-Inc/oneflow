@@ -49,7 +49,6 @@ HAS_VARSTUFF = inspect.CO_VARARGS | inspect.CO_VARKEYWORDS
 _orig_module_call: Callable = oneflow.nn.Module.__call__
 _orig_module_getattr: Callable = oneflow.nn.Module.__getattr__
 
-
 _proxyable_classes: Dict[Type, None] = {}
 
 
@@ -691,9 +690,13 @@ for funcs_name in oneflow_funcs:
     if not funcs_name.startswith("_") and funcs_name not in internal_oneflow_funcs:
         _wrapped_methods_to_patch.append((oneflow, funcs_name))
 
+oneflow_nn_funcs = dir(oneflow.nn.functional)
+for funcs_name in oneflow_nn_funcs:
+    if not funcs_name.startswith("_"):
+        _wrapped_methods_to_patch.append((oneflow.nn.functional, funcs_name))
+
 # TODO(BBuf) fix bug
 _wrapped_methods_to_patch.append((oneflow.Tensor, "__getitem__"))
-
 
 def _find_proxy(*objects_to_search):
     """
@@ -928,7 +931,6 @@ def wrap(fn_or_name: Union[str, Callable]):
     # semantics would be slightly different, but would add support `from x import wrapped_function`
     _wrapped_fns_to_patch.append((f.f_globals, fn_name))
     return fn_or_name
-
 
 def symbolic_trace(
     root: Union[oneflow.nn.Module, Callable],
