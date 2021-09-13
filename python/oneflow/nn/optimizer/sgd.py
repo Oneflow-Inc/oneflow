@@ -115,8 +115,7 @@ class SGD(Optimizer):
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
-                if param_group["momentum"] != 0.0:
-                    self._state[param]["momentum_buf"] = flow.zeros_like(param)
+
         self._momentum_sgd = (
             flow.builtin_op("momentum_update")
             .Input("model")
@@ -149,6 +148,8 @@ class SGD(Optimizer):
                     if param_group["momentum"] == 0.0:
                         self._sgd(param, param.grad, learning_rate_val=lr, l2=l2)
                     else:
+                        if "momentum_buf" not in self._state[param]:
+                            self._state[param]["momentum_buf"] = flow.zeros_like(param)
                         momentum_buf = self._state[param]["momentum_buf"]
                         beta = param_group["momentum"]
                         self._momentum_sgd(
