@@ -20,8 +20,6 @@ limitations under the License.
 
 namespace oneflow {
 
-class CollectiveBoxingPlan;
-
 namespace boxing {
 
 namespace collective {
