@@ -80,14 +80,16 @@ class EagerNaiveSToSOpKernelState final : public user_op::OpKernelState {
 
     const std::vector<TensorSliceView> in_slices =
         GetTensorSliceView(*in_parallel_desc->hierarchy(),
-                           *CHECK_JUST(CachedGetAllSplitNdSbp(in_split_axis, 1)), shape);
+                           *CHECK_JUST(CachedGetAllSplitNdSbp(
+                               in_split_axis, in_parallel_desc->hierarchy()->NumAxes())),
+                           shape);
     CHECK(!ContainsEmptySlice(in_slices));
     const std::vector<TensorSliceView> out_slices =
         GetTensorSliceView(*out_parallel_desc->hierarchy(),
-                           *CHECK_JUST(CachedGetAllSplitNdSbp(out_split_axis, 1)), shape);
+                           *CHECK_JUST(CachedGetAllSplitNdSbp(
+                               out_split_axis, out_parallel_desc->hierarchy()->NumAxes())),
+                           shape);
     CHECK(!ContainsEmptySlice(out_slices));
-
-    memory_copier_.reset(NewDefaultMemoryCopier(device_type));
 
     for (int64_t i = 0; i < out_parallel_num; ++i) {
       const TensorSliceView& out_slice = out_slices.at(i);
@@ -106,6 +108,7 @@ class EagerNaiveSToSOpKernelState final : public user_op::OpKernelState {
             std::make_shared<TensorSliceCopier>(out_slice, intersection, data_type)));
       }
     }
+    memory_copier_.reset(NewDefaultMemoryCopier(device_type));
   }
 
   std::vector<std::pair<int64_t, std::shared_ptr<TensorSliceCopier>>>
