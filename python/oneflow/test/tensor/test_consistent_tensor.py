@@ -18,10 +18,10 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
-
 import oneflow as flow
 import oneflow.unittest
+
+from automated_test_util import *
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -60,6 +60,21 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(y.is_local)
         y = flow.Tensor(x, device="cuda")
         test_case.assertTrue(y.is_local)
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_consistent_set_data(test_case):
+        x_placement = flow.placement("cpu", {0: 0})
+        x_sbp = flow.sbp.broadcast
+        x = flow.ones(2, 3, placement=x_placement, sbp=x_sbp)
+        y_placement = flow.placement("cuda", {0: 0})
+        y_sbp = flow.sbp.split(0)
+        y = flow.ones(4, 5, placement=y_placement, sbp=y_sbp)
+        old_id = id(x)
+        x.data = y
+        test_case.assertEqual(old_id, id(x))
+        test_case.assertTrue(x.shape == (4, 5))
+        test_case.assertTrue(x.placement == y_placement)
+        test_case.assertTrue(x.sbp[0] == y_sbp)
 
     @flow.unittest.skip_unless_1n1d()
     def test_consistent_tensor_autograd_related_methods(test_case):

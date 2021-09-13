@@ -142,9 +142,6 @@ class Adam(Optimizer):
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
-                self._state[param]["exp_avg"] = flow.zeros_like(param)
-                self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
-                self._state[param]["max_exp_avg_sq"] = flow.zeros_like(param)
 
         self._op = (
             flow.builtin_op("adam_update")
@@ -193,6 +190,12 @@ class Adam(Optimizer):
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
+                    if "exp_avg" not in self._state[param]:
+                        self._state[param]["exp_avg"] = flow.zeros_like(param)
+                    if "exp_avg_sq" not in self._state[param]:
+                        self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
+                    if "max_exp_avg_sq" not in self._state[param]:
+                        self._state[param]["max_exp_avg_sq"] = flow.zeros_like(param)
                     m_tensor = self._state[param]["exp_avg"]
                     v_tensor = self._state[param]["exp_avg_sq"]
                     max_v_tensor = self._state[param]["max_exp_avg_sq"]

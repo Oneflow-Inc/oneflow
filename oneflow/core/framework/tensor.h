@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_H_
 #define ONEFLOW_CORE_FRAMEWORK_TENSOR_H_
 
+#include <memory>
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/common/shape_view.h"
@@ -62,6 +63,7 @@ class Tensor {
   virtual bool is_lazy() const = 0;
   virtual bool is_eager() const { return !is_lazy(); }
   virtual const TensorMeta& tensor_meta() const = 0;
+  virtual Maybe<Tensor> data() = 0;
   virtual Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const { OF_UNIMPLEMENTED(); }
 
   // Getters valid only for EagerMirroredTensor
@@ -89,7 +91,6 @@ class Tensor {
   virtual Maybe<TensorArg> current_grad() const = 0;
   virtual Maybe<Tensor> detach() const = 0;
   virtual Maybe<Tensor> clone() const = 0;
-  virtual std::shared_ptr<Tensor> data() const = 0;
 
   // Setters for autograd
   virtual void set_requires_grad(bool requires_grad) = 0;
@@ -104,6 +105,7 @@ class Tensor {
   virtual void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) = 0;
 
   virtual user_op::TensorDesc* mut_tensor_meta() = 0;
+  virtual Maybe<void> set_data(const std::shared_ptr<Tensor>& other) = 0;
 
   virtual Maybe<MirroredTensor> AsMirroredTensor() = 0;
   virtual Maybe<ConsistentTensor> AsConsistentTensor() = 0;
@@ -119,110 +121,114 @@ class StaticZerosTensor final : public Tensor {
     return std::shared_ptr<StaticZerosTensor>(new StaticZerosTensor(shape, dtype, device));
   }
   // Getters
-  const std::shared_ptr<const Shape>& shape() const { return shape_; }
-  Symbol<DType> dtype() const { return CHECK_JUST(DType::Get(dtype_)); }
-  Maybe<TransportToken> transport_token() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<Symbol<cfg::NdSbp>> nd_sbp() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<Symbol<ParallelDesc>> parallel_desc() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<Symbol<Device>> device() const { return device_; }
-  Maybe<Symbol<Device>*> mut_device() { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  bool is_cuda() const {
+  const std::shared_ptr<const Shape>& shape() const override { return shape_; }
+  Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(dtype_)); }
+  Maybe<TransportToken> transport_token() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<Symbol<ParallelDesc>> parallel_desc() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<Symbol<Device>> device() const override { return device_; }
+  Maybe<Symbol<Device>*> mut_device() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  bool is_cuda() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
-  bool is_consistent() const { return false; }
-  bool is_local() const { return !is_consistent(); }
-  bool is_lazy() const {
+  bool is_consistent() const override { return false; }
+  bool is_local() const override { return !is_consistent(); }
+  bool is_lazy() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
-  bool is_eager() const { return !is_lazy(); }
-  const TensorMeta& tensor_meta() const {
+  bool is_eager() const override { return !is_lazy(); }
+  const TensorMeta& tensor_meta() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return *(TensorMeta*)nullptr;
   }
-  Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const {
+  Maybe<Tensor> data() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const override {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
 
   // Getters valid only for EagerMirroredTensor
-  Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() {
+  Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
-  Maybe<vm::EagerBlobObject> eager_blob_object() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<LocalDepObject*> compute_local_dep_object() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<bool> has_eager_blob_object() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<TensorStorage> tensor_storage() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<const Stride> stride() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<int64_t> storage_offset() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<vm::EagerBlobObject> eager_blob_object() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<LocalDepObject*> compute_local_dep_object() const override {
+    RETURN_ERROR_WITH_BUG_PROMPT();
+  }
+  Maybe<bool> has_eager_blob_object() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<TensorStorage> tensor_storage() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<const Stride> stride() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<int64_t> storage_offset() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
   // Getters/Setters valid only for EagerConsistentTensor
-  Maybe<const Optional<Symbol<cfg::NdSbp>>&> consumer_nd_sbp_constraint() const {
+  Maybe<const Optional<Symbol<cfg::NdSbp>>&> consumer_nd_sbp_constraint() const override {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
-  Maybe<MirroredTensor> cur_rank_phy_tensor() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) {
+  Maybe<MirroredTensor> cur_rank_phy_tensor() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) override {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
 
   // Getters for autograd
-  bool requires_grad() const {
+  bool requires_grad() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
-  bool is_leaf() const {
+  bool is_leaf() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
-  bool retain_grad() const {
+  bool retain_grad() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
-  std::shared_ptr<const FunctionNode> grad_fn_node() const {
+  std::shared_ptr<const FunctionNode> grad_fn_node() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
-  Maybe<Tensor> acc_grad() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<TensorArg> current_grad() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<Tensor> detach() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<Tensor> clone() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  std::shared_ptr<Tensor> data() const {
-    PRINT_BUG_PROMPT_AND_ABORT();
-    return nullptr;
-  }
+  Maybe<Tensor> acc_grad() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<TensorArg> current_grad() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<Tensor> detach() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<Tensor> clone() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
   // Setters for autograd
-  void set_requires_grad(bool requires_grad) { PRINT_BUG_PROMPT_AND_ABORT(); }
-  Maybe<void> set_retain_grad(bool retain_grad) { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) {
+  void set_requires_grad(bool requires_grad) override { PRINT_BUG_PROMPT_AND_ABORT(); }
+  Maybe<void> set_retain_grad(bool retain_grad) override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
     PRINT_BUG_PROMPT_AND_ABORT();
   }
-  const std::shared_ptr<FunctionNode>& mut_grad_fn_node() {
+  const std::shared_ptr<FunctionNode>& mut_grad_fn_node() override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return *(std::shared_ptr<FunctionNode>*)nullptr;
   }
-  Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<Tensor> mut_acc_grad() { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  void set_is_leaf(bool is_leaf) { PRINT_BUG_PROMPT_AND_ABORT(); }
-  std::shared_ptr<AutogradMeta> mut_autograd_meta() {
+  Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
+    RETURN_ERROR_WITH_BUG_PROMPT();
+  }
+  Maybe<Tensor> mut_acc_grad() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  void set_is_leaf(bool is_leaf) override { PRINT_BUG_PROMPT_AND_ABORT(); }
+  std::shared_ptr<AutogradMeta> mut_autograd_meta() override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
-  bool has_autograd_meta() const {
+  bool has_autograd_meta() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
-  void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) {
+  void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) override {
     PRINT_BUG_PROMPT_AND_ABORT();
   }
 
-  user_op::TensorDesc* mut_tensor_meta() {
+  user_op::TensorDesc* mut_tensor_meta() override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
+  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
+    RETURN_ERROR_WITH_BUG_PROMPT();
+  }
 
-  Maybe<MirroredTensor> AsMirroredTensor();
-  Maybe<ConsistentTensor> AsConsistentTensor() { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<MirroredTensor> AsMirroredTensor() override;
+  Maybe<ConsistentTensor> AsConsistentTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
  private:
   StaticZerosTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
@@ -281,6 +287,7 @@ class Parameter final : public TensorIf<Parameter> {
   Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const override {
     return tensor_->consistent_tensor_meta();
   }
+  Maybe<Tensor> data() override { return tensor_; }
 
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override {
     return tensor_->mut_eager_mirrored_tensor_impl();
@@ -314,7 +321,6 @@ class Parameter final : public TensorIf<Parameter> {
   Maybe<TensorArg> current_grad() const override { return tensor_->current_grad(); }
   Maybe<Tensor> detach() const override { return tensor_->detach(); }
   Maybe<Tensor> clone() const override { return tensor_->clone(); }
-  std::shared_ptr<Tensor> data() const override { return tensor_->data(); }
 
   void set_requires_grad(bool requires_grad) override {
     return tensor_->set_requires_grad(requires_grad);
@@ -336,12 +342,22 @@ class Parameter final : public TensorIf<Parameter> {
   }
 
   user_op::TensorDesc* mut_tensor_meta() override { return tensor_->mut_tensor_meta(); }
+  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
+    std::shared_ptr<Tensor> tensor = other;
+    while (auto parameter = std::dynamic_pointer_cast<Parameter>(tensor)) {
+      tensor = parameter->tensor_;
+    }
+    CHECK_OR_RETURN(is_local() == tensor->is_local() && is_eager() == tensor->is_eager())
+        << "You can't assign copy between tensors with different type";
+    this->tensor_ = std::move(tensor);
+    return Maybe<void>::Ok();
+  }
 
   Maybe<MirroredTensor> AsMirroredTensor() override {
     if (const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(tensor_)) {
       return mirrored_tensor;
     }
-    OF_RUNTIME_ERROR() << "Parameter Tensor has no AsMirroredTensor property";
+    RETURN_ERROR_WITH_BUG_PROMPT();
   }
 
   Maybe<ConsistentTensor> AsConsistentTensor() override {
@@ -389,8 +405,11 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return false; }
   bool is_cuda() const override;
-  std::shared_ptr<Tensor> data() const override;
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
+  Maybe<Tensor> data() override {
+    OF_LOG_ONCE(LOG(WARNING) << "You shouldn't call `.data` for a LocalTensor.");
+    return std::static_pointer_cast<Tensor>(shared_from_this());
+  }
 
   // Getters valid only for EagerMirroredTensor
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
@@ -439,6 +458,13 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
     return impl_->mut_eager_mirrored_tensor_impl();
   }
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
+  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
+    const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(other);
+    CHECK_NOTNULL_OR_RETURN(mirrored_tensor);
+    impl_ = mirrored_tensor->impl_;
+    grad_fn_node_ = mirrored_tensor->grad_fn_node_;
+    return Maybe<void>::Ok();
+  }
 
   Maybe<MirroredTensor> AsMirroredTensor() override { return shared_from_this(); }
   Maybe<ConsistentTensor> AsConsistentTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
@@ -477,7 +503,10 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
     return impl_->cur_rank_phy_tensor();
   }
   bool is_cuda() const override;
-  std::shared_ptr<Tensor> data() const override;
+  Maybe<Tensor> data() override {
+    OF_LOG_ONCE(LOG(WARNING) << "You shouldn't call `.data` for a ConsistentTensor.");
+    return std::static_pointer_cast<Tensor>(shared_from_this());
+  }
 
   // Getters valid only for EagerMirroredTensor
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
@@ -535,6 +564,13 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   }
 
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
+  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
+    const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(other);
+    CHECK_NOTNULL_OR_RETURN(consistent_tensor);
+    impl_ = consistent_tensor->impl_;
+    grad_fn_node_ = consistent_tensor->grad_fn_node_;
+    return Maybe<void>::Ok();
+  }
 
   Maybe<MirroredTensor> AsMirroredTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<ConsistentTensor> AsConsistentTensor() override { return shared_from_this(); }
