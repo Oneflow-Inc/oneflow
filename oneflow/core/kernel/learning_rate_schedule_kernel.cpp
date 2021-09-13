@@ -174,6 +174,23 @@ double PiecewiseScalingLearningRate(const PiecewiseScalingConf& conf, double lr,
   return scales[i] * lr;
 }
 
+double MultistepLearningRate(const MultiStepConf& conf, double lr, int64_t cur_batch_num) {
+  const PbRf<int64_t>& milestones = conf.milestones();
+  CHECK_GE(milestones.size(), 1);
+  const double gamma = conf.gamma();
+
+  size_t i = 0;
+  if (cur_batch_num < milestones[milestones.size() - 1]) {
+    for (; i < milestones.size(); ++i) {
+      if (cur_batch_num < milestones[i]) { break; }
+    }
+  } else {
+    i = milestones.size();
+  }
+
+  return lr * std::pow(gamma, i);
+}
+
 double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int64_t cur_batch_num) {
   if (conf.has_exponential_conf()) {
     return ExponentialDecayedLearningRate(conf.exponential_conf(), lr, cur_batch_num);
@@ -191,6 +208,8 @@ double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int6
     return LinearCosineDecayedLearningRate(conf.linear_cosine_conf(), lr, cur_batch_num);
   } else if (conf.has_piecewise_scaling_conf()) {
     return PiecewiseScalingLearningRate(conf.piecewise_scaling_conf(), lr, cur_batch_num);
+  } else if (conf.has_multi_step_conf()) {
+    return MultistepLearningRate(conf.multi_step_conf(), lr, cur_batch_num);
   } else {
     UNIMPLEMENTED();
   }
