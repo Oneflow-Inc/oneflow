@@ -154,13 +154,17 @@ def scatter(tensor, tensor_list=None, src=0):
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
     out_shape = tensor.shape
     if flow.env.get_rank() == src:
-        tensor.data(tensor_list[src])
+        tensor.data = tensor_list[src]
         assert isinstance(tensor_list, list)
         assert len(tensor_list) == flow.env.get_world_size()
         for i in range(len(tensor_list)):
-            if i == src: continue
+            if i == src:
+                continue
             assert isinstance(tensor_list[i], flow._oneflow_internal.Tensor)
-            assert tensor_list[i].shape == out_shape, f"invalid tensor size at index {i}: {out_shape} vs {tensor_list[i].shape}"
+            assert (
+                tensor_list[i].shape == out_shape
+            ), f"invalid tensor size at index {i}: {out_shape} vs {tensor_list[i].shape}"
             flow.comm.send(tensor_list[i], i)
+    # send/recv on the same rank is invalid
     if flow.env.get_rank() != src:
         flow.comm.recv(src, out=tensor)
