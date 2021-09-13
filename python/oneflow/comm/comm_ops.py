@@ -145,8 +145,9 @@ def broadcast(tensor, src):
                 [3, 4]], device='cuda:0', dtype=oneflow.int64)
 
     """
-    assert isinstance(tensor, flow._oneflow_internal.Tensor)
     assert isinstance(src, int)
+    assert isinstance(tensor, flow._oneflow_internal.Tensor)
+    assert tensor.is_local
     flow._C.broadcast(tensor, src_rank=src, inplace=True)
 
 
@@ -165,6 +166,7 @@ def scatter(tensor, tensor_list=None, src=0):
     """
     assert isinstance(src, int)
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
+    assert tensor.is_local
     out_shape = tensor.shape
     if flow.env.get_rank() == src:
         tensor.data = tensor_list[src]
@@ -174,6 +176,7 @@ def scatter(tensor, tensor_list=None, src=0):
             if i == src:
                 continue
             assert isinstance(tensor_list[i], flow._oneflow_internal.Tensor)
+            assert tensor_list[i].is_local
             assert (
                 tensor_list[i].shape == out_shape
             ), f"invalid tensor size at index {i}: {out_shape} vs {tensor_list[i].shape}"
