@@ -135,6 +135,7 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
             .add_s(repeat_op.output("out", 0));
         return Maybe<void>::Ok();
       } else {
+        LOG(ERROR) << "Gradient accumulation unsupported op : " << op_conf.DebugString();
         return Error::UnimplementedError();
       }
     } else if ((is_multi_client && op_conf.has_output_conf())

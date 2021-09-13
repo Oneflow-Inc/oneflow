@@ -27,7 +27,6 @@ limitations under the License.
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
-#include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/job/rank_group_scope.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
@@ -179,7 +178,6 @@ class ConsistentAllReduceFunctor {
     {
       CHECK_OR_RETURN(x->is_consistent());
       CHECK_OR_RETURN(IsAllPartialSumNdSbp(JUST(x->nd_sbp())));
-      CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllReduceOpExpr(JUST(x->parallel_desc())));
