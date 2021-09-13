@@ -681,13 +681,15 @@ class ReshapeFunctor {
     size_t x_count = x->shape()->Count(0);
     MutableAttrMap attrs;
     if (need_infer_axis == -1) {
-      CHECK_EQ_OR_RETURN(shape.Count(0), x_count);
+      CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
+          << "\n Shape " << shape.ToString() << " is invalid for input shape "
+          << x->shape()->ToString();
       JUST(attrs.SetAttr<Shape>("shape", shape));
     } else {
       Shape infered_shape = shape;
       infered_shape.Set(need_infer_axis, x_count / count);
       CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
-          << "Shape " << shape.ToString() << " is invalid for input of shape "
+          << "\n Shape " << shape.ToString() << " is invalid for input shape "
           << x->shape()->ToString();
       JUST(attrs.SetAttr<Shape>("shape", infered_shape));
     }
