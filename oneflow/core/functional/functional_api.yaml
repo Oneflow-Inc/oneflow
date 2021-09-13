@@ -1221,3 +1221,18 @@
 - name: "recv"
   signature: "Tensor (Int64 src, Shape shape=None, DataType dtype=None, Device device=None, *, Tensor out=None) => Recv"
   bind_python: True
+
+- name: "batch_gather"
+  signature:
+    "Tensor (Tensor in, Tensor indices) => BatchGather"
+  bind_python: True
+
+- name: "batch_gather"
+  signature:
+    "Tensor (Tensor in, Tensor indices) => BatchGather"
+  bind_python: True
+
+- name: "unsorted_batch_segment_sum"
+  signature:
+    "Tensor (Tensor data, Tensor segment_ids, Int64 num_segments) => UnsortedBatchSegmentSum"
+  bind_python: False
