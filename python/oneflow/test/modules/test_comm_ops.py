@@ -82,7 +82,7 @@ class TestReduce(flow.unittest.TestCase):
         if flow.env.get_rank() == 0:
             test_case.assertTrue(np.allclose(tensor.numpy(), np.array([[5, 7], [9, 11]])))
         else:
-            test_case.assertTrue(np.allclose(tensor.numpy(), np.array([[1, 2], [3, 4]])))    
+            test_case.assertTrue(np.allclose(tensor.numpy(), np.array([[4, 5], [6, 7]])))    
 
 
 @flow.unittest.skip_unless_1n2d()
