@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <oneflow/core/stream/stream_context_adapter.h>
 #include "oneflow/core/kernel/user_kernel.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/op_kernel.h"
@@ -27,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/stream/stream_context_adapter.h"
 
 #ifdef WITH_CUDA_GRAPHS
 
