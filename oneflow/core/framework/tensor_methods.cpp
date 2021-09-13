@@ -89,7 +89,8 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& tensor, const std::vector<int
   const auto& blob_object = JUST(tensor->eager_blob_object());
 
   auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(
-      tensor_meta, JUST(tensor->tensor_storage()), tensor->requires_grad(), tensor->is_leaf());
+      tensor_meta, JUST(tensor->tensor_storage()), tensor->requires_grad(),
+      /*is_leaf=*/!tensor->requires_grad());
   tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()));
   JUST(JUST(tensor_impl->eager_blob_object())->TryInitBlob());
   JUST(tensor_impl->eager_blob_object())->set_is_shape_synced(true);

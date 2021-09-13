@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/framework/py_distribute.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/framework/dtype.h"
@@ -51,9 +52,14 @@ void ApiEagerMirroredTensorZeros(const std::shared_ptr<Tensor>& tensor) {
   return EagerMirroredTensorZeros(tensor).GetOrThrow();
 }
 
+bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
+  return IsContiguous(tensor).GetOrThrow();
+}
+
 template<typename T>
 void ApiCopyMirroredTensorToNumpy(const std::shared_ptr<Tensor>& tensor, py::array_t<T> array) {
-  return CopyBetweenMirroredTensorAndNumpy(tensor, array, OfBlob_CopyToBuffer, "const")
+  return CopyBetweenMirroredTensorAndNumpy(tensor->contiguous(), array, OfBlob_CopyToBuffer,
+                                           "const")
       .GetOrThrow();
 }
 
@@ -92,10 +98,6 @@ Maybe<void> TouchConsistentTensor(const std::shared_ptr<one::Tensor>& tensor) {
 }
 
 auto* CheckMetaConsistency = DECORATE(&TouchConsistentTensor, CheckConsistentTensorMeta);
-
-bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
-  return IsContiguous(tensor).GetOrThrow();
-}
 
 py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {
   return *TensorGetPyTupleOfSbp(tensor).GetPtrOrThrow();
