@@ -49,6 +49,6 @@ class OneflowModuleRegistry {
   };                                                                                             \
   OfApiRegistryInit of_api_registry_init;                                                        \
   }                                                                                              \
-  static void OF_PP_CAT(OneflowApiPythonModule, __LINE__)(pybind11::module& m)
+  static void OF_PP_CAT(OneflowApiPythonModule, __LINE__)(pybind11::module & m)
 
 #endif  // ONEFLOW_API_PYTHON_UTIL_OF_API_REGISTRY_H_
