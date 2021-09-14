@@ -663,45 +663,38 @@ class ScalarLogicalLessEqual2Functor {
 
 }  // namespace impl
 
+using namespace impl;
+
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  m.add_functor<impl::AddNFunctor>("AddN");
-  m.add_functor<impl::ScalarAddFunctor>("ScalarAdd");
-  m.add_functor<impl::ScalarSubFunctor>("ScalarSub");
-  m.add_functor<impl::ScalarMulFunctor>("ScalarMul");
-  m.add_functor<impl::ScalarDivFunctor>("ScalarDiv");
-  m.add_functor<impl::ScalarAdd2Functor>("ScalarAdd2");
-  m.add_functor<impl::ScalarSub2Functor>("ScalarSub2");
-  m.add_functor<impl::ScalarMul2Functor>("ScalarMul2");
-  m.add_functor<impl::ScalarDiv2Functor>("ScalarDiv2");
-  m.add_functor<impl::ScalarPowFunctor>("ScalarPow");
-  m.add_functor<impl::ReduceSumFunctor>("ReduceSum");
-  m.add_functor<impl::ReduceProdFunctor>("ReduceProd");
-  m.add_functor<impl::ReduceMeanFunctor>("ReduceMean");
-  m.add_functor<impl::TransposeFunctor>("Transpose");
-  m.add_functor<impl::ArangeFunctor>("Arange");
-  m.add_functor<impl::Arange2Functor>("Arange2");
-  m.add_functor<impl::ConsistentArangeFunctor>("ConsistentArange");
-  m.add_functor<impl::ConsistentArange2Functor>("ConsistentArange2");
-  m.add_functor<impl::ArgMaxFunctor>("ArgMax");
-  m.add_functor<impl::CastFunctor>("Cast");
-  m.add_functor<impl::ClampFunctor>("Clamp");
-  m.add_functor<impl::ClampGradFunctor>("ClampGrad");
-  m.add_functor<impl::SelectFirstFunctor>("SelectFirst");
-  m.add_functor<impl::MinimumFunctor>("Minimum");
-  m.add_functor<impl::MaximumFunctor>("Maximum");
-  m.add_functor<impl::ScalarFModFunctor>("ScalarFMod");
-  m.add_functor<impl::ScalarLogicalEqualFunctor>("ScalarLogicalEqual");
-  m.add_functor<impl::ScalarLogicalEqual2Functor>("ScalarLogicalEqual2");
-  m.add_functor<impl::ScalarLogicalNotEqualFunctor>("ScalarLogicalNotEqual");
-  m.add_functor<impl::ScalarLogicalNotEqual2Functor>("ScalarLogicalNotEqual2");
-  m.add_functor<impl::ScalarLogicalGreaterFunctor>("ScalarLogicalGreater");
-  m.add_functor<impl::ScalarLogicalGreater2Functor>("ScalarLogicalGreater2");
-  m.add_functor<impl::ScalarLogicalGreaterEqualFunctor>("ScalarLogicalGreaterEqual");
-  m.add_functor<impl::ScalarLogicalGreaterEqual2Functor>("ScalarLogicalGreaterEqual2");
-  m.add_functor<impl::ScalarLogicalLessFunctor>("ScalarLogicalLess");
-  m.add_functor<impl::ScalarLogicalLess2Functor>("ScalarLogicalLess2");
-  m.add_functor<impl::ScalarLogicalLessEqualFunctor>("ScalarLogicalLessEqual");
-  m.add_functor<impl::ScalarLogicalLessEqual2Functor>("ScalarLogicalLessEqual2");
+  m.add_functor<AddNFunctor>("Add");
+  m.add_functor<ScalarAddFunctor, ScalarAdd2Functor>("ScalarAdd");
+  m.add_functor<ScalarSubFunctor, ScalarSub2Functor>("ScalarSub");
+  m.add_functor<ScalarMulFunctor, ScalarMul2Functor>("ScalarMul");
+  m.add_functor<ScalarDivFunctor, ScalarDiv2Functor>("ScalarDiv");
+  m.add_functor<ScalarPowFunctor>("ScalarPow");
+  m.add_functor<ReduceSumFunctor>("ReduceSum");
+  m.add_functor<ReduceProdFunctor>("ReduceProd");
+  m.add_functor<ReduceMeanFunctor>("ReduceMean");
+  m.add_functor<TransposeFunctor>("Transpose");
+  m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
+  m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
+  m.add_functor<ArgMaxFunctor>("ArgMax");
+  m.add_functor<CastFunctor>("Cast");
+  m.add_functor<ClampFunctor>("Clamp");
+  m.add_functor<ClampGradFunctor>("ClampGrad");
+  m.add_functor<SelectFirstFunctor>("SelectFirst");
+  m.add_functor<MinimumFunctor>("Minimum");
+  m.add_functor<MaximumFunctor>("Maximum");
+  m.add_functor<ScalarFModFunctor>("ScalarFMod");
+  m.add_functor<ScalarLogicalEqualFunctor, ScalarLogicalEqual2Functor>("ScalarLogicalEqual");
+  m.add_functor<ScalarLogicalNotEqualFunctor, ScalarLogicalNotEqual2Functor>(
+      "ScalarLogicalNotEqual");
+  m.add_functor<ScalarLogicalGreaterFunctor, ScalarLogicalGreater2Functor>("ScalarLogicalGreater");
+  m.add_functor<ScalarLogicalGreaterEqualFunctor, ScalarLogicalGreaterEqual2Functor>(
+      "ScalarLogicalGreaterEqual");
+  m.add_functor<ScalarLogicalLessFunctor, ScalarLogicalLess2Functor>("ScalarLogicalLess");
+  m.add_functor<ScalarLogicalLessEqualFunctor, ScalarLogicalLessEqual2Functor>(
+      "ScalarLogicalLessEqual");
 };
 
 }  // namespace functional
