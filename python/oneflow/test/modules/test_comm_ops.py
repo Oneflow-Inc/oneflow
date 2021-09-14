@@ -99,10 +99,13 @@ class TestReduce(flow.unittest.TestCase):
         tensor = flow.tensor(np_arr, device="cuda", dtype=flow.int32)
         flow.comm.reduce(tensor, 0)
         if flow.env.get_rank() == 0:
-            test_case.assertTrue(np.allclose(tensor.numpy(), np.array([[5, 7], [9, 11]])))
+            test_case.assertTrue(
+                np.allclose(tensor.numpy(), np.array([[5, 7], [9, 11]]))
+            )
         else:
-            test_case.assertTrue(np.allclose(tensor.numpy(), np.array([[4, 5], [6, 7]])))    
-
+            test_case.assertTrue(
+                np.allclose(tensor.numpy(), np.array([[4, 5], [6, 7]]))
+            )
 
 
 @flow.unittest.skip_unless_1n2d()

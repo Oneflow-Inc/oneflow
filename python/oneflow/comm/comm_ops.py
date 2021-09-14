@@ -16,7 +16,6 @@ limitations under the License.
 
 import oneflow as flow
 import numpy as np
-import oneflow.unittest
 
 
 def all_reduce(tensor):
@@ -150,7 +149,7 @@ def broadcast(tensor, src):
     assert tensor.is_local
     flow._C.broadcast(tensor, src_rank=src, inplace=True)
 
-    
+
 def scatter(tensor, tensor_list=None, src=0):
     """
     Scatters a list of tensors to all processes in a group.
