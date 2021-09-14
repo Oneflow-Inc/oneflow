@@ -98,7 +98,7 @@ void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
     static_assert(sizeof(IBVerbsCommNetRMADesc) <= kActorMsgUserDataMaxSize, "");
     new_msg.AddUserData(sizeof(IBVerbsCommNetRMADesc), &rma_desc);
   }
-  void * data = reinterpret_cast<void*>(&new_msg);
+  char * data = reinterpret_cast<char*>(&new_msg);
   size_t size = sizeof(new_msg);
   qp_vec_.at(dst_machine_id)->PostSendRequest(data,size);
  // qp_vec_.at(dst_machine_id)->PostSendRequest(new_msg);

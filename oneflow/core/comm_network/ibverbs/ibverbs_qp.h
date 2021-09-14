@@ -32,7 +32,7 @@ class ActorMsgMR final {
   ActorMsgMR(ibv_mr* mr, char* addr, size_t message_size) {
     CHECK(message_size >= sizeof(ActorMsg));
     message_size_ = message_size;
-    data_ = reinterpret_cast<void*>(addr);
+    data_ = reinterpret_cast<char*>(addr);
     mr_ = mr;
     size_ = 0;
   }
@@ -41,8 +41,9 @@ class ActorMsgMR final {
   void* addr() { return static_cast<void*>(data_); }
   uint32_t lkey() const { return mr_->lkey; }
   void*  message() const { return data_; }
-  void set_data(void * data,size_t size ) {
-    data_ = reinterpret_cast<void*>(data);
+  void set_data(char * data,size_t size ) {
+    //data_ = reinterpret_cast<void*>(data);
+    std::memcpy(data_,data,size);
     size_ = size;
   }
  // void set_message(const ActorMsg& val) { *message_ = val; }
@@ -52,7 +53,7 @@ class ActorMsgMR final {
   size_t message_size_;
   ibv_mr* mr_;
  // ActorMsg* message_;
-  void * data_;
+  char * data_;
   size_t size_;
 };
 
@@ -84,7 +85,7 @@ class IBVerbsQP final {
   void PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem, const IBVerbsMemDesc& local_mem,
                        void* read_id);
   void PostSendRequest(const ActorMsg& msg);
-  void PostSendRequest(void * data, size_t size);
+  void PostSendRequest(char * data, size_t size);
 
   void ReadDone(WorkRequestId*);
   void SendDone(WorkRequestId*);
