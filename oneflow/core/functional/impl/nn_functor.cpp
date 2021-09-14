@@ -441,7 +441,65 @@ class BinaryCrossEntropyFunctor {
   std::shared_ptr<OpExpr> op_;
   std::shared_ptr<OpExpr> op_weight_;
 };
+class BinaryCrossEntropyWithLogitsFunctor {
+ public:
+  BinaryCrossEntropyWithLogitsFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits")
+                         .Input("input")
+                         .Input("target")
+                         .Output("out")
+                         .Build());
+    op_weight_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits")
+                                .Input("input")
+                                .Input("target")
+                                .Input("weight")
+                                .Output("out")
+                                .Build());
+    op_pos_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits")
+                             .Input("input")
+                             .Input("target")
+                             .Input("pos_weight")
+                             .Output("out")
+                             .Build());
+    op_weight_pos_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits")
+                                    .Input("input")
+                                    .Input("target")
+                                    .Input("weight")
+                                    .Input("pos_weight")
+                                    .Output("out")
+                                    .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const Optional<one::Tensor>& weight,
+                           const Optional<one::Tensor>& pos_weight,
+                           const Optional<std::string>& reduction) const {
+    std::string reduction_v = reduction ? *JUST(reduction.value()) : "none";
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("reduction", reduction_v));
+    JUST(attrs.SetAttr<bool>("has_pos_weight", pos_weight.has_value()));
+    if (weight) {
+      if (pos_weight) {
+        return OpInterpUtil::Dispatch<Tensor>(
+            *op_weight_pos_, {input, target, JUST(weight.value()), JUST(pos_weight.value())},
+            attrs);
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input, target, JUST(weight.value())},
+                                            attrs);
+    }
+    if (pos_weight) {
+      return OpInterpUtil::Dispatch<Tensor>(*op_pos_, {input, target, JUST(pos_weight.value())},
+                                            attrs);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs);
+  }
 
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_weight_;
+  std::shared_ptr<OpExpr> op_pos_;
+  std::shared_ptr<OpExpr> op_weight_pos_;
+};
 class SparseSoftmaxCrossEntropyFunctor {
  public:
   SparseSoftmaxCrossEntropyFunctor() {
@@ -1265,6 +1323,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
   m.add_functor<impl::NllFunctor>("Nll");
   m.add_functor<impl::BinaryCrossEntropyFunctor>("BinaryCrossEntropy");
+  m.add_functor<impl::BinaryCrossEntropyWithLogitsFunctor>("BinaryCrossEntropyWithLogits");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
   m.add_functor<impl::SoftmaxCrossEntropyFunctor>("SoftmaxCrossEntropy");
   m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");

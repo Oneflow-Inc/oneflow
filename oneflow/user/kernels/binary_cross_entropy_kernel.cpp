@@ -80,7 +80,7 @@ class BinaryCrossEntropyKernel final : public user_op::OpKernel {
                                  reduction == ReductionType::kNone ? out : tmp_out, weight);
 
     if (reduction != ReductionType::kNone) {
-      ApplyLossReductionCpu<T>(elem_cnt, tmp_out, out, reduction);
+      ApplyLossReduction<T>(elem_cnt, tmp_out, out, reduction);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

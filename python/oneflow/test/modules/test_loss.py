@@ -72,6 +72,13 @@ def generate_necessity_for_bce_loss(dim: int):
         random_pytorch_tensor(
             dim, batch_size, num_classes, *extra_dim, low=0, high=3, requires_grad=False
         ).to(device),
+        random_pytorch_tensor(
+            1,
+            extra_dim[-1] if dim > 2 else num_classes,
+            low=1,
+            high=3,
+            requires_grad=False,
+        ).to(device),
         device,
     )
 
@@ -153,7 +160,7 @@ class TestNLLLossModule(flow.unittest.TestCase):
 
 
 def test_bce_loss(dim=int, with_logits: bool = False):
-    x, target, weight, device = generate_necessity_for_bce_loss(dim)
+    x, target, weight, pos_weight, device = generate_necessity_for_bce_loss(dim)
 
     m = torch.nn.BCELoss(
         weight=oneof(weight, nothing()),
@@ -162,6 +169,7 @@ def test_bce_loss(dim=int, with_logits: bool = False):
     if with_logits:
         m = torch.nn.BCEWithLogitsLoss(
             weight=oneof(weight, nothing()),
+            pos_weight=oneof(pos_weight, nothing()),
             reduction=oneof("none", "sum", "mean", nothing()),
         )
     m.train(random())
@@ -194,19 +202,19 @@ class TestBCELossModule(flow.unittest.TestCase):
 class TestBCEWithLogitsLossModule(flow.unittest.TestCase):
     @autotest()
     def test_bce_with_logits_loss_with_random_data_dim_2(test_case):
-        test_bce_loss(2, True)
+        return test_bce_loss(2, True)
 
     @autotest()
     def test_bce_with_logits_loss_with_random_data_dim_3(test_case):
-        test_bce_loss(3, True)
+        return test_bce_loss(3, True)
 
     @autotest()
     def test_bce_with_logits_loss_with_random_data_dim_4(test_case):
-        test_bce_loss(4, True)
+        return test_bce_loss(4, True)
 
     @autotest()
     def test_bce_with_logits_loss_with_random_data_dim_5(test_case):
-        test_bce_loss(5, True)
+        return test_bce_loss(5, True)
 
 
 @flow.unittest.skip_unless_1n1d()

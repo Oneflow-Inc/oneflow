@@ -925,37 +925,9 @@ class BCEWithLogitsLoss(Module):
         self.pos_weight = pos_weight
 
     def forward(self, input, target):
-        if not target.shape == input.shape:
-            raise ValueError(
-                "Target size ({}) must be the same as input size ({})".format(
-                    target.size(), input.size()
-                )
-            )
-        _neg_input = flow.negative(input)
-        _max_val = flow.clip(_neg_input, 0)
-        _neg_max_val = flow.negative(_max_val)
-        if self.pos_weight is not None:
-            _log_weight = (self.pos_weight - 1) * target + 1
-            _loss = (1 - target) * input + _log_weight * (
-                flow.log(flow.exp(_neg_max_val) + flow.exp(_neg_input - _max_val))
-                + _max_val
-            )
-        else:
-            _loss = (1 - target) * input + _max_val
-            _loss += flow.log(flow.exp(_neg_max_val) + flow.exp(_neg_input - _max_val))
-        if self.weight is not None:
-            assert (
-                self.weight.shape == input.shape
-            ), "The weight shape must be the same as Input shape"
-            _weighted_loss = self.weight * _loss
-        else:
-            _weighted_loss = _loss
-        if self.reduction == "mean":
-            return flow.mean(_weighted_loss)
-        elif self.reduction == "sum":
-            return flow.sum(_weighted_loss)
-        else:
-            return _weighted_loss
+        return flow._C.binary_cross_entropy_with_logits(
+            input, target, self.weight, self.pos_weight, self.reduction
+        )
 
 
 class SmoothL1Loss(Module):

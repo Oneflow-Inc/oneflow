@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/loss_kernel_util.cuh"
+#include "oneflow/user/kernels/loss_kernel_util.h"
 
 namespace oneflow {
 namespace user_op {
@@ -113,7 +113,7 @@ class BinaryCrossEntropyKernel final : public user_op::OpKernel {
         elem_cnt, input, target, reduction == ReductionType::kNone ? out : tmp_out, weight);
 
     if (reduction != ReductionType::kNone) {
-      ApplyLossReductionGpu<T>(ctx->device_ctx(), elem_cnt, tmp_out, out, reduction);
+      ApplyLossReduction<T>(ctx->device_ctx(), elem_cnt, tmp_out, out, reduction);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -151,7 +151,7 @@ class BinaryCrossEntropyKernel<float16> final : public user_op::OpKernel {
         reinterpret_cast<const half*>(weight));
 
     if (reduction != ReductionType::kNone) {
-      ApplyLossReductionGpu<float16>(ctx->device_ctx(), elem_cnt, tmp_out, out, reduction);
+      ApplyLossReduction<float16>(ctx->device_ctx(), elem_cnt, tmp_out, out, reduction);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

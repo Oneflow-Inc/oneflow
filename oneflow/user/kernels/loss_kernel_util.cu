@@ -13,11 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_USER_KERNELS_LOSS_KERNEL_UTIL_CUH_
-#define ONEFLOW_USER_KERNELS_LOSS_KERNEL_UTIL_CUH_
 
 #include "oneflow/user/kernels/loss_kernel_util.h"
-#include "oneflow/core/device/device_context.h"
 
 namespace oneflow {
 namespace user_op {
@@ -39,8 +36,8 @@ __global__ void ApplyLossReductionImplKernel(int64_t elem_cnt, const T* tmp_out,
   }
 }
 template<>
-__global__ void ApplyLossReductionImplKernel(int64_t elem_cnt, const half* tmp_out, half* out,
-                                             bool is_reduce_mean) {
+__global__ void ApplyLossReductionImplKernel<half>(int64_t elem_cnt, const half* tmp_out, half* out,
+                                                   bool is_reduce_mean) {
   __shared__ half outs[kCudaThreadsNumPerBlock];
   outs[threadIdx.x] = __float2half(0.0);
   for (int i = threadIdx.x; i < elem_cnt; i += kCudaThreadsNumPerBlock) {
@@ -55,8 +52,8 @@ __global__ void ApplyLossReductionImplKernel(int64_t elem_cnt, const half* tmp_o
 }
 
 template<typename T>
-void ApplyLossReductionGpu(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* out,
-                           const ReductionType reduction_type) {
+void ApplyLossReduction(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* out,
+                        const ReductionType reduction_type) {
   if ((reduction_type != ReductionType::kMean) && (reduction_type != ReductionType::kSum)) {
     UNIMPLEMENTED();
     return;
@@ -65,8 +62,8 @@ void ApplyLossReductionGpu(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T
       elem_cnt, tmp_out, out, reduction_type == ReductionType::kMean);
 }
 template<>
-void ApplyLossReductionGpu(DeviceCtx* ctx, int64_t elem_cnt, const float16* tmp_out, float16* out,
-                           const ReductionType reduction_type) {
+void ApplyLossReduction<float16>(DeviceCtx* ctx, int64_t elem_cnt, const float16* tmp_out,
+                                 float16* out, const ReductionType reduction_type) {
   if ((reduction_type != ReductionType::kMean) && (reduction_type != ReductionType::kSum)) {
     UNIMPLEMENTED();
     return;
@@ -75,9 +72,14 @@ void ApplyLossReductionGpu(DeviceCtx* ctx, int64_t elem_cnt, const float16* tmp_
       elem_cnt, reinterpret_cast<const half*>(tmp_out), reinterpret_cast<half*>(out),
       reduction_type == ReductionType::kMean);
 }
+#define SPECIALIZE_APPLY_LOSS_REDUCTION(dtype)                                                     \
+  template void ApplyLossReduction<dtype>(DeviceCtx * ctx, int64_t elem_cnt, const dtype* tmp_out, \
+                                          dtype* out, const ReductionType reduction_type);
+
+SPECIALIZE_APPLY_LOSS_REDUCTION(float)
+SPECIALIZE_APPLY_LOSS_REDUCTION(double)
+SPECIALIZE_APPLY_LOSS_REDUCTION(float16)
 
 }  // namespace loss
 }  // namespace user_op
 }  // namespace oneflow
-
-#endif  // ONEFLOW_USER_KERNELS_LOSS_KERNEL_UTIL_CUH_

@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_LOSS_KERNEL_UTIL_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/device/device_context.h"
 
 namespace oneflow {
 namespace user_op {
@@ -37,16 +38,12 @@ inline ReductionType GetReductionType(const std::string& reduction) {
 }
 
 template<typename T>
-void ApplyLossReductionCpu(int64_t elem_cnt, const T* tmp_out, T* out,
-                           const ReductionType reduction_type) {
-  if ((reduction_type != ReductionType::kMean) && (reduction_type != ReductionType::kSum)) {
-    UNIMPLEMENTED();
-    return;
-  }
-  *out = static_cast<T>(0);
-  FOR_RANGE(int64_t, i, 0, elem_cnt) { *out += tmp_out[i]; }
-  if (reduction_type == ReductionType::kMean) { *out /= elem_cnt; }
-}
+void ApplyLossReduction(int64_t elem_cnt, const T* tmp_out, T* out,
+                        const ReductionType reduction_type);
+
+template<typename T>
+void ApplyLossReduction(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* out,
+                        const ReductionType reduction_type);
 
 }  // namespace loss
 }  // namespace user_op
