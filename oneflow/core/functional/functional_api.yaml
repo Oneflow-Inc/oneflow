@@ -23,10 +23,10 @@
 - name: "add"
   signature:
     [
-      "Tensor (TensorTuple inputs, *, Bool inplace=False) => AddN",
+      "Tensor (TensorTuple inputs, *, Bool inplace=False) => Add",
       "Tensor (Tensor input, Tensor other, *, Bool inplace=False) => Add",
       "Tensor (Tensor input, Scalar other, *, Bool inplace=False) => ScalarAdd",
-      "Tensor (Scalar input, Tensor other) => ScalarAdd2",
+      "Tensor (Scalar input, Tensor other) => ScalarAdd",
     ]
   bind_python: true
 
@@ -35,7 +35,7 @@
     [
       "Tensor (Tensor input, Tensor other) => Sub",
       "Tensor (Tensor input, Scalar other, *, Bool inplace=False) => ScalarSub",
-      "Tensor (Scalar input, Tensor other) => ScalarSub2",
+      "Tensor (Scalar input, Tensor other) =>  ScalarSub",
     ]
   bind_python: true
 
@@ -44,7 +44,7 @@
     [
       "Tensor (Tensor input, Tensor other) => Mul",
       "Tensor (Tensor input, Scalar other) => ScalarMul",
-      "Tensor (Scalar input, Tensor other) => ScalarMul2",
+      "Tensor (Scalar input, Tensor other) => ScalarMul",
     ]
   bind_python: true
 
@@ -53,7 +53,7 @@
     [
       "Tensor (Tensor input, Tensor other) => Div",
       "Tensor (Tensor input, Scalar other) => ScalarDiv",
-      "Tensor (Scalar input, Tensor other) => ScalarDiv2",
+      "Tensor (Scalar input, Tensor other) => ScalarDiv",
     ]
   bind_python: true
 
@@ -66,7 +66,7 @@
     [
       "Tensor (Tensor input, Tensor other) => BroadcastEqual",
       "Tensor (Tensor input, Scalar other) => ScalarLogicalEqual",
-      "Tensor (Scalar input, Tensor other) => ScalarLogicalEqual2",
+      "Tensor (Scalar input, Tensor other) => ScalarLogicalEqual",
     ]
   bind_python: true
 
@@ -75,7 +75,7 @@
     [
       "Tensor (Tensor input, Tensor other) => BroadcastNotEqual",
       "Tensor (Tensor input, Scalar other) => ScalarLogicalNotEqual",
-      "Tensor (Scalar input, Tensor other) => ScalarLogicalNotEqual2",
+      "Tensor (Scalar input, Tensor other) => ScalarLogicalNotEqual",
     ]
   bind_python: true
 
@@ -84,7 +84,7 @@
     [
       "Tensor (Tensor input, Tensor other) => BroadcastGreater",
       "Tensor (Tensor input, Scalar other) => ScalarLogicalGreater",
-      "Tensor (Scalar input, Tensor other) => ScalarLogicalGreater2",
+      "Tensor (Scalar input, Tensor other) => ScalarLogicalGreater",
     ]
   bind_python: true
 
@@ -93,7 +93,7 @@
     [
       "Tensor (Tensor input, Tensor other) => BroadcastGreaterEqual",
       "Tensor (Tensor input, Scalar other) => ScalarLogicalGreaterEqual",
-      "Tensor (Scalar input, Tensor other) => ScalarLogicalGreaterEqual2",
+      "Tensor (Scalar input, Tensor other) => ScalarLogicalGreaterEqual",
     ]
   bind_python: true
 
@@ -114,7 +114,7 @@
     [
       "Tensor (Tensor input, Tensor other) => BroadcastLess",
       "Tensor (Tensor input, Scalar other) => ScalarLogicalLess",
-      "Tensor (Scalar input, Tensor other) => ScalarLogicalLess2",
+      "Tensor (Scalar input, Tensor other) => ScalarLogicalLess",
     ]
   bind_python: True
 
@@ -123,7 +123,7 @@
     [
       "Tensor (Tensor input, Tensor other) => BroadcastLessEqual",
       "Tensor (Tensor input, Scalar other) => ScalarLogicalLessEqual",
-      "Tensor (Scalar input, Tensor other) => ScalarLogicalLessEqual2",
+      "Tensor (Scalar input, Tensor other) => ScalarLogicalLessEqual",
     ]
   bind_python: True
 
@@ -321,7 +321,7 @@
   signature: [
       "Tensor (Int64 start, Int64 end, Int64 step=1, *, DataType dtype=kInt64,
       Device device=None) => Arange",
-      "Tensor (Int64 end, *, DataType dtype=kInt64, Device device=None) => Arange2",
+      "Tensor (Int64 end, *, DataType dtype=kInt64, Device device=None) => Arange",
     ]
   bind_python: True
 
@@ -329,7 +329,7 @@
   signature: [
       "Tensor (Int64 start, Int64 end, Int64 step=1, *, DataType dtype=kInt64,
       Placement placement, SbpList sbp) => ConsistentArange",
-      "Tensor (Int64 end, *, DataType dtype=kInt64, Placement placement, SbpList sbp) => ConsistentArange2",
+      "Tensor (Int64 end, *, DataType dtype=kInt64, Placement placement, SbpList sbp) => ConsistentArange",
     ]
   bind_python: True
 
@@ -638,7 +638,7 @@
 
 - name: "max_pool1d"
   signature:
-    'TensorTuple (Tensor x, Int32List[1] kernel_size, Int32List[1] stride=1, 
+    'TensorTuple (Tensor input, Int32List[1] kernel_size, Int32List[1] stride=None, 
                   Int32List[1] padding=0, Int32List[1] dilation=1, 
                   Bool return_indices=True, Bool ceil_mode=False, 
                   String data_format="channels_first") => Maxpool1D'
@@ -646,7 +646,7 @@
 
 - name: "max_pool2d"
   signature:
-    'TensorTuple (Tensor x, Int32List[2] kernel_size, Int32List[2] stride=1, 
+    'TensorTuple (Tensor input, Int32List[2] kernel_size, Int32List[2] stride=None, 
                   Int32List[2] padding=0, Int32List[2] dilation=1, 
                   Bool return_indices=True, Bool ceil_mode=False, 
                   String data_format="channels_first") => Maxpool2D'
@@ -654,7 +654,7 @@
 
 - name: "max_pool3d"
   signature:
-    'TensorTuple (Tensor x, Int32List[3] kernel_size, Int32List[3] stride=1, 
+    'TensorTuple (Tensor input, Int32List[3] kernel_size, Int32List[3] stride=None, 
                   Int32List[3] padding=0, Int32List[3] dilation=1, 
                   Bool return_indices=True, Bool ceil_mode=False, 
                   String data_format="channels_first") => Maxpool3D'
@@ -696,7 +696,7 @@
   bind_python: False
 
 - name: "slice_update"
-  signature: "Tensor (Tensor x, Tensor update, Int64List start, Int64List stop, Int64List step) => SliceUpdate"
+  signature: "Tensor (Tensor x, Tensor update, Int64List start, Int64List stop, Int64List step, *, Bool inplace=False) => SliceUpdate"
   bind_python: True
 
 - name: "logical_slice"
@@ -996,21 +996,21 @@
 
 - name: "avg_pool1d"
   signature:
-    'Tensor (Tensor x, Int32List[1] kernel_size, Int32List[1] stride=1, 
+    'Tensor (Tensor input, Int32List[1] kernel_size, Int32List[1] stride=None, 
              Int32List[1] padding=0, Bool ceil_mode=False, Bool count_include_pad=True,
              Int64 divisor_override=0, String data_format="channels_first") => Avgpool1D'
   bind_python: True
 
 - name: "avg_pool2d"
   signature:
-    'Tensor (Tensor x, Int32List[2] kernel_size, Int32List[2] stride=1, 
+    'Tensor (Tensor input, Int32List[2] kernel_size, Int32List[2] stride=None, 
              Int32List[2] padding=0, Bool ceil_mode=False, Bool count_include_pad=True,
              Int64 divisor_override=0, String data_format="channels_first") => Avgpool2D'
   bind_python: True
 
 - name: "avg_pool3d"
   signature:
-    'Tensor (Tensor x, Int32List[3] kernel_size, Int32List[3] stride=1, 
+    'Tensor (Tensor input, Int32List[3] kernel_size, Int32List[3] stride=None, 
              Int32List[3] padding=0, Bool ceil_mode=False, Bool count_include_pad=True,
              Int64 divisor_override=0, String data_format="channels_first") => Avgpool3D'
   bind_python: True
@@ -1221,3 +1221,18 @@
 - name: "recv"
   signature: "Tensor (Int64 src, Shape shape=None, DataType dtype=None, Device device=None, *, Tensor out=None) => Recv"
   bind_python: True
+
+- name: "batch_gather"
+  signature:
+    "Tensor (Tensor in, Tensor indices) => BatchGather"
+  bind_python: True
+
+- name: "batch_gather"
+  signature:
+    "Tensor (Tensor in, Tensor indices) => BatchGather"
+  bind_python: True
+
+- name: "unsorted_batch_segment_sum"
+  signature:
+    "Tensor (Tensor data, Tensor segment_ids, Int64 num_segments) => UnsortedBatchSegmentSum"
+  bind_python: False

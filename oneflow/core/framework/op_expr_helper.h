@@ -124,9 +124,6 @@ Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t
 Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t& max_dim_size,
                                 const std::string& name);
 
-Maybe<one::UserOpExpr> UnsortedBatchSegmentSumOp(const int& num_segments);
-Maybe<one::UserOpExpr> UnsortedBatchSegmentSumOp(const int& num_segments, const std::string& name);
-
 Maybe<one::UserOpExpr> ScalarAddByTensorOp();
 Maybe<one::UserOpExpr> ScalarAddByTensorOp(const std::string& name);
 

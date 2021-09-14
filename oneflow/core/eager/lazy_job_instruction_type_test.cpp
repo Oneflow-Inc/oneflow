@@ -57,6 +57,16 @@ class NoArgNoRetMockNNGraph : public NNGraphIf {
     return empty;
   }
 
+  const std::vector<bool>& inputs_valid() const override {
+    static std::vector<bool> empty;
+    return empty;
+  }
+
+  const std::vector<bool>& outputs_valid() const override {
+    static std::vector<bool> empty;
+    return empty;
+  }
+
  private:
   const std::string job_name_;
 };

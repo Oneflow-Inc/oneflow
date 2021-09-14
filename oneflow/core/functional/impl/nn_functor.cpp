@@ -266,7 +266,7 @@ class PoolingNDFunctor {
   virtual ~PoolingNDFunctor() = default;
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
                                 const std::vector<int32_t>& kernel_size,
-                                const std::vector<int32_t>& stride,
+                                const Optional<std::vector<int32_t>>& stride,
                                 const std::vector<int32_t>& padding,
                                 const std::vector<int32_t>& dilation, const bool& return_indices,
                                 const bool& ceil_mode, const std::string& data_format) const {
@@ -274,7 +274,12 @@ class PoolingNDFunctor {
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
     JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
     JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));
+    if (stride.has_value()) {
+      JUST(attrs.SetAttr<std::vector<int32_t>>("stride", *JUST(stride.value())));
+    } else {
+      JUST(attrs.SetAttr<std::vector<int32_t>>(
+          "stride", kernel_size));  // If stride is None, we set it as kernel_size to align Pytorch.
+    }
     JUST(attrs.SetAttr<std::vector<int32_t>>("dilation", dilation));
     JUST(attrs.SetAttr<bool>("return_indices", return_indices));
     JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
@@ -820,14 +825,20 @@ class AvgPoolingNDFunctor {
   virtual ~AvgPoolingNDFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int32_t>& kernel_size,
-                           const std::vector<int32_t>& stride, const std::vector<int32_t>& padding,
-                           const bool& ceil_mode, const bool& count_include_pad,
-                           const int64_t& divisor_override, const std::string& data_format) const {
+                           const Optional<std::vector<int32_t>>& stride,
+                           const std::vector<int32_t>& padding, const bool& ceil_mode,
+                           const bool& count_include_pad, const int64_t& divisor_override,
+                           const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
     JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
     JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));
+    if (stride.has_value()) {
+      JUST(attrs.SetAttr<std::vector<int32_t>>("stride", *JUST(stride.value())));
+    } else {
+      JUST(attrs.SetAttr<std::vector<int32_t>>(
+          "stride", kernel_size));  // If stride is None, we set it as kernel_size to align Pytorch.
+    }
     JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
     JUST(attrs.SetAttr<bool>("count_include_pad", count_include_pad));
     JUST(attrs.SetAttr<int64_t>("divisor_override", divisor_override));

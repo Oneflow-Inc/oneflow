@@ -13,28 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_IF_H_
-#define ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_IF_H_
+#ifndef ONEFLOW_CORE_PRIMITIVE_CUDA_CUDA_GRAPH_SUPPORT_H_
+#define ONEFLOW_CORE_PRIMITIVE_CUDA_CUDA_GRAPH_SUPPORT_H_
 
-#include <string>
-#include <vector>
+#include "oneflow/core/primitive/primitive.h"
 
 namespace oneflow {
 
-class NNGraphIf {
+namespace primitive {
+
+class CudaGraphSupport {
  public:
-  virtual ~NNGraphIf() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CudaGraphSupport);
+  CudaGraphSupport() = default;
+  virtual ~CudaGraphSupport() = default;
 
-  virtual const std::string& job_name() const = 0;
-  virtual const std::vector<std::string>& inputs_op_names() const = 0;
-  virtual const std::vector<std::string>& outputs_op_names() const = 0;
-  virtual const std::vector<bool>& inputs_valid() const = 0;
-  virtual const std::vector<bool>& outputs_valid() const = 0;
-
- protected:
-  NNGraphIf() = default;
+  virtual bool IsCudaGraphSupported() const { return true; }
 };
+
+bool IsCudaGraphPrimitive(const Primitive* primitive);
+
+}  // namespace primitive
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_IF_H_
+#endif  // ONEFLOW_CORE_PRIMITIVE_CUDA_CUDA_GRAPH_SUPPORT_H_

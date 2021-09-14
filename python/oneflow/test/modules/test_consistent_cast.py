@@ -379,6 +379,53 @@ class TestConsistentCastModule_1n1d(flow.unittest.TestCase):
         test_case.assertEqual(tuple(y.shape), (16, 16))
 
 
+def _test_cpu_p2b_with_random_parameter(test_case, device_list):
+    gen_float = np.random.random
+    gen_int = np.random.randint
+    dtype_list = [
+        flow.uint8,
+        flow.int8,
+        flow.int32,
+        flow.int64,
+        flow.float32,
+        flow.float64,
+        flow.double,
+    ]
+
+    def choose_shape_and_dtype(seed):
+        rng = np.random.default_rng(seed)
+        kdtype = rng.integers(low=1, high=len(dtype_list), size=1)
+        ndim = rng.integers(low=1, high=4, size=1)
+        shape = rng.integers(low=1, high=10, size=ndim)
+        return kdtype, shape
+
+    for _ in range(10):
+        seed = flow.tensor(gen_int(1, 1000, 1))
+        seed = seed.to_consistent(
+            placement=flow.env.all_device_placement(seed.device.type),
+            sbp=flow.sbp.broadcast,
+        )
+        seed = int(seed.to_local().numpy())
+        kdtype, shape = choose_shape_and_dtype(seed)
+        if kdtype <= 3:
+            np_arr = gen_int(1, 10, shape)
+        else:
+            np_arr = gen_float(shape)
+        tensor = flow.tensor(np_arr, device="cpu", dtype=dtype_list[int(kdtype)])
+        cpu_tensor = tensor.to_consistent(
+            placement=flow.placement("cpu", {0: device_list}), sbp=flow.sbp.partial_sum
+        )
+        cpu_tensor = cpu_tensor.to_consistent(sbp=flow.sbp.broadcast)
+        tensor = tensor.to("cuda")
+        cuda_tensor = tensor.to_consistent(
+            placement=flow.placement("cuda", {0: device_list}), sbp=flow.sbp.partial_sum
+        )
+        cuda_tensor = cuda_tensor.to_consistent(sbp=flow.sbp.broadcast)
+        test_case.assertTrue(
+            np.allclose(cpu_tensor.to_local().numpy(), cuda_tensor.to_local().numpy())
+        )
+
+
 class TestConsistentCast(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -399,6 +446,13 @@ class TestConsistentCast(flow.unittest.TestCase):
                 np.array([4, 6, 7, 8], dtype=np.float32),
             )
         )
+
+    @flow.unittest.skip_unless_1n4d()
+    def test_cpu_p2b_with_random_parameter(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_list"] = [[0, 1], [1, 2, 3], [0, 1, 2, 3]]
+        for arg in GenArgList(arg_dict):
+            _test_cpu_p2b_with_random_parameter(test_case, *arg)
 
     @flow.unittest.skip_unless_1n4d()
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
