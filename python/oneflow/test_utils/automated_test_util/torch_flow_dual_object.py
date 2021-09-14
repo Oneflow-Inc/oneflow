@@ -21,10 +21,13 @@ import warnings
 
 import numpy as np
 import oneflow as flow
+
 try:
     import torch as torch_original
 except ImportError:
-    print("automated_test_util module uses PyTorch to verify OneFlow module's interface and result. Please install Pytorch according `https://pytorch.org/get-started/locally/`.")
+    print(
+        "automated_test_util module uses PyTorch to verify OneFlow module's interface and result. Please install Pytorch according `https://pytorch.org/get-started/locally/`."
+    )
 
 from .generators import Nothing, generator, random_tensor
 
