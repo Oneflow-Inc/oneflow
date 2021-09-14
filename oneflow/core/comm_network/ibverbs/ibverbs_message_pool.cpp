@@ -21,22 +21,22 @@ limitations under the License.
 namespace oneflow {
 
 IBVerbsMessagePool::~IBVerbsMessagePool() {
-    size_t size = ibv_mr_buf_.size();
-    for(size_t i = 0; i < size; i++) {
-      ibv_mr * mr =  ibv_mr_buf_[i];
-      CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
-      free(memory_buf_[i]);
-    }
-    ibv_mr_buf_.clear();
-    memory_buf_.clear();
+  size_t size = ibv_mr_buf_.size();
+  for (size_t i = 0; i < size; i++) {
+    ibv_mr* mr = ibv_mr_buf_[i];
+    CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
+    free(memory_buf_[i]);
+  }
+  ibv_mr_buf_.clear();
+  memory_buf_.clear();
 }
 
-IBVerbsMessagePool::IBVerbsMessagePool(ibv_pd* pd, uint32_t  num_msg_per_bluk_allocation)
-    : pd_(pd),  num_msg_per_bluk_allocation_(num_msg_per_bluk_allocation) {}
+IBVerbsMessagePool::IBVerbsMessagePool(ibv_pd* pd, uint32_t num_msg_per_bluk_allocation)
+    : pd_(pd), num_msg_per_bluk_allocation_(num_msg_per_bluk_allocation) {}
 
 void IBVerbsMessagePool::BulkAllocMessage() {
   size_t message_size = sizeof(ActorMsg);
-  size_t register_memory_size = message_size *  num_msg_per_bluk_allocation_;
+  size_t register_memory_size = message_size * num_msg_per_bluk_allocation_;
   char* addr = (char*)malloc(register_memory_size);
   ibv_mr* mr = ibv::wrapper.ibv_reg_mr_wrap(
       pd_, addr, register_memory_size,
@@ -44,7 +44,7 @@ void IBVerbsMessagePool::BulkAllocMessage() {
   CHECK(mr);
   ibv_mr_buf_.push_back(mr);
   memory_buf_.push_back(addr);
-  for (size_t i = 0; i <  num_msg_per_bluk_allocation_; i++) {
+  for (size_t i = 0; i < num_msg_per_bluk_allocation_; i++) {
     char* split_addr = addr + message_size * i;
     ActorMsgMR* msg_mr = new ActorMsgMR(mr, split_addr, message_size);
     message_buf_.push_back(msg_mr);

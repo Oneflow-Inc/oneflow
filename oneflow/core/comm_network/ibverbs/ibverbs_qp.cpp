@@ -164,9 +164,9 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
   }
 }
 
-void IBVerbsQP::PostSendRequest(char * data, size_t size) {
+void IBVerbsQP::PostSendRequest(char* data, size_t size) {
   ActorMsgMR* msg_mr = message_pool_->GetMessage();
-  msg_mr->set_data(data,size);
+  msg_mr->set_data(data, size);
   WorkRequestId* wr_id = NewWorkRequestId();
   wr_id->msg_mr = msg_mr;
   ibv_send_wr wr{};
@@ -216,7 +216,7 @@ void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
 void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
   auto* ibv_comm_net = dynamic_cast<IBVerbsCommNet*>(Global<CommNet>::Get());
   CHECK(ibv_comm_net != nullptr);
-  ibv_comm_net->RecvActorMsg(wr_id->msg_mr->message(),wr_id->msg_mr->size());
+  ibv_comm_net->RecvActorMsg(wr_id->msg_mr->message(), wr_id->msg_mr->size());
   PostRecvRequest(wr_id->msg_mr);
   DeleteWorkRequestId(wr_id);
 }

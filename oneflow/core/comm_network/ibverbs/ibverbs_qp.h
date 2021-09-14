@@ -40,17 +40,18 @@ class ActorMsgMR final {
 
   void* addr() { return static_cast<void*>(data_); }
   uint32_t lkey() const { return mr_->lkey; }
-  void*  message() const { return data_; }
-  void set_data(char * data,size_t size ) {
-    std::memcpy(data_,data,size);
+  void* message() const { return data_; }
+  void set_data(char* data, size_t size) {
+    std::memcpy(data_, data, size);
     size_ = size;
   }
   size_t message_size() const { return message_size_; }
-  size_t size() const {return size_ ; }
+  size_t size() const { return size_; }
+
  private:
   size_t message_size_;
   ibv_mr* mr_;
-  char * data_;
+  char* data_;
   size_t size_;
 };
 
@@ -81,8 +82,7 @@ class IBVerbsQP final {
 
   void PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem, const IBVerbsMemDesc& local_mem,
                        void* read_id);
-  void PostSendRequest(const ActorMsg& msg);
-  void PostSendRequest(char * data, size_t size);
+  void PostSendRequest(char* data, size_t size);
 
   void ReadDone(WorkRequestId*);
   void SendDone(WorkRequestId*);

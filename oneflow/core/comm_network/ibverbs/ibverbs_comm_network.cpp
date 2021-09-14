@@ -98,10 +98,9 @@ void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
     static_assert(sizeof(IBVerbsCommNetRMADesc) <= kActorMsgUserDataMaxSize, "");
     new_msg.AddUserData(sizeof(IBVerbsCommNetRMADesc), &rma_desc);
   }
-  char * data = reinterpret_cast<char*>(&new_msg);
+  char* data = reinterpret_cast<char*>(&new_msg);
   size_t size = sizeof(new_msg);
-  qp_vec_.at(dst_machine_id)->PostSendRequest(data,size);
- // qp_vec_.at(dst_machine_id)->PostSendRequest(new_msg);
+  qp_vec_.at(dst_machine_id)->PostSendRequest(data, size);
 }
 
 void IBVerbsCommNet::RecvActorMsg(const ActorMsg& msg) {
@@ -118,8 +117,8 @@ void IBVerbsCommNet::RecvActorMsg(const ActorMsg& msg) {
   Global<ActorMsgBus>::Get()->SendMsgWithoutCommNet(new_msg);
 }
 
-void IBVerbsCommNet::RecvActorMsg(void * data, size_t size) {
-  ActorMsg msg = *(reinterpret_cast<ActorMsg *>(data));
+void IBVerbsCommNet::RecvActorMsg(void* data, size_t size) {
+  ActorMsg msg = *(reinterpret_cast<ActorMsg*>(data));
   ActorMsg new_msg = msg;
   if (msg.IsDataRegstMsgToConsumer()) {
     std::lock_guard<std::mutex> lock(remote_regst2rma_desc_mutex_);
