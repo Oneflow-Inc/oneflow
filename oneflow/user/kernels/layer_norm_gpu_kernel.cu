@@ -172,8 +172,9 @@ int GetLayerNormForwardNumBlocks(const int num_instances) {
   return std::min(static_cast<int>(num_instances), kCudaMaxBlocksNum);
 }
 
-// Using Naive algorithem to calculate mean and var.  
-// For more information you can check this: https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Na%C3%AFve_algorithm
+// Using Naive algorithem to calculate mean and var.
+// For more information you can check this:
+// https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Na%C3%AFve_algorithm
 template<typename T, typename ComputeType>
 __global__ void LayerNormForwardImpl(const int num_instances, const int norm_size,
                                      const double epsilon, const T* x, const T* gamma,
@@ -234,7 +235,8 @@ __global__ void LayerNormForwardImpl(const int num_instances, const int norm_siz
   }
 }
 
-template <typename T, class ReduceOp>
+// The welford reduce is referred from pytorch.
+template<typename T, class ReduceOp>
 __inline__ __device__ T WelfordWarpReduce(T val, const ReduceOp& op) {
 #pragma unroll
   for (int offset = (32 >> 1); offset > 0; offset >>= 1) {
@@ -243,99 +245,81 @@ __inline__ __device__ T WelfordWarpReduce(T val, const ReduceOp& op) {
   return val;
 }
 
-template <typename T, class ReduceOp>
-__inline__ __device__ T
-WelfordBlockReduce(T val, const ReduceOp& op, const T& identity_element, T* shared) {
+template<typename T, class ReduceOp>
+__inline__ __device__ T WelfordBlockReduce(T val, const ReduceOp& op, const T& identity_element,
+                                           T* shared) {
   const int lid = threadIdx.x % 32;
   const int wid = threadIdx.x / 32;
   val = WelfordWarpReduce(val, op);
   __syncthreads();
-  if (lid == 0) {
-    shared[wid] = val;
-  }
+  if (lid == 0) { shared[wid] = val; }
   __syncthreads();
-  val = (threadIdx.x < blockDim.x / 32) ? shared[lid]
-                                                   : identity_element;
-  if (wid == 0) {
-    val = WelfordWarpReduce(val, op);
-  }
+  val = (threadIdx.x < blockDim.x / 32) ? shared[lid] : identity_element;
+  if (wid == 0) { val = WelfordWarpReduce(val, op); }
   return val;
 }
 
 template<typename T>
-struct WelfordData{
-  T mean; 
-  T m2; 
-  T n; 
-  T nf; 
-  __host__ __device__ WelfordData(): mean(0), m2(0), n(0), nf(0){}
-  __host__ __device__ WelfordData(T mean, T m2, T n, T nf): mean(mean), m2(m2), n(n), nf(nf){}
-
-}; 
+struct WelfordData {
+  T mean;
+  T m2;
+  T n;
+  T nf;
+  __host__ __device__ WelfordData() : mean(0), m2(0), n(0), nf(0) {}
+  __host__ __device__ WelfordData(T mean, T m2, T n, T nf) : mean(mean), m2(m2), n(n), nf(nf) {}
+};
 
 template<typename T>
-struct WelfordOps{
-  int32_t correction;
-  bool take_sqrt;
-  using acc_t = WelfordData<T>; 
+struct WelfordOps {
+  using acc_t = WelfordData<T>;
 
   inline __device__ acc_t reduce(acc_t acc, T data) const {
     // Use Welford Online algorithem to compute mean and variance
-    // For more details you can refer to: https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
-    T delta1 = data - acc.mean; 
-    T updated_mean = acc.mean + delta1 / (acc.nf+1); 
-    T delta2 = data - updated_mean; 
-    return {
-      updated_mean,
-      acc.m2 + delta1 * delta2, // For numerical instability, we update m2 = m2 + (x-mean)*(x-updated_mean), and finally variance = m2 / n, n is the count
-      acc.n + static_cast<T>(1.0),
-      acc.n + static_cast<T>(1.0)
-    };
+    // For more details you can refer to:
+    // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
+    T delta1 = data - acc.mean;
+    T updated_mean = acc.mean + delta1 / (acc.nf + 1);
+    T delta2 = data - updated_mean;
+    return {updated_mean,
+            acc.m2 + delta1 * delta2,  // For numerical instability, we update m2 = m2 +
+                                       // (x-mean)*(x-updated_mean), and finally variance = m2 / n,
+                                       // n is the count
+            acc.n + static_cast<T>(1.0), acc.n + static_cast<T>(1.0)};
   }
 
-  inline __device__ T project(acc_t& acc) const {
-    return acc.m2 / acc.nf; 
-  }
+  inline __device__ T project(acc_t& acc) const { return acc.m2 / acc.nf; }
 
   inline __device__ acc_t combine(acc_t a, acc_t b) const {
-    if (a.nf == 0) {
-      return b;
-    }
-    if (b.nf == 0) {
-      return a;
-    }
+    if (a.nf == 0) { return b; }
+    if (b.nf == 0) { return a; }
     T delta = b.mean - a.mean;
     T new_count = a.nf + b.nf;
     T nb_over_n = b.nf / new_count;
     return {
-      a.mean + delta * nb_over_n,
-      a.m2 + b.m2 + delta * delta * a.nf * nb_over_n,
-      // setting acc.n as -1 since acc.n might not be able to represent the count (We will use nf to represent the count)
-      // correctly within its range, setting it to -1 to avoid confusion
-      static_cast<T>(-1.0),
-      new_count
-    };
+        a.mean + delta * nb_over_n, a.m2 + b.m2 + delta * delta * a.nf * nb_over_n,
+        // setting acc.n as -1 since acc.n might not be able to represent the count (We will use nf
+        // to represent the count) correctly within its range, setting it to -1 to avoid confusion
+        static_cast<T>(-1.0), new_count};
   }
 
   inline __device__ acc_t warp_shfl_down(acc_t acc, int offset) const {
-    return {
-      __shfl_down_sync(0xffffffff, acc.mean, offset, 32)
-      , __shfl_down_sync(0xffffffff, acc.m2, offset, 32)
-      , __shfl_down_sync(0xffffffff, acc.n, offset, 32)
-      , __shfl_down_sync(0xffffffff, acc.nf, offset, 32)
-    };
+    return {__shfl_down_sync(0xffffffff, acc.mean, offset, 32),
+            __shfl_down_sync(0xffffffff, acc.m2, offset, 32),
+            __shfl_down_sync(0xffffffff, acc.n, offset, 32),
+            __shfl_down_sync(0xffffffff, acc.nf, offset, 32)};
   }
 
-  __host__ __device__ WelfordOps(T correction, bool take_sqrt): correction(correction), take_sqrt(take_sqrt) {}
-}; 
+  __host__ __device__ WelfordOps() {}
+};
 
-// Using Welford algorithem to calculate mean and var. 
-// For more information you can check this: https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
+// Using Welford algorithem to calculate mean and var.
+// For more information you can check this:
+// https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
 template<typename T, typename ComputeType>
 __global__ void LayerNormWelfordForwardImpl(const int num_instances, const int norm_size,
-                                     const double epsilon, const T* x, const T* gamma,
-                                     const T* beta, ComputeType* mean, ComputeType* inv_variance,
-                                     T* normalized, T* y) {
+                                            const double epsilon, const T* x, const T* gamma,
+                                            const T* beta, ComputeType* mean,
+                                            ComputeType* inv_variance, T* normalized, T* y) {
   using LU = LayerNormUtil<T>;
   extern __shared__ __align__(sizeof(double)) unsigned char fw_shared_buf[];
   auto* compute_buf = reinterpret_cast<ComputeType*>(fw_shared_buf);
@@ -343,33 +327,30 @@ __global__ void LayerNormWelfordForwardImpl(const int num_instances, const int n
   __shared__ ComputeType row_inv_var_shared;
   using WelfordType = WelfordData<ComputeType>;
   using WelfordOp = WelfordOps<ComputeType>;
-  
+
   __shared__
-      typename std::aligned_storage<sizeof(WelfordType), alignof(WelfordType)>::
-          type val_shared[32];
+      typename std::aligned_storage<sizeof(WelfordType), alignof(WelfordType)>::type val_shared[32];
   WelfordType* val_shared_ptr = reinterpret_cast<WelfordType*>(val_shared);
-  const WelfordOp welop(0, false); 
-  WelfordType weldata(0.0, 0.0, 0, 0); 
+  const WelfordOp welop;
+  WelfordType weldata(0.0, 0.0, 0, 0);
 
   for (int row = blockIdx.x; row < num_instances; row += gridDim.x) {
     const int row_offset = row * norm_size;
     const T* x_row = x + row_offset;
     const int tid = threadIdx.x;
-    int count = 0; 
+    int count = 0;
     for (int col = tid; col < norm_size; col += blockDim.x) {
       const ComputeType val = LU::ToComputeType(x_row[col]);
       compute_buf[col] = val;
-      weldata = welop.reduce(weldata, val); 
+      weldata = welop.reduce(weldata, val);
     }
-    __syncthreads(); 
-    weldata = WelfordBlockReduce<WelfordType, WelfordOp>(weldata,
-                                                welop,
-                                                /*identity_element=*/WelfordType(0.0, 0.0, 0, 0),
-                                                val_shared_ptr); 
-    __syncthreads(); 
+    __syncthreads();
+    weldata = WelfordBlockReduce<WelfordType, WelfordOp>(
+        weldata, welop,
+        /*identity_element=*/WelfordType(0.0, 0.0, 0, 0), val_shared_ptr);
     if (tid == 0) {
-      ComputeType row_mean = weldata.mean; 
-      ComputeType row_var = welop.project(weldata); 
+      ComputeType row_mean = weldata.mean;
+      ComputeType row_var = welop.project(weldata);
       row_mean_shared = row_mean;
       mean[row] = row_mean;
       ComputeType row_variance = max(row_var, static_cast<ComputeType>(0.0));
@@ -402,7 +383,7 @@ void LayerNormForwardGpu(DeviceCtx* ctx, const int num_instances, const int norm
                          const double epsilon, const T* x_ptr, const T* gamma_ptr,
                          const T* beta_ptr, T* normalized_ptr, T* y_ptr, user_op::Tensor* mean,
                          user_op::Tensor* inv_variance) {
-    LayerNormWelfordForwardImpl<T, typename LayerNormUtil<T>::ComputeType>
+  LayerNormWelfordForwardImpl<T, typename LayerNormUtil<T>::ComputeType>
       <<<GetLayerNormForwardNumBlocks(num_instances), GetLayerNormForwardBlockSize(),
          GetForwardDynamicSharedMemorySize<T>(norm_size), ctx->cuda_stream()>>>(
           num_instances, norm_size, epsilon, x_ptr, gamma_ptr, beta_ptr,
