@@ -116,7 +116,13 @@ class TestAllToAll(flow.unittest.TestCase):
         ]
         output_list = [flow.tensor([0, 1]) for _ in range(4)]
         flow.comm.all_to_all(output_list, input_list)
-        print("output list = \n", output_list)
+        for i in range(len(output_list)):
+            test_case.assertTrue(
+                np.allclose(
+                    output_list[i].numpy(),
+                    input_list[i].numpy() + (i - flow.env.get_rank()) * 6,
+                )
+            )
 
 
 @flow.unittest.skip_unless_1n2d()
