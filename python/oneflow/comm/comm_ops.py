@@ -198,6 +198,8 @@ def reduce(tensor, dst):
         dst (int): Destination rank
 
     """
+    assert isinstance(tensor, flow._oneflow_internal.Tensor)
+    assert tensor.is_local
     assert isinstance(dst, int)
     result = flow.comm.all_reduce(tensor)
     if flow.env.get_rank() == dst:
