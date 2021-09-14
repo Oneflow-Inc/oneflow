@@ -62,10 +62,10 @@ class Generator final {
 Maybe<void> ManualSeed(uint64_t seed);
 
 Maybe<Generator> DefaultGenerator(const std::string& device, int device_index = -1);
-Maybe<Generator> DefaultGenerator(const DeviceType& device, int device_index = -1);
+Maybe<Generator> DefaultGenerator(DeviceType device, int device_index = -1);
 
 Maybe<Generator> MakeGenerator(const std::string& device, int device_index = -1);
-Maybe<Generator> MakeGenerator(const DeviceType& device, int device_index = -1);
+Maybe<Generator> MakeGenerator(DeviceType device, int device_index = -1);
 
 Maybe<Generator> DefaultAutoGenerator();
 Maybe<Generator> MakeAutoGenerator();

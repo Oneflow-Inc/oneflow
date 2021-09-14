@@ -141,7 +141,7 @@ Maybe<Generator> DefaultGenerator(DeviceType device, int device_index) {
   return DefaultGenerator(DeviceTypeName(device), device_index);
 }
 
-Maybe<Generator> MakeGenerator(const DeviceType& device, int device_index) {
+Maybe<Generator> MakeGenerator(DeviceType device, int device_index) {
   return MakeGenerator(DeviceTypeName(device), device_index);
 }
 
