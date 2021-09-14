@@ -696,7 +696,7 @@
   bind_python: False
 
 - name: "slice_update"
-  signature: "Tensor (Tensor x, Tensor update, Int64List start, Int64List stop, Int64List step) => SliceUpdate"
+  signature: "Tensor (Tensor x, Tensor update, Int64List start, Int64List stop, Int64List step, *, Bool inplace=False) => SliceUpdate"
   bind_python: True
 
 - name: "logical_slice"
