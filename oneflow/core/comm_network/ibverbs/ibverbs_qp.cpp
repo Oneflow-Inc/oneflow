@@ -164,27 +164,6 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
   }
 }
 
-/*void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
-  ActorMsgMR* msg_mr = message_pool_->GetMessage();
-  msg_mr->set_message(msg);
-  WorkRequestId* wr_id = NewWorkRequestId();
-  wr_id->msg_mr = msg_mr;
-  ibv_send_wr wr{};
-  ibv_sge sge{};
-  sge.addr = reinterpret_cast<uint64_t>(msg_mr->addr());
-  sge.length = msg_mr->message_size();
-  sge.lkey = msg_mr->lkey();
-  wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
-  wr.next = nullptr;
-  wr.sg_list = &sge;
-  wr.num_sge = 1;
-  wr.opcode = IBV_WR_SEND;
-  wr.send_flags = 0;
-  wr.imm_data = 0;
-  memset(&(wr.wr), 0, sizeof(wr.wr));
-  EnqueuePostSendReadWR(wr, sge);
-}*/
-
 void IBVerbsQP::PostSendRequest(char * data, size_t size) {
   ActorMsgMR* msg_mr = message_pool_->GetMessage();
   msg_mr->set_data(data,size);

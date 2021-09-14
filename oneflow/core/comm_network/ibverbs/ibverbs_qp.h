@@ -42,17 +42,14 @@ class ActorMsgMR final {
   uint32_t lkey() const { return mr_->lkey; }
   void*  message() const { return data_; }
   void set_data(char * data,size_t size ) {
-    //data_ = reinterpret_cast<void*>(data);
     std::memcpy(data_,data,size);
     size_ = size;
   }
- // void set_message(const ActorMsg& val) { *message_ = val; }
   size_t message_size() const { return message_size_; }
   size_t size() const {return size_ ; }
  private:
   size_t message_size_;
   ibv_mr* mr_;
- // ActorMsg* message_;
   char * data_;
   size_t size_;
 };
