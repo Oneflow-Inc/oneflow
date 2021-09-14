@@ -11,3 +11,4 @@ oneflow communication function
         all_to_all,
         send,
         recv, 
+        barrier,

@@ -214,7 +214,7 @@ def all_to_all(output_tensor_list, input_tensor_list):
         output_tensor_list (list[Tensor]): List of tensors to be gathered one
             per rank.
         input_tensor_list (list[Tensor]): List of tensors to scatter one per rank.
-        
+
     """
 
     def _check_list(tensor_list):
@@ -231,3 +231,11 @@ def all_to_all(output_tensor_list, input_tensor_list):
             input_tensor_list if i == flow.env.get_rank() else [],
             src=i,
         )
+
+
+def barrier():
+    """
+    Synchronizes all processes.
+
+    """
+    oneflow._oneflow_internal.eager.multi_client.Sync()
