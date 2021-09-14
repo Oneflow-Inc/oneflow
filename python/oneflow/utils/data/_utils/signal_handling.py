@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 r"""Signal handling for multiprocessing data loading.
 NOTE [ Signal handling in multiprocessing data loading ]
 In cases like DataLoader, if a worker process dies due to bus error/segfault
@@ -32,7 +47,12 @@ from . import IS_WINDOWS
 # be used `_utils.signal_handling.XXXXX`.
 
 
-from oneflow._oneflow_internal import _set_worker_pids, _remove_worker_pids, _error_if_any_worker_fails, _set_worker_signal_handlers
+from oneflow._oneflow_internal import (
+    _set_worker_pids,
+    _remove_worker_pids,
+    _error_if_any_worker_fails,
+    _set_worker_signal_handlers,
+)
 
 _SIGCHLD_handler_set = False
 r"""Whether SIGCHLD handler is set for DataLoader worker failures. Only one

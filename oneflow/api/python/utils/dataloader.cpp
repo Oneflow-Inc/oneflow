@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 // Together with `torch/utils/data/_utils/signal_handling.py`, the following
 // is an effort to do our best to provide some error message to users when a
 // worker dies due to error / critical signals.
@@ -22,7 +37,6 @@
 
 #include <stdexcept>
 
-
 namespace oneflow {
 
 namespace py = pybind11;
@@ -32,28 +46,27 @@ namespace py = pybind11;
 // The handler will raise default handler so that the kill information will be
 // retrieved from main process.
 // Python handle is _set_worker_signal_handlers().
-#define SIGNAL_HANDLER(SIGNAL, HANDLER_NAME, ERROR_MSG)                       \
-static void HANDLER_NAME(int sig, siginfo_t *info, void *ctx)                 \
-{                                                                             \
-  auto _w = write(STDERR_FILENO, ERROR_MSG, sizeof(ERROR_MSG) / sizeof(char));\
-  (void)_w;                                                                   \
-  struct sigaction sa{};                                                        \
-  sa.sa_handler = SIG_DFL;                                                    \
-  sa.sa_flags = 0;                                                            \
-  if (sigemptyset(&sa.sa_mask) != 0 || sigaction(SIGNAL, &sa, nullptr) != 0) {   \
-    _exit(EXIT_FAILURE);                                                      \
-  } else {                                                                    \
-    raise(SIGNAL);                                                            \
-  }                                                                           \
-}
+#define SIGNAL_HANDLER(SIGNAL, HANDLER_NAME, ERROR_MSG)                          \
+  static void HANDLER_NAME(int sig, siginfo_t* info, void* ctx) {                \
+    auto _w = write(STDERR_FILENO, ERROR_MSG, sizeof(ERROR_MSG) / sizeof(char)); \
+    (void)_w;                                                                    \
+    struct sigaction sa {};                                                      \
+    sa.sa_handler = SIG_DFL;                                                     \
+    sa.sa_flags = 0;                                                             \
+    if (sigemptyset(&sa.sa_mask) != 0 || sigaction(SIGNAL, &sa, nullptr) != 0) { \
+      _exit(EXIT_FAILURE);                                                       \
+    } else {                                                                     \
+      raise(SIGNAL);                                                             \
+    }                                                                            \
+  }
 
 // signal(2) is really not portable. So use sigaction.
 // http://man7.org/linux/man-pages/man2/signal.2.html
-static inline void setSignalHandler(int signal, void(*handler)(int, siginfo_t *, void *), struct sigaction *old_sa_ptr)
-{
-  struct sigaction sa{};
+static inline void setSignalHandler(int signal, void (*handler)(int, siginfo_t*, void*),
+                                    struct sigaction* old_sa_ptr) {
+  struct sigaction sa {};
   sa.sa_sigaction = handler;
-  sa.sa_flags = SA_RESTART|SA_SIGINFO|SA_NOCLDSTOP|SA_NODEFER;
+  sa.sa_flags = SA_RESTART | SA_SIGINFO | SA_NOCLDSTOP | SA_NODEFER;
   if (sigemptyset(&sa.sa_mask) != 0 || sigaction(signal, &sa, old_sa_ptr) != 0) {
     std::ostringstream oss;
     oss << "An error occurred while setting handler for " << strsignal(signal) << ".";
@@ -61,10 +74,13 @@ static inline void setSignalHandler(int signal, void(*handler)(int, siginfo_t *,
   }
 }
 
-SIGNAL_HANDLER(SIGBUS, handler_SIGBUS, "ERROR: Unexpected bus error encountered in worker. "
-  "This might be caused by insufficient shared memory (shm).\n");
-SIGNAL_HANDLER(SIGSEGV, handler_SIGSEGV, "ERROR: Unexpected segmentation fault encountered in worker.\n");
-SIGNAL_HANDLER(SIGFPE, handler_SIGFPE, "ERROR: Unexpected floating-point exception encountered in worker.\n");
+SIGNAL_HANDLER(SIGBUS, handler_SIGBUS,
+               "ERROR: Unexpected bus error encountered in worker. "
+               "This might be caused by insufficient shared memory (shm).\n");
+SIGNAL_HANDLER(SIGSEGV, handler_SIGSEGV,
+               "ERROR: Unexpected segmentation fault encountered in worker.\n");
+SIGNAL_HANDLER(SIGFPE, handler_SIGFPE,
+               "ERROR: Unexpected floating-point exception encountered in worker.\n");
 
 // When an error happened in DataLoader methods and Python starts to exit, the
 // error trace will keep the loader alive, and Python may kill the children
@@ -74,12 +90,9 @@ SIGNAL_HANDLER(SIGFPE, handler_SIGFPE, "ERROR: Unexpected floating-point excepti
 // loader process here to avoid this by _exit(EXIT_SUCCESS). Note that if we
 // exit with nonzero code, the loader SIGCHLD handler may report RuntimeError
 // again, and then it defeats the whole purpose.
-static void handler_SIGTERM(int sig, siginfo_t *info, void *ctx)
-{
-  if (info->si_pid == getppid()) {
-    _exit(EXIT_SUCCESS);
-  }
-  struct sigaction sa{};
+static void handler_SIGTERM(int sig, siginfo_t* info, void* ctx) {
+  if (info->si_pid == getppid()) { _exit(EXIT_SUCCESS); }
+  struct sigaction sa {};
   sa.sa_handler = SIG_DFL;
   sa.sa_flags = 0;
   if (sigemptyset(&sa.sa_mask) != 0 || sigaction(SIGTERM, &sa, nullptr) != 0) {
@@ -105,7 +118,7 @@ static void error_if_any_worker_fails() {
   // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
   int error;
   // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
-  std::set<pid_t> *pid_set;
+  std::set<pid_t>* pid_set;
   // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
   pid_t worker_pid;
   siginfo_t infop;
@@ -118,10 +131,9 @@ static void error_if_any_worker_fails() {
       // Use waitid rather than waitpid so that we can set NOWAIT, and that Python
       // and other handlers can get whatever info they want about the child.
       infop.si_pid = 0;
-      error = waitid(P_PID, worker_pid, &infop, WEXITED|WNOHANG|WNOWAIT);
+      error = waitid(P_PID, worker_pid, &infop, WEXITED | WNOHANG | WNOWAIT);
       // ignore errors and case with no waitable child
-      if (error < 0 || infop.si_pid == 0)
-        continue;
+      if (error < 0 || infop.si_pid == 0) continue;
       if (infop.si_code == CLD_EXITED && infop.si_status != EXIT_SUCCESS) {  // exit with error
         std::ostringstream oss;
         oss << "DataLoader worker (pid " << worker_pid << ") exited "
@@ -137,8 +149,8 @@ static void error_if_any_worker_fails() {
         oss << "DataLoader worker (pid " << worker_pid << ") is killed "
             << "by signal: " << strsignal(infop.si_status) << ". ";
         if (infop.si_status == SIGBUS) {
-            oss << "It is possible that dataloader's workers are out of shared memory. "
-                << "Please try to raise your shared memory limit.";
+          oss << "It is possible that dataloader's workers are out of shared memory. "
+              << "Please try to raise your shared memory limit.";
         }
         // This is necessary. Otherwise, the runtime error will kill the other
         // workers, and trigger this again.
@@ -154,12 +166,8 @@ inline int64_t utils_unpackLong(PyObject* obj) {
   // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
   int overflow;
   long long value = PyLong_AsLongLongAndOverflow(obj, &overflow);
-  if (value == -1 && PyErr_Occurred()) {
-    throw py::value_error();
-  }
-  if (overflow != 0) {
-    throw std::runtime_error("Overflow when unpacking long");
-  }
+  if (value == -1 && PyErr_Occurred()) { throw py::value_error(); }
+  if (overflow != 0) { throw std::runtime_error("Overflow when unpacking long"); }
   return (int64_t)value;
 }
 
@@ -172,11 +180,13 @@ static void set_worker_pids(py::args py_args) {
   }
   int64_t key = utils_unpackLong(PyTuple_GET_ITEM(args, 0));
   if (worker_pids.find(key) != worker_pids.end()) {
-    throw py::value_error("_set_worker_pids should be called only once for each _BaseDataLoaderIter.");
+    throw py::value_error(
+        "_set_worker_pids should be called only once for each _BaseDataLoaderIter.");
   }
-  PyObject *child_pids = PyTuple_GET_ITEM(args, 1);
+  PyObject* child_pids = PyTuple_GET_ITEM(args, 1);
   if (!PyTuple_Check(child_pids)) {
-    py::print("_set_worker_pids expects a tuple for child_pids, but got: ", Py_TYPE(child_pids)->tp_name);
+    py::print("_set_worker_pids expects a tuple for child_pids, but got: ",
+              Py_TYPE(child_pids)->tp_name);
     throw py::type_error("_set_worker_pids expects a tuple for child_pids");
   }
 
@@ -207,24 +217,17 @@ static void remove_worker_pids(py::args py_args) {
 #else
 // dummy implementations for windows
 
-static PyObject *set_worker_signal_handlers(PyObject *module, PyObject *_ignored) {
+static PyObject* set_worker_signal_handlers(PyObject* module, PyObject* _ignored) {
   Py_RETURN_NONE;
 }
 
-static PyObject *set_worker_pids(PyObject *module, PyObject *_ignored) {
-  Py_RETURN_NONE;
-}
+static PyObject* set_worker_pids(PyObject* module, PyObject* _ignored) { Py_RETURN_NONE; }
 
-static PyObject *remove_worker_pids(PyObject *module, PyObject *_ignored) {
-  Py_RETURN_NONE;
-}
+static PyObject* remove_worker_pids(PyObject* module, PyObject* _ignored) { Py_RETURN_NONE; }
 
-static PyObject *error_if_any_worker_fails(PyObject *module, PyObject *_ignored) {
-  Py_RETURN_NONE;
-}
+static PyObject* error_if_any_worker_fails(PyObject* module, PyObject* _ignored) { Py_RETURN_NONE; }
 
 #endif
-
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("_set_worker_signal_handlers", &set_worker_signal_handlers);
@@ -233,4 +236,4 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("_error_if_any_worker_fails", &error_if_any_worker_fails);
 }
 
-} // namespace oneflow
+}  // namespace oneflow

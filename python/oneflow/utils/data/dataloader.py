@@ -29,7 +29,6 @@ import oneflow as flow
 from oneflow.utils.data import _utils
 
 
-
 class ExceptionWrapper(object):
     r"""Wraps an exception plus traceback to communicate across threads"""
 
@@ -91,6 +90,7 @@ _collate_fn_t = Callable[[List[T]], Any]
 default_collate: _collate_fn_t = _utils.collate.default_collate
 
 get_worker_info = _utils.worker.get_worker_info
+
 
 class _DatasetKind(object):
     Map = 0
@@ -451,20 +451,31 @@ class DataLoader(Generic[T_co]):
     def check_worker_number_rationality(self):
         def _create_warning_msg(num_worker_suggest, num_worker_created, cpuset_checked):
 
-            suggested_max_worker_msg = ((
-                "Our suggested max number of worker in current system is {}{}, which is smaller "
-                "than what this DataLoader is going to create.").format(
-                    num_worker_suggest,
-                    ("" if cpuset_checked else " (`cpuset` is not taken into account)"))
-            ) if num_worker_suggest is not None else (
-                "DataLoader is not able to compute a suggested max number of worker in current system.")
+            suggested_max_worker_msg = (
+                (
+                    (
+                        "Our suggested max number of worker in current system is {}{}, which is smaller "
+                        "than what this DataLoader is going to create."
+                    ).format(
+                        num_worker_suggest,
+                        (
+                            ""
+                            if cpuset_checked
+                            else " (`cpuset` is not taken into account)"
+                        ),
+                    )
+                )
+                if num_worker_suggest is not None
+                else (
+                    "DataLoader is not able to compute a suggested max number of worker in current system."
+                )
+            )
 
             warn_msg = (
                 "This DataLoader will create {} worker processes in total. {} "
                 "Please be aware that excessive worker creation might get DataLoader running slow or even freeze, "
-                "lower the worker number to avoid potential slowness/freeze if necessary.").format(
-                    num_worker_created,
-                    suggested_max_worker_msg)
+                "lower the worker number to avoid potential slowness/freeze if necessary."
+            ).format(num_worker_created, suggested_max_worker_msg)
             return warn_msg
 
         if not self.num_workers or self.num_workers == 0:
@@ -473,7 +484,7 @@ class DataLoader(Generic[T_co]):
         # try to compute a suggested max number of worker based on system's resource
         max_num_worker_suggest = None
         cpuset_checked = False
-        if hasattr(os, 'sched_getaffinity'):
+        if hasattr(os, "sched_getaffinity"):
             try:
                 max_num_worker_suggest = len(os.sched_getaffinity(0))
                 cpuset_checked = True
@@ -487,17 +498,19 @@ class DataLoader(Generic[T_co]):
                 max_num_worker_suggest = cpu_count
 
         if max_num_worker_suggest is None:
-            warnings.warn(_create_warning_msg(
-                max_num_worker_suggest,
-                self.num_workers,
-                cpuset_checked))
+            warnings.warn(
+                _create_warning_msg(
+                    max_num_worker_suggest, self.num_workers, cpuset_checked
+                )
+            )
             return
 
         if self.num_workers > max_num_worker_suggest:
-            warnings.warn(_create_warning_msg(
-                max_num_worker_suggest,
-                self.num_workers,
-                cpuset_checked))
+            warnings.warn(
+                _create_warning_msg(
+                    max_num_worker_suggest, self.num_workers, cpuset_checked
+                )
+            )
 
 
 class _BaseDataLoaderIter(object):
@@ -925,11 +938,22 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
             w = multiprocessing_context.Process(
                 target=_utils.worker._worker_loop,
-                args=(self._dataset_kind, self._dataset, index_queue,
-                      self._worker_result_queue, self._workers_done_event,
-                      self._auto_collation, self._collate_fn, self._drop_last,
-                      self._base_seed, self._worker_init_fn, i, self._num_workers,
-                      self._persistent_workers))
+                args=(
+                    self._dataset_kind,
+                    self._dataset,
+                    index_queue,
+                    self._worker_result_queue,
+                    self._workers_done_event,
+                    self._auto_collation,
+                    self._collate_fn,
+                    self._drop_last,
+                    self._base_seed,
+                    self._worker_init_fn,
+                    i,
+                    self._num_workers,
+                    self._persistent_workers,
+                ),
+            )
             w.daemon = True
             # NB: Process.start() actually take some time as it needs to
             #     start a process and pass the arguments over via a pipe.
@@ -949,9 +973,13 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             self._data_queue = queue.Queue()  # type: ignore[var-annotated]
             pin_memory_thread = threading.Thread(
                 target=_utils.pin_memory._pin_memory_loop,
-                args=(self._worker_result_queue, self._data_queue,
-                      flow.cuda.current_device(), # TODO:flow.cuda.current_device()
-                      self._pin_memory_thread_done_event))
+                args=(
+                    self._worker_result_queue,
+                    self._data_queue,
+                    flow.cuda.current_device(),  # TODO:flow.cuda.current_device()
+                    self._pin_memory_thread_done_event,
+                ),
+            )
             pin_memory_thread.daemon = True
             pin_memory_thread.start()
             # Similar to workers (see comment above), we only register
@@ -974,7 +1002,9 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         # map: task idx => - (worker_id,)        if data isn't fetched (outstanding)
         #                  \ (worker_id, data)   if data is already fetched (out-of-order)
         self._task_info = {}
-        self._tasks_outstanding = 0  # always equal to count(v for v in task_info.values() if len(v) == 1)
+        self._tasks_outstanding = (
+            0  # always equal to count(v for v in task_info.values() if len(v) == 1)
+        )
         # A list of booleans representing whether each worker still has work to
         # do, i.e., not having exhausted its iterable dataset object. It always
         # contains all `True`s if not using an iterable-style dataset
@@ -1022,12 +1052,15 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                     failed_workers.append(w)
                     self._mark_worker_as_unavailable(worker_id)
             if len(failed_workers) > 0:
-                pids_str = ', '.join(str(w.pid) for w in failed_workers)
-                raise RuntimeError('DataLoader worker (pid(s) {}) exited unexpectedly'.format(pids_str)) from e
+                pids_str = ", ".join(str(w.pid) for w in failed_workers)
+                raise RuntimeError(
+                    "DataLoader worker (pid(s) {}) exited unexpectedly".format(pids_str)
+                ) from e
             if isinstance(e, queue.Empty):
                 return (False, None)
             import tempfile
             import errno
+
             try:
                 # Raise an exception if we are this close to the FDs limit.
                 # Apparently, trying to open only one file is not a sufficient
@@ -1043,7 +1076,8 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                         " limit using `ulimit -n` in the shell or change the"
                         " sharing strategy by calling"
                         " `torch.multiprocessing.set_sharing_strategy('file_system')`"
-                        " at the beginning of your code") from None
+                        " at the beginning of your code"
+                    ) from None
             raise
 
     def _get_data(self):
@@ -1062,7 +1096,9 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             if success:
                 return data
             else:
-                raise RuntimeError('DataLoader timed out after {} seconds'.format(self._timeout))
+                raise RuntimeError(
+                    "DataLoader timed out after {} seconds".format(self._timeout)
+                )
         elif self._pin_memory:
             while self._pin_memory_thread.is_alive():
                 success, data = self._try_get_data()
@@ -1070,7 +1106,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                     return data
             else:
                 # while condition is false, i.e., pin_memory_thread died.
-                raise RuntimeError('Pin memory thread exited unexpectedly')
+                raise RuntimeError("Pin memory thread exited unexpectedly")
             # In this case, `self._data_queue` is a `queue.Queue`,. But we don't
             # need to call `.task_done()` because we don't use `.join()`.
         else:
@@ -1091,7 +1127,9 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             while self._rcvd_idx < self._send_idx:
                 info = self._task_info[self._rcvd_idx]
                 worker_id = info[0]
-                if len(info) == 2 or self._workers_status[worker_id]:  # has data or is still active
+                if (
+                    len(info) == 2 or self._workers_status[worker_id]
+                ):  # has data or is still active
                     break
                 del self._task_info[self._rcvd_idx]
                 self._rcvd_idx += 1
@@ -1160,7 +1198,9 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         # exhausting an `IterableDataset`. This should be used only when this
         # `_MultiProcessingDataLoaderIter` is going to continue running.
 
-        assert self._workers_status[worker_id] or (self._persistent_workers and shutdown)
+        assert self._workers_status[worker_id] or (
+            self._persistent_workers and shutdown
+        )
 
         # Signal termination to that specific worker.
         q = self._index_queues[worker_id]
@@ -1200,7 +1240,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 # Exit `pin_memory_thread` first because exiting workers may leave
                 # corrupted data in `worker_result_queue` which `pin_memory_thread`
                 # reads from.
-                if hasattr(self, '_pin_memory_thread'):
+                if hasattr(self, "_pin_memory_thread"):
                     # Use hasattr in case error happens before we set the attribute.
                     self._pin_memory_thread_done_event.set()
                     # Send something to pin_memory_thread in case it is waiting
@@ -1252,4 +1292,3 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
     def __del__(self):
         self._shutdown_workers()
-

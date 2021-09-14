@@ -86,10 +86,7 @@ def test(test_case):
     )
 
     trainset = vision.datasets.CIFAR10(
-        root=data_dir,
-        train=True,
-        download=True,
-        transform=transform,
+        root=data_dir, train=True, download=True, transform=transform,
     )
     trainloader = torch.utils.data.DataLoader(
         trainset, batch_size=batch_size, shuffle=False, num_workers=num_workers

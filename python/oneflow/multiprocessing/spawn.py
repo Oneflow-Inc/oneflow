@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 
 from typing import Optional
 import multiprocessing
@@ -23,11 +38,9 @@ class ProcessRaisedException(ProcessException):
     Exception is thrown when the process failed due to exception
     raised by the code.
     """
+
     def __init__(
-        self,
-        msg: str,
-        error_index: int,
-        error_pid: int,
+        self, msg: str, error_index: int, error_pid: int,
     ):
         super().__init__(msg, error_index, error_pid)
 
@@ -37,11 +50,16 @@ class ProcessExitedException(ProcessException):
     Exception is thrown when the process failed due to signal
     or exited with a specific code.
     """
+
     __slots__ = ["exit_code"]
 
     def __init__(
-            self, msg: str, error_index: int, error_pid: int,
-            exit_code: int, signal_name: Optional[str] = None
+        self,
+        msg: str,
+        error_index: int,
+        error_pid: int,
+        exit_code: int,
+        signal_name: Optional[str] = None,
     ):
         super().__init__(msg, error_index, error_pid)
         self.exit_code = exit_code
@@ -62,6 +80,7 @@ def _wrap(fn, i, args, error_queue):
     except Exception:
         # Propagate exception to parent process, keeping original traceback
         import traceback
+
         error_queue.put(traceback.format_exc())
         sys.exit(1)
 
@@ -71,8 +90,7 @@ class ProcessContext:
         self.error_queues = error_queues
         self.processes = processes
         self.sentinels = {
-            process.sentinel: index
-            for index, process in enumerate(processes)
+            process.sentinel: index for index, process in enumerate(processes)
         }
 
     def pids(self):
@@ -96,10 +114,7 @@ class ProcessContext:
             return True
 
         # Wait for any process to fail or all of them to succeed.
-        ready = multiprocessing.connection.wait(
-            self.sentinels.keys(),
-            timeout=timeout,
-        )
+        ready = multiprocessing.connection.wait(self.sentinels.keys(), timeout=timeout,)
 
         error_index = None
         for sentinel in ready:
@@ -128,20 +143,18 @@ class ProcessContext:
             if exitcode < 0:
                 name = signal.Signals(-exitcode).name
                 raise ProcessExitedException(
-                    "process %d terminated with signal %s" %
-                    (error_index, name),
+                    "process %d terminated with signal %s" % (error_index, name),
                     error_index=error_index,
                     error_pid=failed_process.pid,
                     exit_code=exitcode,
-                    signal_name=name
+                    signal_name=name,
                 )
             else:
                 raise ProcessExitedException(
-                    "process %d terminated with exit code %d" %
-                    (error_index, exitcode),
+                    "process %d terminated with exit code %d" % (error_index, exitcode),
                     error_index=error_index,
                     error_pid=failed_process.pid,
-                    exit_code=exitcode
+                    exit_code=exitcode,
                 )
 
         original_trace = self.error_queues[error_index].get()
@@ -152,8 +165,9 @@ class ProcessContext:
 
 class SpawnContext(ProcessContext):
     def __init__(self, processes, error_queues):
-        warnings.warn('SpawnContext is renamed to ProcessContext since 1.4 release.')
+        warnings.warn("SpawnContext is renamed to ProcessContext since 1.4 release.")
         super(SpawnContext, self).__init__(processes, error_queues)
+
     pass
 
 
@@ -165,16 +179,16 @@ class SpawnContext(ProcessContext):
 # general enough, and backends like XLA can reuse them in Colab notebooks as well.
 # Currently we only add this API first, we can consider adding it to documentation as
 # needed in the future.
-def start_processes(fn, args=(), nprocs=1, join=True, daemon=False, start_method='spawn'):
+def start_processes(
+    fn, args=(), nprocs=1, join=True, daemon=False, start_method="spawn"
+):
     mp = multiprocessing.get_context(start_method)
     error_queues = []
     processes = []
     for i in range(nprocs):
         error_queue = mp.SimpleQueue()
         process = mp.Process(
-            target=_wrap,
-            args=(fn, i, args, error_queue),
-            daemon=daemon,
+            target=_wrap, args=(fn, i, args, error_queue), daemon=daemon,
         )
         process.start()
         error_queues.append(error_queue)
@@ -189,7 +203,7 @@ def start_processes(fn, args=(), nprocs=1, join=True, daemon=False, start_method
         pass
 
 
-def spawn(fn, args=(), nprocs=1, join=True, daemon=False, start_method='spawn'):
+def spawn(fn, args=(), nprocs=1, join=True, daemon=False, start_method="spawn"):
     r"""Spawns ``nprocs`` processes that run ``fn`` with ``args``.
 
     If one of the processes exits with a non-zero exit status, the
@@ -222,9 +236,11 @@ def spawn(fn, args=(), nprocs=1, join=True, daemon=False, start_method='spawn'):
         :class:`~ProcessContext` if ``join`` is ``False``
 
     """
-    if start_method != 'spawn':
-        msg = ('This method only supports start_method=spawn (got: %s).\n'
-               'To use a different start_method use:\n\t\t'
-               ' oneflow.multiprocessing.start_processes(...)' % start_method)
+    if start_method != "spawn":
+        msg = (
+            "This method only supports start_method=spawn (got: %s).\n"
+            "To use a different start_method use:\n\t\t"
+            " oneflow.multiprocessing.start_processes(...)" % start_method
+        )
         warnings.warn(msg)
-    return start_processes(fn, args, nprocs, join, daemon, start_method='spawn')
+    return start_processes(fn, args, nprocs, join, daemon, start_method="spawn")

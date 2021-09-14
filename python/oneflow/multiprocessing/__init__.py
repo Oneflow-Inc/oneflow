@@ -1,4 +1,19 @@
 """
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+"""
 oneflow.multiprocessing is a wrapper around the native :mod:`multiprocessing`
 module. It registers custom reducers, that use shared memory to provide shared
 views on the same data in different processes. Once the tensor/storage is moved
@@ -18,8 +33,7 @@ import sys
 from .reductions import init_reductions
 import multiprocessing
 
-__all__ = ['set_sharing_strategy', 'get_sharing_strategy',
-           'get_all_sharing_strategies']
+__all__ = ["set_sharing_strategy", "get_sharing_strategy", "get_all_sharing_strategies"]
 
 
 from multiprocessing import *  # noqa: F403
@@ -35,16 +49,22 @@ flow._oneflow_internal._multiprocessing_init()
 
 """Add helper function to spawn N processes and wait for completion of any of
 them. This depends `mp.get_context` which was added in Python 3.4."""
-from .spawn import spawn, SpawnContext, start_processes, ProcessContext, \
-    ProcessRaisedException, ProcessExitedException
+from .spawn import (
+    spawn,
+    SpawnContext,
+    start_processes,
+    ProcessContext,
+    ProcessRaisedException,
+    ProcessExitedException,
+)
 
 
-if sys.platform == 'darwin' or sys.platform == 'win32':
-    _sharing_strategy = 'file_system'
-    _all_sharing_strategies = {'file_system'}
+if sys.platform == "darwin" or sys.platform == "win32":
+    _sharing_strategy = "file_system"
+    _all_sharing_strategies = {"file_system"}
 else:
-    _sharing_strategy = 'file_descriptor'
-    _all_sharing_strategies = {'file_descriptor', 'file_system'}
+    _sharing_strategy = "file_descriptor"
+    _all_sharing_strategies = {"file_descriptor", "file_system"}
 
 
 def set_sharing_strategy(new_strategy):
