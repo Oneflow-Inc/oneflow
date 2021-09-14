@@ -21,12 +21,13 @@ limitations under the License.
 namespace oneflow {
 
 IBVerbsMessagePool::~IBVerbsMessagePool() {
-  size_t size = ibv_mr_buf_.size();
-  for (size_t i = 0; i < size; i++) {
+  size_t mr_buf_size = ibv_mr_buf_.size();
+  for (size_t i = 0; i < mr_buf_size; i++) {
     ibv_mr* mr = ibv_mr_buf_[i];
     CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
-    free(memory_buf_[i]);
   }
+  size_t memory_buf_size = memory_buf_.size();
+  for (size_t i = 0; i < memory_buf_size; i++) { free(memory_buf_[i]); }
   ibv_mr_buf_.clear();
   memory_buf_.clear();
 }
