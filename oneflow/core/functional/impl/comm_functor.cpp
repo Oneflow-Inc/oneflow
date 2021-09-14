@@ -214,7 +214,6 @@ class ConsistentAllGatherFunctor {
     {
       CHECK_OR_RETURN(x->is_consistent());
       CHECK_OR_RETURN(IsAllSplitNdSbp(JUST(x->nd_sbp()), 0));
-      CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllGatherOpExpr(JUST(x->parallel_desc())));
