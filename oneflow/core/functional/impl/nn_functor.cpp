@@ -275,7 +275,7 @@ class PoolingNDFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
     JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
     if (stride.has_value()) {
-      JUST(attrs.SetAttr<std::vector<int32_t>>("stride", *JUST(stride.value())));
+      JUST(attrs.SetAttr<std::vector<int32_t>>("stride", *JUST(stride)));
     } else {
       JUST(attrs.SetAttr<std::vector<int32_t>>(
           "stride", kernel_size));  // If stride is None, we set it as kernel_size to align Pytorch.
@@ -665,30 +665,25 @@ class NormalizationAddReluFunctor {
       if (addend) {
         return OpInterpUtil::Dispatch<one::Tensor>(
             *addend_norm_eval_op_,
-            {x, JUST(addend.value()), JUST(moving_mean.value()), JUST(moving_variance.value()),
-             gamma, beta},
-            attrs);
+            {x, JUST(addend), JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
       } else {
         return OpInterpUtil::Dispatch<one::Tensor>(
-            *norm_eval_op_,
-            {x, JUST(moving_mean.value()), JUST(moving_variance.value()), gamma, beta}, attrs);
+            *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
       }
     } else if (moving_mean) {
       if (addend) {
         return OpInterpUtil::Dispatch<one::Tensor>(
             *addend_norm_training_stats_op_,
-            {x, JUST(addend.value()), JUST(moving_mean.value()), JUST(moving_variance.value()),
-             gamma, beta},
-            attrs);
+            {x, JUST(addend), JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
       } else {
         return OpInterpUtil::Dispatch<one::Tensor>(
-            *norm_training_stats_op_,
-            {x, JUST(moving_mean.value()), JUST(moving_variance.value()), gamma, beta}, attrs);
+            *norm_training_stats_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta},
+            attrs);
       }
     } else {
       if (addend) {
         return OpInterpUtil::Dispatch<one::Tensor>(*addend_norm_training_no_stats_op_,
-                                                   {x, JUST(addend.value()), gamma, beta}, attrs);
+                                                   {x, JUST(addend), gamma, beta}, attrs);
       } else {
         return OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_, {x, gamma, beta},
                                                    attrs);
@@ -833,7 +828,7 @@ class AvgPoolingNDFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
     JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
     if (stride.has_value()) {
-      JUST(attrs.SetAttr<std::vector<int32_t>>("stride", *JUST(stride.value())));
+      JUST(attrs.SetAttr<std::vector<int32_t>>("stride", *JUST(stride)));
     } else {
       JUST(attrs.SetAttr<std::vector<int32_t>>(
           "stride", kernel_size));  // If stride is None, we set it as kernel_size to align Pytorch.

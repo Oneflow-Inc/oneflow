@@ -78,7 +78,7 @@ struct DtypeAllReduce<T, kSum> {
     const auto& rank_group = JUST(RankGroup::New(parallel_desc));
     TransportToken transport_token =
         JUST(TransportToken::NewTransportToken(kTransportTokenTypeData));
-    for (int64_t i = 0, part_id = JUST(parallel_id.value()); i < parallel_num - 1;
+    for (int64_t i = 0, part_id = JUST(parallel_id); i < parallel_num - 1;
          ++i, part_id = RingDecrease(part_id, parallel_num)) {
       int64_t send_part_id = part_id;
       const T* send_ptr = nullptr;
@@ -116,7 +116,7 @@ struct DtypeAllReduce<T, kSum> {
       T* cur_out = &out[bs.At(recv_part_id).begin()];
       if (recv_size > 0) { VecAdd(recv_size, cur_out, cur_in, recv_ptr); }
     }
-    for (int64_t i = 0, part_id = RingIncrease(JUST(parallel_id.value()), parallel_num);
+    for (int64_t i = 0, part_id = RingIncrease(JUST(parallel_id), parallel_num);
          i < parallel_num - 1; ++i, part_id = RingDecrease(part_id, parallel_num)) {
       int64_t send_part_id = part_id;
       const T* send_ptr = &out[bs.At(send_part_id).begin()];
