@@ -13,7 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <exception>
+#include <stdexcept>
+
 #include "oneflow/core/thread/thread_pool.h"
+
 
 namespace oneflow {
 
@@ -22,8 +26,14 @@ ThreadPool::ThreadPool(int32_t thread_num)
   FOR_RANGE(int32_t, i, 0, thread_num) {
     Channel<std::function<void()>>* chan = &(work_chans_.at(i));
     threads_[i] = std::thread([chan]() {
+      std::exception_ptr ep = nullptr;
       std::function<void()> work;
-      while (chan->Receive(&work) == kChannelStatusSuccess) { work(); }
+      try {
+        while (chan->Receive(&work) == kChannelStatusSuccess) { work(); }
+      } catch(...) {
+        ep = std::current_exception();
+        LOG(ERROR) << "got exception from thead.";
+      }
     });
   }
 }

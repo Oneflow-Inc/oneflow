@@ -21,7 +21,7 @@ limitations under the License.
 #include <memory>
 #include <type_traits>
 #include <set>
-#include <glog/logging.h>
+#include "oneflow/core/common/logging.h"
 #include "oneflow/core/object_msg/dss.h"
 #include "oneflow/core/object_msg/static_counter.h"
 #include "oneflow/core/object_msg/struct_traits.h"

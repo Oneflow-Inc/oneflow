@@ -19,7 +19,7 @@ limitations under the License.
 #include <array>
 #include <initializer_list>
 #include <vector>
-#include <glog/logging.h>
+#include "oneflow/core/common/logging.h"
 
 namespace oneflow {
 

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <climits>
-#include <glog/logging.h>
+#include "oneflow/core/common/logging.h"
 #include "oneflow/core/vm/id_util.h"
 
 namespace oneflow {

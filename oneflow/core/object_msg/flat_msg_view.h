@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_OBJECT_MSG_FLAT_MSG_VIEW_H_
 
 #include <vector>
-#include <glog/logging.h>
+#include "oneflow/core/common/logging.h"
 #include "oneflow/core/object_msg/dss.h"
 #include "oneflow/core/object_msg/flat_msg.h"
 #include "oneflow/core/object_msg/struct_traits.h"

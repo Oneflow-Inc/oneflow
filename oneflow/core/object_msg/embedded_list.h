@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_OBJECT_MSG_EMBEDDED_LIST_H_
 
 #include "oneflow/core/object_msg/struct_traits.h"
-#include <glog/logging.h>
+#include "oneflow/core/common/logging.h"
 
 namespace oneflow {
 

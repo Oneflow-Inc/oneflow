@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <vector>
 #include <unordered_map>
-#include <glog/logging.h>
+#include "oneflow/core/common/logging.h"
 #include "oneflow/cfg/message.h"
 #include "oneflow/cfg/map_field.h"
 #include "oneflow/cfg/repeated_field.h"

@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <array>
 #include <cstring>
-#include <glog/logging.h>
+#include "oneflow/core/common/logging.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/object_msg/dss.h"
 #include "oneflow/core/object_msg/static_counter.h"

@@ -20,7 +20,7 @@ limitations under the License.
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
-#include <glog/logging.h>
+#include "oneflow/core/common/logging.h"
 #include "oneflow/core/common/type_traits.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/hash_eq_trait_ptr.h"

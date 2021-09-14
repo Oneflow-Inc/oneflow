@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <string>
 #include <typeindex>
-#include <glog/logging.h>
+#include "oneflow/core/common/logging.h"
 #include "oneflow/core/vm/stream_desc.msg.h"
 #include "oneflow/core/vm/instr_type_id.h"
 #include "oneflow/core/vm/interpret_type.h"

@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_INSTRUCTION_TYPE_H_
 #define ONEFLOW_CORE_VM_INSTRUCTION_TYPE_H_
 
-#include <glog/logging.h>
+#include "oneflow/core/common/logging.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/infer_stream_type.h"
 

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <stdexcept>
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif  // WITH_CUDA
@@ -62,12 +63,20 @@ std::string LogDir(const std::string& log_dir) {
   return v;
 }
 
+void FailureFunc() {
+  std::string stack;
+  google::glog_internal_namespace_::DumpStackTraceToString(&stack);
+  LOG(ERROR) << "Got failure." << stack;
+  throw std::runtime_error("xxx");
+}
+
 void InitLogging(const CppLoggingConf& logging_conf) {
   FLAGS_log_dir = LogDir(logging_conf.log_dir());
   FLAGS_logtostderr = logging_conf.logtostderr();
   FLAGS_logbuflevel = logging_conf.logbuflevel();
   FLAGS_stderrthreshold = 1;  // 1=WARNING
   google::InitGoogleLogging("oneflow");
+  google::InstallFailureFunction(&FailureFunc);
   LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
 }
 

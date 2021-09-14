@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <glog/logging.h>
+#include "oneflow/core/common/logging.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/thread_local_callback.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"

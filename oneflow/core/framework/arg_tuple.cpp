@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/arg_tuple.h"
-#include <glog/logging.h>
+#include "oneflow/core/common/logging.h"
 
 namespace oneflow {
 
