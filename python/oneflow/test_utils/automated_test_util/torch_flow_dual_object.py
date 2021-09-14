@@ -21,7 +21,10 @@ import warnings
 
 import numpy as np
 import oneflow as flow
-import torch as torch_original
+try:
+    import torch as torch_original
+except ImportError:
+    print('please install torch...')
 
 from .generators import Nothing, generator, random_tensor
 
