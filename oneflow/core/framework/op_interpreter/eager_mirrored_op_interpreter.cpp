@@ -112,7 +112,6 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
   Symbol<Device> op_device;
   bool need_check_mem_case = true;
-  bool need_event_record = false;
 
   // Infer devices
   if (!user_op_expr.has_device_infer_fn()) {
@@ -124,10 +123,6 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   } else {
     need_check_mem_case = false;
     op_device = JUST(user_op_expr.InferDevices(attrs, inputs, outputs));
-    for (const auto& input_tensor : inputs) {
-      const auto& input_device = JUST(input_tensor->device());
-      need_event_record = need_event_record || !(*op_device == *input_device);
-    }
   }
 
   // Infer shapes and dtypes
@@ -165,20 +160,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     output_eager_blob_objects->at(index)->set_is_shape_synced(false);
   }
 
-  const auto& instr_type_name = JUST(op_device->local_call_instruction_name());
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    if (need_event_record) {
-      for (const auto& input_tensor : inputs) {
-        const auto& tensor = JUST(input_tensor->AsMirroredTensor());
-        CHECK_OR_RETURN(static_cast<bool>(tensor));
-        // Instruction `SoftSyncStream` records event which can be used to synchronize cuda
-        // stream
-        const auto& tensor_device = JUST(tensor->device());
-        const auto& tensor_placement = JUST(Placement4Device(tensor_device));
-        JUST(builder->SoftSyncStream(JUST(tensor->compute_local_dep_object()), "mut",
-                                     tensor_placement.shared_from_symbol()));
-      }
-    }
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
                                       ctx, op_device);
   }));

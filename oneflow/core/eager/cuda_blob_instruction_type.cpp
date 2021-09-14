@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/vm/cpu_stream_type.h"
 #ifdef WITH_CUDA
 #include "oneflow/core/eager/blob_instruction_type.h"
 #include "oneflow/core/vm/cuda_stream_type.h"
@@ -45,6 +46,24 @@ class GpuSoftSyncStreamInstructionType : public SoftSyncStreamInstructionType {
   using stream_type = vm::CudaStreamType;
 };
 COMMAND(vm::RegisterInstructionType<GpuSoftSyncStreamInstructionType>("gpu.SoftSyncStream"));
+
+class TouchTensorOnControlStreamInstructionType : public vm::InstructionType {
+ public:
+  TouchTensorOnControlStreamInstructionType() = default;
+  ~TouchTensorOnControlStreamInstructionType() = default;
+  using stream_type = vm::ControlStreamType;
+
+  void Infer(VirtualMachine* vm, Instruction* instruction) const override {
+    UNIMPLEMENTED();
+  }
+  void Compute(VirtualMachine* vm, Instruction* instruction) const override {
+    // do nothing
+  }
+  void Infer(Instruction*) const override { UNIMPLEMENTED(); }
+  void Compute(Instruction*) const override { UNIMPLEMENTED(); }
+};
+COMMAND(
+    vm::RegisterInstructionType<TouchTensorOnControlStreamInstructionType>("TouchTensorOnControlStream"));
 
 }  // namespace vm
 }  // namespace oneflow

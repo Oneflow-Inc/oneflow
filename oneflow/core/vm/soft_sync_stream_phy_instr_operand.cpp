@@ -20,17 +20,17 @@ namespace oneflow {
 
 namespace vm {
 
-void SoftSyncStreamPhyInstrOperand::ForEachConstMirroredObject(
+void ConsumeLocalDepObjectPhyInstrOperand::ForEachConstMirroredObject(
     const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
   if (modifier_ == "const") { DoEach(nullptr, compute_local_dep_object_->mut_mirrored_object()); }
 }
 
-void SoftSyncStreamPhyInstrOperand::ForEachMutMirroredObject(
+void ConsumeLocalDepObjectPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
   if (modifier_ == "mut") { DoEach(nullptr, compute_local_dep_object_->mut_mirrored_object()); }
 }
 
-void SoftSyncStreamPhyInstrOperand::ForEachMut2MirroredObject(
+void ConsumeLocalDepObjectPhyInstrOperand::ForEachMut2MirroredObject(
     const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
   if (modifier_ == "mut2") { DoEach(nullptr, compute_local_dep_object_->mut_mirrored_object()); }
 }

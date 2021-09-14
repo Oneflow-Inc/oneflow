@@ -125,20 +125,6 @@ Maybe<const std::string&> Device::GetSharedScheduleDeviceType() const {
   return MapAt(type2type_for_shared_local_dep_object, type());
 }
 
-Maybe<const std::string&> Device::release_instruction_name() const {
-  static const HashMap<std::string, std::string> type2instr_name{
-      {"cpu", "cpu.ReleaseTensor"},
-      {"gpu", "gpu.ReleaseTensor"},
-      {"cuda", "cuda.ReleaseTensor"},
-      {"cuda_h2d", "cuda_h2d.ReleaseTensor"},
-      {"cuda_d2h", "cuda_d2h.ReleaseTensor"},
-      {"comm_net", "comm_net.ReleaseTensor"},
-      {"sync_launched_nccl", "sync_launched_nccl.ReleaseTensor"},
-      {"async_launched_nccl", "async_launched_nccl.ReleaseTensor"},
-  };
-  return MapAt(type2instr_name, type());
-}
-
 Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
   static const HashMap<std::string, std::string> type2instr_name{
       {"cpu", "cpu.LocalCallOpKernel"},

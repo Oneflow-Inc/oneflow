@@ -25,12 +25,12 @@ class LocalDepObject;
 
 namespace vm {
 
-class SoftSyncStreamPhyInstrOperand : public PhyInstrOperand {
+class ConsumeLocalDepObjectPhyInstrOperand : public PhyInstrOperand {
  public:
-  SoftSyncStreamPhyInstrOperand(LocalDepObject* compute_local_dep_object,
+  ConsumeLocalDepObjectPhyInstrOperand(LocalDepObject* compute_local_dep_object,
                                 const std::string& modifier)
       : compute_local_dep_object_(compute_local_dep_object), modifier_(modifier) {}
-  ~SoftSyncStreamPhyInstrOperand() = default;
+  ~ConsumeLocalDepObjectPhyInstrOperand() = default;
 
   void ForEachConstMirroredObject(
       const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
