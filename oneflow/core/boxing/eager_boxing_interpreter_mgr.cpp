@@ -44,9 +44,10 @@ Maybe<BoxingExprIf> NcclSxToBBoxingExpr() {
                          JUST(BoxingExpr("nccl-s-to-b"))));
 }
 
-Maybe<BoxingExprIf> NcclPToSxBoxingExpr() {
-  return JUST(BoxingExpr(JUST(OutPlacementAndSplit(0)), JUST(BoxingExpr("nccl-p-to-s")),
-                         JUST(OptionalBoxing("nccl-s-to-s"))));
+Maybe<BoxingExprIf> SymmetricPToSxBoxingExpr() {
+  return JUST(BoxingExpr(JUST(OutPlacementAndSplit(0)),
+                         JUST(BoxingExpr("nccl-p-to-s")) | JUST(BoxingExpr("ccl-p-to-s")),
+                         JUST(OptionalBoxing("nccl-s-to-s")) | JUST(BoxingExpr("ccl-s-to-s"))));
 }
 
 Maybe<BoxingExprIf> NToOneBoxingExpr() {
@@ -58,7 +59,7 @@ Maybe<BoxingExprIf> NToOneBoxingExpr() {
 
 Maybe<BoxingExprIf> OneToNBoxingExpr() {
   return JUST(BoxingExpr(JUST(OutPlacementAndPartialSum()), JUST(BoxingExpr("naive-1-to-p")),
-                         JUST(BoxingExpr("nccl-p-to-b")) | JUST(NcclPToSxBoxingExpr())
+                         JUST(BoxingExpr("nccl-p-to-b")) | JUST(SymmetricPToSxBoxingExpr())
                              | JUST(BoxingExpr("identity"))));
 }
 
@@ -85,8 +86,8 @@ Maybe<BoxingExprIf> RawMainBoxingExpr() {
       | JUST(BoxingExpr("cuda-copy-h2d")) | JUST(BoxingExpr("cuda-copy-d2h"))
       | JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("ccl-p-to-b"))
       | JUST(BoxingExpr("nccl-p-to-s")) | JUST(BoxingExpr("nccl-s-to-b"))
-      | JUST(BoxingExpr("nccl-s-to-s")) | JUST(BoxingExpr("naive-b-to-p"))
-      | JUST(BoxingExpr("symmetric-b-to-s")) | JUST(BoxingExpr("ccl-s-to-s"))
+      | JUST(BoxingExpr("nccl-s-to-s")) | JUST(BoxingExpr("ccl-s-to-s"))
+      | JUST(BoxingExpr("symmetric-b-to-p")) | JUST(BoxingExpr("symmetric-b-to-s"))
       | JUST(BoxingExpr("symmetric-s-to-p")) | JUST(BoxingExpr("symmetric-nd-sbp-to-nd-sbp"))
       | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(OneToNBoxingExpr()) | JUST(NToOneBoxingExpr())
       | JUST(BoxingExpr("naive-1-to-1")) | JUST(GenericBoxingExpr());
