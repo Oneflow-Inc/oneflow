@@ -40,7 +40,7 @@ class FunctionNode;
 class ConsistentTensor;
 class MirroredTensor;
 
-class Tensor {
+class Tensor : public std::enable_shared_from_this<Tensor> {
  public:
   virtual ~Tensor() = default;
 
@@ -90,6 +90,7 @@ class Tensor {
   virtual Maybe<Tensor> detach() const = 0;
   virtual Maybe<Tensor> clone() const = 0;
   virtual std::shared_ptr<Tensor> data() const = 0;
+  virtual std::shared_ptr<Tensor> contiguous() const = 0;
 
   // Setters for autograd
   virtual void set_requires_grad(bool requires_grad) = 0;
@@ -189,6 +190,10 @@ class StaticZerosTensor final : public Tensor {
   std::shared_ptr<Tensor> data() const {
     PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
+  }
+
+  std::shared_ptr<Tensor> contiguous() const override {
+    return std::const_pointer_cast<Tensor>(shared_from_this());
   }
 
   // Setters for autograd
@@ -315,6 +320,7 @@ class Parameter final : public TensorIf<Parameter> {
   Maybe<Tensor> detach() const override { return tensor_->detach(); }
   Maybe<Tensor> clone() const override { return tensor_->clone(); }
   std::shared_ptr<Tensor> data() const override { return tensor_->data(); }
+  std::shared_ptr<Tensor> contiguous() const override;
 
   void set_requires_grad(bool requires_grad) override {
     return tensor_->set_requires_grad(requires_grad);
@@ -355,8 +361,7 @@ class Parameter final : public TensorIf<Parameter> {
   std::shared_ptr<Tensor> tensor_;
 };
 
-class MirroredTensor final : public TensorIf<MirroredTensor>,
-                             public std::enable_shared_from_this<MirroredTensor> {
+class MirroredTensor final : public TensorIf<MirroredTensor> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MirroredTensor);
   MirroredTensor() = default;
@@ -390,6 +395,8 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   bool is_consistent() const override { return false; }
   bool is_cuda() const override;
   std::shared_ptr<Tensor> data() const override;
+  std::shared_ptr<Tensor> contiguous() const override;
+
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
 
   // Getters valid only for EagerMirroredTensor
@@ -440,15 +447,16 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   }
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 
-  Maybe<MirroredTensor> AsMirroredTensor() override { return shared_from_this(); }
+  Maybe<MirroredTensor> AsMirroredTensor() override {
+    return std::dynamic_pointer_cast<MirroredTensor>(shared_from_this());
+  }
   Maybe<ConsistentTensor> AsConsistentTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
  private:
   std::shared_ptr<MirroredTensorImpl> impl_;
 };
 
-class ConsistentTensor final : public TensorIf<ConsistentTensor>,
-                               public std::enable_shared_from_this<ConsistentTensor> {
+class ConsistentTensor final : public TensorIf<ConsistentTensor> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConsistentTensor);
   ConsistentTensor() = default;
@@ -478,6 +486,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   }
   bool is_cuda() const override;
   std::shared_ptr<Tensor> data() const override;
+  std::shared_ptr<Tensor> contiguous() const override;
 
   // Getters valid only for EagerMirroredTensor
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
@@ -537,7 +546,9 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 
   Maybe<MirroredTensor> AsMirroredTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<ConsistentTensor> AsConsistentTensor() override { return shared_from_this(); }
+  Maybe<ConsistentTensor> AsConsistentTensor() override {
+    return std::dynamic_pointer_cast<ConsistentTensor>(shared_from_this());
+  }
 
  private:
   std::shared_ptr<ConsistentTensorImpl> impl_;
