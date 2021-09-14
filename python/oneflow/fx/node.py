@@ -161,7 +161,11 @@ class Node:
         self.op = op  # the kind of operation = placeholder|call_method|call_module|call_function|get_attr
         if op in ["call_method", "call_module"]:
             assert isinstance(target, str)
-        if isinstance(target, str) and not hasattr(oneflow, target) and hasattr(oneflow.nn.functional, target):
+        if (
+            isinstance(target, str)
+            and not hasattr(oneflow, target)
+            and hasattr(oneflow.nn.functional, target)
+        ):
             target = "nn.functional." + target
 
         self.target = target  # for method/module/function, the name of the method/module/function/attr

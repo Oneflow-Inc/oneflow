@@ -476,9 +476,7 @@ class Graph:
         name: Optional[str] = None,
         type_expr: Optional[Any] = None,
     ) -> Node:
-        assert op in (
-            "call_function",
-        )
+        assert op in ("call_function",)
         args = () if args is None else args
         kwargs = {} if kwargs is None else kwargs
         assert isinstance(args, tuple), "args must be a tuple"
@@ -947,7 +945,6 @@ class Graph:
 
             # normalize the name hint to get a proper identifier
             global_name = namespace.create_name(name_hint, obj)
-            
 
             if global_name in globals_:
                 assert globals_[global_name] is obj
@@ -1039,8 +1036,10 @@ class Graph:
             elif node.op == "call_function":
                 assert callable(node.target)
                 # pretty print operators
-                
-                if hasattr(oneflow, node.target.__name__) == False and hasattr(oneflow.nn.functional, node.target.__name__):
+
+                if hasattr(oneflow, node.target.__name__) == False and hasattr(
+                    oneflow.nn.functional, node.target.__name__
+                ):
                     qualified_name = "oneflow.nn.functional." + node.target.__name__
                 else:
                     qualified_name = _get_qualified_name(node.target)
@@ -1055,7 +1054,7 @@ class Graph:
                         f"{magic_methods[node.target.__name__].format(*(repr(a) for a in node.args))}"
                     )
                     return
-                
+
                 if qualified_name.startswith("oneflow.nn.functional") != None:
                     global_name = qualified_name
                 else:

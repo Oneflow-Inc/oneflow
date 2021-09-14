@@ -698,6 +698,7 @@ for funcs_name in oneflow_nn_funcs:
 # TODO(BBuf) fix bug
 _wrapped_methods_to_patch.append((oneflow.Tensor, "__getitem__"))
 
+
 def _find_proxy(*objects_to_search):
     """
     Recursively search a data structure for a Proxy() and return it,
@@ -931,6 +932,7 @@ def wrap(fn_or_name: Union[str, Callable]):
     # semantics would be slightly different, but would add support `from x import wrapped_function`
     _wrapped_fns_to_patch.append((f.f_globals, fn_name))
     return fn_or_name
+
 
 def symbolic_trace(
     root: Union[oneflow.nn.Module, Callable],
