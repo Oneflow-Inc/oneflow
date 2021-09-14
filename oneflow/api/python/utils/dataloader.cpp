@@ -94,7 +94,6 @@ static void set_worker_signal_handlers() {
   setSignalHandler(SIGSEGV, &handler_SIGSEGV, nullptr);
   setSignalHandler(SIGTERM, &handler_SIGTERM, nullptr);
   setSignalHandler(SIGFPE, &handler_SIGFPE, nullptr);
-  printf("\n========================dataloader.cpp set_worker_signal_handlers========================");
   // Py_RETURN_NONE;
   // return Py_None;
 }
@@ -103,7 +102,6 @@ static void set_worker_signal_handlers() {
 static std::map<int64_t, std::set<pid_t>> worker_pids = {};
 
 static void error_if_any_worker_fails() {
-  printf("\n========================dataloader.cpp error_if_any_worker_fails========================");
   // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
   int error;
   // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
@@ -149,7 +147,6 @@ static void error_if_any_worker_fails() {
       }
     }
   }
-  printf("\n========================dataloader.cpp error_if_any_worker_fails finish!========================\n");
   // Py_RETURN_NONE;
 }
 
@@ -170,7 +167,6 @@ inline int64_t utils_unpackLong(PyObject* obj) {
 // of pids we are interested in.
 static void set_worker_pids(py::args py_args) {
   PyObject* args = py_args.ptr();
-  printf("\n================dataloader.cpp set_worker_pids================");
   if (PyTuple_GET_SIZE(args) != 2) {
     throw py::type_error("_set_worker_pids expects exactly 2 arguments.");
   }
@@ -192,11 +188,9 @@ static void set_worker_pids(py::args py_args) {
   }
 
   worker_pids[key] = pids_set;
-  printf("\n================dataloader.cpp set_worker_pids finish!================");
 }
 
 static void remove_worker_pids(py::args py_args) {
-  printf("\n================dataloader.cpp remove_worker_pids================");
   PyObject* args = py_args.ptr();
   int64_t key = utils_unpackLong(PyTuple_GET_ITEM(args, 0));
   auto it = worker_pids.find(key);
@@ -205,7 +199,6 @@ static void remove_worker_pids(py::args py_args) {
     throw py::value_error("Cannot find worker information for _BaseDataLoaderIter");
   }
   worker_pids.erase(it);
-  printf("\n================dataloader.cpp remove_worker_pids finish================");
   // Py_RETURN_NONE;
 }
 

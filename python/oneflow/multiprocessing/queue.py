@@ -12,14 +12,11 @@ class ConnectionWrapper(object):
         self.conn = conn
 
     def send(self, obj):
-        print("multiprocessing >> queue.py >> ConnectionWrapper >> send")
         buf = io.BytesIO()
         ForkingPickler(buf, pickle.HIGHEST_PROTOCOL).dump(obj)
-        print("multiprocessing >> queue.py >> ConnectionWrapper >> ForkingPickler()")
         self.send_bytes(buf.getvalue())
 
     def recv(self):
-        print("multiprocessing >> queue.py >> ConnectionWrapper >> recv")
         buf = self.recv_bytes()
         return pickle.loads(buf)
 

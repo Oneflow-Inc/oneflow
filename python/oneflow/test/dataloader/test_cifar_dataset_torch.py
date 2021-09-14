@@ -80,6 +80,7 @@ def test(test_case):
 
     train_epoch = 10
     batch_size = 4
+    num_workers = 2
     data_dir = os.path.join(
         os.getenv("ONEFLOW_TEST_CACHE_DIR", "./data-test-torch"), "cifar10"
     )
@@ -91,7 +92,7 @@ def test(test_case):
         transform=transform,
     )
     trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=batch_size, shuffle=False, num_workers=4
+        trainset, batch_size=batch_size, shuffle=False, num_workers=num_workers
     )
 
     final_loss = 0

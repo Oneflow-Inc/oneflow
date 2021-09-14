@@ -266,7 +266,6 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 init_fn(worker_id)
 
             fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
-            print("worker >>>>>>>>>>>>> fetcher = _DatasetKind.create_fetcher() >> success ")
         except Exception:
             init_exception = ExceptionWrapper(
                 where="in DataLoader worker process {}".format(worker_id))
@@ -311,44 +310,13 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 continue
             idx, index = r
             data: Union[_IterableDatasetStopIteration, ExceptionWrapper]
-            print("\n=======================worker.py >> _worker_loop() >> worker_id:", worker_id, "=====================")
-            print(
-                "IsEnvInited >>>",  flow._oneflow_internal.IsEnvInited(),
-                "\nIsMultiClient() >>>", flow._oneflow_internal.IsMultiClient(), 
-                "\nEnvResource() >>> ", flow._oneflow_internal.EnvResource(),
-                "\nCurrentResource() >>> ", flow._oneflow_internal.CurrentResource(),
-                "\nGetRank() >>> ", flow._oneflow_internal.GetRank(),
-                "\nGetWorldSize() >>> ", flow._oneflow_internal.GetWorldSize(),
-                "\n============================================================================"
-            )
-            # if import oneflow as flow here, it will raise exception:
 
-            # ERROR: test_cifar_dataset (__main__.TestCifarDataset)
-            # ----------------------------------------------------------------------
-            # Traceback (most recent call last):
-            #   File "/home/luyang/Oneflow/oneflow/python/oneflow/utils/data/dataloader.py", line 1028, in _try_get_data
-            #     data = self._data_queue.get(timeout=timeout)
-            #   File "/home/luyang/anaconda3/envs/oneflow-dev/lib/python3.7/multiprocessing/queues.py", line 107, in get
-            #     if not self._poll(timeout):
-            #   File "/home/luyang/anaconda3/envs/oneflow-dev/lib/python3.7/multiprocessing/connection.py", line 257, in poll
-            #     return self._poll(timeout)
-            #   File "/home/luyang/anaconda3/envs/oneflow-dev/lib/python3.7/multiprocessing/connection.py", line 414, in _poll
-            #     r = wait([self], timeout)
-            #   File "/home/luyang/anaconda3/envs/oneflow-dev/lib/python3.7/multiprocessing/connection.py", line 921, in wait
-            #     ready = selector.select(timeout)
-            #   File "/home/luyang/anaconda3/envs/oneflow-dev/lib/python3.7/selectors.py", line 415, in select
-            #     fd_event_list = self._selector.poll(timeout)
-            #   File "/home/luyang/Oneflow/oneflow/python/oneflow/utils/data/_utils/signal_handling.py", line 67, in handler
-            #     _error_if_any_worker_fails()
-            # RuntimeError: DataLoader worker (pid 150121) exited unexpectedly with exit code 1. Details are lost due to multiprocessing. Rerunning with num_workers=0 may give better error trace
             if init_exception is not None:
                 data = init_exception
                 init_exception = None
             else:
                 try:
-                    print("\ntype of fetcher >>>>>>>>>>>>>",type(fetcher))
                     data = fetcher.fetch(index)
-                    print("try >>>>>>>>>>>>> data = fetcher.fetch(index) >> Success!")
                 except Exception as e:
                     if isinstance(e, StopIteration) and dataset_kind == _DatasetKind.Iterable:
                         data = _IterableDatasetStopIteration(worker_id)
@@ -362,7 +330,6 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                         # See NOTE [ Python Traceback Reference Cycle Problem ]
                         data = ExceptionWrapper(
                             where="in DataLoader worker process {}".format(worker_id))
-            print("try >>>>>>>>>>>>> data_queue.put((idx, data))")
             data_queue.put((idx, data))
             del data, idx, index, r  # save memory
     except KeyboardInterrupt:

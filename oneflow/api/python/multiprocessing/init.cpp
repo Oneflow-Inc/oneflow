@@ -21,7 +21,6 @@ namespace multiprocessing {
 namespace py = pybind11;
 
 void multiprocessing_init() {
-  printf("\n================init.cpp >> multiprocessing_init================");
   auto multiprocessing_module =
       THPObjectPtr(PyImport_ImportModule("oneflow.multiprocessing"));
   if (!multiprocessing_module) {
@@ -37,8 +36,6 @@ void multiprocessing_init() {
 #endif
   });
 
-
-  printf("\n================init.cpp >> multiprocessing_init success!================\n");
   //Py_RETURN_TRUE;
 }
 

@@ -16,16 +16,30 @@ except ImportError:
     pass
 
 
+def rebuild_tensor(cls, tensor_data, requires_grad):
+    t = flow.tensor(tensor_data)
+    if cls == Parameter:
+        # we have to pass requires_grad into constructor, rather than set it as an
+        # attribute later, because it's an important check for Integer Tensors to
+        # have requires_grad=False (or else they raise an error)
+        t = Parameter(t, requires_grad=requires_grad)
+    else:
+        t.requires_grad = requires_grad
+    return t
+
+
 def reduce_tensor(tensor):
-    print("\nreductions.py >>>>>>>>>>>>>>>>> reduce_tensor")
-    return flow.Tensor(tensor.numpy())
+    tensor_data = tensor.numpy()
+    requires_grad = tensor.requires_grad
+    return (rebuild_tensor, (type(tensor), tensor_data, requires_grad))
 
 def reduce_local_tensor(tensor):
-    print("\nreductions.py >>>>>>>>>>>>>>>>> reduce_local_tensor")
-    return tensor
+    tensor_data = tensor.numpy()
+    requires_grad = tensor.requires_grad
+    return (rebuild_tensor, (type(tensor), tensor_data, requires_grad))
 
 def init_reductions():
     ForkingPickler.register(Tensor, reduce_tensor)
     ForkingPickler.register(flow._oneflow_internal.Tensor, reduce_local_tensor)
     ForkingPickler.register(Parameter, reduce_tensor)
-    ForkingPickler.register(flow._oneflow_internal.nn.Parameter, reduce_tensor)
+    ForkingPickler.register(flow._oneflow_internal.nn.Parameter, reduce_local_tensor)

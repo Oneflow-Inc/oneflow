@@ -580,10 +580,10 @@ void VirtualMachine::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocat
 int64_t InstructionMaxRunningSeconds() { return 60 * 5; }
 
 Maybe<void> VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) {
-  // CHECK_OR_RETURN(!pthread_fork::IsForkedSubProcess())
-  //     << "Cannot run OneFlow in forked subprocess. Please add "
-  //        "'multiprocessing.set_start_method(\"spawn\")' in '__main__' if you are using Python's "
-  //        "multiprocessing";
+  CHECK_OR_RETURN(!pthread_fork::IsForkedSubProcess())
+      << "Cannot run OneFlow in forked subprocess. Please add "
+         "'multiprocessing.set_start_method(\"spawn\")' in '__main__' if you are using Python's "
+         "multiprocessing";
   InstructionMsgList new_instr_msg_list;
   OBJECT_MSG_LIST_FOR_EACH_PTR(compute_instr_msg_list, compute_instr_msg) {
     if (!compute_instr_msg->phy_instr_operand()) {

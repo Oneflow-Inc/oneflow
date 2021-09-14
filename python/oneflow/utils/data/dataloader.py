@@ -899,22 +899,10 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
         assert self._num_workers > 0
         assert self._prefetch_factor > 0
-        print("\n=======================_MultiProcessingDataLoaderIter=====================")
-        print(
-            "IsEnvInited >>>",  flow._oneflow_internal.IsEnvInited(),
-            "\nIsMultiClient() >>>", flow._oneflow_internal.IsMultiClient(), 
-            "\nEnvResource() >>> ", flow._oneflow_internal.EnvResource(),
-            "\nCurrentResource() >>> ", flow._oneflow_internal.CurrentResource(),
-            "\nGetRank() >>> ", flow._oneflow_internal.GetRank(),
-            "\nGetWorldSize() >>> ", flow._oneflow_internal.GetWorldSize(),
-            "\n============================================================================\n"
-        )
 
         if loader.multiprocessing_context is None:
-            print("multiprocessing_context = multiprocessing")
             multiprocessing_context = multiprocessing
         else:
-            print("multiprocessing_context = loader.multiprocessing_context")
             multiprocessing_context = loader.multiprocessing_context
 
         self._worker_init_fn = loader.worker_init_fn
@@ -973,9 +961,6 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             self._data_queue = self._worker_result_queue
 
         # .pid can be None only before process is spawned (not the case, so ignore)
-        print("id(self) >>>>>>>>>>>> ", id(self), "; type(id(self)) >>>> ", type(id(self)))
-        asd =  tuple(w.pid for w in self._workers)
-        print("tuple(w.pid for w in self._workers) >>>>>>>>>>>> ", asd, "; type >>>> ", type(asd))
         _utils.signal_handling._set_worker_pids(id(self), tuple(w.pid for w in self._workers))  # type: ignore[misc]
         _utils.signal_handling._set_SIGCHLD_handler()
         self._worker_pids_set = True
@@ -1025,9 +1010,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         # Returns a 2-tuple:
         #   (bool: whether successfully get data, any: data if successful else None)
         try:
-            print("dataloader >> _try_get_data() >> data = self._data_queue.get(timeout=timeout) >> start")
             data = self._data_queue.get(timeout=timeout)
-            print("dataloader >> _try_get_data() >> data = self._data_queue.get(timeout=timeout) >> success")
             return (True, data)
         except Exception as e:
             # At timeout and error, we manually check whether any worker has
