@@ -509,24 +509,16 @@ class SparseSoftmaxCrossEntropyFunctor {
                          .Output("out")
                          .Output("prob")
                          .Build());
-    op_mul_ = CHECK_JUST(one::OpBuilder("broadcast_mul").Input("x").Input("y").Output("z").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits,
-                           const std::shared_ptr<one::Tensor>& label,
-                           const Optional<one::Tensor>& weight, const int64_t& depth) const {
+                           const std::shared_ptr<one::Tensor>& label, const int64_t& depth) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("depth", depth));
-    if (weight) {
-      return OpInterpUtil::Dispatch<Tensor>(
-          *op_mul_, {JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {logits, label}, attrs)),
-                     JUST(weight.value())});
-    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {logits, label}, attrs);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
-  std::shared_ptr<OpExpr> op_mul_;
 };
 
 class SoftmaxCrossEntropyFunctor {
