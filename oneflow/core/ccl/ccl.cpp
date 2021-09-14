@@ -175,7 +175,7 @@ Maybe<void> AllGather<DeviceType::kCPU>(const void* in, void* out, size_t elem_c
   CHECK_OR_RETURN(opt_parallel_id->has_value());
   const auto& rank_group = JUST(RankGroup::New(parallel_desc));
   TransportToken transport_token = JUST(TransportToken::NewTransportToken(kTransportTokenTypeData));
-  int64_t parallel_id = JUST(opt_parallel_id->value());
+  int64_t parallel_id = JUST(*opt_parallel_id);
   // In-place operation will happen if in == out + parallel_id * chunk_size
   if (in != &char_out[parallel_id]) { memcpy(&char_out[parallel_id * chunk_size], in, chunk_size); }
   for (int64_t i = 0, part_id = parallel_id; i < parallel_num - 1;
