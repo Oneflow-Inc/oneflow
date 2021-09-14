@@ -17,12 +17,12 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 
+import os
 import numpy as np
 import oneflow as flow
 import oneflow.unittest
 
-from automated_test_util import torch
-from automated_test_util import *
+from oneflow.test_utils.automated_test_util import *
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
