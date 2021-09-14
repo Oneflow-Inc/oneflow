@@ -113,9 +113,9 @@ Maybe<Generator> MakeGenerator(const std::string& device, int device_index) {
   else if (device == "auto") {
     return MakeAutoGenerator();
   } else {
-    UNIMPLEMENTED_THEN_RETURN() << "Invalid device " << device
-                                << " for making generator, please make sure the device is one of "
-                                   "\"cpu\", \"cuda\" and \"auto\".";
+    Error::RuntimeError()() << "Invalid device " << device
+                            << " for making generator, please make sure the device is one of "
+                            << PrintAvailableDevices();
   }
 }
 
@@ -131,10 +131,18 @@ Maybe<Generator> DefaultGenerator(const std::string& device, int device_index) {
   else if (device == "auto") {
     return DefaultAutoGenerator();
   } else {
-    UNIMPLEMENTED_THEN_RETURN() << "Invalid device " << device
-                                << " for making generator, please make sure the device is one of "
-                                   "\"cpu\", \"cuda\" and \"auto\".";
+    Error::RuntimeError()() << "Invalid device " << device
+                            << " for making generator, please make sure the device is one of "
+                            << PrintAvailableDevices();
   }
+}
+
+Maybe<Generator> DefaultGenerator(DeviceType device, int device_index) {
+  return DefaultGenerator(DeviceTypeName(device), device_index);
+}
+
+Maybe<Generator> MakeGenerator(const DeviceType& device, int device_index) {
+  return MakeGenerator(DeviceTypeName(device), device_index);
 }
 
 }  // namespace one
