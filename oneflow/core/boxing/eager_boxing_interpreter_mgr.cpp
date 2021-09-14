@@ -44,11 +44,6 @@ Maybe<BoxingExprIf> NcclSxToBBoxingExpr() {
                          JUST(BoxingExpr("nccl-s-to-b"))));
 }
 
-Maybe<BoxingExprIf> NcclBToSxBoxingExpr() {
-  return JUST(BoxingExpr(JUST(InPlacementAndSplit(0)), JUST(BoxingExpr("symmetric-b-to-s")),
-                         JUST(OptionalBoxing("nccl-s-to-s"))));
-}
-
 Maybe<BoxingExprIf> NcclPToSxBoxingExpr() {
   return JUST(BoxingExpr(JUST(OutPlacementAndSplit(0)), JUST(BoxingExpr("nccl-p-to-s")),
                          JUST(OptionalBoxing("nccl-s-to-s"))));
@@ -72,7 +67,7 @@ Maybe<BoxingExprIf> GenericBoxingExpr() {
   const auto& boxing_expr_with_inclusive_placement =
       JUST(BoxingExpr(JUST(OutPlacementAndBroadcast()), JUST(BoxingExpr("asymmetric-x-to-b")),
                       JUST(BoxingExpr("identity")) | JUST(BoxingExpr("naive-b-to-p"))
-                          | JUST(NcclBToSxBoxingExpr())));
+                          | JUST(BoxingExpr("symmetric-b-to-s"))));
   // in_placement and out_placement have no containment relationship
   // n to 1
   const auto& lhs_boxing = JUST(NToOneBoxingExpr());
