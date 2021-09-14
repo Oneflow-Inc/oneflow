@@ -165,6 +165,53 @@ Maybe<void> AllReduce<DeviceType::kCPU>(const void* in, void* out, size_t elem_c
 }
 
 template<>
+Maybe<void> AllGather<DeviceType::kCPU>(const void* in, void* out, size_t elem_cnt, DataType dtype,
+                                        Symbol<ParallelDesc> parallel_desc, DeviceCtx* ctx) {
+  char* char_out = reinterpret_cast<char*>(out);
+  int64_t parallel_num = parallel_desc->parallel_num();
+  size_t chunk_size = elem_cnt * GetSizeOfDataType(dtype);
+  BalancedSplitter bs(chunk_size * parallel_num, parallel_num);
+  const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
+  CHECK_OR_RETURN(opt_parallel_id->has_value());
+  const auto& rank_group = JUST(RankGroup::New(parallel_desc));
+  TransportToken transport_token = JUST(TransportToken::NewTransportToken(kTransportTokenTypeData));
+  int64_t parallel_id = JUST(opt_parallel_id->value());
+  // In-place operation will happen if in == out + parallel_id * chunk_size
+  if (in != &char_out[parallel_id]) { memcpy(&char_out[parallel_id * chunk_size], in, chunk_size); }
+  for (int64_t i = 0, part_id = parallel_id; i < parallel_num - 1;
+       ++i, part_id = RingDecrease(part_id, parallel_num)) {
+    int64_t send_part_id = part_id;
+    const void* send_ptr = &char_out[bs.At(send_part_id).begin()];
+    size_t send_size = bs.At(send_part_id).size();
+    int64_t recv_part_id = RingDecrease(part_id, parallel_num);
+    void* recv_ptr = &char_out[bs.At(recv_part_id).begin()];
+    size_t recv_size = bs.At(recv_part_id).size();
+    NaiveAsyncTransportCtx ctx(
+        transport_token,
+        [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+          *buffer = const_cast<void*>(send_ptr);
+          *size = send_size;
+          *Cb = [] {};
+          return Maybe<void>::Ok();
+        },
+        [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+          *buffer = recv_ptr;
+          *size = recv_size;
+          *Cb = [] {};
+          return Maybe<void>::Ok();
+        });
+    if (send_size > 0) {
+      JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
+    }
+    if (recv_size > 0) {
+      JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
+    }
+    JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+  }
+  return Maybe<void>::Ok();
+}
+
+template<>
 Maybe<void> Broadcast<DeviceType::kCPU>(const void* in, void* out, size_t elem_cnt, DataType dtype,
                                         int64_t root, Symbol<ParallelDesc> parallel_desc,
                                         DeviceCtx* ctx) {
