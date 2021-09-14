@@ -19,4 +19,5 @@ from oneflow.comm.comm_ops import broadcast
 from oneflow.comm.comm_ops import scatter
 from oneflow.comm.comm_ops import reduce
 from oneflow.comm.comm_ops import all_to_all
+from oneflow.comm.comm_ops import barrier
 from oneflow._C import send, recv
