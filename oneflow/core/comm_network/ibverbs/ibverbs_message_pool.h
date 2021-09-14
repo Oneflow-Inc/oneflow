@@ -30,7 +30,7 @@ class IBVerbsMessagePool final {
   IBVerbsMessagePool() = delete;
   ~IBVerbsMessagePool();
   IBVerbsMessagePool(ibv_pd* pd, uint32_t num_msg_per_bluk_allocation);
-  
+
   ActorMsgMR* GetMessage();
   void PutMessage(ActorMsgMR* msg_mr);
 
