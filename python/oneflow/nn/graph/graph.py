@@ -386,7 +386,7 @@ class Graph(object):
         self.config.proto.set_job_name(self._name)
 
         if self._grad_scaler is not None:
-            self._grad_scaler.generate_conf_for_graph(
+            self._grad_scaler._generate_conf_for_graph(
                 self.config.proto.mutable_train_conf()
             )
 

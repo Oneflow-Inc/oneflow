@@ -28,7 +28,7 @@ def unpack_indices(dual_object):
 
 @flow.unittest.skip_unless_1n1d()
 class TestMaxPooling(flow.unittest.TestCase):
-    @autotest(n=100, auto_backward=False)
+    @autotest(auto_backward=False)
     def test_maxpool1d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         m = torch.nn.MaxPool1d(
@@ -50,7 +50,7 @@ class TestMaxPooling(flow.unittest.TestCase):
         else:
             return y, y.sum().backward()
 
-    @autotest(n=100, auto_backward=False)
+    @autotest(auto_backward=False)
     def test_maxpool2d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         m = torch.nn.MaxPool2d(
@@ -74,7 +74,7 @@ class TestMaxPooling(flow.unittest.TestCase):
         else:
             return y, y.sum().backward()
 
-    @autotest(n=100, auto_backward=False)
+    @autotest(auto_backward=False)
     def test_maxpool3d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         m = torch.nn.MaxPool3d(
@@ -92,6 +92,73 @@ class TestMaxPooling(flow.unittest.TestCase):
             ndim=5, dim2=random(20, 22), dim3=random(20, 22), dim4=random(20, 22)
         ).to(device)
         y = m(x)
+
+        if return_indices:
+            return unpack_indices(y)
+        else:
+            return y, y.sum().backward()
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestMaxPoolingFunctional(flow.unittest.TestCase):
+    @autotest(auto_backward=False)
+    def test_maxpool1d_with_random_data(test_case):
+        return_indices = random().to(bool).value()
+        device = random_device()
+        x = random_pytorch_tensor(ndim=3, dim2=random(20, 22)).to(device)
+        y = torch.nn.functional.max_pool1d(
+            x,
+            kernel_size=random(4, 6).to(int),
+            stride=random(1, 3).to(int) | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(2, 4).to(int) | nothing(),
+            ceil_mode=random().to(bool),
+            return_indices=return_indices,
+        )
+
+        if return_indices:
+            return unpack_indices(y)
+        else:
+            return y, y.sum().backward()
+
+    @autotest(auto_backward=False)
+    def test_maxpool2d_with_random_data(test_case):
+        return_indices = random().to(bool).value()
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(
+            device
+        )
+        y = torch.nn.functional.max_pool2d(
+            x,
+            kernel_size=random(4, 6).to(int),
+            stride=random(1, 3).to(int) | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(2, 4).to(int) | nothing(),
+            ceil_mode=random().to(bool),
+            return_indices=return_indices,
+        )
+
+        if return_indices:
+            return unpack_indices(y)
+        else:
+            return y, y.sum().backward()
+
+    @autotest(auto_backward=False)
+    def test_maxpool3d_with_random_data(test_case):
+        return_indices = random().to(bool).value()
+        device = random_device()
+        x = random_pytorch_tensor(
+            ndim=5, dim2=random(20, 22), dim3=random(20, 22), dim4=random(20, 22)
+        ).to(device)
+        y = torch.nn.functional.max_pool3d(
+            x,
+            kernel_size=random(4, 6).to(int),
+            stride=random(1, 3).to(int) | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(2, 4).to(int) | nothing(),
+            ceil_mode=random().to(bool),
+            return_indices=return_indices,
+        )
 
         if return_indices:
             return unpack_indices(y)
