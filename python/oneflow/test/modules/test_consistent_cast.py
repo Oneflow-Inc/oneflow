@@ -448,6 +448,7 @@ class TestConsistentCast(flow.unittest.TestCase):
         )
 
     @flow.unittest.skip_unless_1n4d()
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cpu_p2b_with_random_parameter(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_list"] = [[0, 1], [1, 2, 3], [0, 1, 2, 3]]

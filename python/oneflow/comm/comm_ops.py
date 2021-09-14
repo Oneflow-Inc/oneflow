@@ -203,3 +203,31 @@ def reduce(tensor, dst):
     result = flow.comm.all_reduce(tensor)
     if flow.env.get_rank() == dst:
         tensor.data = result
+
+
+def all_to_all(output_tensor_list, input_tensor_list):
+    """
+    Each process scatters list of input tensors to all processes in a group and
+    return gathered list of tensors in output list.
+
+    Args:
+        output_tensor_list (list[Tensor]): List of tensors to be gathered one
+            per rank.
+        input_tensor_list (list[Tensor]): List of tensors to scatter one per rank.
+        
+    """
+
+    def _check_list(tensor_list):
+        assert isinstance(tensor_list, list)
+        assert len(tensor_list) == flow.env.get_world_size()
+        for tensor in tensor_list:
+            assert isinstance(tensor, flow._oneflow_internal.Tensor)
+
+    _check_list(output_tensor_list)
+    _check_list(input_tensor_list)
+    for i in range(flow.env.get_world_size()):
+        flow.comm.scatter(
+            output_tensor_list[i],
+            input_tensor_list if i == flow.env.get_rank() else [],
+            src=i,
+        )
