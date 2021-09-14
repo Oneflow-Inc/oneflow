@@ -16,7 +16,6 @@ limitations under the License.
 
 import oneflow as flow
 import numpy as np
-import oneflow.unittest
 
 
 def all_reduce(tensor):
@@ -187,6 +186,24 @@ def scatter(tensor, scatter_list=None, src=0):
         flow.comm.recv(src, out=tensor)
 
 
+def reduce(tensor, dst):
+    """
+    Reduces the tensor data across all machines.
+
+    Only the process with rank ``dst`` is going to receive the final result.
+
+    Args:
+        tensor (Tensor): Input and output of the collective. The function
+            operates in-place.
+        dst (int): Destination rank
+
+    """
+    assert isinstance(dst, int)
+    result = flow.comm.all_reduce(tensor)
+    if flow.env.get_rank() == dst:
+        tensor.data = result
+
+
 def gather(tensor, gather_list=None, dst=0):
     """
     Gathers a list of tensors in a single process.
@@ -204,7 +221,9 @@ def gather(tensor, gather_list=None, dst=0):
     tensor = tensor.expand([1] + list(tensor.shape))
     device_type = tensor.device.type
     placement = flow.env.all_device_placement(device_type)
-    tensor = tensor.to_consistent(placement=placement, sbp=flow.sbp.split(0)).to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+    tensor = tensor.to_consistent(
+        placement=placement, sbp=flow.sbp.split(0)
+    ).to_consistent(placement=placement, sbp=flow.sbp.broadcast)
     if flow.env.get_rank() == dst:
         assert gather_list is not None
         assert len(gather_list) == tensor.shape[0]
