@@ -28,7 +28,8 @@ char* load_image(std::string image_path) {
 int main() {
     float* image_mock_data = new float[28*28];
     for(int i = 0; i < 28*28; i++) {
-        image_mock_data[i] = std::rand() / double(RAND_MAX);
+        //image_mock_data[i] = std::rand() / double(RAND_MAX);
+        image_mock_data[i] = 1.0;
     }
     std::string job_name = "mlp_inference";
     SessionOption option;
@@ -53,6 +54,10 @@ int main() {
 
      for (auto& entry : tensor_outputs) {
         std::cout << "Output name:" << entry.first << std::endl;
+        std::cout << "Output elem:" << entry.second->num_elems() << std::endl;
+        for(int i = 0; i < entry.second->num_elems(); i++) {
+            std::cout << ((float*)entry.second->mutable_data())[i] << " ";
+        }
         //TODO
     }
     session.Close();
