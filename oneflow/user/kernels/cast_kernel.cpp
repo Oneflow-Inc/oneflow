@@ -40,13 +40,12 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
   CastKernel() = default;
   ~CastKernel() = default;
 
-  virtual std::shared_ptr<OpKernelState> CreateOpKernelState(
-      KernelInitContext* ctx) const override {
+  std::shared_ptr<OpKernelState> CreateOpKernelState(KernelInitContext* ctx) const override {
     return std::make_shared<CastKernelState>(NewCastPrimitive(ctx));
   }
 
  private:
-  virtual bool IsCudaGraphSupported(KernelInitContext* ctx, OpKernelState* state) const override {
+  bool IsCudaGraphSupported(KernelInitContext* ctx, OpKernelState* state) const override {
     return IsCudaGraphPrimitive(CHECK_NOTNULL(dynamic_cast<CastKernelState*>(state))->Get().get());
   }
   void Compute(KernelComputeContext* ctx, OpKernelState* state) const override {
