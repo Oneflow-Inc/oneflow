@@ -436,7 +436,9 @@ class Generator:
                 if not block._bind_python:
                     continue
                 signature = block._signature
-                schema_types.append("functional::{0}".format(signature.get_schema_name()))
+                schema_types.append(
+                    "functional::{0}".format(signature.get_schema_name())
+                )
                 return_type = signature._ret._cpp_type
                 schema_fmt += "\n"
                 schema_fmt += "struct {0} {{\n".format(signature.get_schema_name())
@@ -496,7 +498,10 @@ class Generator:
                             )
                         )
                 schema_fmt += 'FunctionDef {0}::function_def = {{\n/*name*/"{1}",\n/*return_def*/{2},\n/*argument_def*/{{\n{3}\n}}\n}};\n'.format(
-                    signature.get_schema_name(), name, return_def, ",\n".join(argument_def)
+                    signature.get_schema_name(),
+                    name,
+                    return_def,
+                    ",\n".join(argument_def),
                 )
 
             if len(schema_types) > 0:
