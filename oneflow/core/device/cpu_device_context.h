@@ -34,6 +34,8 @@ class CpuDeviceCtx final : public DeviceCtx {
 
   vm::Allocator* mut_allocator() override { return Global<vm::CpuAllocator>::Get(); }
 
+  DeviceType device_type() const override { return DeviceType::kCPU; }
+
  private:
 };  // namespace oneflow
 

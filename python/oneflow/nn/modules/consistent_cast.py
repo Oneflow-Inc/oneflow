@@ -68,7 +68,7 @@ def to_consistent_op(input, placement=None, sbp=None, grad_sbp=None):
         elif isinstance(sbp, (tuple, list)):
             if not all(isinstance(sbp_item, flow.sbp.sbp) for sbp_item in sbp):
                 raise TypeError(
-                    "sbp parameter must be type of flow.sbp.sbp or list/tuple of flow.sbp.sbp"
+                    "sbp parameter must be type of oneflow.sbp.sbp or list/tuple of oneflow.sbp.sbp"
                 )
         elif isinstance(sbp, flow.sbp.sbp):
             sbp = (sbp,)

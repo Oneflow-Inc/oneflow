@@ -27,7 +27,6 @@ limitations under the License.
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
-#include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/job/rank_group_scope.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
@@ -119,13 +118,14 @@ auto* CachedEagerNcclS2SOpExpr = DECORATE(&EagerNcclS2S, ThreadLocal);
 class BroadcastFunctor {
  public:
   BroadcastFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool inplace) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t src_rank,
+                           bool inplace) const {
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
     std::string device_type_str = JUST(x->device())->type();
     CHECK_OR_RETURN(device_type_str == "cuda" || device_type_str == "cpu");
     DeviceType device_type = device_type_str == "cuda" ? DeviceType::kGPU : DeviceType::kCPU;
     const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
-    return one::Broadcast(x, parallel_desc, inplace);
+    return one::Broadcast(x, src_rank, parallel_desc, inplace);
   }
 };
 
@@ -156,7 +156,7 @@ class LocalAllReduceFunctor {
                          .Input("in")
                          .Output("out")
                          .Attr("parallel_conf", PbMessage2TxtString(parallel_conf))
-                         .Attr<bool>("async_launch", true)
+                         .Attr<bool>("async_launch", false)
                          .Build());
       rank_group2op_expr[rank_group] = op_expr;
     } else {
@@ -178,7 +178,6 @@ class ConsistentAllReduceFunctor {
     {
       CHECK_OR_RETURN(x->is_consistent());
       CHECK_OR_RETURN(IsAllPartialSumNdSbp(JUST(x->nd_sbp())));
-      CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllReduceOpExpr(JUST(x->parallel_desc())));
@@ -215,7 +214,6 @@ class ConsistentAllGatherFunctor {
     {
       CHECK_OR_RETURN(x->is_consistent());
       CHECK_OR_RETURN(IsAllSplitNdSbp(JUST(x->nd_sbp()), 0));
-      CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllGatherOpExpr(JUST(x->parallel_desc())));
@@ -238,7 +236,6 @@ class ConsistentS2SFunctor {
       CHECK_OR_RETURN(IsSplitSbp(out_nd_sbp->sbp_parallel(0)));
       CHECK_NE_OR_RETURN(in_nd_sbp->sbp_parallel(0).split_parallel().axis(),
                          out_nd_sbp->sbp_parallel(0).split_parallel().axis());
-      CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
     }
     std::shared_ptr<OpExpr> op_expr = JUST(
         CachedEagerNcclS2SOpExpr(JUST(x->parallel_desc()), SymbolOf(in_nd_sbp->sbp_parallel(0)),

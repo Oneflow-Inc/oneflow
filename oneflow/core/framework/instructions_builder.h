@@ -97,6 +97,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   vm::InstructionMsgList* mut_instruction_list() { return instruction_list_; }
 
+  // Build VM execution instructions with NNGraph's inputs/outputs/parameters for NNGraph execution.
   Maybe<void> LaunchLazyJob(const one::EagerBlobObjectListPtr& inputs,
                          const one::EagerBlobObjectListPtr& outputs,
                          const one::EagerBlobObjectListPtr& parameters,
@@ -473,8 +474,10 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   std::function<void(compatible_py::Object*)> release_object_;
 };
 
+// Make VM instructions with instruction builder and run instructions with logical/consistent view.
 Maybe<void> LogicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build);
 
+// Make VM instructions with instruction builder and run instructions with physical/local view.
 Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build);
 
 }  // namespace oneflow

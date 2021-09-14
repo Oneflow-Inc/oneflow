@@ -36,6 +36,11 @@ message CosineDecayConf {
   optional double alpha = 2 [default = 0.0];
 }
 
+message CosineAnnealingDecayConf {
+  required int64 t_max = 1;
+  optional double eta_min = 2 [default = 0.0];
+}
+
 message LinearCosineDecayConf {
   required int64 decay_batches = 1;
   optional double num_periods = 2 [default = 0.5];
@@ -48,6 +53,16 @@ message PiecewiseScalingConf {
   repeated double scales = 2;
 }
 
+message StepConf {
+  required int64 step_size = 1;
+  optional double gamma = 2 [default = 0.1];
+}
+
+message MultiStepConf {
+  repeated int64 milestones = 1;
+  optional double gamma = 2 [default = 0.1];
+}
+
 message LearningRateDecayConf {
   oneof type {
     ExponentialDecayConf exponential_conf = 2000;
@@ -58,6 +73,9 @@ message LearningRateDecayConf {
     CosineDecayConf cosine_conf = 2005;
     LinearCosineDecayConf linear_cosine_conf = 2006;
     PiecewiseScalingConf piecewise_scaling_conf = 2007;
+    MultiStepConf multi_step_conf = 2008;
+    StepConf step_conf = 2009;
+    CosineAnnealingDecayConf cosine_annealing_conf = 2010;
   }
 }
 

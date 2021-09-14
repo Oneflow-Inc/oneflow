@@ -17,6 +17,7 @@ limitations under the License.
 
 #include "oneflow/core/primitive/memcpy.h"
 #include "oneflow/core/stream/cuda_stream_context.h"
+#include "oneflow/core/primitive/cuda/cuda_graph_support.h"
 #include <cuda_runtime.h>
 
 namespace oneflow {
@@ -25,13 +26,14 @@ namespace primitive {
 
 namespace {
 
-class MemcpyImpl : public Memcpy {
+class MemcpyImpl : public Memcpy, public CudaGraphSupport {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MemcpyImpl);
   MemcpyImpl() = default;
   ~MemcpyImpl() override = default;
 
   void Launch(StreamContext* stream_ctx, void* dst, const void* src, size_t count) override {
+    if (dst == src) { return; }
     auto* cuda_stream_ctx = CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx));
     OF_CUDA_CHECK(
         cudaMemcpyAsync(dst, src, count, cudaMemcpyDefault, cuda_stream_ctx->cuda_stream()));

@@ -15,7 +15,8 @@ limitations under the License.
 """
 import oneflow as flow
 from collections import OrderedDict
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
 import numpy as np
 import unittest
