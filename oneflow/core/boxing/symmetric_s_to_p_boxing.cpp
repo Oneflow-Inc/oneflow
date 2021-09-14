@@ -73,8 +73,6 @@ Maybe<one::Tensor> SymmetricSToP(const std::shared_ptr<one::Tensor>& tensor, Sym
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
-  const auto& in_sbp_list = JUST(GetSbpList(tensor_nd_sbp));
-  const auto& out_sbp_list = JUST(GetSbpList(out->nd_sbp()));
 
   std::shared_ptr<one::OpExpr> op_expr = JUST(
       CachedEagerSymmetricSToPOpExpr(tensor_placement, SymbolOf(tensor_nd_sbp->sbp_parallel(0))));
