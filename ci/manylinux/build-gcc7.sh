@@ -1,8 +1,8 @@
 source scl_source enable devtoolset-7
 set -ex
-gcc --version
 export PATH=/usr/lib64/ccache:$PATH
-
+gcc --version
+ld --version
 # clean python dir
 cd ${ONEFLOW_CI_SRC_DIR}
 cd python

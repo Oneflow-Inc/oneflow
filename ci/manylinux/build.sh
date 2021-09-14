@@ -1,6 +1,7 @@
 set -ex
 export PATH=/usr/lib64/ccache:$PATH
-
+gcc --version
+ld --version
 # clean python dir
 cd ${ONEFLOW_CI_SRC_DIR}
 cd python
