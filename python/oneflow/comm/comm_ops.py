@@ -225,6 +225,8 @@ def reduce_scatter(output, input_list):
     for tensor in input_list:
         assert tensor.is_local
         assert tensor.shape == output_shape
-        tensor = tensor.to_consistent(placement=placement, sbp=flow.sbp.partial_sum).to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+        tensor = tensor.to_consistent(
+            placement=placement, sbp=flow.sbp.partial_sum
+        ).to_consistent(placement=placement, sbp=flow.sbp.broadcast)
         reduced_tensor_list.append(tensor.to_local())
     output.data = reduced_tensor_list[flow.env.get_rank()]
