@@ -68,6 +68,19 @@ def _test_reshape_backward(test_case, device):
     test_case.assertTrue(np.allclose(np_grad, input.grad.numpy(), 0.0001, 0.0001))
 
 
+def _test_reshape_scalar(test_case, device):
+    x = flow.tensor(2.0, device=flow.device(device))
+    test_case.assertTrue(np.array_equal(x.shape, ()))
+    a = flow.reshape(x, (1,))
+    test_case.assertTrue(np.array_equal(a.shape, (1,)))
+    b = flow.reshape(x, (1, 1, 1, 1,))
+    test_case.assertTrue(np.array_equal(b.shape, (1, 1, 1, 1)))
+    c = flow.reshape(b, ())
+    test_case.assertTrue(np.array_equal(c.shape, ()))
+    d = flow.reshape(x, ())
+    test_case.assertTrue(np.array_equal(d.shape, ()))
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
     def test_reshape(test_case):
@@ -76,6 +89,7 @@ class TestModule(flow.unittest.TestCase):
             _test_reshape,
             _test_reshape_tuple,
             _test_reshape_backward,
+            _test_reshape_scalar,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

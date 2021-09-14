@@ -209,7 +209,7 @@ class AdamW(Optimizer):
             self._state["step"] += 1
             return loss
 
-    def generate_conf_for_graph(self, train_conf, vars_conf):
+    def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
             optimizer_conf = train_conf.mutable_optimizer_conf().Add()
