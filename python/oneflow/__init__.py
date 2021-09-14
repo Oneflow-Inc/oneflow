@@ -118,6 +118,7 @@ from oneflow._C import round
 from oneflow._C import softplus
 from oneflow._C import tril
 from oneflow._C import triu
+from oneflow._C import pad
 
 from . import sbp
 import atexit
@@ -205,7 +206,7 @@ del atexit
 del oneflow
 
 import oneflow._C
-from oneflow._C import tensor
+from oneflow._C import tensor, batch_gather
 
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image

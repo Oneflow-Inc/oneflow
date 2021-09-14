@@ -230,7 +230,7 @@ def logbuflevel(val):
 
 @enable_if.condition(hob.in_normal_mode & hob.env_initialized)
 def do_nothing(*args, **kwargs):
-    print("Nothing happened because environment has been initialized")
+    print("Environment has been initialized, this env init will do nothing.")
     return False
 
 
