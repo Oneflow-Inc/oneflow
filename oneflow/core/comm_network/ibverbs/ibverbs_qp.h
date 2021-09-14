@@ -32,21 +32,28 @@ class ActorMsgMR final {
   ActorMsgMR(ibv_mr* mr, char* addr, size_t message_size) {
     CHECK(message_size >= sizeof(ActorMsg));
     message_size_ = message_size;
-    message_ = reinterpret_cast<ActorMsg*>(addr);
+    data_ = reinterpret_cast<void*>(addr);
     mr_ = mr;
+    size_ = 0;
   }
   ~ActorMsgMR() = default;
 
-  void* addr() { return static_cast<void*>(message_); }
+  void* addr() { return static_cast<void*>(data_); }
   uint32_t lkey() const { return mr_->lkey; }
-  ActorMsg message() const { return *message_; }
-  void set_message(const ActorMsg& val) { *message_ = val; }
+  void*  message() const { return data_; }
+  void set_data(void * data,size_t size ) {
+    data_ = reinterpret_cast<void*>(data);
+    size_ = size;
+  }
+ // void set_message(const ActorMsg& val) { *message_ = val; }
   size_t message_size() const { return message_size_; }
-
+  size_t size() const {return size_ ; }
  private:
   size_t message_size_;
   ibv_mr* mr_;
-  ActorMsg* message_;
+ // ActorMsg* message_;
+  void * data_;
+  size_t size_;
 };
 
 class IBVerbsQP;
@@ -77,6 +84,7 @@ class IBVerbsQP final {
   void PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem, const IBVerbsMemDesc& local_mem,
                        void* read_id);
   void PostSendRequest(const ActorMsg& msg);
+  void PostSendRequest(void * data, size_t size);
 
   void ReadDone(WorkRequestId*);
   void SendDone(WorkRequestId*);
