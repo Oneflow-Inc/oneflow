@@ -55,6 +55,8 @@ class AdamW(Optimizer):
         eps (float, optional): term added to the denominator to improve
             numerical stability (default: 1e-8)
         weight_decay (float, optional): weight decay (L2 penalty) (In the equation is λ, default: 0)
+        amsgrad (bool, optional): whether to use the AMSGrad variant of this algorithm. (default: False) 
+        do_bias_correction (bool, optional): Whether do bias correction (default: True)
 
     .. _Adam\\: A Method for Stochastic Optimization:
         https://arxiv.org/abs/1412.6980
@@ -116,6 +118,7 @@ class AdamW(Optimizer):
         eps: float = 1e-08,
         weight_decay: float = 0,
         amsgrad: bool = False,
+        do_bias_correction: bool = True,
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
@@ -126,12 +129,14 @@ class AdamW(Optimizer):
             betas[1] >= 0.0 and betas[1] < 1.0
         ), f"Invalid beta parameter at index 1: {betas[1]}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
-        assert amsgrad is False, "Not support AMSGrad now!"
         options = dict()
         options["lr"] = lr
         options["eps"] = eps
         options["betas"] = betas
         options["weight_decay"] = weight_decay
+        options["bias_correction1"] = 1.0
+        options["bias_correction2"] = 1.0
+        options["do_bias_correction"] = do_bias_correction
         options["amsgrad"] = amsgrad
         super().__init__(parameters, options)
 
@@ -139,14 +144,14 @@ class AdamW(Optimizer):
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
-                self._state[param]["exp_avg"] = flow.zeros_like(param)
-                self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
+
         self._op = (
             flow.builtin_op("adam_update")
             .Input("model")
             .Input("model_diff")
             .Input("m")
             .Input("v")
+            .Input("max_v")
             .Attr("l1", 0.0)
             .Attr("l2", 0.0)
             .Build()
@@ -164,23 +169,47 @@ class AdamW(Optimizer):
             if closure is not None:
                 loss = closure()
             for param_group in self.param_groups:
+                if param_group["do_bias_correction"]:
+                    param_group["bias_correction1"] = 1.0 - math.pow(
+                        param_group["betas"][0], self._state["step"] + 1
+                    )
+                    param_group["bias_correction2"] = 1.0 - math.pow(
+                        param_group["betas"][1], self._state["step"] + 1
+                    )
+
                 kwargs = {
                     "learning_rate_val": param_group["lr"],
+                    "bias_correction1_val": param_group["bias_correction1"],
+                    "bias_correction2_val": param_group["bias_correction2"],
                     "weight_decay": param_group["weight_decay"],
                     "beta1": param_group["betas"][0],
                     "beta2": param_group["betas"][1],
                     "epsilon": param_group["eps"],
+                    "do_bias_correction": param_group["do_bias_correction"],
+                    "amsgrad": param_group["amsgrad"],
                 }
+
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
+
+                    if "exp_avg" not in self._state[param]:
+                        self._state[param]["exp_avg"] = flow.zeros_like(param)
+                    if "exp_avg_sq" not in self._state[param]:
+                        self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
+                    if "max_exp_avg_sq" not in self._state[param]:
+                        self._state[param]["max_exp_avg_sq"] = flow.zeros_like(param)
                     m_tensor = self._state[param]["exp_avg"]
                     v_tensor = self._state[param]["exp_avg_sq"]
-                    self._op(param, param.grad, m_tensor, v_tensor, **kwargs)
-            self._state["step"] = self._state["step"] + 1
+                    max_v_tensor = self._state[param]["max_exp_avg_sq"]
+                    self._op(
+                        param, param.grad, m_tensor, v_tensor, max_v_tensor, **kwargs,
+                    )
+
+            self._state["step"] += 1
             return loss
 
-    def generate_conf_for_graph(self, train_conf, vars_conf):
+    def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
             optimizer_conf = train_conf.mutable_optimizer_conf().Add()
@@ -193,6 +222,8 @@ class AdamW(Optimizer):
             beta1 = param_group["betas"][0]
             beta2 = param_group["betas"][1]
             epsilon = param_group["eps"]
+            do_bias_correction = param_group["do_bias_correction"]
+            amsgrad = param_group["amsgrad"]
 
             optimizer_conf.set_base_learning_rate(lr)
 
@@ -200,8 +231,9 @@ class AdamW(Optimizer):
             optimizer_conf.mutable_adam_conf().set_beta2(beta2)
             optimizer_conf.mutable_adam_conf().set_epsilon(epsilon)
             optimizer_conf.mutable_adam_conf().set_do_bias_correction(
-                False
-            )  # TODO(zzk): Check this option
+                do_bias_correction
+            )
+            optimizer_conf.mutable_adam_conf().set_amsgrad(amsgrad)
 
             optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
                 weight_decay

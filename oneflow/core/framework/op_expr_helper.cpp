@@ -366,42 +366,6 @@ Maybe<one::UserOpExpr> BroadcastDivGradOp(const std::string& name) {
       .Build();
 }
 
-Maybe<one::UserOpExpr> LayerNormGradOp(const int64_t& begin_norm_axis, const double& epsilon) {
-  return LayerNormGradOp(begin_norm_axis, epsilon, UniqueOpName("layer_norm_grad"));
-}
-Maybe<one::UserOpExpr> LayerNormGradOp(const int64_t& begin_norm_axis, const double& epsilon,
-                                       const std::string& name) {
-  return one::OpBuilder("layer_norm_grad", name)
-      .Input("x")
-      .Input("mean")
-      .Input("inv_variance")
-      .Input("dy")
-      .Output("dx")
-      .Attr<int64_t>("begin_norm_axis", begin_norm_axis)
-      .Attr<double>("epsilon", epsilon)
-      .Build();
-}
-
-Maybe<one::UserOpExpr> LayerNormParamGradOp(const int64_t& begin_params_axis,
-                                            const bool& has_beta_diff, const bool& has_gamma_diff,
-                                            const bool& has_normalized_diff) {
-  return LayerNormParamGradOp(begin_params_axis, has_beta_diff, has_gamma_diff, has_normalized_diff,
-                              UniqueOpName("layer_norm_param_grad"));
-}
-Maybe<one::UserOpExpr> LayerNormParamGradOp(const int64_t& begin_params_axis,
-                                            const bool& has_beta_diff, const bool& has_gamma_diff,
-                                            const bool& has_normalized_diff,
-                                            const std::string& name) {
-  auto builder = one::OpBuilder("layer_norm_param_grad", name).Input("dy");
-  if (has_gamma_diff || has_normalized_diff) { builder.Input("gamma"); }
-  if (has_gamma_diff) { builder.Input("normalized"); }
-  if (has_beta_diff) { builder.Output("beta_diff"); }
-  if (has_gamma_diff) { builder.Output("gamma_diff"); }
-  if (has_normalized_diff) { builder.Output("normalized_diff"); }
-  if (has_beta_diff || has_gamma_diff) { builder.Output("reduce_buf"); }
-  return builder.Attr<int64_t>("begin_params_axis", begin_params_axis).Build();
-}
-
 Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t& max_dim_size) {
   return ConcatOp(n, axis, max_dim_size, UniqueOpName("concat"));
 }
@@ -413,18 +377,6 @@ Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t
       .Output("out")
       .Attr<int64_t>("axis", axis)
       .Attr<int64_t>("max_dim_size", max_dim_size)
-      .Build();
-}
-
-Maybe<one::UserOpExpr> UnsortedBatchSegmentSumOp(const int& num_segments) {
-  return UnsortedBatchSegmentSumOp(num_segments, UniqueOpName("unsorted_batch_segment_sum"));
-}
-Maybe<one::UserOpExpr> UnsortedBatchSegmentSumOp(const int& num_segments, const std::string& name) {
-  return one::OpBuilder("unsorted_batch_segment_sum", name)
-      .Input("data")
-      .Input("segment_ids")
-      .Output("out")
-      .Attr<int32_t>("num_segments", num_segments)
       .Build();
 }
 

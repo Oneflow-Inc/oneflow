@@ -26,7 +26,7 @@ import oneflow.unittest
 
 
 def _test_transpose(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
     of_out = flow.transpose(input, 0, 1)
@@ -35,7 +35,7 @@ def _test_transpose(test_case, device):
 
 
 def _test_tensor_transpose(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
     of_out = input.transpose(0, 1)
@@ -44,7 +44,7 @@ def _test_tensor_transpose(test_case, device):
 
 
 def _test_tranpose_negative_dim(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
     of_out = flow.transpose(input, -4, -3)
@@ -53,7 +53,7 @@ def _test_tranpose_negative_dim(test_case, device):
 
 
 def _test_transpose_backward(test_case, device):
-    x = flow.Tensor(
+    x = flow.tensor(
         np.random.randn(2, 6, 5, 3),
         dtype=flow.float32,
         device=flow.device(device),
@@ -67,7 +67,7 @@ def _test_transpose_backward(test_case, device):
 
 
 def _test_transpose_backward_v2(test_case, device):
-    x = flow.Tensor(
+    x = flow.tensor(
         np.random.randn(2, 3, 4, 5),
         dtype=flow.float32,
         device=flow.device(device),

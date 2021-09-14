@@ -45,7 +45,7 @@ class CopyHdTaskNode final : public CopyTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kCopyHd; }
 
-  void Init(CopyHdOpConf::Type, int64_t machine_id, int64_t dev_phy_id, const LogicalBlobId& lbi);
+  void Init(CopyHdOpConf::Type, const DeviceId& device_id, const LogicalBlobId& lbi);
 
   CopyHdOpConf::Type copy_type() const { return copy_type_; }
   MemZoneId MemZoneId121() const override {

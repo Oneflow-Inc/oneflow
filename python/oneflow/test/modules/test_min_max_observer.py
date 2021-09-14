@@ -105,7 +105,7 @@ def _run_test_min_max_observer(
     per_layer_quantization,
 ):
     weight = (np.random.random(weight_shape) - 0.5).astype(np.float32)
-    tensor_weight = flow.Tensor(
+    tensor_weight = flow.tensor(
         weight, device=flow.device(device_type), dtype=flow.float32
     )
     min_max_observer = flow.nn.MinMaxObserver(

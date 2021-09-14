@@ -49,7 +49,7 @@ jobs:
           cmake .. -C ../cmake/caches/international/cpu.cmake \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON
-          cmake --build . -j$(nproc) --target oneflow_deps of_cfgobj of_protoobj of_functional_obj
+          cmake --build . -j$(nproc) --target oneflow_deps of_cfgobj of_protoobj of_functional_obj of_functional_tensor_obj
       - name: Run clang-tidy for all translation units
         # use clang as compiler for correct compiler flags
         run: |
@@ -130,7 +130,7 @@ jobs:
       - name: Download conda environment.yml
         if: matrix.test_suite == 'conda'
         run: |
-          wget https://raw.githubusercontent.com/Oneflow-Inc/conda-env/5b985c863ef73fc3f3b597289fdcf740d52cf71c/dev/gcc7/environment.yml
+          wget https://raw.githubusercontent.com/Oneflow-Inc/conda-env/30a7f00eb48ee9009d85a848e720823e5054c66b/dev/gcc7/environment-v2.yml
       - uses: conda-incubator/setup-miniconda@v2
         if: matrix.test_suite == 'conda'
         name: Setup conda

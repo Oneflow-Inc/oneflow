@@ -28,7 +28,7 @@ import oneflow.unittest
 def _test_min(test_case, device, shape, dim, keepdims):
     input_arr = np.random.randn(*shape)
     np_out = np.amin(input_arr, axis=dim, keepdims=keepdims)
-    x = flow.Tensor(
+    x = flow.tensor(
         input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     of_out = flow.min(x, dim, keepdims)
@@ -48,7 +48,7 @@ def _test_min(test_case, device, shape, dim, keepdims):
 def _test_min_tensor_function(test_case, device, shape, dim, keepdims):
     input_arr = np.random.randn(*shape)
     np_out = np.amin(input_arr, axis=dim, keepdims=keepdims)
-    x = flow.Tensor(
+    x = flow.tensor(
         input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     of_out = x.min(dim, keepdims)
@@ -88,7 +88,7 @@ class TestMinModule(flow.unittest.TestCase):
 def _test_max(test_case, device, shape, dim, keepdims):
     input_arr = np.random.randn(*shape)
     np_out = np.amax(input_arr, axis=dim, keepdims=keepdims)
-    x = flow.Tensor(
+    x = flow.tensor(
         input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     of_out = flow.max(x, dim, keepdims)
@@ -108,7 +108,7 @@ def _test_max(test_case, device, shape, dim, keepdims):
 def _test_max_tensor_function(test_case, device, shape, dim, keepdims):
     input_arr = np.random.randn(*shape)
     np_out = np.amax(input_arr, axis=dim, keepdims=keepdims)
-    x = flow.Tensor(
+    x = flow.tensor(
         input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     of_out = x.max(dim, keepdims)

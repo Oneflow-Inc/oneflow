@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
@@ -29,14 +28,15 @@ class ReturnKernel final : public Kernel {
   ~ReturnKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelContext* ctx) const override;
-  void ForwardHeader(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
+  void ForwardHeader(KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type>
-void ReturnKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
+void ReturnKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
   if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
-    const auto& job_name = ctx->job_desc()->job_name();
+    CHECK(this->op_conf().return_conf().has_job_name());
+    const auto& job_name = this->op_conf().return_conf().job_name();
     const auto& op_name = this->op_conf().name();
     auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
     auto* buffer = buffer_mgr->Get(GetOutputBufferName(job_name, op_name));
@@ -54,7 +54,7 @@ void ReturnKernel<device_type>::ForwardDataContent(const KernelContext* ctx) con
 }
 
 template<DeviceType device_type>
-void ReturnKernel<device_type>::ForwardHeader(const KernelContext* ctx) const {
+void ReturnKernel<device_type>::ForwardHeader(KernelContext* ctx) const {
   if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
     // Do nothing.
   } else {

@@ -45,7 +45,7 @@ Maybe<BoxingExprIf> NcclSxToBBoxingExpr() {
 }
 
 Maybe<BoxingExprIf> NcclBToSxBoxingExpr() {
-  return JUST(BoxingExpr(JUST(InPlacementAndSplit(0)), JUST(BoxingExpr("nccl-b-to-s")),
+  return JUST(BoxingExpr(JUST(InPlacementAndSplit(0)), JUST(BoxingExpr("symmetric-b-to-s")),
                          JUST(OptionalBoxing("nccl-s-to-s"))));
 }
 
@@ -88,9 +88,11 @@ Maybe<BoxingExprIf> RawMainBoxingExpr() {
   const auto& core =
       JUST(BoxingExpr("identity")) | JUST(BoxingExpr("flatten-hierarchy"))
       | JUST(BoxingExpr("cuda-copy-h2d")) | JUST(BoxingExpr("cuda-copy-d2h"))
-      | JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("nccl-p-to-s"))
-      | JUST(BoxingExpr("nccl-b-to-s")) | JUST(BoxingExpr("nccl-s-to-b"))
+      | JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("ccl-p-to-b"))
+      | JUST(BoxingExpr("nccl-p-to-s")) | JUST(BoxingExpr("nccl-s-to-b"))
       | JUST(BoxingExpr("nccl-s-to-s")) | JUST(BoxingExpr("naive-b-to-p"))
+      | JUST(BoxingExpr("symmetric-b-to-s")) | JUST(BoxingExpr("ccl-s-to-s"))
+      | JUST(BoxingExpr("symmetric-nd-sbp-to-nd-sbp"))
       | JUST(BoxingExpr(JUST(InPlacementAndBroadcast()), JUST(BoxingExpr("nccl-s-to-b")),
                         JUST(BoxingExpr("naive-b-to-p"))))
       | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(OneToNBoxingExpr()) | JUST(NToOneBoxingExpr())
@@ -108,7 +110,6 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
                                                    Symbol<ParallelDesc> out_parallel_desc) {
   const auto& in = JUST(PlacedNdSbp::New(in_nd_sbp, in_parallel_desc));
   const auto& out = JUST(PlacedNdSbp::New(out_nd_sbp, out_parallel_desc));
-
   const auto& main_boxing_expr = JUST(MainBoxingExpr());
   if (TRY(main_boxing_expr->Check(in, out)).IsOk()) {
     const auto& boxing_func = JUST(main_boxing_expr->GetBoxingFunction(in, out));
