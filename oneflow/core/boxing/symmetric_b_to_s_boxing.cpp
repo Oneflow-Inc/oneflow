@@ -58,9 +58,8 @@ Maybe<one::Tensor> SymmetricB2S(const std::shared_ptr<one::Tensor>& tensor, Symb
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
-  LOG(ERROR) << "running SymmetricB2S";
-  const auto& local_shape = *tensor->shape();
 
+  const auto& local_shape = *tensor->shape();
   std::shared_ptr<one::Tensor> local_tensor = JUST(tensor->cur_rank_phy_tensor());
 
   const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(tensor_placement));
