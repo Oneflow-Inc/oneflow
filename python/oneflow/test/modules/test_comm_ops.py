@@ -70,6 +70,25 @@ class TestBroadCast(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(tensor.numpy(), np.array([[1, 2], [3, 4]])))
 
 
+class TestScatter(flow.unittest.TestCase):
+    @flow.unittest.skip_unless_1n4d()
+    def test_scatter_1n4d(test_case):
+        output = flow.tensor([[1, 2], [3, 4]])
+        if flow.env.get_rank() == 1:
+            tensor_list = [flow.tensor([[5, 6], [7, 8]]) + i for i in range(4)]
+            flow.comm.scatter(output, tensor_list, src=1)
+            test_case.assertTrue(
+                np.allclose(output.numpy(), np.array([[6, 7], [8, 9]]))
+            )
+        else:
+            flow.comm.scatter(output, src=1)
+            test_case.assertTrue(
+                np.allclose(
+                    output.numpy(), np.array([[5, 6], [7, 8]]) + flow.env.get_rank()
+                )
+            )
+
+
 @flow.unittest.skip_unless_1n2d()
 class TestDocs(flow.unittest.TestCase):
     def test_docs(test_case):

@@ -57,3 +57,9 @@ class StepLR(LrScheduler):
             return [group["lr"] for group in self._optimizer.param_groups]
         else:
             return [group["lr"] * self.gamma for group in self._optimizer.param_groups]
+
+    def _generate_conf_for_graph(self, opt_confs):
+        for opt_conf in opt_confs:
+            learning_rate_decay_conf = opt_conf.mutable_learning_rate_decay()
+            learning_rate_decay_conf.mutable_step_conf().set_step_size(self.step_size)
+            learning_rate_decay_conf.mutable_step_conf().set_gamma(self.gamma)
