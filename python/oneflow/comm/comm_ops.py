@@ -203,3 +203,28 @@ def reduce(tensor, dst):
     result = flow.comm.all_reduce(tensor)
     if flow.env.get_rank() == dst:
         tensor.data = result
+
+
+def reduce_scatter(output, input_list):
+    """
+    Reduces, then scatters a list of tensors to all processes in a group.
+
+    Args:
+        output (Tensor): Output tensor.
+        input_list (list[Tensor]): List of tensors to reduce and scatter.
+
+    """
+    assert isinstance(output, flow._oneflow_internal.Tensor)
+    assert output.is_local
+    assert isinstance(input_list, list)
+    assert len(input_list) == flow.env.get_world_size()
+    output_shape = output.shape
+    device_type = output.device.type
+    placement = flow.env.all_device_placement(device_type)
+    reduced_tensor_list = []
+    for tensor in input_list:
+        assert tensor.is_local
+        assert tensor.shape == output_shape
+        tensor = tensor.to_consistent(placement=placement, sbp=flow.sbp.partial_sum).to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+        reduced_tensor_list.append(tensor.to_local())
+    output.data = reduced_tensor_list[flow.env.get_rank()]
