@@ -189,12 +189,6 @@ size_t GetConsumerCount(const TaskProto& task) {
 
 #ifdef WITH_CUDA_GRAPHS
 
-CudaGraphContext* GetCUDAGraphContext(DeviceCtx* device_ctx) {
-  auto* provider = dynamic_cast<StreamContextProvider*>(device_ctx);
-  if (provider == nullptr) { return nullptr; }
-  return dynamic_cast<CudaGraphContext*>(provider->GetStreamContext());
-}
-
 bool IsCUDAGraphSupported(const Kernel* kernel) {
   auto* user_kernel = dynamic_cast<const UserKernel*>(kernel);
   return (user_kernel != nullptr && user_kernel->IsCudaGraphSupported());
@@ -207,15 +201,14 @@ template<int exec_kernel, int inplace, typename IndexType, typename RegstIndex,
 class LightActor : public ActorBase, public KernelContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LightActor);
-  explicit LightActor(std::shared_ptr<DeviceCtx> device_ctx)
-      : thread_(nullptr), device_ctx_(std::move(device_ctx)), stream_kernel_observer_(nullptr) {
-    auto* stream_context_provider = dynamic_cast<StreamContextProvider*>(device_ctx_.get());
-    if (stream_context_provider != nullptr) {
-      auto* kernel_observer_provider =
-          dynamic_cast<KernelObserverProvider*>(stream_context_provider->GetStreamContext());
-      if (kernel_observer_provider != nullptr) {
-        stream_kernel_observer_ = kernel_observer_provider->GetKernelObserver();
-      }
+  explicit LightActor(StreamContext* stream_ctx, std::shared_ptr<DeviceCtx> device_ctx)
+      : thread_(nullptr),
+        stream_ctx_(stream_ctx),
+        device_ctx_(std::move(device_ctx)),
+        stream_kernel_observer_(nullptr) {
+    auto* kernel_observer_provider = dynamic_cast<KernelObserverProvider*>(stream_ctx_);
+    if (kernel_observer_provider != nullptr) {
+      stream_kernel_observer_ = kernel_observer_provider->GetKernelObserver();
     }
   }
   ~LightActor() override = default;
@@ -229,7 +222,7 @@ class LightActor : public ActorBase, public KernelContext {
       const KernelConf& kernel_conf = task_proto.exec_sequence().exec_node(0).kernel_conf();
       kernel_info_[0]->kernel = ConstructKernel(kernel_conf, this);
 #ifdef WITH_CUDA_GRAPHS
-      cuda_graph_ctx_[0] = GetCUDAGraphContext(device_ctx_.get());
+      cuda_graph_ctx_[0] = dynamic_cast<CudaGraphContext*>(stream_ctx);
       if (cuda_graph_ctx_[0] != nullptr && kernel_conf.all_blobs_are_static()
           && IsCUDAGraphSupported(kernel_info_[0]->kernel.get())) {
         cuda_graph_exec_[0].reset(new CudaGraphExecutable());
@@ -496,6 +489,8 @@ class LightActor : public ActorBase, public KernelContext {
     }
   }
 
+  StreamContext* stream_ctx() const override { return stream_ctx_; }
+
   DeviceCtx* device_ctx() const override { return device_ctx_.get(); }
 
   Blob* BnInOp2Blob(const std::string& bn) const override {
@@ -583,6 +578,7 @@ class LightActor : public ActorBase, public KernelContext {
   std::unique_ptr<CudaGraphExecutable> cuda_graph_exec_[exec_kernel];
   CudaGraphContext* cuda_graph_ctx_[exec_kernel]{};
 #endif
+  StreamContext* stream_ctx_;
   std::shared_ptr<DeviceCtx> device_ctx_;
   std::vector<ActorMsg> sync_post_act_msgs_;
   std::vector<ActorMsg> async_post_act_msgs_;
@@ -592,7 +588,8 @@ class LightActor : public ActorBase, public KernelContext {
 
 std::shared_ptr<DeviceCtx> NewDefaultDeviceCtx(const TaskProto& task_proto,
                                                StreamContext* stream_ctx) {
-  return stream_ctx->device_ctx();
+  auto* provider = CHECK_NOTNULL(dynamic_cast<DeviceCtxProvider*>(stream_ctx));
+  return provider->GetDeviceCtx();
 }
 
 template<int kernel_exec, int inplace, typename IndexType, typename RegstIndex,
@@ -600,7 +597,7 @@ template<int kernel_exec, int inplace, typename IndexType, typename RegstIndex,
 ActorBase* NewLightActor(const TaskProto& task_proto, StreamContext* stream_ctx,
                          std::shared_ptr<DeviceCtx> device_ctx) {
   return new LightActor<kernel_exec, inplace, IndexType, RegstIndex, StateContainer>(
-      std::move(device_ctx));
+      stream_ctx, std::move(device_ctx));
 }
 
 template<int kernel_exec, int inplace, typename IndexType>

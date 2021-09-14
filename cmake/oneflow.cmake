@@ -420,7 +420,7 @@ copy_files("${PROTO_HDRS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_i
 copy_files("${CFG_HRCS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 
 set(OF_CORE_HDRS)
-list(APPEND of_core_dir_name_list "common" "device" "framework" "kernel/util" "persistence")
+list(APPEND of_core_dir_name_list "common" "device" "framework" "kernel/util" "persistence" "stream")
 foreach(of_core_dir_name ${of_core_dir_name_list})
   file(GLOB_RECURSE h_files "${PROJECT_SOURCE_DIR}/oneflow/core/${of_core_dir_name}/*.h")
   list(APPEND OF_CORE_HDRS ${h_files})

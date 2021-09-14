@@ -17,11 +17,12 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 
+import os
 import numpy as np
-from automated_test_util import *
-
 import oneflow as flow
 import oneflow.unittest
+
+from oneflow.test_utils.automated_test_util import *
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -128,6 +129,8 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(get_numpy(x), np_zeros))
         flow.nn.init.constant_(x, random_fill_val)
         test_case.assertTrue(np.allclose(get_numpy(x), random_fill_val * np_ones))
+        x.zeros_()
+        test_case.assertTrue(np.array_equal(get_numpy(x), np_zeros))
         test_case.assertEqual(flow.nn.init.calculate_gain("conv2d"), 1)
         test_case.assertEqual(flow.nn.init.calculate_gain("tanh"), 5.0 / 3)
 
@@ -165,6 +168,18 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(x.is_cuda)
         x = flow.Tensor(*shape, device=flow.device("cpu"))
         test_case.assertTrue(not x.is_cuda)
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_tensor_set_data(test_case):
+        a = flow.ones(2, 3, requires_grad=False)
+        b = flow.ones(4, 5, requires_grad=True).to("cuda")
+        old_id = id(a)
+        a.data = b
+        test_case.assertEqual(old_id, id(a))
+        test_case.assertTrue(a.shape == (4, 5))
+        test_case.assertTrue(a.device == flow.device("cuda"))
+        test_case.assertTrue(a.requires_grad)
+        test_case.assertFalse(a.is_leaf)
 
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_unsupported_property(test_case):
