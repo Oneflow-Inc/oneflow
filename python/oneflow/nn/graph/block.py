@@ -216,35 +216,34 @@ class Block(object):
         return result
 
     def _pre_forward_mapping_out_scope(self, *args):
-        # Deal with activation checkpointing identity.
-        if self.config.activation_checkpointing:
+        # Insert identity op when doing activation checkpointing or pipeline execution.
+        # Identity op outside activation checkpointing scope will be the endpoint of an activation checkpointing segment.
+        # Identity op as the first op of a pipeline stage will make backward op depends on the identity op within the stage,
+        # otherwise the backward op may depends the op in former stage which will make graph creates unnessary buffers.
+        if self.config.activation_checkpointing or (
+            self.config.stage_id is not None and self.config.stage_id >= 0
+        ):
 
-            def break_with_identity(t):
+            def insert_identity(t):
                 assert isinstance(t, Tensor)
                 return oneflow._C.identity(t)
 
-            args = self._mapping_io(
-                "input",
-                break_with_identity,
-                "break_activation_checkpointing_with_identity",
-                *args,
-            )
+            args = self._mapping_io("input", insert_identity, "insert_identity", *args,)
 
         return args
 
     def _post_forward_mapping_out_scope(self, *args):
-        # Deal with activation checkpointing identity.
-        if self.config.activation_checkpointing:
+        # Insert identity op when doing activation checkpointing or pipeline execution.
+        if self.config.activation_checkpointing or (
+            self.config.stage_id is not None and self.config.stage_id >= 0
+        ):
 
-            def break_with_identity(t):
+            def insert_identity(t):
                 assert isinstance(t, Tensor)
                 return oneflow._C.identity(t)
 
             args = self._mapping_io(
-                "output",
-                break_with_identity,
-                "break_activation_checkpointing_with_identity",
-                *args,
+                "output", insert_identity, "insert_identity", *args,
             )
         return args
 
@@ -460,6 +459,8 @@ class Block(object):
         lines = None
         if self._type == BlockType.MODULE:
             child_lines = []
+            if not self.config._is_null:
+                child_lines.append(add_indent(repr(self.config), 2))
             if len(self._args_repr) > 0:
                 for in_str in self._args_repr:
                     input_str = add_indent(in_str, 2)
@@ -511,6 +512,7 @@ class BlockConfig(object):
     """
 
     def __init__(self):
+        self._is_null = True
         self._stage_id = None
         self._activation_checkpointing = None
 
@@ -523,7 +525,9 @@ class BlockConfig(object):
     @stage_id.setter
     def stage_id(self, value: int = None):
         r"""Set stage id of Block in pipeline parallelism.
+        Set different module's stage id to hint the graph preparing right num of buffers in pipeline.
         """
+        self._is_null = False
         self._stage_id = value
 
     @property
@@ -536,4 +540,30 @@ class BlockConfig(object):
     def activation_checkpointing(self, value: bool = False):
         r"""Set whether do activation checkpointing in this Block.
         """
+        self._is_null = False
         self._activation_checkpointing = value
+
+    def __repr__(self):
+        main_str = (
+            "("
+            + "CONFIG"
+            + ":config:"
+            + self.__class__.__name__
+            + "("
+            + (
+                ("stage_id=" + str(self.stage_id) + ", ")
+                if self.stage_id is not None
+                else ""
+            )
+            + (
+                (
+                    "activation_checkpointing="
+                    + str(self.activation_checkpointing)
+                    + ", "
+                )
+                if self.activation_checkpointing is not None
+                else ""
+            )
+            + "))"
+        )
+        return main_str
