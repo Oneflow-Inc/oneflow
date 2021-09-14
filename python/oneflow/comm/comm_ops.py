@@ -102,6 +102,7 @@ def all_gather(tensor_list, tensor):
     """
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
     assert isinstance(tensor_list, list)
+    assert len(tensor_list) == flow.env.get_world_size()
     assert tensor.device.index == flow.env.get_local_rank()
     assert tensor.is_local
     tensor = tensor.expand([1] + list(tensor.shape))
