@@ -22,8 +22,8 @@ from test_util import Array2Numpy, FlattenArray, GenArgList, Index2Coordinate
 
 import oneflow as flow
 import oneflow.unittest
-from automated_test_util import torch
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _np_replication_pad2d_grad(src, dest, padding):

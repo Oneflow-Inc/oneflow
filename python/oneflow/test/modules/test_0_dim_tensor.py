@@ -22,8 +22,8 @@ import oneflow as flow
 
 
 from test_util import GenArgList
-from automated_test_util import torch
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_0_dim_tensor(test_case, device):

@@ -21,8 +21,8 @@ import numpy as np
 from test_util import GenArgList
 
 import oneflow as flow
-from automated_test_util import torch
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_logical_or(test_case, shape, device):
