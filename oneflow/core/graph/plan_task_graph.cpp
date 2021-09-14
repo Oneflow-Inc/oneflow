@@ -52,4 +52,8 @@ const TaskProto* PlanTaskGraph::TaskProto4TaskId(int64_t task_id) const {
   return task_id2plan_task_node_.at(task_id)->task_proto();
 }
 
+const PlanTaskNode* PlanTaskGraph::PlanTaskNode4TaskId(int64_t task_id) const {
+  return task_id2plan_task_node_.at(task_id);
+}
+
 }  // namespace oneflow

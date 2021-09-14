@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/job/plan_util.h"
 
 namespace oneflow {
@@ -185,6 +186,32 @@ bool IsTaskConnectedL2R(const TaskProto* src, const TaskProto* dst) {
   return false;
 }
 
+bool IsReachableFromSrcTaskToDstTaskInSameThrd(const PlanTaskNode* src, const PlanTaskNode* dst) {
+  // NOTE(chengcheng): ONLY merge memory chain in same stream.
+  if (src->task_proto()->thrd_id() != dst->task_proto()->thrd_id()) { return false; }
+  const int64_t machine_id = src->task_proto()->machine_id();
+  if (dst->task_proto()->machine_id() != machine_id) { return false; }
+  std::queue<const PlanTaskNode*> queued_nodes;
+  HashSet<const PlanTaskNode*> visited_nodes;
+  queued_nodes.push(src);
+  visited_nodes.insert(src);
+  while (!queued_nodes.empty()) {
+    const PlanTaskNode* cur_node = queued_nodes.front();
+    queued_nodes.pop();
+
+    if (cur_node == dst) { return true; }
+
+    cur_node->ForEachNodeOnOutEdge([&](const PlanTaskNode* next_node) {
+      if (visited_nodes.find(next_node) == visited_nodes.end()
+          && next_node->task_proto()->machine_id() == machine_id) {
+        queued_nodes.push(next_node);
+        visited_nodes.insert(next_node);
+      }
+    });
+  }
+  return false;
+}
+
 void GenMemChainTasksAndRegsts(
     Plan* plan,
     const std::function<bool(const std::string&, const std::string&)>& IsOpNameDataOrCtrlReachable,
@@ -208,14 +235,22 @@ void GenMemChainTasksAndRegsts(
     return false;
   };
 
+  PlanTaskGraph plan_graph(*plan);
   auto IsStrictOrderL2R = [&](const MemoryChain* lhs, const MemoryChain* rhs) -> bool {
     const TaskProto* l_chain_sink_task_node = lhs->sorted_tasks.back();
     const TaskProto* r_chain_source_task_node = rhs->sorted_tasks.front();
     std::string l_op_name;
     std::string r_op_name;
     if (TryGetTaskNodeLogicalOpName(l_chain_sink_task_node, &l_op_name)
-        && TryGetTaskNodeLogicalOpName(r_chain_source_task_node, &r_op_name)) {
-      return IsOpNameDataOrCtrlReachable(l_op_name, r_op_name);
+        && TryGetTaskNodeLogicalOpName(r_chain_source_task_node, &r_op_name)
+        && IsOpNameDataOrCtrlReachable(l_op_name, r_op_name)) {
+      // NOTE(chengcheng): ONLY reachable on op graph CANNOT guarantee src -> dst task reachable,
+      //  so need really search by BFS on plan task graph.
+      const PlanTaskNode* src_node =
+          plan_graph.PlanTaskNode4TaskId(l_chain_sink_task_node->task_id());
+      const PlanTaskNode* dst_node =
+          plan_graph.PlanTaskNode4TaskId(r_chain_source_task_node->task_id());
+      return IsReachableFromSrcTaskToDstTaskInSameThrd(src_node, dst_node);
     }
     return false;
   };

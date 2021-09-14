@@ -52,6 +52,7 @@ class PlanTaskGraph final : public Graph<const PlanTaskNode, PlanTaskEdge> {
   ~PlanTaskGraph() = default;
 
   const TaskProto* TaskProto4TaskId(int64_t task_id) const;
+  const PlanTaskNode* PlanTaskNode4TaskId(int64_t task_id) const;
   const Plan& plan() const { return *plan_; }
 
  private:
