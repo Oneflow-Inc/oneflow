@@ -151,7 +151,7 @@ def broadcast(tensor, src):
     flow._C.broadcast(tensor, src_rank=src, inplace=True)
 
 
-def scatter(tensor, tensor_list=None, src=0):
+def scatter(tensor, scatter_list=None, src=0):
     """
     Scatters a list of tensors to all processes in a group.
 
@@ -169,18 +169,42 @@ def scatter(tensor, tensor_list=None, src=0):
     assert tensor.is_local
     out_shape = tensor.shape
     if flow.env.get_rank() == src:
-        tensor.data = tensor_list[src]
-        assert isinstance(tensor_list, list)
-        assert len(tensor_list) == flow.env.get_world_size()
-        for i in range(len(tensor_list)):
+        tensor.data = scatter_list[src]
+        assert isinstance(scatter_list, list)
+        assert len(scatter_list) == flow.env.get_world_size()
+        for i in range(len(scatter_list)):
             if i == src:
                 continue
-            assert isinstance(tensor_list[i], flow._oneflow_internal.Tensor)
-            assert tensor_list[i].is_local
+            assert isinstance(scatter_list[i], flow._oneflow_internal.Tensor)
+            assert scatter_list[i].is_local
             assert (
-                tensor_list[i].shape == out_shape
-            ), f"invalid tensor size at index {i}: {out_shape} vs {tensor_list[i].shape}"
-            flow.comm.send(tensor_list[i], i)
+                scatter_list[i].shape == out_shape
+            ), f"invalid tensor size at index {i}: {out_shape} vs {scatter_list[i].shape}"
+            flow.comm.send(scatter_list[i], i)
     # send/recv on the same rank is invalid
     if flow.env.get_rank() != src:
         flow.comm.recv(src, out=tensor)
+
+
+def gather(tensor, gather_list=None, dst=0):
+    """
+    Gathers a list of tensors in a single process.
+
+    Args:
+        tensor (Tensor): Input tensor.
+        gather_list (list[Tensor], optional): List of appropriately-sized
+            tensors to use for gathered data (default is None, must be specified
+            on the destination rank)
+        dst (int, optional): Destination rank (default is 0)
+
+    """
+    assert isinstance(tensor, flow._oneflow_internal.Tensor)
+    assert tensor.is_local
+    tensor = tensor.expand([1] + list(tensor.shape))
+    device_type = tensor.device.type
+    placement = flow.env.all_device_placement(device_type)
+    tensor = tensor.to_consistent(placement=placement, sbp=flow.sbp.split(0)).to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+    if flow.env.get_rank() == dst:
+        assert gather_list is not None
+        for i in range(tensor.shape[0]):
+            gather_list[i] = tensor[i].to_local()

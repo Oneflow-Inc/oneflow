@@ -88,6 +88,22 @@ class TestScatter(flow.unittest.TestCase):
                 )
             )
 
+class TestGather(flow.unittest.TestCase):
+    @flow.unittest.skip_unless_1n4d()
+    def test_gather_1n4d(test_case):
+        np_arr = np.array([[1, 2], [3, 4]])
+        if flow.env.get_rank() == 1:
+            input = flow.tensor(np_arr + flow.env.get_rank(), device="cuda", dtype=flow.int32)
+            tensor_list = [flow.zeros(np_arr.shape, dtype=flow.int32) for _ in range(4)]
+            flow.comm.gather(input, gather_list=tensor_list, dst=1)
+            for i in range(4):
+                test_case.assertTrue(
+                    np.allclose(tensor_list[i].numpy(), np.array([[1, 2], [3, 4]]) + i)
+                    )
+        else:
+            input = flow.tensor(np_arr + flow.env.get_rank(), device="cuda", dtype=flow.int32)
+            flow.comm.gather(input, dst=1)
+
 
 @flow.unittest.skip_unless_1n2d()
 class TestDocs(flow.unittest.TestCase):
