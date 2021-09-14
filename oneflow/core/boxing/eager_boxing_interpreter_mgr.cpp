@@ -67,7 +67,7 @@ Maybe<BoxingExprIf> GenericBoxingExpr() {
   // in_placement contain out_placement or out_placement contain in_placement
   const auto& boxing_expr_with_inclusive_placement =
       JUST(BoxingExpr(JUST(OutPlacementAndBroadcast()), JUST(BoxingExpr("asymmetric-x-to-b")),
-                      JUST(BoxingExpr("identity")) | JUST(BoxingExpr("naive-b-to-p"))
+                      JUST(BoxingExpr("identity")) | JUST(BoxingExpr("symmetric-b-to-p"))
                           | JUST(BoxingExpr("symmetric-b-to-s"))));
   // in_placement and out_placement have no containment relationship
   // n to 1
