@@ -33,7 +33,7 @@ class GradScaler(object):
             )
         self._growth_interval = growth_interval
 
-    def generate_conf_for_graph(self, train_conf):
+    def _generate_conf_for_graph(self, train_conf):
         train_conf.mutable_dynamic_loss_scale_policy().set_initial_loss_scale(
             self._init_scale
         )
@@ -52,5 +52,5 @@ class StaticGradScaler(object):
 
         self._scale_factor = scale_factor
 
-    def generate_conf_for_graph(self, train_conf):
+    def _generate_conf_for_graph(self, train_conf):
         train_conf.set_loss_scale_factor(self._scale_factor)
