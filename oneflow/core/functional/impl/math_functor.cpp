@@ -687,11 +687,14 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<MaximumFunctor>("Maximum");
   m.add_functor<ScalarFModFunctor>("ScalarFMod");
   m.add_functor<ScalarLogicalEqualFunctor, ScalarLogicalEqual2Functor>("ScalarLogicalEqual");
-  m.add_functor<ScalarLogicalNotEqualFunctor, ScalarLogicalNotEqual2Functor>("ScalarLogicalNotEqual");
+  m.add_functor<ScalarLogicalNotEqualFunctor, ScalarLogicalNotEqual2Functor>(
+      "ScalarLogicalNotEqual");
   m.add_functor<ScalarLogicalGreaterFunctor, ScalarLogicalGreater2Functor>("ScalarLogicalGreater");
-  m.add_functor<ScalarLogicalGreaterEqualFunctor, ScalarLogicalGreaterEqual2Functor>("ScalarLogicalGreaterEqual");
+  m.add_functor<ScalarLogicalGreaterEqualFunctor, ScalarLogicalGreaterEqual2Functor>(
+      "ScalarLogicalGreaterEqual");
   m.add_functor<ScalarLogicalLessFunctor, ScalarLogicalLess2Functor>("ScalarLogicalLess");
-  m.add_functor<ScalarLogicalLessEqualFunctor, ScalarLogicalLessEqual2Functor>("ScalarLogicalLessEqual");
+  m.add_functor<ScalarLogicalLessEqualFunctor, ScalarLogicalLessEqual2Functor>(
+      "ScalarLogicalLessEqual");
 };
 
 }  // namespace functional
