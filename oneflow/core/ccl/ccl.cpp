@@ -164,6 +164,82 @@ Maybe<void> AllReduce<DeviceType::kCPU>(const void* in, void* out, size_t elem_c
   return SwitchDtypeAllReduce(SwitchCase(dtype, reduce_type), in, out, elem_cnt, parallel_desc);
 }
 
+template<typename T, ReduceType reduce_type>
+struct DtypeReduceScatter;
+
+template<typename T>
+struct DtypeReduceScatter<T, kSum> {
+  static Maybe<void> Call(const void* void_in, void* void_out, size_t elem_cnt,
+                          Symbol<ParallelDesc> parallel_desc) {
+    const T* in = reinterpret_cast<const T*>(void_in);
+    T* out = reinterpret_cast<T*>(void_out);
+
+    int64_t parallel_num = parallel_desc->parallel_num();
+    BalancedSplitter bs(elem_cnt * parallel_num, parallel_num);
+    const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
+    CHECK_OR_RETURN(opt_parallel_id->has_value());
+    int64_t parallel_id = JUST(opt_parallel_id->value());
+
+    std::vector<T> recv_buffer(bs.At(0).size());
+    const auto& rank_group = JUST(RankGroup::New(parallel_desc));
+
+    TransportToken transport_token =
+        JUST(TransportToken::NewTransportToken(kTransportTokenTypeData));
+    for (int64_t i = 0, part_id = RingDecrease(parallel_id, parallel_num); i < parallel_num - 1;
+         ++i, part_id = RingDecrease(part_id, parallel_num)) {
+      int64_t send_part_id = part_id;
+      const T* send_ptr = nullptr;
+      if (i == 0) {
+        send_ptr = &in[bs.At(send_part_id).begin()];
+      } else {
+        send_ptr = out;
+      }
+      size_t send_size = bs.At(send_part_id).size();
+      int64_t recv_part_id = RingDecrease(part_id, parallel_num);
+      T* recv_ptr = recv_buffer.data();
+      size_t recv_size = bs.At(recv_part_id).size();
+      NaiveAsyncTransportCtx ctx(
+          transport_token,
+          [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+            *buffer = const_cast<T*>(send_ptr);
+            *size = send_size * sizeof(T);
+            *Cb = [] {};
+            return Maybe<void>::Ok();
+          },
+          [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+            *buffer = recv_ptr;
+            *size = recv_size * sizeof(T);
+            *Cb = [] {};
+            return Maybe<void>::Ok();
+          });
+      if (send_size > 0) {
+        JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
+      }
+      if (recv_size > 0) {
+        JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
+      }
+      JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+      const T* cur_in = &in[bs.At(recv_part_id).begin()];
+      if (recv_size > 0) { VecAdd(recv_size, out, cur_in, recv_ptr); }
+    }
+    return Maybe<void>::Ok();
+  }
+};
+
+#define MAKE_REDUCE_SCATTER_ENTRY(func_name, T, reduce_type) func_name<T, reduce_type>::Call
+
+DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, DtypeReduceScatter, MAKE_REDUCE_SCATTER_ENTRY,
+                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ), CCL_REDUCE_TYPE_CTRV_SEQ);
+
+#undef MAKE_REDUCE_SCATTER_ENTRY
+
+template<>
+Maybe<void> ReduceScatter<DeviceType::kCPU>(const void* in, void* out, size_t elem_cnt,
+                                            DataType dtype, ReduceType reduce_type,
+                                            Symbol<ParallelDesc> parallel_desc, DeviceCtx* ctx) {
+  return SwitchDtypeReduceScatter(SwitchCase(dtype, reduce_type), in, out, elem_cnt, parallel_desc);
+}
+
 template<>
 Maybe<void> Broadcast<DeviceType::kCPU>(const void* in, void* out, size_t elem_cnt, DataType dtype,
                                         int64_t root, Symbol<ParallelDesc> parallel_desc,
