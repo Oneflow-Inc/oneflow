@@ -32,7 +32,9 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def cast_forward_compare_with_tensorflow(test_cast, device_type, input_shape, dtype):
+def cast_forward_compare_with_tensorflow(
+    test_cast, device_type, input_shape, from_type, to_type
+):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -41,15 +43,15 @@ def cast_forward_compare_with_tensorflow(test_cast, device_type, input_shape, dt
     @flow.global_function(function_config=func_config)
     def cast_forward(
         input_def: oft.Numpy.Placeholder(
-            shape=input_shape, dtype=type_name_to_flow_type[dtype]
+            shape=input_shape, dtype=type_name_to_flow_type[from_type]
         )
     ):
         with flow.scope.placement(device_type, "0:0"):
-            return flow.cast(input_def, dtype=type_name_to_flow_type[dtype])
+            return flow.cast(input_def, dtype=type_name_to_flow_type[to_type])
 
-    input = np.random.rand(*input_shape).astype(type_name_to_np_type[dtype])
+    input = np.random.rand(*input_shape).astype(type_name_to_np_type[from_type])
     of_out = cast_forward(input).get()
-    tf_out = tf.cast(input, dtype=type_name_to_np_type[dtype])
+    tf_out = tf.cast(input, dtype=type_name_to_np_type[to_type])
     assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-05, atol=1e-05)
 
 
@@ -106,7 +108,8 @@ class TestCast(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["input_shape"] = [(5, 4, 3)]
-        arg_dict["dtype"] = ["float32", "int8", "uint8", "double", "int32", "int64"]
+        arg_dict["from_type"] = ["float32", "int8", "uint8", "double", "int32", "int64"]
+        arg_dict["to_type"] = ["float32", "int8", "uint8", "double", "int32", "int64"]
         for arg in GenArgList(arg_dict):
             cast_forward_compare_with_tensorflow(test_case, *arg)
 
