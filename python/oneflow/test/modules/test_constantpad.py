@@ -19,7 +19,8 @@ from collections import OrderedDict
 
 import numpy as np
 
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from oneflow.nn.common_types import _size_2_t, _size_4_t, _size_6_t
 import oneflow as flow
 import oneflow.unittest

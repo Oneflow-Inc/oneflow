@@ -17,7 +17,7 @@ import unittest
 
 import oneflow as flow
 import oneflow.unittest
-from automated_test_util import *
+from oneflow.test_utils.automated_test_util import *
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 
 
