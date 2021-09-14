@@ -66,6 +66,11 @@ class PReluFunctor : public BinaryFunctor {
   PReluFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("prelu").Input("x").Input("alpha").Output("y").Build());
   }
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, 
+                           const std::shared_ptr<Tensor>& alpha) const {
+    JUST(CheckPReLUParametersValid(x, alpha));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, alpha});
+  }
 };
 
 class PReluGradFunctor {

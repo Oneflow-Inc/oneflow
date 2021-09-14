@@ -56,6 +56,19 @@ Maybe<void> CheckShapeCanExpandTo(const Shape& shape, const Shape& expand_shape)
   return Maybe<void>::Ok();
 }
 
+bool IsPReLUParametersValid(const std::shared_ptr<Tensor>& x,
+                            const std::shared_ptr<Tensor>& alpha) {
+  int num_params = alpha->dim(0);
+  return ((num_params == 1) || (num_params == x->shape()->At(1)));
+}
+
+Maybe<void> CheckPReLUParametersValid(const std::shared_ptr<Tensor>& x,
+                                      const std::shared_ptr<Tensor>& alpha) { 
+  CHECK_OR_RETURN(IsPReLUParametersValid(x, alpha))
+      << "num_parameters in prelu must be 1 or " << x->shape()->At(1);
+  return Maybe<void>::Ok();
+}
+
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
