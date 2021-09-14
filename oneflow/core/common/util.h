@@ -240,6 +240,8 @@ int64_t ParseIntegerFromEnv(const std::string& env_var, int64_t default_value);
 
 std::string GetStringFromEnv(const std::string& env_var, const std::string& default_value);
 
+std::vector<std::string> Split(const std::string& s, const std::string& delimiter);
+
 #define OF_PREDICT_TRUE GOOGLE_PREDICT_TRUE
 #define OF_PREDICT_FALSE GOOGLE_PREDICT_FALSE
 

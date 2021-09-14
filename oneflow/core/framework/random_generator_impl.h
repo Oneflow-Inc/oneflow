@@ -22,6 +22,7 @@ limitations under the License.
 
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/tensor.h"
 #ifdef WITH_CUDA
 #include <curand.h>
 #include <curand_kernel.h>
@@ -62,6 +63,9 @@ class GeneratorImpl {
   virtual void set_current_seed(uint64_t seed) = 0;
   uint64_t current_seed() const { return seed_; }
 
+  virtual Maybe<Tensor> GetState() const = 0;
+  virtual Maybe<void> SetState(const std::shared_ptr<Tensor>& tensor_state) = 0;
+
  protected:
   uint64_t seed_;
 };
@@ -95,6 +99,9 @@ class CPUGeneratorImpl : public DeviceGeneratorImpl {
 
   std::mt19937& engine() { return engine_; }
 
+  Maybe<Tensor> GetState() const override;
+  Maybe<void> SetState(const std::shared_ptr<Tensor>& tensor_state) override;
+
  public:
   std::mt19937 engine_;
 };
@@ -111,6 +118,9 @@ class CUDAGeneratorImpl : public DeviceGeneratorImpl {
   curandState* curand_states() const { return curand_states_; }
 
   void set_current_seed(uint64_t seed) override;
+
+  Maybe<Tensor> GetState() const override;
+  Maybe<void> SetState(const std::shared_ptr<Tensor>& tensor_state) override;
 
  private:
   int32_t max_block_num_;
@@ -137,6 +147,9 @@ class AutoGeneratorImpl : public GeneratorImpl {
     seed_ = seed;
     for (const auto& it : generators_) { it.second->set_current_seed(seed); }
   }
+
+  Maybe<Tensor> GetState() const override;
+  Maybe<void> SetState(const std::shared_ptr<Tensor>& tensor_state) override;
 
   template<typename T>
   Maybe<T> GetOrCreate(int device_index) {

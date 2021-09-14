@@ -19,7 +19,9 @@ limitations under the License.
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/platform.h"
 #include <csignal>
+#include <cstdlib>
 #include <limits>
+#include <sstream>
 
 #ifdef __linux__
 #include <sys/sysinfo.h>
@@ -158,6 +160,18 @@ std::string GetStringFromEnv(const std::string& env_var, const std::string& defa
   } else {
     return env_p;
   }
+}
+
+std::vector<std::string> Split(const std::string& s, const std::string& delimiter) {
+  std::vector<std::string> splits;
+  size_t last = 0;
+  size_t next = 0;
+  while ((next = s.find(delimiter, last)) != std::string::npos) {
+    splits.emplace_back(s.substr(last, next - last));
+    last = next + 1;
+  }
+  splits.emplace_back(s.substr(last));
+  return splits;
 }
 
 }  // namespace oneflow

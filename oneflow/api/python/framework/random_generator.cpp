@@ -27,7 +27,15 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<one::Generator, std::shared_ptr<one::Generator>>(m, "Generator")
       .def("manual_seed", &one::Generator::set_current_seed)
       .def("initial_seed", &one::Generator::current_seed)
-      .def("seed", &one::Generator::seed);
+      .def("seed", &one::Generator::seed)
+      .def("__getstate__",
+           [](const std::shared_ptr<one::Generator>& generator) {
+             return generator->GetState().GetPtrOrThrow();
+           })
+      .def("__setstate__", [](const std::shared_ptr<one::Generator>& generator,
+                              const std::shared_ptr<one::Tensor>& state) {
+        return generator->SetState(state).GetOrThrow();
+      });
 
   m.def("manual_seed", [](uint64_t seed) { return one::ManualSeed(seed).GetOrThrow(); });
   m.def("create_generator", [](const std::string& device_tag) {

@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_RANDOM_GENERATOR_H_
 #define ONEFLOW_CORE_FRAMEWORK_RANDOM_GENERATOR_H_
 
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/random_generator_impl.h"
 
 namespace oneflow {
@@ -37,6 +38,9 @@ class Generator final {
 
   // Reset current generator by a non-deterministic random seed, and returns it.
   uint64_t seed();
+
+  Maybe<Tensor> GetState() const { return impl_->GetState(); }
+  Maybe<void> SetState(const std::shared_ptr<Tensor>& state) { return impl_->SetState(state); }
 
   const std::shared_ptr<GeneratorImpl>& impl() const { return impl_; }
 
