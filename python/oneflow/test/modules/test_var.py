@@ -18,6 +18,7 @@ import unittest
 import oneflow as flow
 from oneflow.test_utils.automated_test_util.generators import random
 import oneflow.unittest
+from automated_test_util import torch
 from automated_test_util import *
 
 

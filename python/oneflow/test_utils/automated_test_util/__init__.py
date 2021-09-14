@@ -15,3 +15,4 @@ limitations under the License.
 """
 from .generators import *
 from .torch_flow_dual_object import *
+from .torch_flow_dual_object import torch

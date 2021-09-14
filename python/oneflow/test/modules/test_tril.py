@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+from automated_test_util import torch
 from automated_test_util import *
 import oneflow as flow
 import oneflow.unittest

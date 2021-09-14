@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow as flow
 from test_util import GenArgList
+from automated_test_util import torch
 from automated_test_util import *
 
 

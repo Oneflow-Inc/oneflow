@@ -19,6 +19,7 @@ from collections import OrderedDict
 
 import math
 import numpy as np
+from automated_test_util import torch
 from automated_test_util import *
 from test_util import GenArgList
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type

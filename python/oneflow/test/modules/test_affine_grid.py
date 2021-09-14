@@ -19,6 +19,7 @@ from random import randint
 from random import choice
 
 import numpy as np
+from automated_test_util import torch
 from automated_test_util import *
 
 import oneflow as flow

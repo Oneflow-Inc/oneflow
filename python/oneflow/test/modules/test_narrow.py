@@ -15,6 +15,7 @@ limitations under the License.
 """
 import unittest
 import numpy as np
+from automated_test_util import torch
 from automated_test_util import *
 
 import oneflow as flow

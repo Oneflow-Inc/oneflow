@@ -20,6 +20,7 @@ import oneflow.unittest
 
 import unittest
 
+from automated_test_util import torch
 from automated_test_util import *
 
 

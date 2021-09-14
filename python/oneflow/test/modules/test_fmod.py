@@ -19,6 +19,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+from automated_test_util import torch
 from automated_test_util import *
 from test_util import GenArgList
 

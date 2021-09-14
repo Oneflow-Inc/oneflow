@@ -22,6 +22,7 @@ from packaging import version
 import torch as torch_original
 from typing import Union, Tuple
 
+from automated_test_util import torch
 from automated_test_util import *
 
 NoneType = type(None)

@@ -19,6 +19,7 @@ from collections import OrderedDict
 
 import math
 import numpy as np
+from automated_test_util import torch
 from automated_test_util import *
 from oneflow.nn.modules import min_max_observer
 from test_util import GenArgList

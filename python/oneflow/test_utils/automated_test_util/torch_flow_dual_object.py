@@ -541,4 +541,4 @@ def random_pytorch_tensor(
 
 
 torch = GetDualObject("", torch_original, flow)
-__all__ = ["torch", "autotest", "random_pytorch_tensor"]
+__all__ = ["autotest", "random_pytorch_tensor"]

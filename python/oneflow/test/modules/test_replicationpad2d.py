@@ -22,6 +22,7 @@ from test_util import Array2Numpy, FlattenArray, GenArgList, Index2Coordinate
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import torch
 from automated_test_util import *
 
 

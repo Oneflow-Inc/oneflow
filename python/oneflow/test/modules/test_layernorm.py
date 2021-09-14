@@ -21,6 +21,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 
+from automated_test_util import torch
 from automated_test_util import *
 from test_util import GenArgList
 

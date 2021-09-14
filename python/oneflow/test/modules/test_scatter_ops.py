@@ -18,6 +18,7 @@ import unittest
 import oneflow as flow
 import oneflow.unittest
 import numpy as np
+from automated_test_util import torch
 from automated_test_util import *
 
 
