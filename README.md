@@ -8,8 +8,8 @@
 ## Latest News
 
 - Version 0.5rc1 is out!
-  - New Pytorch flavored APIs (`import oneflow.experimental as flow`)
-  - New [models and examples](https://github.com/Oneflow-Inc/models)
+  - First class support for eager execution. The deprecated APIs are moved to `oneflow.compatible.single_client`
+  - Drop-in replacement of `import torch` for existing Pytorch projects. You could test it by inter-changing `import oneflow as torch` and `import torch as flow`.
   - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.5rc1)
 
 ## Install OneFlow
