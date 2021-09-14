@@ -245,7 +245,6 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
         signal_handling._set_worker_signal_handlers()
 
          # TODO:flow.set_num_threads(1)
-        flow.set_num_threads(1)
         seed = base_seed + worker_id
         random.seed(seed)
         flow.manual_seed(seed)

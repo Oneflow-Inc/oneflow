@@ -14,27 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
-import unittest
-
-import oneflow.unittest
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.optim as optim
 from data_utils import load_data_cifar10
-
-
-classes = (
-    "plane",
-    "car",
-    "bird",
-    "cat",
-    "deer",
-    "dog",
-    "frog",
-    "horse",
-    "ship",
-    "truck",
-)
 
 
 class Net(nn.Module):
@@ -57,11 +40,9 @@ class Net(nn.Module):
         return x
 
 
-def test(test_case):
-    if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
-        device = flow.device("cpu")
-    else:
-        device = flow.device("cuda")
+def test():
+
+    device = flow.device("cuda")
     net = Net()
     net.to(device)
 
@@ -121,11 +102,5 @@ def test(test_case):
     # test_case.assertLess(final_loss, 1.50)
 
 
-@flow.unittest.skip_unless_1n1d()
-class TestCifarDataset(flow.unittest.TestCase):
-    def test_cifar_dataset(test_case):
-        test(test_case)
-
-
 if __name__ == "__main__":
-    unittest.main()
+    test()
