@@ -75,13 +75,13 @@ class PReluFunctor {
     return Maybe<void>::Ok();
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, 
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
                            const std::shared_ptr<Tensor>& alpha) const {
     JUST(CheckPReLUParametersValid(x, alpha));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, alpha});
   }
 
-  private:
+ private:
   std::shared_ptr<OpExpr> op_;
 };
 
