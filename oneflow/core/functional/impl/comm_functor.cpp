@@ -178,7 +178,6 @@ class ConsistentAllReduceFunctor {
     {
       CHECK_OR_RETURN(x->is_consistent());
       CHECK_OR_RETURN(IsAllPartialSumNdSbp(JUST(x->nd_sbp())));
-      CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllReduceOpExpr(JUST(x->parallel_desc())));
@@ -215,7 +214,6 @@ class ConsistentAllGatherFunctor {
     {
       CHECK_OR_RETURN(x->is_consistent());
       CHECK_OR_RETURN(IsAllSplitNdSbp(JUST(x->nd_sbp()), 0));
-      CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllGatherOpExpr(JUST(x->parallel_desc())));
@@ -285,9 +283,9 @@ class RecvFunctor {
     DataType data_type = DataType::kInvalidDataType;
     Symbol<Device> device;
     if (optional_shape.has_value() && optional_dtype.has_value() && optional_device.has_value()) {
-      shape = *JUST(optional_shape.value());
-      data_type = JUST(optional_dtype.value())->data_type();
-      device = JUST(optional_device.value());
+      shape = *JUST(optional_shape);
+      data_type = JUST(optional_dtype)->data_type();
+      device = JUST(optional_device);
     } else if (!optional_shape.has_value() && !optional_dtype.has_value()
                && !optional_device.has_value()) {
       FlatShape flat_shape{};
@@ -313,7 +311,7 @@ class RecvFunctor {
     OpExprInterpContext op_expr_interp_context(attrs, device);
 
     if (out.has_value()) {
-      std::shared_ptr<one::Tensor> out_tensor = JUST(out.value());
+      std::shared_ptr<one::Tensor> out_tensor = JUST(out);
       Symbol<Device> out_tensor_device = JUST(out_tensor->device());
       CHECK_OR_RETURN(out_tensor_device == device);
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);

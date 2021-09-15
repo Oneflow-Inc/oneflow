@@ -62,14 +62,15 @@ void MultiThreadLoop(size_t num, std::function<void(size_t i)> Callback) {
   size_t thread_num = Global<ThreadPool>::Get()->thread_num();
   thread_num = std::min(num, thread_num);
   BalancedSplitter bs(num, thread_num);
-  BlockingCounter bc(thread_num);
+  std::atomic<size_t> bc(thread_num);
   FOR_RANGE(size_t, range_id, 0, thread_num) {
     Global<ThreadPool>::Get()->AddWork([&bc, &bs, range_id, Callback] {
       FOR_RANGE(size_t, i, bs.At(range_id).begin(), bs.At(range_id).end()) { Callback(i); }
-      bc.Decrease();
+      --bc;
     });
   }
-  bc.WaitUntilCntEqualZero();
+  // buzy loop wait.
+  while (bc > 0) {}
 }
 
 }  // namespace oneflow

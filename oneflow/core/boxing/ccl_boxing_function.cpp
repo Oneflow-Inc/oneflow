@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/boxing/eager_boxing_interpreter_util.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/functional/functional.h"
@@ -21,6 +22,33 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
+Maybe<void> RawCheckCclP2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+  CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
+  CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
+
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllPartialSumNdSbp(in->nd_sbp()));
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(out->nd_sbp()));
+
+  CHECK_OR_RETURN(in->placement() == out->placement());
+  CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCPU);
+  return Maybe<void>::Ok();
+}
+
+static constexpr auto* CheckCclP2B = DECORATE(&RawCheckCclP2B, ThreadLocal);
+
+Maybe<void> RawCheckCclS2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+  CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
+  CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
+
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllSplitNdSbp(in->nd_sbp(), 0));
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(out->nd_sbp()));
+
+  CHECK_OR_RETURN(in->placement() == out->placement());
+  CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCPU);
+  return Maybe<void>::Ok();
+}
+
+static constexpr auto* CheckCclS2B = DECORATE(&RawCheckCclS2B, ThreadLocal);
 
 bool IsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
   return sbp_parallel->has_split_parallel();
@@ -44,6 +72,24 @@ static constexpr auto* CheckCclS2S = DECORATE(&RawCheckCclS2S, ThreadLocal);
 
 }  // namespace
 
+Maybe<one::Tensor> CclP2B(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
+                          Symbol<PlacedNdSbp> out) {
+  const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
+  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
+  const auto& tensor_placement = JUST(tensor->parallel_desc());
+  CHECK_OR_RETURN(tensor_placement == in->placement());
+  return JUST(one::functional::ConsistentAllReduce(tensor));
+}
+
+Maybe<one::Tensor> CclS2B(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
+                          Symbol<PlacedNdSbp> out) {
+  const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
+  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
+  const auto& tensor_placement = JUST(tensor->parallel_desc());
+  CHECK_OR_RETURN(tensor_placement == in->placement());
+  return JUST(one::functional::ConsistentAllGather(tensor));
+}
+
 Maybe<one::Tensor> CclS2S(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
                           Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
@@ -53,6 +99,8 @@ Maybe<one::Tensor> CclS2S(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pla
   return JUST(one::functional::ConsistentS2S(tensor, *JUST(GetSbpList(out->nd_sbp()))));
 }
 
+COMMAND(RegisterBoxingFunction("ccl-p-to-b", CheckCclP2B, &CclP2B));
+COMMAND(RegisterBoxingFunction("ccl-s-to-b", CheckCclS2B, &CclS2B));
 COMMAND(RegisterBoxingFunction("ccl-s-to-s", CheckCclS2S, &CclS2S));
 
 }  // namespace oneflow
