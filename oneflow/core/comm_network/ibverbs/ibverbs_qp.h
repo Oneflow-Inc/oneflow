@@ -40,7 +40,7 @@ class ActorMsgMR final {
 
   void* addr() { return static_cast<void*>(data_); }
   uint32_t lkey() const { return mr_->lkey; }
-  void* message() const { return data_; } 
+  void* message() const { return data_; }
   void set_data(char* data, size_t size) {
     std::memcpy(data_, data, size);
     size_ = size;

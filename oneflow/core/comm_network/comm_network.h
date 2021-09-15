@@ -48,10 +48,10 @@ class CommNet {
   void AddReadCallBack(void* actor_read_id, std::function<void()> callback);
   void ReadDone(void* read_id);
 
-  virtual void SendMsg(int64_t dst_machine_id,uint64_t addr, size_t size ) = 0;
-  virtual uint64_t SerialActorMsgToData(const ActorMsg & msg,size_t *size) = 0;
-  virtual ActorMsg DeserialDataToActorMsg(void * data,size_t size) = 0;
-  
+  virtual void SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) = 0;
+  virtual uint64_t SerialActorMsgToData(const ActorMsg& msg, size_t* size) = 0;
+  virtual ActorMsg DeserialDataToActorMsg(void* data, size_t size) = 0;
+
  protected:
   CommNet();
 
