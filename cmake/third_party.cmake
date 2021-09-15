@@ -135,7 +135,7 @@ set(oneflow_third_party_libs
   glog::glog
   GTest::gtest
   protobuf::libprotobuf
-  gRPC::grpc
+  gRPC::grpc++_unsecure
   ${BLAS_LIBRARIES}
   opencv::opencv
   ZLIB::ZLIB
