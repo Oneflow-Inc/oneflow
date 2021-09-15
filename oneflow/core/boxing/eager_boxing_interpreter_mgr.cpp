@@ -44,10 +44,9 @@ Maybe<BoxingExprIf> NcclSxToBBoxingExpr() {
                          JUST(BoxingExpr("nccl-s-to-b"))));
 }
 
-Maybe<BoxingExprIf> SymmetricPToSxBoxingExpr() {
-  return JUST(BoxingExpr(JUST(OutPlacementAndSplit(0)),
-                         JUST(BoxingExpr("nccl-p-to-s")) | JUST(BoxingExpr("ccl-p-to-s")),
-                         JUST(OptionalBoxing("nccl-s-to-s")) | JUST(BoxingExpr("ccl-s-to-s"))));
+Maybe<BoxingExprIf> NcclPToSxBoxingExpr() {
+  return JUST(BoxingExpr(JUST(OutPlacementAndSplit(0)), JUST(BoxingExpr("nccl-p-to-s")),
+                         JUST(OptionalBoxing("nccl-s-to-s"))));
 }
 
 Maybe<BoxingExprIf> NToOneBoxingExpr() {
@@ -59,7 +58,7 @@ Maybe<BoxingExprIf> NToOneBoxingExpr() {
 
 Maybe<BoxingExprIf> OneToNBoxingExpr() {
   return JUST(BoxingExpr(JUST(OutPlacementAndPartialSum()), JUST(BoxingExpr("naive-1-to-p")),
-                         JUST(BoxingExpr("nccl-p-to-b")) | JUST(SymmetricPToSxBoxingExpr())
+                         JUST(BoxingExpr("nccl-p-to-b")) | JUST(NcclPToSxBoxingExpr())
                              | JUST(BoxingExpr("identity"))));
 }
 
