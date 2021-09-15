@@ -26,7 +26,7 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> RawCheckNaiveBToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckSymmetricBToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(in->nd_sbp()));
@@ -36,12 +36,12 @@ Maybe<void> RawCheckNaiveBToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNaiveBToP = DECORATE(&RawCheckNaiveBToP, ThreadLocal);
+static constexpr auto* CheckSymmetricBToP = DECORATE(&RawCheckSymmetricBToP, ThreadLocal);
 
 }  // namespace
 
-Maybe<one::Tensor> NaiveBToP(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
-                             Symbol<PlacedNdSbp> out) {
+Maybe<one::Tensor> SymmetricBToP(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
+                                 Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
@@ -60,6 +60,6 @@ Maybe<one::Tensor> NaiveBToP(const std::shared_ptr<one::Tensor>& tensor, Symbol<
                                                  tensor->dtype()));
 }
 
-COMMAND(RegisterBoxingFunction("naive-b-to-p", CheckNaiveBToP, &NaiveBToP));
+COMMAND(RegisterBoxingFunction("symmetric-b-to-p", CheckSymmetricBToP, &SymmetricBToP));
 
 }  // namespace oneflow
