@@ -107,12 +107,12 @@ EpollCommNet::~EpollCommNet() {
   ActorMsg DeserialDataToActorMsg(char * data,size_t size) override;
 */
 
-void EpollCommNet::SendMsg(int64_t dst_machine_id, char * data ,size_t size) {
+void EpollCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr ,size_t size) {
 
 }
 
-char * EpollCommNet::SerialActorMsgToData(const ActorMsg &msg, size_t *size) {
-  return nullptr;
+uint64_t EpollCommNet::SerialActorMsgToData(const ActorMsg &msg, size_t *size) {
+  return 0;
 }
 
 ActorMsg EpollCommNet::DeserialDataToActorMsg(void *data, size_t size) {

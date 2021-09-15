@@ -102,11 +102,12 @@ IBVerbsCommNet::~IBVerbsCommNet() {
   qp_vec_.at(dst_machine_id)->PostSendRequest(data,size);
 }*/
 
-void IBVerbsCommNet::SendMsg(int64_t dst_machine_id, char *data, size_t size) {
+void IBVerbsCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) {
+  char * data = reinterpret_cast<char*>(addr);
   qp_vec_.at(dst_machine_id)->PostSendRequest(data,size);
 }
 
-char *IBVerbsCommNet::SerialActorMsgToData(const ActorMsg &msg, size_t *size) {
+uint64_t IBVerbsCommNet::SerialActorMsgToData(const ActorMsg &msg, size_t *size) {
   ActorMsg new_msg = msg;
   if (msg.IsDataRegstMsgToConsumer()) {
     CHECK_EQ(msg.user_data_size(), 0);
@@ -119,9 +120,10 @@ char *IBVerbsCommNet::SerialActorMsgToData(const ActorMsg &msg, size_t *size) {
     static_assert(sizeof(IBVerbsCommNetRMADesc) <= kActorMsgUserDataMaxSize, "");
     new_msg.AddUserData(sizeof(IBVerbsCommNetRMADesc), &rma_desc);
   }
-  char* data = reinterpret_cast<char*>(&new_msg);
+  //char* data = reinterpret_cast<char*>(&new_msg);
+  uint64_t addr = reinterpret_cast<uint64_t>(&new_msg);
   *size = sizeof(new_msg);
-  return data;
+  return addr;
 }
 
 ActorMsg IBVerbsCommNet::DeserialDataToActorMsg(void *data, size_t size) {

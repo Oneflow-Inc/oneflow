@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_COMM_NETWORK_H_
 #define ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_COMM_NETWORK_H_
 
+#include <cstdint>
 #include "oneflow/core/common/platform.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
@@ -40,8 +41,8 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsCommNet);
   ~IBVerbsCommNet();
 
-  void SendMsg(int64_t dst_machine_id,char * data,size_t size ) override;
-  char *SerialActorMsgToData(const ActorMsg & msg,size_t *size) override;
+  void SendMsg(int64_t dst_machine_id,uint64_t addr,size_t size ) override;
+  uint64_t SerialActorMsgToData(const ActorMsg & msg,size_t *size) override;
   ActorMsg DeserialDataToActorMsg(void * data,size_t size) override;
   void RecvMsg(void* data, size_t size);
 

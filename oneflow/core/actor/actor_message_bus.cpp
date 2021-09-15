@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/actor/actor_message_bus.h"
+#include <cstdint>
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/thread/thread_manager.h"
@@ -40,14 +41,14 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       ActorMsg new_msg = msg;
       new_msg.set_comm_net_sequence_number(comm_net_sequence);
       size_t  size = 0;
-      char * data = Global<CommNet>::Get()->SerialActorMsgToData(new_msg,&size);
+      uint64_t addr = Global<CommNet>::Get()->SerialActorMsgToData(new_msg,&size);
       CHECK_EQ(size,sizeof(new_msg));
-      Global<CommNet>::Get()->SendMsg(dst_machine_id, data,  size);
+      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr,  size);
     } else {
       size_t  size = 0;
-      char * data = Global<CommNet>::Get()->SerialActorMsgToData(msg,&size);
+      uint64_t addr = Global<CommNet>::Get()->SerialActorMsgToData(msg,&size);
       CHECK_EQ(size,sizeof(msg));
-      Global<CommNet>::Get()->SendMsg(dst_machine_id, data,size);
+      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr,size);
     }
   }
 }
