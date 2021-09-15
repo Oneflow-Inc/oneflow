@@ -75,13 +75,10 @@ class ReplicationPad2d : public Pad2d {
   }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("reflection_pad2d", ReflectionPad2d);
-REGISTER_OP_EXPR_GRAD_FUNCTION("replication_pad2d", ReplicationPad2d);
-
 struct ConstantPadNdCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   std::vector<int64_t> paddings;
-  functional::Scalar padding_value;
+  Scalar padding_value;
 };
 
 class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
@@ -103,9 +100,9 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->paddings = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("padding"));
     if (IsFloatingDataType(inputs.at(0)->dtype()->data_type())) {
-      ctx->padding_value = JUST(composed_attrs.GetAttr<double>("floating_value"));
+      ctx->padding_value = JUST(composed_attrs.GetAttr<double>("floating_constant_value"));
     } else if (IsIntegralDataType(inputs.at(0)->dtype()->data_type())) {
-      ctx->padding_value = JUST(composed_attrs.GetAttr<int64_t>("integral_value"));
+      ctx->padding_value = JUST(composed_attrs.GetAttr<int64_t>("integral_constant_value"));
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
     }
@@ -127,9 +124,9 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
   AttrMap base_attrs_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("constant_pad1d", ConstantPadNd);
-REGISTER_OP_EXPR_GRAD_FUNCTION("constant_pad2d", ConstantPadNd);
-REGISTER_OP_EXPR_GRAD_FUNCTION("constant_pad3d", ConstantPadNd);
+REGISTER_OP_EXPR_GRAD_FUNCTION("pad", ConstantPadNd);
+REGISTER_OP_EXPR_GRAD_FUNCTION("reflection_pad2d", ReflectionPad2d);
+REGISTER_OP_EXPR_GRAD_FUNCTION("replication_pad2d", ReplicationPad2d);
 
 }  // namespace one
 }  // namespace oneflow

@@ -24,7 +24,6 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/function_library.h"
-#include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/functional/functional.h"
 

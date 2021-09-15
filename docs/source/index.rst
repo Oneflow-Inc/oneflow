@@ -24,6 +24,7 @@ OneFlow API Reference
     cuda
     distributed
     fx
+    comm
 
 
 

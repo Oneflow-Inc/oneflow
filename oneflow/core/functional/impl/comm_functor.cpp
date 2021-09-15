@@ -27,7 +27,6 @@ limitations under the License.
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
-#include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/job/rank_group_scope.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
@@ -119,13 +118,14 @@ auto* CachedEagerNcclS2SOpExpr = DECORATE(&EagerNcclS2S, ThreadLocal);
 class BroadcastFunctor {
  public:
   BroadcastFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool inplace) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t src_rank,
+                           bool inplace) const {
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
     std::string device_type_str = JUST(x->device())->type();
     CHECK_OR_RETURN(device_type_str == "cuda" || device_type_str == "cpu");
     DeviceType device_type = device_type_str == "cuda" ? DeviceType::kGPU : DeviceType::kCPU;
     const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
-    return one::Broadcast(x, parallel_desc, inplace);
+    return one::Broadcast(x, src_rank, parallel_desc, inplace);
   }
 };
 
@@ -178,7 +178,6 @@ class ConsistentAllReduceFunctor {
     {
       CHECK_OR_RETURN(x->is_consistent());
       CHECK_OR_RETURN(IsAllPartialSumNdSbp(JUST(x->nd_sbp())));
-      CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllReduceOpExpr(JUST(x->parallel_desc())));
@@ -215,7 +214,6 @@ class ConsistentAllGatherFunctor {
     {
       CHECK_OR_RETURN(x->is_consistent());
       CHECK_OR_RETURN(IsAllSplitNdSbp(JUST(x->nd_sbp()), 0));
-      CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllGatherOpExpr(JUST(x->parallel_desc())));
@@ -285,9 +283,9 @@ class RecvFunctor {
     DataType data_type = DataType::kInvalidDataType;
     Symbol<Device> device;
     if (optional_shape.has_value() && optional_dtype.has_value() && optional_device.has_value()) {
-      shape = *JUST(optional_shape.value());
-      data_type = JUST(optional_dtype.value())->data_type();
-      device = JUST(optional_device.value());
+      shape = *JUST(optional_shape);
+      data_type = JUST(optional_dtype)->data_type();
+      device = JUST(optional_device);
     } else if (!optional_shape.has_value() && !optional_dtype.has_value()
                && !optional_device.has_value()) {
       FlatShape flat_shape{};
@@ -313,7 +311,7 @@ class RecvFunctor {
     OpExprInterpContext op_expr_interp_context(attrs, device);
 
     if (out.has_value()) {
-      std::shared_ptr<one::Tensor> out_tensor = JUST(out.value());
+      std::shared_ptr<one::Tensor> out_tensor = JUST(out);
       Symbol<Device> out_tensor_device = JUST(out_tensor->device());
       CHECK_OR_RETURN(out_tensor_device == device);
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);

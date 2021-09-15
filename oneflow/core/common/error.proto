@@ -133,6 +133,8 @@ message TypeError {}
 
 message TimeoutError {}
 
+message ValueNotFoundError {}
+
 message ErrorProto {
   optional string error_summary = 1 [default = ""];
   optional string msg = 2 [default = ""];
@@ -157,6 +159,7 @@ message ErrorProto {
     TypeError type_error = 29;
     RuntimeError runtime_error = 30;
     TimeoutError timeout_error = 40;
+    ValueNotFoundError value_not_found_error = 31;
     
     JobNameExistError job_name_exist_error = 100;
     JobNameEmptyError job_name_empty_error = 101;
