@@ -246,7 +246,7 @@ jobs:
           oneflow-src: .
           oneflow-build-env: conda
           conda-env-file: conda-env/dev/clang10/environment-v2.yml
-          conda-prefix: ~/miniconda3-prefixes/py39_4.10.3
+          conda-env-name: oneflow-dev-gcc7-v2
       - uses: Oneflow-Inc/get-oneflow@conda-gh-hosted
         name: Test conda on self-hosted
         if: ${{ matrix.build-type == 'clang10'}}
@@ -255,3 +255,4 @@ jobs:
           oneflow-src: .
           oneflow-build-env: conda
           conda-env-file: conda-env/dev/clang10/environment-v2.yml
+          conda-env-name: oneflow-dev-clang10-v2
