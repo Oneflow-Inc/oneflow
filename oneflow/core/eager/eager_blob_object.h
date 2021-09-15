@@ -92,8 +92,10 @@ class EagerBlobObject final : public BlobObject {
     return Maybe<void>::Ok();
   }
 
-    const Optional<Symbol<Device>>& last_used_device() const { return last_used_device_; }
-  void set_last_used_device(Symbol<Device> last_used_device) { last_used_device_ = last_used_device; }
+  const Optional<Symbol<Device>>& last_used_device() const { return last_used_device_; }
+  void set_last_used_device(Symbol<Device> last_used_device) {
+    last_used_device_ = last_used_device;
+  }
 
  private:
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,

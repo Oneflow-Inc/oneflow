@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_SOFT_SYNC_STREAM_PHY_INSTR_OPERAND_H_
-#define ONEFLOW_CORE_VM_SOFT_SYNC_STREAM_PHY_INSTR_OPERAND_H_
+#ifndef ONEFLOW_CORE_VM_CONSUME_LOCAL_DEP_OBJECT_H
+#define ONEFLOW_CORE_VM_CONSUME_LOCAL_DEP_OBJECT_H
 
 #include <functional>
 #include "oneflow/core/vm/phy_instr_operand.h"
@@ -28,7 +28,7 @@ namespace vm {
 class ConsumeLocalDepObjectPhyInstrOperand : public PhyInstrOperand {
  public:
   ConsumeLocalDepObjectPhyInstrOperand(LocalDepObject* compute_local_dep_object,
-                                const std::string& modifier)
+                                       const std::string& modifier)
       : compute_local_dep_object_(compute_local_dep_object), modifier_(modifier) {}
   ~ConsumeLocalDepObjectPhyInstrOperand() = default;
 
@@ -49,4 +49,4 @@ class ConsumeLocalDepObjectPhyInstrOperand : public PhyInstrOperand {
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_SOFT_SYNC_STREAM_PHY_INSTR_OPERAND_H_
+#endif  // ONEFLOW_CORE_VM_CONSUME_LOCAL_DEP_OBJECT_H

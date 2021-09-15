@@ -51,10 +51,10 @@ class AccessBlobByCallbackInstructionType : public vm::InstructionType {
   void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
 };
 
-class SoftSyncStreamInstructionType : public vm::InstructionType {
+class RecordEventAndWaitInstructionType : public vm::InstructionType {
  public:
-  SoftSyncStreamInstructionType() = default;
-  ~SoftSyncStreamInstructionType() override = default;
+  RecordEventAndWaitInstructionType() = default;
+  ~RecordEventAndWaitInstructionType() override = default;
 
   void Compute(vm::Instruction* instruction) const override {
     instruction->set_has_event_record(true);

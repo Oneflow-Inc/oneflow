@@ -33,8 +33,8 @@ limitations under the License.
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/vm/consume_local_dep_object_phy_instr_operand.h"
 #include "oneflow/core/vm/release_tensor_arg_phy_instr_operand.h"
-#include "oneflow/core/vm/soft_sync_stream_phy_instr_operand.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/framework/tensor.h"
@@ -683,14 +683,12 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
   const auto& instr_type_name = JUST(op_device->local_call_instruction_name());
   for (const auto& input : *input_eager_blob_objects) {
     const auto& blob_last_used_device = JUST(input->last_used_device());
-    if (JUST(blob_last_used_device->need_soft_sync_stream())
-        && blob_last_used_device != op_device) {
+    if (blob_last_used_device != op_device) {
       auto* dep_object = JUST(input->compute_local_dep_object());
       JUST(SoftSyncStream(dep_object, "mut", blob_last_used_device));
     }
     input->set_last_used_device(op_device);
   }
-  for (const auto& output : *output_eager_blob_objects) { output->set_last_used_device(op_device); }
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
   auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
@@ -702,6 +700,7 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
   for (const auto& output : *output_eager_blob_objects) {
     if (!output->producer_op_device().has_value()) {
       JUST(output->init_producer_op_device(op_device));
+      output->set_last_used_device(op_device);
     }
   }
   return Maybe<void>::Ok();
@@ -923,7 +922,7 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
     const auto& last_used_device = JUST(eager_blob_object->last_used_device());
     const auto& producer_op_device = JUST(eager_blob_object->producer_op_device());
 
-    if (JUST(last_used_device->need_soft_sync_stream()) && last_used_device != producer_op_device) {
+    if (last_used_device != producer_op_device) {
       JUST(SoftSyncStream(JUST(eager_blob_object->compute_local_dep_object()), "mut",
                           producer_op_device));
     }
@@ -941,11 +940,13 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
 Maybe<void> InstructionsBuilder::SoftSyncStream(LocalDepObject* compute_local_dep_object,
                                                 const std::string& modifier,
                                                 Symbol<Device> op_device) {
+  if (!JUST(op_device->need_soft_sync_stream())) { return Maybe<void>::Ok(); }
+
   const auto& parallel_desc = JUST(Placement4Device(op_device)).shared_from_symbol();
 
   {
     ObjectMsgPtr<vm::InstructionMsg> instruction =
-        ObjectMsgPtr<vm::InstructionMsg>::New(parallel_desc->device_tag() + ".SoftSyncStream");
+        ObjectMsgPtr<vm::InstructionMsg>::New(parallel_desc->device_tag() + ".RecordEventAndWait");
     *instruction->mutable_phy_instr_operand() =
         std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(compute_local_dep_object,
                                                                    modifier);

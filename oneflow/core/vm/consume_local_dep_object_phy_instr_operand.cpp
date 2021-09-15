@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/soft_sync_stream_phy_instr_operand.h"
+#include "oneflow/core/vm/consume_local_dep_object_phy_instr_operand.h"
 #include "oneflow/core/eager/local_dep_object.h"
 
 namespace oneflow {

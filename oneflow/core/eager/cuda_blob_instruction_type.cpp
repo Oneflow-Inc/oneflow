@@ -39,31 +39,14 @@ class GpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallback
 COMMAND(vm::RegisterInstructionType<GpuAccessBlobByCallbackInstructionType>(
     "gpu.AccessBlobByCallback"));
 
-class GpuSoftSyncStreamInstructionType : public SoftSyncStreamInstructionType {
+class GpuRecordEventAndWaitInstructionType : public RecordEventAndWaitInstructionType {
  public:
-  GpuSoftSyncStreamInstructionType() = default;
-  ~GpuSoftSyncStreamInstructionType() override = default;
+  GpuRecordEventAndWaitInstructionType() = default;
+  ~GpuRecordEventAndWaitInstructionType() override = default;
   using stream_type = vm::CudaStreamType;
 };
-COMMAND(vm::RegisterInstructionType<GpuSoftSyncStreamInstructionType>("gpu.SoftSyncStream"));
-
-class TouchTensorOnControlStreamInstructionType : public vm::InstructionType {
- public:
-  TouchTensorOnControlStreamInstructionType() = default;
-  ~TouchTensorOnControlStreamInstructionType() = default;
-  using stream_type = vm::ControlStreamType;
-
-  void Infer(VirtualMachine* vm, Instruction* instruction) const override {
-    UNIMPLEMENTED();
-  }
-  void Compute(VirtualMachine* vm, Instruction* instruction) const override {
-    // do nothing
-  }
-  void Infer(Instruction*) const override { UNIMPLEMENTED(); }
-  void Compute(Instruction*) const override { UNIMPLEMENTED(); }
-};
 COMMAND(
-    vm::RegisterInstructionType<TouchTensorOnControlStreamInstructionType>("TouchTensorOnControlStream"));
+    vm::RegisterInstructionType<GpuRecordEventAndWaitInstructionType>("gpu.RecordEventAndWait"));
 
 }  // namespace vm
 }  // namespace oneflow

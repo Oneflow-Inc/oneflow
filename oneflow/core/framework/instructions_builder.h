@@ -132,9 +132,6 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
                             const std::shared_ptr<const ParallelDesc>& parallel_desc);
 
-  Maybe<void> SoftSyncStream(LocalDepObject* compute_local_dep_object, const std::string& modifier,
-                             Symbol<Device> op_device);
-
   template<typename T>
   Maybe<void> SyncAccessBlobByCallback(const T tensor,
                                        const std::shared_ptr<SpinCounter>& spin_counter,
@@ -401,6 +398,9 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::function<Maybe<compatible_py::BlobObject>(
           const std::shared_ptr<compatible_py::BlobObject>&,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& GetDelegateBlobObject);
+
+  Maybe<void> SoftSyncStream(LocalDepObject* compute_local_dep_object, const std::string& modifier,
+                             Symbol<Device> op_device);
 
   Maybe<void> _FetchBlob(const std::string& instruction_name,
                          const std::shared_ptr<compatible_py::BlobObject>& blob_object,
