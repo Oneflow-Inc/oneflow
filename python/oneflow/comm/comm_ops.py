@@ -109,7 +109,7 @@ def all_gather(tensor_list, tensor):
     tensor = tensor.to_consistent(
         placement=flow.env.all_device_placement(device_type), sbp=flow.sbp.split(0)
     )
-    assert len(tensor_list) == tensor.shape[0]
+    assert len(tensor_list) == flow.env.get_world_size()
     for i in range(tensor.shape[0]):
         tensor_list[i] = tensor[i].to_local()
 
@@ -220,14 +220,24 @@ def gather(tensor, gather_list=None, dst=0):
     """
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
     assert tensor.is_local
-    tensor = tensor.expand([1] + list(tensor.shape))
+    shape = tensor.shape
+    dtype = tensor.dtype
+    tensor = tensor.expand([1] + list(shape))
     device_type = tensor.device.type
     placement = flow.env.all_device_placement(device_type)
     tensor = tensor.to_consistent(
         placement=placement, sbp=flow.sbp.split(0)
     ).to_consistent(placement=placement, sbp=flow.sbp.broadcast)
-    if flow.env.get_rank() == dst:
-        assert gather_list is not None
-        assert len(gather_list) == tensor.shape[0]
-        for i in range(tensor.shape[0]):
-            gather_list[i] = tensor[i].to_local()
+
+    if gather_list is None:
+        gather_list = [
+            flow.empty(shape, dtype=dtype) for _ in range(flow.env.get_world_size())
+        ]
+
+    assert gather_list is not None
+    assert isinstance(gather_list, list)
+    assert len(gather_list) == flow.env.get_world_size()
+    # "to_consistent(placement=flow.env.all_device_placement("cuda/cpu"), sbp=flow.sbp.broadcast)" 
+    # after here will fail, if do getitem on some a rank
+    for i in range(tensor.shape[0]):
+        gather_list[i] = tensor[i].to_local()

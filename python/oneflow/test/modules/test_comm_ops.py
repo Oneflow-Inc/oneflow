@@ -108,6 +108,23 @@ class TestGather(flow.unittest.TestCase):
                 np_arr + flow.env.get_rank(), device="cuda", dtype=flow.int32
             )
             flow.comm.gather(input, dst=1)
+        # this case will fail, if do gititem on some a rank in process group
+        if flow.env.get_rank() == 0:
+            np_arr = np.array([4, 6, 7, 8], dtype=np.float32)
+        else:
+            np_arr = np.array([0, 0, 0, 0], dtype=np.float32)
+        tensor = flow.tensor(np_arr, dtype=flow.float32)
+        placement = flow.placement("cuda", {0: range(4)})
+        device = flow.device("cuda")
+        consistent_tensor = tensor.to_consistent(placement, flow.sbp.broadcast)
+        test_case.assertEqual(consistent_tensor.to_local().device, device)
+        test_case.assertEqual(consistent_tensor.placement, placement)
+        test_case.assertTrue(
+            np.array_equal(
+                consistent_tensor.to_local().numpy(),
+                np.array([4, 6, 7, 8], dtype=np.float32),
+            )
+        )
 
 
 class TestReduce(flow.unittest.TestCase):
