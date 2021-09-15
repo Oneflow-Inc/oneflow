@@ -79,7 +79,7 @@ class ConvBaseFunctor {
     if (bias) {
       MutableAttrMap bias_attrs;
       JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
-      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {conv_out, JUST(bias.value())}, bias_attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {conv_out, JUST(bias)}, bias_attrs);
     } else {
       return conv_out;
     }
@@ -275,7 +275,7 @@ class PoolingNDFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
     JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
     if (stride.has_value()) {
-      JUST(attrs.SetAttr<std::vector<int32_t>>("stride", *JUST(stride.value())));
+      JUST(attrs.SetAttr<std::vector<int32_t>>("stride", *JUST(stride)));
     } else {
       JUST(attrs.SetAttr<std::vector<int32_t>>(
           "stride", kernel_size));  // If stride is None, we set it as kernel_size to align Pytorch.
@@ -554,13 +554,12 @@ class NormalizationFunctor {
       CHECK_OR_RETURN(moving_mean && moving_variance)
           << "Must have moving_mean and moving_variance in eval mode.";
       return OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_eval_op_,
-          {x, JUST(moving_mean.value()), JUST(moving_variance.value()), gamma, beta}, attrs);
+          *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
     }
     if (moving_mean) {
       return OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_training_stats_op_,
-          {x, JUST(moving_mean.value()), JUST(moving_variance.value()), gamma, beta}, attrs);
+          *norm_training_stats_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta},
+          attrs);
     }
     return OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_, {x, gamma, beta},
                                                attrs);
@@ -666,30 +665,25 @@ class NormalizationAddReluFunctor {
       if (addend) {
         return OpInterpUtil::Dispatch<one::Tensor>(
             *addend_norm_eval_op_,
-            {x, JUST(addend.value()), JUST(moving_mean.value()), JUST(moving_variance.value()),
-             gamma, beta},
-            attrs);
+            {x, JUST(addend), JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
       } else {
         return OpInterpUtil::Dispatch<one::Tensor>(
-            *norm_eval_op_,
-            {x, JUST(moving_mean.value()), JUST(moving_variance.value()), gamma, beta}, attrs);
+            *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
       }
     } else if (moving_mean) {
       if (addend) {
         return OpInterpUtil::Dispatch<one::Tensor>(
             *addend_norm_training_stats_op_,
-            {x, JUST(addend.value()), JUST(moving_mean.value()), JUST(moving_variance.value()),
-             gamma, beta},
-            attrs);
+            {x, JUST(addend), JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
       } else {
         return OpInterpUtil::Dispatch<one::Tensor>(
-            *norm_training_stats_op_,
-            {x, JUST(moving_mean.value()), JUST(moving_variance.value()), gamma, beta}, attrs);
+            *norm_training_stats_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta},
+            attrs);
       }
     } else {
       if (addend) {
         return OpInterpUtil::Dispatch<one::Tensor>(*addend_norm_training_no_stats_op_,
-                                                   {x, JUST(addend.value()), gamma, beta}, attrs);
+                                                   {x, JUST(addend), gamma, beta}, attrs);
       } else {
         return OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_, {x, gamma, beta},
                                                    attrs);
@@ -780,7 +774,7 @@ class DropoutFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
 
     JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
@@ -834,7 +828,7 @@ class AvgPoolingNDFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
     JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
     if (stride.has_value()) {
-      JUST(attrs.SetAttr<std::vector<int32_t>>("stride", *JUST(stride.value())));
+      JUST(attrs.SetAttr<std::vector<int32_t>>("stride", *JUST(stride)));
     } else {
       JUST(attrs.SetAttr<std::vector<int32_t>>(
           "stride", kernel_size));  // If stride is None, we set it as kernel_size to align Pytorch.
@@ -1102,7 +1096,7 @@ class FusedBiasAddDropoutFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
     JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
