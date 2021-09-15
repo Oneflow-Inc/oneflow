@@ -289,9 +289,8 @@ class Parameter final : public TensorIf<Parameter> {
   }
   Maybe<Tensor> data() override { return tensor_; }
 
-  // Must override grad_fn_node function. Otherwise grad_fn will belong to this not tensor_.
-  // It will be wrong when use Parameter.data() in operators.
-  // For example: https://github.com/Oneflow-Inc/OneTeam/issues/578#issuecomment-919216297
+  // Must override grad_fn_node function. Otherwise grad_fn will belong to this not tensor_,
+  // and it will be wrong when use Parameter.data() in operators.
   std::shared_ptr<const FunctionNode> grad_fn_node() const override {
     return tensor_->grad_fn_node();
   }
