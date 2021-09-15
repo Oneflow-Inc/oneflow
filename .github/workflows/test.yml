@@ -167,52 +167,6 @@ jobs:
         if: steps.changes.outputs.should_run_single_client_tests == '1'
         run: |
           echo "yes"
-  build-cuda:
-    name: Build
-    needs:
-      [
-        set-initial-variables,
-        check_license_and_format,
-        mirror_third_party,
-        cancel_previous,
-        changed_files,
-      ]
-    continue-on-error: ${{ matrix.allow_fail }}
-    runs-on: ["self-hosted", "linux", "build"]
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'fmt-only') == false
-    outputs:
-      pip-index-url: ${{ steps.build-oneflow.outputs.pip-index-url }}
-      oneflow-testexe-url: ${{ steps.build-oneflow.outputs.oneflow-testexe-url }}
-    steps:
-      - name: Fix permissions
-        run: |
-          docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
-      - name: Checkout OneFlow source code
-        uses: actions/checkout@v2
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-      - name: Build OneFlow
-        id: build-oneflow
-        uses: Oneflow-Inc/get-oneflow@v1
-        if: ${{ matrix.oneflow-build-env == 'manylinux'}}
-        with:
-          action: build-oneflow
-          cmake-init-cache: cmake/caches/ci/cuda.cmake
-          build-script: ci/manylinux/build.sh
-          oneflow-src: .
-          oneflow-build-env: manylinux
-          wheelhouse-dir: manylinux-wheelhouse
-          self-hosted: true
-          cuda-version: 11.4
-          manylinux-cache-dir: ~/manylinux-cache-dir/cuda-11.4
-          docker-run-use-system-http-proxy: false
-          docker-run-use-lld: true
-          cache-key-prefixes: |
-            ${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}
-            ${{ github.repository }}/digest/${{ hashFiles('**/*.cpp') }}
-          python-versions: |
-            3.6
-            3.7
 
   test:
     name: Test suite
