@@ -143,7 +143,6 @@ jobs:
         if: matrix.test_suite == 'conda'
         run: |
           conda env config vars set CXXFLAGS="-w -fPIC"
-        shell: bash -l {0}
       - name: Set environment variables
         run: |
           set -x
@@ -156,7 +155,6 @@ jobs:
           cmake_flags+=" -DCMAKE_MACOSX_RPATH=FALSE"
           cmake_flags+=" -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
           echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
-        shell: bash -l {0}
       - name: Build (third party)
         if: matrix.cmake_generator != 'Ninja'
         run: |
@@ -166,7 +164,6 @@ jobs:
           cd build-third_party
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=ON -DONEFLOW=OFF -DTHIRD_PARTY_DIR=$PWD/../third_party_install
           cmake --build . -j $(nproc)
-        shell: bash -l {0}
       - name: Build (of_ccobj)
         if: matrix.cmake_generator != 'Ninja'
         run: |
@@ -174,7 +171,6 @@ jobs:
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON -DTHIRD_PARTY_DIR=$PWD/../third_party_install
           cmake --build . -j ${{ matrix.make_concurrency }} --target of_ccobj
-        shell: bash -l {0}
       - name: Build (oneflow_internal)
         if: always() && matrix.cmake_generator != 'Ninja'
         run: |
@@ -182,7 +178,6 @@ jobs:
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
           cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_internal
-        shell: bash -l {0}
       - name: Build (oneflow_py)
         if: always() && matrix.cmake_generator != 'Ninja'
         run: |
@@ -190,7 +185,6 @@ jobs:
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
           cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_py
-        shell: bash -l {0}
       - name: Build (oneflow_testexe)
         if: always() && matrix.cmake_generator != 'Ninja'
         run: |
@@ -198,7 +192,6 @@ jobs:
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
           cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_testexe
-        shell: bash -l {0}
       - name: Build (ALL)
         if: always()
         continue-on-error: ${{ startsWith(runner.os, 'macOS') && matrix.cmake_generator == 'Ninja' && matrix.build_shared_libs == 'ON' }}
@@ -207,7 +200,6 @@ jobs:
           cd build
           cmake .. ${{ env.cmake_flags }}
           cmake --build . -j ${{ matrix.make_concurrency }}
-        shell: bash -l {0}
       - name: Exe test
         if: always()
         continue-on-error: true
@@ -218,7 +210,6 @@ jobs:
           mkdir -p build
           cd build
           ./bin/oneflow_testexe
-        shell: bash -l {0}
       - name: Op test
         if: always()
         continue-on-error: true
@@ -228,7 +219,6 @@ jobs:
           ulimit -c
           source build/source.sh
           ONEFLOW_TEST_GITHUB_HOSTED=1 ONEFLOW_TEST_CPU_ONLY=1 bash ci/test/1node_op_test.sh
-        shell: bash -l {0}
       - name: "Tar logs"
         if: always() && contains(github.event.pull_request.labels.*.name, 'need-simple-ci-upload-artifact')
         continue-on-error: true
