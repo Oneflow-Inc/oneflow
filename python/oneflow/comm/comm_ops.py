@@ -237,7 +237,7 @@ def gather(tensor, gather_list=None, dst=0):
     assert gather_list is not None
     assert isinstance(gather_list, list)
     assert len(gather_list) == flow.env.get_world_size()
-    # "to_consistent(placement=flow.env.all_device_placement("cuda/cpu"), sbp=flow.sbp.broadcast)" 
+    # "to_consistent(placement=flow.env.all_device_placement("cuda/cpu"), sbp=flow.sbp.broadcast)"
     # after here will fail, if do getitem on some a rank
     for i in range(tensor.shape[0]):
         gather_list[i] = tensor[i].to_local()
