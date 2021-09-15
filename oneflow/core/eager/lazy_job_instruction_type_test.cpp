@@ -83,7 +83,7 @@ TEST(RunLazyJobInstructionType, simple) {
   std::thread enter_thread([&]() {
     std::shared_ptr<JobInstance> test_job_instance;
     auto* buffer = buffer_mgr->Get(GetSourceTickBufferName(job_name));
-    while (buffer->Receive(&test_job_instance) == kBufferStatusSuccess) {
+    while (buffer->Pull(&test_job_instance) == kBufferStatusSuccess) {
       // Do nothing
     }
   });
@@ -91,7 +91,7 @@ TEST(RunLazyJobInstructionType, simple) {
   std::thread leave_thread([&]() {
     std::shared_ptr<JobInstance> test_job_instance;
     auto* buffer = buffer_mgr->Get(GetCallbackNotifierBufferName(job_name));
-    while (buffer->Receive(&test_job_instance) == kBufferStatusSuccess) {
+    while (buffer->Pull(&test_job_instance) == kBufferStatusSuccess) {
       test_job_instance->Finish();
     }
   });
@@ -139,7 +139,7 @@ TEST(RunLazyJobInstructionType, wait_for_another_job_finished) {
     while (!flag_enter_thread0) {}
     std::shared_ptr<JobInstance> test_job_instance;
     auto* buffer = buffer_mgr->Get(GetSourceTickBufferName(job_name0));
-    while (buffer->Receive(&test_job_instance) == kBufferStatusSuccess) { ++count_enter_thread0; }
+    while (buffer->Pull(&test_job_instance) == kBufferStatusSuccess) { ++count_enter_thread0; }
   });
   std::atomic<bool> flag_enter_thread1(false);
   std::atomic<int> count_enter_thread1(0);
@@ -147,7 +147,7 @@ TEST(RunLazyJobInstructionType, wait_for_another_job_finished) {
     while (!flag_enter_thread1) {}
     std::shared_ptr<JobInstance> test_job_instance;
     auto* buffer = buffer_mgr->Get(GetSourceTickBufferName(job_name1));
-    while (buffer->Receive(&test_job_instance) == kBufferStatusSuccess) { ++count_enter_thread1; }
+    while (buffer->Pull(&test_job_instance) == kBufferStatusSuccess) { ++count_enter_thread1; }
   });
   buffer_mgr->NewBuffer(GetCallbackNotifierBufferName(job_name0), 128);
   buffer_mgr->NewBuffer(GetCallbackNotifierBufferName(job_name1), 128);
@@ -157,7 +157,7 @@ TEST(RunLazyJobInstructionType, wait_for_another_job_finished) {
     while (!flag_leave_thread0) {}
     std::shared_ptr<JobInstance> test_job_instance;
     auto* buffer = buffer_mgr->Get(GetCallbackNotifierBufferName(job_name0));
-    while (buffer->Receive(&test_job_instance) == kBufferStatusSuccess) {
+    while (buffer->Pull(&test_job_instance) == kBufferStatusSuccess) {
       ++count_leave_thread0;
       test_job_instance->Finish();
     }
@@ -168,7 +168,7 @@ TEST(RunLazyJobInstructionType, wait_for_another_job_finished) {
     while (!flag_leave_thread1) {}
     std::shared_ptr<JobInstance> test_job_instance;
     auto* buffer = buffer_mgr->Get(GetCallbackNotifierBufferName(job_name1));
-    while (buffer->Receive(&test_job_instance) == kBufferStatusSuccess) {
+    while (buffer->Pull(&test_job_instance) == kBufferStatusSuccess) {
       ++count_leave_thread1;
       test_job_instance->Finish();
     }
