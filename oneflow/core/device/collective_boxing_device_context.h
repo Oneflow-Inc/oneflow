@@ -32,6 +32,11 @@ class CollectiveBoxingDeviceCtx final : public DeviceCtx {
   std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint> AddCheckpoint();
   void AddCallBack(std::function<void()> callback) const override;
 
+  DeviceType device_type() const override {
+    UNIMPLEMENTED();
+    return DeviceType::kInvalidDevice;
+  }
+
  private:
   std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint> current_checkpoint_;
 

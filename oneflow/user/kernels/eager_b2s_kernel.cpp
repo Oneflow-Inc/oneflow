@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/communicate_util.h"
+#include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
@@ -121,7 +122,7 @@ class EagerBToSKernel final : public user_op::OpKernel {
       .SetIsMatchedHob(user_op::HobDeviceTag() == device);
 
 REGISTER_EAGER_B_TO_S_KERNEL(DeviceType::kCPU)
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+#if defined(WITH_CUDA) && HAS_GPU_SEND_RECV
 REGISTER_EAGER_B_TO_S_KERNEL(DeviceType::kGPU)
 #endif
 

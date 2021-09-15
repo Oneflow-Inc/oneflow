@@ -364,14 +364,6 @@ ParallelConf GenParallelConfOfCpuZeroOnAllMachines() {
   return parallel_conf;
 }
 
-bool IsMirroredParallelContext(const ParallelContext& parallel_ctx) {
-  if (CHECK_JUST(GlobalMultiClientEnv())) {
-    return parallel_ctx.parallel_id() == 0 && parallel_ctx.parallel_num() == 1
-           && GlobalProcessCtx::WorldSize() > 1;
-  }
-  return false;
-}
-
 namespace {
 
 Maybe<Optional<int64_t>> CalcParallelId4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc) {
