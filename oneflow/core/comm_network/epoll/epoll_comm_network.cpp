@@ -115,7 +115,7 @@ char * EpollCommNet::SerialActorMsgToData(const ActorMsg &msg, size_t *size) {
   return nullptr;
 }
 
-ActorMsg EpollCommNet::DeserialDataToActorMsg(char *data, size_t size) {
+ActorMsg EpollCommNet::DeserialDataToActorMsg(void *data, size_t size) {
   ActorMsg msg{};
   return msg;
 }
