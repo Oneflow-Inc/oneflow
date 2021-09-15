@@ -2961,7 +2961,7 @@ class TestEagerNaiveBoxingSToS(flow.unittest.TestCase):
         arg_dict["device_type"] = ["cpu", "cuda"]
         arg_dict["shape"] = [(12, 12), (18, 24)]
         arg_dict["in_device_list"] = [[0, 1], [1, 2, 3]]
-        arg_dict["out_device_list"] = [[2, 3], [0, 1, 3]]
+        arg_dict["out_device_list"] = [[1], [3], [2, 3], [0, 1, 3]]
         arg_dict["in_split_axis"] = [0, 1]
         arg_dict["out_split_axis"] = [0, 1]
         for arg in GenArgList(arg_dict):
