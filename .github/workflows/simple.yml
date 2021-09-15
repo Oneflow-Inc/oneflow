@@ -242,7 +242,7 @@ jobs:
         name: Test conda on self-hosted
         if: ${{ matrix.build-type == 'gcc7'}}
         with:
-          cmake-init-cache: cmake/caches/ci/gh-hosted/cpu-clang.cmake
+          cmake-init-cache: cmake/caches/ci/gh-hosted/cpu-gcc.cmake
           oneflow-src: .
           oneflow-build-env: conda
           conda-env-file: conda-env/dev/clang10/environment-v2.yml
@@ -251,7 +251,7 @@ jobs:
         name: Test conda on self-hosted
         if: ${{ matrix.build-type == 'clang10'}}
         with:
-          cmake-init-cache: cmake/caches/ci/gh-hosted/cpu-gcc.cmake
+          cmake-init-cache: cmake/caches/ci/gh-hosted/cpu-clang.cmake
           oneflow-src: .
           oneflow-build-env: conda
           conda-env-file: conda-env/dev/clang10/environment-v2.yml
