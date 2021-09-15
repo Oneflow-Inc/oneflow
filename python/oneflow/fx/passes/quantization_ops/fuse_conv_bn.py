@@ -11,6 +11,7 @@ class QConvBN(flow.nn.Module):
         quantization_scheme="symmetric",
         quantization_formula="google",
         per_layer_quantization=True,
+        momentum = 0.95,
     ):
         super().__init__()
         self.quantization_bit = quantization_bit
@@ -19,6 +20,10 @@ class QConvBN(flow.nn.Module):
         self.per_layer_quantization = per_layer_quantization
         self.conv_module = conv_module
         self.bn_module = bn_module
+
+        self.moving_min_max_observer = flow.nn.MovingAverageMinMaxObserver(training=self.training, quantization_formula=quantization_formula,
+                                                                       stop_update_after_iters=0, quantization_bit=quantization_bit,
+                                                                       quantization_scheme=quantization_scheme, momentum=momentum)
 
         self.min_max_observer = flow.nn.MinMaxObserver(
             quantization_formula=quantization_formula,
@@ -57,7 +62,7 @@ class QConvBN(flow.nn.Module):
     
 
     def forward(self, x):
-        scale, zero_point = self.min_max_observer(x)
+        scale, zero_point = self.moving_min_max_observer(x, flow.tensor([1], dtype=flow.int64).to(x.device.type))
         x = self.fake_quantization(x, scale, zero_point)
         if self.training:
             y = flow.nn.functional.conv2d(

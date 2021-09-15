@@ -88,6 +88,7 @@ def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphM
     quantization_scheme = "symmetric"
     quantization_formula = "google"
     per_layer_quantization = True
+    momentum = 0.95
     if "quantization_bit" in qconfig:
         quantization_bit = qconfig["quantization_bit"]
     if "quantization_scheme" in qconfig:
@@ -96,6 +97,8 @@ def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphM
         quantization_formula = qconfig["quantization_formula"]
     if "per_layer_quantization" in qconfig:
         per_layer_quantization = qconfig["per_layer_quantization"]
+    if "momentum" in qconfig:
+        momentum = qconfig["momentum"]
 
     insert_place, insert_op_state = GetInsertNode(gm).propagate(input)
     cnt = 0
@@ -113,6 +116,7 @@ def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphM
                             quantization_scheme,
                             quantization_formula,
                             per_layer_quantization,
+                            momentum,
                         ),
                     )
                     y.replace_all_uses_with(x)
@@ -140,6 +144,7 @@ def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphM
                             quantization_scheme,
                             quantization_formula,
                             per_layer_quantization,
+                            momentum,
                         ),
                     )
                     qconv = gm.graph.call_module(
@@ -163,6 +168,7 @@ def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphM
                             quantization_scheme,
                             quantization_formula,
                             per_layer_quantization,
+                            momentum,
                         ),
                     )
                     qmatmul = gm.graph.call_module(

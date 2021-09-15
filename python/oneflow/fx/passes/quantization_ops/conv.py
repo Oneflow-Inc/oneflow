@@ -32,18 +32,23 @@ class QConv2d(flow.nn.Conv2d):
         quantization_scheme="symmetric",
         quantization_formula="google",
         per_layer_quantization=True,
+        momentum = 0.95,
     ) -> None:
         super(QConv2d, self).__init__(
             in_channels, out_channels, kernel_size, stride, padding, dilation, groups
         )
         
+        self.moving_min_max_observer = flow.nn.MovingAverageMinMaxObserver(training=self.training, quantization_formula=quantization_formula,
+                                                                       stop_update_after_iters=0, quantization_bit=quantization_bit,
+                                                                       quantization_scheme=quantization_scheme, momentum=momentum)
+
         self.min_max_observer = flow.nn.MinMaxObserver(
             quantization_formula=quantization_formula,
             quantization_bit=quantization_bit,
             quantization_scheme=quantization_scheme,
             per_layer_quantization=per_layer_quantization,
         )
-        
+
         self.fake_quantization = flow.nn.FakeQuantization(
             quantization_formula=quantization_formula,
             quantization_bit=quantization_bit,
@@ -51,7 +56,7 @@ class QConv2d(flow.nn.Conv2d):
         )
 
     def forward(self, x):
-        scale, zero_point = self.min_max_observer(x)
+        scale, zero_point = self.moving_min_max_observer(x, flow.tensor([1], dtype=flow.int64).to(x.device.type))
         x = self.fake_quantization(x, scale, zero_point)
         weight_scale, weight_zero_point = self.min_max_observer(self.weight)
         self.weight = flow.nn.Parameter(
