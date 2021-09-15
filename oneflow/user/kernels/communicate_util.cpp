@@ -26,7 +26,7 @@ namespace oneflow {
 
 namespace {
 
-const void** GlobalSrcDataPtr() {
+const void** ThreadLocalSrcDataPtr() {
   static thread_local const void* data_ptr = nullptr;
   return &data_ptr;
 }
@@ -36,7 +36,7 @@ const void** GlobalSrcDataPtr() {
 template<DeviceType device_type>
 Maybe<void> Send(const void* in, size_t elem_cnt, DataType dtype, int64_t dst, DeviceCtx* ctx) {
   if (GlobalProcessCtx::Rank() == dst) {
-    auto** src_data_ptr = GlobalSrcDataPtr();
+    auto** src_data_ptr = ThreadLocalSrcDataPtr();
     CHECK_OR_RETURN(*src_data_ptr == nullptr);
     *src_data_ptr = in;
   } else {
@@ -49,7 +49,7 @@ template<DeviceType device_type>
 Maybe<void> Recv(void* out, size_t elem_cnt, DataType dtype, int64_t src, DeviceCtx* ctx) {
   if (GlobalProcessCtx::Rank() == src) {
     size_t buffer_size = elem_cnt * GetSizeOfDataType(dtype);
-    auto** src_data_ptr = GlobalSrcDataPtr();
+    auto** src_data_ptr = ThreadLocalSrcDataPtr();
     const void* in = *src_data_ptr;
     CHECK_OR_RETURN(*src_data_ptr != nullptr);
     Memcpy<device_type>(ctx, out, in, buffer_size);
