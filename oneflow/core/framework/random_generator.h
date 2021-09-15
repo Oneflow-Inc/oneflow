@@ -39,6 +39,8 @@ class Generator final {
   // Reset current generator by a non-deterministic random seed, and returns it.
   uint64_t seed();
 
+  Maybe<Symbol<Device>> device() const { return impl_->device(); }
+
   Maybe<Tensor> GetState() const { return impl_->GetState(); }
   Maybe<void> SetState(const std::shared_ptr<Tensor>& state) { return impl_->SetState(state); }
 

@@ -29,6 +29,21 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+namespace {
+
+Maybe<void> SyncAccessTensorWithTimeOut(
+    const std::shared_ptr<Tensor>& tensor,
+    const std::shared_ptr<std::function<void(uint64_t)>>& callback, const std::string& modifier) {
+  return SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
+    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
+                                               modifier);
+    });
+  });
+}
+
+}  // namespace
+
 struct CPUGeneratorState {
   static constexpr int64_t state_size = std::mt19937::state_size;  // 624
   int64_t states[state_size];
@@ -39,7 +54,7 @@ constexpr int64_t CPUGeneratorState::state_size;
 Maybe<Tensor> CPUGeneratorImpl::GetState() const {
   CPUGeneratorState state;
   const auto& device = JUST(Device::New("cpu"));
-  const auto& tensor_state = JUST(functional::Empty(Shape{sizeof(state)}, DType::Char(), device));
+  const auto& tensor_state = JUST(functional::Empty(Shape{sizeof(state)}, DType::Int8(), device));
 
   std::stringstream ss;
   ss << engine_;
@@ -51,24 +66,23 @@ Maybe<Tensor> CPUGeneratorImpl::GetState() const {
                                  << splits.size() - 1;
   }
   for (int i = 0; i < CPUGeneratorState::state_size; ++i) {
-    state.states[i] = std::atoll(splits.at(i).c_str());
+    state.states[i] = std::atoll(splits.at(i).data());
   }
   state.seed = current_seed();
 
   const auto& callback = std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    memcpy(of_blob->mut_blob()->mut_dptr<char>(), &state, sizeof(state));
+    memcpy(of_blob->mut_blob()->mut_dptr<int8_t>(), &state, sizeof(state));
   });
-  JUST(SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(JUST(tensor_state->AsMirroredTensor()), sc, callback,
-                                               "mut");
-    });
-  }));
+  JUST(SyncAccessTensorWithTimeOut(tensor_state, callback, "mut"));
   return tensor_state;
 }
 
 Maybe<void> CPUGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_state) {
+  const auto& device = JUST(tensor_state->device());
+  if (device->type() != "cpu") {
+    return Error::RuntimeError() << "Generator state should be host tensor.";
+  }
   CPUGeneratorState state;
   if (tensor_state->shape()->elem_cnt() != sizeof(state)) {
     return Error::RuntimeError() << "Tensor state size is not match for CPU generator. It needs "
@@ -77,14 +91,9 @@ Maybe<void> CPUGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_sta
   }
   const auto& callback = std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    memcpy(&state, of_blob->blob().dptr<char>(), sizeof(state));
+    memcpy(&state, of_blob->blob().dptr<int8_t>(), sizeof(state));
   });
-  JUST(SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(JUST(tensor_state->AsMirroredTensor()), sc, callback,
-                                               "const");
-    });
-  }));
+  JUST(SyncAccessTensorWithTimeOut(tensor_state, callback, "const"));
 
   set_current_seed(state.seed);
   std::stringstream ss;
@@ -118,7 +127,7 @@ int GetThreadNum(const cudaDeviceProp& prop) {
 }  // namespace
 
 CUDAGeneratorImpl::CUDAGeneratorImpl(uint64_t seed, int device_index)
-    : DeviceGeneratorImpl(seed, detail::DeviceKey{DeviceType::kGPU, device_index}) {
+    : DeviceGeneratorImpl(seed, DeviceType::kGPU, device_index) {
   cudaDeviceProp prop;
   OF_CUDA_CHECK(cudaGetDeviceProperties(&prop, 0));
   max_block_num_ = prop.multiProcessorCount;
@@ -139,24 +148,23 @@ Maybe<Tensor> CUDAGeneratorImpl::GetState() const {
   int64_t state_size = max_block_num_ * max_thread_num_ * sizeof(curandState);
   int64_t total_size = state_size + sizeof(int64_t);
   const auto& device = JUST(Device::New("cpu"));
-  const auto& tensor_state = JUST(functional::Empty(Shape{total_size}, DType::Char(), device));
+  const auto& tensor_state = JUST(functional::Empty(Shape{total_size}, DType::Int8(), device));
 
   const auto& callback = std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    OF_CUDA_CHECK(cudaMemcpy(of_blob->mut_blob()->mut_dptr<char>(), &curand_states_, state_size,
+    OF_CUDA_CHECK(cudaMemcpy(of_blob->mut_blob()->mut_dptr<int8_t>(), curand_states_, state_size,
                              cudaMemcpyDefault));
-    memcpy(of_blob->mut_blob()->mut_dptr<char>() + state_size, &seed_, sizeof(int64_t));
+    memcpy(of_blob->mut_blob()->mut_dptr<int8_t>() + state_size, &seed_, sizeof(int64_t));
   });
-  JUST(SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(JUST(tensor_state->AsMirroredTensor()), sc, callback,
-                                               "mut");
-    });
-  }));
+  JUST(SyncAccessTensorWithTimeOut(tensor_state, callback, "mut"));
   return tensor_state;
 }
 
 Maybe<void> CUDAGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_state) {
+  const auto& device = JUST(tensor_state->device());
+  if (device->type() != "cpu") {
+    return Error::RuntimeError() << "Generator state should be host tensor.";
+  }
   int64_t state_size = max_block_num_ * max_thread_num_ * sizeof(curandState);
   int64_t total_size = state_size + sizeof(int64_t);
   if (tensor_state->shape()->elem_cnt() != total_size) {
@@ -165,26 +173,157 @@ Maybe<void> CUDAGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
   }
   const auto& callback = std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    const char* data = of_blob->blob().dptr<char>();
+    const int8_t* data = of_blob->blob().dptr<int8_t>();
     uint64_t seed = *((uint64_t*)(data + state_size));
     set_current_seed(seed);
-    OF_CUDA_CHECK(
-        cudaMemcpy(&curand_states_, of_blob->blob().dptr<char>(), state_size, cudaMemcpyDefault));
+    OF_CUDA_CHECK(cudaMemcpy(curand_states_, data, state_size, cudaMemcpyDefault));
   });
-  JUST(SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(JUST(tensor_state->AsMirroredTensor()), sc, callback,
-                                               "const");
-    });
-  }));
+  JUST(SyncAccessTensorWithTimeOut(tensor_state, callback, "const"));
   return Maybe<void>::Ok();
 }
 #endif  // WITH_CUDA
 
-Maybe<Tensor> AutoGeneratorImpl::GetState() const { OF_UNIMPLEMENTED(); }
+struct AutoGeneratorState {
+  uint64_t seed;
+  int64_t num;
+  int64_t device_tag_length;
+  int64_t state_length;
+  // std::vector<int64_t> state_sizes[num];
+  // std::vector<uint8_t> device_tags[device_tag_length];
+  // std::vector<uint8_t> states[state_sizes[0] + state_sizes[1] + ... + state_sizes[num - 1]]
+};
+
+Maybe<Tensor> AutoGeneratorImpl::GetState() const {
+  // TODO(): Fix dead lock in vm.
+  // std::lock_guard<std::mutex> lock(mutex_);
+  AutoGeneratorState state;
+  state.seed = current_seed();
+  state.num = generators_.size();
+
+  state.state_length = 0;
+  std::vector<std::shared_ptr<Tensor>> tensor_states;
+  std::vector<int64_t> state_sizes;
+  for (auto it = generators_.begin(); it != generators_.end(); ++it) {
+    const auto& tensor_state = JUST(it->second->GetState());
+    tensor_states.emplace_back(tensor_state);
+    state_sizes.emplace_back(tensor_state->shape()->elem_cnt());
+    state.state_length += state_sizes.back();
+  }
+
+  std::stringstream ss;
+  auto it = generators_.begin();
+  if (it != generators_.end()) {
+    ss << JUST(it->second->device())->ToString();
+    ++it;
+  }
+  for (; it != generators_.end(); ++it) { ss << "," << JUST(it->second->device())->ToString(); }
+  std::string device_tags = ss.str();
+  state.device_tag_length = device_tags.size();
+
+  int64_t total_size =
+      sizeof(state) + state.num * sizeof(int64_t) + state.device_tag_length + state.state_length;
+  std::vector<int8_t> buffer(total_size);
+  {
+    int8_t* data = buffer.data();
+    memcpy(data, &state, sizeof(state));
+    data += sizeof(state);
+    memcpy(data, state_sizes.data(), state.num * sizeof(int64_t));
+    data += state.num * sizeof(int64_t);
+    memcpy(data, device_tags.data(), state.device_tag_length);
+    data += state.device_tag_length;
+    for (int i = 0; i < tensor_states.size(); ++i) {
+      const auto& tensor = tensor_states.at(i);
+      const auto& callback = std::make_shared<std::function<void(uint64_t)>>(
+          [&data, &state_sizes, i](uint64_t of_blob_ptr) {
+            auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+            memcpy(data, of_blob->blob().dptr<int8_t>(), state_sizes.at(i));
+          });
+      JUST(SyncAccessTensorWithTimeOut(tensor, callback, "const"));
+      data += state_sizes.at(i);
+    }
+  }
+  const auto& device = JUST(Device::New("cpu"));
+  const auto& tensor_state = JUST(functional::Empty(Shape{total_size}, DType::Int8(), device));
+  const auto& callback =
+      std::make_shared<std::function<void(uint64_t)>>([&buffer, &total_size](uint64_t of_blob_ptr) {
+        auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+        memcpy(of_blob->mut_blob()->mut_dptr<int8_t>(), buffer.data(), total_size);
+      });
+  JUST(SyncAccessTensorWithTimeOut(tensor_state, callback, "mut"));
+  return tensor_state;
+}
 
 Maybe<void> AutoGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_state) {
-  OF_UNIMPLEMENTED();
+  const auto& device = JUST(tensor_state->device());
+  if (device->type() != "cpu") {
+    return Error::RuntimeError() << "Generator state should be host tensor.";
+  }
+  AutoGeneratorState state;
+  int64_t total_size = tensor_state->shape()->elem_cnt();
+  std::vector<int8_t> buffer(total_size);
+  const auto& callback =
+      std::make_shared<std::function<void(uint64_t)>>([&buffer, &total_size](uint64_t of_blob_ptr) {
+        auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+        memcpy(buffer.data(), of_blob->blob().dptr<int8_t>(), total_size);
+      });
+  JUST(SyncAccessTensorWithTimeOut(tensor_state, callback, "const"));
+
+  const int8_t* data = buffer.data();
+  memcpy(&state, data, sizeof(state));
+  if (total_size
+      != sizeof(state) + state.num * sizeof(int64_t) + state.device_tag_length
+             + state.state_length) {
+    return Error::RuntimeError() << "Invalid auto generator state, size is not match.";
+  }
+  data += sizeof(state);
+  std::vector<int64_t> state_sizes(state.num);
+  memcpy(state_sizes.data(), data, state.num * sizeof(int64_t));
+  data += state.num * sizeof(int64_t);
+  std::string device_tags;
+  device_tags.resize(state.device_tag_length);
+  memcpy(const_cast<char*>(device_tags.data()), data, state.device_tag_length);
+  data += state.device_tag_length;
+  std::vector<std::shared_ptr<Tensor>> tensor_states(state.num);
+  for (int i = 0; i < state.num; ++i) {
+    int64_t state_size = state_sizes.at(i);
+    tensor_states[i] = JUST(functional::Empty(Shape{state_size}, DType::Int8(), device));
+    const auto& callback =
+        std::make_shared<std::function<void(uint64_t)>>([&data, &state_size](uint64_t of_blob_ptr) {
+          auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+          memcpy(of_blob->mut_blob()->mut_dptr<int8_t>(), data, state_size);
+        });
+    JUST(SyncAccessTensorWithTimeOut(tensor_states[i], callback, "mut"));
+    data += state_size;
+  }
+
+  // TODO(): Fix dead lock in vm.
+  // std::lock_guard<std::mutex> lock(mutex_);
+  // set current seed.
+  set_current_seed(state.seed);
+
+  auto splits = Split(device_tags, ",");
+  if (splits.size() != state.num) {
+    return Error::RuntimeError() << "Invalid auto generator state. The number of state is "
+                                 << state.num << ", but device tags number is " << splits.size();
+  }
+  for (int i = 0; i < splits.size(); ++i) {
+    std::string device_name;
+    int device_index;
+    JUST(ParsingDeviceTag(splits.at(i), &device_name, &device_index));
+    detail::DeviceKey device_key;
+    const auto& device = JUST(Device::New(device_name, device_index));
+    device_key.device_type = JUST(DeviceType4DeviceTag(JUST(device->of_type())));
+    device_key.device_index = device_index;
+    auto it = generators_.find(device_key);
+    if (it == generators_.end()) {
+      it = generators_
+               .emplace(device_key, JUST(detail::MakeGeneratorImpl(seed_, device_key.device_type,
+                                                                   device_key.device_index)))
+               .first;
+    }
+    it->second->SetState(tensor_states.at(i));
+  }
+  return Maybe<void>::Ok();
 }
 
 namespace detail {
@@ -227,6 +366,25 @@ Maybe<CUDAGeneratorImpl> MakeGeneratorImpl<CUDAGeneratorImpl>(uint64_t seed, int
   return std::make_shared<CUDAGeneratorImpl>(seed, device_index);
 }
 #endif  // WITH_CUDA
+
+Maybe<GeneratorImpl> MakeGeneratorImpl(uint64_t seed, DeviceType device_type, int device_index) {
+  std::shared_ptr<GeneratorImpl> impl;
+  switch (device_type) {
+    case kCPU: {
+      impl = JUST(MakeGeneratorImpl<CPUGeneratorImpl>(seed, device_index));
+      break;
+    }
+#ifdef WITH_CUDA
+    case kGPU: {
+      impl = JUST(MakeGeneratorImpl<CUDAGeneratorImpl>(seed, device_index));
+      break;
+    }
+#endif  // WITH_CUDA
+    default:
+      return Error::RuntimeError() << "Can not make generator for device type " << device_type;
+  }
+  return impl;
+}
 
 }  // namespace detail
 

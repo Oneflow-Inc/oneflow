@@ -170,7 +170,7 @@ std::vector<std::string> Split(const std::string& s, const std::string& delimite
     splits.emplace_back(s.substr(last, next - last));
     last = next + 1;
   }
-  splits.emplace_back(s.substr(last));
+  if (last < s.size()) { splits.emplace_back(s.substr(last)); }
   return splits;
 }
 

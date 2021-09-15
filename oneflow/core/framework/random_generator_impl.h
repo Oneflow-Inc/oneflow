@@ -22,6 +22,7 @@ limitations under the License.
 
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor.h"
 #ifdef WITH_CUDA
 #include <curand.h>
@@ -37,6 +38,8 @@ namespace detail {
 
 template<typename T>
 Maybe<T> MakeGeneratorImpl(uint64_t seed, int device_index);
+
+Maybe<GeneratorImpl> MakeGeneratorImpl(uint64_t seed, DeviceType device_type, int device_index);
 
 struct DeviceKey {
   DeviceType device_type;
@@ -63,6 +66,8 @@ class GeneratorImpl {
   virtual void set_current_seed(uint64_t seed) = 0;
   uint64_t current_seed() const { return seed_; }
 
+  virtual Maybe<Symbol<Device>> device() const = 0;
+
   virtual Maybe<Tensor> GetState() const = 0;
   virtual Maybe<void> SetState(const std::shared_ptr<Tensor>& tensor_state) = 0;
 
@@ -72,23 +77,23 @@ class GeneratorImpl {
 
 class DeviceGeneratorImpl : public GeneratorImpl {
  public:
-  explicit DeviceGeneratorImpl(const uint64_t& seed, const detail::DeviceKey& device_key)
-      : GeneratorImpl(seed), device_key_(device_key) {}
+  explicit DeviceGeneratorImpl(const uint64_t& seed, DeviceType device_type, int device_index)
+      : GeneratorImpl(seed), device_type_(device_type), device_index_(device_index) {}
 
   virtual ~DeviceGeneratorImpl() = default;
 
-  int device_index() const { return device_key_.device_index; }
-  const DeviceType& device_type() const { return device_key_.device_type; }
-  const detail::DeviceKey& device_key() const { return device_key_; }
+  const DeviceType& device_type() const { return device_type_; }
+  int device_index() const { return device_index_; }
 
  protected:
-  detail::DeviceKey device_key_;
+  DeviceType device_type_;
+  int device_index_;
 };
 
 class CPUGeneratorImpl : public DeviceGeneratorImpl {
  public:
   explicit CPUGeneratorImpl(uint64_t seed)
-      : DeviceGeneratorImpl(seed, detail::DeviceKey{DeviceType::kCPU, 0}), engine_(seed) {}
+      : DeviceGeneratorImpl(seed, DeviceType::kCPU, 0), engine_(seed) {}
 
   virtual ~CPUGeneratorImpl() = default;
 
@@ -98,6 +103,8 @@ class CPUGeneratorImpl : public DeviceGeneratorImpl {
   }
 
   std::mt19937& engine() { return engine_; }
+
+  Maybe<Symbol<Device>> device() const { return Device::New("cpu"); }
 
   Maybe<Tensor> GetState() const override;
   Maybe<void> SetState(const std::shared_ptr<Tensor>& tensor_state) override;
@@ -118,6 +125,8 @@ class CUDAGeneratorImpl : public DeviceGeneratorImpl {
   curandState* curand_states() const { return curand_states_; }
 
   void set_current_seed(uint64_t seed) override;
+
+  Maybe<Symbol<Device>> device() const { return Device::New("cuda", device_index()); }
 
   Maybe<Tensor> GetState() const override;
   Maybe<void> SetState(const std::shared_ptr<Tensor>& tensor_state) override;
@@ -147,6 +156,8 @@ class AutoGeneratorImpl : public GeneratorImpl {
     seed_ = seed;
     for (const auto& it : generators_) { it.second->set_current_seed(seed); }
   }
+
+  Maybe<Symbol<Device>> device() const { return Device::New("auto"); }
 
   Maybe<Tensor> GetState() const override;
   Maybe<void> SetState(const std::shared_ptr<Tensor>& tensor_state) override;
