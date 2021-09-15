@@ -42,7 +42,7 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       size_t  size = 0;
       char * data = Global<CommNet>::Get()->SerialActorMsgToData(new_msg,&size);
       CHECK_EQ(size,sizeof(new_msg));
-      Global<CommNet>::Get()->SendMsg(dst_machine_id, data,  size)
+      Global<CommNet>::Get()->SendMsg(dst_machine_id, data,  size);
     } else {
       size_t  size = 0;
       char * data = Global<CommNet>::Get()->SerialActorMsgToData(msg,&size);
