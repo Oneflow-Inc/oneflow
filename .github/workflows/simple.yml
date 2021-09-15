@@ -127,18 +127,15 @@ jobs:
         run: |
           python3 -m pip install -r ci/requirements.txt
           python3 -m pip install -r dev-requirements.txt
-      - name: Download conda environment.yml
+      - name: Setup conda
+        env:
+          ENVIRONMENT_FILE: environment.yml
         if: matrix.test_suite == 'conda'
         run: |
-          wget https://raw.githubusercontent.com/Oneflow-Inc/conda-env/30a7f00eb48ee9009d85a848e720823e5054c66b/dev/gcc7/environment-v2.yml -O environment.yml
-      - uses: conda-incubator/setup-miniconda@v2
-        if: matrix.test_suite == 'conda'
-        name: Setup conda
-        with:
-          activate-environment: oneflow-dev-gcc7-v2
-          environment-file: environment.yml
-          python-version: 3.6
-          auto-activate-base: false
+          wget https://raw.githubusercontent.com/Oneflow-Inc/conda-env/30a7f00eb48ee9009d85a848e720823e5054c66b/dev/gcc7/environment-v2.yml -O ${{ env.ENVIRONMENT_FILE }}
+          conda env update -f ${{ env.ENVIRONMENT_FILE }} --prune
+          conda init
+          echo 'conda activate oneflow-dev-gcc7-v2' >> ~/.bashrc
       - name: Set environment variables (conda)
         if: matrix.test_suite == 'conda'
         run: |
