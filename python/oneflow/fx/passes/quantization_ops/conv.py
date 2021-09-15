@@ -36,12 +36,14 @@ class QConv2d(flow.nn.Conv2d):
         super(QConv2d, self).__init__(
             in_channels, out_channels, kernel_size, stride, padding, dilation, groups
         )
+        
         self.min_max_observer = flow.nn.MinMaxObserver(
             quantization_formula=quantization_formula,
             quantization_bit=quantization_bit,
             quantization_scheme=quantization_scheme,
             per_layer_quantization=per_layer_quantization,
         )
+        
         self.fake_quantization = flow.nn.FakeQuantization(
             quantization_formula=quantization_formula,
             quantization_bit=quantization_bit,

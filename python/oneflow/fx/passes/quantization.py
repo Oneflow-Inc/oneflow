@@ -20,6 +20,7 @@ from oneflow.fx.graph_module import GraphModule
 from oneflow.fx.node import Node, map_aggregate
 from typing import Any, Tuple, NamedTuple, Optional
 from oneflow.fx._compatibility import compatibility
+from oneflow.fx.passes.quantization_ops.fuse_conv_bn import QConvBN
 from oneflow.fx.passes.quantization_ops.linear import QLinear
 from ..node import Argument, Target
 from .quantization_ops.conv import QConv2d
@@ -27,6 +28,7 @@ from .quantization_ops.conv import QConv2d
 trace_op = (
     flow.nn.Conv2d,
     flow.nn.Linear,
+    flow.nn.BatchNorm2d,
 )
 
 
@@ -34,7 +36,7 @@ trace_op = (
 class GetInsertNode(flow.fx.Interpreter):
 
     insert_place = []
-    insert_op_state = []
+    insert_op_state = {}
 
     def run_node(self, n: Node) -> Any:
         args, kwargs = self.fetch_args_kwargs_from_env(n)
@@ -64,7 +66,7 @@ class GetInsertNode(flow.fx.Interpreter):
         submod = self.fetch_attr(target)
         if isinstance(submod, trace_op):
             self.insert_place.append(target)
-            self.insert_op_state.append(submod)
+            self.insert_op_state[target] = submod
         return submod(*args, **kwargs)
 
 
@@ -79,11 +81,8 @@ def get_current_module_space(mod: str):
     return y
 
 
-fx_qat_name = dict()
-
 
 def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphModule:
-    fx_qat_name.clear()
 
     quantization_bit = 8
     quantization_scheme = "symmetric"
@@ -103,17 +102,40 @@ def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphM
     for x in gm.graph.nodes:
         if x.target in insert_place:
             with gm.graph.inserting_after(x):
-                if isinstance(insert_op_state[cnt], flow.nn.Conv2d):
+                y = x.next
+                if isinstance(insert_op_state[x.target], flow.nn.Conv2d) and isinstance(insert_op_state[y.target], flow.nn.BatchNorm2d):
+                    gm.add_submodule(
+                        f"{get_current_module_space(x.target)}.conv_bn.{cnt}",
+                        QConvBN(
+                            insert_op_state[x.target],
+                            insert_op_state[y.target],
+                            quantization_bit,
+                            quantization_scheme,
+                            quantization_formula,
+                            per_layer_quantization,
+                        ),
+                    )
+                    y.replace_all_uses_with(x)
+                    gm.graph.erase_node(y)
+                    qconvbn = gm.graph.call_module(
+                        module_name=f"{get_current_module_space(x.target)}.conv_bn.{cnt}",
+                        args=x.args,
+                    )
+                    cnt = cnt + 1
+                    x.replace_all_uses_with(qconvbn)
+                    gm.graph.erase_node(x)
+                
+                elif isinstance(insert_op_state[x.target], flow.nn.Conv2d):
                     gm.add_submodule(
                         f"{get_current_module_space(x.target)}.fake_conv2d.{cnt}",
                         QConv2d(
-                            insert_op_state[cnt].in_channels,
-                            insert_op_state[cnt].out_channels,
-                            insert_op_state[cnt].kernel_size,
-                            insert_op_state[cnt].stride,
-                            insert_op_state[cnt].padding,
-                            insert_op_state[cnt].dilation,
-                            insert_op_state[cnt].groups,
+                            insert_op_state[x.target].in_channels,
+                            insert_op_state[x.target].out_channels,
+                            insert_op_state[x.target].kernel_size,
+                            insert_op_state[x.target].stride,
+                            insert_op_state[x.target].padding,
+                            insert_op_state[x.target].dilation,
+                            insert_op_state[x.target].groups,
                             quantization_bit,
                             quantization_scheme,
                             quantization_formula,
@@ -124,21 +146,18 @@ def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphM
                         module_name=f"{get_current_module_space(x.target)}.fake_conv2d.{cnt}",
                         args=x.args,
                     )
-                    fx_qat_name[
-                        str(x.target)
-                    ] = f"{get_current_module_space(x.target)}.fake_conv2d.{cnt}"
                     cnt = cnt + 1
                     x.replace_all_uses_with(qconv)
                     gm.graph.erase_node(x)
-                elif isinstance(insert_op_state[cnt], flow.nn.Linear):
+                elif isinstance(insert_op_state[x.target], flow.nn.Linear):
                     bias = True
-                    if insert_op_state[cnt].bias is None:
+                    if insert_op_state[x.target].bias is None:
                         bias = False
                     gm.add_submodule(
                         f"{get_current_module_space(x.target)}.fake_matmul.{cnt}",
                         QLinear(
-                            insert_op_state[cnt].in_features,
-                            insert_op_state[cnt].out_features,
+                            insert_op_state[x.target].in_features,
+                            insert_op_state[x.target].out_features,
                             bias,
                             quantization_bit,
                             quantization_scheme,
@@ -150,28 +169,9 @@ def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphM
                         module_name=f"{get_current_module_space(x.target)}.fake_matmul.{cnt}",
                         args=x.args,
                     )
-                    fx_qat_name[
-                        str(x.target)
-                    ] = f"{get_current_module_space(x.target)}.fake_matmul.{cnt}"
                     cnt = cnt + 1
                     x.replace_all_uses_with(qmatmul)
                     gm.graph.erase_node(x)
 
     gm.recompile()
     return gm
-
-
-def convert_quantization_aware_training_module(
-    gm: GraphModule, origin: oneflow.nn.Module, input
-):
-    assert (
-        len(fx_qat_name) > 0
-    ), "quantization_aware_training must be called before convert_quantization_aware_training_module"
-    insert_place, insert_op_state = GetInsertNode(origin).propagate(input)
-
-    origin_w = origin.state_dict()
-    qat_w = gm.state_dict()
-    for k, v in qat_w.items():
-        if k in insert_place:
-            origin_w[fx_qat_name[k]] = v
-    return
