@@ -49,6 +49,10 @@ Maybe<void> AllReduce(const void* in, void* out, size_t elem_cnt, DataType dtype
                       ReduceType reduce_type, Symbol<ParallelDesc> parallel_desc, DeviceCtx* ctx);
 
 template<DeviceType device_type>
+Maybe<void> AllGather(const void* in, void* out, size_t elem_cnt, DataType dtype,
+                      Symbol<ParallelDesc> parallel_desc, DeviceCtx* ctx);
+
+template<DeviceType device_type>
 Maybe<void> ReduceScatter(const void* in, void* out, size_t elem_cnt, DataType dtype,
                           ReduceType reduce_type, Symbol<ParallelDesc> parallel_desc,
                           DeviceCtx* ctx);
