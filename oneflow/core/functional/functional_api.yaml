@@ -1064,7 +1064,7 @@
 
 
 - name: "eager_b_to_s"
-  signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, Shape shape) => EagerBToS"
+  signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList out_sbp, Shape shape) => EagerBToS"
   bind_python: False
 
 - name: "eager_naive_s_to_s"

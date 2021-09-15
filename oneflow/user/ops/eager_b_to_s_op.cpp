@@ -27,13 +27,14 @@ namespace {
 Maybe<void> TensorDescInfer(user_op::InferContext* ctx) {
   const Shape& shape = ctx->Attr<Shape>("shape");
   const std::string& out_parallel_conf_txt = ctx->Attr<std::string>("out_parallel_conf");
+  const int64_t out_split_axis = ctx->Attr<int64_t>("out_split_axis");
   Symbol<ParallelDesc> out_parallel_desc = JUST(TxtStringToPlacement(out_parallel_conf_txt));
   DimVector dim_vec{shape.dim_vec()};
   int64_t out_parallel_num = out_parallel_desc->parallel_num();
   if (out_parallel_num > 1) {
-    int64_t split_axis = 0;
-    CHECK_OR_RETURN(shape.At(split_axis) % out_parallel_num == 0);
-    dim_vec[split_axis] = shape.At(split_axis) / out_parallel_num;
+    CHECK_LE_OR_RETURN(out_split_axis, shape.NumAxes());
+    CHECK_OR_RETURN(shape.At(out_split_axis) % out_parallel_num == 0);
+    dim_vec[out_split_axis] = shape.At(out_split_axis) / out_parallel_num;
   }
   *ctx->OutputShape("out", 0) = Shape(dim_vec);
   return Maybe<void>::Ok();
@@ -45,6 +46,7 @@ Maybe<void> TensorDescInfer(user_op::InferContext* ctx) {
 REGISTER_NO_GRAD_USER_OP("eager_b_to_s")
     .Input("in")
     .Output("out")
+    .Attr<int64_t>("out_split_axis", -1)
     .Attr<std::string>("in_parallel_conf")
     .Attr<std::string>("out_parallel_conf")
     .Attr<Shape>("shape")

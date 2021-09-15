@@ -58,17 +58,17 @@ Maybe<one::Tensor> CclBToS(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
+  const auto& sbp_list = JUST(GetSbpList(out->nd_sbp()));
   std::shared_ptr<one::Tensor> local_tensor = JUST(tensor->cur_rank_phy_tensor());
   {
     const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(tensor_placement));
     const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out->placement()));
     if (in_parallel_id->has_value() || out_parallel_id->has_value()) {
-      local_tensor = JUST(one::functional::EagerBToS(local_tensor, tensor_placement,
-                                                     out->placement(), *tensor->shape()));
+      local_tensor = JUST(one::functional::EagerBToS(
+          local_tensor, tensor_placement, out->placement(), *sbp_list, *tensor->shape()));
     }
   }
 
-  const auto& sbp_list = JUST(GetSbpList(out->nd_sbp()));
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(), *sbp_list,
                                                  *tensor->shape(), tensor->dtype()));
 }
