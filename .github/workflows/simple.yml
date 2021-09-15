@@ -239,7 +239,7 @@ jobs:
           ref: 30a7f00eb48ee9009d85a848e720823e5054c66b
           path: conda-env
       - uses: Oneflow-Inc/get-oneflow@conda-gh-hosted
-        name: Test conda on self-hosted
+        name: Build with gcc7
         if: ${{ matrix.build-type == 'gcc7'}}
         with:
           cmake-init-cache: cmake/caches/ci/gh-hosted/cpu-gcc.cmake
@@ -248,7 +248,7 @@ jobs:
           conda-env-file: conda-env/dev/clang10/environment-v2.yml
           conda-env-name: oneflow-dev-gcc7-v2
       - uses: Oneflow-Inc/get-oneflow@conda-gh-hosted
-        name: Test conda on self-hosted
+        name: Build with clang10
         if: ${{ matrix.build-type == 'clang10'}}
         with:
           cmake-init-cache: cmake/caches/ci/gh-hosted/cpu-clang.cmake
