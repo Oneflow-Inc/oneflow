@@ -61,7 +61,7 @@ class ReluGradFunctor : public BinaryFunctor {
   }
 };
 
-class PReluFunctor : public BinaryFunctor {
+class PReluFunctor {
  public:
   PReluFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("prelu").Input("x").Input("alpha").Output("y").Build());
@@ -80,6 +80,9 @@ class PReluFunctor : public BinaryFunctor {
     JUST(CheckPReLUParametersValid(x, alpha));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, alpha});
   }
+
+  private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class PReluGradFunctor {
