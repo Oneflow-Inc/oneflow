@@ -682,9 +682,9 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
   const auto& parallel_desc_sym = JUST(Placement4Device(op_device)).shared_from_symbol();
   const auto& instr_type_name = JUST(op_device->local_call_instruction_name());
   for (const auto& input : *input_eager_blob_objects) {
-    CHECK_OR_RETURN(input->last_used_device().has_value());
-    const auto& blob_last_used_device = JUST(input->last_used_device().value());
-    if (blob_last_used_device != op_device) {
+    const auto& blob_last_used_device = JUST(input->last_used_device());
+    if (JUST(blob_last_used_device->need_soft_sync_stream())
+        && blob_last_used_device != op_device) {
       auto* dep_object = JUST(input->compute_local_dep_object());
       JUST(SoftSyncStream(dep_object, "mut", blob_last_used_device));
     }
@@ -919,10 +919,14 @@ Maybe<void> InstructionsBuilder::FeedBlob(
 Maybe<void> InstructionsBuilder::ReleaseTensor(
     const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-  const auto& producer_op_device = JUST(eager_blob_object->producer_op_device().value());
-  if (producer_op_device->type() != "cuda" || producer_op_device->type() != "cpu") {
-    JUST(SoftSyncStream(JUST(eager_blob_object->compute_local_dep_object()), "mut",
-                        producer_op_device));
+  if (eager_blob_object->last_used_device().has_value()) {
+    const auto& last_used_device = JUST(eager_blob_object->last_used_device());
+    const auto& producer_op_device = JUST(eager_blob_object->producer_op_device());
+
+    if (JUST(last_used_device->need_soft_sync_stream()) && last_used_device != producer_op_device) {
+      JUST(SoftSyncStream(JUST(eager_blob_object->compute_local_dep_object()), "mut",
+                          producer_op_device));
+    }
   }
   std::string instr_name = parallel_desc->device_tag() + ".ReleaseTensor";
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);

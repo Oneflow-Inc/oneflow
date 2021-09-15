@@ -142,12 +142,30 @@ Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
 Maybe<size_t> Device::instr_local_dep_object_pool_size() const {
   static const size_t kDoubleBufferPoolSize = 2;
   static const HashMap<std::string, size_t> type2pool_size{
-      {"cpu", GetInstructionHighWaterMark()},        {"gpu", GetInstructionHighWaterMark()},
-      {"cuda", GetInstructionHighWaterMark()},       {"cuda_h2d", kDoubleBufferPoolSize},
-      {"cuda_d2h", kDoubleBufferPoolSize},           {"comm_net", kDoubleBufferPoolSize},
-      {"sync_launched_nccl", GetInstructionHighWaterMark()}, {"async_launched_nccl", GetInstructionHighWaterMark()},
+      {"cpu", GetInstructionHighWaterMark()},
+      {"gpu", GetInstructionHighWaterMark()},
+      {"cuda", GetInstructionHighWaterMark()},
+      {"cuda_h2d", kDoubleBufferPoolSize},
+      {"cuda_d2h", kDoubleBufferPoolSize},
+      {"comm_net", GetInstructionHighWaterMark()},
+      {"sync_launched_nccl", GetInstructionHighWaterMark()},
+      {"async_launched_nccl", GetInstructionHighWaterMark()},
   };
   return MapAt(type2pool_size, type());
+}
+
+// TODO(jianhao): move this configuration into stream
+Maybe<bool> Device::need_soft_sync_stream() const {
+  static const HashMap<std::string, bool> type2need_soft_sync_stream{
+      {"cpu", false},
+      {"cuda", true},
+      {"cuda_h2d", false},
+      {"cuda_d2h", false},
+      {"comm_net", false},
+      {"sync_launched_nccl", false},
+      {"async_launched_nccl", false},
+  };
+  return MapAt(type2need_soft_sync_stream, type());
 }
 
 Maybe<const std::string&> Device::local_call_instruction_name() const {
