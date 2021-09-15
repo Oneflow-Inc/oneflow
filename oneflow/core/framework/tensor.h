@@ -289,6 +289,19 @@ class Parameter final : public TensorIf<Parameter> {
   }
   Maybe<Tensor> data() override { return tensor_; }
 
+  // Must override grad_fn_node function. Otherwise grad_fn will belong to Parameter not Tensor.
+  // It will be wrong when use Parameter.data() in operators.
+  // For example: https://github.com/Oneflow-Inc/OneTeam/issues/578#issuecomment-919216297
+  std::shared_ptr<const FunctionNode> grad_fn_node() const override {
+    return tensor_->grad_fn_node();
+  }
+  void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
+    tensor_->set_grad_fn_node(grad_fn_node);
+  }
+  const std::shared_ptr<FunctionNode>& mut_grad_fn_node() override {
+    return tensor_->mut_grad_fn_node();
+  }
+
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override {
     return tensor_->mut_eager_mirrored_tensor_impl();
   }
