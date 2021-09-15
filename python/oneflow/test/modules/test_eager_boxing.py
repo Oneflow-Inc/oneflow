@@ -2611,6 +2611,55 @@ def _test_eager_boxing_with_same_placement_s1_to_b(test_case, in_device, out_dev
         )
 
 
+def _test_eager_naive_boxing_s_to_s(
+    test_case,
+    device_type,
+    shape,
+    in_device_list,
+    out_device_list,
+    in_split_axis,
+    out_split_axis,
+):
+    np_arr = np.random.uniform(-1e-05, 1e-05, shape)
+    placement_with_all_cuda_device = flow.env.all_device_placement(device_type)
+
+    x = flow.tensor(np_arr, device=device_type, dtype=flow.float32)
+
+    x = x.to_consistent(placement_with_all_cuda_device, flow.sbp.broadcast)
+
+    placement = flow.placement(device_type, {0: in_device_list})
+    y = x.to_consistent(placement, flow.sbp.broadcast)
+    y = y.to_consistent(placement, flow.sbp.split(in_split_axis))
+
+    new_placement = flow.placement(device_type, {0: out_device_list})
+    z = y.to_consistent(new_placement, flow.sbp.split(out_split_axis))
+
+    if flow.env.get_rank() in out_device_list:
+        idx = out_device_list.index(flow.env.get_rank())
+        step = int(shape[out_split_axis] / len(out_device_list))
+        if out_split_axis == 0:
+            test_case.assertTrue(
+                np.allclose(
+                    z.to_local().numpy(),
+                    x.to_local().numpy()[idx * step : (idx + 1) * step],
+                    1e-5,
+                    1e-5,
+                )
+            )
+        elif out_split_axis == 1:
+            test_case.assertTrue(
+                np.allclose(
+                    z.to_local().numpy(),
+                    x.to_local().numpy()[..., idx * step : (idx + 1) * step],
+                    1e-5,
+                    1e-5,
+                )
+            )
+        else:
+            raise "only test case with out_split_axis == 0 or out_split_axis == 1"
+    test_case.assertEqual(z.placement, new_placement)
+
+
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestEagerBoxingWithNonOverlappingPlacement(flow.unittest.TestCase):
@@ -2902,6 +2951,21 @@ class TestEagerBoxingWithSameInOutPlacement(flow.unittest.TestCase):
         arg_dict["out_device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_with_same_placement_s1_to_b(test_case, *arg)
+
+
+@flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class TestEagerNaiveBoxingSToS(flow.unittest.TestCase):
+    def test_eager_naive_boxing_s_to_s(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "cuda"]
+        arg_dict["shape"] = [(12, 12), (18, 24)]
+        arg_dict["in_device_list"] = [[0, 1], [1, 2, 3]]
+        arg_dict["out_device_list"] = [[1], [3], [2, 3], [0, 1, 3]]
+        arg_dict["in_split_axis"] = [0, 1]
+        arg_dict["out_split_axis"] = [0, 1]
+        for arg in GenArgList(arg_dict):
+            _test_eager_naive_boxing_s_to_s(test_case, *arg)
 
 
 if __name__ == "__main__":
