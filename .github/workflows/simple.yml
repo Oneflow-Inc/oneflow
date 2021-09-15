@@ -238,13 +238,20 @@ jobs:
           repository: Oneflow-Inc/conda-env
           ref: 30a7f00eb48ee9009d85a848e720823e5054c66b
           path: conda-env
-      - uses: ./
+      - uses: Oneflow-Inc/get-oneflow@conda-gh-hosted
         name: Test conda on self-hosted
-        if: ${{ matrix.build-type == 'clang10'}}
+        if: ${{ matrix.build-type == 'gcc7'}}
         with:
-          cmake-init-cache: cmake/caches/cn/fast/cpu-clang.cmake
+          cmake-init-cache: cmake/caches/ci/gh-hosted/cpu-clang.cmake
           oneflow-src: .
           oneflow-build-env: conda
           conda-env-file: conda-env/dev/clang10/environment-v2.yml
           conda-prefix: ~/miniconda3-prefixes/py39_4.10.3
-          self-hosted: ${{ contains(matrix.os, 'self-hosted') }}
+      - uses: Oneflow-Inc/get-oneflow@conda-gh-hosted
+        name: Test conda on self-hosted
+        if: ${{ matrix.build-type == 'clang10'}}
+        with:
+          cmake-init-cache: cmake/caches/ci/gh-hosted/cpu-gcc.cmake
+          oneflow-src: .
+          oneflow-build-env: conda
+          conda-env-file: conda-env/dev/clang10/environment-v2.yml
