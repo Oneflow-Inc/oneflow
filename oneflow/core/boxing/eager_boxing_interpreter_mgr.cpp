@@ -84,12 +84,13 @@ Maybe<BoxingExprIf> RawMainBoxingExpr() {
       JUST(BoxingExpr("identity")) | JUST(BoxingExpr("flatten-hierarchy"))
       | JUST(BoxingExpr("cuda-copy-h2d")) | JUST(BoxingExpr("cuda-copy-d2h"))
       | JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("ccl-p-to-b"))
-      | JUST(BoxingExpr("nccl-p-to-s")) | JUST(BoxingExpr("nccl-s-to-b"))
+      | JUST(BoxingExpr("nccl-s-to-b")) | JUST(BoxingExpr("ccl-s-to-b"))
       | JUST(BoxingExpr("nccl-s-to-s")) | JUST(BoxingExpr("ccl-s-to-s"))
-      | JUST(BoxingExpr("symmetric-b-to-p")) | JUST(BoxingExpr("symmetric-b-to-s"))
-      | JUST(BoxingExpr("symmetric-s-to-p")) | JUST(BoxingExpr("symmetric-nd-sbp-to-nd-sbp"))
-      | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(OneToNBoxingExpr()) | JUST(NToOneBoxingExpr())
-      | JUST(BoxingExpr("naive-1-to-1")) | JUST(GenericBoxingExpr());
+      | JUST(BoxingExpr("nccl-p-to-s")) | JUST(BoxingExpr("symmetric-b-to-p"))
+      | JUST(BoxingExpr("symmetric-b-to-s")) | JUST(BoxingExpr("symmetric-s-to-p"))
+      | JUST(BoxingExpr("symmetric-nd-sbp-to-nd-sbp")) | JUST(BoxingExpr("asymmetric-x-to-b")) 
+      | JUST(OneToNBoxingExpr()) | JUST(NToOneBoxingExpr()) | JUST(BoxingExpr("naive-1-to-1")) 
+      | JUST(GenericBoxingExpr());
   return core | JUST(OptionalCudaCopy(core));
 }
 
