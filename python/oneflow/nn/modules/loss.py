@@ -21,7 +21,22 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.constant import _ConstantBase
 
 
-class L1Loss(Module):
+class _Loss(Module):
+    def __init__(self, reduction: str = "mean") -> None:
+        super(_Loss, self).__init__()
+        assert reduction in ["none", "mean", "sum"]
+        self.reduction = reduction
+
+
+class _WeightedLoss(_Loss):
+    def __init__(
+        self, weight: Optional[Tensor] = None, reduction: str = "mean"
+    ) -> None:
+        super(_WeightedLoss, self).__init__(reduction=reduction)
+        self.weight = weight
+
+
+class L1Loss(_Loss):
     """This operator computes the L1 Loss between each element in `input` and `target`.
 
     The equation is:
@@ -76,19 +91,10 @@ class L1Loss(Module):
         tensor(24., dtype=oneflow.float32)
     """
 
-    def __init__(self, reduction: str = "mean", reduce=True) -> None:
-        super().__init__()
-        if reduce is not None and (not reduce):
-            raise ValueError("Argument reduce is not supported yet")
-        assert reduction in [
-            "none",
-            "mean",
-            "sum",
-            None,
-        ], "only 'sum', 'mean' and 'none' supported by now"
-        self.reduction = reduction
+    def __init__(self, reduction: str = "mean") -> None:
+        super(L1Loss, self).__init__(reduction)
 
-    def forward(self, input, target):
+    def forward(self, input: Tensor, target: Tensor) -> Tensor:
         assert (
             input.shape == target.shape
         ), "The Input shape must be the same as Target shape"
@@ -101,7 +107,7 @@ class L1Loss(Module):
             return l1_value
 
 
-class CrossEntropyLoss(Module):
+class CrossEntropyLoss(_WeightedLoss):
     """This criterion combines :class:`~flow.nn.LogSoftmax` and :class:`~flow.nn.NLLLoss` in one single class.
 
     It is useful when training a classification problem with `C` classes.
@@ -158,21 +164,12 @@ class CrossEntropyLoss(Module):
 
     def __init__(
         self,
-        weight=None,
-        ignore_index: Optional[int] = None,
-        reduction: Optional[str] = "mean",
+        weight: Optional[Tensor] = None,
+        ignore_index: int = -100,
+        reduction: str = "mean",
     ) -> None:
-        super().__init__()
-        if weight is not None:
-            raise ValueError("Argument weight is not supported yet")
-        assert reduction in [
-            "sum",
-            "none",
-            "mean",
-            None,
-        ], "only 'sum', 'mean' and None supported by now"
+        super(CrossEntropyLoss, self).__init__(weight, reduction)
         self.ignore_index = ignore_index
-        self.reduction = reduction
 
     def forward(self, input, target):
         assert len(input.shape) <= 5
@@ -189,7 +186,7 @@ class CrossEntropyLoss(Module):
         out = flow._C.sparse_softmax_cross_entropy(
             input, target, depth=input.shape[len(input.shape) - 1]
         )
-        if self.ignore_index is not None:
+        if self.ignore_index != -100:
             zeros = flow.zeros(out.shape, dtype=out.dtype, device=out.device)
             condition = flow.eq(target, self.ignore_index)
             ones = flow.ones(
@@ -209,7 +206,7 @@ class CrossEntropyLoss(Module):
             return out.reshape(*target_shape)
 
 
-class BCELoss(Module):
+class BCELoss(_WeightedLoss):
     """This operator computes the binary cross entropy loss.
 
     The equation is:
@@ -273,22 +270,16 @@ class BCELoss(Module):
 
     """
 
-    def __init__(self, weight: Tensor = None, reduction: str = "mean") -> None:
-        super().__init__()
-        assert reduction in [
-            "none",
-            "sum",
-            "mean",
-            None,
-        ], "only 'sum', 'mean' and 'none' supported by now"
-        self.weight = weight
-        self.reduction = reduction
+    def __init__(
+        self, weight: Optional[Tensor] = None, reduction: str = "mean"
+    ) -> None:
+        super(BCELoss, self).__init__(weight, reduction)
 
-    def forward(self, input, target):
+    def forward(self, input: Tensor, target: Tensor) -> Tensor:
         return flow._C.binary_cross_entropy(input, target, self.weight, self.reduction)
 
 
-class NLLLoss(Module):
+class NLLLoss(_WeightedLoss):
     """ The negative log likelihood loss. It is useful to train a classification
     problem with `C` classes.
 
@@ -365,32 +356,21 @@ class NLLLoss(Module):
     """
 
     def __init__(
-        self, weight=None, ignore_index: int = -100, reduction: str = "mean"
+        self,
+        weight: Optional[Tensor] = None,
+        ignore_index: int = -100,
+        reduction: str = "mean",
     ) -> None:
-        super().__init__()
-        assert reduction in [
-            "sum",
-            "none",
-            "mean",
-            None,
-        ], "only 'sum', 'mean' and None supported by now"
-        self.weight = weight
+        super(NLLLoss, self).__init__(weight, reduction)
         self.ignore_index = ignore_index
-        self.reduction = reduction
 
-    def forward(self, input, target):
-        assert len(input.shape) <= 5
-        assert len(target.shape) == len(input.shape) - 1
-        assert input.shape[0] == target.shape[0]
-        for i in range(2, len(input.shape)):
-            assert input.shape[i] == target.shape[i - 1]
-
+    def forward(self, input: Tensor, target: Tensor) -> Tensor:
         return flow._C.nll(
             input, target, self.weight, self.ignore_index, self.reduction
         )
 
 
-class KLDivLoss(Module):
+class KLDivLoss(_Loss):
     """The interface is consistent with PyTorch.
     The documentation is referenced from:
     https://pytorch.org/docs/stable/generated/torch.nn.KLDivLoss.html?highlight=kldivloss#torch.nn.KLDivLoss
@@ -478,14 +458,7 @@ class KLDivLoss(Module):
     """
 
     def __init__(self, reduction: str = "mean", log_target: bool = False) -> None:
-        super().__init__()
-        assert reduction in [
-            "sum",
-            "none",
-            "mean",
-            None,
-        ], "Argument reduction only support 'sum'/'mean'/'none'/None for now!"
-        self.reduction = reduction
+        super(KLDivLoss, self).__init__(reduction)
         self.log_target = log_target
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
@@ -508,7 +481,7 @@ class KLDivLoss(Module):
             return _kl_div_loss
 
 
-class MSELoss(Module):
+class MSELoss(_Loss):
     """The interface is consistent with PyTorch.
     The documentation is referenced from:
     https://pytorch.org/docs/stable/generated/torch.nn.MSELoss.html?highlight=mseloss#torch.nn.MSELoss
@@ -579,14 +552,7 @@ class MSELoss(Module):
     """
 
     def __init__(self, reduction: str = "mean") -> None:
-        super().__init__()
-        assert reduction in [
-            "sum",
-            "none",
-            "mean",
-            None,
-        ], "Argument reduction only support 'sum'/'mean'/'none'/None for now!"
-        self.reduction = reduction
+        super(MSELoss, self).__init__(reduction)
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         mean_squared_difference = flow.square(flow.sub(input, target))
@@ -598,7 +564,7 @@ class MSELoss(Module):
             return mean_squared_difference
 
 
-class MarginRankingLoss(Module):
+class MarginRankingLoss(_Loss):
     """Creates a criterion that measures the loss given
     inputs :math:`x1`, :math:`x2`, two 1D mini-batch `Tensors`,
     and a label 1D mini-batch tensor :math:`y` (containing 1 or -1).
@@ -653,18 +619,11 @@ class MarginRankingLoss(Module):
 
     """
 
-    def __init__(self, margin=0.0, reduction: str = "mean") -> None:
-        super().__init__()
+    def __init__(self, margin: float = 0.0, reduction: str = "mean") -> None:
+        super(MarginRankingLoss, self).__init__(reduction)
         self.margin = margin
-        assert reduction in [
-            "sum",
-            "none",
-            "mean",
-            None,
-        ], "only 'sum', 'mean' and None supported by now"
-        self.reduction = reduction
 
-    def forward(self, input1, input2, target):
+    def forward(self, input1: Tensor, input2: Tensor, target: Tensor) -> Tensor:
         res = flow.clip(
             flow.add(
                 self.margin, flow.mul(target, flow.mul(-1, flow.sub(input1, input2)))
@@ -679,7 +638,7 @@ class MarginRankingLoss(Module):
             return res.mean()
 
 
-class CTCLoss(Module):
+class CTCLoss(_Loss):
     """The Connectionist Temporal Classification loss.
     The interface is consistent with PyTorch.
     The documentation is referenced from:
@@ -772,14 +731,8 @@ class CTCLoss(Module):
     def __init__(
         self, blank: int = 0, reduction: str = "mean", zero_infinity: bool = False
     ) -> None:
-        super().__init__()
-        assert reduction in [
-            "sum",
-            "none",
-            "mean",
-            None,
-        ], "only 'sum', 'mean' and None supported by now"
-        self.reduction = reduction
+        super(CTCLoss, self).__init__(reduction)
+
         self.zero_infinity = zero_infinity
         self._op = (
             flow.builtin_op("ctc_loss")
@@ -834,7 +787,7 @@ class CTCLoss(Module):
             return loss
 
 
-class BCEWithLogitsLoss(Module):
+class BCEWithLogitsLoss(_WeightedLoss):
     """This operator combines the `Sigmoid` and `BCELoss` together. For numerical stability,
     we apply some math tricks instead of using `Sigmoid` layer with `BCELoss`.
 
@@ -905,32 +858,21 @@ class BCEWithLogitsLoss(Module):
 
     def __init__(
         self,
-        weight=None,
-        size_average: bool = True,
-        reduce: bool = True,
-        reduction: Optional[str] = "mean",
-        pos_weight=None,
+        weight: Optional[Tensor] = None,
+        reduction: str = "mean",
+        pos_weight: Optional[Tensor] = None,
     ) -> None:
-        super().__init__()
-        assert reduction in [
-            "sum",
-            "none",
-            "mean",
-            None,
-        ], "only 'sum', 'mean' and None supported by now"
-        self.weight = weight
-        self.size_average = size_average
-        self.reduce = reduce
+        super(BCEWithLogitsLoss, self).__init__(weight, reduction)
         self.reduction = reduction
         self.pos_weight = pos_weight
 
-    def forward(self, input, target):
+    def forward(self, input: Tensor, target: Tensor) -> Tensor:
         return flow._C.binary_cross_entropy_with_logits(
             input, target, self.weight, self.pos_weight, self.reduction
         )
 
 
-class SmoothL1Loss(Module):
+class SmoothL1Loss(_Loss):
     """Creates a criterion that uses a squared term if the absolute
     element-wise error falls below beta and an L1 term otherwise.
     The interface is consistent with PyTorch.
@@ -1028,21 +970,9 @@ class SmoothL1Loss(Module):
         tensor(2.0300, dtype=oneflow.float32)
     """
 
-    def __init__(
-        self, size_average=None, reduce=None, reduction: str = "mean", beta: float = 1.0
-    ) -> None:
-        super().__init__()
-        if size_average is not None:
-            raise ValueError("Argument reduce is not supported yet")
-        if reduce is not None:
-            raise ValueError("Argument reduce is not supported yet")
-        assert reduction in [
-            "sum",
-            "none",
-            "mean",
-            None,
-        ], "only 'sum', 'mean' and None supported by now"
-        self.reduction = reduction
+    def __init__(self, reduction: str = "mean", beta: float = 1.0) -> None:
+        super(SmoothL1Loss, self).__init__(reduction)
+
         self.beta = beta
         self._op = (
             flow.builtin_op("smooth_l1_loss")
@@ -1053,7 +983,7 @@ class SmoothL1Loss(Module):
             .Build()
         )
 
-    def forward(self, input, target) -> Tensor:
+    def forward(self, input: Tensor, target: Tensor) -> Tensor:
         loss = self._op(input, target)[0]
         if self.reduction == "none":
             return loss
@@ -1104,7 +1034,7 @@ class CombinedMarginLoss(Module):
         self.m2 = m2
         self.m3 = m3
 
-    def forward(self, x, label):
+    def forward(self, x: Tensor, label: Tensor) -> Tensor:
         depth = x.shape[1]
         (y, _) = flow._C.combined_margin_loss(
             x, label, m1=self.m1, m2=self.m2, m3=self.m3, depth=depth

@@ -378,19 +378,23 @@ class NllFunctor {
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight, const int64_t& ignore_index,
                            const Optional<std::string>& reduction) const {
+    const auto& input_shape = input->shape();
+    const auto& target_shape = target->shape();
+    CHECK_LE_OR_RETURN(input_shape->NumAxes(), 5);
+    CHECK_EQ_OR_RETURN(input_shape->NumAxes() - 1, target_shape->NumAxes());
+
     std::string reduction_v = reduction ? *JUST(reduction.value()) : "none";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
     JUST(attrs.SetAttr<std::string>("reduction", reduction_v));
 
-    std::vector<int> input_perm(input->shape()->dim_vec().size(), 0);
+    std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
     input_perm[input_perm.size() - 1] = 1;
     for (size_t i = 1; i < input_perm.size() - 1; ++i) { input_perm[i] = i + 1; }
     auto input_ = JUST(functional::Transpose(input, input_perm));
     input_ =
-        JUST(functional::Reshape(input_, {-1, input_->shape()->At(input->shape()->NumAxes() - 1)}));
-    const auto target_shape = target->shape();
-    auto target_ = JUST(functional::Flatten(target, 0, target->shape()->NumAxes() - 1));
+        JUST(functional::Reshape(input_, {-1, input_->shape()->At(input_shape->NumAxes() - 1)}));
+    auto target_ = JUST(functional::Flatten(target, 0, target_shape->NumAxes() - 1));
 
     std::shared_ptr<Tensor> result;
     if (weight) {

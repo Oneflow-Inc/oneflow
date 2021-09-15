@@ -23,57 +23,65 @@ namespace {
 Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   const auto& input_desc = ctx->InputTensorDesc("input", 0);
   const auto& target_desc = ctx->InputTensorDesc("target", 0);
-  // TODO weight
   CHECK_EQ_OR_RETURN(input_desc.is_dynamic(), target_desc.is_dynamic());
   CHECK_GE_OR_RETURN(input_desc.shape().NumAxes(), 2);
-  const int64_t num_out_axes = input_desc.shape().NumAxes() - 1;
-  CHECK_EQ_OR_RETURN(target_desc.shape().NumAxes(), num_out_axes);
-  FOR_RANGE(int64_t, i, 0, num_out_axes) {
-    CHECK_EQ_OR_RETURN(input_desc.shape().At(i), target_desc.shape().At(i));
+  CHECK_EQ_OR_RETURN(target_desc.shape().NumAxes(), 1);
+  CHECK_EQ_OR_RETURN(input_desc.shape().At(0), target_desc.shape().At(0));
+  if (ctx->has_input("weight", 0)) {
+    const auto& weight_desc = ctx->InputTensorDesc("weight", 0);
+    CHECK_EQ_OR_RETURN(weight_desc.is_dynamic(), input_desc.is_dynamic());
+    CHECK_EQ_OR_RETURN(weight_desc.shape(), Shape({input_desc.shape().At(1)}));
   }
+
   JUST(CheckLossReductionAndInferOutputTenserDesc(ctx, "out", input_desc.is_dynamic(),
                                                   target_desc.shape()));
 
   user_op::TensorDesc* total_weight_desc = ctx->OutputTensorDesc("total_weight", 0);
   *total_weight_desc->mut_is_dynamic() = input_desc.is_dynamic();
   *total_weight_desc->mut_shape() = Shape({1});
+
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_OR_RETURN(IsIndexDataType(target_desc.data_type()));
+
   *ctx->OutputDType("out", 0) = ctx->InputDType("input", 0);
   *ctx->OutputDType("total_weight", 0) = ctx->InputDType("input", 0);
+
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   const auto& input_desc = ctx->InputTensorDesc("input", 0);
   const auto& target_desc = ctx->InputTensorDesc("target", 0);
-  // TODO weight
+  const auto& total_weight_desc = ctx->InputTensorDesc("total_weight", 0);
   CHECK_EQ_OR_RETURN(input_desc.is_dynamic(), target_desc.is_dynamic());
   CHECK_GE_OR_RETURN(input_desc.shape().NumAxes(), 2);
-  const int64_t num_out_axes = input_desc.shape().NumAxes() - 1;
-  CHECK_EQ_OR_RETURN(target_desc.shape().NumAxes(), num_out_axes);
-  FOR_RANGE(int64_t, i, 0, num_out_axes) {
-    CHECK_EQ_OR_RETURN(input_desc.shape().At(i), target_desc.shape().At(i));
+  CHECK_EQ_OR_RETURN(target_desc.shape().NumAxes(), 1);
+  CHECK_EQ_OR_RETURN(input_desc.shape().At(0), target_desc.shape().At(0));
+  CHECK_EQ_OR_RETURN(total_weight_desc.shape(), Shape({1}));
+  if (ctx->has_input("weight", 0)) {
+    const auto& weight_desc = ctx->InputTensorDesc("weight", 0);
+    CHECK_EQ_OR_RETURN(weight_desc.is_dynamic(), input_desc.is_dynamic());
+    CHECK_EQ_OR_RETURN(weight_desc.shape(), Shape({input_desc.shape().At(1)}));
   }
-
   JUST(CheckLossReductionAndCheckInputTenserDesc(ctx, "dy", target_desc.shape()));
 
-  const auto& total_weight_desc = ctx->InputTensorDesc("total_weight", 0);
-  CHECK_EQ_OR_RETURN(total_weight_desc.shape(), Shape({1}));
   user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
   *dx_desc->mut_is_dynamic() = input_desc.is_dynamic();
   *dx_desc->mut_shape() = input_desc.shape();
+
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_OR_RETURN(IsIndexDataType(target_desc.data_type()));
+
   *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+
   return Maybe<void>::Ok();
 }
 }  // namespace
