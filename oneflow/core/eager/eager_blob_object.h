@@ -76,7 +76,7 @@ class EagerBlobObject final : public BlobObject {
   }
 
   Maybe<LocalDepObject*> compute_local_dep_object() const {
-    return compute_local_dep_object_.value();
+    return JUST(compute_local_dep_object_);
   }
 
   std::shared_ptr<TensorBuffer>& tensor_buffer() { return tensor_buffer_; }

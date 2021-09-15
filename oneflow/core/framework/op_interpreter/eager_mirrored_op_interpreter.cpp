@@ -48,7 +48,7 @@ namespace one {
 namespace {
 
 Maybe<Symbol<Device>> GetDefaultDevice(const OpExprInterpContext& ctx) {
-  if (ctx.device.has_value()) { return ctx.device.value(); }
+  if (ctx.device.has_value()) { return JUST(ctx.device); }
   return Device::New("cpu", 0);
 }
 
@@ -257,7 +257,7 @@ Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
 Maybe<Shape> CalcPhysicalShape(Symbol<ConsistentTensorMeta> consistent_tensor_meta) {
   const auto& opt_parallel_id =
       JUST(GetParallelId4CurrentProcessCtx(consistent_tensor_meta->parallel_desc()));
-  int64_t parallel_id = JUST(opt_parallel_id->value());
+  int64_t parallel_id = JUST(*opt_parallel_id);
   return GetPhysicalShape(consistent_tensor_meta->shape(), *consistent_tensor_meta->nd_sbp(),
                           *consistent_tensor_meta->parallel_desc(), parallel_id);
 }
@@ -301,8 +301,8 @@ Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const Te
   {
     CHECK_OR_RETURN(ctx.parallel_desc.has_value());
     CHECK_OR_RETURN(ctx.nd_sbp.has_value());
-    const auto& nd_sbp = JUST(ctx.nd_sbp.value());
-    const auto& parallel_desc = JUST(ctx.parallel_desc.value());
+    const auto& nd_sbp = JUST(ctx.nd_sbp);
+    const auto& parallel_desc = JUST(ctx.parallel_desc);
     const auto& logical_shape = JUST(ctx.attrs.GetAttr<Shape>("shape"));
     DataType dtype = JUST(ctx.attrs.GetAttr<DataType>("dtype"));
     ConsistentTensorMeta tensor_meta(std::make_shared<const Shape>(logical_shape), dtype, nd_sbp,
@@ -334,10 +334,10 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
   const auto& consistent_tensor = JUST(outputs->at(0)->AsConsistentTensor());
   JUST(WithConsistencyChecked(consistent_tensor, [&]() -> Maybe<void> {
     if (IsConsistentTensorMetaCheckDisabled()) { return Maybe<void>::Ok(); }
-    const auto& parallel_desc = JUST(ctx.parallel_desc.value());
+    const auto& parallel_desc = JUST(ctx.parallel_desc);
     const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
     if (!parallel_id->has_value()) { return Maybe<void>::Ok(); }
-    const auto& nd_sbp = JUST(ctx.nd_sbp.value());
+    const auto& nd_sbp = JUST(ctx.nd_sbp);
     const auto& tensor_meta = JUST(consistent_tensor->consistent_tensor_meta());
     const auto& local_tensor = JUST(consistent_tensor->cur_rank_phy_tensor());
     const auto& reshaped_tensor = JUST(TryReshapeTensor(local_tensor, tensor_meta));

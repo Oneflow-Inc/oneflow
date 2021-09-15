@@ -18,7 +18,8 @@ import unittest
 import oneflow as flow
 from oneflow.test_utils.automated_test_util.generators import constant, random_bool
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n1d()

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -91,7 +92,7 @@ class ConstantFunctor {
       JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
     }
     if (device.has_value()) {
-      Symbol<Device> device_symbol = JUST(device.value());
+      Symbol<Device> device_symbol = JUST(device);
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
@@ -111,7 +112,7 @@ class EmptyFunctor {
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     if (device.has_value()) {
-      Symbol<Device> device_symbol = JUST(device.value());
+      Symbol<Device> device_symbol = JUST(device);
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
@@ -680,13 +681,15 @@ class ReshapeFunctor {
     size_t x_count = x->shape()->Count(0);
     MutableAttrMap attrs;
     if (need_infer_axis == -1) {
-      CHECK_EQ_OR_RETURN(shape.Count(0), x_count);
+      CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
+          << "\n Shape " << shape.ToString() << " is invalid for input shape "
+          << x->shape()->ToString();
       JUST(attrs.SetAttr<Shape>("shape", shape));
     } else {
       Shape infered_shape = shape;
       infered_shape.Set(need_infer_axis, x_count / count);
       CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
-          << "Shape " << shape.ToString() << " is invalid for input of shape "
+          << "\n Shape " << shape.ToString() << " is invalid for input shape "
           << x->shape()->ToString();
       JUST(attrs.SetAttr<Shape>("shape", infered_shape));
     }
@@ -817,12 +820,20 @@ class SliceUpdateFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& update,
                            const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
-                           const std::vector<int64_t>& step) const {
+                           const std::vector<int64_t>& step, bool inplace) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, update}, attrs);
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      auto outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x, update}, outputs.get(), attrs));
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x, update}, attrs);
+    }
   }
 
  private:
@@ -1364,7 +1375,16 @@ class TensorSetItemFunctor {
     if (slice_shape != *(value_tensor->shape())) {
       value_tensor = JUST(Reshape(value_tensor, slice_shape));
     }
-    JUST(LogicalSliceAssign(x, value_tensor, start, end, step));
+    if (x->is_local()) {
+      JUST(SliceUpdate(x, value_tensor, start, end, step, /*inplace=*/true));
+    } else {
+      if (x->requires_grad() && autograd::GradMode::is_enabled()) {
+        return Error::RuntimeError() << "Backward is not support for consistent tensor setitem,"
+                                        "please use oneflow.no_grad() to disable autograd "
+                                        "currently. We will fix this problem soon.";
+      }
+      JUST(LogicalSliceAssign(x, value_tensor, start, end, step));
+    }
     return Maybe<void>::Ok();
   }
 };
