@@ -33,7 +33,7 @@ Maybe<LocalDepObject*> RawGetEagerNcclLocalDepObject(const std::string& type) {
   const auto& device = JUST(Device::New(type));
   const auto& local_dep_object = device->mut_transport_local_dep_object();
   CHECK_OR_RETURN(local_dep_object.has_value());
-  return JUST(local_dep_object.value());
+  return JUST(local_dep_object);
 }
 
 }  // namespace

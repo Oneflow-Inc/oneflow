@@ -73,7 +73,7 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExp
   if (!LazyMode::is_enabled()) {
     if (inputs.empty()) {
       if (ctx.parallel_desc.has_value()) {
-        JUST(ctx.nd_sbp.value());
+        JUST(ctx.nd_sbp);
         CHECK_OR_RETURN(!ctx.device.has_value());
         return g_eager_consistent_interpreter;
       } else {
