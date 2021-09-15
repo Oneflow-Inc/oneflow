@@ -56,7 +56,7 @@ class BernoulliFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
 
     JUST(bernoulli_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
@@ -78,7 +78,7 @@ class RandFunctor {
                            const Optional<one::Generator>& generator) const {
     DataType dtype_val = DataType::kFloat;
     if (dtype.has_value()) {
-      dtype_val = JUST(dtype.value())->data_type();
+      dtype_val = JUST(dtype)->data_type();
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
         OF_UNIMPLEMENTED() << "Only support float and double in rand().";
       }
@@ -95,7 +95,7 @@ class RandFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
 
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
@@ -103,7 +103,7 @@ class RandFunctor {
     const auto& uniform_kernel_state = std::make_shared<UniformKernelState>(gen);
 
     if (device.has_value()) {
-      Symbol<Device> device_symbol = JUST(device.value());
+      Symbol<Device> device_symbol = JUST(device);
       return OpInterpUtil::Dispatch<Tensor>(
           *op_, {}, OpExprInterpContext(attrs, device_symbol, uniform_kernel_state));
     } else {
@@ -125,7 +125,7 @@ class ConsistentRandFunctor {
                            const Optional<one::Generator>& generator) const {
     DataType dtype_val = DataType::kFloat;
     if (dtype.has_value()) {
-      dtype_val = JUST(dtype.value())->data_type();
+      dtype_val = JUST(dtype)->data_type();
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
         OF_UNIMPLEMENTED() << "Only support float and double in rand().";
       }
@@ -141,7 +141,7 @@ class ConsistentRandFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
 
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
@@ -168,7 +168,7 @@ class RandNFunctor {
                            const Optional<one::Generator>& generator) const {
     DataType dtype_val = DataType::kFloat;
     if (dtype.has_value()) {
-      dtype_val = JUST(dtype.value())->data_type();
+      dtype_val = JUST(dtype)->data_type();
 
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
         OF_UNIMPLEMENTED() << "Only support float and double in randn().";
@@ -186,7 +186,7 @@ class RandNFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
 
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
@@ -194,7 +194,7 @@ class RandNFunctor {
     const auto& normal_kernel_state = std::make_shared<NormalKernelState>(gen);
 
     if (device.has_value()) {
-      Symbol<Device> device_symbol = JUST(device.value());
+      Symbol<Device> device_symbol = JUST(device);
       return OpInterpUtil::Dispatch<Tensor>(
           *op_, {}, OpExprInterpContext(attrs, device_symbol, normal_kernel_state));
     } else {
@@ -216,7 +216,7 @@ class ConsistentRandNFunctor {
                            const Optional<one::Generator>& generator) const {
     DataType dtype_val = DataType::kFloat;
     if (dtype.has_value()) {
-      dtype_val = JUST(dtype.value())->data_type();
+      dtype_val = JUST(dtype)->data_type();
 
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
         OF_UNIMPLEMENTED() << "Only support float and double in randn().";
@@ -233,7 +233,7 @@ class ConsistentRandNFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
 
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
@@ -261,7 +261,7 @@ class RandIntFunctor {
                            const Optional<one::Generator>& generator) const {
     DataType dtype_val = DataType::kInt64;
     if (dtype.has_value()) {
-      dtype_val = JUST(dtype.value())->data_type();
+      dtype_val = JUST(dtype)->data_type();
 
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
         OF_UNIMPLEMENTED() << dtype_val << "not supported in randn";
@@ -278,13 +278,13 @@ class RandIntFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
 
     const auto& uniform_kernel_state = std::make_shared<UniformKernelState>(gen);
     if (device.has_value()) {
-      Symbol<Device> device_symbol = JUST(device.value());
+      Symbol<Device> device_symbol = JUST(device);
       return OpInterpUtil::Dispatch<Tensor>(
           *op_, {}, OpExprInterpContext(attrs, device_symbol, uniform_kernel_state));
     } else {
@@ -307,7 +307,7 @@ class ConsistentRandIntFunctor {
                            const Optional<one::Generator>& generator) const {
     DataType dtype_val = DataType::kInt64;
     if (dtype.has_value()) {
-      dtype_val = JUST(dtype.value())->data_type();
+      dtype_val = JUST(dtype)->data_type();
 
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
         OF_UNIMPLEMENTED() << dtype_val << "not supported in randn";
@@ -323,7 +323,7 @@ class ConsistentRandIntFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
 
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
@@ -360,14 +360,14 @@ class RandPermFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
 
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
 
     const auto& randperm_kernel_state = std::make_shared<UniformKernelState>(gen);
     if (device.has_value()) {
-      Symbol<Device> device_symbol = JUST(device.value());
+      Symbol<Device> device_symbol = JUST(device);
       return OpInterpUtil::Dispatch<Tensor>(
           *randperm_op_, {}, OpExprInterpContext(attrs, device_symbol, randperm_kernel_state));
     } else {
@@ -395,7 +395,7 @@ class ConsistentRandPermFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
 
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
