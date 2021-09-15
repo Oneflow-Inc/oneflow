@@ -135,7 +135,7 @@ jobs:
         if: matrix.test_suite == 'conda'
         name: Setup conda
         with:
-          activate-environment: oneflow-dev-gcc7
+          activate-environment: oneflow-dev-gcc7-v2
           environment-file: environment.yml
           python-version: 3.6
           auto-activate-base: false
