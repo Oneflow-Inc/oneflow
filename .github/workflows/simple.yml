@@ -76,14 +76,11 @@ jobs:
       fail-fast: true
       max-parallel: 3
       matrix:
-        test_suite: ["conda", "mac", "ubuntu"]
+        test_suite: ["mac", "ubuntu"]
         cmake_generator: ["Ninja", "Unix Makefiles"]
         cmake_build_type: ["Debug", "Release"]
         build_shared_libs: ["ON", "OFF"]
         include:
-          - test_suite: conda
-            os: "ubuntu-20.04"
-            make_concurrency: 2
           - test_suite: mac
             os: "macos-10.15"
             make_concurrency: 2
@@ -91,8 +88,6 @@ jobs:
             os: "ubuntu-20.04"
             make_concurrency: 2
         exclude:
-          - test_suite: conda
-            cmake_generator: "Ninja"
           - test_suite: mac
             cmake_build_type: "Debug"
           - test_suite: ubuntu
@@ -111,7 +106,7 @@ jobs:
         run: |
           sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip ninja-build
       - name: Cache pip (Linux)
-        if: startsWith(runner.os, 'Linux') && matrix.test_suite != 'conda'
+        if: startsWith(runner.os, 'Linux')
         uses: actions/cache@v2
         with:
           path: ~/.cache/pip
@@ -123,26 +118,9 @@ jobs:
           path: ~/Library/Caches/pip
           key: ${{ matrix.os }}-pip-${{ hashFiles('**/requirements.txt') }}
       - name: Install dependencies (pip)
-        if: matrix.test_suite != 'conda'
         run: |
           python3 -m pip install -r ci/requirements.txt
           python3 -m pip install -r dev-requirements.txt
-      - name: Download conda environment.yml
-        if: matrix.test_suite == 'conda'
-        run: |
-          wget https://raw.githubusercontent.com/Oneflow-Inc/conda-env/30a7f00eb48ee9009d85a848e720823e5054c66b/dev/gcc7/environment-v2.yml -O environment.yml
-      - uses: conda-incubator/setup-miniconda@v2
-        if: matrix.test_suite == 'conda'
-        name: Setup conda
-        with:
-          activate-environment: oneflow-dev-gcc7-v2
-          environment-file: environment.yml
-          python-version: 3.6
-          auto-activate-base: false
-      - name: Set environment variables (conda)
-        if: matrix.test_suite == 'conda'
-        run: |
-          conda env config vars set CXXFLAGS="-w -fPIC"
       - name: Set environment variables
         run: |
           set -x
