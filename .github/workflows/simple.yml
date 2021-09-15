@@ -245,7 +245,7 @@ jobs:
           cmake-init-cache: cmake/caches/ci/gh-hosted/cpu-gcc.cmake
           oneflow-src: .
           oneflow-build-env: conda
-          conda-env-file: conda-env/dev/clang10/environment-v2.yml
+          conda-env-file: conda-env/dev/gcc7/environment-v2.yml
           conda-env-name: oneflow-dev-gcc7-v2
       - uses: Oneflow-Inc/get-oneflow@ecf3a2bead16ce4dac745c18c841d87487db4df0
         name: Build with clang10
