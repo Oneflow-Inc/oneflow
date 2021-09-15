@@ -39,32 +39,56 @@ Maybe<void> InferNdSbpFn(user_op::InferNdSbpFnContext* ctx) {
 }
 
 Maybe<void> LogicalTensorDescInferFn(user_op::InferContext* ctx) {
-  const Shape& shape = ctx->Attr<Shape>("shape");
+  Shape shape = ctx->Attr<Shape>("shape");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
   const Shape& in_shape = in_tensor_desc.shape();
   Shape* out_shape = out_tensor_desc->mut_shape();
   CHECK_OR_RETURN(in_tensor_desc.is_dynamic() == false);
   *out_tensor_desc = in_tensor_desc;
-  CHECK_GE_OR_RETURN(shape.NumAxes(), 1);
-  DimVector dim_vec = {shape.dim_vec().begin(), shape.dim_vec().end()};
-  FOR_RANGE(int32_t, i, 0, dim_vec.size()) { CHECK_GE_OR_RETURN(dim_vec.at(i), 0); }
-  *out_shape = Shape(dim_vec);
+  if (in_shape.NumAxes() == 0 || shape.NumAxes() == 0) {
+    // NOTE(chengcheng): input/output Scalar
+    // do nothing
+  } else {
+    CHECK_GE_OR_RETURN(shape.NumAxes(), 1);
+    CHECK_GE_OR_RETURN(in_shape.NumAxes(), 1);
+    for (int i = 1 /* skip dim 0 */; i < shape.NumAxes(); ++i) {
+      // NOTE(chengcheng): ONLY dim-0 may be -1 for infer
+      CHECK_GE_OR_RETURN(shape.At(i), 0);
+    }
+    if (shape.At(0) == -1) {
+      // NOTE(chengcheng): dim-0 unchanged for input.
+      shape.Set(0, in_shape.At(0));
+    }
+  }
+  *out_shape = shape;
   CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
-  const Shape& shape = ctx->Attr<Shape>("shape");
-  CHECK_GE_OR_RETURN(shape.NumAxes(), 1);
-  FOR_RANGE(int32_t, i, 0, shape.NumAxes()) { CHECK_GT_OR_RETURN(shape.At(i), 0); }
+  Shape shape = ctx->Attr<Shape>("shape");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
   const Shape& in_shape = in_tensor_desc.shape();
   Shape* out_shape = out_tensor_desc->mut_shape();
-  CHECK_OR_RETURN(in_tensor_desc.is_dynamic() == false);
   *out_tensor_desc->mut_shape() = in_tensor_desc.shape();
   *out_tensor_desc->mut_is_dynamic() = in_tensor_desc.is_dynamic();
+  if (in_shape.NumAxes() == 0 || shape.NumAxes() == 0) {
+    // NOTE(chengcheng): input/output Scalar
+    // do nothing
+  } else {
+    CHECK_GE_OR_RETURN(shape.NumAxes(), 1);
+    CHECK_GE_OR_RETURN(in_shape.NumAxes(), 1);
+    for (int i = 1 /* skip dim 0 */; i < shape.NumAxes(); ++i) {
+      // NOTE(chengcheng): ONLY dim-0 may be -1 for infer
+      CHECK_GE_OR_RETURN(shape.At(i), 0);
+    }
+    if (shape.At(0) == -1) {
+      // NOTE(chengcheng): dim-0 unchanged for input.
+      shape.Set(0, in_shape.At(0));
+    }
+  }
   const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   *out_shape = *JUST(GetPhysicalShape(shape, nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
   CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());
