@@ -33,18 +33,6 @@ struct BlasIf<DeviceType::kGPU> {
   static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                      const int m, const int n, const int k, const double alpha, const float16* a,
                      const float16* b, const double beta, float16* c);
-  static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-                     const int m, const int n, const int k, const double alpha, const uint8_t* a,
-                     const uint8_t* b, const double beta, uint8_t* c);
-  static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-                     const int m, const int n, const int k, const double alpha, const int8_t* a,
-                     const int8_t* b, const double beta, int8_t* c);
-  static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-                     const int m, const int n, const int k, const double alpha, const int32_t* a,
-                     const int32_t* b, const double beta, int32_t* c);
-  static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-                     const int m, const int n, const int k, const double alpha, const int64_t* a,
-                     const int64_t* b, const double beta, int64_t* c);
   static void OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
                             enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
                             const int n, const int k, const double alpha, const float* a,
@@ -57,22 +45,6 @@ struct BlasIf<DeviceType::kGPU> {
                             enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
                             const int n, const int k, const double alpha, const float16* a,
                             const float16* b, const double beta, float16* c);
-  static void OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                            enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
-                            const int n, const int k, const double alpha, const uint8_t* a,
-                            const uint8_t* b, const double beta, uint8_t* c);
-  static void OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                            enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
-                            const int n, const int k, const double alpha, const int8_t* a,
-                            const int8_t* b, const double beta, int8_t* c);
-  static void OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                            enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
-                            const int n, const int k, const double alpha, const int32_t* a,
-                            const int32_t* b, const double beta, int32_t* c);
-  static void OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                            enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
-                            const int n, const int k, const double alpha, const int64_t* a,
-                            const int64_t* b, const double beta, int64_t* c);
 
 
   static void Axpy(DeviceCtx* ctx, const int n, const float alpha, const float* x, const int incx,

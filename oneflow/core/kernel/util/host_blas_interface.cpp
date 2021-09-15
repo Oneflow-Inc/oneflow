@@ -72,34 +72,6 @@ void BlasIf<DeviceType::kCPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans
   Gemm<double>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
 
-void BlasIf<DeviceType::kCPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                                      enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
-                                      const int k, const double alpha, const uint8_t* a,
-                                      const uint8_t* b, const double beta, uint8_t* c) {
-  Gemm<uint8_t>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
-}
-
-void BlasIf<DeviceType::kCPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                                      enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
-                                      const int k, const double alpha, const int8_t* a,
-                                      const int8_t* b, const double beta, int8_t* c) {
-  Gemm<int8_t>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
-}
-
-void BlasIf<DeviceType::kCPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                                      enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
-                                      const int k, const double alpha, const int32_t* a,
-                                      const int32_t* b, const double beta, int32_t* c) {
-  Gemm<int32_t>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
-}
-
-void BlasIf<DeviceType::kCPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                                      enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
-                                      const int k, const double alpha, const int64_t* a,
-                                      const int64_t* b, const double beta, int64_t* c) {
-  Gemm<int64_t>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
-}
-
 void BlasIf<DeviceType::kCPU>::OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
                                              enum CBLAS_TRANSPOSE trans_b, const int batch_size,
                                              const int m, const int n, const int k,
@@ -117,43 +89,6 @@ void BlasIf<DeviceType::kCPU>::OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOS
   BatchedGemmImpl<double>(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha, a, b,
                           beta, c);
 }
-
-void BlasIf<DeviceType::kCPU>::OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                                             enum CBLAS_TRANSPOSE trans_b, const int batch_size,
-                                             const int m, const int n, const int k,
-                                             const double alpha, const uint8_t* a, const uint8_t* b,
-                                             const double beta, uint8_t* c) {
-  BatchedGemmImpl<uint8_t>(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha, a, b,
-                          beta, c);
-}
-
-void BlasIf<DeviceType::kCPU>::OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                                             enum CBLAS_TRANSPOSE trans_b, const int batch_size,
-                                             const int m, const int n, const int k,
-                                             const double alpha, const int8_t* a, const int8_t* b,
-                                             const double beta, int8_t* c) {
-  BatchedGemmImpl<int8_t>(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha, a, b,
-                          beta, c);
-}
-
-void BlasIf<DeviceType::kCPU>::OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                                             enum CBLAS_TRANSPOSE trans_b, const int batch_size,
-                                             const int m, const int n, const int k,
-                                             const double alpha, const int32_t* a, const int32_t* b,
-                                             const double beta, int32_t* c) {
-  BatchedGemmImpl<int32_t>(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha, a, b,
-                          beta, c);
-}
-
-void BlasIf<DeviceType::kCPU>::OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                                             enum CBLAS_TRANSPOSE trans_b, const int batch_size,
-                                             const int m, const int n, const int k,
-                                             const double alpha, const int64_t* a, const int64_t* b,
-                                             const double beta, int64_t* c) {
-  BatchedGemmImpl<int64_t>(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha, a, b,
-                          beta, c);
-}
-
 
 void BlasIf<DeviceType::kCPU>::Axpy(DeviceCtx* ctx, const int n, const float alpha, const float* x,
                                     const int incx, float* y, const int incy) {

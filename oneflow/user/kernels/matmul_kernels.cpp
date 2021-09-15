@@ -197,17 +197,9 @@ class BatchMatmulFloatingKernel final : public user_op::OpKernel, public user_op
 
 REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kCPU, float);
 REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kCPU, double);
-REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kCPU, uint8_t);
-REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kCPU, int8_t);
-REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kCPU, int32_t);
-REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kCPU, int64_t);
 #ifdef WITH_CUDA
 REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kGPU, float);
 REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kGPU, double);
-REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kGPU, uint8_t);
-REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kGPU, int8_t);
-REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kGPU, int32_t);
-REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kGPU, int64_t);
 #endif
 
 #ifdef WITH_CUDA
