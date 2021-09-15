@@ -16,4 +16,6 @@ limitations under the License.
 from oneflow.comm.comm_ops import all_reduce
 from oneflow.comm.comm_ops import all_gather
 from oneflow.comm.comm_ops import broadcast
+from oneflow.comm.comm_ops import scatter
+from oneflow.comm.comm_ops import reduce
 from oneflow._C import send, recv
