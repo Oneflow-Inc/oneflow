@@ -92,7 +92,7 @@ EpollCommNet::~EpollCommNet() {
   for (auto& pair : sockfd2helper_) { delete pair.second; }
 }
 
-void EpollCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& actor_msg) {
+/*void EpollCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& actor_msg) {
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kActor;
   msg.actor_msg = actor_msg;
@@ -100,6 +100,24 @@ void EpollCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& actor_ms
     msg.actor_msg.set_comm_net_token(actor_msg.regst()->comm_net_token());
   }
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
+}*/
+/*
+  void SendMsg(int64_t dst_machine_id,const ActorMsg & msg) override;
+  char *SerialActorMsgToData(const ActorMsg & msg,size_t *size) override;
+  ActorMsg DeserialDataToActorMsg(char * data,size_t size) override;
+*/
+
+void EpollCommNet::SendMsg(int64_t dst_machine_id, char * data ,size_t size) {
+
+}
+
+char * EpollCommNet::SerialActorMsgToData(const ActorMsg &msg, size_t *size) {
+  return nullptr;
+}
+
+ActorMsg EpollCommNet::DeserialDataToActorMsg(char *data, size_t size) {
+  ActorMsg msg{};
+  return msg;
 }
 
 void EpollCommNet::SendTransportMsg(int64_t dst_machine_id, const TransportMsg& transport_msg) {

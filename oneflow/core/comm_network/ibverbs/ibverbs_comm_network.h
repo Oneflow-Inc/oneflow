@@ -40,8 +40,10 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsCommNet);
   ~IBVerbsCommNet();
 
-  void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
-  void RecvActorMsg(void* data, size_t size);
+  void SendMsg(int64_t dst_machine_id,char * data,size_t size ) override;
+  char *SerialActorMsgToData(const ActorMsg & msg,size_t *size) override;
+  ActorMsg DeserialDataToActorMsg(void * data,size_t size) override;
+  void RecvMsg(void* data, size_t size);
 
  private:
   friend class Global<IBVerbsCommNet>;

@@ -39,9 +39,15 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       }
       ActorMsg new_msg = msg;
       new_msg.set_comm_net_sequence_number(comm_net_sequence);
-      Global<CommNet>::Get()->SendActorMsg(dst_machine_id, new_msg);
+      size_t  size = 0;
+      char * data = Global<CommNet>::Get()->SerialActorMsgToData(new_msg,&size);
+      CHECK_EQ(size,sizeof(new_msg));
+      Global<CommNet>::Get()->SendMsg(dst_machine_id, data,  size)
     } else {
-      Global<CommNet>::Get()->SendActorMsg(dst_machine_id, msg);
+      size_t  size = 0;
+      char * data = Global<CommNet>::Get()->SerialActorMsgToData(msg,&size);
+      CHECK_EQ(size,sizeof(msg));
+      Global<CommNet>::Get()->SendMsg(dst_machine_id, msg);
     }
   }
 }
