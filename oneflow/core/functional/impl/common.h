@@ -33,9 +33,6 @@ Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x);
 
 Maybe<void> CheckShapeCanExpandTo(const Shape& shape, const Shape& expand_shape);
 
-Maybe<void> CheckPReLUParametersValid(const std::shared_ptr<Tensor>& x,
-                                      const std::shared_ptr<Tensor>& alpha);
-
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
