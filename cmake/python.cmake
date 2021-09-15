@@ -79,7 +79,8 @@ message(STATUS "Found numpy include directory ${Python_NumPy_INCLUDE_DIRS}")
 
 # PYTHON_EXECUTABLE will be used by pybind11
 set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
-include(pybind11)
+# include(pybind11)
+find_package(pybind11 REQUIRED)
 
 set(CODEGEN_PYTHON_EXECUTABLE ${Python_EXECUTABLE} CACHE STRING "Python executable to generate .cpp/.h files")
 if(NOT "${CODEGEN_PYTHON_EXECUTABLE}" STREQUAL "${Python_EXECUTABLE}")

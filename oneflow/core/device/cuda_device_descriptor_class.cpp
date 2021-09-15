@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/common/str_util.h"
-#include <json.hpp>
+#include <nlohmann/json.hpp>
 
 #ifdef WITH_CUDA
 

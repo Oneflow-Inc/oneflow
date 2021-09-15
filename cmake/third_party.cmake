@@ -3,28 +3,41 @@ if (NOT WIN32)
   find_package(Threads)
 endif()
 
-include(zlib)
-include(protobuf)
-include(googletest)
-include(gflags)
-include(glog)
-include(libjpeg-turbo)
-include(opencv)
-include(eigen)
+# include(zlib)
+find_package(ZLIB REQUIRED)
+# include(protobuf)
+find_package(Protobuf REQUIRED)
+# include(googletest)
+find_package(GTest REQUIRED)
+# include(gflags)
+find_package(gflags REQUIRED)
+# include(glog)
+find_package(glog REQUIRED)
+# include(libjpeg-turbo)
+# include(opencv)
+find_package(OpenCV REQUIRED)
+# include(eigen)
+find_package(Eigen3 REQUIRED)
 if (WITH_COCOAPI)
   include(cocoapi)
 endif()
-include(half)
-include(re2)
-include(json)
+# include(half)
+find_package(half REQUIRED)
+# include(re2)
+find_package(re2 REQUIRED)
+# include(json)
+find_package(nlohmann_json REQUIRED)
 if (RPC_BACKEND MATCHES "GRPC")
-  include(absl)
-  include(cares)
-  include(openssl)
-  include(grpc)
+  # include(absl)
+  # include(cares)
+  # include(openssl)
+  # include(grpc)
+  find_package(gRPC REQUIRED)
 endif()
-include(flatbuffers)
-include(lz4)
+# include(flatbuffers)
+find_package(Flatbuffers REQUIRED)
+# include(lz4)
+find_package(lz4 REQUIRED)
 
 if (WITH_XLA)
   include(tensorflow)
@@ -117,28 +130,20 @@ else()
 endif()
 message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
 
-# libraries only a top level .so or exe should be linked to
-set(oneflow_exe_third_party_libs
-    glog_imported
-    gflags_imported
-)
-
 set(oneflow_third_party_libs
-    ${GOOGLETEST_STATIC_LIBRARIES}
-    ${GOOGLEMOCK_STATIC_LIBRARIES}
-    protobuf_imported
-    ${GRPC_STATIC_LIBRARIES}
-    ${farmhash_STATIC_LIBRARIES}
-    ${BLAS_LIBRARIES}
-    ${OPENCV_STATIC_LIBRARIES}
-    ${COCOAPI_STATIC_LIBRARIES}
-    ${LIBJPEG_STATIC_LIBRARIES}
-    zlib_imported
-    ${ABSL_STATIC_LIBRARIES}
-    ${OPENSSL_STATIC_LIBRARIES}
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${FLATBUFFERS_STATIC_LIBRARIES}
-    ${LZ4_STATIC_LIBRARIES}
+  gflags::gflags
+  glog::glog
+  GTest::gtest
+  protobuf::libprotobuf
+  gRPC::grpc
+  ${BLAS_LIBRARIES}
+  opencv::opencv
+  ZLIB::ZLIB
+  flatbuffers::flatbuffers
+  lz4::lz4
+  nlohmann_json::nlohmann_json
+  half::half
+  ${CMAKE_THREAD_LIBS_INIT}
 )
 
 if (NOT WITH_XLA)
@@ -151,56 +156,10 @@ if(WIN32)
   list(APPEND oneflow_third_party_libs "Ws2_32.lib")
 endif()
 
-set(oneflow_third_party_dependencies
-  zlib
-  protobuf
-  gflags
-  glog
-  googletest
-  opencv_copy_headers_to_destination
-  libpng_copy_headers_to_destination
-  opencv_copy_libs_to_destination
-  eigen
-  half_copy_headers_to_destination
-  re2
-  json_copy_headers_to_destination
-  flatbuffers
-  lz4_copy_libs_to_destination
-  lz4_copy_headers_to_destination
-)
-
-if (WITH_COCOAPI)
-  list(APPEND oneflow_third_party_dependencies cocoapi_copy_headers_to_destination)
-  list(APPEND oneflow_third_party_dependencies cocoapi_copy_libs_to_destination)
-endif()
-
-if (RPC_BACKEND MATCHES "GRPC")
-  list(APPEND oneflow_third_party_dependencies grpc)
-endif()
-
-list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS
-    ${ZLIB_INCLUDE_DIR}
-    ${GFLAGS_INCLUDE_DIR}
-    ${GLOG_INCLUDE_DIR}
-    ${GOOGLETEST_INCLUDE_DIR}
-    ${GOOGLEMOCK_INCLUDE_DIR}
-    ${PROTOBUF_INCLUDE_DIR}
-    ${GRPC_INCLUDE_DIR}
-    ${LIBJPEG_INCLUDE_DIR}
-    ${OPENCV_INCLUDE_DIR}
-    ${LIBPNG_INCLUDE_DIR}
-    ${EIGEN_INCLUDE_DIR}
-    ${COCOAPI_INCLUDE_DIR}
-    ${HALF_INCLUDE_DIR}
-    ${JSON_INCLUDE_DIR}
-    ${ABSL_INCLUDE_DIR}
-    ${OPENSSL_INCLUDE_DIR}
-    ${FLATBUFFERS_INCLUDE_DIR}
-    ${LZ4_INCLUDE_DIR}
-)
+list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS)
 
 if (NOT WITH_XLA)
-  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${RE2_INCLUDE_DIR})
+  list(APPEND oneflow_third_party_libs re2::re2)
 endif()
 
 if (BUILD_CUDA)
@@ -214,15 +173,12 @@ if (BUILD_CUDA)
     endif()
   else()
     include(cub)
-    list(APPEND oneflow_third_party_dependencies cub_copy_headers_to_destination)
   endif()
   include(nccl)
 
   list(APPEND oneflow_third_party_libs ${VENDOR_CUDA_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${NCCL_LIBRARIES})
-
-  list(APPEND oneflow_third_party_dependencies nccl)
 
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS
     ${CUDNN_INCLUDE_DIRS}
@@ -247,7 +203,6 @@ if(BUILD_RDMA)
 endif()
 
 if(BUILD_HWLOC)
-  list(APPEND oneflow_third_party_dependencies hwloc)
   list(APPEND oneflow_third_party_libs ${HWLOC_STATIC_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${PCIACCESS_STATIC_LIBRARIES})
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${HWLOC_INCLUDE_DIR})
@@ -257,8 +212,6 @@ endif()
 include_directories(SYSTEM ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
 
 if(WITH_XLA)
-  list(APPEND oneflow_third_party_dependencies tensorflow_copy_libs_to_destination)
-  list(APPEND oneflow_third_party_dependencies tensorflow_symlink_headers)
   list(APPEND oneflow_third_party_libs ${TENSORFLOW_XLA_LIBRARIES})
 endif()
 
@@ -269,12 +222,3 @@ endif()
 message(STATUS "oneflow_third_party_libs: ${oneflow_third_party_libs}")
 
 add_definitions(-DHALF_ENABLE_CPP11_USER_LITERALS=0)
-
-if (THIRD_PARTY)
-  add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
-  foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
-    copy_all_files_in_dir("${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" prepare_oneflow_third_party)
-  endforeach()
-else()
-  add_custom_target(prepare_oneflow_third_party ALL)
-endif()

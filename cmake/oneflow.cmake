@@ -253,7 +253,6 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
                                ${of_all_rel_protos})
 
 oneflow_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
-add_dependencies(of_protoobj make_pyproto_dir protobuf)
 
 # cfg obj lib
 include(cfg)
@@ -274,8 +273,8 @@ include(functional)
 GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP(
     FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GENERATED_HRCS FUNCTIONAL_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
 oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS} ${FUNCTIONAL_GENERATED_HRCS})
+target_link_libraries(of_functional_obj ${oneflow_third_party_libs})
 add_dependencies(of_functional_obj of_cfgobj)
-add_dependencies(of_functional_obj prepare_oneflow_third_party)
 
 GENERATE_FUNCTIONAL_TENSOR_API_AND_PYBIND11_CPP(
     FUNCTIONAL_TENSOR_GENERATED_SRCS FUNCTIONAL_TENSOR_GENERATED_HRCS
@@ -283,8 +282,8 @@ GENERATE_FUNCTIONAL_TENSOR_API_AND_PYBIND11_CPP(
 oneflow_add_library(of_functional_tensor_obj STATIC
     ${FUNCTIONAL_TENSOR_GENERATED_SRCS} ${FUNCTIONAL_TENSOR_GENERATED_HRCS})
 add_dependencies(of_functional_tensor_obj of_cfgobj)
-add_dependencies(of_functional_tensor_obj prepare_oneflow_third_party)
 target_include_directories(of_functional_tensor_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+target_link_libraries(of_functional_tensor_obj ${oneflow_third_party_libs})
 
 set(PYBIND11_SRCS
     ${CFG_PYBIND11_SRCS}
@@ -319,7 +318,7 @@ if (USE_CLANG_TIDY)
   add_dependencies(of_ccobj of_tidy)
 endif()
 
-target_link_libraries(of_ccobj of_protoobj of_cfgobj of_functional_obj ${ONEFLOW_CUDA_LIBS} glog_imported)
+target_link_libraries(of_ccobj of_protoobj of_cfgobj of_functional_obj ${ONEFLOW_CUDA_LIBS})
 
 target_compile_options(of_ccobj PRIVATE -Werror=return-type)
 target_treat_warnings_as_errors(of_ccobj)
@@ -354,8 +353,7 @@ target_link_libraries(oneflow_internal PRIVATE
                       ${of_libs}
                       of_functional_tensor_obj
                       ${oneflow_third_party_libs}
-                      of_pyext_obj
-                      ${oneflow_exe_third_party_libs})
+                      of_pyext_obj)
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
 target_compile_options(oneflow_internal PRIVATE -Werror=return-type)
@@ -386,7 +384,7 @@ file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_B
 if(BUILD_TESTING)
   if (of_all_test_cc)
     oneflow_add_executable(oneflow_testexe ${of_all_test_cc})
-    target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
+    target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
     set_target_properties(oneflow_testexe PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
     add_test(NAME oneflow_test COMMAND oneflow_testexe)
   endif()

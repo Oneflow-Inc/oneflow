@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/common/util.h"
-#include <json.hpp>
+#include <nlohmann/json.hpp>
 
 namespace oneflow {
 

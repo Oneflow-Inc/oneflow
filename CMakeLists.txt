@@ -215,7 +215,6 @@ endif()
 
 message(STATUS "CMAKE_CXX_COMPILER_VERSION: " ${CMAKE_CXX_COMPILER_VERSION})
 
-add_custom_target(oneflow_deps ALL DEPENDS prepare_oneflow_third_party)
 # skip oneflow cmake to avoid errors caused by the absences of python-dev, proto src
 if (ONEFLOW)
   include(oneflow)
