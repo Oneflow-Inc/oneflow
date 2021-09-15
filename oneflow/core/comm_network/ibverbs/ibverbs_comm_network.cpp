@@ -103,7 +103,7 @@ void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
 }
 
 void IBVerbsCommNet::RecvActorMsg(void* data, size_t size) {
-  ActorMsg msg = *(reinterpret_cast<ActorMsg*>(data));//将数据转为ActorMsg
+  ActorMsg msg = *(reinterpret_cast<ActorMsg*>(data));
   ActorMsg new_msg = msg;
   if (msg.IsDataRegstMsgToConsumer()) {
     std::lock_guard<std::mutex> lock(remote_regst2rma_desc_mutex_);
