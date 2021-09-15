@@ -218,3 +218,33 @@ jobs:
           path: |
             home_oneflow_temp.tar
             cwd_test_tmp_dir.tar
+
+  conda:
+    name: Build with conda
+    if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'need-simple-ci'))
+    runs-on: ubuntu-latest
+    needs: [cancel_previous]
+    strategy:
+      fail-fast: true
+      max-parallel: 3
+      matrix:
+        build-type: ["gcc7", "clang10"]
+    steps:
+      - name: Checkout Oneflow-Inc/oneflow
+        uses: actions/checkout@v2
+      - name: Checkout Oneflow-Inc/conda-env
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/conda-env
+          ref: 30a7f00eb48ee9009d85a848e720823e5054c66b
+          path: conda-env
+      - uses: ./
+        name: Test conda on self-hosted
+        if: ${{ matrix.build-type == 'clang10'}}
+        with:
+          cmake-init-cache: cmake/caches/cn/fast/cpu-clang.cmake
+          oneflow-src: .
+          oneflow-build-env: conda
+          conda-env-file: conda-env/dev/clang10/environment-v2.yml
+          conda-prefix: ~/miniconda3-prefixes/py39_4.10.3
+          self-hosted: ${{ contains(matrix.os, 'self-hosted') }}
