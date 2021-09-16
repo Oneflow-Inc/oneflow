@@ -24,8 +24,8 @@ namespace oneflow {
 
 namespace {
 
-bool RawIsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel, int64_t axis) {
-  return sbp_parallel->has_split_parallel() && sbp_parallel->split_parallel().axis() == axis;
+bool RawIsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
+  return sbp_parallel->has_split_parallel();
 }
 
 static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocal);
@@ -41,7 +41,7 @@ Maybe<void> RawCheckCclBToS(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
 
   CHECK_OR_RETURN(IsBroadcastSbp(in->nd_sbp()->sbp_parallel(0)));
-  CHECK_OR_RETURN(IsSplitSbp(out->nd_sbp()->sbp_parallel(0), 0));
+  CHECK_OR_RETURN(IsSplitSbp(out->nd_sbp()->sbp_parallel(0)));
 
   CHECK_OR_RETURN(in->placement() != out->placement());
   CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());
