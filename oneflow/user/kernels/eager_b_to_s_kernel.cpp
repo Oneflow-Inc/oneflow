@@ -83,55 +83,47 @@ class EagerBToSOpKernelState final : public user_op::OpKernelState {
     for (int64_t out_parallel_id = 0; out_parallel_id < out_parallel_num; ++out_parallel_id) {
       int64_t dst = CHECK_JUST(out_parallel_desc->MachineId4ParallelId(out_parallel_id));
       int64_t src = -1;
-      int64_t in_parallel_id = -1;
       const TensorSliceView& out_slice = GetTensorSliceView4ParallelId(
           *out_parallel_desc->hierarchy(),
           *CHECK_JUST(
               CachedGetAllSplitNdSbp(out_split_axis, out_parallel_desc->hierarchy()->NumAxes())),
           shape, out_parallel_id);
       CHECK(!out_slice.IsEmpty());
-      if (in_parallel_desc->ContainingMachineId(dst)) {
-        src = dst;
-        int64_t src_device_id = GlobalProcessCtx::LocalRank(src);
-        in_parallel_id =
-            CHECK_JUST(in_parallel_desc->ParallelId4MachineDeviceId(src, src_device_id));
-        CHECK_NE(src, -1);
-        CHECK_NE(in_parallel_id, -1);
-        const TensorSliceView& in_slice = GetTensorSliceView4ParallelId(
-            *in_parallel_desc->hierarchy(),
-            *CHECK_JUST(GetAllBroadcastNdSbp(in_parallel_desc->hierarchy()->NumAxes())), shape,
-            in_parallel_id);
-        CHECK(!in_slice.IsEmpty());
-        const TensorSliceView& intersection = out_slice.Intersect(in_slice);
-        CHECK(!intersection.IsEmpty());
-        sorted_p2p_pair_.emplace_back(std::make_pair(src, dst));
-        sorted_elem_cnt2in_tensor_slice_copier_pair_.emplace_back(
-            std::make_pair(intersection.shape().elem_cnt(),
-                           std::make_shared<TensorSliceCopier>(out_slice, in_slice, data_type)));
-        sorted_elem_cnt2out_tensor_slice_copier_pair_.emplace_back(
-            std::make_pair(intersection.shape().elem_cnt(),
-                           std::make_shared<TensorSliceCopier>(out_slice, in_slice, data_type)));
-      } else {
-        int64_t in_parallel_num = in_parallel_desc->parallel_num();
-        in_parallel_id = out_parallel_id % in_parallel_num;
-        src = CHECK_JUST(in_parallel_desc->MachineId4ParallelId(in_parallel_id));
-        CHECK_NE(src, -1);
-        CHECK_NE(in_parallel_id, -1);
-        const TensorSliceView& in_slice = GetTensorSliceView4ParallelId(
-            *in_parallel_desc->hierarchy(),
-            *CHECK_JUST(GetAllBroadcastNdSbp(in_parallel_desc->hierarchy()->NumAxes())), shape,
-            in_parallel_id);
-        CHECK(!in_slice.IsEmpty());
-        const TensorSliceView& intersection = out_slice.Intersect(in_slice);
-        CHECK(!intersection.IsEmpty());
-        sorted_p2p_pair_.emplace_back(std::make_pair(src, dst));
-        sorted_elem_cnt2in_tensor_slice_copier_pair_.emplace_back(
-            std::make_pair(intersection.shape().elem_cnt(),
-                           std::make_shared<TensorSliceCopier>(intersection, in_slice, data_type)));
-        sorted_elem_cnt2out_tensor_slice_copier_pair_.emplace_back(std::make_pair(
-            intersection.shape().elem_cnt(),
-            std::make_shared<TensorSliceCopier>(out_slice, intersection, data_type)));
+      TensorSliceView in_slice;
+      TensorSliceView intersection;
+      {
+        if (in_parallel_desc->ContainingMachineId(dst)) {
+          src = dst;
+          int64_t src_device_id = GlobalProcessCtx::LocalRank(src);
+          int64_t in_parallel_id =
+              CHECK_JUST(in_parallel_desc->ParallelId4MachineDeviceId(src, src_device_id));
+          in_slice = GetTensorSliceView4ParallelId(
+              *in_parallel_desc->hierarchy(),
+              *CHECK_JUST(GetAllBroadcastNdSbp(in_parallel_desc->hierarchy()->NumAxes())), shape,
+              in_parallel_id);
+          // copy to out_slice from in_slice if src == dst
+          intersection = out_slice;
+        } else {
+          int64_t in_parallel_num = in_parallel_desc->parallel_num();
+          int64_t in_parallel_id = out_parallel_id % in_parallel_num;
+          src = CHECK_JUST(in_parallel_desc->MachineId4ParallelId(in_parallel_id));
+          in_slice = GetTensorSliceView4ParallelId(
+              *in_parallel_desc->hierarchy(),
+              *CHECK_JUST(GetAllBroadcastNdSbp(in_parallel_desc->hierarchy()->NumAxes())), shape,
+              in_parallel_id);
+          intersection = out_slice.Intersect(in_slice);
+        }
       }
+      CHECK_NE(src, -1);
+      CHECK(!in_slice.IsEmpty());
+      CHECK(!intersection.IsEmpty());
+      sorted_p2p_pair_.emplace_back(std::make_pair(src, dst));
+      sorted_elem_cnt2in_tensor_slice_copier_pair_.emplace_back(
+          std::make_pair(intersection.shape().elem_cnt(),
+                         std::make_shared<TensorSliceCopier>(intersection, in_slice, data_type)));
+      sorted_elem_cnt2out_tensor_slice_copier_pair_.emplace_back(
+          std::make_pair(intersection.shape().elem_cnt(),
+                         std::make_shared<TensorSliceCopier>(out_slice, intersection, data_type)));
     }
     memory_copier_.reset(NewDefaultMemoryCopier(device_type));
   }
