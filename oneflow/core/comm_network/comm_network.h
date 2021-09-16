@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMM_NETWORK_COMM_NETWORK_H_
 #define ONEFLOW_CORE_COMM_NETWORK_COMM_NETWORK_H_
 
+#include <cstdint>
 #define DEPRECATED __attribute__((deprecated))
 
 #include "oneflow/core/actor/actor_message.h"
@@ -49,6 +50,7 @@ class CommNet {
   void ReadDone(void* read_id);
 
   virtual void SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) = 0;
+  virtual void SendMsg(int64_t dst_machine_id,uint64_t addr ,size_t size,const CallBack & cb ) = 0;
   virtual uint64_t SerialActorMsgToData(const ActorMsg& msg, size_t* size) = 0;
   virtual ActorMsg DeserialDataToActorMsg(void* data, size_t size) = 0;
 

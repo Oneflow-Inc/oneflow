@@ -42,6 +42,7 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
   ~IBVerbsCommNet();
 
   void SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) override;
+  void SendMsg(int64_t dst_machine_id,uint64_t addr ,size_t size,const CallBack & cb ) override;
   uint64_t SerialActorMsgToData(const ActorMsg& msg, size_t* size) override;
   ActorMsg DeserialDataToActorMsg(void* data, size_t size) override;
   void RecvMsg(void* data, size_t size);
@@ -69,6 +70,7 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
       remote_regst2rma_desc_;
   std::mutex remote_regst2rma_desc_mutex_;
   IBVerbsMessagePool* message_pool_;
+  CallBack cb_;
 };
 
 }  // namespace oneflow

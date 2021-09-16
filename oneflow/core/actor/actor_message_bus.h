@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
-
 class ActorMsgBus final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgBus);
@@ -28,7 +27,7 @@ class ActorMsgBus final {
 
   void SendMsg(const ActorMsg& msg);
   void SendMsgWithoutCommNet(const ActorMsg& msg);
-
+  void HandleRecvData(void * data, size_t size);
  private:
   friend class Global<ActorMsgBus>;
   ActorMsgBus() = default;

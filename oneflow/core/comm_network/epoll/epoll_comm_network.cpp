@@ -94,6 +94,8 @@ EpollCommNet::~EpollCommNet() {
 
 void EpollCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) {}
 
+void EpollCommNet::SendMsg(int64_t dst_machine_id,uint64_t addr ,size_t size,const CallBack & cb ) {}
+
 uint64_t EpollCommNet::SerialActorMsgToData(const ActorMsg& msg, size_t* size) { return 0; }
 
 ActorMsg EpollCommNet::DeserialDataToActorMsg(void* data, size_t size) {

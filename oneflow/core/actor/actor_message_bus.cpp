@@ -15,7 +15,9 @@ limitations under the License.
 */
 #include "oneflow/core/actor/actor_message_bus.h"
 #include <cstdint>
+#include <functional>
 #include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/device/collective_boxing_device_context.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/comm_network/comm_network.h"
@@ -27,6 +29,7 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
   if (dst_machine_id == GlobalProcessCtx::Rank()) {
     SendMsgWithoutCommNet(msg);
   } else {
+    CallBack cb = std::bind(&ActorMsgBus::HandleRecvData,this,std::placeholders::_1,std::placeholders::_2);
     if (msg.IsDataRegstMsgToConsumer()) {
       int64_t comm_net_sequence;
       {
@@ -43,12 +46,12 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       size_t size = 0;
       uint64_t addr = Global<CommNet>::Get()->SerialActorMsgToData(new_msg, &size);
       CHECK_EQ(size, sizeof(new_msg));
-      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, size);
+      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, size,cb);
     } else {
       size_t size = 0;
       uint64_t addr = Global<CommNet>::Get()->SerialActorMsgToData(msg, &size);
       CHECK_EQ(size, sizeof(msg));
-      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, size);
+      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, size ,cb);
     }
   }
 }
@@ -57,6 +60,11 @@ void ActorMsgBus::SendMsgWithoutCommNet(const ActorMsg& msg) {
   CHECK_EQ(Global<IDMgr>::Get()->MachineId4ActorId(msg.dst_actor_id()), GlobalProcessCtx::Rank());
   int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(msg.dst_actor_id());
   Global<ThreadMgr>::Get()->GetThrd(thrd_id)->EnqueueActorMsg(msg);
+}
+
+void ActorMsgBus::HandleRecvData(void *data, size_t size) {
+   ActorMsg new_msg = Global<CommNet>::Get()->DeserialDataToActorMsg(data, size);
+   SendMsgWithoutCommNet(new_msg);
 }
 
 }  // namespace oneflow
