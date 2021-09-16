@@ -95,27 +95,43 @@ class EagerBToSOpKernelState final : public user_op::OpKernelState {
         int64_t src_device_id = GlobalProcessCtx::LocalRank(src);
         in_parallel_id =
             CHECK_JUST(in_parallel_desc->ParallelId4MachineDeviceId(src, src_device_id));
+        CHECK_NE(src, -1);
+        CHECK_NE(in_parallel_id, -1);
+        const TensorSliceView& in_slice = GetTensorSliceView4ParallelId(
+            *in_parallel_desc->hierarchy(),
+            *CHECK_JUST(GetAllBroadcastNdSbp(in_parallel_desc->hierarchy()->NumAxes())), shape,
+            in_parallel_id);
+        CHECK(!in_slice.IsEmpty());
+        const TensorSliceView& intersection = out_slice.Intersect(in_slice);
+        CHECK(!intersection.IsEmpty());
+        sorted_p2p_pair_.emplace_back(std::make_pair(src, dst));
+        sorted_elem_cnt2in_tensor_slice_copier_pair_.emplace_back(
+            std::make_pair(intersection.shape().elem_cnt(),
+                           std::make_shared<TensorSliceCopier>(out_slice, in_slice, data_type)));
+        sorted_elem_cnt2out_tensor_slice_copier_pair_.emplace_back(
+            std::make_pair(intersection.shape().elem_cnt(),
+                           std::make_shared<TensorSliceCopier>(out_slice, in_slice, data_type)));
       } else {
         int64_t in_parallel_num = in_parallel_desc->parallel_num();
         in_parallel_id = out_parallel_id % in_parallel_num;
         src = CHECK_JUST(in_parallel_desc->MachineId4ParallelId(in_parallel_id));
+        CHECK_NE(src, -1);
+        CHECK_NE(in_parallel_id, -1);
+        const TensorSliceView& in_slice = GetTensorSliceView4ParallelId(
+            *in_parallel_desc->hierarchy(),
+            *CHECK_JUST(GetAllBroadcastNdSbp(in_parallel_desc->hierarchy()->NumAxes())), shape,
+            in_parallel_id);
+        CHECK(!in_slice.IsEmpty());
+        const TensorSliceView& intersection = out_slice.Intersect(in_slice);
+        CHECK(!intersection.IsEmpty());
+        sorted_p2p_pair_.emplace_back(std::make_pair(src, dst));
+        sorted_elem_cnt2in_tensor_slice_copier_pair_.emplace_back(
+            std::make_pair(intersection.shape().elem_cnt(),
+                           std::make_shared<TensorSliceCopier>(intersection, in_slice, data_type)));
+        sorted_elem_cnt2out_tensor_slice_copier_pair_.emplace_back(std::make_pair(
+            intersection.shape().elem_cnt(),
+            std::make_shared<TensorSliceCopier>(out_slice, intersection, data_type)));
       }
-      CHECK_NE(src, -1);
-      CHECK_NE(in_parallel_id, -1);
-      const TensorSliceView& in_slice = GetTensorSliceView4ParallelId(
-          *in_parallel_desc->hierarchy(),
-          *CHECK_JUST(GetAllBroadcastNdSbp(in_parallel_desc->hierarchy()->NumAxes())), shape,
-          in_parallel_id);
-      CHECK(!in_slice.IsEmpty());
-      const TensorSliceView& intersection = out_slice.Intersect(in_slice);
-      CHECK(!intersection.IsEmpty());
-      sorted_p2p_pair_.emplace_back(std::make_pair(src, dst));
-      sorted_elem_cnt2in_tensor_slice_copier_pair_.emplace_back(
-          std::make_pair(intersection.shape().elem_cnt(),
-                         std::make_shared<TensorSliceCopier>(intersection, in_slice, data_type)));
-      sorted_elem_cnt2out_tensor_slice_copier_pair_.emplace_back(
-          std::make_pair(intersection.shape().elem_cnt(),
-                         std::make_shared<TensorSliceCopier>(out_slice, intersection, data_type)));
     }
     memory_copier_.reset(NewDefaultMemoryCopier(device_type));
   }
@@ -176,6 +192,13 @@ class EagerBToSKernel final : public user_op::OpKernel {
       const auto& p2p_pair = sorted_p2p_pair.at(i);
       int64_t src = p2p_pair.first;
       int64_t dst = p2p_pair.second;
+      if (src == dst && src == GlobalProcessCtx::Rank()) {
+        const auto& elem_cnt2tensor_slice_copier_pair =
+            sorted_elem_cnt2in_tensor_slice_copier_pair.at(i);
+        const auto& tensor_slice_copier = elem_cnt2tensor_slice_copier_pair.second;
+        tensor_slice_copier->Copy(ctx->device_ctx(), *memory_copier, out_ptr, in_ptr);
+        continue;
+      }
       if (GlobalProcessCtx::Rank() == src) {
         const auto& elem_cnt2tensor_slice_copier_pair =
             sorted_elem_cnt2in_tensor_slice_copier_pair.at(i);
