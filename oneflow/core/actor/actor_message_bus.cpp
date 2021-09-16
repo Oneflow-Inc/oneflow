@@ -48,8 +48,8 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       //CHECK_EQ(size, sizeof(new_msg));
       size_t token_size = 0;
       char * serial_data =Global<CommNet>::Get()->SerialTokenToData(new_msg.regst()->comm_net_token(),&token_size);
-      uint64_t debug_addr = reinterpret_cast<uint64_t>(serial_data);
-      std::cout<<"debug_addr:"<<debug_addr << std::endl;
+      //uint64_t debug_addr = reinterpret_cast<uint64_t>(serial_data);
+      //std::cout<<"debug_addr:"<<debug_addr << std::endl;
       new_msg.AddUserData(token_size,serial_data);
       size_t msg_size = sizeof(new_msg);
       uint64_t addr = reinterpret_cast<uint64_t>(&new_msg);
