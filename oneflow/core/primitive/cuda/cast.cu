@@ -65,33 +65,23 @@ struct CastFunctor<nv_bfloat16, From,
 #endif  // CUDA_VERSION >= 11000
 
 template<typename From, typename To>
-void LaunchCast(cudaStream_t stream, const void* from, void* to, size_t count) {
-  OF_CUDA_CHECK((cuda::elementwise::Unary<CastFunctor<To, From>, To, From>(
-      CastFunctor<To, From>(), count, reinterpret_cast<To*>(to),
-      reinterpret_cast<const From*>(from), stream)));
-}
-
-using LaunchFn = std::function<void(cudaStream_t /*stream*/, const void* /*from*/, void* /*to*/,
-                                    size_t /*count*/)>;
-
 class CastImpl : public Cast, public CudaGraphSupport {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CastImpl);
-  explicit CastImpl(LaunchFn launch_fn) : launch_fn_(std::move(launch_fn)) {}
+  explicit CastImpl() = default;
   ~CastImpl() = default;
 
   void Launch(StreamContext* stream_ctx, const void* from, void* to, size_t count) override {
     auto* cuda_stream_ctx = CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx));
-    launch_fn_(cuda_stream_ctx->cuda_stream(), from, to, count);
+    OF_CUDA_CHECK((cuda::elementwise::Unary<CastFunctor<To, From>, To, From>(
+        CastFunctor<To, From>(), count, reinterpret_cast<To*>(to),
+        reinterpret_cast<const From*>(from), cuda_stream_ctx->cuda_stream())));
   }
-
- private:
-  LaunchFn launch_fn_;
 };
 
 template<typename From, typename To>
 std::unique_ptr<Cast> NewCast() {
-  return std::unique_ptr<Cast>(new CastImpl(LaunchCast<From, To>));
+  return std::unique_ptr<Cast>(new CastImpl<From, To>());
 }
 
 class CastFactoryImpl : public CastFactory {
