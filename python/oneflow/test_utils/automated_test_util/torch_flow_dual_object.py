@@ -444,10 +444,12 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
 
 @equality_checker(int, int)
 @equality_checker(bool, bool)
-@equality_checker(type(None), type(None))
 def check_basetype_equality(a, b, ignored1, ignored2):
     return a == b
 
+@equality_checker(type(None), type(None))
+def check_nonetype_equality(a, b, ignored1, ignored2):
+    return True
 
 def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
