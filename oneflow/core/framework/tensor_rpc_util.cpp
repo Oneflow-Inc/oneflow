@@ -89,7 +89,7 @@ FLAT_MSG_BEGIN(FlatTensorConsistency);
       const auto& that_rank_constaint =
           JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::Symbol4SyncedSymbolId(
             this->consumer_nd_sbp_constraint_symbol_id()))->nd_sbp();
-      const auto& this_rank_constaint = JUST(consumer_nd_sbp_constraint.value());
+      const auto& this_rank_constaint = JUST(consumer_nd_sbp_constraint);
       CHECK_OR_RETURN(this_rank_constaint == that_rank_constaint);
     }
     CHECK_EQ_OR_RETURN(this->tensor_transport_token(), tensor_transport_token);
@@ -102,7 +102,7 @@ FLAT_MSG_BEGIN(FlatTensorConsistency);
     this->set_synced_tensor_meta_symbol_id(JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::FindOrSync(
         tensor_meta, &SyncSymbolConsistentTensorMeta)));
     if (consumer_nd_sbp_constraint.has_value()) {
-      const auto& this_rank_constaint = JUST(consumer_nd_sbp_constraint.value());
+      const auto& this_rank_constaint = JUST(consumer_nd_sbp_constraint);
       this->set_consumer_nd_sbp_constraint_symbol_id(
         JUST(SyncedSymbolMap<cfg::NdSbp>::FindOrSync(
               this_rank_constaint, &SyncSymbolNdSbp)));

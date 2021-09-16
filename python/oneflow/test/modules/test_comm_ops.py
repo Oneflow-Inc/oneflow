@@ -89,6 +89,63 @@ class TestScatter(flow.unittest.TestCase):
             )
 
 
+class TestGather(flow.unittest.TestCase):
+    @flow.unittest.skip_unless_1n4d()
+    def test_gather_1n4d(test_case):
+        np_arr = np.array([[1, 2], [3, 4]])
+        if flow.env.get_rank() == 1:
+            input = flow.tensor(
+                np_arr + flow.env.get_rank(), device="cuda", dtype=flow.int32
+            )
+            tensor_list = [flow.zeros(np_arr.shape, dtype=flow.int32) for _ in range(4)]
+            flow.comm.gather(input, gather_list=tensor_list, dst=1)
+            for i in range(4):
+                test_case.assertTrue(
+                    np.allclose(tensor_list[i].numpy(), np.array([[1, 2], [3, 4]]) + i)
+                )
+        else:
+            input = flow.tensor(
+                np_arr + flow.env.get_rank(), device="cuda", dtype=flow.int32
+            )
+            flow.comm.gather(input, dst=1)
+        # this case will fail, if do gititem on some a rank in process group
+        if flow.env.get_rank() == 0:
+            np_arr = np.array([4, 6, 7, 8], dtype=np.float32)
+        else:
+            np_arr = np.array([0, 0, 0, 0], dtype=np.float32)
+        tensor = flow.tensor(np_arr, dtype=flow.float32)
+        placement = flow.placement("cuda", {0: range(4)})
+        device = flow.device("cuda")
+        consistent_tensor = tensor.to_consistent(placement, flow.sbp.broadcast)
+        test_case.assertEqual(consistent_tensor.to_local().device, device)
+        test_case.assertEqual(consistent_tensor.placement, placement)
+        test_case.assertTrue(
+            np.array_equal(
+                consistent_tensor.to_local().numpy(),
+                np.array([4, 6, 7, 8], dtype=np.float32),
+            )
+        )
+
+
+class TestReduce(flow.unittest.TestCase):
+    @flow.unittest.skip_unless_1n2d()
+    def test_reduce_1n2d(test_case):
+        if flow.env.get_rank() == 0:
+            np_arr = np.array([[1, 2], [3, 4]])
+        elif flow.env.get_rank() == 1:
+            np_arr = np.array([[4, 5], [6, 7]])
+        tensor = flow.tensor(np_arr, device="cuda", dtype=flow.int32)
+        flow.comm.reduce(tensor, 0)
+        if flow.env.get_rank() == 0:
+            test_case.assertTrue(
+                np.allclose(tensor.numpy(), np.array([[5, 7], [9, 11]]))
+            )
+        else:
+            test_case.assertTrue(
+                np.allclose(tensor.numpy(), np.array([[4, 5], [6, 7]]))
+            )
+
+
 @flow.unittest.skip_unless_1n2d()
 class TestDocs(flow.unittest.TestCase):
     def test_docs(test_case):
