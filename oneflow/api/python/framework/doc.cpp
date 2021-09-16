@@ -68,6 +68,7 @@ py::object ReplaceDoc(py::object f, const std::string& doc_string) {
                                  PyUnicode_AsEncodedString(f->func_name, "utf-8", "~E~"))
                           << " has not a docstring yet.";
     }
+    Py_DECREF(f->func_doc);
     f->func_doc = PyUnicode_FromString(doc_str);
   } else {
     THROW(RuntimeError) << "function is " << Py_TYPE(obj)->tp_name << ", not a valid function.";
