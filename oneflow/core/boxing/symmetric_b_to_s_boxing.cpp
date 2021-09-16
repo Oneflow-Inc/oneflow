@@ -66,10 +66,10 @@ Maybe<one::Tensor> SymmetricB2S(const std::shared_ptr<one::Tensor>& tensor, Symb
 
   if (parallel_id->has_value()) {
     const TensorSliceView& in_slice = GetTensorSliceView4ParallelId(
-        *tensor_placement->hierarchy(), *tensor_nd_sbp, local_shape, JUST(parallel_id->value()));
+        *tensor_placement->hierarchy(), *tensor_nd_sbp, local_shape, JUST(*parallel_id));
     CHECK(!in_slice.IsEmpty());
     const TensorSliceView& out_slice = GetTensorSliceView4ParallelId(
-        *tensor_placement->hierarchy(), *out->nd_sbp(), local_shape, JUST(parallel_id->value()));
+        *tensor_placement->hierarchy(), *out->nd_sbp(), local_shape, JUST(*parallel_id));
     CHECK(!out_slice.IsEmpty());
     const TensorSliceView& intersection = out_slice.Intersect(in_slice);
     CHECK(!intersection.IsEmpty());
