@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/math_util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
@@ -173,15 +174,6 @@ Maybe<void> InitShapeAxis2NdSbpIndexes(
   }
   return Maybe<void>::Ok();
 }
-
-int64_t Gcd(int64_t m, int64_t n) {
-  if (n == 0) { return m; }
-  CHECK_GT(m, 0);
-  CHECK_GT(n, 0);
-  return Gcd(n, m % n);
-}
-
-int64_t Lcm(int64_t m, int64_t n) { return m * n / Gcd(m, n); }
 
 Maybe<void> InitShapAxis2ExpandedDim(
     std::vector<DimVector>* shape_axis2expanded_dims, const Shape& shape, const Shape& hierarchy,

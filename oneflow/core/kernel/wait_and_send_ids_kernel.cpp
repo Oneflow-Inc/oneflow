@@ -39,14 +39,14 @@ void WaitAndSendIdsKernel<T>::ForwardDataContent(KernelContext* ctx) const {
       status->in_id_ = 0;
       {
         std::shared_ptr<JobInstance> job_instance;
-        status->buffer_status_ = buffer->Receive(&job_instance);
+        status->buffer_status_ = buffer->Pull(&job_instance);
       }
       if (status->buffer_status_ == kBufferStatusErrorClosed) { return; }
       status->out_idx_ = 0;
       status->out_num_ = 1;
     } else {
       auto* buffer_mgr = Global<BufferMgr<int64_t>>::Get();
-      status->buffer_status_ = buffer_mgr->Get(conf.wait_buffer_name())->Receive(&status->in_id_);
+      status->buffer_status_ = buffer_mgr->Get(conf.wait_buffer_name())->Pull(&status->in_id_);
       if (status->buffer_status_ == kBufferStatusErrorClosed) { return; }
       status->out_idx_ = 0;
       status->out_num_ = conf.id_list(status->in_id_).value_size();
