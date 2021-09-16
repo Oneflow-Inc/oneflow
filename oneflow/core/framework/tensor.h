@@ -262,11 +262,8 @@ class TensorIf : public Tensor {
 
 class Parameter final : public TensorIf<Parameter> {
  public:
-  Parameter(std::shared_ptr<Tensor> tensor, bool requires_grad) {
-    while (auto parameter = std::dynamic_pointer_cast<Parameter>(tensor)) {
-      tensor = parameter->tensor_;
-    }
-    this->tensor_ = std::move(tensor);
+  Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad) {
+    this->tensor_ = tensor->detach().GetPtrOrThrow();
     // TODO: in `y = flow.nn.Parameter(x)`, y should have its own "requires_grad" field
     // (align with PyTorch) instead of sharing it with x
     this->tensor_->set_requires_grad(requires_grad);
@@ -355,13 +352,10 @@ class Parameter final : public TensorIf<Parameter> {
 
   user_op::TensorDesc* mut_tensor_meta() override { return tensor_->mut_tensor_meta(); }
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
-    std::shared_ptr<Tensor> tensor = other;
-    while (auto parameter = std::dynamic_pointer_cast<Parameter>(tensor)) {
-      tensor = parameter->tensor_;
-    }
-    CHECK_OR_RETURN(is_local() == tensor->is_local() && is_eager() == tensor->is_eager())
+    CHECK_OR_RETURN(is_local() == other->is_local() && is_eager() == other->is_eager())
         << "You can't assign copy between tensors with different type";
-    this->tensor_ = std::move(tensor);
+    this->tensor_ = JUST(other->detach());
+    this->tensor_->set_requires_grad(other->requires_grad());
     return Maybe<void>::Ok();
   }
 
