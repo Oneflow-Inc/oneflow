@@ -31,8 +31,6 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
 
   void SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) override;
   //void SendMsg(int64_t dst_machine_id,uint64_t addr ,size_t size,const CallBack & cb ) override;
-  uint64_t SerialActorMsgToData(const ActorMsg& msg, size_t* size) override;
-  ActorMsg DeserialDataToActorMsg(void* data, size_t size) override;
   char * SerialTokenToData(void * token,size_t * size) override;
   void * DeSerialDataToToken(char * data, size_t *size ) override;
   void SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg);

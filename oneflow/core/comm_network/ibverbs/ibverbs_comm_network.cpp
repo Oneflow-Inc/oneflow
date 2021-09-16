@@ -89,45 +89,6 @@ void IBVerbsCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size)
   qp_vec_.at(dst_machine_id)->PostSendRequest(data, size);
 }
 
-/*void IBVerbsCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size,const CallBack & cb) {
-  cb_ = cb;
-  char* data = reinterpret_cast<char*>(addr);
-  qp_vec_.at(dst_machine_id)->PostSendRequest(data, size);
-}*/
-
-uint64_t IBVerbsCommNet::SerialActorMsgToData(const ActorMsg& msg, size_t* size) {
-  ActorMsg new_msg = msg;
-  if (msg.IsDataRegstMsgToConsumer()) {
-    CHECK_EQ(msg.user_data_size(), 0);
-    auto* mem_desc = reinterpret_cast<IBVerbsMemDesc*>(msg.regst()->comm_net_token());
-    CHECK(mem_desc != nullptr);
-    IBVerbsCommNetRMADesc rma_desc{};
-    rma_desc.mem_ptr = reinterpret_cast<uint64_t>(mem_desc->mem_ptr());
-    rma_desc.mem_size = mem_desc->mem_size();
-    rma_desc.mr_rkey = mem_desc->mr()->rkey;
-    static_assert(sizeof(IBVerbsCommNetRMADesc) <= kActorMsgUserDataMaxSize, "");
-    new_msg.AddUserData(sizeof(IBVerbsCommNetRMADesc), &rma_desc);
-  }
-  uint64_t addr = reinterpret_cast<uint64_t>(&new_msg);
-  *size = sizeof(new_msg);
-  return addr;
-}
-
-ActorMsg IBVerbsCommNet::DeserialDataToActorMsg(void* data, size_t size) {
-  ActorMsg msg = *(reinterpret_cast<ActorMsg*>(data));
-  ActorMsg new_msg = msg;
-  if (msg.IsDataRegstMsgToConsumer()) {
-    std::lock_guard<std::mutex> lock(remote_regst2rma_desc_mutex_);
-    auto& desc = remote_regst2rma_desc_[std::make_pair(msg.src_actor_id(),
-                                                       reinterpret_cast<uint64_t>(msg.regst()))];
-    if (!desc) { desc.reset(new IBVerbsCommNetRMADesc); }
-    CHECK_EQ(msg.user_data_size(), sizeof(IBVerbsCommNetRMADesc));
-    std::memcpy(desc.get(), msg.user_data(), sizeof(IBVerbsCommNetRMADesc));
-    new_msg.set_comm_net_token(desc.get());
-  }
-  return new_msg;
-}
-
 char * IBVerbsCommNet::SerialTokenToData(void *token, size_t *token_size) {
   char * data = (char*)malloc(sizeof(IBVerbsCommNetRMADesc));
   *token_size = sizeof(IBVerbsCommNetRMADesc);
