@@ -20,6 +20,7 @@ import unittest
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.unittest
+
 from data_utils import load_data_fashion_mnist
 
 
@@ -71,6 +72,8 @@ def test_train_and_eval(test_case):
     else:
         device = flow.device("cuda")
     net = LeNet()
+    lr, num_epochs = 0.02, 1
+    optimizer = flow.optim.SGD(net.parameters(), lr=lr, momentum=0.9)
     net.to(device)
 
     batch_size = 256
@@ -90,8 +93,6 @@ def test_train_and_eval(test_case):
     loss = nn.CrossEntropyLoss()
     loss.to(device)
 
-    lr, num_epochs = 0.02, 1
-    optimizer = flow.optim.SGD(net.parameters(), lr=lr, momentum=0.9)
     final_accuracy = 0
 
     for epoch in range(num_epochs):

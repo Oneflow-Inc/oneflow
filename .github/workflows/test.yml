@@ -211,7 +211,7 @@ jobs:
       - name: Download conda environment.yml # TODO: remove this step if migrated to generated matrix
         if: matrix.test_suite == 'cpu-clang'
         run: |
-          wget https://raw.githubusercontent.com/Oneflow-Inc/conda-env/9cd37571cbd6cc6a81fc87faa7f6a43be772ae31/dev/clang10/environment-v2.yml -O environment.yml
+          wget https://raw.githubusercontent.com/Oneflow-Inc/conda-env/30a7f00eb48ee9009d85a848e720823e5054c66b/dev/clang10/environment-v2.yml -O environment.yml
       - name: Update Conda env
         if: matrix.test_suite == 'cpu-clang'
         run: |

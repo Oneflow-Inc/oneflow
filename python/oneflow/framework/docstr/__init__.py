@@ -20,6 +20,7 @@ from .pooling import *
 from .activation import *
 from .dropout import *
 from .vision import *
+from .norm import *
 from .loss import *
 from .onehot import *
 from .comparison import *
@@ -27,3 +28,4 @@ from .cast import *
 from .constant import *
 from .array_ops import *
 from .tensor import *
+from .comm import *
