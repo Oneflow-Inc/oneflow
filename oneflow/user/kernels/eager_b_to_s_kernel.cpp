@@ -36,6 +36,8 @@ Maybe<Symbol<cfg::NdSbp>> GetAllSplitNdSbp(int64_t axis, int64_t ndim) {
   return SymbolOf(split_nd_sbp);
 }
 
+auto* CachedGetAllSplitNdSbp = DECORATE(&GetAllSplitNdSbp, ThreadLocal);
+
 Maybe<Symbol<cfg::NdSbp>> GetAllBroadcastNdSbp(int64_t ndim) {
   cfg::NdSbp split_nd_sbp;
   for (int64_t i = 0; i < ndim; ++i) {
@@ -44,7 +46,7 @@ Maybe<Symbol<cfg::NdSbp>> GetAllBroadcastNdSbp(int64_t ndim) {
   return SymbolOf(split_nd_sbp);
 }
 
-auto* CachedGetAllSplitNdSbp = DECORATE(&GetAllSplitNdSbp, ThreadLocal);
+auto* CachedGetAllBroadcastNdSbp = DECORATE(&GetAllBroadcastNdSbp, ThreadLocal);
 
 class EagerBToSOpKernelState final : public user_op::OpKernelState {
  public:
@@ -99,7 +101,7 @@ class EagerBToSOpKernelState final : public user_op::OpKernelState {
               CHECK_JUST(in_parallel_desc->ParallelId4MachineDeviceId(src, src_device_id));
           in_slice = GetTensorSliceView4ParallelId(
               *in_parallel_desc->hierarchy(),
-              *CHECK_JUST(GetAllBroadcastNdSbp(in_parallel_desc->hierarchy()->NumAxes())), shape,
+              *CHECK_JUST(CachedGetAllBroadcastNdSbp(in_parallel_desc->hierarchy()->NumAxes())), shape,
               in_parallel_id);
           // copy to out_slice from in_slice if src == dst
           intersection = out_slice;
