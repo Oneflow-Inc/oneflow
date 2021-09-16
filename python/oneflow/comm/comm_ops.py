@@ -235,14 +235,6 @@ def all_to_all(output_tensor_list, input_tensor_list):
         )
 
 
-def barrier():
-    """
-    Synchronizes all processes.
-
-    """
-    oneflow._oneflow_internal.eager.multi_client.Sync()
-
-
 def reduce_scatter(output, input_list):
     """
     Reduces, then scatters a list of tensors to all processes in a group.
