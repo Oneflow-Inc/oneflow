@@ -16,8 +16,8 @@ limitations under the License.
 from collections import OrderedDict
 
 import oneflow as flow
-from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
+from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
 
 
 def allreduce_fn(ddp_state_for_reversed_params, param):
@@ -53,7 +53,7 @@ def DistributedDataParallel(
             x.requires_grad_(requires_grad)
 
     ddp_state_for_reversed_params = OrderedDict(
-        reversed([(x, [False, False]) for x in module.parameters()])
+        reversed([(x, [False, False]) for x in module.parameters() if x.requires_grad])
     )
     module._ddp_state_for_reversed_params = ddp_state_for_reversed_params
     for param in module.parameters():

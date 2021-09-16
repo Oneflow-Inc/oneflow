@@ -19,7 +19,8 @@ from random import randint
 from random import choice
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 import oneflow as flow
 import oneflow.unittest
