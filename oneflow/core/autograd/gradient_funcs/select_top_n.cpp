@@ -25,7 +25,7 @@ namespace one {
 struct SelectTopNCaptureState : public AutoGradCaptureState {
   TensorTuple inputs;
   std::vector<bool> requires_grad;
-  int32_t top_n;
+  int32_t top_n = 0;
 };
 
 class SelectTopN : public OpExprGradFunction<SelectTopNCaptureState> {
