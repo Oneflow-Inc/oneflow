@@ -572,13 +572,13 @@ class TestTensor(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=4).to(device)
         y = x.argsort(dim=random(low=-4, high=4).to(int), descending=random_bool())
         return y
-
-    @flow.unittest.skip_unless_1n1d()
-    def test_mean(test_case):
-        input = flow.tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = input.mean(dim=0)
-        np_out = np.mean(input.numpy(), axis=0)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
+    
+    @autotest()
+    def test_mean_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_pytorch_tensor(ndim=4).to(device)
+        return x.mean(dim)
 
     @autotest()
     def test_log_tensor_with_random_data(test_case):
