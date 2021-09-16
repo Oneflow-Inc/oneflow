@@ -31,8 +31,6 @@ enum class ActorCmd {
 
 enum class ActorMsgType { kRegstMsg = 0, kEordMsg, kCmdMsg };
 
-using CallBack = std::function<void(void *data,size_t size)>;
-
 constexpr uint8_t kActorMsgUserDataMaxSize = 32;
 
 class ActorMsg final {

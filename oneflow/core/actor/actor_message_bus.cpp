@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/actor/actor_message_bus.h"
-#include <cstdint>
-#include <functional>
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/device/collective_boxing_device_context.h"
 #include "oneflow/core/job/id_manager.h"
@@ -29,7 +27,6 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
   if (dst_machine_id == GlobalProcessCtx::Rank()) {
     SendMsgWithoutCommNet(msg);
   } else {
-    CallBack cb = std::bind(&ActorMsgBus::HandleRecvData,this,std::placeholders::_1,std::placeholders::_2);
     if (msg.IsDataRegstMsgToConsumer()) {
       int64_t comm_net_sequence;
       {

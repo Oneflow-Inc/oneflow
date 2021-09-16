@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMM_NETWORK_COMM_NETWORK_H_
 #define ONEFLOW_CORE_COMM_NETWORK_COMM_NETWORK_H_
 
-#include <cstdint>
 #define DEPRECATED __attribute__((deprecated))
 
 #include "oneflow/core/actor/actor_message.h"

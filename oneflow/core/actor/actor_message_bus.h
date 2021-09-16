@@ -28,6 +28,7 @@ class ActorMsgBus final {
   void SendMsg(const ActorMsg& msg);
   void SendMsgWithoutCommNet(const ActorMsg& msg);
   void HandleRecvData(void * data, size_t size);
+  
  private:
   friend class Global<ActorMsgBus>;
   ActorMsgBus() = default;
