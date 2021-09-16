@@ -162,7 +162,7 @@ class Graph(object):
 
         To do training with nn.Graph, you should do 2 more things:
 
-        1. Add at least one optimier(learning rate schedulers are optional) with ``add_optimizer()`` method.
+        1. Add at least one optimizer(learning rate schedulers are optional) with ``add_optimizer()`` method.
         2. Call loss tensor's ``backward()`` method in ``build()`` method.
 
         Note that the computaion graph will automatically execute these methods:
