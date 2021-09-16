@@ -180,6 +180,22 @@ class BatchMatMulFunctor {
   std::shared_ptr<OpExpr> batch_matmul_op_;
 };
 
+class WeightNormFunctor {
+ public:
+  WeightNormFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("weight_norm").Input("v").Input("g").Output("w").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& v,
+                           const std::shared_ptr<one::Tensor>& g, const int32_t& dim) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {v, g}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class LayerNormFunctor {
  public:
   LayerNormFunctor() {
@@ -1025,6 +1041,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
+  m.add_functor<impl::WeightNormFunctor>("WeightNorm");
   m.add_functor<impl::AvgPool2DFunctor>("AvgPool2D");
   m.add_functor<impl::Maxpool1DFunctor>("Maxpool1D");
   m.add_functor<impl::Maxpool2DFunctor>("Maxpool2D");

@@ -587,6 +587,11 @@
     "TensorTuple (Tensor dy, Tensor gamma, Tensor normalized, Int64 begin_params_axis, Double epsilon) => LayerNormAffineParamGrad"
   bind_python: False
 
+- name: "weight_norm"
+  signature:
+    "Tensor (Tensor v, Tensor g, Int32 dim) => WeightNorm"
+  bind_python: True
+
 - name: "avg_pool_2d"
   signature:
     'Tensor (Tensor x, Int32List kernel_size, Int32List stride, String padding,

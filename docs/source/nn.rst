@@ -94,3 +94,4 @@ Operators for neural networks
 
 .. currentmodule:: oneflow.nn.utils
 .. autofunction:: oneflow.nn.utils.clip_grad_norm_
+.. autofunction:: oneflow.nn.utils.weight_norm
