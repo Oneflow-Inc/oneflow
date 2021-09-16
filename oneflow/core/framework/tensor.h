@@ -264,8 +264,6 @@ class Parameter final : public TensorIf<Parameter> {
  public:
   Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad) {
     this->tensor_ = tensor->detach().GetPtrOrThrow();
-    // TODO: in `y = flow.nn.Parameter(x)`, y should have its own "requires_grad" field
-    // (align with PyTorch) instead of sharing it with x
     this->tensor_->set_requires_grad(requires_grad);
   }
 
