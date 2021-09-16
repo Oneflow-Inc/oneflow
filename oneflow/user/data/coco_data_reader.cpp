@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 namespace data {
@@ -36,7 +37,7 @@ COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COC
   // NOTE(zwx): COCODataReader is not consistent since attr nd_sbp is empty,
   // we assume that it works in DDP
   auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
-  if (nd_sbp_str_vec.empty()) {
+  if (nd_sbp_str_vec.empty() && CHECK_JUST(GlobalMultiClientEnv())) {
     parallel_id = GlobalProcessCtx::Rank();
     parallel_num = GlobalProcessCtx::WorldSize();
   } else {
