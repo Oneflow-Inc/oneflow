@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,11 +12,17 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-from oneflow.comm.comm_ops import all_reduce
-from oneflow.comm.comm_ops import all_gather
-from oneflow.comm.comm_ops import broadcast
-from oneflow.comm.comm_ops import scatter
-from oneflow.comm.comm_ops import reduce
-from oneflow.comm.comm_ops import gather
-from oneflow._C import send, recv
+*/
+#ifndef ONEFLOW_CORE_COMMON_MATH_UTIL_H_
+#define ONEFLOW_CORE_COMMON_MATH_UTIL_H_
+#include <stdint.h>
+
+namespace oneflow {
+
+int64_t Gcd(int64_t m, int64_t n);
+
+int64_t Lcm(int64_t m, int64_t n);
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_COMMON_MATH_UTIL_H_

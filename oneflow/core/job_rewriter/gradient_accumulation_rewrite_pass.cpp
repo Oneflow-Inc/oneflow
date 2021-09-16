@@ -159,7 +159,8 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
                                                               return_pack_op.output("out", 0));
       CHECK_EQ(return_in_lbn, old_val);
       return Maybe<void>::Ok();
-    } else if (op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == "reshape") {
+    } else if (is_multi_client && op_conf.has_user_conf()
+               && op_conf.user_conf().op_type_name() == "reshape") {
       const LogicalBlobId in_lbi = node->op().BnInOp2Lbi(node->op().SoleIbn());
       const LogicalBlobId out_lbi = node->op().BnInOp2Lbi(node->op().SoleObn());
       const Shape& in_shape = node->LogicalBlobDesc4Lbi(in_lbi).shape();
