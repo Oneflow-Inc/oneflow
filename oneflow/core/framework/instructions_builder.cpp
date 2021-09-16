@@ -700,8 +700,8 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
   for (const auto& output : *output_eager_blob_objects) {
     if (!output->producer_op_device().has_value()) {
       JUST(output->init_producer_op_device(op_device));
-      output->set_last_used_device(op_device);
     }
+    output->set_last_used_device(op_device);
   }
   return Maybe<void>::Ok();
 }
@@ -924,7 +924,7 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
 
     if (last_used_device != producer_op_device) {
       JUST(SoftSyncStream(JUST(eager_blob_object->compute_local_dep_object()), "mut",
-                          producer_op_device));
+                          last_used_device));
     }
   }
   std::string instr_name = parallel_desc->device_tag() + ".ReleaseTensor";
