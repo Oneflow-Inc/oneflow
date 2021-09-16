@@ -33,7 +33,6 @@ class CopyHdKernel final : public Kernel {
 };
 
 void CopyHdKernel::VirtualKernelInit(KernelContext* ctx) {
-  const DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(this->op_conf().device_tag()));
   CHECK(this->op_conf().has_copy_hd_conf());
   const CopyHdOpConf& copy_hd_conf = this->op_conf().copy_hd_conf();
   primitive::MemcpyKind kind{};
@@ -44,7 +43,8 @@ void CopyHdKernel::VirtualKernelInit(KernelContext* ctx) {
   } else {
     UNIMPLEMENTED();
   }
-  primitive_ = primitive::NewPrimitive<primitive::MemcpyFactory>(device_type, kind);
+  primitive_ =
+      primitive::NewPrimitive<primitive::MemcpyFactory>(this->op_conf().device_tag(), kind);
   CHECK(primitive_);
 }
 

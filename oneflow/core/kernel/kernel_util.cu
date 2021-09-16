@@ -115,106 +115,6 @@ __global__ void gpu_set(const T value, T* addr) {
   *addr = value;
 }
 
-cublasOperation_t CblasTrans2CublasTrans(CBLAS_TRANSPOSE trans) {
-  cublasOperation_t cublas_trans;
-  if (trans == CBLAS_TRANSPOSE::CblasNoTrans) {
-    cublas_trans = cublasOperation_t::CUBLAS_OP_N;
-  } else if (trans == CBLAS_TRANSPOSE::CblasTrans) {
-    cublas_trans = cublasOperation_t::CUBLAS_OP_T;
-  } else if (trans == CBLAS_TRANSPOSE::CblasConjTrans) {
-    cublas_trans = cublasOperation_t::CUBLAS_OP_C;
-  } else {
-    // do nothing
-  }
-  return cublas_trans;
-}
-
-template<int32_t NDIMS>
-struct Int32Array {
-  int32_t val[NDIMS];
-};
-
-template<typename T>
-__global__ void CopyColsRegionGpu(const int64_t row_num, const int64_t col_num, const T* x,
-                                  const int64_t x_col_offset, const int64_t x_lda, T* y,
-                                  const int64_t y_col_offset, const int64_t y_lda) {
-  CUDA_1D_KERNEL_LOOP(index, row_num * col_num) {
-    const int64_t i = index / col_num;
-    const int64_t j = index % col_num;
-    y[i * y_lda + y_col_offset + j] = x[i * x_lda + x_col_offset + j];
-  }
-}
-
-template<int32_t NDIMS>
-__device__ int32_t GetXIndex(const int32_t* y_shape, const int32_t* x_strides, int32_t y_idx) {
-  int32_t x_idx = 0;
-  for (int32_t i = NDIMS - 1; i >= 0; --i) {
-    x_idx += (y_idx % y_shape[i]) * x_strides[i];
-    y_idx /= y_shape[i];
-  }
-  return x_idx;
-}
-
-template<int32_t NDIMS, typename T>
-__global__ void TransposeGpu(const Int32Array<NDIMS> y_shape, const Int32Array<NDIMS> x_strides,
-                             const int32_t elem_cnt, const T* x, T* y) {
-  __shared__ int32_t x_strides_shared[NDIMS];
-  __shared__ int32_t y_dims_shared[NDIMS];
-  const int32_t tid = threadIdx.x;
-  if (tid < NDIMS) {
-    y_dims_shared[tid] = y_shape.val[tid];
-    x_strides_shared[tid] = x_strides.val[tid];
-  }
-  __syncthreads();
-  CUDA_1D_KERNEL_LOOP(y_idx, elem_cnt) {
-    const int32_t x_idx = GetXIndex<NDIMS>(y_dims_shared, x_strides_shared, y_idx);
-#if __CUDA_ARCH__ >= 350
-    y[y_idx] = __ldg(x + x_idx);
-#else
-    y[y_idx] = x[x_idx];
-#endif
-  }
-}
-
-template<int32_t NDIMS, typename T>
-void Transpose(DeviceCtx* ctx, const ShapeView& x_shape, const ShapeView& y_shape,
-               const PbRf<int32_t>& permutation, const int64_t elem_cnt, const T* x, T* y) {
-  CHECK_LE(y_shape.elem_cnt(), GetMaxVal<int32_t>());
-  Int32Array<NDIMS> y_shape_struct;
-  FOR_RANGE(int32_t, i, 0, NDIMS) { y_shape_struct.val[i] = y_shape.At(i); }
-  Int32Array<NDIMS> x_strides;
-  int32_t buff[NDIMS];
-  int32_t cur_stride = 1;
-  for (int32_t i = NDIMS - 1; i >= 0; --i) {
-    buff[i] = cur_stride;
-    cur_stride *= x_shape.At(i);
-  }
-  for (int32_t i = 0; i < NDIMS; ++i) { x_strides.val[i] = buff[permutation[i]]; }
-  TransposeGpu<NDIMS, T>
-      <<<SMBlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          y_shape_struct, x_strides, elem_cnt, x, y);
-}
-
-template<typename T>
-struct TransposeUtil final {
-#define MAKE_TRANSPOSE_SWITCH_ENTRY(func_name, NDIMS) func_name<NDIMS, T>
-  DEFINE_STATIC_SWITCH_FUNC(void, Transpose, MAKE_TRANSPOSE_SWITCH_ENTRY,
-                            MAKE_NDIM_CTRV_SEQ(DIM_SEQ))
-};
-
-template<typename T>
-__global__ void AssignStridedAddrGpu(T** dev_ptrs, T* start_ptr, int32_t stride_len,
-                                     int32_t stride_num) {
-  CUDA_1D_KERNEL_LOOP(i, stride_num) { dev_ptrs[i] = start_ptr + i * stride_len; }
-}
-
-template<typename T>
-void AssignStridedAddr(DeviceCtx* ctx, T** dev_ptrs, T* start_ptr, int stride_len, int stride_num) {
-  AssignStridedAddrGpu<T>
-      <<<BlocksNum4ThreadsNum(stride_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          dev_ptrs, start_ptr, stride_len, stride_num);
-}
-
 }  // namespace
 
 #define MAKE_CUB_DEVICE_REDUCE_SWITCH_ENTRY(func_name, T) cub::DeviceReduce::func_name<T*, T*>
@@ -226,24 +126,6 @@ DEFINE_STATIC_SWITCH_FUNC(cudaError_t, Sum, MAKE_CUB_DEVICE_REDUCE_SWITCH_ENTRY,
 #define KU_IF_METHOD                     \
   template<typename T, typename Derived> \
   void GpuKernelUtilIf<T, Derived>::
-
-KU_IF_METHOD CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
-                            const T* x, const int64_t x_col_offset, const int64_t x_lda, T* y,
-                            const int64_t y_col_offset, const int64_t y_lda) {
-  CopyColsRegionGpu<T>
-      <<<BlocksNum4ThreadsNum(row_num * col_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          row_num, col_num, x, x_col_offset, x_lda, y, y_col_offset, y_lda);
-}
-
-KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const ShapeView& x_shape,
-                       const ShapeView& y_shape, const PbRf<int32_t>& permutation,
-                       const int64_t elem_cnt, const T* x, T* y) {
-  CHECK_LE(y_shape.elem_cnt(), GetMaxVal<int32_t>());
-  CHECK_EQ(num_axis, y_shape.NumAxes());
-  CHECK_EQ(num_axis, x_shape.NumAxes());
-  TransposeUtil<T>::SwitchTranspose(SwitchCase(num_axis), ctx, x_shape, y_shape, permutation,
-                                    elem_cnt, x, y);
-}
 
 KU_IF_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                 uint32_t random_seed, Blob* blob) {
