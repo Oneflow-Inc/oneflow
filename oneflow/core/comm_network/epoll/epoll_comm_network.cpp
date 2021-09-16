@@ -107,7 +107,7 @@ char * EpollCommNet::SerialTokenToData(void *token, size_t *size) {
   return nullptr;
 }
 
-void * EpollCommNet::DeSerialDataToToken(char *data, size_t size) {
+void * EpollCommNet::DeSerialDataToToken(char *data, size_t  * size) {
   return nullptr;
 }
 

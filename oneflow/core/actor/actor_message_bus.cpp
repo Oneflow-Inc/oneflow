@@ -46,19 +46,21 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       //size_t size = 0;
       //uint64_t addr = Global<CommNet>::Get()->SerialActorMsgToData(new_msg, &size);
       //CHECK_EQ(size, sizeof(new_msg));
-      size_t size = 0;
-      char * serial_data =Global<CommNet>::Get()->SerialTokenToData(new_msg.regst()->comm_net_token(),&size);
-      new_msg.AddUserData(size,serial_data);
-      size = sizeof(new_msg);
+      size_t token_size = 0;
+      char * serial_data =Global<CommNet>::Get()->SerialTokenToData(new_msg.regst()->comm_net_token(),&token_size);
+      uint64_t debug_addr = reinterpret_cast<uint64_t>(serial_data);
+      std::cout<<"debug_addr:"<<debug_addr << std::endl;
+      new_msg.AddUserData(token_size,serial_data);
+      size_t msg_size = sizeof(new_msg);
       uint64_t addr = reinterpret_cast<uint64_t>(&new_msg);
-      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, size);
+      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, msg_size);;
     } else {
       /*size_t size = 0;
       uint64_t addr = Global<CommNet>::Get()->SerialActorMsgToData(msg, &size);
       CHECK_EQ(size, sizeof(msg));*/
       uint64_t addr = reinterpret_cast<uint64_t>(&msg);
-      size_t size = sizeof(msg);
-      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, size);
+      size_t msg_size = sizeof(msg);
+      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, msg_size);
     }
   }
 }
@@ -70,8 +72,14 @@ void ActorMsgBus::SendMsgWithoutCommNet(const ActorMsg& msg) {
 }
 
 void ActorMsgBus::HandleRecvData(void *data, size_t size) {
-   ActorMsg new_msg = Global<CommNet>::Get()->DeserialDataToActorMsg(data, size);
-   SendMsgWithoutCommNet(new_msg);
+  ActorMsg msg = *(reinterpret_cast<ActorMsg*>(data));//将数据转为ActorMsg
+  ActorMsg new_msg = msg;
+  size_t token_size = 0;
+  if(msg.IsDataRegstMsgToConsumer()) {
+    void * token = Global<CommNet>::Get()->DeSerialDataToToken((char*)msg.user_data(),&token_size);
+    new_msg.set_comm_net_token(token);
+  }
+  SendMsgWithoutCommNet(new_msg);
 }
 
 }  // namespace oneflow
