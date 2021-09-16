@@ -46,7 +46,7 @@ Maybe<void> SyncAccessTensorWithTimeOut(
 
 struct CPUGeneratorState {
   static constexpr int64_t state_size = std::mt19937::state_size;  // 624
-  int64_t states[state_size];
+  int64_t states[state_size] = {};
   int64_t seed = 0;
 };
 constexpr int64_t CPUGeneratorState::state_size;
