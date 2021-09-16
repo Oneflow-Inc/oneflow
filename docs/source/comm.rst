@@ -10,5 +10,6 @@ oneflow communication function
         scatter,
         reduce,
         gather,
+        reduce_scatter,
         send,
         recv, 
