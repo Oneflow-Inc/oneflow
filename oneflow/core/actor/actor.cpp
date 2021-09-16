@@ -551,6 +551,7 @@ bool Actor::IsWriteReady() const {
 }
 
 void Actor::AsyncLaunchKernel(std::function<Regst*(int64_t)> Regst4RegstDescId) {
+  // try catch
   for (const ExecKernel& ek : exec_kernel_vec_) {
     CHECK_NOTNULL(dynamic_cast<KernelContextImpl*>(ek.kernel_ctx.get()))
         ->UpdateBnInOp2BlobFn([&](const std::string& bn_in_op) -> Blob* {
