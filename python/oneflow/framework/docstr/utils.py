@@ -19,3 +19,12 @@ import oneflow._oneflow_internal
 
 def add_docstr(fun, docstr: str):
     return oneflow._oneflow_internal.add_doc(fun, docstr)
+
+
+def reset_docstr(o, docstr):
+    if type(o) == type:
+        assert hasattr(o, "__doc__"), str(o) + " does not have a docstring!"
+        setattr(o, "__doc__", docstr)
+        return o
+    else:
+        return oneflow._oneflow_internal.reset_doc(o, docstr)

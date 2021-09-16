@@ -16,6 +16,11 @@ import os
 import sys
 import oneflow
 
+sys.path.insert(0, os.path.abspath("."))
+CN_VERSION = os.getenv("CN_DOCS")
+if CN_VERSION:
+    import zh
+
 # -- Project information -----------------------------------------------------
 
 project = u"OneFlow"
