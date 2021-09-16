@@ -47,7 +47,7 @@ class TestParameter(flow.unittest.TestCase):
         a.data = b
         test_case.assertEqual(old_id, id(a))
         test_case.assertTrue(a.shape == (4, 5))
-        test_case.assertTrue(a.requires_grad)
+        test_case.assertFalse(a.requires_grad)
         test_case.assertTrue(a.is_leaf)
 
 

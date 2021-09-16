@@ -352,8 +352,9 @@ class Parameter final : public TensorIf<Parameter> {
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
     CHECK_OR_RETURN(is_local() == other->is_local() && is_eager() == other->is_eager())
         << "You can't assign copy between tensors with different type";
+    bool old_requires_grad = tensor_->requires_grad();
     this->tensor_ = JUST(other->detach());
-    this->tensor_->set_requires_grad(other->requires_grad());
+    this->tensor_->set_requires_grad(old_requires_grad);
     return Maybe<void>::Ok();
   }
 
@@ -463,10 +464,13 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   }
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
-    const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(other);
+    CHECK_OR_RETURN(this->is_leaf()) << "Can only set leaf tensor's data.";
+    const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(JUST(other->detach()));
     CHECK_NOTNULL_OR_RETURN(mirrored_tensor);
+    bool old_requires_grad = requires_grad();
     impl_ = mirrored_tensor->impl_;
-    grad_fn_node_ = mirrored_tensor->grad_fn_node_;
+    set_requires_grad(old_requires_grad);
+    grad_fn_node_ = nullptr;
     return Maybe<void>::Ok();
   }
 
@@ -569,10 +573,14 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
 
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
-    const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(other);
+    CHECK_OR_RETURN(this->is_leaf()) << "Can only set leaf tensor's data.";
+    const auto& consistent_tensor =
+        std::dynamic_pointer_cast<ConsistentTensor>(JUST(other->detach()));
     CHECK_NOTNULL_OR_RETURN(consistent_tensor);
+    bool old_requires_grad = requires_grad();
     impl_ = consistent_tensor->impl_;
-    grad_fn_node_ = consistent_tensor->grad_fn_node_;
+    set_requires_grad(old_requires_grad);
+    grad_fn_node_ = nullptr;
     return Maybe<void>::Ok();
   }
 
