@@ -97,7 +97,9 @@ class EagerSToBOpKernelState final : public user_op::OpKernelState {
             *CHECK_JUST(
                 CachedGetAllSplitNdSbp(in_split_axis, in_parallel_desc->hierarchy()->NumAxes())),
             shape, in_parallel_id);
+        CHECK(!in_slice.IsEmpty());
         const TensorSliceView& intersection = out_slice.Intersect(in_slice);
+        CHECK(!intersection.IsEmpty());
         sorted_p2p_pair_.emplace_back(std::make_pair(src, dst));
         sorted_elem_cnt2in_tensor_slice_copier_pair_.emplace_back(
             std::make_pair(intersection.shape().elem_cnt(),
