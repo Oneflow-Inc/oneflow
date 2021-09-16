@@ -45,14 +45,35 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
 
 namespace view {
 
-Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& tensor, const std::vector<int64_t>& starts,
+Maybe<Tensor> BasicSlice(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
+                         const Stride& target_strides, int64_t storage_offset) {
+  storage_offset += JUST(input->storage_offset());
+  // TODO(): Check shape compatible.
+  auto tensor_meta = std::make_shared<MirroredTensorMeta>(
+      std::make_shared<Shape>(target_shape), input->dtype()->data_type(), JUST(input->device()),
+      std::make_shared<Stride>(target_strides), storage_offset);
+
+  JUST(input->has_eager_blob_object());
+  const auto& blob_object = JUST(input->eager_blob_object());
+
+  auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(
+      tensor_meta, JUST(input->tensor_storage()), input->requires_grad(),
+      /*is_leaf=*/!input->requires_grad());
+  tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()));
+  JUST(JUST(tensor_impl->eager_blob_object())->TryInitBlob());
+  JUST(tensor_impl->eager_blob_object())->set_is_shape_synced(true);
+  std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
+  return output;
+}
+
+Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& starts,
                     const std::vector<int64_t>& ends, const std::vector<int64_t>& steps) {
-  if (!(tensor->is_eager() && tensor->is_local())) {
+  if (!(input->is_eager() && input->is_local())) {
     return Error::RuntimeError() << "view::Slice(): input should be eager local tensor, but is "
-                                 << (tensor->is_lazy() ? "lazy" : "consistent");
+                                 << (input->is_lazy() ? "lazy" : "consistent");
   }
-  const auto& shape = tensor->shape();
-  const auto& strides = JUST(tensor->stride());
+  const auto& shape = input->shape();
+  const auto& strides = JUST(input->stride());
   int size = starts.size();
   if (size != shape->NumAxes()) {
     return Error::RuntimeError() << "view::Slice(): starts size is expected " << shape->NumAxes()
@@ -64,7 +85,7 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& tensor, const std::vector<int
   }
   DimVector target_dims(size);
   StrideVector target_strides(size);
-  int64_t storage_offset = JUST(tensor->storage_offset());
+  int64_t storage_offset = 0;
   for (int i = 0; i < size; ++i) {
     int64_t step = std::min(steps.at(i), shape->At(i));
     if (step < 0) { return Error::RuntimeError() << "Step must be greater than zero."; }
@@ -81,21 +102,9 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& tensor, const std::vector<int
   }
   // Slice 1-d tensor maybe generate 0-dim tensor.
   if (size == 1 && target_dims.at(0) == 1) { target_dims = DimVector{}; }
-  auto tensor_meta = std::make_shared<MirroredTensorMeta>(
-      std::make_shared<Shape>(target_dims), tensor->dtype()->data_type(), JUST(tensor->device()),
-      std::make_shared<Stride>(target_strides), storage_offset);
 
-  JUST(tensor->has_eager_blob_object());
-  const auto& blob_object = JUST(tensor->eager_blob_object());
-
-  auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(
-      tensor_meta, JUST(tensor->tensor_storage()), tensor->requires_grad(),
-      /*is_leaf=*/!tensor->requires_grad());
-  tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()));
-  JUST(JUST(tensor_impl->eager_blob_object())->TryInitBlob());
-  JUST(tensor_impl->eager_blob_object())->set_is_shape_synced(true);
-  std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
-  if (tensor->requires_grad()) {
+  auto output = JUST(BasicSlice(input, Shape(target_dims), Stride(target_strides), storage_offset));
+  if (input->requires_grad()) {
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
@@ -104,18 +113,67 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& tensor, const std::vector<int
               CHECK_EQ_OR_RETURN(out_grads.size(), 1);
               in_grads->resize(1);
               in_grads->at(0) =
-                  JUST(functional::SliceGrad(out_grads.at(0), tensor, starts, ends, steps));
+                  JUST(functional::SliceGrad(out_grads.at(0), input, starts, ends, steps));
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};
     JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("vew::slice_backward", backward_fn,
-                                                            {tensor}, &outputs));
+                                                            {input}, &outputs));
   }
   return output;
 }
 
-Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& tensor,
-                        const std::vector<int32_t>& permute) {
+Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) {
+  if (!(input->is_eager() && input->is_local())) {
+    return Error::RuntimeError() << "view::Reshape(): input should be eager local tensor, but is "
+                                 << (input->is_lazy() ? "lazy" : "consistent");
+  }
+  auto x = input->contiguous();
+  int need_infer_axis = -1;
+  size_t count = 1;
+  for (int i = 0; i < shape.NumAxes(); ++i) {
+    if (shape.At(i) == -1) {
+      CHECK_EQ_OR_RETURN(need_infer_axis, -1)
+          << "Shape " << shape.ToString() << " has more than 1 axis that needs to be infered.";
+      need_infer_axis = i;
+    } else {
+      count *= shape.At(i);
+    }
+  }
+
+  std::shared_ptr<Tensor> output;
+  size_t x_count = x->shape()->Count(0);
+  if (need_infer_axis == -1) {
+    CHECK_EQ_OR_RETURN(shape.Count(0), x_count);
+    output = JUST(BasicSlice(x, shape, Stride(shape), 0));
+  } else {
+    Shape infered_shape = shape;
+    infered_shape.Set(need_infer_axis, x_count / count);
+    CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
+        << "Shape " << shape.ToString() << " is invalid for input of shape "
+        << x->shape()->ToString();
+    output = JUST(BasicSlice(x, infered_shape, Stride(infered_shape), 0));
+  }
+
+  if (input->requires_grad()) {
+    auto backward_fn =
+        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
+            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                bool create_graph) -> Maybe<void> {
+              autograd::AutoGradMode mode(create_graph);
+              CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+              in_grads->resize(1);
+              in_grads->at(0) = JUST(functional::ReshapeLike(out_grads.at(0), input));
+              return Maybe<void>::Ok();
+            });
+    TensorTuple outputs{output};
+    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("vew::reshape_backward", backward_fn,
+                                                            {input}, &outputs));
+  }
+  return output;
+}
+
+Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& permute) {
   UNIMPLEMENTED_THEN_RETURN();
 }
 

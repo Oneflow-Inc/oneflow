@@ -29,6 +29,7 @@ EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
     : BlobObject(mem_case, shape, data_type),
       tensor_buffer_(tensor_buffer),
       is_shape_synced_(true),
+      storage_offset_(0),
       compute_local_dep_object_(dep_object) {
   CHECK(static_cast<bool>(shape));
   CHECK(static_cast<bool>(tensor_buffer));
@@ -76,14 +77,18 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     tensor_buffer_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
                                   required_body_bytes);
 
-    blob->reset_dptr(dptr);
+    int64_t storage_offset_bytes = storage_offset_ * GetSizeOfDataType(blob_desc_.data_type());
+    blob->reset_dptr(dptr + storage_offset_bytes);
     InitNonPODTypeBlobIfNeed(tensor_buffer_->non_pod_allocator(), blob_.get());
   }
   return Maybe<void>::Ok();
 }
 
 void EagerBlobObject::TryResetBlobData() const {
-  if (!blob_->dptr()) { blob_->reset_dptr(tensor_buffer_->blob_dptr()); }
+  if (!blob_->dptr()) {
+    int64_t storage_offset_bytes = storage_offset_ * GetSizeOfDataType(blob_desc_.data_type());
+    blob_->reset_dptr(tensor_buffer_->blob_dptr() + storage_offset_bytes);
+  }
 }
 
 }  // namespace vm

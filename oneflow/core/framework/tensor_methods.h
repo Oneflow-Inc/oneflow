@@ -28,10 +28,12 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor);
 
 namespace view {
 
-Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& tensor, const std::vector<int64_t>& start,
+Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& start,
                     const std::vector<int64_t>& end, const std::vector<int64_t>& step);
 
-Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& tensor, const std::vector<int32_t>& permute);
+Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape);
+
+Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& permute);
 
 }  // namespace view
 
