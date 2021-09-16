@@ -64,7 +64,7 @@ void ActorMsgBus::SendMsgWithoutCommNet(const ActorMsg& msg) {
 }
 
 void ActorMsgBus::HandleRecvData(void *data, size_t size) {
-  ActorMsg msg = *(reinterpret_cast<ActorMsg*>(data);
+  ActorMsg msg = *(reinterpret_cast<ActorMsg*>(data));
   ActorMsg new_msg = msg;
   size_t token_size = 0;
   if(msg.IsDataRegstMsgToConsumer()) {
