@@ -14,3 +14,4 @@ oneflow communication function
         reduce_scatter,
         send,
         recv, 
+        barrier,
