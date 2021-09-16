@@ -473,7 +473,7 @@ class SelectTopNFunctor {
 
   Maybe<TensorTuple> operator()(const TensorTuple& inputs, int32_t n) const {
     MutableAttrMap attr;
-    attr.SetAttr<int32_t>("top_n", n);
+    JUST(attr.SetAttr<int32_t>("top_n", n));
     const auto& output = JUST(OpInterpUtil::Dispatch<one::TensorTuple>(*op_, inputs, attr));
     return output;
   }
