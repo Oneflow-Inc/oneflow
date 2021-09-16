@@ -22,6 +22,29 @@ namespace oneflow {
 
 namespace {
 
+bool IsAllBroadcastNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
+  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
+    if (!sbp_parallel.has_broadcast_parallel()) { return false; }
+  }
+  return true;
+}
+
+bool IsAllPartialSumNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
+  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
+    if (!sbp_parallel.has_partial_sum_parallel()) { return false; }
+  }
+  return true;
+}
+
+bool IsAllSplitNdSbp(Symbol<cfg::NdSbp> nd_sbp, int64_t axis) {
+  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
+    if (!(sbp_parallel.has_split_parallel() && sbp_parallel.split_parallel().axis() == axis)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool IsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
   return sbp_parallel->has_split_parallel();
 }

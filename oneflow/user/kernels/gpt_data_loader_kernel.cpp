@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/user/data/gpt_dataset.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 
@@ -73,7 +74,7 @@ class GPTDataLoader final : public OpKernelState {
     // NOTE(zwx): GPTDataLoader is not consistent since attr nd_sbp is empty,
     // we assume that it works in DDP
     auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
-    if (nd_sbp_str_vec.empty()) {
+    if (nd_sbp_str_vec.empty() && CHECK_JUST(GlobalMultiClientEnv())) {
       num_shards_ = GlobalProcessCtx::WorldSize();
       shard_index_ = GlobalProcessCtx::Rank();
     } else {
