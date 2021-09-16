@@ -112,17 +112,17 @@ class LaunchLazyJobInstructionType final : public InstructionType {
       for (int i = 0; i < cur_nn_graph->inputs_op_names().size(); ++i) {
         if (cur_nn_graph->inputs_valid().at(i)) {
           const std::string& input_op_name = cur_nn_graph->inputs_op_names().at(i);
-          buffer_mgr->Get(GetInputBufferName(job_name, input_op_name))->Send(job_instance);
+          buffer_mgr->Get(GetInputBufferName(job_name, input_op_name))->Push(job_instance);
         }
       }
       for (int i = 0; i < cur_nn_graph->outputs_op_names().size(); ++i) {
         if (cur_nn_graph->outputs_valid().at(i)) {
           const std::string& output_op_name = cur_nn_graph->outputs_op_names().at(i);
-          buffer_mgr->Get(GetOutputBufferName(job_name, output_op_name))->Send(job_instance);
+          buffer_mgr->Get(GetOutputBufferName(job_name, output_op_name))->Push(job_instance);
         }
       }
-      buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Send(job_instance);
-      buffer_mgr->Get(GetSourceTickBufferName(job_name))->Send(job_instance);
+      buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Push(job_instance);
+      buffer_mgr->Get(GetSourceTickBufferName(job_name))->Push(job_instance);
       OF_PROFILER_RANGE_POP();  // BufferMgr
     }
     OF_PROFILER_RANGE_PUSH("EnqueueNNGraph");

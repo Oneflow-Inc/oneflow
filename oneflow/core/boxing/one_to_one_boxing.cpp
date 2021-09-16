@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/boxing/eager_boxing_interpreter_util.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/decorator.h"
@@ -52,9 +51,8 @@ Maybe<one::Tensor> NaiveOneToOne(const std::shared_ptr<one::Tensor>& tensor, Sym
     JUST(one::functional::Send(local_tensor, dst, /* send_meta */ false));
   }
   if (GlobalProcessCtx::Rank() == dst) {
-    local_tensor =
-        JUST(one::functional::Recv(src, *tensor->shape(), tensor->dtype(),
-                                   JUST(local_tensor->device()), Optional<one::Tensor>()));
+    local_tensor = JUST(one::functional::Recv(src, *tensor->shape(), tensor->dtype(),
+                                              JUST(local_tensor->device()), NullOpt));
   }
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(),
                                                  *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),

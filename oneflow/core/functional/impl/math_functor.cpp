@@ -282,7 +282,7 @@ class ArangeFunctor {
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
 
     OpExprInterpContext ctx(attrs);
-    if (device) { ctx.device = JUST(device.value()); }
+    if (device) { ctx.device = JUST(device); }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }
 
@@ -346,6 +346,8 @@ class CastFunctor {
   CastFunctor() { op_ = CHECK_JUST(one::OpBuilder("cast").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Symbol<DType>& dtype) const {
+    if (x->dtype() == dtype) { return x; }
+
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -369,23 +371,23 @@ class ClampFunctor {
     MutableAttrMap attrs;
     if (IsFloatingDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
-        const auto& min_val = JUST(min.value());
+        const auto& min_val = JUST(min);
         JUST(attrs.SetAttr<double>("floating_min", JUST(min_val->As<double>())));
         JUST(attrs.SetAttr<int64_t>("integral_min", 0));
       }
       if (max.has_value()) {
-        const auto& max_val = JUST(max.value());
+        const auto& max_val = JUST(max);
         JUST(attrs.SetAttr<double>("floating_max", JUST(max_val->As<double>())));
         JUST(attrs.SetAttr<int64_t>("integral_max", 0));
       }
     } else if (IsIntegralDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
-        const auto& min_val = JUST(min.value());
+        const auto& min_val = JUST(min);
         JUST(attrs.SetAttr<double>("floating_min", 0));
         JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min_val->As<int64_t>())));
       }
       if (max.has_value()) {
-        const auto& max_val = JUST(max.value());
+        const auto& max_val = JUST(max);
         JUST(attrs.SetAttr<double>("floating_max", 0));
         JUST(attrs.SetAttr<int64_t>("integral_max", JUST(max_val->As<int64_t>())));
       }
@@ -427,23 +429,23 @@ class ClampGradFunctor {
     MutableAttrMap attrs;
     if (IsFloatingDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
-        const auto& min_val = JUST(min.value());
+        const auto& min_val = JUST(min);
         JUST(attrs.SetAttr<double>("floating_min", JUST(min_val->As<double>())));
         JUST(attrs.SetAttr<int64_t>("integral_min", 0));
       }
       if (max.has_value()) {
-        const auto& max_val = JUST(max.value());
+        const auto& max_val = JUST(max);
         JUST(attrs.SetAttr<double>("floating_max", JUST(max_val->As<double>())));
         JUST(attrs.SetAttr<int64_t>("integral_max", 0));
       }
     } else if (IsIntegralDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
-        const auto& min_val = JUST(min.value());
+        const auto& min_val = JUST(min);
         JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min_val->As<int64_t>())));
         JUST(attrs.SetAttr<double>("floating_min", 0));
       }
       if (max.has_value()) {
-        const auto& max_val = JUST(max.value());
+        const auto& max_val = JUST(max);
         JUST(attrs.SetAttr<double>("floating_max", 0));
         JUST(attrs.SetAttr<int64_t>("integral_max", JUST(max_val->As<int64_t>())));
       }

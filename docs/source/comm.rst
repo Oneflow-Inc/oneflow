@@ -8,5 +8,8 @@ oneflow communication function
         all_gather, 
         broadcast,
         scatter,
+        reduce,
+        gather,
+        reduce_scatter,
         send,
         recv, 

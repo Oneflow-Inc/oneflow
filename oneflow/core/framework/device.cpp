@@ -50,7 +50,7 @@ Maybe<void> Device::Init() {
   mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, device_id_);
   const auto& opt_device_transport_tag = JUST(GetSharedTransportDeviceType());
   if (opt_device_transport_tag.has_value()) {
-    const auto& device_transport_tag = *JUST(opt_device_transport_tag.value());
+    const auto& device_transport_tag = *JUST(opt_device_transport_tag);
     transport_local_dep_object_ = JUST(GetLocalDepObject4Device(Device(device_transport_tag, 0)));
   }
   const auto& schedule_device_type = JUST(GetSharedScheduleDeviceType());
