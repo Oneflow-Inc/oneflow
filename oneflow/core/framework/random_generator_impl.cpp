@@ -47,7 +47,7 @@ Maybe<void> SyncAccessTensorWithTimeOut(
 struct CPUGeneratorState {
   static constexpr int64_t state_size = std::mt19937::state_size;  // 624
   int64_t states[state_size];
-  int64_t seed;
+  int64_t seed = 0;
 };
 constexpr int64_t CPUGeneratorState::state_size;
 
@@ -184,10 +184,10 @@ Maybe<void> CUDAGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
 #endif  // WITH_CUDA
 
 struct AutoGeneratorState {
-  uint64_t seed;
-  int64_t num;
-  int64_t device_tag_length;
-  int64_t state_length;
+  uint64_t seed = 0;
+  int64_t num = 0;
+  int64_t device_tag_length = 0;
+  int64_t state_length = 0;
   // std::vector<int64_t> state_sizes[num];
   // std::vector<uint8_t> device_tags[device_tag_length];
   // std::vector<uint8_t> states[state_sizes[0] + state_sizes[1] + ... + state_sizes[num - 1]]
@@ -308,7 +308,7 @@ Maybe<void> AutoGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
   }
   for (int i = 0; i < splits.size(); ++i) {
     std::string device_name;
-    int device_index;
+    int device_index = -1;
     JUST(ParsingDeviceTag(splits.at(i), &device_name, &device_index));
     detail::DeviceKey device_key;
     const auto& device = JUST(Device::New(device_name, device_index));
@@ -321,7 +321,7 @@ Maybe<void> AutoGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
                                                                    device_key.device_index)))
                .first;
     }
-    it->second->SetState(tensor_states.at(i));
+    JUST(it->second->SetState(tensor_states.at(i)));
   }
   return Maybe<void>::Ok();
 }
@@ -338,7 +338,11 @@ size_t DeviceKeyHash::operator()(const DeviceKey& key) const {
 
 template<>
 DeviceKey MakeDeviceKey<CPUGeneratorImpl>(int device_index) {
-  return DeviceKey{DeviceType::kCPU, 0};
+  if (device_index < 0) { device_index = 0; }
+  DeviceKey device_key;
+  device_key.device_type = DeviceType::kCPU;
+  device_key.device_index = device_index;
+  return device_key;
 }
 
 template<>
@@ -356,7 +360,10 @@ int GetCudaDeviceCount() {
 template<>
 DeviceKey MakeDeviceKey<CUDAGeneratorImpl>(int device_index) {
   if (device_index == -1) { OF_CUDA_CHECK(cudaGetDevice(&device_index)); }
-  return DeviceKey{DeviceType::kGPU, device_index};
+  DeviceKey device_key;
+  device_key.device_type = DeviceType::kGPU;
+  device_key.device_index = device_index;
+  return device_key;
 }
 
 template<>

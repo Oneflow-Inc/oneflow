@@ -42,8 +42,8 @@ Maybe<T> MakeGeneratorImpl(uint64_t seed, int device_index);
 Maybe<GeneratorImpl> MakeGeneratorImpl(uint64_t seed, DeviceType device_type, int device_index);
 
 struct DeviceKey {
-  DeviceType device_type;
-  int device_index;
+  DeviceType device_type = kInvalidDevice;
+  int device_index = -1;
 };
 
 struct DeviceKeyHash {
