@@ -20,4 +20,6 @@ from oneflow.comm.comm_ops import scatter
 from oneflow.comm.comm_ops import reduce
 from oneflow.comm.comm_ops import all_to_all
 from oneflow.comm.comm_ops import barrier
+from oneflow.comm.comm_ops import reduce_scatter
+from oneflow.comm.comm_ops import gather
 from oneflow._C import send, recv

@@ -63,6 +63,7 @@ class Error final {
   static Error BlobSplitAxisInferError();
   static Error UnknownJobBuildAndInferError();
   static Error CheckFailedError();
+  static Error ValueNotFoundError();
   static Error TodoError();
   static Error UnimplementedError();
   static Error RuntimeError();
