@@ -26,6 +26,7 @@ namespace oneflow {
 REGISTER_NO_GRAD_USER_OP("eager_s_to_b")
     .Input("in")
     .Output("out")
+    .Attr<int64_t>("in_split_axis", -1)
     .Attr<std::string>("in_parallel_conf")
     .Attr<std::string>("out_parallel_conf")
     .Attr<Shape>("shape")

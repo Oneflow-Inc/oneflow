@@ -2612,7 +2612,7 @@ def _test_eager_boxing_with_same_placement_s1_to_b(test_case, in_device, out_dev
 
 
 def _test_eager_boxing_s_to_b(
-    test_case, shape, device_type, in_device_list, out_device_list
+    test_case, shape, device_type, in_device_list, out_device_list, in_split_axis
 ):
     np_arr = np.random.uniform(-1e-05, 1e-05, shape)
     # use cuda to avoid slice boxing here
@@ -2624,7 +2624,7 @@ def _test_eager_boxing_s_to_b(
     placement = flow.placement(device_type, {0: in_device_list})
     y = x.to_consistent(placement, flow.sbp.broadcast)
 
-    y = y.to_consistent(placement, flow.sbp.split(0))
+    y = y.to_consistent(placement, flow.sbp.split(in_split_axis))
 
     new_placement = flow.placement(device_type, {0: out_device_list})
     z = y.to_consistent(new_placement, flow.sbp.broadcast)
@@ -2987,6 +2987,7 @@ class TestEagerBoxingSToB(flow.unittest.TestCase):
         arg_dict["device_type"] = ["cpu", "cuda"]
         arg_dict["in_device_list"] = [[0, 1], [1, 2, 3]]
         arg_dict["out_device_list"] = [[2, 3], [0, 1, 3]]
+        arg_dict["in_split_axis"] = [0, 1]
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_s_to_b(test_case, *arg)
 

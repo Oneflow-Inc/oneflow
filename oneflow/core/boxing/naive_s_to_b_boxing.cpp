@@ -23,8 +23,8 @@ namespace oneflow {
 
 namespace {
 
-bool RawIsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel, int64_t axis) {
-  return sbp_parallel->has_split_parallel() && sbp_parallel->split_parallel().axis() == axis;
+bool RawIsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
+  return sbp_parallel->has_split_parallel();
 }
 
 static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocal);
@@ -38,7 +38,7 @@ static constexpr auto* IsBroadcastSbp = DECORATE(&RawIsBroadcastSbp, ThreadLocal
 Maybe<void> RawCheckCclSToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
-  CHECK_OR_RETURN(IsSplitSbp(in->nd_sbp()->sbp_parallel(0), 0));
+  CHECK_OR_RETURN(IsSplitSbp(in->nd_sbp()->sbp_parallel(0)));
   CHECK_OR_RETURN(IsBroadcastSbp(out->nd_sbp()->sbp_parallel(0)));
   CHECK_OR_RETURN(in->placement() != out->placement());
   CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());
@@ -60,8 +60,9 @@ Maybe<one::Tensor> CclSToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
     const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(tensor_placement));
     const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out->placement()));
     if (in_parallel_id->has_value() || out_parallel_id->has_value()) {
-      local_tensor = JUST(one::functional::EagerSToB(local_tensor, tensor_placement,
-                                                     out->placement(), *tensor->shape()));
+      local_tensor =
+          JUST(one::functional::EagerSToB(local_tensor, tensor_placement, out->placement(),
+                                          *JUST(GetSbpList(tensor_nd_sbp)), *tensor->shape()));
     }
   }
 

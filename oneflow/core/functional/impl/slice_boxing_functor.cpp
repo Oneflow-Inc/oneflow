@@ -38,10 +38,12 @@ bool IsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
 }
 
 Maybe<one::UserOpExpr> EagerSToB(Symbol<ParallelDesc> in_parallel_desc,
-                                 Symbol<ParallelDesc> out_parallel_desc, const Shape& shape) {
+                                 Symbol<ParallelDesc> out_parallel_desc,
+                                 Symbol<cfg::SbpParallel> src_sbp, const Shape& shape) {
   return one::OpBuilder("eager_s_to_b", *JUST(UniqueStr("eager_s_to_b")))
       .Input("in")
       .Output("out")
+      .Attr<int64_t>("in_split_axis", src_sbp->split_parallel().axis())
       .Attr<std::string>("in_parallel_conf", PbMessage2TxtString(in_parallel_desc->parallel_conf()))
       .Attr<std::string>("out_parallel_conf",
                          PbMessage2TxtString(out_parallel_desc->parallel_conf()))
@@ -76,13 +78,18 @@ class EagerSToBFunctor {
   EagerSToBFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> in_parallel_desc,
-                           Symbol<ParallelDesc> out_parallel_desc, const Shape& shape) const {
+                           Symbol<ParallelDesc> out_parallel_desc,
+                           const std::vector<Symbol<cfg::SbpParallel>>& in_sbp_parallels,
+                           const Shape& shape) const {
+    Symbol<cfg::NdSbp> in_nd_sbp = JUST(GetNdSbp(in_sbp_parallels));
     {
       CHECK_OR_RETURN(x->is_local());
       CHECK_OR_RETURN(x->is_eager());
+      CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(), 1);
+      CHECK_OR_RETURN(IsSplitSbp(in_nd_sbp->sbp_parallel(0)));
     }
-    std::shared_ptr<OpExpr> op_expr =
-        JUST(CachedEagerSToBpExpr(in_parallel_desc, out_parallel_desc, shape));
+    std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerSToBpExpr(
+        in_parallel_desc, out_parallel_desc, SymbolOf(in_nd_sbp->sbp_parallel(0)), shape));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
 };
