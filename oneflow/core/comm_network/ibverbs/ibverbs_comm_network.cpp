@@ -128,6 +128,26 @@ ActorMsg IBVerbsCommNet::DeserialDataToActorMsg(void* data, size_t size) {
   return new_msg;
 }
 
+char * IBVerbsCommNet::SerialTokenToData(void *comm_net_token, size_t *size) {
+  char * data = (char*)malloc(sizeof(IBVerbsCommNetRMADesc));
+  *size = sizeof(IBVerbsCommNetRMADesc);
+  auto * mem_desc = reinterpret_cast<IBVerbsMemDesc*>(comm_net_token);
+  IBVerbsCommNetRMADesc rma_desc{};
+  rma_desc.mem_ptr = reinterpret_cast<uint64_t>(mem_desc->mem_ptr());
+  rma_desc.mem_size = mem_desc->mem_size();
+  rma_desc.mr_rkey = mem_desc->mr()->rkey;
+  static_assert(sizeof(IBVerbsCommNetRMADesc) <= kActorMsgUserDataMaxSize, "");
+  std::memcpy(data,&rma_desc,sizeof(IBVerbsCommNetRMADesc));
+  return data;
+}
+
+void * IBVerbsCommNet::DeSerialDataToToken(char *data, size_t size) {
+  std::lock_guard<std::mutex> lock(remote_regst2rma_desc_mutex_);
+  void * token = malloc(sizeof(IBVerbsCommNetRMADesc));
+  std::memcpy(token, data, sizeof(IBVerbsCommNetRMADesc));
+  return token;
+}
+
 void IBVerbsCommNet::RecvMsg(void* data, size_t size) {
  // ActorMsg new_msg = DeserialDataToActorMsg(data, size);
  // Global<ActorMsgBus>::Get()->SendMsgWithoutCommNet(new_msg);

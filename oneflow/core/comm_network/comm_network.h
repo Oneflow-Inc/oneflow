@@ -53,6 +53,8 @@ class CommNet {
   virtual void SendMsg(int64_t dst_machine_id,uint64_t addr ,size_t size,const CallBack & cb ) = 0;
   virtual uint64_t SerialActorMsgToData(const ActorMsg& msg, size_t* size) = 0;
   virtual ActorMsg DeserialDataToActorMsg(void* data, size_t size) = 0;
+  virtual char * SerialTokenToData(void * token,size_t * size) = 0;
+  virtual void * DeSerialDataToToken(char * data, size_t size ) = 0;
 
  protected:
   CommNet();

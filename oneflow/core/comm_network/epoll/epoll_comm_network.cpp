@@ -103,6 +103,14 @@ ActorMsg EpollCommNet::DeserialDataToActorMsg(void* data, size_t size) {
   return msg;
 }
 
+char * EpollCommNet::SerialTokenToData(void *token, size_t *size) {
+  return nullptr;
+}
+
+void * EpollCommNet::DeSerialDataToToken(char *data, size_t size) {
+  return nullptr;
+}
+
 void EpollCommNet::SendTransportMsg(int64_t dst_machine_id, const TransportMsg& transport_msg) {
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kTransport;

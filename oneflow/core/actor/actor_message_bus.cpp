@@ -43,15 +43,22 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       }
       ActorMsg new_msg = msg;
       new_msg.set_comm_net_sequence_number(comm_net_sequence);
+      //size_t size = 0;
+      //uint64_t addr = Global<CommNet>::Get()->SerialActorMsgToData(new_msg, &size);
+      //CHECK_EQ(size, sizeof(new_msg));
       size_t size = 0;
-      uint64_t addr = Global<CommNet>::Get()->SerialActorMsgToData(new_msg, &size);
-      CHECK_EQ(size, sizeof(new_msg));
-      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, size,cb);
+      char * serial_data =Global<CommNet>::Get()->SerialTokenToData(new_msg.regst()->comm_net_token(),&size);
+      new_msg.AddUserData(size,serial_data);
+      size = sizeof(new_msg);
+      uint64_t addr = reinterpret_cast<uint64_t>(&new_msg);
+      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, size);
     } else {
-      size_t size = 0;
+      /*size_t size = 0;
       uint64_t addr = Global<CommNet>::Get()->SerialActorMsgToData(msg, &size);
-      CHECK_EQ(size, sizeof(msg));
-      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, size ,cb);
+      CHECK_EQ(size, sizeof(msg));*/
+      uint64_t addr = reinterpret_cast<uint64_t>(&msg);
+      size_t size = sizeof(msg);
+      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, size);
     }
   }
 }
