@@ -22,19 +22,20 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct SelectFirstCaptureState : public AutoGradCaptureState {
+struct SelectTopNCaptureState : public AutoGradCaptureState {
   TensorTuple inputs;
   std::vector<bool> requires_grad;
+  int32_t top_n;
 };
 
-class SelectFirst : public OpExprGradFunction<SelectFirstCaptureState> {
+class SelectTopN : public OpExprGradFunction<SelectTopNCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(SelectFirstCaptureState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(SelectTopNCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     ctx->inputs = inputs;
-    CHECK_OR_RETURN(ctx->inputs.at(0)->requires_grad());
+    ctx->top_n = JUST(attrs.GetAttr<int32_t>("top_n"));
     ctx->requires_grad.resize(inputs.size());
     for (int i = 0; i < ctx->requires_grad.size(); ++i) {
       ctx->requires_grad.at(i) = inputs.at(i)->requires_grad();
@@ -42,10 +43,11 @@ class SelectFirst : public OpExprGradFunction<SelectFirstCaptureState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const SelectFirstCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const SelectTopNCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    in_grads->at(0) = out_grads.at(0);
-    for (int i = 1; i < ctx->inputs.size(); i++) {
+    CHECK_EQ_OR_RETURN(ctx->top_n, out_grads.size());
+    for (int i = 0; i < ctx->top_n; ++i) { in_grads->at(i) = out_grads.at(i); }
+    for (int i = ctx->top_n; i < ctx->inputs.size(); ++i) {
       if (!ctx->requires_grad.at(i)) { continue; }
       const auto& tensor = ctx->inputs.at(i);
       in_grads->at(i) = JUST(StaticZerosTensor::MakeTensor(
@@ -55,7 +57,7 @@ class SelectFirst : public OpExprGradFunction<SelectFirstCaptureState> {
   }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("select_first", SelectFirst);
+REGISTER_OP_EXPR_GRAD_FUNCTION("select_top_n", SelectTopN);
 
 }  // namespace one
 }  // namespace oneflow
