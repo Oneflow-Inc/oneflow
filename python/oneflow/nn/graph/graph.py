@@ -236,8 +236,8 @@ class Graph(object):
 
         .. code-block:: python
 
-            g = CustomGraph()
-            out_tensors = g(input_tensors)
+            >>> g = CustomGraph()
+            >>> out_tensors = g(input_tensors)
 
         The inputs of ``__call__`` method must match the inputs of ``build()``
         method. And the ``__call__`` method will return outputs matching the
@@ -265,28 +265,34 @@ class Graph(object):
         """
         return self.config.training
 
-    def debug(self, mode: bool = True) -> None:
+    def debug(self, mode: bool = True, rank: int = 0) -> None:
         r"""Open or close debug mode of the graph.
 
         If in debug mode, logs of computation graph building will be
-        printed on rank 0.
+        printed. The log includes inputs/outputs/parameters/buffers/modules meta information.
+
+        Use ``rank`` to choose which rank to print the debug information.
 
         .. code-block:: python
 
-            g = CustomGraph()
+            >>> g = CustomGraph()
+            >>> g.debug()  # Open debug mode
 
-            # Open debug mode
-            g.debug()
+            >>> out_tensors = g(input_tensors)  # Will print log for debug at the first call
 
-            out_tensors = g(input_tensors)  # Will print log for debug at the first call
-
+        Args:
+            mode (bool): whether to set debug mode ("True") or not (``False``). Default: ``True``.
+            rank (int): choose which rank to print the debug information. Default rank ``0``.
+                        You can choose any valid rank. Rank ``-1`` means print on all rank.
         """
-        if get_rank() != 0:
-            return
-        self._debug = mode
-        for name, block in self._blocks.items():
-            assert block.type == BlockType.MODULE
-            block.debug(mode)
+        assert isinstance(mode, bool)
+        assert isinstance(rank, int)
+        my_rank = get_rank()
+        if -1 == rank or my_rank == rank:
+            self._debug = mode
+            for name, block in self._blocks.items():
+                assert block.type == BlockType.MODULE
+                block.debug(mode, rank)
 
     def __repr__(self):
         r"""For printing the graph structure.

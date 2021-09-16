@@ -122,19 +122,21 @@ class Block(object):
             self._scope = graph_build_util.make_new_block_scope(self.prev_scope, self)
         return self._scope
 
-    def debug(self, mode: bool = True) -> None:
-        if get_rank() != 0:
-            return
-        self._debug = mode
-        if self._type == BlockType.MODULE:
+    def debug(self, mode: bool = True, rank: int = 0) -> None:
+        assert isinstance(mode, bool)
+        assert isinstance(rank, int)
+        my_rank = get_rank()
+        if -1 == rank or my_rank == rank:
+            self._debug = mode
+            if self._type == BlockType.MODULE:
 
-            def _set_child(d):
-                for (_, n) in d.items():
-                    n.debug(mode)
+                def _set_child(d):
+                    for (_, n) in d.items():
+                        n.debug(mode, rank)
 
-            _set_child(self._modules)
-            _set_child(self._parameters)
-            _set_child(self._buffers)
+                _set_child(self._modules)
+                _set_child(self._parameters)
+                _set_child(self._buffers)
 
     def scope_context(self):
         return graph_build_util.BlockScopeContext(self.prev_scope, self.scope)
