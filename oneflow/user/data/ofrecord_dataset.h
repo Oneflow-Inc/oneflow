@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 namespace data {
@@ -60,7 +61,7 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
       auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
       // NOTE(zwx): OFRecordDataset is not consistent since attr nd_sbp is empty,
       // we assume that it works in DDP
-      if (nd_sbp_str_vec.empty()) { is_local = true; }
+      if (nd_sbp_str_vec.empty() && CHECK_JUST(GlobalMultiClientEnv())) { is_local = true; }
     }
     if (is_local) {
       parallel_id_ = GlobalProcessCtx::Rank();
