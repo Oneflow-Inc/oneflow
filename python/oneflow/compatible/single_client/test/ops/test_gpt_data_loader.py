@@ -133,6 +133,7 @@ class TestGPTDataLoader(flow.unittest.TestCase):
             dtype=flow.int64,
             shuffle=True,
             random_seed=self.RANDOM_SEED,
+            nd_sbp=["B"],
         )
         tokens_list = []
         for _ in range(5):

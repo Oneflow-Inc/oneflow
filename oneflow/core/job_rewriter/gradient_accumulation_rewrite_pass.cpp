@@ -135,6 +135,7 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
             .add_s(repeat_op.output("out", 0));
         return Maybe<void>::Ok();
       } else {
+        LOG(ERROR) << "Gradient accumulation unsupported op : " << op_conf.DebugString();
         return Error::UnimplementedError();
       }
     } else if ((is_multi_client && op_conf.has_output_conf())
@@ -157,6 +158,27 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
       const auto& old_val = ReplaceInputLbnInOpCustomizedConf(new_return_op_conf, "in",
                                                               return_pack_op.output("out", 0));
       CHECK_EQ(return_in_lbn, old_val);
+      return Maybe<void>::Ok();
+    } else if (is_multi_client && op_conf.has_user_conf()
+               && op_conf.user_conf().op_type_name() == "reshape") {
+      const LogicalBlobId in_lbi = node->op().BnInOp2Lbi(node->op().SoleIbn());
+      const LogicalBlobId out_lbi = node->op().BnInOp2Lbi(node->op().SoleObn());
+      const Shape& in_shape = node->LogicalBlobDesc4Lbi(in_lbi).shape();
+      const Shape& out_shape = node->LogicalBlobDesc4Lbi(out_lbi).shape();
+      if (in_shape.NumAxes() > 0 && out_shape.NumAxes() > 0 && in_shape.At(0) == out_shape.At(0)) {
+        // NOTE(chengcheng):
+        //  in nn.Graph GradientAccumulation, the reshape conf in JobBuild and after insert
+        //  acc/unpack maybe NOT equal because of dim 0 scaled, so need set dim 0 as -1 for
+        //  dynamic infer.
+        OperatorConf* new_reshape_op_conf = GetOperatorConf4Modify(op_conf);
+        AttrValue* attr_val = &(*new_reshape_op_conf->mutable_user_conf()->mutable_attr())["shape"];
+        CHECK(attr_val->has_at_shape());
+        ShapeProto* shape_conf = attr_val->mutable_at_shape();
+        CHECK_GT(shape_conf->dim_size(), 0);
+        shape_conf->set_dim(0, -1);
+        LOG(INFO) << " Replace ReshapeOpConf from: " << op_conf.DebugString() << " to "
+                  << new_reshape_op_conf->DebugString() << " for dynamic infer by insert unpack.";
+      }
       return Maybe<void>::Ok();
     } else {
       return Maybe<void>::Ok();

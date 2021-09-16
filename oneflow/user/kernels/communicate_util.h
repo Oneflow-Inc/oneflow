@@ -22,9 +22,13 @@ namespace oneflow {
 
 class DeviceCtx;
 
+// Send data from in to rank dst, if cur rank equal dst, memcopy will happen.
+// Rank dst needs to call Recv with the same datatype and the same count from this rank.
 template<DeviceType device_type>
 Maybe<void> Send(const void* in, size_t elem_cnt, DataType dtype, int64_t dst, DeviceCtx* ctx);
 
+// Receive data from rank src into out, if cur rank equal src, memcopy will happen.
+// Rank src needs to call Send with the same datatype and the same count to this rank.
 template<DeviceType device_type>
 Maybe<void> Recv(void* out, size_t elem_cnt, DataType dtype, int64_t src, DeviceCtx* ctx);
 

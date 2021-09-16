@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
+#include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 #include "oneflow/core/graph/stream_index_getter_registry_manager.h"
@@ -539,6 +540,48 @@ void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_node
     TaskEdge* edge = NewEdge();
     Connect<TaskNode>(src_task_nodes.at(i), edge, dst_task_nodes.at(i));
     src_task_nodes.at(i)->BindEdgeWithProducedRegst(edge, regst_desc_name);
+  }
+}
+
+void TaskGraph::AddCtrlEdgeBetweenSrcDstTickAndInputOutputInSameRank() {
+  if (!CHECK_JUST(GlobalMultiClientEnv())) { return; }
+  HashMap<int64_t, TaskNode*> rank_id2src_tick;
+  HashMap<int64_t, TaskNode*> rank_id2dst_tick;
+  HashMap<int64_t, HashSet<TaskNode*>> rank_id2input_output_nodes;
+
+  ForEachNode([&](TaskNode* node) {
+    if (node->GetTaskType() == TaskType::kSrcSubsetTick) {
+      CHECK(rank_id2src_tick.emplace(node->machine_id(), node).second);
+    } else if (node->GetTaskType() == TaskType::kDstSubsetTick) {
+      CHECK(rank_id2dst_tick.emplace(node->machine_id(), node).second);
+    } else if (node->GetTaskType() == TaskType::kNormalForward) {
+      auto* forward_node = reinterpret_cast<NormalForwardCompTaskNode*>(node);
+      CHECK(forward_node);
+      if (forward_node->op()->op_conf().has_input_conf()
+          || forward_node->op()->op_conf().has_output_conf()) {
+        CHECK(rank_id2input_output_nodes[node->machine_id()].insert(node).second);
+      }
+    }
+  });
+
+  auto AddCtrlEdge = [&](TaskNode* src, TaskNode* dst) {
+    std::string ctrl_regst_name;
+    src->BuildCtrlRegstDesc(dst, &ctrl_regst_name);
+    TaskEdge* edge = NewEdge();
+    Connect<TaskNode>(src, edge, dst);
+    src->BindEdgeWithProducedRegst(edge, ctrl_regst_name);
+  };
+
+  for (auto& pair : rank_id2src_tick) {
+    int64_t rank_id = pair.first;
+    TaskNode* src = pair.second;
+    for (TaskNode* io_task : rank_id2input_output_nodes[rank_id]) { AddCtrlEdge(src, io_task); }
+  }
+
+  for (auto& pair : rank_id2dst_tick) {
+    int64_t rank_id = pair.first;
+    TaskNode* dst = pair.second;
+    for (TaskNode* io_task : rank_id2input_output_nodes[rank_id]) { AddCtrlEdge(io_task, dst); }
   }
 }
 

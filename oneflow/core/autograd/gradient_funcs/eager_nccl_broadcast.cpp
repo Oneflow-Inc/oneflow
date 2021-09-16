@@ -69,7 +69,7 @@ class EagerNcclBroadcast : public OpExprGradFunction<EagerNcclBroadcastCaptureSt
                       const TensorTuple& outputs,
                       const OpExprInterpContext& interp_ctx) const override {
     ctx->root = JUST(interp_ctx.attrs.GetAttr<int64_t>("root"));
-    ctx->parallel_desc = JUST(interp_ctx.parallel_desc.value());
+    ctx->parallel_desc = JUST(interp_ctx.parallel_desc);
     return Maybe<void>::Ok();
   }
 
