@@ -104,7 +104,7 @@ class CPUGeneratorImpl : public DeviceGeneratorImpl {
 
   std::mt19937& engine() { return engine_; }
 
-  Maybe<Symbol<Device>> device() const { return Device::New("cpu"); }
+  Maybe<Symbol<Device>> device() const override { return Device::New("cpu"); }
 
   Maybe<Tensor> GetState() const override;
   Maybe<void> SetState(const std::shared_ptr<Tensor>& tensor_state) override;
@@ -126,7 +126,7 @@ class CUDAGeneratorImpl : public DeviceGeneratorImpl {
 
   void set_current_seed(uint64_t seed) override;
 
-  Maybe<Symbol<Device>> device() const { return Device::New("cuda", device_index()); }
+  Maybe<Symbol<Device>> device() const override { return Device::New("cuda", device_index()); }
 
   Maybe<Tensor> GetState() const override;
   Maybe<void> SetState(const std::shared_ptr<Tensor>& tensor_state) override;
@@ -157,7 +157,7 @@ class AutoGeneratorImpl : public GeneratorImpl {
     for (const auto& it : generators_) { it.second->set_current_seed(seed); }
   }
 
-  Maybe<Symbol<Device>> device() const { return Device::New("auto"); }
+  Maybe<Symbol<Device>> device() const override { return Device::New("auto"); }
 
   Maybe<Tensor> GetState() const override;
   Maybe<void> SetState(const std::shared_ptr<Tensor>& tensor_state) override;
