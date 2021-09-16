@@ -275,15 +275,21 @@ class TransposeFunctor {
 class ArangeFunctor {
  public:
   ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
-  Maybe<Tensor> operator()(const int64_t& start, const int64_t& limit, const int64_t& delta,
+  Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("start", start));
-    JUST(attrs.SetAttr<int64_t>("limit", limit));
-    JUST(attrs.SetAttr<int64_t>("delta", delta));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-
+    const DataType range_dtype = dtype->data_type(); 
+    JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
+    if(IsIntegralDataType(range_dtype)){
+      JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+    }else{
+      JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
+      JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
+      JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+    }
     OpExprInterpContext ctx(attrs);
     if (device) { ctx.device = JUST(device.value()); }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
@@ -295,9 +301,9 @@ class ArangeFunctor {
 
 class Arange2Functor {
  public:
-  Maybe<Tensor> operator()(const int64_t& limit, const Symbol<DType>& dtype,
+  Maybe<Tensor> operator()(const Scalar& limit, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
-    return Arange(0, limit, 1, dtype, device);
+    return Arange(Scalar(0), limit, Scalar(1), dtype, device);
   }
 };
 
