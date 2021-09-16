@@ -368,7 +368,7 @@ class ClampFunctor {
         << "Requires one of argument `min` and `max` at least in clip.";
     MutableAttrMap attrs;
     if (IsFloatingDataType(x->dtype()->data_type())) {
-      if (min.has_value()) {
+      if (min.has_value()) {       
         const auto& min_val = JUST(min.value());
         JUST(attrs.SetAttr<double>("floating_min", JUST(min_val->As<double>())));
         JUST(attrs.SetAttr<int64_t>("integral_min", 0));
@@ -407,6 +407,150 @@ class ClampFunctor {
   std::shared_ptr<OpExpr> clip_op_;
   std::shared_ptr<OpExpr> clip_min_op_;
   std::shared_ptr<OpExpr> clip_max_op_;
+};
+
+class VectorNormFunctor {
+ public:
+  VectorNormFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                            const std::vector<int32_t>& ord, const std::vector<int32_t>& input_dim, 
+                            const bool& keepdim) const {
+    std::shared_ptr<one::Tensor> rd; 
+    int32_t num_dims = x->ndim();
+    std::vector<int32_t> dim;
+    if(input_dim.empty())
+    {
+      dim = input_dim;
+    }
+    else {
+      for (auto i=0; i < input_dim.size(); ++i) {
+        if(input_dim[i] >=0)
+        {
+          dim.push_back(input_dim[i]);
+        }
+        else {
+          dim[i] = input_dim[i] + num_dims;
+        }
+        CHECK_OR_RETURN(dim[i] >= num_dims || dim[i] < 0) << "Dimension out of range";
+      }
+    }//check_dim()
+
+    //vector_norm
+    const DType obj(kInt32);
+    Symbol<DType> dtype(obj);
+    
+    if(ord == 0)
+    {
+      //return flow.cast(flow.tensor([flow.argwhere(x).shape[0]]), flow.float32)
+      rd=JUST(ArgWhere(x, dtype));
+    }
+    else if (ord == DBL_MAX) //正无穷大
+    {
+      //return flow.max(flow.abs(x), dim=dim, keepdim=keepdim)
+      rd = JUST(Abs(x));
+      //rd->at(0)
+
+    }
+    else if (ord == -DBL_MAX) //负无穷大
+    {
+      //return flow.min(flow.abs(x), dim=dim, keepdim=keepdim)
+      rd = JUST(Abs(x));
+
+    }
+    else
+    {
+      // flow.pow(flow.sum(flow.pow(flow.abs(x), ord), dim=dim, keepdim=keepdim),1.0 / ord,)
+      rd = JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord)), dim, keepdim)), 1.0 / ord));
+    }
+    return rd;
+    
+  }
+
+};
+
+//2维
+class MatrixNormFunctor {
+ public:
+  MatrixNormFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                            const Optional<Scalar>& ord, const std::vector<int32_t>& input_dim, 
+                            const bool& keepdim) const {
+    std::shared_ptr<one::Tensor> res; 
+    std::vector<int32_t> dim;
+    //判断ord,dim是tuple并且dim的len为2，且dim[0]!=dim[1]
+    if(ord.has_value()) {
+      auto ord_tmp=JUST(ord.value());
+      if(ord_tmp == DBL_MAX || ord_tmp == -DBL_MAX)
+      {
+        dim=input_dim;
+        if(input_dim.size() == 2)
+        {
+          dim[0] = input_dim[1];
+          dim[1] = input_dim[0];
+          if(dim[1] >dim[0]&&keepdim == false)
+          {
+            dim[1]-=dim[1];
+          }
+          res=JUST(ReduceSum(JUST(Abs(x)), dim[0], keepdim));
+          if(ord_tmp==DBL_MAX)
+          {
+            res = JUST(max(res, ord_tmp, dim[1], keepdim));
+          }
+          else
+          {
+            res = JUST(min(res, ord_tmp, dim[1], keepdim));
+          } 
+        }
+      }
+      else if(ord_tmp == 1 || ord_tmp == -1)
+      {  
+        dim=input_dim;
+        if(dim.size() == 2)
+        {
+          if(dim[1]>dim[0] && keepdim==false)
+          {
+            dim[1]-=dim[1];
+
+          }
+          res=JUST(ReduceSum(JUST(Abs(x)), dim[0], keepdim));
+          if(ord_tmp==1)
+          {
+            res = JUST(max(res, ord_tmp, dim[1], keepdim));
+          }
+          else
+          {
+            res = JUST(min(res, ord_tmp, dim[1], keepdim));
+          }
+        }
+      }
+      else
+      {
+         UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
+      }
+      return res;
+    }
+  }
+
+};
+
+
+class MatrixNorm2Functor {
+ public:
+  MatrixNorm2Functor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                            const std::string& ord, const std::vector<int32_t>& input_dim, 
+                            const bool& keepdim) const {
+    std::shared_ptr<one::Tensor> res; 
+    if(ord=="nuc") 
+    {
+      UNIMPLEMENTED_THEN_RETURN() << "Not support ord is nuc.";
+    }
+    else if(ord=="fro")
+    {  
+      res=JUST(Sqrt(JUST(ReduceSum(JUST(Square(x)), input_dim, keepdim))));
+    }
+    return res;
+  }
 };
 
 class ClampGradFunctor {
@@ -685,6 +829,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ArgMaxFunctor>("ArgMax");
   m.add_functor<impl::CastFunctor>("Cast");
   m.add_functor<impl::ClampFunctor>("Clamp");
+  m.add_functor<impl::VectorNormFunctor>("VectorNorm");
+  m.add_functor<impl::MatrixNormFunctor>("MatrixNorm");
+  m.add_functor<impl::MatrixNorm2Functor>("MatrixNorm2");
   m.add_functor<impl::ClampGradFunctor>("ClampGrad");
   m.add_functor<impl::SelectFirstFunctor>("SelectFirst");
   m.add_functor<impl::MinimumFunctor>("Minimum");

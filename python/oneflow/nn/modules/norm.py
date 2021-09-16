@@ -67,12 +67,15 @@ class Vector_Norm(Module):
 
     def _vector_norm(self, x, ord, dim, keepdim=False):
         if ord == 0:
+            
             return flow.cast(flow.tensor([flow.argwhere(x).shape[0]]), flow.float32)
         elif ord == float("inf"):
             return flow.max(flow.abs(x), dim=dim, keepdim=keepdim)
         elif ord == float("-inf"):
             return flow.min(flow.abs(x), dim=dim, keepdim=keepdim)
         else:
+            #dim=None and ord=None会进到这里  ，其他情况x为1维的
+            print("###@@@@")
             return flow.pow(
                 flow.sum(flow.pow(flow.abs(x), ord), dim=dim, keepdim=keepdim),
                 1.0 / ord,
@@ -174,8 +177,10 @@ class Norm(Module):
                 len(x.shape) <= 2
             ), "input must be 1-D or 2-D when dim is None and ord is not None"
             if len(x.shape) == 1:
+                #为1维的
                 res = Vector_Norm(ord=self.ord, keepdim=self.keepdim)(x)
             else:
+                #为2维时
                 res = Matrix_Norm(ord=self.ord, keepdim=self.keepdim)(x)
         elif self.dim == None and self.ord == None:
             res = Vector_Norm(keepdim=self.keepdim)(x)
@@ -370,7 +375,7 @@ def vector_norm_tensor_op(input, ord=2, dim=None, keepdim=False):
         >>> LA.vector_norm(b, ord=3.5)
         tensor(5.4345, dtype=oneflow.float32)
     """
-    return Vector_Norm(ord, dim, keepdim)(input)
+    return flow._C.VectorNorm(ord, dim, keepdim)(input)
 
 
 def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False):

@@ -901,13 +901,24 @@
   bind_python: True
 
 - name: "clamp"
-  signature:
-    ["Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clamp"]
+  signature:"Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clamp"
   bind_python: true
 
 - name: "clamp_grad"
   signature: "Tensor (Tensor dy, Tensor x, Scalar min=None, Scalar max=None) => ClampGrad"
   bind_python: False
+
+- name: "vector_norm"
+  signature: "Tensor (Tensor input, Scalar ord=2.0, Int64List dim=None, Bool keepdim=False) => VectorNorm"
+  bind_python: true
+
+- name: "matrix_norm"
+  signature: 
+  [
+    "Tensor (Tensor input, Scalar ord, Int64List dim=(-2, -1), Bool keepdim=False) => MatrixNorm",
+    "Tensor (Tensor input, String ord="fro", Int64List dim=(-2, -1), Bool keepdim=False) => MatrixNorm2",
+  ]
+  bind_python: true
 
 - name: "dropout"
   signature: "Tensor (Tensor x, Float p=0.5, Bool training=True, Generator generator=None) => Dropout"
