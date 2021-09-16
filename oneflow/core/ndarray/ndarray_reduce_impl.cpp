@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/ndarray/ndarray_reduce_impl.h"
 #include "oneflow/core/ndarray/binary_func.h"
