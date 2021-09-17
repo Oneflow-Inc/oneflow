@@ -346,6 +346,8 @@ class CastFunctor {
   CastFunctor() { op_ = CHECK_JUST(one::OpBuilder("cast").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Symbol<DType>& dtype) const {
+    if (x->dtype() == dtype) { return x; }
+
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -615,12 +617,14 @@ class ClampGradFunctor {
   std::shared_ptr<OpExpr> clip_max_op_;
 };
 
-class SelectFirstFunctor {
+class SelectTopNFunctor {
  public:
-  SelectFirstFunctor() { op_ = CHECK_JUST(one::SelectFirstOpExpr::New()); }
+  SelectTopNFunctor() { op_ = CHECK_JUST(one::SelectTopNOpExpr::New()); }
 
-  Maybe<Tensor> operator()(const TensorTuple& inputs) const {
-    const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, inputs));
+  Maybe<TensorTuple> operator()(const TensorTuple& inputs, int32_t n) const {
+    MutableAttrMap attr;
+    JUST(attr.SetAttr<int32_t>("top_n", n));
+    const auto& output = JUST(OpInterpUtil::Dispatch<one::TensorTuple>(*op_, inputs, attr));
     return output;
   }
 
@@ -833,7 +837,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<MatrixNormFunctor>("MatrixNorm");
   m.add_functor<MatrixNorm2Functor>("MatrixNorm2");
   m.add_functor<ClampGradFunctor>("ClampGrad");
-  m.add_functor<SelectFirstFunctor>("SelectFirst");
+  m.add_functor<SelectTopNFunctor>("SelectTopN");
   m.add_functor<MinimumFunctor>("Minimum");
   m.add_functor<MaximumFunctor>("Maximum");
   m.add_functor<ScalarFModFunctor>("ScalarFMod");
