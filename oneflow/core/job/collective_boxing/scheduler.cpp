@@ -63,11 +63,11 @@ class ExecutorImpl : public Executor {
                      const std::function<void(std::vector<RequestId>&&, void*)>& Handler) override;
   void ExecuteGroupedRequests(const std::vector<RequestId>& request_ids,
                               void* executor_token) override;
+  void DestroyExecutorToken(void* executor_token) override;
 
  private:
   Backend GetUniqueBackend(const std::vector<RequestId>& request_ids);
   void* CreateExecutorToken(const std::vector<RequestId>& request_ids);
-  void DestroyExecutorToken(void* executor_token);
 
   std::vector<std::unique_ptr<ExecutorBackend>> backends_;
   std::shared_ptr<RequestStore> request_store_;
@@ -148,7 +148,6 @@ void ExecutorImpl::ExecuteGroupedRequests(const std::vector<RequestId>& request_
   if (request_ids.empty()) { return; }
   const Backend backend = GetUniqueBackend(request_ids);
   backends_.at(backend)->ExecuteRequests(request_ids, executor_token);
-  DestroyExecutorToken(executor_token);
 }
 
 Backend ExecutorImpl::GetUniqueBackend(const std::vector<RequestId>& request_ids) {

@@ -41,7 +41,7 @@ class Executor {
       const std::function<void(std::vector<RequestId>&&, void*)>& Handler) = 0;
   virtual void ExecuteGroupedRequests(const std::vector<RequestId>& request_ids,
                                       void* executor_token) = 0;
-
+  virtual void DestroyExecutorToken(void* executor_token) = 0;
   virtual void ExecuteRequests(const std::vector<RequestId>& request_ids);
 };
 

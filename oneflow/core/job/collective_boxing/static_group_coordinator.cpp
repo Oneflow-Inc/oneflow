@@ -142,6 +142,12 @@ void StaticGroupCoordinator::InitJob(int64_t job_id) {
 }
 
 void StaticGroupCoordinator::DeinitJob(int64_t job_id) {
+  const auto& it = impl_->job_id2static_group_requests_info_.find(job_id);
+  CHECK(it != impl_->job_id2static_group_requests_info_.end());
+  const auto& group_id2executor_token = it->second.group_id2executor_token;
+  for (int32_t group_id = 0; group_id < group_id2executor_token.size(); ++group_id) {
+    impl_->executor_->DestroyExecutorToken(group_id2executor_token.at(group_id));
+  }
   impl_->job_id2static_group_requests_info_.erase(job_id);
 }
 
