@@ -45,8 +45,7 @@ class GpuRecordEventInstructionType : public RecordEventInstructionType {
   ~GpuRecordEventInstructionType() override = default;
   using stream_type = vm::CudaStreamType;
 };
-COMMAND(
-    vm::RegisterInstructionType<GpuRecordEventInstructionType>("gpu.RecordEvent"));
+COMMAND(vm::RegisterInstructionType<GpuRecordEventInstructionType>("gpu.RecordEvent"));
 
 }  // namespace vm
 }  // namespace oneflow

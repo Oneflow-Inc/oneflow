@@ -143,8 +143,7 @@ class TouchInstructionType : public vm::InstructionType {
   void Infer(Instruction*) const override { UNIMPLEMENTED(); }
   void Compute(Instruction*) const override { UNIMPLEMENTED(); }
 };
-COMMAND(vm::RegisterInstructionType<TouchInstructionType>(
-    "Touch"));
+COMMAND(vm::RegisterInstructionType<TouchInstructionType>("Touch"));
 
 }  // namespace vm
 }  // namespace oneflow

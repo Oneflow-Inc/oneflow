@@ -954,8 +954,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(LocalDepObject* compute_local_de
     instruction_list_->EmplaceBack(std::move(instruction));
   }
   {
-    ObjectMsgPtr<vm::InstructionMsg> instruction =
-        ObjectMsgPtr<vm::InstructionMsg>::New("Touch");
+    ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New("Touch");
     *instruction->mutable_phy_instr_operand() =
         std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(compute_local_dep_object,
                                                                    modifier);
