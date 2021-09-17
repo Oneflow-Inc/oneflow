@@ -92,7 +92,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   {
     autograd::AutoGradMode mode(false);
     JUST(internal_->Apply(op_expr, inputs, outputs, ctx));
-    std::cout<<outputs->at(0)->requires_grad()<<std::endl; 
+    std::cout << outputs->at(0)->requires_grad() << std::endl;
   }
   if (requires_grad) {
     const auto& grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());

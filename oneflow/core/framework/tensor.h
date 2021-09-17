@@ -440,7 +440,9 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
     return impl_->set_acc_grad(grad);
   }
-  Maybe<void> set_requires_grad(bool requires_grad) override { return impl_->set_requires_grad(requires_grad); }
+  Maybe<void> set_requires_grad(bool requires_grad) override {
+    return impl_->set_requires_grad(requires_grad);
+  }
   Maybe<void> set_retain_grad(bool retain_grad) override {
     return impl_->set_retain_grad(retain_grad);
   }
@@ -546,7 +548,9 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
     return impl_->set_acc_grad(grad);
   }
   Maybe<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
-  Maybe<void> set_requires_grad(bool requires_grad) override { return impl_->set_requires_grad(requires_grad); }
+  Maybe<void> set_requires_grad(bool requires_grad) override {
+    return impl_->set_requires_grad(requires_grad);
+  }
   Maybe<void> set_retain_grad(bool retain_grad) override {
     return impl_->set_retain_grad(retain_grad);
   }
