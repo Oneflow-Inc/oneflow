@@ -563,13 +563,11 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
         other = other.to_consistent(placement=self.placement, sbp=self.sbp)
         flow._C.assign_local_tensor(self.to_local(), other.to_local())
     else:
-        if isinstance(other, (Tensor)):
-            src_np = other.numpy()
-        else:
+        if not isinstance(other, (Tensor)):
             assert isinstance(other, np.ndarray)
-            src_np = other
-
-        _copy_from_numpy_to_eager_local_tensor(self, src_np)
+            _copy_from_numpy_to_eager_local_tensor(self, other)
+        else:
+            flow._C.assign_local_tensor(self, other)
 
 
 def _get_device(self):

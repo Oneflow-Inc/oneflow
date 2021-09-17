@@ -201,6 +201,8 @@ class AssignLocalTensorFunctor {
   }
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ref,
                          const std::shared_ptr<one::Tensor>& value) const {
+    CHECK_OR_RETURN(ref->is_local() && value->is_local())
+        << "Both ref and value must be local tensor.";
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, value}));
     return Maybe<void>::Ok();
   }
