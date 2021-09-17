@@ -54,16 +54,22 @@ class CriticalSectionInstructionType final : public InstructionType {
     auto* status_querier = RefCntInstrStatusQuerier::MutCast(status_buffer_data);
     status_querier->SetRefCntAndSetLaunched(phy_instr_operand->consumer_ref_cnt());
   }
-
 };
 
-COMMAND(RegisterInstructionType<CriticalSectionInstructionType<InputCriticalSectionPhyInstrOperand>>("InputCriticalSection"));
+COMMAND(
+    RegisterInstructionType<CriticalSectionInstructionType<InputCriticalSectionPhyInstrOperand>>(
+        "InputCriticalSection"));
 
-COMMAND(RegisterInstructionType<CriticalSectionInstructionType<OutputCriticalSectionPhyInstrOperand>>("OutputCriticalSection"));
+COMMAND(
+    RegisterInstructionType<CriticalSectionInstructionType<OutputCriticalSectionPhyInstrOperand>>(
+        "OutputCriticalSection"));
 
-COMMAND(RegisterInstructionType<CriticalSectionInstructionType<ParameterCriticalSectionPhyInstrOperand>>("ParameterCriticalSection"));
+COMMAND(RegisterInstructionType<
+        CriticalSectionInstructionType<ParameterCriticalSectionPhyInstrOperand>>(
+    "ParameterCriticalSection"));
 
-COMMAND(RegisterInstructionType<CriticalSectionInstructionType<NcclCriticalSectionPhyInstrOperand>>("NcclCriticalSection"));
+COMMAND(RegisterInstructionType<CriticalSectionInstructionType<NcclCriticalSectionPhyInstrOperand>>(
+    "NcclCriticalSection"));
 
 }  // namespace vm
 }  // namespace oneflow

@@ -44,13 +44,25 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
       const std::shared_ptr<OutputCriticalSectionPhyInstrOperand>& outputs_critical_section,
       const std::shared_ptr<ParameterCriticalSectionPhyInstrOperand>& params_critical_section,
       const std::shared_ptr<NcclCriticalSectionPhyInstrOperand>& nccl_critical_section,
-                            const std::shared_ptr<NNGraphIf>& nn_graph)
-      : inputs_critical_section_(inputs_critical_section), outputs_critical_section_(outputs_critical_section), params_critical_section_(params_critical_section), nccl_critical_section_(nccl_critical_section), nn_graph_(nn_graph) {}
+      const std::shared_ptr<NNGraphIf>& nn_graph)
+      : inputs_critical_section_(inputs_critical_section),
+        outputs_critical_section_(outputs_critical_section),
+        params_critical_section_(params_critical_section),
+        nccl_critical_section_(nccl_critical_section),
+        nn_graph_(nn_graph) {}
 
-  const std::shared_ptr<InputCriticalSectionPhyInstrOperand>& inputs_critical_section() const { return inputs_critical_section_; }
-  const std::shared_ptr<OutputCriticalSectionPhyInstrOperand>& outputs_critical_section() const { return outputs_critical_section_; }
-  const std::shared_ptr<ParameterCriticalSectionPhyInstrOperand>& params_critical_section() const { return params_critical_section_; }
-  const std::shared_ptr<NcclCriticalSectionPhyInstrOperand>& nccl_critical_section() const { return nccl_critical_section_; }
+  const std::shared_ptr<InputCriticalSectionPhyInstrOperand>& inputs_critical_section() const {
+    return inputs_critical_section_;
+  }
+  const std::shared_ptr<OutputCriticalSectionPhyInstrOperand>& outputs_critical_section() const {
+    return outputs_critical_section_;
+  }
+  const std::shared_ptr<ParameterCriticalSectionPhyInstrOperand>& params_critical_section() const {
+    return params_critical_section_;
+  }
+  const std::shared_ptr<NcclCriticalSectionPhyInstrOperand>& nccl_critical_section() const {
+    return nccl_critical_section_;
+  }
   const std::shared_ptr<NNGraphIf>& nn_graph() const { return nn_graph_; }
 
   void ForEachConstMirroredObject(
@@ -62,7 +74,8 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
   void ForEachMutMirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
       const override {
-    // Do nothing because lifetime of parameters are managed by params_critical_section_ and nccl_critical_section_.
+    // Do nothing because lifetime of parameters are managed by params_critical_section_ and
+    // nccl_critical_section_.
   }
 
   void ForEachMut2MirroredObject(

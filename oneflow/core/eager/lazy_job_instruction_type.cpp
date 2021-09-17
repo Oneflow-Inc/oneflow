@@ -157,15 +157,14 @@ class LaunchLazyJobInstructionType final : public InstructionType {
         const auto& input_op_name = nn_graph->inputs_op_names().at(i);
         const auto& PushCb = [input_op_name, in_critical_section](int64_t of_blob_ptr) {
           OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-          in_critical_section->ConsumerFetchBlobAndDecreaseRefCnt(
-              input_op_name, [&](Blob* blob){
-                CHECK_NOTNULL(blob);
-                of_blob->mut_blob()->CopyHeaderFrom(of_blob->mut_device_ctx(), blob);
-                if (blob->dptr() == nullptr) { return; }
-                SyncAutoMemcpy(of_blob->mut_device_ctx(), of_blob->mut_blob()->mut_dptr(),
-                               blob->dptr(), blob->ByteSizeOfBlobBody(),
-                               of_blob->mut_blob()->mem_case(), blob->mem_case());
-              });
+          in_critical_section->ConsumerFetchBlobAndDecreaseRefCnt(input_op_name, [&](Blob* blob) {
+            CHECK_NOTNULL(blob);
+            of_blob->mut_blob()->CopyHeaderFrom(of_blob->mut_device_ctx(), blob);
+            if (blob->dptr() == nullptr) { return; }
+            SyncAutoMemcpy(of_blob->mut_device_ctx(), of_blob->mut_blob()->mut_dptr(), blob->dptr(),
+                           blob->ByteSizeOfBlobBody(), of_blob->mut_blob()->mem_case(),
+                           blob->mem_case());
+          });
         };
         CHECK(push_cbs.emplace(input_op_name, PushCb).second);
       } else {
@@ -181,7 +180,7 @@ class LaunchLazyJobInstructionType final : public InstructionType {
         const auto& PullCb = [output_op_name, out_critical_section](int64_t of_blob_ptr) {
           OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
           out_critical_section->ConsumerFetchBlobAndDecreaseRefCnt(
-              output_op_name, [&](Blob* mut_blob){
+              output_op_name, [&](Blob* mut_blob) {
                 CHECK_NOTNULL(mut_blob);
                 mut_blob->CopyHeaderFrom(of_blob->mut_device_ctx(), &of_blob->blob());
                 if (mut_blob->dptr() == nullptr) { return; }
@@ -198,7 +197,8 @@ class LaunchLazyJobInstructionType final : public InstructionType {
     }
     const auto& params_critical_section = phy_instr_operand->params_critical_section();
     const auto& nccl_critical_section = phy_instr_operand->nccl_critical_section();
-    const auto& FinishCb = [this, instruction, in_critical_section, out_critical_section, params_critical_section, nccl_critical_section]() {
+    const auto& FinishCb = [this, instruction, in_critical_section, out_critical_section,
+                            params_critical_section, nccl_critical_section]() {
       CHECK_EQ(*in_critical_section->consumer_ref_cnt(), 0);
       CHECK_EQ(*out_critical_section->consumer_ref_cnt(), 0);
       // finish ParameterCriticalSection/NcclCriticalSection.
