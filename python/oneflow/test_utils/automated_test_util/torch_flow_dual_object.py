@@ -21,7 +21,13 @@ import warnings
 
 import numpy as np
 import oneflow as flow
-import torch as torch_original
+
+try:
+    import torch as torch_original
+except ImportError:
+    print(
+        "automated_test_util module uses PyTorch to verify OneFlow module's interface and result. Please install Pytorch according `https://pytorch.org/get-started/locally/`."
+    )
 
 from .generators import Nothing, generator, random_tensor
 
@@ -436,6 +442,12 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
     return equality_res
 
 
+@equality_checker(int, int)
+@equality_checker(bool, bool)
+def check_basetype_equality(a, b, ignored1, ignored2):
+    return a == b
+
+
 @equality_checker(type(None), type(None))
 def check_nonetype_equality(a, b, ignored1, ignored2):
     return True
@@ -541,4 +553,4 @@ def random_pytorch_tensor(
 
 
 torch = GetDualObject("", torch_original, flow)
-__all__ = ["torch", "autotest", "random_pytorch_tensor"]
+__all__ = ["autotest", "random_pytorch_tensor"]

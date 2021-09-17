@@ -103,17 +103,17 @@ class RunLazyJobInstructionType final : public InstructionType {
       for (int i = 0; i < cur_nn_graph->inputs_op_names().size(); ++i) {
         if (cur_nn_graph->inputs_valid().at(i)) {
           const std::string& input_op_name = cur_nn_graph->inputs_op_names().at(i);
-          buffer_mgr->Get(GetInputBufferName(job_name, input_op_name))->Send(job_instance);
+          buffer_mgr->Get(GetInputBufferName(job_name, input_op_name))->Push(job_instance);
         }
       }
       for (int i = 0; i < cur_nn_graph->outputs_op_names().size(); ++i) {
         if (cur_nn_graph->outputs_valid().at(i)) {
           const std::string& output_op_name = cur_nn_graph->outputs_op_names().at(i);
-          buffer_mgr->Get(GetOutputBufferName(job_name, output_op_name))->Send(job_instance);
+          buffer_mgr->Get(GetOutputBufferName(job_name, output_op_name))->Push(job_instance);
         }
       }
-      buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Send(job_instance);
-      buffer_mgr->Get(GetSourceTickBufferName(job_name))->Send(job_instance);
+      buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Push(job_instance);
+      buffer_mgr->Get(GetSourceTickBufferName(job_name))->Push(job_instance);
       OF_PROFILER_RANGE_POP();  // BufferMgr
     }
     OF_PROFILER_RANGE_PUSH("EnqueueNNGraph");
@@ -151,7 +151,7 @@ class RunLazyJobInstructionType final : public InstructionType {
         const auto& PushCb = [blob](int64_t of_blob_ptr) {
           OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
           of_blob->mut_blob()->CopyHeaderFrom(of_blob->mut_device_ctx(), blob);
-          of_blob->mut_blob()->CopyDataContentFrom(of_blob->mut_device_ctx(), blob);
+          AutoMemcpy(of_blob->mut_device_ctx(), of_blob->mut_blob(), blob);
         };
         CHECK(push_cbs.emplace(op_name, PushCb).second);
       }
@@ -166,7 +166,7 @@ class RunLazyJobInstructionType final : public InstructionType {
         const auto& PullCb = [mut_blob](int64_t of_blob_ptr) {
           OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
           mut_blob->CopyHeaderFrom(of_blob->mut_device_ctx(), &of_blob->blob());
-          mut_blob->CopyDataContentFrom(of_blob->mut_device_ctx(), &of_blob->blob());
+          AutoMemcpy(of_blob->mut_device_ctx(), mut_blob, &of_blob->blob());
         };
         CHECK(pull_cbs.emplace(op_name, PullCb).second);
       }

@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
 import unittest
 from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
 import oneflow.unittest
-
-from automated_test_util import *
+from oneflow.test_utils.automated_test_util import *
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -169,6 +169,15 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(not x.is_cuda)
 
     @flow.unittest.skip_unless_1n1d()
+    @autotest(n=1)
+    def test_tensor_set_data_autograd_meta(test_case):
+        x = torch.ones(2, 3).requires_grad_(True)
+        y = x + x
+        z = torch.zeros(2, 3)
+        z.data = y
+        return z.grad_fn, z.is_leaf
+
+    @flow.unittest.skip_unless_1n1d()
     def test_tensor_set_data(test_case):
         a = flow.ones(2, 3, requires_grad=False)
         b = flow.ones(4, 5, requires_grad=True).to("cuda")
@@ -177,8 +186,8 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(old_id, id(a))
         test_case.assertTrue(a.shape == (4, 5))
         test_case.assertTrue(a.device == flow.device("cuda"))
-        test_case.assertTrue(a.requires_grad)
-        test_case.assertFalse(a.is_leaf)
+        test_case.assertFalse(a.requires_grad)
+        test_case.assertTrue(a.is_leaf)
 
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_unsupported_property(test_case):

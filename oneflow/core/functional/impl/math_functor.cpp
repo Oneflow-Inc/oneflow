@@ -298,7 +298,7 @@ class ArangeFunctor {
       JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
     }
     OpExprInterpContext ctx(attrs);
-    if (device) { ctx.device = JUST(device.value()); }
+    if (device) { ctx.device = JUST(device); }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }
 
@@ -362,6 +362,8 @@ class CastFunctor {
   CastFunctor() { op_ = CHECK_JUST(one::OpBuilder("cast").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Symbol<DType>& dtype) const {
+    if (x->dtype() == dtype) { return x; }
+
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -385,23 +387,23 @@ class ClampFunctor {
     MutableAttrMap attrs;
     if (IsFloatingDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
-        const auto& min_val = JUST(min.value());
+        const auto& min_val = JUST(min);
         JUST(attrs.SetAttr<double>("floating_min", JUST(min_val->As<double>())));
         JUST(attrs.SetAttr<int64_t>("integral_min", 0));
       }
       if (max.has_value()) {
-        const auto& max_val = JUST(max.value());
+        const auto& max_val = JUST(max);
         JUST(attrs.SetAttr<double>("floating_max", JUST(max_val->As<double>())));
         JUST(attrs.SetAttr<int64_t>("integral_max", 0));
       }
     } else if (IsIntegralDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
-        const auto& min_val = JUST(min.value());
+        const auto& min_val = JUST(min);
         JUST(attrs.SetAttr<double>("floating_min", 0));
         JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min_val->As<int64_t>())));
       }
       if (max.has_value()) {
-        const auto& max_val = JUST(max.value());
+        const auto& max_val = JUST(max);
         JUST(attrs.SetAttr<double>("floating_max", 0));
         JUST(attrs.SetAttr<int64_t>("integral_max", JUST(max_val->As<int64_t>())));
       }
@@ -443,23 +445,23 @@ class ClampGradFunctor {
     MutableAttrMap attrs;
     if (IsFloatingDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
-        const auto& min_val = JUST(min.value());
+        const auto& min_val = JUST(min);
         JUST(attrs.SetAttr<double>("floating_min", JUST(min_val->As<double>())));
         JUST(attrs.SetAttr<int64_t>("integral_min", 0));
       }
       if (max.has_value()) {
-        const auto& max_val = JUST(max.value());
+        const auto& max_val = JUST(max);
         JUST(attrs.SetAttr<double>("floating_max", JUST(max_val->As<double>())));
         JUST(attrs.SetAttr<int64_t>("integral_max", 0));
       }
     } else if (IsIntegralDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
-        const auto& min_val = JUST(min.value());
+        const auto& min_val = JUST(min);
         JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min_val->As<int64_t>())));
         JUST(attrs.SetAttr<double>("floating_min", 0));
       }
       if (max.has_value()) {
-        const auto& max_val = JUST(max.value());
+        const auto& max_val = JUST(max);
         JUST(attrs.SetAttr<double>("floating_max", 0));
         JUST(attrs.SetAttr<int64_t>("integral_max", JUST(max_val->As<int64_t>())));
       }
@@ -483,12 +485,14 @@ class ClampGradFunctor {
   std::shared_ptr<OpExpr> clip_max_op_;
 };
 
-class SelectFirstFunctor {
+class SelectTopNFunctor {
  public:
-  SelectFirstFunctor() { op_ = CHECK_JUST(one::SelectFirstOpExpr::New()); }
+  SelectTopNFunctor() { op_ = CHECK_JUST(one::SelectTopNOpExpr::New()); }
 
-  Maybe<Tensor> operator()(const TensorTuple& inputs) const {
-    const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, inputs));
+  Maybe<TensorTuple> operator()(const TensorTuple& inputs, int32_t n) const {
+    MutableAttrMap attr;
+    JUST(attr.SetAttr<int32_t>("top_n", n));
+    const auto& output = JUST(OpInterpUtil::Dispatch<one::TensorTuple>(*op_, inputs, attr));
     return output;
   }
 
@@ -698,7 +702,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<ClampGradFunctor>("ClampGrad");
-  m.add_functor<SelectFirstFunctor>("SelectFirst");
+  m.add_functor<SelectTopNFunctor>("SelectTopN");
   m.add_functor<MinimumFunctor>("Minimum");
   m.add_functor<MaximumFunctor>("Maximum");
   m.add_functor<ScalarFModFunctor>("ScalarFMod");

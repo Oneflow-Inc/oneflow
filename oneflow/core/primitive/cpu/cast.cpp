@@ -32,7 +32,7 @@ class CastImpl : public Cast {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CastImpl);
   CastImpl() = default;
-  ~CastImpl() = default;
+  ~CastImpl() override = default;
 
   void Launch(StreamContext* stream_ctx, const void* from, void* to, size_t count) override {
     CastCpu(reinterpret_cast<const From*>(from), reinterpret_cast<To*>(to), count);
