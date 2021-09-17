@@ -185,7 +185,7 @@ Scheduler::Impl::Impl() {
 class SchedulerPlanToken {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SchedulerPlanToken);
-  SchedulerPlanToken(const std::vector<int64_t>& job_ids) : job_ids_(job_ids) {}
+  explicit SchedulerPlanToken(const std::vector<int64_t>& job_ids) : job_ids_(job_ids) {}
   ~SchedulerPlanToken() = default;
   const std::vector<int64_t>& job_ids() const { return job_ids_; }
 

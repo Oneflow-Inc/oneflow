@@ -77,14 +77,12 @@ struct StaticGroupCoordinator::Impl {
 };
 
 StaticGroupCoordinator::Impl::Impl(std::shared_ptr<RequestStore> request_store,
-                                   std::shared_ptr<Executor> executor) {
-  request_store_ = request_store;
-  executor_ = executor;
-}
+                                   std::shared_ptr<Executor> executor)
+    : request_store_(request_store), executor_(executor) {}
 
 StaticGroupCoordinator::StaticGroupCoordinator() = default;
 
-StaticGroupCoordinator::~StaticGroupCoordinator() { impl_.reset(); }
+StaticGroupCoordinator::~StaticGroupCoordinator() = default;
 
 void StaticGroupCoordinator::Init(std::shared_ptr<RequestStore> request_store,
                                   std::shared_ptr<Executor> executor) {
