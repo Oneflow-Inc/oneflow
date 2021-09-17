@@ -14,12 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/multiply_kernel.h"
+#include "oneflow/user/kernels/elementwise_xpu_kernel.cuh"
 
 namespace oneflow {
 
-#define REGISTER_MULTIPLY_CPU_KERNEL(cpp_type, proto_type) \
-  REGISTER_MULTIPLY_KERNEL(DeviceType::kCPU, cpp_type)
+#define REGISTER_MULTIPLY_GPU_KERNEL(cpp_type, proto_type) \
+  REGISTER_MULTIPLY_KERNEL(DeviceType::kGPU, cpp_type);
 
-OF_PP_FOR_EACH_TUPLE(REGISTER_MULTIPLY_CPU_KERNEL, ARITHMETIC_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(REGISTER_MULTIPLY_GPU_KERNEL, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
