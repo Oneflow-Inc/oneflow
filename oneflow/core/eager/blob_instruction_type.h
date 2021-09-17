@@ -51,10 +51,10 @@ class AccessBlobByCallbackInstructionType : public vm::InstructionType {
   void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
 };
 
-class RecordEventAndWaitInstructionType : public vm::InstructionType {
+class RecordEventInstructionType : public vm::InstructionType {
  public:
-  RecordEventAndWaitInstructionType() = default;
-  ~RecordEventAndWaitInstructionType() override = default;
+  RecordEventInstructionType() = default;
+  ~RecordEventInstructionType() override = default;
 
   void Compute(vm::Instruction* instruction) const override {
     instruction->set_has_event_record(true);

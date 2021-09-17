@@ -946,7 +946,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(LocalDepObject* compute_local_de
 
   {
     ObjectMsgPtr<vm::InstructionMsg> instruction =
-        ObjectMsgPtr<vm::InstructionMsg>::New(parallel_desc->device_tag() + ".RecordEventAndWait");
+        ObjectMsgPtr<vm::InstructionMsg>::New(parallel_desc->device_tag() + ".RecordEvent");
     *instruction->mutable_phy_instr_operand() =
         std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(compute_local_dep_object,
                                                                    modifier);
@@ -955,7 +955,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(LocalDepObject* compute_local_de
   }
   {
     ObjectMsgPtr<vm::InstructionMsg> instruction =
-        ObjectMsgPtr<vm::InstructionMsg>::New("TouchTensorOnControlStream");
+        ObjectMsgPtr<vm::InstructionMsg>::New("Touch");
     *instruction->mutable_phy_instr_operand() =
         std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(compute_local_dep_object,
                                                                    modifier);

@@ -39,14 +39,14 @@ class GpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallback
 COMMAND(vm::RegisterInstructionType<GpuAccessBlobByCallbackInstructionType>(
     "gpu.AccessBlobByCallback"));
 
-class GpuRecordEventAndWaitInstructionType : public RecordEventAndWaitInstructionType {
+class GpuRecordEventInstructionType : public RecordEventInstructionType {
  public:
-  GpuRecordEventAndWaitInstructionType() = default;
-  ~GpuRecordEventAndWaitInstructionType() override = default;
+  GpuRecordEventInstructionType() = default;
+  ~GpuRecordEventInstructionType() override = default;
   using stream_type = vm::CudaStreamType;
 };
 COMMAND(
-    vm::RegisterInstructionType<GpuRecordEventAndWaitInstructionType>("gpu.RecordEventAndWait"));
+    vm::RegisterInstructionType<GpuRecordEventInstructionType>("gpu.RecordEvent"));
 
 }  // namespace vm
 }  // namespace oneflow

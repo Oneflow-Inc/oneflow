@@ -130,10 +130,10 @@ void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) 
   ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));
 }
 
-class TouchTensorOnControlStreamInstructionType : public vm::InstructionType {
+class TouchInstructionType : public vm::InstructionType {
  public:
-  TouchTensorOnControlStreamInstructionType() = default;
-  ~TouchTensorOnControlStreamInstructionType() = default;
+  TouchInstructionType() = default;
+  ~TouchInstructionType() = default;
   using stream_type = vm::ControlStreamType;
 
   void Infer(VirtualMachine* vm, Instruction* instruction) const override { UNIMPLEMENTED(); }
@@ -143,8 +143,8 @@ class TouchTensorOnControlStreamInstructionType : public vm::InstructionType {
   void Infer(Instruction*) const override { UNIMPLEMENTED(); }
   void Compute(Instruction*) const override { UNIMPLEMENTED(); }
 };
-COMMAND(vm::RegisterInstructionType<TouchTensorOnControlStreamInstructionType>(
-    "TouchTensorOnControlStream"));
+COMMAND(vm::RegisterInstructionType<TouchInstructionType>(
+    "Touch"));
 
 }  // namespace vm
 }  // namespace oneflow
