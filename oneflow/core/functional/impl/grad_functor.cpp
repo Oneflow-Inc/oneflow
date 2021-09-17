@@ -1039,6 +1039,90 @@ class ClampGradFunctor {
   std::shared_ptr<OpExpr> clip_max_op_;
 };
 
+class SoftmaxCrossEntropyGradFunctor {
+ public:
+  SoftmaxCrossEntropyGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softmax_cross_entropy_grad")
+                         .Input("dy")
+                         .Input("label")
+                         .Input("prob")
+                         .Output("prediction_diff")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& label,
+                           const std::shared_ptr<one::Tensor>& prob) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, label, prob});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class DropoutGradFunctor {
+ public:
+  DropoutGradFunctor() {
+    dropout_grad_op_ =
+        CHECK_JUST(one::OpBuilder("dropout_grad").Input("dy").Input("mask").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& mask, const float& scale) const {
+    MutableAttrMap dropout_grad_attrs;
+    JUST(dropout_grad_attrs.SetAttr<float>("scale", scale));
+
+    return OpInterpUtil::Dispatch<Tensor>(*dropout_grad_op_, {dy, mask}, dropout_grad_attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> dropout_grad_op_;
+};
+
+class L2NormalizeGradFunctor {
+ public:
+  L2NormalizeGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("l2_normalize_grad")
+                         .Input("dy")
+                         .Input("y")
+                         .Input("square_x_sum")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& square_x_sum, const int32_t& axis,
+                           const float& epsilon) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    JUST(attrs.SetAttr<float>("epsilon", epsilon));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, y, square_x_sum}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedBiasAddGeluGradFunctor {
+ public:
+  FusedBiasAddGeluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_bias_add_gelu_grad")
+                         .Input("a")
+                         .Input("b")
+                         .Input("dy")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
+                           const std::shared_ptr<one::Tensor>& b,
+                           const std::shared_ptr<one::Tensor>& dy, const int32_t& axis) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -1080,6 +1164,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastPowYGradFunctor>("BroadcastPowYGrad");
   m.add_functor<impl::DivGradFunctor>("DivGrad");
   m.add_functor<impl::ClampGradFunctor>("ClampGrad");
+  m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");
+  m.add_functor<impl::DropoutGradFunctor>("DropoutGrad");
+  m.add_functor<impl::L2NormalizeGradFunctor>("L2NormalizeGrad");
+  m.add_functor<impl::FusedBiasAddGeluGradFunctor>("FusedBiasAddGeluGrad");
 };
 
 }  // namespace functional
