@@ -265,7 +265,7 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeAddOpExpr& op_
   OF_UNIMPLEMENTED();
 }
 
-Maybe<void> EagerConsistentInterpreter::ApplyImpl(const SelectFirstOpExpr& op_expr,
+Maybe<void> EagerConsistentInterpreter::ApplyImpl(const SelectTopNOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
