@@ -147,7 +147,7 @@ class TestModule(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 0, 2, 4).to(device)
         y = random_pytorch_tensor(4, 2, 0, 2, 4).to(device)
-        z = torch.cat((x, y), dim=random(0,4))
+        z = torch.cat((x, y), dim=random(0, 4))
         return z
 
 
