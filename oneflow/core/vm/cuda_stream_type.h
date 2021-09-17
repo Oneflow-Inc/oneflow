@@ -48,6 +48,9 @@ class CudaStreamType final : public StreamType {
                                           int64_t this_machine_id) const override;
   bool SharingVirtualMachineThread() const override { return true; }
   bool SupportingTransportInstructions() const override { return true; }
+
+ protected:
+  FunctionPtrNeedEventRecordSrcBeforeConnect GetFunctionNeedEventRecordSrcBeforeConnect() const override;
 };
 
 }  // namespace vm

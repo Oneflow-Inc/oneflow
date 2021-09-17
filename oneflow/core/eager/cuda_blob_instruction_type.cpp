@@ -16,6 +16,7 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include "oneflow/core/eager/blob_instruction_type.h"
 #include "oneflow/core/vm/cuda_stream_type.h"
+#include "oneflow/core/vm/cuda_stream_instruction_trait.h"
 #include "oneflow/core/vm/async_cuda_stream_type.h"
 
 namespace oneflow {
@@ -29,20 +30,24 @@ class GpuLazyReferenceInstructionType : public LazyReferenceInstructionType {
 };
 COMMAND(vm::RegisterInstructionType<GpuLazyReferenceInstructionType>("gpu.LazyReference"));
 
-class GpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallbackInstructionType {
+class GpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallbackInstructionType, public CudaStreamInstructionTrait {
  public:
   GpuAccessBlobByCallbackInstructionType() = default;
   ~GpuAccessBlobByCallbackInstructionType() override = default;
-  using stream_type = vm::CudaStreamType;
+
+  bool do_event_record() const override { return false; }
+
 };
 COMMAND(vm::RegisterInstructionType<GpuAccessBlobByCallbackInstructionType>(
     "gpu.AccessBlobByCallback"));
 
-class GpuSoftSyncStreamInstructionType : public SoftSyncStreamInstructionType {
+class GpuSoftSyncStreamInstructionType : public SoftSyncStreamInstructionType, public CudaStreamInstructionTrait {
  public:
   GpuSoftSyncStreamInstructionType() = default;
   ~GpuSoftSyncStreamInstructionType() override = default;
-  using stream_type = vm::CudaStreamType;
+
+  bool do_event_record() const override { return true; }
+
 };
 COMMAND(vm::RegisterInstructionType<GpuSoftSyncStreamInstructionType>("gpu.SoftSyncStream"));
 

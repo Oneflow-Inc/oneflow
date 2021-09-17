@@ -17,8 +17,6 @@ limitations under the License.
 
 #include "oneflow/core/vm/cuda_optional_event_record_status_querier.h"
 #include "oneflow/core/device/device_context.h"
-#include "oneflow/core/rpc/include/global_process_ctx.h"
-#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 namespace vm {
@@ -29,7 +27,7 @@ bool CudaOptionalEventRecordStatusQuerier::event_completed() const {
 }
 
 void CudaOptionalEventRecordStatusQuerier::SetLaunched(DeviceCtx* device_ctx) {
-  if (has_event_record_ || !CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+  if (has_event_record_) {
     cudaSetDevice(device_id_);
     OF_CUDA_CHECK(
         cudaEventCreateWithFlags(&event_, cudaEventBlockingSync | cudaEventDisableTiming));

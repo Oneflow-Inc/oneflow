@@ -75,6 +75,24 @@ void StreamType::Run(VirtualMachine* vm, Instruction* instruction) const {
   }
 }
 
+bool StreamType::NoNeedEventRecordSrcBeforeConnect(const Instruction* self, const Instruction* dst) {
+  return false;
+}
+
+bool StreamType::NeedEventRecord() const {
+  auto* Func = GetFunctionNeedEventRecordSrcBeforeConnect();
+  return Func != NoNeedEventRecordSrcBeforeConnect;
+}
+
+bool StreamType::NeedEventRecordSrcBeforeConnect(const Instruction* self, const Instruction* dst) const {
+  auto* Func = GetFunctionNeedEventRecordSrcBeforeConnect();
+  return Func(self, dst);
+}
+
+StreamType::FunctionPtrNeedEventRecordSrcBeforeConnect StreamType::GetFunctionNeedEventRecordSrcBeforeConnect() const {
+  return &NoNeedEventRecordSrcBeforeConnect;
+}
+
 void TryRegisterInferStreamTypeId(const StreamType* infer_stream_type,
                                   const StreamType* compute_stream_type) {
   StreamTypeId compute_stream_type_id;

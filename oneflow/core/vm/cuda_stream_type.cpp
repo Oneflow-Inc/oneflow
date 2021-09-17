@@ -17,10 +17,12 @@ limitations under the License.
 
 #include "oneflow/core/vm/cuda_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
+#include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/vm/cuda_optional_event_record_status_querier.h"
 #include "oneflow/core/vm/cuda_stream_handle_device_context.h"
+#include "oneflow/core/vm/cuda_stream_instruction_trait.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/util.h"
 
@@ -79,6 +81,22 @@ ObjectMsgPtr<StreamDesc> CudaStreamType::MakeStreamDesc(const Resource& resource
   ret->set_num_streams_per_machine(device_num);
   ret->set_num_streams_per_thread(1);
   return ret;
+}
+
+namespace {
+
+bool NotDoEventRecordAndDifferentStream(const Instruction* self, const Instruction* dst) {
+  const auto* instruction_type = &self->instr_msg().instr_type_id().instruction_type();
+  const auto* cuda_stream_instruction_trait =
+      dynamic_cast<const CudaStreamInstructionTrait*>(instruction_type);
+  CHECK_NOTNULL(cuda_stream_instruction_trait);
+  return !cuda_stream_instruction_trait->do_event_record() && (&self->stream() != &dst->stream());
+}
+
+}
+
+StreamType::FunctionPtrNeedEventRecordSrcBeforeConnect CudaStreamType::GetFunctionNeedEventRecordSrcBeforeConnect() const {
+  return &NotDoEventRecordAndDifferentStream;
 }
 
 }  // namespace vm

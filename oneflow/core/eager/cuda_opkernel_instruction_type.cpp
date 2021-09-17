@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/cuda_stream_type.h"
+#include "oneflow/core/vm/cuda_stream_instruction_trait.h"
 #include "oneflow/core/vm/async_cuda_stream_type.h"
 #include "oneflow/core/vm/cuda_copy_h2d_stream_type.h"
 #include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
@@ -33,16 +34,17 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class CudaLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType {
+class CudaLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType, public CudaStreamInstructionTrait {
  public:
   CudaLocalCallOpKernelInstructionType() = default;
   ~CudaLocalCallOpKernelInstructionType() override = default;
 
-  using stream_type = vm::CudaStreamType;
+  bool do_event_record() const override { return false; }
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
+
 COMMAND(vm::RegisterInstructionType<CudaLocalCallOpKernelInstructionType>("gpu.LocalCallOpKernel"));
 
 class AsyncCudaLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType {

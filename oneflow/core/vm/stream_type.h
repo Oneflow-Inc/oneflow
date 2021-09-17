@@ -78,8 +78,16 @@ class StreamType {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
 
+  bool NeedEventRecord() const;
+  bool NeedEventRecordSrcBeforeConnect(const Instruction* self, const Instruction* dst) const;
+
  protected:
   StreamType() = default;
+
+  static bool NoNeedEventRecordSrcBeforeConnect(const Instruction* self, const Instruction* dst);
+
+  typedef bool (*FunctionPtrNeedEventRecordSrcBeforeConnect)(const Instruction* self, const Instruction* dst);
+  virtual FunctionPtrNeedEventRecordSrcBeforeConnect GetFunctionNeedEventRecordSrcBeforeConnect()  const;
 };
 
 HashMap<std::type_index, const StreamType*>* StreamType4TypeIndex();
