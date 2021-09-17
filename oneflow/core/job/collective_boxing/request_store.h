@@ -90,8 +90,8 @@ class RequestStore {
   RequestStore() = default;
   ~RequestStore() = default;
 
-  void InitJobRequests(int64_t job_id, const RequestSet& request_set);
-  void DeinitJobRequests(int64_t job_id);
+  void InitJob(int64_t job_id, const RequestSet& request_set);
+  void DeinitJob(int64_t job_id);
 
   RequestEntry* MutRequestEntry(const RequestId& request_id) {
     auto it = job_id2request_entry_vec_.find(request_id.job_id);
@@ -129,12 +129,6 @@ class RequestStore {
     return it->second.size();
   }
 
-  int32_t MaxMultiNodeRequestIdForJob(int64_t job_id) const {
-    const auto& it = job_id2max_multi_node_request_id_.find(job_id);
-    CHECK(it != job_id2max_multi_node_request_id_.end());
-    return it->second;
-  }
-
   RequestId GetRequestIdByName(const std::string& name) const { return name2request_id_.at(name); }
 
   void* CreateRequestEntryToken(const RequestId& request_id);
@@ -145,7 +139,6 @@ class RequestStore {
 
  private:
   HashMap<int64_t, std::vector<std::unique_ptr<RequestEntry>>> job_id2request_entry_vec_;
-  HashMap<int64_t, int32_t> job_id2max_multi_node_request_id_;
   HashMap<std::string, RequestId> name2request_id_;
 };
 

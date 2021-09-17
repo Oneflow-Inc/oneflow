@@ -77,7 +77,7 @@ class ExecutorImpl : public Executor {
   std::vector<std::unique_ptr<ExecutorBackend>> backends_;
   std::shared_ptr<RequestStore> request_store_;
   std::vector<RequestId> group_buffer_;
-  int64_t group_buffer_job_id_;
+  int64_t group_buffer_job_id_{};
 };
 
 void ExecutorImpl::Init(std::shared_ptr<RequestStore> request_store) {
@@ -198,7 +198,7 @@ SchedulerPlanToken* Scheduler::AddPlan(const Plan& plan) {
   for (const auto& job_id7request_set : plan.collective_boxing_plan().job_id2request_set()) {
     const int64_t job_id = job_id7request_set.first;
     job_ids.push_back(job_id);
-    impl_->request_store->InitJobRequests(job_id, job_id7request_set.second);
+    impl_->request_store->InitJob(job_id, job_id7request_set.second);
     impl_->executor->InitJob(job_id);
     impl_->coordinator->InitJob(job_id);
   }
@@ -210,7 +210,7 @@ void Scheduler::DeletePlan(SchedulerPlanToken* plan_token) {
   for (const auto& job_id : job_ids) {
     impl_->coordinator->DeinitJob(job_id);
     impl_->executor->DeinitJob(job_id);
-    impl_->request_store->DeinitJobRequests(job_id);
+    impl_->request_store->DeinitJob(job_id);
   }
   delete plan_token;
 }
