@@ -413,11 +413,13 @@ class VectorNormFunctor {
  public:
   VectorNormFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                            const std::vector<int32_t>& ord, const std::vector<int32_t>& input_dim, 
+                            const Optional<Scalar>& ord, const std::vector<int32_t>& input_dim, 
                             const bool& keepdim) const {
-    std::shared_ptr<one::Tensor> rd; 
+    std::shared_ptr<one::Tensor> rd;
+    std::shared_ptr<one::Tensor> rd_tmp; 
     int32_t num_dims = x->ndim();
     std::vector<int32_t> dim;
+    
     if(input_dim.empty())
     {
       dim = input_dim;
@@ -438,34 +440,36 @@ class VectorNormFunctor {
     //vector_norm
     const DType obj(kInt32);
     Symbol<DType> dtype(obj);
-    
-    if(ord == 0)
+    if(ord.has_value())
     {
-      //return flow.cast(flow.tensor([flow.argwhere(x).shape[0]]), flow.float32)
-      rd=JUST(ArgWhere(x, dtype));
+      const auto& ord_val = JUST(ord.value());
+      if(ord_val == 0)
+      {
+        //sum(x != 0)
+        rd_tmp=JUST(ArgWhere(x, dtype));
+        auto num_rd = rd_tmp->dim(0);//一个int
+        //变成tensor
+        rd=JUST(ScalarAdd(num_rd, rd));
+      }
+      else if (ord_val == DBL_MAX) //正无穷大
+      {
+        //`max(abs(x))` TensorGetItem由索引找到元素
+        rd = JUST(TensorGetItem(JUST(Abs(x)), JUST(ArgMax(JUST(Abs(x))))));
+      }
+      else if (ord_val == -DBL_MAX) //负无穷大
+      {
+        //`min(abs(x))`
+        rd = JUST(ArgSort(JUST(Abs(x)), "ASCENDING"));//从小到大索引排序
+        rd = JUST(TensorGetItem(JUST(Abs(x)), rd->at(0)));
+      }
+      else
+      {
+        // `sum(abs(x)^{ord})^{(1 / ord)}`
+        rd = JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord)), dim, keepdim)), 1.0 / ord));
+      }
     }
-    else if (ord == DBL_MAX) //正无穷大
-    {
-      //return flow.max(flow.abs(x), dim=dim, keepdim=keepdim)
-      rd = JUST(Abs(x));
-      //rd->at(0)
-
-    }
-    else if (ord == -DBL_MAX) //负无穷大
-    {
-      //return flow.min(flow.abs(x), dim=dim, keepdim=keepdim)
-      rd = JUST(Abs(x));
-
-    }
-    else
-    {
-      // flow.pow(flow.sum(flow.pow(flow.abs(x), ord), dim=dim, keepdim=keepdim),1.0 / ord,)
-      rd = JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord)), dim, keepdim)), 1.0 / ord));
-    }
-    return rd;
-    
+    return rd;    
   }
-
 };
 
 //2维

@@ -922,7 +922,7 @@
   bind_python: False
 
 - name: "vector_norm"
-  signature: "Tensor (Tensor input, Scalar ord=2.0, Int64List dim=None, Bool keepdim=False) => VectorNorm"
+  signature: "Tensor (Tensor input, Scalar ord=2, Int64List dim=None, Bool keepdim=False) => VectorNorm"
   bind_python: true
 
 - name: "matrix_norm"
