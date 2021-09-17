@@ -19,8 +19,10 @@ limitations under the License.
 #ifdef WITH_CUDA
 
 #include <cuda.h>
-#include <cuda_bf16.h>
 #include <cuda_runtime_api.h>
+#if CUDA_VERSION >= 11000
+#include <cuda_bf16.h>
+#endif
 
 #if CUDA_VERSION >= 11000 && defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 800
 

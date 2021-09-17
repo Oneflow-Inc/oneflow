@@ -545,7 +545,8 @@ def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
     if tensor.is_consistent:
         src_tensor = flow.tensor(np_arr)
         src_tensor = src_tensor.to_consistent(
-            placement=tensor.placement, sbp=flow.sbp.broadcast
+            placement=tensor.placement,
+            sbp=tuple(flow.sbp.broadcast for _ in range(len(tensor.sbp))),
         )
         tensor.copy_(src_tensor)
     else:
@@ -559,7 +560,10 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
     if self.is_consistent:
         assert isinstance(other, Tensor)
         assert other.is_consistent
-        self[:] = other
+        other = other.to_consistent(placement=self.placement, sbp=self.sbp)
+        _copy_from_numpy_to_eager_local_tensor(
+            self.to_local(), other.to_local().numpy()
+        )
     else:
         if isinstance(other, (Tensor)):
             src_np = other.numpy()

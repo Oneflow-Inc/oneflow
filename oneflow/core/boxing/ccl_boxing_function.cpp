@@ -14,20 +14,42 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/nd_sbp.h"
-#include "oneflow/core/boxing/eager_boxing_interpreter_util.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 
+bool IsAllBroadcastNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
+  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
+    if (!sbp_parallel.has_broadcast_parallel()) { return false; }
+  }
+  return true;
+}
+
+bool IsAllPartialSumNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
+  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
+    if (!sbp_parallel.has_partial_sum_parallel()) { return false; }
+  }
+  return true;
+}
+
+bool IsAllSplitNdSbp(Symbol<cfg::NdSbp> nd_sbp, int64_t axis) {
+  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
+    if (!(sbp_parallel.has_split_parallel() && sbp_parallel.split_parallel().axis() == axis)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 namespace {
 Maybe<void> RawCheckCclP2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
 
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllPartialSumNdSbp(in->nd_sbp()));
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(out->nd_sbp()));
+  CHECK_OR_RETURN(IsAllPartialSumNdSbp(in->nd_sbp()));
+  CHECK_OR_RETURN(IsAllBroadcastNdSbp(out->nd_sbp()));
 
   CHECK_OR_RETURN(in->placement() == out->placement());
   CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCPU);
@@ -40,8 +62,8 @@ Maybe<void> RawCheckCclS2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
 
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllSplitNdSbp(in->nd_sbp(), 0));
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(out->nd_sbp()));
+  CHECK_OR_RETURN(IsAllSplitNdSbp(in->nd_sbp(), 0));
+  CHECK_OR_RETURN(IsAllBroadcastNdSbp(out->nd_sbp()));
 
   CHECK_OR_RETURN(in->placement() == out->placement());
   CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCPU);

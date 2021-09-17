@@ -252,14 +252,16 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
   if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
   int64_t root = JUST(parallel_desc->MachineId4ParallelId(src_rank));
   std::shared_ptr<UserOpExpr> op_expr = JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, root));
+  MutableAttrMap attrs;
+  JUST(attrs.SetAttr<int64_t>("root", src_rank));
   if (root == GlobalProcessCtx::Rank() || inplace) {
     TensorTuple outputs{tensor};
     JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs,
-                                one::OpExprInterpContext(AttrMap{}, parallel_desc)));
+                                one::OpExprInterpContext(attrs, parallel_desc)));
     return tensor;
   } else {
     return JUST(OpInterpUtil::Dispatch<one::Tensor>(
-        *op_expr, {tensor}, one::OpExprInterpContext(AttrMap{}, parallel_desc)));
+        *op_expr, {tensor}, one::OpExprInterpContext(attrs, parallel_desc)));
   }
 }
 
@@ -429,11 +431,11 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const DistributeAddOpExpr& op_ex
   return BuildAndRunDistributeConcatAndAddInstruction(op_expr, inputs, outputs);
 }
 
-Maybe<void> EagerMirroredInterpreter::ApplyImpl(const SelectFirstOpExpr& op_expr,
+Maybe<void> EagerMirroredInterpreter::ApplyImpl(const SelectTopNOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) const {
-  CHECK_EQ_OR_RETURN(outputs->size(), 1);
-  outputs->at(0) = inputs.at(0);
+  int top_n = JUST(ctx.attrs.GetAttr<int32_t>("top_n"));
+  outputs->assign(inputs.begin(), inputs.begin() + top_n);
   return Maybe<void>::Ok();
 }
 
