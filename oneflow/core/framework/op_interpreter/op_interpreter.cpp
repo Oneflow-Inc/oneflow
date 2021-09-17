@@ -92,6 +92,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   {
     autograd::AutoGradMode mode(false);
     JUST(internal_->Apply(op_expr, inputs, outputs, ctx));
+    std::cout<<outputs->at(0)->requires_grad()<<std::endl; 
   }
   if (requires_grad) {
     const auto& grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
@@ -130,7 +131,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     //
     //   - If there is no inplace, the output `requires_grad` should be infered by autograd
     //     mode and inputs.
-    if (!output->requires_grad()) { output->set_requires_grad(requires_grad); }
+    if (!output->requires_grad()) { JUST(output->set_requires_grad(requires_grad)); }
   }
   return Maybe<void>::Ok();
 }
