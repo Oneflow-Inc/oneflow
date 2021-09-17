@@ -222,12 +222,20 @@ def all_to_all(output_tensor_list, input_tensor_list):
         assert isinstance(tensor_list, list)
         assert len(tensor_list) == flow.env.get_world_size()
         shape = tensor_list[0].shape
+        dtype = tensor_list[0].dtype
+        device = tensor_list[0].device
         for tensor in tensor_list:
             assert isinstance(tensor, flow._oneflow_internal.Tensor)
             assert shape == tensor.shape
+            assert dtype == tensor.dtype
+            assert device == tensor.device
     _check_list(output_tensor_list)
     _check_list(input_tensor_list)
     
+    input_list[0].shape == output_list[0].shape
+    input_list[0].dtype == output_list[0].dtype
+    input_list[0].device == output_list[0].device
+
     def _check_meta_consistency(tensor):
         assert isinstance(tensor, flow._oneflow_internal.Tensor)
         tensor.to_consistent(placement=flow.env.all_device_placement(tensor.device.type), sbp=flow.sbp.partial_sum)
