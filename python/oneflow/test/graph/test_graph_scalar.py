@@ -15,8 +15,8 @@ limitations under the License.
 """
 import os
 import unittest
-import numpy as np
 
+import numpy as np
 import oneflow as flow
 import oneflow.unittest
 
@@ -170,7 +170,7 @@ class TestScalarGraph(oneflow.unittest.TestCase):
         _test_scalar_consistent_train_graph(test_case, flow.placement("cuda", {0: [0]}))
 
     def test_scalar_consistent_train_graph_cpu(test_case):
-        _test_scalar_consistent_train_graph(test_case, flow.placement("cuda", {0: [0]}))
+        _test_scalar_consistent_train_graph(test_case, flow.placement("cpu", {0: [0]}))
 
 
 if __name__ == "__main__":

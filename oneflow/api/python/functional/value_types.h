@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/dtype.h"
 
 namespace oneflow {
+class Scalar;
 class Shape;
 class AttrMap;
 
@@ -46,7 +47,6 @@ class TensorTuple;
 class Generator;
 
 namespace functional {
-class Scalar;
 class TensorIndex;
 }  // namespace functional
 }  // namespace one

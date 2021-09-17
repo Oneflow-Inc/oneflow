@@ -38,7 +38,6 @@ class CollectiveBoxingKernelState final : public KernelState {
 
 using namespace boxing::collective;
 
-template<DeviceType device_type>
 class CollectiveBoxingGenericKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingGenericKernel);
@@ -51,14 +50,12 @@ class CollectiveBoxingGenericKernel final : public Kernel {
   void ForwardDataContent(KernelContext* ctx) const override;
 };
 
-template<DeviceType device_type>
-void CollectiveBoxingGenericKernel<device_type>::VirtualKernelInit(KernelContext* ctx) {
+void CollectiveBoxingGenericKernel::VirtualKernelInit(KernelContext* ctx) {
   const RankDesc& rank_desc = this->op_conf().collective_boxing_generic_conf().rank_desc();
   ctx->set_state(std::make_shared<CollectiveBoxingKernelState>(rank_desc));
 }
 
-template<DeviceType device_type>
-void CollectiveBoxingGenericKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
+void CollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) const {
   RequestHandle* request_handle =
       CHECK_NOTNULL(dynamic_cast<CollectiveBoxingKernelState*>(ctx->state().get()))
           ->request_handle();
@@ -91,7 +88,6 @@ void CollectiveBoxingGenericKernel<device_type>::ForwardDataContent(KernelContex
   Global<Scheduler>::Get()->Schedule(request_handle, request);
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kCollectiveBoxingGenericConf,
-                               CollectiveBoxingGenericKernel);
+REGISTER_KERNEL(OperatorConf::kCollectiveBoxingGenericConf, CollectiveBoxingGenericKernel);
 
 }  // namespace oneflow
