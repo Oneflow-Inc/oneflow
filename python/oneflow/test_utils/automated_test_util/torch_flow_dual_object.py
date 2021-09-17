@@ -442,6 +442,12 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
     return equality_res
 
 
+@equality_checker(int, int)
+@equality_checker(bool, bool)
+def check_basetype_equality(a, b, ignored1, ignored2):
+    return a == b
+
+
 @equality_checker(type(None), type(None))
 def check_nonetype_equality(a, b, ignored1, ignored2):
     return True
