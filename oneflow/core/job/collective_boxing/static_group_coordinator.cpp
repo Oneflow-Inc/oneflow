@@ -154,10 +154,10 @@ void StaticGroupCoordinator::AddRequest(void* request_token, void* executor_toke
     CHECK_EQ(current_job_id_, request_id.job_id);
   }
   StaticGroupRequestsInfo* info = token->info;
-  info->group_states
-      .at(info->request_index2request_group_index.at(request_id.request_index).group_id)
-      .AddReadyRequest(
-          info->request_index2request_group_index.at(request_id.request_index).index_in_group);
+  const RequestGroupIndex& request_group_index =
+      info->request_index2request_group_index.at(request_id.request_index);
+  info->group_states.at(request_group_index.group_id)
+      .AddReadyRequest(request_group_index.index_in_group);
   int64_t num_launched_groups = 0;
   while (true) {
     auto& group_state = info->group_states.at(current_group_idx_in_job_);
