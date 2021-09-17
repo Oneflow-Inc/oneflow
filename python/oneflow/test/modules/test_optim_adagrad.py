@@ -60,7 +60,7 @@ def compare_with_numpy_adagrad(
         )
 
         def train_one_iter(grad):
-            grad_tensor = flow.Tensor(
+            grad_tensor = flow.tensor(
                 grad, requires_grad=False, device=flow.device(device)
             )
             loss = flow.sum(x * grad_tensor)
@@ -145,7 +145,7 @@ def compare_with_numpy_adam_clip_grad(
         )
 
         def train_one_iter(grad):
-            grad_tensor = flow.Tensor(
+            grad_tensor = flow.tensor(
                 grad, requires_grad=False, device=flow.device(device)
             )
             loss = flow.sum(x * grad_tensor)

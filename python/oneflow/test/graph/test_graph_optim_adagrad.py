@@ -81,7 +81,7 @@ def compare_with_numpy_adagrad(
     adagrad_graph = CustomAdagradGraph()
 
     for i in range(train_iters):
-        mask_tensor = flow.Tensor(
+        mask_tensor = flow.tensor(
             random_grad_seq[i], requires_grad=False, device=flow.device(device)
         )
         adagrad_x = adagrad_graph(mask_tensor)
@@ -172,7 +172,7 @@ def compare_with_numpy_adagrad_clip_grad(
     adagrad_graph = CustomAdagradGraph()
 
     for i in range(train_iters):
-        mask_tensor = flow.Tensor(
+        mask_tensor = flow.tensor(
             random_grad_seq[i], requires_grad=False, device=flow.device(device)
         )
         adagrad_x = adagrad_graph(mask_tensor)
