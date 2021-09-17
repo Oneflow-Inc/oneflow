@@ -7,8 +7,14 @@ class OneflowConan(ConanFile):
     name = "oneflow"
 
     settings = "os", "compiler", "build_type", "arch"
-    options = {"shared": [True, False], "fPIC": [True, False]}
-    default_options = {"shared": False, "fPIC": True}
+    options = {
+        "shared": [True, False],
+        "fPIC": [True, False]
+    }
+    default_options = {
+        "shared": False,
+        "fPIC": True
+    }
 
     requires = [
         "pybind11/2.7.1",
@@ -16,7 +22,7 @@ class OneflowConan(ConanFile):
         "re2/20210601",
         "protobuf/3.17.1",
         "opencv/3.4.12",
-        "lz4/1.9.3",
+        "xxhash/0.8.0",
         "nlohmann_json/3.10.2",
         "half/2.2.0",
         "gtest/1.11.0",
@@ -24,7 +30,8 @@ class OneflowConan(ConanFile):
         "gflags/2.2.2",
         "flatbuffers/1.12.0",
         "eigen/3.3.9",
-        "glog/0.5.0"
+        "glog/0.4.0",
+        "hwloc/2.4.1",
     ]
 
     generators = "cmake_find_package", "cmake_paths"

@@ -1,6 +1,6 @@
 cmake_policy(SET CMP0074 NEW)
 if (NOT WIN32)
-  find_package(Threads)
+  find_package(Threads REQUIRED)
 endif()
 
 # include(zlib)
@@ -37,7 +37,7 @@ endif()
 # include(flatbuffers)
 find_package(Flatbuffers REQUIRED)
 # include(lz4)
-find_package(lz4 REQUIRED)
+find_package(xxHash REQUIRED)
 
 if (WITH_XLA)
   include(tensorflow)
@@ -47,7 +47,8 @@ if (WITH_TENSORRT)
   include(tensorrt)
 endif()
 
-include(hwloc)
+# include(hwloc)
+find_package(hwloc REQUIRED)
 
 option(CUDA_STATIC "" ON)
 
@@ -136,14 +137,15 @@ set(oneflow_third_party_libs
   GTest::gtest
   protobuf::libprotobuf
   gRPC::grpc++_unsecure
-  ${BLAS_LIBRARIES}
   opencv::opencv
   ZLIB::ZLIB
   flatbuffers::flatbuffers
-  lz4::lz4
+  xxHash::xxhash
   nlohmann_json::nlohmann_json
   half::half
-  ${CMAKE_THREAD_LIBS_INIT}
+  hwloc::hwloc
+  Threads::Threads
+  ${BLAS_LIBRARIES}
 )
 
 if (NOT WITH_XLA)
