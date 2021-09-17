@@ -70,7 +70,7 @@ class MovingAverageMinMaxObserver(Module):
         ``current_train_step`` can be directly assigned to an optimizer(eg.SGD) step.
 
     Args:
-        input (oneflow.Tensor): input tensor.
+        training (bool): Is the model in training state. Defaults to False.
         quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8.
         quantization_scheme (str): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric".
         quantization_formula (str): Support "google" or "cambricon".
@@ -88,11 +88,11 @@ class MovingAverageMinMaxObserver(Module):
 
         >>> weight = (np.random.random((2, 3, 4, 5)) - 0.5).astype(np.float32)
         
-        >>> input_tensor = flow.Tensor(
+        >>> input_tensor = flow.tensor(
         ...    weight, dtype=flow.float32
         ... )
 
-        >>> current_train_step_tensor = flow.Tensor(
+        >>> current_train_step_tensor = flow.tensor(
         ...   np.zeros((1,)).astype(np.float32),
         ...    dtype=flow.int64,
         ... )

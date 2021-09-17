@@ -22,19 +22,20 @@ import oneflow as flow
 
 
 from test_util import GenArgList
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_0_dim_tensor(test_case, device):
     scalar = 9.999
     input_np = np.array(scalar)
-    input = flow.Tensor(input_np, device=device)
+    input = flow.tensor(input_np, device=device)
 
     test_case.assertEqual(input.numel(), 1)
     test_case.assertEqual(input.ndimension(), 0)
 
-    x1 = flow.Tensor(np.array(2), dtype=flow.float32, device=device)
-    x2 = flow.Tensor(np.array(3), dtype=flow.float32, device=device)
+    x1 = flow.tensor(np.array(2), dtype=flow.float32, device=device)
+    x2 = flow.tensor(np.array(3), dtype=flow.float32, device=device)
     y1 = x1 * x2
     y2 = x1 + x2
     test_case.assertEqual(y1.numpy(), 6.0)

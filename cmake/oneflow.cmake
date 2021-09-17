@@ -54,6 +54,9 @@ function(target_treat_warnings_as_errors target)
     target_try_compile_options(${target} -Wno-error=array-bounds)
 
     target_try_compile_options(${target} -Wno-error=comment)
+
+    # disable visibility warnings related to https://github.com/Oneflow-Inc/oneflow/pull/3676.
+    target_try_compile_options(${target} -Wno-error=attributes)
   endif()
 endfunction()
 
@@ -214,7 +217,7 @@ add_custom_target(of_format
 # clang tidy
 add_custom_target(of_tidy
   COMMAND ${Python_EXECUTABLE} ${CMAKE_SOURCE_DIR}/ci/check/run_clang_tidy.py --build_dir ${CMAKE_BINARY_DIR}
-  DEPENDS of_git_version oneflow_deps of_cfgobj of_functional_obj
+  DEPENDS of_git_version oneflow_deps of_cfgobj of_functional_obj of_functional_tensor_obj
   )
 # generate version
 set(OF_GIT_VERSION_DIR ${CMAKE_CURRENT_BINARY_DIR}/of_git_version)
@@ -274,7 +277,19 @@ oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS} ${FUNC
 add_dependencies(of_functional_obj of_cfgobj)
 add_dependencies(of_functional_obj prepare_oneflow_third_party)
 
-set(PYBIND11_SRCS ${CFG_PYBIND11_SRCS} ${FUNCTIONAL_PYBIND11_SRCS})
+GENERATE_FUNCTIONAL_TENSOR_API_AND_PYBIND11_CPP(
+    FUNCTIONAL_TENSOR_GENERATED_SRCS FUNCTIONAL_TENSOR_GENERATED_HRCS
+    FUNCTIONAL_TENSOR_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
+oneflow_add_library(of_functional_tensor_obj STATIC
+    ${FUNCTIONAL_TENSOR_GENERATED_SRCS} ${FUNCTIONAL_TENSOR_GENERATED_HRCS})
+add_dependencies(of_functional_tensor_obj of_cfgobj)
+add_dependencies(of_functional_tensor_obj prepare_oneflow_third_party)
+target_include_directories(of_functional_tensor_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+
+set(PYBIND11_SRCS
+    ${CFG_PYBIND11_SRCS}
+    ${FUNCTIONAL_PYBIND11_SRCS}
+    ${FUNCTIONAL_TENSOR_PYBIND11_SRCS})
 
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
@@ -332,10 +347,15 @@ endif()
 
 pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${PYBIND_REGISTRY_CC})
 set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
-add_dependencies(oneflow_internal of_cfgobj of_functional_obj)
+add_dependencies(oneflow_internal of_cfgobj of_functional_obj of_functional_tensor_obj)
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${ONEFLOW_PYTHON_DIR}/oneflow")
-target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs} of_pyext_obj ${oneflow_exe_third_party_libs})
+target_link_libraries(oneflow_internal PRIVATE
+                      ${of_libs}
+                      of_functional_tensor_obj
+                      ${oneflow_third_party_libs}
+                      of_pyext_obj
+                      ${oneflow_exe_third_party_libs})
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
 target_compile_options(oneflow_internal PRIVATE -Werror=return-type)
@@ -400,7 +420,7 @@ copy_files("${PROTO_HDRS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_i
 copy_files("${CFG_HRCS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 
 set(OF_CORE_HDRS)
-list(APPEND of_core_dir_name_list "common" "device" "framework" "kernel/util" "persistence")
+list(APPEND of_core_dir_name_list "common" "device" "framework" "kernel/util" "persistence" "stream")
 foreach(of_core_dir_name ${of_core_dir_name_list})
   file(GLOB_RECURSE h_files "${PROJECT_SOURCE_DIR}/oneflow/core/${of_core_dir_name}/*.h")
   list(APPEND OF_CORE_HDRS ${h_files})

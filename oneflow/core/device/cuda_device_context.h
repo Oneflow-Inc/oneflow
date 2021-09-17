@@ -46,6 +46,8 @@ class CudaDeviceCtx : public DeviceCtx {
     cuda_handler_->AddCallBack(std::move(callback));
   }
 
+  DeviceType device_type() const override { return DeviceType::kGPU; }
+
  protected:
   CudaStreamHandle* cuda_handler_;
 };

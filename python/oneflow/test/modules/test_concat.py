@@ -22,14 +22,15 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_concat_origin(test_case, device):
-    input1 = flow.Tensor(
+    input1 = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
-    input2 = flow.Tensor(
+    input2 = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
     of_out = flow.cat([input1, input2], dim=0)
@@ -38,10 +39,10 @@ def _test_concat_origin(test_case, device):
 
 
 def _test_concat_with_axis_one(test_case, device):
-    input1 = flow.Tensor(
+    input1 = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
-    input2 = flow.Tensor(
+    input2 = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
     of_out = flow.cat([input1, input2], dim=1)
@@ -50,13 +51,13 @@ def _test_concat_with_axis_one(test_case, device):
 
 
 def _test_concat_with_three_tensor(test_case, device):
-    input1 = flow.Tensor(
+    input1 = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
-    input2 = flow.Tensor(
+    input2 = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
-    input3 = flow.Tensor(
+    input3 = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
     of_out = flow.cat([input1, input2, input3], dim=1)
@@ -65,19 +66,19 @@ def _test_concat_with_three_tensor(test_case, device):
 
 
 def _test_concat_with_three_tensor_backward(test_case, device):
-    input1 = flow.Tensor(
+    input1 = flow.tensor(
         np.random.randn(2, 6, 5, 3),
         dtype=flow.float32,
         device=flow.device(device),
         requires_grad=True,
     )
-    input2 = flow.Tensor(
+    input2 = flow.tensor(
         np.random.randn(2, 6, 5, 3),
         dtype=flow.float32,
         device=flow.device(device),
         requires_grad=True,
     )
-    input3 = flow.Tensor(
+    input3 = flow.tensor(
         np.random.randn(2, 6, 5, 3),
         dtype=flow.float32,
         device=flow.device(device),
@@ -98,13 +99,13 @@ def _test_concat_with_three_tensor_backward(test_case, device):
 
 
 def _test_concat_grad_and_no_grad(test_case, device):
-    input1 = flow.Tensor(
+    input1 = flow.tensor(
         np.random.randn(2, 6, 5, 3),
         dtype=flow.float32,
         device=flow.device(device),
         requires_grad=True,
     )
-    input2 = flow.Tensor(
+    input2 = flow.tensor(
         np.random.randn(2, 6, 5, 3),
         dtype=flow.float32,
         device=flow.device(device),

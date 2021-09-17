@@ -24,67 +24,65 @@ import oneflow.unittest
 
 
 def test_basic_slice(test_case, numpy_x):
-    x = flow.Tensor(numpy_x)
+    x = flow.tensor(numpy_x)
 
-    test_case.assertTrue(np.array_equal(numpy_x[1], x[1].numpy()))
-    test_case.assertTrue(np.array_equal(numpy_x[-2], x[-2].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[1], x[1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[-2], x[-2].numpy()))
 
-    test_case.assertTrue(np.array_equal(numpy_x[0, 1], x[0, 1].numpy()))
-    test_case.assertTrue(np.array_equal(numpy_x[(0, 1)], x[(0, 1)].numpy()))
-    test_case.assertTrue(np.array_equal(numpy_x[((0, 1))], x[((0, 1))].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[0, 1], x[0, 1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[(0, 1)], x[(0, 1)].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[((0, 1))], x[((0, 1))].numpy()))
 
-    test_case.assertTrue(np.array_equal(numpy_x[None], x[None].numpy()))
-    test_case.assertTrue(np.array_equal(numpy_x[True], x[True].numpy()))
-    test_case.assertTrue(np.array_equal(numpy_x[1, None], x[1, None].numpy()))
-    test_case.assertTrue(np.array_equal(numpy_x[1, None, 1], x[1, None, 1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[None], x[None].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[True], x[True].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[1, None], x[1, None].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[1, None, 1], x[1, None, 1].numpy()))
     test_case.assertTrue(
-        np.array_equal(numpy_x[1, None, None, 1], x[1, None, None, 1].numpy())
+        np.allclose(numpy_x[1, None, None, 1], x[1, None, None, 1].numpy())
     )
 
-    test_case.assertTrue(np.array_equal(numpy_x[:], x[:].numpy()))
-    test_case.assertTrue(np.array_equal(numpy_x[:1], x[:1].numpy()))
-    test_case.assertTrue(np.array_equal(numpy_x[0:1], x[0:1].numpy()))
-    test_case.assertTrue(np.array_equal(numpy_x[-2:-1], x[-2:-1].numpy()))
-    test_case.assertTrue(np.array_equal(numpy_x[2:100:200], x[2:100:200].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[:], x[:].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[:1], x[:1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[0:1], x[0:1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[-2:-1], x[-2:-1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[2:100:200], x[2:100:200].numpy()))
 
-    test_case.assertTrue(np.array_equal(numpy_x[0:2, ...], x[0:2, ...].numpy()))
-    test_case.assertTrue(np.array_equal(numpy_x[0:2, ..., 1], x[0:2, ..., 1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[0:2, ...], x[0:2, ...].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[0:2, ..., 1], x[0:2, ..., 1].numpy()))
     test_case.assertTrue(
-        np.array_equal(numpy_x[0:2, ..., 1, 1], x[0:2, ..., 1, 1].numpy())
+        np.allclose(numpy_x[0:2, ..., 1, 1], x[0:2, ..., 1, 1].numpy())
     )
 
-    test_case.assertTrue(np.array_equal(numpy_x[0:4:2, ...], x[0:4:2, ...].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[0:4:2, ...], x[0:4:2, ...].numpy()))
     test_case.assertTrue(
-        np.array_equal(numpy_x[0:2, None, ..., True], x[0:2, None, ..., True].numpy())
+        np.allclose(numpy_x[0:2, None, ..., True], x[0:2, None, ..., True].numpy())
     )
     test_case.assertTrue(
-        np.array_equal(
-            numpy_x[None, ..., 0:4:2, True], x[None, ..., 0:4:2, True].numpy()
-        )
+        np.allclose(numpy_x[None, ..., 0:4:2, True], x[None, ..., 0:4:2, True].numpy())
     )
 
 
 def test_advanced_indexing(test_case, numpy_x):
-    x = flow.Tensor(numpy_x)
+    x = flow.tensor(numpy_x)
 
-    test_case.assertTrue(np.array_equal(numpy_x[[0, 1]], x[[0, 1]].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[[0, 1]], x[[0, 1]].numpy()))
     test_case.assertTrue(
-        np.array_equal(numpy_x[[0, 1], [1, 0]], x[[0, 1], [1, 0]].numpy())
+        np.allclose(numpy_x[[0, 1], [1, 0]], x[[0, 1], [1, 0]].numpy())
     )
     test_case.assertTrue(
-        np.array_equal(
+        np.allclose(
             numpy_x[[[0, 1], [0, 1], [1, 0]]], x[[[0, 1], [0, 1], [1, 0]]].numpy()
         )
     )
-    test_case.assertTrue(np.array_equal(numpy_x[[[0], [1]]], x[[[0], [1]]].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[[[0], [1]]], x[[[0], [1]]].numpy()))
     test_case.assertTrue(
-        np.array_equal(
+        np.allclose(
             numpy_x[[[[0], [1]], [[0], [1]], [0, 1]]],
             x[[[[0], [1]], [[0], [1]], [0, 1]]].numpy(),
         )
     )
     test_case.assertTrue(
-        np.array_equal(
+        np.allclose(
             numpy_x[[[[0, 1], [1, 1]], [[0, 0], [1, 1]], [0, 1]]],
             x[[[[0, 1], [1, 1]], [[0, 0], [1, 1]], [0, 1]]].numpy(),
         )
@@ -92,70 +90,64 @@ def test_advanced_indexing(test_case, numpy_x):
 
     # Tensor index
     test_case.assertTrue(
-        np.array_equal(
+        np.allclose(
             numpy_x[np.array([0, 1]), np.array([1, 0])],
-            x[flow.Tensor([0, 1]).long(), flow.Tensor([1, 0]).long()].numpy(),
+            x[flow.tensor([0, 1]), flow.tensor([1, 0])].numpy(),
         )
     )
     test_case.assertTrue(
-        np.array_equal(
+        np.allclose(
             numpy_x[:, np.array([[0, 1], [1, 1]]), np.array([[1, 0], [1, 1]])],
-            x[
-                :,
-                flow.Tensor([[0, 1], [1, 1]]).long(),
-                flow.Tensor([[1, 0], [1, 1]]).long(),
-            ].numpy(),
+            x[:, flow.tensor([[0, 1], [1, 1]]), flow.tensor([[1, 0], [1, 1]]),].numpy(),
         )
     )
 
 
 def test_combining_indexing(test_case, numpy_x):
-    x = flow.Tensor(numpy_x)
+    x = flow.tensor(numpy_x)
 
     test_case.assertTrue(
-        np.array_equal(numpy_x[[0, 1], 1:2, [1, 0]], x[[0, 1], 1:2, [1, 0]].numpy())
+        np.allclose(numpy_x[[0, 1], 1:2, [1, 0]], x[[0, 1], 1:2, [1, 0]].numpy())
     )
     test_case.assertTrue(
-        np.array_equal(numpy_x[:, [0, 1], [1, 0]], x[:, [0, 1], [1, 0]].numpy())
+        np.allclose(numpy_x[:, [0, 1], [1, 0]], x[:, [0, 1], [1, 0]].numpy())
     )
-    test_case.assertTrue(np.array_equal(numpy_x[:, [0, 1], 1], x[:, [0, 1], 1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[:, [0, 1], 1], x[:, [0, 1], 1].numpy()))
     test_case.assertTrue(
-        np.array_equal(
-            numpy_x[..., [0, 1], 1, [1, 0]], x[..., [0, 1], 1, [1, 0]].numpy()
-        )
+        np.allclose(numpy_x[..., [0, 1], 1, [1, 0]], x[..., [0, 1], 1, [1, 0]].numpy())
     )
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestTensorIndexing(flow.unittest.TestCase):
     def test_basic_slice(test_case):
-        numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5])
+        numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
         test_basic_slice(test_case, numpy_x)
 
-        numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6])
+        numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6]).astype(np.float32)
         test_basic_slice(test_case, numpy_x)
 
-        numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10])
+        numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
         test_basic_slice(test_case, numpy_x)
 
     def test_advanced_indexing(test_case):
-        numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5])
+        numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
         test_advanced_indexing(test_case, numpy_x)
 
-        numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6])
+        numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6]).astype(np.float32)
         test_advanced_indexing(test_case, numpy_x)
 
-        numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10])
+        numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
         test_advanced_indexing(test_case, numpy_x)
 
     def test_combining_indexing(test_case):
-        numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5])
+        numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
         test_combining_indexing(test_case, numpy_x)
 
-        numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6])
+        numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6]).astype(np.float32)
         test_combining_indexing(test_case, numpy_x)
 
-        numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10])
+        numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
         test_combining_indexing(test_case, numpy_x)
 
 

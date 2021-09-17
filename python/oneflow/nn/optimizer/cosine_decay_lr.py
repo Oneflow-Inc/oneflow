@@ -25,7 +25,7 @@ class CosineDecayLR(LrScheduler):
 
     .. math::
 
-        & cos\\_decay = 0.5*(1+cos(\\pi*\\frac{current\\_step}{decay_steps}))
+        & cos\\_decay = 0.5*(1+cos(\\pi*\\frac{current\\_step}{decay\\_steps}))
 
         & decay\\_factor = (1-\\alpha)*cos\\_decay+\\alpha
 
@@ -89,7 +89,7 @@ class CosineDecayLR(LrScheduler):
         else:
             return [base_lr * self.alpha for base_lr in self.base_lrs]
 
-    def generate_conf_for_graph(self, opt_confs):
+    def _generate_conf_for_graph(self, opt_confs):
         # CosineDecayLR is the same as CosineDecayConf in nn.Graph
         for opt_conf in opt_confs:
             learning_rate_decay_conf = opt_conf.mutable_learning_rate_decay()

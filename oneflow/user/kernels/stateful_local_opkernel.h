@@ -350,15 +350,12 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
     return base_ctx_.Tensor4ArgNameAndIndex(arg_name, index);
   }
   DeviceCtx* device_ctx() override { return device_ctx_; }
+  StreamContext* stream_ctx() override { return stream_ctx_.get(); }
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
   const ParallelContext& parallel_ctx() const override {
     UNIMPLEMENTED();
     return *(const ParallelContext*)nullptr;
-  }
-  const JobDesc& job_desc() const override {
-    UNIMPLEMENTED();
-    return *(const JobDesc*)nullptr;
   }
 
   const ArgVec& inputs() const override { return base_ctx_.inputs(); };
@@ -379,6 +376,7 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   const user_op::UserOpConfWrapper* user_op_conf_;
   const ComposedAttrMap* composed_attrs_;
   DeviceCtx* device_ctx_;
+  std::unique_ptr<StreamContext> stream_ctx_;
   LocalUserKernelBaseContext base_ctx_;
 };
 

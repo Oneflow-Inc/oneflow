@@ -25,25 +25,50 @@ namespace functional {
 
 class FunctionLibrary {
  public:
-  using FunctorCreator = std::function<Maybe<PackedFunctor>()>;
-
   virtual ~FunctionLibrary() = default;
 
+  template<typename T>
+  struct PackedFuncMap;
+
+  template<typename R, typename... Args>
+  struct PackedFuncMap<R(Args...)> {
+    using FunctorCreator = typename std::function<PackedFunctor<R(Args...)>()>;
+
+    static HashMap<std::string, FunctorCreator>* Get() {
+      static HashMap<std::string, FunctorCreator> functors;
+      return &functors;
+    }
+  };
+
   template<typename Func>
-  void add_functor(const std::string& func_name) {
-    CHECK_EQ(functors_.count(func_name), 0)
+  void add_one_functor(const std::string& func_name) {
+    using func_type = typename function_traits<Func>::func_type;
+    using FType = typename PackedFunctorMaker<func_type>::FType;
+    auto* functors = PackedFuncMap<FType>::Get();
+    CHECK_EQ(functors->count(func_name), 0)
         << "The functor with name " << func_name << " has been registered more than once.";
-    functors_.emplace(func_name, [func_name]() -> Maybe<PackedFunctor> {
+    functors->emplace(func_name, [func_name]() -> PackedFunctor<FType> {
       Func func;
-      return PackedFunctor::Make(func_name, func);
+      return PackedFunctorMaker<func_type>::make(func_name, func);
     });
   }
 
-  Maybe<PackedFunctor> find(const std::string& func_name) {
-    const auto& it = functors_.find(func_name);
-    CHECK_OR_RETURN(it != functors_.end())
-        << "Functor was not found for op " << func_name
-        << ", please check whether the functor has been registered correctly or not.";
+  template<typename... Fs>
+  void add_functor(const std::string& func_name) {
+    static_assert(sizeof...(Fs) > 0, "at least one functor is expected");
+
+    __attribute__((__unused__)) int dummy[] = {(add_one_functor<Fs>(func_name), 0)...};
+  }
+
+  template<typename R, typename... Args>
+  auto find(const std::string& func_name)
+      -> Maybe<PackedFunctor<typename PackedFunctorMaker<R(Args...)>::FType>> {
+    using FType = typename PackedFunctorMaker<R(Args...)>::FType;
+    auto* functors = PackedFuncMap<FType>::Get();
+    const auto& it = functors->find(func_name);
+    CHECK_OR_RETURN(it != functors->end())
+        << "Functor was not found for \"" << func_name
+        << "\", please check whether the functor has been registered correctly or not.";
     return it->second();
   }
 
@@ -54,8 +79,6 @@ class FunctionLibrary {
 
  private:
   FunctionLibrary() = default;
-
-  HashMap<std::string, FunctorCreator> functors_;
 };
 
 #define ONEFLOW_FUNCTION_LIBRARY(m) ONEFLOW_FUNCTION_LIBRARY_IMPL(m, __COUNTER__)

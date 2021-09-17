@@ -79,7 +79,7 @@ class PReLU(Module):
         >>> import oneflow as flow
         
         >>> m = flow.nn.PReLU()
-        >>> input = flow.Tensor(np.asarray([[[[1, -2], [3, 4]]]]), dtype=flow.float32)
+        >>> input = flow.tensor(np.asarray([[[[1, -2], [3, 4]]]]), dtype=flow.float32)
         >>> print(m(input).numpy())
         [[[[ 1.  -0.5]
            [ 3.   4. ]]]]
@@ -92,9 +92,6 @@ class PReLU(Module):
         self.weight = flow.nn.Parameter(flow.Tensor(num_parameters).fill_(init))
 
     def forward(self, x):
-        assert (
-            self.num_parameters == 1 or self.num_parameters == x.shape[1]
-        ), f"num_parameters in prelu must be 1 or {x.shape[1]}"
         return flow._C.prelu(x, self.weight)
 
 
@@ -227,40 +224,6 @@ class Tanh(Module):
         return flow._C.tanh(input)
 
 
-@register_tensor_op("tanh")
-def tanh_op(input):
-    """This operator computes the hyperbolic tangent value of Tensor.
-
-    The equation is:
-
-    .. math::
-
-        out = \\frac{e^x-e^{-x}}{e^x+e^{-x}}
-
-    Args:
-        x (oneflow.Tensor): A Tensor
-
-    Returns:
-        oneflow.Tensor: The result Tensor
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        
-        >>> x = np.array([-1, 0, 1]).astype(np.float32)
-        >>> input = flow.Tensor(x)
-        >>> tanh = flow.nn.Tanh()
-        >>> out = tanh(input)
-        >>> out
-        tensor([-0.7616,  0.0000,  0.7616], dtype=oneflow.float32)
-
-    """
-    return Tanh()(input)
-
-
 class ELU(Module):
     """Applies the element-wise function:
 
@@ -352,40 +315,6 @@ class GELU(Module):
         return flow._C.gelu(x)
 
 
-@register_tensor_op("gelu")
-def gelu_op(x):
-    """Gelu activation operator.
-
-    The equation is:
-
-    .. math::
-        out = 0.5 * x * (1 + tanh(\\sqrt{\\frac{2}{\\pi}} * (x + 0.044715x^{3})))
-
-    Args:
-        x (oneflow.Tensor): Input Tensor
-
-    Returns:
-        oneflow.Tensor: A Tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        
-        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
-        >>> input = flow.Tensor(x)
-        >>> gelu = flow.nn.GELU()
-
-        >>> out = gelu(input)
-        >>> out
-        tensor([-0.1543,  0.0000,  0.3457], dtype=oneflow.float32)
-
-    """
-    return GELU()(x)
-
-
 class Sigmoid(Module):
     """Applies the element-wise function:
 
@@ -416,34 +345,6 @@ class Sigmoid(Module):
 
     def forward(self, x):
         return flow._C.sigmoid(x)
-
-
-@register_tensor_op("sigmoid")
-def sigmoid_op(x):
-    """Applies the element-wise function:
-
-    .. math::
-        \\text{Sigmoid}(x) = \\sigma(x) = \\frac{1}{1 + \\exp(-x)}
-
-    Shape:
-        - Input: :math:`(N, *)` where `*` means, any number of additional
-          dimensions
-        - Output: :math:`(N, *)`, same shape as the input
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        
-        >>> x = flow.Tensor(np.array([0.81733328, 0.43621480, 0.10351428]))
-        >>> out = flow.sigmoid(x)
-        >>> out
-        tensor([0.6937, 0.6074, 0.5259], dtype=oneflow.float32)
-
-    """
-    return Sigmoid()(x)
 
 
 class Hardsigmoid(Module):
@@ -488,8 +389,8 @@ class Hardsigmoid(Module):
 
     def forward(self, x):
         if self.inplace:
-            warnings.warn("Hardsigmoid module do not support inplace now")
-        return flow._C.hardsigmoid(x)
+            return flow._C.hardsigmoid(x, True)
+        return flow._C.hardsigmoid(x, False)
 
     def extra_repr(self):
         inplace_str = "inplace=True" if self.inplace else ""
@@ -929,29 +830,6 @@ class Mish(Module):
         return flow._C.mish(x)
 
 
-def mish_op(x):
-    """Applies the element-wise function:
-
-    .. math::
-        \\text{Mish}(x) = x * \\text{Tanh}(\\text{Softplus}(x))
-
-    .. note::
-        See `Mish: A Self Regularized Non-Monotonic Neural Activation Function <https://arxiv.org/abs/1908.08681>`_
-
-    See :mod:`oneflow.nn.Mish`
-    """
-    return Mish()(x)
-
-
-@register_tensor_op("mish")
-def mish_op_tensor(x):
-    """
-    mish() -> Tensor
-    See :func:`oneflow.mish`
-    """
-    return Mish()(x)
-
-
 class SiLU(Module):
     r"""SiLU(Swish) activation:
 
@@ -994,36 +872,6 @@ class SiLU(Module):
 
     def forward(self, x):
         return flow._C.silu(x)
-
-
-def silu_op(x):
-    r"""SiLU(Swish) activation:
-
-    .. math::
-        \text{SiLU}(x) = x * sigmoid(x)
-    
-    .. note::
-    
-        See `Gaussian Error Linear Units (GELUs) <https://arxiv.org/abs/1606.08415>`_
-        where the SiLU (Sigmoid Linear Unit) was originally coined, and see
-        `Sigmoid-Weighted Linear Units for Neural Network Function Approximation
-        in Reinforcement Learning <https://arxiv.org/abs/1702.03118>`_ and `Swish:
-        a Self-Gated Activation Function <https://arxiv.org/abs/1710.05941v1>`_
-        where the SiLU was experimented with later.
-    
-    See :mod:`oneflow.nn.SiLU`
-    """
-
-    return SiLU()(x)
-
-
-@register_tensor_op("silu")
-def silu_op_tensor(x):
-    r"""
-    silu() -> Tensor
-    See :func:`oneflow.silu`
-    """
-    return SiLU()(x)
 
 
 class SELU(Module):
@@ -1075,34 +923,6 @@ class SELU(Module):
         return flow._C.selu(x)
 
 
-def selu_op(x):
-    r"""The SELU activation.
-
-    The formula is: 
-    
-    .. math::  
-    
-        \text{SELU}(x) = \text{scale} * (\max(0,x) + \min(0, \alpha * (\exp(x) - 1)))
-    
-    with :math:`\alpha = 1.6732632423543772848170429916717` and
-    
-    :math:`\text{scale} = 1.0507009873554804934193349852946`.
-
-    See :mod:`oneflow.nn.SELU`
-    """
-    return SELU()(x)
-
-
-@register_tensor_op("selu")
-def selu_op_tensor(x):
-    r"""
-    selu() -> Tensor
-    
-    See :func:`oneflow.selu`
-    """
-    return SELU()(x)
-
-
 class Softsign(Module):
     r"""The SoftSign activation.
 
@@ -1139,27 +959,48 @@ class Softsign(Module):
         return flow._C.softsign(x)
 
 
-def softsign_op(x):
-    r"""The SoftSign activation.
+class GLU(Module):
+    r"""The GLU activation.
+
+    Args:
+        input (Tensor, float): input tensor. 
+        dim (int, optional): dimension on which to split the input. Default: -1
+
+    Shape:
+        - Input: :math:`(\ast_1, N, \ast_2)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(\ast_1, M, \ast_2)` where :math:`M=N/2`
 
     The formula is: 
     
     .. math::  
 
-        SoftSign(x) = \frac{x}{1 + |x|}
+        GLU(input) = GLU(a, b) = a \otimes sigmoid(b)
+
+    .. note::
+        where input is split in half along dim to form a and b, ⊗ is the element-wise product between matrices.
+
+    For example:
     
-    See :mod:`oneflow.nn.Softsign`
+    .. code-block:: python
+    
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+        >>> m = nn.GLU()
+        >>> x = flow.tensor([[1, 2, 3, 4], [5, 6, 7, 8]], dtype=flow.float32)
+        >>> y = m(x)
+        >>> y
+        tensor([[0.9526, 1.9640],
+                [4.9954, 5.9980]], dtype=oneflow.float32)
+    
     """
-    return Softsign()(x)
 
+    def __init__(self, dim: Optional[int] = -1):
+        super().__init__()
+        self.dim = dim
 
-@register_tensor_op("softsign")
-def softsign_op_tensor(x):
-    r"""
-    softsign() -> Tensor
-    See :func:`oneflow.softsign`
-    """
-    return Softsign()(x)
+    def forward(self, input):
+        return flow._C.glu(input, self.dim)
 
 
 if __name__ == "__main__":

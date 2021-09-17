@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/eager/run_lazy_job_phy_instr_operand.h"
+#include "oneflow/core/framework/device.h"
 
 namespace oneflow {
 namespace vm {
@@ -26,9 +27,29 @@ void RunLazyJobPhyInstrOperand::ForEachConstMirroredObject(
   }
 }
 
+namespace {
+
+Maybe<LocalDepObject*> RawGetEagerNcclLocalDepObject(const std::string& type) {
+  const auto& device = JUST(Device::New(type));
+  const auto& local_dep_object = device->mut_transport_local_dep_object();
+  CHECK_OR_RETURN(local_dep_object.has_value());
+  return JUST(local_dep_object);
+}
+
+}  // namespace
+
+static constexpr auto* GetEagerNcclLocalDepObject =
+    DECORATE(&RawGetEagerNcclLocalDepObject, ThreadLocalCopiable);
+
 void RunLazyJobPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
     const {
+#ifdef WITH_CUDA
+  auto* sync_launched_nccl = CHECK_JUST(GetEagerNcclLocalDepObject("sync_launched_nccl"));
+  auto* async_launched_nccl = CHECK_JUST(GetEagerNcclLocalDepObject("async_launched_nccl"));
+  CHECK_EQ(sync_launched_nccl, async_launched_nccl);
+  DoEach(nullptr, async_launched_nccl->mut_mirrored_object());
+#endif  // WITH_CUDA
   for (const auto& parameter : *parameters()) {
     DoEach(nullptr, CHECK_JUST(parameter->compute_local_dep_object())->mut_mirrored_object());
   }

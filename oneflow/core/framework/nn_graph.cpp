@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/eager/eager_blob_object.h"
@@ -22,7 +23,6 @@ limitations under the License.
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
@@ -32,8 +32,26 @@ limitations under the License.
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
+
+namespace {
+
+Maybe<bool> GetTensorValidInCurRank(const std::shared_ptr<one::Tensor>& tensor) {
+  if (tensor->is_consistent()) {
+    const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(JUST(tensor->parallel_desc())));
+    if (parallel_id->has_value()) {
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    return true;
+  }
+}
+
+}  // namespace
 
 NNGraph::~NNGraph() {
   VLOG(2) << "graph destructor Try to close c nn graph name " << name_ << "." << std::endl;
@@ -56,22 +74,48 @@ const std::vector<std::string>& NNGraph::inputs_op_names() const { return input_
 
 const std::vector<std::string>& NNGraph::outputs_op_names() const { return output_op_names_; }
 
+const std::vector<bool>& NNGraph::inputs_valid() const { return input_tensors_valid_; }
+
+const std::vector<bool>& NNGraph::outputs_valid() const { return output_tensors_valid_; }
+
 int64_t NNGraph::variable_op_size() const { return variable_op_name2eager_blob_.size(); }
 
-Maybe<void> NNGraph::RegisterInputOpNames(const std::vector<std::string>& input_op_names) {
+Maybe<void> NNGraph::RegisterInputOpNamesAndTensors(
+    const std::vector<std::string>& input_op_names,
+    const std::vector<std::shared_ptr<one::Tensor>>& input_tensors) {
+  CHECK_EQ_OR_RETURN(input_op_names.size(), input_tensors.size());
+  CHECK_OR_RETURN(input_op_names_.empty())
+      << " The input tensors of nn.Graph " << name_ << " are register repeatedly.";
+  CHECK_OR_RETURN(input_tensors_valid_.empty());
   input_op_names_.assign(input_op_names.begin(), input_op_names.end());
+  input_tensors_valid_.reserve(input_tensors.size());
+  for (const auto& input_tensor : input_tensors) {
+    input_tensors_valid_.push_back(JUST(GetTensorValidInCurRank(input_tensor)));
+  }
+  CHECK_EQ_OR_RETURN(input_tensors_valid_.size(), input_tensors.size());
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NNGraph::RegisterOutputOpNames(const std::vector<std::string>& output_op_names) {
+Maybe<void> NNGraph::RegisterOutputOpNamesAndTensors(
+    const std::vector<std::string>& output_op_names,
+    const std::vector<std::shared_ptr<one::Tensor>>& output_tensors) {
+  CHECK_EQ_OR_RETURN(output_op_names.size(), output_tensors.size());
+  CHECK_OR_RETURN(output_op_names_.empty())
+      << " The output tensors of nn.Graph " << name_ << " are register repeatedly.";
+  CHECK_OR_RETURN(output_tensors_valid_.empty());
   output_op_names_.assign(output_op_names.begin(), output_op_names.end());
+  output_tensors_valid_.reserve(output_tensors.size());
+  for (const auto& output_tensor : output_tensors) {
+    output_tensors_valid_.push_back(JUST(GetTensorValidInCurRank(output_tensor)));
+  }
+  CHECK_EQ_OR_RETURN(output_tensors_valid_.size(), output_tensors.size());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
     const std::vector<std::string>& variable_op_names,
     const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors) {
-  JUST(vm::MultiClientSync());
+  JUST(vm::CurrentRankSync());
   CHECK_EQ_OR_RETURN(variable_op_names.size(), variable_tensors.size());
   CHECK_OR_RETURN(variable_op_name2eager_blob_.empty());
   for (int32_t i = 0; i < variable_op_names.size(); ++i) {
@@ -94,7 +138,7 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
 }
 
 Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
-  JUST(vm::MultiClientSync());
+  JUST(vm::CurrentRankSync());
   const auto& free_eager_tensors =
       Global<MultiClientSessionContext>::Get()->GetFreeEagerTensorNamePairByGraphName(name_);
   for (const auto& pair : free_eager_tensors) {
@@ -116,7 +160,7 @@ Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
 }
 
 Maybe<void> NNGraph::CreateAndRegisterNewVariableOpInJobPass() {
-  JUST(vm::MultiClientSync());
+  JUST(vm::CurrentRankSync());
   // NOTE(chengcheng): New EagerTensor need set LazyMode false.
   auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
   OpGraph op_graph(job_);
@@ -139,7 +183,7 @@ Maybe<void> NNGraph::CreateAndRegisterNewVariableOpInJobPass() {
       DType dtype(blob_desc.data_type());
       std::shared_ptr<std::vector<Symbol<cfg::SbpParallel>>> sbp_tuple =
           JUST(GetSbpList(Symbol<cfg::NdSbp>(nd_sbp)));
-      one::functional::Scalar value;
+      Scalar value;
       if (var_conf.initializer().has_constant_conf()) {
         value = var_conf.initializer().constant_conf().value();
       } else if (var_conf.initializer().has_constant_int_conf()) {
@@ -149,7 +193,7 @@ Maybe<void> NNGraph::CreateAndRegisterNewVariableOpInJobPass() {
       }
       std::shared_ptr<one::Tensor> tensor = JUST(one::functional::ConsistentConstant(
           blob_desc.shape(), value, Symbol<DType>(dtype), placement, *sbp_tuple));
-      JUST(vm::MultiClientSync());
+      JUST(vm::CurrentRankSync());
       const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
       Blob* var_blob = JUST(local_var->eager_blob_object())->mut_blob();
       CHECK_OR_RETURN(variable_op_name2eager_blob_.emplace(var_name, var_blob).second);
@@ -198,11 +242,13 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
               << " , compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.\n";
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
+      PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
     }
     // TODO(chengcheng): test collective boxing for multi-job.
     PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
+    PlanUtil::PlanMemoryLog(&plan_, name_);
   }
   if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name = "plan:" + job_name();
@@ -237,10 +283,10 @@ void NNGraph::NewRuntimeBuffers() {
   buffer_mgr->NewBuffer(GetSourceTickBufferName(name_), concurrency_width);
   buffer_mgr->NewBuffer(GetCallbackNotifierBufferName(name_), concurrency_width);
   for (const std::string& input_op_name : input_op_names_) {
-    buffer_mgr->NewBuffer(GetInputBufferName(name_, input_op_name), 2);
+    buffer_mgr->NewBuffer(GetInputBufferName(name_, input_op_name), concurrency_width);
   }
   for (const std::string& output_op_name : output_op_names_) {
-    buffer_mgr->NewBuffer(GetOutputBufferName(name_, output_op_name), 2);
+    buffer_mgr->NewBuffer(GetOutputBufferName(name_, output_op_name), concurrency_width);
   }
 }
 

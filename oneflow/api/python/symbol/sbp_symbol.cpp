@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 namespace py = pybind11;
 

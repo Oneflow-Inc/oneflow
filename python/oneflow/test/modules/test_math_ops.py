@@ -18,7 +18,8 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 import oneflow as flow
@@ -46,7 +47,7 @@ class TestSin(flow.unittest.TestCase):
 
 
 def _test_cos(test_case, shape, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
     )
     of_out = flow.cos(input)
@@ -55,7 +56,7 @@ def _test_cos(test_case, shape, device):
 
 
 def _test_cos_backward(test_case, shape, device):
-    x = flow.Tensor(
+    x = flow.tensor(
         np.random.randn(*shape),
         dtype=flow.float32,
         device=flow.device(device),
@@ -90,7 +91,7 @@ class TestLogModule(flow.unittest.TestCase):
 
 def _test_std(test_case, shape, device):
     np_arr = np.random.randn(*shape)
-    input = flow.Tensor(np_arr, device=flow.device(device))
+    input = flow.tensor(np_arr, dtype=flow.float32, device=flow.device(device))
     of_out = flow.std(input, dim=2)
     np_out = np.std(np_arr, axis=2)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
@@ -98,7 +99,7 @@ def _test_std(test_case, shape, device):
 
 def _test_std_dim1(test_case, shape, device):
     np_arr = np.random.randn(*shape)
-    input = flow.Tensor(np_arr, device=flow.device(device))
+    input = flow.tensor(np_arr, dtype=flow.float32, device=flow.device(device))
     of_out = flow.std(input, dim=1)
     np_out = np.std(np_arr, axis=1)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
@@ -106,7 +107,7 @@ def _test_std_dim1(test_case, shape, device):
 
 def _test_std_negative_dim(test_case, shape, device):
     np_arr = np.random.randn(4, 2, 3, 5)
-    input = flow.Tensor(np_arr, device=flow.device(device))
+    input = flow.tensor(np_arr, dtype=flow.float32, device=flow.device(device))
     of_out = input.std(dim=(-2, -1, -3), keepdim=False)
     np_out = np.std(np_arr, axis=(-2, -1, -3))
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))

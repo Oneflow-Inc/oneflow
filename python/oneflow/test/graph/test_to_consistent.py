@@ -124,7 +124,10 @@ class MyModule2(flow.nn.Module):
         if self.weight.is_consistent:
             y = self.weight.to_consistent(grad_sbp=flow.sbp.broadcast)
         z = flow._C.matmul(y, x, transpose_b=True)
-        return self.activation(z)
+        out = self.activation(z).sum()
+        if self.weight.is_consistent:
+            out = out.to_consistent(sbp=flow.sbp.broadcast)
+        return out
 
 
 class MyModule3(flow.nn.Module):
@@ -198,8 +201,8 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         # pid = os.getpid()
         # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_fwd_P2B")
 
-        local_x = flow.Tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
-        local_y = flow.Tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
+        local_x = flow.tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
+        local_y = flow.tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
 
         z = flow._C.matmul(
             flow.cat([local_x, local_x], dim=1),
@@ -234,13 +237,14 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         # pid = os.getpid()
         # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_bwd_P2B")
 
-        local_x = flow.Tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
-        local_y = flow.Tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
+        local_x = flow.tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
+        local_y = flow.tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
 
         z = flow._C.matmul(
             local_y, flow.cat([local_x, local_x], dim=0), transpose_b=True,
         )
         z = flow._C.relu(z)
+        z = z.sum()
 
         placement = flow.placement("cuda", {0: [0, 1]})
         c_x = local_x.to_consistent(placement=placement, sbp=flow.sbp.split(0))
@@ -253,19 +257,18 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         g_z = g(c_x)
         # print(f"g_z shape: {g_z.shape}, placement: {g_z.placement}, sbp: {g_z.sbp}")
         test_case.assertTrue(g_z.is_consistent)
-        test_case.assertTrue(g_z.sbp[0] == flow.sbp.split(1))
+        test_case.assertTrue(g_z.sbp[0] == flow.sbp.broadcast)
         # S(1) -> B not supported yet
         # c_z = g_z.to_consistent(sbp=flow.sbp.broadcast)
-        c_z = g_z.transpose(0, 1).to_consistent(sbp=flow.sbp.broadcast)
         # print(f"c_z shape: {c_z.shape}, placement: {c_z.placement}, sbp: {c_z.sbp}")
-        test_case.assertTrue(np.allclose(z.numpy().T, c_z.to_local().numpy()))
+        test_case.assertTrue(np.allclose(z.numpy(), g_z.to_local().numpy()))
 
         e_y = c_y.detach()
         # print(f"e_y shape: {e_y.shape}, placement: {e_y.placement}, sbp: {e_y.sbp}")
         e_m = MyModule2(e_y)
         e_z = e_m(c_x)
         # print(f"e_z shape: {e_z.shape}, placement: {e_z.placement}, sbp: {e_z.sbp}")
-        e_z.backward(flow.ones_like(e_z))
+        e_z.backward()
 
         test_case.assertTrue(
             np.allclose(c_y.to_local().numpy(), e_y.to_local().numpy())
@@ -279,8 +282,8 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         # pid = os.getpid()
         # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_multi_graph")
 
-        local_x = flow.Tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
-        local_y = flow.Tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
+        local_x = flow.tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
+        local_y = flow.tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
 
         placement = flow.placement("cuda", {0: [0, 1]})
         x1 = local_x.to_consistent(placement=placement, sbp=flow.sbp.broadcast)
@@ -347,7 +350,7 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
 
     # @unittest.skipIf(True, "")
     def test_free_tensor_to_consistent(test_case):
-        local_x = flow.Tensor(x, device="cpu")
+        local_x = flow.tensor(x, dtype=flow.float32, device="cpu")
         placement = flow.placement("cuda", {0: [0, 1]})
         c_x = local_x.to_consistent(placement, flow.sbp.split(0))
 

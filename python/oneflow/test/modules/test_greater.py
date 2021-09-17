@@ -18,7 +18,8 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
 
 import oneflow as flow
@@ -26,12 +27,12 @@ import oneflow.unittest
 
 
 def _test_greater_normal(test_case, device):
-    input1 = flow.Tensor(
+    input1 = flow.tensor(
         np.array([1, 1, 4]).astype(np.float32),
         dtype=flow.float32,
         device=flow.device(device),
     )
-    input2 = flow.Tensor(
+    input2 = flow.tensor(
         np.array([1, 2, 3]).astype(np.float32),
         dtype=flow.float32,
         device=flow.device(device),
@@ -42,12 +43,12 @@ def _test_greater_normal(test_case, device):
 
 
 def _test_greater_symbol(test_case, device):
-    input1 = flow.Tensor(
+    input1 = flow.tensor(
         np.array([1, 1, 4]).astype(np.float32),
         dtype=flow.float32,
         device=flow.device(device),
     )
-    input2 = flow.Tensor(
+    input2 = flow.tensor(
         np.array([1, 2, 3]).astype(np.float32),
         dtype=flow.float32,
         device=flow.device(device),
@@ -59,7 +60,7 @@ def _test_greater_symbol(test_case, device):
 
 def _test_greater_int_scalar(test_case, device):
     np_arr = np.random.randn(2, 3, 4, 5)
-    input1 = flow.Tensor(np_arr, dtype=flow.float32, device=flow.device(device))
+    input1 = flow.tensor(np_arr, dtype=flow.float32, device=flow.device(device))
     input2 = 1
     of_out = input1 > input2
     np_out = np.greater(np_arr, input2)
@@ -68,7 +69,7 @@ def _test_greater_int_scalar(test_case, device):
 
 def _test_greater_int_tensor_int_scalar(test_case, device):
     np_arr = np.random.randint(2, size=(2, 3, 4, 5))
-    input1 = flow.Tensor(np_arr, dtype=flow.int, device=flow.device(device))
+    input1 = flow.tensor(np_arr, dtype=flow.int, device=flow.device(device))
     input2 = 1
     of_out = input1 > input2
     np_out = np.greater(np_arr, input2)
@@ -77,7 +78,7 @@ def _test_greater_int_tensor_int_scalar(test_case, device):
 
 def _test_greater_float_scalar(test_case, device):
     np_arr = np.random.randn(3, 2, 5, 7)
-    input1 = flow.Tensor(np_arr, dtype=flow.float32, device=flow.device(device))
+    input1 = flow.tensor(np_arr, dtype=flow.float32, device=flow.device(device))
     input2 = 2.3
     of_out = input1 > input2
     np_out = np.greater(np_arr, input2)

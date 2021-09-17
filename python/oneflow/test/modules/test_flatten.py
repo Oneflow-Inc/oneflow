@@ -18,7 +18,8 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
 
 import oneflow as flow
@@ -48,7 +49,8 @@ def _test_flatten(test_case, device):
 
 def _test_flatten_backward(test_case, device):
     m = flow.nn.Flatten().to(flow.device(device))
-    x = flow.Tensor(2, 3, 4, 5, device=flow.device(device), requires_grad=True)
+    x = flow.Tensor(2, 3, 4, 5, device=flow.device(device))
+    x.requires_grad = True
     flow.nn.init.uniform_(x)
     y = m(x)
     z = y.sum()
