@@ -24,6 +24,7 @@ class CpuLazyReferenceInstructionType : public LazyReferenceInstructionType {
   ~CpuLazyReferenceInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 };
 
 COMMAND(vm::RegisterInstructionType<CpuLazyReferenceInstructionType>("cpu.LazyReference"));
@@ -34,6 +35,7 @@ class CpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallback
   ~CpuAccessBlobByCallbackInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 };
 COMMAND(vm::RegisterInstructionType<CpuAccessBlobByCallbackInstructionType>(
     "cpu.AccessBlobByCallback"));
@@ -43,6 +45,7 @@ class CpuSoftSyncStreamInstructionType : public SoftSyncStreamInstructionType {
   CpuSoftSyncStreamInstructionType() = default;
   ~CpuSoftSyncStreamInstructionType() override = default;
   using stream_type = vm::CpuStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 };
 COMMAND(vm::RegisterInstructionType<CpuSoftSyncStreamInstructionType>("cpu.SoftSyncStream"));
 

@@ -31,6 +31,7 @@ class SendBlobInstructionType : public vm::InstructionType {
   virtual ~SendBlobInstructionType() override = default;
 
   using stream_type = vm::TransportSenderStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
   using RefCntType = vm::TransportSenderStreamType::RefCntType;
 
   void Infer(vm::Instruction* instruction) const override {
@@ -52,6 +53,7 @@ class ReceiveBlobInstructionType : public vm::InstructionType {
   virtual ~ReceiveBlobInstructionType() override = default;
 
   using stream_type = vm::TransportReceiverStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
   using RefCntType = vm::TransportReceiverStreamType::RefCntType;
 
   void Infer(vm::Instruction* instruction) const override {

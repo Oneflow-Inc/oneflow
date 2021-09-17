@@ -35,6 +35,7 @@ class NewParallelDescSymbolInstructionType final : public InstructionType {
   bool ResettingIdToObjectMap() const override { return true; }
 
   using stream_type = ControlStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(ParallelDescObjectInstrOperand);

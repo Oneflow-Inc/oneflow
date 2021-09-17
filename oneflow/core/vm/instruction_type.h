@@ -31,6 +31,8 @@ class InstructionType {
  public:
   virtual ~InstructionType() = default;
 
+  virtual bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const = 0;
+
   bool IsSequential() const { return IsFrontSequential(); }
   virtual bool IsFrontSequential() const { return false; }
   virtual bool ResettingIdToObjectMap() const { return false; }

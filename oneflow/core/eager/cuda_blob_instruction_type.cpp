@@ -26,6 +26,7 @@ class GpuLazyReferenceInstructionType : public LazyReferenceInstructionType {
   ~GpuLazyReferenceInstructionType() override = default;
 
   using stream_type = vm::AsyncCudaStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 };
 COMMAND(vm::RegisterInstructionType<GpuLazyReferenceInstructionType>("gpu.LazyReference"));
 
@@ -34,6 +35,7 @@ class GpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallback
   GpuAccessBlobByCallbackInstructionType() = default;
   ~GpuAccessBlobByCallbackInstructionType() override = default;
   using stream_type = vm::CudaStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 };
 COMMAND(vm::RegisterInstructionType<GpuAccessBlobByCallbackInstructionType>(
     "gpu.AccessBlobByCallback"));
@@ -43,6 +45,7 @@ class GpuSoftSyncStreamInstructionType : public SoftSyncStreamInstructionType {
   GpuSoftSyncStreamInstructionType() = default;
   ~GpuSoftSyncStreamInstructionType() override = default;
   using stream_type = vm::CudaStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 };
 COMMAND(vm::RegisterInstructionType<GpuSoftSyncStreamInstructionType>("gpu.SoftSyncStream"));
 

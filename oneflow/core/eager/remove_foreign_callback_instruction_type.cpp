@@ -29,6 +29,7 @@ class RemoveForeignCallbackInstructionType : public vm::InstructionType {
   ~RemoveForeignCallbackInstructionType() override = default;
 
   using stream_type = vm::HostStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
   void Infer(vm::Instruction* instruction) const override {
     // do nothing

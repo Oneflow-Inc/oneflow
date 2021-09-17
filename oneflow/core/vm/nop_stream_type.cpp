@@ -55,6 +55,7 @@ class NopInstructionType final : public InstructionType {
   ~NopInstructionType() override = default;
 
   using stream_type = NopStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
   void Infer(Instruction* instruction) const override { /* do nothing */
   }

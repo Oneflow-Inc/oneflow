@@ -44,6 +44,7 @@ class InitStringSymbolInstructionType final : public InstructionType {
   ~InitStringSymbolInstructionType() override = default;
 
   using stream_type = HostStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
   void Infer(Instruction* instruction) const override {
     FlatMsgView<StringObjectInstrOperand> args(instruction->instr_msg().operand());

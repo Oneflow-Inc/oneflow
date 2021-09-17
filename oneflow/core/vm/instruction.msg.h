@@ -136,6 +136,8 @@ OBJECT_MSG_BEGIN(Instruction);
   OF_PUBLIC void set_has_event_record(bool val);
   OF_PUBLIC const StreamType& stream_type() const;
 
+  OF_PUBLIC bool NoSynchronizeSrcBeforeConnect(const Instruction* dst) const;
+
   OF_PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
       const RwMutexedObject* operand_type(const Operand& operand) const {
     CheckOperand<mem_zone_modifier>(operand);

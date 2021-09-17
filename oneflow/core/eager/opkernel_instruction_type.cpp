@@ -50,6 +50,7 @@ class InitOpKernelObjectInstructionType final : public vm::InstructionType {
   ~InitOpKernelObjectInstructionType() override = default;
 
   using stream_type = vm::DeviceHelperStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
   void Infer(vm::Instruction* instruction) const override {
     FlatMsgView<NewOpKernelObjectInstrOperand> view;
@@ -85,6 +86,7 @@ class DeleteOpKernelObjectInstructionType final : public vm::InstructionType {
   ~DeleteOpKernelObjectInstructionType() override = default;
 
   using stream_type = vm::DeviceHelperStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
   void Infer(vm::Instruction* instruction) const override {
     FlatMsgView<DeleteOpKernelObjectInstrOperand> view;

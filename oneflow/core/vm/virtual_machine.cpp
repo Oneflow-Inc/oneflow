@@ -381,6 +381,7 @@ RwMutexedObjectAccess* VirtualMachine::ConsumeMirroredObject(OperandAccessType a
 
 void VirtualMachine::ConnectInstruction(Instruction* src_instruction,
                                         Instruction* dst_instruction) {
+  CHECK(src_instruction->NoSynchronizeSrcBeforeConnect(dst_instruction));
   CHECK_NE(src_instruction, dst_instruction);
   auto edge = ObjectMsgPtr<InstructionEdge>::NewFrom(mut_vm_thread_only_allocator(),
                                                      src_instruction, dst_instruction);

@@ -39,6 +39,9 @@ class CudaLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstr
   ~CudaLocalCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CudaStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override {
+    return &self->stream() == &dst->stream();
+  }
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -51,6 +54,7 @@ class AsyncCudaLocalCallOpKernelInstructionType final : public LocalCallOpKernel
   ~AsyncCudaLocalCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::AsyncCudaStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -64,6 +68,7 @@ class CudaH2DLocalCallOpKernelInstructionType final : public LocalCallOpKernelIn
   ~CudaH2DLocalCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CudaCopyH2DStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -77,6 +82,7 @@ class CudaD2HLocalCallOpKernelInstructionType final : public LocalCallOpKernelIn
   ~CudaD2HLocalCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CudaCopyD2HStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -90,6 +96,7 @@ class CudaCallOpKernelInstructionType final : public CallOpKernelInstructionType
   ~CudaCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::AsyncCudaStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -103,6 +110,7 @@ class CudaUserStatelessCallOpKernelInstructionType final
   ~CudaUserStatelessCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::AsyncCudaStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -117,6 +125,7 @@ class CudaSystemStatelessCallOpKernelInstructionType final
   ~CudaSystemStatelessCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::AsyncCudaStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -131,6 +140,7 @@ class CudaCopyH2DSystemStatelessCallOpKernelInstructionType final
   ~CudaCopyH2DSystemStatelessCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CudaCopyH2DStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -145,6 +155,7 @@ class CudaCopyD2HSystemStatelessCallOpKernelInstructionType final
   ~CudaCopyD2HSystemStatelessCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CudaCopyD2HStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
   std::shared_ptr<MemoryCase> GetOutBlobMemCase(const DeviceType device_type,
                                                 const int64_t device_id) const override {
@@ -165,6 +176,7 @@ class GpuFetchBlobHeaderInstructionType final : public FetchBlobHeaderInstructio
   ~GpuFetchBlobHeaderInstructionType() override = default;
 
   using stream_type = vm::AsyncCudaStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -177,6 +189,7 @@ class GpuFetchBlobBodyInstructionType final : public FetchBlobBodyInstructionTyp
   ~GpuFetchBlobBodyInstructionType() override = default;
 
   using stream_type = vm::AsyncCudaStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -189,6 +202,7 @@ class GpuFeedBlobInstructionType final : public FeedBlobInstructionType {
   ~GpuFeedBlobInstructionType() override = default;
 
   using stream_type = vm::AsyncCudaStreamType;
+  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
