@@ -16,8 +16,8 @@ limitations under the License.
 #ifndef _ONEFLOW_USER_KERNELS_ELEMENTWISE_XPU_KERNEL_H_
 #define _ONEFLOW_USER_KERNELS_ELEMENTWISE_XPU_KERNEL_H_
 #include "oneflow/core/framework/framework.h"
-
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA>
@@ -50,7 +50,7 @@ struct BinaryElemwiseXpuLauncher<DeviceType::kCPU, FunctorT, OutputT, InputA, In
 };
 
 template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA>
-class UnaryElemwiseXpuKernel final : public user_op::OpKernel {
+class UnaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UnaryElemwiseXpuKernel);
   UnaryElemwiseXpuKernel() = default;
@@ -88,7 +88,7 @@ class UnaryElemwiseXpuKernel final : public user_op::OpKernel {
 
 template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA,
          typename InputB>
-class BinaryElemwiseXpuKernel final : public user_op::OpKernel {
+class BinaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BinaryElemwiseXpuKernel);
   BinaryElemwiseXpuKernel() = default;
