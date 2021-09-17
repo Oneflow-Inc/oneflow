@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_methods.h"
 #include "oneflow/core/functional/impl/common.h"
 
 namespace oneflow {
@@ -32,7 +33,7 @@ class BinaryFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, y});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), y->contiguous()});
   }
 
  protected:
@@ -49,12 +50,13 @@ class InplaceableBinaryFunctor {
     if (inplace) {
       JUST(CheckInplaceValid(x));
       JUST(CheckShapeCanExpandTo(*y->shape(), *x->shape()));
+      CHECK_OR_RETURN(JUST(IsContiguous(x)));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {x, y}, outputs.get()));
+      JUST(OpInterpUtil::Dispatch(*op_, {x, y->contiguous()}, outputs.get()));
       return outputs->at(0);
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), y->contiguous()});
     }
   }
 

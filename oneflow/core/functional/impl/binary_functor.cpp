@@ -60,18 +60,20 @@ class AddFunctor {
     if (inplace) {
       JUST(CheckInplaceValid(x));
       JUST(CheckShapeCanExpandTo(*y->shape(), *x->shape()));
+      CHECK_OR_RETURN(JUST(IsContiguous(x)));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op, {x, y}, outputs.get()));
+      JUST(OpInterpUtil::Dispatch(*op, {x, y->contiguous()}, outputs.get()));
       return outputs->at(0);
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op, {x, y});
+    return OpInterpUtil::Dispatch<Tensor>(*op, {x->contiguous(), y->contiguous()});
   }
 
  private:
   std::shared_ptr<OpExpr> add_op_;
   std::shared_ptr<OpExpr> broadcast_add_op_;
 };
+
 class BroadcastPowFunctor : public BinaryFunctor {
  public:
   BroadcastPowFunctor() {
@@ -96,7 +98,7 @@ class MulFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     if (*x->shape() == *y->shape()) { return OpInterpUtil::Dispatch<Tensor>(*mul_op_, {x, y}); }
-    return OpInterpUtil::Dispatch<Tensor>(*broadcast_mul_op_, {x, y});
+    return OpInterpUtil::Dispatch<Tensor>(*broadcast_mul_op_, {x->contiguous(), y->contiguous()});
   }
 
  private:
@@ -231,12 +233,20 @@ class ScalarDivByTensorFunctor : public BinaryFunctor {
   }
 };
 
-class ReshapeLikeFunctor : public BinaryFunctor {
+class ReshapeLikeFunctor {
  public:
   ReshapeLikeFunctor() {
     op_ =
         CHECK_JUST(one::OpBuilder("reshape_like").Input("in").Input("like").Output("out").Build());
   }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), y});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 }  // namespace impl
