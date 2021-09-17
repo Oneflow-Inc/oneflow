@@ -55,7 +55,6 @@ REGISTER_NO_GRAD_USER_OP("range")
             static_cast<int64_t>(((float_limit - float_start) / float_delta)
                                  + 1);  // Do the ceil division, ceil((limit-start)/delta)
       }
-      printf("out shape is: %ld \n", range_elem_cnt);
       *out_shape = Shape({range_elem_cnt});
       return Maybe<void>::Ok();
     })

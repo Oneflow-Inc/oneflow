@@ -38,17 +38,6 @@ struct RangeFunctor<DeviceType::kGPU, T> final {
   }
 };
 
-// // float16 special case of RangeKernel template
-// template<>
-// void RangeFunctor<DeviceType::kGPU, float16>::operator()(DeviceCtx* ctx, const T start,
-//                                                          const T delta,
-//                                                          const int64_t range_elem_cnt,
-//                                                          float16* out) {
-//   RUN_CUDA_KERNEL((RangeForwardGpuKernel<half>), ctx, range_elem_cnt, start, delta,
-//   range_elem_cnt,
-//                   reinterpret_cast<half*>(out));
-// }
-
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_RANGE_FUNCTOR, (DeviceType::kGPU),
                                  RANGE_DATA_TYPE_SEQ);
 }  // namespace user_op

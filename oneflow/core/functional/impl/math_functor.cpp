@@ -206,7 +206,7 @@ class ReduceSumFunctor {
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     if (IsIntegralDataType(dtype) || dtype == DataType::kUInt8) {
-      // Set dtype as int64 when input is uint8, int8, int32, int64.
+      // Set dtype as int64 when input's dtype is uint8, int8, int32, int64.
       const auto& x_int64 = JUST(functional::Cast(x, DType::Int64()));
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x_int64}, attrs);
     } else {
