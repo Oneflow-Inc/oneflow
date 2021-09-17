@@ -18,7 +18,8 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
 
 import oneflow as flow
@@ -27,7 +28,7 @@ import oneflow.unittest
 
 def _test_unsqueeze(test_case, device):
     np_arr = np.random.rand(2, 6, 9, 3)
-    x = flow.Tensor(np_arr, device=flow.device(device))
+    x = flow.tensor(np_arr, dtype=flow.float32, device=flow.device(device))
     y = flow.unsqueeze(x, dim=1)
     output = np.expand_dims(np_arr, axis=1)
     test_case.assertTrue(np.allclose(output, y.numpy(), 1e-05, 1e-05))
@@ -35,7 +36,7 @@ def _test_unsqueeze(test_case, device):
 
 def _test_unsqueeze_tensor_function(test_case, device):
     np_arr = np.random.rand(2, 3, 4)
-    x = flow.Tensor(np_arr, device=flow.device(device))
+    x = flow.tensor(np_arr, dtype=flow.float32, device=flow.device(device))
     y = x.unsqueeze(dim=2)
     output = np.expand_dims(np_arr, axis=2)
     test_case.assertTrue(np.allclose(output, y.numpy(), 1e-05, 1e-05))
@@ -43,7 +44,7 @@ def _test_unsqueeze_tensor_function(test_case, device):
 
 def _test_unsqueeze_different_dim(test_case, device):
     np_arr = np.random.rand(4, 5, 6, 7)
-    x = flow.Tensor(np_arr, device=flow.device(device))
+    x = flow.tensor(np_arr, dtype=flow.float32, device=flow.device(device))
     for axis in range(-5, 5):
         y = flow.unsqueeze(x, dim=axis)
         output = np.expand_dims(np_arr, axis=axis)
@@ -52,7 +53,9 @@ def _test_unsqueeze_different_dim(test_case, device):
 
 def _test_unsqueeze_backward(test_case, device):
     np_arr = np.random.rand(2, 3, 4, 5)
-    x = flow.Tensor(np_arr, device=flow.device(device), requires_grad=True)
+    x = flow.tensor(
+        np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     y = flow.unsqueeze(x, dim=1).sum()
     y.backward()
     test_case.assertTrue(

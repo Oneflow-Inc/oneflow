@@ -45,9 +45,6 @@ class FakeQuantization(Module):
             & (clamp(round(x / scale + zero\\_point), quant\\_min, quant\\_max) - zero\\_point) * scale
 
     Args:
-        input (oneflow.Tensor): input tensor.
-        scale (oneflow.Tensor): Computed by min_max_observer or moving_average_min_max_observer op.
-        zero_point (oneflow.Tensor): Computed by min_max_observer or moving_average_min_max_observer op.
         quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8.
         quantization_scheme (str): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric".
         quantization_formula (str): Support "google" or "cambricon".
@@ -64,7 +61,7 @@ class FakeQuantization(Module):
 
         >>> weight = (np.random.random((2, 3, 4, 5)) - 0.5).astype(np.float32)
         
-        >>> input_tensor = flow.Tensor(
+        >>> input_tensor = flow.tensor(
         ...    weight, dtype=flow.float32
         ... )
         

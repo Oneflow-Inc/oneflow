@@ -131,9 +131,11 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
 
   const AttrMap& base_attrs() const { return base_attrs_; }
 
-  Maybe<StatefulLocalOpKernel> MutKernel4Device(const Device& device) const;
+  Maybe<StatefulLocalOpKernel> MutKernel4Device(Symbol<Device> device) const;
 
   bool has_device_infer_fn() const { return static_cast<bool>(device_infer_fn_); }
+  const user_op::DeviceInferFn& device_infer_fn() const { return device_infer_fn_; }
+
   Maybe<void> InferLogicalShapeAndDType(
       const AttrMap& attrs, const std::string& device_tag,
       const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
@@ -153,7 +155,7 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   user_op::TensorDescInferFn shape_infer_fn_;
   user_op::DataTypeInferFn dtype_infer_fn_;
   user_op::DeviceInferFn device_infer_fn_;
-  mutable HashMap<Device, std::shared_ptr<StatefulLocalOpKernel>> device2kernel_;
+  mutable HashMap<Symbol<Device>, std::shared_ptr<StatefulLocalOpKernel>> device2kernel_;
   std::shared_ptr<ConsistentTensorInferCache> consistent_tensor_infer_cache_;
 };
 
@@ -237,14 +239,14 @@ using DistributeCloneOpExpr = BuiltinOpExprImpl<DistributeCloneOpConf>;
 using DistributeConcatOpExpr = BuiltinOpExprImpl<DistributeConcatOpConf>;
 using DistributeAddOpExpr = BuiltinOpExprImpl<DistributeAddOpConf>;
 
-class SelectFirstOpExpr final : public OpExpr {
+class SelectTopNOpExpr final : public OpExpr {
  public:
-  static Maybe<SelectFirstOpExpr> New() {
-    return std::shared_ptr<SelectFirstOpExpr>(new SelectFirstOpExpr());
+  static Maybe<SelectTopNOpExpr> New() {
+    return std::shared_ptr<SelectTopNOpExpr>(new SelectTopNOpExpr());
   }
 
   const std::string& op_type_name() const override {
-    static const std::string kOpTypeName = "select_first";
+    static const std::string kOpTypeName = "select_top_n";
     return kOpTypeName;
   }
 
@@ -253,14 +255,17 @@ class SelectFirstOpExpr final : public OpExpr {
     return 0;
   }
 
-  int output_size() const override { return 1; }
+  int output_size() const override {
+    // output should be resized in apply function
+    return 0;
+  }
 
   Maybe<bool> IsGradDisabled() const override { return false; }
 
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
-  SelectFirstOpExpr() = default;
+  SelectTopNOpExpr() = default;
 
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };

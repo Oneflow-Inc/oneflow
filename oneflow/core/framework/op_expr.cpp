@@ -109,17 +109,16 @@ Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
   return Maybe<void>::Ok();
 }
 
-Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(const Device& device) const {
+Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(Symbol<Device> device) const {
   const auto& it = device2kernel_.find(device);
   if (it != device2kernel_.end()) { return it->second; }
 
   std::shared_ptr<OperatorConf> op_conf = std::make_shared<OperatorConf>();
   JUST(BuildOpConf(op_conf.get(), {}));
-  op_conf->set_device_tag(JUST(device.of_type()));
-  std::shared_ptr<const ParallelDesc> parallel_desc = device.parallel_desc_ptr();
-  const auto& opkernel =
-      JUST(StatefulLocalOpKernel::New(op_conf, SymbolOf(device), base_attrs(), parallel_desc,
-                                      input_arg_tuple(), output_arg_tuple()));
+  op_conf->set_device_tag(JUST(device->of_type()));
+  auto parallel_desc = JUST(Placement4Device(device)).shared_from_symbol();
+  const auto& opkernel = JUST(StatefulLocalOpKernel::New(
+      op_conf, device, base_attrs(), parallel_desc, input_arg_tuple(), output_arg_tuple()));
   device2kernel_.emplace(device, opkernel);
   return opkernel;
 }
@@ -300,10 +299,7 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
     UNIMPLEMENTED();
     return *(const cfg::NdSbp*)nullptr;
   }
-  int64_t parallel_num() const override {
-    UNIMPLEMENTED();
-    return 1;
-  }
+  int64_t parallel_num() const override { return 1; }
 };
 
 class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
@@ -614,9 +610,9 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<DistributeAddOpConf>::GetOrCreateOpGr
   UNIMPLEMENTED_THEN_RETURN();
 }
 
-Maybe<OpExprGradClosure> SelectFirstOpExpr::GetOrCreateOpGradClosure() const {
+Maybe<OpExprGradClosure> SelectTopNOpExpr::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
-    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("select_first"));
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("select_top_n"));
     CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
     JUST(op_grad_func_->Init(*this));
   }

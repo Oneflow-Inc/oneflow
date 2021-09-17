@@ -22,16 +22,17 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_addmm(test_case, shape, alpha, beta, device):
     mat1 = np.random.randn(*shape)
     mat2 = np.random.randn(*shape)
     input = np.random.randn(*shape)
-    mat1_tensor = flow.Tensor(mat1, dtype=flow.float32, device=flow.device(device))
-    mat2_tensor = flow.Tensor(mat2, dtype=flow.float32, device=flow.device(device))
-    input_tensor = flow.Tensor(input, dtype=flow.float32, device=flow.device(device))
+    mat1_tensor = flow.tensor(mat1, dtype=flow.float32, device=flow.device(device))
+    mat2_tensor = flow.tensor(mat2, dtype=flow.float32, device=flow.device(device))
+    input_tensor = flow.tensor(input, dtype=flow.float32, device=flow.device(device))
     of_out = flow.addmm(input_tensor, mat1_tensor, mat2_tensor, alpha, beta)
     np_out = np.add(beta * input, alpha * np.matmul(mat1, mat2))
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
@@ -41,9 +42,9 @@ def _test_addmm_backward(test_case, shape, alpha, beta, device):
     mat1 = np.random.randn(*shape)
     mat2 = np.random.randn(*shape)
     input = np.random.randn(*shape)
-    mat1_tensor = flow.Tensor(mat1, dtype=flow.float32, device=flow.device(device))
-    mat2_tensor = flow.Tensor(mat2, dtype=flow.float32, device=flow.device(device))
-    input_tensor = flow.Tensor(
+    mat1_tensor = flow.tensor(mat1, dtype=flow.float32, device=flow.device(device))
+    mat2_tensor = flow.tensor(mat2, dtype=flow.float32, device=flow.device(device))
+    input_tensor = flow.tensor(
         input, dtype=flow.float32, requires_grad=True, device=flow.device(device)
     )
     of_out = flow.addmm(input_tensor, mat1_tensor, mat2_tensor, alpha, beta).sum()

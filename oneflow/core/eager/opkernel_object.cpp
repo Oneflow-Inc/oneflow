@@ -48,7 +48,7 @@ void OpKernelObject::NewPartialInitializedKernel(
     const ParallelDesc* parallel_desc) {
   KernelConf kernel_conf;
   op.GenKernelConf(BlobDesc4BnInOp, parallel_ctx, &kernel_conf);
-  kernel_.reset(new EagerKernel(job_desc_.get(), kernel_conf));
+  kernel_.reset(new EagerKernel(kernel_conf));
 }
 
 Maybe<void> SystemOpKernelObject::ResetKernel(
@@ -79,9 +79,10 @@ void SystemOpKernelObject::ResetKernel(
     const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const OpNodeSignatureDesc& op_node_signature, const ParallelContext* parallel_ctx,
     const ParallelDesc* parallel_desc) {
-  KernelConf kernel_conf;
+  KernelConf kernel_conf{};
   op.GenKernelConf(BlobDesc4BnInOp, parallel_ctx, &kernel_conf);
-  kernel_ = ConstructKernel(job_desc_.get(), kernel_conf, nullptr);
+  kernel_ctx_.reset(new SystemOpKernelContext(nullptr));
+  kernel_ = ConstructKernel(kernel_conf, kernel_ctx_.get());
 }
 
 }  // namespace vm

@@ -38,10 +38,10 @@ def transpose_op(input, dim0, dim1):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        >>> input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> input = flow.tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         >>> out = flow.transpose(input, 0, 1).shape
         >>> out
-        flow.Size([6, 2, 5, 3])
+        oneflow.Size([6, 2, 5, 3])
 
     """
 

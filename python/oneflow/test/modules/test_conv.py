@@ -18,7 +18,8 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
 
 import oneflow as flow
@@ -1151,7 +1152,7 @@ def _test_conv2d(
     test_case, conv, data, weight, output, bias=None, device="cuda",
 ):
     to_device = flow.device(device)
-    x = flow.Tensor(data, device=to_device)
+    x = flow.tensor(data, dtype=flow.float32, device=to_device)
     conv.weight = flow.nn.Parameter(flow.Tensor(weight))
     if bias is not None:
         conv.bias = flow.nn.Parameter(flow.Tensor(bias))
@@ -1164,7 +1165,7 @@ def _test_conv2d_backward(
     test_case, conv, data, weight, data_grad, weight_grad, bias=None, device="cuda",
 ):
     to_device = flow.device(device)
-    x = flow.Tensor(data, device=to_device, requires_grad=True)
+    x = flow.tensor(data, dtype=flow.float32, device=to_device, requires_grad=True)
     conv.weight = flow.nn.Parameter(flow.Tensor(weight), requires_grad=True)
     if bias is not None:
         conv.bias = flow.nn.Parameter(flow.Tensor(bias))
@@ -1288,7 +1289,7 @@ def _test_conv2d_large_in_channel(test_case, device):
             ]
         ]
     )
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     weight = np.array(
@@ -1470,7 +1471,7 @@ def _test_conv2d_large_out_channel(test_case, device):
             ]
         ]
     )
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     weight = np.array(

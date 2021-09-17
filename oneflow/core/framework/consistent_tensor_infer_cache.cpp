@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 
 namespace oneflow {
 namespace one {
@@ -29,7 +30,7 @@ bool OptionalEqual(const Optional<Symbol<cfg::NdSbp>>& lhs,
                    const Optional<Symbol<cfg::NdSbp>>& rhs) {
   if (lhs.has_value() != rhs.has_value()) { return false; }
   if (!lhs.has_value()) { return true; }
-  return CHECK_JUST(lhs.value()) == CHECK_JUST(rhs.value());
+  return CHECK_JUST(lhs) == CHECK_JUST(rhs);
 }
 
 }  // namespace
@@ -37,7 +38,7 @@ bool OptionalEqual(const Optional<Symbol<cfg::NdSbp>>& lhs,
 size_t InputConsistentTensorMeta::hash_value() const {
   size_t hash_value = std::hash<Symbol<ConsistentTensorMeta>>()(tensor_meta());
   if (consumer_nd_sbp_constraint().has_value()) {
-    hash_value ^= std::hash<Symbol<cfg::NdSbp>>()(CHECK_JUST(consumer_nd_sbp_constraint().value()));
+    hash_value ^= std::hash<Symbol<cfg::NdSbp>>()(CHECK_JUST(consumer_nd_sbp_constraint()));
   }
   return hash_value;
 }
@@ -88,7 +89,7 @@ Maybe<void> ConsistentTensorMetaInferArgs::MakeNdSbpConstraints(
   for (int i = 0; i < input_arg_tuple.size(); ++i) {
     const auto& constaint = input_consistent_tensor_metas_.at(i).consumer_nd_sbp_constraint();
     if (constaint.has_value()) {
-      (*map)[input_arg_tuple.indexed_bns().at(i)] = *CHECK_JUST(constaint.value());
+      (*map)[input_arg_tuple.indexed_bns().at(i)] = *CHECK_JUST(constaint);
     }
   }
   return Maybe<void>::Ok();
@@ -179,7 +180,71 @@ Maybe<void> CheckIsDeviceSupportedByOp(const ParallelDesc& parallel_desc,
   return Maybe<void>::Ok();
 }
 
+class UserOpExprOpDeviceInferContext final : public user_op::DeviceInferContext {
+ public:
+  UserOpExprOpDeviceInferContext(const UserOpExpr* user_op_expr,
+                                 const ConsistentTensorMetaInferArgs* infer_args)
+      : user_op_expr_(user_op_expr),
+        composed_attrs_(infer_args->attrs(), user_op_expr->base_attrs()),
+        in_tensor_devices_(user_op_expr_->input_size()),
+        out_tensor_devices_(user_op_expr_->output_size()) {
+    for (int i = 0; i < user_op_expr_->input_size(); ++i) {
+      const auto& parallel_desc =
+          infer_args->input_consistent_tensor_metas().at(i).tensor_meta()->parallel_desc();
+      in_tensor_devices_.at(i) = CHECK_JUST(GetTensorDevice(parallel_desc));
+    }
+  }
+
+  const std::vector<std::pair<std::string, int32_t>>& inputs() const override {
+    return user_op_expr_->indexed_input_pairs();
+  }
+
+  const std::vector<std::pair<std::string, int32_t>>& outputs() const override {
+    return user_op_expr_->indexed_output_pairs();
+  }
+
+  Symbol<Device>* OutputTensorDevice4ArgNameAndIndex(const std::string& name,
+                                                     int64_t index) override {
+    const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
+    int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+    CHECK_GE(tuple_index, 0);
+    CHECK_LT(tuple_index, user_op_expr_->output_size());
+    return &out_tensor_devices_.at(tuple_index);
+  }
+
+  Symbol<Device> InputTensorDevice4ArgNameAndIndex(const std::string& name,
+                                                   int64_t index) const override {
+    const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
+    int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+    CHECK_GE(tuple_index, 0);
+    CHECK_LT(tuple_index, user_op_expr_->input_size());
+    return in_tensor_devices_.at(tuple_index);
+  }
+
+ private:
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
+      const std::string& attr_name) const override {
+    return composed_attrs_.Attr4Name(attr_name);
+  }
+  const UserOpExpr* user_op_expr_;
+  const ComposedAttrMap composed_attrs_;
+  std::vector<Symbol<Device>> in_tensor_devices_;
+  std::vector<Symbol<Device>> out_tensor_devices_;
+};
+
 }  // namespace
+
+/* static */ Maybe<Symbol<Device>> ConsistentTensorInferCache::InferOpDevice(
+    const UserOpExpr& user_op_expr, const ConsistentTensorMetaInferArgs& infer_args) {
+  if (!user_op_expr.device_infer_fn()) {
+    Symbol<ParallelDesc> parallel_desc =
+        infer_args.input_consistent_tensor_metas().at(0).tensor_meta()->parallel_desc();
+    return GetTensorDevice(parallel_desc);
+  } else {
+    UserOpExprOpDeviceInferContext op_device_infer_ctx(&user_op_expr, &infer_args);
+    return TRY(user_op_expr.device_infer_fn()(&op_device_infer_ctx));
+  }
+}
 
 /* static */ Maybe<const ConsistentTensorInferResult> ConsistentTensorInferCache::Infer(
     const UserOpExpr& user_op_expr, const ConsistentTensorMetaInferArgs& infer_args) {
@@ -240,6 +305,7 @@ Maybe<void> CheckIsDeviceSupportedByOp(const ParallelDesc& parallel_desc,
     ConsistentTensorMeta tensor_meta(shape, data_type, nd_sbp, parallel_desc);
     output_metas->at(i) = SymbolOf(tensor_meta);
   }
+  result->set_op_device(JUST(InferOpDevice(user_op_expr, infer_args)));
   return std::shared_ptr<const ConsistentTensorInferResult>(std::move(result));
 }
 
@@ -258,8 +324,8 @@ Maybe<void> CheckIsDeviceSupportedByOp(const ParallelDesc& parallel_desc,
         infer_args.attrs(), parallel_desc->device_tag(), GetInputTensorMeta,
         [&](int32_t i) { return output_mut_metas.at(i).mut_tensor_meta(); }));
   }
-  auto* result =
-      new ConsistentTensorInferResult(user_op_expr.input_size(), user_op_expr.output_size());
+  auto result = std::make_unique<ConsistentTensorInferResult>(user_op_expr.input_size(),
+                                                              user_op_expr.output_size());
   auto* output_metas = result->mut_output_tensor_metas();
   for (int32_t i = 0; i < user_op_expr.output_size(); ++i) {
     const auto& output_mut_meta = output_mut_metas.at(i);
@@ -269,7 +335,8 @@ Maybe<void> CheckIsDeviceSupportedByOp(const ParallelDesc& parallel_desc,
     ConsistentTensorMeta tensor_meta(shape, data_type, nd_sbp, parallel_desc);
     output_metas->at(i) = SymbolOf(tensor_meta);
   }
-  return std::shared_ptr<const ConsistentTensorInferResult>(result);
+  result->set_op_device(JUST(GetTensorDevice(parallel_desc)));
+  return std::shared_ptr<const ConsistentTensorInferResult>(std::move(result));
 }
 
 Maybe<const ConsistentTensorInferResult> ConsistentTensorInferCache::GetOrInfer(

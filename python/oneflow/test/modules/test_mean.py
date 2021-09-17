@@ -18,7 +18,8 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
 
 import oneflow as flow
@@ -26,13 +27,13 @@ import oneflow.unittest
 
 
 def _test_mean(test_case, shape, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
     )
     of_out = flow.mean(input, dim=1)
     np_out = np.mean(input.numpy(), axis=1)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
     )
     of_out = flow.mean(input, dim=0)
@@ -43,7 +44,7 @@ def _test_mean(test_case, shape, device):
 def _test_mean_negative_dim(test_case, shape, device):
     if len(shape) < 4:
         shape = (2, 3, 4, 5)
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
     )
     of_out = flow.mean(input, dim=(-2, -1, -3))
@@ -53,7 +54,7 @@ def _test_mean_negative_dim(test_case, shape, device):
 
 def _test_mean_backward(test_case, shape, device):
     np_arr = np.random.randn(*shape)
-    x = flow.Tensor(
+    x = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     y = flow.mean(x, dim=1)
