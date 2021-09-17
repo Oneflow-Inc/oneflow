@@ -117,7 +117,7 @@ Maybe<void> CreateDstSubsetTickAndSinkTicks(
     parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":0");
     OperatorConf tick_op;
     {
-      tick_op.set_name("System-AutoTick-Tick_" + NewUniqueId());
+      tick_op.set_name("System-SyncAllRanksSinkTick_" + NewUniqueId());
       auto* tick_conf = tick_op.mutable_tick_conf();
       // gather ticks from all processes.
       for (int64_t tick_machine_id : process_ranks) {
