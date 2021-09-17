@@ -29,6 +29,8 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<Symbol<RankGroup>> RankGroup::RawNew(Symbol<ParallelDesc> parallel_desc) {
+  LOG(ERROR) << "parallel_desc: " << PlacementToString(parallel_desc)
+             << "debug string: " << parallel_desc->parallel_conf().DebugString();
   CHECK_EQ_OR_RETURN(parallel_desc->sorted_machine_ids().size(), parallel_desc->parallel_num());
   const auto& sorted_machine_ids = parallel_desc->sorted_machine_ids();
   return New(std::set<int64_t>{sorted_machine_ids.begin(), sorted_machine_ids.end()});
