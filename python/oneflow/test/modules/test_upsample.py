@@ -374,7 +374,7 @@ class TestUpsample2d(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
     @unittest.skip(
-        "pytorch nearest interpolate has bug, https://github.com/pytorch/pytorch/issues/65200"
+        "The nearest interpolate operation in pytorch has bug, https://github.com/pytorch/pytorch/issues/65200"
     )
     @autotest()
     def test_upsample2d(test_case):
@@ -385,7 +385,7 @@ class TestUpsample2d(flow.unittest.TestCase):
         return y
 
     @unittest.skip(
-        "pytorch bilinear interpolate has bug, https://github.com/pytorch/pytorch/issues/65200"
+        "The bilinear interpolate operation in pytorch has bug, https://github.com/pytorch/pytorch/issues/65200"
     )
     @autotest()
     def test_upsample2d_bilinear(test_case):

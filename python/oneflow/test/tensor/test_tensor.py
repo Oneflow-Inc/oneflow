@@ -595,7 +595,7 @@ class TestTensor(flow.unittest.TestCase):
         return y
 
     @autotest()
-    def test_mean_random_data(test_case):
+    def test_mean_with_random_data(test_case):
         device = random_device()
         dim = random(1, 4).to(int)
         x = random_pytorch_tensor(ndim=4, dtype=float).to(device)

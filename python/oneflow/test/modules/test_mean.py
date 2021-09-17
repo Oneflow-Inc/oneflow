@@ -80,7 +80,7 @@ class TestMean(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
     @autotest()
-    def test_mean_random_data(test_case):
+    def test_mean_with_random_data(test_case):
         device = random_device()
         dim = random(1, 4).to(int)
         x = random_pytorch_tensor(ndim=4, dtype=float).to(device)
