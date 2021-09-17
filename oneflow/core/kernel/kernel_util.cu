@@ -30,11 +30,6 @@ __global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
 }
 
 template<typename T>
-__global__ void SqrtGpu(const int64_t n, const T* x, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::sqrt(x[i]); }
-}
-
-template<typename T>
 __global__ void AxpyGpu(const int n, const T alpha, const T* x, const int incx, T* y,
                         const int incy) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[i * incy] += alpha * x[i * incx]; }
@@ -142,10 +137,6 @@ KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) {
   template<typename T>     \
   void KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::value>::type>::
 
-KU_FLOATING_METHOD Dot(DeviceCtx* ctx, const int n, const T* x, const int incx, const T* y,
-                       const int incy, T* result) {
-  cublas_dot<T>(ctx->cublas_pmd_handle(), n, x, incx, y, incy, result);
-}
 KU_FLOATING_METHOD Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx,
                         T* y, const int incy) {
   cublas_axpy<T>(ctx->cublas_pmh_handle(), n, &alpha, x, incx, y, incy);
@@ -158,9 +149,6 @@ KU_FLOATING_METHOD Axpy(DeviceCtx* ctx, const int n, const T* alpha, const T* x,
 KU_FLOATING_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
   MulGpu<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
-}
-KU_FLOATING_METHOD Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
-  SqrtGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 
 KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0) {
