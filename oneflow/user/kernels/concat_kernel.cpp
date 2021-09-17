@@ -54,7 +54,6 @@ class ConcatKernel final : public user_op::OpKernel {
     if (out_tensor->shape().elem_cnt() == 0) { return; }
     const int64_t axis = ctx->Attr<int64_t>("axis");
     const int64_t out_cols = out_tensor->shape().Count(axis);
-    CHECK_GT(out_cols, 0);
     const int64_t rows = out_tensor->shape().elem_cnt() / out_cols;
     CHECK_GT(rows, 0);
     int64_t out_col_offset = 0;
