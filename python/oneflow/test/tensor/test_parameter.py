@@ -20,8 +20,6 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 import oneflow.unittest
-
-
 from oneflow.test_utils.automated_test_util import *
 
 
@@ -29,10 +27,18 @@ from oneflow.test_utils.automated_test_util import *
 class TestParameter(flow.unittest.TestCase):
     @autotest(n=1)
     def test_parameter_grad_fn_none(test_case):
-        x = torch.Tensor(2, 3).requires_grad_(True)
+        x = torch.ones(2, 3).requires_grad_(True)
         y = x + x
         z = torch.nn.Parameter(y)
         return z.grad_fn
+
+    @autotest(n=1)
+    def test_parameter_set_data_autograd_meta(test_case):
+        x = torch.ones(2, 3).requires_grad_(True)
+        y = x + x
+        z = torch.nn.Parameter(x)
+        z.data = y
+        return z.grad_fn, z.is_leaf
 
     def test_parameter_set_data(test_case):
         a = flow.nn.Parameter(flow.ones(2, 3), False)
@@ -41,7 +47,7 @@ class TestParameter(flow.unittest.TestCase):
         a.data = b
         test_case.assertEqual(old_id, id(a))
         test_case.assertTrue(a.shape == (4, 5))
-        test_case.assertTrue(a.requires_grad)
+        test_case.assertFalse(a.requires_grad)
         test_case.assertTrue(a.is_leaf)
 
 
