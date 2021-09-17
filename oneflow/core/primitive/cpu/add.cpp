@@ -25,7 +25,7 @@ namespace {
 template<typename T, size_t arity>
 void AddCpu(const T* const* srcs, T* dst, size_t count) {
   for (size_t i = 0; i < count; ++i) {
-    T sum = 0;
+    T sum = T(0);
     for (size_t a = 0; a < arity; ++a) { sum += srcs[a][i]; }
     dst[i] = sum;
   }
@@ -34,7 +34,7 @@ void AddCpu(const T* const* srcs, T* dst, size_t count) {
 template<typename T>
 void AddCpu(const T* const* srcs, size_t arity, T* dst, size_t count) {
   for (size_t i = 0; i < count; ++i) {
-    T sum = 0;
+    T sum = T(0);
     for (size_t a = 0; a < arity; ++a) { sum += srcs[a][i]; }
     dst[i] = sum;
   }
@@ -45,10 +45,10 @@ class AddImpl : public Add {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AddImpl);
   AddImpl() = default;
-  ~AddImpl() = default;
+  ~AddImpl() override = default;
 
   void Launch(StreamContext* stream_ctx, const void* const* srcs, size_t arity, void* dst,
-              size_t count) {
+              size_t count) override {
 #define ONE_IF(a)                                                                            \
   if (arity == a) {                                                                          \
     AddCpu<T, a>(reinterpret_cast<const T* const*>(srcs), reinterpret_cast<T*>(dst), count); \
@@ -86,7 +86,7 @@ class AddFactoryImpl : public AddFactory {
 #define MAKE_NEW_ADD_ENTRY(type_cpp, type_proto) {type_proto, NewAdd<type_cpp>},
 
     static const std::map<DataType, std::function<std::unique_ptr<Add>()>> new_add_handle{
-        OF_PP_FOR_EACH_TUPLE(MAKE_NEW_ADD_ENTRY, CPU_PRIMITIVE_NATIVE_TYPE_SEQ)};
+        OF_PP_FOR_EACH_TUPLE(MAKE_NEW_ADD_ENTRY, CPU_PRIMITIVE_ALL_TYPE_SEQ)};
 #undef MAKE_NEW_ADD_ENTRY
     const auto it = new_add_handle.find(data_type);
     if (it != new_add_handle.end()) {

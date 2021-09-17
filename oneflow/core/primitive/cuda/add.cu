@@ -88,8 +88,8 @@ template<typename T>
 class AddImpl : public Add, public CudaGraphSupport {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AddImpl);
-  explicit AddImpl() = default;
-  ~AddImpl() = default;
+  AddImpl() = default;
+  ~AddImpl() override = default;
 
   void Launch(StreamContext* stream_ctx, const void* const* srcs, size_t arity, void* dst,
               size_t count) override {
