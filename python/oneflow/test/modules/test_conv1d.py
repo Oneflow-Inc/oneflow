@@ -456,6 +456,5 @@ class TestConv1d(flow.unittest.TestCase):
         return y
 
 
-
 if __name__ == "__main__":
     unittest.main()

@@ -160,6 +160,7 @@ class TestSqrt(flow.unittest.TestCase):
         z = x.sqrt()
         return z
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestExp(flow.unittest.TestCase):
     @autotest()
@@ -168,6 +169,7 @@ class TestExp(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = torch.exp(x)
         return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestRsqrt(flow.unittest.TestCase):

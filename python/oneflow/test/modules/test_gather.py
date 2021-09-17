@@ -132,6 +132,5 @@ class TestGather(flow.unittest.TestCase):
         return torch.gather(input, dim, index)
 
 
-
 if __name__ == "__main__":
     unittest.main()

@@ -341,7 +341,6 @@ class TestGroupNorm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    # @unittest.skip("groupnorm has bug")
     @autotest()
     def test_group_norm_with_random_data(test_case):
         channels = random(5, 20)
@@ -357,6 +356,7 @@ class TestGroupNorm(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=4, dim1=channels).to(device)
         y = m(x)
         return y
+
 
 if __name__ == "__main__":
     unittest.main()

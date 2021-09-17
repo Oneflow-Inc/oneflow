@@ -436,6 +436,7 @@ class TestSoftsignModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestReluFunction(flow.unittest.TestCase):
     @autotest()
@@ -444,6 +445,7 @@ class TestReluFunction(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=2, dim1=3).to(device)
         y = torch.relu(x)
         return y
+
 
 if __name__ == "__main__":
     unittest.main()
