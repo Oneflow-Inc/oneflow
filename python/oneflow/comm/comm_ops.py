@@ -34,17 +34,17 @@ def all_reduce(tensor):
         >>> # We have 1 process groups, 2 ranks.
         >>> import oneflow as flow
 
-        >>> input = flow.tensor([[1, 2], [3, 4]], device="cuda") + flow.env.get_local_rank()
-        >>> # input on rank0
-        >>> input # doctest: +ONLY_CHECK_RANK_0
+        >>> tensor = flow.tensor([[1, 2], [3, 4]], device="cuda") + flow.env.get_local_rank()
+        >>> # tensor on rank0
+        >>> tensor # doctest: +ONLY_CHECK_RANK_0
         tensor([[1, 2],
                 [3, 4]], device='cuda:0', dtype=oneflow.int64)
-        >>> # input on rank1
-        >>> input # doctest: +ONLY_CHECK_RANK_1
+        >>> # tensor on rank1
+        >>> tensor # doctest: +ONLY_CHECK_RANK_1
         tensor([[2, 3],
                 [4, 5]], device='cuda:1', dtype=oneflow.int64)
-        >>> out = flow.comm.all_reduce(input)
-        >>> out.numpy()
+        >>> flow.comm.all_reduce(tensor)
+        >>> tensor.numpy()
         array([[3, 5],
                [7, 9]])
 
@@ -54,11 +54,11 @@ def all_reduce(tensor):
     assert tensor.is_local
     device_type = tensor.device.type
     placement = flow.env.all_device_placement(device_type)
-    tensor = tensor.to_consistent(
+    result = tensor.to_consistent(
         placement=placement, sbp=flow.sbp.partial_sum
     ).to_consistent(placement=placement, sbp=flow.sbp.broadcast)
-
-    return tensor.to_local()
+     
+    tensor.data = result
 
 
 def all_gather(tensor_list, tensor):
@@ -202,9 +202,10 @@ def reduce(tensor, dst):
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
     assert tensor.is_local
     assert isinstance(dst, int)
-    result = flow.comm.all_reduce(tensor)
-    if flow.env.get_rank() == dst:
-        tensor.data = result
+    original_tensor = tensor
+    flow.comm.all_reduce(tensor)
+    if flow.env.get_rank() != dst:
+        tensor.data = original_tensor
 
 
 def all_to_all(output_tensor_list, input_tensor_list):
