@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/tensor_methods.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
@@ -45,11 +46,13 @@ class AddNFunctor {
   }
   Maybe<Tensor> operator()(const TensorTuple& inputs, bool inplace) const {
     CHECK_GE_OR_RETURN(inputs.size(), 2);
+    if (inplace) { CHECK_OR_RETURN(JUST(IsContiguous(inputs.at(0)))); }
     TensorTuple outputs;
     for (int i = 0; i < inputs.size(); i += kMaxInputCount) {
       size_t size = (i + kMaxInputCount) < inputs.size() ? kMaxInputCount : inputs.size() - i;
       TensorTuple partial_inputs(size);
       std::copy(inputs.begin() + i, inputs.begin() + i + size, partial_inputs.begin());
+      for (int j = 0; j < size; ++j) { partial_inputs.at(j) = inputs.at(i + j)->contiguous(); }
       if (i == 0 && inplace) {
         JUST(CheckInplaceValid(partial_inputs.at(0)));
         std::shared_ptr<TensorTuple> outs = std::make_shared<TensorTuple>(1);
@@ -89,12 +92,13 @@ class ScalarAddFunctor {
     }
     if (inplace) {
       JUST(CheckInplaceValid(x));
+      CHECK_OR_RETURN(JUST(IsContiguous(x)));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
       return outputs->at(0);
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
     }
   }
 
@@ -136,12 +140,12 @@ class ScalarMulFunctor {
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
     } else if (scalar.IsIntegral()) {
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
       JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarMul shoule be float or int.";
     }
@@ -180,7 +184,7 @@ class ScalarPowFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("exponent", JUST(scalar.As<double>())));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -204,7 +208,7 @@ class ReduceSumFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -246,7 +250,7 @@ class ReduceProdFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -262,7 +266,7 @@ class TransposeFunctor {
                            const std::vector<int32_t>& permute) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -336,11 +340,6 @@ class ConsistentArange2Functor {
   }
 };
 
-class ArgMaxFunctor : public UnaryFunctor {
- public:
-  ArgMaxFunctor() { op_ = CHECK_JUST(one::OpBuilder("argmax").Input("in").Output("out").Build()); }
-};
-
 class CastFunctor {
  public:
   CastFunctor() { op_ = CHECK_JUST(one::OpBuilder("cast").Input("in").Output("out").Build()); }
@@ -350,7 +349,7 @@ class CastFunctor {
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -402,65 +401,7 @@ class ClampFunctor {
     } else {
       op = clip_op_.get();
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op, {x}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> clip_op_;
-  std::shared_ptr<OpExpr> clip_min_op_;
-  std::shared_ptr<OpExpr> clip_max_op_;
-};
-
-class ClampGradFunctor {
- public:
-  ClampGradFunctor() {
-    clip_op_ = CHECK_JUST(
-        one::OpBuilder("clip_by_scalar_grad").Input("dy").Input("x").Output("dx").Build());
-    clip_min_op_ = CHECK_JUST(
-        one::OpBuilder("clip_by_scalar_min_grad").Input("dy").Input("x").Output("dx").Build());
-    clip_max_op_ = CHECK_JUST(
-        one::OpBuilder("clip_by_scalar_max_grad").Input("dy").Input("x").Output("dx").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
-                           const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& min,
-                           const Optional<Scalar>& max) const {
-    CHECK_OR_RETURN(min.has_value() || max.has_value())
-        << "Requires one of argument `min` and `max` at least in clip_grad.";
-    MutableAttrMap attrs;
-    if (IsFloatingDataType(x->dtype()->data_type())) {
-      if (min.has_value()) {
-        const auto& min_val = JUST(min);
-        JUST(attrs.SetAttr<double>("floating_min", JUST(min_val->As<double>())));
-        JUST(attrs.SetAttr<int64_t>("integral_min", 0));
-      }
-      if (max.has_value()) {
-        const auto& max_val = JUST(max);
-        JUST(attrs.SetAttr<double>("floating_max", JUST(max_val->As<double>())));
-        JUST(attrs.SetAttr<int64_t>("integral_max", 0));
-      }
-    } else if (IsIntegralDataType(x->dtype()->data_type())) {
-      if (min.has_value()) {
-        const auto& min_val = JUST(min);
-        JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min_val->As<int64_t>())));
-        JUST(attrs.SetAttr<double>("floating_min", 0));
-      }
-      if (max.has_value()) {
-        const auto& max_val = JUST(max);
-        JUST(attrs.SetAttr<double>("floating_max", 0));
-        JUST(attrs.SetAttr<int64_t>("integral_max", JUST(max_val->As<int64_t>())));
-      }
-    } else {
-      UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
-    }
-    const OpExpr* op = nullptr;
-    if (!min.has_value()) {
-      op = clip_max_op_.get();
-    } else if (!max.has_value()) {
-      op = clip_min_op_.get();
-    } else {
-      op = clip_op_.get();
-    }
-    return OpInterpUtil::Dispatch<Tensor>(*op, {dy, x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op, {x->contiguous()}, attrs);
   }
 
  private:
@@ -496,9 +437,11 @@ class MinimumFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     if (*x->shape() == *y->shape()) {
-      return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_,
+                                            {x->contiguous(), y->contiguous()});
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*broadcast_minimum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_minimum_op_,
+                                            {x->contiguous(), y->contiguous()});
     }
   }
 
@@ -519,9 +462,11 @@ class MaximumFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     if (*x->shape() == *y->shape()) {
-      return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_,
+                                            {x->contiguous(), y->contiguous()});
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*broadcast_maximum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_maximum_op_,
+                                            {x->contiguous(), y->contiguous()});
     }
   }
 
@@ -549,7 +494,7 @@ class ScalarFModFunctor {
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarAdd shoule be float or int.";
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -577,7 +522,7 @@ class ScalarLogicalBaseFunctor {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarAdd shoule be float or int.";
     }
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -682,10 +627,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<TransposeFunctor>("Transpose");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
-  m.add_functor<ArgMaxFunctor>("ArgMax");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
-  m.add_functor<ClampGradFunctor>("ClampGrad");
   m.add_functor<SelectTopNFunctor>("SelectTopN");
   m.add_functor<MinimumFunctor>("Minimum");
   m.add_functor<MaximumFunctor>("Maximum");

@@ -981,6 +981,64 @@ class BroadcastPowYGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ClampGradFunctor {
+ public:
+  ClampGradFunctor() {
+    clip_op_ = CHECK_JUST(
+        one::OpBuilder("clip_by_scalar_grad").Input("dy").Input("x").Output("dx").Build());
+    clip_min_op_ = CHECK_JUST(
+        one::OpBuilder("clip_by_scalar_min_grad").Input("dy").Input("x").Output("dx").Build());
+    clip_max_op_ = CHECK_JUST(
+        one::OpBuilder("clip_by_scalar_max_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& min,
+                           const Optional<Scalar>& max) const {
+    CHECK_OR_RETURN(min.has_value() || max.has_value())
+        << "Requires one of argument `min` and `max` at least in clip_grad.";
+    MutableAttrMap attrs;
+    if (IsFloatingDataType(x->dtype()->data_type())) {
+      if (min.has_value()) {
+        const auto& min_val = JUST(min);
+        JUST(attrs.SetAttr<double>("floating_min", JUST(min_val->As<double>())));
+        JUST(attrs.SetAttr<int64_t>("integral_min", 0));
+      }
+      if (max.has_value()) {
+        const auto& max_val = JUST(max);
+        JUST(attrs.SetAttr<double>("floating_max", JUST(max_val->As<double>())));
+        JUST(attrs.SetAttr<int64_t>("integral_max", 0));
+      }
+    } else if (IsIntegralDataType(x->dtype()->data_type())) {
+      if (min.has_value()) {
+        const auto& min_val = JUST(min);
+        JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min_val->As<int64_t>())));
+        JUST(attrs.SetAttr<double>("floating_min", 0));
+      }
+      if (max.has_value()) {
+        const auto& max_val = JUST(max);
+        JUST(attrs.SetAttr<double>("floating_max", 0));
+        JUST(attrs.SetAttr<int64_t>("integral_max", JUST(max_val->As<int64_t>())));
+      }
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
+    }
+    const OpExpr* op = nullptr;
+    if (!min.has_value()) {
+      op = clip_max_op_.get();
+    } else if (!max.has_value()) {
+      op = clip_min_op_.get();
+    } else {
+      op = clip_op_.get();
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op, {dy, x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> clip_op_;
+  std::shared_ptr<OpExpr> clip_min_op_;
+  std::shared_ptr<OpExpr> clip_max_op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -1021,6 +1079,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastPowXGradFunctor>("BroadcastPowXGrad");
   m.add_functor<impl::BroadcastPowYGradFunctor>("BroadcastPowYGrad");
   m.add_functor<impl::DivGradFunctor>("DivGrad");
+  m.add_functor<impl::ClampGradFunctor>("ClampGrad");
 };
 
 }  // namespace functional
