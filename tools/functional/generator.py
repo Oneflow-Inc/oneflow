@@ -49,6 +49,37 @@ types_allowed = {
     "PyObject*",
 }
 
+mangled_name = {
+    "Void": "V",
+    "Tensor": "T",
+    "TensorTuple": "Tt",
+    "Scalar": "Sc",
+    "Int": "I",
+    "Int32": "I32",
+    "Int64": "I64",
+    "Float": "F",
+    "Double": "D",
+    "String": "S",
+    "Bool": "B",
+    "ScalarList": "Scl",
+    "IntList": "Il",
+    "Int32List": "I32l",
+    "Int64List": "I64l",
+    "FloatList": "Fl",
+    "DoubleList": "Dl",
+    "StringList": "Sl",
+    "BoolList": "Bl",
+    "DataType": "Dt",
+    "Shape": "Sh",
+    "Generator": "G",
+    "TensorIndex": "Ti",
+    "Device": "De",
+    "Placement": "P",
+    "Sbp": "Sbp",
+    "SbpList": "Sbpl",
+    "PyObject*": "Pyo",
+}
+
 generic_type_aliases = {
     "Int": "int32_t",
     "Int32": "int32_t",
@@ -225,6 +256,14 @@ class Argument:
             if self._default_value == "None":
                 self._optional = True
                 self._default_cpp_value = ""
+            elif self._type.endswith("List"):
+                if self._default_value != "None":
+                    _value_list = [
+                        self._default_value for i in range(self._size)
+                    ]  # For int32List[2] = 2, _value_list will be ["2", "2"]
+                    self._default_cpp_value = (
+                        "{" + ", ".join(_value_list) + "}"
+                    )  # ["2", "2"] -> "{2, 2}"
             elif self._default_value in value_aliases:
                 self._default_cpp_value = value_aliases[self._default_value]
             else:
@@ -311,6 +350,15 @@ class FunctionSignature:
         fmt += ")"
         return fmt
 
+    def get_mangled_type(self):
+        fmt = mangled_name[self._ret._type]
+        for _, arg in enumerate(self._args):
+            fmt += mangled_name[arg._type]
+        return fmt
+
+    def get_schema_name(self):
+        return "{0}Schema_{1}".format(self._name, self.get_mangled_type())
+
 
 class Block:
     def __init__(self, name, signature, bind_python):
@@ -389,12 +437,14 @@ class Generator:
                 if not block._bind_python:
                     continue
                 signature = block._signature
-                schema_types.append("functional::{0}Schema".format(signature._name))
+                schema_types.append(
+                    "functional::{0}".format(signature.get_schema_name())
+                )
                 return_type = signature._ret._cpp_type
                 schema_fmt += "\n"
-                schema_fmt += "struct {0}Schema {{\n".format(signature._name)
-                schema_fmt += "  using FType = decltype(functional::{0});\n".format(
-                    signature._name
+                schema_fmt += "struct {0} {{\n".format(signature.get_schema_name())
+                schema_fmt += "  using FType = {0};\n".format(
+                    signature.to_string(to_cpp=True, drop_name=True)
                 )
                 schema_fmt += "  using R = {0};\n".format(return_type)
                 schema_fmt += "\n"
@@ -413,14 +463,14 @@ class Generator:
                 schema_fmt += "  static FunctionDef function_def;\n"
                 schema_fmt += "};\n"
                 schema_fmt += "\n"
-                schema_fmt += "constexpr size_t {0}Schema::max_args;\n".format(
-                    signature._name
+                schema_fmt += "constexpr size_t {0}::max_args;\n".format(
+                    signature.get_schema_name()
                 )
-                schema_fmt += "constexpr size_t {0}Schema::max_pos_args;\n".format(
-                    signature._name
+                schema_fmt += "constexpr size_t {0}::max_pos_args;\n".format(
+                    signature.get_schema_name()
                 )
-                schema_fmt += "constexpr char const* {0}Schema::signature;\n".format(
-                    signature._name
+                schema_fmt += "constexpr char const* {0}::signature;\n".format(
+                    signature.get_schema_name()
                 )
                 return_def = "ReturnDef(ValueTypeOf<{0}>())".format(return_type)
                 argument_def = []
@@ -448,8 +498,11 @@ class Generator:
                                 optional,
                             )
                         )
-                schema_fmt += 'FunctionDef {0}Schema::function_def = {{\n/*name*/"{1}",\n/*return_def*/{2},\n/*argument_def*/{{\n{3}\n}}\n}};\n'.format(
-                    signature._name, name, return_def, ",\n".join(argument_def)
+                schema_fmt += 'FunctionDef {0}::function_def = {{\n/*name*/"{1}",\n/*return_def*/{2},\n/*argument_def*/{{\n{3}\n}}\n}};\n'.format(
+                    signature.get_schema_name(),
+                    name,
+                    return_def,
+                    ",\n".join(argument_def),
                 )
 
             if len(schema_types) > 0:

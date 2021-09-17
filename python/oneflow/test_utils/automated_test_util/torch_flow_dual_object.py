@@ -21,7 +21,13 @@ import warnings
 
 import numpy as np
 import oneflow as flow
-import torch as torch_original
+
+try:
+    import torch as torch_original
+except ImportError:
+    print(
+        "automated_test_util module uses PyTorch to verify OneFlow module's interface and result. Please install Pytorch according `https://pytorch.org/get-started/locally/`."
+    )
 
 from .generators import Nothing, generator, random_tensor
 
@@ -37,6 +43,8 @@ def torch_tensor_to_flow(x):
 note_pytorch_method_names = []
 note_pytorch_args = []
 note_pytorch_kwargs = []
+vis_tensor = []
+call_tensor_id = []
 
 
 class PyTorchDoesNotSupportError(Exception):
@@ -119,6 +127,23 @@ def get_args(callable, *args, **kwargs):
     new_pytorch_args = []
     new_pytorch_kwargs = {}
     for x in pytorch_args:
+        if isinstance(x, (tuple, list)):
+            new_x = f"("
+            len_x = len(x)
+            for i in range(len_x):
+                if type(x[i]) is torch_original.Tensor:
+                    if i < len_x - 1:
+                        new_x += f"Tensor({get_tensor_shape(x[i])}), "
+                    else:
+                        new_x += f"Tensor({get_tensor_shape(x[i])})"
+                else:
+                    if i < len_x - 1:
+                        new_x += f"{x[i]}, "
+                    else:
+                        new_x += f"{x[i]}"
+            new_x += f")"
+            new_pytorch_args.append(new_x)
+            continue
         if type(x) is torch_original.Tensor:
             new_pytorch_args.append(f"Tensor({get_tensor_shape(x)})")
         else:
@@ -189,6 +214,25 @@ def GetDualObject(name, pytorch, oneflow):
 
                         try:
                             pytorch_res = pytorch(*pytorch_args, **pytorch_kwargs)
+                            if isinstance(pytorch_res, torch_original.Tensor):
+                                if (
+                                    hasattr(pytorch, "__name__")
+                                    and pytorch.__name__ == "to"
+                                    and (
+                                        (
+                                            len(pytorch_args) > 0
+                                            and pytorch_args[0] == "cpu"
+                                        )
+                                        or (
+                                            len(pytorch_kwargs) > 0
+                                            and pytorch_kwargs["device"] == "cpu"
+                                        )
+                                    )
+                                ):
+                                    pass
+                                else:
+                                    call_tensor_id.append(id(pytorch_res))
+
                         except Exception as e:
                             raise PyTorchDoesNotSupportError(e)
 
@@ -196,6 +240,7 @@ def GetDualObject(name, pytorch, oneflow):
                             oneflow_res = torch_tensor_to_flow(pytorch_res)
                         else:
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
+
                         return GetDualObject("unused", pytorch_res, oneflow_res)
 
                 else:
@@ -213,6 +258,8 @@ def GetDualObject(name, pytorch, oneflow):
                             pytorch_res = pytorch_method(
                                 *pytorch_args, **pytorch_kwargs
                             )
+                            if isinstance(pytorch_res, torch_original.Tensor):
+                                call_tensor_id.append(id(pytorch_res))
                         except Exception as e:
                             raise PyTorchDoesNotSupportError(e)
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
@@ -227,12 +274,12 @@ def GetDualObject(name, pytorch, oneflow):
 
 def note_print_args(x, end=True):
     if end:
-        if isinstance(x, str) and not x.startswith("Tensor"):
+        if isinstance(x, str) and "Tensor" not in x:
             print(f"\033[32m'{x}, '\033[0m", end="")
         else:
             print(f"\033[32m{x}, \033[0m", end="")
     else:
-        if isinstance(x, str) and not x.startswith("Tensor"):
+        if isinstance(x, str) and "Tensor" not in x:
             print(f"\033[32m'{x}'\033[0m", end="")
         else:
             print(f"\033[32m{x}\033[0m", end="")
@@ -240,12 +287,12 @@ def note_print_args(x, end=True):
 
 def note_print_kwargs(x, y, end=True):
     if end:
-        if isinstance(y, str) and not y.startswith("Tensor"):
+        if isinstance(y, str) and "Tensor" not in y:
             print(f"\033[32m{x}='{y}, '\033[0m", end="")
         else:
             print(f"\033[32m{x}={y}, \033[0m", end="")
     else:
-        if isinstance(y, str) and not y.startswith("Tensor"):
+        if isinstance(y, str) and "Tensor" not in y:
             print(f"\033[32m{x}='{y}'\033[0m", end="")
         else:
             print(f"\033[32m{x}={y}\033[0m", end="")
@@ -266,6 +313,8 @@ def print_note_fake_program():
 
         if note_pytorch_kwargs[i]:
             index = 0
+            if note_pytorch_args[i]:
+                print(f"\033[32m, \033[0m", end="")
             for x in note_pytorch_kwargs[i].keys():
                 index += 1
                 note_print_kwargs(
@@ -273,11 +322,33 @@ def print_note_fake_program():
                 )
         print(f"\033[32m)\033[0m")
 
+    print(f"\033[32m-----------------------------------------------------------\033[0m")
+    unique_vis_tensor = []
+    flag_vis_tensor = [False for _ in range(len(vis_tensor))]
+    for i in range(len(vis_tensor)):
+        if flag_vis_tensor[i] == True:
+            continue
+        unique_vis_tensor.append(vis_tensor[i])
+        flag_vis_tensor[i] = True
+        for j in range(i + 1, len(vis_tensor)):
+            if id(vis_tensor[i]) == id(vis_tensor[j]) and flag_vis_tensor[j] == False:
+                flag_vis_tensor[j] = True
+
+    print(f"\033[32mThis program has {len(unique_vis_tensor)} input tensor: \033[0m")
+    for input_tensor in unique_vis_tensor:
+        print(f"\033[32mShape{get_tensor_shape(input_tensor)}\033[0m")
+        print(f"\033[32m{input_tensor}\033[0m")
+        print(
+            f"\033[32m-----------------------------------------------------------\033[0m"
+        )
+
 
 def clear_note_fake_program():
     note_pytorch_method_names.clear()
     note_pytorch_args.clear()
     note_pytorch_kwargs.clear()
+    call_tensor_id.clear()
+    vis_tensor.clear()
 
 
 class DualObject:
@@ -371,6 +442,12 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
     return equality_res
 
 
+@equality_checker(int, int)
+@equality_checker(bool, bool)
+def check_basetype_equality(a, b, ignored1, ignored2):
+    return a == b
+
+
 @equality_checker(type(None), type(None))
 def check_nonetype_equality(a, b, ignored1, ignored2):
     return True
@@ -407,6 +484,7 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                     for x in res:
                         if auto_backward:
                             if isinstance(x.pytorch, torch_original.Tensor):
+                                call_tensor_id.append(id(x.pytorch))
                                 x.sum().backward()
                         dual_objects_to_test.append(x)
                 for x in dual_modules_to_test:
@@ -421,6 +499,7 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                                 getattr(x.oneflow, key),
                             )
                         )
+                        call_tensor_id.append(id(getattr(x.pytorch, key)))
                         dual_objects_to_test.append(
                             GetDualObject(
                                 "unused",
@@ -428,6 +507,14 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                                 getattr(x.oneflow, key).grad,
                             )
                         )
+                        call_tensor_id.append(id(getattr(x.pytorch, key).grad))
+
+                for x in dual_objects_to_test:
+                    if (
+                        isinstance(x.pytorch, torch_original.Tensor)
+                        and id(x.pytorch) not in call_tensor_id
+                    ):
+                        vis_tensor.append(x.pytorch)
                 for x in dual_objects_to_test:
                     test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol), x)
                 if verbose:
@@ -466,4 +553,4 @@ def random_pytorch_tensor(
 
 
 torch = GetDualObject("", torch_original, flow)
-__all__ = ["torch", "autotest", "random_pytorch_tensor"]
+__all__ = ["autotest", "random_pytorch_tensor"]

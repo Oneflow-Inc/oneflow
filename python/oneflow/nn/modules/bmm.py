@@ -39,7 +39,7 @@ def bmm_op(input, mat2):
         >>> input2 = flow.Tensor(np.random.randn(10, 4, 5))
         >>> of_out = flow.bmm(input1, input2)
         >>> of_out.shape
-        flow.Size([10, 3, 5])
+        oneflow.Size([10, 3, 5])
     """
     assert (
         input.shape[0] == mat2.shape[0] and input.shape[2] == mat2.shape[1]

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -23,7 +24,6 @@ limitations under the License.
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
-#include "oneflow/core/functional/scalar.h"
 
 namespace oneflow {
 namespace one {
@@ -323,12 +323,7 @@ class GridSampleGradFunctor {
 class PadGradFunctor {
  public:
   PadGradFunctor() {
-    constant_pad_1d_grad_ =
-        CHECK_JUST(one::OpBuilder("constant_pad1d_grad").Input("dy").Output("dx").Build());
-    constant_pad_2d_grad_ =
-        CHECK_JUST(one::OpBuilder("constant_pad2d_grad").Input("dy").Output("dx").Build());
-    constant_pad_3d_grad_ =
-        CHECK_JUST(one::OpBuilder("constant_pad3d_grad").Input("dy").Output("dx").Build());
+    pad_grad_ = CHECK_JUST(one::OpBuilder("pad_grad").Input("dy").Output("dx").Build());
     reflect_pad_grad_ =
         CHECK_JUST(one::OpBuilder("reflection_pad2d_grad").Input("dy").Output("dx").Build());
     replicate_pad_grad_ =
@@ -336,29 +331,31 @@ class PadGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy, const std::vector<int64_t>& pad,
                            const std::string& mode, const Scalar& value) const {
-    size_t padding_size = 2 * dy->shape()->NumAxes();
+    const int64_t ndim = dy->shape()->NumAxes();
+    size_t padding_size = 2 * ndim;
     CHECK_LE_OR_RETURN(pad.size(), padding_size)
         << "Pad size should less than or equal to input axes * 2.";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
     if (mode == "constant") {
+      std::vector<int64_t> pad_before(ndim, 0);
+      std::vector<int64_t> pad_after(ndim, 0);
+      const int64_t pad_pair = pad.size() / 2;
+      for (int64_t i = 0; i < pad_pair; ++i) {
+        pad_before[ndim - i - 1] = pad[2 * i];
+        pad_after[ndim - i - 1] = pad[2 * i + 1];
+      }
+      JUST(attrs.SetAttr<std::vector<int64_t>>("padding_before", pad_before));
+      JUST(attrs.SetAttr<std::vector<int64_t>>("padding_after", pad_after));
+
       if (IsFloatingDataType(dy->dtype()->data_type())) {
-        JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
-        JUST(attrs.SetAttr<int64_t>("integral_value", 0));
+        JUST(attrs.SetAttr<double>("floating_constant_value", JUST(value.As<double>())));
+        JUST(attrs.SetAttr<int64_t>("integral_constant_value", 0));
       } else if (IsIntegralDataType(dy->dtype()->data_type())) {
-        JUST(attrs.SetAttr<double>("floating_value", 0));
-        JUST(attrs.SetAttr<int64_t>("integral_value", JUST(value.As<int64_t>())));
-      } else {
-        UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
+        JUST(attrs.SetAttr<double>("floating_constant_value", 0));
+        JUST(attrs.SetAttr<int64_t>("integral_constant_value", JUST(value.As<int64_t>())));
       }
-      switch (dy->shape()->NumAxes()) {
-        case 3: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_1d_grad_, {dy}, attrs);
-        case 4: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_2d_grad_, {dy}, attrs);
-        case 5: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_3d_grad_, {dy}, attrs);
-        default:
-          UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode << ", but "
-                                      << dy->shape()->NumAxes() << "d-tensor is not support yet! ";
-      }
+      return OpInterpUtil::Dispatch<Tensor>(*pad_grad_, {dy}, attrs);
     } else if (mode == "reflect") {
       return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_grad_, {dy}, attrs);
     } else if (mode == "replicate") {
@@ -370,11 +367,9 @@ class PadGradFunctor {
   }
 
  private:
+  std::shared_ptr<OpExpr> pad_grad_;
   std::shared_ptr<OpExpr> reflect_pad_grad_;
   std::shared_ptr<OpExpr> replicate_pad_grad_;
-  std::shared_ptr<OpExpr> constant_pad_1d_grad_;
-  std::shared_ptr<OpExpr> constant_pad_2d_grad_;
-  std::shared_ptr<OpExpr> constant_pad_3d_grad_;
 };
 
 class AvgPoolingNdGradFunctor {
@@ -444,6 +439,41 @@ class NormalizationGradFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class NormalizationAddReluGradFunctor {
+ public:
+  NormalizationAddReluGradFunctor() {
+    addend_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu_grad")
+                                .Input("x")
+                                .Input("dy")
+                                .Input("mean")
+                                .Input("inv_variance")
+                                .Input("gamma")
+                                .Input("beta")
+                                .Input("reserve_space")
+                                .Input("y")
+                                .Output("dx")
+                                .Output("gamma_diff")
+                                .Output("beta_diff")
+                                .Output("addend_diff")
+                                .Build());
+  }
+  Maybe<TensorTuple> operator()(
+      const std::shared_ptr<one::Tensor>& x, const std::shared_ptr<one::Tensor>& grad,
+      const std::shared_ptr<one::Tensor>& mean, const std::shared_ptr<one::Tensor>& inv_variance,
+      const std::shared_ptr<one::Tensor>& gamma, const std::shared_ptr<one::Tensor>& beta,
+      const std::shared_ptr<one::Tensor>& reserve_space, const std::shared_ptr<one::Tensor>& y,
+      const int32_t& axis, const float& epsilon) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    JUST(attrs.SetAttr<float>("epsilon", epsilon));
+    return OpInterpUtil::Dispatch<TensorTuple>(
+        *addend_op_, {x, grad, mean, inv_variance, gamma, beta, reserve_space, y}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> addend_op_;
 };
 
 class LayerNormGradFunctor {
@@ -967,6 +997,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PadGradFunctor>("PadGrad");
   m.add_functor<impl::AvgPoolingNdGradFunctor>("AvgPoolingNdGrad");
   m.add_functor<impl::NormalizationGradFunctor>("NormalizationGrad");
+  m.add_functor<impl::NormalizationAddReluGradFunctor>("NormalizationAddReluGrad");
   m.add_functor<impl::LayerNormGradFunctor>("LayerNormGrad");
   m.add_functor<impl::LayerNormParamGradFunctor>("LayerNormParamGrad");
   m.add_functor<impl::LayerNormAffineParamGradFunctor>("LayerNormAffineParamGrad");

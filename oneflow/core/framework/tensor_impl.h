@@ -158,7 +158,7 @@ class ConsistentTensorImpl : public TensorImpl {
     return nullptr;
   }
 
-  Maybe<TransportToken> transport_token() const { return transport_token_.to_maybe(); }
+  Maybe<TransportToken> transport_token() const { return JUST(transport_token_); }
 
   Maybe<void> set_transport_token(const TransportToken& transport_token) {
     CHECK_OR_RETURN(!transport_token_.has_value());

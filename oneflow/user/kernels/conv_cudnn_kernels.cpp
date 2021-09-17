@@ -193,7 +193,8 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     }
   }
 
-  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx) const override {
+  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx,
+                            user_op::OpKernelState* state) const override {
     return Global<ResourceDesc, ForSession>::Get()
         ->resource()
         .cudnn_conf()
@@ -270,7 +271,8 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
         args.params.max_ws_size, beta, args.xdesc.Get(), dx->mut_dptr()));
   }
 
-  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx) const override {
+  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx,
+                            user_op::OpKernelState* state) const override {
     return Global<ResourceDesc, ForSession>::Get()
         ->resource()
         .cudnn_conf()
@@ -334,7 +336,8 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel, public user_op::
         args.params.max_ws_size, CudnnSPZeroPtr<T>(), args.wdesc.Get(), filter_diff->mut_dptr()));
   }
 
-  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx) const override {
+  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx,
+                            user_op::OpKernelState* state) const override {
     return Global<ResourceDesc, ForSession>::Get()
         ->resource()
         .cudnn_conf()
