@@ -153,13 +153,13 @@ class TestTensor(flow.unittest.TestCase):
         ):
             b._tensor_buffer_shapes_and_dtypes
 
-    @flow.unittest.skip_unless_1n2d()
+    @flow.unittest.skip_unless_1n4d()
     def test_consistent_tensor_2d_sbp_init(test_case):
         V = 10
         H = 4
         S = 6
 
-        P = flow.placement("cuda", {0: [0, 1]}, (2, 1))
+        P = flow.placement("cuda", {0: [0, 1, 2, 3]}, (2, 2))
 
         wte = flow.nn.Parameter(
             flow.empty(
