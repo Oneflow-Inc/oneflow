@@ -41,7 +41,6 @@ class CpuReleaseTensorInstructionType final : public ReleaseTensorInstructionTyp
   CpuReleaseTensorInstructionType() = default;
   ~CpuReleaseTensorInstructionType() override = default;
   using stream_type = vm::CpuStreamType;
-  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 };
 COMMAND(vm::RegisterInstructionType<CpuReleaseTensorInstructionType>("cpu.ReleaseTensor"));
 
@@ -51,7 +50,6 @@ class GpuReleaseTensorInstructionType final : public ReleaseTensorInstructionTyp
   GpuReleaseTensorInstructionType() = default;
   ~GpuReleaseTensorInstructionType() override = default;
   using stream_type = vm::CudaStreamType;
-  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 };
 COMMAND(vm::RegisterInstructionType<GpuReleaseTensorInstructionType>("gpu.ReleaseTensor"));
 #endif

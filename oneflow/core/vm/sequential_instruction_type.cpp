@@ -63,7 +63,6 @@ class ComputeRankFrontSeqCallbackInstructionType final
   ~ComputeRankFrontSeqCallbackInstructionType() override = default;
 
   using stream_type = HostStreamType;
-  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
   void Infer(Instruction* instruction) const override { UNIMPLEMENTED(); }
   void Compute(Instruction* instruction) const override { Run(instruction->instr_msg()); }
@@ -78,7 +77,6 @@ class CtrlComputeRankFrontSeqCallbackInstructionType final
   ~CtrlComputeRankFrontSeqCallbackInstructionType() override = default;
 
   using stream_type = ControlStreamType;
-  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
   void Infer(VirtualMachine*, InstructionMsg* instr_msg) const override { UNIMPLEMENTED(); }
   void Compute(VirtualMachine*, InstructionMsg* instr_msg) const override { Run(*instr_msg); }
@@ -94,7 +92,6 @@ class GlobalFrontSeqBarrierInstructionType : public InstructionType {
   virtual ~GlobalFrontSeqBarrierInstructionType() override = default;
 
   using stream_type = HostStreamType;
-  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
   virtual bool IsFrontSequential() const override { return true; }
 };

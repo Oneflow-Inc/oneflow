@@ -338,10 +338,6 @@ bool Instruction::Done() const {
   return stream_type().QueryInstructionStatusDone(stream(), status_buffer());
 }
 
-bool Instruction::NoSynchronizeSrcBeforeConnect(const Instruction* dst) const {
-  return instr_msg().instr_type_id().instruction_type().NoSynchronizeSrcBeforeConnect(this, dst);
-}
-
 void Instruction::set_has_event_record(bool val) {
   return stream_type().set_has_event_record(mut_status_buffer(), val);
 }

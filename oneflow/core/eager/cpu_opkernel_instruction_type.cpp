@@ -34,7 +34,6 @@ class CpuLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstru
   ~CpuLocalCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
-  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -47,7 +46,6 @@ class CpuCallOpKernelInstructionType final : public CallOpKernelInstructionType 
   ~CpuCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
-  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -61,7 +59,6 @@ class CpuUserStatelessCallOpKernelInstructionType final
   ~CpuUserStatelessCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
-  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -76,7 +73,6 @@ class CpuSystemStatelessCallOpKernelInstructionType final
   ~CpuSystemStatelessCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
-  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -90,7 +86,6 @@ class CpuFetchBlobHeaderInstructionType final : public FetchBlobHeaderInstructio
   ~CpuFetchBlobHeaderInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
-  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -103,7 +98,6 @@ class CpuFetchBlobBodyInstructionType final : public FetchBlobBodyInstructionTyp
   ~CpuFetchBlobBodyInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
-  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -116,7 +110,6 @@ class CpuFeedBlobInstructionType final : public FeedBlobInstructionType {
   ~CpuFeedBlobInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
-  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }

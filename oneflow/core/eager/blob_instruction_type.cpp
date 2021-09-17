@@ -51,7 +51,6 @@ class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
   ~CudaHostRegisterBlobInstructionType() override = default;
 
   using stream_type = vm::DeviceHelperStreamType;
-  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
   void Infer(vm::Instruction* instruction) const override {
     // do nothing
@@ -81,7 +80,6 @@ class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
   ~CudaHostUnregisterBlobInstructionType() override = default;
 
   using stream_type = vm::DeviceHelperStreamType;
-  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
   void Infer(vm::Instruction* instruction) const override {
     // do nothing

@@ -85,7 +85,6 @@ class RunLazyJobInstructionType final : public InstructionType {
   RunLazyJobInstructionType() = default;
   ~RunLazyJobInstructionType() = default;
   using stream_type = LazyJobStreamType;
-  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
   void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
   void Compute(vm::Instruction* instruction) const override {
     const auto& cur_nn_graph = GetCurNNGraph(instruction);

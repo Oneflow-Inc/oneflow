@@ -34,7 +34,6 @@ class TryClearObjectInstructionType final : public InstructionType {
   ~TryClearObjectInstructionType() override = default;
 
   using stream_type = DeviceHelperStreamType;
-  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(TryClearObjectInstrOperand);

@@ -66,7 +66,6 @@ class NewObjectInstructionType final : public InstructionType {
   bool ResettingIdToObjectMap() const override { return true; }
 
   using stream_type = ControlStreamType;
-  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(NewObjectInstruction);
@@ -117,7 +116,6 @@ class BroadcastObjectReferenceInstructionType final : public InstructionType {
   bool ResettingIdToObjectMap() const override { return true; }
 
   using stream_type = ControlStreamType;
-  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(BroadcastObjectReferenceInstruction);
@@ -177,7 +175,6 @@ class ReplaceMirroredInstructionType final : public InstructionType {
   bool ResettingIdToObjectMap() const override { return true; }
 
   using stream_type = ControlStreamType;
-  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(ReplaceMirroredInstruction);
@@ -233,7 +230,6 @@ class DeleteObjectInstructionType final : public InstructionType {
   ~DeleteObjectInstructionType() override = default;
 
   using stream_type = ControlStreamType;
-  bool NoSynchronizeSrcBeforeConnect(const Instruction* self, const Instruction* dst) const override { return true; }
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(DeleteObjectInstruction);
