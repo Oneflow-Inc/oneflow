@@ -96,6 +96,13 @@ class TestTensor(flow.unittest.TestCase):
         output = flow.tensor(tensor)
         test_case.assertEqual(output.dtype, flow.float32)
         test_case.assertTrue(np.allclose(output.numpy(), np_arr))
+    
+    @autotest()
+    def test_tensor_sign_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.sign()
+        return y
 
     def _test_tensor_init_methods(test_case, tensor_creator, get_numpy):
         shape = (2, 3, 4, 5)
