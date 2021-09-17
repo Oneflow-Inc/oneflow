@@ -373,8 +373,8 @@ class TestUpsample2d(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-
-    @autotest(auto_backward=False)
+    @unittest.skip("pytorch nearest interpolate has bug, https://github.com/pytorch/pytorch/issues/65200")
+    @autotest()
     def test_upsample2d(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
@@ -382,14 +382,16 @@ class TestUpsample2d(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @unittest.skip("pytorch bilinear interpolate has bug, https://github.com/pytorch/pytorch/issues/65200")
     @autotest()
     def test_upsample2d_bilinear(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4).to(device)
-        m = torch.nn.Upsample(scale_factor=random().to(float), mode="bilinear")
+        m = torch.nn.Upsample(scale_factor=random().to(float), mode="bilinear", align_corners=random_bool())
         y = m(x)
         return y
 
+    
 
 if __name__ == "__main__":
     unittest.main()

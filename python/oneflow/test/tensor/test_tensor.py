@@ -104,6 +104,20 @@ class TestTensor(flow.unittest.TestCase):
         y = x.sign()
         return y
 
+    @autotest()
+    def test_flow_tensor_gather_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
+        dim = random(0, 4).to(int)
+        index = random_pytorch_tensor(
+            ndim=4,
+            dim1=random(1, 3).to(int),
+            dim2=random(1, 4).to(int),
+            dim3=random(1, 5).to(int),
+            dtype=int,
+        ).to(device)
+        return input.gather(dim, index)
+
     def _test_tensor_init_methods(test_case, tensor_creator, get_numpy):
         shape = (2, 3, 4, 5)
         x = tensor_creator(*shape)

@@ -57,14 +57,12 @@ def gather_op(input, dim, index, sparse_grad=False):
     ), "Value of dim is out of range(dim should be less than len(index.shape))"
     assert len(input.shape) == len(
         index.shape
-    ), "Dimensions of input and index should equal"
+    ), "dimensions of input and index should equal"
     for i in range(0, len(input.shape)):
-        if dim == i:
-            continue
-        else:
+        if i != dim:
             assert (
-                input.shape[i] == index.shape[i]
-            ), "Dimensions of input and index should be same except at dim"
+                index.shape[i] <= input.shape[i]
+            ), "index.size(d) <= input.size(d) for all dimensions d != dim"
     return flow._C.dim_gather(input, index, dim=dim)
 
 
