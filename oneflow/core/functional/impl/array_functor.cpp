@@ -590,6 +590,7 @@ class ReshapeFunctor {
     op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
+    if (x->is_eager() && x->is_local()) { return view::Reshape(x, shape); }
     int need_infer_axis = -1;
     size_t count = 1;
     for (int i = 0; i < shape.NumAxes(); ++i) {
@@ -629,7 +630,10 @@ class SliceBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
-    if (x->is_eager() && x->is_local()) { return JUST(view::Slice(x, start, stop, step)); }
+    if (x->is_eager() && x->is_local()) {
+      // return ToContiguous(JUST(view::Slice(x, start, stop, step)));
+      return view::Slice(x, start, stop, step);
+    }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
