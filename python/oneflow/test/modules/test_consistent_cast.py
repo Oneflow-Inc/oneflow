@@ -557,6 +557,7 @@ def _test_cpu_p2s_with_random_parameter(test_case, device_list):
             np.allclose(cpu_tensor.to_local().numpy(), cuda_tensor.to_local().numpy())
         )
 
+
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestConsistentCast(flow.unittest.TestCase):
