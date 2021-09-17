@@ -35,7 +35,7 @@ add_docstr(
 
         >>> x = flow.tensor(np.asarray([[[[1, -2], [3, 4]]]]), dtype=flow.float32)
         >>> alpha = flow.nn.Parameter(flow.tensor([1], dtype=flow.float32).fill_(0.25))
-        >>> print(flow._C.prelu(x, alpha).numpy())
+        >>> print(flow.nn.functional.prelu(x, alpha).numpy())
         [[[[ 1.  -0.5]
            [ 3.   4. ]]]]
    
@@ -139,7 +139,7 @@ add_docstr(
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.tensor(x)     
           
-        >>> out = flow._C.log_sigmoid(input)
+        >>> out = flow.nn.functional.log_sigmoid(input)
         >>> out
         tensor([-0.9741, -0.6931, -0.4741], dtype=oneflow.float32)
 
@@ -168,7 +168,7 @@ add_docstr(
 
         >>> x = np.array([1, 2, 3]).astype(np.float32)
         >>> input = flow.tensor(x) 
-        >>> out = flow._C.softsign(input)
+        >>> out = flow.nn.functional.softsign(input)
         >>> out
         tensor([0.5000, 0.6667, 0.7500], dtype=oneflow.float32)
  
