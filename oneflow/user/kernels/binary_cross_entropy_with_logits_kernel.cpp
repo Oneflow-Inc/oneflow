@@ -25,9 +25,15 @@ namespace {
 using namespace loss;
 
 template<typename T>
-inline T ComputeMaxVal(T x) {
+inline T ComputeMaxVal(const T x) {
   T y = -x;
   return y < 0 ? 0 : y;
+}
+
+template<typename T>
+inline T CalSigmoid(const T x) {
+  const T half_of_one = static_cast<T>(0.5);
+  return half_of_one * std::tanh(half_of_one * x) + half_of_one;
 }
 
 template<typename T>
@@ -62,7 +68,7 @@ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, const T* input
     T input_val = input[i];
     T target_val = target[i];
     T dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
-    T input_sigmoid = 0.5 * std::tanh(0.5 * input_val) + 0.5;
+    T input_sigmoid = CalSigmoid(input_val);
     if (pos_weight_processed == nullptr) {
       dx[i] = (input_sigmoid - target_val) * dy_val;
     } else {

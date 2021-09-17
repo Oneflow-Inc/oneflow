@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
+#include <cub/cub.cuh>
 #include "oneflow/user/kernels/loss_kernel_util.h"
 
 namespace oneflow {
@@ -23,30 +23,33 @@ namespace loss {
 template<typename T>
 __global__ void ApplyLossReductionImplKernel(int64_t elem_cnt, const T* tmp_out, T* out,
                                              bool is_reduce_mean) {
-  __shared__ T outs[kCudaThreadsNumPerBlock];
-  outs[threadIdx.x] = static_cast<T>(0);
+  typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
+  __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
+  T thread_sum = static_cast<T>(0);
   for (int i = threadIdx.x; i < elem_cnt; i += kCudaThreadsNumPerBlock) {
-    outs[threadIdx.x] += tmp_out[i];
+    thread_sum += tmp_out[i];
   }
   __syncthreads();
+  T block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(thread_sum, cub::Sum());
   if (threadIdx.x == 0) {
-    *out = static_cast<T>(0);
-    for (int i = 0; i < kCudaThreadsNumPerBlock; ++i) { *out += outs[i]; }
+    *out = block_sum;
     if (is_reduce_mean) { *out /= elem_cnt; }
   }
 }
+
 template<>
 __global__ void ApplyLossReductionImplKernel<half>(int64_t elem_cnt, const half* tmp_out, half* out,
                                                    bool is_reduce_mean) {
-  __shared__ half outs[kCudaThreadsNumPerBlock];
-  outs[threadIdx.x] = __float2half(0.0);
+  typedef cub::BlockReduce<half, kCudaThreadsNumPerBlock> BlockReduce;
+  __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
+  half thread_sum = __float2half(0.0);
   for (int i = threadIdx.x; i < elem_cnt; i += kCudaThreadsNumPerBlock) {
-    outs[threadIdx.x] = __hadd(outs[threadIdx.x], tmp_out[i]);
+    thread_sum = __hadd(thread_sum, tmp_out[i]);
   }
   __syncthreads();
+  half block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(thread_sum, cub::Sum());
   if (threadIdx.x == 0) {
-    *out = __float2half(0.0);
-    for (int i = 0; i < kCudaThreadsNumPerBlock; ++i) { *out = __hadd(*out, outs[i]); }
+    *out = block_sum;
     if (is_reduce_mean) { *out = __float2half(__half2float(*out) / elem_cnt); }
   }
 }

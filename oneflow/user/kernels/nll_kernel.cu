@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cub/cub.cuh>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/user/kernels/loss_kernel_util.h"
@@ -68,31 +69,25 @@ template<typename T, typename K>
 __global__ void ComputeNllOutReduce(const int64_t num_instances, const K num_classes,
                                     const K ignore_index, const T* input, const K* target, T* out,
                                     const T* weight, T* total_weight, bool is_reduce_mean) {
-  __shared__ T weights[kCudaThreadsNumPerBlock];
-  __shared__ T outs[kCudaThreadsNumPerBlock];
-
-  weights[threadIdx.x] = static_cast<T>(0);
-  outs[threadIdx.x] = static_cast<T>(0);
-
+  typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
+  __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
+  T weight_thread_sum = static_cast<T>(0);
+  T out_thread_sum = static_cast<T>(0);
   for (int i = threadIdx.x; i < num_instances; i += kCudaThreadsNumPerBlock) {
     assert(target[i] >= 0);
     assert(target[i] < num_classes);
     K label = target[i];
     if (label == ignore_index) { continue; }
     T cur_weight = weight == nullptr ? 1 : weight[label];
-    weights[threadIdx.x] += cur_weight;
-    outs[threadIdx.x] -= input[i * num_classes + label] * cur_weight;
+    weight_thread_sum += cur_weight;
+    out_thread_sum -= input[i * num_classes + label] * cur_weight;
   }
-
   __syncthreads();
-
+  T weight_block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(weight_thread_sum, cub::Sum());
+  T out_block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(out_thread_sum, cub::Sum());
   if (threadIdx.x == 0) {
-    *total_weight = 0;
-    *out = static_cast<T>(0);
-    for (int i = 0; i < kCudaThreadsNumPerBlock; ++i) {
-      *out += outs[i];
-      *total_weight += weights[i];
-    }
+    *out = out_block_sum;
+    *total_weight = weight_block_sum;
     if (is_reduce_mean) { *out /= *total_weight; }
   }
 }
@@ -103,32 +98,26 @@ __global__ void ComputeNllOutReduceHalf(const int64_t num_instances, const K num
                                         half* out, const half* weight, half* total_weight,
                                         bool is_reduce_mean) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  __shared__ half weights[kCudaThreadsNumPerBlock];
-  __shared__ half outs[kCudaThreadsNumPerBlock];
-
-  weights[threadIdx.x] = __float2half(0);
-  outs[threadIdx.x] = __float2half(0);
-
+  typedef cub::BlockReduce<half, kCudaThreadsNumPerBlock> BlockReduce;
+  __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
+  half weight_thread_sum = __float2half(0);
+  half out_thread_sum = __float2half(0);
   for (int i = threadIdx.x; i < num_instances; i += kCudaThreadsNumPerBlock) {
     assert(target[i] >= 0);
     assert(target[i] < num_classes);
     K label = target[i];
     if (label == ignore_index) { continue; }
     half cur_weight = weight == nullptr ? __float2half(1.0) : weight[label];
-    weights[threadIdx.x] = __hadd(weights[threadIdx.x], cur_weight);
-    outs[threadIdx.x] = __hsub(outs[threadIdx.x], input[i * num_classes + label] * cur_weight);
+    weight_thread_sum = __hadd(weight_thread_sum, cur_weight);
+    out_thread_sum = __hsub(out_thread_sum, __hmul(input[i * num_classes + label], cur_weight));
   }
-
   __syncthreads();
-
+  half weight_block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(weight_thread_sum, cub::Sum());
+  half out_block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(out_thread_sum, cub::Sum());
   if (threadIdx.x == 0) {
-    *total_weight = __float2half(0);
-    *out = __float2half(0);
-    for (int i = 0; i < kCudaThreadsNumPerBlock; ++i) {
-      *out = __hadd(*out, outs[i]);
-      *total_weight = __hadd(*total_weight, weights[i]);
-    }
-    if (is_reduce_mean) { *out = __hdiv(*out, *total_weight); }
+    *out = out_block_sum;
+    *total_weight = weight_block_sum;
+    if (is_reduce_mean) { *out /= __hdiv(*out, *total_weight); }
   }
 #else
   printf("use half need nvcc arch >= 530");

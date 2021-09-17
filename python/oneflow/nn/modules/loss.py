@@ -276,7 +276,9 @@ class BCELoss(_WeightedLoss):
         super(BCELoss, self).__init__(weight, reduction)
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
-        return flow._C.binary_cross_entropy(input, target, self.weight, self.reduction)
+        return flow._C.binary_cross_entropy_loss(
+            input, target, self.weight, self.reduction
+        )
 
 
 class NLLLoss(_WeightedLoss):
@@ -365,7 +367,7 @@ class NLLLoss(_WeightedLoss):
         self.ignore_index = ignore_index
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
-        return flow._C.nll(
+        return flow._C.nll_loss(
             input, target, self.weight, self.ignore_index, self.reduction
         )
 
@@ -867,7 +869,7 @@ class BCEWithLogitsLoss(_WeightedLoss):
         self.pos_weight = pos_weight
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
-        return flow._C.binary_cross_entropy_with_logits(
+        return flow._C.binary_cross_entropy_with_logits_loss(
             input, target, self.weight, self.pos_weight, self.reduction
         )
 

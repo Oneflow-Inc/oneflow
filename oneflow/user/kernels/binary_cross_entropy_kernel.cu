@@ -56,12 +56,13 @@ template<typename T>
 __global__ void ComputeBinaryCrossEntropyGradOut(int64_t elem_cnt, const T* input, const T* target,
                                                  const T* dy, T* dx, const T* weight,
                                                  const ReductionType reduction_type) {
+  const T eps = static_cast<T>(1e-12);
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     T input_val = input[i];
     T target_val = target[i];
     T dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
-    dx[i] = dy_val * (input_val - target_val)
-            / max((static_cast<T>(1.0) - input_val) * input_val, static_cast<T>(1e-12));
+    dx[i] =
+        dy_val * (input_val - target_val) / max((static_cast<T>(1.0) - input_val) * input_val, eps);
     if (weight != nullptr) { dx[i] *= weight[i]; }
     if (reduction_type == ReductionType::kMean) { dx[i] /= elem_cnt; }
   }

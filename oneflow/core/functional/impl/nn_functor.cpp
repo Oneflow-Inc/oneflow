@@ -362,9 +362,9 @@ class AdaptiveAvgPool3DFunctor : public AdaptivePoolNDFunctor {
   }
 };
 
-class NllFunctor {
+class NllLossFunctor {
  public:
-  NllFunctor() {
+  NllLossFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("nll")
                          .Input("input")
                          .Input("target")
@@ -388,7 +388,7 @@ class NllFunctor {
     CHECK_LE_OR_RETURN(input_shape->NumAxes(), 5);
     CHECK_EQ_OR_RETURN(input_shape->NumAxes() - 1, target_shape->NumAxes());
 
-    std::string reduction_v = reduction ? *JUST(reduction.value()) : "none";
+    std::string reduction_v = reduction ? *JUST(reduction) : "none";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
     JUST(attrs.SetAttr<std::string>("reduction", reduction_v));
@@ -403,8 +403,8 @@ class NllFunctor {
 
     std::shared_ptr<Tensor> result;
     if (weight) {
-      result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_weight_,
-                                                   {input_, target_, JUST(weight.value())}, attrs));
+      result =
+          JUST(OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input_, target_, JUST(weight)}, attrs));
     } else {
       result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input_, target_}, attrs));
     }
@@ -417,9 +417,9 @@ class NllFunctor {
   std::shared_ptr<OpExpr> op_weight_;
 };
 
-class BinaryCrossEntropyFunctor {
+class BinaryCrossEntropyLossFunctor {
  public:
-  BinaryCrossEntropyFunctor() {
+  BinaryCrossEntropyLossFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy")
                          .Input("input")
                          .Input("target")
@@ -436,12 +436,11 @@ class BinaryCrossEntropyFunctor {
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight,
                            const Optional<std::string>& reduction) const {
-    std::string reduction_v = reduction ? *JUST(reduction.value()) : "none";
+    std::string reduction_v = reduction ? *JUST(reduction) : "none";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("reduction", reduction_v));
     if (weight) {
-      return OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input, target, JUST(weight.value())},
-                                            attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input, target, JUST(weight)}, attrs);
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs);
   }
@@ -450,9 +449,9 @@ class BinaryCrossEntropyFunctor {
   std::shared_ptr<OpExpr> op_;
   std::shared_ptr<OpExpr> op_weight_;
 };
-class BinaryCrossEntropyWithLogitsFunctor {
+class BinaryCrossEntropyWithLogitsLossFunctor {
  public:
-  BinaryCrossEntropyWithLogitsFunctor() {
+  BinaryCrossEntropyWithLogitsLossFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits")
                          .Input("input")
                          .Input("target")
@@ -483,22 +482,19 @@ class BinaryCrossEntropyWithLogitsFunctor {
                            const Optional<one::Tensor>& weight,
                            const Optional<one::Tensor>& pos_weight,
                            const Optional<std::string>& reduction) const {
-    std::string reduction_v = reduction ? *JUST(reduction.value()) : "none";
+    std::string reduction_v = reduction ? *JUST(reduction) : "none";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("reduction", reduction_v));
     JUST(attrs.SetAttr<bool>("has_pos_weight", pos_weight.has_value()));
     if (weight) {
       if (pos_weight) {
         return OpInterpUtil::Dispatch<Tensor>(
-            *op_weight_pos_, {input, target, JUST(weight.value()), JUST(pos_weight.value())},
-            attrs);
+            *op_weight_pos_, {input, target, JUST(weight), JUST(pos_weight)}, attrs);
       }
-      return OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input, target, JUST(weight.value())},
-                                            attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input, target, JUST(weight)}, attrs);
     }
     if (pos_weight) {
-      return OpInterpUtil::Dispatch<Tensor>(*op_pos_, {input, target, JUST(pos_weight.value())},
-                                            attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*op_pos_, {input, target, JUST(pos_weight)}, attrs);
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs);
   }
@@ -1322,9 +1318,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
-  m.add_functor<impl::NllFunctor>("Nll");
-  m.add_functor<impl::BinaryCrossEntropyFunctor>("BinaryCrossEntropy");
-  m.add_functor<impl::BinaryCrossEntropyWithLogitsFunctor>("BinaryCrossEntropyWithLogits");
+  m.add_functor<impl::NllLossFunctor>("NllLoss");
+  m.add_functor<impl::BinaryCrossEntropyLossFunctor>("BinaryCrossEntropyLoss");
+  m.add_functor<impl::BinaryCrossEntropyWithLogitsLossFunctor>("BinaryCrossEntropyWithLogitsLoss");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
   m.add_functor<impl::SoftmaxCrossEntropyFunctor>("SoftmaxCrossEntropy");
   m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");

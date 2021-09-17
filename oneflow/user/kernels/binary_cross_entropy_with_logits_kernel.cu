@@ -71,6 +71,17 @@ __global__ void ComputeBinaryCrossEntropyWithLogitsOutHalf(int64_t elem_cnt, con
     if (weight != nullptr) { out[i] = __hmul(out[i], weight[i]); }
   }
 }
+template<typename T>
+__device__ __forceinline__ T CalSigmoid(const T x) {
+  const T half_of_one = static_cast<T>(0.5);
+  return half_of_one * tanh(half_of_one * x) + half_of_one;
+}
+
+template<>
+__device__ __forceinline__ float CalSigmoid(const float x) {
+  const float half_of_one = static_cast<float>(0.5);
+  return half_of_one * tanhf(half_of_one * x) + half_of_one;
+}
 
 template<typename T>
 __global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, const T* input,
@@ -82,7 +93,7 @@ __global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, con
     T input_val = input[i];
     T target_val = target[i];
     T dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
-    T input_sigmoid = 0.5 * tanh(0.5 * input_val) + 0.5;
+    T input_sigmoid = CalSigmoid(input_val);
     if (pos_weight_processed == nullptr) {
       dx[i] = (input_sigmoid - target_val) * dy_val;
     } else {
@@ -94,6 +105,7 @@ __global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, con
     if (reduction_type == ReductionType::kMean) { dx[i] /= elem_cnt; }
   }
 }
+
 __global__ void ComputeBinaryCrossEntropyWithLogitsGradOutHalf(int64_t elem_cnt, const half* input,
                                                                const half* target, const half* dy,
                                                                half* dx, const half* weight,
@@ -103,8 +115,7 @@ __global__ void ComputeBinaryCrossEntropyWithLogitsGradOutHalf(int64_t elem_cnt,
     float input_val = __half2float(input[i]);
     float target_val = __half2float(target[i]);
     float dy_val = __half2float(reduction_type == ReductionType::kNone ? dy[i] : *dy);
-    float input_sigmoid = 0.5 * tanhf(0.5 * input_val) + 0.5;
-
+    float input_sigmoid = CalSigmoid(input_val);
     if (pos_weight_processed == nullptr) {
       dx[i] = __float2half((input_sigmoid - target_val) * dy_val);
     } else {

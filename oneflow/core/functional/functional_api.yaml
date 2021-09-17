@@ -517,16 +517,16 @@
     Double alpha=1.0) => BatchMatMul"
   bind_python: True
 
-- name: "nll"
-  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction=None) => Nll"
+- name: "nll_loss"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction=None) => NllLoss"
   bind_python: True
 
-- name: "binary_cross_entropy"
-  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, String reduction=None) => BinaryCrossEntropy"
+- name: "binary_cross_entropy_loss"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, String reduction=None) => BinaryCrossEntropyLoss"
   bind_python: True
 
-- name: "binary_cross_entropy_with_logits"
-  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None, String reduction=None) => BinaryCrossEntropyWithLogits"
+- name: "binary_cross_entropy_with_logits_loss"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None, String reduction=None) => BinaryCrossEntropyWithLogitsLoss"
   bind_python: True
 
 - name: "sparse_softmax_cross_entropy"
