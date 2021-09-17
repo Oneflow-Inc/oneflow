@@ -561,9 +561,7 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
         assert isinstance(other, Tensor)
         assert other.is_consistent
         other = other.to_consistent(placement=self.placement, sbp=self.sbp)
-        _copy_from_numpy_to_eager_local_tensor(
-            self.to_local(), other.to_local().numpy()
-        )
+        flow._C.assign_local_tensor(self.to_local(), other.to_local())
     else:
         if isinstance(other, (Tensor)):
             src_np = other.numpy()
