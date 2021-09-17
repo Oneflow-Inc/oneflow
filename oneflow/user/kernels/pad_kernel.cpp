@@ -80,6 +80,8 @@ class PadKernel final : public user_op::OpKernel, public user_op::CudaGraphSuppo
     const int64_t ndims = x->shape().NumAxes();
     const int64_t size_of_data_type = static_cast<int64_t>(GetSizeOfDataType(x->data_type()));
     CHECK_EQ(padding_before.size(), ndims);
+    
+
     NewKernelUtil<device_type>::Fill(ctx->device_ctx(), y->shape().elem_cnt(),
                                      static_cast<T>(constant_value), y->mut_dptr<T>());
     MemoryCopyNdDesc memory_copy_nd_desc;
@@ -97,7 +99,13 @@ class PadKernel final : public user_op::OpKernel, public user_op::CudaGraphSuppo
 
     memory_copy_nd_desc.dst_pos = NdIndex(dst_pos_vec);
     memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
-    memory_copy_nd_desc.extent = memory_copy_nd_desc.src_shape;
+    DimVector extent_vec(ndims);
+    for(int i=0; i < extent_vec.size(); ++i){
+      extent_vec[i] = dst_shape_vec[i] > src_shape_vec[i] ? src_shape_vec[i] : dst_shape_vec[i];
+    }
+
+    Shape extent_shape(extent_vec);
+    memory_copy_nd_desc.extent = extent_shape;
     MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
 
     std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
