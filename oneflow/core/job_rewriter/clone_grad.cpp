@@ -40,29 +40,25 @@ void GenerateCloneGradOpIfNeed(const OpNode& op_node, JobBuilder* job_builder,
   for (const auto& obn : op_node.op().output_bns()) {
     const OpBlobArg& oba = GenOpBlobArg(op_node.op().op_name(), obn);
     const LogicalBlobId& lbi = op_node.op().BnInOp2Lbi(obn);
-    std::vector<LogicalBlobId> lbis_to_add = std::move(out_oba2in_diff_lbis[oba]);
-    if (lbis_to_add.empty()) { continue; }
-    bool need_add = lbis_to_add.size() > 1;
-    while (lbis_to_add.size() != 1) {
-      const size_t add_n_op_max_input_num = 8;
+    const std::vector<LogicalBlobId>& lbis_to_add = out_oba2in_diff_lbis[oba];
+    if (lbis_to_add.empty()) {
+      continue;
+    } else if (lbis_to_add.size() == 1) {
+      out_oba2out_diff_lbi->emplace(oba, lbis_to_add.front());
+    } else {
       user_op::UserOpConfWrapperBuilder add_op_builder(op_node.op().op_name() + "_clone_grad_"
                                                        + NewUniqueId());
       add_op_builder.Op("add_n");
-      const size_t start = lbis_to_add.size() >= add_n_op_max_input_num
-                               ? lbis_to_add.size() - add_n_op_max_input_num
-                               : 0;
-      for (size_t i = start; i < lbis_to_add.size(); ++i) {
-        add_op_builder.Input("in", GenLogicalBlobName(lbis_to_add.at(i)));
+      for (const LogicalBlobId& lbi_to_add : lbis_to_add) {
+        add_op_builder.Input("in", GenLogicalBlobName(lbi_to_add));
       }
-      lbis_to_add.resize(start);
       const auto& op_conf = CHECK_JUST(job_builder->OpConf4OpName(lbi.op_name()));
       const auto add_op =
           add_op_builder.Output("out").ScopeSymbolId(op_conf.scope_symbol_id()).Build();
       job_builder->AddOps(job_builder->ParallelConf4Lbi(lbi), {add_op.op_conf()});
-      lbis_to_add.push_back(GenLogicalBlobId(add_op.output("out", 0)));
+      CHECK(out_oba2clone_bw_add_out_lbi->emplace(oba, lbis_to_add.front()).second);
+      out_oba2out_diff_lbi->emplace(oba, GenLogicalBlobId(add_op.output("out", 0)));
     }
-    if (need_add) { CHECK(out_oba2clone_bw_add_out_lbi->emplace(oba, lbis_to_add.front()).second); }
-    out_oba2out_diff_lbi->emplace(oba, lbis_to_add.front());
   }
 }
 

@@ -30,13 +30,17 @@ func_config.default_data_type(flow.float)
 def GenerateTest(test_case, shape, num_inputs):
     @flow.global_function(function_config=func_config)
     def AddJob(xs: Tuple[(oft.Numpy.Placeholder(shape),) * num_inputs]):
-        return flow.math.add_n(xs)
+        with flow.scope.placement("cpu", "0:0"):
+            res_cpu = flow.math.add_n(xs)
+        res = flow.math.add_n(xs)
+        return res_cpu, res
 
     inputs = tuple(
         (np.random.rand(*shape).astype(np.float32) for i in range(num_inputs))
     )
-    r = AddJob(inputs).get().numpy()
-    test_case.assertTrue(np.allclose(r, sum(inputs)))
+    r = AddJob(inputs).get()
+    test_case.assertTrue(np.allclose(r[0].numpy(), sum(inputs)))
+    test_case.assertTrue(np.allclose(r[1].numpy(), sum(inputs)))
 
 
 @flow.unittest.skip_unless_1n1d()

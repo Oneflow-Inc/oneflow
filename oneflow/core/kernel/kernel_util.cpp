@@ -295,10 +295,6 @@ void AutoMemset(StreamContext* stream_ctx, void* dst, const char value, size_t s
   template<typename T, typename Derived> \
   void CpuKernelUtilIf<T, Derived>::
 
-KU_IF_METHOD Axpy(DeviceCtx* ctx, const int n, const T* alpha, const T* x, const int incx, T* y,
-                  const int incy) {
-  Derived::Axpy(ctx, n, *alpha, x, incx, y, incy);
-}
 KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }
 
 #define KU_FLOATING_METHOD \
@@ -309,62 +305,11 @@ KU_FLOATING_METHOD Dot(DeviceCtx* ctx, const int n, const T* x, const int incx, 
                        const int incy, T* result) {
   *result = cblas_dot<T>(n, x, incx, y, incy);
 }
-KU_FLOATING_METHOD Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx,
-                        T* y, const int incy) {
-  cblas_axpy<T>(n, alpha, x, incx, y, incy);
-}
 KU_FLOATING_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
   for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
 }
 KU_FLOATING_METHOD Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
   for (int64_t i = 0; i < n; ++i) { y[i] = std::sqrt(x[i]); }
-}
-
-KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0) {
-  for (int64_t i = 0; i != n; ++i) { out[i] = in_0[i]; }
-}
-KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1) {
-  for (int64_t i = 0; i != n; ++i) { out[i] = in_0[i] + in_1[i]; }
-}
-KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                            const T* in_2) {
-  for (int64_t i = 0; i != n; ++i) { out[i] = in_0[i] + in_1[i] + in_2[i]; }
-}
-KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                            const T* in_2, const T* in_3) {
-  for (int64_t i = 0; i != n; ++i) { out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i]; }
-}
-KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                            const T* in_2, const T* in_3, const T* in_4) {
-  for (int64_t i = 0; i != n; ++i) { out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i]; }
-}
-KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                            const T* in_2, const T* in_3, const T* in_4, const T* in_5) {
-  for (int64_t i = 0; i != n; ++i) {
-    out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i];
-  }
-}
-KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                            const T* in_2, const T* in_3, const T* in_4, const T* in_5,
-                            const T* in_6) {
-  for (int64_t i = 0; i != n; ++i) {
-    out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i] + in_6[i];
-  }
-}
-KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                            const T* in_2, const T* in_3, const T* in_4, const T* in_5,
-                            const T* in_6, const T* in_7) {
-  for (int64_t i = 0; i != n; ++i) {
-    out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i] + in_6[i] + in_7[i];
-  }
-}
-KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                            const T* in_2, const T* in_3, const T* in_4, const T* in_5,
-                            const T* in_6, const T* in_7, const T* in_8) {
-  for (int64_t i = 0; i != n; ++i) {
-    out[i] =
-        in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i] + in_6[i] + in_7[i] + in_8[i];
-  }
 }
 
 KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
@@ -398,14 +343,6 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
   template<typename T>     \
   void KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsIntegral<T>::value>::type>::
 
-KU_INTEGRAL_METHOD Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx,
-                        T* y, const int incy) {
-  FOR_RANGE(int, i, 0, n) {
-    *y += alpha * *x;
-    x += incx;
-    y += incy;
-  }
-}
 KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                       uint32_t random_seed, Blob* blob) {
   if (initializer_conf.has_constant_int_conf()) {
