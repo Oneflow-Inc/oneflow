@@ -135,13 +135,28 @@ class TestModule(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
     @autotest(n=10, auto_backward=False)
-    def test_concat_with_0shape_data(test_case):
+    def test_concat_with_input_0shape_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 3, 2, 4).to(device)
         y = random_pytorch_tensor(4, 2, 3, random(0, 3), 4).to(device)
         z = torch.cat((x, y), dim=2)
         return z
 
+    @autotest(n=10, auto_backward=False)
+    def test_concat_with_output_0shape_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 0, 2, 4).to(device)
+        y = random_pytorch_tensor(4, 2, 0, 2, 4).to(device)
+        z = torch.cat((x, y), dim=2)
+        return z
+
+    @autotest(n=10, auto_backward=False)
+    def test_concat_with_0shape_specified_axis(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 0, 2, 4).to(device)
+        y = random_pytorch_tensor(4, 2, 0, 2, 4).to(device)
+        z = torch.cat((x, y), dim=1)
+        return z
 
 if __name__ == "__main__":
     unittest.main()
