@@ -33,12 +33,10 @@ namespace collective {
 class RequestHandle final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RequestHandle);
-  RequestHandle(int32_t local_rank, void* request_entry_token, void* request_token,
-                void* executor_token)
+  RequestHandle(int32_t local_rank, void* request_entry_token, void* request_token)
       : local_rank_(local_rank),
         request_entry_token_(request_entry_token),
-        request_token_(request_token),
-        executor_token_(executor_token) {}
+        request_token_(request_token) {}
   ~RequestHandle() = default;
 
   int32_t local_rank() const { return local_rank_; }
@@ -47,13 +45,10 @@ class RequestHandle final {
 
   void* request_token() { return request_token_; }
 
-  void* executor_token() { return executor_token_; }
-
  private:
   int32_t local_rank_;
   void* request_entry_token_;
   void* request_token_;
-  void* executor_token_;
 };
 
 class ExecutorImpl : public Executor {
@@ -65,14 +60,14 @@ class ExecutorImpl : public Executor {
   void InitJob(int64_t job_id) override;
   void DeinitJob(int64_t job_id) override;
   void GroupRequests(const std::vector<RequestId>& request_ids,
-                     const std::function<void(std::vector<RequestId>&&)>& Handler) override;
+                     const std::function<void(std::vector<RequestId>&&, void*)>& Handler) override;
   void ExecuteGroupedRequests(const std::vector<RequestId>& request_ids,
                               void* executor_token) override;
-  void* CreateExecutorToken(const RequestId& request_id) override;
-  void DestroyExecutorToken(void* executor_token) override;
 
  private:
   Backend GetUniqueBackend(const std::vector<RequestId>& request_ids);
+  void* CreateExecutorToken(const std::vector<RequestId>& request_ids);
+  void DestroyExecutorToken(void* executor_token);
 
   std::vector<std::unique_ptr<ExecutorBackend>> backends_;
   std::shared_ptr<RequestStore> request_store_;
@@ -96,27 +91,32 @@ void ExecutorImpl::DeinitJob(int64_t job_id) {
   backends_.at(Backend::kBackendNCCL)->DeinitJob(job_id);
 }
 
-void* ExecutorImpl::CreateExecutorToken(const RequestId& request_id) {
-  return backends_.at(Backend::kBackendNCCL)->CreateExecutorToken(request_id);
+void* ExecutorImpl::CreateExecutorToken(const std::vector<RequestId>& request_ids) {
+  return backends_.at(Backend::kBackendNCCL)->CreateExecutorToken(request_ids);
 }
 
 void ExecutorImpl::DestroyExecutorToken(void* executor_token) {
   backends_.at(Backend::kBackendNCCL)->DestroyExecutorToken(executor_token);
 }
 
-void ExecutorImpl::GroupRequests(const std::vector<RequestId>& request_ids,
-                                 const std::function<void(std::vector<RequestId>&&)>& Handler) {
+void ExecutorImpl::GroupRequests(
+    const std::vector<RequestId>& request_ids,
+    const std::function<void(std::vector<RequestId>&&, void*)>& Handler) {
   if (request_ids.empty()) { return; }
   const CollectiveBoxingConf& conf =
       Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf();
   if (!conf.enable_fusion()) {
-    for (auto request_id : request_ids) { Handler(std::vector<RequestId>({request_id})); }
+    for (auto request_id : request_ids) {
+      Handler(std::vector<RequestId>({request_id}),
+              CreateExecutorToken(std::vector<RequestId>({request_id})));
+    }
     return;
   }
   auto HandleGroup = [&]() {
     if (group_buffer_.empty()) { return; }
     if (group_buffer_.size() == 1) {
-      Handler(std::vector<RequestId>({group_buffer_.front()}));
+      Handler(std::vector<RequestId>({group_buffer_.front()}),
+              CreateExecutorToken(std::vector<RequestId>({group_buffer_.front()})));
     } else {
       const auto backend =
           request_store_->MutRequestEntry(group_buffer_.front())->desc().op_desc().backend();
@@ -148,6 +148,7 @@ void ExecutorImpl::ExecuteGroupedRequests(const std::vector<RequestId>& request_
   if (request_ids.empty()) { return; }
   const Backend backend = GetUniqueBackend(request_ids);
   backends_.at(backend)->ExecuteRequests(request_ids, executor_token);
+  DestroyExecutorToken(executor_token);
 }
 
 Backend ExecutorImpl::GetUniqueBackend(const std::vector<RequestId>& request_ids) {
@@ -220,12 +221,10 @@ RequestHandle* Scheduler::CreateRequestHandle(const RankDesc& rank_desc) {
   const int32_t local_rank = request_entry->GlobalRankToLocalRank(rank_desc.rank());
   void* request_entry_token = impl_->request_store->CreateRequestEntryToken(request_id);
   void* request_token = impl_->coordinator->CreateRequestToken(request_id);
-  void* executor_token = impl_->executor->CreateExecutorToken(request_id);
-  return new RequestHandle(local_rank, request_entry_token, request_token, executor_token);
+  return new RequestHandle(local_rank, request_entry_token, request_token);
 }
 
 void Scheduler::DestroyRequestHandle(RequestHandle* handle) {
-  impl_->executor->DestroyExecutorToken(handle->executor_token());
   impl_->coordinator->DestroyRequestToken(handle->request_token());
   impl_->request_store->DestroyRequestEntryToken(handle->request_entry_token());
 }
@@ -235,7 +234,7 @@ void Scheduler::Schedule(RequestHandle* handle,
   const int32_t local_rank = handle->local_rank();
   const bool ready = impl_->request_store->GetRequestEntry(handle->request_entry_token())
                          ->AddRuntimeRequest(local_rank, std::move(request_info));
-  if (ready) { impl_->coordinator->AddRequest(handle->request_token(), handle->executor_token()); }
+  if (ready) { impl_->coordinator->AddRequest(handle->request_token()); }
 }
 
 }  // namespace collective

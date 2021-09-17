@@ -37,7 +37,7 @@ class StaticGroupCoordinator : public Coordinator {
             std::shared_ptr<Executor> executor) override;
   void InitJob(int64_t job_id) override;
   void DeinitJob(int64_t job_id) override;
-  void AddRequest(void* request_token, void* executor_token) override;
+  void AddRequest(void* request_token) override;
   void* CreateRequestToken(const RequestId& request_id) override;
   void DestroyRequestToken(void* token);
 

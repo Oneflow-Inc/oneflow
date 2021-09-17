@@ -39,9 +39,9 @@ class NcclExecutorBackend : public ExecutorBackend {
   void InitJob(int64_t job_id) override;
   void DeinitJob(int64_t job_id) override;
   void GroupRequests(const std::vector<RequestId>& request_ids,
-                     const std::function<void(std::vector<RequestId>&&)>& Handler) override;
+                     const std::function<void(std::vector<RequestId>&&, void*)>& Handler) override;
   void ExecuteRequests(const std::vector<RequestId>& request_ids, void* executor_token) override;
-  void* CreateExecutorToken(const RequestId& request_id) override;
+  void* CreateExecutorToken(const std::vector<RequestId>& request_ids) override;
   void DestroyExecutorToken(void* executor_token) override;
 
   struct Impl;
