@@ -156,16 +156,7 @@ Maybe<size_t> Device::instr_local_dep_object_pool_size() const {
 
 // TODO(jianhao): move this configuration into stream
 Maybe<bool> Device::need_soft_sync_stream() const {
-  static const HashMap<std::string, bool> type2need_soft_sync_stream{
-      {"cpu", false},
-      {"cuda", true},
-      {"cuda_h2d", false},
-      {"cuda_d2h", false},
-      {"comm_net", false},
-      {"sync_launched_nccl", false},
-      {"async_launched_nccl", false},
-  };
-  return MapAt(type2need_soft_sync_stream, type());
+  return JUST(local_call_instruction_name()) == "gpu.LocalCallOpKernel";
 }
 
 Maybe<const std::string&> Device::local_call_instruction_name() const {
