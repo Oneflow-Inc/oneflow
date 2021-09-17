@@ -168,17 +168,10 @@ struct Scheduler::Impl {
 };
 
 Scheduler::Impl::Impl() {
-  const CollectiveBoxingConf& conf =
-      Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf();
   request_store.reset(new RequestStore());
   executor.reset(new ExecutorImpl());
   executor->Init(request_store);
-  if (conf.has_static_group_coordinator_conf()
-      || conf.coordinator_conf_case() == CollectiveBoxingConf::COORDINATOR_CONF_NOT_SET) {
-    coordinator.reset(new StaticGroupCoordinator());
-  } else {
-    UNIMPLEMENTED();
-  }
+  coordinator.reset(new StaticGroupCoordinator());
   coordinator->Init(request_store, executor);
 }
 

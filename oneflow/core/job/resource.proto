@@ -7,12 +7,6 @@ message CollectiveBoxingConf {
   // global
   optional bool enable_fusion = 1 [default = true];
   optional int64 num_callback_threads = 2 [default = 4];
-  message StaticGroupCoordinatorConf {
-  }
-
-  oneof coordinator_conf {
-    StaticGroupCoordinatorConf static_group_coordinator_conf = 3;
-  }
   // nccl
   optional int64 nccl_num_streams = 101 [default = 1];
   optional int64 nccl_fusion_threshold_mb = 102 [default = 16];
