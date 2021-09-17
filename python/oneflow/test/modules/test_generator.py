@@ -27,7 +27,7 @@ class TestGenerator(flow.unittest.TestCase):
         cpu_gen = flow.Generator(device="cpu")
         test_case.assertTrue(auto_gen.initial_seed() == cpu_gen.initial_seed())
         with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.UnimplementedException
+            oneflow._oneflow_internal.exception.RuntimeException
         ) as context:
             flow.Generator(device="invalid")
         if not os.getenv("ONEFLOW_TEST_CPU_ONLY"):
@@ -60,7 +60,7 @@ class TestDefaultGenerator(flow.unittest.TestCase):
         auto_gen = flow.default_generator(device="auto")
         cpu_gen = flow.default_generator(device="cpu")
         with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.UnimplementedException
+            oneflow._oneflow_internal.exception.RuntimeException
         ) as context:
             flow.default_generator(device="invalid")
 

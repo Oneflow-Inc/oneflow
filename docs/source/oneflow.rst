@@ -27,6 +27,8 @@ oneflow
             atan2, 
             atanh, 
             bernoulli,
+            broadcast_like, 
+            batch_gather, 
             cat, 
             cast, 
             ceil, 

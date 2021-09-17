@@ -299,10 +299,7 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
     UNIMPLEMENTED();
     return *(const cfg::NdSbp*)nullptr;
   }
-  int64_t parallel_num() const override {
-    UNIMPLEMENTED();
-    return 1;
-  }
+  int64_t parallel_num() const override { return 1; }
 };
 
 class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
@@ -613,9 +610,9 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<DistributeAddOpConf>::GetOrCreateOpGr
   UNIMPLEMENTED_THEN_RETURN();
 }
 
-Maybe<OpExprGradClosure> SelectFirstOpExpr::GetOrCreateOpGradClosure() const {
+Maybe<OpExprGradClosure> SelectTopNOpExpr::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
-    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("select_first"));
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("select_top_n"));
     CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
     JUST(op_grad_func_->Init(*this));
   }

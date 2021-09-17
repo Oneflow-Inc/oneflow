@@ -45,7 +45,7 @@ namespace {
 Maybe<Symbol<ParallelDesc>> GetParallelDesc(const TensorTuple& inputs,
                                             const OpExprInterpContext& ctx) {
   if (!inputs.empty()) { return inputs.at(0)->parallel_desc(); }
-  return ctx.parallel_desc.to_maybe();
+  return JUST(ctx.parallel_desc);
 }
 
 std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_expr,
@@ -116,7 +116,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     const auto& infered_input_meta = result->input_tensor_metas().at(i);
     const auto& input_parallel_desc = JUST(input->parallel_desc());
     CHECK_OR_RETURN(input_parallel_desc == infered_input_meta->parallel_desc());
-    if (infered_input_meta->nd_sbp() != JUST(input->nd_sbp())) {
+    if (input_parallel_desc->parallel_num() != 1
+        && infered_input_meta->nd_sbp() != JUST(input->nd_sbp())) {
       input = JUST(GetBoxingOutput(input, infered_input_meta->nd_sbp(),
                                    infered_input_meta->parallel_desc(), parallel_id.has_value()));
     }
@@ -264,7 +265,7 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeAddOpExpr& op_
   OF_UNIMPLEMENTED();
 }
 
-Maybe<void> EagerConsistentInterpreter::ApplyImpl(const SelectFirstOpExpr& op_expr,
+Maybe<void> EagerConsistentInterpreter::ApplyImpl(const SelectTopNOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
