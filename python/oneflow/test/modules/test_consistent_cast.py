@@ -595,8 +595,7 @@ class TestConsistentCast(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_cpu_s2b_with_random_parameter(test_case, *arg)
 
-    flow.unittest.skip_unless_1n4d()
-
+    @low.unittest.skip_unless_1n4d()
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cpu_p2s_with_random_parameter(test_case):
         arg_dict = OrderedDict()
