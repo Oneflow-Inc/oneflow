@@ -19,6 +19,7 @@ from collections import OrderedDict
 
 import numpy as np
 from test_util import GenArgList
+from oneflow.test_utils.automated_test_util import *
 
 import oneflow as flow
 import oneflow.nn as nn
@@ -433,6 +434,27 @@ class TestConv1d(flow.unittest.TestCase):
         arg_dict["device"] = ["cuda", "cpu"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_conv1d_with_random_data(test_case):
+        channels = random(1, 6)
+        m = torch.nn.Conv1d(
+            in_channels=channels,
+            out_channels=random(1, 20),
+            kernel_size=random(1, 4),
+            stride=random() | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(1, 5) | nothing(),
+            groups=random(1, 5) | nothing(),
+            padding_mode=constant("zeros") | nothing(),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=3, dim1=channels).to(device)
+        y = m(x)
+        return y
+
 
 
 if __name__ == "__main__":
