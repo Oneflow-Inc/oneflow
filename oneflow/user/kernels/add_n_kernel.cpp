@@ -37,7 +37,7 @@ class AddNKernel : public OpKernel, public CudaGraphSupport {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AddNKernel);
   AddNKernel() = default;
-  ~AddNKernel() = default;
+  ~AddNKernel() override = default;
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
