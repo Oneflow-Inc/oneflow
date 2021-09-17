@@ -135,7 +135,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
 
   // Infer shapes and dtypes
   const auto& device_tag = JUST(op_device->of_type());
-  JUST(user_op_expr.InferLogicalShapeAndDType(
+  JUST(user_op_expr.InferPhysicalShapeAndDType(
       attrs, device_tag,
       [&](int32_t i) -> const TensorMeta* {
         return CHECK_JUST(TensorImpl4Tensor(inputs.at(i)))->mut_tensor_meta();
