@@ -117,7 +117,7 @@ __global__ void ComputeNllOutReduceHalf(const int64_t num_instances, const K num
   if (threadIdx.x == 0) {
     *out = out_block_sum;
     *total_weight = weight_block_sum;
-    if (is_reduce_mean) { *out /= __hdiv(*out, *total_weight); }
+    if (is_reduce_mean) { *out = __hdiv(*out, *total_weight); }
   }
 #else
   printf("use half need nvcc arch >= 530");
