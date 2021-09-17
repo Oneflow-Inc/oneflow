@@ -108,7 +108,8 @@ Maybe<void> CreateDstSubsetTickAndSinkTicks(
       tick_conf->set_out("out");
       JUST(job_builder->AddOp(parallel_conf, tick_op));
     }
-    CHECK_OR_RETURN(machine_id2gather_tick_in_lbns.emplace(machine_id, tick_op.name() + "/out").second);
+    CHECK_OR_RETURN(
+        machine_id2gather_tick_in_lbns.emplace(machine_id, tick_op.name() + "/out").second);
   }
   for (int64_t machine_id : process_ranks) {
     ParallelConf parallel_conf;
