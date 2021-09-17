@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_methods.h"
 #include "oneflow/core/functional/impl/common.h"
 
 namespace oneflow {
@@ -31,7 +32,7 @@ namespace impl {
 class UnaryFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()});
   }
 
  protected:
@@ -46,12 +47,13 @@ class InplaceableUnaryFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool inplace) const {
     if (inplace) {
       JUST(CheckInplaceValid(x));
+      CHECK_OR_RETURN(JUST(IsContiguous(x)));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get()));
       return outputs->at(0);
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()});
     }
   }
 
