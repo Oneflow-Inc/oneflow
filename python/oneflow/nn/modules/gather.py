@@ -18,7 +18,7 @@ from oneflow.framework.tensor import register_tensor_op
 
 
 @register_tensor_op("gather")
-def gather_op(input, index, dim=0, sparse_grad=False):
+def gather_op(input, dim, index, sparse_grad=False):
     """Gathers values along an axis specified by `dim`.
 
     For a 3-D tensor the output is specified by::

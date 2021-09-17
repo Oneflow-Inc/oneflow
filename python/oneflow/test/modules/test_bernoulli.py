@@ -60,5 +60,6 @@ class TestBernoulli(flow.unittest.TestCase):
         input = random_pytorch_tensor(ndim=1).to("cpu")
         return torch.bernoulli(input)
 
+
 if __name__ == "__main__":
     unittest.main()

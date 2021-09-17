@@ -79,7 +79,6 @@ class TestMean(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-
     @autotest()
     def test_mean_random_data(test_case):
         device = random_device()

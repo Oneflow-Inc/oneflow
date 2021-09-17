@@ -96,7 +96,7 @@ class TestTensor(flow.unittest.TestCase):
         output = flow.tensor(tensor)
         test_case.assertEqual(output.dtype, flow.float32)
         test_case.assertTrue(np.allclose(output.numpy(), np_arr))
-    
+
     @autotest()
     def test_tensor_sign_with_random_data(test_case):
         device = random_device()
@@ -579,7 +579,7 @@ class TestTensor(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=4).to(device)
         y = x.argsort(dim=random(low=-4, high=4).to(int), descending=random_bool())
         return y
-    
+
     @autotest()
     def test_mean_random_data(test_case):
         device = random_device()

@@ -19,32 +19,10 @@ from collections import OrderedDict
 
 import numpy as np
 from test_util import GenArgList
+from oneflow.test_utils.automated_test_util import *
 
 import oneflow as flow
 import oneflow.unittest
-
-
-def _test_upsample2d(test_case, device):
-    input = flow.tensor(
-        np.arange(1, 5).reshape((1, 1, 2, 2)),
-        device=flow.device(device),
-        dtype=flow.float32,
-    )
-    m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
-    of_out = m(input)
-    np_out = np.array(
-        [
-            [
-                [
-                    [1.0, 1.0, 2.0, 2.0],
-                    [1.0, 1.0, 2.0, 2.0],
-                    [3.0, 3.0, 4.0, 4.0],
-                    [3.0, 3.0, 4.0, 4.0],
-                ]
-            ]
-        ]
-    )
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
 
 
 def _test_upsample2d_bilinear(test_case, device):
@@ -379,7 +357,6 @@ class TestUpsample2d(flow.unittest.TestCase):
     def test_upsample2d(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_upsample2d,
             _test_upsample2d_bilinear,
             _test_upsample2d_bilinear_aligncorner,
             _test_UpsamplingNearest2d,
@@ -395,6 +372,23 @@ class TestUpsample2d(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+
+    @autotest(auto_backward=False)
+    def test_upsample2d(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        m = torch.nn.Upsample(scale_factor=random().to(float), mode="nearest")
+        y = m(x)
+        return y
+
+    @autotest()
+    def test_upsample2d_bilinear(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        m = torch.nn.Upsample(scale_factor=random().to(float), mode="bilinear")
+        y = m(x)
+        return y
 
 
 if __name__ == "__main__":
