@@ -146,7 +146,7 @@ def _test_expand_new_dims_split(test_case, device):
 
 def _test_expand_same_dim_split(test_case, device):
     input_shape = (4, 1, 2, 1)
-    expand_dim = [4, 1, 2, 1]
+    expand_dim = [4, 1, 2, 4]
 
     input_nd = np.random.random(size=input_shape).astype(np.float32)
     torch_in = torch.tensor(input_nd, requires_grad=True)
