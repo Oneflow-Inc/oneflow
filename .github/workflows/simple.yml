@@ -95,6 +95,9 @@ jobs:
           - test_suite: ubuntu
             cmake_generator: "Ninja"
             cmake_build_type: "Debug"
+          - test_suite: ubuntu
+            cmake_generator: "Unix Makefiles"
+            cmake_build_type: "Release"
     steps:
       - uses: actions/checkout@v2
         with:
