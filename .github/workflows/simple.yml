@@ -16,9 +16,9 @@ jobs:
   cancel_previous:
     name: Cancel previous runs
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'need-simple-ci'))
     steps:
       - name: Cancel previous runs of outdated commit
-        if: github.ref != 'refs/heads/master'
         uses: styfle/cancel-workflow-action@0.9.0
         with:
           access_token: ${{ github.token }}
