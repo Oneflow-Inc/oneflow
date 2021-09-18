@@ -18,7 +18,8 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 import oneflow as flow
@@ -158,6 +159,16 @@ class TestSqrt(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         z = x.sqrt()
         return z
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestExp(flow.unittest.TestCase):
+    @autotest()
+    def test_flow_exp_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.exp(x)
+        return y
 
 
 @flow.unittest.skip_unless_1n1d()

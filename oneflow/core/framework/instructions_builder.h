@@ -97,6 +97,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   vm::InstructionMsgList* mut_instruction_list() { return instruction_list_; }
 
+  // Build VM execution instructions with NNGraph's inputs/outputs/parameters for NNGraph execution.
   Maybe<void> RunLazyJob(const one::EagerBlobObjectListPtr& inputs,
                          const one::EagerBlobObjectListPtr& outputs,
                          const one::EagerBlobObjectListPtr& parameters,
@@ -130,9 +131,6 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
                             const std::shared_ptr<const ParallelDesc>& parallel_desc);
-
-  Maybe<void> SoftSyncStream(LocalDepObject* compute_local_dep_object, const std::string& modifier,
-                             const std::shared_ptr<const ParallelDesc>& parallel_desc);
 
   template<typename T>
   Maybe<void> SyncAccessBlobByCallback(const T tensor,
@@ -262,18 +260,14 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> LocalCallOpKernel(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
                                 const one::EagerBlobObjectListPtr& input_eager_blob_objects,
                                 const one::EagerBlobObjectListPtr& output_eager_blob_objects,
-                                const one::OpExprInterpContext& ctx,
-                                const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
-                                const std::string& instr_type_name);
+                                const one::OpExprInterpContext& ctx, Symbol<Device> op_device);
 
   Maybe<void> LocalCallOpKernel(
       const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
       const one::EagerBlobObjectListPtr& input_eager_blob_objects,
       const one::EagerBlobObjectListPtr& output_eager_blob_objects,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
-      const one::OpExprInterpContext& ctx,
-      const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
-      const std::string& instr_type_name);
+      const one::OpExprInterpContext& ctx, Symbol<Device> op_device);
 
  private:
   Maybe<void> RankFrontSeqCallback(const std::string& instruction_name,
@@ -405,6 +399,9 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
           const std::shared_ptr<compatible_py::BlobObject>&,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& GetDelegateBlobObject);
 
+  Maybe<void> SoftSyncStream(LocalDepObject* compute_local_dep_object, const std::string& modifier,
+                             Symbol<Device> op_device);
+
   Maybe<void> _FetchBlob(const std::string& instruction_name,
                          const std::shared_ptr<compatible_py::BlobObject>& blob_object,
                          int64_t callback_id);
@@ -467,8 +464,10 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   std::function<void(compatible_py::Object*)> release_object_;
 };
 
+// Make VM instructions with instruction builder and run instructions with logical/consistent view.
 Maybe<void> LogicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build);
 
+// Make VM instructions with instruction builder and run instructions with physical/local view.
 Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build);
 
 }  // namespace oneflow

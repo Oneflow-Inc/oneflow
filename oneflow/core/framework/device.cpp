@@ -50,7 +50,7 @@ Maybe<void> Device::Init() {
   mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, device_id_);
   const auto& opt_device_transport_tag = JUST(GetSharedTransportDeviceType());
   if (opt_device_transport_tag.has_value()) {
-    const auto& device_transport_tag = *JUST(opt_device_transport_tag.value());
+    const auto& device_transport_tag = *JUST(opt_device_transport_tag);
     transport_local_dep_object_ = JUST(GetLocalDepObject4Device(Device(device_transport_tag, 0)));
   }
   const auto& schedule_device_type = JUST(GetSharedScheduleDeviceType());
@@ -126,12 +126,11 @@ Maybe<const std::string&> Device::GetSharedScheduleDeviceType() const {
 }
 
 Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
-  // gpu.LocalCallOpKernel is shared between device `cuda` and device `cuda_h2d`.
   static const HashMap<std::string, std::string> type2instr_name{
       {"cpu", "cpu.LocalCallOpKernel"},
       {"gpu", "gpu.LocalCallOpKernel"},
       {"cuda", "gpu.LocalCallOpKernel"},
-      {"cuda_h2d", "gpu.LocalCallOpKernel"},
+      {"cuda_h2d", "cuda_h2d.LocalCallOpKernel"},
       {"cuda_d2h", "cuda_d2h.LocalCallOpKernel"},
       {"comm_net", "cpu.LocalCallOpKernel"},
       {"sync_launched_nccl", "gpu.LocalCallOpKernel"},
@@ -143,12 +142,21 @@ Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
 Maybe<size_t> Device::instr_local_dep_object_pool_size() const {
   static const size_t kDoubleBufferPoolSize = 2;
   static const HashMap<std::string, size_t> type2pool_size{
-      {"cpu", GetInstructionHighWaterMark()},        {"gpu", GetInstructionHighWaterMark()},
-      {"cuda", GetInstructionHighWaterMark()},       {"cuda_h2d", kDoubleBufferPoolSize},
-      {"cuda_d2h", kDoubleBufferPoolSize},           {"comm_net", kDoubleBufferPoolSize},
-      {"sync_launched_nccl", kDoubleBufferPoolSize}, {"async_launched_nccl", kDoubleBufferPoolSize},
+      {"cpu", GetInstructionHighWaterMark()},
+      {"gpu", GetInstructionHighWaterMark()},
+      {"cuda", GetInstructionHighWaterMark()},
+      {"cuda_h2d", kDoubleBufferPoolSize},
+      {"cuda_d2h", kDoubleBufferPoolSize},
+      {"comm_net", GetInstructionHighWaterMark()},
+      {"sync_launched_nccl", GetInstructionHighWaterMark()},
+      {"async_launched_nccl", GetInstructionHighWaterMark()},
   };
   return MapAt(type2pool_size, type());
+}
+
+// TODO(jianhao): move this configuration into stream
+Maybe<bool> Device::need_soft_sync_stream() const {
+  return JUST(local_call_instruction_name()) == "gpu.LocalCallOpKernel";
 }
 
 Maybe<const std::string&> Device::local_call_instruction_name() const {

@@ -21,7 +21,7 @@ namespace one {
 
 struct ClipByScalarMinCaptureState : public AutoGradCaptureState {
   bool requires_grad;
-  functional::Scalar min;
+  Scalar min;
 };
 
 class ClipByScalarMin : public OpExprGradFunction<ClipByScalarMinCaptureState> {
@@ -42,9 +42,9 @@ class ClipByScalarMin : public OpExprGradFunction<ClipByScalarMinCaptureState> {
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     if (IsFloatingDataType(inputs.at(0)->dtype()->data_type())) {
-      ctx->min = functional::Scalar(JUST(composed_attrs.GetAttr<double>("floating_min")));
+      ctx->min = Scalar(JUST(composed_attrs.GetAttr<double>("floating_min")));
     } else if (IsIntegralDataType(inputs.at(0)->dtype()->data_type())) {
-      ctx->min = functional::Scalar(JUST(composed_attrs.GetAttr<int64_t>("integral_min")));
+      ctx->min = Scalar(JUST(composed_attrs.GetAttr<int64_t>("integral_min")));
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Data type is not floating or integral type.";
     }
@@ -58,7 +58,7 @@ class ClipByScalarMin : public OpExprGradFunction<ClipByScalarMinCaptureState> {
     if (ctx->requires_grad) {
       const auto& x = ctx->SavedTensors().at(0);
       in_grads->at(0) = JUST(functional::ClampGrad(out_grads.at(0), x, ctx->min,
-                                                   /*max=*/Optional<functional::Scalar>()));
+                                                   /*max=*/NullOpt));
     }
     return Maybe<void>::Ok();
   }
