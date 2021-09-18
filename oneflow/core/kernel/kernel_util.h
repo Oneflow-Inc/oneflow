@@ -53,7 +53,6 @@ template<typename T, typename Derived>
 struct CpuKernelUtilIf {
   static void Axpy(DeviceCtx* ctx, const int n, const T* alpha, const T* x, const int incx, T* y,
                    const int incy);
-  static void Set(DeviceCtx* ctx, const T value, T* addr);
 };
 
 // CPU, Floating
@@ -101,7 +100,6 @@ template<typename T, typename Derived>
 struct GpuKernelUtilIf {
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
-  static void Set(DeviceCtx* ctx, const T value, T* addr);
 };
 
 // GPU, Floating
