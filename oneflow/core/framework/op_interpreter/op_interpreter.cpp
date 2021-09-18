@@ -130,7 +130,10 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     //
     //   - If there is no inplace, the output `requires_grad` should be infered by autograd
     //     mode and inputs.
-    if (!output->requires_grad()) { JUST(output->set_requires_grad(requires_grad)); }
+    if (!output->requires_grad()) {
+      JUST(output->set_requires_grad(
+          requires_grad && IsSupportRequireGradDataType(output->dtype()->data_type())));
+    }
   }
   return Maybe<void>::Ok();
 }
