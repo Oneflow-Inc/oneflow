@@ -25,11 +25,6 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
-  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[i]; }
-}
-
-template<typename T>
 __global__ void AxpyGpu(const int n, const T alpha, const T* x, const int incx, T* y,
                         const int incy) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[i * incy] += alpha * x[i * incx]; }
@@ -146,11 +141,6 @@ KU_FLOATING_METHOD Axpy(DeviceCtx* ctx, const int n, const T* alpha, const T* x,
   cublas_axpy<T>(ctx->cublas_pmd_handle(), n, alpha, x, incx, y, incy);
 }
 
-KU_FLOATING_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
-  MulGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
-}
-
 KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0) {
   gpu_add<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, out, in_0);
@@ -223,11 +213,6 @@ KU_INTEGRAL_METHOD Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, 
                         T* y, const int incy) {
   AxpyGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, alpha, x, incx, y, incy);
-}
-
-KU_INTEGRAL_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
-  MulGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
 }
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto)                                \
