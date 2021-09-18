@@ -22,18 +22,75 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _check_axis
 
 
-def _build_reduce_op(op_type_name, keepdims):
-    return (
-        flow.builtin_op(op_type_name)
-        .Input("input_tensor")
-        .Output("output_tensor")
-        .Attr("keepdims", keepdims)
-        .Build()
-    )
+def max_op(input, dim=None, keepdim=False):
+    """Computes the maximum value of all elements in the input tensor.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
+        >>> flow.max(input)
+        tensor(6., dtype=oneflow.float32)
+        >>> flow.max(input, dim=0)
+        tensor([4., 6., 5.], dtype=oneflow.float32)
+        >>> flow.max(input, dim=1)
+        tensor([5., 6.], dtype=oneflow.float32)
+
+    """
+
+    axis_checked = _check_axis(dim, input.shape)
+    if len(axis_checked) == 0:
+        return input
+    return flow._C.reduce_max(input, axis=axis_checked, keepdims=keepdim)
 
 
-@register_tensor_op("sum")
-def _sum(input, dim=None, keepdim=False):
+@register_tensor_op("max")
+def max_tensor_op(input, dim=None, keepdim=False):
+    """
+    input.max(dim, index) -> Tensor
+    See :func:`oneflow.max`
+    """
+
+    return max_op(input, dim, keepdim)
+
+
+def min_op(input, dim=None, keepdim=False):
+    """Computes the minimum value of all elements in the input tensor.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
+        >>> flow.min(input)
+        tensor(1., dtype=oneflow.float32)
+        >>> flow.min(input, dim=0)
+        tensor([2., 1., 3.], dtype=oneflow.float32)
+        >>> flow.min(input, dim=1)
+        tensor([1., 2.], dtype=oneflow.float32)
+
+    """
+
+    axis_checked = _check_axis(dim, input.shape)
+    if len(axis_checked) == 0:
+        return input
+    return flow._C.reduce_min(input, axis=axis_checked, keepdims=keepdim)
+
+
+@register_tensor_op("min")
+def min_tensor_op(input, dim=None, keepdim=False):
+    """
+    input.min(dim, index) -> Tensor
+    See :func:`oneflow.min`
+    """
+
+    return min_op(input, dim, keepdim)
+
+
+def sum_op(input, dim=None, keepdim=False):
     """Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
     
     For example:
@@ -57,8 +114,17 @@ def _sum(input, dim=None, keepdim=False):
     return flow._C.reduce_sum(input, axis=axis_checked, keepdims=keepdim)
 
 
-@register_tensor_op("mean")
-def _mean(input, dim=None, keepdim=False):
+@register_tensor_op("sum")
+def sum_tensor_op(input, dim=None, keepdim=False):
+    """
+    input.sum(dim, index) -> Tensor
+    See :func:`oneflow.sum`
+    """
+
+    return sum_op(input, dim, keepdim)
+
+
+def mean_op(input, dim=None, keepdim=False):
     """Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
     
     For example:
@@ -81,84 +147,14 @@ def _mean(input, dim=None, keepdim=False):
     return flow._C.reduce_mean(input, axis=axis_checked, keepdims=keepdim)
 
 
-class Min(Module):
-    def __init__(
-        self, axis: Optional[Union[int, Sequence[int]]] = None, keepdims: bool = False
-    ) -> None:
-        super().__init__()
-        self.axis = axis
-        self.keepdims = keepdims
-        self._op = _build_reduce_op("reduce_min", keepdims)
-
-    def forward(self, input):
-        # TODO: moves this check in functor
-        if input.shape.numel() == 0:
-            raise RuntimeError("operation does not have an identity.")
-        axis_checked = _check_axis(self.axis, input.shape)
-        if len(axis_checked) == 0:
-            return input
-        return self._op(input, axis=axis_checked)[0]
-
-
-@register_tensor_op("min")
-def _min(input, dim=None, keepdim=False):
-    """Computes the minimum value of all elements in the input tensor.
-    
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
-        >>> flow.min(input)
-        tensor(1., dtype=oneflow.float32)
-        >>> flow.min(input, dim=0)
-        tensor([2., 1., 3.], dtype=oneflow.float32)
-        >>> flow.min(input, dim=1)
-        tensor([1., 2.], dtype=oneflow.float32)
-
+@register_tensor_op("mean")
+def mean_tensor_op(input, dim=None, keepdim=False):
     """
-    return Min(dim, keepdim)(input)
-
-
-class Max(Module):
-    def __init__(
-        self, axis: Optional[Union[int, Sequence[int]]] = None, keepdims: bool = False
-    ) -> None:
-        super().__init__()
-        self.axis = axis
-        self.keepdims = keepdims
-        self._op = _build_reduce_op("reduce_max", keepdims)
-
-    def forward(self, input):
-        # TODO: moves this check in functor
-        if input.shape.numel() == 0:
-            raise RuntimeError("operation does not have an identity.")
-        axis_checked = _check_axis(self.axis, input.shape)
-        if len(axis_checked) == 0:
-            return input
-        return self._op(input, axis=axis_checked)[0]
-
-
-@register_tensor_op("max")
-def _max(input, dim=None, keepdim=False):
-    """Computes the maximum value of all elements in the input tensor.
-    
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
-        >>> flow.max(input)
-        tensor(6., dtype=oneflow.float32)
-        >>> flow.max(input, dim=0)
-        tensor([4., 6., 5.], dtype=oneflow.float32)
-        >>> flow.max(input, dim=1)
-        tensor([5., 6.], dtype=oneflow.float32)
-
+    input.mean(dim, index) -> Tensor
+    See :func:`oneflow.mean`
     """
-    return Max(dim, keepdim)(input)
+
+    return mean_op(input, dim, keepdim)
 
 
 def prod_op(input, dim=None, keepdim=False):
