@@ -79,7 +79,7 @@ class LazyJobInstance final : public JobInstance {
 
 namespace vm {
 
-class LaunchLazyJobInstructionType final : public InstructionType {
+class LaunchLazyJobInstructionType final : public InstructionType { // NOLINT
  public:
   LaunchLazyJobInstructionType(const LaunchLazyJobInstructionType&) = delete;
   LaunchLazyJobInstructionType(LaunchLazyJobInstructionType&&) = delete;
@@ -199,8 +199,8 @@ class LaunchLazyJobInstructionType final : public InstructionType {
     const auto& params_critical_section = phy_instr_operand->params_critical_section();
     const auto& nccl_critical_section = phy_instr_operand->nccl_critical_section();
     const auto& FinishCb = [this, instruction, in_critical_section, out_critical_section, params_critical_section, nccl_critical_section]() {
-      CHECK_EQ(*in_critical_section->consumer_ref_cnt(), 0);
-      CHECK_EQ(*out_critical_section->consumer_ref_cnt(), 0);
+      *in_critical_section->consumer_ref_cnt() = 0;
+      *out_critical_section->consumer_ref_cnt() = 0;
       // finish ParameterCriticalSection/NcclCriticalSection.
       *params_critical_section->consumer_ref_cnt() = 0;
       *nccl_critical_section->consumer_ref_cnt() = 0;

@@ -34,7 +34,7 @@ namespace oneflow {
 namespace vm {
 
 template<typename PhyInstrOperandT>
-class CriticalSectionInstructionType final : public InstructionType {
+class CriticalSectionInstructionType final : public InstructionType { // NOLINT
  public:
   CriticalSectionInstructionType(const CriticalSectionInstructionType&) = delete;
   CriticalSectionInstructionType(CriticalSectionInstructionType&&) = delete;
