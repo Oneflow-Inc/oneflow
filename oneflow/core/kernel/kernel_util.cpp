@@ -295,8 +295,6 @@ void AutoMemset(StreamContext* stream_ctx, void* dst, const char value, size_t s
   template<typename T, typename Derived> \
   void CpuKernelUtilIf<T, Derived>::
 
-KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }
-
 #define KU_FLOATING_METHOD \
   template<typename T>     \
   void KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::value>::type>::

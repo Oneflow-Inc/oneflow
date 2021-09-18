@@ -22,15 +22,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-template<typename T>
-__global__ void gpu_set(const T value, T* addr) {
-  *addr = value;
-}
-
-}  // namespace
-
 #define MAKE_CUB_DEVICE_REDUCE_SWITCH_ENTRY(func_name, T) cub::DeviceReduce::func_name<T*, T*>
 DEFINE_STATIC_SWITCH_FUNC(cudaError_t, Sum, MAKE_CUB_DEVICE_REDUCE_SWITCH_ENTRY,
                           MAKE_DATA_TYPE_CTRV_SEQ(FLOATING_DATA_TYPE_SEQ));
@@ -47,9 +38,6 @@ KU_IF_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializ
     KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(nullptr, initializer_conf, random_seed,
                                                         host_blob);
   });
-}
-KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) {
-  gpu_set<T><<<1, 1, 0, ctx->cuda_stream()>>>(value, addr);
 }
 
 #define KU_FLOATING_METHOD \

@@ -50,15 +50,12 @@ struct KernelUtil;
 
 // CPU, Integral, Floating
 template<typename T, typename Derived>
-struct CpuKernelUtilIf {
-  static void Set(DeviceCtx* ctx, const T value, T* addr);
-};
+struct CpuKernelUtilIf {};
 
 // CPU, Floating
 template<typename T>
 struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::value>::type>
     : public CpuKernelUtilIf<T, KernelUtil<DeviceType::kCPU, T>> {
-
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
 };
@@ -76,14 +73,12 @@ template<typename T, typename Derived>
 struct GpuKernelUtilIf {
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
-  static void Set(DeviceCtx* ctx, const T value, T* addr);
 };
 
 // GPU, Floating
 template<typename T>
 struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::value>::type>
-    : public GpuKernelUtilIf<T, KernelUtil<DeviceType::kGPU, T>> {
-};
+    : public GpuKernelUtilIf<T, KernelUtil<DeviceType::kGPU, T>> {};
 
 // GPU, Integral
 template<typename T>
