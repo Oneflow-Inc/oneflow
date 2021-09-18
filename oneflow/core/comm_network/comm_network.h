@@ -49,9 +49,11 @@ class CommNet {
   void ReadDone(void* read_id);
 
   virtual void SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) = 0;
+  virtual void SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size,const DataHandle & cb) = 0;
   virtual char * SerialTokenToData(void * token,size_t * size) = 0;
   virtual void * DeSerialDataToToken(char * data, size_t *  size ) = 0;
-
+  DataHandle cb_;
+  
  protected:
   CommNet();
 

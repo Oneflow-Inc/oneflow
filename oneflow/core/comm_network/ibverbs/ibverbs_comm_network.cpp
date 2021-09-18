@@ -89,6 +89,12 @@ void IBVerbsCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size)
   qp_vec_.at(dst_machine_id)->PostSendRequest(data, size);
 }
 
+void IBVerbsCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size,const DataHandle & cb){
+  cb_ = cb;
+  char* data = reinterpret_cast<char*>(addr);
+  qp_vec_.at(dst_machine_id)->PostSendRequest(data, size);
+}
+
 char * IBVerbsCommNet::SerialTokenToData(void *token, size_t *token_size) {
   char * data = (char*)malloc(sizeof(IBVerbsCommNetRMADesc));
   *token_size = sizeof(IBVerbsCommNetRMADesc);
@@ -110,7 +116,8 @@ void * IBVerbsCommNet::DeSerialDataToToken(char *data, size_t  * token_size) {
 }
 
 void IBVerbsCommNet::RecvMsg(void* data, size_t size) {
-  Global<ActorMsgBus>::Get()->HandleRecvData(data, size);
+//  Global<ActorMsgBus>::Get()->HandleRecvData(data, size);
+  cb_(data,size);
 }
 
 IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT) {
