@@ -46,6 +46,7 @@ Device::Device(const std::string& type, int64_t device_id)
       schedule_local_dep_object_(nullptr) {}
 
 Maybe<void> Device::Init() {
+  if (type_ == "auto") { return Maybe<void>::Ok(); }
   DeviceType dev_type = JUST(DeviceType4DeviceTag(JUST(of_type())));
   mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, device_id_);
   const auto& opt_device_transport_tag = JUST(GetSharedTransportDeviceType());
@@ -91,6 +92,7 @@ Maybe<const std::string&> Device::of_type() const {
       {"comm_net", "cpu"},
       {"sync_launched_nccl", "gpu"},
       {"async_launched_nccl", "gpu"},
+      {"auto", "auto"},  // Only used for auto generator currently.
   };
   return MapAt(type2device_tag, type());
 }
@@ -220,5 +222,20 @@ Maybe<Symbol<ParallelDesc>> RawPlacement4Device(Symbol<Device> device) {
 decltype(Device::GetPlacement) Device::GetPlacement =
     DECORATE(&RawGetPlacement, ThreadLocalCopiable);
 decltype(Placement4Device) Placement4Device = DECORATE(&RawPlacement4Device, ThreadLocal);
+
+Maybe<void> ParsingDeviceTag(const std::string& device_tag, std::string* device_name,
+                             int* device_index) {
+  std::string::size_type pos = device_tag.find(':');
+  if (pos == std::string::npos) {
+    *device_name = device_tag;
+    *device_index = -1;
+  } else {
+    std::string index_str = device_tag.substr(pos + 1);
+    CHECK_OR_RETURN(IsStrInt(index_str)) << "Invalid device " << device_tag;
+    *device_name = device_tag.substr(0, pos);
+    *device_index = std::stoi(index_str);
+  }
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow
