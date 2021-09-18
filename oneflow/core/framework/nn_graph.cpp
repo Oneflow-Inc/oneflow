@@ -348,7 +348,7 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
           std::move(var_blobs));
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->LaunchLazyJob(input_blob_list_ptr, output_blob_list_ptr, var_blob_list_ptr,
-                               nn_graph);
+                                  nn_graph);
   }));
   return Maybe<void>::Ok();
 }

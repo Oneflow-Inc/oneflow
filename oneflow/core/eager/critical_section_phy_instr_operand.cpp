@@ -21,7 +21,8 @@ namespace oneflow {
 namespace vm {
 
 CriticalSectionPhyInstrOperand::CriticalSectionPhyInstrOperand(int64_t ref_cnt)
-      : notifier_(std::make_unique<Notifier>()), consumer_ref_cnt_(std::make_shared<std::atomic<int64_t>>(ref_cnt)) { }
+    : notifier_(std::make_unique<Notifier>()),
+      consumer_ref_cnt_(std::make_shared<std::atomic<int64_t>>(ref_cnt)) {}
 
 void CriticalSectionPhyInstrOperand::ProducerNotifiesConsumer() const {
   CHECK(notifier_->Notify() == kNotifierStatusSuccess);
@@ -33,11 +34,14 @@ void CriticalSectionPhyInstrOperand::ConsumerWaitsProducer() const {
 
 TensorCriticalSectionPhyInstrOperand::TensorCriticalSectionPhyInstrOperand(
     const one::EagerBlobObjectListPtr& eager_blob_objects,
-    const HashMap<std::string, int64_t>& op_name2index,
-    const std::shared_ptr<NNGraphIf>& nn_graph)
-      : CriticalSectionPhyInstrOperand(eager_blob_objects->size()), eager_blob_objects_(eager_blob_objects), nn_graph_(nn_graph), op_name2index_(op_name2index) { }
+    const HashMap<std::string, int64_t>& op_name2index, const std::shared_ptr<NNGraphIf>& nn_graph)
+    : CriticalSectionPhyInstrOperand(eager_blob_objects->size()),
+      eager_blob_objects_(eager_blob_objects),
+      nn_graph_(nn_graph),
+      op_name2index_(op_name2index) {}
 
-void TensorCriticalSectionPhyInstrOperand::ConsumerFetchBlobAndDecreaseRefCnt(const std::string& op_name, const std::function<void(Blob*)>& Callback) const {
+void TensorCriticalSectionPhyInstrOperand::ConsumerFetchBlobAndDecreaseRefCnt(
+    const std::string& op_name, const std::function<void(Blob*)>& Callback) const {
   {
     const auto& iter = op_name2index_.find(op_name);
     CHECK(iter != op_name2index_.end());
@@ -50,9 +54,11 @@ void TensorCriticalSectionPhyInstrOperand::ConsumerFetchBlobAndDecreaseRefCnt(co
 }
 
 void TensorCriticalSectionPhyInstrOperand::ForEachMirroredObject(
-    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach) const {
+    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
+    const {
   for (const auto& eager_blob_object : *eager_blob_objects_) {
-    DoEach(nullptr, CHECK_JUST(eager_blob_object->compute_local_dep_object())->mut_mirrored_object());
+    DoEach(nullptr,
+           CHECK_JUST(eager_blob_object->compute_local_dep_object())->mut_mirrored_object());
   }
 }
 
@@ -62,26 +68,27 @@ Maybe<LocalDepObject*> RawCriticalSectionLocalDepObject() {
   return JUST(Device::New("critical_section"))->mut_schedule_local_dep_object();
 }
 
-constexpr auto* CriticalSectionLocalDepObject = DECORATE(&RawCriticalSectionLocalDepObject, ThreadLocal);
+constexpr auto* CriticalSectionLocalDepObject =
+    DECORATE(&RawCriticalSectionLocalDepObject, ThreadLocal);
 
-}
+}  // namespace
 
 void InputCriticalSectionPhyInstrOperand::ForEachMutMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-      const {
-  DoEach(nullptr, CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object()); 
+    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
+    const {
+  DoEach(nullptr, CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object());
 }
 
 void OutputCriticalSectionPhyInstrOperand::ForEachMutMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-      const {
-  DoEach(nullptr, CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object()); 
+    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
+    const {
+  DoEach(nullptr, CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object());
 }
 
 void ParameterCriticalSectionPhyInstrOperand::ForEachMutMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-      const {
-  DoEach(nullptr, CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object()); 
+    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
+    const {
+  DoEach(nullptr, CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object());
   ForEachMirroredObject(DoEach);
 }
 
@@ -100,9 +107,9 @@ static constexpr auto* GetEagerNcclLocalDepObject =
 }  // namespace
 
 void NcclCriticalSectionPhyInstrOperand::ForEachMutMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-      const {
-  DoEach(nullptr, CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object()); 
+    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
+    const {
+  DoEach(nullptr, CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object());
 #ifdef WITH_CUDA
   auto* sync_launched_nccl = CHECK_JUST(GetEagerNcclLocalDepObject("sync_launched_nccl"));
   auto* async_launched_nccl = CHECK_JUST(GetEagerNcclLocalDepObject("async_launched_nccl"));

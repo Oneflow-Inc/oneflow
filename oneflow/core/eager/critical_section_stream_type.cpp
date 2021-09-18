@@ -25,18 +25,18 @@ namespace oneflow {
 namespace vm {
 
 void CriticalSectionStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
-                                      Stream* stream) const {
+                                              Stream* stream) const {
   device_ctx->reset();
 }
 
-void CriticalSectionStreamType::InitInstructionStatus(const Stream& stream,
-                                              InstructionStatusBuffer* status_buffer) const {
+void CriticalSectionStreamType::InitInstructionStatus(
+    const Stream& stream, InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(RefCntInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
   RefCntInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data());
 }
 
-void CriticalSectionStreamType::DeleteInstructionStatus(const Stream& stream,
-                                                InstructionStatusBuffer* status_buffer) const {
+void CriticalSectionStreamType::DeleteInstructionStatus(
+    const Stream& stream, InstructionStatusBuffer* status_buffer) const {
   // do nothing
 }
 
@@ -54,7 +54,7 @@ void CriticalSectionStreamType::Compute(Instruction* instruction) const {
 }
 
 ObjectMsgPtr<StreamDesc> CriticalSectionStreamType::MakeStreamDesc(const Resource& resource,
-                                                           int64_t this_machine_id) const {
+                                                                   int64_t this_machine_id) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CriticalSectionStreamType>());
   ret->set_num_machines(1);

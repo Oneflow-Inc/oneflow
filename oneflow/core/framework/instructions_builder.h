@@ -99,9 +99,9 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   // Build VM execution instructions with NNGraph's inputs/outputs/parameters for NNGraph execution.
   Maybe<void> LaunchLazyJob(const one::EagerBlobObjectListPtr& inputs,
-                         const one::EagerBlobObjectListPtr& outputs,
-                         const one::EagerBlobObjectListPtr& parameters,
-                         const std::shared_ptr<NNGraphIf>& nn_graph) const;
+                            const one::EagerBlobObjectListPtr& outputs,
+                            const one::EagerBlobObjectListPtr& parameters,
+                            const std::shared_ptr<NNGraphIf>& nn_graph) const;
 
   Maybe<compatible_py::BlobObject> PackPhysicalBlobsToLogicalBlob(
       const std::vector<std::shared_ptr<compatible_py::BlobObject>>& physical_blob_objects,
@@ -459,9 +459,15 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   vm::IdGenerator* mut_id_generator() { return id_generator_.get(); }
 
  private:
-  Maybe<vm::InputCriticalSectionPhyInstrOperand> MakeInputCriticalSection(const one::EagerBlobObjectListPtr& eager_blob_object, const std::shared_ptr<NNGraphIf>& nn_graph) const;
-  Maybe<vm::ParameterCriticalSectionPhyInstrOperand> MakeParameterCriticalSection(const one::EagerBlobObjectListPtr& eager_blob_object, const std::shared_ptr<NNGraphIf>& nn_graph) const;
-  Maybe<vm::OutputCriticalSectionPhyInstrOperand> MakeOutputCriticalSection(const one::EagerBlobObjectListPtr& eager_blob_object, const std::shared_ptr<NNGraphIf>& nn_graph) const;
+  Maybe<vm::InputCriticalSectionPhyInstrOperand> MakeInputCriticalSection(
+      const one::EagerBlobObjectListPtr& eager_blob_object,
+      const std::shared_ptr<NNGraphIf>& nn_graph) const;
+  Maybe<vm::ParameterCriticalSectionPhyInstrOperand> MakeParameterCriticalSection(
+      const one::EagerBlobObjectListPtr& eager_blob_object,
+      const std::shared_ptr<NNGraphIf>& nn_graph) const;
+  Maybe<vm::OutputCriticalSectionPhyInstrOperand> MakeOutputCriticalSection(
+      const one::EagerBlobObjectListPtr& eager_blob_object,
+      const std::shared_ptr<NNGraphIf>& nn_graph) const;
   Maybe<vm::NcclCriticalSectionPhyInstrOperand> MakeNcclCriticalSection() const;
 
   std::shared_ptr<vm::IdGenerator> id_generator_;
