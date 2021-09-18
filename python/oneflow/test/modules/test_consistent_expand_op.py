@@ -220,9 +220,9 @@ class ExpandGraphSbpTestCase(oneflow.unittest.TestCase):
             _test_expand_new_dims_broadcast,
             _test_expand_same_dim_broadcast,
             _test_expand_same_dim_negative_broadcast,
-            _test_expand_new_dims_split,
-            _test_expand_same_dim_split,
-            _test_expand_same_dim_negative_split,
+            # _test_expand_new_dims_split,
+            # _test_expand_same_dim_split,
+            # _test_expand_same_dim_negative_split,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
