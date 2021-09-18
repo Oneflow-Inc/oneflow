@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/user/kernels/slice_util.h"
 
 namespace oneflow {

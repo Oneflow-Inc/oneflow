@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/thread/thread.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/actor/actor.h"
 #include "oneflow/core/actor/light_actor.h"
 #include "oneflow/core/stream/stream_context.h"
