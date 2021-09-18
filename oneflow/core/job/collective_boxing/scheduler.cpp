@@ -33,22 +33,22 @@ namespace collective {
 class RequestHandle final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RequestHandle);
-  RequestHandle(int32_t local_rank, void* request_entry_token, void* request_token)
+  RequestHandle(int32_t local_rank, void* request_entry_token, void* coordinator_token)
       : local_rank_(local_rank),
         request_entry_token_(request_entry_token),
-        request_token_(request_token) {}
+        coordinator_token_(coordinator_token) {}
   ~RequestHandle() = default;
 
   int32_t local_rank() const { return local_rank_; }
 
   void* request_entry_token() { return request_entry_token_; }
 
-  void* request_token() { return request_token_; }
+  void* coordinator_token() { return coordinator_token_; }
 
  private:
   int32_t local_rank_;
   void* request_entry_token_;
-  void* request_token_;
+  void* coordinator_token_;
 };
 
 class ExecutorToken final {
@@ -246,12 +246,12 @@ RequestHandle* Scheduler::CreateRequestHandle(const RankDesc& rank_desc) {
   CHECK(rank_desc.op_desc() == request_entry->desc().op_desc());
   const int32_t local_rank = request_entry->GlobalRankToLocalRank(rank_desc.rank());
   void* request_entry_token = impl_->request_store->CreateRequestEntryToken(request_id);
-  void* request_token = impl_->coordinator->CreateRequestToken(request_id);
-  return new RequestHandle(local_rank, request_entry_token, request_token);
+  void* coordinator_token = impl_->coordinator->CreateCoordinatorToken(request_id);
+  return new RequestHandle(local_rank, request_entry_token, coordinator_token);
 }
 
 void Scheduler::DestroyRequestHandle(RequestHandle* handle) {
-  impl_->coordinator->DestroyRequestToken(handle->request_token());
+  impl_->coordinator->DestroyCoordinatorToken(handle->coordinator_token());
   impl_->request_store->DestroyRequestEntryToken(handle->request_entry_token());
 }
 
@@ -260,7 +260,7 @@ void Scheduler::Schedule(RequestHandle* handle,
   const int32_t local_rank = handle->local_rank();
   const bool ready = impl_->request_store->GetRequestEntry(handle->request_entry_token())
                          ->AddRuntimeRequest(local_rank, std::move(request_info));
-  if (ready) { impl_->coordinator->AddRequest(handle->request_token()); }
+  if (ready) { impl_->coordinator->AddRequest(handle->coordinator_token()); }
 }
 
 }  // namespace collective

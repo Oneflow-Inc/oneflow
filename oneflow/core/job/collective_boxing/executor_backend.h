@@ -39,7 +39,8 @@ class ExecutorBackend {
   virtual void DeinitJob(int64_t job_id) = 0;
   virtual void GroupRequests(const std::vector<RequestId>& request_ids,
                              const std::function<void(std::vector<RequestId>&&)>& Handler) = 0;
-  virtual void ExecuteRequests(const std::vector<RequestId>& request_ids, void* executor_token) = 0;
+  virtual void ExecuteRequests(const std::vector<RequestId>& request_ids,
+                               void* executor_backend_token) = 0;
   virtual void* CreateExecutorBackendToken(const std::vector<RequestId>& request_ids) = 0;
   virtual void DestroyExecutorBackendToken(void* executor_backend_token) = 0;
 };
