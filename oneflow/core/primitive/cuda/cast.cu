@@ -69,7 +69,7 @@ class CastImpl : public Cast, public CudaGraphSupport {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CastImpl);
   explicit CastImpl() = default;
-  ~CastImpl() = default;
+  ~CastImpl() override = default;
 
   void Launch(StreamContext* stream_ctx, const void* from, void* to, size_t count) override {
     auto* cuda_stream_ctx = CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx));

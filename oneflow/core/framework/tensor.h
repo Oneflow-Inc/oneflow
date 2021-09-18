@@ -262,13 +262,8 @@ class TensorIf : public Tensor {
 
 class Parameter final : public TensorIf<Parameter> {
  public:
-  Parameter(std::shared_ptr<Tensor> tensor, bool requires_grad) {
-    while (auto parameter = std::dynamic_pointer_cast<Parameter>(tensor)) {
-      tensor = parameter->tensor_;
-    }
-    this->tensor_ = std::move(tensor);
-    // TODO: in `y = flow.nn.Parameter(x)`, y should have its own "requires_grad" field
-    // (align with PyTorch) instead of sharing it with x
+  Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad) {
+    this->tensor_ = tensor->detach().GetPtrOrThrow();
     this->tensor_->set_requires_grad(requires_grad);
   }
 
@@ -288,6 +283,18 @@ class Parameter final : public TensorIf<Parameter> {
     return tensor_->consistent_tensor_meta();
   }
   Maybe<Tensor> data() override { return tensor_; }
+
+  // Must override grad_fn_node function. Otherwise grad_fn will belong to this not tensor_,
+  // and it will be wrong when use Parameter.data() in operators.
+  std::shared_ptr<const FunctionNode> grad_fn_node() const override {
+    return tensor_->grad_fn_node();
+  }
+  void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
+    tensor_->set_grad_fn_node(grad_fn_node);
+  }
+  const std::shared_ptr<FunctionNode>& mut_grad_fn_node() override {
+    return tensor_->mut_grad_fn_node();
+  }
 
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override {
     return tensor_->mut_eager_mirrored_tensor_impl();
@@ -343,13 +350,11 @@ class Parameter final : public TensorIf<Parameter> {
 
   user_op::TensorDesc* mut_tensor_meta() override { return tensor_->mut_tensor_meta(); }
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
-    std::shared_ptr<Tensor> tensor = other;
-    while (auto parameter = std::dynamic_pointer_cast<Parameter>(tensor)) {
-      tensor = parameter->tensor_;
-    }
-    CHECK_OR_RETURN(is_local() == tensor->is_local() && is_eager() == tensor->is_eager())
+    CHECK_OR_RETURN(is_local() == other->is_local() && is_eager() == other->is_eager())
         << "You can't assign copy between tensors with different type";
-    this->tensor_ = std::move(tensor);
+    bool old_requires_grad = tensor_->requires_grad();
+    this->tensor_ = JUST(other->detach());
+    this->tensor_->set_requires_grad(old_requires_grad);
     return Maybe<void>::Ok();
   }
 
@@ -459,10 +464,13 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   }
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
-    const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(other);
+    CHECK_OR_RETURN(this->is_leaf()) << "Can only set leaf tensor's data.";
+    const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(JUST(other->detach()));
     CHECK_NOTNULL_OR_RETURN(mirrored_tensor);
+    bool old_requires_grad = requires_grad();
     impl_ = mirrored_tensor->impl_;
-    grad_fn_node_ = mirrored_tensor->grad_fn_node_;
+    set_requires_grad(old_requires_grad);
+    grad_fn_node_ = nullptr;
     return Maybe<void>::Ok();
   }
 
@@ -565,10 +573,14 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
 
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
-    const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(other);
+    CHECK_OR_RETURN(this->is_leaf()) << "Can only set leaf tensor's data.";
+    const auto& consistent_tensor =
+        std::dynamic_pointer_cast<ConsistentTensor>(JUST(other->detach()));
     CHECK_NOTNULL_OR_RETURN(consistent_tensor);
+    bool old_requires_grad = requires_grad();
     impl_ = consistent_tensor->impl_;
-    grad_fn_node_ = consistent_tensor->grad_fn_node_;
+    set_requires_grad(old_requires_grad);
+    grad_fn_node_ = nullptr;
     return Maybe<void>::Ok();
   }
 
