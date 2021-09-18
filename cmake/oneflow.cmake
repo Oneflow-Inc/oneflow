@@ -354,7 +354,6 @@ target_link_libraries(oneflow_internal PRIVATE
                       ${of_libs}
                       of_functional_tensor_obj
                       ${oneflow_third_party_libs}
-                      ${CUDNN_LIBRARIES}
                       of_pyext_obj
                       ${oneflow_exe_third_party_libs})
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})

@@ -205,6 +205,7 @@ if (BUILD_CUDA)
   include(nccl)
 
   list(APPEND oneflow_third_party_libs ${VENDOR_CUDA_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${NCCL_LIBRARIES})
 
   list(APPEND oneflow_third_party_dependencies nccl)
