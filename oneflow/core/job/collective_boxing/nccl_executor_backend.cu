@@ -491,8 +491,9 @@ struct NcclExecutorBackend::Impl {
     op_type2fusion_enabled.at(OpType::kOpTypeAll2All) = false;
   }
 
-  const CommGroup& GetCommGroup(int32_t stream_id, void* executor_token) const {
-    ExecutorToken* token = static_cast<ExecutorToken*>(executor_token);
+  const CommGroup& GetCommGroup(int32_t stream_id, void* executor_backend_token) const {
+    NcclExecutorBackendToken* token =
+        static_cast<NcclExecutorBackendToken*>(executor_backend_token);
     const auto stream_id2comm_group = token->stream_id2comm_group;
     return stream_id2comm_group->at(stream_id);
   }
@@ -537,7 +538,7 @@ struct NcclExecutorBackend::Impl {
   }
 
   void GroupRequests(const std::vector<RequestId>& request_ids,
-                     const std::function<void(std::vector<RequestId>&&, void*)>& Handler) {
+                     const std::function<void(std::vector<RequestId>&&)>& Handler) {
     std::vector<RequestId> group;
     int64_t group_size = 0;
     const int64_t fusion_max_ops = std::min(conf.nccl_fusion_max_ops(), kMultiCopyParamsMaxSize);
@@ -549,8 +550,7 @@ struct NcclExecutorBackend::Impl {
               || !CanRequestEntryFuse(request_store->MutRequestEntry(group.back()), request_entry)
               || group_size + size > fusion_threshold || group.size() >= fusion_max_ops) {
             if (!group.empty()) {
-              void* executor_token = CreateExecutorToken(group);
-              Handler(std::move(group), executor_token);
+              Handler(std::move(group));
               group.clear();
               group_size = 0;
             }
@@ -558,44 +558,39 @@ struct NcclExecutorBackend::Impl {
           group.push_back(request_id);
           group_size += size;
         });
-    if (!group.empty()) {
-      void* executor_token = CreateExecutorToken(group);
-      Handler(std::move(group), executor_token);
-    }
+    if (!group.empty()) { Handler(std::move(group)); }
   }
 
-  struct ExecutorToken {
+  struct NcclExecutorBackendToken {
     std::vector<CommGroup>* stream_id2comm_group;
   };
 
-  void* CreateExecutorToken(const std::vector<RequestId>& request_ids) {
+  void* CreateExecutorBackendToken(const std::vector<RequestId>& request_ids) {
     CHECK_GT(request_ids.size(), 0);
-    void* executor_token;
+    void* executor_backend_token;
     const DeviceSet& first_device_set =
         request_store->MutRequestEntry(request_ids.front())->desc().device_set();
     auto it = device_set2stream_id2comm_group.find(first_device_set);
-    if (it != device_set2stream_id2comm_group.end()) {
-      executor_token = new ExecutorToken{&it->second};
-    } else {
-      executor_token = new ExecutorToken{nullptr};
-    }
+    CHECK(it != device_set2stream_id2comm_group.end());
+    executor_backend_token = new NcclExecutorBackendToken{&it->second};
     request_store->ForEachMutRequestEntryForIdsInJob(
         request_ids, [&](RequestEntry* request_entry, int32_t i, RequestId request_id) {
           const DeviceSet& device_set = request_entry->desc().device_set();
           CHECK(first_device_set == device_set);
         });
-    return executor_token;
+    return executor_backend_token;
   }
 
-  void DestroyExecutorToken(void* executor_token) {
-    ExecutorToken* token = static_cast<ExecutorToken*>(executor_token);
+  void DestroyExecutorBackendToken(void* executor_backend_token) {
+    NcclExecutorBackendToken* token =
+        static_cast<NcclExecutorBackendToken*>(executor_backend_token);
     delete token;
   }
 
-  void ExecuteRequests(const std::vector<RequestId>& request_ids, void* executor_token) {
+  void ExecuteRequests(const std::vector<RequestId>& request_ids, void* executor_backend_token) {
     const int32_t stream_id = NextStreamId();
     CudaCurrentDeviceGuard device_guard;
-    auto& comm_group = GetCommGroup(stream_id, executor_token);
+    auto& comm_group = GetCommGroup(stream_id, executor_backend_token);
     auto& device_id2stream_ctx = stream_id2device_id2stream_ctx.at(stream_id);
     if (request_store->MutRequestEntry(request_ids.front())->desc().op_desc().op_type()
             == OpType::kOpTypeAllReduce
@@ -636,21 +631,21 @@ void NcclExecutorBackend::DeinitJob(int64_t job_id) {}
 
 void NcclExecutorBackend::GroupRequests(
     const std::vector<RequestId>& request_ids,
-    const std::function<void(std::vector<RequestId>&&, void*)>& Handler) {
+    const std::function<void(std::vector<RequestId>&&)>& Handler) {
   impl_->GroupRequests(request_ids, Handler);
 }
 
-void* NcclExecutorBackend::CreateExecutorToken(const std::vector<RequestId>& request_ids) {
-  return impl_->CreateExecutorToken(request_ids);
+void* NcclExecutorBackend::CreateExecutorBackendToken(const std::vector<RequestId>& request_ids) {
+  return impl_->CreateExecutorBackendToken(request_ids);
 }
 
-void NcclExecutorBackend::DestroyExecutorToken(void* executor_token) {
-  return impl_->DestroyExecutorToken(executor_token);
+void NcclExecutorBackend::DestroyExecutorBackendToken(void* executor_backend_token) {
+  return impl_->DestroyExecutorBackendToken(executor_backend_token);
 }
 
 void NcclExecutorBackend::ExecuteRequests(const std::vector<RequestId>& request_ids,
-                                          void* executor_token) {
-  impl_->ExecuteRequests(request_ids, executor_token);
+                                          void* executor_backend_token) {
+  impl_->ExecuteRequests(request_ids, executor_backend_token);
 }
 
 }  // namespace collective

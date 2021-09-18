@@ -58,11 +58,13 @@ struct RequestGroupIndex {
   int32_t index_in_group;
 };
 
+class ExecutorToken;
+
 struct StaticGroupRequestsInfo {
   std::vector<RequestGroupIndex> request_index2request_group_index;
   std::vector<GroupState> group_states;
   std::vector<std::vector<RequestId>> group_id2request_ids;
-  std::vector<void*> group_id2executor_token;
+  std::vector<ExecutorToken*> group_id2executor_token;
 };
 
 struct StaticGroupRequestsInfoToken {
@@ -122,11 +124,11 @@ void StaticGroupCoordinator::InitJob(int64_t job_id) {
   std::vector<RequestGroupIndex>& request_index2request_group_index =
       info.request_index2request_group_index;
   std::vector<std::vector<RequestId>>& group_id2request_ids = info.group_id2request_ids;
-  std::vector<void*>& group_id2executor_token = info.group_id2executor_token;
+  std::vector<ExecutorToken*>& group_id2executor_token = info.group_id2executor_token;
   const int32_t request_count = impl_->request_store_->RequestCountForJob(job_id);
   request_index2request_group_index.resize(request_count);
   impl_->executor_->GroupRequests(
-      request_ids, [&](std::vector<RequestId>&& group, void* executor_token) {
+      request_ids, [&](std::vector<RequestId>&& group, ExecutorToken* executor_token) {
         const int32_t group_id = group_states.size();
         group_states.emplace_back(group.size());
         for (int32_t idx_in_group = 0; idx_in_group < group.size(); ++idx_in_group) {
@@ -171,7 +173,6 @@ void StaticGroupCoordinator::AddRequest(void* request_token) {
     auto& group_state = info->group_states.at(current_group_idx_in_job_);
     if (group_state.IsReady()) {
       impl_->executor_->ExecuteGroupedRequests(
-          info->group_id2request_ids.at(current_group_idx_in_job_),
           info->group_id2executor_token.at(current_group_idx_in_job_));
       group_state.Reset();
       current_group_idx_in_job_ = (current_group_idx_in_job_ + 1) % info->group_states.size();

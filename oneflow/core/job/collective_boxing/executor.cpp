@@ -22,8 +22,8 @@ namespace boxing {
 namespace collective {
 
 void Executor::ExecuteRequests(const std::vector<RequestId>& request_ids) {
-  GroupRequests(request_ids, [&](std::vector<RequestId>&& group, void* executor_token) {
-    ExecuteGroupedRequests(group, executor_token);
+  GroupRequests(request_ids, [&](std::vector<RequestId>&& group, ExecutorToken* executor_token) {
+    ExecuteGroupedRequests(executor_token);
   });
 }
 
