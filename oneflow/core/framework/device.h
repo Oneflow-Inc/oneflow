@@ -71,6 +71,8 @@ class Device final {
   LocalDepObject* mut_schedule_local_dep_object() const { return schedule_local_dep_object_; }
   Maybe<size_t> instr_local_dep_object_pool_size() const;
 
+  Maybe<bool> need_soft_sync_stream() const;
+
  private:
   Device(const std::string& type, int64_t device_id);
   Maybe<void> Init();

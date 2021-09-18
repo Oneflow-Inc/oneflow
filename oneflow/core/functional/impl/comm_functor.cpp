@@ -156,7 +156,7 @@ class LocalAllReduceFunctor {
                          .Input("in")
                          .Output("out")
                          .Attr("parallel_conf", PbMessage2TxtString(parallel_conf))
-                         .Attr<bool>("async_launch", false)
+                         .Attr<bool>("async_launch", true)
                          .Build());
       rank_group2op_expr[rank_group] = op_expr;
     } else {

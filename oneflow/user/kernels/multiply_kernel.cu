@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,28 +12,15 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
+*/
+#include "oneflow/user/kernels/multiply_kernel.h"
+#include "oneflow/user/kernels/elementwise_xpu_kernel.cuh"
 
-import unittest
-from collections import OrderedDict
+namespace oneflow {
 
-import numpy as np
-from test_util import GenArgList
+#define REGISTER_MULTIPLY_GPU_KERNEL(cpp_type, proto_type) \
+  REGISTER_MULTIPLY_KERNEL(DeviceType::kGPU, cpp_type);
 
-import oneflow as flow
-import oneflow.unittest
+OF_PP_FOR_EACH_TUPLE(REGISTER_MULTIPLY_GPU_KERNEL, ARITHMETIC_DATA_TYPE_SEQ);
 
-from oneflow.test_utils.automated_test_util import *
-
-
-@flow.unittest.skip_unless_1n1d()
-class TestCat(flow.unittest.TestCase):
-    @autotest()
-    def test_cat_with_random_data(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
-        return torch.cat((x, x, x), random(0, 2).to(int))
-
-
-if __name__ == "__main__":
-    unittest.main()
+}  // namespace oneflow
