@@ -1240,3 +1240,8 @@
   signature:
     "Tensor (Tensor data, Tensor segment_ids, Int64 num_segments) => UnsortedBatchSegmentSum"
   bind_python: False
+
+- name: "ctc_greedy_decoder"
+  signature:
+    "TensorTuple (Tensor log_probs, Tensor input_lengths, Bool merge_repeated=True) => CtcGreedyDecoder"
+  bind_python: True
