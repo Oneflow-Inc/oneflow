@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/actor/actor_message_bus.h"
+#include <memory>
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/device/collective_boxing_device_context.h"
 #include "oneflow/core/job/id_manager.h"
@@ -67,7 +68,10 @@ void ActorMsgBus::HandleRecvData(void *data, size_t size) {
   size_t token_size = 0;
   if(msg.IsDataRegstMsgToConsumer()) {
     void * token = Global<CommNet>::Get()->DeSerialDataToToken((char*)msg.user_data(),&token_size);
-    new_msg.set_comm_net_token(token);
+    std::shared_ptr<char> data = std::make_shared<char>(new char[token_size]);
+    std::memcpy(data.get(),token,token_size);
+    free(token);
+    new_msg.set_comm_net_token(data.get());
   }
   SendMsgWithoutCommNet(new_msg);
 }

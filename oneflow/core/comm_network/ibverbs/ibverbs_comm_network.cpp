@@ -106,6 +106,15 @@ void * IBVerbsCommNet::DeSerialDataToToken(char *data, size_t  * token_size) {
   void * token = malloc(sizeof(IBVerbsCommNetRMADesc));
   std::memcpy(token, data, sizeof(IBVerbsCommNetRMADesc));
   *token_size = sizeof(IBVerbsCommNetRMADesc);
+  /*
+     std::lock_guard<std::mutex> lock(remote_regst2rma_desc_mutex_);
+    auto& desc = remote_regst2rma_desc_[std::make_pair(msg.src_actor_id(),
+                                                       reinterpret_cast<uint64_t>(msg.regst()))];
+    if (!desc) { desc.reset(new IBVerbsCommNetRMADesc); }
+    CHECK_EQ(msg.user_data_size(), sizeof(IBVerbsCommNetRMADesc));
+    std::memcpy(desc.get(), msg.user_data(), sizeof(IBVerbsCommNetRMADesc));
+  */
+  
   return token;
 }
 
