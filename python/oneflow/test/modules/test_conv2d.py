@@ -1823,7 +1823,7 @@ class TestConv2d(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
     @autotest()
-    def test_conv_with_random_data(test_case):
+    def test_conv2d_with_random_data(test_case):
         channels = random(1, 6)
         m = torch.nn.Conv2d(
             in_channels=channels,
