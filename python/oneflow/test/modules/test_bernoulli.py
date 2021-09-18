@@ -18,6 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
 
 import oneflow as flow
@@ -52,6 +53,12 @@ class TestBernoulli(flow.unittest.TestCase):
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @unittest.skip("bernoulli has bug")
+    @autotest(auto_backward=False)
+    def test_flow_bernoulli_with_random_data(test_case):
+        input = random_pytorch_tensor(ndim=1).to("cpu")
+        return torch.bernoulli(input)
 
 
 if __name__ == "__main__":
