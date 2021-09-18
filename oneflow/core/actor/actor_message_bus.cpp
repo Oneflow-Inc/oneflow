@@ -43,6 +43,7 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       size_t token_size = 0;
       char * serial_data =Global<CommNet>::Get()->SerialTokenToData(new_msg.regst()->comm_net_token(),&token_size);
       new_msg.AddUserData(token_size,serial_data);
+      free(serial_data);
       size_t msg_size = sizeof(new_msg);
       uint64_t addr = reinterpret_cast<uint64_t>(&new_msg);
       Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, msg_size);;
