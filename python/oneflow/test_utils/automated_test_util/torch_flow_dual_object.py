@@ -58,6 +58,18 @@ class PyTorchDoesNotSupportError(Exception):
         return f"PyTorch error: {str(self.exc)}"
 
 
+class BothDoNotSupportError(Exception):
+    def __init__(self, th_exc, of_exc):
+        self.th_exc = th_exc
+        self.of_exc = of_exc
+
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        return f"PyTorch error: {str(self.th_exc)}\nOneFlow error: {str(self.of_exc)}"
+
+
 call_pytorch = None
 
 
@@ -234,6 +246,13 @@ def GetDualObject(name, pytorch, oneflow):
                                     call_tensor_id.append(id(pytorch_res))
 
                         except Exception as e:
+                            try:
+                                oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
+                            except Exception as ee:
+                                raise BothDoNotSupportError(e, ee)
+                            print(
+                                "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
+                            )
                             raise PyTorchDoesNotSupportError(e)
 
                         if name in postulate:
@@ -261,6 +280,15 @@ def GetDualObject(name, pytorch, oneflow):
                             if isinstance(pytorch_res, torch_original.Tensor):
                                 call_tensor_id.append(id(pytorch_res))
                         except Exception as e:
+                            try:
+                                oneflow_res = oneflow_method(
+                                    *oneflow_args, **oneflow_kwargs
+                                )
+                            except Exception as ee:
+                                raise BothDoNotSupportError(e, ee)
+                            print(
+                                "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
+                            )
                             raise PyTorchDoesNotSupportError(e)
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
                         return GetDualObject("unused", pytorch_res, oneflow_res)
