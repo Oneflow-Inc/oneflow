@@ -91,6 +91,7 @@ class AddImpl : public Add, public CudaGraphSupport {
   AddImpl() = default;
   ~AddImpl() override = default;
 
+  using Add::Launch;
   void Launch(StreamContext* stream_ctx, const void* const* srcs, size_t arity, void* dst,
               size_t count) override {
     cudaStream_t cuda_stream =

@@ -96,8 +96,7 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::va
 // GPU, Integral
 template<typename T>
 struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T>::value>::type>
-    : public GpuKernelUtilIf<T, KernelUtil<DeviceType::kGPU, T>> {
-};
+    : public GpuKernelUtilIf<T, KernelUtil<DeviceType::kGPU, T>> {};
 
 template<typename T, typename U>
 typename std::enable_if<std::is_same<T, U>::value>::type CopyElem(const T* in_dptr, U* out_dptr,
