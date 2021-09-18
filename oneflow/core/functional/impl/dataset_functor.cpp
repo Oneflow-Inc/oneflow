@@ -34,7 +34,7 @@ class ImageFlipFuntor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& flip_code) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("flip_code", flip_code));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
