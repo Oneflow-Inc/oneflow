@@ -313,9 +313,6 @@ KU_FLOATING_METHOD Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, 
                         T* y, const int incy) {
   cblas_axpy<T>(n, alpha, x, incx, y, incy);
 }
-KU_FLOATING_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
-  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
-}
 KU_FLOATING_METHOD Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
   for (int64_t i = 0; i < n; ++i) { y[i] = std::sqrt(x[i]); }
 }
@@ -419,10 +416,6 @@ KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
   } else {
     UNIMPLEMENTED();
   }
-}
-
-KU_INTEGRAL_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
-  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
 }
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto)                                \
