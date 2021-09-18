@@ -34,6 +34,14 @@ def _test_slice(test_case, device):
     test_case.assertTrue(np.array_equal(y.numpy(), np_out))
 
 
+def _test_slice_empty(test_case, device):
+    np_arr = np.random.randn(10).astype(np.float32)
+    x = flow.tensor(np_arr, device=flow.device(device))
+    y = x[3:3]
+    np_out = np_arr[3:3]
+    test_case.assertTrue(np.array_equal(y.numpy(), np_out))
+
+
 def _test_slice_1_dim(test_case, device):
     np_arr = np.random.randn(100).astype(np.float32)
     x = flow.tensor(np_arr, device=flow.device(device))
@@ -125,6 +133,7 @@ class TestSlice(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_slice,
+            _test_slice_empty,
             _test_slice_1_dim,
             _test_slice_3_dim,
             _test_slice_4_dim,
