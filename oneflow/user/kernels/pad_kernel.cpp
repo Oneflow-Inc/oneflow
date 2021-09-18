@@ -74,9 +74,14 @@ class PadKernel final : public user_op::OpKernel, public user_op::CudaGraphSuppo
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    if(y->shape().NumAxes()>0 && y->shape().elem_cnt()==0){
+      // if output is 0-shape tensor, than do nothing and return
+      return;
+    }
     const T constant_value = GetDtypeMatchedValue<T>(ctx->Attr<double>("floating_constant_value"),
                                                      ctx->Attr<int64_t>("integral_constant_value"));
     const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
+    const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
     const int64_t ndims = x->shape().NumAxes();
     const int64_t size_of_data_type = static_cast<int64_t>(GetSizeOfDataType(x->data_type()));
     CHECK_EQ(padding_before.size(), ndims);
@@ -95,19 +100,44 @@ class PadKernel final : public user_op::OpKernel, public user_op::CudaGraphSuppo
 
     DimVector src_pos_vec(ndims, 0);
     DimVector dst_pos_vec(padding_before.cbegin(), padding_before.cend());
+    DimVector padding_before_pos_vec(padding_before.cbegin(), padding_before.cend());
+    DimVector padding_after_pos_vec(padding_after.cbegin(), padding_after.cend());
+
+    for(int i = 0; i < ndims; ++i){
+      if(dst_pos_vec[i] < 0){
+        // When padding[i] < 0 , dst_pos_vec[i] will < 0 too , src_pos_vec[i] should adjust coords relative
+        // and dst_pos_vec[i] will == 0
+        src_pos_vec[i] -= dst_pos_vec[i];
+        dst_pos_vec[i] = 0;
+      }
+    }
+
+    DimVector extent_vec(ndims, 0);
+    for(int i=0; i < extent_vec.size(); ++i){
+      if(y->shape().At(i) < x->shape().At(i)){
+        extent_vec[i] = y->shape().At(i);
+      }else{
+        extent_vec[i] = x->shape().At(i);
+        if(padding_before_pos_vec[i] < 0){
+          extent_vec[i] = extent_vec[i] + padding_before_pos_vec[i];
+        }
+        if(padding_after_pos_vec[i] < 0){
+          extent_vec[i] = extent_vec[i] + padding_after_pos_vec[i];
+        }
+      }
+    }
+
+    src_pos_vec[ndims - 1] *= size_of_data_type;
     dst_pos_vec[ndims - 1] *= size_of_data_type;
+    extent_vec[ndims - 1] *= size_of_data_type;
 
     memory_copy_nd_desc.dst_pos = NdIndex(dst_pos_vec);
     memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
-    DimVector extent_vec(ndims);
-    for(int i=0; i < extent_vec.size(); ++i){
-      extent_vec[i] = dst_shape_vec[i] > src_shape_vec[i] ? src_shape_vec[i] : dst_shape_vec[i];
-    }
-
+    
     Shape extent_shape(extent_vec);
     memory_copy_nd_desc.extent = extent_shape;
-    MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
 
+    MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
     std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
     device_memory_copier->Copy(ctx->device_ctx(), y->mut_dptr<T>(), x->dptr<T>(),
                                reduced_memory_copy_nd_desc);
