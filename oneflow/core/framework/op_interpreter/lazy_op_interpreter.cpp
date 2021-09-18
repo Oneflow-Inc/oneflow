@@ -39,9 +39,9 @@ namespace one {
 
 namespace {
 
-Maybe<Tensor> LazyBuildTensor(const OpAttribute& op_attribute, const std::string& bn_in_op,
-                              const std::shared_ptr<ParallelDesc>& parallel_desc,
-                              const bool is_local) {
+Maybe<Tensor> BuildTensor(const OpAttribute& op_attribute, const std::string& bn_in_op,
+                          const std::shared_ptr<ParallelDesc>& parallel_desc, const bool is_lazy,
+                          const bool is_local) {
   CHECK_OR_RETURN(op_attribute.has_logical_blob_desc_signature());
   const auto& blob_desc_sign_map = op_attribute.logical_blob_desc_signature().bn_in_op2blob_desc();
   auto blob_desc_it = blob_desc_sign_map.find(bn_in_op);
@@ -53,7 +53,7 @@ Maybe<Tensor> LazyBuildTensor(const OpAttribute& op_attribute, const std::string
   if (is_local) {
     const auto& device = JUST(Device::MakeDeviceByParallelDesc(*parallel_desc));
     const auto& tensor =
-        JUST(MirroredTensor::MakeTensor(shape, dtype, device, /* is_lazy= */ true,
+        JUST(MirroredTensor::MakeTensor(shape, dtype, device, is_lazy,
                                         /* requires_grad= */ false, /* is_leaf= */ true));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   } else {
@@ -63,18 +63,22 @@ Maybe<Tensor> LazyBuildTensor(const OpAttribute& op_attribute, const std::string
         << "nd_sbp of " << bn_in_op << " not found in op " << op_attribute.op_conf().name();
     cfg::NdSbp nd_sbp(nd_sbp_it->second);
     const auto& tensor = JUST(ConsistentTensor::MakeTensor(
-        shape, dtype, SymbolOf(nd_sbp), SymbolOf(*parallel_desc), /* is_lazy= */ true,
+        shape, dtype, SymbolOf(nd_sbp), SymbolOf(*parallel_desc), is_lazy,
         /*requires_grad=*/false, /*is_leaf=*/true));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   }
 }
 
-Maybe<void> LazyCheckTensorMatchAttr(const std::shared_ptr<Tensor>& tensor,
-                                     const OpAttribute& op_attribute, const std::string& bn_in_op,
-                                     const std::shared_ptr<ParallelDesc>& parallel_desc,
-                                     const bool is_local, const bool requires_grad,
-                                     const bool is_leaf) {
-  CHECK_OR_RETURN(tensor->is_lazy());
+Maybe<void> CheckTensorMatchAttr(const std::shared_ptr<Tensor>& tensor,
+                                 const OpAttribute& op_attribute, const std::string& bn_in_op,
+                                 const std::shared_ptr<ParallelDesc>& parallel_desc,
+                                 const bool is_lazy, const bool is_local, const bool requires_grad,
+                                 const bool is_leaf) {
+  CHECK_EQ_OR_RETURN(tensor->is_lazy(), is_lazy);
+  CHECK_EQ_OR_RETURN(tensor->is_local(), is_local);
+  CHECK_EQ_OR_RETURN(tensor->requires_grad(), requires_grad);
+  CHECK_EQ_OR_RETURN(tensor->is_leaf(), is_leaf);
+
   CHECK_OR_RETURN(op_attribute.has_logical_blob_desc_signature());
   const auto& blob_desc_sign_map = op_attribute.logical_blob_desc_signature().bn_in_op2blob_desc();
   auto blob_desc_it = blob_desc_sign_map.find(bn_in_op);
@@ -85,9 +89,6 @@ Maybe<void> LazyCheckTensorMatchAttr(const std::shared_ptr<Tensor>& tensor,
   auto dtype = blob_desc_it->second.data_type();
   CHECK_EQ_OR_RETURN(*tensor->shape(), *shape);
   CHECK_EQ_OR_RETURN(tensor->dtype()->data_type(), dtype);
-  CHECK_EQ_OR_RETURN(tensor->is_local(), is_local);
-  CHECK_EQ_OR_RETURN(tensor->requires_grad(), requires_grad);
-  CHECK_EQ_OR_RETURN(tensor->is_leaf(), is_leaf);
 
   if (is_local) {
     const auto& device = JUST(Device::MakeDeviceByParallelDesc(*parallel_desc));
@@ -235,8 +236,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
   CHECK_OR_RETURN(!(*outputs)[0]);
   const std::string obn = "out";  // NOTE(chengcheng): obn is NOT op_expr.indexed_obns
-  (*outputs)[0] = JUST(LazyBuildTensor(op_attr, obn, blob_parallel_desc,
-                                       /* is_local= */ input_tensor->is_local()));
+  (*outputs)[0] = JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true,
+                                   /* is_local= */ input_tensor->is_local()));
   TensorNameScope::Global()->Record((*outputs)[0], GenLogicalBlobName(op_conf.name(), obn));
   return Maybe<void>::Ok();
 }
@@ -290,8 +291,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   CHECK_OR_RETURN(!(*outputs)[0]);
 
   const std::string obn = "out";  // NOTE(chengcheng): obn is NOT op_expr.indexed_obns
-  (*outputs)[0] = JUST(LazyBuildTensor(op_attr, obn, blob_parallel_desc,
-                                       /* is_local */ input_tensor->is_local()));
+  (*outputs)[0] = JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true,
+                                   /* is_local */ input_tensor->is_local()));
   // NOTE(chengcheng): Record variable op output LazyTenosr
   TensorNameScope::Global()->Record((*outputs)[0], GenLogicalBlobName(op_conf.name(), obn));
   // NOTE(chengcheng): Record EagerTensor as variable tensor name
@@ -347,8 +348,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
   CHECK_OR_RETURN(!(*outputs)[0]);
   const std::string obn = "out";  // NOTE(chengcheng): obn is NOT op_expr.indexed_obns
-  (*outputs)[0] = JUST(LazyBuildTensor(op_attr, obn, blob_parallel_desc,
-                                       /* is_local= */ input_tensor->is_local()));
+  (*outputs)[0] = JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ false,
+                                   /* is_local= */ input_tensor->is_local()));
   return Maybe<void>::Ok();
 }
 
@@ -402,8 +403,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ImageDecoderRandomCropResizeOpExpr&
   CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
   CHECK_OR_RETURN(!(*outputs)[0]);
   const std::string obn = "out";  // NOTE(chengcheng): obn is NOT op_expr.indexed_obns
-  (*outputs)[0] = JUST(LazyBuildTensor(op_attr, obn, blob_parallel_desc,
-                                       /* is_local= */ input_tensor->is_local()));
+  (*outputs)[0] = JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true,
+                                   /* is_local= */ input_tensor->is_local()));
   TensorNameScope::Global()->Record((*outputs)[0], GenLogicalBlobName(new_op_name, obn));
   return Maybe<void>::Ok();
 }
@@ -475,7 +476,8 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
   for (int i = 0; i < op_expr.output_size(); ++i) {
     CHECK_OR_RETURN(!(*outputs)[i]);
     const std::string& obn = op_expr.indexed_obns().at(i);
-    (*outputs)[i] = JUST(LazyBuildTensor(op_attr, obn, blob_parallel_desc, is_local));
+    (*outputs)[i] =
+        JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true, is_local));
     TensorNameScope::Global()->Record((*outputs)[i], GenLogicalBlobName(new_op_name, obn));
   }
   return Maybe<void>::Ok();
@@ -658,12 +660,14 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   for (int i = 0; i < op_expr.output_size(); ++i) {
     const std::string& obn = op_expr.indexed_obns().at(i);
     if (!(*outputs)[i]) {
-      (*outputs)[i] = JUST(LazyBuildTensor(op_attr, obn, blob_parallel_desc, is_local));
+      (*outputs)[i] =
+          JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true, is_local));
     } else {
       const std::shared_ptr<Tensor>& inplace_out = (*outputs)[i];
-      JUST(LazyCheckTensorMatchAttr(inplace_out, op_attr, obn, blob_parallel_desc, is_local,
-                                    /* requires_grad */ false,
-                                    /* is_leaf */ true));
+      JUST(CheckTensorMatchAttr(inplace_out, op_attr, obn, blob_parallel_desc, /* is_lazy= */ true,
+                                is_local,
+                                /* requires_grad */ false,
+                                /* is_leaf */ true));
     }
     TensorNameScope::Global()->Record((*outputs)[i], GenLogicalBlobName(new_op_name, obn));
   }
