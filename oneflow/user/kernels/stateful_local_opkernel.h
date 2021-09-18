@@ -156,6 +156,7 @@ class ZeroCopyBaseContext {
       const std::string& arg_name, const int32_t index) const;
 
   Optional<Symbol<ParallelDesc>> parallel_desc() const;
+  const ParallelContext& parallel_ctx() const;
 
   const ArgVec& inputs() const { return input_arg_tuple_->indexed_arg_name_and_index(); }
   const ArgVec& outputs() const { return output_arg_tuple_->indexed_arg_name_and_index(); }
@@ -267,25 +268,24 @@ class LocalUserOpInferContext : public user_op::InferContext {
     return nullptr;
   }
   const ParallelContext& parallel_ctx() const override {
-    UNIMPLEMENTED();
-    return *(const ParallelContext*)nullptr;
+    return zero_copy_base_ctx_.parallel_ctx();
   }
   const ParallelDesc& parallel_desc() const override {
-    UNIMPLEMENTED();
-    return *(const ParallelDesc*)nullptr;
+    return *CHECK_JUST(zero_copy_base_ctx_.parallel_desc());
   }
   const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
                                                       int32_t index) const override {
-    UNIMPLEMENTED();
-    return *(const cfg::SbpParallel*)nullptr;
+    const auto& nd_sbp = NdSbp4ArgNameAndIndex(arg_name, index);
+    CHECK_EQ(nd_sbp.sbp_parallel_size(), 1);
+    return nd_sbp.sbp_parallel(0);
   }
   const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
                                           int32_t index) const override {
-    UNIMPLEMENTED();
-    return *(const cfg::NdSbp*)nullptr;
+    return *CHECK_NOTNULL(zero_copy_base_ctx_.ConsistentTensorMeta4ArgNameAndIndex(arg_name, index))
+                ->nd_sbp();
   }
 
-  int64_t parallel_num() const override { return 1; }
+  int64_t parallel_num() const override { return parallel_ctx().parallel_num(); }
 
   void Update(
       const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
@@ -354,8 +354,7 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
   const ParallelContext& parallel_ctx() const override {
-    UNIMPLEMENTED();
-    return *(const ParallelContext*)nullptr;
+    return base_ctx_.parallel_ctx();
   }
 
   const ArgVec& inputs() const override { return base_ctx_.inputs(); };

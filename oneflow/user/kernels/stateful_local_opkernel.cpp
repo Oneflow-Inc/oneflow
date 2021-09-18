@@ -93,6 +93,19 @@ Optional<Symbol<ParallelDesc>> ZeroCopyBaseContext::parallel_desc() const {
   }
 }
 
+const ParallelContext& ZeroCopyBaseContext::parallel_ctx() const {
+  const auto& parallel_desc = this->parallel_desc();
+  if (parallel_desc.has_value()) {
+    const auto& parallel_desc_symbol = CHECK_JUST(parallel_desc);
+    return *CHECK_JUST(GetParallelContext4CurrentProcessCtx(parallel_desc_symbol));
+  } else {
+    static ParallelContext single_card_parallel_ctx;
+    single_card_parallel_ctx.set_parallel_id(0);
+    single_card_parallel_ctx.set_parallel_num(1);
+    return single_card_parallel_ctx;
+  }
+}
+
 #define RETURN_IF_FOUND(inputs, outputs, post_action)                                             \
   int32_t i = TryGetTensorTupleIndex(input_arg_tuple_->arg_name2bn_index2tensor_tuple_index(),    \
                                      arg_name, index);                                            \
@@ -158,8 +171,7 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
   DeviceType device_type() const override { return base_ctx_.device_type(); }
   const std::string& device_tag() const override { return base_ctx_.device_tag(); }
   const ParallelContext& parallel_ctx() const override {
-    const auto& parallel_desc = CHECK_JUST(base_ctx_.parallel_desc());
-    return *CHECK_JUST(GetParallelContext4CurrentProcessCtx(parallel_desc));
+    return base_ctx_.parallel_ctx();
   }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
@@ -228,16 +240,7 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
   const ParallelContext& parallel_ctx() const override {
-    const auto& parallel_desc = base_ctx_.parallel_desc();
-    if (parallel_desc.has_value()) {
-      const auto& parallel_desc_symbol = CHECK_JUST(parallel_desc);
-      return *CHECK_JUST(GetParallelContext4CurrentProcessCtx(parallel_desc_symbol));
-    } else {
-      static ParallelContext single_card_parallel_ctx;
-      single_card_parallel_ctx.set_parallel_id(0);
-      single_card_parallel_ctx.set_parallel_num(1);
-      return single_card_parallel_ctx;
-    }
+    return base_ctx_.parallel_ctx();
   }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
