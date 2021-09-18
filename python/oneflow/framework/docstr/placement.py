@@ -19,7 +19,7 @@ from oneflow.framework.docstr.utils import add_docstr
 oneflow.placement.__doc__ = r"""
     A oneflow.palcement is an object representing the device group on which a oneflow.Tensor is or will be allocated. The oneflow.palcement contains a device type ('cpu' or 'cuda') and corresponding device sequence.
     
-    A oneflow.Tensor’s palcement can be accessed via the Tensor.palcement property.
+    A oneflow.Tensor's palcement can be accessed via the Tensor.palcement property.
     
     A oneflow.palcement can be constructed in several ways:
     
