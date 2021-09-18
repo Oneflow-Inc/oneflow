@@ -58,10 +58,6 @@ struct CpuKernelUtilIf {
 template<typename T>
 struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::value>::type>
     : public CpuKernelUtilIf<T, KernelUtil<DeviceType::kCPU, T>> {
-  static void Dot(DeviceCtx* ctx, const int n, const T* x, const int incx, const T* y,
-                  const int incy, T* result);
-
-  static void Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
 
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
@@ -87,10 +83,6 @@ struct GpuKernelUtilIf {
 template<typename T>
 struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::value>::type>
     : public GpuKernelUtilIf<T, KernelUtil<DeviceType::kGPU, T>> {
-  static void Dot(DeviceCtx* ctx, const int n, const T* x, const int incx, const T* y,
-                  const int incy, T* result);
-
-  static void Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
 };
 
 // GPU, Integral

@@ -301,14 +301,6 @@ KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }
   template<typename T>     \
   void KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::value>::type>::
 
-KU_FLOATING_METHOD Dot(DeviceCtx* ctx, const int n, const T* x, const int incx, const T* y,
-                       const int incy, T* result) {
-  *result = cblas_dot<T>(n, x, incx, y, incy);
-}
-KU_FLOATING_METHOD Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
-  for (int64_t i = 0; i < n; ++i) { y[i] = std::sqrt(x[i]); }
-}
-
 KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                       uint32_t random_seed, Blob* blob) {
   if (initializer_conf.has_constant_conf()) {

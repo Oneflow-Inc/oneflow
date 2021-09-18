@@ -38,7 +38,7 @@ class AddFactory : public Factory<Add> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AddFactory);
   AddFactory() = default;
-  virtual ~AddFactory() = default;
+  ~AddFactory() override = default;
 
   virtual std::unique_ptr<Add> New(DataType data_type) = 0;
 };
