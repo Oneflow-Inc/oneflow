@@ -1086,8 +1086,8 @@
   signature: "Tensor (Tensor x, SbpList out_sbp) => ConsistentS2S"
   bind_python: False
 
-- name: "select_first"
-  signature: "Tensor (TensorTuple inputs) => SelectFirst"
+- name: "select_top_n"
+  signature: "TensorTuple (TensorTuple inputs, Int32 n) => SelectTopN"
   bind_python: True
 
 - name: "cast_like"

@@ -1115,7 +1115,7 @@ class Topk(Module):
             else:
                 neg_input = flow.mul(input, -1)
                 indices = self._op_topk_last_dim(neg_input)[0]
-            return (flow.gather(input, indices, dim=axis), indices)
+            return (flow.gather(input, axis, indices), indices)
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
             x = flow._C.transpose(input, perm=perm)
@@ -1125,7 +1125,7 @@ class Topk(Module):
                 neg_input = flow.mul(x, -1)
                 indices = self._op_topk_last_dim(neg_input)[0]
             indices = flow._C.transpose(indices, perm=get_inversed_perm(perm))
-            return (flow.gather(input, indices, dim=axis), indices)
+            return (flow.gather(input, axis, indices), indices)
 
 
 @register_tensor_op("topk")

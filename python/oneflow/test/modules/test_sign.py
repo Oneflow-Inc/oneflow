@@ -49,6 +49,13 @@ class TestSign(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_sign_impl(test_case, *arg)
 
+    @autotest()
+    def test_sign_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.sign(x)
+        return y
+
     @autotest(auto_backward=False)
     def test_sign_with_0shape_data(test_case):
         device = random_device()
