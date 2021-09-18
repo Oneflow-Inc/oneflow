@@ -208,7 +208,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::self == py::self)
       .def(py::hash(py::self));
 
-  py::class_<Symbol<ParallelDesc>, std::shared_ptr<Symbol<ParallelDesc>>>(m, "placement")
+  py::class_<Symbol<ParallelDesc>, std::shared_ptr<Symbol<ParallelDesc>>>(m, "placement",
+                                                                          py::dynamic_attr())
       .def(py::init([](const std::string& device_type, const py::dict& machine_device_ids,
                        const std::shared_ptr<Shape>& hierarchy) {
              return PlacementSymbolExportUtil::ApiCreatePlacementSymbol(
