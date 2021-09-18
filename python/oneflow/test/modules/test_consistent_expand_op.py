@@ -121,7 +121,7 @@ def _test_expand_new_dims_split(test_case, device):
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
     of_input = of_input.to_consistent(
-        placement=flow.env.all_device_placement(device), sbp=flow.sbp.broadcast,
+        placement = flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
     )
     of_input = of_input.to_consistent(sbp=flow.sbp.split(0))
 
@@ -220,9 +220,9 @@ class ExpandGraphSbpTestCase(oneflow.unittest.TestCase):
             _test_expand_new_dims_broadcast,
             _test_expand_same_dim_broadcast,
             _test_expand_same_dim_negative_broadcast,
-            # _test_expand_new_dims_split,
-            # _test_expand_same_dim_split,
-            # _test_expand_same_dim_negative_split,
+            _test_expand_new_dims_split,
+            _test_expand_same_dim_split,
+            _test_expand_same_dim_negative_split,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
