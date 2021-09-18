@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_PRIMITIVE_MEMCPY_H_
-#define ONEFLOW_CORE_PRIMITIVE_MEMCPY_H_
+#ifndef ONEFLOW_CORE_PRIMITIVE_ADD_H_
+#define ONEFLOW_CORE_PRIMITIVE_ADD_H_
 
 #include "oneflow/core/primitive/primitive.h"
 
@@ -22,33 +22,27 @@ namespace oneflow {
 
 namespace primitive {
 
-enum MemcpyKind {
-  kAuto = 0,
-  kHtoD,
-  kDtoH,
-  kDtoD,
+class Add : public Primitive {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(Add);
+  Add() = default;
+  ~Add() override = default;
+
+  virtual void Launch(StreamContext* stream_ctx, const void* const* srcs, size_t arity, void* dst,
+                      size_t count) = 0;
 };
 
-class Memcpy : public Primitive {
+class AddFactory : public Factory<Add> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Memcpy);
-  Memcpy() = default;
-  ~Memcpy() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(AddFactory);
+  AddFactory() = default;
+  ~AddFactory() override = default;
 
-  virtual void Launch(StreamContext* stream_ctx, void* dst, const void* src, size_t count) = 0;
-};
-
-class MemcpyFactory : public Factory<Memcpy> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(MemcpyFactory);
-  MemcpyFactory() = default;
-  ~MemcpyFactory() override = default;
-
-  virtual std::unique_ptr<Memcpy> New(MemcpyKind kind) = 0;
+  virtual std::unique_ptr<Add> New(DataType data_type) = 0;
 };
 
 }  // namespace primitive
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_PRIMITIVE_MEMCPY_H_
+#endif  // ONEFLOW_CORE_PRIMITIVE_ADD_H_
