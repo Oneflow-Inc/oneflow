@@ -13,9 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <exception>
+#include <gtest/gtest.h>
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/exception.h"
 
 namespace oneflow {
 namespace test {
@@ -97,16 +98,12 @@ TEST(Optional, non_scalar) {
 }
 
 TEST(Optional, optional_just_error_throw) {
-  bool error_throwed = false;
-  try {
+  ASSERT_THROW({ //NOLINT(cppcoreguidelines-avoid-goto)
     ([]()->Maybe<int> {
       Optional<int> a;
       return JUST(a);
     })().GetOrThrow();
-  } catch (const std::exception& e) {
-    error_throwed = true;
-  }
-  ASSERT_TRUE(error_throwed);
+  }, ValueNotFoundException);
 }
 
 }  // namespace test
