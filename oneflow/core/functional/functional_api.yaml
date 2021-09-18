@@ -1077,6 +1077,10 @@
   signature: "Tensor (Tensor x) => LocalAllReduce"
   bind_python: True
 
+- name: "eager_s_to_b"
+  signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList in_sbp, Shape shape) => EagerSToB"
+  bind_python: False
+
 - name: "eager_naive_s_to_s"
   signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList in_sbp, SbpList out_sbp, Shape shape) => EagerNaiveSToS"
   bind_python: False
