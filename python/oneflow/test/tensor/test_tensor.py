@@ -373,8 +373,6 @@ class TestTensor(flow.unittest.TestCase):
 
         def compare_getitem_with_numpy(tensor, slices):
             np_arr = tensor.numpy()
-            print("np arr slice = ", np_arr[slices])
-            print("tensor slice = ", tensor[slices].numpy())
             test_case.assertTrue(np.allclose(np_arr[slices], tensor[slices].numpy()))
 
         def compare_setitem_with_numpy(tensor, slices, value):
@@ -387,7 +385,7 @@ class TestTensor(flow.unittest.TestCase):
             tensor[slices] = value
             test_case.assertTrue(np.allclose(np_arr, tensor.numpy()))
 
-        x = flow.Tensor(5, 5)
+        x = flow.randn(5, 5)
         v = flow.Tensor([[0, 1, 2, 3, 4]])
         compare_getitem_with_numpy(x, se[-4:-1:2])
         compare_getitem_with_numpy(x, se[-1:])
