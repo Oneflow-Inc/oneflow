@@ -35,7 +35,7 @@ class MemsetFactory : public Factory<Memset> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MemsetFactory);
   MemsetFactory() = default;
-  virtual ~MemsetFactory() = default;
+  ~MemsetFactory() override = default;
 
   virtual std::unique_ptr<Memset> New() = 0;
 };
