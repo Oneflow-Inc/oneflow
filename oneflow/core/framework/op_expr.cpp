@@ -311,9 +311,12 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
       : UserOpExprInferContext(user_op_expr, attrs, parallel_desc->device_tag(),
                                TensorMeta4InputIndex, TensorMeta4OutputIndex),
         parallel_desc_(parallel_desc) {
-    const auto& parallel_id = CHECK_JUST(GetParallelId4CurrentProcessCtx(parallel_desc_));
-    CHECK(parallel_id->has_value());
-    parallel_ctx_.set_parallel_id(CHECK_JUST(*parallel_id));
+    const auto& opt_parallel_id = CHECK_JUST(GetParallelId4CurrentProcessCtx(parallel_desc_));
+    // Default parallel_id = -1, which will not cause bad effects becauce it will never be used in
+    // LogicalTensorDescInfer.
+    int64_t parallel_id = -1;
+    if (opt_parallel_id->has_value()) { parallel_id = CHECK_JUST(*opt_parallel_id); }
+    parallel_ctx_.set_parallel_id(parallel_id);
     parallel_ctx_.set_parallel_num(parallel_desc_->parallel_num());
   }
   ~UserOpExprLogicalInferContext() override = default;
