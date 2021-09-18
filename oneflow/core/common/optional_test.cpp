@@ -98,9 +98,9 @@ TEST(Optional, non_scalar) {
 
 TEST(Optional, optional_just_error_throw) {
   bool error_throwed = false;
-  Optional<int> a;
   try {
-    ([&]()->Maybe<int> {
+    ([]()->Maybe<int> {
+      Optional<int> a;
       return JUST(a);
     })().GetOrThrow();
   } catch (const std::exception& e) {
