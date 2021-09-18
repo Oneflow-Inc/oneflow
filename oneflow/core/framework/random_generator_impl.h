@@ -23,7 +23,6 @@ limitations under the License.
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/tensor.h"
 #ifdef WITH_CUDA
 #include <curand.h>
 #include <curand_kernel.h>
@@ -31,6 +30,8 @@ limitations under the License.
 
 namespace oneflow {
 namespace one {
+
+class Tensor;
 
 class GeneratorImpl;
 

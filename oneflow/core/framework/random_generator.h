@@ -16,11 +16,12 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_RANDOM_GENERATOR_H_
 #define ONEFLOW_CORE_FRAMEWORK_RANDOM_GENERATOR_H_
 
-#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/random_generator_impl.h"
 
 namespace oneflow {
 namespace one {
+
+class Tensor;
 
 // The default seed is selected to be a large number
 // with good distribution of 0s and 1s in bit representation.
