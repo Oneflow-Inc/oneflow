@@ -16,9 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_COLLECTIVE_BOXING_NCCL_EXECUTOR_BACKEND_H_
 #define ONEFLOW_CORE_JOB_COLLECTIVE_BOXING_NCCL_EXECUTOR_BACKEND_H_
 
-#ifdef WITH_CUDA
-
 #include "oneflow/core/job/collective_boxing/executor_backend.h"
+
+#ifdef WITH_CUDA
 
 namespace oneflow {
 
