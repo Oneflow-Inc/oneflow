@@ -74,7 +74,7 @@ jobs:
       CXXFLAGS: "-w"
     strategy:
       fail-fast: true
-      max-parallel: 3
+      max-parallel: 2
       matrix:
         test_suite: ["mac", "ubuntu"]
         cmake_generator: ["Ninja", "Unix Makefiles"]
@@ -90,6 +90,8 @@ jobs:
         exclude:
           - test_suite: mac
             cmake_build_type: "Debug"
+          - test_suite: mac
+            cmake_build_type: "Ninja"
           - test_suite: ubuntu
             cmake_generator: "Ninja"
             cmake_build_type: "Debug"
