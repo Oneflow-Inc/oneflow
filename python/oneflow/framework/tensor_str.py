@@ -209,6 +209,7 @@ def _tensor_str(self, indent):
     if self.dtype is flow.float16:
         self = self.float()
 
+    # TODO: not support nd sbp tensor for now
     if self.is_consistent and len(self.placement.hierarchy) > 1:
         return "[...]"
 
