@@ -160,6 +160,18 @@ def _ne(self, other):
     return self.ne(other)
 
 
+def _and(self, other):
+    return self.logical_and(other)
+
+
+def _or(self, other):
+    return self.logical_or(other)
+
+
+def _xor(self, other):
+    return self.logical_xor(other)
+
+
 def _contiguous(self):
     # TODO: support stride mechanism
     return self
@@ -586,6 +598,9 @@ def _format(self, format_spec):
     return object.__format__(self, format_spec)
 
 
+# TODO here add logical python
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
@@ -613,6 +628,9 @@ def RegisterMethods():
     Tensor.__lt__ = _lt
     Tensor.__ge__ = _ge
     Tensor.__le__ = _le
+    Tensor.__and__ = _and
+    Tensor.__or__ = _or
+    Tensor.__xor__ = _xor
     Tensor.__mul__ = _mul
     Tensor.__rmul__ = _rmul
     Tensor.__add__ = _add

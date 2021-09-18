@@ -23,8 +23,9 @@ class LogicalAnd(Module):
         super().__init__()
 
     def forward(self, input, other):
-        if other.dtype != input.dtype:
-            other = flow.cast(other, input.dtype)
+        if type(input) == type(other):
+            if other.dtype != input.dtype:
+                other = flow.cast(other, input.dtype)
         return flow._C.logical_and(input, other)
 
 
@@ -75,8 +76,9 @@ class LogicalOr(Module):
         super().__init__()
 
     def forward(self, input, other):
-        if other.dtype != input.dtype:
-            other = flow.cast(other, input.dtype)
+        if type(input) == type(other):
+            if other.dtype != input.dtype:
+                other = flow.cast(other, input.dtype)
         return flow._C.logical_or(input, other)
 
 
@@ -150,8 +152,9 @@ def logical_xor_op(input, other):
     """
     assert input.shape == other.shape, "shape of input and other should be same"
 
-    if other.dtype != input.dtype:
-        other = flow.cast(other, input.dtype)
+    if type(input) == type(other):
+        if other.dtype != input.dtype:
+            other = flow.cast(other, input.dtype)
     return flow._C.logical_xor(input, other)
 
 
