@@ -127,4 +127,25 @@ REGISTER_USER_OP("binary_cross_entropy_grad")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP_GRAD("binary_cross_entropy")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
+      if (op.NeedGenGradTensor4OpInput("input", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        builder.Op("binary_cross_entropy_grad")
+            .Input("input", op.input("input", 0))
+            .Input("target", op.input("target", 0))
+            .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
+            .Output("dx")
+            .Attr("reduction", op.attr<std::string>("reduction"));
+        if (op.user_op_conf().has_input("weight", 0)) {
+          builder.Input("weight", op.input("weight", 0));
+        }
+        user_op::UserOpConfWrapper grad_op = builder.Build();
+        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "dx", 0);
+        AddOp(grad_op);
+      }
+      return Maybe<void>::Ok();
+    });
+
 }  // namespace oneflow
