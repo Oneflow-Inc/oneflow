@@ -73,14 +73,15 @@ struct StaticGroupRequestsInfoToken {
 };
 
 struct StaticGroupCoordinator::Impl {
-  Impl(std::shared_ptr<RequestStore> request_store, std::shared_ptr<Executor> executor);
+  Impl(const std::shared_ptr<RequestStore>& request_store,
+       const std::shared_ptr<Executor>& executor);
   std::shared_ptr<RequestStore> request_store_;
   std::shared_ptr<Executor> executor_;
   HashMap<int64_t, StaticGroupRequestsInfo> job_id2static_group_requests_info_;
 };
 
-StaticGroupCoordinator::Impl::Impl(std::shared_ptr<RequestStore> request_store,
-                                   std::shared_ptr<Executor> executor)
+StaticGroupCoordinator::Impl::Impl(const std::shared_ptr<RequestStore>& request_store,
+                                   const std::shared_ptr<Executor>& executor)
     : request_store_(request_store), executor_(executor) {}
 
 StaticGroupCoordinator::StaticGroupCoordinator() = default;

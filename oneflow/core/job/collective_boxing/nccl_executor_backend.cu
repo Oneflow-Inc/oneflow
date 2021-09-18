@@ -615,7 +615,7 @@ struct NcclExecutorBackend::Impl {
 
 NcclExecutorBackend::NcclExecutorBackend() = default;
 
-NcclExecutorBackend::~NcclExecutorBackend() { impl_.reset(); }
+NcclExecutorBackend::~NcclExecutorBackend() = default;
 
 void NcclExecutorBackend::Init(std::shared_ptr<RequestStore> request_store) {
   impl_ = std::make_unique<Impl>(Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf(),
