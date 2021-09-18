@@ -69,10 +69,10 @@ void ActorMsgBus::HandleRecvData(void *data, size_t size) {
   if(msg.IsDataRegstMsgToConsumer()) {
     void * token = Global<CommNet>::Get()->DeSerialDataToToken((char*)msg.user_data(),&token_size);
    // std::shared_ptr<char[]> data = std::make_shared<char[]>(new char[token_size]);
-     std::shared_ptr<char> data(new char[token_size + 1 ], std::default_delete<char[]>());
-    std::memcpy((void*)data.get(),token,token_size);
+     std::shared_ptr<char> data(new char[token_size ], std::default_delete<char[]>());
+    std::memcpy(reinterpret_cast<void*>(data.get()),token,token_size);
     free(token);
-    new_msg.set_comm_net_token((void*)data.get());
+    new_msg.set_comm_net_token(reinterpret_cast<void*>(data.get()));
   }
   SendMsgWithoutCommNet(new_msg);
 }
