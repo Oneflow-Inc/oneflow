@@ -16,9 +16,9 @@ jobs:
   cancel_previous:
     name: Cancel previous runs
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'need-simple-ci'))
     steps:
       - name: Cancel previous runs of outdated commit
-        if: github.ref != 'refs/heads/master'
         uses: styfle/cancel-workflow-action@0.9.0
         with:
           access_token: ${{ github.token }}
@@ -74,7 +74,7 @@ jobs:
       CXXFLAGS: "-w"
     strategy:
       fail-fast: true
-      max-parallel: 3
+      max-parallel: 1
       matrix:
         test_suite: ["mac", "ubuntu"]
         cmake_generator: ["Ninja", "Unix Makefiles"]
@@ -90,9 +90,17 @@ jobs:
         exclude:
           - test_suite: mac
             cmake_build_type: "Debug"
+          - test_suite: mac
+            cmake_generator: "Ninja"
           - test_suite: ubuntu
             cmake_generator: "Ninja"
             cmake_build_type: "Debug"
+          - test_suite: ubuntu
+            cmake_generator: "Ninja"
+            build_shared_libs: "OFF"
+          - test_suite: ubuntu
+            cmake_generator: "Unix Makefiles"
+            cmake_build_type: "Release"
     steps:
       - uses: actions/checkout@v2
         with:
@@ -226,7 +234,7 @@ jobs:
     needs: [cancel_previous]
     strategy:
       fail-fast: true
-      max-parallel: 3
+      max-parallel: 1
       matrix:
         build-type: ["gcc7", "clang10"]
     steps:
