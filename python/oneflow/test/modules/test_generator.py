@@ -16,6 +16,7 @@ limitations under the License.
 
 import os
 import unittest
+import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
@@ -101,6 +102,38 @@ class TestDefaultGenerator(flow.unittest.TestCase):
         for gen in test_gens:
             seed = gen.seed()
             test_case.assertTrue(seed == gen.initial_seed())
+
+    def test_generator_getstate(test_case):
+        auto_gen = flow.Generator(device="auto")
+        state = auto_gen.get_state()
+        cpu_gen = flow.Generator(device="cpu")
+        state = cpu_gen.get_state()
+        auto_gen = flow.default_generator(device="auto")
+        state = auto_gen.get_state()
+        cpu_gen = flow.default_generator(device="cpu")
+        state = cpu_gen.get_state()
+        if not os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+            cuda_gen = flow.Generator(device="cuda")
+            state = cuda_gen.get_state()
+            cuda_gen = flow.default_generator(device="cuda")
+            state = cuda_gen.get_state()
+
+    def test_generator_setstate(test_case):
+        auto_gen = flow.default_generator(device="auto")
+        flow.randn(100, 100, dtype=flow.float32, device="cpu", generator=auto_gen)
+        if not os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+            flow.randn(100, 100, dtype=flow.float32, device="cuda", generator=auto_gen)
+        state = auto_gen.get_state()
+        flow.randn(100, 100, dtype=flow.float32, device="cpu", generator=auto_gen)
+        if not os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+            flow.randn(100, 100, dtype=flow.float32, device="cuda", generator=auto_gen)
+
+        new_state = auto_gen.get_state()
+        test_case.assertTrue(not np.allclose(new_state.numpy(), state.numpy()))
+
+        auto_gen.set_state(state)
+        new_state = auto_gen.get_state()
+        test_case.assertTrue(np.allclose(new_state.numpy(), state.numpy()))
 
 
 if __name__ == "__main__":
