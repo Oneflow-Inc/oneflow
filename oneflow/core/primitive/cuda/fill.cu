@@ -61,10 +61,14 @@ half GetValue<half>(Scalar value) {
   return static_cast<half>(GetValue<float>(value));
 }
 
+#if CUDA_VERSION >= 11000
+
 template<>
 nv_bfloat16 GetValue<nv_bfloat16>(Scalar value) {
   return static_cast<nv_bfloat16>(GetValue<float>(value));
 }
+
+#endif  // CUDA_VERSION >= 11000
 
 template<typename T, size_t pack>
 typename std::enable_if<(pack != 0), void>::type LaunchPackFill(cudaStream_t stream, T* dst,
