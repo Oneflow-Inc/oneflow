@@ -97,14 +97,11 @@ class CPUGeneratorImpl : public DeviceGeneratorImpl {
 
   virtual ~CPUGeneratorImpl() = default;
 
-  void set_current_seed(uint64_t seed) override {
-    seed_ = seed;
-    engine_.seed(seed_);
-  }
+  void set_current_seed(uint64_t seed) override;
 
   std::mt19937& engine() { return engine_; }
 
-  Maybe<Symbol<Device>> device() const override { return Device::New("cpu"); }
+  Maybe<Symbol<Device>> device() const override { return Device::New("cpu", device_index()); }
 
   Maybe<Tensor> GetState() const override;
   Maybe<void> SetState(const std::shared_ptr<Tensor>& tensor_state) override;
@@ -151,11 +148,7 @@ class AutoGeneratorImpl : public GeneratorImpl {
   AutoGeneratorImpl(uint64_t seed) : GeneratorImpl(seed) {}
   virtual ~AutoGeneratorImpl() = default;
 
-  void set_current_seed(uint64_t seed) override {
-    std::lock_guard<std::mutex> lock(mutex_);
-    seed_ = seed;
-    for (const auto& it : generators_) { it.second->set_current_seed(seed); }
-  }
+  void set_current_seed(uint64_t seed) override;
 
   Maybe<Symbol<Device>> device() const override { return Device::New("auto"); }
 

@@ -120,21 +120,13 @@ class TestDefaultGenerator(flow.unittest.TestCase):
 
     def test_generator_setstate(test_case):
         auto_gen = flow.default_generator(device="auto")
-        flow._C.randn(
-            100, 100, dtype=flow.float32, device="cpu", generator=auto_gen
-        ).numpy()
+        flow.randn(100, 100, dtype=flow.float32, device="cpu", generator=auto_gen)
         if not os.getenv("ONEFLOW_TEST_CPU_ONLY"):
-            flow._C.randn(
-                100, 100, dtype=flow.float32, device="cuda", generator=auto_gen
-            ).numpy()
+            flow.randn(100, 100, dtype=flow.float32, device="cuda", generator=auto_gen)
         state = auto_gen.get_state()
-        flow._C.randn(
-            100, 100, dtype=flow.float32, device="cpu", generator=auto_gen
-        ).numpy()
+        flow.randn(100, 100, dtype=flow.float32, device="cpu", generator=auto_gen)
         if not os.getenv("ONEFLOW_TEST_CPU_ONLY"):
-            flow._C.randn(
-                100, 100, dtype=flow.float32, device="cuda", generator=auto_gen
-            ).numpy()
+            flow.randn(100, 100, dtype=flow.float32, device="cuda", generator=auto_gen)
 
         new_state = auto_gen.get_state()
         test_case.assertTrue(not np.allclose(new_state.numpy(), state.numpy()))
