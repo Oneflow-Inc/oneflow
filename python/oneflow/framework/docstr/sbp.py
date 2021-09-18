@@ -38,7 +38,7 @@ oneflow.sbp.sbp.__doc__ = r"""
         logical Tensor can be returned by adding all the physical Tensors according to
         the corresponding positions (element-wise).
     
-    A oneflow.Tensor’s sbp can be accessed via the Tensor.sbp property.
+    A oneflow.Tensor's sbp can be accessed via the Tensor.sbp property.
     
     A sbp can be constructed in several ways:
     
