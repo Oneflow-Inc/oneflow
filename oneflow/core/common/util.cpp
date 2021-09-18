@@ -19,9 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/platform.h"
 #include <csignal>
-#include <cstdlib>
 #include <limits>
-#include <sstream>
 
 #ifdef __linux__
 #include <sys/sysinfo.h>
