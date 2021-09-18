@@ -299,7 +299,6 @@ KU_IF_METHOD Axpy(DeviceCtx* ctx, const int n, const T* alpha, const T* x, const
                   const int incy) {
   Derived::Axpy(ctx, n, *alpha, x, incx, y, incy);
 }
-KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }
 
 #define KU_FLOATING_METHOD \
   template<typename T>     \
