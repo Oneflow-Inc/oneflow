@@ -2992,6 +2992,8 @@ class TestEagerBoxingSToB(flow.unittest.TestCase):
             _test_eager_boxing_s_to_b(test_case, *arg)
 
 
+@flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestEagerNaiveBoxingSToS(flow.unittest.TestCase):
     def test_eager_naive_boxing_s_to_s(test_case):
         arg_dict = OrderedDict()
