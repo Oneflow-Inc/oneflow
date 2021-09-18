@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <exception>
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/util.h"
 
@@ -94,5 +95,19 @@ TEST(Optional, non_scalar) {
 
   ASSERT_EQ(CHECK_JUST(c)->at(1), 2);
 }
+
+TEST(Optional, optional_just_error_throw) {
+  bool error_throwed = false;
+  Optional<int> a;
+  try {
+    ([&]()->Maybe<int> {
+      return JUST(a);
+    })().GetOrThrow();
+  } catch (const std::exception& e) {
+    error_throwed = true;
+  }
+  ASSERT_TRUE(error_throwed);
+}
+
 }  // namespace test
 }  // namespace oneflow
