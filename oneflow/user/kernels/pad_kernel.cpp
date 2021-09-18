@@ -173,12 +173,8 @@ class PadGradKernel final : public user_op::OpKernel, public user_op::CudaGraphS
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    if(dy->shape().NumAxes()>0 && dy->shape().elem_cnt()==0){
-      // if output is 0-shape tensor, than do nothing and return
-      return;
-    }
-    if(dx->shape().NumAxes()>0 && dx->shape().elem_cnt()==0){
-      // if output is 0-shape tensor, than do nothing and return
+    if(dy->shape().NumAxes()>0 && dy->shape().elem_cnt()==0 || dx->shape().NumAxes()>0 && dx->shape().elem_cnt()==0){
+      // if input/output is 0-shape tensor, than do nothing and return
       return;
     }
 
@@ -186,13 +182,6 @@ class PadGradKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
     const int64_t ndims = dy->shape().NumAxes();
     const int64_t size_of_data_type = static_cast<int64_t>(GetSizeOfDataType(dy->data_type()));
-
-
-    std::cout << "PadGradKernel >>>>> Compute()" << std::endl;
-    std::cout << "input shape >>>> " << dy->shape().ToString()  << std::endl;
-    std::cout << "output shape >>>> " << dx->shape().ToString()  << std::endl;
-    std::cout << "padding_before  >>>> " << Shape(DimVector(padding_before.cbegin(), padding_before.cend())).ToString()  << std::endl;
-    std::cout << "padding_after  >>>> " << Shape(DimVector(padding_after.cbegin(), padding_after.cend())).ToString()  << std::endl;
 
     MemoryCopyNdDesc memory_copy_nd_desc;
 
@@ -208,21 +197,12 @@ class PadGradKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     DimVector pad_before_vec(padding_before.cbegin(), padding_before.cend());
     DimVector pad_after_vec(padding_after.cbegin(), padding_after.cend());
 
-    std::cout << "src_pos_vec  >>>> " << Shape(src_pos_vec).ToString()  << std::endl;
-    std::cout << "dst_pos_vec  >>>> " << Shape(dst_pos_vec).ToString()  << std::endl;
-
     for(int i = 0; i < ndims; ++i){
       if(src_pos_vec[i] < 0){
         dst_pos_vec[i] -= src_pos_vec[i];
         src_pos_vec[i] = 0;
       }
     }
-    // for(int i = 0; i < ndims; ++i){
-    //   if(src_pos_vec[i] < 0){
-    //     src_pos_vec[i] -= dst_pos_vec[i];
-    //     dst_pos_vec[i] = 0;
-    //   }
-    // }
 
     DimVector extent_vec(ndims, 0);
     for(int i=0; i < extent_vec.size(); ++i){
@@ -238,23 +218,16 @@ class PadGradKernel final : public user_op::OpKernel, public user_op::CudaGraphS
         }
       }
     }
-
-    std::cout << "extent_vec  >>>> " << Shape(extent_vec).ToString()  << std::endl;
     src_pos_vec[ndims - 1] *= size_of_data_type;
     dst_pos_vec[ndims - 1] *= size_of_data_type;
     extent_vec[ndims - 1] *= size_of_data_type;
-    std::cout << "-----------------------------------------------" << std::endl;
-    std::cout << "src_pos_vec  2 >>>> " << Shape(src_pos_vec).ToString()  << std::endl;
-    std::cout << "dst_pos_vec  2 >>>> " << Shape(dst_pos_vec).ToString()  << std::endl;
-    std::cout << "extent_vec  2 >>>> " << Shape(extent_vec).ToString()  << std::endl;
 
     memory_copy_nd_desc.dst_pos = NdIndex(dst_pos_vec);
     memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
     Shape extent_shape(extent_vec);
     memory_copy_nd_desc.extent = extent_shape;
-    // memory_copy_nd_desc.extent = memory_copy_nd_desc.dst_shape;
-    MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
 
+    MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
     std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
     device_memory_copier->Copy(ctx->device_ctx(), dx->mut_dptr<T>(), dy->dptr<T>(),
                                reduced_memory_copy_nd_desc);
