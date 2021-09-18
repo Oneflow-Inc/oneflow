@@ -65,10 +65,11 @@ void ActorMsgBus::SendMsgWithoutCommNet(const ActorMsg& msg) {
 void ActorMsgBus::HandleRecvData(void *data, size_t size) {
   ActorMsg msg = *(reinterpret_cast<ActorMsg*>(data));
   ActorMsg new_msg = msg;
-  size_t token_size = 0;
+//  size_t token_size = 0;
   if(msg.IsDataRegstMsgToConsumer()) {
-   void * token = Global<CommNet>::Get()->DeSerialDataToToken((char*)msg.user_data(),&token_size);
-    new_msg.set_comm_net_token(token);
+  // void * token = Global<CommNet>::Get()->DeSerialDataToToken((char*)msg.user_data(),&token_size);
+    void *new_token =(void*)msg.user_data();
+    new_msg.set_comm_net_token(new_token);
   }
   SendMsgWithoutCommNet(new_msg);
 }
