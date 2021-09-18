@@ -14,8 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -34,29 +33,11 @@ class Nll : public OpExprGradFunction<NllCaptureState> {
 
  private:
   AttrMap base_attrs_;
-  std::shared_ptr<OpExpr> grad_op_;
-  std::shared_ptr<OpExpr> grad_op_weight_;
 };
 Maybe<void> Nll::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  const std::string& op_name = fw_op_expr->op_name();
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  grad_op_ = JUST(one::OpBuilder("nll_grad", GradientOpName(op_name))
-                      .Input("input")
-                      .Input("target")
-                      .Input("total_weight")
-                      .Input("dy")
-                      .Output("dx")
-                      .Build());
-  grad_op_weight_ = JUST(one::OpBuilder("nll_grad", GradientOpName(op_name))
-                             .Input("input")
-                             .Input("target")
-                             .Input("total_weight")
-                             .Input("weight")
-                             .Input("dy")
-                             .Output("dx")
-                             .Build());
   return Maybe<void>::Ok();
 }
 Maybe<void> Nll::Capture(NllCaptureState* ctx, const TensorTuple& inputs,
@@ -79,17 +60,16 @@ Maybe<void> Nll::Apply(const NllCaptureState* ctx, const TensorTuple& out_grads,
   const auto& input = ctx->SavedTensors().at(0);
   const auto& target = ctx->SavedTensors().at(1);
   const auto& total_weight = ctx->SavedTensors().at(2);
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<int64_t>("ignore_index", ctx->ignore_index));
-  JUST(attrs.SetAttr<std::string>("reduction", ctx->reduction));
+
   in_grads->resize(ctx->SavedTensors().size() - 1);
+
   if (ctx->SavedTensors().size() == 4) {
     const auto& weight = ctx->SavedTensors().at(3);
-    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *grad_op_weight_, {input, target, total_weight, weight, dy}, attrs));
+    in_grads->at(0) = JUST(functional::NllLossGrad(dy, input, target, weight, total_weight,
+                                                   ctx->ignore_index, ctx->reduction));
   } else {
-    in_grads->at(0) =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {input, target, total_weight, dy}, attrs));
+    in_grads->at(0) = JUST(functional::NllLossGrad(dy, input, target, NullOpt, total_weight,
+                                                   ctx->ignore_index, ctx->reduction));
   }
   return Maybe<void>::Ok();
 }

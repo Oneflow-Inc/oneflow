@@ -14,8 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -36,48 +35,12 @@ class BinaryCrossEntropyWithLogits
 
  private:
   AttrMap base_attrs_;
-  std::shared_ptr<OpExpr> grad_op_;
-  std::shared_ptr<OpExpr> grad_op_weight_;
-  std::shared_ptr<OpExpr> grad_op_pos_;
-  std::shared_ptr<OpExpr> grad_op_weight_pos_;
 };
 
 Maybe<void> BinaryCrossEntropyWithLogits::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  const std::string& op_name = fw_op_expr->op_name();
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  grad_op_ = JUST(one::OpBuilder("binary_cross_entropy_with_logits_grad", GradientOpName(op_name))
-                      .Input("input")
-                      .Input("target")
-                      .Input("dy")
-                      .Output("dx")
-                      .Build());
-  grad_op_weight_ =
-      JUST(one::OpBuilder("binary_cross_entropy_with_logits_grad", GradientOpName(op_name))
-               .Input("input")
-               .Input("target")
-               .Input("weight")
-               .Input("dy")
-               .Output("dx")
-               .Build());
-  grad_op_pos_ =
-      JUST(one::OpBuilder("binary_cross_entropy_with_logits_grad", GradientOpName(op_name))
-               .Input("input")
-               .Input("target")
-               .Input("pos_weight")
-               .Input("dy")
-               .Output("dx")
-               .Build());
-  grad_op_weight_pos_ =
-      JUST(one::OpBuilder("binary_cross_entropy_with_logits_grad", GradientOpName(op_name))
-               .Input("input")
-               .Input("target")
-               .Input("weight")
-               .Input("pos_weight")
-               .Input("dy")
-               .Output("dx")
-               .Build());
   return Maybe<void>::Ok();
 }
 Maybe<void> BinaryCrossEntropyWithLogits::Capture(BinaryCrossEntropyWithLogitsCaptureState* ctx,
@@ -106,28 +69,26 @@ Maybe<void> BinaryCrossEntropyWithLogits::Apply(const BinaryCrossEntropyWithLogi
   const auto& input = ctx->SavedTensors().at(0);
   const auto& target = ctx->SavedTensors().at(1);
 
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<std::string>("reduction", ctx->reduction));
-  JUST(attrs.SetAttr<bool>("has_pos_weight", ctx->has_pos_weight));
-
   in_grads->resize(ctx->SavedTensors().size());
+
   if (ctx->SavedTensors().size() == 3) {
     if (ctx->has_pos_weight) {
       const auto& pos_weight = ctx->SavedTensors().at(2);
-      in_grads->at(0) = JUST(
-          OpInterpUtil::Dispatch<Tensor>(*grad_op_pos_, {input, target, pos_weight, dy}, attrs));
+      in_grads->at(0) = JUST(functional::BinaryCrossEntropyWithLogitsLossGrad(
+          dy, input, target, NullOpt, pos_weight, ctx->reduction));
     } else {
       const auto& weight = ctx->SavedTensors().at(2);
-      in_grads->at(0) = JUST(
-          OpInterpUtil::Dispatch<Tensor>(*grad_op_weight_, {input, target, weight, dy}, attrs));
+      in_grads->at(0) = JUST(functional::BinaryCrossEntropyWithLogitsLossGrad(
+          dy, input, target, weight, NullOpt, ctx->reduction));
     }
   } else if (ctx->SavedTensors().size() == 4) {
     const auto& weight = ctx->SavedTensors().at(2);
     const auto& pos_weight = ctx->SavedTensors().at(3);
-    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *grad_op_weight_pos_, {input, target, weight, pos_weight, dy}, attrs));
+    in_grads->at(0) = JUST(functional::BinaryCrossEntropyWithLogitsLossGrad(
+        dy, input, target, weight, pos_weight, ctx->reduction));
   } else {
-    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {input, target, dy}, attrs));
+    in_grads->at(0) = JUST(functional::BinaryCrossEntropyWithLogitsLossGrad(
+        dy, input, target, NullOpt, NullOpt, ctx->reduction));
   }
   return Maybe<void>::Ok();
 }
