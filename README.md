@@ -245,7 +245,7 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 
 - [API Reference](https://oneflow.readthedocs.io/en/master/)
 - [Usage & Design Docs](http://docs.oneflow.org/)
-- [System Design](https://github.com/Oneflow-Inc/oneflow-documentation/blob/master/en/docs/basics_topics/essentials_of_oneflow.md)
+- [System Design](https://docs.oneflow.org/en/v0.4.0/basics_topics/essentials_of_oneflow.html)
 
 ## Model Zoo and Benchmark
 
