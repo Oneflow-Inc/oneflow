@@ -136,7 +136,7 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
 NcclCollectiveBoxingExecutorBackend::NcclCollectiveBoxingExecutorBackend()
     : collective_boxing_conf_(Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf()),
       shutdown_(false) {
-  int nccl_version;
+  int nccl_version = 0;
   OF_NCCL_CHECK(ncclGetVersion(&nccl_version));
   if (nccl_version == 21003) {
     LOG(WARNING) << "Current nccl version is 2.10.3, in this version, ncclGroup() with mixed "
@@ -234,7 +234,7 @@ void NcclCollectiveBoxingExecutorBackend::GroupRequests(
       return false;
     }
   };
-  int nccl_version;
+  int nccl_version = 0;
   OF_NCCL_CHECK(ncclGetVersion(&nccl_version));
   auto CanFuse = [&](const RequestDesc* lhs, const RequestDesc* rhs) -> bool {
     const bool enable_mixed_fusion = (!collective_boxing_conf_.nccl_fusion_all_reduce_use_buffer())

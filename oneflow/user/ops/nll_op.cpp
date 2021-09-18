@@ -95,7 +95,7 @@ REGISTER_USER_OP("nll")
     .Attr<int64_t>("ignore_index")
     .Attr<std::string>("reduction")
     .SetTensorDescInferFn(InferTensorDescFn)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+    .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* target_modifier = GetInputArgModifierFn("target", 0);
       CHECK_OR_RETURN(target_modifier != nullptr);
@@ -137,26 +137,26 @@ REGISTER_USER_OP("nll_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("nll").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                       user_op::AddOpFn AddOp) -> Maybe<void> {
-  if (op.NeedGenGradTensor4OpInput("input", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    builder.Op("nll_grad")
-        .Input("input", op.input("input", 0))
-        .Input("target", op.input("target", 0))
-        .Input("total_weight", op.output("total_weight", 0))
-        .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-        .Output("dx")
-        .Attr("ignore_index", op.attr<int64_t>("ignore_index"))
-        .Attr("reduction", op.attr<std::string>("reduction"));
-    if (op.user_op_conf().has_input("weight", 0)) {
-      builder.Input("weight", op.input("weight", 0));
-    }
-    user_op::UserOpConfWrapper grad_op = builder.Build();
-    op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "dx", 0);
-    AddOp(grad_op);
-  }
-  return Maybe<void>::Ok();
-});
+REGISTER_USER_OP_GRAD("nll").SetGenBackwardOpConfFn(
+    [](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {
+      if (op.NeedGenGradTensor4OpInput("input", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        builder.Op("nll_grad")
+            .Input("input", op.input("input", 0))
+            .Input("target", op.input("target", 0))
+            .Input("total_weight", op.output("total_weight", 0))
+            .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
+            .Output("dx")
+            .Attr("ignore_index", op.attr<int64_t>("ignore_index"))
+            .Attr("reduction", op.attr<std::string>("reduction"));
+        if (op.user_op_conf().has_input("weight", 0)) {
+          builder.Input("weight", op.input("weight", 0));
+        }
+        user_op::UserOpConfWrapper grad_op = builder.Build();
+        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "dx", 0);
+        AddOp(grad_op);
+      }
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace oneflow
