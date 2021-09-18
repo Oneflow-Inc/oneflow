@@ -61,7 +61,6 @@ struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::va
   static void Dot(DeviceCtx* ctx, const int n, const T* x, const int incx, const T* y,
                   const int incy, T* result);
 
-  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
   static void Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
 
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
@@ -74,7 +73,6 @@ struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsIntegral<T>::va
     : public CpuKernelUtilIf<T, KernelUtil<DeviceType::kCPU, T>> {
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
-  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
 };
 
 // GPU, Integral, Floating
@@ -92,7 +90,6 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::va
   static void Dot(DeviceCtx* ctx, const int n, const T* x, const int incx, const T* y,
                   const int incy, T* result);
 
-  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
   static void Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
 };
 
@@ -100,7 +97,6 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::va
 template<typename T>
 struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T>::value>::type>
     : public GpuKernelUtilIf<T, KernelUtil<DeviceType::kGPU, T>> {
-  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
 };
 
 template<typename T, typename U>

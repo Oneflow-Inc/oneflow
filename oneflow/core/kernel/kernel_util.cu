@@ -25,11 +25,6 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
-  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[i]; }
-}
-
-template<typename T>
 __global__ void SqrtGpu(const int64_t n, const T* x, T* y) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::sqrt(x[i]); }
 }
@@ -71,10 +66,6 @@ KU_FLOATING_METHOD Dot(DeviceCtx* ctx, const int n, const T* x, const int incx, 
   cublas_dot<T>(ctx->cublas_pmd_handle(), n, x, incx, y, incy, result);
 }
 
-KU_FLOATING_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
-  MulGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
-}
 KU_FLOATING_METHOD Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
   SqrtGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
@@ -82,11 +73,6 @@ KU_FLOATING_METHOD Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
 #define KU_INTEGRAL_METHOD \
   template<typename T>     \
   void KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T>::value>::type>::
-
-KU_INTEGRAL_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
-  MulGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
-}
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto)                                \
   template struct GpuKernelUtilIf<type_cpp, KernelUtil<DeviceType::kGPU, type_cpp>>; \
