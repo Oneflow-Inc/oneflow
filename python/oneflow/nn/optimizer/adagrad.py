@@ -46,43 +46,43 @@ class Adagrad(Optimizer):
         
         For example: 
 
-    Example 1: 
+        Example 1: 
 
-    .. code-block:: python 
+        .. code-block:: python
 
-        # Assume net is a custom model. 
-        adagrad = flow.optim.Adagrad(net.parameters(), lr=1e-3)
+            # Assume net is a custom model. 
+            adagrad = flow.optim.Adagrad(net.parameters(), lr=1e-3)
 
-        for epoch in range(epochs):
-            # Read data, Compute the loss and so on. 
-            # ...
-            loss.backward()
-            adagrad.step()
-            adagrad.zero_grad()
+            for epoch in range(epochs):
+                # Read data, Compute the loss and so on. 
+                # ...
+                loss.backward()
+                adagrad.step()
+                adagrad.zero_grad()
 
-    Example 2: 
+        Example 2: 
 
-    .. code-block:: python 
+        .. code-block:: python 
 
-        # Assume net is a custom model. 
-        adagrad = flow.optim.Adagrad(
-            [
-                {
-                    "params": net.parameters(),
-                    "lr": learning_rate,
-                    "clip_grad_max_norm": 0.5,
-                    "clip_grad_norm_type": 2.0,
-                }
-            ],
-        )
+            # Assume net is a custom model. 
+            adagrad = flow.optim.Adagrad(
+                [
+                    {
+                        "params": net.parameters(),
+                        "lr": learning_rate,
+                        "clip_grad_max_norm": 0.5,
+                        "clip_grad_norm_type": 2.0,
+                    }
+                ],
+            )
 
-        for epoch in range(epochs):
-            # Read data, Compute the loss and so on. 
-            # ...
-            loss.backward()
-            adagrad.clip_grad()
-            adagrad.step()
-            adagrad.zero_grad()
+            for epoch in range(epochs):
+                # Read data, Compute the loss and so on. 
+                # ...
+                loss.backward()
+                adagrad.clip_grad()
+                adagrad.step()
+                adagrad.zero_grad()
 
         If you want to use clip_grad, you can refer this example. 
 
