@@ -38,6 +38,7 @@ def _test_slice_empty(test_case, device):
     np_arr = np.random.randn(10).astype(np.float32)
     x = flow.tensor(np_arr, device=flow.device(device))
     y = x[3:3]
+    test_case.assertTrue(y.shape, flow.Size((0,)))
     np_out = np_arr[3:3]
     test_case.assertTrue(np.array_equal(y.numpy(), np_out))
 
