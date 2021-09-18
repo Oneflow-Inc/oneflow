@@ -91,7 +91,7 @@ jobs:
           - test_suite: mac
             cmake_build_type: "Debug"
           - test_suite: mac
-            cmake_build_type: "Ninja"
+            cmake_generator: "Ninja"
           - test_suite: ubuntu
             cmake_generator: "Ninja"
             cmake_build_type: "Debug"
