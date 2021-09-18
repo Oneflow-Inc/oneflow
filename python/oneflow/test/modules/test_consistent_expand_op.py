@@ -36,7 +36,7 @@ def _test_expand_new_dims_broadcast(test_case, device):
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
     of_input = of_input.to_consistent(
-        placement=flow.env.all_device_placement(device), sbp=flow.sbp.broadcast,
+        placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
     )
     of_out = of_input.expand(*expand_dim)
     of_out.sum().backward()
@@ -63,7 +63,7 @@ def _test_expand_same_dim_broadcast(test_case, device):
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
     of_input = of_input.to_consistent(
-        placement=flow.env.all_device_placement(device), sbp=flow.sbp.broadcast,
+        placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
     )
 
     of_out = of_input.expand(*expand_dim)
@@ -92,7 +92,7 @@ def _test_expand_same_dim_negative_broadcast(test_case, device):
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
     of_input = of_input.to_consistent(
-        placement=flow.env.all_device_placement(device), sbp=flow.sbp.broadcast,
+        placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
     )
 
     of_out = of_input.expand(*expand_dim)
@@ -121,7 +121,7 @@ def _test_expand_new_dims_split(test_case, device):
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
     of_input = of_input.to_consistent(
-        placement = flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
+        placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
     )
     of_input = of_input.to_consistent(sbp=flow.sbp.split(0))
 
@@ -155,7 +155,7 @@ def _test_expand_same_dim_split(test_case, device):
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
     of_input = of_input.to_consistent(
-        placement=flow.env.all_device_placement(device), sbp=flow.sbp.broadcast,
+        placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
     )
     of_input = of_input.to_consistent(sbp=flow.sbp.split(0))
 
@@ -189,7 +189,7 @@ def _test_expand_same_dim_negative_split(test_case, device):
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
     of_input = of_input.to_consistent(
-        placement=flow.env.all_device_placement(device), sbp=flow.sbp.broadcast,
+        placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
     )
     of_input = of_input.to_consistent(sbp=flow.sbp.split(2))
 
