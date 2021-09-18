@@ -54,6 +54,8 @@ void Kernel::Launch(KernelContext* ctx) const {
 }
 
 void Kernel::Forward(KernelContext* ctx) const {
+  LOG(ERROR) << ">>> " << op_conf().name();
+
   ctx->WillForwardHeader(ctx, this);
   ForwardHeader(ctx);
   ctx->DidForwardHeader(ctx, this);
@@ -64,6 +66,8 @@ void Kernel::Forward(KernelContext* ctx) const {
   ctx->WillForwardDataContent(ctx, this);
   ForwardDataContent(ctx);
   ctx->DidForwardDataContent(ctx, this);
+
+  LOG(ERROR) << "<<< " << op_conf().name();
 }
 
 void Kernel::ForwardHeader(KernelContext* ctx) const {
