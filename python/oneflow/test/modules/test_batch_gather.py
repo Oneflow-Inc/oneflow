@@ -49,7 +49,7 @@ def _test_batch_gather(test_case, shape, device):
         np.int64
     )  # [3, 1, 1] -> [3, 2, 2]
     gather_index = flow.tensor(gather_index).to(device)
-    gather_out = flow.gather(x_tensor_gather, gather_index, dim=0)
+    gather_out = flow.gather(x_tensor_gather, 0, gather_index)
     total_out = batch_gather_out.sum() + gather_out.sum()
     total_out.backward()
 
