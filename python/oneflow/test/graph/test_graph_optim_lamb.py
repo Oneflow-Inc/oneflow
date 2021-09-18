@@ -37,6 +37,8 @@ def compare_with_numpy_lamb(
     clip_grad_args,
 ):
     clip_grad_max_norm, clip_grad_norm_type = clip_grad_args
+    
+    np.random.seed(1000)
 
     random_grad_seq = []
     for _ in range(train_iters):
@@ -71,7 +73,7 @@ def compare_with_numpy_lamb(
             ]
         )
     else:
-         lamb = flow.optim.LAMB(
+        lamb = flow.optim.LAMB(
             [
                 {
                     "params": simp_module.parameters(),
@@ -127,7 +129,7 @@ def compare_with_numpy_lamb(
                     grad, clip_grad_max_norm, clip_grad_norm_type
                 )
 
-            grad = grad + weight_decay * x
+            # grad = grad + weight_decay * x
             bias_correction1 = 1.0
             bias_correction2 = 1.0
 
@@ -143,15 +145,15 @@ def compare_with_numpy_lamb(
             # else:
             #     denom = np.sqrt(s) / np.sqrt(bias_correction2) + eps
             
-            adam_grad = (m / (1 - beta1)) / (np.sqrt(v / (1 - beta2)) + eps)
+            adam_diff = (m / (1 - beta1)) / (np.sqrt(v / (1 - beta2)) + eps)
             w_norm = np.linalg.norm(x, ord=2)
-            g_norm = np.linalg.norm(adam_grad, ord=2)
+            g_norm = np.linalg.norm(adam_diff, ord=2)
             if (w_norm > 0 and g_norm > 0):
                 trust_ratio = w_norm / g_norm
             else:
                 trust_ratio = 1.
                 
-            param = x - learning_rate * trust_ratio * adam_grad 
+            param = x - learning_rate * trust_ratio * (adam_diff + weight_decay * x)
             return (param, m, v)
 
         for i in range(train_iters):
@@ -165,18 +167,18 @@ def compare_with_numpy_lamb(
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestAdam(flow.unittest.TestCase):
+class TestLamb(flow.unittest.TestCase):
     def test_lamb(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["x_shape"] = [(10,)]
-        arg_dict["learning_rate"] = [1, 1e-3]
+        arg_dict["learning_rate"] = [0.1, 1e-3]
         arg_dict["train_iters"] = [10]
         arg_dict["betas"] = [(0.99, 0.9)]
-        arg_dict["weight_decay"] = [0.001, 0.0]
-        arg_dict["eps"] = [1e-8]
+        arg_dict["weight_decay"] = [0.001]
+        arg_dict["eps"] = [1e-8, 1e-6]
         arg_dict["do_bias_correction"] = [False]
-        arg_dict["amsgrad"] = [True, False]
+        arg_dict["amsgrad"] = [True]#, False]
         # NOTE(Xingyu Liao): max_norm == -1 means no clip grad
         arg_dict["clip_grad_args"] = [(-1, 2.0), (1, 2.0)]
 

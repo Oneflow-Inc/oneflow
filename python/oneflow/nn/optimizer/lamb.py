@@ -169,7 +169,6 @@ class LAMB(Optimizer):
             .Input("m")
             .Input("v")
             .Attr("l1", 0.0)
-            .Attr("weight_decay", 0.0)
             .Build()
         )
 
@@ -224,7 +223,7 @@ class LAMB(Optimizer):
                 if "initial_lr" in param_group
                 else param_group["lr"]
             )
-            l2 = param_group["weight_decay"]
+            weight_decay = param_group["weight_decay"]
             beta1 = param_group["betas"][0]
             beta2 = param_group["betas"][1]
             
@@ -232,15 +231,19 @@ class LAMB(Optimizer):
 
             optimizer_conf.set_base_learning_rate(lr)
 
+            self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
+
             optimizer_conf.mutable_lamb_conf().set_beta1(beta1)
             optimizer_conf.mutable_lamb_conf().set_beta2(beta2)
             optimizer_conf.mutable_lamb_conf().set_epsilon(epsilon)
-
-            self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
+            
+            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
+                weight_decay
+            )
 
             # Set l2 penalty as weight decay
             for param in param_group.parameters:
-                vars_conf[param].l2 = l2
+                # vars_conf[param].l2 = l2
                 if param.requires_grad:
                     optimizer_conf.add_variable_op_names(vars_conf[param].name)
 
