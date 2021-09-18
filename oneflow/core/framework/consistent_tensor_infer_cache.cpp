@@ -258,7 +258,7 @@ class UserOpExprOpDeviceInferContext final : public user_op::DeviceInferContext 
     // Infer OpArgMutConsistentTensorMeta.
     const auto& input_metas = infer_args.input_consistent_tensor_metas();
     JUST(user_op_expr.InferLogicalShapeAndDType(
-        infer_args.attrs(), parallel_desc->device_tag(),
+        infer_args.attrs(), parallel_desc,
         [&](int32_t i) { return &*input_metas.at(i).tensor_meta(); },
         [&](int32_t i) { return output_mut_metas.at(i).mut_tensor_meta(); }));
   }
@@ -321,7 +321,7 @@ class UserOpExprOpDeviceInferContext final : public user_op::DeviceInferContext 
       return nullptr;
     };
     JUST(user_op_expr.InferLogicalShapeAndDType(
-        infer_args.attrs(), parallel_desc->device_tag(), GetInputTensorMeta,
+        infer_args.attrs(), parallel_desc, GetInputTensorMeta,
         [&](int32_t i) { return output_mut_metas.at(i).mut_tensor_meta(); }));
   }
   auto result = std::make_unique<ConsistentTensorInferResult>(user_op_expr.input_size(),
