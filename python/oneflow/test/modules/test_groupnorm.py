@@ -19,6 +19,7 @@ from collections import OrderedDict
 
 import numpy as np
 from test_util import GenArgList
+from oneflow.test_utils.automated_test_util import *
 
 import oneflow as flow
 import oneflow.unittest
@@ -339,6 +340,22 @@ class TestGroupNorm(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_group_norm_with_random_data(test_case):
+        channels = random(5, 20)
+        m = torch.nn.GroupNorm(
+            num_groups=random(1, 5),
+            num_channels=channels,
+            eps=random(0, 1) | nothing(),
+            affine=random(),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=4, dim1=channels).to(device)
+        y = m(x)
+        return y
 
 
 if __name__ == "__main__":
