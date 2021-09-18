@@ -373,6 +373,8 @@ class TestTensor(flow.unittest.TestCase):
 
         def compare_getitem_with_numpy(tensor, slices):
             np_arr = tensor.numpy()
+            print("np arr slice = ", np_arr[slices])
+            print("tensor slice = ", tensor[slices].numpy())
             test_case.assertTrue(np.allclose(np_arr[slices], tensor[slices].numpy()))
 
         def compare_setitem_with_numpy(tensor, slices, value):
