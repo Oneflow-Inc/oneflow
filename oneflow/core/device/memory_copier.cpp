@@ -25,13 +25,17 @@ int64_t MemoryCopyNdDescGetNumAxes(const MemoryCopyNdDesc& desc) { return desc.e
 
 void CheckPosExtent(const int64_t num_axes, const Shape& shape, const NdIndex& pos,
                     const Shape& extent) {
+    // std::cout << "\nmemory_copier.cpp >>>>>>>>>>>>> CheckPosExtent()" << std::endl;
+    // std::cout << "CheckPosExtent shape >> "<< shape.ToString() << std::endl;
+    // std::cout << "CheckPosExtent pos >> " << Shape(pos.dim_vec()).ToString() << std::endl;
+    // std::cout << "CheckPosExtent extent >> "<< extent.ToString() << std::endl;
   CHECK_EQ(shape.NumAxes(), num_axes);
   CHECK_EQ(pos.NumAxes(), num_axes);
   CHECK_EQ(extent.NumAxes(), num_axes);
   FOR_RANGE(int64_t, i, 0, num_axes) {
     CHECK_GE(pos.At(i), 0);
     CHECK_GE(extent.At(i), 0);
-    CHECK_GT(shape.At(i), 0);
+    CHECK_GE(shape.At(i), 0);
     CHECK_LE(pos.At(i) + extent.At(i), shape.At(i));
   }
 }
@@ -128,6 +132,12 @@ MemoryCopyNdDesc MemoryCopyNdDesc::CreateDimReducedDesc() const {
   reduced.src_pos = NdIndex(src_pos_vec);
   reduced.extent = Shape(extent_vec);
   reduced.data_type = data_type;
+  // std::cout << "\nmemory_copier.cpp >>>>>>>>>>>>> MemoryCopyNdDesc::CreateDimReducedDesc()" << std::endl;
+  // std::cout << "reduced.src_shape >> "<< reduced.src_shape.ToString() << std::endl;
+  // std::cout << "reduced.dst_shape >> "<< reduced.dst_shape.ToString() << std::endl;
+  // std::cout << "reduced.src_pos >> "<< Shape(src_pos_vec).ToString() << std::endl;
+  // std::cout << "reduced.dst_pos >> "<< Shape(dst_pos_vec).ToString() << std::endl;
+  // std::cout << "reduced.extent >> "<< reduced.extent.ToString() << std::endl;
   return reduced;
 }
 
