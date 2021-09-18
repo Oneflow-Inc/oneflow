@@ -18,7 +18,6 @@ import socket
 import traceback
 from contextlib import closing
 
-import oneflow
 import oneflow._oneflow_internal
 import oneflow.core.control.ctrl_bootstrap_pb2 as ctrl_bootstrap_pb
 import oneflow.core.job.env_pb2 as env_pb
@@ -31,7 +30,7 @@ import oneflow.support.enable_if as enable_if
 from oneflow import oneflow_deprecate
 
 
-def api_all_device_placement(device_type: str) -> oneflow.placement:
+def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.placement:
     r"""
     Return a placement containing all devices of all machines under env.
 
