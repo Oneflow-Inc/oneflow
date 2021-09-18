@@ -19,8 +19,8 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 struct NllCaptureState : public AutoGradCaptureState {
-  int64_t ignore_index;
-  std::string reduction;
+  int64_t ignore_index = -100;
+  std::string reduction = "";
 };
 
 class Nll : public OpExprGradFunction<NllCaptureState> {

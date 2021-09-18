@@ -20,7 +20,7 @@ namespace oneflow {
 namespace one {
 
 struct BinaryCrossEntropyCaptureState : public AutoGradCaptureState {
-  std::string reduction;
+  std::string reduction = "";
 };
 
 class BinaryCrossEntropy : public OpExprGradFunction<BinaryCrossEntropyCaptureState> {

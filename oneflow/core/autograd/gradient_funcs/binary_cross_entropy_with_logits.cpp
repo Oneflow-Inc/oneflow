@@ -20,8 +20,8 @@ namespace oneflow {
 namespace one {
 
 struct BinaryCrossEntropyWithLogitsCaptureState : public AutoGradCaptureState {
-  std::string reduction;
-  bool has_pos_weight;
+  std::string reduction = "";
+  bool has_pos_weight = false;
 };
 
 class BinaryCrossEntropyWithLogits
