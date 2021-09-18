@@ -98,12 +98,15 @@ TEST(Optional, non_scalar) {
 }
 
 TEST(Optional, optional_just_error_throw) {
-  ASSERT_THROW({ //NOLINT(cppcoreguidelines-avoid-goto)
-    ([]()->Maybe<int> {
-      Optional<int> a;
-      return JUST(a);
-    })().GetOrThrow();
-  }, ValueNotFoundException);
+  ASSERT_THROW(  // NOLINT(cppcoreguidelines-avoid-goto)
+      {
+        ([]() -> Maybe<int> {
+          Optional<int> a;
+          return JUST(a);
+        })()
+            .GetOrThrow();
+      },
+      ValueNotFoundException);
 }
 
 }  // namespace test
