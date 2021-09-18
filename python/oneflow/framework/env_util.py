@@ -18,6 +18,7 @@ import socket
 import traceback
 from contextlib import closing
 
+import oneflow
 import oneflow._oneflow_internal
 import oneflow.core.control.ctrl_bootstrap_pb2 as ctrl_bootstrap_pb
 import oneflow.core.job.env_pb2 as env_pb
@@ -30,11 +31,26 @@ import oneflow.support.enable_if as enable_if
 from oneflow import oneflow_deprecate
 
 
-def api_all_device_placement(device_type: str) -> None:
-    """Return a placement containing all devices of all machines under env.
+def api_all_device_placement(device_type: str) -> oneflow.placement:
+    r"""
+    Return a placement containing all devices of all machines under env.
 
     Args:
         device_type (str): cuda or cpu
+
+    For examples:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> p = flow.env.all_device_placement("cuda")
+        >>> p
+        oneflow.placement(device_type="cuda", machine_device_ids={0 : [0, 1, 2, 3]}, hierarchy=(4,))
+        >>> p = flow.env.all_device_placement("cpu")
+        >>> p
+        oneflow.placement(device_type="cpu", machine_device_ids={0 : [0, 1, 2, 3]}, hierarchy=(4,))
+
     """
     return oneflow._oneflow_internal.AllDevicePlacement(device_type)
 
