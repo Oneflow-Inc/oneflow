@@ -17,6 +17,17 @@ import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 
 
+_ordered_dtype_list = [flow.int8, flow.int32, flow.int64, flow.float32, flow.float64]
+
+
+def _infered_binary_op_dtype(dtype_a, dtype_b):
+    """
+    Infer the highest hierarchy dtype. 
+    """
+    inferred_dtype = max(dtype_a, dtype_b, key=_ordered_dtype_list.index)
+    return inferred_dtype
+
+
 @register_tensor_op("eq")
 def eq_op(input, other):
     """
@@ -46,6 +57,14 @@ def eq_op(input, other):
         tensor([1, 1, 1, 0], dtype=oneflow.int8)
 
     """
+    if type(input) == type(other):
+        dtype_a = input.dtype
+        dtype_b = other.dtype
+        if dtype_a != dtype_b:
+            _infer_dtype = _infered_binary_op_dtype(dtype_a, dtype_b)
+            if dtype_a != _infer_dtype:
+                input = input.to(_infer_dtype)
+                other = other.to(_infer_dtype)
     return flow._C.equal(input, other)
 
 
@@ -78,6 +97,15 @@ def ne_op(input, other):
         tensor([0, 0, 0, 1], dtype=oneflow.int8)
 
     """
+    if type(input) == type(other):
+        dtype_a = input.dtype
+        dtype_b = other.dtype
+        if dtype_a != dtype_b:
+            _infer_dtype = _infered_binary_op_dtype(dtype_a, dtype_b)
+            if dtype_a != _infer_dtype:
+                input = input.to(_infer_dtype)
+                other = other.to(_infer_dtype)
+
     return flow._C.not_equal(input, other)
 
 
