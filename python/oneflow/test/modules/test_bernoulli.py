@@ -38,7 +38,6 @@ def _test_bernoulli_with_generator(test_case, shape):
         np.random.rand(*shape), dtype=flow.float32, device=flow.device("cpu")
     )
     y_1 = flow.bernoulli(x, generator=generator)
-    y_1.numpy()
     generator.manual_seed(0)
     y_2 = flow.bernoulli(x, generator=generator)
     test_case.assertTrue(np.allclose(y_1.numpy(), y_2.numpy()))
