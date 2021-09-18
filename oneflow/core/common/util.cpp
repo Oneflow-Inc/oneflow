@@ -162,16 +162,4 @@ std::string GetStringFromEnv(const std::string& env_var, const std::string& defa
   }
 }
 
-std::vector<std::string> Split(const std::string& s, const std::string& delimiter) {
-  std::vector<std::string> splits;
-  size_t last = 0;
-  size_t next = 0;
-  while ((next = s.find(delimiter, last)) != std::string::npos) {
-    splits.emplace_back(s.substr(last, next - last));
-    last = next + 1;
-  }
-  if (last < s.size()) { splits.emplace_back(s.substr(last)); }
-  return splits;
-}
-
 }  // namespace oneflow

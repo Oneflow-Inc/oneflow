@@ -76,7 +76,8 @@ Maybe<Tensor> CPUGeneratorImpl::GetState() const {
 
   std::stringstream ss;
   ss << engine_;
-  auto splits = Split(ss.str(), " ");
+  std::vector<std::string> splits;
+  Split(ss.str(), " ", [&](std::string&& s) { splits.emplace_back(s); });
   // The last element in `splits` indicates state size, not state.
   if (splits.size() != CPUGeneratorState::state_size + 1) {
     return Error::RuntimeError() << "std::mt19937 state size should be "
@@ -339,14 +340,15 @@ Maybe<void> AutoGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
   // set current seed.
   set_current_seed(state.seed);
 
-  JUST(Synchronize());
-  std::lock_guard<std::mutex> lock(mutex_);
-
-  auto splits = Split(device_tags, ",");
+  std::vector<std::string> splits;
+  Split(device_tags, ",", [&](std::string&& s) { splits.emplace_back(s); });
   if (splits.size() != state.num) {
     return Error::RuntimeError() << "Invalid auto generator state. The number of state is "
                                  << state.num << ", but device tags number is " << splits.size();
   }
+  JUST(Synchronize());
+  std::lock_guard<std::mutex> lock(mutex_);
+
   for (int i = 0; i < splits.size(); ++i) {
     std::string device_name;
     int device_index = -1;
