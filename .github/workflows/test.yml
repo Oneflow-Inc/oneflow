@@ -534,7 +534,7 @@ jobs:
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
           upload_core: ${{ contains(github.event.pull_request.labels.*.name, 'upload-core') }}
       - name: Print backtrace (distributed test)
-        if: ${{ steps.distributed_try_3.outcome=='failure' || steps.new_interface_distributed_try_3.outcome=='failure' }}
+        if: ${{ always() && steps.distributed_try_3.outcome=='failure' || steps.new_interface_distributed_try_3.outcome=='failure' }}
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/print_stack_from_core.sh python3 distributed-tmp
       - name: Dataloader API test
@@ -568,7 +568,7 @@ jobs:
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/try_install.sh && bash ci/test/1node_model_serve_test.sh
       - name: Print backtrace (serving test)
-        if: ${{ steps.model_serve_test.outcome=='failure' }}
+        if: ${{ always() && steps.model_serve_test.outcome=='failure' }}
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/print_stack_from_core.sh python3 serving-tmp
       - name: Single client benchmark (mainly for backward compatibility)
