@@ -554,7 +554,7 @@ jobs:
         timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'legacy-op' && !fromJson(matrix.is-distributed) }}
         run: |
-          docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh
+          docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/1node_op_test.sh
       - name: Single client model test
         timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'legacy-model' }}
@@ -565,7 +565,7 @@ jobs:
         id: model_serve_test
         if: ${{ matrix.device == 'cuda' && !fromJson(matrix.cache-hit) && matrix.test-type == 'legacy-model' }}
         run: |
-          docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/try_install.sh && bash ci/test/1node_model_serve_test.sh
+          docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/1node_model_serve_test.sh
       - name: Print backtrace (serving test)
         if: ${{ always() && steps.model_serve_test.outcome=='failure' }}
         run: |
@@ -574,7 +574,7 @@ jobs:
         timeout-minutes: 45
         if: ${{ matrix.device == 'cuda' && !fromJson(matrix.cache-hit) && matrix.test-type == 'legacy-benchmark' }}
         run: |
-          docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test.sh
+          docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/1node_benchmark_test.sh
       - name: Single client benchmark FP16 (mainly for backward compatibility)
         timeout-minutes: 45
         if: ${{ matrix.device == 'cuda' && !fromJson(matrix.cache-hit) && matrix.test-type == 'legacy-benchmark' }}
