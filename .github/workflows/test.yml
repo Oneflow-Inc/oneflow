@@ -468,7 +468,7 @@ jobs:
         timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cuda' }}
         run: |
-          docker exec ${{ env.TEST_CONTAINER_NAME }} ci/test/try_install.sh && bash ci/test/doctest.sh
+          docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/doctest.sh
       - name: Single client dry run test (run without runtime)
         timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cuda' }}
