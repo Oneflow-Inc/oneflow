@@ -110,8 +110,7 @@ if __name__ == "__main__":
     cmds = gen_cmds(cmd=args.cmd, dir=args.dir, doctest=args.doctest)
     start = time.time()
     loop = asyncio.get_event_loop()
-    PER_GPU_PROCESS_NUMS = list(range(1, 13))
-    PER_GPU_PROCESS_NUMS.reverse()
+    PER_GPU_PROCESS_NUMS = [12, 8, 2, 1]
     is_cpu_only = os.getenv("ONEFLOW_TEST_CPU_ONLY")
     if is_cpu_only:
         PER_GPU_PROCESS_NUMS = [1]
