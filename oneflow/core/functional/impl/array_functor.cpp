@@ -1286,7 +1286,7 @@ class TensorGetItemFunctor {
     int64_t ndims = x->shape()->NumAxes();
     std::vector<detail::Slice> slice_indices;
     TensorTuple tensor_indices;
-    std::vector<int64_t> target_dims;
+    std::vector<int64_t> target_dims({});
 
     JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &target_dims));
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
@@ -1314,9 +1314,7 @@ class TensorGetItemFunctor {
     }
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
-    if (shape.NumAxes() != 0 && shape != *(result->shape())) {
-      result = JUST(Reshape(result, shape));
-    }
+    if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
     if (!tensor_indices.empty()) { result = JUST(ApplyAdvancedIndexing(result, tensor_indices)); }
     return result;
   }
