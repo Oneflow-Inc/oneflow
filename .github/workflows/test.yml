@@ -373,8 +373,6 @@ jobs:
         run: |
           echo "TEST_IMG_TAG=${TEST_WITH_TORCH_IMG_TAG}" >> $GITHUB_ENV
       - name: Set environment variables
-        env:
-          test_suite: ${{matrix.test_suite }}
         run: |
           set -x
           extra_docker_args=""
