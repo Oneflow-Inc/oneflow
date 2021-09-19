@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/vm/cpu_stream_type.h"
 #ifdef WITH_CUDA
 #include "oneflow/core/eager/blob_instruction_type.h"
 #include "oneflow/core/vm/cuda_stream_type.h"
@@ -38,13 +39,13 @@ class GpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallback
 COMMAND(vm::RegisterInstructionType<GpuAccessBlobByCallbackInstructionType>(
     "gpu.AccessBlobByCallback"));
 
-class GpuSoftSyncStreamInstructionType : public SoftSyncStreamInstructionType {
+class GpuRecordEventInstructionType : public RecordEventInstructionType {
  public:
-  GpuSoftSyncStreamInstructionType() = default;
-  ~GpuSoftSyncStreamInstructionType() override = default;
+  GpuRecordEventInstructionType() = default;
+  ~GpuRecordEventInstructionType() override = default;
   using stream_type = vm::CudaStreamType;
 };
-COMMAND(vm::RegisterInstructionType<GpuSoftSyncStreamInstructionType>("gpu.SoftSyncStream"));
+COMMAND(vm::RegisterInstructionType<GpuRecordEventInstructionType>("gpu.RecordEvent"));
 
 }  // namespace vm
 }  // namespace oneflow
