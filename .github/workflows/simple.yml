@@ -81,6 +81,13 @@ jobs:
         cmake_generator: ["Ninja", "Unix Makefiles"]
         cmake_build_type: ["Debug", "Release"]
         build_shared_libs: ["ON", "OFF"]
+        include:
+          - test_suite: mac
+            os: "macos-10.15"
+            make_concurrency: 2
+          - test_suite: ubuntu
+            os: "ubuntu-20.04"
+            make_concurrency: 2
         exclude:
           - test_suite: mac
             cmake_build_type: "Debug"
