@@ -380,6 +380,7 @@ jobs:
         run: |
           echo "TEST_IMG_TAG=${TEST_WITH_TORCH_IMG_TAG}" >> $GITHUB_ENV
       - name: Set environment variables
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           set -x
           extra_docker_args=""
@@ -393,7 +394,7 @@ jobs:
           extra_docker_args+=" -e ONEFLOW_TEST_CACHE_DIR=${oneflow_test_cache_dir}"
           echo "EXTRA_DOCKER_ARGS=${extra_docker_args}" >> $GITHUB_ENV
 
-          echo "ONEFLOW_WHEEL_PATH=${ONEFLOW_WHEEL_PATH}" >> $GITHUB_ENV
+          echo "ONEFLOW_WHEEL_PATH=${{ steps.download-digest.outputs.entry-dir }}/whl" >> $GITHUB_ENV
       - name: Start container
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         working-directory: ${{ env.ONEFLOW_SRC }}
