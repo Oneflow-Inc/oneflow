@@ -384,7 +384,6 @@ jobs:
         run: |
           set -x
           extra_docker_args=""
-          extra_docker_args+=" --env ONEFLOW_CI=1"
           if [ "${{ matrix.device }}" == "cpu" ]; then
             extra_docker_args+=" --env ONEFLOW_TEST_CPU_ONLY=1"
             extra_docker_args+=" --env CUDA_VISIBLE_DEVICES=-1"
