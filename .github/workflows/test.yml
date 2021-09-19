@@ -9,6 +9,7 @@ on:
       placeholder:
         description: "placeholder, no effect"
         required: false
+
 jobs:
   cancel_previous:
     name: Cancel previous runs
@@ -149,6 +150,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ONEFLOW_SRC: .
+      OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+      OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
     outputs:
       matrix: ${{ steps.find-cache.outputs.matrix }}
     steps:
@@ -186,6 +189,8 @@ jobs:
       WHEELHOUSE_DIR: manylinux-wheelhouse
       SSH_TANK_HOST: 192.168.1.13
       SSH_TANK_PATH: /tank
+      OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+      OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
     steps:
       - name: Fix permissions
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
@@ -296,6 +301,8 @@ jobs:
     needs: [build-manylinux]
     env:
       ONEFLOW_SRC: .
+      OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+      OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
     outputs:
       matrix: ${{ steps.find-cache.outputs.matrix }}
     steps:
@@ -328,6 +335,8 @@ jobs:
       TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.9.0:0.1
       SSH_TANK_HOST: 192.168.1.13
       SSH_TANK_PATH: /tank
+      OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+      OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
     steps:
       - name: Fix permissions
         run: |
