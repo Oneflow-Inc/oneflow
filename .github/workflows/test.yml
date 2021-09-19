@@ -180,7 +180,7 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     needs: [find-build-cache]
     strategy:
-      fail-fast: false
+      fail-fast: true
       max-parallel: 5
       matrix: ${{ fromJson(needs.find-build-cache.outputs.matrix) }}
     env:
