@@ -168,7 +168,7 @@ jobs:
           runner-labels: |
             self-hosted
             linux
-            provision
+            build
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entries: |
             cu102
