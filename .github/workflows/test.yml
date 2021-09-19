@@ -315,7 +315,6 @@ jobs:
           runner-labels: |
             self-hosted
             linux
-            provision
           oneflow-src: ${{ env.ONEFLOW_SRC }}
 
   test:
