@@ -401,7 +401,7 @@ jobs:
         env:
           ONEFLOW_BIN_PATH: ${{ steps.download-digest.outputs.entry-dir }}/bin
         run: |
-          docker run --rm -d --privileged --network host --shm-size=8g \
+          docker run -d --rm --privileged --network host --shm-size=8g \
             --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
             --runtime=nvidia \
             -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro \
