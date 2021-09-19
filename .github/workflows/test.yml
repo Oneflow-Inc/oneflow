@@ -293,7 +293,7 @@ jobs:
   find-test-cache:
     name: "Find test cache"
     runs-on: ubuntu-latest
-    needs: [test-build-manylinux]
+    needs: [build-manylinux]
     env:
       ONEFLOW_SRC: .
     outputs:
