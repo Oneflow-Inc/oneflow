@@ -616,6 +616,7 @@ jobs:
         timeout-minutes: 45
         if: ${{ always() }}
         run: |
+          docker run --rm -v $PWD:/p -w /p busybox chown -R $(id -u):$(id -g) . || true
           docker rm -f ${container_name} || true
 
   static_analysis_with_clang_on_diff:
