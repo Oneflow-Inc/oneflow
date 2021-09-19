@@ -218,7 +218,7 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
-      - uses: ./
+      - uses: Oneflow-Inc/get-oneflow@add-doctor-test
         name: Build manylinux cpu only
         if: ${{ matrix.entry =='cpu' && !matrix.cache-hit }}
         with:
@@ -237,7 +237,7 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: ./
+      - uses: Oneflow-Inc/get-oneflow@add-doctor-test
         name: Build manylinux cu102
         if: ${{ matrix.entry =='cu102' && !matrix.cache-hit }}
         with:
@@ -256,7 +256,7 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: ./
+      - uses: Oneflow-Inc/get-oneflow@add-doctor-test
         name: Build manylinux cu110_xla
         if: ${{ matrix.entry =='cu110_xla' && !matrix.cache-hit }}
         with:
@@ -276,7 +276,7 @@ jobs:
             3.6
       - name: Upload bin
         if: ${{ !fromJson(matrix.cache-hit) }}
-        uses: ./degist/upload
+        uses: Oneflow-Inc/get-oneflow/degist/upload@add-doctor-test
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
           entry: ${{ matrix.entry }}
@@ -286,7 +286,7 @@ jobs:
           dst-dir: bin
       - name: Upload whl
         if: ${{ !fromJson(matrix.cache-hit) }}
-        uses: ./degist/upload
+        uses: Oneflow-Inc/get-oneflow/degist/upload@add-doctor-test
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
           entry: ${{ matrix.entry }}
@@ -308,7 +308,7 @@ jobs:
     steps:
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
-      - uses: ./cache-complete/matrix/test
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@add-doctor-test
         name: find cache
         id: find-cache
         with:
@@ -351,7 +351,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: ./cache-complete
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-doctor-test
         name: Save cache if successful
         id: save-cache
         with:
@@ -366,7 +366,7 @@ jobs:
           exit 1
       - name: Download wheel and binary
         if: ${{ !fromJson(matrix.cache-hit) }}
-        uses: ./degist/download
+        uses: Oneflow-Inc/get-oneflow/degist/download@add-doctor-test
         id: download-digest
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
