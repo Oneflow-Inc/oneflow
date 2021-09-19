@@ -37,7 +37,6 @@ Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
   CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
 
-  // slice a 1-dim tensor will return a 0-dim or 1-dim tensor
   DimVector dim_vec(ndim);
   FOR_RANGE(size_t, i, 0, dim_vec.size()) {
     const int64_t dim_size = x_shape.At(i);
