@@ -414,7 +414,7 @@ jobs:
             -e ONEFLOW_CI=1 \
             -v $PWD:$PWD \
             -w $PWD \
-            --name ${{ env.TEST_CONTAINER_NAME }} \
+            --name ${ TEST_CONTAINER_NAME } \
             ${{ env.EXTRA_DOCKER_ARGS }} \
             ${{ env.TEST_IMG_TAG }} \
             sleep 3600
