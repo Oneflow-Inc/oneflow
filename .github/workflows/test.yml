@@ -275,7 +275,7 @@ jobs:
           python-versions: |
             3.6
       - name: Upload bin
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type != 'do-nothing' }}
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         uses: Oneflow-Inc/get-oneflow/degist/upload@add-doctor-test
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -285,7 +285,7 @@ jobs:
           src-dir: ${{ env.MANYLINUX_CACHE_DIR }}/build/bin
           dst-dir: bin
       - name: Upload whl
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type != 'do-nothing' }}
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         uses: Oneflow-Inc/get-oneflow/degist/upload@add-doctor-test
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -365,7 +365,7 @@ jobs:
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
       - name: Download wheel and binary
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type != 'do-nothing' }}
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         uses: Oneflow-Inc/get-oneflow/degist/download@add-doctor-test
         id: download-digest
         with:
@@ -397,7 +397,7 @@ jobs:
 
           echo "ONEFLOW_WHEEL_PATH=${ONEFLOW_WHEEL_PATH}" >> $GITHUB_ENV
       - name: Start container
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type != 'do-nothing' }}
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         working-directory: ${{ env.ONEFLOW_SRC }}
         env:
           ONEFLOW_BIN_PATH: ${{ steps.download-digest.outputs.entry-dir }}/bin
@@ -420,17 +420,17 @@ jobs:
             ${TEST_IMG_TAG} \
             sleep 3600
       - name: Test container
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type != 'do-nothing' }}
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} ls
       - name: Install OneFlow
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type != 'do-nothing' }}
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           ls ${{ env.ONEFLOW_WHEEL_PATH }}
           docker exec ${{ env.TEST_CONTAINER_NAME }} python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           docker exec ${{ env.TEST_CONTAINER_NAME }} python3 -m pip install --find-links=${{ env.ONEFLOW_WHEEL_PATH }} oneflow
       - name: Run OneFlow doctor
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type != 'do-nothing' }}
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} python3 -m oneflow --doctor
       - name: Exe test
@@ -587,7 +587,7 @@ jobs:
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }}bash ci/test/test_xla.sh
       - name: Remove automerge
-        if: ${{ failure() && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge') }}
+        if: ${{ failure() && contains(matrix.runs-on, 'self-hosted') && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge') }}
         uses: actions/github-script@v4
         with:
           script: |
@@ -605,18 +605,18 @@ jobs:
             })
       - name: Print stacks in all core files
         timeout-minutes: 45
-        if: ${{ failure() }}
+        if: ${{ failure() && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/print_stack_in_all_dirs.sh || true
       - name: Query system status
         timeout-minutes: 45
-        if: ${{ failure() }}
+        if: ${{ failure() && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           nvidia-smi || true
           docker ps || true
       - name: Remove container
         timeout-minutes: 45
-        if: ${{ always() }}
+        if: ${{ always() && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${container_name} || true
           docker run --rm -v $PWD:/p -w /p busybox chown -R $(id -u):$(id -g) . || true
