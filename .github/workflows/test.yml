@@ -320,7 +320,7 @@ jobs:
 
   test:
     name: Test suite
-    needs: [build-manylinux, wait_for_gpu_slot, changed_files]
+    needs: [build-manylinux, wait_for_gpu_slot, changed_files, find-test-cache]
     runs-on: ${{ matrix.runs-on }}
     continue-on-error: ${{ matrix.allow_fail }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
