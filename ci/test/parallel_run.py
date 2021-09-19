@@ -54,7 +54,7 @@ def everyN(l: list, n: int):
         yield l[i : i + n]
 
 
-async def spawn_shell_and_check(cmd: str = None, gpu_id: int = -1):
+async def spawn_shell_and_check(cmd: str = None, gpu_id: int = -1, check: bool = False):
     is_cpu_only = os.getenv("ONEFLOW_TEST_CPU_ONLY")
     print(f"[gpu={gpu_id}]", cmd)
     p = await asyncio.create_subprocess_shell(
@@ -67,29 +67,34 @@ async def spawn_shell_and_check(cmd: str = None, gpu_id: int = -1):
         ),
     )
     await p.wait()
-    if p.returncode != 0:
-        raise RuntimeError(cmd)
+    if check:
+        if p.returncode != 0:
+            raise RuntimeError(cmd)
+    return {"returncode": p.returncode, "cmd": cmd}
 
 
-def run_cmds(cmds, gpu_num=0, timeout=10, chunk=1, verbose=False):
+async def run_cmds(
+    cmds, gpu_num=0, timeout=10, chunk=1, verbose=False, per_gpu_process_num=1
+):
     is_cpu_only = os.getenv("ONEFLOW_TEST_CPU_ONLY")
     if is_cpu_only:
         gpu_num = os.cpu_count()
-    if gpu_num > 0:
-        loop = asyncio.get_event_loop()
-        PER_GPU_PROCESS_NUM = 4
-        for cmdN in everyN(cmds, PER_GPU_PROCESS_NUM * gpu_num):
-            loop.run_until_complete(
-                asyncio.gather(
-                    *[
-                        spawn_shell_and_check(cmd, i)
-                        for cmd_gpu_num in everyN(cmdN, gpu_num)
-                        for (i, cmd) in enumerate(cmd_gpu_num)
-                    ],
-                ),
-            )
-    else:
-        raise NotImplementedError
+    fails = []
+    assert gpu_num > 0
+    for cmdN in everyN(cmds, per_gpu_process_num * gpu_num):
+        results = await asyncio.gather(
+            *[
+                spawn_shell_and_check(
+                    cmd=cmd, gpu_id=i, check=(per_gpu_process_num == 1)
+                )
+                for cmd_gpu_num in everyN(cmdN, gpu_num)
+                for (i, cmd) in enumerate(cmd_gpu_num)
+            ],
+        )
+        for r in list(results):
+            if r["returncode"] != 0:
+                fails.append(r["cmd"])
+    return fails
 
 
 if __name__ == "__main__":
@@ -104,13 +109,24 @@ if __name__ == "__main__":
     args = parser.parse_args()
     cmds = gen_cmds(cmd=args.cmd, dir=args.dir, doctest=args.doctest)
     start = time.time()
-    run_cmds(
-        cmds,
-        gpu_num=args.gpu_num,
-        timeout=args.timeout,
-        chunk=args.chunk,
-        verbose=args.verbose,
-    )
+    loop = asyncio.get_event_loop()
+    PER_GPU_PROCESS_NUMS = list(range(1, 13))
+    PER_GPU_PROCESS_NUMS.reverse()
+    is_cpu_only = os.getenv("ONEFLOW_TEST_CPU_ONLY")
+    if is_cpu_only:
+        PER_GPU_PROCESS_NUMS = [1]
+    for per_gpu_process_num in PER_GPU_PROCESS_NUMS:
+        print("[per_gpu_process_num]", per_gpu_process_num)
+        cmds = loop.run_until_complete(
+            run_cmds(
+                cmds,
+                gpu_num=args.gpu_num,
+                timeout=args.timeout,
+                chunk=args.chunk,
+                verbose=args.verbose,
+                per_gpu_process_num=per_gpu_process_num,
+            )
+        )
     elapsed = time.time() - start
     elapsed_time_txt = time.strftime("elapsed: %H:%M:%S", time.gmtime(elapsed))
     print(elapsed_time_txt)
