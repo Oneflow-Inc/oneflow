@@ -540,7 +540,7 @@ jobs:
         timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
         run: |
-          ddocker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
+          docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
       - name: Tensor API test
         timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
