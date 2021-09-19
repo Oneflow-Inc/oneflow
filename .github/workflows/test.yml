@@ -205,7 +205,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: Oneflow-Inc/get-oneflow@add-doctor-test
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-doctor-test
         name: Save cache if successful
         id: save-cache
         with:
