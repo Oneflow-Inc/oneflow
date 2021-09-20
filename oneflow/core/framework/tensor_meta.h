@@ -55,6 +55,8 @@ class TensorMeta : public user_op::TensorDesc {
   bool* mut_is_dynamic() override { return &is_dynamic_; }
   void set_is_dynamic(bool val) override { is_dynamic_ = val; }
 
+  virtual const std::string DebugString() const;
+
  private:
   std::shared_ptr<const Shape> shape_;
   DataType data_type_;
@@ -81,6 +83,8 @@ class MirroredTensorMeta : public TensorMeta {
   bool operator==(const MirroredTensorMeta& other) const;
   size_t CalcHashValue() const;
 
+  const std::string DebugString() const;
+
  private:
   Symbol<Device> device_;
   std::shared_ptr<const Stride> stride_;
@@ -106,6 +110,8 @@ class ConsistentTensorMeta : public TensorMeta {
   void set_parallel_desc(Symbol<ParallelDesc> val) { parallel_desc_ = val; }
 
   size_t CalcHashValue() const;
+
+  const std::string DebugString() const;
 
  private:
   Symbol<cfg::NdSbp> nd_sbp_;
