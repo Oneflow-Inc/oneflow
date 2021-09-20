@@ -79,7 +79,7 @@ class LazyJobInstance final : public JobInstance {
 
 namespace vm {
 
-class LaunchLazyJobInstructionType final : public InstructionType { // NOLINT
+class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
  public:
   LaunchLazyJobInstructionType(const LaunchLazyJobInstructionType&) = delete;
   LaunchLazyJobInstructionType(LaunchLazyJobInstructionType&&) = delete;
