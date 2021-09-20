@@ -28,8 +28,7 @@ Maybe<ObjectMsgPtr<LocalDepObject>> RawGetLocalDepObject(const std::string& type
 
 }  // namespace
 
-static constexpr auto* GetLocalDepObject =
-    DECORATE(&RawGetLocalDepObject, ThreadLocalCopiable);
+static constexpr auto* GetLocalDepObject = DECORATE(&RawGetLocalDepObject, ThreadLocalCopiable);
 
 void LaunchLazyJobPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
