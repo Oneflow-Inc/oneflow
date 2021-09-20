@@ -1055,6 +1055,7 @@ def image_batch_align(
     shape: Sequence[int],
     dtype: flow.dtype,
     alignment: int,
+    dynamic_out: bool = True,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     """This operator aligns the shape for a batch of images.
@@ -1152,6 +1153,7 @@ def image_batch_align(
         .Attr("shape", shape)
         .Attr("data_type", dtype)
         .Attr("alignment", alignment)
+        .Attr("dynamic_out", dynamic_out)
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()
