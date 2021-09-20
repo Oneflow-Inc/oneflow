@@ -269,6 +269,7 @@ class UserOpConfBuilder(object):
         input_conf[input_name].ClearField("s")
         for input_blob in input_blob_list:
             input_conf[input_name].s.append(input_blob.unique_name)
+        self.user_op_.op_conf_.user_conf.input_order.append(input_name)
         return self
 
     def InputSize(self, input_name, input_blob_size):
@@ -296,6 +297,7 @@ class UserOpConfBuilder(object):
             lbn = "{}/{}_{}".format(self.user_op_.op_conf_.name, output_name, i)
             out_lbns.append(lbn)
         self.user_op_.op_conf_.user_conf.output[output_name].s[:] = out_lbns
+        self.user_op_.op_conf_.user_conf.output_order.append(output_name)
         self.user_op_.output_arg_key_list_.append(output_name)
         return self
 
