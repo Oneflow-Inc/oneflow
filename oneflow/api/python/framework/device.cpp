@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
-#include "oneflow/api/python/common.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/api/python/framework/device.h"
 #include "oneflow/api/python/of_api_registry.h"
