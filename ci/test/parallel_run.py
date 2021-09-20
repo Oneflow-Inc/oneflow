@@ -1,8 +1,7 @@
 import asyncio
 import os
 import argparse
-from subprocess import TimeoutExpired
-import subprocess
+from subprocess import PIPE, STDOUT
 import glob
 import sys
 import time
@@ -54,11 +53,26 @@ def everyN(l: list, n: int):
         yield l[i : i + n]
 
 
+def contains_oom_info(txt: str):
+    return "memory" in txt or "Memory" in txt or "CUDNN" in txt
+
+
+def should_retry(txt: str):
+    return contains_oom_info(txt)
+
+
+def print_out(prefix: str = "", content: str = ""):
+    for l in content.split("\n"):
+        print(f"[{prefix}]", l)
+
+
 async def spawn_shell_and_check(cmd: str = None, gpu_id: int = -1, check: bool = False):
     is_cpu_only = os.getenv("ONEFLOW_TEST_CPU_ONLY")
     print(f"[gpu={gpu_id}]", cmd)
     p = await asyncio.create_subprocess_shell(
         cmd,
+        stdout=PIPE,
+        stderr=STDOUT,
         env=dict(
             os.environ,
             CUDA_VISIBLE_DEVICES=("-1" if is_cpu_only else ",".join([str(gpu_id)])),
@@ -66,11 +80,13 @@ async def spawn_shell_and_check(cmd: str = None, gpu_id: int = -1, check: bool =
             ONEFLOW_TEST_LOG_DIR=("./unittest-log-" + str(uuid.uuid4())),
         ),
     )
-    await p.wait()
-    if check:
+    (stdout_data, stderr_data) = await p.communicate()
+    decoded = stdout_data.decode()
+    if check or should_retry(decoded) == False:
         if p.returncode != 0:
+            print_out(prefix=cmd, content=decoded)
             raise RuntimeError(cmd)
-    return {"returncode": p.returncode, "cmd": cmd}
+    return {"returncode": p.returncode, "cmd": cmd, "stdout": decoded}
 
 
 async def run_cmds(
@@ -94,6 +110,8 @@ async def run_cmds(
         for r in list(results):
             if r["returncode"] != 0:
                 fails.append(r["cmd"])
+            else:
+                print_out(prefix=r["cmd"], content=r["stdout"])
     return fails
 
 
