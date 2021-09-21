@@ -211,17 +211,26 @@ def _test_expand_same_dim_negative_split(test_case, device):
             )
         )
 
-# NOTE(Liang Depeng): Run with the following command can pass the test locally, but will fail when run in ci.
-# ONEFLOW_TEST_DEVICE_NUM=2 python3 -m oneflow.distributed.launch --nproc_per_node 2 test_consistent_expand_op.py
-@unittest.skipIf(True, "skip for now")
+
 @flow.unittest.skip_unless_1n2d()
-class ExpandGraphSbpTestCase(oneflow.unittest.TestCase):
-    def test_expand_sbp(test_case):
+class ExpandGraphTestCase(oneflow.unittest.TestCase):
+    def test_expand_broadcast(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_expand_new_dims_broadcast,
             _test_expand_same_dim_broadcast,
             _test_expand_same_dim_negative_broadcast,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+    # NOTE(Liang Depeng): Run with the following command can pass the test locally, but will fail when run in ci.
+    # ONEFLOW_TEST_DEVICE_NUM=2 python3 -m oneflow.distributed.launch --nproc_per_node 2 test_consistent_expand_op.py
+    # @unittest.skipIf(True, "skip for now")
+    def test_expand_split(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
             _test_expand_new_dims_split,
             _test_expand_same_dim_split,
             _test_expand_same_dim_negative_split,
