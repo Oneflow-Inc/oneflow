@@ -433,11 +433,10 @@ class StatefulLocalOpKernel final {
   user_op::TensorDescInferFn TensorDescInferFn() const;
   user_op::DataTypeInferFn DataTypeInferFn() const;
 
-  void TryInitOpKernelState(
+  std::shared_ptr<user_op::OpKernelState> TryInitOpKernelState(
       const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx,
       const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-      const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result,
-      user_op::OpKernelState** state);
+      const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result);
 
   vm::EagerBlobObject* mut_temp_blob_object();
 

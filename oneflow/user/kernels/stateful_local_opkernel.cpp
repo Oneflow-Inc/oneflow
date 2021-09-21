@@ -469,23 +469,23 @@ Maybe<const user_op::OpKernel*> StatefulLocalOpKernel::ChooseOpKernel(
   return kernel;
 }
 
-void StatefulLocalOpKernel::TryInitOpKernelState(
+std::shared_ptr<user_op::OpKernelState> StatefulLocalOpKernel::TryInitOpKernelState(
     const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx, const EagerBlobObjectListPtr& inputs,
     const EagerBlobObjectListPtr& outputs,
-    const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result,
-    user_op::OpKernelState** state) {
-  auto it = op_kernel_state_map_.find(op_kernel);
-  if (it != op_kernel_state_map_.end()) {
-    *state = it->second.get();
-    return;
+    const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result) {
+  if (op_kernel->IsStatePersistentInEager()) {
+    auto it = op_kernel_state_map_.find(op_kernel);
+    if (it != op_kernel_state_map_.end()) { return it->second; }
   }
 
   auto init_ctx = std::make_shared<LocalUserKernelInitContext>(
       device_ctx, op_conf_->device_tag(), user_op_conf_.get(), input_arg_tuple_, output_arg_tuple_,
       inputs, outputs, consistent_tensor_infer_result, composed_attrs_for_scheduler_thread());
   auto created_state = op_kernel->CreateOpKernelState(init_ctx.get());
-  op_kernel_state_map_.emplace(op_kernel, created_state);
-  *state = created_state.get();
+  if (op_kernel->IsStatePersistentInEager()) {
+    op_kernel_state_map_.emplace(op_kernel, created_state);
+  }
+  return created_state;
 }
 
 const user_op::InferTmpSizeFn& StatefulLocalOpKernel::GetInferTmpSizeFn(

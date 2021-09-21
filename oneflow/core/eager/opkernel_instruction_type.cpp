@@ -459,9 +459,8 @@ struct LocalCallOpKernelUtil final {
     DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
-    user_op::OpKernelState* state;
-    TryInitOpKernelState(operand, device_ctx, &state);
-    JUST(OpKernelCompute(operand, device_ctx, state));
+    const auto &state = TryInitOpKernelState(operand, device_ctx);
+    JUST(OpKernelCompute(operand, device_ctx, state.get()));
     JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
     operand->set_user_opkernel(nullptr);
     return Maybe<void>::Ok();
@@ -551,15 +550,14 @@ struct LocalCallOpKernelUtil final {
     return Maybe<void>::Ok();
   }
 
-  static inline void TryInitOpKernelState(LocalCallOpKernelPhyInstrOperand* operand,
-                                          DeviceCtx* device_ctx, user_op::OpKernelState** state) {
+  static inline std::shared_ptr<user_op::OpKernelState> TryInitOpKernelState(LocalCallOpKernelPhyInstrOperand* operand,
+                                          DeviceCtx* device_ctx) {
     if (operand->op_interp_ctx().state) {
-      *state = operand->op_interp_ctx().state.get();
-      return;
+      return operand->op_interp_ctx().state;
     }
-    operand->mut_opkernel()->TryInitOpKernelState(operand->user_opkernel(), device_ctx,
+    return operand->mut_opkernel()->TryInitOpKernelState(operand->user_opkernel(), device_ctx,
                                                   operand->inputs(), operand->outputs(),
-                                                  operand->consistent_tensor_infer_result(), state);
+                                                  operand->consistent_tensor_infer_result());
   }
 
   static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,

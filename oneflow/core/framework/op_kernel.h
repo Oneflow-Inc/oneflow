@@ -279,6 +279,7 @@ class OpKernel {
   virtual std::shared_ptr<OpKernelState> CreateOpKernelState(KernelInitContext* ctx) const {
     return std::shared_ptr<OpKernelState>();
   }
+  virtual bool IsStatePersistentInEager() const { return true; }
 
   virtual void Compute(KernelComputeContext* ctx, OpKernelState*) const { Compute(ctx); }
   virtual void Compute(KernelComputeContext*) const { LOG(INFO) << "UNIMPLEMENTED"; }

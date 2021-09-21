@@ -322,6 +322,8 @@ class LogicalSliceKernel final : public user_op::OpKernel {
     return CreateSliceState(ctx, "x");
   }
 
+  bool IsStatePersistentInEager() const override { return false; }
+
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -360,6 +362,8 @@ class LogicalSliceAssignKernel final : public user_op::OpKernel {
     }
     return CreateSliceState(ctx, "ref");
   }
+
+  bool IsStatePersistentInEager() const override { return false; }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
