@@ -234,11 +234,53 @@ class HardSigmoidGradFunctor : public BinaryFunctor {
   }
 };
 
-class SoftmaxFunctor : public UnaryFunctor {
+namespace {
+Maybe<std::pair<bool, std::vector<int32_t>>> 
+CheckSoftmaxNeedTranspose(const std::shared_ptr<Tensor>& x,
+                          int axis) {
+  int dim_num = x->ndim();
+  if(dim_num == 1) {
+    return std::pair<bool, std::vector<int32_t>>(false, std::vector<int32_t>());
+  }
+  if(axis < 0) {
+    axis += dim_num;
+  }
+  CHECK_OR_RETURN((axis >= 0) && (axis < dim_num));
+  bool need_transpose = false;
+  std::vector<int32_t> permute(dim_num);
+  for(int i = 0; i < dim_num; i++) {
+    permute[i] = i;
+  }
+  if(axis != (dim_num - 1)) {
+    need_transpose = true;
+    permute[axis] = permute.back();
+    permute.back() = axis;
+  }
+  return std::pair<bool, std::vector<int32_t>>(need_transpose, permute);
+}
+}  // namespace
+
+class SoftmaxFunctor {
  public:
   SoftmaxFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("softmax").Input("in").Output("out").Build());
   }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x) const {
+    auto check_res = CheckSoftmaxNeedTranspose(x);
+    if(check_res.first) {
+      std::shared_ptr<Tensor> t;
+      t = transpose_func(x, check_res.second).GetPtrOrThrow();
+      t = OpInterpUtil::Dispatch<Tensor>(*op_, {t}).GetPtrOrThrow();
+      return transpose_func(t, check_res.second);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+    }
+  }
+
+  private:
+    TransposeFunctor transpose_func;
+    std::shared_ptr<OpExpr> op_;
 };
 
 class LogSoftmaxFunctor : public UnaryFunctor {
