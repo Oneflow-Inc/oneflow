@@ -121,6 +121,7 @@ def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphM
                     )
                     y.replace_all_uses_with(x)
                     gm.graph.erase_node(y)
+                    gm.delete_submodule(y.target)
                     qconvbn = gm.graph.call_module(
                         module_name=f"{get_current_module_space(x.target)}.conv_bn.{cnt}",
                         args=x.args,
@@ -128,7 +129,7 @@ def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphM
                     cnt = cnt + 1
                     x.replace_all_uses_with(qconvbn)
                     gm.graph.erase_node(x)
-                
+                    gm.delete_submodule(x.target)
                 elif isinstance(insert_op_state[x.target], flow.nn.Conv2d):
                     gm.add_submodule(
                         f"{get_current_module_space(x.target)}.fake_conv2d.{cnt}",
@@ -154,6 +155,7 @@ def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphM
                     cnt = cnt + 1
                     x.replace_all_uses_with(qconv)
                     gm.graph.erase_node(x)
+                    gm.delete_submodule(x.target)
                 elif isinstance(insert_op_state[x.target], flow.nn.Linear):
                     bias = True
                     if insert_op_state[x.target].bias is None:
@@ -178,6 +180,7 @@ def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphM
                     cnt = cnt + 1
                     x.replace_all_uses_with(qmatmul)
                     gm.graph.erase_node(x)
+                    gm.delete_submodule(x.target)
 
     gm.recompile()
     return gm
