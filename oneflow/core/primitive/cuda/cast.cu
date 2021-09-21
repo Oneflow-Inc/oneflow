@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/primitive/cast.h"
 #include "oneflow/core/primitive/cuda/type_seq.h"
+#include "oneflow/core/primitive/cuda/cuda_graph_support.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/stream/cuda_stream_context.h"
 
@@ -73,11 +74,11 @@ void LaunchCast(cudaStream_t stream, const void* from, void* to, size_t count) {
 using LaunchFn = std::function<void(cudaStream_t /*stream*/, const void* /*from*/, void* /*to*/,
                                     size_t /*count*/)>;
 
-class CastImpl : public Cast {
+class CastImpl : public Cast, public CudaGraphSupport {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CastImpl);
   explicit CastImpl(LaunchFn launch_fn) : launch_fn_(std::move(launch_fn)) {}
-  ~CastImpl() = default;
+  ~CastImpl() override = default;
 
   void Launch(StreamContext* stream_ctx, const void* from, void* to, size_t count) override {
     auto* cuda_stream_ctx = CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx));

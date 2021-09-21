@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #ifndef ONEFLOW_CORE_FRAMEWORK_ID_UTIL_H_
+#define ONEFLOW_CORE_FRAMEWORK_ID_UTIL_H_
 
 #include <string>
 #include "oneflow/core/common/maybe.h"
@@ -24,5 +25,4 @@ Maybe<std::string> UniqueStr(const std::string& prefix);
 
 }  // namespace oneflow
 
-#define ONEFLOW_CORE_FRAMEWORK_ID_UTIL_H_
 #endif  // ONEFLOW_CORE_FRAMEWORK_ID_UTIL_H_

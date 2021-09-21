@@ -18,7 +18,8 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from scipy import special
 from test_util import GenArgList
 
@@ -433,6 +434,16 @@ class TestSoftsignModule(flow.unittest.TestCase):
         m.to(device)
         x = random_pytorch_tensor().to(device)
         y = m(x)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestReluFunction(flow.unittest.TestCase):
+    @autotest()
+    def test_flow_relu_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim1=3).to(device)
+        y = torch.relu(x)
         return y
 
 

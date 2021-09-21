@@ -15,7 +15,8 @@ limitations under the License.
 """
 import oneflow as flow
 from collections import OrderedDict
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
 import numpy as np
 import unittest
@@ -25,7 +26,6 @@ def _test_randperm_with_generator(test_case, N, device, dtype):
     generator = flow.Generator()
     generator.manual_seed(0)
     y_1 = flow.randperm(N, device=device, dtype=dtype, generator=generator)
-    generator = flow.Generator()
     generator.manual_seed(0)
     y_2 = flow.randperm(N, device=device, dtype=dtype, generator=generator)
     test_case.assertTrue(np.allclose(y_1.numpy(), y_2.numpy()))
