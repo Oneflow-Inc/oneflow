@@ -93,16 +93,23 @@ Optional<Symbol<ParallelDesc>> ZeroCopyBaseContext::parallel_desc() const {
   }
 }
 
+namespace {
+ParallelContext MakeSingleDeviceParallelCtx() {
+  ParallelContext single_device_parallel_ctx;
+  single_device_parallel_ctx.set_parallel_id(0);
+  single_device_parallel_ctx.set_parallel_num(1);
+  return single_device_parallel_ctx;
+}
+}  // namespace
+
 const ParallelContext& ZeroCopyBaseContext::parallel_ctx() const {
   const auto& parallel_desc = this->parallel_desc();
   if (parallel_desc.has_value()) {
     const auto& parallel_desc_symbol = CHECK_JUST(parallel_desc);
     return *CHECK_JUST(GetParallelContext4CurrentProcessCtx(parallel_desc_symbol));
   } else {
-    static ParallelContext single_card_parallel_ctx;
-    single_card_parallel_ctx.set_parallel_id(0);
-    single_card_parallel_ctx.set_parallel_num(1);
-    return single_card_parallel_ctx;
+    static ParallelContext single_device_parallel_ctx(MakeSingleDeviceParallelCtx());
+    return single_device_parallel_ctx;
   }
 }
 
@@ -170,9 +177,7 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
   const std::string& device_tag() const override { return base_ctx_.device_tag(); }
-  const ParallelContext& parallel_ctx() const override {
-    return base_ctx_.parallel_ctx();
-  }
+  const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
     return base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
@@ -239,9 +244,7 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
   StreamContext* stream_ctx() override { return stream_ctx_.get(); }
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
-  const ParallelContext& parallel_ctx() const override {
-    return base_ctx_.parallel_ctx();
-  }
+  const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
     return base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
