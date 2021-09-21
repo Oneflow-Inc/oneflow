@@ -385,6 +385,17 @@ class Module(object):
 
     def eval(self: T) -> T:
         return self.train(False)
+    
+    def __delattr__(self, name):
+        if name in self._parameters:
+            del self._parameters[name]
+        elif name in self._buffers:
+            del self._buffers[name]
+            self._non_persistent_buffers_set.discard(name)
+        elif name in self._modules:
+            del self._modules[name]
+        else:
+            object.__delattr__(self, name)
 
     def _save_to_state_dict(self, destination, prefix, keep_vars):
         for (name, param) in self._parameters.items():
