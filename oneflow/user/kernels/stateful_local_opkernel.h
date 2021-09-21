@@ -353,9 +353,7 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   StreamContext* stream_ctx() override { return stream_ctx_.get(); }
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
-  const ParallelContext& parallel_ctx() const override {
-    return base_ctx_.parallel_ctx();
-  }
+  const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); }
 
   const ArgVec& inputs() const override { return base_ctx_.inputs(); };
   const ArgVec& outputs() const override { return base_ctx_.outputs(); };
