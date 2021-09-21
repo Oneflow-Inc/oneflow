@@ -23,24 +23,6 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _check_inplace_valid
 
 
-def _softmax_need_transpose(x, axis):
-    assert type(axis) is int
-    dim_num = len(x.shape)
-    if dim_num == 1:
-        return (False, None)
-    if axis < 0:
-        axis += dim_num
-    assert axis >= 0
-    assert axis < dim_num
-    need_transpose = False
-    permute = list(range(dim_num))
-    if axis != dim_num - 1:
-        need_transpose = True
-        permute[axis] = permute[-1]
-        permute[-1] = axis
-    return (need_transpose, permute)
-
-
 class PReLU(Module):
     """Applies the element-wise function:
 
@@ -403,13 +385,7 @@ class Softmax(Module):
         self.axis = 1 if dim is None else dim
 
     def forward(self, x):
-        (need_transpose, permute) = _softmax_need_transpose(x, self.axis)
-        if need_transpose:
-            x = flow._C.transpose(x, perm=permute)
-        res = flow._C.softmax(x)
-        if need_transpose:
-            res = flow._C.transpose(res, perm=permute)
-        return res
+        return flow._C.softmax(x, self.axis)
 
     def extra_repr(self):
         return f"axis={self.axis}"

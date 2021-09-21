@@ -237,7 +237,7 @@ class HardSigmoidGradFunctor : public BinaryFunctor {
 namespace {
 Maybe<std::pair<bool, std::vector<int32_t>>> 
 CheckSoftmaxNeedTranspose(const std::shared_ptr<Tensor>& x,
-                          int axis) {
+                          int32_t axis) {
   int dim_num = x->ndim();
   if(dim_num == 1) {
     return std::pair<bool, std::vector<int32_t>>(false, std::vector<int32_t>());
@@ -266,12 +266,12 @@ class SoftmaxFunctor {
     op_ = CHECK_JUST(one::OpBuilder("softmax").Input("in").Output("out").Build());
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x) const {
-    auto check_res = CheckSoftmaxNeedTranspose(x);
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, int32_t axis) const {
+    auto check_res = CheckSoftmaxNeedTranspose(x, axis);
     if(check_res.first) {
       std::shared_ptr<Tensor> t;
-      t = transpose_func(x, check_res.second).GetPtrOrThrow();
-      t = OpInterpUtil::Dispatch<Tensor>(*op_, {t}).GetPtrOrThrow();
+      t = CHECK_JUST(transpose_func(x, check_res.second));
+      t = CHECK_JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {t}));
       return transpose_func(t, check_res.second);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
