@@ -18,7 +18,8 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from scipy import special
 from test_util import GenArgList
 
@@ -204,8 +205,11 @@ class TestHardsigmoidModule(flow.unittest.TestCase):
             return np.array(np_hsigmoid_out)
 
         def test_hardsigmoid_inplace_impl(test_case, shape, device):
-            x = flow.Tensor(
-                np.random.randn(*shape), device=flow.device(device), requires_grad=True
+            x = flow.tensor(
+                np.random.randn(*shape),
+                dtype=flow.float32,
+                device=flow.device(device),
+                requires_grad=True,
             )
             x_inplace = x + 1
             np_out = np_hardsigmoid(x_inplace.numpy())
@@ -276,7 +280,7 @@ def _test_softplus(test_case, device):
     m = flow.nn.Softplus()
     arr = np.random.randn(2, 3, 4, 5)
     np_out = numpy_softplus(arr, 1.0, 20)
-    x = flow.Tensor(arr, device=flow.device(device))
+    x = flow.tensor(arr, device=flow.device(device))
     of_out = m(x)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
 
@@ -285,7 +289,7 @@ def _test_softplus_beta(test_case, device):
     m = flow.nn.Softplus(beta=1.11)
     arr = np.random.randn(2, 3, 4, 5)
     np_out = numpy_softplus(arr, 1.11, 20)
-    x = flow.Tensor(arr, device=flow.device(device))
+    x = flow.tensor(arr, device=flow.device(device))
     of_out = m(x)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
 
@@ -297,7 +301,7 @@ def _test_softplus_threshold(test_case, device):
         arr * 1.11 > 1.55, arr, 1.0 / 1.11 * np.log(1.0 + np.exp(1.11 * arr))
     )
     np_out = numpy_softplus(arr, 1.11, 1.55)
-    x = flow.Tensor(arr, device=flow.device(device))
+    x = flow.tensor(arr, device=flow.device(device))
     of_out = m(x)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
 
@@ -305,7 +309,7 @@ def _test_softplus_threshold(test_case, device):
 def _test_softplus_backward(test_case, device):
     m = flow.nn.Softplus()
     arr = np.array([1.0, 2.0, 21.0, 20.0, 4.0])
-    x = flow.Tensor(arr, device=flow.device(device), requires_grad=True)
+    x = flow.tensor(arr, device=flow.device(device), requires_grad=True)
     of_out = m(x)
     of_out = of_out.sum()
     of_out.backward()
@@ -430,6 +434,16 @@ class TestSoftsignModule(flow.unittest.TestCase):
         m.to(device)
         x = random_pytorch_tensor().to(device)
         y = m(x)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestReluFunction(flow.unittest.TestCase):
+    @autotest()
+    def test_flow_relu_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim1=3).to(device)
+        y = torch.relu(x)
         return y
 
 

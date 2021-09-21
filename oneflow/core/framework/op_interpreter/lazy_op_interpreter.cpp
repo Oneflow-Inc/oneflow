@@ -370,13 +370,13 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
   if (ctx.parallel_desc.has_value()) {
     // NOTE(chengcheng): consistent
     CHECK_OR_RETURN(!ctx.device.has_value());
-    parallel_desc = JUST(ctx.parallel_desc.value()).shared_from_symbol();
+    parallel_desc = JUST(ctx.parallel_desc).shared_from_symbol();
     is_local = false;
   } else {
     // NOTE(chengcheng): local
     CHECK_OR_RETURN(!ctx.nd_sbp.has_value());
     if (ctx.device.has_value()) {
-      const auto& device = JUST(ctx.device.value());
+      const auto& device = JUST(ctx.device);
       const auto& placement = JUST(Placement4Device(device));
       parallel_desc = placement.shared_from_symbol();
     } else {
@@ -647,13 +647,12 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
   CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   const auto& input_tensor = inputs[0];
-  CHECK_OR_RETURN(input_tensor->is_lazy());
   CHECK_OR_RETURN(input_tensor->is_consistent());
 
   CHECK_OR_RETURN(ctx.parallel_desc.has_value());
-  const auto& parallel_desc_sym = JUST(ctx.parallel_desc.value());
+  const auto& parallel_desc_sym = JUST(ctx.parallel_desc);
   CHECK_OR_RETURN(ctx.nd_sbp.has_value());
-  const auto& sbp_sym = JUST(ctx.nd_sbp.value());
+  const auto& sbp_sym = JUST(ctx.nd_sbp);
 
   std::string input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   if (input_lbn.empty()) {
@@ -675,13 +674,28 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
     TensorNameScope::Global()->Record(input_proxy, input_lbn);
   }
 
+  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
+  CHECK_EQ_OR_RETURN(outputs->size(), 1);
+  CHECK_OR_RETURN(!(*outputs)[0]);
+
+  if (!op_expr.grad_nd_sbp().has_value() && sbp_sym == JUST(input_tensor->nd_sbp())) {
+    // NOTE(chengcheng):  if to_consistent ONLY change placement (nd_sbp and grad_nd_sbp is same),
+    //    there is no need to build hierarchical_parallel_cast op.
+    if (input_proxy) {
+      (*outputs)[0] = input_proxy;
+    } else {
+      (*outputs)[0] = input_tensor;
+    }
+    return Maybe<void>::Ok();
+  }
+
   // build parallel cast op expr
   std::shared_ptr<std::vector<std::string>> sbp_list_ptr = JUST(GetNdSbpStrList(sbp_sym));
   std::string grad_mode;
   std::vector<std::string> grad_sbp_str_list;
   if (op_expr.grad_nd_sbp().has_value()) {
     grad_mode = "manual";
-    grad_sbp_str_list = *JUST(GetNdSbpStrList(JUST(op_expr.grad_nd_sbp().value())));
+    grad_sbp_str_list = *JUST(GetNdSbpStrList(JUST(op_expr.grad_nd_sbp())));
   } else {
     grad_mode = "identity";
   }
@@ -694,9 +708,6 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
                .Attr<std::vector<std::string>>("grad_nd_sbp", grad_sbp_str_list)
                .Build());
 
-  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
-  CHECK_EQ_OR_RETURN(outputs->size(), 1);
-  CHECK_OR_RETURN(!(*outputs)[0]);
   if (input_proxy) {
     (*outputs)[0] =
         JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_cast_op_expr, {input_proxy}));

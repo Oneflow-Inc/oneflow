@@ -17,7 +17,6 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type>
 class AssignKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AssignKernel);
@@ -26,19 +25,15 @@ class AssignKernel final : public Kernel {
 
  private:
   bool IsStateless() const override { return false; }
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
-template<DeviceType device_type>
-void AssignKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
-  ctx->BnInOp2Blob("ref")->CopyValidDataContentFrom(ctx->device_ctx(), ctx->BnInOp2Blob("value"));
+void AssignKernel::ForwardDataContent(KernelContext* ctx) const {
+  const Blob* value = ctx->BnInOp2Blob("value");
+  Blob* ref = ctx->BnInOp2Blob("ref");
+  AutoMemcpy(ctx->stream_ctx(), ref, value);
 }
 
-REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kAssignConf, DeviceType::kCPU,
-                            AssignKernel<DeviceType::kCPU>);
-#ifdef WITH_CUDA
-REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kAssignConf, DeviceType::kGPU,
-                            AssignKernel<DeviceType::kGPU>);
-#endif
+REGISTER_KERNEL(OperatorConf::kAssignConf, AssignKernel);
 
 }  // namespace oneflow

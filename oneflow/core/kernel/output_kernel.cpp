@@ -20,7 +20,6 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type>
 class OutputKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OutputKernel);
@@ -28,12 +27,11 @@ class OutputKernel final : public Kernel {
   ~OutputKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelContext* ctx) const override;
-  void ForwardHeader(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
+  void ForwardHeader(KernelContext* ctx) const override;
 };
 
-template<DeviceType device_type>
-void OutputKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
+void OutputKernel::ForwardDataContent(KernelContext* ctx) const {
   if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
     CHECK(this->op_conf().output_conf().has_job_name());
     const auto& job_name = this->op_conf().output_conf().job_name();
@@ -48,12 +46,11 @@ void OutputKernel<device_type>::ForwardDataContent(const KernelContext* ctx) con
       job_instance->PullBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
     }
   } else {
-    ctx->BnInOp2Blob("out")->CopyDataContentFrom(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
+    AutoMemcpy(ctx->stream_ctx(), ctx->BnInOp2Blob("out"), ctx->BnInOp2Blob("in"));
   }
 }
 
-template<DeviceType device_type>
-void OutputKernel<device_type>::ForwardHeader(const KernelContext* ctx) const {
+void OutputKernel::ForwardHeader(KernelContext* ctx) const {
   if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
     // Do nothing.
   } else {
@@ -61,6 +58,6 @@ void OutputKernel<device_type>::ForwardHeader(const KernelContext* ctx) const {
   }
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kOutputConf, OutputKernel);
+REGISTER_KERNEL(OperatorConf::kOutputConf, OutputKernel);
 
 }  // namespace oneflow

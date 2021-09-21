@@ -39,7 +39,7 @@ class GpuRandPermKernel final : public user_op::OpKernel {
   ~GpuRandPermKernel() = default;
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const auto& generator = CHECK_JUST(one::MakeAutoGenerator());
+    const auto& generator = CHECK_JUST(one::MakeGenerator(kGPU));
     generator->set_current_seed(ctx->Attr<int64_t>("seed"));
     return std::make_shared<DistributionKernelState>(generator);
   }

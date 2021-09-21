@@ -68,12 +68,11 @@ def _test_with_generator(test_case, device, shape, low, high):
     y1 = flow.randint(
         low, high, shape, dtype=flow.float32, device=flow.device(device), generator=gen
     )
-    y1_np = y1.numpy()
     gen.manual_seed(0)
     y2 = flow.randint(
         low, high, shape, dtype=flow.float32, device=flow.device(device), generator=gen
     )
-    test_case.assertTrue(np.allclose(y1_np, y2.numpy(), atol=1e-4, rtol=1e-4))
+    test_case.assertTrue(np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
 
 
 def _test_high(test_case, device, shape, low, high):

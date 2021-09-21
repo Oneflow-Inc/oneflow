@@ -39,6 +39,7 @@ locals()["long"] = oneflow._oneflow_internal.int64
 locals()["uint8"] = oneflow._oneflow_internal.uint8
 locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
+locals()["bfloat16"] = oneflow._oneflow_internal.bfloat16
 from oneflow.version import __version__
 
 _DEPRECATED = set()
@@ -57,6 +58,70 @@ def is_deprecated(func_or_class):
         isinstance(func_or_class, collections.Hashable) and func_or_class in _DEPRECATED
     )
 
+
+from oneflow._C import abs
+from oneflow._C import exp
+from oneflow._C import acos
+from oneflow._C import acosh
+from oneflow._C import acosh as arccosh
+from oneflow._C import atanh
+from oneflow._C import atanh as arctanh
+from oneflow._C import sign
+from oneflow._C import sinh
+from oneflow._C import tan
+from oneflow._C import greater
+from oneflow._C import greater as gt
+from oneflow._C import greater_equal
+from oneflow._C import greater_equal as ge
+from oneflow._C import logical_and
+from oneflow._C import logical_or
+from oneflow._C import logical_xor
+from oneflow._C import gelu
+from oneflow._C import mish
+from oneflow._C import sigmoid
+from oneflow._C import tanh
+from oneflow._C import silu
+from oneflow._C import selu
+from oneflow._C import softsign
+from oneflow._C import cast
+from oneflow._C import ones_like
+from oneflow._C import zeros_like
+from oneflow._C import diag
+from oneflow._C import log1p
+from oneflow._C import add
+from oneflow._C import div
+from oneflow._C import mul
+from oneflow._C import reciprocal_no_nan as reciprocal
+from oneflow._C import sub
+from oneflow._C import asin
+from oneflow._C import asin as arcsin
+from oneflow._C import asinh
+from oneflow._C import asinh as arcsinh
+from oneflow._C import atan
+from oneflow._C import atan as arctan
+from oneflow._C import ceil
+from oneflow._C import clamp
+from oneflow._C import clamp as clip
+from oneflow._C import cos
+from oneflow._C import cosh
+from oneflow._C import erf
+from oneflow._C import erfc
+from oneflow._C import expm1
+from oneflow._C import fmod
+from oneflow._C import log
+from oneflow._C import minimum
+from oneflow._C import maximum
+from oneflow._C import pow
+from oneflow._C import rsqrt
+from oneflow._C import sqrt
+from oneflow._C import square
+from oneflow._C import matmul
+from oneflow._C import bernoulli
+from oneflow._C import round
+from oneflow._C import softplus
+from oneflow._C import tril
+from oneflow._C import triu
+from oneflow._C import pad
 
 from . import sbp
 import atexit
@@ -144,23 +209,11 @@ del atexit
 del oneflow
 
 import oneflow._C
-import oneflow.framework.docstr as docstr
+from oneflow._C import tensor, batch_gather
 
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
-
-from oneflow.nn.modules.trigonometric_ops import acos_op as acos
-from oneflow.nn.modules.trigonometric_ops import acosh_op as acosh
-from oneflow.nn.modules.trigonometric_ops import arccosh_op as arccosh
-from oneflow.nn.modules.trigonometric_ops import atanh_op as atanh
 from oneflow.nn.modules.trigonometric_ops import atan2_op as atan2
-from oneflow.nn.modules.trigonometric_ops import arctanh_op as arctanh
-from oneflow.nn.modules.trigonometric_ops import sign_op as sign
-from oneflow.nn.modules.trigonometric_ops import sinh_op as sinh
-from oneflow.nn.modules.trigonometric_ops import tan_op as tan
-from oneflow.nn.modules.comparison import greater_op as greater
-from oneflow.nn.modules.comparison import greater_equal_op as greater_equal
-
 
 from oneflow.framework.check_point_v2 import Load as load
 from oneflow.framework.check_point_v2 import save
@@ -177,18 +230,8 @@ from oneflow.framework.generator import default_generator, manual_seed
 # from oneflow.framework.model import Model
 from oneflow.framework.scope_util import api_current_scope as current_scope
 from oneflow.framework.tensor import Tensor
-from oneflow.framework.tensor import tensor as tensor
 from oneflow.framework.tensor import is_nonzero
-
-from oneflow.nn.modules.abs import abs_op as abs
-from oneflow.nn.modules.activation import gelu_op as gelu
-from oneflow.nn.modules.activation import mish_op as mish
-from oneflow.nn.modules.activation import sigmoid_op as sigmoid
 from oneflow.nn.modules.activation import softmax_op as softmax
-from oneflow.nn.modules.activation import tanh_op as tanh
-from oneflow.nn.modules.activation import silu_op as silu
-from oneflow.nn.modules.activation import selu_op as selu
-from oneflow.nn.modules.activation import softsign_op as softsign
 from oneflow.nn.modules.pooling import (
     adaptive_avg_pool1d,
     adaptive_avg_pool2d,
@@ -200,18 +243,13 @@ from oneflow.nn.modules.argsort import argsort_op as argsort
 from oneflow.nn.modules.argwhere import argwhere_op as argwhere
 from oneflow.nn.modules.bmm import bmm_op as bmm
 from oneflow.nn.modules.broadcast_like import broadcast_like_op as broadcast_like
-from oneflow.nn.modules.cast import cast_op as cast
 from oneflow.nn.modules.chunk import chunk_op as chunk
 from oneflow.nn.modules.concat import concat_op as cat
-from oneflow.nn.modules.constant import ones_like_op as ones_like
 from oneflow.nn.modules.constant import ones_op as ones
-from oneflow.nn.modules.constant import zeros_like_op as zeros_like
 from oneflow.nn.modules.constant import zeros_op as zeros
 from oneflow.nn.modules.constant import full_op as full
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
-from oneflow.nn.modules.diag import diag_op as diag
-from oneflow.nn.modules.exp import exp_op as exp
 from oneflow.nn.modules.expand import expand_op as expand
 from oneflow.nn.modules.flatten import _flow_flatten as flatten
 from oneflow.nn.modules.flip import flip_op as flip
@@ -220,8 +258,6 @@ from oneflow.nn.modules.gather import gather_op as gather
 from oneflow.nn.modules.gather import gather_nd_op as gather_nd
 from oneflow.nn.modules.comparison import eq_op as eq
 from oneflow.nn.modules.comparison import eq_op as equal
-from oneflow.nn.modules.comparison import greater_op as gt
-from oneflow.nn.modules.comparison import greater_equal_op as ge
 from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
 from oneflow.nn.modules.logical_ops import logical_or_op as logical_or
 from oneflow.nn.modules.logical_ops import logical_xor_op as logical_xor
@@ -232,49 +268,19 @@ from oneflow.nn.modules.comparison import ne_op as not_equal
 from oneflow.nn.modules.tensor_ops import is_floating_point
 from oneflow.nn.modules.tensor_ops import negative_op as neg
 from oneflow.nn.modules.tensor_ops import negative_op as negative
-
 from oneflow.nn.modules.in_top_k import in_top_k_op as in_top_k
 from oneflow.nn.modules.index_select import index_select_op as index_select
-from oneflow.nn.modules.log1p import log1p_op as log1p
 from oneflow.nn.modules.masked_fill import masked_fill_op as masked_fill
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
-from oneflow.nn.modules.math_ops import _add as add
-from oneflow.nn.modules.math_ops import _div as div
-from oneflow.nn.modules.math_ops import _mul as mul
-from oneflow.nn.modules.math_ops import _reciprocal as reciprocal
-from oneflow.nn.modules.math_ops import _sub as sub
 from oneflow.nn.modules.math_ops import addmm_op as addmm
-from oneflow.nn.modules.math_ops import arcsin_op as arcsin
-from oneflow.nn.modules.math_ops import arcsinh_op as arcsinh
-from oneflow.nn.modules.math_ops import arctan_op as arctan
-from oneflow.nn.modules.math_ops import asin_op as asin
-from oneflow.nn.modules.math_ops import asinh_op as asinh
-from oneflow.nn.modules.math_ops import atan_op as atan
-from oneflow.nn.modules.math_ops import ceil_op as ceil
-from oneflow.nn.modules.math_ops import clamp_op as clamp
-from oneflow.nn.modules.math_ops import clip_op as clip
-from oneflow.nn.modules.math_ops import cos_op as cos
-from oneflow.nn.modules.math_ops import cosh_op as cosh
-from oneflow.nn.modules.math_ops import erf_op as erf
-from oneflow.nn.modules.math_ops import erfc_op as erfc
-from oneflow.nn.modules.math_ops import expm1_op as expm1
-from oneflow.nn.modules.math_ops import fmod_op as fmod
-from oneflow.nn.modules.math_ops import log_op as log
-from oneflow.nn.modules.math_ops import minimum as minimum
-from oneflow.nn.modules.math_ops import maximum as maximum
-from oneflow.nn.modules.math_ops import pow_op as pow
-from oneflow.nn.modules.math_ops import rsqrt_op as rsqrt
 from oneflow.nn.modules.math_ops import sin_op as sin
-from oneflow.nn.modules.math_ops import sqrt_op as sqrt
-from oneflow.nn.modules.math_ops import square_op as square
+from oneflow.nn.modules.relu import relu_op as relu
 from oneflow.nn.modules.math_ops import std_op as std
 from oneflow.nn.modules.math_ops import topk_op as topk
 from oneflow.nn.modules.math_ops import variance_op as var
-from oneflow.nn.modules.matmul import matmul_op as matmul
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
 from oneflow.nn.modules.narrow import narrow_op as narrow
 from oneflow.nn.modules.nonzero import nonzero_op as nonzero
-from oneflow.nn.modules.random_ops import bernoulli
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.random_ops import randint_op as randint
@@ -288,12 +294,10 @@ from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.permute import permute_op as permute
-from oneflow.nn.modules.round import round_op as round
 from oneflow.nn.modules.scatter import _scatter_nd_op as scatter_nd
 from oneflow.nn.modules.slice import slice_op as slice
 from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.slice import logical_slice_assign_op as logical_slice_assign
-from oneflow.nn.modules.softplus import softplus_op as softplus
 from oneflow.nn.modules.sort import sort_op as sort
 from oneflow.nn.modules.split import split_op as split
 from oneflow.nn.modules.squeeze import squeeze_op as squeeze
@@ -310,8 +314,6 @@ from oneflow.nn.modules.to import to_op as to
 from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
 from oneflow.nn.modules.consistent_cast import to_local_op as to_local
 from oneflow.nn.modules.transpose import transpose_op as transpose
-from oneflow.nn.modules.tril import tril_op as tril
-from oneflow.nn.modules.triu import triu_op as triu
 from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
@@ -350,4 +352,5 @@ import oneflow.utils.data
 import oneflow.utils.vision
 from oneflow.nn.modules.relu import relu_op as relu
 import oneflow.comm
+import oneflow.framework.docstr as docstr
 import oneflow.cuda

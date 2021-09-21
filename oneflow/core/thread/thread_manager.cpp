@@ -16,8 +16,6 @@ limitations under the License.
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/thread/cpu_thread.h"
-#include "oneflow/core/thread/gpu_thread.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -50,8 +48,7 @@ void ThreadMgr::AddPlan(const Plan& plan) {
     if (stream_id.device_id().rank() != this_rank) { continue; }
     int64_t thrd_id = SerializeStreamIdToInt64(stream_id);
     if (threads_.find(thrd_id) != threads_.end()) { continue; }
-    Thread* thread =
-        NewObj<int, Thread, const StreamId&>(stream_id.device_id().device_type(), stream_id);
+    Thread* thread = new Thread(stream_id);
     CHECK_NOTNULL(thread);
     threads_[thrd_id].reset(thread);
   }
@@ -65,14 +62,15 @@ void MultiThreadLoop(size_t num, std::function<void(size_t i)> Callback) {
   size_t thread_num = Global<ThreadPool>::Get()->thread_num();
   thread_num = std::min(num, thread_num);
   BalancedSplitter bs(num, thread_num);
-  BlockingCounter bc(thread_num);
+  std::atomic<size_t> bc(thread_num);
   FOR_RANGE(size_t, range_id, 0, thread_num) {
     Global<ThreadPool>::Get()->AddWork([&bc, &bs, range_id, Callback] {
       FOR_RANGE(size_t, i, bs.At(range_id).begin(), bs.At(range_id).end()) { Callback(i); }
-      bc.Decrease();
+      --bc;
     });
   }
-  bc.WaitUntilCntEqualZero();
+  // buzy loop wait.
+  while (bc > 0) {}
 }
 
 }  // namespace oneflow

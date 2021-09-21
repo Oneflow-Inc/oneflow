@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/eager/eager_blob_object.h"
@@ -22,7 +23,6 @@ limitations under the License.
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
@@ -35,6 +35,23 @@ limitations under the License.
 #include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
+
+namespace {
+
+Maybe<bool> GetTensorValidInCurRank(const std::shared_ptr<one::Tensor>& tensor) {
+  if (tensor->is_consistent()) {
+    const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(JUST(tensor->parallel_desc())));
+    if (parallel_id->has_value()) {
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    return true;
+  }
+}
+
+}  // namespace
 
 NNGraph::~NNGraph() {
   VLOG(2) << "graph destructor Try to close c nn graph name " << name_ << "." << std::endl;
@@ -57,15 +74,41 @@ const std::vector<std::string>& NNGraph::inputs_op_names() const { return input_
 
 const std::vector<std::string>& NNGraph::outputs_op_names() const { return output_op_names_; }
 
+const std::vector<bool>& NNGraph::inputs_valid() const { return input_tensors_valid_; }
+
+const std::vector<bool>& NNGraph::outputs_valid() const { return output_tensors_valid_; }
+
 int64_t NNGraph::variable_op_size() const { return variable_op_name2eager_blob_.size(); }
 
-Maybe<void> NNGraph::RegisterInputOpNames(const std::vector<std::string>& input_op_names) {
+Maybe<void> NNGraph::RegisterInputOpNamesAndTensors(
+    const std::vector<std::string>& input_op_names,
+    const std::vector<std::shared_ptr<one::Tensor>>& input_tensors) {
+  CHECK_EQ_OR_RETURN(input_op_names.size(), input_tensors.size());
+  CHECK_OR_RETURN(input_op_names_.empty())
+      << " The input tensors of nn.Graph " << name_ << " are register repeatedly.";
+  CHECK_OR_RETURN(input_tensors_valid_.empty());
   input_op_names_.assign(input_op_names.begin(), input_op_names.end());
+  input_tensors_valid_.reserve(input_tensors.size());
+  for (const auto& input_tensor : input_tensors) {
+    input_tensors_valid_.push_back(JUST(GetTensorValidInCurRank(input_tensor)));
+  }
+  CHECK_EQ_OR_RETURN(input_tensors_valid_.size(), input_tensors.size());
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NNGraph::RegisterOutputOpNames(const std::vector<std::string>& output_op_names) {
+Maybe<void> NNGraph::RegisterOutputOpNamesAndTensors(
+    const std::vector<std::string>& output_op_names,
+    const std::vector<std::shared_ptr<one::Tensor>>& output_tensors) {
+  CHECK_EQ_OR_RETURN(output_op_names.size(), output_tensors.size());
+  CHECK_OR_RETURN(output_op_names_.empty())
+      << " The output tensors of nn.Graph " << name_ << " are register repeatedly.";
+  CHECK_OR_RETURN(output_tensors_valid_.empty());
   output_op_names_.assign(output_op_names.begin(), output_op_names.end());
+  output_tensors_valid_.reserve(output_tensors.size());
+  for (const auto& output_tensor : output_tensors) {
+    output_tensors_valid_.push_back(JUST(GetTensorValidInCurRank(output_tensor)));
+  }
+  CHECK_EQ_OR_RETURN(output_tensors_valid_.size(), output_tensors.size());
   return Maybe<void>::Ok();
 }
 
@@ -140,7 +183,7 @@ Maybe<void> NNGraph::CreateAndRegisterNewVariableOpInJobPass() {
       DType dtype(blob_desc.data_type());
       std::shared_ptr<std::vector<Symbol<cfg::SbpParallel>>> sbp_tuple =
           JUST(GetSbpList(Symbol<cfg::NdSbp>(nd_sbp)));
-      one::functional::Scalar value;
+      Scalar value;
       if (var_conf.initializer().has_constant_conf()) {
         value = var_conf.initializer().constant_conf().value();
       } else if (var_conf.initializer().has_constant_int_conf()) {
@@ -199,11 +242,13 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
               << " , compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.\n";
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
+      PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
     }
     // TODO(chengcheng): test collective boxing for multi-job.
     PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
+    PlanUtil::PlanMemoryLog(&plan_, name_);
   }
   if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name = "plan:" + job_name();
@@ -282,7 +327,7 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
   CHECK_EQ_OR_RETURN(inputs.size(), nn_graph->inputs_op_names().size());
   CHECK_EQ_OR_RETURN(outputs.size(), nn_graph->outputs_op_names().size());
   // NOTE(chengcheng):
-  //   parameters not used in RunLazyJobInstrucntion;
+  //   parameters not used in LaunchLazyJobInstrucntion;
   //   the args: parameters is all variable tensor hold by nn.Graph
   //   but the NNGraph::variable_op_size may has FreeEagerTensor as sepcial variable op.
   CHECK_LE_OR_RETURN(parameters.size(), nn_graph->variable_op_size());
@@ -302,8 +347,8 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
       std::make_shared<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>(
           std::move(var_blobs));
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->RunLazyJob(input_blob_list_ptr, output_blob_list_ptr, var_blob_list_ptr,
-                               nn_graph);
+    return builder->LaunchLazyJob(input_blob_list_ptr, output_blob_list_ptr, var_blob_list_ptr,
+                                  nn_graph);
   }));
   return Maybe<void>::Ok();
 }

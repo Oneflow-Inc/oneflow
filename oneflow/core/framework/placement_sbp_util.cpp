@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/math_util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
@@ -98,7 +99,7 @@ static auto* GetAxis2IsBroadcast = DECORATE(&CalcAxis2IsBroadcast, ThreadLocal);
 Maybe<Symbol<ParallelDesc>> CalcSelectedSubParallelDesc(Symbol<ParallelDesc> parallel_desc,
                                                         Symbol<std::vector<int>> axis2is_selected) {
   const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
-  int64_t parallel_id = JUST(opt_parallel_id->value());
+  int64_t parallel_id = JUST(*opt_parallel_id);
   const auto& hierarchy_shape = *parallel_desc->hierarchy();
   const auto& broadcast_parallel_ids =
       JUST(GetSelectedParallelIds(hierarchy_shape, *axis2is_selected, parallel_id));
@@ -173,15 +174,6 @@ Maybe<void> InitShapeAxis2NdSbpIndexes(
   }
   return Maybe<void>::Ok();
 }
-
-int64_t Gcd(int64_t m, int64_t n) {
-  if (n == 0) { return m; }
-  CHECK_GT(m, 0);
-  CHECK_GT(n, 0);
-  return Gcd(n, m % n);
-}
-
-int64_t Lcm(int64_t m, int64_t n) { return m * n / Gcd(m, n); }
 
 Maybe<void> InitShapAxis2ExpandedDim(
     std::vector<DimVector>* shape_axis2expanded_dims, const Shape& shape, const Shape& hierarchy,
@@ -389,7 +381,7 @@ Maybe<bool> IsNdSbpBoxingAcyclic(
     for (int i = 0; i < num_axes + 1; ++i) {
       const auto& opt_axis = JUST(ExclusiveSrcNdSbpAxis4DstNdSbpAxis(axis));
       if (!opt_axis->has_value()) { break; }
-      axis = JUST(opt_axis->value());
+      axis = JUST(*opt_axis);
       if (!visited_axes.insert(axis).second) { return false; }
     }
   }
@@ -406,7 +398,7 @@ Maybe<void> InitNdSbpValidTransformationAxisSequence(
   const auto& HasNoExclusiveSrcNdSbpAxis = [&](int64_t axis) -> Maybe<bool> {
     const auto& opt_src_axis = JUST(ExclusiveSrcNdSbpAxis4DstNdSbpAxis(axis));
     if (!opt_src_axis->has_value()) { return true; }
-    return handled_axes.count(JUST(opt_src_axis->value())) > 0;
+    return handled_axes.count(JUST(*opt_src_axis)) > 0;
   };
   for (int i = 0; i < num_axes; ++i) {
     for (int axis = 0; axis < num_axes; ++axis) {
@@ -461,7 +453,7 @@ std::string GetCyclicBoxingDebugString(
     const auto& opt_axis = CHECK_JUST(ExclusiveSrcNdSbpAxis4DstNdSbpAxis(i));
     if (i) { ss << ", "; }
     if (opt_axis->has_value()) {
-      ss << CHECK_JUST(opt_axis->value());
+      ss << CHECK_JUST(*opt_axis);
     } else {
       ss << "None";
     }
@@ -473,7 +465,7 @@ std::string GetCyclicBoxingDebugString(
 Maybe<Shape> GetPhysicalShape(const Shape& shape, Symbol<cfg::NdSbp> nd_sbp,
                               Symbol<ParallelDesc> parallel_desc) {
   const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
-  return GetPhysicalShape(shape, *nd_sbp, *parallel_desc, JUST(parallel_id->value()));
+  return GetPhysicalShape(shape, *nd_sbp, *parallel_desc, JUST(*parallel_id));
 }
 
 Maybe<Symbol<one::ConsistentTensorMeta>> CalcSubConsistentTensorMeta(
@@ -592,14 +584,14 @@ Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> CalcBroadcastGroup(
         const auto& src_process_ids = node_iter->second;
         int64_t src_process_index = (node_id2counter[node_id]++) % src_process_ids.size();
         int64_t src_process_id = src_process_ids.at(src_process_index);
-        JUST(MutMapAt(&process_id2group, src_process_id))->push_back(process_id);
+        JUST(MapAt(&process_id2group, src_process_id))->push_back(process_id);
       }
     }
   }
   // put remainder process ids into src groups.
   for (int i = 0; i < remainder_process_ids.size(); ++i) {
     int64_t src_process_id = src_process_ids.at(i % src_process_ids.size());
-    JUST(MutMapAt(&process_id2group, src_process_id))->push_back(remainder_process_ids.at(i));
+    JUST(MapAt(&process_id2group, src_process_id))->push_back(remainder_process_ids.at(i));
   }
   const auto& map = std::make_shared<std::unordered_map<int64_t, Symbol<ParallelDesc>>>();
   for (const auto& pair : process_id2group) {

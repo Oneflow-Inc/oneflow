@@ -25,15 +25,15 @@ class ShapeElemCntKernel final : public Kernel {
   ~ShapeElemCntKernel() override = default;
 
  private:
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
   int32_t GetShapePartialElemCnt(const ShapeView& shape) const;
 };
 
 template<DeviceType device_type, typename T>
-void ShapeElemCntKernel<device_type, T>::ForwardDataContent(const KernelContext* ctx) const {
+void ShapeElemCntKernel<device_type, T>::ForwardDataContent(KernelContext* ctx) const {
   const T elem_cnt = GetShapePartialElemCnt(ctx->BnInOp2Blob("x")->shape());
-  KernelUtil<device_type, T>::Set(ctx->device_ctx(), elem_cnt,
-                                  ctx->BnInOp2Blob("y")->mut_dptr<T>());
+  NewKernelUtil<device_type>::Fill(ctx->device_ctx(), 1, elem_cnt,
+                                   ctx->BnInOp2Blob("y")->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>

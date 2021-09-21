@@ -20,14 +20,15 @@ from collections import OrderedDict
 import numpy as np
 from test_util import GenArgList
 
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
 
 
 def _test_autograd_backward(test_case, shape, device):
     np_input = np.random.rand(*shape)
-    of_input = flow.Tensor(
+    of_input = flow.tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     of_out = of_input ** 2
@@ -36,7 +37,7 @@ def _test_autograd_backward(test_case, shape, device):
     test_case.assertTrue(
         np.allclose(of_input.grad.numpy(), np_input * 2, 0.0001, 0.0001)
     )
-    of_input = flow.Tensor(
+    of_input = flow.tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     of_out = of_input ** 2
@@ -45,7 +46,7 @@ def _test_autograd_backward(test_case, shape, device):
     test_case.assertTrue(
         np.allclose(of_input.grad.numpy(), np_input * 6, 0.0001, 0.0001)
     )
-    of_input = flow.Tensor(
+    of_input = flow.tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     of_out = of_input ** 2
@@ -59,7 +60,7 @@ def _test_autograd_backward(test_case, shape, device):
 
 def _test_autograd_grad(test_case, shape, device):
     np_input = np.random.rand(*shape)
-    of_input = flow.Tensor(
+    of_input = flow.tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     of_out = of_input ** 2
@@ -67,7 +68,7 @@ def _test_autograd_grad(test_case, shape, device):
     grad = flow.autograd.grad(of_out_sum, of_input)[0]
     test_case.assertTrue(of_input.grad is None)
     test_case.assertTrue(np.allclose(grad.numpy(), np_input * 2, 0.0001, 0.0001))
-    of_input = flow.Tensor(
+    of_input = flow.tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     of_out = of_input ** 2

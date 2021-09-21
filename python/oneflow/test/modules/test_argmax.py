@@ -22,11 +22,12 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_argmax_aixs_negative(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
     axis = -1
@@ -36,7 +37,7 @@ def _test_argmax_aixs_negative(test_case, device):
 
 
 def _test_tensor_argmax(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
     axis = 0
@@ -47,7 +48,7 @@ def _test_tensor_argmax(test_case, device):
 
 
 def _test_argmax_axis_postive(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
     axis = 1
@@ -57,7 +58,7 @@ def _test_argmax_axis_postive(test_case, device):
 
 
 def _test_argmax_keepdims(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
     axis = 0
@@ -69,7 +70,7 @@ def _test_argmax_keepdims(test_case, device):
 
 
 def _test_argmax_dim_equal_none(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
     of_out = input.argmax()

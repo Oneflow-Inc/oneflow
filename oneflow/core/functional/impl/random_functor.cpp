@@ -56,7 +56,7 @@ class BernoulliFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
 
     JUST(bernoulli_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
@@ -79,7 +79,7 @@ class RandFunctor {
                            const bool& requires_grad) const {
     DataType dtype_val = DataType::kFloat;
     if (dtype.has_value()) {
-      dtype_val = JUST(dtype.value())->data_type();
+      dtype_val = JUST(dtype)->data_type();
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
         OF_UNIMPLEMENTED() << "Only support float and double in rand().";
       }
@@ -96,7 +96,7 @@ class RandFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
 
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
@@ -130,7 +130,7 @@ class ConsistentRandFunctor {
                            const bool& requires_grad) const {
     DataType dtype_val = DataType::kFloat;
     if (dtype.has_value()) {
-      dtype_val = JUST(dtype.value())->data_type();
+      dtype_val = JUST(dtype)->data_type();
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
         OF_UNIMPLEMENTED() << "Only support float and double in rand().";
       }
@@ -146,7 +146,7 @@ class ConsistentRandFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
 
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
@@ -176,7 +176,7 @@ class RandNFunctor {
                            const bool& requires_grad) const {
     DataType dtype_val = DataType::kFloat;
     if (dtype.has_value()) {
-      dtype_val = JUST(dtype.value())->data_type();
+      dtype_val = JUST(dtype)->data_type();
 
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
         OF_UNIMPLEMENTED() << "Only support float and double in randn().";
@@ -194,7 +194,7 @@ class RandNFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
 
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
@@ -227,7 +227,7 @@ class ConsistentRandNFunctor {
                            const bool& requires_grad) const {
     DataType dtype_val = DataType::kFloat;
     if (dtype.has_value()) {
-      dtype_val = JUST(dtype.value())->data_type();
+      dtype_val = JUST(dtype)->data_type();
 
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
         OF_UNIMPLEMENTED() << "Only support float and double in randn().";
@@ -244,7 +244,7 @@ class ConsistentRandNFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
 
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
@@ -295,7 +295,7 @@ class RandIntFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
 
@@ -349,7 +349,7 @@ class ConsistentRandIntFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
 
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
@@ -396,7 +396,7 @@ class RandPermFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
 
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
@@ -437,7 +437,7 @@ class ConsistentRandPermFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
 
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));

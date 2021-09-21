@@ -18,6 +18,7 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.activation import (
     ELU,
     GELU,
+    GLU,
     Hardsigmoid,
     Hardswish,
     Hardtanh,
@@ -39,6 +40,11 @@ from oneflow.nn.modules.activation import (
 
 from oneflow.nn.modules.all_reduce import AllReduce
 from oneflow.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d, BatchNorm3d
+from oneflow.nn.modules.batchnorm_fused import (
+    FusedBatchNorm1d,
+    FusedBatchNorm2d,
+    FusedBatchNorm3d,
+)
 from oneflow.nn.modules.container import (
     ModuleDict,
     ModuleList,
@@ -125,3 +131,5 @@ from oneflow.nn import utils
 from . import functional
 
 from . import parallel
+
+from oneflow.nn.modules.rnn import RNN, LSTM, GRU

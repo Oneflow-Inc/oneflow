@@ -23,18 +23,12 @@ namespace oneflow {
 
 template<typename T>
 void WaitAndSendIdsKernel<T>::VirtualKernelInit(KernelContext* ctx) {
-  ctx->set_state(new WaitAndSendIdsStatus);
+  ctx->set_state(std::make_shared<WaitAndSendIdsStatus>());
 }
 
 template<typename T>
-void WaitAndSendIdsKernel<T>::DestroyState(void* state) const {
-  delete static_cast<WaitAndSendIdsStatus*>(state);
-}
-
-template<typename T>
-void WaitAndSendIdsKernel<T>::ForwardDataContent(const KernelContext* ctx) const {
-  CHECK(ctx->state());
-  auto* status = static_cast<WaitAndSendIdsStatus*>(ctx->state());
+void WaitAndSendIdsKernel<T>::ForwardDataContent(KernelContext* ctx) const {
+  auto* status = CHECK_NOTNULL(dynamic_cast<WaitAndSendIdsStatus*>(ctx->state().get()));
   const auto& conf = this->op_conf().wait_and_send_ids_conf();
   if (status->out_idx_ >= status->out_num_) {
     if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
@@ -45,14 +39,14 @@ void WaitAndSendIdsKernel<T>::ForwardDataContent(const KernelContext* ctx) const
       status->in_id_ = 0;
       {
         std::shared_ptr<JobInstance> job_instance;
-        status->buffer_status_ = buffer->Receive(&job_instance);
+        status->buffer_status_ = buffer->Pull(&job_instance);
       }
       if (status->buffer_status_ == kBufferStatusErrorClosed) { return; }
       status->out_idx_ = 0;
       status->out_num_ = 1;
     } else {
       auto* buffer_mgr = Global<BufferMgr<int64_t>>::Get();
-      status->buffer_status_ = buffer_mgr->Get(conf.wait_buffer_name())->Receive(&status->in_id_);
+      status->buffer_status_ = buffer_mgr->Get(conf.wait_buffer_name())->Pull(&status->in_id_);
       if (status->buffer_status_ == kBufferStatusErrorClosed) { return; }
       status->out_idx_ = 0;
       status->out_num_ = conf.id_list(status->in_id_).value_size();

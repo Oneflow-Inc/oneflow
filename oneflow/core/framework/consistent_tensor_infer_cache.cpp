@@ -30,7 +30,7 @@ bool OptionalEqual(const Optional<Symbol<cfg::NdSbp>>& lhs,
                    const Optional<Symbol<cfg::NdSbp>>& rhs) {
   if (lhs.has_value() != rhs.has_value()) { return false; }
   if (!lhs.has_value()) { return true; }
-  return CHECK_JUST(lhs.value()) == CHECK_JUST(rhs.value());
+  return CHECK_JUST(lhs) == CHECK_JUST(rhs);
 }
 
 }  // namespace
@@ -38,7 +38,7 @@ bool OptionalEqual(const Optional<Symbol<cfg::NdSbp>>& lhs,
 size_t InputConsistentTensorMeta::hash_value() const {
   size_t hash_value = std::hash<Symbol<ConsistentTensorMeta>>()(tensor_meta());
   if (consumer_nd_sbp_constraint().has_value()) {
-    hash_value ^= std::hash<Symbol<cfg::NdSbp>>()(CHECK_JUST(consumer_nd_sbp_constraint().value()));
+    hash_value ^= std::hash<Symbol<cfg::NdSbp>>()(CHECK_JUST(consumer_nd_sbp_constraint()));
   }
   return hash_value;
 }
@@ -89,7 +89,7 @@ Maybe<void> ConsistentTensorMetaInferArgs::MakeNdSbpConstraints(
   for (int i = 0; i < input_arg_tuple.size(); ++i) {
     const auto& constaint = input_consistent_tensor_metas_.at(i).consumer_nd_sbp_constraint();
     if (constaint.has_value()) {
-      (*map)[input_arg_tuple.indexed_bns().at(i)] = *CHECK_JUST(constaint.value());
+      (*map)[input_arg_tuple.indexed_bns().at(i)] = *CHECK_JUST(constaint);
     }
   }
   return Maybe<void>::Ok();
@@ -258,7 +258,7 @@ class UserOpExprOpDeviceInferContext final : public user_op::DeviceInferContext 
     // Infer OpArgMutConsistentTensorMeta.
     const auto& input_metas = infer_args.input_consistent_tensor_metas();
     JUST(user_op_expr.InferLogicalShapeAndDType(
-        infer_args.attrs(), parallel_desc->device_tag(),
+        infer_args.attrs(), parallel_desc,
         [&](int32_t i) { return &*input_metas.at(i).tensor_meta(); },
         [&](int32_t i) { return output_mut_metas.at(i).mut_tensor_meta(); }));
   }
@@ -321,7 +321,7 @@ class UserOpExprOpDeviceInferContext final : public user_op::DeviceInferContext 
       return nullptr;
     };
     JUST(user_op_expr.InferLogicalShapeAndDType(
-        infer_args.attrs(), parallel_desc->device_tag(), GetInputTensorMeta,
+        infer_args.attrs(), parallel_desc, GetInputTensorMeta,
         [&](int32_t i) { return output_mut_metas.at(i).mut_tensor_meta(); }));
   }
   auto result = std::make_unique<ConsistentTensorInferResult>(user_op_expr.input_size(),
