@@ -28,6 +28,7 @@ from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 from oneflow.nn.graph.block import Block, BlockType
+from oneflow.nn.graph.block_container import *
 from oneflow.nn.graph.config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import add_indent, seq_to_func_return, sys_exc_error_msg
@@ -875,7 +876,19 @@ class Graph(object):
             raise KeyError('module name can\'t contain ".", got: {}'.format(name))
         elif name == "":
             raise KeyError('module name can\'t be empty string ""')
-        self._blocks[name] = Block("", name, module)
+
+        if isinstance(module, Sequential):
+            self._blocks[name] = BlockSequential(name, module)
+        elif isinstance(module, ModuleList):
+            self._blocks[name] = BlockModuleList(name, module)
+        elif isinstance(module, ModuleDict):
+            self._blocks[name] = BlockModuleDict(name, module)
+        elif isinstance(module, ParameterList):
+            self._blocks[name] = BlockParameterList(name, module)
+        elif isinstance(module, ParameterDict):
+            self._blocks[name] = BlockParameterDict(name, module)
+        else:
+            self._blocks[name] = Block("", name, module)
 
     def __setattr__(self, name: str, value=None):
         if isinstance(value, Module):

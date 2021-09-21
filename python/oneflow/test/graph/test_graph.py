@@ -250,6 +250,43 @@ class TestGraph(flow.unittest.TestCase):
         y = flow.tensor(y, dtype=flow.float32)
         g._compile(x, y)
 
+    def test_block_with_container(test_case):
+        class SubModule0(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linear = flow.nn.Linear(10, 10, False)
+
+            def forward(self, x):
+                scope = oneflow.current_scope()
+                scope_proto = graph_build_util.scope_to_proto(scope)
+                ck_bool = scope_proto.attr_name2attr_value["checkpointing"].at_bool
+                test_case.assertEqual(ck_bool, True)
+                out = self.linear(x)
+                return out
+
+        class MyModule(flow.nn.Graph):
+            def __init__(self):
+                super(MyModule, self).__init__()
+                self.linears = flow.nn.ModuleList([SubModule0() for i in range(10)])
+                self.params = flow.nn.ParameterList(
+                    [flow.nn.Parameter(flow.randn(10, 10), True) for i in range(10)]
+                )
+
+            def build(self, x):
+                # ModuleList can act as an iterable, or be indexed using ints
+                for i, _ in enumerate(self.linears):
+                    self.linears[i].config.activation_checkpointing = True
+                    x = self.linears[i](x)
+
+                for i, _ in enumerate(self.params):
+                    self.params[i // 2].config._stage_id = 0
+                return x
+
+        model = MyModule()
+        input = flow.tensor(np.random.randn(4, 10), dtype=flow.float32)
+        output = model(input)
+        test_case.assertTrue(output.shape == (4, 10))
+
 
 if __name__ == "__main__":
     unittest.main()
