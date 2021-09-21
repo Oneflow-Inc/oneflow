@@ -14,20 +14,31 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-
+#include "oneflow/user/kernels/expand_kernel_utils.h"
 namespace oneflow {
 
 REGISTER_USER_OP("expand")
     .Input("in")
     .Output("out")
-    .Attr<std::vector<int32_t>>("in_shape")
-    .Attr<std::vector<int32_t>>("out_shape")
-    .Attr<std::vector<int32_t>>("stride")
+    .Attr<std::vector<int32_t>>("logical_in_shape")
+    .Attr<std::vector<int32_t>>("logical_expand_shape")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->OutputShape("out", 0);
-      const auto& out_shape_attr = ctx->Attr<std::vector<int32_t>>("out_shape");
-      DimVector dim_vec(out_shape_attr.begin(), out_shape_attr.end());
-      *out_shape = Shape(dim_vec);
+      const Shape& input_shape = ctx->InputShape("in", 0);
+      const std::vector<int32_t>& logical_expand_shape =
+          ctx->Attr<std::vector<int32_t>>("logical_expand_shape");
+
+      std::vector<int32_t> in_shape;
+      in_shape.resize(input_shape.NumAxes());
+      for (int i = 0; i < input_shape.NumAxes(); ++i) { in_shape[i] = input_shape.At(i); }
+
+      std::vector<int32_t> out_shape;
+      std::vector<int32_t> stride;
+      CHECK_JUST(getOutShapeAndStrideForFp(in_shape, logical_expand_shape, out_shape, stride));
+
+      Shape* output_shape = ctx->OutputShape("out", 0);
+      DimVector dim_vec(out_shape.begin(), out_shape.end());
+      *output_shape = Shape(dim_vec);
+
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -35,6 +46,25 @@ REGISTER_USER_OP("expand")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const std::vector<int32_t>& logical_in_shape =
+          ctx->Attr<std::vector<int32_t>>("logical_in_shape");
+      const std::vector<int32_t>& logical_expand_shape =
+          ctx->Attr<std::vector<int32_t>>("logical_expand_shape");
+      std::vector<int32_t> logical_out_shape;
+      std::vector<int32_t> stride;
+      CHECK_JUST(
+          getOutShapeAndStride(logical_in_shape, logical_expand_shape, logical_out_shape, stride));
+
+      int offset = logical_out_shape.size() - logical_in_shape.size();
+      FOR_RANGE(int64_t, i, 0, logical_in_shape.size()) {
+        if (logical_in_shape[i] == logical_out_shape[i + offset]) {
+          ctx->NewBuilder()
+              .Split(user_op::OpArg("in", 0), i)
+              .Split(user_op::OpArg("out", 0), i + offset)
+              .Build();
+        }
+      }
+
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("in", 0))
           .PartialSum(user_op::OpArg("out", 0))
@@ -45,13 +75,26 @@ REGISTER_USER_OP("expand")
 REGISTER_USER_OP("expand_grad")
     .Input("in")
     .Output("out")
-    .Attr<std::vector<int32_t>>("out_shape")
-    .Attr<std::vector<int32_t>>("stride")
+    .Attr<std::vector<int32_t>>("logical_out_shape")
+    .Attr<std::vector<int32_t>>("logical_expand_shape")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->OutputShape("out", 0);
-      const auto& out_shape_attr = ctx->Attr<std::vector<int32_t>>("out_shape");
-      DimVector dim_vec(out_shape_attr.begin(), out_shape_attr.end());
-      *out_shape = Shape(dim_vec);
+      const Shape& input_shape = ctx->InputShape("in", 0);
+      const std::vector<int32_t>& logical_out_shape =
+          ctx->Attr<std::vector<int32_t>>("logical_out_shape");
+      const std::vector<int32_t>& logical_expand_shape =
+          ctx->Attr<std::vector<int32_t>>("logical_expand_shape");
+
+      std::vector<int32_t> in_shape;
+      in_shape.resize(input_shape.NumAxes());
+      for (int i = 0; i < input_shape.NumAxes(); ++i) { in_shape[i] = input_shape.At(i); }
+      std::vector<int32_t> out_shape;
+      std::vector<int32_t> stride;
+      CHECK_JUST(getOutShapeAndStrideForBp(logical_out_shape, logical_expand_shape, in_shape,
+                                           out_shape, stride));
+
+      Shape* output_shape = ctx->OutputShape("out", 0);
+      DimVector dim_vec(out_shape.begin(), out_shape.end());
+      *output_shape = Shape(dim_vec);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -59,6 +102,23 @@ REGISTER_USER_OP("expand_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& input_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+      const std::vector<int32_t>& logical_out_shape =
+          ctx->Attr<std::vector<int32_t>>("logical_out_shape");
+      const std::vector<int32_t>& logical_expand_shape =
+          ctx->Attr<std::vector<int32_t>>("logical_expand_shape");
+
+      int offset = input_tensor.shape().NumAxes() - logical_out_shape.size();
+      FOR_RANGE(int64_t, i, 0, logical_out_shape.size()) {
+        if (logical_out_shape[i] == input_tensor.shape().At(i + offset)) {
+          ctx->NewBuilder()
+              .Split(user_op::OpArg("in", 0), i + offset)
+              .Split(user_op::OpArg("out", 0), i)
+              .Build();
+        }
+      }
+
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("in", 0))
           .PartialSum(user_op::OpArg("out", 0))
@@ -74,8 +134,10 @@ REGISTER_USER_OP_GRAD("expand").SetGenBackwardOpConfFn([](const user_op::UserOpW
         builder.Op("expand_grad")
             .Input("in", op.GetGradTensorWithOpOutput("out", 0))
             .Output("out")
-            .Attr<std::vector<int32_t>>("out_shape", op.attr<std::vector<int32_t>>("in_shape"))
-            .Attr<std::vector<int32_t>>("stride", op.attr<std::vector<int32_t>>("stride"))
+            .Attr<std::vector<int32_t>>("logical_out_shape",
+                                        op.attr<std::vector<int32_t>>("logical_in_shape"))
+            .Attr<std::vector<int32_t>>("logical_expand_shape",
+                                        op.attr<std::vector<int32_t>>("logical_expand_shape"))
             .Build();
     op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
     AddOp(grad_op);
