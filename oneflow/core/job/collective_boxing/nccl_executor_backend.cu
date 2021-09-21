@@ -280,8 +280,7 @@ void LaunchFusedAllReduce(const CommGroup& comm_group,
   offset_vec.reserve(request_ids.size());
   int64_t offset = 0;
   request_store->ForEachMutRequestEntryForIdsInJob(
-      request_ids,
-      [&](RequestEntry* request_entry, int32_t i, const RequestId& request_id request_id) {
+      request_ids, [&](RequestEntry* request_entry, int32_t i, const RequestId& request_id) {
         offset_vec.emplace_back(offset);
         offset += GetMultiCopyAlignedSize(request_entry->size_in_bytes());
       });
@@ -292,8 +291,7 @@ void LaunchFusedAllReduce(const CommGroup& comm_group,
     const StreamCtx* stream_ctx = device_id2stream_ctx.at(comm_rank.device_id()).get();
     CHECK_LE(offset, stream_ctx->fusion_buffer_size());
     request_store->ForEachMutRequestEntryForIdsInJob(
-        request_ids,
-        [&](RequestEntry* request_entry, int32_t i, const RequestId& request_id request_id) {
+        request_ids, [&](RequestEntry* request_entry, int32_t i, const RequestId& request_id) {
           copy_in_params.Add(stream_ctx->fusion_buffer() + offset_vec.at(i),
                              request_entry->GetRuntimeRequest(local_rank)->send_buff,
                              request_entry->size_in_bytes());
@@ -437,6 +435,14 @@ struct NcclExecutorBackend::Impl {
     current_stream_id = 0;
     enable_mixed_fusion =
         (!conf.nccl_fusion_all_reduce_use_buffer()) && conf.nccl_enable_mixed_fusion();
+    int nccl_version;
+    OF_NCCL_CHECK(ncclGetVersion(&nccl_version));
+    if (nccl_version == 21003) {
+      LOG(WARNING)
+          << "Current nccl version is 2.10.3, in this version, ncclGroup() with mixed "
+             "datatype/element/collective could induce crash or corruption, so we will not "
+             "fuse any request.";
+    }
     InitStreamCtx();
     InitIsOpTypeFusionEnabled();
   }
@@ -506,6 +512,12 @@ struct NcclExecutorBackend::Impl {
   }
 
   bool CanRequestEntryFuse(const RequestEntry* lhs, const RequestEntry* rhs) const {
+    {
+      int nccl_version;
+      OF_NCCL_CHECK(ncclGetVersion(&nccl_version));
+      // Workaround for https://github.com/NVIDIA/nccl/issues/560
+      if (nccl_version == 21003) { return false; }
+    }
     if (lhs->device_set_symbol() != rhs->device_set_symbol()) { return false; }
     if ((!IsRequestEntryFusionEnabled(lhs)) || (!IsRequestEntryFusionEnabled(rhs))) {
       return false;
