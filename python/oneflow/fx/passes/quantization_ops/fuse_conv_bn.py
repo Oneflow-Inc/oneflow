@@ -22,7 +22,7 @@ class QConvBN(flow.nn.Module):
         self.bn_module = bn_module
 
         self.moving_min_max_observer = flow.nn.MovingAverageMinMaxObserver(training=self.training, quantization_formula=quantization_formula,
-                                                                       stop_update_after_iters=0, quantization_bit=quantization_bit,
+                                                                       stop_update_after_iters=1, quantization_bit=quantization_bit,
                                                                        quantization_scheme=quantization_scheme, momentum=momentum)
 
         self.min_max_observer = flow.nn.MinMaxObserver(
@@ -62,7 +62,7 @@ class QConvBN(flow.nn.Module):
     
 
     def forward(self, x):
-        scale, zero_point = self.moving_min_max_observer(x, flow.tensor([1], dtype=flow.int64).to(x.device.type))
+        scale, zero_point = self.moving_min_max_observer(x, flow.tensor([0], dtype=flow.int64).to(x.device.type))
         x = self.fake_quantization(x, scale, zero_point)
         if self.training:
             y = flow.nn.functional.conv2d(
@@ -76,8 +76,8 @@ class QConvBN(flow.nn.Module):
             )
             y = y.permute(1, 0, 2, 3)  # NCHW -> CNHW
             y = y.view(self.conv_module.out_channels, -1)  # CNHW -> C,NHW
-            mean = y.mean(1).detach()
-            var = y.var(1).detach()
+            mean = y.mean(1)
+            var = y.var(1)
             self.bn_module.running_mean = (
                 self.bn_module.momentum * self.bn_module.running_mean
                 + (1 - self.bn_module.momentum) * mean
