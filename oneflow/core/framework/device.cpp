@@ -92,6 +92,7 @@ Maybe<const std::string&> Device::of_type() const {
       {"comm_net", "cpu"},
       {"sync_launched_nccl", "gpu"},
       {"async_launched_nccl", "gpu"},
+      {"critical_section", "cpu"},
       {"auto", "auto"},  // Only used for auto generator currently.
   };
   return MapAt(type2device_tag, type());
@@ -108,6 +109,7 @@ Maybe<const Optional<std::string>&> Device::GetSharedTransportDeviceType() const
       {"comm_net", Optional<std::string>()},
       {"sync_launched_nccl", Optional<std::string>("async_launched_nccl")},
       {"async_launched_nccl", Optional<std::string>("async_launched_nccl")},
+      {"critical_section", Optional<std::string>()},
   };
   return MapAt(type2type_for_shared_local_dep_object, type());
 }
@@ -123,6 +125,7 @@ Maybe<const std::string&> Device::GetSharedScheduleDeviceType() const {
       {"comm_net", "comm_net"},
       {"sync_launched_nccl", "comm_net"},
       {"async_launched_nccl", "async_launched_nccl"},
+      {"critical_section", "critical_section"},
   };
   return MapAt(type2type_for_shared_local_dep_object, type());
 }
