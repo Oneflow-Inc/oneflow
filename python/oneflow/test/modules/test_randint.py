@@ -24,14 +24,14 @@ import oneflow.unittest
 from test_util import GenArgList
 
 
-def _test_rand(test_case, device, shape, low, high):
+def _test_randint(test_case, device, shape, low, high):
     y1 = flow.randint(low, high, shape, device=flow.device(device))
     y2 = flow.randint(low, high, shape, device=flow.device(device))
-    test_case.assertFalse(np.all(y1.numpy() == y2.numpy()))
+    test_case.assertFalse(np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
     test_case.assertTrue(shape == y1.shape)
 
 
-def _test_0d_rand(test_case, device, shape, low, high):
+def _test_0d_randint(test_case, device, shape, low, high):
     y1 = flow.randint(low, high, shape, device=flow.device(device))
     y2 = flow.randint(low, high, shape, device=flow.device(device))
     test_case.assertTrue(
@@ -42,7 +42,6 @@ def _test_0d_rand(test_case, device, shape, low, high):
 
 def _test_different_dtype(test_case, device, shape, low, high):
     for dtype in [
-        flow.uint8,
         flow.int8,
         flow.int32,
         flow.int64,
@@ -78,9 +77,9 @@ def _test_with_generator(test_case, device, shape, low, high):
 
 
 def _test_high(test_case, device, shape, low, high):
-    y1 = flow.randint(low, high, shape, device=flow.device(device))
-    y2 = flow.randint(low, high, shape, device=flow.device(device))
-    test_case.assertFalse(np.all(y1.numpy() == y2.numpy()))
+    y1 = flow.randint(low, high, shape, device=flow.device(device)).numpy()
+    y2 = flow.randint(low, high, shape, device=flow.device(device)).numpy()
+    test_case.assertFalse(np.allclose(y1, y2, atol=1e-4, rtol=1e-4))
     test_case.assertTrue(shape == y1.shape)
 
 
@@ -100,7 +99,6 @@ class TestRandint(flow.unittest.TestCase):
 
     def test_consistent_different_types(test_case):
         for dtype in [
-            flow.uint8,
             flow.int8,
             flow.int32,
             flow.int64,
@@ -117,7 +115,7 @@ class TestRandint(flow.unittest.TestCase):
     def test_randint(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_rand,
+            _test_randint,
             _test_different_dtype,
             _test_backward,
             _test_with_generator,
@@ -131,7 +129,7 @@ class TestRandint(flow.unittest.TestCase):
 
     def test_0d_randint(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_0d_rand]
+        arg_dict["test_fun"] = [_test_0d_randint]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["shape"] = [(2, 0, 4), (2, 0, 2)]
         arg_dict["low"] = [i for i in range(10)]
