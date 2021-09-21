@@ -31,10 +31,11 @@ namespace collective {
 namespace {
 
 void SortRequestIdsByOrder(RequestStore* request_store, std::vector<RequestId>* requests) {
-  std::sort(requests->begin(), requests->end(), [request_store](RequestId a, RequestId b) {
-    return request_store->MutRequestEntry(a)->desc().order()
-           < request_store->MutRequestEntry(b)->desc().order();
-  });
+  std::sort(requests->begin(), requests->end(),
+            [request_store](const RequestId& a, const RequestId& b) {
+              return request_store->MutRequestEntry(a)->desc().order()
+                     < request_store->MutRequestEntry(b)->desc().order();
+            });
 }
 
 }  // namespace
@@ -110,12 +111,12 @@ void StaticGroupCoordinator::InitJob(int64_t job_id) {
   };
   std::vector<RequestId> request_ids;
   impl_->request_store_->ForEachMutRequestEntryInJob(
-      job_id, [&](RequestEntry* request_entry, int32_t i, RequestId request_id) {
+      job_id, [&](RequestEntry* request_entry, int32_t i, const RequestId& request_id) {
         if (request_entry->HasRankOnThisNode()) { request_ids.push_back(request_id); }
       });
   SortRequestIdsByOrder(impl_->request_store_.get(), &request_ids);
   CHECK(std::adjacent_find(request_ids.begin(), request_ids.end(),
-                           [&](RequestId a, RequestId b) {
+                           [&](const RequestId& a, const RequestId& b) {
                              return GetRequestDesc(a).dependency_depth()
                                     > GetRequestDesc(b).dependency_depth();
                            })
@@ -133,7 +134,7 @@ void StaticGroupCoordinator::InitJob(int64_t job_id) {
         const int32_t group_id = group_states.size();
         group_states.emplace_back(group.size());
         for (int32_t idx_in_group = 0; idx_in_group < group.size(); ++idx_in_group) {
-          const RequestId request_id = group.at(idx_in_group);
+          const RequestId& request_id = group.at(idx_in_group);
           RequestGroupIndex request_group_index{group_id, idx_in_group};
           request_index2request_group_index.at(request_id.request_index) = request_group_index;
         }
@@ -200,7 +201,7 @@ void StaticGroupCoordinator::DumpSummary(const int64_t job_id) const {
     group_ls << "group id: " << std::to_string(group_id) << "\n";
     impl_->request_store_->ForEachMutRequestEntryForIdsInJob(
         group_id2request_ids.at(group_id),
-        [&](RequestEntry* request_entry, int32_t i, RequestId request_id) {
+        [&](RequestEntry* request_entry, int32_t i, const RequestId& request_id) {
           group_ls->Write(request_entry->desc());
         });
   }

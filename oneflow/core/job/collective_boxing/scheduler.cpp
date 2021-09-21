@@ -136,7 +136,7 @@ void ExecutorImpl::GroupRequests(
     group_buffer_.clear();
   };
   request_store_->ForEachMutRequestEntryForIdsInJob(
-      request_ids, [&](RequestEntry* request_entry, int32_t i, RequestId request_id) {
+      request_ids, [&](RequestEntry* request_entry, int32_t i, const RequestId& request_id) {
         const int64_t job_id = request_id.job_id;
         if (!group_buffer_.empty()) {
           const auto* cur_entry = request_entry;
@@ -163,7 +163,7 @@ Backend ExecutorImpl::GetUniqueBackend(const std::vector<RequestId>& request_ids
   const Backend backend =
       request_store_->MutRequestEntry(request_ids.front())->desc().op_desc().backend();
   request_store_->ForEachMutRequestEntryForIdsInJob(
-      request_ids, [&](RequestEntry* request_entry, int32_t i, RequestId request_id) {
+      request_ids, [&](RequestEntry* request_entry, int32_t i, const RequestId& request_id) {
         CHECK_EQ(request_entry->desc().op_desc().backend(), backend);
       });
   return backend;
