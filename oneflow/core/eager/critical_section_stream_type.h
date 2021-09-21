@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_EAGER_LAZY_JOB_STREAM_TYPE_H_
-#define ONEFLOW_CORE_EAGER_LAZY_JOB_STREAM_TYPE_H_
+#ifndef ONEFLOW_CORE_EAGER_CRITICAL_SECTION_STREAM_TYPE_H_
+#define ONEFLOW_CORE_EAGER_CRITICAL_SECTION_STREAM_TYPE_H_
 
 #include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/vm/stream_type.h"
@@ -26,12 +26,12 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class LazyJobStreamType final : public StreamType {
+class CriticalSectionStreamType final : public StreamType {
  public:
-  LazyJobStreamType() = default;
-  virtual ~LazyJobStreamType() = default;
+  CriticalSectionStreamType() = default;
+  virtual ~CriticalSectionStreamType() = default;
 
-  const char* device_tag() const override { return "lazy_job"; }
+  const char* device_tag() const override { return "critical_section"; }
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 
@@ -51,4 +51,4 @@ class LazyJobStreamType final : public StreamType {
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_EAGER_LAZY_JOB_STREAM_TYPE_H_
+#endif  // ONEFLOW_CORE_EAGER_CRITICAL_SECTION_STREAM_TYPE_H_
