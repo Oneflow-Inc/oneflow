@@ -213,7 +213,7 @@ def _test_expand_same_dim_negative_split(test_case, device):
 
 
 @flow.unittest.skip_unless_1n2d()
-class ExpandGraphTestCase(oneflow.unittest.TestCase):
+class ExpandConsistentTestCase(oneflow.unittest.TestCase):
     def test_expand_broadcast(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
