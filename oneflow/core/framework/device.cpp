@@ -140,6 +140,8 @@ Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
       {"comm_net", "cpu.LocalCallOpKernel"},
       {"sync_launched_nccl", "gpu.LocalCallOpKernel"},
       {"async_launched_nccl", "async.gpu.LocalCallOpKernel"},
+      // no compute instruction on critical_section device.
+      {"critical_section", "UNIMPLEMENTED INSTRUCTION NAME"},
   };
   return MapAt(type2instr_name, type);
 }
@@ -161,7 +163,6 @@ Maybe<size_t> Device::instr_local_dep_object_pool_size() const {
 
 // TODO(jianhao): move this configuration into stream
 Maybe<bool> Device::need_soft_sync_stream() const {
-  if (type() == "critical_section") { return false; }
   return JUST(local_call_instruction_name()) == "gpu.LocalCallOpKernel";
 }
 

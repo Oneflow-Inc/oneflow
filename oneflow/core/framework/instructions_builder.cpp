@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
@@ -238,17 +239,26 @@ Maybe<int64_t> InstructionsBuilder::NewObjectId(
   return object_id;
 }
 
+namespace {
+
+Maybe<Symbol<Device>> RawGetCriticalSectionDevice() { return Device::New("critical_section"); }
+
+static constexpr auto* GetCriticalSectionDevice =
+    DECORATE(&RawGetCriticalSectionDevice, ThreadLocal);
+
+}  // namespace
+
 Maybe<vm::InputCriticalSectionPhyInstrOperand> InstructionsBuilder::MakeInputCriticalSection(
     const one::EagerBlobObjectListPtr& eager_blob_objects,
     const std::shared_ptr<NNGraphIf>& nn_graph) {
-  const auto& op_device = nn_graph->op_device();
+  const auto& op_device = JUST(GetCriticalSectionDevice());
   for (const auto& input : *eager_blob_objects) {
     const auto& blob_last_used_device = JUST(input->last_used_device());
     if (blob_last_used_device != op_device) {
       auto* dep_object = JUST(input->compute_local_dep_object());
       JUST(SoftSyncStream(dep_object, "mut", blob_last_used_device));
+      input->set_last_used_device(op_device);
     }
-    input->set_last_used_device(op_device);
   }
   static std::string instr_name("InputCriticalSection");
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
@@ -263,14 +273,14 @@ Maybe<vm::ParameterCriticalSectionPhyInstrOperand>
 InstructionsBuilder::MakeParameterCriticalSection(
     const one::EagerBlobObjectListPtr& eager_blob_objects,
     const std::shared_ptr<NNGraphIf>& nn_graph) {
-  const auto& op_device = nn_graph->op_device();
+  const auto& op_device = JUST(GetCriticalSectionDevice());
   for (const auto& param : *eager_blob_objects) {
     const auto& blob_last_used_device = JUST(param->last_used_device());
     if (blob_last_used_device != op_device) {
       auto* dep_object = JUST(param->compute_local_dep_object());
       JUST(SoftSyncStream(dep_object, "mut", blob_last_used_device));
+      param->set_last_used_device(op_device);
     }
-    param->set_last_used_device(op_device);
   }
   static std::string instr_name("ParameterCriticalSection");
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
@@ -284,10 +294,14 @@ InstructionsBuilder::MakeParameterCriticalSection(
 Maybe<vm::OutputCriticalSectionPhyInstrOperand> InstructionsBuilder::MakeOutputCriticalSection(
     const one::EagerBlobObjectListPtr& eager_blob_objects,
     const std::shared_ptr<NNGraphIf>& nn_graph) {
+  const auto& op_device = JUST(GetCriticalSectionDevice());
   for (const auto& output : *eager_blob_objects) {
     const auto& blob_last_used_device = JUST(output->last_used_device());
-    // `blob_last_used_device == nn_graph->op_device()` is ensured by SoftSyncNNGraphBuffers
-    CHECK_OR_RETURN(blob_last_used_device == nn_graph->op_device());
+    if (blob_last_used_device != op_device) {
+      auto* dep_object = JUST(output->compute_local_dep_object());
+      JUST(SoftSyncStream(dep_object, "mut", blob_last_used_device));
+      output->set_last_used_device(op_device);
+    }
   }
   static std::string instr_name("OutputCriticalSection");
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
@@ -327,7 +341,7 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const one::EagerBlobObjectListPtr
 Maybe<void> InstructionsBuilder::SoftSyncNNGraphBuffers(
     const one::EagerBlobObjectListPtr& eager_blob_objects,
     const std::shared_ptr<NNGraphIf>& nn_graph) {
-  const auto& op_device = nn_graph->op_device();
+  const auto& op_device = JUST(GetCriticalSectionDevice());
   for (const auto& eager_blob_object : *eager_blob_objects) {
     const auto& blob_last_used_device = JUST(eager_blob_object->last_used_device());
     if (blob_last_used_device != op_device) {

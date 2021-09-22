@@ -35,12 +35,8 @@ class NNGraphIf {
   virtual const std::vector<bool>& inputs_valid() const = 0;
   virtual const std::vector<bool>& outputs_valid() const = 0;
 
-  const Symbol<Device>& op_device() const { return op_device_; }
-
  protected:
-  NNGraphIf();
-
-  Symbol<Device> op_device_;
+  NNGraphIf() = default;
 };
 
 }  // namespace oneflow

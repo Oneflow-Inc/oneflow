@@ -595,13 +595,6 @@ class Graph(object):
             eager_outputs = self._eager_outputs_buffer[self._cur_index_of_ouputs_buffer]
 
             # oneflow._oneflow_internal.eager.multi_client.Sync() NOTE(chengcheng): Need Sync?
-
-            # Make sure that last used devices of tensors in `outputs_tensor_tuple` are
-            # "critical_section".
-            # Do nothing if the last used devices are "critical_section" already.
-            oneflow._oneflow_internal.nn.graph.SoftSyncNNGraphBuffers(
-                outputs_tensor_tuple, self._c_nn_graph
-            )
             oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
                 convert_to_tensor_tuple(flattened_eager_args),
                 outputs_tensor_tuple,
