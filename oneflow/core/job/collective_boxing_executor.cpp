@@ -572,13 +572,16 @@ std::shared_ptr<const CollectiveBoxingExecutorPlanToken> CollectiveBoxingExecuto
                     || request->op_desc().backend()
                            != rough_groups.back().front()->op_desc().backend()
                     || request->device_set() != rough_groups.back().front()->device_set()))) {
-          CHECK_GT(request->dependency_depth(), rough_groups.back().front()->dependency_depth());
+          if (!rough_groups.empty()) {
+            CHECK(!rough_groups.back().empty());
+            CHECK_GE(request->dependency_depth(), rough_groups.back().front()->dependency_depth());
+          }
           rough_groups.emplace_back(std::vector<const RequestDesc*>({request}));
         } else {
           rough_groups.back().push_back(request);
         }
       } else {
-        if (rough_groups.back().size() != 0
+        if ((!rough_groups.empty()) && (!rough_groups.back().empty())
             && HasRankInteractionOnDeviceSet(rough_groups.back().back()->device_set(),
                                              request->device_set())) {
           rough_groups.emplace_back(std::vector<const RequestDesc*>());
