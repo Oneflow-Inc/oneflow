@@ -106,7 +106,7 @@ def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphM
         if x.target in insert_place:
             with gm.graph.inserting_after(x):
                 y = x.next
-                if isinstance(insert_op_state[x.target], flow.nn.Conv2d) and isinstance(insert_op_state[y.target], flow.nn.BatchNorm2d):
+                if isinstance(insert_op_state[x.target], flow.nn.Conv2d) and y.target in insert_place and isinstance(insert_op_state[y.target], flow.nn.BatchNorm2d):
                     gm.add_submodule(
                         f"{get_current_module_space(x.target)}.conv_bn.{cnt}",
                         QConvBN(
