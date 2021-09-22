@@ -18,6 +18,7 @@ class DistributionKernelState : public user_op::OpKernelState {
   std::shared_ptr<one::Generator> generator_;
 };
 
+// FIXME: refine warning message
 #define CHECK_OUT_OF_BOUNDS(var, name, min, max, dtype) \
   CHECK_EQ(var >= min && var <= max, true) << name << " is out of bounds for " << dtype; \
 
@@ -30,7 +31,6 @@ class DistributionKernelState : public user_op::OpKernelState {
 
 template<typename scalar_t>
 void check_from_to_in_range(int64_t from, int64_t to_inc) {
-  // FIXME: IsIntegral type doesn't include usigned integer type
   if (IsFloating<scalar_t>::value) {
     const auto min = static_cast<double>(std::numeric_limits<scalar_t>::lowest());
     const auto max = static_cast<double>(std::numeric_limits<scalar_t>::max());
@@ -40,7 +40,7 @@ void check_from_to_in_range(int64_t from, int64_t to_inc) {
     constexpr auto digits = std::numeric_limits<scalar_t>::digits;
     WARN_OUT_OF_BOUNDS(from, "from", digits, GetDataType<scalar_t>::value);
     WARN_OUT_OF_BOUNDS(to_inc, "to - 1", digits, GetDataType<scalar_t>::value);
-  } else if (IsIntegral<scalar_t>::value) {
+  } else if (IsIntegral<scalar_t>::value || IsUnsignedIntegral<scalar_t>::value) {
     const auto min = static_cast<int64_t>(std::numeric_limits<scalar_t>::lowest());
     const auto max = static_cast<int64_t>(std::numeric_limits<scalar_t>::max());
     CHECK_OUT_OF_BOUNDS(from, "from", min, max, GetDataType<scalar_t>::value);

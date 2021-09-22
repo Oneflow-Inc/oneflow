@@ -92,7 +92,6 @@ class UniformIntKernel final : public user_op::OpKernel {
         CHECK_LE(from, to) << "uniform kernel expects 'low' casted to dtype to be less than 'high'"
           " casted to dtype, but got from=" << from << " >= to=", to;
     }
-    // FIXME: uint type is not 
     check_from_to_in_range<T>(from, to - 1);
     // LOG(WARNING) << "updated from :" << from << " to:" << to;
     int64_t elem_cnt = out->shape().elem_cnt();
