@@ -567,7 +567,7 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
             assert isinstance(other, np.ndarray)
             _copy_from_numpy_to_eager_local_tensor(self, other)
         else:
-            flow._C.assign_local_tensor(self, other)
+            flow._C.assign_local_tensor(self, other.to(device=self.device))
 
 
 def _get_device(self):
