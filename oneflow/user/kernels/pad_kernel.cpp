@@ -173,7 +173,7 @@ class PadGradKernel final : public user_op::OpKernel, public user_op::CudaGraphS
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    if(dy->shape().NumAxes()>0 && dy->shape().elem_cnt()==0 || dx->shape().NumAxes()>0 && dx->shape().elem_cnt()==0){
+    if((dy->shape().NumAxes()>0 && dy->shape().elem_cnt()==0) || (dx->shape().NumAxes()>0 && dx->shape().elem_cnt()==0)){
       // if input/output is 0-shape tensor, than do nothing and return
       return;
     }
