@@ -563,44 +563,25 @@ std::shared_ptr<const CollectiveBoxingExecutorPlanToken> CollectiveBoxingExecuto
     std::vector<const RequestDesc*> requests;
     for (const auto& request : request_set.request()) { requests.push_back(&request); }
     SortRequestsByOrder(&requests);
-    std::vector<std::vector<const RequestDesc*>> local_requests_vec;
-    std::vector<const RequestDesc*> local_requests;
+    std::vector<std::vector<const RequestDesc*>> rough_groups;
     for (const auto* request : requests) {
       if (HasDeviceOnThisMachine(request->device_set())) {
-        local_requests.push_back(request);
-      } else {
-        if (local_requests.size() != 0
-            && HasRankInteractionOnDeviceSet(local_requests.back()->device_set(),
-                                             request->device_set())) {
-          local_requests_vec.push_back(local_requests);
-          local_requests.clear();
-        }
-      }
-    }
-    if (local_requests.size() != 0) {
-      local_requests_vec.push_back(local_requests);
-      local_requests.clear();
-    }
-    for (int32_t i = 0; i < local_requests_vec.size(); ++i) {
-      CHECK(std::adjacent_find(local_requests_vec.at(i).begin(), local_requests_vec.at(i).end(),
-                               [](const RequestDesc* a, const RequestDesc* b) {
-                                 return a->dependency_depth() > b->dependency_depth();
-                               })
-            == local_requests_vec.at(i).end());
-    }
-
-    std::vector<std::vector<const RequestDesc*>> rough_groups;
-    for (int32_t i = 0; i < local_requests_vec.size(); ++i) {
-      const auto& local_requests = local_requests_vec.at(i);
-      for (int32_t j = 0; j < local_requests.size(); ++j) {
-        const auto* request = local_requests.at(j);
-        if ((j == 0) || (!collective_boxing_conf.enable_fusion()) || rough_groups.empty()
-            || request->dependency_depth() != rough_groups.back().front()->dependency_depth()
-            || request->op_desc().backend() != rough_groups.back().front()->op_desc().backend()
-            || request->device_set() != rough_groups.back().front()->device_set()) {
+        if ((!collective_boxing_conf.enable_fusion()) || rough_groups.empty()
+            || (!rough_groups.back().empty()
+                && (request->dependency_depth() != rough_groups.back().front()->dependency_depth()
+                    || request->op_desc().backend()
+                           != rough_groups.back().front()->op_desc().backend()
+                    || request->device_set() != rough_groups.back().front()->device_set()))) {
+          CHECK_GT(request->dependency_depth(), rough_groups.back().front()->dependency_depth());
           rough_groups.emplace_back(std::vector<const RequestDesc*>({request}));
         } else {
           rough_groups.back().push_back(request);
+        }
+      } else {
+        if (rough_groups.back().size() != 0
+            && HasRankInteractionOnDeviceSet(rough_groups.back().back()->device_set(),
+                                             request->device_set())) {
+          rough_groups.emplace_back(std::vector<const RequestDesc*>());
         }
       }
     }
