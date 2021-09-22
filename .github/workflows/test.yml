@@ -399,7 +399,7 @@ jobs:
         env:
           ONEFLOW_BIN_PATH: ${{ steps.download-digest.outputs.entry-dir }}/bin
         run: |
-          docker pull ${{ env.EXTRA_DOCKER_ARGS }}
+          docker pull ${{ env.TEST_IMG_TAG }}
           docker run -d --rm --privileged --network host --shm-size=8g \
             --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
             --runtime=nvidia \
