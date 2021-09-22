@@ -397,16 +397,15 @@ class NllLossFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight, const int64_t& ignore_index,
-                           const Optional<std::string>& reduction) const {
+                           const std::string& reduction) const {
     const auto& input_shape = input->shape();
     const auto& target_shape = target->shape();
     CHECK_LE_OR_RETURN(input_shape->NumAxes(), 5);
     CHECK_EQ_OR_RETURN(input_shape->NumAxes() - 1, target_shape->NumAxes());
 
-    std::string reduction_v = reduction ? *JUST(reduction) : "none";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
-    JUST(attrs.SetAttr<std::string>("reduction", reduction_v));
+    JUST(attrs.SetAttr<std::string>("reduction", reduction));
 
     std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
     input_perm[input_perm.size() - 1] = 1;
@@ -423,7 +422,7 @@ class NllLossFunctor {
     } else {
       result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input_, target_}, attrs));
     }
-    if (reduction_v == "none") { result = JUST(functional::Reshape(result, *target_shape)); }
+    if (reduction == "none") { result = JUST(functional::Reshape(result, *target_shape)); }
     return result;
   }
 
@@ -450,10 +449,9 @@ class BinaryCrossEntropyLossFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight,
-                           const Optional<std::string>& reduction) const {
-    std::string reduction_v = reduction ? *JUST(reduction) : "none";
+                           const std::string& reduction) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("reduction", reduction_v));
+    JUST(attrs.SetAttr<std::string>("reduction", reduction));
     if (weight) {
       return OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input, target, JUST(weight)}, attrs);
     }
@@ -496,10 +494,9 @@ class BinaryCrossEntropyWithLogitsLossFunctor {
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight,
                            const Optional<one::Tensor>& pos_weight,
-                           const Optional<std::string>& reduction) const {
-    std::string reduction_v = reduction ? *JUST(reduction) : "none";
+                           const std::string& reduction) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("reduction", reduction_v));
+    JUST(attrs.SetAttr<std::string>("reduction", reduction));
     JUST(attrs.SetAttr<bool>("has_pos_weight", pos_weight.has_value()));
     if (weight) {
       if (pos_weight) {

@@ -108,7 +108,7 @@ REGISTER_USER_OP("binary_cross_entropy_with_logits")
     .Attr<bool>("has_pos_weight")
     .Attr<std::string>("reduction")
     .SetTensorDescInferFn(InferTensorDescFn)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+    .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* target_modifier = GetInputArgModifierFn("target", 0);
       CHECK_OR_RETURN(target_modifier != nullptr);
@@ -152,7 +152,7 @@ REGISTER_USER_OP("binary_cross_entropy_with_logits_grad")
 
 REGISTER_USER_OP_GRAD("binary_cross_entropy_with_logits")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("input", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         builder.Op("binary_cross_entropy_with_logits_grad")

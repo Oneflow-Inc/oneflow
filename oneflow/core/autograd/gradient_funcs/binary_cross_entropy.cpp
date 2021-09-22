@@ -14,14 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
 
 struct BinaryCrossEntropyCaptureState : public AutoGradCaptureState {
-  std::string reduction;
+  std::string reduction = "";
 };
 
 class BinaryCrossEntropy : public OpExprGradFunction<BinaryCrossEntropyCaptureState> {
@@ -34,28 +33,12 @@ class BinaryCrossEntropy : public OpExprGradFunction<BinaryCrossEntropyCaptureSt
 
  private:
   AttrMap base_attrs_;
-  std::shared_ptr<OpExpr> grad_op_;
-  std::shared_ptr<OpExpr> grad_op_weight_;
 };
 
 Maybe<void> BinaryCrossEntropy::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  const std::string& op_name = fw_op_expr->op_name();
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  grad_op_ = JUST(one::OpBuilder("binary_cross_entropy_grad", GradientOpName(op_name))
-                      .Input("input")
-                      .Input("target")
-                      .Input("dy")
-                      .Output("dx")
-                      .Build());
-  grad_op_weight_ = JUST(one::OpBuilder("binary_cross_entropy_grad", GradientOpName(op_name))
-                             .Input("input")
-                             .Input("target")
-                             .Input("weight")
-                             .Input("dy")
-                             .Output("dx")
-                             .Build());
   return Maybe<void>::Ok();
 }
 Maybe<void> BinaryCrossEntropy::Capture(BinaryCrossEntropyCaptureState* ctx,
@@ -76,15 +59,15 @@ Maybe<void> BinaryCrossEntropy::Apply(const BinaryCrossEntropyCaptureState* ctx,
   const auto& dy = out_grads.at(0);
   const auto& input = ctx->SavedTensors().at(0);
   const auto& target = ctx->SavedTensors().at(1);
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<std::string>("reduction", ctx->reduction));
   in_grads->resize(ctx->SavedTensors().size());
+
   if (ctx->SavedTensors().size() == 3) {
     const auto& weight = ctx->SavedTensors().at(2);
     in_grads->at(0) =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_weight_, {input, target, weight, dy}, attrs));
+        JUST(functional::BinaryCrossEntropyLossGrad(dy, input, target, weight, ctx->reduction));
   } else {
-    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {input, target, dy}, attrs));
+    in_grads->at(0) =
+        JUST(functional::BinaryCrossEntropyLossGrad(dy, input, target, NullOpt, ctx->reduction));
   }
   return Maybe<void>::Ok();
 }

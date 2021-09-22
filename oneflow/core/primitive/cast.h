@@ -35,7 +35,7 @@ class CastFactory : public Factory<Cast> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CastFactory);
   CastFactory() = default;
-  virtual ~CastFactory() = default;
+  ~CastFactory() override = default;
 
   virtual std::unique_ptr<Cast> New(DataType from, DataType to) = 0;
 };

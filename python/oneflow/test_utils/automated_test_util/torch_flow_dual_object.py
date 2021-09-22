@@ -58,6 +58,18 @@ class PyTorchDoesNotSupportError(Exception):
         return f"PyTorch error: {str(self.exc)}"
 
 
+class BothDoNotSupportError(Exception):
+    def __init__(self, th_exc, of_exc):
+        self.th_exc = th_exc
+        self.of_exc = of_exc
+
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        return f"PyTorch error: {str(self.th_exc)}\nOneFlow error: {str(self.of_exc)}"
+
+
 call_pytorch = None
 
 
@@ -234,6 +246,13 @@ def GetDualObject(name, pytorch, oneflow):
                                     call_tensor_id.append(id(pytorch_res))
 
                         except Exception as e:
+                            try:
+                                oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
+                            except Exception as ee:
+                                raise BothDoNotSupportError(e, ee)
+                            print(
+                                "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
+                            )
                             raise PyTorchDoesNotSupportError(e)
 
                         if name in postulate:
@@ -261,6 +280,15 @@ def GetDualObject(name, pytorch, oneflow):
                             if isinstance(pytorch_res, torch_original.Tensor):
                                 call_tensor_id.append(id(pytorch_res))
                         except Exception as e:
+                            try:
+                                oneflow_res = oneflow_method(
+                                    *oneflow_args, **oneflow_kwargs
+                                )
+                            except Exception as ee:
+                                raise BothDoNotSupportError(e, ee)
+                            print(
+                                "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
+                            )
                             raise PyTorchDoesNotSupportError(e)
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
                         return GetDualObject("unused", pytorch_res, oneflow_res)
@@ -275,12 +303,12 @@ def GetDualObject(name, pytorch, oneflow):
 def note_print_args(x, end=True):
     if end:
         if isinstance(x, str) and "Tensor" not in x:
-            print(f"\033[32m'{x}, '\033[0m", end="")
+            print(f"\033[32m{x}, \033[0m", end="")
         else:
             print(f"\033[32m{x}, \033[0m", end="")
     else:
         if isinstance(x, str) and "Tensor" not in x:
-            print(f"\033[32m'{x}'\033[0m", end="")
+            print(f"\033[32m{x}\033[0m", end="")
         else:
             print(f"\033[32m{x}\033[0m", end="")
 
@@ -288,12 +316,12 @@ def note_print_args(x, end=True):
 def note_print_kwargs(x, y, end=True):
     if end:
         if isinstance(y, str) and "Tensor" not in y:
-            print(f"\033[32m{x}='{y}, '\033[0m", end="")
+            print(f"\033[32m{x}={y}, \033[0m", end="")
         else:
             print(f"\033[32m{x}={y}, \033[0m", end="")
     else:
         if isinstance(y, str) and "Tensor" not in y:
-            print(f"\033[32m{x}='{y}'\033[0m", end="")
+            print(f"\033[32m{x}={y}\033[0m", end="")
         else:
             print(f"\033[32m{x}={y}\033[0m", end="")
 
@@ -547,7 +575,8 @@ def random_pytorch_tensor(
         .requires_grad_(requires_grad and dtype != int)
     )
     flow_tensor = flow.tensor(
-        pytorch_tensor.detach().cpu().numpy(), requires_grad=requires_grad
+        pytorch_tensor.detach().cpu().numpy(),
+        requires_grad=(requires_grad and dtype != int),
     )
     return GetDualObject("unused", pytorch_tensor, flow_tensor)
 

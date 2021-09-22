@@ -98,16 +98,31 @@
   bind_python: true
 
 - name: "logical_and"
-  signature: ["Tensor (Tensor input, Tensor other) => BroadcastLogicalAnd"]
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => BroadcastLogicalAnd", 
+      "Tensor (Tensor input, Scalar other) => ScalarLogicalAnd",
+      "Tensor (Scalar input, Tensor other) => ScalarLogicalAnd",
+    ]
   bind_python: true
 
 - name: "logical_or"
-  signature: ["Tensor (Tensor input, Tensor other) => BroadcastLogicalOr"]
-  bind_python: True
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => BroadcastLogicalOr", 
+      "Tensor (Tensor input, Scalar other) => ScalarLogicalOr",
+      "Tensor (Scalar input, Tensor other) => ScalarLogicalOr",
+    ]
+  bind_python: true
 
 - name: "logical_xor"
-  signature: ["Tensor (Tensor input, Tensor other) => BroadcastLogicalXor"]
-  bind_python: True
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => BroadcastLogicalXor", 
+      "Tensor (Tensor input, Scalar other) => ScalarLogicalXor",
+      "Tensor (Scalar input, Tensor other) => ScalarLogicalXor",
+    ]
+  bind_python: true
 
 - name: "less"
   signature:
@@ -522,15 +537,27 @@
   bind_python: True
 
 - name: "nll_loss"
-  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction=None) => NllLoss"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction) => NllLoss"
   bind_python: True
+
+- name: "nll_loss_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor total_target, Int64 ignore_index, String reduction) => NllLossGrad"
+  bind_python: False
 
 - name: "binary_cross_entropy_loss"
-  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, String reduction=None) => BinaryCrossEntropyLoss"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, String reduction) => BinaryCrossEntropyLoss"
   bind_python: True
 
+- name: "binary_cross_entropy_loss_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, String reduction) => BinaryCrossEntropyLossGrad"
+  bind_python: False
+
 - name: "binary_cross_entropy_with_logits_loss"
-  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None, String reduction=None) => BinaryCrossEntropyWithLogitsLoss"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None, String reduction) => BinaryCrossEntropyWithLogitsLoss"
+  bind_python: True
+
+- name: "binary_cross_entropy_with_logits_loss_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None, String reduction) => BinaryCrossEntropyWithLogitsLossGrad"
   bind_python: True
 
 - name: "sparse_softmax_cross_entropy"
@@ -1077,6 +1104,10 @@
 - name: "local_all_reduce"
   signature: "Tensor (Tensor x) => LocalAllReduce"
   bind_python: True
+
+- name: "eager_s_to_b"
+  signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList in_sbp, Shape shape) => EagerSToB"
+  bind_python: False
 
 - name: "eager_naive_s_to_s"
   signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList in_sbp, SbpList out_sbp, Shape shape) => EagerNaiveSToS"

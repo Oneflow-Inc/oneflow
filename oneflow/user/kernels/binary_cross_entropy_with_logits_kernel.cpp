@@ -46,17 +46,18 @@ void ComputeBinaryCrossEntropyWithLogitsOut(int64_t elem_cnt, const T* input, co
     CHECK_LE(input_val, 1.0);
     CHECK_GE(input_val, 0.0);
     T max_val = ComputeMaxVal(input_val);
-    if (pos_weight_processed == nullptr) {
-      out[i] = (1 - target_val) * input_val + max_val
-               + (std::log(std::exp(-max_val) + std::exp(-input_val - max_val)));
-    } else {
-      T pos_weight_processed_val = pos_weight_processed[i] - target_val + 1;
-      out[i] = (1 - target_val) * input_val
-               + (pos_weight_processed_val
-                  * (std::log(std::exp(-max_val) + std::exp(-input_val - max_val)) + max_val));
+    if (out != nullptr) {
+      if (pos_weight_processed == nullptr) {
+        out[i] = (1 - target_val) * input_val + max_val
+                 + (std::log(std::exp(-max_val) + std::exp(-input_val - max_val)));
+      } else {
+        T pos_weight_processed_val = pos_weight_processed[i] - target_val + 1;
+        out[i] = (1 - target_val) * input_val
+                 + (pos_weight_processed_val
+                    * (std::log(std::exp(-max_val) + std::exp(-input_val - max_val)) + max_val));
+      }
     }
-
-    if (weight != nullptr) { out[i] *= weight[i]; }
+    if (weight != nullptr && out != nullptr) { out[i] *= weight[i]; }
   }
 }
 template<typename T>
