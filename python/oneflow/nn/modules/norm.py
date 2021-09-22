@@ -78,30 +78,11 @@ class Vector_Norm(Module):
 class Matrix_Norm(Module):
     def __init__(self, ord="fro", dim=(-2, -1), keepdim=False) -> None:
         super().__init__()
-        if isinstance(ord, str):
-            assert ord in ["fro", "nuc"], "{} are not supported in matrix norm".format(
-                ord
-            )
-            self.ord = ord
-        elif isinstance(ord, float):
-            assert ord in [
-                float("inf"),
-                float("-inf"),
-            ], "{} are not supported in matrix norm".format(ord)
-            self.ord = ord
-        elif isinstance(ord, int):
-            assert ord in [1, -1, 2, -2], "{} are not supported in matrix norm".format(
-                ord
-            )
-            self.ord = ord
-        elif ord == None:
+        if ord == None:
             self.ord = "fro"
         else:
-            raise TypeError(
-                "linalg_matrix_norm(): argument 'ord' must be Number, not {}".format(
-                    type(ord)
-                )
-            )
+            self.ord = ord
+            
         if isinstance(dim, tuple) and len(dim) == 2 and (dim[0] != dim[1]):
             self.dim = dim
         else:

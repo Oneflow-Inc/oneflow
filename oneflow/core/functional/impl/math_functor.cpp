@@ -472,7 +472,7 @@ class VectorNormFunctor {
     
     std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
     std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-
+    /*
     if(input_dim.empty())
     {
       dim = input_dim;
@@ -489,6 +489,7 @@ class VectorNormFunctor {
         CHECK_OR_RETURN(dim[i] >= num_dims || dim[i] < 0) << "Dimension out of range";
       }
     }//check_dim()
+    */
 
     //vector_norm
     const DType obj(kInt32);
@@ -522,7 +523,7 @@ class VectorNormFunctor {
       else
       {
         // `sum(abs(x)^{ord})^{(1 / ord)}`
-        rd = JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord)), dim, keepdim)), 1.0 / ord));
+        rd = JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord)), input_dim, keepdim)), 1.0 / ord));
       }
     }
     return rd;    

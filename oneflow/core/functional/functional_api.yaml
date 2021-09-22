@@ -937,7 +937,8 @@
   bind_python: True
 
 - name: "clamp"
-  signature:"Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clamp"
+  signature:
+    ["Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clamp"]
   bind_python: true
 
 - name: "clamp_grad"
@@ -945,15 +946,15 @@
   bind_python: False
 
 - name: "vector_norm"
-  signature: "Tensor (Tensor input, Scalar ord=2, Int64List dim=None, Bool keepdim=False) => VectorNorm"
+  signature: "Tensor (Tensor input, Scalar ord=2, Int32List dim=None, Bool keepdim=False) => VectorNorm"
   bind_python: true
 
 - name: "matrix_norm"
   signature: 
-  [
-    "Tensor (Tensor input, Scalar ord, Int64List dim=(-2, -1), Bool keepdim=False) => MatrixNorm",
-    "Tensor (Tensor input, String ord="fro", Int64List dim=(-2, -1), Bool keepdim=False) => MatrixNorm2",
-  ]
+    [
+      "Tensor (Tensor input, Scalar ord, Int32List dim=(-2, -1), Bool keepdim=False) => MatrixNorm",
+      "Tensor (Tensor input, String ord, Int32List dim=(-2, -1), Bool keepdim=False) => MatrixNorm2",
+    ]
   bind_python: true
 
 - name: "dropout"
