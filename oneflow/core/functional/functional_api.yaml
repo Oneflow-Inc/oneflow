@@ -98,16 +98,31 @@
   bind_python: true
 
 - name: "logical_and"
-  signature: ["Tensor (Tensor input, Tensor other) => BroadcastLogicalAnd"]
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => BroadcastLogicalAnd", 
+      "Tensor (Tensor input, Scalar other) => ScalarLogicalAnd",
+      "Tensor (Scalar input, Tensor other) => ScalarLogicalAnd",
+    ]
   bind_python: true
 
 - name: "logical_or"
-  signature: ["Tensor (Tensor input, Tensor other) => BroadcastLogicalOr"]
-  bind_python: True
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => BroadcastLogicalOr", 
+      "Tensor (Tensor input, Scalar other) => ScalarLogicalOr",
+      "Tensor (Scalar input, Tensor other) => ScalarLogicalOr",
+    ]
+  bind_python: true
 
 - name: "logical_xor"
-  signature: ["Tensor (Tensor input, Tensor other) => BroadcastLogicalXor"]
-  bind_python: True
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => BroadcastLogicalXor", 
+      "Tensor (Tensor input, Scalar other) => ScalarLogicalXor",
+      "Tensor (Scalar input, Tensor other) => ScalarLogicalXor",
+    ]
+  bind_python: true
 
 - name: "less"
   signature:
@@ -1069,6 +1084,10 @@
 - name: "local_all_reduce"
   signature: "Tensor (Tensor x) => LocalAllReduce"
   bind_python: True
+
+- name: "eager_s_to_b"
+  signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList in_sbp, Shape shape) => EagerSToB"
+  bind_python: False
 
 - name: "eager_naive_s_to_s"
   signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList in_sbp, SbpList out_sbp, Shape shape) => EagerNaiveSToS"
