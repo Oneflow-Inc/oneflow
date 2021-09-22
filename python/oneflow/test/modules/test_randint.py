@@ -54,15 +54,6 @@ def _test_different_dtype(test_case, device, shape, low, high):
         test_case.assertTrue(y.shape == shape)
 
 
-def _test_backward(test_case, device, shape, low, high):
-    x = flow.randint(low, high, shape, device=flow.device(device), requires_grad=True)
-    y = x.sum()
-    y.backward()
-    test_case.assertTrue(
-        np.allclose(np.ones(shape), x.grad.numpy(), atol=1e-4, rtol=1e-4)
-    )
-
-
 def _test_with_generator(test_case, device, shape, low, high):
     gen = flow.Generator()
     gen.manual_seed(0)
@@ -117,7 +108,6 @@ class TestRandint(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_randint,
             _test_different_dtype,
-            _test_backward,
             _test_with_generator,
         ]
         arg_dict["device"] = ["cpu", "cuda"]

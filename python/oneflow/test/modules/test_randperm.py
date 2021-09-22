@@ -80,7 +80,6 @@ class Testrandperm(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_functions"] = [
             _test_randperm_with_generator,
-            _test_randperm_backward,
             _test_randperm_randomness,
         ]
         arg_dict["N"] = [i for i in range(10, 100, 5)]
@@ -93,6 +92,17 @@ class Testrandperm(flow.unittest.TestCase):
             flow.float32,
             flow.float64,
         ]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+    def test_randperm_backward(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_functions"] = [
+            _test_randperm_backward,
+        ]
+        arg_dict["N"] = [i for i in range(10, 100, 5)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["dtype"] = [flow.float32, flow.float64]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
