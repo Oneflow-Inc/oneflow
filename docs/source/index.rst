@@ -23,6 +23,9 @@ OneFlow API Reference
     utils
     cuda
     distributed
+    comm
+    placement
+    sbp
 
 
 

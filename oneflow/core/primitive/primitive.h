@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/stream/stream_context.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/common/device_type.h"
+#include "oneflow/core/framework/to_string.h"
 
 namespace oneflow {
 
@@ -47,7 +48,14 @@ static std::unique_ptr<typename FactoryType::PrimitiveType> NewPrimitive(DeviceT
                                                                          Args&&... args) {
   std::unique_ptr<FactoryType> factory = NewObjUniquePtr<DeviceType, FactoryType>(device_type);
   if (!factory) { return nullptr; }
-  return factory->New(std::forward<Args...>(args)...);
+  return factory->New(std::forward<Args>(args)...);
+}
+
+template<typename FactoryType, typename... Args>
+static std::unique_ptr<typename FactoryType::PrimitiveType> NewPrimitive(
+    const std::string& device_tag, Args&&... args) {
+  const DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(device_tag));
+  return NewPrimitive<FactoryType, Args...>(device_type, std::forward<Args>(args)...);
 }
 
 #define REGISTER_PRIMITIVE_FACTORY(device, Base, Derived) \

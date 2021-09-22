@@ -211,7 +211,7 @@ jobs:
       - name: Download conda environment.yml # TODO: remove this step if migrated to generated matrix
         if: matrix.test_suite == 'cpu-clang'
         run: |
-          wget https://raw.githubusercontent.com/Oneflow-Inc/conda-env/9cd37571cbd6cc6a81fc87faa7f6a43be772ae31/dev/clang10/environment-v2.yml -O environment.yml
+          wget https://raw.githubusercontent.com/Oneflow-Inc/conda-env/30a7f00eb48ee9009d85a848e720823e5054c66b/dev/clang10/environment-v2.yml -O environment.yml
       - name: Update Conda env
         if: matrix.test_suite == 'cpu-clang'
         run: |
@@ -500,6 +500,35 @@ jobs:
         run: |
           wget ${{ env.image_url }}
           docker load -i $(basename "${{ env.image_url }}")
+      - name: Checkout Oneflow-Inc/models
+        if: matrix.test_suite == 'cuda_new_interface'
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/models
+          ref: 7a6845f7d7133c02a01a75b9ca525e6c40e99639
+          path: oneflow-models
+      - name: Speed test
+        id: speed
+        if: matrix.test_suite == 'cuda_new_interface'
+        continue-on-error: true
+        run: |
+          docker run \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
+            -e ONEFLOW_MODELS_DIR=$PWD/oneflow-models \
+            ${{ env.image_tag }} \
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/test_speed_multi_client.sh"
+      - name: Post speed stats
+        if: matrix.test_suite == 'cuda_new_interface'
+        continue-on-error: true
+        uses: actions/github-script@v4
+        with:
+          script: |
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: "<details>\n <summary>Speed stats:</summary>\n\n ``` \n${{ steps.speed.outputs.stats }}\n ``` \n\n</details>".replace(/\\n/g, '\n')
+            })
       - name: Module API test
         timeout-minutes: 45
         if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
@@ -569,34 +598,6 @@ jobs:
             -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/graph \
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test_multi_client.sh"
-      - name: Checkout Oneflow-Inc/models
-        if: matrix.test_suite == 'cuda_new_interface'
-        uses: actions/checkout@v2
-        with:
-          repository: Oneflow-Inc/models
-          ref: 7a6845f7d7133c02a01a75b9ca525e6c40e99639
-          path: oneflow-models
-      - name: Speed test
-        id: speed
-        if: matrix.test_suite == 'cuda_new_interface'
-        run: |
-          docker run \
-            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
-            -e ONEFLOW_MODELS_DIR=$PWD/oneflow-models \
-            ${{ env.image_tag }} \
-            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/test_speed_multi_client.sh"
-      - name: Post speed stats
-        if: matrix.test_suite == 'cuda_new_interface'
-        continue-on-error: true
-        uses: actions/github-script@v4
-        with:
-          script: |
-            github.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: "<details>\n <summary>Speed stats:</summary>\n\n ``` \n${{ steps.speed.outputs.stats }}\n ``` \n\n</details>".replace(/\\n/g, '\n')
-            })
       - name: Single client op test
         timeout-minutes: 45
         if: contains(fromJson('["cuda_op", "cpu"]'), matrix.test_suite) && needs.changed_files.outputs.should_run_single_client_tests == '1'

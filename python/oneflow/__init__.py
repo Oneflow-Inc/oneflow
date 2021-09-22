@@ -73,6 +73,9 @@ from oneflow._C import greater
 from oneflow._C import greater as gt
 from oneflow._C import greater_equal
 from oneflow._C import greater_equal as ge
+from oneflow._C import logical_and
+from oneflow._C import logical_or
+from oneflow._C import logical_xor
 from oneflow._C import gelu
 from oneflow._C import mish
 from oneflow._C import sigmoid
@@ -118,6 +121,7 @@ from oneflow._C import round
 from oneflow._C import softplus
 from oneflow._C import tril
 from oneflow._C import triu
+from oneflow._C import pad
 
 from . import sbp
 import atexit
@@ -205,7 +209,7 @@ del atexit
 del oneflow
 
 import oneflow._C
-from oneflow._C import tensor
+from oneflow._C import tensor, batch_gather
 
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image

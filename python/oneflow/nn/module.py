@@ -466,20 +466,32 @@ class Module(object):
     def _apply(self, fn):
         for module in self.children():
             module._apply(fn)
+
+        def can_use_assign_copy(tensor, tensor_applied):
+            return tensor.is_local == tensor_applied.is_local
+
         for (key, param) in self._parameters.items():
-            if param is not None:
-                assert isinstance(param, Parameter)
-                assert param.is_leaf
+            if param is None:
+                continue
+
+            assert isinstance(param, Parameter)
+            assert param.is_leaf
+            with flow.no_grad():
+                param_applied = fn(param)
+            param_applied.requires_grad = param.requires_grad
+
+            if param.grad is not None:
+                assert param.grad.is_leaf
                 with flow.no_grad():
-                    param_applied = fn(param)
+                    grad_applied = fn(param.grad)
+                grad_applied.requires_grad = param.grad.requires_grad
+                param_applied.grad = grad_applied
+
+            if can_use_assign_copy(param_applied, param):
+                self._parameters[key].data = param_applied
+            else:
                 self._parameters[key] = Parameter(param_applied, param.requires_grad)
-                if param.grad is not None:
-                    assert param.grad.is_leaf
-                    with flow.no_grad():
-                        grad_applied = fn(param.grad)
-                    self._parameters[key].grad = grad_applied.requires_grad_(
-                        param.grad.requires_grad
-                    )
+
         for (key, buf) in self._buffers.items():
             if buf is not None:
                 self._buffers[key] = fn(buf)
