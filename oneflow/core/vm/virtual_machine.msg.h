@@ -36,8 +36,7 @@ struct VmDesc;
 // clang-format off
 OBJECT_MSG_BEGIN(VirtualMachine);
   // methods
-  OF_PUBLIC void __Init__(const VmDesc& vm_desc) { __Init__(vm_desc, mut_allocator()); }
-  OF_PUBLIC void __Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator);
+  OF_PUBLIC void __Init__(const VmDesc& vm_desc);
   OF_PUBLIC Maybe<void> Receive(InstructionMsgList* instr_list);
   OF_PUBLIC Maybe<void> Receive(ObjectMsgPtr<InstructionMsg>&& instruction_msg);
   OF_PUBLIC void Schedule();
@@ -57,7 +56,6 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   OBJECT_MSG_DEFINE_OPTIONAL(VmResourceDesc, vm_resource_desc);
   OBJECT_MSG_DEFINE_STRUCT(Range, machine_id_range);
   OBJECT_MSG_DEFINE_STRUCT(std::atomic<int64_t>, flying_instruction_cnt);
-  OBJECT_MSG_DEFINE_PTR(ObjectMsgAllocator, vm_thread_only_allocator);
 
   // heads
   OBJECT_MSG_DEFINE_LIST_HEAD(Stream, active_stream_link, active_stream_list);
