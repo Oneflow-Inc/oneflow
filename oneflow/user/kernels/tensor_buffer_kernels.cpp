@@ -45,7 +45,7 @@ class TensorBufferToTensorKernel final : public user_op::OpKernel {
     const int64_t instance_size = instance_shape.elem_cnt() * GetSizeOfDataType(data_type);
     const auto* in_ptr = in->dptr<TensorBuffer>();
     auto* out_ptr = out->mut_dptr<char>();
-    MultiThreadLoop(in_shape.elem_cnt(), [&](size_t i) {
+    MultiThreadLoop<std::function<void(size_t)>>(in_shape.elem_cnt(), [&](size_t i) {
       const TensorBuffer* tensor_buffer = in_ptr + i;
       CHECK_EQ(tensor_buffer->nbytes(), instance_size);
       CHECK_EQ(tensor_buffer->data_type(), data_type);
@@ -88,13 +88,14 @@ class TensorToTensorBufferKernel final : public user_op::OpKernel {
     const int64_t instance_size = instance_shape.elem_cnt() * GetSizeOfDataType(data_type);
     const auto* in_ptr = in->dptr<char>();
     auto* out_ptr = out->mut_dptr<TensorBuffer>();
-    MultiThreadLoop(in_shape.Count(0, in_shape.NumAxes() - instance_dims), [&](size_t i) {
-      TensorBuffer* tensor_buffer = out_ptr + i;
-      tensor_buffer->Resize(instance_shape, data_type);
-      CHECK_EQ(tensor_buffer->nbytes(), instance_size);
-      Memcpy<DeviceType::kCPU>(ctx->device_ctx(), tensor_buffer->mut_data(),
-                               in_ptr + i * instance_size, instance_size);
-    });
+    MultiThreadLoop<std::function<void(size_t)>>(
+        in_shape.Count(0, in_shape.NumAxes() - instance_dims), [&](size_t i) {
+          TensorBuffer* tensor_buffer = out_ptr + i;
+          tensor_buffer->Resize(instance_shape, data_type);
+          CHECK_EQ(tensor_buffer->nbytes(), instance_size);
+          Memcpy<DeviceType::kCPU>(ctx->device_ctx(), tensor_buffer->mut_data(),
+                                   in_ptr + i * instance_size, instance_size);
+        });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -118,7 +119,7 @@ class GenTensorBuffer final : public user_op::OpKernel {
     const std::vector<float>& value_list = ctx->Attr<std::vector<float>>("value_list");
     CHECK_EQ(num_tensor_buffers, shape_list.size());
     CHECK_EQ(num_tensor_buffers, value_list.size());
-    MultiThreadLoop(num_tensor_buffers, [&](size_t i) {
+    MultiThreadLoop<std::function<void(size_t)>>(num_tensor_buffers, [&](size_t i) {
       TensorBuffer* tensor_buffer = out->mut_dptr<TensorBuffer>() + i;
       const Shape& shape = shape_list.at(i);
       tensor_buffer->Resize(shape, GetDataType<T>::value);
@@ -156,7 +157,7 @@ class TensorBufferToListOfTensors final : public user_op::OpKernel {
     CHECK(IsPODDataType(out_dtype));
     const bool dynamic_out = ctx->Attr<bool>("dynamic_out");
     const auto* in_ptr = in->dptr<TensorBuffer>();
-    MultiThreadLoop(in->shape().elem_cnt(), [&](size_t i) {
+    MultiThreadLoop<std::function<void(size_t)>>(in->shape().elem_cnt(), [&](size_t i) {
       const TensorBuffer* tensor_buffer = in_ptr + i;
       user_op::Tensor* out_i = ctx->Tensor4ArgNameAndIndex("out", i);
       CHECK_EQ(out_dtype, tensor_buffer->data_type());
@@ -191,7 +192,7 @@ class TensorBufferToListOfTensorsV2 final : public user_op::OpKernel {
     const std::vector<DataType>& out_dtypes = ctx->Attr<std::vector<DataType>>("out_dtypes");
     const bool dynamic_out = ctx->Attr<bool>("dynamic_out");
     const auto* in_ptr = in->dptr<TensorBuffer>();
-    MultiThreadLoop(in->shape().elem_cnt(), [&](size_t i) {
+    MultiThreadLoop<std::function<void(size_t)>>(in->shape().elem_cnt(), [&](size_t i) {
       CHECK(IsPODDataType(out_dtypes[i]));
       const TensorBuffer* tensor_buffer = in_ptr + i;
       user_op::Tensor* out_i = ctx->Tensor4ArgNameAndIndex("out", i);

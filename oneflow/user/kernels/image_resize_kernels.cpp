@@ -138,7 +138,7 @@ class ImageResizeToFixedSizeKernel final : public user_op::OpKernel {
     CHECK_EQ(scale_tensor->shape().At(0), batch_size);
     CHECK_EQ(scale_tensor->shape().At(1), 2);
 
-    MultiThreadLoop(batch_size, [&](size_t i) {
+    MultiThreadLoop<std::function<void(size_t)>>(batch_size, [&](size_t i) {
       const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
       CHECK_EQ(in_buffer.shape().NumAxes(), 3);
       const int64_t origin_height = in_buffer.shape().At(0);
@@ -202,7 +202,7 @@ class ImageResizeKeepAspectRatioKernel final : public user_op::OpKernel {
     const int32_t max_size = ctx->Attr<int32_t>("max_size");
     const std::string& interp_type = ctx->Attr<std::string>("interpolation_type");
 
-    MultiThreadLoop(num_images, [&](size_t i) {
+    MultiThreadLoop<std::function<void(size_t)>>(num_images, [&](size_t i) {
       ImageTargetResize(in_img_buf[i], out_img_buf + i, resize_longer, target_size, min_size,
                         max_size, interp_type);
       const int64_t org_h = in_img_buf[i].shape().At(0);

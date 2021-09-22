@@ -229,7 +229,7 @@ class ImageFlipKernel final : public user_op::OpKernel {
 
     FlipCode flip_code =
         static_cast<FlipCode>(static_cast<int8_t>(ctx->Attr<int32_t>("flip_code")));
-    MultiThreadLoop(num_images, [&](size_t i) {
+    MultiThreadLoop<std::function<void(size_t)>>(num_images, [&](size_t i) {
       const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
       CHECK_EQ(in_buffer.shape().NumAxes(), 3);
       TensorBuffer* out_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
@@ -258,7 +258,7 @@ class ObjectBboxFlipKernel final : public user_op::OpKernel {
     CHECK_EQ(image_size_tensor->shape().At(0), num_images);
     CHECK_EQ(flip_code_tensor->shape().elem_cnt(), num_images);
 
-    MultiThreadLoop(num_images, [&](size_t i) {
+    MultiThreadLoop<std::function<void(size_t)>>(num_images, [&](size_t i) {
       const TensorBuffer& bbox_buffer = bbox_tensor->dptr<TensorBuffer>()[i];
       CHECK_EQ(bbox_buffer.shape().NumAxes(), 2);
       CHECK_EQ(bbox_buffer.shape().At(1), 4);
@@ -290,7 +290,7 @@ class ObjectBboxScaleKernel final : public user_op::OpKernel {
     CHECK_EQ(scale_tensor->shape().At(0), num_images);
     CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
 
-    MultiThreadLoop(num_images, [&](size_t i) {
+    MultiThreadLoop<std::function<void(size_t)>>(num_images, [&](size_t i) {
       const TensorBuffer& bbox_buffer = bbox_tensor->dptr<TensorBuffer>()[i];
       CHECK_EQ(bbox_buffer.shape().NumAxes(), 2);
       CHECK_EQ(bbox_buffer.shape().At(1), 4);
@@ -322,7 +322,7 @@ class ObjectSegmentationPolygonFlipKernel final : public user_op::OpKernel {
     CHECK_EQ(image_size_tensor->shape().At(0), num_images);
     CHECK_EQ(flip_code_tensor->shape().elem_cnt(), num_images);
 
-    MultiThreadLoop(num_images, [&](size_t i) {
+    MultiThreadLoop<std::function<void(size_t)>>(num_images, [&](size_t i) {
       const TensorBuffer& polygons_buffer = polygon_tensor->dptr<TensorBuffer>()[i];
       CHECK_EQ(polygons_buffer.shape().NumAxes(), 2);
       CHECK_EQ(polygons_buffer.shape().At(1), 2);
@@ -354,7 +354,7 @@ class ObjectSegmentationPolygonScaleKernel final : public user_op::OpKernel {
     CHECK_EQ(scale_tensor->shape().At(0), num_images);
     CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
 
-    MultiThreadLoop(num_images, [&](size_t i) {
+    MultiThreadLoop<std::function<void(size_t)>>(num_images, [&](size_t i) {
       const TensorBuffer& poly_buffer = poly_tensor->dptr<TensorBuffer>()[i];
       CHECK_EQ(poly_buffer.shape().NumAxes(), 2);
       CHECK_EQ(poly_buffer.shape().At(1), 2);
@@ -383,7 +383,7 @@ class ImageNormalize final : public user_op::OpKernel {
     const auto& std_vec = ctx->Attr<std::vector<float>>("std");
     const auto& mean_vec = ctx->Attr<std::vector<float>>("mean");
 
-    MultiThreadLoop(num_images, [&](size_t i) {
+    MultiThreadLoop<std::function<void(size_t)>>(num_images, [&](size_t i) {
       const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
       CHECK_EQ(in_buffer.shape().NumAxes(), 3);
       TensorBuffer* out_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
@@ -413,7 +413,7 @@ class ObjectSegmentationPolygonToMask final : public user_op::OpKernel {
     CHECK_EQ(image_size_tensor->shape().At(0), num_images);
     CHECK_EQ(mask_tensor->shape().elem_cnt(), num_images);
 
-    MultiThreadLoop(num_images, [&](size_t i) {
+    MultiThreadLoop<std::function<void(size_t)>>(num_images, [&](size_t i) {
       const TensorBuffer& poly_buffer = poly_tensor->dptr<TensorBuffer>()[i];
       const TensorBuffer& poly_index_buffer = poly_index_tensor->dptr<TensorBuffer>()[i];
       int32_t image_width = image_size_tensor->dptr<int32_t>()[i * 2 + 0];

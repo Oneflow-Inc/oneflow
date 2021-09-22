@@ -102,7 +102,7 @@ class ImageTargetResizeKernel final : public user_op::OpKernel {
     const int32_t target_size = ctx->Attr<int32_t>("target_size");
     const int32_t max_size = ctx->Attr<int32_t>("max_size");
 
-    MultiThreadLoop(in_tensor->shape().elem_cnt(), [&](size_t i) {
+    MultiThreadLoop<std::function<void(size_t)>>(in_tensor->shape().elem_cnt(), [&](size_t i) {
       ImageTargetResize(in_img_buf[i], out_img_buf + i, target_size, max_size);
       if (size_ptr != nullptr) {
         size_ptr[i * 2 + 0] = out_img_buf[i].shape().At(0);

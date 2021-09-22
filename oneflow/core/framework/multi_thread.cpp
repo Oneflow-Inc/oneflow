@@ -21,7 +21,7 @@ namespace oneflow {
 namespace user_op {
 
 void MultiThreadLoopInOpKernel(size_t num, std::function<void(size_t i)> Callback) {
-  MultiThreadLoop(num, Callback);
+  MultiThreadLoop<std::function<void(size_t)>>(num, Callback);
 }
 
 }  // namespace user_op

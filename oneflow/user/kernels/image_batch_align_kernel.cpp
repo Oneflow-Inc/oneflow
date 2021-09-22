@@ -86,7 +86,7 @@ class ImageBatchAlignKernel final : public user_op::OpKernel {
 
     memset(out_tensor->mut_dptr(), 0,
            out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type()));
-    MultiThreadLoop(num_images, [&](size_t i) {
+    MultiThreadLoop<std::function<void(size_t)>>(num_images, [&](size_t i) {
       const TensorBuffer& image_buffer = in_tensor->dptr<TensorBuffer>()[i];
       T* out_ptr = out_tensor->mut_dptr<T>() + i * max_height * max_width * channels;
       ImageCopier<T>::SwitchCopyFromTensorBuffer(SwitchCase(image_buffer.data_type()), out_ptr,

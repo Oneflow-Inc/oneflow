@@ -58,19 +58,22 @@ void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback) {
   FOR_RANGE(size_t, i, 0, num) { Callback(i); }
 }
 
-void MultiThreadLoop(size_t num, std::function<void(size_t i)> Callback) {
+template<typename DoEachT>
+void MultiThreadLoop(size_t num, const DoEachT& DoEach) {
   size_t thread_num = Global<ThreadPool>::Get()->thread_num();
   thread_num = std::min(num, thread_num);
   BalancedSplitter bs(num, thread_num);
   std::atomic<size_t> bc(thread_num);
   FOR_RANGE(size_t, range_id, 0, thread_num) {
-    Global<ThreadPool>::Get()->AddWork([&bc, &bs, range_id, Callback] {
-      FOR_RANGE(size_t, i, bs.At(range_id).begin(), bs.At(range_id).end()) { Callback(i); }
+    Global<ThreadPool>::Get()->AddWork([&bc, &bs, range_id, DoEach] {
+      FOR_RANGE(size_t, i, bs.At(range_id).begin(), bs.At(range_id).end()) { DoEach(i); }
       --bc;
     });
   }
   // buzy loop wait.
   while (bc > 0) {}
 }
+
+template void MultiThreadLoop(size_t, const std::function<void(size_t i)>&);
 
 }  // namespace oneflow

@@ -77,7 +77,7 @@ class ImageDecodeKernel final : public user_op::OpKernel {
     const std::string& color_space = ctx->Attr<std::string>("color_space");
     const DataType data_type = ctx->Attr<DataType>("data_type");
 
-    MultiThreadLoop(in_tensor->shape().elem_cnt(), [&](size_t i) {
+    MultiThreadLoop<std::function<void(size_t)>>(in_tensor->shape().elem_cnt(), [&](size_t i) {
       DecodeImage(in_img_buf[i], out_img_buf + i, color_space, data_type);
     });
   }

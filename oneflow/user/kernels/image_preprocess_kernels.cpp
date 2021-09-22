@@ -162,7 +162,7 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
       int64_t out_H = out_shape.At(2);
       int64_t out_W = out_shape.At(3);
       int64_t out_image_elem_cnt = C * out_H * out_W;
-      MultiThreadLoop(record_num, [&](size_t i) {
+      MultiThreadLoop<std::function<void(size_t)>>(record_num, [&](size_t i) {
         if (mirror.at(i)) {
           CMN1Sample<TensorLayout::kNCHW, true>(
               C, in_H, in_W, out_H, out_W, crop_pos_y, crop_pos_x, in_dptr + in_image_elem_cnt * i,
@@ -178,7 +178,7 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
       int64_t out_H = out_shape.At(1);
       int64_t out_W = out_shape.At(2);
       int64_t out_image_elem_cnt = C * out_H * out_W;
-      MultiThreadLoop(record_num, [&](size_t i) {
+      MultiThreadLoop<std::function<void(size_t)>>(record_num, [&](size_t i) {
         if (mirror.at(i)) {
           CMN1Sample<TensorLayout::kNHWC, true>(
               C, in_H, in_W, out_H, out_W, crop_pos_y, crop_pos_x, in_dptr + in_image_elem_cnt * i,
@@ -240,7 +240,7 @@ class CropMirrorNormalizeFromTensorBufferToFloatKernel final : public user_op::O
       int64_t out_H = out_shape.At(2);
       int64_t out_W = out_shape.At(3);
       int64_t out_image_elem_cnt = C * out_H * out_W;
-      MultiThreadLoop(record_num, [&](size_t i) {
+      MultiThreadLoop<std::function<void(size_t)>>(record_num, [&](size_t i) {
         const TensorBuffer* in_buffer = in_buffers + i;
         const Shape& in_shape = in_buffer->shape();
         CHECK_EQ(in_shape.NumAxes(), 3);  // H, W, C
@@ -262,7 +262,7 @@ class CropMirrorNormalizeFromTensorBufferToFloatKernel final : public user_op::O
       int64_t out_H = out_shape.At(1);
       int64_t out_W = out_shape.At(2);
       int64_t out_image_elem_cnt = C * out_H * out_W;
-      MultiThreadLoop(record_num, [&](size_t i) {
+      MultiThreadLoop<std::function<void(size_t)>>(record_num, [&](size_t i) {
         const TensorBuffer* in_buffer = in_buffers + i;
         const Shape& in_shape = in_buffer->shape();
         CHECK_EQ(in_shape.NumAxes(), 3);  // H, W, C
@@ -391,7 +391,7 @@ class ImageRandomCropKernel final : public user_op::OpKernel {
     CHECK_EQ(out_blob->shape(), in_blob->shape());
     const TensorBuffer* in_buffers = in_blob->dptr<TensorBuffer>();
     TensorBuffer* out_buffers = out_blob->mut_dptr<TensorBuffer>();
-    MultiThreadLoop(record_num, [&](size_t i) {
+    MultiThreadLoop<std::function<void(size_t)>>(record_num, [&](size_t i) {
       ImageRandomCropImpl(in_buffers + i, out_buffers + i, crop_window_generators->GetGenerator(i));
     });
   }

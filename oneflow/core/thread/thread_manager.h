@@ -42,7 +42,9 @@ class ThreadMgr final {
 };
 
 void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);
-void MultiThreadLoop(size_t num, std::function<void(size_t i)> Callback);
+
+template<typename DoEachT>
+void MultiThreadLoop(size_t num, const DoEachT& DoEach);
 
 }  // namespace oneflow
 

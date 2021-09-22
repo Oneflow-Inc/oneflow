@@ -94,7 +94,7 @@ class OFRecordRawDecoderKernel final : public user_op::OpKernel {
     bool truncate = ctx->Attr<bool>("truncate");
     bool dim1_varying_length = ctx->Attr<bool>("dim1_varying_length");
 
-    MultiThreadLoop(record_num, [&](size_t i) {
+    MultiThreadLoop<std::function<void(size_t)>>(record_num, [&](size_t i) {
       const OFRecord& record = *(records + i);
       T* dptr = out_dptr + i * sample_elem_cnt;
       CHECK(record.feature().find(name) != record.feature().end())
@@ -137,7 +137,7 @@ class OFRecordBytesDecoderKernel final : public user_op::OpKernel {
     const auto* records = in->dptr<OFRecord>();
     auto* buffers = out->mut_dptr<TensorBuffer>();
     const std::string& name = ctx->Attr<std::string>("name");
-    MultiThreadLoop(num_instances, [&](size_t i) {
+    MultiThreadLoop<std::function<void(size_t)>>(num_instances, [&](size_t i) {
       const OFRecord& record = *(records + i);
       TensorBuffer* buffer = buffers + i;
       auto it = record.feature().find(name);
@@ -240,7 +240,7 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
     const std::string& name = ctx->Attr<std::string>("name");
     const std::string& color_space = ctx->Attr<std::string>("color_space");
 
-    MultiThreadLoop(record_num, [&](size_t i) {
+    MultiThreadLoop<std::function<void(size_t)>>(record_num, [&](size_t i) {
       const OFRecord& record = *(records + i);
       TensorBuffer* buffer = buffers + i;
       RandomCropGenerator* gen = crop_window_generators->GetGenerator(i);
@@ -273,7 +273,7 @@ class OFRecordImageDecoderKernel final : public user_op::OpKernel {
     const std::string& name = ctx->Attr<std::string>("name");
     const std::string& color_space = ctx->Attr<std::string>("color_space");
 
-    MultiThreadLoop(record_num, [&](size_t i) {
+    MultiThreadLoop<std::function<void(size_t)>>(record_num, [&](size_t i) {
       const OFRecord& record = *(records + i);
       TensorBuffer* buffer = buffers + i;
       DecodeRandomCropImageFromOneRecord(record, buffer, name, color_space, nullptr);
