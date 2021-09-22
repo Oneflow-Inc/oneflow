@@ -87,9 +87,8 @@ void VirtualMachine::TryReleaseFinishedInstructions(
     } else {
       UNIMPLEMENTED();
     }
-    stream->DeleteInstruction(running_instruction_list->Erase(instruction_ptr));
-    // this->Empty() may be true after `instruction_ptr` erased from vm_stat_running_list.
     vm_stat_running_list->Erase(instruction_ptr);
+    stream->DeleteInstruction(running_instruction_list->Erase(instruction_ptr));
   }
 }
 
