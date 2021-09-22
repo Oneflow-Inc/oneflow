@@ -153,7 +153,7 @@ def _test_lstm(test_case, device):
             out_torch.cpu().data.numpy(),
             out_flow.cpu().data.numpy(),
             rtol=1e-05,
-            atol=1e-06,
+            atol=1e-05,
         )
     )
 
@@ -218,7 +218,7 @@ def _test_gru(test_case, device):
             out_torch.cpu().data.numpy(),
             out_flow.cpu().data.numpy(),
             rtol=1e-05,
-            atol=1e-06,
+            atol=1e-05,
         )
     )
 
