@@ -587,12 +587,15 @@ std::shared_ptr<const CollectiveBoxingExecutorPlanToken> CollectiveBoxingExecuto
           rough_groups.emplace_back(std::vector<const RequestDesc*>({request}));
         }
       } else {
-        if (!IsCurGroupEmpty(rough_groups)
+        if ((!IsCurGroupEmpty(rough_groups))
             && HasRankInteractionOnDeviceSet(rough_groups.back().back()->device_set(),
                                              request->device_set())) {
           rough_groups.emplace_back(std::vector<const RequestDesc*>());
         }
       }
+    }
+    if ((!rough_groups.empty()) && rough_groups.back().empty()) {
+      rough_groups.pop_back();
     }
     std::vector<GroupState>& group_states = job_id2group_states_[job_id];
     CHECK_EQ(group_states.size(), 0);
