@@ -250,11 +250,20 @@ class ConsistentRandNFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
+
 class RandIntFunctor {
  public:
   RandIntFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform_int").Output("out").Build()); }
 
   Maybe<Tensor> operator()(const int64_t low, const int64_t high, const Shape& shape,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Optional<Symbol<Device>>& device,
+                           const Optional<one::Generator>& generator,
+                           const bool& requires_grad) const {
+    return CallImpl(low, high,shape, dtype, device, generator, requires_grad);
+  }
+
+  Maybe<Tensor> CallImpl(const int64_t low, const int64_t high, const Shape& shape,
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
@@ -292,10 +301,32 @@ class RandIntFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class RandIntFunctor2: public RandIntFunctor {
+ public:
+  Maybe<Tensor> operator()(const int64_t high, const Shape& shape,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Optional<Symbol<Device>>& device,
+                           const Optional<one::Generator>& generator,
+                           const bool& requires_grad) const {
+    return CallImpl(0, high, shape, dtype, device, generator, requires_grad);                  
+  }
+};
+
+
 class ConsistentRandIntFunctor {
  public:
   ConsistentRandIntFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform_int").Output("out").Build()); }
+  
   Maybe<Tensor> operator()(const int64_t low, const int64_t high, const Shape& shape,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Optional<one::Generator>& generator,
+                           const bool& requires_grad) const {
+    return CallImpl(low, high, shape, placement, sbp_tuple, dtype, generator, requires_grad);
+  }
+  
+  Maybe<Tensor> CallImpl(const int64_t low, const int64_t high, const Shape& shape,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
                            const Optional<Symbol<DType>>& dtype,
@@ -344,6 +375,19 @@ class ConsistentRandIntFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+
+class ConsistentRandIntFunctor2 : public ConsistentRandIntFunctor {
+ public:
+  Maybe<Tensor> operator()(const int64_t low, const int64_t high, const Shape& shape,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Optional<one::Generator>& generator,
+                           const bool& requires_grad) const {
+    return CallImpl(0, high, shape, placement, sbp_tuple, dtype, generator, requires_grad);
+  }
 };
 
 class RandPermFunctor {
@@ -434,7 +478,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RandNFunctor>("RandN");
   m.add_functor<impl::ConsistentRandNFunctor>("ConsistentRandN");
   m.add_functor<impl::RandIntFunctor>("RandInt");
+  m.add_functor<impl::RandIntFunctor2>("RandInt2");
   m.add_functor<impl::ConsistentRandIntFunctor>("ConsistentRandInt");
+  m.add_functor<impl::ConsistentRandIntFunctor2>("ConsistentRandInt2");
 };
 
 }  // namespace functional
