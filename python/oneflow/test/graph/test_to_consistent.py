@@ -431,11 +431,15 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
 
         e_x = m(x)
         e_c_x = m(c_x)
-        g_x = g(x)
+        # NOTE(chengcheng):
+        #   There are two BUG in this test script:
+        #   1. first call and second call input tensor meta is NOT same
+        #   2. nn.Graph NOT support local input with multi-rank yet.
+        # g_x = g(x)
         g_c_x = g(c_x)
 
         test_case.assertTrue(e_x.dtype == flow.float32)
-        test_case.assertTrue(g_x.dtype == flow.float32)
+        # test_case.assertTrue(g_x.dtype == flow.float32)
         test_case.assertTrue(e_c_x.dtype == flow.float32)
         test_case.assertTrue(g_c_x.dtype == flow.float32)
 
