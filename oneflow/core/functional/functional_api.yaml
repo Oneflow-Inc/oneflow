@@ -517,6 +517,10 @@
     Double alpha=1.0) => BatchMatMul"
   bind_python: True
 
+- name: "l1_loss"
+  signature: "Tensor(Tensor input, Tensor target, String reduction) => L1Loss"
+  bind_python: True
+
 - name: "nll_loss"
   signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction=None) => NllLoss"
   bind_python: True
