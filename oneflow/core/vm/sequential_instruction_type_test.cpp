@@ -32,7 +32,6 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
-#include "oneflow/core/common/cached_object_msg_allocator.h"
 
 namespace oneflow {
 namespace vm {
@@ -56,8 +55,7 @@ TEST(SequentialInstruction, front_seq_compute) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(),
                                       {"NewObject", "ComputeRankFrontSeqCallback"});
-  CachedObjectMsgAllocator allocator(20, 100);
-  auto vm = ObjectMsgPtr<VirtualMachine>::NewFrom(&allocator, vm_desc.Get());
+  auto vm = ObjectMsgPtr<VirtualMachine>::New(vm_desc.Get());
   InstructionMsgList list;
   {
     int64_t logical_object_id = TestUtil::NewObject(&list, "cpu", "0:0");
