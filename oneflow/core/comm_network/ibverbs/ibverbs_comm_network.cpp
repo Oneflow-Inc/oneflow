@@ -105,9 +105,9 @@ char * IBVerbsCommNet::SerialTokenToData(void *token, size_t *token_size) {
 
 void * IBVerbsCommNet::DeSerialDataToToken(char *data, size_t  * token_size) {
   //void * token = malloc(sizeof(IBVerbsCommNetRMADesc));
-  std::shared_ptr<IBVerbsCommNetRMADesc> desc = std::make_shared<IBVerbsCommNetRMADesc>(new IBVerbsCommNetRMADesc);
- // desc.reset(new IBVerbsCommNetRMADesc);
-  std::memcpy(desc.get(), data, sizeof(IBVerbsCommNetRMADesc));                                                 reinterpret_cast<uint64_t>(msg.regst()))];
+  std::shared_ptr<IBVerbsCommNetRMADesc> desc ;//s= std::make_shared<IBVerbsCommNetRMADesc>(new IBVerbsCommNetRMADesc);
+  desc.reset(new IBVerbsCommNetRMADesc);
+  std::memcpy(desc.get(), data, sizeof(IBVerbsCommNetRMADesc));                                               
  // std::memcpy(token, data, sizeof(IBVerbsCommNetRMADesc));
   *token_size = sizeof(IBVerbsCommNetRMADesc);
  // return token;
