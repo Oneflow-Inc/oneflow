@@ -42,7 +42,7 @@ class MemcpyFactory : public Factory<Memcpy> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MemcpyFactory);
   MemcpyFactory() = default;
-  virtual ~MemcpyFactory() = default;
+  ~MemcpyFactory() override = default;
 
   virtual std::unique_ptr<Memcpy> New(MemcpyKind kind) = 0;
 };

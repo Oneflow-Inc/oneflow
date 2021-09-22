@@ -28,3 +28,5 @@ from .array_ops import *
 from .tensor import *
 from .comm import *
 from .ctc_decode import *
+from .placement import *
+from .sbp import *
