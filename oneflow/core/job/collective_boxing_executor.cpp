@@ -71,6 +71,21 @@ bool HasRankInteractionOnDeviceSet(const DeviceSet& a, const DeviceSet& b) {
   return false;
 }
 
+bool IsCurGroupEmpty(const std::vector<std::vector<const RequestDesc*>>& groups) {
+  if (groups.empty()) { return true; }
+  if (groups.back().empty()) { return true; }
+  return false;
+}
+
+bool CanMergeIntoCurGroup(const RequestDesc* request,
+                          const std::vector<std::vector<const RequestDesc*>>& groups) {
+  if (groups.empty()) { return false; }
+  if (groups.back().empty()) { return true; }
+  return (request->dependency_depth() == groups.back().front()->dependency_depth()
+          && request->op_desc().backend() == groups.back().front()->op_desc().backend()
+          && request->device_set() == groups.back().front()->device_set());
+}
+
 std::string GetNcclUniqueIdRpcKey(const std::string& name, int64_t stream_id) {
   return "CollectiveBoxingExecutorNcclUniqueIdRpcKey-" + name + "-" + std::to_string(stream_id);
 }
@@ -566,22 +581,13 @@ std::shared_ptr<const CollectiveBoxingExecutorPlanToken> CollectiveBoxingExecuto
     std::vector<std::vector<const RequestDesc*>> rough_groups;
     for (const auto* request : requests) {
       if (HasDeviceOnThisMachine(request->device_set())) {
-        if ((!collective_boxing_conf.enable_fusion()) || rough_groups.empty()
-            || (!rough_groups.back().empty()
-                && (request->dependency_depth() != rough_groups.back().front()->dependency_depth()
-                    || request->op_desc().backend()
-                           != rough_groups.back().front()->op_desc().backend()
-                    || request->device_set() != rough_groups.back().front()->device_set()))) {
-          if (!rough_groups.empty()) {
-            CHECK(!rough_groups.back().empty());
-            CHECK_GE(request->dependency_depth(), rough_groups.back().front()->dependency_depth());
-          }
-          rough_groups.emplace_back(std::vector<const RequestDesc*>({request}));
-        } else {
+        if (collective_boxing_conf.enable_fusion() && CanMergeIntoCurGroup(request, rough_groups)) {
           rough_groups.back().push_back(request);
+        } else {
+          rough_groups.emplace_back(std::vector<const RequestDesc*>({request}));
         }
       } else {
-        if ((!rough_groups.empty()) && (!rough_groups.back().empty())
+        if (!IsCurGroupEmpty(rough_groups)
             && HasRankInteractionOnDeviceSet(rough_groups.back().back()->device_set(),
                                              request->device_set())) {
           rough_groups.emplace_back(std::vector<const RequestDesc*>());
