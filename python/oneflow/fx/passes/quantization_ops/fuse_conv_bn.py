@@ -1,6 +1,22 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import oneflow as flow
 
 __all__ = ["QConvBN"]
+
 
 class QConvBN(flow.nn.Module):
     def __init__(
@@ -11,7 +27,7 @@ class QConvBN(flow.nn.Module):
         quantization_scheme="symmetric",
         quantization_formula="google",
         per_layer_quantization=True,
-        momentum = 0.95,
+        momentum=0.95,
     ):
         super().__init__()
         self.quantization_bit = quantization_bit
@@ -21,9 +37,14 @@ class QConvBN(flow.nn.Module):
         self.conv_module = conv_module
         self.bn_module = bn_module
 
-        self.moving_min_max_observer = flow.nn.MovingAverageMinMaxObserver(training=self.training, quantization_formula=quantization_formula,
-                                                                       stop_update_after_iters=1, quantization_bit=quantization_bit,
-                                                                       quantization_scheme=quantization_scheme, momentum=momentum)
+        self.moving_min_max_observer = flow.nn.MovingAverageMinMaxObserver(
+            training=self.training,
+            quantization_formula=quantization_formula,
+            stop_update_after_iters=1,
+            quantization_bit=quantization_bit,
+            quantization_scheme=quantization_scheme,
+            momentum=momentum,
+        )
 
         self.min_max_observer = flow.nn.MinMaxObserver(
             quantization_formula=quantization_formula,
@@ -31,7 +52,7 @@ class QConvBN(flow.nn.Module):
             quantization_scheme=quantization_scheme,
             per_layer_quantization=per_layer_quantization,
         )
-        
+
         self.fake_quantization = flow.nn.FakeQuantization(
             quantization_formula=quantization_formula,
             quantization_bit=quantization_bit,
@@ -59,10 +80,11 @@ class QConvBN(flow.nn.Module):
                 bias = -gamma_ * mean
 
         return weight, bias
-    
 
     def forward(self, x):
-        scale, zero_point = self.moving_min_max_observer(x, flow.tensor([0], dtype=flow.int64).to(x.device.type))
+        scale, zero_point = self.moving_min_max_observer(
+            x, flow.tensor([0], dtype=flow.int64).to(x.device.type)
+        )
         x = self.fake_quantization(x, scale, zero_point)
         if self.training:
             y = flow.nn.functional.conv2d(
@@ -78,14 +100,15 @@ class QConvBN(flow.nn.Module):
             y = y.view(self.conv_module.out_channels, -1)  # CNHW -> C,NHW
             mean = y.mean(1)
             var = y.var(1)
-            self.bn_module.running_mean = (
-                self.bn_module.momentum * self.bn_module.running_mean
-                + (1 - self.bn_module.momentum) * mean
-            )
-            self.bn_module.running_var = (
-                self.bn_module.momentum * self.bn_module.running_var
-                + (1 - self.bn_module.momentum) * var
-            )
+            with flow.no_grad():
+                self.bn_module.running_mean = (
+                    self.bn_module.momentum * self.bn_module.running_mean
+                    + (1 - self.bn_module.momentum) * mean
+                )
+                self.bn_module.running_var = (
+                    self.bn_module.momentum * self.bn_module.running_var
+                    + (1 - self.bn_module.momentum) * var
+                )
         else:
             mean = flow.Tensor(self.bn_module.running_mean)
             var = flow.Tensor(self.bn_module.running_var)
@@ -104,4 +127,3 @@ class QConvBN(flow.nn.Module):
             groups=self.conv_module.groups,
         )
         return res
- 
