@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_
 #define ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_
 
+#include <omp.h>
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/auto_registration_factory.h"
@@ -54,7 +55,27 @@ void MultiThreadLoop(size_t num, const DoEachT& DoEach) {
     Global<ThreadPool>::Get()->AddWork([&bc, &bs, range_id, DoEach] {
       size_t start = bs.At(range_id).begin();
       size_t end = bs.At(range_id).end();
-      FOR_RANGE(size_t, i, start, end) { DoEach(i); }
+      static const size_t N = 16;
+      size_t i = start;
+      for (; i <= end - N; i += N) {
+        DoEach(i);
+        DoEach(i + 1);
+        DoEach(i + 2);
+        DoEach(i + 3);
+        DoEach(i + 4);
+        DoEach(i + 5);
+        DoEach(i + 6);
+        DoEach(i + 7);
+        DoEach(i + 8);
+        DoEach(i + 9);
+        DoEach(i + 10);
+        DoEach(i + 11);
+        DoEach(i + 12);
+        DoEach(i + 13);
+        DoEach(i + 14);
+        DoEach(i + 15);
+      }
+      for (; i < end; i++) { DoEach(i); }
       --bc;
     });
   }
