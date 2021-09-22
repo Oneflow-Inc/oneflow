@@ -74,7 +74,7 @@ class PadKernel final : public user_op::OpKernel, public user_op::CudaGraphSuppo
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    if(y->shape().NumAxes()>0 && y->shape().elem_cnt()==0){
+    if (y->shape().NumAxes() > 0 && y->shape().elem_cnt() == 0) {
       // if output is 0-shape tensor, than do nothing and return
       return;
     }
@@ -85,7 +85,6 @@ class PadKernel final : public user_op::OpKernel, public user_op::CudaGraphSuppo
     const int64_t ndims = x->shape().NumAxes();
     const int64_t size_of_data_type = static_cast<int64_t>(GetSizeOfDataType(x->data_type()));
     CHECK_EQ(padding_before.size(), ndims);
-    
 
     NewKernelUtil<device_type>::Fill(ctx->device_ctx(), y->shape().elem_cnt(),
                                      static_cast<T>(constant_value), y->mut_dptr<T>());
@@ -103,27 +102,23 @@ class PadKernel final : public user_op::OpKernel, public user_op::CudaGraphSuppo
     DimVector pad_before_vec(padding_before.cbegin(), padding_before.cend());
     DimVector pad_after_vec(padding_after.cbegin(), padding_after.cend());
 
-    for(int i = 0; i < ndims; ++i){
-      if(dst_pos_vec[i] < 0){
-        // When padding[i] < 0 , dst_pos_vec[i] will < 0 too , src_pos_vec[i] should adjust coords relative
-        // and dst_pos_vec[i] will == 0
+    for (int i = 0; i < ndims; ++i) {
+      if (dst_pos_vec[i] < 0) {
+        // When padding[i] < 0 , dst_pos_vec[i] will < 0 too , src_pos_vec[i] should adjust coords
+        // relative and dst_pos_vec[i] will == 0
         src_pos_vec[i] -= dst_pos_vec[i];
         dst_pos_vec[i] = 0;
       }
     }
 
     DimVector extent_vec(ndims, 0);
-    for(int i=0; i < extent_vec.size(); ++i){
-      if(y->shape().At(i) < x->shape().At(i)){
+    for (int i = 0; i < extent_vec.size(); ++i) {
+      if (y->shape().At(i) < x->shape().At(i)) {
         extent_vec[i] = y->shape().At(i);
-      }else{
+      } else {
         extent_vec[i] = x->shape().At(i);
-        if(pad_before_vec[i] < 0){
-          extent_vec[i] = extent_vec[i] + pad_before_vec[i];
-        }
-        if(pad_after_vec[i] < 0){
-          extent_vec[i] = extent_vec[i] + pad_after_vec[i];
-        }
+        if (pad_before_vec[i] < 0) { extent_vec[i] = extent_vec[i] + pad_before_vec[i]; }
+        if (pad_after_vec[i] < 0) { extent_vec[i] = extent_vec[i] + pad_after_vec[i]; }
       }
     }
 
@@ -173,8 +168,12 @@ class PadGradKernel final : public user_op::OpKernel, public user_op::CudaGraphS
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    if((dy->shape().NumAxes()>0 && dy->shape().elem_cnt()==0) || (dx->shape().NumAxes()>0 && dx->shape().elem_cnt()==0)){
+    if ((dy->shape().NumAxes() > 0 && dy->shape().elem_cnt() == 0)
+        || (dx->shape().NumAxes() > 0 && dx->shape().elem_cnt() == 0)) {
       // if input/output is 0-shape tensor, than do nothing and return
+      size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
+      T* dest = dx->mut_dptr<T>();
+      Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
       return;
     }
 
@@ -197,25 +196,21 @@ class PadGradKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     DimVector pad_before_vec(padding_before.cbegin(), padding_before.cend());
     DimVector pad_after_vec(padding_after.cbegin(), padding_after.cend());
 
-    for(int i = 0; i < ndims; ++i){
-      if(src_pos_vec[i] < 0){
+    for (int i = 0; i < ndims; ++i) {
+      if (src_pos_vec[i] < 0) {
         dst_pos_vec[i] -= src_pos_vec[i];
         src_pos_vec[i] = 0;
       }
     }
 
     DimVector extent_vec(ndims, 0);
-    for(int i=0; i < extent_vec.size(); ++i){
-      if(dy->shape().At(i) < dx->shape().At(i)){
+    for (int i = 0; i < extent_vec.size(); ++i) {
+      if (dy->shape().At(i) < dx->shape().At(i)) {
         extent_vec[i] = dy->shape().At(i);
-      }else{
+      } else {
         extent_vec[i] = dx->shape().At(i);
-        if(pad_before_vec[i] < 0){
-          extent_vec[i] = extent_vec[i] + pad_before_vec[i];
-        }
-        if(pad_after_vec[i] < 0){
-          extent_vec[i] = extent_vec[i] + pad_after_vec[i];
-        }
+        if (pad_before_vec[i] < 0) { extent_vec[i] = extent_vec[i] + pad_before_vec[i]; }
+        if (pad_after_vec[i] < 0) { extent_vec[i] = extent_vec[i] + pad_after_vec[i]; }
       }
     }
     src_pos_vec[ndims - 1] *= size_of_data_type;

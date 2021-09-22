@@ -45,7 +45,7 @@ class TestConstantPad1d(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestConstantPad2d(flow.unittest.TestCase):
-    @autotest(rtol=0.001, atol=0.001)
+    @autotest(n=100, rtol=0.001, atol=0.001)
     def test_constantpad2d_with_random_data(test_case):
         m = torch.nn.ConstantPad2d(
             padding=random(1, 6).to(_size_4_t), value=random().to(float)
@@ -78,6 +78,24 @@ class TestConstantPad3d(flow.unittest.TestCase):
             dim4=random(1, 6),
         ).to(device)
         y = m(x)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestFunctionalConstantPad2d(flow.unittest.TestCase):
+    @autotest(n=20, rtol=0.001, atol=0.001)
+    def test_functional_constantpad2d(test_case):
+        device = random_device()
+        padding = random(-1, 1).to(_size_4_t)
+        value = random().to(float)
+        x = random_pytorch_tensor(
+            ndim=4,
+            dim0=random(2, 3),
+            dim1=random(2, 3),
+            dim2=random(2, 4),
+            dim3=random(2, 4),
+        ).to(device)
+        y = torch.nn.functional.pad(x, pad=padding, mode="constant", value=value)
         return y
 
 
