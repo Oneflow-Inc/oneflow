@@ -58,6 +58,8 @@ def expand_op(input, *sizes):
         ...               [[4, 5]]]]).astype(np.int32)
 
         >>> input = flow.Tensor(x)
+        >>> input.shape
+        oneflow.Size([1, 3, 1, 2])
 
         >>> out = input.expand(1, 3, 2, 2)
         >>> out.shape
