@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_
 #define ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_
 
-#include <omp.h>
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/auto_registration_factory.h"
