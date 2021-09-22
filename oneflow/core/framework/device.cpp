@@ -161,6 +161,7 @@ Maybe<size_t> Device::instr_local_dep_object_pool_size() const {
 
 // TODO(jianhao): move this configuration into stream
 Maybe<bool> Device::need_soft_sync_stream() const {
+  if (type() == "critical_section") { return false; }
   return JUST(local_call_instruction_name()) == "gpu.LocalCallOpKernel";
 }
 

@@ -239,12 +239,21 @@ Maybe<int64_t> InstructionsBuilder::NewObjectId(
 }
 
 Maybe<vm::InputCriticalSectionPhyInstrOperand> InstructionsBuilder::MakeInputCriticalSection(
-    const one::EagerBlobObjectListPtr& eager_blob_object,
-    const std::shared_ptr<NNGraphIf>& nn_graph) const {
+    const one::EagerBlobObjectListPtr& eager_blob_objects,
+    const std::shared_ptr<NNGraphIf>& nn_graph) {
+  const auto& op_device = nn_graph->op_device();
+  for (const auto& input : *eager_blob_objects) {
+    const auto& blob_last_used_device = JUST(input->last_used_device());
+    if (blob_last_used_device != op_device) {
+      auto* dep_object = JUST(input->compute_local_dep_object());
+      JUST(SoftSyncStream(dep_object, "mut", blob_last_used_device));
+    }
+    input->set_last_used_device(op_device);
+  }
   static std::string instr_name("InputCriticalSection");
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   const auto& operand =
-      std::make_shared<vm::InputCriticalSectionPhyInstrOperand>(eager_blob_object, nn_graph);
+      std::make_shared<vm::InputCriticalSectionPhyInstrOperand>(eager_blob_objects, nn_graph);
   *instruction->mutable_phy_instr_operand() = operand;
   instruction_list_->EmplaceBack(std::move(instruction));
   return operand;
@@ -252,30 +261,44 @@ Maybe<vm::InputCriticalSectionPhyInstrOperand> InstructionsBuilder::MakeInputCri
 
 Maybe<vm::ParameterCriticalSectionPhyInstrOperand>
 InstructionsBuilder::MakeParameterCriticalSection(
-    const one::EagerBlobObjectListPtr& eager_blob_object,
-    const std::shared_ptr<NNGraphIf>& nn_graph) const {
+    const one::EagerBlobObjectListPtr& eager_blob_objects,
+    const std::shared_ptr<NNGraphIf>& nn_graph) {
+  const auto& op_device = nn_graph->op_device();
+  for (const auto& param : *eager_blob_objects) {
+    const auto& blob_last_used_device = JUST(param->last_used_device());
+    if (blob_last_used_device != op_device) {
+      auto* dep_object = JUST(param->compute_local_dep_object());
+      JUST(SoftSyncStream(dep_object, "mut", blob_last_used_device));
+    }
+    param->set_last_used_device(op_device);
+  }
   static std::string instr_name("ParameterCriticalSection");
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   const auto& operand =
-      std::make_shared<vm::ParameterCriticalSectionPhyInstrOperand>(eager_blob_object, nn_graph);
+      std::make_shared<vm::ParameterCriticalSectionPhyInstrOperand>(eager_blob_objects, nn_graph);
   *instruction->mutable_phy_instr_operand() = operand;
   instruction_list_->EmplaceBack(std::move(instruction));
   return operand;
 }
 
 Maybe<vm::OutputCriticalSectionPhyInstrOperand> InstructionsBuilder::MakeOutputCriticalSection(
-    const one::EagerBlobObjectListPtr& eager_blob_object,
-    const std::shared_ptr<NNGraphIf>& nn_graph) const {
+    const one::EagerBlobObjectListPtr& eager_blob_objects,
+    const std::shared_ptr<NNGraphIf>& nn_graph) {
+  for (const auto& output : *eager_blob_objects) {
+    const auto& blob_last_used_device = JUST(output->last_used_device());
+    // `blob_last_used_device == nn_graph->op_device()` is ensured by SoftSyncNNGraphBuffers
+    CHECK_OR_RETURN(blob_last_used_device == nn_graph->op_device());
+  }
   static std::string instr_name("OutputCriticalSection");
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   const auto& operand =
-      std::make_shared<vm::OutputCriticalSectionPhyInstrOperand>(eager_blob_object, nn_graph);
+      std::make_shared<vm::OutputCriticalSectionPhyInstrOperand>(eager_blob_objects, nn_graph);
   *instruction->mutable_phy_instr_operand() = operand;
   instruction_list_->EmplaceBack(std::move(instruction));
   return operand;
 }
 
-Maybe<vm::NcclCriticalSectionPhyInstrOperand> InstructionsBuilder::MakeNcclCriticalSection() const {
+Maybe<vm::NcclCriticalSectionPhyInstrOperand> InstructionsBuilder::MakeNcclCriticalSection() {
   static std::string instr_name("NcclCriticalSection");
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   const auto& operand = std::make_shared<vm::NcclCriticalSectionPhyInstrOperand>();
@@ -287,7 +310,7 @@ Maybe<vm::NcclCriticalSectionPhyInstrOperand> InstructionsBuilder::MakeNcclCriti
 Maybe<void> InstructionsBuilder::LaunchLazyJob(const one::EagerBlobObjectListPtr& inputs,
                                                const one::EagerBlobObjectListPtr& outputs,
                                                const one::EagerBlobObjectListPtr& parameters,
-                                               const std::shared_ptr<NNGraphIf>& nn_graph) const {
+                                               const std::shared_ptr<NNGraphIf>& nn_graph) {
   static std::string instr_name("LaunchLazyJob");
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   const auto& in_critical_section = JUST(MakeInputCriticalSection(inputs, nn_graph));
@@ -298,6 +321,21 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const one::EagerBlobObjectListPtr
       in_critical_section, out_critical_section, param_critical_section, nccl_critical_section,
       nn_graph);
   instruction_list_->EmplaceBack(std::move(instruction));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::SoftSyncNNGraphBuffers(
+    const one::EagerBlobObjectListPtr& eager_blob_objects,
+    const std::shared_ptr<NNGraphIf>& nn_graph) {
+  const auto& op_device = nn_graph->op_device();
+  for (const auto& eager_blob_object : *eager_blob_objects) {
+    const auto& blob_last_used_device = JUST(eager_blob_object->last_used_device());
+    if (blob_last_used_device != op_device) {
+      auto* dep_object = JUST(eager_blob_object->compute_local_dep_object());
+      JUST(SoftSyncStream(dep_object, "mut", blob_last_used_device));
+    }
+    eager_blob_object->set_last_used_device(op_device);
+  }
   return Maybe<void>::Ok();
 }
 

@@ -593,7 +593,15 @@ class Graph(object):
                 self._cur_index_of_ouputs_buffer
             ]
             eager_outputs = self._eager_outputs_buffer[self._cur_index_of_ouputs_buffer]
+
             # oneflow._oneflow_internal.eager.multi_client.Sync() NOTE(chengcheng): Need Sync?
+
+            # Make sure that last used devices of tensors in `outputs_tensor_tuple` are
+            # "critical_section".
+            # Do nothing if the last used devices are "critical_section" already.
+            oneflow._oneflow_internal.nn.graph.SoftSyncNNGraphBuffers(
+                outputs_tensor_tuple, self._c_nn_graph
+            )
             oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
                 convert_to_tensor_tuple(flattened_eager_args),
                 outputs_tensor_tuple,
@@ -615,6 +623,14 @@ class Graph(object):
 
         # Copy outputs from buffer
         eager_outputs = self._copy_io("output", *eager_outputs)
+
+        # Make sure that last used devices of tensors in `outputs_tensor_tuple` are
+        # "critical_section".
+        # NNGraph's execution flow will be broken if `last_used_device` of `outputs_tensor_tuple`
+        # are not "critical_section".
+        oneflow._oneflow_internal.nn.graph.SoftSyncNNGraphBuffers(
+            outputs_tensor_tuple, self._c_nn_graph
+        )
         return seq_to_func_return(eager_outputs)
 
     def _build_io(self, io_type, build_func, *args):
