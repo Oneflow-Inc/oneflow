@@ -132,11 +132,9 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     const auto& local_tensor = JUST(outputs->at(i)->cur_rank_phy_tensor());
     output_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
   }
-  const auto& instr_type_name = JUST(GetLocalCallInstructionName(parallel_desc->device_tag()));
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      result, ctx, parallel_desc.shared_from_symbol(),
-                                      instr_type_name);
+                                      result, ctx, result->op_device());
   }));
   return Maybe<void>::Ok();
 }

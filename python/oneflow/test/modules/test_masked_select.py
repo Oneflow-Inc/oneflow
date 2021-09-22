@@ -83,8 +83,8 @@ def _test_masked_select_broadcast(test_case, device):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestAbs(flow.unittest.TestCase):
-    def test_cosh(test_case):
+class TestMaskedSelect(flow.unittest.TestCase):
+    def test_masked_select(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_masked_select, _test_masked_select_broadcast]
         arg_dict["device"] = ["cpu", "cuda"]
