@@ -470,6 +470,9 @@ class VectorNormFunctor {
     int32_t num_dims = x->ndim();
     std::vector<int32_t> dim;
     
+    std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+    std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
+
     if(input_dim.empty())
     {
       dim = input_dim;
@@ -504,13 +507,17 @@ class VectorNormFunctor {
       else if (ord_val == DBL_MAX) //正无穷大
       {
         //`max(abs(x))` TensorGetItem由索引找到元素
-        rd = JUST(TensorGetItem(JUST(Abs(x)), JUST(ArgMax(JUST(Abs(x))))));
+        //rd = JUST(TensorGetItem(JUST(Abs(x)), JUST(ArgMax(JUST(Abs(x))))));
+        std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+        std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
+        rd = JUST(ReduceMax(JUST(Abs(x)), reduce_axis, false));
       }
       else if (ord_val == -DBL_MAX) //负无穷大
       {
         //`min(abs(x))`
-        rd = JUST(ArgSort(JUST(Abs(x)), "ASCENDING"));//从小到大索引排序
-        rd = JUST(TensorGetItem(JUST(Abs(x)), rd->at(0)));
+        //rd = JUST(ArgSort(JUST(Abs(x)), "ASCENDING"));//从小到大索引排序
+        //rd = JUST(TensorGetItem(JUST(Abs(x)), rd->at(0)));
+        RD= JUST(ReduceMin(JUST(Abs(x)), reduce_axis, false));
       }
       else
       {
@@ -536,7 +543,7 @@ class MatrixNormFunctor {
 
     CHECK_OR_RETURN(input_dim.size()==2 && input_dim[0] != input_dim[1]) 
         <<"input_dim must be a 2-tuple of ints with different elements";
-
+    
     //判断ord,dim是tuple并且dim的len为2，且dim[0]!=dim[1]
     auto ord_tmp=JUST(ord.value());
     if(ord_tmp == DBL_MAX || ord_tmp == -DBL_MAX)
@@ -563,10 +570,12 @@ class MatrixNormFunctor {
     if(ord_tmp==DBL_MAX || ord_tmp==1)
     {
       //res = JUST(max(res, dim[1], keepdim));
+      res = JUST(ReduceMax(res, dim[1], keepdim));
     }
     else if(ord_tmp==-DBL_MAX || ord_tmp==-1)
     {
       //res = JUST(min(res, dim[1], keepdim));
+      res = JUST(ReduceMin(res, dim[1], keepdim));
     } 
     return res;
   }

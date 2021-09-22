@@ -110,14 +110,6 @@ class Matrix_Norm(Module):
             )
         self.keepdim = keepdim
 
-    def _matrix_norm(self, x, ord, dim, keepdim):
-        if ord == "nuc":
-            raise NotImplementedError
-        elif ord == "fro":
-            return flow.sqrt(flow.sum(flow.square(x), dim=dim, keepdim=keepdim))
-        else:
-            return flow.C_.matrix_norm(x, ord, dim, keepdim)
-
     def forward(self, x):
         num_dims = len(x.shape)
         if num_dims < 2:
@@ -125,7 +117,11 @@ class Matrix_Norm(Module):
                 "linalg.matrix_norm(): input tensor must be a matrix or batch of matrices"
             )
         dim = check_dim(num_dims, self.dim)
-        return self._matrix_norm(x, ord=self.ord, dim=dim, keepdim=self.keepdim)
+
+        if ord in ["fro", "nuc"]:
+            return flow.C_.matrix_norm(x, self.ord, dim, self.keepdim)
+        else:
+            return flow.C_.matrix_norm(x, self.ord, dim, self.keepdim)
 
 
 class Norm(Module):
