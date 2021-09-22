@@ -393,11 +393,11 @@ class ConsistentRandIntFunctor2 : public ConsistentRandIntFunctor {
 class RandPermFunctor {
  public:
   RandPermFunctor() { randperm_op_ = CHECK_JUST(one::OpBuilder("randperm").Output("out").Build()); }
-  Maybe<Tensor> operator()(const int32_t n, const Optional<Symbol<Device>>& device,
+  Maybe<Tensor> operator()(const int32_t n, 
+                           const Optional<one::Generator>& generator, 
                            const Symbol<DType>& dtype,
-                           const Optional<one::Generator>& generator,
+                           const Optional<Symbol<Device>>& device,
                            const bool& requires_grad) const {
-    // TODO: add dtype impelmentation to randperm randperm_op
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("n", n));
     std::shared_ptr<one::Generator> gen;
@@ -411,7 +411,7 @@ class RandPermFunctor {
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
-    OpExprInterpContext ctx(attrs);
+    OpExprInterpContext ctx(attrs, distribution_state);
     if (device) { ctx.device = JUST(device); }
 
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {}, ctx));
