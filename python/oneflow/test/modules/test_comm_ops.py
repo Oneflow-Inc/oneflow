@@ -15,10 +15,13 @@ limitations under the License.
 """
 
 import numpy as np
-import oneflow as flow
-import oneflow.unittest
 import unittest
 
+import oneflow as flow
+import oneflow.unittest
+
+import torch
+import torch.distributed as dist
 
 class TestAllReduce(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
@@ -149,16 +152,23 @@ class TestReduce(flow.unittest.TestCase):
 class TestAllToAll(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
     def test_all_to_all_1n4d(test_case):
-        input_list = [
+        of_input_list = [
             flow.tensor([0, 1]) + i * 2 + flow.env.get_rank() * 8 for i in range(4)
         ]
-        output_list = [flow.tensor([0, 1]) for _ in range(4)]
-        flow.comm.all_to_all(output_list, input_list)
-        for i in range(len(output_list)):
+        of_output_list = [flow.tensor([0, 1]) for _ in range(4)]
+        flow.comm.all_to_all(of_output_list, of_input_list)
+        
+        # only nccl support
+        dist.init_process_group("nccl")
+        torch_input_list = [torch.tensor(x.numpy()).to("cuda:{}".format(dist.get_rank())) for x in of_input_list]
+        torch_output_list = [torch.tensor(x.numpy()).to("cuda:{}".format(dist.get_rank())) for x in of_output_list]
+        dist.all_to_all(torch_output_list, torch_input_list)
+
+        for i in range(len(of_output_list)):
             test_case.assertTrue(
                 np.allclose(
                     output_list[i].numpy(),
-                    input_list[i].numpy() + (i - flow.env.get_rank()) * 6,
+                    torch_output_list[i].cpu().numpy(),
                 )
             )
 
