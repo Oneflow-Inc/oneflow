@@ -72,6 +72,7 @@ class TestArange(flow.unittest.TestCase):
         start = random().to(int)
         end = start + random().to(int)
         step = random(0, end - start).to(int)
+        print(step.value())
         x = torch.arange(start=start, end=end, step=step)
         device = random_device()
         x.to(device)
