@@ -233,9 +233,9 @@ def all_to_all(output_tensor_list, input_tensor_list):
     _check_list(output_tensor_list)
     _check_list(input_tensor_list)
     
-    input_list[0].shape == output_list[0].shape
-    input_list[0].dtype == output_list[0].dtype
-    input_list[0].device == output_list[0].device
+    input_tensor_list[0].shape == output_tensor_list[0].shape
+    input_tensor_list[0].dtype == output_tensor_list[0].dtype
+    input_tensor_list[0].device == output_tensor_list[0].device
 
     def _check_meta_consistency(tensor):
         assert isinstance(tensor, flow._oneflow_internal.Tensor)
