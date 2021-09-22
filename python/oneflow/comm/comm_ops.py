@@ -227,6 +227,7 @@ def all_to_all(output_tensor_list, input_tensor_list):
         device = tensor_list[0].device
         for tensor in tensor_list:
             assert isinstance(tensor, flow._oneflow_internal.Tensor)
+            assert tensor.is_local
             assert shape == tensor.shape
             assert dtype == tensor.dtype
             assert device == tensor.device
