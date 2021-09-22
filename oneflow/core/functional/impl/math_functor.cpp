@@ -483,58 +483,44 @@ class MatrixNormFunctor {
                             const bool& keepdim) const {
     std::shared_ptr<one::Tensor> res; 
     std::vector<int32_t> dim;
-    //判断ord,dim是tuple并且dim的len为2，且dim[0]!=dim[1]
-    if(ord.has_value()) {
-      auto ord_tmp=JUST(ord.value());
-      if(ord_tmp == DBL_MAX || ord_tmp == -DBL_MAX)
-      {
-        dim=input_dim;
-        if(input_dim.size() == 2)
-        {
-          dim[0] = input_dim[1];
-          dim[1] = input_dim[0];
-          if(dim[1] >dim[0]&&keepdim == false)
-          {
-            dim[1]-=dim[1];
-          }
-          res=JUST(ReduceSum(JUST(Abs(x)), dim[0], keepdim));
-          if(ord_tmp==DBL_MAX)
-          {
-            res = JUST(max(res, ord_tmp, dim[1], keepdim));
-          }
-          else
-          {
-            res = JUST(min(res, ord_tmp, dim[1], keepdim));
-          } 
-        }
-      }
-      else if(ord_tmp == 1 || ord_tmp == -1)
-      {  
-        dim=input_dim;
-        if(dim.size() == 2)
-        {
-          if(dim[1]>dim[0] && keepdim==false)
-          {
-            dim[1]-=dim[1];
+    CHECK_OR_RETURN(ord.has_value()) 
+        <<"ord must be a int or float data";
 
-          }
-          res=JUST(ReduceSum(JUST(Abs(x)), dim[0], keepdim));
-          if(ord_tmp==1)
-          {
-            res = JUST(max(res, ord_tmp, dim[1], keepdim));
-          }
-          else
-          {
-            res = JUST(min(res, ord_tmp, dim[1], keepdim));
-          }
-        }
-      }
-      else
-      {
-         UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
-      }
-      return res;
+    CHECK_OR_RETURN(input_dim.size()==2 && input_dim[0] != input_dim[1]) 
+        <<"input_dim must be a 2-tuple of ints with different elements";
+
+    //判断ord,dim是tuple并且dim的len为2，且dim[0]!=dim[1]
+    auto ord_tmp=JUST(ord.value());
+    if(ord_tmp == DBL_MAX || ord_tmp == -DBL_MAX)
+    {
+      dim=input_dim;
+      dim[0] = input_dim[1];
+      dim[1] = input_dim[0];
     }
+    else if(ord_tmp == 1 || ord_tmp == -1)
+    {
+      dim=input_dim;
+    }
+    else
+    {
+      UNIMPLEMENTED_THEN_RETURN() << "Only support DBL_MAX,-DBL_MAX,1 or -1 data type.";
+    }
+
+    if(dim[1] >dim[0] && keepdim == false)
+    {
+      dim[1]-=dim[1];
+    }
+    res=JUST(ReduceSum(JUST(Abs(x)), dim[0], keepdim));
+
+    if(ord_tmp==DBL_MAX || ord_tmp==1)
+    {
+      //res = JUST(max(res, dim[1], keepdim));
+    }
+    else if(ord_tmp==-DBL_MAX || ord_tmp==-1)
+    {
+      //res = JUST(min(res, dim[1], keepdim));
+    } 
+    return res;
   }
 
 };

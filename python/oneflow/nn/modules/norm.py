@@ -115,23 +115,8 @@ class Matrix_Norm(Module):
             raise NotImplementedError
         elif ord == "fro":
             return flow.sqrt(flow.sum(flow.square(x), dim=dim, keepdim=keepdim))
-        elif ord in [float("inf"), float("-inf")]:
-            (dim_0, dim_1) = (dim[0], dim[1])
-            (dim_0, dim_1) = (dim_1, dim_0)
-            if dim_1 > dim_0 and (not keepdim):
-                dim_1 -= 1
-            res = flow.sum(flow.abs(x), dim=dim_0, keepdim=keepdim)
-            return _norm_min_max(res, ord, dim_1, keepdim)
-        elif ord in [1, -1]:
-            (dim_0, dim_1) = (dim[0], dim[1])
-            if dim_1 > dim_0 and (not keepdim):
-                dim_1 -= 1
-            res = flow.sum(flow.abs(x), dim=dim_0, keepdim=keepdim)
-            return _norm_min_max(res, ord, dim_1, keepdim)
-        elif ord in [2, -2]:
-            raise NotImplementedError
         else:
-            raise ValueError("Invalid norm order: {}".format(ord))
+            return flow.C_.matrix_norm(x, ord, dim, keepdim)
 
     def forward(self, x):
         num_dims = len(x.shape)

@@ -79,3 +79,75 @@ add_docstr(
         tensor(5.4345, dtype=oneflow.float32)
     """,
 )
+
+add_docstr(
+    oneflow._C.matrix_norm,
+    """
+    linalg.matrix_norm(input, ord='fro', dim=(-2, -1), keepdim=False, *, dtype=None, out=None) -> Tensor
+
+    Computes a matrix norm.
+
+    Support input of float, double, cfloat and cdouble dtypes.
+    Also supports batches of matrices: the norm will be computed over the
+    dimensions specified by the 2-tuple :attr:`dim` and the other dimensions will
+    be treated as batch dimensions. The output will have the same batch dimensions.
+
+    :attr:`ord` defines the matrix norm that is computed. The following norms are supported:
+
+    ======================   ========================================================
+    :attr:`ord`              matrix norm
+    ======================   ========================================================
+    `'fro'` (default)        Frobenius norm
+    `'nuc'`                  -- not supported yet --
+    `inf`                    `max(sum(abs(x), dim=1))`
+    `-inf`                   `min(sum(abs(x), dim=1))`
+    `1`                      `max(sum(abs(x), dim=0))`
+    `-1`                     `min(sum(abs(x), dim=0))`
+    `2`                      -- not supported yet --
+    `-2`                     -- not supported yet --
+    ======================   ========================================================
+
+    where `inf` refers to `float('inf')`, NumPy's `inf` object, or any equivalent object.
+
+    Args:
+        input (Tensor): tensor with two or more dimensions. By default its
+            shape is interpreted as `(*, m, n)` where `*` is zero or more
+            batch dimensions, but this behavior can be controlled using :attr:`dim`.
+        ord (int, inf, -inf, 'fro', 'nuc', optional): order of norm. Default: `'fro'`
+        dim (Tuple[int, int], optional): dimensions over which to compute the norm. Default: `(-2, -1)`
+        keepdim (bool, optional): If set to `True`, the reduced dimensions are retained
+            in the result as dimensions with size one. Default: `False`
+
+
+    Returns:
+        A real-valued tensor.
+
+    Examples::
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> a = flow.tensor(np.arange(9, dtype=np.float32)).reshape(3,3)
+        >>> a
+        tensor([[0., 1., 2.],
+                [3., 4., 5.],
+                [6., 7., 8.]], dtype=oneflow.float32)
+        >>> flow._C.matrix_norm(a)
+        tensor(14.2829, dtype=oneflow.float32)
+        >>> flow._C.matrix_norm(a, ord=-1)
+        tensor(9., dtype=oneflow.float32)
+        >>> b = a.expand(2, -1, -1)
+        >>> b
+        tensor([[[0., 1., 2.],
+                 [3., 4., 5.],
+                 [6., 7., 8.]],
+        <BLANKLINE>
+                [[0., 1., 2.],
+                 [3., 4., 5.],
+                 [6., 7., 8.]]], dtype=oneflow.float32)
+        >>> flow._C.matrix_norm(b)
+        tensor([14.2829, 14.2829], dtype=oneflow.float32)
+        >>> flow._C.matrix_norm(b, dim=(0, 2))
+        tensor([ 3.1623, 10.0000, 17.2627], dtype=oneflow.float32)
+    """,
+)
+
