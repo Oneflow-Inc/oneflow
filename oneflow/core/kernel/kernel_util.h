@@ -53,20 +53,14 @@ template<typename T, typename Derived>
 struct CpuKernelUtilIf {
   static void Axpy(DeviceCtx* ctx, const int n, const T* alpha, const T* x, const int incx, T* y,
                    const int incy);
-  static void Set(DeviceCtx* ctx, const T value, T* addr);
 };
 
 // CPU, Floating
 template<typename T>
 struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::value>::type>
     : public CpuKernelUtilIf<T, KernelUtil<DeviceType::kCPU, T>> {
-  static void Dot(DeviceCtx* ctx, const int n, const T* x, const int incx, const T* y,
-                  const int incy, T* result);
   static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, T* y,
                    const int incy);
-
-  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
-  static void Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
 
   static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0);
   static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1);
@@ -99,7 +93,6 @@ struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsIntegral<T>::va
                    const int incy);
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
-  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
 };
 
 // GPU, Integral, Floating
@@ -107,22 +100,16 @@ template<typename T, typename Derived>
 struct GpuKernelUtilIf {
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
-  static void Set(DeviceCtx* ctx, const T value, T* addr);
 };
 
 // GPU, Floating
 template<typename T>
 struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::value>::type>
     : public GpuKernelUtilIf<T, KernelUtil<DeviceType::kGPU, T>> {
-  static void Dot(DeviceCtx* ctx, const int n, const T* x, const int incx, const T* y,
-                  const int incy, T* result);
   static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, T* y,
                    const int incy);
   static void Axpy(DeviceCtx* ctx, const int n, const T* alpha, const T* x, const int incx, T* y,
                    const int incy);
-
-  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
-  static void Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
 
   static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0);
   static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1);
@@ -150,7 +137,6 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T>::va
     : public GpuKernelUtilIf<T, KernelUtil<DeviceType::kGPU, T>> {
   static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, T* y,
                    const int incy);
-  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
 };
 
 template<typename T, typename U>

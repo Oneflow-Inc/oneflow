@@ -111,14 +111,11 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
   }
   Symbol<Device> op_device;
-  std::shared_ptr<const ParallelDesc> op_parallel_desc;
   bool need_check_mem_case = true;
-  bool need_event_record = false;
 
   // Infer devices
   if (!user_op_expr.has_device_infer_fn()) {
     op_device = default_device;
-    op_parallel_desc = JUST(Placement4Device(op_device)).shared_from_symbol();
     for (int i = 0; i < outputs->size(); i++) {
       auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
       *JUST(tensor_impl->mut_device()) = default_device;
@@ -126,16 +123,11 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   } else {
     need_check_mem_case = false;
     op_device = JUST(user_op_expr.InferDevices(attrs, inputs, outputs));
-    for (const auto& input_tensor : inputs) {
-      const auto& input_device = JUST(input_tensor->device());
-      need_event_record = need_event_record || !(*op_device == *input_device);
-    }
-    op_parallel_desc = JUST(Placement4Device(op_device)).shared_from_symbol();
   }
 
   // Infer shapes and dtypes
   const auto& device_tag = JUST(op_device->of_type());
-  JUST(user_op_expr.InferLogicalShapeAndDType(
+  JUST(user_op_expr.InferPhysicalShapeAndDType(
       attrs, device_tag,
       [&](int32_t i) -> const TensorMeta* {
         return CHECK_JUST(TensorImpl4Tensor(inputs.at(i)))->mut_tensor_meta();
@@ -168,22 +160,9 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     output_eager_blob_objects->at(index)->set_is_shape_synced(false);
   }
 
-  const auto& instr_type_name = JUST(op_device->local_call_instruction_name());
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    if (need_event_record) {
-      for (const auto& input_tensor : inputs) {
-        const auto& tensor = JUST(input_tensor->AsMirroredTensor());
-        CHECK_OR_RETURN(static_cast<bool>(tensor));
-        // Instruction `SoftSyncStream` records event which can be used to synchronize cuda
-        // stream
-        const auto& tensor_device = JUST(tensor->device());
-        const auto& tensor_placement = JUST(Placement4Device(tensor_device));
-        JUST(builder->SoftSyncStream(JUST(tensor->compute_local_dep_object()), "mut",
-                                     tensor_placement.shared_from_symbol()));
-      }
-    }
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      ctx, op_parallel_desc, instr_type_name);
+                                      ctx, op_device);
   }));
   return Maybe<void>::Ok();
 }
@@ -252,14 +231,16 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
   if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
   int64_t root = JUST(parallel_desc->MachineId4ParallelId(src_rank));
   std::shared_ptr<UserOpExpr> op_expr = JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, root));
+  MutableAttrMap attrs;
+  JUST(attrs.SetAttr<int64_t>("root", src_rank));
   if (root == GlobalProcessCtx::Rank() || inplace) {
     TensorTuple outputs{tensor};
     JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs,
-                                one::OpExprInterpContext(AttrMap{}, parallel_desc)));
+                                one::OpExprInterpContext(attrs, parallel_desc)));
     return tensor;
   } else {
     return JUST(OpInterpUtil::Dispatch<one::Tensor>(
-        *op_expr, {tensor}, one::OpExprInterpContext(AttrMap{}, parallel_desc)));
+        *op_expr, {tensor}, one::OpExprInterpContext(attrs, parallel_desc)));
   }
 }
 
@@ -315,7 +296,7 @@ Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const Te
     input_mirrored_tensor = JUST(input_tensor->AsMirroredTensor());
     CHECK_OR_RETURN(input_mirrored_tensor) << Error::InvalidValueError("Tensor Cast Error");
     bool requires_grad = autograd::GradMode::is_enabled() && inputs.at(0)->requires_grad();
-    input_mirrored_tensor->set_requires_grad(requires_grad);
+    JUST(input_mirrored_tensor->set_requires_grad(requires_grad));
     input_mirrored_tensor->set_is_leaf(!requires_grad);
   }
   std::shared_ptr<ConsistentTensor> consistent_tensor;
