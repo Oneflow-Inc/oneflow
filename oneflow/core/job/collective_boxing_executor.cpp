@@ -594,9 +594,7 @@ std::shared_ptr<const CollectiveBoxingExecutorPlanToken> CollectiveBoxingExecuto
         }
       }
     }
-    if ((!rough_groups.empty()) && rough_groups.back().empty()) {
-      rough_groups.pop_back();
-    }
+    if ((!rough_groups.empty()) && rough_groups.back().empty()) { rough_groups.pop_back(); }
     std::vector<GroupState>& group_states = job_id2group_states_[job_id];
     CHECK_EQ(group_states.size(), 0);
     for (const auto& rough_group : rough_groups) {
