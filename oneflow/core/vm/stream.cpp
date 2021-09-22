@@ -45,7 +45,7 @@ const StreamTypeId& Stream::stream_type_id() const {
 ObjectMsgPtr<Instruction> Stream::NewInstruction(
     InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   if (free_instruction_list().empty()) {
-    return ObjectMsgPtr<Instruction>::NewFrom(mut_allocator(), instr_msg, this, parallel_desc);
+    return ObjectMsgPtr<Instruction>::New(instr_msg, this, parallel_desc);
   }
   ObjectMsgPtr<Instruction> instruction = mut_free_instruction_list()->PopFront();
   instruction->__Init__(instr_msg, this, parallel_desc);
