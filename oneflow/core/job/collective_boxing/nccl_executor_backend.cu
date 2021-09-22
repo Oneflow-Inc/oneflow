@@ -134,10 +134,6 @@ class CommRank final {
 
   int32_t device_id() const { return device_id_; }
 
-  int32_t global_rank() const { return global_rank_; }
-
-  int32_t local_rank() const { return local_rank_; }
-
   ncclComm_t nccl_comm() const { return nccl_comm_; }
 
   void InitRank(ncclUniqueId unique_id, int32_t global_rank_count) {

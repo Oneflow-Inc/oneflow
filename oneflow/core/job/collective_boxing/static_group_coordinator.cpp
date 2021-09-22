@@ -95,17 +95,20 @@ void StaticGroupCoordinator::Init(std::shared_ptr<RequestStore> request_store,
 }
 
 void* StaticGroupCoordinator::CreateCoordinatorToken(const RequestId& request_id) {
+  std::unique_lock<std::mutex> lock(mutex_);
   auto it = impl_->job_id2static_group_requests_info_.find(request_id.job_id);
   CHECK(it != impl_->job_id2static_group_requests_info_.end());
   return new StaticGroupRequestsInfoToken{request_id, &it->second};
 }
 
 void StaticGroupCoordinator::DestroyCoordinatorToken(void* coordinator_token) {
+  std::unique_lock<std::mutex> lock(mutex_);
   auto token = static_cast<StaticGroupRequestsInfoToken*>(coordinator_token);
   delete token;
 }
 
 void StaticGroupCoordinator::InitJob(int64_t job_id) {
+  std::unique_lock<std::mutex> lock(mutex_);
   const auto& GetRequestDesc = [&](const RequestId& request_id) -> const RequestDesc& {
     return impl_->request_store_->MutRequestEntry(request_id)->desc();
   };
@@ -146,6 +149,7 @@ void StaticGroupCoordinator::InitJob(int64_t job_id) {
 }
 
 void StaticGroupCoordinator::DeinitJob(int64_t job_id) {
+  std::unique_lock<std::mutex> lock(mutex_);
   const auto& it = impl_->job_id2static_group_requests_info_.find(job_id);
   CHECK(it != impl_->job_id2static_group_requests_info_.end());
   const auto& group_id2executor_token = it->second.group_id2executor_token;
