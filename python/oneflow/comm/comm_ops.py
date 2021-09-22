@@ -58,7 +58,7 @@ def all_reduce(tensor):
         placement=placement, sbp=flow.sbp.partial_sum
     ).to_consistent(placement=placement, sbp=flow.sbp.broadcast)
      
-    tensor.data = result
+    tensor.data = result.to_local()
 
 
 def all_gather(tensor_list, tensor):
@@ -202,7 +202,7 @@ def reduce(tensor, dst):
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
     assert tensor.is_local
     assert isinstance(dst, int)
-    original_tensor = tensor
+    original_tensor = flow._C.identity(tensor)
     flow.comm.all_reduce(tensor)
     if flow.env.get_rank() != dst:
         tensor.data = original_tensor
