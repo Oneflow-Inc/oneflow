@@ -153,9 +153,7 @@ class RMSprop(Optimizer):
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
-                self._state[param]["square_avg"] = flow.zeros_like(param)
-                if param_group["centered"]:
-                    self._state[param]["grad_avg"] = flow.zeros_like(param)
+
         self._centered_rmsprop = (
             flow.builtin_op("rmsprop_update")
             .Input("model")
@@ -199,8 +197,14 @@ class RMSprop(Optimizer):
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
+
+                    if "square_avg" not in self._state[param]:
+                        self._state[param]["square_avg"] = flow.zeros_like(param)
                     ms_tensor = self._state[param]["square_avg"]
+
                     if param_group["centered"]:
+                        if "grad_avg" not in self._state[param]:
+                            self._state[param]["grad_avg"] = flow.zeros_like(param)
                         mg_tensor = self._state[param]["grad_avg"]
                         self._centered_rmsprop(
                             param, param.grad, ms_tensor, mg_tensor, **kwargs
@@ -210,7 +214,7 @@ class RMSprop(Optimizer):
             self._state["step"] = self._state["step"] + 1
             return loss
 
-    def generate_conf_for_graph(self, train_conf, vars_conf):
+    def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
             optimizer_conf = train_conf.mutable_optimizer_conf().Add()
