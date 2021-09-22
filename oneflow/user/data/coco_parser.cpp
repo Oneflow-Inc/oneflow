@@ -31,7 +31,7 @@ void COCOParser::Parse(std::shared_ptr<LoadTargetShdPtrVec> batch_data,
   user_op::Tensor* segm_tensor = ctx->Tensor4ArgNameAndIndex("gt_segm", 0);
   user_op::Tensor* segm_index_tensor = ctx->Tensor4ArgNameAndIndex("gt_segm_index", 0);
 
-  MultiThreadLoop<std::function<void(size_t)>>(batch_data->size(), [&](size_t i) {
+  MultiThreadLoop(batch_data->size(), [&](size_t i) {
     TensorBuffer* image_buffer = image_tensor->mut_dptr<TensorBuffer>() + i;
     COCOImage* image = batch_data->at(i).get();
     image_buffer->Swap(&image->data);

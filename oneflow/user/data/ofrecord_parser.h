@@ -35,7 +35,7 @@ class OFRecordParser final : public Parser<TensorBuffer> {
              user_op::KernelComputeContext* ctx) override {
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     OFRecord* dptr = out_tensor->mut_dptr<OFRecord>();
-    MultiThreadLoop<std::function<void(size_t)>>(batch_data->size(), [&](size_t i) {
+    MultiThreadLoop(batch_data->size(), [&](size_t i) {
       TensorBuffer* buffer = batch_data->at(i).get();
       CHECK(dptr[i].ParseFromArray(buffer->data<char>(), buffer->shape().elem_cnt()));
     });

@@ -26,7 +26,7 @@ namespace oneflow {
 #define XPU_1D_KERNEL_LOOP_BEGIN(i, n) CUDA_1D_KERNEL_LOOP(i, n) {
 #define XPU_1D_KERNEL_LOOP_END() }
 #else
-#define XPU_1D_KERNEL_LOOP_BEGIN(i, n) MultiThreadLoop<std::function<void(size_t)>>(n, [&](size_t i) {
+#define XPU_1D_KERNEL_LOOP_BEGIN(i, n) MultiThreadLoop(n, [&](size_t i) {
 #define XPU_1D_KERNEL_LOOP_END() \
   });
 #endif

@@ -53,7 +53,7 @@ template<typename T>
 void VecAdd(size_t size, T* out, const T* in0, const T* in1) {
   size_t thread_num = Global<ThreadPool>::Get()->thread_num();
   BalancedSplitter bs(size, thread_num);
-  MultiThreadLoop<std::function<void(size_t)>>(thread_num, [&](size_t thread_idx) {
+  MultiThreadLoop(thread_num, [&](size_t thread_idx) {
     size_t end = bs.At(thread_idx).end();
     for (size_t i = bs.At(thread_idx).begin(); i < end; ++i) { out[i] = in0[i] + in1[i]; }
   });
