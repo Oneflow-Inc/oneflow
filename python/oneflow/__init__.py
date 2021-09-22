@@ -73,6 +73,9 @@ from oneflow._C import greater
 from oneflow._C import greater as gt
 from oneflow._C import greater_equal
 from oneflow._C import greater_equal as ge
+from oneflow._C import logical_and
+from oneflow._C import logical_or
+from oneflow._C import logical_xor
 from oneflow._C import gelu
 from oneflow._C import mish
 from oneflow._C import sigmoid

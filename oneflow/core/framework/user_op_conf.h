@@ -167,6 +167,8 @@ class UserOpConfWrapperBuilder final {
   HashMap<std::string, std::vector<std::string>> input_;
   HashMap<std::string, std::vector<std::string>> output_;
   HashMap<std::string, AttrValue> attr_;
+  std::vector<std::string> input_order_;
+  std::vector<std::string> output_order_;
   OptInt64 scope_symbol_id_;
 };
 

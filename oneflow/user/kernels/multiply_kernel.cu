@@ -13,25 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-#include "oneflow/api/python/common.h"
-#include "oneflow/core/common/str_util.h"
+#include "oneflow/user/kernels/multiply_kernel.h"
+#include "oneflow/user/kernels/elementwise_xpu_kernel.cuh"
 
 namespace oneflow {
 
-Maybe<void> ParsingDeviceTag(const std::string& device_tag, std::string* device_name,
-                             int* device_index) {
-  std::string::size_type pos = device_tag.find(':');
-  if (pos == std::string::npos) {
-    *device_name = device_tag;
-    *device_index = -1;
-  } else {
-    std::string index_str = device_tag.substr(pos + 1);
-    CHECK_OR_RETURN(IsStrInt(index_str)) << "Invalid device " << device_tag;
-    *device_name = device_tag.substr(0, pos);
-    *device_index = std::stoi(index_str);
-  }
-  return Maybe<void>::Ok();
-}
+#define REGISTER_MULTIPLY_GPU_KERNEL(cpp_type, proto_type) \
+  REGISTER_MULTIPLY_KERNEL(DeviceType::kGPU, cpp_type);
+
+OF_PP_FOR_EACH_TUPLE(REGISTER_MULTIPLY_GPU_KERNEL, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

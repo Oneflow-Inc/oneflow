@@ -101,8 +101,8 @@ class EagerBToSOpKernelState final : public user_op::OpKernelState {
               CHECK_JUST(in_parallel_desc->ParallelId4MachineDeviceId(src, src_device_id));
           in_slice = GetTensorSliceView4ParallelId(
               *in_parallel_desc->hierarchy(),
-              *CHECK_JUST(CachedGetAllBroadcastNdSbp(in_parallel_desc->hierarchy()->NumAxes())), shape,
-              in_parallel_id);
+              *CHECK_JUST(CachedGetAllBroadcastNdSbp(in_parallel_desc->hierarchy()->NumAxes())),
+              shape, in_parallel_id);
           // copy to out_slice from in_slice if src == dst
           intersection = out_slice;
         } else {
