@@ -45,10 +45,10 @@ def _test_cast_backward(test_case, device, shape):
     x = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    y = flow.cast(x, flow.int8)
+    y = flow.cast(x, flow.float64)
     z = y.sum()
     z.backward()
-    np_out = np_arr.astype(np.int8)
+    np_out = np_arr.astype(np.float64)
     test_case.assertTrue(np.array_equal(x.grad.numpy(), np.ones(shape=shape)))
 
 
