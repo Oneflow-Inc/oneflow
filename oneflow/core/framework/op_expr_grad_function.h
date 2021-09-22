@@ -78,12 +78,12 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
     TensorTuple detach_inputs(inputs.size());
     for (int i = 0; i < inputs.size(); ++i) {
       detach_inputs.at(i) = JUST(inputs.at(i)->detach());
-      detach_inputs.at(i)->set_requires_grad(inputs.at(i)->requires_grad());
+      JUST(detach_inputs.at(i)->set_requires_grad(inputs.at(i)->requires_grad()));
     }
     TensorTuple detach_outputs(outputs.size());
     for (int i = 0; i < outputs.size(); ++i) {
       detach_outputs.at(i) = JUST(outputs.at(i)->detach());
-      detach_outputs.at(i)->set_requires_grad(outputs.at(i)->requires_grad());
+      JUST(detach_outputs.at(i)->set_requires_grad(outputs.at(i)->requires_grad()));
     }
     return Capture(state, detach_inputs, detach_outputs, interp_ctx);
   }
