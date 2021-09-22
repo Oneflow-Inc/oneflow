@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
+#include <memory>
 #include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -104,8 +105,8 @@ char * IBVerbsCommNet::SerialTokenToData(void *token, size_t *token_size) {
 
 void * IBVerbsCommNet::DeSerialDataToToken(char *data, size_t  * token_size) {
   //void * token = malloc(sizeof(IBVerbsCommNetRMADesc));
-  std::shared_ptr<IBVerbsCommNetRMADesc> desc;
-  desc.reset(new IBVerbsCommNetRMADesc);
+  std::shared_ptr<IBVerbsCommNetRMADesc> desc = std::make_shared<IBVerbsCommNetRMADesc>(new IBVerbsCommNetRMADesc);
+ // desc.reset(new IBVerbsCommNetRMADesc);
   std::memcpy(desc.get(), data, sizeof(IBVerbsCommNetRMADesc));                                                 reinterpret_cast<uint64_t>(msg.regst()))];
  // std::memcpy(token, data, sizeof(IBVerbsCommNetRMADesc));
   *token_size = sizeof(IBVerbsCommNetRMADesc);
