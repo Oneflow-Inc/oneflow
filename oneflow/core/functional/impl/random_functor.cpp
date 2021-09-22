@@ -63,8 +63,8 @@ class BernoulliFunctor {
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
-    return OpInterpUtil::Dispatch<Tensor>(
-        *bernoulli_op_, {x}, OpExprInterpContext(bernoulli_attrs, distribution_state));
+    return OpInterpUtil::Dispatch<Tensor>(*bernoulli_op_, {x},
+                                          OpExprInterpContext(bernoulli_attrs, distribution_state));
   }
 
  private:
@@ -168,9 +168,7 @@ class RandNFunctor {
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
     DataType dtype_val = DataType::kFloat;
-    if (dtype) {
-      dtype_val = JUST(dtype)->data_type();
-    }
+    if (dtype) { dtype_val = JUST(dtype)->data_type(); }
     if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
       OF_UNIMPLEMENTED() << "Only support float and double in randn().";
     }
@@ -213,9 +211,7 @@ class ConsistentRandNFunctor {
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
     DataType dtype_val = DataType::kFloat;
-    if (dtype) {
-      dtype_val = JUST(dtype)->data_type();
-    }
+    if (dtype) { dtype_val = JUST(dtype)->data_type(); }
     if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
       OF_UNIMPLEMENTED() << "Only support float and double in randn().";
     }
@@ -260,18 +256,16 @@ class RandIntFunctor {
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
-    return CallImpl(low, high,shape, dtype, device, generator, requires_grad);
+    return CallImpl(low, high, shape, dtype, device, generator, requires_grad);
   }
 
   Maybe<Tensor> CallImpl(const int64_t low, const int64_t high, const Shape& shape,
-                           const Optional<Symbol<DType>>& dtype,
-                           const Optional<Symbol<Device>>& device,
-                           const Optional<one::Generator>& generator,
-                           const bool& requires_grad) const {
+                         const Optional<Symbol<DType>>& dtype,
+                         const Optional<Symbol<Device>>& device,
+                         const Optional<one::Generator>& generator,
+                         const bool& requires_grad) const {
     DataType dtype_val = DataType::kInt64;
-    if (dtype) {
-      dtype_val = JUST(dtype)->data_type();
-    }
+    if (dtype) { dtype_val = JUST(dtype)->data_type(); }
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
@@ -301,22 +295,23 @@ class RandIntFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class RandIntFunctor2: public RandIntFunctor {
+class RandIntFunctor2 : public RandIntFunctor {
  public:
   Maybe<Tensor> operator()(const int64_t high, const Shape& shape,
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
-    return CallImpl(0, high, shape, dtype, device, generator, requires_grad);                  
+    return CallImpl(0, high, shape, dtype, device, generator, requires_grad);
   }
 };
 
-
 class ConsistentRandIntFunctor {
  public:
-  ConsistentRandIntFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform_int").Output("out").Build()); }
-  
+  ConsistentRandIntFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("uniform_int").Output("out").Build());
+  }
+
   Maybe<Tensor> operator()(const int64_t low, const int64_t high, const Shape& shape,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
@@ -325,17 +320,15 @@ class ConsistentRandIntFunctor {
                            const bool& requires_grad) const {
     return CallImpl(low, high, shape, placement, sbp_tuple, dtype, generator, requires_grad);
   }
-  
+
   Maybe<Tensor> CallImpl(const int64_t low, const int64_t high, const Shape& shape,
-                           const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
-                           const Optional<Symbol<DType>>& dtype,
-                           const Optional<one::Generator>& generator,
-                           const bool& requires_grad) const {
+                         const Symbol<ParallelDesc>& placement,
+                         const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                         const Optional<Symbol<DType>>& dtype,
+                         const Optional<one::Generator>& generator,
+                         const bool& requires_grad) const {
     DataType dtype_val = DataType::kInt64;
-    if (dtype) {
-      dtype_val = JUST(dtype)->data_type();
-    }
+    if (dtype) { dtype_val = JUST(dtype)->data_type(); }
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
@@ -367,8 +360,6 @@ class ConsistentRandIntFunctor {
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
 
-    result = JUST(functional::ToConsistent(result, placement,
-                                    sbp_tuple, GetNoneSbpList()));
     result->set_requires_grad(requires_grad);
     return result;
   }
@@ -376,7 +367,6 @@ class ConsistentRandIntFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
-
 
 class ConsistentRandIntFunctor2 : public ConsistentRandIntFunctor {
  public:
@@ -393,10 +383,8 @@ class ConsistentRandIntFunctor2 : public ConsistentRandIntFunctor {
 class RandPermFunctor {
  public:
   RandPermFunctor() { randperm_op_ = CHECK_JUST(one::OpBuilder("randperm").Output("out").Build()); }
-  Maybe<Tensor> operator()(const int32_t n, 
-                           const Optional<one::Generator>& generator, 
-                           const Symbol<DType>& dtype,
-                           const Optional<Symbol<Device>>& device,
+  Maybe<Tensor> operator()(const int32_t n, const Optional<one::Generator>& generator,
+                           const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device,
                            const bool& requires_grad) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("n", n));
@@ -430,8 +418,7 @@ class ConsistentRandPermFunctor {
   }
   Maybe<Tensor> operator()(const int32_t n, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
-                           const Optional<one::Generator>& generator,
-                           const Symbol<DType>& dtype,
+                           const Optional<one::Generator>& generator, const Symbol<DType>& dtype,
                            const bool& requires_grad) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("n", n));

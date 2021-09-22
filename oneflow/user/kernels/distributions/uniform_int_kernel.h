@@ -23,20 +23,21 @@ limitations under the License.
 
 namespace oneflow {
 
-
 namespace {
 
-// The purpose of `update_from` and `update_to` is to find the closest valid int64_t number that can be used as actual `from`.
-// The current implementation of `random_` uses uint64_t arithmetics and casts the result to the target dtype(scalar_t).
-// This casting can result in generating numbers that happen to be greater or equal to `to` value. For instance:
+// The purpose of `update_from` and `update_to` is to find the closest valid int64_t number that can
+// be used as actual `from`. The current implementation of `random_` uses uint64_t arithmetics and
+// casts the result to the target dtype(scalar_t). This casting can result in generating numbers
+// that happen to be greater or equal to `to` value. For instance:
 //
 //    auto actual = torch::empty({3, 3}, torch::half);
 //    actual.random_(0, 65504);
 //
-// If random's uint64_t arithmetics produces 65503 as a random value after casting to torch::half it becomes 65504
-// and violates the requirement that random value must be less than `to`. To resolve this issue `update_from` and `update_to`
-// moves `from` to the right and `to` to the left to the next closest value that won't go outside [from, to) after casting to
-// the target dtype. For `to` = 65504 it moves left for (1 << (log2(to) - 11 + 1)) = 32 and becomes 65472, which is previous
+// If random's uint64_t arithmetics produces 65503 as a random value after casting to torch::half it
+// becomes 65504 and violates the requirement that random value must be less than `to`. To resolve
+// this issue `update_from` and `update_to` moves `from` to the right and `to` to the left to the
+// next closest value that won't go outside [from, to) after casting to the target dtype. For `to` =
+// 65504 it moves left for (1 << (log2(to) - 11 + 1)) = 32 and becomes 65472, which is previous
 // available number for torch::half dtype.
 template<typename scalar_t>
 int64_t update_from(int64_t from) {
@@ -84,13 +85,16 @@ class UniformIntKernel final : public user_op::OpKernel {
     int64_t to = ctx->Attr<int64_t>("high");
     // LOG(WARNING) << "get from :" << from << " to:" << to;
     CHECK_LE(from, to) << "uniform kernel expects 'low' to be less than 'high', but got from="
-      << from << " >= to=", to;
+                       << from << " >= to=",
+        to;
 
     if (IsFloating<T>::value) {
-        from = update_from<T>(from);
-        to = update_to<T>(to);
-        CHECK_LE(from, to) << "uniform kernel expects 'low' casted to dtype to be less than 'high'"
-          " casted to dtype, but got from=" << from << " >= to=", to;
+      from = update_from<T>(from);
+      to = update_to<T>(to);
+      CHECK_LE(from, to) << "uniform kernel expects 'low' casted to dtype to be less than 'high'"
+                            " casted to dtype, but got from="
+                         << from << " >= to=",
+          to;
     }
     check_from_to_in_range<T>(from, to - 1);
     // LOG(WARNING) << "updated from :" << from << " to:" << to;

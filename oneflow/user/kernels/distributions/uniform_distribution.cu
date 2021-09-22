@@ -26,7 +26,7 @@ __device__ T GenUniform(curandState* state, const T low, const T high);
 template<>
 __device__ float GenUniform<float>(curandState* state, const float low, const float high) {
   auto rand_num = curand_uniform(state);
-  if(rand_num == 1.0) {
+  if (rand_num == 1.0) {
     return 0.0;
   } else {
     return rand_num * (high - low) + low;
@@ -36,7 +36,7 @@ __device__ float GenUniform<float>(curandState* state, const float low, const fl
 template<>
 __device__ double GenUniform<double>(curandState* state, const double low, const double high) {
   auto rand_num = curand_uniform_double(state);
-  if(rand_num == 1.0) {
+  if (rand_num == 1.0) {
     return 0.0;
   } else {
     return rand_num * (high - low) + low;

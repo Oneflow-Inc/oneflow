@@ -27,7 +27,6 @@ __device__ int64_t GenUniformInt(curandState* state, const int64_t low, const in
   return static_cast<int64_t>(static_cast<int64_t>(curand_uniform(state) * (high - low)) + low);
 }
 
-
 template<typename T>
 __global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, T* dptr, const int64_t low,
                             const int64_t high) {
@@ -52,9 +51,9 @@ void UniformIntDistribution<DeviceType::kGPU, T>::operator()(
                                                                           dptr, low_, high_);
 }
 
-#define INITIATE_GPU_UNIFORM_INT_DISTRIBUTION(T, typeproto)               \
+#define INITIATE_GPU_UNIFORM_INT_DISTRIBUTION(T, typeproto)              \
   template void UniformIntDistribution<DeviceType::kGPU, T>::operator()( \
-      DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,         \
+      DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,            \
       const std::shared_ptr<one::Generator>& generator) const;
 
 OF_PP_FOR_EACH_TUPLE(INITIATE_GPU_UNIFORM_INT_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)

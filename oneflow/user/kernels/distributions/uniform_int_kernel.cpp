@@ -18,10 +18,11 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-#define REGISTER_UNIFORM_KERNEL(device, dtype)                                                 \
-  REGISTER_USER_KERNEL("uniform_int").SetCreateFn<UniformIntKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device)                                                      \
-      & (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
+#define REGISTER_UNIFORM_KERNEL(device, dtype)             \
+  REGISTER_USER_KERNEL("uniform_int")                      \
+      .SetCreateFn<UniformIntKernel<device, dtype>>()      \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device) \
+                       & (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
 REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, float)
 REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, double)
@@ -36,7 +37,7 @@ REGISTER_UNIFORM_KERNEL(DeviceType::kGPU, uint8_t)
 REGISTER_UNIFORM_KERNEL(DeviceType::kGPU, int8_t)
 REGISTER_UNIFORM_KERNEL(DeviceType::kGPU, int32_t)
 REGISTER_UNIFORM_KERNEL(DeviceType::kGPU, int64_t)
-#endif // WITH_CUDA
+#endif  // WITH_CUDA
 
 }  // namespace
 

@@ -33,6 +33,7 @@ def _test_rand(test_case, device, shape):
     test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
     test_case.assertTrue(shape == y1.shape)
 
+
 def _test_0d_rand(test_case, device, shape):
     y1 = flow.rand(*shape, device=flow.device(device))
     y2 = flow.rand(*shape, device=flow.device(device))
@@ -82,7 +83,7 @@ class TestConstantModule(flow.unittest.TestCase):
         x = flow.rand(16, 16, placement=placement, sbp=sbp)
         test_case.assertEqual(x.sbp, sbp)
         test_case.assertEqual(x.placement, placement)
-    
+
     def test_0d_randint(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_0d_rand]

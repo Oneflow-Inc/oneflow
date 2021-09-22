@@ -25,9 +25,7 @@ class CPUUniformIntDistributionImpl {
  public:
   CPUUniformIntDistributionImpl(int64_t low, int64_t high) : random_distribution_(low, high) {}
 
-  T operator()(std::mt19937& engine) { 
-    return static_cast<T>(random_distribution_(engine));
-  }
+  T operator()(std::mt19937& engine) { return static_cast<T>(random_distribution_(engine)); }
 
  private:
   std::uniform_int_distribution<int64_t> random_distribution_;
@@ -43,9 +41,9 @@ void UniformIntDistribution<DeviceType::kCPU, T>::operator()(
   for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = impl(gen->engine()); }
 }
 
-#define INITIATE_CPU_UNIFORM_INT_DISTRIBUTION(T, typeproto)               \
+#define INITIATE_CPU_UNIFORM_INT_DISTRIBUTION(T, typeproto)              \
   template void UniformIntDistribution<DeviceType::kCPU, T>::operator()( \
-      DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,         \
+      DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,            \
       const std::shared_ptr<one::Generator>& generator) const;
 
 OF_PP_FOR_EACH_TUPLE(INITIATE_CPU_UNIFORM_INT_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
