@@ -60,7 +60,7 @@ def _test_slice(test_case, device):
 
 def _test_slice_backward(test_case, device):
     np_grad = np.zeros(10)
-    x = flow.tensor(np.arange(10), device=device, requires_grad=True)
+    x = flow.tensor(np.arange(10).astype(np.float32), device=device, requires_grad=True)
     for i in range(x.numel()):
         y = x[i]
         z = y.sum()
@@ -68,7 +68,9 @@ def _test_slice_backward(test_case, device):
         np_grad[i] = 1
         test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-04, 1e-04))
 
-    x2 = flow.tensor(np.arange(100), device=device, requires_grad=True)
+    x2 = flow.tensor(
+        np.arange(100).astype(np.float32), device=device, requires_grad=True
+    )
     y2 = x2[1:100]
     z2 = y2.sum()
     z2.backward()
