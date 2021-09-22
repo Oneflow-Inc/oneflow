@@ -39,9 +39,8 @@ REGISTER_NO_GRAD_USER_OP("range")
         // CHECK when limit > start, delta > 0; limit < start, delta < 0;
         CHECK_GT_OR_RETURN((integer_limit - integer_start) / integer_delta, static_cast<int64_t>(0))
             << "RuntimeError: upper bound and larger bound inconsistent with step sign";
-        range_elem_cnt =
-            ((std::abs(integer_limit - integer_start) + std::abs(integer_delta) - 1)
-             / std::abs(integer_delta));  // Do the ceil division, ceil((limit-start)/delta)
+        range_elem_cnt = ((integer_limit - integer_start + integer_delta - 1)
+                          / integer_delta);  // Do the ceil division, ceil((limit-start)/delta)
       } else {
         double float_delta = ctx->Attr<double>("float_delta");
         CHECK_OR_RETURN(float_delta != static_cast<double>(0.0))

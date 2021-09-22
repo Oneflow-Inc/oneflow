@@ -38,7 +38,7 @@ class RangeKernel final : public OpKernel {
       start = ctx->Attr<int64_t>("integer_start");
       delta = ctx->Attr<int64_t>("integer_delta");
       limit = ctx->Attr<int64_t>("integer_limit");
-      range_elem_cnt = ((std::abs(limit - start) + std::abs(delta) - 1) / std::abs(delta));
+      range_elem_cnt = ((limit - start + delta - 1) / delta);
     } else {
       // If we use static_cast<T>(start, delta, limit) and std::ceil to calculate range_elem_cnt, it
       // will cause rounding error.
