@@ -162,6 +162,14 @@
   signature: "Tensor (Tensor dz, Tensor x, Tensor y, Tensor z) => BroadcastPowYGrad"
   bind_python: False
 
+- name: "reduce_max"
+  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceMax"
+  bind_python: True
+
+- name: "reduce_min"
+  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceMin"
+  bind_python: True
+
 - name: "reduce_sum"
   signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceSum"
   bind_python: True
