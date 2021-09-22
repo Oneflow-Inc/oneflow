@@ -58,6 +58,7 @@ from oneflow.nn.modules.conv import (
     Conv3d,
     ConvTranspose1d,
     ConvTranspose2d,
+    ConvTranspose3d,
 )
 from oneflow.nn.modules.min_max_observer import MinMaxObserver
 from oneflow.nn.modules.moving_average_min_max_observer import (

@@ -480,6 +480,20 @@
     String data_format="channels_first") => ConvBiasGrad'
   bind_python: False
 
+- name: "deconv1d"
+  signature:
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32 filters,
+    Int32List padding, String data_format, Int32List kernel_size, 
+    Int32List output_padding, Int32List strides, Int32List dilation, Int32 groups=1) => Deconv1d"
+  bind_python: True
+
+- name: "deconv3d"
+  signature:
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32 filters,
+    Int32List padding, String data_format, Int32List kernel_size, 
+    Int32List output_padding, Int32List strides, Int32List dilation, Int32 groups=1) => Deconv3d"
+  bind_python: True
+
 - name: "expand"
   signature: "Tensor (Tensor x, Shape shape) => Expand"
   bind_python: True

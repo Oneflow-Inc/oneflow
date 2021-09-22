@@ -26,7 +26,7 @@ namespace one {
 struct DeConvolutionNdCaptureState : public AutoGradCaptureState {
   bool weight_requires_grad = false;
   bool activation_requires_grad = false;
-  int32_t ndims;
+  size_t ndims;
   std::string data_format;
   std::vector<int32_t> padding_before;
   std::vector<int32_t> kernel_size;
@@ -64,13 +64,13 @@ Maybe<void> DeConvolutionNd::Capture(DeConvolutionNdCaptureState* ctx, const Ten
     ctx->SaveTensorForBackward(inputs.at(0));  // x
   }
 
-  ctx->data_format = JUST(base_attrs_.GetAttr<std::string>("data_format"));
-  ctx->padding_before = JUST(base_attrs_.GetAttr<std::vector<int32_t>>("padding_before"));
-  ctx->kernel_size = JUST(base_attrs_.GetAttr<std::vector<int32_t>>("kernel_size"));
-  ctx->strides = JUST(base_attrs_.GetAttr<std::vector<int32_t>>("strides"));
-  ctx->dilation_rate = JUST(base_attrs_.GetAttr<std::vector<int32_t>>("dilation_rate"));
+  ComposedAttrMap composed_attrs(attrs, base_attrs_);
+  ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
+  ctx->padding_before = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding_before"));
+  ctx->kernel_size = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("kernel_size"));
+  ctx->strides = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("strides"));
+  ctx->dilation_rate = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("dilation_rate"));
   ctx->ndims = ctx->kernel_size.size();
-
   return Maybe<void>::Ok();
 }
 
