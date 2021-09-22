@@ -590,7 +590,7 @@ jobs:
         timeout-minutes: 45
         if: ${{ matrix.device == 'cuda-xla' && !fromJson(matrix.cache-hit) && matrix.test-type == 'legacy-op' }}
         run: |
-          docker exec ${{ env.TEST_CONTAINER_NAME }}bash ci/test/test_xla.sh
+          docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/test_xla.sh
       - name: Remove automerge
         if: ${{ failure() && contains(matrix.runs-on, 'self-hosted') && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge') }}
         uses: actions/github-script@v4
