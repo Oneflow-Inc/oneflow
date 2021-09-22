@@ -41,6 +41,7 @@ ncclRedOp_t GetNcclReduceOp(ReduceMethod reduce_method) {
     return ncclRedOp_t::ncclSum;
   } else {
     UNIMPLEMENTED();
+    return ncclRedOp_t{};
   }
 }
 #endif
@@ -58,6 +59,16 @@ bool HasDeviceOnThisMachine(const DeviceSet& device_set) {
   return std::any_of(
       device_set.device().cbegin(), device_set.device().cend(),
       [](const DeviceDesc& device_desc) { return IsDeviceOnThisMachine(device_desc); });
+}
+
+bool HasRankInteractionOnDeviceSet(const DeviceSet& a, const DeviceSet& b) {
+  for (int64_t i = 0; i < a.device_size(); ++i) {
+    const DeviceDesc& a_device_desc = a.device(i);
+    for (int64_t j = 0; j < b.device_size(); ++j) {
+      if (a_device_desc.machine_id() == b.device(j).machine_id()) { return true; }
+    }
+  }
+  return false;
 }
 
 std::string GetNcclUniqueIdRpcKey(const std::string& name, int64_t stream_id) {
@@ -550,25 +561,47 @@ std::shared_ptr<const CollectiveBoxingExecutorPlanToken> CollectiveBoxingExecuto
     job_ids.push_back(job_id);
     const RequestSet& request_set = job_id7request_set.second;
     std::vector<const RequestDesc*> requests;
-    requests.reserve(request_set.request_size());
-    for (const auto& request : request_set.request()) {
-      if (HasDeviceOnThisMachine(request.device_set())) { requests.push_back(&request); }
-    }
+    for (const auto& request : request_set.request()) { requests.push_back(&request); }
     SortRequestsByOrder(&requests);
-    CHECK(std::adjacent_find(requests.begin(), requests.end(),
-                             [](const RequestDesc* a, const RequestDesc* b) {
-                               return a->dependency_depth() > b->dependency_depth();
-                             })
-          == requests.end());
-    std::vector<std::vector<const RequestDesc*>> rough_groups;
+    std::vector<std::vector<const RequestDesc*>> local_requests_vec;
+    std::vector<const RequestDesc*> local_requests;
     for (const auto* request : requests) {
-      if ((!collective_boxing_conf.enable_fusion()) || rough_groups.empty()
-          || request->dependency_depth() != rough_groups.back().front()->dependency_depth()
-          || request->op_desc().backend() != rough_groups.back().front()->op_desc().backend()
-          || request->device_set() != rough_groups.back().front()->device_set()) {
-        rough_groups.emplace_back(std::vector<const RequestDesc*>({request}));
+      if (HasDeviceOnThisMachine(request->device_set())) {
+        local_requests.push_back(request);
       } else {
-        rough_groups.back().push_back(request);
+        if (local_requests.size() != 0
+            && HasRankInteractionOnDeviceSet(local_requests.back()->device_set(),
+                                             request->device_set())) {
+          local_requests_vec.push_back(local_requests);
+          local_requests.clear();
+        }
+      }
+    }
+    if (local_requests.size() != 0) {
+      local_requests_vec.push_back(local_requests);
+      local_requests.clear();
+    }
+    for (int32_t i = 0; i < local_requests_vec.size(); ++i) {
+      CHECK(std::adjacent_find(local_requests_vec.at(i).begin(), local_requests_vec.at(i).end(),
+                               [](const RequestDesc* a, const RequestDesc* b) {
+                                 return a->dependency_depth() > b->dependency_depth();
+                               })
+            == local_requests_vec.at(i).end());
+    }
+
+    std::vector<std::vector<const RequestDesc*>> rough_groups;
+    for (int32_t i = 0; i < local_requests_vec.size(); ++i) {
+      const auto& local_requests = local_requests_vec.at(i);
+      for (int32_t j = 0; j < local_requests.size(); ++j) {
+        const auto* request = local_requests.at(j);
+        if ((j == 0) || (!collective_boxing_conf.enable_fusion()) || rough_groups.empty()
+            || request->dependency_depth() != rough_groups.back().front()->dependency_depth()
+            || request->op_desc().backend() != rough_groups.back().front()->op_desc().backend()
+            || request->device_set() != rough_groups.back().front()->device_set()) {
+          rough_groups.emplace_back(std::vector<const RequestDesc*>({request}));
+        } else {
+          rough_groups.back().push_back(request);
+        }
       }
     }
     std::vector<GroupState>& group_states = job_id2group_states_[job_id];
