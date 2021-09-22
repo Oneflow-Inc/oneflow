@@ -25,11 +25,6 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void SqrtGpu(const int64_t n, const T* x, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::sqrt(x[i]); }
-}
-
-template<typename T>
 __global__ void AxpyGpu(const int n, const T alpha, const T* x, const int incx, T* y,
                         const int incy) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[i * incy] += alpha * x[i * incx]; }
@@ -105,11 +100,6 @@ __global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1, c
   }
 }
 
-template<typename T>
-__global__ void gpu_set(const T value, T* addr) {
-  *addr = value;
-}
-
 }  // namespace
 
 #define MAKE_CUB_DEVICE_REDUCE_SWITCH_ENTRY(func_name, T) cub::DeviceReduce::func_name<T*, T*>
@@ -129,18 +119,11 @@ KU_IF_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializ
                                                         host_blob);
   });
 }
-KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) {
-  gpu_set<T><<<1, 1, 0, ctx->cuda_stream()>>>(value, addr);
-}
 
 #define KU_FLOATING_METHOD \
   template<typename T>     \
   void KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::value>::type>::
 
-KU_FLOATING_METHOD Dot(DeviceCtx* ctx, const int n, const T* x, const int incx, const T* y,
-                       const int incy, T* result) {
-  cublas_dot<T>(ctx->cublas_pmd_handle(), n, x, incx, y, incy, result);
-}
 KU_FLOATING_METHOD Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx,
                         T* y, const int incy) {
   cublas_axpy<T>(ctx->cublas_pmh_handle(), n, &alpha, x, incx, y, incy);
@@ -148,10 +131,6 @@ KU_FLOATING_METHOD Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, 
 KU_FLOATING_METHOD Axpy(DeviceCtx* ctx, const int n, const T* alpha, const T* x, const int incx,
                         T* y, const int incy) {
   cublas_axpy<T>(ctx->cublas_pmd_handle(), n, alpha, x, incx, y, incy);
-}
-
-KU_FLOATING_METHOD Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
-  SqrtGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 
 KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0) {

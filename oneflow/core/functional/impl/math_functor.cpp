@@ -799,6 +799,45 @@ class ScalarLogicalLessEqual2Functor {
   }
 };
 
+class ScalarLogicalAndFunctor : public ScalarLogicalBaseFunctor {
+ public:
+  ScalarLogicalAndFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_and") {}
+};
+
+// (scalar && x) = (x && scalar)
+class ScalarLogicalAnd2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarLogicalAnd(x, scalar);
+  }
+};
+
+class ScalarLogicalOrFunctor : public ScalarLogicalBaseFunctor {
+ public:
+  ScalarLogicalOrFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_or") {}
+};
+
+// (scalar || x) = (x || scalar)
+class ScalarLogicalOr2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarLogicalOr(x, scalar);
+  }
+};
+
+class ScalarLogicalXorFunctor : public ScalarLogicalBaseFunctor {
+ public:
+  ScalarLogicalXorFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_xor") {}
+};
+
+// (scalar ^ x) = (x ^ scalar)
+class ScalarLogicalXor2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarLogicalXor(x, scalar);
+  }
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -836,6 +875,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarLogicalLessFunctor, ScalarLogicalLess2Functor>("ScalarLogicalLess");
   m.add_functor<ScalarLogicalLessEqualFunctor, ScalarLogicalLessEqual2Functor>(
       "ScalarLogicalLessEqual");
+  m.add_functor<ScalarLogicalAndFunctor, ScalarLogicalAnd2Functor>("ScalarLogicalAnd");
+  m.add_functor<ScalarLogicalOrFunctor, ScalarLogicalOr2Functor>("ScalarLogicalOr");
+  m.add_functor<ScalarLogicalXorFunctor, ScalarLogicalXor2Functor>("ScalarLogicalXor");
 };
 
 }  // namespace functional
