@@ -43,8 +43,8 @@ TEST(Maybe, JUST_MSG) {
 
   auto err = i(10.123).error();
   ASSERT_EQ(err->msg(), "input value 53");
-  ASSERT_EQ(err->stack_frame(0).error_msg(), "(f(y)): input value g(10)");
-  ASSERT_EQ(err->stack_frame(1).error_msg(), "(h(y)): input value int(10.123)");
+  ASSERT_EQ(err->stack_frame(0).error_msg(), "f(y): input value g(10)");
+  ASSERT_EQ(err->stack_frame(1).error_msg(), "h(y): input value int(10.123)");
 }
 
 }  // namespace test

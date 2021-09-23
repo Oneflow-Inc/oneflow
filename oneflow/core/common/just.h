@@ -88,7 +88,7 @@ std::shared_ptr<cfg::ErrorProto> JustGetError(const Optional<T>&) {
     if (!::oneflow::private_details::JustIsOk(value_to_check_)) {                        \
       return ::oneflow::private_details::JustErrorAddStackFrame(                         \
           ::oneflow::private_details::JustGetError(value_to_check_), __FILE__, __LINE__, \
-          __FUNCTION__, OF_PP_STRINGIZE((__VA_ARGS__)));                                 \
+          __FUNCTION__, OF_PP_STRINGIZE(__VA_ARGS__));                                   \
     }                                                                                    \
     std::forward<decltype(value_to_check_)>(value_to_check_);                            \
   }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
@@ -100,7 +100,7 @@ std::shared_ptr<cfg::ErrorProto> JustGetError(const Optional<T>&) {
       LOG(FATAL) << ::oneflow::GetFormatedSerializedError(                                   \
           ::oneflow::private_details::JustErrorAddStackFrame(                                \
               ::oneflow::private_details::JustGetError(value_to_check_), __FILE__, __LINE__, \
-              func_name, OF_PP_STRINGIZE((__VA_ARGS__))));                                   \
+              func_name, OF_PP_STRINGIZE(__VA_ARGS__)));                                     \
     }                                                                                        \
     return std::forward<decltype(value_to_check_)>(value_to_check_);                         \
   })(__FUNCTION__)                                                                           \
@@ -113,7 +113,7 @@ std::shared_ptr<cfg::ErrorProto> JustGetError(const Optional<T>&) {
       return ::oneflow::private_details::JustErrorAddMessage(                         \
           ::oneflow::Error(::oneflow::private_details::JustGetError(value_to_check_)) \
               .AddStackFrame(__FILE__, __LINE__, __FUNCTION__),                       \
-          OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__);                               \
+          OF_PP_STRINGIZE(value), ": ", __VA_ARGS__);                                 \
     }                                                                                 \
     std::forward<decltype(value_to_check_)>(value_to_check_);                         \
   }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
@@ -126,7 +126,7 @@ std::shared_ptr<cfg::ErrorProto> JustGetError(const Optional<T>&) {
           ::oneflow::private_details::JustErrorAddMessage(                                \
               ::oneflow::Error(::oneflow::private_details::JustGetError(value_to_check_)) \
                   .AddStackFrame(__FILE__, __LINE__, func_name),                          \
-              OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__)                                \
+              OF_PP_STRINGIZE(value), ": ", __VA_ARGS__)                                  \
               .error_proto());                                                            \
     }                                                                                     \
     return std::forward<decltype(value_to_check_)>(value_to_check_);                      \
