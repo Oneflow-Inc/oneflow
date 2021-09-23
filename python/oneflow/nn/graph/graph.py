@@ -265,13 +265,15 @@ class Graph(object):
         """
         return self.config.training
 
-    def debug(self, mode: bool = True, ranks: Optional[Union[int, List[int]]] = None) -> None:
+    def debug(
+        self, mode: bool = True, ranks: Optional[Union[int, List[int]]] = None
+    ) -> None:
         r"""Open or close debug mode of the graph.
 
         If in debug mode, logs of computation graph building will be
         printed. The log includes inputs/outputs/parameters/buffers/modules meta information.
 
-        Use ``rank`` to choose which rank to print the debug information.
+        Use ``ranks`` to choose which rank to print the debug information.
 
         .. code-block:: python
 
@@ -282,8 +284,8 @@ class Graph(object):
 
         Args:
             mode (bool): whether to set debug mode ("True") or not (``False``). Default: ``True``.
-            rank (int): choose which rank to print the debug information. Default rank ``0``.
-                        You can choose any valid rank. Rank ``-1`` means print on all rank.
+            ranks (int or list(int)): choose ranks to print the debug information. Default rank ``0``.
+                You can choose any valid rank. Ranks equals ``-1`` means debug on all ranks.
         """
         assert isinstance(mode, bool)
 

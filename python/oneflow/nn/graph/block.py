@@ -122,7 +122,9 @@ class Block(object):
             self._scope = graph_build_util.make_new_block_scope(self.prev_scope, self)
         return self._scope
 
-    def debug(self, mode: bool = True, ranks: Optional[Union[int, List[int]]] = None) -> None:
+    def debug(
+        self, mode: bool = True, ranks: Optional[Union[int, List[int]]] = None
+    ) -> None:
         assert isinstance(mode, bool)
 
         if ranks is None:
