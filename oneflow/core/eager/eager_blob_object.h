@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/eager/blob_object.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/memory/memory_allocator.h"
-#include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/stream.h"
 
 namespace oneflow {
 
@@ -85,16 +85,16 @@ class EagerBlobObject final : public BlobObject {
 
   void set_is_shape_synced(bool val) { is_shape_synced_ = val; }
 
-  const Optional<Symbol<Device>>& producer_op_device() const { return producer_op_device_; }
-  Maybe<void> init_producer_op_device(Symbol<Device> producer_op_device) {
-    CHECK_OR_RETURN(!producer_op_device_.has_value());
-    producer_op_device_ = producer_op_device;
+  const Optional<Symbol<Stream>>& producer_stream() const { return producer_stream_; }
+  Maybe<void> init_producer_stream(Symbol<Stream> producer_stream) {
+    CHECK_OR_RETURN(!producer_stream_.has_value());
+    producer_stream_ = producer_stream;
     return Maybe<void>::Ok();
   }
 
-  const Optional<Symbol<Device>>& last_used_device() const { return last_used_device_; }
-  void set_last_used_device(Symbol<Device> last_used_device) {
-    last_used_device_ = last_used_device;
+  const Optional<Symbol<Stream>>& last_used_stream() const { return last_used_stream_; }
+  void set_last_used_device(Symbol<Stream> last_used_stream) {
+    last_used_stream_ = last_used_stream;
   }
 
  private:
@@ -108,9 +108,12 @@ class EagerBlobObject final : public BlobObject {
   std::size_t blob_body_bytes_;
   std::unique_ptr<MemoryAllocator> non_pod_initer_;
   std::atomic<bool> is_shape_synced_;
+
+  Optional<Symbol<Stream>> producer_stream_;
+  Optional<Symbol<Stream>> last_used_stream_;
+
+  // used by vm scheduler thread
   Optional<LocalDepObject*> compute_local_dep_object_;
-  Optional<Symbol<Device>> producer_op_device_;
-  Optional<Symbol<Device>> last_used_device_;
 };
 
 }  // namespace vm

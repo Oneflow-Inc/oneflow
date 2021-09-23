@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/stream.h"
 
 namespace oneflow {
 
@@ -27,25 +28,25 @@ Maybe<bool> SyncLaunched(user_op::DeviceInferContext* ctx);
 
 Maybe<bool> IsAsyncLaunched(user_op::DeviceInferContext* ctx);
 
-extern Maybe<Symbol<Device>> (*GetNcclDevice)(bool is_async_launced);
-extern Maybe<Symbol<Device>> (*GetCpuTransportDevice)();
+extern Maybe<Symbol<Stream>> (*GetNcclStream)(bool is_async_launced);
+extern Maybe<Symbol<Stream>> (*GetCpuTransportStream)();
 
 Maybe<Symbol<Device>> DefaultGetOutputDeivce(user_op::DeviceInferContext* ctx);
 
 template<
     Maybe<bool> (*GetIsAsyncLaunched)(user_op::DeviceInferContext*),
     Maybe<Symbol<Device>> (*GetOutputDeivce)(user_op::DeviceInferContext*) = DefaultGetOutputDeivce>
-Maybe<Symbol<Device>> DeviceInferFn(user_op::DeviceInferContext* ctx) {
+Maybe<Symbol<Stream>> StreamAndDeviceInferFn(user_op::DeviceInferContext* ctx) {
   Symbol<Device> output_device = JUST(GetOutputDeivce(ctx));
   if (ctx->outputs().size() > 0) {
     *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = output_device;
   }
   if (output_device->type() == "cuda" || output_device->type() == "gpu") {
     bool is_async_launched = JUST(GetIsAsyncLaunched(ctx));
-    const auto& cuda_device = JUST(GetNcclDevice(is_async_launched));
+    const auto& cuda_device = JUST(GetNcclStream(is_async_launched));
     return cuda_device;
   } else if (output_device->type() == "cpu") {
-    return JUST(GetCpuTransportDevice());
+    return JUST(GetCpuTransportStream());
   } else {
     UNIMPLEMENTED_THEN_RETURN();
   }

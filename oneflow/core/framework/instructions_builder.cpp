@@ -719,9 +719,9 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
     const one::EagerBlobObjectListPtr& input_eager_blob_objects,
     const one::EagerBlobObjectListPtr& output_eager_blob_objects,
-    const one::OpExprInterpContext& ctx, Symbol<Device> op_device) {
+    const one::OpExprInterpContext& ctx, Symbol<Stream> stream) {
   return LocalCallOpKernel(opkernel, input_eager_blob_objects, output_eager_blob_objects, nullptr,
-                           ctx, op_device);
+                           ctx, stream);
 }
 
 Maybe<void> InstructionsBuilder::LocalCallOpKernel(
@@ -729,16 +729,16 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const one::EagerBlobObjectListPtr& input_eager_blob_objects,
     const one::EagerBlobObjectListPtr& output_eager_blob_objects,
     const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
-    const one::OpExprInterpContext& ctx, Symbol<Device> op_device) {
-  const auto& parallel_desc_sym = JUST(Placement4Device(op_device)).shared_from_symbol();
-  const auto& instr_type_name = JUST(op_device->local_call_instruction_name());
+    const one::OpExprInterpContext& ctx, Symbol<Stream> stream) {
+  const auto& parallel_desc_sym = JUST(Placement4Device(stream->device())).shared_from_symbol();
+  const auto& instr_type_name = JUST(stream->stream_descriptor().local_call_instruction_name());
   for (const auto& input : *input_eager_blob_objects) {
     const auto& blob_last_used_device = JUST(input->last_used_device());
-    if (blob_last_used_device != op_device) {
+    if (blob_last_used_device != stream) {
       auto* dep_object = JUST(input->compute_local_dep_object());
       JUST(SoftSyncStream(dep_object, "mut", blob_last_used_device));
     }
-    input->set_last_used_device(op_device);
+    input->set_last_used_device(stream);
   }
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
@@ -749,10 +749,10 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
   *instruction->mutable_phy_instr_operand() = phy_instr_operand;
   instruction_list_->EmplaceBack(std::move(instruction));
   for (const auto& output : *output_eager_blob_objects) {
-    if (!output->producer_op_device().has_value()) {
-      JUST(output->init_producer_op_device(op_device));
+    if (!output->producer_stream().has_value()) {
+      JUST(output->init_producer_stream(stream));
     }
-    output->set_last_used_device(op_device);
+    output->set_last_used_device(stream);
   }
   return Maybe<void>::Ok();
 }
@@ -971,9 +971,9 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   if (eager_blob_object->last_used_device().has_value()) {
     const auto& last_used_device = JUST(eager_blob_object->last_used_device());
-    const auto& producer_op_device = JUST(eager_blob_object->producer_op_device());
+    const auto& producer_stream = JUST(eager_blob_object->producer_stream());
 
-    if (last_used_device != producer_op_device) {
+    if (last_used_device != producer_stream) {
       JUST(SoftSyncStream(JUST(eager_blob_object->compute_local_dep_object()), "mut",
                           last_used_device));
     }
@@ -990,11 +990,10 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
 
 Maybe<void> InstructionsBuilder::SoftSyncStream(LocalDepObject* compute_local_dep_object,
                                                 const std::string& modifier,
-                                                Symbol<Device> op_device) {
-  if (!JUST(op_device->need_soft_sync_stream())) { return Maybe<void>::Ok(); }
+                                                Symbol<Stream> stream) {
+  if (!JUST(stream->need_soft_sync_stream())) { return Maybe<void>::Ok(); }
 
-  const auto& parallel_desc = JUST(Placement4Device(op_device)).shared_from_symbol();
-
+  const auto& parallel_desc = JUST(Placement4Device(stream->device())).shared_from_symbol();
   {
     ObjectMsgPtr<vm::InstructionMsg> instruction =
         ObjectMsgPtr<vm::InstructionMsg>::New(parallel_desc->device_tag() + ".RecordEvent");

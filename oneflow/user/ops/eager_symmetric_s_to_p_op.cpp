@@ -29,7 +29,7 @@ REGISTER_NO_GRAD_USER_OP("eager_symmetric_s_to_p")
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
+    .SetStreamAndDeviceInferFn(StreamAndDeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       FOR_RANGE(int64_t, i, 0, in.shape().NumAxes()) {

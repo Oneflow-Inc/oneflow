@@ -260,14 +260,14 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> LocalCallOpKernel(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
                                 const one::EagerBlobObjectListPtr& input_eager_blob_objects,
                                 const one::EagerBlobObjectListPtr& output_eager_blob_objects,
-                                const one::OpExprInterpContext& ctx, Symbol<Device> op_device);
+                                const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
 
   Maybe<void> LocalCallOpKernel(
       const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
       const one::EagerBlobObjectListPtr& input_eager_blob_objects,
       const one::EagerBlobObjectListPtr& output_eager_blob_objects,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
-      const one::OpExprInterpContext& ctx, Symbol<Device> op_device);
+      const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
 
  private:
   Maybe<void> RankFrontSeqCallback(const std::string& instruction_name,
@@ -400,7 +400,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& GetDelegateBlobObject);
 
   Maybe<void> SoftSyncStream(LocalDepObject* compute_local_dep_object, const std::string& modifier,
-                             Symbol<Device> op_device);
+                             Symbol<Stream> stream);
 
   Maybe<void> _FetchBlob(const std::string& instruction_name,
                          const std::shared_ptr<compatible_py::BlobObject>& blob_object,
