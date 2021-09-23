@@ -258,7 +258,7 @@ jobs:
             3.7
       - uses: Oneflow-Inc/get-oneflow@add-doctor-test
         name: Build manylinux cu110_xla
-        if: ${{ matrix.entry =='cu110_xla' && !matrix.cache-hit }}
+        if: ${{ matrix.entry =='cu110_xla' && !matrix.cache-hit && needs.changed_files.outputs.should_run_single_client_tests == '1' }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/cuda-xla.cmake
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc7.sh
