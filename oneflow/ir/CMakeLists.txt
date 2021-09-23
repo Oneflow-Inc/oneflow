@@ -105,7 +105,7 @@ if(NOT llvm_monorepo_POPULATED)
   include_directories(${MLIR_INCLUDE_DIRS})
 endif()
 
-set(LLVM_EXTERNAL_LIT=${LLVM_BINARY_DIR}/bin/llvm-lit)
+set(LLVM_EXTERNAL_LIT "${LLVM_BINARY_DIR}/bin/llvm-lit")
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_BINARY_DIR}/include)
 add_subdirectory(include)
