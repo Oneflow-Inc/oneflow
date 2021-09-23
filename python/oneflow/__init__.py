@@ -239,6 +239,7 @@ from oneflow.nn.modules.pooling import (
 )
 from oneflow.nn.modules.arange import arange_op as arange
 from oneflow.nn.modules.argmax import argmax_op as argmax
+from oneflow.nn.modules.argmin import argmin_op as argmin
 from oneflow.nn.modules.argsort import argsort_op as argsort
 from oneflow.nn.modules.argwhere import argwhere_op as argwhere
 from oneflow.nn.modules.bmm import bmm_op as bmm

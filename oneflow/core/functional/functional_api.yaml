@@ -364,6 +364,10 @@
   signature: "Tensor (Tensor x) => ArgMax"
   bind_python: True
 
+- name: "argmin"
+  signature: "Tensor (Tensor x) => ArgMin"
+  bind_python: True
+
 - name: "argwhere"
   signature: "TensorTuple (Tensor x, DataType dtype=kInt32) => ArgWhere"
   bind_python: True

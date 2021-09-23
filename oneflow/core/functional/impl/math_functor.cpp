@@ -389,6 +389,14 @@ class ArgMaxFunctor : public UnaryFunctor {
   ArgMaxFunctor() { op_ = CHECK_JUST(one::OpBuilder("argmax").Input("in").Output("out").Build()); }
 };
 
+class ArgMinFunctor {
+ public:
+  ArgMinFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return ArgMax(JUST(functional::Negative(x)));
+  }
+};
+
 class CastFunctor {
  public:
   CastFunctor() { op_ = CHECK_JUST(one::OpBuilder("cast").Input("in").Output("out").Build()); }
@@ -772,6 +780,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<ArgMaxFunctor>("ArgMax");
+  m.add_functor<ArgMinFunctor>("ArgMin");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<ClampGradFunctor>("ClampGrad");
