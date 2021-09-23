@@ -191,7 +191,7 @@ class RandNFunctor {
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
-    OpExprInterpContext ctx(attrs);
+    OpExprInterpContext ctx(attrs, distribution_state);
     if (device) { ctx.device = JUST(device); }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     result->set_requires_grad(requires_grad);
@@ -256,14 +256,6 @@ class RandIntFunctor {
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
-    return CallImpl(low, high, shape, dtype, device, generator, requires_grad);
-  }
-
-  Maybe<Tensor> CallImpl(const int64_t low, const int64_t high, const Shape& shape,
-                         const Optional<Symbol<DType>>& dtype,
-                         const Optional<Symbol<Device>>& device,
-                         const Optional<one::Generator>& generator,
-                         const bool& requires_grad) const {
     DataType dtype_val = DataType::kInt64;
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
 
@@ -295,14 +287,14 @@ class RandIntFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class RandIntFunctor2 : public RandIntFunctor {
+class RandInt2Functor {
  public:
   Maybe<Tensor> operator()(const int64_t high, const Shape& shape,
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
-    return CallImpl(0, high, shape, dtype, device, generator, requires_grad);
+    return RandInt(/*low*/ 0, high, shape, dtype, device, generator, requires_grad);
   }
 };
 
@@ -318,15 +310,6 @@ class ConsistentRandIntFunctor {
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
-    return CallImpl(low, high, shape, placement, sbp_tuple, dtype, generator, requires_grad);
-  }
-
-  Maybe<Tensor> CallImpl(const int64_t low, const int64_t high, const Shape& shape,
-                         const Symbol<ParallelDesc>& placement,
-                         const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
-                         const Optional<Symbol<DType>>& dtype,
-                         const Optional<one::Generator>& generator,
-                         const bool& requires_grad) const {
     DataType dtype_val = DataType::kInt64;
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
 
@@ -368,15 +351,16 @@ class ConsistentRandIntFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ConsistentRandIntFunctor2 : public ConsistentRandIntFunctor {
+class ConsistentRandInt2Functor {
  public:
-  Maybe<Tensor> operator()(const int64_t low, const int64_t high, const Shape& shape,
+  Maybe<Tensor> operator()(const int64_t high, const Shape& shape,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
-    return CallImpl(0, high, shape, placement, sbp_tuple, dtype, generator, requires_grad);
+    return ConsistentRandInt(/*low*/ 0, high, shape, placement, sbp_tuple, dtype, generator,
+                             requires_grad);
   }
 };
 
@@ -456,18 +440,18 @@ class ConsistentRandPermFunctor {
 };
 }  // namespace impl
 
+using namespace impl;
+
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  m.add_functor<impl::BernoulliFunctor>("Bernoulli");
-  m.add_functor<impl::RandPermFunctor>("RandPerm");
-  m.add_functor<impl::ConsistentRandPermFunctor>("ConsistentRandPerm");
-  m.add_functor<impl::RandFunctor>("Rand");
-  m.add_functor<impl::ConsistentRandFunctor>("ConsistentRand");
-  m.add_functor<impl::RandNFunctor>("RandN");
-  m.add_functor<impl::ConsistentRandNFunctor>("ConsistentRandN");
-  m.add_functor<impl::RandIntFunctor>("RandInt");
-  m.add_functor<impl::RandIntFunctor2>("RandInt2");
-  m.add_functor<impl::ConsistentRandIntFunctor>("ConsistentRandInt");
-  m.add_functor<impl::ConsistentRandIntFunctor2>("ConsistentRandInt2");
+  m.add_functor<BernoulliFunctor>("Bernoulli");
+  m.add_functor<RandPermFunctor>("RandPerm");
+  m.add_functor<ConsistentRandPermFunctor>("ConsistentRandPerm");
+  m.add_functor<RandFunctor>("Rand");
+  m.add_functor<ConsistentRandFunctor>("ConsistentRand");
+  m.add_functor<RandNFunctor>("RandN");
+  m.add_functor<ConsistentRandNFunctor>("ConsistentRandN");
+  m.add_functor<RandIntFunctor, RandInt2Functor>("RandInt");
+  m.add_functor<ConsistentRandIntFunctor, ConsistentRandInt2Functor>("ConsistentRandInt");
 };
 
 }  // namespace functional

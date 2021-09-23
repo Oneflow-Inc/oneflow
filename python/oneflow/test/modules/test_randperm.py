@@ -36,7 +36,7 @@ def _test_randperm_with_generator(test_case, N, device, dtype):
 
 
 def _test_randperm_backward(test_case, N, device, dtype):
-    dtype = flow.int32  # fix dtype here as reduce_sum doesn't support all dtypes yet
+    dtype = flow.float32  # fix dtype here as reduce_sum doesn't support all dtypes yet
     x = flow.randperm(N, device=device, dtype=dtype)
     x.requires_grad = True
     y = x.sum()

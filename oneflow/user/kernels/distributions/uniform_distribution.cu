@@ -26,21 +26,17 @@ __device__ T GenUniform(curandState* state, const T low, const T high);
 template<>
 __device__ float GenUniform<float>(curandState* state, const float low, const float high) {
   auto rand_num = curand_uniform(state);
-  if (rand_num == 1.0) {
-    return 0.0;
-  } else {
-    return rand_num * (high - low) + low;
-  }
+  // curand_uniform generates (0.0, 1.0], but we want [0.0, 1.0) here
+  if (rand_num == 1.0) { rand_num = 0.0; }
+  return rand_num * (high - low) + low;
 }
 
 template<>
 __device__ double GenUniform<double>(curandState* state, const double low, const double high) {
   auto rand_num = curand_uniform_double(state);
-  if (rand_num == 1.0) {
-    return 0.0;
-  } else {
-    return rand_num * (high - low) + low;
-  }
+  // curand_uniform_double generates (0.0, 1.0], but we want [0.0, 1.0) here
+  if (rand_num == 1.0) { rand_num = 0.0; }
+  return rand_num * (high - low) + low;
 }
 
 template<typename T>

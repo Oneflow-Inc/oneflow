@@ -25,6 +25,7 @@ namespace oneflow {
 
 namespace {
 
+// The following algorithm is adopted from pytorch:
 // The purpose of `update_from` and `update_to` is to find the closest valid int64_t number that can
 // be used as actual `from`. The current implementation of `random_` uses uint64_t arithmetics and
 // casts the result to the target dtype(scalar_t). This casting can result in generating numbers
@@ -83,7 +84,6 @@ class UniformIntKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t from = ctx->Attr<int64_t>("low");
     int64_t to = ctx->Attr<int64_t>("high");
-    // LOG(WARNING) << "get from :" << from << " to:" << to;
     CHECK_LE(from, to) << "uniform kernel expects 'low' to be less than 'high', but got from="
                        << from << " >= to=",
         to;
@@ -97,7 +97,6 @@ class UniformIntKernel final : public user_op::OpKernel {
           to;
     }
     check_from_to_in_range<T>(from, to - 1);
-    // LOG(WARNING) << "updated from :" << from << " to:" << to;
     int64_t elem_cnt = out->shape().elem_cnt();
     T* out_dptr = out->mut_dptr<T>();
     auto* distribution_state = dynamic_cast<DistributionKernelState*>(state);
