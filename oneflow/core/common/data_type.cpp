@@ -54,6 +54,15 @@ bool IsIndexDataType(DataType data_type) {
   }
 #undef INDEX_CASE
 }
+bool IsSupportRequireGradDataType(DataType data_type) {
+  switch (data_type) {
+#define REQUIRE_GRAD_CASE(type_cpp, type_proto) \
+  case type_proto: return true;
+    OF_PP_FOR_EACH_TUPLE(REQUIRE_GRAD_CASE, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
+    default: return false;
+  }
+#undef REQUIRE_GRAD_CASE
+}
 
 size_t GetSizeOfDataType(DataType data_type) {
   switch (data_type) {

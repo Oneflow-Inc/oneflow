@@ -39,7 +39,7 @@ def _run_functional_doctest(
         runner = doctest.DebugRunner(verbose=verbose, optionflags=optionflags)
     else:
         runner = doctest.DocTestRunner(verbose=verbose, optionflags=optionflags)
-    r = inspect.getmembers(flow)
+    r = inspect.getmembers(module)
     for (name, fun) in r:
         if fun.__doc__ is not None:
             test = parser.get_doctest(fun.__doc__, {}, __name__, __file__, 0)
@@ -51,7 +51,7 @@ def _run_functional_doctest(
 class TestFunctionalDocstrModule(flow.unittest.TestCase):
     def test_functional_docstr(test_case):
         arg_dict = OrderedDict()
-        arg_dict["module"] = [flow, flow.Tensor]
+        arg_dict["module"] = [flow, flow.sbp, flow.env]
         for arg in GenArgList(arg_dict):
             _run_functional_doctest(
                 test_case, raise_on_error=True, verbose=True, module=arg[0]

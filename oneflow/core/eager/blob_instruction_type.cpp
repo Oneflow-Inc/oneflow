@@ -130,5 +130,20 @@ void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) 
   ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));
 }
 
+class TouchInstructionType : public vm::InstructionType {
+ public:
+  TouchInstructionType() = default;
+  ~TouchInstructionType() = default;
+  using stream_type = vm::ControlStreamType;
+
+  void Infer(VirtualMachine* vm, Instruction* instruction) const override { UNIMPLEMENTED(); }
+  void Compute(VirtualMachine* vm, Instruction* instruction) const override {
+    // do nothing
+  }
+  void Infer(Instruction*) const override { UNIMPLEMENTED(); }
+  void Compute(Instruction*) const override { UNIMPLEMENTED(); }
+};
+COMMAND(vm::RegisterInstructionType<TouchInstructionType>("Touch"));
+
 }  // namespace vm
 }  // namespace oneflow

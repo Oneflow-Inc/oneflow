@@ -20,8 +20,8 @@ namespace oneflow {
 namespace user_op {
 template<typename T>
 struct RangeFunctor<DeviceType::kCPU, T> final {
-  void operator()(DeviceCtx* ctx, const int32_t start, const int32_t delta,
-                  const int32_t range_elem_cnt, T* out) {
+  void operator()(DeviceCtx* ctx, const T start, const T delta, const int64_t range_elem_cnt,
+                  T* out) {
     DoRange<T>(start, delta, range_elem_cnt, out);
   }
 };
