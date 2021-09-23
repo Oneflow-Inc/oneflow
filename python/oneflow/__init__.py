@@ -67,6 +67,7 @@ from oneflow._C import acosh as arccosh
 from oneflow._C import atanh
 from oneflow._C import atanh as arctanh
 from oneflow._C import sign
+from oneflow._C import sin
 from oneflow._C import sinh
 from oneflow._C import tan
 from oneflow._C import greater
@@ -273,7 +274,6 @@ from oneflow.nn.modules.index_select import index_select_op as index_select
 from oneflow.nn.modules.masked_fill import masked_fill_op as masked_fill
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
-from oneflow.nn.modules.math_ops import sin_op as sin
 from oneflow.nn.modules.relu import relu_op as relu
 from oneflow.nn.modules.math_ops import std_op as std
 from oneflow.nn.modules.math_ops import topk_op as topk

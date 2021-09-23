@@ -63,6 +63,23 @@ class InplaceableUnaryFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class InplaceUnaryFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    JUST(CheckInplaceValid(x));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get()));
+    return outputs->at(0);
+  }
+
+ protected:
+  InplaceUnaryFunctor() = default;
+  virtual ~InplaceUnaryFunctor() = default;
+
+  std::shared_ptr<OpExpr> op_;
+};
+
 class CastIntToFloatUnaryFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {

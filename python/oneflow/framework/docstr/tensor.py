@@ -50,3 +50,22 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.sin,
+    """
+
+    sin() -> Tensor
+
+    See :func:`oneflow.sin`
+    
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sin_,
+    """
+    In-place version of :func:`oneflow.sin`
+    
+    """,
+)

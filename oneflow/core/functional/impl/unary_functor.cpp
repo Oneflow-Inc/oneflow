@@ -25,7 +25,8 @@ namespace one {
 namespace functional {
 
 namespace impl {
-#define INPLACEABLE_UNARY_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("sin", Sin)
+
+#define INPLACE_UNARY_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("sin", SinInplace)
 
 #define UNARY_FUNC_SEQ                                       \
   OF_PP_MAKE_TUPLE_SEQ("abs", Abs)                           \
@@ -54,6 +55,7 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("round", Round)                       \
   OF_PP_MAKE_TUPLE_SEQ("rsqrt", Rsqrt)                       \
   OF_PP_MAKE_TUPLE_SEQ("sign", Sign)                         \
+  OF_PP_MAKE_TUPLE_SEQ("sin", Sin)                           \
   OF_PP_MAKE_TUPLE_SEQ("sinh", Sinh)                         \
   OF_PP_MAKE_TUPLE_SEQ("softplus", Softplus)                 \
   OF_PP_MAKE_TUPLE_SEQ("sqrt", Sqrt)                         \
@@ -72,17 +74,19 @@ namespace impl {
     }                                                                                \
   };
 
-#define INPLACEABLE_UNARY_FUNCOTRS(op_type_name, class_name) \
-  UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, InplaceableUnaryFunctor)
 #define UNARY_FUNCOTRS(op_type_name, class_name) \
   UNARY_ELEMENTWISE_FUNCTOR(                     \
       op_type_name, class_name,                  \
       UnaryFunctor)  // TODO(yaochi): replace UNARY_FUNC_SEQ with INPLACEABLE_UNARY_FUNC_SEQ SEQ
+#define INPLACEABLE_UNARY_FUNCOTRS(op_type_name, class_name) \
+  UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, InplaceableUnaryFunctor)
+#define INPLACE_UNARY_FUNCOTRS(op_type_name, class_name) \
+  UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, InplaceUnaryFunctor)
 #define CAST_INT_FLOAT_UNARY_FUNCOTRS(op_type_name, class_name) \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, CastIntToFloatUnaryFunctor)
 
-OF_PP_FOR_EACH_TUPLE(INPLACEABLE_UNARY_FUNCOTRS, INPLACEABLE_UNARY_FUNC_SEQ);
 OF_PP_FOR_EACH_TUPLE(UNARY_FUNCOTRS, UNARY_FUNC_SEQ);
+OF_PP_FOR_EACH_TUPLE(INPLACE_UNARY_FUNCOTRS, INPLACE_UNARY_FUNC_SEQ);
 OF_PP_FOR_EACH_TUPLE(CAST_INT_FLOAT_UNARY_FUNCOTRS, CAST_INT_TO_FLOAT_UNARY_FUNC_SEQ);
 
 }  // namespace impl
@@ -116,6 +120,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SigmoidFunctor>("Sigmoid");
   m.add_functor<impl::SignFunctor>("Sign");
   m.add_functor<impl::SinFunctor>("Sin");
+  m.add_functor<impl::SinInplaceFunctor>("Sin_");
   m.add_functor<impl::SinhFunctor>("Sinh");
   m.add_functor<impl::SoftplusFunctor>("Softplus");
   m.add_functor<impl::SqrtFunctor>("Sqrt");
