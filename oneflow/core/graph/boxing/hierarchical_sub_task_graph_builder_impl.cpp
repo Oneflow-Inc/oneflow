@@ -205,10 +205,10 @@ class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
           const int64_t parallel_id = i * group_size + j;
           in_tasks.push_back(sorted_in_tasks.at(parallel_id));
           in_parallel_conf.add_device_name(
-              std::to_string(JUST(in_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
+              "@" + std::to_string(JUST(in_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
               + std::to_string(JUST(in_parallel_desc.DeviceId4ParallelId(parallel_id))));
           out_parallel_conf.add_device_name(
-              std::to_string(JUST(out_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
+              "@" + std::to_string(JUST(out_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
               + std::to_string(JUST(out_parallel_desc.DeviceId4ParallelId(parallel_id))));
         }
         DimVector dim_vec = logical_blob_desc.shape().dim_vec();
@@ -284,10 +284,10 @@ class InterGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
           const int64_t parallel_id = j * group_size + i;
           in_tasks.push_back(sorted_in_tasks.at(parallel_id));
           in_parallel_conf.add_device_name(
-              std::to_string(JUST(in_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
+              "@" + std::to_string(JUST(in_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
               + std::to_string(JUST(in_parallel_desc.DeviceId4ParallelId(parallel_id))));
           out_parallel_conf.add_device_name(
-              std::to_string(JUST(out_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
+              "@" + std::to_string(JUST(out_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
               + std::to_string(JUST(out_parallel_desc.DeviceId4ParallelId(parallel_id))));
         }
         DimVector dim_vec = logical_blob_desc.shape().dim_vec();
