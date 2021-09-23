@@ -185,7 +185,7 @@ Maybe<void> CheckIsDeviceSupportedByOp(const ParallelDesc& parallel_desc,
 class UserOpExprStreamInferContext final : public user_op::DeviceInferContext {
  public:
   UserOpExprStreamInferContext(const UserOpExpr* user_op_expr,
-                                 const ConsistentTensorMetaInferArgs* infer_args)
+                               const ConsistentTensorMetaInferArgs* infer_args)
       : user_op_expr_(user_op_expr),
         composed_attrs_(infer_args->attrs(), user_op_expr->base_attrs()),
         in_tensor_devices_(user_op_expr_->input_size()),
@@ -239,7 +239,8 @@ Maybe<Symbol<Stream>> RawGetDefaultStream4ParallelDesc(Symbol<ParallelDesc> para
   return JUST(Stream::NewByDefaultName(device));
 }
 
-static constexpr auto* GetDefaultStream4ParallelDesc = DECORATE(&RawGetDefaultStream4ParallelDesc, ThreadLocal);
+static constexpr auto* GetDefaultStream4ParallelDesc =
+    DECORATE(&RawGetDefaultStream4ParallelDesc, ThreadLocal);
 
 }  // namespace
 

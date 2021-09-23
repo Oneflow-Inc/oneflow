@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
@@ -203,7 +204,8 @@ OpRegistry& OpRegistry::SetDataTypeInferFn(DataTypeInferFn data_type_infer_fn) {
   return *this;
 }
 
-OpRegistry& OpRegistry::SetStreamAndDeviceInferFn(StreamAndDeviceInferFn stream_and_device_infer_fn) {
+OpRegistry& OpRegistry::SetStreamAndDeviceInferFn(
+    StreamAndDeviceInferFn stream_and_device_infer_fn) {
   result_.stream_and_device_infer_fn = std::move(stream_and_device_infer_fn);
   return *this;
 }
@@ -241,7 +243,7 @@ Maybe<OpRegistry&> OpRegistry::Finish() {
   if (result_.check_fn == nullptr) { result_.check_fn = CheckAttrFnUtil::NoCheck; }
   CHECK_OR_RETURN(result_.get_sbp_fn != nullptr) << "No Sbp function for " << result_.op_type_name;
   if (result_.cpu_only_supported && result_.stream_and_device_infer_fn == nullptr) {
-    result_.stream_and_device_infer_fn = [](DeviceInferContext* ctx) -> Maybe<Symbol<Device>> {
+    result_.stream_and_device_infer_fn = [](DeviceInferContext* ctx) -> Maybe<Symbol<Stream>> {
       for (const auto& pair : ctx->inputs()) {
         const Symbol<Device>& input_device =
             ctx->InputTensorDevice4ArgNameAndIndex(pair.first, pair.second);
@@ -259,7 +261,7 @@ Maybe<OpRegistry&> OpRegistry::Finish() {
       for (const auto& pair : ctx->outputs()) {
         *ctx->OutputTensorDevice4ArgNameAndIndex(pair.first, pair.second) = default_device;
       }
-      return default_device;
+      return Stream::NewByDefaultName(default_device);
     };
   }
   return *this;

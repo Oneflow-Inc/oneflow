@@ -389,7 +389,7 @@ class StatefulLocalOpKernel final {
                                           const std::shared_ptr<const ArgTuple>& output_arg_tuple);
   ~StatefulLocalOpKernel();
   const Symbol<Stream>& stream() const { return stream_; }
-  const std::shared_ptr<MemoryCase>& mem_case() const { return stream_->device().mem_case(); }
+  const std::shared_ptr<MemoryCase>& mem_case() const { return stream_->device()->mem_case(); }
   const std::vector<int64_t>& input_tuple_indexes4const_ibns() const {
     return input_tuple_indexes4const_ibns_;
   }

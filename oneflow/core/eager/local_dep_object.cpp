@@ -58,42 +58,33 @@ Maybe<ObjectMsgPtr<LocalDepObject>> LocalDepObject::New(const Device& device) {
 
 namespace {
 
-Maybe<std::vector<ObjectMsgPtr<LocalDepObject>>> RawGetStreamLocalDepObjectPool(Symbol<Stream> stream) {
+Maybe<std::vector<ObjectMsgPtr<LocalDepObject>>> RawGetLocalDepObjectPool(Symbol<Stream> stream) {
   const auto pool = std::make_shared<std::vector<ObjectMsgPtr<LocalDepObject>>>();
-  size_t pool_size = JUST(stream->stream_descriptor().local_dep_object_pool_size());
+  size_t pool_size = stream->stream_descriptor().local_dep_object_pool_size();
   pool->reserve(pool_size);
   for (int64_t i = 0; i < pool_size; ++i) {
-    auto local_dep_object = *JUST(LocalDepObject::New(stream->device()));
+    auto local_dep_object = *JUST(LocalDepObject::New(*stream->device()));
     pool->push_back(local_dep_object);
   }
   return pool;
 }
 
-Maybe<std::vector<ObjectMsgPtr<LocalDepObject>>> RawGetDeviceLocalDepObjectPool(Symbol<Device> device) {
-  const auto& stream = JUST(Stream::NewWithDefaultName(device));
-  return JUST(RawGetStreamLocalDepObjectPool(stream));
-}
-
-static constexpr auto* GetStreamLocalDepObjectPool = DECORATE(&RawGetStreamLocalDepObjectPool, ThreadLocal);
-static constexpr auto* GetDeviceLocalDepObjectPool = DECORATE(&RawGetDeviceLocalDepObjectPool, ThreadLocal);
-
-template<typename T, typename GetPool>
-Maybe<LocalDepObject*> GetLocalDepObjectFromPool<Stream>(Symbol<T> stream_or_device) {
-  const auto& local_dep_object_pool = JUST(GetPool(stream_or_device));
-  CHECK_OR_RETURN(!local_dep_object_pool->empty());
-  size_t pool_size = local_dep_object_pool->size();
-  static thread_local int64_t index = 0;
-  return local_dep_object_pool->at(index++ % pool_size).Mutable();
-}
+static constexpr auto* GetStreamLocalDepObjectPool =
+    DECORATE(&RawGetLocalDepObjectPool, ThreadLocal);
 
 }  // namespace
 
 Maybe<LocalDepObject*> GetLocalDepObjectFromPool(Symbol<Stream> stream) {
-  return GetLocalDepObjectFromPool<Stream, GetStreamLocalDepObjectPool>(stream);
+  const auto& local_dep_object_pool = JUST(GetStreamLocalDepObjectPool(stream));
+  CHECK_OR_RETURN(!local_dep_object_pool->empty());
+  size_t pool_size = local_dep_object_pool->size();
+  auto* index = stream->mut_local_dep_object_pool_index();
+  return local_dep_object_pool->at(*index++ % pool_size).Mutable();
 }
 
 Maybe<LocalDepObject*> GetLocalDepObjectFromPool(Symbol<Device> device) {
-  return GetLocalDepObjectFromPool<Device, GetDeviceLocalDepObjectPool>(device);
+  const auto& stream = JUST(Stream::NewByDefaultName(device));
+  return GetLocalDepObjectFromPool(stream);
 }
 
 }  // namespace oneflow

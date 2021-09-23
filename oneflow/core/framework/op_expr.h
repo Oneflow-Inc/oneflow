@@ -134,8 +134,12 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
 
   Maybe<StatefulLocalOpKernel> MutKernel4Stream(Symbol<Stream> stream) const;
 
-  bool has_stream_and_device_infer_fn() const { return static_cast<bool>(stream_and_device_infer_fn_); }
-  const user_op::StreamAndDeviceInferFn& stream_and_device_infer_fn() const { return stream_and_device_infer_fn_; }
+  bool has_stream_and_device_infer_fn() const {
+    return static_cast<bool>(stream_and_device_infer_fn_);
+  }
+  const user_op::StreamAndDeviceInferFn& stream_and_device_infer_fn() const {
+    return stream_and_device_infer_fn_;
+  }
 
   Maybe<void> InferPhysicalShapeAndDType(
       const AttrMap& attrs, const std::string& device_tag,
@@ -147,7 +151,7 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
       const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
       const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
   Maybe<Symbol<Stream>> InferStreamAndOutputDevices(const AttrMap& attrs, const TensorTuple& inputs,
-                                     TensorTuple* outputs) const;
+                                                    TensorTuple* outputs) const;
   ConsistentTensorInferCache* mut_consistent_tensor_infer_cache() const {
     return consistent_tensor_infer_cache_.get();
   }

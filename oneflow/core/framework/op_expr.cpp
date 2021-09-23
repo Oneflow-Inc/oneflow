@@ -109,14 +109,14 @@ Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
   return Maybe<void>::Ok();
 }
 
-Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Stream(Symbol<Device> stream) const {
+Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Stream(Symbol<Stream> stream) const {
   const auto& it = stream2kernel_.find(stream);
   if (it != stream2kernel_.end()) { return it->second; }
 
   std::shared_ptr<OperatorConf> op_conf = std::make_shared<OperatorConf>();
   JUST(BuildOpConf(op_conf.get(), {}));
-  op_conf->set_device_tag(JUST(stream->device().of_type()));
-  auto parallel_desc = JUST(Placement4Device(stream)).shared_from_symbol();
+  op_conf->set_device_tag(JUST(stream->device()->of_type()));
+  auto parallel_desc = JUST(Placement4Device(stream->device())).shared_from_symbol();
   const auto& opkernel = JUST(StatefulLocalOpKernel::New(
       op_conf, stream, base_attrs(), parallel_desc, input_arg_tuple(), output_arg_tuple()));
   stream2kernel_.emplace(stream, opkernel);
@@ -353,7 +353,8 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
 class UserOpExprStreamAndDeviceInferContext final : public user_op::DeviceInferContext {
  public:
   UserOpExprStreamAndDeviceInferContext(const UserOpExpr* user_op_expr, const AttrMap& attrs,
-                               const TensorTuple& input_tensors, TensorTuple* output_tensors)
+                                        const TensorTuple& input_tensors,
+                                        TensorTuple* output_tensors)
       : user_op_expr_(user_op_expr),
         composed_attrs_(attrs, user_op_expr->base_attrs()),
         input_tensors_(&input_tensors),
@@ -410,7 +411,9 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   CHECK_OR_RETURN(static_cast<bool>(shape_infer_fn_));
   dtype_infer_fn_ = registry->data_type_infer_fn;
   CHECK_OR_RETURN(static_cast<bool>(dtype_infer_fn_));
-  if (registry->stream_and_device_infer_fn) { stream_and_device_infer_fn_ = registry->device_infer_fn; }
+  if (registry->stream_and_device_infer_fn) {
+    stream_and_device_infer_fn_ = registry->stream_and_device_infer_fn;
+  }
   consistent_tensor_infer_cache_.reset(new ConsistentTensorInferCache(self));
   return Maybe<void>::Ok();
 }
@@ -449,10 +452,11 @@ Maybe<void> UserOpExpr::InferLogicalShapeAndDType(
 }
 
 Maybe<Symbol<Stream>> UserOpExpr::InferStreamAndOutputDevices(const AttrMap& attrs,
-                                               const TensorTuple& input_tensors,
-                                               TensorTuple* output_tensors) const {
+                                                              const TensorTuple& input_tensors,
+                                                              TensorTuple* output_tensors) const {
   CHECK_OR_RETURN(static_cast<bool>(stream_and_device_infer_fn_));
-  UserOpExprStreamAndDeviceInferContext stream_and_device_infer_ctx(this, attrs, input_tensors, output_tensors);
+  UserOpExprStreamAndDeviceInferContext stream_and_device_infer_ctx(this, attrs, input_tensors,
+                                                                    output_tensors);
   return TRY(stream_and_device_infer_fn_(&stream_and_device_infer_ctx));
 }
 

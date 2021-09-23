@@ -115,18 +115,18 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
 
   // Infer devices
   if (!user_op_expr.has_stream_and_device_infer_fn()) {
-    stream = default_device;
+    stream = JUST(Stream::NewByDefaultName(default_device));
     for (int i = 0; i < outputs->size(); i++) {
       auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
       *JUST(tensor_impl->mut_device()) = default_device;
     }
   } else {
     need_check_mem_case = false;
-    stream = JUST(user_op_expr.InferDevices(attrs, inputs, outputs));
+    stream = JUST(user_op_expr.InferStreamAndOutputDevices(attrs, inputs, outputs));
   }
 
   // Infer shapes and dtypes
-  const auto& device_tag = JUST(stream->device().of_type());
+  const auto& device_tag = JUST(stream->device()->of_type());
   JUST(user_op_expr.InferPhysicalShapeAndDType(
       attrs, device_tag,
       [&](int32_t i) -> const TensorMeta* {

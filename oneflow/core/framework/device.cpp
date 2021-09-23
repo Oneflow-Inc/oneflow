@@ -38,9 +38,7 @@ inline size_t HashDevice(const std::string& type, int64_t device_id) {
 }  // namespace
 
 Device::Device(const std::string& type, int64_t device_id)
-    : type_(type),
-      device_id_(device_id),
-      hash_value_(HashDevice(type, device_id)) {}
+    : type_(type), device_id_(device_id), hash_value_(HashDevice(type, device_id)) {}
 
 Maybe<void> Device::Init() {
   if (type_ == "auto") { return Maybe<void>::Ok(); }

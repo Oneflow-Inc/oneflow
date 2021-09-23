@@ -227,7 +227,7 @@ class ConsistentTensorInferCache final {
 
  private:
   static Maybe<Symbol<Stream>> InferStream(const UserOpExpr& user_op_expr,
-                                             const ConsistentTensorMetaInferArgs& infer_args);
+                                           const ConsistentTensorMetaInferArgs& infer_args);
 
   std::weak_ptr<const UserOpExpr> user_op_expr_;
   HashMap<ConsistentTensorMetaInferArgs, std::shared_ptr<const ConsistentTensorInferResult>> cache_;

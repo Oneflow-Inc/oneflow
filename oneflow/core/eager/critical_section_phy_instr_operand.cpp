@@ -65,7 +65,7 @@ void TensorCriticalSectionPhyInstrOperand::ForEachMirroredObject(
 namespace {
 
 Maybe<LocalDepObject*> RawCriticalSectionLocalDepObject() {
-  return JUST(Device::New("critical_section"))->mut_schedule_local_dep_object();
+  return JUST(Stream::NewByDefaultDevice("critical_section"))->mut_schedule_local_dep_object();
 }
 
 constexpr auto* CriticalSectionLocalDepObject =
@@ -95,8 +95,8 @@ void ParameterCriticalSectionPhyInstrOperand::ForEachMutMirroredObject(
 namespace {
 
 Maybe<LocalDepObject*> RawGetEagerNcclLocalDepObject(const std::string& type) {
-  const auto& device = JUST(Device::New(type));
-  const auto& local_dep_object = device->mut_transport_local_dep_object();
+  const auto& stream = JUST(Stream::NewByDefaultDevice(type));
+  const auto& local_dep_object = stream->mut_transport_local_dep_object();
   CHECK_OR_RETURN(local_dep_object.has_value());
   return JUST(local_dep_object);
 }

@@ -26,10 +26,11 @@ Maybe<bool> IsAsyncLaunched(user_op::DeviceInferContext* ctx) {
 namespace {
 
 Maybe<Symbol<Stream>> RawGetNcclStream(bool is_async_launced) {
-  return Stream::NewByDefaultDevice(is_async_launced ? "async_launched_nccl" : "sync_launched_nccl");
+  return Stream::NewByDefaultDevice(is_async_launced ? "async_launched_nccl"
+                                                     : "sync_launched_nccl");
 }
 
-Maybe<Symbol<Stream>> RawGetCpuTransportDevice() { return Stream::NewByDefaultDevice("comm_net"); }
+Maybe<Symbol<Stream>> RawGetCpuTransportStream() { return Stream::NewByDefaultDevice("comm_net"); }
 
 }  // namespace
 

@@ -93,7 +93,7 @@ class EagerBlobObject final : public BlobObject {
   }
 
   const Optional<Symbol<Stream>>& last_used_stream() const { return last_used_stream_; }
-  void set_last_used_device(Symbol<Stream> last_used_stream) {
+  void set_last_used_stream(Symbol<Stream> last_used_stream) {
     last_used_stream_ = last_used_stream;
   }
 

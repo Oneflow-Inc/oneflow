@@ -15,27 +15,27 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/stream.h"
 
 namespace oneflow {
 
 namespace {
 
 Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
-                                   const Symbol<Device>& out_device) {
+                                     const Symbol<Device>& out_device) {
   if (JUST(in_device->of_type()) == "gpu" && JUST(out_device->of_type()) == "cpu") {
     return Stream::New("cuda_d2h", in_device);
   } else if (JUST(in_device->of_type()) == "cpu" && JUST(out_device->of_type()) == "gpu") {
     return Stream::New("cuda_h2d", out_device);
   } else if (JUST(in_device->of_type()) == "gpu" && JUST(out_device->of_type()) == "gpu") {
     CHECK_OR_RETURN(in_device == out_device);
-    return Stream::NewWithDefaultName(in_device);
+    return Stream::NewByDefaultName(in_device);
   } else {
-    UNIMPLEMENTED_THEN_RETURN() << "copy not supported. src device_type: " << in_device->of_type()
-      << ", dst device_type: " << out_device->of_type();
+    return Error::UnimplementedError();
   }
 }
 
-Maybe<Symbol<Stream> InferCopyStreamAndDevices(user_op::DeviceInferContext * ctx) {
+Maybe<Symbol<Stream>> InferCopyStreamAndDevices(user_op::DeviceInferContext* ctx) {
   Symbol<Device> out_device =
       JUST(Device::New(ctx->Attr<std::string>("device_type"), ctx->Attr<int64_t>("device_id")));
   *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = out_device;

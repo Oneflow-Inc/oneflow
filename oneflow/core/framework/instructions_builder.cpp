@@ -731,14 +731,14 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
     const one::OpExprInterpContext& ctx, Symbol<Stream> stream) {
   const auto& parallel_desc_sym = JUST(Placement4Device(stream->device())).shared_from_symbol();
-  const auto& instr_type_name = JUST(stream->stream_descriptor().local_call_instruction_name());
+  const auto& instr_type_name = *JUST(stream->stream_descriptor().local_call_instruction_name());
   for (const auto& input : *input_eager_blob_objects) {
-    const auto& blob_last_used_device = JUST(input->last_used_device());
-    if (blob_last_used_device != stream) {
+    const auto& blob_last_used_stream = JUST(input->last_used_stream());
+    if (blob_last_used_stream != stream) {
       auto* dep_object = JUST(input->compute_local_dep_object());
-      JUST(SoftSyncStream(dep_object, "mut", blob_last_used_device));
+      JUST(SoftSyncStream(dep_object, "mut", blob_last_used_stream));
     }
-    input->set_last_used_device(stream);
+    input->set_last_used_stream(stream);
   }
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
@@ -749,10 +749,8 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
   *instruction->mutable_phy_instr_operand() = phy_instr_operand;
   instruction_list_->EmplaceBack(std::move(instruction));
   for (const auto& output : *output_eager_blob_objects) {
-    if (!output->producer_stream().has_value()) {
-      JUST(output->init_producer_stream(stream));
-    }
-    output->set_last_used_device(stream);
+    if (!output->producer_stream().has_value()) { JUST(output->init_producer_stream(stream)); }
+    output->set_last_used_stream(stream);
   }
   return Maybe<void>::Ok();
 }
@@ -969,13 +967,13 @@ Maybe<void> InstructionsBuilder::FeedBlob(
 Maybe<void> InstructionsBuilder::ReleaseTensor(
     const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-  if (eager_blob_object->last_used_device().has_value()) {
-    const auto& last_used_device = JUST(eager_blob_object->last_used_device());
+  if (eager_blob_object->last_used_stream().has_value()) {
+    const auto& last_used_stream = JUST(eager_blob_object->last_used_stream());
     const auto& producer_stream = JUST(eager_blob_object->producer_stream());
 
-    if (last_used_device != producer_stream) {
+    if (last_used_stream != producer_stream) {
       JUST(SoftSyncStream(JUST(eager_blob_object->compute_local_dep_object()), "mut",
-                          last_used_device));
+                          last_used_stream));
     }
   }
   std::string instr_name = parallel_desc->device_tag() + ".ReleaseTensor";
@@ -991,7 +989,7 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
 Maybe<void> InstructionsBuilder::SoftSyncStream(LocalDepObject* compute_local_dep_object,
                                                 const std::string& modifier,
                                                 Symbol<Stream> stream) {
-  if (!JUST(stream->need_soft_sync_stream())) { return Maybe<void>::Ok(); }
+  if (!stream->stream_descriptor().need_soft_sync_stream()) { return Maybe<void>::Ok(); }
 
   const auto& parallel_desc = JUST(Placement4Device(stream->device())).shared_from_symbol();
   {

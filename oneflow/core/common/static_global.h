@@ -52,7 +52,7 @@ template<typename RetT, typename Arg0, typename Arg1>
 struct StaticGlobalCopiable<RetT, Arg0, Arg1> {
   template<RetT (*func)(Arg0, Arg1)>
   static RetT Call(Arg0 arg0, Arg1 arg1) {
-    using KeyT = std::tuple<typename std::decay<Arg0>::type, typename std::decay<Arg0>::type>;
+    using KeyT = std::tuple<typename std::decay<Arg0>::type, typename std::decay<Arg1>::type>;
     using MappedT = typename std::decay<RetT>::type;
     const auto& key = KeyT(arg0, arg1);
     static std::mutex mutex;
@@ -73,7 +73,6 @@ struct StaticGlobalCopiable<RetT, Arg0, Arg1> {
   static_assert(!IsOutArg<Arg0>::value, "");
   static_assert(!IsOutArg<Arg1>::value, "");
 };
-
 
 }  // namespace oneflow
 
