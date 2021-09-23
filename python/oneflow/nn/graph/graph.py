@@ -15,7 +15,7 @@ limitations under the License.
 """
 from collections import OrderedDict
 from functools import partial
-from typing import Dict
+from typing import Dict, Optional, Union, List
 
 import oneflow
 import oneflow._oneflow_internal
@@ -265,7 +265,7 @@ class Graph(object):
         """
         return self.config.training
 
-    def debug(self, mode: bool = True, rank: int = 0) -> None:
+    def debug(self, mode: bool = True, ranks: Optional[Union[int, List[int]]] = None) -> None:
         r"""Open or close debug mode of the graph.
 
         If in debug mode, logs of computation graph building will be
@@ -286,13 +286,22 @@ class Graph(object):
                         You can choose any valid rank. Rank ``-1`` means print on all rank.
         """
         assert isinstance(mode, bool)
-        assert isinstance(rank, int)
+
+        if ranks is None:
+            rank_list = [0]
+        elif isinstance(ranks, int):
+            rank_list = [ranks]
+        elif isinstance(ranks, list):
+            rank_list = ranks
+        else:
+            raise ValueError("ranks must be int or List[int].")
+
         my_rank = get_rank()
-        if -1 == rank or my_rank == rank:
+        if -1 in rank_list or my_rank in rank_list:
             self._debug = mode
             for name, block in self._blocks.items():
                 assert block.type == BlockType.MODULE
-                block.debug(mode, rank)
+                block.debug(mode, ranks)
 
     def __repr__(self):
         r"""For printing the graph structure.

@@ -15,7 +15,7 @@ limitations under the License.
 """
 from collections import OrderedDict
 from functools import partial
-from typing import Iterator, Optional, Set, Union
+from typing import Iterator, Optional, Set, Union, List
 
 import oneflow._C
 import oneflow._oneflow_internal
@@ -122,17 +122,26 @@ class Block(object):
             self._scope = graph_build_util.make_new_block_scope(self.prev_scope, self)
         return self._scope
 
-    def debug(self, mode: bool = True, rank: int = 0) -> None:
+    def debug(self, mode: bool = True, ranks: Optional[Union[int, List[int]]] = None) -> None:
         assert isinstance(mode, bool)
-        assert isinstance(rank, int)
+
+        if ranks is None:
+            rank_list = [0]
+        elif isinstance(ranks, int):
+            rank_list = [ranks]
+        elif isinstance(ranks, list):
+            rank_list = ranks
+        else:
+            raise ValueError("ranks must be int or List[int].")
+
         my_rank = get_rank()
-        if -1 == rank or my_rank == rank:
+        if -1 in rank_list or my_rank in rank_list:
             self._debug = mode
             if self._type == BlockType.MODULE:
 
                 def _set_child(d):
                     for (_, n) in d.items():
-                        n.debug(mode, rank)
+                        n.debug(mode, ranks)
 
                 _set_child(self._modules)
                 _set_child(self._parameters)
