@@ -274,6 +274,7 @@ jobs:
           retry-failed-build: true
           python-versions: |
             3.6
+      # TODO: don't run this if previous skipped. maybe don't generate the matrix entry
       - name: Upload bin
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         uses: Oneflow-Inc/get-oneflow/degist/upload@add-doctor-test
