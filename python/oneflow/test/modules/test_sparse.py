@@ -57,11 +57,11 @@ def _test_embedding_impl(test_case, device):
         ],
         dtype=np.float32,
     )
-    indices = flow.Tensor(
+    indices = flow.tensor(
         [[1, 2, 4, 5], [4, 3, 2, 9]],
         dtype=flow.int,
         device=flow.device(device),
-        requires_grad=True,
+        requires_grad=False,
     )
     m = flow.nn.Embedding(10, 3, _weight=flow.Tensor(weight))
     m = m.to(device)

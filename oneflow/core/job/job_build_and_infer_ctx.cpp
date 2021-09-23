@@ -967,6 +967,16 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
     return JobPass4Name(pass_name)(mut_job(), &job_pass_ctx);
   };
+
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()
+      || Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+    TeePersistentLogStream::Create(StrCat("forward_graph", job_id()))->Write(job());
+    Global<OpGraph>::New(job());
+    Global<OpGraph>::Get()->ToDotWithFilePath("forward_dlnet_" + std::to_string(job_id())
+                                              + "_op_graph.dot");
+    Global<OpGraph>::Delete();
+  }
+
   if (GlobalJobDesc().Bool("__is_user_function__")) {
     JUST(DoPass("ModelUpdateConfCompatiblePass"));
     JUST(DoPass("SetDefaultVariableConf"));
@@ -1001,6 +1011,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("FuseCastScalePass"));
     JUST(DoPass("PruneParallelCastOpsPass"));
     JUST(DoPass("FuseUpdateOpsPass"));
+    JUST(DoPass("FixPipelineStageIdPass"));
     JUST(DoPass("PipelineBufferPass"));
     JUST(DoPass("DumpVariableInfoPass"));
   }

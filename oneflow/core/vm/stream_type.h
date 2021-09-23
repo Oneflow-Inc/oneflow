@@ -28,8 +28,6 @@ limitations under the License.
 
 namespace oneflow {
 
-class ObjectMsgAllocator;
-
 namespace vm {
 
 struct Stream;
@@ -67,6 +65,7 @@ class StreamType {
                                                   int64_t this_machine_id) const = 0;
 
   virtual bool SharingVirtualMachineThread() const = 0;
+  virtual bool SupportingTransportInstructions() const = 0;
   virtual bool IsControlStreamType() const { return false; }
   virtual void Infer(VirtualMachine* vm, Instruction* instruction) const { Infer(instruction); }
   virtual void Compute(VirtualMachine* vm, Instruction* instruction) const { Compute(instruction); }

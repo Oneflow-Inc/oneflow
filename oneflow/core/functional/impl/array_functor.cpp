@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -25,7 +27,6 @@ limitations under the License.
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
-#include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/global_for.h"
@@ -91,7 +92,7 @@ class ConstantFunctor {
       JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
     }
     if (device.has_value()) {
-      Symbol<Device> device_symbol = JUST(device.value());
+      Symbol<Device> device_symbol = JUST(device);
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
@@ -111,7 +112,7 @@ class EmptyFunctor {
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     if (device.has_value()) {
-      Symbol<Device> device_symbol = JUST(device.value());
+      Symbol<Device> device_symbol = JUST(device);
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
@@ -374,40 +375,12 @@ class ExpandFunctor {
     std::vector<int32_t> in_shape(x->shape()->NumAxes());
     for (int i = 0; i < in_shape.size(); ++i) { in_shape[i] = x->shape()->At(i); }
 
-    // calculate the original stride.
-    std::vector<int32_t> original_stride(in_shape.size(), 1);
-    for (int i = x->shape()->NumAxes() - 2; i >= 0; --i) {
-      original_stride[i] = in_shape.at(i + 1) * original_stride.at(i + 1);
-    }
-    std::vector<int32_t> out_shape(shape.NumAxes());
-    std::vector<int32_t> stride(shape.NumAxes());
-    int shift = out_shape.size() - in_shape.size();
-    for (int i = out_shape.size() - 1; i >= 0; --i) {
-      int index = i - shift;
-      if (index >= 0) {
-        if (shape.At(i) == -1 || shape.At(i) == in_shape.at(index)) {
-          out_shape[i] = in_shape.at(index);
-          stride[i] = original_stride.at(index);
-        } else {
-          CHECK_OR_RETURN(shape.At(i) > 0 && in_shape.at(index) == 1)
-              << "Invalid expand shape " << shape.ToString();
-          out_shape[i] = shape.At(i);
-          stride[i] = 0;
-        }
-      } else {
-        CHECK_GT_OR_RETURN(shape.At(i), 0) << "Invalid expand shape " << shape.ToString();
-        out_shape[i] = shape.At(i);
-        if (shape.At(i) == 1 && i < out_shape.size() - 1) {
-          stride[i] = stride.at(i + 1);
-        } else {
-          stride[i] = 0;
-        }
-      }
-    }
+    std::vector<int32_t> expand_shape(shape.NumAxes());
+    for (int i = 0; i < shape.NumAxes(); ++i) { expand_shape[i] = shape.dim_vec().at(i); }
+
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("in_shape", in_shape));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("out_shape", out_shape));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("logical_in_shape", in_shape));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("logical_expand_shape", expand_shape));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -473,9 +446,9 @@ class DimScatterFunctor {
                          .Output("output")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
-                           const std::shared_ptr<one::Tensor>& src, const int32_t& dim) const {
+                           const std::shared_ptr<one::Tensor>& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
@@ -495,9 +468,9 @@ class DimScatterAddFunctor {
                          .Output("output")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
-                           const std::shared_ptr<one::Tensor>& src, const int32_t& dim) const {
+                           const std::shared_ptr<one::Tensor>& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
@@ -517,9 +490,9 @@ class DimScatterMulFunctor {
                          .Output("output")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
-                           const std::shared_ptr<one::Tensor>& src, const int32_t& dim) const {
+                           const std::shared_ptr<one::Tensor>& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
@@ -538,12 +511,11 @@ class DimScatterUpdateScalarFunctor {
                          .Output("output")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::shared_ptr<one::Tensor>& index, const float& src,
-                           const int32_t& dim) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
+                           const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    JUST(attrs.SetAttr<float>("src_scalar", src));
+    JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
@@ -560,12 +532,11 @@ class DimScatterAddScalarFunctor {
                          .Output("output")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::shared_ptr<one::Tensor>& index, const float& src,
-                           const int32_t& dim) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
+                           const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    JUST(attrs.SetAttr<float>("src_scalar", src));
+    JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
@@ -582,12 +553,11 @@ class DimScatterMulScalarFunctor {
                          .Output("output")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::shared_ptr<one::Tensor>& index, const float& src,
-                           const int32_t& dim) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
+                           const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    JUST(attrs.SetAttr<float>("src_scalar", src));
+    JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
@@ -683,13 +653,15 @@ class ReshapeFunctor {
     size_t x_count = x->shape()->Count(0);
     MutableAttrMap attrs;
     if (need_infer_axis == -1) {
-      CHECK_EQ_OR_RETURN(shape.Count(0), x_count);
+      CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
+          << "\n Shape " << shape.ToString() << " is invalid for input shape "
+          << x->shape()->ToString();
       JUST(attrs.SetAttr<Shape>("shape", shape));
     } else {
       Shape infered_shape = shape;
       infered_shape.Set(need_infer_axis, x_count / count);
       CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
-          << "Shape " << shape.ToString() << " is invalid for input of shape "
+          << "\n Shape " << shape.ToString() << " is invalid for input shape "
           << x->shape()->ToString();
       JUST(attrs.SetAttr<Shape>("shape", infered_shape));
     }
@@ -820,12 +792,20 @@ class SliceUpdateFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& update,
                            const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
-                           const std::vector<int64_t>& step) const {
+                           const std::vector<int64_t>& step, bool inplace) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, update}, attrs);
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      auto outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x, update}, outputs.get(), attrs));
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x, update}, attrs);
+    }
   }
 
  private:
@@ -1216,6 +1196,19 @@ class UnsortedSegmentSumLikeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class TrilFunctor {
+ public:
+  TrilFunctor() { op_ = CHECK_JUST(one::OpBuilder("tril").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("diagonal", diagonal));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class TriuFunctor {
  public:
   TriuFunctor() { op_ = CHECK_JUST(one::OpBuilder("triu").Input("in").Output("out").Build()); }
@@ -1265,7 +1258,7 @@ class TensorGetItemFunctor {
     int64_t ndims = x->shape()->NumAxes();
     std::vector<detail::Slice> slice_indices;
     TensorTuple tensor_indices;
-    std::vector<int64_t> target_dims;
+    std::vector<int64_t> target_dims({});
 
     JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &target_dims));
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
@@ -1287,15 +1280,13 @@ class TensorGetItemFunctor {
     }();
     std::shared_ptr<one::Tensor> result;
     if (is_identity) {
-      result = JUST(Copy(x, JUST(x->device())->type(), JUST(x->device())->device_id()));
+      result = JUST(Identity(x));
     } else {
       result = JUST(Slice(x, start, end, step));
     }
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
-    if (shape.NumAxes() != 0 && shape != *(result->shape())) {
-      result = JUST(Reshape(result, shape));
-    }
+    if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
     if (!tensor_indices.empty()) { result = JUST(ApplyAdvancedIndexing(result, tensor_indices)); }
     return result;
   }
@@ -1313,6 +1304,9 @@ class TensorSetItemFunctor {
 
     JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &target_dims));
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
+    CHECK_EQ_OR_RETURN(tensor_indices.size(), 0)
+        << "Advanced indexing is not support for tensor setitem currently, please use basic "
+           "indexing instead.";
     Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
     if (target_shape.Count(0) == 0) { return Maybe<void>::Ok(); }
 
@@ -1351,7 +1345,16 @@ class TensorSetItemFunctor {
     if (slice_shape != *(value_tensor->shape())) {
       value_tensor = JUST(Reshape(value_tensor, slice_shape));
     }
-    JUST(LogicalSliceAssign(x, value_tensor, start, end, step));
+    if (x->is_local()) {
+      JUST(SliceUpdate(x, value_tensor, start, end, step, /*inplace=*/true));
+    } else {
+      if (x->requires_grad() && autograd::GradMode::is_enabled()) {
+        return Error::RuntimeError() << "Backward is not support for consistent tensor setitem,"
+                                        "please use oneflow.no_grad() to disable autograd "
+                                        "currently. We will fix this problem soon.";
+      }
+      JUST(LogicalSliceAssign(x, value_tensor, start, end, step));
+    }
     return Maybe<void>::Ok();
   }
 };
@@ -1413,9 +1416,9 @@ class ElementwiseMaximumGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class BroadcastDivGradFunctor {
+class DivGradFunctor {
  public:
-  BroadcastDivGradFunctor() {
+  DivGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("broadcast_div_grad")
                          .Input("dz")
                          .Input("z")
@@ -1433,10 +1436,67 @@ class BroadcastDivGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class BroadcastPowXGradFunctor {
+ public:
+  BroadcastPowXGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_pow_x_grad")
+                         .Input("dz")
+                         .Input("x")
+                         .Input("y")
+                         .Input("z")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dz,
+                           const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& z) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz, x, y, z});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class BroadcastPowYGradFunctor {
+ public:
+  BroadcastPowYGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_pow_y_grad")
+                         .Input("dz")
+                         .Input("x")
+                         .Input("y")
+                         .Input("z")
+                         .Output("dy")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dz,
+                           const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& z) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz, x, y, z});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class IdentityFunctor {
  public:
   IdentityFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("identity").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class AmpWhiteIdentityFunctor {
+ public:
+  AmpWhiteIdentityFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("amp_white_identity").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in) const {
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in});
@@ -1506,6 +1566,34 @@ class SplitFunctor {
   }
 };
 
+class SplitLikeFunctor {
+ public:
+  SplitLikeFunctor() {
+    ops_.resize(kMaxInputCount);
+    for (int n = 1; n < ops_.size(); ++n) {
+      ops_[n] = CHECK_JUST(one::OpBuilder("split_like")
+                               .Input("in")
+                               .Input("like", n + 1)
+                               .Output("out", n + 1)
+                               .Build());
+    }
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const TensorTuple& like,
+                                const int64_t& axis) const {
+    CHECK_GE_OR_RETURN(like.size(), 2);
+    CHECK_LE_OR_RETURN(like.size(), kMaxInputCount);
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("axis", axis));
+    TensorTuple inputs(like.size() + 1);
+    inputs[0] = x;
+    for (int i = 0; i < like.size(); ++i) { inputs[i + 1] = like[i]; }
+    return OpInterpUtil::Dispatch<TensorTuple>(*ops_.at(like.size() - 1), inputs, attrs);
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> ops_;
+};
+
 class SplitWithSizeFunctor {
  public:
   SplitWithSizeFunctor() {}
@@ -1529,6 +1617,42 @@ class SplitWithSizeFunctor {
         << "but got sum(split_sizes)=" << start_idx;
     return splits;
   }
+};
+
+class BatchGatherFunctor {
+ public:
+  BatchGatherFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("batch_gather").Input("in").Input("indices").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
+                           const std::shared_ptr<one::Tensor>& indices) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in, indices});
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UnsortedBatchSegmentSumFunctor {
+ public:
+  UnsortedBatchSegmentSumFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("unsorted_batch_segment_sum")
+                         .Input("data")
+                         .Input("segment_ids")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& data,
+                           const std::shared_ptr<one::Tensor>& segment_ids,
+                           const int64_t& num_segments) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("num_segments", num_segments));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {data, segment_ids}, attrs);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
 };
 
 }  // namespace impl
@@ -1585,6 +1709,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UpsampleTrilinear3DFunctor>("UpsampleTrilinear3D");
   m.add_functor<impl::UpsampleTrilinear3DGradFunctor>("UpsampleTrilinear3DGrad");
   m.add_functor<impl::UnsortedSegmentSumLikeFunctor>("UnsortedSegmentSumLike");
+  m.add_functor<impl::TrilFunctor>("Tril");
   m.add_functor<impl::TriuFunctor>("Triu");
   m.add_functor<impl::DiagFunctor>("Diag");
   m.add_functor<impl::DiagGradFunctor>("DiagGrad");
@@ -1599,12 +1724,18 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::CastLikeFunctor>("CastLike");
   m.add_functor<impl::ElementwiseMinimumGradFunctor>("ElementwiseMinGrad");
   m.add_functor<impl::ElementwiseMaximumGradFunctor>("ElementwiseMaxGrad");
-  m.add_functor<impl::BroadcastDivGradFunctor>("BroadcastDivGrad");
+  m.add_functor<impl::BroadcastPowXGradFunctor>("BroadcastPowXGrad");
+  m.add_functor<impl::BroadcastPowYGradFunctor>("BroadcastPowYGrad");
+  m.add_functor<impl::DivGradFunctor>("DivGrad");
   m.add_functor<impl::IdentityFunctor>("Identity");
+  m.add_functor<impl::AmpWhiteIdentityFunctor>("AmpWhiteIdentity");
   m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
   m.add_functor<impl::BroadcastReduceSumLikeFunctor>("BroadcastReduceSumLike");
   m.add_functor<impl::SplitFunctor>("Split");
+  m.add_functor<impl::SplitLikeFunctor>("SplitLike");
   m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");
+  m.add_functor<impl::BatchGatherFunctor>("BatchGather");
+  m.add_functor<impl::UnsortedBatchSegmentSumFunctor>("UnsortedBatchSegmentSum");
 };
 
 }  // namespace functional

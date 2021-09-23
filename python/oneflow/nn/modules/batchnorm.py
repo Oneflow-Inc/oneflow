@@ -106,6 +106,7 @@ class _BatchNorm(_NormBase):
         # TODO(zwx): Use `tensor.device_type()` method to help checking if x is on cpu.
         # Using `if x.device == flow.device("cpu"):` will fail as consistent tensor has
         # no device, however using `x.is_cuda` is not a good choice.
+        # TODO: support cpu batch norm kernel
         if not x.is_cuda:
             reduce_axis = []
             for dim in range(len(x.shape)):
@@ -114,14 +115,14 @@ class _BatchNorm(_NormBase):
             mean = x.mean(dim=reduce_axis, keepdim=False)
             variance = x.var(dim=reduce_axis, unbiased=False, keepdim=False)
             if self.training and self.track_running_stats:
-                running_mean = (
-                    self.momentum * self.running_mean + (1 - self.momentum) * mean
-                )
-                running_var = (
-                    self.momentum * self.running_var + (1 - self.momentum) * variance
-                )
-                self.__setattr__("running_mean", running_mean)
-                self.__setattr__("running_var", running_var)
+                # use unbiased variance to update running_var
+                unbiased_variance = x.var(dim=reduce_axis, unbiased=True, keepdim=False)
+                self.running_mean = (
+                    1.0 - self.momentum
+                ) * self.running_mean + self.momentum * mean
+                self.running_var = (
+                    1.0 - self.momentum
+                ) * self.running_var + self.momentum * unbiased_variance
             else:
                 mean = mean if self.running_mean is None else self.running_mean
                 variance = variance if self.running_var is None else self.running_var
@@ -160,7 +161,7 @@ class _BatchNorm(_NormBase):
                 is_training = True
             else:
                 is_training = (self.running_mean is None) and (self.running_var is None)
-            return flow.F.normalization(
+            return flow._C.normalization(
                 x,
                 self.running_mean
                 if not self.training or self.track_running_stats
@@ -397,7 +398,7 @@ class BatchNorm3d(_BatchNorm):
         >>> m = flow.nn.BatchNorm3d(num_features=2, eps=1e-5, momentum=0.1)
         >>> y = m(x)
         >>> y.size()
-        flow.Size([3, 2, 5, 8, 4])
+        oneflow.Size([3, 2, 5, 8, 4])
 
     """
 

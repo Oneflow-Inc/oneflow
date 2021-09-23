@@ -108,6 +108,7 @@ class RankGroup;
 
 struct TransportUtil final {
   static int64_t TimeoutSeconds() { return 60 * 5; }
+  static int64_t BlockingWarningIntervalSeconds() { return 5; }
 
   static Maybe<void> WaitUntilDoneOrTimeout(const AsyncTransportCtx& ctx, int64_t seconds);
 
@@ -135,6 +136,10 @@ struct TransportUtil final {
   static Maybe<void> ReceiveDataFromParentInHeap(const std::vector<int64_t>& rank_heap,
                                                  const TransportToken& token,
                                                  AsyncTransportCtx* ctx);
+  static Maybe<void> ReceiveDataFromRank(int64_t rank, const TransportToken& token,
+                                         AsyncTransportCtx* ctx);
+  static Maybe<void> SendDataToRank(int64_t rank, const TransportToken& token,
+                                    AsyncTransportCtx* ctx);
 };
 
 }  // namespace oneflow

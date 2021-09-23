@@ -38,6 +38,7 @@ inline ncclDataType_t GetNcclDataType(const DataType& dt) {
     NCCL_DATA_TYPE_CASE(Float16);
     default: UNIMPLEMENTED();
   }
+  return ncclDataType_t::ncclFloat;
 }
 
 void NcclCheck(ncclResult_t error);
@@ -45,6 +46,8 @@ void NcclCheck(ncclResult_t error);
 std::string NcclUniqueIdToString(const ncclUniqueId& unique_id);
 
 void NcclUniqueIdFromString(const std::string& str, ncclUniqueId* unique_id);
+
+#define HAS_GPU_SEND_RECV NCCL_VERSION_CODE > 2700
 
 #endif  // WITH_CUDA
 

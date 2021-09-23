@@ -22,12 +22,13 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_argwhere(test_case, shape, device):
     np_input = np.random.randn(*shape)
-    input = flow.Tensor(np_input, device=flow.device(device))
+    input = flow.tensor(np_input, dtype=flow.float32, device=flow.device(device))
     of_out = flow.argwhere(input)
     np_out = np.argwhere(np_input)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))

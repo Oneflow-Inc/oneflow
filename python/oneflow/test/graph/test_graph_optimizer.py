@@ -33,7 +33,7 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                 self.para0 = flow.nn.Parameter(flow.Tensor(10, 4))
 
             def forward(self, x):
-                x = flow.F.matmul(x, self.para0)
+                x = flow._C.matmul(x, self.para0)
                 return x
 
         m = CustomModule()
@@ -50,8 +50,8 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                 }
             ]
         )
-        cosine_lr = flow.optim.lr_scheduler.CosineAnnealingLR(
-            sgd0, steps=100, alpha=0.1
+        cosine_lr = flow.optim.lr_scheduler.CosineDecayLR(
+            sgd0, decay_steps=100, alpha=0.1
         )
 
         class CustomGraph0(flow.nn.Graph):
@@ -62,6 +62,7 @@ class TestGraphOptimizer(flow.unittest.TestCase):
 
             def build(self, x):
                 out = self.m(x)
+                out = out.mean()
                 out.backward()
                 return out
 
@@ -86,8 +87,8 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                 self.para4 = flow.nn.Parameter(flow.Tensor(1, 4))
 
             def forward(self, x):
-                x = flow.F.matmul(self.para0, x)
-                y = flow.F.matmul(self.para3, x)
+                x = flow._C.matmul(self.para0, x)
+                y = flow._C.matmul(self.para3, x)
                 return x, y
 
         m = CustomModule()
@@ -119,14 +120,14 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                 },
             ]
         )
-        cosine_lr0 = flow.optim.lr_scheduler.CosineAnnealingLR(
-            sgd0, steps=10, alpha=0.01
+        cosine_lr0 = flow.optim.lr_scheduler.CosineDecayLR(
+            sgd0, decay_steps=10, alpha=0.01
         )
         constant_warmup_cosine_lr0 = flow.optim.lr_scheduler.WarmUpLR(
             cosine_lr0, warmup_factor=0.5, warmup_iters=5, warmup_method="constant"
         )
-        cosine_lr1 = flow.optim.lr_scheduler.CosineAnnealingLR(
-            sgd1, steps=100, alpha=0.1
+        cosine_lr1 = flow.optim.lr_scheduler.CosineDecayLR(
+            sgd1, decay_steps=100, alpha=0.1
         )
         linear_warmup_cosine_lr1 = flow.optim.lr_scheduler.WarmUpLR(
             cosine_lr1, warmup_factor=0.5, warmup_iters=5, warmup_method="linear"
@@ -159,7 +160,7 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                 self.para0 = flow.nn.Parameter(flow.Tensor(10, 4))
 
             def forward(self, x):
-                x = flow.F.matmul(x, self.para0)
+                x = flow._C.matmul(x, self.para0)
                 return x
 
         m = CustomModule()
@@ -192,6 +193,7 @@ class TestGraphOptimizer(flow.unittest.TestCase):
 
             def build(self, x):
                 out = self.m(x)
+                out = out.sum()
                 out.backward()
                 return out
 

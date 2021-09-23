@@ -39,7 +39,6 @@ class TmpBufferManager final {
   cub::KeyValuePair<int32_t, T>* KeyValueOutPtr() const { return key_value_out_ptr_; }
   void* TempStoragePtr() const { return temp_storage_ptr_; }
 
-  int32_t KeyValueOutElemCnt() const { return key_value_out_elem_cnt_; }
   int32_t TempStorageBytes() const { return temp_storage_bytes_; }
 
  private:
@@ -71,7 +70,7 @@ size_t InferTempStorageForArgMax(int32_t num_row, int32_t num_col) {
   MultiplyFunctor multiply_functor(num_col);
   SegmentOffsetIter segment_offset_iter(counting_iter, multiply_functor);
 
-  size_t temp_storage_bytes = -1;
+  size_t temp_storage_bytes = 0;
   auto err =
       cub::DeviceSegmentedReduce::ArgMax<T*, cub::KeyValuePair<int32_t, T>*, SegmentOffsetIter>(
           /* d_temp_storage */ nullptr, /* temp_storage_bytes */ temp_storage_bytes,
@@ -111,7 +110,7 @@ void ArgMax(const T* in_ptr, int32_t num_row, int32_t num_col, void* temp_storag
 template<typename T>
 __global__ void WriteKeysToOutput(const int32_t instance_num,
                                   const cub::KeyValuePair<int32_t, T>* key_value_out_ptr,
-                                  int32_t* out_ptr) {
+                                  int64_t* out_ptr) {
   CUDA_1D_KERNEL_LOOP(i, instance_num) { out_ptr[i] = key_value_out_ptr[i].key; }
 }
 
@@ -124,6 +123,7 @@ class GpuArgMaxKernel final : public user_op::OpKernel {
   ~GpuArgMaxKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -140,7 +140,7 @@ class GpuArgMaxKernel final : public user_op::OpKernel {
            ctx->device_ctx()->cuda_stream());
     WriteKeysToOutput<T><<<BlocksNum4ThreadsNum(instance_num), kCudaThreadsNumPerBlock, 0,
                            ctx->device_ctx()->cuda_stream()>>>(
-        instance_num, buffer_manager.KeyValueOutPtr(), out->mut_dptr<int32_t>());
+        instance_num, buffer_manager.KeyValueOutPtr(), out->mut_dptr<int64_t>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -167,6 +167,8 @@ class GpuArgMaxKernel final : public user_op::OpKernel {
 
 REGISTER_GPU_ARGMAX_KERNEL(float)
 REGISTER_GPU_ARGMAX_KERNEL(double)
+REGISTER_GPU_ARGMAX_KERNEL(uint8_t)
+REGISTER_GPU_ARGMAX_KERNEL(int8_t)
 REGISTER_GPU_ARGMAX_KERNEL(int32_t)
 REGISTER_GPU_ARGMAX_KERNEL(int64_t)
 

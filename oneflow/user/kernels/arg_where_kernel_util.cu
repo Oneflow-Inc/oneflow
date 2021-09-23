@@ -65,9 +65,7 @@ __global__ void __launch_bounds__(kBlockSize)
 
 template<typename T>
 struct IsTrue {
-  CUB_RUNTIME_FUNCTION __forceinline__ bool operator()(const T& val) const {
-    return static_cast<bool>(val);
-  }
+  __device__ __forceinline__ bool operator()(const T& val) const { return static_cast<bool>(val); }
 };
 
 template<typename IN_T, typename OUT_T, typename OUT_ITER>
@@ -91,7 +89,7 @@ struct ArgWhereKernelUtil<DeviceType::kGPU, IN_T, OUT_T, NDIM> {
     const int64_t elem_cnt = input_shape.elem_cnt();
     // deal with empty blob
     if (elem_cnt == 0) {
-      KernelUtil<DeviceType::kGPU, OUT_T>::Set(ctx, static_cast<OUT_T>(0), output_size_ptr);
+      NewKernelUtil<DeviceType::kGPU>::Fill(ctx, 1, static_cast<OUT_T>(0), output_size_ptr);
       return;
     }
 

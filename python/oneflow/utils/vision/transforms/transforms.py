@@ -586,11 +586,8 @@ class RandomCrop(flow.nn.Module):
         if w == tw and h == th:
             return 0, 0, h, w
 
-        # TODO:replace with flow.randint
-        # i = flow.randint(0, h - th + 1, size=(1, )).item()
-        # j = flow.randint(0, w - tw + 1, size=(1, )).item()
-        i = np.random.randint(low=0, high=h - th + 1, size=(1,), dtype=np.int32)
-        j = np.random.randint(low=0, high=w - tw + 1, size=(1,), dtype=np.int32)
+        i = flow.randint(0, h - th + 1, size=(1,)).item()
+        j = flow.randint(0, w - tw + 1, size=(1,)).item()
         return i, j, th, tw
 
     def __init__(
@@ -788,15 +785,8 @@ class RandomResizedCrop(flow.nn.Module):
             h = int(round(math.sqrt(target_area / aspect_ratio)))
 
             if 0 < w <= width and 0 < h <= height:
-                # TODO:replace with flow.randint
-                # i = flow.randint(0, height - h + 1, size=(1,)).item()
-                # j = flow.randint(0, width - w + 1, size=(1,)).item()
-                i = np.random.randint(
-                    low=0, high=height - h + 1, size=(1,), dtype=np.int32
-                )
-                j = np.random.randint(
-                    low=0, high=width - w + 1, size=(1,), dtype=np.int32
-                )
+                i = flow.randint(0, height - h + 1, size=(1,)).item()
+                j = flow.randint(0, width - w + 1, size=(1,)).item()
                 return i, j, h, w
 
         # Fallback to central crop

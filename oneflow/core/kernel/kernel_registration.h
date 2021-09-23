@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/common/device_type.pb.h"
+#include "oneflow/core/common/device_type.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/to_string.h"

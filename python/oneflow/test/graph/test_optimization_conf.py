@@ -45,7 +45,7 @@ class CustomModule(flow.nn.Module):
 
     def forward(self, x):
         x = self.layer(x)
-        x = oneflow.F.flatten(x, 1)
+        x = oneflow._C.flatten(x, 1)
         x = self.fc1(x) + self.dummy_buff
         return x
 
@@ -103,3 +103,7 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
         print("optimization conf: \n", g._optimization_conf_proto)
         g._generate_config_proto()
         print("graph conf: \n", g._config_proto)
+
+
+if __name__ == "__main__":
+    unittest.main()

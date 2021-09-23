@@ -21,10 +21,11 @@ limitations under the License.
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/framework/local_dep_object.h"
+#include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -33,9 +34,16 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-void TensorImpl::set_requires_grad(bool requires_grad) {
+Maybe<void> TensorImpl::set_requires_grad(bool requires_grad) {
+  if (requires_grad) {
+    const DataType tensor_dtype = dtype();
+    CHECK_OR_RETURN(IsFloatingDataType(tensor_dtype) || tensor_dtype == DataType::kBFloat16
+                    || tensor_dtype == DataType::kFloat16)
+        << "RuntimeError: only Tensors of floating point can require gradients";
+  }
   requires_grad_ = requires_grad;
   if (autograd_meta_) { autograd_meta_->set_requires_grad(requires_grad); }
+  return Maybe<void>::Ok();
 }
 
 Maybe<Tensor> TensorImpl::acc_grad() const {
@@ -86,7 +94,7 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
 Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
   const auto& eager_blob_object = eager_blob_object_;
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());
-  const auto& parallel_desc = this->device()->parallel_desc_ptr();
+  const auto& parallel_desc = JUST(Placement4Device(this->device())).shared_from_symbol();
   tensor_storage_->set_releaser_hook(
       [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorBuffer>&) {
         CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
@@ -195,7 +203,7 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
     Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad, bool is_leaf) {
   const auto& parallel_desc = consistent_tensor_meta->parallel_desc();
   Optional<int64_t> parallel_id;
-  const auto& device = JUST(parallel_desc->GetDevice4CurrentProcessCtx(&parallel_id));
+  const auto& device = JUST(parallel_desc->GetTensorDevice4CurrentProcessCtx(&parallel_id));
   return EagerConsistentTensorImpl::New(consistent_tensor_meta, device, parallel_id, requires_grad,
                                         is_leaf);
 }
@@ -206,7 +214,7 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_s
                               const ParallelDesc& parallel_desc,
                               const Optional<int64_t>& parallel_id) {
   if (parallel_id.has_value()) {
-    return GetPhysicalShape(logical_shape, nd_sbp, parallel_desc, JUST(parallel_id.value()));
+    return GetPhysicalShape(logical_shape, nd_sbp, parallel_desc, JUST(parallel_id));
   } else {
     return std::make_shared<Shape>(DimVector(logical_shape.NumAxes(), 0));
   }
@@ -223,13 +231,22 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_s
   const auto& parallel_desc = consistent_tensor_meta->parallel_desc();
   const auto& cur_rank_phy_shape =
       JUST(GetPhysicalShape(*shape, *nd_sbp, *parallel_desc, parallel_id));
-  const auto& cur_rank_phy_tensor_meta =
-      std::make_shared<MirroredTensorMeta>(cur_rank_phy_shape, dtype, device);
-  auto cur_rank_phy_tensor_impl =
-      std::make_shared<EagerMirroredTensorImpl>(cur_rank_phy_tensor_meta, requires_grad, is_leaf);
-  const auto& dep_object = JUST(GetLocalDepObject(device));
-  JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(dep_object));
-  const auto& cur_rank_phy_tensor = std::make_shared<MirroredTensor>(cur_rank_phy_tensor_impl);
+  std::shared_ptr<MirroredTensor> cur_rank_phy_tensor;
+  if (parallel_id.has_value()) {
+    const auto& cur_rank_phy_tensor_meta =
+        std::make_shared<MirroredTensorMeta>(cur_rank_phy_shape, dtype, device);
+    auto cur_rank_phy_tensor_impl =
+        std::make_shared<EagerMirroredTensorImpl>(cur_rank_phy_tensor_meta, requires_grad, is_leaf);
+    const auto& dep_object = JUST(GetLocalDepObjectFromDevicePool(device));
+    JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(dep_object));
+    cur_rank_phy_tensor = std::make_shared<MirroredTensor>(cur_rank_phy_tensor_impl);
+  } else {
+    const auto& dtype_symbol = JUST(DType::Get(dtype));
+    const auto& empty = JUST(functional::Empty(*cur_rank_phy_shape, dtype_symbol, device));
+    cur_rank_phy_tensor = JUST(empty->AsMirroredTensor());
+    JUST(cur_rank_phy_tensor->set_requires_grad(requires_grad));
+    cur_rank_phy_tensor->set_is_leaf(is_leaf);
+  }
   auto* tensor_impl =
       new EagerConsistentTensorImpl(consistent_tensor_meta, cur_rank_phy_tensor->requires_grad(),
                                     cur_rank_phy_tensor->is_leaf(), cur_rank_phy_tensor);

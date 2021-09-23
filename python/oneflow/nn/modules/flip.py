@@ -40,6 +40,8 @@ def flip_op(input, dims):
         
         >>> np_arr = np.arange(0, 8).reshape((2, 2, 2)).astype(np.float32)
         >>> input = flow.Tensor(np_arr)
+        >>> input.shape
+        oneflow.Size([2, 2, 2])
         >>> out = flow.flip(input, [0, 1])
         >>> out
         tensor([[[6., 7.],
@@ -63,7 +65,7 @@ def flip_op(input, dims):
             i < input_len
         ), f"IndexError: Dimension out of range (expected to be in range of {input_len}, but got {i})"
         new_dims.append(i)
-    return flow.F.flip(input, new_dims)
+    return flow._C.flip(input, new_dims)
 
 
 @register_tensor_op("flip")

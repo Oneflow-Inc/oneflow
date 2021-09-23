@@ -18,7 +18,8 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
 
 import oneflow as flow
@@ -26,11 +27,17 @@ import oneflow.unittest
 
 
 def _test_mul_impl(test_case, device):
-    x = flow.Tensor(
-        np.random.randn(2, 3), device=flow.device(device), requires_grad=True
+    x = flow.tensor(
+        np.random.randn(2, 3),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
     )
-    y = flow.Tensor(
-        np.random.randn(2, 3), device=flow.device(device), requires_grad=True
+    y = flow.tensor(
+        np.random.randn(2, 3),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
     )
     of_out = flow.mul(x, y)
     np_out = np.multiply(x.numpy(), y.numpy())
@@ -42,33 +49,30 @@ def _test_mul_impl(test_case, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad_x, 1e-05, 1e-05))
     test_case.assertTrue(np.allclose(y.grad.numpy(), np_grad_y, 1e-05, 1e-05))
     x = 5
-    y = flow.Tensor(np.random.randn(2, 3), device=flow.device(device))
+    y = flow.tensor(
+        np.random.randn(2, 3), dtype=flow.float32, device=flow.device(device)
+    )
     of_out = flow.mul(x, y)
     np_out = np.multiply(x, y.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    x = flow.Tensor(np.random.randn(2, 3), device=flow.device(device))
+    x = flow.tensor(
+        np.random.randn(2, 3), dtype=flow.float32, device=flow.device(device)
+    )
     y = 5
     of_out = flow.mul(x, y)
     np_out = np.multiply(x.numpy(), y)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    x = flow.Tensor(
-        np.random.randn(1, 1), device=flow.device(device), requires_grad=True
+    x = flow.tensor(
+        np.random.randn(1, 1),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
     )
-    y = flow.Tensor(
-        np.random.randn(2, 3), device=flow.device(device), requires_grad=True
-    )
-    of_out = flow.mul(x, y)
-    np_out = np.multiply(x.numpy(), y.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    of_out = of_out.sum()
-    of_out.backward()
-    test_case.assertTrue(np.allclose(x.grad.numpy(), np.sum(y.numpy()), 1e-05, 1e-05))
-    test_case.assertTrue(np.allclose(y.grad.numpy(), x.numpy(), 1e-05, 1e-05))
-    x = flow.Tensor(
-        np.random.randn(1, 1), device=flow.device(device), requires_grad=True
-    )
-    y = flow.Tensor(
-        np.random.randn(2, 3, 4), device=flow.device(device), requires_grad=True
+    y = flow.tensor(
+        np.random.randn(2, 3),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
     )
     of_out = flow.mul(x, y)
     np_out = np.multiply(x.numpy(), y.numpy())
@@ -77,11 +81,36 @@ def _test_mul_impl(test_case, device):
     of_out.backward()
     test_case.assertTrue(np.allclose(x.grad.numpy(), np.sum(y.numpy()), 1e-05, 1e-05))
     test_case.assertTrue(np.allclose(y.grad.numpy(), x.numpy(), 1e-05, 1e-05))
-    x = flow.Tensor(
-        np.random.randn(1, 1), device=flow.device(device), requires_grad=True
+    x = flow.tensor(
+        np.random.randn(1, 1),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
     )
-    y = flow.Tensor(
-        np.random.randn(2, 3, 4, 5), device=flow.device(device), requires_grad=True
+    y = flow.tensor(
+        np.random.randn(2, 3, 4),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    of_out = flow.mul(x, y)
+    np_out = np.multiply(x.numpy(), y.numpy())
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
+    of_out = of_out.sum()
+    of_out.backward()
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np.sum(y.numpy()), 1e-05, 1e-05))
+    test_case.assertTrue(np.allclose(y.grad.numpy(), x.numpy(), 1e-05, 1e-05))
+    x = flow.tensor(
+        np.random.randn(1, 1),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    y = flow.tensor(
+        np.random.randn(2, 3, 4, 5),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
     )
     of_out = flow.mul(x, y)
     np_out = np.multiply(x.numpy(), y.numpy())

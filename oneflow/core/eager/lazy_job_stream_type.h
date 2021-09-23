@@ -29,7 +29,7 @@ namespace vm {
 class LazyJobStreamType final : public StreamType {
  public:
   LazyJobStreamType() = default;
-  ~LazyJobStreamType() override = default;
+  virtual ~LazyJobStreamType() = default;
 
   const char* device_tag() const override { return "lazy_job"; }
 
@@ -42,9 +42,10 @@ class LazyJobStreamType final : public StreamType {
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
   void Compute(Instruction* instruction) const override;
+  bool SharingVirtualMachineThread() const override { return false; }
+  bool SupportingTransportInstructions() const override { return false; }
   ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
                                           int64_t this_machine_id) const override;
-  bool SharingVirtualMachineThread() const override { return false; }
 };
 
 }  // namespace vm

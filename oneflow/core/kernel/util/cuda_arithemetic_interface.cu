@@ -111,7 +111,7 @@ template<typename T>
 struct TransposeUtil final {
 #define MAKE_TRANSPOSE_SWITCH_ENTRY(func_name, NDIMS) func_name<NDIMS, T>
   DEFINE_STATIC_SWITCH_FUNC(void, TransposeImpl, MAKE_TRANSPOSE_SWITCH_ENTRY,
-                            MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+                            MAKE_NDIM_CTRV_SEQ(DIM_SEQ))
 };
 
 }  // namespace
@@ -403,6 +403,7 @@ void ArithemeticIf<DeviceType::kGPU>::Fill(DeviceCtx* ctx, const int64_t n, cons
 
 COPY_COLS_REGION(float)
 COPY_COLS_REGION(double)
+COPY_COLS_REGION(uint8_t)
 COPY_COLS_REGION(int8_t)
 COPY_COLS_REGION(int32_t)
 COPY_COLS_REGION(int64_t)

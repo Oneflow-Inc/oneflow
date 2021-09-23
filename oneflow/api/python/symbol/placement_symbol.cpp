@@ -140,23 +140,22 @@ struct PlacementSymbolExportUtil {
     CHECK(type2device_tag.find(device_type) != type2device_tag.end())
         << "Invalid device_type: " << device_type << ", device_type must be \"cpu\" or \"cuda\".";
     std::string device_tag = type2device_tag.at(device_type);
-    int64_t world_size = GlobalProcessCtx::WorldSize();
-    int64_t device_num = 0;
-    {
-      if (device_tag == "gpu") {
-        device_num = Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum();
-        CHECK(device_num > 0) << "Can't build cuda placement because no gpu is found!";
-      } else {
-        device_num = Global<ResourceDesc, ForEnv>::Get()->CpuDeviceNum();
+    static thread_local HashMap<std::string, Symbol<ParallelDesc>> device_tag2placement;
+    auto iter = device_tag2placement.find(device_tag);
+    if (iter == device_tag2placement.end()) {
+      int64_t node_size = GlobalProcessCtx::NodeSize();
+      int64_t device_num = GlobalProcessCtx::NumOfProcessPerNode();
+      std::vector<std::string> machine_device_ids;
+      for (int64_t node_id = 0; node_id < node_size; ++node_id) {
+        std::string device_name = std::to_string(node_id) + ":0-" + std::to_string(device_num - 1);
+        machine_device_ids.emplace_back(device_name);
       }
+      Symbol<ParallelDesc> placement =
+          SymbolOf(*PlacementSymbolExportUtil::ApiCreatePlacementSymbol(
+              device_tag, machine_device_ids, std::shared_ptr<Shape>()));
+      iter = device_tag2placement.emplace(device_tag, placement).first;
     }
-    std::vector<std::string> machine_device_ids;
-    for (int64_t rank = 0; rank < world_size; ++rank) {
-      std::string device_name = std::to_string(rank) + ":0-" + std::to_string(device_num - 1);
-      machine_device_ids.emplace_back(device_name);
-    }
-    return SymbolOf(*PlacementSymbolExportUtil::ApiCreatePlacementSymbol(
-        device_tag, machine_device_ids, std::shared_ptr<Shape>()));
+    return iter->second;
   }
 
   static std::string PlacementSymbol2String(Symbol<ParallelDesc> placement) {
@@ -209,7 +208,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::self == py::self)
       .def(py::hash(py::self));
 
-  py::class_<Symbol<ParallelDesc>, std::shared_ptr<Symbol<ParallelDesc>>>(m, "placement")
+  py::class_<Symbol<ParallelDesc>, std::shared_ptr<Symbol<ParallelDesc>>>(m, "placement",
+                                                                          py::dynamic_attr())
       .def(py::init([](const std::string& device_type, const py::dict& machine_device_ids,
                        const std::shared_ptr<Shape>& hierarchy) {
              return PlacementSymbolExportUtil::ApiCreatePlacementSymbol(

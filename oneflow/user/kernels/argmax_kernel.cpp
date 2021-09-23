@@ -30,17 +30,18 @@ class CpuArgMaxKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const T* in_ptr = in->dptr<T>();
-    int32_t* out_ptr = out->mut_dptr<int32_t>();
+    int64_t* out_ptr = out->mut_dptr<int64_t>();
 
-    const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
-    const int32_t instance_num = in->shape().elem_cnt() / instance_size;
-    const int32_t num_thread = std::min(instance_num, Global<ThreadPool>::Get()->thread_num());
+    const int64_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
+    const int64_t instance_num = in->shape().elem_cnt() / instance_size;
+    const int64_t num_thread =
+        std::min(instance_num, (int64_t)Global<ThreadPool>::Get()->thread_num());
     const BalancedSplitter bs(instance_num, num_thread);
     BlockingCounter bc(num_thread);
-    FOR_RANGE(int32_t, thread_id, 0, num_thread) {
+    FOR_RANGE(int64_t, thread_id, 0, num_thread) {
       const Range range = bs.At(thread_id);
       Global<ThreadPool>::Get()->AddWork([=, &bc]() {
-        FOR_RANGE(int32_t, i, range.begin(), range.end()) {
+        FOR_RANGE(int64_t, i, range.begin(), range.end()) {
           const T* in_ptr_i = in_ptr + i * instance_size;
           out_ptr[i] =
               std::distance(in_ptr_i, std::max_element(in_ptr_i, in_ptr_i + instance_size));
@@ -60,6 +61,8 @@ class CpuArgMaxKernel final : public user_op::OpKernel {
 
 REGISTER_CPU_ARGMAX_KERNEL(float)
 REGISTER_CPU_ARGMAX_KERNEL(double)
+REGISTER_CPU_ARGMAX_KERNEL(uint8_t)
+REGISTER_CPU_ARGMAX_KERNEL(int8_t)
 REGISTER_CPU_ARGMAX_KERNEL(int32_t)
 REGISTER_CPU_ARGMAX_KERNEL(int64_t)
 

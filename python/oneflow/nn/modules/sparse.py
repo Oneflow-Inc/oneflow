@@ -43,7 +43,7 @@ class Embedding(Module):
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> indices = flow.Tensor([[1, 2, 4, 5], [4, 3, 2, 9]], dtype=flow.int)
+        >>> indices = flow.tensor([[1, 2, 4, 5], [4, 3, 2, 9]], dtype=flow.int)
         >>> m = flow.nn.Embedding(10, 3)
         >>> y = m(indices)
 
@@ -99,7 +99,7 @@ class Embedding(Module):
                 self.weight[self.padding_idx].fill_(0)
 
     def forward(self, indices):
-        res = flow.F.gather(self.weight, indices, axis=0)
+        res = flow._C.gather(self.weight, indices, axis=0)
         return res
 
 

@@ -19,6 +19,7 @@ from collections import OrderedDict
 
 import numpy as np
 from test_util import GenArgList
+from oneflow.test_utils.automated_test_util import *
 
 import oneflow as flow
 import oneflow.unittest
@@ -42,9 +43,9 @@ def _test_gather(test_case, device):
     index = np.array([[0, 0], [1, 0]])
     np_out = np.take_along_axis(input, index, 0)
     output = flow.gather(
-        flow.Tensor(input, device=flow.device(device)),
-        flow.Tensor(index, dtype=flow.int, device=flow.device(device)),
-        dim=0,
+        flow.tensor(input, dtype=flow.float32, device=flow.device(device)),
+        0,
+        flow.tensor(index, dtype=flow.int, device=flow.device(device)),
     )
     test_case.assertTrue(np.array_equal(output.numpy(), np_out))
 
@@ -53,9 +54,9 @@ def _test_gather_tensor_function(test_case, device):
     input = np.array([[1, 2], [3, 4]])
     index = np.array([[0, 0], [1, 0]])
     np_out = np.take_along_axis(input, index, 1)
-    input = flow.Tensor(input, device=flow.device(device))
-    index = flow.Tensor(index, dtype=flow.int, device=flow.device(device))
-    output = input.gather(index, dim=1)
+    input = flow.tensor(input, dtype=flow.float32, device=flow.device(device))
+    index = flow.tensor(index, dtype=flow.int, device=flow.device(device))
+    output = input.gather(1, index)
     test_case.assertTrue(np.array_equal(output.numpy(), np_out))
 
 
@@ -64,23 +65,23 @@ def _test_gather_random_array(test_case, device):
     index = np.random.choice(np.arange(3), size=180, replace=True).reshape((3, 4, 3, 5))
     np_out = np.take_along_axis(input, index, 1)
     output = flow.gather(
-        flow.Tensor(input, device=flow.device(device)),
-        flow.Tensor(index, dtype=flow.int, device=flow.device(device)),
-        dim=1,
+        flow.tensor(input, dtype=flow.float32, device=flow.device(device)),
+        1,
+        flow.tensor(index, dtype=flow.int, device=flow.device(device)),
     )
     test_case.assertTrue(np.allclose(output.numpy(), np_out))
     np_out2 = np.take_along_axis(input, index, 2)
     output2 = flow.gather(
-        flow.Tensor(input, device=flow.device(device)),
-        flow.Tensor(index, dtype=flow.int, device=flow.device(device)),
-        dim=2,
+        flow.tensor(input, dtype=flow.float32, device=flow.device(device)),
+        2,
+        flow.tensor(index, dtype=flow.int, device=flow.device(device)),
     )
     test_case.assertTrue(np.allclose(output2.numpy(), np_out2))
     np_out3 = np.take_along_axis(input, index, 3)
     output3 = flow.gather(
-        flow.Tensor(input, device=flow.device(device)),
-        flow.Tensor(index, dtype=flow.int, device=flow.device(device)),
-        dim=3,
+        flow.tensor(input, dtype=flow.float32, device=flow.device(device)),
+        3,
+        flow.tensor(index, dtype=flow.int, device=flow.device(device)),
     )
     test_case.assertTrue(np.allclose(output3.numpy(), np_out3))
 
@@ -90,9 +91,11 @@ def _test_gather_backward(test_case, device):
     index = np.array([[0, 0], [1, 0]])
     np_out = np.take_along_axis(input, index, 0)
     np_grad = _scatter_add_numpy(np.ones_like(np_out), 0, index, input.shape)
-    of_input = flow.Tensor(input, requires_grad=True, device=flow.device(device))
+    of_input = flow.tensor(
+        input, dtype=flow.float32, requires_grad=True, device=flow.device(device)
+    )
     output = flow.gather(
-        of_input, flow.Tensor(index, dtype=flow.int, device=flow.device(device)), dim=0
+        of_input, 0, flow.tensor(index, dtype=flow.int, device=flow.device(device)),
     )
     out_sum = output.sum()
     out_sum.backward()
@@ -113,6 +116,20 @@ class TestGather(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_flow_gather_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
+        dim = random(0, 4).to(int)
+        index = random_pytorch_tensor(
+            ndim=4,
+            dim1=random(1, 3).to(int),
+            dim2=random(1, 4).to(int),
+            dim3=random(1, 5).to(int),
+            dtype=int,
+        ).to(device)
+        return torch.gather(input, dim, index)
 
 
 if __name__ == "__main__":
