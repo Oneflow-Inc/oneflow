@@ -16,6 +16,7 @@ find ${ONEFLOW_CI_BUILD_DIR} -name CMakeCache.txt
 find ${ONEFLOW_CI_BUILD_DIR} -name CMakeCache.txt -delete
 if [ ! -f "$ONEFLOW_CI_CMAKE_INIT_CACHE" ]; then
     echo "$ONEFLOW_CI_CMAKE_INIT_CACHE does not exist."
+    exit 1
 fi
 export PATH="${PATH}:$(dirname ${ONEFLOW_CI_PYTHON_EXE})"
 export PYTHON_BIN_PATH=${ONEFLOW_CI_PYTHON_EXE}
