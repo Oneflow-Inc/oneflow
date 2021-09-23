@@ -63,8 +63,7 @@ class TestAllGather(flow.unittest.TestCase):
         if not torch.distributed.is_initialized():
             dist.init_process_group("gloo")
         torch_tensor_list = [
-            torch.zeros(np_arr.shape, dtype=torch.int32)
-            for _ in range(2)
+            torch.zeros(np_arr.shape, dtype=torch.int32) for _ in range(2)
         ]
         torch_input = torch.tensor(np_arr, dtype=torch.int32)
         dist.all_gather(torch_tensor_list, torch_input)
@@ -107,22 +106,18 @@ class TestScatter(flow.unittest.TestCase):
     def test_scatter_1n4d(test_case):
         of_output = flow.tensor([[1, 2], [3, 4]], device="cuda")
         torch_output = torch.tensor([[1, 2], [3, 4]])
-
+        if not torch.distributed.is_initialized():
+            dist.init_process_group("gloo")
         if flow.env.get_rank() == 1:
-            if not torch.distributed.is_initialized():
-                dist.init_process_group("gloo")
-            of_tensor_list = [flow.tensor([[5, 6], [7, 8]], device="cuda") + i for i in range(4)]
+            of_tensor_list = [
+                flow.tensor([[5, 6], [7, 8]], device="cuda") + i for i in range(4)
+            ]
             flow.comm.scatter(of_output, of_tensor_list, src=1)
 
-            torch_tensor_list = [
-                torch.tensor(x.numpy())
-                for x in of_tensor_list
-            ]
+            torch_tensor_list = [torch.tensor(x.numpy()) for x in of_tensor_list]
             dist.scatter(torch_output, torch_tensor_list, src=1)
             test_case.assertTrue(np.allclose(of_output.numpy(), torch_output.numpy()))
         else:
-            if not torch.distributed.is_initialized():
-                dist.init_process_group("gloo")
             flow.comm.scatter(of_output, src=1)
 
             dist.scatter(torch_output, src=1)
@@ -144,11 +139,14 @@ class TestGather(flow.unittest.TestCase):
 
         if flow.env.get_rank() == 1:
             of_tensor_list = [
-                flow.zeros(np_arr.shape, dtype=flow.int32, device="cuda") for _ in range(4)
+                flow.zeros(np_arr.shape, dtype=flow.int32, device="cuda")
+                for _ in range(4)
             ]
             flow.comm.gather(of_input, gather_list=of_tensor_list, dst=1)
 
-            torch_tensor_list = [torch.zeros(np_arr.shape, dtype=torch.int32) for _ in range(4)]
+            torch_tensor_list = [
+                torch.zeros(np_arr.shape, dtype=torch.int32) for _ in range(4)
+            ]
             dist.gather(torch_input, gather_list=torch_tensor_list, dst=1)
             for i in range(4):
                 test_case.assertTrue(
@@ -157,7 +155,6 @@ class TestGather(flow.unittest.TestCase):
         else:
             flow.comm.gather(of_input, dst=1)
             dist.gather(torch_input, dst=1)
-
 
         dist.destroy_process_group()
 
@@ -192,7 +189,8 @@ class TestAllToAll(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
     def test_all_to_all_1n4d(test_case):
         of_input_list = [
-            flow.tensor([0, 1], device="cpu") + i * 2 + flow.env.get_rank() * 8 for i in range(4)
+            flow.tensor([0, 1], device="cpu") + i * 2 + flow.env.get_rank() * 8
+            for i in range(4)
         ]
         of_output_list = [flow.tensor([0, 1], device="cpu") for _ in range(4)]
         flow.comm.all_to_all(of_output_list, of_input_list)
@@ -224,7 +222,8 @@ class TestReduceScatter(flow.unittest.TestCase):
     def test_reduce_scatter_1n4d(test_case):
         of_output = flow.tensor([[0, 0], [0, 0]], device="cpu")
         of_tensor_list = [
-            flow.tensor([[1, 2], [3, 4]], device="cpu") + flow.env.get_rank() + i for i in range(4)
+            flow.tensor([[1, 2], [3, 4]], device="cpu") + flow.env.get_rank() + i
+            for i in range(4)
         ]
         flow.comm.reduce_scatter(of_output, of_tensor_list)
 
