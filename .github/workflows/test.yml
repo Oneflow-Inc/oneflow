@@ -178,7 +178,7 @@ jobs:
   build-manylinux:
     name: "Build manylinux"
     runs-on: ${{ matrix.runs-on }}
-    needs: [find-build-cache]
+    needs: [find-build-cache, changed_files]
     strategy:
       fail-fast: true
       max-parallel: 5
