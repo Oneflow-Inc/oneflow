@@ -96,7 +96,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
     if (!::oneflow::private_details::JustIsOk(value_to_check_)) {                        \
       return ::oneflow::private_details::JustErrorAddStackFrame(                         \
           ::oneflow::private_details::JustGetError(value_to_check_), __FILE__, __LINE__, \
-          __FUNCTION__, OF_PP_STRINGIZE((__VA_ARGS__)));                                 \
+          __FUNCTION__, OF_PP_STRINGIZE(__VA_ARGS__));                                   \
     }                                                                                    \
     std::forward<decltype(value_to_check_)>(value_to_check_);                            \
   })).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
@@ -108,7 +108,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
       LOG(FATAL) << ::oneflow::GetFormatedSerializedError(                                   \
           ::oneflow::private_details::JustErrorAddStackFrame(                                \
               ::oneflow::private_details::JustGetError(value_to_check_), __FILE__, __LINE__, \
-              func_name, OF_PP_STRINGIZE((__VA_ARGS__))));                                   \
+              func_name, OF_PP_STRINGIZE(__VA_ARGS__)));                                     \
     }                                                                                        \
     return std::forward<decltype(value_to_check_)>(value_to_check_);                         \
   })(__FUNCTION__))                                                                          \
@@ -121,7 +121,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
       return ::oneflow::private_details::JustErrorAddMessage(                         \
           ::oneflow::Error(::oneflow::private_details::JustGetError(value_to_check_)) \
               .AddStackFrame(__FILE__, __LINE__, __FUNCTION__),                       \
-          OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__);                               \
+          OF_PP_STRINGIZE(value), ": ", __VA_ARGS__);                                 \
     }                                                                                 \
     std::forward<decltype(value_to_check_)>(value_to_check_);                         \
   })).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
@@ -134,7 +134,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
           ::oneflow::private_details::JustErrorAddMessage(                                \
               ::oneflow::Error(::oneflow::private_details::JustGetError(value_to_check_)) \
                   .AddStackFrame(__FILE__, __LINE__, func_name),                          \
-              OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__)                                \
+              OF_PP_STRINGIZE(value), ": ", __VA_ARGS__)                                  \
               .error_proto());                                                            \
     }                                                                                     \
     return std::forward<decltype(value_to_check_)>(value_to_check_);                      \
