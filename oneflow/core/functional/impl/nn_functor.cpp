@@ -377,6 +377,22 @@ class L1LossFunctor {
     return out;
   }
 };
+class MseLossFunctor {
+ public:
+  MseLossFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const std::string& reduction) const {
+    auto out = JUST(functional::Square(JUST(functional::Sub(input, target))));
+    CHECK_OR_RETURN([&]() -> bool {
+      if ((reduction != "none") && (reduction != "sum") && (reduction != "mean")) return false;
+      return true;
+    }());
+    if (reduction == "sum") { return functional::ReduceSum(out, {}, false); }
+    if (reduction == "mean") { return functional::ReduceMean(out, {}, false); }
+    return out;
+  }
+};
 class NllLossFunctor {
  public:
   NllLossFunctor() {
@@ -1331,6 +1347,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
   m.add_functor<impl::L1LossFunctor>("L1Loss");
+  m.add_functor<impl::MseLossFunctor>("MseLoss");
   m.add_functor<impl::NllLossFunctor>("NllLoss");
   m.add_functor<impl::BinaryCrossEntropyLossFunctor>("BinaryCrossEntropyLoss");
   m.add_functor<impl::BinaryCrossEntropyWithLogitsLossFunctor>("BinaryCrossEntropyWithLogitsLoss");

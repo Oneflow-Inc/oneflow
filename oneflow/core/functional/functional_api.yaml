@@ -536,6 +536,10 @@
   signature: "Tensor(Tensor input, Tensor target, String reduction) => L1Loss"
   bind_python: True
 
+- name: "mse_loss"
+  signature: "Tensor(Tensor input, Tensor target, String reduction) => MseLoss"
+  bind_python: True
+
 - name: "nll_loss"
   signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction) => NllLoss"
   bind_python: True
