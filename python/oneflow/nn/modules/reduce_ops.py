@@ -33,10 +33,10 @@ def max_op(input, dim=None, keepdim=False):
         keepdim (bool, optional): whether the output tensor has dim retained or not. Default: `False`
 
     Returns:
-        If dim is `None`, returns oneflow.Tensor: the maximum value of all elements in the `input` tensor.
-        Otherwise, returns a Tuple(oneflow.Tensor, oneflow.Tensor(dtype=int64)): A tuple of (values, indices), 
-        where the values are the maximum value of all elements in the `input` tensor,
-        the indices are the indices of the elements in the original input tensor.
+        Tensor or Tuple(oneflow.Tensor, oneflow.Tensor(dtype=int64)): If :attr:`dim` is `None`, returns 
+        the maximum value of all elements in the `input` tensor. Otherwise, returns a tuple of Tensor (values, indices), 
+        where the `values` are the maximum value of all elements in the `input` tensor,
+        the `indices` are the indices of the elements in the original input tensor.
 
     For example:
 
@@ -85,10 +85,10 @@ def min_op(input, dim=None, keepdim=False):
         keepdim (bool, optional): whether the output tensor has dim retained or not. Default: `False`
 
     Returns:
-        If dim is `None`, returns oneflow.Tensor: the minimum value of all elements in the `input` tensor.
-        Otherwise, returns a Tuple(oneflow.Tensor, oneflow.Tensor(dtype=int64)): A tuple of (values, indices),
-        where the values are the minimum value of all elements in the `input` tensor,
-        the indices are the indices of the elements in the original input tensor.
+        Tensor or Tuple(oneflow.Tensor, oneflow.Tensor(dtype=int64)): If :attr:`dim` is `None`, returns 
+        the minimum value of all elements in the `input` tensor. Otherwise, returns a tuple of Tensor (values, indices), 
+        where the `values` are the minimum value of all elements in the `input` tensor,
+        the `indices` are the indices of the elements in the original input tensor.
     
     For example:
 
