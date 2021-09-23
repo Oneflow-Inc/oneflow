@@ -19,12 +19,25 @@ from typing import Optional, Sequence, Union
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
+from oneflow.nn.modules.argmax import Argmax
+from oneflow.nn.modules.argmin import Argmin
 from oneflow.nn.modules.utils import _check_axis
 
 
 def max_op(input, dim=None, keepdim=False):
     """Computes the maximum value of all elements in the input tensor.
     
+    Args:
+        input (oneflow.Tensor): the Input Tensor
+        dim (int, optional): the dimension to reduce. Default: `None`
+        keepdim (bool, optional): whether the output tensor has dim retained or not. Default: `False`
+
+    Returns:
+        If dim is `None`, returns oneflow.Tensor: the maximum value of all elements in the `input` tensor.
+        Otherwise, returns a Tuple(oneflow.Tensor, oneflow.Tensor(dtype=int64)): A tuple of (values, indices), 
+        where the values are the maximum value of all elements in the `input` tensor,
+        the indices are the indices of the elements in the original input tensor.
+
     For example:
 
     .. code-block:: python
@@ -33,17 +46,24 @@ def max_op(input, dim=None, keepdim=False):
         >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
         >>> flow.max(input)
         tensor(6., dtype=oneflow.float32)
-        >>> flow.max(input, dim=0)
-        tensor([4., 6., 5.], dtype=oneflow.float32)
-        >>> flow.max(input, dim=1)
+        >>> (values, indices) = flow.max(input, dim=1)
+        >>> values
         tensor([5., 6.], dtype=oneflow.float32)
+        >>> indices
+        tensor([2, 1], dtype=oneflow.int64)
 
     """
 
     axis_checked = _check_axis(dim, input.shape)
     if len(axis_checked) == 0:
         return input
-    return flow._C.reduce_max(input, axis=axis_checked, keepdims=keepdim)
+    if dim == None:
+        return flow._C.reduce_max(input, axis=axis_checked, keepdims=keepdim)
+    else:
+        return (
+            flow._C.reduce_max(input, axis=axis_checked, keepdims=keepdim),
+            Argmax(dim=dim, keepdim=keepdim)(input),
+        )
 
 
 @register_tensor_op("max")
@@ -59,6 +79,17 @@ def max_tensor_op(input, dim=None, keepdim=False):
 def min_op(input, dim=None, keepdim=False):
     """Computes the minimum value of all elements in the input tensor.
     
+    Args:
+        input (oneflow.Tensor): the Input Tensor
+        dim (int, optional): the dimension to reduce. Default: `None`
+        keepdim (bool, optional): whether the output tensor has dim retained or not. Default: `False`
+
+    Returns:
+        If dim is `None`, returns oneflow.Tensor: the minimum value of all elements in the `input` tensor.
+        Otherwise, returns a Tuple(oneflow.Tensor, oneflow.Tensor(dtype=int64)): A tuple of (values, indices),
+        where the values are the minimum value of all elements in the `input` tensor,
+        the indices are the indices of the elements in the original input tensor.
+    
     For example:
 
     .. code-block:: python
@@ -67,17 +98,24 @@ def min_op(input, dim=None, keepdim=False):
         >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
         >>> flow.min(input)
         tensor(1., dtype=oneflow.float32)
-        >>> flow.min(input, dim=0)
-        tensor([2., 1., 3.], dtype=oneflow.float32)
-        >>> flow.min(input, dim=1)
+        >>> (values, indices) = flow.min(input, dim=1)
+        >>> values
         tensor([1., 2.], dtype=oneflow.float32)
+        >>> indices
+        tensor([1, 0], dtype=oneflow.int64)
 
     """
 
     axis_checked = _check_axis(dim, input.shape)
     if len(axis_checked) == 0:
         return input
-    return flow._C.reduce_min(input, axis=axis_checked, keepdims=keepdim)
+    if dim == None:
+        return flow._C.reduce_min(input, axis=axis_checked, keepdims=keepdim)
+    else:
+        return (
+            flow._C.reduce_min(input, axis=axis_checked, keepdims=keepdim),
+            Argmin(dim=dim, keepdim=keepdim)(input),
+        )
 
 
 @register_tensor_op("min")
