@@ -78,8 +78,7 @@ std::shared_ptr<cfg::ErrorProto> JustGetError(const Optional<T>&) {
 template<typename T>
 typename std::remove_const<typename std::remove_reference<T>::type>::type&& force_move(
     T&& v) noexcept {
-  return const_cast<typename std::remove_const<typename std::remove_reference<T>::type>::type&&>(
-      v);
+  return const_cast<typename std::remove_const<typename std::remove_reference<T>::type>::type&&>(v);
 }
 
 }  // namespace private_details
