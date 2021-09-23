@@ -330,8 +330,8 @@ jobs:
     env:
       ONEFLOW_SRC: .
       TEST_CONTAINER_NAME: "pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${{ matrix.entry }}-test"
-      TEST_WITH_TF_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-tf-2.4.0:7e916cddfd5b01b6c55f14b5c205ec42a175d482
-      TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.9.0:0.2
+      TEST_WITH_TF_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-tf-2.4.0:e7a497b41d8b7f1bce055b1f23d027f93b1557ae
+      TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.9.0:e7a497b41d8b7f1bce055b1f23d027f93b1557ae
       SSH_TANK_HOST: 192.168.1.13
       SSH_TANK_PATH: /tank
       OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
