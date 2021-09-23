@@ -22,6 +22,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_bmm(test_case, device):
@@ -95,6 +96,14 @@ class TestModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_bmm_with_torch(test_case):
+        device = random_device()
+        mat1 = random_pytorch_tensor(ndim=3, dim0=2, dim1=4, dim2=3).to(device)
+        mat2 = random_pytorch_tensor(ndim=3, dim0=2, dim1=3, dim2=4).to(device)
+        y = torch.bmm(mat1, mat2,)
+        return y
 
 
 if __name__ == "__main__":
