@@ -35,10 +35,6 @@ def norm_except_dim(v: Tensor, pow: int, dim: int):
         return flow.linalg.norm(v.view(-1, v.size(v.dim() - 1)), ord=2, dim=0).view(
             *output_size
         )
-    else:
-        return norm_except_dim(
-            flow.transpose(flow.transpose(v, 0, dim), pow, 0), 0, dim
-        )
 
 
 class WeightNorm(object):
@@ -123,7 +119,8 @@ def weight_norm(module: T_module, name: str = "weight", dim: int = 0) -> T_modul
 
     .. code-block:: python
 
-        >>> m = weight_norm(flow.Linear(20, 40), name='weight')
+        >>> import oneflow as flow
+        >>> m = flow.nn.utils.weight_norm(flow.nn.Linear(20, 40), name='weight')
         >>> m
         Linear(in_features=20, out_features=40, bias=True)
         >>> m.weight_g.size()
@@ -135,6 +132,28 @@ def weight_norm(module: T_module, name: str = "weight", dim: int = 0) -> T_modul
     WeightNorm.apply(module, name, dim)
     return module
 
+def remove_weight_norm(module: T_module, name: str = 'weight') -> T_module:
+    r"""Removes the weight normalization reparameterization from a module.
+
+    Args:
+        module (Module): containing module
+        name (str, optional): name of weight parameter
+
+    For example:
+
+    .. code-block:: python
+        >>> import oneflow as flow
+        >>> m = flow.nn.utils.weight_norm(nn.Linear(20, 40))
+        >>> flow.nn.utils.remove_weight_norm(m)
+    """
+    for k, hook in module._forward_pre_hooks.items():
+        if isinstance(hook, WeightNorm) and hook.name == name:
+            hook.remove(module)
+            del module._forward_pre_hooks[k]
+            return module
+
+    raise ValueError("weight_norm of '{}' not found in {}"
+                     .format(name, module))
 
 if __name__ == "__main__":
     import doctest
