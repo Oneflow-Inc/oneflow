@@ -31,10 +31,6 @@ if(NOT llvm_monorepo_POPULATED)
     URL ${LLVM_MONO_REPO_URL}
     URL_HASH MD5=${LLVM_MONO_REPO_MD5}
   )
-  SET(LLVM_ROOT ${llvm_monorepo_SOURCE_DIR})
-  set(LLVM_BINARY_DIR ${llvm_monorepo_BINARY_DIR})
-  set(LLVM_RUNTIME_OUTPUT_INTDIR ${LLVM_BINARY_DIR}/bin)
-  set(LLVM_LIBRARY_OUTPUT_INTDIR ${LLVM_BINARY_DIR}/lib)
   set(LLVM_INSTALL_DIR ${THIRD_PARTY_DIR}/llvm)
 
   execute_process(COMMAND "${CMAKE_COMMAND}" ${llvm_monorepo_SOURCE_DIR}/llvm
@@ -85,32 +81,33 @@ if(NOT llvm_monorepo_POPULATED)
   endif()
   set(LLVM_DIR ${LLVM_INSTALL_DIR}/lib/cmake/llvm)
   set(MLIR_DIR ${LLVM_INSTALL_DIR}/lib/cmake/mlir)
-  find_package(MLIR REQUIRED CONFIG)
-
-  list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
-  list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
-  # set LLVM_TOOLS_BINARY_DIR for function `configure_lit_site_cfg`
-  set(LLVM_TOOLS_BINARY_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
-  include(TableGen)
-  include(AddLLVM)
-  include(AddMLIR)
-  include(HandleLLVMOptions)
-
-  set(LLVM_INCLUDE_DIRS
-      ${LLVM_ROOT}/llvm/include
-      ${LLVM_BINARY_DIR}/include
-    )
-  set(MLIR_INCLUDE_DIRS
-      ${LLVM_ROOT}/mlir/include
-      ${LLVM_BINARY_DIR}/tools/mlir/include
-      )
-  include_directories(${LLVM_INCLUDE_DIRS})
-  include_directories(${MLIR_INCLUDE_DIRS})
 endif()
 
-set(LLVM_EXTERNAL_LIT "${LLVM_BINARY_DIR}/bin/llvm-lit")
+set(LLVM_EXTERNAL_LIT "${llvm_monorepo_BINARY_DIR}/bin/llvm-lit")
+message(STATUS "LLVM_EXTERNAL_LIT: ${LLVM_EXTERNAL_LIT}")
+find_package(MLIR REQUIRED CONFIG)
+
+message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
+message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+
+set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/bin)
+set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/lib)
+set(MLIR_BINARY_DIR ${CMAKE_BINARY_DIR})
+
+list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
+list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+include(TableGen)
+include(AddLLVM)
+include(AddMLIR)
+include(HandleLLVMOptions)
+
+include_directories(${LLVM_INCLUDE_DIRS})
+include_directories(${MLIR_INCLUDE_DIRS})
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_BINARY_DIR}/include)
+link_directories(${LLVM_BUILD_LIBRARY_DIR})
+add_definitions(${LLVM_DEFINITIONS})
+
 add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(test)
