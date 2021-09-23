@@ -1327,6 +1327,28 @@ class FusedScaleTrilFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class CtcGreedyDecoderFunctor {
+ public:
+  CtcGreedyDecoderFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("ctc_greedy_decoder")
+                         .Input("log_probs")
+                         .Input("input_lengths")
+                         .Output("decoded")
+                         .Output("neg_sum_logits")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& log_probs,
+                                const std::shared_ptr<one::Tensor>& input_lengths,
+                                const bool& merge_repeated) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("merge_repeated", merge_repeated));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {log_probs, input_lengths}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -1377,6 +1399,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedBiasAddGeluGradFunctor>("FusedBiasAddGeluGrad");
   m.add_functor<impl::FusedBiasAddDropoutFunctor>("FusedBiasAddDropout");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
+  m.add_functor<impl::CtcGreedyDecoderFunctor>("CtcGreedyDecoder");
 };
 
 }  // namespace functional

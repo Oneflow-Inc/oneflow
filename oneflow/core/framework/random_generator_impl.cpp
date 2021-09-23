@@ -111,7 +111,7 @@ Maybe<void> CPUGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_sta
   }
   const auto& callback = std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    memcpy(&state, of_blob->blob().dptr<int8_t>(), sizeof(state));
+    memcpy(reinterpret_cast<void*>(&state), of_blob->blob().dptr<int8_t>(), sizeof(state));
   });
   JUST(SyncAccessTensorWithTimeOut(tensor_state, callback, "const"));
 
@@ -310,7 +310,7 @@ Maybe<void> AutoGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
   JUST(SyncAccessTensorWithTimeOut(tensor_state, callback, "const"));
 
   const int8_t* data = buffer.data();
-  memcpy(&state, data, sizeof(state));
+  memcpy(reinterpret_cast<void*>(&state), data, sizeof(state));
   if (total_size
       != sizeof(state) + state.num * sizeof(int64_t) + state.device_tag_length
              + state.state_length) {

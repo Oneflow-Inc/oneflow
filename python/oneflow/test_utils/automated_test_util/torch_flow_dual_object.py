@@ -249,7 +249,7 @@ def GetDualObject(name, pytorch, oneflow):
                             try:
                                 oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             except Exception as ee:
-                                raise BothDoNotSupportError(e, ee)
+                                raise BothDoNotSupportError(e, ee) from None
                             print(
                                 "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
                             )
@@ -285,7 +285,7 @@ def GetDualObject(name, pytorch, oneflow):
                                     *oneflow_args, **oneflow_kwargs
                                 )
                             except Exception as ee:
-                                raise BothDoNotSupportError(e, ee)
+                                raise BothDoNotSupportError(e, ee) from None
                             print(
                                 "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
                             )
@@ -501,8 +501,9 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                     testing = True
                     res = f(test_case)
                     testing = False
-                except PyTorchDoesNotSupportError as e:
+                except (PyTorchDoesNotSupportError, BothDoNotSupportError) as e:
                     if verbose:
+                        print(f"{f.__name__}")
                         print(e)
                     loop += 1
                     continue
