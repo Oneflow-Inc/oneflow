@@ -24,6 +24,7 @@ limitations under the License.
 namespace oneflow {
 
 class Device;
+class Stream;
 
 // clang-format off
 
@@ -45,8 +46,8 @@ OBJECT_MSG_BEGIN(LocalDepObject);
 OBJECT_MSG_END(LocalDepObject);
 // clang-format on
 
-Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device);
-Maybe<LocalDepObject*> GetLocalDepObject4Device(const Device& device);
+Maybe<LocalDepObject*> GetLocalDepObjectFromPool(Symbol<Stream> stream);
+Maybe<LocalDepObject*> GetLocalDepObjectFromPool(Symbol<Device> device);
 
 }  // namespace oneflow
 

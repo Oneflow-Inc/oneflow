@@ -25,17 +25,17 @@ Maybe<bool> IsAsyncLaunched(user_op::DeviceInferContext* ctx) {
 
 namespace {
 
-Maybe<Symbol<Device>> RawGetNcclDevice(bool is_async_launced) {
-  return Device::New(is_async_launced ? "async_launched_nccl" : "sync_launched_nccl");
+Maybe<Symbol<Stream>> RawGetNcclStream(bool is_async_launced) {
+  return Stream::NewByDefaultDevice(is_async_launced ? "async_launched_nccl" : "sync_launched_nccl");
 }
 
-Maybe<Symbol<Device>> RawGetCpuTransportDevice() { return Device::New("comm_net"); }
+Maybe<Symbol<Stream>> RawGetCpuTransportDevice() { return Stream::NewByDefaultDevice("comm_net"); }
 
 }  // namespace
 
-decltype(GetNcclDevice) GetNcclDevice = DECORATE(&RawGetNcclDevice, ThreadLocal);
-decltype(GetCpuTransportDevice) GetCpuTransportDevice =
-    DECORATE(&RawGetCpuTransportDevice, ThreadLocal);
+decltype(GetNcclStream) GetNcclStream = DECORATE(&RawGetNcclStream, ThreadLocal);
+decltype(GetCpuTransportStream) GetCpuTransportStream =
+    DECORATE(&RawGetCpuTransportStream, ThreadLocal);
 
 Maybe<Symbol<Device>> DefaultGetOutputDeivce(user_op::DeviceInferContext* ctx) {
   CHECK_GT_OR_RETURN(ctx->inputs().size(), 0);

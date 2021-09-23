@@ -20,27 +20,27 @@ namespace oneflow {
 
 namespace {
 
-Maybe<Symbol<Device>> MakeOpDevice(const Symbol<Device>& in_device,
+Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
                                    const Symbol<Device>& out_device) {
   if (JUST(in_device->of_type()) == "gpu" && JUST(out_device->of_type()) == "cpu") {
-    return Device::New("cuda_d2h");
+    return Stream::New("cuda_d2h", in_device);
   } else if (JUST(in_device->of_type()) == "cpu" && JUST(out_device->of_type()) == "gpu") {
-    return Device::New("cuda_h2d");
+    return Stream::New("cuda_h2d", out_device);
+  } else if (JUST(in_device->of_type()) == "gpu" && JUST(out_device->of_type()) == "gpu") {
+    CHECK_OR_RETURN(in_device == out_device);
+    return Stream::NewWithDefaultName(in_device);
   } else {
-    return Device::New(out_device->type(), out_device->device_id());
+    UNIMPLEMENTED_THEN_RETURN() << "copy not supported. src device_type: " << in_device->of_type()
+      << ", dst device_type: " << out_device->of_type();
   }
 }
 
-std::function<Maybe<Symbol<Device>>(user_op::DeviceInferContext* ctx)> GetDeviceInferFn() {
-  std::function<Maybe<Symbol<Device>>(user_op::DeviceInferContext * ctx)> fn =
-      [](user_op::DeviceInferContext* ctx) -> Maybe<Symbol<Device>> {
-    Symbol<Device> out_device =
-        JUST(Device::New(ctx->Attr<std::string>("device_type"), ctx->Attr<int64_t>("device_id")));
-    *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = out_device;
-    const Symbol<Device>& in_device = ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
-    return MakeOpDevice(in_device, out_device);
-  };
-  return fn;
+Maybe<Symbol<Stream> InferCopyStreamAndDevices(user_op::DeviceInferContext * ctx) {
+  Symbol<Device> out_device =
+      JUST(Device::New(ctx->Attr<std::string>("device_type"), ctx->Attr<int64_t>("device_id")));
+  *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = out_device;
+  const Symbol<Device>& in_device = ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
+  return MakeCopyStream(in_device, out_device);
 }
 
 REGISTER_USER_OP("copy")
@@ -53,7 +53,7 @@ REGISTER_USER_OP("copy")
       *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetDeviceInferFn(GetDeviceInferFn())
+    .SetStreamAndDeviceInferFn(&InferCopyStreamAndDevices)
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();

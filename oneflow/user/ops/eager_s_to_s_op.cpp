@@ -55,7 +55,7 @@ REGISTER_NO_GRAD_USER_OP("eager_naive_s_to_s")
     .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
       return Error::TypeError() << "eager_naive_s_to_s op doesn't support consistent tensor!";
     })
-    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
+    .SetStreamAndDeviceInferFn(StreamAndDeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       return Error::TypeError() << "eager_naive_s_to_s op doesn't support consistent tensor!";
     })

@@ -46,8 +46,34 @@ struct StaticGlobalCopiable<RetT, Arg0> {
 
  private:
   static_assert(!IsOutArg<Arg0>::value, "");
-  static_assert(!StaticAny<IsOutArg, Arg0>::value, "");
 };
+
+template<typename RetT, typename Arg0, typename Arg1>
+struct StaticGlobalCopiable<RetT, Arg0, Arg1> {
+  template<RetT (*func)(Arg0, Arg1)>
+  static RetT Call(Arg0 arg0, Arg1 arg1) {
+    using KeyT = std::tuple<typename std::decay<Arg0>::type, typename std::decay<Arg0>::type>;
+    using MappedT = typename std::decay<RetT>::type;
+    const auto& key = KeyT(arg0, arg1);
+    static std::mutex mutex;
+    static std::unordered_map<KeyT, MappedT> map;
+    {
+      std::unique_lock<std::mutex> lock(mutex);
+      auto iter = map.find(key);
+      if (iter != map.end()) { return iter->second; }
+    }
+    auto obj = func(arg0, arg1);
+    {
+      std::unique_lock<std::mutex> lock(mutex);
+      return map.emplace(key, std::move(obj)).first->second;
+    }
+  }
+
+ private:
+  static_assert(!IsOutArg<Arg0>::value, "");
+  static_assert(!IsOutArg<Arg1>::value, "");
+};
+
 
 }  // namespace oneflow
 

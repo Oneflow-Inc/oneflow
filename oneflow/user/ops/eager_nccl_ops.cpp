@@ -30,7 +30,7 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_all_reduce")
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetDeviceInferFn(DeviceInferFn<&IsAsyncLaunched>)
+    .SetStreamAndDeviceInferFn(StreamAndDeviceInferFn<&IsAsyncLaunched>)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("in", 0))
@@ -52,7 +52,7 @@ REGISTER_USER_OP("eager_nccl_broadcast")
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
+    .SetStreamAndDeviceInferFn(StreamAndDeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("in", 0))
@@ -82,7 +82,7 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_reduce")
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
+    .SetStreamAndDeviceInferFn(StreamAndDeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       UNIMPLEMENTED_THEN_RETURN() << "consistent tensor are not supported";
     })
@@ -118,7 +118,7 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_reduce_scatter")
       *out_shape = Shape(dim_vec);
       return Maybe<void>::Ok();
     })
-    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
+    .SetStreamAndDeviceInferFn(StreamAndDeviceInferFn<&SyncLaunched>)
     .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
       const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
       cfg::NdSbp* in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
@@ -180,7 +180,7 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_all_gather")
       }
       return Maybe<void>::Ok();
     })
-    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
+    .SetStreamAndDeviceInferFn(StreamAndDeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_NO_GRAD_USER_OP("eager_nccl_s2s")
@@ -222,6 +222,6 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_s2s")
       }
       return Maybe<void>::Ok();
     })
-    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
+    .SetStreamAndDeviceInferFn(StreamAndDeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 }  // namespace oneflow

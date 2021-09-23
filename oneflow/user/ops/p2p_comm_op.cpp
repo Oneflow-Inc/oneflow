@@ -27,7 +27,7 @@ REGISTER_NO_GRAD_USER_OP("send")
       // Do nothing.
       return Maybe<void>::Ok();
     })
-    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
+    .SetStreamAndDeviceInferFn(StreamAndDeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { UNIMPLEMENTED_THEN_RETURN(); })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       // Do nothing.
@@ -51,7 +51,7 @@ REGISTER_NO_GRAD_USER_OP("recv")
       *ctx->OutputShape("out", 0) = ctx->Attr<Shape>("shape");
       return Maybe<void>::Ok();
     })
-    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched, &GetRecvOutputDeivce>)
+    .SetStreamAndDeviceInferFn(StreamAndDeviceInferFn<&SyncLaunched, &GetRecvOutputDeivce>)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { UNIMPLEMENTED_THEN_RETURN(); })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
