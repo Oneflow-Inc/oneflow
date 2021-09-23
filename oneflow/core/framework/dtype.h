@@ -54,6 +54,7 @@ class DType final {
   Maybe<size_t> bytes() const;
 
   static Maybe<const Symbol<DType>&> Get(DataType);
+  static constexpr int dtype_num = 9; 
 
 #define DECLARE_GET_DATA_TYPE_FUNCTION(data_type) static const Symbol<DType>& data_type();
   OF_PP_FOR_EACH_TUPLE(DECLARE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)
@@ -62,6 +63,33 @@ class DType final {
  private:
   DataType data_type_;
 };
+
+static inline Symbol<DType> promoteTypes(const Symbol<DType> a, const Symbol<DType> b){
+  const Symbol<DType> u1 = CHECK_JUST(DType::Get(DataType::kUInt8)); 
+  const Symbol<DType> c1 = CHECK_JUST(DType::Get(DataType::kChar)); 
+  const Symbol<DType> i2 = CHECK_JUST(DType::Get(DataType::kInt8)); 
+  const Symbol<DType> i4 = CHECK_JUST(DType::Get(DataType::kInt32)); 
+  const Symbol<DType> i8 = CHECK_JUST(DType::Get(DataType::kInt64)); 
+  const Symbol<DType> f2 = CHECK_JUST(DType::Get(DataType::kFloat16)); 
+  const Symbol<DType> f4 = CHECK_JUST(DType::Get(DataType::kFloat)); 
+  const Symbol<DType> f8 = CHECK_JUST(DType::Get(DataType::kDouble)); 
+  const Symbol<DType> bf = CHECK_JUST(DType::Get(DataType::kBFloat16)); 
+
+  // It is consistent with data_type.proto
+  static const Symbol<DType> _promoteTypesLookup[DType::dtype_num][DType::dtype_num] = {
+      /*        u1  c1  i2  i4  i8  f2  f4  f8  bf*/
+      /* u1 */ {u1, c1, i2, i4, i8, f2, f4, f8, bf},
+      /* c1 */ {c1, c1, i2, i4, i8, f2, f4, f8, bf},
+      /* i2 */ {i2, i2, i2, i4, i8, f2, f4, f8, bf},
+      /* i4 */ {i4, i4, i4, i4, i8, f2, f4, f8, bf},
+      /* i8 */ {i8, i8, i8, i8, i8, f2, f4, f8, bf},
+      /* f2 */ {f2, f2, f2, f2, f2, f2, f4, f8, f4},
+      /* f4 */ {f4, f4, f4, f4, f4, f4, f4, f8, f4},
+      /* f8 */ {f8, f8, f8, f8, f8, f8, f8, f8, f8},
+      /* bf */ {bf, bf, bf, bf, bf, f4, f4, f8, bf},
+  };
+  return _promoteTypesLookup[static_cast<int>(a->data_type())-1][static_cast<int>(b->data_type())-1]; // Since kInvalidDataType is not considered, we should minus 1.  
+}
 
 }  // namespace oneflow
 

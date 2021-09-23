@@ -112,12 +112,18 @@ class HardTanhFunctor {
   HardTanhFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("hardtanh").Input("in").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& min_val,
+  Maybe<Tensor> operator()(std::shared_ptr<one::Tensor>& x, const double& min_val,
                            const double& max_val) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("min_val", min_val));
     JUST(attrs.SetAttr<double>("max_val", max_val));
+    // return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+
+    // const std::shared_ptr<one::Tensor>& x_cast = JUST(functional::Cast(x, DType::Double()));
+    // return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x_cast}, attrs);
+    x = JUST(functional::Cast(x, DType::Double()));
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    
   }
 
  private:

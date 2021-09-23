@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -35,7 +36,11 @@ namespace impl {
 class AddFunctor {
  public:
   AddFunctor() {
-    add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
+    add_op_ = CHECK_JUST(one::OpBuilder("add_n")
+                              .Input("in", 2, DType::Int64())
+                              .Output("out")
+                              .SameDtype(bool) // default = false
+                              .Build());
     broadcast_add_op_ =
         CHECK_JUST(one::OpBuilder("broadcast_add").Input("x").Input("y").Output("z").Build());
   }
@@ -51,21 +56,41 @@ class AddFunctor {
       return x;
     }
 
+    // const OpExpr* op = nullptr;
+    // if (*x->shape() == *y->shape()) {
+    //   op = add_op_.get();
+    // } else {
+    //   op = broadcast_add_op_.get();
+    // }
+    // if (inplace) {
+    //   JUST(CheckInplaceValid(x));
+    //   JUST(CheckShapeCanExpandTo(*y->shape(), *x->shape()));
+    //   std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    //   outputs->at(0) = x;
+    //   JUST(OpInterpUtil::Dispatch(*op, {x, y}, outputs.get()));
+    //   return outputs->at(0);
+    // }
+    // return OpInterpUtil::Dispatch<Tensor>(*op, {x, y});
+
+    const Symbol<DType> common_dtype = promoteTypes(x->dtype(), y->dtype()); 
+    printf("Infered common datype is: %d \n", common_dtype->data_type()); 
+    const std::shared_ptr<one::Tensor>& x_cast = JUST(functional::Cast(x, common_dtype));
+    const std::shared_ptr<one::Tensor>& y_cast = JUST(functional::Cast(y, common_dtype)); 
     const OpExpr* op = nullptr;
-    if (*x->shape() == *y->shape()) {
+    if (*x_cast->shape() == *y_cast->shape()) {
       op = add_op_.get();
     } else {
       op = broadcast_add_op_.get();
     }
-    if (inplace) {
-      JUST(CheckInplaceValid(x));
-      JUST(CheckShapeCanExpandTo(*y->shape(), *x->shape()));
-      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op, {x, y}, outputs.get()));
-      return outputs->at(0);
-    }
-    return OpInterpUtil::Dispatch<Tensor>(*op, {x, y});
+    // if (inplace) {
+    //   JUST(CheckInplaceValid(x));
+    //   JUST(CheckShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
+    //   std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    //   outputs->at(0) = x;
+    //   JUST(OpInterpUtil::Dispatch(*op, {x_cast, y_cast}, outputs.get()));
+    //   return outputs->at(0);
+    // }
+    return OpInterpUtil::Dispatch<Tensor>(*op, {x_cast, y_cast});
   }
 
  private:
