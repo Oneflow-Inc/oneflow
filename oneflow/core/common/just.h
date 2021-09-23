@@ -76,8 +76,9 @@ std::shared_ptr<cfg::ErrorProto> JustGetError(const Optional<T>&) {
 }
 
 template<typename T>
-typename std::remove_const<typename std::remove_reference<T>::type>::type&& force_move(
+typename std::remove_const<typename std::remove_reference<T>::type>::type&& RemoveRValConst(
     T&& v) noexcept {
+  static_assert(std::is_rvalue_reference<T&&>::value, "rvalue is expected here");
   return const_cast<typename std::remove_const<typename std::remove_reference<T>::type>::type&&>(v);
 }
 
@@ -90,7 +91,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& forc
 #if defined(__GNUC__) || defined(__CUDACC__) || defined(__clang__)
 
 #define JUST(...)                                                                        \
-  ::oneflow::private_details::force_move(({                                              \
+  ::oneflow::private_details::RemoveRValConst(({                                         \
     auto&& value_to_check_ = __JustStackCheckWrapper__(__VA_ARGS__);                     \
     if (!::oneflow::private_details::JustIsOk(value_to_check_)) {                        \
       return ::oneflow::private_details::JustErrorAddStackFrame(                         \
@@ -101,7 +102,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& forc
   })).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define CHECK_JUST(...)                                                                      \
-  ::oneflow::private_details::force_move(([&](const char* func_name) {                       \
+  ::oneflow::private_details::RemoveRValConst(([&](const char* func_name) {                  \
     auto&& value_to_check_ = __JustStackCheckWrapper__(__VA_ARGS__);                         \
     if (!::oneflow::private_details::JustIsOk(value_to_check_)) {                            \
       LOG(FATAL) << ::oneflow::GetFormatedSerializedError(                                   \
@@ -114,7 +115,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& forc
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define JUST_MSG(value, ...)                                                          \
-  ::oneflow::private_details::force_move(({                                           \
+  ::oneflow::private_details::RemoveRValConst(({                                      \
     auto&& value_to_check_ = (value);                                                 \
     if (!::oneflow::private_details::JustIsOk(value_to_check_)) {                     \
       return ::oneflow::private_details::JustErrorAddMessage(                         \
@@ -126,7 +127,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& forc
   })).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define CHECK_JUST_MSG(value, ...)                                                        \
-  ::oneflow::private_details::force_move(([&](const char* func_name) {                    \
+  ::oneflow::private_details::RemoveRValConst(([&](const char* func_name) {               \
     auto&& value_to_check_ = (value);                                                     \
     if (!::oneflow::private_details::JustIsOk(value_to_check_)) {                         \
       LOG(FATAL) << ::oneflow::GetFormatedSerializedError(                                \
@@ -141,7 +142,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& forc
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define JUST_OPT(...)                                                \
-  ::oneflow::private_details::force_move(({                          \
+  ::oneflow::private_details::RemoveRValConst(({                     \
     auto&& value_to_check_ = __JustStackCheckWrapper__(__VA_ARGS__); \
     if (!value_to_check_.has_value()) { return NullOpt; }            \
     std::forward<decltype(value_to_check_)>(value_to_check_);        \
