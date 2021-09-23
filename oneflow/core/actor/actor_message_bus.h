@@ -35,6 +35,7 @@ class ActorMsgBus final {
   HashMap<std::pair<int64_t, int64_t>, int64_t>
       regst_desc_id_dst_actor_id2comm_net_sequence_number_;
   std::mutex regst_desc_id_dst_actor_id2comm_net_sequence_number_mutex_;
+ // std::deque token_buf_;
 };
 
 }  // namespace oneflow
