@@ -42,7 +42,6 @@ def flip_op(input, dims):
         >>> input = flow.Tensor(np_arr)
         >>> input.shape
         oneflow.Size([2, 2, 2])
-
         >>> out = flow.flip(input, [0, 1])
         >>> out
         tensor([[[6., 7.],
