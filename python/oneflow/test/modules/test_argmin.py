@@ -26,7 +26,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-def _test_argmin_aixs_negative(test_case, device):
+def _test_argmin_axis_negative(test_case, device):
     input = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
@@ -83,7 +83,7 @@ class TestArgmin(flow.unittest.TestCase):
     def test_argmin(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_argmin_aixs_negative,
+            _test_argmin_axis_negative,
             _test_tensor_argmin,
             _test_argmin_axis_postive,
             _test_argmin_keepdims,
