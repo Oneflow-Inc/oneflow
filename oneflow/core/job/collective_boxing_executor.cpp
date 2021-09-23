@@ -41,6 +41,7 @@ ncclRedOp_t GetNcclReduceOp(ReduceMethod reduce_method) {
     return ncclRedOp_t::ncclSum;
   } else {
     UNIMPLEMENTED();
+    return ncclRedOp_t{};
   }
 }
 #endif
@@ -58,6 +59,31 @@ bool HasDeviceOnThisMachine(const DeviceSet& device_set) {
   return std::any_of(
       device_set.device().cbegin(), device_set.device().cend(),
       [](const DeviceDesc& device_desc) { return IsDeviceOnThisMachine(device_desc); });
+}
+
+bool HasRankInteraction(const DeviceSet& a, const DeviceSet& b) {
+  for (int64_t i = 0; i < a.device_size(); ++i) {
+    const DeviceDesc& a_device_desc = a.device(i);
+    for (int64_t j = 0; j < b.device_size(); ++j) {
+      if (a_device_desc.machine_id() == b.device(j).machine_id()) { return true; }
+    }
+  }
+  return false;
+}
+
+bool IsCurGroupEmpty(const std::vector<std::vector<const RequestDesc*>>& groups) {
+  if (groups.empty()) { return true; }
+  if (groups.back().empty()) { return true; }
+  return false;
+}
+
+bool CanMergeIntoCurGroup(const RequestDesc* request,
+                          const std::vector<std::vector<const RequestDesc*>>& groups) {
+  if (groups.empty()) { return false; }
+  if (groups.back().empty()) { return true; }
+  return (request->dependency_depth() == groups.back().front()->dependency_depth()
+          && request->op_desc().backend() == groups.back().front()->op_desc().backend()
+          && request->device_set() == groups.back().front()->device_set());
 }
 
 std::string GetNcclUniqueIdRpcKey(const std::string& name, int64_t stream_id) {
@@ -550,27 +576,25 @@ std::shared_ptr<const CollectiveBoxingExecutorPlanToken> CollectiveBoxingExecuto
     job_ids.push_back(job_id);
     const RequestSet& request_set = job_id7request_set.second;
     std::vector<const RequestDesc*> requests;
-    requests.reserve(request_set.request_size());
-    for (const auto& request : request_set.request()) {
-      if (HasDeviceOnThisMachine(request.device_set())) { requests.push_back(&request); }
-    }
+    for (const auto& request : request_set.request()) { requests.push_back(&request); }
     SortRequestsByOrder(&requests);
-    CHECK(std::adjacent_find(requests.begin(), requests.end(),
-                             [](const RequestDesc* a, const RequestDesc* b) {
-                               return a->dependency_depth() > b->dependency_depth();
-                             })
-          == requests.end());
     std::vector<std::vector<const RequestDesc*>> rough_groups;
     for (const auto* request : requests) {
-      if ((!collective_boxing_conf.enable_fusion()) || rough_groups.empty()
-          || request->dependency_depth() != rough_groups.back().front()->dependency_depth()
-          || request->op_desc().backend() != rough_groups.back().front()->op_desc().backend()
-          || request->device_set() != rough_groups.back().front()->device_set()) {
-        rough_groups.emplace_back(std::vector<const RequestDesc*>({request}));
+      if (HasDeviceOnThisMachine(request->device_set())) {
+        if (collective_boxing_conf.enable_fusion() && CanMergeIntoCurGroup(request, rough_groups)) {
+          rough_groups.back().push_back(request);
+        } else {
+          rough_groups.emplace_back(std::vector<const RequestDesc*>({request}));
+        }
       } else {
-        rough_groups.back().push_back(request);
+        if ((!IsCurGroupEmpty(rough_groups))
+            && HasRankInteraction(rough_groups.back().back()->device_set(),
+                                  request->device_set())) {
+          rough_groups.emplace_back(std::vector<const RequestDesc*>());
+        }
       }
     }
+    if ((!rough_groups.empty()) && rough_groups.back().empty()) { rough_groups.pop_back(); }
     std::vector<GroupState>& group_states = job_id2group_states_[job_id];
     CHECK_EQ(group_states.size(), 0);
     for (const auto& rough_group : rough_groups) {

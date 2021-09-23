@@ -334,17 +334,17 @@
 
 - name: "arange"
   signature: [
-      "Tensor (Int64 start, Int64 end, Int64 step=1, *, DataType dtype=kInt64,
+      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=kInt64,
       Device device=None) => Arange",
-      "Tensor (Int64 end, *, DataType dtype=kInt64, Device device=None) => Arange",
+      "Tensor (Scalar end, *, DataType dtype=kInt64, Device device=None) => Arange",
     ]
   bind_python: True
 
 - name: "consistent_arange"
   signature: [
-      "Tensor (Int64 start, Int64 end, Int64 step=1, *, DataType dtype=kInt64,
+      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=kInt64,
       Placement placement, SbpList sbp) => ConsistentArange",
-      "Tensor (Int64 end, *, DataType dtype=kInt64, Placement placement, SbpList sbp) => ConsistentArange",
+      "Tensor (Scalar end, *, DataType dtype=kInt64, Placement placement, SbpList sbp) => ConsistentArange",
     ]
   bind_python: True
 
