@@ -61,7 +61,7 @@ bool HasDeviceOnThisMachine(const DeviceSet& device_set) {
       [](const DeviceDesc& device_desc) { return IsDeviceOnThisMachine(device_desc); });
 }
 
-bool HasRankInteractionOnDeviceSet(const DeviceSet& a, const DeviceSet& b) {
+bool HasRankInteraction(const DeviceSet& a, const DeviceSet& b) {
   for (int64_t i = 0; i < a.device_size(); ++i) {
     const DeviceDesc& a_device_desc = a.device(i);
     for (int64_t j = 0; j < b.device_size(); ++j) {
@@ -588,8 +588,8 @@ std::shared_ptr<const CollectiveBoxingExecutorPlanToken> CollectiveBoxingExecuto
         }
       } else {
         if ((!IsCurGroupEmpty(rough_groups))
-            && HasRankInteractionOnDeviceSet(rough_groups.back().back()->device_set(),
-                                             request->device_set())) {
+            && HasRankInteraction(rough_groups.back().back()->device_set(),
+                                  request->device_set())) {
           rough_groups.emplace_back(std::vector<const RequestDesc*>());
         }
       }
