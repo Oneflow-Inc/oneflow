@@ -39,7 +39,7 @@ void CommNet::Read(void* actor_read_id, int64_t src_machine_id, void* src_token,
   ReadContext* read_ctx = new ReadContext;
   read_ctx->actor_read_ctx = actor_read_ctx;
   auto do_read = [this, read_ctx, src_machine_id, src_token, dst_token]() {
-    DoRead(read_ctx, src_machine_id, src_token, dst_token);
+    DoRead(read_ctx, src_machine_id, src_token, dst_token);//这个是callback 函数，lambda函数
   };
   AddWorkToStream(actor_read_id, do_read, true);
 }

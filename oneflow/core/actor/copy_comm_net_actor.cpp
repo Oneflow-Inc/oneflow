@@ -91,6 +91,9 @@ void CopyCommNetActor::Act() {
     void* writeable_token = writeable_regst->comm_net_token();
     // Async
     Global<CommNet>::Get()->Read(actor_read_id_, src_machine_id, readable_token, writeable_token);
+    device_ctx_->AddCallBack([readable_token]() {
+      free(readable_token); }
+    );
   }
 }
 
