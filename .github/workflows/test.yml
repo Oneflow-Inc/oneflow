@@ -588,7 +588,7 @@ jobs:
           docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/1node_benchmark_test_fp16.sh
       - name: Single client XLA Test
         timeout-minutes: 45
-        if: ${{ matrix.device == 'cuda-xla' && !fromJson(matrix.cache-hit) && matrix.test-type == 'legacy-op' }}
+        if: ${{ matrix.device == 'cuda-xla' && !fromJson(matrix.cache-hit) && matrix.test-type == 'legacy-op' && needs.changed_files.outputs.should_run_single_client_tests == '1' }}
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/test_xla.sh
       - name: Remove automerge
