@@ -276,7 +276,7 @@ std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>& e
 #define CHECK_OK(...)                                         \
   for (auto&& maybe = __JustStackCheckWrapper__(__VA_ARGS__); \
        GOOGLE_PREDICT_BRANCH_NOT_TAKEN(!maybe.IsOk());)       \
-  LOG(FATAL) << OF_PP_STRINGIZE((__VA_ARGS__)) << " is not OK:\n" << maybe.GetSerializedError()
+  LOG(FATAL) << OF_PP_STRINGIZE(__VA_ARGS__) << " is not OK:\n" << maybe.GetSerializedError()
 
 #define OF_RETURN_IF_ERROR(...)                                          \
   for (auto&& maybe_##__LINE__ = __JustStackCheckWrapper__(__VA_ARGS__); \

@@ -64,7 +64,7 @@ TEST(Maybe, CHECK_OK) {
   };
 
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-goto)
-  ASSERT_EXIT(CHECK_OK(g(11)), testing::KilledBySignal(SIGABRT), R"(\(g\(11\)\) is not OK)");
+  ASSERT_EXIT(CHECK_OK(g(11)), testing::KilledBySignal(SIGABRT), R"(g\(11\) is not OK)");
 }
 
 }  // namespace test
