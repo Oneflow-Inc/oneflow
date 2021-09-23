@@ -107,9 +107,8 @@ def all_gather(tensor_list, tensor):
     assert tensor.is_local
     tensor = tensor.expand([1] + list(tensor.shape))
     device_type = tensor.device.type
-    tensor = tensor.to_consistent(
-        placement=flow.env.all_device_placement(device_type), sbp=flow.sbp.split(0)
-    )
+    placement = flow.env.all_device_placement(device_type)
+    tensor = tensor.to_consistent(placement=placement, sbp=flow.sbp.split(0)).to_consistent(placement=placement, sbp=flow.sbp.broadcast)
     assert len(tensor_list) == flow.env.get_world_size()
     for i in range(tensor.shape[0]):
         tensor_list[i] = tensor[i].to_local()
@@ -314,7 +313,5 @@ def gather(tensor, gather_list=None, dst=0):
     assert gather_list is not None
     assert isinstance(gather_list, list)
     assert len(gather_list) == flow.env.get_world_size()
-    # "to_consistent(placement=flow.env.all_device_placement("cuda/cpu"), sbp=flow.sbp.broadcast)"
-    # after here will fail, if do getitem on some a rank
     for i in range(tensor.shape[0]):
         gather_list[i] = tensor[i].to_local()
