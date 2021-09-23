@@ -334,17 +334,17 @@
 
 - name: "arange"
   signature: [
-      "Tensor (Int64 start, Int64 end, Int64 step=1, *, DataType dtype=kInt64,
+      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=kInt64,
       Device device=None) => Arange",
-      "Tensor (Int64 end, *, DataType dtype=kInt64, Device device=None) => Arange",
+      "Tensor (Scalar end, *, DataType dtype=kInt64, Device device=None) => Arange",
     ]
   bind_python: True
 
 - name: "consistent_arange"
   signature: [
-      "Tensor (Int64 start, Int64 end, Int64 step=1, *, DataType dtype=kInt64,
+      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=kInt64,
       Placement placement, SbpList sbp) => ConsistentArange",
-      "Tensor (Int64 end, *, DataType dtype=kInt64, Placement placement, SbpList sbp) => ConsistentArange",
+      "Tensor (Scalar end, *, DataType dtype=kInt64, Placement placement, SbpList sbp) => ConsistentArange",
     ]
   bind_python: True
 
@@ -1273,3 +1273,8 @@
   signature:
     "Tensor (Tensor data, Tensor segment_ids, Int64 num_segments) => UnsortedBatchSegmentSum"
   bind_python: False
+
+- name: "ctc_greedy_decoder"
+  signature:
+    "TensorTuple (Tensor log_probs, Tensor input_lengths, Bool merge_repeated=True) => CtcGreedyDecoder"
+  bind_python: True
