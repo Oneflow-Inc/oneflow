@@ -156,7 +156,7 @@ class LocalAllReduceFunctor {
                          .Input("in")
                          .Output("out")
                          .Attr("parallel_conf", PbMessage2TxtString(parallel_conf))
-                         .Attr<bool>("async_launch", false)
+                         .Attr<bool>("async_launch", true)
                          .Build());
       rank_group2op_expr[rank_group] = op_expr;
     } else {
@@ -194,12 +194,12 @@ class ConsistentReduceScatterFunctor {
       CHECK_OR_RETURN(x->is_consistent());
       if (op_type == "max") {
         CHECK_OR_RETURN(IsAllBroadcastNdSbp(JUST(x->nd_sbp())));
+        CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
       } else if (op_type == "sum") {
         CHECK_OR_RETURN(IsAllPartialSumNdSbp(JUST(x->nd_sbp())));
       } else {
         UNIMPLEMENTED_THEN_RETURN();
       }
-      CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedNcclReduceScatterOpExpr(JUST(x->parallel_desc()), op_type));
