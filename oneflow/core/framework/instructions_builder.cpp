@@ -251,15 +251,7 @@ static constexpr auto* GetCriticalSectionDevice =
 Maybe<vm::InputCriticalSectionPhyInstrOperand> InstructionsBuilder::MakeInputCriticalSection(
     const one::EagerBlobObjectListPtr& eager_blob_objects,
     const std::shared_ptr<NNGraphIf>& nn_graph) {
-  const auto& op_device = JUST(GetCriticalSectionDevice());
-  for (const auto& input : *eager_blob_objects) {
-    const auto& blob_last_used_device = JUST(input->last_used_device());
-    if (blob_last_used_device != op_device) {
-      auto* dep_object = JUST(input->compute_local_dep_object());
-      JUST(SoftSyncStream(dep_object, "mut", blob_last_used_device));
-      input->set_last_used_device(op_device);
-    }
-  }
+  JUST(SoftSyncNNGraphBuffers(eager_blob_objects, nn_graph));
   static std::string instr_name("InputCriticalSection");
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   const auto& operand =
@@ -273,15 +265,7 @@ Maybe<vm::ParameterCriticalSectionPhyInstrOperand>
 InstructionsBuilder::MakeParameterCriticalSection(
     const one::EagerBlobObjectListPtr& eager_blob_objects,
     const std::shared_ptr<NNGraphIf>& nn_graph) {
-  const auto& op_device = JUST(GetCriticalSectionDevice());
-  for (const auto& param : *eager_blob_objects) {
-    const auto& blob_last_used_device = JUST(param->last_used_device());
-    if (blob_last_used_device != op_device) {
-      auto* dep_object = JUST(param->compute_local_dep_object());
-      JUST(SoftSyncStream(dep_object, "mut", blob_last_used_device));
-      param->set_last_used_device(op_device);
-    }
-  }
+  JUST(SoftSyncNNGraphBuffers(eager_blob_objects, nn_graph));
   static std::string instr_name("ParameterCriticalSection");
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   const auto& operand =
@@ -294,15 +278,7 @@ InstructionsBuilder::MakeParameterCriticalSection(
 Maybe<vm::OutputCriticalSectionPhyInstrOperand> InstructionsBuilder::MakeOutputCriticalSection(
     const one::EagerBlobObjectListPtr& eager_blob_objects,
     const std::shared_ptr<NNGraphIf>& nn_graph) {
-  const auto& op_device = JUST(GetCriticalSectionDevice());
-  for (const auto& output : *eager_blob_objects) {
-    const auto& blob_last_used_device = JUST(output->last_used_device());
-    if (blob_last_used_device != op_device) {
-      auto* dep_object = JUST(output->compute_local_dep_object());
-      JUST(SoftSyncStream(dep_object, "mut", blob_last_used_device));
-      output->set_last_used_device(op_device);
-    }
-  }
+  JUST(SoftSyncNNGraphBuffers(eager_blob_objects, nn_graph));
   static std::string instr_name("OutputCriticalSection");
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   const auto& operand =
