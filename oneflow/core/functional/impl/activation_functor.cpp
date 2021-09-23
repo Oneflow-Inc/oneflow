@@ -117,13 +117,7 @@ class HardTanhFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("min_val", min_val));
     JUST(attrs.SetAttr<double>("max_val", max_val));
-    // return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
-
-    // const std::shared_ptr<one::Tensor>& x_cast = JUST(functional::Cast(x, DType::Double()));
-    // return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x_cast}, attrs);
-    x = JUST(functional::Cast(x, DType::Double()));
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
-    
   }
 
  private:

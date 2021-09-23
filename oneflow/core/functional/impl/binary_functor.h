@@ -28,32 +28,11 @@ namespace functional {
 
 namespace impl {
 
-class TensorProcessorConfig{
-  // ...
-}; 
-
-class TensorProcessor{
-  // ...
-
-  // interface: Input, construct(config), Apply(Config)
-}; 
-
-
-
-
 class BinaryFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
-    // TensorIteratorConfig config(promote_dtype=True); 
-    // TensorIterator.Input(x)
-    //               .Input(y)
-    //               .
-
-    // return OpInterpUtil::Dispatch<Tensor>(*op_, {x, y});
-    return OpInterpUtil::Dispatch<Tensor>(*op_, iterator.inputs);
-
-
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, y});
   }
 
  protected:
