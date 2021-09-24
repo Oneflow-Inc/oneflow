@@ -222,7 +222,7 @@ export ONEFLOW_PYTHON_DIR={oneflow_python_dir}
 {oneflow_python_dir_cmd}
 export PATH="$PATH:$(dirname {get_python_bin('3.6')})"
 export PYTHON_BIN_PATH={get_python_bin('3.6')}
-$PYTHON_BIN_PATH -m pip install --user -r {os.path.join(oneflow_src_dir, "ci/fixed-dev-requirements.txt")}
+$PYTHON_BIN_PATH -m pip install -i https://mirrors.aliyun.com/pypi/simple --user -r {os.path.join(oneflow_src_dir, "ci/fixed-dev-requirements.txt")}
 $PYTHON_BIN_PATH -c "from __future__ import print_function;import numpy; print(numpy.get_include());"
 {cmake_cmd}
 cmake --build . -j `nproc` --target oneflow_deps
@@ -312,7 +312,7 @@ export LD_LIBRARY_PATH=/opt/intel/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/opt/intel/oneapi/mkl/latest/lib/intel64:$LD_LIBRARY_PATH
 export ONEFLOW_SRC_DIR={oneflow_src_dir}
 export ONEFLOW_CMAKE_CMD="{cmake_cmd}"
-{python_bin} -m pip install --user -r {os.path.join(oneflow_src_dir, "ci/fixed-dev-requirements.txt")}
+{python_bin} -m pip install -i https://mirrors.aliyun.com/pypi/simple --user -r {os.path.join(oneflow_src_dir, "ci/fixed-dev-requirements.txt")}
 """
     if enter_bash:
         bash_cmd += "\nbash"
