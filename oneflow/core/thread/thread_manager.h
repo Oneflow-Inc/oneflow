@@ -47,6 +47,7 @@ void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);
 
 template<typename DoEachT>
 void MultiThreadLoop(size_t num, const DoEachT& DoEach) {
+  if (num == 0) { return; }
   size_t thread_num = Global<ThreadPool>::Get()->thread_num();
   thread_num = std::min(num, thread_num);
   BalancedSplitter bs(num, thread_num);
