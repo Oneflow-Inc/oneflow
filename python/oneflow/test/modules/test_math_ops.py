@@ -36,14 +36,62 @@ class TestSinh(flow.unittest.TestCase):
         return y
 
 
+def _test_sin(test_case, shape, device):
+    input = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
+    of_out = flow.sin(input)
+    np_out = np.sin(input.numpy())
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+
+def _test_sin_backward(test_case, shape, device):
+    x = flow.tensor(
+        np.random.randn(*shape),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    y = flow.sin(x)
+    z = y.sum()
+    z.backward()
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np.cos(x.numpy()), 1e-5, 1e-5))
+
+
+def _test_inplace_sin(test_case, shape, device):
+    x = flow.tensor(
+        np.random.randn(*shape),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    x_inplace = x + 1
+    np_out = np.sin(x_inplace.numpy())
+
+    id_old = id(x_inplace)
+    x_inplace.sin_()
+
+    test_case.assertEqual(id_old, id(x_inplace))
+    test_case.assertTrue(np.allclose(x_inplace.numpy(), np_out, 1e-5, 1e-5))
+
+    of_x_inplace = x_inplace.sum()
+    of_x_inplace.backward()
+    test_case.assertTrue(
+        np.allclose(x.grad.numpy(), np.cos(x_inplace.numpy()), 1e-5, 1e-5)
+    )
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestSin(flow.unittest.TestCase):
-    @autotest()
-    def test_flow_sin_with_random_data(test_case):
-        device = random_device()
-        x = random_pytorch_tensor().to(device)
-        y = torch.sin(x)
-        return y
+    def test_sin(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_sin,
+            _test_sin_backward,
+            _test_inplace_sin,
+        ]
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 def _test_cos(test_case, shape, device):

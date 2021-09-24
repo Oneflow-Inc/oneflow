@@ -323,6 +323,15 @@ struct SinFunctor<float> {
 };
 
 template<>
+struct SinInplaceFunctor<float> {
+  static OF_DEVICE_FUNC float Forward(const float x) { return MATH_FUNC_F(sin, x); }
+
+  static OF_DEVICE_FUNC float Backward(const float x, const float dy) {
+    return dy * MATH_FUNC_F(cos, x);
+  }
+};
+
+template<>
 struct SinhFunctor<float> {
   static OF_DEVICE_FUNC float Forward(const float x) { return MATH_FUNC_F(sinh, x); }
 
@@ -595,6 +604,15 @@ struct SigmoidFunctor<double> {
 
 template<>
 struct SinFunctor<double> {
+  static OF_DEVICE_FUNC double Forward(const double x) { return MATH_FUNC_D(sin, x); }
+
+  static OF_DEVICE_FUNC double Backward(const double x, const double dy) {
+    return dy * MATH_FUNC_D(cos, x);
+  }
+};
+
+template<>
+struct SinInplaceFunctor<double> {
   static OF_DEVICE_FUNC double Forward(const double x) { return MATH_FUNC_D(sin, x); }
 
   static OF_DEVICE_FUNC double Backward(const double x, const double dy) {
@@ -910,6 +928,13 @@ struct SignFunctor<half> {
 
 template<>
 struct SinFunctor<half> {
+  static OF_HALF_FUNC half Forward(const half x) { return hsin(x); }
+
+  static OF_HALF_FUNC half Backward(const half x, const half dy) { return __hmul(dy, hcos(x)); }
+};
+
+template<>
+struct SinInplaceFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) { return hsin(x); }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) { return __hmul(dy, hcos(x)); }

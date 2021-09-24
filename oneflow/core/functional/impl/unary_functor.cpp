@@ -78,8 +78,6 @@ namespace impl {
   UNARY_ELEMENTWISE_FUNCTOR(                     \
       op_type_name, class_name,                  \
       UnaryFunctor)  // TODO(yaochi): replace UNARY_FUNC_SEQ with INPLACEABLE_UNARY_FUNC_SEQ SEQ
-#define INPLACEABLE_UNARY_FUNCOTRS(op_type_name, class_name) \
-  UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, InplaceableUnaryFunctor)
 #define INPLACE_UNARY_FUNCOTRS(op_type_name, class_name) \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, InplaceUnaryFunctor)
 #define CAST_INT_FLOAT_UNARY_FUNCOTRS(op_type_name, class_name) \
