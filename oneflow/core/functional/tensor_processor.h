@@ -24,13 +24,13 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-class TensorProcessor {
+class TensorProcessor final {
  public:
   explicit TensorProcessor(bool promote_inputs_to_common_dtype) {
     promote_inputs_to_common_dtype_ = promote_inputs_to_common_dtype;
   };
-  TensorProcessor& AddInputs(TensorTuple init_list);
-  TensorProcessor& AddInputs(TensorTuple init_list, Symbol<DType> lowest_dtype);
+  TensorProcessor& AddInputs(const TensorTuple& init_list);
+  TensorProcessor& AddInputs(const TensorTuple& init_list, Symbol<DType> lowest_dtype);
 
   TensorProcessor& Apply();
   void ComputeCommonDType();
