@@ -21,15 +21,17 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-TensorProcessor& TensorProcessor::AddInputs(const TensorTuple& init_list) {
-  tensor_tuple_ = init_list;
+TensorProcessor& TensorProcessor::AddInputs(const TensorTuple& init_tensor_or_tuple) {
+  tensor_tuple_.insert(tensor_tuple_.end(), init_tensor_or_tuple.begin(),
+                       init_tensor_or_tuple.end());
   return *this;
 }
 
-TensorProcessor& TensorProcessor::AddInputs(const TensorTuple& init_list,
+TensorProcessor& TensorProcessor::AddInputs(const TensorTuple& init_tensor_or_tuple,
                                             Symbol<DType> lowest_dtype) {
-  tensor_tuple_ = init_list;
-  lowest_dtype_ = lowest_dtype;
+  tensor_tuple_.insert(tensor_tuple_.end(), init_tensor_or_tuple.begin(),
+                       init_tensor_or_tuple.end());
+  lowest_dtype_.emplace_back(lowest_dtype);
   has_lowest_dtype_ = true;
   return *this;
 }
@@ -51,6 +53,16 @@ void TensorProcessor::CheckHasDifferentInputDType() {
   }
 }
 
+void TensorProcessor::InferLowestDType() {
+  for (auto& dtype : lowest_dtype_) {
+    if (common_dtype_ == DType::InvalidDataType()) {
+      common_dtype_ = dtype;  // Initialize the common_dtype_
+    } else {
+      common_dtype_ = promoteTypes(dtype, common_dtype_);
+    }
+  }
+}
+
 void TensorProcessor::InsertCast() {
   for (auto& tensor_ptr : tensor_tuple_) {
     if (tensor_ptr->dtype() != common_dtype_) {
@@ -59,11 +71,16 @@ void TensorProcessor::InsertCast() {
   }
 }
 
+void TensorProcessor::promote_inputs_to_common_dtype(bool is_promote) {
+  promote_inputs_to_common_dtype_ = is_promote;
+}
+
 TensorProcessor& TensorProcessor::Apply() {
   if (promote_inputs_to_common_dtype_) { CheckHasDifferentInputDType(); }
 
-  // Initialize common_dtype_ as the lowest_dtype.
-  if (has_lowest_dtype_) { common_dtype_ = lowest_dtype_; }
+  if (has_lowest_dtype_) {
+    InferLowestDType();
+  }  // First Infer the "highest" Dtype from each input's lowest DType.
 
   // Compute the common dtype and Promote.
   if ((has_different_input_dtype_ && promote_inputs_to_common_dtype_) || has_lowest_dtype_) {

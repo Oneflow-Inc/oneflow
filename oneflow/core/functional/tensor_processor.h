@@ -26,9 +26,7 @@ namespace functional {
 
 class TensorProcessor final {
  public:
-  explicit TensorProcessor(bool promote_inputs_to_common_dtype) {
-    promote_inputs_to_common_dtype_ = promote_inputs_to_common_dtype;
-  };
+  explicit TensorProcessor(){};
   TensorProcessor& AddInputs(const TensorTuple& init_list);
   TensorProcessor& AddInputs(const TensorTuple& init_list, Symbol<DType> lowest_dtype);
 
@@ -36,12 +34,14 @@ class TensorProcessor final {
   void ComputeCommonDType();
   void CheckHasDifferentInputDType();
   void InsertCast();
+  void promote_inputs_to_common_dtype(bool is_promote);
+  void InferLowestDType();
   TensorTuple& GetInputs() { return tensor_tuple_; };
 
  private:
   TensorTuple tensor_tuple_;
   Symbol<DType> common_dtype_ = DType::InvalidDataType();
-  Symbol<DType> lowest_dtype_ = DType::InvalidDataType();
+  std::vector<Symbol<DType>> lowest_dtype_;
 
   bool has_different_input_dtype_ = false;
   bool promote_inputs_to_common_dtype_ = false;

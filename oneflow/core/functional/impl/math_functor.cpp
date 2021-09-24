@@ -206,7 +206,7 @@ class ReduceSumFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    TensorProcessor tensor_processor(/*promote_inputs_to_common_dtype=*/true);
+    TensorProcessor tensor_processor;
     tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply();
     TensorTuple input_tuple = tensor_processor.GetInputs();
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
