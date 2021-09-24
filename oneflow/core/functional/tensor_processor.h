@@ -13,16 +13,41 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FUNCTIONAL_IMPL_BINARY_FUNCTOR_H_
-#define ONEFLOW_CORE_FUNCTIONAL_IMPL_BINARY_FUNCTOR_H_
+#ifndef ONEFLOW_CORE_FUNCTIONAL_IMPL_TENSOR_PROCESSOR_H_
+#define ONEFLOW_CORE_FUNCTIONAL_IMPL_TENSOR_PROCESSOR_H_
 
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/functional/impl/common.h"
 
+namespace oneflow {
+namespace one {
+namespace functional {
+
 class TensorProcessorConfig {
-  // ...
+ public:
+  TensorProcessorConfig() = default;
+  explicit TensorProcessorConfig(bool promote_inputs_to_common_dtype)
+      : promote_inputs_to_common_dtype_(promote_inputs_to_common_dtype){};
+  bool promote_inputs_to_common_dtype_ = false;
 };
+
+class TensorProcessor {
+ public:
+  explicit TensorProcessor(const TensorProcessorConfig&);
+  TensorProcessor& AddInput(const std::shared_ptr<one::Tensor>&);
+  TensorProcessor& Apply();
+  void ComputeCommonDType();
+  void CheckHasDifferentInputDType();
+  std::vector<std::shared_ptr<one::Tensor>>& Get() { return tensor_ptr_vec; };
+
+ private:
+  std::vector<std::shared_ptr<one::Tensor>> tensor_ptr_vec;
+  TensorProcessorConfig config_;
+  Symbol<DType> common_dtype_ = DType::InvalidDataType();
+  bool has_different_input_dtype_ = false;
+};
+
+}  // namespace functional
+}  // namespace one
+}  // namespace oneflow
 
 #endif
