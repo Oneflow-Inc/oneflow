@@ -142,7 +142,7 @@ async def launch_remote_container(
     if oneflow_wheel_path:
         whl_basename = os.path.basename(oneflow_wheel_path)
         await spawn_shell_and_check(
-            f"ssh {remote_host} docker exec {container_name} python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple}"
+            f"ssh {remote_host} docker exec {container_name} python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple"
         )
         await spawn_shell_and_check(
             f"ssh {remote_host} docker exec {container_name} python3 -m pip install {workspace_dir}/{whl_basename}"
