@@ -31,8 +31,6 @@ __global__ void ComputeBinaryCrossEntropyWithLogitsOut(int64_t elem_cnt, const T
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     T input_val = input[i];
     T target_val = target[i];
-    assert(input_val >= 0.0);
-    assert(input_val <= 1.0);
     T max_val = -input_val < 0 ? 0 : -input_val;
 
     if (pos_weight_processed == nullptr) {
@@ -55,8 +53,6 @@ __global__ void ComputeBinaryCrossEntropyWithLogitsOutHalf(int64_t elem_cnt, con
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     float input_val = __half2float(input[i]);
     float target_val = __half2float(target[i]);
-    assert(input_val >= 0.0);
-    assert(input_val <= 1.0);
     float max_val = -input_val < 0 ? 0 : -input_val;
 
     if (pos_weight_processed == nullptr) {

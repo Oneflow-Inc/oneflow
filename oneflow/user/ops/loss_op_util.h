@@ -35,7 +35,7 @@ inline Maybe<void> CheckLossReductionAndInferOutputTenserDesc(
   if (reduction == "none") {
     *out_desc->mut_shape() = output_shape_when_reduction_is_none;
   } else {
-    *out_desc->mut_shape() = Shape({1});
+    *out_desc->mut_shape() = Shape();
   }
   return Maybe<void>::Ok();
 }
@@ -49,7 +49,7 @@ inline Maybe<void> CheckLossReductionAndCheckInputTenserDesc(
   if (reduction == "none") {
     CHECK_EQ_OR_RETURN(input_desc.shape(), input_shape_when_reduction_is_none);
   } else {
-    CHECK_EQ_OR_RETURN(input_desc.shape(), Shape({1}));
+    CHECK_EQ_OR_RETURN(input_desc.shape(), Shape());
   }
   return Maybe<void>::Ok();
 }

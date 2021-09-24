@@ -43,8 +43,6 @@ void ComputeBinaryCrossEntropyWithLogitsOut(int64_t elem_cnt, const T* input, co
   FOR_RANGE(int64_t, i, 0, elem_cnt) {
     T input_val = input[i];
     T target_val = target[i];
-    CHECK_LE(input_val, 1.0);
-    CHECK_GE(input_val, 0.0);
     T max_val = ComputeMaxVal(input_val);
     if (out != nullptr) {
       if (pos_weight_processed == nullptr) {

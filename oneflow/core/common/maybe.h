@@ -263,11 +263,6 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   Maybe<PtrT> maybe_ptr_;
 };
 
-inline bool MaybeIsOk(Maybe<void>&& maybe) {
-  if (!maybe.IsOk()) { LOG(ERROR) << maybe.GetSerializedError(); }
-  return maybe.IsOk();
-}
-
 namespace {
 std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>& error_proto) {
   // return error msg got from formatted function or debugstring.
@@ -278,7 +273,10 @@ std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>& e
 }  // namespace
 }  // namespace oneflow
 
-#define CHECK_OK(...) CHECK(MaybeIsOk(__VA_ARGS__))
+#define CHECK_OK(...)                                         \
+  for (auto&& maybe = __JustStackCheckWrapper__(__VA_ARGS__); \
+       GOOGLE_PREDICT_BRANCH_NOT_TAKEN(!maybe.IsOk());)       \
+  LOG(FATAL) << OF_PP_STRINGIZE(__VA_ARGS__) << " is not OK:\n" << maybe.GetSerializedError()
 
 #define OF_RETURN_IF_ERROR(...)                                          \
   for (auto&& maybe_##__LINE__ = __JustStackCheckWrapper__(__VA_ARGS__); \
