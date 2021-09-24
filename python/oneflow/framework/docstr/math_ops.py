@@ -527,21 +527,25 @@ add_docstr(
 add_docstr(
     oneflow.sin,
     """Returns a new tensor with the sine of the elements of :attr:`input`.
+
     sin(x: Tensor) -> Tensor
     
     .. math::
         \text{y}_{i} = \sin(\text{x}_{i})
+    
     Args:
         x (Tensor): the input tensor.
         
     For example:
     .. code-block:: python
+
         >>> import oneflow as flow
         >>> import numpy as np
         >>> x1 = flow.tensor(np.array([-0.5461,  0.1347, -2.7266, -0.2746]).astype(np.float32))
         >>> y1 = flow.sin(x1)
         >>> y1
         tensor([-0.5194,  0.1343, -0.4032, -0.2712], dtype=oneflow.float32)
+        
         >>> x2 = flow.tensor(np.array([-1.4, 2.6, 3.7]).astype(np.float32), device=flow.device('cuda'))
         >>> y2 = flow.sin(x2)
         >>> y2
