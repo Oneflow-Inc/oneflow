@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/nn_graph_if.h"
-#include "oneflow/core/common/notifier.h"
 
 namespace oneflow {
 
@@ -40,20 +39,19 @@ class CriticalSectionPhyInstrOperand : public PhyInstrOperand {
 
   explicit CriticalSectionPhyInstrOperand(int64_t ref_cnt);
 
-  // Called by producer.
-  void ProducerNotifiesConsumer() const;
-
-  // Called by consumer.
-  void ConsumerWaitsProducer() const;
+  const std::shared_ptr<std::atomic<int64_t>>& critical_section_ready_ref_cnt() const {
+    return critical_section_ready_ref_cnt_;
+  }
 
   const std::shared_ptr<std::atomic<int64_t>>& consumer_ref_cnt() const {
     return consumer_ref_cnt_;
-  };
+  }
 
  protected:
-  // producer notifies consumer
-  std::unique_ptr<Notifier> notifier_;
-  // number of working consumers.
+  // Initiliazed with 1.
+  // Reset to 0 when critical section ready.
+  std::shared_ptr<std::atomic<int64_t>> critical_section_ready_ref_cnt_;
+  // Number of working consumers.
   std::shared_ptr<std::atomic<int64_t>> consumer_ref_cnt_;
 };
 
