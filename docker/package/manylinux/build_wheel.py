@@ -155,7 +155,14 @@ def get_common_docker_args(
     inplace_attr = ""
     if inplace == False:
         inplace_attr = ":ro"
-    return f"-v {oneflow_src_dir}:{oneflow_src_dir}{inplace_attr} {proxy_env_arg} {pwd_arg} {house_dir_arg} {cache_dir_arg} {build_dir_arg} -w {current_dir} --shm-size=8g"
+    cache_dir_args = " ".join(
+        [
+            f"-v {os.path.join(cache_dir, 'ccache')}:/root/.ccache",
+            f"-v ${os.path.join(cache_dir, 'local')}:/root/.local",
+            f"-v ${os.path.join(cache_dir, 'cache')}:/root/.cache",
+        ]
+    )
+    return f"{cache_dir_args} -v {oneflow_src_dir}:{oneflow_src_dir}{inplace_attr} {proxy_env_arg} {pwd_arg} {house_dir_arg} {cache_dir_arg} {build_dir_arg} -w {current_dir} --shm-size=8g"
 
 
 def get_python_dir(inplace=True, oneflow_src_dir=None, cache_dir=None):
