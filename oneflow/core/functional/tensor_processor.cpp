@@ -77,7 +77,7 @@ TensorProcessor& TensorProcessor::PromoteInputsToCommonDtype(bool is_promote) {
   return *this;
 }
 
-Maybe<TensorProcessor&> TensorProcessor::Apply() {
+Maybe<void> TensorProcessor::Apply() {
   if (promote_inputs_to_common_dtype_) { CheckHasDifferentInputDType(); }
 
   if (has_lowest_dtype_) {
@@ -92,7 +92,7 @@ Maybe<TensorProcessor&> TensorProcessor::Apply() {
   }
   // Promote all the inputs to the lowest dtype.
 
-  return *this;
+  return Maybe<void>::Ok();
 }
 
 }  // namespace functional

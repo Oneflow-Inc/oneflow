@@ -34,7 +34,7 @@ class TensorProcessor final {
   TensorProcessor& AddInputs(const TensorTuple& init_list);
   TensorProcessor& AddInputs(const TensorTuple& init_list, Symbol<DType> lowest_dtype);
 
-  Maybe<TensorProcessor&> Apply();
+  Maybe<void> Apply();
   void ComputeCommonDType();
   void CheckHasDifferentInputDType();
   Maybe<void> InsertCast();
