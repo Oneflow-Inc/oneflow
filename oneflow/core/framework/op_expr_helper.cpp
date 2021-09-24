@@ -380,18 +380,6 @@ Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t
       .Build();
 }
 
-Maybe<one::UserOpExpr> UnsortedBatchSegmentSumOp(const int& num_segments) {
-  return UnsortedBatchSegmentSumOp(num_segments, UniqueOpName("unsorted_batch_segment_sum"));
-}
-Maybe<one::UserOpExpr> UnsortedBatchSegmentSumOp(const int& num_segments, const std::string& name) {
-  return one::OpBuilder("unsorted_batch_segment_sum", name)
-      .Input("data")
-      .Input("segment_ids")
-      .Output("out")
-      .Attr<int32_t>("num_segments", num_segments)
-      .Build();
-}
-
 Maybe<one::UserOpExpr> ScalarAddByTensorOp() {
   return ScalarAddByTensorOp(UniqueOpName("scalar_add_by_tensor"));
 }
@@ -641,17 +629,18 @@ Maybe<one::UserOpExpr> WhereOp(const std::string& name) {
       .Build();
 }
 
-Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
-                                    const std::vector<int32_t>& stride) {
-  return ExpandGradOp(out_shape, stride, UniqueOpName("expand_grad"));
+Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& logical_out_shape,
+                                    const std::vector<int32_t>& logical_expand_shape) {
+  return ExpandGradOp(logical_out_shape, logical_expand_shape, UniqueOpName("expand_grad"));
 }
-Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
-                                    const std::vector<int32_t>& stride, const std::string& name) {
+Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& logical_out_shape,
+                                    const std::vector<int32_t>& logical_expand_shape,
+                                    const std::string& name) {
   return one::OpBuilder("expand_grad", name)
       .Input("in")
       .Output("out")
-      .Attr<std::vector<int32_t>>("out_shape", out_shape)
-      .Attr<std::vector<int32_t>>("stride", stride)
+      .Attr<std::vector<int32_t>>("logical_out_shape", logical_out_shape)
+      .Attr<std::vector<int32_t>>("logical_expand_shape", logical_expand_shape)
       .Build();
 }
 

@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/stream/stream_context_adapter.h"
 
 namespace oneflow {
 namespace one {
@@ -92,6 +93,26 @@ Optional<Symbol<ParallelDesc>> ZeroCopyBaseContext::parallel_desc() const {
   }
 }
 
+namespace {
+ParallelContext MakeSingleDeviceParallelCtx() {
+  ParallelContext single_device_parallel_ctx;
+  single_device_parallel_ctx.set_parallel_id(0);
+  single_device_parallel_ctx.set_parallel_num(1);
+  return single_device_parallel_ctx;
+}
+}  // namespace
+
+const ParallelContext& ZeroCopyBaseContext::parallel_ctx() const {
+  const auto& parallel_desc = this->parallel_desc();
+  if (parallel_desc.has_value()) {
+    const auto& parallel_desc_symbol = CHECK_JUST(parallel_desc);
+    return *CHECK_JUST(GetParallelContext4CurrentProcessCtx(parallel_desc_symbol));
+  } else {
+    static ParallelContext single_device_parallel_ctx(MakeSingleDeviceParallelCtx());
+    return single_device_parallel_ctx;
+  }
+}
+
 #define RETURN_IF_FOUND(inputs, outputs, post_action)                                             \
   int32_t i = TryGetTensorTupleIndex(input_arg_tuple_->arg_name2bn_index2tensor_tuple_index(),    \
                                      arg_name, index);                                            \
@@ -156,10 +177,7 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
   const std::string& device_tag() const override { return base_ctx_.device_tag(); }
-  const ParallelContext& parallel_ctx() const override {
-    const auto& parallel_desc = CHECK_JUST(base_ctx_.parallel_desc().value());
-    return *CHECK_JUST(GetParallelContext4CurrentProcessCtx(parallel_desc));
-  }
+  const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
     return base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
@@ -217,25 +235,16 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
         device_ctx_(device_ctx),
         base_ctx_(device_tag, input_arg_tuple, output_arg_tuple),
         composed_attrs_(composed_attrs) {
+    if (device_ctx != nullptr) { stream_ctx_.reset(NewStreamContextAdapter(device_ctx)); }
     base_ctx_.Update(inputs, outputs, consistent_tensor_infer_result);
   }
   ~LocalUserKernelInitContext() override = default;
 
   DeviceCtx* device_ctx() override { return device_ctx_; }
+  StreamContext* stream_ctx() override { return stream_ctx_.get(); }
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
-  const ParallelContext& parallel_ctx() const override {
-    const auto& parallel_desc = base_ctx_.parallel_desc();
-    if (parallel_desc.has_value()) {
-      const auto& parallel_desc_symbol = CHECK_JUST(parallel_desc.value());
-      return *CHECK_JUST(GetParallelContext4CurrentProcessCtx(parallel_desc_symbol));
-    } else {
-      static ParallelContext single_card_parallel_ctx;
-      single_card_parallel_ctx.set_parallel_id(0);
-      single_card_parallel_ctx.set_parallel_num(1);
-      return single_card_parallel_ctx;
-    }
-  }
+  const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
     return base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
@@ -260,7 +269,7 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
   const ParallelDesc& parallel_desc() const override {
-    return *CHECK_JUST(base_ctx_.parallel_desc().value());
+    return *CHECK_JUST(base_ctx_.parallel_desc());
   }
 
  private:
@@ -273,6 +282,7 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
 
   const user_op::UserOpConfWrapper* user_op_conf_;
   DeviceCtx* device_ctx_;
+  std::unique_ptr<StreamContext> stream_ctx_;
   LocalUserKernelBaseContext base_ctx_;
   const ComposedAttrMap* composed_attrs_;
 };
@@ -304,13 +314,20 @@ LocalUserKernelComputeContext::LocalUserKernelComputeContext(
     : user_op_conf_(user_op_conf),
       composed_attrs_(composed_attrs),
       device_ctx_(device_ctx),
-      base_ctx_(device_tag, input_arg_tuple, output_arg_tuple, tmp_buffer) {}
+      base_ctx_(device_tag, input_arg_tuple, output_arg_tuple, tmp_buffer) {
+  if (device_ctx != nullptr) { stream_ctx_.reset(NewStreamContextAdapter(device_ctx)); }
+}
 
 void LocalUserKernelComputeContext::Update(
     const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
     const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result,
     DeviceCtx* device_ctx) {
   device_ctx_ = device_ctx;
+  if (device_ctx != nullptr) {
+    stream_ctx_.reset(NewStreamContextAdapter(device_ctx));
+  } else {
+    stream_ctx_.reset();
+  }
   base_ctx_.Update(inputs, outputs, consistent_tensor_infer_result);
 }
 

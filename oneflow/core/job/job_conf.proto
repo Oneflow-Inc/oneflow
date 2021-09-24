@@ -52,6 +52,12 @@ message LambModelUpdateConf {
   required float epsilon = 3;
 }
 
+message AdagradModelUpdateConf {
+  required float lr_decay = 1 [default = 0.0];
+  required float initial_accumulator_value = 2 [default = 0.0];
+  required float epsilon = 3 [default = 1e-10];
+}
+
 message ClipByGlobalNormConf {
   required float clip_norm = 1;
   optional float global_norm = 2;
@@ -91,6 +97,7 @@ message OptimizerConf {
     AdamModelUpdateConf adam_conf = 1004;
     LazyAdamModelUpdateConf lazy_adam_conf = 1005;
     LambModelUpdateConf lamb_conf = 1006;
+    AdagradModelUpdateConf adagrad_conf = 1007;
   }
 }
 
@@ -107,6 +114,7 @@ message NormalModelUpdateOpUserConf {
     AdamModelUpdateConf adam_conf = 1004;
     LazyAdamModelUpdateConf lazy_adam_conf = 1005;
     LambModelUpdateConf lamb_conf = 1006;
+    AdagradModelUpdateConf adagrad_conf = 1007;
   }
 }
 

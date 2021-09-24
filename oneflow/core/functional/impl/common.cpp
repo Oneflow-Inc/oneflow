@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/functional/impl/common.h"
 
+#include "oneflow/core/autograd/autograd_mode.h"
+
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -24,7 +26,7 @@ bool IsStaticZerosTensor(const std::shared_ptr<Tensor>& x) {
 }
 
 bool IsInplaceValid(const std::shared_ptr<Tensor>& x) {
-  return !(x->is_leaf() && x->requires_grad());
+  return !autograd::GradMode::is_enabled() || !(x->is_leaf() && x->requires_grad());
 }
 
 Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x) {

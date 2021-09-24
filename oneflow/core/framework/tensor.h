@@ -93,7 +93,7 @@ class Tensor {
   virtual Maybe<Tensor> clone() const = 0;
 
   // Setters for autograd
-  virtual void set_requires_grad(bool requires_grad) = 0;
+  virtual Maybe<void> set_requires_grad(bool requires_grad) = 0;
   virtual Maybe<void> set_retain_grad(bool retain_grad) = 0;
   virtual void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) = 0;
   virtual const std::shared_ptr<FunctionNode>& mut_grad_fn_node() = 0;
@@ -193,7 +193,7 @@ class StaticZerosTensor final : public Tensor {
   Maybe<Tensor> clone() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
   // Setters for autograd
-  void set_requires_grad(bool requires_grad) override { PRINT_BUG_PROMPT_AND_ABORT(); }
+  Maybe<void> set_requires_grad(bool requires_grad) override { PRINT_BUG_PROMPT_AND_ABORT(); }
   Maybe<void> set_retain_grad(bool retain_grad) override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
     PRINT_BUG_PROMPT_AND_ABORT();
@@ -262,14 +262,9 @@ class TensorIf : public Tensor {
 
 class Parameter final : public TensorIf<Parameter> {
  public:
-  Parameter(std::shared_ptr<Tensor> tensor, bool requires_grad) {
-    while (auto parameter = std::dynamic_pointer_cast<Parameter>(tensor)) {
-      tensor = parameter->tensor_;
-    }
-    this->tensor_ = std::move(tensor);
-    // TODO: in `y = flow.nn.Parameter(x)`, y should have its own "requires_grad" field
-    // (align with PyTorch) instead of sharing it with x
-    this->tensor_->set_requires_grad(requires_grad);
+  Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad) {
+    this->tensor_ = tensor->detach().GetPtrOrThrow();
+    CHECK_JUST(this->tensor_->set_requires_grad(requires_grad));
   }
 
   const std::shared_ptr<const Shape>& shape() const override { return tensor_->shape(); }
@@ -288,6 +283,18 @@ class Parameter final : public TensorIf<Parameter> {
     return tensor_->consistent_tensor_meta();
   }
   Maybe<Tensor> data() override { return tensor_; }
+
+  // Must override grad_fn_node function. Otherwise grad_fn will belong to this not tensor_,
+  // and it will be wrong when use Parameter.data() in operators.
+  std::shared_ptr<const FunctionNode> grad_fn_node() const override {
+    return tensor_->grad_fn_node();
+  }
+  void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
+    tensor_->set_grad_fn_node(grad_fn_node);
+  }
+  const std::shared_ptr<FunctionNode>& mut_grad_fn_node() override {
+    return tensor_->mut_grad_fn_node();
+  }
 
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override {
     return tensor_->mut_eager_mirrored_tensor_impl();
@@ -322,7 +329,7 @@ class Parameter final : public TensorIf<Parameter> {
   Maybe<Tensor> detach() const override { return tensor_->detach(); }
   Maybe<Tensor> clone() const override { return tensor_->clone(); }
 
-  void set_requires_grad(bool requires_grad) override {
+  Maybe<void> set_requires_grad(bool requires_grad) override {
     return tensor_->set_requires_grad(requires_grad);
   }
   Maybe<void> set_retain_grad(bool retain_grad) override {
@@ -343,13 +350,11 @@ class Parameter final : public TensorIf<Parameter> {
 
   user_op::TensorDesc* mut_tensor_meta() override { return tensor_->mut_tensor_meta(); }
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
-    std::shared_ptr<Tensor> tensor = other;
-    while (auto parameter = std::dynamic_pointer_cast<Parameter>(tensor)) {
-      tensor = parameter->tensor_;
-    }
-    CHECK_OR_RETURN(is_local() == tensor->is_local() && is_eager() == tensor->is_eager())
+    CHECK_OR_RETURN(is_local() == other->is_local() && is_eager() == other->is_eager())
         << "You can't assign copy between tensors with different type";
-    this->tensor_ = std::move(tensor);
+    bool old_requires_grad = tensor_->requires_grad();
+    this->tensor_ = JUST(other->detach());
+    JUST(this->tensor_->set_requires_grad(old_requires_grad));
     return Maybe<void>::Ok();
   }
 
@@ -435,7 +440,11 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
     return impl_->set_acc_grad(grad);
   }
-  void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
+  Maybe<void> set_requires_grad(bool requires_grad) override {
+    JUST(impl_->set_requires_grad(requires_grad));
+    if (!requires_grad) { set_grad_fn_node(nullptr); }
+    return Maybe<void>::Ok();
+  }
   Maybe<void> set_retain_grad(bool retain_grad) override {
     return impl_->set_retain_grad(retain_grad);
   }
@@ -459,10 +468,13 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   }
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
-    const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(other);
+    CHECK_OR_RETURN(this->is_leaf()) << "Can only set leaf tensor's data.";
+    const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(JUST(other->detach()));
     CHECK_NOTNULL_OR_RETURN(mirrored_tensor);
+    bool old_requires_grad = requires_grad();
     impl_ = mirrored_tensor->impl_;
-    grad_fn_node_ = mirrored_tensor->grad_fn_node_;
+    set_requires_grad(old_requires_grad);
+    grad_fn_node_ = nullptr;
     return Maybe<void>::Ok();
   }
 
@@ -538,7 +550,12 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
     return impl_->set_acc_grad(grad);
   }
   Maybe<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
-  void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
+  Maybe<void> set_requires_grad(bool requires_grad) override {
+    // return impl_->set_requires_grad(requires_grad);
+    JUST(impl_->set_requires_grad(requires_grad));
+    if (!requires_grad) { set_grad_fn_node(nullptr); }
+    return Maybe<void>::Ok();
+  }
   Maybe<void> set_retain_grad(bool retain_grad) override {
     return impl_->set_retain_grad(retain_grad);
   }
@@ -565,10 +582,14 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
 
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
-    const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(other);
+    CHECK_OR_RETURN(this->is_leaf()) << "Can only set leaf tensor's data.";
+    const auto& consistent_tensor =
+        std::dynamic_pointer_cast<ConsistentTensor>(JUST(other->detach()));
     CHECK_NOTNULL_OR_RETURN(consistent_tensor);
+    bool old_requires_grad = requires_grad();
     impl_ = consistent_tensor->impl_;
-    grad_fn_node_ = consistent_tensor->grad_fn_node_;
+    set_requires_grad(old_requires_grad);
+    grad_fn_node_ = nullptr;
     return Maybe<void>::Ok();
   }
 

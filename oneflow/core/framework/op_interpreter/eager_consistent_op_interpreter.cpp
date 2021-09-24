@@ -45,7 +45,7 @@ namespace {
 Maybe<Symbol<ParallelDesc>> GetParallelDesc(const TensorTuple& inputs,
                                             const OpExprInterpContext& ctx) {
   if (!inputs.empty()) { return inputs.at(0)->parallel_desc(); }
-  return ctx.parallel_desc.value();
+  return JUST(ctx.parallel_desc);
 }
 
 std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_expr,
@@ -89,8 +89,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   const auto& parallel_desc = JUST(GetParallelDesc(inputs, ctx));
   std::shared_ptr<const ConsistentTensorInferResult> result;
   if (inputs.empty()) {
-    const auto& infer_args = JUST(SrcOpConsistentTensorMetaInferArgs::New(
-        ctx.attrs, parallel_desc, JUST(ctx.nd_sbp.value())));
+    const auto& infer_args =
+        JUST(SrcOpConsistentTensorMetaInferArgs::New(ctx.attrs, parallel_desc, JUST(ctx.nd_sbp)));
     result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
   } else {
     const auto& infer_args = JUST(ConsistentTensorMetaInferArgs::New(ctx.attrs, inputs));
@@ -132,11 +132,9 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     const auto& local_tensor = JUST(outputs->at(i)->cur_rank_phy_tensor());
     output_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
   }
-  const auto& instr_type_name = JUST(GetLocalCallInstructionName(parallel_desc->device_tag()));
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      result, ctx, parallel_desc.shared_from_symbol(),
-                                      instr_type_name);
+                                      result, ctx, result->op_device());
   }));
   return Maybe<void>::Ok();
 }
@@ -172,8 +170,8 @@ Maybe<void> RawConsistentToConsistent(const ConsistentToConsistentOpExpr& op_exp
   CHECK_OR_RETURN(ctx.parallel_desc.has_value());
   CHECK_OR_RETURN(ctx.nd_sbp.has_value());
   const auto& in_parallel_desc = JUST(input->parallel_desc());
-  const auto& out_nd_sbp = JUST(ctx.nd_sbp.value());
-  const auto& out_parallel_desc = JUST(ctx.parallel_desc.value());
+  const auto& out_nd_sbp = JUST(ctx.nd_sbp);
+  const auto& out_parallel_desc = JUST(ctx.parallel_desc);
   const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_parallel_desc));
   const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
   const auto& tensor =
@@ -265,7 +263,7 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeAddOpExpr& op_
   OF_UNIMPLEMENTED();
 }
 
-Maybe<void> EagerConsistentInterpreter::ApplyImpl(const SelectFirstOpExpr& op_expr,
+Maybe<void> EagerConsistentInterpreter::ApplyImpl(const SelectTopNOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
