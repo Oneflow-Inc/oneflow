@@ -26,79 +26,79 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-def _test_argmax_axis_negative(test_case, device):
+def _test_argmin_axis_negative(test_case, device):
     input = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
     axis = -1
-    of_out = flow.argmax(input, dim=axis)
-    np_out = np.argmax(input.numpy(), axis=axis)
+    of_out = flow.argmin(input, dim=axis)
+    np_out = np.argmin(input.numpy(), axis=axis)
     test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
 
-def _test_tensor_argmax(test_case, device):
+def _test_tensor_argmin(test_case, device):
     input = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
     axis = 0
-    of_out = input.argmax(dim=axis)
-    np_out = np.argmax(input.numpy(), axis=axis)
+    of_out = input.argmin(dim=axis)
+    np_out = np.argmin(input.numpy(), axis=axis)
     test_case.assertTrue(np.array_equal(of_out.numpy().shape, np_out.shape))
     test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
 
-def _test_argmax_axis_postive(test_case, device):
+def _test_argmin_axis_postive(test_case, device):
     input = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
     axis = 1
-    of_out = flow.argmax(input, dim=axis)
-    np_out = np.argmax(input.numpy(), axis=axis)
+    of_out = flow.argmin(input, dim=axis)
+    np_out = np.argmin(input.numpy(), axis=axis)
     test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
 
-def _test_argmax_keepdims(test_case, device):
+def _test_argmin_keepdims(test_case, device):
     input = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
     axis = 0
-    of_out = input.argmax(axis, True)
-    np_out = np.argmax(input.numpy(), axis=axis)
+    of_out = input.argmin(axis, True)
+    np_out = np.argmin(input.numpy(), axis=axis)
     np_out = np.expand_dims(np_out, axis=axis)
     test_case.assertTrue(np.array_equal(of_out.numpy().shape, np_out.shape))
     test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
 
-def _test_argmax_dim_equal_none(test_case, device):
+def _test_argmin_dim_equal_none(test_case, device):
     input = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
-    of_out = input.argmax()
-    np_out = np.argmax(input.numpy().flatten(), axis=0)
+    of_out = input.argmin()
+    np_out = np.argmin(input.numpy().flatten(), axis=0)
     test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestArgmax(flow.unittest.TestCase):
-    def test_argmax(test_case):
+class TestArgmin(flow.unittest.TestCase):
+    def test_argmin(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_argmax_axis_negative,
-            _test_tensor_argmax,
-            _test_argmax_axis_postive,
-            _test_argmax_keepdims,
-            _test_argmax_dim_equal_none,
+            _test_argmin_axis_negative,
+            _test_tensor_argmin,
+            _test_argmin_axis_postive,
+            _test_argmin_keepdims,
+            _test_argmin_dim_equal_none,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
     @autotest(n=5, auto_backward=False, rtol=1e-5, atol=1e-5)
-    def test_argmax_with_random_data(test_case):
+    def test_argmin_with_random_data(test_case):
         device = random_device()
         ndim = random(1, 6).to(int)
         x = random_pytorch_tensor(ndim=ndim).to(device)
-        y = torch.argmax(x, dim=random(0, ndim).to(int), keepdim=random().to(bool))
+        y = torch.argmin(x, dim=random(0, ndim).to(int), keepdim=random().to(bool))
         return y
 
 
