@@ -236,8 +236,8 @@ class Graph(object):
 
         .. code-block:: python
 
-            >>> g = CustomGraph()
-            >>> out_tensors = g(input_tensors)
+            g = CustomGraph()
+            out_tensors = g(input_tensors)
 
         The inputs of ``__call__`` method must match the inputs of ``build()``
         method. And the ``__call__`` method will return outputs matching the
@@ -277,10 +277,9 @@ class Graph(object):
 
         .. code-block:: python
 
-            >>> g = CustomGraph()
-            >>> g.debug()  # Open debug mode
-
-            >>> out_tensors = g(input_tensors)  # Will print log for debug at the first call
+            g = CustomGraph()
+            g.debug()  # Open debug mode
+            out_tensors = g(input_tensors)  # Will print log for debug at the first call
 
         Args:
             mode (bool): whether to set debug mode ("True") or not (``False``). Default: ``True``.
