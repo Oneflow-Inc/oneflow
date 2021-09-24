@@ -387,7 +387,7 @@ def _sin(self):
 
 def _sin_(self):
     return flow._C.sin_(self)
-    
+
 
 def _atan(self):
     return flow.atan(self)
