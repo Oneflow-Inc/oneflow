@@ -357,7 +357,7 @@ jobs:
         with:
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entry: ${{ matrix.entry }}
-          digest-type: test
+          digest-type: ${{ matrix.digest-type }}
           mark-as-completed: ${{ contains(matrix.runs-on, 'self-hosted') }}
       - name: Check digest and fail if cache result not identical to matrix
         if: ${{ fromJSON(steps.save-cache.outputs.cache-hit) != matrix.cache-hit }}
