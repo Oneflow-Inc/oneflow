@@ -102,7 +102,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
   })).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define CHECK_JUST(...)                                                                      \
-  ::oneflow::private_details::RemoveRValConst(([&](const char* func_name) {                  \
+  ([&](const char* func_name) {                                                              \
     auto&& value_to_check_ = __JustStackCheckWrapper__(__VA_ARGS__);                         \
     if (!::oneflow::private_details::JustIsOk(value_to_check_)) {                            \
       LOG(FATAL) << ::oneflow::GetFormatedSerializedError(                                   \
@@ -111,7 +111,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
               func_name, OF_PP_STRINGIZE(__VA_ARGS__)));                                     \
     }                                                                                        \
     return std::forward<decltype(value_to_check_)>(value_to_check_);                         \
-  })(__FUNCTION__))                                                                          \
+  })(__FUNCTION__)                                                                           \
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define JUST_MSG(value, ...)                                                          \
@@ -127,7 +127,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
   })).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define CHECK_JUST_MSG(value, ...)                                                        \
-  ::oneflow::private_details::RemoveRValConst(([&](const char* func_name) {               \
+  ([&](const char* func_name) {                                                           \
     auto&& value_to_check_ = (value);                                                     \
     if (!::oneflow::private_details::JustIsOk(value_to_check_)) {                         \
       LOG(FATAL) << ::oneflow::GetFormatedSerializedError(                                \
@@ -138,7 +138,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
               .error_proto());                                                            \
     }                                                                                     \
     return std::forward<decltype(value_to_check_)>(value_to_check_);                      \
-  })(__FUNCTION__))                                                                       \
+  })(__FUNCTION__)                                                                        \
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define JUST_OPT(...)                                                \
