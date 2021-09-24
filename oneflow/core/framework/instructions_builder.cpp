@@ -252,7 +252,6 @@ static constexpr auto* GetCriticalSectionDevice =
 Maybe<vm::InputCriticalSectionPhyInstrOperand> InstructionsBuilder::MakeInputCriticalSection(
     const one::EagerBlobObjectListPtr& eager_blob_objects,
     const std::shared_ptr<NNGraphIf>& nn_graph) {
-  JUST(SoftSyncNNGraphBuffers(eager_blob_objects, nn_graph));
   static std::string instr_name("InputCriticalSection");
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   const auto& operand =
@@ -266,7 +265,6 @@ Maybe<vm::ParameterCriticalSectionPhyInstrOperand>
 InstructionsBuilder::MakeParameterCriticalSection(
     const one::EagerBlobObjectListPtr& eager_blob_objects,
     const std::shared_ptr<NNGraphIf>& nn_graph) {
-  JUST(SoftSyncNNGraphBuffers(eager_blob_objects, nn_graph));
   static std::string instr_name("ParameterCriticalSection");
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   const auto& operand =
@@ -279,7 +277,6 @@ InstructionsBuilder::MakeParameterCriticalSection(
 Maybe<vm::OutputCriticalSectionPhyInstrOperand> InstructionsBuilder::MakeOutputCriticalSection(
     const one::EagerBlobObjectListPtr& eager_blob_objects,
     const std::shared_ptr<NNGraphIf>& nn_graph) {
-  JUST(SoftSyncNNGraphBuffers(eager_blob_objects, nn_graph));
   static std::string instr_name("OutputCriticalSection");
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   const auto& operand =
@@ -314,24 +311,39 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const one::EagerBlobObjectListPtr
                                                const one::EagerBlobObjectListPtr& outputs,
                                                const one::EagerBlobObjectListPtr& parameters,
                                                const std::shared_ptr<NNGraphIf>& nn_graph) {
-  static std::string instr_name("LaunchLazyJob");
-  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
-  const auto& in_critical_section = JUST(MakeInputCriticalSection(inputs, nn_graph));
-  const auto& out_critical_section = JUST(MakeOutputCriticalSection(outputs, nn_graph));
-  const auto& param_critical_section = JUST(MakeParameterCriticalSection(parameters, nn_graph));
-  const auto& nccl_critical_section = JUST(MakeNcclCriticalSection());
-  const auto& in_dep_object =
-      JUST(WaitUntilZero(in_critical_section->critical_section_ready_ref_cnt()));
-  const auto& out_dep_object =
-      JUST(WaitUntilZero(out_critical_section->critical_section_ready_ref_cnt()));
-  const auto& param_dep_object =
-      JUST(WaitUntilZero(param_critical_section->critical_section_ready_ref_cnt()));
-  const auto& nccl_dep_object =
-      JUST(WaitUntilZero(nccl_critical_section->critical_section_ready_ref_cnt()));
-  *instruction->mutable_phy_instr_operand() = std::make_shared<vm::LaunchLazyJobPhyInstrOperand>(
-      in_critical_section, *in_dep_object, out_critical_section, *out_dep_object,
-      param_critical_section, *param_dep_object, nccl_critical_section, *nccl_dep_object, nn_graph);
-  instruction_list_->EmplaceBack(std::move(instruction));
+  JUST(SoftSyncNNGraphBuffers(inputs, nn_graph));
+  JUST(SoftSyncNNGraphBuffers(outputs, nn_graph));
+  JUST(SoftSyncNNGraphBuffers(parameters, nn_graph));
+  {
+    // Warnning: Do not insert any instructions in chain:
+    // [EagerCriticalSection] -> [WaitUntilZero] -> LaunchLazyJob
+
+    // Warnning: Do not insert SoftSync in this scope.
+
+    // Instructions EagerCriticalSection will hold the ownership of inputs/outputs/paramters
+    // until Instructions LaunchLazyJob done. other instructions inserted may make virtual machine
+    // dead lock.
+    const auto& in_critical_section = JUST(MakeInputCriticalSection(inputs, nn_graph));
+    const auto& out_critical_section = JUST(MakeOutputCriticalSection(outputs, nn_graph));
+    const auto& param_critical_section = JUST(MakeParameterCriticalSection(parameters, nn_graph));
+    const auto& nccl_critical_section = JUST(MakeNcclCriticalSection());
+    const auto& in_dep_object =
+        JUST(WaitUntilZero(in_critical_section->critical_section_ready_ref_cnt()));
+    const auto& out_dep_object =
+        JUST(WaitUntilZero(out_critical_section->critical_section_ready_ref_cnt()));
+    const auto& param_dep_object =
+        JUST(WaitUntilZero(param_critical_section->critical_section_ready_ref_cnt()));
+    const auto& nccl_dep_object =
+        JUST(WaitUntilZero(nccl_critical_section->critical_section_ready_ref_cnt()));
+    static std::string instr_name("LaunchLazyJob");
+    ObjectMsgPtr<vm::InstructionMsg> instruction =
+        ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
+    *instruction->mutable_phy_instr_operand() = std::make_shared<vm::LaunchLazyJobPhyInstrOperand>(
+        in_critical_section, *in_dep_object, out_critical_section, *out_dep_object,
+        param_critical_section, *param_dep_object, nccl_critical_section, *nccl_dep_object,
+        nn_graph);
+    instruction_list_->EmplaceBack(std::move(instruction));
+  }
   return Maybe<void>::Ok();
 }
 
