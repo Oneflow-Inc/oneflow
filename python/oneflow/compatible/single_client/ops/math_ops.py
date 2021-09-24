@@ -2096,18 +2096,33 @@ def range(
         (start, limit) = (0, start)
     assert limit > start, "Limit should be larger than start"
     assert delta <= limit - start, "Delta is ilegal"
-    assert type(start) == int, "Params `start`'s type should be int"
-    assert type(limit) == int, "Params `limit`'s type should be int"
-    assert type(delta) == int, "Params `delta`'s type should be int"
-    return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Range_"))
-        .Op("range")
-        .Attr("start", start)
-        .Attr("delta", delta)
-        .Attr("limit", limit)
-        .Attr("dtype", dtype)
-        .Output("out")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
+    if dtype == flow.float32 or dtype == flow.float64:
+        return (
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("Range_")
+            )
+            .Op("range")
+            .Attr("float_start", float(start))
+            .Attr("float_delta", float(delta))
+            .Attr("float_limit", float(limit))
+            .Attr("dtype", dtype)
+            .Output("out")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
+    else:
+        return (
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("Range_")
+            )
+            .Op("range")
+            .Attr("integer_start", int(start))
+            .Attr("integer_delta", int(delta))
+            .Attr("integer_limit", int(limit))
+            .Attr("dtype", dtype)
+            .Output("out")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )

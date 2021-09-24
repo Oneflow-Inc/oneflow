@@ -86,6 +86,7 @@ class ConcatKernel final : public user_op::OpKernel {
 #define REGISTER_CONCAT_KERNEL_WITH_DEVICE(device) \
   REGISTER_CONCAT_KERNEL(device, float)            \
   REGISTER_CONCAT_KERNEL(device, double)           \
+  REGISTER_CONCAT_KERNEL(device, uint8_t)          \
   REGISTER_CONCAT_KERNEL(device, int8_t)           \
   REGISTER_CONCAT_KERNEL(device, int32_t)          \
   REGISTER_CONCAT_KERNEL(device, int64_t)

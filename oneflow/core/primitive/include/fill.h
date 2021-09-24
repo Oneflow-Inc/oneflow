@@ -13,35 +13,36 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_PRIMITIVE_MEMSET_H_
-#define ONEFLOW_CORE_PRIMITIVE_MEMSET_H_
+#ifndef ONEFLOW_CORE_PRIMITIVE_FILL_H_
+#define ONEFLOW_CORE_PRIMITIVE_FILL_H_
 
-#include "oneflow/core/primitive/primitive.h"
+#include "oneflow/core/primitive/include/primitive.h"
+#include "oneflow/core/common/scalar.h"
 
 namespace oneflow {
 
 namespace primitive {
 
-class Memset : public Primitive {
+class Fill : public Primitive {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Memset);
-  Memset() = default;
-  ~Memset() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(Fill);
+  Fill() = default;
+  ~Fill() override = default;
 
-  virtual void Launch(StreamContext* stream_ctx, void* ptr, int value, size_t count) = 0;
+  virtual void Launch(StreamContext* stream_ctx, void* dst, Scalar value, size_t count) = 0;
 };
 
-class MemsetFactory : public Factory<Memset> {
+class FillFactory : public Factory<Fill> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(MemsetFactory);
-  MemsetFactory() = default;
-  ~MemsetFactory() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(FillFactory);
+  FillFactory() = default;
+  ~FillFactory() override = default;
 
-  virtual std::unique_ptr<Memset> New() = 0;
+  virtual std::unique_ptr<Fill> New(DataType data_type) = 0;
 };
 
 }  // namespace primitive
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_PRIMITIVE_MEMSET_H_
+#endif  // ONEFLOW_CORE_PRIMITIVE_FILL_H_
