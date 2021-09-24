@@ -325,7 +325,7 @@ jobs:
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     strategy:
       # TODO: set it to true before merging to master
-      fail-fast: false
+      fail-fast: ${{ contains(github.event.pull_request.labels.*.name, 'need-all-tests-even-fail') }}
       max-parallel: 5
       matrix: ${{ fromJson(needs.find-test-cache.outputs.matrix) }}
     env:
