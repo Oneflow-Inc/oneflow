@@ -22,7 +22,7 @@ from oneflow.ops.transpose_util import (
 )
 
 
-class Argmax(Module):
+class Argmin(Module):
     def __init__(self, dim: int = None, keepdim: bool = False) -> None:
         super().__init__()
         self.dim = dim
@@ -36,14 +36,14 @@ class Argmax(Module):
         axis = self.dim if self.dim >= 0 else self.dim + num_axes
         assert 0 <= axis < num_axes, "axis out of range"
         if axis == num_axes - 1:
-            x = flow._C.argmax(input)
+            x = flow._C.argmin(input)
             if self.keepdim == True:
                 x = flow.unsqueeze(x, -1)
             return x
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
             x = flow._C.transpose(input, perm=perm)
-            x = flow._C.argmax(x)
+            x = flow._C.argmin(x)
             x = flow.unsqueeze(x, -1)
             x = flow._C.transpose(x, perm=get_inversed_perm(perm))
             if self.keepdim == False:
@@ -51,8 +51,8 @@ class Argmax(Module):
             return x
 
 
-@register_tensor_op("argmax")
-def argmax_op(input, dim: int = None, keepdim: bool = False):
+@register_tensor_op("argmin")
+def argmin_op(input, dim: int = None, keepdim: bool = False):
     """The op computes the index with the largest value of a Tensor at specified axis.
 
     Args:
@@ -69,17 +69,17 @@ def argmax_op(input, dim: int = None, keepdim: bool = False):
 
         >>> import oneflow as flow
         
-        >>> input = flow.tensor([[1, 3, 8, 7, 2],
-        ...            [1, 9, 4, 3, 2]], dtype=flow.float32)
-        >>> output = flow.argmax(input)
+        >>> input = flow.tensor([[4, 3, 1, 0, 2],
+        ...            [5, 9, 7, 6, 8]], dtype=flow.float32)
+        >>> output = flow.argmin(input)
         >>> output
-        tensor(6, dtype=oneflow.int64)
-        >>> output = flow.argmax(input, dim=1)
+        tensor(3, dtype=oneflow.int64)
+        >>> output = flow.argmin(input, dim=1)
         >>> output
-        tensor([2, 1], dtype=oneflow.int64)
+        tensor([3, 0], dtype=oneflow.int64)
 
     """
-    return Argmax(dim=dim, keepdim=keepdim)(input)
+    return Argmin(dim=dim, keepdim=keepdim)(input)
 
 
 if __name__ == "__main__":
