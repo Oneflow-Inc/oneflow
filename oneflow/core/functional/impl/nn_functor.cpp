@@ -1198,6 +1198,48 @@ class CtcGreedyDecoderFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class PartialFCSampleFunctor {
+ public:
+  PartialFCSampleFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("distributed_partial_fc_sample")
+                         .Input("weight")
+                         .Input("label")
+                         .Output("mapped_label")
+                         .Output("sampled_label")
+                         .Output("sampled_weight")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& wegiht,
+                                const std::shared_ptr<one::Tensor>& label,
+                                const int64_t& num_sample) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("num_sample", num_sample));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {wegiht, label}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class PariticalFCSampleDisableBoxing {
+ public:
+  PariticalFCSampleDisableBoxing() {
+    op_ = CHECK_JUST(one::OpBuilder("distributed_partial_fc_sample_disable_boxing")
+                         .Input("sampled_weight_diff")
+                         .Input("sampled_label")
+                         .Output("boxing_disabled_sampled_weight_diff")
+                         .Output("boxing_disabled_sampled_label")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& sampled_weight_diff,
+                                const std::shared_ptr<one::Tensor>& sampled_label) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {sampled_weight_diff, sampled_label});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -1245,6 +1287,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedBiasAddDropoutFunctor>("FusedBiasAddDropout");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
   m.add_functor<impl::CtcGreedyDecoderFunctor>("CtcGreedyDecoder");
+  m.add_functor<impl::PartialFCSampleFunctor>("DistributedPariticalFCSample");
+  m.add_functor<impl::PariticalFCSampleDisableBoxing>("DistributedPariticalFCSampleDisableBoxing");
 };
 
 }  // namespace functional
