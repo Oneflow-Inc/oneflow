@@ -309,6 +309,7 @@ export LD_LIBRARY_PATH=/opt/intel/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/opt/intel/oneapi/mkl/latest/lib/intel64:$LD_LIBRARY_PATH
 export ONEFLOW_SRC_DIR={oneflow_src_dir}
 export ONEFLOW_CMAKE_CMD="{cmake_cmd}"
+python3 -m pip install --user -r {os.path.join(oneflow_src_dir, "ci/fixed-dev-requirements.txt")}
 """
     if enter_bash:
         bash_cmd += "\nbash"
