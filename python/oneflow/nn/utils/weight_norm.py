@@ -23,18 +23,23 @@ from oneflow.nn.module import Module
 
 
 def norm_except_dim(v: Tensor, pow: int, dim: int):
+    assert -v.dim() <= dim <= v.dim() - 1, "dim out of range"
+
     if dim == -1:
-        return flow.linalg.norm(v, "fro")
+        return flow.linalg.norm(v, pow)
     elif dim == 0:
         output_size = [1] * v.dim()
         output_size[0] = v.size(0)
-        return flow.linalg.norm(v.view(v.size(0), -1), ord=2, dim=1).view(*output_size)
+        return flow.linalg.norm(v.view(v.size(0), -1), ord=pow, dim=1).view(
+            *output_size
+        )
     elif dim == v.dim() - 1:
         output_size = [1] * v.dim()
         output_size[v.dim() - 1] = v.size(v.dim() - 1)
-        return flow.linalg.norm(v.view(-1, v.size(v.dim() - 1)), ord=2, dim=0).view(
+        return flow.linalg.norm(v.view(-1, v.size(v.dim() - 1)), ord=pow, dim=0).view(
             *output_size
         )
+    return
 
 
 class WeightNorm(object):
@@ -87,6 +92,7 @@ class WeightNorm(object):
 
 T_module = TypeVar("T_module", bound=Module)
 
+
 def weight_norm(module: T_module, name: str = "weight", dim: int = 0) -> T_module:
     r"""Applies weight normalization to a parameter in the given module.
 
@@ -132,7 +138,8 @@ def weight_norm(module: T_module, name: str = "weight", dim: int = 0) -> T_modul
     WeightNorm.apply(module, name, dim)
     return module
 
-def remove_weight_norm(module: T_module, name: str = 'weight') -> T_module:
+
+def remove_weight_norm(module: T_module, name: str = "weight") -> T_module:
     r"""Removes the weight normalization reparameterization from a module.
 
     Args:
@@ -152,8 +159,8 @@ def remove_weight_norm(module: T_module, name: str = 'weight') -> T_module:
             del module._forward_pre_hooks[k]
             return module
 
-    raise ValueError("weight_norm of '{}' not found in {}"
-                     .format(name, module))
+    raise ValueError("weight_norm of '{}' not found in {}".format(name, module))
+
 
 if __name__ == "__main__":
     import doctest
