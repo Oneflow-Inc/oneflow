@@ -626,7 +626,7 @@ jobs:
         timeout-minutes: 45
         if: ${{ always() && contains(matrix.runs-on, 'self-hosted') }}
         run: |
-          docker rm -f ${container_name} || true
+          docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
           docker run --rm -v $PWD:/p -w /p busybox chown -R $(id -u):$(id -g) . || true
 
   static_analysis_with_clang_on_diff:
