@@ -544,6 +544,30 @@
     Double alpha=1.0) => BatchMatMul"
   bind_python: True
 
+- name: "nll_loss"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction) => NllLoss"
+  bind_python: True
+
+- name: "nll_loss_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor total_target, Int64 ignore_index, String reduction) => NllLossGrad"
+  bind_python: False
+
+- name: "binary_cross_entropy_loss"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, String reduction) => BinaryCrossEntropyLoss"
+  bind_python: True
+
+- name: "binary_cross_entropy_loss_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, String reduction) => BinaryCrossEntropyLossGrad"
+  bind_python: False
+
+- name: "binary_cross_entropy_with_logits_loss"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None, String reduction) => BinaryCrossEntropyWithLogitsLoss"
+  bind_python: True
+
+- name: "binary_cross_entropy_with_logits_loss_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None, String reduction) => BinaryCrossEntropyWithLogitsLossGrad"
+  bind_python: True
+
 - name: "sparse_softmax_cross_entropy"
   signature: "Tensor (Tensor logits, Tensor label, Int64 depth) => SparseSoftmaxCrossEntropy"
   bind_python: True
