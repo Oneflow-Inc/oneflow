@@ -215,11 +215,11 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_del_operand(ObjectId logical_ob
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::Clone() const {
-  return ObjectMsgPtr<InstructionMsg>::NewFrom(mut_allocator(), *this);
+  return ObjectMsgPtr<InstructionMsg>::New(*this);
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::MakeInferInstrMsg() const {
-  auto infer_instr_msg = ObjectMsgPtr<InstructionMsg>::NewFrom(mut_allocator(), *this);
+  auto infer_instr_msg = ObjectMsgPtr<InstructionMsg>::New(*this);
   auto* stream_type_id = infer_instr_msg->mut_instr_type_id()->mut_stream_type_id();
   CHECK_EQ(stream_type_id->interpret_type(), InterpretType::kCompute);
   stream_type_id->CopyFrom(LookupInferStreamTypeId(*stream_type_id));

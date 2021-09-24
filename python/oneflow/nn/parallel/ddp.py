@@ -64,9 +64,20 @@ def DistributedDataParallel(
         ddp_state_for_reversed_params = module._ddp_state_for_reversed_params
         for state in ddp_state_for_reversed_params.values():
             state[0], state[1] = False, False
-        output = flow._C.select_first(
-            convert_to_tensor_tuple([output, *ddp_state_for_reversed_params.keys()])
-        )
+        if isinstance(output, tuple):
+            output = flow._C.select_top_n(
+                convert_to_tensor_tuple(
+                    [*output, *ddp_state_for_reversed_params.keys()]
+                ),
+                n=len(output),
+            )
+        else:
+            output = flow._C.select_top_n(
+                convert_to_tensor_tuple(
+                    [output, *ddp_state_for_reversed_params.keys()]
+                ),
+                n=1,
+            )[0]
         return output
 
     module.register_forward_hook(post_forward_hook)
