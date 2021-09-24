@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_PRIMITIVE_CUDA_CUDA_GRAPH_SUPPORT_H_
 #define ONEFLOW_CORE_PRIMITIVE_CUDA_CUDA_GRAPH_SUPPORT_H_
 
-#include "oneflow/core/primitive/primitive.h"
+#include "oneflow/core/primitive/include/primitive.h"
 
 namespace oneflow {
 
