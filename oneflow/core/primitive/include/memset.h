@@ -13,35 +13,35 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_PRIMITIVE_CAST_H_
-#define ONEFLOW_CORE_PRIMITIVE_CAST_H_
+#ifndef ONEFLOW_CORE_PRIMITIVE_MEMSET_H_
+#define ONEFLOW_CORE_PRIMITIVE_MEMSET_H_
 
-#include "oneflow/core/primitive/primitive.h"
+#include "oneflow/core/primitive/include/primitive.h"
 
 namespace oneflow {
 
 namespace primitive {
 
-class Cast : public Primitive {
+class Memset : public Primitive {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Cast);
-  Cast() = default;
-  ~Cast() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(Memset);
+  Memset() = default;
+  ~Memset() override = default;
 
-  virtual void Launch(StreamContext* stream_ctx, const void* from, void* to, size_t count) = 0;
+  virtual void Launch(StreamContext* stream_ctx, void* ptr, int value, size_t count) = 0;
 };
 
-class CastFactory : public Factory<Cast> {
+class MemsetFactory : public Factory<Memset> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CastFactory);
-  CastFactory() = default;
-  ~CastFactory() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(MemsetFactory);
+  MemsetFactory() = default;
+  ~MemsetFactory() override = default;
 
-  virtual std::unique_ptr<Cast> New(DataType from, DataType to) = 0;
+  virtual std::unique_ptr<Memset> New() = 0;
 };
 
 }  // namespace primitive
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_PRIMITIVE_CAST_H_
+#endif  // ONEFLOW_CORE_PRIMITIVE_MEMSET_H_
