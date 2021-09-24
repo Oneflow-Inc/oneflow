@@ -99,7 +99,11 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   }
   const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   *out_shape = *JUST(GetPhysicalShape(shape, nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
-  CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());
+  CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt())
+      << " Reshape infer ERROR! in op_name: " << ctx->op_name()
+      << " input shape is : " << in_shape.ToString()
+      << " , output shape is : " << out_shape->ToString()
+      << " , And reshape shape conf is : " << ctx->Attr<Shape>("shape").ToString();
   return Maybe<void>::Ok();
 }
 
