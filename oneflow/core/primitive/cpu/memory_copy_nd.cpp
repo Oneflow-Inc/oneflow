@@ -23,13 +23,11 @@ namespace primitive {
 namespace {
 
 void Copy1D(void* dst, const void* src, size_t count) {
-  LOG(ERROR) << "Copy1D ";
   std::memcpy(dst, src, count);
 }
 
 void Copy2D(void* dst, size_t dst_pitch, const void* src, size_t src_pitch, size_t width,
             size_t height) {
-  LOG(ERROR) << "Copy2D ";
   unsigned char* dst_ptr = (unsigned char*)dst;
   const unsigned char* src_ptr = (unsigned char*)src;
   FOR_RANGE(size_t, i, 0, height) {
@@ -42,7 +40,6 @@ void Copy2D(void* dst, size_t dst_pitch, const void* src, size_t src_pitch, size
 void Copy3D(size_t size_of_data_type, void* dst, const int64_t* dst_dims, const int64_t* dst_pos,
             const void* src, const int64_t* src_dims, const int64_t* src_pos,
             const int64_t* extent) {
-  LOG(ERROR) << "Copy3D ";
   const size_t dst_pitch = dst_dims[2] * size_of_data_type;
   const size_t src_pitch = src_dims[2] * size_of_data_type;
   const size_t dst_inner_area = dst_dims[1] * dst_pitch;
@@ -89,7 +86,6 @@ void CopyNDCpuImpl(size_t size_of_data_type, void* dst, const int64_t* dst_dims,
 void CopyND(size_t size_of_data_type, size_t num_dims, void* dst, const int64_t* dst_dims,
             const int64_t* dst_pos, const void* src, const int64_t* src_dims,
             const int64_t* src_pos, const int64_t* extent) {
-  LOG(ERROR) << "CopyND " << num_dims;
   if (num_dims == 4) {
     CopyNDCpuImpl<4>(size_of_data_type, dst, dst_dims, dst_pos, src, src_dims, src_pos, extent);
   } else if (num_dims == 5) {

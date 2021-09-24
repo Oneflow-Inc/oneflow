@@ -154,7 +154,6 @@ template<int32_t NDIMS>
 void CopyNDGpuImpl(cudaStream_t stream, const size_t size_of_data_type, void* dst,
                    const int64_t* dst_dims, const int64_t* dst_pos, const void* src,
                    const int64_t* src_dims, const int64_t* src_pos, const int64_t* extent) {
-  LOG(ERROR) << "CopyNDGpuImpl " << NDIMS;
   int64_t new_dst_dims[NDIMS];
   int64_t new_dst_pos[NDIMS];
   int64_t new_src_dims[NDIMS];
@@ -186,7 +185,6 @@ void CopyNDGpuImpl(cudaStream_t stream, const size_t size_of_data_type, void* ds
 }
 
 void Copy1D(cudaStream_t stream, void* dst, const void* src, size_t count) {
-  LOG(ERROR) << "copy 1D";
   OF_CUDA_CHECK(cudaMemcpyAsync(dst, src, count, cudaMemcpyDefault, stream));
 }
 
