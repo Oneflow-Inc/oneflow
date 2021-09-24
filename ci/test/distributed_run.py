@@ -142,6 +142,9 @@ async def launch_remote_container(
     if oneflow_wheel_path:
         whl_basename = os.path.basename(oneflow_wheel_path)
         await spawn_shell_and_check(
+            f"ssh {remote_host} docker exec {container_name} python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple}"
+        )
+        await spawn_shell_and_check(
             f"ssh {remote_host} docker exec {container_name} python3 -m pip install {workspace_dir}/{whl_basename}"
         )
     await spawn_shell(
@@ -254,6 +257,7 @@ export ONEFLOW_TEST_TMP_DIR="{self.oneflow_test_tmp_dir}"
 export NCCL_DEBUG=INFO
 export ONEFLOW_TEST_WORKER_AGENT_PORT={agent_port}
 export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
+python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 """
         if self.oneflow_wheel_path:
             exports += f"python3 -m pip install {self.oneflow_wheel_path}"
