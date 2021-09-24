@@ -40,7 +40,7 @@ parser.add_argument("--package_name", type=str, default="oneflow")
 args, remain_args = parser.parse_known_args()
 sys.argv = ["setup.py"] + remain_args
 REQUIRED_PACKAGES = [
-    f"numpy>={np.__version__}",
+    f"numpy>=1.12.0",
     "protobuf>=3.9.2",
     "tqdm",
     "requests",
