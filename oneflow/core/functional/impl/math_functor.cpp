@@ -208,7 +208,7 @@ class ReduceSumFunctor {
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     TensorProcessor tensor_processor;
     tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply();
-    TensorTuple input_tuple = tensor_processor.GetInputs();
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
   }
 

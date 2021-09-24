@@ -36,7 +36,7 @@ class TensorProcessor final {
   void InsertCast();
   void promote_inputs_to_common_dtype(bool is_promote);
   void InferLowestDType();
-  TensorTuple& GetInputs() { return tensor_tuple_; };
+  Maybe<TensorTuple&> GetInputs() { return tensor_tuple_; };
 
  private:
   TensorTuple tensor_tuple_;
