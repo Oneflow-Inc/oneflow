@@ -83,8 +83,6 @@ endif()
 
 set(XRT_TF_BAZEL_OUTPUT_DIR ${PROJECT_BINARY_DIR}/xla_tf_bazel_output CACHE STRING "")
 if (THIRD_PARTY)
-  add_custom_target(tensorflow_create_bazel_out_dir
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${XRT_TF_BAZEL_OUTPUT_DIR})
   ExternalProject_Add(${TENSORFLOW_PROJECT}
     PREFIX ${TENSORFLOW_SOURCES_DIR}
     URL ${XRT_TF_URL}
@@ -93,7 +91,6 @@ if (THIRD_PARTY)
     BUILD_COMMAND cd ${TENSORFLOW_SRCS_DIR} &&
                   ${BAZEL_ENV_ARGS} bazel --output_user_root=${XRT_TF_BAZEL_OUTPUT_DIR} build ${TENSORFLOW_BUILD_CMD} -j HOST_CPUS //tensorflow/compiler/jit/xla_lib:libxla_core.so
     INSTALL_COMMAND ""
-    DEPENDS tensorflow_create_bazel_out_dir
   )
 
   set(TENSORFLOW_XLA_FRAMEWORK_LIB ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow/libtensorflow_framework.so.2)

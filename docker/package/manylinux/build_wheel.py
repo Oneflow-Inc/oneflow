@@ -218,9 +218,12 @@ def build_third_party(
     )
 
     bash_cmd = f"""set -ex
-export TEST_TMPDIR={cache_dir}/bazel_cache
 export ONEFLOW_PYTHON_DIR={oneflow_python_dir}
 {oneflow_python_dir_cmd}
+export PATH="$PATH:$(dirname {get_python_bin('3.6')})"
+export PYTHON_BIN_PATH={get_python_bin('3.6')}
+$PYTHON_BIN_PATH -m pip install --user -r {os.path.join(oneflow_src_dir, "ci/fixed-dev-requirements.txt")}
+$PYTHON_BIN_PATH -c "from __future__ import print_function;import numpy; print(numpy.get_include());"
 {cmake_cmd}
 cmake --build . -j `nproc` --target oneflow_deps
 """
