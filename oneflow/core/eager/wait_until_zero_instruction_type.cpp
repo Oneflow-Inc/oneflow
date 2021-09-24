@@ -33,6 +33,7 @@ class WaitUntilZeroInstructionType final : public InstructionType {
   ~WaitUntilZeroInstructionType() = default;
 
   WaitUntilZeroInstructionType& operator=(const WaitUntilZeroInstructionType&) = delete;
+  WaitUntilZeroInstructionType& operator=(WaitUntilZeroInstructionType&&) = delete;
 
   using stream_type = WaitUntilZeroStreamType;
   void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
