@@ -22,24 +22,30 @@ from typing import Any, TypeVar
 from oneflow.nn.module import Module
 
 
-def norm_except_dim(v: Tensor, pow: int, dim: int):
+def norm_except_dim(v: Tensor, dim: int):
     assert -v.dim() <= dim <= v.dim() - 1, "dim out of range"
 
     if dim == -1:
-        return flow.linalg.norm(v, pow)
+        return flow.linalg.norm(v, ord='fro')
     elif dim == 0:
         output_size = [1] * v.dim()
         output_size[0] = v.size(0)
-        return flow.linalg.norm(v.view(v.size(0), -1), ord=pow, dim=1).view(
+        return flow.linalg.norm(v.view(v.size(0), -1), ord=2, dim=1).view(
             *output_size
         )
     elif dim == v.dim() - 1:
         output_size = [1] * v.dim()
         output_size[v.dim() - 1] = v.size(v.dim() - 1)
-        return flow.linalg.norm(v.view(-1, v.size(v.dim() - 1)), ord=pow, dim=0).view(
+        return flow.linalg.norm(v.view(-1, v.size(v.dim() - 1)), ord=2, dim=0).view(
             *output_size
         )
-    return
+    else:
+        v = flow.transpose(v,0,dim)
+        output_size = [1] * v.dim()
+        output_size[0] = v.size(0)
+        norm = flow.linalg.norm(v.view(v.size(0), -1), ord=2, dim=1).view(*output_size)
+        return flow.transpose(norm, 0, dim)
+
 
 
 class WeightNorm(object):
@@ -55,7 +61,7 @@ class WeightNorm(object):
     def compute_weight(self, module: Module) -> Any:
         g = getattr(module, self.name + "_g")
         v = getattr(module, self.name + "_v")
-        return v * (g / norm_except_dim(v, 2, self.dim))
+        return v * (g / norm_except_dim(v, self.dim))
 
     @staticmethod
     def apply(module, name: str, dim: int) -> "WeightNorm":
@@ -76,7 +82,7 @@ class WeightNorm(object):
 
         # add g and v as new parameters and express w as g/||v|| * v
         module.register_parameter(
-            name + "_g", flow.nn.Parameter(norm_except_dim(weight, 2, dim).data)
+            name + "_g", flow.nn.Parameter(norm_except_dim(weight, dim).data)
         )
         module.register_parameter(name + "_v", flow.nn.Parameter(weight.data))
         setattr(module, name, fn.compute_weight(module))

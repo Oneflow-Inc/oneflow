@@ -68,6 +68,38 @@ def _test_weightnorm(test_case, device):
         )
     )
 
+def _test_weightnorm_dim_m1(test_case, device):
+    model_flow = flow.nn.Linear(2, 4)  # shape of weight: (4, 2)
+    with flow.no_grad():
+        for i in range(input_arr.shape[0]):
+            for j in range(input_arr.shape[1]):
+                model_flow.weight[i, j] = input_arr[i][j]
+    m_flow = flow.nn.utils.weight_norm(model_flow, name="weight",dim=-1)
+
+    model_torch = torch.nn.Linear(2, 4)
+    with torch.no_grad():
+        for i in range(input_arr.shape[0]):
+            for j in range(input_arr.shape[1]):
+                model_torch.weight[i, j] = input_arr[i][j]
+    m_torch = torch.nn.utils.weight_norm(model_torch, name="weight",dim=-1)
+
+    test_case.assertTrue(
+        np.allclose(
+            m_flow.weight_g.detach().numpy(),
+            m_torch.weight_g.detach().numpy(),
+            1e-05,
+            1e-05,
+        )
+    )
+    test_case.assertTrue(
+        np.allclose(
+            m_flow.weight_v.detach().numpy(),
+            m_torch.weight_v.detach().numpy(),
+            1e-05,
+            1e-05,
+        )
+    )
+
 
 def _test_weightnorm_backward(test_case, device):
     linear = flow.nn.Linear(3, 8)
@@ -115,6 +147,7 @@ class TestWeightNorm(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_weightnorm,
+            _test_weightnorm_dim_m1,
             _test_weightnorm_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
