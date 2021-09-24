@@ -15,7 +15,7 @@ limitations under the License.
 """
 from collections import OrderedDict
 from functools import partial
-from typing import Dict
+from typing import Dict, Optional, Union, List
 
 import oneflow
 import oneflow._oneflow_internal
@@ -162,7 +162,7 @@ class Graph(object):
 
         To do training with nn.Graph, you should do 2 more things:
 
-        1. Add at least one optimier(learning rate schedulers are optional) with ``add_optimizer()`` method.
+        1. Add at least one optimizer(learning rate schedulers are optional) with ``add_optimizer()`` method.
         2. Call loss tensor's ``backward()`` method in ``build()`` method.
 
         Note that the computaion graph will automatically execute these methods:
@@ -265,28 +265,44 @@ class Graph(object):
         """
         return self.config.training
 
-    def debug(self, mode: bool = True) -> None:
+    def debug(
+        self, mode: bool = True, ranks: Optional[Union[int, List[int]]] = None
+    ) -> None:
         r"""Open or close debug mode of the graph.
 
         If in debug mode, logs of computation graph building will be
-        printed on rank 0.
+        printed. The log includes inputs/outputs/parameters/buffers/modules meta information.
+
+        Use ``ranks`` to choose which rank to print the debug information.
 
         .. code-block:: python
 
             g = CustomGraph()
-
-            # Open debug mode
-            g.debug()
-
+            g.debug()  # Open debug mode
             out_tensors = g(input_tensors)  # Will print log for debug at the first call
 
+        Args:
+            mode (bool): whether to set debug mode ("True") or not (``False``). Default: ``True``.
+            ranks (int or list(int)): choose ranks to print the debug information. Default rank ``0``.
+                You can choose any valid rank. Ranks equals ``-1`` means debug on all ranks.
         """
-        if get_rank() != 0:
-            return
-        self._debug = mode
-        for name, block in self._blocks.items():
-            assert block.type == BlockType.MODULE
-            block.debug(mode)
+        assert isinstance(mode, bool)
+
+        if ranks is None:
+            rank_list = [0]
+        elif isinstance(ranks, int):
+            rank_list = [ranks]
+        elif isinstance(ranks, list):
+            rank_list = ranks
+        else:
+            raise ValueError("ranks must be int or List[int].")
+
+        my_rank = get_rank()
+        if -1 in rank_list or my_rank in rank_list:
+            self._debug = mode
+            for name, block in self._blocks.items():
+                assert block.type == BlockType.MODULE
+                block.debug(mode, ranks)
 
     def __repr__(self):
         r"""For printing the graph structure.
