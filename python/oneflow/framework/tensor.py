@@ -381,6 +381,18 @@ def _arcsinh(self):
     return flow.arcsinh(self)
 
 
+def _sin(self):
+    return flow._C.sin(self)
+
+
+def _sin_(self):
+    return flow._C.sin_(self)
+
+
+def _atan(self):
+    return flow.atan(self)
+    
+
 def _atan(self):
     return flow.atan(self)
 
@@ -675,6 +687,8 @@ def RegisterMethods():
     Tensor.mul = _mul
     Tensor.reciprocal = _reciprocal
     Tensor.sub = _sub
+    Tensor.sin = _sin
+    Tensor.sin_ = _sin_
     Tensor.asin = _asin
     Tensor.arcsin = _arcsin
     Tensor.asinh = _asinh
