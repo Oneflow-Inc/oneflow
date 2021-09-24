@@ -220,6 +220,7 @@ jobs:
           exit 1
       - uses: Oneflow-Inc/get-oneflow@add-doctor-test
         name: Build manylinux cpu only
+        id: build-cpu
         if: ${{ matrix.entry =='cpu' && !matrix.cache-hit }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/cpu.cmake
@@ -239,6 +240,7 @@ jobs:
             3.7
       - uses: Oneflow-Inc/get-oneflow@add-doctor-test
         name: Build manylinux cu102
+        id: build-cuda
         if: ${{ matrix.entry =='cu102' && !matrix.cache-hit }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/cuda.cmake
@@ -258,6 +260,7 @@ jobs:
             3.7
       - uses: Oneflow-Inc/get-oneflow@add-doctor-test
         name: Build manylinux cu101_xla
+        id: build-xla
         if: ${{ matrix.entry =='cu101_xla' && !matrix.cache-hit && needs.changed_files.outputs.should_run_single_client_tests == '1' }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/cuda-xla.cmake
@@ -276,7 +279,7 @@ jobs:
             3.6
       # TODO: don't run this if previous skipped. maybe don't generate the matrix entry
       - name: Upload bin
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
         uses: Oneflow-Inc/get-oneflow/degist/upload@add-doctor-test
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -286,7 +289,7 @@ jobs:
           src-dir: ${{ env.MANYLINUX_CACHE_DIR }}/build/bin
           dst-dir: bin
       - name: Upload whl
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
         uses: Oneflow-Inc/get-oneflow/degist/upload@add-doctor-test
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
