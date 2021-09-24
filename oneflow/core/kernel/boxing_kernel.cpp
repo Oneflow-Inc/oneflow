@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/common/blocking_counter.h"
-#include "oneflow/core/primitive/add.h"
+#include "oneflow/core/primitive/include/add.h"
 
 namespace oneflow {
 

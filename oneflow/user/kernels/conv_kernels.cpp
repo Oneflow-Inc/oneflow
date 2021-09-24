@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/user/ops/nn_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/primitive/add.h"
+#include "oneflow/core/primitive/include/add.h"
 
 namespace oneflow {
 
