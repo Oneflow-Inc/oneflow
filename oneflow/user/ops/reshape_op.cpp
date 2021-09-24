@@ -52,14 +52,18 @@ Maybe<void> LogicalTensorDescInferFn(user_op::InferContext* ctx) {
   } else {
     CHECK_GE_OR_RETURN(shape.NumAxes(), 1);
     CHECK_GE_OR_RETURN(in_shape.NumAxes(), 1);
-    for (int i = 1 /* skip dim 0 */; i < shape.NumAxes(); ++i) {
-      // NOTE(chengcheng): ONLY dim-0 may be -1 for infer
-      CHECK_GE_OR_RETURN(shape.At(i), 0);
+    int need_infer_axis = -1;
+    size_t count = 1;
+    for (int i = 0; i < shape.NumAxes(); ++i) {
+      if (shape.At(i) == -1) {
+        CHECK_EQ_OR_RETURN(need_infer_axis, -1)
+            << "Shape " << shape.ToString() << " has more than 1 axis that needs to be infered.";
+        need_infer_axis = i;
+      } else {
+        count *= shape.At(i);
+      }
     }
-    if (shape.At(0) == -1) {
-      // NOTE(chengcheng): dim-0 unchanged for input.
-      shape.Set(0, in_shape.At(0));
-    }
+    if (need_infer_axis != -1) { shape.Set(need_infer_axis, in_shape.elem_cnt() / count); }
   }
   *out_shape = shape;
   CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());
@@ -80,14 +84,18 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   } else {
     CHECK_GE_OR_RETURN(shape.NumAxes(), 1);
     CHECK_GE_OR_RETURN(in_shape.NumAxes(), 1);
-    for (int i = 1 /* skip dim 0 */; i < shape.NumAxes(); ++i) {
-      // NOTE(chengcheng): ONLY dim-0 may be -1 for infer
-      CHECK_GE_OR_RETURN(shape.At(i), 0);
+    int need_infer_axis = -1;
+    size_t count = 1;
+    for (int i = 0; i < shape.NumAxes(); ++i) {
+      if (shape.At(i) == -1) {
+        CHECK_EQ_OR_RETURN(need_infer_axis, -1)
+            << "Shape " << shape.ToString() << " has more than 1 axis that needs to be infered.";
+        need_infer_axis = i;
+      } else {
+        count *= shape.At(i);
+      }
     }
-    if (shape.At(0) == -1) {
-      // NOTE(chengcheng): dim-0 unchanged for input.
-      shape.Set(0, in_shape.At(0));
-    }
+    if (need_infer_axis != -1) { shape.Set(need_infer_axis, in_shape.elem_cnt() / count); }
   }
   const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   *out_shape = *JUST(GetPhysicalShape(shape, nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
