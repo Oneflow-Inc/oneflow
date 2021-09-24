@@ -19,7 +19,6 @@ import argparse
 import glob
 import os
 import sys
-import numpy as np
 
 from setuptools import find_packages, setup
 from setuptools.command.install import install
@@ -40,7 +39,7 @@ parser.add_argument("--package_name", type=str, default="oneflow")
 args, remain_args = parser.parse_known_args()
 sys.argv = ["setup.py"] + remain_args
 REQUIRED_PACKAGES = [
-    f"numpy>=1.12.0",
+    "numpy>=1.12.0",
     "protobuf>=3.9.2",
     "tqdm",
     "requests",
