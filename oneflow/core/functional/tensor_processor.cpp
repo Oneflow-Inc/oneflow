@@ -21,23 +21,26 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-TensorProcessor::TensorProcessor(const TensorProcessorConfig& tensor_process_config) {
-  config_ = tensor_process_config;
+TensorProcessor& TensorProcessor::AddInputs(TensorTuple init_list) {
+  tensor_tuple_ = TensorTuple(init_list);
+  return *this;
 }
 
-TensorProcessor& TensorProcessor::AddInput(const std::shared_ptr<one::Tensor>& tensor_ptr) {
-  tensor_ptr_vec.push_back(tensor_ptr);
+TensorProcessor& TensorProcessor::AddInputs(TensorTuple init_list, Symbol<DType> lowest_dtype) {
+  tensor_tuple_ = TensorTuple(init_list);
+  lowest_dtype_ = lowest_dtype;
+  has_lowest_dtype_ = true;
   return *this;
 }
 
 void TensorProcessor::ComputeCommonDType() {
-  for (auto& tensor_ptr : tensor_ptr_vec) {
+  for (auto& tensor_ptr : tensor_tuple_) {
     common_dtype_ = promoteTypes(tensor_ptr->dtype(), common_dtype_);
   }
 }
 
 void TensorProcessor::CheckHasDifferentInputDType() {
-  for (auto& tensor_ptr : tensor_ptr_vec) {
+  for (auto& tensor_ptr : tensor_tuple_) {
     if (common_dtype_ == DType::InvalidDataType()) {
       common_dtype_ = tensor_ptr->dtype();  // Initialize the common_dtype_
     } else {
@@ -47,18 +50,28 @@ void TensorProcessor::CheckHasDifferentInputDType() {
   }
 }
 
-TensorProcessor& TensorProcessor::Apply() {
-  if (config_.promote_inputs_to_common_dtype_) { CheckHasDifferentInputDType(); }
-  // Compute the common dtype and Promote.
-  if (has_different_input_dtype_ && config_.promote_inputs_to_common_dtype_) {
-    ComputeCommonDType();
-    // If current tensor_dtype != promoted common dtype, we insert a Cast function.
-    for (auto& tensor_ptr : tensor_ptr_vec) {
-      if (tensor_ptr->dtype() != common_dtype_) {
-        tensor_ptr = CHECK_JUST(functional::Cast(tensor_ptr, common_dtype_));
-      }
+void TensorProcessor::InsertCast() {
+  for (auto& tensor_ptr : tensor_tuple_) {
+    if (tensor_ptr->dtype() != common_dtype_) {
+      tensor_ptr = CHECK_JUST(functional::Cast(tensor_ptr, common_dtype_));
     }
   }
+}
+
+TensorProcessor& TensorProcessor::Apply() {
+  if (promote_inputs_to_common_dtype_) { CheckHasDifferentInputDType(); }
+  // Compute the common dtype and Promote.
+  if (has_different_input_dtype_ && promote_inputs_to_common_dtype_) {
+    ComputeCommonDType();
+    // If current tensor_dtype != promoted common dtype, we insert a Cast function.
+    InsertCast();
+  }
+  // Promote all the inputs to the lowest dtype.
+  if (has_lowest_dtype_) {
+    common_dtype_ = lowest_dtype_;
+    InsertCast();
+  }
+
   return *this;
 }
 

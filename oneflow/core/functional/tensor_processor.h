@@ -13,41 +13,43 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FUNCTIONAL_IMPL_TENSOR_PROCESSOR_H_
-#define ONEFLOW_CORE_FUNCTIONAL_IMPL_TENSOR_PROCESSOR_H_
+#ifndef ONEFLOW_CORE_FUNCTIONAL_TENSOR_PROCESSOR_H_
+#define ONEFLOW_CORE_FUNCTIONAL_TENSOR_PROCESSOR_H_
 
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/functional/impl/common.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 
 namespace oneflow {
 namespace one {
 namespace functional {
 
-class TensorProcessorConfig {
- public:
-  TensorProcessorConfig() = default;
-  explicit TensorProcessorConfig(bool promote_inputs_to_common_dtype)
-      : promote_inputs_to_common_dtype_(promote_inputs_to_common_dtype){};
-  bool promote_inputs_to_common_dtype_ = false;
-};
-
 class TensorProcessor {
  public:
-  explicit TensorProcessor(const TensorProcessorConfig&);
-  TensorProcessor& AddInput(const std::shared_ptr<one::Tensor>&);
+  explicit TensorProcessor(bool promote_inputs_to_common_dtype) {
+    promote_inputs_to_common_dtype_ = promote_inputs_to_common_dtype;
+  };
+  TensorProcessor& AddInputs(TensorTuple init_list);
+  TensorProcessor& AddInputs(TensorTuple init_list, Symbol<DType> lowest_dtype);
+
   TensorProcessor& Apply();
   void ComputeCommonDType();
   void CheckHasDifferentInputDType();
-  std::vector<std::shared_ptr<one::Tensor>>& Get() { return tensor_ptr_vec; };
+  void InsertCast();
+  TensorTuple& GetInputs() { return tensor_tuple_; };
 
  private:
-  std::vector<std::shared_ptr<one::Tensor>> tensor_ptr_vec;
-  TensorProcessorConfig config_;
+  TensorTuple tensor_tuple_;
   Symbol<DType> common_dtype_ = DType::InvalidDataType();
+  Symbol<DType> lowest_dtype_ = DType::InvalidDataType();
+
   bool has_different_input_dtype_ = false;
+  bool promote_inputs_to_common_dtype_ = false;
+  bool has_lowest_dtype_ = false;
 };
 
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
 
-#endif
+#endif  // ONEFLOW_CORE_FUNCTIONAL_TENSOR_PROCESSOR_H_
