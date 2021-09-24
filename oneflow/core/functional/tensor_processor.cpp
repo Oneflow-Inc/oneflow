@@ -71,8 +71,9 @@ void TensorProcessor::InsertCast() {
   }
 }
 
-void TensorProcessor::promote_inputs_to_common_dtype(bool is_promote) {
+TensorProcessor& TensorProcessor::promote_inputs_to_common_dtype(bool is_promote) {
   promote_inputs_to_common_dtype_ = is_promote;
+  return *this;
 }
 
 TensorProcessor& TensorProcessor::Apply() {
