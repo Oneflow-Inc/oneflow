@@ -250,6 +250,150 @@ class SmoothL1LossGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class NllLossGradFunctor {
+ public:
+  NllLossGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("nll_grad")
+                         .Input("input")
+                         .Input("target")
+                         .Input("total_weight")
+                         .Input("dy")
+                         .Output("dx")
+                         .Build());
+    op_weight_ = CHECK_JUST(one::OpBuilder("nll_grad")
+                                .Input("input")
+                                .Input("target")
+                                .Input("total_weight")
+                                .Input("weight")
+                                .Input("dy")
+                                .Output("dx")
+                                .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const Optional<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& total_weight,
+                           const int64_t ignore_index, const std::string& reduction) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
+    JUST(attrs.SetAttr<std::string>("reduction", reduction));
+    if (weight) {
+      return OpInterpUtil::Dispatch<one::Tensor>(
+          *op_weight_, {input, target, total_weight, JUST(weight), dy}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {input, target, total_weight, dy}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_weight_;
+};
+class BinaryCrossEntropyLossGradFunctor {
+ public:
+  BinaryCrossEntropyLossGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_grad")
+                         .Input("input")
+                         .Input("target")
+                         .Input("dy")
+                         .Output("dx")
+                         .Build());
+    op_weight_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_grad")
+                                .Input("input")
+                                .Input("target")
+                                .Input("weight")
+                                .Input("dy")
+                                .Output("dx")
+                                .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const Optional<one::Tensor>& weight,
+                           const std::string& reduction) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("reduction", reduction));
+    if (weight) {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_weight_, {input, target, JUST(weight), dy},
+                                                 attrs);
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {input, target, dy}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_weight_;
+};
+
+class BinaryCrossEntropyWithLogitsLossGradFunctor {
+ public:
+  BinaryCrossEntropyWithLogitsLossGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits_grad")
+                         .Input("input")
+                         .Input("target")
+                         .Input("dy")
+                         .Output("dx")
+                         .Build());
+    op_weight_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits_grad")
+                                .Input("input")
+                                .Input("target")
+                                .Input("weight")
+                                .Input("dy")
+                                .Output("dx")
+                                .Build());
+    op_pos_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits_grad")
+                             .Input("input")
+                             .Input("target")
+                             .Input("pos_weight")
+                             .Input("dy")
+                             .Output("dx")
+                             .Build());
+    op_weight_pos_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits_grad")
+                                    .Input("input")
+                                    .Input("target")
+                                    .Input("weight")
+                                    .Input("pos_weight")
+                                    .Input("dy")
+                                    .Output("dx")
+                                    .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const Optional<one::Tensor>& weight,
+                           const Optional<one::Tensor>& pos_weight,
+                           const std::string& reduction) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("reduction", reduction));
+    JUST(attrs.SetAttr<bool>("has_pos_weight", pos_weight.has_value()));
+
+    if (weight) {
+      if (pos_weight) {
+        return OpInterpUtil::Dispatch<one::Tensor>(
+            *op_weight_pos_, {input, target, JUST(weight), JUST(pos_weight), dy}, attrs);
+      } else {
+        return OpInterpUtil::Dispatch<one::Tensor>(*op_weight_, {input, target, JUST(weight), dy},
+                                                   attrs);
+      }
+    } else {
+      if (pos_weight) {
+        return OpInterpUtil::Dispatch<one::Tensor>(*op_pos_, {input, target, JUST(pos_weight), dy},
+                                                   attrs);
+      } else {
+        return OpInterpUtil::Dispatch<one::Tensor>(*op_, {input, target, dy}, attrs);
+      }
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_weight_;
+  std::shared_ptr<OpExpr> op_pos_;
+  std::shared_ptr<OpExpr> op_weight_pos_;
+};
+
 class CombinedMarginLossGradFunctor {
  public:
   CombinedMarginLossGradFunctor() {
@@ -572,6 +716,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConvDataGradFunctor>("ConvDataGrad");
   m.add_functor<impl::PoolNdGradFunctor>("PoolNdGrad");
   m.add_functor<impl::AdaptivePoolNdGradFunctor>("AdaptivePoolNdGrad");
+  m.add_functor<impl::NllLossGradFunctor>("NllLossGrad");
+  m.add_functor<impl::BinaryCrossEntropyLossGradFunctor>("BinaryCrossEntropyLossGrad");
+  m.add_functor<impl::BinaryCrossEntropyWithLogitsLossGradFunctor>(
+      "BinaryCrossEntropyWithLogitsLossGrad");
   m.add_functor<impl::SmoothL1LossGradFunctor>("SmoothL1LossGrad");
   m.add_functor<impl::CombinedMarginLossGradFunctor>("CombinedMarginLossGrad");
   m.add_functor<impl::AffineGridGradFunctor>("AffineGridGrad");
