@@ -285,6 +285,7 @@ class TestGraph(flow.unittest.TestCase):
         model = MyModule()
         input = flow.tensor(np.random.randn(4, 10), dtype=flow.float32)
         output = model(input)
+        print(model)
         test_case.assertTrue(output.shape == (4, 10))
 
 

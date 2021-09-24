@@ -16,7 +16,7 @@ limitations under the License.
 import inspect
 import functools
 
-from oneflow.nn.modules.container import *
+from oneflow.nn.utils.container import *
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.graph.block import Block, BlockType
 
@@ -25,7 +25,7 @@ from oneflow.nn.graph.block import Block, BlockType
 # Changeing self._modules or self._parameters to block, when member function called
 
 
-class BlockSequential(Sequential):
+class SequentialBlock(SequentialContainer[Block]):
     def __init__(self, name: str, super_member: Sequential) -> None:
         self.container_name = name
         super().__init__(super_member)

@@ -223,12 +223,12 @@ class TestAlexnetGraph(oneflow.unittest.TestCase):
         args.device = "cuda"
         _test_alexnet_graph_repr(test_case, args)
 
-    def test_alexnet_graph_gpu(test_case):
+    def _test_alexnet_graph_gpu(test_case):
         args, unknown_args = _parse_args()
         args.device = "cuda"
         _test_alexnet_graph(test_case, args)
 
-    def test_alexnet_graph_cpu(test_case):
+    def _test_alexnet_graph_cpu(test_case):
         args, unknown_args = _parse_args()
         args.device = "cpu"
         args.train_batch_size = 40
