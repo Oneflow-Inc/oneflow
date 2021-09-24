@@ -526,7 +526,6 @@ add_docstr(
 
 add_docstr(
     oneflow.sin,
-
     """Returns a new tensor with the sine of the elements of :attr:`input`.
 
     sin(x: Tensor) -> Tensor
