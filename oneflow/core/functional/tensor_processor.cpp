@@ -22,12 +22,12 @@ namespace one {
 namespace functional {
 
 TensorProcessor& TensorProcessor::AddInputs(TensorTuple init_list) {
-  tensor_tuple_ = TensorTuple(init_list);
+  tensor_tuple_ = init_list;
   return *this;
 }
 
 TensorProcessor& TensorProcessor::AddInputs(TensorTuple init_list, Symbol<DType> lowest_dtype) {
-  tensor_tuple_ = TensorTuple(init_list);
+  tensor_tuple_ = init_list;
   lowest_dtype_ = lowest_dtype;
   has_lowest_dtype_ = true;
   return *this;

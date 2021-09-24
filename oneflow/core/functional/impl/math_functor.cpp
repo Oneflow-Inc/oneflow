@@ -206,13 +206,6 @@ class ReduceSumFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    // if (IsIntegralDataType(dtype) || dtype == DataType::kUInt8) {
-    //   // Set dtype as int64 when input's dtype is uint8, int8, int32, int64.
-    //   const auto& x_int64 = JUST(functional::Cast(x, DType::Int64()));
-    //   return OpInterpUtil::Dispatch<Tensor>(*op_, {x_int64}, attrs);
-    // } else {
-    //   return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-    // }
     TensorProcessor tensor_processor(/*promote_inputs_to_common_dtype=*/true);
     tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply();
     TensorTuple input_tuple = tensor_processor.GetInputs();
