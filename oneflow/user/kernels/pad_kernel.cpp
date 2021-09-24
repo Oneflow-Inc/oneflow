@@ -89,9 +89,9 @@ class PadKernel final : public user_op::OpKernel, public user_op::CudaGraphSuppo
     std::unique_ptr<primitive::MemoryCopyNd> primitive =
         primitive::NewPrimitive<primitive::MemoryCopyNdFactory>(device_type);
     CHECK(primitive);
-    primitive->Launch(ctx->stream_ctx(), x->data_type(), x->shape().NumAxes(),
-                              y->mut_dptr<T>(), y->shape().ptr(), dst_pos_vec.data(), x->dptr<T>(),
-                              x->shape().ptr(), src_pos_vec.data(), x->shape().ptr());
+    primitive->Launch(ctx->stream_ctx(), x->data_type(), x->shape().NumAxes(), y->mut_dptr<T>(),
+                      y->shape().ptr(), dst_pos_vec.data(), x->dptr<T>(), x->shape().ptr(),
+                      src_pos_vec.data(), x->shape().ptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
