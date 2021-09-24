@@ -20,11 +20,42 @@ namespace oneflow {
 
 namespace primitive {
 
+void ReduceParamDims(size_t num_dims, const int64_t* dst_dims, const int64_t* dst_pos,
+                     const int64_t* src_dims, const int64_t* src_pos, const int64_t* extent,
+                     size_t* reduced_num_dims, int64_t* reduced_dst_dims, int64_t* reduced_dst_pos,
+                     int64_t* reduced_src_dims, int64_t* reduced_src_pos, int64_t* reduced_extent) {
+  if (num_dims == 0) {
+    *reduced_num_dims = 0;
+    return;
+  }
+  int64_t reduced_i = 0;
+  FOR_RANGE(int64_t, i, 0, num_dims) {
+    if ((i != 0) && dst_dims[i] == src_dims[i] && dst_dims[i] == extent[i] && src_pos[i] == 0
+        && dst_pos[i] == 0) {
+      reduced_dst_dims[reduced_i] *= extent[i];
+      reduced_dst_pos[reduced_i] *= extent[i];
+      reduced_src_dims[reduced_i] *= extent[i];
+      reduced_src_pos[reduced_i] *= extent[i];
+      reduced_extent[reduced_i] *= extent[i];
+    } else {
+      if (i == 0) {
+        reduced_i = 0;
+      } else {
+        reduced_i = reduced_i + 1;
+      }
+      reduced_dst_dims[reduced_i] = dst_dims[i];
+      reduced_dst_pos[reduced_i] = dst_pos[i];
+      reduced_src_dims[reduced_i] = src_dims[i];
+      reduced_src_pos[reduced_i] = src_pos[i];
+      reduced_extent[reduced_i] = extent[i];
+    }
+  }
+  *reduced_num_dims = reduced_i + 1;
+}
+
 namespace {
 
-void Copy1D(void* dst, const void* src, size_t count) {
-  std::memcpy(dst, src, count);
-}
+void Copy1D(void* dst, const void* src, size_t count) { std::memcpy(dst, src, count); }
 
 void Copy2D(void* dst, size_t dst_pitch, const void* src, size_t src_pitch, size_t width,
             size_t height) {
@@ -97,6 +128,31 @@ void CopyND(size_t size_of_data_type, size_t num_dims, void* dst, const int64_t*
   }
 }
 
+void DispatchLaunch(DataType data_type, size_t num_dims, void* dst, const int64_t* dst_dims,
+                    const int64_t* dst_pos, const void* src, const int64_t* src_dims,
+                    const int64_t* src_pos, const int64_t* extent) {
+  const size_t size_of_data_type = GetSizeOfDataType(data_type);
+  if (num_dims == 0) {
+    Copy1D((unsigned char*)dst, (unsigned char*)src, size_of_data_type);
+  } else if (num_dims == 1) {
+    Copy1D((unsigned char*)dst + dst_pos[0] * size_of_data_type,
+           (unsigned char*)src + src_pos[0] * size_of_data_type, extent[0] * size_of_data_type);
+  } else if (num_dims == 2) {
+    const size_t dst_pitch = dst_dims[1] * size_of_data_type;
+    const size_t src_pitch = src_dims[1] * size_of_data_type;
+    const size_t width = extent[1] * size_of_data_type;
+    const size_t height = extent[0];
+    void* dst_2d = (unsigned char*)dst + dst_pos[0] * dst_pitch + dst_pos[1] * size_of_data_type;
+    const void* src_2d =
+        (const unsigned char*)src + src_pos[0] * src_pitch + src_pos[1] * size_of_data_type;
+    Copy2D(dst_2d, dst_pitch, src_2d, src_pitch, width, height);
+  } else if (num_dims == 3) {
+    Copy3D(size_of_data_type, dst, dst_dims, dst_pos, src, src_dims, src_pos, extent);
+  } else {
+    CopyND(size_of_data_type, num_dims, dst, dst_dims, dst_pos, src, src_dims, src_pos, extent);
+  }
+}
+
 class MemoryCopyNdImpl : public MemoryCopyNd {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MemoryCopyNdImpl);
@@ -107,26 +163,23 @@ class MemoryCopyNdImpl : public MemoryCopyNd {
               const int64_t* dst_dims, const int64_t* dst_pos, const void* src,
               const int64_t* src_dims, const int64_t* src_pos,
               const int64_t* extent) const override {
-    const size_t size_of_data_type = GetSizeOfDataType(data_type);
-    if (num_dims == 0) {
-      Copy1D((unsigned char*)dst, (unsigned char*)src, size_of_data_type);
-    } else if (num_dims == 1) {
-      Copy1D((unsigned char*)dst + dst_pos[0] * size_of_data_type,
-             (unsigned char*)src + src_pos[0] * size_of_data_type, extent[0] * size_of_data_type);
-    } else if (num_dims == 2) {
-      const size_t dst_pitch = dst_dims[1] * size_of_data_type;
-      const size_t src_pitch = src_dims[1] * size_of_data_type;
-      const size_t width = extent[1] * size_of_data_type;
-      const size_t height = extent[0];
-      void* dst_2d = (unsigned char*)dst + dst_pos[0] * dst_pitch + dst_pos[1] * size_of_data_type;
-      const void* src_2d =
-          (const unsigned char*)src + src_pos[0] * src_pitch + src_pos[1] * size_of_data_type;
-      Copy2D(dst_2d, dst_pitch, src_2d, src_pitch, width, height);
-    } else if (num_dims == 3) {
-      Copy3D(size_of_data_type, dst, dst_dims, dst_pos, src, src_dims, src_pos, extent);
-    } else {
-      CopyND(size_of_data_type, num_dims, dst, dst_dims, dst_pos, src, src_dims, src_pos, extent);
-    }
+    std::vector<int64_t> reduced_dst_dims;
+    std::vector<int64_t> reduced_dst_pos;
+    std::vector<int64_t> reduced_src_dims;
+    std::vector<int64_t> reduced_src_pos;
+    std::vector<int64_t> reduced_extent;
+    reduced_dst_dims.resize(num_dims);
+    reduced_dst_pos.resize(num_dims);
+    reduced_src_dims.resize(num_dims);
+    reduced_src_pos.resize(num_dims);
+    reduced_extent.resize(num_dims);
+    size_t reduced_num_dims = 0;
+    ReduceParamDims(num_dims, dst_dims, dst_pos, src_dims, src_pos, extent, &reduced_num_dims,
+                    reduced_dst_dims.data(), reduced_dst_pos.data(), reduced_src_dims.data(),
+                    reduced_src_pos.data(), reduced_extent.data());
+    DispatchLaunch(data_type, reduced_num_dims, dst, reduced_dst_dims.data(),
+                   reduced_dst_pos.data(), src, reduced_src_dims.data(), reduced_src_pos.data(),
+                   reduced_extent.data());
   }
 };
 

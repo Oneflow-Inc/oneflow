@@ -24,6 +24,11 @@ namespace oneflow {
 
 namespace primitive {
 
+void ReduceParamDims(size_t num_dims, const int64_t* dst_dims, const int64_t* dst_pos,
+                     const int64_t* src_dims, const int64_t* src_pos, const int64_t* extent,
+                     size_t* reduced_num_dims, int64_t* reduced_dst_dims, int64_t* reduced_dst_pos,
+                     int64_t* reduced_src_dims, int64_t* reduced_src_pos, int64_t* reduced_extent);
+
 namespace {
 
 template<int32_t NDIMS, typename I>
@@ -229,8 +234,23 @@ class MemoryCopyNdImpl : public MemoryCopyNd, public CudaGraphSupport {
               const int64_t* extent) const override {
     cudaStream_t cuda_stream =
         CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
-    DispatchLaunch(cuda_stream, data_type, num_dims, dst, dst_dims, dst_pos, src, src_dims, src_pos,
-                   extent);
+    std::vector<int64_t> reduced_dst_dims;
+    std::vector<int64_t> reduced_dst_pos;
+    std::vector<int64_t> reduced_src_dims;
+    std::vector<int64_t> reduced_src_pos;
+    std::vector<int64_t> reduced_extent;
+    reduced_dst_dims.resize(num_dims);
+    reduced_dst_pos.resize(num_dims);
+    reduced_src_dims.resize(num_dims);
+    reduced_src_pos.resize(num_dims);
+    reduced_extent.resize(num_dims);
+    size_t reduced_num_dim = 0;
+    ReduceParamDims(num_dims, dst_dims, dst_pos, src_dims, src_pos, extent, &reduced_num_dim,
+                    reduced_dst_dims.data(), reduced_dst_pos.data(), reduced_src_dims.data(),
+                    reduced_src_pos.data(), reduced_extent.data());
+    DispatchLaunch(cuda_stream, data_type, reduced_num_dim, dst, reduced_dst_dims.data(),
+                   reduced_dst_pos.data(), src, reduced_src_dims.data(), reduced_src_pos.data(),
+                   reduced_extent.data());
   }
 };
 

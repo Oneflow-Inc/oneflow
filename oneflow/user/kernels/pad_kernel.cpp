@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/device/memory_copier.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/primitive/include/memory_copy_nd.h"
 
 namespace oneflow {
 
@@ -82,27 +83,15 @@ class PadKernel final : public user_op::OpKernel, public user_op::CudaGraphSuppo
     CHECK_EQ(padding_before.size(), ndims);
     NewKernelUtil<device_type>::Fill(ctx->device_ctx(), y->shape().elem_cnt(),
                                      static_cast<T>(constant_value), y->mut_dptr<T>());
-    MemoryCopyNdDesc memory_copy_nd_desc;
-
-    DimVector src_shape_vec(ndims);
-    DimVector dst_shape_vec(ndims);
-    GetDimVectorInBytes(x->shape(), size_of_data_type, src_shape_vec);
-    GetDimVectorInBytes(y->shape(), size_of_data_type, dst_shape_vec);
-    memory_copy_nd_desc.src_shape = Shape(src_shape_vec);
-    memory_copy_nd_desc.dst_shape = Shape(dst_shape_vec);
-
     DimVector src_pos_vec(ndims, 0);
     DimVector dst_pos_vec(padding_before.cbegin(), padding_before.cend());
-    dst_pos_vec[ndims - 1] *= size_of_data_type;
 
-    memory_copy_nd_desc.dst_pos = NdIndex(dst_pos_vec);
-    memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
-    memory_copy_nd_desc.extent = memory_copy_nd_desc.src_shape;
-    MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
-
-    std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
-    device_memory_copier->Copy(ctx->device_ctx(), y->mut_dptr<T>(), x->dptr<T>(),
-                               reduced_memory_copy_nd_desc);
+    std::unique_ptr<primitive::MemoryCopyNd> primitive =
+        primitive::NewPrimitive<primitive::MemoryCopyNdFactory>(device_type);
+    CHECK(primitive);
+    primitive->Launch(ctx->stream_ctx(), x->data_type(), x->shape().NumAxes(),
+                              y->mut_dptr<T>(), y->shape().ptr(), dst_pos_vec.data(), x->dptr<T>(),
+                              x->shape().ptr(), src_pos_vec.data(), x->shape().ptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
