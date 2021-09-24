@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/eager/critical_section_phy_instr_operand.h"
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/common/notifier.h"
@@ -41,14 +42,21 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
 
   LaunchLazyJobPhyInstrOperand(
       const std::shared_ptr<InputCriticalSectionPhyInstrOperand>& inputs_critical_section,
+      ObjectMsgPtr<LocalDepObject> in_dep_object,
       const std::shared_ptr<OutputCriticalSectionPhyInstrOperand>& outputs_critical_section,
+      ObjectMsgPtr<LocalDepObject> out_dep_object,
       const std::shared_ptr<ParameterCriticalSectionPhyInstrOperand>& params_critical_section,
+      ObjectMsgPtr<LocalDepObject> param_dep_object,
       const std::shared_ptr<NcclCriticalSectionPhyInstrOperand>& nccl_critical_section,
-      const std::shared_ptr<NNGraphIf>& nn_graph)
+      ObjectMsgPtr<LocalDepObject> nccl_dep_object, const std::shared_ptr<NNGraphIf>& nn_graph)
       : inputs_critical_section_(inputs_critical_section),
+        in_dep_object_(in_dep_object),
         outputs_critical_section_(outputs_critical_section),
+        out_dep_object_(out_dep_object),
         params_critical_section_(params_critical_section),
+        param_dep_object_(param_dep_object),
         nccl_critical_section_(nccl_critical_section),
+        nccl_dep_object_(nccl_dep_object),
         nn_graph_(nn_graph) {}
 
   const std::shared_ptr<InputCriticalSectionPhyInstrOperand>& inputs_critical_section() const {
@@ -83,9 +91,13 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
 
  private:
   std::shared_ptr<InputCriticalSectionPhyInstrOperand> inputs_critical_section_;
+  mutable ObjectMsgPtr<LocalDepObject> in_dep_object_;
   std::shared_ptr<OutputCriticalSectionPhyInstrOperand> outputs_critical_section_;
+  mutable ObjectMsgPtr<LocalDepObject> out_dep_object_;
   std::shared_ptr<ParameterCriticalSectionPhyInstrOperand> params_critical_section_;
+  mutable ObjectMsgPtr<LocalDepObject> param_dep_object_;
   std::shared_ptr<NcclCriticalSectionPhyInstrOperand> nccl_critical_section_;
+  mutable ObjectMsgPtr<LocalDepObject> nccl_dep_object_;
   std::shared_ptr<NNGraphIf> nn_graph_;
 };
 }  // namespace vm
