@@ -33,6 +33,7 @@ limitations under the License.
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/eager/wait_until_zero_phy_instr_operand.h"
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/consume_local_dep_object_phy_instr_operand.h"
 #include "oneflow/core/vm/release_tensor_arg_phy_instr_operand.h"
@@ -297,6 +298,18 @@ Maybe<vm::NcclCriticalSectionPhyInstrOperand> InstructionsBuilder::MakeNcclCriti
   return operand;
 }
 
+Maybe<ObjectMsgPtr<LocalDepObject>> InstructionsBuilder::WaitUntilZero(
+    const std::shared_ptr<std::atomic<int64_t>>& ref_cnt) {
+  static std::string instr_name("WaitUntilZero");
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
+  const auto& cpu_device = JUST(Device::New("cpu"));
+  const auto& dep_object = JUST(LocalDepObject::New(*cpu_device));
+  const auto& operand = std::make_shared<vm::WaitUntilZeroPhyInstrOperand>(ref_cnt, *dep_object);
+  *instruction->mutable_phy_instr_operand() = operand;
+  instruction_list_->EmplaceBack(std::move(instruction));
+  return dep_object;
+}
+
 Maybe<void> InstructionsBuilder::LaunchLazyJob(const one::EagerBlobObjectListPtr& inputs,
                                                const one::EagerBlobObjectListPtr& outputs,
                                                const one::EagerBlobObjectListPtr& parameters,
@@ -307,9 +320,17 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const one::EagerBlobObjectListPtr
   const auto& out_critical_section = JUST(MakeOutputCriticalSection(outputs, nn_graph));
   const auto& param_critical_section = JUST(MakeParameterCriticalSection(parameters, nn_graph));
   const auto& nccl_critical_section = JUST(MakeNcclCriticalSection());
+  const auto& in_dep_object =
+      JUST(WaitUntilZero(in_critical_section->critical_section_ready_ref_cnt()));
+  const auto& out_dep_object =
+      JUST(WaitUntilZero(out_critical_section->critical_section_ready_ref_cnt()));
+  const auto& param_dep_object =
+      JUST(WaitUntilZero(param_critical_section->critical_section_ready_ref_cnt()));
+  const auto& nccl_dep_object =
+      JUST(WaitUntilZero(nccl_critical_section->critical_section_ready_ref_cnt()));
   *instruction->mutable_phy_instr_operand() = std::make_shared<vm::LaunchLazyJobPhyInstrOperand>(
-      in_critical_section, out_critical_section, param_critical_section, nccl_critical_section,
-      nn_graph);
+      in_critical_section, *in_dep_object, out_critical_section, *out_dep_object,
+      param_critical_section, *param_dep_object, nccl_critical_section, *nccl_dep_object, nn_graph);
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }

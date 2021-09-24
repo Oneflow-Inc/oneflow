@@ -474,6 +474,9 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<NNGraphIf>& nn_graph);
   Maybe<vm::NcclCriticalSectionPhyInstrOperand> MakeNcclCriticalSection();
 
+  Maybe<ObjectMsgPtr<LocalDepObject>> WaitUntilZero(
+      const std::shared_ptr<std::atomic<int64_t>>& ref_cnt);
+
   std::shared_ptr<vm::IdGenerator> id_generator_;
   vm::InstructionMsgList* instruction_list_;
   vm::cfg::EagerSymbolList* eager_symbol_list_;
