@@ -102,6 +102,22 @@ def test_advanced_indexing(test_case, numpy_x):
         )
     )
 
+    # mask tensor index
+    mask = np.random.rand(numpy_x.shape[0], numpy_x.shape[1]).astype(np.float32)
+    y = flow.tensor(mask)
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0.5], x[y > 0.5].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0.5, 1], x[y > 0.5, 1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0], x[y > 0].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0, 1], x[y > 0, 1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 1], x[y > 1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 1, 1], x[y > 1, 1].numpy()))
+
+    mask = np.random.rand(*numpy_x.shape).astype(np.float32)
+    y = flow.tensor(mask)
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0.5], x[y > 0.5].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0], x[y > 0].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 1], x[y > 1].numpy()))
+
 
 def test_combining_indexing(test_case, numpy_x):
     x = flow.tensor(numpy_x)

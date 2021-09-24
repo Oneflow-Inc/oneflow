@@ -78,4 +78,10 @@ class MathUnaryElementwiseGradCpuKernel final : public user_op::OpKernel {
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,
                                  MATH_UNARY_ELEMENTWISE_FUNC_SEQ, FLOATING_DATA_TYPE_SEQ)
 
+// For some special dtype kernel register.
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,
+                                 OF_PP_MAKE_TUPLE_SEQ("abs", Abs), UNSIGNED_INT_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,
+                                 OF_PP_MAKE_TUPLE_SEQ("abs", Abs), INT_DATA_TYPE_SEQ)
+
 }  // namespace oneflow
