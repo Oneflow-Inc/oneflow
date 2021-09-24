@@ -14,12 +14,46 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/functional/tensor_processor.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
 namespace functional {
+
+namespace {
+
+Symbol<DType> ComputeCommonDType(const TensorTuple& tensor_tuple) {
+  Symbol<DType> common_dtype = DType::InvalidDataType();
+  for (auto& tensor_ptr : tensor_tuple) {
+    common_dtype = promoteTypes(tensor_ptr->dtype(), common_dtype);
+  }
+  return common_dtype;
+}
+
+bool CheckHasDifferentInputDType(const TensorTuple& tensor_tuple) {
+  Symbol<DType> common_dtype = DType::InvalidDataType();
+  for (auto& tensor_ptr : tensor_tuple) {
+    if (common_dtype == DType::InvalidDataType()) {
+      common_dtype = tensor_ptr->dtype();  // Initialize the common_dtype_
+    } else {
+      return true;
+    }
+  }
+  return false;
+}
+
+Maybe<void> InsertCast(TensorTuple& tensor_tuple, const Symbol<DType>& common_dtype) {
+  for (auto& tensor_ptr : tensor_tuple) {
+    if (tensor_ptr->dtype() != common_dtype) {
+      tensor_ptr = JUST(functional::Cast(tensor_ptr, common_dtype));
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
 
 TensorProcessor& TensorProcessor::AddInputs(const TensorTuple& init_tensor_or_tuple) {
   tensor_tuple_.insert(tensor_tuple_.end(), init_tensor_or_tuple.begin(),
@@ -36,62 +70,28 @@ TensorProcessor& TensorProcessor::AddInputs(const TensorTuple& init_tensor_or_tu
   return *this;
 }
 
-void TensorProcessor::ComputeCommonDType() {
-  for (auto& tensor_ptr : tensor_tuple_) {
-    common_dtype_ = promoteTypes(tensor_ptr->dtype(), common_dtype_);
-  }
-}
-
-void TensorProcessor::CheckHasDifferentInputDType() {
-  for (auto& tensor_ptr : tensor_tuple_) {
-    if (common_dtype_ == DType::InvalidDataType()) {
-      common_dtype_ = tensor_ptr->dtype();  // Initialize the common_dtype_
-    } else {
-      has_different_input_dtype_ = true;
-      break;  // Just for set the `has_different_input_dtype` flag
-    }
-  }
-}
-
-void TensorProcessor::InferLowestDType() {
-  for (auto& dtype : lowest_dtype_) {
-    if (common_dtype_ == DType::InvalidDataType()) {
-      common_dtype_ = dtype;  // Initialize the common_dtype_
-    } else {
-      common_dtype_ = promoteTypes(dtype, common_dtype_);
-    }
-  }
-}
-
-Maybe<void> TensorProcessor::InsertCast() {
-  for (auto& tensor_ptr : tensor_tuple_) {
-    if (tensor_ptr->dtype() != common_dtype_) {
-      tensor_ptr = JUST(functional::Cast(tensor_ptr, common_dtype_));
-    }
-  }
-  return Maybe<void>::Ok();
-}
-
 TensorProcessor& TensorProcessor::PromoteInputsToCommonDtype(bool is_promote) {
   promote_inputs_to_common_dtype_ = is_promote;
   return *this;
 }
 
 Maybe<void> TensorProcessor::Apply() {
-  if (promote_inputs_to_common_dtype_) { CheckHasDifferentInputDType(); }
-
-  if (has_lowest_dtype_) {
-    InferLowestDType();
-  }  // First Infer the "highest" Dtype from each input's lowest DType.
-
-  // Compute the common dtype and Promote.
-  if ((has_different_input_dtype_ && promote_inputs_to_common_dtype_) || has_lowest_dtype_) {
-    ComputeCommonDType();
-    // If current tensor_dtype != promoted common dtype, we insert a Cast function.
-    JUST(InsertCast());
+  if (promote_inputs_to_common_dtype_) {
+    has_different_input_dtype_ = CheckHasDifferentInputDType(tensor_tuple_);
+    if (has_different_input_dtype_) {
+      common_dtype_ = ComputeCommonDType(tensor_tuple_);
+      InsertCast(tensor_tuple_, common_dtype_);
+    }
+  } else {
+    if (has_lowest_dtype_) {
+      for (int i = 0; i < tensor_tuple_.size(); ++i) {
+        Symbol<DType> curr_dtype = lowest_dtype_.at(i);
+        if (curr_dtype && *curr_dtype > *tensor_tuple_.at(i)->dtype()) {
+          tensor_tuple_.at(i) = JUST(one::functional::Cast(tensor_tuple_.at(i), curr_dtype));
+        }
+      }
+    }
   }
-  // Promote all the inputs to the lowest dtype.
-
   return Maybe<void>::Ok();
 }
 
