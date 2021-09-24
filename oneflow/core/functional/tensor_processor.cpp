@@ -63,20 +63,21 @@ void TensorProcessor::InferLowestDType() {
   }
 }
 
-void TensorProcessor::InsertCast() {
+Maybe<void> TensorProcessor::InsertCast() {
   for (auto& tensor_ptr : tensor_tuple_) {
     if (tensor_ptr->dtype() != common_dtype_) {
-      tensor_ptr = CHECK_JUST(functional::Cast(tensor_ptr, common_dtype_));
+      tensor_ptr = JUST(functional::Cast(tensor_ptr, common_dtype_));
     }
   }
+  return Maybe<void>::Ok();
 }
 
-TensorProcessor& TensorProcessor::promote_inputs_to_common_dtype(bool is_promote) {
+TensorProcessor& TensorProcessor::PromoteInputsToCommonDtype(bool is_promote) {
   promote_inputs_to_common_dtype_ = is_promote;
   return *this;
 }
 
-TensorProcessor& TensorProcessor::Apply() {
+Maybe<TensorProcessor&> TensorProcessor::Apply() {
   if (promote_inputs_to_common_dtype_) { CheckHasDifferentInputDType(); }
 
   if (has_lowest_dtype_) {
@@ -87,7 +88,7 @@ TensorProcessor& TensorProcessor::Apply() {
   if ((has_different_input_dtype_ && promote_inputs_to_common_dtype_) || has_lowest_dtype_) {
     ComputeCommonDType();
     // If current tensor_dtype != promoted common dtype, we insert a Cast function.
-    InsertCast();
+    JUST(InsertCast());
   }
   // Promote all the inputs to the lowest dtype.
 

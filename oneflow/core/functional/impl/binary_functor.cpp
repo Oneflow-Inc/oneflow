@@ -54,7 +54,7 @@ class AddFunctor {
     const OpExpr* op = nullptr;
 
     TensorProcessor tensor_processor;
-    tensor_processor.promote_inputs_to_common_dtype(true).AddInputs({x, y}).Apply();
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
     TensorTuple input_vec = JUST(tensor_processor.GetInputs());
     const std::shared_ptr<one::Tensor>& x_cast = input_vec[0];
     const std::shared_ptr<one::Tensor>& y_cast = input_vec[1];
@@ -103,7 +103,7 @@ class MulFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     TensorProcessor tensor_processor;
-    tensor_processor.promote_inputs_to_common_dtype(true).AddInputs({x, y}).Apply();
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
     TensorTuple input_vec = JUST(tensor_processor.GetInputs());
 
     if (*x->shape() == *y->shape()) { return OpInterpUtil::Dispatch<Tensor>(*mul_op_, input_vec); }
