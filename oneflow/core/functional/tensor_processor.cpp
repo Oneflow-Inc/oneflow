@@ -60,17 +60,17 @@ void TensorProcessor::InsertCast() {
 
 TensorProcessor& TensorProcessor::Apply() {
   if (promote_inputs_to_common_dtype_) { CheckHasDifferentInputDType(); }
+
+  // Initialize common_dtype_ as the lowest_dtype.
+  if (has_lowest_dtype_) { common_dtype_ = lowest_dtype_; }
+
   // Compute the common dtype and Promote.
-  if (has_different_input_dtype_ && promote_inputs_to_common_dtype_) {
+  if ((has_different_input_dtype_ && promote_inputs_to_common_dtype_) || has_lowest_dtype_) {
     ComputeCommonDType();
     // If current tensor_dtype != promoted common dtype, we insert a Cast function.
     InsertCast();
   }
   // Promote all the inputs to the lowest dtype.
-  if (has_lowest_dtype_) {
-    common_dtype_ = lowest_dtype_;
-    InsertCast();
-  }
 
   return *this;
 }
