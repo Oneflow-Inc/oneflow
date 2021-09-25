@@ -4,6 +4,7 @@ gcc --version
 ld --version
 # clean python dir
 cd ${ONEFLOW_CI_SRC_DIR}
+${ONEFLOW_CI_PYTHON_EXE} -m pip install -i https://mirrors.aliyun.com/pypi/simple --user -r ci/fixed-dev-requirements.txt
 cd python
 git clean -nXd -e \!dist -e \!dist/**
 git clean -fXd -e \!dist -e \!dist/**
@@ -18,7 +19,6 @@ if [ ! -f "$ONEFLOW_CI_CMAKE_INIT_CACHE" ]; then
     exit 1
 fi
 cmake -S ${ONEFLOW_CI_SRC_DIR} -C ${ONEFLOW_CI_CMAKE_INIT_CACHE} -DPython3_EXECUTABLE=${ONEFLOW_CI_PYTHON_EXE}
-
 # cmake build
 cd ${ONEFLOW_CI_BUILD_DIR}
 cmake --build . -j $(nproc)

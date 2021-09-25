@@ -8,7 +8,7 @@ cd ${ONEFLOW_CI_SRC_DIR}
 cd python
 git clean -nXd -e \!dist -e \!dist/**
 git clean -fXd -e \!dist -e \!dist/**
-
+${ONEFLOW_CI_PYTHON_EXE} -m pip install -i https://mirrors.aliyun.com/pypi/simple --user -r ci/fixed-dev-requirements.txt
 # cmake config
 mkdir -p ${ONEFLOW_CI_BUILD_DIR}
 cd ${ONEFLOW_CI_BUILD_DIR}
