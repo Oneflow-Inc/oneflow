@@ -80,6 +80,7 @@ if (BUILD_CUDA)
     endif()
   endif()
   message(STATUS "VENDOR_CUDA_LIBRARIES: ${VENDOR_CUDA_LIBRARIES}")
+  # add a cache entry if want to use a ccache/sccache wrapped nvcc
   set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE} CACHE STRING "")
   message(STATUS "CMAKE_CUDA_COMPILER: ${CMAKE_CUDA_COMPILER}")
   set(CMAKE_CUDA_STANDARD 11)
