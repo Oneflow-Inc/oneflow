@@ -146,14 +146,14 @@ foreach(oneflow_single_file ${oneflow_all_src})
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.cuh$")
     if(BUILD_CUDA)
-      list(APPEND of_cuda_src ${oneflow_single_file})
+      list(APPEND of_all_obj_cc ${oneflow_single_file})
     endif()
     set(group_this ON)
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.cu$")
     if(BUILD_CUDA)
-      list(APPEND of_cuda_src ${oneflow_single_file})
+      list(APPEND of_all_obj_cc ${oneflow_single_file})
     endif()
     set(group_this ON)
   endif()
@@ -294,17 +294,6 @@ set(PYBIND11_SRCS
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
 
-if(BUILD_CUDA)
-  oneflow_add_library(of_cudaobj ${of_cuda_src})
-  add_dependencies(of_cudaobj of_protoobj of_cfgobj of_functional_obj)
-  target_link_libraries(of_cudaobj ${oneflow_third_party_libs})
-  set(ONEFLOW_CUDA_LIBS of_cudaobj)
-
-  target_compile_options(of_cudaobj PRIVATE -Xcompiler -Werror=return-type)
-  # remove THRUST_IGNORE_CUB_VERSION_CHECK if starting using bundled cub
-  target_compile_definitions(of_cudaobj PRIVATE THRUST_IGNORE_CUB_VERSION_CHECK)
-endif()
-
 # cc obj lib
 oneflow_add_library(of_ccobj ${of_all_obj_cc})
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
@@ -319,7 +308,18 @@ if (USE_CLANG_TIDY)
   add_dependencies(of_ccobj of_tidy)
 endif()
 
-target_link_libraries(of_ccobj of_protoobj of_cfgobj of_functional_obj ${ONEFLOW_CUDA_LIBS} glog_imported)
+if(BUILD_CUDA)
+  target_compile_options(of_ccobj PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+    -Xcompiler;
+    -Werror=return-type;
+  >)
+  # remove THRUST_IGNORE_CUB_VERSION_CHECK if starting using bundled cub
+  target_compile_definitions(of_ccobj PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+  THRUST_IGNORE_CUB_VERSION_CHECK;
+  >)
+endif()
+
+target_link_libraries(of_ccobj of_protoobj of_cfgobj of_functional_obj glog_imported)
 
 target_compile_options(of_ccobj PRIVATE -Werror=return-type)
 target_treat_warnings_as_errors(of_ccobj)
@@ -348,7 +348,7 @@ endif()
 if(APPLE)
   set(of_libs -Wl,-force_load of_ccobj of_protoobj of_cfgobj of_functional_obj ${ONEFLOW_MLIR_LIBS})
 elseif(UNIX)
-  set(of_libs -Wl,--whole-archive ${ONEFLOW_CUDA_LIBS} of_ccobj of_protoobj of_cfgobj of_functional_obj ${ONEFLOW_MLIR_LIBS} -Wl,--no-whole-archive -ldl -lrt)
+  set(of_libs -Wl,--whole-archive of_ccobj of_protoobj of_cfgobj of_functional_obj ${ONEFLOW_MLIR_LIBS} -Wl,--no-whole-archive -ldl -lrt)
 elseif(WIN32)
   set(of_libs of_ccobj of_protoobj of_cfgobj of_functional_obj)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj")

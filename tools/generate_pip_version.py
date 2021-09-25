@@ -29,8 +29,10 @@ elif os.getenv("ONEFLOW_RELEASE_NIGHTLY"):
 # append compute_platform
 compute_platform = ""
 if args.cuda:
-    compute_platform = "".join(args.cuda.split("."))
-    assert len(compute_platform) == 3, compute_platform
+    # TODO: use a proper semver lib to handle versions
+    splits = args.cuda.split(".")[0:2]
+    assert len(splits) == 2
+    compute_platform = "".join(splits)
     compute_platform = "cu" + compute_platform
 else:
     compute_platform = "cpu"
