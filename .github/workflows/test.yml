@@ -704,3 +704,12 @@ jobs:
               repo: context.repo.repo,
               body: 'CI failed, removing label automerge'
             })
+
+  test-success:
+    name: Test suite success
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Do nothing
+        run: |
+          echo success
