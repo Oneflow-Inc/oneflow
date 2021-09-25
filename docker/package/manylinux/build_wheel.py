@@ -480,7 +480,7 @@ if __name__ == "__main__":
             extra_docker_args = args.extra_docker_args
             if "--name" not in extra_docker_args:
                 extra_docker_args += (
-                    f" --name run-by-{getpass.getuser()}-{str(uuid.uuid4())}"
+                    f" --name manylinux-build-run-by-{getpass.getuser()}"
                 )
             user_img_tag = f"{img_prefix}:{user}"
             inc_img_tag = f"oneflowinc/{versioned_img_tag}"
