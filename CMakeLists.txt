@@ -1,5 +1,5 @@
 # Minimum CMake required
-cmake_minimum_required(VERSION 3.14.0)
+cmake_minimum_required(VERSION 3.18.0)
 
 if (NOT CMAKE_BUILD_TYPE)
   message(STATUS "No build type selected, default to Release")
@@ -174,41 +174,35 @@ if (BUILD_CUDA)
     set(CUDA_NVCC_THREADS_NUMBER "1" CACHE STRING "")
     list(APPEND CUDA_NVCC_FLAGS -t ${CUDA_NVCC_THREADS_NUMBER})
   endif()
-  #  half is not fully supported when __CUDA_ARCH__ < 530
-  #  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_30,code=sm_30")
-  #  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_52,code=sm_52")
-  # cubin
-  # Tesla P100
-  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_60,code=sm_60")
-  # Tesla P40/P4, Quadro Pxxx/Pxxxx, GeForce GTX 10xx, TITAN X/Xp
-  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_61,code=sm_61")
-  # V100, TITAN V
-  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_70,code=sm_70")
-  if(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
-    # T4, Quadro RTX xxxx, Txxxx, Geforce RTX 20xx, TITAN RTX
-    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_75,code=sm_75")
+  # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags
+  if(NOT DEFINED CUDA_ARCHITECTURES)
+    if(CUDA_VERSION VERSION_LESS "11.4") # too large binary might lead to failure
+      list(APPEND CUDA_ARCHITECTURES 60-real)
+      # Tesla P40/P4, Quadro Pxxx/Pxxxx, GeForce GTX 10xx, TITAN X/Xp
+      list(APPEND CUDA_ARCHITECTURES 61-real)
+      # V100, TITAN V
+      list(APPEND CUDA_ARCHITECTURES 70-real)
+    endif()
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
+      # T4, Quadro RTX xxxx, Txxxx, Geforce RTX 20xx, TITAN RTX
+      list(APPEND CUDA_ARCHITECTURES 75-real)
+    endif()
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
+      # A100
+      list(APPEND CUDA_ARCHITECTURES 80-real)
+    endif()
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.1")
+      # GeForce RTX 30xx
+      list(APPEND CUDA_ARCHITECTURES 86-real)
+    endif()
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
+      list(APPEND CUDA_ARCHITECTURES 80-virtual)
+    elseif(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
+      list(APPEND CUDA_ARCHITECTURES 75-virtual)
+    else()
+      list(APPEND CUDA_ARCHITECTURES 70-virtual)
+    endif()
   endif()
-  if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
-    # A100
-    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_80,code=sm_80")
-  endif()
-  if(CUDA_VERSION VERSION_GREATER_EQUAL "11.1")
-    # GeForce RTX 30xx
-    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_86,code=sm_86")
-  endif()
-  if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
-    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_80,code=compute_80")
-  elseif(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
-    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_75,code=compute_75")
-  else()
-    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_70,code=compute_70")
-  endif()
-  if(NOT DEFINED CUDA_NVCC_GENCODES)
-    set(CUDA_NVCC_GENCODES ${DEFAULT_CUDA_NVCC_GENCODES})
-  endif()
-  foreach(CUDA_NVCC_GENCODE ${CUDA_NVCC_GENCODES})
-    list(APPEND CUDA_NVCC_FLAGS -gencode ${CUDA_NVCC_GENCODE})
-  endforeach()
   message(STATUS "CUDA_NVCC_FLAGS: " ${CUDA_NVCC_FLAGS})
   list(JOIN CUDA_NVCC_FLAGS " " CMAKE_CUDA_FLAGS)
 endif()
