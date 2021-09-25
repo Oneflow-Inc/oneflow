@@ -164,7 +164,6 @@ if (BUILD_CUDA)
   enable_language(CUDA)
   include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
   message(STATUS "CUDA_VERSION: ${CUDA_VERSION}")
-  message(STATUS "CUDA_TOOLKIT_ROOT_DIR: ${CUDA_TOOLKIT_ROOT_DIR}")
   set(CUDA_SEPARABLE_COMPILATION OFF)
 
   list(APPEND CUDA_NVCC_FLAGS -Werror cross-execution-space-call -Wno-deprecated-gpu-targets)
