@@ -110,8 +110,8 @@ async def create_remote_workspace_dir(
 def get_docker_cache_args():
     return " ".join(
         [
-            f"-v {os.path.join(Path.home(), 'test-container-cache/dot-local')}:/root/.local",
-            f"-v {os.path.join(Path.home(), 'test-container-cache/dot-cache')}:/root/.cache",
+            f"-v {Path.home() / 'test-container-cache/dot-local'}:/root/.local",
+            f"-v {Path.home() / 'test-container-cache/dot-cache'}:/root/.cache",
         ]
     )
 
