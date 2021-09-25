@@ -161,10 +161,39 @@ set(ONEFLOW_INCLUDE_DIR "${ONEFLOW_PYTHON_DIR}/oneflow/include")
 include(third_party)
 
 if (BUILD_CUDA)
+  # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags
+  if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+    if(CUDA_VERSION VERSION_LESS "11.4") # too large binary might lead to failure
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 60-real)
+      # Tesla P40/P4, Quadro Pxxx/Pxxxx, GeForce GTX 10xx, TITAN X/Xp
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 61-real)
+      # V100, TITAN V
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 70-real)
+    endif()
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
+      # T4, Quadro RTX xxxx, Txxxx, Geforce RTX 20xx, TITAN RTX
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 75-real)
+    endif()
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
+      # A100
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 80-real)
+    endif()
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.1")
+      # GeForce RTX 30xx
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 86-real)
+    endif()
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 80-virtual)
+    elseif(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 75-virtual)
+    else()
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 70-virtual)
+    endif()
+  endif()
   enable_language(CUDA)
   include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
   message(STATUS "CUDA_VERSION: ${CUDA_VERSION}")
-  message(STATUS "CUDA_TOOLKIT_ROOT_DIR: ${CUDA_TOOLKIT_ROOT_DIR}")
+  message(STATUS "CMAKE_CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
   set(CUDA_SEPARABLE_COMPILATION OFF)
 
   list(APPEND CUDA_NVCC_FLAGS -Werror cross-execution-space-call -Wno-deprecated-gpu-targets)
@@ -173,35 +202,6 @@ if (BUILD_CUDA)
     list(APPEND CUDA_NVCC_FLAGS --display-error-number --diag-suppress 177)
     set(CUDA_NVCC_THREADS_NUMBER "1" CACHE STRING "")
     list(APPEND CUDA_NVCC_FLAGS -t ${CUDA_NVCC_THREADS_NUMBER})
-  endif()
-  # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags
-  if(NOT DEFINED CUDA_ARCHITECTURES)
-    if(CUDA_VERSION VERSION_LESS "11.4") # too large binary might lead to failure
-      list(APPEND CUDA_ARCHITECTURES 60-real)
-      # Tesla P40/P4, Quadro Pxxx/Pxxxx, GeForce GTX 10xx, TITAN X/Xp
-      list(APPEND CUDA_ARCHITECTURES 61-real)
-      # V100, TITAN V
-      list(APPEND CUDA_ARCHITECTURES 70-real)
-    endif()
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
-      # T4, Quadro RTX xxxx, Txxxx, Geforce RTX 20xx, TITAN RTX
-      list(APPEND CUDA_ARCHITECTURES 75-real)
-    endif()
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
-      # A100
-      list(APPEND CUDA_ARCHITECTURES 80-real)
-    endif()
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.1")
-      # GeForce RTX 30xx
-      list(APPEND CUDA_ARCHITECTURES 86-real)
-    endif()
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
-      list(APPEND CUDA_ARCHITECTURES 80-virtual)
-    elseif(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
-      list(APPEND CUDA_ARCHITECTURES 75-virtual)
-    else()
-      list(APPEND CUDA_ARCHITECTURES 70-virtual)
-    endif()
   endif()
   message(STATUS "CUDA_NVCC_FLAGS: " ${CUDA_NVCC_FLAGS})
   list(JOIN CUDA_NVCC_FLAGS " " CMAKE_CUDA_FLAGS)
