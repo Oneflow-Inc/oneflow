@@ -368,6 +368,9 @@ if __name__ == "__main__":
         "--custom_img_tag", type=str, required=False, default=None,
     )
     parser.add_argument(
+        "--container_name", type=str, required=False, default=None,
+    )
+    parser.add_argument(
         "--cache_dir", type=str, required=False, default=None,
     )
     default_wheel_house_dir = os.path.join(os.getcwd(), "wheelhouse")
@@ -478,10 +481,13 @@ if __name__ == "__main__":
                     ' -DBAZEL_ENV_ARGS="BAZEL_LINKLIBS=-l%:libstdc++.a"'
                 )
             extra_docker_args = args.extra_docker_args
-            if "--name" not in extra_docker_args:
-                extra_docker_args += (
-                    f" --name manylinux-build-run-by-{getpass.getuser()}"
-                )
+            if not args.container_name:
+                args.container_name = f"manylinux-build-run-by-{getpass.getuser()}"
+            assert args.container_name
+            subprocess.call(
+                f"docker rm -f {args.container_name}", shell=True,
+            )
+            extra_docker_args += f" --name {args.container_name}"
             user_img_tag = f"{img_prefix}:{user}"
             inc_img_tag = f"oneflowinc/{versioned_img_tag}"
             img_tag = inc_img_tag
