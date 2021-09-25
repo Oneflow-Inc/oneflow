@@ -19,23 +19,13 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-namespace {
-
-Maybe<ObjectMsgPtr<LocalDepObject>> RawGetLocalDepObject(const std::string& type) {
-  const auto& device = JUST(Device::New(type));
-  return LocalDepObject::New(*device);
-}
-
-}  // namespace
-
-static constexpr auto* GetLocalDepObject = DECORATE(&RawGetLocalDepObject, ThreadLocalCopiable);
-
 void LaunchLazyJobPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
     const {
-  auto dep_object = *CHECK_JUST(GetLocalDepObject("cpu"));
-  DoEach(nullptr, dep_object->mut_mirrored_object());
-  // lifetime of parameters are managed by params_critical_section_ and nccl_critical_section_.
+  DoEach(nullptr, in_dep_object_->mut_mirrored_object());
+  DoEach(nullptr, out_dep_object_->mut_mirrored_object());
+  DoEach(nullptr, param_dep_object_->mut_mirrored_object());
+  DoEach(nullptr, nccl_dep_object_->mut_mirrored_object());
 }
 
 }  // namespace vm

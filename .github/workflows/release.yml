@@ -115,6 +115,7 @@ jobs:
           fi
           extra_flags+=" --extra_oneflow_cmake_args=-DBUILD_PROFILER=OFF"
           extra_flags+=" --extra_oneflow_cmake_args=-DTREAT_WARNINGS_AS_ERRORS=OFF"
+          extra_flags+=" --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple"
           echo "cuda_version=${cuda_version}" >> $GITHUB_ENV
           echo "python_version=${python_version}" >> $GITHUB_ENV
           echo "compute_platforms=${compute_platforms}" >> $GITHUB_ENV
