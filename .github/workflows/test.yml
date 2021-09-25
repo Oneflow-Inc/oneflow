@@ -161,7 +161,7 @@ jobs:
         with:
           repository: Oneflow-Inc/oneflow
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@2fded7fea5aa2a9d34441a56ac001e57635e0013
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@4417f492e7e95b469e5f2abcf12669621443a47d
         name: find cache
         id: find-cache
         with:
@@ -205,7 +205,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@2fded7fea5aa2a9d34441a56ac001e57635e0013
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@4417f492e7e95b469e5f2abcf12669621443a47d
         name: Save cache if successful
         id: save-cache
         with:
@@ -218,7 +218,7 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
-      - uses: Oneflow-Inc/get-oneflow@2fded7fea5aa2a9d34441a56ac001e57635e0013
+      - uses: Oneflow-Inc/get-oneflow@4417f492e7e95b469e5f2abcf12669621443a47d
         name: Build manylinux cpu only
         id: build-cpu
         if: ${{ matrix.entry =='cpu' && !matrix.cache-hit }}
@@ -238,7 +238,7 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@2fded7fea5aa2a9d34441a56ac001e57635e0013
+      - uses: Oneflow-Inc/get-oneflow@4417f492e7e95b469e5f2abcf12669621443a47d
         name: Build manylinux cu102
         id: build-cuda
         if: ${{ matrix.entry =='cu102' && !matrix.cache-hit }}
@@ -258,7 +258,7 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@2fded7fea5aa2a9d34441a56ac001e57635e0013
+      - uses: Oneflow-Inc/get-oneflow@4417f492e7e95b469e5f2abcf12669621443a47d
         name: Build manylinux cu101_xla
         id: build-xla
         if: ${{ matrix.entry =='cu101_xla' && !matrix.cache-hit && needs.changed_files.outputs.should_run_single_client_tests == '1' }}
@@ -279,7 +279,7 @@ jobs:
             3.6
       - name: Upload bin
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
-        uses: Oneflow-Inc/get-oneflow/degist/upload@2fded7fea5aa2a9d34441a56ac001e57635e0013
+        uses: Oneflow-Inc/get-oneflow/degist/upload@4417f492e7e95b469e5f2abcf12669621443a47d
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
           entry: ${{ matrix.entry }}
@@ -289,7 +289,7 @@ jobs:
           dst-dir: bin
       - name: Upload whl
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
-        uses: Oneflow-Inc/get-oneflow/degist/upload@2fded7fea5aa2a9d34441a56ac001e57635e0013
+        uses: Oneflow-Inc/get-oneflow/degist/upload@4417f492e7e95b469e5f2abcf12669621443a47d
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
           entry: ${{ matrix.entry }}
@@ -311,7 +311,7 @@ jobs:
     steps:
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@2fded7fea5aa2a9d34441a56ac001e57635e0013
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@4417f492e7e95b469e5f2abcf12669621443a47d
         name: find cache
         id: find-cache
         with:
@@ -353,7 +353,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@2fded7fea5aa2a9d34441a56ac001e57635e0013
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@4417f492e7e95b469e5f2abcf12669621443a47d
         name: Save cache if successful
         id: save-cache
         with:
@@ -367,8 +367,8 @@ jobs:
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
       - name: Download wheel and binary
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/degist/download@2fded7fea5aa2a9d34441a56ac001e57635e0013
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (!fromJson(matrix.is-xla) || (fromJson(matrix.is-xla) && needs.changed_files.outputs.should_run_single_client_tests == '1')) }}
+        uses: Oneflow-Inc/get-oneflow/degist/download@4417f492e7e95b469e5f2abcf12669621443a47d
         id: download-digest
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -427,13 +427,13 @@ jobs:
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} ls
       - name: Install OneFlow
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (!fromJson(matrix.is-xla) || (fromJson(matrix.is-xla) && needs.changed_files.outputs.should_run_single_client_tests == '1')) }}
         run: |
           ls ${ONEFLOW_WHEEL_PATH}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install --find-links=${ONEFLOW_WHEEL_PATH} oneflow
       - name: Run OneFlow doctor
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (!fromJson(matrix.is-xla) || (fromJson(matrix.is-xla) && needs.changed_files.outputs.should_run_single_client_tests == '1')) }}
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} python3 -m oneflow --doctor
       - name: Exe test
@@ -704,12 +704,3 @@ jobs:
               repo: context.repo.repo,
               body: 'CI failed, removing label automerge'
             })
-
-  test-success:
-    name: Test suite success
-    needs: [test]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Do nothing
-        run: |
-          echo success
