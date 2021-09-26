@@ -69,10 +69,10 @@ class AddFunctor {
       JUST(CheckShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x_cast;
-      JUST(OpInterpUtil::Dispatch(*op, {x_cast, y_cast}, outputs.get()));
+      JUST(OpInterpUtil::Dispatch(*op, input_vec, outputs.get()));
       return outputs->at(0);
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op, {x_cast, y_cast});
+    return OpInterpUtil::Dispatch<Tensor>(*op, input_vec);
   }
 
  private:
