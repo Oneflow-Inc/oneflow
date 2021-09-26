@@ -28,9 +28,7 @@ class TensorProcessor final {
  public:
   TensorProcessor()
       : common_dtype_(DType::InvalidDataType()),
-        has_different_input_dtype_(false),
-        promote_inputs_to_common_dtype_(false),
-        has_lowest_dtype_(false){};
+        promote_inputs_to_common_dtype_(false){};
   TensorProcessor& AddInputs(const TensorTuple& init_list);
   TensorProcessor& AddInputs(const TensorTuple& init_list, Symbol<DType> lowest_dtype);
 
@@ -43,9 +41,7 @@ class TensorProcessor final {
   Symbol<DType> common_dtype_;
   std::vector<Symbol<DType>> lowest_dtype_;
 
-  bool has_different_input_dtype_;
   bool promote_inputs_to_common_dtype_;
-  bool has_lowest_dtype_;
 };
 
 }  // namespace functional
