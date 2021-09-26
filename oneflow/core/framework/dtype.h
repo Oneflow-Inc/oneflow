@@ -45,8 +45,6 @@ class DType final {
   ~DType() = default;
 
   bool operator==(const DType& other) const { return this->data_type() == other.data_type(); }
-  bool operator>(const DType& other) const { return this->data_type() > other.data_type(); }
-  bool operator<(const DType& other) const { return this->data_type() < other.data_type(); }
 
   DataType data_type() const { return data_type_; }
   bool is_signed() const;
