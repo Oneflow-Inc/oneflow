@@ -40,6 +40,8 @@ def flip_op(input, dims):
         
         >>> np_arr = np.arange(0, 8).reshape((2, 2, 2)).astype(np.float32)
         >>> input = flow.Tensor(np_arr)
+        >>> input.shape
+        oneflow.Size([2, 2, 2])
         >>> out = flow.flip(input, [0, 1])
         >>> out
         tensor([[[6., 7.],
