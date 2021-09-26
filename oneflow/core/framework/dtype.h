@@ -99,7 +99,7 @@ static inline Symbol<DType> promoteTypes(const Symbol<DType> a, const Symbol<DTy
     iv < u1 < c1 < i2 < i4 < i8 < f2 < f4 < f8 < bf < re < bu.
 
     The new DataType should be add in the end of proto, and the Loopup table should be maintained as
-    right priority (author:zzk).
+    right priority (author:zhengzekang).
   */
   static const Symbol<DType> _promoteTypesLookup[DType::dtype_num][DType::dtype_num] = {
       /*         iv  c1  f4  f8  i2  i4  i8  u1  re  f2  bu  bf*/
