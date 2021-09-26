@@ -76,7 +76,7 @@ def test(test_case):
         ]
     )
 
-    train_epoch = 10
+    train_epoch = 1
     batch_size = 4
     num_workers = 0
     data_dir = os.path.join(
