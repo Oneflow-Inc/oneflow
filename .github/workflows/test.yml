@@ -533,7 +533,7 @@ jobs:
         run: |
           python3 ci/test/distributed_run.py --bash_script ci/test/2node_op_test_multi_client.sh --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/ --custom_img_tag=${{ env.TEST_IMG_TAG }} --oneflow_wheel_path=${{ env.ONEFLOW_WHEEL_PATH }} --oneflow_wheel_python_version=3.7
       - name: Upload log (distributed test)
-        if: ${{ always() && (steps.distributed_try_3.outcome=='failure' || steps.new_interface_distributed_try_3.outcome=='failure') }}
+        if: ${{ always() && (steps.distributed_try_3.outcome=='failure' || steps.new_interface_distributed_try_3.outcome=='failure') && github.event.pull_request.head.repo.full_name == github.repository }}
         uses: ./.github/actions/upload_oss
         with:
           src_path: distributed-tmp
