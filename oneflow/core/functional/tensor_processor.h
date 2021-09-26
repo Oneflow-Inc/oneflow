@@ -27,8 +27,7 @@ namespace functional {
 class TensorProcessor final {
  public:
   TensorProcessor()
-      : common_dtype_(DType::InvalidDataType()),
-        promote_inputs_to_common_dtype_(false){};
+      : common_dtype_(DType::InvalidDataType()), promote_inputs_to_common_dtype_(false){};
   TensorProcessor& AddInputs(const TensorTuple& init_list);
   TensorProcessor& AddInputs(const TensorTuple& init_list, Symbol<DType> lowest_dtype);
 

@@ -100,6 +100,15 @@ bool DType::is_signed() const { return CHECK_JUST(DTypeMeta4DataType(data_type_)
 
 bool DType::is_complex() const { return CHECK_JUST(DTypeMeta4DataType(data_type_)).is_complex(); }
 
+/*
+  The order of datatype is:
+  iv   c1   f4   f8   i2   i4   i8   u1   re   f2   bu   bf
+  The priority order of datatype is:
+  0    1    2    3    4    5    6    7    8    9    10   11
+  iv < u1 < c1 < i2 < i4 c< i8 < f2 < f4 < f8 < bf < re < bu.
+*/
+const int DType::priority_order[DType::dtype_num] = {0, 2, 7, 8, 3, 4, 5, 1, 10, 6, 11, 9};
+
 bool DType::is_floating_point() const {
   return CHECK_JUST(DTypeMeta4DataType(data_type_)).is_floating_point();
 }

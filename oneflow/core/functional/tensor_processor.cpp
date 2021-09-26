@@ -78,16 +78,19 @@ Maybe<void> TensorProcessor::Apply() {
   if (promote_inputs_to_common_dtype_) {
     bool has_different_input_dtype = CheckHasDifferentInputDType(tensor_tuple_);
     if (has_different_input_dtype) {
-      // Cast all the inputs to common_dtype if the input tensor dtype is lower than common_dtype. 
+      // Cast all the inputs to common_dtype if the input tensor dtype is lower than common_dtype.
       common_dtype_ = ComputeCommonDType(tensor_tuple_);
       InsertCast(tensor_tuple_, common_dtype_);
     }
   } else {
     for (int i = 0; i < tensor_tuple_.size(); ++i) {
-      // Cast all the inputs to it's attribute `lowest_dtype` if the input tensor dtype is lower than attribute `lowest_dtype`. 
+      // Cast all the inputs to it's attribute `lowest_dtype` if the input tensor dtype is lower
+      // than attribute `lowest_dtype`.
       Symbol<DType> curr_dtype = lowest_dtype_.at(i);
-      if (curr_dtype && *curr_dtype > *tensor_tuple_.at(i)->dtype()) {
-        tensor_tuple_.at(i) = JUST(one::functional::Cast(tensor_tuple_.at(i), curr_dtype)); 
+      if (curr_dtype
+          && DType::priority_order[curr_dtype->data_type()]
+                 > DType::priority_order[tensor_tuple_.at(i)->dtype()->data_type()]) {
+        tensor_tuple_.at(i) = JUST(one::functional::Cast(tensor_tuple_.at(i), curr_dtype));
       }
     }
   }

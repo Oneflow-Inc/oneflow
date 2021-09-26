@@ -34,6 +34,7 @@ class BinaryFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     TensorProcessor tensor_processor;
+    printf("Enter binary functor!");
     JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple);

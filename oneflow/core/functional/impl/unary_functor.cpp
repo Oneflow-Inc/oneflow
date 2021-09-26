@@ -60,7 +60,7 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("square", Square)                     \
   OF_PP_MAKE_TUPLE_SEQ("tan", Tan)
 
-#define FLOAT_UNARY_FUNC_SEQ      \
+#define FLOAT_UNARY_FUNC_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ("sigmoid_v2", Sigmoid) \
   OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)
 
