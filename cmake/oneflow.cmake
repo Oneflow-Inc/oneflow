@@ -19,7 +19,7 @@ function(target_try_compile_option target flag)
     check_cxx_compiler_flag(${checkedFlag} ${varName}_SUPPORTED)
   endif()
   if (${varName}_SUPPORTED)
-    target_compile_options(${target} PRIVATE ${flag})
+    target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${flag}>)
   endif ()
 endfunction()
 
@@ -31,7 +31,7 @@ endfunction()
 
 function(target_treat_warnings_as_errors target)
   if (TREAT_WARNINGS_AS_ERRORS)
-    target_compile_options(${target} PRIVATE -Werror)
+    target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror>)
 
     # TODO: remove it while fixing all deprecated call
     target_try_compile_options(${target} -Wno-error=deprecated-declarations)
@@ -310,20 +310,22 @@ endif()
 
 if(BUILD_CUDA)
   target_compile_options(of_ccobj PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
-    -Xcompiler;
-    -Werror=return-type;
+    -Xcompiler -Werror=return-type;
+    -Werror cross-execution-space-call;
+    -Wno-deprecated-gpu-targets;
+    -Xcudafe --diag_suppress=declared_but_not_referenced;
   >)
   # remove THRUST_IGNORE_CUB_VERSION_CHECK if starting using bundled cub
   target_compile_definitions(of_ccobj PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
-  THRUST_IGNORE_CUB_VERSION_CHECK;
+    THRUST_IGNORE_CUB_VERSION_CHECK;
   >)
 endif()
 
 target_link_libraries(of_ccobj of_protoobj of_cfgobj of_functional_obj glog_imported)
 
-target_compile_options(of_ccobj PRIVATE -Werror=return-type)
+target_compile_options(of_ccobj PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror=return-type>)
 target_treat_warnings_as_errors(of_ccobj)
-target_compile_options(of_ccobj PRIVATE -DGOOGLE_LOGGING)
+target_compile_definitions(of_ccobj PRIVATE GOOGLE_LOGGING)
 
 # py ext lib
 add_library(of_pyext_obj ${of_pyext_obj_cc})
