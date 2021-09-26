@@ -108,7 +108,18 @@ bool DType::is_complex() const { return CHECK_JUST(DTypeMeta4DataType(data_type_
   0    1    2    3    4    5    6    7    8    9    10   11
   iv < u1 < c1 < i1 < i4 < i8 < f2 < f4 < f8 < bf < re < bu.
 */
-const int DType::priority_order[DataType::kMaxDataType] = {0, 2, 7, 8, 3, 4, 5, 1, 10, 6, 11, 9};
+const int DType::priority_order[DataType::kMaxDataType] = {0,  /*kInvalid*/
+                                                           2,  /*kChar*/
+                                                           7,  /*kFloat32*/
+                                                           8,  /*kDouble*/
+                                                           3,  /*kInt8*/
+                                                           4,  /*kInt32*/
+                                                           5,  /*kInt64*/
+                                                           1,  /*kUInt8*/
+                                                           10, /*kOFRecord*/
+                                                           6,  /*kFloat16*/
+                                                           11, /*kTensorBuffer*/
+                                                           9 /*kBFloat16*/};
 
 bool DType::is_floating_point() const {
   return CHECK_JUST(DTypeMeta4DataType(data_type_)).is_floating_point();

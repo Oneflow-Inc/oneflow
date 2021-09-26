@@ -64,7 +64,7 @@ class DType final {
   DataType data_type_;
 };
 
-Symbol<DType> promoteTypes(const Symbol<DType> a, const Symbol<DType> b); 
+Symbol<DType> promoteTypes(const Symbol<DType> a, const Symbol<DType> b);
 
 }  // namespace oneflow
 
