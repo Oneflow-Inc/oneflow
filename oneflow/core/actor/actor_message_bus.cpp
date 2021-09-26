@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/actor/actor_message_bus.h"
+#include <cstddef>
 #include <memory>
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -29,6 +30,8 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
   if (dst_machine_id == GlobalProcessCtx::Rank()) {
     SendMsgWithoutCommNet(msg);
   } else {
+    std::function<void(void * , size_t)> cb = std::bind(&ActorMsgBus::HandleRecvData,this,std::placeholders::_1,std::placeholders::_2);
+    Global<CommNet>::Get()->RegisterMsgCallback(cb);
     if (msg.IsDataRegstMsgToConsumer()) {
       int64_t comm_net_sequence;
       {
@@ -48,13 +51,11 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       free(serial_data);
       size_t msg_size = sizeof(new_msg);
       uint64_t addr = reinterpret_cast<uint64_t>(&new_msg);
-      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, msg_size);;
-      Global<CommNet>::Get()->RegisterMsgCallback(std::bind(&ActorMsgBus::HandleRecvData,this,std::placeholders::_1,std::placeholders::_2));
+      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, msg_size);
     } else {
       uint64_t addr = reinterpret_cast<uint64_t>(&msg);
       size_t msg_size = sizeof(msg);
       Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, msg_size);
-      Global<CommNet>::Get()->RegisterMsgCallback(std::bind(&ActorMsgBus::HandleRecvData,this,std::placeholders::_1,std::placeholders::_2));
     }
   }
 }

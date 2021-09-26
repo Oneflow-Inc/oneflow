@@ -91,7 +91,6 @@ void IBVerbsCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size)
 }
 
 void IBVerbsCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size,const DataHandle & cb){
-  //cb_ =  Global<ActorMsgBus>::Get()->HandleRecvData;
   char* data = reinterpret_cast<char*>(addr);
   qp_vec_.at(dst_machine_id)->PostSendRequest(data, size);
 }
