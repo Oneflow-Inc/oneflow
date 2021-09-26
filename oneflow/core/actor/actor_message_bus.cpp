@@ -30,8 +30,10 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
   if (dst_machine_id == GlobalProcessCtx::Rank()) {
     SendMsgWithoutCommNet(msg);
   } else {
-    std::function<void(void * , size_t)> cb = std::bind(&ActorMsgBus::HandleRecvData,this,std::placeholders::_1,std::placeholders::_2);
-    Global<CommNet>::Get()->RegisterMsgCallback(cb);
+    auto msgHandle = [this] (void *data,size_t size) {
+      HandleRecvData(data, size);
+    };
+    Global<CommNet>::Get()->RegisterMsgCallback(msgHandle);
     if (msg.IsDataRegstMsgToConsumer()) {
       int64_t comm_net_sequence;
       {
