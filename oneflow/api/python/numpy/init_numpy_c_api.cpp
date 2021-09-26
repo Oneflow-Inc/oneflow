@@ -13,18 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_REGISTRY_ERROR_H
-#define ONEFLOW_CORE_COMMON_REGISTRY_ERROR_H
 
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/extension/python/numpy.h"
 
-namespace oneflow {
+namespace py = pybind11;
 
-// Note: there is a time interval between catching error and reporting an error,
-// any error occur in this interval can't be displayed.
-Maybe<void> CheckAndClearRegistryFlag();
-void CatchRegistryError(const std::function<Maybe<void>()>&);
-
-}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_COMMON_REGISTRY_ERROR_H
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  m.def("InitNumpyCAPI", []() { return oneflow::numpy::InitNumpyCAPI().GetOrThrow(); });
+}
