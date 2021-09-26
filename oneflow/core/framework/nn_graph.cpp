@@ -55,6 +55,7 @@ Maybe<std::string> GetTensorMetaString(const std::shared_ptr<one::Tensor>& tenso
   std::string ret = "shape=" + tensor->shape()->ToString() + ", dtype=" + tensor->dtype()->name();
   if (tensor->is_consistent()) {
     ret += ", placement=" + *JUST(PlacementToString(JUST(tensor->parallel_desc())));
+    ret += ", nd_sbp=" + *JUST(NdSbpToString(JUST(tensor->nd_sbp())));
   } else {
     ret += ", device=" + JUST(tensor->device())->ToString();
   }
