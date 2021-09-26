@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/communicate_util.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
@@ -120,7 +121,7 @@ class EagerPToBKernel final : public user_op::OpKernel {
 
 REGISTER_EAGER_P_TO_B_KERNEL(float, DeviceType::kCPU)
 REGISTER_EAGER_P_TO_B_KERNEL(double, DeviceType::kCPU)
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+#if defined(WITH_CUDA) && HAS_GPU_SEND_RECV
 REGISTER_EAGER_P_TO_B_KERNEL(float16, DeviceType::kGPU)
 REGISTER_EAGER_P_TO_B_KERNEL(float, DeviceType::kGPU)
 REGISTER_EAGER_P_TO_B_KERNEL(double, DeviceType::kGPU)

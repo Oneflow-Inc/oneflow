@@ -36,22 +36,21 @@ bool RawIsBroadcastSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
 
 static constexpr auto* IsBroadcastSbp = DECORATE(&RawIsBroadcastSbp, ThreadLocal);
 
-Maybe<void> RawCheckCclPToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckNaivePToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsPartialSumSbp(in->nd_sbp()->sbp_parallel(0)));
   CHECK_OR_RETURN(IsBroadcastSbp(out->nd_sbp()->sbp_parallel(0)));
   CHECK_OR_RETURN(in->placement() != out->placement());
-  // CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCPU);
   CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckCclPToB = DECORATE(&RawCheckCclPToB, ThreadLocal);
+static constexpr auto* CheckNaivePToB = DECORATE(&RawCheckNaivePToB, ThreadLocal);
 
 }  // namespace
 
-Maybe<one::Tensor> CclPToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
+Maybe<one::Tensor> NaivePToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
                            Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
@@ -72,6 +71,6 @@ Maybe<one::Tensor> CclPToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
                                                  *tensor->shape(), tensor->dtype()));
 }
 
-COMMAND(RegisterBoxingFunction("naive-p-to-b", CheckCclPToB, &CclPToB));
+COMMAND(RegisterBoxingFunction("naive-p-to-b", CheckNaivePToB, &NaivePToB));
 
 }  // namespace oneflow
