@@ -1336,7 +1336,7 @@ def _test_conv2d_large_in_channel(test_case, device):
             ],
         ]
     ]
-    test_case.assertTrue(np.allclose(output.numpy(), np_out, 1e-6, 1e-6))
+    test_case.assertTrue(np.allclose(output.numpy(), np_out, 1e-3, 1e-3))
     output = output.sum()
     output.backward()
     np_grad = [
@@ -1447,7 +1447,7 @@ def _test_conv2d_large_in_channel(test_case, device):
             ],
         ]
     ]
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-6, 1e-6))
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-3, 1e-3))
 
 
 def _test_conv2d_large_out_channel(test_case, device):
@@ -1536,7 +1536,7 @@ def _test_conv2d_large_out_channel(test_case, device):
             ]
         ]
     )
-    test_case.assertTrue(np.allclose(output.numpy(), np_out, 1e-6, 1e-6))
+    test_case.assertTrue(np.allclose(output.numpy(), np_out, 1e-3, 1e-3))
     output = output.sum()
     output.backward()
     np_grad = np.array(
@@ -1559,7 +1559,7 @@ def _test_conv2d_large_out_channel(test_case, device):
             ]
         ]
     )
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-6, 1e-6))
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-3, 1e-3))
 
 
 @flow.unittest.skip_unless_1n1d()
