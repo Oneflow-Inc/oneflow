@@ -84,7 +84,7 @@ void CommNet::AddWorkToStream(void* actor_read_id, const std::function<void()>& 
   }
 }
 
-void CommNet::RegisterMsgCallback(std::function<void (void *, size_t)> MsgHandle) {
+void CommNet::RegisterMsgCallback(const std::function<void (void *, size_t)>  & MsgHandle) {
   msghandle_ = MsgHandle;
 }
 

@@ -54,7 +54,7 @@ class CommNet {
   virtual void * DeSerialDataToToken(char * data, size_t *  size ) = 0;
   std::function<void(void*,size_t)> msghandle_;
 
-  void RegisterMsgCallback(std::function<void(void*,size_t)> MsgHandle);
+  void RegisterMsgCallback(const std::function<void(void*,size_t)>  & MsgHandle);
   
  protected:
   CommNet();
