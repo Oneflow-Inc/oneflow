@@ -162,6 +162,14 @@
   signature: "Tensor (Tensor dz, Tensor x, Tensor y, Tensor z) => BroadcastPowYGrad"
   bind_python: False
 
+- name: "reduce_max"
+  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceMax"
+  bind_python: True
+
+- name: "reduce_min"
+  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceMin"
+  bind_python: True
+
 - name: "reduce_sum"
   signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceSum"
   bind_python: True
@@ -334,17 +342,17 @@
 
 - name: "arange"
   signature: [
-      "Tensor (Int64 start, Int64 end, Int64 step=1, *, DataType dtype=kInt64,
+      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=kInt64,
       Device device=None) => Arange",
-      "Tensor (Int64 end, *, DataType dtype=kInt64, Device device=None) => Arange",
+      "Tensor (Scalar end, *, DataType dtype=kInt64, Device device=None) => Arange",
     ]
   bind_python: True
 
 - name: "consistent_arange"
   signature: [
-      "Tensor (Int64 start, Int64 end, Int64 step=1, *, DataType dtype=kInt64,
+      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=kInt64,
       Placement placement, SbpList sbp) => ConsistentArange",
-      "Tensor (Int64 end, *, DataType dtype=kInt64, Placement placement, SbpList sbp) => ConsistentArange",
+      "Tensor (Scalar end, *, DataType dtype=kInt64, Placement placement, SbpList sbp) => ConsistentArange",
     ]
   bind_python: True
 
@@ -354,6 +362,10 @@
 
 - name: "argmax"
   signature: "Tensor (Tensor x) => ArgMax"
+  bind_python: True
+
+- name: "argmin"
+  signature: "Tensor (Tensor x) => ArgMin"
   bind_python: True
 
 - name: "argwhere"
@@ -532,8 +544,36 @@
     Double alpha=1.0) => BatchMatMul"
   bind_python: True
 
+- name: "nll_loss"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction) => NllLoss"
+  bind_python: True
+
+- name: "nll_loss_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor total_target, Int64 ignore_index, String reduction) => NllLossGrad"
+  bind_python: False
+
+- name: "binary_cross_entropy_loss"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, String reduction) => BinaryCrossEntropyLoss"
+  bind_python: True
+
+- name: "binary_cross_entropy_loss_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, String reduction) => BinaryCrossEntropyLossGrad"
+  bind_python: False
+
+- name: "binary_cross_entropy_with_logits_loss"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None, String reduction) => BinaryCrossEntropyWithLogitsLoss"
+  bind_python: True
+
+- name: "binary_cross_entropy_with_logits_loss_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None, String reduction) => BinaryCrossEntropyWithLogitsLossGrad"
+  bind_python: True
+
 - name: "sparse_softmax_cross_entropy"
   signature: "Tensor (Tensor logits, Tensor label, Int64 depth) => SparseSoftmaxCrossEntropy"
+  bind_python: True
+
+- name: "sparse_softmax_cross_entropy_ms"
+  signature: "Tensor (Tensor logits, Tensor label, Int64 depth) => SparseSoftmaxCrossEntropyMs"
   bind_python: True
 
 - name: "softmax_cross_entropy"
@@ -1081,6 +1121,10 @@
   signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, Shape shape) => EagerPToB"
   bind_python: False
 
+- name: "eager_b_to_s"
+  signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList out_sbp, Shape shape) => EagerBToS"
+  bind_python: False
+
 - name: "eager_s_to_b"
   signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList in_sbp, Shape shape) => EagerSToB"
   bind_python: False
@@ -1263,3 +1307,8 @@
   signature:
     "Tensor (Tensor data, Tensor segment_ids, Int64 num_segments) => UnsortedBatchSegmentSum"
   bind_python: False
+
+- name: "ctc_greedy_decoder"
+  signature:
+    "TensorTuple (Tensor log_probs, Tensor input_lengths, Bool merge_repeated=True) => CtcGreedyDecoder"
+  bind_python: True
