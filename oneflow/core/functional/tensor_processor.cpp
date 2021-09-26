@@ -82,7 +82,7 @@ Maybe<void> TensorProcessor::Apply() {
     bool has_different_input_dtype = CheckHasDifferentInputDType(tensor_tuple_);
     if (has_different_input_dtype) {
       common_dtype_ = ComputeCommonDType(tensor_tuple_);
-      CastToSameType(tensor_tuple_, common_dtype_);
+      JUST(CastToSameType(tensor_tuple_, common_dtype_));
     }
   } else {
     for (int i = 0; i < tensor_tuple_.size(); ++i) {
