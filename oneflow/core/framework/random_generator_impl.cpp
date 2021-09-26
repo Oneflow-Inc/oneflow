@@ -405,7 +405,11 @@ Maybe<CPUGeneratorImpl> MakeGeneratorImpl<CPUGeneratorImpl>(uint64_t seed, int d
 
 int GetCudaDeviceIndex() {
   int cuda_device_index = 0;
-  OF_CUDA_CHECK(cudaGetDevice(&cuda_device_index));
+  if (CHECK_JUST(GlobalMultiClientEnv())) {
+    cuda_device_index = GlobalProcessCtx::LocalRank();
+  } else {
+    OF_CUDA_CHECK(cudaGetDevice(&cuda_device_index));
+  }
   return cuda_device_index;
 }
 
