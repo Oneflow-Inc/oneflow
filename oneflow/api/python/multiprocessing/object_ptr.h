@@ -18,18 +18,20 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
 
+// reference: pytorch/torch/csrc/utils/object_ptr.h
+// https://github.com/pytorch/pytorch/blob/d69c22dd61a2f006dcfe1e3ea8468a3ecaf931aa/torch/csrc/utils/object_ptr.h
 template<class T>
-class THPPointer {
+class OFPointer {
  public:
-  THPPointer() : ptr(nullptr){};
-  explicit THPPointer(T* ptr) noexcept : ptr(ptr){};
-  THPPointer(THPPointer&& p) noexcept {
+  OFPointer() : ptr(nullptr){};
+  explicit OFPointer(T* ptr) noexcept : ptr(ptr){};
+  OFPointer(OFPointer&& p) noexcept {
     free();
     ptr = p.ptr;
     p.ptr = nullptr;
   };
 
-  ~THPPointer() { free(); };
+  ~OFPointer() { free(); };
   T* get() { return ptr; }
   const T* get() const { return ptr; }
   T* release() {
@@ -38,12 +40,12 @@ class THPPointer {
     return tmp;
   }
   operator T*() { return ptr; }
-  THPPointer& operator=(T* new_ptr) noexcept {
+  OFPointer& operator=(T* new_ptr) noexcept {
     free();
     ptr = new_ptr;
     return *this;
   }
-  THPPointer& operator=(THPPointer&& p) noexcept {
+  OFPointer& operator=(OFPointer&& p) noexcept {
     free();
     ptr = p.ptr;
     p.ptr = nullptr;
@@ -68,4 +70,4 @@ class THPPointer {
  * out the GIL itself.  Easiest way to avoid this problem is to
  * not use THPPointer in this situation.
  */
-using THPObjectPtr = THPPointer<PyObject>;
+using OFObjectPtr = OFPointer<PyObject>;

@@ -33,7 +33,7 @@ namespace multiprocessing {
 namespace py = pybind11;
 
 void multiprocessing_init() {
-  auto multiprocessing_module = THPObjectPtr(PyImport_ImportModule("oneflow.multiprocessing"));
+  auto multiprocessing_module = OFObjectPtr(PyImport_ImportModule("oneflow.multiprocessing"));
   if (!multiprocessing_module) {
     throw std::runtime_error("multiprocessing init error >> multiprocessing_module init fail!");
   }
