@@ -89,7 +89,7 @@ Maybe<void> TensorProcessor::Apply() {
       // Cast all the inputs to it's attribute `lowest_dtype` if the input tensor dtype is lower
       // than attribute `lowest_dtype`.
       Symbol<DType> base_dtype = inputs_lowest_dtype_vec_.at(i);
-      if (base_dtype
+      if (base_dtype->data_type()
           && DType::priority_order[base_dtype->data_type()]
                  > DType::priority_order[tensor_tuple_.at(i)->dtype()->data_type()]) {
         tensor_tuple_.at(i) = JUST(one::functional::Cast(tensor_tuple_.at(i), base_dtype));
