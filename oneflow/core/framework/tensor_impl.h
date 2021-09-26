@@ -239,6 +239,10 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   Maybe<void> UpdateTensorStorage();
   Maybe<void> set_eager_blob_object(std::shared_ptr<vm::EagerBlobObject> eager_blob_object);
 
+  // The cpu/gpu memory of tensor is managed by tensor_storage_
+  // When a tensor destructed, it's cpu/gpu memory will get freed by instruction `ReleaseTensor`.
+  // `eager_blob_object_` takes cpu/gpu memory of tensor as raw ptr,
+  // because shared reference of cpu/gpu memory will unnecessarily delay deallocation in vm.
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
 };

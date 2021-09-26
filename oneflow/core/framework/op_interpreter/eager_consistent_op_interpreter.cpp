@@ -122,6 +122,11 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
         && infered_input_meta->nd_sbp() != JUST(input->nd_sbp())) {
       input = JUST(GetBoxingOutput(input, infered_input_meta->nd_sbp(),
                                    infered_input_meta->parallel_desc(), parallel_id.has_value()));
+      // The cpu/gpu memory of tensor is managed by Tensor.tensor_iml_.tensor_storage_
+      // when `input` destructed, the cpu/gpu memory in input.tensor_iml_.tensor_storage_
+      // will get freed.
+      // `input.tensor_impl_.eager_blob_object` takes cpu/gpu memory of tensor as raw ptr.
+      // because shared reference will unnecessarily delay deallocation in vm.
       boxing_outputs.push_back(input);
     }
     const auto& local_tensor = JUST(input->cur_rank_phy_tensor());
