@@ -102,7 +102,7 @@ static inline Symbol<DType> promoteTypes(const Symbol<DType> a, const Symbol<DTy
     right priority (author:zhengzekang).
   */
   static const Symbol<DType> _promoteTypesLookup[DType::dtype_num][DType::dtype_num] = {
-      /*         iv  c1  f4  f8  i2  i4  i8  u1  re  f2  bu  bf*/
+      /*        iv  c1  f4  f8  i2  i4  i8  u1  re  f2  bu  bf */
       /* iv */ {iv, c1, f4, f8, i2, i4, i8, u1, re, f2, bu, bf},
       /* c1 */ {c1, c1, f4, f8, i2, i4, i8, c1, re, f2, bu, bf},
       /* f4 */ {f4, f4, f4, f8, f4, f4, f4, f4, re, f4, bu, bf},

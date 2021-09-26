@@ -44,7 +44,7 @@ bool CheckHasDifferentInputDType(const TensorTuple& tensor_tuple) {
   return false;
 }
 
-Maybe<void> InsertCast(TensorTuple& tensor_tuple, const Symbol<DType>& common_dtype) {
+Maybe<void> CastToSameType(TensorTuple& tensor_tuple, const Symbol<DType>& common_dtype) {
   for (auto& tensor_ptr : tensor_tuple) {
     if (tensor_ptr->dtype() != common_dtype) {
       tensor_ptr = JUST(functional::Cast(tensor_ptr, common_dtype));
@@ -56,16 +56,19 @@ Maybe<void> InsertCast(TensorTuple& tensor_tuple, const Symbol<DType>& common_dt
 }  // namespace
 
 TensorProcessor& TensorProcessor::AddInputs(const TensorTuple& init_tensor_or_tuple) {
-  tensor_tuple_.insert(tensor_tuple_.end(), init_tensor_or_tuple.begin(),
-                       init_tensor_or_tuple.end());
+  for (auto tensor : init_tensor_or_tuple) {
+    tensor_tuple_.emplace_back(tensor);
+    inputs_lowest_dtype_vec_.emplace_back(DType::InvalidDataType());
+  }
   return *this;
 }
 
 TensorProcessor& TensorProcessor::AddInputs(const TensorTuple& init_tensor_or_tuple,
-                                            Symbol<DType> lowest_dtype) {
-  tensor_tuple_.insert(tensor_tuple_.end(), init_tensor_or_tuple.begin(),
-                       init_tensor_or_tuple.end());
-  lowest_dtype_.emplace_back(lowest_dtype);
+                                            Symbol<DType> tensor_lowest_dtype) {
+  for (auto tensor : init_tensor_or_tuple) {
+    tensor_tuple_.emplace_back(tensor);
+    inputs_lowest_dtype_vec_.emplace_back(tensor_lowest_dtype);
+  }
   return *this;
 }
 
@@ -78,19 +81,18 @@ Maybe<void> TensorProcessor::Apply() {
   if (promote_inputs_to_common_dtype_) {
     bool has_different_input_dtype = CheckHasDifferentInputDType(tensor_tuple_);
     if (has_different_input_dtype) {
-      // Cast all the inputs to common_dtype if the input tensor dtype is lower than common_dtype.
       common_dtype_ = ComputeCommonDType(tensor_tuple_);
-      InsertCast(tensor_tuple_, common_dtype_);
+      CastToSameType(tensor_tuple_, common_dtype_);
     }
   } else {
     for (int i = 0; i < tensor_tuple_.size(); ++i) {
       // Cast all the inputs to it's attribute `lowest_dtype` if the input tensor dtype is lower
       // than attribute `lowest_dtype`.
-      Symbol<DType> curr_dtype = lowest_dtype_.at(i);
-      if (curr_dtype
-          && DType::priority_order[curr_dtype->data_type()]
+      Symbol<DType> base_dtype = inputs_lowest_dtype_vec_.at(i);
+      if (base_dtype
+          && DType::priority_order[base_dtype->data_type()]
                  > DType::priority_order[tensor_tuple_.at(i)->dtype()->data_type()]) {
-        tensor_tuple_.at(i) = JUST(one::functional::Cast(tensor_tuple_.at(i), curr_dtype));
+        tensor_tuple_.at(i) = JUST(one::functional::Cast(tensor_tuple_.at(i), base_dtype));
       }
     }
   }
