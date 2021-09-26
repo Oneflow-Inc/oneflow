@@ -118,7 +118,7 @@ void DispatchIndexType(StreamContext* stream_ctx, void* dst, const int64_t* dst_
                        const int64_t* dst_pos, const void* src, const int64_t* src_dims,
                        const int64_t* src_pos, const int64_t* extent) {
   size_t count = 1;
-  for (size_t i = 0; i < num_dims; ++i) { count *= src_dims[i]; }
+  for (size_t i = 0; i < num_dims; ++i) { count *= extent[i]; }
   if (count < GetMaxVal<int32_t>()) {
     LaunchKernel<num_dims, movement_size, int32_t>(stream_ctx, dst, dst_dims, dst_pos, src,
                                                    src_dims, src_pos, extent, count);

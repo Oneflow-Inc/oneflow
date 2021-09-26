@@ -37,7 +37,7 @@ __global__ void CopyNdKernel(CopyNdKernelParams<num_dims, IndexType> params) {
     IndexType dst_index[num_dims];
     params.copy_index_helper.OffsetToNdIndex(i, copy_index);
 #pragma unroll
-    for (IndexType j = 0; j < num_dims; j++) {
+    for (size_t j = 0; j < num_dims; ++j) {
       src_index[j] = params.src_pos[j] + copy_index[j];
       dst_index[j] = params.dst_pos[j] + copy_index[j];
     }
