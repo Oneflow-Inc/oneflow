@@ -89,10 +89,10 @@ void CommNet::RegisterMsgCallback(const std::function<void (void *, size_t)>  & 
 }
 
 CommNet::CommNet() {
-  auto cb = [] (void * data,size_t size) {
-    Global<ActorMsgBus>::Get()->HandleRecvData(data,size);
-  };
-  msghandle_ = cb;
+ // auto cb = [] (void * data,size_t size) {
+  //  Global<ActorMsgBus>::Get()->HandleRecvData(data,size);
+ // };
+ // msghandle_ = cb;
   //msghandle_ = Global<ActorMsgBus>::Get()->HandleRecvData;
   int64_t this_machine_id = GlobalProcessCtx::Rank();
   for (int64_t i : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
