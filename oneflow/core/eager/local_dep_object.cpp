@@ -65,19 +65,22 @@ PoolLocalDepObjectList* RawThreadLocalPoolLocalDepObjectList(Symbol<Device> devi
   static thread_local PoolLocalDepObjectList pool_list;
   return &pool_list;
 }
-static constexpr auto* ThreadLocalPoolLocalDepObjectList = DECORATE(&RawThreadLocalPoolLocalDepObjectList, ThreadLocal);
+static constexpr auto* ThreadLocalPoolLocalDepObjectList =
+    DECORATE(&RawThreadLocalPoolLocalDepObjectList, ThreadLocal);
 
 StoredLocalDepObjectList* RawThreadLocalStoredLocalDepObjectList(Symbol<Device> device) {
   static thread_local StoredLocalDepObjectList stored_list;
   return &stored_list;
 }
-static constexpr auto* ThreadLocalStoredLocalDepObjectList = DECORATE(&RawThreadLocalStoredLocalDepObjectList, ThreadLocal);
+static constexpr auto* ThreadLocalStoredLocalDepObjectList =
+    DECORATE(&RawThreadLocalStoredLocalDepObjectList, ThreadLocal);
 
 OccupiedLocalDepObjectList* RawThreadLocalOccupiedLocalDepObjectList(Symbol<Device> device) {
   static thread_local OccupiedLocalDepObjectList occupied_list;
   return &occupied_list;
 }
-static constexpr auto* ThreadLocalOccupiedLocalDepObjectList = DECORATE(&RawThreadLocalOccupiedLocalDepObjectList, ThreadLocal);
+static constexpr auto* ThreadLocalOccupiedLocalDepObjectList =
+    DECORATE(&RawThreadLocalOccupiedLocalDepObjectList, ThreadLocal);
 
 }  // namespace
 
