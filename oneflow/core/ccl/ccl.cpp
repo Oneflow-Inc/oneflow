@@ -327,6 +327,121 @@ Maybe<void> CpuBroadcast(const void* in, void* out, size_t buffer_size, int64_t 
   return Maybe<void>::Ok();
 }
 
+template<typename T, ReduceType reduce_type>
+struct DtypeReduce;
+
+template<typename T>
+struct DtypeReduce<T, kSum> {
+  static Maybe<void> Call(const void* void_in, void* void_out, size_t elem_cnt, int64_t root,
+                          Symbol<ParallelDesc> parallel_desc) {
+    const T* in = reinterpret_cast<const T*>(void_in);
+    T* out = reinterpret_cast<T*>(void_out);
+    int64_t parallel_num = parallel_desc->parallel_num();
+    BalancedSplitter bs(elem_cnt, parallel_num);
+    std::vector<T> recv_buffer(bs.At(0).size());
+    Optional<int64_t> parallel_id;
+    JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
+    const auto& rank_group = JUST(RankGroup::New(parallel_desc));
+    TransportToken transport_token =
+        JUST(TransportToken::NewTransportToken(kTransportTokenTypeData));
+    for (int64_t i = 0, part_id = RingDecrease(JUST(parallel_id), parallel_num);
+         i < parallel_num - 1; ++i, part_id = RingDecrease(part_id, parallel_num)) {
+      int64_t send_part_id = part_id;
+      const T* send_ptr = nullptr;
+      if (i == 0) {
+        send_ptr = &in[bs.At(send_part_id).begin()];
+      } else {
+        send_ptr = &out[bs.At(send_part_id).begin()];
+      }
+      size_t send_size = bs.At(send_part_id).size();
+      int64_t recv_part_id = RingDecrease(part_id, parallel_num);
+      T* recv_ptr = recv_buffer.data();
+      size_t recv_size = bs.At(recv_part_id).size();
+      NaiveAsyncTransportCtx ctx(
+          transport_token,
+          [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+            *buffer = const_cast<T*>(send_ptr);
+            *size = send_size * sizeof(T);
+            *Cb = [] {};
+            return Maybe<void>::Ok();
+          },
+          [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+            *buffer = recv_ptr;
+            *size = recv_size * sizeof(T);
+            *Cb = [] {};
+            return Maybe<void>::Ok();
+          });
+      if (send_size > 0) {
+        JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
+      }
+      if (recv_size > 0) {
+        JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
+      }
+      JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+      const T* cur_in = &in[bs.At(recv_part_id).begin()];
+      T* cur_out = &out[bs.At(recv_part_id).begin()];
+      if (recv_size > 0) { VecAdd(recv_size, cur_out, cur_in, recv_ptr); }
+    }
+
+    for (int64_t i = 0, part_id = RingIncrease(root, parallel_num); i < parallel_num - 1;
+         ++i, part_id = RingIncrease(part_id, parallel_num)) {
+      int64_t send_part_id = part_id;
+      int64_t src_rank = JUST(parallel_desc->MachineId4ParallelId(send_part_id));
+      const T* send_ptr = &out[bs.At(send_part_id).begin()];
+      size_t send_size = bs.At(send_part_id).size();
+      int64_t recv_part_id = part_id;
+      T* recv_ptr = &out[bs.At(recv_part_id).begin()];
+      size_t recv_size = bs.At(recv_part_id).size();
+
+      if (send_size > 0 && src_rank == GlobalProcessCtx::Rank()) {
+        NaiveAsyncTransportCtx ctx(
+            transport_token,
+            [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+              *buffer = const_cast<T*>(send_ptr);
+              *size = send_size * sizeof(T);
+              *Cb = [] {};
+              return Maybe<void>::Ok();
+            },
+            [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+              UNIMPLEMENTED_THEN_RETURN();
+            });
+        JUST(TransportUtil::SendDataToRank(root, transport_token, &ctx));
+        JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+      }
+      if (recv_size > 0 && root == GlobalProcessCtx::Rank()) {
+        NaiveAsyncTransportCtx ctx(
+            transport_token,
+            [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+              UNIMPLEMENTED_THEN_RETURN();
+            },
+            [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+              *buffer = recv_ptr;
+              *size = recv_size * sizeof(T);
+              *Cb = [] {};
+              return Maybe<void>::Ok();
+            });
+        JUST(TransportUtil::ReceiveDataFromRank(src_rank, transport_token, &ctx));
+        JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+      }
+    }
+    return Maybe<void>::Ok();
+  }
+};
+
+#define MAKE_REDUCE_ENTRY(func_name, T, reduce_type) func_name<T, reduce_type>::Call
+
+DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, DtypeReduce, MAKE_REDUCE_ENTRY,
+                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ), CCL_REDUCE_TYPE_CTRV_SEQ);
+
+#undef MAKE_REDUCE_ENTRY
+
+template<>
+Maybe<void> Reduce<DeviceType::kCPU>(const void* in, void* out, size_t elem_cnt, DataType dtype,
+                                     ReduceType reduce_type, int64_t root,
+                                     Symbol<ParallelDesc> parallel_desc, DeviceCtx* ctx) {
+  return SwitchDtypeReduce(SwitchCase(dtype, reduce_type), in, out, elem_cnt, root, parallel_desc);
+}
+
 #ifdef WITH_CUDA
 std::pair<ncclComm_t, int64_t> RawGetNcclCommAndPeerNcclRank(int64_t peer_process_id) {
   std::set<std::pair<int64_t, int64_t>> device_set;
