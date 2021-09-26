@@ -32,3 +32,7 @@
     "Tensor (Shape size, *, Placement placement, SbpList sbp) => ConsistentTensorWithShapeCtor",
   ]
   bind_python: True
+
+- name: "assign_local_tensor"
+  signature: "Void (Tensor ref, Tensor value)=> AssignLocalTensorFunctor"
+  bind_python: True

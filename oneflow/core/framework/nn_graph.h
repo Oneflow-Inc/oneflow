@@ -82,6 +82,9 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
                            const one::TensorTuple& parameters,
                            const std::shared_ptr<NNGraph>& nn_graph);
 
+Maybe<void> SoftSyncNNGraphBuffers(const one::TensorTuple& buffers,
+                                   const std::shared_ptr<NNGraph>& nn_graph);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_H_

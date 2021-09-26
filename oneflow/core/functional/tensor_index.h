@@ -104,8 +104,6 @@ class TensorIndex : public std::vector<detail::IndexItem> {
   using std::vector<detail::IndexItem>::vector;
 };
 
-int64_t CountSpecifiedDims(const TensorIndex& index);
-
 Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
                                 std::vector<detail::Slice>* slice_indices,
                                 TensorTuple* tensor_indices, std::vector<int64_t>* target_dims);
