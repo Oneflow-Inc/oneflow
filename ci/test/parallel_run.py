@@ -1,7 +1,7 @@
+import asyncio
 import os
 import argparse
-from subprocess import TimeoutExpired
-import subprocess
+from subprocess import PIPE, STDOUT
 import glob
 import sys
 import time
@@ -48,79 +48,71 @@ def split_and_print(prefix, text):
     print(prefixed, flush=True)
 
 
-def run_cmds(cmds, gpu_num=0, timeout=10, chunk=1, verbose=False):
+def everyN(l: list, n: int):
+    for i in range(0, len(l), n):
+        yield l[i : i + n]
+
+
+def contains_oom_info(txt: str):
+    return "memory" in txt or "Memory" in txt or "CUDNN" in txt
+
+
+def should_retry(txt: str):
+    return contains_oom_info(txt)
+
+
+def print_out(prefix: str = "", content: str = ""):
+    for l in content.split("\n"):
+        print(f"[{prefix}]", l)
+
+
+async def spawn_shell_and_check(cmd: str = None, gpu_id: int = -1, check: bool = False):
+    is_cpu_only = os.getenv("ONEFLOW_TEST_CPU_ONLY")
+    print(f"[gpu={gpu_id}]", cmd)
+    p = await asyncio.create_subprocess_shell(
+        cmd,
+        stdout=PIPE,
+        stderr=STDOUT,
+        env=dict(
+            os.environ,
+            CUDA_VISIBLE_DEVICES=("-1" if is_cpu_only else ",".join([str(gpu_id)])),
+            ONEFLOW_TEST_MASTER_PORT=str(find_free_port()),
+            ONEFLOW_TEST_LOG_DIR=("./unittest-log-" + str(uuid.uuid4())),
+        ),
+    )
+    (stdout_data, stderr_data) = await p.communicate()
+    decoded = stdout_data.decode()
+    if check or should_retry(decoded) == False:
+        if p.returncode != 0:
+            print_out(prefix=cmd, content=decoded)
+            raise RuntimeError(cmd)
+    return {"returncode": p.returncode, "cmd": cmd, "stdout": decoded}
+
+
+async def run_cmds(
+    cmds, gpu_num=0, timeout=10, chunk=1, verbose=False, per_gpu_process_num=1
+):
     is_cpu_only = os.getenv("ONEFLOW_TEST_CPU_ONLY")
     if is_cpu_only:
         gpu_num = os.cpu_count()
-    if gpu_num > 0:
-        proc2gpu_ids = {}
-        while True:
-
-            def available_slots():
-                occupied_gpu_ids = set({})
-                for _p, gpu_ids in proc2gpu_ids.items():
-                    assert isinstance(gpu_ids, list)
-                    occupied_gpu_ids.update(gpu_ids)
-                return set(range(gpu_num)) - occupied_gpu_ids
-
-            while len(available_slots()) >= chunk and len(cmds):
-                available_gpu_ids = available_slots()
-                gpu_ids_to_occupy = []
-                for _i in range(chunk):
-                    gpu_id = available_gpu_ids.pop()
-                    gpu_ids_to_occupy.append(gpu_id)
-                cmd = cmds.pop()
-                cuda_visible_devices = ",".join([str(i) for i in gpu_ids_to_occupy])
-                if verbose:
-                    print(
-                        "cuda_visible_devices:",
-                        cuda_visible_devices,
-                        "cmd:",
-                        cmd,
-                        flush=True,
-                    )
-                proc = subprocess.Popen(
-                    cmd,
-                    env=dict(
-                        os.environ,
-                        CUDA_VISIBLE_DEVICES=(
-                            "" if is_cpu_only else cuda_visible_devices
-                        ),
-                        ONEFLOW_TEST_MASTER_PORT=str(find_free_port()),
-                        ONEFLOW_TEST_LOG_DIR=("./unittest-log-" + str(uuid.uuid4())),
-                    ),
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    encoding="utf-8",
-                    shell=True,
+    fails = []
+    assert gpu_num > 0
+    for cmdN in everyN(cmds, per_gpu_process_num * gpu_num):
+        results = await asyncio.gather(
+            *[
+                spawn_shell_and_check(
+                    cmd=cmd, gpu_id=i, check=(per_gpu_process_num == 1)
                 )
-                proc2gpu_ids[proc] = gpu_ids_to_occupy
-
-            procs_to_release = []
-            for proc, gpu_ids in proc2gpu_ids.items():
-                outs = None
-                errs = None
-                try:
-                    outs, errs = proc.communicate(timeout=1)
-                    if outs:
-                        split_and_print(f"[{proc.args}][stdout]", outs)
-                    if errs:
-                        split_and_print(f"[{proc.args}][stderr]", errs)
-                    if proc.returncode == 0:
-                        procs_to_release.append(proc)
-                    else:
-                        for proc_to_kill in proc2gpu_ids.keys():
-                            proc_to_kill.kill()
-                            proc_to_kill.wait()
-                        raise ValueError("non-zero returncode found", proc.args)
-                except TimeoutExpired:
-                    pass
-            for proc in procs_to_release:
-                proc2gpu_ids.pop(proc)
-            if len(proc2gpu_ids) == 0 and len(cmds) == 0:
-                break
-    else:
-        raise NotImplementedError
+                for cmd_gpu_num in everyN(cmdN, gpu_num)
+                for (i, cmd) in enumerate(cmd_gpu_num)
+            ],
+        )
+        for r in list(results):
+            if r["returncode"] != 0:
+                fails.append(r["cmd"])
+            else:
+                print_out(prefix=r["cmd"], content=r["stdout"])
+    return fails
 
 
 if __name__ == "__main__":
@@ -135,13 +127,23 @@ if __name__ == "__main__":
     args = parser.parse_args()
     cmds = gen_cmds(cmd=args.cmd, dir=args.dir, doctest=args.doctest)
     start = time.time()
-    run_cmds(
-        cmds,
-        gpu_num=args.gpu_num,
-        timeout=args.timeout,
-        chunk=args.chunk,
-        verbose=args.verbose,
-    )
+    loop = asyncio.get_event_loop()
+    PER_GPU_PROCESS_NUMS = [12, 8, 2, 1]
+    is_cpu_only = os.getenv("ONEFLOW_TEST_CPU_ONLY")
+    if is_cpu_only:
+        PER_GPU_PROCESS_NUMS = [1]
+    for per_gpu_process_num in PER_GPU_PROCESS_NUMS:
+        print("[per_gpu_process_num]", per_gpu_process_num)
+        cmds = loop.run_until_complete(
+            run_cmds(
+                cmds,
+                gpu_num=args.gpu_num,
+                timeout=args.timeout,
+                chunk=args.chunk,
+                verbose=args.verbose,
+                per_gpu_process_num=per_gpu_process_num,
+            )
+        )
     elapsed = time.time() - start
     elapsed_time_txt = time.strftime("elapsed: %H:%M:%S", time.gmtime(elapsed))
     print(elapsed_time_txt)

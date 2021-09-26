@@ -392,4 +392,15 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
   return Maybe<void>::Ok();
 }
 
+Maybe<void> SoftSyncNNGraphBuffers(const one::TensorTuple& buffers,
+                                   const std::shared_ptr<NNGraph>& nn_graph) {
+  const auto& eager_blob_objects =
+      std::make_shared<std::vector<std::shared_ptr<vm::EagerBlobObject>>>();
+  JUST(MakeEagerBlobObjectList(eager_blob_objects.get(), buffers));
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    return builder->SoftSyncNNGraphBuffers(eager_blob_objects, nn_graph);
+  }));
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow
