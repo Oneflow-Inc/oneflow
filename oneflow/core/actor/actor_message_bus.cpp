@@ -28,7 +28,8 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
   if (dst_machine_id == GlobalProcessCtx::Rank()) {
     SendMsgWithoutCommNet(msg);
   } else {
-    DataHandle cb = std::bind(&ActorMsgBus::HandleRecvData,this,std::placeholders::_1,std::placeholders::_2);
+    //std::function(void())
+  //  DataHandle cb = std::bind(&Global<ActorMsgBus>::Get()->HandleRecvData,this,std::placeholders::_1,std::placeholders::_2);
     if (msg.IsDataRegstMsgToConsumer()) {
       int64_t comm_net_sequence;
       {
@@ -48,11 +49,11 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       free(serial_data);
       size_t msg_size = sizeof(new_msg);
       uint64_t addr = reinterpret_cast<uint64_t>(&new_msg);
-      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, msg_size,cb);;
+      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, msg_size);;
     } else {
       uint64_t addr = reinterpret_cast<uint64_t>(&msg);
       size_t msg_size = sizeof(msg);
-      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, msg_size,cb);
+      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, msg_size);
     }
   }
 }
