@@ -15,9 +15,3 @@ limitations under the License.
 */
 #define NO_IMPORT_ARRAY
 #include "oneflow/extension/python/numpy_internal.h"
-
-namespace oneflow {
-namespace numpy {
-Maybe<void> InitNumpyCAPI();
-}
-}  // namespace oneflow
