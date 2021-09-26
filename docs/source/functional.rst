@@ -37,3 +37,4 @@ Functional operations for neural networks
 .. autofunction:: interpolate
 .. autofunction:: layer_norm
 .. autofunction:: ctc_greedy_decoder
+.. autofunction:: sparse_softmax_cross_entropy_with_logits

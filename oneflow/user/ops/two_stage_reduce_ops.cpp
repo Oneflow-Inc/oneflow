@@ -177,8 +177,8 @@ Maybe<void> GetReduceDeviceStageGradSbpFn(user_op::SbpContext* ctx) {
   int32_t num_axes = 0;
   HashSet<int32_t> conf_axes;
   {
-    const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-    num_axes = in_tensor.shape().NumAxes();
+    const auto& output_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("out_diff", 0);
+    num_axes = output_tensor.shape().NumAxes();
     const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
     conf_axes = {reduced_axes.begin(), reduced_axes.end()};
   }
