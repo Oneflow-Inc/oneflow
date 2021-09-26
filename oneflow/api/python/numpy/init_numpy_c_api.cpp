@@ -17,14 +17,9 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/extension/python/numpy.h"
 
 namespace py = pybind11;
-
-namespace oneflow {
-namespace numpy {
-Maybe<void> InitNumpyCAPI();
-}
-}  // namespace oneflow
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("InitNumpyCAPI", []() { return oneflow::numpy::InitNumpyCAPI().GetOrThrow(); });
