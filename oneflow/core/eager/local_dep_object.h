@@ -40,12 +40,14 @@ OBJECT_MSG_BEGIN(LocalDepObject);
   OBJECT_MSG_DEFINE_OPTIONAL(vm::MirroredObject, mirrored_object);
 
   // links
-  OBJECT_MSG_DEFINE_LIST_LINK(free_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(zombie_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(pool_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(occupied_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(stored_link);
 OBJECT_MSG_END(LocalDepObject);
 // clang-format on
 
 Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device);
+Maybe<void> PutLocalDepObjectToDevicePool(Symbol<Device> device, LocalDepObject* local_dep_object);
 Maybe<LocalDepObject*> GetLocalDepObject4Device(const Device& device);
 
 }  // namespace oneflow
