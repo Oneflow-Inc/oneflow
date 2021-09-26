@@ -84,8 +84,11 @@ void CommNet::AddWorkToStream(void* actor_read_id, const std::function<void()>& 
   }
 }
 
-void CommNet::RegisterMsgCallback(const std::function<void (void *, size_t)>  & MsgHandle) {
-  msghandle_ = MsgHandle;
+void CommNet::RegisterMsgCallback(const std::function<void (void *, size_t)>  & MsgHandle = nullptr) {
+  auto cb = [] (void * data,size_t size) {
+  Global<ActorMsgBus>::Get()->HandleRecvData(data,size);
+  };
+  msghandle_ = cb;
 }
 
 CommNet::CommNet() {
@@ -104,6 +107,7 @@ CommNet::CommNet() {
     std::function<void()> cb;
     while (ready_cbs_.Receive(&cb) == kChannelStatusSuccess) { cb(); }
   });
+  RegisterMsgCallback();
 }
 
 }  // namespace oneflow
