@@ -41,43 +41,21 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
   ~LaunchLazyJobPhyInstrOperand() override = default;
 
   LaunchLazyJobPhyInstrOperand(
-      const std::shared_ptr<InputCriticalSectionPhyInstrOperand>& inputs_critical_section,
-      ObjectMsgPtr<LocalDepObject> in_dep_object,
-      const std::shared_ptr<OutputCriticalSectionPhyInstrOperand>& outputs_critical_section,
-      ObjectMsgPtr<LocalDepObject> out_dep_object,
-      const std::shared_ptr<ParameterCriticalSectionPhyInstrOperand>& params_critical_section,
-      ObjectMsgPtr<LocalDepObject> param_dep_object,
-      const std::shared_ptr<NcclCriticalSectionPhyInstrOperand>& nccl_critical_section,
-      ObjectMsgPtr<LocalDepObject> nccl_dep_object, const std::shared_ptr<NNGraphIf>& nn_graph)
-      : inputs_critical_section_(inputs_critical_section),
-        in_dep_object_(in_dep_object),
-        outputs_critical_section_(outputs_critical_section),
-        out_dep_object_(out_dep_object),
-        params_critical_section_(params_critical_section),
-        param_dep_object_(param_dep_object),
-        nccl_critical_section_(nccl_critical_section),
-        nccl_dep_object_(nccl_dep_object),
+      const std::vector<ObjectMsgPtr<LocalDepObject>>& input_local_dep_objects,
+      const std::vector<ObjectMsgPtr<LocalDepObject>>& output_local_dep_objects,
+      HashMap<std::string, >
+      const one::EagerBlobObjectListPtr& param_blob_objects,
+      const std::shared_ptr<NNGraphIf>& nn_graph)
+      : input_local_dep_objects_(input_local_dep_objects),
+        output_local_dep_objects_(output_local_dep_objects),
+        param_blob_objects_(param_blob_objects),
         nn_graph_(nn_graph) {}
 
-  const std::shared_ptr<InputCriticalSectionPhyInstrOperand>& inputs_critical_section() const {
-    return inputs_critical_section_;
-  }
-  const std::shared_ptr<OutputCriticalSectionPhyInstrOperand>& outputs_critical_section() const {
-    return outputs_critical_section_;
-  }
-  const std::shared_ptr<ParameterCriticalSectionPhyInstrOperand>& params_critical_section() const {
-    return params_critical_section_;
-  }
-  const std::shared_ptr<NcclCriticalSectionPhyInstrOperand>& nccl_critical_section() const {
-    return nccl_critical_section_;
-  }
   const std::shared_ptr<NNGraphIf>& nn_graph() const { return nn_graph_; }
 
   void ForEachConstMirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override {
-    // Do nothing because lifetime of inputs are managed by inputs_critical_section_.
-  }
+      const override;
 
   void ForEachMutMirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
@@ -85,19 +63,12 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
 
   void ForEachMut2MirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override {
-    // Do nothing because lifetime of outputs are managed by outputs_critical_section_.
-  }
+      const override;
 
  private:
-  std::shared_ptr<InputCriticalSectionPhyInstrOperand> inputs_critical_section_;
-  mutable ObjectMsgPtr<LocalDepObject> in_dep_object_;
-  std::shared_ptr<OutputCriticalSectionPhyInstrOperand> outputs_critical_section_;
-  mutable ObjectMsgPtr<LocalDepObject> out_dep_object_;
-  std::shared_ptr<ParameterCriticalSectionPhyInstrOperand> params_critical_section_;
-  mutable ObjectMsgPtr<LocalDepObject> param_dep_object_;
-  std::shared_ptr<NcclCriticalSectionPhyInstrOperand> nccl_critical_section_;
-  mutable ObjectMsgPtr<LocalDepObject> nccl_dep_object_;
+  std::vector<ObjectMsgPtr<LocalDepObject>> input_local_dep_objects_;
+  std::vector<ObjectMsgPtr<LocalDepObject>> output_local_dep_objects_;
+  one::EagerBlobObjectListPtr param_blob_objects_;
   std::shared_ptr<NNGraphIf> nn_graph_;
 };
 }  // namespace vm

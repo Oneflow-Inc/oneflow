@@ -20,32 +20,7 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-CriticalSectionPhyInstrOperand::CriticalSectionPhyInstrOperand(int64_t ref_cnt)
-    : critical_section_ready_ref_cnt_(std::make_shared<std::atomic<int64_t>>(1)),
-      consumer_ref_cnt_(std::make_shared<std::atomic<int64_t>>(ref_cnt)) {}
-
-TensorCriticalSectionPhyInstrOperand::TensorCriticalSectionPhyInstrOperand(
-    const one::EagerBlobObjectListPtr& eager_blob_objects,
-    const HashMap<std::string, int64_t>& op_name2index, const std::shared_ptr<NNGraphIf>& nn_graph)
-    : CriticalSectionPhyInstrOperand(eager_blob_objects->size()),
-      eager_blob_objects_(eager_blob_objects),
-      nn_graph_(nn_graph),
-      op_name2index_(op_name2index) {}
-
-void TensorCriticalSectionPhyInstrOperand::ConsumerFetchBlobAndDecreaseRefCnt(
-    const std::string& op_name, const std::function<void(Blob*)>& Callback) const {
-  {
-    const auto& iter = op_name2index_.find(op_name);
-    CHECK(iter != op_name2index_.end());
-    const auto& eager_blob_object = eager_blob_objects_->at(iter->second);
-    CHECK(static_cast<bool>(eager_blob_object));
-    Callback(eager_blob_object->mut_blob());
-  }
-  CHECK_GE(*consumer_ref_cnt_, 0);
-  --*consumer_ref_cnt_;
-}
-
-void TensorCriticalSectionPhyInstrOperand::ForEachMirroredObject(
+void CriticalSectionPhyInstrOperand::ForEachMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
     const {
   for (const auto& eager_blob_object : *eager_blob_objects_) {
@@ -65,49 +40,11 @@ constexpr auto* CriticalSectionLocalDepObject =
 
 }  // namespace
 
-void InputCriticalSectionPhyInstrOperand::ForEachMutMirroredObject(
+void CriticalSectionBeginPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
     const {
   DoEach(nullptr, CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object());
-}
-
-void OutputCriticalSectionPhyInstrOperand::ForEachMutMirroredObject(
-    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-    const {
-  DoEach(nullptr, CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object());
-}
-
-void ParameterCriticalSectionPhyInstrOperand::ForEachMutMirroredObject(
-    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-    const {
-  DoEach(nullptr, CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object());
-  ForEachMirroredObject(DoEach);
-}
-
-namespace {
-
-Maybe<LocalDepObject*> RawGetEagerNcclLocalDepObject(const std::string& type) {
-  const auto& device = JUST(Device::New(type));
-  const auto& local_dep_object = device->mut_transport_local_dep_object();
-  CHECK_OR_RETURN(local_dep_object.has_value());
-  return JUST(local_dep_object);
-}
-
-static constexpr auto* GetEagerNcclLocalDepObject =
-    DECORATE(&RawGetEagerNcclLocalDepObject, ThreadLocalCopiable);
-
-}  // namespace
-
-void NcclCriticalSectionPhyInstrOperand::ForEachMutMirroredObject(
-    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-    const {
-  DoEach(nullptr, CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object());
-#ifdef WITH_CUDA
-  auto* sync_launched_nccl = CHECK_JUST(GetEagerNcclLocalDepObject("sync_launched_nccl"));
-  auto* async_launched_nccl = CHECK_JUST(GetEagerNcclLocalDepObject("async_launched_nccl"));
-  CHECK_EQ(sync_launched_nccl, async_launched_nccl);
-  DoEach(nullptr, async_launched_nccl->mut_mirrored_object());
-#endif  // WITH_CUDA
+  DoEach(nullptr, local_dep_object_->mut_mirrored_object());
 }
 
 }  // namespace vm
