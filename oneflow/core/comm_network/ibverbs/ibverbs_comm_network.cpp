@@ -118,7 +118,7 @@ void * IBVerbsCommNet::DeSerialDataToToken(char *data, size_t  * token_size) {
 
 void IBVerbsCommNet::RecvMsg(void* data, size_t size) {
 //  Global<ActorMsgBus>::Get()->HandleRecvData(data, size);
-  cb_(data,size);
+  msghandle_(data,size);
 }
 
 IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT) {
