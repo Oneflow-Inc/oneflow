@@ -14,8 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
-#include <memory>
-#include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
+include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/resource_desc.h"
@@ -90,11 +89,6 @@ void IBVerbsCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size)
   qp_vec_.at(dst_machine_id)->PostSendRequest(data, size);
 }
 
-void IBVerbsCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size,const DataHandle & cb){
-  char* data = reinterpret_cast<char*>(addr);
-  qp_vec_.at(dst_machine_id)->PostSendRequest(data, size);
-}
-
 char * IBVerbsCommNet::SerialTokenToData(void *token, size_t *token_size) {
   char * data = (char*)malloc(sizeof(IBVerbsCommNetRMADesc));
   *token_size = sizeof(IBVerbsCommNetRMADesc);
@@ -116,8 +110,7 @@ void * IBVerbsCommNet::DeSerialDataToToken(char *data, size_t  * token_size) {
 }
 
 void IBVerbsCommNet::RecvMsg(void* data, size_t size) {
-//  Global<ActorMsgBus>::Get()->HandleRecvData(data, size);
-  msghandle_(data,size);
+   msghandle_(data,size);
 }
 
 IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT) {

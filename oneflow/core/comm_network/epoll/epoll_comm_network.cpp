@@ -94,8 +94,6 @@ EpollCommNet::~EpollCommNet() {
 
 void EpollCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) {}
 
-void EpollCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size,const DataHandle & cb) {}
-
 char * EpollCommNet::SerialTokenToData(void *token, size_t *size) {
   return nullptr;
 }
