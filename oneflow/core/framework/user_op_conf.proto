@@ -11,4 +11,8 @@ message UserOpConf {
   map<string, ListString> input = 2;
   map<string, ListString> output = 3;
   map<string, AttrValue> attr = 4;
+  // NOTE(chengcheng): specify the input/output order according to the order called by
+  //   UserOpBuilder.
+  repeated string input_order = 5;
+  repeated string output_order = 6;
 }

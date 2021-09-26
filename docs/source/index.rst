@@ -25,6 +25,8 @@ OneFlow API Reference
     distributed
     fx
     comm
+    placement
+    sbp
 
 
 

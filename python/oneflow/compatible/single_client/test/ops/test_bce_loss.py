@@ -67,7 +67,9 @@ def _compare_bceloss_with_np(
     np_grad_dict = np_bce_loss_diff(input, target, weight)
 
     def assert_prediction_grad(blob: tp.Numpy):
-        assert np.allclose(blob, np_grad_dict["np_bce_grad_mean"])
+        assert np.allclose(
+            blob, np_grad_dict["np_bce_grad_mean"], rtol=1e-03, atol=1e-03,
+        )
 
     @flow.global_function(type="train", function_config=func_config)
     def oneflow_bceloss(

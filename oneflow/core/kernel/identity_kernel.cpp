@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/primitive/memcpy.h"
+#include "oneflow/core/primitive/include/memcpy.h"
 
 namespace oneflow {
 

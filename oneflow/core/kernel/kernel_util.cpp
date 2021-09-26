@@ -18,8 +18,8 @@ limitations under the License.
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/memory/memory_case.pb.h"
-#include "oneflow/core/primitive/memcpy.h"
-#include "oneflow/core/primitive/memset.h"
+#include "oneflow/core/primitive/include/memcpy.h"
+#include "oneflow/core/primitive/include/memset.h"
 #include "oneflow/core/stream/stream_context_adapter.h"
 
 namespace oneflow {
@@ -299,22 +299,14 @@ KU_IF_METHOD Axpy(DeviceCtx* ctx, const int n, const T* alpha, const T* x, const
                   const int incy) {
   Derived::Axpy(ctx, n, *alpha, x, incx, y, incy);
 }
-KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }
 
 #define KU_FLOATING_METHOD \
   template<typename T>     \
   void KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::value>::type>::
 
-KU_FLOATING_METHOD Dot(DeviceCtx* ctx, const int n, const T* x, const int incx, const T* y,
-                       const int incy, T* result) {
-  *result = cblas_dot<T>(n, x, incx, y, incy);
-}
 KU_FLOATING_METHOD Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx,
                         T* y, const int incy) {
   cblas_axpy<T>(n, alpha, x, incx, y, incy);
-}
-KU_FLOATING_METHOD Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
-  for (int64_t i = 0; i < n; ++i) { y[i] = std::sqrt(x[i]); }
 }
 
 KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0) {

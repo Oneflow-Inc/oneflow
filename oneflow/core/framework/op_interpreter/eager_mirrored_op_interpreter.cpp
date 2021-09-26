@@ -127,7 +127,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
 
   // Infer shapes and dtypes
   const auto& device_tag = JUST(op_device->of_type());
-  JUST(user_op_expr.InferLogicalShapeAndDType(
+  JUST(user_op_expr.InferPhysicalShapeAndDType(
       attrs, device_tag,
       [&](int32_t i) -> const TensorMeta* {
         return CHECK_JUST(TensorImpl4Tensor(inputs.at(i)))->mut_tensor_meta();
@@ -296,7 +296,7 @@ Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const Te
     input_mirrored_tensor = JUST(input_tensor->AsMirroredTensor());
     CHECK_OR_RETURN(input_mirrored_tensor) << Error::InvalidValueError("Tensor Cast Error");
     bool requires_grad = autograd::GradMode::is_enabled() && inputs.at(0)->requires_grad();
-    input_mirrored_tensor->set_requires_grad(requires_grad);
+    JUST(input_mirrored_tensor->set_requires_grad(requires_grad));
     input_mirrored_tensor->set_is_leaf(!requires_grad);
   }
   std::shared_ptr<ConsistentTensor> consistent_tensor;
