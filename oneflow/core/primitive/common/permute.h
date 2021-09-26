@@ -51,30 +51,32 @@ void SimplifyPermutation(size_t num_dims, const int64_t* src_dims, const int* pe
   CHECK_NE(num_dims, 0);
   int inverse[max_num_dims];
   for (size_t i = 0; i < num_dims; ++i) { inverse[permutation[i]] = i; }
-  int offset[max_num_dims];
-  offset[0] = 0;
-  for (size_t i = 1; i < num_dims; ++i) {
-    if (inverse[i] == inverse[i - 1] + 1) {
-      offset[i] = offset[i - 1] + 1;
+  int mapping[max_num_dims];
+  size_t valid_num_dims = 0;
+  for (size_t i = 0; i < num_dims; ++i) {
+    const int src_dim = src_dims[i];
+    if (src_dim == 1 || (i != 0 && inverse[i] == inverse[i - 1] + 1)) {
+      mapping[i] = -1;
+      if (src_dim != 1) { simplified_src_dims[valid_num_dims - 1] *= src_dim; }
     } else {
-      offset[i] = offset[i - 1];
+      mapping[i] = valid_num_dims;
+      simplified_src_dims[valid_num_dims] = src_dim;
+      valid_num_dims += 1;
     }
   }
-  *simplified_num_dims = 0;
-  for (size_t i = 0; i < num_dims; ++i) {
-    if (i != 0 && inverse[i] == inverse[i - 1] + 1) {
-      simplified_src_dims[*simplified_num_dims - 1] *= src_dims[i];
-    } else {
-      simplified_src_dims[*simplified_num_dims] = src_dims[i];
-      *simplified_num_dims += 1;
-    }
-  }
-  size_t permutation_index = 0;
-  for (size_t i = 0; i < num_dims; ++i) {
-    if (i != 0 && permutation[i] == permutation[i - 1] + 1) {
-    } else {
-      simplified_permutation[permutation_index] = permutation[i] - offset[permutation[i]];
-      permutation_index += 1;
+  if (valid_num_dims == 0) {
+    *simplified_num_dims = 1;
+    simplified_src_dims[0] = 1;
+    simplified_permutation[0] = 0;
+  } else {
+    *simplified_num_dims = valid_num_dims;
+    size_t permutation_index = 0;
+    for (size_t i = 0; i < num_dims; ++i) {
+      const int mapped = mapping[permutation[i]];
+      if (mapped >= 0) {
+        simplified_permutation[permutation_index] = mapped;
+        permutation_index += 1;
+      }
     }
   }
 }
@@ -195,8 +197,10 @@ void SimplifyThenLaunch(StreamContext* stream_ctx, DataType data_type, size_t nu
   SimplifyPermutation<kMaxNumDims, kMaxMovementSize>(
       num_dims, src_dims, permutation, &simplified_num_dims, simplified_src_dims,
       simplified_permutation, GetSizeOfDataType(data_type), src, dst, &movement_size);
-  LaunchWithSimplified(stream_ctx, movement_size, simplified_num_dims, simplified_src_dims, src,
-                       simplified_permutation, dst);
+  if (simplified_num_dims > 0) {
+    LaunchWithSimplified(stream_ctx, movement_size, simplified_num_dims, simplified_src_dims, src,
+                         simplified_permutation, dst);
+  }
 }
 
 }  // namespace
