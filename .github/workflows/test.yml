@@ -164,6 +164,7 @@ jobs:
       - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@4417f492e7e95b469e5f2abcf12669621443a47d
         name: find cache
         id: find-cache
+        timeout-minutes: 5
         with:
           runner-labels: |
             self-hosted
@@ -208,6 +209,7 @@ jobs:
       - uses: Oneflow-Inc/get-oneflow/cache-complete@4417f492e7e95b469e5f2abcf12669621443a47d
         name: Save cache if successful
         id: save-cache
+        timeout-minutes: 5
         with:
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entry: ${{ matrix.entry }}
@@ -280,6 +282,7 @@ jobs:
       - name: Upload bin
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
         uses: Oneflow-Inc/get-oneflow/degist/upload@4417f492e7e95b469e5f2abcf12669621443a47d
+        timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
           entry: ${{ matrix.entry }}
@@ -290,6 +293,7 @@ jobs:
       - name: Upload whl
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
         uses: Oneflow-Inc/get-oneflow/degist/upload@4417f492e7e95b469e5f2abcf12669621443a47d
+        timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
           entry: ${{ matrix.entry }}
@@ -314,6 +318,7 @@ jobs:
       - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@4417f492e7e95b469e5f2abcf12669621443a47d
         name: find cache
         id: find-cache
+        timeout-minutes: 5
         with:
           runner-labels: |
             self-hosted
@@ -356,6 +361,7 @@ jobs:
       - uses: Oneflow-Inc/get-oneflow/cache-complete@4417f492e7e95b469e5f2abcf12669621443a47d
         name: Save cache if successful
         id: save-cache
+        timeout-minutes: 5
         with:
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entry: ${{ matrix.entry }}
@@ -370,6 +376,7 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (!fromJson(matrix.is-xla) || (fromJson(matrix.is-xla) && needs.changed_files.outputs.should_run_single_client_tests == '1')) }}
         uses: Oneflow-Inc/get-oneflow/degist/download@4417f492e7e95b469e5f2abcf12669621443a47d
         id: download-digest
+        timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
           entry: ${{ matrix.compute-platform }}
@@ -556,6 +563,7 @@ jobs:
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/tensor ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
       - name: Graph API test
+        timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/graph ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
