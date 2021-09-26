@@ -529,12 +529,16 @@ int64_t MakeScopeSymbolId(const JobConfigProto& job_conf, const ParallelConf& pa
 std::string AddLbns(JobBuilder* job_builder, const std::vector<std::string>& lbns,
                     const ParallelConf& parallel_conf, int64_t scope_symbol_id,
                     const std::string& op_name_prefix) {
-  user_op::UserOpConfWrapperBuilder add_op_builder(op_name_prefix + NewUniqueId());
-  add_op_builder.Op("add_n");
-  for (const std::string& lbn : lbns) { add_op_builder.Input("in", lbn); }
-  const auto add_op = add_op_builder.Output("out").ScopeSymbolId(scope_symbol_id).Build();
-  job_builder->AddOps(parallel_conf, {add_op.op_conf()});
-  return add_op.output("out", 0);
+  if (lbns.size() == 1) {
+    return lbns.front();
+  } else {
+    user_op::UserOpConfWrapperBuilder add_op_builder(op_name_prefix + NewUniqueId());
+    add_op_builder.Op("add_n");
+    for (const std::string& lbn : lbns) { add_op_builder.Input("in", lbn); }
+    const auto add_op = add_op_builder.Output("out").ScopeSymbolId(scope_symbol_id).Build();
+    job_builder->AddOps(parallel_conf, {add_op.op_conf()});
+    return add_op.output("out", 0);
+  }
 }
 
 std::string AddCastToP(JobBuilder* job_builder, const std::string& in_lbn,
