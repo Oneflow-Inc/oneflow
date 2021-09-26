@@ -79,18 +79,19 @@ Maybe<BoxingExprIf> GenericBoxingExpr() {
 }
 
 Maybe<BoxingExprIf> RawMainBoxingExpr() {
-  const auto& core =
-      JUST(BoxingExpr("identity")) | JUST(BoxingExpr("flatten-hierarchy"))
-      | JUST(BoxingExpr("cuda-copy-h2d")) | JUST(BoxingExpr("cuda-copy-d2h"))
-      | JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("ccl-p-to-b"))
-      | JUST(BoxingExpr("nccl-s-to-b")) | JUST(BoxingExpr("ccl-s-to-b"))
-      | JUST(BoxingExpr("nccl-s-to-s")) | JUST(BoxingExpr("ccl-s-to-s"))
-      | JUST(BoxingExpr("nccl-p-to-s")) | JUST(BoxingExpr("ccl-p-to-s"))
-      | JUST(BoxingExpr("symmetric-b-to-p")) | JUST(BoxingExpr("symmetric-b-to-s"))
-      | JUST(BoxingExpr("symmetric-s-to-p")) | JUST(BoxingExpr("symmetric-nd-sbp-to-nd-sbp"))
-      | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(BoxingExpr("naive-s-to-s"))
-      | JUST(BoxingExpr("naive-1-to-1")) | JUST(BoxingExpr("naive-s-to-b"))
-      | JUST(OneToNBoxingExpr()) | JUST(NToOneBoxingExpr()) | JUST(GenericBoxingExpr());
+  const auto& core = JUST(BoxingExpr("identity")) | JUST(BoxingExpr("flatten-hierarchy"))
+                     | JUST(BoxingExpr("cuda-copy-h2d")) | JUST(BoxingExpr("cuda-copy-d2h"))
+                     | JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("ccl-p-to-b"))
+                     | JUST(BoxingExpr("nccl-s-to-b")) | JUST(BoxingExpr("ccl-s-to-b"))
+                     | JUST(BoxingExpr("nccl-s-to-s")) | JUST(BoxingExpr("ccl-s-to-s"))
+                     | JUST(BoxingExpr("nccl-p-to-s")) | JUST(BoxingExpr("ccl-p-to-s"))
+                     | JUST(BoxingExpr("symmetric-b-to-p")) | JUST(BoxingExpr("symmetric-b-to-s"))
+                     | JUST(BoxingExpr("symmetric-s-to-p"))
+                     | JUST(BoxingExpr("symmetric-nd-sbp-to-nd-sbp"))
+                     | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(BoxingExpr("naive-s-to-s"))
+                     | JUST(BoxingExpr("naive-1-to-1")) | JUST(BoxingExpr("naive-s-to-b"))
+                     | JUST(BoxingExpr("naive-b-to-s")) | JUST(OneToNBoxingExpr())
+                     | JUST(NToOneBoxingExpr()) | JUST(GenericBoxingExpr());
   return core | JUST(OptionalCudaCopy(core));
 }
 

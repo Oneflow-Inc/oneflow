@@ -19,7 +19,11 @@ limitations under the License.
 #include <string>
 #include <vector>
 
+#include "oneflow/core/common/symbol.h"
+
 namespace oneflow {
+
+class Device;
 
 class NNGraphIf {
  public:

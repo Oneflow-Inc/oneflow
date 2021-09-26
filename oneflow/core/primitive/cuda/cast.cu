@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/primitive/cast.h"
+#include "oneflow/core/primitive/include/cast.h"
 #include "oneflow/core/primitive/cuda/type_seq.h"
 #include "oneflow/core/primitive/cuda/cuda_graph_support.h"
 #include "oneflow/core/cuda/elementwise.cuh"

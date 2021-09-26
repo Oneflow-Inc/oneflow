@@ -57,6 +57,10 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
            const one::TensorTuple& parameters, const std::shared_ptr<NNGraph>& nn_graph) {
           return RunLazyNNGraph(inputs, outputs, parameters, nn_graph).GetOrThrow();
         });
+  m.def("SoftSyncNNGraphBuffers",
+        [](const one::TensorTuple& buffers, const std::shared_ptr<NNGraph>& nn_graph) {
+          return SoftSyncNNGraphBuffers(buffers, nn_graph).GetOrThrow();
+        });
   m.def("AddTensorAsGraphLoss",
         [](const std::shared_ptr<one::Tensor>& t) { return AddTensorAsGraphLoss(t).GetOrThrow(); });
 }
