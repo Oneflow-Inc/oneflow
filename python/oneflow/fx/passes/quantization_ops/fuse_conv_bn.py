@@ -112,7 +112,7 @@ class QConvBN(flow.nn.Module):
         else:
             mean = flow.Tensor(self.bn_module.running_mean)
             var = flow.Tensor(self.bn_module.running_var)
-        
+
         std = flow.sqrt(var + self.bn_module.eps)
         weight, bias = self.fold_bn(mean, std)
 

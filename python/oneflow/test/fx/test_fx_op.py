@@ -14,9 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-import unittest
+import oneflow.unittest
 import numpy as np
+import unittest
 from oneflow.fx import symbolic_trace
+from oneflow.test_utils.automated_test_util import *
 
 
 def sort_op(x):

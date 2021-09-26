@@ -385,7 +385,7 @@ class Module(object):
 
     def eval(self: T) -> T:
         return self.train(False)
-    
+
     def __delattr__(self, name):
         if name in self._parameters:
             del self._parameters[name]

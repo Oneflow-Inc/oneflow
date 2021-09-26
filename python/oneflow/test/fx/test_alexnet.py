@@ -15,9 +15,11 @@ limitations under the License.
 """
 import oneflow as flow
 import oneflow.nn as nn
-import unittest
 import numpy as np
+import unittest
+import oneflow.unittest
 from oneflow.fx import symbolic_trace
+from oneflow.test_utils.automated_test_util import *
 
 
 class AlexNet(nn.Module):

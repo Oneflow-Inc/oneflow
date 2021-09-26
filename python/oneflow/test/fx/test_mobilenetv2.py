@@ -16,10 +16,12 @@ limitations under the License.
 import oneflow as flow
 import oneflow.nn as nn
 import unittest
+import oneflow.unittest
 import numpy as np
 from oneflow.fx import symbolic_trace
 from oneflow import Tensor
 from typing import Callable, Any, Optional, List
+from oneflow.test_utils.automated_test_util import *
 
 
 def _make_divisible(v: float, divisor: int, min_value: Optional[int] = None) -> int:

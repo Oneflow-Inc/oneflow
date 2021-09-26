@@ -13,14 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import tempfile
+from oneflow.fx.passes.quantization import GetInsertNode
 import oneflow as flow
 import oneflow.nn as nn
-import unittest
+import oneflow.unittest
 import numpy as np
+import unittest
 from oneflow.fx import symbolic_trace
-from oneflow.fx.passes.quantization import GetInsertNode
-
+from oneflow.test_utils.automated_test_util import *
 
 class AlexNet(nn.Module):
     def __init__(self, num_classes: int = 1000) -> None:
@@ -87,9 +87,9 @@ class TestAlexNet(flow.unittest.TestCase):
         m = AlexNet()
         gm: flow.fx.GraphModule = symbolic_trace(m)
         input = flow.randn(1, 3, 224, 224)
-        insert_place, _ = GetInsertNode(gm).propagate(input)
+        insert_place, insert_op_state = GetInsertNode(gm).propagate(input)
         for x in gm.graph.nodes:
-            if x.target in insert_place:
+            if x.target in insert_place and isinstance(insert_op_state[x.target], nn.Conv2d):
                 y = x._next
                 with gm.graph.inserting_after(x):
                     neg: flow.fx.Node = gm.graph.call_function(
