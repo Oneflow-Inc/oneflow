@@ -96,7 +96,7 @@ class CPUGeneratorImpl : public DeviceGeneratorImpl {
   explicit CPUGeneratorImpl(uint64_t seed)
       : DeviceGeneratorImpl(seed, DeviceType::kCPU, 0), engine_(seed) {}
 
-  virtual ~CPUGeneratorImpl() = default;
+  virtual ~CPUGeneratorImpl();
 
   void set_current_seed(uint64_t seed) override;
 
