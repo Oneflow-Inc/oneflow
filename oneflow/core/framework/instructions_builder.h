@@ -101,7 +101,11 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> LaunchLazyJob(const one::EagerBlobObjectListPtr& inputs,
                             const one::EagerBlobObjectListPtr& outputs,
                             const one::EagerBlobObjectListPtr& parameters,
-                            const std::shared_ptr<NNGraphIf>& nn_graph) const;
+                            const std::shared_ptr<NNGraphIf>& nn_graph);
+
+  // soft sync for inputs/outputs buffers of NNGraph
+  Maybe<void> SoftSyncNNGraphBuffers(const one::EagerBlobObjectListPtr& eager_blob_objects,
+                                     const std::shared_ptr<NNGraphIf>& nn_graph);
 
   Maybe<compatible_py::BlobObject> PackPhysicalBlobsToLogicalBlob(
       const std::vector<std::shared_ptr<compatible_py::BlobObject>>& physical_blob_objects,
@@ -461,14 +465,17 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
  private:
   Maybe<vm::InputCriticalSectionPhyInstrOperand> MakeInputCriticalSection(
       const one::EagerBlobObjectListPtr& eager_blob_object,
-      const std::shared_ptr<NNGraphIf>& nn_graph) const;
+      const std::shared_ptr<NNGraphIf>& nn_graph);
   Maybe<vm::ParameterCriticalSectionPhyInstrOperand> MakeParameterCriticalSection(
       const one::EagerBlobObjectListPtr& eager_blob_object,
-      const std::shared_ptr<NNGraphIf>& nn_graph) const;
+      const std::shared_ptr<NNGraphIf>& nn_graph);
   Maybe<vm::OutputCriticalSectionPhyInstrOperand> MakeOutputCriticalSection(
       const one::EagerBlobObjectListPtr& eager_blob_object,
-      const std::shared_ptr<NNGraphIf>& nn_graph) const;
-  Maybe<vm::NcclCriticalSectionPhyInstrOperand> MakeNcclCriticalSection() const;
+      const std::shared_ptr<NNGraphIf>& nn_graph);
+  Maybe<vm::NcclCriticalSectionPhyInstrOperand> MakeNcclCriticalSection();
+
+  Maybe<ObjectMsgPtr<LocalDepObject>> WaitUntilZero(
+      const std::shared_ptr<std::atomic<int64_t>>& ref_cnt);
 
   std::shared_ptr<vm::IdGenerator> id_generator_;
   vm::InstructionMsgList* instruction_list_;
