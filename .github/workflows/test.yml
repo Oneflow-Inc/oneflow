@@ -210,7 +210,7 @@ jobs:
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entry: ${{ matrix.entry }}
           digest-type: build
-          mark-as-completed: ${{ contains(matrix.runs-on, 'self-hosted') }}
+          mark-as-completed: ${{ contains(matrix.runs-on, 'self-hosted') && github.repository == 'Oneflow-Inc/oneflow }}
       - name: Check digest and fail if cache result not identical to matrix
         if: ${{ fromJSON(steps.save-cache.outputs.cache-hit) != matrix.cache-hit }}
         run: |
@@ -358,7 +358,7 @@ jobs:
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entry: ${{ matrix.entry }}
           digest-type: ${{ matrix.digest-type }}
-          mark-as-completed: ${{ contains(matrix.runs-on, 'self-hosted') }}
+          mark-as-completed: ${{ contains(matrix.runs-on, 'self-hosted') && github.repository == 'Oneflow-Inc/oneflow }}
       - name: Check digest and fail if cache result not identical to matrix
         if: ${{ fromJSON(steps.save-cache.outputs.cache-hit) != matrix.cache-hit }}
         run: |
