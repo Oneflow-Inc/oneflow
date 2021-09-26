@@ -190,6 +190,7 @@ void SimplifyThenLaunch(StreamContext* stream_ctx, DataType data_type, size_t nu
                         const int64_t* src_dims, const void* src, const int* permutation,
                         void* dst) {
   CHECK_LE(num_dims, kMaxNumDims);
+  CHECK_GT(num_dims, 0);
   size_t simplified_num_dims = 0;
   int64_t simplified_src_dims[kMaxNumDims];
   int simplified_permutation[kMaxNumDims];
@@ -197,10 +198,8 @@ void SimplifyThenLaunch(StreamContext* stream_ctx, DataType data_type, size_t nu
   SimplifyPermutation<kMaxNumDims, kMaxMovementSize>(
       num_dims, src_dims, permutation, &simplified_num_dims, simplified_src_dims,
       simplified_permutation, GetSizeOfDataType(data_type), src, dst, &movement_size);
-  if (simplified_num_dims > 0) {
-    LaunchWithSimplified(stream_ctx, movement_size, simplified_num_dims, simplified_src_dims, src,
-                         simplified_permutation, dst);
-  }
+  LaunchWithSimplified(stream_ctx, movement_size, simplified_num_dims, simplified_src_dims, src,
+                       simplified_permutation, dst);
 }
 
 }  // namespace
