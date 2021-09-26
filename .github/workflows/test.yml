@@ -642,6 +642,9 @@ jobs:
     name: Static analysis with clang on diff
     runs-on: ubuntu-20.04
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    env:
+      OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+      OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
     steps:
       - name: Check out OneFlow
         uses: actions/checkout@v2
@@ -649,17 +652,29 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@4417f492e7e95b469e5f2abcf12669621443a47d
+        name: Save cache if successful
+        id: save-cache
+        timeout-minutes: 5
+        with:
+          oneflow-src: .
+          entry: static_analysis_with_clang_on_diff
+          digest-type: build
+          mark-as-completed: true
       - name: Install dependencies
+        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         run: |
           sudo apt-get update
           sudo apt-get install -y libopenblas-dev nasm python3-pip ninja-build ccache
       - name: Download OneFlow custom clang-tidy
+        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         run: |
           wget https://github.com/Oneflow-Inc/llvm-project/releases/download/latest/clang-tidy-489012f-x86_64.AppImage
           wget https://raw.githubusercontent.com/oneflow-inc/llvm-project/maybe/clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py
           chmod +x clang-tidy-489012f-x86_64.AppImage clang-tidy-diff.py
       - name: Cache third party dir
         uses: actions/cache@v2
+        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         with:
           path: ~/.ccache
           key: clang-tidy-diff-third-party-ccache-${{ hashFiles('**/CMakeLists.txt') }}-${{ hashFiles('**/*.cmake') }}
@@ -667,6 +682,7 @@ jobs:
             clang-tidy-diff-third-party-ccache-${{ hashFiles('**/CMakeLists.txt') }}-
             clang-tidy-diff-third-party-ccache-
       - name: Build third party libs and generate files
+        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         run: |
           export CCACHE_COMPRESS=true
           export CCACHE_MAXSIZE=500M
@@ -679,12 +695,13 @@ jobs:
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build . -j$(nproc) --target oneflow_deps of_cfgobj of_protoobj of_functional_obj of_functional_tensor_obj
       - name: Fetch upstream
-        if: github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
+        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) && github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name }}
         run: |
           git remote add upstream https://github.com/Oneflow-Inc/oneflow
           git fetch upstream
       - name: Run clang-tidy for modified files
         # use clang as compiler for correct compiler flags
+        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         run: |
           cd build
           rm CMakeCache.txt
@@ -697,7 +714,7 @@ jobs:
           cd ..
           git diff -U0 ${{ github.event.pull_request.base.sha }} | ./clang-tidy-diff.py -clang-tidy-binary ./clang-tidy-489012f-x86_64.AppImage -path build -allow-enabling-alpha-checkers -j $(nproc) -p1 -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" -warnings-as-errors="*,-maybe-glog-fatal,-clang-analyzer-alpha.*"
       - name: Remove automerge
-        if: failure() && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge')
+        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) && failure() && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge') }}
         uses: actions/github-script@v4
         with:
           script: |

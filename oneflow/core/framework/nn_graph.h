@@ -38,6 +38,8 @@ class NNGraph final : public NNGraphIf {
   const std::vector<std::string>& outputs_op_names() const override;
   const std::vector<bool>& inputs_valid() const override;
   const std::vector<bool>& outputs_valid() const override;
+  const std::vector<std::string>& inputs_tensor_meta_str() const;
+  const std::vector<std::string>& outputs_tensor_meta_str() const;
   int64_t variable_op_size() const;
 
   Maybe<void> RegisterInputOpNamesAndTensors(
@@ -64,6 +66,8 @@ class NNGraph final : public NNGraphIf {
   std::vector<std::string> output_op_names_;
   std::vector<bool> input_tensors_valid_;
   std::vector<bool> output_tensors_valid_;
+  std::vector<std::string> inputs_tensor_meta_str_;
+  std::vector<std::string> outputs_tensor_meta_str_;
   HashMap<std::string, Blob*> variable_op_name2eager_blob_;
   HashSet<std::string> variable_op_names_;
   Job job_;
