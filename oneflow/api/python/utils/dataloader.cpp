@@ -31,7 +31,8 @@ namespace oneflow {
 
 namespace py = pybind11;
 
-// reference: https://github.com/pytorch/pytorch/blob/d69c22dd61a2f006dcfe1e3ea8468a3ecaf931aa/torch/csrc/DataLoader.cpp
+// reference: pytorch/torch/csrc/DataLoader.cpp
+// https://github.com/pytorch/pytorch/blob/d69c22dd61a2f006dcfe1e3ea8468a3ecaf931aa/torch/csrc/DataLoader.cpp
 
 // Critical signal handlers should be registered on worker processes before
 // doing work.
