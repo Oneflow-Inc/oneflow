@@ -13,16 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-// Together with `torch/utils/data/_utils/signal_handling.py`, the following
-// is an effort to do our best to provide some error message to users when a
-// worker dies due to error / critical signals.
-//
-// See NOTE [ Signal handling in multiprocessing data loading ] for more details.
-
-// TODO: The following don't work on Windows. Specifically, sigaction, waitid
-// calls, and SIGCHLD handler. Currently, dummy implementations are provided
-// for Windows.
-
 #ifndef _WIN32
 
 #include <atomic>
@@ -40,6 +30,8 @@ limitations under the License.
 namespace oneflow {
 
 namespace py = pybind11;
+
+// reference: https://github.com/pytorch/pytorch/blob/d69c22dd61a2f006dcfe1e3ea8468a3ecaf931aa/torch/csrc/DataLoader.cpp
 
 // Critical signal handlers should be registered on worker processes before
 // doing work.
@@ -107,8 +99,6 @@ static void set_worker_signal_handlers() {
   setSignalHandler(SIGSEGV, &handler_SIGSEGV, nullptr);
   setSignalHandler(SIGTERM, &handler_SIGTERM, nullptr);
   setSignalHandler(SIGFPE, &handler_SIGFPE, nullptr);
-  // Py_RETURN_NONE;
-  // return Py_None;
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
@@ -159,7 +149,6 @@ static void error_if_any_worker_fails() {
       }
     }
   }
-  // Py_RETURN_NONE;
 }
 
 inline int64_t utils_unpackLong(PyObject* obj) {
@@ -209,7 +198,6 @@ static void remove_worker_pids(py::args py_args) {
     throw py::value_error("Cannot find worker information for _BaseDataLoaderIter");
   }
   worker_pids.erase(it);
-  // Py_RETURN_NONE;
 }
 
 #undef SIGNAL_HANDLER
