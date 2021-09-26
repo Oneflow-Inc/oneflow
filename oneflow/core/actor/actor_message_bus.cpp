@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/actor/actor_message_bus.h"
 #include <cstddef>
 #include <memory>
+#include "oneflow/core/actor/actor.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/device/collective_boxing_device_context.h"
@@ -31,7 +32,7 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
     SendMsgWithoutCommNet(msg);
   } else {
     auto msgHandle = [this] (void *data,size_t size) {
-      HandleRecvData(data, size);
+      Global<ActorMsgBus>::Get()->HandleRecvData(data, size);
     };
     Global<CommNet>::Get()->RegisterMsgCallback(msgHandle);
     if (msg.IsDataRegstMsgToConsumer()) {
