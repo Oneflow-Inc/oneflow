@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/register/register.h"
 
 namespace oneflow {
-using DataHandle = std::function<void(void * ,size_t)>;
 
 enum class ActorCmd {
   kInitModel = 0,     // MdUpdt Actor
