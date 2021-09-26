@@ -31,7 +31,6 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
   if (dst_machine_id == GlobalProcessCtx::Rank()) {
     SendMsgWithoutCommNet(msg);
   } else {
-    Global<CommNet>::Get()->RegisterMsgCallback(nullptr);
     if (msg.IsDataRegstMsgToConsumer()) {
       int64_t comm_net_sequence;
       {

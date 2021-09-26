@@ -102,7 +102,7 @@ CommNet::CommNet() {
     std::function<void()> cb;
     while (ready_cbs_.Receive(&cb) == kChannelStatusSuccess) { cb(); }
   });
- // RegisterMsgCallback();
+  RegisterMsgCallback();
 }
 
 }  // namespace oneflow
