@@ -31,8 +31,6 @@ std::unique_ptr<primitive::Add> NewAddPrimitive(Context* ctx) {
   return primitive::NewPrimitive<primitive::AddFactory>(ctx->device_type(), data_type);
 }
 
-using AddKernelState = OpKernelStateWrapper<std::unique_ptr<primitive::Add>>;
-
 class AddNKernel : public OpKernel, public CudaGraphSupport {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AddNKernel);
@@ -41,15 +39,10 @@ class AddNKernel : public OpKernel, public CudaGraphSupport {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
-  std::shared_ptr<OpKernelState> CreateOpKernelState(KernelInitContext* ctx) const override {
-    return std::make_shared<AddKernelState>(NewAddPrimitive(ctx));
-  }
-
  private:
-  bool IsCudaGraphSupported(KernelInitContext* ctx, OpKernelState* state) const override {
-    return IsCudaGraphPrimitive(CHECK_NOTNULL(dynamic_cast<AddKernelState*>(state))->Get().get());
-  }
   void Compute(KernelComputeContext* ctx, OpKernelState* state) const override {
+    auto primitive = NewAddPrimitive(ctx);
+    CHECK(primitive);
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const DataType data_type = out->data_type();
     const size_t count = out->shape().elem_cnt();
@@ -61,9 +54,7 @@ class AddNKernel : public OpKernel, public CudaGraphSupport {
       CHECK_EQ(in_i->data_type(), data_type);
       srcs[i] = in_i->template dptr();
     }
-    CHECK_NOTNULL(dynamic_cast<AddKernelState*>(state))
-        ->Get()
-        ->Launch(ctx->stream_ctx(), srcs.data(), in_num, out->mut_dptr(), count);
+    primitive->Launch(ctx->stream_ctx(), srcs.data(), in_num, out->mut_dptr(), count);
   }
 };
 
