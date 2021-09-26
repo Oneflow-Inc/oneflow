@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/actor/actor_message_bus.h"
+#include "oneflow/core/common/global.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/env_desc.h"
@@ -88,6 +89,11 @@ void CommNet::RegisterMsgCallback(std::function<void (void *, size_t)> MsgHandle
 }
 
 CommNet::CommNet() {
+  auto cb = [] (void * data,size_t size) {
+    Global<ActorMsgBus>::Get()->HandleRecvData(data,size);
+  };
+  msghandle_ = cb;
+  //msghandle_ = Global<ActorMsgBus>::Get()->HandleRecvData;
   int64_t this_machine_id = GlobalProcessCtx::Rank();
   for (int64_t i : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
     if (i == this_machine_id) { continue; }
