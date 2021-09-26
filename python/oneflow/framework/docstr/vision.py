@@ -133,7 +133,7 @@ add_docstr(
         >>> import oneflow as flow
 
         >>> input = flow.tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)  
-        >>> output = flow._C.upsample(input, height_scale=2.0, width_scale=2.0, align_corners=False, interpolation="nearest")
+        >>> output = flow.nn.functional.upsample(input, height_scale=2.0, width_scale=2.0, align_corners=False, interpolation="nearest")
     
         >>> output
         tensor([[[[1., 1., 2., 2.],

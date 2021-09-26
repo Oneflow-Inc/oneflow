@@ -140,6 +140,8 @@ Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
       {"comm_net", "cpu.LocalCallOpKernel"},
       {"sync_launched_nccl", "gpu.LocalCallOpKernel"},
       {"async_launched_nccl", "async.gpu.LocalCallOpKernel"},
+      // no compute instruction on critical_section device.
+      {"critical_section", "UNIMPLEMENTED INSTRUCTION NAME"},
   };
   return MapAt(type2instr_name, type);
 }
