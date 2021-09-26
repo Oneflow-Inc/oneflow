@@ -11,7 +11,7 @@ on:
         required: false
 env:
   OSS_ACCESS_KEY_ID: ${{ fromJson(format('[\"{0}\",\"LTAI5tGQpDyDCtKPvwDG9GQH\"]', secrets.OSS_ACCESS_KEY_ID))[github.repository == 'Oneflow-Inc/oneflow'] }}
-  OSS_ACCESS_KEY_SECRET: ${{ fromJson(format('[\"{0}\",\"ig8ZOCcmZVzT3t5TUPrK492fic3TQo\"]'', secrets.OSS_ACCESS_KEY_SECRET))[github.repository == 'Oneflow-Inc/oneflow'] }}
+  OSS_ACCESS_KEY_SECRET: ${{ fromJson(format('[\"{0}\",\"ig8ZOCcmZVzT3t5TUPrK492fic3TQo\"]', secrets.OSS_ACCESS_KEY_SECRET))[github.repository == 'Oneflow-Inc/oneflow'] }}
 jobs:
   cancel_previous:
     name: Cancel previous runs
