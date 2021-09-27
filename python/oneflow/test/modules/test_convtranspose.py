@@ -19,16 +19,36 @@ import unittest
 import oneflow as flow
 import oneflow.unittest
 from collections import OrderedDict
+from oneflow.test_utils.automated_test_util import *
 
-import torch
 import numpy as np
 from test_util import GenArgList
 
 
 def _test_convtranspose1d_bias_false(test_case, device):
-    np_arr = np.random.randn(1, 1, 3)
-    weight = np.ones((1, 2, 3))
-
+    np_arr = np.array(
+        [
+            [
+                [ 0.35356437, -0.95761778, 0.19567713]
+            ]
+        ]
+    )
+    weight = np.ones((1,2,3))
+    test_out_data = np.array(
+        [
+            [
+                [ 0.35356438, -0.6040534, -0.40837622, -0.7619406, 0.19567713],
+                [ 0.35356438, -0.6040534, -0.40837622, -0.7619406, 0.19567713]
+            ]
+        ]
+    )
+    test_out_grad = np.array(
+        [
+            [
+                [6., 6., 6.]
+            ]
+        ]
+    )
     input_flow = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
@@ -36,28 +56,42 @@ def _test_convtranspose1d_bias_false(test_case, device):
     m_f.weight.data = flow.tensor(weight, dtype=flow.float32)
     m_f = m_f.to(device)
     out_flow = m_f(input_flow)
-
-    input_torch = torch.tensor(np_arr, dtype=torch.float32, requires_grad=True)
-    m_t = torch.nn.ConvTranspose1d(1, 2, 3, stride=1, bias=False)
-    m_t.weight.data = torch.tensor(weight, dtype=torch.float32)
-    out_torch = m_t(input_torch)
-
     test_case.assertTrue(
-        np.allclose(out_flow.numpy(), out_torch.detach().numpy(), 1e-06, 1e-06)
+        np.allclose(out_flow.numpy(), test_out_data, 1e-06, 1e-06)
     )
+
     out_flow = out_flow.sum()
     out_flow.backward()
-    out_torch = out_torch.sum()
-    out_torch.backward()
     test_case.assertTrue(
-        np.allclose(input_flow.grad.numpy(), input_torch.grad.numpy(), 1e-06, 1e-06)
+        np.allclose(input_flow.grad.numpy(), test_out_grad, 1e-06, 1e-06)
     )
 
 
 def _test_convtranspose1d_bias_true(test_case, device):
-    np_arr = np.random.randn(1, 1, 3)
-    weight = np.ones((1, 2, 3))
-    bias = np.random.rand(2)
+    np_arr = np.array(
+        [
+            [
+                [ 0.54925832, -0.64144184, 0.15213189]
+            ]
+        ]
+    )
+    weight = np.ones((1,2,3))
+    bias = np.array([0.16849578, 0.1509564])
+    test_out_data = np.array(
+        [
+            [
+                [ 0.71775407, 0.07631224, 0.22844413, -0.32081416, 0.32062766],
+                [ 0.7002147, 0.05877288, 0.21090476, -0.3383535, 0.3030883]
+            ]
+        ]
+    )
+    test_out_grad = np.array(
+        [
+            [
+                [6., 6., 6.]
+            ]
+        ]
+    )
 
     input_flow = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
@@ -67,29 +101,42 @@ def _test_convtranspose1d_bias_true(test_case, device):
     m_f.bias = flow.nn.Parameter(flow.Tensor(bias))
     m_f = m_f.to(device)
     out_flow = m_f(input_flow)
-
-    input_torch = torch.tensor(np_arr, dtype=torch.float32, requires_grad=True)
-    m_t = torch.nn.ConvTranspose1d(1, 2, 3, stride=1, bias=True)
-    m_t.weight.data = torch.tensor(weight, dtype=torch.float32)
-    m_t.bias = torch.nn.Parameter(torch.Tensor(bias))
-    out_torch = m_t(input_torch)
-
     test_case.assertTrue(
-        np.allclose(out_flow.numpy(), out_torch.detach().numpy(), 1e-06, 1e-06)
+        np.allclose(out_flow.numpy(), test_out_data, 1e-06, 1e-06)
     )
     out_flow = out_flow.sum()
     out_flow.backward()
-    out_torch = out_torch.sum()
-    out_torch.backward()
     test_case.assertTrue(
-        np.allclose(input_flow.grad.numpy(), input_torch.grad.numpy(), 1e-06, 1e-06)
+        np.allclose(input_flow.grad.numpy(), test_out_grad, 1e-06, 1e-06)
     )
 
 
 def _test_convtranspose1d_group_bias_false(test_case, device):
-    np_arr = np.random.randn(2, 2, 3)
+    np_arr = np.array(
+        [
+            [
+                [ 0.38072484, -0.01421228, -0.6512485],
+                [-0.05744093, 2.47079971, 0.17573214]
+            ]
+        ]
+    )
     weight = np.ones((2, 1, 3))
-
+    test_out_data = np.array(
+        [
+            [
+                [ 0.38072485, 0.36651257, -0.28473592, -0.66546077, -0.6512485],
+                [-0.05744093, 2.4133587, 2.5890908, 2.6465318, 0.17573214]
+            ]
+        ]
+    )
+    test_out_grad = np.array(
+        [
+            [
+                [3., 3., 3.],
+                [3., 3., 3.]
+            ]
+        ]
+    )
     input_flow = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
@@ -97,29 +144,55 @@ def _test_convtranspose1d_group_bias_false(test_case, device):
     m_f.weight.data = flow.tensor(weight, dtype=flow.float32)
     m_f = m_f.to(device)
     out_flow = m_f(input_flow)
-
-    input_torch = torch.tensor(np_arr, dtype=torch.float32, requires_grad=True)
-    m_t = torch.nn.ConvTranspose1d(2, 2, 3, stride=1, groups=2, bias=False)
-    m_t.weight.data = torch.tensor(weight, dtype=torch.float32)
-    out_torch = m_t(input_torch)
-
     test_case.assertTrue(
-        np.allclose(out_flow.numpy(), out_torch.detach().numpy(), 1e-06, 1e-06)
-    )
+        np.allclose(out_flow.numpy(), test_out_data, 1e-06, 1e-06)
+    )  
     out_flow = out_flow.sum()
     out_flow.backward()
-    out_torch = out_torch.sum()
-    out_torch.backward()
     test_case.assertTrue(
-        np.allclose(input_flow.grad.numpy(), input_torch.grad.numpy(), 1e-06, 1e-06)
+        np.allclose(input_flow.grad.numpy(), test_out_grad, 1e-06, 1e-06)
     )
 
 
 def _test_convtranspose1d_group_bias_true(test_case, device):
-    np_arr = np.random.randn(2, 2, 3)
+    np_arr = np.array(
+        [
+            [
+                [-0.77808793, 0.99824008, 0.57340066],
+                [ 1.46278707, -0.65234252, -1.13087643]
+            ],
+            [
+                [ 0.76053973, 0.62332447, -1.17157106],
+                [ 0.60291466, -0.0472167, 0.89986403]
+            ]
+        ]
+    )
     weight = np.ones((2, 1, 3))
-    bias = np.random.rand(2)
-
+    bias = np.array([0.32546719, 0.14995032])
+    test_out_data = np.array(
+        [
+            [
+                [-0.45262071, 0.54561937, 1.11902, 1.897108, 0.89886785],
+                [ 1.6127374, 0.96039486, -0.1704815, -1.6332686, -0.9809261]
+            ],
+            [
+                [ 1.0860069, 1.7093314, 0.5377604, -0.22277936, -0.8461038],
+                [ 0.75286496, 0.70564824, 1.6055121, 1.0025976, 1.0498143]
+            ]
+        ]
+    )
+    test_out_grad = np.array(
+        [
+            [
+                [3., 3., 3.],
+                [3., 3., 3.]
+            ],
+            [
+                [3., 3., 3.],
+                [3., 3., 3.]
+            ]
+        ]
+    )
     input_flow = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
@@ -128,29 +201,62 @@ def _test_convtranspose1d_group_bias_true(test_case, device):
     m_f.bias = flow.nn.Parameter(flow.Tensor(bias))
     m_f = m_f.to(device)
     out_flow = m_f(input_flow)
-
-    input_torch = torch.tensor(np_arr, dtype=torch.float32, requires_grad=True)
-    m_t = torch.nn.ConvTranspose1d(2, 2, 3, stride=1, groups=2, bias=True)
-    m_t.weight.data = torch.tensor(weight, dtype=torch.float32)
-    m_t.bias = torch.nn.Parameter(torch.Tensor(bias))
-    out_torch = m_t(input_torch)
-
     test_case.assertTrue(
-        np.allclose(out_flow.numpy(), out_torch.detach().numpy(), 1e-06, 1e-06)
+        np.allclose(out_flow.numpy(), test_out_data, 1e-06, 1e-06)
     )
     out_flow = out_flow.sum()
     out_flow.backward()
-    out_torch = out_torch.sum()
-    out_torch.backward()
     test_case.assertTrue(
-        np.allclose(input_flow.grad.numpy(), input_torch.grad.numpy(), 1e-06, 1e-06)
+        np.allclose(input_flow.grad.numpy(), test_out_grad, 1e-06, 1e-06)
     )
 
 
 def _test_convtranspose1d_group_large_out_channel(test_case, device):
-    np_arr = np.random.randn(2, 2, 3)
+    np_arr = np.array(
+        [
+            [
+                [ 2.00934643, 1.5782626, -1.59060988],
+                [-1.70463546, 1.30170714, -1.04025804]
+            ],
+            [
+                [ 0.60327536, 1.26085986, -0.58499662],
+                [-0.48145872, -1.64391469, -0.09332249]
+            ]
+        ]
+    )
     weight = np.ones((2, 3, 3))
-
+    test_out_data = np.array(
+        [
+            [
+                [ 2.0093465, 3.587609, 1.9969991, -0.01234734, -1.5906099],
+                [ 2.0093465, 3.587609, 1.9969991, -0.01234734, -1.5906099],
+                [ 2.0093465, 3.587609, 1.9969991, -0.01234734, -1.5906099],
+                [-1.7046355, -0.40292835, -1.4431864, 0.2614491, -1.040258],
+                [-1.7046355, -0.40292835, -1.4431864, 0.2614491, -1.040258],
+                [-1.7046355, -0.40292835, -1.4431864, 0.2614491, -1.040258],
+            ],
+            [
+                [ 0.60327536, 1.8641353, 1.2791386, 0.6758632, -0.58499664],
+                [ 0.60327536, 1.8641353, 1.2791386, 0.6758632, -0.58499664],
+                [ 0.60327536, 1.8641353, 1.2791386, 0.6758632, -0.58499664],
+                [-0.48145872, -2.1253734, -2.2186959, -1.7372372, -0.09332249],
+                [-0.48145872, -2.1253734, -2.2186959, -1.7372372, -0.09332249],
+                [-0.48145872, -2.1253734, -2.2186959, -1.7372372, -0.09332249],
+            ]
+        ]
+    )
+    test_out_grad = np.array(
+        [
+            [
+                [9., 9., 9.],
+                [9., 9., 9.]
+            ],
+            [
+                [9., 9., 9.],
+                [9., 9., 9.]
+            ]
+        ]
+    )
     input_flow = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
@@ -158,28 +264,62 @@ def _test_convtranspose1d_group_large_out_channel(test_case, device):
     m_f.weight.data = flow.tensor(weight, dtype=flow.float32)
     m_f = m_f.to(device)
     out_flow = m_f(input_flow)
-
-    input_torch = torch.tensor(np_arr, dtype=torch.float32, requires_grad=True)
-    m_t = torch.nn.ConvTranspose1d(2, 6, 3, stride=1, groups=2, bias=False)
-    m_t.weight.data = torch.tensor(weight, dtype=torch.float32)
-    out_torch = m_t(input_torch)
-
     test_case.assertTrue(
-        np.allclose(out_flow.numpy(), out_torch.detach().numpy(), 1e-06, 1e-06)
+        np.allclose(out_flow.numpy(), test_out_data, 1e-06, 1e-06)
     )
     out_flow = out_flow.sum()
     out_flow.backward()
-    out_torch = out_torch.sum()
-    out_torch.backward()
     test_case.assertTrue(
-        np.allclose(input_flow.grad.numpy(), input_torch.grad.numpy(), 1e-06, 1e-06)
+        np.allclose(input_flow.grad.numpy(), test_out_grad, 1e-06, 1e-06)
     )
 
 
 def _test_convtranspose1d_group_large_in_channel(test_case, device):
-    np_arr = np.random.randn(2, 4, 3)
+    np_arr = np.array(
+        [
+            [
+                [-0.3939792, -0.34989742, 0.15775536],
+                [ 0.927185, 0.25040535, -1.22738067],
+                [-0.2187831, -0.24346108, -0.07109655],
+                [-1.55353756, -0.37241986, 0.59579139],
+            ],
+            [
+                [-0.01818884, -1.34408642, 1.31260516],
+                [ 0.52124192, 0.52142919, 1.40499944],
+                [ 0.7410308, 1.93069512, 0.25694943],
+                [-0.30531658, 0.24990326, -0.9493729],
+            ]
+        ]
+    )
     weight = np.ones((4, 1, 3))
-
+    test_out_data = np.array(
+        [
+            [
+                [ 0.5332058, 0.43371373, -0.6359115, -1.1691173, -1.0696253],
+                [-1.7723207, -2.3882017, -1.8635068, -0.09118611, 0.52469486]
+            ],
+            [
+                [ 0.50305307, -0.31960416, 2.3980005, 1.8949474, 2.7176046],
+                [ 0.43571424, 2.6163127, 1.9238893, 1.488175, -0.69242346]
+            ]
+        ]
+    )
+    test_out_grad = np.array(
+        [
+            [
+                [3., 3., 3.],
+                [3., 3., 3.],
+                [3., 3., 3.],
+                [3., 3., 3.]
+            ],
+            [
+                [3., 3., 3.],
+                [3., 3., 3.],
+                [3., 3., 3.],
+                [3., 3., 3.]
+            ]
+        ]
+    )
     input_flow = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
@@ -187,21 +327,13 @@ def _test_convtranspose1d_group_large_in_channel(test_case, device):
     m_f.weight.data = flow.tensor(weight, dtype=flow.float32)
     m_f = m_f.to(device)
     out_flow = m_f(input_flow)
-
-    input_torch = torch.tensor(np_arr, dtype=torch.float32, requires_grad=True)
-    m_t = torch.nn.ConvTranspose1d(4, 2, 3, stride=1, groups=2, bias=False)
-    m_t.weight.data = torch.tensor(weight, dtype=torch.float32)
-    out_torch = m_t(input_torch)
-
     test_case.assertTrue(
-        np.allclose(out_flow.numpy(), out_torch.detach().numpy(), 1e-06, 1e-06)
+        np.allclose(out_flow.numpy(), test_out_data, 1e-06, 1e-06)
     )
     out_flow = out_flow.sum()
     out_flow.backward()
-    out_torch = out_torch.sum()
-    out_torch.backward()
     test_case.assertTrue(
-        np.allclose(input_flow.grad.numpy(), input_torch.grad.numpy(), 1e-06, 1e-06)
+        np.allclose(input_flow.grad.numpy(), test_out_grad, 1e-06, 1e-06)
     )
 
 
@@ -221,6 +353,26 @@ class TestConvTranspose(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @autotest(5)
+    def test_ConvTranspose1d_(test_case):
+        channels = random(1, 6).to(int)
+        m = torch.nn.ConvTranspose1d(
+            in_channels=channels,
+            out_channels=random(1, 20).to(int),
+            kernel_size=random(1, 4).to(int),
+            stride=random().to(int) | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(1, 5).to(int) | nothing(),
+            groups=1,
+            padding_mode=constant("zeros"),
+            bias=False
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=4, dim1=channels).to(device)
+        y = m(x)
+        return y
 
 if __name__ == "__main__":
     unittest.main()
