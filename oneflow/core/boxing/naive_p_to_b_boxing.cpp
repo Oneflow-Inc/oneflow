@@ -51,7 +51,7 @@ static constexpr auto* CheckNaivePToB = DECORATE(&RawCheckNaivePToB, ThreadLocal
 }  // namespace
 
 Maybe<one::Tensor> NaivePToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
-                           Symbol<PlacedNdSbp> out) {
+                             Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());

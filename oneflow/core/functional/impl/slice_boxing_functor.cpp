@@ -136,7 +136,7 @@ class EagerPToBFunctor {
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerPToBpExpr(in_parallel_desc, out_parallel_desc, shape));
-        return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
 };
 
