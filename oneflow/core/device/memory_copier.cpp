@@ -30,8 +30,8 @@ void CheckPosExtent(const int64_t num_axes, const Shape& shape, const NdIndex& p
   CHECK_EQ(extent.NumAxes(), num_axes);
   FOR_RANGE(int64_t, i, 0, num_axes) {
     CHECK_GE(pos.At(i), 0);
-    CHECK_GT(extent.At(i), 0);
-    CHECK_GT(shape.At(i), 0);
+    CHECK_GE(extent.At(i), 0);
+    CHECK_GE(shape.At(i), 0);
     CHECK_LE(pos.At(i) + extent.At(i), shape.At(i));
   }
 }

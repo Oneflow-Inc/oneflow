@@ -16,14 +16,15 @@ else()
     endif()
 endif()
 
+get_filename_component(CUDATOOLKIT_BIN_ROOT ${CUDAToolkit_BIN_DIR} DIRECTORY)
 if(USE_SYSTEM_NCCL)
     include(FindPackageHandleStandardArgs)
     find_path(NCCL_INCLUDE_DIR nccl.h
-            HINTS ${NCCL_ROOT_DIR} ${CUDA_TOOLKIT_ROOT_DIR}
+            HINTS ${NCCL_ROOT_DIR} ${CUDATOOLKIT_BIN_ROOT}
             PATH_SUFFIXES cuda/include include)
     unset(NCCL_LIBRARY CACHE)
     find_library(NCCL_LIBRARY ${NCCL_LIBRARY_NAME}
-            HINTS ${NCCL_ROOT_DIR} ${CUDA_TOOLKIT_ROOT_DIR}
+            HINTS ${NCCL_ROOT_DIR} ${CUDATOOLKIT_BIN_ROOT}
             PATH_SUFFIXES lib lib64 cuda/lib cuda/lib64 lib/x64)
     find_package_handle_standard_args(
             NCCL DEFAULT_MSG NCCL_INCLUDE_DIR NCCL_LIBRARY)
@@ -51,7 +52,7 @@ else()
             UPDATE_COMMAND ""
             CONFIGURE_COMMAND ""
             BUILD_IN_SOURCE 1
-            BUILD_COMMAND make -j${PROC_NUM} src.build CUDA_HOME=${CUDA_TOOLKIT_ROOT_DIR}
+            BUILD_COMMAND make -j${PROC_NUM} src.build CUDA_HOME=${CUDATOOLKIT_BIN_ROOT}
             INSTALL_COMMAND make src.install PREFIX=${NCCL_INSTALL_DIR}
             BUILD_BYPRODUCTS ${NCCL_LIBRARIES}
         )
@@ -59,4 +60,3 @@ else()
     endif(THIRD_PARTY)
 
 endif()
-
