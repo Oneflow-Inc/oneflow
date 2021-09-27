@@ -335,17 +335,23 @@ struct DtypeReduce<T, kSum> {
   static Maybe<void> Call(const void* void_in, void* void_out, size_t elem_cnt, int64_t root,
                           Symbol<ParallelDesc> parallel_desc) {
     const T* in = reinterpret_cast<const T*>(void_in);
-    size_t size = root == GlobalProcessCtx::Rank() ? 0 : elem_cnt;
-    T* out = nullptr;
-    // void_out is only used on rank root and ignored for other ranks.
-    std::vector<T> tmp_out_buffer(size);
-    if (root == GlobalProcessCtx::Rank()) {
-      out = reinterpret_cast<T*>(void_out);
-    } else {
-      out = tmp_out_buffer.data();
-    }
+    T* out = reinterpret_cast<T*>(void_out);
+
     int64_t parallel_num = parallel_desc->parallel_num();
     BalancedSplitter bs(elem_cnt, parallel_num);
+
+    size_t size = root == GlobalProcessCtx::Rank() && void_in != void_out ? 0 : bs.At(0).size();
+    T* tmp_out = nullptr;
+    // void_out is only used on rank root and ignored for other ranks.
+    std::vector<T> tmp_out_buffer(size);
+    int64_t parallel_id_of_root =
+        JUST(parallel_desc->ParallelId4MachineDeviceId(root, GlobalProcessCtx::LocalRank(root)));
+    if (root == GlobalProcessCtx::Rank() && void_in != void_out) {
+      tmp_out = &reinterpret_cast<T*>(void_out)[bs.At(parallel_id_of_root).begin()];
+    } else {
+      tmp_out = tmp_out_buffer.data();
+    }
+
     std::vector<T> recv_buffer(bs.At(0).size());
     Optional<int64_t> parallel_id;
     JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
@@ -359,7 +365,7 @@ struct DtypeReduce<T, kSum> {
       if (i == 0) {
         send_ptr = &in[bs.At(send_part_id).begin()];
       } else {
-        send_ptr = &out[bs.At(send_part_id).begin()];
+        send_ptr = tmp_out;
       }
       size_t send_size = bs.At(send_part_id).size();
       int64_t recv_part_id = RingDecrease(part_id, parallel_num);
@@ -387,15 +393,19 @@ struct DtypeReduce<T, kSum> {
       }
       JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
       const T* cur_in = &in[bs.At(recv_part_id).begin()];
-      T* cur_out = &out[bs.At(recv_part_id).begin()];
-      if (recv_size > 0) { VecAdd(recv_size, cur_out, cur_in, recv_ptr); }
+      if (recv_size > 0) { VecAdd(recv_size, tmp_out, cur_in, recv_ptr); }
+    }
+
+    if (root == GlobalProcessCtx::Rank() && void_in == void_out) {
+      memcpy(&out[bs.At(parallel_id_of_root).begin()], tmp_out,
+             bs.At(parallel_id_of_root).size() * sizeof(T));
     }
 
     for (int64_t i = 0, part_id = RingIncrease(root, parallel_num); i < parallel_num - 1;
          ++i, part_id = RingIncrease(part_id, parallel_num)) {
       int64_t send_part_id = part_id;
       int64_t src_rank = JUST(parallel_desc->MachineId4ParallelId(send_part_id));
-      const T* send_ptr = &out[bs.At(send_part_id).begin()];
+      const T* send_ptr = tmp_out;
       size_t send_size = bs.At(send_part_id).size();
       int64_t recv_part_id = part_id;
       T* recv_ptr = &out[bs.At(recv_part_id).begin()];
