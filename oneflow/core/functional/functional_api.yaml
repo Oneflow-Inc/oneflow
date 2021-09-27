@@ -889,6 +889,10 @@
   signature: "Tensor (Tensor x) => Atan"
   bind_python: True
 
+- name: "atan2"
+  signature: "Tensor (Tensor input, Tensor other) => Atan2"
+  bind_python: True
+
 - name: "atanh"
   signature: "Tensor (Tensor x) => Atanh"
   bind_python: True
