@@ -78,7 +78,6 @@ def _eager_consistent_tensor_to(input, device_type, dtype):
 
     if device_type == input.placement.device_type and dtype != input.dtype:
         return flow._C.cast(input, dtype=dtype)
-
     device = flow.device(device_type)
     placement = flow._oneflow_internal._ReplacePlacementDeviceTag(
         input.placement, device_type

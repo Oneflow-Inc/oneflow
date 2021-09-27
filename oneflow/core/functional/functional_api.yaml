@@ -319,6 +319,7 @@
     "Tensor (Tensor x, Tensor moving_mean=None, Tensor moving_variance=None,
     Tensor gamma, Tensor beta, Int32 axis=1, Float epsilon=1e-5,
     Float momentum=0.9, Bool is_training=False) => Normalization"
+
   bind_python: True
 
 - name: "normalization_grad"
@@ -888,6 +889,10 @@
   signature: "Tensor (Tensor x) => Atan"
   bind_python: True
 
+- name: "atan2"
+  signature: "Tensor (Tensor input, Tensor other) => Atan2"
+  bind_python: True
+
 - name: "atanh"
   signature: "Tensor (Tensor x) => Atanh"
   bind_python: True
@@ -1175,39 +1180,42 @@
 
 - name: "rand"
   signature: [
-      "Tensor (Shape shape, *, DataType dtype=None, Device device=None,
-      Generator generator=None) => Rand",
-    ]
-  bind_python: True
-
-- name: "consistent_rand"
-  signature: [
-      "Tensor (Shape shape, *, Placement placement, SbpList sbp, DataType dtype=None,
-      Generator generator=None) => ConsistentRand",
-    ]
+    "Tensor (Shape size, *, DataType dtype=None, Device device=None,
+             Generator generator=None, Bool requires_grad=False) => Rand",
+    "Tensor (Shape size, *, Placement placement, SbpList sbp, DataType dtype=None,
+             Generator generator=None, Bool requires_grad=False) => ConsistentRand",
+  ]
   bind_python: True
 
 - name: "randn"
   signature: [
-      "Tensor (Shape shape, *, DataType dtype=None, Device device=None,
-      Generator generator=None) => RandN",
-    ]
-  bind_python: True
-
-- name: "consistent_randn"
-  signature: [
-      "Tensor (Shape shape, *, Placement placement, SbpList sbp, DataType dtype=None,
-      Generator generator=None) => ConsistentRandN",
-    ]
+    "Tensor (Shape size, *, DataType dtype=None, Device device=None, 
+             Generator generator=None, Bool requires_grad=False) => RandN",
+    "Tensor (Shape size, *, Placement placement, SbpList sbp, DataType dtype=None,
+             Generator generator=None, Bool requires_grad=False) => ConsistentRandN",
+  ]
   bind_python: True
 
 - name: "randint"
-  signature: "Tensor (Int64 low, Int64 high, Shape shape, DataType dtype=None, Device device=None, Generator generator=None)=> RandInt"
+  signature: [
+    "Tensor (Int64 low, Int64 high, Shape size, *, DataType dtype=None, 
+             Device device=None, Generator generator=None, Bool requires_grad=False)=> RandInt",
+    "Tensor (Int64 high, Shape size, *, DataType dtype=None, 
+             Device device=None, Generator generator=None, Bool requires_grad=False)=> RandInt",
+    "Tensor (Int64 low, Int64 high, Shape size, *, Placement placement, SbpList sbp_tuple, 
+             DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> ConsistentRandInt",
+    "Tensor (Int64 high, Shape size, *, Placement placement, SbpList sbp_tuple, 
+             DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> ConsistentRandInt",
+  ]
   bind_python: True
 
-- name: "consistent_randint"
-  signature: "Tensor (Int64 low, Int64 high, Shape shape, Placement placement, SbpList sbp_tuple, DataType dtype=None, Generator generator=None)=> ConsistentRandInt"
+- name: "randperm"
+  signature: [
+    "Tensor (Int32 n, *, Generator generator=None, DataType dtype=kInt64, Device device=None, Bool requires_grad=False) => RandPerm",
+    "Tensor (Int32 n, *, Placement placement, SbpList sbp, Generator generator=None, DataType dtype=kInt64, Bool requires_grad=False) => ConsistentRandPerm",
+  ]
   bind_python: True
+
 
 - name: "unfold"
   signature:
@@ -1242,20 +1250,6 @@
 - name: "l2_normalize_grad"
   signature: "Tensor (Tensor dy, Tensor y, Tensor square_x_sum, Int32 axis, Float epsilon) => L2NormalizeGrad"
   bind_python: False
-
-- name: "randperm"
-  signature:
-    [
-      "Tensor (Int32 n, *, Device device=None, Generator generator=None) => RandPerm",
-    ]
-  bind_python: True
-
-- name: "consistent_randperm"
-  signature:
-    [
-      "Tensor (Int32 n, *, Placement placement, SbpList sbp, Generator generator=None) => ConsistentRandPerm",
-    ]
-  bind_python: True
 
 - name: "fused_self_attention"
   signature: "TensorTuple (Tensor hidden_states, Int64 head_size=8, Float alpha=1.0) => FusedSelfAttention"
