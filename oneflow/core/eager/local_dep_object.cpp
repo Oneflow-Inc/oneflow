@@ -58,7 +58,7 @@ Maybe<ObjectMsgPtr<LocalDepObject>> LocalDepObject::New(const Device& device) {
 namespace {
 
 using PoolLocalDepObjectList = OBJECT_MSG_LIST(LocalDepObject, pool_link);
-using StoredLocalDepObjectList = OBJECT_MSG_LIST(LocalDepObject, occupied_link);
+using StoredLocalDepObjectList = OBJECT_MSG_LIST(LocalDepObject, stored_link);
 using OccupiedLocalDepObjectList = OBJECT_MSG_LIST(LocalDepObject, occupied_link);
 
 PoolLocalDepObjectList* RawThreadLocalPoolLocalDepObjectList(Symbol<Device> device) {
@@ -101,8 +101,11 @@ Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device) {
   }
   auto* ptr = local_dep_object.Mutable();
   CHECK_OR_RETURN(local_dep_object->is_pool_link_empty());
+  CHECK_OR_RETURN(local_dep_object->is_stored_link_empty());
   CHECK_OR_RETURN(local_dep_object->is_occupied_link_empty());
+  CHECK_GT_OR_RETURN(ptr->ref_cnt(), 0);
   ThreadLocalOccupiedLocalDepObjectList(device)->EmplaceBack(std::move(local_dep_object));
+  CHECK_GT_OR_RETURN(ptr->ref_cnt(), 0);
   return ptr;
 }
 
@@ -118,6 +121,7 @@ Maybe<void> PutLocalDepObjectToDevicePool(Symbol<Device> device, LocalDepObject*
   } else {
     ThreadLocalStoredLocalDepObjectList(device)->PushBack(local_dep_object);
   }
+  CHECK_GT_OR_RETURN(local_dep_object->ref_cnt(), 1);
   ThreadLocalOccupiedLocalDepObjectList(device)->Erase(local_dep_object);
   return Maybe<void>::Ok();
 }
