@@ -36,7 +36,8 @@ class CudaCopyD2HDeviceCtx : public DeviceCtx {
   CudaCopyD2HDeviceCtx(CallbackMsgListPtr callback_msg_list, int64_t device_id)
       : cuda_handler_(new CudaStreamHandle(nullptr)),
         callback_msg_list_(callback_msg_list),
-        cuda_allocator_(CudaHostAllocator(device_id)) {}
+        cuda_allocator_(CudaHostAllocator(device_id)),
+        device_id_(device_id) {}
 
   cudaStream_t cuda_stream() const override { return cuda_handler_->cuda_stream(); }
   cublasHandle_t cublas_pmh_handle() const override { return cuda_handler_->cublas_pmh_handle(); }
@@ -56,10 +57,15 @@ class CudaCopyD2HDeviceCtx : public DeviceCtx {
 
   DeviceType device_type() const override { return DeviceType::kGPU; }
 
+  std::shared_ptr<EventRecord> MakeEventRecord() override {
+    return std::make_shared<CudaEventRecord>(device_id_, this);
+  }
+
  protected:
   std::unique_ptr<CudaStreamHandle> cuda_handler_;
   CallbackMsgListPtr callback_msg_list_;
   CudaHostAllocator cuda_allocator_;
+  int64_t device_id_;
 };
 
 #endif  // WITH_CUDA

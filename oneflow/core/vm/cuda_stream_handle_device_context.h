@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/device/device_context.h"
+#include "oneflow/core/device/cuda_event_record.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/common/callback.msg.h"
 #include "oneflow/core/vm/cuda_allocator.h"
@@ -38,7 +39,8 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx {
       : cuda_handler_(new CudaStreamHandle(nullptr)),
         callback_msg_list_(callback_msg_list),
         cuda_allocator_(
-            new ThreadSafeAllocator(std::unique_ptr<Allocator>(new CudaAllocator(device_id)))) {}
+            new ThreadSafeAllocator(std::unique_ptr<Allocator>(new CudaAllocator(device_id)))),
+        device_id_(device_id) {}
 
   cudaStream_t cuda_stream() const override { return cuda_handler_->cuda_stream(); }
   cublasHandle_t cublas_pmh_handle() const override { return cuda_handler_->cublas_pmh_handle(); }
@@ -58,10 +60,15 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx {
 
   DeviceType device_type() const override { return DeviceType::kGPU; }
 
+  std::shared_ptr<EventRecord> MakeEventRecord() override {
+    return std::make_shared<CudaEventRecord>(device_id_, this);
+  }
+
  protected:
   std::unique_ptr<CudaStreamHandle> cuda_handler_;
   CallbackMsgListPtr callback_msg_list_;
   std::unique_ptr<Allocator> cuda_allocator_;
+  int64_t device_id_;
 };
 
 #endif  // WITH_CUDA

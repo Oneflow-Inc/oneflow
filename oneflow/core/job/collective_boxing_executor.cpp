@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job/collective_boxing_executor.h"
 #include "oneflow/core/device/nccl_util.h"
+#include "oneflow/core/device/cuda_event_record.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
@@ -135,6 +136,10 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
     cudaStream_t cuda_stream() const override { return stream; }
     void AddCallBack(std::function<void()>) const override { UNIMPLEMENTED(); }
     DeviceType device_type() const override { return DeviceType::kGPU; }
+
+    std::shared_ptr<EventRecord> MakeEventRecord() override {
+      return std::make_shared<CudaEventRecord>(this);
+    }
 
     cudaStream_t stream = nullptr;
     char* fusion_buffer = nullptr;

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/device.h"
 
 namespace oneflow {
@@ -37,8 +38,8 @@ static constexpr auto* GetEagerNcclLocalDepObject =
 void LaunchLazyJobPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
     const {
-  DoEach(nullptr, inputs_critical_section_->mut_local_dep_object()->mut_mirrored_object());
-  DoEach(nullptr, outputs_critical_section_->mut_local_dep_object()->mut_mirrored_object());
+  DoEach(nullptr, inputs_local_dep_object_->mut_mirrored_object());
+  DoEach(nullptr, outputs_local_dep_object_->mut_mirrored_object());
 
   for (const auto& eager_blob_object : *param_blob_objects_) {
     DoEach(nullptr,
@@ -56,17 +57,17 @@ void LaunchLazyJobPhyInstrOperand::ForEachMutMirroredObject(
 void LaunchLazyJobPhyInstrOperand::ForEachConstMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
     const {
-  for (auto& local_dep_object : input_local_dep_objects_) {
-    DoEach(nullptr, local_dep_object->mut_mirrored_object());
-  }
+  DoEach(nullptr, inputs_local_dep_object_->mut_mirrored_object());
 }
 
 void LaunchLazyJobPhyInstrOperand::ForEachMut2MirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
     const {
-  for (auto& local_dep_object : output_local_dep_objects_) {
-    DoEach(nullptr, local_dep_object->mut_mirrored_object());
-  }
+  DoEach(nullptr, outputs_local_dep_object_->mut_mirrored_object());
+}
+
+Maybe<SharedEventRecord> LaunchLazyJobPhyInstrOperand::EndEventRecord4OpName(const std::string& op_name) const {
+  return JUST(MapAt(*op_name2end_event_record_, op_name));
 }
 
 }  // namespace vm

@@ -36,6 +36,10 @@ class CpuDeviceCtx final : public DeviceCtx {
 
   DeviceType device_type() const override { return DeviceType::kCPU; }
 
+  std::shared_ptr<EventRecord> MakeEventRecord() override {
+    return std::make_shared<NaiveEventRecord>();
+  }
+
  private:
 };  // namespace oneflow
 

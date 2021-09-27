@@ -37,6 +37,11 @@ class CollectiveBoxingDeviceCtx final : public DeviceCtx {
     return DeviceType::kInvalidDevice;
   }
 
+  std::shared_ptr<EventRecord> MakeEventRecord() override {
+    UNIMPLEMENTED();
+    return std::shared_ptr<EventRecord>();
+  }
+
  private:
   std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint> current_checkpoint_;
 

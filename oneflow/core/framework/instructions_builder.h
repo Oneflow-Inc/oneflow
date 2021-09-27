@@ -63,6 +63,8 @@ struct CreateSymbolIdHelper {
 
 }  // namespace detail
 
+class SharedEventRecord;
+
 class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuilder> {
  public:
   InstructionsBuilder(const InstructionsBuilder&) = delete;
@@ -463,19 +465,14 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   vm::IdGenerator* mut_id_generator() { return id_generator_.get(); }
 
  private:
-  Maybe<vm::InputCriticalSectionPhyInstrOperand> MakeInputCriticalSection(
-      const one::EagerBlobObjectListPtr& eager_blob_object,
-      const std::shared_ptr<NNGraphIf>& nn_graph);
-  Maybe<vm::ParameterCriticalSectionPhyInstrOperand> MakeParameterCriticalSection(
-      const one::EagerBlobObjectListPtr& eager_blob_object,
-      const std::shared_ptr<NNGraphIf>& nn_graph);
-  Maybe<vm::OutputCriticalSectionPhyInstrOperand> MakeOutputCriticalSection(
-      const one::EagerBlobObjectListPtr& eager_blob_object,
-      const std::shared_ptr<NNGraphIf>& nn_graph);
-  Maybe<vm::NcclCriticalSectionPhyInstrOperand> MakeNcclCriticalSection();
+  template<typename PhyInstrOperandT>
+  Maybe<ObjectMsgPtr<LocalDepObject>> MakeCriticalSectionBegin(
+      const one::EagerBlobObjectListPtr& eager_blob_objects);
 
-  Maybe<ObjectMsgPtr<LocalDepObject>> WaitUntilZero(
-      const std::shared_ptr<std::atomic<int64_t>>& ref_cnt);
+  template<typename PhyInstrOperandT>
+  Maybe<void> MakeCriticalSectionEnd(
+      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const std::shared_ptr<SharedEventRecord>& event_record);
 
   std::shared_ptr<vm::IdGenerator> id_generator_;
   vm::InstructionMsgList* instruction_list_;

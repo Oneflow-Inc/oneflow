@@ -145,60 +145,58 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
     CHECK_NOTNULL(phy_instr_operand);
     const auto& nn_graph = phy_instr_operand->nn_graph();
     HashMap<std::string, std::function<void(int64_t)>> push_cbs;
-    const auto& in_critical_section = phy_instr_operand->inputs_critical_section();
     for (int i = 0; i < nn_graph->inputs_op_names().size(); ++i) {
+      const auto& input_op_name = nn_graph->inputs_op_names().at(i);
+      const auto& end_event_record =
+        CHECK_JUST(phy_instr_operand->EndEventRecord4OpName(input_op_name));
       if (nn_graph->inputs_valid().at(i)) {
-        const auto& input_op_name = nn_graph->inputs_op_names().at(i);
-        const auto& PushCb = [input_op_name, in_critical_section](int64_t of_blob_ptr) {
+        const auto& input_blob_object = phy_instr_operand->input_blob_objects()->at(i);
+        const auto& PushCb = [input_op_name, end_event_record, input_blob_object](int64_t of_blob_ptr) {
           OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-          in_critical_section->ConsumerFetchBlobAndDecreaseRefCnt(input_op_name, [&](Blob* blob) {
-            CHECK_NOTNULL(blob);
-            of_blob->mut_blob()->CopyHeaderFrom(of_blob->mut_device_ctx(), blob);
-            if (blob->dptr() == nullptr) { return; }
-            SyncAutoMemcpy(of_blob->mut_device_ctx(), of_blob->mut_blob()->mut_dptr(), blob->dptr(),
-                           blob->ByteSizeOfBlobBody(), of_blob->mut_blob()->mem_case(),
-                           blob->mem_case());
-          });
+          const Blob* blob = &input_blob_object->blob();
+          CHECK_NOTNULL(blob);
+          of_blob->mut_blob()->CopyHeaderFrom(of_blob->mut_device_ctx(), blob);
+          if (blob->dptr() == nullptr) {
+            end_event_record->Init(std::make_shared<NaiveEventRecord>());
+          } else {
+            AutoMemcpy(of_blob->mut_device_ctx(), of_blob->mut_blob(), blob);
+            end_event_record->Init(of_blob->mut_device_ctx()->MakeEventRecord());
+          }
         };
         CHECK(push_cbs.emplace(input_op_name, PushCb).second);
       } else {
-        CHECK_GT(*in_critical_section->consumer_ref_cnt(), 0);
-        --*in_critical_section->consumer_ref_cnt();
+        end_event_record->Init(std::make_shared<NaiveEventRecord>());
       }
     }
     HashMap<std::string, std::function<void(int64_t)>> pull_cbs;
-    const auto& out_critical_section = phy_instr_operand->outputs_critical_section();
     for (int i = 0; i < nn_graph->outputs_op_names().size(); ++i) {
+      const auto& output_op_name = nn_graph->outputs_op_names().at(i);
+      const auto& end_event_record =
+        CHECK_JUST(phy_instr_operand->EndEventRecord4OpName(output_op_name));
       if (nn_graph->outputs_valid().at(i)) {
-        const auto& output_op_name = nn_graph->outputs_op_names().at(i);
-        const auto& PullCb = [output_op_name, out_critical_section](int64_t of_blob_ptr) {
+        const auto& output_blob_object = phy_instr_operand->output_blob_objects()->at(i);
+        const auto& PullCb = [output_op_name, end_event_record, output_blob_object](int64_t of_blob_ptr) {
           OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-          out_critical_section->ConsumerFetchBlobAndDecreaseRefCnt(
-              output_op_name, [&](Blob* mut_blob) {
-                CHECK_NOTNULL(mut_blob);
-                mut_blob->CopyHeaderFrom(of_blob->mut_device_ctx(), &of_blob->blob());
-                if (mut_blob->dptr() == nullptr) { return; }
-                SyncAutoMemcpy(of_blob->mut_device_ctx(), mut_blob->mut_dptr(),
-                               of_blob->blob().dptr(), of_blob->blob().ByteSizeOfBlobBody(),
-                               mut_blob->mem_case(), of_blob->blob().mem_case());
-              });
+          Blob* mut_blob = output_blob_object->mut_blob();
+          CHECK_NOTNULL(mut_blob);
+          mut_blob->CopyHeaderFrom(of_blob->mut_device_ctx(), &of_blob->blob());
+          if (mut_blob->dptr() == nullptr) {
+            end_event_record->Init(std::make_shared<NaiveEventRecord>());
+          } else {
+            AutoMemcpy(of_blob->mut_device_ctx(), mut_blob, &of_blob->blob());
+            end_event_record->Init(of_blob->mut_device_ctx()->MakeEventRecord());
+          }
         };
         CHECK(pull_cbs.emplace(output_op_name, PullCb).second);
       } else {
-        CHECK_GT(*out_critical_section->consumer_ref_cnt(), 0);
-        --*out_critical_section->consumer_ref_cnt();
+        end_event_record->Init(std::make_shared<NaiveEventRecord>());
       }
     }
-    const auto& params_critical_section = phy_instr_operand->params_critical_section();
-    const auto& nccl_critical_section = phy_instr_operand->nccl_critical_section();
-    const auto& FinishCb = [this, instruction, in_critical_section, out_critical_section,
-                            params_critical_section, nccl_critical_section]() {
-      *in_critical_section->consumer_ref_cnt() = 0;
-      *out_critical_section->consumer_ref_cnt() = 0;
-      // finish ParameterCriticalSection/NcclCriticalSection.
-      *params_critical_section->consumer_ref_cnt() = 0;
-      *nccl_critical_section->consumer_ref_cnt() = 0;
-
+    const auto& op_name2end_event_record = phy_instr_operand->op_name2end_event_record();
+    const auto& FinishCb = [this, instruction, op_name2end_event_record]() {
+      for (const auto& pair : *op_name2end_event_record) {
+        pair.second->TryInit(std::make_shared<NaiveEventRecord>());
+      }
       auto* device_ctx = GetLazyJobDeviceCtx(instruction);
       device_ctx->DequeueNNGraph();
       auto* status_buffer = instruction->mut_status_buffer();

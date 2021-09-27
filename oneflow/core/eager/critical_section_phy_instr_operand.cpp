@@ -20,13 +20,20 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void CriticalSectionPhyInstrOperand::ForEachMirroredObject(
+void CriticalSectionBeginPhyInstrOperand::ForEachMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
     const {
   for (const auto& eager_blob_object : *eager_blob_objects_) {
     DoEach(nullptr,
            CHECK_JUST(eager_blob_object->compute_local_dep_object())->mut_mirrored_object());
   }
+}
+
+void CriticalSectionEndPhyInstrOperand::ForEachMirroredObject(
+    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
+    const {
+  DoEach(nullptr,
+         CHECK_JUST(eager_blob_object_->compute_local_dep_object())->mut_mirrored_object());
 }
 
 namespace {
@@ -45,6 +52,12 @@ void CriticalSectionBeginPhyInstrOperand::ForEachMutMirroredObject(
     const {
   DoEach(nullptr, CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object());
   DoEach(nullptr, local_dep_object_->mut_mirrored_object());
+}
+
+void CriticalSectionEndPhyInstrOperand::ForEachMutMirroredObject(
+    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
+    const {
+  DoEach(nullptr, CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object());
 }
 
 }  // namespace vm

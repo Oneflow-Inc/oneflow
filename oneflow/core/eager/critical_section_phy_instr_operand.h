@@ -49,7 +49,7 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
       const override;
 
-  LocalDepObject* mut_local_dep_object() const { return local_dep_object_.Mutable(); }
+  ObjectMsgPtr<LocalDepObject> local_dep_object() const { return local_dep_object_; }
 
  protected:
   one::EagerBlobObjectListPtr eager_blob_objects_;
@@ -58,8 +58,7 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
 
 class InputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeginPhyInstrOperand {
  public:
-  InputCriticalSectionBeginPhyInstrOperand(const one::EagerBlobObjectListPtr& eager_blob_objects)
-      : CriticalSectionBeginPhyInstrOperand(eager_blob_objects) {}
+  using CriticalSectionBeginPhyInstrOperand::CriticalSectionBeginPhyInstrOperand;
 
   ~InputCriticalSectionBeginPhyInstrOperand() override = default;
 
@@ -78,10 +77,65 @@ class InputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeg
 
 class OutputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeginPhyInstrOperand {
  public:
-  OutputCriticalSectionBeginPhyInstrOperand(const one::EagerBlobObjectListPtr& eager_blob_objects)
-      : CriticalSectionBeginPhyInstrOperand(eager_blob_objects) {}
+  using CriticalSectionBeginPhyInstrOperand::CriticalSectionBeginPhyInstrOperand;
 
   ~OutputCriticalSectionBeginPhyInstrOperand() override = default;
+
+  // for inputs
+  void ForEachConstMirroredObject(
+      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
+      const override {}
+
+  // for outputs
+  void ForEachMut2MirroredObject(
+      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
+      const override {
+    ForEachMirroredObject(DoEach);
+  }
+};
+
+class CriticalSectionEndPhyInstrOperand : public PhyInstrOperand {
+ public:
+  CriticalSectionEndPhyInstrOperand(
+      const std::shared_ptr<EagerBlobObject>& eager_blob_object,
+      const std::shared_ptr<SharedEventRecord>& event_record)
+      : eager_blob_object_(eager_blob_object), event_record_(event_record) {}
+  virtual ~CriticalSectionEndPhyInstrOperand() = default;
+
+  const std::shared_ptr<SharedEventRecord>& event_record() const { return event_record_; }
+
+  void ForEachMirroredObject(
+      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&) const;
+
+  void ForEachMutMirroredObject(
+      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
+      const override;
+
+ private:
+  std::shared_ptr<EagerBlobObject> eager_blob_object_;
+  std::shared_ptr<SharedEventRecord> event_record_;
+};
+
+class InputCriticalSecondEndPhyInstrOperand final : public CriticalSectionEndPhyInstrOperand {
+ public:
+  using CriticalSectionEndPhyInstrOperand::CriticalSectionEndPhyInstrOperand;
+  ~InputCriticalSecondEndPhyInstrOperand() override = default;
+
+  void ForEachConstMirroredObject(
+      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
+      const override {
+    ForEachMirroredObject(DoEach);
+  }
+
+  void ForEachMut2MirroredObject(
+      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
+      const override {}
+};
+
+class OutputCriticalSecondEndPhyInstrOperand final : public CriticalSectionEndPhyInstrOperand {
+ public:
+  using CriticalSectionEndPhyInstrOperand::CriticalSectionEndPhyInstrOperand;
+  ~OutputCriticalSecondEndPhyInstrOperand() override = default;
 
   // for inputs
   void ForEachConstMirroredObject(
