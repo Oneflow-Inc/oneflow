@@ -586,8 +586,8 @@ class RandomCrop(flow.nn.Module):
         if w == tw and h == th:
             return 0, 0, h, w
 
-        i = np.randint(0, h - th + 1, size=(1,)).item()
-        j = np.randint(0, w - tw + 1, size=(1,)).item()
+        i = np.random.randint(0, h - th + 1, size=(1,)).item()
+        j = np.random.randint(0, w - tw + 1, size=(1,)).item()
         return i, j, th, tw
 
     def __init__(
