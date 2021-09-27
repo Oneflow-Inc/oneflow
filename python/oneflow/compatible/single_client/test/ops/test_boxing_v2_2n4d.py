@@ -61,10 +61,10 @@ def _test_split_to_split(
     x = np.random.rand(96, 96, 96).astype(np.float32)
     y = split_to_split_job(x).get().numpy()
     test_case.assertTrue(np.array_equal(x, y))
-    print(np.array_equal(x, y))
 
 
 def _test_split_to_split_enable_all_to_all(
+    test_case,
     src_device_type,
     dst_device_type,
     src_device_num,
@@ -101,11 +101,10 @@ def _test_split_to_split_enable_all_to_all(
     x = np.random.rand(32, 16, 64, 48).astype(np.float32)
     y = split_to_split_job(x).get().numpy()
     test_case.assertTrue(np.array_equal(x, y))
-    print(np.array_equal(x, y))
 
 
 def _test_split_to_broadcast(
-    src_device_type, dst_device_type, src_device_num, dst_device_num, src_axis,
+    test_case, src_device_type, dst_device_type, src_device_num, dst_device_num, src_axis,
 ):
     if src_axis + 1 > src_device_num:
         return
@@ -133,22 +132,13 @@ def _test_split_to_broadcast(
     x = np.random.rand(96, 96, 96).astype(np.float32)
     y = split_to_broadcast_job(x).get().numpy()
     test_case.assertTrue(np.array_equal(x, y))
-    print(np.array_equal(x, y))
 
 
 def _test_broadcast_to_split(
-    src_device_type, dst_device_type, src_device_num, dst_device_num, dst_axis,
+    test_case, src_device_type, dst_device_type, src_device_num, dst_device_num, dst_axis,
 ):
     if dst_axis + 1 > dst_device_num:
         return
-    print(
-        "_test_broadcast_to_split:",
-        src_device_type,
-        dst_device_type,
-        src_device_num,
-        dst_device_num,
-        dst_axis,
-    )
 
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
@@ -173,24 +163,15 @@ def _test_broadcast_to_split(
     x = np.random.rand(96, 96, 96).astype(np.float32)
     y = broadcast_to_split_job(x).get().numpy()
     test_case.assertTrue(np.array_equal(x, y))
-    print(np.array_equal(x, y))
 
 
 def _test_partial_sum_to_split(
-    src_device_type, dst_device_type, src_device_num, dst_device_num, dst_axis,
+    test_case, src_device_type, dst_device_type, src_device_num, dst_device_num, dst_axis,
 ):
     if dst_axis + 1 > dst_device_num:
         return
     if dst_axis > 1:
         return
-    print(
-        "_test_partial_sum_to_split:",
-        src_device_type,
-        dst_device_type,
-        src_device_num,
-        dst_device_num,
-        dst_axis,
-    )
 
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
@@ -216,20 +197,11 @@ def _test_partial_sum_to_split(
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
     y = partial_sum_to_split_job(x).get().numpy()
     test_case.assertTrue(np.array_equal(x, y))
-    print(np.allclose(np.sum(x, axis=0), y))
-    assert np.allclose(np.sum(x, axis=0), y)
 
 
 def _test_partial_sum_to_broadcast(
     src_device_type, dst_device_type, src_device_num, dst_device_num
 ):
-    print(
-        "_test_partial_sum_to_broadcast:",
-        src_device_type,
-        dst_device_type,
-        src_device_num,
-        dst_device_num,
-    )
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
@@ -253,21 +225,12 @@ def _test_partial_sum_to_broadcast(
 
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
     y = partial_sum_to_broadcast_job(x).get().numpy()
-    print(np.allclose(np.sum(x, axis=0), y))
-    assert np.allclose(np.sum(x, axis=0), y)
+    test_case.assertTrue(np.array_equal(x, y))
 
 
 def _test_broadcast_to_broadcast(
     src_device_type, dst_device_type, src_device_num, dst_device_num
 ):
-    print(
-        "_test_broadcast_to_broadcast:",
-        src_device_type,
-        dst_device_type,
-        src_device_num,
-        dst_device_num,
-    )
-
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
@@ -291,8 +254,6 @@ def _test_broadcast_to_broadcast(
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
     y = broadcast_to_broadcast_job(x).get().numpy()
     test_case.assertTrue(np.array_equal(x, y))
-    print(np.array_equal(x, y))
-    assert np.array_equal(x, y)
 
 
 def _test_multi_lbi(src_device_type, dst_device_type, src_device_num, dst_device_num):
