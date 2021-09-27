@@ -31,7 +31,8 @@ template<size_t max_movement_size>
 size_t GetMovementSize(size_t elem_size, size_t num_dims, const int64_t* src_dims, const void* src,
                        const int* permutation, void* dst) {
   static_assert(max_movement_size > 0 && (max_movement_size & (max_movement_size - 1)) == 0, "");
-  CHECK_EQ(elem_size > 0 && (elem_size & (elem_size - 1)), 0);
+  CHECK_GT(elem_size, 0);
+  CHECK_EQ((elem_size & (elem_size - 1)), 0);
   CHECK_EQ(max_movement_size % elem_size, 0);
   if (permutation[num_dims - 1] == num_dims - 1) {
     const int64_t last_dim_size = src_dims[num_dims - 1] * elem_size;
@@ -126,7 +127,7 @@ void LaunchKernel(StreamContext* stream_ctx, const int64_t* src_dims, const void
   for (size_t i = 0; i < num_dims; ++i) { params.permutation[i] = permutation[i]; }
   params.src = src;
   params.dst = dst;
-  params.count = count;
+  params.count = static_cast<IndexType>(count);
   LaunchKernel<num_dims, movement_size, IndexType>(stream_ctx, params);
 }
 
