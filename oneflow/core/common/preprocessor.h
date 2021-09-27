@@ -31,8 +31,8 @@ limitations under the License.
 
 #define OF_PP_TUPLE_ELEM(n, t) OF_PP_INTERNAL_TUPLE_ELEM(n, t)
 
-#define OF_PP_MAKE_TUPLE_SEQ(...) OF_PP_INTERNAL_MAKE_TUPLE_SEQ(__VA_ARGS__)
 
+#define OF_PP_MAKE_TUPLE_SEQ(...) OF_PP_INTERNAL_MAKE_TUPLE_SEQ(__VA_ARGS__)
 #define OF_PP_FOR_EACH_TUPLE(macro, seq) OF_PP_INTERNAL_FOR_EACH_TUPLE(macro, seq)
 
 #define OF_PP_OUTTER_FOR_EACH_TUPLE(macro, seq) OF_PP_INTERNAL_OUTTER_FOR_EACH_TUPLE(macro, seq)

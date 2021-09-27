@@ -92,10 +92,16 @@ EpollCommNet::~EpollCommNet() {
   for (auto& pair : sockfd2helper_) { delete pair.second; }
 }
 
-void EpollCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) {}
+void EpollCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) {
+    char* data = reinterpret_cast<char*>(addr);
+    SocketMsg msg;
+    msg.msg_type = SocketMsgType::kActor;
+    msg.data = data;
+    GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
+}
 
 char * EpollCommNet::SerialTokenToData(void *token, size_t *size) {
-  return nullptr;
+  return (char*)token;
 }
 
 void * EpollCommNet::DeSerialDataToToken(char *data, size_t  * size) {
