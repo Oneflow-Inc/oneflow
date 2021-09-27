@@ -17,11 +17,11 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_NO_GRAD_USER_OP("uniform")
+REGISTER_NO_GRAD_USER_OP("uniform_int")
     .Output("out")
     .SetOutputBufferNum(1)
-    .Attr<double>("from", 0)
-    .Attr<double>("to", 1)
+    .Attr<int64_t>("from", 0)
+    .Attr<int64_t>("to", 1)
     .Attr<DataType>("dtype")
     .Attr<Shape>("shape")
     .Attr<std::string>("nd_sbp")

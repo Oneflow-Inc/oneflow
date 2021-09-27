@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/functional/tensor_processor.h"
 
 namespace oneflow {
 namespace one {
@@ -243,7 +244,7 @@ class ReduceSumFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
-    const DataType dtype = x->dtype()->data_type();
+    // const DataType dtype = x->dtype()->data_type();
     MutableAttrMap attrs;
     if (axis.empty()) {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
@@ -253,13 +254,10 @@ class ReduceSumFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    if (IsIntegralDataType(dtype) || dtype == DataType::kUInt8) {
-      // Set dtype as int64 when input's dtype is uint8, int8, int32, int64.
-      const auto& x_int64 = JUST(functional::Cast(x, DType::Int64()));
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x_int64}, attrs);
-    } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-    }
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
   }
 
  private:
