@@ -22,17 +22,19 @@ from typing import Any, TypeVar
 from oneflow.nn.module import Module
 
 
-def norm_except_dim(v: Tensor, dim: int):
+def _norm_except_dim_0(v: Tensor):
+    output_size = [1] * v.dim()
+    output_size[0] = v.size(0)
+    return flow.linalg.norm(v.view(v.size(0), -1), ord=2, dim=1).view(*output_size)
+
+
+def _norm_except_dim(v: Tensor, dim: int):
     assert -v.dim() <= dim <= v.dim() - 1, "dim out of range"
 
     if dim == -1:
-        return flow.linalg.norm(v, ord='fro')
+        return flow.linalg.norm(v, ord="fro")
     elif dim == 0:
-        output_size = [1] * v.dim()
-        output_size[0] = v.size(0)
-        return flow.linalg.norm(v.view(v.size(0), -1), ord=2, dim=1).view(
-            *output_size
-        )
+        return _norm_except_dim_0(v)
     elif dim == v.dim() - 1:
         output_size = [1] * v.dim()
         output_size[v.dim() - 1] = v.size(v.dim() - 1)
@@ -40,12 +42,7 @@ def norm_except_dim(v: Tensor, dim: int):
             *output_size
         )
     else:
-        v = flow.transpose(v,0,dim)
-        output_size = [1] * v.dim()
-        output_size[0] = v.size(0)
-        norm = flow.linalg.norm(v.view(v.size(0), -1), ord=2, dim=1).view(*output_size)
-        return flow.transpose(norm, 0, dim)
-
+        return flow.transpose(_norm_except_dim_0(flow.transpose(v, 0, dim)), 0, dim)
 
 
 class WeightNorm(object):
@@ -61,7 +58,7 @@ class WeightNorm(object):
     def compute_weight(self, module: Module) -> Any:
         g = getattr(module, self.name + "_g")
         v = getattr(module, self.name + "_v")
-        return v * (g / norm_except_dim(v, self.dim))
+        return v * (g / _norm_except_dim(v, self.dim))
 
     @staticmethod
     def apply(module, name: str, dim: int) -> "WeightNorm":
@@ -82,15 +79,22 @@ class WeightNorm(object):
 
         # add g and v as new parameters and express w as g/||v|| * v
         module.register_parameter(
-            name + "_g", flow.nn.Parameter(norm_except_dim(weight, dim).data)
+            name + "_g", flow.nn.Parameter(_norm_except_dim(weight, dim))
         )
-        module.register_parameter(name + "_v", flow.nn.Parameter(weight.data))
+        module.register_parameter(name + "_v", flow.nn.Parameter(weight))
         setattr(module, name, fn.compute_weight(module))
 
         # recompute weight before every forward()
         module.register_forward_pre_hook(fn)
 
         return fn
+
+    def remove(self, module: Module) -> None:
+        weight = self.compute_weight(module)
+        delattr(module, self.name)
+        del module._parameters[self.name + "_g"]
+        del module._parameters[self.name + "_v"]
+        setattr(module, self.name, flow.nn.Parameter(weight))
 
     def __call__(self, module: Module, inputs: Any) -> None:
         setattr(module, self.name, self.compute_weight(module))
@@ -136,9 +140,9 @@ def weight_norm(module: T_module, name: str = "weight", dim: int = 0) -> T_modul
         >>> m
         Linear(in_features=20, out_features=40, bias=True)
         >>> m.weight_g.size()
-        torch.Size([40, 1])
+        oneflow.Size([40, 1])
         >>> m.weight_v.size()
-        torch.Size([40, 20])
+        oneflow.Size([40, 20])
 
     """
     WeightNorm.apply(module, name, dim)
@@ -155,9 +159,12 @@ def remove_weight_norm(module: T_module, name: str = "weight") -> T_module:
     For example:
 
     .. code-block:: python
+
         >>> import oneflow as flow
-        >>> m = flow.nn.utils.weight_norm(nn.Linear(20, 40))
+        >>> m = flow.nn.utils.weight_norm(flow.nn.Linear(20, 40))
         >>> flow.nn.utils.remove_weight_norm(m)
+        Linear(in_features=20, out_features=40, bias=True)
+
     """
     for k, hook in module._forward_pre_hooks.items():
         if isinstance(hook, WeightNorm) and hook.name == name:

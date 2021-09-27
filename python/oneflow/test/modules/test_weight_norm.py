@@ -21,7 +21,6 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 
-# from automated_test_util import *
 import torch
 from test_util import GenArgList
 
@@ -36,52 +35,20 @@ input_arr = np.array(
 )
 
 
-def _test_weightnorm(test_case, device):
+def _test_weightnorm(test_case, device, dim):
     model_flow = flow.nn.Linear(2, 4)  # shape of weight: (4, 2)
     with flow.no_grad():
         for i in range(input_arr.shape[0]):
             for j in range(input_arr.shape[1]):
                 model_flow.weight[i, j] = input_arr[i][j]
-    m_flow = flow.nn.utils.weight_norm(model_flow, name="weight")
+    m_flow = flow.nn.utils.weight_norm(model_flow, name="weight", dim=dim)
 
     model_torch = torch.nn.Linear(2, 4)
     with torch.no_grad():
         for i in range(input_arr.shape[0]):
             for j in range(input_arr.shape[1]):
                 model_torch.weight[i, j] = input_arr[i][j]
-    m_torch = torch.nn.utils.weight_norm(model_torch, name="weight")
-
-    test_case.assertTrue(
-        np.allclose(
-            m_flow.weight_g.detach().numpy(),
-            m_torch.weight_g.detach().numpy(),
-            1e-05,
-            1e-05,
-        )
-    )
-    test_case.assertTrue(
-        np.allclose(
-            m_flow.weight_v.detach().numpy(),
-            m_torch.weight_v.detach().numpy(),
-            1e-05,
-            1e-05,
-        )
-    )
-
-def _test_weightnorm_dim_m1(test_case, device):
-    model_flow = flow.nn.Linear(2, 4)  # shape of weight: (4, 2)
-    with flow.no_grad():
-        for i in range(input_arr.shape[0]):
-            for j in range(input_arr.shape[1]):
-                model_flow.weight[i, j] = input_arr[i][j]
-    m_flow = flow.nn.utils.weight_norm(model_flow, name="weight",dim=-1)
-
-    model_torch = torch.nn.Linear(2, 4)
-    with torch.no_grad():
-        for i in range(input_arr.shape[0]):
-            for j in range(input_arr.shape[1]):
-                model_torch.weight[i, j] = input_arr[i][j]
-    m_torch = torch.nn.utils.weight_norm(model_torch, name="weight",dim=-1)
+    m_torch = torch.nn.utils.weight_norm(model_torch, name="weight", dim=dim)
 
     test_case.assertTrue(
         np.allclose(
@@ -101,7 +68,7 @@ def _test_weightnorm_dim_m1(test_case, device):
     )
 
 
-def _test_weightnorm_backward(test_case, device):
+def _test_weightnorm_backward(test_case, device, dim):
     linear = flow.nn.Linear(3, 8)
     x = flow.tensor(
         [
@@ -120,7 +87,7 @@ def _test_weightnorm_backward(test_case, device):
     flow.nn.init.constant_(linear.weight, 2.068758)
     flow.nn.init.constant_(linear.bias, 0.23)
 
-    linear_wn = flow.nn.utils.weight_norm(linear, name="weight")
+    linear_wn = flow.nn.utils.weight_norm(linear, name="weight", dim=dim)
     of_out = linear_wn(x)
 
     of_out = of_out.sum()
@@ -147,10 +114,10 @@ class TestWeightNorm(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_weightnorm,
-            _test_weightnorm_dim_m1,
             _test_weightnorm_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["dim"] = [None, -2, -1, 0, 1]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
