@@ -35,8 +35,6 @@ class SliceBoxingTaskNode final : public TransportTaskNode {
   ~SliceBoxingTaskNode() override = default;
 
   void Init(const LogicalBlobId& lbi, const TensorSliceView& out_slice, SliceBoxingTaskMode mode,
-            int64_t machine_id, int64_t thrd_id, MemZoneId&& mem_zone_id);
-  void Init(const LogicalBlobId& lbi, const TensorSliceView& out_slice, SliceBoxingTaskMode mode,
             int64_t machine_id, int64_t thrd_id);
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
@@ -49,15 +47,12 @@ class SliceBoxingTaskNode final : public TransportTaskNode {
   void BuildExecGphAndRegst() override;
   void InferProducedDataRegstTimeShape() override;
   OperatorConf GetBoxingOpConf();
-  void InitProducedRegstMemCase(MemoryCase*) override;
-  MemZoneId MemZoneId121() const override;
 
   HashMap<const TaskEdge*, TensorSliceView> in_data_edge2slice_;
   std::vector<const TaskEdge*> ordered_in_data_edges_;
   TensorSliceView out_slice_;
   Shape out_shape_;
   SliceBoxingTaskMode mode_ = kSliceBoxingTaskModeInvalid;
-  MemZoneId mem_zone_id_;
 };
 
 }  // namespace oneflow
