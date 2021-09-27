@@ -26,7 +26,7 @@ from oneflow.compatible.single_client import typing as oft
 
 
 def _test_split_to_split(
-    test_case, 
+    test_case,
     src_device_type,
     dst_device_type,
     src_device_num,
@@ -46,9 +46,15 @@ def _test_split_to_split(
 
     @flow.global_function(function_config=func_config)
     def split_to_split_job(x: oft.Numpy.Placeholder((96, 96, 96))):
-        with flow.scope.placement(src_device_type, ["0:0-" + str(src_device_num - 1), "1:0-" + str(src_device_num - 1)]):
+        with flow.scope.placement(
+            src_device_type,
+            ["0:0-" + str(src_device_num - 1), "1:0-" + str(src_device_num - 1)],
+        ):
             src = flow.identity(x.with_distribute(flow.distribute.split(src_axis)))
-        with flow.scope.placement(dst_device_type, ["0:0-" + str(dst_device_num - 1), "1:0-" + str(dst_device_num - 1)]):
+        with flow.scope.placement(
+            dst_device_type,
+            ["0:0-" + str(dst_device_num - 1), "1:0-" + str(dst_device_num - 1)],
+        ):
             dst = flow.identity(src.with_distribute(flow.distribute.split(dst_axis)))
         return dst
 
@@ -80,9 +86,15 @@ def _test_split_to_split_enable_all_to_all(
 
     @flow.global_function(function_config=func_config)
     def split_to_split_job(x: oft.Numpy.Placeholder((32, 16, 64, 48))):
-        with flow.scope.placement(src_device_type, ["0:0-" + str(src_device_num - 1), "1:0-" + str(src_device_num - 1)]):
+        with flow.scope.placement(
+            src_device_type,
+            ["0:0-" + str(src_device_num - 1), "1:0-" + str(src_device_num - 1)],
+        ):
             src = flow.identity(x.with_distribute(flow.distribute.split(src_axis)))
-        with flow.scope.placement(dst_device_type, ["0:0-" + str(dst_device_num - 1), "1:0-" + str(dst_device_num - 1)]):
+        with flow.scope.placement(
+            dst_device_type,
+            ["0:0-" + str(dst_device_num - 1), "1:0-" + str(dst_device_num - 1)],
+        ):
             dst = flow.identity(src.with_distribute(flow.distribute.split(dst_axis)))
         return dst
 
@@ -93,11 +105,7 @@ def _test_split_to_split_enable_all_to_all(
 
 
 def _test_split_to_broadcast(
-    src_device_type,
-    dst_device_type,
-    src_device_num,
-    dst_device_num,
-    src_axis,
+    src_device_type, dst_device_type, src_device_num, dst_device_num, src_axis,
 ):
     if src_axis + 1 > src_device_num:
         return
@@ -110,9 +118,15 @@ def _test_split_to_broadcast(
 
     @flow.global_function(function_config=func_config)
     def split_to_broadcast_job(x: oft.Numpy.Placeholder((96, 96, 96))):
-        with flow.scope.placement(src_device_type, ["0:0-" + str(src_device_num - 1), "1:0-" + str(src_device_num - 1)]):
+        with flow.scope.placement(
+            src_device_type,
+            ["0:0-" + str(src_device_num - 1), "1:0-" + str(src_device_num - 1)],
+        ):
             src = flow.identity(x.with_distribute(flow.distribute.split(src_axis)))
-        with flow.scope.placement(dst_device_type, ["0:0-" + str(dst_device_num - 1), "1:0-" + str(dst_device_num - 1)]):
+        with flow.scope.placement(
+            dst_device_type,
+            ["0:0-" + str(dst_device_num - 1), "1:0-" + str(dst_device_num - 1)],
+        ):
             dst = flow.identity(src.with_distribute(flow.distribute.broadcast()))
         return dst
 
@@ -123,15 +137,18 @@ def _test_split_to_broadcast(
 
 
 def _test_broadcast_to_split(
-    src_device_type,
-    dst_device_type,
-    src_device_num,
-    dst_device_num,
-    dst_axis,
+    src_device_type, dst_device_type, src_device_num, dst_device_num, dst_axis,
 ):
     if dst_axis + 1 > dst_device_num:
         return
-    print("_test_broadcast_to_split:", src_device_type, dst_device_type, src_device_num, dst_device_num, dst_axis)
+    print(
+        "_test_broadcast_to_split:",
+        src_device_type,
+        dst_device_type,
+        src_device_num,
+        dst_device_num,
+        dst_axis,
+    )
 
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
@@ -141,9 +158,15 @@ def _test_broadcast_to_split(
 
     @flow.global_function(function_config=func_config)
     def broadcast_to_split_job(x: oft.Numpy.Placeholder((96, 96, 96))):
-        with flow.scope.placement(src_device_type, ["0:0-" + str(src_device_num - 1), "1:0-" + str(src_device_num - 1)]):
+        with flow.scope.placement(
+            src_device_type,
+            ["0:0-" + str(src_device_num - 1), "1:0-" + str(src_device_num - 1)],
+        ):
             src = flow.identity(x.with_distribute(flow.distribute.broadcast()))
-        with flow.scope.placement(dst_device_type, ["0:0-" + str(dst_device_num - 1), "1:0-" + str(dst_device_num - 1)]):
+        with flow.scope.placement(
+            dst_device_type,
+            ["0:0-" + str(dst_device_num - 1), "1:0-" + str(dst_device_num - 1)],
+        ):
             dst = flow.identity(src.with_distribute(flow.distribute.split(dst_axis)))
         return dst
 
@@ -154,17 +177,20 @@ def _test_broadcast_to_split(
 
 
 def _test_partial_sum_to_split(
-    src_device_type,
-    dst_device_type,
-    src_device_num,
-    dst_device_num,
-    dst_axis,
+    src_device_type, dst_device_type, src_device_num, dst_device_num, dst_axis,
 ):
     if dst_axis + 1 > dst_device_num:
         return
     if dst_axis > 1:
         return
-    print("_test_partial_sum_to_split:", src_device_type, dst_device_type, src_device_num, dst_device_num, dst_axis)
+    print(
+        "_test_partial_sum_to_split:",
+        src_device_type,
+        dst_device_type,
+        src_device_num,
+        dst_device_num,
+        dst_axis,
+    )
 
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
@@ -174,10 +200,16 @@ def _test_partial_sum_to_split(
 
     @flow.global_function(function_config=func_config)
     def partial_sum_to_split_job(x: oft.Numpy.Placeholder((96, 96, 96))):
-        with flow.scope.placement(src_device_type, ["0:0-" + str(src_device_num - 1), "1:0-" + str(src_device_num - 1)]):
+        with flow.scope.placement(
+            src_device_type,
+            ["0:0-" + str(src_device_num - 1), "1:0-" + str(src_device_num - 1)],
+        ):
             src = flow.identity(x.with_distribute(flow.distribute.split(0)))
             src = flow.math.reduce_sum(src, axis=0)
-        with flow.scope.placement(dst_device_type, ["0:0-" + str(dst_device_num - 1), "1:0-" + str(dst_device_num - 1)]):
+        with flow.scope.placement(
+            dst_device_type,
+            ["0:0-" + str(dst_device_num - 1), "1:0-" + str(dst_device_num - 1)],
+        ):
             dst = flow.identity(src.with_distribute(flow.distribute.split(dst_axis)))
         return dst
 
@@ -185,13 +217,19 @@ def _test_partial_sum_to_split(
     y = partial_sum_to_split_job(x).get().numpy()
     test_case.assertTrue(np.array_equal(x, y))
     print(np.allclose(np.sum(x, axis=0), y))
-    assert(np.allclose(np.sum(x, axis=0), y))
+    assert np.allclose(np.sum(x, axis=0), y)
 
 
 def _test_partial_sum_to_broadcast(
     src_device_type, dst_device_type, src_device_num, dst_device_num
 ):
-    print("_test_partial_sum_to_broadcast:", src_device_type, dst_device_type, src_device_num, dst_device_num)
+    print(
+        "_test_partial_sum_to_broadcast:",
+        src_device_type,
+        dst_device_type,
+        src_device_num,
+        dst_device_num,
+    )
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
@@ -200,23 +238,35 @@ def _test_partial_sum_to_broadcast(
 
     @flow.global_function(function_config=func_config)
     def partial_sum_to_broadcast_job(x: oft.Numpy.Placeholder((96, 96, 96))):
-        with flow.scope.placement(src_device_type, ["0:0-" + str(src_device_num - 1), "1:0-" + str(src_device_num - 1)]):
+        with flow.scope.placement(
+            src_device_type,
+            ["0:0-" + str(src_device_num - 1), "1:0-" + str(src_device_num - 1)],
+        ):
             src = flow.identity(x.with_distribute(flow.distribute.split(0)))
             src = flow.math.reduce_sum(src, axis=0)
-        with flow.scope.placement(dst_device_type, ["0:0-" + str(dst_device_num - 1), "1:0-" + str(dst_device_num - 1)]):
+        with flow.scope.placement(
+            dst_device_type,
+            ["0:0-" + str(dst_device_num - 1), "1:0-" + str(dst_device_num - 1)],
+        ):
             dst = flow.identity(src.with_distribute(flow.distribute.broadcast()))
         return dst
 
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
     y = partial_sum_to_broadcast_job(x).get().numpy()
     print(np.allclose(np.sum(x, axis=0), y))
-    assert(np.allclose(np.sum(x, axis=0), y))
+    assert np.allclose(np.sum(x, axis=0), y)
 
 
 def _test_broadcast_to_broadcast(
     src_device_type, dst_device_type, src_device_num, dst_device_num
 ):
-    print("_test_broadcast_to_broadcast:", src_device_type, dst_device_type, src_device_num, dst_device_num)
+    print(
+        "_test_broadcast_to_broadcast:",
+        src_device_type,
+        dst_device_type,
+        src_device_num,
+        dst_device_num,
+    )
 
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
@@ -226,9 +276,15 @@ def _test_broadcast_to_broadcast(
 
     @flow.global_function(function_config=func_config)
     def broadcast_to_broadcast_job(x: oft.Numpy.Placeholder((96, 96, 96))):
-        with flow.scope.placement(src_device_type, ["0:0-" + str(src_device_num - 1), "1:0-" + str(src_device_num - 1)]):
+        with flow.scope.placement(
+            src_device_type,
+            ["0:0-" + str(src_device_num - 1), "1:0-" + str(src_device_num - 1)],
+        ):
             src = flow.identity(x.with_distribute(flow.distribute.broadcast()))
-        with flow.scope.placement(dst_device_type, ["0:0-" + str(dst_device_num - 1), "1:0-" + str(dst_device_num - 1)]):
+        with flow.scope.placement(
+            dst_device_type,
+            ["0:0-" + str(dst_device_num - 1), "1:0-" + str(dst_device_num - 1)],
+        ):
             dst = flow.identity(src.with_distribute(flow.distribute.broadcast()))
         return dst
 
@@ -236,13 +292,10 @@ def _test_broadcast_to_broadcast(
     y = broadcast_to_broadcast_job(x).get().numpy()
     test_case.assertTrue(np.array_equal(x, y))
     print(np.array_equal(x, y))
-    assert(np.array_equal(x, y))
-    
+    assert np.array_equal(x, y)
 
 
-def _test_multi_lbi(
-    src_device_type, dst_device_type, src_device_num, dst_device_num
-):
+def _test_multi_lbi(src_device_type, dst_device_type, src_device_num, dst_device_num):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
@@ -251,12 +304,18 @@ def _test_multi_lbi(
 
     @flow.global_function(function_config=func_config)
     def multi_lbi_job(x: oft.Numpy.Placeholder((96, 96, 96))):
-        with flow.scope.placement(src_device_type, ["0:0-" + str(src_device_num - 1), "1:0-" + str(src_device_num - 1)]):
+        with flow.scope.placement(
+            src_device_type,
+            ["0:0-" + str(src_device_num - 1), "1:0-" + str(src_device_num - 1)],
+        ):
             src_s0 = flow.identity(x.with_distribute(flow.distribute.split(0)))
             src_s1 = flow.identity(x.with_distribute(flow.distribute.split(1)))
             src_b = flow.identity(x.with_distribute(flow.distribute.split(1)))
             (t0_0, t0_1, t0_2) = flow.identity_n((src_s0, src_s1, src_b))
-        with flow.scope.placement(dst_device_type, ["0:0-" + str(dst_device_num - 1), "1:0-" + str(dst_device_num - 1)]):
+        with flow.scope.placement(
+            dst_device_type,
+            ["0:0-" + str(dst_device_num - 1), "1:0-" + str(dst_device_num - 1)],
+        ):
             t0_0 = t0_0.with_distribute(flow.distribute.split(1))
             t0_1 = t0_1.with_distribute(flow.distribute.broadcast())
             t0_2 = t0_2.with_distribute(flow.distribute.split(1))
