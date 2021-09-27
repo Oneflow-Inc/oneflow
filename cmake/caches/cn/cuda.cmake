@@ -1,3 +1,5 @@
 set(BUILD_CUDA YES CACHE BOOL "")
 set(THIRD_PARTY_MIRROR aliyun CACHE STRING "")
 set(PIP_INDEX_MIRROR "https://pypi.tuna.tsinghua.edu.cn/simple" CACHE STRING "")
+set(CUDNN_ROOT_DIR /usr/local/cudnn CACHE STRING "")
+set(TREAT_WARNINGS_AS_ERRORS NO CACHE BOOL "")

@@ -21,16 +21,8 @@ namespace oneflow {
 namespace vm {
 
 CriticalSectionPhyInstrOperand::CriticalSectionPhyInstrOperand(int64_t ref_cnt)
-    : notifier_(std::make_unique<Notifier>()),
+    : critical_section_ready_ref_cnt_(std::make_shared<std::atomic<int64_t>>(1)),
       consumer_ref_cnt_(std::make_shared<std::atomic<int64_t>>(ref_cnt)) {}
-
-void CriticalSectionPhyInstrOperand::ProducerNotifiesConsumer() const {
-  CHECK(notifier_->Notify() == kNotifierStatusSuccess);
-}
-
-void CriticalSectionPhyInstrOperand::ConsumerWaitsProducer() const {
-  notifier_->WaitAndClearNotifiedCnt();
-}
 
 TensorCriticalSectionPhyInstrOperand::TensorCriticalSectionPhyInstrOperand(
     const one::EagerBlobObjectListPtr& eager_blob_objects,

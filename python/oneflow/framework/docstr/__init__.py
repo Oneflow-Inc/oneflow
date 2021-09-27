@@ -30,3 +30,4 @@ from .comm import *
 from .ctc_decode import *
 from .placement import *
 from .sbp import *
+from .trigonometric_ops import *
