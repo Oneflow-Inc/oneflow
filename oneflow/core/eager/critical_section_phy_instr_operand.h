@@ -35,11 +35,14 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
  public:
   CriticalSectionBeginPhyInstrOperand(const CriticalSectionBeginPhyInstrOperand&) = delete;
   CriticalSectionBeginPhyInstrOperand(CriticalSectionBeginPhyInstrOperand&&) = delete;
-  CriticalSectionBeginPhyInstrOperand& operator=(const CriticalSectionBeginPhyInstrOperand&) = delete;
+  CriticalSectionBeginPhyInstrOperand& operator=(const CriticalSectionBeginPhyInstrOperand&) =
+      delete;
   CriticalSectionBeginPhyInstrOperand& operator=(CriticalSectionBeginPhyInstrOperand&&) = delete;
   virtual ~CriticalSectionBeginPhyInstrOperand() = default;
 
-  explicit CriticalSectionBeginPhyInstrOperand(const one::EagerBlobObjectListPtr& eager_blob_objects, ObjectMsgPtr<LocalDepObject> local_dep_object)
+  explicit CriticalSectionBeginPhyInstrOperand(
+      const one::EagerBlobObjectListPtr& eager_blob_objects,
+      ObjectMsgPtr<LocalDepObject> local_dep_object)
       : eager_blob_objects_(eager_blob_objects), local_dep_object_(local_dep_object) {}
 
   void ForEachMirroredObject(
@@ -96,9 +99,8 @@ class OutputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBe
 
 class CriticalSectionEndPhyInstrOperand : public PhyInstrOperand {
  public:
-  CriticalSectionEndPhyInstrOperand(
-      const std::shared_ptr<EagerBlobObject>& eager_blob_object,
-      const std::shared_ptr<SharedEventRecord>& event_record)
+  CriticalSectionEndPhyInstrOperand(const std::shared_ptr<EagerBlobObject>& eager_blob_object,
+                                    const std::shared_ptr<SharedEventRecord>& event_record)
       : eager_blob_object_(eager_blob_object), event_record_(event_record) {}
   virtual ~CriticalSectionEndPhyInstrOperand() = default;
 
