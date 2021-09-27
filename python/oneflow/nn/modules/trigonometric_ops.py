@@ -267,9 +267,6 @@ def atan2_op(input, other):
 @register_tensor_op("atan2")
 def atan2_op_tensor(input, other):
     """
-
-    atan2(other) -> Tensor
-
     See :func:`oneflow.atan2`
     """
     return flow._C.atan2(input, other)
