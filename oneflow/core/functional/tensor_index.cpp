@@ -194,24 +194,49 @@ Maybe<Tensor> AdjustSubspace(const std::shared_ptr<Tensor>& input, const TensorT
   return Transpose(input, permute);
 }
 
+Maybe<bool> HasFalseIndex(const TensorIndex& index) {
+  bool has_false_index = false;
+  for (int i = 0; i < index.size(); ++i) {
+    const auto& index_item = index.at(i);
+    if (index_item.IsBoolean()) {
+      if (!index_item.boolean()) {
+        has_false_index = true;
+        break;
+      }
+    }
+  }
+  return has_false_index;
+}
+
 }  // namespace
 
 Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
                                 std::vector<detail::Slice>* slice_indices,
-                                TensorTuple* tensor_indices, std::vector<int64_t>* target_dims) {
+                                TensorTuple* tensor_indices, std::vector<int64_t>* expand_dims,
+                                std::vector<int64_t>* target_dims) {
   int64_t ndims = shape.NumAxes();
   int64_t specified_ndims = CountSpecifiedDims(index);
   CHECK_LE_OR_RETURN(specified_ndims, ndims)
       << "Too many indices for tensor of dimension " << ndims;
+  bool has_false_index = JUST(HasFalseIndex(index));
+  bool has_expand_boolean_dim = false;
   int dim = 0;
   for (int i = 0; i < index.size(); ++i) {
     const auto& index_item = index.at(i);
     if (index_item.IsNone()) {
+      expand_dims->emplace_back(dim);
+      slice_indices->emplace_back(0, 1, 1);
       target_dims->emplace_back(1);
       continue;
     }
     if (index_item.IsBoolean()) {
-      target_dims->emplace_back(index_item.boolean());
+      if (!has_expand_boolean_dim) {
+        int boolean_index = !has_false_index;
+        expand_dims->emplace_back(dim);
+        slice_indices->emplace_back(0, boolean_index, 1);
+        target_dims->emplace_back(boolean_index);
+        has_expand_boolean_dim = true;
+      }
       continue;
     }
     if (index_item.IsEllipsis()) {
@@ -280,6 +305,23 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
     target_dims->emplace_back(shape.At(i));
   }
   return Maybe<void>::Ok();
+}
+
+Maybe<std::vector<detail::Slice>> RemoveExpandDimSlice(
+    const std::vector<detail::Slice>& expand_slices, const std::vector<int64_t>& expand_dims) {
+  auto slices = std::make_shared<std::vector<detail::Slice>>();
+  std::vector<int> mask(expand_slices.size(), 0);
+  for (const auto& dim : expand_dims) {
+    if (dim >= expand_slices.size()) {
+      return Error::RuntimeError()
+             << "Dimension " << dim << " is out of bounds for size " << expand_slices.size();
+    }
+    mask[dim] = 1;
+  }
+  for (int i = 0; i < expand_slices.size(); ++i) {
+    if (!mask[i]) { slices->emplace_back(expand_slices.at(i)); }
+  }
+  return slices;
 }
 
 Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
