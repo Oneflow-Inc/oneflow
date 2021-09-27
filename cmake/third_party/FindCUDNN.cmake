@@ -10,16 +10,16 @@
 #  CUDNN_LIBRARY_DIRS
 
 include(FindPackageHandleStandardArgs)
+include(CMakeDependentOption)
 
 set(CUDNN_ROOT_DIR "" CACHE PATH "Folder contains NVIDIA cuDNN")
 
-if(CUDA_VERSION VERSION_LESS "11.0") # too large binary might lead to link failure
-  set(CUDNN_STATIC_DEFAULT ON)
-else()
-  set(CUDNN_STATIC_DEFAULT OFF)
+if(CUDA_VERSION VERSION_LESS "11.0")
+  set(CUDA_VERSION_VERSION_LESS_11 TRUE)
 endif()
 
-option(CUDNN_STATIC "Look for static cuDNN" ${CUDNN_STATIC_DEFAULT})
+cmake_dependent_option(CUDNN_STATIC "Look for static cuDNN" ON "CUDA_VERSION_VERSION_LESS_11" OFF)
+
 if(OF_CUDA_LINK_DYNAMIC_LIBRARY)
    set(CUDNN_STATIC OFF)
 endif()
