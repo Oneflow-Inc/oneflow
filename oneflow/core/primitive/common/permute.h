@@ -96,7 +96,7 @@ void SimplifyPermutation(size_t num_dims, const int64_t* src_dims, const int* pe
     simplified_src_dims[*simplified_num_dims - 1] /= (*movement_size / elem_size);
   } else {
     int64_t tmp_dims[max_num_dims];
-    for (size_t i = 0; i < num_dims++ i) { tmp_dims[i] = src_dims[i]; }
+    for (size_t i = 0; i < num_dims; ++i) { tmp_dims[i] = src_dims[i]; }
     tmp_dims[num_dims - 1] /= (pre_simpified_movement_size / elem_size);
     SimplifyPermutation<max_num_dims>(num_dims, tmp_dims, permutation, simplified_num_dims,
                                       simplified_src_dims, simplified_permutation);
