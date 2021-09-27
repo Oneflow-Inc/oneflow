@@ -86,7 +86,7 @@ class LAMB(Optimizer):
     .. code-block:: python 
 
         # Assume net is a custom model. 
-        rmsprop = flow.optim.RMSprop(net.parameters(), lr=1e-3)
+        rmsprop = flow.optim.LAMB(net.parameters(), lr=1e-3)
 
         for epoch in range(epochs):
             # Read data, Compute the loss and so on. 
@@ -100,7 +100,7 @@ class LAMB(Optimizer):
     .. code-block:: python 
 
         # Assume net is a custom model. 
-        rmsprop = flow.optim.RMSprop(
+        rmsprop = flow.optim.LAMB(
             [
                 {
                     "params": net.parameters(),
@@ -135,6 +135,8 @@ class LAMB(Optimizer):
         amsgrad: bool = False,
         do_bias_correction: bool = True,
     ):
+        if amsgrad:
+            raise RuntimeError("LAMB does not support AMSGrad variant.")
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
         assert (
@@ -189,13 +191,11 @@ class LAMB(Optimizer):
                     "learning_rate_val": param_group["lr"],
                     "bias_correction1_val": param_group["bias_correction1"],
                     "bias_correction2_val": param_group["bias_correction2"],
-                    "decay_rate": param_group["alpha"],
-                    "l2": param_group["weight_decay"],
+                    "weight_decay": param_group["weight_decay"],
                     "beta1": param_group["betas"][0],
                     "beta2": param_group["betas"][1],
                     "epsilon": param_group["eps"],
                     "do_bias_correction": param_group["do_bias_correction"],
-
                 }
                 for param in param_group.parameters:
                     if param.grad is None:
@@ -208,7 +208,7 @@ class LAMB(Optimizer):
                     v_tensor = self._state[param]["exp_avg_sq"]
                     
                     self._lamb_op(
-                        param, param.grad, m_tensor, v_tensor
+                        param, param.grad, m_tensor, v_tensor, **kwargs
                     )
             self._state["step"] = self._state["step"] + 1
             return loss
@@ -236,6 +236,7 @@ class LAMB(Optimizer):
             optimizer_conf.mutable_lamb_conf().set_beta1(beta1)
             optimizer_conf.mutable_lamb_conf().set_beta2(beta2)
             optimizer_conf.mutable_lamb_conf().set_epsilon(epsilon)
+            # optimizer_conf.mutable_lamb_conf().set_do_bias_correction(do_bias_correction)
             
             optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
                 weight_decay

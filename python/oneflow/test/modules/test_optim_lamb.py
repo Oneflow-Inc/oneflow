@@ -45,60 +45,42 @@ def compare_with_numpy_lamb(
         random_grad_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
     init_value = np.random.uniform(size=x_shape).astype(np.float32)
 
-    class CustomModule(flow.nn.Module):
-        def __init__(self):
-            super().__init__()
-            self.param = flow.nn.Parameter(
-                flow.Tensor(init_value, device=flow.device(device))
-            )
-
-        def forward(self, mask):
-            return self.param * mask
-
-    simp_module = CustomModule()
-    simp_module.to(device)
-    simp_module.train()
-
-    optim_kwargs = {
-        "params": simp_module.parameters(),
-        "lr": learning_rate,
-        "betas": betas,
-        "eps": eps,
-        "weight_decay": weight_decay,
-        "do_bias_correction": do_bias_correction,
-    }
-    
-    if (clip_grad_max_norm != -1):
-        optim_kwargs["clip_grad_max_norm"] = clip_grad_max_norm 
-        optim_kwargs["clip_grad_norm_type"] = clip_grad_norm_type
-
-
-    lamb = flow.optim.LAMB([optim_kwargs])
-
-    class CustomLambGraph(flow.nn.Graph):
-        def __init__(self):
-            super().__init__()
-            self.m = simp_module
-            self.add_optimizer(lamb)
-
-        def build(self, mask_tensor):
-            loss = flow.sum(self.m(mask_tensor))
-            loss.backward()
-            return loss
-
     of_res_list = []
-    lamb_graph = CustomLambGraph()
 
-    for i in range(train_iters):
-        mask_tensor = flow.tensor(
-            random_grad_seq[i],
-            dtype=flow.float32,
-            requires_grad=False,
-            device=flow.device(device),
-        )
-        _ = lamb_graph(mask_tensor)
+    def train_by_oneflow():
+        x = flow.nn.Parameter(flow.Tensor(init_value, device=flow.device(device)))
+        
+        optim_kwargs = {
+            "params": [x],
+            "lr": learning_rate,
+            "betas": betas,
+            "eps": eps,
+            "weight_decay": weight_decay,
+            "do_bias_correction": do_bias_correction,
+        }
+        
+        if (clip_grad_max_norm != -1):
+            optim_kwargs["clip_grad_max_norm"] = clip_grad_max_norm 
+            optim_kwargs["clip_grad_norm_type"] = clip_grad_norm_type
 
-        of_res_list.append(simp_module.param.numpy())
+
+        lamb = flow.optim.LAMB([optim_kwargs])
+        
+        def train_one_iter(grad):
+            grad_tensor = flow.tensor(grad, dtype=flow.float32, requires_grad=False, device=flow.device(device))
+            
+            loss = flow.sum(x * grad_tensor)
+            loss.backward()
+            lamb.step()
+            lamb.zero_grad()
+            return x
+
+        for i in range(train_iters):
+            param = train_one_iter(random_grad_seq[i])
+
+            of_res_list.append(param.numpy())
+    
+    train_by_oneflow()
 
     np_res_list = []
 
@@ -164,7 +146,7 @@ class TestLamb(flow.unittest.TestCase):
         arg_dict["weight_decay"] = [0.001]
         arg_dict["eps"] = [1e-8, 1e-6]
         arg_dict["do_bias_correction"] = [False]
-        arg_dict["amsgrad"] = [True]#, False]
+        arg_dict["amsgrad"] = [False]
         # NOTE(xyliao): max_norm == -1 means no clip grad
         arg_dict["clip_grad_args"] = [(-1, 2.0), (1, 2.0)]
 
