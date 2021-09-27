@@ -107,7 +107,7 @@ class Graph(object):
         self._args_repr = []
         self._outs_repr = []
         self._debug = False
-        self._outputs_buffer_size = 2
+        self._outputs_buffer_size = 3
         self._cur_index_of_ouputs_buffer = 0
 
         self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(self._name)
@@ -566,18 +566,17 @@ class Graph(object):
         ]
 
         # Make outputs buffer
-        if self._outputs_buffer_size >= 2:
-            for i in range(self._outputs_buffer_size - 1):
-                outputs_buffer_item = self._empty_like_io(
-                    "output", *self._eager_outputs
-                )
-                self._eager_outputs_buffer.append(outputs_buffer_item)
-                outputs_tensor_tuple_buffer_item = convert_to_tensor_tuple(
-                    self._flatten_io("output", *outputs_buffer_item)
-                )
-                self._outputs_tensor_tuple_buffer.append(
-                    outputs_tensor_tuple_buffer_item
-                )
+        for i in range(self._outputs_buffer_size - 1):
+            outputs_buffer_item = self._empty_like_io(
+                "output", *self._eager_outputs
+            )
+            self._eager_outputs_buffer.append(outputs_buffer_item)
+            outputs_tensor_tuple_buffer_item = convert_to_tensor_tuple(
+                self._flatten_io("output", *outputs_buffer_item)
+            )
+            self._outputs_tensor_tuple_buffer.append(
+                outputs_tensor_tuple_buffer_item
+            )
         self._check_outputs_buffer()
 
     def _check_outputs_buffer(self):
