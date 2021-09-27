@@ -88,23 +88,15 @@ void SimplifyPermutation(size_t num_dims, const int64_t* src_dims, const int* pe
                          size_t* movement_size) {
   const size_t pre_simpified_movement_size =
       GetMovementSize<max_movement_size>(elem_size, num_dims, src_dims, src, permutation, dst);
-  if (pre_simpified_movement_size == elem_size) {
-    SimplifyPermutation<max_num_dims>(num_dims, src_dims, permutation, simplified_num_dims,
-                                      simplified_src_dims, simplified_permutation);
-    *movement_size = GetMovementSize<max_movement_size>(
-        elem_size, *simplified_num_dims, simplified_src_dims, src, simplified_permutation, dst);
-    simplified_src_dims[*simplified_num_dims - 1] /= (*movement_size / elem_size);
-  } else {
-    int64_t tmp_dims[max_num_dims];
-    for (size_t i = 0; i < num_dims; ++i) { tmp_dims[i] = src_dims[i]; }
-    tmp_dims[num_dims - 1] /= (pre_simpified_movement_size / elem_size);
-    SimplifyPermutation<max_num_dims>(num_dims, tmp_dims, permutation, simplified_num_dims,
-                                      simplified_src_dims, simplified_permutation);
-    *movement_size =
-        GetMovementSize<max_movement_size>(pre_simpified_movement_size, *simplified_num_dims,
-                                           simplified_src_dims, src, simplified_permutation, dst);
-    simplified_src_dims[*simplified_num_dims - 1] /= (*movement_size / pre_simpified_movement_size);
-  }
+  int64_t tmp_dims[max_num_dims];
+  for (size_t i = 0; i < num_dims; ++i) { tmp_dims[i] = src_dims[i]; }
+  tmp_dims[num_dims - 1] /= (pre_simpified_movement_size / elem_size);
+  SimplifyPermutation<max_num_dims>(num_dims, tmp_dims, permutation, simplified_num_dims,
+                                    simplified_src_dims, simplified_permutation);
+  *movement_size =
+      GetMovementSize<max_movement_size>(pre_simpified_movement_size, *simplified_num_dims,
+                                         simplified_src_dims, src, simplified_permutation, dst);
+  simplified_src_dims[*simplified_num_dims - 1] /= (*movement_size / pre_simpified_movement_size);
 }
 
 template<size_t num_dims, typename IndexType>
