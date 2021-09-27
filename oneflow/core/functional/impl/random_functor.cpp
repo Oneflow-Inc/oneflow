@@ -104,7 +104,7 @@ class RandFunctor {
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, distribution_state);
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
-    result->set_requires_grad(requires_grad);
+    JUST(result->set_requires_grad(requires_grad));
     return result;
   }
 
@@ -151,7 +151,7 @@ class ConsistentRandFunctor {
     }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
-    result->set_requires_grad(requires_grad);
+    JUST(result->set_requires_grad(requires_grad));
     return result;
   }
 
@@ -193,7 +193,7 @@ class RandNFunctor {
     OpExprInterpContext ctx(attrs, distribution_state);
     if (device) { ctx.device = JUST(device); }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
-    result->set_requires_grad(requires_grad);
+    JUST(result->set_requires_grad(requires_grad));
     return result;
   }
 
@@ -238,7 +238,7 @@ class ConsistentRandNFunctor {
     }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
-    result->set_requires_grad(requires_grad);
+    JUST(result->set_requires_grad(requires_grad));
     return result;
   }
 
@@ -278,7 +278,7 @@ class RandIntFunctor {
     if (device) { ctx.device = JUST(device); }
 
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
-    result->set_requires_grad(requires_grad);
+    JUST(result->set_requires_grad(requires_grad));
     return result;
   }
 
@@ -342,7 +342,7 @@ class ConsistentRandIntFunctor {
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
 
-    result->set_requires_grad(requires_grad);
+    JUST(result->set_requires_grad(requires_grad));
     return result;
   }
 
@@ -386,7 +386,7 @@ class RandPermFunctor {
     if (device) { ctx.device = JUST(device); }
 
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {}, ctx));
-    result->set_requires_grad(requires_grad);
+    JUST(result->set_requires_grad(requires_grad));
     return result;
   }
 
@@ -430,7 +430,7 @@ class ConsistentRandPermFunctor {
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *randperm_op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
 
-    result->set_requires_grad(requires_grad);
+    JUST(result->set_requires_grad(requires_grad));
     return result;
   }
 
