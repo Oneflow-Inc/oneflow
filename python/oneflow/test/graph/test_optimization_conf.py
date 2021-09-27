@@ -93,6 +93,7 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
                 self.config.allow_fuse_add_to_output(True)
                 self.config.allow_fuse_cast_scale(True)
                 self.config.set_gradient_accumulation_steps(100)
+                self.config.set_zero_redundancy_optimizer_mode("distributed_split")
 
             def build(self, x):
                 x = self.m(x)
