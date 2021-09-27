@@ -38,7 +38,6 @@ size_t HashTypedAttrVal(const T& val) {
   template const T& AttrValueCast(const user_op::AttrVal& attr_val); \
   template size_t HashTypedAttrVal(const T& attr_val);
 
-
 OF_PP_FOR_EACH_TUPLE(INITIALIZE_ATTR_VALUE_CAST, ATTR_SEQ)
 
 }  // namespace oneflow

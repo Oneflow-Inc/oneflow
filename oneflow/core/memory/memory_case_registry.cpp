@@ -16,6 +16,8 @@ limitations under the License.
 #include "oneflow/core/memory/memory_case_registry.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/to_string.h"
+/*
+template<typename T> T Attr(string) 和 bool HasAttr(string)
 
 
 /*
