@@ -104,7 +104,12 @@ def _test_split_to_split_enable_all_to_all(
 
 
 def _test_split_to_broadcast(
-    test_case, src_device_type, dst_device_type, src_device_num, dst_device_num, src_axis,
+    test_case,
+    src_device_type,
+    dst_device_type,
+    src_device_num,
+    dst_device_num,
+    src_axis,
 ):
     if src_axis + 1 > src_device_num:
         return
@@ -135,7 +140,12 @@ def _test_split_to_broadcast(
 
 
 def _test_broadcast_to_split(
-    test_case, src_device_type, dst_device_type, src_device_num, dst_device_num, dst_axis,
+    test_case,
+    src_device_type,
+    dst_device_type,
+    src_device_num,
+    dst_device_num,
+    dst_axis,
 ):
     if dst_axis + 1 > dst_device_num:
         return
@@ -166,7 +176,12 @@ def _test_broadcast_to_split(
 
 
 def _test_partial_sum_to_split(
-    test_case, src_device_type, dst_device_type, src_device_num, dst_device_num, dst_axis,
+    test_case,
+    src_device_type,
+    dst_device_type,
+    src_device_num,
+    dst_device_num,
+    dst_axis,
 ):
     if dst_axis + 1 > dst_device_num:
         return
