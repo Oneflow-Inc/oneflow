@@ -56,7 +56,7 @@ Maybe<void> CastToSameType(TensorTuple& tensor_tuple, const Symbol<DType>& commo
 }  // namespace
 
 TensorProcessor& TensorProcessor::AddInputs(const TensorTuple& init_tensor_or_tuple) {
-  for (auto tensor : init_tensor_or_tuple) {
+  for (const auto& tensor : init_tensor_or_tuple) {
     tensor_tuple_.emplace_back(tensor);
     inputs_lowest_dtype_vec_.emplace_back(DType::InvalidDataType());
   }
@@ -65,7 +65,7 @@ TensorProcessor& TensorProcessor::AddInputs(const TensorTuple& init_tensor_or_tu
 
 TensorProcessor& TensorProcessor::AddInputs(const TensorTuple& init_tensor_or_tuple,
                                             Symbol<DType> tensor_lowest_dtype) {
-  for (auto tensor : init_tensor_or_tuple) {
+  for (const auto& tensor : init_tensor_or_tuple) {
     tensor_tuple_.emplace_back(tensor);
     inputs_lowest_dtype_vec_.emplace_back(tensor_lowest_dtype);
   }
