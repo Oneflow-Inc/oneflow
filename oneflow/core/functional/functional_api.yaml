@@ -1117,6 +1117,10 @@
   signature: "Tensor (Tensor x) => LocalAllReduce"
   bind_python: True
 
+- name: "local_reduce"
+  signature: "Tensor (Tensor x, *, Int64 dst=0, Bool inplace=True) => LocalReduce"
+  bind_python: True
+
 - name: "eager_b_to_s"
   signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList out_sbp, Shape shape) => EagerBToS"
   bind_python: False

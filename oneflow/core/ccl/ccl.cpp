@@ -335,7 +335,15 @@ struct DtypeReduce<T, kSum> {
   static Maybe<void> Call(const void* void_in, void* void_out, size_t elem_cnt, int64_t root,
                           Symbol<ParallelDesc> parallel_desc) {
     const T* in = reinterpret_cast<const T*>(void_in);
-    T* out = reinterpret_cast<T*>(void_out);
+    size_t size = root == GlobalProcessCtx::Rank() ? 0 : elem_cnt;
+    T* out = nullptr;
+    // void_out is only used on rank root and ignored for other ranks.
+    std::vector<T> tmp_out_buffer(size);
+    if (root == GlobalProcessCtx::Rank()) {
+      out = reinterpret_cast<T*>(void_out);
+    } else {
+      out = tmp_out_buffer.data();
+    }
     int64_t parallel_num = parallel_desc->parallel_num();
     BalancedSplitter bs(elem_cnt, parallel_num);
     std::vector<T> recv_buffer(bs.At(0).size());
