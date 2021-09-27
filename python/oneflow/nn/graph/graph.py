@@ -107,7 +107,7 @@ class Graph(object):
         self._args_repr = []
         self._outs_repr = []
         self._debug = False
-        self._outputs_buffer_size = 3
+        self._outputs_buffer_size = 2
         self._cur_index_of_ouputs_buffer = 0
 
         self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(self._name)
@@ -551,11 +551,20 @@ class Graph(object):
 
             return eager_out
 
+        def convert_to_synced_tensor_tuple(*args):
+            tensor_tuple = convert_to_tensor_tuple(*args)
+            # tensors acting as buffer should be synced once upon created.
+            oneflow._oneflow_internal.nn.graph.SoftSyncNNGraphBuffers(
+                tensor_tuple, self._c_nn_graph
+            )
+            return tensor_tuple
+
+
         self._eager_outputs = self._mapping_io(
             "output", build_real_output, *self._eager_outputs
         )
 
-        self._outputs_tensor_tuple = convert_to_tensor_tuple(
+        self._outputs_tensor_tuple = convert_to_synced_tensor_tuple(
             self._flatten_io("output", *self._eager_outputs)
         )
         self._eager_outputs_buffer = [
@@ -571,7 +580,7 @@ class Graph(object):
                 "output", *self._eager_outputs
             )
             self._eager_outputs_buffer.append(outputs_buffer_item)
-            outputs_tensor_tuple_buffer_item = convert_to_tensor_tuple(
+            outputs_tensor_tuple_buffer_item = convert_to_synced_tensor_tuple(
                 self._flatten_io("output", *outputs_buffer_item)
             )
             self._outputs_tensor_tuple_buffer.append(
