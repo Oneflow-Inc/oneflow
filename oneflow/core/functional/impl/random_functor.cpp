@@ -33,7 +33,6 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/lazy_mode.h"
-#include "oneflow/user/kernels/bernoulli_kernel.h"
 #include "oneflow/user/kernels/distributions/common.h"
 
 namespace oneflow {
