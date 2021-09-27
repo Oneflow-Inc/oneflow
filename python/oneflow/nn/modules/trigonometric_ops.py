@@ -227,17 +227,6 @@ def arccosh_op_tensor(input):
     return flow._C.acosh(input)
 
 
-class Atan2(Module):
-    def __init__(self) -> None:
-        super().__init__()
-        self.atan2_op = (
-            flow.builtin_op("atan2").Input("x").Input("y").Output("z").Build()
-        )
-
-    def forward(self, x, y):
-        return self.atan2_op(x, y)[0]
-
-
 def atan2_op(input, other):
     """Element-wise arctangent of input{i}/other{i}
     with consideration of the quadrant. Returns a new tensor with the signed
@@ -272,7 +261,7 @@ def atan2_op(input, other):
         array([ 1.5707964,  0.       , -1.5707964], dtype=float32)
 
     """
-    return Atan2()(input, other)
+    return flow._C.atan2(input, other)
 
 
 @register_tensor_op("atan2")
@@ -283,7 +272,7 @@ def atan2_op_tensor(input, other):
 
     See :func:`oneflow.atan2`
     """
-    return Atan2()(input, other)
+    return flow._C.atan2(input, other)
 
 
 if __name__ == "__main__":
