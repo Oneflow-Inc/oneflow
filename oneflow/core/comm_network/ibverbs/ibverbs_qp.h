@@ -27,10 +27,7 @@ class ActorMsgMR final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgMR);
   ActorMsgMR() = delete;
-  ActorMsgMR(ibv_pd* pd) {
-    mem_desc_.reset(new IBVerbsMemDesc(pd, &msg_, sizeof(msg_)));
-    CHECK_EQ(mem_desc_->sge_vec().size(), 1);
-  }
+  ActorMsgMR(ibv_pd* pd) { mem_desc_.reset(new IBVerbsMemDesc(pd, &msg_, sizeof(msg_))); }
   ~ActorMsgMR() { mem_desc_.reset(); }
 
   const ActorMsg& msg() const { return msg_; }
@@ -51,18 +48,20 @@ struct WorkRequestId {
   ActorMsgMR* msg_mr;
 };
 
+struct IBVerbsCommNetRMADesc;
+
 class IBVerbsQP final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsQP);
   IBVerbsQP() = delete;
-  IBVerbsQP(ibv_context*, ibv_pd*, ibv_cq* send_cq, ibv_cq* recv_cq);
+  IBVerbsQP(ibv_context*, ibv_pd*, uint8_t port_num, ibv_cq* send_cq, ibv_cq* recv_cq);
   ~IBVerbsQP();
 
   uint32_t qp_num() const { return qp_->qp_num; }
   void Connect(const IBVerbsConnectionInfo& peer_info);
   void PostAllRecvRequest();
 
-  void PostReadRequest(const IBVerbsMemDescProto& remote_mem, const IBVerbsMemDesc& local_mem,
+  void PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem, const IBVerbsMemDesc& local_mem,
                        void* read_id);
   void PostSendRequest(const ActorMsg& msg);
 
@@ -71,6 +70,8 @@ class IBVerbsQP final {
   void RecvDone(WorkRequestId*);
 
  private:
+  void EnqueuePostSendReadWR(ibv_send_wr wr, ibv_sge sge);
+  void PostPendingSendWR();
   WorkRequestId* NewWorkRequestId();
   void DeleteWorkRequestId(WorkRequestId* wr_id);
   ActorMsgMR* GetOneSendMsgMRFromBuf();
@@ -78,11 +79,17 @@ class IBVerbsQP final {
 
   ibv_context* ctx_;
   ibv_pd* pd_;
+  uint8_t port_num_;
   ibv_qp* qp_;
   std::vector<ActorMsgMR*> recv_msg_buf_;
 
   std::mutex send_msg_buf_mtx_;
   std::queue<ActorMsgMR*> send_msg_buf_;
+  std::mutex pending_send_wr_mutex_;
+  uint32_t num_outstanding_send_wr_;
+  uint32_t max_outstanding_send_wr_;
+  std::queue<std::pair<ibv_send_wr, ibv_sge>> pending_send_wr_queue_;
+  size_t read_block_size_;
 };
 
 }  // namespace oneflow

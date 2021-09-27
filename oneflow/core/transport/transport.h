@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef __linux__
+
 #ifndef ONEFLOW_CORE_TRANSPORT_TRANSPORT_H_
 #define ONEFLOW_CORE_TRANSPORT_TRANSPORT_H_
 
@@ -137,3 +139,5 @@ class Transport {
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_TRANSPORT_TRANSPORT_H_
+
+#endif  // __linux__

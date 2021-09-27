@@ -17,9 +17,15 @@ limitations under the License.
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/actor/actor.h"
-#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/actor/light_actor.h"
 
 namespace oneflow {
+
+Thread::Thread() {
+  local_msg_queue_enabled_ =
+      ParseBooleanFromEnv("ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE", false);
+  light_actor_enabled_ = ParseBooleanFromEnv("ONEFLOW_ACTOR_ENABLE_LIGHT_ACTOR", false);
+}
 
 Thread::~Thread() {
   actor_thread_.join();
@@ -30,15 +36,6 @@ Thread::~Thread() {
 void Thread::AddTask(const TaskProto& task) {
   std::unique_lock<std::mutex> lck(id2task_mtx_);
   CHECK(id2task_.emplace(task.task_id(), task).second);
-}
-
-void Thread::EnqueueActorMsg(const ActorMsg& msg) {
-  if (Global<ResourceDesc, ForSession>::Get()->thread_enable_local_message_queue()
-      && std::this_thread::get_id() == actor_thread_.get_id()) {
-    local_msg_queue_.push(msg);
-  } else {
-    msg_channel_.Send(msg);
-  }
 }
 
 void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
@@ -65,8 +62,11 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
     int process_msg_ret = actor_it->second->ProcessMsg(msg);
     if (process_msg_ret == 1) {
       LOG(INFO) << "thread " << thrd_id_ << " deconstruct actor " << actor_id;
+      auto job_id_it = id2job_id_.find(actor_id);
+      const int64_t job_id = job_id_it->second;
+      id2job_id_.erase(job_id_it);
       id2actor_ptr_.erase(actor_it);
-      Global<RuntimeCtx>::Get()->DecreaseCounter("running_actor_cnt");
+      Global<RuntimeCtx>::Get()->DecreaseCounter(GetRunningActorCountKeyByJobId(job_id));
     } else {
       CHECK_EQ(process_msg_ret, 0);
     }
@@ -74,10 +74,21 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
 }
 
 void Thread::ConstructActor(int64_t actor_id, const ThreadCtx& thread_ctx) {
-  LOG(INFO) << "thread " << thrd_id_ << " construct actor " << actor_id;
   std::unique_lock<std::mutex> lck(id2task_mtx_);
   auto task_it = id2task_.find(actor_id);
-  CHECK(id2actor_ptr_.emplace(actor_id, NewActor(task_it->second, thread_ctx)).second);
+  std::unique_ptr<ActorBase> actor_ptr;
+  const TaskProto& task = task_it->second;
+  if (light_actor_enabled_) { actor_ptr = TryNewLightActor(task, thread_ctx); }
+  if (!actor_ptr) {
+    actor_ptr = NewActor(task, thread_ctx);
+    LOG(INFO) << "Thread " << thrd_id_ << " construct Actor " << TaskType_Name(task.task_type())
+              << " " << actor_id;
+  } else {
+    LOG(INFO) << "Thread " << thrd_id_ << " construct LightActor "
+              << TaskType_Name(task.task_type()) << " " << actor_id;
+  }
+  CHECK(id2actor_ptr_.emplace(actor_id, std::move(actor_ptr)).second);
+  CHECK(id2job_id_.emplace(actor_id, task.job_id()).second);
   id2task_.erase(task_it);
   Global<RuntimeCtx>::Get()->DecreaseCounter("constructing_actor_cnt");
 }

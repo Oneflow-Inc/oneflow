@@ -45,13 +45,6 @@ struct DimGatherFunctor final {
                   int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output);
 };
 
-template<DeviceType device_type, typename IN_T, typename IDX_T>
-struct DimScatterAddFunctor final {
-  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
-                  const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt,
-                  int32_t dim, const IDX_T* index, const IN_T* src, IN_T* output);
-};
-
 template<typename IN_T, typename IDX_T>
 OF_DEVICE_FUNC void DoDimGather(const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
                                 const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim,
@@ -79,29 +72,10 @@ struct DeviceAdd {
   };
 };
 
-template<typename IN_T, typename IDX_T>
-OF_DEVICE_FUNC void DoDimScatterAdd(const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
-                                    const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim,
-                                    int64_t elem_cnt, int32_t dim, const IDX_T* index,
-                                    const IN_T* input, IN_T* output) {
-  XPU_1D_KERNEL_LOOP(input_offset, elem_cnt) {
-    IDX_T coordinate[kDimGatherMaxDimCount] = {0};
-    input_nd_helper.OffsetToNdIndex(input_offset, coordinate, ndim);
-    coordinate[dim] = index[input_offset];
-
-    IDX_T output_offset = output_nd_helper.NdIndexToOffset(coordinate, ndim);
-    DeviceAdd<IN_T>::Invoke(input + input_offset, output + output_offset);
-  }
-}
-
 // macros for functors instantiate(used by dim_gather_kernel_util.cu and dim_gather_kernel_uti.cpp)
 #define INSTANTIATE_DIM_GATHER_FUNCTOR(device_type_v, dtype_pair, itype_pair)   \
   template struct DimGatherFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
                                    OF_PP_PAIR_FIRST(itype_pair)>;
-
-#define INSTANTIATE_DIM_SCATTER_ADD_FUNCTOR(device_type_v, dtype_pair, itype_pair)  \
-  template struct DimScatterAddFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
-                                       OF_PP_PAIR_FIRST(itype_pair)>;
 
 }  // namespace user_op
 }  // namespace oneflow

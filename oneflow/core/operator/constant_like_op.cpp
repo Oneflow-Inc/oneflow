@@ -36,10 +36,11 @@ class ConstantLikeOp final : public Operator {
   ConstantLikeOp() = default;
   ~ConstantLikeOp() = default;
 
-  void InitFromOpConf() override {
+  Maybe<void> InitFromOpConf() override {
     CHECK(op_conf().has_constant_like_conf());
     EnrollInputBn("like", false);
     EnrollOutputBn("out", false);
+    return Maybe<void>::Ok();
   }
 
   Maybe<void> InferLogicalOutBlobDescs(
@@ -57,7 +58,7 @@ class ConstantLikeOp final : public Operator {
  private:
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const {
+      cfg::SbpSignatureList* sbp_sig_list) const override {
     SbpSignatureBuilder()
         .Split("like", 0)
         .Split("out", 0)

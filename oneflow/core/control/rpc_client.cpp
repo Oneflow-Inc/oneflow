@@ -150,12 +150,6 @@ void RpcClient::PullMasterKV(const std::string& k, PbMessage* msg) {
   PullMasterKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
 }
 
-void RpcClient::PushActEvent(const ActEvent& act_event) {
-  ClientCall<CtrlMethod::kPushActEvent> call;
-  *(call.mut_request()->mutable_act_event()) = act_event;
-  call(GetMasterStub());
-}
-
 void RpcClient::Clear() {
   ClientCall<CtrlMethod::kClear> call;
   call(GetThisStub());

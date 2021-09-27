@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/register/register_desc.pb.h"
+#include "oneflow/core/memory/memory_case_attr_util.h"
 
 namespace oneflow {
 
@@ -34,7 +35,7 @@ class RtRegstDesc {
   int64_t producer_actor_id() const { return producer_actor_id_; }
   const std::vector<int64_t>& consumers_actor_id() const { return consumers_actor_id_; }
   int64_t register_num() const { return register_num_; }
-  const MemoryCase& mem_case() const { return mem_case_; }
+  const MemCase& mem_case() const { return mem_case_; }
   const RegstDescTypeProto& regst_desc_type() const { return regst_desc_type_; }
 
   int64_t lbi_num() const { return sorted_lbi_vec_.size(); }
@@ -60,11 +61,13 @@ class RtRegstDesc {
   std::vector<int64_t> consumers_actor_id_;
   int64_t register_num_;
   RegstDescTypeProto regst_desc_type_;
-  MemoryCase mem_case_;
+  MemCase mem_case_;
   HashMap<LogicalBlobId, int64_t> lbi2blob_desc_ordinal_;
   std::unique_ptr<Shape> data_regst_time_shape_;
   std::vector<std::unique_ptr<const BlobDesc>> sorted_blob_desc_vec_;
   std::vector<LogicalBlobId> sorted_lbi_vec_;
+
+  bool has_separated_header_;
 };
 
 }  // namespace oneflow

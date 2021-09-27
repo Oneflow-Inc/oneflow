@@ -26,14 +26,14 @@ class LazyRefBlobObject final : public BlobObject {
   LazyRefBlobObject(const LazyRefBlobObject&) = delete;
   LazyRefBlobObject(LazyRefBlobObject&&) = delete;
   LazyRefBlobObject(Blob* blob)
-      : BlobObject(std::make_shared<MemoryCase>(blob->mem_case()),
+      : BlobObject(std::make_shared<MemCase>(blob->mem_case()),
                    std::make_shared<Shape>(blob->static_shape()), blob->data_type()) {
     blob_desc_ = blob->blob_desc();
     ref_blob_ = blob;
   }
   ~LazyRefBlobObject() override = default;
 
-  BlobDesc* mut_blob_desc() override { UNIMPLEMENTED(); }
+  BlobDesc* mut_blob_desc() override { return nullptr; }
 
   const Blob& blob() const override { return *ref_blob_; }
   Blob* mut_blob() override { return ref_blob_; }

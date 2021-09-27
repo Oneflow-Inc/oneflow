@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/vm/object.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/register/blob.h"
+#include "oneflow/core/memory/memory_case_attr_util.h"
 
 namespace oneflow {
 
@@ -28,7 +29,7 @@ namespace vm {
 
 class BlobObject : public vm::Object {
  public:
-  BlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
+  BlobObject(const std::shared_ptr<MemCase>& mem_case, const std::shared_ptr<Shape>& shape,
              DataType data_type)
       : mem_case_(mem_case), blob_desc_(shape, data_type) {}
   BlobObject(const BlobObject&) = delete;
@@ -46,10 +47,10 @@ class BlobObject : public vm::Object {
 
   Maybe<void> CheckMemCase(const ParallelDesc& parallel_desc, int64_t machine_id) const;
 
-  const MemoryCase& mem_case() const { return *mem_case_; }
+  const MemCase& mem_case() const { return *mem_case_; }
 
  protected:
-  std::shared_ptr<MemoryCase> mem_case_;
+  std::shared_ptr<MemCase> mem_case_;
   BlobDesc blob_desc_;
 };
 

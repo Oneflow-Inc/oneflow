@@ -27,7 +27,7 @@ limitations under the License.
 #include "oneflow/core/job/inter_user_job_info.pb.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/job/foreign_watcher.h"
-#include "oneflow/core/job/foreign_job_instance.h"
+#include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/framework/config_def.h"
@@ -37,8 +37,7 @@ limitations under the License.
 
 namespace oneflow {
 
-inline Maybe<void> RegisterForeignCallbackOnlyOnce(
-    const std::shared_ptr<ForeignCallback>& callback) {
+inline Maybe<void> RegisterGlobalForeignCallback(const std::shared_ptr<ForeignCallback>& callback) {
   CHECK_ISNULL_OR_RETURN(Global<std::shared_ptr<ForeignCallback>>::Get())
       << "foreign callback registered";
   // Global<T>::SetAllocated is preferred since Global<T>::New will output logs but
@@ -48,7 +47,14 @@ inline Maybe<void> RegisterForeignCallbackOnlyOnce(
   return Maybe<void>::Ok();
 }
 
-inline Maybe<void> RegisterWatcherOnlyOnce(const std::shared_ptr<ForeignWatcher>& watcher) {
+inline Maybe<void> DestroyGlobalForeignCallback() {
+  if (Global<std::shared_ptr<ForeignCallback>>::Get()) {
+    Global<std::shared_ptr<ForeignCallback>>::Delete();
+  }
+  return Maybe<void>::Ok();
+}
+
+inline Maybe<void> RegisterGlobalWatcher(const std::shared_ptr<ForeignWatcher>& watcher) {
   CHECK_ISNULL_OR_RETURN(Global<std::shared_ptr<ForeignWatcher>>::Get())
       << "foreign watcher registered";
   // Global<T>::SetAllocated is preferred since Global<T>::New will output logs but
@@ -58,11 +64,11 @@ inline Maybe<void> RegisterWatcherOnlyOnce(const std::shared_ptr<ForeignWatcher>
   return Maybe<void>::Ok();
 }
 
-inline Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
+inline Maybe<void> LaunchJob(const std::shared_ptr<oneflow::JobInstance>& cb) {
   CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
   CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
   const auto& job_name = cb->job_name();
-  auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::Get();
+  auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
   int64_t job_id = Global<JobName2JobId>::Get()->at(job_name);
   if (IsPullJob(job_name, *Global<InterUserJobInfo>::Get())) {
     buffer_mgr->Get(GetForeignOutputBufferName(job_name))->Send(cb);
@@ -89,12 +95,7 @@ inline Maybe<std::string> GetSerializedInterUserJobInfo() {
 }
 
 inline Maybe<const JobSet&> GetJobSet() {
-  JobBuildAndInferCtxMgr* job_ctx_mgr;
-  if (*Global<bool, EagerExecution>::Get()) {
-    job_ctx_mgr = Global<EagerJobBuildAndInferCtxMgr>::Get();
-  } else {
-    job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
-  }
+  auto* job_ctx_mgr = JUST(GlobalJobBuildAndInferCtxMgr());
   CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
   return job_ctx_mgr->job_set();
 }

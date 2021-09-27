@@ -15,27 +15,26 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/user/ops/comm_net_device_infer_util.h"
 
 namespace oneflow {
 
-REGISTER_USER_OP("_nccl_logical_all_reduce")
+REGISTER_NO_GRAD_USER_OP("_nccl_logical_all_reduce")
     .Input("in")
     .Output("out")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
-                                        -> Maybe<void> {
-      const ParallelDistribution& in_dis_hint =
-          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-      ParallelDistribution* in_distribution = ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-      ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
+      const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+      cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+      cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
       CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
       for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
         CHECK_OR_RETURN(sbp_hint.has_partial_sum_parallel());
@@ -52,26 +51,26 @@ REGISTER_USER_OP("_nccl_logical_all_reduce")
         out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
       }
       return Maybe<void>::Ok();
-    });
+    })
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
-REGISTER_USER_OP("_nccl_logical_reduce_scatter")
+REGISTER_NO_GRAD_USER_OP("_nccl_logical_reduce_scatter")
     .Input("in")
     .Output("out")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
-                                        -> Maybe<void> {
-      const ParallelDistribution& in_dis_hint =
-          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-      ParallelDistribution* in_distribution = ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-      ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
+      const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+      cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+      cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
       CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
       for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
         CHECK_OR_RETURN(sbp_hint.has_partial_sum_parallel());
@@ -88,26 +87,26 @@ REGISTER_USER_OP("_nccl_logical_reduce_scatter")
         out_distribution->add_sbp_parallel()->mutable_split_parallel()->set_axis(0);
       }
       return Maybe<void>::Ok();
-    });
+    })
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
-REGISTER_USER_OP("_nccl_logical_all_gather")
+REGISTER_NO_GRAD_USER_OP("_nccl_logical_all_gather")
     .Input("in")
     .Output("out")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
-                                        -> Maybe<void> {
-      const ParallelDistribution& in_dis_hint =
-          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-      ParallelDistribution* in_distribution = ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-      ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
+      const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+      cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+      cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
       CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
       for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
         CHECK_OR_RETURN(sbp_hint.has_split_parallel());
@@ -125,25 +124,25 @@ REGISTER_USER_OP("_nccl_logical_all_gather")
         out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
       }
       return Maybe<void>::Ok();
-    });
+    })
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
-REGISTER_USER_OP("_nccl_logical_all_gather_noncontinuous")
+REGISTER_NO_GRAD_USER_OP("_nccl_logical_all_gather_noncontinuous")
     .Input("in")
     .Output("out")
     .Attr<int64_t>("in_split_axis", -1)
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
-                                        -> Maybe<void> {
-      const ParallelDistribution& in_dis_hint =
-          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
+    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
+      const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
       CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
       const int64_t in_split_axis = ctx->user_op_conf().attr<int64_t>("in_split_axis");
       CHECK_GE_OR_RETURN(in_split_axis, 1);
@@ -152,8 +151,8 @@ REGISTER_USER_OP("_nccl_logical_all_gather_noncontinuous")
         CHECK_EQ_OR_RETURN(sbp_hint.split_parallel().axis(), in_split_axis);
       }
 
-      ParallelDistribution* in_distribution = ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-      ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+      cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
       in_distribution->clear_sbp_parallel();
       out_distribution->clear_sbp_parallel();
 
@@ -165,30 +164,30 @@ REGISTER_USER_OP("_nccl_logical_all_gather_noncontinuous")
         out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
       }
       return Maybe<void>::Ok();
-    });
+    })
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
-REGISTER_USER_OP("_nccl_logical_s2s")
+REGISTER_NO_GRAD_USER_OP("_nccl_logical_s2s")
     .Input("in")
     .Output("out")
     .Attr<int64_t>("in_split_axis", -1)
     .Attr<int64_t>("out_split_axis", -1)
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
-                                        -> Maybe<void> {
+    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
       const int64_t in_split_axis = ctx->user_op_conf().attr<int64_t>("in_split_axis");
       const int64_t out_split_axis = ctx->user_op_conf().attr<int64_t>("out_split_axis");
-      const ParallelDistribution& in_dis_hint =
-          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-      ParallelDistribution* in_distribution = ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-      ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+      cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+      cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
       CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
       for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
         CHECK_OR_RETURN(sbp_hint.has_split_parallel());
@@ -206,6 +205,8 @@ REGISTER_USER_OP("_nccl_logical_s2s")
         out_distribution->add_sbp_parallel()->mutable_split_parallel()->set_axis(out_split_axis);
       }
       return Maybe<void>::Ok();
-    });
+    })
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 }  // namespace oneflow

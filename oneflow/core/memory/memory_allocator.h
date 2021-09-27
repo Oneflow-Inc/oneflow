@@ -27,12 +27,12 @@ class MemoryAllocator final {
   MemoryAllocator() = default;
   ~MemoryAllocator();
 
-  char* Allocate(MemoryCase mem_case, std::size_t size);
+  char* Allocate(MemCase mem_case, std::size_t size);
   template<typename T>
   T* PlacementNew(T* mem_ptr);
 
  private:
-  void Deallocate(char* dptr, MemoryCase mem_case);
+  void Deallocate(char* dptr, MemCase mem_case);
 
   std::mutex deleters_mutex_;
   std::list<std::function<void()>> deleters_;
@@ -53,8 +53,8 @@ T* MemoryAllocator::PlacementNew(T* mem_ptr) {
 }
 
 struct MemoryAllocatorImpl final {
-  static void* Allocate(MemoryCase mem_case, size_t size);
-  static void Deallocate(void* ptr, MemoryCase mem_case);
+  static void* Allocate(MemCase mem_case, size_t size);
+  static void Deallocate(void* ptr, MemCase mem_case);
   static void* AllocateUnPinnedHostMem(size_t size);
   static void DeallocateUnPinnedHostMem(void* ptr);
 };

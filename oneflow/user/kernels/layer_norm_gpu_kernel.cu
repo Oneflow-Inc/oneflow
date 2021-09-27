@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/cuda/atomic.cuh"
 #include <cub/cub.cuh>
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -177,7 +178,7 @@ __global__ void LayerNormForwardImpl(const int num_instances, const int norm_siz
                                      const T* beta, ComputeType* mean, ComputeType* inv_variance,
                                      T* normalized, T* y) {
   using LU = LayerNormUtil<T>;
-  extern __shared__ __align__(sizeof(ComputeType)) unsigned char fw_shared_buf[];
+  extern __shared__ __align__(sizeof(double)) unsigned char fw_shared_buf[];
   auto* compute_buf = reinterpret_cast<ComputeType*>(fw_shared_buf);
   __shared__ ComputeType row_mean_shared;
   __shared__ ComputeType row_inv_var_shared;
@@ -315,7 +316,7 @@ template<typename T, typename I>
 __global__ void LayerNormParamGradImpl(const I n, const I instance_size, const T* dy,
                                        const T* normalized, const T* gamma, T* gamma_diff,
                                        T* beta_diff, T* normalized_diff) {
-  extern __shared__ __align__(sizeof(T)) unsigned char bw_shared_buf[];
+  extern __shared__ __align__(sizeof(double)) unsigned char bw_shared_buf[];
   auto* gamma_diff_sum_buf = reinterpret_cast<T*>(bw_shared_buf);
   auto* beta_diff_sum_buf = gamma_diff_sum_buf + instance_size;
   const I tid = threadIdx.x;
@@ -345,7 +346,7 @@ __global__ void LayerNormParamGradHalfImpl(const I n, const I instance_size, con
                                            const half* normalized, const half* gamma,
                                            half* tmp_gamma_diff, half* tmp_beta_diff,
                                            half* normalized_diff) {
-  extern __shared__ __align__(sizeof(float)) unsigned char bw_shared_buf[];
+  extern __shared__ __align__(sizeof(double)) unsigned char bw_shared_buf[];
   auto* gamma_diff_sum_buf = reinterpret_cast<float*>(bw_shared_buf);
   auto* beta_diff_sum_buf = gamma_diff_sum_buf + instance_size;
   const I tid = threadIdx.x;
@@ -375,12 +376,13 @@ __global__ void LayerNormParamGradHalfImpl(const I n, const I instance_size, con
 }  // namespace
 
 template<typename T, typename BNParamT>
-class LayerNormGpuKernel final : public user_op::OpKernel {
+class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   LayerNormGpuKernel() = default;
   ~LayerNormGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
@@ -453,7 +455,7 @@ class LayerNormGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                             \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                    \
-        user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);       \
+        user_op::TensorDesc* mean = ctx->OutputTensorDesc("mean", 0);                 \
         const DataType& data_type = mean->data_type();                                \
         const int64_t elem_cnt = mean->shape().elem_cnt();                            \
         return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type)) * 2;       \
@@ -464,12 +466,13 @@ REGISTER_LAYER_NORM_GPU_KERNEL(double, double)
 REGISTER_LAYER_NORM_GPU_KERNEL(float16, float)
 
 template<typename T, typename BNParamT>
-class LayerNormGradGpuKernel final : public user_op::OpKernel {
+class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   LayerNormGradGpuKernel() = default;
   ~LayerNormGradGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -519,9 +522,9 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                       \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))          \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                              \
-        user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);                 \
-        const DataType& data_type = mean->data_type();                                          \
-        const int64_t elem_cnt = mean->shape().elem_cnt();                                      \
+        const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);                      \
+        const DataType& data_type = mean.data_type();                                           \
+        const int64_t elem_cnt = mean.shape().elem_cnt();                                       \
         return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type)) * 3;                 \
       })                                                                                        \
       .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
@@ -537,12 +540,14 @@ REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(double, double)
 REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(float16, float)
 
 template<typename T>
-class LayerNormParamGradGpuKernel final : public user_op::OpKernel {
+class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
+                                          public user_op::CudaGraphSupport {
  public:
   LayerNormParamGradGpuKernel() = default;
   ~LayerNormParamGradGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     using NdUtil = NdarrayUtil<DeviceType::kGPU, T>;
@@ -632,12 +637,14 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel {
 REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(float)
 REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(double)
 
-class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel {
+class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
+                                              public user_op::CudaGraphSupport {
  public:
   LayerNormParamGradGpuHalfKernel() = default;
   ~LayerNormParamGradGpuHalfKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     using NdUtil = NdarrayUtil<DeviceType::kGPU, float16>;
@@ -740,13 +747,13 @@ REGISTER_USER_KERNEL("layer_norm_param_grad")
       const bool has_gamma_diff = ctx->has_output("gamma_diff", 0);
       const bool has_beta_diff = ctx->has_output("beta_diff", 0);
       const bool has_normalized_diff = ctx->has_output("normalized_diff", 0);
-      const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
-      const int64_t instance_size = dy->shape().Count(begin_params_axis);
+      const auto& dy = ctx->InputTensorDesc("dy", 0);
+      const int64_t instance_size = dy.shape().Count(begin_params_axis);
       size_t tmp_buffer_size = 0;
       if (has_gamma_diff && has_beta_diff && has_normalized_diff) {
         const size_t tmp_gamma_diff =
-            GetCudaAlignedSize(GetLayerNormParamGradNumBlocks(dy->shape().elem_cnt())
-                               * instance_size * sizeof(float16));
+            GetCudaAlignedSize(GetLayerNormParamGradNumBlocks(dy.shape().elem_cnt()) * instance_size
+                               * sizeof(float16));
         const size_t tmp_beta_diff = tmp_gamma_diff;
         const size_t tmp_reduce_buf = tmp_gamma_diff;
         tmp_buffer_size = tmp_gamma_diff + tmp_beta_diff + tmp_reduce_buf;

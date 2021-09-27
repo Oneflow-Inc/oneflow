@@ -25,12 +25,12 @@ REGISTER_USER_OP("hardtanh")
     .Attr<double>("max_val")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      *out_shape = *in_shape;
+      const Shape& in_shape = ctx->InputShape("in", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
+      *out_shape = in_shape;
       double min_val = ctx->Attr<double>("min_val");
       double max_val = ctx->Attr<double>("max_val");
-      CHECK_LE(min_val, max_val);
+      CHECK_LE_OR_RETURN(min_val, max_val);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -44,7 +44,7 @@ REGISTER_USER_OP("hardtanh")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
@@ -55,14 +55,14 @@ REGISTER_USER_OP("hardtanh_grad")
     .Attr<double>("max_val")
     .Output("dx")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
-      const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
-      Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
-      CHECK(*dy_shape == *y_shape);
-      *dx_shape = *dy_shape;
+      const Shape& y_shape = ctx->InputShape("y", 0);
+      const Shape& dy_shape = ctx->InputShape("dy", 0);
+      Shape* dx_shape = ctx->OutputShape("dx", 0);
+      CHECK_OR_RETURN(dy_shape == y_shape);
+      *dx_shape = dy_shape;
       double min_val = ctx->Attr<double>("min_val");
       double max_val = ctx->Attr<double>("max_val");
-      CHECK_LE(min_val, max_val);
+      CHECK_LE_OR_RETURN(min_val, max_val);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -77,27 +77,29 @@ REGISTER_USER_OP("hardtanh_grad")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("y", 0), *ctx->Dtype4ArgNameAndIndex("dy", 0));
-      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("y", 0);
+      CHECK_EQ_OR_RETURN(ctx->InputDType("y", 0), ctx->InputDType("dy", 0));
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("y", 0);
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("hardtanh").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
-  const auto hardtanh_grad_op_name = ctx->FwOp().op_name() + "_grad";
-  ctx->DefineOp(hardtanh_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("hardtanh_grad")
-        .InputBind("y", ctx->FwOp().output("out", 0))
-        .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-        .Attr("min_val", ctx->FwOp().attr<double>("min_val"))
-        .Attr("max_val", ctx->FwOp().attr<double>("max_val"))
-        .Output("dx")
-        .Build();
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
-                            [&ctx, &hardtanh_grad_op_name]() -> const std::string& {
-                              return ctx->GetOp(hardtanh_grad_op_name).output("dx", 0);
-                            });
-});
+REGISTER_USER_OP_GRAD("hardtanh")
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
+      const auto hardtanh_grad_op_name = ctx->FwOp().op_name() + "_grad";
+      ctx->DefineOp(hardtanh_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+        return builder.OpTypeName("hardtanh_grad")
+            .InputBind("y", ctx->FwOp().output("out", 0))
+            .InputBind("dy", ctx->FwOp().output_grad("out", 0))
+            .Attr("min_val", ctx->FwOp().attr<double>("min_val"))
+            .Attr("max_val", ctx->FwOp().attr<double>("max_val"))
+            .Output("dx")
+            .Build();
+      });
+      ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
+                                [&ctx, &hardtanh_grad_op_name]() -> const std::string& {
+                                  return ctx->GetOp(hardtanh_grad_op_name).output("dx", 0);
+                                });
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace
 

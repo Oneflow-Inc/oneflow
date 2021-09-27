@@ -104,8 +104,8 @@ void InitMemoryChains(Plan* plan,
     mem_chain->sorted_tasks.push_back(task);
     for (auto& pair : *(task->mutable_produced_regst_desc())) {
       RegstDescProto* regst_desc = &pair.second;
-      if (regst_desc->mem_case().has_device_cuda_mem()
-          && regst_desc->mem_case().device_cuda_mem().device_id() == device_id
+      if ((regst_desc->mutable_mem_case()->name_to_attr().at("device_type").at_device_type() == DeviceType::kGPU)
+          && regst_desc->mutable_mem_case()->name_to_attr().at("device_id").at_int64() == device_id
           && regst_desc->enable_reuse_mem() && regst_desc->register_num() == 1
           && regst_desc->mem_block_id() == -1 && regst_desc->mem_block_offset() == -1
           && regst_desc->regst_desc_type().has_data_regst_desc()) {
@@ -115,7 +115,7 @@ void InitMemoryChains(Plan* plan,
         // for time shape in mem chain
         Shape regst_time_shape =
             Shape(regst_desc->regst_desc_type().data_regst_desc().time_shape());
-        if (mem_chain->time_shape.elem_cnt() == 0) {
+        if (!mem_chain->time_shape.is_initialized()) {
           mem_chain->time_shape = regst_time_shape;
         } else {
           CHECK(mem_chain->time_shape == regst_time_shape);

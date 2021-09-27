@@ -24,26 +24,27 @@ limitations under the License.
 
 namespace oneflow {
 
-void* MemoryAllocatorImpl::Allocate(MemoryCase mem_case, size_t size) {
+void* MemoryAllocatorImpl::Allocate(MemCase mem_case, size_t size) {
   void* ptr = nullptr;
-  if (mem_case.has_host_mem()) {
-    if (mem_case.host_mem().has_cuda_pinned_mem()) {
+  if (mem_case.Attr<DeviceType>("device_type") == kCPU) {
+    if (mem_case.HasAttr<DeviceType>("cuda_pinned_mem")) {
 #ifdef WITH_CUDA
-      if (Global<ResourceDesc, ForSession>::Get()->enable_numa_aware_cuda_malloc_host()) {
-        NumaAwareCudaMallocHost(mem_case.host_mem().cuda_pinned_mem().device_id(), &ptr, size);
-      } else {
-        OF_CUDA_CHECK(cudaMallocHost(&ptr, size));
-      }
+      // NOTE(chengcheng):
+      //   All cudaMallocHost MUST set the correct device id to avoid creating CUDA context
+      //   on other GPU which will occopy 500MiB device memory.
+      int64_t device_id = mem_case.Attr<int64_t>("cuda_pinned_mem_device_id");
+      CudaCurrentDeviceGuard guard(device_id);
+      NumaAwareCudaMallocHost(device_id, &ptr, size);
 #else
       UNIMPLEMENTED();
 #endif
     } else {
-      ptr = malloc(size);
+      ptr = aligned_alloc(kHostAlignSize, size);
       CHECK_NOTNULL(ptr);
     }
-  } else if (mem_case.has_device_cuda_mem()) {
+  } else if (mem_case.Attr<DeviceType>("device_type") == kGPU) {
 #ifdef WITH_CUDA
-    CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
+    CudaCurrentDeviceGuard guard(mem_case.Attr<int64_t>("device_id"));
     OF_CUDA_CHECK(cudaMalloc(&ptr, size));
 #else
     UNIMPLEMENTED();
@@ -54,9 +55,9 @@ void* MemoryAllocatorImpl::Allocate(MemoryCase mem_case, size_t size) {
   return ptr;
 }
 
-void MemoryAllocatorImpl::Deallocate(void* ptr, MemoryCase mem_case) {
-  if (mem_case.has_host_mem()) {
-    if (mem_case.host_mem().has_cuda_pinned_mem()) {
+void MemoryAllocatorImpl::Deallocate(void* ptr, MemCase mem_case) {
+  if (mem_case.Attr<DeviceType>("device_type") == kCPU) {
+    if (mem_case.HasAttr<DeviceType>("cuda_pinned_mem")) {
 #ifdef WITH_CUDA
       OF_CUDA_CHECK(cudaFreeHost(ptr));
 #else
@@ -65,9 +66,9 @@ void MemoryAllocatorImpl::Deallocate(void* ptr, MemoryCase mem_case) {
     } else {
       free(ptr);
     }
-  } else if (mem_case.has_device_cuda_mem()) {
+  } else if (mem_case.Attr<DeviceType>("device_type") == kGPU) {
 #ifdef WITH_CUDA
-    CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
+    CudaCurrentDeviceGuard guard(mem_case.Attr<int64_t>("device_id"));
     OF_CUDA_CHECK(cudaFree(ptr));
 #else
     UNIMPLEMENTED();
@@ -78,7 +79,7 @@ void MemoryAllocatorImpl::Deallocate(void* ptr, MemoryCase mem_case) {
 }
 
 void* MemoryAllocatorImpl::AllocateUnPinnedHostMem(size_t size) {
-  void* ptr = malloc(size);
+  void* ptr = aligned_alloc(kHostAlignSize, size);
   CHECK_NOTNULL(ptr);
   return ptr;
 }
@@ -89,14 +90,14 @@ MemoryAllocator::~MemoryAllocator() {
   for (std::function<void()> deleter : deleters_) { deleter(); }
 }
 
-char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
+char* MemoryAllocator::Allocate(MemCase mem_case, std::size_t size) {
   const int memset_val = 0;
   char* dptr = static_cast<char*>(MemoryAllocatorImpl::Allocate(mem_case, size));
-  if (mem_case.has_host_mem()) {
+  if (mem_case.Attr<DeviceType>("device_type") == kCPU) {
     memset(dptr, memset_val, size);
-  } else if (mem_case.has_device_cuda_mem()) {
+  } else if (mem_case.Attr<DeviceType>("device_type") == kGPU) {
 #ifdef WITH_CUDA
-    CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
+    CudaCurrentDeviceGuard guard(mem_case.Attr<int64_t>("device_id"));
     OF_CUDA_CHECK(cudaMemset(dptr, memset_val, size));
 #else
     UNIMPLEMENTED();
@@ -108,7 +109,7 @@ char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
   return dptr;
 }
 
-void MemoryAllocator::Deallocate(char* dptr, MemoryCase mem_case) {
+void MemoryAllocator::Deallocate(char* dptr, MemCase mem_case) {
   MemoryAllocatorImpl::Deallocate(static_cast<void*>(dptr), mem_case);
 }
 

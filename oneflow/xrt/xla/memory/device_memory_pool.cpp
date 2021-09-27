@@ -62,13 +62,13 @@ class CpuMemoryPool : public DeviceMemoryPool {
 
  private:
   void ReserveImpl(size_t size) override {
-    mem_buffer_ = new uint8_t[size];
+    mem_buffer_ = reinterpret_cast<uint8_t*>(aligned_alloc(kHostAlignSize, size));
     CHECK(mem_buffer_);
     capacity_ = size;
   }
 
   void ReleaseImpl() override {
-    if (capacity_ > 0 && mem_buffer_) { delete[] mem_buffer_; }
+    if (capacity_ > 0 && mem_buffer_) { free(mem_buffer_); }
     capacity_ = 0;
     mem_buffer_ = nullptr;
   }

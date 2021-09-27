@@ -20,11 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-#ifdef WITH_GIT_VERSION
-
 const char* GetOneFlowGitVersion();
-
-#endif  // WITH_GIT_VERSION
 
 void DumpVersionInfo();
 

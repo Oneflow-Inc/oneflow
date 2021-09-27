@@ -156,8 +156,8 @@ void TaskNode::ForEachProducedDataRegst(
 
 void TaskNode::Build() { BuildExecGphAndRegst(); }
 
-void TaskNode::EraseZeroSizeProducedBlob() {
-  for (auto& pair : produced_regsts_) { pair.second->EraseZeroSizeBlob(); }
+void TaskNode::EraseUninitializedShapeProducedBlob() {
+  for (auto& pair : produced_regsts_) { pair.second->EraseUninitializedShapeBlob(); }
 }
 
 void TaskNode::EraseZeroSizeConsumedRegst() {
@@ -233,13 +233,9 @@ void TaskNode::ToProto(TaskProto* task_proto) const {
   }
 }
 
-int64_t TaskNode::MemZoneId121() const {
-  const IDMgr* id_mgr = Global<IDMgr>::Get();
-  if (device_type() == DeviceType::kCPU) {
-    return id_mgr->CpuMemZoneId();
-  } else {
-    return id_mgr->GpuMemZoneId(id_mgr->GetGpuPhyIdFromThrdId(thrd_id_));
-  }
+MemZoneId TaskNode::MemZoneId121() const {
+  StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id_);
+  return MemZoneId{stream_id.device_id()};
 }
 
 bool TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node, std::string* name) {
@@ -310,20 +306,19 @@ void TaskNode::InitProducedRegstMemCase(RegstDesc* regst) {
   InitProducedRegstMemCase(regst->mut_mem_case());
 }
 
-void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
+void TaskNode::InitProducedRegstMemCase(MemCase* mem_case) {
   if (device_type() == DeviceType::kCPU) {
-    mem_case->mutable_host_mem();
+    mem_case->SetAttr("device_type", kCPU);
   } else if (device_type() == DeviceType::kGPU) {
-    mem_case->mutable_device_cuda_mem()->set_device_id(
-        Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id_));
+    mem_case->SetAttr("device_id", Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id_));
   } else {
     UNIMPLEMENTED();
   }
 }
 
-void TaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
-  if (mem_case->has_host_mem() && device_type() == DeviceType::kGPU) {
-    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(GpuPhyId());
+void TaskNode::PinConsumedRegstMemCase(MemCase* mem_case) {
+  if ((mem_case->Attr<DeviceType>("device_type")==kCPU) && device_type() == DeviceType::kGPU) {
+    mem_case->SetAttr("cuda_pinned_mem_device_id", GpuPhyId());
   }
 }
 
@@ -342,11 +337,6 @@ void TaskNode::UpdateTaskId() {
   StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id_);
   TaskId task_id = Global<IDMgr>::Get()->GetTaskIdGenerator()->Generate(stream_id);
   task_id_ = SerializeTaskIdToInt64(task_id);
-}
-
-int64_t TaskNode::GlobalWorkStreamId() const {
-  CHECK_NE(task_id_, -1);
-  return Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task_id_);
 }
 
 void TaskNode::EraseConsumedRegstsByName(const std::string& name) {

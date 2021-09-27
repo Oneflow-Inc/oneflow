@@ -34,8 +34,13 @@ limitations under the License.
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/release_tensor_arg_phy_instr_operand.h"
-#include "oneflow/core/framework/vm_local_dep_object.h"
+#include "oneflow/core/vm/soft_sync_stream_phy_instr_operand.h"
+#include "oneflow/core/framework/consistent_tensor_infer_cache.h"
+#include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/instruction_replay.h"
+#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 
@@ -136,18 +141,24 @@ Maybe<compatible_py::BlobObject> MakeNewBlobObjectLike(
   std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>
       bn_in_op2blob_object =
           std::make_shared<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>();
-  builder->RawStatelessCall(std::make_shared<cfg::OpAttribute>(*op_attribute), parallel_conf,
-                            bn_in_op2blob_object);
+  JUST(builder->RawStatelessCall(std::make_shared<cfg::OpAttribute>(*op_attribute), parallel_conf,
+                                 bn_in_op2blob_object));
   return JUST(MapAt(*bn_in_op2blob_object, "out"));
 }
 
 Maybe<void> _ReleaseLogicalObject(compatible_py::Object* obj) {
-  JUST(LogicalRun([&obj](InstructionsBuilder* build) { build->DeleteObject(obj); }));
+  JUST(LogicalRun([&obj](InstructionsBuilder* build) -> Maybe<void> {
+    JUST(build->DeleteObject(obj));
+    return Maybe<void>::Ok();
+  }));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> _ReleasePhysicalObject(compatible_py::Object* obj) {
-  JUST(PhysicalRun([&obj](InstructionsBuilder* build) { build->DeleteObject(obj); }));
+  JUST(PhysicalRun([&obj](InstructionsBuilder* build) -> Maybe<void> {
+    JUST(build->DeleteObject(obj));
+    return Maybe<void>::Ok();
+  }));
   return Maybe<void>::Ok();
 }
 
@@ -225,6 +236,18 @@ Maybe<int64_t> InstructionsBuilder::NewObjectId(
   instruction->add_int64_operand(object_id);
   instruction_list_->PushBack(instruction.Mutable());
   return object_id;
+}
+
+Maybe<void> InstructionsBuilder::RunLazyJob(const one::EagerBlobObjectListPtr& inputs,
+                                            const one::EagerBlobObjectListPtr& outputs,
+                                            const one::EagerBlobObjectListPtr& parameters,
+                                            const std::shared_ptr<NNGraphIf>& nn_graph) const {
+  static std::string instr_name("RunLazyJob");
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
+  *instruction->mutable_phy_instr_operand() =
+      std::make_shared<vm::RunLazyJobPhyInstrOperand>(inputs, outputs, parameters, nn_graph);
+  instruction_list_->EmplaceBack(std::move(instruction));
+  return Maybe<void>::Ok();
 }
 
 Maybe<compatible_py::BlobObject> InstructionsBuilder::PackPhysicalBlobsToLogicalBlob(
@@ -450,7 +473,7 @@ Maybe<compatible_py::BlobObject> InstructionsBuilder::MakeReferenceBlobObject(
   CHECK((*parallel_desc_symbol) == (*op_arg_parallel_attr->parallel_desc_symbol()));
   std::shared_ptr<compatible_py::BlobObject> ref_blob_object =
       JUST(NewBlobObject(op_arg_parallel_attr, blob_object->op_arg_blob_attr()));
-  ReplaceMirrored(parallel_desc_symbol, {ref_blob_object}, {blob_object});
+  JUST(ReplaceMirrored(parallel_desc_symbol, {ref_blob_object}, {blob_object}));
   return ref_blob_object;
 }
 
@@ -499,19 +522,18 @@ Maybe<Scope> InstructionsBuilder::BuildInitialScope(
 Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelDesc(
     const std::shared_ptr<Scope>& scope, const std::string& device_tag,
     const std::vector<std::string>& machine_device_ids, const std::shared_ptr<Shape>& hierarchy) {
-  const auto SetScopeProto =
-      [this, &device_tag, &machine_device_ids,
-       &hierarchy](const std::shared_ptr<cfg::ScopeProto>& scope_proto) -> Maybe<void> {
+  const auto SetScopeProto = [this, &device_tag, &machine_device_ids,
+                              &hierarchy](const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
     std::shared_ptr<cfg::ParallelConf> parallel_conf =
-        JUST(MakeParallelConf(device_tag, machine_device_ids, hierarchy));
+        CHECK_JUST(MakeParallelConf(device_tag, machine_device_ids, hierarchy));
     std::shared_ptr<ParallelDesc> device_parallel_desc_sym =
-        JUST(GetParallelDescSymbol(parallel_conf));
-    parallel_conf = JUST(MakeParallelConf("cpu", machine_device_ids, hierarchy));
+        CHECK_JUST(GetParallelDescSymbol(parallel_conf));
+    parallel_conf = CHECK_JUST(MakeParallelConf("cpu", machine_device_ids, hierarchy));
     std::shared_ptr<ParallelDesc> host_parallel_desc_sym =
-        JUST(GetParallelDescSymbol(parallel_conf));
-    scope_proto->set_device_parallel_desc_symbol_id(JUST(device_parallel_desc_sym->symbol_id()));
-    scope_proto->set_host_parallel_desc_symbol_id(JUST(host_parallel_desc_sym->symbol_id()));
-    return Maybe<void>::Ok();
+        CHECK_JUST(GetParallelDescSymbol(parallel_conf));
+    scope_proto->set_device_parallel_desc_symbol_id(
+        CHECK_JUST(device_parallel_desc_sym->symbol_id()));
+    scope_proto->set_host_parallel_desc_symbol_id(CHECK_JUST(host_parallel_desc_sym->symbol_id()));
   };
 
   return BuildScopeByProtoSetter(scope, SetScopeProto);
@@ -602,8 +624,8 @@ Maybe<void> InstructionsBuilder::Build121AssignInstruction(
   for (int64_t i = 0; i < parallel_num; ++i) { token_id_1.emplace_back(NewTokenId()); }
   std::tuple<std::vector<uint64_t>, std::vector<uint64_t>> token_ids =
       std::make_tuple(token_id_0, token_id_1);
-  BuildSendInstruction(ref_blob_object->parallel_desc_symbol(), value_blob_object, token_ids);
-  BuildRecvInstruction(value_blob_object->parallel_desc_symbol(), ref_blob_object, token_ids);
+  JUST(BuildSendInstruction(ref_blob_object->parallel_desc_symbol(), value_blob_object, token_ids));
+  JUST(BuildRecvInstruction(value_blob_object->parallel_desc_symbol(), ref_blob_object, token_ids));
   return Maybe<void>::Ok();
 }
 
@@ -645,13 +667,27 @@ Maybe<void> InstructionsBuilder::BuildRecvInstruction(
 Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
     const one::EagerBlobObjectListPtr& input_eager_blob_objects,
-    const one::EagerBlobObjectListPtr& output_eager_blob_objects, const AttrMap& attrs,
+    const one::EagerBlobObjectListPtr& output_eager_blob_objects,
+    const one::OpExprInterpContext& ctx,
+    const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
+    const std::string& instr_type_name) {
+  return LocalCallOpKernel(opkernel, input_eager_blob_objects, output_eager_blob_objects, nullptr,
+                           ctx, parallel_desc_sym, instr_type_name);
+}
+
+Maybe<void> InstructionsBuilder::LocalCallOpKernel(
+    const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+    const one::EagerBlobObjectListPtr& input_eager_blob_objects,
+    const one::EagerBlobObjectListPtr& output_eager_blob_objects,
+    const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
+    const one::OpExprInterpContext& ctx,
     const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
     const std::string& instr_type_name) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
   auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
-      opkernel, input_eager_blob_objects, output_eager_blob_objects, attrs);
+      opkernel, input_eager_blob_objects, output_eager_blob_objects, consistent_tensor_infer_result,
+      ctx, *one::CurrentDevVmDepObjectConsumeMode());
   *instruction->mut_parallel_desc() = parallel_desc_sym;
   *instruction->mutable_phy_instr_operand() = phy_instr_operand;
   instruction_list_->EmplaceBack(std::move(instruction));
@@ -872,28 +908,80 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   std::string instr_name = parallel_desc->device_tag() + ".ReleaseTensor";
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
-  const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object =
-      JUST(eager_blob_object->compute_local_dep_object());
+  LocalDepObject* compute_local_dep_object = JUST(eager_blob_object->compute_local_dep_object());
   *instruction->mutable_phy_instr_operand() = std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(
       eager_blob_object, compute_local_dep_object);
   *instruction->mut_parallel_desc() = parallel_desc;
-  instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
+  instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
+
+Maybe<void> InstructionsBuilder::SoftSyncStream(
+    LocalDepObject* compute_local_dep_object, const std::string& modifier,
+    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+  ObjectMsgPtr<vm::InstructionMsg> instruction =
+      ObjectMsgPtr<vm::InstructionMsg>::New(parallel_desc->device_tag() + ".SoftSyncStream");
+  *instruction->mutable_phy_instr_operand() =
+      std::make_shared<vm::SoftSyncStreamPhyInstrOperand>(compute_local_dep_object, modifier);
+  *instruction->mut_parallel_desc() = parallel_desc;
+  instruction_list_->EmplaceBack(std::move(instruction));
+  return Maybe<void>::Ok();
+}
+
+namespace {
+
+const std::shared_ptr<const ParallelDesc>& GetParallelDesc(
+    const std::shared_ptr<one::MirroredTensor> tensor) {
+  const auto& device = CHECK_JUST(tensor->device());
+  const auto& placement = CHECK_JUST(Placement4Device(device));
+  return placement.shared_from_symbol();
+}
+
+const std::shared_ptr<const ParallelDesc>& GetParallelDesc(
+    const one::EagerMirroredTensorImpl* tensor) {
+  const auto& placement = CHECK_JUST(Placement4Device(tensor->device()));
+  return placement.shared_from_symbol();
+}
+
+}  // namespace
+
+template<typename T>
+Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
+    const T tensor, const std::shared_ptr<SpinCounter>& spin_counter,
+    std::shared_ptr<std::function<void(uint64_t)>> Callback, const std::string& modifier) {
+  const auto& CallbackWrapper = [spin_counter, Callback](uint64_t ofblob_ptr) {
+    (*Callback)(ofblob_ptr);
+    CHECK_GT(Callback.use_count(), 1);
+    // What we want to do here is dereferencing the `Callback` in scheduler thread, because we don't
+    // want any python objects destructed in scheduler thread.
+    const_cast<std::shared_ptr<std::function<void(uint64_t)>>*>(&Callback)->reset();
+    spin_counter->Decrease();
+  };
+  return AccessBlobByCallback(tensor, CallbackWrapper, modifier);
+}
+
+template Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
+    const std::shared_ptr<one::MirroredTensor> tensor,
+    const std::shared_ptr<SpinCounter>& spin_counter,
+    std::shared_ptr<std::function<void(uint64_t)>> callback, const std::string& modifier);
+
+template Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
+    const one::EagerMirroredTensorImpl* tensor, const std::shared_ptr<SpinCounter>& spin_counter,
+    std::shared_ptr<std::function<void(uint64_t)>> callback, const std::string& modifier);
 
 template<typename T>
 Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
                                                       const std::function<void(uint64_t)>& callback,
                                                       const std::string& modifier) {
-  std::string instr_name = tensor->parallel_desc()->device_tag() + ".AccessBlobByCallback";
+  const auto& parallel_desc = GetParallelDesc(tensor);
+  std::string instr_name = parallel_desc->device_tag() + ".AccessBlobByCallback";
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
-  const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object =
-      JUST(tensor->compute_local_dep_object());
+  LocalDepObject* compute_local_dep_object = JUST(tensor->compute_local_dep_object());
   *instruction->mutable_phy_instr_operand() = std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(
       eager_blob_object, compute_local_dep_object, callback, modifier);
-  *instruction->mut_parallel_desc() = tensor->parallel_desc();
-  instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
+  *instruction->mut_parallel_desc() = parallel_desc;
+  instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
 
@@ -1116,7 +1204,7 @@ Maybe<void> InstructionsBuilder::StatefulCall(
   };
 
   const auto GetDelegateBlobObject =
-      [this, &FetchDelegateBlobObject](
+      [&FetchDelegateBlobObject](
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
@@ -1149,7 +1237,7 @@ Maybe<void> InstructionsBuilder::StatelessCall(
   };
 
   const auto GetDelegateBlobObject =
-      [this, &FetchDelegateBlobObject](
+      [&FetchDelegateBlobObject](
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
@@ -1192,7 +1280,7 @@ Maybe<void> InstructionsBuilder::NoBoxingStatelessCall(
   };
 
   const auto GetDirectOr121BlobObject =
-      [this, &FetchDelegateBlobObject](
+      [&FetchDelegateBlobObject](
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
@@ -1528,7 +1616,13 @@ InstructionsBuilder::GetMut2OperandBlobObjects(
   return mut2_operand_blob_objects;
 }
 
-Maybe<void> LogicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
+Maybe<void> LogicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
+  if (JUST(GlobalMultiClientEnv())) {
+    // NOTE(chengcheng): in Multi-Client LogicalRun will degenerate directly to PhysicalRun,
+    //   because each rank will process instructions ONLY from itself, NOT the master.
+    return PhysicalRun(Build);
+  }
+
   const std::shared_ptr<vm::LogicalIdGenerator> id_generator =
       std::make_shared<vm::LogicalIdGenerator>();
   std::shared_ptr<Session> sess = JUST(GetDefaultSession());
@@ -1536,19 +1630,24 @@ Maybe<void> LogicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
   const auto& eager_symbol_list = sess->eager_symbol_list();
   InstructionsBuilder instructions_builder(id_generator, instruction_list.get(),
                                            eager_symbol_list.get(), _ReleaseLogicalObject);
-  Build(&instructions_builder);
+  JUST(Build(&instructions_builder));
   JUST(Global<vm::EagerOneflow>::Get()->RunLogicalInstruction(
       instructions_builder.mut_instruction_list(), instructions_builder.eager_symbol_list()));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> PhysicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
+Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
   vm::InstructionMsgList instruction_list;
   vm::cfg::EagerSymbolList eager_symbol_list;
-  InstructionsBuilder instructions_builder(std::shared_ptr<vm::PhysicalIdGenerator>(),
+  InstructionsBuilder instructions_builder(std::make_shared<vm::PhysicalIdGenerator>(),
                                            &instruction_list, &eager_symbol_list,
                                            _ReleasePhysicalObject);
-  Build(&instructions_builder);
+  JUST(Build(&instructions_builder));
+  if (debug::RecordingInstructions()) {
+    OBJECT_MSG_LIST_FOR_EACH(instructions_builder.mut_instruction_list(), instruction_msg) {
+      debug::RecordInstruction(instruction_msg);
+    }
+  }
   JUST(Global<vm::EagerOneflow>::Get()->RunPhysicalInstruction(
       instructions_builder.mut_instruction_list(), instructions_builder.eager_symbol_list()));
   return Maybe<void>::Ok();

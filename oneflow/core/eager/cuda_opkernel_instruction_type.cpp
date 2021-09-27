@@ -45,6 +45,19 @@ class CudaLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstr
 };
 COMMAND(vm::RegisterInstructionType<CudaLocalCallOpKernelInstructionType>("gpu.LocalCallOpKernel"));
 
+class AsyncCudaLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType {
+ public:
+  AsyncCudaLocalCallOpKernelInstructionType() = default;
+  ~AsyncCudaLocalCallOpKernelInstructionType() override = default;
+
+  using stream_type = vm::AsyncCudaStreamType;
+
+ private:
+  const char* device_tag() const override { return stream_type().device_tag(); }
+};
+COMMAND(vm::RegisterInstructionType<AsyncCudaLocalCallOpKernelInstructionType>(
+    "async.gpu.LocalCallOpKernel"));
+
 class CudaH2DLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType {
  public:
   CudaH2DLocalCallOpKernelInstructionType() = default;
@@ -133,10 +146,10 @@ class CudaCopyD2HSystemStatelessCallOpKernelInstructionType final
 
   using stream_type = vm::CudaCopyD2HStreamType;
 
-  std::shared_ptr<MemoryCase> GetOutBlobMemCase(const DeviceType device_type,
+  std::shared_ptr<MemCase> GetOutBlobMemCase(const DeviceType device_type,
                                                 const int64_t device_id) const override {
-    auto mem_case = std::make_shared<MemoryCase>();
-    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(device_id);
+    auto mem_case = std::make_shared<MemCase>();
+    mem_case->SetAttr("cuda_pinned_mem_device_id", device_id);
     return mem_case;
   }
 

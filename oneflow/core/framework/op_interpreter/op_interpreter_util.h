@@ -31,41 +31,48 @@ namespace one {
 
 class OpInterpUtil {
  public:
-  static Maybe<AutogradInterpreter> GetInterpreter();
-
   template<typename T>
-  static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs, const AttrMap& attrs);
+  static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs, const AttrMap& attrs) {
+    return Dispatch<T>(op_expr, inputs, OpExprInterpContext(attrs));
+  }
 
   template<typename T>
   static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs) {
-    return Dispatch<T>(op_expr, inputs, AttrMap{});
+    return Dispatch<T>(op_expr, inputs, OpExprInterpContext(AttrMap{}));
   }
 
-  static Maybe<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr& op_expr, const AttrMap& attrs);
+  template<typename T>
+  static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
+                           const OpExprInterpContext& ctx);
+
+  static Maybe<void> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
+                              TensorTuple* outputs, const AttrMap& attrs) {
+    return Dispatch(op_expr, inputs, outputs, OpExprInterpContext(attrs));
+  }
+
+  static Maybe<void> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
+                              TensorTuple* outputs) {
+    return Dispatch(op_expr, inputs, outputs, OpExprInterpContext(AttrMap{}));
+  }
+
+  static Maybe<void> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
+                              TensorTuple* outputs, const OpExprInterpContext& ctx);
 
   static Maybe<cfg::OpAttribute> AddOpAndInferOpAttribute(const OperatorConf& op_conf,
                                                           const bool is_mirrored_strategy_enabled);
 
-  static Maybe<cfg::OpAttribute> InferOpAttribute(const BuiltinOpExpr& op_expr,
-                                                  const TensorTuple& inputs, const AttrMap& attrs);
-
-  static Maybe<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>
-  MakeBn2BlobObjectMap(const std::vector<std::string>& indexed_ibns, const TensorTuple& inputs);
-
-  static Maybe<compatible_py::BlobObject> GetTensorBlobObject(
-      const std::shared_ptr<Tensor>& tensor);
+  static Maybe<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr& op_expr, const AttrMap& attrs);
 
   static Maybe<Tensor> BuildTensor(
       const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr,
-      const bool is_lazy);
+      const bool is_lazy, const bool is_local);
 
-  static Maybe<Tensor> BuildTensorFromBlobObject(
-      const std::shared_ptr<compatible_py::BlobObject>& blob_object);
-
-  static Maybe<Tensor> BuildEagerMirroredTensorFromEagerBlobObject(
-      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-      const std::shared_ptr<const Device>& device);
+  static Maybe<void> CheckTensorMatchAttr(
+      const std::shared_ptr<Tensor>& tensor,
+      const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
+      const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr,
+      const bool is_lazy, const bool is_local, const bool requires_grad, const bool is_leaf);
 };
 
 }  // namespace one

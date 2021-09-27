@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
-#include "oneflow/core/graph/chain_act_graph.h"
+#include "oneflow/core/memory/memory_case_attr_util.h"
 
 namespace oneflow {
 
@@ -51,7 +51,7 @@ class Improver final {
       const std::function<const HashMap<int64_t, double>&(int64_t)>& Ratio4RegstDescId,
       const MemZoneRegstDescs& mz_regst_descs) const;
   uint64_t AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const;
-  int64_t GetMemoryZoneId(const MemoryCase& mem_case) const;
+  int64_t GetMemoryZoneId(const MemCase& mem_case) const;
   void MakeMemZoneRegstDescs(const Plan& plan, MemZoneRegstDescs* mz2regst_desc) const;
   double CalcMaxRegstDescDuration(
       const std::function<const HashMap<int64_t, double>&(int64_t)>& Duration4RegstDescId,

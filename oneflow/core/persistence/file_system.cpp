@@ -26,6 +26,24 @@ namespace oneflow {
 
 namespace fs {
 
+std::string FileSystem::SplitRecursiveDir(const std::string& dirname,
+                                          std::vector<std::string>& sub_dirs) {
+  std::string remaining_dir = dirname;
+  while (!remaining_dir.empty()) {
+    bool status = FileExists(remaining_dir);
+    if (status) { break; }
+    // Basename returns "" for / ending dirs.
+    if (remaining_dir[remaining_dir.length() - 1] != '/') {
+      sub_dirs.push_back(Basename(remaining_dir));
+    }
+    remaining_dir = Dirname(remaining_dir);
+  }
+
+  // sub_dirs contains all the dirs to be created but in reverse order.
+  std::reverse(sub_dirs.begin(), sub_dirs.end());
+  return remaining_dir;
+}
+
 void FileSystem::CreateDirIfNotExist(const std::string& dirname) {
   if (IsDirectory(dirname)) { return; }
   CreateDir(dirname);
@@ -33,7 +51,16 @@ void FileSystem::CreateDirIfNotExist(const std::string& dirname) {
 
 void FileSystem::RecursivelyCreateDirIfNotExist(const std::string& dirname) {
   if (IsDirectory(dirname)) { return; }
-  RecursivelyCreateDir(dirname);
+  // sub_dirs contains all the dirs to be created but in reverse order.
+  std::vector<std::string> sub_dirs;
+  std::string remaining_dir = SplitRecursiveDir(dirname, sub_dirs);
+
+  // Now create the directories.
+  std::string built_path = remaining_dir;
+  for (const std::string& sub_dir : sub_dirs) {
+    built_path = JoinPath(built_path, sub_dir);
+    CreateDirIfNotExist(built_path);
+  }
 }
 
 bool FileSystem::IsDirEmpty(const std::string& dirname) { return ListDir(dirname).empty(); }
@@ -83,20 +110,9 @@ void FileSystem::RecursivelyDeleteDir(const std::string& dirname) {
 }
 
 void FileSystem::RecursivelyCreateDir(const std::string& dirname) {
-  std::string remaining_dir = dirname;
-  std::vector<std::string> sub_dirs;
-  while (!remaining_dir.empty()) {
-    bool status = FileExists(remaining_dir);
-    if (status) { break; }
-    // Basename returns "" for / ending dirs.
-    if (remaining_dir[remaining_dir.length() - 1] != '/') {
-      sub_dirs.push_back(Basename(remaining_dir));
-    }
-    remaining_dir = Dirname(remaining_dir);
-  }
-
   // sub_dirs contains all the dirs to be created but in reverse order.
-  std::reverse(sub_dirs.begin(), sub_dirs.end());
+  std::vector<std::string> sub_dirs;
+  std::string remaining_dir = SplitRecursiveDir(dirname, sub_dirs);
 
   // Now create the directories.
   std::string built_path = remaining_dir;
@@ -108,35 +124,74 @@ void FileSystem::RecursivelyCreateDir(const std::string& dirname) {
 
 }  // namespace fs
 
-fs::FileSystem* LocalFS() {
+void CreateLocalFS(std::unique_ptr<fs::FileSystem>& fs) {
 #ifdef OF_PLATFORM_POSIX
-  static fs::FileSystem* fs = new fs::PosixFileSystem;
+  fs.reset(new fs::PosixFileSystem);
+#else
+  OF_UNIMPLEMENTED();
 #endif
-  return fs;
 }
 
-fs::FileSystem* NetworkFS() { return LocalFS(); }
-
-fs::FileSystem* HadoopFS(const HdfsConf& hdfs_conf) {
-  static fs::FileSystem* fs = new fs::HadoopFileSystem(hdfs_conf);
-  return fs;
+void CreateHadoopFS(std::unique_ptr<fs::FileSystem>& fs, const std::string& namenode) {
+  fs.reset(new fs::HadoopFileSystem(namenode));
 }
 
-fs::FileSystem* GetFS(const FileSystemConf& file_system_conf) {
-  if (file_system_conf.has_localfs_conf()) {
-    return LocalFS();
-  } else if (file_system_conf.has_networkfs_conf()) {
-    return NetworkFS();
-  } else if (file_system_conf.has_hdfs_conf()) {
-    return HadoopFS(file_system_conf.hdfs_conf());
+void CreateFileSystemFromEnv(std::unique_ptr<fs::FileSystem>& fs, const std::string& env_prefix) {
+  CHECK(!fs);
+
+  auto fs_type_env = env_prefix + "_TYPE";
+  const char* fs_type = std::getenv(fs_type_env.c_str());
+  std::string fs_type_str;
+  if (fs_type) {
+    fs_type_str = ToLower(fs_type);
   } else {
-    UNIMPLEMENTED();
+    // local file system by default
+    fs_type_str = "local";
+  }
+
+  if (fs_type_str == "local") {
+    CreateLocalFS(fs);
+  } else if (fs_type_str == "hdfs") {
+    auto hdfs_nn_env = env_prefix + "_HDFS_NAMENODE";
+    const char* hdfs_namenode = std::getenv(hdfs_nn_env.c_str());
+    if (hdfs_namenode == nullptr) {
+      LOG(FATAL) << "env " << hdfs_nn_env << " must be set when " << fs_type_env
+                 << " be set to hdfs";
+    }
+    CreateHadoopFS(fs, hdfs_namenode);
+  } else {
+    LOG(FATAL) << "invalid value " << fs_type << " of env " << fs_type_env;
   }
 }
 
-fs::FileSystem* DataFS() { return GetFS(Global<const IOConf>::Get()->data_fs_conf()); }
-fs::FileSystem* DataFS(int64_t session_id) {
-  return GetFS(Global<const IOConf>::Get(session_id)->data_fs_conf());
+fs::FileSystem* DataFS() {
+  static std::unique_ptr<fs::FileSystem> data_fs;
+  static std::mutex data_fs_mutex;
+  {
+    std::lock_guard<std::mutex> lock(data_fs_mutex);
+    if (!data_fs) { CreateFileSystemFromEnv(data_fs, "ONEFLOW_DATA_FILE_SYSTEM"); }
+  }
+  return data_fs.get();
 }
-fs::FileSystem* SnapshotFS() { return GetFS(Global<const IOConf>::Get()->snapshot_fs_conf()); }
+
+fs::FileSystem* SnapshotFS() {
+  static std::unique_ptr<fs::FileSystem> snapshot_fs;
+  static std::mutex snapshot_fs_mutex;
+  {
+    std::lock_guard<std::mutex> lock(snapshot_fs_mutex);
+    if (!snapshot_fs) { CreateFileSystemFromEnv(snapshot_fs, "ONEFLOW_SNAPSHOT_FILE_SYSTEM"); }
+  }
+  return snapshot_fs.get();
+}
+
+fs::FileSystem* LocalFS() {
+  static std::unique_ptr<fs::FileSystem> local_fs;
+  static std::mutex local_fs_mutex;
+  {
+    std::lock_guard<std::mutex> lock(local_fs_mutex);
+    if (!local_fs) { CreateLocalFS(local_fs); }
+  }
+  return local_fs.get();
+}
+
 }  // namespace oneflow

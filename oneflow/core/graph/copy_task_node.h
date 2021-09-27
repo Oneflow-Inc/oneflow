@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/graph/transport_task_node.h"
 
+
 namespace oneflow {
 
 class CopyTaskNode : public TransportTaskNode {
@@ -48,19 +49,19 @@ class CopyHdTaskNode final : public CopyTaskNode {
   void Init(CopyHdOpConf::Type, int64_t machine_id, int64_t dev_phy_id, const LogicalBlobId& lbi);
 
   CopyHdOpConf::Type copy_type() const { return copy_type_; }
-  int64_t MemZoneId121() const override {
+  MemZoneId MemZoneId121() const override {
     if (copy_type_ == CopyHdOpConf::H2D) {
       return TaskNode::MemZoneId121();
     } else if (copy_type_ == CopyHdOpConf::D2H) {
-      return Global<IDMgr>::Get()->CpuMemZoneId();
+      return GetNodeCPUMemZoneId(this->machine_id());
     } else {
       UNIMPLEMENTED();
-      return -1;
     }
+    return kInvalidMemZoneId;
   }
 
  private:
-  void InitProducedRegstMemCase(MemoryCase*) override;
+  void InitProducedRegstMemCase(MemCase*) override;
   OperatorConf NewCopyOpConf() override;
 
   CopyHdOpConf::Type copy_type_;
@@ -77,8 +78,6 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
   void Init(int64_t machine_id, const LogicalBlobId& lbi);
 
  private:
-  void InitProducedRegstMemCase(MemoryCase*) override;
-  void PinConsumedRegstMemCase(MemoryCase*) override;
   OperatorConf NewCopyOpConf() override;
 };
 

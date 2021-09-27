@@ -28,30 +28,30 @@ bool IsTensorWithType(const user_op::TensorDesc* desc, DataType data_type) {
 }
 
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
-  CHECK_OR_RETURN(IsScalarTensor(ctx->TensorDesc4ArgNameAndIndex("count_not_finite", 0)));
-  CHECK_OR_RETURN(IsScalarTensor(ctx->TensorDesc4ArgNameAndIndex("loss_scale", 0)));
-  CHECK_OR_RETURN(IsScalarTensor(ctx->TensorDesc4ArgNameAndIndex("good_step_counter", 0)));
+  CHECK_OR_RETURN(IsScalarTensor(&(ctx->InputTensorDesc("count_not_finite", 0))));
+  CHECK_OR_RETURN(IsScalarTensor(&(ctx->InputTensorDesc("loss_scale", 0))));
+  CHECK_OR_RETURN(IsScalarTensor(&(ctx->InputTensorDesc("good_step_counter", 0))));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
   CHECK_OR_RETURN(
-      IsTensorWithType(ctx->TensorDesc4ArgNameAndIndex("count_not_finite", 0), DataType::kInt64));
+      IsTensorWithType(&(ctx->InputTensorDesc("count_not_finite", 0)), DataType::kInt64));
+  CHECK_OR_RETURN(IsTensorWithType(&(ctx->InputTensorDesc("loss_scale", 0)), DataType::kFloat));
   CHECK_OR_RETURN(
-      IsTensorWithType(ctx->TensorDesc4ArgNameAndIndex("loss_scale", 0), DataType::kFloat));
-  CHECK_OR_RETURN(
-      IsTensorWithType(ctx->TensorDesc4ArgNameAndIndex("good_step_counter", 0), DataType::kInt64));
+      IsTensorWithType(&(ctx->InputTensorDesc("good_step_counter", 0)), DataType::kInt64));
   return Maybe<void>::Ok();
 }
 
-void InputArgModifierFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                        const user_op::UserOpConfWrapper& conf) {
+Maybe<void> InputArgModifierFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
+                               const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* loss_scale = GetInputArgModifierFn("loss_scale", 0);
-  CHECK(loss_scale != nullptr);
+  CHECK_OR_RETURN(loss_scale != nullptr);
   loss_scale->set_is_mutable(true);
   user_op::InputArgModifier* good_step_counter = GetInputArgModifierFn("good_step_counter", 0);
-  CHECK(good_step_counter != nullptr);
+  CHECK_OR_RETURN(good_step_counter != nullptr);
   good_step_counter->set_is_mutable(true);
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
@@ -64,6 +64,7 @@ REGISTER_USER_OP("dynamic_loss_scale_schedule")
     .Attr<float>("multiplier", 2.0)
     .SetTensorDescInferFn(InferTensorDesc)
     .SetInputArgModifyFn(InputArgModifierFn)
-    .SetDataTypeInferFn(InferDataType);
+    .SetDataTypeInferFn(InferDataType)
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 }  // namespace oneflow

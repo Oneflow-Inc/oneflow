@@ -16,14 +16,15 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
-REGISTER_USER_OP("range")
+REGISTER_NO_GRAD_USER_OP("range")
     .Output("out")
     .Attr<int64_t>("start")
     .Attr<int64_t>("delta")
     .Attr<int64_t>("limit")
     .Attr<DataType>("dtype")
+    .Attr<std::vector<std::string>>("nd_sbp")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       int64_t start = ctx->Attr<int64_t>("start");
       int64_t delta = ctx->Attr<int64_t>("delta");
       int64_t limit = ctx->Attr<int64_t>("limit");
@@ -37,8 +38,13 @@ REGISTER_USER_OP("range")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = ctx->Attr<DataType>("dtype");
+      *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
       return Maybe<void>::Ok();
+    })
+    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
+      cfg::SbpParallel default_sbp;
+      default_sbp.mutable_broadcast_parallel();
+      return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
     });
 
 }  // namespace oneflow

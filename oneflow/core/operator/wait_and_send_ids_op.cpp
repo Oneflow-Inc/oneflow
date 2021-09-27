@@ -18,9 +18,10 @@ limitations under the License.
 
 namespace oneflow {
 
-void WaitAndSendIdsOp::InitFromOpConf() {
+Maybe<void> WaitAndSendIdsOp::InitFromOpConf() {
   CHECK(op_conf().has_wait_and_send_ids_conf());
   EnrollOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 namespace {
@@ -48,7 +49,7 @@ Maybe<void> WaitAndSendIdsOp::InferOutBlobDescs(
   return InferBlobDescs(op_conf(), GetBlobDesc4BnInOp);
 }
 
-Maybe<void> WaitAndSendIdsOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> WaitAndSendIdsOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder().Broadcast(output_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }

@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/common/id_util.h"
 
 namespace oneflow {
-
 namespace {
 
 // MemCaseId int64_t encode
@@ -34,7 +33,7 @@ namespace {
 // |          |   rank   | MemCaseId  |
 // |          | -- 19 -- | --- 18 --- |
 // | reserved |    GlobalMemCaseId    |
-// | -- 27 -- | -------- 37 --------- |
+// | -- 27 -- | -------- 37 ---------|
 // | ------------ 64 bit ------------ |
 
 constexpr size_t kRegByNetBits = 1;
@@ -48,12 +47,12 @@ constexpr size_t kRankShift = kDeviceTypeShift + kDeviceTypeBits;
 
 }  // namespace
 
-MemCaseId::MemCaseId(const MemoryCase& mem_case) {
+MemCaseId::MemCaseId(const MemCase& mem_case) {
   *this = MemCaseRegistryMgr<MemCaseIdGeneratorRegistry>::Get().LookupRegistry(mem_case).Generate(
       mem_case);
 }
 
-void MemCaseId::ToProto(MemoryCase* mem_case) const {
+void MemCaseId::ToProto(MemCase* mem_case) const {
   MemCaseRegistryMgr<MemCaseIdToProtoRegistry>::Get().LookupRegistry(*this).ToProto(*this,
                                                                                     mem_case);
 }
@@ -73,26 +72,27 @@ int64_t EncodeGlobalMemCaseIdToInt64(const GlobalMemCaseId& global_mem_case_id) 
   return id;
 }
 
-bool PatchMemCase(const MemoryCase& src_mem_case, MemoryCase* dst_mem_case) {
+bool PatchMemCase(const MemCase& src_mem_case, MemCase* dst_mem_case) {
   return MemCaseRegistryMgr<PatchMemCaseRegistry>::Get()
       .LookupRegistry(src_mem_case)
       .Patch(src_mem_case, dst_mem_case);
 }
 
-MemoryCase GenerateCorrespondingPageLockedHostMemoryCase(const MemoryCase& mem_case) {
-  MemoryCase page_locked_mem_case;
+MemCase GenerateCorrespondingPageLockedHostMemoryCase(const MemCase& mem_case) {
+  MemCase page_locked_mem_case;
   MemCaseRegistryMgr<PageLockedMemCaseRegistry>::Get().LookupRegistry(mem_case).PageLock(
       mem_case, &page_locked_mem_case);
   return page_locked_mem_case;
 }
 
-std::shared_ptr<MemoryCase> MemoryCaseUtil::MakeMemCase(const DeviceType device_type,
+std::shared_ptr<MemCase> MemoryCaseUtil::MakeMemCase(const DeviceType device_type,
                                                         const int64_t device_id) {
-  const auto& mem_case = std::make_shared<MemoryCase>();
+  const auto& mem_case = std::make_shared<MemCase>();
   if (device_type == DeviceType::kCPU) {
-    mem_case->mutable_host_mem();
+    mem_case->SetAttr<DeviceType>("device_type", kCPU);
   } else if (device_type == DeviceType::kGPU) {
-    mem_case->mutable_device_cuda_mem()->set_device_id(device_id);
+    mem_case->SetAttr<DeviceType>("device_type", kGPU);
+    mem_case->SetAttr<int64_t>("device_id", device_id);
   } else {
     UNIMPLEMENTED();
   }

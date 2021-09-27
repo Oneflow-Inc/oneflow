@@ -27,7 +27,7 @@ limitations under the License.
 
 namespace oneflow {
 
-inline void RebuildXrtCompiledJob(const OpGraph& op_graph, Job* job) {
+inline Maybe<void> RebuildXrtCompiledJob(const OpGraph& op_graph, Job* job) {
 #ifdef OF_WITH_XRT
   const auto& job_desc = GlobalJobDesc();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
@@ -43,6 +43,7 @@ inline void RebuildXrtCompiledJob(const OpGraph& op_graph, Job* job) {
         ->Write(*job);
   }
 #endif  // OF_WITH_XRT
+  return Maybe<void>::Ok();
 }
 
 inline bool XrtCompilationEnabled(const JobDesc& job_desc) {

@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_KERNEL_BLOB_TENSOR_VIEW_H_
 #define ONEFLOW_CORE_KERNEL_BLOB_TENSOR_VIEW_H_
 
-#include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/user_op_tensor.h"
 
 namespace oneflow {
 
@@ -32,11 +32,12 @@ class BlobTensorView final : public Tensor {
   const ShapeView& shape() const override;
   MutShapeView* mut_shape() override;
   DataType data_type() const override;
-  const MemoryCase& mem_case() const override;
+  const MemCase& mem_case() const override;
   const void* raw_dptr() const override;
   void* mut_raw_dptr() override;
 
   void Reset(Blob* blob);
+  Blob* blob() const;
 
  private:
   Blob* blob_;

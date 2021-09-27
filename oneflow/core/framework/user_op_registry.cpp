@@ -83,6 +83,11 @@ OpRegistry& OpRegistry::SupportCpuOnly() {
   return *this;
 }
 
+OpRegistry& OpRegistry::NoGrad() {
+  result_.no_grad = true;
+  return *this;
+}
+
 OpRegistry& OpRegistry::SetOutputBufferNum(int32_t num) {
   result_.same_output_regst_num = num;
   return *this;
@@ -188,9 +193,8 @@ OpRegistry& OpRegistry::SetOutputBlobTimeShapeInferFn(
   return *this;
 }
 
-OpRegistry& OpRegistry::SetParallelDistributionInferFn(
-    ParallelDistributionInferFn parallel_distribution_infer_fn) {
-  result_.parallel_distribution_infer_fn = std::move(parallel_distribution_infer_fn);
+OpRegistry& OpRegistry::SetNdSbpInferFn(NdSbpInferFn nd_sbp_infer_fn) {
+  result_.nd_sbp_infer_fn = std::move(nd_sbp_infer_fn);
   return *this;
 }
 
@@ -204,8 +208,8 @@ OpRegistry& OpRegistry::SetDeviceInferFn(DeviceInferFn device_infer_fn) {
   return *this;
 }
 
-OpRegistry& OpRegistry::Finish() {
-  CHECK(result_.logical_tensor_desc_infer_fn != nullptr)
+Maybe<OpRegistry&> OpRegistry::Finish() {
+  CHECK_OR_RETURN(result_.logical_tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;
   if (!result_.physical_tensor_desc_infer_fn) {
     const auto& logical_fn = result_.logical_tensor_desc_infer_fn;
@@ -215,39 +219,35 @@ OpRegistry& OpRegistry::Finish() {
         logical_fn(ctx);
       } else {
         for (const auto& pair : ctx->inputs()) {
-          const auto& parallel_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex(pair.first, pair.second);
+          const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex(pair.first, pair.second);
           const TensorDesc* in_logical =
               ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
           const TensorDesc* in_physical = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
-          CHECK_OR_RETURN(*JUST(GetPhysicalShape(in_logical->shape(), parallel_distribution,
-                                                 ctx->parallel_desc(), ctx->parallel_ctx()))
+          CHECK_OR_RETURN(*JUST(GetPhysicalShape(in_logical->shape(), nd_sbp, ctx->parallel_desc(),
+                                                 ctx->parallel_ctx()))
                           == in_physical->shape());
         }
         for (const auto& pair : ctx->outputs()) {
-          TensorDesc* desc = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
+          TensorDesc* desc = ctx->OutputTensorDesc(pair.first, pair.second);
           *desc = *ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
-          const auto& parallel_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex(pair.first, pair.second);
-          *desc->mut_shape() = *JUST(GetPhysicalShape(desc->shape(), parallel_distribution,
-                                                      ctx->parallel_desc(), ctx->parallel_ctx()));
+          const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex(pair.first, pair.second);
+          *desc->mut_shape() = *JUST(
+              GetPhysicalShape(desc->shape(), nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
         }
       }
       return Maybe<void>::Ok();
     };
   }
   if (result_.check_fn == nullptr) { result_.check_fn = CheckAttrFnUtil::NoCheck; }
-  if (result_.get_sbp_fn == nullptr) {
-    result_.get_sbp_fn = GetSbpFnUtil::DefaultBroadcastToBroadcast;
-  }
+  CHECK_OR_RETURN(result_.get_sbp_fn != nullptr) << "No Sbp function for " << result_.op_type_name;
   if (result_.cpu_only_supported && result_.device_infer_fn == nullptr) {
-    result_.device_infer_fn = [](DeviceInferContext* ctx) -> Maybe<const Device> {
+    result_.device_infer_fn = [](DeviceInferContext* ctx) -> Maybe<Symbol<Device>> {
       for (const auto& pair : ctx->inputs()) {
-        const std::shared_ptr<const Device>& input_device =
+        const Symbol<Device>& input_device =
             ctx->InputTensorDevice4ArgNameAndIndex(pair.first, pair.second);
-        CHECK_EQ_OR_RETURN(JUST(input_device->of_type()), "cpu");
+        CHECK_EQ(JUST(input_device->of_type()), "cpu");
       }
-      std::shared_ptr<const Device> default_device;
+      Symbol<Device> default_device;
       {
         if (ctx->inputs().size() != 0) {
           const auto& first_input_name = ctx->inputs().begin()->first;

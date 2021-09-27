@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/user/kernels/model_update_kernel_util.h"
 #include "oneflow/user/kernels/indexed_slices_reduce_sum_kernel_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -92,7 +93,7 @@ class IndexedSlicesUpdateOpKernelState final : public user_op::OpKernelState {
 
 std::shared_ptr<user_op::OpKernelState> CreateIndexedSlicesUpdateOpKernelState(
     user_op::KernelInitContext* ctx) {
-  const SbpParallel& model_sbp = ctx->SbpParallel4ArgNameAndIndex("model", 0);
+  const cfg::SbpParallel& model_sbp = ctx->SbpParallel4ArgNameAndIndex("model", 0);
   const user_op::TensorDesc* model_logical_desc =
       ctx->LogicalTensorDesc4ArgNameAndIndex("model", 0);
   const int64_t num_model_instances = model_logical_desc->shape().At(0);
@@ -110,20 +111,25 @@ std::shared_ptr<user_op::OpKernelState> CreateIndexedSlicesUpdateOpKernelState(
 }
 
 template<DeviceType device_type, typename T, typename G>
-class SGDUpdateKernel final : public user_op::OpKernel {
+class SGDUpdateKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   SGDUpdateKernel() = default;
   ~SGDUpdateKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     const auto scale = ctx->Attr<double>("scale");
     const auto l1 = ctx->Attr<float>("l1");
     const auto l2 = ctx->Attr<float>("l2");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
+    const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
+    const float* learning_rate_ptr = nullptr;
+    if (ctx->has_input("learning_rate", 0)) {
+      const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+      learning_rate_ptr = learning_rate->dptr<float>();
+    }
     const T* scale_by_ptr = nullptr;
     if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
@@ -139,7 +145,7 @@ class SGDUpdateKernel final : public user_op::OpKernel {
     }
     SGDUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, weight_decay,
-        learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(),
+        learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(),
         model->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
@@ -163,10 +169,10 @@ REGISTER_SGD_UPDATE_KERNEL(DeviceType::kGPU, double, double);
 template<DeviceType device_type, typename T, typename K>
 user_op::InferTmpSizeFn GenInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
-    const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
-    const user_op::TensorDesc* values = ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
-    const int64_t num_indices = indices->shape().elem_cnt();
-    const int64_t num_values = values->shape().elem_cnt();
+    const user_op::TensorDesc& indices = ctx->InputTensorDesc("model_diff_indices", 0);
+    const user_op::TensorDesc& values = ctx->InputTensorDesc("model_diff_values", 0);
+    const int64_t num_indices = indices.shape().elem_cnt();
+    const int64_t num_values = values.shape().elem_cnt();
     TmpBufferManager<device_type, T, K> buffer_manager(nullptr, num_indices, num_values);
     return buffer_manager.GetTotalBufferSize();
   };
@@ -241,14 +247,10 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_INDEXED_SLICES_SGD_UPDATE_KERNEL, DEVI
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 template<DeviceType device_type, typename T, typename G>
-class MomentumUpdateKernel final : public user_op::OpKernel {
+class MomentumUpdateKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   explicit MomentumUpdateKernel(user_op::KernelCreateContext* ctx) {
-    scale_ = ctx->Attr<double>("scale");
-    l1_ = ctx->Attr<float>("l1");
-    l2_ = ctx->Attr<float>("l2");
-    beta_ = ctx->Attr<float>("beta");
-    weight_decay_ = ctx->Attr<float>("weight_decay");
+    has_learning_rate_ptr_ = ctx->has_input("learning_rate", 0);
     has_scale_by_ptr_ = ctx->has_input("scale_by_tensor", 0);
     has_skip_if_ = ctx->has_input("skip_if", 0);
   };
@@ -256,10 +258,21 @@ class MomentumUpdateKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+    float learning_rate_val = ctx->Attr<float>("learning_rate_val");
+    double scale = ctx->Attr<double>("scale");
+    float l1 = ctx->Attr<float>("l1");
+    float l2 = ctx->Attr<float>("l2");
+    float beta = ctx->Attr<float>("beta");
+    float weight_decay = ctx->Attr<float>("weight_decay");
+
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* momentum = ctx->Tensor4ArgNameAndIndex("momentum", 0);
+    const float* learning_rate_ptr = nullptr;
+    if (has_learning_rate_ptr_) {
+      const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+      learning_rate_ptr = learning_rate->dptr<float>();
+    }
     const T* scale_by_ptr = nullptr;
     if (has_scale_by_ptr_) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
@@ -274,18 +287,14 @@ class MomentumUpdateKernel final : public user_op::OpKernel {
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     MomentumUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale_), l1_, l2_, beta_,
-        weight_decay_, learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr,
+        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta,
+        weight_decay, learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
         model_diff->dptr<G>(), model->mut_dptr<T>(), momentum->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 
  private:
-  double scale_;
-  float l1_;
-  float l2_;
-  float beta_;
-  float weight_decay_;
+  bool has_learning_rate_ptr_;
   bool has_scale_by_ptr_;
   bool has_skip_if_;
 };
@@ -377,14 +386,13 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_INDEXED_SLICES_MOMENTUM_UPDATE_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 template<DeviceType device_type, typename T, typename G>
-class AdamUpdateKernel final : public user_op::OpKernel {
+class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   AdamUpdateKernel() = default;
   ~AdamUpdateKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* m = ctx->Tensor4ArgNameAndIndex("m", 0);
@@ -396,6 +404,12 @@ class AdamUpdateKernel final : public user_op::OpKernel {
     const auto beta2 = ctx->Attr<float>("beta2");
     const auto epsilon = ctx->Attr<float>("epsilon");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
+    const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
+    const float* learning_rate_ptr = nullptr;
+    if (ctx->has_input("learning_rate", 0)) {
+      const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+      learning_rate_ptr = learning_rate->dptr<float>();
+    }
     const T* scale_by_ptr = nullptr;
     if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
@@ -411,7 +425,7 @@ class AdamUpdateKernel final : public user_op::OpKernel {
     }
     AdamUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
-        epsilon, weight_decay, learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr,
+        epsilon, weight_decay, learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
         model_diff->dptr<G>(), model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
@@ -543,7 +557,7 @@ class LambTmpBufferManager final {
 };
 
 template<DeviceType device_type, typename T, typename G>
-class LambUpdateKernel final : public user_op::OpKernel {
+class LambUpdateKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   LambUpdateKernel() = default;
   ~LambUpdateKernel() = default;
@@ -591,8 +605,8 @@ class LambUpdateKernel final : public user_op::OpKernel {
 template<DeviceType device_type, typename T>
 user_op::InferTmpSizeFn LambGenInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
-    const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-    LambTmpBufferManager<device_type, T> tbm(nullptr, model->shape().elem_cnt());
+    const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+    LambTmpBufferManager<device_type, T> tbm(nullptr, model.shape().elem_cnt());
     return tbm.GetTotalBufferSize();
   };
 }
@@ -614,7 +628,8 @@ REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, double, double);
 #endif  // WITH_CUDA
 
 template<DeviceType device_type>
-class AdamBiasCorrectionLearningRateKernel final : public user_op::OpKernel {
+class AdamBiasCorrectionLearningRateKernel final : public user_op::OpKernel,
+                                                   public user_op::CudaGraphSupport {
  public:
   AdamBiasCorrectionLearningRateKernel() = default;
   ~AdamBiasCorrectionLearningRateKernel() override = default;
@@ -643,14 +658,13 @@ REGISTER_ADAM_BIAS_CORRECTION_LEARNING_RATE_KERNEL(DeviceType::kGPU)
 #endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T, typename G>
-class RmsPropUpdateKernel final : public user_op::OpKernel {
+class RmsPropUpdateKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   RmsPropUpdateKernel() = default;
   ~RmsPropUpdateKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* mean_square = ctx->Tensor4ArgNameAndIndex("mean_square", 0);
@@ -661,6 +675,12 @@ class RmsPropUpdateKernel final : public user_op::OpKernel {
     const auto epsilon = ctx->Attr<float>("epsilon");
     const auto centered = ctx->Attr<bool>("centered");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
+    const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
+    const float* learning_rate_ptr = nullptr;
+    if (ctx->has_input("learning_rate", 0)) {
+      const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+      learning_rate_ptr = learning_rate->dptr<float>();
+    }
     const T* scale_by_ptr = nullptr;
     if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
@@ -681,8 +701,9 @@ class RmsPropUpdateKernel final : public user_op::OpKernel {
     }
     RmsPropUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, centered,
-        epsilon, weight_decay, decay_rate, learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr,
-        model_diff->dptr<G>(), model->mut_dptr<T>(), mean_square->mut_dptr<T>(), mean_gradient_ptr);
+        epsilon, weight_decay, decay_rate, learning_rate_val, learning_rate_ptr, scale_by_ptr,
+        skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), mean_square->mut_dptr<T>(),
+        mean_gradient_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -738,7 +759,7 @@ class LarsTmpBufferManager final {
 };
 
 template<DeviceType device_type, typename T, typename G>
-class LarsUpdateKernel final : public user_op::OpKernel {
+class LarsUpdateKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   LarsUpdateKernel() = default;
   ~LarsUpdateKernel() override = default;
@@ -783,8 +804,8 @@ class LarsUpdateKernel final : public user_op::OpKernel {
 template<DeviceType device_type, typename T>
 user_op::InferTmpSizeFn LarsGenInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
-    const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-    LarsTmpBufferManager<device_type, T> tlm(nullptr, model->shape().elem_cnt());
+    const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+    LarsTmpBufferManager<device_type, T> tlm(nullptr, model.shape().elem_cnt());
     return tlm.GetTotalBufferSize();
   };
 }

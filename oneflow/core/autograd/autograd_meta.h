@@ -18,18 +18,28 @@ limitations under the License.
 #define ONEFLOW_CORE_AUTOGRAD_AUTOGRAD_META_H_
 
 #include <memory>
+#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/optional.h"
 
 namespace oneflow {
 
 class Shape;
-class DType;
+
+class Device;
+class ParallelDesc;
+namespace cfg {
+class NdSbp;
+}
 
 namespace one {
 
 class Tensor;
 class TensorArg;
+class MirroredTensor;
 
 class AutogradMeta final {
  public:
@@ -38,21 +48,24 @@ class AutogradMeta final {
       : is_leaf_(is_leaf),
         requires_grad_(requires_grad),
         retain_grad_(false),
-        now_grad_arg_(new TensorArg) {}
+        current_grad_(new TensorArg) {}
 
   // Getters
   const std::shared_ptr<Tensor>& acc_grad() const { return acc_grad_; }
-  const std::shared_ptr<TensorArg>& now_grad_arg() const { return now_grad_arg_; }
+  const std::shared_ptr<TensorArg>& current_grad() const { return current_grad_; }
   bool requires_grad() const { return requires_grad_; }
   bool is_leaf() const { return is_leaf_; }
   bool retain_grad() const { return retain_grad_; }
+  using Hook = std::function<std::shared_ptr<Tensor>(const std::shared_ptr<const Tensor>&)>;
+  const std::vector<Hook>& hooks() const { return hooks_; }
 
   // Setters
-  void set_acc_grad(const std::shared_ptr<Tensor>& grad) { acc_grad_ = grad; }
+  Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad);
   std::shared_ptr<Tensor> mut_acc_grad() { return acc_grad_; }
   void set_requires_grad(bool requires_grad) { requires_grad_ = requires_grad; }
   void set_retain_grad(bool retain_grad) { retain_grad_ = retain_grad; }
   void set_is_leaf(bool is_leaf) { is_leaf_ = is_leaf; }
+  void add_hook(const Hook& hook) { hooks_.push_back(hook); }
 
  private:
   bool is_leaf_;
@@ -64,8 +77,13 @@ class AutogradMeta final {
   bool retain_grad_;
 
   std::shared_ptr<Tensor> acc_grad_;
-  std::shared_ptr<TensorArg> now_grad_arg_;
+  std::shared_ptr<TensorArg> current_grad_;
+  std::vector<Hook> hooks_;
 };
+
+inline std::shared_ptr<AutogradMeta> NewAutogradMeta(bool requires_grad, bool is_leaf) {
+  return std::shared_ptr<AutogradMeta>(new AutogradMeta(requires_grad, is_leaf));
+}
 
 class TensorInfo final {
  public:
@@ -76,8 +94,10 @@ class TensorInfo final {
 
  private:
   std::shared_ptr<const Shape> shape_;
-  std::shared_ptr<const DType> dtype_;
-  // TODO: Add device info
+  Symbol<DType> dtype_;
+  Optional<Symbol<Device>> device_;               // for local tensor
+  Optional<Symbol<ParallelDesc>> parallel_desc_;  // for consistent tensor
+  Optional<Symbol<cfg::NdSbp>> nd_sbp_;           // for consistent tensor
 };
 
 }  // namespace one

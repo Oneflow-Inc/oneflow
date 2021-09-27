@@ -27,21 +27,22 @@ REGISTER_USER_OP("combined_margin_loss")
     .Attr<float>("m3")
     .Attr<int64_t>("depth")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-      const user_op::TensorDesc* label = ctx->TensorDesc4ArgNameAndIndex("label", 0);
-      user_op::TensorDesc* theta = ctx->TensorDesc4ArgNameAndIndex("theta", 0);
-      CHECK_EQ_OR_RETURN(label->shape().At(0), x->shape().At(0));
-      CHECK_GE_OR_RETURN(x->shape().NumAxes(), 2);
-      *ctx->Shape4ArgNameAndIndex("y", 0) = *ctx->Shape4ArgNameAndIndex("x", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("y", 0) = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
-      *theta->mut_is_dynamic() = x->is_dynamic();
-      *theta->mut_shape() = label->shape();
+      const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+      const user_op::TensorDesc& label = ctx->InputTensorDesc("label", 0);
+      user_op::TensorDesc* theta = ctx->OutputTensorDesc("theta", 0);
+      CHECK_EQ_OR_RETURN(label.shape().At(0), x.shape().At(0));
+      CHECK_GE_OR_RETURN(x.shape().NumAxes(), 2);
+      *ctx->OutputShape("y", 0) = ctx->InputShape("x", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("y", 0) = ctx->InputIsDynamic("x", 0);
+      *theta->mut_is_dynamic() = x.is_dynamic();
+      *theta->mut_shape() = label.shape();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* label_arg_modifier = GetInputArgModifierFn("label", 0);
       label_arg_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
@@ -59,8 +60,8 @@ REGISTER_USER_OP("combined_margin_loss")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
-      *ctx->Dtype4ArgNameAndIndex("theta", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+      *ctx->OutputDType("theta", 0) = ctx->InputDType("x", 0);
       return Maybe<void>::Ok();
     });
 
@@ -74,18 +75,18 @@ REGISTER_USER_OP("combined_margin_loss_grad")
     .Attr<float>("m3")
     .Attr<int64_t>("depth")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
-      const user_op::TensorDesc* label = ctx->TensorDesc4ArgNameAndIndex("label", 0);
-      const user_op::TensorDesc* theta = ctx->TensorDesc4ArgNameAndIndex("theta", 0);
-      CHECK_EQ_OR_RETURN(label->shape().At(0), dy->shape().At(0));
-      CHECK_EQ_OR_RETURN(label->shape().At(0), theta->shape().At(0));
-      CHECK_GE_OR_RETURN(dy->shape().NumAxes(), 2);
-      *ctx->Shape4ArgNameAndIndex("dx", 0) = *ctx->Shape4ArgNameAndIndex("dy", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("dx", 0) = *ctx->IsDynamic4ArgNameAndIndex("dy", 0);
+      const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
+      const user_op::TensorDesc& label = ctx->InputTensorDesc("label", 0);
+      const user_op::TensorDesc& theta = ctx->InputTensorDesc("theta", 0);
+      CHECK_EQ_OR_RETURN(label.shape().At(0), dy.shape().At(0));
+      CHECK_EQ_OR_RETURN(label.shape().At(0), theta.shape().At(0));
+      CHECK_GE_OR_RETURN(dy.shape().NumAxes(), 2);
+      *ctx->OutputShape("dx", 0) = ctx->InputShape("dy", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("dx", 0) = ctx->InputIsDynamic("dy", 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -105,7 +106,8 @@ REGISTER_USER_OP("combined_margin_loss_grad")
     });
 
 REGISTER_USER_OP_GRAD("combined_margin_loss")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op = builder.Op("combined_margin_loss_grad")
@@ -121,6 +123,7 @@ REGISTER_USER_OP_GRAD("combined_margin_loss")
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

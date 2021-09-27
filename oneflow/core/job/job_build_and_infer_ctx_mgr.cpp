@@ -13,15 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/common/util.h"
 #include <json.hpp>
 
 namespace oneflow {
 
 Maybe<void> JobBuildAndInferCtxMgr::OpenJobBuildAndInferCtx(const std::string& job_name) {
-  CHECK_OR_RETURN(!has_cur_job_) << Error::UnknownJobBuildAndInferError
+  CHECK_OR_RETURN(!has_cur_job_) << Error::UnknownJobBuildAndInferError()
                                  << "cur job not leave before you enter this job_name:" << job_name;
   CHECK_OR_RETURN(!job_name.empty()) << Error::JobNameEmptyError();
   CHECK_OR_RETURN(job_name2infer_ctx_.find(job_name) == job_name2infer_ctx_.end())
@@ -103,10 +106,15 @@ Maybe<void> EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {
 bool EagerExecutionEnabled() { return *Global<bool, EagerExecution>::Get(); }
 
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
-  if (EagerExecutionEnabled()) {
-    return JUST(GlobalMaybe<EagerJobBuildAndInferCtxMgr>());
-  } else {
+  if (JUST(GlobalMultiClientEnv())) {
     return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
+  } else {
+    // single-client
+    if (EagerExecutionEnabled()) {
+      return JUST(GlobalMaybe<EagerJobBuildAndInferCtxMgr>());
+    } else {
+      return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
+    }
   }
 }
 

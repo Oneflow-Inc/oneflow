@@ -7,6 +7,8 @@ inputs:
     required: true
   oss_access_key_secret:
     required: true
+  upload_core:
+    required: false
 runs:
   using: "composite"
   steps:
@@ -24,7 +26,13 @@ runs:
         if [ -d "${{ inputs.src_path }}" ]; then
           dir_arg="--recursive"
         fi
-        $HOME/ossutil64 cp --update ${dir_arg} ${{ inputs.src_path }} ${{ inputs.oss_dst_path }}
+        upload_core_arg=""
+        if [ "${{ inputs.upload_core }}" == "true" ]; then
+            echo "will upload core files"
+        else
+            upload_core_arg+="--exclude core*"
+        fi
+        $HOME/ossutil64 cp --update ${dir_arg} ${upload_core_arg} ${{ inputs.src_path }} ${{ inputs.oss_dst_path }}
       shell: bash
       env:
         OSS_ACCESS_KEY_ID: ${{ inputs.oss_access_key_id }}

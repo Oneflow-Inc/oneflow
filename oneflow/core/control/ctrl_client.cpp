@@ -23,13 +23,7 @@ namespace {
 
 }  // namespace
 
-GrpcCtrlClient::~GrpcCtrlClient() {
-  {
-    std::unique_lock<std::mutex> lck(need_heartbeat_thread_stop_mtx_);
-    need_heartbeat_thread_stop_ = true;
-  }
-  heartbeat_thread_.join();
-}
+GrpcCtrlClient::~GrpcCtrlClient() { StopHeartbeat(); }
 
 GrpcCtrlClient::GrpcCtrlClient(const ProcessCtx& process_ctx) : process_ctx_(process_ctx) {
   rpc_client_.ReserveStubsOfSize(process_ctx.ctrl_addr_size());
@@ -46,9 +40,12 @@ GrpcCtrlClient::GrpcCtrlClient(const ProcessCtx& process_ctx) : process_ctx_(pro
     LoadServerRequest request;
     LoadServerResponse response;
     while (true) {
+      const auto wait_duration = std::chrono::seconds(sleep_second_dis(gen));
       {
         std::unique_lock<std::mutex> lck(need_heartbeat_thread_stop_mtx_);
-        if (need_heartbeat_thread_stop_) { break; }
+        const bool stopped = need_heartbeat_thread_stop_cv_.wait_for(
+            lck, wait_duration, [&]() { return need_heartbeat_thread_stop_; });
+        if (stopped) { break; }
       }
       for (size_t i = 0; i < rpc_client_.GetStubSize(); ++i) {
         grpc::ClientContext client_ctx;
@@ -57,7 +54,6 @@ GrpcCtrlClient::GrpcCtrlClient(const ProcessCtx& process_ctx) : process_ctx_(pro
             &client_ctx, request, &response))
             << "Machine " << i << " lost";
       }
-      std::this_thread::sleep_for(std::chrono::seconds(sleep_second_dis(gen)));
     }
   });
 }
@@ -108,14 +104,21 @@ void GrpcCtrlClient::PullMasterKV(const std::string& k, PbMessage* msg) {
 
 void GrpcCtrlClient::Clear() { rpc_client_.Clear(); }
 
-void GrpcCtrlClient::PushActEvent(const ActEvent& act_event) {
-  rpc_client_.PushActEvent(act_event);
-}
-
 int32_t GrpcCtrlClient::IncreaseCount(const std::string& k, int32_t v) {
   return rpc_client_.IncreaseCount(k, v);
 }
 
 void GrpcCtrlClient::EraseCount(const std::string& k) { rpc_client_.EraseCount(k); }
+
+void GrpcCtrlClient::StopHeartbeat() {
+  bool already_stopped = false;
+  {
+    std::unique_lock<std::mutex> lck(need_heartbeat_thread_stop_mtx_);
+    already_stopped = need_heartbeat_thread_stop_;
+    need_heartbeat_thread_stop_ = true;
+    need_heartbeat_thread_stop_cv_.notify_all();
+  }
+  if (!already_stopped) { heartbeat_thread_.join(); }
+}
 
 }  // namespace oneflow

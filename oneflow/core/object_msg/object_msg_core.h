@@ -332,8 +332,8 @@ class ObjectMsgDefaultAllocator : public ObjectMsgAllocator {
   ObjectMsgDefaultAllocator() = default;
 
   static ObjectMsgDefaultAllocator* GlobalObjectMsgAllocator() {
-    static ObjectMsgDefaultAllocator allocator;
-    return &allocator;
+    static ObjectMsgDefaultAllocator* allocator = new ObjectMsgDefaultAllocator();
+    return allocator;
   }
 
   char* Allocate(std::size_t size) override { return allocator_.allocate(size); }
@@ -343,7 +343,7 @@ class ObjectMsgDefaultAllocator : public ObjectMsgAllocator {
   std::allocator<char> allocator_;
 };
 
-class ObjectMsgPtrUtil;
+struct ObjectMsgPtrUtil;
 template<typename T>
 class ObjectMsgPtr;
 
@@ -358,7 +358,7 @@ class ObjectMsgBase {
   ObjectMsgAllocator* mut_allocator() const { return allocator_; }
 
  private:
-  friend class ObjectMsgPtrUtil;
+  friend struct ObjectMsgPtrUtil;
   void InitRefCount() { ref_cnt_ = 0; }
   void set_allocator(ObjectMsgAllocator* allocator) { allocator_ = allocator; }
   void IncreaseRefCount() { ref_cnt_++; }
@@ -550,7 +550,7 @@ class ObjectMsgPtr final {
 
  private:
   void Clear() {
-    if (ptr_ == nullptr) { return; }
+    if (ptr_ == nullptr) { return; }  // NOLINT
     ObjectMsgPtrUtil::ReleaseRef<value_type>(ptr_);
     ptr_ = nullptr;
   }

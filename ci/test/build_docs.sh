@@ -1,4 +1,4 @@
 set -ex
 cp -r docs /docs
 cd /docs
-make html
+make html SPHINXOPTS="-W --keep-going"

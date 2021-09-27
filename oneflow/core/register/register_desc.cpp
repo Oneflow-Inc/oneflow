@@ -112,10 +112,10 @@ void RegstDesc::ForEachLbi(std::function<void(const LogicalBlobId&)> func) const
   for (const auto& p : lbi2blob_desc_) { func(p.first); }
 }
 
-void RegstDesc::EraseZeroSizeBlob() {
+void RegstDesc::EraseUninitializedShapeBlob() {
   EraseIf<LogicalBlobId, std::unique_ptr<BlobDesc>>(
       &lbi2blob_desc_, [](HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>::iterator it) {
-        return it->second->ByteSizeOfBlobBody() == 0;
+        return !it->second->shape().is_initialized();
       });
 }
 
@@ -142,7 +142,7 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_min_register_num(min_register_num_);
   ret->set_max_register_num(max_register_num_);
   ret->set_register_num(min_register_num_);
-  *(ret->mutable_mem_case()) = mem_case_;
+  *(ret->mutable_mem_case()) = mem_case_.mem_case;
   ret->set_enable_reuse_mem(enable_reuse_mem_);
   ret->set_mem_block_id(mem_block_id_);
   ret->set_mem_block_offset(mem_block_offset_);
@@ -179,15 +179,15 @@ void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_prot
   ctrl_regst_proto->set_max_register_num(1);
   ctrl_regst_proto->set_register_num(1);
   ctrl_regst_proto->mutable_regst_desc_type()->mutable_ctrl_regst_desc();
-  ctrl_regst_proto->mutable_mem_case()->mutable_host_mem();
+  ctrl_regst_proto->mutable_mem_case()->name_to_attr().at("device_type").at_device_type();
   ctrl_regst_proto->set_enable_reuse_mem(false);
   ctrl_regst_proto->set_mem_block_id(-1);
   ctrl_regst_proto->set_mem_block_offset(-1);
 }
 
-MemoryCase MakeHostMemCase() {
-  MemoryCase mem_case;
-  mem_case.mutable_host_mem();
+MemCase MakeHostMemCase() {
+  MemCase mem_case;
+  mem_case.SetAttr("device_type", DeviceType::kCPU);
   return mem_case;
 }
 

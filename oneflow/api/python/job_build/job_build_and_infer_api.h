@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
@@ -41,12 +42,12 @@ inline void CurJobBuildAndInferCtx_CheckJob() {
   return oneflow::CurJobBuildAndInferCtx_CheckJob().GetOrThrow();
 }
 
-inline void CurJobBuildAndInferCtx_SetJobConf(const std::string& serialized_job_conf) {
-  return oneflow::CurJobBuildAndInferCtx_SetJobConf(serialized_job_conf).GetOrThrow();
+inline void CurJobBuildAndInferCtx_SetJobConf(const oneflow::cfg::JobConfigProto& cfg_job_conf) {
+  return oneflow::CurJobBuildAndInferCtx_SetJobConf(cfg_job_conf).GetOrThrow();
 }
 
-inline void CurJobBuildAndInferCtx_SetTrainConf(const std::string& serialized_train_conf) {
-  return oneflow::CurJobBuildAndInferCtx_SetTrainConf(serialized_train_conf).GetOrThrow();
+inline void CurJobBuildAndInferCtx_SetTrainConf(const oneflow::cfg::TrainConf& cfg_train_conf) {
+  return oneflow::CurJobBuildAndInferCtx_SetTrainConf(cfg_train_conf).GetOrThrow();
 }
 
 inline void CurJobBuildAndInferCtx_Complete() {

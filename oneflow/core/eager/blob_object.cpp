@@ -24,15 +24,15 @@ Maybe<void> BlobObject::CheckMemCase(const ParallelDesc& parallel_desc, int64_t 
       << "ParallelDesc does not contain machine_id: " << machine_id;
   const std::string device_tag = *JUST(DeviceTag4DeviceType(parallel_desc.device_type()));
   if (parallel_desc.device_type() == DeviceType::kCPU) {
-    CHECK_OR_RETURN(this->mem_case_->has_host_mem())
+    CHECK_OR_RETURN(this->mem_case_->Attr<DeviceType>("device_type") == kCPU)
         << "DeviceType: " << device_tag
-        << " not match MemoryCase: " << this->mem_case_->host_mem().DebugString();
+        << " not match MemoryCase: " << this->mem_case_->Attr<DeviceType>("device_type");
   } else if (parallel_desc.device_type() == DeviceType::kGPU) {
-    CHECK_OR_RETURN(this->mem_case_->has_device_cuda_mem())
+    CHECK_OR_RETURN(this->mem_case_->Attr<DeviceType>("device_type") == kGPU)
         << "DeviceType: " << device_tag
-        << " not match MemoryCase: " << this->mem_case_->device_cuda_mem().DebugString();
+        << " not match MemoryCase: " << this->mem_case_->Attr<DeviceType>("device_type");
     CHECK_OR_RETURN(
-        parallel_desc.Containing(machine_id, this->mem_case_->device_cuda_mem().device_id()));
+        parallel_desc.Containing(machine_id, this->mem_case_->Attr<int64_t>("device_id")));
   } else {
     OF_UNIMPLEMENTED();
   }

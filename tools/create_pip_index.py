@@ -1,8 +1,9 @@
-# python3 -m pip install oss2 beautifulsoup4 --user.
+# python3 -m pip install oss2 beautifulsoup4 --user
 from bs4 import BeautifulSoup
 import os
 import oss2
-
+import urllib
+import urllib.parse
 
 page_template = """
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
@@ -27,7 +28,7 @@ soup = BeautifulSoup(page_template, "html.parser")
 
 
 def url4key(endpoint, bucket, key):
-    return "https://{}.{}/{}".format(bucket, endpoint, key)
+    return "https://{}.{}/{}".format(bucket, endpoint, urllib.parse.quote(key))
 
 
 def append_link(soup, link):
@@ -52,7 +53,6 @@ def generate_index_file(endpoint, bucket, dir_key, file_path, index_keys=None):
         for f in files.object_list:
             key = f.key
             if key.endswith(".whl"):
-                print(key)
                 link = url4key(endpoint, bucket, key)
                 append_link(soup, link)
                 count += 1

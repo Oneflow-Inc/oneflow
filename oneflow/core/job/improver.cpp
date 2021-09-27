@@ -22,12 +22,10 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/sharable_mem_block_graph.h"
-#include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/blocking_counter.h"
 
@@ -101,46 +99,6 @@ std::function<void(int64_t, uint64_t)> MakeSetterSetPlanRegstNum(Plan* plan) {
   auto MutRestDesc4Id = PlanUtil::MakeMutRegstDesc4Id(plan);
   return [MutRestDesc4Id](int64_t regst_desc_id, uint64_t num) {
     MutRestDesc4Id(regst_desc_id)->set_register_num(num);
-  };
-}
-
-std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathDurations4RegstDescId(
-    const ChainActGraph& graph) {
-  auto regst_desc_id2consumer_id2duration =
-      std::make_shared<HashMap<int64_t, HashMap<int64_t, double>>>();
-  graph.ForEachRegstDescConsumerPathMeanDuration(
-      [&](int64_t regst_desc_id, int64_t consumer_actor_id, double time) {
-        (*regst_desc_id2consumer_id2duration)[regst_desc_id][consumer_actor_id] = time;
-      });
-  auto empty = std::make_shared<const HashMap<int64_t, double>>();
-  return [regst_desc_id2consumer_id2duration,
-          empty](int64_t regst_desc_id) -> const HashMap<int64_t, double>& {
-    const auto& it = regst_desc_id2consumer_id2duration->find(regst_desc_id);
-    if (it == regst_desc_id2consumer_id2duration->end()) {
-      return *empty;
-    } else {
-      return it->second;
-    }
-  };
-}
-
-std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4RegstDescId(
-    const ChainActGraph& graph) {
-  auto regst_desc_id2consumer_id2ii_scale =
-      std::make_shared<HashMap<int64_t, HashMap<int64_t, double>>>();
-  graph.ForEachRegstDescConsumerPathIIScale(
-      [&](int64_t regst_desc_id, int64_t consumer_actor_id, double ii_scale) {
-        (*regst_desc_id2consumer_id2ii_scale)[regst_desc_id][consumer_actor_id] = ii_scale;
-      });
-  auto empty = std::make_shared<const HashMap<int64_t, double>>();
-  return [regst_desc_id2consumer_id2ii_scale,
-          empty](int64_t regst_desc_id) -> const HashMap<int64_t, double>& {
-    const auto& it = regst_desc_id2consumer_id2ii_scale->find(regst_desc_id);
-    if (it == regst_desc_id2consumer_id2ii_scale->end()) {
-      return *empty;
-    } else {
-      return it->second;
-    }
   };
 }
 
@@ -273,7 +231,6 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
       MemBlockProto* mem_block = &(mem_block_id2mem_block.at(mem_block_id));
       CHECK_EQ(mem_block->job_id(0), job_id);
       CHECK_EQ(mem_block->machine_id(), machine_id);
-      CHECK(mem_block->mem_case() == regst_desc->mem_case());
       CHECK_EQ(mem_block->enable_reuse_mem(), regst_desc->enable_reuse_mem());
       mem_block->set_mem_size(std::max(mem_block->mem_size(), regst_main_size + mem_block_offset));
     }
@@ -286,7 +243,7 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
       mem_block.add_job_id(job_id);
       mem_block.set_machine_id(machine_id);
       *(mem_block.mutable_mem_case()) =
-          GenerateCorrespondingPageLockedHostMemoryCase(regst_desc->mem_case());
+          GenerateCorrespondingPageLockedHostMemCase(MemCase(regst_desc->mem_case())).mem_case;
       mem_block.set_enable_reuse_mem(false);
       mem_block.set_mem_size(regst_separated_size);
       mem_block.set_thrd_id_hint(thrd_id);
@@ -297,7 +254,7 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
   auto GenChunk4ReusedMemBlockIfNeed = [&](MemBlockProto* mem_block) {
     int64_t mzuid = EncodeGlobalMemCaseIdToInt64(
         GlobalMemCaseId{static_cast<GlobalMemCaseId::node_index_t>(mem_block->machine_id()),
-                        mem_block->mem_case()});
+                        MemCase(mem_block->mem_case())});
     if (mzuid2chunk.find(mzuid) == mzuid2chunk.end()) {
       ChunkProto chunk;
       chunk.set_chunk_id(Global<IDMgr>::Get()->NewChunkId());
@@ -357,9 +314,9 @@ uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) 
   return static_cast<uint64_t>(mem_size);
 }
 
-int64_t Improver::GetMemoryZoneId(const MemoryCase& mem_case) const {
-  if (mem_case.has_device_cuda_mem()) {
-    return mem_case.device_cuda_mem().device_id();
+int64_t Improver::GetMemoryZoneId(const MemCase& mem_case) const {
+  if (mem_case.Attr<DeviceType>("device_type")==kGPU) {
+    return mem_case.Attr<int64_t>("device_id");
   } else {
     return Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
   }
@@ -372,7 +329,7 @@ void Improver::MakeMemZoneRegstDescs(const Plan& plan, MemZoneRegstDescs* mz2reg
   }
   for (const auto& task : plan.task()) {
     for (const auto& pair : task.produced_regst_desc()) {
-      int64_t mem_zone_id = GetMemoryZoneId(pair.second.mem_case());
+      int64_t mem_zone_id = GetMemoryZoneId(MemCase(pair.second.mem_case()));
       mz2regst_desc->at(task.machine_id()).at(mem_zone_id).push_back(&pair.second);
     }
   }
@@ -389,15 +346,15 @@ Maybe<void> Improver::CheckAllZoneNotOOM(
       const uint64_t calc =
           CalcMemoryConsumed(regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId, ii);
       const uint64_t available = AvailableMemSize(machine_id, mem_zone_id);
-      const auto* id_mgr = Global<IDMgr>::Get();
       if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+        MemZoneId mem_zone = DecodeMemZoneIdFromInt64(mem_zone_id);
         LOG(ERROR) << "machine_id: " << machine_id << ", mem_zone_id: " << mem_zone_id
-                   << ", is_gpu: " << (id_mgr->IsGpuMemZone(mem_zone_id) ? "yes" : "no")
+                   << ", is_gpu: " << (mem_zone.device_type() == DeviceType::kGPU ? "yes" : "no")
                    << ", CalcMemoryConsumed: " << calc;
       }
       if (calc >= available) {
-        const std::string device_tag = *JUST(DeviceTag4DeviceType(
-            id_mgr->IsGpuMemZone(mem_zone_id) ? DeviceType::kGPU : DeviceType::kCPU));
+        MemZoneId mem_zone = DecodeMemZoneIdFromInt64(mem_zone_id);
+        const std::string device_tag = *JUST(DeviceTag4DeviceType(mem_zone.device_type()));
         return Error::MemoryZoneOutOfMemoryError(machine_id, mem_zone_id, calc, available,
                                                  device_tag)
                << "OOM detected at compile time. ";

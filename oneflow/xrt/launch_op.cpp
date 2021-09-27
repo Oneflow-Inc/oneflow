@@ -17,13 +17,14 @@ limitations under the License.
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/xrt/api.h"
 #include "oneflow/xrt/launch_op.h"
+#include "oneflow/xrt/utility/stl.h"
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 
 namespace oneflow {
 
-void XrtLaunchOp::InitFromOpConf() {
+Maybe<void> XrtLaunchOp::InitFromOpConf() {
   CHECK(op_conf().has_xrt_launch_conf());
   const auto& launch_conf = op_conf().xrt_launch_conf();
   int inputs_num = launch_conf.in().size();
@@ -37,6 +38,7 @@ void XrtLaunchOp::InitFromOpConf() {
     EnrollInputBn(absl::StrCat("in_", i))->set_is_mutable(mutability);
   }
   if (outputs_num > 0) { EnrollRepeatedOutputBn("out"); }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> XrtLaunchOp::InferLogicalOutBlobDescs(
@@ -87,12 +89,19 @@ Maybe<void> XrtLaunchOp::InferOutBlobDescs(
   {
     // Run InferShape pass
     const auto& sbp_signatures = launch_conf.sbp_signatures();
+    xrt::util::PbMap<std::string, cfg::SbpSignature> cfg_sbp_signatures;
+    for (const auto& pair : sbp_signatures) {
+      cfg_sbp_signatures.insert({pair.first, cfg::SbpSignature(pair.second)});
+    }
     auto options = xrt::CreateDefaultXrtPassOptions();
     DeviceType device_type = JUST(DeviceType4DeviceTag(op_conf().device_tag()));
     auto graph = xrt::BuildXrtGraph(launch_conf.function(), device_type, GlobalJobDesc());
     const ParallelDesc& op_parallel_desc = *JUST(GetOpParallelDesc());
+    const xrt::util::PbMap<std::string, cfg::SbpSignature>* const_cfg_sbp_signatures_ptr =
+        &cfg_sbp_signatures;
     xrt::RunXrtPass("InferShape", graph.get(), options, &GlobalJobDesc(), parallel_ctx,
-                    &op_parallel_desc, &sbp_signatures, &lbn2logical_blob_desc, &blob_descs);
+                    &op_parallel_desc, const_cfg_sbp_signatures_ptr, &lbn2logical_blob_desc,
+                    &blob_descs);
   }
 
   // Fetch output blob descs
@@ -108,8 +117,8 @@ Maybe<void> XrtLaunchOp::InferOutBlobDescs(
 }
 
 Maybe<void> XrtLaunchOp::InferSbpSignature(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
     XrtLaunchOp::SbpInferHint4IbnFunc SbpInferHint4Ibn, const ParallelDesc& parallel_desc) const {
   *sbp_signature = sbp_sig_conf;
   // Check existence of inputs and outputs sbp parallel.

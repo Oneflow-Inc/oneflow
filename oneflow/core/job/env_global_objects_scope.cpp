@@ -34,6 +34,19 @@ limitations under the License.
 #include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/rpc/include/manager.h"
 #include "oneflow/core/transport/transport.h"
+#include "oneflow/core/device/node_device_descriptor_manager.h"
+#include "oneflow/core/vm/symbol_storage.h"
+#include "oneflow/core/framework/multi_client_session_context.h"
+#include "oneflow/core/framework/symbol_id_cache.h"
+#include "oneflow/core/operator/op_node_signature.cfg.h"
+#include "oneflow/core/operator/op_conf.cfg.h"
+#include "oneflow/core/comm_network/comm_network.h"
+#include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
+#include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
+#include "oneflow/core/kernel/kernel_observer_manager.h"
+#ifdef WITH_RDMA
+#include "oneflow/core/platform/include/ibv.h"
+#endif  // WITH_RDMA
 
 namespace oneflow {
 
@@ -46,13 +59,8 @@ std::string LogDir(const std::string& log_dir) {
   return v;
 }
 
-void InitLogging(const CppLoggingConf& logging_conf, bool default_physical_env) {
-  if (!default_physical_env) {
-    FLAGS_log_dir = LogDir(logging_conf.log_dir());
-  } else {
-    std::string default_env_log_path = JoinPath(logging_conf.log_dir(), "default_physical_env_log");
-    FLAGS_log_dir = LogDir(default_env_log_path);
-  }
+void InitLogging(const CppLoggingConf& logging_conf) {
+  FLAGS_log_dir = LogDir(logging_conf.log_dir());
   FLAGS_logtostderr = logging_conf.logtostderr();
   FLAGS_logbuflevel = logging_conf.logbuflevel();
   FLAGS_stderrthreshold = 1;  // 1=WARNING
@@ -84,12 +92,42 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
   return resource;
 }
 
+void ClearAllSymbolAndIdCache() {
+  Global<symbol::Storage<StringSymbol>>::Get()->ClearAll();
+  Global<symbol::IdCache<std::string>>::Get()->ClearAll();
+
+  Global<symbol::Storage<Scope>>::Get()->ClearAll();
+  Global<symbol::IdCache<cfg::ScopeProto>>::Get()->ClearAll();
+
+  Global<symbol::Storage<JobDesc>>::Get()->ClearAll();
+  Global<symbol::IdCache<cfg::JobConfigProto>>::Get()->ClearAll();
+
+  Global<symbol::Storage<ParallelDesc>>::Get()->ClearAll();
+  Global<symbol::IdCache<cfg::ParallelConf>>::Get()->ClearAll();
+
+  Global<symbol::Storage<OperatorConfSymbol>>::Get()->ClearAll();
+  Global<symbol::IdCache<cfg::OperatorConf>>::Get()->ClearAll();
+  Global<symbol::Storage<OpNodeSignatureDesc>>::Get()->ClearAll();
+  Global<symbol::IdCache<cfg::OpNodeSignature>>::Get()->ClearAll();
+}
+
+#if defined(__linux__) && defined(WITH_RDMA)
+
+bool CommNetIBEnabled() {
+  bool user_enabled = ParseBooleanFromEnv("ONEFLOW_COMM_NET_IB_ENABLE", false);
+  if (user_enabled) {
+    return ibv::IsAvailable();
+  } else {
+    return false;
+  }
+}
+
+#endif
+
 }  // namespace
 
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
-  thread_id_ = std::this_thread::get_id();
-  is_default_physical_env_ = env_proto.is_default_physical_env();
-  InitLogging(env_proto.cpp_logging_conf(), JUST(is_default_physical_env_));
+  InitLogging(env_proto.cpp_logging_conf());
 #ifdef WITH_CUDA
   InitGlobalCudaDeviceProp();
 #endif
@@ -129,36 +167,70 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
                                     GlobalProcessCtx::NumOfProcessPerNode());
   Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto),
                                         GlobalProcessCtx::NumOfProcessPerNode());
+  Global<device::NodeDeviceDescriptorManager>::SetAllocated(
+      new device::NodeDeviceDescriptorManager());
+  if (Global<ResourceDesc, ForEnv>::Get()->enable_debug_mode()) {
+    Global<device::NodeDeviceDescriptorManager>::Get()->DumpSummary("devices");
+  }
   Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
-  Global<vm::VirtualMachineScope>::New(Global<ResourceDesc, ForSession>::Get()->resource());
-  Global<EagerJobBuildAndInferCtxMgr>::New();
 #ifdef WITH_CUDA
   Global<EagerNcclCommMgr>::New();
   Global<CudnnConvAlgoCache>::New();
 #endif
+  Global<vm::VirtualMachineScope>::New(Global<ResourceDesc, ForSession>::Get()->resource());
+  Global<EagerJobBuildAndInferCtxMgr>::New();
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+#ifdef __linux__
     Global<EpollCommNet>::New();
     Global<Transport>::New();
+    if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
+#ifdef WITH_RDMA
+      if (CommNetIBEnabled()) {
+        Global<IBVerbsCommNet>::New();
+        Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get());
+      } else {
+        Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get());
+      }
+#else
+      Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get());
+#endif  // WITH_RDMA
+    }
+#endif  // __linux__
   }
+  Global<KernelObserver>::SetAllocated(new KernelObserverManager());
   return Maybe<void>::Ok();
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
+  auto session_ctx = Global<MultiClientSessionContext>::Get();
+  if (session_ctx != nullptr) {
+    VLOG(2) << "Multi client session has not closed , env close it at env scope destruction.";
+    CHECK_JUST(session_ctx->TryClose());
+  }
+  Global<KernelObserver>::Delete();
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+#ifdef __linux__
+    if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
+      if (Global<EpollCommNet>::Get() != static_cast<EpollCommNet*>(Global<CommNet>::Get())) {
+        Global<CommNet>::Delete();
+      }
+    }
     Global<Transport>::Delete();
     Global<EpollCommNet>::Delete();
+#endif  // __linux__
   }
+  Global<EagerJobBuildAndInferCtxMgr>::Delete();
+  Global<vm::VirtualMachineScope>::Delete();
 #ifdef WITH_CUDA
   Global<CudnnConvAlgoCache>::Delete();
   Global<EagerNcclCommMgr>::Delete();
 #endif
-  Global<EagerJobBuildAndInferCtxMgr>::Delete();
-  Global<vm::VirtualMachineScope>::Delete();
   Global<ThreadPool>::Delete();
   if (Global<ResourceDesc, ForSession>::Get() != nullptr) {
     Global<ResourceDesc, ForSession>::Delete();
   }
   Global<ResourceDesc, ForEnv>::Delete();
+  Global<device::NodeDeviceDescriptorManager>::Delete();
   CHECK_NOTNULL(Global<CtrlClient>::Get());
   CHECK_NOTNULL(Global<EnvDesc>::Get());
   Global<RpcManager>::Delete();
@@ -167,24 +239,8 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
 #ifdef WITH_CUDA
   Global<cudaDeviceProp>::Delete();
 #endif
+  ClearAllSymbolAndIdCache();
   google::ShutdownGoogleLogging();
-}
-
-const std::shared_ptr<const ParallelDesc>& EnvGlobalObjectsScope::MutParallelDesc4Device(
-    const Device& device) {
-  CHECK(thread_id_ == std::this_thread::get_id());
-  {
-    const auto& iter = device2parallel_desc_.find(device);
-    if (iter != device2parallel_desc_.end()) { return iter->second; }
-  }
-  std::string machine_device_id =
-      "@" + std::to_string(GlobalProcessCtx::Rank()) + ":" + std::to_string(device.device_id());
-  ParallelConf parallel_conf;
-  parallel_conf.set_device_tag(CHECK_JUST(device.of_type()));
-  parallel_conf.add_device_name(machine_device_id);
-  std::shared_ptr<const ParallelDesc> parallel_desc =
-      std::make_shared<const ParallelDesc>(parallel_conf);
-  return device2parallel_desc_.emplace(device, parallel_desc).first->second;
 }
 
 }  // namespace oneflow

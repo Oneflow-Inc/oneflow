@@ -1,7 +1,10 @@
 include(ExternalProject)
 
-set(GRPC_INCLUDE_DIR ${THIRD_PARTY_DIR}/grpc/include)
-set(GRPC_LIBRARY_DIR ${THIRD_PARTY_DIR}/grpc/lib)
+set(GRPC_INSTALL_DIR ${THIRD_PARTY_DIR}/grpc)
+set(GRPC_INSTALL_INCLUDE_DIR include)
+set(GRPC_INSTALL_LIBRARY_DIR lib)
+set(GRPC_INCLUDE_DIR ${THIRD_PARTY_DIR}/grpc/${GRPC_INSTALL_INCLUDE_DIR})
+set(GRPC_LIBRARY_DIR ${THIRD_PARTY_DIR}/grpc/${GRPC_INSTALL_LIBRARY_DIR})
 
 set(GRPC_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/include)
 SET(GRPC_TAR_URL https://github.com/grpc/grpc/archive/v1.27.3.tar.gz)
@@ -10,28 +13,23 @@ set(GRPC_URL_HASH 0c6c3fc8682d4262dd0e5e6fabe1a7e2)
 SET(GRPC_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc)
 
 if(WIN32)
-    set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/${CMAKE_BUILD_TYPE})
     set(GRPC_LIBRARY_NAMES grpc++_unsecure.lib
-      grpc_unsecure.lib gpr.lib upb.lib address_sorting.lib)
+      grpc_unsecure.lib gpr.lib upb.lib address_sorting.lib cares.lib)
 elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
-    set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/${CMAKE_BUILD_TYPE})
     set(GRPC_LIBRARY_NAMES libgrpc++_unsecure.a
-      libgrpc_unsecure.a libgpr.a libupb.a libaddress_sorting.a)
+      libgrpc_unsecure.a libgpr.a libupb.a libaddress_sorting.a libcares.a)
 else()
     include(GNUInstallDirs)
-    set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc)
     set(GRPC_LIBRARY_NAMES libgrpc++_unsecure.a
-      libgrpc_unsecure.a libgpr.a libupb.a libaddress_sorting.a)
+      libgrpc_unsecure.a libgpr.a libupb.a libaddress_sorting.a libcares.a)
 endif()
 
 foreach(LIBRARY_NAME ${GRPC_LIBRARY_NAMES})
     list(APPEND GRPC_STATIC_LIBRARIES ${GRPC_LIBRARY_DIR}/${LIBRARY_NAME})
-    list(APPEND GRPC_BUILD_STATIC_LIBRARIES ${GRPC_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
-set(PROTOBUF_CONFIG_DIR ${PROTOBUF_BUILD_LIBRARY_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/protobuf)
+set(PROTOBUF_CONFIG_DIR ${PROTOBUF_LIBRARY_DIR}/cmake/protobuf)
 set(ABSL_CONFIG_DIR ${ABSL_INSTALL}/${CMAKE_INSTALL_LIBDIR}/cmake/absl)
-set(CARES_CONFIG_DIR ${CARES_INSTALL}/lib/cmake/c-ares)
 
 if(THIRD_PARTY)
 
@@ -39,49 +37,44 @@ include(ProcessorCount)
 ProcessorCount(PROC_NUM)
 ExternalProject_Add(grpc
     PREFIX ${GRPC_SOURCE_DIR}
-    DEPENDS protobuf absl cares openssl zlib zlib_copy_headers_to_destination
+    DEPENDS protobuf absl cares openssl zlib
     URL ${GRPC_TAR_URL}
     URL_HASH MD5=${GRPC_URL_HASH}
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
-    BUILD_COMMAND make -j${PROC_NUM} grpc grpc_unsecure grpc++_unsecure
-    INSTALL_COMMAND ""
+    BUILD_BYPRODUCTS ${GRPC_STATIC_LIBRARIES}
+    BUILD_COMMAND ${CMAKE_COMMAND} --build . -j ${PROC_NUM} --target grpc && ${CMAKE_COMMAND} --build . -j ${PROC_NUM} --target grpc_unsecure && ${CMAKE_COMMAND} --build . -j ${PROC_NUM} --target grpc++_unsecure
     CMAKE_CACHE_ARGS
+        -DCMAKE_C_COMPILER_LAUNCHER:STRING=${CMAKE_C_COMPILER_LAUNCHER}
+        -DCMAKE_CXX_COMPILER_LAUNCHER:STRING=${CMAKE_CXX_COMPILER_LAUNCHER}
+        -DCMAKE_POLICY_DEFAULT_CMP0074:STRING=NEW
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
         -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
         -DCMAKE_CXX_FLAGS_RELEASE:STRING=${CMAKE_CXX_FLAGS_RELEASE}
         -DCMAKE_C_FLAGS_DEBUG:STRING=${CMAKE_C_FLAGS_DEBUG}
         -DCMAKE_C_FLAGS_RELEASE:STRING=${CMAKE_C_FLAGS_RELEASE}
+        -DgRPC_INSTALL:BOOL=ON
         -DCMAKE_VERBOSE_MAKEFILE:BOOL=OFF
         -DgRPC_BUILD_TESTS:BOOL=OFF
+        -DgRPC_BUILD_GRPC_CPP_PLUGIN:BOOL=ON
+        -DgRPC_BUILD_GRPC_CSHARP_PLUGIN:BOOL=OFF
+        -DgRPC_BUILD_GRPC_NODE_PLUGIN:BOOL=OFF
+        -DgRPC_BUILD_GRPC_OBJECTIVE_C_PLUGIN:BOOL=OFF
+        -DgRPC_BUILD_GRPC_PHP_PLUGIN:BOOL=OFF
+        -DgRPC_BUILD_GRPC_PYTHON_PLUGIN:BOOL=OFF
+        -DgRPC_BUILD_GRPC_RUBY_PLUGIN:BOOL=OFF
         -DgRPC_ABSL_PROVIDER:STRING=package
         -Dabsl_DIR:PATH=${ABSL_CONFIG_DIR}
         -DgRPC_PROTOBUF_PROVIDER:STRING=package
         -DgRPC_PROTOBUF_PACKAGE_TYPE:STRING=CONFIG
+        -DProtobuf_ROOT:STRING=${PROTOBUF_INSTALL_DIR}
         -DProtobuf_DIR:PATH=${PROTOBUF_CONFIG_DIR}
-        -DgRPC_CARES_PROVIDER:STRING=package
-        -Dc-ares_DIR:PATH=${CARES_CONFIG_DIR}
+        -DgRPC_CARES_PROVIDER:STRING=module
+        -DCARES_ROOT_DIR:PATH=${CARES_SOURCE_DIR}
         -DgRPC_ZLIB_PROVIDER:STRING=package
         -DZLIB_ROOT:PATH=${ZLIB_INSTALL}
         -DgRPC_SSL_PROVIDER:STRING=package
-        -DOPENSSL_ROOT_DIR:PATH=${OPENSSL_INSTALL}
+        -DOpenSSL_ROOT:PATH=${OPENSSL_INSTALL}
+        -DCMAKE_INSTALL_PREFIX:STRING=${GRPC_INSTALL_DIR}
 )
-
-add_custom_target(grpc_create_library_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${GRPC_LIBRARY_DIR}
-  DEPENDS grpc)
-
-add_custom_target(grpc_copy_headers_to_destination
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/include ${THIRD_PARTY_DIR}/grpc/include
-  DEPENDS grpc_create_library_dir)
-
-add_custom_target(grpc_copy_libs_to_destination
-  DEPENDS grpc_create_library_dir)
-
-foreach(LIBRARY_NAME ${GRPC_LIBRARY_NAMES})
-  add_custom_command(TARGET grpc_copy_libs_to_destination
-    COMMAND ${CMAKE_COMMAND} -E create_symlink ${GRPC_BUILD_LIBRARY_DIR}/${LIBRARY_NAME}
-    ${GRPC_LIBRARY_DIR}/${LIBRARY_NAME})
-endforeach()
-
 endif(THIRD_PARTY)

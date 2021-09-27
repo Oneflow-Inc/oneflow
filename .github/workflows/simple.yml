@@ -1,0 +1,252 @@
+name: Simple CI
+on:
+  pull_request:
+    types: [review_requested]
+    branches:
+      - "*"
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+    inputs:
+      placeholder:
+        description: "placeholder, no effect"
+        required: false
+jobs:
+  cancel_previous:
+    name: Cancel previous runs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel previous runs of outdated commit
+        if: github.ref != 'refs/heads/master'
+        uses: styfle/cancel-workflow-action@0.9.0
+        with:
+          access_token: ${{ github.token }}
+
+  static_analysis_with_clang:
+    name: Static analysis with clang
+    runs-on: ubuntu-20.04
+    if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'need-simple-ci'))
+    steps:
+      - name: Check out OneFlow
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libopenblas-dev nasm python3-pip ninja-build
+      - name: Download OneFlow custom clang-tidy
+        run: |
+          wget https://github.com/Oneflow-Inc/llvm-project/releases/download/latest/clang-tidy-489012f-x86_64.AppImage
+          wget https://raw.githubusercontent.com/oneflow-inc/llvm-project/maybe/clang-tools-extra/clang-tidy/tool/run-clang-tidy.py
+          chmod +x clang-tidy-489012f-x86_64.AppImage run-clang-tidy.py
+      - name: Build third party libs and generate files
+        run: |
+          mkdir build
+          cd build
+          cmake .. -C ../cmake/caches/international/cpu.cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON
+          cmake --build . -j$(nproc) --target oneflow_deps of_cfgobj of_protoobj of_functional_obj
+      - name: Run clang-tidy for all translation units
+        # use clang as compiler for correct compiler flags
+        run: |
+          cd build
+          rm CMakeCache.txt
+          cmake .. -C ../cmake/caches/international/cpu.cmake \
+            -DCMAKE_C_COMPILER=clang-12 \
+            -DCMAKE_CXX_COMPILER=clang++-12 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          cd ..
+          ./run-clang-tidy.py -clang-tidy-binary ./clang-tidy-489012f-x86_64.AppImage -p build -quiet -allow-enabling-alpha-checkers -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" "^(?!$(pwd)/build)"
+
+  hosted:
+    name: CPU-only
+    if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'need-simple-ci'))
+    runs-on: ${{ matrix.os }}
+    needs: [cancel_previous]
+    env:
+      CFLAGS: "-w"
+      CXXFLAGS: "-w"
+    strategy:
+      fail-fast: true
+      max-parallel: 3
+      matrix:
+        test_suite: ["conda", "mac", "ubuntu"]
+        cmake_generator: ["Ninja", "Unix Makefiles"]
+        cmake_build_type: ["Debug", "Release"]
+        build_shared_libs: ["ON", "OFF"]
+        include:
+          - test_suite: conda
+            os: "ubuntu-20.04"
+            make_concurrency: 2
+          - test_suite: mac
+            os: "macos-10.15"
+            make_concurrency: 2
+          - test_suite: ubuntu
+            os: "ubuntu-20.04"
+            make_concurrency: 2
+        exclude:
+          - test_suite: conda
+            cmake_generator: "Ninja"
+          - test_suite: mac
+            cmake_build_type: "Debug"
+          - test_suite: ubuntu
+            cmake_generator: "Ninja"
+            cmake_build_type: "Debug"
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Install dependencies (homebrew)
+        if: matrix.test_suite == 'mac'
+        run: |
+          brew install nasm ninja
+      - name: Install dependencies (apt)
+        if: matrix.test_suite == 'ubuntu'
+        run: |
+          sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip ninja-build
+      - name: Cache pip (Linux)
+        if: startsWith(runner.os, 'Linux') && matrix.test_suite != 'conda'
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ matrix.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+      - name: Cache pip (macOS)
+        if: startsWith(runner.os, 'macOS')
+        uses: actions/cache@v2
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ matrix.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+      - name: Install dependencies (pip)
+        if: matrix.test_suite != 'conda'
+        run: |
+          python3 -m pip install -r ci/requirements.txt
+          python3 -m pip install -r dev-requirements.txt
+      - name: Download conda environment.yml
+        if: matrix.test_suite == 'conda'
+        run: |
+          wget https://raw.githubusercontent.com/Oneflow-Inc/conda-env/5b985c863ef73fc3f3b597289fdcf740d52cf71c/dev/gcc7/environment.yml
+      - uses: conda-incubator/setup-miniconda@v2
+        if: matrix.test_suite == 'conda'
+        name: Setup conda
+        with:
+          activate-environment: oneflow-dev-gcc7
+          environment-file: environment.yml
+          python-version: 3.6
+          auto-activate-base: false
+      - name: Set environment variables (conda)
+        if: matrix.test_suite == 'conda'
+        run: |
+          conda env config vars set CXXFLAGS="-w -fPIC"
+        shell: bash -l {0}
+      - name: Set environment variables
+        run: |
+          set -x
+          cmake_flags=""
+          cmake_flags+=" -DBUILD_CUDA=OFF"
+          cmake_flags+=" -DBUILD_TESTING=ON"
+          cmake_flags+=" -G '${{ matrix.cmake_generator }}'"
+          cmake_flags+=" -DCMAKE_BUILD_TYPE=${{ matrix.cmake_build_type }}"
+          cmake_flags+=" -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs }}"
+          cmake_flags+=" -DCMAKE_MACOSX_RPATH=FALSE"
+          cmake_flags+=" -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
+          echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
+        shell: bash -l {0}
+      - name: Build (third party)
+        if: matrix.cmake_generator != 'Ninja'
+        run: |
+          set -x
+          mkdir -p build-third_party
+          mkdir -p third_party_install
+          cd build-third_party
+          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=ON -DONEFLOW=OFF -DTHIRD_PARTY_DIR=$PWD/../third_party_install
+          cmake --build . -j $(nproc)
+        shell: bash -l {0}
+      - name: Build (of_ccobj)
+        if: matrix.cmake_generator != 'Ninja'
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON -DTHIRD_PARTY_DIR=$PWD/../third_party_install
+          cmake --build . -j ${{ matrix.make_concurrency }} --target of_ccobj
+        shell: bash -l {0}
+      - name: Build (oneflow_internal)
+        if: always() && matrix.cmake_generator != 'Ninja'
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
+          cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_internal
+        shell: bash -l {0}
+      - name: Build (oneflow_py)
+        if: always() && matrix.cmake_generator != 'Ninja'
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
+          cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_py
+        shell: bash -l {0}
+      - name: Build (oneflow_testexe)
+        if: always() && matrix.cmake_generator != 'Ninja'
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
+          cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_testexe
+        shell: bash -l {0}
+      - name: Build (ALL)
+        if: always()
+        continue-on-error: ${{ startsWith(runner.os, 'macOS') && matrix.cmake_generator == 'Ninja' && matrix.build_shared_libs == 'ON' }}
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. ${{ env.cmake_flags }}
+          cmake --build . -j ${{ matrix.make_concurrency }}
+        shell: bash -l {0}
+      - name: Exe test
+        if: always()
+        continue-on-error: true
+        run: |
+          ulimit -c
+          ulimit -c unlimited
+          ulimit -c
+          mkdir -p build
+          cd build
+          ./bin/oneflow_testexe
+        shell: bash -l {0}
+      - name: Op test
+        if: always()
+        continue-on-error: true
+        run: |
+          ulimit -c
+          ulimit -c unlimited
+          ulimit -c
+          source build/source.sh
+          ONEFLOW_TEST_GITHUB_HOSTED=1 ONEFLOW_TEST_CPU_ONLY=1 bash ci/test/1node_op_test.sh
+        shell: bash -l {0}
+      - name: "Tar logs"
+        if: always() && contains(github.event.pull_request.labels.*.name, 'need-simple-ci-upload-artifact')
+        continue-on-error: true
+        run: |
+          set -ex
+          if [[ -d "${HOME}/oneflow_temp" ]]
+          then
+              tar -cvf home_oneflow_temp.tar ${HOME}/oneflow_temp
+          fi
+          if [[ -d "${PWD}/test_tmp_dir" ]]
+          then
+              tar -cvf cwd_test_tmp_dir.tar ${PWD}/test_tmp_dir
+          fi
+      - name: Upload logs
+        if: always() && contains(github.event.pull_request.labels.*.name, 'need-simple-ci-upload-artifact')
+        uses: actions/upload-artifact@v2
+        with:
+          name: logs-${{ matrix.test_suite }}-${{ matrix.cmake_generator }}-${{ matrix.cmake_build_type }}-shared-${{ matrix.build_shared_libs }}
+          path: |
+            home_oneflow_temp.tar
+            cwd_test_tmp_dir.tar

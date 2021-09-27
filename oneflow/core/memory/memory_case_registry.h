@@ -61,7 +61,7 @@ struct MemCaseRegisterHelper {
 class MemCaseIdGeneratorRegistry final {
  public:
   using self_t = MemCaseIdGeneratorRegistry;
-  using key_t = const MemoryCase&;
+  using key_t = const MemCase&;
   using matcher_t = std::function<bool(key_t)>;
   using generator_t = std::function<MemCaseId(key_t)>;
 
@@ -87,7 +87,7 @@ class MemCaseIdToProtoRegistry final {
   using self_t = MemCaseIdToProtoRegistry;
   using key_t = const MemCaseId&;
   using matcher_t = std::function<bool(key_t)>;
-  using to_proto_t = std::function<void(key_t, MemoryCase*)>;
+  using to_proto_t = std::function<void(key_t, MemCase*)>;
 
   self_t& SetMatcher(matcher_t matcher) {
     matcher_ = std::move(matcher);
@@ -99,7 +99,7 @@ class MemCaseIdToProtoRegistry final {
     to_proto_ = std::move(to_proto);
     return *this;
   }
-  void ToProto(key_t key, MemoryCase* mem_case) const { to_proto_(key, mem_case); }
+  void ToProto(key_t key, MemCase* mem_case) const { to_proto_(key, mem_case); }
 
  private:
   matcher_t matcher_;
@@ -109,9 +109,9 @@ class MemCaseIdToProtoRegistry final {
 class PageLockedMemCaseRegistry final {
  public:
   using self_t = PageLockedMemCaseRegistry;
-  using key_t = const MemoryCase&;
+  using key_t = const MemCase&;
   using matcher_t = std::function<bool(key_t)>;
-  using page_locker_t = std::function<void(key_t, MemoryCase*)>;
+  using page_locker_t = std::function<void(key_t, MemCase*)>;
 
   self_t& SetMatcher(matcher_t matcher) {
     matcher_ = std::move(matcher);
@@ -123,7 +123,7 @@ class PageLockedMemCaseRegistry final {
     page_locker_ = std::move(page_locker);
     return *this;
   }
-  void PageLock(key_t key, MemoryCase* page_locked_mem_case) const {
+  void PageLock(key_t key, MemCase* page_locked_mem_case) const {
     return page_locker_(key, page_locked_mem_case);
   }
 
@@ -135,9 +135,9 @@ class PageLockedMemCaseRegistry final {
 class PatchMemCaseRegistry final {
  public:
   using self_t = PatchMemCaseRegistry;
-  using key_t = const MemoryCase&;
+  using key_t = const MemCase&;
   using matcher_t = std::function<bool(key_t)>;
-  using patcher_t = std::function<bool(key_t, MemoryCase*)>;
+  using patcher_t = std::function<bool(key_t, MemCase*)>;
 
   self_t& SetMatcher(matcher_t matcher) {
     matcher_ = std::move(matcher);
@@ -149,7 +149,7 @@ class PatchMemCaseRegistry final {
     patcher_ = std::move(patcher);
     return *this;
   }
-  bool Patch(key_t key, MemoryCase* dst_mem_case) const { return patcher_(key, dst_mem_case); }
+  bool Patch(key_t key, MemCase* dst_mem_case) const { return patcher_(key, dst_mem_case); }
 
  private:
   matcher_t matcher_;

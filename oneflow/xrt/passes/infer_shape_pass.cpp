@@ -32,14 +32,14 @@ namespace shape_inference {
 
 void InferShape(XrtGraph* graph, const XrtPassOptions& options, const JobDesc* job_desc,
                 const ParallelContext* parallel_ctx, const ParallelDesc* parallel_desc,
-                const util::PbMap<std::string, SbpSignature>* sbp_signatures,
+                const util::PbMap<std::string, cfg::SbpSignature>* sbp_signatures,
                 const util::PbMap<std::string, BlobDescProto>* lbn2logical_blob_desc_proto,
                 util::Map<std::string, BlobDesc>* blob_descs) {
   algorithm::TopologyVisit(*graph, [&](XrtNode* node) {
     if (!node->IsArgumentNode()) {
       DeviceType device_type = XrtDeviceToDeviceType(node->device());
       const auto& conf = *dynamic_cast<const OperatorConf*>(&node->param());
-      auto op = ConstructOp(conf, device_type);
+      auto op = CHECK_JUST(ConstructOp(conf, device_type));
       CHECK_JUST(op->FillOpParallelDesc(*parallel_desc));
       auto get_blob_desc_fn = [&](const std::string& bn) -> BlobDesc* {
         const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);
@@ -65,7 +65,7 @@ void InferShape(XrtGraph* graph, const XrtPassOptions& options, const JobDesc* j
       };
       CHECK_JUST(op->FillLogicalInBlobDesc(GetLogicalBlobDesc4BnInOp));
       CHECK_JUST(op->FillLogicalOutBlobDesc(GetLogicalBlobDesc4BnInOp));
-      const SbpSignature& sbp_signature = sbp_signatures->at(node->name());
+      const cfg::SbpSignature& sbp_signature = sbp_signatures->at(node->name());
       CHECK_JUST(op->FillSbpSignature(sbp_signature));
       CHECK_JUST(op->InferOutBlobDescsIf(get_blob_desc_fn, parallel_ctx));
     }
@@ -95,7 +95,8 @@ class InferShapePass : public XrtPass {
     const auto* job_desc = any_cast<const JobDesc*>(params[0]);
     const auto* parallel_ctx = any_cast<const ParallelContext*>(params[1]);
     const auto* parallel_desc = any_cast<const ParallelDesc*>(params[2]);
-    const auto* sbp_signatures = any_cast<const util::PbMap<std::string, SbpSignature>*>(params[3]);
+    const auto* sbp_signatures =
+        any_cast<const util::PbMap<std::string, cfg::SbpSignature>*>(params[3]);
     const auto* lbn2logical_blob_desc_proto =
         any_cast<const util::PbMap<std::string, BlobDescProto>*>(params[4]);
     auto* blob_descs = any_cast<util::Map<std::string, BlobDesc>*>(params[5]);

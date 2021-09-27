@@ -4,7 +4,7 @@ RUN apt remove openmpi-common libfabric1 openmpi-bin librdmacm1:amd64 libopenmpi
 ENV MOFED_DIR MLNX_OFED_LINUX-4.3-1.0.1.0-ubuntu18.04-x86_64
 RUN wget https://oneflow-static.oss-cn-beijing.aliyuncs.com/deps/${MOFED_DIR}.tgz && \
     tar -xzvf ${MOFED_DIR}.tgz && \
-    ${MOFED_DIR}/mlnxofedinstall --user-space-only --without-fw-update --all -q && \
+    ${MOFED_DIR}/mlnxofedinstall --user-space-only --without-fw-update --all -q --force && \
     cd .. && \
     rm -rf ${MOFED_DIR} && \
     rm -rf *.tgz

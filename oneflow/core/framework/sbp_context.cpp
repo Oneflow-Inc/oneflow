@@ -21,15 +21,15 @@ namespace oneflow {
 
 namespace {
 
-inline void SplitImpl(SbpSignature* sbp_sign, const std::string& bn, int64_t axis) {
+inline void SplitImpl(cfg::SbpSignature* sbp_sign, const std::string& bn, int64_t axis) {
   (*sbp_sign->mutable_bn_in_op2sbp_parallel())[bn].mutable_split_parallel()->set_axis(axis);
 }
 
-inline void BroadcastImpl(SbpSignature* sbp_sign, const std::string& bn) {
+inline void BroadcastImpl(cfg::SbpSignature* sbp_sign, const std::string& bn) {
   (*sbp_sign->mutable_bn_in_op2sbp_parallel())[bn].mutable_broadcast_parallel();
 }
 
-inline void PartialSumImpl(SbpSignature* sbp_sign, const std::string& bn) {
+inline void PartialSumImpl(cfg::SbpSignature* sbp_sign, const std::string& bn) {
   (*sbp_sign->mutable_bn_in_op2sbp_parallel())[bn].mutable_partial_sum_parallel();
 }
 
@@ -111,6 +111,41 @@ Maybe<void> GetSbpFnUtil::SplitForEachAxis(SbpContext* ctx) {
   for (int64_t axis = 0; axis < num_axes; ++axis) {
     ctx->NewBuilder().Split(inputs, axis).Split(ctx->outputs(), axis).Build();
   }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferNdSbp4SrcOp(user_op::InferNdSbpFnContext* ctx,
+                             const cfg::SbpParallel& default_sbp) {
+  const Shape& hierarchy = ctx->parallel_hierarchy();
+  const auto& sbp_str_list = ctx->user_op_conf().attr<std::vector<std::string>>("nd_sbp");
+
+  // src op may have tick inputs whose sbp should be broadcast
+  for (const auto& input_arg : ctx->inputs()) {
+    cfg::NdSbp* input_nd_sbp = ctx->NdSbp4ArgNameAndIndex(input_arg.first, input_arg.second);
+    FOR_RANGE(int, i, 0, hierarchy.NumAxes()) {
+      input_nd_sbp->add_sbp_parallel()->mutable_broadcast_parallel();
+    }
+  }
+
+  for (const auto& output_arg : ctx->outputs()) {
+    cfg::NdSbp* output_nd_sbp = ctx->NdSbp4ArgNameAndIndex(output_arg.first, output_arg.second);
+    size_t nd_sbp_size = sbp_str_list.size();
+    if (nd_sbp_size == 0) {
+      nd_sbp_size = hierarchy.NumAxes();
+    } else {
+      CHECK_EQ_OR_RETURN(nd_sbp_size, hierarchy.NumAxes());
+    }
+    FOR_RANGE(size_t, i, 0, nd_sbp_size) {
+      cfg::SbpParallel* sbp = output_nd_sbp->add_sbp_parallel();
+      if (sbp_str_list.size() == 0) {
+        *sbp = default_sbp;
+      } else {
+        CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_str_list[i], sbp));
+      }
+      CHECK_OR_RETURN(sbp->has_split_parallel() || sbp->has_broadcast_parallel());
+    }
+  }
+
   return Maybe<void>::Ok();
 }
 

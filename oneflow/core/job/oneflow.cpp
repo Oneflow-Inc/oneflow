@@ -24,12 +24,10 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/job_set.pb.h"
-#include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/sub_plan.pb.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
-#include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/model_io_v2_job.h"
 #include "oneflow/core/job/model_io_job.h"
@@ -42,6 +40,7 @@ limitations under the License.
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
 
 namespace std {
 
@@ -58,10 +57,25 @@ struct hash<oneflow::ParallelBlobConf> {
 
 namespace oneflow {
 
+bool operator==(const SbpParallel& lhs, const SbpParallel& rhs) {
+  return lhs.parallel_type_case() == rhs.parallel_type_case();
+}
+
+bool operator!=(const SbpParallel& lhs, const SbpParallel& rhs) { return !(lhs == rhs); }
+
+bool operator==(const NdSbp& lhs, const NdSbp& rhs) {
+  if (lhs.sbp_parallel().size() != rhs.sbp_parallel().size()) { return false; }
+  for (int i = 0; i < lhs.sbp_parallel().size(); ++i) {
+    if (lhs.sbp_parallel().Get(i) != rhs.sbp_parallel().Get(i)) { return false; }
+  }
+  return true;
+}
+
+bool operator!=(const NdSbp& lhs, const NdSbp& rhs) { return !(lhs == rhs); }
+
 bool operator==(const ParallelBlobConf& lhs, const ParallelBlobConf& rhs) {
   return BlobDesc(lhs.logical_blob_desc_conf()) == BlobDesc(rhs.logical_blob_desc_conf())
-         && lhs.parallel_conf() == rhs.parallel_conf()
-         && lhs.parallel_distribution() == rhs.parallel_distribution();
+         && lhs.parallel_conf() == rhs.parallel_conf() && lhs.nd_sbp() == rhs.nd_sbp();
 }
 
 namespace {
@@ -84,8 +98,6 @@ std::string cluster_thrd_ids_key(const std::string& plan_name) {
   return plan_name + "_cluster_thrd_ids";
 }
 
-std::string net_topo_key(const std::string& plan_name) { return plan_name + "_net_topo"; }
-
 std::string ctrl_regst_desc_info_key(const std::string& plan_name) {
   return plan_name + "_ctrl_regst_desc_info_key";
 }
@@ -102,30 +114,6 @@ std::string sub_plan_key(const std::string& plan_name, int64_t machine_id, int64
 
 std::string block7chunk_key(const std::string& plan_name, int64_t machine_id) {
   return plan_name + "_" + std::to_string(machine_id) + "_block7chunk";
-}
-
-void PopulateOpAttibute(
-    Plan* plan,
-    const PbMap<int64_t, ::oneflow::OpAttributeRefTable>& job_id2op_attribute_ref_table) {
-  for (auto& task : *plan->mutable_task()) {
-    if (task.exec_sequence().exec_node_size() == 1
-        && task.exec_sequence().exec_node(0).kernel_conf().has_op_attribute_ref()) {
-      auto* kernel_conf = task.mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
-      auto table_it = job_id2op_attribute_ref_table.find(task.job_id());
-      CHECK(table_it != job_id2op_attribute_ref_table.end())
-          << "op attribute ref table not found for job id: " << task.job_id();
-      auto it = table_it->second.op_name2op_attribute().find(kernel_conf->op_attribute_ref());
-      CHECK(it != table_it->second.op_name2op_attribute().end())
-          << "ref: " << kernel_conf->op_attribute_ref() << " not found";
-      *kernel_conf->mutable_op_attribute() = it->second;
-      kernel_conf->clear_op_attribute_ref();
-    } else {
-      for (auto& exec_node : task.exec_sequence().exec_node()) {
-        CHECK(exec_node.kernel_conf().has_op_attribute())
-            << "op_attribute absent, exec_node: " << exec_node.DebugString();
-      }
-    }
-  }
 }
 
 void PushPlan(const std::string& plan_name, Plan&& plan) {
@@ -172,7 +160,6 @@ void PushPlan(const std::string& plan_name, Plan&& plan) {
     Global<CtrlClient>::Get()->PushKV(block7chunk_key(plan_name, pair.first), pair.second);
   }
 
-  Global<CtrlClient>::Get()->PushKV(net_topo_key(plan_name), plan.net_topo());
   Global<CtrlClient>::Get()->PushKV(ctrl_regst_desc_info_key(plan_name),
                                     plan.ctrl_regst_desc_info());
   Global<CtrlClient>::Get()->PushKV(job_id2job_conf(plan_name), plan.job_confs());
@@ -195,9 +182,6 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
     Global<CtrlClient>::Get()->PullKV(sub_plan_key(plan_name, machine_id, thrd_id), &sub_plan);
     plan->mutable_task()->MergeFrom(sub_plan.task());
   }
-  NetTopo net_topo;
-  Global<CtrlClient>::Get()->PullKV(net_topo_key(plan_name), &net_topo);
-  *(plan->mutable_net_topo()) = net_topo;
   CtrlRegstDescInfo ctrl_regst_desc_info;
   Global<CtrlClient>::Get()->PullKV(ctrl_regst_desc_info_key(plan_name), &ctrl_regst_desc_info);
   *(plan->mutable_ctrl_regst_desc_info()) = ctrl_regst_desc_info;
@@ -213,155 +197,7 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   OpAttributeInfo op_attribute_info;
   Global<CtrlClient>::Get()->PullKV("op_attribute_info", &op_attribute_info);
   // populate op_attribute_info
-  PopulateOpAttibute(plan, op_attribute_info.job_id2op_attribute_ref_table());
-}
-
-bool IsCollectiveBoxingTaskType(TaskType task_type) {
-  return task_type == TaskType::kCollectiveBoxingGeneric;
-}
-
-bool IsCollectiveBoxingNode(const PlanTaskNode* node) {
-  const TaskType task_type = node->task_proto()->task_type();
-  return task_type == TaskType::kCollectiveBoxingGeneric;
-}
-
-const boxing::collective::RankDesc& GetRankDesc(const OperatorConf& conf) {
-  if (conf.has_collective_boxing_generic_conf()) {
-    return conf.collective_boxing_generic_conf().rank_desc();
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-const boxing::collective::RankDesc& GetRankDesc(Plan* plan, const TaskProto& task_proto) {
-  CHECK_EQ(task_proto.exec_sequence().exec_node_size(), 1);
-  return GetRankDesc(PlanUtil::GetOpAttribute(plan, task_proto.job_id(),
-                                              task_proto.exec_sequence().exec_node(0).kernel_conf())
-                         .op_conf());
-}
-
-void GetDeviceDesc(const TaskProto* task_proto, boxing::collective::DeviceDesc* device_desc) {
-  device_desc->set_machine_id(task_proto->machine_id());
-  const int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(task_proto->task_id());
-  device_desc->set_device_type(Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(thrd_id));
-  if (device_desc->device_type() == DeviceType::kGPU) {
-    device_desc->set_device_id(Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id));
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-void GenCollectiveBoxingPlan(Job* job, Plan* plan) {
-  using namespace boxing::collective;
-
-  struct RequestInfo {
-    OpDesc op_desc;
-    std::map<int64_t, const PlanTaskNode*> rank2node;
-    int64_t order;
-    int64_t dependency_depth;
-  };
-
-  RequestSet* request_set = &(*plan->mutable_collective_boxing_plan()
-                                   ->mutable_job_id2request_set())[GlobalJobDesc().job_id()];
-  const int64_t cb_task_count = std::count_if(
-      plan->task().cbegin(), plan->task().cend(),
-      [](const TaskProto& task) { return IsCollectiveBoxingTaskType(task.task_type()); });
-  if (cb_task_count == 0) { return; }
-
-  PlanTaskGraph plan_task_graph(*plan);
-  int64_t dependency_depth = 0;
-  int64_t order = 0;
-  HashSet<const PlanTaskNode*> all_visited;
-  while (true) {
-    std::list<const PlanTaskNode*> src_nodes;
-    plan_task_graph.ForEachNode([&](const PlanTaskNode* node) {
-      if (all_visited.count(node) != 0) { return; }
-      int64_t in_cnt = 0;
-      node->ForEachNodeOnInEdge([&](const PlanTaskNode* node_on_in_edge) {
-        if (all_visited.count(node_on_in_edge) != 0) { return; }
-        in_cnt += 1;
-      });
-      if (in_cnt == 0) { src_nodes.push_back(node); }
-    });
-    if (src_nodes.empty()) { break; }
-    auto ForEachNodeOnInEdge = [&](const PlanTaskNode* node,
-                                   const std::function<void(const PlanTaskNode*)>& Handler) {
-      node->ForEachNodeOnInEdge([&](const PlanTaskNode* node_on_in_edge) {
-        if (all_visited.count(node_on_in_edge) == 0) { Handler(node_on_in_edge); }
-      });
-    };
-    auto ForEachNodeOnOutEdge = [&](const PlanTaskNode* node,
-                                    const std::function<void(const PlanTaskNode*)>& Handler) {
-      if (!IsCollectiveBoxingNode(node)) {
-        node->ForEachNodeOnOutEdge([&](const PlanTaskNode* node_on_out_edge) {
-          bool has_unvisited_collective_boxing_node_on_in_edges = false;
-          node_on_out_edge->ForEachNodeOnInEdge([&](const PlanTaskNode* node_on_in_edge) {
-            if (!has_unvisited_collective_boxing_node_on_in_edges
-                && IsCollectiveBoxingNode(node_on_in_edge)
-                && all_visited.count(node_on_in_edge) == 0) {
-              has_unvisited_collective_boxing_node_on_in_edges = true;
-            }
-          });
-          if (!has_unvisited_collective_boxing_node_on_in_edges) { Handler(node_on_out_edge); }
-        });
-      }
-    };
-    HashSet<const PlanTaskNode*> visited;
-    std::vector<const PlanTaskNode*> collective_boxing_nodes;
-    plan_task_graph.TopoForEachNode(src_nodes, ForEachNodeOnInEdge, ForEachNodeOnOutEdge,
-                                    [&](const PlanTaskNode* node) {
-                                      visited.insert(node);
-                                      if (IsCollectiveBoxingNode(node)) {
-                                        collective_boxing_nodes.push_back(node);
-                                      }
-                                    });
-    if (collective_boxing_nodes.empty()) { break; }
-    HashMap<std::string, RequestInfo> name2request_info;
-    for (const PlanTaskNode* node : collective_boxing_nodes) {
-      const TaskProto* task_proto = node->task_proto();
-      const RankDesc& rank_desc = GetRankDesc(plan, *task_proto);
-      CHECK_GE(rank_desc.rank(), 0);
-      CHECK_LT(rank_desc.rank(), rank_desc.op_desc().num_ranks());
-      const std::string& name = rank_desc.op_desc().name();
-      boxing::collective::DeviceDesc device_desc;
-      GetDeviceDesc(task_proto, &device_desc);
-      auto it = name2request_info.find(name);
-      if (it == name2request_info.end()) {
-        RequestInfo request_info{
-            .op_desc = rank_desc.op_desc(),
-            .rank2node = {std::make_pair(rank_desc.rank(), node)},
-            .order = order,
-            .dependency_depth = dependency_depth,
-        };
-        name2request_info.emplace(std::make_pair(name, std::move(request_info)));
-        order += 1;
-      } else {
-        CHECK(it->second.op_desc == rank_desc.op_desc());
-        CHECK(it->second.rank2node.emplace(std::make_pair(rank_desc.rank(), node)).second);
-      }
-    }
-    int64_t collected = 0;
-    for (const auto& name7request_info : name2request_info) {
-      const RequestInfo& info = name7request_info.second;
-      if (info.rank2node.size() == info.op_desc.num_ranks()) {
-        collected += 1;
-        boxing::collective::RequestDesc* request_desc = request_set->mutable_request()->Add();
-        *request_desc->mutable_op_desc() = info.op_desc;
-        for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
-          GetDeviceDesc(info.rank2node.at(i)->task_proto(),
-                        request_desc->mutable_device_set()->mutable_device()->Add());
-        }
-        request_desc->set_order(info.order);
-        request_desc->set_dependency_depth(info.dependency_depth);
-      } else {
-        CHECK_LT(info.rank2node.size(), info.op_desc.num_ranks());
-        for (const auto& pair : info.rank2node) { visited.erase(pair.second); }
-      }
-    }
-    CHECK_GT(collected, 0);
-    all_visited.insert(visited.begin(), visited.end());
-    ++dependency_depth;
-  }
+  PlanUtil::PopulateOpAttibute(plan, op_attribute_info.job_id2op_attribute_ref_table());
 }
 
 Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) {
@@ -369,6 +205,7 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) 
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     double start = GetCurTime();
     Compiler().Compile(job, plan, need_job_complete);
+    PlanUtil::GenMemBlockAndChunk4Plan(plan);
 
     LOG(INFO) << "\njob_id: " << job_desc.job_id() << " , job_name: " << job_desc.job_name()
               << " , compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.\n";
@@ -376,11 +213,12 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) 
       TeePersistentLogStream::Create(StrCat("subplan_job_", job_desc.job_id()))->Write(*plan);
     }
   }
-  GenCollectiveBoxingPlan(job, plan);
+  PlanUtil::GenCollectiveBoxingPlan(job, plan);
+  PlanUtil::GenRegisterHint(plan);
   return Maybe<void>::Ok();
 }
 
-void MergePlanWithoutGenNetTopo(Plan* plan, Plan&& other) {
+void MergePlan(Plan* plan, Plan&& other) {
   PbRpf<TaskProto>* dst_tasks = plan->mutable_task();
   PbRpf<TaskProto>* src_tasks = other.mutable_task();
   dst_tasks->Reserve(dst_tasks->size() + src_tasks->size());
@@ -402,30 +240,10 @@ void MergePlanWithoutGenNetTopo(Plan* plan, Plan&& other) {
   }
 }
 
-void MergeSubPlanWithoutGenNetTopo(Plan* plan, std::vector<Plan>&& sub_plans) {
+void MergeSubPlan(Plan* plan, std::vector<Plan>&& sub_plans) {
   CHECK(!sub_plans.empty());
   *plan = std::move(sub_plans.at(0));
-  FOR_RANGE(int32_t, i, 1, sub_plans.size()) {
-    MergePlanWithoutGenNetTopo(plan, std::move(sub_plans.at(i)));
-  }
-}
-
-void MergePlan(Plan* plan, Plan&& other) {
-  MergePlanWithoutGenNetTopo(plan, std::move(other));
-  Compiler().GenNetTopo(plan);
-}
-
-void DumpCtrlRegstInfoToPlan(Plan* plan) {
-  auto* ctrl_regst_desc_id2producer_task_id =
-      plan->mutable_ctrl_regst_desc_info()->mutable_ctrl_regst_desc_id2producer_task_id();
-  for (const TaskProto& task : plan->task()) {
-    for (const auto& pair : task.produced_regst_desc()) {
-      if (pair.second.regst_desc_type().has_ctrl_regst_desc()) {
-        ctrl_regst_desc_id2producer_task_id->insert(
-            {pair.second.regst_desc_id(), pair.second.producer_task_id()});
-      }
-    }
-  }
+  FOR_RANGE(int32_t, i, 1, sub_plans.size()) { MergePlan(plan, std::move(sub_plans.at(i))); }
 }
 
 RegstDescProto* GetSoleDataRegstDescProto(TaskProto* task) {
@@ -484,22 +302,6 @@ void LinkTickTaskProto(Plan* plan, TaskProto* identity_tick, TaskProto* src_tick
   UpdateSoleObnRegstDescId(plan, identity_tick);
 }
 
-void FixRegstHostMemCase(TaskProto* task_proto,
-                         const std::function<const TaskProto*(int64_t)>& TaskProto4TaskId) {
-  for (auto& pair : *task_proto->mutable_produced_regst_desc()) {
-    auto* regst = &pair.second;
-    CHECK(regst->mem_case().has_host_mem());
-    CHECK_EQ(regst->mem_case().host_mem().has_cuda_pinned_mem(), false);
-    bool used_by_network = false;
-    for (int64_t consumer_task_id : regst->consumer_task_id()) {
-      const auto* consumer_task_proto = TaskProto4TaskId(consumer_task_id);
-      used_by_network =
-          used_by_network || (task_proto->machine_id() != consumer_task_proto->machine_id());
-    }
-    regst->mutable_mem_case()->mutable_host_mem()->set_used_by_network(used_by_network);
-  }
-}
-
 void LinkMainPlan(Plan* plan, Plan&& main_plan,
                   const std::vector<std::map<int64_t, std::string>>& identity_tick_op_names) {
   std::function<bool(const TaskProto*)> IsInterfaceTickTockTask;
@@ -539,7 +341,6 @@ void LinkMainPlan(Plan* plan, Plan&& main_plan,
           plan, identity_tick,
           sole_tick_op_name2sole_task.at(cs.machine_id2source_tick_op_name().at(machine_id)),
           sole_tick_op_name2sole_task.at(cs.machine_id2sink_tick_op_name().at(machine_id)));
-      FixRegstHostMemCase(identity_tick, TaskProto4TaskId);
     }
   }
   {
@@ -572,7 +373,7 @@ void GetMemSharingOpBlobInfo(const JobBuilder& job_builder, const std::string& o
   std::string obn = "out";
   std::string lbn;
   {
-    const auto& op_conf = job_builder.OpConf4OpName(op_name);
+    const auto& op_conf = CHECK_JUST(job_builder.OpConf4OpName(op_name));
     if (op_conf.has_variable_conf()) {
       lbn = op_name + "/" + op_conf.variable_conf().out();
     } else if (op_conf.has_input_conf()) {
@@ -589,11 +390,9 @@ void GetMemSharingOpBlobInfo(const JobBuilder& job_builder, const std::string& o
   ParallelBlobConf ret;
   *blob_conf->mutable_parallel_conf() = job_builder.ParallelConf4OpName(op_name);
   *blob_conf->mutable_logical_blob_desc_conf() = job.helper().lbn2logical_blob_desc().at(lbn);
-  *blob_conf->mutable_parallel_distribution() = job.job_parallel_view_conf()
-                                                    .op_name2parallel_distribution_signature_conf()
-                                                    .at(op_name)
-                                                    .bn_in_op2parallel_distribution()
-                                                    .at(obn);
+  *blob_conf->mutable_nd_sbp() =
+      job.job_parallel_view_conf().op_name2nd_sbp_signature_conf().at(op_name).bn_in_op2nd_sbp().at(
+          obn);
 }
 
 void FilterOpName2ParallelBlobConf(
@@ -1048,7 +847,7 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
     auto* input_conf = input_op_conf.mutable_input_conf();
     input_conf->set_out("out");
     auto* blob_conf = input_conf->mutable_blob_conf();
-    InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
+    CHECK_JUST(InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf));
     data_type = blob_conf->data_type();
     job_builder.AddOps(parallel_blob_conf.parallel_conf(), {input_op_conf});
   }
@@ -1086,7 +885,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
     foreign_input_conf->set_out("out");
     foreign_input_conf->set_ofblob_buffer_name(GetForeignInputBufferName(job_name));
     auto* blob_conf = foreign_input_conf->mutable_blob_conf();
-    InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
+    CHECK_JUST(InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf));
     data_type = blob_conf->data_type();
     ParallelConf parallel_conf;
     parallel_conf.set_device_tag("cpu");
@@ -1099,7 +898,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
     auto* output_conf = output_op_conf.mutable_output_conf();
     output_conf->set_in(foreign_input_op_conf.name() + "/out");
     output_conf->set_out("out");
-    InterfaceOpUtil::InitBlobConf(output_conf->mutable_blob_conf(), parallel_blob_conf);
+    CHECK_JUST(InterfaceOpUtil::InitBlobConf(output_conf->mutable_blob_conf(), parallel_blob_conf));
     job_builder.AddOps(parallel_blob_conf.parallel_conf(), {output_op_conf});
   }
   auto* job_conf = job->mutable_job_conf();
@@ -1122,8 +921,9 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
     CHECK(!job_desc.Bool("__is_user_function__"));
     jobs.emplace_back(new Job(*job));
   };
-  if (Global<const IOConf>::Get()->enable_legacy_model_io()) {
-    if (Global<const IOConf>::Get()->enable_model_io_v2()) {
+
+  if (Global<ResourceDesc, ForSession>::Get()->resource().enable_legacy_model_io()) {
+    if (Global<ResourceDesc, ForSession>::Get()->resource().enable_model_io_v2()) {
       MakeModelIoV2Jobs(jobs, var_op_name2parallel_blob_conf, AppendJob);
     } else {
       MakeModelIoJobs(jobs, var_op_name2parallel_blob_conf, AppendJob);
@@ -1158,7 +958,7 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
     auto scope = std::make_unique<GlobalJobDescScope>(jobs.at(i)->job_conf(), i);
     JUST(CompileCurJobOnMaster(jobs.at(i).get(), &sub_plans.at(i), true));
   }
-  MergeSubPlanWithoutGenNetTopo(&plan, std::move(sub_plans));
+  MergeSubPlan(&plan, std::move(sub_plans));
   InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(function_jobs, &plan);
   InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(jobs, &plan);
   PlanUtil::SetForceInplaceMemBlock(&plan);
@@ -1174,7 +974,7 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
   }
   LinkMainPlan(&plan, std::move(main_plan), identity_tick_op_names);
   PlanUtil::CleanUselessMemBlockAndCheckValid(&plan);
-  DumpCtrlRegstInfoToPlan(&plan);
+  PlanUtil::DumpCtrlRegstInfoToPlan(&plan);
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create("merged_plan")->Write(plan);
     PlanUtil::ToDotFile(plan, "/dot/merged_plan.dot");
@@ -1219,7 +1019,9 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
     LOG(ERROR) << "this is dry run, exiting";
     exit(0);
   }
-  runtime_.reset(new Runtime(plan_, GetMaxVal<size_t>(), false));
+
+  HashMap<std::string, Blob*> variable_op_name2eager_blob;
+  runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob));
   OF_PROFILER_RANGE_POP();  // new Runtime
   return Maybe<void>::Ok();
 }
@@ -1227,10 +1029,6 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
 Oneflow::~Oneflow() {
   if (GlobalProcessCtx::IsThisProcessMaster()) { runtime_buffers_scope_.reset(); }
   runtime_.reset();
-  if (Global<Profiler>::Get() != nullptr) {
-    Global<Profiler>::Get()->Profile(
-        plan_, JoinPath(FLAGS_log_dir, ActEventLogger::act_event_bin_filename()));
-  }
 }
 
 }  // namespace oneflow

@@ -18,15 +18,23 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/device_type.pb.h"
-#include "oneflow/core/memory/memory_case.pb.h"
+//#include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/user_op_conf.h"
+#include "oneflow/core/framework/tensor_desc.h"
+#include "oneflow/core/framework/attr_value.h"
+#include "oneflow/core/job/placement.pb.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/memory/memory_case_attr_util.h"
+
 
 namespace oneflow {
-
 class MemCaseId {
  public:
   using device_index_t = uint32_t;
 
-  explicit MemCaseId(const MemoryCase& mem_case);
+  explicit MemCaseId(const MemCase& mem_case);
   explicit MemCaseId(DeviceType device_type, device_index_t device_index,
                      DeviceType page_locked_device_type, bool registered_by_network)
       : device_type_(device_type),
@@ -41,7 +49,7 @@ class MemCaseId {
   explicit MemCaseId(DeviceType device_type, device_index_t device_index)
       : MemCaseId(device_type, device_index, DeviceType::kInvalidDevice, false) {}
 
-  void ToProto(MemoryCase* mem_case) const;
+  void ToProto(MemCase* mem_case) const;
 
   DeviceType device_type() const { return device_type_; }
   device_index_t device_index() const { return device_index_; }
@@ -67,7 +75,7 @@ class GlobalMemCaseId {
 
   explicit GlobalMemCaseId(node_index_t node_index, const MemCaseId& mem_case_id)
       : node_index_(node_index), mem_case_id_(mem_case_id) {}
-  explicit GlobalMemCaseId(node_index_t node_index, const MemoryCase& mem_case)
+  explicit GlobalMemCaseId(node_index_t node_index, const MemCase& mem_case)
       : GlobalMemCaseId(node_index, MemCaseId{mem_case}) {}
 
   node_index_t node_index() const { return node_index_; }
@@ -83,15 +91,21 @@ class GlobalMemCaseId {
   MemCaseId mem_case_id_;
 };
 
-inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
+inline bool operator==(const MemCase& lhs, const MemCase& rhs) {
   return MemCaseId{lhs} == MemCaseId{rhs};
 }
-inline bool operator!=(const MemoryCase& lhs, const MemoryCase& rhs) {
+inline bool operator!=(const MemCase& lhs, const MemCase& rhs) {
   return !(MemCaseId{lhs} == MemCaseId{rhs});
 }
 
 int64_t EncodeMemCaseIdToInt64(const MemCaseId& mem_case_id);
 int64_t EncodeGlobalMemCaseIdToInt64(const GlobalMemCaseId& mem_case_id);
+const std::shared_ptr<const user_op::AttrVal>& Attr4Name(const std::string& attr_name);
+
+template<typename T>
+const T& Attr(const std::string& attr_name) {
+  return AttrValueCast<T>(*Attr4Name(attr_name));
+}
 
 // Patch the source memory case to destination memory case. Patching follow below rules:
 // 1) Patch failed when src_mem_case and dst_mem_case have different device_type
@@ -101,16 +115,17 @@ int64_t EncodeGlobalMemCaseIdToInt64(const GlobalMemCaseId& mem_case_id);
 // 3) When src_mem_case and dst_mem_case have the same cpu device_type
 // and src_mem_case has more constrain than dst_mem_case(page-locked by other device,
 // such as gpu or network device), patch the constrain of src_mem_case to dst_mem_case.
-bool PatchMemCase(const MemoryCase& src_mem_case, MemoryCase* dst_mem_case);
+bool PatchMemCase(const MemCase& src_mem_case, MemCase* dst_mem_case);
 
 // Generate host pinned memory for non-cpu device memory case
 // which usually be used for generating blob header memory case for non-cpu device blob
-MemoryCase GenerateCorrespondingPageLockedHostMemoryCase(const MemoryCase& mem_case);
+MemCase GenerateCorrespondingPageLockedHostMemCase(const MemCase& mem_case);
 
 struct MemoryCaseUtil {
-  static std::shared_ptr<MemoryCase> MakeMemCase(const DeviceType device_type,
+  static std::shared_ptr<MemCase> MakeMemCase(const DeviceType device_type,
                                                  const int64_t device_id);
 };
+
 
 }  // namespace oneflow
 

@@ -75,6 +75,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OF_PUBLIC std::vector<FlatMsg<InstructionOperand>>* mutable_operand() {
     return mutable_operand_list()->mut_operand();
   }
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> Clone() const;
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> MakeInferInstrMsg() const;
 
   // fields
@@ -107,7 +108,7 @@ FLAT_MSG_BEGIN(InstructionStatusBuffer);
 FLAT_MSG_END(InstructionStatusBuffer);
 // clang-format on
 
-class Instruction;
+struct Instruction;
 // clang-format off
 OBJECT_MSG_BEGIN(InstructionEdge);
   // methods
@@ -115,13 +116,17 @@ OBJECT_MSG_BEGIN(InstructionEdge);
     set_src_instruction(src_instruction);
     set_dst_instruction(dst_instruction);
   }
+
+  // fields
+  OBJECT_MSG_DEFINE_PTR(Instruction, src_instruction); 
+  OBJECT_MSG_DEFINE_PTR(Instruction, dst_instruction); 
   // links
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, Instruction*, src_instruction);
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, Instruction*, dst_instruction);
+  OBJECT_MSG_DEFINE_LIST_LINK(src_instruction_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(dst_instruction_link);
 OBJECT_MSG_END(InstructionEdge);
 // clang-format on
 
-class Stream;
+struct Stream;
 // clang-format off
 OBJECT_MSG_BEGIN(Instruction);
   // methods
@@ -229,8 +234,8 @@ OBJECT_MSG_BEGIN(Instruction);
   OBJECT_MSG_DEFINE_LIST_LINK(front_seq_infer_instr_link);
   OBJECT_MSG_DEFINE_LIST_LINK(front_seq_compute_instr_link);
   OBJECT_MSG_DEFINE_LIST_HEAD(CallbackMsg, callback_link, callback_list);
-  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(InstructionEdge, src_instruction, in_edges);
-  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(InstructionEdge, dst_instruction, out_edges);
+  OBJECT_MSG_DEFINE_LIST_HEAD(InstructionEdge, src_instruction_link, in_edges);
+  OBJECT_MSG_DEFINE_LIST_HEAD(InstructionEdge, dst_instruction_link, out_edges);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(RwMutexedObjectAccess, mirrored_object_id, mirrored_object_id2access);
   OBJECT_MSG_DEFINE_LIST_HEAD(RwMutexedObjectAccess, instruction_access_link, access_list);
 OBJECT_MSG_END(Instruction);

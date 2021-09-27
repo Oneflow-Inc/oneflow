@@ -18,13 +18,14 @@ limitations under the License.
 
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/register/register_desc.pb.h"
+#include "oneflow/core/memory/memory_case_attr_util.h"
 
 namespace oneflow {
 
 const int32_t kMaxRegisterNum = std::numeric_limits<int32_t>::max();
 
 void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_proto);
-MemoryCase MakeHostMemCase();
+MemCase MakeHostMemCase();
 
 class TaskNode;
 
@@ -63,8 +64,8 @@ class RegstDesc final {
   size_t NumOfLbi() const { return lbi2blob_desc_.size(); }
 
   // mem
-  const MemoryCase& mem_case() const { return mem_case_; }
-  MemoryCase* mut_mem_case() { return &mem_case_; }
+  const MemCase& mem_case() const { return mem_case_; }
+  MemCase* mut_mem_case() { return &mem_case_; }
   bool enable_reuse_mem() { return enable_reuse_mem_; }
   void set_enable_reuse_mem(bool enable_reuse_mem) { enable_reuse_mem_ = enable_reuse_mem; }
   int64_t mem_block_offset() const;
@@ -99,7 +100,7 @@ class RegstDesc final {
   bool HasSameMemSize(const RegstDesc*);
 
   // util
-  void EraseZeroSizeBlob();
+  void EraseUninitializedShapeBlob();
   void ToProto(RegstDescProto*) const;
   bool HasSameBlobDescs(const RegstDesc*);
 
@@ -112,7 +113,7 @@ class RegstDesc final {
 
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2blob_desc_;
 
-  MemoryCase mem_case_;
+  MemCase mem_case_;
   RegstDescTypeProto regst_desc_type_;
   bool enable_reuse_mem_;
   int32_t mem_block_id_;

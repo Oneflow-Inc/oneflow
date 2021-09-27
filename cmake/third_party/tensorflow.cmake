@@ -1,3 +1,4 @@
+cmake_minimum_required(VERSION 3.17.0)
 include (ExternalProject)
 
 if (WITH_XLA)
@@ -11,7 +12,12 @@ else()
   set(TENSORFLOW_GENFILE_DIR k8-opt)
 endif()
 
-set(TF_WITH_CUDA ON)
+list(APPEND TENSORFLOW_BUILD_CMD --config=noaws)
+list(APPEND TENSORFLOW_BUILD_CMD --config=nogcp)
+list(APPEND TENSORFLOW_BUILD_CMD --config=nohdfs)
+list(APPEND TENSORFLOW_BUILD_CMD --config=nonccl)
+
+set(TF_WITH_CUDA ${BUILD_CUDA})
 if (TF_WITH_CUDA)
   set(CUDA_COMPUTE_CAPABILITIES "6.0,6.1")
   if (NOT CUDA_VERSION VERSION_LESS "10.0")
@@ -22,7 +28,7 @@ if (TF_WITH_CUDA)
   list(APPEND TENSORFLOW_BUILD_CMD --action_env TF_CUDA_COMPUTE_CAPABILITIES=${CUDA_COMPUTE_CAPABILITIES})
 endif()
 
-message(STATUS ${TENSORFLOW_BUILD_CMD})
+message(STATUS "TENSORFLOW_BUILD_CMD: ${TENSORFLOW_BUILD_CMD}")
 
 set(TENSORFLOW_PROJECT  tensorflow)
 set(TENSORFLOW_SOURCES_DIR ${CMAKE_CURRENT_BINARY_DIR}/tensorflow)
@@ -65,17 +71,24 @@ list(APPEND TENSORFLOW_XLA_LIBRARIES libtensorflow_framework.so.1)
 list(APPEND TENSORFLOW_XLA_LIBRARIES libxla_core.so)
 link_directories(${TENSORFLOW_INSTALL_DIR}/lib)
 
-if(NOT XRT_TF_URL)
-  set(XRT_TF_URL https://github.com/Oneflow-Inc/tensorflow/archive/fc42cf2a17e4af9f494278ddee66b6d17e1e9eaf.zip)
+set(XRT_TF_DOWNLOAD_NO_EXTRACT OFF)
+set(XRT_TF_URL "https://github.com/Oneflow-Inc/tensorflow/archive/7016a22292a607edc4175d07dae263faad31cd04.zip" CACHE STRING "")
+message(STATUS "XRT_TF_URL: ${XRT_TF_URL}")
+
+if(IS_DIRECTORY ${XRT_TF_URL})
+  set(XRT_TF_DOWNLOAD_NO_EXTRACT ON)
+else()
   use_mirror(VARIABLE XRT_TF_URL URL ${XRT_TF_URL})
 endif()
+
 if (THIRD_PARTY)
   ExternalProject_Add(${TENSORFLOW_PROJECT}
     PREFIX ${TENSORFLOW_SOURCES_DIR}
     URL ${XRT_TF_URL}
+    DOWNLOAD_NO_EXTRACT ${XRT_TF_DOWNLOAD_NO_EXTRACT}
     CONFIGURE_COMMAND ""
     BUILD_COMMAND cd ${TENSORFLOW_SRCS_DIR} &&
-                  bazel build ${TENSORFLOW_BUILD_CMD} -j HOST_CPUS //tensorflow/compiler/jit/xla_lib:libxla_core.so
+                  ${BAZEL_ENV_ARGS} bazel build ${TENSORFLOW_BUILD_CMD} -j HOST_CPUS //tensorflow/compiler/jit/xla_lib:libxla_core.so
     INSTALL_COMMAND ""
   )
 
@@ -110,6 +123,19 @@ if (THIRD_PARTY)
         ${dst}
     )
   endforeach()
+
+  add_custom_command(TARGET tensorflow_symlink_headers
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+      ${GLOG_INCLUDE_DIR}/glog
+      ${TENSORFLOW_INSTALL_DIR}/include/tensorflow_inc/tensorflow/core/platform/google
+  )
+
+  add_custom_command(TARGET tensorflow_symlink_headers
+    COMMAND patch --forward
+    ${TENSORFLOW_INSTALL_DIR}/include/tensorflow_inc/tensorflow/stream_executor/platform/logging.h
+    ${CMAKE_SOURCE_DIR}/cmake/third_party/patches/tensorflow-logging.patch
+    || true
+  )
 
 endif(THIRD_PARTY)
 

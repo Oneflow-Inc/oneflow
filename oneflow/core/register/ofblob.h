@@ -28,10 +28,11 @@ class OfBlob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OfBlob);
   OfBlob(DeviceCtx* device_ctx, Blob* blob) : device_ctx_(device_ctx), blob_(blob) {
-    mem_case_.mutable_host_mem();
+    mem_case_.SetAttr("device_type", kCPU);
   }
   ~OfBlob() = default;
 
+  const Blob& blob() const { return *blob_; }
   int data_type() const { return blob_->data_type(); }
   size_t NumAxes() const { return blob_->shape().NumAxes(); }
   bool is_dynamic() const { return blob_->blob_desc().is_dynamic(); }
@@ -43,11 +44,15 @@ class OfBlob final {
   void AutoMemCopyTo(T* ptr, int64_t len) const;
   template<typename T>
   void AutoMemCopyFrom(const T* ptr, int64_t len) const;
+  void AsyncAutoMemset(const char value) const;
+
+  Blob* mut_blob() { return blob_; }
+  DeviceCtx* mut_device_ctx() { return device_ctx_; }
 
  private:
   DeviceCtx* device_ctx_;
   Blob* blob_;
-  MemoryCase mem_case_;
+  MemCase mem_case_;
 };
 
 inline void OfBlob::CopyShapeFrom(const int64_t* ptr, int64_t num_axis) const {
@@ -87,6 +92,11 @@ void OfBlob::AutoMemCopyFrom(const T* ptr, int64_t len) const {
                  mem_case_);
 }
 
+inline void OfBlob::AsyncAutoMemset(const char value) const {
+  ::oneflow::AutoMemset(device_ctx_, blob_->mut_dptr(), value,
+                        blob_->shape().elem_cnt() * GetSizeOfDataType(blob_->data_type()),
+                        blob_->mem_case());
+}
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_REGISTER_OFBLOB_H_

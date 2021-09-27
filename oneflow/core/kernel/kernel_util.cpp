@@ -259,9 +259,9 @@ void MatrixRowReduce(const int64_t row_num, const int64_t col_num, const T* x, T
 }  // namespace
 
 void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
-                const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
+                const MemCase& dst_mem_case, const MemCase& src_mem_case) {
   void (*func)(DeviceCtx*, void* dst, const void* src, size_t sz);
-  if (src_mem_case.has_host_mem() && dst_mem_case.has_host_mem()) {
+  if ((src_mem_case.Attr<DeviceType>("device_type")==kCPU) && (dst_mem_case.Attr<DeviceType>("device_type") == kCPU)) {
     func = &Memcpy<DeviceType::kCPU>;
   } else {
 #ifdef WITH_CUDA
@@ -274,15 +274,30 @@ void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
 }
 
 void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
-                    const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
+                    const MemCase& dst_mem_case, const MemCase& src_mem_case) {
   AutoMemcpy(ctx, dst, src, sz, dst_mem_case, src_mem_case);
-  if (src_mem_case.has_device_cuda_mem() || dst_mem_case.has_device_cuda_mem()) {
+  if ((src_mem_case.Attr<DeviceType>("device_type")==kGPU) || (dst_mem_case.Attr<DeviceType>("device_type")==kGPU)){
 #ifdef WITH_CUDA
     OF_CUDA_CHECK(cudaStreamSynchronize(ctx->cuda_stream()));
 #else
     UNIMPLEMENTED();
 #endif  // WITH_CUDA
   }
+}
+
+void AutoMemset(DeviceCtx* ctx, void* dst, const char value, size_t sz,
+                const MemCase& dst_mem_case) {
+  void (*func)(DeviceCtx*, void* dst, const char value, size_t sz);
+  if (dst_mem_case.Attr<DeviceType>("device_type")==kCPU) {
+    func = &Memset<DeviceType::kCPU>;
+  } else {
+#ifdef WITH_CUDA
+    func = &Memset<DeviceType::kGPU>;
+#else
+    UNIMPLEMENTED();
+#endif  // WITH_CUDA
+  }
+  func(ctx, dst, value, sz);
 }
 
 #define KU_IF_METHOD                     \

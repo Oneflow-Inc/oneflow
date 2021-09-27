@@ -49,9 +49,10 @@ HashSet<int32_t> GetInclusiveAxes(const ShapeElemCntOpConf& conf, int32_t num_ax
 
 }  // namespace
 
-void ShapeElemCntOp::InitFromOpConf() {
+Maybe<void> ShapeElemCntOp::InitFromOpConf() {
   EnrollInputBn("x", false);
   EnrollOutputBn("y", false);
+  return Maybe<void>::Ok();
 }
 
 namespace {
@@ -59,7 +60,7 @@ namespace {
 Maybe<void> InferBlobDescs(const OperatorConf& op_conf,
                            const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
   BlobDesc4BnInOp("y")->set_data_type(op_conf.shape_elem_cnt_conf().data_type());
-  BlobDesc4BnInOp("y")->mut_shape() = Shape({1});
+  BlobDesc4BnInOp("y")->mut_shape() = Shape({});
   return Maybe<void>::Ok();
 }
 
@@ -89,7 +90,7 @@ void ShapeElemCntOp::VirtualGenKernelConf(
 
 Maybe<void> ShapeElemCntOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
+    cfg::SbpSignatureList* sbp_sig_list) const {
   int32_t num_axes = JUST(LogicalBlobDesc4Ibn("x")).shape().NumAxes();
   const auto& inclusive_axes = GetInclusiveAxes(op_conf().shape_elem_cnt_conf(), num_axes);
   auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(inclusive_axes, num_axes);
@@ -105,6 +106,12 @@ Maybe<void> ShapeElemCntOp::GetSbpSignatures(
           .Broadcast(output_bns())
           .Build(sbp_sig_list->mutable_sbp_signature()->Add());
     }
+  }
+  if (num_axes == 0) {
+    SbpSignatureBuilder()
+        .PartialSum(input_bns())
+        .PartialSum(output_bns())
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   }
   return Maybe<void>::Ok();
 }

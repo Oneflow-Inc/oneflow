@@ -33,9 +33,9 @@ SplitSbpSignatureListBuilder&& SplitSbpSignatureListBuilder::SetNumAxes(int64_t 
   return std::move(*this);
 }
 
-void SplitSbpSignatureListBuilder::Build(SbpSignatureList* list) const {
-  CHECK_GT(num_axes_, 0);
-  SbpSignature sbp_sig_template(sbp_signature_template_);
+void SplitSbpSignatureListBuilder::Build(cfg::SbpSignatureList* list) const {
+  CHECK_GE(num_axes_, 0);
+  cfg::SbpSignature sbp_sig_template(sbp_signature_template_);
   FOR_RANGE(int32_t, axis, 0, num_axes_) {
     for (auto& pair : *sbp_sig_template.mutable_bn_in_op2sbp_parallel()) {
       pair.second.mutable_split_parallel()->set_axis(axis);
@@ -95,7 +95,7 @@ SbpSignatureBuilder&& SbpSignatureBuilder::PartialSum(
 
 SplitSbpSignatureListBuilder SbpSignatureBuilder::MakeSplitSignatureListBuilder(
     int64_t num_axes) const {
-  SbpSignature sbp_signature;
+  cfg::SbpSignature sbp_signature;
   Build(&sbp_signature);
   return SplitSbpSignatureListBuilder(sbp_signature).SetNumAxes(num_axes);
 }

@@ -45,6 +45,8 @@ class PosixFileSystem final : public FileSystem {
 
   void CreateDir(const std::string& dirname) override;
 
+  void CreateDirIfNotExist(const std::string& dirname) override;
+
   void DeleteDir(const std::string& dirname) override;
 
   uint64_t GetFileSize(const std::string& fname) override;

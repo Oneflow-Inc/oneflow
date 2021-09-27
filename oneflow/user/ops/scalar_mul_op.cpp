@@ -25,8 +25,8 @@ REGISTER_USER_OP("scalar_mul")
     .Attr<int64_t>("int_operand")
     .Attr<double>("float_operand")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -38,12 +38,13 @@ REGISTER_USER_OP("scalar_mul")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("scalar_mul")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("in", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -51,13 +52,14 @@ REGISTER_USER_OP_GRAD("scalar_mul")
                 .Input("in", op.GetGradTensorWithOpOutput("out", 0))
                 .Output("out")
                 .Attr("has_int_operand", op.attr<bool>("has_int_operand"))
-                .Attr("int_operand", op.attr<int64_t>("int_operand"))
+                .Attr("int_operand", op.attr_or_default<int64_t>("int_operand", 0))
                 .Attr("has_float_operand", op.attr<bool>("has_float_operand"))
-                .Attr("float_operand", op.attr<double>("float_operand"))
+                .Attr("float_operand", op.attr_or_default<double>("float_operand", 0.0))
                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

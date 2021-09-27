@@ -17,11 +17,11 @@ limitations under the License.
 
 namespace oneflow {
 
-void CalcOutAndPadding(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
-                       int32_t stride, const std::string& padding_type, int64_t* output_size,
-                       int32_t* padding_before, int32_t* padding_after) {
-  CHECK_GT(stride, 0);
-  CHECK_GE(dilation_rate, 1);
+Maybe<void> CalcOutAndPadding(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
+                              int32_t stride, const std::string& padding_type, int64_t* output_size,
+                              int32_t* padding_before, int32_t* padding_after) {
+  CHECK_GT_OR_RETURN(stride, 0);
+  CHECK_GE_OR_RETURN(dilation_rate, 1);
 
   int32_t effective_filter_size = (filter_size - 1) * dilation_rate + 1;
   if (padding_type == "valid") {
@@ -41,13 +41,14 @@ void CalcOutAndPadding(int64_t input_size, int32_t filter_size, int32_t dilation
   } else {
     UNIMPLEMENTED();
   }
-  if (output_size) { CHECK_GE((*output_size), 0); }
+  if (output_size) { CHECK_GE_OR_RETURN((*output_size), 0); }
+  return Maybe<void>::Ok();
 }
 
-void CalcSamePadding(int64_t input_size, int32_t filter_size, int32_t dilation_rate, int32_t stride,
-                     int32_t* padding_small, int32_t* padding_large) {
-  CHECK_GT(stride, 0);
-  CHECK_GE(dilation_rate, 1);
+Maybe<void> CalcSamePadding(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
+                            int32_t stride, int32_t* padding_small, int32_t* padding_large) {
+  CHECK_GT_OR_RETURN(stride, 0);
+  CHECK_GE_OR_RETURN(dilation_rate, 1);
 
   int32_t effective_filter_size = (filter_size - 1) * dilation_rate + 1;
   int64_t tmp_output_size = (input_size + stride - 1) / stride;
@@ -55,18 +56,20 @@ void CalcSamePadding(int64_t input_size, int32_t filter_size, int32_t dilation_r
       0, static_cast<int32_t>((tmp_output_size - 1) * stride + effective_filter_size - input_size));
   if (padding_small) { *padding_small = padding_needed / 2; }
   if (padding_large) { *padding_large = padding_needed - padding_needed / 2; }
+  return Maybe<void>::Ok();
 }
 
-void CalcConvOut(int64_t input_size, int32_t filter_size, int32_t dilation_rate, int32_t stride,
-                 int32_t padding_before, int64_t* output_size) {
-  CHECK_GT(stride, 0);
-  CHECK_GE(dilation_rate, 1);
+Maybe<void> CalcConvOut(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
+                        int32_t stride, int32_t padding_before, int64_t* output_size) {
+  CHECK_GT_OR_RETURN(stride, 0);
+  CHECK_GE_OR_RETURN(dilation_rate, 1);
 
   int32_t effective_filter_size = (filter_size - 1) * dilation_rate + 1;
   if (output_size) {
     *output_size = (input_size + 2 * padding_before - effective_filter_size + stride) / stride;
-    CHECK_GE((*output_size), 0);
+    CHECK_GE_OR_RETURN((*output_size), 0);
   }
+  return Maybe<void>::Ok();
 }
 
 const size_t IdxOffset(const std::string& data_format) {

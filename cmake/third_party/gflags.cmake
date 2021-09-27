@@ -1,7 +1,8 @@
 include (ExternalProject)
 
-set(GFLAGS_INCLUDE_DIR ${THIRD_PARTY_DIR}/gflags/include)
-set(GFLAGS_LIBRARY_DIR ${THIRD_PARTY_DIR}/gflags/lib)
+set(GFLAGS_INSTALL_DIR ${THIRD_PARTY_DIR}/gflags/install)
+set(GFLAGS_INCLUDE_DIR ${GFLAGS_INSTALL_DIR}/include)
+set(GFLAGS_LIBRARY_DIR ${GFLAGS_INSTALL_DIR}/lib)
 
 set(gflags_HEADERS_DIR ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/include)
 set(gflags_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/lib)
@@ -9,19 +10,15 @@ set(gflags_URL https://github.com/Oneflow-Inc/gflags/archive/9314597d4.tar.gz)
 use_mirror(VARIABLE gflags_URL URL ${gflags_URL})
 
 if(WIN32)
-    set(GFLAGS_BUILD_LIBRARY_DIR ${gflags_LIB_DIR}/${CMAKE_BUILD_TYPE})
     set(GFLAGS_LIBRARY_NAMES gflags_static.lib)
 elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
-    set(GFLAGS_BUILD_LIBRARY_DIR ${gflags_LIB_DIR}/${CMAKE_BUILD_TYPE})
     set(GFLAGS_LIBRARY_NAMES libgflags.a)
 else()
-    set(GFLAGS_BUILD_LIBRARY_DIR ${gflags_LIB_DIR})
     set(GFLAGS_LIBRARY_NAMES libgflags.a)
 endif()
 
 foreach(LIBRARY_NAME ${GFLAGS_LIBRARY_NAMES})
     list(APPEND GFLAGS_STATIC_LIBRARIES ${GFLAGS_LIBRARY_DIR}/${LIBRARY_NAME})
-    list(APPEND GFLAGS_BUILD_STATIC_LIBRARIES ${GFLAGS_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
 set (GFLAGS_PUBLIC_H
@@ -39,34 +36,19 @@ ExternalProject_Add(gflags
     URL_MD5 9677cc51d63642ba3d5f2a57a1fa2bd0
     UPDATE_COMMAND bash -c "rm -f BUILD || true"
     BUILD_IN_SOURCE 1
-    INSTALL_COMMAND ""
+    BUILD_BYPRODUCTS ${GFLAGS_STATIC_LIBRARIES}
     CMAKE_CACHE_ARGS
+        -DCMAKE_C_COMPILER_LAUNCHER:STRING=${CMAKE_C_COMPILER_LAUNCHER}
+        -DCMAKE_CXX_COMPILER_LAUNCHER:STRING=${CMAKE_CXX_COMPILER_LAUNCHER}
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
         -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
         -DCMAKE_CXX_FLAGS_RELEASE:STRING=${CMAKE_CXX_FLAGS_RELEASE}
         -DCMAKE_CXX_FLAGS_RELWITHDEBINFO:STRING=${CMAKE_CXX_FLAGS_RELWITHDEBINFO}
         -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
         -DGFLAGS_NAMESPACE:STRING=gflags
+        -DCMAKE_INSTALL_PREFIX:STRING=${GFLAGS_INSTALL_DIR}
 )
 
-add_custom_target(gflags_create_header_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${GFLAGS_INCLUDE_DIR}/gflags
-  DEPENDS gflags)
-
-add_custom_target(gflags_copy_headers_to_destination
-    DEPENDS gflags_create_header_dir)
-
-foreach(header_file ${GFLAGS_PUBLIC_H})
-  add_custom_command(TARGET gflags_copy_headers_to_destination PRE_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${header_file} ${GFLAGS_INCLUDE_DIR}/gflags)
-endforeach()
-
-add_custom_target(gflags_create_library_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${GFLAGS_LIBRARY_DIR}
-  DEPENDS gflags)
-
-add_custom_target(gflags_copy_libs_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GFLAGS_BUILD_STATIC_LIBRARIES} ${GFLAGS_LIBRARY_DIR}
-  DEPENDS gflags_create_library_dir)
-
 endif(THIRD_PARTY)
+add_library(gflags_imported UNKNOWN IMPORTED)
+set_property(TARGET gflags_imported PROPERTY IMPORTED_LOCATION "${GFLAGS_STATIC_LIBRARIES}")

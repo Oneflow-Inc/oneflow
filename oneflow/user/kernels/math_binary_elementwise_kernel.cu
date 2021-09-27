@@ -46,12 +46,14 @@ class MathBinaryElementwiseGpuKernel final : public user_op::OpKernel {
   ~MathBinaryElementwiseGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
+    if (n == 0) { return; }
     MathBinaryElementwiseForwardGpu<BinaryFunctor, T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, tensor_x->dptr<T>(), tensor_y->dptr<T>(), tensor_z->mut_dptr<T>());
@@ -66,6 +68,7 @@ class MathBinaryElementwiseXGradGpuKernel final : public user_op::OpKernel {
   ~MathBinaryElementwiseXGradGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -73,6 +76,7 @@ class MathBinaryElementwiseXGradGpuKernel final : public user_op::OpKernel {
     user_op::Tensor* tensor_dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
+    if (n == 0) { return; }
     MathBinaryElementwiseBackwardXGradGpu<BinaryFunctor, T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, tensor_x->dptr<T>(), tensor_y->dptr<T>(), tensor_dz->dptr<T>(),
@@ -88,6 +92,7 @@ class MathBinaryElementwiseYGradGpuKernel final : public user_op::OpKernel {
   ~MathBinaryElementwiseYGradGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -95,6 +100,7 @@ class MathBinaryElementwiseYGradGpuKernel final : public user_op::OpKernel {
     user_op::Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
+    if (n == 0) { return; }
     MathBinaryElementwiseBackwardYGradGpu<BinaryFunctor, T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, tensor_x->dptr<T>(), tensor_y->dptr<T>(), tensor_dz->dptr<T>(),
@@ -134,6 +140,7 @@ class MathBinaryElementwiseGpuHalfKernel final : public user_op::OpKernel {
   ~MathBinaryElementwiseGpuHalfKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -143,6 +150,7 @@ class MathBinaryElementwiseGpuHalfKernel final : public user_op::OpKernel {
     half* z = reinterpret_cast<half*>(tensor_z->mut_dptr<float16>());
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
+    if (n == 0) { return; }
     MathBinaryElementwiseForwardGpu<BinaryFunctor, half>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, y, z);
@@ -157,6 +165,7 @@ class MathBinaryElementwiseXGradGpuHalfKernel final : public user_op::OpKernel {
   ~MathBinaryElementwiseXGradGpuHalfKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -169,6 +178,7 @@ class MathBinaryElementwiseXGradGpuHalfKernel final : public user_op::OpKernel {
     half* dx = reinterpret_cast<half*>(tensor_dx->mut_dptr<float16>());
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
+    if (n == 0) { return; }
     MathBinaryElementwiseBackwardXGradGpu<BinaryFunctor, half>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, y, dz, dx);
@@ -183,6 +193,7 @@ class MathBinaryElementwiseYGradGpuHalfKernel final : public user_op::OpKernel {
   ~MathBinaryElementwiseYGradGpuHalfKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -195,6 +206,7 @@ class MathBinaryElementwiseYGradGpuHalfKernel final : public user_op::OpKernel {
     half* dy = reinterpret_cast<half*>(tensor_dy->mut_dptr<float16>());
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
+    if (n == 0) { return; }
     MathBinaryElementwiseBackwardYGradGpu<BinaryFunctor, half>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, y, dz, dy);

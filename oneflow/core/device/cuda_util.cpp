@@ -16,9 +16,10 @@ limitations under the License.
 #ifdef WITH_CUDA
 
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/common/platform.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/memory/memory_case_registry.h"
+#include "oneflow/core/device/node_device_descriptor_manager.h"
+#include "oneflow/core/device/cuda_device_descriptor.h"
 
 namespace oneflow {
 
@@ -131,90 +132,33 @@ size_t GetAvailableGpuMemSize(int dev_id) {
   return prop.totalGlobalMem;
 }
 
-#ifdef OF_PLATFORM_POSIX
-
 namespace {
 
-void ParseCpuMask(const std::string& cpu_mask, cpu_set_t* cpu_set) {
-  CPU_ZERO_S(sizeof(cpu_set_t), cpu_set);
-  const char* const head = cpu_mask.c_str();
-  const char* const tail = head + cpu_mask.size();
-  const char* pos = head;
-  std::vector<uint64_t> masks;
-  while (pos < tail) {
-    char* end_pos = nullptr;
-    const uint64_t mask = std::strtoul(pos, &end_pos, 16);
-    if (pos != head) {
-      CHECK_EQ(end_pos - pos, 8);
-    } else {
-      CHECK_NE(end_pos, pos);
-      CHECK_LE(end_pos - pos, 8);
-    }
-    if (end_pos < tail) { CHECK_EQ(*end_pos, ','); }
-    masks.push_back(mask);
-    pos = end_pos + 1;
-  }
-  int32_t cpu = 0;
-  for (int64_t i = masks.size() - 1; i >= 0; i--) {
-    for (uint64_t b = 0; b < 32; b++) {
-      if ((masks.at(i) & (1UL << b)) != 0) { CPU_SET_S(cpu, sizeof(cpu_set_t), cpu_set); }
-      cpu += 1;
-    }
-  }
-}
-
-std::string CudaDeviceGetCpuMask(int32_t dev_id) {
-  std::vector<char> pci_bus_id_buf(sizeof("0000:00:00.0"));
-  OF_CUDA_CHECK(cudaDeviceGetPCIBusId(pci_bus_id_buf.data(),
-                                      static_cast<int>(pci_bus_id_buf.size()), dev_id));
-  for (int32_t i = 0; i < pci_bus_id_buf.size(); ++i) {
-    pci_bus_id_buf[i] = std::tolower(pci_bus_id_buf[i]);
-  }
-  const std::string pci_bus_id(pci_bus_id_buf.data(), pci_bus_id_buf.size() - 1);
-  const std::string pci_bus_id_short = pci_bus_id.substr(0, sizeof("0000:00") - 1);
-  const std::string local_cpus_file =
-      "/sys/class/pci_bus/" + pci_bus_id_short + "/device/" + pci_bus_id + "/local_cpus";
-  char* cpu_map_path = realpath(local_cpus_file.c_str(), nullptr);
-  CHECK_NOTNULL(cpu_map_path);
-  std::ifstream is(cpu_map_path);
-  std::string cpu_mask;
-  CHECK(std::getline(is, cpu_mask).good());
-  is.close();
-  free(cpu_map_path);
-  return cpu_mask;
-}
-
-void CudaDeviceGetCpuAffinity(int32_t dev_id, cpu_set_t* cpu_set) {
-  const std::string cpu_mask = CudaDeviceGetCpuMask(dev_id);
-  ParseCpuMask(cpu_mask, cpu_set);
+std::function<void(void**, size_t)> GetCudaMallocHostFn(int32_t dev) {
+  auto default_fn = [](void** ptr, size_t size) { cudaMallocHost(ptr, size); };
+  auto manager = Global<device::NodeDeviceDescriptorManager>::Get();
+  if (manager == nullptr) { return default_fn; }
+  auto node_desc = manager->GetLocalNodeDeviceDescriptor();
+  auto cuda_device = std::dynamic_pointer_cast<const device::CudaDeviceDescriptor>(
+      node_desc->GetDevice(device::kCudaDeviceDescriptorClassName, dev));
+  if (!cuda_device) { return default_fn; }
+  auto saved_affinity = node_desc->Topology()->GetMemoryAffinity();
+  if (!saved_affinity) { return default_fn; }
+  auto device_affinity =
+      node_desc->Topology()->GetMemoryAffinityByPCIBusID(cuda_device->PCIBusID());
+  if (!device_affinity) { return default_fn; }
+  return [device_affinity, saved_affinity, node_desc, default_fn](void** ptr, size_t size) {
+    node_desc->Topology()->SetMemoryAffinity(device_affinity);
+    default_fn(ptr, size);
+    node_desc->Topology()->SetMemoryAffinity(saved_affinity);
+  };
 }
 
 }  // namespace
 
-#endif
-
 void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
-#ifdef OF_PLATFORM_POSIX
-  cpu_set_t new_cpu_set;
-  CudaDeviceGetCpuAffinity(dev, &new_cpu_set);
-  cpu_set_t saved_cpu_set;
-  CHECK_EQ(sched_getaffinity(0, sizeof(cpu_set_t), &saved_cpu_set), 0);
-  CHECK_EQ(sched_setaffinity(0, sizeof(cpu_set_t), &new_cpu_set), 0);
-  OF_CUDA_CHECK(cudaMallocHost(ptr, size));
-  CHECK_EQ(sched_setaffinity(0, sizeof(cpu_set_t), &saved_cpu_set), 0);
-#else
-  UNIMPLEMENTED();
-#endif
-}
-
-void CudaDeviceSetCpuAffinity(int32_t dev) {
-#ifdef OF_PLATFORM_POSIX
-  cpu_set_t new_cpu_set;
-  CudaDeviceGetCpuAffinity(dev, &new_cpu_set);
-  CHECK_EQ(sched_setaffinity(0, sizeof(cpu_set_t), &new_cpu_set), 0);
-#else
-  UNIMPLEMENTED();
-#endif
+  auto fn = GetCudaMallocHostFn(dev);
+  fn(ptr, size);
 }
 
 cudaDataType_t GetCudaDataType(DataType val) {
@@ -236,15 +180,15 @@ CudaCurrentDeviceGuard::~CudaCurrentDeviceGuard() { OF_CUDA_CHECK(cudaSetDevice(
 
 namespace {
 
-bool MatchCudaMemoryCase(const MemoryCase& mem_case) {
-  if (mem_case.has_device_cuda_mem()) { return true; }
+bool MatchCudaMemoryCase(const MemCase& mem_case) {
+  if (mem_case.Attr<DeviceType>("device_type") == kGPU) { return true; }
   return false;
 }
 
-bool MatchCudaOrCudaPinnedHostMemoryCase(const MemoryCase& mem_case) {
-  if (mem_case.has_host_mem() && mem_case.host_mem().has_cuda_pinned_mem()) {
+bool MatchCudaOrCudaPinnedHostMemoryCase(const MemCase& mem_case) {
+  if (mem_case.Attr<DeviceType>("device_type")==kCPU && mem_case.HasAttr<MemCase>("cuda_pinned_mem")) {
     return true;
-  } else if (mem_case.has_device_cuda_mem()) {
+  } else if (mem_case.Attr<DeviceType>("device_type") == kGPU) {
     return true;
   }
   return false;
@@ -264,39 +208,41 @@ bool MatchCudaOrCudaPinnedHostMemCaseId(const MemCaseId& mem_case_id) {
 
 REGISTER_MEM_CASE_ID_GENERATOR(DeviceType::kGPU)
     .SetMatcher(MatchCudaOrCudaPinnedHostMemoryCase)
-    .SetGenerator([](const MemoryCase& mem_case) -> MemCaseId {
+    .SetGenerator([](const MemCase& mem_case) -> MemCaseId {
       DeviceType device_type = DeviceType::kInvalidDevice;
       MemCaseId::device_index_t device_index = 0;
       DeviceType page_locked_device_type = DeviceType::kInvalidDevice;
       bool used_by_network = false;
-      if (mem_case.has_host_mem()) {
-        CHECK(mem_case.host_mem().has_cuda_pinned_mem());
+      // if(mem_case.Attr<DeviceType>(const std::string &attr_name))
+      // if(mem_case.device_type == kCPU)
+      if (mem_case.Attr<DeviceType>("device_type") == kCPU) {
+        CHECK(mem_case.HasAttr<MemCase>("cuda_pinned_mem"));
         device_type = DeviceType::kCPU;
         page_locked_device_type = DeviceType::kGPU;
-        device_index = mem_case.host_mem().cuda_pinned_mem().device_id();
-        if (mem_case.host_mem().has_used_by_network() && mem_case.host_mem().used_by_network()) {
+        device_index = mem_case.Attr<int64_t>("cuda_pinned_mem_device_id");
+        if (mem_case.HasAttr<MemCase>("used_by_network")) {
           used_by_network = true;
         }
       } else {
-        CHECK(mem_case.has_device_cuda_mem());
+        CHECK(mem_case.Attr<DeviceType>("device_type") == kGPU);
         device_type = DeviceType::kGPU;
-        device_index = mem_case.device_cuda_mem().device_id();
+        device_index = mem_case.Attr<int64_t>("device_id");
       }
       return MemCaseId{device_type, device_index, page_locked_device_type, used_by_network};
     });
 
 REGISTER_MEM_CASE_ID_TO_PROTO(DeviceType::kGPU)
     .SetMatcher(MatchCudaOrCudaPinnedHostMemCaseId)
-    .SetToProto([](const MemCaseId& mem_case_id, MemoryCase* mem_case) -> void {
+    .SetToProto([](const MemCaseId& mem_case_id, MemCase* mem_case) -> void {
       if (mem_case_id.device_type() == DeviceType::kCPU) {
         CHECK_EQ(mem_case_id.host_mem_page_locked_device_type(), DeviceType::kGPU);
-        auto* host_mem = mem_case->mutable_host_mem();
-        host_mem->mutable_cuda_pinned_mem()->set_device_id(mem_case_id.device_index());
+        mem_case->SetAttr("device_type", kCPU);
+        mem_case->SetAttr("cuda_pinned_mem_device_id", mem_case_id.device_index());
         if (mem_case_id.is_host_mem_registered_by_network()) {
-          host_mem->set_used_by_network(true);
+          mem_case->SetAttr("used_by_network", true);
         }
       } else if (mem_case_id.device_type() == DeviceType::kGPU) {
-        mem_case->mutable_device_cuda_mem()->set_device_id(mem_case_id.device_index());
+        mem_case->SetAttr("device_id", mem_case_id.device_index());
       } else {
         UNIMPLEMENTED();
       }
@@ -304,33 +250,31 @@ REGISTER_MEM_CASE_ID_TO_PROTO(DeviceType::kGPU)
 
 REGISTER_PAGE_LOCKED_MEM_CASE(DeviceType::kGPU)
     .SetMatcher(MatchCudaMemoryCase)
-    .SetPageLocker([](const MemoryCase& mem_case, MemoryCase* page_locked_mem_case) -> void {
-      CHECK(mem_case.has_device_cuda_mem());
-      page_locked_mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(
-          mem_case.device_cuda_mem().device_id());
+    .SetPageLocker([](const MemCase& mem_case, MemCase* page_locked_mem_case) -> void {
+      CHECK(mem_case.Attr<DeviceType>("device_type") == kGPU);
+      page_locked_mem_case->SetAttr("cuda_pinned_mem_device_id", mem_case.Attr<int64_t>("device_id"));
     });
 
 REGISTER_PATCH_MEM_CASE(DeviceType::kGPU)
     .SetMatcher(MatchCudaOrCudaPinnedHostMemoryCase)
-    .SetPatcher([](const MemoryCase& src_mem_case, MemoryCase* dst_mem_case) -> bool {
-      if (src_mem_case.has_host_mem()) {
-        CHECK(src_mem_case.host_mem().has_cuda_pinned_mem());
-        if (!dst_mem_case->has_host_mem()) { return false; }
-        if (dst_mem_case->host_mem().page_lock_case_case() == HostMemory::PAGE_LOCK_CASE_NOT_SET) {
-          *(dst_mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()) =
-              src_mem_case.host_mem().cuda_pinned_mem();
+    .SetPatcher([](const MemCase& src_mem_case, MemCase* dst_mem_case) -> bool {
+      if (src_mem_case.Attr<DeviceType>("device_type") == kCPU) {
+        CHECK(src_mem_case.HasAttr<MemCase>("cuda_pinned_mem"));
+        if (!(dst_mem_case->Attr<DeviceType>("device_type") == kCPU)) { return false; }
+        if (dst_mem_case->HasAttr<MemCase>("page_lock_case")) {
+          dst_mem_case->SetAttr("cuda_pinned_mem", src_mem_case.Attr<MemCase>("cuda_pinned_mem"));
         } else {
           return false;
         }
-        if (src_mem_case.host_mem().has_used_by_network()
-            && src_mem_case.host_mem().used_by_network()) {
-          dst_mem_case->mutable_host_mem()->set_used_by_network(true);
+        if (src_mem_case.HasAttr<bool>("used_by_network") 
+            && src_mem_case.Attr<bool>("used_by_network")) {
+          dst_mem_case->SetAttr("used_by_network", true);
         }
       } else {
-        CHECK(src_mem_case.has_device_cuda_mem());
-        if (!dst_mem_case->has_device_cuda_mem()) { return false; }
-        if (src_mem_case.device_cuda_mem().device_id()
-            != dst_mem_case->device_cuda_mem().device_id()) {
+        CHECK(src_mem_case.Attr<DeviceType>("device_type") == kGPU);
+        if (!(dst_mem_case->Attr<DeviceType>("device_type") == kGPU)) { return false; }
+        if (src_mem_case.Attr<int64_t>("device_id")
+            != dst_mem_case->Attr<int64_t>("device_id")) {
           return false;
         }
       }

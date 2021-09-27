@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
-#include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/memory/memory_case_attr_util.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/symbol.h"
@@ -48,8 +48,8 @@ class BlobAccessCheckerIf final : public BlobAccessChecker {
 class Blob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
-  Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr);
-  Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr);
+  Blob(const MemCase& mem_case, const BlobDesc* blob_desc, char* header_ptr);
+  Blob(const MemCase& mem_case, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr);
   virtual ~Blob() = default;
 
   DataType data_type() const { return blob_desc_->data_type(); }
@@ -93,7 +93,7 @@ class Blob final {
   bool IsBodyEmpty() const { return shape().elem_cnt() == 0; }
 
   size_t AlignedTotalByteSize() const { return blob_desc_->AlignedTotalByteSize(); }
-  const MemoryCase& mem_case() const { return mem_case_; }
+  const MemCase& mem_case() const { return mem_case_; }
 
   size_t ByteSizeOfBlobBody() const { return blob_desc_->ByteSizeOfBlobBody(); }
   size_t AlignedByteSizeOfBlobBody() const { return blob_desc_->AlignedByteSizeOfBlobBody(); }
@@ -105,11 +105,11 @@ class Blob final {
   const BlobAccessChecker* blob_access_checker() { return this->blob_access_checker_; }
 
  private:
-  void Init(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr,
+  void Init(const MemCase& mem_case, const BlobDesc* blob_desc, char* header_ptr,
             char* body_ptr);
 
   const BlobAccessChecker* blob_access_checker_;
-  MemoryCase mem_case_;
+  MemCase mem_case_;
   const BlobDesc* blob_desc_;
   void* dptr_;
   char* header_ptr_;

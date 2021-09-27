@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/math_unary_elementwise_func.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -33,12 +34,14 @@ __global__ void MathUnaryElementwiseBackwardGpu(const int n, const T* x, const T
 }  // namespace
 
 template<template<typename> class UnaryFunctor, typename T>
-class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel {
+class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel,
+                                            public user_op::CudaGraphSupport {
  public:
   MathUnaryElementwiseGpuKernel() = default;
   ~MathUnaryElementwiseGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -46,6 +49,7 @@ class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel {
     T* y = tensor_y->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
+    if (n == 0) { return; }
     MathUnaryElementwiseForwardGpu<UnaryFunctor, T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, y);
@@ -54,12 +58,14 @@ class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel {
 };
 
 template<template<typename> class UnaryFunctor, typename T>
-class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel {
+class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel,
+                                                public user_op::CudaGraphSupport {
  public:
   MathUnaryElementwiseGradGpuKernel() = default;
   ~MathUnaryElementwiseGradGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -70,6 +76,7 @@ class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel {
     T* dx = tensor_dx->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
+    if (n == 0) { return; }
     MathUnaryElementwiseBackwardGpu<UnaryFunctor, T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, dy, dx);
@@ -97,12 +104,14 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_GPU_KERNEL_AND_
                                  MATH_UNARY_ELEMENTWISE_FUNC_SEQ, FLOATING_DATA_TYPE_SEQ)
 
 template<template<typename> class UnaryFunctor>
-class MathUnaryElementwiseGpuHalfKernel final : public user_op::OpKernel {
+class MathUnaryElementwiseGpuHalfKernel final : public user_op::OpKernel,
+                                                public user_op::CudaGraphSupport {
  public:
   MathUnaryElementwiseGpuHalfKernel() = default;
   ~MathUnaryElementwiseGpuHalfKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -110,6 +119,7 @@ class MathUnaryElementwiseGpuHalfKernel final : public user_op::OpKernel {
     half* y = reinterpret_cast<half*>(tensor_y->mut_dptr<float16>());
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
+    if (n == 0) { return; }
     MathUnaryElementwiseForwardGpu<UnaryFunctor, half>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, y);
@@ -118,12 +128,14 @@ class MathUnaryElementwiseGpuHalfKernel final : public user_op::OpKernel {
 };
 
 template<template<typename> class UnaryFunctor>
-class MathUnaryElementwiseGradGpuHalfKernel final : public user_op::OpKernel {
+class MathUnaryElementwiseGradGpuHalfKernel final : public user_op::OpKernel,
+                                                    public user_op::CudaGraphSupport {
  public:
   MathUnaryElementwiseGradGpuHalfKernel() = default;
   ~MathUnaryElementwiseGradGpuHalfKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -134,6 +146,7 @@ class MathUnaryElementwiseGradGpuHalfKernel final : public user_op::OpKernel {
     half* dx = reinterpret_cast<half*>(tensor_dx->mut_dptr<float16>());
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
+    if (n == 0) { return; }
     MathUnaryElementwiseBackwardGpu<UnaryFunctor, half>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, dy, dx);

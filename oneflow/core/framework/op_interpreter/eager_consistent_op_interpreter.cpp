@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+#include <sstream>
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -23,169 +26,244 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_mgr.h"
+#include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/core/framework/tensor_rpc_util.h"
+#include "oneflow/core/framework/tensor_consistent_id.h"
+#include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/common/decorator.h"
 
 namespace oneflow {
 namespace one {
 
-static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTuple& inputs,
-                                  TensorTuple* outputs, const AttrMap& attrs) {
-  using namespace std::placeholders;
-  const auto& scope = JUST(GetCurrentScope());
-  const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, inputs, attrs));
-  auto parallel_conf =
-      std::make_shared<cfg::ParallelConf>(scope->device_parallel_desc_symbol()->parallel_conf());
+namespace {
 
-  auto build_instruction = [&](InstructionsBuilder* builder) {
-    const auto& bn2blob_object =
-        CHECK_JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
-    const auto& boxing_util = *Global<std::shared_ptr<ForeignBoxingUtil>>::Get();
-    CHECK_JUST(builder->StatelessCall(
-        op_attribute, parallel_conf, bn2blob_object,
-        std::bind(&ForeignBoxingUtil::BoxingTo, boxing_util.get(), _1, _2, _3)));
-    for (int i = 0; i < outputs->size(); ++i) {
-      const std::string& obn = op_expr.indexed_obns().at(i);
-      outputs->at(i) = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(bn2blob_object->at(obn)));
-    }
-  };
-  return LogicalRun(build_instruction);
+Maybe<Symbol<ParallelDesc>> GetParallelDesc(const TensorTuple& inputs,
+                                            const OpExprInterpContext& ctx) {
+  if (!inputs.empty()) { return inputs.at(0)->parallel_desc(); }
+  return ctx.parallel_desc.value();
 }
+
+std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_expr,
+                                                    const StatefulLocalOpKernel& kernel) {
+  CHECK(!kernel.output_tuple_indexes4mut2_obns().empty());
+  std::string plentysuffix = kernel.output_tuple_indexes4mut2_obns().size() == 1 ? "s" : "";
+  std::stringstream ss;
+  ss << "operator `" << user_op_expr.op_type_name() << "`"
+     << " does not support consistent mode because the shape" << plentysuffix << " of output tensor"
+     << plentysuffix << " ";
+  int i = 0;
+  for (const auto& out_index : kernel.output_tuple_indexes4mut2_obns()) {
+    if (i++ > 0) { ss << ", "; }
+    ss << out_index;
+  }
+  ss << " are not infered before op computation.";
+  return ss.str();
+}
+
+Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<cfg::NdSbp> out_nd_sbp,
+                               Symbol<ParallelDesc> out_parallel_desc) {
+  const auto* mgr = Global<EagerBoxingInterpreterManager>::Get();
+  // Eager boxing
+  const auto& in_nd_sbp = JUST(input->nd_sbp());
+  const auto& in_parallel_desc = JUST(input->parallel_desc());
+  const auto& boxing_interpreter = JUST(
+      mgr->GetEagerBoxingInterpreter(in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
+  const auto& output = JUST(boxing_interpreter->Interpret(input, in_nd_sbp, out_nd_sbp,
+                                                          in_parallel_desc, out_parallel_desc));
+  return output;
+}
+
+auto* GetBoxingOutput =
+    DECORATE(DECORATE(&CalcBoxingOutput, CheckConsistentTensorMeta), DisableRecusiveBoxingCall);
+
+Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
+                      TensorTuple* outputs, const OpExprInterpContext& ctx) {
+  CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
+  const auto& parallel_desc = JUST(GetParallelDesc(inputs, ctx));
+  std::shared_ptr<const ConsistentTensorInferResult> result;
+  if (inputs.empty()) {
+    const auto& infer_args = JUST(SrcOpConsistentTensorMetaInferArgs::New(
+        ctx.attrs, parallel_desc, JUST(ctx.nd_sbp.value())));
+    result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
+  } else {
+    const auto& infer_args = JUST(ConsistentTensorMetaInferArgs::New(ctx.attrs, inputs));
+    result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
+  }
+  const auto& output_tensor_metas = result->output_tensor_metas();
+  Optional<int64_t> parallel_id;
+  const auto& tensor_device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
+  for (int i = 0; i < outputs->size(); ++i) {
+    const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(
+        output_tensor_metas.at(i), tensor_device, parallel_id, false, false));
+    outputs->at(i).reset(new ConsistentTensor(tensor_impl));
+  }
+  // Run instruction LocalCallOpKernel
+  const auto& kernel = JUST(user_op_expr.MutKernel4Device(result->op_device()));
+  CHECK_EQ_OR_RETURN(kernel->output_tuple_indexes4mut2_obns().size(), 0)
+      << Error::UnimplementedError()
+      << GetDynamicOpConsistentFailedDebugString(user_op_expr, *kernel);
+  std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
+      std::make_shared<EagerBlobObjectList>(inputs.size());
+  for (int i = 0; i < inputs.size(); ++i) {
+    std::shared_ptr<Tensor> input = inputs.at(i);
+    const auto& infered_input_meta = result->input_tensor_metas().at(i);
+    const auto& input_parallel_desc = JUST(input->parallel_desc());
+    CHECK_OR_RETURN(input_parallel_desc == infered_input_meta->parallel_desc());
+    if (infered_input_meta->nd_sbp() != JUST(input->nd_sbp())) {
+      input = JUST(GetBoxingOutput(input, infered_input_meta->nd_sbp(),
+                                   infered_input_meta->parallel_desc()));
+    }
+    const auto& local_tensor = JUST(input->cur_rank_phy_tensor());
+    input_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
+  }
+  // Do nothing if the `parallel_desc` doesn't cover current ProcessCtx.
+  if (!parallel_id.has_value()) { return Maybe<void>::Ok(); }
+  std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
+      std::make_shared<EagerBlobObjectList>(outputs->size());
+  for (int i = 0; i < outputs->size(); ++i) {
+    const auto& local_tensor = JUST(outputs->at(i)->cur_rank_phy_tensor());
+    output_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
+  }
+  const auto& instr_type_name = JUST(GetLocalCallInstructionName(parallel_desc->device_tag()));
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
+                                      result, ctx, parallel_desc.shared_from_symbol(),
+                                      instr_type_name);
+  }));
+  return Maybe<void>::Ok();
+}
+
+auto* InterpretThenInitConsistentId = DECORATE(&Interpret, NonRecursiveInitConsistentId);
+
+}  // namespace
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const UserOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrMap& attrs) const {
-  return NaiveInterpret(op_expr, inputs, outputs, attrs);
+                                                  const OpExprInterpContext& ctx) const {
+  return InterpretThenInitConsistentId(op_expr, inputs, outputs, ctx);
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const VariableOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), 0);
-  CHECK_EQ_OR_RETURN(outputs->size(), 1);
-  return NaiveInterpret(op_expr, inputs, outputs, attrs);
+                                                  const OpExprInterpContext& ctx) const {
+  OF_UNIMPLEMENTED();
 }
 
-static Maybe<void> BuildAndRunMirroredCastInstruction(const BuiltinOpExpr& op_expr,
-                                                      const TensorTuple& inputs,
-                                                      TensorTuple* outputs) {
-  const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, inputs, /*attrs=*/{}));
-  OpAttribute proto_op_attribute;
-  op_attribute->ToProto(&proto_op_attribute);
+namespace {
 
-  auto build_instruction = [&](InstructionsBuilder* builder) {
-    const auto& bn2blob_object =
-        CHECK_JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
-    const auto& in_blob_object = (*bn2blob_object)["in"];
-    const auto& parallel_desc_symbol = in_blob_object->parallel_desc_symbol();
-    const auto& op_arg_parallel_attr = CHECK_JUST(
-        compatible_py::GetOpArgParallelAttribute(parallel_desc_symbol, proto_op_attribute, "out"));
-    const auto& out_blob_object = CHECK_JUST(builder->MakeReferenceBlobObject(
-        in_blob_object,
-        std::make_shared<compatible_py::OpArgParallelAttribute>(*op_arg_parallel_attr)));
-    outputs->at(0) = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(out_blob_object));
-  };
-  return LogicalRun(build_instruction);
+static constexpr auto* RecursiveGetBoxingOutput =
+    DECORATE(&CalcBoxingOutput, CheckConsistentTensorMeta);
+
+Maybe<void> RawConsistentToConsistent(const ConsistentToConsistentOpExpr& op_expr,
+                                      const TensorTuple& inputs, TensorTuple* outputs,
+                                      const OpExprInterpContext& ctx) {
+  CHECK_EQ_OR_RETURN(inputs.size(), 1);
+  CHECK_EQ_OR_RETURN(outputs->size(), 1);
+  const auto& input = inputs.at(0);
+  CHECK_OR_RETURN(input->is_consistent());
+  CHECK_OR_RETURN(ctx.parallel_desc.has_value());
+  CHECK_OR_RETURN(ctx.nd_sbp.has_value());
+  const auto& in_parallel_desc = JUST(input->parallel_desc());
+  const auto& out_nd_sbp = JUST(ctx.nd_sbp.value());
+  const auto& out_parallel_desc = JUST(ctx.parallel_desc.value());
+  const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_parallel_desc));
+  const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
+  const auto& tensor = JUST(RecursiveGetBoxingOutput(input, out_nd_sbp, out_parallel_desc));
+  CHECK_OR_RETURN(tensor);
+  if (out_parallel_id->has_value()) {
+    const auto& nd_sbp = JUST(tensor->nd_sbp());
+    const auto& parallel_desc = JUST(tensor->parallel_desc());
+    CHECK_OR_RETURN(nd_sbp == out_nd_sbp) << ". nd_sbp: " << *JUST(NdSbpToString(nd_sbp))
+                                          << ", out_nd_sbp" << *JUST(NdSbpToString(out_nd_sbp));
+    CHECK_OR_RETURN(parallel_desc == out_parallel_desc);
+    outputs->at(0) = tensor;
+  } else {
+    ConsistentTensorMeta tensor_meta(tensor->shape(), tensor->dtype()->data_type(), out_nd_sbp,
+                                     out_parallel_desc);
+    const auto& tensor_impl =
+        JUST(EagerConsistentTensorImpl::New(SymbolOf(tensor_meta), tensor->requires_grad(), false));
+    outputs->at(0).reset(new ConsistentTensor(tensor_impl));
+  }
+  CHECK_OR_RETURN(outputs->at(0));
+  return Maybe<void>::Ok();
+}
+
+static constexpr auto* ConsistentToConsistent =
+    DECORATE(&RawConsistentToConsistent, NonRecursiveInitConsistentId);
+
+}  // namespace
+
+Maybe<void> EagerConsistentInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_expr,
+                                                  const TensorTuple& inputs, TensorTuple* outputs,
+                                                  const OpExprInterpContext& ctx) const {
+  JUST(ConsistentToConsistent(op_expr, inputs, outputs, ctx));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastToConsistentOpExpr& op_expr,
+                                                  const TensorTuple& inputs, TensorTuple* outputs,
+                                                  const OpExprInterpContext& ctx) const {
+  OF_UNIMPLEMENTED();
+}
+
+Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromConsistentOpExpr& op_expr,
+                                                  const TensorTuple& inputs, TensorTuple* outputs,
+                                                  const OpExprInterpContext& ctx) const {
+  CHECK_EQ_OR_RETURN(inputs.size(), 1);
+  const auto& input_tensor = inputs.at(0);
+  const auto& mirrored_tensor = JUST(JUST(input_tensor->cur_rank_phy_tensor())->detach());
+  bool requires_grad = autograd::GradMode::is_enabled() && input_tensor->requires_grad();
+  mirrored_tensor->set_requires_grad(requires_grad);
+  mirrored_tensor->set_is_leaf(!requires_grad);
+  outputs->at(0) = mirrored_tensor;
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastToMirroredOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrMap& attrs) const {
-  return BuildAndRunMirroredCastInstruction(op_expr, inputs, outputs);
+                                                  const OpExprInterpContext& ctx) const {
+  OF_UNIMPLEMENTED();
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromMirroredOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrMap& attrs) const {
-  return BuildAndRunMirroredCastInstruction(op_expr, inputs, outputs);
-}
-
-static Maybe<compatible_py::BlobObject> GetInBlobObject(
-    InstructionsBuilder* builder, const OpAttribute& op_attribute, const std::string& ibn,
-    const HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>& bn2blob_object) {
-  const auto& parallel_sig = op_attribute.parallel_signature().bn_in_op2parallel_desc_symbol_id();
-  int symbol_id = parallel_sig.at(ibn);
-  const auto& in_op_parallel_desc_sym = JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(symbol_id));
-  const auto& in_op_arg_parallel_attr =
-      JUST(compatible_py::GetOpArgParallelAttribute(in_op_parallel_desc_sym, op_attribute, ibn));
-  const auto& origin_blob_object = bn2blob_object.at(ibn);
-  return (*Global<std::shared_ptr<ForeignBoxingUtil>>::Get())
-      ->BoxingTo(builder, origin_blob_object, in_op_arg_parallel_attr);
-};
-
-static Maybe<void> BuildAndRunDistributeSplitOrCloneInstruction(const BuiltinOpExpr& op_expr,
-                                                                const TensorTuple& inputs,
-                                                                TensorTuple* outputs) {
-  const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, inputs, /*attrs=*/{}));
-  OpAttribute proto_op_attribute;
-  op_attribute->ToProto(&proto_op_attribute);
-
-  auto build_instruction = [&](InstructionsBuilder* builder) {
-    const auto& bn2blob_object =
-        CHECK_JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
-    const auto& logical_in_blob_object =
-        CHECK_JUST(GetInBlobObject(builder, proto_op_attribute, "in", *bn2blob_object));
-    const auto& physical_out_blob_objects =
-        CHECK_JUST(builder->UnpackLogicalBlobToPhysicalBlobs(logical_in_blob_object));
-    for (int i = 0; i < physical_out_blob_objects->size(); ++i) {
-      outputs->at(i) =
-          CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(physical_out_blob_objects->at(i)));
-    }
-  };
-  return LogicalRun(build_instruction);
+                                                  const OpExprInterpContext& ctx) const {
+  OF_UNIMPLEMENTED();
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeSplitOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrMap& attrs) const {
-  return BuildAndRunDistributeSplitOrCloneInstruction(op_expr, inputs, outputs);
+                                                  const OpExprInterpContext& ctx) const {
+  OF_UNIMPLEMENTED();
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeCloneOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrMap& attrs) const {
-  return BuildAndRunDistributeSplitOrCloneInstruction(op_expr, inputs, outputs);
-}
-
-static Maybe<void> BuildAndRunDistributeConcatAndAddInstruction(const BuiltinOpExpr& op_expr,
-                                                                const TensorTuple& inputs,
-                                                                TensorTuple* outputs) {
-  const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, inputs, /*attrs=*/{}));
-  OpAttribute proto_op_attribute;
-  op_attribute->ToProto(&proto_op_attribute);
-  const auto& op_parallel_desc_sym = JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(
-      proto_op_attribute.parallel_signature().op_parallel_desc_symbol_id()));
-  const auto& op_arg_parallel_attr = JUST(
-      compatible_py::GetOpArgParallelAttribute(op_parallel_desc_sym, proto_op_attribute, "out"));
-  const auto& op_arg_blob_attr =
-      JUST(compatible_py::GetOpArgBlobAttribute(proto_op_attribute, "out"));
-
-  auto build_instruction = [&](InstructionsBuilder* builder) {
-    const auto& bn2blob_object =
-        CHECK_JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
-    int input_size = op_expr.indexed_ibns().size();
-    std::vector<std::shared_ptr<compatible_py::BlobObject>> in_blob_objects(input_size);
-    for (int i = 0; i < input_size; ++i) {
-      in_blob_objects[i] = CHECK_JUST(
-          GetInBlobObject(builder, proto_op_attribute, "in_" + std::to_string(i), *bn2blob_object));
-    }
-    const auto& physical_out_blob_object = CHECK_JUST(builder->PackPhysicalBlobsToLogicalBlob(
-        in_blob_objects, op_arg_parallel_attr, op_arg_blob_attr));
-    outputs->at(0) = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(physical_out_blob_object));
-  };
-  return LogicalRun(build_instruction);
+                                                  const OpExprInterpContext& ctx) const {
+  OF_UNIMPLEMENTED();
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeConcatOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrMap& attrs) const {
-  return BuildAndRunDistributeConcatAndAddInstruction(op_expr, inputs, outputs);
+                                                  const OpExprInterpContext& ctx) const {
+  OF_UNIMPLEMENTED();
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeAddOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrMap& attrs) const {
-  return BuildAndRunDistributeConcatAndAddInstruction(op_expr, inputs, outputs);
+                                                  const OpExprInterpContext& ctx) const {
+  OF_UNIMPLEMENTED();
+}
+
+Maybe<void> EagerConsistentInterpreter::ApplyImpl(const SelectFirstOpExpr& op_expr,
+                                                  const TensorTuple& inputs, TensorTuple* outputs,
+                                                  const OpExprInterpContext& ctx) const {
+  OF_UNIMPLEMENTED();
 }
 
 }  // namespace one

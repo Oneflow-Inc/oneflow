@@ -17,15 +17,18 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/to_string.h"
 
+
+/*
+template<typename T> T Attr(string) 和 bool HasAttr(string)
+
+*/
+
 namespace oneflow {
 
 namespace {
 
-bool MatchPageableHostMemoryCase(const MemoryCase& mem_case) {
-  if (!mem_case.has_host_mem()) { return false; }
-  if (mem_case.host_mem().page_lock_case_case() != HostMemory::PAGE_LOCK_CASE_NOT_SET) {
-    return false;
-  }
+bool MatchPageableHostMemoryCase(const MemCase& mem_case) {
+  if(!mem_case.Attr<bool>("is_pinned_device")) {return false;}
   return true;
 }
 
@@ -38,53 +41,48 @@ bool MatchPageableHostMemCaseId(const MemCaseId& mem_case_id) {
   return true;
 }
 
-}  // namespace
+  // namespace
 
 // register for normal host memory
 REGISTER_MEM_CASE_ID_GENERATOR(DeviceType::kCPU)
-    .SetMatcher(MatchPageableHostMemoryCase)
-    .SetGenerator([](const MemoryCase& mem_case) -> MemCaseId {
-      CHECK(mem_case.has_host_mem());
-      CHECK_EQ(mem_case.host_mem().page_lock_case_case(), HostMemory::PAGE_LOCK_CASE_NOT_SET);
-      bool used_by_network =
-          mem_case.host_mem().has_used_by_network() && mem_case.host_mem().used_by_network();
+    .SetMatcher(MatchPageableHostMemoryCase) 
+    .SetGenerator([](const MemCase& mem_case) -> MemCaseId {
+      CHECK(mem_case.Attr<DeviceType>("device_type") == kCPU);
+      bool used_by_network = mem_case.Attr<bool>("used_by_network");
       return MemCaseId{DeviceType::kCPU, 0, DeviceType::kInvalidDevice, used_by_network};
     });
 
 REGISTER_MEM_CASE_ID_TO_PROTO(DeviceType::kCPU)
     .SetMatcher(MatchPageableHostMemCaseId)
-    .SetToProto([](const MemCaseId& mem_case_id, MemoryCase* mem_case) -> void {
-      auto* host_mem = mem_case->mutable_host_mem();
-      if (mem_case_id.is_host_mem_registered_by_network()) { host_mem->set_used_by_network(true); }
+    .SetToProto([](const MemCaseId& mem_case_id, MemCase* mem_case) -> void {
+      auto host_mem = mem_case->Attr<MemCase>("host_mem");
+      if (mem_case_id.is_host_mem_registered_by_network()) { 
+              host_mem.SetAttr<bool>("used_by_network", true); }
     });
 
 REGISTER_PATCH_MEM_CASE(DeviceType::kCPU)
     .SetMatcher(MatchPageableHostMemoryCase)
-    .SetPatcher([](const MemoryCase& src_mem_case, MemoryCase* dst_mem_case) -> bool {
-      CHECK(src_mem_case.has_host_mem());
-      CHECK_EQ(src_mem_case.host_mem().page_lock_case_case(), HostMemory::PAGE_LOCK_CASE_NOT_SET);
-      if (!dst_mem_case->has_host_mem()) { return false; }
-      if (dst_mem_case->host_mem().page_lock_case_case() != HostMemory::PAGE_LOCK_CASE_NOT_SET) {
-        return false;
-      }
-      if (src_mem_case.host_mem().has_used_by_network()
-          && src_mem_case.host_mem().used_by_network()) {
-        dst_mem_case->mutable_host_mem()->set_used_by_network(true);
+    .SetPatcher([](const MemCase& src_mem_case, MemCase* dst_mem_case) -> bool {
+      CHECK(src_mem_case.Attr<DeviceType>("device_type") == kCPU);
+      if (dst_mem_case->Attr<DeviceType>("device_type") != kCPU) { return false; }
+
+      if(src_mem_case.Attr<bool>("is_used_by_network")) {
+        dst_mem_case->SetAttr<bool>("is_used_by_network", true);
       }
       return true;
     });
 
 namespace {
 
-bool MatchDummyDeviceMemoryCase(const MemoryCase& mem_case) {
-  if (mem_case.has_dummy_device_mem()) { return true; }
-  return false;
+bool MatchDummyDeviceMemoryCase(const MemCase& mem_case) {
+  if (mem_case.Attr<DeviceType>("device_type") != kDummyDevice) { return false; }
+  return true;
 }
 
-bool MatchDummyDeviceOrDummyDevicePinnedHostMemoryCase(const MemoryCase& mem_case) {
-  if (mem_case.has_host_mem() && mem_case.host_mem().has_dummy_device_pinned_mem()) {
+bool MatchDummyDeviceOrDummyDevicePinnedHostMemoryCase(const MemCase& mem_case) {
+  if (mem_case.HasAttr<MemCase>("host_mem") && mem_case.Attr<DeviceType>("host_mem_pinned_device") == kDummyDevice) {
     return true;
-  } else if (mem_case.has_dummy_device_mem()) {
+  } else if (mem_case.Attr<DeviceType>("device_type") == kDummyDevice){
     return true;
   }
   return false;
@@ -105,19 +103,19 @@ bool MatchDummyDeviceOrDummyDevicePinnedHostMemCaseId(const MemCaseId& mem_case_
 // register for dummy device memory
 REGISTER_MEM_CASE_ID_GENERATOR(DeviceType::kDummyDevice)
     .SetMatcher(MatchDummyDeviceOrDummyDevicePinnedHostMemoryCase)
-    .SetGenerator([](const MemoryCase& mem_case) -> MemCaseId {
+    .SetGenerator([](const MemCase& mem_case) -> MemCaseId {
       DeviceType device_type = DeviceType::kInvalidDevice;
       DeviceType page_locked_device_type = DeviceType::kInvalidDevice;
       bool used_by_network = false;
-      if (mem_case.has_host_mem()) {
-        CHECK(mem_case.host_mem().has_dummy_device_pinned_mem());
+      if (mem_case.Attr<DeviceType>("device_type") == kCPU) {
+        CHECK(mem_case.Attr<DeviceType>("pinned_device") == kDummyDevice);
         device_type = DeviceType::kCPU;
         page_locked_device_type = DeviceType::kDummyDevice;
-        if (mem_case.host_mem().has_used_by_network() && mem_case.host_mem().used_by_network()) {
+        if (mem_case.HasAttr<bool>("used_by_network")) {
           used_by_network = true;
         }
       } else {
-        CHECK(mem_case.has_dummy_device_mem());
+        CHECK(mem_case.Attr<DeviceType>("device_type") == kDummyDevice);
         device_type = DeviceType::kDummyDevice;
       }
       return MemCaseId{device_type, 0, page_locked_device_type, used_by_network};
@@ -125,16 +123,14 @@ REGISTER_MEM_CASE_ID_GENERATOR(DeviceType::kDummyDevice)
 
 REGISTER_MEM_CASE_ID_TO_PROTO(DeviceType::kDummyDevice)
     .SetMatcher(MatchDummyDeviceOrDummyDevicePinnedHostMemCaseId)
-    .SetToProto([](const MemCaseId& mem_case_id, MemoryCase* mem_case) -> void {
+    .SetToProto([](const MemCaseId& mem_case_id, MemCase* mem_case) -> void {
       if (mem_case_id.device_type() == DeviceType::kCPU) {
         CHECK_EQ(mem_case_id.host_mem_page_locked_device_type(), DeviceType::kDummyDevice);
-        auto* host_mem = mem_case->mutable_host_mem();
-        host_mem->mutable_dummy_device_pinned_mem();
         if (mem_case_id.is_host_mem_registered_by_network()) {
-          host_mem->set_used_by_network(true);
+          mem_case->SetAttr<bool>("host_mem_used_by_network", true);
         }
       } else if (mem_case_id.device_type() == DeviceType::kDummyDevice) {
-        mem_case->mutable_dummy_device_mem();
+        mem_case->SetAttr<DeviceType>("device_type", kDummyDevice);
       } else {
         UNIMPLEMENTED();
       }
@@ -142,32 +138,33 @@ REGISTER_MEM_CASE_ID_TO_PROTO(DeviceType::kDummyDevice)
 
 REGISTER_PAGE_LOCKED_MEM_CASE(DeviceType::kDummyDevice)
     .SetMatcher(MatchDummyDeviceMemoryCase)
-    .SetPageLocker([](const MemoryCase& mem_case, MemoryCase* page_locked_mem_case) -> void {
-      CHECK(mem_case.has_dummy_device_mem());
-      page_locked_mem_case->mutable_host_mem()->mutable_dummy_device_pinned_mem();
+    .SetPageLocker([](const MemCase& mem_case, MemCase* page_locked_mem_case) -> void {
+      CHECK(mem_case.Attr<DeviceType>("device_type") == kDummyDevice);
+      page_locked_mem_case->SetAttr<DeviceType>("host_mem_pinned_device", kDummyDevice);
     });
 
 REGISTER_PATCH_MEM_CASE(DeviceType::kDummyDevice)
     .SetMatcher(MatchDummyDeviceOrDummyDevicePinnedHostMemoryCase)
-    .SetPatcher([](const MemoryCase& src_mem_case, MemoryCase* dst_mem_case) -> bool {
-      if (src_mem_case.has_host_mem()) {
-        if (!dst_mem_case->has_host_mem()) { return false; }
-        if (dst_mem_case->host_mem().page_lock_case_case() == HostMemory::PAGE_LOCK_CASE_NOT_SET) {
-          if (src_mem_case.host_mem().has_dummy_device_pinned_mem()) {
-            dst_mem_case->mutable_host_mem()->mutable_dummy_device_pinned_mem();
+    .SetPatcher([](const MemCase& src_mem_case, MemCase* dst_mem_case) -> bool {
+      if (src_mem_case.Attr<DeviceType>("device_type") == kCPU ) {
+        if (!(dst_mem_case->Attr<DeviceType>("device_type") != kCPU)) { return false; }
+        if (!dst_mem_case->HasAttr<MemCase>("pinned_device")) {
+          if (src_mem_case.Attr<DeviceType>("pinned_device") == kDummyDevice) {
+            dst_mem_case->SetAttr<DeviceType>("pinned_device", kDummyDevice);
           }
         } else {
           return false;
         }
-        if (src_mem_case.host_mem().has_used_by_network()
-            && src_mem_case.host_mem().used_by_network()) {
-          dst_mem_case->mutable_host_mem()->set_used_by_network(true);
+        if (src_mem_case.HasAttr<bool>("used_by_network")) {
+          dst_mem_case->SetAttr<bool>("used_by_network", true);
         }
       } else {
-        CHECK(src_mem_case.has_dummy_device_mem());
-        if (!dst_mem_case->has_dummy_device_mem()) { return false; }
+        CHECK(src_mem_case.Attr<DeviceType>("device_type") == kDummyDevice);
+        if ( dst_mem_case->Attr<DeviceType>("device_type") != kDummyDevice) { return false; }
       }
       return true;
     });
 
 }  // namespace oneflow
+
+}

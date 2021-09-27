@@ -23,7 +23,7 @@ class CopyHdOp final : public Operator {
   CopyHdOp() = default;
   ~CopyHdOp() override = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override {
@@ -35,12 +35,13 @@ class CopyHdOp final : public Operator {
 
  private:
   Maybe<void> InferSbpSignature(
-      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const {
+      const ParallelDesc& parallel_desc) const override {
     auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    const SbpParallel& sbp_parallel = JUST(SbpInferHint4Ibn(input_bns().Get(0)))->sbp_parallel();
+    const cfg::SbpParallel& sbp_parallel =
+        JUST(SbpInferHint4Ibn(input_bns().Get(0)))->sbp_parallel();
     (*bn2sbp)[input_bns().Get(0)] = sbp_parallel;
     (*bn2sbp)[output_bns().Get(0)] = sbp_parallel;
     return Maybe<void>::Ok();
@@ -49,9 +50,10 @@ class CopyHdOp final : public Operator {
   LogicalBlobId lbi4obn(const std::string& output_bn) const override;
 };
 
-void CopyHdOp::InitFromOpConf() {
+Maybe<void> CopyHdOp::InitFromOpConf() {
   EnrollInputBn("in", false);
   EnrollOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> CopyHdOp::InferOutBlobDescs(

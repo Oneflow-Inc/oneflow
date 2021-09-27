@@ -34,7 +34,7 @@ void CopyTaskNode::BuildExecGphAndRegst() {
   auto in_regst = GetSoleConsumedRegst("copy_in");
   out_regst->CopyBlobDescFrom(in_regst.get());
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = ConstructOp(NewCopyOpConf());
+  node->mut_op() = CHECK_JUST(ConstructOp(NewCopyOpConf()));
   node->BindBnWithRegst(node->op()->SoleIbn(), in_regst);
   node->BindBnWithRegst(node->op()->SoleObn(), out_regst);
 }
@@ -61,11 +61,11 @@ void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, int6
   set_lbi(lbi);
 }
 
-void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
+void CopyHdTaskNode::InitProducedRegstMemCase(MemCase* mem_case) {
   if (copy_type_ == CopyHdOpConf::H2D) {
     TaskNode::InitProducedRegstMemCase(mem_case);
   } else if (copy_type_ == CopyHdOpConf::D2H) {
-    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(GpuPhyId());
+    mem_case->SetAttr("cuda_pinned_mem_device_id", GpuPhyId());
   } else {
     UNIMPLEMENTED();
   }
@@ -95,15 +95,6 @@ void CopyCommNetTaskNode::Init(int64_t machine_id, const LogicalBlobId& lbi) {
   StreamId stream_id{device_id, generator->GenerateCommNetStreamIndex()};
   set_thrd_id(SerializeStreamIdToInt64(stream_id));
   set_lbi(lbi);
-}
-
-void CopyCommNetTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
-  mem_case->mutable_host_mem()->set_used_by_network(true);
-}
-
-void CopyCommNetTaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
-  CHECK(mem_case->has_host_mem());
-  mem_case->mutable_host_mem()->set_used_by_network(true);
 }
 
 OperatorConf CopyCommNetTaskNode::NewCopyOpConf() {
