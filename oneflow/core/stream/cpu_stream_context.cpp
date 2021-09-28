@@ -75,7 +75,7 @@ class DeviceCtxImpl final : public DeviceCtx {
 }  // namespace
 
 Maybe<void> CpuStreamContext::OnExecutionContextSetup() {
-  OF_PROFILER_NAME_THIS_HOST_THREAD("__CPU Actor Thread");
+  OF_PROFILER_NAME_THIS_HOST_THREAD("_CPU Actor Thread");
   return Maybe<void>::Ok();
 }
 
