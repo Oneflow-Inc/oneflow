@@ -123,6 +123,9 @@ def weight_norm(module: T_module, name: str = "weight", dim: int = 0) -> T_modul
     
     See https://arxiv.org/abs/1602.07868
 
+    This document description is refereced to the Pytorch document. 
+    https://pytorch.org/docs/stable/generated/torch.nn.utils.weight_norm.html
+
     Args:
         module (Module): containing module
         name (str, optional): name of weight parameter

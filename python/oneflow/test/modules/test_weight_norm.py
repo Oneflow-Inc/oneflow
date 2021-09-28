@@ -21,8 +21,11 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 
-import torch
 from test_util import GenArgList
+
+# import torch
+import torch as torch_original
+from oneflow.test_utils.automated_test_util import *
 
 input_arr = np.array(
     [
@@ -37,35 +40,55 @@ input_arr = np.array(
 
 def _test_weightnorm(test_case, device, dim):
     model_flow = flow.nn.Linear(2, 4)  # shape of weight: (4, 2)
+    model_flow = model_flow.to(device)
     with flow.no_grad():
         for i in range(input_arr.shape[0]):
             for j in range(input_arr.shape[1]):
                 model_flow.weight[i, j] = input_arr[i][j]
     m_flow = flow.nn.utils.weight_norm(model_flow, name="weight", dim=dim)
 
-    model_torch = torch.nn.Linear(2, 4)
-    with torch.no_grad():
+    model_torch = torch_original.nn.Linear(2, 4)
+    model_torch = model_torch.to(device)
+    with torch_original.no_grad():
         for i in range(input_arr.shape[0]):
             for j in range(input_arr.shape[1]):
                 model_torch.weight[i, j] = input_arr[i][j]
-    m_torch = torch.nn.utils.weight_norm(model_torch, name="weight", dim=dim)
+    m_torch = torch_original.nn.utils.weight_norm(model_torch, name="weight", dim=dim)
 
-    test_case.assertTrue(
-        np.allclose(
-            m_flow.weight_g.detach().numpy(),
-            m_torch.weight_g.detach().numpy(),
-            1e-05,
-            1e-05,
+    if(device == 'cpu'):
+        test_case.assertTrue(
+            np.allclose(
+                m_flow.weight_g.detach().numpy(),
+                m_torch.weight_g.detach().numpy(),
+                1e-05,
+                1e-05,
+            )
         )
-    )
-    test_case.assertTrue(
-        np.allclose(
-            m_flow.weight_v.detach().numpy(),
-            m_torch.weight_v.detach().numpy(),
-            1e-05,
-            1e-05,
+        test_case.assertTrue(
+            np.allclose(
+                m_flow.weight_v.detach().numpy(),
+                m_torch.weight_v.detach().numpy(),
+                1e-05,
+                1e-05,
+            )
         )
-    )
+    elif(device == 'gpu'):
+        test_case.assertTrue(
+            np.allclose(
+                m_flow.weight_g.detach().cpu().numpy(),
+                m_torch.weight_g.detach().cpu().numpy(),
+                1e-05,
+                1e-05,
+            )
+        )
+        test_case.assertTrue(
+            np.allclose(
+                m_flow.weight_v.detach().numpy(),
+                m_torch.weight_v.detach().numpy(),
+                1e-05,
+                1e-05,
+            )
+        )
 
 
 def _test_weightnorm_backward(test_case, device, dim):
@@ -120,6 +143,19 @@ class TestWeightNorm(flow.unittest.TestCase):
         arg_dict["dim"] = [None, -2, -1, 0, 1]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+    
+    @autotest(n=10, auto_backward=True)
+    def test_weight_norm_with_random_data(test_case):
+        device = random_device()
+
+        dim = random(-2, 2).to(int).value()
+        output = random(2,6).to(int)
+        input = random(2,6).to(int)
+
+        model_torch = torch.nn.Linear(output, input)
+        model_torch = model_torch.to(device)
+        m = torch.nn.utils.weight_norm(model_torch, name="weight",dim=dim)
+        return m.weight_g, m.weight_v
 
 
 if __name__ == "__main__":
