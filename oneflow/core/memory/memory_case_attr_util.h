@@ -68,6 +68,10 @@ public:
     return false;
   }
 
+  MemoryCase GetMemCase() const {
+    return mem_case;
+  }
+private:
   MemoryCase mem_case;
 };
 

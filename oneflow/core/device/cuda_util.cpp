@@ -186,7 +186,7 @@ bool MatchCudaMemoryCase(const MemCase& mem_case) {
 }
 
 bool MatchCudaOrCudaPinnedHostMemoryCase(const MemCase& mem_case) {
-  if (mem_case.Attr<DeviceType>("device_type")==kCPU && mem_case.HasAttr<MemCase>("cuda_pinned_mem")) {
+  if (mem_case.Attr<DeviceType>("device_type")==kCPU && mem_case.Attr<DeviceType>("pinned_device_type")==kGPU) {
     return true;
   } else if (mem_case.Attr<DeviceType>("device_type") == kGPU) {
     return true;
@@ -216,7 +216,7 @@ REGISTER_MEM_CASE_ID_GENERATOR(DeviceType::kGPU)
       // if(mem_case.Attr<DeviceType>(const std::string &attr_name))
       // if(mem_case.device_type == kCPU)
       if (mem_case.Attr<DeviceType>("device_type") == kCPU) {
-        CHECK(mem_case.HasAttr<MemCase>("cuda_pinned_mem"));
+        CHECK(mem_case.Attr<DeviceType>("pinned_device_id") == kGPU);
         device_type = DeviceType::kCPU;
         page_locked_device_type = DeviceType::kGPU;
         device_index = mem_case.Attr<int64_t>("cuda_pinned_mem_device_id");
@@ -259,10 +259,10 @@ REGISTER_PATCH_MEM_CASE(DeviceType::kGPU)
     .SetMatcher(MatchCudaOrCudaPinnedHostMemoryCase)
     .SetPatcher([](const MemCase& src_mem_case, MemCase* dst_mem_case) -> bool {
       if (src_mem_case.Attr<DeviceType>("device_type") == kCPU) {
-        CHECK(src_mem_case.HasAttr<MemCase>("cuda_pinned_mem"));
+        CHECK(src_mem_case.Attr<DeviceType>("pinned_device_type")==kGPU);
         if (!(dst_mem_case->Attr<DeviceType>("device_type") == kCPU)) { return false; }
         if (dst_mem_case->HasAttr<MemCase>("page_lock_case")) {
-          dst_mem_case->SetAttr("cuda_pinned_mem", src_mem_case.Attr<MemCase>("cuda_pinned_mem"));
+          dst_mem_case->SetAttr("pinned_device_type", src_mem_case.Attr<DeviceType>("pinned_device_type"));
         } else {
           return false;
         }

@@ -142,7 +142,7 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_min_register_num(min_register_num_);
   ret->set_max_register_num(max_register_num_);
   ret->set_register_num(min_register_num_);
-  *(ret->mutable_mem_case()) = mem_case_.mem_case;
+  *(ret->mutable_mem_case()) = mem_case_.GetMemCase();
   ret->set_enable_reuse_mem(enable_reuse_mem_);
   ret->set_mem_block_id(mem_block_id_);
   ret->set_mem_block_offset(mem_block_offset_);

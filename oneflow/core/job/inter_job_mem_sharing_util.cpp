@@ -316,11 +316,11 @@ void MergeSharedInterfaceMemBlock(const std::vector<std::shared_ptr<Job>>& jobs,
       const auto& task_protos = pair.second;
       FOR_RANGE(int64_t, i, 0, task_protos.size()) {
         RegstDescProto* regst_desc = PlanUtil::GetSoleProducedDataRegst(task_protos.at(i));
-        *(regst_desc->mutable_mem_case()) = common_mem_case_vec.at(i).mem_case;
+        *(regst_desc->mutable_mem_case()) = common_mem_case_vec.at(i).GetMemCase();
         CHECK(mem_block_id2mem_block->find(regst_desc->mem_block_id())
               != mem_block_id2mem_block->end());
         *(mem_block_id2mem_block->at(regst_desc->mem_block_id()).mutable_mem_case()) =
-            common_mem_case_vec.at(i).mem_case;
+            common_mem_case_vec.at(i).GetMemCase();
       }
     }
   }

@@ -121,7 +121,7 @@ void SliceBoxingAddKernel<device_type, T>::ForwardDataContent(const KernelContex
           (device_type == kCPU)
 #ifdef WITH_CUDA
           || (device_type == DeviceType::kGPU && in_i->mem_case().Attr<DeviceType>("device_type")==DeviceType::kCPU
-              && in_i->mem_case().HasAttr<DeviceType>("cuda_pinned_mem"))
+              && in_i->mem_case().Attr<DeviceType>("pinned_device_type")==DeviceType::kGPU)
           || (device_type == DeviceType::kGPU && in_i->mem_case().Attr<DeviceType>("device_type")==DeviceType::kGPU
               && out->mem_case().Attr<DeviceType>("device_type")==DeviceType::kGPU
               && out->mem_case().Attr<int64_t>("device_id")

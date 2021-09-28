@@ -308,7 +308,7 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
       mem_block.add_job_id(job_id);
       mem_block.set_machine_id(machine_id);
       *(mem_block.mutable_mem_case()) =
-          GenerateCorrespondingPageLockedHostMemCase(MemCase(regst_desc->mem_case())).mem_case;
+          GenerateCorrespondingPageLockedHostMemCase(MemCase(regst_desc->mem_case())).GetMemCase();
       mem_block.set_enable_reuse_mem(false);
       mem_block.set_mem_size(regst_separated_size);
       mem_block.set_thrd_id_hint(thrd_id);

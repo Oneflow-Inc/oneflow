@@ -60,7 +60,7 @@ class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
     auto* blob_obj = CHECK_JUST(instruction->mut_operand_type(args->blob())->Mut<BlobObject>());
     auto* blob = blob_obj->mut_blob();
     CHECK(blob->mem_case().Attr<DeviceType>("device_type") == kCPU);
-    if (blob->mem_case().HasAttr<DeviceType>("cuda_pinned_mem")) { return; }
+    if (blob->mem_case().Attr<DeviceType>("pinned_device_type") == kGPU) { return; }
     void* dptr = blob->mut_dptr();
     CHECK_NOTNULL(dptr);
     size_t size = blob->AlignedByteSizeOfBlobBody();
@@ -89,7 +89,7 @@ class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
     auto* blob_obj = CHECK_JUST(instruction->mut_operand_type(args->blob())->Mut<BlobObject>());
     auto* blob = blob_obj->mut_blob();
     CHECK(blob->mem_case().Attr<DeviceType>("device_type") == kCPU);
-    if (blob->mem_case().HasAttr<DeviceType>("cuda_pinned_mem")) { return; }
+    if (blob->mem_case().Attr<DeviceType>("pinned_device_type") == kGPU) { return; }
     void* dptr = blob->mut_dptr();
     CHECK_NOTNULL(dptr);
     cudaError_t cuda_error = cudaHostUnregister(dptr);

@@ -27,7 +27,7 @@ namespace oneflow {
 void* MemoryAllocatorImpl::Allocate(MemCase mem_case, size_t size) {
   void* ptr = nullptr;
   if (mem_case.Attr<DeviceType>("device_type") == kCPU) {
-    if (mem_case.HasAttr<DeviceType>("cuda_pinned_mem")) {
+    if (mem_case.Attr<DeviceType>("pinned_device_type") == kGPU) {
 #ifdef WITH_CUDA
       // NOTE(chengcheng):
       //   All cudaMallocHost MUST set the correct device id to avoid creating CUDA context
@@ -57,7 +57,7 @@ void* MemoryAllocatorImpl::Allocate(MemCase mem_case, size_t size) {
 
 void MemoryAllocatorImpl::Deallocate(void* ptr, MemCase mem_case) {
   if (mem_case.Attr<DeviceType>("device_type") == kCPU) {
-    if (mem_case.HasAttr<DeviceType>("cuda_pinned_mem")) {
+    if (mem_case.Attr<DeviceType>("pinned_device_type") == kGPU) {
 #ifdef WITH_CUDA
       OF_CUDA_CHECK(cudaFreeHost(ptr));
 #else
