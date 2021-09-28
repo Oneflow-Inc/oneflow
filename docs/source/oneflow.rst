@@ -96,6 +96,7 @@ oneflow
             scatter,
             scatter_add,
             scatter_nd, 
+            tensor_scatter_nd_update,
             sin, 
             sinh, 
             sign, 

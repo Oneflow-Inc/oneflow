@@ -613,6 +613,29 @@ class ScatterNdFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class TensorScatterNdUpdateFunctor {
+ public:
+  TensorScatterNdUpdateFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("tensor_scatter_nd_update")
+                         .Input("params")
+                         .Input("updates")
+                         .Input("indices")
+                         .Output("out")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& tensor,
+                           const std::shared_ptr<one::Tensor>& indices,
+                           const std::shared_ptr<one::Tensor>& updates) const {
+    CHECK_OR_RETURN(*tensor->dtype() == *updates->dtype())
+        << "The dtype of tensor and updates must be same.";
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {tensor, updates, indices});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ScatterNdLikeFunctor {
  public:
   ScatterNdLikeFunctor() {
@@ -1693,6 +1716,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ArgSortFunctor>("ArgSort");
   m.add_functor<impl::GatherNdFunctor>("GatherNd");
   m.add_functor<impl::ScatterNdFunctor>("ScatterNd");
+  m.add_functor<impl::TensorScatterNdUpdateFunctor>("TensorScatterNdUpdate");
   m.add_functor<impl::ScatterNdLikeFunctor>("ScatterNdLike");
   m.add_functor<impl::ReshapeFunctor>("Reshape");
   m.add_functor<impl::SliceFunctor>("Slice");
