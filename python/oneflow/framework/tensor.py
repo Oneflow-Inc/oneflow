@@ -288,6 +288,8 @@ def _abs(self):
 def _exp(self):
     return flow.exp(self)
 
+def _expand_as(input, other):
+    return flow.expand(input, other.size())
 
 def _acos(self):
     return flow.acos(self)
@@ -691,6 +693,7 @@ def RegisterMethods():
     Tensor.clip = _clip
     Tensor.cos = _cos
     Tensor.cosh = _cosh
+    Tensor.expand_as = _expand_as
     Tensor.erf = _erf
     Tensor.erfc = _erfc
     Tensor.expm1 = _expm1
