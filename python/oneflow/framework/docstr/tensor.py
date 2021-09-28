@@ -64,5 +64,12 @@ add_docstr(
     Args:
         other (:class:`oneflow.Tensor`): The result tensor has the same size
             as :attr:`other`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.numel,
     """
+    See :func:`oneflow.numel`
+    """,
 )

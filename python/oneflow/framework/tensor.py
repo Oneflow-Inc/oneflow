@@ -288,8 +288,10 @@ def _abs(self):
 def _exp(self):
     return flow.exp(self)
 
+
 def _expand_as(input, other):
     return flow.expand(input, other.size())
+
 
 def _acos(self):
     return flow.acos(self)
