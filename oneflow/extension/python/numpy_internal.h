@@ -40,5 +40,7 @@ Maybe<DataType> NumpyTypeToOFDataType(int np_array_type);
 
 Maybe<DataType> GetOFDataTypeFromNpArray(PyArrayObject* array);
 
+Maybe<void> InitNumpyCAPI();
+
 }  // namespace numpy
 }  // namespace oneflow
