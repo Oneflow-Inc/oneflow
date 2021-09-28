@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/global.h"
 #ifdef __linux__
 
 #include "oneflow/core/comm_network/epoll/socket_read_helper.h"
@@ -73,6 +74,7 @@ bool SocketReadHelper::DoCurRead(void (SocketReadHelper::*set_cur_read_done)()) 
 
 void SocketReadHelper::SetStatusWhenMsgHeadDone() {
   switch (cur_msg_.msg_type) {
+  case SocketMsgType::kActor: SocketReadHelper::SetStatusWhenActorMsgHeadDone();break;
 #define MAKE_ENTRY(x, y) \
   case SocketMsgType::k##x: SetStatusWhen##x##MsgHeadDone(); break;
     OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ);
@@ -107,8 +109,9 @@ void SocketReadHelper::SetStatusWhenRequestReadMsgHeadDone() {
 }
 
 void SocketReadHelper::SetStatusWhenActorMsgHeadDone() {
-  //Global<ActorMsgBus>::Get()->SendMsgWithoutCommNet(cur_msg_.);
-  
+  char * data = cur_msg_.data;
+  size_t size = cur_msg_.size;
+  Global<EpollCommNet>::Get()->msghandle_(data,size);
   SwitchToMsgHeadReadHandle();
 }
 

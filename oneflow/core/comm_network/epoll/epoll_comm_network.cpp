@@ -97,15 +97,22 @@ void EpollCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) {
     SocketMsg msg;
     msg.msg_type = SocketMsgType::kActor;
     msg.data = data;
+    msg.size = size;
     GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
 
-char * EpollCommNet::SerialTokenToData(void *token, size_t *size) {
-  return (char*)token;
+char * EpollCommNet::SerialTokenToData(void *token, size_t *token_size) {
+    char *data = (char*)malloc(sizeof(SocketMemDesc));
+    std::memcpy(data,token,sizeof(SocketMemDesc));
+    *token_size = sizeof(SocketMemDesc);
+    return data;
 }
 
-void * EpollCommNet::DeSerialDataToToken(char *data, size_t  * size) {
-  return nullptr;
+void * EpollCommNet::DeSerialDataToToken(char *data, size_t  * token_size) {
+  void * token = malloc(sizeof(SocketMemDesc));
+  std::memcpy(token,data,sizeof(SocketMemDesc));
+  *token_size = sizeof(SocketMemDesc);
+  return token;
 }
 
 void EpollCommNet::SendTransportMsg(int64_t dst_machine_id, const TransportMsg& transport_msg) {

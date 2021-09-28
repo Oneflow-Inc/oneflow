@@ -39,14 +39,15 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(RequestWrite, request_write) \
   OF_PP_MAKE_TUPLE_SEQ(RequestRead, request_read)   \
   OF_PP_MAKE_TUPLE_SEQ(Transport, transport)
-  // OF_PP_MAKE_TUPLE_SEQ(Actor, actor)                \
+
  
 
 enum class SocketMsgType {
+  kActor,
 #define MAKE_ENTRY(x, y) k##x,
   OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ)
 #undef MAKE_ENTRY
-kActor;
+
 };
 
 struct RequestWriteMsg {
@@ -70,6 +71,7 @@ struct SocketMsg {
 #undef MAKE_ENTRY
     char * data;
   };
+  size_t size;
 };
 
 using CallBackList = std::list<std::function<void()>>;
