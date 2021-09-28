@@ -55,7 +55,7 @@ def _test_weightnorm(test_case, device, dim):
                 model_torch.weight[i, j] = input_arr[i][j]
     m_torch = torch_original.nn.utils.weight_norm(model_torch, name="weight", dim=dim)
 
-    if(device == 'cpu'):
+    if device == "cpu":
         test_case.assertTrue(
             np.allclose(
                 m_flow.weight_g.detach().numpy(),
@@ -72,7 +72,7 @@ def _test_weightnorm(test_case, device, dim):
                 1e-05,
             )
         )
-    elif(device == 'gpu'):
+    elif device == "gpu":
         test_case.assertTrue(
             np.allclose(
                 m_flow.weight_g.detach().cpu().numpy(),
@@ -143,18 +143,18 @@ class TestWeightNorm(flow.unittest.TestCase):
         arg_dict["dim"] = [None, -2, -1, 0, 1]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-    
+
     @autotest(n=10, auto_backward=True)
     def test_weight_norm_with_random_data(test_case):
         device = random_device()
 
         dim = random(-2, 2).to(int).value()
-        output = random(2,6).to(int)
-        input = random(2,6).to(int)
+        output = random(2, 6).to(int)
+        input = random(2, 6).to(int)
 
         model_torch = torch.nn.Linear(output, input)
         model_torch = model_torch.to(device)
-        m = torch.nn.utils.weight_norm(model_torch, name="weight",dim=dim)
+        m = torch.nn.utils.weight_norm(model_torch, name="weight", dim=dim)
         return m.weight_g, m.weight_v
 
 
