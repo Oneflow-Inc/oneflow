@@ -709,6 +709,7 @@ def RegisterMethods():
     Tensor.triu = _triu
     Tensor.contiguous = _contiguous
 
+
 def register_tensor_op(op_name):
     def set_tensor_op(method):
         setattr(Tensor, op_name, method)
