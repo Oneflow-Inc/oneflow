@@ -78,31 +78,12 @@ TensorProcessor& TensorProcessor::PromoteInputsToCommonDtype(bool is_promote) {
   return *this;
 }
 
-TensorProcessor& TensorProcessor::PromoteInputsWithScalar(bool is_promote) {
-  promote_inputs_with_scalar_ = is_promote;
-  return *this;
-}
-
 Maybe<void> TensorProcessor::Apply() {
   if (promote_inputs_to_common_dtype_) {
     bool has_different_input_dtype = CheckHasDifferentInputDType(tensor_tuple_);
     if (has_different_input_dtype) {
       common_dtype_ = ComputeCommonDType(tensor_tuple_);
       JUST(CastToSameType(tensor_tuple_, common_dtype_));
-    }
-  } else if (promote_inputs_with_scalar_) {
-    /*
-    Only promote type to Float32 when tensor is Int type but scalar is float type.
-    */
-    for (int i = 0; i < tensor_tuple_.size(); ++i) {
-      Symbol<DType> scalar_dtype = inputs_lowest_dtype_vec_.at(
-          i);  // Set scalar type like: tensor_processor.AddInputs({x}, dtype);
-      Symbol<DType> tensor_dtype = tensor_tuple_.at(i)->dtype();
-      if (IsFloatingDataType(scalar_dtype->data_type())
-          && DType::priority_order[tensor_dtype->data_type()]
-                 < DType::priority_order[DType::Float()->data_type()]) {
-        tensor_tuple_.at(i) = JUST(one::functional::Cast(tensor_tuple_.at(i), DType::Float()));
-      }
     }
   } else {
     for (int i = 0; i < tensor_tuple_.size(); ++i) {

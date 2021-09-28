@@ -78,21 +78,26 @@ class ScalarAddFunctor {
                            bool inplace) const {
     MutableAttrMap attrs;
     TensorProcessor tensor_processor;
-    Symbol<DType> scalar_dtype;
+    Symbol<DType> lowest_dtype;
     if (scalar.IsFloatingPoint()) {
       JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
-      scalar_dtype = DType::Double();
+      // Only promote type to Float32 when tensor is Int type but scalar is float type.
+      if (DType::priority_order[x->dtype()->data_type()] < DType::priority_order[DType::Float16()->data_type()]) {
+        lowest_dtype = DType::Float();
+      } else {
+        lowest_dtype = x->dtype();
+      }
     } else if (scalar.IsIntegral()) {
       JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
-      scalar_dtype = DType::Int64();
+      lowest_dtype = x->dtype();
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarAdd shoule be float or int.";
     }
-    JUST(tensor_processor.PromoteInputsWithScalar(true).AddInputs({x}, scalar_dtype).Apply());
+    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
     TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
     if (inplace) {
       JUST(CheckInplaceValid(x));
@@ -140,21 +145,26 @@ class ScalarMulFunctor {
     if (std::dynamic_pointer_cast<StaticZerosTensor>(x)) { return x; }
     MutableAttrMap attrs;
     TensorProcessor tensor_processor;
-    Symbol<DType> scalar_dtype;
+    Symbol<DType> lowest_dtype;
     if (scalar.IsFloatingPoint()) {
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
-      scalar_dtype = DType::Double();
+      // Only promote type to Float32 when tensor is Int type but scalar is float type.
+      if (DType::priority_order[x->dtype()->data_type()] < DType::priority_order[DType::Float16()->data_type()]) {
+        lowest_dtype = DType::Float();
+      } else {
+        lowest_dtype = x->dtype();
+      }
     } else if (scalar.IsIntegral()) {
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
       JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
-      scalar_dtype = DType::Int64();
+      lowest_dtype = x->dtype();
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarMul shoule be float or int.";
     }
-    JUST(tensor_processor.PromoteInputsWithScalar(true).AddInputs({x}, scalar_dtype).Apply());
+    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
     TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, casted_vec, attrs);
   }
@@ -192,21 +202,26 @@ class ScalarPowFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
     MutableAttrMap attrs;
     TensorProcessor tensor_processor;
-    Symbol<DType> scalar_dtype;
+    Symbol<DType> lowest_dtype;
     if (scalar.IsFloatingPoint()) {
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
-      scalar_dtype = DType::Double();
+      // Only promote type to Float32 when tensor is Int type but scalar is float type.
+      if (DType::priority_order[x->dtype()->data_type()] < DType::priority_order[DType::Float16()->data_type()]) {
+        lowest_dtype = DType::Float();
+      } else {
+        lowest_dtype = x->dtype();
+      }
     } else if (scalar.IsIntegral()) {
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
       JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
-      scalar_dtype = DType::Int64();
+      lowest_dtype = x->dtype();
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarPow shoule be float or int.";
     }
-    JUST(tensor_processor.PromoteInputsWithScalar(true).AddInputs({x}, scalar_dtype).Apply());
+    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
     TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, casted_vec, attrs);
   }
@@ -642,21 +657,26 @@ class ScalarFModFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
     MutableAttrMap attrs;
     TensorProcessor tensor_processor;
-    Symbol<DType> scalar_dtype;
+    Symbol<DType> lowest_dtype;
     if (IsFloatingDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
-      scalar_dtype = DType::Double();
+      // Only promote type to Float32 when tensor is Int type but scalar is float type.
+      if (DType::priority_order[x->dtype()->data_type()] < DType::priority_order[DType::Float16()->data_type()]) {
+        lowest_dtype = DType::Float();
+      } else {
+        lowest_dtype = x->dtype();
+      }
     } else if (IsIntegralDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
-      scalar_dtype = DType::Int64();
+      lowest_dtype = x->dtype();
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarAdd shoule be float or int.";
     }
-    JUST(tensor_processor.PromoteInputsWithScalar(true).AddInputs({x}, scalar_dtype).Apply());
+    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
     TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, casted_vec, attrs);
   }
