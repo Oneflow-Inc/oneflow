@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
 
 
 def numel_op(input):
@@ -24,7 +23,7 @@ def numel_op(input):
     Returns the total number of elements in the :attr:`input` tensor.
 
     Args:
-        {input}
+        input (oneflow.Tensor): Input Tensor
 
     .. code-block:: python
 
