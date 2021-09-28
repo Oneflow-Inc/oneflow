@@ -37,7 +37,7 @@ def compare_with_numpy_lamb(
     clip_grad_args,
 ):
     clip_grad_max_norm, clip_grad_norm_type = clip_grad_args
-    
+
     np.random.seed(1000)
 
     random_grad_seq = []
@@ -49,7 +49,7 @@ def compare_with_numpy_lamb(
 
     def train_by_oneflow():
         x = flow.nn.Parameter(flow.Tensor(init_value, device=flow.device(device)))
-        
+
         optim_kwargs = {
             "params": [x],
             "lr": learning_rate,
@@ -58,19 +58,25 @@ def compare_with_numpy_lamb(
             "weight_decay": weight_decay,
             "do_bias_correction": do_bias_correction,
         }
-        
-        if (clip_grad_max_norm != -1):
-            optim_kwargs["clip_grad_max_norm"] = clip_grad_max_norm 
+
+        if clip_grad_max_norm != -1:
+            optim_kwargs["clip_grad_max_norm"] = clip_grad_max_norm
             optim_kwargs["clip_grad_norm_type"] = clip_grad_norm_type
 
-
         lamb = flow.optim.LAMB([optim_kwargs])
-        
+
         def train_one_iter(grad):
-            grad_tensor = flow.tensor(grad, dtype=flow.float32, requires_grad=False, device=flow.device(device))
-            
+            grad_tensor = flow.tensor(
+                grad,
+                dtype=flow.float32,
+                requires_grad=False,
+                device=flow.device(device),
+            )
+
             loss = flow.sum(x * grad_tensor)
             loss.backward()
+            if clip_grad_max_norm != -1:
+                lamb.clip_grad()
             lamb.step()
             lamb.zero_grad()
             return x
@@ -79,7 +85,7 @@ def compare_with_numpy_lamb(
             param = train_one_iter(random_grad_seq[i])
 
             of_res_list.append(param.numpy())
-    
+
     train_by_oneflow()
 
     np_res_list = []
@@ -92,7 +98,7 @@ def compare_with_numpy_lamb(
         beta2 = betas[1]
 
         def np_train_one_iter(step, grad):
-            if (clip_grad_max_norm != -1):
+            if clip_grad_max_norm != -1:
                 total_norm, grad = clip_grad_norm_np(
                     grad, clip_grad_max_norm, clip_grad_norm_type
                 )
@@ -112,15 +118,15 @@ def compare_with_numpy_lamb(
             #     denom = np.sqrt(max_s) / np.sqrt(bias_correction2) + eps
             # else:
             #     denom = np.sqrt(s) / np.sqrt(bias_correction2) + eps
-            
+
             adam_diff = (m / (1 - beta1)) / (np.sqrt(v / (1 - beta2)) + eps)
             w_norm = np.linalg.norm(x, ord=2)
             g_norm = np.linalg.norm(adam_diff, ord=2)
-            if (w_norm > 0 and g_norm > 0):
+            if w_norm > 0 and g_norm > 0:
                 trust_ratio = w_norm / g_norm
             else:
-                trust_ratio = 1.
-                
+                trust_ratio = 1.0
+
             param = x - learning_rate * trust_ratio * (adam_diff + weight_decay * x)
             return (param, m, v)
 
@@ -130,8 +136,10 @@ def compare_with_numpy_lamb(
         return x
 
     train_by_numpy()
-    
+
     test_case.assertTrue(np.allclose(of_res_list, np_res_list, rtol=1e-3, atol=1e-3))
+    # if not np.allclose(of_res_list, np_res_list, rtol=1e-3, atol=1e-3):
+    # print("catch")
 
 
 @flow.unittest.skip_unless_1n1d()

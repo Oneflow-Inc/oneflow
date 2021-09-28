@@ -163,7 +163,7 @@ class LAMB(Optimizer):
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
-        
+
         self._lamb_op = (
             flow.builtin_op("lamb_update")
             .Input("model")
@@ -173,7 +173,6 @@ class LAMB(Optimizer):
             .Attr("l1", 0.0)
             .Build()
         )
-
 
     def step(self, closure: Callable = None):
         """Performs a single optimization step.
@@ -189,13 +188,13 @@ class LAMB(Optimizer):
             for param_group in self.param_groups:
                 kwargs = {
                     "learning_rate_val": param_group["lr"],
-                    "bias_correction1_val": param_group["bias_correction1"],
-                    "bias_correction2_val": param_group["bias_correction2"],
+                    # "bias_correction1_val": param_group["bias_correction1"],
+                    # "bias_correction2_val": param_group["bias_correction2"],
                     "weight_decay": param_group["weight_decay"],
                     "beta1": param_group["betas"][0],
                     "beta2": param_group["betas"][1],
                     "epsilon": param_group["eps"],
-                    "do_bias_correction": param_group["do_bias_correction"],
+                    # "do_bias_correction": param_group["do_bias_correction"],
                 }
                 for param in param_group.parameters:
                     if param.grad is None:
@@ -206,10 +205,8 @@ class LAMB(Optimizer):
                         self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
                     m_tensor = self._state[param]["exp_avg"]
                     v_tensor = self._state[param]["exp_avg_sq"]
-                    
-                    self._lamb_op(
-                        param, param.grad, m_tensor, v_tensor, **kwargs
-                    )
+
+                    self._lamb_op(param, param.grad, m_tensor, v_tensor, **kwargs)
             self._state["step"] = self._state["step"] + 1
             return loss
 
@@ -226,7 +223,7 @@ class LAMB(Optimizer):
             weight_decay = param_group["weight_decay"]
             beta1 = param_group["betas"][0]
             beta2 = param_group["betas"][1]
-            
+
             epsilon = param_group["eps"]
 
             optimizer_conf.set_base_learning_rate(lr)
@@ -237,7 +234,7 @@ class LAMB(Optimizer):
             optimizer_conf.mutable_lamb_conf().set_beta2(beta2)
             optimizer_conf.mutable_lamb_conf().set_epsilon(epsilon)
             # optimizer_conf.mutable_lamb_conf().set_do_bias_correction(do_bias_correction)
-            
+
             optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
                 weight_decay
             )

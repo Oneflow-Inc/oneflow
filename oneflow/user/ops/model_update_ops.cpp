@@ -214,14 +214,7 @@ Maybe<void> InferIndexedSlicesAdamUpdateDataType(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferLambUpdateTensorDesc(user_op::InferContext* ctx) {
-  const float beta1 = ctx->Attr<float>("beta1");
-  const float beta2 = ctx->Attr<float>("beta2");
-  CHECK_GE_OR_RETURN(beta1, 0);
-  CHECK_LT_OR_RETURN(beta1, 1);
-  CHECK_GE_OR_RETURN(beta2, 0);
-  CHECK_LT_OR_RETURN(beta2, 1);
   const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
-
   const Shape& shape = model.shape();
   const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", 0);
   CHECK_EQ_OR_RETURN(model_diff.shape(), shape);
@@ -230,10 +223,6 @@ Maybe<void> InferLambUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& v = ctx->InputTensorDesc("v", 0);
   JUST(CheckShapeLike(&v, &model));
   JUST(CheckLearningRateShape(ctx));
-  const user_op::TensorDesc& beta1_t = ctx->InputTensorDesc("beta1_t", 0);
-  const user_op::TensorDesc& beta2_t = ctx->InputTensorDesc("beta2_t", 0);
-  JUST(CheckScalarShape(&beta1_t));
-  JUST(CheckScalarShape(&beta2_t));
   if (ctx->has_input("scale_by_tensor", 0)) {
     const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
     JUST(CheckScalarShape(&scale_by_tensor));
@@ -247,11 +236,6 @@ Maybe<void> InferLambUpdateDataType(user_op::InferContext* ctx) {
   JUST(CheckDataTypeLike(&m, &model));
   const user_op::TensorDesc& v = ctx->InputTensorDesc("v", 0);
   JUST(CheckDataTypeLike(&v, &model));
-  const DataType data_type = model.data_type();
-  const user_op::TensorDesc& beta1_t = ctx->InputTensorDesc("beta1_t", 0);
-  const user_op::TensorDesc& beta2_t = ctx->InputTensorDesc("beta2_t", 0);
-  JUST(CheckScalarDataType(&beta1_t, data_type));
-  JUST(CheckScalarDataType(&beta2_t, data_type));
   JUST(CheckLearningRateDataType(ctx));
   if (ctx->has_input("scale_by_tensor", 0)) {
     const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
@@ -281,8 +265,6 @@ Maybe<void> LambInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArg
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0));
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "m", 0));
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "v", 0));
-  JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "beta1_t", 0));
-  JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "beta2_t", 0));
   return Maybe<void>::Ok();
 }
 
@@ -607,15 +589,14 @@ REGISTER_NO_GRAD_USER_OP("indexed_slices_adam_update")
     .SetDataTypeInferFn(InferIndexedSlicesAdamUpdateDataType);
 
 REGISTER_NO_GRAD_USER_OP("lamb_update")
-    .Input("m")
-    .Input("v")
-    .Input("beta1_t")
-    .Input("beta2_t")
     .Input("model")
     .Input("model_diff")
-    .Input("learning_rate")
+    .OptionalInput("learning_rate")
     .OptionalInput("scale_by_tensor")
     .OptionalInput("skip_if")
+    .Input("m")
+    .Input("v")
+    .Attr<float>("learning_rate_val", 0.0)
     .Attr<float>("beta1")
     .Attr<float>("beta2")
     .Attr<float>("epsilon")
