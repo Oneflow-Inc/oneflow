@@ -65,6 +65,7 @@ class AddFunctor {
       op = broadcast_add_op_.get();
     }
     if (inplace) {
+      JUST(CheckInplaceCastValid(x, x_cast));
       JUST(CheckInplaceValid(x));
       JUST(CheckShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
@@ -115,10 +116,17 @@ class MulFunctor {
   std::shared_ptr<OpExpr> broadcast_mul_op_;
 };
 
-class DivFunctor : public BinaryFunctor {
+class DivFunctor : public BinaryFloatFunctor {
  public:
   DivFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("broadcast_div").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class Atan2Functor : public BinaryFloatFunctor {
+ public:
+  Atan2Functor() {
+    op_ = CHECK_JUST(one::OpBuilder("atan2").Input("x").Input("y").Output("z").Build());
   }
 };
 
@@ -254,6 +262,7 @@ class ReshapeLikeFunctor : public BinaryFunctor {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AddFunctor>("Add");
+  m.add_functor<impl::Atan2Functor>("Atan2");
   m.add_functor<impl::SubFunctor>("Sub");
   m.add_functor<impl::MulFunctor>("Mul");
   m.add_functor<impl::DivFunctor>("Div");
