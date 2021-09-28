@@ -62,7 +62,7 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("square", Square)                     \
   OF_PP_MAKE_TUPLE_SEQ("tan", Tan)
 
-#define CAST_INT_TO_FLOAT_UNARY_FUNC_SEQ      \
+#define FLOAT_UNARY_FUNC_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ("sigmoid_v2", Sigmoid) \
   OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)
 
@@ -82,10 +82,12 @@ namespace impl {
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, InplaceUnaryFunctor)
 #define CAST_INT_FLOAT_UNARY_FUNCOTRS(op_type_name, class_name) \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, CastIntToFloatUnaryFunctor)
+#define FLOAT_UNARY_FUNCOTRS(op_type_name, class_name) \
+  UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, FloatUnaryFunctor)
 
 OF_PP_FOR_EACH_TUPLE(UNARY_FUNCOTRS, UNARY_FUNC_SEQ);
 OF_PP_FOR_EACH_TUPLE(INPLACE_UNARY_FUNCOTRS, INPLACE_UNARY_FUNC_SEQ);
-OF_PP_FOR_EACH_TUPLE(CAST_INT_FLOAT_UNARY_FUNCOTRS, CAST_INT_TO_FLOAT_UNARY_FUNC_SEQ);
+OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_FUNCOTRS, FLOAT_UNARY_FUNC_SEQ);
 
 }  // namespace impl
 
