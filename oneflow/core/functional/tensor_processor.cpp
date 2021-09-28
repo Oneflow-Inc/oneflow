@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/functional/tensor_processor.h"
-#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/functional/functional.h"
