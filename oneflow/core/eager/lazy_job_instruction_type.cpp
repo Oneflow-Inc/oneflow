@@ -94,6 +94,7 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
     auto* device_ctx = GetLazyJobDeviceCtx(instruction);
 
     static thread_local bool has_set = false;
+    static thread_local int64_t run_id = 0;
     if (!has_set) {
       has_set = true;
       OF_PROFILER_NAME_THIS_HOST_THREAD("__NNGraph vm stream");
@@ -103,7 +104,7 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
     device_ctx->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(cur_nn_graph);
     OF_PROFILER_RANGE_POP();  // WaitUntilQueueEmptyIfFrontNNGraphNotEquals
     {
-      OF_PROFILER_RANGE_PUSH("MakeJobInstance");
+      OF_PROFILER_RANGE_PUSH("i=" + std::to_string(run_id++) + "-MakeJobInstance");
       const auto& job_instance = MakeJobInstance(instruction);
       OF_PROFILER_RANGE_POP();  // MakeJobInstance
       OF_PROFILER_RANGE_PUSH("Send all buffers to BufferMgr");
