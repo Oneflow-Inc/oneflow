@@ -1255,12 +1255,19 @@ class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
-    int64_t ndims = x->shape()->NumAxes();
     std::vector<detail::Slice> slice_indices;
     TensorTuple tensor_indices;
-    std::vector<int64_t> target_dims({});
+    std::vector<int64_t> target_dims;
+    std::vector<int64_t> expand_dims;
+    JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &expand_dims,
+                             &target_dims));
 
-    JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &target_dims));
+    auto expand_input = x;
+    for (int i = 0; i < expand_dims.size(); ++i) {
+      int64_t dim = expand_dims.at(i);
+      expand_input = JUST(functional::ExpandDims(expand_input, dim + i));
+    }
+    int64_t ndims = expand_input->shape()->NumAxes();
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
     Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
 
@@ -1274,15 +1281,17 @@ class TensorGetItemFunctor {
     bool is_identity = [&]() {
       if (target_shape.NumAxes() == 0) { return false; }
       for (int i = 0; i < ndims; ++i) {
-        if (start[i] != 0 || end[i] != x->shape()->At(i) || step[i] != 1) { return false; }
+        if (start[i] != 0 || end[i] != expand_input->shape()->At(i) || step[i] != 1) {
+          return false;
+        }
       }
       return true;
     }();
     std::shared_ptr<one::Tensor> result;
     if (is_identity) {
-      result = JUST(Identity(x));
+      result = JUST(Identity(expand_input));
     } else {
-      result = JUST(Slice(x, start, end, step));
+      result = JUST(Slice(expand_input, start, end, step));
     }
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
@@ -1297,12 +1306,16 @@ class TensorSetItemFunctor {
   TensorSetItemFunctor() {}
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index,
                          const std::shared_ptr<one::Tensor>& value) const {
-    int64_t ndims = x->shape()->NumAxes();
     std::vector<detail::Slice> slice_indices;
     TensorTuple tensor_indices;
+    std::vector<int64_t> expand_dims;
     std::vector<int64_t> target_dims;
-
-    JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &target_dims));
+    JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &expand_dims,
+                             &target_dims));
+    if (expand_dims.size()) {
+      slice_indices = *JUST(RemoveExpandDimSlice(slice_indices, expand_dims));
+    }
+    int64_t ndims = x->shape()->NumAxes();
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
     CHECK_EQ_OR_RETURN(tensor_indices.size(), 0)
         << "Advanced indexing is not support for tensor setitem currently, please use basic "
