@@ -7,10 +7,10 @@
 
 ## Latest News
 
-- Version 0.5rc1 is out!
+- Version 0.5rc2 is out!
   - First class support for eager execution. The deprecated APIs are moved to `oneflow.compatible.single_client`
   - Drop-in replacement of `import torch` for existing Pytorch projects. You could test it by inter-changing `import oneflow as torch` and `import torch as flow`.
-  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.5rc1)
+  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.5rc2)
 
 ## Install OneFlow
 
@@ -34,7 +34,7 @@
 - To install latest stable release of OneFlow with CUDA support:
 
   ```bash
-  python3 -m pip install -f https://release.oneflow.info oneflow==0.5rc1+cu102
+  python3 -m pip install -f https://release.oneflow.info oneflow==0.5rc2+cu102
   ```
 
 - To install nightly release of OneFlow with CUDA support:
@@ -47,7 +47,7 @@
 
   - Stable
     ```bash
-    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.5rc1+[PLATFORM]
+    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.5rc2+[PLATFORM]
     ```
   - Nightly
     ```
@@ -70,6 +70,13 @@
   ```
   For more information on this, please refer to [pypi 镜像使用帮助](https://mirror.tuna.tsinghua.edu.cn/help/pypi/)
 
+### Use docker image
+
+````
+docker pull oneflowinc/oneflow:nightly-cuda10.2
+docker pull oneflowinc/oneflow:nightly-cuda11.1
+```
+
 ### Build from Source
 
 <details>
@@ -79,7 +86,7 @@
 
   ```bash
   git clone https://github.com/Oneflow-Inc/oneflow --depth=1
-  ```
+````
 
 - #### Option 2: Download from Aliyun
 
@@ -219,6 +226,7 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 <summary>3 minutes to run MNIST.</summary>
 
 - Clone the demo code from OneFlow documentation
+
   ```
   git clone https://github.com/Oneflow-Inc/oneflow-documentation.git
   cd oneflow-documentation/cn/docs/single_client/code/quick_start/
