@@ -86,7 +86,7 @@ docker pull oneflowinc/oneflow:nightly-cuda11.1
 
   ```bash
   git clone https://github.com/Oneflow-Inc/oneflow --depth=1
-````
+  ```
 
 - #### Option 2: Download from Aliyun
 
@@ -289,3 +289,4 @@ OneFlow was originally developed by [OneFlow Inc](http://www.oneflow.org) and [Z
 ## License
 
 [Apache License 2.0](LICENSE)
+````
