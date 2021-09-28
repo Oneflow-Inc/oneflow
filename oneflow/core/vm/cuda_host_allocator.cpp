@@ -22,6 +22,7 @@ namespace oneflow {
 namespace vm {
 
 CudaHostAllocator::~CudaHostAllocator() {
+  CudaCurrentDeviceGuard guard(device_id_);
   for (const auto& ptr_vec : granularity2free_ptrs_) {
     for (char* ptr : ptr_vec) { OF_CUDA_CHECK(cudaFreeHost(ptr)); }
   }
@@ -47,7 +48,6 @@ void CudaHostAllocator::Allocate(char** mem_ptr, std::size_t size) {
 }
 
 void CudaHostAllocator::Deallocate(char* mem_ptr, std::size_t size) {
-  CudaCurrentDeviceGuard guard(device_id_);
   std::unique_lock<std::mutex> lock(mutex_);
   auto iter = occupied_ptr2granularity_.find(mem_ptr);
   CHECK(iter != occupied_ptr2granularity_.end());
