@@ -61,6 +61,25 @@ def test_basic_slice(test_case, numpy_x):
         np.allclose(numpy_x[None, ..., 0:4:2, True], x[None, ..., 0:4:2, True].numpy())
     )
 
+    test_case.assertTrue(np.allclose(numpy_x[False, ...], x[False, ...].numpy()))
+    test_case.assertTrue(
+        np.allclose(numpy_x[False, True, ...], x[False, True, ...].numpy())
+    )
+    test_case.assertTrue(
+        np.allclose(numpy_x[True, ..., False, True], x[True, ..., False, True].numpy())
+    )
+    test_case.assertTrue(
+        np.allclose(
+            numpy_x[True, None, ..., False, True],
+            x[True, None, ..., False, True].numpy(),
+        )
+    )
+    test_case.assertTrue(
+        np.allclose(
+            numpy_x[True, 1, ..., False, True], x[True, 1, ..., False, True].numpy()
+        )
+    )
+
 
 def test_advanced_indexing(test_case, numpy_x):
     x = flow.tensor(numpy_x)
@@ -101,6 +120,22 @@ def test_advanced_indexing(test_case, numpy_x):
             x[:, flow.tensor([[0, 1], [1, 1]]), flow.tensor([[1, 0], [1, 1]]),].numpy(),
         )
     )
+
+    # mask tensor index
+    mask = np.random.rand(numpy_x.shape[0], numpy_x.shape[1]).astype(np.float32)
+    y = flow.tensor(mask)
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0.5], x[y > 0.5].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0.5, 1], x[y > 0.5, 1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0], x[y > 0].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0, 1], x[y > 0, 1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 1], x[y > 1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 1, 1], x[y > 1, 1].numpy()))
+
+    mask = np.random.rand(*numpy_x.shape).astype(np.float32)
+    y = flow.tensor(mask)
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0.5], x[y > 0.5].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0], x[y > 0].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 1], x[y > 1].numpy()))
 
 
 def test_combining_indexing(test_case, numpy_x):
