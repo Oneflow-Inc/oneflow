@@ -205,6 +205,7 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
     // TODO: replace absolute path with something more idiomatic
     llvm::SmallVector<llvm::StringRef> ext_libs({"/home/caishenghang/ir_cuda/build/lib/"
                                                  "libMLIROneFlowExtension.so"});
+    // TODO: cache the jit engine with uniq ptr
     auto jit_or_error = mlir::ExecutionEngine::create(
         /* m */ *module, /* llvmModuleBuilder */ nullptr, /* transformer */ {},
         /* jitCodeGenOptLevel */ llvm::None, /* sharedLibPaths */ ext_libs);
