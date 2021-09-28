@@ -23,7 +23,6 @@ import oneflow.unittest
 
 from test_util import GenArgList
 
-# import torch
 import torch as torch_original
 from oneflow.test_utils.automated_test_util import *
 
@@ -39,7 +38,7 @@ input_arr = np.array(
 
 
 def _test_weightnorm(test_case, device, dim):
-    model_flow = flow.nn.Linear(2, 4)  # shape of weight: (4, 2)
+    model_flow = flow.nn.Linear(2, 4)
     model_flow = model_flow.to(device)
     with flow.no_grad():
         for i in range(input_arr.shape[0]):

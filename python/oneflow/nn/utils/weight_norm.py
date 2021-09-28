@@ -17,7 +17,6 @@ limitations under the License.
 
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
-from oneflow.framework.tensor import register_tensor_op
 from typing import Any, TypeVar
 from oneflow.nn.module import Module
 
