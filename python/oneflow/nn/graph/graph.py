@@ -107,6 +107,8 @@ class Graph(object):
         self._args_repr = []
         self._outs_repr = []
         self._debug = False
+        self._debug_min_s_level = 2
+        self._debug_max_v_level = 0
         self._outputs_buffer_size = 2
         self._cur_index_of_ouputs_buffer = 0
 
@@ -266,13 +268,15 @@ class Graph(object):
         return self.config.training
 
     def debug(
-        self, mode: bool = True, ranks: Optional[Union[int, List[int]]] = None
+        self, mode: bool = True, v_level:int = 0, ranks: Optional[Union[int, List[int]]] = None, 
     ) -> None:
         r"""Open or close debug mode of the graph.
 
-        If in debug mode, logs of computation graph building will be
-        printed. The log includes inputs/outputs/parameters/buffers/modules meta information.
+        If in debug mode, logs of computation graph building infos or warnings will be
+        printed. Otherwise, only errors will be printed.
 
+        Use ``v_level`` to choose verbose debug info level, default level is 0, max level is 1.
+        
         Use ``ranks`` to choose which rank to print the debug information.
 
         .. code-block:: python
@@ -283,6 +287,7 @@ class Graph(object):
 
         Args:
             mode (bool): whether to set debug mode ("True") or not (``False``). Default: ``True``.
+            v_level (int): choose verbose debug info level, default v_level is 0, max v_level is 1.
             ranks (int or list(int)): choose ranks to print the debug information. Default rank ``0``.
                 You can choose any valid rank. Ranks equals ``-1`` means debug on all ranks.
         """
@@ -300,9 +305,12 @@ class Graph(object):
         my_rank = get_rank()
         if -1 in rank_list or my_rank in rank_list:
             self._debug = mode
+            if self._debug:
+                self._debug_min_s_level = 0
+                self._debug_max_v_level = v_level
             for name, block in self._blocks.items():
                 assert block.type == BlockType.MODULE
-                block.debug(mode, ranks)
+                block.debug(mode, v_level, ranks)
 
     def __repr__(self):
         r"""For printing the graph structure.
@@ -349,10 +357,12 @@ class Graph(object):
         shallow_repr = "(GRAPH:" + self._name + ":" + self.__class__.__name__ + ")"
         return shallow_repr
 
-    def _rank0_print(self, msg: str = ""):
-        if get_rank() != 0:
-            return
-        print(msg)
+    def _print(self, s_level = 2, v_level = 0, msg: str = ""):
+        r"""Do print according to info level.
+        """
+        if s_level >= self._debug_min_s_level:
+            if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
+                print(msg)
 
     @property
     def _config_proto(self):
@@ -367,7 +377,7 @@ class Graph(object):
     @property
     def _graph_proto(self):
         if not self._is_compiled:
-            self._rank0_print(
+            self._print(
                 f"[ERROR]{self._shallow_repr()} has not been compiled, so it's graph proto is None."
                 " You can call the graph to trigger it's compilation."
             )
@@ -838,7 +848,7 @@ class Graph(object):
             state_tensor = state_block.origin
             state_op_names.append(op_name)
             state_tensors.append(state_tensor)
-            if state_block.type == BlockType.PARAMETER:
+            if state_block.type == BlockType.PARAMETER and state_block.origin in self._variables_conf:
                 state_config = self._variables_conf[state_block.origin]
             else:
                 state_config = None
