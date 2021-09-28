@@ -25,9 +25,7 @@ CudaHostAllocator::~CudaHostAllocator() {
   for (const auto& ptr_vec : granularity2free_ptrs_) {
     for (char* ptr : ptr_vec) { OF_CUDA_CHECK(cudaFreeHost(ptr)); }
   }
-  for (const auto& pair : occupied_ptr2granularity_) {
-    OF_CUDA_CHECK(cudaFreeHost(pair.first));
-  }
+  for (const auto& pair : occupied_ptr2granularity_) { OF_CUDA_CHECK(cudaFreeHost(pair.first)); }
 }
 
 void CudaHostAllocator::Allocate(char** mem_ptr, std::size_t size) {
