@@ -65,6 +65,7 @@ class AddFunctor {
       op = broadcast_add_op_.get();
     }
     if (inplace) {
+      JUST(CheckInplaceCastValid(x, x_cast));
       JUST(CheckInplaceValid(x));
       JUST(CheckShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
