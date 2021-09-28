@@ -69,9 +69,11 @@ struct SocketMsg {
 #define MAKE_ENTRY(x, y) x##Msg y##_msg;
     OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ)
 #undef MAKE_ENTRY
-    char * data;
+    union {
+      char * data;
+      size_t size;
+    } actor_msg;
   };
-  size_t size;
 };
 
 using CallBackList = std::list<std::function<void()>>;
