@@ -50,3 +50,10 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.atan2,
+    r"""
+    See :func:`oneflow.atan2`
+    """,
+)
