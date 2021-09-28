@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
 #ifdef __linux__
 
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
@@ -96,10 +97,11 @@ void EpollCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) {
     char* data = reinterpret_cast<char*>(addr);
     SocketMsg msg;
     msg.msg_type = SocketMsgType::kActor;
-    //msg.data = data;
     msg.actor_msg.data = (char*)malloc(size);
+    uint64_t data_addr = reinterpret_cast<uint64_t>(msg.actor_msg.data);
     std::memcpy(msg.actor_msg.data,data,size);
     msg.actor_msg.size = size;
+    std::cout<<"EpollCommNet::SendMsg,the data_addr:0x"<<std::hex<<data_addr <<" and size:"<<size << std::endl;
     GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
 

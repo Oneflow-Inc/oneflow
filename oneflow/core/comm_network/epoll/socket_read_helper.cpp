@@ -109,7 +109,8 @@ void SocketReadHelper::SetStatusWhenRequestReadMsgHeadDone() {
 }
 
 void SocketReadHelper::SetStatusWhenActorMsgHeadDone() {
-  Global<EpollCommNet>::Get()->msghandle_(cur_msg_.actor_msg.data,cur_msg_.actor_msg.size);
+  Global<ActorMsgBus>::Get()->HandleRecvData((void*)cur_msg_.actor_msg.data, cur_msg_.actor_msg.size);
+ // Global<EpollCommNet>::Get()->msghandle_(cur_msg_.actor_msg.data,cur_msg_.actor_msg.size);
   SwitchToMsgHeadReadHandle();
 }
 
