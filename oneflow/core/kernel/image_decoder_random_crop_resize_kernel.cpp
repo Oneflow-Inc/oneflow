@@ -322,18 +322,12 @@ void GpuDecodeHandle::DecodeRandomCrop(const unsigned char* data, size_t length,
   }
   OF_NVJPEG_CHECK(nvjpegStateAttachPinnedBuffer(jpeg_state, jpeg_pinned_buffer_));
   OF_NVJPEG_CHECK(nvjpegStateAttachDeviceBuffer(jpeg_state, jpeg_device_buffer_));
-  OF_PROFILER_RANGE_PUSH("nvjpeg decode host");
   OF_NVJPEG_CHECK(nvjpegDecodeJpegHost(jpeg_handle_, jpeg_decoder, jpeg_state, jpeg_decode_params_,
                                        jpeg_stream_));
-  OF_PROFILER_RANGE_POP();
-  OF_PROFILER_RANGE_PUSH("nvjpeg h2d");
   OF_NVJPEG_CHECK(nvjpegDecodeJpegTransferToDevice(jpeg_handle_, jpeg_decoder, jpeg_state,
                                                    jpeg_stream_, cuda_stream_));
-  OF_PROFILER_RANGE_POP();
-  OF_PROFILER_RANGE_PUSH("nvjpeg decode gpu");
   OF_NVJPEG_CHECK(
       nvjpegDecodeJpegDevice(jpeg_handle_, jpeg_decoder, jpeg_state, &image, cuda_stream_));
-  OF_PROFILER_RANGE_POP();
   *dst_width = roi.w;
   *dst_height = roi.h;
 }
@@ -468,7 +462,7 @@ class Worker final {
 
   void PollWork(const std::function<std::shared_ptr<DecodeHandle>()>& handle_factory,
                 int target_width, int target_height, int warmup_size) {
-    OF_PROFILER_NAME_THIS_HOST_THREAD("__GPU image decoder");
+    OF_PROFILER_NAME_THIS_HOST_THREAD("_GPU image decoder");
     std::shared_ptr<DecodeHandle> handle = handle_factory();
     std::shared_ptr<Work> work;
     while (true) {
@@ -477,14 +471,12 @@ class Worker final {
       CHECK_EQ(status, ChannelStatus::kChannelStatusSuccess);
       handle->WarmupOnce(warmup_size, work->workspace, work->workspace_size);
       while (true) {
-        OF_PROFILER_RANGE_PUSH("Decode 1 image");
         const int task_id = work->task_counter->fetch_add(1, std::memory_order_relaxed);
         if (task_id >= work->tasks->size()) { break; }
         const Task& task = work->tasks->at(task_id);
         handle->DecodeRandomCropResize(task.data, task.length, task.crop_generator, work->workspace,
                                        work->workspace_size, task.dst, target_width, target_height);
         handle->Synchronize();
-        OF_PROFILER_RANGE_POP();
       }
       work->done_counter->Decrease();
     }

@@ -235,7 +235,7 @@ CudaStreamContextImpl::~CudaStreamContextImpl() {
 }
 
 Maybe<void> CudaStreamContextImpl::OnExecutionContextSetup() {
-  OF_PROFILER_NAME_THIS_HOST_THREAD("__GPU " + std::to_string(stream_id_.device_id().device_index())
+  OF_PROFILER_NAME_THIS_HOST_THREAD("_GPU " + std::to_string(stream_id_.device_id().device_index())
                                     + " Actor Thread: "
                                     + std::to_string(stream_id_.stream_index()));
   SetAffinityByDevice(stream_id_.device_id().device_index());
