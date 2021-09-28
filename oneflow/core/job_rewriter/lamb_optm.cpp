@@ -55,24 +55,15 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
   OperatorConf v_var = GenerateLAMBHelperVariableOpConf(*var_op, "v", 0.f);
   job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {m_var, v_var});
 
-  OperatorConf beta1_t_var;
-  OperatorConf beta2_t_var;
   const LambModelUpdateConf& lamb_conf = optimizer_conf.lamb_conf();
-  beta1_t_var = GenerateLAMBHelperVariableOpConf(*var_op, "beta1_t", lamb_conf.beta1());
-  SetScalarShapeAndNdSbpConf(var_op_node.parallel_desc(), &beta1_t_var);
-  beta2_t_var = GenerateLAMBHelperVariableOpConf(*var_op, "beta2_t", lamb_conf.beta2());
-  SetScalarShapeAndNdSbpConf(var_op_node.parallel_desc(), &beta2_t_var);
-  job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {beta1_t_var, beta2_t_var});
 
   user_op::UserOpConfWrapperBuilder lamb_update_op_builder(var_op->op_name() + "_optimizer");
   lamb_update_op_builder.OpTypeName("lamb_update")
-      .Input("m", GenVariableOutputLbn(m_var))
-      .Input("v", GenVariableOutputLbn(v_var))
-      .Input("beta1_t", GenVariableOutputLbn(beta1_t_var))
-      .Input("beta2_t", GenVariableOutputLbn(beta2_t_var))
       .Input("model", GenLogicalBlobName(var_op->BnInOp2Lbi("out")))
       .Input("model_diff", model_diff_lbn)
       .Input("learning_rate", optimizer_conf.learning_rate_lbn())
+      .Input("m", GenVariableOutputLbn(m_var))
+      .Input("v", GenVariableOutputLbn(v_var))
       .Attr<float>("beta1", lamb_conf.beta1())
       .Attr<float>("beta2", lamb_conf.beta2())
       .Attr<float>("epsilon", lamb_conf.epsilon())

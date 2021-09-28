@@ -34,9 +34,10 @@ def compare_with_numpy_lamb(
     eps,
     do_bias_correction,
     amsgrad,
-    clip_grad_args,
+    adam_w_mode,
+    clip_grad_max_norm,
+    clip_grad_norm_type
 ):
-    clip_grad_max_norm, clip_grad_norm_type = clip_grad_args
 
     np.random.seed(1000)
 
@@ -56,6 +57,8 @@ def compare_with_numpy_lamb(
             "betas": betas,
             "eps": eps,
             "weight_decay": weight_decay,
+            "amsgrad": amsgrad,
+            "adam_w_mode": adam_w_mode,
             "do_bias_correction": do_bias_correction,
         }
 
@@ -102,8 +105,9 @@ def compare_with_numpy_lamb(
                 total_norm, grad = clip_grad_norm_np(
                     grad, clip_grad_max_norm, clip_grad_norm_type
                 )
+            if adam_w_mode:
+                grad = grad + weight_decay * x
 
-            # grad = grad + weight_decay * x
             bias_correction1 = 1.0
             bias_correction2 = 1.0
 
@@ -127,7 +131,11 @@ def compare_with_numpy_lamb(
             else:
                 trust_ratio = 1.0
 
-            param = x - learning_rate * trust_ratio * (adam_diff + weight_decay * x)
+            if adam_w_mode:
+                param = x - learning_rate * trust_ratio * adam_diff
+            else:
+                param = x - learning_rate * trust_ratio * (adam_diff + weight_decay * x)
+
             return (param, m, v)
 
         for i in range(train_iters):
@@ -138,8 +146,6 @@ def compare_with_numpy_lamb(
     train_by_numpy()
 
     test_case.assertTrue(np.allclose(of_res_list, np_res_list, rtol=1e-3, atol=1e-3))
-    # if not np.allclose(of_res_list, np_res_list, rtol=1e-3, atol=1e-3):
-    # print("catch")
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -151,12 +157,14 @@ class TestLamb(flow.unittest.TestCase):
         arg_dict["learning_rate"] = [0.1, 1e-3]
         arg_dict["train_iters"] = [10]
         arg_dict["betas"] = [(0.99, 0.9)]
-        arg_dict["weight_decay"] = [0.001]
+        arg_dict["weight_decay"] = [0.001, 0.1]
         arg_dict["eps"] = [1e-8, 1e-6]
         arg_dict["do_bias_correction"] = [False]
         arg_dict["amsgrad"] = [False]
+        arg_dict["adam_w_mode"] = [True, False]
         # NOTE(xyliao): max_norm == -1 means no clip grad
-        arg_dict["clip_grad_args"] = [(-1, 2.0), (1, 2.0)]
+        arg_dict["clip_grad_max_norm"] = [-1, 0, 0.5, 1.0]
+        arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
 
         for arg in GenArgList(arg_dict):
             compare_with_numpy_lamb(test_case, *arg)

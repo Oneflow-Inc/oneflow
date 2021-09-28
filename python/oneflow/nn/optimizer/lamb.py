@@ -13,11 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import collections
 from typing import Callable, Dict, Iterator, List, Union, Tuple
 
 import oneflow as flow
-from oneflow.nn.optimizer.optimizer import Optimizer, ParamGroup
+from oneflow.nn.optimizer.optimizer import Optimizer
 from oneflow.nn.parameter import Parameter
 
 
@@ -133,6 +132,7 @@ class LAMB(Optimizer):
         eps: float = 1e-08,
         weight_decay: float = 0,
         amsgrad: bool = False,
+        adam_w_mode: bool = True,
         do_bias_correction: bool = True,
     ):
         if amsgrad:
@@ -153,6 +153,7 @@ class LAMB(Optimizer):
         options["betas"] = betas
         options["weight_decay"] = weight_decay
         options["amsgrad"] = amsgrad
+        options["adam_w_mode"] = adam_w_mode
         options["bias_correction1"] = 1.0
         options["bias_correction2"] = 1.0
         options["do_bias_correction"] = do_bias_correction
@@ -190,12 +191,15 @@ class LAMB(Optimizer):
                     "learning_rate_val": param_group["lr"],
                     # "bias_correction1_val": param_group["bias_correction1"],
                     # "bias_correction2_val": param_group["bias_correction2"],
-                    "weight_decay": param_group["weight_decay"],
                     "beta1": param_group["betas"][0],
                     "beta2": param_group["betas"][1],
                     "epsilon": param_group["eps"],
                     # "do_bias_correction": param_group["do_bias_correction"],
                 }
+                if param_group["adam_w_mode"]:
+                    kwargs["l2"] = param_group["weight_decay"]
+                else:
+                    kwargs["weight_decay"] = param_group["weight_decay"]
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
@@ -220,6 +224,7 @@ class LAMB(Optimizer):
                 if "initial_lr" in param_group
                 else param_group["lr"]
             )
+            adam_w_mode = param_group["adam_w_mode"]
             weight_decay = param_group["weight_decay"]
             beta1 = param_group["betas"][0]
             beta2 = param_group["betas"][1]
@@ -235,13 +240,15 @@ class LAMB(Optimizer):
             optimizer_conf.mutable_lamb_conf().set_epsilon(epsilon)
             # optimizer_conf.mutable_lamb_conf().set_do_bias_correction(do_bias_correction)
 
-            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
-                weight_decay
-            )
+            if not adam_w_mode:
+                optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
+                    weight_decay
+                )
 
-            # Set l2 penalty as weight decay
             for param in param_group.parameters:
-                # vars_conf[param].l2 = l2
+                if adam_w_mode:
+                    # Set l2 penalty as weight decay if using adam_w mode
+                    vars_conf[param].l2 = weight_decay
                 if param.requires_grad:
                     optimizer_conf.add_variable_op_names(vars_conf[param].name)
 

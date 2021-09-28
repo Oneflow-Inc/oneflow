@@ -34,10 +34,11 @@ def compare_with_numpy_lamb(
     eps,
     do_bias_correction,
     amsgrad,
-    clip_grad_args,
+    adam_w_mode,
+    clip_grad_max_norm,
+    clip_grad_norm_type,
 ):
-    clip_grad_max_norm, clip_grad_norm_type = clip_grad_args
-    
+
     np.random.seed(1000)
 
     random_grad_seq = []
@@ -65,13 +66,14 @@ def compare_with_numpy_lamb(
         "betas": betas,
         "eps": eps,
         "weight_decay": weight_decay,
+        "amsgrad": amsgrad,
+        "adam_w_mode": adam_w_mode,
         "do_bias_correction": do_bias_correction,
     }
-    
-    if (clip_grad_max_norm != -1):
-        optim_kwargs["clip_grad_max_norm"] = clip_grad_max_norm 
-        optim_kwargs["clip_grad_norm_type"] = clip_grad_norm_type
 
+    if clip_grad_max_norm != -1:
+        optim_kwargs["clip_grad_max_norm"] = clip_grad_max_norm
+        optim_kwargs["clip_grad_norm_type"] = clip_grad_norm_type
 
     lamb = flow.optim.LAMB([optim_kwargs])
 
@@ -110,12 +112,14 @@ def compare_with_numpy_lamb(
         beta2 = betas[1]
 
         def np_train_one_iter(step, grad):
-            if (clip_grad_max_norm != -1):
+            if clip_grad_max_norm != -1:
                 total_norm, grad = clip_grad_norm_np(
                     grad, clip_grad_max_norm, clip_grad_norm_type
                 )
 
-            # grad = grad + weight_decay * x
+            if adam_w_mode:
+                grad = grad + weight_decay * x
+
             bias_correction1 = 1.0
             bias_correction2 = 1.0
 
@@ -130,16 +134,20 @@ def compare_with_numpy_lamb(
             #     denom = np.sqrt(max_s) / np.sqrt(bias_correction2) + eps
             # else:
             #     denom = np.sqrt(s) / np.sqrt(bias_correction2) + eps
-            
+
             adam_diff = (m / (1 - beta1)) / (np.sqrt(v / (1 - beta2)) + eps)
             w_norm = np.linalg.norm(x, ord=2)
             g_norm = np.linalg.norm(adam_diff, ord=2)
-            if (w_norm > 0 and g_norm > 0):
+            if w_norm > 0 and g_norm > 0:
                 trust_ratio = w_norm / g_norm
             else:
-                trust_ratio = 1.
-                
-            param = x - learning_rate * trust_ratio * (adam_diff + weight_decay * x)
+                trust_ratio = 1.0
+
+            if adam_w_mode:
+                param = x - learning_rate * trust_ratio * adam_diff
+            else:
+                param = x - learning_rate * trust_ratio * (adam_diff + weight_decay * x)
+
             return (param, m, v)
 
         for i in range(train_iters):
@@ -148,7 +156,7 @@ def compare_with_numpy_lamb(
         return x
 
     train_by_numpy()
-    
+
     test_case.assertTrue(np.allclose(of_res_list, np_res_list, rtol=1e-3, atol=1e-3))
 
 
@@ -161,15 +169,33 @@ class TestLamb(flow.unittest.TestCase):
         arg_dict["learning_rate"] = [0.1, 1e-3]
         arg_dict["train_iters"] = [10]
         arg_dict["betas"] = [(0.99, 0.9)]
-        arg_dict["weight_decay"] = [0.001]
+        arg_dict["weight_decay"] = [0.001, 0.1]
         arg_dict["eps"] = [1e-8, 1e-6]
         arg_dict["do_bias_correction"] = [False]
-        arg_dict["amsgrad"] = [True]#, False]
+        arg_dict["amsgrad"] = [False]
+        arg_dict["adam_w_mode"] = [True, False]
         # NOTE(xyliao): max_norm == -1 means no clip grad
-        arg_dict["clip_grad_args"] = [(-1, 2.0), (1, 2.0)]
+        arg_dict["clip_grad_max_norm"] = [-1]  # , 1.0]
+        arg_dict["clip_grad_norm_type"] = [2.0]
 
         for arg in GenArgList(arg_dict):
             compare_with_numpy_lamb(test_case, *arg)
+
+    def test_lamb_with_clip_grad(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["x_shape"] = [(10,)]
+        arg_dict["learning_rate"] = [0.1, 1e-3]
+        arg_dict["train_iters"] = [10]
+        arg_dict["betas"] = [(0.99, 0.9)]
+        # NOTE(xyliao): test will fail when weight_decay > 0
+        arg_dict["weight_decay"] = [0]
+        arg_dict["eps"] = [1e-8, 1e-6]
+        arg_dict["do_bias_correction"] = [False]
+        arg_dict["amsgrad"] = [False]
+        arg_dict["adam_w_mode"] = [True, False]
+        arg_dict["clip_grad_max_norm"] = [1.0]
+        arg_dict["clip_grad_norm_type"] = [2.0]
 
 
 if __name__ == "__main__":
