@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <glog/logging.h>
 #include <google/protobuf/text_format.h>
+#include <type_traits>
 #include "oneflow/core/common/type_traits.h"
 #include "oneflow/core/common/either_ptr.h"
 #include "oneflow/core/common/shared_or_scalar.h"
@@ -52,9 +53,15 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   ~Maybe() = default;
 
   bool IsOk() const { return data_or_error_.template Has<T>(); }
-  std::shared_ptr<T> Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
+
+  const std::shared_ptr<T>& Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const& {
     return data_or_error_.template Get<T>();
   }
+
+  std::shared_ptr<T> Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() && {
+    return std::move(data_or_error_).template Get<T>();
+  }
+
   std::shared_ptr<cfg::ErrorProto> error() const {
     return data_or_error_.template Get<cfg::ErrorProto>();
   }
