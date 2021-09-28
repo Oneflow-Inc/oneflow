@@ -32,10 +32,16 @@ class CpuScalarPowKernel final : public OpKernel {
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const T* in_ptr = in_tensor->dptr<T>();
     T* out_ptr = out_tensor->mut_dptr<T>();
-    const T exponent = static_cast<T>(ctx->Attr<double>("exponent"));
-
+    T scalar_operand = static_cast<T>(0);
+    if (ctx->Attr<bool>("has_int_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<int64_t>("int_operand"));
+    } else if (ctx->Attr<bool>("has_float_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<double>("float_operand"));
+    } else {
+      UNIMPLEMENTED();
+    }
     const int64_t elem_cnt = in_tensor->shape().elem_cnt();
-    FOR_RANGE(int64_t, i, 0, elem_cnt) { out_ptr[i] = std::pow(in_ptr[i], exponent); }
+    FOR_RANGE(int64_t, i, 0, elem_cnt) { out_ptr[i] = std::pow(in_ptr[i], scalar_operand); }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -46,6 +52,10 @@ class CpuScalarPowKernel final : public OpKernel {
       .SetIsMatchedHob((HobDeviceTag() == device)       \
                        & (HobDataType("out", 0) == GetDataType<dtype>::value));
 
+REGISTER_CPU_SCALAR_POW_KERNEL(DeviceType::kCPU, uint8_t);
+REGISTER_CPU_SCALAR_POW_KERNEL(DeviceType::kCPU, int8_t);
+REGISTER_CPU_SCALAR_POW_KERNEL(DeviceType::kCPU, int32_t);
+REGISTER_CPU_SCALAR_POW_KERNEL(DeviceType::kCPU, int64_t);
 REGISTER_CPU_SCALAR_POW_KERNEL(DeviceType::kCPU, float);
 REGISTER_CPU_SCALAR_POW_KERNEL(DeviceType::kCPU, double);
 
@@ -79,6 +89,10 @@ class CpuScalarPowGradKernel final : public OpKernel {
       .SetIsMatchedHob((HobDeviceTag() == device)           \
                        & (HobDataType("dx", 0) == GetDataType<dtype>::value));
 
+REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, uint8_t);
+REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, int8_t);
+REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, int32_t);
+REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, int64_t);
 REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, float);
 REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, double);
 
