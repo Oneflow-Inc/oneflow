@@ -61,6 +61,25 @@ def test_basic_slice(test_case, numpy_x):
         np.allclose(numpy_x[None, ..., 0:4:2, True], x[None, ..., 0:4:2, True].numpy())
     )
 
+    test_case.assertTrue(np.allclose(numpy_x[False, ...], x[False, ...].numpy()))
+    test_case.assertTrue(
+        np.allclose(numpy_x[False, True, ...], x[False, True, ...].numpy())
+    )
+    test_case.assertTrue(
+        np.allclose(numpy_x[True, ..., False, True], x[True, ..., False, True].numpy())
+    )
+    test_case.assertTrue(
+        np.allclose(
+            numpy_x[True, None, ..., False, True],
+            x[True, None, ..., False, True].numpy(),
+        )
+    )
+    test_case.assertTrue(
+        np.allclose(
+            numpy_x[True, 1, ..., False, True], x[True, 1, ..., False, True].numpy()
+        )
+    )
+
 
 def test_advanced_indexing(test_case, numpy_x):
     x = flow.tensor(numpy_x)

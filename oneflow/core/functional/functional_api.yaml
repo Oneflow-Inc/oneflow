@@ -893,6 +893,10 @@
   signature: "Tensor (Tensor x) => Atan"
   bind_python: True
 
+- name: "atan2"
+  signature: "Tensor (Tensor input, Tensor other) => Atan2"
+  bind_python: True
+
 - name: "atanh"
   signature: "Tensor (Tensor x) => Atanh"
   bind_python: True
@@ -1121,6 +1125,10 @@
 - name: "local_all_reduce"
   signature: "Tensor (Tensor x) => LocalAllReduce"
   bind_python: True
+
+- name: "eager_p_to_b"
+  signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, Shape shape) => EagerPToB"
+  bind_python: False
 
 - name: "eager_b_to_s"
   signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList out_sbp, Shape shape) => EagerBToS"

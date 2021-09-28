@@ -305,6 +305,10 @@ def _atanh(self):
     return flow.atanh(self)
 
 
+def _atan2(self, other):
+    return flow.atan2(self, other)
+
+
 def _arctanh(self):
     return flow.arctanh(self)
 
@@ -661,6 +665,7 @@ def RegisterMethods():
     Tensor.acosh = _acosh
     Tensor.arccosh = _arccosh
     Tensor.atanh = _atanh
+    Tensor.atan2 = _atan2
     Tensor.arctanh = _arctanh
     Tensor.sign = _sign
     Tensor.sinh = _sinh
