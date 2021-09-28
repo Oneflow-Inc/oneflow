@@ -195,17 +195,9 @@ Maybe<Tensor> AdjustSubspace(const std::shared_ptr<Tensor>& input, const TensorT
 }
 
 Maybe<bool> HasFalseIndex(const TensorIndex& index) {
-  bool has_false_index = false;
-  for (int i = 0; i < index.size(); ++i) {
-    const auto& index_item = index.at(i);
-    if (index_item.IsBoolean()) {
-      if (!index_item.boolean()) {
-        has_false_index = true;
-        break;
-      }
-    }
-  }
-  return has_false_index;
+  return std::any_of(index.begin(), index.end(), [](const detail::IndexItem& item) {
+    return item.IsBoolean() && !item.boolean();
+  });
 }
 
 }  // namespace
