@@ -34,8 +34,21 @@ class QConvBN(flow.nn.Module):
         self.quantization_scheme = quantization_scheme
         self.quantization_formula = quantization_formula
         self.per_layer_quantization = per_layer_quantization
-        self.conv_module = conv_module
-        self.bn_module = bn_module
+
+        self.conv_weight = conv_module.weight
+        self.conv_bias = conv_module.bias
+        self.conv_out_channels = conv_module.out_channels
+        self.conv_stride = conv_module.stride
+        self.conv_padding = conv_module.padding
+        self.conv_dilation = conv_module.dilation
+        self.conv_groups = conv_module.groups
+
+        self.bn_running_mean = bn_module.running_mean
+        self.bn_running_var = bn_module.running_var
+        self.bn_weight = bn_module.weight
+        self.bn_bias = bn_module.bias
+        self.bn_affine = bn_module.affine
+        self.bn_eps = bn_module.eps
 
         self.moving_min_max_observer = flow.nn.MovingAverageMinMaxObserver(
             training=self.training,
@@ -60,60 +73,58 @@ class QConvBN(flow.nn.Module):
         )
 
     def fold_bn(self, mean, std):
-        if self.bn_module.affine:
-            gamma_ = self.bn_module.weight / std
-            weight = self.conv_module.weight * gamma_.view(
-                self.conv_module.out_channels, 1, 1, 1
-            )
-            if self.conv_module.bias is not None:
-                bias = (
-                    gamma_ * self.conv_module.bias - gamma_ * mean + self.bn_module.bias
-                )
+        if self.bn_affine:
+            gamma_ = self.bn_weight / std
+            weight = self.conv_weight * gamma_.view(self.conv_out_channels, 1, 1, 1)
+            if self.conv_bias is not None:
+                bias = gamma_ * self.conv_bias - gamma_ * mean + self.bn_bias
             else:
-                bias = self.bn_module.bias - gamma_ * mean
+                bias = self.bn_bias - gamma_ * mean
         else:
             gamma_ = 1 / std
-            weight = self.conv_module.weight * gamma_
-            if self.conv_module.bias is not None:
-                bias = gamma_ * self.conv_module.bias - gamma_ * mean
+            weight = self.conv_weight * gamma_
+            if self.conv_bias is not None:
+                bias = gamma_ * self.conv_bias - gamma_ * mean
             else:
                 bias = -gamma_ * mean
 
         return weight, bias
 
     def forward(self, x):
-        scale, zero_point = self.moving_min_max_observer(
-            x, flow.tensor([0], dtype=flow.int64).to(x.device.type)
-        )
+        new_zero = flow.tensor([0], dtype=flow.int64) + 0
+        new_zero = new_zero.to(x.device.type)
+        scale, zero_point = self.moving_min_max_observer(x, new_zero)
         x = self.fake_quantization(x, scale, zero_point)
         if self.training:
             y = flow.nn.functional.conv2d(
                 x,
-                self.conv_module.weight,
-                self.conv_module.bias,
-                stride=self.conv_module.stride,
-                padding=self.conv_module.padding,
-                dilation=self.conv_module.dilation,
-                groups=self.conv_module.groups,
+                self.conv_weight,
+                self.conv_bias,
+                stride=self.conv_stride,
+                padding=self.conv_padding,
+                dilation=self.conv_dilation,
+                groups=self.conv_groups,
             )
             y = y.permute(1, 0, 2, 3)  # NCHW -> CNHW
-            y = y.view(self.conv_module.out_channels, -1)  # CNHW -> C,NHW
+            y = y.view(self.conv_out_channels, -1)  # CNHW -> C,NHW
             mean = y.mean(1)
             var = y.var(1)
             with flow.no_grad():
-                self.bn_module.running_mean = (
-                    self.bn_module.momentum * self.bn_module.running_mean
-                    + (1 - self.bn_module.momentum) * mean
+                self.bn_running_mean = (
+                    self.bn_momentum * self.bn_running_mean
+                    + (1 - self.bn_momentum) * mean
                 )
-                self.bn_module.running_var = (
-                    self.bn_module.momentum * self.bn_module.running_var
-                    + (1 - self.bn_module.momentum) * var
+                self.bn_running_var = (
+                    self.bn_momentum * self.bn_running_var
+                    + (1 - self.bn_momentum) * var
                 )
         else:
-            mean = flow.Tensor(self.bn_module.running_mean)
-            var = flow.Tensor(self.bn_module.running_var)
+            mean = self.bn_running_mean + 0.0
+            mean = mean.to(x.device)
+            var = self.bn_running_var + 0.0
+            var = var.to(x.device)
 
-        std = flow.sqrt(var + self.bn_module.eps)
+        std = flow.sqrt(var + self.bn_eps)
         weight, bias = self.fold_bn(mean, std)
 
         weight_scale, weight_zero_point = self.min_max_observer(weight)
@@ -121,9 +132,9 @@ class QConvBN(flow.nn.Module):
             x,
             self.fake_quantization(weight, weight_scale, weight_zero_point),
             bias,
-            stride=self.conv_module.stride,
-            padding=self.conv_module.padding,
-            dilation=self.conv_module.dilation,
-            groups=self.conv_module.groups,
+            stride=self.conv_stride,
+            padding=self.conv_padding,
+            dilation=self.conv_dilation,
+            groups=self.conv_groups,
         )
         return res

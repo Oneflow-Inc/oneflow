@@ -47,6 +47,7 @@ REGISTER_NO_GRAD_USER_OP("moving_average_min_max_observer")
       CHECK_OR_RETURN(moving_max_shape.NumAxes() == 1 && moving_max_shape.At(0) == 1);
       CHECK_OR_RETURN(moving_min_shape.NumAxes() == 1 && moving_min_shape.At(0) == 1);
 
+      std::cout << current_train_step << std::endl;
       CHECK_OR_RETURN(current_train_step.NumAxes() == 1 && current_train_step.At(0) == 1);
 
       *ctx->OutputShape("scale", 0) = Shape({1});

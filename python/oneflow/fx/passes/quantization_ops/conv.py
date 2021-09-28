@@ -61,9 +61,12 @@ class QConv2d(flow.nn.Conv2d):
         )
 
     def forward(self, x):
-        scale, zero_point = self.moving_min_max_observer(
-            x, flow.tensor([0], dtype=flow.int64).to(x.device.type)
-        )
+        new_zero = flow.tensor([0], dtype=flow.int64) + 0
+        new_zero = new_zero.to(x.device.type)
+        scale, zero_point = self.moving_min_max_observer(x, new_zero)
+        # scale, zero_point = self.moving_min_max_observer(
+        #     x, flow.tensor([0], dtype=flow.int64).to(x.device.type)
+        # )
         x = self.fake_quantization(x, scale, zero_point)
         weight_scale, weight_zero_point = self.min_max_observer(self.weight)
         self.weight = flow.nn.Parameter(
