@@ -126,9 +126,9 @@ class EagerCclReduceKernel final : public user_op::OpKernel {
       CHECK_EQ(in->data_type(), out->data_type());
       out_ptr = out->mut_dptr();
     }
-    ccl::Reduce<DeviceType::kCPU>(in->dptr(), out_ptr, in->shape().elem_cnt(), in->data_type(),
-                                  ccl::kSum, root, kernel_state->parallel_desc(),
-                                  ctx->device_ctx());
+    CHECK_JUST(ccl::Reduce<DeviceType::kCPU>(in->dptr(), out_ptr, in->shape().elem_cnt(),
+                                             in->data_type(), ccl::kSum, root,
+                                             kernel_state->parallel_desc(), ctx->device_ctx()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
