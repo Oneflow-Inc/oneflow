@@ -59,10 +59,10 @@ namespace impl {
 
 #define FLOAT_UNARY_FUNC_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ("sigmoid_v2", Sigmoid) \
-  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)\
-  OF_PP_MAKE_TUPLE_SEQ("erf", Erf)                           \
-  OF_PP_MAKE_TUPLE_SEQ("erfc", Erfc)   \
-  OF_PP_MAKE_TUPLE_SEQ("expm1", Expm1)                       
+  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)          \
+  OF_PP_MAKE_TUPLE_SEQ("erf", Erf)            \
+  OF_PP_MAKE_TUPLE_SEQ("erfc", Erfc)          \
+  OF_PP_MAKE_TUPLE_SEQ("expm1", Expm1)
 
 #define UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, base)                    \
   class class_name##Functor : public base {                                          \

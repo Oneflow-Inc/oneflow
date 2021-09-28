@@ -77,17 +77,23 @@ class ScalarAddFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
                            bool inplace) const {
     MutableAttrMap attrs;
+    TensorProcessor tensor_processor;
+    Symbol<DType> scalar_dtype;
     if (scalar.IsFloatingPoint()) {
       JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
+      scalar_dtype = DType::Double();
     } else if (scalar.IsIntegral()) {
       JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
+      scalar_dtype = DType::Int64();
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarAdd shoule be float or int.";
     }
+    JUST(tensor_processor.PromoteInputsWithScalar(true).AddInputs({x}, scalar_dtype).Apply());
+    TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
@@ -95,7 +101,7 @@ class ScalarAddFunctor {
       JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
       return outputs->at(0);
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, casted_vec, attrs);
     }
   }
 
@@ -133,19 +139,24 @@ class ScalarMulFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
     if (std::dynamic_pointer_cast<StaticZerosTensor>(x)) { return x; }
     MutableAttrMap attrs;
+    TensorProcessor tensor_processor;
+    Symbol<DType> scalar_dtype;
     if (scalar.IsFloatingPoint()) {
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+      scalar_dtype = DType::Double();
     } else if (scalar.IsIntegral()) {
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
       JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+      scalar_dtype = DType::Int64();
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarMul shoule be float or int.";
     }
+    JUST(tensor_processor.PromoteInputsWithScalar(true).AddInputs({x}, scalar_dtype).Apply());
+    TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, casted_vec, attrs);
   }
 
  private:
@@ -180,8 +191,24 @@ class ScalarPowFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("exponent", JUST(scalar.As<double>())));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    TensorProcessor tensor_processor;
+    Symbol<DType> scalar_dtype;
+    if (scalar.IsFloatingPoint()) {
+      JUST(attrs.SetAttr<bool>("has_float_operand", true));
+      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
+      JUST(attrs.SetAttr<bool>("has_int_operand", false));
+      scalar_dtype = DType::Double();
+    } else if (scalar.IsIntegral()) {
+      JUST(attrs.SetAttr<bool>("has_float_operand", false));
+      JUST(attrs.SetAttr<bool>("has_int_operand", true));
+      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
+      scalar_dtype = DType::Int64();
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarPow shoule be float or int.";
+    }
+    JUST(tensor_processor.PromoteInputsWithScalar(true).AddInputs({x}, scalar_dtype).Apply());
+    TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, casted_vec, attrs);
   }
 
  private:
@@ -614,19 +641,24 @@ class ScalarFModFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
     MutableAttrMap attrs;
-
+    TensorProcessor tensor_processor;
+    Symbol<DType> scalar_dtype;
     if (IsFloatingDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
+      scalar_dtype = DType::Double();
     } else if (IsIntegralDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
+      scalar_dtype = DType::Int64();
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarAdd shoule be float or int.";
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    JUST(tensor_processor.PromoteInputsWithScalar(true).AddInputs({x}, scalar_dtype).Apply());
+    TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, casted_vec, attrs);
   }
 
  private:
