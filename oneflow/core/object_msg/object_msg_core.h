@@ -471,7 +471,7 @@ class ObjectMsgPtr final {
   const value_type& operator*() const { return *ptr_; }
   bool operator==(const ObjectMsgPtr& rhs) const { return this->ptr_ == rhs.ptr_; }
 
-  value_type* Mutable() { return ptr_; }  // NOLINT
+  value_type* Mutable() { return ptr_; }
   value_type* operator->() { return ptr_; }
   value_type& operator*() { return *ptr_; }
 
@@ -480,8 +480,8 @@ class ObjectMsgPtr final {
   void Reset(value_type* ptr) {
     Clear();
     if (ptr == nullptr) { return; }
-    ptr_ = ptr;                               // NOLINT
-    ObjectMsgPtrUtil::Ref<value_type>(ptr_);  // NOLINT
+    ptr_ = ptr;
+    ObjectMsgPtrUtil::Ref<value_type>(ptr_);
   }
 
   ObjectMsgPtr& operator=(const ObjectMsgPtr& rhs) {
@@ -509,8 +509,8 @@ class ObjectMsgPtr final {
 
  private:
   void Clear() {
-    if (ptr_ == nullptr) { return; }                 // NOLINT
-    ObjectMsgPtrUtil::ReleaseRef<value_type>(ptr_);  // NOLINT
+    if (ptr_ == nullptr) { return; }
+    ObjectMsgPtrUtil::ReleaseRef<value_type>(ptr_);
     ptr_ = nullptr;
   }
   value_type* ptr_;
