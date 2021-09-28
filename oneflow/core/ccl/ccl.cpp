@@ -401,8 +401,8 @@ struct DtypeReduce<T, kSum> {
              bs.At(parallel_id_of_root).size() * sizeof(T));
     }
 
-    for (int64_t i = 0, part_id = RingIncrease(root, parallel_num); i < parallel_num - 1;
-         ++i, part_id = RingIncrease(part_id, parallel_num)) {
+    for (int64_t i = 0, part_id = RingIncrease(parallel_id_of_root, parallel_num);
+         i < parallel_num - 1; ++i, part_id = RingIncrease(part_id, parallel_num)) {
       int64_t send_part_id = part_id;
       int64_t src_rank = JUST(parallel_desc->MachineId4ParallelId(send_part_id));
       const T* send_ptr = tmp_out;
