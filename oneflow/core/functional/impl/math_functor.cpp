@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/functional/tensor_processor.h"
 
 namespace oneflow {
 namespace one {
@@ -243,6 +244,7 @@ class ReduceSumFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
+    // const DataType dtype = x->dtype()->data_type();
     MutableAttrMap attrs;
     if (axis.empty()) {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
@@ -252,7 +254,10 @@ class ReduceSumFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
   }
 
  private:
@@ -264,6 +269,9 @@ class ReduceMeanFunctor {
   ReduceMeanFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
+    // ReduceMean only calculate floating values.
+    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type()))
+        << "RuntimeError: Can only calculate the mean of floating types.";
     const auto& sum = JUST(functional::ReduceSum(x, axis, keepdims));
     size_t reduce_count = 1;
     if (axis.empty()) {
@@ -320,15 +328,21 @@ class TransposeFunctor {
 class ArangeFunctor {
  public:
   ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
-  Maybe<Tensor> operator()(const int64_t& start, const int64_t& limit, const int64_t& delta,
+  Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("start", start));
-    JUST(attrs.SetAttr<int64_t>("limit", limit));
-    JUST(attrs.SetAttr<int64_t>("delta", delta));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-
+    const DataType range_dtype = dtype->data_type();
+    JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
+    if (IsIntegralDataType(range_dtype)) {
+      JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+    } else {
+      JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
+      JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
+      JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+    }
     OpExprInterpContext ctx(attrs);
     if (device) { ctx.device = JUST(device); }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
@@ -340,23 +354,30 @@ class ArangeFunctor {
 
 class Arange2Functor {
  public:
-  Maybe<Tensor> operator()(const int64_t& limit, const Symbol<DType>& dtype,
+  Maybe<Tensor> operator()(const Scalar& limit, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
-    return Arange(0, limit, 1, dtype, device);
+    return Arange(Scalar(0), limit, Scalar(1), dtype, device);
   }
 };
 
 class ConsistentArangeFunctor {
  public:
   ConsistentArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
-  Maybe<Tensor> operator()(const int64_t& start, const int64_t& limit, const int64_t& delta,
+  Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Symbol<DType>& dtype, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("start", start));
-    JUST(attrs.SetAttr<int64_t>("limit", limit));
-    JUST(attrs.SetAttr<int64_t>("delta", delta));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    const DataType range_dtype = dtype->data_type();
+    JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
+    if (IsIntegralDataType(range_dtype)) {
+      JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+    } else {
+      JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
+      JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
+      JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+    }
 
     if (LazyMode::is_enabled()) {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
@@ -377,16 +398,24 @@ class ConsistentArangeFunctor {
 
 class ConsistentArange2Functor {
  public:
-  Maybe<Tensor> operator()(const int64_t& limit, const Symbol<DType>& dtype,
+  Maybe<Tensor> operator()(const Scalar& limit, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
-    return ConsistentArange(0, limit, 1, dtype, placement, sbp_tuple);
+    return ConsistentArange(Scalar(0), limit, Scalar(1), dtype, placement, sbp_tuple);
   }
 };
 
 class ArgMaxFunctor : public UnaryFunctor {
  public:
   ArgMaxFunctor() { op_ = CHECK_JUST(one::OpBuilder("argmax").Input("in").Output("out").Build()); }
+};
+
+class ArgMinFunctor {
+ public:
+  ArgMinFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return ArgMax(JUST(functional::Negative(x)));
+  }
 };
 
 class CastFunctor {
@@ -916,6 +945,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<ArgMaxFunctor>("ArgMax");
+  m.add_functor<ArgMinFunctor>("ArgMin");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<VectorNormFunctor>("VectorNorm");

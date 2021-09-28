@@ -305,6 +305,10 @@ def _atanh(self):
     return flow.atanh(self)
 
 
+def _atan2(self, other):
+    return flow.atan2(self, other)
+
+
 def _arctanh(self):
     return flow.arctanh(self)
 
@@ -573,17 +577,13 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
         assert isinstance(other, Tensor)
         assert other.is_consistent
         other = other.to_consistent(placement=self.placement, sbp=self.sbp)
-        _copy_from_numpy_to_eager_local_tensor(
-            self.to_local(), other.to_local().numpy()
-        )
+        flow._C.assign_local_tensor(self.to_local(), other.to_local())
     else:
-        if isinstance(other, (Tensor)):
-            src_np = other.numpy()
-        else:
+        if not isinstance(other, (Tensor)):
             assert isinstance(other, np.ndarray)
-            src_np = other
-
-        _copy_from_numpy_to_eager_local_tensor(self, src_np)
+            _copy_from_numpy_to_eager_local_tensor(self, other)
+        else:
+            flow._C.assign_local_tensor(self, other.to(device=self.device))
 
 
 def _get_device(self):
@@ -657,6 +657,7 @@ def RegisterMethods():
     Tensor.acosh = _acosh
     Tensor.arccosh = _arccosh
     Tensor.atanh = _atanh
+    Tensor.atan2 = _atan2
     Tensor.arctanh = _arctanh
     Tensor.sign = _sign
     Tensor.sinh = _sinh

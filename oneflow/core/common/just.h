@@ -18,6 +18,7 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_JUST_H_
 
 #include <glog/logging.h>
+#include <type_traits>
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/preprocessor.h"
 
@@ -74,6 +75,13 @@ std::shared_ptr<cfg::ErrorProto> JustGetError(const Optional<T>&) {
   return Error::ValueNotFoundError().error_proto();
 }
 
+template<typename T>
+typename std::remove_const<typename std::remove_reference<T>::type>::type&& RemoveRValConst(
+    T&& v) noexcept {
+  static_assert(std::is_rvalue_reference<T&&>::value, "rvalue is expected here");
+  return const_cast<typename std::remove_const<typename std::remove_reference<T>::type>::type&&>(v);
+}
+
 }  // namespace private_details
 }  // namespace oneflow
 
@@ -83,15 +91,15 @@ std::shared_ptr<cfg::ErrorProto> JustGetError(const Optional<T>&) {
 #if defined(__GNUC__) || defined(__CUDACC__) || defined(__clang__)
 
 #define JUST(...)                                                                        \
-  ({                                                                                     \
+  ::oneflow::private_details::RemoveRValConst(({                                         \
     auto&& value_to_check_ = __JustStackCheckWrapper__(__VA_ARGS__);                     \
     if (!::oneflow::private_details::JustIsOk(value_to_check_)) {                        \
       return ::oneflow::private_details::JustErrorAddStackFrame(                         \
           ::oneflow::private_details::JustGetError(value_to_check_), __FILE__, __LINE__, \
-          __FUNCTION__, OF_PP_STRINGIZE((__VA_ARGS__)));                                 \
+          __FUNCTION__, OF_PP_STRINGIZE(__VA_ARGS__));                                   \
     }                                                                                    \
     std::forward<decltype(value_to_check_)>(value_to_check_);                            \
-  }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
+  })).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define CHECK_JUST(...)                                                                      \
   ([&](const char* func_name) {                                                              \
@@ -100,23 +108,23 @@ std::shared_ptr<cfg::ErrorProto> JustGetError(const Optional<T>&) {
       LOG(FATAL) << ::oneflow::GetFormatedSerializedError(                                   \
           ::oneflow::private_details::JustErrorAddStackFrame(                                \
               ::oneflow::private_details::JustGetError(value_to_check_), __FILE__, __LINE__, \
-              func_name, OF_PP_STRINGIZE((__VA_ARGS__))));                                   \
+              func_name, OF_PP_STRINGIZE(__VA_ARGS__)));                                     \
     }                                                                                        \
     return std::forward<decltype(value_to_check_)>(value_to_check_);                         \
   })(__FUNCTION__)                                                                           \
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define JUST_MSG(value, ...)                                                          \
-  ({                                                                                  \
+  ::oneflow::private_details::RemoveRValConst(({                                      \
     auto&& value_to_check_ = (value);                                                 \
     if (!::oneflow::private_details::JustIsOk(value_to_check_)) {                     \
       return ::oneflow::private_details::JustErrorAddMessage(                         \
           ::oneflow::Error(::oneflow::private_details::JustGetError(value_to_check_)) \
               .AddStackFrame(__FILE__, __LINE__, __FUNCTION__),                       \
-          OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__);                               \
+          OF_PP_STRINGIZE(value), ": ", __VA_ARGS__);                                 \
     }                                                                                 \
     std::forward<decltype(value_to_check_)>(value_to_check_);                         \
-  }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
+  })).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define CHECK_JUST_MSG(value, ...)                                                        \
   ([&](const char* func_name) {                                                           \
@@ -126,7 +134,7 @@ std::shared_ptr<cfg::ErrorProto> JustGetError(const Optional<T>&) {
           ::oneflow::private_details::JustErrorAddMessage(                                \
               ::oneflow::Error(::oneflow::private_details::JustGetError(value_to_check_)) \
                   .AddStackFrame(__FILE__, __LINE__, func_name),                          \
-              OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__)                                \
+              OF_PP_STRINGIZE(value), ": ", __VA_ARGS__)                                  \
               .error_proto());                                                            \
     }                                                                                     \
     return std::forward<decltype(value_to_check_)>(value_to_check_);                      \
@@ -134,11 +142,11 @@ std::shared_ptr<cfg::ErrorProto> JustGetError(const Optional<T>&) {
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define JUST_OPT(...)                                                \
-  ({                                                                 \
+  ::oneflow::private_details::RemoveRValConst(({                     \
     auto&& value_to_check_ = __JustStackCheckWrapper__(__VA_ARGS__); \
     if (!value_to_check_.has_value()) { return NullOpt; }            \
     std::forward<decltype(value_to_check_)>(value_to_check_);        \
-  }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
+  })).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #else
 #error statement expression is no supported, please implement try-catch version of JUST
