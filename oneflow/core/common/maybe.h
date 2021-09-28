@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <glog/logging.h>
 #include <google/protobuf/text_format.h>
-#include <type_traits>
 #include "oneflow/core/common/type_traits.h"
 #include "oneflow/core/common/either_ptr.h"
 #include "oneflow/core/common/shared_or_scalar.h"
