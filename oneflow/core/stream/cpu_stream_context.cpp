@@ -15,16 +15,19 @@ limitations under the License.
 */
 #include "oneflow/core/stream/stream_context.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/vm/cpu_allocator.h"
 #include "oneflow/core/kernel/chain_kernel_observer.h"
 #include "oneflow/core/kernel/cpu_check_numerics_kernel_observer.h"
+#include "oneflow/core/stream/execution_context_hook.h"
 
 namespace oneflow {
 
 class CpuStreamContext : public StreamContext,
+                         public ExecutionContextHook,
                          public KernelObserverProvider,
                          public DeviceCtxProvider {
  public:
@@ -37,6 +40,9 @@ class CpuStreamContext : public StreamContext,
   std::shared_ptr<DeviceCtx> GetDeviceCtx() override;
   KernelObserver* GetKernelObserver() override;
   DeviceType device_type() const override { return DeviceType::kCPU; }
+
+  Maybe<void> OnExecutionContextSetup() override;
+  Maybe<void> OnExecutionContextTeardown() override;
 
  private:
   std::shared_ptr<DeviceCtx> device_ctx_;
@@ -71,6 +77,13 @@ class DeviceCtxImpl final : public DeviceCtx {
 };
 
 }  // namespace
+
+Maybe<void> CpuStreamContext::OnExecutionContextSetup() {
+  OF_PROFILER_NAME_THIS_HOST_THREAD("__CPU Actor Thread");
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CpuStreamContext::OnExecutionContextTeardown() { return Maybe<void>::Ok(); }
 
 CpuStreamContext::CpuStreamContext() {
   std::vector<std::shared_ptr<KernelObserver>> kernel_observers;

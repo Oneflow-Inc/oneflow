@@ -25,13 +25,9 @@ namespace {
 
 REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, float)
 REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, double)
-REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, int32_t)
-REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, int64_t)
 #ifdef WITH_CUDA
 REGISTER_UNIFORM_KERNEL(DeviceType::kGPU, float)
 REGISTER_UNIFORM_KERNEL(DeviceType::kGPU, double)
-REGISTER_UNIFORM_KERNEL(DeviceType::kGPU, int32_t)
-REGISTER_UNIFORM_KERNEL(DeviceType::kGPU, int64_t)
 #endif  // WITH_CUDA
 }  // namespace
 
