@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/ndarray/ndarray_apply_broadcast_binary_core.h"
-#include "oneflow/core/common/data_type_seq.h"
 
 namespace oneflow {
 
