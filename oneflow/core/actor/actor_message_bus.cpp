@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/actor/actor_message_bus.h"
+#include <cstdint>
 #include "oneflow/core/actor/actor.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -64,6 +65,8 @@ void ActorMsgBus::SendMsgWithoutCommNet(const ActorMsg& msg) {
 }
 
 void ActorMsgBus::HandleRecvData(void *data, size_t size) {
+  uint64_t addr = reinterpret_cast<uint64_t>(data);
+  std::cout<<"ActorMsgBus::HandleRecvData,the addr:0x"<<std::hex << addr << " and size:"<<size<< std::endl;
   ActorMsg msg = *(reinterpret_cast<ActorMsg*>(data));
   ActorMsg new_msg = msg;
   size_t token_size = 0;

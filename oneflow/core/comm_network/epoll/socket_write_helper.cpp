@@ -97,7 +97,7 @@ bool SocketWriteHelper::MsgBodyWriteHandle() {
 
 bool SocketWriteHelper::DoCurWrite(void (SocketWriteHelper::*set_cur_write_done)()) {
   ssize_t n = write(sockfd_, write_ptr_, write_size_);
-  std::cout<<"SocketWriteHelper::DoCurWrite,the sockfd_"<<sockfd_ <<" and the write_size:"<<write_size_ <<" and n:"<<n << std::endl;
+  std::cout<<"SocketWriteHelper::DoCurWrite,the sockfd_:"<<sockfd_ <<" and the write_size:"<<write_size_ <<" and n:"<<n << std::endl;
   if (n == write_size_) {
     (this->*set_cur_write_done)();
     return true;
