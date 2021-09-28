@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/thread/thread_consistent_id.h"
 #include "oneflow/core/framework/transport_token.h"
 
@@ -42,6 +43,7 @@ void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
   *Initializer = [&]() {
     if (!CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) { return; }
     CHECK_JUST(InitThisThreadUniqueConsistentId(kThreadConsistentIdScheduler, "scheduler"));
+    OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Scheduler");
   };
 }
 
@@ -82,6 +84,7 @@ void GetWorkerThreadInitializer(ObjectMsgPtr<vm::VirtualMachine> vm,
     if (iter != stream_type_index2consistent_id.end()) {
       CHECK_JUST(InitThisThreadConsistentId(iter->second, stream_type_index.name()));
     }
+    OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Worker");
   };
 }
 
