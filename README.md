@@ -72,7 +72,7 @@
 
 ### Use docker image
 
-````
+```
 docker pull oneflowinc/oneflow:nightly-cuda10.2
 docker pull oneflowinc/oneflow:nightly-cuda11.1
 ```
@@ -289,5 +289,3 @@ OneFlow was originally developed by [OneFlow Inc](http://www.oneflow.org) and [Z
 ## License
 
 [Apache License 2.0](LICENSE)
-
-````
