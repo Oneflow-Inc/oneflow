@@ -112,6 +112,7 @@ bool SocketWriteHelper::DoCurWrite(void (SocketWriteHelper::*set_cur_write_done)
 
 void SocketWriteHelper::SetStatusWhenMsgHeadDone() {
   switch (cur_msg_.msg_type) {
+  case SocketMsgType::kActor: SetStatusWhenActorMsgHeadDone();break;
 #define MAKE_ENTRY(x, y) \
   case SocketMsgType::k##x: return SetStatusWhen##x##MsgHeadDone();
     OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ);
