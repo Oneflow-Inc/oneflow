@@ -93,6 +93,12 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
     const auto& cur_nn_graph = GetCurNNGraph(instruction);
     auto* device_ctx = GetLazyJobDeviceCtx(instruction);
 
+    static thread_local bool has_set = false;
+    if (!has_set) {
+      has_set = true;
+      OF_PROFILER_NAME_THIS_HOST_THREAD("__NNGraph vm stream");
+    }
+
     OF_PROFILER_RANGE_PUSH("WaitUntilQueueEmptyIfFrontNNGraphNotEquals");
     device_ctx->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(cur_nn_graph);
     OF_PROFILER_RANGE_POP();  // WaitUntilQueueEmptyIfFrontNNGraphNotEquals
