@@ -105,6 +105,20 @@ PrepareToCallBatchedGemm(const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TR
                          cublas_trans_b);
 }
 
+#define CUDA_DATA_TYPE_SEQ                 \
+  OF_PP_MAKE_TUPLE_SEQ(float, CUDA_R_32F)  \
+  OF_PP_MAKE_TUPLE_SEQ(double, CUDA_R_64F) \
+  OF_PP_MAKE_TUPLE_SEQ(float16, CUDA_R_16F)
+
+template<typename T>
+struct CudaDataType;
+
+#define SPECIALIZE_CUDA_DATA_TYPE(type_cpp, type_cuda) \
+  template<>                                           \
+  struct CudaDataType<type_cpp> : std::integral_constant<cudaDataType_t, type_cuda> {};
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_CUDA_DATA_TYPE, CUDA_DATA_TYPE_SEQ);
+#undef SPECIALIZE_CUDA_DATA_TYPE
+
 template<typename T>
 cudaDataType_t GetCudaDataType4BatchedGemm() {
   return CudaDataType<T>::value;

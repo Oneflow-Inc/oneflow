@@ -105,26 +105,6 @@ bool IsCuda9OnTuringDevice() {
          && global_device_prop.minor == 5;
 }
 
-template<>
-void CudaCheck(cudaError_t error) {
-  CHECK_EQ(error, cudaSuccess) << cudaGetErrorString(error);
-}
-
-template<>
-void CudaCheck(cudnnStatus_t error) {
-  CHECK_EQ(error, CUDNN_STATUS_SUCCESS) << cudnnGetErrorString(error);
-}
-
-template<>
-void CudaCheck(cublasStatus_t error) {
-  CHECK_EQ(error, CUBLAS_STATUS_SUCCESS) << CublasGetErrorString(error);
-}
-
-template<>
-void CudaCheck(curandStatus_t error) {
-  CHECK_EQ(error, CURAND_STATUS_SUCCESS) << CurandGetErrorString(error);
-}
-
 size_t GetAvailableGpuMemSize(int dev_id) {
   cudaDeviceProp prop;
   cudaGetDeviceProperties(&prop, dev_id);
@@ -158,14 +138,6 @@ std::function<void(void**, size_t)> GetCudaMallocHostFn(int32_t dev) {
 void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
   auto fn = GetCudaMallocHostFn(dev);
   fn(ptr, size);
-}
-
-cudaDataType_t GetCudaDataType(DataType val) {
-#define MAKE_ENTRY(type_cpp, type_cuda) \
-  if (val == GetDataType<type_cpp>::value) { return type_cuda; }
-  OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, CUDA_DATA_TYPE_SEQ);
-#undef MAKE_ENTRY
-  UNIMPLEMENTED();
 }
 
 CudaCurrentDeviceGuard::CudaCurrentDeviceGuard(int32_t dev_id) {

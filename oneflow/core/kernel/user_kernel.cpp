@@ -28,12 +28,6 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/stream/stream_context_adapter.h"
 
-#ifdef WITH_CUDA_GRAPHS
-
-#include "oneflow/core/device/cuda_device_context.h"
-
-#endif  // WITH_CUDA_GRAPHS
-
 namespace oneflow {
 
 namespace {

@@ -19,13 +19,11 @@ limitations under the License.
 #include "oneflow/core/actor/actor_base.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/device/cpu_device_context.h"
-#include "oneflow/core/device/cuda_device_context.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/register/register_manager.h"
-#include "oneflow/core/thread/thread_context.h"
 #include "oneflow/core/actor/register_slot.h"
 
 namespace oneflow {

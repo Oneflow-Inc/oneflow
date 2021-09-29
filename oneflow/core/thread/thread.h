@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/task.pb.h"
-#include "oneflow/core/thread/thread_context.h"
 #include "oneflow/core/actor/actor.h"
 
 namespace oneflow {

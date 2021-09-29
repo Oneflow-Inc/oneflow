@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/cpu_check_numerics_kernel_observer.h"
-#include "oneflow/core/device/cuda_device_context.h"
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
