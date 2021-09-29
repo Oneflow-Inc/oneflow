@@ -256,6 +256,7 @@ jobs:
           docker-run-use-system-http-proxy: false
           docker-run-use-lld: false
           retry-failed-build: true
+          clean-ccache: ${{ env.clean-ccache }}
           python-versions: |
             3.6
             3.7
@@ -276,6 +277,7 @@ jobs:
           docker-run-use-system-http-proxy: true
           docker-run-use-lld: true
           retry-failed-build: true
+          clean-ccache: ${{ env.clean-ccache }}
           python-versions: |
             3.6
       - name: Upload bin
