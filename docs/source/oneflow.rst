@@ -79,6 +79,7 @@ oneflow
             neg, 
             negative, 
             nonzero,
+            numel, 
             empty,
             ones, 
             ones_like, 
