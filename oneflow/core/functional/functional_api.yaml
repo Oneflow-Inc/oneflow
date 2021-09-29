@@ -150,6 +150,10 @@
     ]
   bind_python: True
 
+- name: "scalar_pow_grad"
+  signature: "Tensor (Tensor input, Tensor dy, Scalar exponent) => ScalarPowGrad"
+  bind_python: False
+
 - name: "broadcast_pow"
   signature: "Tensor (Tensor x, Tensor y) => BroadcastPow"
   bind_python: False
