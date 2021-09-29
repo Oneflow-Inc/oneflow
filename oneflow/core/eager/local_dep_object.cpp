@@ -58,7 +58,7 @@ Maybe<ObjectMsgPtr<LocalDepObject>> LocalDepObject::New(const Device& device) {
 namespace {
 
 using PoolLocalDepObjectList = OBJECT_MSG_LIST(LocalDepObject, pool_link);
-using StoredLocalDepObjectList = OBJECT_MSG_LIST(LocalDepObject, occupied_link);
+using StoredLocalDepObjectList = OBJECT_MSG_LIST(LocalDepObject, stored_link);
 using OccupiedLocalDepObjectList = OBJECT_MSG_LIST(LocalDepObject, occupied_link);
 
 PoolLocalDepObjectList* RawThreadLocalPoolLocalDepObjectList(Symbol<Device> device) {
