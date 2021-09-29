@@ -43,7 +43,8 @@ size_t GetMovementSize(size_t elem_size, size_t num_dims, void* dst, const int64
                        const int64_t* dst_pos, const void* src, const int64_t* src_dims,
                        const int64_t* src_pos, const int64_t* extent) {
   static_assert(max_movement_size > 0 && (max_movement_size & (max_movement_size - 1)) == 0, "");
-  CHECK_EQ(elem_size > 0 && (elem_size & (elem_size - 1)), 0);
+  CHECK_GT(elem_size, 0);
+  CHECK_EQ((elem_size & (elem_size - 1)), 0);
   CHECK_EQ(max_movement_size % elem_size, 0);
   const int64_t last_dst_dim_size = dst_dims[num_dims - 1] * elem_size;
   const int64_t last_dst_pos = dst_pos[num_dims - 1] * elem_size;
@@ -109,7 +110,7 @@ void LaunchKernel(StreamContext* stream_ctx, void* dst, const int64_t* dst_dims,
   }
   params.src = src;
   params.dst = dst;
-  params.count = count;
+  params.count = static_cast<IndexType>(count);
   LaunchKernel<num_dims, movement_size, IndexType>(stream_ctx, params);
 }
 
