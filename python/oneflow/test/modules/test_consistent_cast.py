@@ -133,7 +133,6 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
         test_case.assertTrue(
             np.array_equal(z.numpy(), np.ones((8, 16), dtype=np.int32) * scale)
         )
-    
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_local_to_consistent_s0p_2_s0s0(test_case):
@@ -156,7 +155,6 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
         test_case.assertTrue(
             np.array_equal(z.numpy(), np.ones((8, 16), dtype=np.int32) * scale)
         )
-
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_to_consistent_loop_broadcast_shape_dtype(test_case):
