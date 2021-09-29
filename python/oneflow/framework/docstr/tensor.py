@@ -52,6 +52,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.atan2,
+    r"""
+    See :func:`oneflow.atan2`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.expand_as,
     """
     expand_as(other) -> Tensor
