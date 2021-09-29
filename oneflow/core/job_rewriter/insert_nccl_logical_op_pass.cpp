@@ -456,6 +456,18 @@ bool TryBuildNcclBy3DHierarchyChangeDim1(OperatorConf* ret,
                .Build()
                .op_conf();
     return true;
+  } else if ((src_dim1_sbp.has_split_parallel() && dst_dim1_sbp.has_broadcast_parallel())
+             && (src_dim1_sbp.split_parallel().axis() > 0)) {
+    // S(1)->B : AllGather Noncontinuous
+    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2B-" + NewUniqueId())
+               .Op("_nccl_logical_3D_change_dim1_all_gather_noncontinuous")
+               .Input("in", lbn)
+               .Output("out")
+               .Attr<int64_t>("in_dim1_split_axis", src_dim1_sbp.split_parallel().axis())
+               .ScopeSymbolId(scope_symbol_id)
+               .Build()
+               .op_conf();
+    return true;
   } else if (src_dim1_sbp.has_partial_sum_parallel() && dst_dim1_sbp.has_split_parallel()
              && (dst_dim1_sbp.split_parallel().axis() == 0)) {
     // P->S(0) : ReduceScatter
@@ -463,6 +475,18 @@ bool TryBuildNcclBy3DHierarchyChangeDim1(OperatorConf* ret,
                .Op("_nccl_logical_3D_change_dim1_reduce_scatter")
                .Input("in", lbn)
                .Output("out")
+               .ScopeSymbolId(scope_symbol_id)
+               .Build()
+               .op_conf();
+    return true;
+  } else if (src_dim1_sbp.has_partial_sum_parallel() && dst_dim1_sbp.has_split_parallel()
+             && (dst_dim1_sbp.split_parallel().axis() > 0)) {
+    // P->S(0) : ReduceScatter Noncontinuous
+    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2S-" + NewUniqueId())
+               .Op("_nccl_logical_3D_change_dim1_reduce_scatter_noncontinuous")
+               .Input("in", lbn)
+               .Output("out")
+               .Attr<int64_t>("out_dim1_split_axis", dst_dim1_sbp.split_parallel().axis())
                .ScopeSymbolId(scope_symbol_id)
                .Build()
                .op_conf();
