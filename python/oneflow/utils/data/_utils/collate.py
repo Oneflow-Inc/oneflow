@@ -78,7 +78,7 @@ def default_collate(batch):
     elem_type = type(elem)
     if isinstance(elem, (flow.Tensor, flow._oneflow_internal.Tensor)):
         # TODO: tensor.storage()._new_shared(numel)
-        return flow.stack(batch, dim=0)
+        return flow._C.stack(batch, dim=0)
     elif (
         elem_type.__module__ == "numpy"
         and elem_type.__name__ != "str_"
@@ -89,9 +89,9 @@ def default_collate(batch):
             if np_str_obj_array_pattern.search(elem.dtype.str) is not None:
                 raise TypeError(default_collate_err_msg_format.format(elem.dtype))
 
-            return default_collate([flow.Tensor(b) for b in batch])
+            return default_collate([flow.tensor(b) for b in batch])
         elif elem.shape == ():  # scalars
-            return flow.Tensor(batch)
+            return flow.tensor(batch)
     elif isinstance(elem, float):
         return flow.tensor(batch, dtype=flow.float64)
     elif isinstance(elem, int):

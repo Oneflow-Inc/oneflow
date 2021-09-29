@@ -336,7 +336,7 @@ def random_split(
             "Sum of input lengths does not equal the length of the input dataset!"
         )
 
-    indices = flow.randperm(sum(lengths), generator=generator).tolist()
+    indices = flow._C.randperm(sum(lengths), generator=generator).tolist()
     return [
         Subset(dataset, indices[offset - length : offset])
         for offset, length in zip(_accumulate(lengths), lengths)

@@ -124,10 +124,10 @@ def to_tensor(pic):
         if pic.ndim == 2:
             pic = pic[:, :, None]
 
-        img = flow.Tensor(pic.transpose((2, 0, 1)))
+        img = flow.tensor(pic.transpose((2, 0, 1)))
         # backward compatibility
         if img.dtype == flow.int:
-            return img.to(dtype=default_float_dtype).div(255)
+            return flow._C.cast(img, dtype=default_float_dtype).div(255)
         else:
             return img
 
@@ -150,11 +150,11 @@ def to_tensor(pic):
     if pic.mode == "1":
         img = 255 * img
 
-    img = flow.reshape(img, shape=(pic.size[1], pic.size[0], len(pic.getbands())))
+    img = flow._C.reshape(img, shape=(pic.size[1], pic.size[0], len(pic.getbands())))
     # put it from HWC to CHW format
-    res = img.permute(2, 0, 1)
+    res = flow._C.transpose(img, perm=[2, 0, 1])
     if img.dtype == flow.int:
-        res = res.to(dtype=default_float_dtype).div(255)
+        res = flow._C.cast(res, dtype=default_float_dtype).div(255)
     return res
 
 
@@ -182,8 +182,7 @@ def pil_to_tensor(pic):
     img = flow.tensor(np.asarray(pic))
     img = img.view(pic.size[1], pic.size[0], len(pic.getbands()))
     # put it from HWC to CHW format
-    img = img.permute((2, 0, 1))
-    return img
+    return img.permute((2, 0, 1))
 
 
 def convert_image_dtype(
@@ -264,12 +263,11 @@ def normalize(
         )
     std = flow.tensor(np_std, dtype=dtype, device=tensor.device)
     if mean.ndim == 1:
-        mean = mean.reshape(-1, 1, 1)
+        mean = flow._C.reshape(mean, shape=(-1, 1, 1))
     if std.ndim == 1:
-        std = std.reshape(-1, 1, 1)
-    tensor = tensor.sub(mean).div(std)
+        std = flow._C.reshape(std, shape=(-1, 1, 1))
     # tensor.sub_(mean).div_(std)
-    return tensor
+    return flow._C.div(flow._C.sub(tensor, mean), std)
 
 
 def resize(
