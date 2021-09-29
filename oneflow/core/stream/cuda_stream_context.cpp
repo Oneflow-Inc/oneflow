@@ -111,7 +111,7 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
 #endif  // WITH_CUDA_GRAPHS
 };
 
-class DeviceCtxImpl : public DeviceCtx {
+class DeviceCtxImpl : public DeviceCtx, public EventRecordProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DeviceCtxImpl);
   explicit DeviceCtxImpl(CudaStreamContextImpl* stream_ctx) : stream_ctx_(stream_ctx) {}

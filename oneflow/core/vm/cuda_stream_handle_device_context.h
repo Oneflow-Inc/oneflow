@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/device/device_context.h"
-#include "oneflow/core/device/cuda_event_record.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/common/callback.msg.h"
 #include "oneflow/core/vm/cuda_allocator.h"
@@ -59,10 +58,6 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx {
   vm::Allocator* mut_allocator() override { return cuda_allocator_.get(); }
 
   DeviceType device_type() const override { return DeviceType::kGPU; }
-
-  std::shared_ptr<EventRecord> MakeEventRecord() override {
-    return std::make_shared<CudaEventRecord>(device_id_, this);
-  }
 
  protected:
   std::unique_ptr<CudaStreamHandle> cuda_handler_;

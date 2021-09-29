@@ -57,10 +57,6 @@ class CudaCopyD2HDeviceCtx : public DeviceCtx {
 
   DeviceType device_type() const override { return DeviceType::kGPU; }
 
-  std::shared_ptr<EventRecord> MakeEventRecord() override {
-    return std::make_shared<CudaEventRecord>(device_id_, this);
-  }
-
  protected:
   std::unique_ptr<CudaStreamHandle> cuda_handler_;
   CallbackMsgListPtr callback_msg_list_;

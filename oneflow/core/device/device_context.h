@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_H_
 
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/device/event_record.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 
 namespace oneflow {
@@ -65,8 +64,6 @@ class DeviceCtx {
   }
 
   virtual DeviceType device_type() const = 0;
-
-  virtual std::shared_ptr<EventRecord> MakeEventRecord() = 0;
 
  protected:
   DeviceCtx() = default;

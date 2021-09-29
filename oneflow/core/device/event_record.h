@@ -35,6 +35,15 @@ class EventRecord {
   EventRecord() = default;
 };
 
+class EventRecordProvider {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(EventRecordProvider);
+  EventRecordProvider() = default;
+  virtual ~EventRecordProvider() = default;
+
+  virtual std::shared_ptr<EventRecord> MakeEventRecord() = 0;
+};
+
 class NaiveEventRecord final : public EventRecord {
  public:
   NaiveEventRecord(const NaiveEventRecord&) = delete;

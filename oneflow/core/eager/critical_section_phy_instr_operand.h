@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/device/event_record.h"
 #include "oneflow/core/framework/nn_graph_if.h"
 
 namespace oneflow {

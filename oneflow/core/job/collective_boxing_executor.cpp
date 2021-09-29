@@ -132,7 +132,7 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
     std::function<void(Maybe<void>)> callback;
   };
 
-  struct NcclDeviceCtx : public DeviceCtx {
+  struct NcclDeviceCtx : public DeviceCtx, public EventRecordProvider {
     cudaStream_t cuda_stream() const override { return stream; }
     void AddCallBack(std::function<void()>) const override { UNIMPLEMENTED(); }
     DeviceType device_type() const override { return DeviceType::kGPU; }

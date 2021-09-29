@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/device/device_context.h"
+#include "oneflow/core/device/event_record.h"
 #include "oneflow/core/vm/cpu_allocator.h"
 #include "oneflow/core/kernel/chain_kernel_observer.h"
 #include "oneflow/core/kernel/cpu_check_numerics_kernel_observer.h"
@@ -45,7 +46,7 @@ class CpuStreamContext : public StreamContext,
 
 namespace {
 
-class DeviceCtxImpl final : public DeviceCtx {
+class DeviceCtxImpl final : public DeviceCtx, public EventRecordProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DeviceCtxImpl);
   explicit DeviceCtxImpl(CpuStreamContext* stream_ctx) : stream_ctx_(stream_ctx) {}
