@@ -142,12 +142,12 @@ def tensor_scatter_nd_update(tensor, indices, updates):
     This operation creates a new tensor by applying sparse updates to the input tensor.
     This is similar to an index assignment.
 
-    This operator is very similar to `flow.scatter_nd`, except that the updates are scattered onto an existing
+    This operator is very similar to :meth:`scatter_nd`, except that the updates are scattered onto an existing
     tensor (as opposed to a zero-tensor).
 
     Args:
         tensor: The tensor will be scattered.
-        indices: The indices of `update`. Its type should be `flow.int`.
+        indices: The indices of ``update``. Its type should be `flow.int`.
         update: The update Tensor.
 
     For example:
