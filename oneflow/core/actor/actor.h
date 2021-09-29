@@ -68,7 +68,6 @@ class Actor : public ActorBase {
   const ParallelContext* parallel_ctx() const { return parallel_ctx_.get(); }
   bool ReceiveAllEordMsg() const { return remaining_eord_cnt_ == 0; }
   bool ReceiveEordMsg(int64_t regst_desc_id) const;
-  DeviceType GetDeviceType() const;
   virtual void VirtualActorInit(const TaskProto&) {}
   int64_t Name2SoleRegstDescId(const std::string& name) const;
   const std::vector<int64_t>& Name2RegstDescIds(const std::string& name) const;

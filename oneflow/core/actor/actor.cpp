@@ -297,10 +297,6 @@ void Actor::ForEachProducedRegst(const std::function<void(Regst*)>& Handler) con
   }
 }
 
-DeviceType Actor::GetDeviceType() const {
-  return Global<IDMgr>::Get()->GetDeviceTypeFromActorId(actor_id_);
-}
-
 int64_t Actor::Name2SoleRegstDescId(const std::string& name) const {
   auto find_it = name2regst_desc_id_.find(name);
   if (find_it != name2regst_desc_id_.end()) {

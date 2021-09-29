@@ -23,18 +23,14 @@ class AccActor final : public Actor {
   AccActor() = default;
   ~AccActor() override = default;
 
-  using Actor::Init;
-
  private:
   void Act() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 
   void VirtualActorInit(const TaskProto& proto) override;
-  void Init(const TaskProto&, int32_t max_acc_cnt);
 
-  std::function<void(DeviceCtx*, void* dst, const void* src, size_t)> cpy_func_;
-  int32_t acc_cnt_;
-  int32_t max_acc_cnt_;
+  int32_t acc_cnt_{};
+  int32_t max_acc_cnt_{};
 };
 
 void AccActor::VirtualActorInit(const TaskProto& proto) {
@@ -45,44 +41,21 @@ void AccActor::VirtualActorInit(const TaskProto& proto) {
                                     ->RegstDesc4RegstDescId(Name2SoleRegstDescId("out"))
                                     .data_regst_time_shape();
   CHECK_GE(in_time_shape.elem_cnt(), out_time_shape.elem_cnt());
-  Init(proto, in_time_shape.elem_cnt() / out_time_shape.elem_cnt());
-}
-
-void AccActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt) {
-  using namespace std::placeholders;
-  if (GetDeviceType() == DeviceType::kCPU) {
-    cpy_func_ = std::bind(Memcpy<DeviceType::kCPU>, _1, _2, _3, _4);
-  } else {
-#ifdef WITH_CUDA
-    cpy_func_ = std::bind(Memcpy<DeviceType::kGPU>, _1, _2, _3, _4);
-#else
-    UNIMPLEMENTED();
-#endif
-  }
-  OF_SET_MSG_HANDLER(&AccActor::HandlerNormal);
+  max_acc_cnt_ = in_time_shape.elem_cnt() / out_time_shape.elem_cnt();
   acc_cnt_ = 0;
-  max_acc_cnt_ = max_acc_cnt;
+  OF_SET_MSG_HANDLER(&AccActor::HandlerNormal);
 }
 
 void AccActor::Act() {
-  Regst* out_regst = GetNaiveCurWriteable("out");
-  Regst* in_regst = GetNaiveCurReadable("in");
   if (acc_cnt_ == 0) {
+    Regst* out_regst = GetNaiveCurWriteable("out");
+    Regst* in_regst = GetNaiveCurReadable("in");
     const Blob* in_blob = in_regst->GetMutSoleBlob();
     Blob* out_blob = out_regst->GetMutSoleBlob();
-    if (GetDeviceType() == DeviceType::kCPU) {
-      Memcpy<DeviceType::kCPU>(mut_device_ctx().get(), out_blob->ForceMutDptr(), in_blob->dptr(),
-                               out_blob->ByteSizeOfBlobBody());
-    } else if (GetDeviceType() == DeviceType::kGPU) {
-#ifdef WITH_CUDA
-      Memcpy<DeviceType::kGPU>(mut_device_ctx().get(), out_blob->ForceMutDptr(), in_blob->dptr(),
-                               out_blob->ByteSizeOfBlobBody());
-#else
-      UNIMPLEMENTED();
-#endif
-    } else {
-      UNIMPLEMENTED();
-    }
+    const size_t size = in_blob->ByteSizeOfBlobBody();
+    CHECK_EQ(out_blob->ByteSizeOfBlobBody(), size);
+    AutoMemcpy(mut_device_ctx().get(), out_blob->ForceMutDptr(), in_blob->dptr(), size,
+               out_blob->mem_case(), in_blob->mem_case());
   } else {
     AsyncLaunchKernel();
   }
