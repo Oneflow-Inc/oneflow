@@ -618,8 +618,8 @@ class TensorScatterNdUpdateFunctor {
   TensorScatterNdUpdateFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("tensor_scatter_nd_update")
                          .Input("params")
-                         .Input("updates")
                          .Input("indices")
+                         .Input("updates")
                          .Output("out")
                          .Build());
   }
@@ -629,7 +629,7 @@ class TensorScatterNdUpdateFunctor {
                            const std::shared_ptr<one::Tensor>& updates) const {
     CHECK_OR_RETURN(*tensor->dtype() == *updates->dtype())
         << "The dtype of tensor and updates must be same.";
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {tensor, updates, indices});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {tensor, indices, updates});
   }
 
  private:

@@ -25,9 +25,7 @@ from test_util import GenArgList
 
 
 def _test_tensor_scatter_nd_update(test_case, device):
-    origin = flow.tensor(
-        np.arange(8), dtype=flow.float, device=flow.device(device)
-    )
+    origin = flow.tensor(np.arange(8), dtype=flow.float, device=flow.device(device))
     indices = flow.tensor(
         np.array([[1], [6], [4]]), dtype=flow.int, device=flow.device(device)
     )
@@ -77,15 +75,15 @@ def _test_tensor_scatter_nd_update_backward(test_case, device):
         dtype=flow.float,
         device=flow.device(device),
     )
-    np_out = np.array([0.0, 10.2, 0.0, 0.0, 12.7, 0.0, 5.1, 0.0])
+    np_out = np.array([0.0, 10.2, 2.0, 3.0, 12.7, 5.0, 5.1, 7.0])
     np_update_grad = np.array([1.0, 1.0, 1.0])
     np_origin_grad = np.array([1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 1.0])
     output = flow.tensor_scatter_nd_update(origin, indices, of_update)
     out_sum = output.sum()
     out_sum.backward()
     test_case.assertTrue(np.allclose(output.numpy(), np_out, 0.0001, 0.0001))
-    test_case.assertTrue(np.array_equal(of_update.grad.numpy(), np_update_grad))
-    test_case.assertTrue(np.array_equal(origin.grad.numpy(), np_origin_grad))
+    test_case.assertTrue(np.allclose(of_update.grad.numpy(), np_update_grad))
+    test_case.assertTrue(np.allclose(origin.grad.numpy(), np_origin_grad))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -95,7 +93,7 @@ class TestTensorScatterNdUpdate(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_tensor_scatter_nd_update,
             _test_tensor_scatter_nd_update_t,
-            #  _test_tensor_scatter_nd_update_backward,
+            _test_tensor_scatter_nd_update_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
