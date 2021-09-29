@@ -38,10 +38,7 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("ceil", Ceil)                         \
   OF_PP_MAKE_TUPLE_SEQ("cos", Cos)                           \
   OF_PP_MAKE_TUPLE_SEQ("cosh", Cosh)                         \
-  OF_PP_MAKE_TUPLE_SEQ("erf", Erf)                           \
-  OF_PP_MAKE_TUPLE_SEQ("erfc", Erfc)                         \
   OF_PP_MAKE_TUPLE_SEQ("exp", Exp)                           \
-  OF_PP_MAKE_TUPLE_SEQ("expm1", Expm1)                       \
   OF_PP_MAKE_TUPLE_SEQ("floor", Floor)                       \
   OF_PP_MAKE_TUPLE_SEQ("lgamma", Lgamma)                     \
   OF_PP_MAKE_TUPLE_SEQ("log", Log)                           \
@@ -60,9 +57,12 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("square", Square)                     \
   OF_PP_MAKE_TUPLE_SEQ("tan", Tan)
 
-#define CAST_INT_TO_FLOAT_UNARY_FUNC_SEQ      \
+#define FLOAT_UNARY_FUNC_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ("sigmoid_v2", Sigmoid) \
-  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)
+  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)          \
+  OF_PP_MAKE_TUPLE_SEQ("erf", Erf)            \
+  OF_PP_MAKE_TUPLE_SEQ("erfc", Erfc)          \
+  OF_PP_MAKE_TUPLE_SEQ("expm1", Expm1)
 
 #define UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, base)                    \
   class class_name##Functor : public base {                                          \
@@ -78,12 +78,12 @@ namespace impl {
   UNARY_ELEMENTWISE_FUNCTOR(                     \
       op_type_name, class_name,                  \
       UnaryFunctor)  // TODO(yaochi): replace UNARY_FUNC_SEQ with INPLACEABLE_UNARY_FUNC_SEQ SEQ
-#define CAST_INT_FLOAT_UNARY_FUNCOTRS(op_type_name, class_name) \
-  UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, CastIntToFloatUnaryFunctor)
+#define FLOAT_UNARY_FUNCOTRS(op_type_name, class_name) \
+  UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, FloatUnaryFunctor)
 
 OF_PP_FOR_EACH_TUPLE(INPLACEABLE_UNARY_FUNCOTRS, INPLACEABLE_UNARY_FUNC_SEQ);
 OF_PP_FOR_EACH_TUPLE(UNARY_FUNCOTRS, UNARY_FUNC_SEQ);
-OF_PP_FOR_EACH_TUPLE(CAST_INT_FLOAT_UNARY_FUNCOTRS, CAST_INT_TO_FLOAT_UNARY_FUNC_SEQ);
+OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_FUNCOTRS, FLOAT_UNARY_FUNC_SEQ);
 
 }  // namespace impl
 

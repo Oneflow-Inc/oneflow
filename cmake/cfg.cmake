@@ -1,25 +1,25 @@
 execute_process(
-  COMMAND python3 ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
+  COMMAND ${CODEGEN_PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
     --get_message_type=cfg_include_dir
   OUTPUT_VARIABLE CFG_INCLUDE_DIR)
 
 execute_process(
-  COMMAND python3 ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
+  COMMAND ${CODEGEN_PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
     --get_message_type=template_convert_python_script
   OUTPUT_VARIABLE TEMPLATE_CONVERT_PYTHON_SCRIPT)
 
 execute_process(
-  COMMAND python3 ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
+  COMMAND ${CODEGEN_PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
     --get_message_type=copy_pyproto_python_script
   OUTPUT_VARIABLE COPY_PYPROTO_PYTHON_SCRIPT)
 
 execute_process(
-  COMMAND python3 ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
+  COMMAND ${CODEGEN_PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
     --get_message_type=pybind_registry_cc
   OUTPUT_VARIABLE PYBIND_REGISTRY_CC)
 
 execute_process(
-  COMMAND python3 ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
+  COMMAND ${CODEGEN_PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
     --get_message_type=template_files
   OUTPUT_VARIABLE TEMPLATE_FILES)
 

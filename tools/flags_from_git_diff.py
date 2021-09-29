@@ -25,7 +25,7 @@ def should_run_single_client_tests(changed=None):
         or f.endswith(".cmake")
         or f.endswith("CMakeLists.txt")
     ]
-    print("[changed]", not_single_client_files)
+    print("[changed]", changed)
     print("[not_single_client_files]", not_single_client_files)
     return len(not_single_client_files) < len(changed)
 
