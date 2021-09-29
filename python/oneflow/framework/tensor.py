@@ -289,6 +289,10 @@ def _exp(self):
     return flow.exp(self)
 
 
+def _expand_as(input, other):
+    return flow.expand(input, other.size())
+
+
 def _acos(self):
     return flow.acos(self)
 
@@ -303,6 +307,10 @@ def _arccosh(self):
 
 def _atanh(self):
     return flow.atanh(self)
+
+
+def _atan2(self, other):
+    return flow.atan2(self, other)
 
 
 def _arctanh(self):
@@ -653,6 +661,7 @@ def RegisterMethods():
     Tensor.acosh = _acosh
     Tensor.arccosh = _arccosh
     Tensor.atanh = _atanh
+    Tensor.atan2 = _atan2
     Tensor.arctanh = _arctanh
     Tensor.sign = _sign
     Tensor.sinh = _sinh
@@ -686,6 +695,7 @@ def RegisterMethods():
     Tensor.clip = _clip
     Tensor.cos = _cos
     Tensor.cosh = _cosh
+    Tensor.expand_as = _expand_as
     Tensor.erf = _erf
     Tensor.erfc = _erfc
     Tensor.expm1 = _expm1
