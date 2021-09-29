@@ -110,7 +110,7 @@ void SocketReadHelper::SetStatusWhenRequestReadMsgHeadDone() {
 
 void SocketReadHelper::SetStatusWhenActorMsgHeadDone() {
   size_t size = cur_msg_.size;
-  void * data = malloc(size);
+  char * data =(char*) malloc(size);
   std::memcpy(data,cur_msg_.actor_msg.data,size);
   //std::cout<<""
   Global<ActorMsgBus>::Get()->HandleRecvData(data,size);
