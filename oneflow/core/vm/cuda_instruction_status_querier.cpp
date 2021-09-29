@@ -23,7 +23,7 @@ namespace vm {
 
 bool CudaInstrStatusQuerier::event_completed() const {
   cudaSetDevice(device_id_);
-  return cudaEventQuery(event_) == cudaSuccess;
+  return cudaEventQuery(event_) != cudaErrorNotReady;
 }
 
 void CudaInstrStatusQuerier::SetLaunched(DeviceCtx* device_ctx) {

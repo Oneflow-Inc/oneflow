@@ -24,7 +24,7 @@ namespace oneflow {
 
 namespace {
 
-int64_t GetCurrentDeviceId() {
+int GetCurrentDeviceId() {
   int device_id = -1;
   OF_CUDA_CHECK(cudaGetDevice(&device_id));
   CHECK_EQ(device_id, GlobalProcessCtx::Rank());
@@ -44,7 +44,7 @@ CudaEventRecord::CudaEventRecord(int64_t device_id, DeviceCtx* device_ctx) : dev
 
 bool CudaEventRecord::QueryDone() const {
   CudaCurrentDeviceGuard guard(device_id_);
-  return cudaEventQuery(event_) == cudaSuccess;
+  return cudaEventQuery(event_) != cudaErrorNotReady;
 }
 
 #endif  // WITH_CUDA
