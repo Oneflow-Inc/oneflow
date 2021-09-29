@@ -150,6 +150,10 @@
     ]
   bind_python: True
 
+- name: "scalar_pow_grad"
+  signature: "Tensor (Tensor input, Tensor dy, Scalar exponent) => ScalarPowGrad"
+  bind_python: False
+
 - name: "broadcast_pow"
   signature: "Tensor (Tensor x, Tensor y) => BroadcastPow"
   bind_python: False
@@ -889,6 +893,10 @@
   signature: "Tensor (Tensor x) => Atan"
   bind_python: True
 
+- name: "atan2"
+  signature: "Tensor (Tensor input, Tensor other) => Atan2"
+  bind_python: True
+
 - name: "atanh"
   signature: "Tensor (Tensor x) => Atanh"
   bind_python: True
@@ -1118,6 +1126,14 @@
   signature: "Tensor (Tensor x) => LocalAllReduce"
   bind_python: True
 
+- name: "local_reduce"
+  signature: "Tensor (Tensor x, *, Int64 dst=0, Bool inplace=True) => LocalReduce"
+  bind_python: True
+
+- name: "eager_p_to_b"
+  signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, Shape shape) => EagerPToB"
+  bind_python: False
+
 - name: "eager_b_to_s"
   signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList out_sbp, Shape shape) => EagerBToS"
   bind_python: False
@@ -1128,6 +1144,10 @@
 
 - name: "eager_naive_s_to_s"
   signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList in_sbp, SbpList out_sbp, Shape shape) => EagerNaiveSToS"
+  bind_python: False
+
+- name: "eager_p_to_s"
+  signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList out_sbp, Shape shape) => EagerPToS"
   bind_python: False
 
 - name: "consistent_all_reduce"

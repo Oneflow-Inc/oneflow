@@ -100,6 +100,7 @@ from oneflow._C import asinh
 from oneflow._C import asinh as arcsinh
 from oneflow._C import atan
 from oneflow._C import atan as arctan
+from oneflow._C import atan2
 from oneflow._C import ceil
 from oneflow._C import clamp
 from oneflow._C import clamp as clip
@@ -214,7 +215,6 @@ from oneflow._C import tensor, batch_gather
 
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
-from oneflow.nn.modules.trigonometric_ops import atan2_op as atan2
 
 from oneflow.framework.check_point_v2 import Load as load
 from oneflow.framework.check_point_v2 import save
@@ -283,6 +283,7 @@ from oneflow.nn.modules.math_ops import variance_op as var
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
 from oneflow.nn.modules.narrow import narrow_op as narrow
 from oneflow.nn.modules.nonzero import nonzero_op as nonzero
+from oneflow.nn.modules.numel import numel_op as numel
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.random_ops import randint_op as randint
