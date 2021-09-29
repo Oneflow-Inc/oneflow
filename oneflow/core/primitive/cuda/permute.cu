@@ -108,7 +108,6 @@ template<size_t num_dims, typename IndexType>
 bool CheckLaunchBatchPermute(PermuteKernelParams<num_dims, IndexType> params){
   IndexType half_num_dims = num_dims / 2; 
   if (num_dims != 3){return false; }
-  // bool flag = num_dims==3; // TODO: suppport more dims like: 0 (1 2) (3 4) ->  0 (3 4) (1 2)
   for(int j=0; j < half_num_dims; j++){
     // Check whether only 2part of dims permute, like (0, 1, 2)->(0, 2, 1), (0, 1, 2, 3, 4)->(0, 3, 4, 1, 2)
     if(!(params.permutation[1 + j] == 1 + j + half_num_dims) && (params.permutation[1 + j + half_num_dims] == 1 + j)){
