@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/functional/tensor_processor.h"
 
 namespace oneflow {
 namespace one {
@@ -187,15 +188,14 @@ class ScalarPowFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ReduceSumFunctor {
+class ReduceMaxFunctor {
  public:
-  ReduceSumFunctor() {
+  ReduceMaxFunctor() {
     op_ = CHECK_JUST(
-        one::OpBuilder("reduce_sum").Input("input_tensor").Output("output_tensor").Build());
+        one::OpBuilder("reduce_max").Input("input_tensor").Output("output_tensor").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
-    const DataType dtype = x->dtype()->data_type();
     MutableAttrMap attrs;
     if (axis.empty()) {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
@@ -205,13 +205,59 @@ class ReduceSumFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    if (IsIntegralDataType(dtype) || dtype == DataType::kUInt8) {
-      // Set dtype as int64 when input's dtype is uint8, int8, int32, int64.
-      const auto& x_int64 = JUST(functional::Cast(x, DType::Int64()));
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x_int64}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ReduceMinFunctor {
+ public:
+  ReduceMinFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("reduce_min").Input("input_tensor").Output("output_tensor").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
+                           const bool& keepdims) const {
+    MutableAttrMap attrs;
+    if (axis.empty()) {
+      std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+      std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
+    JUST(attrs.SetAttr<bool>("keepdims", keepdims));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ReduceSumFunctor {
+ public:
+  ReduceSumFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("reduce_sum").Input("input_tensor").Output("output_tensor").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
+                           const bool& keepdims) const {
+    // const DataType dtype = x->dtype()->data_type();
+    MutableAttrMap attrs;
+    if (axis.empty()) {
+      std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+      std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
+    } else {
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+    }
+    JUST(attrs.SetAttr<bool>("keepdims", keepdims));
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
   }
 
  private:
@@ -362,6 +408,14 @@ class ConsistentArange2Functor {
 class ArgMaxFunctor : public UnaryFunctor {
  public:
   ArgMaxFunctor() { op_ = CHECK_JUST(one::OpBuilder("argmax").Input("in").Output("out").Build()); }
+};
+
+class ArgMinFunctor {
+ public:
+  ArgMinFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return ArgMax(JUST(functional::Negative(x)));
+  }
 };
 
 class CastFunctor {
@@ -738,13 +792,16 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarMulFunctor, ScalarMul2Functor>("ScalarMul");
   m.add_functor<ScalarDivFunctor, ScalarDiv2Functor>("ScalarDiv");
   m.add_functor<ScalarPowFunctor>("ScalarPow");
+  m.add_functor<ReduceMaxFunctor>("ReduceMax");
+  m.add_functor<ReduceMeanFunctor>("ReduceMean");
+  m.add_functor<ReduceMinFunctor>("ReduceMin");
   m.add_functor<ReduceSumFunctor>("ReduceSum");
   m.add_functor<ReduceProdFunctor>("ReduceProd");
-  m.add_functor<ReduceMeanFunctor>("ReduceMean");
   m.add_functor<TransposeFunctor>("Transpose");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<ArgMaxFunctor>("ArgMax");
+  m.add_functor<ArgMinFunctor>("ArgMin");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<ClampGradFunctor>("ClampGrad");

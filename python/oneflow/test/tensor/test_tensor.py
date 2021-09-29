@@ -1428,6 +1428,29 @@ class TestTensor(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=1, dim0=random()).to(device)
         return x.diag()
 
+    @autotest()
+    def test_flow_tensor_expand_with_random_data(test_case):
+        random_expand_size = random(1, 6).to(int).value()
+        x = random_pytorch_tensor(ndim=5, dim0=1, dim1=1, dim2=1, dim3=1, dim4=1)
+        ndim = 5
+        expand_size = random_expand_size
+        dim_size = [1,] * ndim
+        random_index = random(0, ndim).to(int).value()
+        dim_size[random_index] = expand_size
+        return x.expand(*dim_size)
+
+    @autotest()
+    def test_flow_tensor_expand_with_random_data(test_case):
+        random_expand_size = random(1, 6).to(int).value()
+        x = random_pytorch_tensor(ndim=5, dim0=1, dim1=1, dim2=1, dim3=1, dim4=1)
+        ndim = 5
+        expand_size = random_expand_size
+        dim_size = [1,] * ndim
+        random_index = random(0, ndim).to(int).value()
+        dim_size[random_index] = expand_size
+        y = torch.ones(dim_size)
+        return x.expand_as(y)
+
     @flow.unittest.skip_unless_1n1d()
     @autotest()
     def test_tensor_diag_other_dim(test_case):

@@ -22,17 +22,6 @@ template<typename T, typename E = void>
 class CPUUniformDistributionImpl;
 
 template<typename T>
-class CPUUniformDistributionImpl<T, typename std::enable_if<std::is_integral<T>::value>::type> {
- public:
-  CPUUniformDistributionImpl(T low, T high) : random_distribution_(low, high) {}
-
-  T operator()(std::mt19937& engine) { return random_distribution_(engine); }
-
- private:
-  std::uniform_int_distribution<T> random_distribution_;
-};
-
-template<typename T>
 class CPUUniformDistributionImpl<T,
                                  typename std::enable_if<std::is_floating_point<T>::value>::type> {
  public:
@@ -60,6 +49,5 @@ void UniformDistribution<DeviceType::kCPU, T>::operator()(
       const std::shared_ptr<one::Generator>& generator) const;
 
 OF_PP_FOR_EACH_TUPLE(INITIATE_CPU_UNIFORM_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
-OF_PP_FOR_EACH_TUPLE(INITIATE_CPU_UNIFORM_DISTRIBUTION, INT_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

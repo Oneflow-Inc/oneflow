@@ -16,10 +16,11 @@ jobs:
   cancel_previous:
     name: Cancel previous runs
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'need-simple-ci'))
+    if: ${{ github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'need-simple-ci')) }}
     steps:
       - name: Cancel previous runs of outdated commit
         uses: styfle/cancel-workflow-action@0.9.0
+        if: ${{ github.ref != 'refs/heads/master' }}
         with:
           access_token: ${{ github.token }}
 
@@ -246,7 +247,7 @@ jobs:
           repository: Oneflow-Inc/conda-env
           ref: 30a7f00eb48ee9009d85a848e720823e5054c66b
           path: conda-env
-      - uses: Oneflow-Inc/get-oneflow@b9c5793ee3b0a3d5c9e2975f230d985e6712787e
+      - uses: Oneflow-Inc/get-oneflow@2a9efceab8d45b725a687e73f870f9b75a15e472
         name: Build with gcc7
         if: ${{ matrix.build-type == 'gcc7'}}
         with:
@@ -255,7 +256,7 @@ jobs:
           oneflow-build-env: conda
           conda-env-file: conda-env/dev/gcc7/environment-v2.yml
           conda-env-name: oneflow-dev-gcc7-v2
-      - uses: Oneflow-Inc/get-oneflow@b9c5793ee3b0a3d5c9e2975f230d985e6712787e
+      - uses: Oneflow-Inc/get-oneflow@2a9efceab8d45b725a687e73f870f9b75a15e472
         name: Build with clang10
         if: ${{ matrix.build-type == 'clang10'}}
         with:
