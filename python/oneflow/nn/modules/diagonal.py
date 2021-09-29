@@ -16,6 +16,7 @@ limitations under the License.
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 
+
 def diagonal_op(input, offset=0, dim1=0, dim2=1):
     """
     Returns a partial view of input with the its diagonal elements with respect to dim1 and dim2 
@@ -45,6 +46,7 @@ def diagonal_op(input, offset=0, dim1=0, dim2=1):
     """
     out = flow.F.diagonal(input, offset, dim1, dim2)
     return out
+
 
 if __name__ == "__main__":
     import doctest

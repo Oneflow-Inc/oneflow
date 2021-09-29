@@ -18,6 +18,7 @@ from automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
 
+
 class TestDiagonal(flow.unittest.TestCase):
     @autotest()
     def test_flow_diagonal_with_random_data(test_case):
@@ -31,6 +32,7 @@ class TestDiagonal(flow.unittest.TestCase):
         ).to(device)
         z = torch.diagonal(x, 1, 0, 2)
         return z
+
 
 if __name__ == "__main__":
     unittest.main()
