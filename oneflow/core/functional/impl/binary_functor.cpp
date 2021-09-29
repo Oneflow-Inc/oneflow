@@ -142,6 +142,17 @@ class PowFunctor : public BinaryFunctor {
   }
 };
 
+class FloorDivFunctor : public BinaryFunctor {
+ public:
+  FloorDivFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("pow").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    return BinaryFunctor::operator()(x, y);
+  }
+};
+
 class BroadcastFModFunctor : public BinaryFunctor {
  public:
   BroadcastFModFunctor() {
@@ -283,6 +294,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ScalarDivByTensorFunctor>("ScalarDivByTensor");
   m.add_functor<impl::BroadcastFModFunctor>("BroadcastFMod");
   m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
+  m.add_functor<impl::FloorDivFunctor>("FloorDiv");
 };
 
 }  // namespace functional
