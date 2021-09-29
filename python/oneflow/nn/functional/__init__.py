@@ -44,6 +44,7 @@ from oneflow._C import log_sigmoid as logsigmoid
 from oneflow._C import log_sigmoid
 from oneflow._C import softsign
 from oneflow._C import softmax
+from oneflow._C import logsoftmax
 from oneflow._C import softplus
 from oneflow._C import tanh
 from oneflow._C import silu

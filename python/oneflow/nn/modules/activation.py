@@ -437,7 +437,8 @@ def softmax_op(tensor, dim=None):
         tensor([[[0.1575, 0.3754, 0.4671],
                  [0.0507, 0.1230, 0.8263]]], dtype=oneflow.float32)
     """
-    return Softmax(dim)(tensor)
+    axis = 1 if dim is None else dim
+    return flow._C.softmax(x, axis)
 
 
 class LogSoftmax(Module):
@@ -486,13 +487,7 @@ class LogSoftmax(Module):
             self.dim = None
 
     def forward(self, x):
-        (need_transpose, permute) = _softmax_need_transpose(x, self.dim)
-        if need_transpose:
-            x = flow._C.transpose(x, perm=permute)
-        x = flow._C.logsoftmax(x)
-        if need_transpose:
-            x = flow._C.transpose(x, perm=permute)
-        return x
+        return flow._C.logsoftmax(x, self.dim)
 
     def extra_repr(self):
         return f"dim={self.dim}"

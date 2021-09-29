@@ -90,6 +90,21 @@ add_docstr(
     See :class:`~oneflow.nn.Softmax` for more details.
     """,
 )
+
+add_docstr(
+    oneflow._C.logsoftmax,
+    r"""
+    logsoftmax(x: Tensor) -> Tensor 
+
+    LogSoftmax is defined as:
+
+    .. math::
+        \text{LogSoftmax}(x_{i}) = \log\left(\frac{\exp(x_i) }{ \sum_j \exp(x_j)} \right) = x_i - \log({ \sum_j \exp(x_j)})
+    
+    See :class:`~oneflow.nn.logsoftmax` for more details.
+    """,
+)
+
 add_docstr(
     oneflow.softplus,
     r"""
