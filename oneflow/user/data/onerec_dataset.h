@@ -24,7 +24,6 @@ limitations under the License.
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/job/job_set.pb.h"
 
-#define XXH_NAMESPACE LZ4_
 #include <xxhash.h>
 
 namespace oneflow {
@@ -85,10 +84,10 @@ class OneRecDataset final : public Dataset<TensorBuffer> {
     BalancedSplitter bs(data_file_paths_.size(), parallel_num_);
     range_ = bs.At(parallel_id_);
     ResetInstream();
-    hash_state_ = LZ4_XXH64_createState();
+    hash_state_ = XXH64_createState();
   }
 
-  ~OneRecDataset() { CHECK_NE(LZ4_XXH64_freeState(hash_state_), XXH_ERROR); }
+  ~OneRecDataset() { CHECK_NE(XXH64_freeState(hash_state_), XXH_ERROR); }
 
   LoadTargetPtrList Next() override {
     LoadTargetPtrList ret;
@@ -119,9 +118,9 @@ class OneRecDataset final : public Dataset<TensorBuffer> {
     CHECK_GE(payload_size, 0);
     CHECK_LE(payload_size, kMaxPayloadSize);
     XXH64_hash_t const seed = 0;
-    CHECK_NE(LZ4_XXH64_reset(hash_state_, seed), XXH_ERROR);
+    CHECK_NE(XXH64_reset(hash_state_, seed), XXH_ERROR);
     CHECK_NE(XXH64_update(hash_state_, header_view.raw, kHeaderSizeWithoutDigest), XXH_ERROR);
-    CHECK_EQ(ByteSwap(header_view.header.digest), LZ4_XXH64_digest(hash_state_));
+    CHECK_EQ(ByteSwap(header_view.header.digest), XXH64_digest(hash_state_));
     const int32_t padded_size = RoundUp(payload_size, kPayloadAlignmentSize) - payload_size;
     tensor.Resize(Shape({payload_size}), DataType::kChar);
     char* body = tensor.mut_data<char>();
@@ -132,8 +131,8 @@ class OneRecDataset final : public Dataset<TensorBuffer> {
     OneRecFrameFooterView footer_view{};
     CHECK_EQ(in_stream_->ReadFully(footer_view.raw, kDigestFieldSize), 0);  // read footer
     CHECK_NE(XXH64_reset(hash_state_, seed), XXH_ERROR);
-    CHECK_NE(LZ4_XXH64_update(hash_state_, body, payload_size), XXH_ERROR);
-    CHECK_EQ(ByteSwap(footer_view.digest), LZ4_XXH64_digest(hash_state_));
+    CHECK_NE(XXH64_update(hash_state_, body, payload_size), XXH_ERROR);
+    CHECK_EQ(ByteSwap(footer_view.digest), XXH64_digest(hash_state_));
   }
 
   void ResetInstream() {
