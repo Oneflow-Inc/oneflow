@@ -84,7 +84,8 @@ class ScalarAddFunctor {
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
       // Only promote type to Float32 when tensor is Int type but scalar is float type.
-      if (DType::priority_order[x->dtype()->data_type()] < DType::priority_order[DType::Float16()->data_type()]) {
+      if (DType::priority_order[x->dtype()->data_type()]
+          < DType::priority_order[DType::Float16()->data_type()]) {
         lowest_dtype = DType::Float();
       } else {
         lowest_dtype = x->dtype();
@@ -100,6 +101,7 @@ class ScalarAddFunctor {
     JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
     TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
     if (inplace) {
+      JUST(CheckInplaceCastValid(x, casted_vec[0]));
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
@@ -151,7 +153,8 @@ class ScalarMulFunctor {
       JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
       // Only promote type to Float32 when tensor is Int type but scalar is float type.
-      if (DType::priority_order[x->dtype()->data_type()] < DType::priority_order[DType::Float16()->data_type()]) {
+      if (DType::priority_order[x->dtype()->data_type()]
+          < DType::priority_order[DType::Float16()->data_type()]) {
         lowest_dtype = DType::Float();
       } else {
         lowest_dtype = x->dtype();
@@ -208,7 +211,8 @@ class ScalarPowFunctor {
       JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
       // Only promote type to Float32 when tensor is Int type but scalar is float type.
-      if (DType::priority_order[x->dtype()->data_type()] < DType::priority_order[DType::Float16()->data_type()]) {
+      if (DType::priority_order[x->dtype()->data_type()]
+          < DType::priority_order[DType::Float16()->data_type()]) {
         lowest_dtype = DType::Float();
       } else {
         lowest_dtype = x->dtype();
@@ -663,7 +667,8 @@ class ScalarFModFunctor {
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
       // Only promote type to Float32 when tensor is Int type but scalar is float type.
-      if (DType::priority_order[x->dtype()->data_type()] < DType::priority_order[DType::Float16()->data_type()]) {
+      if (DType::priority_order[x->dtype()->data_type()]
+          < DType::priority_order[DType::Float16()->data_type()]) {
         lowest_dtype = DType::Float();
       } else {
         lowest_dtype = x->dtype();
