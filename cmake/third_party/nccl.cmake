@@ -16,15 +16,14 @@ else()
     endif()
 endif()
 
-get_filename_component(CUDATOOLKIT_BIN_ROOT ${CUDAToolkit_BIN_DIR} DIRECTORY)
 if(USE_SYSTEM_NCCL)
     include(FindPackageHandleStandardArgs)
     find_path(NCCL_INCLUDE_DIR nccl.h
-            HINTS ${NCCL_ROOT_DIR} ${CUDATOOLKIT_BIN_ROOT}
+            HINTS ${NCCL_ROOT_DIR} ${CUDAToolkit_INCLUDE_DIRS}
             PATH_SUFFIXES cuda/include include)
     unset(NCCL_LIBRARY CACHE)
     find_library(NCCL_LIBRARY ${NCCL_LIBRARY_NAME}
-            HINTS ${NCCL_ROOT_DIR} ${CUDATOOLKIT_BIN_ROOT}
+            HINTS ${NCCL_ROOT_DIR} ${CUDAToolkit_LIBRARY_DIR} ${CUDAToolkit_LIBRARY_ROOT}
             PATH_SUFFIXES lib lib64 cuda/lib cuda/lib64 lib/x64)
     find_package_handle_standard_args(
             NCCL DEFAULT_MSG NCCL_INCLUDE_DIR NCCL_LIBRARY)

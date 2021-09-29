@@ -29,15 +29,13 @@ else()
 	set(__cudnn_libname "libcudnn.so")
 endif()
 
-get_filename_component(CUDATOOLKIT_BIN_ROOT ${CUDAToolkit_BIN_DIR} DIRECTORY)
-
 find_path(CUDNN_INCLUDE_DIR cudnn.h
-    HINTS ${CUDNN_ROOT_DIR} ${CUDATOOLKIT_BIN_ROOT}
+    HINTS ${CUDNN_ROOT_DIR} ${CUDAToolkit_INCLUDE_DIRS}
     PATH_SUFFIXES cuda/include include)
 
 unset(CUDNN_LIBRARY CACHE)
 find_library(CUDNN_LIBRARY ${__cudnn_libname}
-	HINTS ${CUDNN_ROOT_DIR} ${CUDATOOLKIT_BIN_ROOT}
+	HINTS ${CUDNN_ROOT_DIR} ${CUDAToolkit_LIBRARY_DIR}
     PATH_SUFFIXES lib lib64 cuda/lib cuda/lib64 lib/x64)
 
 find_package_handle_standard_args(
