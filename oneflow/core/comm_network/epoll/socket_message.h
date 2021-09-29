@@ -73,9 +73,9 @@ struct SocketMsg {
 #undef MAKE_ENTRY
     struct {
       char data[256];
-      size_t size;
     }actor_msg;
   };
+  size_t size ;
 };
 
 using CallBackList = std::list<std::function<void()>>;
