@@ -98,7 +98,8 @@ void EpollCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) {
     SocketMsg msg;
     msg.size = 0;
     msg.msg_type = SocketMsgType::kActor;
-    std::memcpy(&msg,data,size);
+    //std::memcpy(&msg,data,size);
+    std::memcpy(msg.actor_msg.data,data,size);
     //msg.actor_msg.size  = size;
     msg.size = size;
     std::cout<<"EpollCommNet::SendMsg, size:"<<size << std::endl;
