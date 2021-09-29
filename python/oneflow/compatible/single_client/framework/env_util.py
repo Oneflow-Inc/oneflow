@@ -61,8 +61,8 @@ def enable_eager_environment(val=True):
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
-def enable_dtr(val=False, thres=0.5):
-    return oneflow._oneflow_internal.EnableDTRStrategy(val, thres)
+def enable_dtr(val=False, thres=1, debug=False):
+    return oneflow._oneflow_internal.EnableDTRStrategy(val, thres, debug)
 
 def api_env_init() -> bool:
     """Init environment for job

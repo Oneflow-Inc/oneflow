@@ -243,6 +243,7 @@ class EagerMirroredTensorImpl : public MirroredTensorImpl {
 
   virtual Maybe<void> InitEagerBlobObject(LocalDepObject* dep_object);
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override { return this; }
+  int eager_blob_object_count() { return eager_blob_object_.use_count(); }
 
  protected:
   Maybe<void> UpdateTensorStorage();
@@ -261,7 +262,8 @@ class DTREagerMirroredTensorImpl final : public EagerMirroredTensorImpl {
   DTREagerMirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
                           const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad,
                           bool is_leaf) : EagerMirroredTensorImpl(tensor_meta, tensor_storage, requires_grad, is_leaf) {}
-  ~DTREagerMirroredTensorImpl() {std::cout << "DTREagerMirroredTensorImpl is being deleted." << std::endl;}
+  // ~DTREagerMirroredTensorImpl() {}
+  ~DTREagerMirroredTensorImpl() override {}
 
   Maybe<void> InitEagerBlobObject(LocalDepObject* dep_object);
   // Maybe<void> InitEagerBlobObjectAndTensorStorage(

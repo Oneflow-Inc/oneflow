@@ -83,6 +83,7 @@ bool EagerExecutionEnabled();
 bool DTREnabled();
 double GetDTRMemoryThreshold();
 size_t GetDTRRemainMemory();
+bool DTRDebugEnabled();
 
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr();
 Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name);

@@ -444,8 +444,8 @@ class DTRMirroredTensor final : public MirroredTensor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DTRMirroredTensor);
   DTRMirroredTensor() = default;
-  explicit DTRMirroredTensor(const std::shared_ptr<DTREagerMirroredTensorImpl>& impl) { impl_ = impl; std::cout << "DTRMirroredTensor is being constructed." << std::endl; }
-  ~DTRMirroredTensor() {std::cout << "DTRMirroredTensor is being deleted." << std::endl; }
+  explicit DTRMirroredTensor(const std::shared_ptr<DTREagerMirroredTensorImpl>& impl) { impl_ = impl; }
+  ~DTRMirroredTensor() {}
 };
 
 class ConsistentTensor final : public TensorIf<ConsistentTensor>,

@@ -48,13 +48,15 @@ def api_enable_eager_execution(val: bool = True) -> None:
     return enable_if.unique([enable_eager_environment])(val)
 
 
-def api_enable_dtr(val: bool = False, thres: float = 1) -> None:
+def api_enable_dtr(val: bool = False, thres: float = 1, debug: bool = False) -> None:
     """If True, DTR strategy will be launched. Memory threshold in percentage.
 
     Args:
-        val (bool, optional): Whether dtr or not.  Defaults to False.
+        val (bool, optional): Use DTR strategy or not. Defaults to False.
+        thres (float, optional): Cuda memory threshold. Defaults to 1 (Full use).
+        debug (bool, optional): Show detailed info or not. Defaults to False.
     """
-    return enable_if.unique([enable_dtr])(val, thres)
+    return enable_if.unique([enable_dtr])(val, thres, debug)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
@@ -63,8 +65,8 @@ def enable_eager_environment(val=True):
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
-def enable_dtr(val=False, thres=0.5):
-    return oneflow._oneflow_internal.EnableDTRStrategy(val, thres)
+def enable_dtr(val=False, thres=1, debug=False):
+    return oneflow._oneflow_internal.EnableDTRStrategy(val, thres, debug)
 
 
 def api_env_init() -> bool:

@@ -28,6 +28,7 @@ class EagerExecution {};
 class EnableDTR {};
 class DTRRemainMemory {};   // (1 - thres) * total_memory
 class DTRMemoryThreshold {};
+class EnableDTRDebug {};
 
 class MultiClient {};
 

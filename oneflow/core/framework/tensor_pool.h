@@ -18,8 +18,10 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_TENSOR_POOL_H_
 
 #include <unordered_set>
+#include <set>
 #include <chrono>
 
+#include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 
 namespace oneflow {
@@ -27,6 +29,13 @@ namespace one {
 
 struct DTRTensorPool {
     DTRTensorPool();
+    ~DTRTensorPool() { 
+        std::cout << "=======================" << std::endl;
+        std::cout << "Destruct DTRTensorPool." << std::endl;
+        std::cout << "Times of eviction: " << num_eviction_ << std::endl;
+        std::cout << "Times of recomputation: " << num_recomputation_ << std::endl;
+        display();
+    }
 
     Maybe<void> insert(vm::DTREagerBlobObject* blob_object, size_t thres=0);
     Maybe<void> evict(vm::DTREagerBlobObject* blob_object);
@@ -37,17 +46,18 @@ struct DTRTensorPool {
     const std::chrono::steady_clock::time_point start_time() { return start_time_; }
     double duration();
     void display();
+    void add_recompute_times() { num_recomputation_++; }
 
     // TODO: Implementation of disjoint-set data structure
 
 private:
-    // shared_ptr or not?
-    // downcast to DTREagerBlobObject*, could use unique interfaces
     // At first, we use unordered_set for efficiency. Now use vector to view id of candidates in order.
+    std::set<vm::DTREagerBlobObject*> candidates_;
     // std::unordered_set<vm::DTREagerBlobObject*> candidates_;
-    std::vector<vm::DTREagerBlobObject*> candidates_;
+    // std::vector<vm::DTREagerBlobObject*> candidates_;
     std::chrono::steady_clock::time_point start_time_;
-
+    int num_eviction_;
+    int num_recomputation_;
 };
 
 }   // namespace one

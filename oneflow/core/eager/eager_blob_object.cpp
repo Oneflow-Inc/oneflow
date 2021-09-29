@@ -85,7 +85,20 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DTREagerBlobObject::InitBlobAttrs(std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand) {
+DTREagerBlobObject::~DTREagerBlobObject() {
+  evict_from_pool();
+  non_pod_initer_.reset();
+  tensor_buffer_.reset();
+  blob_.reset();
+}
+
+void DTREagerBlobObject::evict_from_pool() {
+  // std::cout << "evict from pool===============================" << std::endl;
+  if (IsShuttingDown()) { return; }
+  CHECK_JUST(Global<one::DTRTensorPool>::Get()->evict(this));
+}
+
+Maybe<void> DTREagerBlobObject::InitBlobAttrs(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand) {
   // reset DTREageBlobObject properties
   compute_time_ = 0;
   pinned_ = 0;
@@ -93,8 +106,9 @@ Maybe<void> DTREagerBlobObject::InitBlobAttrs(std::shared_ptr<vm::LocalCallOpKer
   // current time 
   update_access_time();
   // last_access_time_ = Global<one::DTRTensorPool>::Get()->duration();
-
-  compute_op_ = operand;
+  //TODO: unique_ptr
+  compute_op_ = std::make_unique<DTRLocalCallOpKernelPhyInstrOperand>(operand->shared_opkernel(), operand->inputs(), operand->outputs(), operand->consistent_tensor_infer_result(), operand->op_interp_ctx(), operand->dev_vm_dep_object_consume_mode());
+  // compute_op_ = operand;
   could_evict_ = (input_size() > 0) && could_evict_;
 
   return Maybe<void>::Ok();
@@ -105,22 +119,24 @@ void DTREagerBlobObject::update_access_time() {
 }
 
 void DTREagerBlobObject::update_user_ops(std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand) {
-  user_ops_.emplace_back(operand);
+  //TODO unique_ptr
+  user_ops_.emplace_back(std::make_unique<DTRLocalCallOpKernelPhyInstrOperand>(operand->shared_opkernel(), operand->inputs(), operand->outputs(), operand->consistent_tensor_infer_result(), operand->op_interp_ctx(), operand->dev_vm_dep_object_consume_mode()));
 }
 
-bool DTREagerBlobObject::is_in_memory() {
+bool DTREagerBlobObject::is_in_memory() const {
   // return !evict_flag_;
   return (tensor_buffer_.get()->blob_dptr() != nullptr);
 }
 
-Maybe<double> DTREagerBlobObject::parent_cost() {
+Maybe<double> DTREagerBlobObject::parent_cost() const {
   double cost = 0;
 
   auto* ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(compute_op_.get());
   CHECK_NOTNULL_OR_RETURN(ptr);
   for (const auto& input : *ptr->inputs()) {
     CHECK_OR_RETURN(static_cast<bool>(input.get()));
-    auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(input.get());
+    auto object = input.get();
+    const auto* dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(input.get());
     CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
     if (!dtr_blob_object->is_in_memory()) {
       auto com_time = dtr_blob_object->compute_time();
@@ -132,15 +148,16 @@ Maybe<double> DTREagerBlobObject::parent_cost() {
   return cost;
 }
 
-Maybe<double> DTREagerBlobObject::child_cost() {
+Maybe<double> DTREagerBlobObject::child_cost() const {
   double cost = 0;
 
-  for (auto operand: user_ops_) {
-    auto* ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(operand.get());
+  for (int i = 0; i < user_ops_.size(); ++i) {
+    const auto* ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(CHECK_JUST(user_op(i)));
     CHECK_NOTNULL_OR_RETURN(ptr);
     for (const auto& output : *ptr->outputs()) {
       CHECK_OR_RETURN(static_cast<bool>(output.get()));
-      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(output.get());
+      auto object = output.get();
+      const auto* dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(output.get());
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
       if (!dtr_blob_object->is_in_memory()) {
         auto com_time = dtr_blob_object->compute_time();
@@ -153,19 +170,19 @@ Maybe<double> DTREagerBlobObject::child_cost() {
   return cost;
 }
 
-Maybe<double> DTREagerBlobObject::neighbor_cost() {
+Maybe<double> DTREagerBlobObject::neighbor_cost() const {
   auto p_cost = JUST(parent_cost());
   auto c_cost = JUST(child_cost());
   return p_cost + c_cost + compute_time_;
 }
 
-Maybe<double> DTREagerBlobObject::cost() {
+Maybe<double> DTREagerBlobObject::cost() const {
   auto n_cost = JUST(neighbor_cost());
   return n_cost / blob_body_bytes_ / last_access_time_; 
 }
 
-size_t DTREagerBlobObject::input_size() {
-  auto* ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(compute_op_.get());
+size_t DTREagerBlobObject::input_size() const {
+  const auto& ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(compute_op_.get());
   return ptr->inputs()->size();
 }
 

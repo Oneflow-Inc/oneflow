@@ -39,7 +39,7 @@ class OpKernel;
 
 namespace vm {
 
-class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
+class LocalCallOpKernelPhyInstrOperand : public vm::PhyInstrOperand {
  public:
   LocalCallOpKernelPhyInstrOperand(const LocalCallOpKernelPhyInstrOperand&) = delete;
   LocalCallOpKernelPhyInstrOperand(LocalCallOpKernelPhyInstrOperand&&) = delete;
@@ -59,6 +59,7 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
         dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode) {}
 
   const one::StatefulLocalOpKernel& opkernel() const { return *opkernel_; }
+  const std::shared_ptr<one::StatefulLocalOpKernel>& shared_opkernel() const {return opkernel_; }
   const one::EagerBlobObjectListPtr& inputs() const { return inputs_; }
   const one::EagerBlobObjectListPtr& outputs() const { return outputs_; }
   const AttrMap& attrs() const { return op_interp_ctx_.attrs; }
@@ -102,7 +103,7 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
     return consistent_tensor_infer_result_;
   }
 
- private:
+ protected:
   std::shared_ptr<one::StatefulLocalOpKernel> opkernel_;
   one::EagerBlobObjectListPtr inputs_;
   one::EagerBlobObjectListPtr outputs_;
@@ -110,6 +111,35 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   const one::OpExprInterpContext op_interp_ctx_;
   const user_op::OpKernel* user_opkernel_;
   const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode_;
+};
+
+
+class DTRLocalCallOpKernelPhyInstrOperand final : public LocalCallOpKernelPhyInstrOperand {
+ public:
+  DTRLocalCallOpKernelPhyInstrOperand(const DTRLocalCallOpKernelPhyInstrOperand&) = delete;
+  DTRLocalCallOpKernelPhyInstrOperand(DTRLocalCallOpKernelPhyInstrOperand&&) = delete;
+
+  DTRLocalCallOpKernelPhyInstrOperand(
+      const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+      const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,
+      const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
+      const one::OpExprInterpContext& op_interp_ctx_,
+      const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode) : LocalCallOpKernelPhyInstrOperand(opkernel, inputs, outputs, consistent_tensor_infer_result, op_interp_ctx_, dev_vm_dep_object_consume_mode)
+      {
+        std::shared_ptr<one::EagerBlobObjectList> tmp_inputs = std::make_shared<one::EagerBlobObjectList>(inputs->size());
+        for (int i = 0; i < inputs->size(); ++i) {
+          tmp_inputs->at(i) = std::shared_ptr<vm::EagerBlobObject>(inputs_->at(i).get(), [](vm::EagerBlobObject* ptr) {});
+          // tmp_inputs->at(i) = std::shared_ptr<vm::EagerBlobObject>(inputs_->at(i).get(), [](vm::EagerBlobObject* ptr) { std::cout << "Fake delete inputs in the copied operand." << std::endl; });
+        }
+        inputs_ = tmp_inputs;
+        std::shared_ptr<one::EagerBlobObjectList> tmp_outputs = std::make_shared<one::EagerBlobObjectList>(outputs->size());
+        for (int i = 0; i < outputs->size(); ++i) {
+          tmp_outputs->at(i) = std::shared_ptr<vm::EagerBlobObject>(outputs_->at(i).get(), [](vm::EagerBlobObject* ptr) {});
+          // tmp_outputs->at(i) = std::shared_ptr<vm::EagerBlobObject>(outputs_->at(i).get(), [](vm::EagerBlobObject* ptr) { std::cout << "Fake delete outputs in the copied operand." << std::endl; });
+        }
+        outputs_ = tmp_outputs;
+      }
+  ~DTRLocalCallOpKernelPhyInstrOperand() override = default;
 };
 
 }  // namespace vm

@@ -22,7 +22,8 @@ limitations under the License.
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
-
+#include "oneflow/core/job/env_global_objects_scope.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 namespace oneflow {
 
 namespace vm {
@@ -131,7 +132,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
         pinned_ = 0;
         compute_op_ = nullptr;
         node_ = nullptr;
-        user_ops_ = std::vector<std::shared_ptr<LocalCallOpKernelPhyInstrOperand>>();
+        user_ops_ = std::vector<std::unique_ptr<LocalCallOpKernelPhyInstrOperand>>();
         could_evict_ = true;
       }
   DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
@@ -142,14 +143,10 @@ class DTREagerBlobObject final : public EagerBlobObject {
                     pinned_ = 0;
                     compute_op_ = nullptr;
                     node_ = nullptr;
-                    user_ops_ = std::vector<std::shared_ptr<LocalCallOpKernelPhyInstrOperand>>();
+                    user_ops_ = std::vector<std::unique_ptr<LocalCallOpKernelPhyInstrOperand>>();
                     could_evict_ = true;
                   }
-  ~DTREagerBlobObject() override {
-    non_pod_initer_.reset();
-    tensor_buffer_.reset();
-    blob_.reset();
-  }
+  ~DTREagerBlobObject() override;
 
   Maybe<void> InitBlobAttrs(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
 
@@ -157,7 +154,12 @@ class DTREagerBlobObject final : public EagerBlobObject {
   const std::size_t memory() const { return blob_body_bytes_; }
   const double compute_time() const { return compute_time_; }
   const double last_access_time() const { return last_access_time_; }
-  std::shared_ptr<LocalCallOpKernelPhyInstrOperand> compute_op() const { return compute_op_; }
+  LocalCallOpKernelPhyInstrOperand* compute_op() const { return compute_op_.get(); }
+  Maybe<LocalCallOpKernelPhyInstrOperand*> user_op(int i) const {
+    CHECK_LT(i, user_ops_.size());
+    CHECK_NOTNULL_OR_RETURN(user_ops_[i].get());
+    return user_ops_[i].get();
+  }
   void set_compute_time(double val) {
     if (val > 0) {
       compute_time_ = val;
@@ -170,13 +172,14 @@ class DTREagerBlobObject final : public EagerBlobObject {
   void set_evict_attr(bool val) { could_evict_ = val; }
 
   // DTR Strategy
-  bool is_in_memory();
-  bool is_pinned() { return (pinned_ > 0); }
-  int num_pinned() { return pinned_; }
-  int num_user_ops() { return user_ops_.size(); }
-  bool is_evictable() {return could_evict_; }
-  void pin() { pinned_++; std::cout << "pinned" << std::endl; }
-  void unpin() { pinned_--; std::cout << "unpinned" << std::endl; }
+  bool is_in_memory() const;
+  bool is_pinned() const { return (pinned_ > 0); }
+  int num_pinned() const { return pinned_; }
+  int num_user_ops() const { return user_ops_.size(); }
+  bool is_evictable() const {return could_evict_; }
+
+  void pin() { pinned_++; if (oneflow::DTRDebugEnabled()) {std::cout << "pinned" << std::endl;} }
+  void unpin() { pinned_--; if (oneflow::DTRDebugEnabled()) {std::cout << "unpinned" << std::endl;} }
   void update_access_time();
   void update_user_ops(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
   Maybe<void> evict() {
@@ -186,13 +189,14 @@ class DTREagerBlobObject final : public EagerBlobObject {
     CHECK_NE_OR_RETURN(is_in_memory(), true);
     return Maybe<void>::Ok();
     }
-  Maybe<double> parent_cost();
-  Maybe<double> child_cost();
-  Maybe<double> neighbor_cost();
-  size_t input_size();
+  Maybe<double> parent_cost() const;
+  Maybe<double> child_cost() const;
+  Maybe<double> neighbor_cost() const;
+  size_t input_size() const;
+  void evict_from_pool();
 
   // TODO: variable cost functions in terms of different heuristics
-  Maybe<double> cost();
+  Maybe<double> cost() const;
 
   std::shared_ptr<DisjNode> node_;
 
@@ -202,8 +206,8 @@ class DTREagerBlobObject final : public EagerBlobObject {
   double compute_time_;
   double last_access_time_;
   size_t pinned_;
-  std::shared_ptr<LocalCallOpKernelPhyInstrOperand> compute_op_;
-  std::vector<std::shared_ptr<LocalCallOpKernelPhyInstrOperand>> user_ops_;
+  std::unique_ptr<LocalCallOpKernelPhyInstrOperand> compute_op_;
+  std::vector<std::unique_ptr<LocalCallOpKernelPhyInstrOperand>> user_ops_;
 };
 
 }  // namespace vm
