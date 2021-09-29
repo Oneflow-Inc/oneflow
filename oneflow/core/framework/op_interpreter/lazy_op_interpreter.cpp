@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
@@ -31,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow {
@@ -534,17 +536,22 @@ Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
   CHECK_OR_RETURN(op_expr.op_type_name() == "copy");
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
-  const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
-  CHECK_OR_RETURN(input_tensor->is_lazy());
-  std::string input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
-  if (input_lbn.empty()) {
-    JUST(AddFreeEagerTensorToVariableOp(input_tensor));
-    input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
-  }
-  CHECK_OR_RETURN(!input_lbn.empty());  // lbn must exist.
   std::string device_type = JUST(ctx.attrs.GetAttr<std::string>("device_type"));
   int64_t device_id = JUST(ctx.attrs.GetAttr<int64_t>("device_id"));
-
+  const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
+  std::string input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+  if (input_lbn.empty()) {
+    CHECK_OR_RETURN(input_tensor->is_eager());
+    std::shared_ptr<Tensor> new_input_tensor;
+    {
+      auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
+      new_input_tensor = JUST(functional::Copy(input_tensor, device_type, device_id));
+    }
+    CHECK_OR_RETURN(new_input_tensor->is_eager());
+    JUST(AddFreeEagerTensorToVariableOp(new_input_tensor));
+    input_lbn = TensorNameScope::Global()->Lookup(new_input_tensor);
+  }
+  CHECK_OR_RETURN(!input_lbn.empty());  // lbn must exist.
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
   CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
   if (input_tensor->is_local()) {

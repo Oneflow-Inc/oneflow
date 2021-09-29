@@ -57,6 +57,33 @@ class TestGraphWithEagerTensorCaught(oneflow.unittest.TestCase):
             np.allclose(graph_out.numpy(), eager_out.numpy(), atol=1e-4, rtol=1e-4)
         )
 
+    def test_eager_tensor_to(test_case):
+        class EagerTensorToModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+        
+            def forward(self):
+                # test free eager tensor to
+                t = flow.tensor([1.0], dtype=flow.float32).to("cuda")
+                return t
+
+        e_m = EagerTensorToModule()
+
+        class EagerTensorToGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.e_m = e_m 
+
+            def build(self):
+                return self.e_m()
+
+        e_g = EagerTensorToGraph()
+        graph_out = e_g()
+        eager_out = e_m()
+        test_case.assertTrue(
+            np.allclose(graph_out.numpy(), eager_out.numpy(), atol=1e-4, rtol=1e-4)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
