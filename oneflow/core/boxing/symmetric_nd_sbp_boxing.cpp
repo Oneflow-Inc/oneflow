@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 
@@ -42,7 +43,11 @@ Maybe<one::Tensor> ReinterpterConsistentTensor(const std::shared_ptr<one::Tensor
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<Shape>("shape", shape));
   JUST(attrs.SetAttr<DataType>("dtype", tensor->dtype()->data_type()));
-  const auto& x = JUST(tensor->cur_rank_phy_tensor());
+  const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
+  std::shared_ptr<Shape> pyhsical_shape =
+      JUST(GetPhysicalShape(shape, *nd_sbp, *parallel_desc, JUST(*parallel_id)));
+  std::shared_ptr<one::Tensor> x = JUST(tensor->cur_rank_phy_tensor());
+  if (*x->shape() != *pyhsical_shape) { x = JUST(one::functional::Reshape(x, *pyhsical_shape)); }
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(
       *op, {x}, one::OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
 }
