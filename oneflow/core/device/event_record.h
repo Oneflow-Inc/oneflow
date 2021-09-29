@@ -1,5 +1,20 @@
-#ifndef ONEFLOW_CORE_DEVICE_EVENT_RECORD_H_ 
-#define ONEFLOW_CORE_DEVICE_EVENT_RECORD_H_ 
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#ifndef ONEFLOW_CORE_DEVICE_EVENT_RECORD_H_
+#define ONEFLOW_CORE_DEVICE_EVENT_RECORD_H_
 
 #include <atomic>
 #include <memory>
@@ -9,10 +24,10 @@ namespace oneflow {
 
 class EventRecord {
  public:
-   EventRecord(const EventRecord&) = delete;
-   EventRecord(EventRecord&&) = delete;
-   EventRecord& operator=(const EventRecord&) = delete;
-   EventRecord& operator=(EventRecord&&) = delete;
+  EventRecord(const EventRecord&) = delete;
+  EventRecord(EventRecord&&) = delete;
+  EventRecord& operator=(const EventRecord&) = delete;
+  EventRecord& operator=(EventRecord&&) = delete;
   ~EventRecord() = default;
 
   virtual bool QueryDone() const = 0;
@@ -22,15 +37,15 @@ class EventRecord {
 
 class NaiveEventRecord final : public EventRecord {
  public:
-   NaiveEventRecord(const NaiveEventRecord&) = delete;
-   NaiveEventRecord(NaiveEventRecord&&) = delete;
-   NaiveEventRecord& operator=(const NaiveEventRecord&) = delete;
-   NaiveEventRecord& operator=(NaiveEventRecord&&) = delete;
+  NaiveEventRecord(const NaiveEventRecord&) = delete;
+  NaiveEventRecord(NaiveEventRecord&&) = delete;
+  NaiveEventRecord& operator=(const NaiveEventRecord&) = delete;
+  NaiveEventRecord& operator=(NaiveEventRecord&&) = delete;
 
   using EventRecord::EventRecord;
   ~NaiveEventRecord() = default;
 
-  bool QueryDone() const { return true; } 
+  bool QueryDone() const { return true; }
 };
 
 class SharedEventRecord final : public EventRecord {
@@ -40,7 +55,7 @@ class SharedEventRecord final : public EventRecord {
   SharedEventRecord& operator=(const SharedEventRecord&) = delete;
   SharedEventRecord& operator=(SharedEventRecord&&) = delete;
 
-  SharedEventRecord(): EventRecord(), inited_(false) {}
+  SharedEventRecord() : EventRecord(), inited_(false) {}
   ~SharedEventRecord() = default;
 
   bool QueryDone() const override { return inited_ && event_record_->QueryDone(); }
@@ -59,6 +74,6 @@ class SharedEventRecord final : public EventRecord {
   std::shared_ptr<EventRecord> event_record_;
 };
 
-}
+}  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_DEVICE_EVENT_RECORD_H_ 
+#endif  // ONEFLOW_CORE_DEVICE_EVENT_RECORD_H_

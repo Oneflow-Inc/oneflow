@@ -38,7 +38,8 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
  public:
   CriticalSectionBeginInstructionType(const CriticalSectionBeginInstructionType&) = delete;
   CriticalSectionBeginInstructionType(CriticalSectionBeginInstructionType&&) = delete;
-  CriticalSectionBeginInstructionType& operator=(const CriticalSectionBeginInstructionType&) = delete;
+  CriticalSectionBeginInstructionType& operator=(const CriticalSectionBeginInstructionType&) =
+      delete;
   CriticalSectionBeginInstructionType& operator=(CriticalSectionBeginInstructionType&&) = delete;
   CriticalSectionBeginInstructionType() = default;
   ~CriticalSectionBeginInstructionType() = default;
