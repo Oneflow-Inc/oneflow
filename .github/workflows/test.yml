@@ -347,7 +347,6 @@ jobs:
         run: |
           set -x
           docker run --rm -v $PWD:/p -w /p busybox chown -R $(id -u):$(id -g) .
-          docker run --rm -v $PWD:/p -w /p busybox chmod -R 666 .
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
         with:
