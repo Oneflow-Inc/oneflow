@@ -103,6 +103,7 @@ class RandFunctor {
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, distribution_state);
+    if (device) { ctx.device = JUST(device); }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;

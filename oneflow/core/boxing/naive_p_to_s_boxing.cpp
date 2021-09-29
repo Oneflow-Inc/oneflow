@@ -23,23 +23,23 @@ namespace oneflow {
 
 namespace {
 
+bool RawIsPartialSumSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
+  return sbp_parallel->has_partial_sum_parallel();
+}
+
+static constexpr auto* IsPartialSumSbp = DECORATE(&RawIsPartialSumSbp, ThreadLocal);
+
 bool RawIsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
   return sbp_parallel->has_split_parallel();
 }
 
 static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocal);
 
-bool RawIsBroadcastSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
-  return sbp_parallel->has_broadcast_parallel();
-}
-
-static constexpr auto* IsBroadcastSbp = DECORATE(&RawIsBroadcastSbp, ThreadLocal);
-
-Maybe<void> RawCheckNaiveBToS(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckNaivePToS(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
 
-  CHECK_OR_RETURN(IsBroadcastSbp(in->nd_sbp()->sbp_parallel(0)));
+  CHECK_OR_RETURN(IsPartialSumSbp(in->nd_sbp()->sbp_parallel(0)));
   CHECK_OR_RETURN(IsSplitSbp(out->nd_sbp()->sbp_parallel(0)));
 
   CHECK_OR_RETURN(in->placement() != out->placement());
@@ -47,11 +47,11 @@ Maybe<void> RawCheckNaiveBToS(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNaiveBToS = DECORATE(&RawCheckNaiveBToS, ThreadLocal);
+static constexpr auto* CheckNaivePToS = DECORATE(&RawCheckNaivePToS, ThreadLocal);
 
 }  // namespace
 
-Maybe<one::Tensor> NaiveBToS(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
+Maybe<one::Tensor> NaivePToS(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
                              Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
@@ -63,7 +63,7 @@ Maybe<one::Tensor> NaiveBToS(const std::shared_ptr<one::Tensor>& tensor, Symbol<
     const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(tensor_placement));
     const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out->placement()));
     if (in_parallel_id->has_value() || out_parallel_id->has_value()) {
-      local_tensor = JUST(one::functional::EagerBToS(
+      local_tensor = JUST(one::functional::EagerPToS(
           local_tensor, tensor_placement, out->placement(), *sbp_list, *tensor->shape()));
     }
   }
@@ -72,6 +72,6 @@ Maybe<one::Tensor> NaiveBToS(const std::shared_ptr<one::Tensor>& tensor, Symbol<
                                                  *tensor->shape(), tensor->dtype()));
 }
 
-COMMAND(RegisterBoxingFunction("naive-b-to-s", CheckNaiveBToS, &NaiveBToS));
+COMMAND(RegisterBoxingFunction("naive-p-to-s", CheckNaivePToS, &NaivePToS));
 
 }  // namespace oneflow

@@ -84,17 +84,13 @@ class UniformIntKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t from = ctx->Attr<int64_t>("low");
     int64_t to = ctx->Attr<int64_t>("high");
-    CHECK_LE(from, to) << "uniform kernel expects 'low' to be less than 'high', but got from="
-                       << from << " >= to=",
-        to;
+    CHECK_LT(from, to) << "uniform kernel expects 'low' to be less than 'high'";
 
     if (IsFloating<T>::value) {
       from = update_from<T>(from);
       to = update_to<T>(to);
-      CHECK_LE(from, to) << "uniform kernel expects 'low' casted to dtype to be less than 'high'"
-                            " casted to dtype, but got from="
-                         << from << " >= to=",
-          to;
+      CHECK_LT(from, to) << "uniform kernel expects 'low' casted to dtype to be less than 'high'"
+                            " casted to dtype";
     }
     check_from_to_in_range<T>(from, to - 1);
     int64_t elem_cnt = out->shape().elem_cnt();
