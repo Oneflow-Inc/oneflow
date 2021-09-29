@@ -34,7 +34,8 @@ void HostStreamType::InitInstructionStatus(const Stream& stream,
 
 void HostStreamType::DeleteInstructionStatus(const Stream& stream,
                                              InstructionStatusBuffer* status_buffer) const {
-  // do nothing
+  auto* ptr = NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  ptr->~NaiveInstrStatusQuerier();
 }
 
 bool HostStreamType::QueryInstructionStatusDone(

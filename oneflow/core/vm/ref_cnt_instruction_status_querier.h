@@ -45,7 +45,7 @@ class RefCntInstrStatusQuerier {
  private:
   RefCntInstrStatusQuerier() : launched_(false), ref_cnt_() {}
 
-  volatile bool launched_;
+  std::atomic<bool> launched_;
   std::shared_ptr<std::atomic<int64_t>> ref_cnt_;
 };
 

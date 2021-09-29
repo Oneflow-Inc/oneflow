@@ -37,7 +37,8 @@ void CudaCopyD2HStreamType::InitInstructionStatus(const Stream& stream,
 
 void CudaCopyD2HStreamType::DeleteInstructionStatus(const Stream& stream,
                                                     InstructionStatusBuffer* status_buffer) const {
-  // do nothing
+  auto* ptr = CudaInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  ptr->~CudaInstrStatusQuerier();
 }
 
 // Returns true if the instruction launched and the cuda event completed.
