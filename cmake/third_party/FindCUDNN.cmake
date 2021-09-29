@@ -10,10 +10,16 @@
 #  CUDNN_LIBRARY_DIRS
 
 include(FindPackageHandleStandardArgs)
+include(CMakeDependentOption)
 
 set(CUDNN_ROOT_DIR "" CACHE PATH "Folder contains NVIDIA cuDNN")
 
-option(CUDNN_STATIC "Look for static cuDNN" ON)
+if(CUDA_VERSION VERSION_LESS "11.0")
+  set(CUDA_VERSION_VERSION_LESS_11 TRUE)
+endif()
+
+cmake_dependent_option(CUDNN_STATIC "Look for static cuDNN" ON "CUDA_VERSION_VERSION_LESS_11" OFF)
+
 if(OF_CUDA_LINK_DYNAMIC_LIBRARY)
    set(CUDNN_STATIC OFF)
 endif()
@@ -24,12 +30,12 @@ else()
 endif()
 
 find_path(CUDNN_INCLUDE_DIR cudnn.h
-    HINTS ${CUDNN_ROOT_DIR} ${CUDA_TOOLKIT_ROOT_DIR}
+    HINTS ${CUDNN_ROOT_DIR} ${CUDAToolkit_INCLUDE_DIRS}
     PATH_SUFFIXES cuda/include include)
 
 unset(CUDNN_LIBRARY CACHE)
 find_library(CUDNN_LIBRARY ${__cudnn_libname}
-	HINTS ${CUDNN_ROOT_DIR} ${CUDA_TOOLKIT_ROOT_DIR}
+	HINTS ${CUDNN_ROOT_DIR} ${CUDAToolkit_LIBRARY_DIR}
     PATH_SUFFIXES lib lib64 cuda/lib cuda/lib64 lib/x64)
 
 find_package_handle_standard_args(

@@ -375,40 +375,12 @@ class ExpandFunctor {
     std::vector<int32_t> in_shape(x->shape()->NumAxes());
     for (int i = 0; i < in_shape.size(); ++i) { in_shape[i] = x->shape()->At(i); }
 
-    // calculate the original stride.
-    std::vector<int32_t> original_stride(in_shape.size(), 1);
-    for (int i = x->shape()->NumAxes() - 2; i >= 0; --i) {
-      original_stride[i] = in_shape.at(i + 1) * original_stride.at(i + 1);
-    }
-    std::vector<int32_t> out_shape(shape.NumAxes());
-    std::vector<int32_t> stride(shape.NumAxes());
-    int shift = out_shape.size() - in_shape.size();
-    for (int i = out_shape.size() - 1; i >= 0; --i) {
-      int index = i - shift;
-      if (index >= 0) {
-        if (shape.At(i) == -1 || shape.At(i) == in_shape.at(index)) {
-          out_shape[i] = in_shape.at(index);
-          stride[i] = original_stride.at(index);
-        } else {
-          CHECK_OR_RETURN(shape.At(i) > 0 && in_shape.at(index) == 1)
-              << "Invalid expand shape " << shape.ToString();
-          out_shape[i] = shape.At(i);
-          stride[i] = 0;
-        }
-      } else {
-        CHECK_GT_OR_RETURN(shape.At(i), 0) << "Invalid expand shape " << shape.ToString();
-        out_shape[i] = shape.At(i);
-        if (shape.At(i) == 1 && i < out_shape.size() - 1) {
-          stride[i] = stride.at(i + 1);
-        } else {
-          stride[i] = 0;
-        }
-      }
-    }
+    std::vector<int32_t> expand_shape(shape.NumAxes());
+    for (int i = 0; i < shape.NumAxes(); ++i) { expand_shape[i] = shape.dim_vec().at(i); }
+
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("in_shape", in_shape));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("out_shape", out_shape));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("logical_in_shape", in_shape));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("logical_expand_shape", expand_shape));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -1283,12 +1255,19 @@ class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
-    int64_t ndims = x->shape()->NumAxes();
     std::vector<detail::Slice> slice_indices;
     TensorTuple tensor_indices;
     std::vector<int64_t> target_dims;
+    std::vector<int64_t> expand_dims;
+    JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &expand_dims,
+                             &target_dims));
 
-    JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &target_dims));
+    auto expand_input = x;
+    for (int i = 0; i < expand_dims.size(); ++i) {
+      int64_t dim = expand_dims.at(i);
+      expand_input = JUST(functional::ExpandDims(expand_input, dim + i));
+    }
+    int64_t ndims = expand_input->shape()->NumAxes();
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
     Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
 
@@ -1302,21 +1281,21 @@ class TensorGetItemFunctor {
     bool is_identity = [&]() {
       if (target_shape.NumAxes() == 0) { return false; }
       for (int i = 0; i < ndims; ++i) {
-        if (start[i] != 0 || end[i] != x->shape()->At(i) || step[i] != 1) { return false; }
+        if (start[i] != 0 || end[i] != expand_input->shape()->At(i) || step[i] != 1) {
+          return false;
+        }
       }
       return true;
     }();
     std::shared_ptr<one::Tensor> result;
     if (is_identity) {
-      result = JUST(Identity(x));
+      result = JUST(Identity(expand_input));
     } else {
-      result = JUST(Slice(x, start, end, step));
+      result = JUST(Slice(expand_input, start, end, step));
     }
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
-    if (shape.NumAxes() != 0 && shape != *(result->shape())) {
-      result = JUST(Reshape(result, shape));
-    }
+    if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
     if (!tensor_indices.empty()) { result = JUST(ApplyAdvancedIndexing(result, tensor_indices)); }
     return result;
   }
@@ -1327,12 +1306,16 @@ class TensorSetItemFunctor {
   TensorSetItemFunctor() {}
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index,
                          const std::shared_ptr<one::Tensor>& value) const {
-    int64_t ndims = x->shape()->NumAxes();
     std::vector<detail::Slice> slice_indices;
     TensorTuple tensor_indices;
+    std::vector<int64_t> expand_dims;
     std::vector<int64_t> target_dims;
-
-    JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &target_dims));
+    JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &expand_dims,
+                             &target_dims));
+    if (expand_dims.size()) {
+      slice_indices = *JUST(RemoveExpandDimSlice(slice_indices, expand_dims));
+    }
+    int64_t ndims = x->shape()->NumAxes();
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
     CHECK_EQ_OR_RETURN(tensor_indices.size(), 0)
         << "Advanced indexing is not support for tensor setitem currently, please use basic "
