@@ -27,7 +27,6 @@ limitations under the License.
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/test_util.h"
-#include "oneflow/core/common/cached_object_msg_allocator.h"
 
 namespace oneflow {
 namespace vm {
@@ -39,8 +38,7 @@ namespace {
 TEST(ControlStreamType, new_symbol_symbol) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol"});
-  CachedObjectMsgAllocator allocator(20, 100);
-  auto vm = ObjectMsgPtr<VirtualMachine>::NewFrom(&allocator, vm_desc.Get());
+  auto vm = ObjectMsgPtr<VirtualMachine>::New(vm_desc.Get());
   InstructionMsgList list;
   int64_t symbol_id = IdUtil::NewLogicalSymbolId();
   list.EmplaceBack(NewInstruction("NewSymbol")->add_int64_operand(symbol_id));

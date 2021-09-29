@@ -18,8 +18,8 @@ limitations under the License.
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/memory/memory_case.pb.h"
-#include "oneflow/core/primitive/memcpy.h"
-#include "oneflow/core/primitive/memset.h"
+#include "oneflow/core/primitive/include/memcpy.h"
+#include "oneflow/core/primitive/include/memset.h"
 #include "oneflow/core/stream/stream_context_adapter.h"
 
 namespace oneflow {
@@ -299,7 +299,6 @@ KU_IF_METHOD Axpy(DeviceCtx* ctx, const int n, const T* alpha, const T* x, const
                   const int incy) {
   Derived::Axpy(ctx, n, *alpha, x, incx, y, incy);
 }
-KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }
 
 #define KU_FLOATING_METHOD \
   template<typename T>     \

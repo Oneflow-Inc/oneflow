@@ -59,6 +59,17 @@ struct IsIntegral : std::integral_constant<bool, false> {};
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, INT_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
 
+// Type Trait: IsUnsignedIntegral
+
+template<typename T>
+struct IsUnsignedIntegral : std::integral_constant<bool, false> {};
+
+#define SPECIALIZE_TRUE_INTEGRAL(type_cpp, type_proto) \
+  template<>                                           \
+  struct IsUnsignedIntegral<type_cpp> : std::integral_constant<bool, true> {};
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, UNSIGNED_INT_DATA_TYPE_SEQ);
+#undef SPECIALIZE_TRUE_INTEGRAL
+
 // Type Trait: GetDataType
 
 template<typename T, typename T2 = void>
@@ -210,6 +221,7 @@ struct DevDType<DeviceType::kGPU, float16> {
 
 bool IsIntegralDataType(DataType data_type);
 bool IsFloatingDataType(DataType data_type);
+bool IsSupportRequireGradDataType(DataType data_type);
 bool IsPODDataType(DataType data_type);
 bool IsIndexDataType(DataType data_type);
 size_t GetSizeOfDataType(DataType data_type);
