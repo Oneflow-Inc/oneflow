@@ -67,7 +67,6 @@ add_docstr(
     ``self.expand_as(other)`` is equivalent to ``self.expand(other.size())``.
 
     Please see :meth:`~Tensor.expand` for more information about ``expand``.
-    
     Args:
         other (:class:`oneflow.Tensor`): The result tensor has the same size
             as :attr:`other`.
