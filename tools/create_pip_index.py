@@ -5,6 +5,7 @@ import oss2
 import urllib
 import urllib.parse
 
+os.environ["no_proxy"] = "*"
 page_template = """
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html>
