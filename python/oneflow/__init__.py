@@ -283,6 +283,7 @@ from oneflow.nn.modules.math_ops import variance_op as var
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
 from oneflow.nn.modules.narrow import narrow_op as narrow
 from oneflow.nn.modules.nonzero import nonzero_op as nonzero
+from oneflow.nn.modules.numel import numel_op as numel
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.random_ops import randint_op as randint
