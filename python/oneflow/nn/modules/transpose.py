@@ -44,24 +44,6 @@ def transpose_op(input, dim0, dim1):
         oneflow.Size([6, 2, 5, 3])
 
     """
-
-    # x_shape = input.shape
-
-    # if dim0 < 0:
-    #     dim0 += len(x_shape)
-    # if dim1 < 0:
-    #     dim1 += len(x_shape)
-    # assert dim0 >= 0 and dim0 < len(x_shape), "Invalid dim0 {}, len(shape): {}".format(
-    #     dim0, len(x_shape)
-    # )
-    # assert dim1 >= 0 and dim1 < len(x_shape), "Invalid dim1 {}, len(shape): {}".format(
-    #     dim1, len(x_shape)
-    # )
-    # perm = []
-    # for i in range(len(x_shape)):
-    #     perm.append(i)
-    # (perm[dim0], perm[dim1]) = (perm[dim1], perm[dim0])
-    # return flow._C.transpose(input, perm=perm)
     return flow._C.transpose(input, dim0=dim0, dim1=dim1)
 
 
