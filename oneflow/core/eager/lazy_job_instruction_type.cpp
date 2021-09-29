@@ -88,8 +88,6 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
   using stream_type = LazyJobStreamType;
   void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
   void Compute(vm::Instruction* instruction) const override {
-    const auto* ptr = instruction->instr_msg().phy_instr_operand().get();
-    const auto* phy_instr_operand = dynamic_cast<const LaunchLazyJobPhyInstrOperand*>(ptr);
     const auto& cur_nn_graph = GetCurNNGraph(instruction);
     auto* device_ctx = GetLazyJobDeviceCtx(instruction);
 

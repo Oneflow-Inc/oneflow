@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/device/event_record.h"
 #include "oneflow/core/framework/nn_graph_if.h"
 
 namespace oneflow {
@@ -39,8 +40,11 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
   CriticalSectionBeginPhyInstrOperand& operator=(CriticalSectionBeginPhyInstrOperand&&) = delete;
   virtual ~CriticalSectionBeginPhyInstrOperand() = default;
 
-  explicit CriticalSectionBeginPhyInstrOperand(const one::EagerBlobObjectListPtr& eager_blob_objects, ObjectMsgPtr<LocalDepObject> local_dep_object)
-      : eager_blob_objects_(eager_blob_objects), local_dep_object_(local_dep_object) {}
+  explicit CriticalSectionBeginPhyInstrOperand(const one::EagerBlobObjectListPtr& eager_blob_objects, ObjectMsgPtr<LocalDepObject> local_dep_object, const std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>& op_name2end_event_record)
+      : eager_blob_objects_(eager_blob_objects), op_name2end_event_record_(op_name2end_event_record) {}
+
+  const one::EagerBlobObjectListPtr& eager_blob_objects() const { return eager_blob_objects_; }
+  const std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>& op_name2end_event_recor() const { return op_name2end_event_record_; }
 
   void ForEachMirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&) const;
@@ -49,11 +53,9 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
       const override;
 
-  ObjectMsgPtr<LocalDepObject> local_dep_object() const { return local_dep_object_; }
-
  protected:
   one::EagerBlobObjectListPtr eager_blob_objects_;
-  mutable ObjectMsgPtr<LocalDepObject> local_dep_object_;
+  std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>> op_name2end_event_record_;
 };
 
 class InputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeginPhyInstrOperand {
