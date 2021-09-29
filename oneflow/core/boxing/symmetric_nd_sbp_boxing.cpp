@@ -65,7 +65,6 @@ Maybe<void> CheckSymmetricNdSbpBoxing(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp
   CHECK_OR_RETURN(in->nd_sbp() != out->nd_sbp());
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), out->nd_sbp()->sbp_parallel_size());
   CHECK_GT_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
-  JUST(CheckIsNdSbpBoxingAcyclic(in, out));
   return Maybe<void>::Ok();
 }
 
