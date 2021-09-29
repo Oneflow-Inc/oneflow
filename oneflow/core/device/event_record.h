@@ -70,6 +70,9 @@ class SharedEventRecord final : public EventRecord {
   bool QueryDone() const override { return inited_ && event_record_->QueryDone(); }
 
   void Init(const std::shared_ptr<EventRecord>& event_record) {
+    // No lock needed. This function will be called only one time.
+    // In most cases, errors will be successfully detected by CHECK
+    // even though run in different threads.
     CHECK(!inited_);
     event_record_ = event_record;
     inited_ = true;
