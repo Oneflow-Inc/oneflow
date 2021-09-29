@@ -50,7 +50,12 @@ class QConvBN(flow.nn.Module):
         self.bn_affine = bn_module.affine
         self.bn_eps = bn_module.eps
 
-        self.moving_min_max_observer = flow.nn.MovingAverageMinMaxObserver(
+        # self.register_buffer("new_zero_1", flow.Tensor(1))
+        # self.new_zero_1.fill_(0)
+        # self.register_buffer("new_zero_2", flow.Tensor(1))
+        # self.new_zero_2.fill_(0)
+
+        self.moving_min_max_observer_1 = flow.nn.MovingAverageMinMaxObserver(
             training=self.training,
             quantization_formula=quantization_formula,
             stop_update_after_iters=1,
@@ -59,11 +64,13 @@ class QConvBN(flow.nn.Module):
             momentum=momentum,
         )
 
-        self.min_max_observer = flow.nn.MinMaxObserver(
+        self.moving_min_max_observer_2 = flow.nn.MovingAverageMinMaxObserver(
+            training=self.training,
             quantization_formula=quantization_formula,
+            stop_update_after_iters=1,
             quantization_bit=quantization_bit,
             quantization_scheme=quantization_scheme,
-            per_layer_quantization=per_layer_quantization,
+            momentum=momentum,
         )
 
         self.fake_quantization = flow.nn.FakeQuantization(
@@ -91,9 +98,9 @@ class QConvBN(flow.nn.Module):
         return weight, bias
 
     def forward(self, x):
-        new_zero = flow.tensor([0], dtype=flow.int64) + 0
-        new_zero = new_zero.to(x.device.type)
-        scale, zero_point = self.moving_min_max_observer(x, new_zero)
+        new_zero_1 = flow.zeros(1)
+        new_zero_1 = new_zero_1.to(x.device.type)
+        scale, zero_point = self.moving_min_max_observer_1(x, new_zero_1)
         x = self.fake_quantization(x, scale, zero_point)
         if self.training:
             y = flow.nn.functional.conv2d(
@@ -127,7 +134,14 @@ class QConvBN(flow.nn.Module):
         std = flow.sqrt(var + self.bn_eps)
         weight, bias = self.fold_bn(mean, std)
 
-        weight_scale, weight_zero_point = self.min_max_observer(weight)
+        # weight_scale, weight_zero_point = flow.ones(1), flow.zeros(1)
+        # weight_scale = weight_scale.to(x.device.type)
+        # weight_zero_point = weight_zero_point.to(x.device.type)
+        new_zero_2 = flow.zeros(1)
+        new_zero_2 = new_zero_2.to(x.device.type)
+        weight_scale, weight_zero_point = self.moving_min_max_observer_2(
+            weight, new_zero_2
+        )
         res = flow.nn.functional.conv2d(
             x,
             self.fake_quantization(weight, weight_scale, weight_zero_point),
