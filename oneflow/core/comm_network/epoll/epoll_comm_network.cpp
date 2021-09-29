@@ -97,11 +97,10 @@ void EpollCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) {
     char* data = reinterpret_cast<char*>(addr);
     SocketMsg msg;
     msg.msg_type = SocketMsgType::kActor;
-    msg.actor_msg.data = (char*)malloc(size);
-    uint64_t data_addr = reinterpret_cast<uint64_t>(msg.actor_msg.data);
     std::memcpy(msg.actor_msg.data,data,size);
-    msg.actor_msg.size = size;
-    std::cout<<"EpollCommNet::SendMsg,the data_addr:0x"<<std::hex<<data_addr <<" and size:"<<size << std::endl;
+    msg.actor_msg.size  = size;
+    std::cout<<"EpollCommNet::SendMsg, size:"<<size << std::endl;
+    std::cout<<"EpollCommNet::SendMsg,msg.actor_msg.size:"<<msg.actor_msg.size << std::endl;
     GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
 
