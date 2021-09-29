@@ -3078,7 +3078,7 @@ class TestEagerBoxingWithSameInOutPlacement(flow.unittest.TestCase):
         arg_dict["out_device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_with_same_placement_s1_to_p(test_case, *arg)
-    
+
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_eager_boxing_with_same_placement_s1_to_b(test_case):
         arg_dict = OrderedDict()
