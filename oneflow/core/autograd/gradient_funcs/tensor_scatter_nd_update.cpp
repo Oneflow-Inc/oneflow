@@ -20,8 +20,8 @@ namespace oneflow {
 namespace one {
 
 struct TensorScatterNdUpdateCaptureState : public AutoGradCaptureState {
-  bool tensor_requires_grad;
-  bool update_requires_grad;
+  bool tensor_requires_grad = false;
+  bool update_requires_grad = false;
 };
 
 class TensorScatterNdUpdate : public OpExprGradFunction<TensorScatterNdUpdateCaptureState> {
