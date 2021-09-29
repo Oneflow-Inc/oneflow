@@ -15,11 +15,13 @@ limitations under the License.
 """
 
 import numpy as np
+import os
 import oneflow as flow
 import oneflow.unittest
 import unittest
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestAllReduce(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_all_reduce_1n2d(test_case):
@@ -36,6 +38,7 @@ class TestAllReduce(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(out.numpy(), np_arr * 4))
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestAllGather(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_all_gather_1n2d(test_case):
@@ -54,6 +57,7 @@ class TestAllGather(flow.unittest.TestCase):
         )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestBroadCast(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_broadcast_1n2d(test_case):
@@ -70,6 +74,7 @@ class TestBroadCast(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(tensor.numpy(), np.array([[1, 2], [3, 4]])))
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestScatter(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
     def test_scatter_1n4d(test_case):
@@ -89,6 +94,7 @@ class TestScatter(flow.unittest.TestCase):
             )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestGather(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
     def test_gather_1n4d(test_case):
@@ -127,6 +133,7 @@ class TestGather(flow.unittest.TestCase):
         )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestReduce(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_reduce_1n2d(test_case):
@@ -146,6 +153,7 @@ class TestReduce(flow.unittest.TestCase):
             )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestReduceScatter(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
     def test_reduce_scatter_1n4d(test_case):
@@ -159,6 +167,7 @@ class TestReduceScatter(flow.unittest.TestCase):
         )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class TestDocs(flow.unittest.TestCase):
     def test_docs(test_case):

@@ -32,6 +32,7 @@ struct ScalarFmodFunctor<DeviceType::kGPU, BIN_OP, T> final {
 };
 
 #define INSTANTIATE_SCALAR_FUNCTORS(device_type, binary_op)           \
+  template struct ScalarFmodFunctor<device_type, binary_op, uint8_t>; \
   template struct ScalarFmodFunctor<device_type, binary_op, int8_t>;  \
   template struct ScalarFmodFunctor<device_type, binary_op, int32_t>; \
   template struct ScalarFmodFunctor<device_type, binary_op, int64_t>; \

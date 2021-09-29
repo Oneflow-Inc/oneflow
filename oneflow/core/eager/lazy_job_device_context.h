@@ -91,10 +91,6 @@ class LazyJobDeviceCtx final : public DeviceCtx {
     cond_.notify_all();
   }
 
-  std::shared_ptr<EventRecord> MakeEventRecord() override {
-    return std::make_shared<NaiveEventRecord>();
-  }
-
  private:
   std::queue<std::weak_ptr<NNGraphIf>> queue_;
   std::mutex mutex_;

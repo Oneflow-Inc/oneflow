@@ -31,7 +31,8 @@ void InferStreamTypeUtil::InitInstructionStatus(const Stream& stream,
 
 void InferStreamTypeUtil::DeleteInstructionStatus(const Stream& stream,
                                                   InstructionStatusBuffer* status_buffer) {
-  // do nothing
+  auto* ptr = NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  ptr->~NaiveInstrStatusQuerier();
 }
 
 bool InferStreamTypeUtil::QueryInstructionStatusDone(const Stream& stream,

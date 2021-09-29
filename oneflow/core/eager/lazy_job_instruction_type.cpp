@@ -146,10 +146,11 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
     for (int i = 0; i < nn_graph->inputs_op_names().size(); ++i) {
       const auto& input_op_name = nn_graph->inputs_op_names().at(i);
       const auto& end_event_record =
-        CHECK_JUST(phy_instr_operand->EndEventRecord4OpName(input_op_name));
+          CHECK_JUST(phy_instr_operand->EndEventRecord4OpName(input_op_name));
       if (nn_graph->inputs_valid().at(i)) {
         const auto& input_blob_object = phy_instr_operand->input_blob_objects()->at(i);
-        const auto& PushCb = [input_op_name, end_event_record, input_blob_object](int64_t of_blob_ptr) {
+        const auto& PushCb = [input_op_name, end_event_record,
+                              input_blob_object](int64_t of_blob_ptr) {
           OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
           const Blob* blob = &input_blob_object->blob();
           CHECK_NOTNULL(blob);
@@ -158,7 +159,9 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
             end_event_record->Init(std::make_shared<NaiveEventRecord>());
           } else {
             AutoMemcpy(of_blob->mut_device_ctx(), of_blob->mut_blob(), blob);
-            end_event_record->Init(of_blob->mut_device_ctx()->MakeEventRecord());
+            auto* event_record_provider =
+                CHECK_NOTNULL(dynamic_cast<EventRecordProvider*>(of_blob->mut_device_ctx()));
+            end_event_record->Init(event_record_provider->MakeEventRecord());
           }
         };
         CHECK(push_cbs.emplace(input_op_name, PushCb).second);
@@ -170,10 +173,11 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
     for (int i = 0; i < nn_graph->outputs_op_names().size(); ++i) {
       const auto& output_op_name = nn_graph->outputs_op_names().at(i);
       const auto& end_event_record =
-        CHECK_JUST(phy_instr_operand->EndEventRecord4OpName(output_op_name));
+          CHECK_JUST(phy_instr_operand->EndEventRecord4OpName(output_op_name));
       if (nn_graph->outputs_valid().at(i)) {
         const auto& output_blob_object = phy_instr_operand->output_blob_objects()->at(i);
-        const auto& PullCb = [output_op_name, end_event_record, output_blob_object](int64_t of_blob_ptr) {
+        const auto& PullCb = [output_op_name, end_event_record,
+                              output_blob_object](int64_t of_blob_ptr) {
           OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
           Blob* mut_blob = output_blob_object->mut_blob();
           CHECK_NOTNULL(mut_blob);
@@ -182,7 +186,9 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
             end_event_record->Init(std::make_shared<NaiveEventRecord>());
           } else {
             AutoMemcpy(of_blob->mut_device_ctx(), mut_blob, &of_blob->blob());
-            end_event_record->Init(of_blob->mut_device_ctx()->MakeEventRecord());
+            auto* event_record_provider =
+                CHECK_NOTNULL(dynamic_cast<EventRecordProvider*>(of_blob->mut_device_ctx()));
+            end_event_record->Init(event_record_provider->MakeEventRecord());
           }
         };
         CHECK(pull_cbs.emplace(output_op_name, PullCb).second);

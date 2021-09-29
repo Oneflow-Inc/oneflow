@@ -2611,6 +2611,7 @@ def _test_eager_boxing_with_same_placement_s1_to_b(test_case, in_device, out_dev
         )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def _test_eager_boxing_b_to_s(
     test_case, shape, device_type, in_device_list, out_device_list, out_split_axis
 ):
@@ -2651,6 +2652,7 @@ def _test_eager_boxing_b_to_s(
             raise "only test case with out_split_axis == 0 or out_split_axis == 1"
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def _test_eager_boxing_s_to_b(
     test_case, shape, device_type, in_device_list, out_device_list, in_split_axis
 ):
@@ -2676,6 +2678,7 @@ def _test_eager_boxing_s_to_b(
     test_case.assertEqual(z.placement, new_placement)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def _test_eager_boxing_p_to_s(
     test_case, shape, device_type, in_device_list, out_device_list, out_split_axis
 ):
@@ -2717,6 +2720,7 @@ def _test_eager_boxing_p_to_s(
             raise "only test case with out_split_axis == 0 or out_split_axis == 1"
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def _test_eager_boxing_p_to_b(
     test_case, shape, device_type, in_device_list, out_device_list
 ):
@@ -2740,6 +2744,7 @@ def _test_eager_boxing_p_to_b(
         )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def _test_eager_naive_boxing_s_to_s(
     test_case,
     device_type,
@@ -2790,7 +2795,6 @@ def _test_eager_naive_boxing_s_to_s(
 
 
 @flow.unittest.skip_unless_1n4d()
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestEagerBoxingWithNonOverlappingPlacement(flow.unittest.TestCase):
     def test_eager_boxing_with_non_overlapping_placement_p_to_s1(test_case):
         arg_dict = OrderedDict()
@@ -2834,6 +2838,7 @@ class TestEagerBoxingWithNonOverlappingPlacement(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_with_non_overlapping_placement_s1_to_b(test_case, *arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_eager_boxing_with_non_overlapping_placement_s1_to_p(test_case):
         arg_dict = OrderedDict()
         arg_dict["in_device"] = ["cpu", "cuda"]
@@ -2843,7 +2848,6 @@ class TestEagerBoxingWithNonOverlappingPlacement(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n4d()
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestEagerBoxingWithOverlappingPlacement(flow.unittest.TestCase):
     def test_eager_boxing_with_overlapping_placement_p_to_s1(test_case):
         arg_dict = OrderedDict()
@@ -2887,6 +2891,7 @@ class TestEagerBoxingWithOverlappingPlacement(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_with_overlapping_placement_s1_to_b(test_case, *arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_eager_boxing_with_overlapping_placement_s1_to_p(test_case):
         arg_dict = OrderedDict()
         arg_dict["in_device"] = ["cpu", "cuda"]
@@ -2896,7 +2901,6 @@ class TestEagerBoxingWithOverlappingPlacement(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n4d()
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestEagerBoxingWithInPlacementContainOutPlacement(flow.unittest.TestCase):
     def test_eager_boxing_with_in_placement_contain_out_placement_p_to_s1(test_case):
         arg_dict = OrderedDict()
@@ -2943,6 +2947,7 @@ class TestEagerBoxingWithInPlacementContainOutPlacement(flow.unittest.TestCase):
                 test_case, *arg
             )
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_eager_boxing_with_in_placement_contain_out_placement_s1_to_p(test_case):
         arg_dict = OrderedDict()
         arg_dict["in_device"] = ["cpu", "cuda"]
@@ -2963,7 +2968,6 @@ class TestEagerBoxingWithInPlacementContainOutPlacement(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n4d()
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestEagerBoxingWithOutPlacementContainInPlacement(flow.unittest.TestCase):
     def test_eager_boxing_with_out_placement_contain_in_placement_p_to_s1(test_case):
         arg_dict = OrderedDict()
@@ -3001,6 +3005,7 @@ class TestEagerBoxingWithOutPlacementContainInPlacement(flow.unittest.TestCase):
                 test_case, *arg
             )
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_eager_boxing_with_out_placement_contain_in_placement_s1_to_p(test_case):
         arg_dict = OrderedDict()
         arg_dict["in_device"] = ["cpu", "cuda"]
@@ -3030,7 +3035,6 @@ class TestEagerBoxingWithOutPlacementContainInPlacement(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n4d()
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestEagerBoxingWithSameInOutPlacement(flow.unittest.TestCase):
     def test_eager_boxing_with_same_placement_s0_to_s1(test_case):
         arg_dict = OrderedDict()
@@ -3039,6 +3043,7 @@ class TestEagerBoxingWithSameInOutPlacement(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_with_same_placement_s0_to_s1(test_case, *arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_eager_boxing_with_same_placement_p_to_s1(test_case):
         arg_dict = OrderedDict()
         arg_dict["in_device"] = ["cpu", "cuda"]
@@ -3074,6 +3079,7 @@ class TestEagerBoxingWithSameInOutPlacement(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_with_same_placement_s1_to_p(test_case, *arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_eager_boxing_with_same_placement_s1_to_b(test_case):
         arg_dict = OrderedDict()
         arg_dict["in_device"] = ["cpu", "cuda"]
@@ -3083,7 +3089,6 @@ class TestEagerBoxingWithSameInOutPlacement(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n4d()
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestEagerBoxingBToS(flow.unittest.TestCase):
     def test_eager_boxing_b_to_s(test_case):
         arg_dict = OrderedDict()
@@ -3097,7 +3102,6 @@ class TestEagerBoxingBToS(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n4d()
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestEagerBoxingPToS(flow.unittest.TestCase):
     def test_eager_boxing_p_to_s(test_case):
         arg_dict = OrderedDict()
@@ -3111,7 +3115,6 @@ class TestEagerBoxingPToS(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n4d()
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestEagerBoxingSToB(flow.unittest.TestCase):
     def test_eager_boxing_s_to_b(test_case):
         arg_dict = OrderedDict()
@@ -3125,7 +3128,6 @@ class TestEagerBoxingSToB(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n4d()
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestEagerBoxingPToB(flow.unittest.TestCase):
     def test_eager_boxing_p_to_b(test_case):
         arg_dict = OrderedDict()
@@ -3138,7 +3140,6 @@ class TestEagerBoxingPToB(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n4d()
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestEagerNaiveBoxingSToS(flow.unittest.TestCase):
     def test_eager_naive_boxing_s_to_s(test_case):
         arg_dict = OrderedDict()

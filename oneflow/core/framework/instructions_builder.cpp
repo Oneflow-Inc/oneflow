@@ -287,8 +287,8 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const one::EagerBlobObjectListPtr
         JUST(MakeCriticalSectionBegin<vm::InputCriticalSectionBeginPhyInstrOperand>(inputs));
     const auto& out_local_dep_object =
         JUST(MakeCriticalSectionBegin<vm::OutputCriticalSectionBeginPhyInstrOperand>(outputs));
-    const auto& op_name2end_event_record = 
-      std::make_shared<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>();
+    const auto& op_name2end_event_record =
+        std::make_shared<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>();
     for (const auto& op_name : nn_graph->inputs_op_names()) {
       const auto& event_record = std::make_shared<SharedEventRecord>();
       CHECK_OR_RETURN(op_name2end_event_record->emplace(op_name, event_record).second);
@@ -301,22 +301,25 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const one::EagerBlobObjectListPtr
       static std::string instr_name("LaunchLazyJob");
       ObjectMsgPtr<vm::InstructionMsg> instruction =
           ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
-      *instruction->mutable_phy_instr_operand() = std::make_shared<vm::LaunchLazyJobPhyInstrOperand>(
-          *in_local_dep_object, *out_local_dep_object, op_name2end_event_record,
-          inputs, outputs, parameters, nn_graph);
+      *instruction->mutable_phy_instr_operand() =
+          std::make_shared<vm::LaunchLazyJobPhyInstrOperand>(
+              *in_local_dep_object, *out_local_dep_object, op_name2end_event_record, inputs,
+              outputs, parameters, nn_graph);
       instruction_list_->EmplaceBack(std::move(instruction));
     }
     for (int i = 0; i < nn_graph->inputs_op_names().size(); ++i) {
       const auto& eager_blob_object = inputs->at(i);
       const auto& op_name = nn_graph->inputs_op_names().at(i);
       const auto& event_record = JUST(MapAt(*op_name2end_event_record, op_name));
-      JUST(MakeCriticalSectionEnd<vm::InputCriticalSecondEndPhyInstrOperand>(eager_blob_object, event_record));
+      JUST(MakeCriticalSectionEnd<vm::InputCriticalSecondEndPhyInstrOperand>(eager_blob_object,
+                                                                             event_record));
     }
     for (int i = 0; i < nn_graph->outputs_op_names().size(); ++i) {
       const auto& eager_blob_object = outputs->at(i);
       const auto& op_name = nn_graph->outputs_op_names().at(i);
       const auto& event_record = JUST(MapAt(*op_name2end_event_record, op_name));
-      JUST(MakeCriticalSectionEnd<vm::OutputCriticalSecondEndPhyInstrOperand>(eager_blob_object, event_record));
+      JUST(MakeCriticalSectionEnd<vm::OutputCriticalSecondEndPhyInstrOperand>(eager_blob_object,
+                                                                              event_record));
     }
   }
   return Maybe<void>::Ok();

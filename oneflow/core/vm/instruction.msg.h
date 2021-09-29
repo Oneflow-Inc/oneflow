@@ -102,8 +102,13 @@ template<OperandMemZoneModifier mem_zone_modifier>
 void CheckOperand(const Operand& operand);
 
 static const int kInstructionStatusBufferBytes = 32;
+
 // clang-format off
+FLAT_MSG_BEGIN(InstructionDeleted);
+FLAT_MSG_END(InstructionDeleted);
+
 FLAT_MSG_BEGIN(InstructionStatusBuffer);
+  FLAT_MSG_DEFINE_OPTIONAL(InstructionDeleted, instruction_deleted);
   FLAT_MSG_DEFINE_REPEATED(char, buffer, kInstructionStatusBufferBytes);
 FLAT_MSG_END(InstructionStatusBuffer);
 // clang-format on

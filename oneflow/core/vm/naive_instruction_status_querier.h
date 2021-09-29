@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_NAIVE_VM_INSTRUCTION_STATUS_QUERIER_H_
 #define ONEFLOW_CORE_VM_NAIVE_VM_INSTRUCTION_STATUS_QUERIER_H_
 
+#include <atomic>
+
 namespace oneflow {
 namespace vm {
 
@@ -38,7 +40,7 @@ class NaiveInstrStatusQuerier {
 
  private:
   NaiveInstrStatusQuerier() : done_(false) {}
-  volatile bool done_;
+  std::atomic<bool> done_;
 };
 
 }  // namespace vm

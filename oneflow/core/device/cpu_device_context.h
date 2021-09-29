@@ -17,11 +17,12 @@ limitations under the License.
 #define ONEFLOW_CORE_DEVICE_CPU_DEVICE_CONTEXT_H_
 
 #include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/device/event_record.h"
 #include "oneflow/core/vm/cpu_allocator.h"
 
 namespace oneflow {
 
-class CpuDeviceCtx final : public DeviceCtx {
+class CpuDeviceCtx final : public DeviceCtx, public EventRecordProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDeviceCtx);
   CpuDeviceCtx() = default;

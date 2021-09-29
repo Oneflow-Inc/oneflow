@@ -25,7 +25,7 @@ namespace oneflow {
 
 #ifdef WITH_CUDA
 
-class CudaDeviceCtx : public DeviceCtx {
+class CudaDeviceCtx : public DeviceCtx, public EventRecordProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaDeviceCtx);
   CudaDeviceCtx() = delete;
