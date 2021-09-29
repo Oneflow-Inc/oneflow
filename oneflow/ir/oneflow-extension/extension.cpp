@@ -203,8 +203,9 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
         << "fail to lower OneFlow to CUDA LLVM";
     if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
     // TODO: replace absolute path with something more idiomatic
-    llvm::SmallVector<llvm::StringRef> ext_libs({"/home/caishenghang/ir_cuda/build/lib/"
-                                                 "libMLIROneFlowExtension.so"});
+    llvm::SmallVector<llvm::StringRef> ext_libs(
+        {"/home/caishenghang/ir_cuda/python/oneflow/"
+         "_oneflow_internal.cpython-38-x86_64-linux-gnu.so"});
     // TODO: cache the jit engine with uniq ptr
     auto jit_or_error = mlir::ExecutionEngine::create(
         /* m */ *module, /* llvmModuleBuilder */ nullptr, /* transformer */ {},
