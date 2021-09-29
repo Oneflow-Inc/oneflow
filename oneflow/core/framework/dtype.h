@@ -54,6 +54,7 @@ class DType final {
   Maybe<size_t> bytes() const;
 
   static Maybe<const Symbol<DType>&> Get(DataType);
+  static const int priority_order[DataType::kMaxDataType];
 
 #define DECLARE_GET_DATA_TYPE_FUNCTION(data_type) static const Symbol<DType>& data_type();
   OF_PP_FOR_EACH_TUPLE(DECLARE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)
@@ -62,6 +63,8 @@ class DType final {
  private:
   DataType data_type_;
 };
+
+Symbol<DType> promoteTypes(const Symbol<DType> a, const Symbol<DType> b);
 
 }  // namespace oneflow
 
