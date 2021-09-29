@@ -205,10 +205,11 @@ class TestLinear(flow.unittest.TestCase):
     @autotest()
     def test_nn_functional_bias_linear_with_random_data(test_case):
         input_size = random()
+        bias_size = random()
         device = random_device()
         x = random_pytorch_tensor(ndim=2, dim1=input_size).to(device)
-        weight = random_pytorch_tensor(ndim=2, dim0=input_size).to(device)
-        bias = random_pytorch_tensor(ndim=1, dim0=1).to(device)
+        weight = random_pytorch_tensor(ndim=2, dim0=bias_size, dim1=input_size).to(device)
+        bias = random_pytorch_tensor(ndim=1, dim0=bias_size).to(device)
         y = torch.nn.functional.linear(x, weight, bias)
         return y
 
