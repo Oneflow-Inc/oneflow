@@ -264,9 +264,9 @@ class SoftmaxFunctor {
     op_ = CHECK_JUST(one::OpBuilder("softmax").Input("in").Output("out").Build());
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, int32_t axis) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, int32_t dim) const {
     std::vector<int32_t> permute;
-    bool need_transpose = JUST(CheckSoftmaxNeedTranspose(x, axis, &permute));
+    bool need_transpose = JUST(CheckSoftmaxNeedTranspose(x, dim, &permute));
     if(need_transpose) {
       return Transpose(JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {JUST(Transpose(x, permute))})), permute);
     } else {
