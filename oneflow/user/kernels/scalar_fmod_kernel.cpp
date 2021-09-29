@@ -60,6 +60,7 @@ class ScalarFmodKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kCPU, uint8_t)
 REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kCPU, int8_t)
 REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kCPU, int32_t)
 REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kCPU, int64_t)
@@ -67,7 +68,7 @@ REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kCPU, double)
 REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kCPU, float)
 
 #ifdef WITH_CUDA
-
+REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kGPU, uint8_t)
 REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kGPU, int8_t)
 REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kGPU, int32_t)
 REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kGPU, int64_t)
