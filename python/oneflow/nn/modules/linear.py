@@ -118,6 +118,13 @@ class Linear(Module):
         )
 
 
+def linear(input, weight, bias=None):
+    res = flow._C.matmul(input, weight, transpose_a=False, transpose_b=True)
+    if bias is not None:
+        res += bias
+    return res
+
+
 if __name__ == "__main__":
     import doctest
 

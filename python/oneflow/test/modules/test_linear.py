@@ -194,6 +194,15 @@ class TestLinear(flow.unittest.TestCase):
         return y
 
     @autotest()
+    def test_nn_functional_linear_with_random_data(test_case):
+        input_size = random()
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim1=input_size).to(device)
+        weight = random_pytorch_tensor(ndim=2, dim0=input_size).to(device)
+        y = torch.nn.functional.linear(x, weight)
+        return y
+
+    @autotest()
     def test_identity_with_random_data(test_case):
         m = torch.nn.Identity(
             x=random().to(int),
