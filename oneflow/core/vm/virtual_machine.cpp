@@ -370,8 +370,8 @@ void VirtualMachine::ForEachMutMirroredObject(
 RwMutexedObjectAccess* VirtualMachine::ConsumeMirroredObject(OperandAccessType access_type,
                                                              MirroredObject* mirrored_object,
                                                              Instruction* instruction) {
-  auto rw_mutexed_object_access = ObjectMsgPtr<RwMutexedObjectAccess>::NewFrom(
-      instruction->mut_allocator(), instruction, mirrored_object, access_type);
+  auto rw_mutexed_object_access =
+      ObjectMsgPtr<RwMutexedObjectAccess>::New(instruction, mirrored_object, access_type);
   instruction->mut_mirrored_object_id2access()->Insert(rw_mutexed_object_access.Mutable());
   instruction->mut_access_list()->PushBack(rw_mutexed_object_access.Mutable());
   mirrored_object->mut_rw_mutexed_object()->mut_access_list()->EmplaceBack(
@@ -382,8 +382,7 @@ RwMutexedObjectAccess* VirtualMachine::ConsumeMirroredObject(OperandAccessType a
 void VirtualMachine::ConnectInstruction(Instruction* src_instruction,
                                         Instruction* dst_instruction) {
   CHECK_NE(src_instruction, dst_instruction);
-  auto edge = ObjectMsgPtr<InstructionEdge>::NewFrom(mut_vm_thread_only_allocator(),
-                                                     src_instruction, dst_instruction);
+  auto edge = ObjectMsgPtr<InstructionEdge>::New(src_instruction, dst_instruction);
   src_instruction->mut_out_edges()->PushBack(edge.Mutable());
   dst_instruction->mut_in_edges()->PushBack(edge.Mutable());
 }
@@ -550,26 +549,24 @@ void VirtualMachine::TryMoveWaitingToReady(Instruction* instruction, ReadyList* 
   }
 }
 
-void VirtualMachine::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
+void VirtualMachine::__Init__(const VmDesc& vm_desc) {
   mutable_vm_resource_desc()->CopyFrom(vm_desc.vm_resource_desc());
   CHECK_GT(vm_desc.machine_id_range().size(), 0);
   *mutable_machine_id_range() = vm_desc.machine_id_range();
-  set_vm_thread_only_allocator(allocator);
   OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.stream_type_id2desc(), stream_desc) {
     if (stream_desc->num_threads() == 0) { continue; }
-    auto stream_rt_desc = ObjectMsgPtr<StreamRtDesc>::NewFrom(allocator, stream_desc);
+    auto stream_rt_desc = ObjectMsgPtr<StreamRtDesc>::New(stream_desc);
     mut_stream_type_id2stream_rt_desc()->Insert(stream_rt_desc.Mutable());
     BalancedSplitter bs(stream_desc->parallel_num(), stream_desc->num_threads());
     for (int64_t i = 0, rel_global_device_id = 0; i < stream_desc->num_threads(); ++i) {
-      auto thread_ctx = ObjectMsgPtr<ThreadCtx>::NewFrom(allocator, stream_rt_desc.Get());
+      auto thread_ctx = ObjectMsgPtr<ThreadCtx>::New(stream_rt_desc.Get());
       mut_thread_ctx_list()->PushBack(thread_ctx.Mutable());
       for (int j = bs.At(i).begin(); j < bs.At(i).end(); ++j, ++rel_global_device_id) {
         StreamId stream_id;
         stream_id.__Init__(stream_desc->stream_type_id(),
                            this_start_global_device_id() + rel_global_device_id);
-        auto stream =
-            ObjectMsgPtr<Stream>::NewFrom(mut_allocator(), thread_ctx.Mutable(), stream_id,
-                                          vm_resource_desc().max_device_num_per_machine());
+        auto stream = ObjectMsgPtr<Stream>::New(thread_ctx.Mutable(), stream_id,
+                                                vm_resource_desc().max_device_num_per_machine());
         CHECK(stream_rt_desc->mut_stream_id2stream()->Insert(stream.Mutable()).second);
         thread_ctx->mut_stream_list()->PushBack(stream.Mutable());
       }
@@ -671,8 +668,17 @@ void VirtualMachine::Schedule() {
   TryDeleteLogicalObjects();
   TryRunFrontSeqInstruction(/*out*/ ready_instruction_list);
   auto* waiting_instruction_list = mut_waiting_instruction_list();
-  if (pending_msg_list().size() > 0) {
+  // Use thread_unsafe_size to avoid acquiring mutex lock.
+  // The inconsistency between pending_msg_list.list_head_.list_head_.container_ and
+  // pending_msg_list.list_head_.list_head_.size_ is not a fatal error because
+  // VirtualMachine::Schedule is always in a buzy loop. All instructions will get handled
+  // eventually.
+  //  VirtualMachine::Receive may be less effiencient if the thread safe version
+  //  `pending_msg_list().size()` used here, because VirtualMachine::Schedule is more likely to get
+  //  the mutex lock.
+  if (pending_msg_list().thread_unsafe_size() > 0) {
     TmpPendingInstrMsgList tmp_pending_msg_list;
+    // MoveTo is under a lock.
     mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
     FilterAndRunInstructionsInAdvance(&tmp_pending_msg_list);
     NewInstructionList new_instruction_list;
@@ -685,6 +691,12 @@ void VirtualMachine::Schedule() {
   *mut_flying_instruction_cnt() = mut_waiting_instruction_list()->size()
                                   + mut_ready_instruction_list()->size()
                                   + mutable_vm_stat_running_instruction_list()->size();
+}
+
+bool VirtualMachine::ThreadUnsafeEmpty() const {
+  return pending_msg_list().thread_unsafe_size() == 0 && waiting_instruction_list().empty()
+         && active_stream_list().empty() && front_seq_compute_instr_list().empty()
+         && flying_instruction_cnt() == 0;
 }
 
 bool VirtualMachine::Empty() const {

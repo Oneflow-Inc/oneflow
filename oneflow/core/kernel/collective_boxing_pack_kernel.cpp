@@ -27,12 +27,11 @@ class CollectiveBoxingPackKernel final : public Kernel {
 
  private:
   bool IsStateless() const override { return false; }
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type, typename T>
-void CollectiveBoxingPackKernel<device_type, T>::ForwardDataContent(
-    const KernelContext* ctx) const {
+void CollectiveBoxingPackKernel<device_type, T>::ForwardDataContent(KernelContext* ctx) const {
   const Blob* in = ctx->BnInOp2Blob("in");
   Blob* out = ctx->BnInOp2Blob("out");
   const CollectiveBoxingPackOpConf& pack_conf = this->op_conf().collective_boxing_pack_conf();
@@ -68,7 +67,7 @@ void CollectiveBoxingPackKernel<device_type, T>::ForwardDataContent(
         ctx->device_ctx(), transpose_in_shape.NumAxes(), transpose_in_shape, transpose_out_shape,
         perm, transpose_in_shape.elem_cnt(), in->dptr<T>(), out->mut_dptr<T>());
   } else {
-    out->CopyDataContentFrom(ctx->device_ctx(), in);
+    AutoMemcpy(ctx->stream_ctx(), out, in);
   }
 }
 

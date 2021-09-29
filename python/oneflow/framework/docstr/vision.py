@@ -19,13 +19,39 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow._C.pad,
     r"""
-    pad(input: Tensor, pad: List[int], mode: str = "constant", value: Scalar = 0) -> Tensor
+    Pads tensor.
+
+    Padding size:
+        The padding size by which to pad some dimensions of :attr:`input`
+        are described starting from the last dimension and moving forward.
+        :math:`\left\lfloor\frac{\text{len(pad)}}{2}\right\rfloor` dimensions
+        of ``input`` will be padded.
+        For example, to pad only the last dimension of the input tensor, then
+        :attr:`pad` has the form
+        :math:`(\text{padding_left}, \text{padding_right})`;
+        to pad the last 2 dimensions of the input tensor, then use
+        :math:`(\text{padding_left}, \text{padding_right},`
+        :math:`\text{padding_top}, \text{padding_bottom})`;
+        to pad the last 3 dimensions, use
+        :math:`(\text{padding_left}, \text{padding_right},`
+        :math:`\text{padding_top}, \text{padding_bottom}`
+        :math:`\text{padding_front}, \text{padding_back})`.
+
+    Padding mode:
+        See :class:`oneflow.nn.ConstantPad2d`, :class:`oneflow.nn.ReflectionPad2d`, and
+        :class:`oneflow.nn.ReplicationPad2d` for concrete examples on how each of the
+        padding modes works. Constant padding is implemented for arbitrary dimensions.
+        Replicate padding is implemented for padding the last 3 dimensions of 5D input
+        tensor, or the last 2 dimensions of 4D input tensor, or the last dimension of
+        3D input tensor. Reflect padding is only implemented for padding the last 2
+        dimensions of 4D input tensor, or the last dimension of 3D input tensor.
 
     Args:
         input (Tensor): N-dimensional tensor
-        pad (List[int]): 4-elements List
+        pad (tuple): m-elements tuple, where
+            :math:`\frac{m}{2} \leq` input dimensions and :math:`m` is even.
         mode: ``'constant'``, ``'reflect'``, ``'replicate'`` or ``'circular'``.
-            Default: ``'constant'``        
+            Default: ``'constant'``
         value: fill value for ``'constant'`` padding. Default: ``0``
 
     For example:
@@ -36,10 +62,10 @@ add_docstr(
         >>> import numpy as np
 
         >>> pad = [2, 2, 1, 1]
-        >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
-        >>> output = flow._C.pad(input, pad, mode = "replicate")
+        >>> input = flow.tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
+        >>> output = flow.nn.functional.pad(input, pad, mode = "replicate")
         >>> output.shape
-        flow.Size([1, 2, 5, 7])
+        oneflow.Size([1, 2, 5, 7])
         >>> output
         tensor([[[[ 0.,  0.,  0.,  1.,  2.,  2.,  2.],
                   [ 0.,  0.,  0.,  1.,  2.,  2.,  2.],
@@ -106,8 +132,8 @@ add_docstr(
 
         >>> import oneflow as flow
 
-        >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)  
-        >>> output = flow._C.upsample(input, height_scale=2.0, width_scale=2.0, align_corners=False, interpolation="nearest")
+        >>> input = flow.tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)  
+        >>> output = flow.nn.functional.upsample(input, height_scale=2.0, width_scale=2.0, align_corners=False, interpolation="nearest")
     
         >>> output
         tensor([[[[1., 1., 2., 2.],

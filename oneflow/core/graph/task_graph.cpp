@@ -26,19 +26,27 @@ limitations under the License.
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
+#include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 #include "oneflow/core/graph/stream_index_getter_registry_manager.h"
+#include "oneflow/core/primitive/include/memcpy.h"
 
 namespace oneflow {
 
 namespace {
 
-bool IsInterfaceTask(const TaskNode* node) {
-  const auto* comp_task_node = dynamic_cast<const CompTaskNode*>(node);
-  if (comp_task_node == nullptr) { return false; }
-  auto op_type_case = comp_task_node->op()->op_conf().op_type_case();
-  return IsClassRegistered<int32_t, IsInterfaceOpConf4OpTypeCase>(op_type_case);
+bool IsMemcpyPrimitiveSupported(DeviceType device_type, primitive::MemcpyKind kind) {
+  auto primitive = primitive::NewPrimitive<primitive::MemcpyFactory>(device_type, kind);
+  return primitive.operator bool();
+}
+
+bool IsMemcpyHtoDSupported(DeviceType device_type) {
+  return IsMemcpyPrimitiveSupported(device_type, primitive::MemcpyKind::kHtoD);
+}
+
+bool IsMemcpyDtoHSupported(DeviceType device_type) {
+  return IsMemcpyPrimitiveSupported(device_type, primitive::MemcpyKind::kDtoH);
 }
 
 bool IsConnectToTickOp(const TaskNode* node) {
@@ -283,7 +291,7 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
               : static_cast<DeviceId::device_index_t>(dev_phy_id);
       DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), parallel_desc.device_type(),
                          device_index};
-      StreamId::stream_index_t stream_index;
+      StreamId::stream_index_t stream_index{};
       if (op_node->op().op_conf().has_stream_index_hint()) {
         int32_t stream_index_hint = op_node->op().op_conf().stream_index_hint();
         LOG(INFO) << "set op: " << op_node->op().op_name() << " to stream: " << stream_index_hint;
@@ -476,12 +484,11 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
       return src_node;
     } else if (dst_mem_zone_id.device_type() == DeviceType::kCPU) {
       if (src_mem_zone_id.node_index() == dst_mem_zone_id.node_index()) {
-        CHECK_EQ(src_mem_zone_id.device_type(), DeviceType::kGPU);
         // on the same node, not on the same device
         // src must be not on the cpu mem zone, copy d2h first
+        CHECK(IsMemcpyDtoHSupported(src_mem_zone_id.device_id().device_type()));
         CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-        copy_task->Init(CopyHdOpConf::D2H, src_mem_zone_id.node_index(),
-                        src_mem_zone_id.device_index(), lbi);
+        copy_task->Init(CopyHdOpConf::D2H, src_mem_zone_id.device_id(), lbi);
         Connect<TaskNode>(src_node, NewTaskEdgeWithLbi(lbi), copy_task);
         proxy2node[key] = copy_task;
         return copy_task;
@@ -497,12 +504,11 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
         return copy_comm_net_task;
       }
     } else {
-      CHECK_EQ(dst_mem_zone_id.device_type(), DeviceType::kGPU);
       TaskNode* proxy_on_dst_host =
           GetProxyNode(src_node, lbi, GetNodeCPUMemZoneId(dst_mem_zone_id.node_index()));
+      CHECK(IsMemcpyHtoDSupported(dst_mem_zone_id.device_id().device_type()));
       CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-      copy_task->Init(CopyHdOpConf::H2D, proxy_on_dst_host->machine_id(),
-                      dst_mem_zone_id.device_index(), lbi);
+      copy_task->Init(CopyHdOpConf::H2D, dst_mem_zone_id.device_id(), lbi);
       Connect<TaskNode>(proxy_on_dst_host, NewTaskEdgeWithLbi(lbi), copy_task);
       proxy2node[key] = copy_task;
       return copy_task;
@@ -534,6 +540,48 @@ void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_node
     TaskEdge* edge = NewEdge();
     Connect<TaskNode>(src_task_nodes.at(i), edge, dst_task_nodes.at(i));
     src_task_nodes.at(i)->BindEdgeWithProducedRegst(edge, regst_desc_name);
+  }
+}
+
+void TaskGraph::AddCtrlEdgeBetweenSrcDstTickAndInputOutputInSameRank() {
+  if (!CHECK_JUST(GlobalMultiClientEnv())) { return; }
+  HashMap<int64_t, TaskNode*> rank_id2src_tick;
+  HashMap<int64_t, TaskNode*> rank_id2dst_tick;
+  HashMap<int64_t, HashSet<TaskNode*>> rank_id2input_output_nodes;
+
+  ForEachNode([&](TaskNode* node) {
+    if (node->GetTaskType() == TaskType::kSrcSubsetTick) {
+      CHECK(rank_id2src_tick.emplace(node->machine_id(), node).second);
+    } else if (node->GetTaskType() == TaskType::kDstSubsetTick) {
+      CHECK(rank_id2dst_tick.emplace(node->machine_id(), node).second);
+    } else if (node->GetTaskType() == TaskType::kNormalForward) {
+      auto* forward_node = reinterpret_cast<NormalForwardCompTaskNode*>(node);
+      CHECK(forward_node);
+      if (forward_node->op()->op_conf().has_input_conf()
+          || forward_node->op()->op_conf().has_output_conf()) {
+        CHECK(rank_id2input_output_nodes[node->machine_id()].insert(node).second);
+      }
+    }
+  });
+
+  auto AddCtrlEdge = [&](TaskNode* src, TaskNode* dst) {
+    std::string ctrl_regst_name;
+    src->BuildCtrlRegstDesc(dst, &ctrl_regst_name);
+    TaskEdge* edge = NewEdge();
+    Connect<TaskNode>(src, edge, dst);
+    src->BindEdgeWithProducedRegst(edge, ctrl_regst_name);
+  };
+
+  for (auto& pair : rank_id2src_tick) {
+    int64_t rank_id = pair.first;
+    TaskNode* src = pair.second;
+    for (TaskNode* io_task : rank_id2input_output_nodes[rank_id]) { AddCtrlEdge(src, io_task); }
+  }
+
+  for (auto& pair : rank_id2dst_tick) {
+    int64_t rank_id = pair.first;
+    TaskNode* dst = pair.second;
+    for (TaskNode* io_task : rank_id2input_output_nodes[rank_id]) { AddCtrlEdge(io_task, dst); }
   }
 }
 
@@ -686,7 +734,7 @@ void TaskGraph::ForEachGpuDeviceNodes(
   HashMap<std::pair<int64_t, int64_t>, HashSet<TaskNode*>> global_dev_phy_id2nodes;
   ForEachNode([&](TaskNode* task_node) {
     if (task_node->device_type() != DeviceType::kGPU) { return; }
-    int64_t dev_phy_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(task_node->thrd_id());
+    int64_t dev_phy_id = task_node->stream_id().device_id().device_index();
     global_dev_phy_id2nodes[{task_node->machine_id(), dev_phy_id}].emplace(task_node);
   });
   for (const auto& pair : global_dev_phy_id2nodes) { Handler(pair.second); }

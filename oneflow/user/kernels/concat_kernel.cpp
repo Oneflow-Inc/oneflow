@@ -51,6 +51,7 @@ class ConcatKernel final : public user_op::OpKernel {
 
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    if (out_tensor->shape().elem_cnt() == 0) { return; }
     const int64_t axis = ctx->Attr<int64_t>("axis");
     const int64_t out_cols = out_tensor->shape().Count(axis);
     const int64_t rows = out_tensor->shape().elem_cnt() / out_cols;
@@ -85,6 +86,7 @@ class ConcatKernel final : public user_op::OpKernel {
 #define REGISTER_CONCAT_KERNEL_WITH_DEVICE(device) \
   REGISTER_CONCAT_KERNEL(device, float)            \
   REGISTER_CONCAT_KERNEL(device, double)           \
+  REGISTER_CONCAT_KERNEL(device, uint8_t)          \
   REGISTER_CONCAT_KERNEL(device, int8_t)           \
   REGISTER_CONCAT_KERNEL(device, int32_t)          \
   REGISTER_CONCAT_KERNEL(device, int64_t)

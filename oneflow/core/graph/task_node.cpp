@@ -64,9 +64,12 @@ std::shared_ptr<RegstDesc> TaskNode::GetSoleConsumedRegst(const std::string& nam
   return vec.front();
 }
 
-DeviceType TaskNode::device_type() const {
-  return Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(thrd_id_);
+const StreamId& TaskNode::stream_id() const {
+  CHECK(new_task_id_);
+  return new_task_id_->stream_id();
 }
+
+DeviceType TaskNode::device_type() const { return stream_id().device_id().device_type(); }
 
 void TaskNode::set_machine_id(int64_t val) {
   CHECK_EQ(machine_id_, -1);
@@ -335,8 +338,8 @@ void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
   StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id_);
-  TaskId task_id = Global<IDMgr>::Get()->GetTaskIdGenerator()->Generate(stream_id);
-  task_id_ = SerializeTaskIdToInt64(task_id);
+  new_task_id_.reset(new TaskId(Global<IDMgr>::Get()->GetTaskIdGenerator()->Generate(stream_id)));
+  task_id_ = SerializeTaskIdToInt64(*new_task_id_);
 }
 
 void TaskNode::EraseConsumedRegstsByName(const std::string& name) {

@@ -44,9 +44,11 @@ def check_dim(num_dims, input_dim):
 
 def _norm_min_max(input, ord, dim, keepdim):
     if ord > 0:
-        return flow.max(input, dim=dim, keepdim=keepdim)
+        temp = flow.max(input, dim=dim, keepdim=keepdim)
+        return temp if dim == None else temp[0]
     else:
-        return flow.min(input, dim=dim, keepdim=keepdim)
+        temp = flow.min(input, dim=dim, keepdim=keepdim)
+        return temp if dim == None else temp[0]
 
 
 class Vector_Norm(Module):
@@ -69,9 +71,11 @@ class Vector_Norm(Module):
         if ord == 0:
             return flow.cast(flow.tensor([flow.argwhere(x).shape[0]]), flow.float32)
         elif ord == float("inf"):
-            return flow.max(flow.abs(x), dim=dim, keepdim=keepdim)
+            temp = flow.max(flow.abs(x), dim=dim, keepdim=keepdim)
+            return temp if dim == None else temp[0]
         elif ord == float("-inf"):
-            return flow.min(flow.abs(x), dim=dim, keepdim=keepdim)
+            temp = flow.min(flow.abs(x), dim=dim, keepdim=keepdim)
+            return temp if dim == None else temp[0]
         else:
             return flow.pow(
                 flow.sum(flow.pow(flow.abs(x), ord), dim=dim, keepdim=keepdim),

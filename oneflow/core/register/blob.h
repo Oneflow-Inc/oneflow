@@ -87,8 +87,6 @@ class Blob final {
 
   void reset_dptr(char* dptr) { dptr_ = dptr; }
 
-  void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
-  void CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs);
   bool IsBodyEmpty() const { return shape().elem_cnt() == 0; }
 

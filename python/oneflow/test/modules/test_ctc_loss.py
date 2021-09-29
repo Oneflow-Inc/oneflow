@@ -238,22 +238,22 @@ def compare_with_np(
     ctc_loss = flow.nn.CTCLoss(
         blank=blank, reduction=reduction, zero_infinity=zero_infinity
     )
-    log_probs = flow.Tensor(
+    log_probs = flow.tensor(
         log_probs,
         dtype=flow.float32,
         requires_grad=True,
         device=flow.device(device_type),
     )
-    targets = flow.Tensor(
+    targets = flow.tensor(
         targets, dtype=flow.int32, requires_grad=False, device=flow.device(device_type)
     )
-    input_lengths = flow.Tensor(
+    input_lengths = flow.tensor(
         input_lengths,
         dtype=flow.int32,
         requires_grad=False,
         device=flow.device(device_type),
     )
-    target_lengths = flow.Tensor(
+    target_lengths = flow.tensor(
         target_lengths,
         dtype=flow.int32,
         requires_grad=False,

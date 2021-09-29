@@ -31,7 +31,7 @@ class BoxingKernel final : public Kernel {
 
  private:
   void VirtualKernelInit(KernelContext* ctx) override;
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 
   PbRpf<std::string> ibn_0_;
   PbRpf<std::string> obn_0_;
@@ -76,11 +76,13 @@ void CalcSumOfBlobs<float16>(DeviceCtx* ctx,
   }
 }
 
-void CopyFromFirstToOtherBlobs(DeviceCtx* ctx,
+void CopyFromFirstToOtherBlobs(KernelContext* ctx,
                                const std::function<Blob*(const std::string&)>& BnInOp2Blob,
-                               const PbRpf<std::string>& bns, CopyBlobFieldMthd Copy) {
+                               const PbRpf<std::string>& bns) {
   const Blob* blob_0 = BnInOp2Blob(bns.Get(0));
-  FOR_RANGE(size_t, i, 1, bns.size()) { (BnInOp2Blob(bns.Get(i))->*Copy)(ctx, blob_0); }
+  FOR_RANGE(size_t, i, 1, bns.size()) {
+    AutoMemcpy(ctx->stream_ctx(), BnInOp2Blob(bns.Get(i)), blob_0);
+  }
 }
 
 class DataContentDesc final {
@@ -213,7 +215,7 @@ void BoxingKernel<T>::VirtualKernelInit(KernelContext* ctx) {
 }
 
 template<typename T>
-void BoxingKernel<T>::ForwardDataContent(const KernelContext* ctx) const {
+void BoxingKernel<T>::ForwardDataContent(KernelContext* ctx) const {
   const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
   DeviceCtx* device_ctx = ctx->device_ctx();
   const auto BnInOp2Blob = [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); };
@@ -225,8 +227,7 @@ void BoxingKernel<T>::ForwardDataContent(const KernelContext* ctx) const {
     } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
       ConcatSplitDataContent(device_ctx, BnInOp2Blob, op_attribute().input_bns(),
                              boxing_conf.concat_box().axis(), obn_0_, 0);
-      CopyFromFirstToOtherBlobs(device_ctx, BnInOp2Blob, op_attribute().output_bns(),
-                                DataContentIterator::GetCopyBlobFieldMthd());
+      CopyFromFirstToOtherBlobs(ctx, BnInOp2Blob, op_attribute().output_bns());
     } else {
       UNIMPLEMENTED();
     }
@@ -237,8 +238,7 @@ void BoxingKernel<T>::ForwardDataContent(const KernelContext* ctx) const {
                              op_attribute().output_bns(), boxing_conf.split_box().axis());
     } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
       CalcSumOfBlobs<T>(device_ctx, BnInOp2Blob, op_attribute().input_bns(), obn_0_.Get(0));
-      CopyFromFirstToOtherBlobs(device_ctx, BnInOp2Blob, op_attribute().output_bns(),
-                                DataContentIterator::GetCopyBlobFieldMthd());
+      CopyFromFirstToOtherBlobs(ctx, BnInOp2Blob, op_attribute().output_bns());
     } else {
       UNIMPLEMENTED();
     }

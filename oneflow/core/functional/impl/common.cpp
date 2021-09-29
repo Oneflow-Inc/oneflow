@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/functional/impl/common.h"
 
+#include "oneflow/core/autograd/autograd_mode.h"
+
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -24,12 +26,20 @@ bool IsStaticZerosTensor(const std::shared_ptr<Tensor>& x) {
 }
 
 bool IsInplaceValid(const std::shared_ptr<Tensor>& x) {
-  return !(x->is_leaf() && x->requires_grad());
+  return !autograd::GradMode::is_enabled() || !(x->is_leaf() && x->requires_grad());
 }
 
 Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x) {
   CHECK_OR_RETURN(IsInplaceValid(x))
       << "a leaf Tensor that requires grad is being used in an in-place operation.";
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CheckInplaceCastValid(const std::shared_ptr<Tensor>& x,
+                                  const std::shared_ptr<Tensor>& x_cast) {
+  CHECK_OR_RETURN(*x->dtype() == *x_cast->dtype())
+      << "RuntimeError: result type " << x_cast->dtype()->name()
+      << " can't be cast to the desired output type " << x->dtype()->name();
   return Maybe<void>::Ok();
 }
 

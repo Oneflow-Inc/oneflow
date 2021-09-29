@@ -25,6 +25,7 @@ class GraphConfig(object):
 
     def __init__(self):
         super().__init__()
+        self._outputs_buffer_size = 2
         self.proto = job_conf_cfg.JobConfigProto()
         self._train(False)
 
@@ -41,6 +42,18 @@ class GraphConfig(object):
         if self.proto.has_predict_conf():
             return False
         raise NotImplementedError
+
+    def set_outputs_buffer_size(self, value: int = 2):
+        r"""Set the outputs buffer size of ``nn.Graph``.
+        When graph's outputs buffer size is greater than 2, multiple call on the
+        graph can work like a pipeline. This makes multiple call takes less time.
+        
+        The default outputs buffer size is 2.
+
+        Args:
+            value (int): graph ouputs buffer size.
+        """
+        self._outputs_buffer_size = value
 
     def enable_amp(self, mode: bool = True):
         """If true, then graph will use mixed precision mode, it means use both float16 and float32 during model training.
@@ -79,7 +92,7 @@ class GraphConfig(object):
         """Set num of steps to accumulate gradient.
 
         Args:
-            value (int): num of steps
+            value (int): num of steps.
         """
         self.proto.set_num_gradient_accumulation_steps(value)
 
@@ -89,3 +102,15 @@ class GraphConfig(object):
         opt_dict.generate_optimizer_and_variable_configs(
             self.proto.mutable_train_conf(), variables_conf
         )
+
+    def __repr__(self):
+        main_str = (
+            "("
+            + "CONFIG"
+            + ":config:"
+            + self.__class__.__name__
+            + "("
+            + ("training=" + str(self.training) + ", ")
+            + "))"
+        )
+        return main_str

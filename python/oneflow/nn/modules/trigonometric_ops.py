@@ -156,7 +156,7 @@ def acos_op(input):
         >>> import numpy as np
 
         >>> arr = np.array([0.5, 0.6, 0.7])
-        >>> input = flow.Tensor(arr, dtype=flow.float32)
+        >>> input = flow.tensor(arr, dtype=flow.float32)
         >>> output = flow.acos(input)
         >>> output
         tensor([1.0472, 0.9273, 0.7954], dtype=oneflow.float32)
@@ -227,17 +227,6 @@ def arccosh_op_tensor(input):
     return flow._C.acosh(input)
 
 
-class Atan2(Module):
-    def __init__(self) -> None:
-        super().__init__()
-        self.atan2_op = (
-            flow.builtin_op("atan2").Input("x").Input("y").Output("z").Build()
-        )
-
-    def forward(self, x, y):
-        return self.atan2_op(x, y)[0]
-
-
 def atan2_op(input, other):
     """Element-wise arctangent of input{i}/other{i}
     with consideration of the quadrant. Returns a new tensor with the signed
@@ -272,7 +261,7 @@ def atan2_op(input, other):
         array([ 1.5707964,  0.       , -1.5707964], dtype=float32)
 
     """
-    return Atan2()(input, other)
+    return flow._C.atan2(input, other)
 
 
 @register_tensor_op("atan2")
@@ -283,59 +272,7 @@ def atan2_op_tensor(input, other):
 
     See :func:`oneflow.atan2`
     """
-    return Atan2()(input, other)
-
-
-def atanh_op(input):
-    """Returns a new tensor with the inverse hyperbolic tangent of the elements of :attr:`input`.
-
-    .. math::
-        \\text{out}_{i} = \\tanh^{-1}(\\text{input}_{i})
-
-    Args:
-        input (Tensor): the input tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
-        >>> input = flow.Tensor(np_arr)
-        >>> output = flow.atanh(input)
-        >>> output
-        tensor([0.5493, 0.6931, 0.8673], dtype=oneflow.float32)
-
-    """
-    return flow._C.atanh(input)
-
-
-@register_tensor_op("atanh")
-def atanh_op_tensor(input):
-    """
-    atanh() -> Tensor
-    See :func:`oneflow.atanh`
-
-    """
-    return flow._C.atanh(input)
-
-
-def arctanh_op(input):
-    """
-
-    Alias for :func:`oneflow.atanh`
-    """
-    return flow._C.atanh(input)
-
-
-@register_tensor_op("arctanh")
-def arctanh_op_tensor(input):
-    """
-
-    Alias for :func:`oneflow.atanh`
-    """
-    return flow._C.atanh(input)
+    return flow._C.atan2(input, other)
 
 
 if __name__ == "__main__":

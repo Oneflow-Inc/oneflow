@@ -18,19 +18,21 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_reshape(test_case, device):
     x = np.array(
         [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
     ).astype(np.float32)
-    input = flow.Tensor(x, device=flow.device(device))
+    input = flow.tensor(x, dtype=flow.float32, device=flow.device(device))
     of_shape = flow.reshape(input, shape=[2, 2, 2, -1]).numpy().shape
     np_shape = (2, 2, 2, 2)
     test_case.assertTrue(np.array_equal(of_shape, np_shape))
@@ -40,7 +42,7 @@ def _test_reshape_tuple(test_case, device):
     x = np.array(
         [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
     ).astype(np.float32)
-    input = flow.Tensor(x, device=flow.device(device))
+    input = flow.tensor(x, dtype=flow.float32, device=flow.device(device))
     of_shape = flow.reshape(input, shape=(2, 2, 2, -1)).numpy().shape
     np_shape = (2, 2, 2, 2)
     test_case.assertTrue(np.array_equal(of_shape, np_shape))
@@ -50,7 +52,9 @@ def _test_reshape_backward(test_case, device):
     x = np.array(
         [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
     ).astype(np.float32)
-    input = flow.Tensor(x, device=flow.device(device), requires_grad=True)
+    input = flow.tensor(
+        x, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     of_out = flow.reshape(input, shape=[2, 2, 2, -1]).sum()
     of_out.backward()
     np_grad = np.array(
@@ -64,6 +68,19 @@ def _test_reshape_backward(test_case, device):
     test_case.assertTrue(np.allclose(np_grad, input.grad.numpy(), 0.0001, 0.0001))
 
 
+def _test_reshape_scalar(test_case, device):
+    x = flow.tensor(2.0, device=flow.device(device))
+    test_case.assertTrue(np.array_equal(x.shape, ()))
+    a = flow.reshape(x, (1,))
+    test_case.assertTrue(np.array_equal(a.shape, (1,)))
+    b = flow.reshape(x, (1, 1, 1, 1,))
+    test_case.assertTrue(np.array_equal(b.shape, (1, 1, 1, 1)))
+    c = flow.reshape(b, ())
+    test_case.assertTrue(np.array_equal(c.shape, ()))
+    d = flow.reshape(x, ())
+    test_case.assertTrue(np.array_equal(d.shape, ()))
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
     def test_reshape(test_case):
@@ -72,6 +89,7 @@ class TestModule(flow.unittest.TestCase):
             _test_reshape,
             _test_reshape_tuple,
             _test_reshape_backward,
+            _test_reshape_scalar,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

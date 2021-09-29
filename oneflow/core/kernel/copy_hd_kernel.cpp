@@ -14,10 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/primitive/include/memcpy.h"
 
 namespace oneflow {
-
-#ifdef WITH_CUDA
 
 class CopyHdKernel final : public Kernel {
  public:
@@ -26,22 +25,41 @@ class CopyHdKernel final : public Kernel {
   ~CopyHdKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelContext* ctx) const override;
-  void ForwardHeader(const KernelContext* ctx) const override;
+  void VirtualKernelInit(KernelContext* ctx) override;
+  void ForwardDataContent(KernelContext* ctx) const override;
+  void ForwardHeader(KernelContext* ctx) const override;
+
+  std::unique_ptr<primitive::Memcpy> primitive_;
 };
 
-void CopyHdKernel::ForwardDataContent(const KernelContext* ctx) const {
-  const Blob* in_blob = ctx->BnInOp2Blob(op_attribute().input_bns(0));
-  Blob* out_blob = ctx->BnInOp2Blob(op_attribute().output_bns(0));
-  out_blob->CopyValidDataContentFrom(ctx->device_ctx(), in_blob);
+void CopyHdKernel::VirtualKernelInit(KernelContext* ctx) {
+  CHECK(this->op_conf().has_copy_hd_conf());
+  const CopyHdOpConf& copy_hd_conf = this->op_conf().copy_hd_conf();
+  primitive::MemcpyKind kind{};
+  if (copy_hd_conf.type() == CopyHdOpConf::H2D) {
+    kind = primitive::MemcpyKind::kHtoD;
+  } else if (copy_hd_conf.type() == CopyHdOpConf::D2H) {
+    kind = primitive::MemcpyKind::kDtoH;
+  } else {
+    UNIMPLEMENTED();
+  }
+  primitive_ =
+      primitive::NewPrimitive<primitive::MemcpyFactory>(this->op_conf().device_tag(), kind);
+  CHECK(primitive_);
 }
 
-void CopyHdKernel::ForwardHeader(const KernelContext* ctx) const {
+void CopyHdKernel::ForwardDataContent(KernelContext* ctx) const {
+  const Blob* in_blob = ctx->BnInOp2Blob(op_attribute().input_bns(0));
+  Blob* out_blob = ctx->BnInOp2Blob(op_attribute().output_bns(0));
+  const size_t body_byte_size = in_blob->ByteSizeOfBlobBody();
+  CHECK_EQ(out_blob->ByteSizeOfBlobBody(), body_byte_size);
+  primitive_->Launch(ctx->stream_ctx(), out_blob->mut_dptr(), in_blob->dptr(), body_byte_size);
+}
+
+void CopyHdKernel::ForwardHeader(KernelContext* ctx) const {
   ctx->BnInOp2Blob("out")->CopyHeaderFrom(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
 }
 
 REGISTER_KERNEL(OperatorConf::kCopyHdConf, CopyHdKernel);
-
-#endif
 
 }  // namespace oneflow

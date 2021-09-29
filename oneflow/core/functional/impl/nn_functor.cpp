@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -23,10 +24,10 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/random_generator.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
-#include "oneflow/core/functional/scalar.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
 
 namespace oneflow {
@@ -79,7 +80,7 @@ class ConvBaseFunctor {
     if (bias) {
       MutableAttrMap bias_attrs;
       JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
-      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {conv_out, JUST(bias.value())}, bias_attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {conv_out, JUST(bias)}, bias_attrs);
     } else {
       return conv_out;
     }
@@ -265,16 +266,21 @@ class PoolingNDFunctor {
   PoolingNDFunctor() = default;
   virtual ~PoolingNDFunctor() = default;
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
-                                const std::string& data_format, const std::vector<int32_t>& padding,
                                 const std::vector<int32_t>& kernel_size,
-                                const std::vector<int32_t>& stride,
+                                const Optional<std::vector<int32_t>>& stride,
+                                const std::vector<int32_t>& padding,
                                 const std::vector<int32_t>& dilation, const bool& return_indices,
-                                const bool& ceil_mode) const {
+                                const bool& ceil_mode, const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
     JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
     JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));
+    if (stride.has_value()) {
+      JUST(attrs.SetAttr<std::vector<int32_t>>("stride", *JUST(stride)));
+    } else {
+      JUST(attrs.SetAttr<std::vector<int32_t>>(
+          "stride", kernel_size));  // If stride is None, we set it as kernel_size to align Pytorch.
+    }
     JUST(attrs.SetAttr<std::vector<int32_t>>("dilation", dilation));
     JUST(attrs.SetAttr<bool>("return_indices", return_indices));
     JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
@@ -356,10 +362,171 @@ class AdaptiveAvgPool3DFunctor : public AdaptivePoolNDFunctor {
   }
 };
 
+class NllLossFunctor {
+ public:
+  NllLossFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("nll")
+                         .Input("input")
+                         .Input("target")
+                         .Output("out")
+                         .Output("total_weight")
+                         .Build());
+    op_weight_ = CHECK_JUST(one::OpBuilder("nll")
+                                .Input("input")
+                                .Input("target")
+                                .Input("weight")
+                                .Output("out")
+                                .Output("total_weight")
+                                .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const Optional<one::Tensor>& weight, const int64_t& ignore_index,
+                           const std::string& reduction) const {
+    const auto& input_shape = input->shape();
+    const auto& target_shape = target->shape();
+    CHECK_LE_OR_RETURN(input_shape->NumAxes(), 5);
+    CHECK_EQ_OR_RETURN(input_shape->NumAxes() - 1, target_shape->NumAxes());
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
+    JUST(attrs.SetAttr<std::string>("reduction", reduction));
+
+    std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
+    input_perm[input_perm.size() - 1] = 1;
+    for (size_t i = 1; i < input_perm.size() - 1; ++i) { input_perm[i] = i + 1; }
+    auto input_ = JUST(functional::Transpose(input, input_perm));
+    input_ =
+        JUST(functional::Reshape(input_, {-1, input_->shape()->At(input_shape->NumAxes() - 1)}));
+    auto target_ = JUST(functional::Flatten(target, 0, target_shape->NumAxes() - 1));
+
+    std::shared_ptr<Tensor> result;
+    if (weight) {
+      result =
+          JUST(OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input_, target_, JUST(weight)}, attrs));
+    } else {
+      result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input_, target_}, attrs));
+    }
+    if (reduction == "none") { result = JUST(functional::Reshape(result, *target_shape)); }
+    return result;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_weight_;
+};
+
+class BinaryCrossEntropyLossFunctor {
+ public:
+  BinaryCrossEntropyLossFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy")
+                         .Input("input")
+                         .Input("target")
+                         .Output("out")
+                         .Build());
+    op_weight_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy")
+                                .Input("input")
+                                .Input("target")
+                                .Input("weight")
+                                .Output("out")
+                                .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const Optional<one::Tensor>& weight,
+                           const std::string& reduction) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("reduction", reduction));
+    if (weight) {
+      return OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input, target, JUST(weight)}, attrs);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_weight_;
+};
+class BinaryCrossEntropyWithLogitsLossFunctor {
+ public:
+  BinaryCrossEntropyWithLogitsLossFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits")
+                         .Input("input")
+                         .Input("target")
+                         .Output("out")
+                         .Build());
+    op_weight_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits")
+                                .Input("input")
+                                .Input("target")
+                                .Input("weight")
+                                .Output("out")
+                                .Build());
+    op_pos_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits")
+                             .Input("input")
+                             .Input("target")
+                             .Input("pos_weight")
+                             .Output("out")
+                             .Build());
+    op_weight_pos_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits")
+                                    .Input("input")
+                                    .Input("target")
+                                    .Input("weight")
+                                    .Input("pos_weight")
+                                    .Output("out")
+                                    .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const Optional<one::Tensor>& weight,
+                           const Optional<one::Tensor>& pos_weight,
+                           const std::string& reduction) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("reduction", reduction));
+    JUST(attrs.SetAttr<bool>("has_pos_weight", pos_weight.has_value()));
+    if (weight) {
+      if (pos_weight) {
+        return OpInterpUtil::Dispatch<Tensor>(
+            *op_weight_pos_, {input, target, JUST(weight), JUST(pos_weight)}, attrs);
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input, target, JUST(weight)}, attrs);
+    }
+    if (pos_weight) {
+      return OpInterpUtil::Dispatch<Tensor>(*op_pos_, {input, target, JUST(pos_weight)}, attrs);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_weight_;
+  std::shared_ptr<OpExpr> op_pos_;
+  std::shared_ptr<OpExpr> op_weight_pos_;
+};
 class SparseSoftmaxCrossEntropyFunctor {
  public:
   SparseSoftmaxCrossEntropyFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("sparse_softmax_cross_entropy")
+                         .Input("prediction")
+                         .Input("label")
+                         .Output("out")
+                         .Output("prob")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits,
+                           const std::shared_ptr<one::Tensor>& label, const int64_t& depth) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("depth", depth));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {logits, label}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SparseSoftmaxCrossEntropyMsFunctor {
+ public:
+  SparseSoftmaxCrossEntropyMsFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("sparse_softmax_cross_entropy_ms")
                          .Input("prediction")
                          .Input("label")
                          .Output("out")
@@ -536,7 +703,7 @@ class NormalizationFunctor {
                            const std::shared_ptr<one::Tensor>& gamma,
                            const std::shared_ptr<one::Tensor>& beta, const int32_t& axis,
                            const float& epsilon, const float& momentum,
-                           const bool& is_training) const {
+                           const bool& training) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", axis));
     JUST(attrs.SetAttr<float>("epsilon", epsilon));
@@ -545,17 +712,16 @@ class NormalizationFunctor {
 
     CHECK_OR_RETURN((moving_mean && moving_variance) || (!moving_mean && !moving_variance))
         << "Both moving_mean and moving_variance should be None or Tensor.";
-    if (!is_training) {
+    if (!training) {
       CHECK_OR_RETURN(moving_mean && moving_variance)
           << "Must have moving_mean and moving_variance in eval mode.";
       return OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_eval_op_,
-          {x, JUST(moving_mean.value()), JUST(moving_variance.value()), gamma, beta}, attrs);
+          *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
     }
     if (moving_mean) {
       return OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_training_stats_op_,
-          {x, JUST(moving_mean.value()), JUST(moving_variance.value()), gamma, beta}, attrs);
+          *norm_training_stats_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta},
+          attrs);
     }
     return OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_, {x, gamma, beta},
                                                attrs);
@@ -567,40 +733,173 @@ class NormalizationFunctor {
   std::shared_ptr<OpExpr> norm_training_no_stats_op_;
 };
 
+class NormalizationAddReluFunctor {
+ public:
+  NormalizationAddReluFunctor() {
+    norm_eval_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
+                                   .Input("x")
+                                   .Input("moving_mean")
+                                   .Input("moving_variance")
+                                   .Input("gamma")
+                                   .Input("beta")
+                                   .Output("y")
+                                   .Output("reserve_space")
+                                   .Attr("training", false)
+                                   .Build());
+    norm_training_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
+                                             .Input("x")
+                                             .Input("moving_mean")
+                                             .Input("moving_variance")
+                                             .Input("gamma")
+                                             .Input("beta")
+                                             .Output("y")
+                                             .Output("reserve_space")
+                                             .Output("mean")
+                                             .Output("inv_variance")
+                                             .Attr("training", true)
+                                             .Build());
+    norm_training_no_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
+                                                .Input("x")
+                                                .Input("gamma")
+                                                .Input("beta")
+                                                .Output("y")
+                                                .Output("reserve_space")
+                                                .Output("mean")
+                                                .Output("inv_variance")
+                                                .Attr("training", true)
+                                                .Build());
+
+    addend_norm_eval_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
+                                          .Input("x")
+                                          .Input("addend")
+                                          .Input("moving_mean")
+                                          .Input("moving_variance")
+                                          .Input("gamma")
+                                          .Input("beta")
+                                          .Output("y")
+                                          .Output("reserve_space")
+                                          .Attr("training", false)
+                                          .Build());
+    addend_norm_training_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
+                                                    .Input("x")
+                                                    .Input("addend")
+                                                    .Input("moving_mean")
+                                                    .Input("moving_variance")
+                                                    .Input("gamma")
+                                                    .Input("beta")
+                                                    .Output("y")
+                                                    .Output("reserve_space")
+                                                    .Output("mean")
+                                                    .Output("inv_variance")
+                                                    .Attr("training", true)
+                                                    .Build());
+    addend_norm_training_no_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
+                                                       .Input("x")
+                                                       .Input("addend")
+                                                       .Input("gamma")
+                                                       .Input("beta")
+                                                       .Output("y")
+                                                       .Output("reserve_space")
+                                                       .Output("mean")
+                                                       .Output("inv_variance")
+                                                       .Attr("training", true)
+                                                       .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<one::Tensor>& addend,
+                           const Optional<one::Tensor>& moving_mean,
+                           const Optional<one::Tensor>& moving_variance,
+                           const std::shared_ptr<one::Tensor>& gamma,
+                           const std::shared_ptr<one::Tensor>& beta, const int32_t& axis,
+                           const float& epsilon, const float& momentum,
+                           const bool& is_training) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    JUST(attrs.SetAttr<float>("epsilon", epsilon));
+    // convert torch momentum to tensorflow momentum
+    JUST(attrs.SetAttr<float>("momentum", 1 - momentum));
+
+    CHECK_OR_RETURN((moving_mean && moving_variance) || (!moving_mean && !moving_variance))
+        << "Both moving_mean and moving_variance should be None or Tensor.";
+    if (!is_training) {
+      CHECK_OR_RETURN(moving_mean && moving_variance)
+          << "Must have moving_mean and moving_variance in eval mode.";
+      if (addend) {
+        return OpInterpUtil::Dispatch<one::Tensor>(
+            *addend_norm_eval_op_,
+            {x, JUST(addend), JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
+      } else {
+        return OpInterpUtil::Dispatch<one::Tensor>(
+            *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
+      }
+    } else if (moving_mean) {
+      if (addend) {
+        return OpInterpUtil::Dispatch<one::Tensor>(
+            *addend_norm_training_stats_op_,
+            {x, JUST(addend), JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
+      } else {
+        return OpInterpUtil::Dispatch<one::Tensor>(
+            *norm_training_stats_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta},
+            attrs);
+      }
+    } else {
+      if (addend) {
+        return OpInterpUtil::Dispatch<one::Tensor>(*addend_norm_training_no_stats_op_,
+                                                   {x, JUST(addend), gamma, beta}, attrs);
+      } else {
+        return OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_, {x, gamma, beta},
+                                                   attrs);
+      }
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> norm_eval_op_;
+  std::shared_ptr<OpExpr> norm_training_stats_op_;
+  std::shared_ptr<OpExpr> norm_training_no_stats_op_;
+  std::shared_ptr<OpExpr> addend_norm_eval_op_;
+  std::shared_ptr<OpExpr> addend_norm_training_stats_op_;
+  std::shared_ptr<OpExpr> addend_norm_training_no_stats_op_;
+};
+
 class PadFunctor {
  public:
   PadFunctor() {
-    constant_pad_1d_ = CHECK_JUST(one::OpBuilder("constant_pad1d").Input("x").Output("y").Build());
-    constant_pad_2d_ = CHECK_JUST(one::OpBuilder("constant_pad2d").Input("x").Output("y").Build());
-    constant_pad_3d_ = CHECK_JUST(one::OpBuilder("constant_pad3d").Input("x").Output("y").Build());
+    pad_ = CHECK_JUST(one::OpBuilder("pad").Input("x").Output("y").Build());
     reflect_pad_ = CHECK_JUST(one::OpBuilder("reflection_pad2d").Input("x").Output("y").Build());
     replicate_pad_ = CHECK_JUST(one::OpBuilder("replication_pad2d").Input("x").Output("y").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& pad,
                            const std::string& mode, const Scalar& value) const {
-    size_t padding_size = 2 * x->shape()->NumAxes();
-    CHECK_LE_OR_RETURN(pad.size(), padding_size)
+    const int64_t ndim = x->shape()->NumAxes();
+    CHECK_LE_OR_RETURN(ndim, 5) << "Dimension of input tensor should less than or equal to 5";
+    CHECK_LE_OR_RETURN(pad.size(), 2 * ndim)
         << "Pad size should less than or equal to input axes * 2.";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
     if (mode == "constant") {
+      CHECK_EQ_OR_RETURN(pad.size() % 2, 0)
+          << "Length of pad must be even but instead it equals " << pad.size();
       if (IsFloatingDataType(x->dtype()->data_type())) {
-        JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
-        JUST(attrs.SetAttr<int64_t>("integral_value", 0));
+        JUST(attrs.SetAttr<double>("floating_constant_value", JUST(value.As<double>())));
+        JUST(attrs.SetAttr<int64_t>("integral_constant_value", 0));
       } else if (IsIntegralDataType(x->dtype()->data_type())) {
-        JUST(attrs.SetAttr<double>("floating_value", 0));
-        JUST(attrs.SetAttr<int64_t>("integral_value", JUST(value.As<int64_t>())));
+        JUST(attrs.SetAttr<double>("floating_constant_value", 0));
+        JUST(attrs.SetAttr<int64_t>("integral_constant_value", JUST(value.As<int64_t>())));
       } else {
         UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
       }
-      switch (x->shape()->NumAxes()) {
-        case 3: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_1d_, {x}, attrs);
-        case 4: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_2d_, {x}, attrs);
-        case 5: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_3d_, {x}, attrs);
-        default:
-          UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode << ", but " << x->shape()->NumAxes()
-                                      << "d-tensor is not support yet! ";
+
+      std::vector<int64_t> pad_before(ndim, 0);
+      std::vector<int64_t> pad_after(ndim, 0);
+      const int64_t pad_pair = pad.size() / 2;
+      for (int64_t i = 0; i < pad_pair; ++i) {
+        pad_before[ndim - i - 1] = pad[2 * i];
+        pad_after[ndim - i - 1] = pad[2 * i + 1];
       }
+      JUST(attrs.SetAttr<std::vector<int64_t>>("padding_before", pad_before));
+      JUST(attrs.SetAttr<std::vector<int64_t>>("padding_after", pad_after));
+      return OpInterpUtil::Dispatch<Tensor>(*pad_, {x}, attrs);
 
     } else if (mode == "reflect") {
       return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_, {x}, attrs);
@@ -613,9 +912,7 @@ class PadFunctor {
   }
 
  private:
-  std::shared_ptr<OpExpr> constant_pad_1d_;
-  std::shared_ptr<OpExpr> constant_pad_2d_;
-  std::shared_ptr<OpExpr> constant_pad_3d_;
+  std::shared_ptr<OpExpr> pad_;
   std::shared_ptr<OpExpr> reflect_pad_;
   std::shared_ptr<OpExpr> replicate_pad_;
 };
@@ -629,7 +926,9 @@ class DropoutFunctor {
         CHECK_JUST(one::OpBuilder("dropout").Input("in").Input("mask").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
-                           const Optional<one::Generator>& generator) const {
+                           const bool& training, const Optional<one::Generator>& generator) const {
+    if (!training || p == 0.0) return x;
+
     MutableAttrMap random_mask_like_attrs;
     JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
 
@@ -637,7 +936,7 @@ class DropoutFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
 
     JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
@@ -680,16 +979,22 @@ class AvgPoolingNDFunctor {
  public:
   AvgPoolingNDFunctor() = default;
   virtual ~AvgPoolingNDFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& data_format,
-                           const std::vector<int32_t>& padding,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int32_t>& kernel_size,
-                           const std::vector<int32_t>& stride, const bool& ceil_mode,
-                           const bool& count_include_pad, const int64_t& divisor_override) const {
+                           const Optional<std::vector<int32_t>>& stride,
+                           const std::vector<int32_t>& padding, const bool& ceil_mode,
+                           const bool& count_include_pad, const int64_t& divisor_override,
+                           const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
     JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
     JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));
+    if (stride.has_value()) {
+      JUST(attrs.SetAttr<std::vector<int32_t>>("stride", *JUST(stride)));
+    } else {
+      JUST(attrs.SetAttr<std::vector<int32_t>>(
+          "stride", kernel_size));  // If stride is None, we set it as kernel_size to align Pytorch.
+    }
     JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
     JUST(attrs.SetAttr<bool>("count_include_pad", count_include_pad));
     JUST(attrs.SetAttr<int64_t>("divisor_override", divisor_override));
@@ -953,7 +1258,7 @@ class FusedBiasAddDropoutFunctor {
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
-      gen = JUST(generator.value());
+      gen = JUST(generator);
     }
     JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
@@ -1012,6 +1317,28 @@ class FusedScaleTrilFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class CtcGreedyDecoderFunctor {
+ public:
+  CtcGreedyDecoderFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("ctc_greedy_decoder")
+                         .Input("log_probs")
+                         .Input("input_lengths")
+                         .Output("decoded")
+                         .Output("neg_sum_logits")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& log_probs,
+                                const std::shared_ptr<one::Tensor>& input_lengths,
+                                const bool& merge_repeated) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("merge_repeated", merge_repeated));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {log_probs, input_lengths}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -1031,7 +1358,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
+  m.add_functor<impl::NllLossFunctor>("NllLoss");
+  m.add_functor<impl::BinaryCrossEntropyLossFunctor>("BinaryCrossEntropyLoss");
+  m.add_functor<impl::BinaryCrossEntropyWithLogitsLossFunctor>("BinaryCrossEntropyWithLogitsLoss");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
+  m.add_functor<impl::SparseSoftmaxCrossEntropyMsFunctor>("SparseSoftmaxCrossEntropyMs");
   m.add_functor<impl::SoftmaxCrossEntropyFunctor>("SoftmaxCrossEntropy");
   m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");
   m.add_functor<impl::SmoothL1LossFunctor>("SmoothL1Loss");
@@ -1039,6 +1370,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AffineGridFunctor>("AffineGrid");
   m.add_functor<impl::GridSampleFunctor>("GridSample");
   m.add_functor<impl::NormalizationFunctor>("Normalization");
+  m.add_functor<impl::NormalizationAddReluFunctor>("NormalizationAddRelu");
   m.add_functor<impl::PadFunctor>("Pad");
   m.add_functor<impl::DropoutFunctor>("Dropout");
   m.add_functor<impl::DropoutGradFunctor>("DropoutGrad");
@@ -1056,6 +1388,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedBiasAddGeluGradFunctor>("FusedBiasAddGeluGrad");
   m.add_functor<impl::FusedBiasAddDropoutFunctor>("FusedBiasAddDropout");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
+  m.add_functor<impl::CtcGreedyDecoderFunctor>("CtcGreedyDecoder");
 };
 
 }  // namespace functional

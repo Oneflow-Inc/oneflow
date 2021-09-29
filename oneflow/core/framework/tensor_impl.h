@@ -78,7 +78,7 @@ class TensorImpl {
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad);
   Maybe<Tensor> mut_acc_grad();
-  void set_requires_grad(bool requires_grad);
+  Maybe<void> set_requires_grad(bool requires_grad);
   Maybe<void> set_retain_grad(bool retain_grad);
   void set_is_leaf(bool is_leaf) { is_leaf_ = is_leaf; }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() { return autograd_meta_; }
@@ -157,7 +157,7 @@ class ConsistentTensorImpl : public TensorImpl {
     return nullptr;
   }
 
-  Maybe<TransportToken> transport_token() const { return transport_token_.value(); }
+  Maybe<TransportToken> transport_token() const { return JUST(transport_token_); }
 
   Maybe<void> set_transport_token(const TransportToken& transport_token) {
     CHECK_OR_RETURN(!transport_token_.has_value());

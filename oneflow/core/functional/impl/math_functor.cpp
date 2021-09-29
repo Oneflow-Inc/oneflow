@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -25,9 +26,9 @@ limitations under the License.
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
-#include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/functional/tensor_processor.h"
 
 namespace oneflow {
 namespace one {
@@ -187,11 +188,11 @@ class ScalarPowFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ReduceSumFunctor {
+class ReduceMaxFunctor {
  public:
-  ReduceSumFunctor() {
+  ReduceMaxFunctor() {
     op_ = CHECK_JUST(
-        one::OpBuilder("reduce_sum").Input("input_tensor").Output("output_tensor").Build());
+        one::OpBuilder("reduce_max").Input("input_tensor").Output("output_tensor").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
@@ -211,11 +212,66 @@ class ReduceSumFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ReduceMinFunctor {
+ public:
+  ReduceMinFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("reduce_min").Input("input_tensor").Output("output_tensor").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
+                           const bool& keepdims) const {
+    MutableAttrMap attrs;
+    if (axis.empty()) {
+      std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+      std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
+    } else {
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+    }
+    JUST(attrs.SetAttr<bool>("keepdims", keepdims));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ReduceSumFunctor {
+ public:
+  ReduceSumFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("reduce_sum").Input("input_tensor").Output("output_tensor").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
+                           const bool& keepdims) const {
+    // const DataType dtype = x->dtype()->data_type();
+    MutableAttrMap attrs;
+    if (axis.empty()) {
+      std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+      std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
+    } else {
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+    }
+    JUST(attrs.SetAttr<bool>("keepdims", keepdims));
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ReduceMeanFunctor {
  public:
   ReduceMeanFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
+    // ReduceMean only calculate floating values.
+    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type()))
+        << "RuntimeError: Can only calculate the mean of floating types.";
     const auto& sum = JUST(functional::ReduceSum(x, axis, keepdims));
     size_t reduce_count = 1;
     if (axis.empty()) {
@@ -272,17 +328,23 @@ class TransposeFunctor {
 class ArangeFunctor {
  public:
   ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
-  Maybe<Tensor> operator()(const int64_t& start, const int64_t& limit, const int64_t& delta,
+  Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("start", start));
-    JUST(attrs.SetAttr<int64_t>("limit", limit));
-    JUST(attrs.SetAttr<int64_t>("delta", delta));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-
+    const DataType range_dtype = dtype->data_type();
+    JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
+    if (IsIntegralDataType(range_dtype)) {
+      JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+    } else {
+      JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
+      JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
+      JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+    }
     OpExprInterpContext ctx(attrs);
-    if (device) { ctx.device = JUST(device.value()); }
+    if (device) { ctx.device = JUST(device); }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }
 
@@ -292,23 +354,30 @@ class ArangeFunctor {
 
 class Arange2Functor {
  public:
-  Maybe<Tensor> operator()(const int64_t& limit, const Symbol<DType>& dtype,
+  Maybe<Tensor> operator()(const Scalar& limit, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
-    return Arange(0, limit, 1, dtype, device);
+    return Arange(Scalar(0), limit, Scalar(1), dtype, device);
   }
 };
 
 class ConsistentArangeFunctor {
  public:
   ConsistentArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
-  Maybe<Tensor> operator()(const int64_t& start, const int64_t& limit, const int64_t& delta,
+  Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Symbol<DType>& dtype, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("start", start));
-    JUST(attrs.SetAttr<int64_t>("limit", limit));
-    JUST(attrs.SetAttr<int64_t>("delta", delta));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    const DataType range_dtype = dtype->data_type();
+    JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
+    if (IsIntegralDataType(range_dtype)) {
+      JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+    } else {
+      JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
+      JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
+      JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+    }
 
     if (LazyMode::is_enabled()) {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
@@ -329,10 +398,10 @@ class ConsistentArangeFunctor {
 
 class ConsistentArange2Functor {
  public:
-  Maybe<Tensor> operator()(const int64_t& limit, const Symbol<DType>& dtype,
+  Maybe<Tensor> operator()(const Scalar& limit, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
-    return ConsistentArange(0, limit, 1, dtype, placement, sbp_tuple);
+    return ConsistentArange(Scalar(0), limit, Scalar(1), dtype, placement, sbp_tuple);
   }
 };
 
@@ -341,11 +410,21 @@ class ArgMaxFunctor : public UnaryFunctor {
   ArgMaxFunctor() { op_ = CHECK_JUST(one::OpBuilder("argmax").Input("in").Output("out").Build()); }
 };
 
+class ArgMinFunctor {
+ public:
+  ArgMinFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return ArgMax(JUST(functional::Negative(x)));
+  }
+};
+
 class CastFunctor {
  public:
   CastFunctor() { op_ = CHECK_JUST(one::OpBuilder("cast").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Symbol<DType>& dtype) const {
+    if (x->dtype() == dtype) { return x; }
+
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -369,23 +448,23 @@ class ClampFunctor {
     MutableAttrMap attrs;
     if (IsFloatingDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
-        const auto& min_val = JUST(min.value());
+        const auto& min_val = JUST(min);
         JUST(attrs.SetAttr<double>("floating_min", JUST(min_val->As<double>())));
         JUST(attrs.SetAttr<int64_t>("integral_min", 0));
       }
       if (max.has_value()) {
-        const auto& max_val = JUST(max.value());
+        const auto& max_val = JUST(max);
         JUST(attrs.SetAttr<double>("floating_max", JUST(max_val->As<double>())));
         JUST(attrs.SetAttr<int64_t>("integral_max", 0));
       }
     } else if (IsIntegralDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
-        const auto& min_val = JUST(min.value());
+        const auto& min_val = JUST(min);
         JUST(attrs.SetAttr<double>("floating_min", 0));
         JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min_val->As<int64_t>())));
       }
       if (max.has_value()) {
-        const auto& max_val = JUST(max.value());
+        const auto& max_val = JUST(max);
         JUST(attrs.SetAttr<double>("floating_max", 0));
         JUST(attrs.SetAttr<int64_t>("integral_max", JUST(max_val->As<int64_t>())));
       }
@@ -427,23 +506,23 @@ class ClampGradFunctor {
     MutableAttrMap attrs;
     if (IsFloatingDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
-        const auto& min_val = JUST(min.value());
+        const auto& min_val = JUST(min);
         JUST(attrs.SetAttr<double>("floating_min", JUST(min_val->As<double>())));
         JUST(attrs.SetAttr<int64_t>("integral_min", 0));
       }
       if (max.has_value()) {
-        const auto& max_val = JUST(max.value());
+        const auto& max_val = JUST(max);
         JUST(attrs.SetAttr<double>("floating_max", JUST(max_val->As<double>())));
         JUST(attrs.SetAttr<int64_t>("integral_max", 0));
       }
     } else if (IsIntegralDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
-        const auto& min_val = JUST(min.value());
+        const auto& min_val = JUST(min);
         JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min_val->As<int64_t>())));
         JUST(attrs.SetAttr<double>("floating_min", 0));
       }
       if (max.has_value()) {
-        const auto& max_val = JUST(max.value());
+        const auto& max_val = JUST(max);
         JUST(attrs.SetAttr<double>("floating_max", 0));
         JUST(attrs.SetAttr<int64_t>("integral_max", JUST(max_val->As<int64_t>())));
       }
@@ -467,12 +546,14 @@ class ClampGradFunctor {
   std::shared_ptr<OpExpr> clip_max_op_;
 };
 
-class SelectFirstFunctor {
+class SelectTopNFunctor {
  public:
-  SelectFirstFunctor() { op_ = CHECK_JUST(one::SelectFirstOpExpr::New()); }
+  SelectTopNFunctor() { op_ = CHECK_JUST(one::SelectTopNOpExpr::New()); }
 
-  Maybe<Tensor> operator()(const TensorTuple& inputs) const {
-    const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, inputs));
+  Maybe<TensorTuple> operator()(const TensorTuple& inputs, int32_t n) const {
+    MutableAttrMap attr;
+    JUST(attr.SetAttr<int32_t>("top_n", n));
+    const auto& output = JUST(OpInterpUtil::Dispatch<one::TensorTuple>(*op_, inputs, attr));
     return output;
   }
 
@@ -661,47 +742,85 @@ class ScalarLogicalLessEqual2Functor {
   }
 };
 
+class ScalarLogicalAndFunctor : public ScalarLogicalBaseFunctor {
+ public:
+  ScalarLogicalAndFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_and") {}
+};
+
+// (scalar && x) = (x && scalar)
+class ScalarLogicalAnd2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarLogicalAnd(x, scalar);
+  }
+};
+
+class ScalarLogicalOrFunctor : public ScalarLogicalBaseFunctor {
+ public:
+  ScalarLogicalOrFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_or") {}
+};
+
+// (scalar || x) = (x || scalar)
+class ScalarLogicalOr2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarLogicalOr(x, scalar);
+  }
+};
+
+class ScalarLogicalXorFunctor : public ScalarLogicalBaseFunctor {
+ public:
+  ScalarLogicalXorFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_xor") {}
+};
+
+// (scalar ^ x) = (x ^ scalar)
+class ScalarLogicalXor2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarLogicalXor(x, scalar);
+  }
+};
+
 }  // namespace impl
 
+using namespace impl;
+
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  m.add_functor<impl::AddNFunctor>("AddN");
-  m.add_functor<impl::ScalarAddFunctor>("ScalarAdd");
-  m.add_functor<impl::ScalarSubFunctor>("ScalarSub");
-  m.add_functor<impl::ScalarMulFunctor>("ScalarMul");
-  m.add_functor<impl::ScalarDivFunctor>("ScalarDiv");
-  m.add_functor<impl::ScalarAdd2Functor>("ScalarAdd2");
-  m.add_functor<impl::ScalarSub2Functor>("ScalarSub2");
-  m.add_functor<impl::ScalarMul2Functor>("ScalarMul2");
-  m.add_functor<impl::ScalarDiv2Functor>("ScalarDiv2");
-  m.add_functor<impl::ScalarPowFunctor>("ScalarPow");
-  m.add_functor<impl::ReduceSumFunctor>("ReduceSum");
-  m.add_functor<impl::ReduceProdFunctor>("ReduceProd");
-  m.add_functor<impl::ReduceMeanFunctor>("ReduceMean");
-  m.add_functor<impl::TransposeFunctor>("Transpose");
-  m.add_functor<impl::ArangeFunctor>("Arange");
-  m.add_functor<impl::Arange2Functor>("Arange2");
-  m.add_functor<impl::ConsistentArangeFunctor>("ConsistentArange");
-  m.add_functor<impl::ConsistentArange2Functor>("ConsistentArange2");
-  m.add_functor<impl::ArgMaxFunctor>("ArgMax");
-  m.add_functor<impl::CastFunctor>("Cast");
-  m.add_functor<impl::ClampFunctor>("Clamp");
-  m.add_functor<impl::ClampGradFunctor>("ClampGrad");
-  m.add_functor<impl::SelectFirstFunctor>("SelectFirst");
-  m.add_functor<impl::MinimumFunctor>("Minimum");
-  m.add_functor<impl::MaximumFunctor>("Maximum");
-  m.add_functor<impl::ScalarFModFunctor>("ScalarFMod");
-  m.add_functor<impl::ScalarLogicalEqualFunctor>("ScalarLogicalEqual");
-  m.add_functor<impl::ScalarLogicalEqual2Functor>("ScalarLogicalEqual2");
-  m.add_functor<impl::ScalarLogicalNotEqualFunctor>("ScalarLogicalNotEqual");
-  m.add_functor<impl::ScalarLogicalNotEqual2Functor>("ScalarLogicalNotEqual2");
-  m.add_functor<impl::ScalarLogicalGreaterFunctor>("ScalarLogicalGreater");
-  m.add_functor<impl::ScalarLogicalGreater2Functor>("ScalarLogicalGreater2");
-  m.add_functor<impl::ScalarLogicalGreaterEqualFunctor>("ScalarLogicalGreaterEqual");
-  m.add_functor<impl::ScalarLogicalGreaterEqual2Functor>("ScalarLogicalGreaterEqual2");
-  m.add_functor<impl::ScalarLogicalLessFunctor>("ScalarLogicalLess");
-  m.add_functor<impl::ScalarLogicalLess2Functor>("ScalarLogicalLess2");
-  m.add_functor<impl::ScalarLogicalLessEqualFunctor>("ScalarLogicalLessEqual");
-  m.add_functor<impl::ScalarLogicalLessEqual2Functor>("ScalarLogicalLessEqual2");
+  m.add_functor<AddNFunctor>("Add");
+  m.add_functor<ScalarAddFunctor, ScalarAdd2Functor>("ScalarAdd");
+  m.add_functor<ScalarSubFunctor, ScalarSub2Functor>("ScalarSub");
+  m.add_functor<ScalarMulFunctor, ScalarMul2Functor>("ScalarMul");
+  m.add_functor<ScalarDivFunctor, ScalarDiv2Functor>("ScalarDiv");
+  m.add_functor<ScalarPowFunctor>("ScalarPow");
+  m.add_functor<ReduceMaxFunctor>("ReduceMax");
+  m.add_functor<ReduceMeanFunctor>("ReduceMean");
+  m.add_functor<ReduceMinFunctor>("ReduceMin");
+  m.add_functor<ReduceSumFunctor>("ReduceSum");
+  m.add_functor<ReduceProdFunctor>("ReduceProd");
+  m.add_functor<TransposeFunctor>("Transpose");
+  m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
+  m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
+  m.add_functor<ArgMaxFunctor>("ArgMax");
+  m.add_functor<ArgMinFunctor>("ArgMin");
+  m.add_functor<CastFunctor>("Cast");
+  m.add_functor<ClampFunctor>("Clamp");
+  m.add_functor<ClampGradFunctor>("ClampGrad");
+  m.add_functor<SelectTopNFunctor>("SelectTopN");
+  m.add_functor<MinimumFunctor>("Minimum");
+  m.add_functor<MaximumFunctor>("Maximum");
+  m.add_functor<ScalarFModFunctor>("ScalarFMod");
+  m.add_functor<ScalarLogicalEqualFunctor, ScalarLogicalEqual2Functor>("ScalarLogicalEqual");
+  m.add_functor<ScalarLogicalNotEqualFunctor, ScalarLogicalNotEqual2Functor>(
+      "ScalarLogicalNotEqual");
+  m.add_functor<ScalarLogicalGreaterFunctor, ScalarLogicalGreater2Functor>("ScalarLogicalGreater");
+  m.add_functor<ScalarLogicalGreaterEqualFunctor, ScalarLogicalGreaterEqual2Functor>(
+      "ScalarLogicalGreaterEqual");
+  m.add_functor<ScalarLogicalLessFunctor, ScalarLogicalLess2Functor>("ScalarLogicalLess");
+  m.add_functor<ScalarLogicalLessEqualFunctor, ScalarLogicalLessEqual2Functor>(
+      "ScalarLogicalLessEqual");
+  m.add_functor<ScalarLogicalAndFunctor, ScalarLogicalAnd2Functor>("ScalarLogicalAnd");
+  m.add_functor<ScalarLogicalOrFunctor, ScalarLogicalOr2Functor>("ScalarLogicalOr");
+  m.add_functor<ScalarLogicalXorFunctor, ScalarLogicalXor2Functor>("ScalarLogicalXor");
 };
 
 }  // namespace functional

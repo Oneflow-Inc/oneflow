@@ -18,20 +18,37 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
-
 import oneflow as flow
 import oneflow.unittest
+from oneflow.test_utils.automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestParameter(flow.unittest.TestCase):
     @autotest(n=1)
     def test_parameter_grad_fn_none(test_case):
-        x = torch.Tensor(2, 3).requires_grad_(True)
+        x = torch.ones(2, 3).requires_grad_(True)
         y = x + x
         z = torch.nn.Parameter(y)
         return z.grad_fn
+
+    @autotest(n=1)
+    def test_parameter_set_data_autograd_meta(test_case):
+        x = torch.ones(2, 3).requires_grad_(True)
+        y = x + x
+        z = torch.nn.Parameter(x)
+        z.data = y
+        return z.grad_fn, z.is_leaf
+
+    def test_parameter_set_data(test_case):
+        a = flow.nn.Parameter(flow.ones(2, 3), False)
+        old_id = id(a)
+        b = flow.nn.Parameter(flow.ones(4, 5), True)
+        a.data = b
+        test_case.assertEqual(old_id, id(a))
+        test_case.assertTrue(a.shape == (4, 5))
+        test_case.assertFalse(a.requires_grad)
+        test_case.assertTrue(a.is_leaf)
 
 
 if __name__ == "__main__":

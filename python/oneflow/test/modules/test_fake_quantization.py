@@ -19,7 +19,8 @@ from collections import OrderedDict
 
 import math
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
@@ -142,8 +143,8 @@ def _run_test_fake_quantize(
     per_layer_quantization,
 ):
     input = (np.random.random(in_shape) - 0.5).astype(type_name_to_np_type[dtype])
-    input_tensor = flow.Tensor(
-        input, requires_grad=True, device=flow.device(device_type)
+    input_tensor = flow.tensor(
+        input, dtype=flow.float32, requires_grad=True, device=flow.device(device_type)
     )
     min_max_observer = flow.nn.MinMaxObserver(
         quantization_formula=quantization_formula,

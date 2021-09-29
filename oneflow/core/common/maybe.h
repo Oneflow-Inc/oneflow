@@ -23,16 +23,9 @@ limitations under the License.
 #include "oneflow/core/common/shared_or_scalar.h"
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/common/just.h"
 
 namespace oneflow {
-
-template<typename T, typename Enabled = void>
-class Maybe;
-
-Maybe<std::string> FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>&);
-namespace {
-std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>&);
-}
 
 template<typename T>
 struct is_maybe {
@@ -270,39 +263,6 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   Maybe<PtrT> maybe_ptr_;
 };
 
-#define __MaybeErrorStackCheckWrapper__(...) __VA_ARGS__
-
-inline bool MaybeIsOk(Maybe<void>&& maybe) {
-  if (!maybe.IsOk()) { LOG(ERROR) << maybe.GetSerializedError(); }
-  return maybe.IsOk();
-}
-
-#define MAYBE_FAILED_LOC __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
-
-#if defined(__GNUC__) || defined(__CUDACC__) || defined(__clang__)
-
-namespace private_details {
-
-inline void MaybeErrorAddStackFrame(const std::shared_ptr<cfg::ErrorProto>& err,
-                                    const std::string& file, int64_t line, const std::string& func,
-                                    const std::string& message) {
-  auto* stack_frame = err->add_stack_frame();
-  stack_frame->set_file(file);
-  stack_frame->set_line(line);
-  stack_frame->set_function(func);
-  stack_frame->set_error_msg(message);
-}
-
-template<typename... T>
-Error&& MaybeErrorAddMessage(Error&& err, T&&... msg) {
-  __attribute__((unused)) int dummy[] = {((void)(std::move(err) << std::forward<T>(msg)), 0)...};
-  return std::move(err);
-}
-
-}  // namespace private_details
-
-#define TRY(...) __MaybeErrorStackCheckWrapper__(__VA_ARGS__)
-
 namespace {
 std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>& error_proto) {
   // return error msg got from formatted function or debugstring.
@@ -311,66 +271,17 @@ std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>& e
   return error_str.first;
 }
 }  // namespace
-
-#define JUST(...)                                                                           \
-  ({                                                                                        \
-    auto&& maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__);                            \
-    if (!maybe.IsOk()) {                                                                    \
-      ::oneflow::private_details::MaybeErrorAddStackFrame(                                  \
-          maybe.error(), __FILE__, __LINE__, __FUNCTION__, OF_PP_STRINGIZE((__VA_ARGS__))); \
-      return maybe.error();                                                                 \
-    }                                                                                       \
-    std::move(maybe);                                                                       \
-  }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
-#define CHECK_JUST(...)                                                                  \
-  ([&](const char* func_name) {                                                          \
-    auto&& maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__);                         \
-    if (!maybe.IsOk()) {                                                                 \
-      ::oneflow::private_details::MaybeErrorAddStackFrame(                               \
-          maybe.error(), __FILE__, __LINE__, func_name, OF_PP_STRINGIZE((__VA_ARGS__))); \
-      LOG(FATAL) << maybe.GetSerializedError();                                          \
-    }                                                                                    \
-    return std::move(maybe);                                                             \
-  })(__FUNCTION__)                                                                       \
-      .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
-
-#define JUST_MSG(value, ...)                                                               \
-  ({                                                                                       \
-    auto&& maybe = (value);                                                                \
-    if (!maybe.IsOk()) {                                                                   \
-      return ::oneflow::private_details::MaybeErrorAddMessage(                             \
-          ::oneflow::Error(maybe.error()).AddStackFrame(__FILE__, __LINE__, __FUNCTION__), \
-          OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__);                                    \
-    }                                                                                      \
-    std::move(maybe);                                                                      \
-  }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
-
-#define CHECK_JUST_MSG(value, ...)                                                             \
-  ([&](const char* func_name) {                                                                \
-    auto&& maybe = (value);                                                                    \
-    if (!maybe.IsOk()) {                                                                       \
-      LOG(FATAL)                                                                               \
-          << ::oneflow::private_details::MaybeErrorAddMessage(                                 \
-                 ::oneflow::Error(maybe.error()).AddStackFrame(__FILE__, __LINE__, func_name), \
-                 OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__)                                  \
-                 ->DebugString();                                                              \
-    }                                                                                          \
-    return std::move(maybe);                                                                   \
-  })(__FUNCTION__)                                                                             \
-      .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
-
-#define CHECK_OK(...) CHECK(MaybeIsOk(__VA_ARGS__))
-
-#define OF_RETURN_IF_ERROR(...)                                                \
-  for (auto&& maybe_##__LINE__ = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
-       !maybe_##__LINE__.IsOk();)                                              \
-  return Error(maybe_##__LINE__.error()).AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
-
-#else
-#error statement expression is no supported, please implement try-catch version of JUST
-#endif
-
 }  // namespace oneflow
+
+#define CHECK_OK(...)                                         \
+  for (auto&& maybe = __JustStackCheckWrapper__(__VA_ARGS__); \
+       GOOGLE_PREDICT_BRANCH_NOT_TAKEN(!maybe.IsOk());)       \
+  LOG(FATAL) << OF_PP_STRINGIZE(__VA_ARGS__) << " is not OK:\n" << maybe.GetSerializedError()
+
+#define OF_RETURN_IF_ERROR(...)                                          \
+  for (auto&& maybe_##__LINE__ = __JustStackCheckWrapper__(__VA_ARGS__); \
+       !maybe_##__LINE__.IsOk();)                                        \
+  return Error(maybe_##__LINE__.error()).AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
 
 #define OF_TODO() return Error::TodoError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
 #define OF_UNIMPLEMENTED() \
@@ -380,6 +291,15 @@ std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>& e
   return Error::RuntimeError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) << "RuntimeError " \
                                                                                   ": "
 #define RETURN_ERROR_WITH_BUG_PROMPT() OF_RUNTIME_ERROR() << kOfBugIssueUploadPrompt
+
+#define OF_LOG_ONCE(x)          \
+  {                             \
+    static bool warned = false; \
+    if (!warned) {              \
+      warned = true;            \
+      x;                        \
+    }                           \
+  }
 
 #define OF_COMPLIE_OPTION_ERROR()                                                         \
   return Error::CompileOptionWrongError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \

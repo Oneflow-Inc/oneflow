@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/nd_sbp.h"
-#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_mgr.h"
+#include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/common/decorator.h"
 
@@ -65,8 +65,8 @@ class CastToConsistent : public OpExprGradFunction<CastConsistentCaptureState> {
   Maybe<void> Capture(CastConsistentCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs,
                       const OpExprInterpContext& interp_ctx) const override {
-    ctx->parallel_desc = JUST(interp_ctx.parallel_desc.value());
-    ctx->nd_sbp = JUST(GetDualNdSbp(JUST(interp_ctx.nd_sbp.value())));
+    ctx->parallel_desc = JUST(interp_ctx.parallel_desc);
+    ctx->nd_sbp = JUST(GetDualNdSbp(JUST(interp_ctx.nd_sbp)));
     return Maybe<void>::Ok();
   }
 

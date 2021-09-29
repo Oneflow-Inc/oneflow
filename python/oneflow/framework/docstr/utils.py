@@ -15,7 +15,27 @@ limitations under the License.
 """
 
 import oneflow._oneflow_internal
+from doctest import DocTestParser, DebugRunner, DocTestRunner
+
+
+def _test_docstr(docstr, verbose=True, optionflags=0, raise_on_error=True):
+    parser = DocTestParser()
+    if raise_on_error:
+        runner = DebugRunner(verbose=verbose, optionflags=optionflags)
+    else:
+        runner = DocTestRunner(verbose=verbose, optionflags=optionflags)
+    test = parser.get_doctest(docstr, {}, __name__, __file__, 0)
+    runner.run(test)
 
 
 def add_docstr(fun, docstr: str):
     return oneflow._oneflow_internal.add_doc(fun, docstr)
+
+
+def reset_docstr(o, docstr):
+    if type(o) == type:
+        assert hasattr(o, "__doc__"), str(o) + " does not have a docstring!"
+        setattr(o, "__doc__", docstr)
+        return o
+    else:
+        return oneflow._oneflow_internal.reset_doc(o, docstr)

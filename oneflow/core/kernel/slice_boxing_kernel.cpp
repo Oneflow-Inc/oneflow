@@ -50,7 +50,7 @@ class SliceBoxingCopyKernel final : public SliceBoxingKernel<device_type, T> {
 
  private:
   virtual const SliceBoxingConf& GetCustomizedBoxingConf() const override;
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type, typename T>
@@ -62,7 +62,7 @@ class SliceBoxingAddKernel final : public SliceBoxingKernel<device_type, T> {
 
  private:
   virtual const SliceBoxingConf& GetCustomizedBoxingConf() const override;
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type, typename T>
@@ -94,7 +94,7 @@ const SliceBoxingConf& SliceBoxingCopyKernel<device_type, T>::GetCustomizedBoxin
 }
 
 template<DeviceType device_type, typename T>
-void SliceBoxingCopyKernel<device_type, T>::ForwardDataContent(const KernelContext* ctx) const {
+void SliceBoxingCopyKernel<device_type, T>::ForwardDataContent(KernelContext* ctx) const {
   Blob* out = ctx->BnInOp2Blob("out");
   FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
     const Blob* in_i = ctx->BnInOp2Blob(GenRepeatedBn("in", i));
@@ -109,7 +109,7 @@ const SliceBoxingConf& SliceBoxingAddKernel<device_type, T>::GetCustomizedBoxing
 }
 
 template<DeviceType device_type, typename T>
-void SliceBoxingAddKernel<device_type, T>::ForwardDataContent(const KernelContext* ctx) const {
+void SliceBoxingAddKernel<device_type, T>::ForwardDataContent(KernelContext* ctx) const {
   Blob* out = ctx->BnInOp2Blob("out");
   FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
     const Blob* in_i = ctx->BnInOp2Blob(GenRepeatedBn("in", i));

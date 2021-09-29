@@ -16,14 +16,15 @@ limitations under the License.
 
 #include "oneflow/api/python/functional/python_arg.h"
 
+#include "oneflow/api/python/framework/device.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/indexing.h"
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/random_generator.h"
-#include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/functional/tensor_index.h"
 
 namespace py = pybind11;
@@ -124,6 +125,10 @@ Maybe<one::Generator> PythonArg::ObjectAs<one::Generator>() const {
 
 template<>
 Maybe<Symbol<Device>> PythonArg::ObjectAs<Symbol<Device>>() const {
+  if (PyStringCheck(object_)) {
+    const char* device_str = JUST(PyStringAsString(object_));
+    return DeviceExportUtil::ParseAndNew(device_str);
+  }
   return PyUnpackDevice(object_);
 }
 
@@ -140,12 +145,26 @@ Maybe<Symbol<cfg::SbpParallel>> PythonArg::ObjectAs<Symbol<cfg::SbpParallel>>() 
 template<>
 Maybe<std::vector<Symbol<cfg::SbpParallel>>>
 PythonArg::ObjectAs<std::vector<Symbol<cfg::SbpParallel>>>() const {
+  if (PySbpParallelCheck(object_)) {
+    return std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>(
+        1, JUST(PyUnpackSbpParallel(object_)));
+  }
   return PyUnpackSbpParallelSequence(object_);
 }
 
 template<>
 Maybe<TensorIndex> PythonArg::ObjectAs<TensorIndex>() const {
   return PyUnpackTensorIndex(object_);
+}
+
+template<>
+Maybe<PyObject*> PythonArg::ObjectAs<PyObject*>() const {
+  return object_;
+}
+
+template<>
+Maybe<const PyObject*> PythonArg::ObjectAs<const PyObject*>() const {
+  return object_;
 }
 
 Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
@@ -178,10 +197,12 @@ Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
     case kGENERATOR:
     case kGENERATOR_REF: return PyGeneratorCheck(object_);
     case kTENSOR_INDEX: return PyTensorIndexCheck(object_);
-    case kDEVICE: return PyDeviceCheck(object_);
+    case kDEVICE: return PyDeviceCheck(object_) || PyStringCheck(object_);
     case kPARALLEL_DESC: return PyParallelDescCheck(object_);
     case kSBP_PARALLEL: return PySbpParallelCheck(object_);
-    case kSBP_PARALLEL_LIST: return PySbpParallelSequenceCheck(object_);
+    case kSBP_PARALLEL_LIST:
+      return PySbpParallelSequenceCheck(object_) || PySbpParallelCheck(object_);
+    case kPY_OBJECT: return nullptr != object_;
     default: {
       OF_UNIMPLEMENTED() << "Can not check type " << JUST(ValueTypeName(type));
     }

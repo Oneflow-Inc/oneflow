@@ -23,7 +23,6 @@ namespace oneflow {
 
 using namespace boxing::collective;
 
-template<DeviceType device_type>
 class CollectiveBoxingGenericKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingGenericKernel);
@@ -32,12 +31,10 @@ class CollectiveBoxingGenericKernel final : public Kernel {
 
  private:
   bool IsKernelLaunchSynchronized() const override { return false; }
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
-template<DeviceType device_type>
-void CollectiveBoxingGenericKernel<device_type>::ForwardDataContent(
-    const KernelContext* ctx) const {
+void CollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) const {
   RuntimeRequestInfo request;
   const RankDesc& rank_desc = this->op_conf().collective_boxing_generic_conf().rank_desc();
   const DataType data_type = rank_desc.op_desc().data_type();
@@ -68,7 +65,6 @@ void CollectiveBoxingGenericKernel<device_type>::ForwardDataContent(
   Global<CollectiveBoxingExecutor>::Get()->Enqueue(rank_desc, request);
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kCollectiveBoxingGenericConf,
-                               CollectiveBoxingGenericKernel);
+REGISTER_KERNEL(OperatorConf::kCollectiveBoxingGenericConf, CollectiveBoxingGenericKernel);
 
 }  // namespace oneflow
