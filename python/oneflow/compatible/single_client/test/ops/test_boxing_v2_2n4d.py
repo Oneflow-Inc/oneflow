@@ -215,7 +215,7 @@ def _test_partial_sum_to_split(
 
 
 def _test_partial_sum_to_broadcast(
-    src_device_type, dst_device_type, src_device_num, dst_device_num
+    test_case, src_device_type, dst_device_type, src_device_num, dst_device_num
 ):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
@@ -244,7 +244,7 @@ def _test_partial_sum_to_broadcast(
 
 
 def _test_broadcast_to_broadcast(
-    src_device_type, dst_device_type, src_device_num, dst_device_num
+    test_case, src_device_type, dst_device_type, src_device_num, dst_device_num
 ):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
@@ -271,7 +271,7 @@ def _test_broadcast_to_broadcast(
     test_case.assertTrue(np.array_equal(x, y))
 
 
-def _test_multi_lbi(src_device_type, dst_device_type, src_device_num, dst_device_num):
+def _test_multi_lbi(test_case, src_device_type, dst_device_type, src_device_num, dst_device_num):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
