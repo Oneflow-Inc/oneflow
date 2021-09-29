@@ -211,7 +211,7 @@ def _test_partial_sum_to_split(
 
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
     y = partial_sum_to_split_job(x).get().numpy()
-    test_case.assertTrue(np.array_equal(x, y))
+    test_case.assertTrue(np.array_equal(np.sum(x, axis=0), y))
 
 
 def _test_partial_sum_to_broadcast(
@@ -240,7 +240,7 @@ def _test_partial_sum_to_broadcast(
 
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
     y = partial_sum_to_broadcast_job(x).get().numpy()
-    test_case.assertTrue(np.array_equal(x, y))
+    test_case.assertTrue(np.array_equal(np.sum(x, axis=0), y))
 
 
 def _test_broadcast_to_broadcast(
