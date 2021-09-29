@@ -73,11 +73,19 @@ class CpuScalarPowGradKernel final : public OpKernel {
     const T* x_ptr = x_tensor->dptr<T>();
     const T* dy_ptr = dy_tensor->dptr<T>();
     T* dx_ptr = dx_tensor->mut_dptr<T>();
-    const T exponent = static_cast<T>(ctx->Attr<double>("exponent"));
+    T scalar_operand = static_cast<T>(0);
+    if (ctx->Attr<bool>("has_int_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<int64_t>("int_operand"));
+    } else if (ctx->Attr<bool>("has_float_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<double>("float_operand"));
+    } else {
+      UNIMPLEMENTED();
+    }
 
     const int32_t elem_cnt = x_tensor->shape().elem_cnt();
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      dx_ptr[i] = exponent * (std::pow(x_ptr[i], exponent - static_cast<T>(1))) * dy_ptr[i];
+      dx_ptr[i] =
+          scalar_operand * (std::pow(x_ptr[i], scalar_operand - static_cast<T>(1))) * dy_ptr[i];
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
