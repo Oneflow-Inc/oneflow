@@ -103,6 +103,25 @@ class Embedding(Module):
         return res
 
 
+def embedding(
+    input,
+    weight,
+    padding_idx=None,
+    max_norm=None,
+    norm_type=None,
+    scale_grad_by_freq=False,
+    sparse=False,
+):
+    assert max_norm is None, "Not support max_norm yet!"
+    assert norm_type is None, "Not support norm_type yet!"
+    assert scale_grad_by_freq is False, "Not support scale_grad_by_freq=True yet!"
+    assert sparse is False, "Not support sparse=True yet!"
+    if padding_idx is not None:
+        weight[padding_idx].fill_(0)
+    res = flow._C.gather(weight, input, axis=0)
+    return res
+
+
 if __name__ == "__main__":
     import doctest
 
