@@ -13,19 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_BUFFERHOSTREGISTER_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_BUFFERHOSTREGISTER_H_
 
-#include "mlir/Pass/Pass.h"
-
-namespace mlir {
+#ifdef WITH_MLIR
+#include <glog/logging.h>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/ir/include/OneFlow/Extension.h"
 
 namespace oneflow {
 
-std::unique_ptr<mlir::Pass> createBufferHostRegisterPass();
+ONEFLOW_API_PYBIND11_MODULE("ir", m) {
+  m.def("load_jit_shared_lib",
+        [](const std::string& lib_path) { MutSharedLibPaths()->insert(lib_path); });
+}
+
+#endif  // WITH_MLIR
 
 }  // namespace oneflow
-
-}  // namespace mlir
-
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_BUFFERHOSTREGISTER_H_

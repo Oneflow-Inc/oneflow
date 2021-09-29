@@ -13,19 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_BUFFERHOSTREGISTER_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_BUFFERHOSTREGISTER_H_
 
-#include "mlir/Pass/Pass.h"
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_EXTENSION_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_EXTENSION_H_
 
-namespace mlir {
+#ifdef WITH_MLIR
+#include <unordered_set>
 
 namespace oneflow {
 
-std::unique_ptr<mlir::Pass> createBufferHostRegisterPass();
+using SharedLibs = std::unordered_set<std::string>;
+SharedLibs* MutSharedLibPaths();
+const SharedLibs* SharedLibPaths();
+
+#endif  // WITH_MLIR
 
 }  // namespace oneflow
 
-}  // namespace mlir
-
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_BUFFERHOSTREGISTER_H_
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_EXTENSION_H_

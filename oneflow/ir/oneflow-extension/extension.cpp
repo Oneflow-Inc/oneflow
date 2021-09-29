@@ -25,8 +25,16 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/ir/include/OneFlow/Passes.h"
+#include "oneflow/ir/include/OneFlow/Extension.h"
 
 namespace oneflow {
+
+SharedLibs* MutSharedLibPaths() {
+  static SharedLibs libs = {};
+  return &libs;
+}
+
+const SharedLibs* SharedLibPaths() { return MutSharedLibPaths(); }
 
 namespace {
 
@@ -202,10 +210,8 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
     CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToCUDALLVM(&mlir_ctx, *module)))
         << "fail to lower OneFlow to CUDA LLVM";
     if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
-    // TODO: replace absolute path with something more idiomatic
     llvm::SmallVector<llvm::StringRef> ext_libs(
-        {"/home/caishenghang/ir_cuda/python/oneflow/"
-         "_oneflow_internal.cpython-38-x86_64-linux-gnu.so"});
+        {SharedLibPaths()->begin(), SharedLibPaths()->end()});
     // TODO: cache the jit engine with uniq ptr
     auto jit_or_error = mlir::ExecutionEngine::create(
         /* m */ *module, /* llvmModuleBuilder */ nullptr, /* transformer */ {},
