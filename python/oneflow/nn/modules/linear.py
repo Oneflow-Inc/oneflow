@@ -122,8 +122,6 @@ def linear(input, weight, bias=None):
     r"""
     Applies a linear transformation to the incoming data: :math:`y = xA^T + b`.
 
-    This operator supports :ref:`TensorFloat32<tf32_on_ampere>`.
-
     Shape:
 
         - Input: :math:`(N, *, in\_features)` N is the batch size, `*` means any number of
@@ -131,6 +129,20 @@ def linear(input, weight, bias=None):
         - Weight: :math:`(out\_features, in\_features)`
         - Bias: :math:`(out\_features)`
         - Output: :math:`(N, *, out\_features)`
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+
+        >>> input = flow.tensor(np.random.randn(128, 20))
+        >>> weight = flow.tensor(np.random.randn(30, 20))
+        >>> output = flow.nn.functional.linear(input, weight)
+        >>> output.size()
+        oneflow.Size([128, 30])
+    
     """
     res = flow._C.matmul(input, weight, transpose_a=False, transpose_b=True)
     if bias is not None:
