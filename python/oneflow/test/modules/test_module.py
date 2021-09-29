@@ -33,6 +33,7 @@ def np_relu(np_arr):
     return np.where(np_arr > 0, np_arr, 0)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestModule(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_nested_module(test_case):

@@ -40,6 +40,7 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
         test_case.assertEqual(y.placement, placement)
         test_case.assertEqual(tuple(y.shape), (16, 16))
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_to_consistent_flatten_hierarchy_cpu_to_gpu(test_case):
         x = flow.ones((16, 16), dtype=flow.int32)
         sbp = (flow.sbp.partial_sum,)
@@ -53,6 +54,7 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
         test_case.assertEqual(y.placement, placement)
         test_case.assertEqual(tuple(y.shape), (16, 16))
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_to_consistent_flatten_hierarchy_gpu_to_cpu(test_case):
         x = flow.ones((16, 16), dtype=flow.int32)
         sbp = (flow.sbp.partial_sum,)
@@ -79,6 +81,7 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
         test_case.assertEqual(tuple(y.shape), (32, 16))
         test_case.assertEqual(y.dtype, flow.int32)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_local_to_consistent_2d_sbp(test_case):
         x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
         placement = flow.placement("cuda", {0: range(4)}, hierarchy=(2, 2))
@@ -89,6 +92,7 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
         test_case.assertEqual(tuple(y.shape), (32, 16))
         test_case.assertEqual(y.dtype, flow.int32)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_local_to_consistent_sp_2_bb(test_case):
         x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
         placement = flow.placement("cuda", {0: range(4)}, hierarchy=(2, 2))
@@ -108,7 +112,7 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
             np.array_equal(z.numpy(), np.ones((32, 16), dtype=np.int32) * 2)
         )
 
-
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_local_to_consistent_ps0_2_s0s0(test_case):
         x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
         x = x * int(os.getenv("RANK"))
@@ -131,6 +135,7 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
         )
     
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_local_to_consistent_s0p_2_s0s0(test_case):
         x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
         x = x * int(os.getenv("RANK"))
@@ -153,6 +158,7 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
         )
 
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_to_consistent_loop_broadcast_shape_dtype(test_case):
         if int(os.getenv("RANK")) < 2:
             x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
@@ -220,6 +226,7 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
             np.array_equal(z.numpy(), np.ones((32, 16), dtype=np.int32))
         )
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cuda_consistent_to_consistent_s2b(test_case):
         x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
         placement = flow.placement("cuda", {0: range(2)})
@@ -273,6 +280,7 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
                 )
             )
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cuda_consistent_to_consistent_s2p(test_case):
         x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
         placement = flow.placement("cuda", {0: range(2)})
@@ -311,6 +319,7 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
                 )
             )
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cuda_consistent_to_consistent_b2p(test_case):
         x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
         placement = flow.placement("cuda", {0: range(2)})
@@ -331,6 +340,7 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
                 np.array_equal(z.numpy(), np.zeros((16, 16), dtype=np.int32))
             )
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cuda_consistent_to_consistent_b2s(test_case):
         x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
         placement = flow.placement("cuda", {0: range(2)})
@@ -361,6 +371,7 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
             np.array_equal(z.numpy(), np.ones((8, 16), dtype=np.int32) * 2)
         )
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cuda_consistent_to_consistent_p2s(test_case):
         x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
         placement = flow.placement("cuda", {0: range(2)})
@@ -376,6 +387,7 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
             np.array_equal(z.numpy(), np.ones((8, 16), dtype=np.int32) * 2)
         )
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cuda_consistent_to_consistent_cuda_h2d(test_case):
         x = flow.ones((16, 16), device=flow.device("cpu"), dtype=flow.int32)
         placement = flow.placement("cpu", {0: range(2)})
@@ -391,6 +403,7 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
             np.array_equal(z.numpy(), np.ones((16, 16), dtype=np.int32))
         )
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cuda_consistent_to_consistent_cpu_p2b(test_case):
         x = flow.ones((16, 16), device=flow.device("cpu"), dtype=flow.int32)
         placement = flow.placement("cpu", {0: range(2)})
@@ -411,6 +424,7 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
             np.array_equal(z.numpy(), np.ones((16, 16), dtype=np.int32) * 2)
         )
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cuda_consistent_to_consistent_p2b(test_case):
         x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
         placement = flow.placement("cuda", {0: range(2)})
