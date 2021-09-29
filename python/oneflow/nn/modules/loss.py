@@ -172,38 +172,9 @@ class CrossEntropyLoss(_WeightedLoss):
         self.ignore_index = ignore_index
 
     def forward(self, input, target):
-        assert len(input.shape) <= 5
-        assert len(target.shape) == len(input.shape) - 1
-        assert input.shape[0] == target.shape[0]
-        for i in range(2, len(input.shape)):
-            assert input.shape[i] == target.shape[i - 1]
-        input = flow._C.transpose(
-            input, perm=(0,) + tuple(range(2, len(input.shape))) + (1,)
+        return flow._C.cross_entropy(
+            input, target, self.weight, self.ignore_index, self.reduction
         )
-        input = flow.reshape(input, shape=[-1, input.shape[-1]])
-        target_shape = target.shape
-        target = target.flatten()
-        out = flow._C.sparse_softmax_cross_entropy(
-            input, target, depth=input.shape[len(input.shape) - 1]
-        )
-        if self.ignore_index != -100:
-            zeros = flow.zeros(out.shape, dtype=out.dtype, device=out.device)
-            condition = flow.eq(target, self.ignore_index)
-            ones = flow.ones(
-                condition.shape, dtype=condition.dtype, device=condition.device
-            )
-            condition = flow.reshape(ones.sub(condition), tuple(out.shape))
-            out = flow.where(condition, out, zeros)
-            if self.reduction == "mean":
-                reduce_sum = out.sum()
-                reduce_count = condition.argwhere().shape[0]
-                out = flow.mul(reduce_sum, 1.0 / reduce_count)
-        if self.reduction == "mean":
-            return out.mean()
-        elif self.reduction == "sum":
-            return out.sum()
-        else:
-            return out.reshape(*target_shape)
 
 
 class BCELoss(_WeightedLoss):

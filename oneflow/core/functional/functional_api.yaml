@@ -569,6 +569,10 @@
   signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None, String reduction) => BinaryCrossEntropyWithLogitsLossGrad"
   bind_python: True
 
+- name: "cross_entropy"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction) => CrossEntropy"
+  bind_python: True
+
 - name: "sparse_softmax_cross_entropy"
   signature: "Tensor (Tensor logits, Tensor label, Int64 depth) => SparseSoftmaxCrossEntropy"
   bind_python: True
