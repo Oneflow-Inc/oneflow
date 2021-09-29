@@ -18,12 +18,14 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_div_impl(test_case, shape, device):
@@ -96,7 +98,7 @@ class TestDiv(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_div_impl(test_case, *arg)
 
-    def test_sub_against_pytorch(test_case):
+    def test_div_against_pytorch(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_type"] = [test_flow_against_pytorch, test_tensor_against_pytorch]
         arg_dict["device"] = ["cpu", "cuda"]

@@ -180,19 +180,6 @@ Maybe<one::UserOpExpr> ScalarPowOp(const double& exponent, const std::string& na
       .Build();
 }
 
-Maybe<one::UserOpExpr> ScalarPowGradOp(const double& exponent) {
-  return ScalarPowGradOp(exponent, UniqueOpName("scalar_pow_grad"));
-}
-
-Maybe<one::UserOpExpr> ScalarPowGradOp(const double& exponent, const std::string& name) {
-  return one::OpBuilder("scalar_pow_grad", name)
-      .Input("x")
-      .Input("dy")
-      .Attr<double>("exponent", exponent)
-      .Output("dx")
-      .Build();
-}
-
 template<>
 Maybe<one::UserOpExpr> ScalarMulOp(const float& scalar, const std::string& name) {
   return one::OpBuilder("scalar_mul", name)
@@ -629,17 +616,18 @@ Maybe<one::UserOpExpr> WhereOp(const std::string& name) {
       .Build();
 }
 
-Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
-                                    const std::vector<int32_t>& stride) {
-  return ExpandGradOp(out_shape, stride, UniqueOpName("expand_grad"));
+Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& logical_out_shape,
+                                    const std::vector<int32_t>& logical_expand_shape) {
+  return ExpandGradOp(logical_out_shape, logical_expand_shape, UniqueOpName("expand_grad"));
 }
-Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
-                                    const std::vector<int32_t>& stride, const std::string& name) {
+Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& logical_out_shape,
+                                    const std::vector<int32_t>& logical_expand_shape,
+                                    const std::string& name) {
   return one::OpBuilder("expand_grad", name)
       .Input("in")
       .Output("out")
-      .Attr<std::vector<int32_t>>("out_shape", out_shape)
-      .Attr<std::vector<int32_t>>("stride", stride)
+      .Attr<std::vector<int32_t>>("logical_out_shape", logical_out_shape)
+      .Attr<std::vector<int32_t>>("logical_expand_shape", logical_expand_shape)
       .Build();
 }
 

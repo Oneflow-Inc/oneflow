@@ -49,6 +49,15 @@ Maybe<void> AllReduce(const void* in, void* out, size_t elem_cnt, DataType dtype
                       ReduceType reduce_type, Symbol<ParallelDesc> parallel_desc, DeviceCtx* ctx);
 
 template<DeviceType device_type>
+Maybe<void> ReduceScatter(const void* in, void* out, size_t elem_cnt, DataType dtype,
+                          ReduceType reduce_type, Symbol<ParallelDesc> parallel_desc,
+                          DeviceCtx* ctx);
+
+template<DeviceType device_type>
+Maybe<void> AllGather(const void* in, void* out, size_t elem_cnt, DataType dtype,
+                      Symbol<ParallelDesc> parallel_desc, DeviceCtx* ctx);
+
+template<DeviceType device_type>
 Maybe<void> Send(const void* in, size_t elem_cnt, DataType dtype, int64_t dst, DeviceCtx* ctx);
 
 template<DeviceType device_type>
@@ -57,6 +66,11 @@ Maybe<void> Recv(void* out, size_t elem_cnt, DataType dtype, int64_t src, Device
 template<DeviceType device_type>
 Maybe<void> Broadcast(const void* in, void* out, size_t elem_cnt, DataType dtype, int64_t root,
                       Symbol<ParallelDesc> parallel_desc, DeviceCtx* ctx);
+
+template<DeviceType device_type>
+Maybe<void> Reduce(const void* in, void* out, size_t elem_cnt, DataType dtype,
+                   ReduceType reduce_type, int64_t root, Symbol<ParallelDesc> parallel_desc,
+                   DeviceCtx* ctx);
 
 Maybe<void> CpuBroadcast(const void* in, void* out, size_t buffer_size, int64_t root,
                          Symbol<ParallelDesc> parallel_desc, const TransportToken& transport_token);

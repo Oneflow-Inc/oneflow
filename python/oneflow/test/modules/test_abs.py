@@ -17,7 +17,7 @@ limitations under the License.
 import unittest
 
 import oneflow as flow
-from automated_test_util import *
+from oneflow.test_utils.automated_test_util import *
 import oneflow.unittest
 
 

@@ -21,7 +21,8 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -151,6 +152,35 @@ class TestTensor(flow.unittest.TestCase):
             oneflow._oneflow_internal.exception.RuntimeException
         ):
             b._tensor_buffer_shapes_and_dtypes
+
+    @flow.unittest.skip_unless_1n4d()
+    def test_consistent_tensor_2d_sbp_init(test_case):
+        V = 10
+        H = 4
+        S = 6
+
+        P = flow.placement("cuda", {0: [0, 1, 2, 3]}, (2, 2))
+
+        wte = flow.nn.Parameter(
+            flow.empty(
+                (V, H),
+                dtype=flow.float32,
+                placement=P,
+                sbp=[flow.sbp.broadcast, flow.sbp.split(0)],
+            )
+        )
+
+        wpe = flow.nn.Parameter(
+            flow.empty(
+                (S, H),
+                dtype=flow.float32,
+                placement=P,
+                sbp=[flow.sbp.broadcast, flow.sbp.broadcast],
+            )
+        )
+
+        flow.nn.init.normal_(wte, std=0.02)
+        flow.nn.init.normal_(wpe, std=0.02)
 
 
 if __name__ == "__main__":

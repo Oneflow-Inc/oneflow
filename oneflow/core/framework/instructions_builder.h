@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_INSTRUCTIONS_BUILDER_H_
 
 #include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
-#include "oneflow/core/eager/run_lazy_job_phy_instr_operand.h"
+#include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
 #include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/id_generator.h"
@@ -98,10 +98,14 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   vm::InstructionMsgList* mut_instruction_list() { return instruction_list_; }
 
   // Build VM execution instructions with NNGraph's inputs/outputs/parameters for NNGraph execution.
-  Maybe<void> RunLazyJob(const one::EagerBlobObjectListPtr& inputs,
-                         const one::EagerBlobObjectListPtr& outputs,
-                         const one::EagerBlobObjectListPtr& parameters,
-                         const std::shared_ptr<NNGraphIf>& nn_graph) const;
+  Maybe<void> LaunchLazyJob(const one::EagerBlobObjectListPtr& inputs,
+                            const one::EagerBlobObjectListPtr& outputs,
+                            const one::EagerBlobObjectListPtr& parameters,
+                            const std::shared_ptr<NNGraphIf>& nn_graph);
+
+  // soft sync for inputs/outputs buffers of NNGraph
+  Maybe<void> SoftSyncNNGraphBuffers(const one::EagerBlobObjectListPtr& eager_blob_objects,
+                                     const std::shared_ptr<NNGraphIf>& nn_graph);
 
   Maybe<compatible_py::BlobObject> PackPhysicalBlobsToLogicalBlob(
       const std::vector<std::shared_ptr<compatible_py::BlobObject>>& physical_blob_objects,
@@ -131,9 +135,6 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
                             const std::shared_ptr<const ParallelDesc>& parallel_desc);
-
-  Maybe<void> SoftSyncStream(LocalDepObject* compute_local_dep_object, const std::string& modifier,
-                             const std::shared_ptr<const ParallelDesc>& parallel_desc);
 
   template<typename T>
   Maybe<void> SyncAccessBlobByCallback(const T tensor,
@@ -263,18 +264,14 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> LocalCallOpKernel(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
                                 const one::EagerBlobObjectListPtr& input_eager_blob_objects,
                                 const one::EagerBlobObjectListPtr& output_eager_blob_objects,
-                                const one::OpExprInterpContext& ctx,
-                                const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
-                                const std::string& instr_type_name);
+                                const one::OpExprInterpContext& ctx, Symbol<Device> op_device);
 
   Maybe<void> LocalCallOpKernel(
       const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
       const one::EagerBlobObjectListPtr& input_eager_blob_objects,
       const one::EagerBlobObjectListPtr& output_eager_blob_objects,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
-      const one::OpExprInterpContext& ctx,
-      const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
-      const std::string& instr_type_name);
+      const one::OpExprInterpContext& ctx, Symbol<Device> op_device);
 
  private:
   Maybe<void> RankFrontSeqCallback(const std::string& instruction_name,
@@ -406,6 +403,9 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
           const std::shared_ptr<compatible_py::BlobObject>&,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& GetDelegateBlobObject);
 
+  Maybe<void> SoftSyncStream(LocalDepObject* compute_local_dep_object, const std::string& modifier,
+                             Symbol<Device> op_device);
+
   Maybe<void> _FetchBlob(const std::string& instruction_name,
                          const std::shared_ptr<compatible_py::BlobObject>& blob_object,
                          int64_t callback_id);
@@ -461,6 +461,21 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   vm::cfg::EagerSymbolList* mut_eager_symbol_list() { return eager_symbol_list_; }
 
   vm::IdGenerator* mut_id_generator() { return id_generator_.get(); }
+
+ private:
+  Maybe<vm::InputCriticalSectionPhyInstrOperand> MakeInputCriticalSection(
+      const one::EagerBlobObjectListPtr& eager_blob_object,
+      const std::shared_ptr<NNGraphIf>& nn_graph);
+  Maybe<vm::ParameterCriticalSectionPhyInstrOperand> MakeParameterCriticalSection(
+      const one::EagerBlobObjectListPtr& eager_blob_object,
+      const std::shared_ptr<NNGraphIf>& nn_graph);
+  Maybe<vm::OutputCriticalSectionPhyInstrOperand> MakeOutputCriticalSection(
+      const one::EagerBlobObjectListPtr& eager_blob_object,
+      const std::shared_ptr<NNGraphIf>& nn_graph);
+  Maybe<vm::NcclCriticalSectionPhyInstrOperand> MakeNcclCriticalSection();
+
+  Maybe<ObjectMsgPtr<LocalDepObject>> WaitUntilZero(
+      const std::shared_ptr<std::atomic<int64_t>>& ref_cnt);
 
   std::shared_ptr<vm::IdGenerator> id_generator_;
   vm::InstructionMsgList* instruction_list_;

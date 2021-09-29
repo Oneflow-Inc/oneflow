@@ -107,8 +107,7 @@ std::shared_ptr<Tensor> ApiNewTensor(py::args args, py::kwargs kwargs) {
 
 void ApiSetRequiresGrad(Tensor& tensor, bool requires_grad) {
   if (tensor.is_leaf()) {
-    tensor.set_requires_grad(requires_grad);
-    if (!requires_grad) { tensor.set_grad_fn_node(nullptr); }
+    tensor.set_requires_grad(requires_grad).GetOrThrow();
   } else {
     throw std::runtime_error("You can only change requires_grad flags of leaf tensors.");
   }

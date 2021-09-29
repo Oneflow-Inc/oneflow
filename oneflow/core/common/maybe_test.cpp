@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/maybe.h"
+#include <gtest/gtest-death-test.h>
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -43,8 +44,27 @@ TEST(Maybe, JUST_MSG) {
 
   auto err = i(10.123).error();
   ASSERT_EQ(err->msg(), "input value 53");
-  ASSERT_EQ(err->stack_frame(0).error_msg(), "(f(y)): input value g(10)");
-  ASSERT_EQ(err->stack_frame(1).error_msg(), "(h(y)): input value int(10.123)");
+  ASSERT_EQ(err->stack_frame(0).error_msg(), "f(y): input value g(10)");
+  ASSERT_EQ(err->stack_frame(1).error_msg(), "h(y): input value int(10.123)");
+
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-goto)
+  ASSERT_EXIT(CHECK_JUST(i(10.234)), testing::KilledBySignal(SIGABRT), R"(input value 53)");
+}
+
+TEST(Maybe, CHECK_OK) {
+  auto f = [](int x) -> Maybe<int> {
+    if (x > 10) { return Error::InvalidValueError("") << "input value " << x; }
+
+    return 233;
+  };
+
+  auto g = [&](int x) -> Maybe<int> {
+    auto y = JUST(f(x));
+    return f(y);
+  };
+
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-goto)
+  ASSERT_EXIT(CHECK_OK(g(11)), testing::KilledBySignal(SIGABRT), R"(g\(11\) is not OK)");
 }
 
 }  // namespace test

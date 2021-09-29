@@ -18,7 +18,8 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
 
 import oneflow as flow
@@ -84,7 +85,7 @@ def _test_rnn(test_case, device):
             out_torch.cpu().data.numpy(),
             out_flow.cpu().data.numpy(),
             rtol=1e-05,
-            atol=1e-06,
+            atol=1e-05,
         )
     )
 
@@ -99,7 +100,7 @@ def _test_rnn(test_case, device):
 
 def _test_lstm(test_case, device):
     input_size = random.randint(10, 1000)
-    hidden_size = random.randint(10, 1000)
+    hidden_size = random.randint(12, 1000)
     num_layers = random.randint(1, 6)
     bias = random.randint(-10, 10) <= 0
     batch_first = random.randint(-10, 10) <= 0
@@ -152,7 +153,7 @@ def _test_lstm(test_case, device):
             out_torch.cpu().data.numpy(),
             out_flow.cpu().data.numpy(),
             rtol=1e-05,
-            atol=1e-06,
+            atol=1e-05,
         )
     )
 
@@ -217,7 +218,7 @@ def _test_gru(test_case, device):
             out_torch.cpu().data.numpy(),
             out_flow.cpu().data.numpy(),
             rtol=1e-05,
-            atol=1e-06,
+            atol=1e-05,
         )
     )
 
