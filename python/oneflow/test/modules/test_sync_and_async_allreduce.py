@@ -16,6 +16,7 @@ limitations under the License.
 
 import unittest
 import numpy as np
+import os
 import oneflow as flow
 import oneflow.unittest
 
@@ -29,6 +30,7 @@ def async_allreduce(x):
 
 
 @flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestP2bOnGPU(flow.unittest.TestCase):
     def test_p2b(test_case):
         placement = flow.placement("cuda", {0: range(4)})
