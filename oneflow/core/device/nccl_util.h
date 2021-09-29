@@ -41,8 +41,6 @@ inline ncclDataType_t GetNcclDataType(const DataType& dt) {
   return ncclDataType_t::ncclFloat;
 }
 
-void NcclCheck(ncclResult_t error);
-
 std::string NcclUniqueIdToString(const ncclUniqueId& unique_id);
 
 void NcclUniqueIdFromString(const std::string& str, ncclUniqueId* unique_id);
