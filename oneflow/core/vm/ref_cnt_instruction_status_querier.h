@@ -28,6 +28,10 @@ class RefCntInstrStatusQuerier {
 
   bool done() const { return launched_ && *ref_cnt_ == 0; }
   void SetRefCntAndSetLaunched(const std::shared_ptr<std::atomic<int64_t>>& ref_cnt) {
+    // No lock needed. This function will be called only one time.
+    // In most cases, errors will be successfully detected by CHECK
+    // even though run in different threads.
+    CHECK(!launched_);
     ref_cnt_ = ref_cnt;
     launched_ = true;
   }

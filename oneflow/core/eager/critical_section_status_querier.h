@@ -30,6 +30,10 @@ class CriticalSectionStatusQuerier final {
   bool QueryDone() const { return launched_ && event_record_->QueryDone(); }
 
   void SetLaunched(const std::shared_ptr<EventRecord>& event_record) {
+    // No lock needed. This function will be called only one time.
+    // In most cases, errors will be successfully detected by CHECK
+    // even though run in different threads.
+    CHECK(!launched_);
     event_record_ = event_record;
     launched_ = true;
   }

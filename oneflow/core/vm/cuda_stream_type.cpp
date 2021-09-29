@@ -41,7 +41,8 @@ void CudaStreamType::InitInstructionStatus(const Stream& stream,
 
 void CudaStreamType::DeleteInstructionStatus(const Stream& stream,
                                              InstructionStatusBuffer* status_buffer) const {
-  auto* ptr = CudaOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  auto* ptr =
+      CudaOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
   ptr->~CudaOptionalEventRecordStatusQuerier();
 }
 

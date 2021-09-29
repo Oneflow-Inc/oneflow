@@ -559,7 +559,6 @@ class Graph(object):
             )
             return tensor_tuple
 
-
         self._eager_outputs = self._mapping_io(
             "output", build_real_output, *self._eager_outputs
         )
@@ -576,16 +575,12 @@ class Graph(object):
 
         # Make outputs buffer
         for i in range(self._outputs_buffer_size - 1):
-            outputs_buffer_item = self._empty_like_io(
-                "output", *self._eager_outputs
-            )
+            outputs_buffer_item = self._empty_like_io("output", *self._eager_outputs)
             self._eager_outputs_buffer.append(outputs_buffer_item)
             outputs_tensor_tuple_buffer_item = convert_to_synced_tensor_tuple(
                 self._flatten_io("output", *outputs_buffer_item)
             )
-            self._outputs_tensor_tuple_buffer.append(
-                outputs_tensor_tuple_buffer_item
-            )
+            self._outputs_tensor_tuple_buffer.append(outputs_tensor_tuple_buffer_item)
         self._check_outputs_buffer()
 
     def _check_outputs_buffer(self):

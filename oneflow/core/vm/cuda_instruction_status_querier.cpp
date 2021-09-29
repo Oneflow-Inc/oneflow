@@ -27,6 +27,10 @@ bool CudaInstrStatusQuerier::event_completed() const {
 }
 
 void CudaInstrStatusQuerier::SetLaunched(DeviceCtx* device_ctx) {
+  // No lock needed. This function will be called only one time.
+  // In most cases, errors will be successfully detected by CHECK
+  // even though run in different threads.
+  CHECK(!launched_);
   cudaSetDevice(device_id_);
   OF_CUDA_CHECK(cudaEventCreateWithFlags(&event_, cudaEventBlockingSync | cudaEventDisableTiming));
   OF_CUDA_CHECK(cudaEventRecord(event_, device_ctx->cuda_stream()));
