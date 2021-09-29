@@ -194,7 +194,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           set -x
-          docker run --rm -v $HOME:$HOME busybox rm -rf $PWD
+          docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
       - name: Remove leftover cuda-installer.log
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
@@ -344,7 +344,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           set -x
-          docker run --rm -v $HOME:$HOME busybox rm -rf $PWD
+          docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
         with:
@@ -631,7 +631,7 @@ jobs:
         if: ${{ always() && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-          docker run --rm -v $HOME:$HOME busybox rm -rf $PWD
+          docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
 
   static_analysis_with_clang_on_diff:
     name: Static analysis with clang on diff
