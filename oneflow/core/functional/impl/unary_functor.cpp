@@ -26,8 +26,6 @@ namespace functional {
 
 namespace impl {
 
-#define INPLACE_UNARY_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("sin", SinInplace)
-
 #define UNARY_FUNC_SEQ                                       \
   OF_PP_MAKE_TUPLE_SEQ("abs", Abs)                           \
   OF_PP_MAKE_TUPLE_SEQ("acos", Acos)                         \
@@ -65,6 +63,9 @@ namespace impl {
 #define FLOAT_UNARY_FUNC_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ("sigmoid_v2", Sigmoid) \
   OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)
+
+#define INPLACE_UNARY_FUNC_SEQ                              \
+  OF_PP_MAKE_TUPLE_SEQ("sin_inplace", SinInplace)
 
 #define UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, base)                    \
   class class_name##Functor : public base {                                          \

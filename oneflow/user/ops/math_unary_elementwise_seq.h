@@ -49,13 +49,16 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("sigmoid_v2", Sigmoid)                \
   OF_PP_MAKE_TUPLE_SEQ("sign", Sign)                         \
   OF_PP_MAKE_TUPLE_SEQ("sin", Sin)                           \
-  OF_PP_MAKE_TUPLE_SEQ("sin_inplace", SinInplace)            \
   OF_PP_MAKE_TUPLE_SEQ("sinh", Sinh)                         \
   OF_PP_MAKE_TUPLE_SEQ("softplus", Softplus)                 \
   OF_PP_MAKE_TUPLE_SEQ("sqrt", Sqrt)                         \
   OF_PP_MAKE_TUPLE_SEQ("square", Square)                     \
   OF_PP_MAKE_TUPLE_SEQ("tan", Tan)                           \
   OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)
+
+#define MATH_UNARY_INPLACE_ELEMENTWISE_FUNC_SEQ              \
+  OF_PP_MAKE_TUPLE_SEQ("sin_inplace", SinInplace)                   
+
 
 }  // namespace oneflow
 

@@ -41,6 +41,7 @@ namespace oneflow {
   struct func_prefix##Functor;
 
 OF_PP_FOR_EACH_TUPLE(DECLARE_UNARY_FUNCTOR, MATH_UNARY_ELEMENTWISE_FUNC_SEQ)
+OF_PP_FOR_EACH_TUPLE(DECLARE_UNARY_FUNCTOR, MATH_UNARY_INPLACE_ELEMENTWISE_FUNC_SEQ)
 
 template<typename T>
 struct AbsFunctor {
@@ -327,7 +328,7 @@ struct SinInplaceFunctor<float> {
   static OF_DEVICE_FUNC float Forward(const float x) { return MATH_FUNC_F(sin, x); }
 
   static OF_DEVICE_FUNC float Backward(const float x, const float dy) {
-    return dy * MATH_FUNC_F(cos, x);
+    return dy * MATH_FUNC_F(cos, MATH_FUNC_F(asin, x));
   }
 };
 
@@ -616,7 +617,7 @@ struct SinInplaceFunctor<double> {
   static OF_DEVICE_FUNC double Forward(const double x) { return MATH_FUNC_D(sin, x); }
 
   static OF_DEVICE_FUNC double Backward(const double x, const double dy) {
-    return dy * MATH_FUNC_D(cos, x);
+    return dy * MATH_FUNC_F(cos, MATH_FUNC_F(asin, x));
   }
 };
 
