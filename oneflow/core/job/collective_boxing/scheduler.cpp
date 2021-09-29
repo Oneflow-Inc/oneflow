@@ -30,6 +30,31 @@ namespace boxing {
 
 namespace collective {
 
+namespace {
+
+bool CanMergeIntoCurGroup(RequestStore* request_store, const RequestEntry* request_entry,
+                          const RequestId& request_id, const std::vector<RequestId>& group_buffer) {
+  if (group_buffer.empty()) { return true; }
+  const RequestId& group_entry_id = group_buffer.front();
+  const auto* group_entry = request_store->MutRequestEntry(group_entry_id);
+  return (request_id.job_id == group_entry_id.job_id
+          && request_entry->desc().dependency_depth() == group_entry->desc().dependency_depth()
+          && request_entry->desc().op_desc().backend() == group_entry->desc().op_desc().backend()
+          && request_entry->device_set_symbol() == group_entry->device_set_symbol());
+}
+
+bool HasRankInteraction(const DeviceSet& a, const DeviceSet& b) {
+  for (int64_t i = 0; i < a.device_size(); ++i) {
+    const DeviceDesc& a_device_desc = a.device(i);
+    for (int64_t j = 0; j < b.device_size(); ++j) {
+      if (a_device_desc.machine_id() == b.device(j).machine_id()) { return true; }
+    }
+  }
+  return false;
+}
+
+}  // namespace
+
 class RequestHandle final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RequestHandle);
@@ -89,7 +114,6 @@ class ExecutorImpl : public Executor {
   std::vector<std::unique_ptr<ExecutorBackend>> backends_;
   std::shared_ptr<RequestStore> request_store_;
   std::vector<RequestId> group_buffer_;
-  int64_t group_buffer_job_id_{};
 };
 
 void ExecutorImpl::Init(std::shared_ptr<RequestStore> request_store) {
@@ -137,19 +161,21 @@ void ExecutorImpl::GroupRequests(
   };
   request_store_->ForEachMutRequestEntryForIdsInJob(
       request_ids, [&](RequestEntry* request_entry, int32_t i, const RequestId& request_id) {
-        const int64_t job_id = request_id.job_id;
-        if (!group_buffer_.empty()) {
-          const auto* cur_entry = request_entry;
-          const auto* group_entry = request_store_->MutRequestEntry(group_buffer_.front());
-          if ((!conf.enable_fusion()) || job_id != group_buffer_job_id_
-              || cur_entry->desc().dependency_depth() != group_entry->desc().dependency_depth()
-              || cur_entry->desc().op_desc().backend() != group_entry->desc().op_desc().backend()
-              || cur_entry->device_set_symbol() != group_entry->device_set_symbol()) {
+        if (request_entry->HasRankOnThisNode()) {
+          if (!(conf.enable_fusion()
+                && CanMergeIntoCurGroup(request_store_.get(), request_entry, request_id,
+                                        group_buffer_))) {
+            HandleGroup();
+          }
+          group_buffer_.push_back(request_id);
+        } else {
+          if (!group_buffer_.empty()
+              && HasRankInteraction(
+                  request_store_->MutRequestEntry(group_buffer_.back())->desc().device_set(),
+                  request_entry->desc().device_set())) {
             HandleGroup();
           }
         }
-        group_buffer_.push_back(request_id);
-        group_buffer_job_id_ = job_id;
       });
   HandleGroup();
 }

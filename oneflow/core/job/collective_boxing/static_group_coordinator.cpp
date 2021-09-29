@@ -119,43 +119,12 @@ void StaticGroupCoordinator::DestroyCoordinatorToken(void* coordinator_token) {
 
 void StaticGroupCoordinator::InitJob(int64_t job_id) {
   std::unique_lock<std::mutex> lock(mutex_);
-  const auto& GetRequestDesc = [&](const RequestId& request_id) -> const RequestDesc& {
-    return impl_->request_store_->MutRequestEntry(request_id)->desc();
-  };
   std::vector<RequestId> request_ids;
   impl_->request_store_->ForEachMutRequestEntryInJob(
       job_id, [&](RequestEntry* request_entry, int32_t i, const RequestId& request_id) {
         request_ids.push_back(request_id);
       });
   SortRequestIdsByOrder(impl_->request_store_.get(), &request_ids);
-  std::vector<std::vector<RequestId>> local_request_ids_vec;
-  std::vector<RequestId> local_request_ids;
-  impl_->request_store_->ForEachMutRequestEntryForIdsInJob(
-      request_ids, [&](RequestEntry* request_entry, int32_t i, const RequestId& request_id) {
-        if (request_entry->HasRankOnThisNode()) {
-          local_request_ids.push_back(request_id);
-        } else {
-          if (local_request_ids.size() != 0
-              && HasRankInteractionOnDeviceSet(
-                  GetRequestDesc(local_request_ids.back()).device_set(),
-                  request_entry->desc().device_set())) {
-            local_request_ids_vec.push_back(local_request_ids);
-            local_request_ids.clear();
-          }
-        }
-      });
-  if (local_request_ids.size() != 0) {
-    local_request_ids_vec.push_back(local_request_ids);
-    local_request_ids.clear();
-  }
-  for (int32_t i = 0; i < local_request_ids_vec.size(); ++i) {
-    CHECK(std::adjacent_find(local_request_ids_vec.at(i).begin(), local_request_ids_vec.at(i).end(),
-                             [&](const RequestId& a, const RequestId& b) {
-                               return GetRequestDesc(a).dependency_depth()
-                                      > GetRequestDesc(b).dependency_depth();
-                             })
-          == local_request_ids_vec.at(i).end());
-  }
   StaticGroupRequestsInfo info;
   std::vector<GroupState>& group_states = info.group_states;
   std::vector<RequestGroupIndex>& request_index2request_group_index =
@@ -164,21 +133,18 @@ void StaticGroupCoordinator::InitJob(int64_t job_id) {
   std::vector<ExecutorToken*>& group_id2executor_token = info.group_id2executor_token;
   const int32_t request_count = impl_->request_store_->RequestCountForJob(job_id);
   request_index2request_group_index.resize(request_count);
-  for (int32_t i = 0; i < local_request_ids_vec.size(); ++i) {
-    impl_->executor_->GroupRequests(
-        local_request_ids_vec.at(i),
-        [&](std::vector<RequestId>&& group, ExecutorToken* executor_token) {
-          const int32_t group_id = group_states.size();
-          group_states.emplace_back(group.size());
-          for (int32_t idx_in_group = 0; idx_in_group < group.size(); ++idx_in_group) {
-            const RequestId& request_id = group.at(idx_in_group);
-            RequestGroupIndex request_group_index{group_id, idx_in_group};
-            request_index2request_group_index.at(request_id.request_index) = request_group_index;
-          }
-          group_id2request_ids.push_back(group);
-          group_id2executor_token.push_back(executor_token);
-        });
-  }
+  impl_->executor_->GroupRequests(
+      request_ids, [&](std::vector<RequestId>&& group, ExecutorToken* executor_token) {
+        const int32_t group_id = group_states.size();
+        group_states.emplace_back(group.size());
+        for (int32_t idx_in_group = 0; idx_in_group < group.size(); ++idx_in_group) {
+          const RequestId& request_id = group.at(idx_in_group);
+          RequestGroupIndex request_group_index{group_id, idx_in_group};
+          request_index2request_group_index.at(request_id.request_index) = request_group_index;
+        }
+        group_id2request_ids.push_back(group);
+        group_id2executor_token.push_back(executor_token);
+      });
 
   CHECK(impl_->job_id2static_group_requests_info_.emplace(job_id, info).second);
   if (group_states.size() != 0) { DumpSummary(job_id); }
