@@ -199,6 +199,7 @@ jobs:
       - name: Remove leftover cuda-installer.log
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
+          docker run --rm -v /tmp:/host/tmp -w /p busybox chmod 666 /host/tmp/cuda-installer.log
           docker run --rm -v /tmp:/host/tmp -w /p busybox rm -f /host/tmp/cuda-installer.log
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
