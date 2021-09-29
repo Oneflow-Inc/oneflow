@@ -189,7 +189,6 @@ jobs:
       WHEELHOUSE_DIR: manylinux-wheelhouse
       SSH_TANK_HOST: 192.168.1.13
       SSH_TANK_PATH: /tank
-      CLEAN_CCACHE: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
     steps:
       - name: Fix permissions
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
@@ -235,7 +234,7 @@ jobs:
           docker-run-use-system-http-proxy: false
           docker-run-use-lld: true
           retry-failed-build: true
-          clean-ccache: ${{ env.clean-ccache }}
+          clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.6
             3.7
@@ -256,7 +255,7 @@ jobs:
           docker-run-use-system-http-proxy: false
           docker-run-use-lld: false
           retry-failed-build: true
-          clean-ccache: ${{ env.clean-ccache }}
+          clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.6
             3.7
@@ -277,7 +276,7 @@ jobs:
           docker-run-use-system-http-proxy: true
           docker-run-use-lld: true
           retry-failed-build: true
-          clean-ccache: ${{ env.clean-ccache }}
+          clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.6
       - name: Upload bin
