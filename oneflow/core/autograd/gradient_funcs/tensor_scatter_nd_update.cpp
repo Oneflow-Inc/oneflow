@@ -55,7 +55,8 @@ class TensorScatterNdUpdate : public OpExprGradFunction<TensorScatterNdUpdateCap
       const auto& indices = ctx->SavedTensors().at(0);
       const auto& update = ctx->SavedTensors().at(1);
       const auto& temp = JUST(functional::ZerosLike(update));
-      in_grads->at(0) = JUST(functional::TensorScatterNdUpdate(out_grads.at(0), indices, temp));
+      in_grads->at(0) = JUST(
+          functional::TensorScatterNdUpdate(out_grads.at(0), indices, temp, /*inplace=*/false));
     }
     return Maybe<void>::Ok();
   }

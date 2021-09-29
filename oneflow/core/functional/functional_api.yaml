@@ -530,7 +530,7 @@
   bind_python: True
 
 - name: "tensor_scatter_nd_update"
-  signature: "Tensor (Tensor tensor, Tensor indices, Tensor updates) => TensorScatterNdUpdate"
+  signature: "Tensor (Tensor tensor, Tensor indices, Tensor updates, Bool inplace=False) => TensorScatterNdUpdate"
   bind_python: True
 
 - name: "scatterndlike"
