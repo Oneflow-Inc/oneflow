@@ -22,7 +22,8 @@ from packaging import version
 import torch as torch_original
 from typing import Union, Tuple
 
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 NoneType = type(None)
 # Not the same as those in PyTorch because 'output_size' cannot be NoneType (even in 'torch.nn.AdaptiveAvgPoolXd')

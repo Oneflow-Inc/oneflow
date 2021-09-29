@@ -110,7 +110,7 @@ void ArgMax(const T* in_ptr, int32_t num_row, int32_t num_col, void* temp_storag
 template<typename T>
 __global__ void WriteKeysToOutput(const int32_t instance_num,
                                   const cub::KeyValuePair<int32_t, T>* key_value_out_ptr,
-                                  int32_t* out_ptr) {
+                                  int64_t* out_ptr) {
   CUDA_1D_KERNEL_LOOP(i, instance_num) { out_ptr[i] = key_value_out_ptr[i].key; }
 }
 
@@ -140,7 +140,7 @@ class GpuArgMaxKernel final : public user_op::OpKernel {
            ctx->device_ctx()->cuda_stream());
     WriteKeysToOutput<T><<<BlocksNum4ThreadsNum(instance_num), kCudaThreadsNumPerBlock, 0,
                            ctx->device_ctx()->cuda_stream()>>>(
-        instance_num, buffer_manager.KeyValueOutPtr(), out->mut_dptr<int32_t>());
+        instance_num, buffer_manager.KeyValueOutPtr(), out->mut_dptr<int64_t>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -167,6 +167,8 @@ class GpuArgMaxKernel final : public user_op::OpKernel {
 
 REGISTER_GPU_ARGMAX_KERNEL(float)
 REGISTER_GPU_ARGMAX_KERNEL(double)
+REGISTER_GPU_ARGMAX_KERNEL(uint8_t)
+REGISTER_GPU_ARGMAX_KERNEL(int8_t)
 REGISTER_GPU_ARGMAX_KERNEL(int32_t)
 REGISTER_GPU_ARGMAX_KERNEL(int64_t)
 

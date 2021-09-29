@@ -117,8 +117,16 @@ class GpuExpandKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const std::vector<int32_t>& logical_expand_shape =
+        ctx->Attr<std::vector<int32_t>>("logical_expand_shape");
 
-    const std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("stride");
+    std::vector<int32_t> in_shape;
+    in_shape.resize(in->shape().NumAxes());
+    for (int i = 0; i < in->shape().NumAxes(); ++i) { in_shape[i] = in->shape().At(i); }
+
+    std::vector<int32_t> out_shape;
+    std::vector<int32_t> stride;
+    CHECK_JUST(getOutShapeAndStrideForFp(in_shape, logical_expand_shape, out_shape, stride));
 
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
@@ -127,10 +135,8 @@ class GpuExpandKernel final : public user_op::OpKernel {
 
     STRIDES expand_stride;
     for (int i = 0; i < out_dims; ++i) { expand_stride.val[i] = stride[i]; }
-    DimVector out_dim_vec;
-    out->shape().ToDimVector(&out_dim_vec);
     STRIDES out_stride;
-    InitStride(out_stride.val, out_dim_vec.data(), out_dims);
+    InitStride(out_stride.val, out_shape.data(), out_dims);
     GpuExpandFunctor<T>()(ctx->device_ctx(), in_ptr, out_stride, expand_stride, out_dims, out_size,
                           out_ptr);
   }
@@ -146,7 +152,9 @@ class GpuExpandKernel final : public user_op::OpKernel {
 REGISTER_EXPAND_KERNEL(float);
 REGISTER_EXPAND_KERNEL(double);
 REGISTER_EXPAND_KERNEL(float16);
-REGISTER_EXPAND_KERNEL(int);
+REGISTER_EXPAND_KERNEL(uint8_t);
+REGISTER_EXPAND_KERNEL(int8_t);
+REGISTER_EXPAND_KERNEL(int32_t);
 REGISTER_EXPAND_KERNEL(int64_t);
 
 template<typename T>
@@ -160,8 +168,18 @@ class GpuExpandGradKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const std::vector<int32_t>& logical_out_shape =
+        ctx->Attr<std::vector<int32_t>>("logical_out_shape");
+    const std::vector<int32_t>& logical_expand_shape =
+        ctx->Attr<std::vector<int32_t>>("logical_expand_shape");
 
-    const std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("stride");
+    std::vector<int32_t> in_shape;
+    in_shape.resize(in->shape().NumAxes());
+    for (int i = 0; i < in->shape().NumAxes(); ++i) { in_shape[i] = in->shape().At(i); }
+    std::vector<int32_t> out_shape;
+    std::vector<int32_t> stride;
+    CHECK_JUST(getOutShapeAndStrideForBp(logical_out_shape, logical_expand_shape, in_shape,
+                                         out_shape, stride));
 
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
@@ -172,10 +190,9 @@ class GpuExpandGradKernel final : public user_op::OpKernel {
 
     STRIDES expand_stride;
     for (int i = 0; i < in_dims; ++i) { expand_stride.val[i] = stride[i]; }
-    DimVector in_dim_vec;
-    in->shape().ToDimVector(&in_dim_vec);
     STRIDES in_stride;
-    InitStride(in_stride.val, in_dim_vec.data(), in_dims);
+    InitStride(in_stride.val, in_shape.data(), in_dims);
+
     GpuExpandGradFunctor<T>()(ctx->device_ctx(), in_ptr, in_stride, expand_stride, in_dims, in_size,
                               out_size, out_ptr);
   }
@@ -192,7 +209,7 @@ class GpuExpandGradKernel final : public user_op::OpKernel {
 REGISTER_EXPAND_GRAD_KERNEL(float);
 REGISTER_EXPAND_GRAD_KERNEL(double);
 REGISTER_EXPAND_GRAD_KERNEL(float16);
-REGISTER_EXPAND_GRAD_KERNEL(int);
+REGISTER_EXPAND_GRAD_KERNEL(int32_t);
 REGISTER_EXPAND_GRAD_KERNEL(int64_t);
 
 }  // namespace oneflow

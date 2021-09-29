@@ -71,6 +71,7 @@ Maybe<const DTypeMeta&> DTypeMeta4DataType(DataType data_type) {
       {DataType::kUInt8, DTypeMeta("oneflow.uint8", false, false, false)},
       {DataType::kOFRecord, DTypeMeta("oneflow.of_record", false, false, false)},
       {DataType::kTensorBuffer, DTypeMeta("oneflow.tensor_buffer", false, false, false)},
+      {DataType::kBFloat16, DTypeMeta("oneflow.bfloat16", true, true, false)},
   };
   return MapAt(data_type2dtype_meta, data_type);
 };
@@ -99,6 +100,27 @@ bool DType::is_signed() const { return CHECK_JUST(DTypeMeta4DataType(data_type_)
 
 bool DType::is_complex() const { return CHECK_JUST(DTypeMeta4DataType(data_type_)).is_complex(); }
 
+/*
+  The order of datatype is:
+  0    1    2    3    4    5    6    7    8    9    10   11
+  iv   c1   f4   f8   i1   i4   i8   u1   re   f2   bu   bf
+  The priority order of datatype is:
+  0    1    2    3    4    5    6    7    8    9    10   11
+  iv < u1 < c1 < i1 < i4 < i8 < f2 < f4 < f8 < bf < re < bu.
+*/
+const int DType::priority_order[DataType::kMaxDataType] = {0,  /*kInvalid*/
+                                                           2,  /*kChar*/
+                                                           7,  /*kFloat32*/
+                                                           8,  /*kDouble*/
+                                                           3,  /*kInt8*/
+                                                           4,  /*kInt32*/
+                                                           5,  /*kInt64*/
+                                                           1,  /*kUInt8*/
+                                                           10, /*kOFRecord*/
+                                                           6,  /*kFloat16*/
+                                                           11, /*kTensorBuffer*/
+                                                           9 /*kBFloat16*/};
+
 bool DType::is_floating_point() const {
   return CHECK_JUST(DTypeMeta4DataType(data_type_)).is_floating_point();
 }
@@ -112,5 +134,58 @@ const std::string& DType::name() const { return CHECK_JUST(DTypeMeta4DataType(da
   }
 OF_PP_FOR_EACH_TUPLE(DEFINE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)
 #undef DEFINE_GET_DATA_TYPE_FUNCTION
+
+Symbol<DType> promoteTypes(const Symbol<DType> a, const Symbol<DType> b) {
+  const Symbol<DType> iv = CHECK_JUST(DType::Get(DataType::kInvalidDataType));
+  const Symbol<DType> c1 = CHECK_JUST(DType::Get(DataType::kChar));
+  const Symbol<DType> f4 = CHECK_JUST(DType::Get(DataType::kFloat));
+  const Symbol<DType> f8 = CHECK_JUST(DType::Get(DataType::kDouble));
+  const Symbol<DType> i1 = CHECK_JUST(DType::Get(DataType::kInt8));
+  const Symbol<DType> i4 = CHECK_JUST(DType::Get(DataType::kInt32));
+  const Symbol<DType> i8 = CHECK_JUST(DType::Get(DataType::kInt64));
+  const Symbol<DType> u1 = CHECK_JUST(DType::Get(DataType::kUInt8));
+  const Symbol<DType> re = CHECK_JUST(DType::Get(DataType::kOFRecord));
+  const Symbol<DType> f2 = CHECK_JUST(DType::Get(DataType::kFloat16));
+  const Symbol<DType> bu = CHECK_JUST(DType::Get(DataType::kTensorBuffer));
+  const Symbol<DType> bf = CHECK_JUST(DType::Get(DataType::kBFloat16));
+
+  /* It is consistent with data_type.proto(except kInvalidDataType, kOFRecord and kTensorBuffer)
+    kInvalidDataType = 0;
+    kChar = 1;
+    kFloat = 2;
+    kDouble = 3;
+    kInt8 = 4;
+    kInt32 = 5;
+    kInt64 = 6;
+    kUInt8 = 7;
+    kOFRecord = 8;
+    kFloat16 = 9;
+    kTensorBuffer = 10;
+    kBFloat16 = 11;
+
+    The priority order of datatype is:
+    iv < u1 < c1 < i1 < i4 < i8 < f2 < f4 < f8 < bf < re < bu.
+
+    The new DataType should be add in the end of proto, and the Loopup table should be maintained as
+    right priority (author:zhengzekang).
+  */
+  static const Symbol<DType> _promoteTypesLookup[DataType::kMaxDataType][DataType::kMaxDataType] = {
+      /*        iv  c1  f4  f8  i1  i4  i8  u1  re  f2  bu  bf */
+      /* iv */ {iv, c1, f4, f8, i1, i4, i8, u1, re, f2, bu, bf},
+      /* c1 */ {c1, c1, f4, f8, i1, i4, i8, c1, re, f2, bu, bf},
+      /* f4 */ {f4, f4, f4, f8, f4, f4, f4, f4, re, f4, bu, bf},
+      /* f8 */ {f8, f8, f8, f8, f8, f8, f8, f8, re, f8, bu, bf},
+      /* i1 */ {i1, i1, f4, f8, i1, i4, i8, i1, re, f2, bu, bf},
+      /* i4 */ {i4, i4, f4, f8, i4, i4, i8, i4, re, f2, bu, bf},
+      /* i8 */ {i8, i8, f4, f8, i8, i8, i8, i8, re, f2, bu, bf},
+      /* u1 */ {u1, c1, f4, f8, i1, i4, i8, u1, re, f2, bu, bf},
+      /* re */ {re, re, re, re, re, re, re, re, re, re, bu, re},
+      /* f2 */ {f2, f2, f4, f8, f2, f2, f2, f2, re, f2, bu, bf},
+      /* bu */ {bu, bu, bu, bu, bu, bu, bu, bu, bu, bu, bu, bu},
+      /* bf */ {bf, bf, bf, bf, bf, bf, bf, bf, re, bf, bu, bf},
+  };
+
+  return _promoteTypesLookup[static_cast<int>(a->data_type())][static_cast<int>(b->data_type())];
+}
 
 }  // namespace oneflow

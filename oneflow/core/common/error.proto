@@ -126,12 +126,14 @@ message ErrorStackFrame {
 
 message SymbolIdUninitializedError {}
 
-message ValueError {}
+message InvalidValueError {}
 
 message IndexError {}
 message TypeError {}
 
 message TimeoutError {}
+
+message ValueNotFoundError {}
 
 message ErrorProto {
   optional string error_summary = 1 [default = ""];
@@ -152,11 +154,12 @@ message ErrorProto {
     LossBlobNotFoundError loss_blob_not_found_error = 24;
     JobSetEmptyError job_set_empty_error = 25;
     DeviceTagNotFoundError device_tag_not_found_error = 26;
-    ValueError value_error = 27;
+    InvalidValueError invalid_value_error = 27;
     IndexError index_error = 28;
     TypeError type_error = 29;
     RuntimeError runtime_error = 30;
     TimeoutError timeout_error = 40;
+    ValueNotFoundError value_not_found_error = 31;
     
     JobNameExistError job_name_exist_error = 100;
     JobNameEmptyError job_name_empty_error = 101;

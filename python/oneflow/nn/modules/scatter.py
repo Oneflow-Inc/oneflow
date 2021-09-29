@@ -127,8 +127,8 @@ def _scatter_nd_op(index, update, shape):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> index = flow.Tensor(np.array([[1], [6], [4]]), dtype=flow.int)
-        >>> update = flow.Tensor(np.array([10.2,5.1,12.7]), dtype=flow.float)
+        >>> index = flow.tensor(np.array([[1], [6], [4]]), dtype=flow.int)
+        >>> update = flow.tensor(np.array([10.2, 5.1, 12.7]), dtype=flow.float)
         >>> out = flow.scatter_nd(index, update, [8])
         >>> out
         tensor([ 0.0000, 10.2000,  0.0000,  0.0000, 12.7000,  0.0000,  5.1000,  0.0000],

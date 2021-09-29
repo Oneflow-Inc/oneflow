@@ -18,6 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
 
 import oneflow as flow
@@ -26,7 +27,7 @@ import oneflow.unittest
 
 def _test_bernoulli(test_case, shape):
     input_arr = np.ones(shape)
-    x = flow.Tensor(input_arr, device=flow.device("cpu"))
+    x = flow.tensor(input_arr, dtype=flow.float32, device=flow.device("cpu"))
     y = flow.bernoulli(x)
     test_case.assertTrue(np.allclose(y.numpy(), x.numpy()))
 
@@ -34,9 +35,10 @@ def _test_bernoulli(test_case, shape):
 def _test_bernoulli_with_generator(test_case, shape):
     generator = flow.Generator()
     generator.manual_seed(0)
-    x = flow.Tensor(np.random.rand(*shape), device=flow.device("cpu"))
+    x = flow.tensor(
+        np.random.rand(*shape), dtype=flow.float32, device=flow.device("cpu")
+    )
     y_1 = flow.bernoulli(x, generator=generator)
-    y_1.numpy()
     generator.manual_seed(0)
     y_2 = flow.bernoulli(x, generator=generator)
     test_case.assertTrue(np.allclose(y_1.numpy(), y_2.numpy()))
@@ -50,6 +52,12 @@ class TestBernoulli(flow.unittest.TestCase):
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @unittest.skip("bernoulli has bug")
+    @autotest(auto_backward=False)
+    def test_flow_bernoulli_with_random_data(test_case):
+        input = random_pytorch_tensor(ndim=1).to("cpu")
+        return torch.bernoulli(input)
 
 
 if __name__ == "__main__":

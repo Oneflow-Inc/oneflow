@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import collections
-from itertools import chain
 import warnings
 from copy import deepcopy
+from itertools import chain
 from typing import Any, Callable, Dict, Union
 
 from oneflow.framework.tensor import Tensor
@@ -43,8 +43,6 @@ class ParamGroup(object):
             self._options["clip_grad_norm_type"] = parameters["clip_grad_norm_type"]
 
     def __getitem__(self, key):
-        if key == "params":
-            return self._parameters
         return self._options[key]
 
     def __setitem__(self, key, value):
@@ -90,9 +88,9 @@ class Optimizer(object):
 
         if len(groups) != len(saved_groups):
             raise ValueError(
-                "loaded state dict has a different number of " "parameter groups"
+                "loaded state dict has a different number of parameter groups"
             )
-        param_lens = (len(g["params"]) for g in groups)
+        param_lens = (len(g._parameters) for g in groups)
         saved_lens = (len(g["params"]) for g in saved_groups)
         if any(p_len != s_len for p_len, s_len in zip(param_lens, saved_lens)):
             raise ValueError(
@@ -105,18 +103,18 @@ class Optimizer(object):
             old_id: p
             for old_id, p in zip(
                 chain.from_iterable((g["params"] for g in saved_groups)),
-                chain.from_iterable((g["params"] for g in groups)),
+                chain.from_iterable((g._parameters for g in groups)),
             )
         }
 
         def cast(param, value):
-            r"""Make a deep copy of value, casting all tensors to device of param."""
+            r"""Make a deep copy of value, casting all tensors to device or placement of param."""
             if isinstance(value, Tensor):
                 if value.is_local:
                     value = value.to(param.device)
                 else:
                     value = value.to_consistent(
-                        placement=value.placement, sbp=value.sbp
+                        placement=param.placement, sbp=param.sbp
                     )
                 return value
             elif isinstance(value, dict):
@@ -170,11 +168,11 @@ class Optimizer(object):
             param_mappings.update(
                 {
                     id(p): i
-                    for i, p in enumerate(group["params"], start_index)
+                    for i, p in enumerate(group._parameters, start_index)
                     if id(p) not in param_mappings
                 }
             )
-            packed["params"] = [param_mappings[id(p)] for p in group["params"]]
+            packed["params"] = [param_mappings[id(p)] for p in group._parameters]
             start_index += len(packed["params"])
             return packed
 
@@ -193,7 +191,15 @@ class Optimizer(object):
         raise NotImplementedError()
 
     def clip_grad(self):
-        r"""Clips the gradient of parameters in param_groups.
+        r"""Clips gradient norm of an iterable of parameters. 
+        The norm is computed over all gradients together, as if they were concatenated into a single vector.
+        
+        You can set the max_norm and norm_type. 
+
+        For more details, you can refer to the documentation of each optimizer(like Adam, SGD and so on). 
+
+        You can also refer the code in :func:`oneflow.nn.utils.clip_grad_norm_`
+        
         """
         for param_group in self.param_groups:
             if param_group._enable_clip_grad:
@@ -226,25 +232,14 @@ class Optimizer(object):
             3. Optimizers have a different behavior if the gradient is 0 or None
             (in one case it does the step with a gradient of 0 and in the other
             it skips the step altogether).
-
-        Returns:
-            None
-
         """
-        all_grad_is_none = True
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 if param.grad is not None:
-                    all_grad_is_none = False
                     if set_to_none:
                         param.grad = None
                     else:
                         param.grad.zeros_()
-        if all_grad_is_none:
-            warnings.warn(
-                "\nParameters in optimizer do not have gradient.\nPlease check `loss.backward()` is called"
-                "or not,\nor try to declare optimizer after calling `module.to()`"
-            )
 
     def _parse_input_parameters(self, parameters):
         """

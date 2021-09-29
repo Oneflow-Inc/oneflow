@@ -22,7 +22,8 @@ from test_util import Array2Numpy, FlattenArray, GenArgList, Index2Coordinate
 
 import oneflow as flow
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _np_replication_pad2d_grad(src, dest, padding):
@@ -67,7 +68,7 @@ def _np_replication_pad2d_grad(src, dest, padding):
 
 def _test_ReplicationPad2d(test_case, shape, padding, device):
     np_input = np.random.random(shape).astype(np.float32)
-    of_input = flow.Tensor(
+    of_input = flow.tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     if isinstance(padding, int):

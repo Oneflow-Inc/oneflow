@@ -23,7 +23,7 @@ namespace {
 bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   if (step != 1) { return false; }
   if (start != 0) { return false; }
-  if (stop != std::numeric_limits<int64_t>::max()) { return false; }
+  if (stop != size) { return false; }
   return true;
 }
 
@@ -37,25 +37,6 @@ Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
   CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
 
-  // slice a 1-dim tensor will return a 0-dim or 1-dim tensor
-  if (x_shape.NumAxes() == 1) {
-    const int64_t start = start_vec.at(0);
-    const int64_t stop = stop_vec.at(0);
-    const int64_t step = step_vec.at(0);
-    const int64_t diff = (step > 0) ? (stop - start - 1) : (stop - start + 1);
-    const int64_t len = diff / step + 1;
-    CHECK_GE_OR_RETURN(len, 1);
-    if (len == 1) {
-      // return a 0-dim tensor
-      DimVector zero_dim_vec(0);
-      *ctx->OutputShape("y", 0) = Shape(zero_dim_vec);
-    } else {
-      DimVector one_dim_vec(1);
-      one_dim_vec[0] = len;
-      *ctx->OutputShape("y", 0) = Shape(one_dim_vec);
-    }
-    return Maybe<void>::Ok();
-  }
   DimVector dim_vec(ndim);
   FOR_RANGE(size_t, i, 0, dim_vec.size()) {
     const int64_t dim_size = x_shape.At(i);
@@ -115,27 +96,10 @@ Maybe<void> InferSliceGradOpTensorDesc(user_op::InferContext* ctx) {
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
 
   const int64_t ndim = dy_shape.NumAxes();
-  if (like_shape.NumAxes() == 1) {
-    const int64_t start = start_vec.at(0);
-    const int64_t stop = stop_vec.at(0);
-    const int64_t step = step_vec.at(0);
-    const int64_t diff = (step > 0) ? (stop - start - 1) : (stop - start + 1);
-    const int64_t len = diff / step + 1;
-    CHECK_GE_OR_RETURN(len, 1);
-    if (len == 1) {
-      CHECK_EQ_OR_RETURN(ndim, 0);
-    } else {
-      CHECK_EQ_OR_RETURN(ndim, 1);
-    }
-    CHECK_EQ_OR_RETURN(start_vec.size(), 1);
-    CHECK_EQ_OR_RETURN(stop_vec.size(), 1);
-    CHECK_EQ_OR_RETURN(step_vec.size(), 1);
-  } else {
-    CHECK_EQ_OR_RETURN(like_shape.NumAxes(), ndim);
-    CHECK_EQ_OR_RETURN(start_vec.size(), ndim);
-    CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
-    CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
-  }
+  CHECK_EQ_OR_RETURN(like_shape.NumAxes(), ndim);
+  CHECK_EQ_OR_RETURN(start_vec.size(), ndim);
+  CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
+  CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
   *ctx->OutputShape("dx", 0) = like_shape;
   return Maybe<void>::Ok();
 }

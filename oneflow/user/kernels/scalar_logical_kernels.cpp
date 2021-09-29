@@ -77,15 +77,23 @@ class ScalarLogicalKernel final : public user_op::OpKernel {
   REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_logical_less", BinaryFuncLT,  \
                                                      dtype);                                       \
   REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_logical_less_equal",          \
-                                                     BinaryFuncLE, dtype);
+                                                     BinaryFuncLE, dtype);                         \
+  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_logical_or", BinaryFuncOR,    \
+                                                     dtype);                                       \
+  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_logical_xor", BinaryFuncXOR,  \
+                                                     dtype);                                       \
+  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_logical_and", BinaryFuncAND,  \
+                                                     dtype);
 
 #define REGISTER_SCALAR_LOGICAL_CPU_KERNELS()               \
+  REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kCPU, int8_t)  \
   REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kCPU, int32_t) \
   REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kCPU, int64_t) \
   REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kCPU, float)   \
   REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kCPU, double)
 
 #define REGISTER_SCALAR_LOGICAL_GPU_KERNELS()               \
+  REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kCPU, int8_t)  \
   REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kGPU, int32_t) \
   REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kGPU, int64_t) \
   REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kGPU, float)   \
