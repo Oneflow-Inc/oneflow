@@ -41,8 +41,8 @@ OBJECT_MSG_BEGIN(LocalDepObject);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(pool_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(occupied_link);
   OBJECT_MSG_DEFINE_LIST_LINK(stored_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(lifetime_link);
 OBJECT_MSG_END(LocalDepObject);
 // clang-format on
 

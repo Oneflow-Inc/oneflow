@@ -58,8 +58,8 @@ Maybe<ObjectMsgPtr<LocalDepObject>> LocalDepObject::New(const Device& device) {
 namespace {
 
 using PoolLocalDepObjectList = OBJECT_MSG_LIST(LocalDepObject, pool_link);
-using StoredLocalDepObjectList = OBJECT_MSG_LIST(LocalDepObject, stored_link);
-using OccupiedLocalDepObjectList = OBJECT_MSG_LIST(LocalDepObject, occupied_link);
+using StoredLocalDepObjectList = OBJECT_MSG_MUTEXED_LIST(LocalDepObject, stored_link);
+using LifetimeLocalDepObjectList = OBJECT_MSG_MUTEXED_LIST(LocalDepObject, lifetime_link);
 
 PoolLocalDepObjectList* RawThreadLocalPoolLocalDepObjectList(Symbol<Device> device) {
   static thread_local PoolLocalDepObjectList pool_list;
@@ -68,26 +68,26 @@ PoolLocalDepObjectList* RawThreadLocalPoolLocalDepObjectList(Symbol<Device> devi
 static constexpr auto* ThreadLocalPoolLocalDepObjectList =
     DECORATE(&RawThreadLocalPoolLocalDepObjectList, ThreadLocal);
 
-StoredLocalDepObjectList* RawThreadLocalStoredLocalDepObjectList(Symbol<Device> device) {
-  static thread_local StoredLocalDepObjectList stored_list;
+StoredLocalDepObjectList* RawGlobalStoredLocalDepObjectList(Symbol<Device> device) {
+  static StoredLocalDepObjectList stored_list;
   return &stored_list;
 }
-static constexpr auto* ThreadLocalStoredLocalDepObjectList =
-    DECORATE(&RawThreadLocalStoredLocalDepObjectList, ThreadLocal);
+static constexpr auto* GlobalStoredLocalDepObjectList =
+    DECORATE(&RawGlobalStoredLocalDepObjectList, StaticGlobalCopiable);
 
-OccupiedLocalDepObjectList* RawThreadLocalOccupiedLocalDepObjectList(Symbol<Device> device) {
-  static thread_local OccupiedLocalDepObjectList occupied_list;
-  return &occupied_list;
+LifetimeLocalDepObjectList* RawGlobalLifetimeLocalDepObjectList(Symbol<Device> device) {
+  static LifetimeLocalDepObjectList lifetime_list;
+  return &lifetime_list;
 }
-static constexpr auto* ThreadLocalOccupiedLocalDepObjectList =
-    DECORATE(&RawThreadLocalOccupiedLocalDepObjectList, ThreadLocal);
+static constexpr auto* GlobalLifetimeLocalDepObjectList =
+    DECORATE(&RawGlobalLifetimeLocalDepObjectList, StaticGlobalCopiable);
 
 }  // namespace
 
 Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device) {
   ObjectMsgPtr<LocalDepObject> local_dep_object;
   auto* pool_list = ThreadLocalPoolLocalDepObjectList(device);
-  auto* stored_list = ThreadLocalStoredLocalDepObjectList(device);
+  auto* stored_list = GlobalStoredLocalDepObjectList(device);
   if (!pool_list->empty()) {
     // When running stable, fetch recycled local_dep_object from pool_list which acting as a
     // object pool.
@@ -98,27 +98,26 @@ Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device) {
   } else {
     // When running unstable and no stored objects, directly new LocalDepObject
     local_dep_object = *JUST(LocalDepObject::New(*device));
+    GlobalLifetimeLocalDepObjectList(device)->PushBack(local_dep_object.Mutable());
   }
-  auto* ptr = local_dep_object.Mutable();
   CHECK_OR_RETURN(local_dep_object->is_pool_link_empty());
-  CHECK_OR_RETURN(local_dep_object->is_occupied_link_empty());
-  ThreadLocalOccupiedLocalDepObjectList(device)->EmplaceBack(std::move(local_dep_object));
-  return ptr;
+  CHECK_OR_RETURN(local_dep_object->is_stored_link_empty());
+  CHECK_OR_RETURN(!local_dep_object->is_lifetime_link_empty());
+  return local_dep_object.Mutable();
 }
 
 Maybe<void> PutLocalDepObjectToDevicePool(Symbol<Device> device, LocalDepObject* local_dep_object) {
   CHECK_OR_RETURN(local_dep_object->is_pool_link_empty());
   CHECK_OR_RETURN(local_dep_object->is_stored_link_empty());
-  CHECK_OR_RETURN(!local_dep_object->is_occupied_link_empty());
+  CHECK_OR_RETURN(!local_dep_object->is_lifetime_link_empty());
   auto* pool_list = ThreadLocalPoolLocalDepObjectList(device);
   const auto& pool_size = JUST(device->instr_local_dep_object_pool_size());
   // Keep pool_list->size() not bigger than pool_size
   if (pool_list->size() < pool_size) {
     pool_list->PushBack(local_dep_object);
   } else {
-    ThreadLocalStoredLocalDepObjectList(device)->PushBack(local_dep_object);
+    GlobalStoredLocalDepObjectList(device)->PushBack(local_dep_object);
   }
-  ThreadLocalOccupiedLocalDepObjectList(device)->Erase(local_dep_object);
   return Maybe<void>::Ok();
 }
 
