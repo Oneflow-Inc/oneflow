@@ -15,6 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
+import oneflow._oneflow_internal.lazy_mode as lazy_mode
 
 
 def _tensor_to(input, device, dtype, copy=False):
@@ -28,7 +29,11 @@ def _tensor_to(input, device, dtype, copy=False):
     ret = input
     copy_happened = False
     if device != ret.device:
-        ret = flow._C.copy(ret, device_type=device.type, device_id=device.index)
+        if ret.is_eager:
+            with lazy_mode.guard(False):
+                ret = flow._C.copy(ret, device_type=device.type, device_id=device.index)
+        if lazy_mode.is_enabled():
+            ret = flow._C.copy(ret, device_type=device.type, device_id=device.index)
         copy_happened = True
 
     if dtype != ret.dtype:
@@ -36,7 +41,13 @@ def _tensor_to(input, device, dtype, copy=False):
         copy_happened = True
 
     if copy and not copy_happened:
-        ret = flow._C.copy(ret, device_type=ret.device.type, device_id=ret.device.index)
+        if ret.is_eager:
+            with lazy_mode.guard(False):
+                ret = flow._C.copy(
+                    ret, device_type=ret.device.type, device_id=ret.device.index
+                )
+        if lazy_mode.is_enabled():
+            ret = flow._C.copy(ret, device_type=device.type, device_id=device.index)
 
     return ret
 
@@ -58,7 +69,12 @@ def _consistent_tensor_to(input, device_type, dtype, copy=False):
     if input.is_lazy:
         return _lazy_consistent_tensor_to(input, device_type, dtype)
     else:
-        return _eager_consistent_tensor_to(input, device_type, dtype)
+        if lazy_mode.is_enabled():
+            with lazy_mode.guard(False):
+                eager_ret = _eager_consistent_tensor_to(input, device_type, dtype)
+            return flow._C.copy(eager_ret, device_type=device_type, device_id=0)
+        else:
+            return _eager_consistent_tensor_to(input, device_type, dtype)
 
 
 def _lazy_consistent_tensor_to(input, device_type, dtype):

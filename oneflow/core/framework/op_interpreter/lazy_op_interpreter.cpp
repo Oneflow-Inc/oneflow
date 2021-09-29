@@ -542,14 +542,15 @@ Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
   std::string input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   if (input_lbn.empty()) {
     CHECK_OR_RETURN(input_tensor->is_eager());
-    std::shared_ptr<Tensor> new_input_tensor;
-    {
-      auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
-      new_input_tensor = JUST(functional::Copy(input_tensor, device_type, device_id));
+    if (input_tensor->is_local()) {
+      CHECK_EQ_OR_RETURN(JUST(input_tensor->device())->device_id(), device_id);
+      CHECK_EQ_OR_RETURN(JUST(input_tensor->device())->type(), device_type);
+    } else {
+      CHECK_EQ_OR_RETURN(Device::Type4DeviceTag(JUST(input_tensor->parallel_desc())->device_tag()),
+                         device_type);
     }
-    CHECK_OR_RETURN(new_input_tensor->is_eager());
-    JUST(AddFreeEagerTensorToVariableOp(new_input_tensor));
-    input_lbn = TensorNameScope::Global()->Lookup(new_input_tensor);
+    JUST(AddFreeEagerTensorToVariableOp(input_tensor));
+    input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   }
   CHECK_OR_RETURN(!input_lbn.empty());  // lbn must exist.
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
