@@ -64,10 +64,12 @@ class DConv2d(flow.nn.Conv2d):
         self.weight = flow.nn.Parameter(
             self.fake_quantization(self.weight, weight_scale, weight_zero_point)
         )
+        self.register_buffer("new_zero", flow.Tensor(1))
+        self.new_zero.fill_(0)
 
     def forward(self, x):
         scale, zero_point = self.moving_min_max_observer(
-            x, flow.tensor([0], dtype=flow.int64).to(x.device.type)
+            x, self.new_zero.to(flow.int64).to(x.device.type)
         )
         x = self.fake_quantization(x, scale, zero_point)
         return flow.nn.functional.conv2d(

@@ -20,6 +20,9 @@ from oneflow.fx.graph_module import GraphModule
 from oneflow.fx.node import Node, map_aggregate
 from typing import Any, Tuple, NamedTuple, Optional
 from oneflow.fx._compatibility import compatibility
+from oneflow.fx.passes import dequantization_ops
+from oneflow.fx.passes.quantization_ops.fuse_conv_bn import QConvBN
+from oneflow.fx.passes.quantization_ops.linear import QLinear
 from oneflow.fx.passes.dequantization_ops.d_conv import DConv2d
 from oneflow.fx.passes.dequantization_ops.d_linear import DLinear
 from ..node import Argument, Target
@@ -69,6 +72,43 @@ class GetInsertNode(flow.fx.Interpreter):
             self.insert_op_state[target] = submod
         return submod(*args, **kwargs)
 
+@compatibility(is_backward_compatible=True)
+class GetQuantizationNode(flow.fx.Interpreter):
+
+    quantization_place = []
+    quantization_op_state = {}
+
+    def run_node(self, n: Node) -> Any:
+        args, kwargs = self.fetch_args_kwargs_from_env(n)
+        assert isinstance(args, tuple)
+        assert isinstance(kwargs, dict)
+        return getattr(self, n.op)(n.target, args, kwargs)
+
+    def propagate(self, *args):
+        """
+        Run `module` via interpretation and return the result and
+        record the shape and type of each node.
+
+        Args:
+            *args (Tensor): the sample input.
+
+        Returns:
+            Any: The value returned from executing the Module
+        """
+        self.quantization_place.clear()
+        super().run(*args)
+        return (self.quantization_place, self.quantization_op_state)
+
+    def call_module(
+        self, target: "Target", args: Tuple[Argument, ...], kwargs: Dict[str, Any]
+    ) -> Any:
+        assert isinstance(target, str)
+        submod = self.fetch_attr(target)
+        if isinstance(submod, QConvBN):
+            self.quantization_place.append(target)
+            self.quantization_op_state[target] = submod
+        return submod(*args, **kwargs)
+
 
 def get_current_module_space(mod: str):
     x = mod.split(".")
@@ -80,8 +120,7 @@ def get_current_module_space(mod: str):
             y += "."
     return y
 
-
-def dequantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphModule:
+def dequantization_aware_training(origin_gm: GraphModule, quantize_gm: GraphModule, input, qconfig: dict) -> GraphModule:
 
     quantization_bit = 8
     quantization_scheme = "symmetric"
@@ -99,11 +138,12 @@ def dequantization_aware_training(gm: GraphModule, input, qconfig: dict) -> Grap
     if "momentum" in qconfig:
         momentum = qconfig["momentum"]
 
-    insert_place, insert_op_state = GetInsertNode(gm).propagate(input)
+    quantization_place, quantization_op_state = GetQuantizationNode(quantize_gm).propagate(input)
+    insert_place, insert_op_state = GetInsertNode(origin_gm).propagate(input)
     cnt = 0
-    for x in gm.graph.nodes:
+    for x in origin_gm.graph.nodes:
         if x.target in insert_place:
-            with gm.graph.inserting_after(x):
+            with origin_gm.graph.inserting_after(x):
                 y = x.next
                 if (
                     isinstance(insert_op_state[x.target], flow.nn.Conv2d)
@@ -112,90 +152,123 @@ def dequantization_aware_training(gm: GraphModule, input, qconfig: dict) -> Grap
                 ):
                     now_target = get_current_module_space(x.target)
                     if now_target == "":
-                        now_target = f"conv_bn.{cnt}"
+                        now_target = f"fake_conv_bn.{cnt}"
                     else:
                         now_target = (
-                            f"{get_current_module_space(x.target)}.conv_bn.{cnt}"
+                            f"{get_current_module_space(x.target)}.fake_conv_bn.{cnt}"
                         )
-                    # gm.add_submodule(
-                    #     now_target,
-                    #     QConvBN(
-                    #         insert_op_state[x.target],
-                    #         insert_op_state[y.target],
-                    #         quantization_bit,
-                    #         quantization_scheme,
-                    #         quantization_formula,
-                    #         per_layer_quantization,
-                    #         momentum,
-                    #     ),
-                    # )
+
+                    dequanzation_conv = DConv2d(
+                        quantization_op_state[now_target].conv_module.in_channels, 
+                        quantization_op_state[now_target].conv_module.out_channels,
+                        quantization_op_state[now_target].conv_module.kernel_size,
+                        quantization_op_state[now_target].conv_module.stride,
+                        quantization_op_state[now_target].conv_module.padding,
+                        quantization_op_state[now_target].conv_module.dilation,
+                        quantization_op_state[now_target].conv_module.groups,
+                        quantization_bit,
+                        quantization_scheme,
+                        quantization_formula,
+                        per_layer_quantization,
+                        momentum,
+                        )
+                    # mean = flow.Tensor(quantization_op_state[now_target].bn_module.running_mean)
+                    # var = flow.Tensor(quantization_op_state[now_target].bn_module.running_var)
+                    # std = flow.sqrt(var + quantization_op_state[now_target].bn_module.eps)
+
+                    # if quantization_op_state[now_target].bn_module.affine:
+                    #     gamma_ = quantization_op_state[now_target].bn_module.weight / std
+                    #     weight = quantization_op_state[now_target].conv_module.weight * gamma_.view(
+                    #         quantization_op_state[now_target].conv_module.out_channels, 1, 1, 1
+                    #     )
+                    #     if quantization_op_state[now_target].conv_module.bias is not None:
+                    #         bias = (
+                    #             gamma_ * quantization_op_state[now_target].conv_module.bias - gamma_ * mean + quantization_op_state[now_target].bn_module.bias
+                    #         )
+                    #     else:
+                    #         bias = quantization_op_state[now_target].bn_module.bias - gamma_ * mean
+                    # else:
+                    #     gamma_ = 1 / std
+                    #     weight = quantization_op_state[now_target].conv_module.weight * gamma_
+                    #     if quantization_op_state[now_target].conv_module.bias is not None:
+                    #         bias = gamma_ * quantization_op_state[now_target].conv_module.bias - gamma_ * mean
+                    #     else:
+                    #         bias = -gamma_ * mean
+
+                    # dequanzation_conv.weight = flow.nn.Parameter(weight)
+                    # dequanzation_conv.bias = flow.nn.Parameter(bias)
+
+                    origin_gm.add_submodule(
+                        now_target,
+                        dequanzation_conv,
+                    )
                     y.replace_all_uses_with(x)
-                    gm.graph.erase_node(y)
-                    gm.delete_submodule(y.target)
-                    qconvbn = gm.graph.call_module(module_name=now_target, args=x.args,)
+                    origin_gm.graph.erase_node(y)
+                    origin_gm.delete_submodule(y.target)
+                    qconvbn = origin_gm.graph.call_module(module_name=now_target, args=x.args,)
                     cnt = cnt + 1
                     x.replace_all_uses_with(qconvbn)
-                    gm.graph.erase_node(x)
-                    gm.delete_submodule(x.target)
-                elif isinstance(insert_op_state[x.target], flow.nn.Conv2d):
-                    now_target = get_current_module_space(x.target)
-                    if now_target == "":
-                        now_target = f"fake_conv2d.{cnt}"
-                    else:
-                        now_target = (
-                            f"{get_current_module_space(x.target)}.fake_conv2d.{cnt}"
-                        )
-                    gm.add_submodule(
-                        now_target,
-                        QConv2d(
-                            insert_op_state[x.target].in_channels,
-                            insert_op_state[x.target].out_channels,
-                            insert_op_state[x.target].kernel_size,
-                            insert_op_state[x.target].stride,
-                            insert_op_state[x.target].padding,
-                            insert_op_state[x.target].dilation,
-                            insert_op_state[x.target].groups,
-                            quantization_bit,
-                            quantization_scheme,
-                            quantization_formula,
-                            per_layer_quantization,
-                            momentum,
-                        ),
-                    )
-                    qconv = gm.graph.call_module(module_name=now_target, args=x.args,)
-                    cnt = cnt + 1
-                    x.replace_all_uses_with(qconv)
-                    gm.graph.erase_node(x)
-                    gm.delete_submodule(x.target)
-                elif isinstance(insert_op_state[x.target], flow.nn.Linear):
-                    bias = True
-                    if insert_op_state[x.target].bias is None:
-                        bias = False
-                    now_target = get_current_module_space(x.target)
-                    if now_target == "":
-                        now_target = f"fake_matmul.{cnt}"
-                    else:
-                        now_target = (
-                            f"{get_current_module_space(x.target)}.fake_matmul.{cnt}"
-                        )
-                    gm.add_submodule(
-                        now_target,
-                        QLinear(
-                            insert_op_state[x.target].in_features,
-                            insert_op_state[x.target].out_features,
-                            bias,
-                            quantization_bit,
-                            quantization_scheme,
-                            quantization_formula,
-                            per_layer_quantization,
-                            momentum,
-                        ),
-                    )
-                    qmatmul = gm.graph.call_module(module_name=now_target, args=x.args,)
-                    cnt = cnt + 1
-                    x.replace_all_uses_with(qmatmul)
-                    gm.graph.erase_node(x)
-                    gm.delete_submodule(x.target)
+                    origin_gm.graph.erase_node(x)
+                    origin_gm.delete_submodule(x.target)
+                # elif isinstance(insert_op_state[x.target], flow.nn.Conv2d):
+                #     now_target = get_current_module_space(x.target)
+                #     if now_target == "":
+                #         now_target = f"fake_conv2d.{cnt}"
+                #     else:
+                #         now_target = (
+                #             f"{get_current_module_space(x.target)}.fake_conv2d.{cnt}"
+                #         )
+                #     origin_gm.add_submodule(
+                #         now_target,
+                #         QConv2d(
+                #             insert_op_state[x.target].in_channels,
+                #             insert_op_state[x.target].out_channels,
+                #             insert_op_state[x.target].kernel_size,
+                #             insert_op_state[x.target].stride,
+                #             insert_op_state[x.target].padding,
+                #             insert_op_state[x.target].dilation,
+                #             insert_op_state[x.target].groups,
+                #             quantization_bit,
+                #             quantization_scheme,
+                #             quantization_formula,
+                #             per_layer_quantization,
+                #             momentum,
+                #         ),
+                #     )
+                #     qconv = origin_gm.graph.call_module(module_name=now_target, args=x.args,)
+                #     cnt = cnt + 1
+                #     x.replace_all_uses_with(qconv)
+                #     origin_gm.graph.erase_node(x)
+                #     origin_gm.delete_submodule(x.target)
+                # elif isinstance(insert_op_state[x.target], flow.nn.Linear):
+                #     bias = True
+                #     if insert_op_state[x.target].bias is None:
+                #         bias = False
+                #     now_target = get_current_module_space(x.target)
+                #     if now_target == "":
+                #         now_target = f"fake_matmul.{cnt}"
+                #     else:
+                #         now_target = (
+                #             f"{get_current_module_space(x.target)}.fake_matmul.{cnt}"
+                #         )
+                #     origin_gm.add_submodule(
+                #         now_target,
+                #         QLinear(
+                #             insert_op_state[x.target].in_features,
+                #             insert_op_state[x.target].out_features,
+                #             bias,
+                #             quantization_bit,
+                #             quantization_scheme,
+                #             quantization_formula,
+                #             per_layer_quantization,
+                #             momentum,
+                #         ),
+                #     )
+                #     qmatmul = origin_gm.graph.call_module(module_name=now_target, args=x.args,)
+                #     cnt = cnt + 1
+                #     x.replace_all_uses_with(qmatmul)
+                #     origin_gm.graph.erase_node(x)
+                #     origin_gm.delete_submodule(x.target)
 
-    gm.recompile()
-    return gm
+    origin_gm.recompile()
+    return origin_gm
