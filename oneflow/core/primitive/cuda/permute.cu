@@ -32,9 +32,9 @@ __global__ void PermuteKernel(PermuteKernelParams<num_dims, IndexType> params) {
   using T = typename std::aligned_storage<movement_size, movement_size>::type;
   const T* src = reinterpret_cast<const T*>(params.src);
   T* dst = reinterpret_cast<T*>(params.dst);
+  IndexType src_index[num_dims];
+  IndexType dst_index[num_dims];
   CUDA_1D_KERNEL_LOOP_T(IndexType, i, params.count) {
-    IndexType src_index[num_dims];
-    IndexType dst_index[num_dims];
     params.dst_index_helper.OffsetToNdIndex(i, dst_index);
 #pragma unroll
     for (size_t dim = 0; dim < num_dims; ++dim) {
