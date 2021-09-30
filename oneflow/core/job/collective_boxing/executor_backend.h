@@ -34,15 +34,15 @@ class ExecutorBackend {
   ExecutorBackend() = default;
   virtual ~ExecutorBackend() = default;
 
-  virtual void Init(std::shared_ptr<RequestStore> request_store){};
+  virtual void Init(std::shared_ptr<RequestStore> request_store) = 0;
   virtual void InitJob(int64_t job_id) = 0;
   virtual void DeinitJob(int64_t job_id) = 0;
   virtual void GroupRequests(
       const std::vector<RequestId>& request_ids,
       const std::function<void(std::vector<RequestId>&&, void*)>& Handler) = 0;
-  virtual void ExecuteRequests(void* executor_backend_token) = 0;
-  virtual void* CreateExecutorBackendToken(const std::vector<RequestId>& request_ids) = 0;
-  virtual void DestroyExecutorBackendToken(void* executor_backend_token) = 0;
+  virtual void ExecuteGroup(void* group_token) = 0;
+  virtual void* CreateGroupToken(const std::vector<RequestId>& group) = 0;
+  virtual void DestroyGroupToken(void* group_token) = 0;
 };
 
 }  // namespace collective

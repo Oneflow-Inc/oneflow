@@ -69,13 +69,13 @@ struct RequestGroupIndex {
   int32_t index_in_group;
 };
 
-class ExecutorToken;
+class GroupToken;
 
 struct StaticGroupRequestsInfo {
   std::vector<RequestGroupIndex> request_index2request_group_index;
   std::vector<GroupState> group_states;
   std::vector<std::vector<RequestId>> group_id2request_ids;
-  std::vector<ExecutorToken*> group_id2executor_token;
+  std::vector<GroupToken*> group_id2group_token;
 };
 
 struct StaticGroupRequestsInfoToken {
@@ -130,11 +130,11 @@ void StaticGroupCoordinator::InitJob(int64_t job_id) {
   std::vector<RequestGroupIndex>& request_index2request_group_index =
       info.request_index2request_group_index;
   std::vector<std::vector<RequestId>>& group_id2request_ids = info.group_id2request_ids;
-  std::vector<ExecutorToken*>& group_id2executor_token = info.group_id2executor_token;
+  std::vector<GroupToken*>& group_id2group_token = info.group_id2group_token;
   const int32_t request_count = impl_->request_store_->RequestCountForJob(job_id);
   request_index2request_group_index.resize(request_count);
   impl_->executor_->GroupRequests(
-      request_ids, [&](std::vector<RequestId>&& group, ExecutorToken* executor_token) {
+      request_ids, [&](std::vector<RequestId>&& group, GroupToken* group_token) {
         const int32_t group_id = group_states.size();
         group_states.emplace_back(group.size());
         for (int32_t idx_in_group = 0; idx_in_group < group.size(); ++idx_in_group) {
@@ -143,7 +143,7 @@ void StaticGroupCoordinator::InitJob(int64_t job_id) {
           request_index2request_group_index.at(request_id.request_index) = request_group_index;
         }
         group_id2request_ids.push_back(group);
-        group_id2executor_token.push_back(executor_token);
+        group_id2group_token.push_back(group_token);
       });
 
   CHECK(impl_->job_id2static_group_requests_info_.emplace(job_id, info).second);
@@ -154,9 +154,9 @@ void StaticGroupCoordinator::DeinitJob(int64_t job_id) {
   std::unique_lock<std::mutex> lock(mutex_);
   const auto& it = impl_->job_id2static_group_requests_info_.find(job_id);
   CHECK(it != impl_->job_id2static_group_requests_info_.end());
-  const auto& group_id2executor_token = it->second.group_id2executor_token;
-  for (int32_t group_id = 0; group_id < group_id2executor_token.size(); ++group_id) {
-    impl_->executor_->DestroyExecutorToken(group_id2executor_token.at(group_id));
+  const auto& group_id2group_token = it->second.group_id2group_token;
+  for (int32_t group_id = 0; group_id < group_id2group_token.size(); ++group_id) {
+    impl_->executor_->DestroyGroupToken(group_id2group_token.at(group_id));
   }
   impl_->job_id2static_group_requests_info_.erase(job_id);
 }
@@ -181,8 +181,7 @@ void StaticGroupCoordinator::AddRequest(void* coordinator_token) {
   while (true) {
     auto& group_state = info->group_states.at(current_group_idx_in_job_);
     if (group_state.IsReady()) {
-      impl_->executor_->ExecuteGroupedRequests(
-          info->group_id2executor_token.at(current_group_idx_in_job_));
+      impl_->executor_->ExecuteGroup(info->group_id2group_token.at(current_group_idx_in_job_));
       group_state.Reset();
       current_group_idx_in_job_ = (current_group_idx_in_job_ + 1) % info->group_states.size();
       num_launched_groups += 1;

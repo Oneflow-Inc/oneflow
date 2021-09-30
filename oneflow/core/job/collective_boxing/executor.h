@@ -28,7 +28,7 @@ class RequestStore;
 
 struct RequestId;
 
-class ExecutorToken;
+class GroupToken;
 
 class Executor {
  public:
@@ -40,9 +40,9 @@ class Executor {
   virtual void DeinitJob(int64_t job_id) = 0;
   virtual void GroupRequests(
       const std::vector<RequestId>& request_ids,
-      const std::function<void(std::vector<RequestId>&&, ExecutorToken*)>& Handler) = 0;
-  virtual void ExecuteGroupedRequests(ExecutorToken* executor_token) = 0;
-  virtual void DestroyExecutorToken(ExecutorToken* executor_token) = 0;
+      const std::function<void(std::vector<RequestId>&&, GroupToken*)>& Handler) = 0;
+  virtual void ExecuteGroup(GroupToken* group_token) = 0;
+  virtual void DestroyGroupToken(GroupToken* group_token) = 0;
   virtual void ExecuteRequests(const std::vector<RequestId>& request_ids);
 };
 

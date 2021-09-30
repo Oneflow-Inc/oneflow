@@ -553,7 +553,7 @@ struct NcclExecutorBackend::Impl {
               || !CanRequestEntryFuse(request_store->MutRequestEntry(group.back()), request_entry)
               || group_size + size > fusion_threshold || group.size() >= fusion_max_ops) {
             if (!group.empty()) {
-              void* token = CreateExecutorBackendToken(group);
+              void* token = CreateGroupToken(group);
               Handler(std::move(group), token);
               group.clear();
               group_size = 0;
@@ -563,44 +563,41 @@ struct NcclExecutorBackend::Impl {
           group_size += size;
         });
     if (!group.empty()) {
-      void* token = CreateExecutorBackendToken(group);
+      void* token = CreateGroupToken(group);
       Handler(std::move(group), token);
     }
   }
 
-  struct NcclExecutorBackendToken {
-    NcclExecutorBackendToken(const std::vector<RequestId>& request_ids,
-                             std::vector<CommGroup>* stream_id2comm_group)
-        : request_ids(request_ids), stream_id2comm_group(stream_id2comm_group) {}
+  struct GroupToken {
+    GroupToken(const std::vector<RequestId>& group, std::vector<CommGroup>* stream_id2comm_group)
+        : request_ids(group), stream_id2comm_group(stream_id2comm_group) {}
     std::vector<RequestId> request_ids;
     std::vector<CommGroup>* stream_id2comm_group;
   };
 
-  void* CreateExecutorBackendToken(const std::vector<RequestId>& request_ids) {
-    CHECK_GT(request_ids.size(), 0);
-    void* executor_backend_token;
+  void* CreateGroupToken(const std::vector<RequestId>& group) {
+    CHECK_GT(group.size(), 0);
+    void* group_token;
     const DeviceSet& first_device_set =
-        request_store->MutRequestEntry(request_ids.front())->desc().device_set();
+        request_store->MutRequestEntry(group.front())->desc().device_set();
     auto it = device_set2stream_id2comm_group.find(first_device_set);
     CHECK(it != device_set2stream_id2comm_group.end());
-    executor_backend_token = new NcclExecutorBackendToken(request_ids, &it->second);
+    group_token = new GroupToken(group, &it->second);
     request_store->ForEachMutRequestEntryForIdsInJob(
-        request_ids, [&](RequestEntry* request_entry, int32_t i, const RequestId& request_id) {
+        group, [&](RequestEntry* request_entry, int32_t i, const RequestId& request_id) {
           const DeviceSet& device_set = request_entry->desc().device_set();
           CHECK(first_device_set == device_set);
         });
-    return executor_backend_token;
+    return group_token;
   }
 
-  void DestroyExecutorBackendToken(void* executor_backend_token) {
-    NcclExecutorBackendToken* token =
-        static_cast<NcclExecutorBackendToken*>(executor_backend_token);
+  void DestroyGroupToken(void* group_token) {
+    GroupToken* token = static_cast<GroupToken*>(group_token);
     delete token;
   }
 
-  void ExecuteRequests(void* executor_backend_token) {
-    NcclExecutorBackendToken* token =
-        static_cast<NcclExecutorBackendToken*>(executor_backend_token);
+  void ExecuteGroup(void* group_token) {
+    GroupToken* token = static_cast<GroupToken*>(group_token);
     const std::vector<RequestId>& request_ids = token->request_ids;
     if (request_ids.empty()) { return; }
     const int32_t stream_id = NextStreamId();
@@ -650,17 +647,15 @@ void NcclExecutorBackend::GroupRequests(
   impl_->GroupRequests(request_ids, Handler);
 }
 
-void* NcclExecutorBackend::CreateExecutorBackendToken(const std::vector<RequestId>& request_ids) {
-  return impl_->CreateExecutorBackendToken(request_ids);
+void* NcclExecutorBackend::CreateGroupToken(const std::vector<RequestId>& group) {
+  return impl_->CreateGroupToken(group);
 }
 
-void NcclExecutorBackend::DestroyExecutorBackendToken(void* executor_backend_token) {
-  return impl_->DestroyExecutorBackendToken(executor_backend_token);
+void NcclExecutorBackend::DestroyGroupToken(void* group_token) {
+  return impl_->DestroyGroupToken(group_token);
 }
 
-void NcclExecutorBackend::ExecuteRequests(void* executor_backend_token) {
-  impl_->ExecuteRequests(executor_backend_token);
-}
+void NcclExecutorBackend::ExecuteGroup(void* group_token) { impl_->ExecuteGroup(group_token); }
 
 }  // namespace collective
 

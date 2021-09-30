@@ -76,20 +76,20 @@ class RequestHandle final {
   void* coordinator_token_;
 };
 
-class ExecutorToken final {
+class GroupToken final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ExecutorToken);
-  ExecutorToken(Backend backend, void* backend_token)
-      : backend_(backend), backend_token_(backend_token) {}
-  ~ExecutorToken() = default;
+  OF_DISALLOW_COPY_AND_MOVE(GroupToken);
+  GroupToken(Backend backend, void* backend_group_token)
+      : backend_(backend), backend_group_token_(backend_group_token) {}
+  ~GroupToken() = default;
 
   Backend backend() { return backend_; }
 
-  void* backend_token() { return backend_token_; }
+  void* backend_group_token() { return backend_group_token_; }
 
  private:
   Backend backend_;
-  void* backend_token_;
+  void* backend_group_token_;
 };
 
 class ExecutorImpl : public Executor {
@@ -102,14 +102,13 @@ class ExecutorImpl : public Executor {
   void DeinitJob(int64_t job_id) override;
   void GroupRequests(
       const std::vector<RequestId>& request_ids,
-      const std::function<void(std::vector<RequestId>&&, ExecutorToken*)>& Handler) override;
-  void ExecuteGroupedRequests(ExecutorToken* executor_token) override;
-  void DestroyExecutorToken(ExecutorToken* executor_token) override;
+      const std::function<void(std::vector<RequestId>&&, GroupToken*)>& Handler) override;
+  void ExecuteGroup(GroupToken* group_token) override;
+  void DestroyGroupToken(GroupToken* group_token) override;
 
  private:
-  Backend GetUniqueBackend(const std::vector<RequestId>& request_ids);
-  ExecutorToken* CreateExecutorToken(const std::vector<RequestId>& request_ids,
-                                     void* backend_token);
+  Backend GetUniqueBackend(const std::vector<RequestId>& group);
+  GroupToken* CreateGroupToken(const std::vector<RequestId>& group, void* backend_group_token);
 
   std::vector<std::unique_ptr<ExecutorBackend>> backends_;
   std::shared_ptr<RequestStore> request_store_;
@@ -132,25 +131,25 @@ void ExecutorImpl::DeinitJob(int64_t job_id) {
   backends_.at(Backend::kBackendNCCL)->DeinitJob(job_id);
 }
 
-ExecutorToken* ExecutorImpl::CreateExecutorToken(const std::vector<RequestId>& request_ids,
-                                                 void* backend_token) {
-  return new ExecutorToken(GetUniqueBackend(request_ids), backend_token);
+GroupToken* ExecutorImpl::CreateGroupToken(const std::vector<RequestId>& group,
+                                           void* backend_group_token) {
+  return new GroupToken(GetUniqueBackend(group), backend_group_token);
 }
 
-void ExecutorImpl::DestroyExecutorToken(ExecutorToken* executor_token) {
-  backends_.at(Backend::kBackendNCCL)->DestroyExecutorBackendToken(executor_token->backend_token());
-  delete executor_token;
+void ExecutorImpl::DestroyGroupToken(GroupToken* group_token) {
+  backends_.at(Backend::kBackendNCCL)->DestroyGroupToken(group_token->backend_group_token());
+  delete group_token;
 }
 
 void ExecutorImpl::GroupRequests(
     const std::vector<RequestId>& request_ids,
-    const std::function<void(std::vector<RequestId>&&, ExecutorToken*)>& Handler) {
+    const std::function<void(std::vector<RequestId>&&, GroupToken*)>& Handler) {
   if (request_ids.empty()) { return; }
   const CollectiveBoxingConf& conf =
       Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf();
-  auto BackendHandler = [&](std::vector<RequestId>&& group, void* backend_token) {
-    ExecutorToken* executor_token = CreateExecutorToken(group, backend_token);
-    Handler(std::move(group), executor_token);
+  auto BackendHandler = [&](std::vector<RequestId>&& group, void* backend_group_token) {
+    GroupToken* group_token = CreateGroupToken(group, backend_group_token);
+    Handler(std::move(group), group_token);
   };
   auto HandleGroup = [&]() {
     if (group_buffer_.empty()) { return; }
@@ -180,16 +179,16 @@ void ExecutorImpl::GroupRequests(
   HandleGroup();
 }
 
-void ExecutorImpl::ExecuteGroupedRequests(ExecutorToken* executor_token) {
-  const Backend backend = executor_token->backend();
-  backends_.at(backend)->ExecuteRequests(executor_token->backend_token());
+void ExecutorImpl::ExecuteGroup(GroupToken* group_token) {
+  const Backend backend = group_token->backend();
+  backends_.at(backend)->ExecuteGroup(group_token->backend_group_token());
 }
 
-Backend ExecutorImpl::GetUniqueBackend(const std::vector<RequestId>& request_ids) {
+Backend ExecutorImpl::GetUniqueBackend(const std::vector<RequestId>& group) {
   const Backend backend =
-      request_store_->MutRequestEntry(request_ids.front())->desc().op_desc().backend();
+      request_store_->MutRequestEntry(group.front())->desc().op_desc().backend();
   request_store_->ForEachMutRequestEntryForIdsInJob(
-      request_ids, [&](RequestEntry* request_entry, int32_t i, const RequestId& request_id) {
+      group, [&](RequestEntry* request_entry, int32_t i, const RequestId& request_id) {
         CHECK_EQ(request_entry->desc().op_desc().backend(), backend);
       });
   return backend;
