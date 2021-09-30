@@ -70,8 +70,8 @@ class OnDemandHostBlob final {
   void Init() {
     header.resize(blob_desc_->AlignedByteSizeOfBlobHeader());
     data.resize(blob_desc_->AlignedByteSizeOfBlobBody());
-    MemoryCase host_mem_case;
-    host_mem_case.mutable_host_mem();
+    MemCase host_mem_case;
+    host_mem_case.SetAttr("device_type", DeviceType::kCPU);
     blob_.reset(new Blob(host_mem_case, blob_desc_.get(), header.data(), data.data()));
   }
 

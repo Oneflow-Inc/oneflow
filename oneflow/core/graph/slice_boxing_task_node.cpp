@@ -117,15 +117,17 @@ OperatorConf SliceBoxingTaskNode::GetBoxingOpConf() {
   return op_conf;
 }
 
-void SliceBoxingTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
+void SliceBoxingTaskNode::InitProducedRegstMemCase(MemCase* mem_case) {
   if (mem_zone_id_.device_type() == DeviceType::kCPU) {
-    HostMemory* host_mem = mem_case->mutable_host_mem();
+    //MemCase* host_mem = mem_case->mutable_host_mem();
+    CHECK( mem_case->Attr<DeviceType>("device_type")==kCPU );
     StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id());
     if (stream_id.device_id().device_type() == DeviceType::kGPU) {
-      host_mem->mutable_cuda_pinned_mem()->set_device_id(stream_id.device_id().device_index());
+      mem_case->SetAttr("cuda_pinned_mem_device_id", stream_id.device_id().device_index());
     }
   } else if (mem_zone_id_.device_type() == DeviceType::kGPU) {
-    mem_case->mutable_device_cuda_mem()->set_device_id(mem_zone_id_.device_index());
+    CHECK( mem_case->Attr<DeviceType>("device_type")==kGPU );
+    mem_case->SetAttr("device_id", mem_zone_id_.device_index());
   } else {
     UNIMPLEMENTED();
   }

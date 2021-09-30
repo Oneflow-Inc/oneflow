@@ -16,41 +16,116 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_MEMORY_MEMORY_CASE_UTIL_H_
 #define ONEFLOW_CORE_MEMORY_MEMORY_CASE_UTIL_H_
 
-#include "oneflow/core/common/device_type.h"
-#include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/device_type.pb.h"
+//#include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/user_op_conf.h"
+#include "oneflow/core/framework/tensor_desc.h"
+#include "oneflow/core/framework/attr_value.h"
+#include "oneflow/core/job/placement.pb.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/memory/memory_case_attr_util.h"
+
 
 namespace oneflow {
+class MemCaseId {
+ public:
+  using device_index_t = uint32_t;
 
-inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
-  if (lhs.has_host_mem() && rhs.has_host_mem()) {
-    const HostMemory& lhs_host_mem = lhs.host_mem();
-    const HostMemory& rhs_host_mem = rhs.host_mem();
-    if (lhs_host_mem.has_cuda_pinned_mem() && rhs_host_mem.has_cuda_pinned_mem()) {
-      return lhs_host_mem.cuda_pinned_mem().device_id()
-             == rhs_host_mem.cuda_pinned_mem().device_id();
-    } else {
-      return (!lhs_host_mem.has_cuda_pinned_mem()) && (!rhs_host_mem.has_cuda_pinned_mem());
+  explicit MemCaseId(const MemCase& mem_case);
+  explicit MemCaseId(DeviceType device_type, device_index_t device_index,
+                     DeviceType page_locked_device_type, bool registered_by_network)
+      : device_type_(device_type),
+        device_index_(device_index),
+        host_mem_page_locked_device_type_(page_locked_device_type),
+        host_mem_registered_by_network_(registered_by_network) {
+    if (device_type != DeviceType::kCPU) {
+      CHECK_EQ(page_locked_device_type, DeviceType::kInvalidDevice);
+      CHECK_EQ(registered_by_network, false);
     }
   }
-  if (lhs.has_device_cuda_mem() && rhs.has_device_cuda_mem()) {
-    return lhs.device_cuda_mem().device_id() == rhs.device_cuda_mem().device_id();
+  explicit MemCaseId(DeviceType device_type, device_index_t device_index)
+      : MemCaseId(device_type, device_index, DeviceType::kInvalidDevice, false) {}
+
+  void ToProto(MemCase* mem_case) const;
+
+  DeviceType device_type() const { return device_type_; }
+  device_index_t device_index() const { return device_index_; }
+  DeviceType host_mem_page_locked_device_type() const { return host_mem_page_locked_device_type_; }
+  bool is_host_mem_registered_by_network() const { return host_mem_registered_by_network_; }
+
+  bool operator==(const MemCaseId& rhs) const {
+    return device_type_ == rhs.device_type_ && device_index_ == rhs.device_index_
+           && host_mem_page_locked_device_type_ == rhs.host_mem_page_locked_device_type_;
   }
-  return false;
+  bool operator!=(const MemCaseId& rhs) const { return !((*this) == rhs); }
+
+ private:
+  DeviceType device_type_;
+  device_index_t device_index_;
+  DeviceType host_mem_page_locked_device_type_;
+  bool host_mem_registered_by_network_;
+};
+
+class GlobalMemCaseId {
+ public:
+  using node_index_t = uint32_t;
+
+  explicit GlobalMemCaseId(node_index_t node_index, const MemCaseId& mem_case_id)
+      : node_index_(node_index), mem_case_id_(mem_case_id) {}
+  explicit GlobalMemCaseId(node_index_t node_index, const MemCase& mem_case)
+      : GlobalMemCaseId(node_index, MemCaseId{mem_case}) {}
+
+  node_index_t node_index() const { return node_index_; }
+  const MemCaseId& mem_case_id() const { return mem_case_id_; }
+
+  bool operator==(const GlobalMemCaseId& rhs) const {
+    return node_index_ == rhs.node_index_ && mem_case_id_ == rhs.mem_case_id_;
+  }
+  bool operator!=(const GlobalMemCaseId& rhs) const { return !((*this) == rhs); }
+
+ private:
+  node_index_t node_index_;
+  MemCaseId mem_case_id_;
+};
+
+inline bool operator==(const MemCase& lhs, const MemCase& rhs) {
+  return MemCaseId{lhs} == MemCaseId{rhs};
+}
+inline bool operator!=(const MemCase& lhs, const MemCase& rhs) {
+  return !(MemCaseId{lhs} == MemCaseId{rhs});
 }
 
+int64_t EncodeMemCaseIdToInt64(const MemCaseId& mem_case_id);
+int64_t EncodeGlobalMemCaseIdToInt64(const GlobalMemCaseId& mem_case_id);
+const std::shared_ptr<const user_op::AttrVal>& Attr4Name(const std::string& attr_name);
+
+template<typename T>
+const T& Attr(const std::string& attr_name) {
+  return AttrValueCast<T>(*Attr4Name(attr_name));
+}
+
+// Patch the source memory case to destination memory case. Patching follow below rules:
+// 1) Patch failed when src_mem_case and dst_mem_case have different device_type
+// or one of them has invalid device_type.
+// 2) Patch failed when src_mem_case and dst_mem_case have the same non-cpu device_type
+// but have different device_index.
+// 3) When src_mem_case and dst_mem_case have the same cpu device_type
+// and src_mem_case has more constrain than dst_mem_case(page-locked by other device,
+// such as gpu or network device), patch the constrain of src_mem_case to dst_mem_case.
+bool PatchMemCase(const MemCase& src_mem_case, MemCase* dst_mem_case);
+
+// Generate host pinned memory for non-cpu device memory case
+// which usually be used for generating blob header memory case for non-cpu device blob
+MemCase GenerateCorrespondingPageLockedHostMemCase(const MemCase& mem_case);
+
 struct MemoryCaseUtil {
-  static bool GetCommonMemoryCase(const MemoryCase& a, const MemoryCase& b, MemoryCase* common);
-
-  static MemoryCase GetHostMemoryCaseForRegstSeparatedHeader(const MemoryCase& mem_case);
-
-  static int64_t GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case);
-
-  static int64_t GenMemZoneId(const MemoryCase& mem_case);
-
-  static std::shared_ptr<MemoryCase> MakeMemCase(const DeviceType device_type,
+  static std::shared_ptr<MemCase> MakeMemCase(const DeviceType device_type,
                                                  const int64_t device_id);
 };
+
 
 }  // namespace oneflow
 

@@ -23,7 +23,7 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
   producer_actor_id_ = proto.producer_task_id();
   consumers_actor_id_ = PbRf2StdVec(proto.consumer_task_id());
   register_num_ = proto.register_num();
-  mem_case_ = proto.mem_case();
+  mem_case_ = MemCase(proto.mem_case());
   regst_desc_type_ = proto.regst_desc_type();
   if (proto.regst_desc_type().has_data_regst_desc()) {
     const DataRegstDesc& data_regst_desc = proto.regst_desc_type().data_regst_desc();
@@ -45,7 +45,7 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
     sorted_blob_desc_vec_.push_back(std::make_unique<const BlobDesc>(BlobDesc(DataType::kChar)));
   }
 
-  if ((proto.mem_case().has_device_cuda_mem())
+  if ((proto.mem_case().name_to_attr().at("device_type").at_device_type() == DeviceType::kGPU)
       || (proto.has_variable_op_name() && !proto.variable_op_name().empty())) {
     // NOTE(chengcheng): When this regst is shared with EagerBlobObject, header is ALWAYS separated.
     has_separated_header_ = true;

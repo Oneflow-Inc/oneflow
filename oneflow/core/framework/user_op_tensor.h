@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/shape.h"
-#include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/memory/memory_case_attr_util.h"
 #include "oneflow/core/common/error.h"
 
 namespace oneflow {
@@ -35,7 +35,7 @@ class Tensor {
   virtual const ShapeView& shape() const = 0;
   virtual MutShapeView* mut_shape() = 0;
   virtual DataType data_type() const = 0;
-  virtual const MemoryCase& mem_case() const = 0;
+  virtual const MemCase& mem_case() const = 0;
   virtual const void* raw_dptr() const = 0;
   virtual void* mut_raw_dptr() = 0;
 

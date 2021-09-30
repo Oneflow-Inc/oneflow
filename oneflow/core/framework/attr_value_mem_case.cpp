@@ -13,28 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_GRAPH_TRANSPORT_TASK_NODE_H_
-#define ONEFLOW_CORE_GRAPH_TRANSPORT_TASK_NODE_H_
-
-#include "oneflow/core/graph/task_node.h"
-#include "oneflow/core/register/logical_blob_id.pb.h"
-
+#include "oneflow/core/framework/attr_value_mem_case.h"
 
 namespace oneflow {
 
-class TransportTaskNode : public TaskNode {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(TransportTaskNode);
-  TransportTaskNode() = default;
-  virtual ~TransportTaskNode() = default;
+template<typename T>
+const T& AttrValueCast(const AttrValue& attr_val) {
+  const auto* typed_attr = dynamic_cast<const TypeAttrVal<T>*>(&attr_val);
+  return CHECK_NOTNULL(typed_attr)->val();
+}
 
-  void set_lbi(const LogicalBlobId& lbi) { lbi_ = lbi; }
-  LogicalBlobId lbi() const { return lbi_; }
+template<typename T>
+T& AttrValueCastNotConst(AttrValue& attr_val) {
+  auto* typed_attr = dynamic_cast<const TypeAttrVal<T>*>(&attr_val);
+  return CHECK_NOTNULL(typed_attr)->val();
+}
 
- private:
-  LogicalBlobId lbi_;
-};
 
-}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_GRAPH_TRANSPORT_TASK_NODE_H_
+}// namespace oneflow

@@ -26,9 +26,9 @@ class JobInstance {
 
   virtual ~JobInstance() = default;
 
-  virtual std::string job_name() const { UNIMPLEMENTED(); }
-  virtual std::string sole_input_op_name_in_user_job() const { UNIMPLEMENTED(); }
-  virtual std::string sole_output_op_name_in_user_job() const { UNIMPLEMENTED(); }
+  virtual std::string job_name() const { return nullptr; }
+  virtual std::string sole_input_op_name_in_user_job() const { return nullptr; }
+  virtual std::string sole_output_op_name_in_user_job() const { return nullptr; }
   virtual void PushBlobByOpName(uint64_t ofblob_ptr, const std::string& op_name) const {
     UNIMPLEMENTED();
   }

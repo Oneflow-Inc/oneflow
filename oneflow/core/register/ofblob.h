@@ -28,7 +28,7 @@ class OfBlob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OfBlob);
   OfBlob(DeviceCtx* device_ctx, Blob* blob) : device_ctx_(device_ctx), blob_(blob) {
-    mem_case_.mutable_host_mem();
+    mem_case_.SetAttr("device_type", kCPU);
   }
   ~OfBlob() = default;
 
@@ -52,7 +52,7 @@ class OfBlob final {
  private:
   DeviceCtx* device_ctx_;
   Blob* blob_;
-  MemoryCase mem_case_;
+  MemCase mem_case_;
 };
 
 inline void OfBlob::CopyShapeFrom(const int64_t* ptr, int64_t num_axis) const {

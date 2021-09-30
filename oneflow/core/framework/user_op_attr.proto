@@ -3,6 +3,8 @@ package oneflow;
 
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
+import "oneflow/core/common/device_type.proto";
+
 
 enum AttrType {
   kAtInt32 = 1;
@@ -19,6 +21,7 @@ enum AttrType {
   kAtListDataType = 12;
   kAtListShape = 13;
   kAtListString = 14;
+  kAtDeviceType = 15;
 }
 
 message AttrValue {
@@ -56,6 +59,7 @@ message AttrValue {
     ListDataType at_list_data_type = 12;
     ListShape at_list_shape = 13;
     ListString at_list_string = 14;
+    DeviceType at_device_type = 15;
   }
 }
 

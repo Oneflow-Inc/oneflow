@@ -245,7 +245,7 @@ Maybe<void> MakeBlob4BnInOp(vm::Instruction* instruction, const T& args,
 
 template<typename T>
 void InitOutputBlobObjects(vm::Instruction* instruction, const T& args,
-                           const std::shared_ptr<MemoryCase>& mem_case, DataType data_type) {
+                           const std::shared_ptr<MemCase>& mem_case, DataType data_type) {
   const auto& InitRwMutexedObject = [&](vm::RwMutexedObject* rw_mutexed_object) {
     const auto& parallel_desc = instruction->parallel_desc();
     CHECK(static_cast<bool>(parallel_desc));
@@ -310,7 +310,7 @@ Maybe<void> CheckBlobParallel(vm::Instruction* instruction, const T& args,
 
 template<typename T>
 Maybe<void> OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruction, const T& args,
-                          const std::shared_ptr<MemoryCase>& mem_case) {
+                          const std::shared_ptr<MemCase>& mem_case) {
   {
     DataType default_data_type = opkernel_obj->job_desc().DefaultDataType();
     CHECK_NE_OR_RETURN(default_data_type, DataType::kInvalidDataType);
@@ -347,7 +347,7 @@ Maybe<void> OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruc
 
 Maybe<void> OpKernelInfer(SystemOpKernelObject* opkernel_obj, vm::Instruction* instruction,
                           const StatelessCallOpKernelInstrOperand& args,
-                          const std::shared_ptr<MemoryCase>& mem_case) {
+                          const std::shared_ptr<MemCase>& mem_case) {
   {
     DataType default_data_type = opkernel_obj->job_desc().DefaultDataType();
     CHECK_NE_OR_RETURN(default_data_type, DataType::kInvalidDataType);
@@ -477,18 +477,18 @@ struct LocalCallOpKernelUtil final {
     return ptr;
   }
 
-  static inline Maybe<const MemoryCase&> GetMemCase(LocalCallOpKernelPhyInstrOperand* operand) {
+  static inline Maybe<const MemCase&> GetMemCase(LocalCallOpKernelPhyInstrOperand* operand) {
     const auto& mem_case = operand->opkernel().mem_case();
     CHECK_OR_RETURN(static_cast<bool>(mem_case));
     return *mem_case;
   }
 
-  static inline Maybe<void> CheckMemCase(const MemoryCase& mem_case, DeviceType device_type,
+  static inline Maybe<void> CheckMemCase(const MemCase& mem_case, DeviceType device_type,
                                          int64_t device_id) {
-    if (mem_case.has_host_mem()) {
+    if (mem_case.Attr<DeviceType>("device_type") == kCPU) {
       CHECK_EQ_OR_RETURN(device_type, DeviceType::kCPU);
-    } else if (mem_case.has_device_cuda_mem()) {
-      CHECK_EQ_OR_RETURN(mem_case.device_cuda_mem().device_id(), device_id);
+    } else if (mem_case.Attr<DeviceType>("device_type") == kGPU) {
+      CHECK_EQ_OR_RETURN(mem_case.Attr<int64_t>("device_id"), device_id);
     } else {
       OF_UNIMPLEMENTED();
     }
@@ -685,7 +685,7 @@ void UserStatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruct
       << CHECK_JUST(GetOpConf(instruction, args.Get())).DebugString();
 }
 
-std::shared_ptr<MemoryCase> SystemStatelessCallOpKernelInstructionType::GetOutBlobMemCase(
+std::shared_ptr<MemCase> SystemStatelessCallOpKernelInstructionType::GetOutBlobMemCase(
     const DeviceType device_type, const int64_t device_id) const {
   return MemoryCaseUtil::MakeMemCase(device_type, device_id);
 }

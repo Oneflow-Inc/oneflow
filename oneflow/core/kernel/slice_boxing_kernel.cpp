@@ -120,12 +120,12 @@ void SliceBoxingAddKernel<device_type, T>::ForwardDataContent(KernelContext* ctx
       bool can_direct_access =
           (device_type == kCPU)
 #ifdef WITH_CUDA
-          || (device_type == DeviceType::kGPU && in_i->mem_case().has_host_mem()
-              && in_i->mem_case().host_mem().has_cuda_pinned_mem())
-          || (device_type == DeviceType::kGPU && in_i->mem_case().has_device_cuda_mem()
-              && out->mem_case().has_device_cuda_mem()
-              && out->mem_case().device_cuda_mem().device_id()
-                     == in_i->mem_case().device_cuda_mem().device_id());
+          || (device_type == DeviceType::kGPU && in_i->mem_case().Attr<DeviceType>("device_type")==DeviceType::kCPU
+              && in_i->mem_case().Attr<DeviceType>("pinned_device_type")==DeviceType::kGPU)
+          || (device_type == DeviceType::kGPU && in_i->mem_case().Attr<DeviceType>("device_type")==DeviceType::kGPU
+              && out->mem_case().Attr<DeviceType>("device_type")==DeviceType::kGPU
+              && out->mem_case().Attr<int64_t>("device_id")
+                     == in_i->mem_case().Attr<int64_t>("device_id"));
 #else
           ;
 #endif

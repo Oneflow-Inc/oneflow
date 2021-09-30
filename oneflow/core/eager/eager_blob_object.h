@@ -44,11 +44,11 @@ class EagerBlobObject final : public BlobObject {
  public:
   EagerBlobObject(const EagerBlobObject&) = delete;
   EagerBlobObject(EagerBlobObject&&) = delete;
-  EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
+  EagerBlobObject(const std::shared_ptr<MemCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer)
       : EagerBlobObject(mem_case, shape, data_type, tensor_buffer, Optional<LocalDepObject*>()) {}
 
-  EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
+  EagerBlobObject(const std::shared_ptr<MemCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
                   LocalDepObject* dep_object)
       : EagerBlobObject(mem_case, shape, data_type, tensor_buffer,
@@ -98,7 +98,7 @@ class EagerBlobObject final : public BlobObject {
   }
 
  private:
-  EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
+  EagerBlobObject(const std::shared_ptr<MemCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
                   const Optional<LocalDepObject*>& dep_object);
 

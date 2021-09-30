@@ -22,6 +22,8 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/memory/memory_zone.h"
+#include "oneflow/core/memory/memory_case_attr_util.h"
+
 
 namespace std {
 
@@ -125,8 +127,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::shared_ptr<RegstDesc> NewProducedRegst(bool enable_reuse_mem, int32_t min_register_num,
                                               int32_t max_register_num, const RegstDescTypeProto&);
   virtual void InitProducedRegstMemCase(RegstDesc* regst);
-  virtual void InitProducedRegstMemCase(MemoryCase*);
-  virtual void PinConsumedRegstMemCase(MemoryCase*);
+  virtual void InitProducedRegstMemCase(MemCase*);
+  virtual void PinConsumedRegstMemCase(MemCase*);
   void ConsumeRegst(const std::string& name);
   void ConsumeRegst(const std::string& name, const std::shared_ptr<RegstDesc>&);
   ExecGraph& mut_exec_gph() { return exec_gph_; }

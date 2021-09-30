@@ -109,8 +109,8 @@ class TypedAttrVal final : public AttrVal {
     return this->val_ == that->val_;
   }
 
-  const T& val() const { return val_; }
-
+  const T& val() const { return val_; }     
+  T& val_not_const() {return val_;}
  private:
   OF_DISALLOW_COPY_AND_MOVE(TypedAttrVal);
 
@@ -121,6 +121,9 @@ class TypedAttrVal final : public AttrVal {
 
 template<typename T>
 const T& AttrValueCast(const user_op::AttrVal& val);
+
+template<typename T>
+T& AttrValueCastNotConst(const user_op::AttrVal& val);
 
 }  // namespace oneflow
 

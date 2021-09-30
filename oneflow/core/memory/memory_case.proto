@@ -1,21 +1,10 @@
 syntax = "proto2";
 package oneflow;
 
-message CudaPinnedMemory {
-  required int64 device_id = 1;
-}
-
-message HostMemory {
-  optional CudaPinnedMemory cuda_pinned_mem = 1;
-}
-
-message DeviceCudaMemory {
-  required int64 device_id = 1;
-}
+import "oneflow/core/framework/user_op_attr.proto";
 
 message MemoryCase {
-  oneof case {
-    HostMemory host_mem = 1;
-    DeviceCudaMemory device_cuda_mem = 2;
-  }
+  map<string, AttrValue> name_to_attr = 1;
 }
+
+

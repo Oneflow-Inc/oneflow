@@ -26,7 +26,7 @@ limitations under the License.
 namespace oneflow {
 
 class ParallelDesc;
-class MemoryCase;
+class MemCase;
 class LocalDepObject;
 
 inline size_t GetInstructionHighWaterMark() { return 500; }
@@ -50,7 +50,7 @@ class Device final {
   bool operator!=(const Device& device) const {
     return !(type_ == device.type() && device_id_ == device.device_id());
   }
-  const std::shared_ptr<MemoryCase>& mem_case() const { return mem_case_; }
+  const std::shared_ptr<MemCase>& mem_case() const { return mem_case_; }
 
   static Maybe<Symbol<Device>> ThreadLocalGetOrNew(const std::string& type, int64_t device_id);
   static Maybe<Symbol<Device>> New(const std::string& type, int64_t device_id);
@@ -80,7 +80,7 @@ class Device final {
   const std::string type_;
   const int64_t device_id_;
   const size_t hash_value_;
-  std::shared_ptr<MemoryCase> mem_case_;
+  std::shared_ptr<MemCase> mem_case_;
   Optional<LocalDepObject*> transport_local_dep_object_;
   LocalDepObject* schedule_local_dep_object_;
 };

@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/graph/transport_task_node.h"
 
+
 namespace oneflow {
 
 class CopyTaskNode : public TransportTaskNode {
@@ -60,7 +61,7 @@ class CopyHdTaskNode final : public CopyTaskNode {
   }
 
  private:
-  void InitProducedRegstMemCase(MemoryCase*) override;
+  void InitProducedRegstMemCase(MemCase*) override;
   OperatorConf NewCopyOpConf() override;
 
   CopyHdOpConf::Type copy_type_;

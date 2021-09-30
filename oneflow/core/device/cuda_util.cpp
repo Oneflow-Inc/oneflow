@@ -13,14 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_CUDA
+
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/global.h"
+#include "oneflow/core/memory/memory_case_registry.h"
 #include "oneflow/core/device/node_device_descriptor_manager.h"
 #include "oneflow/core/device/cuda_device_descriptor.h"
 
 namespace oneflow {
-
-#ifdef WITH_CUDA
 
 const char* CublasGetErrorString(cublasStatus_t error) {
   switch (error) {
@@ -177,6 +178,109 @@ CudaCurrentDeviceGuard::CudaCurrentDeviceGuard() { OF_CUDA_CHECK(cudaGetDevice(&
 
 CudaCurrentDeviceGuard::~CudaCurrentDeviceGuard() { OF_CUDA_CHECK(cudaSetDevice(saved_dev_id_)); }
 
-#endif  // WITH_CUDA
+namespace {
+
+bool MatchCudaMemoryCase(const MemCase& mem_case) {
+  if (mem_case.Attr<DeviceType>("device_type") == kGPU) { return true; }
+  return false;
+}
+
+bool MatchCudaOrCudaPinnedHostMemoryCase(const MemCase& mem_case) {
+  if (mem_case.Attr<DeviceType>("device_type")==kCPU && mem_case.Attr<DeviceType>("pinned_device_type")==kGPU) {
+    return true;
+  } else if (mem_case.Attr<DeviceType>("device_type") == kGPU) {
+    return true;
+  }
+  return false;
+}
+
+bool MatchCudaOrCudaPinnedHostMemCaseId(const MemCaseId& mem_case_id) {
+  if (mem_case_id.device_type() == DeviceType::kCPU
+      && mem_case_id.host_mem_page_locked_device_type() == DeviceType::kGPU) {
+    return true;
+  } else if (mem_case_id.device_type() == DeviceType::kGPU) {
+    return true;
+  }
+  return false;
+}
+
+}  // namespace
+
+REGISTER_MEM_CASE_ID_GENERATOR(DeviceType::kGPU)
+    .SetMatcher(MatchCudaOrCudaPinnedHostMemoryCase)
+    .SetGenerator([](const MemCase& mem_case) -> MemCaseId {
+      DeviceType device_type = DeviceType::kInvalidDevice;
+      MemCaseId::device_index_t device_index = 0;
+      DeviceType page_locked_device_type = DeviceType::kInvalidDevice;
+      bool used_by_network = false;
+      // if(mem_case.Attr<DeviceType>(const std::string &attr_name))
+      // if(mem_case.device_type == kCPU)
+      if (mem_case.Attr<DeviceType>("device_type") == kCPU) {
+        CHECK(mem_case.Attr<DeviceType>("pinned_device_id") == kGPU);
+        device_type = DeviceType::kCPU;
+        page_locked_device_type = DeviceType::kGPU;
+        device_index = mem_case.Attr<int64_t>("cuda_pinned_mem_device_id");
+        if (mem_case.HasAttr<MemCase>("used_by_network")) {
+          used_by_network = true;
+        }
+      } else {
+        CHECK(mem_case.Attr<DeviceType>("device_type") == kGPU);
+        device_type = DeviceType::kGPU;
+        device_index = mem_case.Attr<int64_t>("device_id");
+      }
+      return MemCaseId{device_type, device_index, page_locked_device_type, used_by_network};
+    });
+
+REGISTER_MEM_CASE_ID_TO_PROTO(DeviceType::kGPU)
+    .SetMatcher(MatchCudaOrCudaPinnedHostMemCaseId)
+    .SetToProto([](const MemCaseId& mem_case_id, MemCase* mem_case) -> void {
+      if (mem_case_id.device_type() == DeviceType::kCPU) {
+        CHECK_EQ(mem_case_id.host_mem_page_locked_device_type(), DeviceType::kGPU);
+        mem_case->SetAttr("device_type", kCPU);
+        mem_case->SetAttr("cuda_pinned_mem_device_id", mem_case_id.device_index());
+        if (mem_case_id.is_host_mem_registered_by_network()) {
+          mem_case->SetAttr("used_by_network", true);
+        }
+      } else if (mem_case_id.device_type() == DeviceType::kGPU) {
+        mem_case->SetAttr("device_id", mem_case_id.device_index());
+      } else {
+        UNIMPLEMENTED();
+      }
+    });
+
+REGISTER_PAGE_LOCKED_MEM_CASE(DeviceType::kGPU)
+    .SetMatcher(MatchCudaMemoryCase)
+    .SetPageLocker([](const MemCase& mem_case, MemCase* page_locked_mem_case) -> void {
+      CHECK(mem_case.Attr<DeviceType>("device_type") == kGPU);
+      page_locked_mem_case->SetAttr("cuda_pinned_mem_device_id", mem_case.Attr<int64_t>("device_id"));
+    });
+
+REGISTER_PATCH_MEM_CASE(DeviceType::kGPU)
+    .SetMatcher(MatchCudaOrCudaPinnedHostMemoryCase)
+    .SetPatcher([](const MemCase& src_mem_case, MemCase* dst_mem_case) -> bool {
+      if (src_mem_case.Attr<DeviceType>("device_type") == kCPU) {
+        CHECK(src_mem_case.Attr<DeviceType>("pinned_device_type")==kGPU);
+        if (!(dst_mem_case->Attr<DeviceType>("device_type") == kCPU)) { return false; }
+        if (dst_mem_case->HasAttr<MemCase>("page_lock_case")) {
+          dst_mem_case->SetAttr("pinned_device_type", src_mem_case.Attr<DeviceType>("pinned_device_type"));
+        } else {
+          return false;
+        }
+        if (src_mem_case.HasAttr<bool>("used_by_network") 
+            && src_mem_case.Attr<bool>("used_by_network")) {
+          dst_mem_case->SetAttr("used_by_network", true);
+        }
+      } else {
+        CHECK(src_mem_case.Attr<DeviceType>("device_type") == kGPU);
+        if (!(dst_mem_case->Attr<DeviceType>("device_type") == kGPU)) { return false; }
+        if (src_mem_case.Attr<int64_t>("device_id")
+            != dst_mem_case->Attr<int64_t>("device_id")) {
+          return false;
+        }
+      }
+      return true;
+    });
 
 }  // namespace oneflow
+
+#endif  // WITH_CUDA

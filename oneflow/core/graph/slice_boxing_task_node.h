@@ -49,7 +49,7 @@ class SliceBoxingTaskNode final : public TransportTaskNode {
   void BuildExecGphAndRegst() override;
   void InferProducedDataRegstTimeShape() override;
   OperatorConf GetBoxingOpConf();
-  void InitProducedRegstMemCase(MemoryCase*) override;
+  void InitProducedRegstMemCase(MemCase*) override;
   MemZoneId MemZoneId121() const override;
 
   HashMap<const TaskEdge*, TensorSliceView> in_data_edge2slice_;

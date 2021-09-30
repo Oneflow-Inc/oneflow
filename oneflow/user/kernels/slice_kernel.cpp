@@ -327,10 +327,10 @@ class LogicalSliceKernel final : public user_op::OpKernel {
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const SliceContext& slice_ctx = dynamic_cast<OpKernelStateWrapper<SliceContext>*>(state)->Get();
-    if (y_tensor->mem_case().has_host_mem()) {
+    if (y_tensor->mem_case().Attr<DeviceType>("device_type") == DeviceType::kCPU) {
       memset(y_tensor->mut_dptr(), 0,
              y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()));
-    } else if (y_tensor->mem_case().has_device_cuda_mem()) {
+    } else if (y_tensor->mem_case().Attr<DeviceType>("device_type") == DeviceType::kGPU) {
 #if defined(WITH_CUDA)
       cudaMemset(y_tensor->mut_dptr(), 0,
                  y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()));

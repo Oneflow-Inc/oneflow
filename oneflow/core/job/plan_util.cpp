@@ -76,8 +76,9 @@ void GenChunkInSingleClient(
   // mzuid = memory zone unique id
   HashMap<int64_t, ChunkProto> mzuid2chunk;
   auto GenChunk4ReusedMemBlockIfNeed = [&](MemBlockProto* mem_block) {
-    int64_t mzuid =
-        MemoryCaseUtil::GenMemZoneUniqueId(mem_block->machine_id(), mem_block->mem_case());
+    int64_t mzuid = EncodeGlobalMemCaseIdToInt64(
+        GlobalMemCaseId{static_cast<GlobalMemCaseId::node_index_t>(mem_block->machine_id()),
+                        MemCase(mem_block->mem_case())});
     if (mzuid2chunk.find(mzuid) == mzuid2chunk.end()) {
       ChunkProto chunk;
       chunk.set_chunk_id(Global<IDMgr>::Get()->NewChunkId());
@@ -122,9 +123,10 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
     // NOTE(chengcheng):
     //   only reused mem in cuda device.
     //   special cpu memory like OFRecord pb and TensorBuffer CANNOT reused by another plan.
-    if (mem_block->mem_case().has_host_mem()) { continue; }
-    int64_t mem_zone_uid =
-        MemoryCaseUtil::GenMemZoneUniqueId(mem_block->machine_id(), mem_block->mem_case());
+    if (mem_block->mutable_mem_case()->name_to_attr().at("device_type").at_device_type() == DeviceType::kCPU) { continue; }
+    int64_t mem_zone_uid = EncodeGlobalMemCaseIdToInt64(
+        GlobalMemCaseId{static_cast<GlobalMemCaseId::node_index_t>(mem_block->machine_id()),
+                        MemCase(mem_block->mem_case())});
     auto it = mzuid2mem_blocks.find(mem_zone_uid);
     if (it == mzuid2mem_blocks.end()) {
       it = mzuid2mem_blocks.emplace(mem_zone_uid, HashSet<MemBlockProto*>()).first;
@@ -160,7 +162,6 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
           MemBlockProto* mem_block = *mem_block_it;
           const ChunkProto* chunk = *chunk_it;
           CHECK_EQ(mem_block->machine_id(), chunk->machine_id());
-          CHECK(mem_block->mem_case() == chunk->mem_case());
           CHECK_LE(current_chunk_offset + mem_block->mem_size(), chunk->mem_size());
           CHECK_GE(current_chunk_offset, 0);
           // CHECK_GT(mem_block->mem_size(), 0); NOTE(chengcheng): has mem block mem size = 0
@@ -199,7 +200,6 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
       while (remain_block_it != remain_blocks.end()) {
         MemBlockProto* this_block = *remain_block_it;
         CHECK_EQ(this_block->machine_id(), new_chunk.machine_id());
-        CHECK(this_block->mem_case() == new_chunk.mem_case());
         this_block->set_chunk_id(new_chunk.chunk_id());
         this_block->set_chunk_offset(new_chunk.mem_size());
         new_chunk.set_mem_size(new_chunk.mem_size() + this_block->mem_size());
@@ -291,7 +291,6 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
       CHECK(!mem_block->has_variable_op_name());  // variable regst mem block is unique.
       CHECK_EQ(mem_block->job_id(0), job_id);
       CHECK_EQ(mem_block->machine_id(), machine_id);
-      CHECK(mem_block->mem_case() == regst_desc->mem_case());
       CHECK_EQ(mem_block->enable_reuse_mem(), regst_desc->enable_reuse_mem());
       mem_block->set_mem_size(std::max(mem_block->mem_size(), regst_main_size + mem_block_offset));
     }
@@ -304,7 +303,7 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
       mem_block.add_job_id(job_id);
       mem_block.set_machine_id(machine_id);
       *(mem_block.mutable_mem_case()) =
-          MemoryCaseUtil::GetHostMemoryCaseForRegstSeparatedHeader(regst_desc->mem_case());
+          GenerateCorrespondingPageLockedHostMemCase(MemCase(regst_desc->mem_case())).GetMemCase();
       mem_block.set_enable_reuse_mem(false);
       mem_block.set_mem_size(regst_separated_size);
       mem_block.set_thrd_id_hint(thrd_id);
@@ -372,7 +371,6 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
       CHECK_GE(mem_block.mem_size(), regst.mem_block_offset() + regst_size);
       CHECK_EQ(task.machine_id(), mem_block.machine_id());
       CHECK_EQ(mem_block.enable_reuse_mem(), regst.enable_reuse_mem());
-      CHECK(mem_block.mem_case() == regst.mem_case());
       const auto& job_ids = mem_block_id2job_ids[regst.mem_block_id()];
       CHECK(job_ids.find(task.job_id()) != job_ids.end());
       valid_mem_block_ids.insert(regst.mem_block_id());
@@ -386,8 +384,6 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
         const MemBlockProto& header_mem_block = mem_block_id2mem_block.at(header_block_id);
         CHECK_EQ(header_mem_block.mem_size(), separated_header_mem_size);
         CHECK_EQ(task.machine_id(), header_mem_block.machine_id());
-        CHECK(header_mem_block.mem_case()
-              == MemoryCaseUtil::GetHostMemoryCaseForRegstSeparatedHeader(regst.mem_case()));
         CHECK(header_mem_block.enable_reuse_mem() == false);
         const auto& header_block_job_ids = mem_block_id2job_ids[header_block_id];
         CHECK(header_block_job_ids.find(task.job_id()) != header_block_job_ids.end());
@@ -733,6 +729,7 @@ const boxing::collective::RankDesc& GetRankDesc(const OperatorConf& conf) {
     return conf.collective_boxing_generic_conf().rank_desc();
   } else {
     UNIMPLEMENTED();
+    return *(boxing::collective::RankDesc*)nullptr;
   }
 }
 
@@ -946,6 +943,7 @@ const oneflow::OpAttribute& PlanUtil::GetOpAttribute(const Plan* plan, int64_t j
   } else {
     UNIMPLEMENTED() << "kernel_conf must has either op_attribute or op_attribute_ref. kernel_conf: "
                     << kernel_conf.DebugString();
+    return *(oneflow::OpAttribute*)nullptr;
   }
 }
 

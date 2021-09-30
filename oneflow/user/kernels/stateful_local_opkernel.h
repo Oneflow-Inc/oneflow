@@ -61,7 +61,7 @@ class EagerBlobObjectTensorView final : public user_op::Tensor {
 
   DataType data_type() const override { return mut_eager_blob_object_()->blob().data_type(); }
 
-  const MemoryCase& mem_case() const override {
+  const MemCase& mem_case() const override {
     return mut_eager_blob_object_()->blob().mem_case();
   }
 
@@ -387,7 +387,7 @@ class StatefulLocalOpKernel final {
                                           const std::shared_ptr<const ArgTuple>& output_arg_tuple);
   ~StatefulLocalOpKernel();
   const Symbol<Device>& device() const { return device_; }
-  const std::shared_ptr<MemoryCase>& mem_case() const { return device_->mem_case(); }
+  const std::shared_ptr<MemCase>& mem_case() const { return device_->mem_case(); }
   const std::vector<int64_t>& input_tuple_indexes4const_ibns() const {
     return input_tuple_indexes4const_ibns_;
   }

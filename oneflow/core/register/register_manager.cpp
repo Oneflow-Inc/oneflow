@@ -29,10 +29,10 @@ namespace oneflow {
 namespace {
 
 struct PackedChunkInfo {
-  MemoryCase mem_case;
+  MemCase mem_case;
   int64_t size;
   std::vector<const MemBlockProto*> blocks;
-  PackedChunkInfo(const MemoryCase& mem) {
+  PackedChunkInfo(const MemCase& mem) {
     mem_case = mem;
     size = 0;
   }
@@ -82,22 +82,21 @@ void RegstMgr::AddPlan(const Plan& plan,
         CHECK_GE(var_blob->blob_desc().AlignedByteSizeOfBlobHeader(), mem_block.mem_size());
         CHECK_GE(mem_block.mem_size(), var_blob->blob_desc().ByteSizeOfBlobHeader());
         CHECK(mem_block_id2ptr_.emplace(mem_block_id, var_blob->mut_header_ptr()).second);
-        CHECK(mem_block.mem_case().has_host_mem());
+        CHECK(mem_block.mem_case().name_to_attr().at("device_type").at_device_type() == DeviceType::kCPU);
       } else {
         CHECK_GE(var_blob->blob_desc().AlignedByteSizeOfBlobBody(), mem_block.mem_size());
         CHECK_GE(mem_block.mem_size(), var_blob->blob_desc().ByteSizeOfBlobBody());
         CHECK(mem_block_id2ptr_.emplace(mem_block_id, var_blob->ForceMutDptr<char>()).second);
-        CHECK(mem_block.mem_case() == var_blob->mem_case());
       }
     } else {
-      int64_t zone_id = MemoryCaseUtil::GenMemZoneId(mem_block.mem_case());
+      int64_t zone_id = EncodeMemCaseIdToInt64(MemCaseId{MemCase(mem_block.mem_case())});
       if (zone_id2packed_chunk.find(zone_id) == zone_id2packed_chunk.end()) {
-        zone_id2packed_chunk.emplace(zone_id, PackedChunkInfo(mem_block.mem_case()));
+        zone_id2packed_chunk.emplace(zone_id, PackedChunkInfo(MemCase(mem_block.mem_case())));
       }
       PackedChunkInfo* packed_chunk = &(zone_id2packed_chunk.at(zone_id));
       packed_chunk->blocks.push_back(&mem_block);
       packed_chunk->size += mem_block.mem_size();
-      CHECK(packed_chunk->mem_case == mem_block.mem_case());
+      CHECK(packed_chunk->mem_case == MemCase(mem_block.mem_case()) );
     }
   }
 
@@ -195,8 +194,8 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
   char* cur_body_pointer = nullptr;
   char* cur_header_pointer = nullptr;
   if (separated_header_mem_size > 0) {
-    MemoryCase host_mem_case;
-    host_mem_case.mutable_host_mem();
+    MemCase host_mem_case;
+    host_mem_case.SetAttr("device_type", DeviceType::kCPU);
     if (separated_header_mem_ptr == nullptr) {
       separated_header_mem_ptr =
           Global<MemoryAllocator>::Get()->Allocate(host_mem_case, separated_header_mem_size);

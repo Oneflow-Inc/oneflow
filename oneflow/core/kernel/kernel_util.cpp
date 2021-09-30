@@ -240,14 +240,13 @@ void AutoMemcpy(DeviceCtx* ctx, Blob* dst, const Blob* src) {
   std::unique_ptr<StreamContext> stream_ctx(NewStreamContextAdapter(ctx));
   AutoMemcpy(stream_ctx.get(), dst, src);
 }
+}  // namespace
 
-void AutoMemcpy(StreamContext* stream_ctx, void* dst, const void* src, size_t sz,
-                const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
-  primitive::MemcpyKind kind{};
-  if (stream_ctx->device_type() == DeviceType::kCPU) {
-    CHECK(src_mem_case.has_host_mem());
-    CHECK(dst_mem_case.has_host_mem());
-    kind = primitive::MemcpyKind::kDtoD;
+void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
+                const MemCase& dst_mem_case, const MemCase& src_mem_case) {
+  void (*func)(DeviceCtx*, void* dst, const void* src, size_t sz);
+  if ((src_mem_case.Attr<DeviceType>("device_type")==kCPU) && (dst_mem_case.Attr<DeviceType>("device_type") == kCPU)) {
+    func = &Memcpy<DeviceType::kCPU>;
   } else {
     if (src_mem_case.has_host_mem()) {
       CHECK(!dst_mem_case.has_host_mem());
@@ -273,22 +272,30 @@ void AutoMemcpy(StreamContext* stream_ctx, Blob* dst, const Blob* src) {
 }
 
 void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
-                    const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
+                    const MemCase& dst_mem_case, const MemCase& src_mem_case) {
   AutoMemcpy(ctx, dst, src, sz, dst_mem_case, src_mem_case);
-  ctx->SyncDevice();
+  if ((src_mem_case.Attr<DeviceType>("device_type")==kGPU) || (dst_mem_case.Attr<DeviceType>("device_type")==kGPU)){
+#ifdef WITH_CUDA
+    OF_CUDA_CHECK(cudaStreamSynchronize(ctx->cuda_stream()));
+#else
+    UNIMPLEMENTED();
+#endif  // WITH_CUDA
+  }
 }
 
 void AutoMemset(DeviceCtx* ctx, void* dst, const char value, size_t sz,
-                const MemoryCase& dst_mem_case) {
-  std::unique_ptr<StreamContext> stream_ctx(NewStreamContextAdapter(ctx));
-  AutoMemset(stream_ctx.get(), dst, value, sz, dst_mem_case);
-}
-
-void AutoMemset(StreamContext* stream_ctx, void* dst, const char value, size_t sz,
-                const MemoryCase& /*dst_mem_case*/) {
-  std::unique_ptr<primitive::Memset> primitive =
-      primitive::NewPrimitive<primitive::MemsetFactory>(stream_ctx->device_type());
-  primitive->Launch(stream_ctx, dst, value, sz);
+                const MemCase& dst_mem_case) {
+  void (*func)(DeviceCtx*, void* dst, const char value, size_t sz);
+  if (dst_mem_case.Attr<DeviceType>("device_type")==kCPU) {
+    func = &Memset<DeviceType::kCPU>;
+  } else {
+#ifdef WITH_CUDA
+    func = &Memset<DeviceType::kGPU>;
+#else
+    UNIMPLEMENTED();
+#endif  // WITH_CUDA
+  }
+  func(ctx, dst, value, sz);
 }
 
 #define KU_IF_METHOD                     \

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #ifndef ONEFLOW_CORE_FRAMEWORK_ATTR_MAP_H_
+
 #define ONEFLOW_CORE_FRAMEWORK_ATTR_MAP_H_
 
 #include "oneflow/core/common/util.h"
@@ -55,7 +56,7 @@ class AttrName2AttrValWrapper {
   using const_iterator = typename AttrName2AttrVal::const_iterator;
   const_iterator begin() const { return attrs_->begin(); }
   const_iterator end() const { return attrs_->end(); }
-
+  
   const_iterator find(const std::string& attr_name) const { return attrs_->find(attr_name); }
 
   size_t hash_value() const { return hash_value_; }
@@ -99,7 +100,6 @@ class AttrMap final {
   const_iterator find(const std::string& attr_name) const { return attrs_.find(attr_name); }
 
   size_t hash_value() const { return attrs_.hash_value(); }
-
  private:
   AttrName2AttrValWrapper attrs_;
 };
@@ -111,12 +111,11 @@ class ComposedAttrMap final {
  public:
   ComposedAttrMap(const AttrMap& base) : base_(base) {}
   ComposedAttrMap(const AttrMap& prior, const AttrMap& base) : prior_(prior), base_(base) {}
-
   template<typename T>
   Maybe<const T&> GetAttr(const std::string& attr_name) const;
 
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(const std::string& attr_name) const;
-
+  
   void ResetPrior(const AttrMap& prior) { prior_ = prior; }
   void ResetBase(const AttrMap& base) { base_ = base; }
 

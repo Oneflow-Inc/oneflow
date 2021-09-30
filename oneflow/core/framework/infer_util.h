@@ -97,7 +97,7 @@ class DeviceInferContext {
   template<typename T>
   const T& Attr(const std::string& attr_name) const {
     return AttrValueCast<T>(*Attr4Name(attr_name));
-  }
+  }      
 
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;

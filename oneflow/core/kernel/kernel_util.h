@@ -29,21 +29,73 @@ namespace oneflow {
 
 class Blob;
 class InitializerConf;
-class MemoryCase;
-class StreamContext;
+class MemCase;
+
+size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num);
 
 void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
-                const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case);
-void AutoMemcpy(DeviceCtx* ctx, Blob* dst, const Blob* src);
-void AutoMemcpy(StreamContext* stream_ctx, void* dst, const void* src, size_t sz,
-                const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case);
-void AutoMemcpy(StreamContext* stream_ctx, Blob* dst, const Blob* src);
+                const MemCase& dst_mem_case, const MemCase& src_mem_case);
 void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
-                    const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case);
+                    const MemCase& dst_mem_case, const MemCase& src_mem_case);
 void AutoMemset(DeviceCtx* ctx, void* dst, const char value, size_t sz,
-                const MemoryCase& dst_mem_case);
-void AutoMemset(StreamContext* stream_ctx, void* dst, const char value, size_t sz,
-                const MemoryCase& dst_mem_case);
+                const MemCase& dst_mem_case);
+
+template<typename T>
+OF_DEVICE_FUNC T ReduceCoreAdd(const T x, const T y) {
+  return x + y;
+}
+
+template<typename T>
+OF_DEVICE_FUNC T ReduceCoreMax(const T x, const T y) {
+  return x > y ? x : y;
+}
+
+// CPU, GPU, Integral, Floating
+template<DeviceType device_type, typename T, typename Derived>
+struct KernelUtilIf {
+  static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+                     const int m, const int n, const int k, const T alpha, const T* a, const T* b,
+                     const T beta, T* c) {
+    const int lda = (trans_a == CblasNoTrans) ? k : m;
+    const int ldb = (trans_b == CblasNoTrans) ? n : k;
+    const int ldc = n;
+
+    Derived::Gemm(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, lda, b, ldb, beta, c,
+                  ldc);
+  }
+
+  static void OFGemmTrans(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                          enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
+                          const T alpha, const T* a, const T* b, const T beta, T* c) {
+    trans_a = (trans_a == CblasNoTrans) ? CblasTrans : CblasNoTrans;
+    trans_b = (trans_b == CblasNoTrans) ? CblasTrans : CblasNoTrans;
+    OFGemm(ctx, trans_b, trans_a, n, m, k, alpha, b, a, beta, c);
+  }
+
+  static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+                       T alpha, T beta, const Blob* a, const Blob* b, Blob* c) {
+    const int m = c->shape().At(0);
+    const int n = c->shape().Count(1);
+    const int k = (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);
+
+    OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(), b->dptr<T>(), beta,
+           c->mut_dptr<T>());
+  }
+
+  static void OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                            enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
+                            const int n, const int k, const T alpha, const T* a, const T* b,
+                            const T beta, T* c, T** buf) {
+    Derived::BatchedGemm(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha, a, b,
+                         beta, c, buf);
+  }
+
+  static void InitializeWithProperConf(DeviceCtx* ctx, const InitializerConf* initializer_conf,
+                                       uint32_t random_seed, Blob* blob) {
+    CHECK_NOTNULL(initializer_conf);
+    Derived::InitializeWithConf(ctx, *initializer_conf, random_seed, blob);
+  }
+};
 
 template<DeviceType device_type, typename T, typename U = void>
 struct KernelUtil;

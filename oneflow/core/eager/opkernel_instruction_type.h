@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/vm/instr_type_id.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/memory/memory_case_attr_util.h"
 
 namespace oneflow {
 namespace vm {
@@ -81,7 +81,7 @@ class SystemStatelessCallOpKernelInstructionType : public vm::InstructionType {
   void Infer(vm::Instruction* instruction) const override;
   void Compute(vm::Instruction* instruction) const override;
 
-  virtual std::shared_ptr<MemoryCase> GetOutBlobMemCase(const DeviceType device_type,
+  virtual std::shared_ptr<MemCase> GetOutBlobMemCase(const DeviceType device_type,
                                                         const int64_t device_id) const;
 
   using vm::InstructionType::Compute;

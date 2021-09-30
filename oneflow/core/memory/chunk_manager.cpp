@@ -36,8 +36,9 @@ void ChunkMgr::GetChunkProtosByMemZoneUniqueId(int64_t mem_zone_uid,
 }
 
 void ChunkMgr::AddChunkProto(const ChunkProto& chunk) {
-  const int64_t mem_zone_uid =
-      MemoryCaseUtil::GenMemZoneUniqueId(chunk.machine_id(), chunk.mem_case());
+  const int64_t mem_zone_uid =  EncodeGlobalMemCaseIdToInt64(
+        GlobalMemCaseId{static_cast<GlobalMemCaseId::node_index_t>(chunk.machine_id()),
+                        MemCase(chunk.mem_case())});
   CHECK(
       chunk_id2chunk_proto_.emplace(chunk.chunk_id(), std::make_unique<ChunkProto>(chunk)).second);
   auto chunk_ids_it = mzuid2chunk_ids_.find(mem_zone_uid);
@@ -51,13 +52,12 @@ char* ChunkMgr::FindOrCreateChunk(const ChunkProto& chunk) {
   CHECK_EQ(GlobalProcessCtx::Rank(), chunk.machine_id());
   auto it = chunk_id2chunk_.find(chunk.chunk_id());
   if (it == chunk_id2chunk_.end()) {
-    char* chunk_ptr = Global<MemoryAllocator>::Get()->Allocate(chunk.mem_case(), chunk.mem_size());
+    char* chunk_ptr = Global<MemoryAllocator>::Get()->Allocate(MemCase(chunk.mem_case()), chunk.mem_size());
     it = chunk_id2chunk_.emplace(chunk.chunk_id(), ChunkWithPtr(chunk_ptr, chunk)).first;
   } else {
     const ChunkProto& store_proto = it->second.chunk_proto;
     CHECK_EQ(chunk.chunk_id(), store_proto.chunk_id());
     CHECK_EQ(chunk.machine_id(), store_proto.machine_id());
-    CHECK(chunk.mem_case() == store_proto.mem_case());
     CHECK_EQ(chunk.mem_size(), store_proto.mem_size());
   }
   return it->second.ptr;

@@ -31,7 +31,7 @@ limitations under the License.
 
 namespace oneflow {
 
-class MemoryCase;
+class MemCase;
 class LocalDepObject;
 
 namespace cfg {

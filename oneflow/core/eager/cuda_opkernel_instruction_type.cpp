@@ -146,10 +146,10 @@ class CudaCopyD2HSystemStatelessCallOpKernelInstructionType final
 
   using stream_type = vm::CudaCopyD2HStreamType;
 
-  std::shared_ptr<MemoryCase> GetOutBlobMemCase(const DeviceType device_type,
+  std::shared_ptr<MemCase> GetOutBlobMemCase(const DeviceType device_type,
                                                 const int64_t device_id) const override {
-    auto mem_case = std::make_shared<MemoryCase>();
-    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(device_id);
+    auto mem_case = std::make_shared<MemCase>();
+    mem_case->SetAttr("cuda_pinned_mem_device_id", device_id);
     return mem_case;
   }
 

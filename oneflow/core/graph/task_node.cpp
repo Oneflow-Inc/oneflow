@@ -309,20 +309,19 @@ void TaskNode::InitProducedRegstMemCase(RegstDesc* regst) {
   InitProducedRegstMemCase(regst->mut_mem_case());
 }
 
-void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
+void TaskNode::InitProducedRegstMemCase(MemCase* mem_case) {
   if (device_type() == DeviceType::kCPU) {
-    mem_case->mutable_host_mem();
+    mem_case->SetAttr("device_type", kCPU);
   } else if (device_type() == DeviceType::kGPU) {
-    mem_case->mutable_device_cuda_mem()->set_device_id(stream_id().device_id().device_index());
+    mem_case->SetAttr("device_id", Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id_));
   } else {
     UNIMPLEMENTED();
   }
 }
 
-void TaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
-  if (mem_case->has_host_mem() && device_type() == DeviceType::kGPU) {
-    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(
-        stream_id().device_id().device_index());
+void TaskNode::PinConsumedRegstMemCase(MemCase* mem_case) {
+  if ((mem_case->Attr<DeviceType>("device_type")==kCPU) && device_type() == DeviceType::kGPU) {
+    mem_case->SetAttr("cuda_pinned_mem_device_id", GpuPhyId());
   }
 }
 

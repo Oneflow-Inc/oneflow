@@ -1,12 +1,9 @@
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -364,7 +361,7 @@ REGISTER_USER_OP("conv_filter_grad")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
       const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-
+      
       const int32_t num_spatial_dims = ctx->Attr<int32_t>("num_spatial_dims");
       const int32_t groups = ctx->Attr<int32_t>("groups");
       const std::string& data_format = ctx->Attr<std::string>("data_format");

@@ -24,6 +24,12 @@ const T& AttrValueCast(const user_op::AttrVal& attr_val) {
 }
 
 template<typename T>
+T& AttrValueCastNotConst(user_op::AttrVal& attr_val) {
+  auto* typed_attr = dynamic_cast<const user_op::TypedAttrVal<T>*>(&attr_val);
+  return CHECK_NOTNULL(typed_attr)->val();
+}
+
+template<typename T>
 size_t HashTypedAttrVal(const T& val) {
   return std::hash<T>()(val);
 }
