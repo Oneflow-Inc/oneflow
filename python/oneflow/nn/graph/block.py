@@ -50,6 +50,8 @@ class Block(object):
         self._scope = None
         self._prev_scope = None
         self._debug = False
+        self._debug_min_s_level = 2
+        self._debug_max_v_level = 0
         if isinstance(value, Module):
             self._type = BlockType.MODULE
             self._is_executing_forward = False
@@ -123,7 +125,10 @@ class Block(object):
         return self._scope
 
     def debug(
-        self, mode: bool = True, ranks: Optional[Union[int, List[int]]] = None
+        self,
+        mode: bool = True,
+        v_level: int = 0,
+        ranks: Optional[Union[int, List[int]]] = None,
     ) -> None:
         assert isinstance(mode, bool)
 
@@ -139,11 +144,14 @@ class Block(object):
         my_rank = get_rank()
         if -1 in rank_list or my_rank in rank_list:
             self._debug = mode
+            if self._debug:
+                self._debug_min_s_level = 0
+                self._debug_max_v_level = v_level
             if self._type == BlockType.MODULE:
 
                 def _set_child(d):
                     for (_, n) in d.items():
-                        n.debug(mode, ranks)
+                        n.debug(mode, v_level, ranks)
 
                 _set_child(self._modules)
                 _set_child(self._parameters)
@@ -154,8 +162,7 @@ class Block(object):
 
     def __call__(self, *args):
         assert self._type == BlockType.MODULE
-        if self._debug:
-            print(self._shallow_repr())
+        self._print(0, 1, self._shallow_repr())
 
         for idx, arg in enumerate(args):
             meta_repr_str = (
@@ -174,15 +181,15 @@ class Block(object):
             if not isinstance(arg, Tensor):
                 in_str = "[WARNING]" + in_str
             self._args_repr.append(in_str)
-            if self._debug:
-                print(in_str)
 
-                def _print_state(d):
-                    for (_, n) in d.items():
-                        print(n._shallow_repr())
+            self._print(0, 1, in_str)
 
-                _print_state(self._parameters)
-                _print_state(self._buffers)
+            def _print_state(d):
+                for (_, n) in d.items():
+                    self._print(0, 1, n._shallow_repr())
+
+            _print_state(self._parameters)
+            _print_state(self._buffers)
 
         result = self._origin.__class__.__call__(self, *args)
 
@@ -208,8 +215,7 @@ class Block(object):
                 out_str = "[WARNING]" + out_str
 
             self._outs_repr.append(out_str)
-            if self._debug:
-                print(out_str)
+            self._print(0, 1, out_str)
 
         return result
 
@@ -291,15 +297,17 @@ class Block(object):
                     )
                     if is_tensor:
                         seq_args.append(mapping_tensor(arg[i]))
-                        if self._debug:
-                            print(
-                                f"{repr_str} is a Tensor, {func_desc} transformation has been done."
-                            )
+                        self._print(
+                            0,
+                            1,
+                            f"{repr_str} is a Tensor, {func_desc} transformation has been done.",
+                        )
                     else:
-                        if self._debug:
-                            print(
-                                f"{repr_str} is not a Tensor, {func_desc} transformation will be ignored."
-                            )
+                        self._print(
+                            0,
+                            0,
+                            f"{repr_str} is not a Tensor, {func_desc} transformation will be ignored.",
+                        )
                         seq_args.append(arg[i])
                 mapped_args.append(seq_args)
             elif isinstance(arg, Tensor):
@@ -308,20 +316,22 @@ class Block(object):
                 )
                 assert is_tensor
                 mapped_args.append(mapping_tensor(arg))
-                if self._debug:
-                    print(
-                        f"{repr_str} is a Tensor, {func_desc} transformation has been done."
-                    )
+                self._print(
+                    0,
+                    1,
+                    f"{repr_str} is a Tensor, {func_desc} transformation has been done.",
+                )
             else:
                 is_tensor, name, repr_str = self._io_tensor_check_and_gen(
                     arg, io_type, idx
                 )
                 assert not is_tensor
                 mapped_args.append(arg)
-                if self._debug:
-                    print(
-                        f"{repr_str} is not a Tensor or a list of Tensor, {func_desc} transformation will be ignored."
-                    )
+                self._print(
+                    0,
+                    0,
+                    f"{repr_str} is not a Tensor or a list of Tensor, {func_desc} transformation will be ignored.",
+                )
 
         return tuple(mapped_args)
 
@@ -501,6 +511,16 @@ class Block(object):
             main_str += "\n  " + "\n  ".join(lines) + "\n"
         main_str += ")"
         return main_str
+
+    def _print(self, s_level=2, v_level=0, msg: str = ""):
+        r"""Do print according to info level.
+        """
+        assert isinstance(s_level, int)
+        assert isinstance(v_level, int)
+        assert isinstance(msg, str)
+        if s_level >= self._debug_min_s_level:
+            if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
+                print(msg)
 
     def _shallow_repr(self):
         shallow_repr = (

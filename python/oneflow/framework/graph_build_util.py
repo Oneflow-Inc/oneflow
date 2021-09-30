@@ -156,6 +156,8 @@ def build_graph_state(op_name, state_tensor, state_config):
         attr_l2 = user_op_attr_cfg.AttrValue()
         attr_l2.set_at_double(state_config.l2)
         attrs["l2"] = attr_l2
+    elif state_tensor.requires_grad:
+        attrs["l2"] = 0.0
 
     assert isinstance(state_tensor, Tensor)
     lazy_tensor = var_op.apply([state_tensor], attrs)[0]

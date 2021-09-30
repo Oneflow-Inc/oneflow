@@ -34,3 +34,7 @@ from oneflow.framework.config_util import (
 from oneflow.framework.config_util import (
     api_nccl_use_compute_stream as enable_use_compute_stream,
 )
+
+from oneflow.framework.config_util import (
+    api_disable_group_boxing_by_dst_parallel as disable_group_boxing_by_dst_parallel,
+)

@@ -107,6 +107,8 @@ class Graph(object):
         self._args_repr = []
         self._outs_repr = []
         self._debug = False
+        self._debug_min_s_level = 2
+        self._debug_max_v_level = 0
         self._outputs_buffer_size = 2
         self._cur_index_of_ouputs_buffer = 0
 
@@ -266,13 +268,18 @@ class Graph(object):
         return self.config.training
 
     def debug(
-        self, mode: bool = True, ranks: Optional[Union[int, List[int]]] = None
+        self,
+        mode: bool = True,
+        v_level: int = 0,
+        ranks: Optional[Union[int, List[int]]] = None,
     ) -> None:
         r"""Open or close debug mode of the graph.
 
-        If in debug mode, logs of computation graph building will be
-        printed. The log includes inputs/outputs/parameters/buffers/modules meta information.
+        If in debug mode, logs of computation graph building infos or warnings will be
+        printed. Otherwise, only errors will be printed.
 
+        Use ``v_level`` to choose verbose debug info level, default level is 0, max level is 1.
+        
         Use ``ranks`` to choose which rank to print the debug information.
 
         .. code-block:: python
@@ -283,6 +290,7 @@ class Graph(object):
 
         Args:
             mode (bool): whether to set debug mode ("True") or not (``False``). Default: ``True``.
+            v_level (int): choose verbose debug info level, default v_level is 0, max v_level is 1.
             ranks (int or list(int)): choose ranks to print the debug information. Default rank ``0``.
                 You can choose any valid rank. Ranks equals ``-1`` means debug on all ranks.
         """
@@ -300,9 +308,12 @@ class Graph(object):
         my_rank = get_rank()
         if -1 in rank_list or my_rank in rank_list:
             self._debug = mode
+            if self._debug:
+                self._debug_min_s_level = 0
+                self._debug_max_v_level = v_level
             for name, block in self._blocks.items():
                 assert block.type == BlockType.MODULE
-                block.debug(mode, ranks)
+                block.debug(mode, v_level, ranks)
 
     def __repr__(self):
         r"""For printing the graph structure.
@@ -349,10 +360,15 @@ class Graph(object):
         shallow_repr = "(GRAPH:" + self._name + ":" + self.__class__.__name__ + ")"
         return shallow_repr
 
-    def _rank0_print(self, msg: str = ""):
-        if get_rank() != 0:
-            return
-        print(msg)
+    def _print(self, s_level=2, v_level=0, msg: str = ""):
+        r"""Do print according to info level.
+        """
+        assert isinstance(s_level, int)
+        assert isinstance(v_level, int)
+        assert isinstance(msg, str)
+        if s_level >= self._debug_min_s_level:
+            if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
+                print(msg)
 
     @property
     def _config_proto(self):
@@ -367,18 +383,22 @@ class Graph(object):
     @property
     def _graph_proto(self):
         if not self._is_compiled:
-            self._rank0_print(
+            self._print(
+                2,
+                0,
                 f"[ERROR]{self._shallow_repr()} has not been compiled, so it's graph proto is None."
-                " You can call the graph to trigger it's compilation."
+                " You can call the graph to trigger it's compilation.",
             )
         return self._forward_job_proto
 
     @property
     def _full_graph_proto(self):
         if not self._is_compiled:
-            self._rank0_print(
+            self._print(
+                2,
+                0,
                 f"[ERROR]{self._shallow_repr()} has not been compiled, so it's full graph proto is None."
-                " You can call the graph to trigger it's compilation."
+                " You can call the graph to trigger it's compilation.",
             )
         return self._full_job_proto
 
@@ -420,41 +440,44 @@ class Graph(object):
     def _compile(self, *args):
         # Build graph
         try:
-            if self._debug:
-                print(self._shallow_repr() + " start building graph.")
+            self._print(0, 0, self._shallow_repr() + " start building graph.")
             assert not self._is_compiled, (
                 "nn.Graph " + self._name + " has already been compiled."
             )
 
             eager_outputs = self._build_graph(*args)
 
-            if self._debug:
-                print(self._shallow_repr() + " end building graph.")
+            self._print(0, 0, self._shallow_repr() + " end building graph.")
         except:
-            print(
+            self._print(
+                2,
+                0,
                 "[ERROR]"
                 + self._shallow_repr()
                 + " build graph got error: "
-                + sys_exc_error_msg()
+                + sys_exc_error_msg(),
             )
             raise
 
         # Complie graph to execution plan and init Runtime
         try:
-            if self._debug:
-                print(
-                    self._shallow_repr()
-                    + " start compiling plan and init graph runtime."
-                )
+            self._print(
+                0,
+                0,
+                self._shallow_repr() + " start compiling plan and init graph runtime.",
+            )
 
             self._c_nn_graph.complie_and_init_runtime()
 
-            if self._debug:
-                print(
-                    self._shallow_repr() + " end compiling plan and init graph rumtime."
-                )
+            self._print(
+                0,
+                0,
+                self._shallow_repr() + " end compiling plan and init graph rumtime.",
+            )
         except:
-            print(
+            self._print(
+                2,
+                0,
                 "[ERROR]"
                 + self._shallow_repr()
                 + " compiling plan or initialing graph runtime got error : ",
@@ -622,11 +645,13 @@ class Graph(object):
             if self._cur_index_of_ouputs_buffer >= self._outputs_buffer_size:
                 self._cur_index_of_ouputs_buffer = 0
         except:
-            print(
+            self._print(
+                2,
+                0,
                 "[ERROR]"
                 + self._shallow_repr()
                 + " run got error : "
-                + sys_exc_error_msg()
+                + sys_exc_error_msg(),
             )
             raise
 
@@ -660,8 +685,7 @@ class Graph(object):
                 build_arg = None
 
             args_repr.append(repr_str)
-            if self._debug:
-                print(repr_str)
+            self._print(0, 1, repr_str)
             return build_arg
 
         for idx, arg in enumerate(args):
@@ -778,7 +802,7 @@ class Graph(object):
             repr_str = (
                 "[ERROR](" + io_type.upper() + ":" + name + ":" + str(type(item)) + ")"
             )
-            print(repr_str)
+            self._print(2, 0, repr_str)
             raise NotImplementedError(
                 "nn.Graph.build()'s input/output only support types: Tensor/list(Tensor)/None."
             )
@@ -825,7 +849,7 @@ class Graph(object):
             repr_str = (
                 "[ERROR](" + io_type.upper() + ":" + name + ":" + str(type(item)) + ")"
             )
-            print(repr_str)
+            self._print(2, 0, repr_str)
             raise NotImplementedError(
                 "nn.Graph.build()'s input/output only support types: Tensor/list(Tensor)/None."
             )
@@ -838,7 +862,10 @@ class Graph(object):
             state_tensor = state_block.origin
             state_op_names.append(op_name)
             state_tensors.append(state_tensor)
-            if state_block.type == BlockType.PARAMETER:
+            if (
+                state_block.type == BlockType.PARAMETER
+                and state_block.origin in self._variables_conf
+            ):
                 state_config = self._variables_conf[state_block.origin]
             else:
                 state_config = None
