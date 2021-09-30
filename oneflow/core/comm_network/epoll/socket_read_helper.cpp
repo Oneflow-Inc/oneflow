@@ -55,7 +55,6 @@ bool SocketReadHelper::MsgBodyReadHandle() {
 }
 
 bool SocketReadHelper::DoCurRead(void (SocketReadHelper::*set_cur_read_done)()) {
-  read_size_ = sizeof(cur_msg_);
   ssize_t n = read(sockfd_, read_ptr_, read_size_);
   const int val = 1;
   PCHECK(setsockopt(sockfd_, IPPROTO_TCP, TCP_QUICKACK, (char*)&val, sizeof(int)) == 0);

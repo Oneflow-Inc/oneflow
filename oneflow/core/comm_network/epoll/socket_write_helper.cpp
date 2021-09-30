@@ -104,7 +104,7 @@ bool SocketWriteHelper::MsgBodyWriteHandle() {
 }
 
 bool SocketWriteHelper::DoCurWrite(void (SocketWriteHelper::*set_cur_write_done)()) {
-  write_size_ = sizeof(cur_msg_);
+  //write_size_ = sizeof(cur_msg_);
   ssize_t n = write(sockfd_, write_ptr_, write_size_);
   std::cout<<"SocketWriteHelper::DoCurWrite,the sockfd:"<<   sockfd_<<" and the queue_not_empty_fd:"<<queue_not_empty_fd_ << " and write_size:"<<write_size_<< " and n:"<< n<< std::endl;
   std::cout<<std::endl<<std::endl;
@@ -146,6 +146,7 @@ void SocketWriteHelper::SetStatusWhenRequestReadMsgHeadDone() {
   auto src_mem_desc = static_cast<const SocketMemDesc*>(src_token);
   write_ptr_ = reinterpret_cast<const char*>(src_mem_desc->mem_ptr);
   write_size_ = src_mem_desc->byte_size;
+  std::cout<<"SocketWriteHelper::SetStatusWhenRequestReadMsgHeadDone the write_size_:"<<write_size_<<std::endl;
   cur_write_handle_ = &SocketWriteHelper::MsgBodyWriteHandle;
 }
 
