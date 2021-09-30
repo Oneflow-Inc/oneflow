@@ -37,3 +37,6 @@ Functional operations for neural networks
 .. autofunction:: interpolate
 .. autofunction:: layer_norm
 .. autofunction:: ctc_greedy_decoder
+.. autofunction:: embedding
+.. autofunction:: linear
+
