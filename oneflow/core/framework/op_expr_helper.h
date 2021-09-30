@@ -67,9 +67,6 @@ Maybe<one::UserOpExpr> ReduceSumLikeOp(const std::vector<int32_t>& axis, const s
 Maybe<one::UserOpExpr> ScalarPowOp(const double& exponent);
 Maybe<one::UserOpExpr> ScalarPowOp(const double& exponent, const std::string& name);
 
-Maybe<one::UserOpExpr> ScalarPowGradOp(const double& exponent);
-Maybe<one::UserOpExpr> ScalarPowGradOp(const double& exponent, const std::string& name);
-
 template<typename T>
 Maybe<one::UserOpExpr> ScalarAddOp(const T& scalar);
 

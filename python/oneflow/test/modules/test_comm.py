@@ -17,11 +17,13 @@ limitations under the License.
 import unittest
 
 import numpy as np
+import os
 
 import oneflow as flow
 import oneflow.unittest
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestComm(flow.unittest.TestCase):
     def _test_send_recv(test_case, x0, src, dst):
         rank = flow.env.get_rank()
