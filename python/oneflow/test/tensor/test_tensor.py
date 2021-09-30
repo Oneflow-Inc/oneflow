@@ -14,14 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
 import unittest
 from collections import OrderedDict
 
-import os
 import numpy as np
 import oneflow as flow
 import oneflow.unittest
-
 from oneflow.test_utils.automated_test_util import *
 
 
@@ -97,6 +96,27 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(output.dtype, flow.float32)
         test_case.assertTrue(np.allclose(output.numpy(), np_arr))
 
+    @autotest()
+    def test_tensor_sign_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.sign()
+        return y
+
+    @autotest()
+    def test_flow_tensor_gather_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
+        dim = random(0, 4).to(int)
+        index = random_pytorch_tensor(
+            ndim=4,
+            dim1=random(1, 3).to(int),
+            dim2=random(1, 4).to(int),
+            dim3=random(1, 5).to(int),
+            dtype=int,
+        ).to(device)
+        return input.gather(dim, index)
+
     def _test_tensor_init_methods(test_case, tensor_creator, get_numpy):
         shape = (2, 3, 4, 5)
         x = tensor_creator(*shape)
@@ -170,6 +190,15 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(not x.is_cuda)
 
     @flow.unittest.skip_unless_1n1d()
+    @autotest(n=1)
+    def test_tensor_set_data_autograd_meta(test_case):
+        x = torch.ones(2, 3).requires_grad_(True)
+        y = x + x
+        z = torch.zeros(2, 3)
+        z.data = y
+        return z.grad_fn, z.is_leaf
+
+    @flow.unittest.skip_unless_1n1d()
     def test_tensor_set_data(test_case):
         a = flow.ones(2, 3, requires_grad=False)
         b = flow.ones(4, 5, requires_grad=True).to("cuda")
@@ -178,8 +207,8 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(old_id, id(a))
         test_case.assertTrue(a.shape == (4, 5))
         test_case.assertTrue(a.device == flow.device("cuda"))
-        test_case.assertTrue(a.requires_grad)
-        test_case.assertFalse(a.is_leaf)
+        test_case.assertFalse(a.requires_grad)
+        test_case.assertTrue(a.is_leaf)
 
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_unsupported_property(test_case):
@@ -377,7 +406,7 @@ class TestTensor(flow.unittest.TestCase):
             tensor[slices] = value
             test_case.assertTrue(np.allclose(np_arr, tensor.numpy()))
 
-        x = flow.Tensor(5, 5)
+        x = flow.randn(5, 5)
         v = flow.Tensor([[0, 1, 2, 3, 4]])
         compare_getitem_with_numpy(x, se[-4:-1:2])
         compare_getitem_with_numpy(x, se[-1:])
@@ -573,12 +602,12 @@ class TestTensor(flow.unittest.TestCase):
         y = x.argsort(dim=random(low=-4, high=4).to(int), descending=random_bool())
         return y
 
-    @flow.unittest.skip_unless_1n1d()
-    def test_mean(test_case):
-        input = flow.tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = input.mean(dim=0)
-        np_out = np.mean(input.numpy(), axis=0)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
+    @autotest()
+    def test_mean_with_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_pytorch_tensor(ndim=4, dtype=float).to(device)
+        return x.mean(dim)
 
     @autotest()
     def test_log_tensor_with_random_data(test_case):
@@ -1398,6 +1427,29 @@ class TestTensor(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor(ndim=1, dim0=random()).to(device)
         return x.diag()
+
+    @autotest()
+    def test_flow_tensor_expand_with_random_data(test_case):
+        random_expand_size = random(1, 6).to(int).value()
+        x = random_pytorch_tensor(ndim=5, dim0=1, dim1=1, dim2=1, dim3=1, dim4=1)
+        ndim = 5
+        expand_size = random_expand_size
+        dim_size = [1,] * ndim
+        random_index = random(0, ndim).to(int).value()
+        dim_size[random_index] = expand_size
+        return x.expand(*dim_size)
+
+    @autotest()
+    def test_flow_tensor_expand_with_random_data(test_case):
+        random_expand_size = random(1, 6).to(int).value()
+        x = random_pytorch_tensor(ndim=5, dim0=1, dim1=1, dim2=1, dim3=1, dim4=1)
+        ndim = 5
+        expand_size = random_expand_size
+        dim_size = [1,] * ndim
+        random_index = random(0, ndim).to(int).value()
+        dim_size[random_index] = expand_size
+        y = torch.ones(dim_size)
+        return x.expand_as(y)
 
     @flow.unittest.skip_unless_1n1d()
     @autotest()

@@ -128,18 +128,52 @@ struct SoftSignGradFunctor<half> {
   SoftSignGradFunctor<float> float_functor;
 };
 
-#define REGISTER_ACTIVATION_GPU_KERNEL(dtype)           \
-  REGISTER_ELU_KERNEL(DeviceType::kGPU, dtype);         \
-  REGISTER_HARDSWISH_KERNEL(DeviceType::kGPU, dtype);   \
-  REGISTER_HARDSIGMOID_KERNEL(DeviceType::kGPU, dtype); \
-  REGISTER_HARDTANH_KERNEL(DeviceType::kGPU, dtype);    \
-  REGISTER_MISH_KERNEL(DeviceType::kGPU, dtype);        \
-  REGISTER_SILU_KERNEL(DeviceType::kGPU, dtype);        \
-  REGISTER_SELU_KERNEL(DeviceType::kGPU, dtype);        \
-  REGISTER_SOFTSIGN_KERNEL(DeviceType::kGPU, dtype);
+template<>
+struct ReluFunctor<half> {
+  OF_DEVICE_FUNC explicit ReluFunctor() {}
+  __device__ half operator()(half x) const {
+    half zero = __float2half(0.0);
+    if (__hgt(x, zero)) {
+      return x;
+    } else {
+      return zero;
+    }
+  }
+};
+
+template<>
+struct ReluGradFunctor<half> {
+  OF_DEVICE_FUNC explicit ReluGradFunctor() {}
+  __device__ half operator()(half y, half dy) const {
+    half zero = __float2half(0.0);
+    if (__hgt(y, zero)) {
+      return dy;
+    } else {
+      return zero;
+    }
+  }
+};
+
+#define REGISTER_ACTIVATION_GPU_KERNEL(dtype)            \
+  REGISTER_ELU_KERNEL(DeviceType::kGPU, dtype);          \
+  REGISTER_HARDSWISH_KERNEL(DeviceType::kGPU, dtype);    \
+  REGISTER_HARDSIGMOID_KERNEL(DeviceType::kGPU, dtype);  \
+  REGISTER_HARDTANH_KERNEL(DeviceType::kGPU, dtype);     \
+  REGISTER_MISH_KERNEL(DeviceType::kGPU, dtype);         \
+  REGISTER_SILU_KERNEL(DeviceType::kGPU, dtype);         \
+  REGISTER_SELU_KERNEL(DeviceType::kGPU, dtype);         \
+  REGISTER_SOFTSIGN_KERNEL(DeviceType::kGPU, dtype);     \
+  REGISTER_RELU_FORWARD_KERNEL(DeviceType::kGPU, dtype); \
+  REGISTER_RELU_BACKWARD_KERNEL(DeviceType::kGPU, dtype);
 
 REGISTER_ACTIVATION_GPU_KERNEL(half);
 REGISTER_ACTIVATION_GPU_KERNEL(float);
 REGISTER_ACTIVATION_GPU_KERNEL(double);
+
+// For some special DType
+REGISTER_RELU_FORWARD_KERNEL(DeviceType::kGPU, uint8_t);
+REGISTER_RELU_FORWARD_KERNEL(DeviceType::kGPU, int8_t);
+REGISTER_RELU_FORWARD_KERNEL(DeviceType::kGPU, int32_t);
+REGISTER_RELU_FORWARD_KERNEL(DeviceType::kGPU, int64_t);
 
 }  // namespace oneflow

@@ -1,5 +1,5 @@
 # Minimum CMake required
-cmake_minimum_required(VERSION 3.14.0)
+cmake_minimum_required(VERSION 3.18.0)
 
 if (NOT CMAKE_BUILD_TYPE)
   message(STATUS "No build type selected, default to Release")
@@ -10,8 +10,6 @@ if(NOT CMAKE_BUILD_TYPE MATCHES "^(Debug|Release|RelWithDebInfo|MinSizeRel)$")
   message(FATAL_ERROR "Expected CMAKE_BUILD_TYPE is Debug, Release, RelWithDebInfo or MinSizeRel, got ${CMAKE_BUILD_TYPE}")
 endif()
 message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
-
-add_definitions(-DONEFLOW_CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "")
 
@@ -161,54 +159,42 @@ set(ONEFLOW_INCLUDE_DIR "${ONEFLOW_PYTHON_DIR}/oneflow/include")
 include(third_party)
 
 if (BUILD_CUDA)
+  # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags
+  if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+    list(APPEND CMAKE_CUDA_ARCHITECTURES 60-real)
+    # Tesla P40/P4, Quadro Pxxx/Pxxxx, GeForce GTX 10xx, TITAN X/Xp
+    list(APPEND CMAKE_CUDA_ARCHITECTURES 61-real)
+    # V100, TITAN V
+    list(APPEND CMAKE_CUDA_ARCHITECTURES 70-real)
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
+      # T4, Quadro RTX xxxx, Txxxx, Geforce RTX 20xx, TITAN RTX
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 75-real)
+    endif()
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
+      # A100
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 80-real)
+    endif()
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.1")
+      # GeForce RTX 30xx
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 86-real)
+    endif()
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 80-virtual)
+    elseif(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 75-virtual)
+    else()
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 70-virtual)
+    endif()
+  endif()
   enable_language(CUDA)
   include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
-  message(STATUS "CUDA_VERSION: ${CUDA_VERSION}")
-  message(STATUS "CUDA_TOOLKIT_ROOT_DIR: ${CUDA_TOOLKIT_ROOT_DIR}")
+  message(STATUS "CMAKE_CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
   set(CUDA_SEPARABLE_COMPILATION OFF)
 
-  list(APPEND CUDA_NVCC_FLAGS -Werror cross-execution-space-call -Wno-deprecated-gpu-targets)
   if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL "11.2")
-    # warning #177-D: parameter "args" was declared but never referenced
-    list(APPEND CUDA_NVCC_FLAGS --display-error-number --diag-suppress 177)
     set(CUDA_NVCC_THREADS_NUMBER "1" CACHE STRING "")
     list(APPEND CUDA_NVCC_FLAGS -t ${CUDA_NVCC_THREADS_NUMBER})
   endif()
-  #  half is not fully supported when __CUDA_ARCH__ < 530
-  #  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_30,code=sm_30")
-  #  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_52,code=sm_52")
-  # cubin
-  # Tesla P100
-  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_60,code=sm_60")
-  # Tesla P40/P4, Quadro Pxxx/Pxxxx, GeForce GTX 10xx, TITAN X/Xp
-  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_61,code=sm_61")
-  # V100, TITAN V
-  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_70,code=sm_70")
-  if(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
-    # T4, Quadro RTX xxxx, Txxxx, Geforce RTX 20xx, TITAN RTX
-    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_75,code=sm_75")
-  endif()
-  if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
-    # A100
-    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_80,code=sm_80")
-  endif()
-  if(CUDA_VERSION VERSION_GREATER_EQUAL "11.1")
-    # GeForce RTX 30xx
-    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_86,code=sm_86")
-  endif()
-  if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
-    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_80,code=compute_80")
-  elseif(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
-    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_75,code=compute_75")
-  else()
-    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_70,code=compute_70")
-  endif()
-  if(NOT DEFINED CUDA_NVCC_GENCODES)
-    set(CUDA_NVCC_GENCODES ${DEFAULT_CUDA_NVCC_GENCODES})
-  endif()
-  foreach(CUDA_NVCC_GENCODE ${CUDA_NVCC_GENCODES})
-    list(APPEND CUDA_NVCC_FLAGS -gencode ${CUDA_NVCC_GENCODE})
-  endforeach()
   message(STATUS "CUDA_NVCC_FLAGS: " ${CUDA_NVCC_FLAGS})
   list(JOIN CUDA_NVCC_FLAGS " " CMAKE_CUDA_FLAGS)
 endif()

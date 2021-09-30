@@ -32,6 +32,12 @@ T Fastpow(T a, int64_t b) {
   return ans;
 }
 
+template<typename T>
+void SumSquares2(int64_t n, const T* src0, T* dst0, const T* src1, T* dst1) {
+  *dst0 += cblas_dot<T>(n, src0, 1, src0, 1);
+  *dst1 += cblas_dot<T>(n, src1, 1, src1, 1);
+}
+
 }  // namespace
 
 template<typename T, typename G>
@@ -229,6 +235,38 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_INDEXED_SLICES_ADAM_MODEL_UPDATE_KE
 #undef INSTANTIATE_INDEXED_SLICES_ADAM_MODEL_UPDATE_KERNEL_UTIL_CPU
 
 template<typename T, typename G>
+struct AdagradUpdateKernelUtil<DeviceType::kCPU, T, G> {
+  static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float lr_decay,
+                     float epsilon, float weight_decay, float learning_rate_val, int64_t train_step,
+                     const float* learning_rate, const int64_t* train_step_ptr,
+                     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
+                     T* sum);
+};
+
+template<typename T, typename G>
+void AdagradUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
+    DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float lr_decay, float epsilon,
+    float weight_decay, float learning_rate_val, int64_t train_step, const float* learning_rate,
+    const int64_t* train_step_ptr, const T* scale_by_ptr, const int64_t* skip_if,
+    const G* model_diff, T* model, T* sum) {
+  if (skip_if != nullptr && *skip_if != 0) { return; }
+  if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
+  if (train_step_ptr != nullptr) {
+    train_step = *train_step_ptr + 1;
+  }  // train_step_ptr start from zero.
+  if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
+  learning_rate_val = learning_rate_val / (1 + (train_step - 1) * lr_decay);
+
+  FOR_RANGE(int64_t, i, 0, n) {
+    AdagradUpdateFunctor<T, G>()(model_diff + i, model + i, sum + i, scale, l1, l2, epsilon,
+                                 weight_decay, learning_rate_val);
+  }
+}
+
+template struct AdagradUpdateKernelUtil<DeviceType::kCPU, float, float>;
+template struct AdagradUpdateKernelUtil<DeviceType::kCPU, double, double>;
+
+template<typename T, typename G>
 struct LambUpdateKernelUtil<DeviceType::kCPU, T, G> {
   static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1,
                      float beta2, float epsilon, float weight_decay, float learning_rate_val,
@@ -249,12 +287,11 @@ void LambUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
     LambGradFunctor<T, G>()(model_diff + i, adam_diff + i, model + i, m + i, v + i, scale, l1, l2,
                             beta1, beta2, epsilon);
   }
-  T* w_norm = norm_buffer;
-  T* g_norm = norm_buffer + 1;
-  KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, model, 1, model, 1, w_norm);
-  KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, adam_diff, 1, adam_diff, 1, g_norm);
-  KernelUtil<DeviceType::kCPU, T>::Sqrt(ctx, 2, norm_buffer, norm_buffer);
-  const float lr = LambLRFunctor<T>()(learning_rate_val, w_norm, g_norm);
+  T* w_norm_2 = norm_buffer;
+  T* g_norm_2 = norm_buffer + 1;
+  Memset<DeviceType::kCPU>(ctx, norm_buffer, 0, 2 * sizeof(T));
+  SumSquares2(n, model, w_norm_2, adam_diff, g_norm_2);
+  const float lr = LambLRFunctor<T>()(learning_rate_val, w_norm_2, g_norm_2);
   FOR_RANGE(int64_t, i, 0, n) {
     LambUpdateFunctor<T>()(lr, weight_decay, adam_diff + i, model + i);
   }
@@ -332,9 +369,8 @@ void LarsUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
     model_diff_tmp[i] =
         CastScaleRegularizeGradientFunctor<T, G>()(model_diff[i], model[i], scale, l1, l2);
   }
-  KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, model, 1, model, 1, &model_norm);
-  KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, model_diff_tmp, 1, model_diff_tmp, 1,
-                                       &model_diff_norm);
+  Memset<DeviceType::kCPU>(ctx, data_tmp, 0, 2 * sizeof(T));
+  SumSquares2(n, model, &model_norm, model_diff_tmp, &model_diff_norm);
   model_norm = std::sqrt(model_norm);
   model_diff_norm = std::sqrt(model_diff_norm);
   T lars = static_cast<T>(1);

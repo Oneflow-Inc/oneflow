@@ -160,9 +160,25 @@ def _ne(self, other):
     return self.ne(other)
 
 
+def _and(self, other):
+    return self.logical_and(other)
+
+
+def _or(self, other):
+    return self.logical_or(other)
+
+
+def _xor(self, other):
+    return self.logical_xor(other)
+
+
 def _contiguous(self):
     # TODO: support stride mechanism
     return self
+
+
+def _transpose(self, dim0, dim1):
+    return flow._C.transpose(self, dim0, dim1)
 
 
 def _getstate(self):
@@ -277,6 +293,10 @@ def _exp(self):
     return flow.exp(self)
 
 
+def _expand_as(input, other):
+    return flow.expand(input, other.size())
+
+
 def _acos(self):
     return flow.acos(self)
 
@@ -291,6 +311,10 @@ def _arccosh(self):
 
 def _atanh(self):
     return flow.atanh(self)
+
+
+def _atan2(self, other):
+    return flow.atan2(self, other)
 
 
 def _arctanh(self):
@@ -545,7 +569,8 @@ def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
     if tensor.is_consistent:
         src_tensor = flow.tensor(np_arr)
         src_tensor = src_tensor.to_consistent(
-            placement=tensor.placement, sbp=flow.sbp.broadcast
+            placement=tensor.placement,
+            sbp=tuple(flow.sbp.broadcast for _ in range(len(tensor.sbp))),
         )
         tensor.copy_(src_tensor)
     else:
@@ -559,15 +584,14 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
     if self.is_consistent:
         assert isinstance(other, Tensor)
         assert other.is_consistent
-        self[:] = other
+        other = other.to_consistent(placement=self.placement, sbp=self.sbp)
+        flow._C.assign_local_tensor(self.to_local(), other.to_local())
     else:
-        if isinstance(other, (Tensor)):
-            src_np = other.numpy()
-        else:
+        if not isinstance(other, (Tensor)):
             assert isinstance(other, np.ndarray)
-            src_np = other
-
-        _copy_from_numpy_to_eager_local_tensor(self, src_np)
+            _copy_from_numpy_to_eager_local_tensor(self, other)
+        else:
+            flow._C.assign_local_tensor(self, other.to(device=self.device))
 
 
 def _get_device(self):
@@ -609,6 +633,9 @@ def RegisterMethods():
     Tensor.__lt__ = _lt
     Tensor.__ge__ = _ge
     Tensor.__le__ = _le
+    Tensor.__and__ = _and
+    Tensor.__or__ = _or
+    Tensor.__xor__ = _xor
     Tensor.__mul__ = _mul
     Tensor.__rmul__ = _rmul
     Tensor.__add__ = _add
@@ -638,6 +665,7 @@ def RegisterMethods():
     Tensor.acosh = _acosh
     Tensor.arccosh = _arccosh
     Tensor.atanh = _atanh
+    Tensor.atan2 = _atan2
     Tensor.arctanh = _arctanh
     Tensor.sign = _sign
     Tensor.sinh = _sinh
@@ -671,6 +699,7 @@ def RegisterMethods():
     Tensor.clip = _clip
     Tensor.cos = _cos
     Tensor.cosh = _cosh
+    Tensor.expand_as = _expand_as
     Tensor.erf = _erf
     Tensor.erfc = _erfc
     Tensor.expm1 = _expm1
@@ -688,6 +717,7 @@ def RegisterMethods():
     Tensor.tril = _tril
     Tensor.triu = _triu
     Tensor.contiguous = _contiguous
+    Tensor.transpose = _transpose
 
 
 def register_tensor_op(op_name):
