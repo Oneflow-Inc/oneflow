@@ -85,6 +85,7 @@ class ScalarLogicalKernel final : public user_op::OpKernel {
   REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_logical_and", BinaryFuncAND,  \
                                                      dtype_pair);
 
+// we register uint8_t, int8_t, int32_t, int64_t, float, double.
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_LOGICAL_KERNEL, (DeviceType::kCPU),
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
 
