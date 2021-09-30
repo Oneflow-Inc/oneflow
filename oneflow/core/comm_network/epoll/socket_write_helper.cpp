@@ -51,6 +51,7 @@ void SocketWriteHelper::AsyncWrite(const SocketMsg& msg) {
   pending_msg_queue_->push(msg);
   pending_msg_queue_mtx_.unlock();
   std::cout<<"SocketWriteHelper,::AsyncWrite, the sockfd_:"<<sockfd_ <<" and the queue_not_empty_fd:"<<queue_not_empty_fd_<<std::endl;
+  std::cout<<"SocketWriteHelper::AsyncWrite,the write_size:"<<write_size_ << std::endl;
   if (need_send_event) { SendQueueNotEmptyEvent(); }
 }
 
@@ -58,6 +59,7 @@ void SocketWriteHelper::NotifyMeSocketWriteable() { WriteUntilMsgQueueEmptyOrSoc
 
 void SocketWriteHelper::SendQueueNotEmptyEvent() {
   uint64_t event_num = 1;
+  std::cout<<"SocketWriteHelper::SendQueueNotEmptyEvent,the sockfd:"<<   sockfd_<<" and the queue_not_empty_fd:"<<queue_not_empty_fd_ << " and write_size:"<<write_size_<<std::endl;
   PCHECK(write(queue_not_empty_fd_, &event_num, 8) == 8);
 }
 
@@ -68,7 +70,10 @@ void SocketWriteHelper::ProcessQueueNotEmptyEvent() {
 }
 
 void SocketWriteHelper::WriteUntilMsgQueueEmptyOrSocketNotWriteable() {
-  while ((this->*cur_write_handle_)()) {}
+  std::cout<<"SocketWriteHelper::WriteUntilMsgQueueEmptyOrSocketNotWriteable,the sockfd:"<<   sockfd_<<" and the queue_not_empty_fd:"<<queue_not_empty_fd_ << " and write_size:"<<write_size_<<std::endl;
+  while ((this->*cur_write_handle_)()) {
+    std::cout<<"SocketWriteHelper::WriteUntilMsgQueueEmptyOrSocketNotWriteable,the sockfd:"<<   sockfd_<<" and the queue_not_empty_fd:"<<queue_not_empty_fd_ << " and write_size:"<<write_size_<<std::endl;
+  }
 }
 
 bool SocketWriteHelper::InitMsgWriteHandle() {
@@ -83,11 +88,13 @@ bool SocketWriteHelper::InitMsgWriteHandle() {
   cur_msg_queue_->pop();
   write_ptr_ = reinterpret_cast<const char*>(&cur_msg_);
   write_size_ = sizeof(cur_msg_);
+  std::cout<<"SocketWriteHelper::InitMsgWriteHandle,the sockfd:"<<   sockfd_<<" and the queue_not_empty_fd:"<<queue_not_empty_fd_ << " and write_size:"<<write_size_<<std::endl;
   cur_write_handle_ = &SocketWriteHelper::MsgHeadWriteHandle;
   return true;
 }
 
 bool SocketWriteHelper::MsgHeadWriteHandle() {
+  std::cout<<"SocketWriteHelper::MsgHeadWriteHandle,the sockfd:"<<   sockfd_<<" and the queue_not_empty_fd:"<<queue_not_empty_fd_ << " and write_size:"<<write_size_<<std::endl;
   return DoCurWrite(&SocketWriteHelper::SetStatusWhenMsgHeadDone);
 }
 
@@ -97,7 +104,7 @@ bool SocketWriteHelper::MsgBodyWriteHandle() {
 
 bool SocketWriteHelper::DoCurWrite(void (SocketWriteHelper::*set_cur_write_done)()) {
   ssize_t n = write(sockfd_, write_ptr_, write_size_);
-  std::cout<<"SocketWriteHelper::DoCurWrite,the sockfd_:"<<sockfd_ <<" and the write_size:"<<write_size_ <<" and n:"<<n << std::endl;
+  std::cout<<"SocketWriteHelper::DoCurWrite,the sockfd:"<<   sockfd_<<" and the queue_not_empty_fd:"<<queue_not_empty_fd_ << " and write_size:"<<write_size_<< " and n:"<< n<< std::endl;
   if (n == write_size_) {
     (this->*set_cur_write_done)();
     return true;

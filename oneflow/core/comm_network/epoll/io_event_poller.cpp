@@ -92,7 +92,6 @@ void IOEventPoller::EpollLoop() {
     const epoll_event* cur_event = ep_events_;
     for (int event_idx = 0; event_idx < event_num; ++event_idx, ++cur_event) {
       auto io_handler = static_cast<IOHandler*>(cur_event->data.ptr);
-      std::cout<<"IOEventPoller::EpollLoop,the io_handler->fd:"<<io_handler->fd<<std::endl;
       PCHECK(!(cur_event->events & EPOLLERR)) << "fd: " << io_handler->fd;
       if (io_handler->fd == break_epoll_loop_fd_) { return; }
       if (cur_event->events & EPOLLIN) {
