@@ -25,7 +25,7 @@ class CpuDeviceCtxAdapter final : public DeviceCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDeviceCtxAdapter);
   explicit CpuDeviceCtxAdapter(StreamContext* stream_ctx) : stream_ctx_(stream_ctx) {}
-  ~CpuDeviceCtxAdapter() = default;
+  ~CpuDeviceCtxAdapter() override = default;
 
   std::unique_ptr<DeviceCtx> Copy() const {
     return std::unique_ptr<DeviceCtx>(new CpuDeviceCtxAdapter(stream_ctx_));
