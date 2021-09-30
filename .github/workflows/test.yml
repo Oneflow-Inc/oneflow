@@ -408,7 +408,7 @@ jobs:
 
           echo "ONEFLOW_WHEEL_PATH=${{ steps.download-digest.outputs.entry-dir }}/whl" >> $GITHUB_ENV
       - name: Set environment variables (distributed)
-        if: ${{ !fromJson(matrix.is-distributed) }}
+        if: ${{ fromJson(matrix.is-distributed) }}
         run: |
           set -x
           EXTRA_DOCKER_ARGS+=" --network host "
