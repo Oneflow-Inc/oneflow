@@ -1350,12 +1350,10 @@ class TensorSetItemFunctor {
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
     // Not support combined indexing now
     if (!tensor_indices.empty()) {
-      for (int dim = 0; dim < ndims; ++dim) {
-        const auto& slice = slice_indices.at(dim);
-        CHECK_OR_RETURN(slice.start() == 0 && slice.end() == x->shape()->At(dim)
-                        && slice.step() == 1)
-            << "Combining indexing is not support for tensor setitem currently";
-      }
+      CHECK_OR_RETURN(tensor_indices.size() == ndims
+                      && std::all_of(tensor_indices.begin(), tensor_indices.end(),
+                                     [](const std::shared_ptr<Tensor>& index) { return index; }))
+          << "Combining indexing is not support for tensor setitem currently";
     }
 
     Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
