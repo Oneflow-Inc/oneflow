@@ -37,10 +37,7 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("ceil", Ceil)                         \
   OF_PP_MAKE_TUPLE_SEQ("cos", Cos)                           \
   OF_PP_MAKE_TUPLE_SEQ("cosh", Cosh)                         \
-  OF_PP_MAKE_TUPLE_SEQ("erf", Erf)                           \
-  OF_PP_MAKE_TUPLE_SEQ("erfc", Erfc)                         \
   OF_PP_MAKE_TUPLE_SEQ("exp", Exp)                           \
-  OF_PP_MAKE_TUPLE_SEQ("expm1", Expm1)                       \
   OF_PP_MAKE_TUPLE_SEQ("floor", Floor)                       \
   OF_PP_MAKE_TUPLE_SEQ("lgamma", Lgamma)                     \
   OF_PP_MAKE_TUPLE_SEQ("log", Log)                           \
@@ -62,10 +59,12 @@ namespace impl {
 
 #define FLOAT_UNARY_FUNC_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ("sigmoid_v2", Sigmoid) \
-  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)
+  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)          \
+  OF_PP_MAKE_TUPLE_SEQ("erf", Erf)            \
+  OF_PP_MAKE_TUPLE_SEQ("erfc", Erfc)          \
+  OF_PP_MAKE_TUPLE_SEQ("expm1", Expm1)
 
-#define INPLACE_UNARY_FUNC_SEQ                              \
-  OF_PP_MAKE_TUPLE_SEQ("sin_inplace", SinInplace)
+#define INPLACE_UNARY_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("sin_inplace", SinInplace)
 
 #define UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, base)                    \
   class class_name##Functor : public base {                                          \

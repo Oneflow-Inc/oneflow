@@ -113,6 +113,17 @@ Maybe<one::UserOpExpr> EagerNcclS2S(Symbol<ParallelDesc> parallel_desc,
 
 auto* CachedEagerNcclS2SOpExpr = DECORATE(&EagerNcclS2S, ThreadLocal);
 
+Maybe<one::UserOpExpr> EagerNcclReduce(Symbol<ParallelDesc> parallel_desc, int64_t root) {
+  return one::OpBuilder("eager_nccl_reduce", *JUST(UniqueStr("eager_nccl_reduce")))
+      .Input("in")
+      .Output("out")
+      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Attr<int64_t>("root", root)
+      .Build();
+}
+
+auto* CachedEagerNcclReduceOpExpr = DECORATE(&EagerNcclReduce, ThreadLocal);
+
 }  // namespace
 
 class BroadcastFunctor {
@@ -325,6 +336,42 @@ class RecvFunctor {
  private:
   std::shared_ptr<OpExpr> op_expr_;
 };
+
+class LocalReduceFunctor {
+ public:
+  LocalReduceFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t dst, bool inplace) const {
+    const auto& device = JUST(x->device());
+    { CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank()); }
+    static thread_local std::unordered_map<Symbol<RankGroup>, Symbol<ParallelDesc>>
+        rank_group2parallel_desc;
+    const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
+    auto iter = rank_group2parallel_desc.find(rank_group);
+    Symbol<ParallelDesc> parallel_desc;
+    if (iter == rank_group2parallel_desc.end()) {
+      ParallelConf parallel_conf;
+      parallel_conf.set_device_tag(JUST(device->of_type()));
+      JUST(rank_group->ForEachRank([&parallel_conf](int64_t rank) -> Maybe<void> {
+        parallel_conf.add_device_name("@" + std::to_string(rank) + ":"
+                                      + std::to_string(GlobalProcessCtx::LocalRank(rank)));
+        return Maybe<void>::Ok();
+      }));
+      parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
+      rank_group2parallel_desc[rank_group] = parallel_desc;
+    } else {
+      parallel_desc = iter->second;
+    }
+    std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerNcclReduceOpExpr(parallel_desc, dst));
+    if (inplace) {
+      TensorTuple outputs{x};
+      JUST(OpInterpUtil::Dispatch(*op_expr, {x}, &outputs));
+      return x;
+    } else {
+      return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+    }
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -336,6 +383,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConsistentS2SFunctor>("ConsistentS2S");
   m.add_functor<impl::SendFunctor>("Send");
   m.add_functor<impl::RecvFunctor>("Recv");
+  m.add_functor<impl::LocalReduceFunctor>("LocalReduce");
 };
 
 }  // namespace functional

@@ -56,9 +56,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("tan", Tan)                           \
   OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)
 
-#define MATH_UNARY_INPLACE_ELEMENTWISE_FUNC_SEQ              \
-  OF_PP_MAKE_TUPLE_SEQ("sin_inplace", SinInplace)                   
-
+#define MATH_UNARY_INPLACE_ELEMENTWISE_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("sin_inplace", SinInplace)
 
 }  // namespace oneflow
 

@@ -29,7 +29,13 @@ namespace profiler {
 
 void NameThisHostThread(const std::string& name) {
 #ifdef OF_ENABLE_PROFILER
-  nvtxNameOsThreadA(syscall(SYS_gettid), name.c_str());
+  static thread_local std::unique_ptr<std::string> thread_name_prefix;
+  if (!thread_name_prefix) {
+    thread_name_prefix.reset(
+        new std::string(GetStringFromEnv("ONEFLOW_PROFILER_HOST_THREAD_NAME_PREFIX", "")));
+  }
+  const std::string name_with_prefix = *thread_name_prefix + name;
+  nvtxNameOsThreadA(syscall(SYS_gettid), name_with_prefix.c_str());
 #endif  // OF_ENABLE_PROFILER
 }
 

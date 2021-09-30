@@ -150,6 +150,10 @@
     ]
   bind_python: True
 
+- name: "scalar_pow_grad"
+  signature: "Tensor (Tensor input, Tensor dy, Scalar exponent) => ScalarPowGrad"
+  bind_python: False
+
 - name: "broadcast_pow"
   signature: "Tensor (Tensor x, Tensor y) => BroadcastPow"
   bind_python: False
@@ -1124,6 +1128,10 @@
 
 - name: "local_all_reduce"
   signature: "Tensor (Tensor x) => LocalAllReduce"
+  bind_python: True
+
+- name: "local_reduce"
+  signature: "Tensor (Tensor x, *, Int64 dst=0, Bool inplace=True) => LocalReduce"
   bind_python: True
 
 - name: "eager_p_to_b"
