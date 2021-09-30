@@ -91,6 +91,7 @@ from oneflow._C import diag
 from oneflow._C import log1p
 from oneflow._C import add
 from oneflow._C import div
+from oneflow._C import floor_divide
 from oneflow._C import mul
 from oneflow._C import reciprocal_no_nan as reciprocal
 from oneflow._C import sub
