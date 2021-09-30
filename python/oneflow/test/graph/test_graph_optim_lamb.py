@@ -130,12 +130,10 @@ def compare_with_numpy_lamb(
             m = beta1 * mt + (1 - beta1) * grad
             v = beta2 * vt + (1 - beta2) * grad * grad
 
-            # if amsgrad:
-            #     denom = np.sqrt(max_s) / np.sqrt(bias_correction2) + eps
-            # else:
-            #     denom = np.sqrt(s) / np.sqrt(bias_correction2) + eps
-
-            adam_diff = (m / (1 - beta1)) / (np.sqrt(v / (1 - beta2)) + eps)
+            denom = np.sqrt(v) / np.sqrt(bias_correction2) + eps
+            adam_diff = m / bias_correction1 / denom
+            if not adam_w_mode:
+                adam_diff = adam_diff + weight_decay * x
             w_norm = np.linalg.norm(x, ord=2)
             g_norm = np.linalg.norm(adam_diff, ord=2)
             if w_norm > 0 and g_norm > 0:
@@ -143,11 +141,7 @@ def compare_with_numpy_lamb(
             else:
                 trust_ratio = 1.0
 
-            if adam_w_mode:
-                param = x - learning_rate * trust_ratio * adam_diff
-            else:
-                param = x - learning_rate * trust_ratio * (adam_diff + weight_decay * x)
-
+            param = x - learning_rate * trust_ratio * adam_diff
             return (param, m, v)
 
         for i in range(train_iters):
