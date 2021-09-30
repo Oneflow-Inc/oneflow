@@ -361,6 +361,7 @@ target_link_libraries(oneflow_internal PRIVATE
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
 target_compile_options(oneflow_internal PRIVATE -Werror=return-type)
+target_compile_definitions(oneflow_internal PRIVATE ONEFLOW_CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
 target_treat_warnings_as_errors(oneflow_internal)
 
 set(gen_pip_args "")
