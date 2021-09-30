@@ -11,8 +11,6 @@ if(NOT CMAKE_BUILD_TYPE MATCHES "^(Debug|Release|RelWithDebInfo|MinSizeRel)$")
 endif()
 message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 
-add_definitions(-DONEFLOW_CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "")
 
 option(THIRD_PARTY "Build third party" ON)
@@ -163,13 +161,11 @@ include(third_party)
 if (BUILD_CUDA)
   # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags
   if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-    if(CUDA_VERSION VERSION_LESS "11.4") # too large binary might lead to failure
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 60-real)
-      # Tesla P40/P4, Quadro Pxxx/Pxxxx, GeForce GTX 10xx, TITAN X/Xp
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 61-real)
-      # V100, TITAN V
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 70-real)
-    endif()
+    list(APPEND CMAKE_CUDA_ARCHITECTURES 60-real)
+    # Tesla P40/P4, Quadro Pxxx/Pxxxx, GeForce GTX 10xx, TITAN X/Xp
+    list(APPEND CMAKE_CUDA_ARCHITECTURES 61-real)
+    # V100, TITAN V
+    list(APPEND CMAKE_CUDA_ARCHITECTURES 70-real)
     if(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
       # T4, Quadro RTX xxxx, Txxxx, Geforce RTX 20xx, TITAN RTX
       list(APPEND CMAKE_CUDA_ARCHITECTURES 75-real)

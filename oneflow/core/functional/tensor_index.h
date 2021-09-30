@@ -106,7 +106,11 @@ class TensorIndex : public std::vector<detail::IndexItem> {
 
 Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
                                 std::vector<detail::Slice>* slice_indices,
-                                TensorTuple* tensor_indices, std::vector<int64_t>* target_dims);
+                                TensorTuple* tensor_indices, std::vector<int64_t>* expand_dims,
+                                std::vector<int64_t>* target_dims);
+
+Maybe<std::vector<detail::Slice>> RemoveExpandDimSlice(
+    const std::vector<detail::Slice>& expand_slices, const std::vector<int64_t>& expand_dims);
 
 Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
                                     const TensorTuple& indices);
