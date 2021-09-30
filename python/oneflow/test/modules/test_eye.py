@@ -40,7 +40,7 @@ def _test_eye_backward(test_case, device, n, m):
 
 def _test_eye_with_1n2d(test_case, n, m, device, sbp):
     placement = flow.placement(device, {0: range(2)})
-    x = flow.consistent_eye(n, m, placement=placement, sbp=sbp)
+    x = flow.eye(n, m, placement=placement, sbp=sbp)
     test_case.assertTrue(x.placement, placement)
     test_case.assertTrue(x.sbp, sbp)
 
