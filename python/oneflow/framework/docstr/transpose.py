@@ -13,14 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Optional, Sequence
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
 
-import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
-
-
-@register_tensor_op("transpose")
-def transpose_op(input, dim0, dim1):
+add_docstr(
+    oneflow._C.transpose,
     """Returns a tensor that is a transposed version of input. The given dimensions dim0 and dim1 are swapped.
 
     The resulting out tensor shares its underlying storage with the input tensor, so changing the content of one would change the content of the other.
@@ -43,11 +40,5 @@ def transpose_op(input, dim0, dim1):
         >>> out
         oneflow.Size([6, 2, 5, 3])
 
-    """
-    return flow._C.transpose(input, dim0=dim0, dim1=dim1)
-
-
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod(raise_on_error=True)
+    """,
+)

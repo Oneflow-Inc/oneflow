@@ -80,3 +80,11 @@ add_docstr(
     See :func:`oneflow.numel`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.transpose,
+    """
+    See :func:`oneflow.transpose`
+    """,
+)
+
