@@ -455,7 +455,7 @@ class RandomTransforms:
         return format_string
 
 
-class RandomApply(flow.nn.Module):
+class RandomApply(Module):
     """Apply randomly a list of transformations with a given probability.
 
     .. note::
@@ -471,7 +471,7 @@ class RandomApply(flow.nn.Module):
         `lambda` functions or ``PIL.Image``.
 
     Args:
-        transforms (sequence or flow.nn.Module): list of transformations
+        transforms (sequence or Module): list of transformations
         p (float): probability
     """
 
@@ -519,7 +519,7 @@ class RandomChoice(RandomTransforms):
         return t(img)
 
 
-class RandomCrop(flow.nn.Module):
+class RandomCrop(Module):
     """Crop the given image at a random location.
     If the image is oneflow Tensor, it is expected
     to have [..., H, W] shape, where ... means an arbitrary number of leading dimensions,
@@ -586,8 +586,8 @@ class RandomCrop(flow.nn.Module):
         if w == tw and h == th:
             return 0, 0, h, w
 
-        i = flow.randint(0, h - th + 1, size=(1,)).item()
-        j = flow.randint(0, w - tw + 1, size=(1,)).item()
+        i = np.random.randint(0, h - th + 1, size=(1,)).item()
+        j = np.random.randint(0, w - tw + 1, size=(1,)).item()
         return i, j, th, tw
 
     def __init__(
@@ -637,7 +637,7 @@ class RandomCrop(flow.nn.Module):
         )
 
 
-class RandomHorizontalFlip(flow.nn.Module):
+class RandomHorizontalFlip(Module):
     """Horizontally flip the given image randomly with a given probability.
     If the image is flow Tensor, it is expected
     to have [..., H, W] shape, where ... means an arbitrary number of leading
@@ -668,7 +668,7 @@ class RandomHorizontalFlip(flow.nn.Module):
         return self.__class__.__name__ + "(p={})".format(self.p)
 
 
-class RandomVerticalFlip(flow.nn.Module):
+class RandomVerticalFlip(Module):
     """Vertically flip the given image randomly with a given probability.
     If the image is flow Tensor, it is expected
     to have [..., H, W] shape, where ... means an arbitrary number of leading
@@ -699,7 +699,7 @@ class RandomVerticalFlip(flow.nn.Module):
         return self.__class__.__name__ + "(p={})".format(self.p)
 
 
-class RandomResizedCrop(flow.nn.Module):
+class RandomResizedCrop(Module):
     """Crop a random portion of image and resize it to a given size.
 
     If the image is flow Tensor, it is expected
@@ -785,8 +785,8 @@ class RandomResizedCrop(flow.nn.Module):
             h = int(round(math.sqrt(target_area / aspect_ratio)))
 
             if 0 < w <= width and 0 < h <= height:
-                i = flow.randint(0, height - h + 1, size=(1,)).item()
-                j = flow.randint(0, width - w + 1, size=(1,)).item()
+                i = flow._C.randint(0, height - h + 1, size=(1,)).item()
+                j = flow._C.randint(0, width - w + 1, size=(1,)).item()
                 return i, j, h, w
 
         # Fallback to central crop
@@ -837,7 +837,7 @@ class RandomSizedCrop(RandomResizedCrop):
         super(RandomSizedCrop, self).__init__(*args, **kwargs)
 
 
-class FiveCrop(flow.nn.Module):
+class FiveCrop(Module):
     """Crop the given image into four corners and the central crop.
     If the image is flow Tensor, it is expected
     to have [..., H, W] shape, where ... means an arbitrary number of leading
@@ -885,7 +885,7 @@ class FiveCrop(flow.nn.Module):
         return self.__class__.__name__ + "(size={0})".format(self.size)
 
 
-class TenCrop(flow.nn.Module):
+class TenCrop(Module):
     """Crop the given image into four corners and the central crop plus the flipped version of
     these (horizontal flipping is used by default).
     If the image is flow Tensor, it is expected
@@ -938,7 +938,7 @@ class TenCrop(flow.nn.Module):
         )
 
 
-class RandomRotation(flow.nn.Module):
+class RandomRotation(Module):
     """Rotate the image by angle.
     If the image is flow Tensor, it is expected
     to have [..., H, W] shape, where ... means an arbitrary number of leading dimensions.
