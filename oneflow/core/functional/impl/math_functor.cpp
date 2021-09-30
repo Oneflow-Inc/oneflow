@@ -436,6 +436,37 @@ class TransposeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class Transpose2dimFunctor {
+ public:
+  Transpose2dimFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("transpose").Input("input").Output("output").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t dim0,
+                           const int32_t dim1) const {
+    MutableAttrMap attrs;
+    const int64_t ndim = x->shape()->NumAxes();
+    std::vector<int32_t> permute;
+    int32_t dim_0 = dim0;
+    int32_t dim_1 = dim1;
+
+    if (dim0 < 0) { dim_0 += ndim; }
+    if (dim1 < 0) { dim_1 += ndim; }
+
+    CHECK_OR_RETURN(dim_0 >= 0 && dim0 < ndim)
+        << "Invalid dim0:" << dim_0 << " len(shape):" << ndim;
+    CHECK_OR_RETURN(dim_1 >= 0 && dim1 < ndim)
+        << "Invalid dim1:" << dim_1 << " len(shape):" << ndim;
+    for (int32_t i = 0; i < ndim; ++i) { permute.push_back(i); }
+    std::swap(permute[dim_0], permute[dim_1]);
+
+    JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ArangeFunctor {
  public:
   ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
@@ -921,6 +952,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceSumFunctor>("ReduceSum");
   m.add_functor<ReduceProdFunctor>("ReduceProd");
   m.add_functor<TransposeFunctor>("Transpose");
+  m.add_functor<Transpose2dimFunctor>("Transpose2dim");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<ArgMaxFunctor>("ArgMax");

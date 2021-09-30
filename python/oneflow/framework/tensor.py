@@ -177,6 +177,10 @@ def _contiguous(self):
     return self
 
 
+def _transpose(self, dim0, dim1):
+    return flow._C.transpose(self, dim0, dim1)
+
+
 def _getstate(self):
     assert self.is_local, "Only support local tensor to pickle"
     return {"data": self.numpy(), "dtype": self.dtype}
@@ -719,6 +723,7 @@ def RegisterMethods():
     Tensor.tril = _tril
     Tensor.triu = _triu
     Tensor.contiguous = _contiguous
+    Tensor.transpose = _transpose
 
 
 def register_tensor_op(op_name):

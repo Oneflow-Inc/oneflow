@@ -100,7 +100,7 @@
 - name: "logical_and"
   signature:
     [
-      "Tensor (Tensor input, Tensor other) => BroadcastLogicalAnd", 
+      "Tensor (Tensor input, Tensor other) => BroadcastLogicalAnd",
       "Tensor (Tensor input, Scalar other) => ScalarLogicalAnd",
       "Tensor (Scalar input, Tensor other) => ScalarLogicalAnd",
     ]
@@ -109,7 +109,7 @@
 - name: "logical_or"
   signature:
     [
-      "Tensor (Tensor input, Tensor other) => BroadcastLogicalOr", 
+      "Tensor (Tensor input, Tensor other) => BroadcastLogicalOr",
       "Tensor (Tensor input, Scalar other) => ScalarLogicalOr",
       "Tensor (Scalar input, Tensor other) => ScalarLogicalOr",
     ]
@@ -118,7 +118,7 @@
 - name: "logical_xor"
   signature:
     [
-      "Tensor (Tensor input, Tensor other) => BroadcastLogicalXor", 
+      "Tensor (Tensor input, Tensor other) => BroadcastLogicalXor",
       "Tensor (Tensor input, Scalar other) => ScalarLogicalXor",
       "Tensor (Scalar input, Tensor other) => ScalarLogicalXor",
     ]
@@ -202,7 +202,11 @@
   bind_python: True
 
 - name: "transpose"
-  signature: "Tensor (Tensor x, Int32List perm) => Transpose"
+  signature:
+      [
+        "Tensor (Tensor x, Int32List perm) => Transpose",
+        "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Transpose2dim",
+      ]
   bind_python: True
 
 - name: "reciprocal"
@@ -350,14 +354,14 @@
 - name: "normalization_add_relu"
   signature:
     "Tensor (Tensor x, Tensor addend=None, Tensor moving_mean=None, Tensor moving_variance=None,
-             Tensor gamma, Tensor beta, Int32 axis=1, Float epsilon=1e-5,
-             Float momentum=0.9, Bool is_training=False) => NormalizationAddRelu"
+    Tensor gamma, Tensor beta, Int32 axis=1, Float epsilon=1e-5,
+    Float momentum=0.9, Bool is_training=False) => NormalizationAddRelu"
   bind_python: True
 
 - name: "normalization_add_relu_grad"
   signature:
     "TensorTuple (Tensor x, Tensor dy, Tensor moving_mean, Tensor moving_variance,
-             Tensor gamma, Tensor beta, Tensor reserve_space, Tensor y, Int32 axis=1, Float epsilon=1e-5) => NormalizationAddReluGrad"
+    Tensor gamma, Tensor beta, Tensor reserve_space, Tensor y, Int32 axis=1, Float epsilon=1e-5) => NormalizationAddReluGrad"
   bind_python: False
 
 - name: "arange"
@@ -544,6 +548,10 @@
   signature: "Tensor (Tensor indices, Tensor updates, Shape shape) => ScatterNd"
   bind_python: True
 
+- name: "tensor_scatter_nd_update"
+  signature: "Tensor (Tensor tensor, Tensor indices, Tensor updates, Bool inplace=False) => TensorScatterNdUpdate"
+  bind_python: True
+
 - name: "scatterndlike"
   signature: "Tensor (Tensor like, Tensor updates, Tensor indices) => ScatterNdLike"
   bind_python: True
@@ -661,18 +669,15 @@
   bind_python: True
 
 - name: "layer_norm_grad"
-  signature:
-    "Tensor (Tensor x, Tensor mean, Tensor inv_variance, Tensor dy, Int64 begin_norm_axis, Double epsilon) => LayerNormGrad"
+  signature: "Tensor (Tensor x, Tensor mean, Tensor inv_variance, Tensor dy, Int64 begin_norm_axis, Double epsilon) => LayerNormGrad"
   bind_python: False
 
 - name: "layer_norm_param_grad"
-  signature:
-    "Tensor (Tensor dy, Int64 begin_params_axis, Double epsilon) => LayerNormParamGrad"
+  signature: "Tensor (Tensor dy, Int64 begin_params_axis, Double epsilon) => LayerNormParamGrad"
   bind_python: False
 
 - name: "layer_norm_affine_param_grad"
-  signature:
-    "TensorTuple (Tensor dy, Tensor gamma, Tensor normalized, Int64 begin_params_axis, Double epsilon) => LayerNormAffineParamGrad"
+  signature: "TensorTuple (Tensor dy, Tensor gamma, Tensor normalized, Int64 begin_params_axis, Double epsilon) => LayerNormAffineParamGrad"
   bind_python: False
 
 - name: "avg_pool_2d"
@@ -1211,42 +1216,42 @@
 
 - name: "rand"
   signature: [
-    "Tensor (Shape size, *, DataType dtype=None, Device device=None,
-             Generator generator=None, Bool requires_grad=False) => Rand",
-    "Tensor (Shape size, *, Placement placement, SbpList sbp, DataType dtype=None,
-             Generator generator=None, Bool requires_grad=False) => ConsistentRand",
-  ]
+      "Tensor (Shape size, *, DataType dtype=None, Device device=None,
+      Generator generator=None, Bool requires_grad=False) => Rand",
+      "Tensor (Shape size, *, Placement placement, SbpList sbp, DataType dtype=None,
+      Generator generator=None, Bool requires_grad=False) => ConsistentRand",
+    ]
   bind_python: True
 
 - name: "randn"
   signature: [
-    "Tensor (Shape size, *, DataType dtype=None, Device device=None, 
-             Generator generator=None, Bool requires_grad=False) => RandN",
-    "Tensor (Shape size, *, Placement placement, SbpList sbp, DataType dtype=None,
-             Generator generator=None, Bool requires_grad=False) => ConsistentRandN",
-  ]
+      "Tensor (Shape size, *, DataType dtype=None, Device device=None,
+      Generator generator=None, Bool requires_grad=False) => RandN",
+      "Tensor (Shape size, *, Placement placement, SbpList sbp, DataType dtype=None,
+      Generator generator=None, Bool requires_grad=False) => ConsistentRandN",
+    ]
   bind_python: True
 
 - name: "randint"
   signature: [
-    "Tensor (Int64 low, Int64 high, Shape size, *, DataType dtype=None, 
-             Device device=None, Generator generator=None, Bool requires_grad=False)=> RandInt",
-    "Tensor (Int64 high, Shape size, *, DataType dtype=None, 
-             Device device=None, Generator generator=None, Bool requires_grad=False)=> RandInt",
-    "Tensor (Int64 low, Int64 high, Shape size, *, Placement placement, SbpList sbp_tuple, 
-             DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> ConsistentRandInt",
-    "Tensor (Int64 high, Shape size, *, Placement placement, SbpList sbp_tuple, 
-             DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> ConsistentRandInt",
-  ]
+      "Tensor (Int64 low, Int64 high, Shape size, *, DataType dtype=None,
+      Device device=None, Generator generator=None, Bool requires_grad=False)=> RandInt",
+      "Tensor (Int64 high, Shape size, *, DataType dtype=None,
+      Device device=None, Generator generator=None, Bool requires_grad=False)=> RandInt",
+      "Tensor (Int64 low, Int64 high, Shape size, *, Placement placement, SbpList sbp_tuple,
+      DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> ConsistentRandInt",
+      "Tensor (Int64 high, Shape size, *, Placement placement, SbpList sbp_tuple,
+      DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> ConsistentRandInt",
+    ]
   bind_python: True
 
 - name: "randperm"
-  signature: [
-    "Tensor (Int32 n, *, Generator generator=None, DataType dtype=kInt64, Device device=None, Bool requires_grad=False) => RandPerm",
-    "Tensor (Int32 n, *, Placement placement, SbpList sbp, Generator generator=None, DataType dtype=kInt64, Bool requires_grad=False) => ConsistentRandPerm",
-  ]
+  signature:
+    [
+      "Tensor (Int32 n, *, Generator generator=None, DataType dtype=kInt64, Device device=None, Bool requires_grad=False) => RandPerm",
+      "Tensor (Int32 n, *, Placement placement, SbpList sbp, Generator generator=None, DataType dtype=kInt64, Bool requires_grad=False) => ConsistentRandPerm",
+    ]
   bind_python: True
-
 
 - name: "unfold"
   signature:
@@ -1315,21 +1320,17 @@
   bind_python: True
 
 - name: "batch_gather"
-  signature:
-    "Tensor (Tensor in, Tensor indices) => BatchGather"
+  signature: "Tensor (Tensor in, Tensor indices) => BatchGather"
   bind_python: True
 
 - name: "batch_gather"
-  signature:
-    "Tensor (Tensor in, Tensor indices) => BatchGather"
+  signature: "Tensor (Tensor in, Tensor indices) => BatchGather"
   bind_python: True
 
 - name: "unsorted_batch_segment_sum"
-  signature:
-    "Tensor (Tensor data, Tensor segment_ids, Int64 num_segments) => UnsortedBatchSegmentSum"
+  signature: "Tensor (Tensor data, Tensor segment_ids, Int64 num_segments) => UnsortedBatchSegmentSum"
   bind_python: False
 
 - name: "ctc_greedy_decoder"
-  signature:
-    "TensorTuple (Tensor log_probs, Tensor input_lengths, Bool merge_repeated=True) => CtcGreedyDecoder"
+  signature: "TensorTuple (Tensor log_probs, Tensor input_lengths, Bool merge_repeated=True) => CtcGreedyDecoder"
   bind_python: True
