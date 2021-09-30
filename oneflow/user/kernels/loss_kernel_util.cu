@@ -21,8 +21,8 @@ namespace user_op {
 namespace loss {
 
 template<typename T>
-__global__ void ApplyLossReductionImplKernel(int64_t elem_cnt, const T* tmp_out, T* out,
-                                             bool is_reduce_mean) {
+__global__ void ApplyLossReductionImpl(int64_t elem_cnt, const T* tmp_out, T* out,
+                                       bool is_reduce_mean) {
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
   T thread_sum = static_cast<T>(0);
@@ -38,19 +38,22 @@ __global__ void ApplyLossReductionImplKernel(int64_t elem_cnt, const T* tmp_out,
 }
 
 template<>
-__global__ void ApplyLossReductionImplKernel<half>(int64_t elem_cnt, const half* tmp_out, half* out,
-                                                   bool is_reduce_mean) {
+__global__ void ApplyLossReductionImpl<float16>(int64_t elem_cnt, const float16* tmp_out,
+                                                float16* out, bool is_reduce_mean) {
+  FLOAT16_TO_HALF(tmp_out)
+  FLOAT16_TO_HALF(out)
+
   typedef cub::BlockReduce<half, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
   half thread_sum = __float2half(0.0);
   for (int i = threadIdx.x; i < elem_cnt; i += kCudaThreadsNumPerBlock) {
-    thread_sum = __hadd(thread_sum, tmp_out[i]);
+    thread_sum = __hadd(thread_sum, tmp_out_[i]);
   }
   __syncthreads();
   half block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(thread_sum, cub::Sum());
   if (threadIdx.x == 0) {
-    *out = block_sum;
-    if (is_reduce_mean) { *out = __float2half(__half2float(*out) / elem_cnt); }
+    *out_ = block_sum;
+    if (is_reduce_mean) { *out_ = __float2half(__half2float(*out_) / elem_cnt); }
   }
 }
 
@@ -62,21 +65,10 @@ void ApplyLossReductionIfNeed(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out
     UNIMPLEMENTED();
     return;
   }
-  ApplyLossReductionImplKernel<<<1, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+  ApplyLossReductionImpl<<<1, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       elem_cnt, tmp_out, out, reduction_type == ReductionType::kMean);
 }
-template<>
-void ApplyLossReductionIfNeed<float16>(DeviceCtx* ctx, int64_t elem_cnt, const float16* tmp_out,
-                                       float16* out, const ReductionType reduction_type) {
-  if (reduction_type == ReductionType::kNone) { return; }
-  if ((reduction_type != ReductionType::kMean) && (reduction_type != ReductionType::kSum)) {
-    UNIMPLEMENTED();
-    return;
-  }
-  ApplyLossReductionImplKernel<<<1, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      elem_cnt, reinterpret_cast<const half*>(tmp_out), reinterpret_cast<half*>(out),
-      reduction_type == ReductionType::kMean);
-}
+
 #define SPECIALIZE_APPLY_LOSS_REDUCTION(dtype)                                     \
   template void ApplyLossReductionIfNeed<dtype>(DeviceCtx * ctx, int64_t elem_cnt, \
                                                 const dtype* tmp_out, dtype* out,  \

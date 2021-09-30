@@ -732,7 +732,7 @@ class CtcLossFunctor {
         return functional::Constant(*out->shape(), scalar, out->dtype(), JUST(out->device()));
       };
       const auto eq_out = JUST(functional::BroadcastEqual(
-          out, JUST(create_constant(Scalar(-std::numeric_limits<double>::infinity())))));
+          out, JUST(create_constant(Scalar(std::numeric_limits<double>::infinity())))));
 
       out = JUST(functional::Where(eq_out, JUST(create_constant(Scalar(0))), out));
     }
