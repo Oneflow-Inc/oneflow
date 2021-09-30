@@ -152,4 +152,9 @@ class NllGradKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("dy", 0) == OF_PP_PAIR_SECOND(dtype_pair))       \
                        & (user_op::HobDataType("dx", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_NLL_KERNEL, FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_NLL_GRAD_KERNEL, FLOATING_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
+}  // namespace user_op
 }  // namespace oneflow
