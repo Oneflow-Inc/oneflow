@@ -70,10 +70,6 @@ void ApplyLossReductionIfNeed<float16>(DeviceCtx* ctx, int64_t elem_cnt, const f
                                        float16* out, const ReductionType reduction_type) {
   if (reduction_type == ReductionType::kNone) { return; }
   if ((reduction_type != ReductionType::kMean) && (reduction_type != ReductionType::kSum)) {
-    UNIMPLEMENTED();
-    return;
-  }
-  ApplyLossReductionImplKernel<<<1, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       elem_cnt, reinterpret_cast<const half*>(tmp_out), reinterpret_cast<half*>(out),
       reduction_type == ReductionType::kMean);
 }

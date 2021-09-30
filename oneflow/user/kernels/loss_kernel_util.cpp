@@ -26,7 +26,6 @@ void ApplyLossReductionIfNeed(int64_t elem_cnt, const T* tmp_out, T* out,
     UNIMPLEMENTED();
     return;
   }
-
   *out = static_cast<T>(0);
   FOR_RANGE(int64_t, i, 0, elem_cnt) { *out += tmp_out[i]; }
   if (reduction_type == ReductionType::kMean) { *out /= elem_cnt; }

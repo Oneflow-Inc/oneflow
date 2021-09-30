@@ -91,12 +91,6 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
     const auto* ptr = instruction->instr_msg().phy_instr_operand().get();
     const auto* phy_instr_operand = dynamic_cast<const LaunchLazyJobPhyInstrOperand*>(ptr);
     const auto& cur_nn_graph = GetCurNNGraph(instruction);
-    {
-      phy_instr_operand->inputs_critical_section()->ConsumerWaitsProducer();
-      phy_instr_operand->outputs_critical_section()->ConsumerWaitsProducer();
-      phy_instr_operand->params_critical_section()->ConsumerWaitsProducer();
-      phy_instr_operand->nccl_critical_section()->ConsumerWaitsProducer();
-    }
     auto* device_ctx = GetLazyJobDeviceCtx(instruction);
 
     OF_PROFILER_RANGE_PUSH("WaitUntilQueueEmptyIfFrontNNGraphNotEquals");

@@ -49,7 +49,8 @@ class CriticalSectionInstructionType final : public InstructionType {  // NOLINT
     const auto* ptr = instruction->instr_msg().phy_instr_operand().get();
     const auto* phy_instr_operand = dynamic_cast<const PhyInstrOperandT*>(ptr);
     CHECK_NOTNULL(phy_instr_operand);
-    phy_instr_operand->ProducerNotifiesConsumer();
+    // Reset to zero when critical section ready.
+    *phy_instr_operand->critical_section_ready_ref_cnt() = 0;
     auto* status_buffer_data = instruction->mut_status_buffer()->mut_buffer()->mut_data();
     auto* status_querier = RefCntInstrStatusQuerier::MutCast(status_buffer_data);
     status_querier->SetRefCntAndSetLaunched(phy_instr_operand->consumer_ref_cnt());

@@ -68,7 +68,6 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
 
   return Maybe<void>::Ok();
 }
-
 Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
@@ -82,7 +81,6 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
 
   return Maybe<void>::Ok();
 }
-
 }  // namespace
 
 REGISTER_USER_OP("binary_cross_entropy")
