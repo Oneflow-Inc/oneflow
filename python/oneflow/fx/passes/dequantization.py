@@ -20,8 +20,8 @@ from oneflow.fx.graph_module import GraphModule
 from oneflow.fx.node import Node, map_aggregate
 from typing import Any, Tuple, NamedTuple, Optional
 from oneflow.fx._compatibility import compatibility
-from oneflow.fx.passes.quantization_ops.fuse_conv_bn import QConvBN
-from oneflow.fx.passes.quantization_ops.linear import QLinear
+from oneflow.fx.passes.dequantization_ops.d_conv import DConv2d
+from oneflow.fx.passes.dequantization_ops.d_linear import DLinear
 from ..node import Argument, Target
 from .quantization_ops.conv import QConv2d
 
@@ -81,7 +81,7 @@ def get_current_module_space(mod: str):
     return y
 
 
-def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphModule:
+def dequantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphModule:
 
     quantization_bit = 8
     quantization_scheme = "symmetric"
@@ -117,18 +117,18 @@ def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphM
                         now_target = (
                             f"{get_current_module_space(x.target)}.conv_bn.{cnt}"
                         )
-                    gm.add_submodule(
-                        now_target,
-                        QConvBN(
-                            insert_op_state[x.target],
-                            insert_op_state[y.target],
-                            quantization_bit,
-                            quantization_scheme,
-                            quantization_formula,
-                            per_layer_quantization,
-                            momentum,
-                        ),
-                    )
+                    # gm.add_submodule(
+                    #     now_target,
+                    #     QConvBN(
+                    #         insert_op_state[x.target],
+                    #         insert_op_state[y.target],
+                    #         quantization_bit,
+                    #         quantization_scheme,
+                    #         quantization_formula,
+                    #         per_layer_quantization,
+                    #         momentum,
+                    #     ),
+                    # )
                     y.replace_all_uses_with(x)
                     gm.graph.erase_node(y)
                     gm.delete_submodule(y.target)

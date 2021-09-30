@@ -15,10 +15,10 @@ limitations under the License.
 """
 import oneflow as flow
 
-__all__ = ["QConv2d"]
+__all__ = ["DConv2d"]
 
 
-class QConv2d(flow.nn.Conv2d):
+class DConv2d(flow.nn.Conv2d):
     def __init__(
         self,
         in_channels,
@@ -34,7 +34,7 @@ class QConv2d(flow.nn.Conv2d):
         per_layer_quantization=True,
         momentum=0.95,
     ) -> None:
-        super(QConv2d, self).__init__(
+        super(DConv2d, self).__init__(
             in_channels, out_channels, kernel_size, stride, padding, dilation, groups
         )
 
@@ -60,15 +60,16 @@ class QConv2d(flow.nn.Conv2d):
             quantization_scheme=quantization_scheme,
         )
 
+        weight_scale, weight_zero_point = self.min_max_observer(self.weight)
+        self.weight = flow.nn.Parameter(
+            self.fake_quantization(self.weight, weight_scale, weight_zero_point)
+        )
+
     def forward(self, x):
         scale, zero_point = self.moving_min_max_observer(
             x, flow.tensor([0], dtype=flow.int64).to(x.device.type)
         )
         x = self.fake_quantization(x, scale, zero_point)
-        weight_scale, weight_zero_point = self.min_max_observer(self.weight)
-        self.weight = flow.nn.Parameter(
-            self.fake_quantization(self.weight, weight_scale, weight_zero_point)
-        )
         return flow.nn.functional.conv2d(
             x,
             self.weight,
