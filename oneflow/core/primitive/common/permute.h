@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_PRIMITIVE_COMMON_PERMUTE_H_
 #define ONEFLOW_CORE_PRIMITIVE_COMMON_PERMUTE_H_
 
+#include <sys/stat.h>
 #include "oneflow/core/primitive/include/primitive.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
@@ -116,19 +117,63 @@ constexpr size_t kMaxNumDims = 8;
 template<size_t num_dims, size_t movement_size, typename IndexType>
 void LaunchKernel(StreamContext* stream_ctx, PermuteKernelParams<num_dims, IndexType> params);
 
+template<size_t num_dims>
+bool CheckIfMergeToBatchPermute(const int* permutation) {
+  /*
+  Check whether satisfied the batch permute condition. The examples in below are all satisfied.
+  0 1 2 -> 0 2 1
+  0 1 2 3 4 -> 0 1 2 4 3
+  TODO(zhengzekang): check: 0 1 2 3 4 -> 0 3 4 1 2.
+  */
+  if (num_dims < 3) { return false; }
+  for (size_t i = 0; i < num_dims - 2; ++i) {
+    if (permutation[i] != i) { return false; }
+  }
+  if (!(permutation[num_dims - 1] == num_dims - 2 && permutation[num_dims - 2] == num_dims - 1)) {
+    return false;
+  }
+  return true;
+}
+
 template<size_t num_dims, size_t movement_size, typename IndexType>
 void LaunchKernel(StreamContext* stream_ctx, const int64_t* src_dims, const void* src,
                   const int* permutation, void* dst, size_t count) {
-  PermuteKernelParams<num_dims, IndexType> params;
-  params.src_index_helper = NdIndexOffsetHelper<IndexType, num_dims>(src_dims);
-  int64_t dst_dims[num_dims];
-  for (size_t i = 0; i < num_dims; ++i) { dst_dims[i] = src_dims[permutation[i]]; }
-  params.dst_index_helper = NdIndexOffsetHelper<IndexType, num_dims>(dst_dims);
-  for (size_t i = 0; i < num_dims; ++i) { params.permutation[i] = permutation[i]; }
-  params.src = src;
-  params.dst = dst;
-  params.count = static_cast<IndexType>(count);
-  LaunchKernel<num_dims, movement_size, IndexType>(stream_ctx, params);
+  if (CheckIfMergeToBatchPermute<num_dims>(permutation)) {
+    /*
+      Merge the first (num_dims-2) dims to the batch dim and transpose
+      For example: (dim0, dim1, dim2, dim3, dim4) -> (dim0*dim1*dim2, dim3, dim4), we merged it and
+      transpose as (dim0*dim1*dim2, dim4, dim3)
+    */
+    PermuteKernelParams<3, IndexType> params;
+    int64_t merged_src_dims[3] = {1, 1, 1};
+    // step1: src (dim0, dim1, dim2, dim3, dim4) -> src (dim0*dim1*dim2, dim3, dim4)
+    for (size_t i = 0; i < num_dims - 2; ++i) { merged_src_dims[0] *= src_dims[i]; }
+    merged_src_dims[1] = src_dims[num_dims - 2];
+    merged_src_dims[2] = src_dims[num_dims - 1];
+    params.src_index_helper = NdIndexOffsetHelper<IndexType, 3>(merged_src_dims);
+    // step2: Transpose last 2dims.
+    int64_t dst_dims[3] = {merged_src_dims[0], merged_src_dims[2], merged_src_dims[1]};
+    params.dst_index_helper = NdIndexOffsetHelper<IndexType, 3>(dst_dims);
+    params.permutation[0] = 0;
+    params.permutation[1] = 2;
+    params.permutation[2] = 1;
+
+    params.src = src;
+    params.dst = dst;
+    params.count = static_cast<IndexType>(count);
+    LaunchKernel<3, movement_size, IndexType>(stream_ctx, params);
+  } else {
+    PermuteKernelParams<num_dims, IndexType> params;
+    params.src_index_helper = NdIndexOffsetHelper<IndexType, num_dims>(src_dims);
+    int64_t dst_dims[num_dims];
+    for (size_t i = 0; i < num_dims; ++i) { dst_dims[i] = src_dims[permutation[i]]; }
+    params.dst_index_helper = NdIndexOffsetHelper<IndexType, num_dims>(dst_dims);
+    for (size_t i = 0; i < num_dims; ++i) { params.permutation[i] = permutation[i]; }
+    params.src = src;
+    params.dst = dst;
+    params.count = static_cast<IndexType>(count);
+    LaunchKernel<num_dims, movement_size, IndexType>(stream_ctx, params);
+  }
 }
 
 template<size_t num_dims, size_t movement_size>
