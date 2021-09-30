@@ -90,8 +90,9 @@ template<size_t num_dims, size_t movement_size, typename IndexType>
 void LaunchBatchPermuteKernel(StreamContext* stream_ctx, PermuteKernelParams<num_dims, IndexType> params) {
   cudaStream_t cuda_stream =
       CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
-  NdIndexOffsetHelper<IndexType, 3> global_index; 
-  global_index.OffsetToNdIndex(params.count); 
+
+  IndexType global_index[3]; 
+  params.src_index_helper.OffsetToNdIndex(params.count, global_index); 
   const IndexType N = global_index[0]; 
   const IndexType H = global_index[1]; 
   const IndexType W = global_index[2]; 
@@ -106,15 +107,13 @@ void LaunchBatchPermuteKernel(StreamContext* stream_ctx, PermuteKernelParams<num
 
 template<size_t num_dims, typename IndexType>
 bool CheckLaunchBatchPermute(PermuteKernelParams<num_dims, IndexType> params){
-  IndexType half_num_dims = num_dims / 2; 
-  if (num_dims != 3){return false; }
-  for(int j=0; j < half_num_dims; j++){
-    // Check whether only 2part of dims permute, like (0, 1, 2)->(0, 2, 1), (0, 1, 2, 3, 4)->(0, 3, 4, 1, 2)
-    if(!(params.permutation[1 + j] == 1 + j + half_num_dims) && (params.permutation[1 + j + half_num_dims] == 1 + j)){
-      return false; 
-    }
+  // (0, 1, 2) -> (0, 2, 1)
+  if(num_dims==3){
+    if(params.permutation[num_dims-1]==num_dims-2 && params.permutation[num_dims-2]==num_dims-1){
+    return true; 
+   }
   }
-  return true; 
+  return false; 
 }
 
 template<size_t num_dims, size_t movement_size, typename IndexType>
