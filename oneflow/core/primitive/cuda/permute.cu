@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/primitive/include/permute.h"
 #include "oneflow/core/primitive/common/permute.h"
 #include "oneflow/core/stream/cuda_stream_context.h"

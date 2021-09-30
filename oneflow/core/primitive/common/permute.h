@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_PRIMITIVE_COMMON_PERMUTE_H_
 #define ONEFLOW_CORE_PRIMITIVE_COMMON_PERMUTE_H_
 
-#include <sys/stat.h>
 #include "oneflow/core/primitive/include/primitive.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
