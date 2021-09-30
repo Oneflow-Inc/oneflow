@@ -938,7 +938,7 @@ template<>
 struct SinInplaceFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) { return hsin(x); }
 
-  static OF_HALF_FUNC half Backward(const half x, const half dy) { return __hmul(dy, hcos(x)); }
+  static OF_HALF_FUNC half Backward(const half x, const half dy) { return __hmul(dy, hcos(MATH_FUNC_H(asin, x))); }
 };
 
 template<>
