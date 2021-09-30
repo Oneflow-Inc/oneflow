@@ -76,7 +76,7 @@ def _cast_squeeze_in(
     if out_dtype not in req_dtypes:
         need_cast = True
         req_dtype = req_dtypes[0]
-        img = img.to(req_dtype)
+        img = flow._C.cast(img, req_dtype)
     return img, need_cast, need_squeeze, out_dtype
 
 
@@ -90,8 +90,7 @@ def _cast_squeeze_out(
         if out_dtype in (flow.uint8, flow.int8, flow.int16, flow.int32, flow.int64):
             # it is better to round before cast
             img = flow.round(img)
-        img = img.to(out_dtype)
-
+        img = flow._C.cast(img, out_dtype)
     return img
 
 
@@ -104,7 +103,7 @@ def convert_image_dtype(
     if image.is_floating_point():
         # TODO:Tensor.is_floating_point()
         if flow.tensor(0, dtype=dtype).is_floating_point():
-            return image.to(dtype)
+            return flow._C.cast(image, dtype)
 
         # float to int
         if (image.dtype == flow.float32 and dtype in (flow.int32, flow.int64)) or (
@@ -121,13 +120,13 @@ def convert_image_dtype(
         eps = 1e-3
         max_val = _max_value(dtype)
         result = image.mul(max_val + 1.0 - eps)
-        return result.to(dtype)
+        return flow._C.cast(result, dtype)
     else:
         input_max = _max_value(image.dtype)
 
         # int to float
         if flow.tensor(0, dtype=dtype).is_floating_point():
-            image = image.to(dtype)
+            image = flow._C.cast(image, dtype)
             return image / input_max
 
         output_max = _max_value(dtype)
@@ -136,10 +135,10 @@ def convert_image_dtype(
         if input_max > output_max:
             factor = int((input_max + 1) // (output_max + 1))
             image = flow.div(image, factor, rounding_mode="floor")
-            return image.to(dtype)
+            return flow._C.cast(image, dtype)
         else:
             factor = int((output_max + 1) // (input_max + 1))
-            image = image.to(dtype)
+            image = flow._C.cast(image, dtype)
             return image * factor
 
 
@@ -269,14 +268,14 @@ def pad(
         # until pytorch issue is resolved :
         # https://github.com/pytorch/pytorch/issues/40763
         need_cast = True
-        img = img.to(flow.float32)
+        img = flow._C.cast(img, flow.float32)
     img = flow._C.pad(img, pad=p, mode=padding_mode, value=float(fill))
 
     if need_squeeze:
         img = img.squeeze(dim=0)
 
     if need_cast:
-        img = img.to(out_dtype)
+        img = flow._C.cast(img, out_dtype)
     return img
 
 
