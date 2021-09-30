@@ -27,6 +27,9 @@ class ChainKernelObserver final : public KernelObserver {
       : kernel_observers_(std::move(kernel_observers)) {}
   ~ChainKernelObserver() override = default;
 
+  void WillInit(KernelContext* kernel_ctx, const Kernel* kernel) override;
+  void DidInit(KernelContext* kernel_ctx, const Kernel* kernel) override;
+
   void WillForward(KernelContext* kernel_ctx, const Kernel* kernel) override;
   void DidForward(KernelContext* kernel_ctx, const Kernel* kernel) override;
 

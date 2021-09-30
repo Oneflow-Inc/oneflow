@@ -82,7 +82,9 @@ std::unique_ptr<const Kernel> ConstructKernel(const KernelConf& conf, KernelCont
   Kernel* rptr = kernel_registration::CreateKernel(conf);
   if (rptr == nullptr) { rptr = NewObj<int32_t, Kernel>(op_type, conf); }
   CHECK_NOTNULL(rptr);
+  kernel_ctx->WillInit(kernel_ctx, rptr);
   rptr->Init(conf, kernel_ctx);
+  kernel_ctx->DidInit(kernel_ctx, rptr);
   return std::unique_ptr<const Kernel>(rptr);
 }
 

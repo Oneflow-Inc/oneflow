@@ -18,6 +18,14 @@ limitations under the License.
 
 namespace oneflow {
 
+void ChainKernelObserver::WillInit(KernelContext* kernel_ctx, const Kernel* kernel) {
+  for (const auto& observer : kernel_observers_) { observer->WillInit(kernel_ctx, kernel); }
+}
+
+void ChainKernelObserver::DidInit(KernelContext* kernel_ctx, const Kernel* kernel) {
+  for (const auto& observer : kernel_observers_) { observer->DidInit(kernel_ctx, kernel); }
+}
+
 void ChainKernelObserver::WillForward(KernelContext* kernel_ctx, const Kernel* kernel) {
   for (const auto& observer : kernel_observers_) { observer->WillForward(kernel_ctx, kernel); }
 }

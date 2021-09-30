@@ -30,6 +30,9 @@ class KernelObserver {
   KernelObserver() = default;
   virtual ~KernelObserver() = default;
 
+  virtual void WillInit(KernelContext* kernel_ctx, const Kernel* kernel) {}
+  virtual void DidInit(KernelContext* kernel_ctx, const Kernel* kernel) {}
+
   virtual void WillForward(KernelContext* kernel_ctx, const Kernel* kernel) {}
   virtual void DidForward(KernelContext* kernel_ctx, const Kernel* kernel) {}
 

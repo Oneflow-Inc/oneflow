@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/kernel/chain_kernel_observer.h"
 #include "oneflow/core/kernel/cuda_check_numerics_kernel_observer.h"
+#include "oneflow/core/kernel/cuda_check_device_kernel_observer.h"
 
 #ifdef WITH_CUDA
 
@@ -191,6 +192,10 @@ CudaStreamContextImpl::CudaStreamContextImpl(const StreamId& stream_id) : stream
                     "to a truthy "
                     "value, it will impact performance";
     kernel_observers.emplace_back(new CudaCheckNumericsKernelObserver());
+  }
+  if (ParseBooleanFromEnv("ONEFLOW_DEBUG_KERNEL_CHECK_DEVICE", false)) {
+    kernel_observers.emplace_back(
+        new CudaCheckDeviceKernelObserver(stream_id_.device_id().device_index()));
   }
   kernel_observer_.reset(new ChainKernelObserver(kernel_observers));
 

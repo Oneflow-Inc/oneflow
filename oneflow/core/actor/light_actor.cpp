@@ -520,6 +520,20 @@ class LightActor : public ActorBase, public KernelContext {
     kernel_info_[0]->state = std::move(state);
   }
 
+  void WillInit(KernelContext* kernel_ctx, const Kernel* kernel) override {
+    Global<KernelObserver>::Get()->WillInit(kernel_ctx, kernel);
+    if (stream_kernel_observer_ != nullptr) {
+      stream_kernel_observer_->WillInit(kernel_ctx, kernel);
+    }
+  }
+
+  void DidInit(KernelContext* kernel_ctx, const Kernel* kernel) override {
+    Global<KernelObserver>::Get()->DidInit(kernel_ctx, kernel);
+    if (stream_kernel_observer_ != nullptr) {
+      stream_kernel_observer_->DidInit(kernel_ctx, kernel);
+    }
+  }
+
   void WillForward(KernelContext* kernel_ctx, const Kernel* kernel) override {
     Global<KernelObserver>::Get()->WillForward(kernel_ctx, kernel);
     if (stream_kernel_observer_ != nullptr) {

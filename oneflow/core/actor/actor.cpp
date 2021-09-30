@@ -47,6 +47,9 @@ class KernelContextImpl : public KernelContext {
 
   void set_state(std::shared_ptr<KernelState> state) override { state_ = std::move(state); }
 
+  void WillInit(KernelContext* kernel_ctx, const Kernel* kernel) override;
+  void DidInit(KernelContext* kernel_ctx, const Kernel* kernel) override;
+
   void WillForward(KernelContext* kernel_ctx, const Kernel* kernel) override;
   void DidForward(KernelContext* kernel_ctx, const Kernel* kernel) override;
 
@@ -67,6 +70,16 @@ class KernelContextImpl : public KernelContext {
   std::shared_ptr<KernelState> state_;
   KernelObserver* stream_kernel_observer_;
 };
+
+void KernelContextImpl::WillInit(KernelContext* kernel_ctx, const Kernel* kernel) {
+  Global<KernelObserver>::Get()->WillInit(kernel_ctx, kernel);
+  if (stream_kernel_observer_ != nullptr) { stream_kernel_observer_->WillInit(kernel_ctx, kernel); }
+}
+
+void KernelContextImpl::DidInit(KernelContext* kernel_ctx, const Kernel* kernel) {
+  Global<KernelObserver>::Get()->DidInit(kernel_ctx, kernel);
+  if (stream_kernel_observer_ != nullptr) { stream_kernel_observer_->DidInit(kernel_ctx, kernel); }
+}
 
 void KernelContextImpl::WillForward(KernelContext* kernel_ctx, const Kernel* kernel) {
   Global<KernelObserver>::Get()->WillForward(kernel_ctx, kernel);
