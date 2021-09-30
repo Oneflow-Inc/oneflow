@@ -29,11 +29,11 @@ Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& B
 
 }  // namespace
 
-class CriticalSectionEndTickOp final : public Operator {
+class CriticalSectionCallbackTickOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CriticalSectionEndTickOp);
-  CriticalSectionEndTickOp() = default;
-  ~CriticalSectionEndTickOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CriticalSectionCallbackTickOp);
+  CriticalSectionCallbackTickOp() = default;
+  ~CriticalSectionCallbackTickOp() = default;
 
   Maybe<void> InitFromOpConf() override;
   Maybe<void> InferLogicalOutBlobDescs(
@@ -49,33 +49,33 @@ class CriticalSectionEndTickOp final : public Operator {
       cfg::SbpSignatureList* sbp_sig_list) const override;
 };
 
-Maybe<void> CriticalSectionEndTickOp::InitFromOpConf() {
-  CHECK(op_conf().has_critical_section_end_tick_conf());
+Maybe<void> CriticalSectionCallbackTickOp::InitFromOpConf() {
+  CHECK(op_conf().has_critical_section_callback_tick_conf());
   EnrollRepeatedInputBn("tick", false);
   EnrollOutputBn("out", false);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CriticalSectionEndTickOp::InferLogicalOutBlobDescs(
+Maybe<void> CriticalSectionCallbackTickOp::InferLogicalOutBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const ParallelDesc& parallel_desc) const {
   return InferBlobDescs(BlobDesc4BnInOp);
 }
 
-Maybe<void> CriticalSectionEndTickOp::InferOutBlobDescs(
+Maybe<void> CriticalSectionCallbackTickOp::InferOutBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
-Maybe<void> CriticalSectionEndTickOp::GetSbpSignatures(
+Maybe<void> CriticalSectionCallbackTickOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     cfg::SbpSignatureList* sbp_sig_list) const {
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kCriticalSectionEndTickConf, 2);
-REGISTER_OP(OperatorConf::kCriticalSectionEndTickConf, CriticalSectionEndTickOp);
-REGISTER_TICK_TOCK_OP(OperatorConf::kCriticalSectionEndTickConf);
+REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kCriticalSectionCallbackTickConf, 2);
+REGISTER_OP(OperatorConf::kCriticalSectionCallbackTickConf, CriticalSectionCallbackTickOp);
+REGISTER_TICK_TOCK_OP(OperatorConf::kCriticalSectionCallbackTickConf);
 
 }  // namespace oneflow

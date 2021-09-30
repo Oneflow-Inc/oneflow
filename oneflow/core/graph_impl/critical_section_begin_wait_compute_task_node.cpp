@@ -17,14 +17,14 @@ limitations under the License.
 
 namespace oneflow {
 
-class CriticalSectionBeginTickCompTaskNode final : public CompTaskNode {
+class CriticalSectionWaitTickCompTaskNode final : public CompTaskNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CriticalSectionBeginTickCompTaskNode);
-  CriticalSectionBeginTickCompTaskNode() = default;
-  ~CriticalSectionBeginTickCompTaskNode() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CriticalSectionWaitTickCompTaskNode);
+  CriticalSectionWaitTickCompTaskNode() = default;
+  ~CriticalSectionWaitTickCompTaskNode() = default;
 
   bool IsMeaningLess() override { return false; }
-  TaskType GetTaskType() const override { return TaskType::kCriticalSectionBeginTick; }
+  TaskType GetTaskType() const override { return TaskType::kCriticalSectionWaitTick; }
 
  private:
   void ProduceAllRegstsAndBindEdges() override;
@@ -33,17 +33,17 @@ class CriticalSectionBeginTickCompTaskNode final : public CompTaskNode {
   bool IsIndependent() const override { return true; }
 };
 
-void CriticalSectionBeginTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
+void CriticalSectionWaitTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out", false, 1, 1);
   ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
 }
 
-void CriticalSectionBeginTickCompTaskNode::ConsumeAllRegsts() {
+void CriticalSectionWaitTickCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in");
   ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
 }
 
-void CriticalSectionBeginTickCompTaskNode::BuildExecGphAndRegst() {
+void CriticalSectionWaitTickCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = op();
   const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
@@ -59,13 +59,13 @@ void CriticalSectionBeginTickCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kCriticalSectionBeginTick);
+REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kCriticalSectionWaitTick);
 
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kCriticalSectionBeginTick)
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kCriticalSectionWaitTick)
     .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
-      return generator->GenerateIndependentTaskStreamIndex(TaskType::kCriticalSectionBeginTick);
+      return generator->GenerateIndependentTaskStreamIndex(TaskType::kCriticalSectionWaitTick);
     });
 
-REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kCriticalSectionBeginTickConf, CriticalSectionBeginTickCompTaskNode);
+REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kCriticalSectionWaitTickConf, CriticalSectionWaitTickCompTaskNode);
 
 }  // namespace oneflow

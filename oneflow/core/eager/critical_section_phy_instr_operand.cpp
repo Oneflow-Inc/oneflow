@@ -15,7 +15,12 @@ limitations under the License.
 */
 #include "oneflow/core/eager/critical_section_phy_instr_operand.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/device/cuda_event_record.h"
+#include "oneflow/core/register/ofblob.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace vm {
@@ -51,7 +56,59 @@ void CriticalSectionBeginPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
     const {
   DoEach(nullptr, CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object());
-  DoEach(nullptr, local_dep_object_->mut_mirrored_object());
+}
+
+void CriticalSectionBeginPhyInstrOperand::FinishInvalidInterfaceEventRecords() {
+  for (const auto& op_name : interface_op_names()) {
+    size_t index = CHECK_JUST(op_name2interface_index_, op_name);
+    if (!interfaces_valid().at(index)) {
+      pair.second->Init(std::make_shared<NaiveEventRecord>());
+    }
+  }
+}
+
+void CriticalSectionBeginPhyInstrOperand::Finish() {
+  for (const auto& pair : *op_name2end_event_record_) {
+    pair.second->TryInit(std::make_shared<NaiveEventRecord>());
+  }
+}
+
+void InputCriticalSectionBeginPhyInstrOperand::AccessBlobByCallback(int64_t of_blob_ptr, const std::string& op_name) {
+  int64_t i = CHECK_JUST(MapAt(op_name2inferface_index_, op_name);
+  CHECK(interfaces_valid().at(i));
+  OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  const auto& eager_blob_object = eager_blob_objects_.at(i);
+  const Blob* blob = &eager_blob_object->blob();
+  CHECK_NOTNULL(blob);
+  of_blob->mut_blob()->CopyHeaderFrom(of_blob->mut_device_ctx(), blob);
+  const auto& end_event_record = op_name2end_event_record_->at(op_name);
+  if (blob->dptr() == nullptr) {
+    end_event_record->Init(std::make_shared<NaiveEventRecord>());
+  } else {
+    AutoMemcpy(of_blob->mut_device_ctx(), of_blob->mut_blob(), blob);
+    auto* event_record_provider =
+        CHECK_NOTNULL(dynamic_cast<EventRecordProvider*>(of_blob->mut_device_ctx()));
+    end_event_record->Init(event_record_provider->MakeEventRecord());
+  }
+}
+
+void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByCallback(int64_t of_blob_ptr, const std::string& op_name) {
+  int64_t i = CHECK_JUST(MapAt(op_name2inferface_index_, op_name);
+  CHECK(interfaces_valid().at(i));
+  OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  const auto& eager_blob_object = eager_blob_objects_.at(i);
+  Blob* mut_blob = eager_blob_object->mut_blob();
+  CHECK_NOTNULL(mut_blob);
+  mut_blob->CopyHeaderFrom(of_blob->mut_device_ctx(), &of_blob->blob());
+  const auto& end_event_record = op_name2end_event_record_->at(op_name);
+  if (mut_blob->dptr() == nullptr) {
+    end_event_record->Init(std::make_shared<NaiveEventRecord>());
+  } else {
+    AutoMemcpy(of_blob->mut_device_ctx(), mut_blob, &of_blob->blob());
+    auto* event_record_provider =
+        CHECK_NOTNULL(dynamic_cast<EventRecordProvider*>(of_blob->mut_device_ctx()));
+    end_event_record->Init(event_record_provider->MakeEventRecord());
+  }
 }
 
 void CriticalSectionEndPhyInstrOperand::ForEachMutMirroredObject(

@@ -56,7 +56,7 @@ void PrependTickByParallelDesc(const OpGraph& op_graph, JobBuilder* job_builder)
   }
 }
 
-Maybe<const OperatorConf&> FindSrcSubsetTickOpConf(const Job& job) {
+Maybe<const OperatorConf&> FindSoleSrcSubsetTickOpConf(const Job& job) {
   const OperatorConf* src_subset_tick_op_conf = nullptr;
   for (const auto& op_conf : job.net().op()) {
     if (!op_conf.has_src_subset_tick_conf()) { continue; }
@@ -555,7 +555,7 @@ Maybe<void> AutoSourceAndSinkTick(
     CHECK_OR_RETURN(tick_lbis.emplace(op_node->op().BnInOp2Lbi(op_node->op().SoleObn())).second);
     return Maybe<void>::Ok();
   }));
-  OperatorConf src_subset_tick = JUST(FindSrcSubsetTickOpConf(job_builder->job()));
+  OperatorConf src_subset_tick = JUST(FindSoleSrcSubsetTickOpConf(job_builder->job()));
   JUST(CreateSourceTicksAndSrcSubsetTick(&src_subset_tick, job_builder, DoEachSrc));
   JUST(CreateDstSubsetTickAndSinkTicks(src_subset_tick, tick_lbis, job_builder, DoEachSink));
   return Maybe<void>::Ok();
@@ -606,6 +606,165 @@ Maybe<void> MultiClientAutoSourceAndSinkTick(const OpGraph& op_graph, Job* job) 
     }
   }
   return Maybe<void>::Ok();
+}
+
+namespace {
+
+Maybe<void> InsertCriticalSectionSrcAndDstTicks(const OpGraph& op_graph, JobBuilder* job_builder,
+    std::vector<std::string>* interface_src_tick_op_names,
+    std::vector<std::string>* interface_dst_tick_lbns) {
+  HashMap<ParallelDesc, std::vector<const OpNode*>> parallel_desc2interface_op_nodes;
+  for (const auto* op_node : interface_op_nodes) {
+    parallel_desc2interface_op_nodes[op_node->parallel_desc()].push_back(op_node);
+  }
+  for (const auto& pair : parallel_desc2interface_op_nodes) {
+    const auto& parallel_conf = pair.first.parallel_conf();
+    OperatorConf interface_op(pair.second->op().op_conf());
+    {
+      OperatorConf tick_op;
+      tick_op.set_name("System-EagerCriticalSection-Interface-Begin-Tick-" + NewUniqueId());
+      auto* tick_op_conf = tick_op.mutable_tick_conf();
+      tick_op_conf->set_out("out");
+      interface_src_tick_op_names->push_back(tick_op.name());
+      JUST(job_builder->AddOp(parallel_conf, tick_op));
+      interface_op.add_ctrl_in_op_name(tick_op.name());
+      JUST(job_builder->MutOpOnlyOnce(interface_op));
+    }
+    {
+      OperatorConf tick_op;
+      tick_op.set_name("System-EagerCriticalSection-Interface-End-Tick-" + NewUniqueId());
+      auto* tick_op_conf = tick_op.mutable_tick_conf();
+      tick_op_conf->add_ctrl_in_op_name(interface_op.name());
+      tick_op_conf->set_out("out");
+      interface_dst_tick_lbns->push_back(tick_op.name() + "/out");
+      JUST(job_builder->AddOp(parallel_conf, tick_op));
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InsertSrcSubsetTickAndDstSubsetTick(
+    const std::vector<std::string>& interface_src_tick_op_names,
+    const std::vector<std::string>& interface_dst_tick_lbns,
+    JobBuilder* job_builder, std::string* src_subset_tick_op_name,
+    LogicalBlobId* dst_subset_tick_lbi) {
+  {
+    OperatorConf src_subset_tick;
+    JUST(BuildSrcSubsetTickOpAndParallelConf(&src_subset_tick, job_builder));
+    *src_subset_tick_op_name = src_subset_tick.name();
+  }
+  for (const auto& op_name : interface_src_tick_op_names) {
+    OperatorConf op_conf(JUST(job_builder->OpConf4OpName(op_name)));
+    CHECK_OR_RETURN(op_conf.has_tick_conf());
+    op_conf.mutable_tick_conf().add_tick(*src_subset_tick_op_name + "/out");
+    JUST(job_builder->MutOpOnlyOnce(op_conf));
+  }
+  HashSet<LogicalBlobId> dst_subset_tick_input_lbis;
+  dst_subset_tick_input_lbis.insert(GenLogicalBlobId(*src_subset_tick_op_name + "/out"));
+  for (const auto& lbn : interface_dst_tick_lbns) {
+    const auto& lbi = GenLogicalBlobId(lbn);
+    CHECK_OR_RETURN(dst_subset_tick_input_lbis.insert(lbi).second);
+  }
+  {
+    OperatorConf dst_subset_tick_op;
+    JUST(BuildDstSubsetTickOpAndParallelConf(dst_subset_tick_input_lbis, &dst_subset_tick_op,
+                                             job_builder));
+    dst_subset_tick_lbi->set_name(dst_subset_tick_op.name());
+    CHECK_OR_RETURN(dst_subset_tick_op.has_dst_subset_tick_conf());
+    dst_subset_tick_lbi->set_blob_name(dst_subset_tick_op.dst_subset_tick_conf().out());
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InsertCriticalSectionWaitTicks(
+    const OpGraph& op_graph, JobBuilder* job_builder, const std::string& src_subset_tick_op_name,
+    const auto& wait_buffer_name) {
+  std::vector<const OpNode*> wait_and_send_id_op_nodes;
+  op_graph.ForEachNode([&](OpNode* op_node){
+    if (!op_node->op().has_wait_and_send_ids_conf()) { return; }
+    wait_and_send_id_op_nodes.push_back(op_node);
+  });
+  CHECK_GT_OR_RETURN(wait_and_send_id_op_nodes.size(), 0);
+  Operator src_subset_tick_op(JUST(job_builder->OpConf4OpName(src_subset_tick_op_name)));
+  CHECK_OR_RETURN(src_subset_tick_op.has_src_subset_tick_conf());
+  for (const OpNode* wait_and_send_id_op_node : wait_and_send_id_op_nodes) {
+    LogicalBlobId lbi;
+    lbi.set_op_name(wait_and_send_id_op_node->op().op_name());
+    lbi.set_blob_name(wait_and_send_id_op_node->op().wait_and_send_ids_conf().out());
+    OperatorConf critical_section_wait_op;
+    {
+      critical_section_wait_op.set_name("System-EagerCriticalSection-Wait-" + NewUniqueId());
+      auto* conf = critical_section_wait_op.mutable_critical_section_wait_tick_conf();
+      conf->add_tick(GenLogicalBlobName(lbi));
+      conf->set_out("out");
+      conf->set_buffer_name(wait_buffer_name);
+    }
+    const auto& parallel_conf = wait_and_send_id_op_node->parallel_desc().parallel_conf();
+    JUST(job_builder->AddOp(parallel_conf, critical_section_wait_op));
+    src_subset_tick_op.mutable_src_subset_tick_conf()->add_tick(
+      GenLogicalBlobName(critical_section_wait_op.name() + "/out"));
+  }
+  JUST(job_builder->MutOpOnlyOnce(src_subset_tick_op));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InsertCriticalSectionCallbackTicks(
+    const OpGraph& op_graph, JobBuilder* job_builder, const LogicalBlobId& dst_subset_tick_lbi,
+    const auto& callback_buffer_name) {
+  OperatorConf critical_section_callback_op;
+  {
+    auto* conf = critical_section_callback_op.mutable_critical_section_callback_tick_conf();
+    conf->add_tick(GenLogicalBlobName(dst_subset_tick_lbi));
+    conf->set_out("out");
+    conf->set_buffer_name(callback_buffer_name);
+  }
+  const auto& parallel_conf = JUST(job_builder->ParallelConf4OpName(dst_subset_tick_op_name));
+  JUST(job_builder->AddOp(parallel_conf, critical_section_callback_op));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> MultiClientAutoCriticalSectionTick(const OpGraph& op_graph, Job* job, const std::vector<const OpNode*>& interface_op_nodes, const auto& wait_buffer_name, const auto& callback_buffer_name) {
+  JobBuilder job_builder(job);
+  std::vector<std::string> interface_src_tick_op_names;
+  std::vector<std::string> interface_dst_tick_lbns;
+  JUST(InsertCriticalSectionSrcAndDstTicks(interface_op_nodes, &job_builder,
+                                           &interface_src_tick_op_names, &interface_dst_tick_lbns));
+  std::string src_subset_tick_op_name;
+  LogicalBlobId dst_subset_tick_lbi;
+  JUST(InsertSrcSubsetTickAndDstSubsetTick(
+      interface_src_tick_op_names, interface_dst_tick_lbns, &job_builder,
+      &src_subset_tick_op_name, &dst_subset_tick_lbi));
+  JUST(InsertCriticalSectionWaitTicks(op_graph, &job_builder, src_subset_tick_op_name,
+                                      wait_buffer_name));
+  JUST(InsertCriticalSectionCallbackTicks(op_graph, &job_builder, dst_subset_tick_lbi,
+                                          callback_buffer_name));
+  return Maybe<void>::Ok();
+}
+
+}
+
+Maybe<void> MultiClientAutoInputCriticalSectionTick(const OpGraph& op_graph, Job* job) {
+  if (!JUST(*Global<Maybe<void>, MultiClient>::Get())) { return Maybe<void>::Ok(); }
+  std::vector<const OpNode*> interface_op_nodes;
+  op_graph.ForEachNode([&](OpNode* node){
+    if (node->op().op_conf().has_input_conf()) { interface_op_nodes.push_back(node); }
+  });
+  return MultiClientAutoCriticalSectionTick(
+      op_graph, job, interface_op_nodes,
+      GetInputCriticalSectionWaitBufferName(job->job_conf().job_name()),
+      GetInputCriticalSectionCallbackBufferName(job->job_conf().job_name()));
+}
+
+Maybe<void> MultiClientAutoOutputCriticalSectionTick(const OpGraph& op_graph, Job* job) {
+  if (!JUST(*Global<Maybe<void>, MultiClient>::Get())) { return Maybe<void>::Ok(); }
+  std::vector<const OpNode*> interface_op_nodes;
+  op_graph.ForEachNode([&](OpNode* node){
+    if (node->op().op_conf().has_output_conf()) { interface_op_nodes.push_back(node); }
+  });
+  return MultiClientAutoCriticalSectionTick(
+      op_graph, job, interface_op_nodes,
+      GetOutputCriticalSectionWaitBufferName(job->job_conf().job_name()),
+      GetOutputCriticalSectionCallbackBufferName(job->job_conf().job_name()));
 }
 
 Maybe<void> SingleClientAddGlobalInputCriticalSections(const OpGraph& op_graph,

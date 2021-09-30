@@ -42,31 +42,11 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
   ~LaunchLazyJobPhyInstrOperand() override = default;
 
   LaunchLazyJobPhyInstrOperand(
-      const ObjectMsgPtr<LocalDepObject>& inputs_local_dep_object,
-      const ObjectMsgPtr<LocalDepObject>& outputs_local_dep_object,
-      const std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>&
-          op_name2end_event_record,
-      const one::EagerBlobObjectListPtr& input_blob_objects,
-      const one::EagerBlobObjectListPtr& output_blob_objects,
-      const one::EagerBlobObjectListPtr& param_blob_objects,
-      const std::shared_ptr<NNGraphIf>& nn_graph)
-      : inputs_local_dep_object_(inputs_local_dep_object),
-        outputs_local_dep_object_(outputs_local_dep_object),
-        op_name2end_event_record_(op_name2end_event_record),
-        input_blob_objects_(input_blob_objects),
-        output_blob_objects_(output_blob_objects),
-        param_blob_objects_(param_blob_objects),
-        nn_graph_(nn_graph) {}
+      const std::shared_ptr<NNGraphIf>& nn_graph,
+      const one::EagerBlobObjectListPtr& param_blob_objects)
+      : nn_graph_(nn_graph), param_blob_objects_(param_blob_objects) {}
 
-  const one::EagerBlobObjectListPtr& input_blob_objects() const { return input_blob_objects_; }
-  const one::EagerBlobObjectListPtr& output_blob_objects() const { return output_blob_objects_; }
   const std::shared_ptr<NNGraphIf>& nn_graph() const { return nn_graph_; }
-
-  Maybe<SharedEventRecord> EndEventRecord4OpName(const std::string& op_name) const;
-  const std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>&
-  op_name2end_event_record() const {
-    return op_name2end_event_record_;
-  }
 
   void ForEachConstMirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
@@ -81,14 +61,8 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
       const override;
 
  private:
-  mutable ObjectMsgPtr<LocalDepObject> inputs_local_dep_object_;
-  mutable ObjectMsgPtr<LocalDepObject> outputs_local_dep_object_;
-  std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>
-      op_name2end_event_record_;
-  one::EagerBlobObjectListPtr input_blob_objects_;
-  one::EagerBlobObjectListPtr output_blob_objects_;
-  one::EagerBlobObjectListPtr param_blob_objects_;
   std::shared_ptr<NNGraphIf> nn_graph_;
+  one::EagerBlobObjectListPtr param_blob_objects_;
 };
 }  // namespace vm
 }  // namespace oneflow

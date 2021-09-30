@@ -50,37 +50,59 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
   void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
 
   void Compute(vm::Instruction* instruction) const override {
+    OF_PROFILER_RANGE_PUSH("CriticalSectionBegin");
     {
-      OF_PROFILER_RANGE_PUSH("MakeCriticalSectionInstance");
-      const auto& critical_section_instance = MakeCriticalSectionInstance(instruction);
-      OF_PROFILER_RANGE_POP();  // MakeCriticalSectionInstance
-      const auto& cur_nn_graph = GetCurNNGraph(instruction);
+      auto ptr = instruction->instr_msg().phy_instr_operand();
+      auto phy_instr_operand = std::dynamic_pointer_cast<CriticalSectionBeginPhyInstrOperand>(ptr);
+      CHECK_NOTNULL(phy_instr_operand);
+      const auto& critical_section_instance = MakeCriticalSectionInstance(phy_instr_operand);
       const auto& job_name = job_instance->job_name();
       auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
-      buffer_mgr->Get(GetCriticalSectionWaitBufferName(job_name))->Push(job_instance);
-      for (int i = 0; i < cur_nn_graph->inputs_op_names().size(); ++i) {
-        if (cur_nn_graph->inputs_valid().at(i)) {
-          const std::string& input_op_name = cur_nn_graph->inputs_op_names().at(i);
-          buffer_mgr->Get(GetInputBufferName(job_name, input_op_name))->Push(critical_section_instance);
+      for (int i = 0; i < phy_instr_operand->interface_op_names().size(); ++i) {
+        if (phy_instr_operand->interfaces_valid().at(i)) {
+          const std::string& interface_op_name = phy_instr_operand->interface_op_names().at(i);
+          const auto& buffer_name =
+            phy_instr_operand->GetInterfaceBufferName(job_name, interface_op_name);
+          buffer_mgr->Get(buffer_name)->Push(critical_section_instance);
         }
       }
-      buffer_mgr->Get(GetCriticalSectionCallbackBufferName(job_name))->Push(job_instance);
+      const auto& callback_buffer_name =
+          phy_instr_operand->GetInterfaceCriticalSectionCallbackBuffer(job_name);
+      buffer_mgr->Get(callback_buffer_name)->Push(job_instance);
+      const auto& wait_buffer_name =
+          phy_instr_operand->GetInterfaceCriticalSectionWaitBuffer(job_name);
+      buffer_mgr->Get(wait_buffer_name)->Push(job_instance);
     }
     {
       auto* status_buffer_data = instruction->mut_status_buffer()->mut_buffer()->mut_data();
       auto* status_querier = CriticalSectionStatusQuerier::MutCast(status_buffer_data);
       status_querier->SetLaunched(std::make_shared<NaiveEventRecord>());
     }
+    OF_PROFILER_RANGE_POP();  // CriticalSectionBegin
   }
 
  private:
-  std::shared_ptr<NNGraphIf> GetCurNNGraph(Instruction* instruction) const {
-    const auto* ptr = instruction->instr_msg().phy_instr_operand().get();
-    const auto* phy_instr_operand = dynamic_cast<const CriticalSectionBeginPhyInstrOperand*>(ptr);
-    CHECK_NOTNULL(phy_instr_operand);
-    return phy_instr_operand->nn_graph();
-  }
+  
+  class NaiveCriticalSectionInstance final : public CriticalSectionInstance {
+   public:
+    NaiveCriticalSectionInstance(std::shared_ptr<CriticalSectionBeginPhyInstrOperand> phy_instr_operand)
+      : CriticalSectionInstance(), phy_instr_operand_(phy_instr_operand) {}
 
+    ~NaiveCriticalSectionInstance() override = default;
+    void AccessBlobByOpName(uint64_t ofblob_ptr, const std::string& op_name) const override {
+      phy_instr_operand_->AccessBlobByOpName(ofblob_ptr, op_name);
+    }
+    void Finish() const override { phy_instr_operand_->Finish(); }
+    
+   private:
+    std::shared_ptr<CriticalSectionBeginPhyInstrOperand> phy_instr_operand_;
+  };
+
+  std::shared_ptr<CriticalSectionInstance> MakeCriticalSectionInstance(std::shared_ptr<CriticalSectionBeginPhyInstrOperand> phy_instr_operand) const {
+    auto ptr = std::make_shared<NaiveCriticalSectionInstance>(phy_instr_operand);
+    ptr->FinishInvalidInterfaceEventRecords();
+    return ptr;
+  }
 };
 
 COMMAND(RegisterInstructionType<CriticalSectionBeginInstructionType>("CriticalSectionBegin"));

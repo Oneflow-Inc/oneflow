@@ -21,27 +21,27 @@ limitations under the License.
 
 namespace oneflow {
 
-class CriticalSectionEndTickKernel final : public Kernel {
+class CriticalSectionWaitTickKernel final : public Kernel {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CriticalSectionEndTickKernel);
-  CriticalSectionEndTickKernel() = default;
-  ~CriticalSectionEndTickKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CriticalSectionWaitTickKernel);
+  CriticalSectionWaitTickKernel() = default;
+  ~CriticalSectionWaitTickKernel() = default;
 
  private:
   bool IsStateless() const override { return false; }
   void ForwardDataContent(KernelContext* ctx) const override;
 };
 
-void CriticalSectionEndTickKernel::ForwardDataContent(KernelContext* ctx) const {
+void CriticalSectionWaitTickKernel::ForwardDataContent(KernelContext* ctx) const {
   auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
   bool is_multi_client = CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get());
-  CHECK(op_conf().has_critical_section_end_conf());
-  std::string buffer_name = GetCriticalSectionEndBufferName(op_conf().critical_section_end_conf().job_name());
+  CHECK(op_conf().has_critical_section_wait_conf());
+  const std::string& buffer_name = op_conf().critical_section_wait_conf().buffer_name();
   std::shared_ptr<CriticalSectionInstance> foreign_critical_section_instance;
-  BufferStatus buffer_status = buffer_mgr->Get(buffer_name)->TryReceive(&foreign_critical_section_instance);
+  BufferStatus buffer_status = buffer_mgr->Get(buffer_name)->Receive(&foreign_critical_section_instance);
   CHECK_EQ(buffer_status, kBufferStatusSuccess);
 }
 
-REGISTER_KERNEL(OperatorConf::kCriticalSectionEndTickConf, CriticalSectionEndTickKernel);
+REGISTER_KERNEL(OperatorConf::kCriticalSectionWaitTickConf, CriticalSectionWaitTickKernel);
 
 }  // namespace oneflow
