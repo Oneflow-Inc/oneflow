@@ -109,10 +109,10 @@ void SocketReadHelper::SetStatusWhenRequestReadMsgHeadDone() {
 }
 
 void SocketReadHelper::SetStatusWhenActorMsgHeadDone() {
-  size_t size = cur_msg_.size;
+  size_t size = cur_msg_.actor_msg.size;
   char * data =(char*) malloc(size);
   std::memcpy(data,cur_msg_.actor_msg.data,size);
-  //std::cout<<""
+  std::cout<<"SocketReadHelper::SetStatusWhenActorMsgHeadDone,the size:"<<size << std::endl;
   Global<ActorMsgBus>::Get()->HandleRecvData(data,size);
  // Global<EpollCommNet>::Get()->msghandle_(cur_msg_.actor_msg.data,cur_msg_.actor_msg.size);
   SwitchToMsgHeadReadHandle();
