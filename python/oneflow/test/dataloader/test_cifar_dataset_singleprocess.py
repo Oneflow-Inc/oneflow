@@ -78,6 +78,7 @@ def test(test_case):
 
     train_epoch = 1
     batch_size = 4
+    num_workers = 0
     data_dir = os.path.join(
         os.getenv("ONEFLOW_TEST_CACHE_DIR", "./data-test"), "cifar10"
     )
@@ -88,7 +89,7 @@ def test(test_case):
         download=True,
         transform=transform,
         source_url="https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/cifar/cifar-10-python.tar.gz",
-        num_workers=0,
+        num_workers=num_workers,
     )
 
     final_loss = 0
@@ -110,7 +111,7 @@ def test(test_case):
             optimizer.step()
 
             # print statistics
-            running_loss += loss.numpy()
+            running_loss += loss.item()
             if i % 200 == 0:  # print every 200 mini-batches
                 final_loss = running_loss / 200
                 print("epoch: %d  step: %5d  loss: %.3f " % (epoch, i, final_loss))
@@ -128,4 +129,7 @@ class TestCifarDataset(flow.unittest.TestCase):
 
 
 if __name__ == "__main__":
+    import multiprocessing as mp
+
+    mp.set_start_method("spawn")
     unittest.main()
