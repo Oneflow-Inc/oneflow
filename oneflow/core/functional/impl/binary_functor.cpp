@@ -145,7 +145,7 @@ class PowFunctor : public BinaryFunctor {
 class FloorDivFunctor : public BinaryFunctor {
  public:
   FloorDivFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("pow").Input("x").Input("y").Output("z").Build());
+    op_ = CHECK_JUST(one::OpBuilder("floordiv").Input("x").Input("y").Output("z").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {

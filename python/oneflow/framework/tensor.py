@@ -662,6 +662,7 @@ def RegisterMethods():
     Tensor._meta_repr = _meta_repr
     Tensor.abs = _abs
     Tensor.exp = _exp
+    Tensor.floor_divide = _floor_divide
     Tensor.acos = _acos
     Tensor.acosh = _acosh
     Tensor.arccosh = _arccosh
