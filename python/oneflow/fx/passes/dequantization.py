@@ -172,31 +172,33 @@ def dequantization_aware_training(origin_gm: GraphModule, quantize_gm: GraphModu
                         per_layer_quantization,
                         momentum,
                         )
-                    # mean = flow.Tensor(quantization_op_state[now_target].bn_module.running_mean)
-                    # var = flow.Tensor(quantization_op_state[now_target].bn_module.running_var)
-                    # std = flow.sqrt(var + quantization_op_state[now_target].bn_module.eps)
+                    mean = flow.Tensor(quantization_op_state[now_target].bn_module.running_mean)
+                    var = flow.Tensor(quantization_op_state[now_target].bn_module.running_var)
+                    std = flow.sqrt(var + quantization_op_state[now_target].bn_module.eps)
 
-                    # if quantization_op_state[now_target].bn_module.affine:
-                    #     gamma_ = quantization_op_state[now_target].bn_module.weight / std
-                    #     weight = quantization_op_state[now_target].conv_module.weight * gamma_.view(
-                    #         quantization_op_state[now_target].conv_module.out_channels, 1, 1, 1
-                    #     )
-                    #     if quantization_op_state[now_target].conv_module.bias is not None:
-                    #         bias = (
-                    #             gamma_ * quantization_op_state[now_target].conv_module.bias - gamma_ * mean + quantization_op_state[now_target].bn_module.bias
-                    #         )
-                    #     else:
-                    #         bias = quantization_op_state[now_target].bn_module.bias - gamma_ * mean
-                    # else:
-                    #     gamma_ = 1 / std
-                    #     weight = quantization_op_state[now_target].conv_module.weight * gamma_
-                    #     if quantization_op_state[now_target].conv_module.bias is not None:
-                    #         bias = gamma_ * quantization_op_state[now_target].conv_module.bias - gamma_ * mean
-                    #     else:
-                    #         bias = -gamma_ * mean
+                    if quantization_op_state[now_target].bn_module.affine:
+                        gamma_ = quantization_op_state[now_target].bn_module.weight / std
+                        weight = quantization_op_state[now_target].conv_module.weight * gamma_.view(
+                            quantization_op_state[now_target].conv_module.out_channels, 1, 1, 1
+                        )
+                        if quantization_op_state[now_target].conv_module.bias is not None:
+                            bias = (
+                                gamma_ * quantization_op_state[now_target].conv_module.bias - gamma_ * mean + quantization_op_state[now_target].bn_module.bias
+                            )
+                        else:
+                            bias = quantization_op_state[now_target].bn_module.bias - gamma_ * mean
+                    else:
+                        gamma_ = 1 / std
+                        weight = quantization_op_state[now_target].conv_module.weight * gamma_
+                        if quantization_op_state[now_target].conv_module.bias is not None:
+                            bias = gamma_ * quantization_op_state[now_target].conv_module.bias - gamma_ * mean
+                        else:
+                            bias = -gamma_ * mean
 
-                    # dequanzation_conv.weight = flow.nn.Parameter(weight)
-                    # dequanzation_conv.bias = flow.nn.Parameter(bias)
+                    dequanzation_conv.weight = flow.nn.Parameter(weight)
+                    dequanzation_conv.bias = flow.nn.Parameter(bias)
+                    dequanzation_conv.moving_min_max_observer.moving_max = quantization_op_state[now_target].moving_min_max_observer.moving_max
+                    dequanzation_conv.moving_min_max_observer.moving_min = quantization_op_state[now_target].moving_min_max_observer.moving_min
 
                     origin_gm.add_submodule(
                         now_target,
