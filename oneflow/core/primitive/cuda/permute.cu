@@ -109,11 +109,8 @@ void LaunchBatchPermuteKernel(StreamContext* stream_ctx,
 template<size_t num_dims, typename IndexType>
 bool CheckLaunchBatchPermute(PermuteKernelParams<num_dims, IndexType> params) {
   // (0, 1, 2) -> (0, 2, 1)
-  if (num_dims == 3) {
-    if (params.permutation[num_dims - 1] == num_dims - 2
-        && params.permutation[num_dims - 2] == num_dims - 1) {
-      return true;
-    }
+  if (num_dims == 3 && params.permutation[num_dims - 1] == 1 && params.permutation[num_dims - 2] == 2) {
+    return true;
   }
   return false;
 }
