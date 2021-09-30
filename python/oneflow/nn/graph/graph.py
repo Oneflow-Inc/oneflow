@@ -107,7 +107,7 @@ class Graph(object):
         self._args_repr = []
         self._outs_repr = []
         self._debug = False
-        self._outputs_buffer_size = 2
+        self._outputs_buffer_size = 3
         self._cur_index_of_ouputs_buffer = 0
 
         self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(self._name)
