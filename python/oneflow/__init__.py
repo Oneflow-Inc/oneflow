@@ -124,6 +124,7 @@ from oneflow._C import softplus
 from oneflow._C import tril
 from oneflow._C import triu
 from oneflow._C import pad
+from oneflow._C import transpose
 
 from . import sbp
 import atexit
@@ -316,7 +317,6 @@ from oneflow.nn.modules.tile import tile_op as tile
 from oneflow.nn.modules.to import to_op as to
 from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
 from oneflow.nn.modules.consistent_cast import to_local_op as to_local
-from oneflow.nn.modules.transpose import transpose_op as transpose
 from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *

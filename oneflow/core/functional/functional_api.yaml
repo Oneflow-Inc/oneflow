@@ -187,7 +187,11 @@
   bind_python: True
 
 - name: "transpose"
-  signature: "Tensor (Tensor x, Int32List perm) => Transpose"
+  signature:
+      [
+        "Tensor (Tensor x, Int32List perm) => Transpose",
+        "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Transpose2dim",
+      ]
   bind_python: True
 
 - name: "reciprocal"
