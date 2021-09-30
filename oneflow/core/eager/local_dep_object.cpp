@@ -57,32 +57,72 @@ Maybe<ObjectMsgPtr<LocalDepObject>> LocalDepObject::New(const Device& device) {
 
 namespace {
 
-Maybe<std::vector<ObjectMsgPtr<LocalDepObject>>> RawGetLocalDepObjectPool(Symbol<Device> device) {
-  const auto pool = std::make_shared<std::vector<ObjectMsgPtr<LocalDepObject>>>();
-  size_t pool_size = JUST(device->instr_local_dep_object_pool_size());
-  pool->reserve(pool_size);
-  for (int64_t i = 0; i < pool_size; ++i) {
-    auto local_dep_object = *JUST(LocalDepObject::New(*device));
-    pool->push_back(local_dep_object);
-  }
-  return pool;
+using PoolLocalDepObjectList = OBJECT_MSG_LIST(LocalDepObject, pool_link);
+using StoredLocalDepObjectList = OBJECT_MSG_MUTEXED_LIST(LocalDepObject, stored_link);
+using LifetimeLocalDepObjectList = OBJECT_MSG_MUTEXED_LIST(LocalDepObject, lifetime_link);
+
+PoolLocalDepObjectList* RawThreadLocalPoolLocalDepObjectList(Symbol<Device> device) {
+  static thread_local PoolLocalDepObjectList pool_list;
+  return &pool_list;
 }
+static constexpr auto* ThreadLocalPoolLocalDepObjectList =
+    DECORATE(&RawThreadLocalPoolLocalDepObjectList, ThreadLocal);
+
+StoredLocalDepObjectList* RawGlobalStoredLocalDepObjectList(Symbol<Device> device) {
+  static StoredLocalDepObjectList stored_list;
+  return &stored_list;
+}
+static constexpr auto* GlobalStoredLocalDepObjectList =
+    DECORATE(&RawGlobalStoredLocalDepObjectList, StaticGlobalCopiable);
+
+LifetimeLocalDepObjectList* RawGlobalLifetimeLocalDepObjectList(Symbol<Device> device) {
+  static LifetimeLocalDepObjectList lifetime_list;
+  return &lifetime_list;
+}
+static constexpr auto* GlobalLifetimeLocalDepObjectList =
+    DECORATE(&RawGlobalLifetimeLocalDepObjectList, StaticGlobalCopiable);
 
 }  // namespace
 
-static constexpr auto* GetLocalDepObjectPool = DECORATE(&RawGetLocalDepObjectPool, ThreadLocal);
-
 Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device) {
-  const auto& local_dep_object_pool = JUST(GetLocalDepObjectPool(device));
-  CHECK_OR_RETURN(!local_dep_object_pool->empty());
-  size_t pool_size = local_dep_object_pool->size();
-  static thread_local int64_t index = 0;
-  return local_dep_object_pool->at(index++ % pool_size).Mutable();
+  ObjectMsgPtr<LocalDepObject> local_dep_object;
+  auto* pool_list = ThreadLocalPoolLocalDepObjectList(device);
+  auto* stored_list = GlobalStoredLocalDepObjectList(device);
+  if (!pool_list->empty()) {
+    // When running stable, fetch recycled local_dep_object from pool_list which acting as a
+    // object pool.
+    local_dep_object = pool_list->PopFront();
+  } else if (!stored_list->empty()) {
+    // When running unstable, try fetch local_dep_object from stored_list
+    local_dep_object = stored_list->PopFront();
+  } else {
+    // When running unstable and no stored objects, directly new LocalDepObject
+    local_dep_object = *JUST(LocalDepObject::New(*device));
+    GlobalLifetimeLocalDepObjectList(device)->PushBack(local_dep_object.Mutable());
+  }
+  CHECK_OR_RETURN(local_dep_object->is_pool_link_empty());
+  CHECK_OR_RETURN(local_dep_object->is_stored_link_empty());
+  CHECK_OR_RETURN(!local_dep_object->is_lifetime_link_empty());
+  return local_dep_object.Mutable();
+}
+
+Maybe<void> PutLocalDepObjectToDevicePool(Symbol<Device> device, LocalDepObject* local_dep_object) {
+  CHECK_OR_RETURN(local_dep_object->is_pool_link_empty());
+  CHECK_OR_RETURN(local_dep_object->is_stored_link_empty());
+  CHECK_OR_RETURN(!local_dep_object->is_lifetime_link_empty());
+  auto* pool_list = ThreadLocalPoolLocalDepObjectList(device);
+  const auto& pool_size = JUST(device->instr_local_dep_object_pool_size());
+  // Keep pool_list->size() not bigger than pool_size
+  if (pool_list->size() < pool_size) {
+    pool_list->PushBack(local_dep_object);
+  } else {
+    GlobalStoredLocalDepObjectList(device)->PushBack(local_dep_object);
+  }
+  return Maybe<void>::Ok();
 }
 
 Maybe<LocalDepObject*> GetLocalDepObject4Device(const Device& device) {
   static constexpr auto* GetObj = DECORATE(&LocalDepObject::New, StaticGlobalCopiable);
   return JUST(GetObj(device))->Mutable();
 }
-
 }  // namespace oneflow
