@@ -135,17 +135,6 @@ class NllGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T>
-user_op::InferTmpSizeFn GenFwInferTmpSizeFn() {
-  return [](user_op::InferContext* ctx) {
-    const int64_t n = ctx->InputShape("target", 0).elem_cnt();
-    const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
-
-    if (reduction != ReductionType::kNone) { return GetCudaAlignedSize(n * sizeof(T)); }
-    return static_cast<size_t>(0);
-  };
-}
-
 }  // namespace
 #define REGISTER_NLL_KERNEL(dtype_pair, ltype_pair)                                           \
   REGISTER_USER_KERNEL("nll")                                                                 \
@@ -153,7 +142,7 @@ user_op::InferTmpSizeFn GenFwInferTmpSizeFn() {
       .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU)                          \
                        & (user_op::HobDataType("target", 0) == OF_PP_PAIR_SECOND(ltype_pair)) \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))   \
-      .SetInferTmpSizeFn(GenFwInferTmpSizeFn<OF_PP_PAIR_FIRST(dtype_pair)>());
+      .SetInferTmpSizeFn(loss::GenDefaultInferTmpSizeFn<OF_PP_PAIR_FIRST(dtype_pair)>());
 
 #define REGISTER_NLL_GRAD_KERNEL(dtype_pair, ltype_pair)                                        \
   REGISTER_USER_KERNEL("nll_grad")                                                              \

@@ -55,8 +55,9 @@ __global__ void ApplyLossReductionImplKernel<half>(int64_t elem_cnt, const half*
 }
 
 template<typename T>
-void ApplyLossReduction(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* out,
-                        const ReductionType reduction_type) {
+void ApplyLossReductionIfNeed(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* out,
+                              const ReductionType reduction_type) {
+  if (reduction_type == ReductionType::kNone) { return; }
   if ((reduction_type != ReductionType::kMean) && (reduction_type != ReductionType::kSum)) {
     UNIMPLEMENTED();
     return;
@@ -65,8 +66,9 @@ void ApplyLossReduction(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* o
       elem_cnt, tmp_out, out, reduction_type == ReductionType::kMean);
 }
 template<>
-void ApplyLossReduction<float16>(DeviceCtx* ctx, int64_t elem_cnt, const float16* tmp_out,
-                                 float16* out, const ReductionType reduction_type) {
+void ApplyLossReductionIfNeed<float16>(DeviceCtx* ctx, int64_t elem_cnt, const float16* tmp_out,
+                                       float16* out, const ReductionType reduction_type) {
+  if (reduction_type == ReductionType::kNone) { return; }
   if ((reduction_type != ReductionType::kMean) && (reduction_type != ReductionType::kSum)) {
     UNIMPLEMENTED();
     return;
@@ -75,9 +77,10 @@ void ApplyLossReduction<float16>(DeviceCtx* ctx, int64_t elem_cnt, const float16
       elem_cnt, reinterpret_cast<const half*>(tmp_out), reinterpret_cast<half*>(out),
       reduction_type == ReductionType::kMean);
 }
-#define SPECIALIZE_APPLY_LOSS_REDUCTION(dtype)                                                     \
-  template void ApplyLossReduction<dtype>(DeviceCtx * ctx, int64_t elem_cnt, const dtype* tmp_out, \
-                                          dtype* out, const ReductionType reduction_type);
+#define SPECIALIZE_APPLY_LOSS_REDUCTION(dtype)                                     \
+  template void ApplyLossReductionIfNeed<dtype>(DeviceCtx * ctx, int64_t elem_cnt, \
+                                                const dtype* tmp_out, dtype* out,  \
+                                                const ReductionType reduction_type);
 
 SPECIALIZE_APPLY_LOSS_REDUCTION(float)
 SPECIALIZE_APPLY_LOSS_REDUCTION(double)

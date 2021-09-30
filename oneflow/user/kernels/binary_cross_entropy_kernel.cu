@@ -113,9 +113,7 @@ class BinaryCrossEntropyKernel final : public user_op::OpKernel {
                                    ctx->device_ctx()->cuda_stream()>>>(
         elem_cnt, input, target, reduction == ReductionType::kNone ? out : tmp_out, weight);
 
-    if (reduction != ReductionType::kNone) {
-      ApplyLossReduction<T>(ctx->device_ctx(), elem_cnt, tmp_out, out, reduction);
-    }
+    ApplyLossReductionIfNeed<T>(ctx->device_ctx(), elem_cnt, tmp_out, out, reduction);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -151,9 +149,7 @@ class BinaryCrossEntropyKernel<float16> final : public user_op::OpKernel {
                                           : reinterpret_cast<half*>(tmp_out),
         reinterpret_cast<const half*>(weight));
 
-    if (reduction != ReductionType::kNone) {
-      ApplyLossReduction<float16>(ctx->device_ctx(), elem_cnt, tmp_out, out, reduction);
-    }
+    ApplyLossReductionIfNeed<float16>(ctx->device_ctx(), elem_cnt, tmp_out, out, reduction);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -221,17 +217,6 @@ class BinaryCrossEntropyGradKernel<float16> final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T>
-user_op::InferTmpSizeFn GenFwInferTmpSizeFn() {
-  return [](user_op::InferContext* ctx) {
-    const int64_t n = ctx->InputShape("input", 0).elem_cnt();
-    const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
-
-    if (reduction != ReductionType::kNone) { return GetCudaAlignedSize(n * sizeof(T)); }
-    return static_cast<size_t>(0);
-  };
-}
-
 }  // namespace
 
 #define REGISTER_BINARY_CROSS_ENTROPY_KERNEL(dtype)                                       \
@@ -241,7 +226,7 @@ user_op::InferTmpSizeFn GenFwInferTmpSizeFn() {
                        & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
                        & (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))   \
-      .SetInferTmpSizeFn(GenFwInferTmpSizeFn<dtype>());
+      .SetInferTmpSizeFn(loss::GenDefaultInferTmpSizeFn<dtype>());
 
 #define REGISTER_BINARY_CROSS_ENTROPY_GRAD_KERNEL(dtype)                                  \
   REGISTER_USER_KERNEL("binary_cross_entropy_grad")                                       \

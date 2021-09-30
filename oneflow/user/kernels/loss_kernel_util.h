@@ -18,10 +18,30 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/device/device_context.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 namespace user_op {
 namespace loss {
+
+#ifdef WITH_CUDA
+template<typename T>
+struct Float16To;
+
+template<>
+struct Float16To<const float16*> {
+  using type = const half*;
+};
+
+template<>
+struct Float16To<float16*> {
+  using type = half*;
+};
+
+#define FLOAT16_TO_HALF(x) \
+  Float16To<decltype(x)>::type x##_ = reinterpret_cast<Float16To<decltype(x)>::type>(x);
+
+#endif  // WITH_CUDA
 
 enum class ReductionType { kNone, kSum, kMean, kNotImplemented };
 
@@ -38,12 +58,24 @@ inline ReductionType GetReductionType(const std::string& reduction) {
 }
 
 template<typename T>
-void ApplyLossReduction(int64_t elem_cnt, const T* tmp_out, T* out,
-                        const ReductionType reduction_type);
+void ApplyLossReductionIfNeed(int64_t elem_cnt, const T* tmp_out, T* out,
+                              const ReductionType reduction_type);
 
 template<typename T>
-void ApplyLossReduction(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* out,
-                        const ReductionType reduction_type);
+void ApplyLossReductionIfNeed(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* out,
+                              const ReductionType reduction_type);
+
+template<typename T>
+user_op::InferTmpSizeFn GenDefaultInferTmpSizeFn(const std::string& input_name = "input",
+                                                 const std::string& reduction_name = "reduction") {
+  return [=](user_op::InferContext* ctx) {
+    const int64_t n = ctx->InputShape(input_name, 0).elem_cnt();
+    const ReductionType reduction = GetReductionType(ctx->Attr<std::string>(reduction_name));
+
+    if (reduction != ReductionType::kNone) { return GetCudaAlignedSize(n * sizeof(T)); }
+    return static_cast<size_t>(0);
+  };
+}
 
 }  // namespace loss
 }  // namespace user_op
