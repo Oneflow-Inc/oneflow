@@ -363,7 +363,6 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
   // NOTE(chengcheng): nccl donot support dynamic shape.
   if (logical_blob_desc.is_dynamic()) { return false; }
   CHECK_GT(logical_blob_desc.shape().elem_cnt(), 0);
-  CHECK_GT(logical_blob_desc.shape().NumAxes(), 0);
 
   if (src_hierarchy->NumAxes() == 1 && dst_hierarchy->NumAxes() == 1) {
     return TryBuildNcclBy1DHierarchy(ret, src_nd_sbp.sbp_parallel(0), dst_nd_sbp.sbp_parallel(0),
