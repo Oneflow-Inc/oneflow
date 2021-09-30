@@ -255,7 +255,7 @@ def normalize(
     np_std = np.array(std)
     # TODO: use tensor.any()
     # if (std == 0).any():
-    if np.count_nonzero(np_std==0) > 0:
+    if np.count_nonzero(np_std == 0) > 0:
         raise ValueError(
             "std evaluated to zero after conversion to {}, leading to division by zero.".format(
                 dtype
