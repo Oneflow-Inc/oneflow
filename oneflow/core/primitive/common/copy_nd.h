@@ -195,11 +195,12 @@ void SimplifyCopyNd(size_t num_dims, const int64_t* dst_dims, const int64_t* dst
   *movement_size = GetMovementSize<max_movement_size>(
       elem_size, *simplified_num_dims, dst, simplified_dst_dims, simplified_dst_pos, src,
       simplified_src_dims, simplified_src_pos, simplified_extent);
-  simplified_dst_dims[*simplified_num_dims - 1] /= (*movement_size / elem_size);
-  simplified_dst_pos[*simplified_num_dims - 1] /= (*movement_size / elem_size);
-  simplified_src_dims[*simplified_num_dims - 1] /= (*movement_size / elem_size);
-  simplified_src_pos[*simplified_num_dims - 1] /= (*movement_size / elem_size);
-  simplified_extent[*simplified_num_dims - 1] /= (*movement_size / elem_size);
+  size_t movement_elem_num = *movement_size / elem_size;
+  simplified_dst_dims[*simplified_num_dims - 1] /= movement_elem_num;
+  simplified_dst_pos[*simplified_num_dims - 1] /= movement_elem_num;
+  simplified_src_dims[*simplified_num_dims - 1] /= movement_elem_num;
+  simplified_src_pos[*simplified_num_dims - 1] /= movement_elem_num;
+  simplified_extent[*simplified_num_dims - 1] /= movement_elem_num;
 }
 
 void SimplifyThenLaunch(StreamContext* stream_ctx, DataType data_type, size_t num_dims, void* dst,
