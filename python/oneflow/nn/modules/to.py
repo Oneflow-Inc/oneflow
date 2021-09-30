@@ -15,6 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
+import oneflow._oneflow_internal.lazy_mode as lazy_mode
 
 
 def _tensor_to(input, device, dtype, copy=False):
@@ -55,7 +56,7 @@ def _consistent_tensor_to(input, device_type, dtype, copy=False):
     if device_type == input.placement.device_type and dtype == input.dtype:
         return input if not copy else input.clone()
 
-    if input.is_lazy:
+    if lazy_mode.is_enabled():
         return _lazy_consistent_tensor_to(input, device_type, dtype)
     else:
         return _eager_consistent_tensor_to(input, device_type, dtype)
