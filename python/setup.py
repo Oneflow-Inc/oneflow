@@ -45,6 +45,7 @@ REQUIRED_PACKAGES = [
     "tqdm",
     "requests",
     "pillow",
+    "dataclasses",
 ]
 
 
