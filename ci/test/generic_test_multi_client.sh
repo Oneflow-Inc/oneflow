@@ -16,7 +16,12 @@ cd ${test_tmp_dir}/$(basename $test_dir)
 
 gpu_num=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
 export ONEFLOW_TEST_DEVICE_NUM=1
-
+python3 $src_dir/ci/test/parallel_run.py \
+    --gpu_num=${gpu_num} \
+    --dir=${PWD} \
+    --timeout=1 \
+    --verbose \
+    --chunk=1
 if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_backend_grpc())')" == *"True"* ]]; then
     export ONEFLOW_TEST_DEVICE_NUM=2
     python3 -m oneflow.distributed.launch --nproc_per_node 2 -m unittest discover ${PWD} --failfast --verbose
