@@ -18,6 +18,7 @@ oneflow
             arctan, 
             arctanh, 
             argmax, 
+            argmin, 
             arange, 
             argsort, 
             argwhere,

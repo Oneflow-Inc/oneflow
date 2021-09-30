@@ -91,8 +91,8 @@ class GroupNorm(Module):
         self.eps = eps
         self.affine = affine
         if self.affine:
-            self.weight = flow.nn.Parameter(flow.Tensor(1, num_channels, 1))
-            self.bias = flow.nn.Parameter(flow.Tensor(1, num_channels, 1))
+            self.weight = flow.nn.Parameter(flow.Tensor(num_channels))
+            self.bias = flow.nn.Parameter(flow.Tensor(num_channels))
         else:
             self.register_parameter("weight", None)
             self.register_parameter("bias", None)
@@ -121,9 +121,9 @@ class GroupNorm(Module):
             normalized, shape=[origin_shape[0], self.num_channels, -1]
         )
         if self.weight is not None:
-            normalized = normalized * self.weight
+            normalized = normalized * self.weight.reshape(1, self.num_channels, 1)
         if self.bias is not None:
-            normalized = normalized + self.bias
+            normalized = normalized + self.bias.reshape(1, self.num_channels, 1)
         res = flow.reshape(normalized, shape=tuple(input.shape))
         return res
 

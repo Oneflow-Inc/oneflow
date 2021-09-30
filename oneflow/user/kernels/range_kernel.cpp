@@ -29,11 +29,29 @@ class RangeKernel final : public OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     T* output = out->mut_dptr<T>();
-    const int32_t start = ctx->Attr<int64_t>("start");
-    const int32_t delta = ctx->Attr<int64_t>("delta");
-    const int32_t limit = ctx->Attr<int64_t>("limit");
-    const int32_t range_elem_cnt =
-        (((limit - start) + delta - 1) / delta);  // Do the ceil division, ceil((limit-start)/delta)
+    const DataType dtype = ctx->Attr<DataType>("dtype");
+    int64_t range_elem_cnt = 0;
+    T start = 0;
+    T delta = 0;
+    T limit = 0;
+    if (IsIntegralDataType(dtype)) {
+      start = ctx->Attr<int64_t>("integer_start");
+      delta = ctx->Attr<int64_t>("integer_delta");
+      limit = ctx->Attr<int64_t>("integer_limit");
+      range_elem_cnt = ((limit - start + delta - 1) / delta);
+    } else {
+      // If we use static_cast<T>(start, delta, limit) and std::ceil to calculate range_elem_cnt, it
+      // will cause rounding error.
+      double float_start = ctx->Attr<double>("float_start");
+      double float_delta = ctx->Attr<double>("float_delta");
+      double float_limit = ctx->Attr<double>("float_limit");
+      range_elem_cnt =
+          static_cast<int64_t>(((float_limit - float_start) / float_delta)
+                               + 1);  // Do the ceil division, ceil((limit-start)/delta)
+      start = static_cast<T>(float_start);
+      delta = static_cast<T>(float_delta);
+      limit = static_cast<T>(float_limit);
+    }
     RangeFunctor<device_type, T>()(ctx->device_ctx(), start, delta, range_elem_cnt, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -45,6 +63,8 @@ class RangeKernel final : public OpKernel {
       & (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
 #define REGISTER_RANGE_KERNELS_WITH_DEVICE(device) \
+  REGISTER_RANGE_KERNEL(device, uint8_t)           \
+  REGISTER_RANGE_KERNEL(device, int8_t)            \
   REGISTER_RANGE_KERNEL(device, int32_t)           \
   REGISTER_RANGE_KERNEL(device, int64_t)           \
   REGISTER_RANGE_KERNEL(device, float)             \
@@ -56,7 +76,6 @@ REGISTER_RANGE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 // Register GPU version
 #ifdef WITH_CUDA
 REGISTER_RANGE_KERNELS_WITH_DEVICE(DeviceType::kGPU);
-REGISTER_RANGE_KERNEL(DeviceType::kGPU, float16);
 #endif
 }  // namespace user_op
 }  // namespace oneflow

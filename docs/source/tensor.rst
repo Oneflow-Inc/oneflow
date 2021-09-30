@@ -16,6 +16,7 @@ OneFlow Tensor Class
             arctan, 
             arctanh, 
             argmax, 
+            argmin, 
             argsort, 
             argwhere, 
             asin, 

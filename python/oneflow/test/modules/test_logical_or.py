@@ -45,6 +45,14 @@ def _test_tensor_logical_or(test_case, shape, device):
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
+def _test_tensor_scalar_logical_or(test_case, shape, scalar, dtype, device):
+    np_input = np.random.randint(3, size=shape)
+    input = flow.tensor(np_input, dtype=dtype, device=flow.device(device))
+    of_out = input.logical_or(scalar)
+    np_out = np.logical_or(np_input, scalar)
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestLogicalOrModule(flow.unittest.TestCase):
     def test_logical_or(test_case):
@@ -54,6 +62,16 @@ class TestLogicalOrModule(flow.unittest.TestCase):
             _test_tensor_logical_or,
         ]
         arg_dict["shape"] = [(2, 3), (2, 4, 5)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+    def test_scalar_logical_or(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [_test_tensor_scalar_logical_or]
+        arg_dict["shape"] = [(2, 3), (2, 4, 5)]
+        arg_dict["scalar"] = [1, 0]
+        arg_dict["dtype"] = [flow.float32, flow.int32]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])

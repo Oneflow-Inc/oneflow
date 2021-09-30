@@ -81,7 +81,6 @@ def get_current_module_space(mod: str):
     return y
 
 
-
 def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphModule:
 
     quantization_bit = 8
@@ -106,9 +105,20 @@ def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphM
         if x.target in insert_place:
             with gm.graph.inserting_after(x):
                 y = x.next
-                if isinstance(insert_op_state[x.target], flow.nn.Conv2d) and y.target in insert_place and isinstance(insert_op_state[y.target], flow.nn.BatchNorm2d):
+                if (
+                    isinstance(insert_op_state[x.target], flow.nn.Conv2d)
+                    and y.target in insert_place
+                    and isinstance(insert_op_state[y.target], flow.nn.BatchNorm2d)
+                ):
+                    now_target = get_current_module_space(x.target)
+                    if now_target == "":
+                        now_target = f"conv_bn.{cnt}"
+                    else:
+                        now_target = (
+                            f"{get_current_module_space(x.target)}.conv_bn.{cnt}"
+                        )
                     gm.add_submodule(
-                        f"{get_current_module_space(x.target)}.conv_bn.{cnt}",
+                        now_target,
                         QConvBN(
                             insert_op_state[x.target],
                             insert_op_state[y.target],
@@ -122,17 +132,19 @@ def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphM
                     y.replace_all_uses_with(x)
                     gm.graph.erase_node(y)
                     gm.delete_submodule(y.target)
-                    qconvbn = gm.graph.call_module(
-                        module_name=f"{get_current_module_space(x.target)}.conv_bn.{cnt}",
-                        args=x.args,
-                    )
+                    qconvbn = gm.graph.call_module(module_name=now_target, args=x.args,)
                     cnt = cnt + 1
                     x.replace_all_uses_with(qconvbn)
                     gm.graph.erase_node(x)
                     gm.delete_submodule(x.target)
                 elif isinstance(insert_op_state[x.target], flow.nn.Conv2d):
+                    now_target = get_current_module_space(x.target)
+                    if now_target == "":
+                        now_target = f"fake_conv2d.{cnt}"
+                    else:
+                        now_target = f"{get_current_module_space(x.target)}.fake_conv2d.{cnt}"
                     gm.add_submodule(
-                        f"{get_current_module_space(x.target)}.fake_conv2d.{cnt}",
+                        now_target,
                         QConv2d(
                             insert_op_state[x.target].in_channels,
                             insert_op_state[x.target].out_channels,
@@ -149,7 +161,7 @@ def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphM
                         ),
                     )
                     qconv = gm.graph.call_module(
-                        module_name=f"{get_current_module_space(x.target)}.fake_conv2d.{cnt}",
+                        module_name=now_target,
                         args=x.args,
                     )
                     cnt = cnt + 1
@@ -160,8 +172,13 @@ def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphM
                     bias = True
                     if insert_op_state[x.target].bias is None:
                         bias = False
+                    now_target = get_current_module_space(x.target)
+                    if now_target == "":
+                        now_target = f"fake_matmul.{cnt}"
+                    else:
+                        now_target = f"{get_current_module_space(x.target)}.fake_matmul.{cnt}"
                     gm.add_submodule(
-                        f"{get_current_module_space(x.target)}.fake_matmul.{cnt}",
+                        now_target,
                         QLinear(
                             insert_op_state[x.target].in_features,
                             insert_op_state[x.target].out_features,
@@ -174,7 +191,7 @@ def quantization_aware_training(gm: GraphModule, input, qconfig: dict) -> GraphM
                         ),
                     )
                     qmatmul = gm.graph.call_module(
-                        module_name=f"{get_current_module_space(x.target)}.fake_matmul.{cnt}",
+                        module_name=now_target,
                         args=x.args,
                     )
                     cnt = cnt + 1

@@ -30,7 +30,7 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 #include "oneflow/core/graph/stream_index_getter_registry_manager.h"
-#include "oneflow/core/primitive/memcpy.h"
+#include "oneflow/core/primitive/include/memcpy.h"
 
 namespace oneflow {
 

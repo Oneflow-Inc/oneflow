@@ -34,9 +34,16 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-void TensorImpl::set_requires_grad(bool requires_grad) {
+Maybe<void> TensorImpl::set_requires_grad(bool requires_grad) {
+  if (requires_grad) {
+    const DataType tensor_dtype = dtype();
+    CHECK_OR_RETURN(IsFloatingDataType(tensor_dtype) || tensor_dtype == DataType::kBFloat16
+                    || tensor_dtype == DataType::kFloat16)
+        << "RuntimeError: only Tensors of floating point can require gradients";
+  }
   requires_grad_ = requires_grad;
   if (autograd_meta_) { autograd_meta_->set_requires_grad(requires_grad); }
+  return Maybe<void>::Ok();
 }
 
 Maybe<Tensor> TensorImpl::acc_grad() const {
@@ -237,7 +244,7 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_s
     const auto& dtype_symbol = JUST(DType::Get(dtype));
     const auto& empty = JUST(functional::Empty(*cur_rank_phy_shape, dtype_symbol, device));
     cur_rank_phy_tensor = JUST(empty->AsMirroredTensor());
-    cur_rank_phy_tensor->set_requires_grad(requires_grad);
+    JUST(cur_rank_phy_tensor->set_requires_grad(requires_grad));
     cur_rank_phy_tensor->set_is_leaf(is_leaf);
   }
   auto* tensor_impl =

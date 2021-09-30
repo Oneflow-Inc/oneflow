@@ -577,6 +577,7 @@ class {module_name}(oneflow.nn.Module):
             )
 
         def wrapped_call(self, *args, **kwargs):
+            print(*args, **kwargs)
             try:
                 if cls_call is not None:
                     return cls_call(self, *args, **kwargs)
@@ -597,3 +598,20 @@ class {module_name}(oneflow.nn.Module):
         cls.__call__ = wrapped_call
 
         return python_code
+
+    def __call__(self, *args, **kwargs):
+        for hook in itertools.chain(self._forward_pre_hooks.values()):
+            result = hook(self, args)
+            if result is not None:
+                if not isinstance(result, tuple):
+                    result = (result,)
+                args = result
+
+        res = self.forward(*args, **kwargs)
+
+        for hook in itertools.chain(self._forward_hooks.values()):
+            result = hook(self, args, res)
+            if result is not None:
+                res = result
+
+        return res

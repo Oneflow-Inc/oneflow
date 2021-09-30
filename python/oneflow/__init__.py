@@ -73,6 +73,9 @@ from oneflow._C import greater
 from oneflow._C import greater as gt
 from oneflow._C import greater_equal
 from oneflow._C import greater_equal as ge
+from oneflow._C import logical_and
+from oneflow._C import logical_or
+from oneflow._C import logical_xor
 from oneflow._C import gelu
 from oneflow._C import mish
 from oneflow._C import sigmoid
@@ -236,6 +239,7 @@ from oneflow.nn.modules.pooling import (
 )
 from oneflow.nn.modules.arange import arange_op as arange
 from oneflow.nn.modules.argmax import argmax_op as argmax
+from oneflow.nn.modules.argmin import argmin_op as argmin
 from oneflow.nn.modules.argsort import argsort_op as argsort
 from oneflow.nn.modules.argwhere import argwhere_op as argwhere
 from oneflow.nn.modules.bmm import bmm_op as bmm
@@ -282,10 +286,10 @@ from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.random_ops import randint_op as randint
 from oneflow.nn.modules.random_ops import randperm_op as randperm
-from oneflow.nn.modules.reduce_ops import _max as max
-from oneflow.nn.modules.reduce_ops import _mean as mean
-from oneflow.nn.modules.reduce_ops import _min as min
-from oneflow.nn.modules.reduce_ops import _sum as sum
+from oneflow.nn.modules.reduce_ops import max_op as max
+from oneflow.nn.modules.reduce_ops import min_op as min
+from oneflow.nn.modules.reduce_ops import sum_op as sum
+from oneflow.nn.modules.reduce_ops import mean_op as mean
 from oneflow.nn.modules.reduce_ops import prod_op as prod
 from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape

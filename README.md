@@ -221,8 +221,9 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 - Clone the demo code from OneFlow documentation
   ```
   git clone https://github.com/Oneflow-Inc/oneflow-documentation.git
-  cd oneflow-documentation/cn/docs/code/quick_start/
+  cd oneflow-documentation/cn/docs/single_client/code/quick_start/
   ```
+
 - Run it in Python
 
   ```
@@ -238,7 +239,7 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
   0.35245502
   ...
   ```
-- More info on this demo, please refer to [doc on quick start](http://docs.oneflow.org/quick_start/quickstart_in_3_min.html).
+- More info on this demo, please refer to [doc on quick start](https://docs.oneflow.org/master/single_client/quick_start/quickstart_in_3_min.html).
 </details>
 
 ## Documentation

@@ -194,6 +194,23 @@ class ConsistentTensorWithShapeCtorFunctor {
   }
 };
 
+class AssignLocalTensorFunctor {
+ public:
+  AssignLocalTensorFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("assign").Input("ref").Input("value").Build());
+  }
+  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ref,
+                         const std::shared_ptr<one::Tensor>& value) const {
+    CHECK_OR_RETURN(ref->is_local() && value->is_local())
+        << "Both ref and value must be local tensor.";
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, value}));
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -206,6 +223,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConsistentTensorWithDataCtorFunctor>("ConsistentTensorWithDataCtor");
   m.add_functor<impl::TensorWithShapeCtorFunctor>("TensorWithShapeCtor");
   m.add_functor<impl::ConsistentTensorWithShapeCtorFunctor>("ConsistentTensorWithShapeCtor");
+  m.add_functor<impl::AssignLocalTensorFunctor>("AssignLocalTensorFunctor");
 }
 
 }  // namespace functional

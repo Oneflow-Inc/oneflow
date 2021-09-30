@@ -28,8 +28,6 @@ limitations under the License.
 
 namespace oneflow {
 
-class ObjectMsgAllocator;
-
 namespace vm {
 
 struct Stream;

@@ -160,6 +160,18 @@ def _ne(self, other):
     return self.ne(other)
 
 
+def _and(self, other):
+    return self.logical_and(other)
+
+
+def _or(self, other):
+    return self.logical_or(other)
+
+
+def _xor(self, other):
+    return self.logical_xor(other)
+
+
 def _contiguous(self):
     # TODO: support stride mechanism
     return self
@@ -561,17 +573,13 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
         assert isinstance(other, Tensor)
         assert other.is_consistent
         other = other.to_consistent(placement=self.placement, sbp=self.sbp)
-        _copy_from_numpy_to_eager_local_tensor(
-            self.to_local(), other.to_local().numpy()
-        )
+        flow._C.assign_local_tensor(self.to_local(), other.to_local())
     else:
-        if isinstance(other, (Tensor)):
-            src_np = other.numpy()
-        else:
+        if not isinstance(other, (Tensor)):
             assert isinstance(other, np.ndarray)
-            src_np = other
-
-        _copy_from_numpy_to_eager_local_tensor(self, src_np)
+            _copy_from_numpy_to_eager_local_tensor(self, other)
+        else:
+            flow._C.assign_local_tensor(self, other.to(device=self.device))
 
 
 def _get_device(self):
@@ -613,6 +621,9 @@ def RegisterMethods():
     Tensor.__lt__ = _lt
     Tensor.__ge__ = _ge
     Tensor.__le__ = _le
+    Tensor.__and__ = _and
+    Tensor.__or__ = _or
+    Tensor.__xor__ = _xor
     Tensor.__mul__ = _mul
     Tensor.__rmul__ = _rmul
     Tensor.__add__ = _add

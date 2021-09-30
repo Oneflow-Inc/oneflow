@@ -16,11 +16,13 @@ limitations under the License.
 import oneflow as flow
 import oneflow.nn as nn
 import unittest
+import oneflow.unittest
 import numpy as np
 from oneflow.fx import symbolic_trace
 
 from oneflow import Tensor
 from typing import Type, Any, Callable, Union, List, Optional
+from oneflow.test_utils.automated_test_util import *
 
 
 def conv3x3(

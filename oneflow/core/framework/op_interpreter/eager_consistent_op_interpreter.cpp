@@ -111,6 +111,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
       << GetDynamicOpConsistentFailedDebugString(user_op_expr, *kernel);
   std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(inputs.size());
+  // expand lifetime of boxing outputs to the end of this function
+  TensorTuple boxing_outputs;
   for (int i = 0; i < inputs.size(); ++i) {
     std::shared_ptr<Tensor> input = inputs.at(i);
     const auto& infered_input_meta = result->input_tensor_metas().at(i);
@@ -120,6 +122,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
         && infered_input_meta->nd_sbp() != JUST(input->nd_sbp())) {
       input = JUST(GetBoxingOutput(input, infered_input_meta->nd_sbp(),
                                    infered_input_meta->parallel_desc(), parallel_id.has_value()));
+      boxing_outputs.push_back(input);
     }
     const auto& local_tensor = JUST(input->cur_rank_phy_tensor());
     input_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());

@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/test_util.h"
-#include "oneflow/core/common/cached_object_msg_allocator.h"
 #include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {

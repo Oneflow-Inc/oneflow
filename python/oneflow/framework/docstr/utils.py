@@ -33,7 +33,6 @@ def add_docstr(fun, docstr: str):
 
 
 def reset_docstr(o, docstr):
-    _test_docstr(docstr)
     if type(o) == type:
         assert hasattr(o, "__doc__"), str(o) + " does not have a docstring!"
         setattr(o, "__doc__", docstr)

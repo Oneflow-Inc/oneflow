@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_INSTRUCTIONS_BUILDER_H_
 
 #include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
-#include "oneflow/core/eager/run_lazy_job_phy_instr_operand.h"
+#include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
 #include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/id_generator.h"
@@ -98,10 +98,14 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   vm::InstructionMsgList* mut_instruction_list() { return instruction_list_; }
 
   // Build VM execution instructions with NNGraph's inputs/outputs/parameters for NNGraph execution.
-  Maybe<void> RunLazyJob(const one::EagerBlobObjectListPtr& inputs,
-                         const one::EagerBlobObjectListPtr& outputs,
-                         const one::EagerBlobObjectListPtr& parameters,
-                         const std::shared_ptr<NNGraphIf>& nn_graph) const;
+  Maybe<void> LaunchLazyJob(const one::EagerBlobObjectListPtr& inputs,
+                            const one::EagerBlobObjectListPtr& outputs,
+                            const one::EagerBlobObjectListPtr& parameters,
+                            const std::shared_ptr<NNGraphIf>& nn_graph);
+
+  // soft sync for inputs/outputs buffers of NNGraph
+  Maybe<void> SoftSyncNNGraphBuffers(const one::EagerBlobObjectListPtr& eager_blob_objects,
+                                     const std::shared_ptr<NNGraphIf>& nn_graph);
 
   Maybe<compatible_py::BlobObject> PackPhysicalBlobsToLogicalBlob(
       const std::vector<std::shared_ptr<compatible_py::BlobObject>>& physical_blob_objects,
@@ -457,6 +461,21 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   vm::cfg::EagerSymbolList* mut_eager_symbol_list() { return eager_symbol_list_; }
 
   vm::IdGenerator* mut_id_generator() { return id_generator_.get(); }
+
+ private:
+  Maybe<vm::InputCriticalSectionPhyInstrOperand> MakeInputCriticalSection(
+      const one::EagerBlobObjectListPtr& eager_blob_object,
+      const std::shared_ptr<NNGraphIf>& nn_graph);
+  Maybe<vm::ParameterCriticalSectionPhyInstrOperand> MakeParameterCriticalSection(
+      const one::EagerBlobObjectListPtr& eager_blob_object,
+      const std::shared_ptr<NNGraphIf>& nn_graph);
+  Maybe<vm::OutputCriticalSectionPhyInstrOperand> MakeOutputCriticalSection(
+      const one::EagerBlobObjectListPtr& eager_blob_object,
+      const std::shared_ptr<NNGraphIf>& nn_graph);
+  Maybe<vm::NcclCriticalSectionPhyInstrOperand> MakeNcclCriticalSection();
+
+  Maybe<ObjectMsgPtr<LocalDepObject>> WaitUntilZero(
+      const std::shared_ptr<std::atomic<int64_t>>& ref_cnt);
 
   std::shared_ptr<vm::IdGenerator> id_generator_;
   vm::InstructionMsgList* instruction_list_;

@@ -2053,36 +2053,35 @@ def expand(
     assert len(expand_size) >= len(
         x.shape
     ), "The desired expanded dims should not be less than the input dims."
-    original_stride = [1]
-    for i in range(len(x.shape) - 2, -1, -1):
-        original_stride.insert(0, original_stride[0] * x.shape[i + 1])
-    new_size = []
-    new_stride = []
-    diff = len(expand_size) - len(x.shape)
-    for i in range(len(expand_size) - 1, -1, -1):
-        if i >= diff:
-            if expand_size[i] == -1 or expand_size[i] == x.shape[i - diff]:
-                new_size.insert(0, x.shape[i - diff])
-                new_stride.insert(0, original_stride[i - diff])
-            else:
-                assert expand_size[i] >= 1 and x.shape[i - diff] == 1
-                new_size.insert(0, expand_size[i])
-                new_stride.insert(0, 0)
-        else:
-            assert expand_size[i] >= 1
-            new_size.insert(0, expand_size[i])
-            if expand_size[i] == 1:
-                new_stride.insert(0, new_stride[0])
-            else:
-                new_stride.insert(0, 0)
+    # original_stride = [1]
+    # for i in range(len(x.shape) - 2, -1, -1):
+    #     original_stride.insert(0, original_stride[0] * x.shape[i + 1])
+    # new_size = []
+    # new_stride = []
+    # diff = len(expand_size) - len(x.shape)
+    # for i in range(len(expand_size) - 1, -1, -1):
+    #     if i >= diff:
+    #         if expand_size[i] == -1 or expand_size[i] == x.shape[i - diff]:
+    #             new_size.insert(0, x.shape[i - diff])
+    #             new_stride.insert(0, original_stride[i - diff])
+    #         else:
+    #             assert expand_size[i] >= 1 and x.shape[i - diff] == 1
+    #             new_size.insert(0, expand_size[i])
+    #             new_stride.insert(0, 0)
+    #     else:
+    #         assert expand_size[i] >= 1
+    #         new_size.insert(0, expand_size[i])
+    #         if expand_size[i] == 1:
+    #             new_stride.insert(0, new_stride[0])
+    #         else:
+    #             new_stride.insert(0, 0)
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Expand_"))
         .Op("expand")
         .Input("in", [x])
         .Output("out")
-        .Attr("in_shape", list(x.shape))
-        .Attr("out_shape", new_size)
-        .Attr("stride", new_stride)
+        .Attr("logical_in_shape", list(x.shape))
+        .Attr("logical_expand_shape", expand_size)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]

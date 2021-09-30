@@ -89,6 +89,9 @@ Maybe<const std::string&> GetLocalCallInstructionName(const std::string& device_
 
 extern Maybe<Symbol<ParallelDesc>> (*Placement4Device)(Symbol<Device> device);
 
+Maybe<void> ParsingDeviceTag(const std::string& device_tag, std::string* device_name,
+                             int* device_index);
+
 }  // namespace oneflow
 
 namespace std {

@@ -21,6 +21,8 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+class Tensor;
+
 // The default seed is selected to be a large number
 // with good distribution of 0s and 1s in bit representation.
 static constexpr uint64_t default_rng_seed_val = 67280421310721;
@@ -37,6 +39,11 @@ class Generator final {
 
   // Reset current generator by a non-deterministic random seed, and returns it.
   uint64_t seed();
+
+  Maybe<Symbol<Device>> device() const { return impl_->device(); }
+
+  Maybe<Tensor> GetState() const { return impl_->GetState(); }
+  Maybe<void> SetState(const std::shared_ptr<Tensor>& state) { return impl_->SetState(state); }
 
   const std::shared_ptr<GeneratorImpl>& impl() const { return impl_; }
 

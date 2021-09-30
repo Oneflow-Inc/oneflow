@@ -84,11 +84,13 @@ Maybe<BoxingExprIf> RawMainBoxingExpr() {
                      | JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("ccl-p-to-b"))
                      | JUST(BoxingExpr("nccl-s-to-b")) | JUST(BoxingExpr("ccl-s-to-b"))
                      | JUST(BoxingExpr("nccl-s-to-s")) | JUST(BoxingExpr("ccl-s-to-s"))
-                     | JUST(BoxingExpr("nccl-p-to-s")) | JUST(BoxingExpr("symmetric-b-to-p"))
-                     | JUST(BoxingExpr("symmetric-b-to-s")) | JUST(BoxingExpr("symmetric-s-to-p"))
+                     | JUST(BoxingExpr("nccl-p-to-s")) | JUST(BoxingExpr("ccl-p-to-s"))
+                     | JUST(BoxingExpr("symmetric-b-to-p")) | JUST(BoxingExpr("symmetric-b-to-s"))
+                     | JUST(BoxingExpr("symmetric-s-to-p"))
                      | JUST(BoxingExpr("symmetric-nd-sbp-to-nd-sbp"))
                      | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(BoxingExpr("naive-s-to-s"))
-                     | JUST(BoxingExpr("naive-1-to-1")) | JUST(OneToNBoxingExpr())
+                     | JUST(BoxingExpr("naive-1-to-1")) | JUST(BoxingExpr("naive-s-to-b"))
+                     | JUST(BoxingExpr("naive-b-to-s")) | JUST(OneToNBoxingExpr())
                      | JUST(NToOneBoxingExpr()) | JUST(GenericBoxingExpr());
   return core | JUST(OptionalCudaCopy(core));
 }

@@ -93,7 +93,7 @@ class Tensor {
   virtual Maybe<Tensor> clone() const = 0;
 
   // Setters for autograd
-  virtual void set_requires_grad(bool requires_grad) = 0;
+  virtual Maybe<void> set_requires_grad(bool requires_grad) = 0;
   virtual Maybe<void> set_retain_grad(bool retain_grad) = 0;
   virtual void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) = 0;
   virtual const std::shared_ptr<FunctionNode>& mut_grad_fn_node() = 0;
@@ -193,7 +193,7 @@ class StaticZerosTensor final : public Tensor {
   Maybe<Tensor> clone() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
   // Setters for autograd
-  void set_requires_grad(bool requires_grad) override { PRINT_BUG_PROMPT_AND_ABORT(); }
+  Maybe<void> set_requires_grad(bool requires_grad) override { PRINT_BUG_PROMPT_AND_ABORT(); }
   Maybe<void> set_retain_grad(bool retain_grad) override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
     PRINT_BUG_PROMPT_AND_ABORT();
@@ -264,7 +264,7 @@ class Parameter final : public TensorIf<Parameter> {
  public:
   Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad) {
     this->tensor_ = tensor->detach().GetPtrOrThrow();
-    this->tensor_->set_requires_grad(requires_grad);
+    CHECK_JUST(this->tensor_->set_requires_grad(requires_grad));
   }
 
   const std::shared_ptr<const Shape>& shape() const override { return tensor_->shape(); }
@@ -329,7 +329,7 @@ class Parameter final : public TensorIf<Parameter> {
   Maybe<Tensor> detach() const override { return tensor_->detach(); }
   Maybe<Tensor> clone() const override { return tensor_->clone(); }
 
-  void set_requires_grad(bool requires_grad) override {
+  Maybe<void> set_requires_grad(bool requires_grad) override {
     return tensor_->set_requires_grad(requires_grad);
   }
   Maybe<void> set_retain_grad(bool retain_grad) override {
@@ -354,7 +354,7 @@ class Parameter final : public TensorIf<Parameter> {
         << "You can't assign copy between tensors with different type";
     bool old_requires_grad = tensor_->requires_grad();
     this->tensor_ = JUST(other->detach());
-    this->tensor_->set_requires_grad(old_requires_grad);
+    JUST(this->tensor_->set_requires_grad(old_requires_grad));
     return Maybe<void>::Ok();
   }
 
@@ -440,7 +440,11 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
     return impl_->set_acc_grad(grad);
   }
-  void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
+  Maybe<void> set_requires_grad(bool requires_grad) override {
+    JUST(impl_->set_requires_grad(requires_grad));
+    if (!requires_grad) { set_grad_fn_node(nullptr); }
+    return Maybe<void>::Ok();
+  }
   Maybe<void> set_retain_grad(bool retain_grad) override {
     return impl_->set_retain_grad(retain_grad);
   }
@@ -546,7 +550,12 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
     return impl_->set_acc_grad(grad);
   }
   Maybe<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
-  void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
+  Maybe<void> set_requires_grad(bool requires_grad) override {
+    // return impl_->set_requires_grad(requires_grad);
+    JUST(impl_->set_requires_grad(requires_grad));
+    if (!requires_grad) { set_grad_fn_node(nullptr); }
+    return Maybe<void>::Ok();
+  }
   Maybe<void> set_retain_grad(bool retain_grad) override {
     return impl_->set_retain_grad(retain_grad);
   }
