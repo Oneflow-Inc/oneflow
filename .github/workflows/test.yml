@@ -86,11 +86,19 @@ jobs:
         id: git_push
         if: ${{ failure() }}
         run: |
+          git diff -p > license_and_format.patch
+          cat license_and_format.patch
           git config --global user.email "ci-bot@oneflow.org"
           git config --global user.name "oneflow-ci-bot"
           git add -u
           git commit -m "auto format by CI"
           git push
+      - name: Upload patch
+        if: ${{ failure() && steps.git_push.outcome == 'failure' }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: license_and_format-${{ github.sha }}.patch
+          path: license_and_format.patch
       - name: Please request CI again
         if: ${{ failure() }}
         run: |
