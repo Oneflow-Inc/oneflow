@@ -124,6 +124,7 @@ from oneflow._C import softplus
 from oneflow._C import tril
 from oneflow._C import triu
 from oneflow._C import pad
+from oneflow._C import transpose
 
 from . import sbp
 import atexit
@@ -283,6 +284,7 @@ from oneflow.nn.modules.math_ops import variance_op as var
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
 from oneflow.nn.modules.narrow import narrow_op as narrow
 from oneflow.nn.modules.nonzero import nonzero_op as nonzero
+from oneflow.nn.modules.numel import numel_op as numel
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.random_ops import randint_op as randint
@@ -296,7 +298,6 @@ from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.permute import permute_op as permute
-from oneflow.nn.modules.scatter import _scatter_nd_op as scatter_nd
 from oneflow.nn.modules.slice import slice_op as slice
 from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.slice import logical_slice_assign_op as logical_slice_assign
@@ -315,7 +316,6 @@ from oneflow.nn.modules.tile import tile_op as tile
 from oneflow.nn.modules.to import to_op as to
 from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
 from oneflow.nn.modules.consistent_cast import to_local_op as to_local
-from oneflow.nn.modules.transpose import transpose_op as transpose
 from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
@@ -356,3 +356,4 @@ from oneflow.nn.modules.relu import relu_op as relu
 import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
+import oneflow.multiprocessing

@@ -44,7 +44,7 @@ __global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, T* dptr,
                             const T high) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
   curandState localState = state[id];
-  if (id < elem_cnt) { dptr[id] = GenUniform<T>(&localState, low, high); }
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) { dptr[i] = GenUniform<T>(&localState, low, high); }
   state[id] = localState;
 }
 
