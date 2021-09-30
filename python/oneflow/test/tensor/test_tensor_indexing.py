@@ -13,12 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import unittest
 import random
+import unittest
 from collections import OrderedDict
 
 import numpy as np
-
 import oneflow as flow
 import oneflow.unittest
 
@@ -153,6 +152,26 @@ def test_combining_indexing(test_case, numpy_x):
     )
 
 
+def test_mask_setitem(test_case, numpy_x):
+    x = flow.tensor(numpy_x)
+
+    # mask tensor index
+    mask = np.random.rand(*numpy_x.shape).astype(np.float32)
+    y = flow.tensor(mask)
+
+    # broadcast set
+    x[y > 0.5] = 1.0
+    numpy_x[mask > 0.5] = 1.0
+    test_case.assertTrue(np.allclose(numpy_x, x.numpy()))
+
+    # elementwise set
+    update = np.random.randn((mask > 0.5).sum()).astype(np.float32)
+    tensor_update = flow.tensor(update)
+    x[y > 0.5] = tensor_update
+    numpy_x[mask > 0.5] = update
+    test_case.assertTrue(np.allclose(numpy_x, x.numpy()))
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestTensorIndexing(flow.unittest.TestCase):
     def test_basic_slice(test_case):
@@ -184,6 +203,16 @@ class TestTensorIndexing(flow.unittest.TestCase):
 
         numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
         test_combining_indexing(test_case, numpy_x)
+
+    def test_mask_setitem(test_case):
+        numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
+        test_mask_setitem(test_case, numpy_x)
+
+        numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6]).astype(np.float32)
+        test_mask_setitem(test_case, numpy_x)
+
+        numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
+        test_mask_setitem(test_case, numpy_x)
 
 
 if __name__ == "__main__":
