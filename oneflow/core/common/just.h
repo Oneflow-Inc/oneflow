@@ -153,3 +153,6 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
 #endif
 
 #endif  // ONEFLOW_CORE_COMMON_JUST_H_
+
+   int        a   ;
+  
