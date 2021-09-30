@@ -1458,6 +1458,27 @@ class TestTensor(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
         return x.diag()
 
+    @flow.unittest.skip_unless_1n4d()
+    def test_construct_consistent_tensor_by_numpy(test_case):
+        x = np.ones((4, 4), dtype=np.int32)
+        if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+            device_type = "cpu"
+        else:
+            device_type = "cuda"
+        placement = flow.placement(device_type, {0: [0, 1, 2, 3]})
+        y = flow.tensor(
+            x,
+            dtype=flow.float32,
+            placement=placement,
+            sbp=[flow.sbp.split(0)],
+            requires_grad=False,
+        )
+        test_case.assertTrue(tensor.dtype == flow.float32)
+        test_case.assertTrue(
+            np.allclose(y.to_local().numpy(), np.ones((1, 4), dtype=np.float32))
+        )
+        test_case.assertEqual(y.placement, placement)
+
 
 if __name__ == "__main__":
     unittest.main()
