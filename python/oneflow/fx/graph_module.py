@@ -577,7 +577,6 @@ class {module_name}(oneflow.nn.Module):
             )
 
         def wrapped_call(self, *args, **kwargs):
-            print(*args, **kwargs)
             try:
                 if cls_call is not None:
                     return cls_call(self, *args, **kwargs)
