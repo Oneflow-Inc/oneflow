@@ -324,12 +324,12 @@ void Instruction::__Init__(InstructionMsg* instr_msg, Stream* stream,
   mutable_status_buffer();
   reset_instr_msg(instr_msg);
   set_stream(stream);
-  stream_type().InitInstructionStatus(*stream, mutable_status_buffer());
+  stream_type().InitInstructionStatusIf(*stream, mutable_status_buffer());
   *mutable_parallel_desc() = parallel_desc;
 }
 
 void Instruction::__Delete__() {
-  stream_type().DeleteInstructionStatus(stream(), mut_status_buffer());
+  stream_type().DeleteInstructionStatusIf(stream(), mut_status_buffer());
   mut_in_edges()->Clear();
   mut_out_edges()->Clear();
 }
