@@ -13,47 +13,49 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_REF_CNT_VM_INSTRUCTION_STATUS_QUERIER_H_
-#define ONEFLOW_CORE_VM_REF_CNT_VM_INSTRUCTION_STATUS_QUERIER_H_
+#ifndef ONEFLOW_CORE_EAGER_CRITICAL_SECTION_QUERIER_H_
+#define ONEFLOW_CORE_EAGER_CRITICAL_SECTION_QUERIER_H_
 
 #include <atomic>
 #include <memory>
+#include "oneflow/core/device/event_record.h"
 
 namespace oneflow {
 namespace vm {
 
-class RefCntInstrStatusQuerier {
+class CriticalSectionStatusQuerier final {
  public:
-  ~RefCntInstrStatusQuerier() = default;
+  ~CriticalSectionStatusQuerier() = default;
 
-  bool done() const { return launched_ && *ref_cnt_ == 0; }
-  void SetRefCntAndSetLaunched(const std::shared_ptr<std::atomic<int64_t>>& ref_cnt) {
+  bool QueryDone() const { return launched_ && event_record_->QueryDone(); }
+
+  void SetLaunched(const std::shared_ptr<EventRecord>& event_record) {
     // No lock needed. This function will be called only one time.
     // In most cases, errors will be successfully detected by CHECK
     // even though run in different threads.
     CHECK(!launched_);
-    ref_cnt_ = ref_cnt;
+    event_record_ = event_record;
     launched_ = true;
   }
 
-  static const RefCntInstrStatusQuerier* Cast(const char* mem_ptr) {
-    return reinterpret_cast<const RefCntInstrStatusQuerier*>(mem_ptr);
+  static const CriticalSectionStatusQuerier* Cast(const char* mem_ptr) {
+    return reinterpret_cast<const CriticalSectionStatusQuerier*>(mem_ptr);
   }
-  static RefCntInstrStatusQuerier* MutCast(char* mem_ptr) {
-    return reinterpret_cast<RefCntInstrStatusQuerier*>(mem_ptr);
+  static CriticalSectionStatusQuerier* MutCast(char* mem_ptr) {
+    return reinterpret_cast<CriticalSectionStatusQuerier*>(mem_ptr);
   }
-  static RefCntInstrStatusQuerier* PlacementNew(char* mem_ptr) {
-    return new (mem_ptr) RefCntInstrStatusQuerier();
+  static CriticalSectionStatusQuerier* PlacementNew(char* mem_ptr) {
+    return new (mem_ptr) CriticalSectionStatusQuerier();
   }
 
  private:
-  RefCntInstrStatusQuerier() : launched_(false), ref_cnt_() {}
+  explicit CriticalSectionStatusQuerier() : launched_(false) {}
 
   std::atomic<bool> launched_;
-  std::shared_ptr<std::atomic<int64_t>> ref_cnt_;
+  std::shared_ptr<EventRecord> event_record_;
 };
 
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_REF_CNT_VM_INSTRUCTION_STATUS_QUERIER_H_
+#endif  // ONEFLOW_CORE_EAGER_CRITICAL_SECTION_QUERIER_H_
