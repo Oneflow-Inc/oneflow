@@ -51,7 +51,7 @@ class NaiveEventRecord final : public EventRecord {
   NaiveEventRecord& operator=(const NaiveEventRecord&) = delete;
   NaiveEventRecord& operator=(NaiveEventRecord&&) = delete;
 
-  using EventRecord::EventRecord;
+  NaiveEventRecord() = default;
   ~NaiveEventRecord() = default;
 
   bool QueryDone() const { return true; }

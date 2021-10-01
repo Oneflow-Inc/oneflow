@@ -22,6 +22,7 @@ namespace vm {
 
 namespace {
 
+#ifdef WITH_CUDA
 Maybe<LocalDepObject*> RawGetEagerNcclLocalDepObject(const std::string& type) {
   const auto& device = JUST(Device::New(type));
   const auto& local_dep_object = device->mut_transport_local_dep_object();
@@ -31,6 +32,7 @@ Maybe<LocalDepObject*> RawGetEagerNcclLocalDepObject(const std::string& type) {
 
 static constexpr auto* GetEagerNcclLocalDepObject =
     DECORATE(&RawGetEagerNcclLocalDepObject, ThreadLocalCopiable);
+#endif  // WITH_CUDA
 
 }  // namespace
 
