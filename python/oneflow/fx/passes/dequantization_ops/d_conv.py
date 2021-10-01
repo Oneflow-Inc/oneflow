@@ -60,10 +60,6 @@ class DConv2d(flow.nn.Conv2d):
             quantization_scheme=quantization_scheme,
         )
 
-        weight_scale, weight_zero_point = self.min_max_observer(self.weight)
-        self.weight = flow.nn.Parameter(
-            self.fake_quantization(self.weight, weight_scale, weight_zero_point)
-        )
         self.register_buffer("new_zero", flow.Tensor(1))
         self.new_zero.fill_(0)
 
