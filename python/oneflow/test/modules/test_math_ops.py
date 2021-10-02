@@ -443,5 +443,23 @@ class TestMaximum(flow.unittest.TestCase):
         return torch.maximum(x, y)
 
 
+@flow.unittest.skip_unless_1n1d()
+class TestFloordiv(flow.unittest.TestCase):
+    @autotest(auto_backward=False)
+    def test_elementwise_floordiv_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        y = random_pytorch_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+
+        return torch.floor_divide(x, y)
+
+    @autotest(auto_backward=False)
+    def test_tensor_floordiv_scalar_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        y = random().to(int)
+        return torch.floor_divide(x, y)
+
+
 if __name__ == "__main__":
     unittest.main()

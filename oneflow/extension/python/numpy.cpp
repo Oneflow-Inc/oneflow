@@ -60,15 +60,12 @@ Maybe<DataType> GetOFDataTypeFromNpArray(PyArrayObject* array) {
 // defined in numpy_internal.h
 // Reference:
 // https://numpy.org/doc/stable/reference/c-api/array.html#importing-the-api
-void InitNumpyCAPI() {
-  CatchRegistryError([]() -> Maybe<void> {
-    CHECK_ISNULL_OR_RETURN(PyArray_API);
-    CHECK_EQ_OR_RETURN(_import_array(), 0);
-    return Maybe<void>::Ok();
-  });
+Maybe<void> InitNumpyCAPI() {
+  CHECK_ISNULL_OR_RETURN(PyArray_API);
+  CHECK_EQ_OR_RETURN(_import_array(), 0)
+      << ". Unable to import Numpy array, try to upgrade Numpy version!";
+  return Maybe<void>::Ok();
 }
-
-COMMAND(InitNumpyCAPI());
 
 }  // namespace numpy
 }  // namespace oneflow
