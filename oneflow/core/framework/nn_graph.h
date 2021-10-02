@@ -43,10 +43,10 @@ class NNGraph final : public NNGraphIf {
   int64_t variable_op_size() const;
 
   Maybe<void> RegisterInputOpNamesAndTensors(
-      const std::vector<std::string>& input_op_names,
+      const std::vector<std::string>& inputs_op_names,
       const std::vector<std::shared_ptr<one::Tensor>>& input_tensors);
   Maybe<void> RegisterOutputOpNamesAndTensors(
-      const std::vector<std::string>& output_op_names,
+      const std::vector<std::string>& outputs_op_names,
       const std::vector<std::shared_ptr<one::Tensor>>& output_tensors);
   Maybe<void> RegisterVariableOpNamesAndTensors(
       const std::vector<std::string>& variable_op_names,
@@ -62,8 +62,8 @@ class NNGraph final : public NNGraphIf {
   void CloseRuntimeBuffers();
 
   std::string name_;
-  std::vector<std::string> input_op_names_;
-  std::vector<std::string> output_op_names_;
+  std::vector<std::string> inputs_op_names_;
+  std::vector<std::string> outputs_op_names_;
   std::vector<bool> input_tensors_valid_;
   std::vector<bool> output_tensors_valid_;
   std::vector<std::string> inputs_tensor_meta_str_;

@@ -38,7 +38,8 @@ void CriticalSectionWaitTickKernel::ForwardDataContent(KernelContext* ctx) const
   CHECK(op_conf().has_critical_section_wait_conf());
   const std::string& buffer_name = op_conf().critical_section_wait_conf().buffer_name();
   std::shared_ptr<CriticalSectionInstance> foreign_critical_section_instance;
-  BufferStatus buffer_status = buffer_mgr->Get(buffer_name)->Receive(&foreign_critical_section_instance);
+  BufferStatus buffer_status =
+      buffer_mgr->Get(buffer_name)->Receive(&foreign_critical_section_instance);
   CHECK_EQ(buffer_status, kBufferStatusSuccess);
 }
 

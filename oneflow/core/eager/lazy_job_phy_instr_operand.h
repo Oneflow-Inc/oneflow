@@ -41,9 +41,8 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
   LaunchLazyJobPhyInstrOperand(LaunchLazyJobPhyInstrOperand&&) = delete;
   ~LaunchLazyJobPhyInstrOperand() override = default;
 
-  LaunchLazyJobPhyInstrOperand(
-      const std::shared_ptr<NNGraphIf>& nn_graph,
-      const one::EagerBlobObjectListPtr& param_blob_objects)
+  LaunchLazyJobPhyInstrOperand(const std::shared_ptr<NNGraphIf>& nn_graph,
+                               const one::EagerBlobObjectListPtr& param_blob_objects)
       : nn_graph_(nn_graph), param_blob_objects_(param_blob_objects) {}
 
   const std::shared_ptr<NNGraphIf>& nn_graph() const { return nn_graph_; }

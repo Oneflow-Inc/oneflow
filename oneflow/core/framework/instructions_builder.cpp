@@ -280,7 +280,8 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const one::EagerBlobObjectListPtr
   JUST(SoftSyncNNGraphBuffers(parameters, nn_graph));
   {
     // instruction chain: [CriticalSectionBegin] -> [CriticalSectionEnd]
-    // instructions LaunchLazyJob are launched independent from instruction chains [CriticalSectionBegin] -> [CriticalSectionEnd]
+    // instructions LaunchLazyJob are launched independent from instruction chains
+    // [CriticalSectionBegin] -> [CriticalSectionEnd]
     const auto& input_op_name2end_event_record =
         std::make_shared<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>();
     {

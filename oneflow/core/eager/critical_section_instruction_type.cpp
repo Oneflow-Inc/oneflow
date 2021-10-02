@@ -58,11 +58,11 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
       const auto& critical_section_instance = MakeCriticalSectionInstance(phy_instr_operand);
       const auto& job_name = job_instance->job_name();
       auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
-      for (int i = 0; i < phy_instr_operand->interface_op_names().size(); ++i) {
+      for (int i = 0; i < phy_instr_operand->interfaces_op_names().size(); ++i) {
         if (phy_instr_operand->interfaces_valid().at(i)) {
-          const std::string& interface_op_name = phy_instr_operand->interface_op_names().at(i);
+          const std::string& interface_op_name = phy_instr_operand->interfaces_op_names().at(i);
           const auto& buffer_name =
-            phy_instr_operand->GetInterfaceBufferName(job_name, interface_op_name);
+              phy_instr_operand->GetInterfaceBufferName(job_name, interface_op_name);
           buffer_mgr->Get(buffer_name)->Push(critical_section_instance);
         }
       }
@@ -82,23 +82,24 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
   }
 
  private:
-  
   class NaiveCriticalSectionInstance final : public CriticalSectionInstance {
    public:
-    NaiveCriticalSectionInstance(std::shared_ptr<CriticalSectionBeginPhyInstrOperand> phy_instr_operand)
-      : CriticalSectionInstance(), phy_instr_operand_(phy_instr_operand) {}
+    NaiveCriticalSectionInstance(
+        std::shared_ptr<CriticalSectionBeginPhyInstrOperand> phy_instr_operand)
+        : CriticalSectionInstance(), phy_instr_operand_(phy_instr_operand) {}
 
     ~NaiveCriticalSectionInstance() override = default;
     void AccessBlobByOpName(uint64_t ofblob_ptr, const std::string& op_name) const override {
       phy_instr_operand_->AccessBlobByOpName(ofblob_ptr, op_name);
     }
     void Finish() const override { phy_instr_operand_->Finish(); }
-    
+
    private:
     std::shared_ptr<CriticalSectionBeginPhyInstrOperand> phy_instr_operand_;
   };
 
-  std::shared_ptr<CriticalSectionInstance> MakeCriticalSectionInstance(std::shared_ptr<CriticalSectionBeginPhyInstrOperand> phy_instr_operand) const {
+  std::shared_ptr<CriticalSectionInstance> MakeCriticalSectionInstance(
+      std::shared_ptr<CriticalSectionBeginPhyInstrOperand> phy_instr_operand) const {
     auto ptr = std::make_shared<NaiveCriticalSectionInstance>(phy_instr_operand);
     ptr->FinishInvalidInterfaceEventRecords();
     return ptr;

@@ -71,7 +71,6 @@ inline std::string GetOutputCriticalSectionCallbackBufferName(const std::string&
 }
 
 inline std::string GetForeignInputBufferName(const std::string& job_name) {
-inline std::string GetForeignInputBufferName(const std::string& job_name) {
   static const std::string prefix = "ForeignInput-";
   return prefix + job_name;
 }

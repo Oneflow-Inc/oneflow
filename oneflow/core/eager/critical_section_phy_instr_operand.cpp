@@ -59,10 +59,12 @@ void CriticalSectionBeginPhyInstrOperand::ForEachMutMirroredObject(
 }
 
 void CriticalSectionBeginPhyInstrOperand::FinishInvalidInterfaceEventRecords() {
-  for (const auto& op_name : interface_op_names()) {
-    size_t index = CHECK_JUST(op_name2interface_index_, op_name);
+  for (const auto& op_name : interfaces_op_names()) {
+    size_t index = CHECK_JUST(MapAt(op_name2interface_index_, op_name));
     if (!interfaces_valid().at(index)) {
-      pair.second->Init(std::make_shared<NaiveEventRecord>());
+      const auto& iter = op_name2end_event_record_->find(op_name);
+      CHECK(iter != op_name2end_event_record_->end());
+      iter->second->Init(std::make_shared<NaiveEventRecord>());
     }
   }
 }
@@ -73,11 +75,12 @@ void CriticalSectionBeginPhyInstrOperand::Finish() {
   }
 }
 
-void InputCriticalSectionBeginPhyInstrOperand::AccessBlobByCallback(int64_t of_blob_ptr, const std::string& op_name) {
-  int64_t i = CHECK_JUST(MapAt(op_name2inferface_index_, op_name);
+void InputCriticalSectionBeginPhyInstrOperand::AccessBlobByCallback(int64_t of_blob_ptr,
+                                                                    const std::string& op_name) {
+  int64_t i = CHECK_JUST(MapAt(op_name2interface_index_, op_name));
   CHECK(interfaces_valid().at(i));
   OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  const auto& eager_blob_object = eager_blob_objects_.at(i);
+  const auto& eager_blob_object = eager_blob_objects_->at(i);
   const Blob* blob = &eager_blob_object->blob();
   CHECK_NOTNULL(blob);
   of_blob->mut_blob()->CopyHeaderFrom(of_blob->mut_device_ctx(), blob);
@@ -92,11 +95,12 @@ void InputCriticalSectionBeginPhyInstrOperand::AccessBlobByCallback(int64_t of_b
   }
 }
 
-void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByCallback(int64_t of_blob_ptr, const std::string& op_name) {
-  int64_t i = CHECK_JUST(MapAt(op_name2inferface_index_, op_name);
+void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByCallback(int64_t of_blob_ptr,
+                                                                     const std::string& op_name) {
+  int64_t i = CHECK_JUST(MapAt(op_name2interface_index_, op_name));
   CHECK(interfaces_valid().at(i));
   OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  const auto& eager_blob_object = eager_blob_objects_.at(i);
+  const auto& eager_blob_object = eager_blob_objects_->at(i);
   Blob* mut_blob = eager_blob_object->mut_blob();
   CHECK_NOTNULL(mut_blob);
   mut_blob->CopyHeaderFrom(of_blob->mut_device_ctx(), &of_blob->blob());

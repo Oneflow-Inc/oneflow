@@ -470,8 +470,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand);
 
   template<typename PhyInstrOperandT>
-  Maybe<void> MakeCriticalSectionEnd(
-      const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand);
+  Maybe<void> MakeCriticalSectionEnd(const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand);
 
   std::shared_ptr<vm::IdGenerator> id_generator_;
   vm::InstructionMsgList* instruction_list_;
