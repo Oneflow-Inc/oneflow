@@ -36,7 +36,6 @@ namespace oneflow {
     OF_PRIVATE DEFINE_STATIC_COUNTER(field_counter);      \
     DSS_BEGIN(STATIC_COUNTER(field_counter), class_name); \
     OBJECT_MSG_DEFINE_DEFAULT(class_name);                \
-    OBJECT_MSG_DEFINE_LINK_EDGES_GETTER();                \
     OBJECT_MSG_DEFINE_CONTAINER_ELEM_STRUCT();            \
     OBJECT_MSG_DEFINE_INIT();                             \
     OBJECT_MSG_DEFINE_DELETE();                           \
@@ -252,13 +251,6 @@ namespace oneflow {
     using type = void;                                \
   };
 
-#define OBJECT_MSG_DEFINE_LINK_EDGES_GETTER()                        \
- public:                                                             \
-  template<int field_counter, typename Enable = void>                \
-  struct LinkEdgesGetter final {                                     \
-    static void Call(std::set<ObjectMsgContainerLinkEdge>* edges) {} \
-  };
-
 #define OBJECT_MSG_DEFINE_INIT()                                            \
  public:                                                                    \
   template<typename WalkCtxType>                                            \
@@ -269,11 +261,6 @@ namespace oneflow {
  private:                                                                   \
   template<int field_counter, typename WalkCtxType, typename PtrFieldType>  \
   struct ObjectMsgField__Init__ : public ObjectMsgNaiveInit<WalkCtxType, PtrFieldType> {};
-
-#define OBJECT_MSG_OVERLOAD_LINK_EDGES_GETTER(field_counter, link_edges_getter) \
- public:                                                                        \
-  template<typename Enabled>                                                    \
-  struct LinkEdgesGetter<field_counter, Enabled> final : public link_edges_getter {};
 
 #define OBJECT_MSG_OVERLOAD_INIT(field_counter, init_template)            \
  private:                                                                 \
