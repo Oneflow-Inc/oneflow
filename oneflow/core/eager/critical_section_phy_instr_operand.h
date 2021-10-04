@@ -53,10 +53,6 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
 
   const std::shared_ptr<NNGraphIf>& nn_graph() const { return nn_graph_; }
   const one::EagerBlobObjectListPtr& eager_blob_objects() const { return eager_blob_objects_; }
-  const std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>&
-  op_name2end_event_recor() const {
-    return op_name2end_event_record_;
-  }
 
   void ForEachMirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&) const;
