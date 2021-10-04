@@ -27,6 +27,12 @@ struct ThreadCtx;
 
 // clang-format off
 OBJECT_MSG_BEGIN(Stream);
+ public:
+  // Getters
+  int64_t max_device_num_per_machine() const { return max_device_num_per_machine_; }
+  // Setters
+  void set_max_device_num_per_machine(int64_t val) { max_device_num_per_machine_ = val; }
+
   // methods
   OF_PUBLIC void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id, const int64_t max_device_num_per_machine);
   OF_PUBLIC ObjectMsgPtr<Instruction> NewInstruction(InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc);
@@ -38,10 +44,6 @@ OBJECT_MSG_BEGIN(Stream);
   OF_PUBLIC const StreamTypeId& stream_type_id() const;
   OF_PRIVATE void MoveToFreeList(ObjectMsgPtr<Instruction>&& instruction);
   OF_PRIVATE void MoveFromZombieListToFreeList();
-
- public:
-  int64_t max_device_num_per_machine() const { return max_device_num_per_machine_; }
-  void set_max_device_num_per_machine(int64_t val) { max_device_num_per_machine_ = val; }
 
   // fields
   OBJECT_MSG_DEFINE_PTR(ThreadCtx, thread_ctx); 

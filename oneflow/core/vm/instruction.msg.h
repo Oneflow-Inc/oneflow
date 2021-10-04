@@ -36,10 +36,33 @@ namespace vm {
 
 // clang-format off
 OBJECT_MSG_BEGIN(InstructionOperandList);
+ public:
+  void __Init__() {}
+
   OBJECT_MSG_DEFINE_STRUCT(std::vector<FlatMsg<InstructionOperand>>, operand);
 OBJECT_MSG_END(InstructionOperandList);
 
 OBJECT_MSG_BEGIN(InstructionMsg);
+ public:
+  // Getters
+  bool has_parallel_desc_symbol_id() const { return 0 != parallel_desc_symbol_id_; }
+  int64_t parallel_desc_symbol_id() const { return parallel_desc_symbol_id_; }
+  const InstructionOperandList& operand_list() const {
+    if (operand_list_) { return operand_list_.Get(); }
+    static const auto default_val = ObjectMsgPtr<InstructionOperandList>::New();
+    return default_val.Get();
+  }
+  // Setters
+  void set_parallel_desc_symbol_id(int64_t val) { parallel_desc_symbol_id_ = val; }
+  InstructionOperandList* mut_operand_list() { return mutable_operand_list(); }
+  InstructionOperandList* mutable_operand_list() {
+    if (!operand_list_) { operand_list_ = ObjectMsgPtr<InstructionOperandList>::New(); }
+    return operand_list_.Mutable();
+  }
+  void reset_operand_list(const InstructionOperandList& other) {
+    operand_list_.Reset(const_cast<InstructionOperandList*>(&other));
+  }
+
   // methods
   OF_PUBLIC void __Init__();
   OF_PUBLIC void __Init__(const std::string& instr_type_name);
@@ -78,20 +101,13 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> Clone() const;
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> MakeInferInstrMsg() const;
 
- public:
-  // Getters
-  bool has_parallel_desc_symbol_id() const { return 0 != parallel_desc_symbol_id_; }
-  int64_t parallel_desc_symbol_id() const { return parallel_desc_symbol_id_; }
-  // Setters
-  void set_parallel_desc_symbol_id(int64_t val) { parallel_desc_symbol_id_ = val; }
-
   // fields
   OBJECT_MSG_DEFINE_STRUCT(InstrTypeId, instr_type_id);
   // instr_type_name is a necessary reduandant field for method ToProto
   OBJECT_MSG_DEFINE_STRUCT(std::string, instr_type_name);
   OBJECT_MSG_FIELD(int64_t, parallel_desc_symbol_id_);
   OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<const ParallelDesc>, parallel_desc);
-  OBJECT_MSG_DEFINE_OPTIONAL(InstructionOperandList, operand_list);
+  OBJECT_MSG_FIELD(ObjectMsgPtr<InstructionOperandList>, operand_list_);
   OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<PhyInstrOperand>, phy_instr_operand);
 
 
@@ -141,6 +157,20 @@ OBJECT_MSG_END(InstructionEdge);
 struct Stream;
 // clang-format off
 OBJECT_MSG_BEGIN(Instruction);
+ public:
+  const InstructionMsg& instr_msg() const {
+    if (instr_msg_) { return instr_msg_.Get(); }
+    static const auto default_val = ObjectMsgPtr<InstructionMsg>::New();
+    return default_val.Get();
+  }
+  InstructionMsg* mut_instr_msg() { return mutable_instr_msg(); }
+  InstructionMsg* mutable_instr_msg() {
+    if (!instr_msg_) { instr_msg_ = ObjectMsgPtr<InstructionMsg>::New(); }
+    return instr_msg_.Mutable();
+  }
+  void reset_instr_msg(InstructionMsg* instr_msg) { instr_msg_.Reset(instr_msg); }
+  void clear_instr_msg() { instr_msg_.Reset(); }
+
   // methods
   OF_PUBLIC void __Init__(InstructionMsg* instr_msg, Stream* stream, const std::shared_ptr<const ParallelDesc>& parallel_desc);
   OF_PUBLIC void __Delete__();
@@ -234,7 +264,7 @@ OBJECT_MSG_BEGIN(Instruction);
 
   // fields
   OBJECT_MSG_DEFINE_FLAT_MSG(InstructionStatusBuffer, status_buffer);
-  OBJECT_MSG_DEFINE_OPTIONAL(InstructionMsg, instr_msg);
+  OBJECT_MSG_FIELD(ObjectMsgPtr<InstructionMsg>, instr_msg_);
   OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<const ParallelDesc>, parallel_desc);
   OBJECT_MSG_DEFINE_PTR(Stream, stream); 
 

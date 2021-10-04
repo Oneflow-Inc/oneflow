@@ -38,8 +38,6 @@ namespace oneflow {
 #define _OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(field_counter, elem_type, elem_field_name,        \
                                              field_name)                                       \
   _OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name)           \
-  OBJECT_MSG_DEFINE_MUTEXED_LIST_ELEM_STRUCT(field_counter, elem_type, elem_field_name,        \
-                                             field_name);                                      \
   OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedMutexedListHeadInit);               \
   OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedMutexedListHeadDelete);           \
   DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _ObjectMsgListType), \
@@ -63,14 +61,6 @@ namespace oneflow {
                                                                                                   \
  private:                                                                                         \
   OF_PP_CAT(field_name, _ObjectMsgListType) OF_PP_CAT(field_name, _);
-
-#define OBJECT_MSG_DEFINE_MUTEXED_LIST_ELEM_STRUCT(field_counter, elem_type, elem_field_name, \
-                                                   field_name)                                \
- public:                                                                                      \
-  template<typename Enabled>                                                                  \
-  struct ContainerElemStruct<field_counter, Enabled> final {                                  \
-    using type = elem_type;                                                                   \
-  };
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedMutexedListHeadInit {

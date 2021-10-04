@@ -40,19 +40,19 @@ enum OperandAccessType {
 
 // clang-format off
 OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
-  // methods
-  OF_PUBLIC void __Init__(Instruction* instruction, MirroredObject* mirrored_object,
-                       OperandAccessType access_type);
-
-  OF_PUBLIC bool is_const_operand() const;
-  OF_PUBLIC bool is_mut_operand() const;
-
  public:
   // Getters
   OperandAccessType access_type() const { return access_type_; }
 
   // Setters
   void set_access_type(OperandAccessType val) { access_type_ = val; }
+
+  // methods
+  OF_PUBLIC void __Init__(Instruction* instruction, MirroredObject* mirrored_object,
+                       OperandAccessType access_type);
+
+  OF_PUBLIC bool is_const_operand() const;
+  OF_PUBLIC bool is_mut_operand() const;
 
   // fields
   OBJECT_MSG_FIELD(OperandAccessType, access_type_);
@@ -69,8 +69,10 @@ OBJECT_MSG_END(RwMutexedObjectAccess);
 
 struct LogicalObject;
 OBJECT_MSG_BEGIN(RwMutexedObject);
-  // methods
+ public:
+  void __Init__() {}
 
+  // methods
   OF_PUBLIC template<typename T> bool Has() const {
     return dynamic_cast<const T*>(&object()) != nullptr;
   }
@@ -110,12 +112,35 @@ OBJECT_MSG_BEGIN(RwMutexedObject);
 OBJECT_MSG_END(RwMutexedObject);
 
 OBJECT_MSG_BEGIN(MirroredObject);
+ public:
+  MirroredObject() = default;
+  // Getters
+  const RwMutexedObject& rw_mutexed_object() const {
+    if (rw_mutexed_object_) { return rw_mutexed_object_.Get(); }
+    static const auto default_val = ObjectMsgPtr<RwMutexedObject>::New();
+    return default_val.Get();
+  }
+  // Setters
+  RwMutexedObject* mut_rw_mutexed_object() { return mutable_rw_mutexed_object(); }
+  RwMutexedObject* mutable_rw_mutexed_object() {
+    if (!rw_mutexed_object_) { rw_mutexed_object_ = ObjectMsgPtr<RwMutexedObject>::New(); }
+    return rw_mutexed_object_.Mutable();
+  }
+  void reset_rw_mutexed_object(RwMutexedObject* rw_mutexed_object) {
+    rw_mutexed_object_.Reset(rw_mutexed_object);
+  }
+  void reset_rw_mutexed_object(const RwMutexedObject& rw_mutexed_object) {
+    rw_mutexed_object_.Reset(const_cast<RwMutexedObject*>(&rw_mutexed_object));
+  }
+
+
   // methods
+  OF_PUBLIC void __Init__() { /* Do nothing */ }
   OF_PUBLIC void __Init__(LogicalObject* logical_object, int64_t global_device_id);
 
   //fields
   OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectId, mirrored_object_id);
-  OBJECT_MSG_DEFINE_OPTIONAL(RwMutexedObject, rw_mutexed_object);
+  OBJECT_MSG_FIELD(ObjectMsgPtr<RwMutexedObject>, rw_mutexed_object_);
   OBJECT_MSG_DEFINE_PTR(RwMutexedObjectAccess, deleting_access);
 
 
@@ -125,7 +150,10 @@ OBJECT_MSG_END(MirroredObject);
 
 struct VirtualMachine;
 OBJECT_MSG_BEGIN(LogicalObject);
+ public:
+  LogicalObject() = default;
   // methods
+  OF_PUBLIC void __Init__() { /* Do nothing */ }
   OF_PUBLIC void __Init__(const ObjectId& logical_object_id) {
     __Init__(logical_object_id, std::shared_ptr<const ParallelDesc>());
   }

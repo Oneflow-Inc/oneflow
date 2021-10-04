@@ -35,6 +35,21 @@ namespace vm {
 struct VmDesc;
 // clang-format off
 OBJECT_MSG_BEGIN(VirtualMachine);
+ public:
+  // Getters
+  const VmResourceDesc& vm_resource_desc() const {
+    if (vm_resource_desc_) { return vm_resource_desc_.Get(); }
+    static const auto default_val = ObjectMsgPtr<VmResourceDesc>::New();
+    return default_val.Get();
+  }
+  //Setters
+  VmResourceDesc* mut_vm_resource_desc() { return mutable_vm_resource_desc(); }
+  VmResourceDesc* mutable_vm_resource_desc() {
+    if (!vm_resource_desc_) { vm_resource_desc_ = ObjectMsgPtr<VmResourceDesc>::New(); }
+    return vm_resource_desc_.Mutable();
+  }
+
+
   // methods
   OF_PUBLIC void __Init__(const VmDesc& vm_desc);
   OF_PUBLIC Maybe<void> Receive(InstructionMsgList* instr_list);
@@ -53,7 +68,7 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   }
 
   // fields
-  OBJECT_MSG_DEFINE_OPTIONAL(VmResourceDesc, vm_resource_desc);
+  OBJECT_MSG_FIELD(ObjectMsgPtr<VmResourceDesc>, vm_resource_desc_);
   OBJECT_MSG_DEFINE_STRUCT(Range, machine_id_range);
   OBJECT_MSG_DEFINE_STRUCT(std::atomic<int64_t>, flying_instruction_cnt);
 

@@ -61,7 +61,6 @@ namespace oneflow {
   DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _ObjectMsgListType), \
                    OF_PP_CAT(field_name, _));                                                  \
   _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name)                   \
-  OBJECT_MSG_DEFINE_LIST_ELEM_STRUCT(field_counter, elem_type, elem_field_name, field_name);   \
   OBJECT_MSG_OVERLOAD_INIT_WITH_FIELD_INDEX(field_counter, ObjectMsgEmbeddedListHeadInit);     \
   OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedListHeadDelete);
 
@@ -87,13 +86,6 @@ namespace oneflow {
                                                                                    \
  private:                                                                          \
   OF_PP_CAT(field_name, _ObjectMsgListType) OF_PP_CAT(field_name, _);
-
-#define OBJECT_MSG_DEFINE_LIST_ELEM_STRUCT(field_counter, elem_type, elem_field_name, field_name) \
- public:                                                                                          \
-  template<typename Enabled>                                                                      \
-  struct ContainerElemStruct<field_counter, Enabled> final {                                      \
-    using type = elem_type;                                                                       \
-  };
 
 #define _OBJECT_MSG_DEFINE_LIST_LINK(field_counter, field_name)               \
   _OBJECT_MSG_DEFINE_LIST_LINK_FIELD(field_name)                              \

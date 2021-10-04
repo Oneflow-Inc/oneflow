@@ -30,20 +30,23 @@ using DeviceTag2DeviceNum = std::unordered_map<std::string, int64_t>;
 
 // clang-format off
 OBJECT_MSG_BEGIN(VmResourceDesc);
-  // methods
-  OF_PUBLIC void __Init__(const Resource& resource);
-  OF_PUBLIC void __Init__(
-      int64_t machine_num, const DeviceTag2DeviceNum& device_tag2device_num);
-  OF_PUBLIC void CopyFrom(const VmResourceDesc& vm_resource_desc);
-  OF_PUBLIC int64_t GetGlobalDeviceId(int64_t machine_id, int64_t device_id) const;
-
  public:
+  VmResourceDesc() = default;
+  void __Init__() {}
   // Getters
   int64_t machine_num() const { return machine_num_; }
   int64_t max_device_num_per_machine() const { return max_device_num_per_machine_; }
   // Setters
   void set_machine_num(int64_t val) { machine_num_ = val; }
   void set_max_device_num_per_machine(int64_t val) { max_device_num_per_machine_ = val; }
+
+
+  // methods
+  OF_PUBLIC void __Init__(const Resource& resource);
+  OF_PUBLIC void __Init__(
+      int64_t machine_num, const DeviceTag2DeviceNum& device_tag2device_num);
+  OF_PUBLIC void CopyFrom(const VmResourceDesc& vm_resource_desc);
+  OF_PUBLIC int64_t GetGlobalDeviceId(int64_t machine_id, int64_t device_id) const;
 
   // fields
   OBJECT_MSG_FIELD(int64_t, machine_num_);

@@ -232,6 +232,8 @@ TEST(ObjectMsgList, FOR_EACH) {
 
 // clang-format off
 OBJECT_MSG_BEGIN(TestObjectMsgListHead);
+ public:
+  TestObjectMsgListHead() = default;
   OBJECT_MSG_DEFINE_LIST_HEAD(TestListItem, foo_list, foo_list);
 OBJECT_MSG_END(TestObjectMsgListHead);
 // clang-format on
@@ -264,7 +266,24 @@ TEST(ObjectMsg, OBJECT_MSG_DEFINE_LIST_HEAD) {
 
 // clang-format off
 OBJECT_MSG_BEGIN(TestObjectMsgListHeadWrapper);
-  OBJECT_MSG_DEFINE_OPTIONAL(TestObjectMsgListHead, head);
+ public:
+  // Getters
+  const TestObjectMsgListHead& head() const {
+    if (head_) { return head_.Get(); }
+    static const auto default_val = ObjectMsgPtr<TestObjectMsgListHead>::New();
+    return default_val.Get();
+  }
+  // Setters
+  TestObjectMsgListHead* mut_head() { return mutable_head(); }
+  TestObjectMsgListHead* mutable_head() {
+    if (!head_) { head_ = ObjectMsgPtr<TestObjectMsgListHead>::New(); }
+    return head_.Mutable();
+  }
+  void clear_head() {
+    if (head_) { head_.Reset(); }
+  }
+
+  OBJECT_MSG_FIELD(ObjectMsgPtr<TestObjectMsgListHead>, head_);
 OBJECT_MSG_END(TestObjectMsgListHeadWrapper);
 // clang-format on
 

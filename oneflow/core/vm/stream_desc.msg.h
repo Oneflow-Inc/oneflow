@@ -58,14 +58,8 @@ class StreamId final {
 
 // clang-format off
 OBJECT_MSG_BEGIN(StreamDesc);
-  // methods
-  OF_PUBLIC void __Init__() {}
-  OF_PUBLIC void __Init__(const StreamTypeId& stream_type_id, int32_t num_machines, int32_t num_streams_per_machine,
-                       int32_t num_streams_per_thread);
-  OF_PUBLIC int32_t num_threads() const;
-  OF_PUBLIC int32_t parallel_num() const { return num_machines() * num_streams_per_machine(); }
-
  public:
+  StreamDesc() = default;
   // Getters
   int32_t num_machines() const { return num_machines_; }
   int32_t num_streams_per_machine() const { return num_streams_per_machine_; }
@@ -74,6 +68,13 @@ OBJECT_MSG_BEGIN(StreamDesc);
   void set_num_machines(int32_t val) { num_machines_ = val; }
   void set_num_streams_per_machine(int32_t val) { num_streams_per_machine_ = val; }
   void set_num_streams_per_thread(int32_t val) { num_streams_per_thread_ = val; }
+
+  // methods
+  OF_PUBLIC void __Init__() {}
+  OF_PUBLIC void __Init__(const StreamTypeId& stream_type_id, int32_t num_machines, int32_t num_streams_per_machine,
+                       int32_t num_streams_per_thread);
+  OF_PUBLIC int32_t num_threads() const;
+  OF_PUBLIC int32_t parallel_num() const { return num_machines() * num_streams_per_machine(); }
 
   // fields
   OBJECT_MSG_FIELD(int32_t, num_machines_);

@@ -27,6 +27,20 @@ namespace vm {
 
 // clang-format off
 OBJECT_MSG_BEGIN(VmDesc);
+ public:
+  // Getters
+  const VmResourceDesc& vm_resource_desc() const {
+    if (vm_resource_desc_) { return vm_resource_desc_.Get(); }
+    static const auto default_val = ObjectMsgPtr<VmResourceDesc>::New();
+    return default_val.Get();
+  }
+  //Setters
+  VmResourceDesc* mut_vm_resource_desc() { return mutable_vm_resource_desc(); }
+  VmResourceDesc* mutable_vm_resource_desc() {
+    if (!vm_resource_desc_) { vm_resource_desc_ = ObjectMsgPtr<VmResourceDesc>::New(); }
+    return vm_resource_desc_.Mutable();
+  }
+
   // methods
   OF_PUBLIC void __Init__(const VmResourceDesc& vm_resource_desc) {
     __Init__(vm_resource_desc, Range(0, 1));
@@ -37,7 +51,7 @@ OBJECT_MSG_BEGIN(VmDesc);
   }
   
   // fields
-  OBJECT_MSG_DEFINE_OPTIONAL(VmResourceDesc, vm_resource_desc);
+  OBJECT_MSG_FIELD(ObjectMsgPtr<VmResourceDesc>, vm_resource_desc_);
   OBJECT_MSG_DEFINE_STRUCT(Range, machine_id_range);
 
   // links
