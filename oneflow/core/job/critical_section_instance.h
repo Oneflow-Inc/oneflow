@@ -24,6 +24,8 @@ class CriticalSectionInstance {
  public:
   CriticalSectionInstance() = default;
 
+  virtual const std::string& job_name() const = 0;
+
   virtual ~CriticalSectionInstance() = default;
 
   virtual void AccessBlobByOpName(uint64_t ofblob_ptr, const std::string& op_name) const {

@@ -35,11 +35,11 @@ class CriticalSectionWaitTickKernel final : public Kernel {
 void CriticalSectionWaitTickKernel::ForwardDataContent(KernelContext* ctx) const {
   auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
   bool is_multi_client = CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get());
-  CHECK(op_conf().has_critical_section_wait_conf());
-  const std::string& buffer_name = op_conf().critical_section_wait_conf().buffer_name();
+  CHECK(this->op_conf().has_critical_section_wait_tick_conf());
+  const std::string& buffer_name = this->op_conf().critical_section_wait_tick_conf().buffer_name();
   std::shared_ptr<CriticalSectionInstance> foreign_critical_section_instance;
   BufferStatus buffer_status =
-      buffer_mgr->Get(buffer_name)->Receive(&foreign_critical_section_instance);
+      buffer_mgr->Get(buffer_name)->Pull(&foreign_critical_section_instance);
   CHECK_EQ(buffer_status, kBufferStatusSuccess);
 }
 

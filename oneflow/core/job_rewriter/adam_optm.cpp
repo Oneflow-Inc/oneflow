@@ -136,9 +136,9 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
     auto* state = CHECK_JUST(ctx->MutableState<BiasCorrectionFactorState>(job_pass_state_key));
     ParallelConf bias_correction_parallel_conf;
     const auto& lr_parallel_conf =
-        job_builder->ParallelConf4Lbi(GenLogicalBlobId(learning_rate_lbn));
+        CHECK_JUST(job_builder->ParallelConf4Lbi(GenLogicalBlobId(learning_rate_lbn)));
     const auto& train_step_parallel_conf =
-        job_builder->ParallelConf4Lbi(GenLogicalBlobId(train_step_lbn));
+        CHECK_JUST(job_builder->ParallelConf4Lbi(GenLogicalBlobId(train_step_lbn)));
     if (lr_parallel_conf == train_step_parallel_conf) {
       bias_correction_parallel_conf = lr_parallel_conf;
     } else {

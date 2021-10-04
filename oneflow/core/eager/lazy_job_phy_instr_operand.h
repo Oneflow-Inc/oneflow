@@ -49,7 +49,7 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
 
   void ForEachConstMirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
+      const override {}
 
   void ForEachMutMirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
@@ -57,7 +57,7 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
 
   void ForEachMut2MirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
+      const override {}
 
  private:
   std::shared_ptr<NNGraphIf> nn_graph_;

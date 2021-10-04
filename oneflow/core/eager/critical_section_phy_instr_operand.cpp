@@ -75,8 +75,8 @@ void CriticalSectionBeginPhyInstrOperand::Finish() {
   }
 }
 
-void InputCriticalSectionBeginPhyInstrOperand::AccessBlobByCallback(int64_t of_blob_ptr,
-                                                                    const std::string& op_name) {
+void InputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_blob_ptr,
+                                                                  const std::string& op_name) {
   int64_t i = CHECK_JUST(MapAt(op_name2interface_index_, op_name));
   CHECK(interfaces_valid().at(i));
   OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
@@ -95,8 +95,8 @@ void InputCriticalSectionBeginPhyInstrOperand::AccessBlobByCallback(int64_t of_b
   }
 }
 
-void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByCallback(int64_t of_blob_ptr,
-                                                                     const std::string& op_name) {
+void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_blob_ptr,
+                                                                   const std::string& op_name) {
   int64_t i = CHECK_JUST(MapAt(op_name2interface_index_, op_name));
   CHECK(interfaces_valid().at(i));
   OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);

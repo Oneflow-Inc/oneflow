@@ -51,6 +51,7 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
         eager_blob_objects_(eager_blob_objects),
         op_name2end_event_record_(op_name2end_event_record) {}
 
+  const std::shared_ptr<NNGraphIf>& nn_graph() const { return nn_graph_; }
   const one::EagerBlobObjectListPtr& eager_blob_objects() const { return eager_blob_objects_; }
   const std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>&
   op_name2end_event_recor() const {
@@ -72,7 +73,7 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
       const std::string& job_name) const = 0;
   virtual std::string GetInterfaceCriticalSectionWaitBufferName(
       const std::string& job_name) const = 0;
-  virtual void AccessBlobByCallback(int64_t of_blob_ptr, const std::string& op_name);
+  virtual void AccessBlobByOpName(uint64_t of_blob_ptr, const std::string& op_name) = 0;
 
   void FinishInvalidInterfaceEventRecords();
   void Finish();
@@ -131,7 +132,7 @@ class InputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeg
       const std::string& job_name) const override {
     return GetInputCriticalSectionWaitBufferName(job_name);
   }
-  void AccessBlobByCallback(int64_t of_blob_ptr, const std::string& op_name) override;
+  void AccessBlobByOpName(uint64_t of_blob_ptr, const std::string& op_name) override;
 };
 
 class OutputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeginPhyInstrOperand {
@@ -180,7 +181,7 @@ class OutputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBe
       const std::string& job_name) const override {
     return GetOutputCriticalSectionWaitBufferName(job_name);
   }
-  void AccessBlobByCallback(int64_t of_blob_ptr, const std::string& op_name) override;
+  void AccessBlobByOpName(uint64_t of_blob_ptr, const std::string& op_name) override;
 };
 
 class CriticalSectionEndPhyInstrOperand : public PhyInstrOperand {

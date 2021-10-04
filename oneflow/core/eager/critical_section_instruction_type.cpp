@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/job/job_instance.h"
+#include "oneflow/core/job/critical_section_instance.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/vm/stream.msg.h"
@@ -56,7 +56,7 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
       auto phy_instr_operand = std::dynamic_pointer_cast<CriticalSectionBeginPhyInstrOperand>(ptr);
       CHECK_NOTNULL(phy_instr_operand);
       const auto& critical_section_instance = MakeCriticalSectionInstance(phy_instr_operand);
-      const auto& job_name = job_instance->job_name();
+      const auto& job_name = critical_section_instance->job_name();
       auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
       for (int i = 0; i < phy_instr_operand->interfaces_op_names().size(); ++i) {
         if (phy_instr_operand->interfaces_valid().at(i)) {
@@ -67,11 +67,11 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
         }
       }
       const auto& callback_buffer_name =
-          phy_instr_operand->GetInterfaceCriticalSectionCallbackBuffer(job_name);
-      buffer_mgr->Get(callback_buffer_name)->Push(job_instance);
+          phy_instr_operand->GetInterfaceCriticalSectionCallbackBufferName(job_name);
+      buffer_mgr->Get(callback_buffer_name)->Push(critical_section_instance);
       const auto& wait_buffer_name =
-          phy_instr_operand->GetInterfaceCriticalSectionWaitBuffer(job_name);
-      buffer_mgr->Get(wait_buffer_name)->Push(job_instance);
+          phy_instr_operand->GetInterfaceCriticalSectionWaitBufferName(job_name);
+      buffer_mgr->Get(wait_buffer_name)->Push(critical_section_instance);
     }
     {
       auto* status_buffer_data = instruction->mut_status_buffer()->mut_buffer()->mut_data();
@@ -85,10 +85,14 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
   class NaiveCriticalSectionInstance final : public CriticalSectionInstance {
    public:
     NaiveCriticalSectionInstance(
-        std::shared_ptr<CriticalSectionBeginPhyInstrOperand> phy_instr_operand)
-        : CriticalSectionInstance(), phy_instr_operand_(phy_instr_operand) {}
+        std::shared_ptr<CriticalSectionBeginPhyInstrOperand> phy_instr_operand,
+        const std::string& job_name)
+        : CriticalSectionInstance(), phy_instr_operand_(phy_instr_operand), job_name_(job_name) {}
 
     ~NaiveCriticalSectionInstance() override = default;
+
+    const std::string& job_name() const override { return job_name_; }
+
     void AccessBlobByOpName(uint64_t ofblob_ptr, const std::string& op_name) const override {
       phy_instr_operand_->AccessBlobByOpName(ofblob_ptr, op_name);
     }
@@ -96,13 +100,14 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
 
    private:
     std::shared_ptr<CriticalSectionBeginPhyInstrOperand> phy_instr_operand_;
+    std::string job_name_;
   };
 
   std::shared_ptr<CriticalSectionInstance> MakeCriticalSectionInstance(
       std::shared_ptr<CriticalSectionBeginPhyInstrOperand> phy_instr_operand) const {
-    auto ptr = std::make_shared<NaiveCriticalSectionInstance>(phy_instr_operand);
-    ptr->FinishInvalidInterfaceEventRecords();
-    return ptr;
+    phy_instr_operand->FinishInvalidInterfaceEventRecords();
+    const auto& job_name = phy_instr_operand->nn_graph()->job_name();
+    return std::make_shared<NaiveCriticalSectionInstance>(phy_instr_operand, job_name);
   }
 };
 
