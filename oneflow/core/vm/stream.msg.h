@@ -39,10 +39,14 @@ OBJECT_MSG_BEGIN(Stream);
   OF_PRIVATE void MoveToFreeList(ObjectMsgPtr<Instruction>&& instruction);
   OF_PRIVATE void MoveFromZombieListToFreeList();
 
+ public:
+  int64_t max_device_num_per_machine() const { return max_device_num_per_machine_; }
+  void set_max_device_num_per_machine(int64_t val) { max_device_num_per_machine_ = val; }
+
   // fields
   OBJECT_MSG_DEFINE_PTR(ThreadCtx, thread_ctx); 
   OBJECT_MSG_DEFINE_STRUCT(std::unique_ptr<DeviceCtx>, device_ctx);
-  OBJECT_MSG_DEFINE_OPTIONAL(int64_t, max_device_num_per_machine);
+  OBJECT_MSG_FIELD(int64_t, max_device_num_per_machine_);
   
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(active_stream_link);

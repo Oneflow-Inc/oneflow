@@ -37,9 +37,17 @@ OBJECT_MSG_BEGIN(VmResourceDesc);
   OF_PUBLIC void CopyFrom(const VmResourceDesc& vm_resource_desc);
   OF_PUBLIC int64_t GetGlobalDeviceId(int64_t machine_id, int64_t device_id) const;
 
+ public:
+  // Getters
+  int64_t machine_num() const { return machine_num_; }
+  int64_t max_device_num_per_machine() const { return max_device_num_per_machine_; }
+  // Setters
+  void set_machine_num(int64_t val) { machine_num_ = val; }
+  void set_max_device_num_per_machine(int64_t val) { max_device_num_per_machine_ = val; }
+
   // fields
-  OBJECT_MSG_DEFINE_OPTIONAL(int64_t, machine_num);
-  OBJECT_MSG_DEFINE_OPTIONAL(int64_t, max_device_num_per_machine);
+  OBJECT_MSG_FIELD(int64_t, machine_num_);
+  OBJECT_MSG_FIELD(int64_t, max_device_num_per_machine_);
   OBJECT_MSG_DEFINE_STRUCT(DeviceTag2DeviceNum, device_tag2device_num);
 OBJECT_MSG_END(VmResourceDesc);
 // clang-format on

@@ -78,11 +78,18 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> Clone() const;
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> MakeInferInstrMsg() const;
 
+ public:
+  // Getters
+  bool has_parallel_desc_symbol_id() const { return 0 != parallel_desc_symbol_id_; }
+  int64_t parallel_desc_symbol_id() const { return parallel_desc_symbol_id_; }
+  // Setters
+  void set_parallel_desc_symbol_id(int64_t val) { parallel_desc_symbol_id_ = val; }
+
   // fields
   OBJECT_MSG_DEFINE_STRUCT(InstrTypeId, instr_type_id);
   // instr_type_name is a necessary reduandant field for method ToProto
   OBJECT_MSG_DEFINE_STRUCT(std::string, instr_type_name);
-  OBJECT_MSG_DEFINE_OPTIONAL(int64_t, parallel_desc_symbol_id);
+  OBJECT_MSG_FIELD(int64_t, parallel_desc_symbol_id_);
   OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<const ParallelDesc>, parallel_desc);
   OBJECT_MSG_DEFINE_OPTIONAL(InstructionOperandList, operand_list);
   OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<PhyInstrOperand>, phy_instr_operand);

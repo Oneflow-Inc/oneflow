@@ -25,8 +25,12 @@ namespace {
 
 // clang-format off
 OBJECT_MSG_BEGIN(Foo);
+ public:
+  int x() const { return x_; }
+  void set_x(int val) { x_ = val; }
+
   // fields
-  OBJECT_MSG_DEFINE_OPTIONAL(int, x);
+  OBJECT_MSG_FIELD(int, x_);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(link);

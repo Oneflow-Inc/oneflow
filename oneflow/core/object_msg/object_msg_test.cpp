@@ -23,14 +23,26 @@ namespace test {
 
 // clang-format off
 OBJECT_MSG_BEGIN(ObjectMsgFoo)
-  OBJECT_MSG_DEFINE_OPTIONAL(int8_t, x);
-  OBJECT_MSG_DEFINE_OPTIONAL(int32_t, foo);
-  OBJECT_MSG_DEFINE_OPTIONAL(int16_t, bar);
-  OBJECT_MSG_DEFINE_OPTIONAL(int64_t, foobar);
-  OBJECT_MSG_DEFINE_PTR(std::string, is_deleted);
-
  public:
+  // Getters
+  int8_t x() const { return x_; }
+  int32_t foo() const { return foo_; }
+  int16_t bar() const { return bar_; }
+  int64_t foobar() const { return foobar_; }
+
+  // Setters
+  void set_x(int8_t val) { x_ = val; }
+  void set_foo(int32_t val) { foo_ = val; }
+  void set_bar(int16_t val) { bar_ = val; }
+  void set_foobar(int64_t val) { foobar_ = val; }
+
   void __Delete__();
+
+  OBJECT_MSG_FIELD(int8_t, x_);
+  OBJECT_MSG_FIELD(int32_t, foo_);
+  OBJECT_MSG_FIELD(int16_t, bar_);
+  OBJECT_MSG_FIELD(int64_t, foobar_);
+  OBJECT_MSG_DEFINE_PTR(std::string, is_deleted);
 
 OBJECT_MSG_END(ObjectMsgFoo)
 // clang-format on

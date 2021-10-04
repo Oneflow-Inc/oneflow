@@ -24,5 +24,6 @@ limitations under the License.
 #include "oneflow/core/object_msg/object_msg_mutexed_list.h"
 #include "oneflow/core/object_msg/object_msg_condition_list.h"
 #include "oneflow/core/object_msg/object_msg_map.h"
+#include "oneflow/core/object_msg/object_msg_field.h"
 
 #endif  // ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_H_

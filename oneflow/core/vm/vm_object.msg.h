@@ -47,8 +47,15 @@ OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
   OF_PUBLIC bool is_const_operand() const;
   OF_PUBLIC bool is_mut_operand() const;
 
+ public:
+  // Getters
+  OperandAccessType access_type() const { return access_type_; }
+
+  // Setters
+  void set_access_type(OperandAccessType val) { access_type_ = val; }
+
   // fields
-  OBJECT_MSG_DEFINE_OPTIONAL(OperandAccessType, access_type);
+  OBJECT_MSG_FIELD(OperandAccessType, access_type_);
   OBJECT_MSG_DEFINE_PTR(Instruction, instruction);
   OBJECT_MSG_DEFINE_PTR(MirroredObject, mirrored_object);
   OBJECT_MSG_DEFINE_PTR(RwMutexedObject, rw_mutexed_object);
