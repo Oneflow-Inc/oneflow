@@ -18,8 +18,7 @@ import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.module import Module
 
-
-__all__ = ["scatter", "scatter_add"]
+__all__ = ["scatter", "scatter_add", "scatter_nd", "tensor_scatter_nd_update"]
 
 
 def scatter(input, dim, index, src):
@@ -113,7 +112,7 @@ def scatter_add(input, dim, index, src):
     return flow._C.scatter_add(input, dim, index, src)
 
 
-def _scatter_nd_op(index, update, shape):
+def scatter_nd(index, update, shape):
     """This operator inserts the elements in `update` according to the `index` and create a new Tensor.
 
     Args:
@@ -127,8 +126,8 @@ def _scatter_nd_op(index, update, shape):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> index = flow.Tensor(np.array([[1], [6], [4]]), dtype=flow.int)
-        >>> update = flow.Tensor(np.array([10.2,5.1,12.7]), dtype=flow.float)
+        >>> index = flow.tensor(np.array([[1], [6], [4]]), dtype=flow.int)
+        >>> update = flow.tensor(np.array([10.2, 5.1, 12.7]), dtype=flow.float)
         >>> out = flow.scatter_nd(index, update, [8])
         >>> out
         tensor([ 0.0000, 10.2000,  0.0000,  0.0000, 12.7000,  0.0000,  5.1000,  0.0000],
@@ -136,6 +135,34 @@ def _scatter_nd_op(index, update, shape):
 
     """
     return flow._C.scatternd(index, update, shape)
+
+
+def tensor_scatter_nd_update(tensor, indices, updates):
+    r"""
+    This operation creates a new tensor by applying sparse updates to the input tensor.
+    This is similar to an index assignment.
+
+    This operator is very similar to :meth:`scatter_nd`, except that the updates are scattered onto an existing
+    tensor (as opposed to a zero-tensor).
+
+    Args:
+        tensor: The tensor will be scattered.
+        indices: The indices of ``update``. Its type should be `flow.int`.
+        update: The update Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> tensor = flow.arange(8)
+        >>> indices = flow.tensor([[1], [3], [5]])
+        >>> updates = flow.tensor([-1, -2, -3])
+        >>> flow.tensor_scatter_nd_update(tensor, indices, updates)
+        tensor([ 0, -1,  2, -2,  4, -3,  6,  7], dtype=oneflow.int64)
+
+    """
+    return flow._C.tensor_scatter_nd_update(tensor, indices, updates)
 
 
 if __name__ == "__main__":

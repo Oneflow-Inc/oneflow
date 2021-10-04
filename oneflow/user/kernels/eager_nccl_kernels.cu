@@ -21,6 +21,8 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 
+#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+
 namespace oneflow {
 
 namespace {
@@ -148,10 +150,14 @@ class EagerNcclReduceKernel final : public user_op::OpKernel {
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(in->shape(), out->shape());
-    CHECK_EQ(in->data_type(), out->data_type());
     int64_t root = ctx->Attr<int64_t>("root");
-    OF_NCCL_CHECK(ncclReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
+    void* out_ptr = nullptr;
+    if (GlobalProcessCtx::Rank() == root) {
+      CHECK_EQ(in->shape(), out->shape());
+      CHECK_EQ(in->data_type(), out->data_type());
+      out_ptr = out->mut_dptr();
+    }
+    OF_NCCL_CHECK(ncclReduce(in->dptr(), out_ptr, in->shape().elem_cnt(),
                              GetNcclDataType(in->data_type()), ncclSum, root, kernel_state->comm(),
                              ctx->device_ctx()->cuda_stream()));
   };
@@ -258,7 +264,8 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
 
     CHECK_EQ(in->data_type(), out->data_type());
     const int64_t num_ranks = kernel_state->parallel_desc()->parallel_num();
-    CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt());
+    CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt())
+        << in->shape().ToString() << " vs " << out->shape().ToString();
     const int64_t elem_cnt = in->shape().elem_cnt();
     const int64_t in_split_axis = ctx->Attr<int64_t>("in_split_axis");
     const int64_t out_split_axis = ctx->Attr<int64_t>("out_split_axis");
@@ -364,3 +371,5 @@ REGISTER_EAGER_NCCL_S2S_KERNEL(float)
 REGISTER_EAGER_NCCL_S2S_KERNEL(double)
 REGISTER_EAGER_NCCL_S2S_KERNEL(float16)
 }  // namespace oneflow
+
+#endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700

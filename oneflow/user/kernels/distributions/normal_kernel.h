@@ -18,20 +18,10 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_DISTRIBUTIONS_NORMAL_KERNEL_H_
 
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/user/kernels/distributions/common.h"
 #include "oneflow/user/kernels/distributions/normal_distribution.h"
 
 namespace oneflow {
-
-class NormalKernelState : public user_op::OpKernelState {
- public:
-  explicit NormalKernelState(const std::shared_ptr<one::Generator>& generator)
-      : generator_(generator) {}
-
-  const std::shared_ptr<one::Generator>& generator() const { return generator_; }
-
- private:
-  std::shared_ptr<one::Generator> generator_;
-};
 
 namespace {
 
@@ -43,9 +33,9 @@ class NormalKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const auto& generator = CHECK_JUST(one::MakeAutoGenerator());
+    const auto& generator = CHECK_JUST(one::MakeGenerator(device_type));
     generator->set_current_seed(ctx->Attr<int64_t>("seed"));
-    return std::make_shared<NormalKernelState>(generator);
+    return std::make_shared<DistributionKernelState>(generator);
   }
 
  private:
@@ -55,9 +45,9 @@ class NormalKernel final : public user_op::OpKernel {
     const double std = ctx->Attr<double>("std");
     int64_t elem_cnt = out->shape().elem_cnt();
     T* out_dptr = out->mut_dptr<T>();
-    auto* normal_state = dynamic_cast<NormalKernelState*>(state);
-    CHECK_NOTNULL(normal_state);
-    const auto& generator = normal_state->generator();
+    auto* distribution_state = dynamic_cast<DistributionKernelState*>(state);
+    CHECK_NOTNULL(distribution_state);
+    const auto& generator = distribution_state->generator();
     CHECK_NOTNULL(generator);
     NormalDistribution<device_type, T> distribution(static_cast<T>(mean), static_cast<T>(std));
     distribution(ctx->device_ctx(), elem_cnt, out_dptr, generator);

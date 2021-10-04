@@ -26,7 +26,7 @@ import oneflow.unittest
 
 def _test_cast_float2int(test_case, device, shape):
     np_arr = np.random.randn(*shape).astype(np.float32)
-    input = flow.Tensor(np_arr, dtype=flow.float32, device=flow.device(device))
+    input = flow.tensor(np_arr, dtype=flow.float32, device=flow.device(device))
     output = flow.cast(input, flow.int8)
     np_out = np_arr.astype(np.int8)
     test_case.assertTrue(np.array_equal(output.numpy(), np_out))
@@ -34,7 +34,7 @@ def _test_cast_float2int(test_case, device, shape):
 
 def _test_cast_int2float(test_case, device, shape):
     np_arr = np.random.randn(*shape).astype(np.int8)
-    input = flow.Tensor(np_arr, dtype=flow.int8, device=flow.device(device))
+    input = flow.tensor(np_arr, dtype=flow.int8, device=flow.device(device))
     output = flow.cast(input, flow.float32)
     np_out = np_arr.astype(np.float32)
     test_case.assertTrue(np.array_equal(output.numpy(), np_out))
@@ -42,13 +42,13 @@ def _test_cast_int2float(test_case, device, shape):
 
 def _test_cast_backward(test_case, device, shape):
     np_arr = np.random.randn(*shape).astype(np.float32)
-    x = flow.Tensor(
+    x = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    y = flow.cast(x, flow.int8)
+    y = flow.cast(x, flow.float64)
     z = y.sum()
     z.backward()
-    np_out = np_arr.astype(np.int8)
+    np_out = np_arr.astype(np.float64)
     test_case.assertTrue(np.array_equal(x.grad.numpy(), np.ones(shape=shape)))
 
 

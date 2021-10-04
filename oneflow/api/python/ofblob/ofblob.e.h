@@ -24,23 +24,26 @@ limitations under the License.
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/extension/python/numpy.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
-#define DEFINE_OF_BLOB_COPY_TO_OR_FROM_BUFFER(direction)                                   \
-  template<typename T>                                                                     \
-  Maybe<void> OfBlob_Copy##direction##Buffer(uint64_t of_blob_ptr, py::array_t<T> array) { \
-    return Global<ForeignLockHelper>::Get()->WithScopedAcquire(                            \
-        [&of_blob_ptr, &array]() -> Maybe<void> {                                          \
-          py::buffer_info buf = array.request();                                           \
-          T* buf_ptr = (T*)buf.ptr;                                                        \
-          size_t size = buf.size;                                                          \
-          using namespace oneflow;                                                         \
-          auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);                          \
-          of_blob->AutoMemCopy##direction<T>(buf_ptr, size);                               \
-          return Maybe<void>::Ok();                                                        \
-        });                                                                                \
+#define DEFINE_OF_BLOB_COPY_TO_OR_FROM_BUFFER(direction)                                         \
+  template<typename T>                                                                           \
+  Maybe<void> OfBlob_Copy##direction##Buffer(uint64_t of_blob_ptr, py::array_t<T> array) {       \
+    return Global<ForeignLockHelper>::Get()->WithScopedAcquire([&of_blob_ptr,                    \
+                                                                &array]() -> Maybe<void> {       \
+      py::array contiguous_array = py::reinterpret_steal<py::array>(reinterpret_cast<PyObject*>( \
+          PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(array.ptr()))));                \
+      py::buffer_info buf = contiguous_array.request();                                          \
+      T* buf_ptr = (T*)buf.ptr;                                                                  \
+      size_t size = buf.size;                                                                    \
+      using namespace oneflow;                                                                   \
+      auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);                                    \
+      of_blob->AutoMemCopy##direction<T>(buf_ptr, size);                                         \
+      return Maybe<void>::Ok();                                                                  \
+    });                                                                                          \
   }
 
 DEFINE_OF_BLOB_COPY_TO_OR_FROM_BUFFER(To)

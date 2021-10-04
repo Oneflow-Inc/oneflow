@@ -19,6 +19,7 @@ from collections import OrderedDict
 
 import numpy as np
 from test_util import GenArgList
+from oneflow.test_utils.automated_test_util import *
 
 import oneflow as flow
 import oneflow.nn as nn
@@ -27,7 +28,7 @@ import oneflow.unittest
 
 def _test_conv1d_bias_false(test_case, device):
     np_arr = np.array([[[1.28795946, -0.2921792, 0.20338029, 0.78604293, -1.89607573]]])
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     weight = np.array(
@@ -68,7 +69,7 @@ def _test_conv1d_bias_true(test_case, device):
             ]
         ]
     )
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     weight = np.array(
@@ -125,7 +126,7 @@ def _test_conv1d_dilation(test_case, device):
     np_arr = np.array(
         [[[-0.43016902, 1.74619496, -0.57338119, 0.25563857, 0.12575546]]]
     )
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     weight = np.array(
@@ -161,7 +162,7 @@ def _test_conv1d_stride(test_case, device):
     np_arr = np.array(
         [[[-1.01312506, -0.40687919, 1.5985316, 0.53594196, -1.89935565]]]
     )
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     weight = np.array(
@@ -202,7 +203,7 @@ def _test_conv1d_group_bias_true(test_case, device):
             ]
         ]
     )
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     weight = np.array(
@@ -252,7 +253,7 @@ def _test_conv1d_group_large_out_bias_true(test_case, device):
             ]
         ]
     )
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     weight = np.array(
@@ -310,7 +311,7 @@ def _test_conv1d_group_large_in_bias_true(test_case, device):
             ]
         ]
     )
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     weight = np.array(
@@ -361,7 +362,7 @@ def _test_conv1d_compilcate(test_case, device):
             ]
         ]
     )
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     weight = np.array(
@@ -433,6 +434,26 @@ class TestConv1d(flow.unittest.TestCase):
         arg_dict["device"] = ["cuda", "cpu"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_conv1d_with_random_data(test_case):
+        channels = random(1, 6)
+        m = torch.nn.Conv1d(
+            in_channels=channels,
+            out_channels=random(1, 20),
+            kernel_size=random(1, 4),
+            stride=random() | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(1, 5) | nothing(),
+            groups=random(1, 5) | nothing(),
+            padding_mode=constant("zeros") | nothing(),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=3, dim1=channels).to(device)
+        y = m(x)
+        return y
 
 
 if __name__ == "__main__":

@@ -19,6 +19,7 @@ from collections import OrderedDict
 
 import numpy as np
 from test_util import GenArgList
+from oneflow.test_utils.automated_test_util import *
 
 import oneflow as flow
 import oneflow.unittest
@@ -83,10 +84,10 @@ def _test_groupnorm(test_case, device):
         ],
         dtype=np.float32,
     )
-    x = flow.Tensor(input_arr, device=flow.device(device))
+    x = flow.tensor(input_arr, dtype=flow.float32, device=flow.device(device))
     m = flow.nn.GroupNorm(num_groups=1, num_channels=2).to(device=flow.device(device))
     y = m(x)
-    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-05, 1e-05))
+    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-03, 1e-03))
 
 
 def _test_groupnorm_3d(test_case, device):
@@ -204,12 +205,12 @@ def _test_groupnorm_3d(test_case, device):
         ],
         dtype=np.float32,
     )
-    x = flow.Tensor(input_arr, device=flow.device(device))
+    x = flow.tensor(input_arr, dtype=flow.float32, device=flow.device(device))
     m = flow.nn.GroupNorm(num_groups=2, num_channels=2, affine=False).to(
         device=flow.device(device)
     )
     y = m(x)
-    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-05, 1e-05))
+    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-03, 1e-03))
 
 
 def _test_groupnorm_backward(test_case, device):
@@ -242,13 +243,15 @@ def _test_groupnorm_backward(test_case, device):
         ],
         dtype=np.float32,
     )
-    x = flow.Tensor(input_arr, device=flow.device(device), requires_grad=True)
+    x = flow.tensor(
+        input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     m = flow.nn.GroupNorm(num_groups=1, num_channels=2).to(device=flow.device(device))
     y = m(x)
     z = y.sum()
     z.backward()
     test_case.assertTrue(
-        np.allclose(x.grad.numpy(), np.zeros(shape=input_arr.shape), 1e-05, 1e-05)
+        np.allclose(x.grad.numpy(), np.zeros(shape=input_arr.shape), 1e-03, 1e-03)
     )
 
 
@@ -310,7 +313,9 @@ def _test_groupnorm_backward_3d(test_case, device):
         ],
         dtype=np.float32,
     )
-    x = flow.Tensor(input_arr, device=flow.device(device), requires_grad=True)
+    x = flow.tensor(
+        input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     m = flow.nn.GroupNorm(num_groups=2, num_channels=2, affine=False).to(
         device=flow.device(device)
     )
@@ -318,7 +323,7 @@ def _test_groupnorm_backward_3d(test_case, device):
     z = y.sum()
     z.backward()
     test_case.assertTrue(
-        np.allclose(x.grad.numpy(), np.zeros(shape=input_arr.shape), 1e-05, 1e-05)
+        np.allclose(x.grad.numpy(), np.zeros(shape=input_arr.shape), 1e-03, 1e-03)
     )
 
 
@@ -335,6 +340,22 @@ class TestGroupNorm(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(rtol=1e-03, atol=1e-03)
+    def test_group_norm_with_random_data(test_case):
+        channels = random(5, 20)
+        m = torch.nn.GroupNorm(
+            num_groups=random(1, 5),
+            num_channels=channels,
+            eps=random(0, 1) | nothing(),
+            affine=random(),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=4, dim1=channels).to(device)
+        y = m(x)
+        return y
 
 
 if __name__ == "__main__":

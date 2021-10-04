@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/eager/blob_object.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/memory/memory_allocator.h"
+#include "oneflow/core/framework/device.h"
 
 namespace oneflow {
 
@@ -75,7 +76,7 @@ class EagerBlobObject final : public BlobObject {
   }
 
   Maybe<LocalDepObject*> compute_local_dep_object() const {
-    return compute_local_dep_object_.value();
+    return JUST(compute_local_dep_object_);
   }
 
   std::shared_ptr<TensorBuffer>& tensor_buffer() { return tensor_buffer_; }
@@ -83,6 +84,18 @@ class EagerBlobObject final : public BlobObject {
   bool is_shape_synced() const { return is_shape_synced_; }
 
   void set_is_shape_synced(bool val) { is_shape_synced_ = val; }
+
+  const Optional<Symbol<Device>>& producer_op_device() const { return producer_op_device_; }
+  Maybe<void> init_producer_op_device(Symbol<Device> producer_op_device) {
+    CHECK_OR_RETURN(!producer_op_device_.has_value());
+    producer_op_device_ = producer_op_device;
+    return Maybe<void>::Ok();
+  }
+
+  const Optional<Symbol<Device>>& last_used_device() const { return last_used_device_; }
+  void set_last_used_device(Symbol<Device> last_used_device) {
+    last_used_device_ = last_used_device;
+  }
 
  private:
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
@@ -96,6 +109,8 @@ class EagerBlobObject final : public BlobObject {
   std::unique_ptr<MemoryAllocator> non_pod_initer_;
   std::atomic<bool> is_shape_synced_;
   Optional<LocalDepObject*> compute_local_dep_object_;
+  Optional<Symbol<Device>> producer_op_device_;
+  Optional<Symbol<Device>> last_used_device_;
 };
 
 }  // namespace vm

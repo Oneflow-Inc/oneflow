@@ -56,7 +56,6 @@ class MinMaxObserver(Module):
     If per_layer_quantization is False, then the shape of scale and zero_point will be (input.shape[0],).
 
     Args:
-        input (oneflow.Tensor): input tensor.
         quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8.
         quantization_scheme (str): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric".
         quantization_formula (str): Support "google" or "cambricon".
@@ -74,7 +73,7 @@ class MinMaxObserver(Module):
 
         >>> weight = (np.random.random((2, 3, 4, 5)) - 0.5).astype(np.float32)
         
-        >>> input_tensor = flow.Tensor(
+        >>> input_tensor = flow.tensor(
         ...    weight, dtype=flow.float32
         ... )
         

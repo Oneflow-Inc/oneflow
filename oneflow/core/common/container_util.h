@@ -22,13 +22,11 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename MapT, typename KeyT>
-scalar_or_const_ref_t<typename MapT::mapped_type> MapAtOrDefault(const MapT& map, const KeyT& key) {
+template<typename MapT, typename KeyT, typename U>
+scalar_or_const_ref_t<typename MapT::mapped_type> MapAt(const MapT& map, const KeyT& key,
+                                                        const U& default_val) {
   const auto& iter = map.find(key);
-  if (iter == map.end()) {
-    static typename MapT::mapped_type default_val;
-    return default_val;
-  }
+  if (iter == map.end()) { return default_val; }
   return iter->second;
 }
 
@@ -40,41 +38,37 @@ Maybe<scalar_or_const_ref_t<typename MapT::mapped_type>> MapAt(const MapT& map, 
 }
 
 template<typename MapT, typename KeyT>
-Maybe<typename MapT::mapped_type*> MutMapAt(MapT* map, const KeyT& key) {
+Maybe<typename MapT::mapped_type*> MapAt(MapT* map, const KeyT& key) {
   const auto& iter = map->find(key);
   CHECK_OR_RETURN(iter != map->end());
   return &iter->second;
 }
 
-template<typename MapT, typename KeyT>
-Maybe<typename MapT::mapped_type*> MapAt(MapT* map, const KeyT& key) {
-  return MutMapAt(map, key);
-}
-
 template<typename VecT>
-Maybe<scalar_or_const_ref_t<typename VecT::value_type>> VectorAt(const VecT& vec, int64_t index) {
-  CHECK_GE_OR_RETURN(index, 0);
+Maybe<scalar_or_const_ref_t<typename VecT::value_type>> VectorAt(const VecT& vec,
+                                                                 typename VecT::size_type index) {
   CHECK_LT_OR_RETURN(index, vec.size());
-  return vec.at(index);
+  return vec[index];
 }
 
 template<typename VecT>
-Maybe<typename VecT::value_type*> VectorAt(VecT* vec, int64_t index) {
-  CHECK_GE_OR_RETURN(index, 0);
+Maybe<typename VecT::value_type*> VectorAt(VecT* vec, typename VecT::size_type index) {
   CHECK_LT_OR_RETURN(index, vec->size());
-  return &vec->at(index);
+  return &vec[index];
 }
 
 template<typename T>
-std::string Join(const T& vec, const std::string& glue) {
-  std::string str;
-  bool not_first = false;
-  for (const auto& elem : vec) {
-    if (not_first) { str += glue; }
-    str += elem;
-    not_first = true;
+std::string Join(const T& con, const std::string& delimiter) {
+  std::ostringstream os;
+  auto b = begin(con), e = end(con);
+
+  if (b != e) {
+    std::copy(b, prev(e), std::ostream_iterator<typename T::value_type>(os, delimiter));
+    b = prev(e);
   }
-  return str;
+  if (b != e) { os << *b; }
+
+  return os.str();
 }
 
 }  // namespace oneflow

@@ -40,7 +40,7 @@ bool IsScalarTensor(const one::Tensor& tensor) {
 // Checks and sets default value for initial gradients based on out_grads
 // If output is the tensor whose size is greater than 1, out_grad's shape must be same as output's.
 // If output is a scalar tensor, out_grad will also be a scaler or empty(will be inited to
-// `flow.ones([1])`).
+// `oneflow.ones([1])`).
 Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
                                              const one::TensorTuple& out_grads) {
   size_t grad_size = out_grads.empty() ? outputs.size() : out_grads.size();

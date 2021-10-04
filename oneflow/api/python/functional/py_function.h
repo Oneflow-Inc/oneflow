@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_API_PYTHON_FUNCTIONAL_PY_FUNCTION_H_
+#define ONEFLOW_API_PYTHON_FUNCTIONAL_PY_FUNCTION_H_
+
 #include <pybind11/pybind11.h>
 
 #include "oneflow/api/python/functional/function_def.h"
@@ -89,3 +92,5 @@ inline py::object PyFunction(const py::args& args, const py::kwargs& kwargs) {
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
+
+#endif  // ONEFLOW_API_PYTHON_FUNCTIONAL_PY_FUNCTION_H_

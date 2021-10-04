@@ -15,15 +15,16 @@ limitations under the License.
 """
 from collections import OrderedDict
 from functools import partial
-from typing import Iterator, Optional, Set, Union
+from typing import Iterator, Optional, Set, Union, List
 
+import oneflow._C
 import oneflow._oneflow_internal
 import oneflow.framework.graph_build_util as graph_build_util
 from oneflow.env import get_rank
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.nn.module import Module
 from oneflow.nn.parameter import Parameter
-from oneflow.nn.graph.util import add_indent
+from oneflow.nn.graph.util import add_indent, seq_to_func_return
 
 
 class BlockType:
@@ -49,6 +50,8 @@ class Block(object):
         self._scope = None
         self._prev_scope = None
         self._debug = False
+        self._debug_min_s_level = 2
+        self._debug_max_v_level = 0
         if isinstance(value, Module):
             self._type = BlockType.MODULE
             self._is_executing_forward = False
@@ -121,27 +124,45 @@ class Block(object):
             self._scope = graph_build_util.make_new_block_scope(self.prev_scope, self)
         return self._scope
 
-    def debug(self, mode: bool = True) -> None:
-        if get_rank() != 0:
-            return
-        self._debug = mode
-        if self._type == BlockType.MODULE:
+    def debug(
+        self,
+        mode: bool = True,
+        v_level: int = 0,
+        ranks: Optional[Union[int, List[int]]] = None,
+    ) -> None:
+        assert isinstance(mode, bool)
 
-            def _set_child(d):
-                for (_, n) in d.items():
-                    n.debug(mode)
+        if ranks is None:
+            rank_list = [0]
+        elif isinstance(ranks, int):
+            rank_list = [ranks]
+        elif isinstance(ranks, list):
+            rank_list = ranks
+        else:
+            raise ValueError("ranks must be int or List[int].")
 
-            _set_child(self._modules)
-            _set_child(self._parameters)
-            _set_child(self._buffers)
+        my_rank = get_rank()
+        if -1 in rank_list or my_rank in rank_list:
+            self._debug = mode
+            if self._debug:
+                self._debug_min_s_level = 0
+                self._debug_max_v_level = v_level
+            if self._type == BlockType.MODULE:
+
+                def _set_child(d):
+                    for (_, n) in d.items():
+                        n.debug(mode, v_level, ranks)
+
+                _set_child(self._modules)
+                _set_child(self._parameters)
+                _set_child(self._buffers)
 
     def scope_context(self):
         return graph_build_util.BlockScopeContext(self.prev_scope, self.scope)
 
     def __call__(self, *args):
         assert self._type == BlockType.MODULE
-        if self._debug:
-            print(self._shallow_repr())
+        self._print(0, 1, self._shallow_repr())
 
         for idx, arg in enumerate(args):
             meta_repr_str = (
@@ -160,15 +181,15 @@ class Block(object):
             if not isinstance(arg, Tensor):
                 in_str = "[WARNING]" + in_str
             self._args_repr.append(in_str)
-            if self._debug:
-                print(in_str)
 
-                def _print_state(d):
-                    for (_, n) in d.items():
-                        print(n._shallow_repr())
+            self._print(0, 1, in_str)
 
-                _print_state(self._parameters)
-                _print_state(self._buffers)
+            def _print_state(d):
+                for (_, n) in d.items():
+                    self._print(0, 1, n._shallow_repr())
+
+            _print_state(self._parameters)
+            _print_state(self._buffers)
 
         result = self._origin.__class__.__call__(self, *args)
 
@@ -194,8 +215,7 @@ class Block(object):
                 out_str = "[WARNING]" + out_str
 
             self._outs_repr.append(out_str)
-            if self._debug:
-                print(out_str)
+            self._print(0, 1, out_str)
 
         return result
 
@@ -206,10 +226,45 @@ class Block(object):
     def forward(self, *args):
         assert self._type == BlockType.MODULE
         self._is_executing_forward = True
+        args = self._pre_forward_mapping_out_scope(*args)
         with self.scope_context():
             result = self._origin.__class__.forward(self, *args)
+        result = self._post_forward_mapping_out_scope(result)
+        result = seq_to_func_return(result)
         self._is_executing_forward = False
         return result
+
+    def _pre_forward_mapping_out_scope(self, *args):
+        # Insert identity op when doing activation checkpointing or pipeline execution.
+        # Identity op outside activation checkpointing scope will be the endpoint of an activation checkpointing segment.
+        # Identity op as the first op of a pipeline stage will make backward op depends on the identity op within the stage,
+        # otherwise the backward op may depends the op in former stage which will make graph creates unnessary buffers.
+        if self.config.activation_checkpointing or (
+            self.config.stage_id is not None and self.config.stage_id >= 0
+        ):
+
+            def insert_identity(t):
+                assert isinstance(t, Tensor)
+                return oneflow._C.identity(t)
+
+            args = self._mapping_io("input", insert_identity, "insert_identity", *args,)
+
+        return args
+
+    def _post_forward_mapping_out_scope(self, *args):
+        # Insert identity op when doing activation checkpointing or pipeline execution.
+        if self.config.activation_checkpointing or (
+            self.config.stage_id is not None and self.config.stage_id >= 0
+        ):
+
+            def insert_identity(t):
+                assert isinstance(t, Tensor)
+                return oneflow._C.identity(t)
+
+            args = self._mapping_io(
+                "output", insert_identity, "insert_identity", *args,
+            )
+        return args
 
     def modules(self, memo: Optional[Set["Block"]] = None) -> Iterator["Block"]:
         assert self._type == BlockType.MODULE
@@ -223,6 +278,91 @@ class Block(object):
                     continue
                 for m in module.modules(memo):
                     yield m
+
+    def _mapping_io(self, io_type, func, func_desc, *args):
+        assert isinstance(func_desc, str)
+        assert io_type in ("input", "output")
+        mapped_args = []
+
+        def mapping_tensor(item):
+            assert isinstance(item, Tensor)
+            return func(item)
+
+        for idx, arg in enumerate(args):
+            if isinstance(arg, list):
+                seq_args = list()
+                for i in range(len(arg)):
+                    is_tensor, name, repr_str = self._io_tensor_check_and_gen(
+                        arg[i], io_type, idx, i
+                    )
+                    if is_tensor:
+                        seq_args.append(mapping_tensor(arg[i]))
+                        self._print(
+                            0,
+                            1,
+                            f"{repr_str} is a Tensor, {func_desc} transformation has been done.",
+                        )
+                    else:
+                        self._print(
+                            0,
+                            0,
+                            f"{repr_str} is not a Tensor, {func_desc} transformation will be ignored.",
+                        )
+                        seq_args.append(arg[i])
+                mapped_args.append(seq_args)
+            elif isinstance(arg, Tensor):
+                is_tensor, name, repr_str = self._io_tensor_check_and_gen(
+                    arg, io_type, idx
+                )
+                assert is_tensor
+                mapped_args.append(mapping_tensor(arg))
+                self._print(
+                    0,
+                    1,
+                    f"{repr_str} is a Tensor, {func_desc} transformation has been done.",
+                )
+            else:
+                is_tensor, name, repr_str = self._io_tensor_check_and_gen(
+                    arg, io_type, idx
+                )
+                assert not is_tensor
+                mapped_args.append(arg)
+                self._print(
+                    0,
+                    0,
+                    f"{repr_str} is not a Tensor or a list of Tensor, {func_desc} transformation will be ignored.",
+                )
+
+        return tuple(mapped_args)
+
+    def _io_tensor_check_and_gen(self, item, io_type, idx, second_idx=None):
+        assert io_type in ("input", "output")
+        name = (
+            "_"
+            + self.name_prefix
+            + self.name
+            + "-"
+            + io_type
+            + "_"
+            + str(idx)
+            + ("" if second_idx is None else "_" + str(second_idx))
+        )
+        if isinstance(item, Tensor):
+            repr_str = (
+                "(" + io_type.upper() + ":" + name + ":" + item._meta_repr() + ")"
+            )
+            return True, name, repr_str
+        else:
+            repr_str = (
+                "[WARNING]("
+                + io_type.upper()
+                + ":"
+                + name
+                + ":"
+                + str(type(item))
+                + ")"
+            )
+            return False, name, repr_str
 
     def _members(self, get_members_fn, recurse=True) -> Iterator["Block"]:
         assert self._type == BlockType.MODULE
@@ -342,6 +482,8 @@ class Block(object):
         lines = None
         if self._type == BlockType.MODULE:
             child_lines = []
+            if not self.config._is_null:
+                child_lines.append(add_indent(repr(self.config), 2))
             if len(self._args_repr) > 0:
                 for in_str in self._args_repr:
                     input_str = add_indent(in_str, 2)
@@ -370,6 +512,16 @@ class Block(object):
         main_str += ")"
         return main_str
 
+    def _print(self, s_level=2, v_level=0, msg: str = ""):
+        r"""Do print according to info level.
+        """
+        assert isinstance(s_level, int)
+        assert isinstance(v_level, int)
+        assert isinstance(msg, str)
+        if s_level >= self._debug_min_s_level:
+            if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
+                print(msg)
+
     def _shallow_repr(self):
         shallow_repr = (
             "("
@@ -389,22 +541,62 @@ class Block(object):
 
 
 class BlockConfig(object):
+    r"""Configurations on Block in nn.Graph.
+    """
+
     def __init__(self):
+        self._is_null = True
         self._stage_id = None
         self._activation_checkpointing = None
 
     @property
     def stage_id(self):
+        r"""Get stage id of Block in pipeline parallelism.
+        """
         return self._stage_id
 
     @stage_id.setter
     def stage_id(self, value: int = None):
+        r"""Set stage id of Block in pipeline parallelism.
+        Set different module's stage id to hint the graph preparing right num of buffers in pipeline.
+        """
+        self._is_null = False
         self._stage_id = value
 
     @property
     def activation_checkpointing(self):
+        r"""Get whether do activation checkpointing in this Block.
+        """
         return self._activation_checkpointing
 
     @activation_checkpointing.setter
     def activation_checkpointing(self, value: bool = False):
+        r"""Set whether do activation checkpointing in this Block.
+        """
+        self._is_null = False
         self._activation_checkpointing = value
+
+    def __repr__(self):
+        main_str = (
+            "("
+            + "CONFIG"
+            + ":config:"
+            + self.__class__.__name__
+            + "("
+            + (
+                ("stage_id=" + str(self.stage_id) + ", ")
+                if self.stage_id is not None
+                else ""
+            )
+            + (
+                (
+                    "activation_checkpointing="
+                    + str(self.activation_checkpointing)
+                    + ", "
+                )
+                if self.activation_checkpointing is not None
+                else ""
+            )
+            + "))"
+        )
+        return main_str

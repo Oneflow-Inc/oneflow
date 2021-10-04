@@ -82,10 +82,10 @@ def _in_top_k_np(targets, predictions, k):
 def _test_in_top_k_impl(test_case, shape, k, device):
     np_targets = np.random.randint(0, shape[1], size=shape[0])
     np_predictions = np.random.rand(*shape)
-    of_targets = flow.Tensor(
-        np_targets, dtype=flow.int32, device=flow.device(device), requires_grad=True
+    of_targets = flow.tensor(
+        np_targets, dtype=flow.int32, device=flow.device(device), requires_grad=False
     )
-    of_predictions = flow.Tensor(
+    of_predictions = flow.tensor(
         np_predictions,
         dtype=flow.float32,
         device=flow.device(device),

@@ -15,6 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
+import oneflow._oneflow_internal.lazy_mode as lazy_mode
 
 
 def _tensor_to(input, device, dtype, copy=False):
@@ -41,7 +42,7 @@ def _tensor_to(input, device, dtype, copy=False):
     return ret
 
 
-def _consistent_tensor_to(input, device_type, dtype):
+def _consistent_tensor_to(input, device_type, dtype, copy=False):
     assert input.is_consistent
     # TODO(zwx): support lazy check_meta_consistency
     # input.check_meta_consistency()
@@ -53,9 +54,9 @@ def _consistent_tensor_to(input, device_type, dtype):
     assert isinstance(dtype, flow.dtype)
 
     if device_type == input.placement.device_type and dtype == input.dtype:
-        return input
+        return input if not copy else input.clone()
 
-    if input.is_lazy:
+    if lazy_mode.is_enabled():
         return _lazy_consistent_tensor_to(input, device_type, dtype)
     else:
         return _eager_consistent_tensor_to(input, device_type, dtype)
@@ -78,7 +79,6 @@ def _eager_consistent_tensor_to(input, device_type, dtype):
 
     if device_type == input.placement.device_type and dtype != input.dtype:
         return flow._C.cast(input, dtype=dtype)
-
     device = flow.device(device_type)
     placement = flow._oneflow_internal._ReplacePlacementDeviceTag(
         input.placement, device_type
@@ -184,10 +184,7 @@ def to_op(input, *args, **kwargs):
                 f"but device param {device} has been received."
             )
 
-        if copy is True:
-            raise TypeError("A consistent tensor do not support to(copy=True)")
-
-        return _consistent_tensor_to(input, device, dtype)
+        return _consistent_tensor_to(input, device, dtype, copy=copy)
     else:
         if isinstance(device, str):
             device = flow.device(device)

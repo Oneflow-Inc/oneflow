@@ -37,7 +37,8 @@ PRINT_OPTS = __PrinterOptions()
 def _try_convert_to_local_tensor(tensor):
     if tensor.is_consistent:
         tensor = tensor.to_consistent(
-            placement=tensor.placement, sbp=flow.sbp.broadcast
+            placement=flow.env.all_device_placement(tensor.placement.device_type),
+            sbp=flow.sbp.broadcast,
         ).to_local()
     return tensor
 
@@ -208,19 +209,9 @@ def _tensor_str(self, indent):
     if self.dtype is flow.float16:
         self = self.float()
 
-    # TODO: not support flow.sbp.split(x) but flow.sbp.split(0).
-    def _cannot_print(sbp):
-        return (
-            sbp != flow.sbp.partial_sum
-            and sbp != flow.sbp.broadcast
-            and sbp != flow.sbp.split(0)
-        )
-
-    # TODO: delete it when boxing on "CPU" and s1->b on "GPU" are ready
-    if self.is_consistent:
-        self = self.to("cuda")
-        if all(_cannot_print(sbp) for sbp in self.sbp):
-            return "[...]"
+    # TODO: not support nd sbp tensor for now
+    if self.is_consistent and len(self.placement.hierarchy) > 1:
+        return "[...]"
 
     with flow.no_grad():
         formatter = _Formatter(get_summarized_data(self) if summarize else self)

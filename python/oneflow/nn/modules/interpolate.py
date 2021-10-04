@@ -278,7 +278,7 @@ def interpolate(
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 4)), dtype=flow.float32)
+        >>> input = flow.tensor(np.arange(1, 5).reshape((1, 1, 4)), dtype=flow.float32)
         >>> output = flow.nn.functional.interpolate(input, scale_factor=2.0, mode="linear")
         >>> output
         tensor([[[1.0000, 1.2500, 1.7500, 2.2500, 2.7500, 3.2500, 3.7500, 4.0000]]],

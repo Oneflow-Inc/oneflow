@@ -33,6 +33,7 @@ Operators for neural networks
         Embedding,
         Flatten,
         GELU,
+        GLU,
         GroupNorm,
         Hardsigmoid,
         Hardswish,
@@ -90,3 +91,8 @@ Operators for neural networks
         Quantization
 
 .. autofunction:: oneflow.nn.parallel.DistributedDataParallel
+
+.. currentmodule:: oneflow.nn.utils
+.. autofunction:: oneflow.nn.utils.clip_grad_norm_
+.. autofunction:: oneflow.nn.utils.weight_norm
+.. autofunction:: oneflow.nn.utils.remove_weight_norm

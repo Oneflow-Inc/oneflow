@@ -398,7 +398,7 @@ class BatchNorm3d(_BatchNorm):
         >>> m = flow.nn.BatchNorm3d(num_features=2, eps=1e-5, momentum=0.1)
         >>> y = m(x)
         >>> y.size()
-        flow.Size([3, 2, 5, 8, 4])
+        oneflow.Size([3, 2, 5, 8, 4])
 
     """
 

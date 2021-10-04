@@ -22,12 +22,13 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_floor(test_case, shape, device):
     np_input = np.random.randn(*shape)
-    of_input = flow.Tensor(
+    of_input = flow.tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     of_out = flow.floor(of_input)

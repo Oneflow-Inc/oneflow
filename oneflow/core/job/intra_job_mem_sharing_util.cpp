@@ -94,10 +94,11 @@ void InitMemoryChains(Plan* plan,
                       HashMap<int64_t, HashMap<int64_t, MemoryChain>>* device2chain2mem_chain) {
   for (int64_t i = 0; i < plan->task_size(); ++i) {
     TaskProto* task = plan->mutable_task(i);
+    const StreamId stream_id = PlanUtil::GetStreamId(*task);
     int64_t machine_id = task->machine_id();
-    DeviceType device_type = Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task->thrd_id());
+    DeviceType device_type = stream_id.device_id().device_type();
     if (device_type != DeviceType::kGPU) { continue; }
-    int64_t device_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(task->thrd_id());
+    int64_t device_id = stream_id.device_id().device_index();
     int64_t device_unique_id = GenDeviceUniqueId(machine_id, device_id);
     MemoryChain* mem_chain =
         &((*device2chain2mem_chain)[device_unique_id][task->task_set_info().chain_id()]);

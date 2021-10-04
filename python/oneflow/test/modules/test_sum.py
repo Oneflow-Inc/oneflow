@@ -18,7 +18,8 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
 
 import oneflow as flow
@@ -26,19 +27,19 @@ import oneflow.unittest
 
 
 def _test_sum_impl(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(2, 3), dtype=flow.float32, device=flow.device(device)
     )
     of_out = flow.sum(input, dim=0)
     np_out = np.sum(input.numpy(), axis=0)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(2, 3), dtype=flow.float32, device=flow.device(device)
     )
     of_out = flow.sum(input, dim=0)
     np_out = np.sum(input.numpy(), axis=0)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(2, 3), dtype=flow.float32, device=flow.device(device)
     )
     of_out = flow.sum(input, dim=1)
@@ -46,7 +47,7 @@ def _test_sum_impl(test_case, device):
     np_out = np.sum(input.numpy(), axis=1)
     test_case.assertTrue(np.allclose(of_out2.numpy(), of_out.numpy(), 1e-05, 1e-05))
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(4, 5, 6),
         dtype=flow.float32,
         device=flow.device(device),

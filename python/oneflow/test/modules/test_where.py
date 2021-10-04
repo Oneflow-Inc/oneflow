@@ -18,7 +18,8 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
 
 import oneflow as flow
@@ -26,15 +27,15 @@ import oneflow.unittest
 
 
 def _test_where(test_case, device):
-    x = flow.Tensor(
+    x = flow.tensor(
         np.array([[-0.462, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]),
         dtype=flow.float32,
         device=flow.device(device),
     )
-    y = flow.Tensor(
+    y = flow.tensor(
         np.ones(shape=(3, 2)), dtype=flow.float32, device=flow.device(device)
     )
-    condition = flow.Tensor(
+    condition = flow.tensor(
         np.array([[0, 1], [1, 0], [1, 0]]), dtype=flow.int32, device=flow.device(device)
     )
     of_out = flow.where(condition, x, y)
@@ -43,15 +44,15 @@ def _test_where(test_case, device):
 
 
 def _test_where_broadcast(test_case, device):
-    x = flow.Tensor(
+    x = flow.tensor(
         np.array([[[-0.462, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]]),
         dtype=flow.float32,
         device=flow.device(device),
     )
-    y = flow.Tensor(
+    y = flow.tensor(
         np.ones(shape=(3, 3, 2)), dtype=flow.float32, device=flow.device(device)
     )
-    condition = flow.Tensor(
+    condition = flow.tensor(
         np.array([[[0, 1], [1, 0], [1, 0]]]),
         dtype=flow.int32,
         device=flow.device(device),
@@ -70,22 +71,22 @@ def _test_where_broadcast(test_case, device):
 def _test_where_scalar(test_case, device):
     x = 0.5
     y = 2.0
-    condition = flow.Tensor(np.array([1]), dtype=flow.int32)
+    condition = flow.tensor(np.array([1]), dtype=flow.int32)
     of_out = flow.where(condition, x, y)
     np_out = np.array([0.5])
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
 
 
 def _test_where_dim4(test_case, device):
-    x = flow.Tensor(
+    x = flow.tensor(
         np.array([[[[-0.462, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]]]),
         dtype=flow.float32,
         device=flow.device(device),
     )
-    y = flow.Tensor(
+    y = flow.tensor(
         np.ones(shape=(1, 1, 3, 2)), dtype=flow.float32, device=flow.device(device)
     )
-    condition = flow.Tensor(
+    condition = flow.tensor(
         np.array([[[[0, 1], [1, 0], [1, 0]]]]),
         dtype=flow.int32,
         device=flow.device(device),
@@ -96,19 +97,19 @@ def _test_where_dim4(test_case, device):
 
 
 def _test_where_backward(test_case, device):
-    x = flow.Tensor(
+    x = flow.tensor(
         np.array([[-0.462, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]),
         dtype=flow.float32,
         device=flow.device(device),
         requires_grad=True,
     )
-    y = flow.Tensor(
+    y = flow.tensor(
         np.ones(shape=(3, 2)),
         dtype=flow.float32,
         device=flow.device(device),
         requires_grad=True,
     )
-    condition = flow.Tensor(
+    condition = flow.tensor(
         np.array([[0, 1], [1, 0], [1, 0]]), dtype=flow.int32, device=flow.device(device)
     )
     of_out = flow.where(condition, x, y)
@@ -123,19 +124,19 @@ def _test_where_backward(test_case, device):
 
 
 def _test_where_broadcast_backward(test_case, device):
-    x = flow.Tensor(
+    x = flow.tensor(
         np.array([[[-0.462, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]]),
         dtype=flow.float32,
         device=flow.device(device),
         requires_grad=True,
     )
-    y = flow.Tensor(
+    y = flow.tensor(
         np.ones(shape=(3, 3, 2)),
         dtype=flow.float32,
         device=flow.device(device),
         requires_grad=True,
     )
-    condition = flow.Tensor(
+    condition = flow.tensor(
         np.array([[[0, 1], [1, 0], [1, 0]]]),
         dtype=flow.int32,
         device=flow.device(device),
@@ -154,16 +155,16 @@ def _test_where_broadcast_backward(test_case, device):
 
 
 def _test_where_broadcast_x_backward(test_case, device):
-    x = flow.Tensor(
+    x = flow.tensor(
         np.array([[[-0.462, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]]),
         dtype=flow.float32,
         device=flow.device(device),
         requires_grad=True,
     )
-    y = flow.Tensor(
+    y = flow.tensor(
         np.ones(shape=(3, 3, 2)), dtype=flow.float32, device=flow.device(device)
     )
-    condition = flow.Tensor(
+    condition = flow.tensor(
         np.array([[[0, 1], [1, 0], [1, 0]]]),
         dtype=flow.int32,
         device=flow.device(device),
@@ -176,7 +177,7 @@ def _test_where_broadcast_x_backward(test_case, device):
 
 
 def _test_where_x_y_none(test_case, device):
-    condition = flow.Tensor(
+    condition = flow.tensor(
         np.array([[[-0.462, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]]),
         dtype=flow.float32,
         device=flow.device(device),

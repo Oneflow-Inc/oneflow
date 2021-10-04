@@ -20,44 +20,6 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _single
 
 
-def bernoulli(input, *, generator=None, out=None):
-    """This operator returns a Tensor with binaray random numbers (0 / 1) from a Bernoulli distribution.
-
-    Args:
-        input(Tensor) - the input tensor of probability values for the Bernoulli distribution
-        generator: (optional): a pseudorandom number generator for sampling
-        out (Tensor, optional): the output tensor.
-
-    Shape:
-        - Input: :math:`(*)`. Input can be of any shape
-        - Output: :math:`(*)`. Output is of the same shape as input
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        
-        >>> arr = np.array(
-        ...    [
-        ...        [1.0, 1.0, 1.0],
-        ...        [1.0, 1.0, 1.0],
-        ...        [1.0, 1.0, 1.0],
-        ...    ]
-        ... )
-        >>> x = flow.Tensor(arr)
-        >>> y = flow.bernoulli(x)
-        >>> y
-        tensor([[1., 1., 1.],
-                [1., 1., 1.],
-                [1., 1., 1.]], dtype=oneflow.float32)
-
-
-    """
-    return flow._C.bernoulli(input, dtype=flow.float32, generator=generator)
-
-
 def _rand_op_common_process(
     size, device=None, generator=None, placement=None, sbp=None
 ):
@@ -109,7 +71,7 @@ class Rand(Module):
 
     def forward(self):
         if self.placement is not None:
-            res = flow._C.consistent_rand(
+            res = flow._C.rand(
                 self.size,
                 placement=self.placement,
                 sbp=self.sbp,
@@ -144,8 +106,8 @@ def rand_op(
     The shape of the tensor is defined by the variable argument ``size``.
 
     Args:
-        size (int... or flow.Size): Defining the shape of the output tensor.
-          Can be a variable number of arguments or a collection like a list or tuple or flow.Size.
+        size (int... or oneflow.Size): Defining the shape of the output tensor.
+          Can be a variable number of arguments or a collection like a list or tuple or oneflow.Size.
         out (optional): The output tensor.
         dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.float32``.
         layout (optional): The desired layout of returned Tensor.
@@ -165,7 +127,7 @@ def rand_op(
         >>> import oneflow as flow
         >>> x = flow.rand(3,3)
         >>> x.shape
-        flow.Size([3, 3])
+        oneflow.Size([3, 3])
         >>> x.is_consistent
         False
         >>> placement = flow.placement("cpu", {0: [0]})
@@ -207,12 +169,13 @@ class RandN(Module):
 
     def forward(self):
         if self.placement is not None:
-            res = flow._C.consistent_randn(
+            res = flow._C.randn(
                 self.size,
                 placement=self.placement,
                 sbp=self.sbp,
                 dtype=self.dtype,
                 generator=self.generator,
+                requires_grad=self.requires_grad,
             )
         else:
             res = flow._C.randn(
@@ -220,8 +183,8 @@ class RandN(Module):
                 dtype=self.dtype,
                 device=self.device,
                 generator=self.generator,
+                requires_grad=self.requires_grad,
             )
-        res.requires_grad = self.requires_grad
         return res
 
 
@@ -242,8 +205,8 @@ def randn_op(
     The shape of the tensor is defined by the variable argument ``size``.
 
     Args:
-        size (int... or flow.Size): Defining the shape of the output tensor.
-          Can be a variable number of arguments or a collection like a list or tuple or flow.Size.
+        size (int... or oneflow.Size): Defining the shape of the output tensor.
+          Can be a variable number of arguments or a collection like a list or tuple or oneflow.Size.
         out (optional): The output tensor.
         dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.float32``.
         layout (optional): The desired layout of returned Tensor.
@@ -263,7 +226,7 @@ def randn_op(
         >>> import oneflow as flow
         >>> x = flow.randn(3,3)
         >>> x.shape
-        flow.Size([3, 3])
+        oneflow.Size([3, 3])
         >>> x.is_consistent
         False
         >>> placement = flow.placement("cpu", {0:[0]})
@@ -314,26 +277,27 @@ class RandInt(Module):
 
     def forward(self):
         if self.placement is not None:
-            res = flow._C.consistent_randint(
+            res = flow._C.randint(
                 self.low,
                 self.high,
-                shape=self.size,
+                size=self.size,
                 placement=self.placement,
                 sbp_tuple=self.sbp,
                 dtype=self.dtype,
                 generator=self.generator,
+                requires_grad=self.requires_grad,
             )
         else:
             res = flow._C.randint(
                 self.low,
                 self.high,
-                shape=self.size,
+                size=self.size,
                 dtype=self.dtype,
                 device=self.device,
                 generator=self.generator,
+                requires_grad=self.requires_grad,
             )
-        res.requires_grad = self.requires_grad
-        return res.to(dtype=self.dtype)
+        return res
 
 
 def randint_op(
@@ -355,8 +319,8 @@ def randint_op(
     The shape of the tensor is defined by the variable argument ``size``.
 
     Args:
-        size (int... or flow.Size): Defining the shape of the output tensor.
-          Can be a variable number of arguments or a collection like a list or tuple or flow.Size.
+        size (int... or oneflow.Size): Defining the shape of the output tensor.
+          Can be a variable number of arguments or a collection like a list or tuple or oneflow.Size.
         out (optional): The output tensor.
         dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.int64``.
         layout (optional): The desired layout of returned Tensor.
@@ -419,12 +383,20 @@ class RandPerm(Module):
 
     def forward(self, out=None):
         if self.placement is not None:
-            res = flow._C.consistent_randperm(
-                self.n, placement=self.placement, sbp=self.sbp, generator=self.generator
+            res = flow._C.randperm(
+                self.n,
+                placement=self.placement,
+                sbp=self.sbp,
+                generator=self.generator,
+                requires_grad=self.requires_grad,
             )
         else:
-            res = flow._C.randperm(self.n, device=self.device, generator=self.generator)
-        res.requires_grad = self.requires_grad
+            res = flow._C.randperm(
+                self.n,
+                device=self.device,
+                generator=self.generator,
+                requires_grad=self.requires_grad,
+            )
         return res.to(dtype=self.dtype)
 
 

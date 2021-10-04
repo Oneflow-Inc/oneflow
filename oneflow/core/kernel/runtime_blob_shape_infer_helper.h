@@ -27,7 +27,7 @@ class BlobDesc;
 class RuntimeBlobShapeInferHelper final {
  public:
   RuntimeBlobShapeInferHelper(const OperatorConf& op_conf, const KernelConf& kernel_conf,
-                              const JobDesc* job_desc);
+                              const void* scope);
   ~RuntimeBlobShapeInferHelper() = default;
 
   void InferShape(const std::function<Blob*(const std::string&)>& BnInOp2Blob);

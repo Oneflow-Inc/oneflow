@@ -17,8 +17,8 @@ import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
-    oneflow._C.bernoulli,
-    r"""
+    oneflow.bernoulli,
+    """
     bernoulli(input, *, generator=None, out=None)
     
     This operator returns a Tensor with binaray random numbers (0 / 1) from a Bernoulli distribution.
@@ -46,8 +46,8 @@ add_docstr(
         ...        [1.0, 1.0, 1.0],
         ...    ]
         ... )
-        >>> x = flow.Tensor(arr)
-        >>> y = flow._C.bernoulli(x)
+        >>> x = flow.tensor(arr, dtype=flow.float32)
+        >>> y = flow.bernoulli(x)
         >>> y
         tensor([[1., 1., 1.],
                 [1., 1., 1.],

@@ -13,11 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Union
+from typing import Union, Sequence
 
 import oneflow as flow
-from oneflow.nn.module import Module
 from oneflow.nn.common_types import _size_4_t
+from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _quadruple
 
 
@@ -45,26 +45,13 @@ class ReplicationPad2d(Module):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> replicationpad_layer_0 = flow.nn.ReplicationPad2d((2, 2, 1, 1))
-        >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
-        >>> input_int = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))
-        >>> output = replicationpad_layer_0(input)
+        >>> m = flow.nn.ReplicationPad2d((2, 2, 1, 1))
+        >>> input = flow.tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
+        >>> input_int = flow.tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))
+        >>> output = m(input)
         >>> output.shape
-        flow.Size([1, 2, 5, 7])
+        oneflow.Size([1, 2, 5, 7])
         >>> output
-        tensor([[[[ 0.,  0.,  0.,  1.,  2.,  2.,  2.],
-                  [ 0.,  0.,  0.,  1.,  2.,  2.,  2.],
-                  [ 3.,  3.,  3.,  4.,  5.,  5.,  5.],
-                  [ 6.,  6.,  6.,  7.,  8.,  8.,  8.],
-                  [ 6.,  6.,  6.,  7.,  8.,  8.,  8.]],
-        <BLANKLINE>
-                 [[ 9.,  9.,  9., 10., 11., 11., 11.],
-                  [ 9.,  9.,  9., 10., 11., 11., 11.],
-                  [12., 12., 12., 13., 14., 14., 14.],
-                  [15., 15., 15., 16., 17., 17., 17.],
-                  [15., 15., 15., 16., 17., 17., 17.]]]], dtype=oneflow.float32)
-        >>> output_int = replicationpad_layer_0(input_int)
-        >>> output_int
         tensor([[[[ 0.,  0.,  0.,  1.,  2.,  2.,  2.],
                   [ 0.,  0.,  0.,  1.,  2.,  2.,  2.],
                   [ 3.,  3.,  3.,  4.,  5.,  5.,  5.],
@@ -125,7 +112,7 @@ class ReflectionPad2d(Module):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)), dtype=flow.float32)
+        >>> input = flow.tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
         >>> m = flow.nn.ReflectionPad2d((2, 2, 1, 1))
         >>> out = m(input)
         >>> out
@@ -214,10 +201,9 @@ class ConstantPad1d(Module):
     def __init__(self, padding: Union[int, tuple, list], value: Union[int, float] = 0):
         super().__init__()
         if isinstance(padding, (tuple, list)):
-            assert len(padding) == 2, ValueError("Length of padding must be 4")
-            boundary = [padding[0], padding[1]]
+            boundary = padding
         elif isinstance(padding, int):
-            boundary = [padding, padding]
+            boundary = [padding] * 2
         else:
             raise ValueError("padding must be int or list or tuple!")
         self.padding = boundary
@@ -261,26 +247,12 @@ class ConstantPad2d(Module):
         >>> import oneflow as flow
         >>> import numpy as np
 
-        >>> constantpad_layer_0 = flow.nn.ConstantPad2d((2, 2, 1, 1), 1)
-        >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
-        >>> input_int = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))
-        >>> output = constantpad_layer_0(input)
+        >>> m = flow.nn.ConstantPad2d((2, 2, 1, 1), 1)
+        >>> input = flow.tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
+        >>> output = m(input)
         >>> output.shape
-        flow.Size([1, 2, 5, 7])
+        oneflow.Size([1, 2, 5, 7])
         >>> output
-        tensor([[[[ 1.,  1.,  1.,  1.,  1.,  1.,  1.],
-                  [ 1.,  1.,  0.,  1.,  2.,  1.,  1.],
-                  [ 1.,  1.,  3.,  4.,  5.,  1.,  1.],
-                  [ 1.,  1.,  6.,  7.,  8.,  1.,  1.],
-                  [ 1.,  1.,  1.,  1.,  1.,  1.,  1.]],
-        <BLANKLINE>
-                 [[ 1.,  1.,  1.,  1.,  1.,  1.,  1.],
-                  [ 1.,  1.,  9., 10., 11.,  1.,  1.],
-                  [ 1.,  1., 12., 13., 14.,  1.,  1.],
-                  [ 1.,  1., 15., 16., 17.,  1.,  1.],
-                  [ 1.,  1.,  1.,  1.,  1.,  1.,  1.]]]], dtype=oneflow.float32)
-        >>> output_int = constantpad_layer_0(input_int)
-        >>> output_int
         tensor([[[[ 1.,  1.,  1.,  1.,  1.,  1.,  1.],
                   [ 1.,  1.,  0.,  1.,  2.,  1.,  1.],
                   [ 1.,  1.,  3.,  4.,  5.,  1.,  1.],
@@ -298,10 +270,9 @@ class ConstantPad2d(Module):
     def __init__(self, padding: Union[int, tuple, list], value: Union[int, float] = 0):
         super().__init__()
         if isinstance(padding, (tuple, list)):
-            assert len(padding) == 4, ValueError("Length of padding must be 4")
-            boundary = [padding[0], padding[1], padding[2], padding[3]]
+            boundary = padding
         elif isinstance(padding, int):
-            boundary = [padding, padding, padding, padding]
+            boundary = [padding] * 4
         else:
             raise ValueError("padding must be int or list or tuple!")
         self.padding = boundary
@@ -374,17 +345,9 @@ class ConstantPad3d(Module):
     def __init__(self, padding: Union[int, tuple, list], value: Union[int, float] = 0):
         super().__init__()
         if isinstance(padding, (tuple, list)):
-            assert len(padding) == 6, ValueError("Length of padding must be 6")
-            boundary = [
-                padding[0],
-                padding[1],
-                padding[2],
-                padding[3],
-                padding[4],
-                padding[5],
-            ]
+            boundary = padding
         elif isinstance(padding, int):
-            boundary = [padding, padding, padding, padding, padding, padding]
+            boundary = [padding] * 6
         else:
             raise ValueError("padding must be int or list or tuple!")
         self.padding = boundary
@@ -422,13 +385,13 @@ class ZeroPad2d(Module):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> zeropad_layer_int = flow.nn.ZeroPad2d(2)
-        >>> zeropad_layer_tuple = flow.nn.ZeroPad2d((1,2,2,0))
-        >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
-        >>> output_int = zeropad_layer_int(input)
-        >>> output_int.shape
-        flow.Size([1, 2, 7, 7])
-        >>> output_int
+        >>> m1 = flow.nn.ZeroPad2d(2)
+        >>> m2 = flow.nn.ZeroPad2d((1,2,2,0))
+        >>> input = flow.tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
+        >>> output = m1(input)
+        >>> output.shape
+        oneflow.Size([1, 2, 7, 7])
+        >>> output
         tensor([[[[ 0.,  0.,  0.,  0.,  0.,  0.,  0.],
                   [ 0.,  0.,  0.,  0.,  0.,  0.,  0.],
                   [ 0.,  0.,  0.,  1.,  2.,  0.,  0.],
@@ -444,8 +407,8 @@ class ZeroPad2d(Module):
                   [ 0.,  0., 15., 16., 17.,  0.,  0.],
                   [ 0.,  0.,  0.,  0.,  0.,  0.,  0.],
                   [ 0.,  0.,  0.,  0.,  0.,  0.,  0.]]]], dtype=oneflow.float32)
-        >>> output_tuple = zeropad_layer_tuple(input)
-        >>> output_tuple
+        >>> output = m2(input)
+        >>> output
         tensor([[[[ 0.,  0.,  0.,  0.,  0.,  0.],
                   [ 0.,  0.,  0.,  0.,  0.,  0.],
                   [ 0.,  0.,  1.,  2.,  0.,  0.],
@@ -459,37 +422,24 @@ class ZeroPad2d(Module):
                   [ 0., 15., 16., 17.,  0.,  0.]]]], dtype=oneflow.float32)
     """
 
-    def __init__(self, padding: Union[int, tuple]):
+    def __init__(self, padding: Union[int, tuple, list]):
         super().__init__()
-        if isinstance(padding, tuple):
-            assert len(padding) == 4, ValueError("Length of padding must be 4")
-            boundary = [padding[0], padding[1], padding[2], padding[3]]
+        if isinstance(padding, (tuple, list)):
+            boundary = padding
         elif isinstance(padding, int):
-            boundary = [padding, padding, padding, padding]
+            boundary = [padding] * 4
         else:
-            raise ValueError("padding must be int  or tuple!")
+            raise ValueError("padding must be int or list or tuple!")
         self.padding = boundary
         self.value = 0.0
 
     def forward(self, x):
-        (_, _, h, w) = x.shape
-        if x.dtype in [flow.float32, flow.float16, flow.float64]:
-            floating_value = float(self.value)
-            integral_value = int(0)
+        if x.dtype in (flow.float32, flow.float16, flow.float64):
+            self.value = float(self.value)
         else:
-            floating_value = float(0)
-            integral_value = int(self.value)
-        self._op = (
-            flow.builtin_op("constant_pad2d")
-            .Input("x")
-            .Output("y")
-            .Attr("padding", self.padding)
-            .Attr("floating_value", floating_value)
-            .Attr("integral_value", integral_value)
-            .Build()
-        )
-        res = self._op(x)[0]
-        return res
+            self.value = int(self.value)
+
+        return flow._C.pad(x, pad=self.padding, mode="constant", value=self.value)
 
 
 if __name__ == "__main__":

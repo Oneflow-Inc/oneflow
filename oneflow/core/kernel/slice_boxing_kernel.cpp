@@ -18,11 +18,12 @@ limitations under the License.
 #include "oneflow/core/device/memory_copier.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/kernel/slice_boxing_kernel_util.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class SliceBoxingKernel : public KernelIf<device_type> {
+class SliceBoxingKernel : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SliceBoxingKernel);
   SliceBoxingKernel() = default;
@@ -34,7 +35,7 @@ class SliceBoxingKernel : public KernelIf<device_type> {
   const std::vector<std::shared_ptr<TensorSliceCopier>>& tensor_slice_copier_vec() const;
 
  private:
-  void VirtualKernelInit() override;
+  void VirtualKernelInit(KernelContext* ctx) override;
 
   std::vector<std::shared_ptr<TensorSliceCopier>> tensor_slice_copier_vec_;
   std::unique_ptr<MemoryCopier> memory_copier_;
@@ -49,8 +50,7 @@ class SliceBoxingCopyKernel final : public SliceBoxingKernel<device_type, T> {
 
  private:
   virtual const SliceBoxingConf& GetCustomizedBoxingConf() const override;
-  void ForwardDataContent(const KernelCtx&,
-                          const std::function<Blob*(const std::string&)>&) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type, typename T>
@@ -62,12 +62,11 @@ class SliceBoxingAddKernel final : public SliceBoxingKernel<device_type, T> {
 
  private:
   virtual const SliceBoxingConf& GetCustomizedBoxingConf() const override;
-  void ForwardDataContent(const KernelCtx&,
-                          const std::function<Blob*(const std::string&)>&) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type, typename T>
-void SliceBoxingKernel<device_type, T>::VirtualKernelInit() {
+void SliceBoxingKernel<device_type, T>::VirtualKernelInit(KernelContext* ctx) {
   memory_copier_.reset(NewDefaultMemoryCopier(device_type));
   const SliceBoxingConf& conf = GetCustomizedBoxingConf();
   const TensorSliceView out_slice(conf.out_slice());
@@ -95,12 +94,12 @@ const SliceBoxingConf& SliceBoxingCopyKernel<device_type, T>::GetCustomizedBoxin
 }
 
 template<DeviceType device_type, typename T>
-void SliceBoxingCopyKernel<device_type, T>::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  Blob* out = BnInOp2Blob("out");
+void SliceBoxingCopyKernel<device_type, T>::ForwardDataContent(KernelContext* ctx) const {
+  Blob* out = ctx->BnInOp2Blob("out");
   FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
-    const Blob* in_i = BnInOp2Blob(GenRepeatedBn("in", i));
-    this->tensor_slice_copier_vec().at(i)->Copy(ctx.device_ctx, *this->memory_copier(), out, in_i);
+    const Blob* in_i = ctx->BnInOp2Blob(GenRepeatedBn("in", i));
+    this->tensor_slice_copier_vec().at(i)->Copy(ctx->device_ctx(), *this->memory_copier(), out,
+                                                in_i);
   }
 }
 
@@ -110,13 +109,12 @@ const SliceBoxingConf& SliceBoxingAddKernel<device_type, T>::GetCustomizedBoxing
 }
 
 template<DeviceType device_type, typename T>
-void SliceBoxingAddKernel<device_type, T>::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  Blob* out = BnInOp2Blob("out");
+void SliceBoxingAddKernel<device_type, T>::ForwardDataContent(KernelContext* ctx) const {
+  Blob* out = ctx->BnInOp2Blob("out");
   FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
-    const Blob* in_i = BnInOp2Blob(GenRepeatedBn("in", i));
+    const Blob* in_i = ctx->BnInOp2Blob(GenRepeatedBn("in", i));
     if (i == 0) {
-      this->tensor_slice_copier_vec().at(i)->Copy(ctx.device_ctx, *this->memory_copier(), out,
+      this->tensor_slice_copier_vec().at(i)->Copy(ctx->device_ctx(), *this->memory_copier(), out,
                                                   in_i);
     } else {
       bool can_direct_access =
@@ -132,14 +130,14 @@ void SliceBoxingAddKernel<device_type, T>::ForwardDataContent(
           ;
 #endif
       if (in_i->shape() == out->shape() && can_direct_access) {
-        SliceBoxingKernelUtil<device_type, T>::Add(ctx.device_ctx, out->shape().elem_cnt(),
+        SliceBoxingKernelUtil<device_type, T>::Add(ctx->device_ctx(), out->shape().elem_cnt(),
                                                    in_i->dptr<T>(), out->dptr<T>(),
                                                    out->mut_dptr<T>());
       } else {
-        Blob* buf = BnInOp2Blob("buf");
-        this->tensor_slice_copier_vec().at(i)->Copy(ctx.device_ctx, *this->memory_copier(), buf,
+        Blob* buf = ctx->BnInOp2Blob("buf");
+        this->tensor_slice_copier_vec().at(i)->Copy(ctx->device_ctx(), *this->memory_copier(), buf,
                                                     in_i);
-        SliceBoxingKernelUtil<device_type, T>::Add(ctx.device_ctx, out->shape().elem_cnt(),
+        SliceBoxingKernelUtil<device_type, T>::Add(ctx->device_ctx(), out->shape().elem_cnt(),
                                                    buf->dptr<T>(), out->dptr<T>(),
                                                    out->mut_dptr<T>());
       }

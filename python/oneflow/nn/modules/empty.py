@@ -17,9 +17,8 @@ limitations under the License.
 from typing import List, Optional, Union
 
 import oneflow as flow
-
 from oneflow.nn.common_types import _size_any_t
-from oneflow.nn.modules.utils import _single, _handle_size_arg
+from oneflow.nn.modules.utils import _handle_size_arg, _single
 
 
 def empty_op(
@@ -37,8 +36,8 @@ def empty_op(
     The shape of the tensor is defined by the variable argument ``size``.
 
     Args:
-        size (int... or flow.Size): Defining the shape of the output tensor.
-          Can be a variable number of arguments or a collection like a list or tuple or flow.Size.
+        size (int... or oneflow.Size): Defining the shape of the output tensor.
+          Can be a variable number of arguments or a collection like a list or tuple or oneflow.Size.
         dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.float32``.
         device (torch.device, optional): The desired device of returned local tensor. If None, uses the
           current device.
@@ -54,7 +53,7 @@ def empty_op(
         >>> import oneflow as flow
         >>> y = flow.empty(4, 5)  # construct local empty tensor
         >>> y.shape
-        flow.Size([4, 5])
+        oneflow.Size([4, 5])
         >>> y.is_consistent
         False
         >>> placement = flow.placement("cpu", {0: [0]})

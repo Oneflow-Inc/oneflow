@@ -19,7 +19,7 @@ import oneflow as flow
 from oneflow.nn import init
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _single, _pair, _triple
+from oneflow.nn.modules.utils import _pair, _single, _triple
 
 
 def slice(x, begin, size):
@@ -741,7 +741,7 @@ class ConvTranspose2d(Module):
         >>> input = flow.Tensor(np.random.randn(20, 16, 50, 100), device=flow.device("cuda"))
         >>> output = m(input)
         >>> output.size()
-        flow.Size([20, 33, 93, 100])
+        oneflow.Size([20, 33, 93, 100])
 
     .. _cross-correlation:
         https://en.wikipedia.org/wiki/Cross-correlation

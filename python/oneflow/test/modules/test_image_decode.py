@@ -42,7 +42,7 @@ class TestImageDecode(flow.unittest.TestCase):
         images_np_arr_static = np.zeros(static_shape, dtype=np.int8)
         for (idx, np_arr) in enumerate(images_np_arr):
             images_np_arr_static[idx, : np_arr.shape[1]] = np_arr
-        input = flow.Tensor(
+        input = flow.tensor(
             images_np_arr_static, dtype=flow.int8, device=flow.device("cpu")
         )
         images_buffer = flow.tensor_to_tensor_buffer(input, instance_dims=1)

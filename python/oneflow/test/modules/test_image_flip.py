@@ -24,7 +24,7 @@ import oneflow.unittest
 
 
 def _of_image_flip(images, image_static_shape, flip_code):
-    image_tensors = flow.Tensor(images, dtype=flow.float, device=flow.device("cpu"))
+    image_tensors = flow.tensor(images, dtype=flow.float, device=flow.device("cpu"))
     image_tensor_buffer = flow.tensor_to_tensor_buffer(image_tensors, instance_dims=3)
     flip_images = flow.nn.image.flip(flip_code)(image_tensor_buffer)
     return flip_images.numpy()

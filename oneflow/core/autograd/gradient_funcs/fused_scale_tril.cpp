@@ -65,7 +65,7 @@ Maybe<void> FusedScaleTril::Apply(const FusedScaleTrilState* ctx, const TensorTu
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(1);
-  functional::Scalar scale;
+  Scalar scale;
   if (ctx->is_floating_scale_value) {
     scale = ctx->floating_scale_value;
   } else {

@@ -71,8 +71,8 @@ def meshgrid_op(*tensors):
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> input1 = flow.Tensor(np.array([1, 2, 3]), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.array([4, 5, 6]), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.array([1, 2, 3]), dtype=flow.float32)
+        >>> input2 = flow.tensor(np.array([4, 5, 6]), dtype=flow.float32)
         >>> of_x, of_y = flow.meshgrid(input1, input2)
         >>> of_x
         tensor([[1., 1., 1.],

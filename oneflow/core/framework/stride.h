@@ -54,8 +54,8 @@ namespace std {
 template<>
 struct hash<oneflow::Stride> {
   size_t operator()(const oneflow::Stride& stride) const {
-    size_t ret = 0;
-    FOR_RANGE(int, i, 0, stride.NumAxes()) { ret ^= std::hash<int64_t>()(stride.At(i)); }
+    size_t ret = stride.NumAxes();
+    FOR_RANGE(int, i, 0, stride.NumAxes()) { oneflow::AddHash(&ret, stride.At(i)); }
     return ret;
   }
 };

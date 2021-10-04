@@ -31,3 +31,16 @@ def default_generator(device=None):
 
 def manual_seed(seed):
     oneflow._oneflow_internal.manual_seed(seed)
+
+
+def _getstate(self):
+    return {"device": str(self.device), "state": self.get_state()}
+
+
+def _setstate(self, state_dict):
+    self.__init__(state_dict["device"])
+    self.set_state(state_dict["state"])
+
+
+oneflow._oneflow_internal.Generator.__getstate__ = _getstate
+oneflow._oneflow_internal.Generator.__setstate__ = _setstate

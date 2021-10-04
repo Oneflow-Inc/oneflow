@@ -25,9 +25,12 @@ limitations under the License.
 
 namespace oneflow {
 
+class StreamContext;
+
 class Thread {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Thread);
+  explicit Thread(const StreamId& stream_id);
   virtual ~Thread();
 
   void AddTask(const TaskProto&);
@@ -51,16 +54,11 @@ class Thread {
     }
   }
 
-  void JoinAllActor() { actor_thread_.join(); }
-
  protected:
-  Thread();
-  std::thread& mut_actor_thread() { return actor_thread_; }
-  void PollMsgChannel(const ThreadCtx& thread_ctx);
-  void set_thrd_id(int64_t val) { thrd_id_ = val; }
+  void PollMsgChannel();
 
  private:
-  void ConstructActor(int64_t actor_id, const ThreadCtx& thread_ctx);
+  void ConstructActor(int64_t actor_id);
 
   inline bool UseLocalMsgQueue() const {
     return local_msg_queue_enabled_ && std::this_thread::get_id() == actor_thread_.get_id();
@@ -77,6 +75,7 @@ class Thread {
   bool local_msg_queue_enabled_;
   int64_t thrd_id_;
   bool light_actor_enabled_;
+  std::unique_ptr<StreamContext> stream_ctx_;
 };
 
 }  // namespace oneflow

@@ -46,7 +46,7 @@ class DimScatterScalarKernel final : public user_op::OpKernel {
       Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size);
     } else {
       std::cout << "Unimplemented Error" << std::endl;
-      throw Error::Unimplemented();  // TODO: Remove throw Error.
+      throw Error::UnimplementedError();  // TODO: Remove throw Error.
     }
 
     const int ndim = out_tensor->shape().NumAxes();

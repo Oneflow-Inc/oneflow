@@ -22,11 +22,6 @@ void SinkActor::VirtualActorInit(const TaskProto& proto) {
   VirtualSinkActorInit(proto);
 }
 
-void SinkActor::Act() {
-  KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  kernel_ctx.other = NewOther();
-  AsyncLaunchKernel(kernel_ctx);
-  DeleteOther(kernel_ctx.other);
-}
+void SinkActor::Act() { AsyncLaunchKernel(); }
 
 }  // namespace oneflow

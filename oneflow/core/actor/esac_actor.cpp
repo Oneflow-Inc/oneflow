@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/actor/actor.h"
+#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/kernel/esac_kernel.h"
 
 namespace oneflow {
 
@@ -48,7 +50,7 @@ class EsacActor final : public Actor {
   int64_t GetCurProcessedRegstDescId() const;
 
   RegstSlot consumed_rs_;
-  int64_t cur_processed_regst_desc_id_;
+  int64_t cur_processed_regst_desc_id_{};
   HashMap<int64_t, int64_t> regst_desc_id2in_bn_id_;
 };
 
@@ -86,9 +88,10 @@ void EsacActor::Act() {
   Regst* cur_regst = consumed_rs_.Front(cur_processed_regst_desc_id_);
   CHECK(cur_regst);
   int64_t in_bn_id = InBnId4RegstDescId(cur_processed_regst_desc_id_);
-  KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  kernel_ctx.other = &in_bn_id;
-  AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
+  CHECK_EQ(exec_kernel_vec().size(), 1);
+  CHECK_NOTNULL(dynamic_cast<EsacKernelState*>(exec_kernel_vec().at(0).kernel_ctx->state().get()))
+      ->value = in_bn_id;
+  AsyncLaunchKernel([&](int64_t regst_desc_id) -> Regst* {
     if (cur_processed_regst_desc_id_ != regst_desc_id) { return nullptr; }
     return cur_regst;
   });
