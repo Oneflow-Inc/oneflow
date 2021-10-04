@@ -135,8 +135,7 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
   JUST(WithOpGraphAndMutJobBuilder(job, &SingleClientAddGlobalInputCriticalSections));
   JUST(WithOpGraphAndMutJobBuilder(job, &SingleClientAddGlobalOutputCriticalSections));
   JUST(WithOpGraphAndMutJob(job, &MultiClientAutoSourceAndSinkTick));
-  JUST(WithOpGraphAndMutJob(job, &MultiClientAutoInputCriticalSectionTick));
-  JUST(WithOpGraphAndMutJob(job, &MultiClientAutoOutputCriticalSectionTick));
+  JUST(WithOpGraphAndMutJob(job, &MultiClientAutoInterfaceCriticalSectionTick));
   JUST(JobPass4Name("SystemOpFillJobNamePass")(job, &job_pass_ctx));
   JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
   if (XrtCompilationEnabled(GlobalJobDesc())) {
