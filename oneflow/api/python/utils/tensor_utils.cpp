@@ -18,6 +18,8 @@ limitations under the License.
 #include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -83,6 +85,7 @@ Maybe<std::tuple<std::vector<Shape>, std::vector<Symbol<DType>>>>
 MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
   const auto& tensor = JUST(t->AsMirroredTensor());
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
+  CHECK_OR_RETURN(tensor->tensor_meta().data_type() == DataType::kTensorBuffer) << "tensor buffer supported only";
   std::vector<Shape> shapes;
   std::vector<Symbol<DType>> dtypes;
 
