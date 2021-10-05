@@ -21,11 +21,11 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-// Initializes CudaCopyD2HDeviceCtx which contains CudaStreamHandle object and CallbackMsgListPtr
+// Initializes CudaCopyD2HDeviceCtx which contains CudaStreamHandle
 // object, The related istructions will be handled with CudaCopyD2HDeviceCtx
 void CudaCopyD2HStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                           Stream* stream) const {
-  device_ctx->reset(new CudaCopyD2HDeviceCtx(stream->mut_callback_list(), stream->device_id()));
+  device_ctx->reset(new CudaCopyD2HDeviceCtx(stream->device_id()));
 }
 
 // Reinterprets status_buffer as CudaInstrStatusQuerier
@@ -57,7 +57,6 @@ void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
     instr_type_id.instruction_type().Compute(instruction);
     OF_CUDA_CHECK(cudaGetLastError());
   }
-  stream->mut_callback_list()->MoveTo(instruction->mut_callback_list());
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
   CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }

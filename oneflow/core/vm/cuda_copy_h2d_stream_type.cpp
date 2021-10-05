@@ -22,8 +22,7 @@ namespace vm {
 
 void CudaCopyH2DStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                           Stream* stream) const {
-  device_ctx->reset(
-      new CudaStreamHandleDeviceCtx(stream->mut_callback_list(), stream->device_id()));
+  device_ctx->reset(new CudaStreamHandleDeviceCtx(stream->device_id()));
 }
 
 void CudaCopyH2DStreamType::InitInstructionStatus(const Stream& stream,
@@ -52,7 +51,6 @@ void CudaCopyH2DStreamType::Compute(Instruction* instruction) const {
     instr_type_id.instruction_type().Compute(instruction);
     OF_CUDA_CHECK(cudaGetLastError());
   }
-  stream->mut_callback_list()->MoveTo(instruction->mut_callback_list());
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
   CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }

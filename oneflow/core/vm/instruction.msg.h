@@ -304,7 +304,6 @@ OBJECT_MSG_BEGIN(Instruction);
   OBJECT_MSG_DEFINE_LIST_LINK(pending_instruction_link);
   OBJECT_MSG_DEFINE_LIST_LINK(front_seq_infer_instr_link);
   OBJECT_MSG_DEFINE_LIST_LINK(front_seq_compute_instr_link);
-  OBJECT_MSG_DEFINE_LIST_HEAD(CallbackMsg, callback_link, callback_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(InstructionEdge, src_instruction_link, in_edges);
   OBJECT_MSG_DEFINE_LIST_HEAD(InstructionEdge, dst_instruction_link, out_edges);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(RwMutexedObjectAccess, mirrored_object_id, mirrored_object_id2access);

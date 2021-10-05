@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/vm/stream_desc.msg.h"
 #include "oneflow/core/vm/instr_type_id.h"
 #include "oneflow/core/vm/interpret_type.h"
-#include "oneflow/core/common/callback.msg.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
 

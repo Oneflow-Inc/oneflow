@@ -26,8 +26,7 @@ namespace vm {
 
 void AsyncCudaStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                         Stream* stream) const {
-  device_ctx->reset(
-      new CudaStreamHandleDeviceCtx(stream->mut_callback_list(), stream->device_id()));
+  device_ctx->reset(new CudaStreamHandleDeviceCtx(stream->device_id()));
 }
 
 void AsyncCudaStreamType::InitInstructionStatus(const Stream& stream,
@@ -56,7 +55,6 @@ void AsyncCudaStreamType::Compute(Instruction* instruction) const {
     instr_type_id.instruction_type().Compute(instruction);
     OF_CUDA_CHECK(cudaGetLastError());
   }
-  stream->mut_callback_list()->MoveTo(instruction->mut_callback_list());
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
   CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
