@@ -29,8 +29,19 @@ namespace {
 
 // clang-format off
 OBJECT_MSG_BEGIN(TestListItem)
+ public:
+  void __Init__() { clear_cnt(); }
+  // Getters
+  bool has_cnt() const { return cnt_ != nullptr; }
+  int cnt() const { return *cnt_; }
+  // Setters
+  void set_cnt(int* val) { cnt_ = val; }
+  void clear_cnt() { cnt_ = nullptr; }
+  int* mut_cnt() { return cnt_; }
+  int* mutable_cnt() { return cnt_; }
+
   OBJECT_MSG_DEFINE_LIST_LINK(foo_list);
-  OBJECT_MSG_DEFINE_PTR(int, cnt);
+  OBJECT_MSG_FIELD(int*, cnt_);
 
  public:
   void __Delete__() {
@@ -337,11 +348,25 @@ TEST(ObjectMsg, MoveTo) {
 
 // clang-format off
 OBJECT_MSG_BEGIN(SelfLoopContainer);
+ public:
+  void __Init__() { clear_deleted(); }
+  // Getters
+  bool has_deleted() const { return deleted_ != nullptr; }
+  bool deleted() const { return *deleted_; } 
+  // Setters
+  bool* mut_deleted() { return deleted_; }
+  bool* mutable_deleted() { return deleted_; }
+  void set_deleted(bool* val) { deleted_ = val; }
+  void clear_deleted() { deleted_ = nullptr; }
+
   // methods
-  OF_PUBLIC void __Init__(bool* deleted) { set_deleted(deleted); }
+  OF_PUBLIC void __Init__(bool* deleted) {
+    __Init__();
+    set_deleted(deleted);
+  }
   OF_PUBLIC void __Delete__() { *mut_deleted() = true; }
   // fields
-  OBJECT_MSG_DEFINE_PTR(bool, deleted);
+  OBJECT_MSG_FIELD(bool*, deleted_);
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(link);
   OBJECT_MSG_DEFINE_LIST_HEAD(SelfLoopContainer, link, head);

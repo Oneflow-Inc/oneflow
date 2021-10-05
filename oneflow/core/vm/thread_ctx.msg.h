@@ -25,13 +25,25 @@ namespace vm {
 
 // clang-format off
 OBJECT_MSG_BEGIN(ThreadCtx);
+ public:
+  void __Init__() { clear_stream_rt_desc(); }
+
+  // Getters
+  bool has_stream_rt_desc() const { return stream_rt_desc_ != nullptr; }
+  const StreamRtDesc& stream_rt_desc() const { return *stream_rt_desc_; }
+
+  // Setters
+  void set_stream_rt_desc(const StreamRtDesc* val) { stream_rt_desc_ = val; }
+  void clear_stream_rt_desc() { stream_rt_desc_ = nullptr; }
+
   // methods
   OF_PUBLIC void __Init__(const StreamRtDesc& stream_rt_desc) {
+    __Init__();
     set_stream_rt_desc(&stream_rt_desc);
   }
   OF_PUBLIC void LoopRun(const std::function<void(ThreadCtx*)>& Initializer);
   // fields
-  OBJECT_MSG_DEFINE_PTR(const StreamRtDesc, stream_rt_desc); 
+  OBJECT_MSG_FIELD(const StreamRtDesc*, stream_rt_desc_); 
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(thread_ctx_link);

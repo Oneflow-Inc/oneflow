@@ -20,8 +20,11 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
+void Stream::__Init__() { clear_thread_ctx(); }
+
 void Stream::__Init__(ThreadCtx* thread_ctx, const StreamId& stream_id,
                       const int64_t max_device_num_per_machine) {
+  __Init__();
   set_thread_ctx(thread_ctx);
   mut_stream_id()->CopyFrom(stream_id);
   // InitDeviceCtx may use max_device_num_per_machine,

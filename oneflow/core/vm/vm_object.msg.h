@@ -41,11 +41,30 @@ enum OperandAccessType {
 // clang-format off
 OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
  public:
+  void __Init__();
   // Getters
   OperandAccessType access_type() const { return access_type_; }
+  bool has_instruction() const { return instruction_ != nullptr; }
+  bool has_mirrored_object() const { return mirrored_object_ != nullptr; }
+  bool has_rw_mutexed_object() const { return rw_mutexed_object_ != nullptr; }
+  const Instruction& instruction() const { return *instruction_; }
+  const MirroredObject& mirrored_object() const { return *mirrored_object_; }
+  const RwMutexedObject& rw_mutexed_object() const { return *rw_mutexed_object_; }
 
   // Setters
   void set_access_type(OperandAccessType val) { access_type_ = val; }
+  void set_instruction(Instruction* val) { instruction_ = val; }
+  void set_mirrored_object(MirroredObject* val) { mirrored_object_ = val; }
+  void set_rw_mutexed_object(RwMutexedObject* val) { rw_mutexed_object_ = val; }
+  void clear_instruction() { instruction_ = nullptr; }
+  void clear_mirrored_object() { mirrored_object_ = nullptr; }
+  void clear_rw_mutexed_object() { rw_mutexed_object_ = nullptr; }
+  Instruction* mut_instruction() { return instruction_; }
+  MirroredObject* mut_mirrored_object() { return mirrored_object_; }
+  RwMutexedObject* mut_rw_mutexed_object() { return rw_mutexed_object_; }
+  Instruction* mutable_instruction() { return instruction_; }
+  MirroredObject* mutable_mirrored_object() { return mirrored_object_; }
+  RwMutexedObject* mutable_rw_mutexed_object() { return rw_mutexed_object_; }
 
   // methods
   OF_PUBLIC void __Init__(Instruction* instruction, MirroredObject* mirrored_object,
@@ -56,9 +75,9 @@ OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
 
   // fields
   OBJECT_MSG_FIELD(OperandAccessType, access_type_);
-  OBJECT_MSG_DEFINE_PTR(Instruction, instruction);
-  OBJECT_MSG_DEFINE_PTR(MirroredObject, mirrored_object);
-  OBJECT_MSG_DEFINE_PTR(RwMutexedObject, rw_mutexed_object);
+  OBJECT_MSG_FIELD(Instruction*, instruction_);
+  OBJECT_MSG_FIELD(MirroredObject*, mirrored_object_);
+  OBJECT_MSG_FIELD(RwMutexedObject*, rw_mutexed_object_);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(instruction_access_link);
@@ -113,14 +132,19 @@ OBJECT_MSG_END(RwMutexedObject);
 
 OBJECT_MSG_BEGIN(MirroredObject);
  public:
-  MirroredObject() = default;
   // Getters
+  bool has_deleting_access() const { return deleting_access_ != nullptr; }
+  const RwMutexedObjectAccess& deleting_access() const { return *deleting_access_; }
   const RwMutexedObject& rw_mutexed_object() const {
     if (rw_mutexed_object_) { return rw_mutexed_object_.Get(); }
     static const auto default_val = ObjectMsgPtr<RwMutexedObject>::New();
     return default_val.Get();
   }
   // Setters
+  void set_deleting_access(RwMutexedObjectAccess* val) { deleting_access_ = val; }
+  void clear_deleting_access() { deleting_access_ = nullptr; }
+  RwMutexedObjectAccess* mut_deleting_access() { return deleting_access_; }
+  RwMutexedObjectAccess* mutable_deleting_access() { return deleting_access_; }
   RwMutexedObject* mut_rw_mutexed_object() { return mutable_rw_mutexed_object(); }
   RwMutexedObject* mutable_rw_mutexed_object() {
     if (!rw_mutexed_object_) { rw_mutexed_object_ = ObjectMsgPtr<RwMutexedObject>::New(); }
@@ -135,13 +159,13 @@ OBJECT_MSG_BEGIN(MirroredObject);
 
 
   // methods
-  OF_PUBLIC void __Init__() { /* Do nothing */ }
+  OF_PUBLIC void __Init__() { clear_deleting_access(); }
   OF_PUBLIC void __Init__(LogicalObject* logical_object, int64_t global_device_id);
 
   //fields
   OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectId, mirrored_object_id);
   OBJECT_MSG_FIELD(ObjectMsgPtr<RwMutexedObject>, rw_mutexed_object_);
-  OBJECT_MSG_DEFINE_PTR(RwMutexedObjectAccess, deleting_access);
+  OBJECT_MSG_FIELD(RwMutexedObjectAccess*, deleting_access_);
 
 
   // links

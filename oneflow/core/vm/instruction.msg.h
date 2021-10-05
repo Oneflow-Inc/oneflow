@@ -139,15 +139,35 @@ FLAT_MSG_END(InstructionStatusBuffer);
 struct Instruction;
 // clang-format off
 OBJECT_MSG_BEGIN(InstructionEdge);
+ public:
+  void __Init__() {
+    clear_src_instruction();
+    clear_dst_instruction();
+  }
+  // Getters
+  bool has_src_instruction() const { return src_instruction_ != nullptr; } 
+  bool has_dst_instruction() const { return dst_instruction_ != nullptr; } 
+  const Instruction& src_instruction() const { return *src_instruction_; }
+  const Instruction& dst_instruction() const { return *dst_instruction_; } 
+  // Setters
+  void set_src_instruction(Instruction* val) { src_instruction_ = val; } 
+  void set_dst_instruction(Instruction* val) { dst_instruction_ = val; } 
+  void clear_src_instruction() { src_instruction_ = nullptr; } 
+  void clear_dst_instruction() { dst_instruction_ = nullptr; } 
+  Instruction* mut_src_instruction() { return src_instruction_; } 
+  Instruction* mut_dst_instruction() { return dst_instruction_; } 
+  Instruction* mutable_src_instruction() { return src_instruction_; } 
+  Instruction* mutable_dst_instruction() { return dst_instruction_; } 
   // methods
   OF_PUBLIC void __Init__(Instruction* src_instruction, Instruction* dst_instruction) {
+    __Init__();
     set_src_instruction(src_instruction);
     set_dst_instruction(dst_instruction);
   }
 
   // fields
-  OBJECT_MSG_DEFINE_PTR(Instruction, src_instruction); 
-  OBJECT_MSG_DEFINE_PTR(Instruction, dst_instruction); 
+  OBJECT_MSG_FIELD(Instruction*, src_instruction_); 
+  OBJECT_MSG_FIELD(Instruction*, dst_instruction_); 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(src_instruction_link);
   OBJECT_MSG_DEFINE_LIST_LINK(dst_instruction_link);
@@ -158,11 +178,20 @@ struct Stream;
 // clang-format off
 OBJECT_MSG_BEGIN(Instruction);
  public:
+  // Getters
+  void __Init__() { clear_stream(); }
+  bool has_stream() const { return stream_ != nullptr;  }
+  const Stream& stream() const { return *stream_;  }
   const InstructionMsg& instr_msg() const {
     if (instr_msg_) { return instr_msg_.Get(); }
     static const auto default_val = ObjectMsgPtr<InstructionMsg>::New();
     return default_val.Get();
   }
+  // Setters
+  void set_stream(Stream* val) { stream_ = val; }
+  void clear_stream() { stream_ = nullptr; }
+  Stream* mut_stream() { return stream_; }
+  Stream* mutable_stream() { return stream_; }
   InstructionMsg* mut_instr_msg() { return mutable_instr_msg(); }
   InstructionMsg* mutable_instr_msg() {
     if (!instr_msg_) { instr_msg_ = ObjectMsgPtr<InstructionMsg>::New(); }
@@ -266,7 +295,7 @@ OBJECT_MSG_BEGIN(Instruction);
   OBJECT_MSG_DEFINE_FLAT_MSG(InstructionStatusBuffer, status_buffer);
   OBJECT_MSG_FIELD(ObjectMsgPtr<InstructionMsg>, instr_msg_);
   OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<const ParallelDesc>, parallel_desc);
-  OBJECT_MSG_DEFINE_PTR(Stream, stream); 
+  OBJECT_MSG_FIELD(Stream*, stream_); 
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(instruction_link);

@@ -24,8 +24,19 @@ namespace {
 
 // clang-format off
 OBJECT_MSG_BEGIN(ObjectMsgSkipListFoo);
+ public:
+  void __Init__() { clear_is_deleted(); }
+  // Getters
+  bool has_is_deleted() const { return is_deleted_ != nullptr; }
+  int is_deleted() const { return *is_deleted_; }
+  // Setters
+  void set_is_deleted(int* val) { is_deleted_ = val; }
+  void clear_is_deleted() { is_deleted_ = nullptr; }
+  int* mut_is_deleted() { return is_deleted_; }
+  int* mutable_is_deleted() { return is_deleted_; }
+
   OBJECT_MSG_DEFINE_MAP_KEY(int32_t, foo_map_key);
-  OBJECT_MSG_DEFINE_PTR(int, is_deleted);
+  OBJECT_MSG_FIELD(int*, is_deleted_);
   void __Delete__() {
     if (has_is_deleted()) { ++*mutable_is_deleted(); }
   }

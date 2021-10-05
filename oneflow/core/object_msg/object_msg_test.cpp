@@ -24,18 +24,25 @@ namespace test {
 // clang-format off
 OBJECT_MSG_BEGIN(ObjectMsgFoo)
  public:
-  ObjectMsgFoo() = default;
+  void __Init__() { clear_is_deleted(); }
+
   // Getters
   int8_t x() const { return x_; }
   int32_t foo() const { return foo_; }
   int16_t bar() const { return bar_; }
   int64_t foobar() const { return foobar_; }
+  bool has_is_deleted() const { return is_deleted_ != nullptr; }
+  const std::string& is_deleted() const { return *is_deleted_; }
 
   // Setters
   void set_x(int8_t val) { x_ = val; }
   void set_foo(int32_t val) { foo_ = val; }
   void set_bar(int16_t val) { bar_ = val; }
   void set_foobar(int64_t val) { foobar_ = val; }
+  void set_is_deleted(std::string* val) { is_deleted_ = val; }
+  std::string* mut_is_deleted() { return is_deleted_; }
+  std::string* mutable_is_deleted() { return is_deleted_; }
+  void clear_is_deleted() { is_deleted_ = nullptr; }
 
   void __Delete__();
 
@@ -43,7 +50,7 @@ OBJECT_MSG_BEGIN(ObjectMsgFoo)
   OBJECT_MSG_FIELD(int32_t, foo_);
   OBJECT_MSG_FIELD(int16_t, bar_);
   OBJECT_MSG_FIELD(int64_t, foobar_);
-  OBJECT_MSG_DEFINE_PTR(std::string, is_deleted);
+  OBJECT_MSG_FIELD(std::string*, is_deleted_);
 
 OBJECT_MSG_END(ObjectMsgFoo)
 // clang-format on
@@ -72,21 +79,29 @@ TEST(OBJECT_MSG, __delete__) {
 // clang-format off
 OBJECT_MSG_BEGIN(ObjectMsgBar)
  public:
+  void __Init__() { clear_is_deleted(); }
+
   // Getters
   const ObjectMsgFoo& foo() const {
     if (foo_) { return foo_.Get(); }
     static const auto default_val = ObjectMsgPtr<ObjectMsgFoo>::New();
     return default_val.Get();
   }
+  const std::string& is_deleted() const { return *is_deleted_; }
+  bool has_is_deleted() const { return is_deleted_ != nullptr; }
   // Setters
   ObjectMsgFoo* mut_foo() { return mutable_foo(); }
   ObjectMsgFoo* mutable_foo() {
     if (!foo_) { foo_ = ObjectMsgPtr<ObjectMsgFoo>::New(); }
     return foo_.Mutable();
   }
+  std::string* mut_is_deleted() { return is_deleted_; }
+  std::string* mutable_is_deleted() { return is_deleted_; }
+  void set_is_deleted(std::string* val) { is_deleted_ = val; }
+  void clear_is_deleted() { is_deleted_ = nullptr; }
 
   OBJECT_MSG_FIELD(ObjectMsgPtr<ObjectMsgFoo>, foo_);
-  OBJECT_MSG_DEFINE_PTR(std::string, is_deleted);
+  OBJECT_MSG_FIELD(std::string*, is_deleted_);
 
  public:
   void __Delete__(){

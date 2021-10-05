@@ -322,6 +322,7 @@ int64_t Instruction::GetOperandDefaultGlobalDeviceId() const { return stream().g
 
 void Instruction::__Init__(InstructionMsg* instr_msg, Stream* stream,
                            const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+  __Init__();
   mutable_status_buffer();
   reset_instr_msg(instr_msg);
   set_stream(stream);
