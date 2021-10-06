@@ -105,27 +105,24 @@ namespace oneflow {
               typename elem_type::OF_PP_CAT(elem_field_name, _ObjectMsgSkipListKeyType), \
               elem_type::OF_PP_CAT(elem_field_name, _kDssFieldOffset)>
 
-#define _OBJECT_MSG_SKIPLIST_FOR_EACH(skiplist_type, skiplist_ptr, elem)                     \
-  for (ObjectMsgPtr<skiplist_type::value_type> elem, *end_if_not_null = nullptr;             \
-       end_if_not_null == nullptr; end_if_not_null = nullptr, ++end_if_not_null)             \
-  EMBEDDED_LIST_FOR_EACH_WITH_EXPR(                                                          \
-      (StructField<                                                                          \
-          skiplist_type, EmbeddedListLink,                                                   \
-          skiplist_type::ContainerLevelZeroLinkOffset()>::FieldPtr4StructPtr(skiplist_ptr)), \
+#define _OBJECT_MSG_SKIPLIST_FOR_EACH(skiplist_type, skiplist_ptr, elem)                      \
+  for (ObjectMsgPtr<skiplist_type::value_type> elem, *end_if_not_null = nullptr;              \
+       end_if_not_null == nullptr; end_if_not_null = nullptr, ++end_if_not_null)              \
+  LIST_ENTRY_FOR_EACH_WITH_EXPR(                                                              \
+      (StructField<skiplist_type, ListEntry, skiplist_type::ContainerLevelZeroLinkOffset()>:: \
+           FieldPtr4StructPtr(skiplist_ptr)),                                                 \
       skiplist_type::elem_level0_link_struct_field, elem_ptr, (elem.Reset(elem_ptr), true))
 
-#define _OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(skiplist_type, skiplist_ptr, elem)                 \
-  EMBEDDED_LIST_FOR_EACH(                                                                    \
-      (StructField<                                                                          \
-          skiplist_type, EmbeddedListLink,                                                   \
-          skiplist_type::ContainerLevelZeroLinkOffset()>::FieldPtr4StructPtr(skiplist_ptr)), \
+#define _OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(skiplist_type, skiplist_ptr, elem)                  \
+  LIST_ENTRY_FOR_EACH(                                                                        \
+      (StructField<skiplist_type, ListEntry, skiplist_type::ContainerLevelZeroLinkOffset()>:: \
+           FieldPtr4StructPtr(skiplist_ptr)),                                                 \
       skiplist_type::elem_level0_link_struct_field, elem)
 
-#define _OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(skiplist_type, skiplist_ptr, elem)          \
-  EMBEDDED_LIST_UNSAFE_FOR_EACH(                                                             \
-      (StructField<                                                                          \
-          skiplist_type, EmbeddedListLink,                                                   \
-          skiplist_type::ContainerLevelZeroLinkOffset()>::FieldPtr4StructPtr(skiplist_ptr)), \
+#define _OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(skiplist_type, skiplist_ptr, elem)           \
+  LIST_ENTRY_UNSAFE_FOR_EACH(                                                                 \
+      (StructField<skiplist_type, ListEntry, skiplist_type::ContainerLevelZeroLinkOffset()>:: \
+           FieldPtr4StructPtr(skiplist_ptr)),                                                 \
       skiplist_type::elem_level0_link_struct_field, elem)
 
 template<typename WalkCtxType, typename PtrFieldType>
@@ -154,7 +151,7 @@ class TrivialObjectMsgSkipList {
   using value_type = typename ElemKeyField::struct_type;
   using key_type = typename ElemKeyField::field_type::key_type;
   using elem_key_level0_link_struct_field =
-      StructField<typename ElemKeyField::field_type, EmbeddedListLink,
+      StructField<typename ElemKeyField::field_type, ListEntry,
                   ElemKeyField::field_type::LevelZeroLinkOffset()>;
   using elem_level0_link_struct_field =
       typename ComposeStructField<ElemKeyField, elem_key_level0_link_struct_field>::type;

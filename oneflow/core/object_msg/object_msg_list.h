@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <typeinfo>
 #include "oneflow/core/object_msg/object_msg_core.h"
-#include "oneflow/core/object_msg/embedded_list.h"
+#include "oneflow/core/object_msg/list_entry.h"
 
 namespace oneflow {
 
@@ -52,8 +52,8 @@ namespace oneflow {
 
 // details
 
-#define _OBJECT_MSG_LIST_STRUCT_FIELD(obj_msg_type, obj_msg_field)   \
-  StructField<OBJECT_MSG_TYPE_CHECK(obj_msg_type), EmbeddedListLink, \
+#define _OBJECT_MSG_LIST_STRUCT_FIELD(obj_msg_type, obj_msg_field) \
+  StructField<OBJECT_MSG_TYPE_CHECK(obj_msg_type), ListEntry,      \
               OBJECT_MSG_TYPE_CHECK(obj_msg_type)::OF_PP_CAT(obj_msg_field, _kDssFieldOffset)>
 
 #define _OBJECT_MSG_DEFINE_LIST_HEAD(field_counter, elem_type, elem_field_name, field_name)    \
@@ -61,14 +61,14 @@ namespace oneflow {
   DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _ObjectMsgListType), \
                    OF_PP_CAT(field_name, _));                                                  \
   _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name)                   \
-  OBJECT_MSG_OVERLOAD_INIT_WITH_FIELD_INDEX(field_counter, ObjectMsgEmbeddedListHeadInit);     \
-  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedListHeadDelete);
+  OBJECT_MSG_OVERLOAD_INIT_WITH_FIELD_INDEX(field_counter, ObjectMsgListHeadInit);             \
+  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgListHeadDelete);
 
 #define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD_TYPE(elem_type, elem_field_name, field_name)            \
  public:                                                                                           \
   using OF_PP_CAT(field_name, _ObjectMsgListType) =                                                \
       TrivialObjectMsgList<GetObjectMsgLinkType<std::is_same<self_type, elem_type>::value>::value, \
-                           StructField<OBJECT_MSG_TYPE_CHECK(elem_type), EmbeddedListLink,         \
+                           StructField<OBJECT_MSG_TYPE_CHECK(elem_type), ListEntry,                \
                                        OBJECT_MSG_TYPE_CHECK(elem_type)::OF_PP_CAT(                \
                                            elem_field_name, _kDssFieldOffset)>>;
 
@@ -87,11 +87,11 @@ namespace oneflow {
  private:                                                                          \
   OF_PP_CAT(field_name, _ObjectMsgListType) OF_PP_CAT(field_name, _);
 
-#define _OBJECT_MSG_DEFINE_LIST_LINK(field_counter, field_name)               \
-  _OBJECT_MSG_DEFINE_LIST_LINK_FIELD(field_name)                              \
-  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedListLinkInit);     \
-  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedListLinkDelete); \
-  DSS_DEFINE_FIELD(field_counter, "object message", EmbeddedListLink, OF_PP_CAT(field_name, _));
+#define _OBJECT_MSG_DEFINE_LIST_LINK(field_counter, field_name)        \
+  _OBJECT_MSG_DEFINE_LIST_LINK_FIELD(field_name)                       \
+  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgListEntryInit);     \
+  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgListEntryDelete); \
+  DSS_DEFINE_FIELD(field_counter, "object message", ListEntry, OF_PP_CAT(field_name, _));
 
 #define _OBJECT_MSG_DEFINE_LIST_LINK_FIELD(field_name)         \
  public:                                                       \
@@ -100,48 +100,48 @@ namespace oneflow {
   }                                                            \
                                                                \
  private:                                                      \
-  EmbeddedListLink OF_PP_CAT(field_name, _);
+  ListEntry OF_PP_CAT(field_name, _);
 
 #define _OBJECT_MSG_LIST_FOR_EACH(list_type, list_ptr, elem)                          \
   for (ObjectMsgPtr<typename list_type::value_type> elem, *end_if_not_null = nullptr; \
        end_if_not_null == nullptr; end_if_not_null = nullptr, ++end_if_not_null)      \
-  EMBEDDED_LIST_FOR_EACH_WITH_EXPR(                                                   \
-      (StructField<typename list_type, EmbeddedListLink,                              \
+  LIST_ENTRY_FOR_EACH_WITH_EXPR(                                                      \
+      (StructField<typename list_type, ListEntry,                                     \
                    list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)),  \
       list_type::value_link_struct_field, elem_ptr, (elem.Reset(elem_ptr), true))
 
 #define _OBJECT_MSG_LIST_FOR_EACH_PTR(list_type, list_ptr, elem)                     \
-  EMBEDDED_LIST_FOR_EACH(                                                            \
-      (StructField<typename list_type, EmbeddedListLink,                             \
+  LIST_ENTRY_FOR_EACH(                                                               \
+      (StructField<typename list_type, ListEntry,                                    \
                    list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)), \
       list_type::value_link_struct_field, elem)
 
 #define _OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(list_type, list_ptr, elem)              \
-  EMBEDDED_LIST_UNSAFE_FOR_EACH(                                                     \
-      (StructField<typename list_type, EmbeddedListLink,                             \
+  LIST_ENTRY_UNSAFE_FOR_EACH(                                                        \
+      (StructField<typename list_type, ListEntry,                                    \
                    list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)), \
       list_type::value_link_struct_field, elem)
 
 template<int field_index, typename WalkCtxType, typename PtrFieldType>
-struct ObjectMsgEmbeddedListHeadInit {
+struct ObjectMsgListHeadInit {
   static void Call(WalkCtxType* ctx, PtrFieldType* field) {
     field->template __Init__<field_index>();
   }
 };
 
 template<typename WalkCtxType, typename PtrFieldType>
-struct ObjectMsgEmbeddedListHeadDelete {
+struct ObjectMsgListHeadDelete {
   static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->Clear(); }
 };
 
 template<typename WalkCtxType, typename PtrFieldType>
-struct ObjectMsgEmbeddedListLinkInit {
-  static void Call(WalkCtxType* ctx, EmbeddedListLink* field) { field->__Init__(); }
+struct ObjectMsgListEntryInit {
+  static void Call(WalkCtxType* ctx, ListEntry* field) { field->__Init__(); }
 };
 
 template<typename WalkCtxType, typename PtrFieldType>
-struct ObjectMsgEmbeddedListLinkDelete {
-  static void Call(WalkCtxType* ctx, EmbeddedListLink* field) { CHECK(field->empty()); }
+struct ObjectMsgListEntryDelete {
+  static void Call(WalkCtxType* ctx, ListEntry* field) { CHECK(field->empty()); }
 };
 
 enum ObjectMsgLinkType { kDisableSelfLoopLink = 0, kEnableSelfLoopLink };
@@ -169,7 +169,7 @@ class TrivialObjectMsgList<kDisableSelfLoopLink, ValueLinkField> {
   template<typename Enabled = void>
   static constexpr int ContainerLinkOffset() {
     return offsetof(TrivialObjectMsgList, list_head_)
-           + EmbeddedListHead<ValueLinkField>::ContainerLinkOffset();
+           + ListHead<ValueLinkField>::ContainerLinkOffset();
   }
 
   std::size_t size() const { return list_head_.size(); }
@@ -262,7 +262,7 @@ class TrivialObjectMsgList<kDisableSelfLoopLink, ValueLinkField> {
   }
 
  private:
-  EmbeddedListHead<ValueLinkField> list_head_;
+  ListHead<ValueLinkField> list_head_;
 };
 
 template<typename ValueLinkField>
@@ -274,7 +274,7 @@ class TrivialObjectMsgList<kEnableSelfLoopLink, ValueLinkField> {
   template<typename Enabled = void>
   static constexpr int ContainerLinkOffset() {
     return offsetof(TrivialObjectMsgList, list_head_)
-           + EmbeddedListHead<ValueLinkField>::ContainerLinkOffset();
+           + ListHead<ValueLinkField>::ContainerLinkOffset();
   }
 
   std::size_t size() const { return list_head_.size(); }
@@ -406,7 +406,7 @@ class TrivialObjectMsgList<kEnableSelfLoopLink, ValueLinkField> {
     }
   }
 
-  EmbeddedListHead<ValueLinkField> list_head_;
+  ListHead<ValueLinkField> list_head_;
   const value_type* container_;
 };
 

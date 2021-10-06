@@ -21,7 +21,7 @@ limitations under the License.
 #include <random>
 #include <glog/logging.h>
 #include "oneflow/core/object_msg/struct_traits.h"
-#include "oneflow/core/object_msg/embedded_list.h"
+#include "oneflow/core/object_msg/list_entry.h"
 
 namespace oneflow {
 
@@ -43,9 +43,9 @@ struct EmbeddedSkipListLink final {
   void NullptrClear() {
     for (auto& link : links_) { link.NullptrClear(); }
   }
-  void InsertAfter(EmbeddedSkipListLink* prev_skiplist_link, int levels) {
+  void InsertAfter(EmbeddedSkipListLink* prev_skiplist_entry, int levels) {
     CHECK(empty());
-    EmbeddedListLink* prev_link = &prev_skiplist_link->links_[0];
+    ListEntry* prev_link = &prev_skiplist_entry->links_[0];
     int i = 0;
     for (; i < levels; ++i, ++prev_link) {
       while (prev_link->nullptr_empty()) { prev_link = (prev_link - 1)->prev() + 1; }
@@ -59,8 +59,8 @@ struct EmbeddedSkipListLink final {
       links_[i].NullptrClear();
     }
   }
-  static EmbeddedSkipListLink* ThisPtr4LinkPtr(EmbeddedListLink* slist_ptr, int level) {
-    auto* links_ptr = (std::array<EmbeddedListLink, max_level>*)(slist_ptr - level);
+  static EmbeddedSkipListLink* ThisPtr4LinkPtr(ListEntry* slist_ptr, int level) {
+    auto* links_ptr = (std::array<ListEntry, max_level>*)(slist_ptr - level);
     return StructField<self_type, decltype(links_), LinksOffset()>::StructPtr4FieldPtr(links_ptr);
   }
   void CheckEmpty() const {
@@ -70,7 +70,7 @@ struct EmbeddedSkipListLink final {
     for (const auto& link : links_) { CHECK(link.nullptr_empty()); }
   }
 
-  EmbeddedListLink* mutable_link(int i) { return &links_[i]; }
+  ListEntry* mutable_link(int i) { return &links_[i]; }
 
  private:
   template<typename Enabled = void>
@@ -78,7 +78,7 @@ struct EmbeddedSkipListLink final {
     return offsetof(self_type, links_);
   }
 
-  std::array<EmbeddedListLink, max_level> links_;
+  std::array<ListEntry, max_level> links_;
 };
 
 template<typename T, int N = 20>
@@ -118,7 +118,7 @@ struct EmbeddedSkipListKey {
   }
 
   static self_type* Find(const key_type& key, link_type* head, int size_shift) {
-    EmbeddedListLink* last_link_less_than_key = SearchLastBottomLinkLessThan(key, head, size_shift);
+    ListEntry* last_link_less_than_key = SearchLastBottomLinkLessThan(key, head, size_shift);
     if (last_link_less_than_key->next() == head->mutable_link(0)) { return nullptr; }
     self_type* searched = ThisPtr4LinkPtr(last_link_less_than_key->next(), 0);
     if (searched->key() == key) { return searched; }
@@ -133,12 +133,12 @@ struct EmbeddedSkipListKey {
   static void Erase(self_type* elem) { elem->link_.Erase(); }
   // return true if success
   static std::pair<self_type*, bool> Insert(self_type* elem, link_type* head, int size_shift) {
-    EmbeddedListLink* prev_list_link = SearchLastBottomLinkLessThan(elem->key(), head, size_shift);
+    ListEntry* prev_list_entry = SearchLastBottomLinkLessThan(elem->key(), head, size_shift);
     self_type* maybe_searched = nullptr;
-    if (prev_list_link->next() == head->mutable_link(0)) {
+    if (prev_list_entry->next() == head->mutable_link(0)) {
       maybe_searched = nullptr;
     } else {
-      maybe_searched = ThisPtr4LinkPtr(prev_list_link->next(), 0);
+      maybe_searched = ThisPtr4LinkPtr(prev_list_entry->next(), 0);
     }
     self_type* ret_elem = nullptr;
     bool success = false;
@@ -146,7 +146,7 @@ struct EmbeddedSkipListKey {
       ret_elem = maybe_searched;
       success = false;
     } else {
-      self_type* prev = ThisPtr4LinkPtr(prev_list_link, 0);
+      self_type* prev = ThisPtr4LinkPtr(prev_list_entry, 0);
       ret_elem = elem;
       elem->link_.InsertAfter(&prev->link_, RandomNumLevels(size_shift));
       success = true;
@@ -154,8 +154,8 @@ struct EmbeddedSkipListKey {
     // CHECK_EQ(Find(ret_elem->key(), head), ret_elem, GetMaxVal<int32_t>() / 2);
     return std::make_pair(ret_elem, success);
   }
-  static EmbeddedSkipListKey* ThisPtr4LinkPtr(EmbeddedListLink* list_link_ptr, int level) {
-    auto* skip_list_ptr = link_type::ThisPtr4LinkPtr(list_link_ptr, level);
+  static EmbeddedSkipListKey* ThisPtr4LinkPtr(ListEntry* list_entry_ptr, int level) {
+    auto* skip_list_ptr = link_type::ThisPtr4LinkPtr(list_entry_ptr, level);
     using FieldUtil = StructField<self_type, link_type, SkipListIteratorOffset()>;
     return FieldUtil::StructPtr4FieldPtr(skip_list_ptr);
   }
@@ -182,18 +182,18 @@ struct EmbeddedSkipListKey {
     return num_levels;
   }
 
-  static EmbeddedListLink* SearchLastBottomLinkLessThan(const key_type& key, link_type* head,
-                                                        int size_shift) {
+  static ListEntry* SearchLastBottomLinkLessThan(const key_type& key, link_type* head,
+                                                 int size_shift) {
     int max_num_level = std::min(size_shift, N);
-    EmbeddedListLink* list_link = head->mutable_link(max_num_level);
+    ListEntry* list_entry = head->mutable_link(max_num_level);
     for (int level = max_num_level - 1; level >= 0; --level) {
-      --list_link;
-      while (list_link->next() != head->mutable_link(level)
-             && ThisPtr4LinkPtr(list_link->next(), level)->key() < key) {
-        list_link = list_link->next();
+      --list_entry;
+      while (list_entry->next() != head->mutable_link(level)
+             && ThisPtr4LinkPtr(list_entry->next(), level)->key() < key) {
+        list_entry = list_entry->next();
       }
     }
-    return list_link;
+    return list_entry;
   }
 
   link_type link_;
@@ -207,7 +207,7 @@ class EmbeddedSkipListHead {
   using key_link_type = typename ValueLinkField::field_type;
   using key_type = typename key_link_type::key_type;
   using value_key_level0_link_struct_field =
-      StructField<typename ValueLinkField::field_type, EmbeddedListLink,
+      StructField<typename ValueLinkField::field_type, ListEntry,
                   ValueLinkField::field_type::LevelZeroLinkOffset()>;
   using value_level0_link_struct_field =
       typename ComposeStructField<ValueLinkField, value_key_level0_link_struct_field>::type;
@@ -227,10 +227,10 @@ class EmbeddedSkipListHead {
   bool empty() const { return size_ == 0; }
 
   value_type* Begin() {
-    EmbeddedListLink* head_level0 = skiplist_head_.mutable_link(0);
-    EmbeddedListLink* begin_list_link = head_level0->next();
-    if (begin_list_link == head_level0) { return nullptr; }
-    return value_level0_link_struct_field::StructPtr4FieldPtr(begin_list_link);
+    ListEntry* head_level0 = skiplist_head_.mutable_link(0);
+    ListEntry* begin_list_entry = head_level0->next();
+    if (begin_list_entry == head_level0) { return nullptr; }
+    return value_level0_link_struct_field::StructPtr4FieldPtr(begin_list_entry);
   }
 
   value_type* Find(const key_type& key) {
@@ -268,11 +268,11 @@ class EmbeddedSkipListHead {
   void Clear(const Callback& cb) {
     using link_type = EmbeddedSkipListLink<max_level>;
     for (; size_ > 0; --size_) {
-      EmbeddedListLink* begin_list_link = skiplist_head_.mutable_link(0)->next();
-      auto* begin = link_type::ThisPtr4LinkPtr(begin_list_link, 0);
+      ListEntry* begin_list_entry = skiplist_head_.mutable_link(0)->next();
+      auto* begin = link_type::ThisPtr4LinkPtr(begin_list_entry, 0);
       if (begin == &skiplist_head_) { break; }
       begin->Erase();
-      cb(value_level0_link_struct_field::StructPtr4FieldPtr(begin_list_link));
+      cb(value_level0_link_struct_field::StructPtr4FieldPtr(begin_list_entry));
     }
     CHECK(empty_debug());
   }

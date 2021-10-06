@@ -13,18 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_OBJECT_MSG_EMBEDDED_LIST_H_
-#define ONEFLOW_CORE_OBJECT_MSG_EMBEDDED_LIST_H_
+#ifndef ONEFLOW_CORE_OBJECT_MSG_LIST_ENTRY_H_
+#define ONEFLOW_CORE_OBJECT_MSG_LIST_ENTRY_H_
 
 #include "oneflow/core/object_msg/struct_traits.h"
 #include <glog/logging.h>
 
 namespace oneflow {
 
-struct EmbeddedListLink {
+struct ListEntry {
  public:
-  EmbeddedListLink* prev() const { return prev_; }
-  EmbeddedListLink* next() const { return next_; }
+  ListEntry* prev() const { return prev_; }
+  ListEntry* next() const { return next_; }
 
   void __Init__() { Clear(); }
   void Clear() {
@@ -33,11 +33,11 @@ struct EmbeddedListLink {
   }
 
   bool empty() const { return prev_ == this || next_ == this; }
-  void AppendTo(EmbeddedListLink* prev) {
+  void AppendTo(ListEntry* prev) {
     prev->set_next(this);
     this->set_prev(prev);
   }
-  void InsertAfter(EmbeddedListLink* prev) {
+  void InsertAfter(ListEntry* prev) {
     auto* next = prev->next();
     this->AppendTo(prev);
     next->AppendTo(this);
@@ -55,50 +55,49 @@ struct EmbeddedListLink {
   }
 
  private:
-  void set_prev(EmbeddedListLink* prev) { prev_ = prev; }
-  void set_next(EmbeddedListLink* next) { next_ = next; }
+  void set_prev(ListEntry* prev) { prev_ = prev; }
+  void set_next(ListEntry* next) { next_ = next; }
 
-  EmbeddedListLink* prev_;
-  EmbeddedListLink* next_;
+  ListEntry* prev_;
+  ListEntry* next_;
 };
 
-#define EMBEDDED_LIST_FOR_EACH(head_link, elem_link_struct_field, elem) \
-  EMBEDDED_LIST_FOR_EACH_WITH_EXPR(head_link, elem_link_struct_field, elem, 0)
+#define LIST_ENTRY_FOR_EACH(head_link, elem_link_struct_field, elem) \
+  LIST_ENTRY_FOR_EACH_WITH_EXPR(head_link, elem_link_struct_field, elem, 0)
 
-#define EMBEDDED_LIST_FOR_EACH_WITH_EXPR(head_link, elem_link_struct_field, elem, expr) \
-  for (typename elem_link_struct_field::struct_type* elem = nullptr; elem == nullptr;   \
-       elem = nullptr, elem++)                                                          \
-  EMBEDDED_LIST_FOR_EACH_I(                                                             \
-      head_link, __elem_link__,                                                         \
-      ((elem = elem_link_struct_field::StructPtr4FieldPtr(__elem_link__)), expr))
-
-#define EMBEDDED_LIST_FOR_EACH_I(head_link, elem_link, expr)                              \
-  for (EmbeddedListLink* __head_link__ = (head_link), *elem_link = __head_link__->next(), \
-                         *__next_link__ = elem_link->next();                              \
-       (elem_link != __head_link__) && ((expr) || true);                                  \
-       elem_link = __next_link__, __next_link__ = __next_link__->next())
-
-#define EMBEDDED_LIST_UNSAFE_FOR_EACH(head_link, elem_link_struct_field, elem)        \
+#define LIST_ENTRY_FOR_EACH_WITH_EXPR(head_link, elem_link_struct_field, elem, expr)  \
   for (typename elem_link_struct_field::struct_type* elem = nullptr; elem == nullptr; \
        elem = nullptr, elem++)                                                        \
-  EMBEDDED_LIST_UNSAFE_FOR_EACH_I(                                                    \
+  LIST_ENTRY_FOR_EACH_I(                                                              \
       head_link, __elem_link__,                                                       \
-      (elem = elem_link_struct_field::StructPtr4FieldPtr(__elem_link__)))
+      ((elem = elem_link_struct_field::StructPtr4FieldPtr(__elem_link__)), expr))
 
-#define EMBEDDED_LIST_UNSAFE_FOR_EACH_I(head_link, elem_link, expr)                       \
-  for (EmbeddedListLink* __head_link__ = (head_link), *elem_link = __head_link__->next(); \
+#define LIST_ENTRY_FOR_EACH_I(head_link, elem_link, expr)                          \
+  for (ListEntry* __head_link__ = (head_link), *elem_link = __head_link__->next(), \
+                  *__next_link__ = elem_link->next();                              \
+       (elem_link != __head_link__) && ((expr) || true);                           \
+       elem_link = __next_link__, __next_link__ = __next_link__->next())
+
+#define LIST_ENTRY_UNSAFE_FOR_EACH(head_link, elem_link_struct_field, elem)           \
+  for (typename elem_link_struct_field::struct_type* elem = nullptr; elem == nullptr; \
+       elem = nullptr, elem++)                                                        \
+  LIST_ENTRY_UNSAFE_FOR_EACH_I(head_link, __elem_link__,                              \
+                               (elem = elem_link_struct_field::StructPtr4FieldPtr(__elem_link__)))
+
+#define LIST_ENTRY_UNSAFE_FOR_EACH_I(head_link, elem_link, expr)                   \
+  for (ListEntry* __head_link__ = (head_link), *elem_link = __head_link__->next(); \
        (elem_link != __head_link__) && ((expr), true); elem_link = elem_link->next())
 
 template<typename LinkField>
-class EmbeddedListHead {
+class ListHead {
  public:
   using value_type = typename LinkField::struct_type;
-  static_assert(std::is_same<typename LinkField::field_type, EmbeddedListLink>::value,
-                "no EmbeddedListLink found");
+  static_assert(std::is_same<typename LinkField::field_type, ListEntry>::value,
+                "no ListEntry found");
 
   template<typename Enabled = void>
   static constexpr int ContainerLinkOffset() {
-    return offsetof(EmbeddedListHead, container_);
+    return offsetof(ListHead, container_);
   }
 
   std::size_t size() const { return size_; }
@@ -110,7 +109,7 @@ class EmbeddedListHead {
   }
   void CheckSize() const {
     size_t link_size = 0;
-    for (EmbeddedListLink* iter = container_.next(); iter != &container_; iter = iter->next()) {
+    for (ListEntry* iter = container_.next(); iter != &container_; iter = iter->next()) {
       ++link_size;
     }
     CHECK_EQ(size_, link_size);
@@ -144,27 +143,27 @@ class EmbeddedListHead {
   void Erase(value_type* elem) {
     CHECK_GT(size_, 0);
     CHECK_NE(elem, End());
-    EmbeddedListLink* list_link = LinkField::FieldPtr4StructPtr(elem);
-    CHECK(!list_link->empty());
-    list_link->Erase();
+    ListEntry* list_entry = LinkField::FieldPtr4StructPtr(elem);
+    CHECK(!list_entry->empty());
+    list_entry->Erase();
     --size_;
   }
-  void MoveToDstBack(value_type* elem, EmbeddedListHead* dst) {
+  void MoveToDstBack(value_type* elem, ListHead* dst) {
     CHECK(!container_.empty());
     auto* dst_rbegin = dst->container_.prev();
     auto* dst_end = &dst->container_;
-    EmbeddedListLink* elem_link = LinkField::FieldPtr4StructPtr(elem);
+    ListEntry* elem_link = LinkField::FieldPtr4StructPtr(elem);
     elem_link->next()->AppendTo(elem_link->prev());
     elem_link->AppendTo(dst_rbegin);
     dst_end->AppendTo(elem_link);
     --size_;
     ++dst->size_;
   }
-  void MoveToDstFront(value_type* elem, EmbeddedListHead* dst) {
+  void MoveToDstFront(value_type* elem, ListHead* dst) {
     CHECK(!container_.empty());
     auto* dst_end = &dst->container_;
     auto* dst_begin = dst->container_.next();
-    EmbeddedListLink* elem_link = LinkField::FieldPtr4StructPtr(elem);
+    ListEntry* elem_link = LinkField::FieldPtr4StructPtr(elem);
     elem_link->next()->AppendTo(elem_link->prev());
     elem_link->AppendTo(dst_end);
     dst_begin->AppendTo(elem_link);
@@ -185,7 +184,7 @@ class EmbeddedListHead {
     Erase(first);
     return first;
   }
-  void MoveToDstBack(EmbeddedListHead* dst) {
+  void MoveToDstBack(ListHead* dst) {
     if (container_.empty()) { return; }
     auto* dst_last = dst->container_.prev();
     auto* dst_end = &dst->container_;
@@ -199,22 +198,22 @@ class EmbeddedListHead {
 
  private:
   void InsertAfter(value_type* prev_elem, value_type* new_elem) {
-    EmbeddedListLink* prev_list_link = LinkField::FieldPtr4StructPtr(prev_elem);
-    EmbeddedListLink* next_list_link = prev_list_link->next();
-    EmbeddedListLink* new_list_link = LinkField::FieldPtr4StructPtr(new_elem);
-    CHECK(new_list_link->empty());
-    new_list_link->AppendTo(prev_list_link);
-    next_list_link->AppendTo(new_list_link);
+    ListEntry* prev_list_entry = LinkField::FieldPtr4StructPtr(prev_elem);
+    ListEntry* next_list_entry = prev_list_entry->next();
+    ListEntry* new_list_entry = LinkField::FieldPtr4StructPtr(new_elem);
+    CHECK(new_list_entry->empty());
+    new_list_entry->AppendTo(prev_list_entry);
+    next_list_entry->AppendTo(new_list_entry);
     ++size_;
   }
-  const EmbeddedListLink& container() const { return container_; }
-  EmbeddedListLink* mut_container() { return &container_; }
+  const ListEntry& container() const { return container_; }
+  ListEntry* mut_container() { return &container_; }
 
  private:
-  EmbeddedListLink container_;
+  ListEntry container_;
   volatile std::size_t size_;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OBJECT_MSG_EMBEDDED_LIST_H_
+#endif  // ONEFLOW_CORE_OBJECT_MSG_LIST_ENTRY_H_
