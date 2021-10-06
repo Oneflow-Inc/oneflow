@@ -34,13 +34,15 @@ OBJECT_MSG_BEGIN(TestListItem)
   // Getters
   bool has_cnt() const { return cnt_ != nullptr; }
   int cnt() const { return *cnt_; }
+  bool is_foo_list_empty() const { return foo_list_.empty(); }
+
   // Setters
   void set_cnt(int* val) { cnt_ = val; }
   void clear_cnt() { cnt_ = nullptr; }
   int* mut_cnt() { return cnt_; }
   int* mutable_cnt() { return cnt_; }
 
-  OBJECT_MSG_DEFINE_LIST_LINK(foo_list);
+  OBJECT_MSG_FIELD(ListEntry, foo_list_);
   OBJECT_MSG_FIELD(int*, cnt_);
 
  public:
@@ -353,6 +355,7 @@ OBJECT_MSG_BEGIN(SelfLoopContainer);
   // Getters
   bool has_deleted() const { return deleted_ != nullptr; }
   bool deleted() const { return *deleted_; } 
+  bool is_entry_empty() const { return entry_.empty(); }
   // Setters
   bool* mut_deleted() { return deleted_; }
   bool* mutable_deleted() { return deleted_; }
@@ -368,7 +371,7 @@ OBJECT_MSG_BEGIN(SelfLoopContainer);
   // fields
   OBJECT_MSG_FIELD(bool*, deleted_);
   // list entries
-  OBJECT_MSG_DEFINE_LIST_LINK(entry);
+  OBJECT_MSG_FIELD(ListEntry, entry_);
   OBJECT_MSG_DEFINE_LIST_HEAD(SelfLoopContainer, entry, head);
 OBJECT_MSG_END(SelfLoopContainer);
 // clang-format on

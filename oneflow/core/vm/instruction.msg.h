@@ -129,7 +129,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
 
 
   // list entries
-  OBJECT_MSG_DEFINE_LIST_LINK(instr_msg_entry);
+  OBJECT_MSG_FIELD(ListEntry, instr_msg_entry_);
 
   // private methods
   OF_PRIVATE InstructionOperand* add_instr_operand();
@@ -186,8 +186,8 @@ OBJECT_MSG_BEGIN(InstructionEdge);
   OBJECT_MSG_FIELD(Instruction*, src_instruction_); 
   OBJECT_MSG_FIELD(Instruction*, dst_instruction_); 
   // list entries
-  OBJECT_MSG_DEFINE_LIST_LINK(src_instruction_entry);
-  OBJECT_MSG_DEFINE_LIST_LINK(dst_instruction_entry);
+  OBJECT_MSG_FIELD(ListEntry, src_instruction_entry_);
+  OBJECT_MSG_FIELD(ListEntry, dst_instruction_entry_);
 OBJECT_MSG_END(InstructionEdge);
 // clang-format on
 
@@ -206,6 +206,11 @@ OBJECT_MSG_BEGIN(Instruction);
   }
   const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
   const InstructionStatusBuffer& status_buffer() const { return status_buffer_.Get(); }
+  bool is_instruction_entry_empty() const { return instruction_entry_.empty(); }
+  bool is_vm_stat_running_instruction_entry_empty() const { return vm_stat_running_instruction_entry_.empty(); }
+  bool is_pending_instruction_entry_empty() const { return pending_instruction_entry_.empty(); }
+  bool is_front_seq_compute_instr_entry_empty() const { return front_seq_compute_instr_entry_.empty(); }
+
   // Setters
   void set_stream(Stream* val) { stream_ = val; }
   void clear_stream() { stream_ = nullptr; }
@@ -321,12 +326,12 @@ OBJECT_MSG_BEGIN(Instruction);
   OBJECT_MSG_FIELD(Stream*, stream_); 
 
   // list entries
-  OBJECT_MSG_DEFINE_LIST_LINK(instruction_entry);
+  OBJECT_MSG_FIELD(ListEntry, instruction_entry_);
   // `vm_stat_running_instruction_entry` valid from instruction ready to instruction done 
-  OBJECT_MSG_DEFINE_LIST_LINK(vm_stat_running_instruction_entry);
-  OBJECT_MSG_DEFINE_LIST_LINK(pending_instruction_entry);
-  OBJECT_MSG_DEFINE_LIST_LINK(front_seq_infer_instr_entry);
-  OBJECT_MSG_DEFINE_LIST_LINK(front_seq_compute_instr_entry);
+  OBJECT_MSG_FIELD(ListEntry, vm_stat_running_instruction_entry_);
+  OBJECT_MSG_FIELD(ListEntry, pending_instruction_entry_);
+  OBJECT_MSG_FIELD(ListEntry, front_seq_infer_instr_entry_);
+  OBJECT_MSG_FIELD(ListEntry, front_seq_compute_instr_entry_);
   OBJECT_MSG_DEFINE_LIST_HEAD(InstructionEdge, src_instruction_entry, in_edges);
   OBJECT_MSG_DEFINE_LIST_HEAD(InstructionEdge, dst_instruction_entry, out_edges);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(RwMutexedObjectAccess, mirrored_object_id, mirrored_object_id2access);

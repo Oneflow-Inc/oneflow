@@ -23,6 +23,8 @@ namespace oneflow {
 
 struct ListEntry {
  public:
+  ListEntry() { Clear(); }
+
   ListEntry* prev() const { return prev_; }
   ListEntry* next() const { return next_; }
 

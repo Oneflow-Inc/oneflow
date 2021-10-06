@@ -41,6 +41,9 @@ OBJECT_MSG_BEGIN(LocalDepObject);
     static const auto default_val = ObjectMsgPtr<vm::MirroredObject>::New();
     return default_val.Get();
   }
+  bool is_pool_entry_empty() const { return pool_entry_.empty(); }
+  bool is_stored_entry_empty() const { return stored_entry_.empty(); }
+  bool is_lifetime_entry_empty() const { return lifetime_entry_.empty(); }
 
   // Setters
   vm::LogicalObject* mut_logical_object() { return mutable_logical_object(); }
@@ -65,9 +68,9 @@ OBJECT_MSG_BEGIN(LocalDepObject);
   OBJECT_MSG_FIELD(ObjectMsgPtr<vm::MirroredObject>, mirrored_object_); 
 
   // list entries
-  OBJECT_MSG_DEFINE_LIST_LINK(pool_entry);
-  OBJECT_MSG_DEFINE_LIST_LINK(stored_entry);
-  OBJECT_MSG_DEFINE_LIST_LINK(lifetime_entry);
+  OBJECT_MSG_FIELD(ListEntry, pool_entry_);
+  OBJECT_MSG_FIELD(ListEntry, stored_entry_);
+  OBJECT_MSG_FIELD(ListEntry, lifetime_entry_);
 OBJECT_MSG_END(LocalDepObject);
 // clang-format on
 

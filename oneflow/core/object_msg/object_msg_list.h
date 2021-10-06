@@ -22,11 +22,6 @@ limitations under the License.
 
 namespace oneflow {
 
-#define OBJECT_MSG_DEFINE_LIST_LINK(field_name)                                     \
-  static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                \
-  _OBJECT_MSG_DEFINE_LIST_LINK(STATIC_COUNTER(field_counter), field_name);
-
 #define OBJECT_MSG_DEFINE_LIST_HEAD(elem_type, elem_field_name, field_name)               \
   static_assert(__is_object_message_type__, "this struct is not a object message");       \
   OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                      \
@@ -87,21 +82,6 @@ namespace oneflow {
  private:                                                                          \
   OF_PP_CAT(field_name, _ObjectMsgListType) OF_PP_CAT(field_name, _);
 
-#define _OBJECT_MSG_DEFINE_LIST_LINK(field_counter, field_name)        \
-  _OBJECT_MSG_DEFINE_LIST_LINK_FIELD(field_name)                       \
-  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgListEntryInit);     \
-  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgListEntryDelete); \
-  DSS_DEFINE_FIELD(field_counter, "object message", ListEntry, OF_PP_CAT(field_name, _));
-
-#define _OBJECT_MSG_DEFINE_LIST_LINK_FIELD(field_name)         \
- public:                                                       \
-  bool OF_PP_CAT(is_, OF_PP_CAT(field_name, _empty))() const { \
-    return OF_PP_CAT(field_name, _).empty();                   \
-  }                                                            \
-                                                               \
- private:                                                      \
-  ListEntry OF_PP_CAT(field_name, _);
-
 #define _OBJECT_MSG_LIST_FOR_EACH(list_type, list_ptr, elem)                          \
   for (ObjectMsgPtr<typename list_type::value_type> elem, *end_if_not_null = nullptr; \
        end_if_not_null == nullptr; end_if_not_null = nullptr, ++end_if_not_null)      \
@@ -132,16 +112,6 @@ struct ObjectMsgListHeadInit {
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgListHeadDelete {
   static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->Clear(); }
-};
-
-template<typename WalkCtxType, typename PtrFieldType>
-struct ObjectMsgListEntryInit {
-  static void Call(WalkCtxType* ctx, ListEntry* field) { field->__Init__(); }
-};
-
-template<typename WalkCtxType, typename PtrFieldType>
-struct ObjectMsgListEntryDelete {
-  static void Call(WalkCtxType* ctx, ListEntry* field) { CHECK(field->empty()); }
 };
 
 enum ObjectMsgLinkType { kDisableSelfLoopLink = 0, kEnableSelfLoopLink };

@@ -50,6 +50,7 @@ OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
   const Instruction& instruction() const { return *instruction_; }
   const MirroredObject& mirrored_object() const { return *mirrored_object_; }
   const RwMutexedObject& rw_mutexed_object() const { return *rw_mutexed_object_; }
+  bool is_rw_mutexed_object_access_entry_empty() const { return rw_mutexed_object_access_entry_.empty(); }
 
   // Setters
   void set_access_type(OperandAccessType val) { access_type_ = val; }
@@ -80,8 +81,8 @@ OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
   OBJECT_MSG_FIELD(RwMutexedObject*, rw_mutexed_object_);
 
   // list entries
-  OBJECT_MSG_DEFINE_LIST_LINK(instruction_access_entry);
-  OBJECT_MSG_DEFINE_LIST_LINK(rw_mutexed_object_access_entry);
+  OBJECT_MSG_FIELD(ListEntry, instruction_access_entry_);
+  OBJECT_MSG_FIELD(ListEntry, rw_mutexed_object_access_entry_);
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, MirroredObjectId, mirrored_object_id);
   
 OBJECT_MSG_END(RwMutexedObjectAccess);
@@ -181,6 +182,7 @@ OBJECT_MSG_BEGIN(LogicalObject);
   LogicalObject() = default;
   // Getters
   const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
+  bool is_delete_entry_empty() const { return delete_entry_.empty(); }
   // Setters
   std::shared_ptr<const ParallelDesc>* mut_parallel_desc() { return &parallel_desc_; }
   std::shared_ptr<const ParallelDesc>* mutable_parallel_desc() { return &parallel_desc_; }
@@ -201,7 +203,7 @@ OBJECT_MSG_BEGIN(LogicalObject);
 
   // list entries
   OBJECT_MSG_DEFINE_MAP_KEY(ObjectId, logical_object_id);
-  OBJECT_MSG_DEFINE_LIST_LINK(delete_entry);
+  OBJECT_MSG_FIELD(ListEntry, delete_entry_);
   // heads
   OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, global_device_id, global_device_id2mirrored_object);
 OBJECT_MSG_END(LogicalObject);

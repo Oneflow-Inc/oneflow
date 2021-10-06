@@ -35,6 +35,8 @@ OBJECT_MSG_BEGIN(Stream);
   const ThreadCtx& thread_ctx() const { return *thread_ctx_; }
   bool has_thread_ctx() const { return thread_ctx_ != nullptr; }
   const std::unique_ptr<DeviceCtx>& device_ctx() const { return device_ctx_; }
+  bool is_active_stream_entry_empty() const { return active_stream_entry_.empty(); }
+
   // Setters
   void set_max_device_num_per_machine(int64_t val) { max_device_num_per_machine_ = val; }
   ThreadCtx* mut_thread_ctx() { return thread_ctx_; }
@@ -62,8 +64,8 @@ OBJECT_MSG_BEGIN(Stream);
   OBJECT_MSG_FIELD(int64_t, max_device_num_per_machine_);
   
   // list entries
-  OBJECT_MSG_DEFINE_LIST_LINK(active_stream_entry);
-  OBJECT_MSG_DEFINE_LIST_LINK(thread_ctx_stream_entry);
+  OBJECT_MSG_FIELD(ListEntry, active_stream_entry_);
+  OBJECT_MSG_FIELD(ListEntry, thread_ctx_stream_entry_);
   OBJECT_MSG_DEFINE_MAP_KEY(StreamId, stream_id);
 
   // heads 
