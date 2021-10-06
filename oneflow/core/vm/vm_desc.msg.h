@@ -34,12 +34,15 @@ OBJECT_MSG_BEGIN(VmDesc);
     static const auto default_val = ObjectMsgPtr<VmResourceDesc>::New();
     return default_val.Get();
   }
+  const Range& machine_id_range() const { return machine_id_range_; }
   //Setters
   VmResourceDesc* mut_vm_resource_desc() { return mutable_vm_resource_desc(); }
   VmResourceDesc* mutable_vm_resource_desc() {
     if (!vm_resource_desc_) { vm_resource_desc_ = ObjectMsgPtr<VmResourceDesc>::New(); }
     return vm_resource_desc_.Mutable();
   }
+  Range* mut_machine_id_range() { return &machine_id_range_; }
+  Range* mutable_machine_id_range() { return &machine_id_range_; }
 
   // methods
   OF_PUBLIC void __Init__(const VmResourceDesc& vm_resource_desc) {
@@ -52,7 +55,7 @@ OBJECT_MSG_BEGIN(VmDesc);
   
   // fields
   OBJECT_MSG_FIELD(ObjectMsgPtr<VmResourceDesc>, vm_resource_desc_);
-  OBJECT_MSG_DEFINE_STRUCT(Range, machine_id_range);
+  OBJECT_MSG_FIELD(Range, machine_id_range_);
 
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(StreamDesc, stream_type_id, stream_type_id2desc);

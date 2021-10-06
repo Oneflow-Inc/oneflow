@@ -179,24 +179,6 @@ struct ObjectMsgPtrUtil final {
   }
 };
 
-template<typename T>
-struct ObjectMsgStructDefault final {
-  ObjectMsgStructDefault() {
-    std::memset(reinterpret_cast<void*>(Mutable()), 0, sizeof(T));
-    ObjectMsgPtrUtil::InitRef<T>(Mutable());
-  }
-
-  const T& Get() const { return msg.msg_; }
-  T* Mutable() { return &msg.msg_; }
-
- private:
-  union Msg {
-    T msg_;
-    Msg() {}
-    ~Msg() {}
-  } msg;
-};
-
 template<bool is_pointer>
 struct _ObjectMsgNaiveInit {
   template<typename WalkCtxType, typename PtrFieldType>
@@ -221,7 +203,6 @@ struct _ObjectMsgNaiveInit<true> {
                   "FieldType is not a subclass of ObjectMsgStruct");
     auto* ptr = new FieldType();
     *field_ptr = ptr;
-    std::memset(reinterpret_cast<void*>(ptr), 0, sizeof(FieldType));
     ObjectMsgPtrUtil::InitRef<FieldType>(ptr);
     ObjectMsgPtrUtil::Ref<FieldType>(ptr);
     ptr->template ObjectMsg__Init__<WalkCtxType>(ctx);

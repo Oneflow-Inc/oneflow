@@ -42,12 +42,18 @@ OBJECT_MSG_BEGIN(VirtualMachine);
     static const auto default_val = ObjectMsgPtr<VmResourceDesc>::New();
     return default_val.Get();
   }
+  const Range& machine_id_range() const { return machine_id_range_; }
+  const std::atomic<int64_t>& flying_instruction_cnt() const { return flying_instruction_cnt_; }
   //Setters
   VmResourceDesc* mut_vm_resource_desc() { return mutable_vm_resource_desc(); }
   VmResourceDesc* mutable_vm_resource_desc() {
     if (!vm_resource_desc_) { vm_resource_desc_ = ObjectMsgPtr<VmResourceDesc>::New(); }
     return vm_resource_desc_.Mutable();
   }
+  Range* mut_machine_id_range() { return &machine_id_range_; }
+  std::atomic<int64_t>* mut_flying_instruction_cnt() { return &flying_instruction_cnt_; }
+  Range* mutable_machine_id_range() { return &machine_id_range_; }
+  std::atomic<int64_t>* mutable_flying_instruction_cnt() { return &flying_instruction_cnt_; }
 
 
   // methods
@@ -69,8 +75,8 @@ OBJECT_MSG_BEGIN(VirtualMachine);
 
   // fields
   OBJECT_MSG_FIELD(ObjectMsgPtr<VmResourceDesc>, vm_resource_desc_);
-  OBJECT_MSG_DEFINE_STRUCT(Range, machine_id_range);
-  OBJECT_MSG_DEFINE_STRUCT(std::atomic<int64_t>, flying_instruction_cnt);
+  OBJECT_MSG_FIELD(Range, machine_id_range_);
+  OBJECT_MSG_FIELD(std::atomic<int64_t>, flying_instruction_cnt_);
 
   // heads
   OBJECT_MSG_DEFINE_LIST_HEAD(Stream, active_stream_link, active_stream_list);

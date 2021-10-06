@@ -97,34 +97,34 @@ OBJECT_MSG_BEGIN(RwMutexedObject);
   }
   OF_PUBLIC template<typename T> Maybe<const T&> Get() const {
     const T* obj = dynamic_cast<const T*>(&object());
-    const auto &origin_obj = *object_ptr();
+    const auto &origin_obj = *object_ptr_;
     CHECK_NOTNULL_OR_RETURN(obj)
       << "cast to " << typeid(T).name() << "failed. "
-      << "type: " << (object_ptr() ? typeid(origin_obj).name() : "nullptr");
+      << "type: " << (object_ptr_ ? typeid(origin_obj).name() : "nullptr");
     return *obj;
   }
   OF_PUBLIC template<typename T> Maybe<T*> Mut() {
-    T* obj = dynamic_cast<T*>(object_ptr().get());
-    const auto &origin_obj = *object_ptr();
+    T* obj = dynamic_cast<T*>(object_ptr_.get());
+    const auto &origin_obj = *object_ptr_;
     CHECK_NOTNULL_OR_RETURN(obj)
       << "cast to " << typeid(T).name() << "failed. "
-      << "type: " << (object_ptr() ? typeid(origin_obj).name() : "nullptr");
+      << "type: " << (object_ptr_ ? typeid(origin_obj).name() : "nullptr");
     return obj;
   }
   OF_PUBLIC template<typename T, typename... Args> T* Init(Args&&... args) {
-    T* object = dynamic_cast<T*>(object_ptr().get());
+    T* object = dynamic_cast<T*>(object_ptr_.get());
     CHECK(object == nullptr);
     object = new T(std::forward<Args>(args)...);
     reset_object(object);
     return object;
   }
-  OF_PUBLIC const Object& object() const { return *object_ptr().get(); }
-  OF_PUBLIC bool has_object() const { return object_ptr().get() != nullptr; }
-  OF_PUBLIC void reset_object(Object* object) { mut_object_ptr()->reset(object); }
+  OF_PUBLIC const Object& object() const { return *object_ptr_; }
+  OF_PUBLIC bool has_object() const { return static_cast<bool>(object_ptr_); }
+  OF_PUBLIC void reset_object(Object* object) { object_ptr_.reset(object); }
   OF_PUBLIC void reset_object() { reset_object(nullptr); }
 
   // fields
-  OBJECT_MSG_DEFINE_STRUCT(std::unique_ptr<Object>, object_ptr);
+  OBJECT_MSG_FIELD(std::unique_ptr<Object>, object_ptr_);
 
   // links
   OBJECT_MSG_DEFINE_LIST_HEAD(RwMutexedObjectAccess, rw_mutexed_object_access_link, access_list);
@@ -176,6 +176,12 @@ struct VirtualMachine;
 OBJECT_MSG_BEGIN(LogicalObject);
  public:
   LogicalObject() = default;
+  // Getters
+  const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
+  // Setters
+  std::shared_ptr<const ParallelDesc>* mut_parallel_desc() { return &parallel_desc_; }
+  std::shared_ptr<const ParallelDesc>* mutable_parallel_desc() { return &parallel_desc_; }
+
   // methods
   OF_PUBLIC void __Init__() { /* Do nothing */ }
   OF_PUBLIC void __Init__(const ObjectId& logical_object_id) {
@@ -188,7 +194,7 @@ OBJECT_MSG_BEGIN(LogicalObject);
   }
 
   // fields
-  OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<const ParallelDesc>, parallel_desc);
+  OBJECT_MSG_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
 
   // links
   OBJECT_MSG_DEFINE_MAP_KEY(ObjectId, logical_object_id);

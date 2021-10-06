@@ -38,8 +38,13 @@ namespace vm {
 OBJECT_MSG_BEGIN(InstructionOperandList);
  public:
   void __Init__() {}
+  // Getters
+  const std::vector<FlatMsg<InstructionOperand>>& operand() const { return operand_; }
+  // Setters
+  std::vector<FlatMsg<InstructionOperand>>* mut_operand() { return &operand_; }
+  std::vector<FlatMsg<InstructionOperand>>* mutable_operand() { return &operand_; }
 
-  OBJECT_MSG_DEFINE_STRUCT(std::vector<FlatMsg<InstructionOperand>>, operand);
+  OBJECT_MSG_FIELD(std::vector<FlatMsg<InstructionOperand>>, operand_);
 OBJECT_MSG_END(InstructionOperandList);
 
 OBJECT_MSG_BEGIN(InstructionMsg);
@@ -52,6 +57,10 @@ OBJECT_MSG_BEGIN(InstructionMsg);
     static const auto default_val = ObjectMsgPtr<InstructionOperandList>::New();
     return default_val.Get();
   }
+  const std::string& instr_type_name() const { return instr_type_name_; }
+  const InstrTypeId& instr_type_id() const { return instr_type_id_; }
+  const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
+  const std::shared_ptr<PhyInstrOperand>& phy_instr_operand() const { return phy_instr_operand_; }
   // Setters
   void set_parallel_desc_symbol_id(int64_t val) { parallel_desc_symbol_id_ = val; }
   InstructionOperandList* mut_operand_list() { return mutable_operand_list(); }
@@ -62,6 +71,14 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   void reset_operand_list(const InstructionOperandList& other) {
     operand_list_.Reset(const_cast<InstructionOperandList*>(&other));
   }
+  std::string* mut_instr_type_name() { return &instr_type_name_; }
+  std::string* mutable_instr_type_name() { return &instr_type_name_; }
+  InstrTypeId* mut_instr_type_id() { return &instr_type_id_; }
+  InstrTypeId* mutable_instr_type_id() { return &instr_type_id_; }
+  std::shared_ptr<const ParallelDesc>* mut_parallel_desc() { return &parallel_desc_; }
+  std::shared_ptr<const ParallelDesc>* mutable_parallel_desc() { return &parallel_desc_; }
+  std::shared_ptr<PhyInstrOperand>* mut_phy_instr_operand() { return &phy_instr_operand_; }
+  std::shared_ptr<PhyInstrOperand>* mutable_phy_instr_operand() { return &phy_instr_operand_; }
 
   // methods
   OF_PUBLIC void __Init__();
@@ -102,13 +119,13 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> MakeInferInstrMsg() const;
 
   // fields
-  OBJECT_MSG_DEFINE_STRUCT(InstrTypeId, instr_type_id);
+  OBJECT_MSG_FIELD(InstrTypeId, instr_type_id_);
   // instr_type_name is a necessary reduandant field for method ToProto
-  OBJECT_MSG_DEFINE_STRUCT(std::string, instr_type_name);
+  OBJECT_MSG_FIELD(std::string, instr_type_name_);
   OBJECT_MSG_FIELD(int64_t, parallel_desc_symbol_id_);
-  OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<const ParallelDesc>, parallel_desc);
+  OBJECT_MSG_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
   OBJECT_MSG_FIELD(ObjectMsgPtr<InstructionOperandList>, operand_list_);
-  OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<PhyInstrOperand>, phy_instr_operand);
+  OBJECT_MSG_FIELD(std::shared_ptr<PhyInstrOperand>, phy_instr_operand_);
 
 
   // links
@@ -187,6 +204,7 @@ OBJECT_MSG_BEGIN(Instruction);
     static const auto default_val = ObjectMsgPtr<InstructionMsg>::New();
     return default_val.Get();
   }
+  const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
   // Setters
   void set_stream(Stream* val) { stream_ = val; }
   void clear_stream() { stream_ = nullptr; }
@@ -199,6 +217,8 @@ OBJECT_MSG_BEGIN(Instruction);
   }
   void reset_instr_msg(InstructionMsg* instr_msg) { instr_msg_.Reset(instr_msg); }
   void clear_instr_msg() { instr_msg_.Reset(); }
+  std::shared_ptr<const ParallelDesc>* mut_parallel_desc() { return &parallel_desc_; }
+  std::shared_ptr<const ParallelDesc>* mutable_parallel_desc() { return &parallel_desc_; }
 
   // methods
   OF_PUBLIC void __Init__(InstructionMsg* instr_msg, Stream* stream, const std::shared_ptr<const ParallelDesc>& parallel_desc);
@@ -294,7 +314,7 @@ OBJECT_MSG_BEGIN(Instruction);
   // fields
   OBJECT_MSG_DEFINE_FLAT_MSG(InstructionStatusBuffer, status_buffer);
   OBJECT_MSG_FIELD(ObjectMsgPtr<InstructionMsg>, instr_msg_);
-  OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<const ParallelDesc>, parallel_desc);
+  OBJECT_MSG_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
   OBJECT_MSG_FIELD(Stream*, stream_); 
 
   // links

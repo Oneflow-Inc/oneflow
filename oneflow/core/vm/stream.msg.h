@@ -34,12 +34,15 @@ OBJECT_MSG_BEGIN(Stream);
   int64_t max_device_num_per_machine() const { return max_device_num_per_machine_; }
   const ThreadCtx& thread_ctx() const { return *thread_ctx_; }
   bool has_thread_ctx() const { return thread_ctx_ != nullptr; }
+  const std::unique_ptr<DeviceCtx>& device_ctx() const { return device_ctx_; }
   // Setters
   void set_max_device_num_per_machine(int64_t val) { max_device_num_per_machine_ = val; }
   ThreadCtx* mut_thread_ctx() { return thread_ctx_; }
   ThreadCtx* mutable_thread_ctx() { return thread_ctx_; }
   void set_thread_ctx(ThreadCtx* val) { thread_ctx_ = val; }
   void clear_thread_ctx() { thread_ctx_ = nullptr; }
+  std::unique_ptr<DeviceCtx>* mut_device_ctx() { return &device_ctx_; }
+  std::unique_ptr<DeviceCtx>* mutable_device_ctx() { return &device_ctx_; }
 
   // methods
   OF_PUBLIC void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id, const int64_t max_device_num_per_machine);
@@ -55,7 +58,7 @@ OBJECT_MSG_BEGIN(Stream);
 
   // fields
   OBJECT_MSG_FIELD(ThreadCtx*, thread_ctx_); 
-  OBJECT_MSG_DEFINE_STRUCT(std::unique_ptr<DeviceCtx>, device_ctx);
+  OBJECT_MSG_FIELD(std::unique_ptr<DeviceCtx>, device_ctx_);
   OBJECT_MSG_FIELD(int64_t, max_device_num_per_machine_);
   
   // links
