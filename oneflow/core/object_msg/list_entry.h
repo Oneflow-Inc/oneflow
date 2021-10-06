@@ -21,6 +21,8 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace intrusive {
+
 struct ListEntry {
  public:
   ListEntry() { Clear(); }
@@ -74,10 +76,10 @@ struct ListEntry {
       head_entry, __elem_entry__,                                                      \
       ((elem = elem_entry_struct_field::StructPtr4FieldPtr(__elem_entry__)), expr))
 
-#define LIST_ENTRY_FOR_EACH_I(head_entry, elem_entry, expr)                            \
-  for (ListEntry* __head_entry__ = (head_entry), *elem_entry = __head_entry__->next(), \
-                  *__next_entry__ = elem_entry->next();                                \
-       (elem_entry != __head_entry__) && ((expr) || true);                             \
+#define LIST_ENTRY_FOR_EACH_I(head_entry, elem_entry, expr)                                       \
+  for (intrusive::ListEntry* __head_entry__ = (head_entry), *elem_entry = __head_entry__->next(), \
+                             *__next_entry__ = elem_entry->next();                                \
+       (elem_entry != __head_entry__) && ((expr) || true);                                        \
        elem_entry = __next_entry__, __next_entry__ = __next_entry__->next())
 
 #define LIST_ENTRY_UNSAFE_FOR_EACH(head_entry, elem_entry_struct_field, elem)          \
@@ -87,8 +89,8 @@ struct ListEntry {
       head_entry, __elem_entry__,                                                      \
       (elem = elem_entry_struct_field::StructPtr4FieldPtr(__elem_entry__)))
 
-#define LIST_ENTRY_UNSAFE_FOR_EACH_I(head_entry, elem_entry, expr)                     \
-  for (ListEntry* __head_entry__ = (head_entry), *elem_entry = __head_entry__->next(); \
+#define LIST_ENTRY_UNSAFE_FOR_EACH_I(head_entry, elem_entry, expr)                                \
+  for (intrusive::ListEntry* __head_entry__ = (head_entry), *elem_entry = __head_entry__->next(); \
        (elem_entry != __head_entry__) && ((expr), true); elem_entry = elem_entry->next())
 
 template<typename LinkField>
@@ -216,6 +218,8 @@ class ListHead {
   ListEntry container_;
   volatile std::size_t size_;
 };
+
+}  // namespace intrusive
 
 }  // namespace oneflow
 

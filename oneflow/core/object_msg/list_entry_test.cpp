@@ -23,6 +23,8 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace intrusive {
+
 namespace test {
 
 struct ListItemBar final {
@@ -37,7 +39,7 @@ class TestListEntry final : public ListEntry {
 };
 
 template<typename ItemField>
-class TestListHead : public ListHead<ItemField> {
+class TestListHead : public intrusive::ListHead<ItemField> {
  public:
   TestListHead() { this->__Init__(); }
 };
@@ -215,5 +217,7 @@ TEST(ListHead, prev_item) {
 }
 
 }  // namespace test
+
+}  // namespace intrusive
 
 }  // namespace oneflow

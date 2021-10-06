@@ -81,8 +81,8 @@ OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
   OBJECT_MSG_FIELD(RwMutexedObject*, rw_mutexed_object_);
 
   // list entries
-  OBJECT_MSG_FIELD(ListEntry, instruction_access_entry_);
-  OBJECT_MSG_FIELD(ListEntry, rw_mutexed_object_access_entry_);
+  OBJECT_MSG_FIELD(intrusive::ListEntry, instruction_access_entry_);
+  OBJECT_MSG_FIELD(intrusive::ListEntry, rw_mutexed_object_access_entry_);
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, MirroredObjectId, mirrored_object_id);
   
 OBJECT_MSG_END(RwMutexedObjectAccess);
@@ -203,7 +203,7 @@ OBJECT_MSG_BEGIN(LogicalObject);
 
   // list entries
   OBJECT_MSG_DEFINE_MAP_KEY(ObjectId, logical_object_id);
-  OBJECT_MSG_FIELD(ListEntry, delete_entry_);
+  OBJECT_MSG_FIELD(intrusive::ListEntry, delete_entry_);
   // heads
   OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, global_device_id, global_device_id2mirrored_object);
 OBJECT_MSG_END(LogicalObject);

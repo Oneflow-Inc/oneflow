@@ -33,7 +33,7 @@ OBJECT_MSG_BEGIN(Foo);
   OBJECT_MSG_FIELD(int, x_);
 
   // list entries
-  OBJECT_MSG_FIELD(ListEntry, entry_);
+  OBJECT_MSG_FIELD(intrusive::ListEntry, entry_);
 OBJECT_MSG_END(Foo);
 // clang-format on
 

@@ -18,6 +18,8 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace intrusive {
+
 namespace test {
 
 template<typename ElemKeyField>
@@ -159,5 +161,7 @@ TEST(EmbeddedSkipList, erase_many_by_elem) {
 }
 
 }  // namespace test
+
+}  // namespace intrusive
 
 }  // namespace oneflow

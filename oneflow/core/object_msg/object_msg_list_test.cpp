@@ -42,7 +42,7 @@ OBJECT_MSG_BEGIN(TestListItem)
   int* mut_cnt() { return cnt_; }
   int* mutable_cnt() { return cnt_; }
 
-  OBJECT_MSG_FIELD(ListEntry, foo_list_);
+  OBJECT_MSG_FIELD(intrusive::ListEntry, foo_list_);
   OBJECT_MSG_FIELD(int*, cnt_);
 
  public:
@@ -371,7 +371,7 @@ OBJECT_MSG_BEGIN(SelfLoopContainer);
   // fields
   OBJECT_MSG_FIELD(bool*, deleted_);
   // list entries
-  OBJECT_MSG_FIELD(ListEntry, entry_);
+  OBJECT_MSG_FIELD(intrusive::ListEntry, entry_);
   OBJECT_MSG_DEFINE_LIST_HEAD(SelfLoopContainer, entry, head);
 OBJECT_MSG_END(SelfLoopContainer);
 // clang-format on

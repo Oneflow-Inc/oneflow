@@ -68,9 +68,9 @@ OBJECT_MSG_BEGIN(LocalDepObject);
   OBJECT_MSG_FIELD(ObjectMsgPtr<vm::MirroredObject>, mirrored_object_); 
 
   // list entries
-  OBJECT_MSG_FIELD(ListEntry, pool_entry_);
-  OBJECT_MSG_FIELD(ListEntry, stored_entry_);
-  OBJECT_MSG_FIELD(ListEntry, lifetime_entry_);
+  OBJECT_MSG_FIELD(intrusive::ListEntry, pool_entry_);
+  OBJECT_MSG_FIELD(intrusive::ListEntry, stored_entry_);
+  OBJECT_MSG_FIELD(intrusive::ListEntry, lifetime_entry_);
 OBJECT_MSG_END(LocalDepObject);
 // clang-format on
 

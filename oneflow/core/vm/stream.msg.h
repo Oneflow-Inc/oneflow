@@ -64,8 +64,8 @@ OBJECT_MSG_BEGIN(Stream);
   OBJECT_MSG_FIELD(int64_t, max_device_num_per_machine_);
   
   // list entries
-  OBJECT_MSG_FIELD(ListEntry, active_stream_entry_);
-  OBJECT_MSG_FIELD(ListEntry, thread_ctx_stream_entry_);
+  OBJECT_MSG_FIELD(intrusive::ListEntry, active_stream_entry_);
+  OBJECT_MSG_FIELD(intrusive::ListEntry, thread_ctx_stream_entry_);
   OBJECT_MSG_DEFINE_MAP_KEY(StreamId, stream_id);
 
   // heads 

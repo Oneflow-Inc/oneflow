@@ -31,10 +31,6 @@ namespace oneflow {
 #define OBJECT_MSG_LIST(obj_msg_type, obj_msg_field) \
   ObjectMsgList<_OBJECT_MSG_LIST_STRUCT_FIELD(obj_msg_type, obj_msg_field)>
 
-#define OBJECT_MSG_LIST_PTR(obj_msg_type, obj_msg_field) \
-  TrivialObjectMsgList<kDisableSelfLoopLink,             \
-                       _OBJECT_MSG_LIST_STRUCT_FIELD(obj_msg_type, obj_msg_field)>*
-
 #define OBJECT_MSG_LIST_FOR_EACH(list_ptr, elem) \
   _OBJECT_MSG_LIST_FOR_EACH(std::remove_pointer<decltype(list_ptr)>::type, list_ptr, elem)
 
@@ -47,8 +43,8 @@ namespace oneflow {
 
 // details
 
-#define _OBJECT_MSG_LIST_STRUCT_FIELD(obj_msg_type, obj_msg_field) \
-  StructField<OBJECT_MSG_TYPE_CHECK(obj_msg_type), ListEntry,      \
+#define _OBJECT_MSG_LIST_STRUCT_FIELD(obj_msg_type, obj_msg_field)       \
+  StructField<OBJECT_MSG_TYPE_CHECK(obj_msg_type), intrusive::ListEntry, \
               OBJECT_MSG_TYPE_CHECK(obj_msg_type)::OF_PP_CAT(obj_msg_field, _kDssFieldOffset)>
 
 #define _OBJECT_MSG_DEFINE_LIST_HEAD(field_counter, elem_type, elem_field_name, field_name)    \
@@ -63,7 +59,7 @@ namespace oneflow {
  public:                                                                                           \
   using OF_PP_CAT(field_name, _ObjectMsgListType) =                                                \
       TrivialObjectMsgList<GetObjectMsgLinkType<std::is_same<self_type, elem_type>::value>::value, \
-                           StructField<OBJECT_MSG_TYPE_CHECK(elem_type), ListEntry,                \
+                           StructField<OBJECT_MSG_TYPE_CHECK(elem_type), intrusive::ListEntry,     \
                                        OBJECT_MSG_TYPE_CHECK(elem_type)::OF_PP_CAT(                \
                                            elem_field_name, _kDssFieldOffset)>>;
 
@@ -86,19 +82,19 @@ namespace oneflow {
   for (ObjectMsgPtr<typename list_type::value_type> elem, *end_if_not_null = nullptr; \
        end_if_not_null == nullptr; end_if_not_null = nullptr, ++end_if_not_null)      \
   LIST_ENTRY_FOR_EACH_WITH_EXPR(                                                      \
-      (StructField<typename list_type, ListEntry,                                     \
+      (StructField<typename list_type, intrusive::ListEntry,                          \
                    list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)),  \
       list_type::value_entry_struct_field, elem_ptr, (elem.Reset(elem_ptr), true))
 
 #define _OBJECT_MSG_LIST_FOR_EACH_PTR(list_type, list_ptr, elem)                     \
   LIST_ENTRY_FOR_EACH(                                                               \
-      (StructField<typename list_type, ListEntry,                                    \
+      (StructField<typename list_type, intrusive::ListEntry,                         \
                    list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)), \
       list_type::value_entry_struct_field, elem)
 
 #define _OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(list_type, list_ptr, elem)              \
   LIST_ENTRY_UNSAFE_FOR_EACH(                                                        \
-      (StructField<typename list_type, ListEntry,                                    \
+      (StructField<typename list_type, intrusive::ListEntry,                         \
                    list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)), \
       list_type::value_entry_struct_field, elem)
 
@@ -139,7 +135,7 @@ class TrivialObjectMsgList<kDisableSelfLoopLink, ValueLinkField> {
   template<typename Enabled = void>
   static constexpr int ContainerLinkOffset() {
     return offsetof(TrivialObjectMsgList, list_head_)
-           + ListHead<ValueLinkField>::ContainerLinkOffset();
+           + intrusive::ListHead<ValueLinkField>::ContainerLinkOffset();
   }
 
   std::size_t size() const { return list_head_.size(); }
@@ -232,7 +228,7 @@ class TrivialObjectMsgList<kDisableSelfLoopLink, ValueLinkField> {
   }
 
  private:
-  ListHead<ValueLinkField> list_head_;
+  intrusive::ListHead<ValueLinkField> list_head_;
 };
 
 template<typename ValueLinkField>
@@ -244,7 +240,7 @@ class TrivialObjectMsgList<kEnableSelfLoopLink, ValueLinkField> {
   template<typename Enabled = void>
   static constexpr int ContainerLinkOffset() {
     return offsetof(TrivialObjectMsgList, list_head_)
-           + ListHead<ValueLinkField>::ContainerLinkOffset();
+           + intrusive::ListHead<ValueLinkField>::ContainerLinkOffset();
   }
 
   std::size_t size() const { return list_head_.size(); }
@@ -376,7 +372,7 @@ class TrivialObjectMsgList<kEnableSelfLoopLink, ValueLinkField> {
     }
   }
 
-  ListHead<ValueLinkField> list_head_;
+  intrusive::ListHead<ValueLinkField> list_head_;
   const value_type* container_;
 };
 

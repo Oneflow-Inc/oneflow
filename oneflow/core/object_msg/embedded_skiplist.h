@@ -25,6 +25,8 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace intrusive {
+
 template<int max_level>
 struct EmbeddedSkipListLink final {
  public:
@@ -60,7 +62,7 @@ struct EmbeddedSkipListLink final {
     }
   }
   static EmbeddedSkipListLink* ThisPtr4LinkPtr(ListEntry* slist_ptr, int level) {
-    auto* entries_ptr = (std::array<ListEntry, max_level>*)(slist_ptr - level);
+    auto* entries_ptr = (std::array<intrusive::ListEntry, max_level>*)(slist_ptr - level);
     return StructField<self_type, decltype(entries_), LinksOffset()>::StructPtr4FieldPtr(
         entries_ptr);
   }
@@ -79,7 +81,7 @@ struct EmbeddedSkipListLink final {
     return offsetof(self_type, entries_);
   }
 
-  std::array<ListEntry, max_level> entries_;
+  std::array<intrusive::ListEntry, max_level> entries_;
 };
 
 template<typename T, int N = 20>
@@ -208,7 +210,7 @@ class EmbeddedSkipListHead {
   using key_entry_type = typename ValueLinkField::field_type;
   using key_type = typename key_entry_type::key_type;
   using value_key_level0_entry_struct_field =
-      StructField<typename ValueLinkField::field_type, ListEntry,
+      StructField<typename ValueLinkField::field_type, intrusive::ListEntry,
                   ValueLinkField::field_type::LevelZeroLinkOffset()>;
   using value_level0_entry_struct_field =
       typename ComposeStructField<ValueLinkField, value_key_level0_entry_struct_field>::type;
@@ -293,6 +295,8 @@ class EmbeddedSkipListHead {
   EmbeddedSkipListLink<max_level> skiplist_head_;
   volatile std::size_t size_;
 };
+
+}  // namespace intrusive
 
 }  // namespace oneflow
 
