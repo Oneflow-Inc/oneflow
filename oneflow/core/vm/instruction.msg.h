@@ -205,6 +205,7 @@ OBJECT_MSG_BEGIN(Instruction);
     return default_val.Get();
   }
   const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
+  const InstructionStatusBuffer& status_buffer() const { return status_buffer_.Get(); }
   // Setters
   void set_stream(Stream* val) { stream_ = val; }
   void clear_stream() { stream_ = nullptr; }
@@ -219,6 +220,8 @@ OBJECT_MSG_BEGIN(Instruction);
   void clear_instr_msg() { instr_msg_.Reset(); }
   std::shared_ptr<const ParallelDesc>* mut_parallel_desc() { return &parallel_desc_; }
   std::shared_ptr<const ParallelDesc>* mutable_parallel_desc() { return &parallel_desc_; }
+  InstructionStatusBuffer* mut_status_buffer() { return status_buffer_.Mutable(); }
+  InstructionStatusBuffer* mutable_status_buffer() { return status_buffer_.Mutable(); }
 
   // methods
   OF_PUBLIC void __Init__(InstructionMsg* instr_msg, Stream* stream, const std::shared_ptr<const ParallelDesc>& parallel_desc);
@@ -312,7 +315,7 @@ OBJECT_MSG_BEGIN(Instruction);
   };
 
   // fields
-  OBJECT_MSG_DEFINE_FLAT_MSG(InstructionStatusBuffer, status_buffer);
+  OBJECT_MSG_FIELD(FlatMsg<InstructionStatusBuffer>, status_buffer_);
   OBJECT_MSG_FIELD(ObjectMsgPtr<InstructionMsg>, instr_msg_);
   OBJECT_MSG_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
   OBJECT_MSG_FIELD(Stream*, stream_); 

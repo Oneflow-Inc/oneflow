@@ -140,6 +140,7 @@ OBJECT_MSG_BEGIN(MirroredObject);
     static const auto default_val = ObjectMsgPtr<RwMutexedObject>::New();
     return default_val.Get();
   }
+  const MirroredObjectId& mirrored_object_id() const { return mirrored_object_id_.Get(); }
   // Setters
   void set_deleting_access(RwMutexedObjectAccess* val) { deleting_access_ = val; }
   void clear_deleting_access() { deleting_access_ = nullptr; }
@@ -156,6 +157,8 @@ OBJECT_MSG_BEGIN(MirroredObject);
   void reset_rw_mutexed_object(const RwMutexedObject& rw_mutexed_object) {
     rw_mutexed_object_.Reset(const_cast<RwMutexedObject*>(&rw_mutexed_object));
   }
+  MirroredObjectId* mut_mirrored_object_id() { return mirrored_object_id_.Mutable(); }
+  MirroredObjectId* mutable_mirrored_object_id() { return mirrored_object_id_.Mutable(); }
 
 
   // methods
@@ -163,7 +166,7 @@ OBJECT_MSG_BEGIN(MirroredObject);
   OF_PUBLIC void __Init__(LogicalObject* logical_object, int64_t global_device_id);
 
   //fields
-  OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectId, mirrored_object_id);
+  OBJECT_MSG_FIELD(FlatMsg<MirroredObjectId>, mirrored_object_id_);
   OBJECT_MSG_FIELD(ObjectMsgPtr<RwMutexedObject>, rw_mutexed_object_);
   OBJECT_MSG_FIELD(RwMutexedObjectAccess*, deleting_access_);
 

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/object_msg/flat_msg.h"
 #include "oneflow/core/common/preprocessor.h"
 
 namespace oneflow {
@@ -143,13 +144,19 @@ FLAT_MSG_END(FlatMsgDemo)
 
 // clang-format off
 OBJECT_MSG_BEGIN(ObjectMsgContainerDemo)
-  OBJECT_MSG_DEFINE_FLAT_MSG(FlatMsgDemo, flat_field);
+ public:
+  // Getters
+  const FlatMsgDemo& flat_field() const { return flat_field_.Get(); }
+  // Setters
+  FlatMsgDemo* mut_flat_field() { return flat_field_.Mutable(); }
+  FlatMsgDemo* mutable_flat_field() { return flat_field_.Mutable(); }
+
+  OBJECT_MSG_FIELD(FlatMsg<FlatMsgDemo>, flat_field_);
 OBJECT_MSG_END(ObjectMsgContainerDemo)
 // clang-format on
 
 TEST(OBJECT_MSG, flat_msg_field) {
   auto obj = ObjectMsgPtr<ObjectMsgContainerDemo>::New();
-  ASSERT_TRUE(obj->has_flat_field());
   ASSERT_TRUE(!obj->flat_field().has_int32_field());
   obj->mutable_flat_field()->set_int32_field(33);
   ASSERT_TRUE(obj->flat_field().has_int32_field());
