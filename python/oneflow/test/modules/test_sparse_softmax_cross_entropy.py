@@ -43,7 +43,7 @@ def compare_with_tensorflow(
         np_logits, device=device_type, dtype=data_type, requires_grad=True
     )
     of_labels = flow.tensor(np_labels, device=device_type, dtype=label_type)
-    of_output = flow.nn.functional.sparse_softmax_cross_entropy_with_logits(
+    of_output = flow.nn.functional.sparse_softmax_cross_entropy(
         labels=of_labels, logits=of_logits
     ).to(device_type)
     of_output.sum().backward()
@@ -81,7 +81,7 @@ def compare_eager_consistent_with_tensorflow(
     flow.comm.broadcast(of_labels, 0)
     of_labels = of_labels.to_consistent(placement=placement, sbp=[flow.sbp.broadcast])
 
-    of_output = flow.nn.functional.sparse_softmax_cross_entropy_ms_with_logits(
+    of_output = flow.nn.functional.sparse_softmax_cross_entropy(
         labels=of_labels, logits=of_logits
     ).to(device_type)
     of_output.sum().backward()
@@ -99,7 +99,7 @@ def compare_eager_consistent_with_tensorflow(
         )
 
 
-def compare_lazy_with_tensorflow(
+def compare_lazy_consistent_with_tensorflow(
     device_type, data_type, label_type, batch_size, num_classes,
 ):
     data_type = type_name_to_flow_type[data_type]
@@ -122,7 +122,7 @@ def compare_lazy_with_tensorflow(
             super(MyModule, self).__init__()
 
         def build(self, logits, labels):
-            output = flow.nn.functional.sparse_softmax_cross_entropy_ms_with_logits(
+            output = flow.nn.functional.sparse_softmax_cross_entropy(
                 labels=labels, logits=logits
             )
             # nn.graph no support get input.grad
@@ -151,7 +151,7 @@ def compare_lazy_with_tensorflow(
 
 class TestSparseSoftmaxCrossEntropyWithLogits(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
-    def test_sparse_softmax_cross_entropy_with_logits(test_case):
+    def test_sparse_softmax_cross_entropy(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cuda", "cpu"]
         arg_dict["data_type"] = ["float32", "double"]
@@ -165,7 +165,7 @@ class TestSparseSoftmaxCrossEntropyWithLogits(flow.unittest.TestCase):
 class TestSparseSoftmaxCrossEntropyMsWithLogits(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n4d()
-    def test_distributed_sparse_softmax_cross_entropy_with_logits(test_case):
+    def test_distributed_sparse_softmax_cross_entropy(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cuda"]
         arg_dict["data_type"] = ["float32", "double"]
@@ -174,7 +174,7 @@ class TestSparseSoftmaxCrossEntropyMsWithLogits(flow.unittest.TestCase):
         arg_dict["num_classes"] = [1000]
         for arg in GenArgList(arg_dict):
             compare_eager_consistent_with_tensorflow(*arg)
-            compare_lazy_with_tensorflow(*arg)
+            compare_lazy_consistent_with_tensorflow(*arg)
 
 
 if __name__ == "__main__":

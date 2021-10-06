@@ -16,7 +16,7 @@ limitations under the License.
 import oneflow as flow
 
 
-def sparse_softmax_cross_entropy_with_logits(labels, logits):
+def sparse_softmax_cross_entropy(labels, logits):
     """The interface is consistent with TensorFlow.    
     The documentation is referenced from: 
     https://www.tensorflow.org/api_docs/python/tf/nn/sparse_softmax_cross_entropy_with_logits
@@ -61,18 +61,13 @@ def sparse_softmax_cross_entropy_with_logits(labels, logits):
         >>> np_labels = np.array([0, 3, 1])
         >>> logits = flow.tensor(np_logits, dtype=flow.float32)
         >>> labels = flow.tensor(np_labels, dtype=flow.int32)
-        >>> output = flow.nn.functional.sparse_softmax_cross_entropy_with_logits(
+        >>> output = flow.nn.functional.sparse_softmax_cross_entropy(
         ...     labels=labels, logits=logits
         ... )
         >>> output
         tensor([0.2975, 1.1448, -0.0000], dtype=oneflow.float32)
     """
     return flow._C.sparse_softmax_cross_entropy(logits, labels)
-
-
-def sparse_softmax_cross_entropy_ms_with_logits(labels, logits):
-    # Using this function for parallel in num_classes dimension.
-    return flow._C.sparse_softmax_cross_entropy_ms(logits, labels)
 
 
 if __name__ == "__main__":

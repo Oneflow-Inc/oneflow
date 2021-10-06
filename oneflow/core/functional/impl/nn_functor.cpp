@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
 
 namespace oneflow {
@@ -548,29 +549,21 @@ class SparseCrossEntropyMsFunctor {
 class SparseSoftmaxCrossEntropyFunctor {
  public:
   SparseSoftmaxCrossEntropyFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("sparse_softmax_cross_entropy")
+    // SparseSoftmaxCrossEntropy
+    op_sparse_softmax_cross_entropy_ = CHECK_JUST(one::OpBuilder("sparse_softmax_cross_entropy")
                          .Input("prediction")
                          .Input("label")
                          .Output("prob")
                          .Output("out")
                          .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits,
-                           const std::shared_ptr<one::Tensor>& label) const {
-    MutableAttrMap attrs;
-    int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
-    JUST(attrs.SetAttr<int64_t>("depth", depth));
-    const auto& result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {logits, label}, attrs));
-    return result->at(1);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class SparseSoftmaxCrossEntropyMsFunctor {
- public:
-  SparseSoftmaxCrossEntropyMsFunctor() {
+    // lazy model SparseSoftmaxCrossEntropyMs
+    op_sparse_softmax_cross_entropy_ms_ = CHECK_JUST(one::OpBuilder("sparse_softmax_cross_entropy_ms")
+                         .Input("prediction")
+                         .Input("label")
+                         .Output("prob")
+                         .Output("out")
+                         .Build());
+    // eager model SparseSoftmaxCrossEntropyMs
     op_reduce_max_device_stage_ = CHECK_JUST(one::OpBuilder("reduce_max_device_stage")
                                                  .Input("in")
                                                  .Output("out")
@@ -583,20 +576,78 @@ class SparseSoftmaxCrossEntropyMsFunctor {
                                                  .Output("out")
                                                  .Output("mask")
                                                  .Build());
-    op_broadcast_sub_ =
-        CHECK_JUST(one::OpBuilder("broadcast_sub").Input("x").Input("y").Output("z").Build());
-    op_exp_ = CHECK_JUST(one::OpBuilder("exp").Input("x").Output("y").Build());
-    op_reduce_sum_ = CHECK_JUST(
-        one::OpBuilder("reduce_sum").Input("input_tensor").Output("output_tensor").Build());
-    op_broadcast_div_ =
-        CHECK_JUST(one::OpBuilder("broadcast_div").Input("x").Input("y").Output("z").Build());
     op_sparse_cross_entropy_ms_ = CHECK_JUST(one::OpBuilder("sparse_cross_entropy_ms")
                                                  .Input("prediction")
                                                  .Input("label")
                                                  .Output("out")
                                                  .Build());
+    op_broadcast_sub_ =
+        CHECK_JUST(one::OpBuilder("broadcast_sub").Input("x").Input("y").Output("z").Build());
+    op_broadcast_div_ =
+        CHECK_JUST(one::OpBuilder("broadcast_div").Input("x").Input("y").Output("z").Build());
+    op_reduce_sum_ = CHECK_JUST(
+        one::OpBuilder("reduce_sum").Input("input_tensor").Output("output_tensor").Build());
+    op_exp_ = CHECK_JUST(one::OpBuilder("exp").Input("x").Output("y").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits,
+                           const std::shared_ptr<one::Tensor>& label) const {
+    if(JUST(RunWithMsVersion(logits, label))) {
+      if (LazyMode::is_enabled()) { 
+        return LazySparseSoftmaxCrossEntropyMsOperator(logits, label);
+      } else {
+        return EagerSparseSoftmaxCrossEntropyMsOperator(logits, label);
+      }
+    } else {
+      return SparseSoftmaxCrossEntropyOperator(logits, label);
+    }
+  }
+
+  Maybe<bool> RunWithMsVersion(const std::shared_ptr<one::Tensor>& logits,
+                        const std::shared_ptr<one::Tensor>& label) const
+  {
+    if(!(logits->is_consistent() && label->is_consistent()))
+      return false;
+
+    if(logits->shape()->NumAxes() != 2)
+      return false;
+
+    const cfg::NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
+    const int32_t split_axis = logits->shape()->NumAxes() - 1;
+    bool has_split_axis_parallel = false;
+    for (int64_t i = 0; i < logits_nd_sbp.sbp_parallel_size(); ++i) {
+      const auto& sbp = logits_nd_sbp.sbp_parallel(i);
+      if (sbp.has_split_parallel() && sbp.split_parallel().axis() == split_axis) {
+        has_split_axis_parallel = true;
+      } else {
+        if(sbp.has_partial_sum_parallel())
+          return false;
+      }
+    }
+    if(!has_split_axis_parallel)
+      return false;
+
+    return true;
+  }
+
+  Maybe<Tensor> SparseSoftmaxCrossEntropyOperator(const std::shared_ptr<one::Tensor>& logits,
+                           const std::shared_ptr<one::Tensor>& label) const {
+    MutableAttrMap attrs;
+    int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
+    JUST(attrs.SetAttr<int64_t>("depth", depth));
+    const auto& result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_sparse_softmax_cross_entropy_, {logits, label}, attrs));
+    return result->at(1);
+  }
+
+  Maybe<Tensor> LazySparseSoftmaxCrossEntropyMsOperator(const std::shared_ptr<one::Tensor>& logits,
+                           const std::shared_ptr<one::Tensor>& label) const {
+    MutableAttrMap attrs;
+    int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
+    JUST(attrs.SetAttr<int64_t>("depth", depth));
+    const auto& result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_sparse_softmax_cross_entropy_ms_, {logits, label}, attrs));
+    return result->at(1);
+  }
+
+  Maybe<Tensor> EagerSparseSoftmaxCrossEntropyMsOperator(const std::shared_ptr<one::Tensor>& logits,
                            const std::shared_ptr<one::Tensor>& label) const {
     MutableAttrMap attrs;
     int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
@@ -636,6 +687,11 @@ class SparseSoftmaxCrossEntropyMsFunctor {
   }
 
  private:
+  // SparseSoftmaxCrossEntropy
+  std::shared_ptr<OpExpr> op_sparse_softmax_cross_entropy_;
+  // lazy model SparseSoftmaxCrossEntropyMs
+  std::shared_ptr<OpExpr> op_sparse_softmax_cross_entropy_ms_;
+  // SparseSoftmaxCrossEntropyMs
   std::shared_ptr<OpExpr> op_reduce_max_device_stage_;
   std::shared_ptr<OpExpr> op_reduce_max_global_stage_;
   std::shared_ptr<OpExpr> op_broadcast_sub_;
@@ -1465,7 +1521,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SparseCrossEntropyFunctor>("SparseCrossEntropy");
   m.add_functor<impl::SparseCrossEntropyMsFunctor>("SparseCrossEntropyMs");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
-  m.add_functor<impl::SparseSoftmaxCrossEntropyMsFunctor>("SparseSoftmaxCrossEntropyMs");
   m.add_functor<impl::SoftmaxCrossEntropyFunctor>("SoftmaxCrossEntropy");
   m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");
   m.add_functor<impl::SmoothL1LossFunctor>("SmoothL1Loss");
