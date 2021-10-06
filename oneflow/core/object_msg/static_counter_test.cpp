@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/object_msg/static_counter.h"
+#include "oneflow/core/object_msg/object_msg.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -24,17 +25,31 @@ namespace {
 
 DEFINE_STATIC_COUNTER(static_counter);
 
+static_assert(STATIC_COUNTER(static_counter) == 0, "");
+
 TEST(StaticCounter, eq0) { static_assert(STATIC_COUNTER(static_counter) == 0, ""); }
 
 INCREASE_STATIC_COUNTER(static_counter);
 
+static_assert(STATIC_COUNTER(static_counter) == 1, "");
+
 TEST(StaticCounter, eq1) { static_assert(STATIC_COUNTER(static_counter) == 1, ""); }
+
+static_assert(STATIC_COUNTER(static_counter) == 1, "");
 
 TEST(StaticCounter, eq1_again) { static_assert(STATIC_COUNTER(static_counter) == 1, ""); }
 
 INCREASE_STATIC_COUNTER(static_counter);
 
+static_assert(STATIC_COUNTER(static_counter) == 2, "");
+
 TEST(StaticCounter, eq2) { static_assert(STATIC_COUNTER(static_counter) == 2, ""); }
+
+// clang-format off
+OBJECT_MSG_BEGIN(FooBar);
+  static_assert(STATIC_COUNTER(field_counter) == 0, "");
+OBJECT_MSG_END(FooBar);
+// clang-format on
 
 }  // namespace
 

@@ -163,6 +163,25 @@ TEST(OBJECT_MSG, flat_msg_field) {
   ASSERT_EQ(obj->flat_field().int32_field(), 33);
 }
 
+// clang-format off
+OBJECT_MSG_BEGIN(TestObjectMsgCurrentOffset);
+  static_assert(OBJECT_MSG_FIELD_COUNTER == 0, "");
+  static_assert(OBJECT_MSG_FIELD_COUNTER == 0, "");
+  OBJECT_MSG_FIELD(int64_t, a);
+  static_assert(OBJECT_MSG_FIELD_COUNTER == 1, "");
+  static_assert(OBJECT_MSG_FIELD_COUNTER == 1, "");
+  OBJECT_MSG_FIELD(int64_t, b);
+  static_assert(OBJECT_MSG_FIELD_COUNTER == 2, "");
+  static_assert(OBJECT_MSG_FIELD_COUNTER == 2, "");
+  OBJECT_MSG_FIELD(int8_t, c);
+  static_assert(OBJECT_MSG_FIELD_COUNTER == 3, "");
+  static_assert(OBJECT_MSG_FIELD_COUNTER == 3, "");
+  OBJECT_MSG_FIELD(int64_t, d);
+  static_assert(OBJECT_MSG_FIELD_COUNTER == 4, "");
+  static_assert(OBJECT_MSG_FIELD_COUNTER == 4, "");
+OBJECT_MSG_END(TestObjectMsgCurrentOffset);
+// clang-format on
+
 }  // namespace test
 
 }  // namespace oneflow

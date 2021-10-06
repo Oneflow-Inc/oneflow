@@ -36,10 +36,10 @@ namespace oneflow {
     OF_PRIVATE DEFINE_STATIC_COUNTER(field_counter);      \
     DSS_BEGIN(STATIC_COUNTER(field_counter), class_name); \
     OBJECT_MSG_DEFINE_INIT();                             \
-    OBJECT_MSG_DEFINE_DELETE();                           \
-    OBJECT_MSG_DEFINE_BASE();
+    OBJECT_MSG_DEFINE_DELETE();
 
 #define OBJECT_MSG_END(class_name)                                                  \
+  OBJECT_MSG_DEFINE_BASE();                                                         \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
   OF_PUBLIC static const int __NumberOfFields__ = STATIC_COUNTER(field_counter);    \
   OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                \
@@ -51,6 +51,21 @@ namespace oneflow {
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
   OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                \
   _OBJECT_MSG_FIELD(STATIC_COUNTER(field_counter), field_type, field_name);
+
+// return current defined field counter inside a object_msg class.
+// note: not used outside OBJECT_MSG_BEGIN ... OBJECT_MSG_END
+// e.g.:
+// OBJECT_MSG_BEGIN(Foo);
+//   static_assert(OBJECT_MSG_FIELD_COUNTER == 0, "");
+//   OBJECT_MSG_FIELD(int64_t, a);
+//   static_assert(OBJECT_MSG_FIELD_COUNTER == 1, "");
+//   OBJECT_MSG_FIELD(int64_t, b);
+//   static_assert(OBJECT_MSG_FIELD_COUNTER == 2, "");
+//   OBJECT_MSG_FIELD(int8_t, c);
+//   static_assert(OBJECT_MSG_FIELD_COUNTER == 3, "");
+//   OBJECT_MSG_FIELD(int64_t, d);
+// OBJECT_MSG_END(Foo);
+#define OBJECT_MSG_FIELD_COUNTER STATIC_COUNTER(field_counter)
 
 // details
 

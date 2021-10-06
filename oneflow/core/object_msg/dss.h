@@ -203,13 +203,13 @@ namespace oneflow {
     static const int value = 0;                                                               \
   };                                                                                          \
   template<int tpl_fld_counter, typename Enabled = void>                                      \
-  struct __DssFieldOffsetByOffsetOf__ {                                                       \
+  struct __DssFieldOffsetOfFieldNumber__ {                                                    \
     constexpr static int Get() {                                                              \
-      return __DssFieldOffsetByOffsetOf__<tpl_fld_counter - 1, Enabled>::Get();               \
+      return __DssFieldOffsetOfFieldNumber__<tpl_fld_counter - 1, Enabled>::Get();            \
     }                                                                                         \
   };                                                                                          \
   template<typename Enabled>                                                                  \
-  struct __DssFieldOffsetByOffsetOf__<field_counter, Enabled> {                               \
+  struct __DssFieldOffsetOfFieldNumber__<field_counter, Enabled> {                            \
     constexpr static int Get() { return 0; }                                                  \
   };                                                                                          \
   template<int tpl_fld_counter, typename Enabled = void>                                      \
@@ -295,7 +295,7 @@ namespace oneflow {
     static const int value = sizeof(field_type);                                                   \
   };                                                                                               \
   template<typename Enabled>                                                                       \
-  struct __DssFieldOffsetByOffsetOf__<field_counter, Enabled> {                                    \
+  struct __DssFieldOffsetOfFieldNumber__<field_counter, Enabled> {                                 \
     constexpr static int Get() {                                                                   \
       static_assert(std::is_standard_layout<__DssSelfType__>::value, "");                          \
       return offsetof(__DssSelfType__, field);                                                     \
@@ -305,7 +305,7 @@ namespace oneflow {
   struct __DssStaticAssertFieldCounter__<field_counter, Enabled> {                                 \
     static void StaticAssert() {                                                                   \
       static const int kAccSize = __DssAccumulatedAlignedSize4Counter__<field_counter>::value;     \
-      static_assert(kAccSize == __DssFieldOffsetByOffsetOf__<field_counter>::Get(),                \
+      static_assert(kAccSize == __DssFieldOffsetOfFieldNumber__<field_counter>::Get(),             \
                     DSS_ASSERT_VERBOSE(dss_type));                                                 \
     }                                                                                              \
   };                                                                                               \
