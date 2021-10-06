@@ -86,8 +86,8 @@ void Stream::MoveFromZombieListToFreeList() {
 }
 
 void Stream::DeleteInstruction(ObjectMsgPtr<Instruction>&& instruction) {
-  CHECK(instruction->is_pending_instruction_link_empty());
-  CHECK(instruction->is_instruction_link_empty());
+  CHECK(instruction->is_pending_instruction_entry_empty());
+  CHECK(instruction->is_instruction_entry_empty());
   // the value of instruction->ref_cnt() may be updated by a worker thread
   size_t ref_cnt = instruction->ref_cnt();
   if (ref_cnt == 1) {

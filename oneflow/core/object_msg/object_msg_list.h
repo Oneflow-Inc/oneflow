@@ -108,19 +108,19 @@ namespace oneflow {
   LIST_ENTRY_FOR_EACH_WITH_EXPR(                                                      \
       (StructField<typename list_type, ListEntry,                                     \
                    list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)),  \
-      list_type::value_link_struct_field, elem_ptr, (elem.Reset(elem_ptr), true))
+      list_type::value_entry_struct_field, elem_ptr, (elem.Reset(elem_ptr), true))
 
 #define _OBJECT_MSG_LIST_FOR_EACH_PTR(list_type, list_ptr, elem)                     \
   LIST_ENTRY_FOR_EACH(                                                               \
       (StructField<typename list_type, ListEntry,                                    \
                    list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)), \
-      list_type::value_link_struct_field, elem)
+      list_type::value_entry_struct_field, elem)
 
 #define _OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(list_type, list_ptr, elem)              \
   LIST_ENTRY_UNSAFE_FOR_EACH(                                                        \
       (StructField<typename list_type, ListEntry,                                    \
                    list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)), \
-      list_type::value_link_struct_field, elem)
+      list_type::value_entry_struct_field, elem)
 
 template<int field_index, typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgListHeadInit {
@@ -146,7 +146,7 @@ struct ObjectMsgListEntryDelete {
 
 enum ObjectMsgLinkType { kDisableSelfLoopLink = 0, kEnableSelfLoopLink };
 
-template<bool enable_self_loop_link>
+template<bool enable_self_loop_entry>
 struct GetObjectMsgLinkType {};
 template<>
 struct GetObjectMsgLinkType<true> {
@@ -157,14 +157,14 @@ struct GetObjectMsgLinkType<false> {
   static const ObjectMsgLinkType value = kDisableSelfLoopLink;
 };
 
-template<ObjectMsgLinkType link_type, typename ValueLinkField>
+template<ObjectMsgLinkType entry_type, typename ValueLinkField>
 class TrivialObjectMsgList;
 
 template<typename ValueLinkField>
 class TrivialObjectMsgList<kDisableSelfLoopLink, ValueLinkField> {
  public:
   using value_type = typename ValueLinkField::struct_type;
-  using value_link_struct_field = ValueLinkField;
+  using value_entry_struct_field = ValueLinkField;
 
   template<typename Enabled = void>
   static constexpr int ContainerLinkOffset() {
@@ -269,7 +269,7 @@ template<typename ValueLinkField>
 class TrivialObjectMsgList<kEnableSelfLoopLink, ValueLinkField> {
  public:
   using value_type = typename ValueLinkField::struct_type;
-  using value_link_struct_field = ValueLinkField;
+  using value_entry_struct_field = ValueLinkField;
 
   template<typename Enabled = void>
   static constexpr int ContainerLinkOffset() {

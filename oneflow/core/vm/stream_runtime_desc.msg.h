@@ -50,7 +50,7 @@ OBJECT_MSG_BEGIN(StreamRtDesc);
   // fields
   OBJECT_MSG_FIELD(ObjectMsgPtr<StreamDesc>, stream_desc_); 
 
-  // links
+  // list entries
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, StreamTypeId, stream_type_id);
   OBJECT_MSG_DEFINE_MAP_HEAD(Stream, stream_id, stream_id2stream);
 OBJECT_MSG_END(StreamRtDesc);

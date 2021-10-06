@@ -81,7 +81,7 @@ OBJECT_MSG_BEGIN(StreamDesc);
   OBJECT_MSG_FIELD(int32_t, num_streams_per_machine_);
   OBJECT_MSG_FIELD(int32_t, num_streams_per_thread_);
 
-  // links
+  // list entries
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, StreamTypeId, stream_type_id);
 OBJECT_MSG_END(StreamDesc);
 // clang-format on

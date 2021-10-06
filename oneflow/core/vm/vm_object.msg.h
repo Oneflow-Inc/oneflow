@@ -79,9 +79,9 @@ OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
   OBJECT_MSG_FIELD(MirroredObject*, mirrored_object_);
   OBJECT_MSG_FIELD(RwMutexedObject*, rw_mutexed_object_);
 
-  // links
-  OBJECT_MSG_DEFINE_LIST_LINK(instruction_access_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(rw_mutexed_object_access_link);
+  // list entries
+  OBJECT_MSG_DEFINE_LIST_LINK(instruction_access_entry);
+  OBJECT_MSG_DEFINE_LIST_LINK(rw_mutexed_object_access_entry);
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, MirroredObjectId, mirrored_object_id);
   
 OBJECT_MSG_END(RwMutexedObjectAccess);
@@ -126,8 +126,8 @@ OBJECT_MSG_BEGIN(RwMutexedObject);
   // fields
   OBJECT_MSG_FIELD(std::unique_ptr<Object>, object_ptr_);
 
-  // links
-  OBJECT_MSG_DEFINE_LIST_HEAD(RwMutexedObjectAccess, rw_mutexed_object_access_link, access_list);
+  // list entries
+  OBJECT_MSG_DEFINE_LIST_HEAD(RwMutexedObjectAccess, rw_mutexed_object_access_entry, access_list);
 OBJECT_MSG_END(RwMutexedObject);
 
 OBJECT_MSG_BEGIN(MirroredObject);
@@ -171,7 +171,7 @@ OBJECT_MSG_BEGIN(MirroredObject);
   OBJECT_MSG_FIELD(RwMutexedObjectAccess*, deleting_access_);
 
 
-  // links
+  // list entries
   OBJECT_MSG_DEFINE_MAP_KEY(int64_t, global_device_id);
 OBJECT_MSG_END(MirroredObject);
 
@@ -199,9 +199,9 @@ OBJECT_MSG_BEGIN(LogicalObject);
   // fields
   OBJECT_MSG_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
 
-  // links
+  // list entries
   OBJECT_MSG_DEFINE_MAP_KEY(ObjectId, logical_object_id);
-  OBJECT_MSG_DEFINE_LIST_LINK(delete_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(delete_entry);
   // heads
   OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, global_device_id, global_device_id2mirrored_object);
 OBJECT_MSG_END(LogicalObject);

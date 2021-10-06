@@ -62,31 +62,32 @@ struct ListEntry {
   ListEntry* next_;
 };
 
-#define LIST_ENTRY_FOR_EACH(head_link, elem_link_struct_field, elem) \
-  LIST_ENTRY_FOR_EACH_WITH_EXPR(head_link, elem_link_struct_field, elem, 0)
+#define LIST_ENTRY_FOR_EACH(head_entry, elem_entry_struct_field, elem) \
+  LIST_ENTRY_FOR_EACH_WITH_EXPR(head_entry, elem_entry_struct_field, elem, 0)
 
-#define LIST_ENTRY_FOR_EACH_WITH_EXPR(head_link, elem_link_struct_field, elem, expr)  \
-  for (typename elem_link_struct_field::struct_type* elem = nullptr; elem == nullptr; \
-       elem = nullptr, elem++)                                                        \
-  LIST_ENTRY_FOR_EACH_I(                                                              \
-      head_link, __elem_link__,                                                       \
-      ((elem = elem_link_struct_field::StructPtr4FieldPtr(__elem_link__)), expr))
+#define LIST_ENTRY_FOR_EACH_WITH_EXPR(head_entry, elem_entry_struct_field, elem, expr) \
+  for (typename elem_entry_struct_field::struct_type* elem = nullptr; elem == nullptr; \
+       elem = nullptr, elem++)                                                         \
+  LIST_ENTRY_FOR_EACH_I(                                                               \
+      head_entry, __elem_entry__,                                                      \
+      ((elem = elem_entry_struct_field::StructPtr4FieldPtr(__elem_entry__)), expr))
 
-#define LIST_ENTRY_FOR_EACH_I(head_link, elem_link, expr)                          \
-  for (ListEntry* __head_link__ = (head_link), *elem_link = __head_link__->next(), \
-                  *__next_link__ = elem_link->next();                              \
-       (elem_link != __head_link__) && ((expr) || true);                           \
-       elem_link = __next_link__, __next_link__ = __next_link__->next())
+#define LIST_ENTRY_FOR_EACH_I(head_entry, elem_entry, expr)                            \
+  for (ListEntry* __head_entry__ = (head_entry), *elem_entry = __head_entry__->next(), \
+                  *__next_entry__ = elem_entry->next();                                \
+       (elem_entry != __head_entry__) && ((expr) || true);                             \
+       elem_entry = __next_entry__, __next_entry__ = __next_entry__->next())
 
-#define LIST_ENTRY_UNSAFE_FOR_EACH(head_link, elem_link_struct_field, elem)           \
-  for (typename elem_link_struct_field::struct_type* elem = nullptr; elem == nullptr; \
-       elem = nullptr, elem++)                                                        \
-  LIST_ENTRY_UNSAFE_FOR_EACH_I(head_link, __elem_link__,                              \
-                               (elem = elem_link_struct_field::StructPtr4FieldPtr(__elem_link__)))
+#define LIST_ENTRY_UNSAFE_FOR_EACH(head_entry, elem_entry_struct_field, elem)          \
+  for (typename elem_entry_struct_field::struct_type* elem = nullptr; elem == nullptr; \
+       elem = nullptr, elem++)                                                         \
+  LIST_ENTRY_UNSAFE_FOR_EACH_I(                                                        \
+      head_entry, __elem_entry__,                                                      \
+      (elem = elem_entry_struct_field::StructPtr4FieldPtr(__elem_entry__)))
 
-#define LIST_ENTRY_UNSAFE_FOR_EACH_I(head_link, elem_link, expr)                   \
-  for (ListEntry* __head_link__ = (head_link), *elem_link = __head_link__->next(); \
-       (elem_link != __head_link__) && ((expr), true); elem_link = elem_link->next())
+#define LIST_ENTRY_UNSAFE_FOR_EACH_I(head_entry, elem_entry, expr)                     \
+  for (ListEntry* __head_entry__ = (head_entry), *elem_entry = __head_entry__->next(); \
+       (elem_entry != __head_entry__) && ((expr), true); elem_entry = elem_entry->next())
 
 template<typename LinkField>
 class ListHead {
@@ -108,11 +109,11 @@ class ListHead {
     return size_empty;
   }
   void CheckSize() const {
-    size_t link_size = 0;
+    size_t entry_size = 0;
     for (ListEntry* iter = container_.next(); iter != &container_; iter = iter->next()) {
-      ++link_size;
+      ++entry_size;
     }
-    CHECK_EQ(size_, link_size);
+    CHECK_EQ(size_, entry_size);
   }
   const value_type& Begin() const { return Next(End()); }
   const value_type& ReverseBegin() const { return Prev(End()); }
@@ -152,10 +153,10 @@ class ListHead {
     CHECK(!container_.empty());
     auto* dst_rbegin = dst->container_.prev();
     auto* dst_end = &dst->container_;
-    ListEntry* elem_link = LinkField::FieldPtr4StructPtr(elem);
-    elem_link->next()->AppendTo(elem_link->prev());
-    elem_link->AppendTo(dst_rbegin);
-    dst_end->AppendTo(elem_link);
+    ListEntry* elem_entry = LinkField::FieldPtr4StructPtr(elem);
+    elem_entry->next()->AppendTo(elem_entry->prev());
+    elem_entry->AppendTo(dst_rbegin);
+    dst_end->AppendTo(elem_entry);
     --size_;
     ++dst->size_;
   }
@@ -163,10 +164,10 @@ class ListHead {
     CHECK(!container_.empty());
     auto* dst_end = &dst->container_;
     auto* dst_begin = dst->container_.next();
-    ListEntry* elem_link = LinkField::FieldPtr4StructPtr(elem);
-    elem_link->next()->AppendTo(elem_link->prev());
-    elem_link->AppendTo(dst_end);
-    dst_begin->AppendTo(elem_link);
+    ListEntry* elem_entry = LinkField::FieldPtr4StructPtr(elem);
+    elem_entry->next()->AppendTo(elem_entry->prev());
+    elem_entry->AppendTo(dst_end);
+    dst_begin->AppendTo(elem_entry);
     --size_;
     ++dst->size_;
   }

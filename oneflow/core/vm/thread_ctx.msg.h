@@ -45,10 +45,10 @@ OBJECT_MSG_BEGIN(ThreadCtx);
   // fields
   OBJECT_MSG_FIELD(const StreamRtDesc*, stream_rt_desc_); 
 
-  // links
-  OBJECT_MSG_DEFINE_LIST_LINK(thread_ctx_link);
-  OBJECT_MSG_DEFINE_LIST_HEAD(Stream, thread_ctx_stream_link, stream_list);
-  OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(Instruction, pending_instruction_link,
+  // list entries
+  OBJECT_MSG_DEFINE_LIST_LINK(thread_ctx_entry);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Stream, thread_ctx_stream_entry, stream_list);
+  OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(Instruction, pending_instruction_entry,
                                         pending_instruction_list);
 
   OF_PRIVATE ObjectMsgConditionListStatus ReceiveAndRun();

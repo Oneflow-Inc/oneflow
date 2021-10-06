@@ -61,15 +61,15 @@ OBJECT_MSG_BEGIN(Stream);
   OBJECT_MSG_FIELD(std::unique_ptr<DeviceCtx>, device_ctx_);
   OBJECT_MSG_FIELD(int64_t, max_device_num_per_machine_);
   
-  // links
-  OBJECT_MSG_DEFINE_LIST_LINK(active_stream_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(thread_ctx_stream_link);
+  // list entries
+  OBJECT_MSG_DEFINE_LIST_LINK(active_stream_entry);
+  OBJECT_MSG_DEFINE_LIST_LINK(thread_ctx_stream_entry);
   OBJECT_MSG_DEFINE_MAP_KEY(StreamId, stream_id);
 
   // heads 
-  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, free_instruction_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, zombie_instruction_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, running_instruction_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_entry, free_instruction_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_entry, zombie_instruction_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_entry, running_instruction_list);
 OBJECT_MSG_END(Stream);
 // clang-format on
 

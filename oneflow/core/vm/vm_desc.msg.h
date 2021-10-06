@@ -57,7 +57,7 @@ OBJECT_MSG_BEGIN(VmDesc);
   OBJECT_MSG_FIELD(ObjectMsgPtr<VmResourceDesc>, vm_resource_desc_);
   OBJECT_MSG_FIELD(Range, machine_id_range_);
 
-  // links
+  // list entries
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(StreamDesc, stream_type_id, stream_type_id2desc);
 OBJECT_MSG_END(VmDesc);
 // clang-format on

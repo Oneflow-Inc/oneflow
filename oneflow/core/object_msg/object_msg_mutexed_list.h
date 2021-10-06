@@ -23,7 +23,8 @@ namespace oneflow {
 
 #define OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(elem_type, elem_field_name, field_name)               \
   static_assert(__is_object_message_type__, "this struct is not a object message");               \
-  static_assert(!std::is_same<self_type, elem_type>::value, "self loop link is not supported");   \
+  static_assert(!std::is_same<self_type, elem_type>::value,                                       \
+                "self loop list_entry is not supported");                                         \
   OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                              \
   _OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(STATIC_COUNTER(field_counter), elem_type, elem_field_name, \
                                        field_name);

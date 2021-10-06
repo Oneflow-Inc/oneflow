@@ -128,15 +128,15 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OBJECT_MSG_FIELD(std::shared_ptr<PhyInstrOperand>, phy_instr_operand_);
 
 
-  // links
-  OBJECT_MSG_DEFINE_LIST_LINK(instr_msg_link);
+  // list entries
+  OBJECT_MSG_DEFINE_LIST_LINK(instr_msg_entry);
 
   // private methods
   OF_PRIVATE InstructionOperand* add_instr_operand();
 OBJECT_MSG_END(InstructionMsg);
 // clang-format on
 
-using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
+using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_entry);
 
 template<OperandMemZoneModifier mem_zone_modifier>
 void CheckOperand(const Operand& operand);
@@ -185,9 +185,9 @@ OBJECT_MSG_BEGIN(InstructionEdge);
   // fields
   OBJECT_MSG_FIELD(Instruction*, src_instruction_); 
   OBJECT_MSG_FIELD(Instruction*, dst_instruction_); 
-  // links
-  OBJECT_MSG_DEFINE_LIST_LINK(src_instruction_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(dst_instruction_link);
+  // list entries
+  OBJECT_MSG_DEFINE_LIST_LINK(src_instruction_entry);
+  OBJECT_MSG_DEFINE_LIST_LINK(dst_instruction_entry);
 OBJECT_MSG_END(InstructionEdge);
 // clang-format on
 
@@ -320,17 +320,17 @@ OBJECT_MSG_BEGIN(Instruction);
   OBJECT_MSG_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
   OBJECT_MSG_FIELD(Stream*, stream_); 
 
-  // links
-  OBJECT_MSG_DEFINE_LIST_LINK(instruction_link);
-  // `vm_stat_running_instruction_link` valid from instruction ready to instruction done 
-  OBJECT_MSG_DEFINE_LIST_LINK(vm_stat_running_instruction_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(pending_instruction_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(front_seq_infer_instr_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(front_seq_compute_instr_link);
-  OBJECT_MSG_DEFINE_LIST_HEAD(InstructionEdge, src_instruction_link, in_edges);
-  OBJECT_MSG_DEFINE_LIST_HEAD(InstructionEdge, dst_instruction_link, out_edges);
+  // list entries
+  OBJECT_MSG_DEFINE_LIST_LINK(instruction_entry);
+  // `vm_stat_running_instruction_entry` valid from instruction ready to instruction done 
+  OBJECT_MSG_DEFINE_LIST_LINK(vm_stat_running_instruction_entry);
+  OBJECT_MSG_DEFINE_LIST_LINK(pending_instruction_entry);
+  OBJECT_MSG_DEFINE_LIST_LINK(front_seq_infer_instr_entry);
+  OBJECT_MSG_DEFINE_LIST_LINK(front_seq_compute_instr_entry);
+  OBJECT_MSG_DEFINE_LIST_HEAD(InstructionEdge, src_instruction_entry, in_edges);
+  OBJECT_MSG_DEFINE_LIST_HEAD(InstructionEdge, dst_instruction_entry, out_edges);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(RwMutexedObjectAccess, mirrored_object_id, mirrored_object_id2access);
-  OBJECT_MSG_DEFINE_LIST_HEAD(RwMutexedObjectAccess, instruction_access_link, access_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(RwMutexedObjectAccess, instruction_access_entry, access_list);
 OBJECT_MSG_END(Instruction);
 // clang-format on
 

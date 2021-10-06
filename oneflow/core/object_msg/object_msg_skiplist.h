@@ -27,11 +27,11 @@ namespace oneflow {
   OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                      \
   _OBJECT_MSG_DEFINE_SKIPLIST_KEY(STATIC_COUNTER(field_counter), max_level, T, field_name);
 
-#define OBJECT_MSG_DEFINE_SKIPLIST_HEAD(elem_type, elem_field_name, field_name)                 \
-  static_assert(__is_object_message_type__, "this struct is not a object message");             \
-  static_assert(!std::is_same<self_type, elem_type>::value, "self loop link is not supported"); \
-  OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                            \
-  _OBJECT_MSG_DEFINE_SKIPLIST_HEAD(STATIC_COUNTER(field_counter), elem_type, elem_field_name,   \
+#define OBJECT_MSG_DEFINE_SKIPLIST_HEAD(elem_type, elem_field_name, field_name)                  \
+  static_assert(__is_object_message_type__, "this struct is not a object message");              \
+  static_assert(!std::is_same<self_type, elem_type>::value, "self loop entry is not supported"); \
+  OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                             \
+  _OBJECT_MSG_DEFINE_SKIPLIST_HEAD(STATIC_COUNTER(field_counter), elem_type, elem_field_name,    \
                                    field_name);
 
 #define OBJECT_MSG_SKIPLIST(elem_type, elem_field_name) \
@@ -111,19 +111,19 @@ namespace oneflow {
   LIST_ENTRY_FOR_EACH_WITH_EXPR(                                                              \
       (StructField<skiplist_type, ListEntry, skiplist_type::ContainerLevelZeroLinkOffset()>:: \
            FieldPtr4StructPtr(skiplist_ptr)),                                                 \
-      skiplist_type::elem_level0_link_struct_field, elem_ptr, (elem.Reset(elem_ptr), true))
+      skiplist_type::elem_level0_entry_struct_field, elem_ptr, (elem.Reset(elem_ptr), true))
 
 #define _OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(skiplist_type, skiplist_ptr, elem)                  \
   LIST_ENTRY_FOR_EACH(                                                                        \
       (StructField<skiplist_type, ListEntry, skiplist_type::ContainerLevelZeroLinkOffset()>:: \
            FieldPtr4StructPtr(skiplist_ptr)),                                                 \
-      skiplist_type::elem_level0_link_struct_field, elem)
+      skiplist_type::elem_level0_entry_struct_field, elem)
 
 #define _OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(skiplist_type, skiplist_ptr, elem)           \
   LIST_ENTRY_UNSAFE_FOR_EACH(                                                                 \
       (StructField<skiplist_type, ListEntry, skiplist_type::ContainerLevelZeroLinkOffset()>:: \
            FieldPtr4StructPtr(skiplist_ptr)),                                                 \
-      skiplist_type::elem_level0_link_struct_field, elem)
+      skiplist_type::elem_level0_entry_struct_field, elem)
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedSkipListHeadInit {
@@ -150,11 +150,11 @@ class TrivialObjectMsgSkipList {
  public:
   using value_type = typename ElemKeyField::struct_type;
   using key_type = typename ElemKeyField::field_type::key_type;
-  using elem_key_level0_link_struct_field =
+  using elem_key_level0_entry_struct_field =
       StructField<typename ElemKeyField::field_type, ListEntry,
                   ElemKeyField::field_type::LevelZeroLinkOffset()>;
-  using elem_level0_link_struct_field =
-      typename ComposeStructField<ElemKeyField, elem_key_level0_link_struct_field>::type;
+  using elem_level0_entry_struct_field =
+      typename ComposeStructField<ElemKeyField, elem_key_level0_entry_struct_field>::type;
   template<typename Enabled = void>
   static constexpr int ContainerLevelZeroLinkOffset() {
     return offsetof(TrivialObjectMsgSkipList, skiplist_head_)

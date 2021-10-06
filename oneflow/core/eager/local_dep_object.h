@@ -64,10 +64,10 @@ OBJECT_MSG_BEGIN(LocalDepObject);
   OBJECT_MSG_FIELD(ObjectMsgPtr<vm::LogicalObject>, logical_object_);
   OBJECT_MSG_FIELD(ObjectMsgPtr<vm::MirroredObject>, mirrored_object_); 
 
-  // links
-  OBJECT_MSG_DEFINE_LIST_LINK(pool_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(stored_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(lifetime_link);
+  // list entries
+  OBJECT_MSG_DEFINE_LIST_LINK(pool_entry);
+  OBJECT_MSG_DEFINE_LIST_LINK(stored_entry);
+  OBJECT_MSG_DEFINE_LIST_LINK(lifetime_entry);
 OBJECT_MSG_END(LocalDepObject);
 // clang-format on
 

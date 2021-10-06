@@ -310,28 +310,6 @@ struct ObjectMsgIsScalar {
       std::is_arithmetic<T>::value || std::is_enum<T>::value || std::is_same<T, std::string>::value;
 };
 
-struct ObjectMsgContainerLinkEdge {
-  std::string container_type_name;
-  std::string container_field_name;
-  std::string elem_type_name;
-  std::string elem_link_name;
-
-  bool operator<(const ObjectMsgContainerLinkEdge& rhs) const {
-    if (this->container_type_name != rhs.container_type_name) {
-      return this->container_type_name < rhs.container_type_name;
-    }
-    if (this->container_field_name != rhs.container_field_name) {
-      return this->container_field_name < rhs.container_field_name;
-    }
-    if (this->elem_type_name != rhs.elem_type_name) {
-      return this->elem_type_name < rhs.elem_type_name;
-    }
-    if (this->elem_link_name != rhs.elem_link_name) {
-      return this->elem_link_name < rhs.elem_link_name;
-    }
-    return false;
-  }
-};
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_CORE_H_

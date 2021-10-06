@@ -32,19 +32,19 @@ OBJECT_MSG_BEGIN(Foo);
   // fields
   OBJECT_MSG_FIELD(int, x_);
 
-  // links
-  OBJECT_MSG_DEFINE_LIST_LINK(link);
+  // list entries
+  OBJECT_MSG_DEFINE_LIST_LINK(entry);
 OBJECT_MSG_END(Foo);
 // clang-format on
 
 // clang-format off
 OBJECT_MSG_BEGIN(FooList);
-  // links
-  OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(Foo, link, list);
+  // list entries
+  OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(Foo, entry, list);
 OBJECT_MSG_END(FooList);
 // clang-format on
 
-using ConditionListFoo = OBJECT_MSG_CONDITION_LIST(Foo, link);
+using ConditionListFoo = OBJECT_MSG_CONDITION_LIST(Foo, entry);
 
 void CallFromSenderThread(ConditionListFoo* condition_list, Range range) {
   for (int i = range.begin(); i < range.end(); ++i) {
@@ -64,7 +64,7 @@ void CallFromReceiverThreadByPopFront(std::vector<int>* visit, ConditionListFoo*
 }
 
 void CallFromReceiverThreadByMoveTo(std::vector<int>* visit, ConditionListFoo* condition_list) {
-  OBJECT_MSG_LIST(Foo, link) tmp_list;
+  OBJECT_MSG_LIST(Foo, entry) tmp_list;
   while (condition_list->MoveTo(&tmp_list) == kObjectMsgConditionListStatusSuccess) {
     OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_list, foo) {
       ++visit->at(foo->x());

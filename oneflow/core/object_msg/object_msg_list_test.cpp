@@ -367,9 +367,9 @@ OBJECT_MSG_BEGIN(SelfLoopContainer);
   OF_PUBLIC void __Delete__() { *mut_deleted() = true; }
   // fields
   OBJECT_MSG_FIELD(bool*, deleted_);
-  // links
-  OBJECT_MSG_DEFINE_LIST_LINK(link);
-  OBJECT_MSG_DEFINE_LIST_HEAD(SelfLoopContainer, link, head);
+  // list entries
+  OBJECT_MSG_DEFINE_LIST_LINK(entry);
+  OBJECT_MSG_DEFINE_LIST_HEAD(SelfLoopContainer, entry, head);
 OBJECT_MSG_END(SelfLoopContainer);
 // clang-format on
 
