@@ -111,12 +111,12 @@ class TrivialObjectMsgMutexedList {
     return list_head_.PopFront();
   }
 
-  void MoveFrom(TrivialObjectMsgList<kDisableSelfLoopLink, LinkField>* src) {
+  void MoveFrom(TrivialObjectMsgList<LinkField, kDisableSelfLoopLink>* src) {
     std::unique_lock<std::mutex> lock(mutex_);
     src->MoveToDstBack(&list_head_);
   }
 
-  void MoveTo(TrivialObjectMsgList<kDisableSelfLoopLink, LinkField>* dst) {
+  void MoveTo(TrivialObjectMsgList<LinkField, kDisableSelfLoopLink>* dst) {
     std::unique_lock<std::mutex> lock(mutex_);
     list_head_.MoveToDstBack(dst);
   }
@@ -127,7 +127,7 @@ class TrivialObjectMsgMutexedList {
   }
 
  private:
-  TrivialObjectMsgList<kDisableSelfLoopLink, LinkField> list_head_;
+  TrivialObjectMsgList<LinkField, kDisableSelfLoopLink> list_head_;
   mutable std::mutex mutex_;
 };
 

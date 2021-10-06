@@ -113,7 +113,7 @@ class TrivialObjectMsgConditionList {
   }
 
   ObjectMsgConditionListStatus MoveFrom(
-      TrivialObjectMsgList<kDisableSelfLoopLink, LinkField>* src) {
+      TrivialObjectMsgList<LinkField, kDisableSelfLoopLink>* src) {
     std::unique_lock<std::mutex> lock(*mut_mutex());
     if (is_closed_) { return kObjectMsgConditionListStatusErrorClosed; }
     src->MoveToDstBack(&list_head_);
@@ -121,7 +121,7 @@ class TrivialObjectMsgConditionList {
     return kObjectMsgConditionListStatusSuccess;
   }
 
-  ObjectMsgConditionListStatus MoveTo(TrivialObjectMsgList<kDisableSelfLoopLink, LinkField>* dst) {
+  ObjectMsgConditionListStatus MoveTo(TrivialObjectMsgList<LinkField, kDisableSelfLoopLink>* dst) {
     std::unique_lock<std::mutex> lock(*mut_mutex());
     mut_cond()->wait(lock, [this]() { return (!list_head_.empty()) || is_closed_; });
     if (list_head_.empty()) { return kObjectMsgConditionListStatusErrorClosed; }
@@ -130,7 +130,7 @@ class TrivialObjectMsgConditionList {
   }
 
   ObjectMsgConditionListStatus TryMoveTo(
-      TrivialObjectMsgList<kDisableSelfLoopLink, LinkField>* dst) {
+      TrivialObjectMsgList<LinkField, kDisableSelfLoopLink>* dst) {
     std::unique_lock<std::mutex> lock(*mut_mutex());
     if (list_head_.empty()) { return kObjectMsgConditionListStatusSuccess; }
     mut_cond()->wait(lock, [this]() { return (!list_head_.empty()) || is_closed_; });
@@ -158,7 +158,7 @@ class TrivialObjectMsgConditionList {
     return reinterpret_cast<std::condition_variable*>(&cond_buff_[0]);
   }
 
-  TrivialObjectMsgList<kDisableSelfLoopLink, LinkField> list_head_;
+  TrivialObjectMsgList<LinkField, kDisableSelfLoopLink> list_head_;
   union {
     char mutex_buff_[sizeof(std::mutex)];
     int64_t mutex_buff_align_;

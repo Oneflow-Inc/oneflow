@@ -57,11 +57,10 @@ namespace oneflow {
 
 #define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD_TYPE(elem_type, elem_field_name, field_name)            \
  public:                                                                                           \
-  using OF_PP_CAT(field_name, _ObjectMsgListType) =                                                \
-      TrivialObjectMsgList<GetObjectMsgLinkType<std::is_same<self_type, elem_type>::value>::value, \
-                           StructField<OBJECT_MSG_TYPE_CHECK(elem_type), intrusive::ListEntry,     \
-                                       OBJECT_MSG_TYPE_CHECK(elem_type)::OF_PP_CAT(                \
-                                           elem_field_name, _kDssFieldOffset)>>;
+  using OF_PP_CAT(field_name, _ObjectMsgListType) = TrivialObjectMsgList<                          \
+      StructField<OBJECT_MSG_TYPE_CHECK(elem_type), intrusive::ListEntry,                          \
+                  OBJECT_MSG_TYPE_CHECK(elem_type)::OF_PP_CAT(elem_field_name, _kDssFieldOffset)>, \
+      GetObjectMsgLinkType<std::is_same<self_type, elem_type>::value>::value>;
 
 #define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name) \
  public:                                                                           \
@@ -123,11 +122,11 @@ struct GetObjectMsgLinkType<false> {
   static const ObjectMsgLinkType value = kDisableSelfLoopLink;
 };
 
-template<ObjectMsgLinkType entry_type, typename ValueLinkField>
+template<typename ValueLinkField, ObjectMsgLinkType entry_type>
 class TrivialObjectMsgList;
 
 template<typename ValueLinkField>
-class TrivialObjectMsgList<kDisableSelfLoopLink, ValueLinkField> {
+class TrivialObjectMsgList<ValueLinkField, kDisableSelfLoopLink> {
  public:
   using value_type = typename ValueLinkField::struct_type;
   using value_entry_struct_field = ValueLinkField;
@@ -232,7 +231,7 @@ class TrivialObjectMsgList<kDisableSelfLoopLink, ValueLinkField> {
 };
 
 template<typename ValueLinkField>
-class TrivialObjectMsgList<kEnableSelfLoopLink, ValueLinkField> {
+class TrivialObjectMsgList<ValueLinkField, kEnableSelfLoopLink> {
  public:
   using value_type = typename ValueLinkField::struct_type;
   using value_entry_struct_field = ValueLinkField;
@@ -377,13 +376,14 @@ class TrivialObjectMsgList<kEnableSelfLoopLink, ValueLinkField> {
 };
 
 template<typename LinkField>
-class ObjectMsgList : public TrivialObjectMsgList<kDisableSelfLoopLink, LinkField> {
+class ObjectMsgList : public TrivialObjectMsgList<LinkField, kDisableSelfLoopLink> {
  public:
   ObjectMsgList(const ObjectMsgList&) = delete;
   ObjectMsgList(ObjectMsgList&&) = delete;
   ObjectMsgList() { this->__Init__(); }
   ~ObjectMsgList() { this->Clear(); }
 };
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_LIST_H_
