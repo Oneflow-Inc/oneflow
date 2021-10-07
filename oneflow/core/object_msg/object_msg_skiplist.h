@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_SKIPLIST_H_
 
 #include "oneflow/core/object_msg/object_msg_core.h"
-#include "oneflow/core/object_msg/embedded_skiplist.h"
+#include "oneflow/core/object_msg/skiplist_entry.h"
 
 namespace oneflow {
 
@@ -52,8 +52,8 @@ namespace oneflow {
 
 #define _OBJECT_MSG_DEFINE_SKIPLIST_HEAD(field_counter, elem_type, elem_field_name, field_name)    \
   _OBJECT_MSG_DEFINE_SKIPLIST_HEAD_FIELD(elem_type, elem_field_name, field_name);                  \
-  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedSkipListHeadInit);                      \
-  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedSkipListHeadDelete);                  \
+  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgSkipListHeadInit);                              \
+  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgSkipListHeadDelete);                          \
   DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _ObjectMsgSkipListType), \
                    OF_PP_CAT(field_name, _));
 
@@ -84,7 +84,7 @@ namespace oneflow {
 #define _OBJECT_MSG_DEFINE_SKIPLIST_KEY_FIELD(max_level, key_type, field_name)               \
  public:                                                                                     \
   using OF_PP_CAT(field_name, _ObjectMsgSkipListKeyType) =                                   \
-      intrusive::EmbeddedSkipListKey<key_type, max_level>;                                   \
+      intrusive::SkipListEntry<key_type, max_level>;                                         \
   bool OF_PP_CAT(is_, OF_PP_CAT(field_name, _inserted))() const {                            \
     return !OF_PP_CAT(field_name, _).empty();                                                \
   }                                                                                          \
@@ -129,12 +129,12 @@ namespace oneflow {
       skiplist_type::elem_level0_entry_struct_field, elem)
 
 template<typename WalkCtxType, typename PtrFieldType>
-struct ObjectMsgEmbeddedSkipListHeadInit {
+struct ObjectMsgSkipListHeadInit {
   static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->__Init__(); }
 };
 
 template<typename WalkCtxType, typename PtrFieldType>
-struct ObjectMsgEmbeddedSkipListHeadDelete {
+struct ObjectMsgSkipListHeadDelete {
   static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->Clear(); }
 };
 
@@ -161,7 +161,7 @@ class TrivialObjectMsgSkipList {
   template<typename Enabled = void>
   static constexpr int ContainerLevelZeroLinkOffset() {
     return offsetof(TrivialObjectMsgSkipList, skiplist_head_)
-           + intrusive::EmbeddedSkipListHead<ElemKeyField>::ContainerLevelZeroLinkOffset();
+           + intrusive::SkipListHead<ElemKeyField>::ContainerLevelZeroLinkOffset();
   }
 
   void __Init__() { skiplist_head_.__Init__(); }
@@ -198,7 +198,7 @@ class TrivialObjectMsgSkipList {
   }
 
  private:
-  intrusive::EmbeddedSkipListHead<ElemKeyField> skiplist_head_;
+  intrusive::SkipListHead<ElemKeyField> skiplist_head_;
 };
 
 template<typename ItemField>

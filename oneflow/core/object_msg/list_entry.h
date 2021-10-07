@@ -96,6 +96,7 @@ struct ListEntry {
 template<typename LinkField>
 class ListHead {
  public:
+  ListHead() { Clear(); }
   using value_type = typename LinkField::struct_type;
   static_assert(std::is_same<typename LinkField::field_type, ListEntry>::value,
                 "no ListEntry found");

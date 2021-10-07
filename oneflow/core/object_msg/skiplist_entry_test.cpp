@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/object_msg/embedded_skiplist.h"
+#include "oneflow/core/object_msg/skiplist_entry.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -23,20 +23,20 @@ namespace intrusive {
 namespace test {
 
 template<typename ElemKeyField>
-class TestEmbeddedSkipListHead final : public EmbeddedSkipListHead<ElemKeyField> {
+class TestSkipListHead final : public SkipListHead<ElemKeyField> {
  public:
-  TestEmbeddedSkipListHead() { this->__Init__(); }
-  ~TestEmbeddedSkipListHead() { this->Clear(); }
+  TestSkipListHead() { this->__Init__(); }
+  ~TestSkipListHead() { this->Clear(); }
 };
 
 struct FooSkipListElem {
   FooSkipListElem() { key.__Init__(); }
 
-  EmbeddedSkipListKey<int> key;
+  SkipListEntry<int> key;
   int value;
 };
 
-using FooSkipList = TestEmbeddedSkipListHead<STRUCT_FIELD(FooSkipListElem, key)>;
+using FooSkipList = TestSkipListHead<STRUCT_FIELD(FooSkipListElem, key)>;
 
 TEST(EmbeddedSkipList, empty) {
   FooSkipList skiplist;

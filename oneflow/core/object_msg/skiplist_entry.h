@@ -28,9 +28,10 @@ namespace oneflow {
 namespace intrusive {
 
 template<int max_level>
-struct EmbeddedSkipListLink final {
+struct ListEntryArray final {
  public:
-  using self_type = EmbeddedSkipListLink<max_level>;
+  ListEntryArray() { Clear(); }
+  using self_type = ListEntryArray<max_level>;
   template<typename Enabled = void>
   static constexpr int LevelZeroLinkOffset() {
     return 0;
@@ -39,13 +40,14 @@ struct EmbeddedSkipListLink final {
   bool empty() const { return entries_[0].nullptr_empty(); }
 
   void __Init__() { Clear(); }
+
   void Clear() {
     for (auto& entry : entries_) { entry.Clear(); }
   }
   void NullptrClear() {
     for (auto& entry : entries_) { entry.NullptrClear(); }
   }
-  void InsertAfter(EmbeddedSkipListLink* prev_skiplist_entry, int levels) {
+  void InsertAfter(ListEntryArray* prev_skiplist_entry, int levels) {
     CHECK(empty());
     ListEntry* prev_entry = &prev_skiplist_entry->entries_[0];
     int i = 0;
@@ -61,7 +63,7 @@ struct EmbeddedSkipListLink final {
       entries_[i].NullptrClear();
     }
   }
-  static EmbeddedSkipListLink* ThisPtr4LinkPtr(ListEntry* slist_ptr, int level) {
+  static ListEntryArray* ThisPtr4LinkPtr(ListEntry* slist_ptr, int level) {
     auto* entries_ptr = (std::array<intrusive::ListEntry, max_level>*)(slist_ptr - level);
     return StructField<self_type, decltype(entries_), LinksOffset()>::StructPtr4FieldPtr(
         entries_ptr);
@@ -85,16 +87,17 @@ struct EmbeddedSkipListLink final {
 };
 
 template<typename T, int N = 20>
-struct EmbeddedSkipListKey {
+struct SkipListEntry {
  public:
-  using self_type = EmbeddedSkipListKey<T, N>;
-  using entry_type = EmbeddedSkipListLink<N>;
+  SkipListEntry() { __Init__(); }
+  using self_type = SkipListEntry<T, N>;
+  using entry_type = ListEntryArray<N>;
   using key_type = T;
   static const int max_level = N;
   static_assert(N > 0, "invalid number of levels");
   template<typename Enabled = void>
   static constexpr int LevelZeroLinkOffset() {
-    return offsetof(EmbeddedSkipListKey, entry_) + entry_type::LevelZeroLinkOffset();
+    return offsetof(SkipListEntry, entry_) + entry_type::LevelZeroLinkOffset();
   }
 
   bool empty() const { return entry_.empty(); }
@@ -157,7 +160,7 @@ struct EmbeddedSkipListKey {
     // CHECK_EQ(Find(ret_elem->key(), head), ret_elem, GetMaxVal<int32_t>() / 2);
     return std::make_pair(ret_elem, success);
   }
-  static EmbeddedSkipListKey* ThisPtr4LinkPtr(ListEntry* list_entry_ptr, int level) {
+  static SkipListEntry* ThisPtr4LinkPtr(ListEntry* list_entry_ptr, int level) {
     auto* skip_list_ptr = entry_type::ThisPtr4LinkPtr(list_entry_ptr, level);
     using FieldUtil = StructField<self_type, entry_type, SkipListIteratorOffset()>;
     return FieldUtil::StructPtr4FieldPtr(skip_list_ptr);
@@ -204,8 +207,9 @@ struct EmbeddedSkipListKey {
 };
 
 template<typename ValueLinkField>
-class EmbeddedSkipListHead {
+class SkipListHead {
  public:
+  SkipListHead() { __Init__(); }
   using value_type = typename ValueLinkField::struct_type;
   using key_entry_type = typename ValueLinkField::field_type;
   using key_type = typename key_entry_type::key_type;
@@ -217,8 +221,8 @@ class EmbeddedSkipListHead {
   static const int max_level = key_entry_type::max_level;
   template<typename Enabled = void>
   static constexpr int ContainerLevelZeroLinkOffset() {
-    return offsetof(EmbeddedSkipListHead, skiplist_head_)
-           + EmbeddedSkipListLink<max_level>::LevelZeroLinkOffset();
+    return offsetof(SkipListHead, skiplist_head_)
+           + ListEntryArray<max_level>::LevelZeroLinkOffset();
   }
 
   void __Init__() {
@@ -243,7 +247,7 @@ class EmbeddedSkipListHead {
   }
   const value_type* Find(const key_type& key) const {
     auto* key_entry_ptr = key_entry_type::Find(
-        key, const_cast<EmbeddedSkipListLink<max_level>*>(&skiplist_head_), size_shift());
+        key, const_cast<ListEntryArray<max_level>*>(&skiplist_head_), size_shift());
     if (key_entry_ptr == nullptr) { return nullptr; }
     return ValueLinkField::StructPtr4FieldPtr(key_entry_ptr);
   }
@@ -269,7 +273,7 @@ class EmbeddedSkipListHead {
 
   template<typename Callback>
   void Clear(const Callback& cb) {
-    using entry_type = EmbeddedSkipListLink<max_level>;
+    using entry_type = ListEntryArray<max_level>;
     for (; size_ > 0; --size_) {
       ListEntry* begin_list_entry = skiplist_head_.mutable_entry(0)->next();
       auto* begin = entry_type::ThisPtr4LinkPtr(begin_list_entry, 0);
@@ -292,7 +296,7 @@ class EmbeddedSkipListHead {
  private:
   int size_shift() const { return std::log2(size_ + 1); }
 
-  EmbeddedSkipListLink<max_level> skiplist_head_;
+  ListEntryArray<max_level> skiplist_head_;
   volatile std::size_t size_;
 };
 
