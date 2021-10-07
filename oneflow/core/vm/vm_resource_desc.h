@@ -41,7 +41,6 @@ INTRUSIVE_BEGIN(VmResourceDesc);
   void set_machine_num(int64_t val) { machine_num_ = val; }
   void set_max_device_num_per_machine(int64_t val) { max_device_num_per_machine_ = val; }
   DeviceTag2DeviceNum* mut_device_tag2device_num() { return &device_tag2device_num_; }
-  DeviceTag2DeviceNum* mutable_device_tag2device_num() { return &device_tag2device_num_; }
 
 
   // methods

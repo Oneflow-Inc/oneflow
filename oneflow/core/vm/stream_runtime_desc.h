@@ -41,16 +41,13 @@ INTRUSIVE_BEGIN(StreamRtDesc);
   const StreamTypeId& stream_type_id() const { return stream_type_id_.key().Get(); }
   const StreamId2Stream& stream_id2stream() const { return stream_id2stream_; }
   // Setters
-  StreamDesc* mut_stream_desc() { return mutable_stream_desc(); }
-  StreamDesc* mutable_stream_desc() { 
+  StreamDesc* mut_stream_desc() { 
     if (!stream_desc_) { stream_desc_ = intrusive::MakeShared<StreamDesc>(); }
     return stream_desc_.Mutable();
   }
   void reset_stream_desc(StreamDesc* stream_desc) { stream_desc_.Reset(stream_desc); }
   StreamTypeId* mut_stream_type_id() { return stream_type_id_.mut_key()->Mutable(); }
-  StreamTypeId* mutable_stream_type_id() { return stream_type_id_.mut_key()->Mutable(); }
   StreamId2Stream* mut_stream_id2stream() { return &stream_id2stream_; }
-  StreamId2Stream* mutable_stream_id2stream() { return &stream_id2stream_; }
 
   // methods
   OF_PUBLIC void __Init__(StreamDesc* stream_desc);

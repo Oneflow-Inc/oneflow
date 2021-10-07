@@ -44,9 +44,7 @@ INTRUSIVE_BEGIN(ThreadCtx);
   void set_stream_rt_desc(const StreamRtDesc* val) { stream_rt_desc_ = val; }
   void clear_stream_rt_desc() { stream_rt_desc_ = nullptr; }
   StreamList* mut_stream_list() { return &stream_list_; }
-  StreamList* mutable_stream_list() { return &stream_list_; }
   PendingInstructionChannel* mut_pending_instruction_list() { return &pending_instruction_list_; }
-  PendingInstructionChannel* mutable_pending_instruction_list() { return &pending_instruction_list_; }
 
   // methods
   OF_PUBLIC void __Init__(const StreamRtDesc& stream_rt_desc) {

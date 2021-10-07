@@ -72,7 +72,7 @@ void VirtualMachine::TryReleaseFinishedInstructions(
     Stream* stream,
     /*out*/ ReadyInstructionList* ready_instruction_list) {
   auto* running_instruction_list = stream->mut_running_instruction_list();
-  auto* front_seq_compute_list = mutable_front_seq_compute_instr_list();
+  auto* front_seq_compute_list = mut_front_seq_compute_instr_list();
   auto* vm_stat_running_list = mut_vm_stat_running_instruction_list();
   while (true) {
     auto* instruction_ptr = running_instruction_list->Begin();
@@ -127,7 +127,7 @@ bool IsStreamInParallelDesc(const ParallelDesc* parallel_desc, const Stream& str
 
 void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
                                       /*out*/ NewInstructionList* new_instruction_list) {
-  auto* front_seq_compute_list = mutable_front_seq_compute_instr_list();
+  auto* front_seq_compute_list = mut_front_seq_compute_instr_list();
   INTRUSIVE_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
     const StreamTypeId& stream_type_id = instr_msg->instr_type_id().stream_type_id();
     auto* stream_rt_desc = mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
@@ -243,9 +243,9 @@ void ForEachConstMirroredObject4ConstPhyInstrOperand(InterpretType interpret_typ
 template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
 void VirtualMachine::ForEachConstMirroredObject(
     const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
-    const ModifiedOperand<kDataMutableModifier, mem_zone_modifier>& mutable_operand,
+    const ModifiedOperand<kDataMutableModifier, mem_zone_modifier>& mut_operand,
     int64_t global_device_id, const DoEachT& DoEach) {
-  const Operand& operand = mutable_operand.operand();
+  const Operand& operand = mut_operand.operand();
   if (interpret_type == InterpretType::kCompute) {
     ForEachMirroredObject<&IdUtil::GetTypeId>(id2logical_object, operand, global_device_id, DoEach);
   } else if (interpret_type == InterpretType::kInfer) {
@@ -277,9 +277,9 @@ void ForEachConstMirroredObject4MutPhyInstrOperand(InterpretType interpret_type,
 template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
 void VirtualMachine::ForEachMutMirroredObject(
     const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
-    const ModifiedOperand<kDataMutableModifier, mem_zone_modifier>& mutable_operand,
+    const ModifiedOperand<kDataMutableModifier, mem_zone_modifier>& mut_operand,
     int64_t global_device_id, const DoEachT& DoEach) {
-  const Operand& operand = mutable_operand.operand();
+  const Operand& operand = mut_operand.operand();
   if (interpret_type == InterpretType::kCompute) {
     ForEachMirroredObject<&IdUtil::GetValueId>(id2logical_object, operand, global_device_id,
                                                DoEach);
@@ -354,9 +354,9 @@ void ForEachMutMirroredObject4Mut2PhyInstrOperand(InterpretType interpret_type,
 template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
 void VirtualMachine::ForEachMutMirroredObject(
     const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
-    const ModifiedOperand<kDeleteModifier, mem_zone_modifier>& mutable_operand,
+    const ModifiedOperand<kDeleteModifier, mem_zone_modifier>& mut_operand,
     int64_t global_device_id, const DoEachT& DoEach) {
-  const Operand& operand = mutable_operand.operand();
+  const Operand& operand = mut_operand.operand();
   if (interpret_type == InterpretType::kCompute) {
     ForEachMirroredObject<&IdUtil::GetValueId>(id2logical_object, operand, global_device_id,
                                                DoEach);
@@ -550,9 +550,9 @@ void VirtualMachine::TryMoveWaitingToReady(Instruction* instruction, ReadyList* 
 }
 
 void VirtualMachine::__Init__(const VmDesc& vm_desc) {
-  mutable_vm_resource_desc()->CopyFrom(vm_desc.vm_resource_desc());
+  mut_vm_resource_desc()->CopyFrom(vm_desc.vm_resource_desc());
   CHECK_GT(vm_desc.machine_id_range().size(), 0);
-  *mutable_machine_id_range() = vm_desc.machine_id_range();
+  *mut_machine_id_range() = vm_desc.machine_id_range();
   INTRUSIVE_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.stream_type_id2desc(), stream_desc) {
     if (stream_desc->num_threads() == 0) { continue; }
     auto stream_rt_desc = intrusive::MakeShared<StreamRtDesc>(stream_desc);
@@ -633,7 +633,7 @@ void VirtualMachine::TryRunFrontSeqInstruction(
 }
 
 void VirtualMachine::TryRunFrontSeqInstruction(ReadyInstructionList* ready_instruction_list) {
-  TryRunFrontSeqInstruction(mutable_front_seq_compute_instr_list(), ready_instruction_list);
+  TryRunFrontSeqInstruction(mut_front_seq_compute_instr_list(), ready_instruction_list);
 }
 
 void VirtualMachine::TryDeleteLogicalObjects() {
@@ -690,7 +690,7 @@ void VirtualMachine::Schedule() {
   DispatchAndPrescheduleInstructions(ready_instruction_list);
   *mut_flying_instruction_cnt() = mut_waiting_instruction_list()->size()
                                   + mut_ready_instruction_list()->size()
-                                  + mutable_vm_stat_running_instruction_list()->size();
+                                  + mut_vm_stat_running_instruction_list()->size();
 }
 
 bool VirtualMachine::ThreadUnsafeEmpty() const {

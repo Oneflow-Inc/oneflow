@@ -43,9 +43,8 @@ Maybe<void> LocalDepObject::Init(const Device& device) {
       global_device_id = vm.this_start_global_device_id() + device_id;
     }
   }
-  mutable_logical_object()->__Init__(object_id,
-                                     std::const_pointer_cast<ParallelDesc>(parallel_desc));
-  mutable_mirrored_object()->__Init__(mutable_logical_object(), global_device_id);
+  mut_logical_object()->__Init__(object_id, std::const_pointer_cast<ParallelDesc>(parallel_desc));
+  mut_mirrored_object()->__Init__(mut_logical_object(), global_device_id);
   return Maybe<void>::Ok();
 }
 

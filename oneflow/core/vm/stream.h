@@ -47,19 +47,13 @@ INTRUSIVE_BEGIN(Stream);
   // Setters
   void set_max_device_num_per_machine(int64_t val) { max_device_num_per_machine_ = val; }
   ThreadCtx* mut_thread_ctx() { return thread_ctx_; }
-  ThreadCtx* mutable_thread_ctx() { return thread_ctx_; }
   void set_thread_ctx(ThreadCtx* val) { thread_ctx_ = val; }
   void clear_thread_ctx() { thread_ctx_ = nullptr; }
   std::unique_ptr<DeviceCtx>* mut_device_ctx() { return &device_ctx_; }
-  std::unique_ptr<DeviceCtx>* mutable_device_ctx() { return &device_ctx_; }
   InstructionList* mut_free_instruction_list() { return &free_instruction_list_; }
   InstructionList* mut_zombie_instruction_list() { return &zombie_instruction_list_; }
   InstructionList* mut_running_instruction_list() { return &running_instruction_list_; }
-  InstructionList* mutable_free_instruction_list() { return &free_instruction_list_; }
-  InstructionList* mutable_zombie_instruction_list() { return &zombie_instruction_list_; }
-  InstructionList* mutable_running_instruction_list() { return &running_instruction_list_; }
   StreamId* mut_stream_id() { return stream_id_.mut_key(); }
-  StreamId* mutable_stream_id() { return stream_id_.mut_key(); }
 
   // methods
   OF_PUBLIC void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id, const int64_t max_device_num_per_machine);

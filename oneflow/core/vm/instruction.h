@@ -42,7 +42,6 @@ INTRUSIVE_BEGIN(InstructionOperandList);
   const std::vector<FlatMsg<InstructionOperand>>& operand() const { return operand_; }
   // Setters
   std::vector<FlatMsg<InstructionOperand>>* mut_operand() { return &operand_; }
-  std::vector<FlatMsg<InstructionOperand>>* mutable_operand() { return &operand_; }
 
   INTRUSIVE_DEFINE_FIELD(std::vector<FlatMsg<InstructionOperand>>, operand_);
 INTRUSIVE_END(InstructionOperandList);
@@ -63,8 +62,7 @@ INTRUSIVE_BEGIN(InstructionMsg);
   const std::shared_ptr<PhyInstrOperand>& phy_instr_operand() const { return phy_instr_operand_; }
   // Setters
   void set_parallel_desc_symbol_id(int64_t val) { parallel_desc_symbol_id_ = val; }
-  InstructionOperandList* mut_operand_list() { return mutable_operand_list(); }
-  InstructionOperandList* mutable_operand_list() {
+  InstructionOperandList* mut_operand_list() {
     if (!operand_list_) { operand_list_ = intrusive::MakeShared<InstructionOperandList>(); }
     return operand_list_.Mutable();
   }
@@ -72,13 +70,9 @@ INTRUSIVE_BEGIN(InstructionMsg);
     operand_list_.Reset(const_cast<InstructionOperandList*>(&other));
   }
   std::string* mut_instr_type_name() { return &instr_type_name_; }
-  std::string* mutable_instr_type_name() { return &instr_type_name_; }
   InstrTypeId* mut_instr_type_id() { return &instr_type_id_; }
-  InstrTypeId* mutable_instr_type_id() { return &instr_type_id_; }
   std::shared_ptr<const ParallelDesc>* mut_parallel_desc() { return &parallel_desc_; }
-  std::shared_ptr<const ParallelDesc>* mutable_parallel_desc() { return &parallel_desc_; }
   std::shared_ptr<PhyInstrOperand>* mut_phy_instr_operand() { return &phy_instr_operand_; }
-  std::shared_ptr<PhyInstrOperand>* mutable_phy_instr_operand() { return &phy_instr_operand_; }
 
   // methods
   OF_PUBLIC void __Init__();
@@ -111,9 +105,6 @@ INTRUSIVE_BEGIN(InstructionMsg);
   }
   OF_PUBLIC std::vector<FlatMsg<InstructionOperand>>* mut_operand() {
     return mut_operand_list()->mut_operand();
-  }
-  OF_PUBLIC std::vector<FlatMsg<InstructionOperand>>* mutable_operand() {
-    return mutable_operand_list()->mut_operand();
   }
   OF_PUBLIC intrusive::SharedPtr<InstructionMsg> Clone() const;
   OF_PUBLIC intrusive::SharedPtr<InstructionMsg> MakeInferInstrMsg() const;
@@ -173,8 +164,6 @@ INTRUSIVE_BEGIN(InstructionEdge);
   void clear_dst_instruction() { dst_instruction_ = nullptr; } 
   Instruction* mut_src_instruction() { return src_instruction_; } 
   Instruction* mut_dst_instruction() { return dst_instruction_; } 
-  Instruction* mutable_src_instruction() { return src_instruction_; } 
-  Instruction* mutable_dst_instruction() { return dst_instruction_; } 
   // methods
   OF_PUBLIC void __Init__(Instruction* src_instruction, Instruction* dst_instruction) {
     __Init__();
@@ -228,28 +217,18 @@ INTRUSIVE_BEGIN(Instruction);
   void set_stream(Stream* val) { stream_ = val; }
   void clear_stream() { stream_ = nullptr; }
   Stream* mut_stream() { return stream_; }
-  Stream* mutable_stream() { return stream_; }
-  InstructionMsg* mut_instr_msg() { return mutable_instr_msg(); }
-  InstructionMsg* mutable_instr_msg() {
+  InstructionMsg* mut_instr_msg() {
     if (!instr_msg_) { instr_msg_ = intrusive::MakeShared<InstructionMsg>(); }
     return instr_msg_.Mutable();
   }
   void reset_instr_msg(InstructionMsg* instr_msg) { instr_msg_.Reset(instr_msg); }
   void clear_instr_msg() { instr_msg_.Reset(); }
   std::shared_ptr<const ParallelDesc>* mut_parallel_desc() { return &parallel_desc_; }
-  std::shared_ptr<const ParallelDesc>* mutable_parallel_desc() { return &parallel_desc_; }
   InstructionStatusBuffer* mut_status_buffer() { return status_buffer_.Mutable(); }
-  InstructionStatusBuffer* mutable_status_buffer() { return status_buffer_.Mutable(); }
   InEdgeList* mut_in_edges() { return &in_edges_; }
   OutEdgeList* mut_out_edges() { return &out_edges_; }
   RwMutexedObjectAccessList* mut_access_list() { return &access_list_; }
-  InEdgeList* mutable_in_edges() { return &in_edges_; }
-  OutEdgeList* mutable_out_edges() { return &out_edges_; }
-  RwMutexedObjectAccessList* mutable_access_list() { return &access_list_; }
   MirroredObjectId2RwMutexedObjectAccess* mut_mirrored_object_id2access() {
-      return &mirrored_object_id2access_;
-  }
-  MirroredObjectId2RwMutexedObjectAccess* mutable_mirrored_object_id2access() {
       return &mirrored_object_id2access_;
   }
 

@@ -243,7 +243,8 @@ struct FlatMsgGetDefault<true> final {
     (_FLAT_MSG_ONEOF_NOT_SET_VALUE(oneof_name));                                               \
   }                                                                                            \
   OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mut_, OF_PP_PAIR_SECOND(pair))() {                        \
-    CHECK(OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))());                                         \
+    OF_PP_CAT(set_, _FLAT_MSG_ONEOF_CASE_NAME(oneof_name))                                     \
+    (get_enum_value(OF_PP_PAIR_SECOND(pair)));                                                 \
     return &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);                    \
   }                                                                                            \
   OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() {                    \

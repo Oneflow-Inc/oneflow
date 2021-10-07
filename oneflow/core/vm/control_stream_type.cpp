@@ -119,7 +119,7 @@ void ControlStreamType::Compute(Instruction* instruction) const { UNIMPLEMENTED(
 intrusive::SharedPtr<StreamDesc> ControlStreamType::MakeStreamDesc(const Resource& resource,
                                                                    int64_t this_machine_id) const {
   auto ret = intrusive::MakeShared<StreamDesc>();
-  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<ControlStreamType>());
+  ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<ControlStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);

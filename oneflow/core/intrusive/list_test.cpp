@@ -40,14 +40,13 @@ INTRUSIVE_BEGIN(TestListItem)
   void set_cnt(int* val) { cnt_ = val; }
   void clear_cnt() { cnt_ = nullptr; }
   int* mut_cnt() { return cnt_; }
-  int* mutable_cnt() { return cnt_; }
 
   INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, foo_list_);
   INTRUSIVE_DEFINE_FIELD(int*, cnt_);
 
  public:
   void __Delete__() {
-    if (has_cnt()) { --*mutable_cnt(); }
+    if (has_cnt()) { --*mut_cnt(); }
   }
 INTRUSIVE_END(TestListItem)
 // clang-format on
@@ -254,7 +253,6 @@ INTRUSIVE_BEGIN(TestIntrusiveListHead);
   const FooList& foo_list() const { return foo_list_; }
   // Setters
   FooList* mut_foo_list() { return &foo_list_; }
-  FooList* mutable_foo_list() { return &foo_list_; }
 
   INTRUSIVE_DEFINE_FIELD(FooList, foo_list_);
 INTRUSIVE_END(TestIntrusiveListHead);
@@ -262,7 +260,7 @@ INTRUSIVE_END(TestIntrusiveListHead);
 
 TEST(List, intrusive_list_for_each) {
   auto foo_list_head = intrusive::MakeShared<TestIntrusiveListHead>();
-  auto& foo_list = *foo_list_head->mutable_foo_list();
+  auto& foo_list = *foo_list_head->mut_foo_list();
   auto item0 = intrusive::MakeShared<TestListItem>();
   auto item1 = intrusive::MakeShared<TestListItem>();
   foo_list.PushBack(item0.Mutable());
@@ -296,8 +294,7 @@ INTRUSIVE_BEGIN(TestIntrusiveListHeadWrapper);
     return default_val.Get();
   }
   // Setters
-  TestIntrusiveListHead* mut_head() { return mutable_head(); }
-  TestIntrusiveListHead* mutable_head() {
+  TestIntrusiveListHead* mut_head() {
     if (!head_) { head_ = intrusive::MakeShared<TestIntrusiveListHead>(); }
     return head_.Mutable();
   }
@@ -311,7 +308,7 @@ INTRUSIVE_END(TestIntrusiveListHeadWrapper);
 
 TEST(List, nested_list_delete) {
   auto foo_list_head = intrusive::MakeShared<TestIntrusiveListHeadWrapper>();
-  auto& foo_list = *foo_list_head->mutable_head()->mutable_foo_list();
+  auto& foo_list = *foo_list_head->mut_head()->mut_foo_list();
   auto item0 = intrusive::MakeShared<TestListItem>();
   auto item1 = intrusive::MakeShared<TestListItem>();
   foo_list.PushBack(item0.Mutable());
@@ -367,7 +364,6 @@ INTRUSIVE_BEGIN(SelfLoopContainer);
   bool is_entry_empty() const { return entry_.empty(); }
   // Setters
   bool* mut_deleted() { return deleted_; }
-  bool* mutable_deleted() { return deleted_; }
   void set_deleted(bool* val) { deleted_ = val; }
   void clear_deleted() { deleted_ = nullptr; }
 
@@ -385,7 +381,6 @@ INTRUSIVE_BEGIN(SelfLoopContainer);
   using SelfLoopContainerList = intrusive::HeadFreeList<INTRUSIVE_FIELD(SelfLoopContainer, entry_), INTRUSIVE_FIELD_COUNTER>;
   const SelfLoopContainerList& head() const { return head_; }
   SelfLoopContainerList* mut_head() { return &head_; }
-  SelfLoopContainerList* mutable_head() { return &head_; }
   INTRUSIVE_DEFINE_FIELD(SelfLoopContainerList, head_);
 INTRUSIVE_END(SelfLoopContainer);
 // clang-format on

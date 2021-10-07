@@ -50,7 +50,6 @@ INTRUSIVE_BEGIN(StreamTypeIdItem);
   const StreamTypeId& stream_type_id() const { return stream_type_id_.key().Get(); }
   // Setters
   StreamTypeId* mut_stream_type_id() { return stream_type_id_.mut_key()->Mutable(); }
-  StreamTypeId* mutable_stream_type_id() { return stream_type_id_.mut_key()->Mutable(); }
 
   using StreamTypeIdKey = intrusive::SkipListEntry<FlatMsg<StreamTypeId>, 20>;
   INTRUSIVE_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);

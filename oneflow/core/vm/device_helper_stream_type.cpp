@@ -64,7 +64,7 @@ intrusive::SharedPtr<StreamDesc> DeviceHelperStreamType::MakeStreamDesc(
   if (device_num == 0) { return intrusive::SharedPtr<StreamDesc>(); }
   CHECK_GT(device_num, 0);
   auto ret = intrusive::MakeShared<StreamDesc>();
-  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<DeviceHelperStreamType>());
+  ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<DeviceHelperStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(device_num);
   ret->set_num_streams_per_thread(1);

@@ -70,7 +70,6 @@ INTRUSIVE_BEGIN(StreamDesc);
   void set_num_streams_per_machine(int32_t val) { num_streams_per_machine_ = val; }
   void set_num_streams_per_thread(int32_t val) { num_streams_per_thread_ = val; }
   StreamTypeId* mut_stream_type_id() { return stream_type_id_.mut_key()->Mutable(); }
-  StreamTypeId* mutable_stream_type_id() { return stream_type_id_.mut_key()->Mutable(); }
 
   // methods
   OF_PUBLIC void __Init__() {}

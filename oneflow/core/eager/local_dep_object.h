@@ -46,13 +46,11 @@ INTRUSIVE_BEGIN(LocalDepObject);
   bool is_lifetime_entry_empty() const { return lifetime_entry_.empty(); }
 
   // Setters
-  vm::LogicalObject* mut_logical_object() { return mutable_logical_object(); }
-  vm::LogicalObject* mutable_logical_object() {
+  vm::LogicalObject* mut_logical_object() {
     if (!logical_object_) { logical_object_ = intrusive::MakeShared<vm::LogicalObject>(); }
     return logical_object_.Mutable();
   }
-  vm::MirroredObject* mut_mirrored_object() { return mutable_mirrored_object(); }
-  vm::MirroredObject* mutable_mirrored_object() {
+  vm::MirroredObject* mut_mirrored_object() {
     if (!mirrored_object_) { mirrored_object_ = intrusive::MakeShared<vm::MirroredObject>(); }
     return mirrored_object_.Mutable();
   }

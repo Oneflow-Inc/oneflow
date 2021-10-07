@@ -66,11 +66,7 @@ INTRUSIVE_BEGIN(RwMutexedObjectAccess);
   Instruction* mut_instruction() { return instruction_; }
   MirroredObject* mut_mirrored_object() { return mirrored_object_; }
   RwMutexedObject* mut_rw_mutexed_object() { return rw_mutexed_object_; }
-  Instruction* mutable_instruction() { return instruction_; }
-  MirroredObject* mutable_mirrored_object() { return mirrored_object_; }
-  RwMutexedObject* mutable_rw_mutexed_object() { return rw_mutexed_object_; }
   MirroredObjectId* mut_mirrored_object_id() { return mirrored_object_id_.mut_key()->Mutable(); }
-  MirroredObjectId* mutable_mirrored_object_id() { return mirrored_object_id_.mut_key()->Mutable(); }
 
   // methods
   OF_PUBLIC void __Init__(Instruction* instruction, MirroredObject* mirrored_object,
@@ -105,7 +101,6 @@ INTRUSIVE_BEGIN(RwMutexedObject);
   const RwMutexedObjectAccessList& access_list() const { return access_list_; }
   // Setters
   RwMutexedObjectAccessList* mut_access_list() { return &access_list_; }
-  RwMutexedObjectAccessList* mutable_access_list() { return &access_list_; }
 
   // methods
   OF_PUBLIC template<typename T> bool Has() const {
@@ -162,9 +157,7 @@ INTRUSIVE_BEGIN(MirroredObject);
   void set_deleting_access(RwMutexedObjectAccess* val) { deleting_access_ = val; }
   void clear_deleting_access() { deleting_access_ = nullptr; }
   RwMutexedObjectAccess* mut_deleting_access() { return deleting_access_; }
-  RwMutexedObjectAccess* mutable_deleting_access() { return deleting_access_; }
-  RwMutexedObject* mut_rw_mutexed_object() { return mutable_rw_mutexed_object(); }
-  RwMutexedObject* mutable_rw_mutexed_object() {
+  RwMutexedObject* mut_rw_mutexed_object() {
     if (!rw_mutexed_object_) { rw_mutexed_object_ = intrusive::MakeShared<RwMutexedObject>(); }
     return rw_mutexed_object_.Mutable();
   }
@@ -175,7 +168,6 @@ INTRUSIVE_BEGIN(MirroredObject);
     rw_mutexed_object_.Reset(const_cast<RwMutexedObject*>(&rw_mutexed_object));
   }
   MirroredObjectId* mut_mirrored_object_id() { return mirrored_object_id_.Mutable(); }
-  MirroredObjectId* mutable_mirrored_object_id() { return mirrored_object_id_.Mutable(); }
   void set_global_device_id(int64_t val) { *global_device_id_.mut_key() = val; }
 
 
@@ -210,12 +202,8 @@ INTRUSIVE_BEGIN(LogicalObject);
   }
   // Setters
   std::shared_ptr<const ParallelDesc>* mut_parallel_desc() { return &parallel_desc_; }
-  std::shared_ptr<const ParallelDesc>* mutable_parallel_desc() { return &parallel_desc_; }
   void set_logical_object_id(const ObjectId& val) { *logical_object_id_.mut_key() = val; }
   GlobalDeviceId2MirroredObject* mut_global_device_id2mirrored_object() {
-    return &global_device_id2mirrored_object_;
-  }
-  GlobalDeviceId2MirroredObject* mutable_global_device_id2mirrored_object() {
     return &global_device_id2mirrored_object_;
   }
 
@@ -227,7 +215,7 @@ INTRUSIVE_BEGIN(LogicalObject);
   OF_PUBLIC void __Init__(const ObjectId& logical_object_id,
                        const std::shared_ptr<const ParallelDesc>& parallel_desc) {
     set_logical_object_id(logical_object_id);
-    *mutable_parallel_desc() = parallel_desc;
+    *mut_parallel_desc() = parallel_desc;
   }
 
   // fields

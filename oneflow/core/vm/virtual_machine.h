@@ -70,15 +70,12 @@ INTRUSIVE_BEGIN(VirtualMachine);
   const StreamTypeId2StreamRtDesc& stream_type_id2stream_rt_desc() const { return stream_type_id2stream_rt_desc_; }
   const Id2LogicalObject& id2logical_object() const { return id2logical_object_; }
   //Setters
-  VmResourceDesc* mut_vm_resource_desc() { return mutable_vm_resource_desc(); }
-  VmResourceDesc* mutable_vm_resource_desc() {
+  VmResourceDesc* mut_vm_resource_desc() {
     if (!vm_resource_desc_) { vm_resource_desc_ = intrusive::MakeShared<VmResourceDesc>(); }
     return vm_resource_desc_.Mutable();
   }
   Range* mut_machine_id_range() { return &machine_id_range_; }
   std::atomic<int64_t>* mut_flying_instruction_cnt() { return &flying_instruction_cnt_; }
-  Range* mutable_machine_id_range() { return &machine_id_range_; }
-  std::atomic<int64_t>* mutable_flying_instruction_cnt() { return &flying_instruction_cnt_; }
   ActiveStreamList* mut_active_stream_list() { return &active_stream_list_; }
   ThreadCtxList* mut_thread_ctx_list() { return &thread_ctx_list_; }
   LogicalObjectDeleteList* mut_delete_logical_object_list() { return &delete_logical_object_list_; }
@@ -86,19 +83,9 @@ INTRUSIVE_BEGIN(VirtualMachine);
   InstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
   VmStatRunningInstructionList* mut_vm_stat_running_instruction_list() { return &vm_stat_running_instruction_list_; }
   FrontSeqInstructionList* mut_front_seq_compute_instr_list() { return &front_seq_compute_instr_list_; }
-  ActiveStreamList* mutable_active_stream_list() { return &active_stream_list_; }
-  ThreadCtxList* mutable_thread_ctx_list() { return &thread_ctx_list_; }
-  LogicalObjectDeleteList* mutable_delete_logical_object_list() { return &delete_logical_object_list_; }
-  InstructionList* mutable_waiting_instruction_list() { return &waiting_instruction_list_; }
-  InstructionList* mutable_ready_instruction_list() { return &ready_instruction_list_; }
-  VmStatRunningInstructionList* mutable_vm_stat_running_instruction_list() { return &vm_stat_running_instruction_list_; }
-  FrontSeqInstructionList* mutable_front_seq_compute_instr_list() { return &front_seq_compute_instr_list_; }
   InstructionMsgMutextList* mut_pending_msg_list() { return &pending_msg_list_; }
-  InstructionMsgMutextList* mutable_pending_msg_list() { return &pending_msg_list_; }
   StreamTypeId2StreamRtDesc* mut_stream_type_id2stream_rt_desc() { return &stream_type_id2stream_rt_desc_; }
-  StreamTypeId2StreamRtDesc* mutable_stream_type_id2stream_rt_desc() { return &stream_type_id2stream_rt_desc_; }
   Id2LogicalObject* mut_id2logical_object() { return &id2logical_object_; }
-  Id2LogicalObject* mutable_id2logical_object() { return &id2logical_object_; }
 
   // methods
   OF_PUBLIC void __Init__(const VmDesc& vm_desc);

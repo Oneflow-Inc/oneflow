@@ -40,23 +40,20 @@ INTRUSIVE_BEGIN(VmDesc);
   const Range& machine_id_range() const { return machine_id_range_; }
   const StreamTypeId2StreamDesc& stream_type_id2desc() const { return stream_type_id2desc_; }
   //Setters
-  VmResourceDesc* mut_vm_resource_desc() { return mutable_vm_resource_desc(); }
-  VmResourceDesc* mutable_vm_resource_desc() {
+  VmResourceDesc* mut_vm_resource_desc() {
     if (!vm_resource_desc_) { vm_resource_desc_ = intrusive::MakeShared<VmResourceDesc>(); }
     return vm_resource_desc_.Mutable();
   }
   Range* mut_machine_id_range() { return &machine_id_range_; }
-  Range* mutable_machine_id_range() { return &machine_id_range_; }
   StreamTypeId2StreamDesc* mut_stream_type_id2desc() { return &stream_type_id2desc_; }
-  StreamTypeId2StreamDesc* mutable_stream_type_id2desc() { return &stream_type_id2desc_; }
 
   // methods
   OF_PUBLIC void __Init__(const VmResourceDesc& vm_resource_desc) {
     __Init__(vm_resource_desc, Range(0, 1));
   }
   OF_PUBLIC void __Init__(const VmResourceDesc& vm_resource_desc, const Range& machine_id_range) {
-    mutable_vm_resource_desc()->CopyFrom(vm_resource_desc);
-    *mutable_machine_id_range() = machine_id_range;
+    mut_vm_resource_desc()->CopyFrom(vm_resource_desc);
+    *mut_machine_id_range() = machine_id_range;
   }
   
   // fields

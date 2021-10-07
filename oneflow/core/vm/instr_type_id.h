@@ -39,12 +39,12 @@ class InstrTypeId final {
 
   void __Init__() {
     std::memset(reinterpret_cast<void*>(this), 0, sizeof(InstrTypeId));
-    mutable_stream_type_id()->__Init__();
+    mut_stream_type_id()->__Init__();
   }
   void __Init__(const StreamType* stream_type, const InstructionType* instruction_type,
                 InterpretType interpret_type) {
     __Init__();
-    mutable_stream_type_id()->__Init__(stream_type, interpret_type);
+    mut_stream_type_id()->__Init__(stream_type, interpret_type);
     instruction_type_ = instruction_type;
   }
   void clear() {
@@ -61,7 +61,6 @@ class InstrTypeId final {
 
   // Setters
   StreamTypeId* mut_stream_type_id() { return &stream_type_id_; }
-  StreamTypeId* mutable_stream_type_id() { return &stream_type_id_; }
 
   bool operator==(const InstrTypeId& rhs) const {
     return stream_type_id_ == rhs.stream_type_id_ && instruction_type_ == rhs.instruction_type_;

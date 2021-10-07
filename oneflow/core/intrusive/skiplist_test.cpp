@@ -36,13 +36,12 @@ INTRUSIVE_BEGIN(SkipListFoo);
   void set_is_deleted(int* val) { is_deleted_ = val; }
   void clear_is_deleted() { is_deleted_ = nullptr; }
   int* mut_is_deleted() { return is_deleted_; }
-  int* mutable_is_deleted() { return is_deleted_; }
   void set_foo_map_key(int32_t val) { *foo_map_key_.mut_key() = val; }
 
   INTRUSIVE_DEFINE_FIELD(intrusive::SkipListEntry<int32_t>, foo_map_key_);
   INTRUSIVE_DEFINE_FIELD(int*, is_deleted_);
   void __Delete__() {
-    if (has_is_deleted()) { ++*mutable_is_deleted(); }
+    if (has_is_deleted()) { ++*mut_is_deleted(); }
   }
 INTRUSIVE_END(SkipListFoo);
 // clang-format on
@@ -54,7 +53,6 @@ INTRUSIVE_BEGIN(SkipListFooContainer);
   using Key2SkipListFoo = intrusive::SkipList<INTRUSIVE_FIELD(SkipListFoo, foo_map_key_)>;
   const Key2SkipListFoo& foo_map() const { return foo_map_; }
   Key2SkipListFoo* mut_foo_map() { return &foo_map_; }
-  Key2SkipListFoo* mutable_foo_map() { return &foo_map_; }
 
   // maps
   INTRUSIVE_DEFINE_FIELD(Key2SkipListFoo, foo_map_);
@@ -195,7 +193,7 @@ TEST(SkipList, MAP_HEAD) {
   int elem_cnt = 0;
   {
     auto foo_map_container = intrusive::MakeShared<SkipListFooContainer>();
-    auto& foo_map = *foo_map_container->mutable_foo_map();
+    auto& foo_map = *foo_map_container->mut_foo_map();
     intrusive::SharedPtr<SkipListFoo> exists[100];
     for (int i = 0; i < 100; ++i) {
       exists[i] = intrusive::MakeShared<SkipListFoo>();
@@ -228,7 +226,7 @@ TEST(SkipList, FOR_EACH) {
   int elem_cnt = 0;
   {
     auto foo_map_container = intrusive::MakeShared<SkipListFooContainer>();
-    auto& foo_map = *foo_map_container->mutable_foo_map();
+    auto& foo_map = *foo_map_container->mut_foo_map();
     intrusive::SharedPtr<SkipListFoo> exists[100];
     for (int i = 0; i < 100; ++i) {
       exists[i] = intrusive::MakeShared<SkipListFoo>();

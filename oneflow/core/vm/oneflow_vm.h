@@ -45,7 +45,6 @@ class OneflowVM final {
   // for asynchronized execution
   std::list<std::unique_ptr<std::thread>> worker_threads_;
   std::thread schedule_thread_;
-  std::atomic<bool> exiting_;
   Notifier notifier_;
 };
 
