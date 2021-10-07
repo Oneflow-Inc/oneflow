@@ -41,7 +41,7 @@ class OneflowVM final {
   vm::VirtualMachine* mut_vm() { return vm_.Mutable(); }
   void ControlSync();
 
-  ObjectMsgPtr<vm::VirtualMachine> vm_;
+  intrusive::SharedPtr<vm::VirtualMachine> vm_;
   // for asynchronized execution
   std::list<std::unique_ptr<std::thread>> worker_threads_;
   std::thread schedule_thread_;

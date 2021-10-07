@@ -45,17 +45,17 @@ const StreamTypeId& Stream::stream_type_id() const {
   return thread_ctx().stream_rt_desc().stream_type_id();
 }
 
-ObjectMsgPtr<Instruction> Stream::NewInstruction(
+intrusive::SharedPtr<Instruction> Stream::NewInstruction(
     InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   if (free_instruction_list().empty()) {
-    return ObjectMsgPtr<Instruction>::New(instr_msg, this, parallel_desc);
+    return intrusive::SharedPtr<Instruction>::New(instr_msg, this, parallel_desc);
   }
-  ObjectMsgPtr<Instruction> instruction = mut_free_instruction_list()->PopFront();
+  intrusive::SharedPtr<Instruction> instruction = mut_free_instruction_list()->PopFront();
   instruction->__Init__(instr_msg, this, parallel_desc);
   return instruction;
 }
 
-void Stream::MoveToFreeList(ObjectMsgPtr<Instruction>&& instruction) {
+void Stream::MoveToFreeList(intrusive::SharedPtr<Instruction>&& instruction) {
   CHECK_EQ(instruction->ref_cnt(), 1);
   instruction->clear_instr_msg();
   auto* instruction_ptr = instruction.Mutable();
@@ -67,7 +67,7 @@ void Stream::MoveFromZombieListToFreeList() {
   auto* zombie_list = mut_zombie_instruction_list();
   static const size_t kTryCount = 2;
   for (int i = 0; i < kTryCount; ++i) {
-    ObjectMsgPtr<Instruction> first = zombie_list->Begin();
+    intrusive::SharedPtr<Instruction> first = zombie_list->Begin();
     if (!first) { break; }
     zombie_list->Erase(first.Mutable());
     size_t ref_cnt = first->ref_cnt();
@@ -85,7 +85,7 @@ void Stream::MoveFromZombieListToFreeList() {
   }
 }
 
-void Stream::DeleteInstruction(ObjectMsgPtr<Instruction>&& instruction) {
+void Stream::DeleteInstruction(intrusive::SharedPtr<Instruction>&& instruction) {
   CHECK(instruction->is_pending_instruction_entry_empty());
   CHECK(instruction->is_instruction_entry_empty());
   // the value of instruction->ref_cnt() may be updated by a worker thread

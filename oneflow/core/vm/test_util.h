@@ -41,13 +41,14 @@ class TestResourceDescScope final {
 };
 
 struct TestUtil {
-  static ObjectMsgPtr<VmResourceDesc> NewVmResourceDesc() { return NewVmResourceDesc(1); }
+  static intrusive::SharedPtr<VmResourceDesc> NewVmResourceDesc() { return NewVmResourceDesc(1); }
 
-  static ObjectMsgPtr<VmResourceDesc> NewVmResourceDesc(int64_t device_num) {
+  static intrusive::SharedPtr<VmResourceDesc> NewVmResourceDesc(int64_t device_num) {
     return NewVmResourceDesc(device_num, 1);
   }
 
-  static ObjectMsgPtr<VmResourceDesc> NewVmResourceDesc(int64_t device_num, int64_t machine_num);
+  static intrusive::SharedPtr<VmResourceDesc> NewVmResourceDesc(int64_t device_num,
+                                                                int64_t machine_num);
 
   // return logical_object_id
   static int64_t NewObject(InstructionMsgList* list, const std::string& device_tag,

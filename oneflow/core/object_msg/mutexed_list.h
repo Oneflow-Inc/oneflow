@@ -48,21 +48,21 @@ class MutexedList {
     new (&this->mutex_) std::mutex();
   }
 
-  void EmplaceBack(ObjectMsgPtr<value_type>&& ptr) {
+  void EmplaceBack(intrusive::SharedPtr<value_type>&& ptr) {
     std::unique_lock<std::mutex> lock(mutex_);
     return list_head_.EmplaceBack(std::move(ptr));
   }
-  void EmplaceFront(ObjectMsgPtr<value_type>&& ptr) {
+  void EmplaceFront(intrusive::SharedPtr<value_type>&& ptr) {
     std::unique_lock<std::mutex> lock(mutex_);
     return list_head_.EmplaceFront(std::move(ptr));
   }
-  void PushBack(value_type* ptr) { EmplaceBack(ObjectMsgPtr<value_type>(ptr)); }
-  void PushFront(value_type* ptr) { EmplaceFront(ObjectMsgPtr<value_type>(ptr)); }
-  ObjectMsgPtr<value_type> PopBack() {
+  void PushBack(value_type* ptr) { EmplaceBack(intrusive::SharedPtr<value_type>(ptr)); }
+  void PushFront(value_type* ptr) { EmplaceFront(intrusive::SharedPtr<value_type>(ptr)); }
+  intrusive::SharedPtr<value_type> PopBack() {
     std::unique_lock<std::mutex> lock(mutex_);
     return list_head_.PopBack();
   }
-  ObjectMsgPtr<value_type> PopFront() {
+  intrusive::SharedPtr<value_type> PopFront() {
     std::unique_lock<std::mutex> lock(mutex_);
     return list_head_.PopFront();
   }

@@ -20,28 +20,30 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace intrusive {
+
 template<typename T>
-class ObjectMsgPtr final {
+class SharedPtr final {
  public:
-  static_assert(T::__is_object_message_type__, "T is not a object message type");
+  static_assert(T::__has_intrusive_ref__, "T is not a intrusive-referenced class");
   using value_type = T;
-  ObjectMsgPtr() : ptr_(nullptr) {}
-  ObjectMsgPtr(value_type* ptr) : ptr_(nullptr) { Reset(ptr); }
-  ObjectMsgPtr(const ObjectMsgPtr& obj_ptr) {
+  SharedPtr() : ptr_(nullptr) {}
+  SharedPtr(value_type* ptr) : ptr_(nullptr) { Reset(ptr); }
+  SharedPtr(const SharedPtr& obj_ptr) {
     ptr_ = nullptr;
     Reset(obj_ptr.ptr_);
   }
-  ObjectMsgPtr(ObjectMsgPtr&& obj_ptr) {
+  SharedPtr(SharedPtr&& obj_ptr) {
     ptr_ = obj_ptr.ptr_;
     obj_ptr.ptr_ = nullptr;
   }
-  ~ObjectMsgPtr() { Clear(); }
+  ~SharedPtr() { Clear(); }
 
   operator bool() const { return ptr_ != nullptr; }
   const value_type& Get() const { return *ptr_; }
   const value_type* operator->() const { return ptr_; }
   const value_type& operator*() const { return *ptr_; }
-  bool operator==(const ObjectMsgPtr& rhs) const { return this->ptr_ == rhs.ptr_; }
+  bool operator==(const SharedPtr& rhs) const { return this->ptr_ == rhs.ptr_; }
 
   value_type* Mutable() { return ptr_; }
   value_type* operator->() { return ptr_; }
@@ -53,24 +55,24 @@ class ObjectMsgPtr final {
     Clear();
     if (ptr == nullptr) { return; }
     ptr_ = ptr;
-    ObjectMsgPtrUtil::Ref<value_type>(ptr_);
+    PtrUtil::Ref<value_type>(ptr_);
   }
 
-  ObjectMsgPtr& operator=(const ObjectMsgPtr& rhs) {
+  SharedPtr& operator=(const SharedPtr& rhs) {
     Reset(rhs.ptr_);
     return *this;
   }
 
   template<typename... Args>
-  static ObjectMsgPtr New(Args&&... args) {
-    ObjectMsgPtr ret;
-    ObjectMsgPtrUtil::NewAndInitRef(&ret.ptr_);
+  static SharedPtr New(Args&&... args) {
+    SharedPtr ret;
+    PtrUtil::NewAndInitRef(&ret.ptr_);
     ret.Mutable()->__Init__(std::forward<Args>(args)...);
     return ret;
   }
 
-  static ObjectMsgPtr __UnsafeMove__(value_type* ptr) {
-    ObjectMsgPtr ret;
+  static SharedPtr __UnsafeMove__(value_type* ptr) {
+    SharedPtr ret;
     ret.ptr_ = ptr;
     return ret;
   }
@@ -82,11 +84,13 @@ class ObjectMsgPtr final {
  private:
   void Clear() {
     if (ptr_ == nullptr) { return; }
-    ObjectMsgPtrUtil::ReleaseRef<value_type>(ptr_);
+    PtrUtil::ReleaseRef<value_type>(ptr_);
     ptr_ = nullptr;
   }
   value_type* ptr_;
 };
+
+}  // namespace intrusive
 
 }  // namespace oneflow
 

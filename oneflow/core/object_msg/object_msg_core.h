@@ -28,29 +28,30 @@ limitations under the License.
 
 namespace oneflow {
 
-#define OBJECT_MSG_BEGIN(class_name)                     \
-  struct class_name final : public ObjectMsgBase {       \
-   public:                                               \
-    using self_type = class_name;                        \
-    static const bool __is_object_message_type__ = true; \
-    OF_PRIVATE DEFINE_STATIC_COUNTER(field_counter);     \
+#define OBJECT_MSG_BEGIN(class_name)                 \
+  struct class_name final : public intrusive::Base { \
+   public:                                           \
+    using self_type = class_name;                    \
+    static const bool __has_intrusive_ref__ = true;  \
+    OF_PRIVATE DEFINE_STATIC_COUNTER(field_counter); \
     DSS_BEGIN(STATIC_COUNTER(field_counter), class_name);
 
 #define OBJECT_MSG_END(class_name)                                                  \
   _OBJECT_MSG_DEFINE_REF();                                                         \
-  static_assert(__is_object_message_type__, "this struct is not a object message"); \
+  static_assert(__has_intrusive_ref__, "this class is not intrusive-referenced");   \
   OF_PUBLIC static const int __NumberOfFields__ = STATIC_COUNTER(field_counter);    \
   OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                \
-  DSS_END(STATIC_COUNTER(field_counter), "object message", class_name);             \
+  DSS_END(STATIC_COUNTER(field_counter), "intrusive-referenced class", class_name); \
   }                                                                                 \
   ;
 
-#define OBJECT_MSG_DEFINE_FIELD(field_type, field_name)                             \
- private:                                                                           \
-  static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  field_type field_name;                                                            \
-  INCREASE_STATIC_COUNTER(field_counter);                                           \
-  DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "object message", field_type, field_name);
+#define OBJECT_MSG_DEFINE_FIELD(field_type, field_name)                                     \
+ private:                                                                                   \
+  static_assert(__has_intrusive_ref__, "this class is not intrusive-referenced");           \
+  field_type field_name;                                                                    \
+  INCREASE_STATIC_COUNTER(field_counter);                                                   \
+  DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "intrusive-referenced class", field_type, \
+                   field_name);
 
 #define OBJECT_MSG_FIELD(struct_type, field_name)                            \
   StructField<struct_type, struct_type::OF_PP_CAT(field_name, DssFieldType), \
@@ -84,33 +85,35 @@ namespace oneflow {
 
 // details
 
-#define _OBJECT_MSG_DEFINE_REF()                                                  \
- public:                                                                          \
-  ObjectMsgRef* __mut_object_msg_ref__() { return &__object_msg_ref__; }          \
-  int32_t ref_cnt() const { return __object_msg_ref__.ref_cnt(); }                \
-                                                                                  \
- private:                                                                         \
-  ObjectMsgRef __object_msg_ref__;                                                \
-  OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                              \
-  DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "object message", ObjectMsgRef, \
-                   __object_msg_ref__);
+#define _OBJECT_MSG_DEFINE_REF()                                                                \
+ public:                                                                                        \
+  intrusive::Ref* __mut_intrusive_ref__() { return &__intrusive_ref__; }                        \
+  int32_t ref_cnt() const { return __intrusive_ref__.ref_cnt(); }                               \
+                                                                                                \
+ private:                                                                                       \
+  intrusive::Ref __intrusive_ref__;                                                             \
+  OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                            \
+  DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "intrusive-referenced class", intrusive::Ref, \
+                   __intrusive_ref__);
 
 #define _OBJECT_MSG_DEFINE_FIELD(field_counter, field_type, field_name) \
  private:                                                               \
   field_type field_name;                                                \
-  DSS_DEFINE_FIELD(field_counter, "object message", field_type, field_name);
+  DSS_DEFINE_FIELD(field_counter, "intrusive-referenced class", field_type, field_name);
 
-struct ObjectMsgBase {
+namespace intrusive {
+
+struct Base {
   void __Init__() {}
   void __Delete__() {}
 };
 
-class ObjectMsgRef {
+class Ref {
  public:
   int32_t ref_cnt() const { return ref_cnt_; }
 
  private:
-  friend struct ObjectMsgPtrUtil;
+  friend struct PtrUtil;
   void InitRefCount() { ref_cnt_ = 0; }
   void IncreaseRefCount() { ref_cnt_++; }
   int32_t DecreaseRefCount() { return --ref_cnt_; }
@@ -118,26 +121,28 @@ class ObjectMsgRef {
   std::atomic<int32_t> ref_cnt_;
 };
 
-struct ObjectMsgPtrUtil final {
+struct PtrUtil final {
   template<typename T>
   static void NewAndInitRef(T** ptr) {
     *ptr = new T();
-    (*ptr)->__mut_object_msg_ref__()->InitRefCount();
+    (*ptr)->__mut_intrusive_ref__()->InitRefCount();
     Ref(*ptr);
   }
   template<typename T>
   static void Ref(T* ptr) {
-    ptr->__mut_object_msg_ref__()->IncreaseRefCount();
+    ptr->__mut_intrusive_ref__()->IncreaseRefCount();
   }
   template<typename T>
   static void ReleaseRef(T* ptr) {
     CHECK_NOTNULL(ptr);
-    int32_t ref_cnt = ptr->__mut_object_msg_ref__()->DecreaseRefCount();
+    int32_t ref_cnt = ptr->__mut_intrusive_ref__()->DecreaseRefCount();
     if (ref_cnt > 0) { return; }
     ptr->__Delete__();
     delete ptr;
   }
 };
+
+}  // namespace intrusive
 
 }  // namespace oneflow
 

@@ -28,8 +28,8 @@ bool* RecordingInstructionsFlag() {
   return &recording_instruction;
 }
 
-std::list<ObjectMsgPtr<vm::InstructionMsg>>* RecordedInstructionList() {
-  static thread_local std::list<ObjectMsgPtr<vm::InstructionMsg>> list;
+std::list<intrusive::SharedPtr<vm::InstructionMsg>>* RecordedInstructionList() {
+  static thread_local std::list<intrusive::SharedPtr<vm::InstructionMsg>> list;
   return &list;
 }
 
@@ -45,7 +45,7 @@ void EndRecordingInstructions() { *RecordingInstructionsFlag() = false; }
 
 void ClearRecordedInstructions() { RecordedInstructionList()->clear(); }
 
-void RecordInstruction(const ObjectMsgPtr<vm::InstructionMsg>& instruction) {
+void RecordInstruction(const intrusive::SharedPtr<vm::InstructionMsg>& instruction) {
   RecordedInstructionList()->push_back(instruction);
 }
 

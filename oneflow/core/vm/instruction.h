@@ -54,7 +54,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   int64_t parallel_desc_symbol_id() const { return parallel_desc_symbol_id_; }
   const InstructionOperandList& operand_list() const {
     if (operand_list_) { return operand_list_.Get(); }
-    static const auto default_val = ObjectMsgPtr<InstructionOperandList>::New();
+    static const auto default_val = intrusive::SharedPtr<InstructionOperandList>::New();
     return default_val.Get();
   }
   const std::string& instr_type_name() const { return instr_type_name_; }
@@ -65,7 +65,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   void set_parallel_desc_symbol_id(int64_t val) { parallel_desc_symbol_id_ = val; }
   InstructionOperandList* mut_operand_list() { return mutable_operand_list(); }
   InstructionOperandList* mutable_operand_list() {
-    if (!operand_list_) { operand_list_ = ObjectMsgPtr<InstructionOperandList>::New(); }
+    if (!operand_list_) { operand_list_ = intrusive::SharedPtr<InstructionOperandList>::New(); }
     return operand_list_.Mutable();
   }
   void reset_operand_list(const InstructionOperandList& other) {
@@ -88,24 +88,24 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OF_PUBLIC void __Init__(const InstructionMsg& instr_msg);
 
   OF_PUBLIC void ToProto(InstructionProto* proto) const;
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_parallel_desc(int64_t symbol_id);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_double_operand(double double_operand);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_int64_operand(int64_t int64_operand);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_uint64_operand(uint64_t uint64_operand);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_bool_operand(bool bool_operand);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_separator();
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id, const SoleMirroredObject&);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id, const AllMirroredObject&);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_symbol_operand(ObjectId logical_object_id);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id, const SoleMirroredObject&);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id, const AllMirroredObject&);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_init_symbol_operand(ObjectId logical_object_id);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const SoleMirroredObject&);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const AllMirroredObject&);
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_del_operand(ObjectId logical_object_id);
+  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_parallel_desc(int64_t symbol_id);
+  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_double_operand(double double_operand);
+  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_int64_operand(int64_t int64_operand);
+  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_uint64_operand(uint64_t uint64_operand);
+  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_bool_operand(bool bool_operand);
+  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_separator();
+  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id);
+  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id, const SoleMirroredObject&);
+  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id, const AllMirroredObject&);
+  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_symbol_operand(ObjectId logical_object_id);
+  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id);
+  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id, const SoleMirroredObject&);
+  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id, const AllMirroredObject&);
+  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_init_symbol_operand(ObjectId logical_object_id);
+  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id);
+  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const SoleMirroredObject&);
+  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const AllMirroredObject&);
+  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_del_operand(ObjectId logical_object_id);
   OF_PUBLIC const std::vector<FlatMsg<InstructionOperand>>& operand() const {
     return operand_list().operand();
   }
@@ -115,8 +115,8 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OF_PUBLIC std::vector<FlatMsg<InstructionOperand>>* mutable_operand() {
     return mutable_operand_list()->mut_operand();
   }
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> Clone() const;
-  OF_PUBLIC ObjectMsgPtr<InstructionMsg> MakeInferInstrMsg() const;
+  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> Clone() const;
+  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> MakeInferInstrMsg() const;
 
   // fields
   OBJECT_MSG_DEFINE_FIELD(InstrTypeId, instr_type_id_);
@@ -124,7 +124,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OBJECT_MSG_DEFINE_FIELD(std::string, instr_type_name_);
   OBJECT_MSG_DEFINE_FIELD(int64_t, parallel_desc_symbol_id_);
   OBJECT_MSG_DEFINE_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
-  OBJECT_MSG_DEFINE_FIELD(ObjectMsgPtr<InstructionOperandList>, operand_list_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::SharedPtr<InstructionOperandList>, operand_list_);
   OBJECT_MSG_DEFINE_FIELD(std::shared_ptr<PhyInstrOperand>, phy_instr_operand_);
 
 
@@ -209,7 +209,7 @@ OBJECT_MSG_BEGIN(Instruction);
   const Stream& stream() const { return *stream_;  }
   const InstructionMsg& instr_msg() const {
     if (instr_msg_) { return instr_msg_.Get(); }
-    static const auto default_val = ObjectMsgPtr<InstructionMsg>::New();
+    static const auto default_val = intrusive::SharedPtr<InstructionMsg>::New();
     return default_val.Get();
   }
   const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
@@ -231,7 +231,7 @@ OBJECT_MSG_BEGIN(Instruction);
   Stream* mutable_stream() { return stream_; }
   InstructionMsg* mut_instr_msg() { return mutable_instr_msg(); }
   InstructionMsg* mutable_instr_msg() {
-    if (!instr_msg_) { instr_msg_ = ObjectMsgPtr<InstructionMsg>::New(); }
+    if (!instr_msg_) { instr_msg_ = intrusive::SharedPtr<InstructionMsg>::New(); }
     return instr_msg_.Mutable();
   }
   void reset_instr_msg(InstructionMsg* instr_msg) { instr_msg_.Reset(instr_msg); }
@@ -346,7 +346,7 @@ OBJECT_MSG_BEGIN(Instruction);
 
   // fields
   OBJECT_MSG_DEFINE_FIELD(FlatMsg<InstructionStatusBuffer>, status_buffer_);
-  OBJECT_MSG_DEFINE_FIELD(ObjectMsgPtr<InstructionMsg>, instr_msg_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::SharedPtr<InstructionMsg>, instr_msg_);
   OBJECT_MSG_DEFINE_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
   OBJECT_MSG_DEFINE_FIELD(Stream*, stream_); 
 

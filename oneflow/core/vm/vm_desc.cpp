@@ -28,14 +28,15 @@ void SetMachineIdRange(Range* range, int64_t machine_num, int64_t this_machine_i
   *range = Range(this_machine_id, this_machine_id + 1);
 }
 
-ObjectMsgPtr<VmDesc> MakeVmDesc(
+intrusive::SharedPtr<VmDesc> MakeVmDesc(
     const Resource& resource, int64_t this_machine_id,
     const std::function<void(const std::function<void(const InstrTypeId&)>&)>& ForEachInstrTypeId) {
   std::set<StreamTypeId> stream_type_ids;
   ForEachInstrTypeId([&](const InstrTypeId& instr_type_id) {
     stream_type_ids.insert(instr_type_id.stream_type_id());
   });
-  auto vm_desc = ObjectMsgPtr<VmDesc>::New(ObjectMsgPtr<VmResourceDesc>::New(resource).Get());
+  auto vm_desc =
+      intrusive::SharedPtr<VmDesc>::New(intrusive::SharedPtr<VmResourceDesc>::New(resource).Get());
   SetMachineIdRange(vm_desc->mutable_machine_id_range(), resource.machine_num(), this_machine_id);
   int cnt = 0;
   for (const auto& stream_type_id : stream_type_ids) {
@@ -52,12 +53,12 @@ ObjectMsgPtr<VmDesc> MakeVmDesc(
 
 }  // namespace
 
-ObjectMsgPtr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id) {
+intrusive::SharedPtr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id) {
   return MakeVmDesc(resource, this_machine_id, &ForEachInstrTypeId);
 }
 
-ObjectMsgPtr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id,
-                                const std::set<std::string>& instr_type_names) {
+intrusive::SharedPtr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id,
+                                        const std::set<std::string>& instr_type_names) {
   const auto& ForEachInstrTypeId = [&](const std::function<void(const InstrTypeId&)>& Handler) {
     for (const auto& instr_type_name : instr_type_names) {
       Handler(LookupInstrTypeId(instr_type_name));

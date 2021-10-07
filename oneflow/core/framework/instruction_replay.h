@@ -31,7 +31,7 @@ void EndRecordingInstructions();
 
 void ClearRecordedInstructions();
 
-void RecordInstruction(const ObjectMsgPtr<vm::InstructionMsg>& instruction);
+void RecordInstruction(const intrusive::SharedPtr<vm::InstructionMsg>& instruction);
 
 void ReplayInstructions();
 

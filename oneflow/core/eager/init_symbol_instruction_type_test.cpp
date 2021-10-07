@@ -43,9 +43,9 @@ using InstructionMsgList = intrusive::List<OBJECT_MSG_FIELD(vm::InstructionMsg, 
 
 template<typename T, typename SerializedT>
 void TestInitSymbolInstructionType(const std::string& instr_type_name) {
-  auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
+  auto vm_desc = intrusive::SharedPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol", instr_type_name});
-  auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
+  auto vm = intrusive::SharedPtr<vm::VirtualMachine>::New(vm_desc.Get());
   InstructionMsgList list;
   int64_t symbol_id = vm::IdUtil::NewLogicalSymbolId();
   CHECK_JUST(Global<symbol::Storage<T>>::Get()->Add(symbol_id, SerializedT()));

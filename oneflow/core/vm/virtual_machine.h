@@ -54,7 +54,7 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   // Getters
   const VmResourceDesc& vm_resource_desc() const {
     if (vm_resource_desc_) { return vm_resource_desc_.Get(); }
-    static const auto default_val = ObjectMsgPtr<VmResourceDesc>::New();
+    static const auto default_val = intrusive::SharedPtr<VmResourceDesc>::New();
     return default_val.Get();
   }
   const Range& machine_id_range() const { return machine_id_range_; }
@@ -72,7 +72,7 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   //Setters
   VmResourceDesc* mut_vm_resource_desc() { return mutable_vm_resource_desc(); }
   VmResourceDesc* mutable_vm_resource_desc() {
-    if (!vm_resource_desc_) { vm_resource_desc_ = ObjectMsgPtr<VmResourceDesc>::New(); }
+    if (!vm_resource_desc_) { vm_resource_desc_ = intrusive::SharedPtr<VmResourceDesc>::New(); }
     return vm_resource_desc_.Mutable();
   }
   Range* mut_machine_id_range() { return &machine_id_range_; }
@@ -103,7 +103,7 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   // methods
   OF_PUBLIC void __Init__(const VmDesc& vm_desc);
   OF_PUBLIC Maybe<void> Receive(InstructionMsgList* instr_list);
-  OF_PUBLIC Maybe<void> Receive(ObjectMsgPtr<InstructionMsg>&& instruction_msg);
+  OF_PUBLIC Maybe<void> Receive(intrusive::SharedPtr<InstructionMsg>&& instruction_msg);
   OF_PUBLIC void Schedule();
   OF_PUBLIC bool ThreadUnsafeEmpty() const;
   OF_PUBLIC bool Empty() const;
@@ -118,7 +118,7 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   }
 
   // fields
-  OBJECT_MSG_DEFINE_FIELD(ObjectMsgPtr<VmResourceDesc>, vm_resource_desc_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::SharedPtr<VmResourceDesc>, vm_resource_desc_);
   OBJECT_MSG_DEFINE_FIELD(Range, machine_id_range_);
   OBJECT_MSG_DEFINE_FIELD(std::atomic<int64_t>, flying_instruction_cnt_);
 

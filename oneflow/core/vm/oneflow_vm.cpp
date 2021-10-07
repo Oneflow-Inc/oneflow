@@ -61,7 +61,7 @@ std::type_index GetStreamTypeIndex(const vm::ThreadCtx* thread_ctx) {
 //   thread #7 is active in process #7, while others are not.
 //   to make them communicate with each other, we can allocate thread_consistent_id 1 to all those
 //   gpu threads in all processes.
-void GetWorkerThreadInitializer(ObjectMsgPtr<vm::VirtualMachine> vm,
+void GetWorkerThreadInitializer(intrusive::SharedPtr<vm::VirtualMachine> vm,
                                 std::function<void(vm::ThreadCtx*)>* Initializer) {
   std::set<std::type_index> stream_type_indexes;
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm->mut_thread_ctx_list(), thread_ctx) {
@@ -88,7 +88,8 @@ void GetWorkerThreadInitializer(ObjectMsgPtr<vm::VirtualMachine> vm,
 }  // namespace
 
 OneflowVM::OneflowVM(const Resource& resource, int64_t this_machine_id)
-    : vm_(ObjectMsgPtr<vm::VirtualMachine>::New(vm::MakeVmDesc(resource, this_machine_id).Get())) {
+    : vm_(intrusive::SharedPtr<vm::VirtualMachine>::New(
+        vm::MakeVmDesc(resource, this_machine_id).Get())) {
   std::function<void()> SchedulerInitializer;
   GetSchedulerThreadInitializer(&SchedulerInitializer);
   std::function<void(vm::ThreadCtx*)> WorkerInitializer;

@@ -43,7 +43,7 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
 
   explicit CriticalSectionBeginPhyInstrOperand(
       const one::EagerBlobObjectListPtr& eager_blob_objects,
-      ObjectMsgPtr<LocalDepObject> local_dep_object)
+      intrusive::SharedPtr<LocalDepObject> local_dep_object)
       : eager_blob_objects_(eager_blob_objects), local_dep_object_(local_dep_object) {}
 
   void ForEachMirroredObject(
@@ -53,11 +53,11 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
       const override;
 
-  ObjectMsgPtr<LocalDepObject> local_dep_object() const { return local_dep_object_; }
+  intrusive::SharedPtr<LocalDepObject> local_dep_object() const { return local_dep_object_; }
 
  protected:
   one::EagerBlobObjectListPtr eager_blob_objects_;
-  mutable ObjectMsgPtr<LocalDepObject> local_dep_object_;
+  mutable intrusive::SharedPtr<LocalDepObject> local_dep_object_;
 };
 
 class InputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeginPhyInstrOperand {

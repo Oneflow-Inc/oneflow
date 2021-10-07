@@ -48,9 +48,9 @@ struct GlobaProcessCtxScope final {
 
 TEST(ControlStreamType, new_object) {
   GlobaProcessCtxScope scope(1, 1);
-  auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
+  auto vm_desc = intrusive::SharedPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
-  auto vm = ObjectMsgPtr<VirtualMachine>::New(vm_desc.Get());
+  auto vm = intrusive::SharedPtr<VirtualMachine>::New(vm_desc.Get());
   InstructionMsgList list;
   TestUtil::NewObject(&list, "cpu", "0:0");
   ASSERT_TRUE(vm->pending_msg_list().empty());
@@ -63,9 +63,9 @@ TEST(ControlStreamType, new_object) {
 
 TEST(ControlStreamType, delete_object) {
   GlobaProcessCtxScope scope(1, 1);
-  auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
+  auto vm_desc = intrusive::SharedPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
-  auto vm = ObjectMsgPtr<VirtualMachine>::New(vm_desc.Get());
+  auto vm = intrusive::SharedPtr<VirtualMachine>::New(vm_desc.Get());
   InstructionMsgList list;
   int64_t logical_object_id = TestUtil::NewObject(&list, "cpu", "0:0");
   list.EmplaceBack(NewInstruction("DeleteObject")->add_del_operand(logical_object_id));

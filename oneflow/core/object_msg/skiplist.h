@@ -35,7 +35,7 @@ namespace oneflow {
 // details
 
 #define _OBJECT_MSG_SKIPLIST_FOR_EACH(skiplist_type, skiplist_ptr, elem)                     \
-  for (ObjectMsgPtr<skiplist_type::value_type> elem, *end_if_not_null = nullptr;             \
+  for (intrusive::SharedPtr<skiplist_type::value_type> elem, *end_if_not_null = nullptr;     \
        end_if_not_null == nullptr; end_if_not_null = nullptr, ++end_if_not_null)             \
   LIST_ENTRY_FOR_EACH_WITH_EXPR(                                                             \
       (StructField<                                                                          \
@@ -86,32 +86,32 @@ class SkipList {
   std::size_t size() const { return skiplist_head_.size(); }
   bool empty() const { return skiplist_head_.empty(); }
   value_type* Begin() { return skiplist_head_.Begin(); }
-  ObjectMsgPtr<value_type> Find(const key_type& key) {
-    ObjectMsgPtr<value_type> ret;
+  intrusive::SharedPtr<value_type> Find(const key_type& key) {
+    intrusive::SharedPtr<value_type> ret;
     ret.Reset(skiplist_head_.Find(key));
     return ret;
   }
   value_type* FindPtr(const key_type& key) { return skiplist_head_.Find(key); }
   const value_type* FindPtr(const key_type& key) const { return skiplist_head_.Find(key); }
-  bool EqualsEnd(const ObjectMsgPtr<value_type>& ptr) { return !ptr; }
-  void Erase(const key_type& key) { ObjectMsgPtrUtil::ReleaseRef(skiplist_head_.Erase(key)); }
+  bool EqualsEnd(const intrusive::SharedPtr<value_type>& ptr) { return !ptr; }
+  void Erase(const key_type& key) { PtrUtil::ReleaseRef(skiplist_head_.Erase(key)); }
   void Erase(value_type* elem_ptr) {
     skiplist_head_.Erase(elem_ptr);
-    ObjectMsgPtrUtil::ReleaseRef(elem_ptr);
+    PtrUtil::ReleaseRef(elem_ptr);
   }
-  std::pair<ObjectMsgPtr<value_type>, bool> Insert(value_type* elem_ptr) {
+  std::pair<intrusive::SharedPtr<value_type>, bool> Insert(value_type* elem_ptr) {
     value_type* ret_elem = nullptr;
     bool success = false;
     std::tie(ret_elem, success) = skiplist_head_.Insert(elem_ptr);
-    std::pair<ObjectMsgPtr<value_type>, bool> ret;
+    std::pair<intrusive::SharedPtr<value_type>, bool> ret;
     ret.first.Reset(ret_elem);
     ret.second = success;
-    if (success) { ObjectMsgPtrUtil::Ref(elem_ptr); }
+    if (success) { PtrUtil::Ref(elem_ptr); }
     return ret;
   }
 
   void Clear() {
-    skiplist_head_.Clear([](value_type* elem) { ObjectMsgPtrUtil::ReleaseRef(elem); });
+    skiplist_head_.Clear([](value_type* elem) { PtrUtil::ReleaseRef(elem); });
   }
 
  private:

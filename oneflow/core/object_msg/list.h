@@ -35,12 +35,12 @@ namespace oneflow {
 
 // details
 
-#define _OBJECT_MSG_LIST_FOR_EACH(list_type, list_ptr, elem)                          \
-  for (ObjectMsgPtr<typename list_type::value_type> elem, *end_if_not_null = nullptr; \
-       end_if_not_null == nullptr; end_if_not_null = nullptr, ++end_if_not_null)      \
-  LIST_ENTRY_FOR_EACH_WITH_EXPR(                                                      \
-      (StructField<typename list_type, intrusive::ListEntry,                          \
-                   list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)),  \
+#define _OBJECT_MSG_LIST_FOR_EACH(list_type, list_ptr, elem)                                  \
+  for (intrusive::SharedPtr<typename list_type::value_type> elem, *end_if_not_null = nullptr; \
+       end_if_not_null == nullptr; end_if_not_null = nullptr, ++end_if_not_null)              \
+  LIST_ENTRY_FOR_EACH_WITH_EXPR(                                                              \
+      (StructField<typename list_type, intrusive::ListEntry,                                  \
+                   list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)),          \
       list_type::value_entry_struct_field, elem_ptr, (elem.Reset(elem_ptr), true))
 
 #define _OBJECT_MSG_LIST_FOR_EACH_PTR(list_type, list_ptr, elem)                     \
@@ -116,48 +116,48 @@ class List {
 
   void PushBack(value_type* ptr) {
     list_head_.PushBack(ptr);
-    ObjectMsgPtrUtil::Ref(ptr);
+    PtrUtil::Ref(ptr);
   }
 
   void PushFront(value_type* ptr) {
     list_head_.PushFront(ptr);
-    ObjectMsgPtrUtil::Ref(ptr);
+    PtrUtil::Ref(ptr);
   }
 
-  void EmplaceBack(ObjectMsgPtr<value_type>&& ptr) {
+  void EmplaceBack(intrusive::SharedPtr<value_type>&& ptr) {
     value_type* raw_ptr = nullptr;
     ptr.__UnsafeMoveTo__(&raw_ptr);
     list_head_.PushBack(raw_ptr);
   }
 
-  void EmplaceFront(ObjectMsgPtr<value_type>&& ptr) {
+  void EmplaceFront(intrusive::SharedPtr<value_type>&& ptr) {
     value_type* raw_ptr = nullptr;
     ptr.__UnsafeMoveTo__(&raw_ptr);
     list_head_.PushFront(raw_ptr);
   }
 
-  ObjectMsgPtr<value_type> Erase(value_type* ptr) {
+  intrusive::SharedPtr<value_type> Erase(value_type* ptr) {
     list_head_.Erase(ptr);
-    return ObjectMsgPtr<value_type>::__UnsafeMove__(ptr);
+    return intrusive::SharedPtr<value_type>::__UnsafeMove__(ptr);
   }
 
-  ObjectMsgPtr<value_type> PopBack() {
+  intrusive::SharedPtr<value_type> PopBack() {
     value_type* raw_ptr = nullptr;
     if (!list_head_.empty()) { raw_ptr = list_head_.PopBack(); }
-    return ObjectMsgPtr<value_type>::__UnsafeMove__(raw_ptr);
+    return intrusive::SharedPtr<value_type>::__UnsafeMove__(raw_ptr);
   }
 
-  ObjectMsgPtr<value_type> PopFront() {
+  intrusive::SharedPtr<value_type> PopFront() {
     value_type* raw_ptr = nullptr;
     if (!list_head_.empty()) { raw_ptr = list_head_.PopFront(); }
-    return ObjectMsgPtr<value_type>::__UnsafeMove__(raw_ptr);
+    return intrusive::SharedPtr<value_type>::__UnsafeMove__(raw_ptr);
   }
 
   void MoveTo(List* list) { MoveToDstBack(list); }
   void MoveToDstBack(List* list) { list_head_.MoveToDstBack(&list->list_head_); }
 
   void Clear() {
-    while (!empty()) { ObjectMsgPtrUtil::ReleaseRef(list_head_.PopFront()); }
+    while (!empty()) { PtrUtil::ReleaseRef(list_head_.PopFront()); }
   }
 
  private:
@@ -237,15 +237,15 @@ class HeadFreeList {
 
   void PushBack(value_type* ptr) {
     list_head_.PushBack(ptr);
-    if (container_ != ptr) { ObjectMsgPtrUtil::Ref(ptr); }
+    if (container_ != ptr) { PtrUtil::Ref(ptr); }
   }
 
   void PushFront(value_type* ptr) {
     list_head_.PushFront(ptr);
-    if (container_ != ptr) { ObjectMsgPtrUtil::Ref(ptr); }
+    if (container_ != ptr) { PtrUtil::Ref(ptr); }
   }
 
-  void EmplaceBack(ObjectMsgPtr<value_type>&& ptr) {
+  void EmplaceBack(intrusive::SharedPtr<value_type>&& ptr) {
     value_type* raw_ptr = nullptr;
     if (container_ != ptr.Mutable()) {
       ptr.__UnsafeMoveTo__(&raw_ptr);
@@ -255,7 +255,7 @@ class HeadFreeList {
     list_head_.PushBack(raw_ptr);
   }
 
-  void EmplaceFront(ObjectMsgPtr<value_type>&& ptr) {
+  void EmplaceFront(intrusive::SharedPtr<value_type>&& ptr) {
     value_type* raw_ptr = nullptr;
     if (container_ != ptr.Mutable()) {
       ptr.__UnsafeMoveTo__(&raw_ptr);
@@ -265,32 +265,32 @@ class HeadFreeList {
     list_head_.PushFront(raw_ptr);
   }
 
-  ObjectMsgPtr<value_type> Erase(value_type* ptr) {
+  intrusive::SharedPtr<value_type> Erase(value_type* ptr) {
     list_head_.Erase(ptr);
     if (container_ != ptr) {
-      return ObjectMsgPtr<value_type>::__UnsafeMove__(ptr);
+      return intrusive::SharedPtr<value_type>::__UnsafeMove__(ptr);
     } else {
-      return ObjectMsgPtr<value_type>(ptr);
+      return intrusive::SharedPtr<value_type>(ptr);
     }
   }
 
-  ObjectMsgPtr<value_type> PopBack() {
+  intrusive::SharedPtr<value_type> PopBack() {
     value_type* raw_ptr = nullptr;
     if (!list_head_.empty()) { raw_ptr = list_head_.PopBack(); }
     if (container_ != raw_ptr) {
-      return ObjectMsgPtr<value_type>::__UnsafeMove__(raw_ptr);
+      return intrusive::SharedPtr<value_type>::__UnsafeMove__(raw_ptr);
     } else {
-      return ObjectMsgPtr<value_type>(raw_ptr);
+      return intrusive::SharedPtr<value_type>(raw_ptr);
     }
   }
 
-  ObjectMsgPtr<value_type> PopFront() {
+  intrusive::SharedPtr<value_type> PopFront() {
     value_type* raw_ptr = nullptr;
     if (!list_head_.empty()) { raw_ptr = list_head_.PopFront(); }
     if (container_ != raw_ptr) {
-      return ObjectMsgPtr<value_type>::__UnsafeMove__(raw_ptr);
+      return intrusive::SharedPtr<value_type>::__UnsafeMove__(raw_ptr);
     } else {
-      return ObjectMsgPtr<value_type>(raw_ptr);
+      return intrusive::SharedPtr<value_type>(raw_ptr);
     }
   }
 
@@ -302,16 +302,16 @@ class HeadFreeList {
   void Clear() {
     while (!empty()) {
       auto* ptr = list_head_.PopFront();
-      if (container_ != ptr) { ObjectMsgPtrUtil::ReleaseRef(ptr); }
+      if (container_ != ptr) { PtrUtil::ReleaseRef(ptr); }
     }
   }
 
  private:
   void MoveReference(value_type* ptr, HeadFreeList* dst) {
     if (ptr == container_ && ptr != dst->container_) {
-      ObjectMsgPtrUtil::Ref(ptr);
+      PtrUtil::Ref(ptr);
     } else if (ptr != container_ && ptr == dst->container_) {
-      ObjectMsgPtrUtil::ReleaseRef(ptr);
+      PtrUtil::ReleaseRef(ptr);
     } else {
       // do nothing
     }

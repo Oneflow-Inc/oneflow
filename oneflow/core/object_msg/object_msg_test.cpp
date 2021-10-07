@@ -25,12 +25,14 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace intrusive {
+
 namespace test {
 
 namespace {
 
-TEST(ObjectMsgStruct, ref_cnt) {
-  class Foo final : public ObjectMsgRef {
+TEST(Ref, ref_cnt) {
+  class Foo final : public Ref {
    public:
     Foo() = default;
   };
@@ -81,7 +83,7 @@ void ObjectMsgFoo::__Delete__() {
 }
 
 TEST(OBJECT_MSG, naive) {
-  auto foo = ObjectMsgPtr<ObjectMsgFoo>::New();
+  auto foo = intrusive::SharedPtr<ObjectMsgFoo>::New();
   foo->set_bar(9527);
   ASSERT_TRUE(foo->bar() == 9527);
 }
@@ -89,7 +91,7 @@ TEST(OBJECT_MSG, naive) {
 TEST(OBJECT_MSG, __delete__) {
   std::string is_deleted;
   {
-    auto foo = ObjectMsgPtr<ObjectMsgFoo>::New();
+    auto foo = intrusive::SharedPtr<ObjectMsgFoo>::New();
     foo->set_bar(9527);
     foo->set_is_deleted(&is_deleted);
     ASSERT_EQ(foo->bar(), 9527);
@@ -105,7 +107,7 @@ OBJECT_MSG_BEGIN(ObjectMsgBar)
   // Getters
   const ObjectMsgFoo& foo() const {
     if (foo_) { return foo_.Get(); }
-    static const auto default_val = ObjectMsgPtr<ObjectMsgFoo>::New();
+    static const auto default_val = intrusive::SharedPtr<ObjectMsgFoo>::New();
     return default_val.Get();
   }
   const std::string& is_deleted() const { return *is_deleted_; }
@@ -113,7 +115,7 @@ OBJECT_MSG_BEGIN(ObjectMsgBar)
   // Setters
   ObjectMsgFoo* mut_foo() { return mutable_foo(); }
   ObjectMsgFoo* mutable_foo() {
-    if (!foo_) { foo_ = ObjectMsgPtr<ObjectMsgFoo>::New(); }
+    if (!foo_) { foo_ = intrusive::SharedPtr<ObjectMsgFoo>::New(); }
     return foo_.Mutable();
   }
   std::string* mut_is_deleted() { return is_deleted_; }
@@ -121,7 +123,7 @@ OBJECT_MSG_BEGIN(ObjectMsgBar)
   void set_is_deleted(std::string* val) { is_deleted_ = val; }
   void clear_is_deleted() { is_deleted_ = nullptr; }
 
-  OBJECT_MSG_DEFINE_FIELD(ObjectMsgPtr<ObjectMsgFoo>, foo_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::SharedPtr<ObjectMsgFoo>, foo_);
   OBJECT_MSG_DEFINE_FIELD(std::string*, is_deleted_);
 
  public:
@@ -132,7 +134,7 @@ OBJECT_MSG_END(ObjectMsgBar)
 // clang-format on
 
 TEST(OBJECT_MSG, nested_objects) {
-  auto bar = ObjectMsgPtr<ObjectMsgBar>::New();
+  auto bar = intrusive::SharedPtr<ObjectMsgBar>::New();
   bar->mutable_foo()->set_bar(9527);
   ASSERT_TRUE(bar->foo().bar() == 9527);
 }
@@ -141,7 +143,7 @@ TEST(OBJECT_MSG, nested_delete) {
   std::string bar_is_deleted;
   std::string is_deleted;
   {
-    auto bar = ObjectMsgPtr<ObjectMsgBar>::New();
+    auto bar = intrusive::SharedPtr<ObjectMsgBar>::New();
     bar->set_is_deleted(&bar_is_deleted);
     auto* foo = bar->mutable_foo();
     foo->set_bar(9527);
@@ -176,7 +178,7 @@ OBJECT_MSG_END(ObjectMsgContainerDemo)
 // clang-format on
 
 TEST(OBJECT_MSG, flat_msg_field) {
-  auto obj = ObjectMsgPtr<ObjectMsgContainerDemo>::New();
+  auto obj = intrusive::SharedPtr<ObjectMsgContainerDemo>::New();
   ASSERT_TRUE(!obj->flat_field().has_int32_field());
   obj->mutable_flat_field()->set_int32_field(33);
   ASSERT_TRUE(obj->flat_field().has_int32_field());
@@ -226,5 +228,7 @@ TEST(OBJECT_MSG, object_msg_field_offset) {
 }  // namespace
 
 }  // namespace test
+
+}  // namespace intrusive
 
 }  // namespace oneflow

@@ -63,14 +63,14 @@ OBJECT_MSG_BEGIN(Stream);
 
   // methods
   OF_PUBLIC void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id, const int64_t max_device_num_per_machine);
-  OF_PUBLIC ObjectMsgPtr<Instruction> NewInstruction(InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc);
-  OF_PUBLIC void DeleteInstruction(ObjectMsgPtr<Instruction>&&);
+  OF_PUBLIC intrusive::SharedPtr<Instruction> NewInstruction(InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc);
+  OF_PUBLIC void DeleteInstruction(intrusive::SharedPtr<Instruction>&&);
   OF_PUBLIC int64_t global_device_id() const { return stream_id().global_device_id(); }
   OF_PUBLIC int64_t machine_id() const;
   OF_PUBLIC int64_t device_id() const;
   OF_PUBLIC const StreamType& stream_type() const;
   OF_PUBLIC const StreamTypeId& stream_type_id() const;
-  OF_PRIVATE void MoveToFreeList(ObjectMsgPtr<Instruction>&& instruction);
+  OF_PRIVATE void MoveToFreeList(intrusive::SharedPtr<Instruction>&& instruction);
   OF_PRIVATE void MoveFromZombieListToFreeList();
 
   // fields

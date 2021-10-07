@@ -59,8 +59,8 @@ class StreamType {
   virtual void Compute(Instruction* instruction) const = 0;
   virtual void Infer(Instruction* instruction) const { LOG(FATAL) << "UNIMPLEMENTED"; }
 
-  virtual ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                                  int64_t this_machine_id) const = 0;
+  virtual intrusive::SharedPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
+                                                          int64_t this_machine_id) const = 0;
 
   virtual bool SharingVirtualMachineThread() const = 0;
   virtual bool SupportingTransportInstructions() const = 0;

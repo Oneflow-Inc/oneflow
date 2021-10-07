@@ -153,7 +153,7 @@ OBJECT_MSG_BEGIN(MirroredObject);
   const RwMutexedObjectAccess& deleting_access() const { return *deleting_access_; }
   const RwMutexedObject& rw_mutexed_object() const {
     if (rw_mutexed_object_) { return rw_mutexed_object_.Get(); }
-    static const auto default_val = ObjectMsgPtr<RwMutexedObject>::New();
+    static const auto default_val = intrusive::SharedPtr<RwMutexedObject>::New();
     return default_val.Get();
   }
   const MirroredObjectId& mirrored_object_id() const { return mirrored_object_id_.Get(); }
@@ -165,7 +165,7 @@ OBJECT_MSG_BEGIN(MirroredObject);
   RwMutexedObjectAccess* mutable_deleting_access() { return deleting_access_; }
   RwMutexedObject* mut_rw_mutexed_object() { return mutable_rw_mutexed_object(); }
   RwMutexedObject* mutable_rw_mutexed_object() {
-    if (!rw_mutexed_object_) { rw_mutexed_object_ = ObjectMsgPtr<RwMutexedObject>::New(); }
+    if (!rw_mutexed_object_) { rw_mutexed_object_ = intrusive::SharedPtr<RwMutexedObject>::New(); }
     return rw_mutexed_object_.Mutable();
   }
   void reset_rw_mutexed_object(RwMutexedObject* rw_mutexed_object) {
@@ -185,7 +185,7 @@ OBJECT_MSG_BEGIN(MirroredObject);
 
   //fields
   OBJECT_MSG_DEFINE_FIELD(FlatMsg<MirroredObjectId>, mirrored_object_id_);
-  OBJECT_MSG_DEFINE_FIELD(ObjectMsgPtr<RwMutexedObject>, rw_mutexed_object_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::SharedPtr<RwMutexedObject>, rw_mutexed_object_);
   OBJECT_MSG_DEFINE_FIELD(RwMutexedObjectAccess*, deleting_access_);
 
 

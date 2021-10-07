@@ -141,7 +141,7 @@ void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
     const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(stream_rt_desc->mut_stream_id2stream(), stream) {
       if (!IsStreamInParallelDesc(parallel_desc.get(), *stream)) { continue; }
-      ObjectMsgPtr<Instruction> instr = stream->NewInstruction(instr_msg, parallel_desc);
+      intrusive::SharedPtr<Instruction> instr = stream->NewInstruction(instr_msg, parallel_desc);
       if (stream_type_id.interpret_type() == kInfer) {
         // do nothing
       } else if (stream_type_id.interpret_type() == kCompute) {
@@ -371,7 +371,7 @@ RwMutexedObjectAccess* VirtualMachine::ConsumeMirroredObject(OperandAccessType a
                                                              MirroredObject* mirrored_object,
                                                              Instruction* instruction) {
   auto rw_mutexed_object_access =
-      ObjectMsgPtr<RwMutexedObjectAccess>::New(instruction, mirrored_object, access_type);
+      intrusive::SharedPtr<RwMutexedObjectAccess>::New(instruction, mirrored_object, access_type);
   instruction->mut_mirrored_object_id2access()->Insert(rw_mutexed_object_access.Mutable());
   instruction->mut_access_list()->PushBack(rw_mutexed_object_access.Mutable());
   mirrored_object->mut_rw_mutexed_object()->mut_access_list()->EmplaceBack(
@@ -382,7 +382,7 @@ RwMutexedObjectAccess* VirtualMachine::ConsumeMirroredObject(OperandAccessType a
 void VirtualMachine::ConnectInstruction(Instruction* src_instruction,
                                         Instruction* dst_instruction) {
   CHECK_NE(src_instruction, dst_instruction);
-  auto edge = ObjectMsgPtr<InstructionEdge>::New(src_instruction, dst_instruction);
+  auto edge = intrusive::SharedPtr<InstructionEdge>::New(src_instruction, dst_instruction);
   src_instruction->mut_out_edges()->PushBack(edge.Mutable());
   dst_instruction->mut_in_edges()->PushBack(edge.Mutable());
 }
@@ -555,18 +555,18 @@ void VirtualMachine::__Init__(const VmDesc& vm_desc) {
   *mutable_machine_id_range() = vm_desc.machine_id_range();
   OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.stream_type_id2desc(), stream_desc) {
     if (stream_desc->num_threads() == 0) { continue; }
-    auto stream_rt_desc = ObjectMsgPtr<StreamRtDesc>::New(stream_desc);
+    auto stream_rt_desc = intrusive::SharedPtr<StreamRtDesc>::New(stream_desc);
     mut_stream_type_id2stream_rt_desc()->Insert(stream_rt_desc.Mutable());
     BalancedSplitter bs(stream_desc->parallel_num(), stream_desc->num_threads());
     for (int64_t i = 0, rel_global_device_id = 0; i < stream_desc->num_threads(); ++i) {
-      auto thread_ctx = ObjectMsgPtr<ThreadCtx>::New(stream_rt_desc.Get());
+      auto thread_ctx = intrusive::SharedPtr<ThreadCtx>::New(stream_rt_desc.Get());
       mut_thread_ctx_list()->PushBack(thread_ctx.Mutable());
       for (int j = bs.At(i).begin(); j < bs.At(i).end(); ++j, ++rel_global_device_id) {
         StreamId stream_id;
         stream_id.__Init__(stream_desc->stream_type_id(),
                            this_start_global_device_id() + rel_global_device_id);
-        auto stream = ObjectMsgPtr<Stream>::New(thread_ctx.Mutable(), stream_id,
-                                                vm_resource_desc().max_device_num_per_machine());
+        auto stream = intrusive::SharedPtr<Stream>::New(
+            thread_ctx.Mutable(), stream_id, vm_resource_desc().max_device_num_per_machine());
         CHECK(stream_rt_desc->mut_stream_id2stream()->Insert(stream.Mutable()).second);
         thread_ctx->mut_stream_list()->PushBack(stream.Mutable());
       }
@@ -608,7 +608,7 @@ Maybe<void> VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) 
   return Maybe<void>::Ok();
 }
 
-Maybe<void> VirtualMachine::Receive(ObjectMsgPtr<InstructionMsg>&& compute_instr_msg) {
+Maybe<void> VirtualMachine::Receive(intrusive::SharedPtr<InstructionMsg>&& compute_instr_msg) {
   InstructionMsgList instr_msg_list;
   instr_msg_list.EmplaceBack(std::move(compute_instr_msg));
   return Receive(&instr_msg_list);

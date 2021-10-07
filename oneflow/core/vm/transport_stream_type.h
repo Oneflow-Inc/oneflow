@@ -49,8 +49,8 @@ class TransportStreamType : public StreamType {
   void Compute(Instruction* instruction) const override;
 
   template<typename DerivedT>
-  ObjectMsgPtr<StreamDesc> MakeTransportStreamDesc(const Resource& resource,
-                                                   int64_t this_machine_id) const;
+  intrusive::SharedPtr<StreamDesc> MakeTransportStreamDesc(const Resource& resource,
+                                                           int64_t this_machine_id) const;
   bool SharingVirtualMachineThread() const override { return true; }
   // not support transport instructions because the entire TransportStreamType is deperecated.
   bool SupportingTransportInstructions() const override { return false; }
@@ -61,8 +61,8 @@ class TransportSenderStreamType : public TransportStreamType {
   TransportSenderStreamType() = default;
   ~TransportSenderStreamType() override = default;
 
-  ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                          int64_t this_machine_id) const override;
+  intrusive::SharedPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
+                                                  int64_t this_machine_id) const override;
 };
 
 class TransportReceiverStreamType : public TransportStreamType {
@@ -70,8 +70,8 @@ class TransportReceiverStreamType : public TransportStreamType {
   TransportReceiverStreamType() = default;
   ~TransportReceiverStreamType() override = default;
 
-  ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                          int64_t this_machine_id) const override;
+  intrusive::SharedPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
+                                                  int64_t this_machine_id) const override;
 };
 
 }  // namespace vm

@@ -42,8 +42,8 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
   ~LaunchLazyJobPhyInstrOperand() override = default;
 
   LaunchLazyJobPhyInstrOperand(
-      const ObjectMsgPtr<LocalDepObject>& inputs_local_dep_object,
-      const ObjectMsgPtr<LocalDepObject>& outputs_local_dep_object,
+      const intrusive::SharedPtr<LocalDepObject>& inputs_local_dep_object,
+      const intrusive::SharedPtr<LocalDepObject>& outputs_local_dep_object,
       const std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>&
           op_name2end_event_record,
       const one::EagerBlobObjectListPtr& input_blob_objects,
@@ -81,8 +81,8 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
       const override;
 
  private:
-  mutable ObjectMsgPtr<LocalDepObject> inputs_local_dep_object_;
-  mutable ObjectMsgPtr<LocalDepObject> outputs_local_dep_object_;
+  mutable intrusive::SharedPtr<LocalDepObject> inputs_local_dep_object_;
+  mutable intrusive::SharedPtr<LocalDepObject> outputs_local_dep_object_;
   std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>
       op_name2end_event_record_;
   one::EagerBlobObjectListPtr input_blob_objects_;

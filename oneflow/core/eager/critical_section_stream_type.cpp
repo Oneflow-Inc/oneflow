@@ -54,9 +54,9 @@ void CriticalSectionStreamType::Compute(Instruction* instruction) const {
   }
 }
 
-ObjectMsgPtr<StreamDesc> CriticalSectionStreamType::MakeStreamDesc(const Resource& resource,
-                                                                   int64_t this_machine_id) const {
-  auto ret = ObjectMsgPtr<StreamDesc>::New();
+intrusive::SharedPtr<StreamDesc> CriticalSectionStreamType::MakeStreamDesc(
+    const Resource& resource, int64_t this_machine_id) const {
+  auto ret = intrusive::SharedPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CriticalSectionStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
