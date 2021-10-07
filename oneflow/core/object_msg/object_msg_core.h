@@ -35,7 +35,6 @@ namespace oneflow {
     static const bool __is_object_message_type__ = true;  \
     OF_PRIVATE DEFINE_STATIC_COUNTER(field_counter);      \
     DSS_BEGIN(STATIC_COUNTER(field_counter), class_name); \
-    OBJECT_MSG_DEFINE_INIT();                             \
     OBJECT_MSG_DEFINE_DELETE();
 
 #define OBJECT_MSG_END(class_name)                                                  \
@@ -97,29 +96,6 @@ namespace oneflow {
   DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "object message", ObjectMsgBase, \
                    __object_msg_base__);
 
-#define OBJECT_MSG_DEFINE_INIT()                                            \
- public:                                                                    \
-  template<typename WalkCtxType>                                            \
-  void ObjectMsg__Init__(WalkCtxType* ctx) {                                \
-    this->template __WalkField__<ObjectMsgField__Init__, WalkCtxType>(ctx); \
-  }                                                                         \
-                                                                            \
- private:                                                                   \
-  template<int field_counter, typename WalkCtxType, typename PtrFieldType>  \
-  struct ObjectMsgField__Init__ : public ObjectMsgNaiveInit<WalkCtxType, PtrFieldType> {};
-
-#define OBJECT_MSG_OVERLOAD_INIT(field_counter, init_template)            \
- private:                                                                 \
-  template<typename WalkCtxType, typename PtrFieldType>                   \
-  struct ObjectMsgField__Init__<field_counter, WalkCtxType, PtrFieldType> \
-      : public init_template<WalkCtxType, PtrFieldType> {};
-
-#define OBJECT_MSG_OVERLOAD_INIT_WITH_FIELD_INDEX(field_counter, init_template) \
- private:                                                                       \
-  template<typename WalkCtxType, typename PtrFieldType>                         \
-  struct ObjectMsgField__Init__<field_counter, WalkCtxType, PtrFieldType>       \
-      : public init_template<field_counter, WalkCtxType, PtrFieldType> {};
-
 #define OBJECT_MSG_DEFINE_DELETE()                                                \
  public:                                                                          \
   void ObjectMsg__Delete__() {                                                    \
@@ -140,15 +116,8 @@ namespace oneflow {
 #define _OBJECT_MSG_DEFINE_FIELD(field_counter, field_type, field_name) \
  private:                                                               \
   field_type field_name;                                                \
-  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgFieldInit);          \
   OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgFieldDelete);      \
   DSS_DEFINE_FIELD(field_counter, "object message", field_type, field_name);
-
-template<typename WalkCtxType, typename FieldType>
-struct ObjectMsgFieldInit {
-  static void Call(WalkCtxType* ctx, FieldType* field) { /* Do nothing */
-  }
-};
 
 template<typename WalkCtxType, typename FieldType>
 struct ObjectMsgFieldDelete {
@@ -192,8 +161,10 @@ class ObjectMsgBase {
 
 struct ObjectMsgPtrUtil final {
   template<typename T>
-  static void InitRef(T* ptr) {
-    ptr->__mut_object_msg_base__()->InitRefCount();
+  static void InitRef(T** ptr) {
+    *ptr = new T();
+    (*ptr)->__mut_object_msg_base__()->InitRefCount();
+    Ref(*ptr);
   }
   template<typename T>
   static void Ref(T* ptr) {
@@ -206,36 +177,6 @@ struct ObjectMsgPtrUtil final {
     if (ref_cnt > 0) { return; }
     ptr->ObjectMsg__Delete__();
     delete ptr;
-  }
-};
-
-template<bool is_pointer>
-struct _ObjectMsgNaiveInit {
-  template<typename WalkCtxType, typename PtrFieldType>
-  static void Call(WalkCtxType* ctx, PtrFieldType* field) {}
-};
-
-template<typename WalkCtxType, typename PtrFieldType>
-struct ObjectMsgNaiveInit {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field) {
-    static const bool is_ptr = std::is_pointer<PtrFieldType>::value;
-    _ObjectMsgNaiveInit<is_ptr>::template Call<WalkCtxType, PtrFieldType>(ctx, field);
-  }
-};
-
-template<>
-struct _ObjectMsgNaiveInit<true> {
-  template<typename WalkCtxType, typename PtrFieldType>
-  static void Call(WalkCtxType* ctx, PtrFieldType* field_ptr) {
-    static_assert(std::is_pointer<PtrFieldType>::value, "invalid use of _ObjectMsgNaiveInit");
-    using FieldType = typename std::remove_pointer<PtrFieldType>::type;
-    static_assert(std::is_base_of<ObjectMsgStruct, FieldType>::value,
-                  "FieldType is not a subclass of ObjectMsgStruct");
-    auto* ptr = new FieldType();
-    *field_ptr = ptr;
-    ObjectMsgPtrUtil::InitRef<FieldType>(ptr);
-    ObjectMsgPtrUtil::Ref<FieldType>(ptr);
-    ptr->template ObjectMsg__Init__<WalkCtxType>(ctx);
   }
 };
 
@@ -310,7 +251,7 @@ class ObjectMsgPtr final {
   template<typename... Args>
   static ObjectMsgPtr New(Args&&... args) {
     ObjectMsgPtr ret;
-    ObjectMsgNaiveInit<void, value_type*>::Call(nullptr, &ret.ptr_);
+    ObjectMsgPtrUtil::InitRef(&ret.ptr_);
     ret.Mutable()->__Init__(std::forward<Args>(args)...);
     return ret;
   }
