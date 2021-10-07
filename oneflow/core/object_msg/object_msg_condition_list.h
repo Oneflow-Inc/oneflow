@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <mutex>
 #include <condition_variable>
-#include "oneflow/core/object_msg/object_msg_list.h"
+#include "oneflow/core/object_msg/list.h"
 
 namespace oneflow {
 

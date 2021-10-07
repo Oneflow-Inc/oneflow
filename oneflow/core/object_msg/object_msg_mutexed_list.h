@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_OBJECT_MSG_MUTEXED_LIST_H_
 
 #include <mutex>
-#include "oneflow/core/object_msg/object_msg_list.h"
+#include "oneflow/core/object_msg/list.h"
 
 namespace oneflow {
 
