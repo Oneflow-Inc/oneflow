@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/vm/vm_resource_desc.msg.h"
 #include "oneflow/core/common/range.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/object_msg/mutexed_list.h"
 
 namespace oneflow {
 
@@ -45,6 +46,8 @@ OBJECT_MSG_BEGIN(VirtualMachine);
       intrusive::List<OBJECT_MSG_FIELD(Instruction, vm_stat_running_instruction_entry_)>;
   using FrontSeqInstructionList =
       intrusive::List<OBJECT_MSG_FIELD(Instruction, front_seq_compute_instr_entry_)>;
+  using InstructionMsgMutextList =
+      intrusive::MutexedList<OBJECT_MSG_FIELD(InstructionMsg, instr_msg_entry_)>;
 
   // Getters
   const VmResourceDesc& vm_resource_desc() const {
@@ -61,6 +64,7 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   const InstructionList& ready_instruction_list() const { return ready_instruction_list_; }
   const VmStatRunningInstructionList& vm_stat_running_instruction_list() const { return vm_stat_running_instruction_list_; }
   const FrontSeqInstructionList& front_seq_compute_instr_list() const { return front_seq_compute_instr_list_; }
+  const InstructionMsgMutextList& pending_msg_list() const { return pending_msg_list_; }
   //Setters
   VmResourceDesc* mut_vm_resource_desc() { return mutable_vm_resource_desc(); }
   VmResourceDesc* mutable_vm_resource_desc() {
@@ -85,6 +89,8 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   InstructionList* mutable_ready_instruction_list() { return &ready_instruction_list_; }
   VmStatRunningInstructionList* mutable_vm_stat_running_instruction_list() { return &vm_stat_running_instruction_list_; }
   FrontSeqInstructionList* mutable_front_seq_compute_instr_list() { return &front_seq_compute_instr_list_; }
+  InstructionMsgMutextList* mut_pending_msg_list() { return &pending_msg_list_; }
+  InstructionMsgMutextList* mutable_pending_msg_list() { return &pending_msg_list_; }
 
   // methods
   OF_PUBLIC void __Init__(const VmDesc& vm_desc);
@@ -115,7 +121,7 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   OBJECT_MSG_DEFINE_MAP_HEAD(LogicalObject, logical_object_id, id2logical_object);
   OBJECT_MSG_DEFINE_FIELD(LogicalObjectDeleteList, delete_logical_object_list_);
 
-  OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(InstructionMsg, instr_msg_entry, pending_msg_list);
+  OBJECT_MSG_DEFINE_FIELD(InstructionMsgMutextList, pending_msg_list_);
   OBJECT_MSG_DEFINE_FIELD(InstructionList, waiting_instruction_list_);
   OBJECT_MSG_DEFINE_FIELD(InstructionList, ready_instruction_list_);
   OBJECT_MSG_DEFINE_FIELD(VmStatRunningInstructionList, vm_stat_running_instruction_list_);
