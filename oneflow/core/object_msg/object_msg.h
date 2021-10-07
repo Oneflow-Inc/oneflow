@@ -18,6 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/object_msg/object_msg_core.h"
 #include "oneflow/core/object_msg/list.h"
-#include "oneflow/core/object_msg/object_msg_map.h"
+#include "oneflow/core/object_msg/skiplist.h"
 
 #endif  // ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_H_

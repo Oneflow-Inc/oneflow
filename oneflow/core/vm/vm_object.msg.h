@@ -198,14 +198,26 @@ struct VirtualMachine;
 OBJECT_MSG_BEGIN(LogicalObject);
  public:
   LogicalObject() = default;
+  // types
+  using GlobalDeviceId2MirroredObject =
+      intrusive::SkipList<OBJECT_MSG_FIELD(MirroredObject, global_device_id_)>;
   // Getters
   const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
   bool is_delete_entry_empty() const { return delete_entry_.empty(); }
   const ObjectId& logical_object_id() const { return logical_object_id_.key(); }
+  const GlobalDeviceId2MirroredObject& global_device_id2mirrored_object() const {
+    return global_device_id2mirrored_object_;
+  }
   // Setters
   std::shared_ptr<const ParallelDesc>* mut_parallel_desc() { return &parallel_desc_; }
   std::shared_ptr<const ParallelDesc>* mutable_parallel_desc() { return &parallel_desc_; }
   void set_logical_object_id(const ObjectId& val) { *logical_object_id_.mut_key() = val; }
+  GlobalDeviceId2MirroredObject* mut_global_device_id2mirrored_object() {
+    return &global_device_id2mirrored_object_;
+  }
+  GlobalDeviceId2MirroredObject* mutable_global_device_id2mirrored_object() {
+    return &global_device_id2mirrored_object_;
+  }
 
   // methods
   OF_PUBLIC void __Init__() { /* Do nothing */ }
@@ -226,7 +238,7 @@ OBJECT_MSG_BEGIN(LogicalObject);
   OBJECT_MSG_DEFINE_FIELD(ObjectIdKey, logical_object_id_);
   OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, delete_entry_);
   // heads
-  OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, global_device_id, global_device_id2mirrored_object);
+  OBJECT_MSG_DEFINE_FIELD(GlobalDeviceId2MirroredObject, global_device_id2mirrored_object_);
 OBJECT_MSG_END(LogicalObject);
 // clang-format on
 

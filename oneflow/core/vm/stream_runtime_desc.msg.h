@@ -30,6 +30,8 @@ struct StreamDesc;
 OBJECT_MSG_BEGIN(StreamRtDesc);
  public:
   StreamRtDesc() = default;
+  // types
+  using StreamId2Stream = intrusive::SkipList<OBJECT_MSG_FIELD(Stream, stream_id_)>;
   // Getters
   const StreamDesc& stream_desc() const {
     if (stream_desc_) { return stream_desc_.Get(); }
@@ -37,6 +39,7 @@ OBJECT_MSG_BEGIN(StreamRtDesc);
     return default_val.Get();
   }
   const StreamTypeId& stream_type_id() const { return stream_type_id_.key().Get(); }
+  const StreamId2Stream& stream_id2stream() const { return stream_id2stream_; }
   // Setters
   StreamDesc* mut_stream_desc() { return mutable_stream_desc(); }
   StreamDesc* mutable_stream_desc() { 
@@ -46,6 +49,8 @@ OBJECT_MSG_BEGIN(StreamRtDesc);
   void reset_stream_desc(StreamDesc* stream_desc) { stream_desc_.Reset(stream_desc); }
   StreamTypeId* mut_stream_type_id() { return stream_type_id_.mut_key()->Mutable(); }
   StreamTypeId* mutable_stream_type_id() { return stream_type_id_.mut_key()->Mutable(); }
+  StreamId2Stream* mut_stream_id2stream() { return &stream_id2stream_; }
+  StreamId2Stream* mutable_stream_id2stream() { return &stream_id2stream_; }
 
   // methods
   OF_PUBLIC void __Init__(StreamDesc* stream_desc);
@@ -57,7 +62,7 @@ OBJECT_MSG_BEGIN(StreamRtDesc);
   // list entries
   using StreamTypeIdKey = intrusive::SkipListEntry<FlatMsg<StreamTypeId>, 7>;
   OBJECT_MSG_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);
-  OBJECT_MSG_DEFINE_MAP_HEAD(Stream, stream_id, stream_id2stream);
+  OBJECT_MSG_DEFINE_FIELD(StreamId2Stream, stream_id2stream_);
 OBJECT_MSG_END(StreamRtDesc);
 // clang-format on
 

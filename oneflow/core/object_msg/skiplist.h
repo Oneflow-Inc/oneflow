@@ -21,16 +21,6 @@ limitations under the License.
 
 namespace oneflow {
 
-#define OBJECT_MSG_DEFINE_SKIPLIST_HEAD(elem_type, elem_field_name, field_name)                  \
-  static_assert(__is_object_message_type__, "this struct is not a object message");              \
-  static_assert(!std::is_same<self_type, elem_type>::value, "self loop entry is not supported"); \
-  OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                             \
-  _OBJECT_MSG_DEFINE_SKIPLIST_HEAD(STATIC_COUNTER(field_counter), elem_type, elem_field_name,    \
-                                   field_name);
-
-#define OBJECT_MSG_SKIPLIST(elem_type, elem_field_name) \
-  ObjectMsgSkipList<OBJECT_MSG_SKIPLIST_ELEM_STRUCT_FIELD(elem_type, elem_field_name)>
-
 #define OBJECT_MSG_SKIPLIST_FOR_EACH(skiplist_ptr, elem)                                         \
   _OBJECT_MSG_SKIPLIST_FOR_EACH(std::remove_pointer<decltype(skiplist_ptr)>::type, skiplist_ptr, \
                                 elem)
@@ -43,34 +33,6 @@ namespace oneflow {
   _OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(std::remove_pointer<decltype(skiplist_ptr)>::type, \
                                            skiplist_ptr, elem)
 // details
-
-#define _OBJECT_MSG_DEFINE_SKIPLIST_HEAD(field_counter, elem_type, elem_field_name, field_name)    \
-  _OBJECT_MSG_DEFINE_SKIPLIST_HEAD_FIELD(elem_type, elem_field_name, field_name);                  \
-  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgSkipListHeadInit);                              \
-  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgSkipListHeadDelete);                          \
-  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _ObjectMsgSkipListType), \
-                   OF_PP_CAT(field_name, _));
-
-#define _OBJECT_MSG_DEFINE_SKIPLIST_HEAD_FIELD(elem_type, elem_field_name, field_name)             \
- public:                                                                                           \
-  using OF_PP_CAT(field_name, _ObjectMsgSkipListType) =                                            \
-      TrivialObjectMsgSkipList<OBJECT_MSG_SKIPLIST_ELEM_STRUCT_FIELD(elem_type, elem_field_name)>; \
-  const OF_PP_CAT(field_name, _ObjectMsgSkipListType) & field_name() const {                       \
-    return OF_PP_CAT(field_name, _);                                                               \
-  }                                                                                                \
-  OF_PP_CAT(field_name, _ObjectMsgSkipListType) * OF_PP_CAT(mut_, field_name)() {                  \
-    return &OF_PP_CAT(field_name, _);                                                              \
-  }                                                                                                \
-  OF_PP_CAT(field_name, _ObjectMsgSkipListType) * OF_PP_CAT(mutable_, field_name)() {              \
-    return &OF_PP_CAT(field_name, _);                                                              \
-  }                                                                                                \
-                                                                                                   \
- private:                                                                                          \
-  OF_PP_CAT(field_name, _ObjectMsgSkipListType) OF_PP_CAT(field_name, _);
-
-#define OBJECT_MSG_SKIPLIST_ELEM_STRUCT_FIELD(elem_type, elem_field_name)               \
-  StructField<elem_type, typename elem_type::OF_PP_CAT(elem_field_name, _DssFieldType), \
-              elem_type::OF_PP_CAT(elem_field_name, _kDssFieldOffset)>
 
 #define _OBJECT_MSG_SKIPLIST_FOR_EACH(skiplist_type, skiplist_ptr, elem)                     \
   for (ObjectMsgPtr<skiplist_type::value_type> elem, *end_if_not_null = nullptr;             \
@@ -95,29 +57,17 @@ namespace oneflow {
           skiplist_type::ContainerLevelZeroLinkOffset()>::FieldPtr4StructPtr(skiplist_ptr)), \
       skiplist_type::elem_level0_entry_struct_field, elem)
 
-template<typename WalkCtxType, typename PtrFieldType>
-struct ObjectMsgSkipListHeadInit {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->__Init__(); }
-};
-
-template<typename WalkCtxType, typename PtrFieldType>
-struct ObjectMsgSkipListHeadDelete {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->Clear(); }
-};
-
-template<typename WalkCtxType, typename PtrFieldType>
-struct ObjectMsgEmbeddedSkipListIteratorInit {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->__Init__(); }
-};
-
-template<typename WalkCtxType, typename PtrFieldType>
-struct ObjectMsgEmbeddedSkipListIteratorDelete {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->CheckEmpty(); }
-};
+namespace intrusive {
 
 template<typename ElemKeyField>
-class TrivialObjectMsgSkipList {
+class SkipList {
  public:
+  SkipList(const SkipList&) = delete;
+  SkipList(SkipList&&) = delete;
+
+  SkipList() { this->__Init__(); }
+  ~SkipList() { this->Clear(); }
+
   using value_type = typename ElemKeyField::struct_type;
   using key_type = typename ElemKeyField::field_type::key_type;
   using elem_key_level0_entry_struct_field =
@@ -127,7 +77,7 @@ class TrivialObjectMsgSkipList {
       typename ComposeStructField<ElemKeyField, elem_key_level0_entry_struct_field>::type;
   template<typename Enabled = void>
   static constexpr int ContainerLevelZeroLinkOffset() {
-    return offsetof(TrivialObjectMsgSkipList, skiplist_head_)
+    return offsetof(SkipList, skiplist_head_)
            + intrusive::SkipListHead<ElemKeyField>::ContainerLevelZeroLinkOffset();
   }
 
@@ -168,15 +118,8 @@ class TrivialObjectMsgSkipList {
   intrusive::SkipListHead<ElemKeyField> skiplist_head_;
 };
 
-template<typename ItemField>
-class ObjectMsgSkipList final : public TrivialObjectMsgSkipList<ItemField> {
- public:
-  ObjectMsgSkipList(const ObjectMsgSkipList&) = delete;
-  ObjectMsgSkipList(ObjectMsgSkipList&&) = delete;
+}  // namespace intrusive
 
-  ObjectMsgSkipList() { this->__Init__(); }
-  ~ObjectMsgSkipList() { this->Clear(); }
-};
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_SKIPLIST_H_

@@ -48,6 +48,8 @@ OBJECT_MSG_BEGIN(VirtualMachine);
       intrusive::List<OBJECT_MSG_FIELD(Instruction, front_seq_compute_instr_entry_)>;
   using InstructionMsgMutextList =
       intrusive::MutexedList<OBJECT_MSG_FIELD(InstructionMsg, instr_msg_entry_)>;
+  using StreamTypeId2StreamRtDesc = intrusive::SkipList<OBJECT_MSG_FIELD(StreamRtDesc, stream_type_id_)>;
+  using Id2LogicalObject = intrusive::SkipList<OBJECT_MSG_FIELD(LogicalObject, logical_object_id_)>;
 
   // Getters
   const VmResourceDesc& vm_resource_desc() const {
@@ -65,6 +67,8 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   const VmStatRunningInstructionList& vm_stat_running_instruction_list() const { return vm_stat_running_instruction_list_; }
   const FrontSeqInstructionList& front_seq_compute_instr_list() const { return front_seq_compute_instr_list_; }
   const InstructionMsgMutextList& pending_msg_list() const { return pending_msg_list_; }
+  const StreamTypeId2StreamRtDesc& stream_type_id2stream_rt_desc() const { return stream_type_id2stream_rt_desc_; }
+  const Id2LogicalObject& id2logical_object() const { return id2logical_object_; }
   //Setters
   VmResourceDesc* mut_vm_resource_desc() { return mutable_vm_resource_desc(); }
   VmResourceDesc* mutable_vm_resource_desc() {
@@ -91,6 +95,10 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   FrontSeqInstructionList* mutable_front_seq_compute_instr_list() { return &front_seq_compute_instr_list_; }
   InstructionMsgMutextList* mut_pending_msg_list() { return &pending_msg_list_; }
   InstructionMsgMutextList* mutable_pending_msg_list() { return &pending_msg_list_; }
+  StreamTypeId2StreamRtDesc* mut_stream_type_id2stream_rt_desc() { return &stream_type_id2stream_rt_desc_; }
+  StreamTypeId2StreamRtDesc* mutable_stream_type_id2stream_rt_desc() { return &stream_type_id2stream_rt_desc_; }
+  Id2LogicalObject* mut_id2logical_object() { return &id2logical_object_; }
+  Id2LogicalObject* mutable_id2logical_object() { return &id2logical_object_; }
 
   // methods
   OF_PUBLIC void __Init__(const VmDesc& vm_desc);
@@ -117,8 +125,8 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   // heads
   OBJECT_MSG_DEFINE_FIELD(ActiveStreamList, active_stream_list_);
   OBJECT_MSG_DEFINE_FIELD(ThreadCtxList, thread_ctx_list_);
-  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(StreamRtDesc, stream_type_id, stream_type_id2stream_rt_desc);
-  OBJECT_MSG_DEFINE_MAP_HEAD(LogicalObject, logical_object_id, id2logical_object);
+  OBJECT_MSG_DEFINE_FIELD(StreamTypeId2StreamRtDesc, stream_type_id2stream_rt_desc_);
+  OBJECT_MSG_DEFINE_FIELD(Id2LogicalObject, id2logical_object_);
   OBJECT_MSG_DEFINE_FIELD(LogicalObjectDeleteList, delete_logical_object_list_);
 
   OBJECT_MSG_DEFINE_FIELD(InstructionMsgMutextList, pending_msg_list_);
@@ -134,7 +142,6 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   using PrescheduledInstructionList = InstructionList;
   using WaitingInstructionList = InstructionList;
   using ReadyInstructionList = InstructionList;
-  using Id2LogicalObject = VirtualMachine::id2logical_object_ObjectMsgSkipListType;
 
   template<typename ContainerT>
   void TryRunFrontSeqInstruction(ContainerT* front_seq_list,

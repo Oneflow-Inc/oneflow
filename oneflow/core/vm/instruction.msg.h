@@ -200,6 +200,8 @@ OBJECT_MSG_BEGIN(Instruction);
   using OutEdgeList = intrusive::List<OBJECT_MSG_FIELD(InstructionEdge, out_edge_entry_)>;
   using RwMutexedObjectAccessList =
       intrusive::List<OBJECT_MSG_FIELD(RwMutexedObjectAccess, instruction_access_entry_)>;
+  using MirroredObjectId2RwMutexedObjectAccess =
+      intrusive::SkipList<OBJECT_MSG_FIELD(RwMutexedObjectAccess, mirrored_object_id_)>;
 
   // Getters
   void __Init__() { clear_stream(); }
@@ -219,6 +221,8 @@ OBJECT_MSG_BEGIN(Instruction);
   const InEdgeList& in_edges() const { return in_edges_; }
   const OutEdgeList& out_edges() const { return out_edges_; }
   const RwMutexedObjectAccessList& access_list() const { return access_list_; }
+  const MirroredObjectId2RwMutexedObjectAccess& mirrored_object_id2access() const {
+      return mirrored_object_id2access_; }
 
   // Setters
   void set_stream(Stream* val) { stream_ = val; }
@@ -242,6 +246,12 @@ OBJECT_MSG_BEGIN(Instruction);
   InEdgeList* mutable_in_edges() { return &in_edges_; }
   OutEdgeList* mutable_out_edges() { return &out_edges_; }
   RwMutexedObjectAccessList* mutable_access_list() { return &access_list_; }
+  MirroredObjectId2RwMutexedObjectAccess* mut_mirrored_object_id2access() {
+      return &mirrored_object_id2access_;
+  }
+  MirroredObjectId2RwMutexedObjectAccess* mutable_mirrored_object_id2access() {
+      return &mirrored_object_id2access_;
+  }
 
   // methods
   OF_PUBLIC void __Init__(InstructionMsg* instr_msg, Stream* stream, const std::shared_ptr<const ParallelDesc>& parallel_desc);
@@ -347,10 +357,14 @@ OBJECT_MSG_BEGIN(Instruction);
   OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, pending_instruction_entry_);
   OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, front_seq_infer_instr_entry_);
   OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, front_seq_compute_instr_entry_);
+
+  // maps
+  OBJECT_MSG_DEFINE_FIELD(MirroredObjectId2RwMutexedObjectAccess, mirrored_object_id2access_);
+
+  // lists
+  OBJECT_MSG_DEFINE_FIELD(RwMutexedObjectAccessList, access_list_);
   OBJECT_MSG_DEFINE_FIELD(InEdgeList, in_edges_);
   OBJECT_MSG_DEFINE_FIELD(OutEdgeList, out_edges_);
-  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(RwMutexedObjectAccess, mirrored_object_id, mirrored_object_id2access);
-  OBJECT_MSG_DEFINE_FIELD(RwMutexedObjectAccessList, access_list_);
 OBJECT_MSG_END(Instruction);
 // clang-format on
 

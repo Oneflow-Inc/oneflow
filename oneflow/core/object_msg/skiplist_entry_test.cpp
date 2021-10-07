@@ -38,13 +38,13 @@ struct FooSkipListElem {
 
 using FooSkipList = TestSkipListHead<STRUCT_FIELD(FooSkipListElem, key)>;
 
-TEST(EmbeddedSkipList, empty) {
+TEST(SkipListEntry, empty) {
   FooSkipList skiplist;
   ASSERT_TRUE(skiplist.empty_debug());
   ASSERT_EQ(skiplist.size(), 0);
 }
 
-TEST(EmbeddedSkipList, insert_naive) {
+TEST(SkipListEntry, insert_naive) {
   FooSkipList skiplist;
   FooSkipListElem elem0;
   *elem0.key.mut_key() = 0;
@@ -61,7 +61,7 @@ TEST(EmbeddedSkipList, insert_naive) {
   }
 }
 
-TEST(EmbeddedSkipList, erase_by_key) {
+TEST(SkipListEntry, erase_by_key) {
   FooSkipList skiplist;
   FooSkipListElem elem0;
   *elem0.key.mut_key() = 0;
@@ -74,7 +74,7 @@ TEST(EmbeddedSkipList, erase_by_key) {
   ASSERT_TRUE(skiplist.Find(int(0)) == nullptr);
 }
 
-TEST(EmbeddedSkipList, erase_by_elem) {
+TEST(SkipListEntry, erase_by_elem) {
   FooSkipList skiplist;
   FooSkipListElem elem0;
   *elem0.key.mut_key() = 0;
@@ -87,7 +87,7 @@ TEST(EmbeddedSkipList, erase_by_elem) {
   ASSERT_TRUE(skiplist.Find(int(0)) == nullptr);
 }
 
-TEST(EmbeddedSkipList, insert_many) {
+TEST(SkipListEntry, insert_many) {
   FooSkipList skiplist;
   FooSkipListElem exists[100];
   for (int i = 0; i < 100; ++i) {
@@ -114,7 +114,7 @@ TEST(EmbeddedSkipList, insert_many) {
   ASSERT_TRUE(skiplist.empty_debug());
 }
 
-TEST(EmbeddedSkipList, erase_many_by_key) {
+TEST(SkipListEntry, erase_many_by_key) {
   FooSkipList skiplist;
   FooSkipListElem exists[100];
   for (int i = 0; i < 100; ++i) {
@@ -137,7 +137,7 @@ TEST(EmbeddedSkipList, erase_many_by_key) {
   ASSERT_TRUE(skiplist.empty_debug());
 }
 
-TEST(EmbeddedSkipList, erase_many_by_elem) {
+TEST(SkipListEntry, erase_many_by_elem) {
   FooSkipList skiplist;
   FooSkipListElem exists[100];
   for (int i = 0; i < 100; ++i) {

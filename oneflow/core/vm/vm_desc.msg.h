@@ -28,6 +28,9 @@ namespace vm {
 // clang-format off
 OBJECT_MSG_BEGIN(VmDesc);
  public:
+  // types
+  using StreamTypeId2StreamDesc =
+      intrusive::SkipList<OBJECT_MSG_FIELD(StreamDesc, stream_type_id_)>;
   // Getters
   const VmResourceDesc& vm_resource_desc() const {
     if (vm_resource_desc_) { return vm_resource_desc_.Get(); }
@@ -35,6 +38,7 @@ OBJECT_MSG_BEGIN(VmDesc);
     return default_val.Get();
   }
   const Range& machine_id_range() const { return machine_id_range_; }
+  const StreamTypeId2StreamDesc& stream_type_id2desc() const { return stream_type_id2desc_; }
   //Setters
   VmResourceDesc* mut_vm_resource_desc() { return mutable_vm_resource_desc(); }
   VmResourceDesc* mutable_vm_resource_desc() {
@@ -43,6 +47,8 @@ OBJECT_MSG_BEGIN(VmDesc);
   }
   Range* mut_machine_id_range() { return &machine_id_range_; }
   Range* mutable_machine_id_range() { return &machine_id_range_; }
+  StreamTypeId2StreamDesc* mut_stream_type_id2desc() { return &stream_type_id2desc_; }
+  StreamTypeId2StreamDesc* mutable_stream_type_id2desc() { return &stream_type_id2desc_; }
 
   // methods
   OF_PUBLIC void __Init__(const VmResourceDesc& vm_resource_desc) {
@@ -57,8 +63,8 @@ OBJECT_MSG_BEGIN(VmDesc);
   OBJECT_MSG_DEFINE_FIELD(ObjectMsgPtr<VmResourceDesc>, vm_resource_desc_);
   OBJECT_MSG_DEFINE_FIELD(Range, machine_id_range_);
 
-  // list entries
-  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(StreamDesc, stream_type_id, stream_type_id2desc);
+  // maps
+  OBJECT_MSG_DEFINE_FIELD(StreamTypeId2StreamDesc, stream_type_id2desc_);
 OBJECT_MSG_END(VmDesc);
 // clang-format on
 

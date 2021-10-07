@@ -56,7 +56,7 @@ OBJECT_MSG_BEGIN(StreamTypeIdItem);
   OBJECT_MSG_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);
 OBJECT_MSG_END(StreamTypeIdItem);
 // clang-format on
-using StreamTypeIdSet = OBJECT_MSG_MAP(StreamTypeIdItem, stream_type_id);
+using StreamTypeIdSet = intrusive::SkipList<OBJECT_MSG_FIELD(StreamTypeIdItem, stream_type_id_)>;
 
 TEST(StreamTypeId, map_key) {
   auto stream_type_id0 = ObjectMsgPtr<StreamTypeIdItem>::New();

@@ -192,7 +192,7 @@ void VirtualMachine::ForEachMirroredObject(Id2LogicalObject* id2logical_object,
   if (logical_object == nullptr) { return; }
   auto* map = logical_object->mut_global_device_id2mirrored_object();
   if (operand.has_all_mirrored_object()) {
-    OBJECT_MSG_MAP_FOR_EACH_PTR(map, mirrored_object) { DoEach(mirrored_object); }
+    OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(map, mirrored_object) { DoEach(mirrored_object); }
   } else {
     auto* mirrored_object = map->FindPtr(operand.GetGlobalDeviceId(global_device_id));
     if (mirrored_object != nullptr) { DoEach(mirrored_object); }
@@ -641,7 +641,7 @@ void VirtualMachine::TryDeleteLogicalObjects() {
   // OBJECT_MSG_LIST_FOR_EACH_PTR supports removing elements at the end of iteration code
   OBJECT_MSG_LIST_FOR_EACH_PTR(delete_list, logical_object) {
     auto* global_device_id2mirrored_object = logical_object->mut_global_device_id2mirrored_object();
-    OBJECT_MSG_MAP_FOR_EACH_PTR(global_device_id2mirrored_object, mirrored_object) {
+    OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(global_device_id2mirrored_object, mirrored_object) {
       CHECK_EQ(mirrored_object->ref_cnt(), 1);
       if (mirrored_object->rw_mutexed_object().ref_cnt() == 1) {
         CHECK_EQ(mirrored_object->rw_mutexed_object().access_list().size(), 0);
