@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_H_
 
 #include "oneflow/core/object_msg/object_msg_core.h"
+#include "oneflow/core/object_msg/shared_ptr.h"
 #include "oneflow/core/object_msg/list.h"
 #include "oneflow/core/object_msg/skiplist.h"
 

@@ -120,7 +120,7 @@ class ObjectMsgRef {
 
 struct ObjectMsgPtrUtil final {
   template<typename T>
-  static void InitRef(T** ptr) {
+  static void NewAndInitRef(T** ptr) {
     *ptr = new T();
     (*ptr)->__mut_object_msg_ref__()->InitRefCount();
     Ref(*ptr);
@@ -137,74 +137,6 @@ struct ObjectMsgPtrUtil final {
     ptr->__Delete__();
     delete ptr;
   }
-};
-
-template<typename T>
-class ObjectMsgPtr final {
- public:
-  static_assert(T::__is_object_message_type__, "T is not a object message type");
-  using value_type = T;
-  ObjectMsgPtr() : ptr_(nullptr) {}
-  ObjectMsgPtr(value_type* ptr) : ptr_(nullptr) { Reset(ptr); }
-  ObjectMsgPtr(const ObjectMsgPtr& obj_ptr) {
-    ptr_ = nullptr;
-    Reset(obj_ptr.ptr_);
-  }
-  ObjectMsgPtr(ObjectMsgPtr&& obj_ptr) {
-    ptr_ = obj_ptr.ptr_;
-    obj_ptr.ptr_ = nullptr;
-  }
-  ~ObjectMsgPtr() { Clear(); }
-
-  operator bool() const { return ptr_ != nullptr; }
-  const value_type& Get() const { return *ptr_; }
-  const value_type* operator->() const { return ptr_; }
-  const value_type& operator*() const { return *ptr_; }
-  bool operator==(const ObjectMsgPtr& rhs) const { return this->ptr_ == rhs.ptr_; }
-
-  value_type* Mutable() { return ptr_; }
-  value_type* operator->() { return ptr_; }
-  value_type& operator*() { return *ptr_; }
-
-  void Reset() { Reset(nullptr); }
-
-  void Reset(value_type* ptr) {
-    Clear();
-    if (ptr == nullptr) { return; }
-    ptr_ = ptr;
-    ObjectMsgPtrUtil::Ref<value_type>(ptr_);
-  }
-
-  ObjectMsgPtr& operator=(const ObjectMsgPtr& rhs) {
-    Reset(rhs.ptr_);
-    return *this;
-  }
-
-  template<typename... Args>
-  static ObjectMsgPtr New(Args&&... args) {
-    ObjectMsgPtr ret;
-    ObjectMsgPtrUtil::InitRef(&ret.ptr_);
-    ret.Mutable()->__Init__(std::forward<Args>(args)...);
-    return ret;
-  }
-
-  static ObjectMsgPtr __UnsafeMove__(value_type* ptr) {
-    ObjectMsgPtr ret;
-    ret.ptr_ = ptr;
-    return ret;
-  }
-  void __UnsafeMoveTo__(value_type** ptr) {
-    *ptr = ptr_;
-    ptr_ = nullptr;
-  }
-
- private:
-  void Clear() {
-    if (ptr_ == nullptr) { return; }
-    ObjectMsgPtrUtil::ReleaseRef<value_type>(ptr_);
-    ptr_ = nullptr;
-  }
-  value_type* ptr_;
 };
 
 }  // namespace oneflow
