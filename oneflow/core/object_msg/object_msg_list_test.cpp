@@ -247,9 +247,7 @@ TEST(List, FOR_EACH) {
 OBJECT_MSG_BEGIN(TestObjectMsgListHead);
  public:
   TestObjectMsgListHead() = default;
-  using FooList = intrusive::List<StructField<
-             TestListItem, intrusive::ListEntry,
-             OBJECT_MSG_FIELD_OFFSET(TestListItem, OBJECT_MSG_FIELD_NUMBER(TestListItem, foo_list_))>>;
+  using FooList = intrusive::List<OBJECT_MSG_FIELD(TestListItem, foo_list_)>;
   // Getters
   const FooList& foo_list() const { return foo_list_; }
   // Setters

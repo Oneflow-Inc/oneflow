@@ -318,6 +318,7 @@ namespace oneflow {
     using type = field_type;                                                                       \
   };                                                                                               \
   static const int OF_PP_CAT(field, kDssFieldFieldNumber) = field_counter;                         \
+  using OF_PP_CAT(field, kDssFieldType) = field_type;                                              \
   static const int OF_PP_CAT(field, kDssFieldOffset) =                                             \
       __DssAccumulatedAlignedSize4Counter__<field_counter>::value;
 

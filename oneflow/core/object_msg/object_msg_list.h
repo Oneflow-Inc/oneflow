@@ -381,6 +381,7 @@ namespace intrusive {
 template<typename LinkField>
 class List : public TrivialObjectMsgList<LinkField, kDisableSelfLoopLink> {
  public:
+  static_assert(std::is_same<typename LinkField::field_type, intrusive::ListEntry>::value, "");
   List(const List&) = delete;
   List(List&&) = delete;
   List() { this->__Init__(); }
