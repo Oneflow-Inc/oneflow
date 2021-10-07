@@ -22,6 +22,8 @@ namespace oneflow {
 
 namespace test {
 
+namespace {
+
 // clang-format off
 OBJECT_MSG_BEGIN(ObjectMsgFoo)
  public:
@@ -164,10 +166,10 @@ TEST(OBJECT_MSG, flat_msg_field) {
 }
 
 // clang-format off
-OBJECT_MSG_BEGIN(TestObjectMsgCurrentOffset);
+OBJECT_MSG_BEGIN(TestObjectMsgField);
   static_assert(OBJECT_MSG_FIELD_COUNTER == 0, "");
   static_assert(OBJECT_MSG_FIELD_COUNTER == 0, "");
-  OBJECT_MSG_FIELD(int64_t, a);
+  OBJECT_MSG_FIELD(int32_t, a);
   static_assert(OBJECT_MSG_FIELD_COUNTER == 1, "");
   static_assert(OBJECT_MSG_FIELD_COUNTER == 1, "");
   OBJECT_MSG_FIELD(int64_t, b);
@@ -179,8 +181,31 @@ OBJECT_MSG_BEGIN(TestObjectMsgCurrentOffset);
   OBJECT_MSG_FIELD(int64_t, d);
   static_assert(OBJECT_MSG_FIELD_COUNTER == 4, "");
   static_assert(OBJECT_MSG_FIELD_COUNTER == 4, "");
-OBJECT_MSG_END(TestObjectMsgCurrentOffset);
+OBJECT_MSG_END(TestObjectMsgField);
 // clang-format on
+
+TEST(OBJECT_MSG, object_msg_field_number) {
+  static_assert(OBJECT_MSG_FIELD_NUMBER(TestObjectMsgField, a) == 1, "");
+  static_assert(OBJECT_MSG_FIELD_NUMBER(TestObjectMsgField, b) == 2, "");
+  static_assert(OBJECT_MSG_FIELD_NUMBER(TestObjectMsgField, c) == 3, "");
+  static_assert(OBJECT_MSG_FIELD_NUMBER(TestObjectMsgField, d) == 4, "");
+}
+
+TEST(OBJECT_MSG, object_msg_field_type) {
+  static_assert(std::is_same<OBJECT_MSG_FIELD_TYPE(TestObjectMsgField, 1), int32_t>::value, "");
+  static_assert(std::is_same<OBJECT_MSG_FIELD_TYPE(TestObjectMsgField, 2), int64_t>::value, "");
+  static_assert(std::is_same<OBJECT_MSG_FIELD_TYPE(TestObjectMsgField, 3), int8_t>::value, "");
+  static_assert(std::is_same<OBJECT_MSG_FIELD_TYPE(TestObjectMsgField, 4), int64_t>::value, "");
+}
+
+TEST(OBJECT_MSG, object_msg_field_offset) {
+  static_assert(OBJECT_MSG_FIELD_OFFSET(TestObjectMsgField, 1) == 0, "");
+  static_assert(OBJECT_MSG_FIELD_OFFSET(TestObjectMsgField, 2) == 8, "");
+  static_assert(OBJECT_MSG_FIELD_OFFSET(TestObjectMsgField, 3) == 16, "");
+  static_assert(OBJECT_MSG_FIELD_OFFSET(TestObjectMsgField, 4) == 24, "");
+}
+
+}  // namespace
 
 }  // namespace test
 

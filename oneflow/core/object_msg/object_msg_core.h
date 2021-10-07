@@ -52,7 +52,18 @@ namespace oneflow {
   OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                \
   _OBJECT_MSG_FIELD(STATIC_COUNTER(field_counter), field_type, field_name);
 
-// return current defined field counter inside a object_msg class.
+// Get field number by field name
+// note: field numbers start from 1 instead of 0.
+#define OBJECT_MSG_FIELD_NUMBER(cls, field_name) cls::OF_PP_CAT(field_name, kDssFieldFieldNumber)
+
+// Get field type by field number
+#define OBJECT_MSG_FIELD_TYPE(cls, field_number) cls::__DssFieldType__<field_number>::type
+
+// Get field offset by field number
+#define OBJECT_MSG_FIELD_OFFSET(cls, field_number) \
+  cls::__DssFieldOffset4FieldIndex__<field_number>::value
+
+// Get current defined field counter inside a object_msg class.
 // note: not used outside OBJECT_MSG_BEGIN ... OBJECT_MSG_END
 // e.g.:
 // OBJECT_MSG_BEGIN(Foo);
@@ -317,12 +328,6 @@ class ObjectMsgPtr final {
     ptr_ = nullptr;
   }
   value_type* ptr_;
-};
-
-template<typename T>
-struct ObjectMsgIsScalar {
-  const static bool value =
-      std::is_arithmetic<T>::value || std::is_enum<T>::value || std::is_same<T, std::string>::value;
 };
 
 }  // namespace oneflow

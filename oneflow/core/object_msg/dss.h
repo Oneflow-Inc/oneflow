@@ -107,6 +107,8 @@ namespace oneflow {
   using __DssSelfType__ = type;                                                               \
                                                                                               \
  public:                                                                                      \
+  template<int tpl_fld_counter, typename Enabled = void>                                      \
+  struct __DssFieldType__;                                                                    \
   template<template<int, class, class> class F, typename WalkCtxType>                         \
   void __WalkField__(WalkCtxType* ctx) {                                                      \
     __DssFieldIter__<field_counter, F, WalkCtxType>::Call(ctx, this);                         \
@@ -311,6 +313,11 @@ namespace oneflow {
   };                                                                                               \
                                                                                                    \
  public:                                                                                           \
+  template<typename Enabled>                                                                       \
+  struct __DssFieldType__<field_counter, Enabled> {                                                \
+    using type = field_type;                                                                       \
+  };                                                                                               \
+  static const int OF_PP_CAT(field, kDssFieldFieldNumber) = field_counter;                         \
   static const int OF_PP_CAT(field, kDssFieldOffset) =                                             \
       __DssAccumulatedAlignedSize4Counter__<field_counter>::value;
 
