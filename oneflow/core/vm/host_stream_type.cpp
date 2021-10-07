@@ -55,7 +55,7 @@ void HostStreamType::Compute(Instruction* instruction) const {
 
 intrusive::SharedPtr<StreamDesc> HostStreamType::MakeStreamDesc(const Resource& resource,
                                                                 int64_t this_machine_id) const {
-  auto ret = intrusive::SharedPtr<StreamDesc>::New();
+  auto ret = intrusive::MakeShared<StreamDesc>();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<HostStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);

@@ -88,7 +88,7 @@ void GetWorkerThreadInitializer(intrusive::SharedPtr<vm::VirtualMachine> vm,
 }  // namespace
 
 OneflowVM::OneflowVM(const Resource& resource, int64_t this_machine_id)
-    : vm_(intrusive::SharedPtr<vm::VirtualMachine>::New(
+    : vm_(intrusive::MakeShared<vm::VirtualMachine>(
         vm::MakeVmDesc(resource, this_machine_id).Get())) {
   std::function<void()> SchedulerInitializer;
   GetSchedulerThreadInitializer(&SchedulerInitializer);

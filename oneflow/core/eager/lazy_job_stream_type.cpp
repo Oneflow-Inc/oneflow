@@ -57,7 +57,7 @@ void LazyJobStreamType::Compute(Instruction* instruction) const {
 
 intrusive::SharedPtr<StreamDesc> LazyJobStreamType::MakeStreamDesc(const Resource& resource,
                                                                    int64_t this_machine_id) const {
-  auto ret = intrusive::SharedPtr<StreamDesc>::New();
+  auto ret = intrusive::MakeShared<StreamDesc>();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<LazyJobStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);

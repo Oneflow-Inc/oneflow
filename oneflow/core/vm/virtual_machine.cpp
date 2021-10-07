@@ -371,7 +371,7 @@ RwMutexedObjectAccess* VirtualMachine::ConsumeMirroredObject(OperandAccessType a
                                                              MirroredObject* mirrored_object,
                                                              Instruction* instruction) {
   auto rw_mutexed_object_access =
-      intrusive::SharedPtr<RwMutexedObjectAccess>::New(instruction, mirrored_object, access_type);
+      intrusive::MakeShared<RwMutexedObjectAccess>(instruction, mirrored_object, access_type);
   instruction->mut_mirrored_object_id2access()->Insert(rw_mutexed_object_access.Mutable());
   instruction->mut_access_list()->PushBack(rw_mutexed_object_access.Mutable());
   mirrored_object->mut_rw_mutexed_object()->mut_access_list()->EmplaceBack(
@@ -382,7 +382,7 @@ RwMutexedObjectAccess* VirtualMachine::ConsumeMirroredObject(OperandAccessType a
 void VirtualMachine::ConnectInstruction(Instruction* src_instruction,
                                         Instruction* dst_instruction) {
   CHECK_NE(src_instruction, dst_instruction);
-  auto edge = intrusive::SharedPtr<InstructionEdge>::New(src_instruction, dst_instruction);
+  auto edge = intrusive::MakeShared<InstructionEdge>(src_instruction, dst_instruction);
   src_instruction->mut_out_edges()->PushBack(edge.Mutable());
   dst_instruction->mut_in_edges()->PushBack(edge.Mutable());
 }
@@ -555,17 +555,17 @@ void VirtualMachine::__Init__(const VmDesc& vm_desc) {
   *mutable_machine_id_range() = vm_desc.machine_id_range();
   OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.stream_type_id2desc(), stream_desc) {
     if (stream_desc->num_threads() == 0) { continue; }
-    auto stream_rt_desc = intrusive::SharedPtr<StreamRtDesc>::New(stream_desc);
+    auto stream_rt_desc = intrusive::MakeShared<StreamRtDesc>(stream_desc);
     mut_stream_type_id2stream_rt_desc()->Insert(stream_rt_desc.Mutable());
     BalancedSplitter bs(stream_desc->parallel_num(), stream_desc->num_threads());
     for (int64_t i = 0, rel_global_device_id = 0; i < stream_desc->num_threads(); ++i) {
-      auto thread_ctx = intrusive::SharedPtr<ThreadCtx>::New(stream_rt_desc.Get());
+      auto thread_ctx = intrusive::MakeShared<ThreadCtx>(stream_rt_desc.Get());
       mut_thread_ctx_list()->PushBack(thread_ctx.Mutable());
       for (int j = bs.At(i).begin(); j < bs.At(i).end(); ++j, ++rel_global_device_id) {
         StreamId stream_id;
         stream_id.__Init__(stream_desc->stream_type_id(),
                            this_start_global_device_id() + rel_global_device_id);
-        auto stream = intrusive::SharedPtr<Stream>::New(
+        auto stream = intrusive::MakeShared<Stream>(
             thread_ctx.Mutable(), stream_id, vm_resource_desc().max_device_num_per_machine());
         CHECK(stream_rt_desc->mut_stream_id2stream()->Insert(stream.Mutable()).second);
         thread_ctx->mut_stream_list()->PushBack(stream.Mutable());

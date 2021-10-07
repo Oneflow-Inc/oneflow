@@ -218,11 +218,11 @@ intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_del_operand(ObjectId lo
 }
 
 intrusive::SharedPtr<InstructionMsg> InstructionMsg::Clone() const {
-  return intrusive::SharedPtr<InstructionMsg>::New(*this);
+  return intrusive::MakeShared<InstructionMsg>(*this);
 }
 
 intrusive::SharedPtr<InstructionMsg> InstructionMsg::MakeInferInstrMsg() const {
-  auto infer_instr_msg = intrusive::SharedPtr<InstructionMsg>::New(*this);
+  auto infer_instr_msg = intrusive::MakeShared<InstructionMsg>(*this);
   auto* stream_type_id = infer_instr_msg->mut_instr_type_id()->mut_stream_type_id();
   CHECK_EQ(stream_type_id->interpret_type(), InterpretType::kCompute);
   stream_type_id->CopyFrom(LookupInferStreamTypeId(*stream_type_id));

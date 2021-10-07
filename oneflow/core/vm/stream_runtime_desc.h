@@ -35,7 +35,7 @@ OBJECT_MSG_BEGIN(StreamRtDesc);
   // Getters
   const StreamDesc& stream_desc() const {
     if (stream_desc_) { return stream_desc_.Get(); }
-    static const auto default_val = intrusive::SharedPtr<StreamDesc>::New();
+    static const auto default_val = intrusive::MakeShared<StreamDesc>();
     return default_val.Get();
   }
   const StreamTypeId& stream_type_id() const { return stream_type_id_.key().Get(); }
@@ -43,7 +43,7 @@ OBJECT_MSG_BEGIN(StreamRtDesc);
   // Setters
   StreamDesc* mut_stream_desc() { return mutable_stream_desc(); }
   StreamDesc* mutable_stream_desc() { 
-    if (!stream_desc_) { stream_desc_ = intrusive::SharedPtr<StreamDesc>::New(); }
+    if (!stream_desc_) { stream_desc_ = intrusive::MakeShared<StreamDesc>(); }
     return stream_desc_.Mutable();
   }
   void reset_stream_desc(StreamDesc* stream_desc) { stream_desc_.Reset(stream_desc); }

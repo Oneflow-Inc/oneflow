@@ -34,7 +34,7 @@ OBJECT_MSG_BEGIN(VmDesc);
   // Getters
   const VmResourceDesc& vm_resource_desc() const {
     if (vm_resource_desc_) { return vm_resource_desc_.Get(); }
-    static const auto default_val = intrusive::SharedPtr<VmResourceDesc>::New();
+    static const auto default_val = intrusive::MakeShared<VmResourceDesc>();
     return default_val.Get();
   }
   const Range& machine_id_range() const { return machine_id_range_; }
@@ -42,7 +42,7 @@ OBJECT_MSG_BEGIN(VmDesc);
   //Setters
   VmResourceDesc* mut_vm_resource_desc() { return mutable_vm_resource_desc(); }
   VmResourceDesc* mutable_vm_resource_desc() {
-    if (!vm_resource_desc_) { vm_resource_desc_ = intrusive::SharedPtr<VmResourceDesc>::New(); }
+    if (!vm_resource_desc_) { vm_resource_desc_ = intrusive::MakeShared<VmResourceDesc>(); }
     return vm_resource_desc_.Mutable();
   }
   Range* mut_machine_id_range() { return &machine_id_range_; }

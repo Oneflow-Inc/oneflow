@@ -54,7 +54,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   int64_t parallel_desc_symbol_id() const { return parallel_desc_symbol_id_; }
   const InstructionOperandList& operand_list() const {
     if (operand_list_) { return operand_list_.Get(); }
-    static const auto default_val = intrusive::SharedPtr<InstructionOperandList>::New();
+    static const auto default_val = intrusive::MakeShared<InstructionOperandList>();
     return default_val.Get();
   }
   const std::string& instr_type_name() const { return instr_type_name_; }
@@ -65,7 +65,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   void set_parallel_desc_symbol_id(int64_t val) { parallel_desc_symbol_id_ = val; }
   InstructionOperandList* mut_operand_list() { return mutable_operand_list(); }
   InstructionOperandList* mutable_operand_list() {
-    if (!operand_list_) { operand_list_ = intrusive::SharedPtr<InstructionOperandList>::New(); }
+    if (!operand_list_) { operand_list_ = intrusive::MakeShared<InstructionOperandList>(); }
     return operand_list_.Mutable();
   }
   void reset_operand_list(const InstructionOperandList& other) {
@@ -209,7 +209,7 @@ OBJECT_MSG_BEGIN(Instruction);
   const Stream& stream() const { return *stream_;  }
   const InstructionMsg& instr_msg() const {
     if (instr_msg_) { return instr_msg_.Get(); }
-    static const auto default_val = intrusive::SharedPtr<InstructionMsg>::New();
+    static const auto default_val = intrusive::MakeShared<InstructionMsg>();
     return default_val.Get();
   }
   const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
@@ -231,7 +231,7 @@ OBJECT_MSG_BEGIN(Instruction);
   Stream* mutable_stream() { return stream_; }
   InstructionMsg* mut_instr_msg() { return mutable_instr_msg(); }
   InstructionMsg* mutable_instr_msg() {
-    if (!instr_msg_) { instr_msg_ = intrusive::SharedPtr<InstructionMsg>::New(); }
+    if (!instr_msg_) { instr_msg_ = intrusive::MakeShared<InstructionMsg>(); }
     return instr_msg_.Mutable();
   }
   void reset_instr_msg(InstructionMsg* instr_msg) { instr_msg_.Reset(instr_msg); }

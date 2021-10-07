@@ -59,10 +59,10 @@ OBJECT_MSG_END(StreamTypeIdItem);
 using StreamTypeIdSet = intrusive::SkipList<OBJECT_MSG_FIELD(StreamTypeIdItem, stream_type_id_)>;
 
 TEST(StreamTypeId, map_key) {
-  auto stream_type_id0 = intrusive::SharedPtr<StreamTypeIdItem>::New();
+  auto stream_type_id0 = intrusive::MakeShared<StreamTypeIdItem>();
   stream_type_id0->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<ControlStreamType>(),
                                                   InterpretType::kCompute);
-  auto stream_type_id1 = intrusive::SharedPtr<StreamTypeIdItem>::New();
+  auto stream_type_id1 = intrusive::MakeShared<StreamTypeIdItem>();
   stream_type_id1->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<ControlStreamType>(),
                                                   InterpretType::kCompute);
   StreamTypeIdSet stream_type_id_set;

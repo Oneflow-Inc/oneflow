@@ -33,12 +33,12 @@ OBJECT_MSG_BEGIN(LocalDepObject);
   // Getters
   const vm::LogicalObject& logical_object() const {
     if (logical_object_) { return logical_object_.Get(); }
-    static const auto default_val = intrusive::SharedPtr<vm::LogicalObject>::New();
+    static const auto default_val = intrusive::MakeShared<vm::LogicalObject>();
     return default_val.Get();
   }
   const vm::MirroredObject& mirrored_object() const {
     if (mirrored_object_) { return mirrored_object_.Get(); }
-    static const auto default_val = intrusive::SharedPtr<vm::MirroredObject>::New();
+    static const auto default_val = intrusive::MakeShared<vm::MirroredObject>();
     return default_val.Get();
   }
   bool is_pool_entry_empty() const { return pool_entry_.empty(); }
@@ -48,12 +48,12 @@ OBJECT_MSG_BEGIN(LocalDepObject);
   // Setters
   vm::LogicalObject* mut_logical_object() { return mutable_logical_object(); }
   vm::LogicalObject* mutable_logical_object() {
-    if (!logical_object_) { logical_object_ = intrusive::SharedPtr<vm::LogicalObject>::New(); }
+    if (!logical_object_) { logical_object_ = intrusive::MakeShared<vm::LogicalObject>(); }
     return logical_object_.Mutable();
   }
   vm::MirroredObject* mut_mirrored_object() { return mutable_mirrored_object(); }
   vm::MirroredObject* mutable_mirrored_object() {
-    if (!mirrored_object_) { mirrored_object_ = intrusive::SharedPtr<vm::MirroredObject>::New(); }
+    if (!mirrored_object_) { mirrored_object_ = intrusive::MakeShared<vm::MirroredObject>(); }
     return mirrored_object_.Mutable();
   }
 

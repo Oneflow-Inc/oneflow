@@ -90,8 +90,7 @@ class NewObjectInstructionType final : public InstructionType {
     CHECK(static_cast<bool>(parallel_desc));
     FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
       int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id(i));
-      auto logical_object =
-          intrusive::SharedPtr<LogicalObject>::New(logical_object_id, parallel_desc);
+      auto logical_object = intrusive::MakeShared<LogicalObject>(logical_object_id, parallel_desc);
       CHECK(vm->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
       auto* global_device_id2mirrored_object =
           logical_object->mut_global_device_id2mirrored_object();
@@ -99,8 +98,8 @@ class NewObjectInstructionType final : public InstructionType {
           *parallel_desc, vm->machine_id_range(), [&](int64_t machine_id, int64_t device_id) {
             int64_t global_device_id =
                 vm->vm_resource_desc().GetGlobalDeviceId(machine_id, device_id);
-            auto mirrored_object = intrusive::SharedPtr<MirroredObject>::New(
-                logical_object.Mutable(), global_device_id);
+            auto mirrored_object =
+                intrusive::MakeShared<MirroredObject>(logical_object.Mutable(), global_device_id);
             CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
           });
     }
@@ -149,7 +148,7 @@ class BroadcastObjectReferenceInstructionType final : public InstructionType {
     }
     CHECK(static_cast<bool>(parallel_desc));
     int64_t new_object = GetLogicalObjectId(args->new_object());
-    auto logical_object = intrusive::SharedPtr<LogicalObject>::New(new_object, parallel_desc);
+    auto logical_object = intrusive::MakeShared<LogicalObject>(new_object, parallel_desc);
     CHECK(vm->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
     auto* global_device_id2mirrored_object = logical_object->mut_global_device_id2mirrored_object();
     ForEachMachineIdAndDeviceIdInRange(
@@ -157,7 +156,7 @@ class BroadcastObjectReferenceInstructionType final : public InstructionType {
           int64_t global_device_id =
               vm->vm_resource_desc().GetGlobalDeviceId(machine_id, device_id);
           auto mirrored_object =
-              intrusive::SharedPtr<MirroredObject>::New(logical_object.Mutable(), global_device_id);
+              intrusive::MakeShared<MirroredObject>(logical_object.Mutable(), global_device_id);
           mirrored_object->reset_rw_mutexed_object(*sole_rw_mutexed_object);
           CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
         });

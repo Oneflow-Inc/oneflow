@@ -83,7 +83,7 @@ void ObjectMsgFoo::__Delete__() {
 }
 
 TEST(OBJECT_MSG, naive) {
-  auto foo = intrusive::SharedPtr<ObjectMsgFoo>::New();
+  auto foo = intrusive::MakeShared<ObjectMsgFoo>();
   foo->set_bar(9527);
   ASSERT_TRUE(foo->bar() == 9527);
 }
@@ -91,7 +91,7 @@ TEST(OBJECT_MSG, naive) {
 TEST(OBJECT_MSG, __delete__) {
   std::string is_deleted;
   {
-    auto foo = intrusive::SharedPtr<ObjectMsgFoo>::New();
+    auto foo = intrusive::MakeShared<ObjectMsgFoo>();
     foo->set_bar(9527);
     foo->set_is_deleted(&is_deleted);
     ASSERT_EQ(foo->bar(), 9527);
@@ -107,7 +107,7 @@ OBJECT_MSG_BEGIN(ObjectMsgBar)
   // Getters
   const ObjectMsgFoo& foo() const {
     if (foo_) { return foo_.Get(); }
-    static const auto default_val = intrusive::SharedPtr<ObjectMsgFoo>::New();
+    static const auto default_val = intrusive::MakeShared<ObjectMsgFoo>();
     return default_val.Get();
   }
   const std::string& is_deleted() const { return *is_deleted_; }
@@ -115,7 +115,7 @@ OBJECT_MSG_BEGIN(ObjectMsgBar)
   // Setters
   ObjectMsgFoo* mut_foo() { return mutable_foo(); }
   ObjectMsgFoo* mutable_foo() {
-    if (!foo_) { foo_ = intrusive::SharedPtr<ObjectMsgFoo>::New(); }
+    if (!foo_) { foo_ = intrusive::MakeShared<ObjectMsgFoo>(); }
     return foo_.Mutable();
   }
   std::string* mut_is_deleted() { return is_deleted_; }
@@ -134,7 +134,7 @@ OBJECT_MSG_END(ObjectMsgBar)
 // clang-format on
 
 TEST(OBJECT_MSG, nested_objects) {
-  auto bar = intrusive::SharedPtr<ObjectMsgBar>::New();
+  auto bar = intrusive::MakeShared<ObjectMsgBar>();
   bar->mutable_foo()->set_bar(9527);
   ASSERT_TRUE(bar->foo().bar() == 9527);
 }
@@ -143,7 +143,7 @@ TEST(OBJECT_MSG, nested_delete) {
   std::string bar_is_deleted;
   std::string is_deleted;
   {
-    auto bar = intrusive::SharedPtr<ObjectMsgBar>::New();
+    auto bar = intrusive::MakeShared<ObjectMsgBar>();
     bar->set_is_deleted(&bar_is_deleted);
     auto* foo = bar->mutable_foo();
     foo->set_bar(9527);
@@ -178,7 +178,7 @@ OBJECT_MSG_END(ObjectMsgContainerDemo)
 // clang-format on
 
 TEST(OBJECT_MSG, flat_msg_field) {
-  auto obj = intrusive::SharedPtr<ObjectMsgContainerDemo>::New();
+  auto obj = intrusive::MakeShared<ObjectMsgContainerDemo>();
   ASSERT_TRUE(!obj->flat_field().has_int32_field());
   obj->mutable_flat_field()->set_int32_field(33);
   ASSERT_TRUE(obj->flat_field().has_int32_field());

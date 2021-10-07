@@ -34,9 +34,9 @@ namespace vm {
 namespace test {
 
 TEST(StringStreamType, init_string_object) {
-  auto vm_desc = intrusive::SharedPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
+  auto vm_desc = intrusive::MakeShared<VmDesc>(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol", "InitStringSymbol"});
-  auto vm = intrusive::SharedPtr<VirtualMachine>::New(vm_desc.Get());
+  auto vm = intrusive::MakeShared<VirtualMachine>(vm_desc.Get());
   InstructionMsgList list;
   int64_t symbol_id = IdUtil::NewLogicalSymbolId();
   CHECK_JUST(Global<symbol::Storage<StringSymbol>>::Get()->Add(symbol_id, "foobar"));

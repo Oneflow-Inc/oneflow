@@ -31,7 +31,7 @@ namespace oneflow {
 namespace vm {
 
 intrusive::SharedPtr<InstructionMsg> NewInstruction(const std::string& instr_type_name) {
-  return intrusive::SharedPtr<InstructionMsg>::New(instr_type_name);
+  return intrusive::MakeShared<InstructionMsg>(instr_type_name);
 }
 
 Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {

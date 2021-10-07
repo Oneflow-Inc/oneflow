@@ -57,7 +57,7 @@ intrusive::SharedPtr<StreamDesc> TransportStreamType::MakeTransportStreamDesc(
   if (resource.has_gpu_device_num()) {
     device_num = std::max<std::size_t>(device_num, resource.gpu_device_num());
   }
-  auto ret = intrusive::SharedPtr<StreamDesc>::New();
+  auto ret = intrusive::MakeShared<StreamDesc>();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<DerivedT>());
   // TODO(lixinqi): remove this ugly field
   ret->set_num_machines(1);

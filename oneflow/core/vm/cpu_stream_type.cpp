@@ -60,7 +60,7 @@ intrusive::SharedPtr<StreamDesc> CpuStreamType::MakeStreamDesc(const Resource& r
                                                                int64_t this_machine_id) const {
   if (!resource.has_cpu_device_num()) { return intrusive::SharedPtr<StreamDesc>(); }
   std::size_t device_num = resource.cpu_device_num();
-  auto ret = intrusive::SharedPtr<StreamDesc>::New();
+  auto ret = intrusive::MakeShared<StreamDesc>();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CpuStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(device_num);

@@ -52,7 +52,7 @@ Maybe<int64_t> NewSymbolId(vm::IdGenerator* id_generator,
                            vm::InstructionMsgList* instruction_list) {
   int64_t symbol_id = JUST(id_generator->NewSymbolId());
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New("NewSymbol");
+      intrusive::MakeShared<vm::InstructionMsg>("NewSymbol");
   instruction->add_int64_operand(symbol_id);
   instruction_list->PushBack(instruction.Mutable());
   return symbol_id;
@@ -187,7 +187,7 @@ Maybe<int64_t> CreateSymbolIdHelper<T>::Call(vm::IdGenerator* id_generator,
   int64_t symbol_id = JUST(NewSymbolId(id_generator, instruction_list));
   {
     intrusive::SharedPtr<vm::InstructionMsg> instruction =
-        intrusive::SharedPtr<vm::InstructionMsg>::New(GetInstrTypeName<T>());
+        intrusive::MakeShared<vm::InstructionMsg>(GetInstrTypeName<T>());
     instruction->add_init_symbol_operand(symbol_id);
     instruction_list->PushBack(instruction.Mutable());
   }
@@ -209,7 +209,7 @@ Maybe<int64_t> CreateSymbolIdHelper<cfg::ParallelConf>::Call(
   int64_t symbol_id = JUST(id_generator->NewSymbolId());
   {
     intrusive::SharedPtr<vm::InstructionMsg> instruction =
-        intrusive::SharedPtr<vm::InstructionMsg>::New(GetInstrTypeName<cfg::ParallelConf>());
+        intrusive::MakeShared<vm::InstructionMsg>(GetInstrTypeName<cfg::ParallelConf>());
     instruction->add_int64_operand(symbol_id);
     instruction_list->PushBack(instruction.Mutable());
   }
@@ -225,7 +225,7 @@ Maybe<int64_t> CreateSymbolIdHelper<cfg::ParallelConf>::Call(
 
 Maybe<int64_t> InstructionsBuilder::NewSymbolId() {
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New("NewSymbol");
+      intrusive::MakeShared<vm::InstructionMsg>("NewSymbol");
   int64_t symbol_id = JUST(id_generator_->NewSymbolId());
   instruction->add_int64_operand(symbol_id);
   instruction_list_->PushBack(instruction.Mutable());
@@ -236,7 +236,7 @@ Maybe<int64_t> InstructionsBuilder::NewObjectId(
     const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
   int64_t object_id = JUST(id_generator_->NewObjectId());
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New("NewObject");
+      intrusive::MakeShared<vm::InstructionMsg>("NewObject");
   instruction->add_parallel_desc(JUST(parallel_desc_sym->symbol_id()));
   instruction->add_int64_operand(object_id);
   instruction_list_->PushBack(instruction.Mutable());
@@ -256,7 +256,7 @@ template<typename T>
 Maybe<intrusive::SharedPtr<LocalDepObject>> InstructionsBuilder::MakeCriticalSectionBegin(
     const one::EagerBlobObjectListPtr& eager_blob_objects) {
   static std::string instr_name("CriticalSectionBegin");
-  auto instruction = intrusive::SharedPtr<vm::InstructionMsg>::New(instr_name);
+  auto instruction = intrusive::MakeShared<vm::InstructionMsg>(instr_name);
   const auto& device = JUST(GetCriticalSectionDevice());
   const auto local_dep_object = JUST(LocalDepObject::New(*device));
   const auto& operand = std::make_shared<T>(eager_blob_objects, *local_dep_object);
@@ -270,7 +270,7 @@ Maybe<void> InstructionsBuilder::MakeCriticalSectionEnd(
     const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
     const std::shared_ptr<SharedEventRecord>& event_record) {
   static std::string instr_name("CriticalSectionEnd");
-  auto instruction = intrusive::SharedPtr<vm::InstructionMsg>::New(instr_name);
+  auto instruction = intrusive::MakeShared<vm::InstructionMsg>(instr_name);
   const auto& operand = std::make_shared<PhyInstrOperandT>(eager_blob_object, event_record);
   *instruction->mutable_phy_instr_operand() = operand;
   instruction_list_->EmplaceBack(std::move(instruction));
@@ -303,7 +303,7 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const one::EagerBlobObjectListPtr
     {
       static std::string instr_name("LaunchLazyJob");
       intrusive::SharedPtr<vm::InstructionMsg> instruction =
-          intrusive::SharedPtr<vm::InstructionMsg>::New(instr_name);
+          intrusive::MakeShared<vm::InstructionMsg>(instr_name);
       *instruction->mutable_phy_instr_operand() =
           std::make_shared<vm::LaunchLazyJobPhyInstrOperand>(
               *in_local_dep_object, *out_local_dep_object, op_name2end_event_record, inputs,
@@ -575,7 +575,7 @@ Maybe<void> InstructionsBuilder::ReplaceMirrored(
     const std::vector<std::shared_ptr<compatible_py::BlobObject>>& lhs_objects,
     const std::vector<std::shared_ptr<compatible_py::BlobObject>>& rhs_objects) {
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New("ReplaceMirrored");
+      intrusive::MakeShared<vm::InstructionMsg>("ReplaceMirrored");
   instruction->set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
   for (const auto& lhs_object : lhs_objects) {
     instruction->add_int64_operand(lhs_object->object_id());
@@ -698,7 +698,7 @@ Maybe<int64_t> InstructionsBuilder::BroadcastObjectReference(
     const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
   int64_t object_id = JUST(id_generator_->NewObjectId());
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New("BroadcastObjectReference");
+      intrusive::MakeShared<vm::InstructionMsg>("BroadcastObjectReference");
   instruction->set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
   instruction->add_int64_operand(object_id);
   instruction->add_int64_operand(sole_mirrored_object->object_id());
@@ -727,7 +727,7 @@ Maybe<void> InstructionsBuilder::BuildSendInstruction(
     const std::shared_ptr<compatible_py::BlobObject>& src_blob_object,
     const std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>& token_ids) {
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New("SendBlob");
+      intrusive::MakeShared<vm::InstructionMsg>("SendBlob");
   instruction->set_parallel_desc_symbol_id(
       JUST(src_blob_object->parallel_desc_symbol()->symbol_id()));
   instruction->add_symbol_operand(JUST(dst_parallel_desc_symbol->symbol_id()));
@@ -745,7 +745,7 @@ Maybe<void> InstructionsBuilder::BuildRecvInstruction(
     const std::shared_ptr<compatible_py::BlobObject>& dst_blob_object,
     const std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>& token_ids) {
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New("ReceiveBlob");
+      intrusive::MakeShared<vm::InstructionMsg>("ReceiveBlob");
   instruction->set_parallel_desc_symbol_id(
       JUST(dst_blob_object->parallel_desc_symbol()->symbol_id()));
   instruction->add_symbol_operand(JUST(src_parallel_desc_symbol->symbol_id()));
@@ -784,7 +784,7 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     input->set_last_used_device(op_device);
   }
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New(instr_type_name);
+      intrusive::MakeShared<vm::InstructionMsg>(instr_type_name);
   auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
       opkernel, input_eager_blob_objects, output_eager_blob_objects, consistent_tensor_infer_result,
       ctx, *one::CurrentDevVmDepObjectConsumeMode());
@@ -803,7 +803,7 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
 Maybe<void> InstructionsBuilder::CudaHostRegisterBlob(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New("CudaHostRegisterBlob");
+      intrusive::MakeShared<vm::InstructionMsg>("CudaHostRegisterBlob");
   instruction->set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
   instruction->add_mut_operand(blob_object->object_id());
   instruction_list_->PushBack(instruction.Mutable());
@@ -813,7 +813,7 @@ Maybe<void> InstructionsBuilder::CudaHostRegisterBlob(
 Maybe<void> InstructionsBuilder::CudaHostUnregisterBlob(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New("CudaHostUnregisterBlob");
+      intrusive::MakeShared<vm::InstructionMsg>("CudaHostUnregisterBlob");
   instruction->set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
   instruction->add_mut_operand(blob_object->object_id());
   instruction_list_->PushBack(instruction.Mutable());
@@ -842,7 +842,7 @@ Maybe<void> InstructionsBuilder::LazyReference(
     const std::string& interface_op_name) {
   std::string device_tag = blob_object->parallel_desc_symbol()->device_tag();
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New(device_tag + ".LazyReference");
+      intrusive::MakeShared<vm::InstructionMsg>(device_tag + ".LazyReference");
   instruction->set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
   instruction->add_mut_operand(blob_object->object_id());
   std::shared_ptr<StringSymbol> interface_op_name_sym =
@@ -884,7 +884,7 @@ Maybe<compatible_py::Object> InstructionsBuilder::GetSharedOpKernelObject4Parall
 
 Maybe<void> InstructionsBuilder::InitStringSymbol(int64_t symbol_id, std::string str) {
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New("InitStringSymbol");
+      intrusive::MakeShared<vm::InstructionMsg>("InitStringSymbol");
   instruction->add_init_symbol_operand(symbol_id);
   instruction_list_->PushBack(instruction.Mutable());
   vm::cfg::EagerSymbol eager_symbol;
@@ -897,7 +897,7 @@ Maybe<void> InstructionsBuilder::InitStringSymbol(int64_t symbol_id, std::string
 Maybe<void> InstructionsBuilder::InitJobConfSymbol(
     int64_t symbol_id, const std::shared_ptr<cfg::JobConfigProto>& job_conf) {
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New("InitJobDescSymbol");
+      intrusive::MakeShared<vm::InstructionMsg>("InitJobDescSymbol");
   instruction->add_init_symbol_operand(symbol_id);
   instruction_list_->PushBack(instruction.Mutable());
   vm::cfg::EagerSymbol eager_symbol;
@@ -910,7 +910,7 @@ Maybe<void> InstructionsBuilder::InitJobConfSymbol(
 Maybe<void> InstructionsBuilder::NewParallelConfSymbol(
     int64_t symbol_id, const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New("NewParallelDescSymbol");
+      intrusive::MakeShared<vm::InstructionMsg>("NewParallelDescSymbol");
   instruction->add_int64_operand(symbol_id);
   instruction_list_->PushBack(instruction.Mutable());
   vm::cfg::EagerSymbol eager_symbol;
@@ -923,7 +923,7 @@ Maybe<void> InstructionsBuilder::NewParallelConfSymbol(
 Maybe<void> InstructionsBuilder::NewScopeSymbol(
     int64_t symbol_id, const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New("InitScopeSymbol");
+      intrusive::MakeShared<vm::InstructionMsg>("InitScopeSymbol");
   instruction->add_init_symbol_operand(symbol_id);
   instruction_list_->PushBack(instruction.Mutable());
   vm::cfg::EagerSymbol eager_symbol;
@@ -939,7 +939,7 @@ Maybe<int64_t> InstructionsBuilder::_NewOpKernelObject(
     const std::shared_ptr<OperatorConfSymbol>& op_conf_sym) {
   int64_t object_id = JUST(NewObjectId(parallel_desc_symbol));
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New("InitOpKernelObject");
+      intrusive::MakeShared<vm::InstructionMsg>("InitOpKernelObject");
   instruction->set_parallel_desc_symbol_id(JUST(parallel_desc_symbol->symbol_id()));
   instruction->add_symbol_operand(JUST(job_desc_sym->symbol_id()));
   instruction->add_symbol_operand(JUST(op_conf_sym->symbol_id()));
@@ -951,7 +951,7 @@ Maybe<int64_t> InstructionsBuilder::_NewOpKernelObject(
 Maybe<void> InstructionsBuilder::InitOpNodeSignatureDescSymbol(
     int64_t symbol_id, const std::shared_ptr<cfg::OpNodeSignature>& op_node_signature_sym) {
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New("InitOpNodeSignatureDescSymbol");
+      intrusive::MakeShared<vm::InstructionMsg>("InitOpNodeSignatureDescSymbol");
   instruction->add_init_symbol_operand(symbol_id);
   instruction_list_->PushBack(instruction.Mutable());
   vm::cfg::EagerSymbol eager_symbol;
@@ -964,7 +964,7 @@ Maybe<void> InstructionsBuilder::InitOpNodeSignatureDescSymbol(
 Maybe<void> InstructionsBuilder::InitOpConfSymbol(
     int64_t symbol_id, const std::shared_ptr<cfg::OperatorConf>& op_conf) {
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New("InitOperatorConfSymbol");
+      intrusive::MakeShared<vm::InstructionMsg>("InitOperatorConfSymbol");
   instruction->add_init_symbol_operand(symbol_id);
   instruction_list_->PushBack(instruction.Mutable());
   vm::cfg::EagerSymbol eager_symbol;
@@ -977,7 +977,7 @@ Maybe<void> InstructionsBuilder::InitOpConfSymbol(
 Maybe<void> InstructionsBuilder::InsertRemoveForeignCallbackInstruction(int64_t object_id,
                                                                         int64_t callback_id) {
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New("RemoveForeignCallback");
+      intrusive::MakeShared<vm::InstructionMsg>("RemoveForeignCallback");
   instruction->add_mut_operand(object_id, vm::AllMirroredObject());
   instruction->add_int64_operand(callback_id);
   instruction_list_->PushBack(instruction.Mutable());
@@ -989,7 +989,7 @@ Maybe<void> InstructionsBuilder::_FetchBlob(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object, int64_t callback_id) {
   const std::string& device_tag = blob_object->parallel_desc_symbol()->device_tag();
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New(device_tag + "." + instruction_name);
+      intrusive::MakeShared<vm::InstructionMsg>(device_tag + "." + instruction_name);
   instruction->set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
   instruction->add_const_operand(blob_object->object_id());
   instruction->add_int64_operand(callback_id);
@@ -1001,7 +1001,7 @@ Maybe<void> InstructionsBuilder::FeedBlob(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object, int64_t callback_id) {
   const std::string& device_tag = blob_object->parallel_desc_symbol()->device_tag();
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New(device_tag + "." + "FeedBlob");
+      intrusive::MakeShared<vm::InstructionMsg>(device_tag + "." + "FeedBlob");
   instruction->set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
   instruction->add_mut2_operand(blob_object->object_id());
   instruction->add_int64_operand(callback_id);
@@ -1023,7 +1023,7 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   }
   std::string instr_name = parallel_desc->device_tag() + ".ReleaseTensor";
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New(instr_name);
+      intrusive::MakeShared<vm::InstructionMsg>(instr_name);
   LocalDepObject* compute_local_dep_object = JUST(eager_blob_object->compute_local_dep_object());
   *instruction->mutable_phy_instr_operand() = std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(
       eager_blob_object, compute_local_dep_object);
@@ -1041,7 +1041,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(LocalDepObject* compute_local_de
 
   {
     intrusive::SharedPtr<vm::InstructionMsg> instruction =
-        intrusive::SharedPtr<vm::InstructionMsg>::New(parallel_desc->device_tag() + ".RecordEvent");
+        intrusive::MakeShared<vm::InstructionMsg>(parallel_desc->device_tag() + ".RecordEvent");
     *instruction->mutable_phy_instr_operand() =
         std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(compute_local_dep_object,
                                                                    modifier);
@@ -1050,7 +1050,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(LocalDepObject* compute_local_de
   }
   {
     intrusive::SharedPtr<vm::InstructionMsg> instruction =
-        intrusive::SharedPtr<vm::InstructionMsg>::New("Touch");
+        intrusive::MakeShared<vm::InstructionMsg>("Touch");
     *instruction->mutable_phy_instr_operand() =
         std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(compute_local_dep_object,
                                                                    modifier);
@@ -1108,7 +1108,7 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
   const auto& parallel_desc = GetParallelDesc(tensor);
   std::string instr_name = parallel_desc->device_tag() + ".AccessBlobByCallback";
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New(instr_name);
+      intrusive::MakeShared<vm::InstructionMsg>(instr_name);
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
   LocalDepObject* compute_local_dep_object = JUST(tensor->compute_local_dep_object());
   *instruction->mutable_phy_instr_operand() = std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(
@@ -1129,7 +1129,7 @@ template Maybe<void> InstructionsBuilder::AccessBlobByCallback(
 Maybe<void> InstructionsBuilder::ComputeRankFrontSeqCallback(
     const std::function<void()>& callback) {
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New("ComputeRankFrontSeqCallback");
+      intrusive::MakeShared<vm::InstructionMsg>("ComputeRankFrontSeqCallback");
   instruction->add_int64_operand(GlobalProcessCtx::Rank());
   *instruction->mutable_phy_instr_operand() =
       std::make_shared<vm::NoArgCbPhyInstrOperand>(callback);
@@ -1139,7 +1139,7 @@ Maybe<void> InstructionsBuilder::ComputeRankFrontSeqCallback(
 
 Maybe<void> InstructionsBuilder::ComputeGlobalFrontSeqBarrier() {
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New("ComputeGlobalFrontSeqBarrier");
+      intrusive::MakeShared<vm::InstructionMsg>("ComputeGlobalFrontSeqBarrier");
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
@@ -1158,7 +1158,7 @@ Maybe<void> InstructionsBuilder::FetchBlobBody(
 
 Maybe<void> InstructionsBuilder::_TryClearObject(compatible_py::Object* blob_object) {
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New("TryClearObject");
+      intrusive::MakeShared<vm::InstructionMsg>("TryClearObject");
   instruction->set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
   instruction->add_mut_operand(blob_object->object_id());
   instruction_list_->PushBack(instruction.Mutable());
@@ -1167,7 +1167,7 @@ Maybe<void> InstructionsBuilder::_TryClearObject(compatible_py::Object* blob_obj
 
 Maybe<void> InstructionsBuilder::_DeleteObject(compatible_py::Object* blob_object) {
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New("DeleteObject");
+      intrusive::MakeShared<vm::InstructionMsg>("DeleteObject");
   instruction->set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
   instruction->add_del_operand(blob_object->object_id());
   instruction_list_->PushBack(instruction.Mutable());
@@ -1191,8 +1191,7 @@ Maybe<void> InstructionsBuilder::_StatefulCallOpKernel(
         std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
         mut2_operand_blob_objects) {
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New(parallel_desc_sym->device_tag() + "."
-                                                    + instr_name);
+      intrusive::MakeShared<vm::InstructionMsg>(parallel_desc_sym->device_tag() + "." + instr_name);
   instruction->set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
   instruction->add_mut_operand(opkernel_object->object_id());
   instruction->add_symbol_operand(JUST(op_node_signature_sym->symbol_id()));
@@ -1252,8 +1251,7 @@ Maybe<void> InstructionsBuilder::_StatelessCallOpKernel(
         std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
         mut2_operand_blob_objects) {
   intrusive::SharedPtr<vm::InstructionMsg> instruction =
-      intrusive::SharedPtr<vm::InstructionMsg>::New(parallel_desc_sym->device_tag() + "."
-                                                    + instr_name);
+      intrusive::MakeShared<vm::InstructionMsg>(parallel_desc_sym->device_tag() + "." + instr_name);
   instruction->set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
   instruction->add_symbol_operand(JUST(job_desc_sym->symbol_id()));
   instruction->add_symbol_operand(JUST(op_conf_sym->symbol_id()));

@@ -36,7 +36,7 @@ intrusive::SharedPtr<VmDesc> MakeVmDesc(
     stream_type_ids.insert(instr_type_id.stream_type_id());
   });
   auto vm_desc =
-      intrusive::SharedPtr<VmDesc>::New(intrusive::SharedPtr<VmResourceDesc>::New(resource).Get());
+      intrusive::MakeShared<VmDesc>(intrusive::MakeShared<VmResourceDesc>(resource).Get());
   SetMachineIdRange(vm_desc->mutable_machine_id_range(), resource.machine_num(), this_machine_id);
   int cnt = 0;
   for (const auto& stream_type_id : stream_type_ids) {

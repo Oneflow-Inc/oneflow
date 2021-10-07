@@ -50,7 +50,7 @@ Maybe<void> LocalDepObject::Init(const Device& device) {
 }
 
 Maybe<intrusive::SharedPtr<LocalDepObject>> LocalDepObject::New(const Device& device) {
-  auto local_dep_obj = intrusive::SharedPtr<LocalDepObject>::New();
+  auto local_dep_obj = intrusive::MakeShared<LocalDepObject>();
   JUST(local_dep_obj.Mutable()->Init(device));
   return local_dep_obj;
 }

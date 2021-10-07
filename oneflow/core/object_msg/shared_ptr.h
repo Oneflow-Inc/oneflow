@@ -39,6 +39,14 @@ class SharedPtr final {
   }
   ~SharedPtr() { Clear(); }
 
+  template<typename... Args>
+  static SharedPtr MakeShared(Args&&... args) {
+    SharedPtr ret;
+    PtrUtil::NewAndInitRef(&ret.ptr_);
+    ret.Mutable()->__Init__(std::forward<Args>(args)...);
+    return ret;
+  }
+
   operator bool() const { return ptr_ != nullptr; }
   const value_type& Get() const { return *ptr_; }
   const value_type* operator->() const { return ptr_; }
@@ -63,14 +71,6 @@ class SharedPtr final {
     return *this;
   }
 
-  template<typename... Args>
-  static SharedPtr New(Args&&... args) {
-    SharedPtr ret;
-    PtrUtil::NewAndInitRef(&ret.ptr_);
-    ret.Mutable()->__Init__(std::forward<Args>(args)...);
-    return ret;
-  }
-
   static SharedPtr __UnsafeMove__(value_type* ptr) {
     SharedPtr ret;
     ret.ptr_ = ptr;
@@ -89,6 +89,11 @@ class SharedPtr final {
   }
   value_type* ptr_;
 };
+
+template<typename T, typename... Args>
+SharedPtr<T> MakeShared(Args&&... args) {
+  return SharedPtr<T>::MakeShared(std::forward<Args>(args)...);
+}
 
 }  // namespace intrusive
 

@@ -58,11 +58,11 @@ class NewSymbolInstructionType final : public InstructionType {
     CHECK(view.Match(instr_msg->operand()));
     FOR_RANGE(int, i, 0, view->symbol_id_size()) {
       int64_t symbol_id = GetLogicalObjectId(view->symbol_id(i));
-      auto logical_object = intrusive::SharedPtr<LogicalObject>::New(symbol_id);
+      auto logical_object = intrusive::MakeShared<LogicalObject>(symbol_id);
       CHECK(vm->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
       auto* global_device_id2mirrored_object =
           logical_object->mut_global_device_id2mirrored_object();
-      auto mirrored_object = intrusive::SharedPtr<MirroredObject>::New(logical_object.Mutable(), 0);
+      auto mirrored_object = intrusive::MakeShared<MirroredObject>(logical_object.Mutable(), 0);
       CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
     }
   }
@@ -118,7 +118,7 @@ void ControlStreamType::Compute(Instruction* instruction) const { UNIMPLEMENTED(
 
 intrusive::SharedPtr<StreamDesc> ControlStreamType::MakeStreamDesc(const Resource& resource,
                                                                    int64_t this_machine_id) const {
-  auto ret = intrusive::SharedPtr<StreamDesc>::New();
+  auto ret = intrusive::MakeShared<StreamDesc>();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<ControlStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
