@@ -55,11 +55,11 @@ INTRUSIVE_BEGIN(LocalDepObject);
     return mirrored_object_.Mutable();
   }
 
-
   // methods
-  OF_PUBLIC static Maybe<intrusive::SharedPtr<LocalDepObject>> New(const Device& device);
+  static Maybe<intrusive::SharedPtr<LocalDepObject>> New(const Device& device);
 
-  OF_PRIVATE Maybe<void> Init(const Device& device);
+ private:
+  Maybe<void> Init(const Device& device);
 
   // fields
   INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<vm::LogicalObject>, logical_object_);

@@ -41,10 +41,11 @@ enum OperandMemZoneModifier {
 // clang-format off
 template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
 FLAT_MSG_BEGIN(ModifiedOperand);
-  OF_PUBLIC static const OperandAccessModifier operand_access_modifier = access_modifier;
-  OF_PUBLIC static const OperandMemZoneModifier operand_mem_zone_modifier = mem_zone_modifier;
+ public:
+  static const OperandAccessModifier operand_access_modifier = access_modifier;
+  static const OperandMemZoneModifier operand_mem_zone_modifier = mem_zone_modifier;
   // methods
-  OF_PUBLIC int64_t logical_object_id() const { return operand().logical_object_id(); }
+  int64_t logical_object_id() const { return operand().logical_object_id(); }
   // fields
   FLAT_MSG_DEFINE_OPTIONAL(Operand, operand);
 FLAT_MSG_END(ModifiedOperand);
@@ -67,10 +68,11 @@ namespace cfg {
 }
 
 FLAT_MSG_BEGIN(InstructionOperand);
+ public:
   // methods
-  OF_PUBLIC void __Init__(const InstructionOperandProto& proto);
-  OF_PUBLIC void __Init__(const cfg::InstructionOperandProto& proto); 
-  OF_PUBLIC void ToProto(InstructionOperandProto* proto) const;
+  void __Init__(const InstructionOperandProto& proto);
+  void __Init__(const cfg::InstructionOperandProto& proto); 
+  void ToProto(InstructionOperandProto* proto) const;
   // fields
   FLAT_MSG_DEFINE_STRICT_ONEOF(_,
     FLAT_MSG_ONEOF_FIELD(ConstOperand, const_operand)

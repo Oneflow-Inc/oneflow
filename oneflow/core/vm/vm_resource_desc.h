@@ -44,15 +44,17 @@ INTRUSIVE_BEGIN(VmResourceDesc);
 
 
   // methods
-  OF_PUBLIC void __Init__(const Resource& resource);
-  OF_PUBLIC void __Init__(
+  void __Init__(const Resource& resource);
+  void __Init__(
       int64_t machine_num, const DeviceTag2DeviceNum& device_tag2device_num);
-  OF_PUBLIC void CopyFrom(const VmResourceDesc& vm_resource_desc);
-  OF_PUBLIC int64_t GetGlobalDeviceId(int64_t machine_id, int64_t device_id) const;
+  void CopyFrom(const VmResourceDesc& vm_resource_desc);
+  int64_t GetGlobalDeviceId(int64_t machine_id, int64_t device_id) const;
 
+ private:
   // fields
   INTRUSIVE_DEFINE_FIELD(int64_t, machine_num_);
   INTRUSIVE_DEFINE_FIELD(int64_t, max_device_num_per_machine_);
+  // maps
   INTRUSIVE_DEFINE_FIELD(DeviceTag2DeviceNum, device_tag2device_num_);
 INTRUSIVE_END(VmResourceDesc);
 // clang-format on

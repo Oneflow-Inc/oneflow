@@ -47,21 +47,22 @@ INTRUSIVE_BEGIN(ThreadCtx);
   PendingInstructionChannel* mut_pending_instruction_list() { return &pending_instruction_list_; }
 
   // methods
-  OF_PUBLIC void __Init__(const StreamRtDesc& stream_rt_desc) {
+  void __Init__(const StreamRtDesc& stream_rt_desc) {
     __Init__();
     set_stream_rt_desc(&stream_rt_desc);
   }
-  OF_PUBLIC void LoopRun(const std::function<void(ThreadCtx*)>& Initializer);
+  void LoopRun(const std::function<void(ThreadCtx*)>& Initializer);
+  intrusive::ChannelStatus TryReceiveAndRun();
+  
+ private:
+  intrusive::ChannelStatus ReceiveAndRun();
   // fields
   INTRUSIVE_DEFINE_FIELD(const StreamRtDesc*, stream_rt_desc_); 
-
   // list entries
   INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, thread_ctx_entry_);
+  // lists
   INTRUSIVE_DEFINE_FIELD(StreamList, stream_list_);
   INTRUSIVE_DEFINE_FIELD(PendingInstructionChannel, pending_instruction_list_);
-
-  OF_PRIVATE intrusive::ChannelStatus ReceiveAndRun();
-  OF_PUBLIC intrusive::ChannelStatus TryReceiveAndRun();
 INTRUSIVE_END(ThreadCtx);
 // clang-format on
 

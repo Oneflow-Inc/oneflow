@@ -28,8 +28,6 @@ struct ThreadCtx;
 // clang-format off
 INTRUSIVE_BEGIN(Stream);
  public:
-  void __Init__();
-
   // types
   using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, instruction_entry_)>;
 
@@ -56,29 +54,30 @@ INTRUSIVE_BEGIN(Stream);
   StreamId* mut_stream_id() { return stream_id_.mut_key(); }
 
   // methods
-  OF_PUBLIC void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id, const int64_t max_device_num_per_machine);
-  OF_PUBLIC intrusive::SharedPtr<Instruction> NewInstruction(InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc);
-  OF_PUBLIC void DeleteInstruction(intrusive::SharedPtr<Instruction>&&);
-  OF_PUBLIC int64_t global_device_id() const { return stream_id().global_device_id(); }
-  OF_PUBLIC int64_t machine_id() const;
-  OF_PUBLIC int64_t device_id() const;
-  OF_PUBLIC const StreamType& stream_type() const;
-  OF_PUBLIC const StreamTypeId& stream_type_id() const;
-  OF_PRIVATE void MoveToFreeList(intrusive::SharedPtr<Instruction>&& instruction);
-  OF_PRIVATE void MoveFromZombieListToFreeList();
+  void __Init__();
+  void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id, const int64_t max_device_num_per_machine);
+  intrusive::SharedPtr<Instruction> NewInstruction(InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc);
+  void DeleteInstruction(intrusive::SharedPtr<Instruction>&&);
+  int64_t global_device_id() const { return stream_id().global_device_id(); }
+  int64_t machine_id() const;
+  int64_t device_id() const;
+  const StreamType& stream_type() const;
+  const StreamTypeId& stream_type_id() const;
+
+ private:
+  void MoveToFreeList(intrusive::SharedPtr<Instruction>&& instruction);
+  void MoveFromZombieListToFreeList();
 
   // fields
   INTRUSIVE_DEFINE_FIELD(ThreadCtx*, thread_ctx_); 
   INTRUSIVE_DEFINE_FIELD(std::unique_ptr<DeviceCtx>, device_ctx_);
   INTRUSIVE_DEFINE_FIELD(int64_t, max_device_num_per_machine_);
-  
   // list entries
   INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, active_stream_entry_);
   INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, thread_ctx_stream_entry_);
   using StreamIdKey = intrusive::SkipListEntry<StreamId, 10>;
   INTRUSIVE_DEFINE_FIELD(StreamIdKey, stream_id_);
-
-  // heads 
+  // lists 
   INTRUSIVE_DEFINE_FIELD(InstructionList, free_instruction_list_);
   INTRUSIVE_DEFINE_FIELD(InstructionList, zombie_instruction_list_);
   INTRUSIVE_DEFINE_FIELD(InstructionList, running_instruction_list_);

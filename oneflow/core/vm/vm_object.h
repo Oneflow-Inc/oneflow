@@ -69,24 +69,23 @@ INTRUSIVE_BEGIN(RwMutexedObjectAccess);
   MirroredObjectId* mut_mirrored_object_id() { return mirrored_object_id_.mut_key()->Mutable(); }
 
   // methods
-  OF_PUBLIC void __Init__(Instruction* instruction, MirroredObject* mirrored_object,
+  void __Init__(Instruction* instruction, MirroredObject* mirrored_object,
                        OperandAccessType access_type);
 
-  OF_PUBLIC bool is_const_operand() const;
-  OF_PUBLIC bool is_mut_operand() const;
+  bool is_const_operand() const;
+  bool is_mut_operand() const;
 
+ private:
   // fields
   INTRUSIVE_DEFINE_FIELD(OperandAccessType, access_type_);
   INTRUSIVE_DEFINE_FIELD(Instruction*, instruction_);
   INTRUSIVE_DEFINE_FIELD(MirroredObject*, mirrored_object_);
   INTRUSIVE_DEFINE_FIELD(RwMutexedObject*, rw_mutexed_object_);
-
   // list entries
   INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, instruction_access_entry_);
   INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, rw_mutexed_object_access_entry_);
   using MirroredObjectIdKey = intrusive::SkipListEntry<FlatMsg<MirroredObjectId>, 10>;
   INTRUSIVE_DEFINE_FIELD(MirroredObjectIdKey, mirrored_object_id_);
-  
 INTRUSIVE_END(RwMutexedObjectAccess);
 
 struct LogicalObject;
@@ -103,10 +102,10 @@ INTRUSIVE_BEGIN(RwMutexedObject);
   RwMutexedObjectAccessList* mut_access_list() { return &access_list_; }
 
   // methods
-  OF_PUBLIC template<typename T> bool Has() const {
+  template<typename T> bool Has() const {
     return dynamic_cast<const T*>(&object()) != nullptr;
   }
-  OF_PUBLIC template<typename T> Maybe<const T&> Get() const {
+  template<typename T> Maybe<const T&> Get() const {
     const T* obj = dynamic_cast<const T*>(&object());
     const auto &origin_obj = *object_ptr_;
     CHECK_NOTNULL_OR_RETURN(obj)
@@ -114,7 +113,7 @@ INTRUSIVE_BEGIN(RwMutexedObject);
       << "type: " << (object_ptr_ ? typeid(origin_obj).name() : "nullptr");
     return *obj;
   }
-  OF_PUBLIC template<typename T> Maybe<T*> Mut() {
+  template<typename T> Maybe<T*> Mut() {
     T* obj = dynamic_cast<T*>(object_ptr_.get());
     const auto &origin_obj = *object_ptr_;
     CHECK_NOTNULL_OR_RETURN(obj)
@@ -122,17 +121,17 @@ INTRUSIVE_BEGIN(RwMutexedObject);
       << "type: " << (object_ptr_ ? typeid(origin_obj).name() : "nullptr");
     return obj;
   }
-  OF_PUBLIC template<typename T, typename... Args> T* Init(Args&&... args) {
+  template<typename T, typename... Args> T* Init(Args&&... args) {
     T* object = dynamic_cast<T*>(object_ptr_.get());
     CHECK(object == nullptr);
     object = new T(std::forward<Args>(args)...);
     reset_object(object);
     return object;
   }
-  OF_PUBLIC const Object& object() const { return *object_ptr_; }
-  OF_PUBLIC bool has_object() const { return static_cast<bool>(object_ptr_); }
-  OF_PUBLIC void reset_object(Object* object) { object_ptr_.reset(object); }
-  OF_PUBLIC void reset_object() { reset_object(nullptr); }
+  const Object& object() const { return *object_ptr_; }
+  bool has_object() const { return static_cast<bool>(object_ptr_); }
+  void reset_object(Object* object) { object_ptr_.reset(object); }
+  void reset_object() { reset_object(nullptr); }
 
   // fields
   INTRUSIVE_DEFINE_FIELD(std::unique_ptr<Object>, object_ptr_);
@@ -172,16 +171,15 @@ INTRUSIVE_BEGIN(MirroredObject);
 
 
   // methods
-  OF_PUBLIC void __Init__() { clear_deleting_access(); }
-  OF_PUBLIC void __Init__(LogicalObject* logical_object, int64_t global_device_id);
+  void __Init__() { clear_deleting_access(); }
+  void __Init__(LogicalObject* logical_object, int64_t global_device_id);
 
+ private:
   //fields
   INTRUSIVE_DEFINE_FIELD(FlatMsg<MirroredObjectId>, mirrored_object_id_);
   INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<RwMutexedObject>, rw_mutexed_object_);
   INTRUSIVE_DEFINE_FIELD(RwMutexedObjectAccess*, deleting_access_);
-
-
-  // list entries
+  // map entries
   using Int64Key = intrusive::SkipListEntry<int64_t, 10>;
   INTRUSIVE_DEFINE_FIELD(Int64Key, global_device_id_);
 INTRUSIVE_END(MirroredObject);
@@ -208,24 +206,25 @@ INTRUSIVE_BEGIN(LogicalObject);
   }
 
   // methods
-  OF_PUBLIC void __Init__() { /* Do nothing */ }
-  OF_PUBLIC void __Init__(const ObjectId& logical_object_id) {
+  void __Init__() { /* Do nothing */ }
+  void __Init__(const ObjectId& logical_object_id) {
     __Init__(logical_object_id, std::shared_ptr<const ParallelDesc>());
   }
-  OF_PUBLIC void __Init__(const ObjectId& logical_object_id,
+  void __Init__(const ObjectId& logical_object_id,
                        const std::shared_ptr<const ParallelDesc>& parallel_desc) {
     set_logical_object_id(logical_object_id);
     *mut_parallel_desc() = parallel_desc;
   }
 
+ private:
   // fields
   INTRUSIVE_DEFINE_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
-
-  // list entries
+  // map entries
   using ObjectIdKey = intrusive::SkipListEntry<ObjectId, 24>;
   INTRUSIVE_DEFINE_FIELD(ObjectIdKey, logical_object_id_);
+  // list entries
   INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, delete_entry_);
-  // heads
+  // maps
   INTRUSIVE_DEFINE_FIELD(GlobalDeviceId2MirroredObject, global_device_id2mirrored_object_);
 INTRUSIVE_END(LogicalObject);
 // clang-format on

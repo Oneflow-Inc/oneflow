@@ -51,6 +51,7 @@ INTRUSIVE_BEGIN(StreamTypeIdItem);
   // Setters
   StreamTypeId* mut_stream_type_id() { return stream_type_id_.mut_key()->Mutable(); }
 
+ private:
   using StreamTypeIdKey = intrusive::SkipListEntry<FlatMsg<StreamTypeId>, 20>;
   INTRUSIVE_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);
 INTRUSIVE_END(StreamTypeIdItem);

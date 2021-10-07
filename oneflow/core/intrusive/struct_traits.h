@@ -27,9 +27,6 @@ namespace oneflow {
 #define STRUCT_FIELD_TYPE(T, field) decltype(((T*)nullptr)->field)
 #define STRUCT_FIELD_OFFSET(T, field) offsetof(T, field)
 
-#define OF_PUBLIC public:
-#define OF_PRIVATE private:
-
 // details
 template<typename T, typename F, int offset>
 struct StructField {

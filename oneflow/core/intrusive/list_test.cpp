@@ -31,6 +31,10 @@ namespace {
 INTRUSIVE_BEGIN(TestListItem)
  public:
   void __Init__() { clear_cnt(); }
+  void __Delete__() {
+    if (has_cnt()) { --*mut_cnt(); }
+  }
+
   // Getters
   bool has_cnt() const { return cnt_ != nullptr; }
   int cnt() const { return *cnt_; }
@@ -41,13 +45,9 @@ INTRUSIVE_BEGIN(TestListItem)
   void clear_cnt() { cnt_ = nullptr; }
   int* mut_cnt() { return cnt_; }
 
+ private:
   INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, foo_list_);
   INTRUSIVE_DEFINE_FIELD(int*, cnt_);
-
- public:
-  void __Delete__() {
-    if (has_cnt()) { --*mut_cnt(); }
-  }
 INTRUSIVE_END(TestListItem)
 // clang-format on
 
@@ -248,12 +248,14 @@ TEST(List, FOR_EACH) {
 INTRUSIVE_BEGIN(TestIntrusiveListHead);
  public:
   TestIntrusiveListHead() = default;
+  // types
   using FooList = intrusive::List<INTRUSIVE_FIELD(TestListItem, foo_list_)>;
   // Getters
   const FooList& foo_list() const { return foo_list_; }
   // Setters
   FooList* mut_foo_list() { return &foo_list_; }
 
+ private:
   INTRUSIVE_DEFINE_FIELD(FooList, foo_list_);
 INTRUSIVE_END(TestIntrusiveListHead);
 // clang-format on
@@ -302,6 +304,7 @@ INTRUSIVE_BEGIN(TestIntrusiveListHeadWrapper);
     if (head_) { head_.Reset(); }
   }
 
+ private:
   INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<TestIntrusiveListHead>, head_);
 INTRUSIVE_END(TestIntrusiveListHeadWrapper);
 // clang-format on
@@ -368,19 +371,24 @@ INTRUSIVE_BEGIN(SelfLoopContainer);
   void clear_deleted() { deleted_ = nullptr; }
 
   // methods
-  OF_PUBLIC void __Init__(bool* deleted) {
+  void __Init__(bool* deleted) {
     __Init__();
     set_deleted(deleted);
   }
-  OF_PUBLIC void __Delete__() { *mut_deleted() = true; }
+  void __Delete__() { *mut_deleted() = true; }
+
+ private:
   // fields
   INTRUSIVE_DEFINE_FIELD(bool*, deleted_);
   // list entries
   INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, entry_);
  public:
+  // Do not insert other INTRUSIVE_DEFINE_FIELDs between `using SelfLoopContainerList = ...;` and
+  // `INTRUSIVE_DEFINE_FIELD(SelfLoopContainerList, ...);` 
   using SelfLoopContainerList = intrusive::HeadFreeList<INTRUSIVE_FIELD(SelfLoopContainer, entry_), INTRUSIVE_FIELD_COUNTER>;
   const SelfLoopContainerList& head() const { return head_; }
   SelfLoopContainerList* mut_head() { return &head_; }
+ private:
   INTRUSIVE_DEFINE_FIELD(SelfLoopContainerList, head_);
 INTRUSIVE_END(SelfLoopContainer);
 // clang-format on

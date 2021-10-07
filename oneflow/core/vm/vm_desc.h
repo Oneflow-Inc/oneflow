@@ -48,18 +48,17 @@ INTRUSIVE_BEGIN(VmDesc);
   StreamTypeId2StreamDesc* mut_stream_type_id2desc() { return &stream_type_id2desc_; }
 
   // methods
-  OF_PUBLIC void __Init__(const VmResourceDesc& vm_resource_desc) {
+  void __Init__(const VmResourceDesc& vm_resource_desc) {
     __Init__(vm_resource_desc, Range(0, 1));
   }
-  OF_PUBLIC void __Init__(const VmResourceDesc& vm_resource_desc, const Range& machine_id_range) {
+  void __Init__(const VmResourceDesc& vm_resource_desc, const Range& machine_id_range) {
     mut_vm_resource_desc()->CopyFrom(vm_resource_desc);
     *mut_machine_id_range() = machine_id_range;
   }
-  
+ private:  
   // fields
   INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<VmResourceDesc>, vm_resource_desc_);
   INTRUSIVE_DEFINE_FIELD(Range, machine_id_range_);
-
   // maps
   INTRUSIVE_DEFINE_FIELD(StreamTypeId2StreamDesc, stream_type_id2desc_);
 INTRUSIVE_END(VmDesc);

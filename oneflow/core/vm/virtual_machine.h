@@ -88,41 +88,22 @@ INTRUSIVE_BEGIN(VirtualMachine);
   Id2LogicalObject* mut_id2logical_object() { return &id2logical_object_; }
 
   // methods
-  OF_PUBLIC void __Init__(const VmDesc& vm_desc);
-  OF_PUBLIC Maybe<void> Receive(InstructionMsgList* instr_list);
-  OF_PUBLIC Maybe<void> Receive(intrusive::SharedPtr<InstructionMsg>&& instruction_msg);
-  OF_PUBLIC void Schedule();
-  OF_PUBLIC bool ThreadUnsafeEmpty() const;
-  OF_PUBLIC bool Empty() const;
-  OF_PUBLIC Maybe<const ParallelDesc> GetInstructionParallelDesc(const InstructionMsg&);
-  OF_PUBLIC MirroredObject* MutMirroredObject(int64_t logical_object_id, int64_t global_device_id);
-  OF_PUBLIC const MirroredObject* GetMirroredObject(int64_t logical_object_id,
-                                                 int64_t global_device_id);
+  void __Init__(const VmDesc& vm_desc);
+  Maybe<void> Receive(InstructionMsgList* instr_list);
+  Maybe<void> Receive(intrusive::SharedPtr<InstructionMsg>&& instruction_msg);
+  void Schedule();
+  bool ThreadUnsafeEmpty() const;
+  bool Empty() const;
+  Maybe<const ParallelDesc> GetInstructionParallelDesc(const InstructionMsg&);
+  MirroredObject* MutMirroredObject(int64_t logical_object_id, int64_t global_device_id);
+  const MirroredObject* GetMirroredObject(int64_t logical_object_id,
+                                       int64_t global_device_id);
 
-  OF_PUBLIC int64_t this_machine_id() const;
-  OF_PUBLIC int64_t this_start_global_device_id() const {
+  int64_t this_machine_id() const;
+  int64_t this_start_global_device_id() const {
     return this_machine_id() * vm_resource_desc().max_device_num_per_machine();
   }
 
-  // fields
-  INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<VmResourceDesc>, vm_resource_desc_);
-  INTRUSIVE_DEFINE_FIELD(Range, machine_id_range_);
-  INTRUSIVE_DEFINE_FIELD(std::atomic<int64_t>, flying_instruction_cnt_);
-
-  // heads
-  INTRUSIVE_DEFINE_FIELD(ActiveStreamList, active_stream_list_);
-  INTRUSIVE_DEFINE_FIELD(ThreadCtxList, thread_ctx_list_);
-  INTRUSIVE_DEFINE_FIELD(StreamTypeId2StreamRtDesc, stream_type_id2stream_rt_desc_);
-  INTRUSIVE_DEFINE_FIELD(Id2LogicalObject, id2logical_object_);
-  INTRUSIVE_DEFINE_FIELD(LogicalObjectDeleteList, delete_logical_object_list_);
-
-  INTRUSIVE_DEFINE_FIELD(InstructionMsgMutextList, pending_msg_list_);
-  INTRUSIVE_DEFINE_FIELD(InstructionList, waiting_instruction_list_);
-  INTRUSIVE_DEFINE_FIELD(InstructionList, ready_instruction_list_);
-  INTRUSIVE_DEFINE_FIELD(VmStatRunningInstructionList, vm_stat_running_instruction_list_);
-  INTRUSIVE_DEFINE_FIELD(FrontSeqInstructionList, front_seq_compute_instr_list_);
-
-  // methods
  private:
   using TmpPendingInstrMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, instr_msg_entry_)>;
   using NewInstructionList = InstructionList;
@@ -186,6 +167,22 @@ INTRUSIVE_BEGIN(VirtualMachine);
 
   void TryDeleteLogicalObjects();
 
+  // fields
+  INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<VmResourceDesc>, vm_resource_desc_);
+  INTRUSIVE_DEFINE_FIELD(Range, machine_id_range_);
+  INTRUSIVE_DEFINE_FIELD(std::atomic<int64_t>, flying_instruction_cnt_);
+  // lists or maps
+  // Do not change the order of the following fields 
+  INTRUSIVE_DEFINE_FIELD(ActiveStreamList, active_stream_list_);
+  INTRUSIVE_DEFINE_FIELD(ThreadCtxList, thread_ctx_list_);
+  INTRUSIVE_DEFINE_FIELD(StreamTypeId2StreamRtDesc, stream_type_id2stream_rt_desc_);
+  INTRUSIVE_DEFINE_FIELD(Id2LogicalObject, id2logical_object_);
+  INTRUSIVE_DEFINE_FIELD(LogicalObjectDeleteList, delete_logical_object_list_);
+  INTRUSIVE_DEFINE_FIELD(InstructionMsgMutextList, pending_msg_list_);
+  INTRUSIVE_DEFINE_FIELD(InstructionList, waiting_instruction_list_);
+  INTRUSIVE_DEFINE_FIELD(InstructionList, ready_instruction_list_);
+  INTRUSIVE_DEFINE_FIELD(VmStatRunningInstructionList, vm_stat_running_instruction_list_);
+  INTRUSIVE_DEFINE_FIELD(FrontSeqInstructionList, front_seq_compute_instr_list_);
 INTRUSIVE_END(VirtualMachine);
 // clang-format on
 

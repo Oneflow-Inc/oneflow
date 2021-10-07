@@ -43,6 +43,7 @@ INTRUSIVE_BEGIN(InstructionOperandList);
   // Setters
   std::vector<FlatMsg<InstructionOperand>>* mut_operand() { return &operand_; }
 
+ private:
   INTRUSIVE_DEFINE_FIELD(std::vector<FlatMsg<InstructionOperand>>, operand_);
 INTRUSIVE_END(InstructionOperandList);
 
@@ -75,39 +76,42 @@ INTRUSIVE_BEGIN(InstructionMsg);
   std::shared_ptr<PhyInstrOperand>* mut_phy_instr_operand() { return &phy_instr_operand_; }
 
   // methods
-  OF_PUBLIC void __Init__();
-  OF_PUBLIC void __Init__(const std::string& instr_type_name);
-  OF_PUBLIC void __Init__(const InstructionProto& proto);
-  OF_PUBLIC void __Init__(const cfg::InstructionProto& proto); 
-  OF_PUBLIC void __Init__(const InstructionMsg& instr_msg);
+  void __Init__();
+  void __Init__(const std::string& instr_type_name);
+  void __Init__(const InstructionProto& proto);
+  void __Init__(const cfg::InstructionProto& proto); 
+  void __Init__(const InstructionMsg& instr_msg);
 
-  OF_PUBLIC void ToProto(InstructionProto* proto) const;
-  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_parallel_desc(int64_t symbol_id);
-  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_double_operand(double double_operand);
-  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_int64_operand(int64_t int64_operand);
-  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_uint64_operand(uint64_t uint64_operand);
-  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_bool_operand(bool bool_operand);
-  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_separator();
-  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id);
-  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id, const SoleMirroredObject&);
-  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id, const AllMirroredObject&);
-  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_symbol_operand(ObjectId logical_object_id);
-  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id);
-  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id, const SoleMirroredObject&);
-  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id, const AllMirroredObject&);
-  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_init_symbol_operand(ObjectId logical_object_id);
-  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id);
-  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const SoleMirroredObject&);
-  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const AllMirroredObject&);
-  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> add_del_operand(ObjectId logical_object_id);
-  OF_PUBLIC const std::vector<FlatMsg<InstructionOperand>>& operand() const {
+  void ToProto(InstructionProto* proto) const;
+  intrusive::SharedPtr<InstructionMsg> add_parallel_desc(int64_t symbol_id);
+  intrusive::SharedPtr<InstructionMsg> add_double_operand(double double_operand);
+  intrusive::SharedPtr<InstructionMsg> add_int64_operand(int64_t int64_operand);
+  intrusive::SharedPtr<InstructionMsg> add_uint64_operand(uint64_t uint64_operand);
+  intrusive::SharedPtr<InstructionMsg> add_bool_operand(bool bool_operand);
+  intrusive::SharedPtr<InstructionMsg> add_separator();
+  intrusive::SharedPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id);
+  intrusive::SharedPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id, const SoleMirroredObject&);
+  intrusive::SharedPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id, const AllMirroredObject&);
+  intrusive::SharedPtr<InstructionMsg> add_symbol_operand(ObjectId logical_object_id);
+  intrusive::SharedPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id);
+  intrusive::SharedPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id, const SoleMirroredObject&);
+  intrusive::SharedPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id, const AllMirroredObject&);
+  intrusive::SharedPtr<InstructionMsg> add_init_symbol_operand(ObjectId logical_object_id);
+  intrusive::SharedPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id);
+  intrusive::SharedPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const SoleMirroredObject&);
+  intrusive::SharedPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const AllMirroredObject&);
+  intrusive::SharedPtr<InstructionMsg> add_del_operand(ObjectId logical_object_id);
+  const std::vector<FlatMsg<InstructionOperand>>& operand() const {
     return operand_list().operand();
   }
-  OF_PUBLIC std::vector<FlatMsg<InstructionOperand>>* mut_operand() {
+  std::vector<FlatMsg<InstructionOperand>>* mut_operand() {
     return mut_operand_list()->mut_operand();
   }
-  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> Clone() const;
-  OF_PUBLIC intrusive::SharedPtr<InstructionMsg> MakeInferInstrMsg() const;
+  intrusive::SharedPtr<InstructionMsg> Clone() const;
+  intrusive::SharedPtr<InstructionMsg> MakeInferInstrMsg() const;
+
+ private:
+  InstructionOperand* add_instr_operand();
 
   // fields
   INTRUSIVE_DEFINE_FIELD(InstrTypeId, instr_type_id_);
@@ -117,13 +121,8 @@ INTRUSIVE_BEGIN(InstructionMsg);
   INTRUSIVE_DEFINE_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
   INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<InstructionOperandList>, operand_list_);
   INTRUSIVE_DEFINE_FIELD(std::shared_ptr<PhyInstrOperand>, phy_instr_operand_);
-
-
   // list entries
   INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, instr_msg_entry_);
-
-  // private methods
-  OF_PRIVATE InstructionOperand* add_instr_operand();
 INTRUSIVE_END(InstructionMsg);
 // clang-format on
 
@@ -165,12 +164,13 @@ INTRUSIVE_BEGIN(InstructionEdge);
   Instruction* mut_src_instruction() { return src_instruction_; } 
   Instruction* mut_dst_instruction() { return dst_instruction_; } 
   // methods
-  OF_PUBLIC void __Init__(Instruction* src_instruction, Instruction* dst_instruction) {
+  void __Init__(Instruction* src_instruction, Instruction* dst_instruction) {
     __Init__();
     set_src_instruction(src_instruction);
     set_dst_instruction(dst_instruction);
   }
 
+ private:
   // fields
   INTRUSIVE_DEFINE_FIELD(Instruction*, src_instruction_); 
   INTRUSIVE_DEFINE_FIELD(Instruction*, dst_instruction_); 
@@ -233,90 +233,82 @@ INTRUSIVE_BEGIN(Instruction);
   }
 
   // methods
-  OF_PUBLIC void __Init__(InstructionMsg* instr_msg, Stream* stream, const std::shared_ptr<const ParallelDesc>& parallel_desc);
-  OF_PUBLIC void __Delete__();
-  OF_PUBLIC bool Done() const;
-  OF_PUBLIC void set_has_event_record(bool val);
-  OF_PUBLIC const StreamType& stream_type() const;
-
-  OF_PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
+  void __Init__(InstructionMsg* instr_msg, Stream* stream, const std::shared_ptr<const ParallelDesc>& parallel_desc);
+  void __Delete__();
+  bool Done() const;
+  void set_has_event_record(bool val);
+  const StreamType& stream_type() const;
+  template<OperandMemZoneModifier mem_zone_modifier>
       const RwMutexedObject* operand_type(const Operand& operand) const {
     CheckOperand<mem_zone_modifier>(operand);
     return operand_type(operand, GetOperandDefaultGlobalDeviceId());
   }
-  OF_PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
+  template<OperandMemZoneModifier mem_zone_modifier>
       const RwMutexedObject* operand_value(const Operand& operand) const {
     CheckOperand<mem_zone_modifier>(operand);
     return operand_value(operand, GetOperandDefaultGlobalDeviceId());
   }
-  OF_PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
+  template<OperandMemZoneModifier mem_zone_modifier>
       RwMutexedObject* mut_operand_type(const Operand& operand) {
     CheckOperand<mem_zone_modifier>(operand);
     return mut_operand_type(operand, GetOperandDefaultGlobalDeviceId());
   }
-  OF_PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
+  template<OperandMemZoneModifier mem_zone_modifier>
       RwMutexedObject* mut_operand_value(const Operand& operand) {
     CheckOperand<mem_zone_modifier>(operand);
     return mut_operand_value(operand, GetOperandDefaultGlobalDeviceId());
   }
-
-  OF_PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
+  template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
   const RwMutexedObject* operand_type(
       const ModifiedOperand<access_modifier, mem_zone_modifier>& operand) const {
     return operand_type<mem_zone_modifier>(operand.operand());
   }
-  OF_PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
+  template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
   const RwMutexedObject* operand_value(
       const ModifiedOperand<access_modifier, mem_zone_modifier>& operand) const {
     return operand_value<mem_zone_modifier>(operand.operand());
   }
-  OF_PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
+  template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
   RwMutexedObject* mut_operand_type(
       const ModifiedOperand<access_modifier, mem_zone_modifier>& operand) {
     return mut_operand_type<mem_zone_modifier>(operand.operand());
   }
-  OF_PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
+  template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
   RwMutexedObject* mut_operand_value(
       const ModifiedOperand<access_modifier, mem_zone_modifier>& operand) {
     return mut_operand_value<mem_zone_modifier>(operand.operand());
   }
-
-  OF_PUBLIC template<InterpretType interpret_type>
+  template<InterpretType interpret_type>
          MirroredObject* MutMirroredObject(const MutOperand& mut_operand) {
     return MirroredObjectUtil<interpret_type>::Mut(this, mut_operand);
   }
-
-  OF_PUBLIC template<InterpretType interpret_type>
+  template<InterpretType interpret_type>
          const MirroredObject* GetMirroredObject(const ConstOperand& const_operand) const {
     return MirroredObjectUtil<interpret_type>::Get(*this, const_operand);
   }
+  MirroredObject* mut_type_mirrored_object(const MutOperand& mut_operand);
+  MirroredObject* mut_value_mirrored_object(const MutOperand& mut_operand);
 
-  OF_PUBLIC MirroredObject* mut_type_mirrored_object(const MutOperand& mut_operand);
-  OF_PUBLIC MirroredObject* mut_value_mirrored_object(const MutOperand& mut_operand);
-
-  // private methods
-  OF_PRIVATE template<int64_t(*TransformLogicalObjectId)(int64_t)>
+ private:
+  template<int64_t(*TransformLogicalObjectId)(int64_t)>
           MirroredObject* MutMirroredObject(const Operand& operand,
                                             int64_t default_global_device_id);
-  OF_PRIVATE template<int64_t(*TransformLogicalObjectId)(int64_t)>
+  template<int64_t(*TransformLogicalObjectId)(int64_t)>
           const MirroredObject* GetMirroredObject(const Operand& operand,
                                                   int64_t default_global_device_id) const;
-  OF_PRIVATE const RwMutexedObject* operand_type(const Operand& operand,
+  const RwMutexedObject* operand_type(const Operand& operand,
                                               int64_t default_global_device_id) const;
-  OF_PRIVATE const RwMutexedObject* operand_value(const Operand& operand,
+  const RwMutexedObject* operand_value(const Operand& operand,
                                                int64_t default_global_device_id) const;
-  OF_PRIVATE RwMutexedObject* mut_operand_type(const Operand& operand,
+  RwMutexedObject* mut_operand_type(const Operand& operand,
                                             int64_t default_global_device_id);
-  OF_PRIVATE RwMutexedObject* mut_operand_value(const Operand& operand,  
+  RwMutexedObject* mut_operand_value(const Operand& operand,  
                                              int64_t default_global_device_id);
-
-  OF_PRIVATE MirroredObject* MutMirroredObject(const Operand& operand,
+  MirroredObject* MutMirroredObject(const Operand& operand,
                                                      int64_t default_global_device_id) {
     return MutMirroredObject<&IdUtil::GetValueId>(operand, default_global_device_id);
   }
-
-  OF_PRIVATE int64_t GetOperandDefaultGlobalDeviceId() const;
-
+  int64_t GetOperandDefaultGlobalDeviceId() const;
   template<InterpretType interpret_type>
   struct MirroredObjectUtil {
     static const MirroredObject* Get(const Instruction&, const ConstOperand&);
@@ -328,7 +320,6 @@ INTRUSIVE_BEGIN(Instruction);
   INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<InstructionMsg>, instr_msg_);
   INTRUSIVE_DEFINE_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
   INTRUSIVE_DEFINE_FIELD(Stream*, stream_); 
-
   // list entries
   INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, instruction_entry_);
   // `vm_stat_running_instruction_entry` valid from instruction ready to instruction done 
@@ -336,10 +327,8 @@ INTRUSIVE_BEGIN(Instruction);
   INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, pending_instruction_entry_);
   INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, front_seq_infer_instr_entry_);
   INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, front_seq_compute_instr_entry_);
-
   // maps
   INTRUSIVE_DEFINE_FIELD(MirroredObjectId2RwMutexedObjectAccess, mirrored_object_id2access_);
-
   // lists
   INTRUSIVE_DEFINE_FIELD(RwMutexedObjectAccessList, access_list_);
   INTRUSIVE_DEFINE_FIELD(InEdgeList, in_edges_);

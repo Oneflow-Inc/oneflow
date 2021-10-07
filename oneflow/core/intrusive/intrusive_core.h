@@ -33,14 +33,20 @@ namespace oneflow {
    public:                                           \
     using self_type = class_name;                    \
     static const bool __has_intrusive_ref__ = true;  \
-    OF_PRIVATE DEFINE_STATIC_COUNTER(field_counter); \
+                                                     \
+   private:                                          \
+    DEFINE_STATIC_COUNTER(field_counter);            \
     DSS_BEGIN(STATIC_COUNTER(field_counter), class_name);
 
 #define INTRUSIVE_END(class_name)                                                   \
   _INTRUSIVE_DEFINE_REF();                                                          \
   static_assert(__has_intrusive_ref__, "this class is not intrusive-referenced");   \
-  OF_PUBLIC static const int __NumberOfFields__ = STATIC_COUNTER(field_counter);    \
-  OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                \
+                                                                                    \
+ public:                                                                            \
+  static const int __NumberOfFields__ = STATIC_COUNTER(field_counter);              \
+                                                                                    \
+ private:                                                                           \
+  INCREASE_STATIC_COUNTER(field_counter);                                           \
   DSS_END(STATIC_COUNTER(field_counter), "intrusive-referenced class", class_name); \
   }                                                                                 \
   ;
@@ -92,7 +98,9 @@ namespace oneflow {
                                                                                                 \
  private:                                                                                       \
   intrusive::Ref __intrusive_ref__;                                                             \
-  OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                            \
+                                                                                                \
+ private:                                                                                       \
+  INCREASE_STATIC_COUNTER(field_counter);                                                       \
   DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "intrusive-referenced class", intrusive::Ref, \
                    __intrusive_ref__);
 

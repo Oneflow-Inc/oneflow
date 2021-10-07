@@ -35,18 +35,20 @@ FLAT_MSG_BEGIN(AllMirroredObject);
 FLAT_MSG_END(AllMirroredObject);
 
 FLAT_MSG_BEGIN(Operand);
+ public:
   // methods
   // init current_global_device_id
-  OF_PUBLIC void __Init__(const ObjectId& logical_object_id);
+  void __Init__(const ObjectId& logical_object_id);
   // init sole_mirrored_object
-  OF_PUBLIC void __Init__(const ObjectId& logical_object_id, const SoleMirroredObject&);
+  void __Init__(const ObjectId& logical_object_id, const SoleMirroredObject&);
   // init all_mirrored_object
-  OF_PUBLIC void __Init__(const ObjectId& logical_object_id, const AllMirroredObject&);
-  OF_PUBLIC void __Init__(const OperandProto& proto);
-  OF_PUBLIC void __Init__(const cfg::OperandProto& proto);
-  OF_PUBLIC void ToProto(OperandProto* proto) const;
-  OF_PUBLIC int64_t GetGlobalDeviceId(int64_t default_global_device_id) const;
+  void __Init__(const ObjectId& logical_object_id, const AllMirroredObject&);
+  void __Init__(const OperandProto& proto);
+  void __Init__(const cfg::OperandProto& proto);
+  void ToProto(OperandProto* proto) const;
+  int64_t GetGlobalDeviceId(int64_t default_global_device_id) const;
 
+ private:
   // fields
   FLAT_MSG_DEFINE_OPTIONAL(ObjectId, logical_object_id);
   FLAT_MSG_DEFINE_ONEOF(operand_type,
@@ -58,23 +60,24 @@ FLAT_MSG_END(Operand);
 
 // clang-format off
 FLAT_MSG_BEGIN(MirroredObjectId);
+ public:
   // methods
-  OF_PUBLIC void __Init__() {}
-  OF_PUBLIC void __Init__(int64_t logical_object_id_value, int64_t global_device_id);
-  OF_PUBLIC template<int64_t(*TransformLogicalObjectId)(int64_t)>
+  void __Init__() {}
+  void __Init__(int64_t logical_object_id_value, int64_t global_device_id);
+  template<int64_t(*TransformLogicalObjectId)(int64_t)>
          void __Init__(const Operand& operand, int64_t global_device_id) {
     __Init__(TransformLogicalObjectId(operand.logical_object_id()),
              operand.GetGlobalDeviceId(global_device_id));
   }
-  OF_PUBLIC void __Init__(const Operand& operand, int64_t global_device_id) {
+  void __Init__(const Operand& operand, int64_t global_device_id) {
     __Init__(operand.logical_object_id(), operand.GetGlobalDeviceId(global_device_id));
   }
-  OF_PUBLIC FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
+  FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
 
+ private:
   // fields
   FLAT_MSG_DEFINE_OPTIONAL(int64_t, logical_object_id_value);
   FLAT_MSG_DEFINE_OPTIONAL(int64_t, global_device_id);
-
 FLAT_MSG_END(MirroredObjectId);
 // clang-format on
 

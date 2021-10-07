@@ -50,12 +50,12 @@ INTRUSIVE_BEGIN(StreamRtDesc);
   StreamId2Stream* mut_stream_id2stream() { return &stream_id2stream_; }
 
   // methods
-  OF_PUBLIC void __Init__(StreamDesc* stream_desc);
-  OF_PUBLIC const StreamType& stream_type() const;
+  void __Init__(StreamDesc* stream_desc);
+  const StreamType& stream_type() const;
 
+ private:
   // fields
   INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<StreamDesc>, stream_desc_); 
-
   // list entries
   using StreamTypeIdKey = intrusive::SkipListEntry<FlatMsg<StreamTypeId>, 7>;
   INTRUSIVE_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);

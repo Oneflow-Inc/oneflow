@@ -48,6 +48,7 @@ TEST(Ref, ref_cnt) {
 INTRUSIVE_BEGIN(IntrusiveFoo)
  public:
   void __Init__() { clear_is_deleted(); }
+  void __Delete__();
 
   // Getters
   int8_t x() const { return x_; }
@@ -66,14 +67,12 @@ INTRUSIVE_BEGIN(IntrusiveFoo)
   std::string* mut_is_deleted() { return is_deleted_; }
   void clear_is_deleted() { is_deleted_ = nullptr; }
 
-  void __Delete__();
-
+ private:
   INTRUSIVE_DEFINE_FIELD(int8_t, x_);
   INTRUSIVE_DEFINE_FIELD(int32_t, foo_);
   INTRUSIVE_DEFINE_FIELD(int16_t, bar_);
   INTRUSIVE_DEFINE_FIELD(int64_t, foobar_);
   INTRUSIVE_DEFINE_FIELD(std::string*, is_deleted_);
-
 INTRUSIVE_END(IntrusiveFoo)
 // clang-format on
 
@@ -102,6 +101,9 @@ TEST(intrusive, __delete__) {
 INTRUSIVE_BEGIN(IntrusiveBar)
  public:
   void __Init__() { clear_is_deleted(); }
+  void __Delete__(){
+    if (mut_is_deleted()) { *mut_is_deleted() = "bar_deleted"; }
+  }
 
   // Getters
   const IntrusiveFoo& foo() const {
@@ -111,6 +113,7 @@ INTRUSIVE_BEGIN(IntrusiveBar)
   }
   const std::string& is_deleted() const { return *is_deleted_; }
   bool has_is_deleted() const { return is_deleted_ != nullptr; }
+
   // Setters
   IntrusiveFoo* mut_foo() {
     if (!foo_) { foo_ = intrusive::MakeShared<IntrusiveFoo>(); }
@@ -120,13 +123,9 @@ INTRUSIVE_BEGIN(IntrusiveBar)
   void set_is_deleted(std::string* val) { is_deleted_ = val; }
   void clear_is_deleted() { is_deleted_ = nullptr; }
 
+ private:
   INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<IntrusiveFoo>, foo_);
   INTRUSIVE_DEFINE_FIELD(std::string*, is_deleted_);
-
- public:
-  void __Delete__(){
-    if (mut_is_deleted()) { *mut_is_deleted() = "bar_deleted"; }
-  }
 INTRUSIVE_END(IntrusiveBar)
 // clang-format on
 
@@ -169,6 +168,7 @@ INTRUSIVE_BEGIN(IntrusiveContainerDemo)
   // Setters
   FlatMsgDemo* mut_flat_field() { return flat_field_.Mutable(); }
 
+ private:
   INTRUSIVE_DEFINE_FIELD(FlatMsg<FlatMsgDemo>, flat_field_);
 INTRUSIVE_END(IntrusiveContainerDemo)
 // clang-format on

@@ -72,17 +72,17 @@ INTRUSIVE_BEGIN(StreamDesc);
   StreamTypeId* mut_stream_type_id() { return stream_type_id_.mut_key()->Mutable(); }
 
   // methods
-  OF_PUBLIC void __Init__() {}
-  OF_PUBLIC void __Init__(const StreamTypeId& stream_type_id, int32_t num_machines, int32_t num_streams_per_machine,
-                       int32_t num_streams_per_thread);
-  OF_PUBLIC int32_t num_threads() const;
-  OF_PUBLIC int32_t parallel_num() const { return num_machines() * num_streams_per_machine(); }
+  void __Init__() {}
+  void __Init__(const StreamTypeId& stream_type_id, int32_t num_machines, int32_t num_streams_per_machine,
+             int32_t num_streams_per_thread);
+  int32_t num_threads() const;
+  int32_t parallel_num() const { return num_machines() * num_streams_per_machine(); }
 
+ private:
   // fields
   INTRUSIVE_DEFINE_FIELD(int32_t, num_machines_);
   INTRUSIVE_DEFINE_FIELD(int32_t, num_streams_per_machine_);
   INTRUSIVE_DEFINE_FIELD(int32_t, num_streams_per_thread_);
-
   // skiplist entries
   using StreamTypeIdKey = intrusive::SkipListEntry<FlatMsg<StreamTypeId>, 7>;
   INTRUSIVE_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);
