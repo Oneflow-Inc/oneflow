@@ -44,7 +44,7 @@ OBJECT_MSG_BEGIN(InstructionOperandList);
   std::vector<FlatMsg<InstructionOperand>>* mut_operand() { return &operand_; }
   std::vector<FlatMsg<InstructionOperand>>* mutable_operand() { return &operand_; }
 
-  OBJECT_MSG_FIELD(std::vector<FlatMsg<InstructionOperand>>, operand_);
+  OBJECT_MSG_DEFINE_FIELD(std::vector<FlatMsg<InstructionOperand>>, operand_);
 OBJECT_MSG_END(InstructionOperandList);
 
 OBJECT_MSG_BEGIN(InstructionMsg);
@@ -119,17 +119,17 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> MakeInferInstrMsg() const;
 
   // fields
-  OBJECT_MSG_FIELD(InstrTypeId, instr_type_id_);
+  OBJECT_MSG_DEFINE_FIELD(InstrTypeId, instr_type_id_);
   // instr_type_name is a necessary reduandant field for method ToProto
-  OBJECT_MSG_FIELD(std::string, instr_type_name_);
-  OBJECT_MSG_FIELD(int64_t, parallel_desc_symbol_id_);
-  OBJECT_MSG_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
-  OBJECT_MSG_FIELD(ObjectMsgPtr<InstructionOperandList>, operand_list_);
-  OBJECT_MSG_FIELD(std::shared_ptr<PhyInstrOperand>, phy_instr_operand_);
+  OBJECT_MSG_DEFINE_FIELD(std::string, instr_type_name_);
+  OBJECT_MSG_DEFINE_FIELD(int64_t, parallel_desc_symbol_id_);
+  OBJECT_MSG_DEFINE_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
+  OBJECT_MSG_DEFINE_FIELD(ObjectMsgPtr<InstructionOperandList>, operand_list_);
+  OBJECT_MSG_DEFINE_FIELD(std::shared_ptr<PhyInstrOperand>, phy_instr_operand_);
 
 
   // list entries
-  OBJECT_MSG_FIELD(intrusive::ListEntry, instr_msg_entry_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, instr_msg_entry_);
 
   // private methods
   OF_PRIVATE InstructionOperand* add_instr_operand();
@@ -183,11 +183,11 @@ OBJECT_MSG_BEGIN(InstructionEdge);
   }
 
   // fields
-  OBJECT_MSG_FIELD(Instruction*, src_instruction_); 
-  OBJECT_MSG_FIELD(Instruction*, dst_instruction_); 
+  OBJECT_MSG_DEFINE_FIELD(Instruction*, src_instruction_); 
+  OBJECT_MSG_DEFINE_FIELD(Instruction*, dst_instruction_); 
   // list entries
-  OBJECT_MSG_FIELD(intrusive::ListEntry, src_instruction_entry_);
-  OBJECT_MSG_FIELD(intrusive::ListEntry, dst_instruction_entry_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, src_instruction_entry_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, dst_instruction_entry_);
 OBJECT_MSG_END(InstructionEdge);
 // clang-format on
 
@@ -320,18 +320,18 @@ OBJECT_MSG_BEGIN(Instruction);
   };
 
   // fields
-  OBJECT_MSG_FIELD(FlatMsg<InstructionStatusBuffer>, status_buffer_);
-  OBJECT_MSG_FIELD(ObjectMsgPtr<InstructionMsg>, instr_msg_);
-  OBJECT_MSG_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
-  OBJECT_MSG_FIELD(Stream*, stream_); 
+  OBJECT_MSG_DEFINE_FIELD(FlatMsg<InstructionStatusBuffer>, status_buffer_);
+  OBJECT_MSG_DEFINE_FIELD(ObjectMsgPtr<InstructionMsg>, instr_msg_);
+  OBJECT_MSG_DEFINE_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
+  OBJECT_MSG_DEFINE_FIELD(Stream*, stream_); 
 
   // list entries
-  OBJECT_MSG_FIELD(intrusive::ListEntry, instruction_entry_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, instruction_entry_);
   // `vm_stat_running_instruction_entry` valid from instruction ready to instruction done 
-  OBJECT_MSG_FIELD(intrusive::ListEntry, vm_stat_running_instruction_entry_);
-  OBJECT_MSG_FIELD(intrusive::ListEntry, pending_instruction_entry_);
-  OBJECT_MSG_FIELD(intrusive::ListEntry, front_seq_infer_instr_entry_);
-  OBJECT_MSG_FIELD(intrusive::ListEntry, front_seq_compute_instr_entry_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, vm_stat_running_instruction_entry_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, pending_instruction_entry_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, front_seq_infer_instr_entry_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, front_seq_compute_instr_entry_);
   OBJECT_MSG_DEFINE_LIST_HEAD(InstructionEdge, src_instruction_entry, in_edges);
   OBJECT_MSG_DEFINE_LIST_HEAD(InstructionEdge, dst_instruction_entry, out_edges);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(RwMutexedObjectAccess, mirrored_object_id, mirrored_object_id2access);

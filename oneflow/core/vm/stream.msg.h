@@ -59,13 +59,13 @@ OBJECT_MSG_BEGIN(Stream);
   OF_PRIVATE void MoveFromZombieListToFreeList();
 
   // fields
-  OBJECT_MSG_FIELD(ThreadCtx*, thread_ctx_); 
-  OBJECT_MSG_FIELD(std::unique_ptr<DeviceCtx>, device_ctx_);
-  OBJECT_MSG_FIELD(int64_t, max_device_num_per_machine_);
+  OBJECT_MSG_DEFINE_FIELD(ThreadCtx*, thread_ctx_); 
+  OBJECT_MSG_DEFINE_FIELD(std::unique_ptr<DeviceCtx>, device_ctx_);
+  OBJECT_MSG_DEFINE_FIELD(int64_t, max_device_num_per_machine_);
   
   // list entries
-  OBJECT_MSG_FIELD(intrusive::ListEntry, active_stream_entry_);
-  OBJECT_MSG_FIELD(intrusive::ListEntry, thread_ctx_stream_entry_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, active_stream_entry_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, thread_ctx_stream_entry_);
   OBJECT_MSG_DEFINE_MAP_KEY(StreamId, stream_id);
 
   // heads 

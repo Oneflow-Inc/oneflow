@@ -77,9 +77,9 @@ OBJECT_MSG_BEGIN(StreamDesc);
   OF_PUBLIC int32_t parallel_num() const { return num_machines() * num_streams_per_machine(); }
 
   // fields
-  OBJECT_MSG_FIELD(int32_t, num_machines_);
-  OBJECT_MSG_FIELD(int32_t, num_streams_per_machine_);
-  OBJECT_MSG_FIELD(int32_t, num_streams_per_thread_);
+  OBJECT_MSG_DEFINE_FIELD(int32_t, num_machines_);
+  OBJECT_MSG_DEFINE_FIELD(int32_t, num_streams_per_machine_);
+  OBJECT_MSG_DEFINE_FIELD(int32_t, num_streams_per_thread_);
 
   // list entries
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, StreamTypeId, stream_type_id);

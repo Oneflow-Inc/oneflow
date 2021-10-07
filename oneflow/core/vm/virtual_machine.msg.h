@@ -74,9 +74,9 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   }
 
   // fields
-  OBJECT_MSG_FIELD(ObjectMsgPtr<VmResourceDesc>, vm_resource_desc_);
-  OBJECT_MSG_FIELD(Range, machine_id_range_);
-  OBJECT_MSG_FIELD(std::atomic<int64_t>, flying_instruction_cnt_);
+  OBJECT_MSG_DEFINE_FIELD(ObjectMsgPtr<VmResourceDesc>, vm_resource_desc_);
+  OBJECT_MSG_DEFINE_FIELD(Range, machine_id_range_);
+  OBJECT_MSG_DEFINE_FIELD(std::atomic<int64_t>, flying_instruction_cnt_);
 
   // heads
   OBJECT_MSG_DEFINE_LIST_HEAD(Stream, active_stream_entry, active_stream_list);

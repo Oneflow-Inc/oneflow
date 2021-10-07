@@ -36,7 +36,7 @@ OBJECT_MSG_BEGIN(ObjectMsgSkipListFoo);
   int* mutable_is_deleted() { return is_deleted_; }
 
   OBJECT_MSG_DEFINE_MAP_KEY(int32_t, foo_map_key);
-  OBJECT_MSG_FIELD(int*, is_deleted_);
+  OBJECT_MSG_DEFINE_FIELD(int*, is_deleted_);
   void __Delete__() {
     if (has_is_deleted()) { ++*mutable_is_deleted(); }
   }

@@ -42,8 +42,8 @@ OBJECT_MSG_BEGIN(TestListItem)
   int* mut_cnt() { return cnt_; }
   int* mutable_cnt() { return cnt_; }
 
-  OBJECT_MSG_FIELD(intrusive::ListEntry, foo_list_);
-  OBJECT_MSG_FIELD(int*, cnt_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, foo_list_);
+  OBJECT_MSG_DEFINE_FIELD(int*, cnt_);
 
  public:
   void __Delete__() {
@@ -256,7 +256,7 @@ OBJECT_MSG_BEGIN(TestObjectMsgListHead);
   FooList* mut_foo_list() { return &foo_list_; }
   FooList* mutable_foo_list() { return &foo_list_; }
 
-  OBJECT_MSG_FIELD(FooList, foo_list_);
+  OBJECT_MSG_DEFINE_FIELD(FooList, foo_list_);
 OBJECT_MSG_END(TestObjectMsgListHead);
 // clang-format on
 
@@ -305,7 +305,7 @@ OBJECT_MSG_BEGIN(TestObjectMsgListHeadWrapper);
     if (head_) { head_.Reset(); }
   }
 
-  OBJECT_MSG_FIELD(ObjectMsgPtr<TestObjectMsgListHead>, head_);
+  OBJECT_MSG_DEFINE_FIELD(ObjectMsgPtr<TestObjectMsgListHead>, head_);
 OBJECT_MSG_END(TestObjectMsgListHeadWrapper);
 // clang-format on
 
@@ -378,9 +378,9 @@ OBJECT_MSG_BEGIN(SelfLoopContainer);
   }
   OF_PUBLIC void __Delete__() { *mut_deleted() = true; }
   // fields
-  OBJECT_MSG_FIELD(bool*, deleted_);
+  OBJECT_MSG_DEFINE_FIELD(bool*, deleted_);
   // list entries
-  OBJECT_MSG_FIELD(intrusive::ListEntry, entry_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, entry_);
   OBJECT_MSG_DEFINE_LIST_HEAD(SelfLoopContainer, entry, head);
 OBJECT_MSG_END(SelfLoopContainer);
 // clang-format on

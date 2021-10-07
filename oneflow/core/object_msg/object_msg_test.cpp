@@ -49,11 +49,11 @@ OBJECT_MSG_BEGIN(ObjectMsgFoo)
 
   void __Delete__();
 
-  OBJECT_MSG_FIELD(int8_t, x_);
-  OBJECT_MSG_FIELD(int32_t, foo_);
-  OBJECT_MSG_FIELD(int16_t, bar_);
-  OBJECT_MSG_FIELD(int64_t, foobar_);
-  OBJECT_MSG_FIELD(std::string*, is_deleted_);
+  OBJECT_MSG_DEFINE_FIELD(int8_t, x_);
+  OBJECT_MSG_DEFINE_FIELD(int32_t, foo_);
+  OBJECT_MSG_DEFINE_FIELD(int16_t, bar_);
+  OBJECT_MSG_DEFINE_FIELD(int64_t, foobar_);
+  OBJECT_MSG_DEFINE_FIELD(std::string*, is_deleted_);
 
 OBJECT_MSG_END(ObjectMsgFoo)
 // clang-format on
@@ -103,8 +103,8 @@ OBJECT_MSG_BEGIN(ObjectMsgBar)
   void set_is_deleted(std::string* val) { is_deleted_ = val; }
   void clear_is_deleted() { is_deleted_ = nullptr; }
 
-  OBJECT_MSG_FIELD(ObjectMsgPtr<ObjectMsgFoo>, foo_);
-  OBJECT_MSG_FIELD(std::string*, is_deleted_);
+  OBJECT_MSG_DEFINE_FIELD(ObjectMsgPtr<ObjectMsgFoo>, foo_);
+  OBJECT_MSG_DEFINE_FIELD(std::string*, is_deleted_);
 
  public:
   void __Delete__(){
@@ -153,7 +153,7 @@ OBJECT_MSG_BEGIN(ObjectMsgContainerDemo)
   FlatMsgDemo* mut_flat_field() { return flat_field_.Mutable(); }
   FlatMsgDemo* mutable_flat_field() { return flat_field_.Mutable(); }
 
-  OBJECT_MSG_FIELD(FlatMsg<FlatMsgDemo>, flat_field_);
+  OBJECT_MSG_DEFINE_FIELD(FlatMsg<FlatMsgDemo>, flat_field_);
 OBJECT_MSG_END(ObjectMsgContainerDemo)
 // clang-format on
 
@@ -169,16 +169,16 @@ TEST(OBJECT_MSG, flat_msg_field) {
 OBJECT_MSG_BEGIN(TestObjectMsgField);
   static_assert(OBJECT_MSG_FIELD_COUNTER == 0, "");
   static_assert(OBJECT_MSG_FIELD_COUNTER == 0, "");
-  OBJECT_MSG_FIELD(int32_t, a);
+  OBJECT_MSG_DEFINE_FIELD(int32_t, a);
   static_assert(OBJECT_MSG_FIELD_COUNTER == 1, "");
   static_assert(OBJECT_MSG_FIELD_COUNTER == 1, "");
-  OBJECT_MSG_FIELD(int64_t, b);
+  OBJECT_MSG_DEFINE_FIELD(int64_t, b);
   static_assert(OBJECT_MSG_FIELD_COUNTER == 2, "");
   static_assert(OBJECT_MSG_FIELD_COUNTER == 2, "");
-  OBJECT_MSG_FIELD(int8_t, c);
+  OBJECT_MSG_DEFINE_FIELD(int8_t, c);
   static_assert(OBJECT_MSG_FIELD_COUNTER == 3, "");
   static_assert(OBJECT_MSG_FIELD_COUNTER == 3, "");
-  OBJECT_MSG_FIELD(int64_t, d);
+  OBJECT_MSG_DEFINE_FIELD(int64_t, d);
   static_assert(OBJECT_MSG_FIELD_COUNTER == 4, "");
   static_assert(OBJECT_MSG_FIELD_COUNTER == 4, "");
 OBJECT_MSG_END(TestObjectMsgField);

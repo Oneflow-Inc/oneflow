@@ -48,7 +48,7 @@ OBJECT_MSG_BEGIN(StreamRtDesc);
   OF_PUBLIC const StreamType& stream_type() const;
 
   // fields
-  OBJECT_MSG_FIELD(ObjectMsgPtr<StreamDesc>, stream_desc_); 
+  OBJECT_MSG_DEFINE_FIELD(ObjectMsgPtr<StreamDesc>, stream_desc_); 
 
   // list entries
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, StreamTypeId, stream_type_id);

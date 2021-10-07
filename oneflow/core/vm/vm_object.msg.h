@@ -75,14 +75,14 @@ OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
   OF_PUBLIC bool is_mut_operand() const;
 
   // fields
-  OBJECT_MSG_FIELD(OperandAccessType, access_type_);
-  OBJECT_MSG_FIELD(Instruction*, instruction_);
-  OBJECT_MSG_FIELD(MirroredObject*, mirrored_object_);
-  OBJECT_MSG_FIELD(RwMutexedObject*, rw_mutexed_object_);
+  OBJECT_MSG_DEFINE_FIELD(OperandAccessType, access_type_);
+  OBJECT_MSG_DEFINE_FIELD(Instruction*, instruction_);
+  OBJECT_MSG_DEFINE_FIELD(MirroredObject*, mirrored_object_);
+  OBJECT_MSG_DEFINE_FIELD(RwMutexedObject*, rw_mutexed_object_);
 
   // list entries
-  OBJECT_MSG_FIELD(intrusive::ListEntry, instruction_access_entry_);
-  OBJECT_MSG_FIELD(intrusive::ListEntry, rw_mutexed_object_access_entry_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, instruction_access_entry_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, rw_mutexed_object_access_entry_);
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, MirroredObjectId, mirrored_object_id);
   
 OBJECT_MSG_END(RwMutexedObjectAccess);
@@ -125,7 +125,7 @@ OBJECT_MSG_BEGIN(RwMutexedObject);
   OF_PUBLIC void reset_object() { reset_object(nullptr); }
 
   // fields
-  OBJECT_MSG_FIELD(std::unique_ptr<Object>, object_ptr_);
+  OBJECT_MSG_DEFINE_FIELD(std::unique_ptr<Object>, object_ptr_);
 
   // list entries
   OBJECT_MSG_DEFINE_LIST_HEAD(RwMutexedObjectAccess, rw_mutexed_object_access_entry, access_list);
@@ -167,9 +167,9 @@ OBJECT_MSG_BEGIN(MirroredObject);
   OF_PUBLIC void __Init__(LogicalObject* logical_object, int64_t global_device_id);
 
   //fields
-  OBJECT_MSG_FIELD(FlatMsg<MirroredObjectId>, mirrored_object_id_);
-  OBJECT_MSG_FIELD(ObjectMsgPtr<RwMutexedObject>, rw_mutexed_object_);
-  OBJECT_MSG_FIELD(RwMutexedObjectAccess*, deleting_access_);
+  OBJECT_MSG_DEFINE_FIELD(FlatMsg<MirroredObjectId>, mirrored_object_id_);
+  OBJECT_MSG_DEFINE_FIELD(ObjectMsgPtr<RwMutexedObject>, rw_mutexed_object_);
+  OBJECT_MSG_DEFINE_FIELD(RwMutexedObjectAccess*, deleting_access_);
 
 
   // list entries
@@ -199,11 +199,11 @@ OBJECT_MSG_BEGIN(LogicalObject);
   }
 
   // fields
-  OBJECT_MSG_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
+  OBJECT_MSG_DEFINE_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
 
   // list entries
   OBJECT_MSG_DEFINE_MAP_KEY(ObjectId, logical_object_id);
-  OBJECT_MSG_FIELD(intrusive::ListEntry, delete_entry_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, delete_entry_);
   // heads
   OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, global_device_id, global_device_id2mirrored_object);
 OBJECT_MSG_END(LogicalObject);

@@ -47,10 +47,10 @@ namespace oneflow {
   }                                                                                 \
   ;
 
-#define OBJECT_MSG_FIELD(field_type, field_name)                                    \
+#define OBJECT_MSG_DEFINE_FIELD(field_type, field_name)                             \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
   OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                \
-  _OBJECT_MSG_FIELD(STATIC_COUNTER(field_counter), field_type, field_name);
+  _OBJECT_MSG_DEFINE_FIELD(STATIC_COUNTER(field_counter), field_type, field_name);
 
 // Get field number by field name
 // note: field numbers start from 1 instead of 0.
@@ -68,13 +68,13 @@ namespace oneflow {
 // e.g.:
 // OBJECT_MSG_BEGIN(Foo);
 //   static_assert(OBJECT_MSG_FIELD_COUNTER == 0, "");
-//   OBJECT_MSG_FIELD(int64_t, a);
+//   OBJECT_MSG_DEFINE_FIELD(int64_t, a);
 //   static_assert(OBJECT_MSG_FIELD_COUNTER == 1, "");
-//   OBJECT_MSG_FIELD(int64_t, b);
+//   OBJECT_MSG_DEFINE_FIELD(int64_t, b);
 //   static_assert(OBJECT_MSG_FIELD_COUNTER == 2, "");
-//   OBJECT_MSG_FIELD(int8_t, c);
+//   OBJECT_MSG_DEFINE_FIELD(int8_t, c);
 //   static_assert(OBJECT_MSG_FIELD_COUNTER == 3, "");
-//   OBJECT_MSG_FIELD(int64_t, d);
+//   OBJECT_MSG_DEFINE_FIELD(int64_t, d);
 // OBJECT_MSG_END(Foo);
 #define OBJECT_MSG_FIELD_COUNTER STATIC_COUNTER(field_counter)
 
@@ -133,11 +133,11 @@ namespace oneflow {
   struct ObjectMsgField__Delete__<field_counter, WalkCtxType, PtrFieldType> \
       : public delete_template<WalkCtxType, PtrFieldType> {};
 
-#define _OBJECT_MSG_FIELD(field_counter, field_type, field_name)   \
- private:                                                          \
-  field_type field_name;                                           \
-  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgFieldInit);     \
-  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgFieldDelete); \
+#define _OBJECT_MSG_DEFINE_FIELD(field_counter, field_type, field_name) \
+ private:                                                               \
+  field_type field_name;                                                \
+  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgFieldInit);          \
+  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgFieldDelete);      \
   DSS_DEFINE_FIELD(field_counter, "object message", field_type, field_name);
 
 template<typename WalkCtxType, typename FieldType>

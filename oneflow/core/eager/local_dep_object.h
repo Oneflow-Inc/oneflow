@@ -64,13 +64,13 @@ OBJECT_MSG_BEGIN(LocalDepObject);
   OF_PRIVATE Maybe<void> Init(const Device& device);
 
   // fields
-  OBJECT_MSG_FIELD(ObjectMsgPtr<vm::LogicalObject>, logical_object_);
-  OBJECT_MSG_FIELD(ObjectMsgPtr<vm::MirroredObject>, mirrored_object_); 
+  OBJECT_MSG_DEFINE_FIELD(ObjectMsgPtr<vm::LogicalObject>, logical_object_);
+  OBJECT_MSG_DEFINE_FIELD(ObjectMsgPtr<vm::MirroredObject>, mirrored_object_); 
 
   // list entries
-  OBJECT_MSG_FIELD(intrusive::ListEntry, pool_entry_);
-  OBJECT_MSG_FIELD(intrusive::ListEntry, stored_entry_);
-  OBJECT_MSG_FIELD(intrusive::ListEntry, lifetime_entry_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, pool_entry_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, stored_entry_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, lifetime_entry_);
 OBJECT_MSG_END(LocalDepObject);
 // clang-format on
 

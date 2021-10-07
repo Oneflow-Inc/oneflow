@@ -30,10 +30,10 @@ OBJECT_MSG_BEGIN(Foo);
   void set_x(int val) { x_ = val; }
 
   // fields
-  OBJECT_MSG_FIELD(int, x_);
+  OBJECT_MSG_DEFINE_FIELD(int, x_);
 
   // list entries
-  OBJECT_MSG_FIELD(intrusive::ListEntry, entry_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, entry_);
 OBJECT_MSG_END(Foo);
 // clang-format on
 

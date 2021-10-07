@@ -52,9 +52,9 @@ OBJECT_MSG_BEGIN(VmResourceDesc);
   OF_PUBLIC int64_t GetGlobalDeviceId(int64_t machine_id, int64_t device_id) const;
 
   // fields
-  OBJECT_MSG_FIELD(int64_t, machine_num_);
-  OBJECT_MSG_FIELD(int64_t, max_device_num_per_machine_);
-  OBJECT_MSG_FIELD(DeviceTag2DeviceNum, device_tag2device_num_);
+  OBJECT_MSG_DEFINE_FIELD(int64_t, machine_num_);
+  OBJECT_MSG_DEFINE_FIELD(int64_t, max_device_num_per_machine_);
+  OBJECT_MSG_DEFINE_FIELD(DeviceTag2DeviceNum, device_tag2device_num_);
 OBJECT_MSG_END(VmResourceDesc);
 // clang-format on
 

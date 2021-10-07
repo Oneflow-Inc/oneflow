@@ -43,10 +43,10 @@ OBJECT_MSG_BEGIN(ThreadCtx);
   }
   OF_PUBLIC void LoopRun(const std::function<void(ThreadCtx*)>& Initializer);
   // fields
-  OBJECT_MSG_FIELD(const StreamRtDesc*, stream_rt_desc_); 
+  OBJECT_MSG_DEFINE_FIELD(const StreamRtDesc*, stream_rt_desc_); 
 
   // list entries
-  OBJECT_MSG_FIELD(intrusive::ListEntry, thread_ctx_entry_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, thread_ctx_entry_);
   OBJECT_MSG_DEFINE_LIST_HEAD(Stream, thread_ctx_stream_entry, stream_list);
   OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(Instruction, pending_instruction_entry,
                                         pending_instruction_list);

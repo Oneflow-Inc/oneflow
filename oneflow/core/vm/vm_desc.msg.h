@@ -54,8 +54,8 @@ OBJECT_MSG_BEGIN(VmDesc);
   }
   
   // fields
-  OBJECT_MSG_FIELD(ObjectMsgPtr<VmResourceDesc>, vm_resource_desc_);
-  OBJECT_MSG_FIELD(Range, machine_id_range_);
+  OBJECT_MSG_DEFINE_FIELD(ObjectMsgPtr<VmResourceDesc>, vm_resource_desc_);
+  OBJECT_MSG_DEFINE_FIELD(Range, machine_id_range_);
 
   // list entries
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(StreamDesc, stream_type_id, stream_type_id2desc);
