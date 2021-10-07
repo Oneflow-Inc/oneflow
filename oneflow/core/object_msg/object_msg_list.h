@@ -126,16 +126,23 @@ struct GetObjectMsgLinkType<false> {
 template<typename ValueLinkField, ObjectMsgLinkType entry_type>
 class TrivialObjectMsgList;
 
+namespace intrusive {
+
 template<typename ValueLinkField>
-class TrivialObjectMsgList<ValueLinkField, kDisableSelfLoopLink> {
+class List {
  public:
+  static_assert(std::is_same<typename ValueLinkField::field_type, intrusive::ListEntry>::value, "");
+  List(const List&) = delete;
+  List(List&&) = delete;
+  List() { this->__Init__(); }
+  ~List() { this->Clear(); }
+
   using value_type = typename ValueLinkField::struct_type;
   using value_entry_struct_field = ValueLinkField;
 
   template<typename Enabled = void>
   static constexpr int ContainerLinkOffset() {
-    return offsetof(TrivialObjectMsgList, list_head_)
-           + intrusive::ListHead<ValueLinkField>::ContainerLinkOffset();
+    return offsetof(List, list_head_) + intrusive::ListHead<ValueLinkField>::ContainerLinkOffset();
   }
 
   std::size_t size() const { return list_head_.size(); }
@@ -164,18 +171,18 @@ class TrivialObjectMsgList<ValueLinkField, kDisableSelfLoopLink> {
   }
   constexpr value_type* End() const { return nullptr; }
 
-  void MoveToDstBack(value_type* ptr, TrivialObjectMsgList* dst) {
+  void MoveToDstBack(value_type* ptr, List* dst) {
     list_head_.MoveToDstBack(ptr, &dst->list_head_);
   }
-  void MoveToDstFront(value_type* ptr, TrivialObjectMsgList* dst) {
+  void MoveToDstFront(value_type* ptr, List* dst) {
     list_head_.MoveToDstFront(ptr, &dst->list_head_);
   }
-  value_type* MoveFrontToDstBack(TrivialObjectMsgList* dst) {
+  value_type* MoveFrontToDstBack(List* dst) {
     value_type* begin = list_head_.Begin();
     MoveToDstBack(begin, dst);
     return begin;
   }
-  value_type* MoveBackToDstBack(TrivialObjectMsgList* dst) {
+  value_type* MoveBackToDstBack(List* dst) {
     value_type* begin = list_head_.Last();
     MoveToDstBack(begin, dst);
     return begin;
@@ -220,8 +227,8 @@ class TrivialObjectMsgList<ValueLinkField, kDisableSelfLoopLink> {
     return ObjectMsgPtr<value_type>::__UnsafeMove__(raw_ptr);
   }
 
-  void MoveTo(TrivialObjectMsgList* list) { MoveToDstBack(list); }
-  void MoveToDstBack(TrivialObjectMsgList* list) { list_head_.MoveToDstBack(&list->list_head_); }
+  void MoveTo(List* list) { MoveToDstBack(list); }
+  void MoveToDstBack(List* list) { list_head_.MoveToDstBack(&list->list_head_); }
 
   void Clear() {
     while (!empty()) { ObjectMsgPtrUtil::ReleaseRef(list_head_.PopFront()); }
@@ -230,6 +237,8 @@ class TrivialObjectMsgList<ValueLinkField, kDisableSelfLoopLink> {
  private:
   intrusive::ListHead<ValueLinkField> list_head_;
 };
+
+}  // namespace intrusive
 
 template<typename ValueLinkField>
 class TrivialObjectMsgList<ValueLinkField, kEnableSelfLoopLink> {
@@ -375,20 +384,6 @@ class TrivialObjectMsgList<ValueLinkField, kEnableSelfLoopLink> {
   intrusive::ListHead<ValueLinkField> list_head_;
   const value_type* container_;
 };
-
-namespace intrusive {
-
-template<typename LinkField>
-class List : public TrivialObjectMsgList<LinkField, kDisableSelfLoopLink> {
- public:
-  static_assert(std::is_same<typename LinkField::field_type, intrusive::ListEntry>::value, "");
-  List(const List&) = delete;
-  List(List&&) = delete;
-  List() { this->__Init__(); }
-  ~List() { this->Clear(); }
-};
-
-}  // namespace intrusive
 
 }  // namespace oneflow
 
