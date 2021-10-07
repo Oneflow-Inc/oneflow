@@ -14,10 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/object_msg/channel.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/range.h"
 
 namespace oneflow {
+
+namespace intrusive {
 
 namespace test {
 
@@ -37,35 +40,26 @@ OBJECT_MSG_BEGIN(Foo);
 OBJECT_MSG_END(Foo);
 // clang-format on
 
-// clang-format off
-OBJECT_MSG_BEGIN(FooList);
-  // list entries
-  OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(Foo, entry, list);
-OBJECT_MSG_END(FooList);
-// clang-format on
+using ChannelFoo = intrusive::Channel<OBJECT_MSG_FIELD(Foo, entry_)>;
 
-using ConditionListFoo = OBJECT_MSG_CONDITION_LIST(Foo, entry);
-
-void CallFromSenderThread(ConditionListFoo* condition_list, Range range) {
+void CallFromSenderThread(ChannelFoo* condition_list, Range range) {
   for (int i = range.begin(); i < range.end(); ++i) {
     auto foo = ObjectMsgPtr<Foo>::New();
     foo->set_x(i);
-    if (condition_list->EmplaceBack(std::move(foo)) != kObjectMsgConditionListStatusSuccess) {
-      break;
-    }
+    if (condition_list->EmplaceBack(std::move(foo)) != intrusive::kChannelStatusSuccess) { break; }
   }
 }
 
-void CallFromReceiverThreadByPopFront(std::vector<int>* visit, ConditionListFoo* condition_list) {
+void CallFromReceiverThreadByPopFront(std::vector<int>* visit, ChannelFoo* condition_list) {
   ObjectMsgPtr<Foo> foo;
-  while (condition_list->PopFront(&foo) == kObjectMsgConditionListStatusSuccess) {
+  while (condition_list->PopFront(&foo) == intrusive::kChannelStatusSuccess) {
     ++visit->at(foo->x());
   }
 }
 
-void CallFromReceiverThreadByMoveTo(std::vector<int>* visit, ConditionListFoo* condition_list) {
+void CallFromReceiverThreadByMoveTo(std::vector<int>* visit, ChannelFoo* condition_list) {
   intrusive::List<OBJECT_MSG_FIELD(Foo, entry_)> tmp_list;
-  while (condition_list->MoveTo(&tmp_list) == kObjectMsgConditionListStatusSuccess) {
+  while (condition_list->MoveTo(&tmp_list) == intrusive::kChannelStatusSuccess) {
     OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_list, foo) {
       ++visit->at(foo->x());
       tmp_list.Erase(foo);
@@ -73,10 +67,10 @@ void CallFromReceiverThreadByMoveTo(std::vector<int>* visit, ConditionListFoo* c
   }
 }
 
-typedef void (*ThreadHandlerType)(std::vector<int>* visit, ConditionListFoo* condition_list);
+typedef void (*ThreadHandlerType)(std::vector<int>* visit, ChannelFoo* condition_list);
 
-void TestConditionList(ThreadHandlerType ThreadHandler) {
-  ConditionListFoo condition_list;
+void TestChannel(ThreadHandlerType ThreadHandler) {
+  ChannelFoo condition_list;
   std::vector<std::thread> senders;
   std::vector<std::thread> receivers;
   int sender_num = 30;
@@ -104,16 +98,14 @@ void TestConditionList(ThreadHandlerType ThreadHandler) {
   }
 }
 
-TEST(ObjectMsgConditionList, 30sender40receiver_pop_front) {
-  TestConditionList(&CallFromReceiverThreadByPopFront);
-}
+TEST(Channel, 30sender40receiver_pop_front) { TestChannel(&CallFromReceiverThreadByPopFront); }
 
-TEST(ObjectMsgConditionList, 30sender40receiver_move_to) {
-  TestConditionList(&CallFromReceiverThreadByMoveTo);
-}
+TEST(Channel, 30sender40receiver_move_to) { TestChannel(&CallFromReceiverThreadByMoveTo); }
 
 }  // namespace
 
 }  // namespace test
+
+}  // namespace intrusive
 
 }  // namespace oneflow

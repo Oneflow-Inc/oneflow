@@ -17,6 +17,8 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_THREAD_MSG_H_
 
 #include <functional>
+#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/object_msg/channel.h"
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/stream_runtime_desc.msg.h"
 
@@ -30,6 +32,8 @@ OBJECT_MSG_BEGIN(ThreadCtx);
 
   // types
   using StreamList = intrusive::List<OBJECT_MSG_FIELD(Stream, thread_ctx_stream_entry_)>;
+  using PendingInstructionChannel =
+      intrusive::Channel<OBJECT_MSG_FIELD(Instruction, pending_instruction_entry_)>;
 
   // Getters
   bool has_stream_rt_desc() const { return stream_rt_desc_ != nullptr; }
@@ -41,6 +45,8 @@ OBJECT_MSG_BEGIN(ThreadCtx);
   void clear_stream_rt_desc() { stream_rt_desc_ = nullptr; }
   StreamList* mut_stream_list() { return &stream_list_; }
   StreamList* mutable_stream_list() { return &stream_list_; }
+  PendingInstructionChannel* mut_pending_instruction_list() { return &pending_instruction_list_; }
+  PendingInstructionChannel* mutable_pending_instruction_list() { return &pending_instruction_list_; }
 
   // methods
   OF_PUBLIC void __Init__(const StreamRtDesc& stream_rt_desc) {
@@ -54,11 +60,10 @@ OBJECT_MSG_BEGIN(ThreadCtx);
   // list entries
   OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, thread_ctx_entry_);
   OBJECT_MSG_DEFINE_FIELD(StreamList, stream_list_);
-  OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(Instruction, pending_instruction_entry,
-                                        pending_instruction_list);
+  OBJECT_MSG_DEFINE_FIELD(PendingInstructionChannel, pending_instruction_list_);
 
-  OF_PRIVATE ObjectMsgConditionListStatus ReceiveAndRun();
-  OF_PUBLIC ObjectMsgConditionListStatus TryReceiveAndRun();
+  OF_PRIVATE intrusive::ChannelStatus ReceiveAndRun();
+  OF_PUBLIC intrusive::ChannelStatus TryReceiveAndRun();
 OBJECT_MSG_END(ThreadCtx);
 // clang-format on
 
