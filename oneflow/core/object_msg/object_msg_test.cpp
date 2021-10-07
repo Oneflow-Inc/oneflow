@@ -30,7 +30,7 @@ namespace test {
 namespace {
 
 TEST(ObjectMsgStruct, ref_cnt) {
-  class Foo final : public ObjectMsgBase {
+  class Foo final : public ObjectMsgRef {
    public:
     Foo() = default;
   };
