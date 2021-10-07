@@ -45,7 +45,7 @@ TEST(Ref, ref_cnt) {
 }
 
 // clang-format off
-OBJECT_MSG_BEGIN(ObjectMsgFoo)
+OBJECT_MSG_BEGIN(IntrusiveFoo)
  public:
   void __Init__() { clear_is_deleted(); }
 
@@ -75,15 +75,15 @@ OBJECT_MSG_BEGIN(ObjectMsgFoo)
   OBJECT_MSG_DEFINE_FIELD(int64_t, foobar_);
   OBJECT_MSG_DEFINE_FIELD(std::string*, is_deleted_);
 
-OBJECT_MSG_END(ObjectMsgFoo)
+OBJECT_MSG_END(IntrusiveFoo)
 // clang-format on
 
-void ObjectMsgFoo::__Delete__() {
+void IntrusiveFoo::__Delete__() {
   if (mutable_is_deleted()) { *mutable_is_deleted() = "deleted"; }
 }
 
 TEST(OBJECT_MSG, naive) {
-  auto foo = intrusive::MakeShared<ObjectMsgFoo>();
+  auto foo = intrusive::MakeShared<IntrusiveFoo>();
   foo->set_bar(9527);
   ASSERT_TRUE(foo->bar() == 9527);
 }
@@ -91,7 +91,7 @@ TEST(OBJECT_MSG, naive) {
 TEST(OBJECT_MSG, __delete__) {
   std::string is_deleted;
   {
-    auto foo = intrusive::MakeShared<ObjectMsgFoo>();
+    auto foo = intrusive::MakeShared<IntrusiveFoo>();
     foo->set_bar(9527);
     foo->set_is_deleted(&is_deleted);
     ASSERT_EQ(foo->bar(), 9527);
@@ -100,22 +100,22 @@ TEST(OBJECT_MSG, __delete__) {
 }
 
 // clang-format off
-OBJECT_MSG_BEGIN(ObjectMsgBar)
+OBJECT_MSG_BEGIN(IntrusiveBar)
  public:
   void __Init__() { clear_is_deleted(); }
 
   // Getters
-  const ObjectMsgFoo& foo() const {
+  const IntrusiveFoo& foo() const {
     if (foo_) { return foo_.Get(); }
-    static const auto default_val = intrusive::MakeShared<ObjectMsgFoo>();
+    static const auto default_val = intrusive::MakeShared<IntrusiveFoo>();
     return default_val.Get();
   }
   const std::string& is_deleted() const { return *is_deleted_; }
   bool has_is_deleted() const { return is_deleted_ != nullptr; }
   // Setters
-  ObjectMsgFoo* mut_foo() { return mutable_foo(); }
-  ObjectMsgFoo* mutable_foo() {
-    if (!foo_) { foo_ = intrusive::MakeShared<ObjectMsgFoo>(); }
+  IntrusiveFoo* mut_foo() { return mutable_foo(); }
+  IntrusiveFoo* mutable_foo() {
+    if (!foo_) { foo_ = intrusive::MakeShared<IntrusiveFoo>(); }
     return foo_.Mutable();
   }
   std::string* mut_is_deleted() { return is_deleted_; }
@@ -123,18 +123,18 @@ OBJECT_MSG_BEGIN(ObjectMsgBar)
   void set_is_deleted(std::string* val) { is_deleted_ = val; }
   void clear_is_deleted() { is_deleted_ = nullptr; }
 
-  OBJECT_MSG_DEFINE_FIELD(intrusive::SharedPtr<ObjectMsgFoo>, foo_);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::SharedPtr<IntrusiveFoo>, foo_);
   OBJECT_MSG_DEFINE_FIELD(std::string*, is_deleted_);
 
  public:
   void __Delete__(){
     if (mutable_is_deleted()) { *mutable_is_deleted() = "bar_deleted"; }
   }
-OBJECT_MSG_END(ObjectMsgBar)
+OBJECT_MSG_END(IntrusiveBar)
 // clang-format on
 
 TEST(OBJECT_MSG, nested_objects) {
-  auto bar = intrusive::MakeShared<ObjectMsgBar>();
+  auto bar = intrusive::MakeShared<IntrusiveBar>();
   bar->mutable_foo()->set_bar(9527);
   ASSERT_TRUE(bar->foo().bar() == 9527);
 }
@@ -143,7 +143,7 @@ TEST(OBJECT_MSG, nested_delete) {
   std::string bar_is_deleted;
   std::string is_deleted;
   {
-    auto bar = intrusive::MakeShared<ObjectMsgBar>();
+    auto bar = intrusive::MakeShared<IntrusiveBar>();
     bar->set_is_deleted(&bar_is_deleted);
     auto* foo = bar->mutable_foo();
     foo->set_bar(9527);
@@ -165,7 +165,7 @@ FLAT_MSG_END(FlatMsgDemo)
 // clang-format on
 
 // clang-format off
-OBJECT_MSG_BEGIN(ObjectMsgContainerDemo)
+OBJECT_MSG_BEGIN(IntrusiveContainerDemo)
  public:
   // Getters
   const FlatMsgDemo& flat_field() const { return flat_field_.Get(); }
@@ -174,11 +174,11 @@ OBJECT_MSG_BEGIN(ObjectMsgContainerDemo)
   FlatMsgDemo* mutable_flat_field() { return flat_field_.Mutable(); }
 
   OBJECT_MSG_DEFINE_FIELD(FlatMsg<FlatMsgDemo>, flat_field_);
-OBJECT_MSG_END(ObjectMsgContainerDemo)
+OBJECT_MSG_END(IntrusiveContainerDemo)
 // clang-format on
 
 TEST(OBJECT_MSG, flat_msg_field) {
-  auto obj = intrusive::MakeShared<ObjectMsgContainerDemo>();
+  auto obj = intrusive::MakeShared<IntrusiveContainerDemo>();
   ASSERT_TRUE(!obj->flat_field().has_int32_field());
   obj->mutable_flat_field()->set_int32_field(33);
   ASSERT_TRUE(obj->flat_field().has_int32_field());
@@ -186,7 +186,7 @@ TEST(OBJECT_MSG, flat_msg_field) {
 }
 
 // clang-format off
-OBJECT_MSG_BEGIN(TestObjectMsgField);
+OBJECT_MSG_BEGIN(TestIntrusiveField);
   static_assert(OBJECT_MSG_FIELD_COUNTER == 0, "");
   static_assert(OBJECT_MSG_FIELD_COUNTER == 0, "");
   OBJECT_MSG_DEFINE_FIELD(int32_t, a);
@@ -201,28 +201,28 @@ OBJECT_MSG_BEGIN(TestObjectMsgField);
   OBJECT_MSG_DEFINE_FIELD(int64_t, d);
   static_assert(OBJECT_MSG_FIELD_COUNTER == 4, "");
   static_assert(OBJECT_MSG_FIELD_COUNTER == 4, "");
-OBJECT_MSG_END(TestObjectMsgField);
+OBJECT_MSG_END(TestIntrusiveField);
 // clang-format on
 
 TEST(OBJECT_MSG, object_msg_field_number) {
-  static_assert(OBJECT_MSG_FIELD_NUMBER(TestObjectMsgField, a) == 1, "");
-  static_assert(OBJECT_MSG_FIELD_NUMBER(TestObjectMsgField, b) == 2, "");
-  static_assert(OBJECT_MSG_FIELD_NUMBER(TestObjectMsgField, c) == 3, "");
-  static_assert(OBJECT_MSG_FIELD_NUMBER(TestObjectMsgField, d) == 4, "");
+  static_assert(OBJECT_MSG_FIELD_NUMBER(TestIntrusiveField, a) == 1, "");
+  static_assert(OBJECT_MSG_FIELD_NUMBER(TestIntrusiveField, b) == 2, "");
+  static_assert(OBJECT_MSG_FIELD_NUMBER(TestIntrusiveField, c) == 3, "");
+  static_assert(OBJECT_MSG_FIELD_NUMBER(TestIntrusiveField, d) == 4, "");
 }
 
 TEST(OBJECT_MSG, object_msg_field_type) {
-  static_assert(std::is_same<OBJECT_MSG_FIELD_TYPE(TestObjectMsgField, 1), int32_t>::value, "");
-  static_assert(std::is_same<OBJECT_MSG_FIELD_TYPE(TestObjectMsgField, 2), int64_t>::value, "");
-  static_assert(std::is_same<OBJECT_MSG_FIELD_TYPE(TestObjectMsgField, 3), int8_t>::value, "");
-  static_assert(std::is_same<OBJECT_MSG_FIELD_TYPE(TestObjectMsgField, 4), int64_t>::value, "");
+  static_assert(std::is_same<OBJECT_MSG_FIELD_TYPE(TestIntrusiveField, 1), int32_t>::value, "");
+  static_assert(std::is_same<OBJECT_MSG_FIELD_TYPE(TestIntrusiveField, 2), int64_t>::value, "");
+  static_assert(std::is_same<OBJECT_MSG_FIELD_TYPE(TestIntrusiveField, 3), int8_t>::value, "");
+  static_assert(std::is_same<OBJECT_MSG_FIELD_TYPE(TestIntrusiveField, 4), int64_t>::value, "");
 }
 
 TEST(OBJECT_MSG, object_msg_field_offset) {
-  static_assert(OBJECT_MSG_FIELD_OFFSET(TestObjectMsgField, 1) == 0, "");
-  static_assert(OBJECT_MSG_FIELD_OFFSET(TestObjectMsgField, 2) == 8, "");
-  static_assert(OBJECT_MSG_FIELD_OFFSET(TestObjectMsgField, 3) == 16, "");
-  static_assert(OBJECT_MSG_FIELD_OFFSET(TestObjectMsgField, 4) == 24, "");
+  static_assert(OBJECT_MSG_FIELD_OFFSET(TestIntrusiveField, 1) == 0, "");
+  static_assert(OBJECT_MSG_FIELD_OFFSET(TestIntrusiveField, 2) == 8, "");
+  static_assert(OBJECT_MSG_FIELD_OFFSET(TestIntrusiveField, 3) == 16, "");
+  static_assert(OBJECT_MSG_FIELD_OFFSET(TestIntrusiveField, 4) == 24, "");
 }
 
 }  // namespace

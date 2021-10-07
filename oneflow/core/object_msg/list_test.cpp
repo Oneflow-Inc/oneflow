@@ -246,9 +246,9 @@ TEST(List, FOR_EACH) {
 }
 
 // clang-format off
-OBJECT_MSG_BEGIN(TestObjectMsgListHead);
+OBJECT_MSG_BEGIN(TestIntrusiveListHead);
  public:
-  TestObjectMsgListHead() = default;
+  TestIntrusiveListHead() = default;
   using FooList = intrusive::List<OBJECT_MSG_FIELD(TestListItem, foo_list_)>;
   // Getters
   const FooList& foo_list() const { return foo_list_; }
@@ -257,11 +257,11 @@ OBJECT_MSG_BEGIN(TestObjectMsgListHead);
   FooList* mutable_foo_list() { return &foo_list_; }
 
   OBJECT_MSG_DEFINE_FIELD(FooList, foo_list_);
-OBJECT_MSG_END(TestObjectMsgListHead);
+OBJECT_MSG_END(TestIntrusiveListHead);
 // clang-format on
 
 TEST(List, object_msg_define_list_head) {
-  auto foo_list_head = intrusive::MakeShared<TestObjectMsgListHead>();
+  auto foo_list_head = intrusive::MakeShared<TestIntrusiveListHead>();
   auto& foo_list = *foo_list_head->mutable_foo_list();
   auto item0 = intrusive::MakeShared<TestListItem>();
   auto item1 = intrusive::MakeShared<TestListItem>();
@@ -287,30 +287,30 @@ TEST(List, object_msg_define_list_head) {
 }
 
 // clang-format off
-OBJECT_MSG_BEGIN(TestObjectMsgListHeadWrapper);
+OBJECT_MSG_BEGIN(TestIntrusiveListHeadWrapper);
  public:
   // Getters
-  const TestObjectMsgListHead& head() const {
+  const TestIntrusiveListHead& head() const {
     if (head_) { return head_.Get(); }
-    static const auto default_val = intrusive::MakeShared<TestObjectMsgListHead>();
+    static const auto default_val = intrusive::MakeShared<TestIntrusiveListHead>();
     return default_val.Get();
   }
   // Setters
-  TestObjectMsgListHead* mut_head() { return mutable_head(); }
-  TestObjectMsgListHead* mutable_head() {
-    if (!head_) { head_ = intrusive::MakeShared<TestObjectMsgListHead>(); }
+  TestIntrusiveListHead* mut_head() { return mutable_head(); }
+  TestIntrusiveListHead* mutable_head() {
+    if (!head_) { head_ = intrusive::MakeShared<TestIntrusiveListHead>(); }
     return head_.Mutable();
   }
   void clear_head() {
     if (head_) { head_.Reset(); }
   }
 
-  OBJECT_MSG_DEFINE_FIELD(intrusive::SharedPtr<TestObjectMsgListHead>, head_);
-OBJECT_MSG_END(TestObjectMsgListHeadWrapper);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::SharedPtr<TestIntrusiveListHead>, head_);
+OBJECT_MSG_END(TestIntrusiveListHeadWrapper);
 // clang-format on
 
 TEST(List, nested_list_delete) {
-  auto foo_list_head = intrusive::MakeShared<TestObjectMsgListHeadWrapper>();
+  auto foo_list_head = intrusive::MakeShared<TestIntrusiveListHeadWrapper>();
   auto& foo_list = *foo_list_head->mutable_head()->mutable_foo_list();
   auto item0 = intrusive::MakeShared<TestListItem>();
   auto item1 = intrusive::MakeShared<TestListItem>();
@@ -390,13 +390,13 @@ OBJECT_MSG_BEGIN(SelfLoopContainer);
 OBJECT_MSG_END(SelfLoopContainer);
 // clang-format on
 
-TEST(ObjectMsgSelfLoopList, __Init__) {
+TEST(IntrusiveSelfLoopList, __Init__) {
   bool deleted = false;
   auto self_loop_head = intrusive::MakeShared<SelfLoopContainer>(&deleted);
   ASSERT_EQ(self_loop_head->mut_head()->container_, self_loop_head.Mutable());
 }
 
-TEST(ObjectMsgSelfLoopList, PushBack) {
+TEST(IntrusiveSelfLoopList, PushBack) {
   bool deleted0 = false;
   bool deleted1 = false;
   {
@@ -415,7 +415,7 @@ TEST(ObjectMsgSelfLoopList, PushBack) {
   ASSERT_TRUE(deleted1);
 }
 
-TEST(ObjectMsgSelfLoopList, PushFront) {
+TEST(IntrusiveSelfLoopList, PushFront) {
   bool deleted0 = false;
   bool deleted1 = false;
   {
@@ -434,7 +434,7 @@ TEST(ObjectMsgSelfLoopList, PushFront) {
   ASSERT_TRUE(deleted1);
 }
 
-TEST(ObjectMsgSelfLoopList, EmplaceBack) {
+TEST(IntrusiveSelfLoopList, EmplaceBack) {
   bool deleted0 = false;
   bool deleted1 = false;
   {
@@ -455,7 +455,7 @@ TEST(ObjectMsgSelfLoopList, EmplaceBack) {
   ASSERT_TRUE(deleted1);
 }
 
-TEST(ObjectMsgSelfLoopList, EmplaceFront) {
+TEST(IntrusiveSelfLoopList, EmplaceFront) {
   bool deleted0 = false;
   bool deleted1 = false;
   {
@@ -476,7 +476,7 @@ TEST(ObjectMsgSelfLoopList, EmplaceFront) {
   ASSERT_TRUE(deleted1);
 }
 
-TEST(ObjectMsgSelfLoopList, Erase) {
+TEST(IntrusiveSelfLoopList, Erase) {
   bool deleted0 = false;
   bool deleted1 = false;
   {
@@ -493,7 +493,7 @@ TEST(ObjectMsgSelfLoopList, Erase) {
   ASSERT_TRUE(deleted1);
 }
 
-TEST(ObjectMsgSelfLoopList, PopBack) {
+TEST(IntrusiveSelfLoopList, PopBack) {
   bool deleted0 = false;
   bool deleted1 = false;
   {
@@ -510,7 +510,7 @@ TEST(ObjectMsgSelfLoopList, PopBack) {
   ASSERT_TRUE(deleted1);
 }
 
-TEST(ObjectMsgSelfLoopList, PopFront) {
+TEST(IntrusiveSelfLoopList, PopFront) {
   bool deleted0 = false;
   bool deleted1 = false;
   {
@@ -527,7 +527,7 @@ TEST(ObjectMsgSelfLoopList, PopFront) {
   ASSERT_TRUE(deleted1);
 }
 
-TEST(ObjectMsgSelfLoopList, MoveTo) {
+TEST(IntrusiveSelfLoopList, MoveTo) {
   bool deleted0 = false;
   bool deleted1 = false;
   {
@@ -543,7 +543,7 @@ TEST(ObjectMsgSelfLoopList, MoveTo) {
   ASSERT_TRUE(deleted1);
 }
 
-TEST(ObjectMsgSelfLoopList, Clear) {
+TEST(IntrusiveSelfLoopList, Clear) {
   bool deleted0 = false;
   bool deleted1 = false;
   {
