@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/common/flat_shape.h"
 #include "oneflow/core/common/shape_vec.h"
-#include "oneflow/core/object_msg/flat_msg.h"
+#include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/job/rank_group_scope.h"
 

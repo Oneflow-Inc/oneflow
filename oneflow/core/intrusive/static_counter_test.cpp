@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/object_msg/static_counter.h"
-#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/intrusive/static_counter.h"
+#include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -46,9 +46,9 @@ static_assert(STATIC_COUNTER(static_counter) == 2, "");
 TEST(StaticCounter, eq2) { static_assert(STATIC_COUNTER(static_counter) == 2, ""); }
 
 // clang-format off
-OBJECT_MSG_BEGIN(FooBar);
+INTRUSIVE_BEGIN(FooBar);
   static_assert(STATIC_COUNTER(field_counter) == 0, "");
-OBJECT_MSG_END(FooBar);
+INTRUSIVE_END(FooBar);
 // clang-format on
 
 }  // namespace

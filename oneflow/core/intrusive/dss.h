@@ -13,13 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_OBJECT_MSG_DSS_H_
-#define ONEFLOW_CORE_OBJECT_MSG_DSS_H_
+#ifndef ONEFLOW_CORE_INTRUSIVE_DSS_H_
+#define ONEFLOW_CORE_INTRUSIVE_DSS_H_
 
 #include <cstddef>
 #include <typeinfo>
 #include "oneflow/core/common/preprocessor.h"
-#include "oneflow/core/object_msg/struct_traits.h"
+#include "oneflow/core/intrusive/struct_traits.h"
 
 namespace oneflow {
 
@@ -397,4 +397,4 @@ struct MutableTrait<true, Enabled> {
 };
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OBJECT_MSG_DSS_H_
+#endif  // ONEFLOW_CORE_INTRUSIVE_DSS_H_

@@ -13,28 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_SKIPLIST_H_
-#define ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_SKIPLIST_H_
+#ifndef ONEFLOW_CORE_INTRUSIVE_INTRUSIVE_SKIPLIST_H_
+#define ONEFLOW_CORE_INTRUSIVE_INTRUSIVE_SKIPLIST_H_
 
-#include "oneflow/core/object_msg/object_msg_core.h"
-#include "oneflow/core/object_msg/skiplist_entry.h"
+#include "oneflow/core/intrusive/intrusive_core.h"
+#include "oneflow/core/intrusive/skiplist_entry.h"
 
 namespace oneflow {
 
-#define OBJECT_MSG_SKIPLIST_FOR_EACH(skiplist_ptr, elem)                                         \
-  _OBJECT_MSG_SKIPLIST_FOR_EACH(std::remove_pointer<decltype(skiplist_ptr)>::type, skiplist_ptr, \
-                                elem)
+#define INTRUSIVE_SKIPLIST_FOR_EACH(skiplist_ptr, elem)                                         \
+  _INTRUSIVE_SKIPLIST_FOR_EACH(std::remove_pointer<decltype(skiplist_ptr)>::type, skiplist_ptr, \
+                               elem)
 
-#define OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(skiplist_ptr, elem)                           \
-  _OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(std::remove_pointer<decltype(skiplist_ptr)>::type, \
-                                    skiplist_ptr, elem)
+#define INTRUSIVE_SKIPLIST_FOR_EACH_PTR(skiplist_ptr, elem)                           \
+  _INTRUSIVE_SKIPLIST_FOR_EACH_PTR(std::remove_pointer<decltype(skiplist_ptr)>::type, \
+                                   skiplist_ptr, elem)
 
-#define OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(skiplist_ptr, elem)                           \
-  _OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(std::remove_pointer<decltype(skiplist_ptr)>::type, \
-                                           skiplist_ptr, elem)
+#define INTRUSIVE_SKIPLIST_UNSAFE_FOR_EACH_PTR(skiplist_ptr, elem)                           \
+  _INTRUSIVE_SKIPLIST_UNSAFE_FOR_EACH_PTR(std::remove_pointer<decltype(skiplist_ptr)>::type, \
+                                          skiplist_ptr, elem)
 // details
 
-#define _OBJECT_MSG_SKIPLIST_FOR_EACH(skiplist_type, skiplist_ptr, elem)                     \
+#define _INTRUSIVE_SKIPLIST_FOR_EACH(skiplist_type, skiplist_ptr, elem)                      \
   for (intrusive::SharedPtr<skiplist_type::value_type> elem, *end_if_not_null = nullptr;     \
        end_if_not_null == nullptr; end_if_not_null = nullptr, ++end_if_not_null)             \
   LIST_ENTRY_FOR_EACH_WITH_EXPR(                                                             \
@@ -43,14 +43,14 @@ namespace oneflow {
           skiplist_type::ContainerLevelZeroLinkOffset()>::FieldPtr4StructPtr(skiplist_ptr)), \
       skiplist_type::elem_level0_entry_struct_field, elem_ptr, (elem.Reset(elem_ptr), true))
 
-#define _OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(skiplist_type, skiplist_ptr, elem)                 \
+#define _INTRUSIVE_SKIPLIST_FOR_EACH_PTR(skiplist_type, skiplist_ptr, elem)                  \
   LIST_ENTRY_FOR_EACH(                                                                       \
       (StructField<                                                                          \
           skiplist_type, intrusive::ListEntry,                                               \
           skiplist_type::ContainerLevelZeroLinkOffset()>::FieldPtr4StructPtr(skiplist_ptr)), \
       skiplist_type::elem_level0_entry_struct_field, elem)
 
-#define _OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(skiplist_type, skiplist_ptr, elem)          \
+#define _INTRUSIVE_SKIPLIST_UNSAFE_FOR_EACH_PTR(skiplist_type, skiplist_ptr, elem)           \
   LIST_ENTRY_UNSAFE_FOR_EACH(                                                                \
       (StructField<                                                                          \
           skiplist_type, intrusive::ListEntry,                                               \
@@ -122,4 +122,4 @@ class SkipList {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_SKIPLIST_H_
+#endif  // ONEFLOW_CORE_INTRUSIVE_INTRUSIVE_SKIPLIST_H_

@@ -35,7 +35,7 @@ limitations under the License.
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
-#include "oneflow/core/object_msg/flat_msg.h"
+#include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/common/flat_shape.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/balanced_splitter.h"

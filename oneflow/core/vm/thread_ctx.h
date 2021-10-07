@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_THREAD_MSG_H_
-#define ONEFLOW_CORE_VM_THREAD_MSG_H_
+#ifndef ONEFLOW_CORE_VM_THREAD__H_
+#define ONEFLOW_CORE_VM_THREAD__H_
 
 #include <functional>
-#include "oneflow/core/object_msg/object_msg.h"
-#include "oneflow/core/object_msg/channel.h"
+#include "oneflow/core/intrusive/intrusive.h"
+#include "oneflow/core/intrusive/channel.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/stream_runtime_desc.h"
 
@@ -26,14 +26,14 @@ namespace oneflow {
 namespace vm {
 
 // clang-format off
-OBJECT_MSG_BEGIN(ThreadCtx);
+INTRUSIVE_BEGIN(ThreadCtx);
  public:
   void __Init__() { clear_stream_rt_desc(); }
 
   // types
-  using StreamList = intrusive::List<OBJECT_MSG_FIELD(Stream, thread_ctx_stream_entry_)>;
+  using StreamList = intrusive::List<INTRUSIVE_FIELD(Stream, thread_ctx_stream_entry_)>;
   using PendingInstructionChannel =
-      intrusive::Channel<OBJECT_MSG_FIELD(Instruction, pending_instruction_entry_)>;
+      intrusive::Channel<INTRUSIVE_FIELD(Instruction, pending_instruction_entry_)>;
 
   // Getters
   bool has_stream_rt_desc() const { return stream_rt_desc_ != nullptr; }
@@ -55,19 +55,19 @@ OBJECT_MSG_BEGIN(ThreadCtx);
   }
   OF_PUBLIC void LoopRun(const std::function<void(ThreadCtx*)>& Initializer);
   // fields
-  OBJECT_MSG_DEFINE_FIELD(const StreamRtDesc*, stream_rt_desc_); 
+  INTRUSIVE_DEFINE_FIELD(const StreamRtDesc*, stream_rt_desc_); 
 
   // list entries
-  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, thread_ctx_entry_);
-  OBJECT_MSG_DEFINE_FIELD(StreamList, stream_list_);
-  OBJECT_MSG_DEFINE_FIELD(PendingInstructionChannel, pending_instruction_list_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, thread_ctx_entry_);
+  INTRUSIVE_DEFINE_FIELD(StreamList, stream_list_);
+  INTRUSIVE_DEFINE_FIELD(PendingInstructionChannel, pending_instruction_list_);
 
   OF_PRIVATE intrusive::ChannelStatus ReceiveAndRun();
   OF_PUBLIC intrusive::ChannelStatus TryReceiveAndRun();
-OBJECT_MSG_END(ThreadCtx);
+INTRUSIVE_END(ThreadCtx);
 // clang-format on
 
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_THREAD_MSG_H_
+#endif  // ONEFLOW_CORE_VM_THREAD__H_

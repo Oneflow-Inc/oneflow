@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_SCHEDULER_MSG_H_
-#define ONEFLOW_CORE_VM_SCHEDULER_MSG_H_
+#ifndef ONEFLOW_CORE_VM_VIRTUAL_MACHINE_H_
+#define ONEFLOW_CORE_VM_VIRTUAL_MACHINE_H_
 
 #include <mutex>
 #include "oneflow/core/common/maybe.h"
@@ -27,7 +27,7 @@ limitations under the License.
 #include "oneflow/core/vm/vm_resource_desc.h"
 #include "oneflow/core/common/range.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/object_msg/mutexed_list.h"
+#include "oneflow/core/intrusive/mutexed_list.h"
 
 namespace oneflow {
 
@@ -35,21 +35,21 @@ namespace vm {
 
 struct VmDesc;
 // clang-format off
-OBJECT_MSG_BEGIN(VirtualMachine);
+INTRUSIVE_BEGIN(VirtualMachine);
  public:
   // types
-  using ActiveStreamList = intrusive::List<OBJECT_MSG_FIELD(Stream, active_stream_entry_)>;
-  using ThreadCtxList = intrusive::List<OBJECT_MSG_FIELD(ThreadCtx, thread_ctx_entry_)>;
-  using LogicalObjectDeleteList = intrusive::List<OBJECT_MSG_FIELD(LogicalObject, delete_entry_)>;
-  using InstructionList = intrusive::List<OBJECT_MSG_FIELD(Instruction, instruction_entry_)>;
+  using ActiveStreamList = intrusive::List<INTRUSIVE_FIELD(Stream, active_stream_entry_)>;
+  using ThreadCtxList = intrusive::List<INTRUSIVE_FIELD(ThreadCtx, thread_ctx_entry_)>;
+  using LogicalObjectDeleteList = intrusive::List<INTRUSIVE_FIELD(LogicalObject, delete_entry_)>;
+  using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, instruction_entry_)>;
   using VmStatRunningInstructionList =
-      intrusive::List<OBJECT_MSG_FIELD(Instruction, vm_stat_running_instruction_entry_)>;
+      intrusive::List<INTRUSIVE_FIELD(Instruction, vm_stat_running_instruction_entry_)>;
   using FrontSeqInstructionList =
-      intrusive::List<OBJECT_MSG_FIELD(Instruction, front_seq_compute_instr_entry_)>;
+      intrusive::List<INTRUSIVE_FIELD(Instruction, front_seq_compute_instr_entry_)>;
   using InstructionMsgMutextList =
-      intrusive::MutexedList<OBJECT_MSG_FIELD(InstructionMsg, instr_msg_entry_)>;
-  using StreamTypeId2StreamRtDesc = intrusive::SkipList<OBJECT_MSG_FIELD(StreamRtDesc, stream_type_id_)>;
-  using Id2LogicalObject = intrusive::SkipList<OBJECT_MSG_FIELD(LogicalObject, logical_object_id_)>;
+      intrusive::MutexedList<INTRUSIVE_FIELD(InstructionMsg, instr_msg_entry_)>;
+  using StreamTypeId2StreamRtDesc = intrusive::SkipList<INTRUSIVE_FIELD(StreamRtDesc, stream_type_id_)>;
+  using Id2LogicalObject = intrusive::SkipList<INTRUSIVE_FIELD(LogicalObject, logical_object_id_)>;
 
   // Getters
   const VmResourceDesc& vm_resource_desc() const {
@@ -118,26 +118,26 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   }
 
   // fields
-  OBJECT_MSG_DEFINE_FIELD(intrusive::SharedPtr<VmResourceDesc>, vm_resource_desc_);
-  OBJECT_MSG_DEFINE_FIELD(Range, machine_id_range_);
-  OBJECT_MSG_DEFINE_FIELD(std::atomic<int64_t>, flying_instruction_cnt_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<VmResourceDesc>, vm_resource_desc_);
+  INTRUSIVE_DEFINE_FIELD(Range, machine_id_range_);
+  INTRUSIVE_DEFINE_FIELD(std::atomic<int64_t>, flying_instruction_cnt_);
 
   // heads
-  OBJECT_MSG_DEFINE_FIELD(ActiveStreamList, active_stream_list_);
-  OBJECT_MSG_DEFINE_FIELD(ThreadCtxList, thread_ctx_list_);
-  OBJECT_MSG_DEFINE_FIELD(StreamTypeId2StreamRtDesc, stream_type_id2stream_rt_desc_);
-  OBJECT_MSG_DEFINE_FIELD(Id2LogicalObject, id2logical_object_);
-  OBJECT_MSG_DEFINE_FIELD(LogicalObjectDeleteList, delete_logical_object_list_);
+  INTRUSIVE_DEFINE_FIELD(ActiveStreamList, active_stream_list_);
+  INTRUSIVE_DEFINE_FIELD(ThreadCtxList, thread_ctx_list_);
+  INTRUSIVE_DEFINE_FIELD(StreamTypeId2StreamRtDesc, stream_type_id2stream_rt_desc_);
+  INTRUSIVE_DEFINE_FIELD(Id2LogicalObject, id2logical_object_);
+  INTRUSIVE_DEFINE_FIELD(LogicalObjectDeleteList, delete_logical_object_list_);
 
-  OBJECT_MSG_DEFINE_FIELD(InstructionMsgMutextList, pending_msg_list_);
-  OBJECT_MSG_DEFINE_FIELD(InstructionList, waiting_instruction_list_);
-  OBJECT_MSG_DEFINE_FIELD(InstructionList, ready_instruction_list_);
-  OBJECT_MSG_DEFINE_FIELD(VmStatRunningInstructionList, vm_stat_running_instruction_list_);
-  OBJECT_MSG_DEFINE_FIELD(FrontSeqInstructionList, front_seq_compute_instr_list_);
+  INTRUSIVE_DEFINE_FIELD(InstructionMsgMutextList, pending_msg_list_);
+  INTRUSIVE_DEFINE_FIELD(InstructionList, waiting_instruction_list_);
+  INTRUSIVE_DEFINE_FIELD(InstructionList, ready_instruction_list_);
+  INTRUSIVE_DEFINE_FIELD(VmStatRunningInstructionList, vm_stat_running_instruction_list_);
+  INTRUSIVE_DEFINE_FIELD(FrontSeqInstructionList, front_seq_compute_instr_list_);
 
   // methods
  private:
-  using TmpPendingInstrMsgList = intrusive::List<OBJECT_MSG_FIELD(InstructionMsg, instr_msg_entry_)>;
+  using TmpPendingInstrMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, instr_msg_entry_)>;
   using NewInstructionList = InstructionList;
   using PrescheduledInstructionList = InstructionList;
   using WaitingInstructionList = InstructionList;
@@ -199,11 +199,11 @@ OBJECT_MSG_BEGIN(VirtualMachine);
 
   void TryDeleteLogicalObjects();
 
-OBJECT_MSG_END(VirtualMachine);
+INTRUSIVE_END(VirtualMachine);
 // clang-format on
 
 }  // namespace vm
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_SCHEDULER_MSG_H_
+#endif  // ONEFLOW_CORE_VM_VIRTUAL_MACHINE_H_

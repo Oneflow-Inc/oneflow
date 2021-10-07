@@ -19,7 +19,7 @@ limitations under the License.
 #include <sstream>
 #define private public
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/intrusive/intrusive.h"
 
 namespace oneflow {
 
@@ -28,7 +28,7 @@ namespace test {
 namespace {
 
 // clang-format off
-OBJECT_MSG_BEGIN(TestListItem)
+INTRUSIVE_BEGIN(TestListItem)
  public:
   void __Init__() { clear_cnt(); }
   // Getters
@@ -42,17 +42,17 @@ OBJECT_MSG_BEGIN(TestListItem)
   int* mut_cnt() { return cnt_; }
   int* mutable_cnt() { return cnt_; }
 
-  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, foo_list_);
-  OBJECT_MSG_DEFINE_FIELD(int*, cnt_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, foo_list_);
+  INTRUSIVE_DEFINE_FIELD(int*, cnt_);
 
  public:
   void __Delete__() {
     if (has_cnt()) { --*mutable_cnt(); }
   }
-OBJECT_MSG_END(TestListItem)
+INTRUSIVE_END(TestListItem)
 // clang-format on
 
-using TestList = intrusive::List<OBJECT_MSG_FIELD(TestListItem, foo_list_)>;
+using TestList = intrusive::List<INTRUSIVE_FIELD(TestListItem, foo_list_)>;
 
 TEST(List, empty) {
   TestList foo_list;
@@ -211,7 +211,7 @@ TEST(List, UNSAFE_FOR_EACH_PTR) {
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   int i = 0;
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(&foo_list, item) {
+  INTRUSIVE_LIST_UNSAFE_FOR_EACH_PTR(&foo_list, item) {
     if (i == 0) {
       ASSERT_TRUE(item == item0.Mutable());
     } else if (i == 1) {
@@ -229,7 +229,7 @@ TEST(List, FOR_EACH) {
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   int i = 0;
-  OBJECT_MSG_LIST_FOR_EACH(&foo_list, item) {
+  INTRUSIVE_LIST_FOR_EACH(&foo_list, item) {
     if (i == 0) {
       ASSERT_TRUE(item == item0);
       foo_list.Erase(item.Mutable());
@@ -246,21 +246,21 @@ TEST(List, FOR_EACH) {
 }
 
 // clang-format off
-OBJECT_MSG_BEGIN(TestIntrusiveListHead);
+INTRUSIVE_BEGIN(TestIntrusiveListHead);
  public:
   TestIntrusiveListHead() = default;
-  using FooList = intrusive::List<OBJECT_MSG_FIELD(TestListItem, foo_list_)>;
+  using FooList = intrusive::List<INTRUSIVE_FIELD(TestListItem, foo_list_)>;
   // Getters
   const FooList& foo_list() const { return foo_list_; }
   // Setters
   FooList* mut_foo_list() { return &foo_list_; }
   FooList* mutable_foo_list() { return &foo_list_; }
 
-  OBJECT_MSG_DEFINE_FIELD(FooList, foo_list_);
-OBJECT_MSG_END(TestIntrusiveListHead);
+  INTRUSIVE_DEFINE_FIELD(FooList, foo_list_);
+INTRUSIVE_END(TestIntrusiveListHead);
 // clang-format on
 
-TEST(List, object_msg_define_list_head) {
+TEST(List, intrusive_list_for_each) {
   auto foo_list_head = intrusive::MakeShared<TestIntrusiveListHead>();
   auto& foo_list = *foo_list_head->mutable_foo_list();
   auto item0 = intrusive::MakeShared<TestListItem>();
@@ -270,7 +270,7 @@ TEST(List, object_msg_define_list_head) {
   ASSERT_EQ(item0->ref_cnt(), 2);
   ASSERT_EQ(item1->ref_cnt(), 2);
   int i = 0;
-  OBJECT_MSG_LIST_FOR_EACH(&foo_list, item) {
+  INTRUSIVE_LIST_FOR_EACH(&foo_list, item) {
     if (i == 0) {
       ASSERT_TRUE(item == item0);
       foo_list.Erase(item.Mutable());
@@ -287,7 +287,7 @@ TEST(List, object_msg_define_list_head) {
 }
 
 // clang-format off
-OBJECT_MSG_BEGIN(TestIntrusiveListHeadWrapper);
+INTRUSIVE_BEGIN(TestIntrusiveListHeadWrapper);
  public:
   // Getters
   const TestIntrusiveListHead& head() const {
@@ -305,8 +305,8 @@ OBJECT_MSG_BEGIN(TestIntrusiveListHeadWrapper);
     if (head_) { head_.Reset(); }
   }
 
-  OBJECT_MSG_DEFINE_FIELD(intrusive::SharedPtr<TestIntrusiveListHead>, head_);
-OBJECT_MSG_END(TestIntrusiveListHeadWrapper);
+  INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<TestIntrusiveListHead>, head_);
+INTRUSIVE_END(TestIntrusiveListHeadWrapper);
 // clang-format on
 
 TEST(List, nested_list_delete) {
@@ -319,7 +319,7 @@ TEST(List, nested_list_delete) {
   ASSERT_EQ(item0->ref_cnt(), 2);
   ASSERT_EQ(item1->ref_cnt(), 2);
   int i = 0;
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(&foo_list, item) {
+  INTRUSIVE_LIST_UNSAFE_FOR_EACH_PTR(&foo_list, item) {
     if (i == 0) {
       ASSERT_TRUE(item == item0.Mutable());
     } else if (i == 1) {
@@ -358,7 +358,7 @@ TEST(List, MoveTo) {
 }
 
 // clang-format off
-OBJECT_MSG_BEGIN(SelfLoopContainer);
+INTRUSIVE_BEGIN(SelfLoopContainer);
  public:
   void __Init__() { clear_deleted(); }
   // Getters
@@ -378,16 +378,16 @@ OBJECT_MSG_BEGIN(SelfLoopContainer);
   }
   OF_PUBLIC void __Delete__() { *mut_deleted() = true; }
   // fields
-  OBJECT_MSG_DEFINE_FIELD(bool*, deleted_);
+  INTRUSIVE_DEFINE_FIELD(bool*, deleted_);
   // list entries
-  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, entry_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, entry_);
  public:
-  using SelfLoopContainerList = intrusive::HeadFreeList<OBJECT_MSG_FIELD(SelfLoopContainer, entry_), OBJECT_MSG_FIELD_COUNTER>;
+  using SelfLoopContainerList = intrusive::HeadFreeList<INTRUSIVE_FIELD(SelfLoopContainer, entry_), INTRUSIVE_FIELD_COUNTER>;
   const SelfLoopContainerList& head() const { return head_; }
   SelfLoopContainerList* mut_head() { return &head_; }
   SelfLoopContainerList* mutable_head() { return &head_; }
-  OBJECT_MSG_DEFINE_FIELD(SelfLoopContainerList, head_);
-OBJECT_MSG_END(SelfLoopContainer);
+  INTRUSIVE_DEFINE_FIELD(SelfLoopContainerList, head_);
+INTRUSIVE_END(SelfLoopContainer);
 // clang-format on
 
 TEST(IntrusiveSelfLoopList, __Init__) {

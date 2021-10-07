@@ -13,11 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_VM_RESOURCE_DESC_MSG_H_
-#define ONEFLOW_CORE_VM_VM_RESOURCE_DESC_MSG_H_
+#ifndef ONEFLOW_CORE_VM_VM_RESOURCE_DESC__H_
+#define ONEFLOW_CORE_VM_VM_RESOURCE_DESC__H_
 
 #include <unordered_map>
-#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {
@@ -29,7 +29,7 @@ namespace vm {
 using DeviceTag2DeviceNum = std::unordered_map<std::string, int64_t>;
 
 // clang-format off
-OBJECT_MSG_BEGIN(VmResourceDesc);
+INTRUSIVE_BEGIN(VmResourceDesc);
  public:
   VmResourceDesc() = default;
   void __Init__() {}
@@ -52,13 +52,13 @@ OBJECT_MSG_BEGIN(VmResourceDesc);
   OF_PUBLIC int64_t GetGlobalDeviceId(int64_t machine_id, int64_t device_id) const;
 
   // fields
-  OBJECT_MSG_DEFINE_FIELD(int64_t, machine_num_);
-  OBJECT_MSG_DEFINE_FIELD(int64_t, max_device_num_per_machine_);
-  OBJECT_MSG_DEFINE_FIELD(DeviceTag2DeviceNum, device_tag2device_num_);
-OBJECT_MSG_END(VmResourceDesc);
+  INTRUSIVE_DEFINE_FIELD(int64_t, machine_num_);
+  INTRUSIVE_DEFINE_FIELD(int64_t, max_device_num_per_machine_);
+  INTRUSIVE_DEFINE_FIELD(DeviceTag2DeviceNum, device_tag2device_num_);
+INTRUSIVE_END(VmResourceDesc);
 // clang-format on
 
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_VM_RESOURCE_DESC_MSG_H_
+#endif  // ONEFLOW_CORE_VM_VM_RESOURCE_DESC__H_

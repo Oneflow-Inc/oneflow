@@ -13,13 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_VPU_DESC_MSG_H_
-#define ONEFLOW_CORE_VM_VPU_DESC_MSG_H_
+#ifndef ONEFLOW_CORE_VM_VPU_DESC__H_
+#define ONEFLOW_CORE_VM_VPU_DESC__H_
 
 #include <cstring>
 #include <typeindex>
-#include "oneflow/core/object_msg/flat_msg.h"
-#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/intrusive/flat_msg.h"
+#include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/interpret_type.h"
 #include "oneflow/core/vm/stream_type_id.h"
@@ -57,7 +57,7 @@ class StreamId final {
 };
 
 // clang-format off
-OBJECT_MSG_BEGIN(StreamDesc);
+INTRUSIVE_BEGIN(StreamDesc);
  public:
   StreamDesc() = default;
   // Getters
@@ -80,17 +80,17 @@ OBJECT_MSG_BEGIN(StreamDesc);
   OF_PUBLIC int32_t parallel_num() const { return num_machines() * num_streams_per_machine(); }
 
   // fields
-  OBJECT_MSG_DEFINE_FIELD(int32_t, num_machines_);
-  OBJECT_MSG_DEFINE_FIELD(int32_t, num_streams_per_machine_);
-  OBJECT_MSG_DEFINE_FIELD(int32_t, num_streams_per_thread_);
+  INTRUSIVE_DEFINE_FIELD(int32_t, num_machines_);
+  INTRUSIVE_DEFINE_FIELD(int32_t, num_streams_per_machine_);
+  INTRUSIVE_DEFINE_FIELD(int32_t, num_streams_per_thread_);
 
   // skiplist entries
   using StreamTypeIdKey = intrusive::SkipListEntry<FlatMsg<StreamTypeId>, 7>;
-  OBJECT_MSG_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);
-OBJECT_MSG_END(StreamDesc);
+  INTRUSIVE_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);
+INTRUSIVE_END(StreamDesc);
 // clang-format on
 
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_VPU_DESC_MSG_H_
+#endif  // ONEFLOW_CORE_VM_VPU_DESC__H_

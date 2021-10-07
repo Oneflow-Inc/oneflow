@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/object_msg/object_msg.h"
-#include "oneflow/core/object_msg/channel.h"
+#include "oneflow/core/intrusive/intrusive.h"
+#include "oneflow/core/intrusive/channel.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/range.h"
 
@@ -27,20 +27,20 @@ namespace test {
 namespace {
 
 // clang-format off
-OBJECT_MSG_BEGIN(Foo);
+INTRUSIVE_BEGIN(Foo);
  public:
   int x() const { return x_; }
   void set_x(int val) { x_ = val; }
 
   // fields
-  OBJECT_MSG_DEFINE_FIELD(int, x_);
+  INTRUSIVE_DEFINE_FIELD(int, x_);
 
   // list entries
-  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, entry_);
-OBJECT_MSG_END(Foo);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, entry_);
+INTRUSIVE_END(Foo);
 // clang-format on
 
-using ChannelFoo = intrusive::Channel<OBJECT_MSG_FIELD(Foo, entry_)>;
+using ChannelFoo = intrusive::Channel<INTRUSIVE_FIELD(Foo, entry_)>;
 
 void CallFromSenderThread(ChannelFoo* condition_list, Range range) {
   for (int i = range.begin(); i < range.end(); ++i) {
@@ -58,9 +58,9 @@ void CallFromReceiverThreadByPopFront(std::vector<int>* visit, ChannelFoo* condi
 }
 
 void CallFromReceiverThreadByMoveTo(std::vector<int>* visit, ChannelFoo* condition_list) {
-  intrusive::List<OBJECT_MSG_FIELD(Foo, entry_)> tmp_list;
+  intrusive::List<INTRUSIVE_FIELD(Foo, entry_)> tmp_list;
   while (condition_list->MoveTo(&tmp_list) == intrusive::kChannelStatusSuccess) {
-    OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_list, foo) {
+    INTRUSIVE_LIST_FOR_EACH_PTR(&tmp_list, foo) {
       ++visit->at(foo->x());
       tmp_list.Erase(foo);
     }

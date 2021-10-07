@@ -57,11 +57,11 @@ Maybe<intrusive::SharedPtr<LocalDepObject>> LocalDepObject::New(const Device& de
 
 namespace {
 
-using PoolLocalDepObjectList = intrusive::List<OBJECT_MSG_FIELD(LocalDepObject, pool_entry_)>;
+using PoolLocalDepObjectList = intrusive::List<INTRUSIVE_FIELD(LocalDepObject, pool_entry_)>;
 using StoredLocalDepObjectList =
-    intrusive::MutexedList<OBJECT_MSG_FIELD(LocalDepObject, stored_entry_)>;
+    intrusive::MutexedList<INTRUSIVE_FIELD(LocalDepObject, stored_entry_)>;
 using LifetimeLocalDepObjectList =
-    intrusive::MutexedList<OBJECT_MSG_FIELD(LocalDepObject, lifetime_entry_)>;
+    intrusive::MutexedList<INTRUSIVE_FIELD(LocalDepObject, lifetime_entry_)>;
 
 PoolLocalDepObjectList* RawThreadLocalPoolLocalDepObjectList(Symbol<Device> device) {
   static thread_local PoolLocalDepObjectList pool_list;

@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/vm/stream_type_id.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/common/util.h"
@@ -44,7 +44,7 @@ TEST(StreamTypeId, logical_compare) {
 }
 
 // clang-format off
-OBJECT_MSG_BEGIN(StreamTypeIdItem);
+INTRUSIVE_BEGIN(StreamTypeIdItem);
  public:
   // Getters
   const StreamTypeId& stream_type_id() const { return stream_type_id_.key().Get(); }
@@ -53,10 +53,10 @@ OBJECT_MSG_BEGIN(StreamTypeIdItem);
   StreamTypeId* mutable_stream_type_id() { return stream_type_id_.mut_key()->Mutable(); }
 
   using StreamTypeIdKey = intrusive::SkipListEntry<FlatMsg<StreamTypeId>, 20>;
-  OBJECT_MSG_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);
-OBJECT_MSG_END(StreamTypeIdItem);
+  INTRUSIVE_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);
+INTRUSIVE_END(StreamTypeIdItem);
 // clang-format on
-using StreamTypeIdSet = intrusive::SkipList<OBJECT_MSG_FIELD(StreamTypeIdItem, stream_type_id_)>;
+using StreamTypeIdSet = intrusive::SkipList<INTRUSIVE_FIELD(StreamTypeIdItem, stream_type_id_)>;
 
 TEST(StreamTypeId, map_key) {
   auto stream_type_id0 = intrusive::MakeShared<StreamTypeIdItem>();

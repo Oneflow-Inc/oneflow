@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_MIRRORED_OBJECT_MSG_H_
-#define ONEFLOW_CORE_VM_MIRRORED_OBJECT_MSG_H_
+#ifndef ONEFLOW_CORE_VM_VM_OBJECT_H_
+#define ONEFLOW_CORE_VM_VM_OBJECT_H_
 
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/object_msg/flat_msg.h"
-#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/intrusive/flat_msg.h"
+#include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/mirrored_object_id.h"
 #include "oneflow/core/vm/stream_desc.h"
@@ -39,7 +39,7 @@ enum OperandAccessType {
 };
 
 // clang-format off
-OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
+INTRUSIVE_BEGIN(RwMutexedObjectAccess);
  public:
   RwMutexedObjectAccess() = default;
   void __Init__();
@@ -80,26 +80,26 @@ OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
   OF_PUBLIC bool is_mut_operand() const;
 
   // fields
-  OBJECT_MSG_DEFINE_FIELD(OperandAccessType, access_type_);
-  OBJECT_MSG_DEFINE_FIELD(Instruction*, instruction_);
-  OBJECT_MSG_DEFINE_FIELD(MirroredObject*, mirrored_object_);
-  OBJECT_MSG_DEFINE_FIELD(RwMutexedObject*, rw_mutexed_object_);
+  INTRUSIVE_DEFINE_FIELD(OperandAccessType, access_type_);
+  INTRUSIVE_DEFINE_FIELD(Instruction*, instruction_);
+  INTRUSIVE_DEFINE_FIELD(MirroredObject*, mirrored_object_);
+  INTRUSIVE_DEFINE_FIELD(RwMutexedObject*, rw_mutexed_object_);
 
   // list entries
-  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, instruction_access_entry_);
-  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, rw_mutexed_object_access_entry_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, instruction_access_entry_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, rw_mutexed_object_access_entry_);
   using MirroredObjectIdKey = intrusive::SkipListEntry<FlatMsg<MirroredObjectId>, 10>;
-  OBJECT_MSG_DEFINE_FIELD(MirroredObjectIdKey, mirrored_object_id_);
+  INTRUSIVE_DEFINE_FIELD(MirroredObjectIdKey, mirrored_object_id_);
   
-OBJECT_MSG_END(RwMutexedObjectAccess);
+INTRUSIVE_END(RwMutexedObjectAccess);
 
 struct LogicalObject;
-OBJECT_MSG_BEGIN(RwMutexedObject);
+INTRUSIVE_BEGIN(RwMutexedObject);
  public:
   void __Init__() {}
 
   // types
-  using RwMutexedObjectAccessList = intrusive::List<OBJECT_MSG_FIELD(RwMutexedObjectAccess, rw_mutexed_object_access_entry_)>;
+  using RwMutexedObjectAccessList = intrusive::List<INTRUSIVE_FIELD(RwMutexedObjectAccess, rw_mutexed_object_access_entry_)>;
 
   // Getters
   const RwMutexedObjectAccessList& access_list() const { return access_list_; }
@@ -140,13 +140,13 @@ OBJECT_MSG_BEGIN(RwMutexedObject);
   OF_PUBLIC void reset_object() { reset_object(nullptr); }
 
   // fields
-  OBJECT_MSG_DEFINE_FIELD(std::unique_ptr<Object>, object_ptr_);
+  INTRUSIVE_DEFINE_FIELD(std::unique_ptr<Object>, object_ptr_);
 
   // list entries
-  OBJECT_MSG_DEFINE_FIELD(RwMutexedObjectAccessList, access_list_);
-OBJECT_MSG_END(RwMutexedObject);
+  INTRUSIVE_DEFINE_FIELD(RwMutexedObjectAccessList, access_list_);
+INTRUSIVE_END(RwMutexedObject);
 
-OBJECT_MSG_BEGIN(MirroredObject);
+INTRUSIVE_BEGIN(MirroredObject);
  public:
   // Getters
   bool has_deleting_access() const { return deleting_access_ != nullptr; }
@@ -184,23 +184,23 @@ OBJECT_MSG_BEGIN(MirroredObject);
   OF_PUBLIC void __Init__(LogicalObject* logical_object, int64_t global_device_id);
 
   //fields
-  OBJECT_MSG_DEFINE_FIELD(FlatMsg<MirroredObjectId>, mirrored_object_id_);
-  OBJECT_MSG_DEFINE_FIELD(intrusive::SharedPtr<RwMutexedObject>, rw_mutexed_object_);
-  OBJECT_MSG_DEFINE_FIELD(RwMutexedObjectAccess*, deleting_access_);
+  INTRUSIVE_DEFINE_FIELD(FlatMsg<MirroredObjectId>, mirrored_object_id_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<RwMutexedObject>, rw_mutexed_object_);
+  INTRUSIVE_DEFINE_FIELD(RwMutexedObjectAccess*, deleting_access_);
 
 
   // list entries
   using Int64Key = intrusive::SkipListEntry<int64_t, 10>;
-  OBJECT_MSG_DEFINE_FIELD(Int64Key, global_device_id_);
-OBJECT_MSG_END(MirroredObject);
+  INTRUSIVE_DEFINE_FIELD(Int64Key, global_device_id_);
+INTRUSIVE_END(MirroredObject);
 
 struct VirtualMachine;
-OBJECT_MSG_BEGIN(LogicalObject);
+INTRUSIVE_BEGIN(LogicalObject);
  public:
   LogicalObject() = default;
   // types
   using GlobalDeviceId2MirroredObject =
-      intrusive::SkipList<OBJECT_MSG_FIELD(MirroredObject, global_device_id_)>;
+      intrusive::SkipList<INTRUSIVE_FIELD(MirroredObject, global_device_id_)>;
   // Getters
   const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
   bool is_delete_entry_empty() const { return delete_entry_.empty(); }
@@ -231,19 +231,19 @@ OBJECT_MSG_BEGIN(LogicalObject);
   }
 
   // fields
-  OBJECT_MSG_DEFINE_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
+  INTRUSIVE_DEFINE_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
 
   // list entries
   using ObjectIdKey = intrusive::SkipListEntry<ObjectId, 24>;
-  OBJECT_MSG_DEFINE_FIELD(ObjectIdKey, logical_object_id_);
-  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, delete_entry_);
+  INTRUSIVE_DEFINE_FIELD(ObjectIdKey, logical_object_id_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, delete_entry_);
   // heads
-  OBJECT_MSG_DEFINE_FIELD(GlobalDeviceId2MirroredObject, global_device_id2mirrored_object_);
-OBJECT_MSG_END(LogicalObject);
+  INTRUSIVE_DEFINE_FIELD(GlobalDeviceId2MirroredObject, global_device_id2mirrored_object_);
+INTRUSIVE_END(LogicalObject);
 // clang-format on
 
 }  // namespace vm
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_MIRRORED_OBJECT_MSG_H_
+#endif  // ONEFLOW_CORE_VM_VM_OBJECT_H_

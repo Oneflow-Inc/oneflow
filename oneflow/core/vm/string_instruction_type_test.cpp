@@ -45,7 +45,7 @@ TEST(StringStreamType, init_string_object) {
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    INTRUSIVE_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
   auto* logical_object = vm->mut_id2logical_object()->FindPtr(IdUtil::GetTypeId(symbol_id));
   ASSERT_NE(logical_object, nullptr);

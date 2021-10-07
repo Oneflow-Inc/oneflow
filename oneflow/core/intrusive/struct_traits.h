@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_OBJECT_MSG_STRUCT_MACRO_TRAITS_H_
-#define ONEFLOW_CORE_OBJECT_MSG_STRUCT_MACRO_TRAITS_H_
+#ifndef ONEFLOW_CORE_INTRUSIVE_STRUCT_MACRO_TRAITS_H_
+#define ONEFLOW_CORE_INTRUSIVE_STRUCT_MACRO_TRAITS_H_
 
 #include <cstddef>
 #include <type_traits>
@@ -80,4 +80,4 @@ using ConstRefOrPtr = typename ConstRefOrPtrStruct<T>::type;
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OBJECT_MSG_STRUCT_MACRO_TRAITS_H_
+#endif  // ONEFLOW_CORE_INTRUSIVE_STRUCT_MACRO_TRAITS_H_

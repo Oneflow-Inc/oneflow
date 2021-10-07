@@ -13,29 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_OBJECT_MSG_LIST_H_
-#define ONEFLOW_CORE_OBJECT_MSG_LIST_H_
+#ifndef ONEFLOW_CORE_INTRUSIVE_LIST_H_
+#define ONEFLOW_CORE_INTRUSIVE_LIST_H_
 
 #include <typeinfo>
-#include "oneflow/core/object_msg/object_msg_core.h"
-#include "oneflow/core/object_msg/list_entry.h"
-#include "oneflow/core/object_msg/struct_traits.h"
+#include "oneflow/core/intrusive/intrusive_core.h"
+#include "oneflow/core/intrusive/list_entry.h"
+#include "oneflow/core/intrusive/struct_traits.h"
 
 namespace oneflow {
 
-#define OBJECT_MSG_LIST_FOR_EACH(list_ptr, elem) \
-  _OBJECT_MSG_LIST_FOR_EACH(std::remove_pointer<decltype(list_ptr)>::type, list_ptr, elem)
+#define INTRUSIVE_LIST_FOR_EACH(list_ptr, elem) \
+  _INTRUSIVE_LIST_FOR_EACH(std::remove_pointer<decltype(list_ptr)>::type, list_ptr, elem)
 
-#define OBJECT_MSG_LIST_FOR_EACH_PTR(list_ptr, elem) \
-  _OBJECT_MSG_LIST_FOR_EACH_PTR(std::remove_pointer<decltype(list_ptr)>::type, list_ptr, elem)
+#define INTRUSIVE_LIST_FOR_EACH_PTR(list_ptr, elem) \
+  _INTRUSIVE_LIST_FOR_EACH_PTR(std::remove_pointer<decltype(list_ptr)>::type, list_ptr, elem)
 
-#define OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(list_ptr, elem)                                     \
-  _OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(std::remove_pointer<decltype(list_ptr)>::type, list_ptr, \
-                                       elem)
+#define INTRUSIVE_LIST_UNSAFE_FOR_EACH_PTR(list_ptr, elem) \
+  _INTRUSIVE_LIST_UNSAFE_FOR_EACH_PTR(std::remove_pointer<decltype(list_ptr)>::type, list_ptr, elem)
 
 // details
 
-#define _OBJECT_MSG_LIST_FOR_EACH(list_type, list_ptr, elem)                                  \
+#define _INTRUSIVE_LIST_FOR_EACH(list_type, list_ptr, elem)                                   \
   for (intrusive::SharedPtr<typename list_type::value_type> elem, *end_if_not_null = nullptr; \
        end_if_not_null == nullptr; end_if_not_null = nullptr, ++end_if_not_null)              \
   LIST_ENTRY_FOR_EACH_WITH_EXPR(                                                              \
@@ -43,13 +42,13 @@ namespace oneflow {
                    list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)),          \
       list_type::value_entry_struct_field, elem_ptr, (elem.Reset(elem_ptr), true))
 
-#define _OBJECT_MSG_LIST_FOR_EACH_PTR(list_type, list_ptr, elem)                     \
+#define _INTRUSIVE_LIST_FOR_EACH_PTR(list_type, list_ptr, elem)                      \
   LIST_ENTRY_FOR_EACH(                                                               \
       (StructField<typename list_type, intrusive::ListEntry,                         \
                    list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)), \
       list_type::value_entry_struct_field, elem)
 
-#define _OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(list_type, list_ptr, elem)              \
+#define _INTRUSIVE_LIST_UNSAFE_FOR_EACH_PTR(list_type, list_ptr, elem)               \
   LIST_ENTRY_UNSAFE_FOR_EACH(                                                        \
       (StructField<typename list_type, intrusive::ListEntry,                         \
                    list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)), \
@@ -191,12 +190,12 @@ class HeadFreeList {
   void __Init__() {
     list_head_.__Init__();
     static_assert(
-        std::is_same<HeadFreeList, OBJECT_MSG_FIELD_TYPE(typename value_type,
-                                                         field_number_in_countainter)>::value,
+        std::is_same<HeadFreeList,
+                     INTRUSIVE_FIELD_TYPE(typename value_type, field_number_in_countainter)>::value,
         "");
     using ThisInContainer =
         StructField<value_type, HeadFreeList,
-                    OBJECT_MSG_FIELD_OFFSET(value_type, field_number_in_countainter)>;
+                    INTRUSIVE_FIELD_OFFSET(value_type, field_number_in_countainter)>;
     container_ = ThisInContainer::StructPtr4FieldPtr(this);
   }
 
@@ -325,4 +324,4 @@ class HeadFreeList {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OBJECT_MSG_LIST_H_
+#endif  // ONEFLOW_CORE_INTRUSIVE_LIST_H_

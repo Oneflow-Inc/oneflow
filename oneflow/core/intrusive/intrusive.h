@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_H_
-#define ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_H_
+#ifndef ONEFLOW_CORE_INTRUSIVE_INTRUSIVE_H_
+#define ONEFLOW_CORE_INTRUSIVE_INTRUSIVE_H_
 
-#include "oneflow/core/object_msg/object_msg_core.h"
-#include "oneflow/core/object_msg/shared_ptr.h"
-#include "oneflow/core/object_msg/list.h"
-#include "oneflow/core/object_msg/skiplist.h"
+#include "oneflow/core/intrusive/intrusive_core.h"
+#include "oneflow/core/intrusive/shared_ptr.h"
+#include "oneflow/core/intrusive/list.h"
+#include "oneflow/core/intrusive/skiplist.h"
 
-#endif  // ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_H_
+#endif  // ONEFLOW_CORE_INTRUSIVE_INTRUSIVE_H_

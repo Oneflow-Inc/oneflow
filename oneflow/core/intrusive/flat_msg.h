@@ -13,15 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_OBJECT_MSG_FLAT_MSG_H_
-#define ONEFLOW_CORE_OBJECT_MSG_FLAT_MSG_H_
+#ifndef ONEFLOW_CORE_INTRUSIVE_FLAT__H_
+#define ONEFLOW_CORE_INTRUSIVE_FLAT__H_
 
 #include <array>
 #include <cstring>
 #include <glog/logging.h>
 #include "oneflow/core/common/preprocessor.h"
-#include "oneflow/core/object_msg/dss.h"
-#include "oneflow/core/object_msg/static_counter.h"
+#include "oneflow/core/intrusive/dss.h"
+#include "oneflow/core/intrusive/static_counter.h"
 
 namespace oneflow {
 
@@ -480,4 +480,4 @@ class FlatMsgRepeatedField final {
 };
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OBJECT_MSG_FLAT_MSG_H_
+#endif  // ONEFLOW_CORE_INTRUSIVE_FLAT__H_

@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -25,7 +25,7 @@ namespace test {
 namespace {
 
 // clang-format off
-OBJECT_MSG_BEGIN(SkipListFoo);
+INTRUSIVE_BEGIN(SkipListFoo);
  public:
   void __Init__() { clear_is_deleted(); }
   // Getters
@@ -39,29 +39,29 @@ OBJECT_MSG_BEGIN(SkipListFoo);
   int* mutable_is_deleted() { return is_deleted_; }
   void set_foo_map_key(int32_t val) { *foo_map_key_.mut_key() = val; }
 
-  OBJECT_MSG_DEFINE_FIELD(intrusive::SkipListEntry<int32_t>, foo_map_key_);
-  OBJECT_MSG_DEFINE_FIELD(int*, is_deleted_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::SkipListEntry<int32_t>, foo_map_key_);
+  INTRUSIVE_DEFINE_FIELD(int*, is_deleted_);
   void __Delete__() {
     if (has_is_deleted()) { ++*mutable_is_deleted(); }
   }
-OBJECT_MSG_END(SkipListFoo);
+INTRUSIVE_END(SkipListFoo);
 // clang-format on
 
 // clang-format off
-OBJECT_MSG_BEGIN(SkipListFooContainer);
+INTRUSIVE_BEGIN(SkipListFooContainer);
  public:
   // types
-  using Key2SkipListFoo = intrusive::SkipList<OBJECT_MSG_FIELD(SkipListFoo, foo_map_key_)>;
+  using Key2SkipListFoo = intrusive::SkipList<INTRUSIVE_FIELD(SkipListFoo, foo_map_key_)>;
   const Key2SkipListFoo& foo_map() const { return foo_map_; }
   Key2SkipListFoo* mut_foo_map() { return &foo_map_; }
   Key2SkipListFoo* mutable_foo_map() { return &foo_map_; }
 
   // maps
-  OBJECT_MSG_DEFINE_FIELD(Key2SkipListFoo, foo_map_);
-OBJECT_MSG_END(SkipListFooContainer);
+  INTRUSIVE_DEFINE_FIELD(Key2SkipListFoo, foo_map_);
+INTRUSIVE_END(SkipListFooContainer);
 // clang-format on
 
-using Key2SkipListFoo = intrusive::SkipList<OBJECT_MSG_FIELD(SkipListFoo, foo_map_key_)>;
+using Key2SkipListFoo = intrusive::SkipList<INTRUSIVE_FIELD(SkipListFoo, foo_map_key_)>;
 TEST(SkipList, empty) {
   Key2SkipListFoo foo_map;
   ASSERT_TRUE(foo_map.empty());
@@ -240,7 +240,7 @@ TEST(SkipList, FOR_EACH) {
       ASSERT_EQ(exists[i]->ref_cnt(), 2);
     }
     int value = -50;
-    OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&foo_map, foo) {
+    INTRUSIVE_SKIPLIST_UNSAFE_FOR_EACH_PTR(&foo_map, foo) {
       ASSERT_EQ(foo->foo_map_key(), value);
       ++value;
     }

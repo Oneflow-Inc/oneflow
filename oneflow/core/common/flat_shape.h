@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_FLAT_SHAPE_H_
 
 #include <memory>
-#include "oneflow/core/object_msg/flat_msg.h"
+#include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape_vec.h"
 

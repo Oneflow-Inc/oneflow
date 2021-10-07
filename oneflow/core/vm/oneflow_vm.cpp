@@ -30,7 +30,7 @@ namespace {
 
 Maybe<void> ForEachThreadCtx(vm::VirtualMachine* vm,
                              const std::function<Maybe<void>(vm::ThreadCtx*)>& DoEach) {
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm->mut_thread_ctx_list(), thread_ctx) {
+  INTRUSIVE_LIST_UNSAFE_FOR_EACH_PTR(vm->mut_thread_ctx_list(), thread_ctx) {
     const auto& stream_type = thread_ctx->stream_rt_desc().stream_type_id().stream_type();
     if (stream_type.SharingVirtualMachineThread()) { continue; }
     JUST(DoEach(thread_ctx));
@@ -64,7 +64,7 @@ std::type_index GetStreamTypeIndex(const vm::ThreadCtx* thread_ctx) {
 void GetWorkerThreadInitializer(intrusive::SharedPtr<vm::VirtualMachine> vm,
                                 std::function<void(vm::ThreadCtx*)>* Initializer) {
   std::set<std::type_index> stream_type_indexes;
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm->mut_thread_ctx_list(), thread_ctx) {
+  INTRUSIVE_LIST_UNSAFE_FOR_EACH_PTR(vm->mut_thread_ctx_list(), thread_ctx) {
     const auto& stream_type = thread_ctx->stream_rt_desc().stream_type_id().stream_type();
     if (!stream_type.SupportingTransportInstructions()) { continue; }
     stream_type_indexes.insert(GetStreamTypeIndex(thread_ctx));

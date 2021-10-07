@@ -26,9 +26,9 @@ void ThreadCtx::LoopRun(const std::function<void(ThreadCtx*)>& Initializer) {
 
 intrusive::ChannelStatus ThreadCtx::ReceiveAndRun() {
   const StreamType& stream_type = stream_rt_desc().stream_type();
-  intrusive::List<OBJECT_MSG_FIELD(Instruction, pending_instruction_entry_)> tmp_list;
+  intrusive::List<INTRUSIVE_FIELD(Instruction, pending_instruction_entry_)> tmp_list;
   intrusive::ChannelStatus status = mut_pending_instruction_list()->MoveTo(&tmp_list);
-  OBJECT_MSG_LIST_FOR_EACH(&tmp_list, instruction) {
+  INTRUSIVE_LIST_FOR_EACH(&tmp_list, instruction) {
     tmp_list.Erase(instruction.Mutable());
     stream_type.Run(instruction.Mutable());
   }
@@ -37,9 +37,9 @@ intrusive::ChannelStatus ThreadCtx::ReceiveAndRun() {
 
 intrusive::ChannelStatus ThreadCtx::TryReceiveAndRun() {
   const StreamType& stream_type = stream_rt_desc().stream_type();
-  intrusive::List<OBJECT_MSG_FIELD(Instruction, pending_instruction_entry_)> tmp_list;
+  intrusive::List<INTRUSIVE_FIELD(Instruction, pending_instruction_entry_)> tmp_list;
   intrusive::ChannelStatus status = mut_pending_instruction_list()->TryMoveTo(&tmp_list);
-  OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_list, instruction) {
+  INTRUSIVE_LIST_FOR_EACH_PTR(&tmp_list, instruction) {
     CHECK_GT(instruction->ref_cnt(), 1);
     tmp_list.Erase(instruction);
     stream_type.Run(instruction);

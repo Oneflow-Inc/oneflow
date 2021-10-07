@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_STREAM_RUNTIME_DESC_MSG_H_
-#define ONEFLOW_CORE_VM_STREAM_RUNTIME_DESC_MSG_H_
+#ifndef ONEFLOW_CORE_VM_STREAM_RUNTIME_DESC__H_
+#define ONEFLOW_CORE_VM_STREAM_RUNTIME_DESC__H_
 
 #include "oneflow/core/vm/stream_desc.h"
 #include "oneflow/core/vm/stream.h"
@@ -27,11 +27,11 @@ struct StreamDesc;
 
 // Rt is short for Runtime
 // clang-format off
-OBJECT_MSG_BEGIN(StreamRtDesc);
+INTRUSIVE_BEGIN(StreamRtDesc);
  public:
   StreamRtDesc() = default;
   // types
-  using StreamId2Stream = intrusive::SkipList<OBJECT_MSG_FIELD(Stream, stream_id_)>;
+  using StreamId2Stream = intrusive::SkipList<INTRUSIVE_FIELD(Stream, stream_id_)>;
   // Getters
   const StreamDesc& stream_desc() const {
     if (stream_desc_) { return stream_desc_.Get(); }
@@ -57,16 +57,16 @@ OBJECT_MSG_BEGIN(StreamRtDesc);
   OF_PUBLIC const StreamType& stream_type() const;
 
   // fields
-  OBJECT_MSG_DEFINE_FIELD(intrusive::SharedPtr<StreamDesc>, stream_desc_); 
+  INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<StreamDesc>, stream_desc_); 
 
   // list entries
   using StreamTypeIdKey = intrusive::SkipListEntry<FlatMsg<StreamTypeId>, 7>;
-  OBJECT_MSG_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);
-  OBJECT_MSG_DEFINE_FIELD(StreamId2Stream, stream_id2stream_);
-OBJECT_MSG_END(StreamRtDesc);
+  INTRUSIVE_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);
+  INTRUSIVE_DEFINE_FIELD(StreamId2Stream, stream_id2stream_);
+INTRUSIVE_END(StreamRtDesc);
 // clang-format on
 
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_STREAM_RUNTIME_DESC_MSG_H_
+#endif  // ONEFLOW_CORE_VM_STREAM_RUNTIME_DESC__H_

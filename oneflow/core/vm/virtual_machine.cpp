@@ -52,7 +52,7 @@ void VirtualMachine::ReleaseInstruction(Instruction* instruction,
                                         /*out*/ ReadyInstructionList* ready_instruction_list) {
   auto* access_list = instruction->mut_access_list();
   auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
-  OBJECT_MSG_LIST_FOR_EACH(access_list, access) {
+  INTRUSIVE_LIST_FOR_EACH(access_list, access) {
     CHECK_GT(access->ref_cnt(), 1);
     access_list->Erase(access.Mutable());
     if (access->is_mirrored_object_id_inserted()) {
@@ -93,7 +93,7 @@ void VirtualMachine::TryReleaseFinishedInstructions(
 }
 
 void VirtualMachine::FilterAndRunInstructionsInAdvance(TmpPendingInstrMsgList* instr_msg_list) {
-  OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
+  INTRUSIVE_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
     const auto& instr_type_id = instr_msg->instr_type_id();
     if (instr_type_id.instruction_type().ResettingIdToObjectMap()) {
       const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
@@ -128,7 +128,7 @@ bool IsStreamInParallelDesc(const ParallelDesc* parallel_desc, const Stream& str
 void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
                                       /*out*/ NewInstructionList* new_instruction_list) {
   auto* front_seq_compute_list = mutable_front_seq_compute_instr_list();
-  OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
+  INTRUSIVE_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
     const StreamTypeId& stream_type_id = instr_msg->instr_type_id().stream_type_id();
     auto* stream_rt_desc = mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
     const auto& instruction_type = instr_msg->instr_type_id().instruction_type();
@@ -139,7 +139,7 @@ void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
     bool is_front_seq = instruction_type.IsFrontSequential();
     if (is_front_seq) { CHECK_EQ(stream_rt_desc->stream_id2stream().size(), 1); }
     const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
-    OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(stream_rt_desc->mut_stream_id2stream(), stream) {
+    INTRUSIVE_SKIPLIST_UNSAFE_FOR_EACH_PTR(stream_rt_desc->mut_stream_id2stream(), stream) {
       if (!IsStreamInParallelDesc(parallel_desc.get(), *stream)) { continue; }
       intrusive::SharedPtr<Instruction> instr = stream->NewInstruction(instr_msg, parallel_desc);
       if (stream_type_id.interpret_type() == kInfer) {
@@ -192,7 +192,7 @@ void VirtualMachine::ForEachMirroredObject(Id2LogicalObject* id2logical_object,
   if (logical_object == nullptr) { return; }
   auto* map = logical_object->mut_global_device_id2mirrored_object();
   if (operand.has_all_mirrored_object()) {
-    OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(map, mirrored_object) { DoEach(mirrored_object); }
+    INTRUSIVE_SKIPLIST_FOR_EACH_PTR(map, mirrored_object) { DoEach(mirrored_object); }
   } else {
     auto* mirrored_object = map->FindPtr(operand.GetGlobalDeviceId(global_device_id));
     if (mirrored_object != nullptr) { DoEach(mirrored_object); }
@@ -389,7 +389,7 @@ void VirtualMachine::ConnectInstruction(Instruction* src_instruction,
 
 void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                                             NewInstructionList* new_instruction_list) {
-  OBJECT_MSG_LIST_FOR_EACH_PTR(new_instruction_list, instruction) {
+  INTRUSIVE_LIST_FOR_EACH_PTR(new_instruction_list, instruction) {
     int64_t global_device_id = instruction->stream().global_device_id();
     const InterpretType interpret_type = instruction->stream().stream_type_id().interpret_type();
     auto ConsumeConstMirroredObject = [&](MirroredObject* mirrored_object) {
@@ -466,7 +466,7 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
       }
     }
     auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
-    OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(rw_mutexed_object_accesses, rw_mutexed_object_access) {
+    INTRUSIVE_SKIPLIST_UNSAFE_FOR_EACH_PTR(rw_mutexed_object_accesses, rw_mutexed_object_access) {
       auto* mirrored_object = rw_mutexed_object_access->mut_mirrored_object();
       if (mirrored_object->has_deleting_access()
           && mirrored_object->mut_deleting_access() != rw_mutexed_object_access) {
@@ -488,7 +488,7 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
       } else {
         CHECK(rw_mutexed_object_access->is_mut_operand());
         auto* access_list = mirrored_object->mut_rw_mutexed_object()->mut_access_list();
-        OBJECT_MSG_LIST_FOR_EACH_PTR(access_list, access) {
+        INTRUSIVE_LIST_FOR_EACH_PTR(access_list, access) {
           if (access == rw_mutexed_object_access) { break; }
           CHECK(access->is_const_operand() || access->is_mut_operand())
               << "access type " << access->access_type() << " not supported";
@@ -505,7 +505,7 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
 
 void VirtualMachine::FilterReadyInstructions(NewInstructionList* new_instruction_list,
                                              /*out*/ ReadyInstructionList* ready_instruction_list) {
-  OBJECT_MSG_LIST_FOR_EACH_PTR(new_instruction_list, instruction) {
+  INTRUSIVE_LIST_FOR_EACH_PTR(new_instruction_list, instruction) {
     if (instruction->in_edges().empty()) {
       new_instruction_list->MoveToDstBack(instruction, ready_instruction_list);
     }
@@ -517,7 +517,7 @@ void VirtualMachine::DispatchAndPrescheduleInstructions(
   PrescheduledInstructionList prescheduled;
   auto* active_stream_list = mut_active_stream_list();
   auto* vm_stat_running_list = mut_vm_stat_running_instruction_list();
-  OBJECT_MSG_LIST_FOR_EACH_PTR(ready_instruction_list, instruction) {
+  INTRUSIVE_LIST_FOR_EACH_PTR(ready_instruction_list, instruction) {
     vm_stat_running_list->PushBack(instruction);
     auto* stream = instruction->mut_stream();
     ready_instruction_list->MoveToDstBack(instruction, stream->mut_running_instruction_list());
@@ -539,7 +539,7 @@ void VirtualMachine::TryMoveWaitingToReady(Instruction* instruction, ReadyList* 
                                            const IsEdgeReadyT& IsEdgeReady) {
   auto* wait_instruction_list = mut_waiting_instruction_list();
   auto* out_edges = instruction->mut_out_edges();
-  OBJECT_MSG_LIST_FOR_EACH_PTR(out_edges, out_edge) {
+  INTRUSIVE_LIST_FOR_EACH_PTR(out_edges, out_edge) {
     Instruction* out_instruction = out_edge->mut_dst_instruction();
     if (!IsEdgeReady(out_instruction)) { continue; }
     out_edges->Erase(out_edge);
@@ -553,7 +553,7 @@ void VirtualMachine::__Init__(const VmDesc& vm_desc) {
   mutable_vm_resource_desc()->CopyFrom(vm_desc.vm_resource_desc());
   CHECK_GT(vm_desc.machine_id_range().size(), 0);
   *mutable_machine_id_range() = vm_desc.machine_id_range();
-  OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.stream_type_id2desc(), stream_desc) {
+  INTRUSIVE_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.stream_type_id2desc(), stream_desc) {
     if (stream_desc->num_threads() == 0) { continue; }
     auto stream_rt_desc = intrusive::MakeShared<StreamRtDesc>(stream_desc);
     mut_stream_type_id2stream_rt_desc()->Insert(stream_rt_desc.Mutable());
@@ -582,7 +582,7 @@ Maybe<void> VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) 
          "'multiprocessing.set_start_method(\"spawn\")' in '__main__' if you are using Python's "
          "multiprocessing";
   InstructionMsgList new_instr_msg_list;
-  OBJECT_MSG_LIST_FOR_EACH_PTR(compute_instr_msg_list, compute_instr_msg) {
+  INTRUSIVE_LIST_FOR_EACH_PTR(compute_instr_msg_list, compute_instr_msg) {
     if (!compute_instr_msg->phy_instr_operand()) {
       new_instr_msg_list.EmplaceBack(compute_instr_msg->MakeInferInstrMsg());
     }
@@ -638,10 +638,10 @@ void VirtualMachine::TryRunFrontSeqInstruction(ReadyInstructionList* ready_instr
 
 void VirtualMachine::TryDeleteLogicalObjects() {
   auto* delete_list = mut_delete_logical_object_list();
-  // OBJECT_MSG_LIST_FOR_EACH_PTR supports removing elements at the end of iteration code
-  OBJECT_MSG_LIST_FOR_EACH_PTR(delete_list, logical_object) {
+  // INTRUSIVE_LIST_FOR_EACH_PTR supports removing elements at the end of iteration code
+  INTRUSIVE_LIST_FOR_EACH_PTR(delete_list, logical_object) {
     auto* global_device_id2mirrored_object = logical_object->mut_global_device_id2mirrored_object();
-    OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(global_device_id2mirrored_object, mirrored_object) {
+    INTRUSIVE_SKIPLIST_FOR_EACH_PTR(global_device_id2mirrored_object, mirrored_object) {
       CHECK_EQ(mirrored_object->ref_cnt(), 1);
       if (mirrored_object->rw_mutexed_object().ref_cnt() == 1) {
         CHECK_EQ(mirrored_object->rw_mutexed_object().access_list().size(), 0);
@@ -661,7 +661,7 @@ void VirtualMachine::TryDeleteLogicalObjects() {
 void VirtualMachine::Schedule() {
   ReadyInstructionList* ready_instruction_list = mut_ready_instruction_list();
   auto* active_stream_list = mut_active_stream_list();
-  OBJECT_MSG_LIST_FOR_EACH_PTR(active_stream_list, stream) {
+  INTRUSIVE_LIST_FOR_EACH_PTR(active_stream_list, stream) {
     TryReleaseFinishedInstructions(stream, /*out*/ ready_instruction_list);
     if (stream->running_instruction_list().empty()) { active_stream_list->Erase(stream); }
   }

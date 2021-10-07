@@ -26,12 +26,12 @@ namespace vm {
 struct ThreadCtx;
 
 // clang-format off
-OBJECT_MSG_BEGIN(Stream);
+INTRUSIVE_BEGIN(Stream);
  public:
   void __Init__();
 
   // types
-  using InstructionList = intrusive::List<OBJECT_MSG_FIELD(Instruction, instruction_entry_)>;
+  using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, instruction_entry_)>;
 
   // Getters
   int64_t max_device_num_per_machine() const { return max_device_num_per_machine_; }
@@ -74,21 +74,21 @@ OBJECT_MSG_BEGIN(Stream);
   OF_PRIVATE void MoveFromZombieListToFreeList();
 
   // fields
-  OBJECT_MSG_DEFINE_FIELD(ThreadCtx*, thread_ctx_); 
-  OBJECT_MSG_DEFINE_FIELD(std::unique_ptr<DeviceCtx>, device_ctx_);
-  OBJECT_MSG_DEFINE_FIELD(int64_t, max_device_num_per_machine_);
+  INTRUSIVE_DEFINE_FIELD(ThreadCtx*, thread_ctx_); 
+  INTRUSIVE_DEFINE_FIELD(std::unique_ptr<DeviceCtx>, device_ctx_);
+  INTRUSIVE_DEFINE_FIELD(int64_t, max_device_num_per_machine_);
   
   // list entries
-  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, active_stream_entry_);
-  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, thread_ctx_stream_entry_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, active_stream_entry_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, thread_ctx_stream_entry_);
   using StreamIdKey = intrusive::SkipListEntry<StreamId, 10>;
-  OBJECT_MSG_DEFINE_FIELD(StreamIdKey, stream_id_);
+  INTRUSIVE_DEFINE_FIELD(StreamIdKey, stream_id_);
 
   // heads 
-  OBJECT_MSG_DEFINE_FIELD(InstructionList, free_instruction_list_);
-  OBJECT_MSG_DEFINE_FIELD(InstructionList, zombie_instruction_list_);
-  OBJECT_MSG_DEFINE_FIELD(InstructionList, running_instruction_list_);
-OBJECT_MSG_END(Stream);
+  INTRUSIVE_DEFINE_FIELD(InstructionList, free_instruction_list_);
+  INTRUSIVE_DEFINE_FIELD(InstructionList, zombie_instruction_list_);
+  INTRUSIVE_DEFINE_FIELD(InstructionList, running_instruction_list_);
+INTRUSIVE_END(Stream);
 // clang-format on
 
 }  // namespace vm

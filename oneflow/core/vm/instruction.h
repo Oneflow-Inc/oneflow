@@ -13,14 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_VPU_INSTRUCTION_MSG_H_
-#define ONEFLOW_CORE_VM_VPU_INSTRUCTION_MSG_H_
+#ifndef ONEFLOW_CORE_VM_VPU_INSTRUCTION__H_
+#define ONEFLOW_CORE_VM_VPU_INSTRUCTION__H_
 
 #include <cstring>
 #include <mutex>
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/object_msg/flat_msg.h"
-#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/intrusive/flat_msg.h"
+#include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/vm/stream_desc.h"
 #include "oneflow/core/vm/vm_object.h"
 #include "oneflow/core/vm/stream_type.h"
@@ -35,7 +35,7 @@ namespace oneflow {
 namespace vm {
 
 // clang-format off
-OBJECT_MSG_BEGIN(InstructionOperandList);
+INTRUSIVE_BEGIN(InstructionOperandList);
  public:
   void __Init__() {}
   // Getters
@@ -44,10 +44,10 @@ OBJECT_MSG_BEGIN(InstructionOperandList);
   std::vector<FlatMsg<InstructionOperand>>* mut_operand() { return &operand_; }
   std::vector<FlatMsg<InstructionOperand>>* mutable_operand() { return &operand_; }
 
-  OBJECT_MSG_DEFINE_FIELD(std::vector<FlatMsg<InstructionOperand>>, operand_);
-OBJECT_MSG_END(InstructionOperandList);
+  INTRUSIVE_DEFINE_FIELD(std::vector<FlatMsg<InstructionOperand>>, operand_);
+INTRUSIVE_END(InstructionOperandList);
 
-OBJECT_MSG_BEGIN(InstructionMsg);
+INTRUSIVE_BEGIN(InstructionMsg);
  public:
   // Getters
   bool has_parallel_desc_symbol_id() const { return 0 != parallel_desc_symbol_id_; }
@@ -119,24 +119,24 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OF_PUBLIC intrusive::SharedPtr<InstructionMsg> MakeInferInstrMsg() const;
 
   // fields
-  OBJECT_MSG_DEFINE_FIELD(InstrTypeId, instr_type_id_);
+  INTRUSIVE_DEFINE_FIELD(InstrTypeId, instr_type_id_);
   // instr_type_name is a necessary reduandant field for method ToProto
-  OBJECT_MSG_DEFINE_FIELD(std::string, instr_type_name_);
-  OBJECT_MSG_DEFINE_FIELD(int64_t, parallel_desc_symbol_id_);
-  OBJECT_MSG_DEFINE_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
-  OBJECT_MSG_DEFINE_FIELD(intrusive::SharedPtr<InstructionOperandList>, operand_list_);
-  OBJECT_MSG_DEFINE_FIELD(std::shared_ptr<PhyInstrOperand>, phy_instr_operand_);
+  INTRUSIVE_DEFINE_FIELD(std::string, instr_type_name_);
+  INTRUSIVE_DEFINE_FIELD(int64_t, parallel_desc_symbol_id_);
+  INTRUSIVE_DEFINE_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<InstructionOperandList>, operand_list_);
+  INTRUSIVE_DEFINE_FIELD(std::shared_ptr<PhyInstrOperand>, phy_instr_operand_);
 
 
   // list entries
-  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, instr_msg_entry_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, instr_msg_entry_);
 
   // private methods
   OF_PRIVATE InstructionOperand* add_instr_operand();
-OBJECT_MSG_END(InstructionMsg);
+INTRUSIVE_END(InstructionMsg);
 // clang-format on
 
-using InstructionMsgList = intrusive::List<OBJECT_MSG_FIELD(InstructionMsg, instr_msg_entry_)>;
+using InstructionMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, instr_msg_entry_)>;
 
 template<OperandMemZoneModifier mem_zone_modifier>
 void CheckOperand(const Operand& operand);
@@ -155,7 +155,7 @@ FLAT_MSG_END(InstructionStatusBuffer);
 
 struct Instruction;
 // clang-format off
-OBJECT_MSG_BEGIN(InstructionEdge);
+INTRUSIVE_BEGIN(InstructionEdge);
  public:
   void __Init__() {
     clear_src_instruction();
@@ -183,25 +183,25 @@ OBJECT_MSG_BEGIN(InstructionEdge);
   }
 
   // fields
-  OBJECT_MSG_DEFINE_FIELD(Instruction*, src_instruction_); 
-  OBJECT_MSG_DEFINE_FIELD(Instruction*, dst_instruction_); 
+  INTRUSIVE_DEFINE_FIELD(Instruction*, src_instruction_); 
+  INTRUSIVE_DEFINE_FIELD(Instruction*, dst_instruction_); 
   // list entries
-  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, in_edge_entry_);
-  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, out_edge_entry_);
-OBJECT_MSG_END(InstructionEdge);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, in_edge_entry_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, out_edge_entry_);
+INTRUSIVE_END(InstructionEdge);
 // clang-format on
 
 struct Stream;
 // clang-format off
-OBJECT_MSG_BEGIN(Instruction);
+INTRUSIVE_BEGIN(Instruction);
  public:
   // types
-  using InEdgeList = intrusive::List<OBJECT_MSG_FIELD(InstructionEdge, in_edge_entry_)>;
-  using OutEdgeList = intrusive::List<OBJECT_MSG_FIELD(InstructionEdge, out_edge_entry_)>;
+  using InEdgeList = intrusive::List<INTRUSIVE_FIELD(InstructionEdge, in_edge_entry_)>;
+  using OutEdgeList = intrusive::List<INTRUSIVE_FIELD(InstructionEdge, out_edge_entry_)>;
   using RwMutexedObjectAccessList =
-      intrusive::List<OBJECT_MSG_FIELD(RwMutexedObjectAccess, instruction_access_entry_)>;
+      intrusive::List<INTRUSIVE_FIELD(RwMutexedObjectAccess, instruction_access_entry_)>;
   using MirroredObjectId2RwMutexedObjectAccess =
-      intrusive::SkipList<OBJECT_MSG_FIELD(RwMutexedObjectAccess, mirrored_object_id_)>;
+      intrusive::SkipList<INTRUSIVE_FIELD(RwMutexedObjectAccess, mirrored_object_id_)>;
 
   // Getters
   void __Init__() { clear_stream(); }
@@ -345,30 +345,30 @@ OBJECT_MSG_BEGIN(Instruction);
   };
 
   // fields
-  OBJECT_MSG_DEFINE_FIELD(FlatMsg<InstructionStatusBuffer>, status_buffer_);
-  OBJECT_MSG_DEFINE_FIELD(intrusive::SharedPtr<InstructionMsg>, instr_msg_);
-  OBJECT_MSG_DEFINE_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
-  OBJECT_MSG_DEFINE_FIELD(Stream*, stream_); 
+  INTRUSIVE_DEFINE_FIELD(FlatMsg<InstructionStatusBuffer>, status_buffer_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<InstructionMsg>, instr_msg_);
+  INTRUSIVE_DEFINE_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
+  INTRUSIVE_DEFINE_FIELD(Stream*, stream_); 
 
   // list entries
-  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, instruction_entry_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, instruction_entry_);
   // `vm_stat_running_instruction_entry` valid from instruction ready to instruction done 
-  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, vm_stat_running_instruction_entry_);
-  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, pending_instruction_entry_);
-  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, front_seq_infer_instr_entry_);
-  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, front_seq_compute_instr_entry_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, vm_stat_running_instruction_entry_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, pending_instruction_entry_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, front_seq_infer_instr_entry_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, front_seq_compute_instr_entry_);
 
   // maps
-  OBJECT_MSG_DEFINE_FIELD(MirroredObjectId2RwMutexedObjectAccess, mirrored_object_id2access_);
+  INTRUSIVE_DEFINE_FIELD(MirroredObjectId2RwMutexedObjectAccess, mirrored_object_id2access_);
 
   // lists
-  OBJECT_MSG_DEFINE_FIELD(RwMutexedObjectAccessList, access_list_);
-  OBJECT_MSG_DEFINE_FIELD(InEdgeList, in_edges_);
-  OBJECT_MSG_DEFINE_FIELD(OutEdgeList, out_edges_);
-OBJECT_MSG_END(Instruction);
+  INTRUSIVE_DEFINE_FIELD(RwMutexedObjectAccessList, access_list_);
+  INTRUSIVE_DEFINE_FIELD(InEdgeList, in_edges_);
+  INTRUSIVE_DEFINE_FIELD(OutEdgeList, out_edges_);
+INTRUSIVE_END(Instruction);
 // clang-format on
 
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_VPU_INSTRUCTION_MSG_H_
+#endif  // ONEFLOW_CORE_VM_VPU_INSTRUCTION__H_

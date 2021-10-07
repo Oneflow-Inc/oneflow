@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_LOCAL_DEP_OBJECT_H_
 #define ONEFLOW_CORE_FRAMEWORK_LOCAL_DEP_OBJECT_H_
 
-#include "oneflow/core/object_msg/object_msg_core.h"
+#include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/vm/vm_object.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
@@ -28,7 +28,7 @@ class Device;
 // clang-format off
 
 // Helps VirtualMachine building instruction edges
-OBJECT_MSG_BEGIN(LocalDepObject);
+INTRUSIVE_BEGIN(LocalDepObject);
  public:
   // Getters
   const vm::LogicalObject& logical_object() const {
@@ -64,14 +64,14 @@ OBJECT_MSG_BEGIN(LocalDepObject);
   OF_PRIVATE Maybe<void> Init(const Device& device);
 
   // fields
-  OBJECT_MSG_DEFINE_FIELD(intrusive::SharedPtr<vm::LogicalObject>, logical_object_);
-  OBJECT_MSG_DEFINE_FIELD(intrusive::SharedPtr<vm::MirroredObject>, mirrored_object_); 
+  INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<vm::LogicalObject>, logical_object_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<vm::MirroredObject>, mirrored_object_); 
 
   // list entries
-  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, pool_entry_);
-  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, stored_entry_);
-  OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, lifetime_entry_);
-OBJECT_MSG_END(LocalDepObject);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, pool_entry_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, stored_entry_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, lifetime_entry_);
+INTRUSIVE_END(LocalDepObject);
 // clang-format on
 
 Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device);

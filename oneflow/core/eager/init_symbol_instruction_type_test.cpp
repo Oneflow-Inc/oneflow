@@ -39,7 +39,7 @@ namespace oneflow {
 namespace vm {
 namespace test {
 
-using InstructionMsgList = intrusive::List<OBJECT_MSG_FIELD(vm::InstructionMsg, instr_msg_entry_)>;
+using InstructionMsgList = intrusive::List<INTRUSIVE_FIELD(vm::InstructionMsg, instr_msg_entry_)>;
 
 template<typename T, typename SerializedT>
 void TestInitSymbolInstructionType(const std::string& instr_type_name) {
@@ -54,7 +54,7 @@ void TestInitSymbolInstructionType(const std::string& instr_type_name) {
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    INTRUSIVE_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
   auto* logical_object = vm->mut_id2logical_object()->FindPtr(vm::IdUtil::GetTypeId(symbol_id));
   ASSERT_NE(logical_object, nullptr);

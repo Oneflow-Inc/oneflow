@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_MEM_ZONE_TYPE_DESC_MSG_H_
-#define ONEFLOW_CORE_VM_MEM_ZONE_TYPE_DESC_MSG_H_
+#ifndef ONEFLOW_CORE_VM_MEM_ZONE_TYPE_DESC__H_
+#define ONEFLOW_CORE_VM_MEM_ZONE_TYPE_DESC__H_
 
 #include "oneflow/core/vm/stream_desc.h"
 #include "oneflow/core/vm/virtual_machine.h"
@@ -26,11 +26,11 @@ namespace oneflow {
 namespace vm {
 
 // clang-format off
-OBJECT_MSG_BEGIN(VmDesc);
+INTRUSIVE_BEGIN(VmDesc);
  public:
   // types
   using StreamTypeId2StreamDesc =
-      intrusive::SkipList<OBJECT_MSG_FIELD(StreamDesc, stream_type_id_)>;
+      intrusive::SkipList<INTRUSIVE_FIELD(StreamDesc, stream_type_id_)>;
   // Getters
   const VmResourceDesc& vm_resource_desc() const {
     if (vm_resource_desc_) { return vm_resource_desc_.Get(); }
@@ -60,12 +60,12 @@ OBJECT_MSG_BEGIN(VmDesc);
   }
   
   // fields
-  OBJECT_MSG_DEFINE_FIELD(intrusive::SharedPtr<VmResourceDesc>, vm_resource_desc_);
-  OBJECT_MSG_DEFINE_FIELD(Range, machine_id_range_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<VmResourceDesc>, vm_resource_desc_);
+  INTRUSIVE_DEFINE_FIELD(Range, machine_id_range_);
 
   // maps
-  OBJECT_MSG_DEFINE_FIELD(StreamTypeId2StreamDesc, stream_type_id2desc_);
-OBJECT_MSG_END(VmDesc);
+  INTRUSIVE_DEFINE_FIELD(StreamTypeId2StreamDesc, stream_type_id2desc_);
+INTRUSIVE_END(VmDesc);
 // clang-format on
 
 intrusive::SharedPtr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id);
@@ -75,4 +75,4 @@ intrusive::SharedPtr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_m
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_MEM_ZONE_TYPE_DESC_MSG_H_
+#endif  // ONEFLOW_CORE_VM_MEM_ZONE_TYPE_DESC__H_

@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_H_
 
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/vm/instruction.h"
 
 namespace oneflow {

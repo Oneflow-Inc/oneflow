@@ -18,7 +18,7 @@ limitations under the License.
 // reference: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65899
 #include <sstream>
 #define private public
-#include "oneflow/core/object_msg/list_entry.h"
+#include "oneflow/core/intrusive/list_entry.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {

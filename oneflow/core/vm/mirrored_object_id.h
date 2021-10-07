@@ -13,10 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_MIRRORED_OBJECT_ID_MSG_H_
-#define ONEFLOW_CORE_VM_MIRRORED_OBJECT_ID_MSG_H_
+#ifndef ONEFLOW_CORE_VM_MIRRORED_OBJECT_ID__H_
+#define ONEFLOW_CORE_VM_MIRRORED_OBJECT_ID__H_
 
-#include "oneflow/core/object_msg/flat_msg.h"
+#include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/vm/instruction.cfg.h"
@@ -81,4 +81,4 @@ FLAT_MSG_END(MirroredObjectId);
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_MIRRORED_OBJECT_ID_MSG_H_
+#endif  // ONEFLOW_CORE_VM_MIRRORED_OBJECT_ID__H_
