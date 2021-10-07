@@ -28,14 +28,13 @@ limitations under the License.
 
 namespace oneflow {
 
-#define OBJECT_MSG_BEGIN(class_name)                      \
-  struct class_name final : public ObjectMsgStruct {      \
-   public:                                                \
-    using self_type = class_name;                         \
-    static const bool __is_object_message_type__ = true;  \
-    OF_PRIVATE DEFINE_STATIC_COUNTER(field_counter);      \
-    DSS_BEGIN(STATIC_COUNTER(field_counter), class_name); \
-    OBJECT_MSG_DEFINE_DELETE();
+#define OBJECT_MSG_BEGIN(class_name)                     \
+  struct class_name final : public ObjectMsgStruct {     \
+   public:                                               \
+    using self_type = class_name;                        \
+    static const bool __is_object_message_type__ = true; \
+    OF_PRIVATE DEFINE_STATIC_COUNTER(field_counter);     \
+    DSS_BEGIN(STATIC_COUNTER(field_counter), class_name);
 
 #define OBJECT_MSG_END(class_name)                                                  \
   OBJECT_MSG_DEFINE_BASE();                                                         \
@@ -47,9 +46,11 @@ namespace oneflow {
   ;
 
 #define OBJECT_MSG_DEFINE_FIELD(field_type, field_name)                             \
+ private:                                                                           \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                \
-  _OBJECT_MSG_DEFINE_FIELD(STATIC_COUNTER(field_counter), field_type, field_name);
+  field_type field_name;                                                            \
+  INCREASE_STATIC_COUNTER(field_counter);                                           \
+  DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "object message", field_type, field_name);
 
 #define OBJECT_MSG_FIELD(struct_type, field_name)                            \
   StructField<struct_type, struct_type::OF_PP_CAT(field_name, DssFieldType), \
@@ -83,8 +84,6 @@ namespace oneflow {
 
 // details
 
-#define OBJECT_MSG_TYPE_CHECK(class_name) ObjectMsgSelfType<class_name>::type
-
 #define OBJECT_MSG_DEFINE_BASE()                                                   \
  public:                                                                           \
   ObjectMsgBase* __mut_object_msg_base__() { return &__object_msg_base__; }        \
@@ -96,50 +95,10 @@ namespace oneflow {
   DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "object message", ObjectMsgBase, \
                    __object_msg_base__);
 
-#define OBJECT_MSG_DEFINE_DELETE()                                                \
- public:                                                                          \
-  void ObjectMsg__Delete__() {                                                    \
-    this->__Delete__();                                                           \
-    this->template __ReverseWalkField__<ObjectMsgField__Delete__, void>(nullptr); \
-  }                                                                               \
-                                                                                  \
- private:                                                                         \
-  template<int field_counter, typename WalkCtxType, typename PtrFieldType>        \
-  struct ObjectMsgField__Delete__ : public ObjectMsgNaiveDelete<WalkCtxType, PtrFieldType> {};
-
-#define OBJECT_MSG_OVERLOAD_DELETE(field_counter, delete_template)          \
- private:                                                                   \
-  template<typename WalkCtxType, typename PtrFieldType>                     \
-  struct ObjectMsgField__Delete__<field_counter, WalkCtxType, PtrFieldType> \
-      : public delete_template<WalkCtxType, PtrFieldType> {};
-
 #define _OBJECT_MSG_DEFINE_FIELD(field_counter, field_type, field_name) \
  private:                                                               \
   field_type field_name;                                                \
-  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgFieldDelete);      \
   DSS_DEFINE_FIELD(field_counter, "object message", field_type, field_name);
-
-template<typename WalkCtxType, typename FieldType>
-struct ObjectMsgFieldDelete {
-  static void Call(WalkCtxType* ctx, FieldType* field) { /* Do nothing */
-  }
-};
-
-template<typename T, typename Enabled = void>
-struct ObjectMsgSelfType {
-  static_assert(T::__is_object_message_type__, "T is not a object message type");
-  using type = T;
-};
-
-template<typename T>
-struct ObjectMsgSelfType<
-    T, typename std::enable_if<std::is_arithmetic<T>::value || std::is_enum<T>::value>::type> {
-  using type = T;
-};
-
-struct ObjectMsgPtrUtil;
-template<typename T>
-class ObjectMsgPtr;
 
 struct ObjectMsgStruct {
   void __Init__() {}
@@ -175,43 +134,16 @@ struct ObjectMsgPtrUtil final {
     CHECK_NOTNULL(ptr);
     int32_t ref_cnt = ptr->__mut_object_msg_base__()->DecreaseRefCount();
     if (ref_cnt > 0) { return; }
-    ptr->ObjectMsg__Delete__();
+    ptr->__Delete__();
     delete ptr;
-  }
-};
-
-template<bool is_pointer>
-struct _ObjectMsgNaiveDelete {
-  template<typename WalkCtxType, typename PtrFieldType>
-  static void Call(WalkCtxType* ctx, PtrFieldType* field) {}
-};
-
-template<typename WalkCtxType, typename PtrFieldType>
-struct ObjectMsgNaiveDelete {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field) {
-    static const bool is_ptr = std::is_pointer<PtrFieldType>::value;
-    _ObjectMsgNaiveDelete<is_ptr>::template Call<WalkCtxType, PtrFieldType>(ctx, field);
-  }
-};
-
-template<>
-struct _ObjectMsgNaiveDelete<true> {
-  template<typename WalkCtxType, typename PtrFieldType>
-  static void Call(WalkCtxType* ctx, PtrFieldType* field) {
-    static_assert(std::is_pointer<PtrFieldType>::value, "invalid use of _ObjectMsgNaiveDelete");
-    using FieldType = typename std::remove_pointer<PtrFieldType>::type;
-    static_assert(std::is_base_of<ObjectMsgStruct, FieldType>::value,
-                  "FieldType is not a subclass of ObjectMsgStruct");
-    auto* ptr = *field;
-    if (ptr == nullptr) { return; }
-    ObjectMsgPtrUtil::ReleaseRef<FieldType>(ptr);
   }
 };
 
 template<typename T>
 class ObjectMsgPtr final {
  public:
-  using value_type = typename OBJECT_MSG_TYPE_CHECK(T);
+  static_assert(T::__is_object_message_type__, "T is not a object message type");
+  using value_type = T;
   ObjectMsgPtr() : ptr_(nullptr) {}
   ObjectMsgPtr(value_type* ptr) : ptr_(nullptr) { Reset(ptr); }
   ObjectMsgPtr(const ObjectMsgPtr& obj_ptr) {
