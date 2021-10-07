@@ -42,6 +42,7 @@ OBJECT_MSG_BEGIN(Stream);
   const InstructionList& free_instruction_list() const { return free_instruction_list_; }
   const InstructionList& zombie_instruction_list() const { return zombie_instruction_list_; }
   const InstructionList& running_instruction_list() const { return running_instruction_list_; }
+  const StreamId& stream_id() const { return stream_id_.key(); }
 
   // Setters
   void set_max_device_num_per_machine(int64_t val) { max_device_num_per_machine_ = val; }
@@ -57,6 +58,8 @@ OBJECT_MSG_BEGIN(Stream);
   InstructionList* mutable_free_instruction_list() { return &free_instruction_list_; }
   InstructionList* mutable_zombie_instruction_list() { return &zombie_instruction_list_; }
   InstructionList* mutable_running_instruction_list() { return &running_instruction_list_; }
+  StreamId* mut_stream_id() { return stream_id_.mut_key(); }
+  StreamId* mutable_stream_id() { return stream_id_.mut_key(); }
 
   // methods
   OF_PUBLIC void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id, const int64_t max_device_num_per_machine);
@@ -78,7 +81,8 @@ OBJECT_MSG_BEGIN(Stream);
   // list entries
   OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, active_stream_entry_);
   OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, thread_ctx_stream_entry_);
-  OBJECT_MSG_DEFINE_MAP_KEY(StreamId, stream_id);
+  using StreamIdKey = intrusive::SkipListEntry<StreamId, 10>;
+  OBJECT_MSG_DEFINE_FIELD(StreamIdKey, stream_id_);
 
   // heads 
   OBJECT_MSG_DEFINE_FIELD(InstructionList, free_instruction_list_);

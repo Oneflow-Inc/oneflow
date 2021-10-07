@@ -45,7 +45,15 @@ TEST(StreamTypeId, logical_compare) {
 
 // clang-format off
 OBJECT_MSG_BEGIN(StreamTypeIdItem);
-  OBJECT_MSG_DEFINE_MAP_KEY(StreamTypeId, stream_type_id);
+ public:
+  // Getters
+  const StreamTypeId& stream_type_id() const { return stream_type_id_.key().Get(); }
+  // Setters
+  StreamTypeId* mut_stream_type_id() { return stream_type_id_.mut_key()->Mutable(); }
+  StreamTypeId* mutable_stream_type_id() { return stream_type_id_.mut_key()->Mutable(); }
+
+  using StreamTypeIdKey = intrusive::SkipListEntry<FlatMsg<StreamTypeId>, 20>;
+  OBJECT_MSG_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);
 OBJECT_MSG_END(StreamTypeIdItem);
 // clang-format on
 using StreamTypeIdSet = OBJECT_MSG_MAP(StreamTypeIdItem, stream_type_id);

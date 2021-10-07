@@ -21,12 +21,6 @@ limitations under the License.
 
 namespace oneflow {
 
-#define OBJECT_MSG_DEFINE_SKIPLIST_KEY(max_level, T, field_name)                          \
-  static_assert(__is_object_message_type__, "this struct is not a object message");       \
-  static_assert(std::is_standard_layout<T>::value, "this struct is not standard layout"); \
-  OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                      \
-  _OBJECT_MSG_DEFINE_SKIPLIST_KEY(STATIC_COUNTER(field_counter), max_level, T, field_name);
-
 #define OBJECT_MSG_DEFINE_SKIPLIST_HEAD(elem_type, elem_field_name, field_name)                  \
   static_assert(__is_object_message_type__, "this struct is not a object message");              \
   static_assert(!std::is_same<self_type, elem_type>::value, "self loop entry is not supported"); \
@@ -73,32 +67,6 @@ namespace oneflow {
                                                                                                    \
  private:                                                                                          \
   OF_PP_CAT(field_name, _ObjectMsgSkipListType) OF_PP_CAT(field_name, _);
-
-#define _OBJECT_MSG_DEFINE_SKIPLIST_KEY(field_counter, max_level, T, field_name)      \
-  _OBJECT_MSG_DEFINE_SKIPLIST_KEY_FIELD(max_level, T, field_name)                     \
-  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedSkipListIteratorInit);     \
-  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedSkipListIteratorDelete); \
-  DSS_DEFINE_FIELD(field_counter, "object message",                                   \
-                   OF_PP_CAT(field_name, _ObjectMsgSkipListKeyType), OF_PP_CAT(field_name, _));
-
-#define _OBJECT_MSG_DEFINE_SKIPLIST_KEY_FIELD(max_level, key_type, field_name)               \
- public:                                                                                     \
-  using OF_PP_CAT(field_name, _ObjectMsgSkipListKeyType) =                                   \
-      intrusive::SkipListEntry<key_type, max_level>;                                         \
-  bool OF_PP_CAT(is_, OF_PP_CAT(field_name, _inserted))() const {                            \
-    return !OF_PP_CAT(field_name, _).empty();                                                \
-  }                                                                                          \
-  ConstType<key_type>& field_name() const { return OF_PP_CAT(field_name, _).key(); }         \
-  key_type* OF_PP_CAT(mut_, field_name)() { return OF_PP_CAT(field_name, _).mut_key(); }     \
-  key_type* OF_PP_CAT(mutable_, field_name)() { return OF_PP_CAT(field_name, _).mut_key(); } \
-  template<typename T>                                                                       \
-  void OF_PP_CAT(set_, field_name)(const T& val) {                                           \
-    static_assert(std::is_scalar<T>::value, "T is not scalar type");                         \
-    *OF_PP_CAT(mut_, field_name)() = val;                                                    \
-  }                                                                                          \
-                                                                                             \
- private:                                                                                    \
-  OF_PP_CAT(field_name, _ObjectMsgSkipListKeyType) OF_PP_CAT(field_name, _);
 
 #define OBJECT_MSG_SKIPLIST_ELEM_STRUCT_FIELD(elem_type, elem_field_name)               \
   StructField<elem_type, typename elem_type::OF_PP_CAT(elem_field_name, _DssFieldType), \

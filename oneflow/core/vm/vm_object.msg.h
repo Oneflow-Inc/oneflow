@@ -157,6 +157,7 @@ OBJECT_MSG_BEGIN(MirroredObject);
     return default_val.Get();
   }
   const MirroredObjectId& mirrored_object_id() const { return mirrored_object_id_.Get(); }
+  int64_t global_device_id() const { return global_device_id_.key(); }
   // Setters
   void set_deleting_access(RwMutexedObjectAccess* val) { deleting_access_ = val; }
   void clear_deleting_access() { deleting_access_ = nullptr; }
@@ -175,6 +176,7 @@ OBJECT_MSG_BEGIN(MirroredObject);
   }
   MirroredObjectId* mut_mirrored_object_id() { return mirrored_object_id_.Mutable(); }
   MirroredObjectId* mutable_mirrored_object_id() { return mirrored_object_id_.Mutable(); }
+  void set_global_device_id(int64_t val) { *global_device_id_.mut_key() = val; }
 
 
   // methods
@@ -188,7 +190,8 @@ OBJECT_MSG_BEGIN(MirroredObject);
 
 
   // list entries
-  OBJECT_MSG_DEFINE_MAP_KEY(int64_t, global_device_id);
+  using Int64Key = intrusive::SkipListEntry<int64_t, 10>;
+  OBJECT_MSG_DEFINE_FIELD(Int64Key, global_device_id_);
 OBJECT_MSG_END(MirroredObject);
 
 struct VirtualMachine;
@@ -198,9 +201,11 @@ OBJECT_MSG_BEGIN(LogicalObject);
   // Getters
   const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
   bool is_delete_entry_empty() const { return delete_entry_.empty(); }
+  const ObjectId& logical_object_id() const { return logical_object_id_.key(); }
   // Setters
   std::shared_ptr<const ParallelDesc>* mut_parallel_desc() { return &parallel_desc_; }
   std::shared_ptr<const ParallelDesc>* mutable_parallel_desc() { return &parallel_desc_; }
+  void set_logical_object_id(const ObjectId& val) { *logical_object_id_.mut_key() = val; }
 
   // methods
   OF_PUBLIC void __Init__() { /* Do nothing */ }
@@ -217,7 +222,8 @@ OBJECT_MSG_BEGIN(LogicalObject);
   OBJECT_MSG_DEFINE_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
 
   // list entries
-  OBJECT_MSG_DEFINE_MAP_KEY(ObjectId, logical_object_id);
+  using ObjectIdKey = intrusive::SkipListEntry<ObjectId, 24>;
+  OBJECT_MSG_DEFINE_FIELD(ObjectIdKey, logical_object_id_);
   OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, delete_entry_);
   // heads
   OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, global_device_id, global_device_id2mirrored_object);

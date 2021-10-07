@@ -29,13 +29,15 @@ OBJECT_MSG_BEGIN(ObjectMsgSkipListFoo);
   // Getters
   bool has_is_deleted() const { return is_deleted_ != nullptr; }
   int is_deleted() const { return *is_deleted_; }
+  int32_t foo_map_key() const { return foo_map_key_.key(); }
   // Setters
   void set_is_deleted(int* val) { is_deleted_ = val; }
   void clear_is_deleted() { is_deleted_ = nullptr; }
   int* mut_is_deleted() { return is_deleted_; }
   int* mutable_is_deleted() { return is_deleted_; }
+  void set_foo_map_key(int32_t val) { *foo_map_key_.mut_key() = val; }
 
-  OBJECT_MSG_DEFINE_MAP_KEY(int32_t, foo_map_key);
+  OBJECT_MSG_DEFINE_FIELD(intrusive::SkipListEntry<int32_t>, foo_map_key_);
   OBJECT_MSG_DEFINE_FIELD(int*, is_deleted_);
   void __Delete__() {
     if (has_is_deleted()) { ++*mutable_is_deleted(); }
