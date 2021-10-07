@@ -26,7 +26,7 @@ void ThreadCtx::LoopRun(const std::function<void(ThreadCtx*)>& Initializer) {
 
 ObjectMsgConditionListStatus ThreadCtx::ReceiveAndRun() {
   const StreamType& stream_type = stream_rt_desc().stream_type();
-  OBJECT_MSG_LIST(Instruction, pending_instruction_entry) tmp_list;
+  intrusive::List<OBJECT_MSG_FIELD(Instruction, pending_instruction_entry_)> tmp_list;
   ObjectMsgConditionListStatus status = mut_pending_instruction_list()->MoveTo(&tmp_list);
   OBJECT_MSG_LIST_FOR_EACH(&tmp_list, instruction) {
     tmp_list.Erase(instruction.Mutable());
@@ -37,7 +37,7 @@ ObjectMsgConditionListStatus ThreadCtx::ReceiveAndRun() {
 
 ObjectMsgConditionListStatus ThreadCtx::TryReceiveAndRun() {
   const StreamType& stream_type = stream_rt_desc().stream_type();
-  OBJECT_MSG_LIST(Instruction, pending_instruction_entry) tmp_list;
+  intrusive::List<OBJECT_MSG_FIELD(Instruction, pending_instruction_entry_)> tmp_list;
   ObjectMsgConditionListStatus status = mut_pending_instruction_list()->TryMoveTo(&tmp_list);
   OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_list, instruction) {
     CHECK_GT(instruction->ref_cnt(), 1);

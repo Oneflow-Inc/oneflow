@@ -40,7 +40,7 @@ namespace oneflow {
 namespace vm {
 namespace test {
 
-using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_entry);
+using InstructionMsgList = intrusive::List<OBJECT_MSG_FIELD(vm::InstructionMsg, instr_msg_entry_)>;
 
 int64_t NewJobDescSymbol(InstructionMsgList* list,
                          const std::shared_ptr<JobConfigProto>& job_conf) {

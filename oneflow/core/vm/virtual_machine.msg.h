@@ -123,7 +123,7 @@ OBJECT_MSG_BEGIN(VirtualMachine);
 
   // methods
  private:
-  using TmpPendingInstrMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_entry);
+  using TmpPendingInstrMsgList = intrusive::List<OBJECT_MSG_FIELD(InstructionMsg, instr_msg_entry_)>;
   using NewInstructionList = InstructionList;
   using PrescheduledInstructionList = InstructionList;
   using WaitingInstructionList = InstructionList;

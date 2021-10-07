@@ -23,15 +23,6 @@ limitations under the License.
 
 namespace oneflow {
 
-#define OBJECT_MSG_DEFINE_LIST_HEAD(elem_type, elem_field_name, field_name)               \
-  static_assert(__is_object_message_type__, "this struct is not a object message");       \
-  OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                      \
-  _OBJECT_MSG_DEFINE_LIST_HEAD(STATIC_COUNTER(field_counter), elem_type, elem_field_name, \
-                               field_name);
-
-#define OBJECT_MSG_LIST(obj_msg_type, obj_msg_field) \
-  intrusive::List<_OBJECT_MSG_LIST_STRUCT_FIELD(obj_msg_type, obj_msg_field)>
-
 #define OBJECT_MSG_LIST_FOR_EACH(list_ptr, elem) \
   _OBJECT_MSG_LIST_FOR_EACH(std::remove_pointer<decltype(list_ptr)>::type, list_ptr, elem)
 
@@ -43,40 +34,6 @@ namespace oneflow {
                                        elem)
 
 // details
-
-#define _OBJECT_MSG_LIST_STRUCT_FIELD(obj_msg_type, obj_msg_field)       \
-  StructField<OBJECT_MSG_TYPE_CHECK(obj_msg_type), intrusive::ListEntry, \
-              OBJECT_MSG_TYPE_CHECK(obj_msg_type)::OF_PP_CAT(obj_msg_field, _kDssFieldOffset)>
-
-#define _OBJECT_MSG_DEFINE_LIST_HEAD(field_counter, elem_type, elem_field_name, field_name)    \
-  _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD_TYPE(elem_type, elem_field_name, field_name)              \
-  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _ObjectMsgListType), \
-                   OF_PP_CAT(field_name, _));                                                  \
-  _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name)                   \
-  OBJECT_MSG_OVERLOAD_INIT_WITH_FIELD_INDEX(field_counter, ObjectMsgListHeadInit);             \
-  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgListHeadDelete);
-
-#define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD_TYPE(elem_type, elem_field_name, field_name)            \
- public:                                                                                           \
-  using OF_PP_CAT(field_name, _ObjectMsgListType) = TrivialObjectMsgList<                          \
-      StructField<OBJECT_MSG_TYPE_CHECK(elem_type), intrusive::ListEntry,                          \
-                  OBJECT_MSG_TYPE_CHECK(elem_type)::OF_PP_CAT(elem_field_name, _kDssFieldOffset)>, \
-      GetObjectMsgLinkType<std::is_same<self_type, elem_type>::value>::value>;
-
-#define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name) \
- public:                                                                           \
-  const OF_PP_CAT(field_name, _ObjectMsgListType) & field_name() const {           \
-    return OF_PP_CAT(field_name, _);                                               \
-  }                                                                                \
-  OF_PP_CAT(field_name, _ObjectMsgListType) * OF_PP_CAT(mut_, field_name)() {      \
-    return &OF_PP_CAT(field_name, _);                                              \
-  }                                                                                \
-  OF_PP_CAT(field_name, _ObjectMsgListType) * OF_PP_CAT(mutable_, field_name)() {  \
-    return &OF_PP_CAT(field_name, _);                                              \
-  }                                                                                \
-                                                                                   \
- private:                                                                          \
-  OF_PP_CAT(field_name, _ObjectMsgListType) OF_PP_CAT(field_name, _);
 
 #define _OBJECT_MSG_LIST_FOR_EACH(list_type, list_ptr, elem)                          \
   for (ObjectMsgPtr<typename list_type::value_type> elem, *end_if_not_null = nullptr; \
@@ -97,34 +54,6 @@ namespace oneflow {
       (StructField<typename list_type, intrusive::ListEntry,                         \
                    list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)), \
       list_type::value_entry_struct_field, elem)
-
-template<int field_index, typename WalkCtxType, typename PtrFieldType>
-struct ObjectMsgListHeadInit {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field) {
-    field->template __Init__<field_index>();
-  }
-};
-
-template<typename WalkCtxType, typename PtrFieldType>
-struct ObjectMsgListHeadDelete {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->Clear(); }
-};
-
-enum ObjectMsgLinkType { kDisableSelfLoopLink = 0, kEnableSelfLoopLink };
-
-template<bool enable_self_loop_entry>
-struct GetObjectMsgLinkType {};
-template<>
-struct GetObjectMsgLinkType<true> {
-  static const ObjectMsgLinkType value = kEnableSelfLoopLink;
-};
-template<>
-struct GetObjectMsgLinkType<false> {
-  static const ObjectMsgLinkType value = kDisableSelfLoopLink;
-};
-
-template<typename ValueLinkField, ObjectMsgLinkType entry_type>
-class TrivialObjectMsgList;
 
 namespace intrusive {
 
@@ -150,10 +79,7 @@ class List {
 
   void CheckSize() const { list_head_.CheckSize(); }
 
-  template<int field_index = 0>
-  void __Init__() {
-    list_head_.__Init__();
-  }
+  void __Init__() { list_head_.__Init__(); }
 
   value_type* Begin() {
     if (list_head_.empty()) { return nullptr; }
@@ -238,29 +164,39 @@ class List {
   intrusive::ListHead<ValueLinkField> list_head_;
 };
 
-}  // namespace intrusive
-
-template<typename ValueLinkField>
-class TrivialObjectMsgList<ValueLinkField, kEnableSelfLoopLink> {
+template<typename ValueLinkField, int field_counter>
+class HeadFreeList {
  public:
+  static_assert(std::is_same<typename ValueLinkField::field_type, intrusive::ListEntry>::value, "");
+  HeadFreeList(const HeadFreeList&) = delete;
+  HeadFreeList(HeadFreeList&&) = delete;
+  HeadFreeList() { this->__Init__(); }
+  ~HeadFreeList() { this->Clear(); }
+
   using value_type = typename ValueLinkField::struct_type;
   using value_entry_struct_field = ValueLinkField;
 
+  // field_counter is last field_number
+  static const int field_number_in_countainter = field_counter + 1;
+
   template<typename Enabled = void>
   static constexpr int ContainerLinkOffset() {
-    return offsetof(TrivialObjectMsgList, list_head_)
+    return offsetof(HeadFreeList, list_head_)
            + intrusive::ListHead<ValueLinkField>::ContainerLinkOffset();
   }
 
   std::size_t size() const { return list_head_.size(); }
   bool empty() const { return list_head_.empty(); }
 
-  template<int field_index>
   void __Init__() {
     list_head_.__Init__();
+    static_assert(
+        std::is_same<HeadFreeList, OBJECT_MSG_FIELD_TYPE(typename value_type,
+                                                         field_number_in_countainter)>::value,
+        "");
     using ThisInContainer =
-        StructField<value_type, TrivialObjectMsgList,
-                    value_type::template __DssFieldOffset4FieldIndex__<field_index>::value>;
+        StructField<value_type, HeadFreeList,
+                    OBJECT_MSG_FIELD_OFFSET(value_type, field_number_in_countainter)>;
     container_ = ThisInContainer::StructPtr4FieldPtr(this);
   }
 
@@ -280,20 +216,20 @@ class TrivialObjectMsgList<ValueLinkField, kEnableSelfLoopLink> {
   }
   constexpr value_type* End() const { return nullptr; }
 
-  void MoveToDstBack(value_type* ptr, TrivialObjectMsgList* dst) {
+  void MoveToDstBack(value_type* ptr, HeadFreeList* dst) {
     list_head_.MoveToDstBack(ptr, &dst->list_head_);
     MoveReference(ptr, dst);
   }
-  void MoveToDstFront(value_type* ptr, TrivialObjectMsgList* dst) {
+  void MoveToDstFront(value_type* ptr, HeadFreeList* dst) {
     list_head_.MoveToDstFront(ptr, &dst->list_head_);
     MoveReference(ptr, dst);
   }
-  value_type* MoveFrontToDstBack(TrivialObjectMsgList* dst) {
+  value_type* MoveFrontToDstBack(HeadFreeList* dst) {
     value_type* begin = list_head_.Begin();
     MoveToDstBack(begin, dst);
     return begin;
   }
-  value_type* MoveBackToDstBack(TrivialObjectMsgList* dst) {
+  value_type* MoveBackToDstBack(HeadFreeList* dst) {
     value_type* begin = list_head_.Last();
     MoveToDstBack(begin, dst);
     return begin;
@@ -358,8 +294,8 @@ class TrivialObjectMsgList<ValueLinkField, kEnableSelfLoopLink> {
     }
   }
 
-  void MoveTo(TrivialObjectMsgList* list) { MoveToDstBack(list); }
-  void MoveToDstBack(TrivialObjectMsgList* list) {
+  void MoveTo(HeadFreeList* list) { MoveToDstBack(list); }
+  void MoveToDstBack(HeadFreeList* list) {
     while (!empty()) { MoveToDstBack(list_head_.Begin(), list); }
   }
 
@@ -371,7 +307,7 @@ class TrivialObjectMsgList<ValueLinkField, kEnableSelfLoopLink> {
   }
 
  private:
-  void MoveReference(value_type* ptr, TrivialObjectMsgList* dst) {
+  void MoveReference(value_type* ptr, HeadFreeList* dst) {
     if (ptr == container_ && ptr != dst->container_) {
       ObjectMsgPtrUtil::Ref(ptr);
     } else if (ptr != container_ && ptr == dst->container_) {
@@ -384,6 +320,8 @@ class TrivialObjectMsgList<ValueLinkField, kEnableSelfLoopLink> {
   intrusive::ListHead<ValueLinkField> list_head_;
   const value_type* container_;
 };
+
+}  // namespace intrusive
 
 }  // namespace oneflow
 

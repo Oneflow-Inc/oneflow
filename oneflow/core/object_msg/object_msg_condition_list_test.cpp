@@ -64,7 +64,7 @@ void CallFromReceiverThreadByPopFront(std::vector<int>* visit, ConditionListFoo*
 }
 
 void CallFromReceiverThreadByMoveTo(std::vector<int>* visit, ConditionListFoo* condition_list) {
-  OBJECT_MSG_LIST(Foo, entry) tmp_list;
+  intrusive::List<OBJECT_MSG_FIELD(Foo, entry_)> tmp_list;
   while (condition_list->MoveTo(&tmp_list) == kObjectMsgConditionListStatusSuccess) {
     OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_list, foo) {
       ++visit->at(foo->x());

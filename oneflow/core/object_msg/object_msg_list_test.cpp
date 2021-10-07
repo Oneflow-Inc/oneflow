@@ -52,14 +52,16 @@ OBJECT_MSG_BEGIN(TestListItem)
 OBJECT_MSG_END(TestListItem)
 // clang-format on
 
+using TestList = intrusive::List<OBJECT_MSG_FIELD(TestListItem, foo_list_)>;
+
 TEST(List, empty) {
-  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  TestList foo_list;
   ASSERT_TRUE(foo_list.empty());
   ASSERT_EQ(foo_list.size(), 0);
 }
 
 TEST(List, empty_Begin) {
-  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  TestList foo_list;
   ObjectMsgPtr<TestListItem> obj_ptr;
   obj_ptr = foo_list.Begin();
   ASSERT_TRUE(!obj_ptr);
@@ -70,7 +72,7 @@ TEST(List, empty_Begin) {
 }
 
 TEST(List, empty_Next) {
-  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  TestList foo_list;
   ObjectMsgPtr<TestListItem> obj_ptr;
   ObjectMsgPtr<TestListItem> next;
   obj_ptr = foo_list.Begin();
@@ -86,7 +88,7 @@ TEST(List, empty_Next) {
 }
 
 TEST(List, PushFront) {
-  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  TestList foo_list;
   auto item0 = ObjectMsgPtr<TestListItem>::New();
   auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushFront(item0.Mutable());
@@ -102,7 +104,7 @@ TEST(List, PushFront) {
 TEST(List, destructor) {
   int elem_cnt = 2;
   {
-    OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+    TestList foo_list;
     auto item0 = ObjectMsgPtr<TestListItem>::New();
     item0->set_cnt(&elem_cnt);
     auto item1 = ObjectMsgPtr<TestListItem>::New();
@@ -114,7 +116,7 @@ TEST(List, destructor) {
   elem_cnt = 2;
   auto item0 = ObjectMsgPtr<TestListItem>::New();
   {
-    OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+    TestList foo_list;
     item0->set_cnt(&elem_cnt);
     auto item1 = ObjectMsgPtr<TestListItem>::New();
     item1->set_cnt(&elem_cnt);
@@ -125,7 +127,7 @@ TEST(List, destructor) {
 }
 
 TEST(List, PushBack) {
-  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  TestList foo_list;
   auto item0 = ObjectMsgPtr<TestListItem>::New();
   auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
@@ -139,7 +141,7 @@ TEST(List, PushBack) {
 }
 
 TEST(List, Erase) {
-  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  TestList foo_list;
   auto item0 = ObjectMsgPtr<TestListItem>::New();
   auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
@@ -156,7 +158,7 @@ TEST(List, Erase) {
 }
 
 TEST(List, PopBack) {
-  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  TestList foo_list;
   auto item0 = ObjectMsgPtr<TestListItem>::New();
   auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
@@ -173,7 +175,7 @@ TEST(List, PopBack) {
 }
 
 TEST(List, PopFront) {
-  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  TestList foo_list;
   auto item0 = ObjectMsgPtr<TestListItem>::New();
   auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
@@ -189,7 +191,7 @@ TEST(List, PopFront) {
 }
 
 TEST(List, Clear) {
-  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  TestList foo_list;
   auto item0 = ObjectMsgPtr<TestListItem>::New();
   auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
@@ -203,7 +205,7 @@ TEST(List, Clear) {
 }
 
 TEST(List, UNSAFE_FOR_EACH_PTR) {
-  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  TestList foo_list;
   auto item0 = ObjectMsgPtr<TestListItem>::New();
   auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
@@ -221,7 +223,7 @@ TEST(List, UNSAFE_FOR_EACH_PTR) {
 }
 
 TEST(List, FOR_EACH) {
-  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  TestList foo_list;
   auto item0 = ObjectMsgPtr<TestListItem>::New();
   auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
@@ -332,8 +334,8 @@ TEST(List, nested_list_delete) {
 }
 
 TEST(List, MoveTo) {
-  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list0;
+  TestList foo_list;
+  TestList foo_list0;
   auto item0 = ObjectMsgPtr<TestListItem>::New();
   auto item1 = ObjectMsgPtr<TestListItem>::New();
   ASSERT_EQ(item0->is_foo_list_empty(), true);
@@ -379,7 +381,12 @@ OBJECT_MSG_BEGIN(SelfLoopContainer);
   OBJECT_MSG_DEFINE_FIELD(bool*, deleted_);
   // list entries
   OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, entry_);
-  OBJECT_MSG_DEFINE_LIST_HEAD(SelfLoopContainer, entry, head);
+ public:
+  using SelfLoopContainerList = intrusive::HeadFreeList<OBJECT_MSG_FIELD(SelfLoopContainer, entry_), OBJECT_MSG_FIELD_COUNTER>;
+  const SelfLoopContainerList& head() const { return head_; }
+  SelfLoopContainerList* mut_head() { return &head_; }
+  SelfLoopContainerList* mutable_head() { return &head_; }
+  OBJECT_MSG_DEFINE_FIELD(SelfLoopContainerList, head_);
 OBJECT_MSG_END(SelfLoopContainer);
 // clang-format on
 

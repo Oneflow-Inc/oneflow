@@ -57,7 +57,7 @@ Maybe<ObjectMsgPtr<LocalDepObject>> LocalDepObject::New(const Device& device) {
 
 namespace {
 
-using PoolLocalDepObjectList = OBJECT_MSG_LIST(LocalDepObject, pool_entry);
+using PoolLocalDepObjectList = intrusive::List<OBJECT_MSG_FIELD(LocalDepObject, pool_entry_)>;
 using StoredLocalDepObjectList = OBJECT_MSG_MUTEXED_LIST(LocalDepObject, stored_entry);
 using LifetimeLocalDepObjectList = OBJECT_MSG_MUTEXED_LIST(LocalDepObject, lifetime_entry);
 

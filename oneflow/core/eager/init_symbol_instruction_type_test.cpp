@@ -39,7 +39,7 @@ namespace oneflow {
 namespace vm {
 namespace test {
 
-using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_entry);
+using InstructionMsgList = intrusive::List<OBJECT_MSG_FIELD(vm::InstructionMsg, instr_msg_entry_)>;
 
 template<typename T, typename SerializedT>
 void TestInitSymbolInstructionType(const std::string& instr_type_name) {

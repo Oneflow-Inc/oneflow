@@ -65,7 +65,7 @@ namespace oneflow {
 
 // Get field offset by field number
 #define OBJECT_MSG_FIELD_OFFSET(cls, field_number) \
-  cls::__DssFieldOffset4FieldIndex__<field_number>::value
+  cls::template __DssFieldOffset4FieldIndex__<field_number>::value
 
 // Get current defined field counter inside a object_msg class.
 // note: not used outside OBJECT_MSG_BEGIN ... OBJECT_MSG_END

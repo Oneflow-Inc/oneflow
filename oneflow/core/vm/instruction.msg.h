@@ -136,7 +136,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
 OBJECT_MSG_END(InstructionMsg);
 // clang-format on
 
-using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_entry);
+using InstructionMsgList = intrusive::List<OBJECT_MSG_FIELD(InstructionMsg, instr_msg_entry_)>;
 
 template<OperandMemZoneModifier mem_zone_modifier>
 void CheckOperand(const Operand& operand);
