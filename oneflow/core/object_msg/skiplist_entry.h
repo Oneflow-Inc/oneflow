@@ -89,7 +89,7 @@ struct ListEntryArray final {
 template<typename T, int N = 20>
 struct SkipListEntry {
  public:
-  SkipListEntry() { __Init__(); }
+  SkipListEntry() : key_() { __Init__(); }
   using self_type = SkipListEntry<T, N>;
   using entry_type = ListEntryArray<N>;
   using key_type = T;
@@ -102,19 +102,10 @@ struct SkipListEntry {
 
   bool empty() const { return entry_.empty(); }
 
-  void __Init__() {
-    entry_.NullptrClear();
-    KeyInitializer<std::is_scalar<T>::value>::Call(mut_key());
-  }
+  void __Init__() { entry_.NullptrClear(); }
 
-  const T& key() const {
-    const T* __attribute__((__may_alias__)) ptr = reinterpret_cast<const T*>(&key_buffer_[0]);
-    return *ptr;
-  }
-  T* mut_key() {
-    T* __attribute__((__may_alias__)) ptr = reinterpret_cast<T*>(&key_buffer_[0]);
-    return ptr;
-  }
+  const T& key() const { return key_; }
+  T* mut_key() { return &key_; }
 
   void CheckEmpty() const { return entry_.CheckNullptrEmpty(); }
 
@@ -167,15 +158,6 @@ struct SkipListEntry {
   }
 
  private:
-  template<bool is_scalar, typename Enabled = void>
-  struct KeyInitializer {
-    static void Call(T* key) {}
-  };
-  template<typename Enabled>
-  struct KeyInitializer<false, Enabled> {
-    static void Call(T* key) { key->__Init__(); }
-  };
-
   template<typename Enabled = void>
   static constexpr int SkipListIteratorOffset() {
     return offsetof(self_type, entry_);
@@ -203,7 +185,7 @@ struct SkipListEntry {
   }
 
   entry_type entry_;
-  char key_buffer_[sizeof(T)];
+  T key_;
 };
 
 template<typename ValueLinkField>

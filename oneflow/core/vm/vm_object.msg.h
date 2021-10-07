@@ -41,6 +41,7 @@ enum OperandAccessType {
 // clang-format off
 OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
  public:
+  RwMutexedObjectAccess() = default;
   void __Init__();
   // Getters
   OperandAccessType access_type() const { return access_type_; }
@@ -51,6 +52,8 @@ OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
   const MirroredObject& mirrored_object() const { return *mirrored_object_; }
   const RwMutexedObject& rw_mutexed_object() const { return *rw_mutexed_object_; }
   bool is_rw_mutexed_object_access_entry_empty() const { return rw_mutexed_object_access_entry_.empty(); }
+  const MirroredObjectId& mirrored_object_id() const { return mirrored_object_id_.key().Get(); }
+  bool is_mirrored_object_id_inserted() const { return !mirrored_object_id_.empty(); }
 
   // Setters
   void set_access_type(OperandAccessType val) { access_type_ = val; }
@@ -66,6 +69,8 @@ OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
   Instruction* mutable_instruction() { return instruction_; }
   MirroredObject* mutable_mirrored_object() { return mirrored_object_; }
   RwMutexedObject* mutable_rw_mutexed_object() { return rw_mutexed_object_; }
+  MirroredObjectId* mut_mirrored_object_id() { return mirrored_object_id_.mut_key()->Mutable(); }
+  MirroredObjectId* mutable_mirrored_object_id() { return mirrored_object_id_.mut_key()->Mutable(); }
 
   // methods
   OF_PUBLIC void __Init__(Instruction* instruction, MirroredObject* mirrored_object,
@@ -83,7 +88,8 @@ OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
   // list entries
   OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, instruction_access_entry_);
   OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, rw_mutexed_object_access_entry_);
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, MirroredObjectId, mirrored_object_id);
+  using MirroredObjectIdKey = intrusive::SkipListEntry<FlatMsg<MirroredObjectId>, 10>;
+  OBJECT_MSG_DEFINE_FIELD(MirroredObjectIdKey, mirrored_object_id_);
   
 OBJECT_MSG_END(RwMutexedObjectAccess);
 

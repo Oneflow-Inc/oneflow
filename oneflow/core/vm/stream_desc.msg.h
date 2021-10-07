@@ -64,10 +64,13 @@ OBJECT_MSG_BEGIN(StreamDesc);
   int32_t num_machines() const { return num_machines_; }
   int32_t num_streams_per_machine() const { return num_streams_per_machine_; }
   int32_t num_streams_per_thread() const { return num_streams_per_thread_; }
+  const StreamTypeId& stream_type_id() const { return stream_type_id_.key().Get(); }
   // Setters
   void set_num_machines(int32_t val) { num_machines_ = val; }
   void set_num_streams_per_machine(int32_t val) { num_streams_per_machine_ = val; }
   void set_num_streams_per_thread(int32_t val) { num_streams_per_thread_ = val; }
+  StreamTypeId* mut_stream_type_id() { return stream_type_id_.mut_key()->Mutable(); }
+  StreamTypeId* mutable_stream_type_id() { return stream_type_id_.mut_key()->Mutable(); }
 
   // methods
   OF_PUBLIC void __Init__() {}
@@ -81,8 +84,9 @@ OBJECT_MSG_BEGIN(StreamDesc);
   OBJECT_MSG_DEFINE_FIELD(int32_t, num_streams_per_machine_);
   OBJECT_MSG_DEFINE_FIELD(int32_t, num_streams_per_thread_);
 
-  // list entries
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, StreamTypeId, stream_type_id);
+  // skiplist entries
+  using StreamTypeIdKey = intrusive::SkipListEntry<FlatMsg<StreamTypeId>, 7>;
+  OBJECT_MSG_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);
 OBJECT_MSG_END(StreamDesc);
 // clang-format on
 

@@ -100,9 +100,8 @@ namespace oneflow {
  private:                                                                                    \
   OF_PP_CAT(field_name, _ObjectMsgSkipListKeyType) OF_PP_CAT(field_name, _);
 
-#define OBJECT_MSG_SKIPLIST_ELEM_STRUCT_FIELD(elem_type, elem_field_name)                \
-  StructField<elem_type,                                                                 \
-              typename elem_type::OF_PP_CAT(elem_field_name, _ObjectMsgSkipListKeyType), \
+#define OBJECT_MSG_SKIPLIST_ELEM_STRUCT_FIELD(elem_type, elem_field_name)               \
+  StructField<elem_type, typename elem_type::OF_PP_CAT(elem_field_name, _DssFieldType), \
               elem_type::OF_PP_CAT(elem_field_name, _kDssFieldOffset)>
 
 #define _OBJECT_MSG_SKIPLIST_FOR_EACH(skiplist_type, skiplist_ptr, elem)                     \

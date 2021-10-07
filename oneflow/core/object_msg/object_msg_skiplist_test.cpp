@@ -235,12 +235,6 @@ TEST(ObjectMsgSkipList, FOR_EACH) {
   ASSERT_EQ(elem_cnt, 100);
 }
 
-// clang-format off
-OBJECT_MSG_BEGIN(PtrAsKey);
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, int*, ptr_key);
-OBJECT_MSG_END(PtrAsKey);
-// clang-format on
-
 }  // namespace
 
 }  // namespace test

@@ -52,8 +52,8 @@ namespace oneflow {
   OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                \
   _OBJECT_MSG_DEFINE_FIELD(STATIC_COUNTER(field_counter), field_type, field_name);
 
-#define OBJECT_MSG_FIELD(struct_type, field_name)                             \
-  StructField<struct_type, struct_type::OF_PP_CAT(field_name, kDssFieldType), \
+#define OBJECT_MSG_FIELD(struct_type, field_name)                            \
+  StructField<struct_type, struct_type::OF_PP_CAT(field_name, DssFieldType), \
               struct_type::OF_PP_CAT(field_name, kDssFieldOffset)>
 
 // Get field number by field name
