@@ -195,6 +195,14 @@ struct Stream;
 // clang-format off
 OBJECT_MSG_BEGIN(Instruction);
  public:
+  // types
+  using InstructionEdgeSrcList =
+      intrusive::List<OBJECT_MSG_FIELD(InstructionEdge, src_instruction_entry_)>;
+  using InstructionEdgeDstList =
+      intrusive::List<OBJECT_MSG_FIELD(InstructionEdge, dst_instruction_entry_)>;
+  using RwMutexedObjectAccessList =
+      intrusive::List<OBJECT_MSG_FIELD(RwMutexedObjectAccess, instruction_access_entry_)>;
+
   // Getters
   void __Init__() { clear_stream(); }
   bool has_stream() const { return stream_ != nullptr;  }
@@ -210,6 +218,9 @@ OBJECT_MSG_BEGIN(Instruction);
   bool is_vm_stat_running_instruction_entry_empty() const { return vm_stat_running_instruction_entry_.empty(); }
   bool is_pending_instruction_entry_empty() const { return pending_instruction_entry_.empty(); }
   bool is_front_seq_compute_instr_entry_empty() const { return front_seq_compute_instr_entry_.empty(); }
+  const InstructionEdgeSrcList& in_edges() const { return in_edges_; }
+  const InstructionEdgeDstList& out_edges() const { return out_edges_; }
+  const RwMutexedObjectAccessList& access_list() const { return access_list_; }
 
   // Setters
   void set_stream(Stream* val) { stream_ = val; }
@@ -227,6 +238,12 @@ OBJECT_MSG_BEGIN(Instruction);
   std::shared_ptr<const ParallelDesc>* mutable_parallel_desc() { return &parallel_desc_; }
   InstructionStatusBuffer* mut_status_buffer() { return status_buffer_.Mutable(); }
   InstructionStatusBuffer* mutable_status_buffer() { return status_buffer_.Mutable(); }
+  InstructionEdgeSrcList* mut_in_edges() { return &in_edges_; }
+  InstructionEdgeDstList* mut_out_edges() { return &out_edges_; }
+  RwMutexedObjectAccessList* mut_access_list() { return &access_list_; }
+  InstructionEdgeSrcList* mutable_in_edges() { return &in_edges_; }
+  InstructionEdgeDstList* mutable_out_edges() { return &out_edges_; }
+  RwMutexedObjectAccessList* mutable_access_list() { return &access_list_; }
 
   // methods
   OF_PUBLIC void __Init__(InstructionMsg* instr_msg, Stream* stream, const std::shared_ptr<const ParallelDesc>& parallel_desc);
@@ -332,10 +349,10 @@ OBJECT_MSG_BEGIN(Instruction);
   OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, pending_instruction_entry_);
   OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, front_seq_infer_instr_entry_);
   OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, front_seq_compute_instr_entry_);
-  OBJECT_MSG_DEFINE_LIST_HEAD(InstructionEdge, src_instruction_entry, in_edges);
-  OBJECT_MSG_DEFINE_LIST_HEAD(InstructionEdge, dst_instruction_entry, out_edges);
+  OBJECT_MSG_DEFINE_FIELD(InstructionEdgeSrcList, in_edges_);
+  OBJECT_MSG_DEFINE_FIELD(InstructionEdgeDstList, out_edges_);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(RwMutexedObjectAccess, mirrored_object_id, mirrored_object_id2access);
-  OBJECT_MSG_DEFINE_LIST_HEAD(RwMutexedObjectAccess, instruction_access_entry, access_list);
+  OBJECT_MSG_DEFINE_FIELD(RwMutexedObjectAccessList, access_list_);
 OBJECT_MSG_END(Instruction);
 // clang-format on
 

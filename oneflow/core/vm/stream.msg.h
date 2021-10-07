@@ -30,12 +30,18 @@ OBJECT_MSG_BEGIN(Stream);
  public:
   void __Init__();
 
+  // types
+  using InstructionList = intrusive::List<OBJECT_MSG_FIELD(Instruction, instruction_entry_)>;
+
   // Getters
   int64_t max_device_num_per_machine() const { return max_device_num_per_machine_; }
   const ThreadCtx& thread_ctx() const { return *thread_ctx_; }
   bool has_thread_ctx() const { return thread_ctx_ != nullptr; }
   const std::unique_ptr<DeviceCtx>& device_ctx() const { return device_ctx_; }
   bool is_active_stream_entry_empty() const { return active_stream_entry_.empty(); }
+  const InstructionList& free_instruction_list() const { return free_instruction_list_; }
+  const InstructionList& zombie_instruction_list() const { return zombie_instruction_list_; }
+  const InstructionList& running_instruction_list() const { return running_instruction_list_; }
 
   // Setters
   void set_max_device_num_per_machine(int64_t val) { max_device_num_per_machine_ = val; }
@@ -45,6 +51,12 @@ OBJECT_MSG_BEGIN(Stream);
   void clear_thread_ctx() { thread_ctx_ = nullptr; }
   std::unique_ptr<DeviceCtx>* mut_device_ctx() { return &device_ctx_; }
   std::unique_ptr<DeviceCtx>* mutable_device_ctx() { return &device_ctx_; }
+  InstructionList* mut_free_instruction_list() { return &free_instruction_list_; }
+  InstructionList* mut_zombie_instruction_list() { return &zombie_instruction_list_; }
+  InstructionList* mut_running_instruction_list() { return &running_instruction_list_; }
+  InstructionList* mutable_free_instruction_list() { return &free_instruction_list_; }
+  InstructionList* mutable_zombie_instruction_list() { return &zombie_instruction_list_; }
+  InstructionList* mutable_running_instruction_list() { return &running_instruction_list_; }
 
   // methods
   OF_PUBLIC void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id, const int64_t max_device_num_per_machine);
@@ -69,9 +81,9 @@ OBJECT_MSG_BEGIN(Stream);
   OBJECT_MSG_DEFINE_MAP_KEY(StreamId, stream_id);
 
   // heads 
-  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_entry, free_instruction_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_entry, zombie_instruction_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_entry, running_instruction_list);
+  OBJECT_MSG_DEFINE_FIELD(InstructionList, free_instruction_list_);
+  OBJECT_MSG_DEFINE_FIELD(InstructionList, zombie_instruction_list_);
+  OBJECT_MSG_DEFINE_FIELD(InstructionList, running_instruction_list_);
 OBJECT_MSG_END(Stream);
 // clang-format on
 

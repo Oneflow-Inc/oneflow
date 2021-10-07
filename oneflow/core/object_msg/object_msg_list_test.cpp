@@ -258,7 +258,7 @@ OBJECT_MSG_BEGIN(TestObjectMsgListHead);
 OBJECT_MSG_END(TestObjectMsgListHead);
 // clang-format on
 
-TEST(List, OBJECT_MSG_DEFINE_LIST_HEAD) {
+TEST(List, object_msg_define_list_head) {
   auto foo_list_head = ObjectMsgPtr<TestObjectMsgListHead>::New();
   auto& foo_list = *foo_list_head->mutable_foo_list();
   auto item0 = ObjectMsgPtr<TestListItem>::New();

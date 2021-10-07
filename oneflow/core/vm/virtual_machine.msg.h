@@ -36,6 +36,16 @@ struct VmDesc;
 // clang-format off
 OBJECT_MSG_BEGIN(VirtualMachine);
  public:
+  // types
+  using ActiveStreamList = intrusive::List<OBJECT_MSG_FIELD(Stream, active_stream_entry_)>;
+  using ThreadCtxList = intrusive::List<OBJECT_MSG_FIELD(ThreadCtx, thread_ctx_entry_)>;
+  using LogicalObjectDeleteList = intrusive::List<OBJECT_MSG_FIELD(LogicalObject, delete_entry_)>;
+  using InstructionList = intrusive::List<OBJECT_MSG_FIELD(Instruction, instruction_entry_)>;
+  using VmStatRunningInstructionList =
+      intrusive::List<OBJECT_MSG_FIELD(Instruction, vm_stat_running_instruction_entry_)>;
+  using FrontSeqInstructionList =
+      intrusive::List<OBJECT_MSG_FIELD(Instruction, front_seq_compute_instr_entry_)>;
+
   // Getters
   const VmResourceDesc& vm_resource_desc() const {
     if (vm_resource_desc_) { return vm_resource_desc_.Get(); }
@@ -44,6 +54,13 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   }
   const Range& machine_id_range() const { return machine_id_range_; }
   const std::atomic<int64_t>& flying_instruction_cnt() const { return flying_instruction_cnt_; }
+  const ActiveStreamList& active_stream_list() const { return active_stream_list_; }
+  const ThreadCtxList& thread_ctx_list() const { return thread_ctx_list_; }
+  const LogicalObjectDeleteList& delete_logical_object_list() const { return delete_logical_object_list_; }
+  const InstructionList& waiting_instruction_list() const { return waiting_instruction_list_; }
+  const InstructionList& ready_instruction_list() const { return ready_instruction_list_; }
+  const VmStatRunningInstructionList& vm_stat_running_instruction_list() const { return vm_stat_running_instruction_list_; }
+  const FrontSeqInstructionList& front_seq_compute_instr_list() const { return front_seq_compute_instr_list_; }
   //Setters
   VmResourceDesc* mut_vm_resource_desc() { return mutable_vm_resource_desc(); }
   VmResourceDesc* mutable_vm_resource_desc() {
@@ -54,7 +71,20 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   std::atomic<int64_t>* mut_flying_instruction_cnt() { return &flying_instruction_cnt_; }
   Range* mutable_machine_id_range() { return &machine_id_range_; }
   std::atomic<int64_t>* mutable_flying_instruction_cnt() { return &flying_instruction_cnt_; }
-
+  ActiveStreamList* mut_active_stream_list() { return &active_stream_list_; }
+  ThreadCtxList* mut_thread_ctx_list() { return &thread_ctx_list_; }
+  LogicalObjectDeleteList* mut_delete_logical_object_list() { return &delete_logical_object_list_; }
+  InstructionList* mut_waiting_instruction_list() { return &waiting_instruction_list_; }
+  InstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
+  VmStatRunningInstructionList* mut_vm_stat_running_instruction_list() { return &vm_stat_running_instruction_list_; }
+  FrontSeqInstructionList* mut_front_seq_compute_instr_list() { return &front_seq_compute_instr_list_; }
+  ActiveStreamList* mutable_active_stream_list() { return &active_stream_list_; }
+  ThreadCtxList* mutable_thread_ctx_list() { return &thread_ctx_list_; }
+  LogicalObjectDeleteList* mutable_delete_logical_object_list() { return &delete_logical_object_list_; }
+  InstructionList* mutable_waiting_instruction_list() { return &waiting_instruction_list_; }
+  InstructionList* mutable_ready_instruction_list() { return &ready_instruction_list_; }
+  VmStatRunningInstructionList* mutable_vm_stat_running_instruction_list() { return &vm_stat_running_instruction_list_; }
+  FrontSeqInstructionList* mutable_front_seq_compute_instr_list() { return &front_seq_compute_instr_list_; }
 
   // methods
   OF_PUBLIC void __Init__(const VmDesc& vm_desc);
@@ -79,28 +109,26 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   OBJECT_MSG_DEFINE_FIELD(std::atomic<int64_t>, flying_instruction_cnt_);
 
   // heads
-  OBJECT_MSG_DEFINE_LIST_HEAD(Stream, active_stream_entry, active_stream_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(ThreadCtx, thread_ctx_entry, thread_ctx_list);
+  OBJECT_MSG_DEFINE_FIELD(ActiveStreamList, active_stream_list_);
+  OBJECT_MSG_DEFINE_FIELD(ThreadCtxList, thread_ctx_list_);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(StreamRtDesc, stream_type_id, stream_type_id2stream_rt_desc);
   OBJECT_MSG_DEFINE_MAP_HEAD(LogicalObject, logical_object_id, id2logical_object);
-  OBJECT_MSG_DEFINE_LIST_HEAD(LogicalObject, delete_entry, delete_logical_object_list);
+  OBJECT_MSG_DEFINE_FIELD(LogicalObjectDeleteList, delete_logical_object_list_);
 
   OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(InstructionMsg, instr_msg_entry, pending_msg_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_entry, waiting_instruction_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_entry, ready_instruction_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, vm_stat_running_instruction_entry,
-                              vm_stat_running_instruction_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, front_seq_compute_instr_entry, front_seq_compute_instr_list);
+  OBJECT_MSG_DEFINE_FIELD(InstructionList, waiting_instruction_list_);
+  OBJECT_MSG_DEFINE_FIELD(InstructionList, ready_instruction_list_);
+  OBJECT_MSG_DEFINE_FIELD(VmStatRunningInstructionList, vm_stat_running_instruction_list_);
+  OBJECT_MSG_DEFINE_FIELD(FrontSeqInstructionList, front_seq_compute_instr_list_);
 
   // methods
  private:
   using TmpPendingInstrMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_entry);
-  using NewInstructionList = OBJECT_MSG_LIST(Instruction, instruction_entry);
-  using PrescheduledInstructionList = OBJECT_MSG_LIST(Instruction, instruction_entry);
-  using WaitingInstructionList = VirtualMachine::waiting_instruction_list_ObjectMsgListType;
-  using ReadyInstructionList = VirtualMachine::ready_instruction_list_ObjectMsgListType;
+  using NewInstructionList = InstructionList;
+  using PrescheduledInstructionList = InstructionList;
+  using WaitingInstructionList = InstructionList;
+  using ReadyInstructionList = InstructionList;
   using Id2LogicalObject = VirtualMachine::id2logical_object_ObjectMsgSkipListType;
-  using ActiveStreamList = VirtualMachine::active_stream_list_ObjectMsgListType;
 
   template<typename ContainerT>
   void TryRunFrontSeqInstruction(ContainerT* front_seq_list,

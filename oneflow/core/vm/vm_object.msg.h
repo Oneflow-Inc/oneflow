@@ -92,6 +92,15 @@ OBJECT_MSG_BEGIN(RwMutexedObject);
  public:
   void __Init__() {}
 
+  // types
+  using RwMutexedObjectAccessList = intrusive::List<OBJECT_MSG_FIELD(RwMutexedObjectAccess, rw_mutexed_object_access_entry_)>;
+
+  // Getters
+  const RwMutexedObjectAccessList& access_list() const { return access_list_; }
+  // Setters
+  RwMutexedObjectAccessList* mut_access_list() { return &access_list_; }
+  RwMutexedObjectAccessList* mutable_access_list() { return &access_list_; }
+
   // methods
   OF_PUBLIC template<typename T> bool Has() const {
     return dynamic_cast<const T*>(&object()) != nullptr;
@@ -128,7 +137,7 @@ OBJECT_MSG_BEGIN(RwMutexedObject);
   OBJECT_MSG_DEFINE_FIELD(std::unique_ptr<Object>, object_ptr_);
 
   // list entries
-  OBJECT_MSG_DEFINE_LIST_HEAD(RwMutexedObjectAccess, rw_mutexed_object_access_entry, access_list);
+  OBJECT_MSG_DEFINE_FIELD(RwMutexedObjectAccessList, access_list_);
 OBJECT_MSG_END(RwMutexedObject);
 
 OBJECT_MSG_BEGIN(MirroredObject);

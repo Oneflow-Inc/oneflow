@@ -28,13 +28,19 @@ OBJECT_MSG_BEGIN(ThreadCtx);
  public:
   void __Init__() { clear_stream_rt_desc(); }
 
+  // types
+  using StreamList = intrusive::List<OBJECT_MSG_FIELD(Stream, thread_ctx_stream_entry_)>;
+
   // Getters
   bool has_stream_rt_desc() const { return stream_rt_desc_ != nullptr; }
   const StreamRtDesc& stream_rt_desc() const { return *stream_rt_desc_; }
+  const StreamList& stream_list() const { return stream_list_; }
 
   // Setters
   void set_stream_rt_desc(const StreamRtDesc* val) { stream_rt_desc_ = val; }
   void clear_stream_rt_desc() { stream_rt_desc_ = nullptr; }
+  StreamList* mut_stream_list() { return &stream_list_; }
+  StreamList* mutable_stream_list() { return &stream_list_; }
 
   // methods
   OF_PUBLIC void __Init__(const StreamRtDesc& stream_rt_desc) {
@@ -47,7 +53,7 @@ OBJECT_MSG_BEGIN(ThreadCtx);
 
   // list entries
   OBJECT_MSG_DEFINE_FIELD(intrusive::ListEntry, thread_ctx_entry_);
-  OBJECT_MSG_DEFINE_LIST_HEAD(Stream, thread_ctx_stream_entry, stream_list);
+  OBJECT_MSG_DEFINE_FIELD(StreamList, stream_list_);
   OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(Instruction, pending_instruction_entry,
                                         pending_instruction_list);
 
