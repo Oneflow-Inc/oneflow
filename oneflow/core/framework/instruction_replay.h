@@ -17,7 +17,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_INSTRUCTION_REPLAY_H_
 #define ONEFLOW_CORE_FRAMEWORK_INSTRUCTION_REPLAY_H_
 
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 
 namespace oneflow {
 

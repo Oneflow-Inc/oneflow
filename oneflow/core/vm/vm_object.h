@@ -20,8 +20,8 @@ limitations under the License.
 #include "oneflow/core/object_msg/flat_msg.h"
 #include "oneflow/core/object_msg/object_msg.h"
 #include "oneflow/core/vm/id_util.h"
-#include "oneflow/core/vm/mirrored_object_id.msg.h"
-#include "oneflow/core/vm/stream_desc.msg.h"
+#include "oneflow/core/vm/mirrored_object_id.h"
+#include "oneflow/core/vm/stream_desc.h"
 #include "oneflow/core/vm/object.h"
 #include "oneflow/core/job/parallel_desc.h"
 

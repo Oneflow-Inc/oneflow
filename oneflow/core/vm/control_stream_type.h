@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_CONTROL_VM_STREAM_TYPE_H_
 
 #include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 
 namespace oneflow {
 namespace vm {

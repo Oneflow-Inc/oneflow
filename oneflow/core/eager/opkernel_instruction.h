@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/instruction_operand.h"
 
 namespace oneflow {
 namespace vm {

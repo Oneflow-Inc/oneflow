@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
 

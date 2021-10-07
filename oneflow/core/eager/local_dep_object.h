@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_LOCAL_DEP_OBJECT_H_
 
 #include "oneflow/core/object_msg/object_msg_core.h"
-#include "oneflow/core/vm/vm_object.msg.h"
+#include "oneflow/core/vm/vm_object.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
 

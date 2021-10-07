@@ -19,8 +19,8 @@ limitations under the License.
 #include <functional>
 #include "oneflow/core/object_msg/object_msg.h"
 #include "oneflow/core/object_msg/channel.h"
-#include "oneflow/core/vm/stream.msg.h"
-#include "oneflow/core/vm/stream_runtime_desc.msg.h"
+#include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/stream_runtime_desc.h"
 
 namespace oneflow {
 namespace vm {

@@ -16,8 +16,8 @@ limitations under the License.
 
 #include "oneflow/core/eager/critical_section_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
-#include "oneflow/core/vm/thread_ctx.msg.h"
+#include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/eager/critical_section_status_querier.h"
 #include "oneflow/core/common/util.h"
 

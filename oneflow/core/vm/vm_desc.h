@@ -16,10 +16,10 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_MEM_ZONE_TYPE_DESC_MSG_H_
 #define ONEFLOW_CORE_VM_MEM_ZONE_TYPE_DESC_MSG_H_
 
-#include "oneflow/core/vm/stream_desc.msg.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
+#include "oneflow/core/vm/stream_desc.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/interpret_type.h"
-#include "oneflow/core/vm/vm_resource_desc.msg.h"
+#include "oneflow/core/vm/vm_resource_desc.h"
 #include "oneflow/core/common/range.h"
 
 namespace oneflow {

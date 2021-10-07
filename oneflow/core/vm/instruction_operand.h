@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/object_msg/flat_msg.h"
 #include "oneflow/core/vm/id_util.h"
-#include "oneflow/core/vm/mirrored_object_id.msg.h"
+#include "oneflow/core/vm/mirrored_object_id.h"
 #include "oneflow/core/vm/phy_instr_operand.h"
 
 namespace oneflow {

@@ -17,8 +17,8 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_DEVICE_HELPER_STREAM_TYPE_H_
 
 #include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
-#include "oneflow/core/vm/stream.msg.h"
+#include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/vm/stream.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
 

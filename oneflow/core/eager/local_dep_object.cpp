@@ -19,9 +19,9 @@ limitations under the License.
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/static_global.h"
 #include "oneflow/core/vm/id_util.h"
-#include "oneflow/core/vm/vm_object.msg.h"
+#include "oneflow/core/vm/vm_object.h"
 #include "oneflow/core/vm/oneflow_vm.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {

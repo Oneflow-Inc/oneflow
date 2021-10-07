@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include <typeinfo>
 #include "oneflow/core/vm/oneflow_vm.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/common/blocking_counter.h"

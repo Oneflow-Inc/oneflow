@@ -17,7 +17,7 @@ limitations under the License.
 #include <list>
 #include "oneflow/core/framework/instruction_replay.h"
 #include "oneflow/core/vm/vm_util.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 
 namespace oneflow {
 

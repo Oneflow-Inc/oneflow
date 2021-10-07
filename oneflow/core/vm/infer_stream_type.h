@@ -20,8 +20,6 @@ limitations under the License.
 #include "oneflow/core/object_msg/object_msg.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/control_stream_type.h"
-#include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/stream_desc.msg.h"
 #include "oneflow/core/device/device_context.h"
 
 namespace oneflow {

@@ -17,11 +17,11 @@ limitations under the License.
 #include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
-#include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/vm/instruction_operand.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/vm/object_wrapper.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
