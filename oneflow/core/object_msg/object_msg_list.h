@@ -19,6 +19,7 @@ limitations under the License.
 #include <typeinfo>
 #include "oneflow/core/object_msg/object_msg_core.h"
 #include "oneflow/core/object_msg/list_entry.h"
+#include "oneflow/core/object_msg/struct_traits.h"
 
 namespace oneflow {
 
@@ -29,7 +30,7 @@ namespace oneflow {
                                field_name);
 
 #define OBJECT_MSG_LIST(obj_msg_type, obj_msg_field) \
-  ObjectMsgList<_OBJECT_MSG_LIST_STRUCT_FIELD(obj_msg_type, obj_msg_field)>
+  intrusive::List<_OBJECT_MSG_LIST_STRUCT_FIELD(obj_msg_type, obj_msg_field)>
 
 #define OBJECT_MSG_LIST_FOR_EACH(list_ptr, elem) \
   _OBJECT_MSG_LIST_FOR_EACH(std::remove_pointer<decltype(list_ptr)>::type, list_ptr, elem)
@@ -375,14 +376,18 @@ class TrivialObjectMsgList<ValueLinkField, kEnableSelfLoopLink> {
   const value_type* container_;
 };
 
+namespace intrusive {
+
 template<typename LinkField>
-class ObjectMsgList : public TrivialObjectMsgList<LinkField, kDisableSelfLoopLink> {
+class List : public TrivialObjectMsgList<LinkField, kDisableSelfLoopLink> {
  public:
-  ObjectMsgList(const ObjectMsgList&) = delete;
-  ObjectMsgList(ObjectMsgList&&) = delete;
-  ObjectMsgList() { this->__Init__(); }
-  ~ObjectMsgList() { this->Clear(); }
+  List(const List&) = delete;
+  List(List&&) = delete;
+  List() { this->__Init__(); }
+  ~List() { this->Clear(); }
 };
+
+}  // namespace intrusive
 
 }  // namespace oneflow
 

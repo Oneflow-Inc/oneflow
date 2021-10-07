@@ -52,13 +52,13 @@ OBJECT_MSG_BEGIN(TestListItem)
 OBJECT_MSG_END(TestListItem)
 // clang-format on
 
-TEST(ObjectMsgList, empty) {
+TEST(List, empty) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
   ASSERT_TRUE(foo_list.empty());
   ASSERT_EQ(foo_list.size(), 0);
 }
 
-TEST(ObjectMsgList, empty_Begin) {
+TEST(List, empty_Begin) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
   ObjectMsgPtr<TestListItem> obj_ptr;
   obj_ptr = foo_list.Begin();
@@ -69,7 +69,7 @@ TEST(ObjectMsgList, empty_Begin) {
   ASSERT_TRUE(!obj_ptr);
 }
 
-TEST(ObjectMsgList, empty_Next) {
+TEST(List, empty_Next) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
   ObjectMsgPtr<TestListItem> obj_ptr;
   ObjectMsgPtr<TestListItem> next;
@@ -85,7 +85,7 @@ TEST(ObjectMsgList, empty_Next) {
   ASSERT_TRUE(!next);
 }
 
-TEST(ObjectMsgList, PushFront) {
+TEST(List, PushFront) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
   auto item0 = ObjectMsgPtr<TestListItem>::New();
   auto item1 = ObjectMsgPtr<TestListItem>::New();
@@ -99,7 +99,7 @@ TEST(ObjectMsgList, PushFront) {
   ASSERT_TRUE(next == item0);
 }
 
-TEST(ObjectMsgList, destructor) {
+TEST(List, destructor) {
   int elem_cnt = 2;
   {
     OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
@@ -124,7 +124,7 @@ TEST(ObjectMsgList, destructor) {
   ASSERT_EQ(elem_cnt, 1);
 }
 
-TEST(ObjectMsgList, PushBack) {
+TEST(List, PushBack) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
   auto item0 = ObjectMsgPtr<TestListItem>::New();
   auto item1 = ObjectMsgPtr<TestListItem>::New();
@@ -138,7 +138,7 @@ TEST(ObjectMsgList, PushBack) {
   ASSERT_TRUE(next == item1);
 }
 
-TEST(ObjectMsgList, Erase) {
+TEST(List, Erase) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
   auto item0 = ObjectMsgPtr<TestListItem>::New();
   auto item1 = ObjectMsgPtr<TestListItem>::New();
@@ -155,7 +155,7 @@ TEST(ObjectMsgList, Erase) {
   ASSERT_TRUE(!next);
 }
 
-TEST(ObjectMsgList, PopBack) {
+TEST(List, PopBack) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
   auto item0 = ObjectMsgPtr<TestListItem>::New();
   auto item1 = ObjectMsgPtr<TestListItem>::New();
@@ -172,7 +172,7 @@ TEST(ObjectMsgList, PopBack) {
   ASSERT_TRUE(!next);
 }
 
-TEST(ObjectMsgList, PopFront) {
+TEST(List, PopFront) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
   auto item0 = ObjectMsgPtr<TestListItem>::New();
   auto item1 = ObjectMsgPtr<TestListItem>::New();
@@ -188,7 +188,7 @@ TEST(ObjectMsgList, PopFront) {
   ASSERT_TRUE(!next);
 }
 
-TEST(ObjectMsgList, Clear) {
+TEST(List, Clear) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
   auto item0 = ObjectMsgPtr<TestListItem>::New();
   auto item1 = ObjectMsgPtr<TestListItem>::New();
@@ -202,7 +202,7 @@ TEST(ObjectMsgList, Clear) {
   ASSERT_EQ(item1->ref_cnt(), 1);
 }
 
-TEST(ObjectMsgList, UNSAFE_FOR_EACH_PTR) {
+TEST(List, UNSAFE_FOR_EACH_PTR) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
   auto item0 = ObjectMsgPtr<TestListItem>::New();
   auto item1 = ObjectMsgPtr<TestListItem>::New();
@@ -220,7 +220,7 @@ TEST(ObjectMsgList, UNSAFE_FOR_EACH_PTR) {
   ASSERT_EQ(i, 2);
 }
 
-TEST(ObjectMsgList, FOR_EACH) {
+TEST(List, FOR_EACH) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
   auto item0 = ObjectMsgPtr<TestListItem>::New();
   auto item1 = ObjectMsgPtr<TestListItem>::New();
@@ -247,11 +247,20 @@ TEST(ObjectMsgList, FOR_EACH) {
 OBJECT_MSG_BEGIN(TestObjectMsgListHead);
  public:
   TestObjectMsgListHead() = default;
-  OBJECT_MSG_DEFINE_LIST_HEAD(TestListItem, foo_list, foo_list);
+  using FooList = intrusive::List<StructField<
+             TestListItem, intrusive::ListEntry,
+             OBJECT_MSG_FIELD_OFFSET(TestListItem, OBJECT_MSG_FIELD_NUMBER(TestListItem, foo_list_))>>;
+  // Getters
+  const FooList& foo_list() const { return foo_list_; }
+  // Setters
+  FooList* mut_foo_list() { return &foo_list_; }
+  FooList* mutable_foo_list() { return &foo_list_; }
+
+  OBJECT_MSG_FIELD(FooList, foo_list_);
 OBJECT_MSG_END(TestObjectMsgListHead);
 // clang-format on
 
-TEST(ObjectMsg, OBJECT_MSG_DEFINE_LIST_HEAD) {
+TEST(List, OBJECT_MSG_DEFINE_LIST_HEAD) {
   auto foo_list_head = ObjectMsgPtr<TestObjectMsgListHead>::New();
   auto& foo_list = *foo_list_head->mutable_foo_list();
   auto item0 = ObjectMsgPtr<TestListItem>::New();
@@ -300,7 +309,7 @@ OBJECT_MSG_BEGIN(TestObjectMsgListHeadWrapper);
 OBJECT_MSG_END(TestObjectMsgListHeadWrapper);
 // clang-format on
 
-TEST(ObjectMsg, nested_list_delete) {
+TEST(List, nested_list_delete) {
   auto foo_list_head = ObjectMsgPtr<TestObjectMsgListHeadWrapper>::New();
   auto& foo_list = *foo_list_head->mutable_head()->mutable_foo_list();
   auto item0 = ObjectMsgPtr<TestListItem>::New();
@@ -324,7 +333,7 @@ TEST(ObjectMsg, nested_list_delete) {
   ASSERT_EQ(item1->ref_cnt(), 1);
 }
 
-TEST(ObjectMsg, MoveTo) {
+TEST(List, MoveTo) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list0;
   auto item0 = ObjectMsgPtr<TestListItem>::New();

@@ -57,7 +57,7 @@ namespace oneflow {
 #define OBJECT_MSG_FIELD_NUMBER(cls, field_name) cls::OF_PP_CAT(field_name, kDssFieldFieldNumber)
 
 // Get field type by field number
-#define OBJECT_MSG_FIELD_TYPE(cls, field_number) cls::__DssFieldType__<field_number>::type
+#define OBJECT_MSG_FIELD_TYPE(cls, field_number) cls::template __DssFieldType__<field_number>::type
 
 // Get field offset by field number
 #define OBJECT_MSG_FIELD_OFFSET(cls, field_number) \
