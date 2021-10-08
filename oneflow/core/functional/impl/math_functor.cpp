@@ -793,13 +793,14 @@ class ScalarLogicalBaseFunctor {
   }
   virtual ~ScalarLogicalBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    const DataType dtype = x->dtype()->data_type();
     MutableAttrMap attrs;
 
-    if (IsFloatingDataType(x->dtype()->data_type())) {
+    if (IsFloatingDataType(dtype)) {
       JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
-    } else if (IsIntegralDataType(x->dtype()->data_type())) {
+    } else if (IsIntegralDataType(dtype) || dtype == DataType::kUInt8) {
       JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));

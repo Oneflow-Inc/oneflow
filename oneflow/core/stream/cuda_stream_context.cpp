@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/device/node_device_descriptor_manager.h"
 #include "oneflow/core/device/cuda_device_descriptor.h"
+#include "oneflow/core/device/cuda_event_record.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/kernel/chain_kernel_observer.h"
@@ -110,7 +111,7 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
 #endif  // WITH_CUDA_GRAPHS
 };
 
-class DeviceCtxImpl : public DeviceCtx {
+class DeviceCtxImpl : public DeviceCtx, public EventRecordProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DeviceCtxImpl);
   explicit DeviceCtxImpl(CudaStreamContextImpl* stream_ctx) : stream_ctx_(stream_ctx) {}
@@ -131,6 +132,10 @@ class DeviceCtxImpl : public DeviceCtx {
   }
 
   DeviceType device_type() const override { return stream_ctx_->device_type(); }
+
+  std::shared_ptr<EventRecord> MakeEventRecord() override {
+    return std::make_shared<CudaEventRecord>(this);
+  }
 
  protected:
   CudaStreamContextImpl* stream_ctx_;

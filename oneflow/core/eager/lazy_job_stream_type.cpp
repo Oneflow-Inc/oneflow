@@ -38,7 +38,8 @@ void LazyJobStreamType::InitInstructionStatus(const Stream& stream,
 
 void LazyJobStreamType::DeleteInstructionStatus(const Stream& stream,
                                                 InstructionStatusBuffer* status_buffer) const {
-  // do nothing
+  auto* ptr = NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  ptr->~NaiveInstrStatusQuerier();
 }
 
 bool LazyJobStreamType::QueryInstructionStatusDone(
