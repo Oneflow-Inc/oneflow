@@ -65,6 +65,7 @@ class AddFunctor {
       op = broadcast_add_op_.get();
     }
     if (inplace) {
+      JUST(CheckInplaceCastValid(x, x_cast));
       JUST(CheckInplaceValid(x));
       JUST(CheckShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
@@ -137,6 +138,17 @@ class PowFunctor : public BinaryFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     if (*x->shape() != *y->shape()) { return BroadcastPow(x, y); }
+    return BinaryFunctor::operator()(x, y);
+  }
+};
+
+class FloorDivFunctor : public BinaryFunctor {
+ public:
+  FloorDivFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("floordiv").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
     return BinaryFunctor::operator()(x, y);
   }
 };
@@ -282,6 +294,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ScalarDivByTensorFunctor>("ScalarDivByTensor");
   m.add_functor<impl::BroadcastFModFunctor>("BroadcastFMod");
   m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
+  m.add_functor<impl::FloorDivFunctor>("FloorDiv");
 };
 
 }  // namespace functional

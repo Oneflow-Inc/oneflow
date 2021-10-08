@@ -224,7 +224,7 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromConsistentOpExpr
   const auto& input_tensor = inputs.at(0);
   const auto& mirrored_tensor = JUST(JUST(input_tensor->cur_rank_phy_tensor())->detach());
   bool requires_grad = autograd::GradMode::is_enabled() && input_tensor->requires_grad();
-  mirrored_tensor->set_requires_grad(requires_grad);
+  JUST(mirrored_tensor->set_requires_grad(requires_grad));
   mirrored_tensor->set_is_leaf(!requires_grad);
   outputs->at(0) = mirrored_tensor;
   return Maybe<void>::Ok();
