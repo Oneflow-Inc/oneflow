@@ -479,8 +479,8 @@ class ConsistentEyeFunctor {
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
   }
 
-  private:
-   std::shared_ptr<OpExpr> op_;
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class Transpose2dimFunctor {
@@ -1000,12 +1000,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceSumFunctor>("ReduceSum");
   m.add_functor<ReduceProdFunctor>("ReduceProd");
   m.add_functor<TransposeFunctor>("Transpose");
-<<<<<<< HEAD
   m.add_functor<EyeFunctor>("Eye");
   m.add_functor<ConsistentEyeFunctor>("ConsistentEye");
-=======
   m.add_functor<Transpose2dimFunctor>("Transpose2dim");
->>>>>>> 2dcc2b9726cfabcbbe53eec4db8f75a18ee65c1c
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<ArgMaxFunctor>("ArgMax");
