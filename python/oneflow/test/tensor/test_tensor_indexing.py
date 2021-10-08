@@ -171,6 +171,11 @@ def test_mask_setitem(test_case, numpy_x):
     numpy_x[mask > 0.5] = update
     test_case.assertTrue(np.allclose(numpy_x, x.numpy()))
 
+    # empty mask
+    x[y > 1.0] = 1.0
+    numpy_x[mask > 1.0] = 1.0
+    test_case.assertTrue(np.allclose(numpy_x, x.numpy()))
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestTensorIndexing(flow.unittest.TestCase):
