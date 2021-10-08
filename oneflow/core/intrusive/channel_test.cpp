@@ -60,7 +60,7 @@ void CallFromReceiverThreadByPopFront(std::vector<int>* visit, ChannelFoo* condi
 void CallFromReceiverThreadByMoveTo(std::vector<int>* visit, ChannelFoo* condition_list) {
   intrusive::List<INTRUSIVE_FIELD(Foo, entry_)> tmp_list;
   while (condition_list->MoveTo(&tmp_list) == intrusive::kChannelStatusSuccess) {
-    INTRUSIVE_LIST_FOR_EACH_PTR(foo, &tmp_list) {
+    INTRUSIVE_FOR_EACH_PTR(foo, &tmp_list) {
       ++visit->at(foo->x());
       tmp_list.Erase(foo);
     }

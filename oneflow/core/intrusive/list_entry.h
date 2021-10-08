@@ -102,7 +102,7 @@ class ListHead {
                 "no ListEntry found");
 
   template<typename Enabled = void>
-  static constexpr int ContainerLinkOffset() {
+  static constexpr int IteratorEntryOffset() {
     return offsetof(ListHead, container_);
   }
 

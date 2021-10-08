@@ -20,5 +20,6 @@ limitations under the License.
 #include "oneflow/core/intrusive/shared_ptr.h"
 #include "oneflow/core/intrusive/list.h"
 #include "oneflow/core/intrusive/skiplist.h"
+#include "oneflow/core/intrusive/for_each.h"
 
 #endif  // ONEFLOW_CORE_INTRUSIVE_INTRUSIVE_H_

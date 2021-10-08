@@ -86,7 +86,7 @@ TEST(SequentialInstruction, front_seq_compute) {
   std::thread t([&]() {
     while (!compute_finished) {
       vm->Schedule();
-      INTRUSIVE_LIST_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
+      INTRUSIVE_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
     }
     bc.Decrease();
   });

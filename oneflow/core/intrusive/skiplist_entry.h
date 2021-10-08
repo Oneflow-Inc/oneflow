@@ -202,7 +202,7 @@ class SkipListHead {
       typename ComposeStructField<ValueLinkField, value_key_level0_entry_struct_field>::type;
   static const int max_level = key_entry_type::max_level;
   template<typename Enabled = void>
-  static constexpr int ContainerLevelZeroLinkOffset() {
+  static constexpr int IteratorEntryOffset() {
     return offsetof(SkipListHead, skiplist_head_)
            + ListEntryArray<max_level>::LevelZeroLinkOffset();
   }

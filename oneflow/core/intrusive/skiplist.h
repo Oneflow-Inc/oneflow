@@ -21,42 +21,6 @@ limitations under the License.
 
 namespace oneflow {
 
-#define INTRUSIVE_SKIPLIST_FOR_EACH(elem, skiplist_ptr)                                 \
-  _INTRUSIVE_SKIPLIST_FOR_EACH(std::remove_pointer<decltype(skiplist_ptr)>::type, elem, \
-                               skiplist_ptr)
-
-#define INTRUSIVE_SKIPLIST_FOR_EACH_PTR(elem, skiplist_ptr)                                 \
-  _INTRUSIVE_SKIPLIST_FOR_EACH_PTR(std::remove_pointer<decltype(skiplist_ptr)>::type, elem, \
-                                   skiplist_ptr)
-
-#define INTRUSIVE_SKIPLIST_UNSAFE_FOR_EACH_PTR(elem, skiplist_ptr)                                 \
-  _INTRUSIVE_SKIPLIST_UNSAFE_FOR_EACH_PTR(std::remove_pointer<decltype(skiplist_ptr)>::type, elem, \
-                                          skiplist_ptr)
-// details
-
-#define _INTRUSIVE_SKIPLIST_FOR_EACH(skiplist_type, elem, skiplist_ptr)                      \
-  for (intrusive::SharedPtr<skiplist_type::value_type> elem, *end_if_not_null = nullptr;     \
-       end_if_not_null == nullptr; end_if_not_null = nullptr, ++end_if_not_null)             \
-  LIST_ENTRY_FOR_EACH_WITH_EXPR(                                                             \
-      (StructField<                                                                          \
-          skiplist_type, intrusive::ListEntry,                                               \
-          skiplist_type::ContainerLevelZeroLinkOffset()>::FieldPtr4StructPtr(skiplist_ptr)), \
-      skiplist_type::elem_level0_entry_struct_field, elem_ptr, (elem.Reset(elem_ptr), true))
-
-#define _INTRUSIVE_SKIPLIST_FOR_EACH_PTR(skiplist_type, elem, skiplist_ptr)                  \
-  LIST_ENTRY_FOR_EACH(                                                                       \
-      (StructField<                                                                          \
-          skiplist_type, intrusive::ListEntry,                                               \
-          skiplist_type::ContainerLevelZeroLinkOffset()>::FieldPtr4StructPtr(skiplist_ptr)), \
-      skiplist_type::elem_level0_entry_struct_field, elem)
-
-#define _INTRUSIVE_SKIPLIST_UNSAFE_FOR_EACH_PTR(skiplist_type, elem, skiplist_ptr)           \
-  LIST_ENTRY_UNSAFE_FOR_EACH(                                                                \
-      (StructField<                                                                          \
-          skiplist_type, intrusive::ListEntry,                                               \
-          skiplist_type::ContainerLevelZeroLinkOffset()>::FieldPtr4StructPtr(skiplist_ptr)), \
-      skiplist_type::elem_level0_entry_struct_field, elem)
-
 namespace intrusive {
 
 template<typename ElemKeyField>
@@ -73,12 +37,12 @@ class SkipList {
   using elem_key_level0_entry_struct_field =
       StructField<typename ElemKeyField::field_type, intrusive::ListEntry,
                   ElemKeyField::field_type::LevelZeroLinkOffset()>;
-  using elem_level0_entry_struct_field =
+  using iterator_struct_field =
       typename ComposeStructField<ElemKeyField, elem_key_level0_entry_struct_field>::type;
   template<typename Enabled = void>
-  static constexpr int ContainerLevelZeroLinkOffset() {
+  static constexpr int IteratorEntryOffset() {
     return offsetof(SkipList, skiplist_head_)
-           + intrusive::SkipListHead<ElemKeyField>::ContainerLevelZeroLinkOffset();
+           + intrusive::SkipListHead<ElemKeyField>::IteratorEntryOffset();
   }
 
   void __Init__() { skiplist_head_.__Init__(); }

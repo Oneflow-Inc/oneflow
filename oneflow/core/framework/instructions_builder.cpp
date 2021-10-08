@@ -1775,7 +1775,7 @@ Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& 
                                            _ReleasePhysicalObject);
   JUST(Build(&instructions_builder));
   if (debug::RecordingInstructions()) {
-    INTRUSIVE_LIST_FOR_EACH(instruction_msg, instructions_builder.mut_instruction_list()) {
+    INTRUSIVE_FOR_EACH(instruction_msg, instructions_builder.mut_instruction_list()) {
       debug::RecordInstruction(instruction_msg);
     }
   }
