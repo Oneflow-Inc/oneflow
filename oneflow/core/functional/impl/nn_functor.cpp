@@ -636,13 +636,8 @@ class TripletMarginLossFunctor {
                            const std::shared_ptr<one::Tensor>& negative,
                            const float& margin, const float& p, const float& eps,
                            const bool& swap, const std::string& reduction) const {
-    
-    //auto da_p=JUST(Norm2(JUST(ScalarAdd(eps, JUST(Sub(anchor, positive)))), p));
-    //Optional<std::vector<int32_t>> dim;
-
     int32_t dim_norm = anchor->ndim()-1;
     std::vector<int32_t> dim(1, dim_norm);
-
     auto da_p=JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, positive)))), p, dim, false));
     auto da_n=JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, negative)))), p,dim, false));
     if(swap)
