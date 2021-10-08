@@ -166,6 +166,21 @@
   signature: "Tensor (Tensor dz, Tensor x, Tensor y, Tensor z) => BroadcastPowYGrad"
   bind_python: False
 
+- name: "floor_divide"
+  signature: 
+    ["Tensor (Tensor x, Tensor y) => FloorDiv", 
+     "Tensor (Tensor input, Scalar scalar) => ScalarFloorDiv"]
+  bind_python: True
+
+- name: "floordiv_x_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y, Tensor z) => FloorDivXGrad"
+  bind_python: False
+
+- name: "floordiv_y_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y, Tensor z) => FloorDivYGrad"
+  bind_python: False
+
+
 - name: "reduce_max"
   signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceMax"
   bind_python: True
