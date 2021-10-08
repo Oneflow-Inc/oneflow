@@ -87,9 +87,8 @@ class ConsistentTensorWithDataFunctor {
       const auto& other = JUST(PyUnpackTensor(data));
       return MakeTensorFromOtherTensor(other, dtype, placement, sbp_tuple, requires_grad);
     }
-    // TODO(): Construct consistent tensor from sequence or numpy ndarray.
-    return Error::RuntimeError()
-           << "Can not construct consistent tensor from sequence or numpy array currently.";
+    // Make consistent tensor from python sequence or numpy array.
+    return MakeConsistentTensorFromData(data, dtype, placement, sbp_tuple, requires_grad);
   }
 };
 
@@ -163,9 +162,8 @@ class ConsistentTensorWithDataCtorFunctor {
       return MakeTensorFromOtherTensor(other, dtype, placement, sbp_tuple,
                                        /*requires_grad=*/false);
     }
-    // TODO(): Construct consistent tensor from sequence or numpy ndarray.
-    return Error::RuntimeError()
-           << "Can not construct consistent tensor from sequence or numpy array currently.";
+    // Make consistent tensor from python sequence or numpy array.
+    return MakeConsistentTensorFromData(data, dtype, placement, sbp_tuple, /*requires_grad=*/false);
   }
 };
 
