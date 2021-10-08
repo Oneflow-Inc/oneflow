@@ -144,8 +144,8 @@ class KLDivGradKernel : public SimpleLossGradKernel<DeviceType::kGPU, T, KLDivGr
 
 }  // namespace
 
-REGISTER_SIMPLE_LOSS_KERNEL_GPU("kl_div", KLDivKernel)
-REGISTER_SIMPLE_LOSS_GRAD_KERNEL_GPU("kl_div_grad", KLDivGradKernel)
+REGISTER_SIMPLE_LOSS_KERNEL_GPU("kl_div_loss", KLDivKernel)
+REGISTER_SIMPLE_LOSS_GRAD_KERNEL_GPU("kl_div_loss_grad", KLDivGradKernel)
 
 }  // namespace user_op
 }  // namespace oneflow

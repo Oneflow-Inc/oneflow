@@ -399,7 +399,7 @@ class MseLossFunctor {
 class KLDivLossFunctor {
  public:
   KLDivLossFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("kl_div").Input("input").Input("target").Output("out").Build());
+    op_ = CHECK_JUST(one::OpBuilder("kl_div_loss").Input("input").Input("target").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target, const bool log_target,

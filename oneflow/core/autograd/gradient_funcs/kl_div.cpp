@@ -19,31 +19,31 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct KLDivCaptureState : public AutoGradCaptureState {
+struct KLDivLossCaptureState : public AutoGradCaptureState {
   bool log_target;
   std::string reduction = "";
 };
 
-class KLDiv : public OpExprGradFunction<KLDivCaptureState> {
+class KLDivLoss : public OpExprGradFunction<KLDivLossCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(KLDivCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const AttrMap& attrs) const override;
-  Maybe<void> Apply(const KLDivCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Capture(KLDivLossCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override;
+  Maybe<void> Apply(const KLDivLossCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
   AttrMap base_attrs_;
 };
 
-Maybe<void> KLDiv::Init(const OpExpr& op) {
+Maybe<void> KLDivLoss::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
-Maybe<void> KLDiv::Capture(KLDivCaptureState* ctx, const TensorTuple& inputs,
-                           const TensorTuple& outputs, const AttrMap& attrs) const {
+Maybe<void> KLDivLoss::Capture(KLDivLossCaptureState* ctx, const TensorTuple& inputs,
+                               const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->log_target = JUST(composed_attrs.GetAttr<bool>("log_target"));
   ctx->reduction = JUST(composed_attrs.GetAttr<std::string>("reduction"));
@@ -51,8 +51,8 @@ Maybe<void> KLDiv::Capture(KLDivCaptureState* ctx, const TensorTuple& inputs,
   ctx->SaveTensorForBackward(inputs.at(1));  // target
   return Maybe<void>::Ok();
 }
-Maybe<void> KLDiv::Apply(const KLDivCaptureState* ctx, const TensorTuple& out_grads,
-                         TensorTuple* in_grads) const {
+Maybe<void> KLDivLoss::Apply(const KLDivLossCaptureState* ctx, const TensorTuple& out_grads,
+                             TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   const auto& dy = out_grads.at(0);
   const auto& input = ctx->SavedTensors().at(0);
@@ -63,7 +63,7 @@ Maybe<void> KLDiv::Apply(const KLDivCaptureState* ctx, const TensorTuple& out_gr
 
   return Maybe<void>::Ok();
 }
-REGISTER_OP_EXPR_GRAD_FUNCTION("kl_div", KLDiv);
+REGISTER_OP_EXPR_GRAD_FUNCTION("kl_div_loss", KLDivLoss);
 
 }  // namespace one
 }  // namespace oneflow

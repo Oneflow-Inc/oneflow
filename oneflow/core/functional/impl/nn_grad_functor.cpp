@@ -255,7 +255,7 @@ class SmoothL1LossGradFunctor {
 class KLDivLossGradFunctor {
  public:
   KLDivLossGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("kl_div_grad")
+    op_ = CHECK_JUST(one::OpBuilder("kl_div_loss_grad")
                          .Input("input")
                          .Input("target")
                          .Input("dy")

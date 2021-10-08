@@ -67,7 +67,7 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
 
 }  // namespace
 
-REGISTER_USER_OP("kl_div")
+REGISTER_USER_OP("kl_div_loss")
     .Input("input")
     .Input("target")
     .Output("out")
@@ -94,7 +94,7 @@ REGISTER_USER_OP("kl_div")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("kl_div_grad")
+REGISTER_USER_OP("kl_div_loss_grad")
     .Input("input")
     .Input("target")
     .Input("dy")
@@ -117,12 +117,13 @@ REGISTER_USER_OP("kl_div_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("kl_div").SetGenBackwardOpConfFn(
-    [](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {
+REGISTER_USER_OP_GRAD("kl_div_loss")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("input", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
-            builder.Op("kl_div_grad")
+            builder.Op("kl_div_loss_grad")
                 .Input("input", op.input("input", 0))
                 .Input("target", op.input("target", 0))
                 .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
