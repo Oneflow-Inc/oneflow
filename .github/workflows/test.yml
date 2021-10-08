@@ -173,6 +173,7 @@ jobs:
         id: find-cache
         timeout-minutes: 5
         with:
+          delete-cache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           runner-labels: |
             self-hosted
             linux
@@ -243,7 +244,6 @@ jobs:
           docker-run-use-lld: true
           retry-failed-build: true
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
-          delete-cache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.6
             3.7
@@ -265,7 +265,6 @@ jobs:
           docker-run-use-lld: false
           retry-failed-build: true
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
-          delete-cache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.6
             3.7
@@ -287,7 +286,6 @@ jobs:
           docker-run-use-lld: true
           retry-failed-build: true
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
-          delete-cache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.6
       - name: Upload bin
