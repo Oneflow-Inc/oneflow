@@ -27,7 +27,7 @@ namespace {
 int GetCurrentDeviceId() {
   int device_id = -1;
   OF_CUDA_CHECK(cudaGetDevice(&device_id));
-  CHECK_EQ(device_id, GlobalProcessCtx::Rank());
+  CHECK_EQ(device_id, GlobalProcessCtx::LocalRank());
   return device_id;
 }
 
