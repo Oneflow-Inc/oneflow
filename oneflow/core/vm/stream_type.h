@@ -28,8 +28,6 @@ limitations under the License.
 
 namespace oneflow {
 
-class ObjectMsgAllocator;
-
 namespace vm {
 
 struct Stream;
@@ -51,10 +49,9 @@ class StreamType {
 
   virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const = 0;
 
-  virtual void InitInstructionStatus(const Stream& stream,
-                                     InstructionStatusBuffer* status_buffer) const = 0;
-  virtual void DeleteInstructionStatus(const Stream& stream,
-                                       InstructionStatusBuffer* status_buffer) const = 0;
+  void InitInstructionStatusIf(const Stream& stream, InstructionStatusBuffer* status_buffer) const;
+  void DeleteInstructionStatusIf(const Stream& stream,
+                                 InstructionStatusBuffer* status_buffer) const;
   virtual bool QueryInstructionStatusDone(const Stream& stream,
                                           const InstructionStatusBuffer& status_buffer) const = 0;
   virtual void set_has_event_record(InstructionStatusBuffer* status_buffer, bool val) const {
@@ -80,6 +77,11 @@ class StreamType {
 
  protected:
   StreamType() = default;
+
+  virtual void InitInstructionStatus(const Stream& stream,
+                                     InstructionStatusBuffer* status_buffer) const = 0;
+  virtual void DeleteInstructionStatus(const Stream& stream,
+                                       InstructionStatusBuffer* status_buffer) const = 0;
 };
 
 HashMap<std::type_index, const StreamType*>* StreamType4TypeIndex();

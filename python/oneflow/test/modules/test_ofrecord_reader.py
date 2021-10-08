@@ -66,6 +66,7 @@ class DataLoaderGraph(flow.nn.Graph):
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@unittest.skipUnless(os.path.exists("/dataset/imagenet_227"), "")
 @flow.unittest.skip_unless_1n2d()
 class DistributedOFRecordReaderTestCase(oneflow.unittest.TestCase):
     def test(test_case):

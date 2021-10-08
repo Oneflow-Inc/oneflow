@@ -140,18 +140,20 @@ Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
       {"comm_net", "cpu.LocalCallOpKernel"},
       {"sync_launched_nccl", "gpu.LocalCallOpKernel"},
       {"async_launched_nccl", "async.gpu.LocalCallOpKernel"},
+      // no compute instruction on critical_section device.
+      {"critical_section", "UNIMPLEMENTED INSTRUCTION NAME"},
   };
   return MapAt(type2instr_name, type);
 }
 
 Maybe<size_t> Device::instr_local_dep_object_pool_size() const {
-  static const size_t kDoubleBufferPoolSize = 2;
+  static const size_t kSmallPoolSize = 4;
   static const HashMap<std::string, size_t> type2pool_size{
       {"cpu", GetInstructionHighWaterMark()},
       {"gpu", GetInstructionHighWaterMark()},
       {"cuda", GetInstructionHighWaterMark()},
-      {"cuda_h2d", kDoubleBufferPoolSize},
-      {"cuda_d2h", kDoubleBufferPoolSize},
+      {"cuda_h2d", kSmallPoolSize},
+      {"cuda_d2h", GetInstructionHighWaterMark()},
       {"comm_net", GetInstructionHighWaterMark()},
       {"sync_launched_nccl", GetInstructionHighWaterMark()},
       {"async_launched_nccl", GetInstructionHighWaterMark()},

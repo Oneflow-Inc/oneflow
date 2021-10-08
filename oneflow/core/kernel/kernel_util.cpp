@@ -18,8 +18,8 @@ limitations under the License.
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/memory/memory_case.pb.h"
-#include "oneflow/core/primitive/memcpy.h"
-#include "oneflow/core/primitive/memset.h"
+#include "oneflow/core/primitive/include/memcpy.h"
+#include "oneflow/core/primitive/include/memset.h"
 #include "oneflow/core/stream/stream_context_adapter.h"
 
 namespace oneflow {

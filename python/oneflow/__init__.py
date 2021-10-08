@@ -19,6 +19,7 @@ import collections
 
 import oneflow._oneflow_internal
 
+oneflow._oneflow_internal.InitNumpyCAPI()
 oneflow._oneflow_internal.CheckAndClearRegistryFlag()
 Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
@@ -90,6 +91,7 @@ from oneflow._C import diag
 from oneflow._C import log1p
 from oneflow._C import add
 from oneflow._C import div
+from oneflow._C import floor_divide
 from oneflow._C import mul
 from oneflow._C import reciprocal_no_nan as reciprocal
 from oneflow._C import sub
@@ -99,6 +101,7 @@ from oneflow._C import asinh
 from oneflow._C import asinh as arcsinh
 from oneflow._C import atan
 from oneflow._C import atan as arctan
+from oneflow._C import atan2
 from oneflow._C import ceil
 from oneflow._C import clamp
 from oneflow._C import clamp as clip
@@ -122,6 +125,7 @@ from oneflow._C import softplus
 from oneflow._C import tril
 from oneflow._C import triu
 from oneflow._C import pad
+from oneflow._C import transpose
 
 from . import sbp
 import atexit
@@ -213,7 +217,6 @@ from oneflow._C import tensor, batch_gather
 
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
-from oneflow.nn.modules.trigonometric_ops import atan2_op as atan2
 
 from oneflow.framework.check_point_v2 import Load as load
 from oneflow.framework.check_point_v2 import save
@@ -239,6 +242,7 @@ from oneflow.nn.modules.pooling import (
 )
 from oneflow.nn.modules.arange import arange_op as arange
 from oneflow.nn.modules.argmax import argmax_op as argmax
+from oneflow.nn.modules.argmin import argmin_op as argmin
 from oneflow.nn.modules.argsort import argsort_op as argsort
 from oneflow.nn.modules.argwhere import argwhere_op as argwhere
 from oneflow.nn.modules.bmm import bmm_op as bmm
@@ -281,6 +285,7 @@ from oneflow.nn.modules.math_ops import variance_op as var
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
 from oneflow.nn.modules.narrow import narrow_op as narrow
 from oneflow.nn.modules.nonzero import nonzero_op as nonzero
+from oneflow.nn.modules.numel import numel_op as numel
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.random_ops import randint_op as randint
@@ -294,7 +299,6 @@ from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.permute import permute_op as permute
-from oneflow.nn.modules.scatter import _scatter_nd_op as scatter_nd
 from oneflow.nn.modules.slice import slice_op as slice
 from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.slice import logical_slice_assign_op as logical_slice_assign
@@ -313,7 +317,6 @@ from oneflow.nn.modules.tile import tile_op as tile
 from oneflow.nn.modules.to import to_op as to
 from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
 from oneflow.nn.modules.consistent_cast import to_local_op as to_local
-from oneflow.nn.modules.transpose import transpose_op as transpose
 from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
@@ -354,3 +357,4 @@ from oneflow.nn.modules.relu import relu_op as relu
 import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
+import oneflow.multiprocessing

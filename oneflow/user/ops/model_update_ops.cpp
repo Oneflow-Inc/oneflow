@@ -581,6 +581,7 @@ REGISTER_NO_GRAD_USER_OP("adam_update")
             .Split(user_op::OpArg("model_diff", 0), axis)
             .Split(user_op::OpArg("m", 0), axis)
             .Split(user_op::OpArg("v", 0), axis)
+            .Split(user_op::OpArg("max_v", 0), axis)
             .Build();
       }
       return Maybe<void>::Ok();
@@ -651,6 +652,7 @@ REGISTER_NO_GRAD_USER_OP("indexed_slices_adam_update")
           .Split(user_op::OpArg("model", 0), 0)
           .Split(user_op::OpArg("m", 0), 0)
           .Split(user_op::OpArg("v", 0), 0)
+          .Split(user_op::OpArg("max_v", 0), 0)
           .Build();
       FOR_RANGE(int64_t, i, 1, model.shape().NumAxes()) {
         ctx->NewBuilder()
@@ -660,6 +662,7 @@ REGISTER_NO_GRAD_USER_OP("indexed_slices_adam_update")
             .Split(user_op::OpArg("model", 0), i)
             .Split(user_op::OpArg("m", 0), i)
             .Split(user_op::OpArg("v", 0), i)
+            .Split(user_op::OpArg("max_v", 0), i)
             .Build();
       }
       return Maybe<void>::Ok();

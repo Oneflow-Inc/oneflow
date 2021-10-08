@@ -180,19 +180,6 @@ Maybe<one::UserOpExpr> ScalarPowOp(const double& exponent, const std::string& na
       .Build();
 }
 
-Maybe<one::UserOpExpr> ScalarPowGradOp(const double& exponent) {
-  return ScalarPowGradOp(exponent, UniqueOpName("scalar_pow_grad"));
-}
-
-Maybe<one::UserOpExpr> ScalarPowGradOp(const double& exponent, const std::string& name) {
-  return one::OpBuilder("scalar_pow_grad", name)
-      .Input("x")
-      .Input("dy")
-      .Attr<double>("exponent", exponent)
-      .Output("dx")
-      .Build();
-}
-
 template<>
 Maybe<one::UserOpExpr> ScalarMulOp(const float& scalar, const std::string& name) {
   return one::OpBuilder("scalar_mul", name)
