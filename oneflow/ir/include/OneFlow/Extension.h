@@ -18,6 +18,7 @@ limitations under the License.
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_EXTENSION_H_
 
 #ifdef WITH_MLIR
+
 #include <unordered_set>
 
 namespace oneflow {
