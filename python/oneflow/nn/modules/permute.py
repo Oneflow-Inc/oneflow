@@ -17,6 +17,11 @@ from typing import Optional, Sequence
 
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
+from oneflow.nn.modules.utils import _single
+
+
+def _input_args_is_int(args):
+    return all((isinstance(x, int) for x in args))
 
 
 @register_tensor_op("permute")
@@ -40,17 +45,13 @@ def permute_op(input, *dims):
 
     """
 
-    perm = list(dims)
-    assert len(perm) == len(input.shape)
-    new_perm = []
-    for dim in perm:
-        if dim < 0:
-            dim += len(perm)
-        assert dim >= 0 and dim < len(
-            input.shape
-        ), "Invalid dim0 {}, len(shape): {}".format(dim, len(input.shape))
-        new_perm.append(dim)
-    return flow._C.transpose(input, perm=new_perm)
+    if _input_args_is_int(dims):
+        new_dims = _single(dims)
+    elif _input_args_is_int(*dims):
+        new_dims = _single(*dims)
+    else:
+        raise ValueError("the input dims parameter of permute is not illegal!")
+    return flow._C.transpose(input, perm=new_dims)
 
 
 if __name__ == "__main__":
