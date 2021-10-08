@@ -39,7 +39,8 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_APPLY_BINARY_CORE,
                                      UNSIGNED_INT_DATA_TYPE_SEQ,
                                  ARITHMETIC_BINARY_FUNC_SEQ)
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_APPLY_BINARY_CORE,
-                                 ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
+                                     UNSIGNED_INT_DATA_TYPE_SEQ,
                                  LOGICAL_BINARY_FUNC_SEQ)
 
 }  // namespace oneflow
