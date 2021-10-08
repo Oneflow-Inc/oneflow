@@ -38,11 +38,11 @@ def _test_eye_backward(test_case, device, n, m):
     test_case.assertTrue(np.array_equal(x.grad.numpy(), np.ones([n, m])))
 
 
-def _test_eye_with_1n2d(test_case, n, m, device, sbp):
+def _test_eye_with_1n2d(test_case, n, m, device):
     placement = flow.placement(device, {0: range(2)})
-    x = flow.eye(n, m, placement=placement, sbp=sbp)
+    x = flow.eye(n, m, placement=placement, sbp=flow.sbp.broadcast)
     test_case.assertTrue(x.placement, placement)
-    test_case.assertTrue(x.sbp, sbp)
+    test_case.assertTrue(x.sbp, flow.sbp.broadcast)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -78,7 +78,6 @@ class TestConsistentEye(flow.unittest.TestCase):
         arg_dict["n"] = [4, 3, 2]
         arg_dict["m"] = [4, 3, 2]
         arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["sbp"] = [flow.sbp.broadcast, flow.sbp.split(0), flow.sbp.partial_sum]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 

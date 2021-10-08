@@ -67,6 +67,7 @@ def eye_op(
         else:
             for elem in sbp:
                 assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
+                assert elem == flow.sbp.broadcast
         assert len(sbp) == len(placement.hierarchy)
         res = flow._C.consistent_eye(n, m, dtype=dtype, placement=placement, sbp=sbp)
 
