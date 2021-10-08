@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/primitive/include/add.h"
 
 namespace oneflow {
 
@@ -47,33 +48,19 @@ PbRpf<std::string> ConstructPbRpf(const std::string& s) {
 }
 
 template<typename T>
-void CalcSumOfBlobs(DeviceCtx* ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+void CalcSumOfBlobs(KernelContext* ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                     const PbRpf<std::string>& src_bns, const std::string& dst_bn) {
-  const Blob* src_blob_0 = BnInOp2Blob(src_bns.Get(0));
   Blob* dst_blob = BnInOp2Blob(dst_bn);
-  Memcpy<DeviceType::kCPU>(ctx, dst_blob->mut_dptr(), src_blob_0->dptr(),
-                           src_blob_0->ByteSizeOfBlobBody());
-  FOR_RANGE(size_t, i, 1, src_bns.size()) {
+  std::unique_ptr<primitive::Add> primitive =
+      primitive::NewPrimitive<primitive::AddFactory>(DeviceType::kCPU, dst_blob->data_type());
+  CHECK(primitive);
+  std::vector<const void*> srcs(src_bns.size());
+  FOR_RANGE(size_t, i, 0, src_bns.size()) {
     Blob* src_blob_i = BnInOp2Blob(src_bns.Get(i));
-    KernelUtil<DeviceType::kCPU, T>::Axpy(ctx, dst_blob->static_shape().elem_cnt(), 1.0,
-                                          src_blob_i->dptr<T>(), 1, dst_blob->mut_dptr<T>(), 1);
+    srcs[i] = src_blob_i->dptr<T>();
   }
-}
-
-template<>
-void CalcSumOfBlobs<float16>(DeviceCtx* ctx,
-                             const std::function<Blob*(const std::string&)>& BnInOp2Blob,
-                             const PbRpf<std::string>& src_bns, const std::string& dst_bn) {
-  const Blob* src_blob_0 = BnInOp2Blob(src_bns.Get(0));
-  Blob* dst_blob = BnInOp2Blob(dst_bn);
-  Memcpy<DeviceType::kCPU>(ctx, dst_blob->mut_dptr(), src_blob_0->dptr(),
-                           src_blob_0->ByteSizeOfBlobBody());
-  FOR_RANGE(size_t, i, 1, src_bns.size()) {
-    Blob* src_blob_i = BnInOp2Blob(src_bns.Get(i));
-    FOR_RANGE(int, i, 0, dst_blob->static_shape().elem_cnt()) {
-      dst_blob->mut_dptr<float16>()[i] += src_blob_i->dptr<float16>()[i];
-    }
-  }
+  primitive->Launch(ctx->stream_ctx(), srcs.data(), srcs.size(), dst_blob->mut_dptr<T>(),
+                    dst_blob->static_shape().elem_cnt());
 }
 
 void CopyFromFirstToOtherBlobs(KernelContext* ctx,
@@ -233,11 +220,11 @@ void BoxingKernel<T>::ForwardDataContent(KernelContext* ctx) const {
     }
   } else if (boxing_conf.in_box_case() == BoxingOpConf::kAddBox) {
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
-      CalcSumOfBlobs<T>(device_ctx, BnInOp2Blob, op_attribute().input_bns(), "middle");
+      CalcSumOfBlobs<T>(ctx, BnInOp2Blob, op_attribute().input_bns(), "middle");
       ConcatSplitDataContent(device_ctx, BnInOp2Blob, ConstructPbRpf("middle"), 0,
                              op_attribute().output_bns(), boxing_conf.split_box().axis());
     } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
-      CalcSumOfBlobs<T>(device_ctx, BnInOp2Blob, op_attribute().input_bns(), obn_0_.Get(0));
+      CalcSumOfBlobs<T>(ctx, BnInOp2Blob, op_attribute().input_bns(), obn_0_.Get(0));
       CopyFromFirstToOtherBlobs(ctx, BnInOp2Blob, op_attribute().output_bns());
     } else {
       UNIMPLEMENTED();
