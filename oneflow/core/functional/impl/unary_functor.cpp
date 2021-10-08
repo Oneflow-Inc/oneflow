@@ -64,7 +64,7 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("erfc", Erfc)          \
   OF_PP_MAKE_TUPLE_SEQ("expm1", Expm1)
 
-#define INPLACE_UNARY_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("sin_inplace", SinInplace)
+#define INPLACE_UNARY_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("tanh", SinInplace)
 
 #define UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, base)                    \
   class class_name##Functor : public base {                                          \
@@ -73,6 +73,14 @@ namespace impl {
       op_ = CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Output("y").Build()); \
     }                                                                                \
   };
+
+// #define UNARY_ELEMENTWISE_INPLACE_FUNCTOR(op_type_name, class_name, base)                    \
+//   class class_name##Functor : public base {                                          \
+//    public:                                                                           \
+//     class_name##Functor() {                                                          \
+//       op_ = CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Input("x_").Output("y").Build()); \
+//     }                                                                                \
+//   };
 
 #define UNARY_FUNCOTRS(op_type_name, class_name) \
   UNARY_ELEMENTWISE_FUNCTOR(                     \

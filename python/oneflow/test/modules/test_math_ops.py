@@ -75,7 +75,30 @@ def _test_inplace_sin(test_case, shape, device):
     of_x_inplace = x_inplace.sum()
     of_x_inplace.backward()
     test_case.assertTrue(
-        np.allclose(x.grad.numpy(), np.cos(x_inplace.numpy()), 1e-5, 1e-5)
+        np.allclose(x.grad.numpy(), np.cos(np.arcsin(x_inplace.numpy())), 1e-5, 1e-5)
+    )
+
+
+def _test_inplace_sin_backward(test_case, shape, device):
+    np_x = np.random.randn(*shape)
+    of_x = flow.tensor(
+        np_x,
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    of_x_inplace = of_x + 1
+    of_x_inplace.sin_()
+
+    test_case.assertTrue(
+        np.allclose(of_x_inplace.numpy(), np.sin(np_x+1), 1e-5, 1e-5)
+    )
+
+    of_x_inplace = of_x_inplace.sum()
+    of_x_inplace.backward()
+
+    test_case.assertTrue(
+        np.allclose(of_x.grad.numpy(), np.cos(np.arcsin(np.sin(np_x+1))), 1e-5, 1e-5)
     )
 
 
@@ -87,6 +110,7 @@ class TestSin(flow.unittest.TestCase):
             _test_sin,
             _test_sin_backward,
             _test_inplace_sin,
+            _test_inplace_sin_backward,
         ]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
