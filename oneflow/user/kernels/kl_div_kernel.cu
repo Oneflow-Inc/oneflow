@@ -39,6 +39,7 @@ __global__ void ComputeKLDivOut(int64_t elem_cnt, const T* input, const T* targe
 template<>
 __global__ void ComputeKLDivOut(int64_t elem_cnt, const half* input, const half* target, half* out,
                                 const bool log_target) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   const half zero_half = __float2half(0.0);
   if (log_target) {
     CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
@@ -50,6 +51,10 @@ __global__ void ComputeKLDivOut(int64_t elem_cnt, const half* input, const half*
       out[i] = __hgt(target[i], zero_half) ? out_val : zero_half;
     }
   }
+#else
+  printf("use half need nvcc arch >= 530");
+  assert(false);
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 
 template<typename T>
@@ -67,6 +72,7 @@ template<>
 __global__ void ComputeKLDivGradOut(int64_t elem_cnt, const half* input, const half* target,
                                     const half* dy, half* dx, const ReductionType reduction_type,
                                     const bool log_target) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   const half zero_half = __float2half(0.0);
   FOR_RANGE(int64_t, i, 0, elem_cnt) {
     const half dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
@@ -77,6 +83,10 @@ __global__ void ComputeKLDivGradOut(int64_t elem_cnt, const half* input, const h
       dx[i] = __hdiv(dx[i], __float2half(static_cast<float>(elem_cnt)));
     }
   }
+#else
+  printf("use half need nvcc arch >= 530");
+  assert(false);
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 
 template<typename T>

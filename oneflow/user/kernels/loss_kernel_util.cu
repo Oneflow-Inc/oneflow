@@ -40,6 +40,7 @@ __global__ void ApplyLossReductionImpl(int64_t elem_cnt, const T* tmp_out, T* ou
 template<>
 __global__ void ApplyLossReductionImpl<half>(int64_t elem_cnt, const half* tmp_out, half* out,
                                              bool is_reduce_mean) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   typedef cub::BlockReduce<half, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
   half thread_sum = __float2half(0.0);
@@ -52,6 +53,10 @@ __global__ void ApplyLossReductionImpl<half>(int64_t elem_cnt, const half* tmp_o
     *out = block_sum;
     if (is_reduce_mean) { *out = __float2half(__half2float(*out) / elem_cnt); }
   }
+#else
+  printf("use half need nvcc arch >= 530");
+  assert(false);
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 
 template<DeviceType device_type, typename T>

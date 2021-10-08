@@ -51,6 +51,7 @@ __global__ void ComputeBinaryCrossEntropyWithLogitsOut(int64_t elem_cnt, const h
                                                        const half* target, half* out,
                                                        const half* weight,
                                                        const half* pos_weight_processed) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     float input_val = __half2float(input[i]);
     float target_val = __half2float(target[i]);
@@ -67,6 +68,10 @@ __global__ void ComputeBinaryCrossEntropyWithLogitsOut(int64_t elem_cnt, const h
     }
     if (weight != nullptr) { out[i] = __hmul(out[i], weight[i]); }
   }
+#else
+  printf("use half need nvcc arch >= 530");
+  assert(false);
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 
 template<typename T>
@@ -110,6 +115,7 @@ __global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, con
                                                            half* dx, const half* weight,
                                                            const half* pos_weight_processed,
                                                            const ReductionType reduction_type) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     float input_val = __half2float(input[i]);
     float target_val = __half2float(target[i]);
@@ -129,6 +135,10 @@ __global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, con
       dx[i] = __float2half(__half2float(dx[i]) / elem_cnt);
     }
   }
+#else
+  printf("use half need nvcc arch >= 530");
+  assert(false);
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 
 template<typename T>

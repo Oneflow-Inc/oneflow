@@ -39,6 +39,7 @@ __global__ void ComputeSmoothL1Out(int64_t elem_cnt, const T* input, const T* ta
 template<>
 __global__ void ComputeSmoothL1Out(int64_t elem_cnt, const half* input, const half* target,
                                    half* out, const float beta) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   const half half_one = __float2half(0.5);
   const half half_beta = __float2half(beta);
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
@@ -49,6 +50,10 @@ __global__ void ComputeSmoothL1Out(int64_t elem_cnt, const half* input, const ha
       out[i] = __hsub(abs_diff, __hmul(half_one, half_beta));
     }
   }
+#else
+  printf("use half need nvcc arch >= 530");
+  assert(false);
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 
 template<typename T>
@@ -73,6 +78,7 @@ template<>
 __global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, const half* input, const half* target,
                                        const half* dy, half* dx, const ReductionType reduction_type,
                                        const float beta) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   const half half_zero = GetZeroVal<half>();
   const half half_one = GetOneVal<half>();
   const half half_beta = __float2half(beta);
@@ -93,6 +99,10 @@ __global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, const half* input, cons
       dx[i] = __hdiv(dx[i], __float2half(static_cast<float>(elem_cnt)));
     };
   }
+#else
+  printf("use half need nvcc arch >= 530");
+  assert(false);
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 
 template<typename T>
