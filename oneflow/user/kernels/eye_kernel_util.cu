@@ -28,7 +28,7 @@ __global__ void EyeForwardGpuKernel(const int64_t cols, const int64_t rows, T* o
 
 template<typename T>
 struct EyeFunctor<DeviceType::kGPU, T> final {
-  void operator()(DeviceCtx* ctx, const int64_t cols, const int64_t rows, T* out) {
+  void operator()(DeviceCtx* ctx, const int64_t& cols, const int64_t& rows, T* out) {
     RUN_CUDA_KERNEL((EyeForwardGpuKernel<T>), ctx, rows, cols, rows, out);
   }
 };
