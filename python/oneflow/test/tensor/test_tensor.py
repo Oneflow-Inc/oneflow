@@ -841,17 +841,17 @@ class TestTensor(flow.unittest.TestCase):
         y = x.unsqueeze(random(1, 3).to(int))
         return y
 
-    # @autotest()
-    # def test_permute_flow_with_random_data(test_case):
-    #     device = random_device()
-    #     x = random_pytorch_tensor(ndim=4).to(device)
-    #     y = x.permute(
-    #         random(0, 4).to(int),
-    #         random(0, 4).to(int),
-    #         random(0, 4).to(int),
-    #         random(0, 4).to(int),
-    #     )
-    #     return y
+    @autotest()
+    def test_permute_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = x.permute(
+            random(0, 4).to(int),
+            random(0, 4).to(int),
+            random(0, 4).to(int),
+            random(0, 4).to(int),
+        )
+        return y
 
     @autotest()
     def test_transpose_tensor_with_random_data(test_case):
