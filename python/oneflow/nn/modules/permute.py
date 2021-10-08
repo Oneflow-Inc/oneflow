@@ -24,8 +24,34 @@ def _input_args_is_int(args):
     return all((isinstance(x, int) for x in args))
 
 
+def permute_op(input, dims):
+    """Returns a view of the original tensor with its dimensions permuted.
+
+    Args:
+        dims (tuple of python:ints): The desired ordering of dimensions
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        
+        >>> input = flow.tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> out = flow.permute(input, (1, 0, 2, 3)).shape
+        >>> out
+        oneflow.Size([6, 2, 5, 3])
+
+    """
+    if _input_args_is_int(dims):
+        new_dims = _single(dims)
+    else:
+        raise ValueError("the input dims parameter of permute is not illegal!")
+    return flow._C.transpose(input, perm=new_dims)
+
+
 @register_tensor_op("permute")
-def permute_op(input, *dims):
+def permute_tensor_op(input, *dims):
     """Returns a view of the original tensor with its dimensions permuted.
 
     Args:
