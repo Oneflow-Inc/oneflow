@@ -11,8 +11,6 @@ if(NOT CMAKE_BUILD_TYPE MATCHES "^(Debug|Release|RelWithDebInfo|MinSizeRel)$")
 endif()
 message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 
-add_definitions(-DONEFLOW_CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "")
 
 option(THIRD_PARTY "Build third party" ON)

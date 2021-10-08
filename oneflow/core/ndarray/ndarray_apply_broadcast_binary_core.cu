@@ -163,18 +163,21 @@ struct NdarrayApplyBroadcastInplaceBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS,
   template struct NdarrayApplyBroadcastBinaryCoreWrapper<                 \
       DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_BINARY_FUNC,
-                                 ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, DIM_SEQ,
-                                 ARITHMETIC_BINARY_FUNC_SEQ);
+                                 ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ
+                                     UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 DIM_SEQ, ARITHMETIC_BINARY_FUNC_SEQ);
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_BINARY_FUNC,
-                                 ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, DIM_SEQ,
-                                 LOGICAL_BINARY_FUNC_SEQ);
+                                 ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ
+                                     UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 DIM_SEQ, LOGICAL_BINARY_FUNC_SEQ);
 
 #define INSTANTIATE_BROADCAST_INPLACE_BINARY_FUNC(dtype_pair, NDIMS, binary_func) \
   template struct NdarrayApplyBroadcastInplaceBinaryCoreWrapper<                  \
       DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_INPLACE_BINARY_FUNC,
-                                 ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, DIM_SEQ,
-                                 ARITHMETIC_BINARY_FUNC_SEQ);
+                                 ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ
+                                     UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 DIM_SEQ, ARITHMETIC_BINARY_FUNC_SEQ);
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_INPLACE_BINARY_FUNC,
                                  ((int8_t, DataType::kInt8)), DIM_SEQ, LOGICAL_BINARY_FUNC_SEQ);
 
