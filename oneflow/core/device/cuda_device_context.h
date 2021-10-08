@@ -18,13 +18,14 @@ limitations under the License.
 
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/device/device_context.h"
+#include "oneflow/core/device/cuda_event_record.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
 
 namespace oneflow {
 
 #ifdef WITH_CUDA
 
-class CudaDeviceCtx : public DeviceCtx {
+class CudaDeviceCtx : public DeviceCtx, public EventRecordProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaDeviceCtx);
   CudaDeviceCtx() = delete;
@@ -47,6 +48,10 @@ class CudaDeviceCtx : public DeviceCtx {
   }
 
   DeviceType device_type() const override { return DeviceType::kGPU; }
+
+  std::shared_ptr<EventRecord> MakeEventRecord() override {
+    return std::make_shared<CudaEventRecord>(this);
+  }
 
  protected:
   CudaStreamHandle* cuda_handler_;

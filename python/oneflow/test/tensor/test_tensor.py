@@ -1457,6 +1457,24 @@ class TestTensor(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
         return x.diag()
+  
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(auto_backward=False)
+    def test_floordiv_elementwise_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2, dim0=4, dim1=8).to(device)
+        other = random_pytorch_tensor(ndim=2, dim0=4, dim1=8).to(device)
+        y = input.floor_divide(other)
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(auto_backward=False)
+    def test_scalar_floordiv_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2, dim0=4, dim1=8).to(device)
+        other = random().to(int)
+        y = input.floor_divide(other)
+        return y
 
     @flow.unittest.skip_unless_1n4d()
     def test_construct_consistent_tensor_by_numpy(test_case):
