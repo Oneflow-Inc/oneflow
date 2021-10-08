@@ -106,6 +106,19 @@ struct BinaryFuncFloorMod final {
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncFloorMod);
 
+template<>
+struct BinaryFuncFloorMod<uint8_t> final {
+  static OF_DEVICE_FUNC uint8_t Invoke(const uint8_t x, const uint8_t y) {
+#if defined(__CUDACC__)
+    uint8_t trunc_mod = x % y;
+    return trunc_mod;
+#else
+    uint8_t trunc_mod = x % y;
+    return trunc_mod;
+#endif
+  }
+};
+
 template<typename T>
 struct BinaryFuncFMod final {
   static OF_DEVICE_FUNC T Invoke(const T x, const T y) {

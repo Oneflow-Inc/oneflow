@@ -150,17 +150,17 @@ class RandomSampler(Sampler[int]):
             generator = self.generator
         if self.replacement:
             for _ in range(self.num_samples // 32):
-                yield from flow.randint(
+                yield from flow._C.randint(
                     high=n, size=(32,), dtype=flow.int64, generator=generator
-                ).tolist()
-            yield from flow.randint(
+                ).numpy().tolist()
+            yield from flow._C.randint(
                 high=n,
                 size=(self.num_samples % 32,),
                 dtype=flow.int64,
                 generator=generator,
-            ).tolist()
+            ).numpy().tolist()
         else:
-            yield from flow.randperm(n, generator=generator).tolist()
+            yield from flow._C.randperm(n, generator=generator).numpy().tolist()
 
     def __len__(self):
         return self.num_samples
@@ -182,7 +182,7 @@ class SubsetRandomSampler(Sampler[int]):
     def __iter__(self):
         return (
             self.indices[i]
-            for i in flow.randperm(len(self.indices), generator=self.generator)
+            for i in flow._C.randperm(len(self.indices), generator=self.generator)
         )
 
     def __len__(self):
