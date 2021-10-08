@@ -57,9 +57,10 @@ __global__ void ApplyLossReductionImpl<float16>(int64_t elem_cnt, const float16*
   }
 }
 
-template<typename T>
-void ApplyLossReductionIfNeed(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* out,
-                              const ReductionType reduction_type) {
+template<DeviceType device_type, typename T>
+RETURN_VOID_IF_GPU(device_type)
+ApplyLossReductionIfNeed(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* out,
+                         const ReductionType reduction_type) {
   if (reduction_type == ReductionType::kNone) { return; }
   if ((reduction_type != ReductionType::kMean) && (reduction_type != ReductionType::kSum)) {
     UNIMPLEMENTED();
@@ -69,14 +70,14 @@ void ApplyLossReductionIfNeed(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out
       elem_cnt, tmp_out, out, reduction_type == ReductionType::kMean);
 }
 
-#define SPECIALIZE_APPLY_LOSS_REDUCTION(dtype)                                     \
-  template void ApplyLossReductionIfNeed<dtype>(DeviceCtx * ctx, int64_t elem_cnt, \
-                                                const dtype* tmp_out, dtype* out,  \
-                                                const ReductionType reduction_type);
+#define SPECIALIZE_APPLY_LOSS_REDUCTION(device_type, dtype)                              \
+  template RETURN_VOID_IF_GPU(device_type) ApplyLossReductionIfNeed<device_type, dtype>( \
+      DeviceCtx * ctx, int64_t elem_cnt, const dtype* tmp_out, dtype* out,               \
+      const ReductionType reduction_type);
 
-SPECIALIZE_APPLY_LOSS_REDUCTION(float)
-SPECIALIZE_APPLY_LOSS_REDUCTION(double)
-SPECIALIZE_APPLY_LOSS_REDUCTION(float16)
+SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kGPU, float)
+SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kGPU, double)
+SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kGPU, float16)
 
 }  // namespace loss
 }  // namespace user_op
