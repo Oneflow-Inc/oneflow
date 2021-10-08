@@ -24,11 +24,11 @@ namespace {
 
 using namespace loss;
 
-#define RERUEN_VOID_IF_NOT_FLOAT16 typename std::enable_if_t<!std::is_same<T, float16>::value, void>
-#define RERUEN_VOID_IF_FLOAT16 typename std::enable_if_t<std::is_same<T, float16>::value, void>
+#define RETURN_VOID_IF_NOT_FLOAT16 typename std::enable_if_t<!std::is_same<T, float16>::value, void>
+#define RETURN_VOID_IF_FLOAT16 typename std::enable_if_t<std::is_same<T, float16>::value, void>
 
 template<typename T, typename K>
-__global__ RERUEN_VOID_IF_NOT_FLOAT16 ComputeNllOutNone(const int64_t num_instances,
+__global__ RETURN_VOID_IF_NOT_FLOAT16 ComputeNllOutNone(const int64_t num_instances,
                                                         const K num_classes, const K ignore_index,
                                                         const T* input, const K* target, T* out,
                                                         const T* weight, T* total_weight) {
@@ -47,7 +47,7 @@ __global__ RERUEN_VOID_IF_NOT_FLOAT16 ComputeNllOutNone(const int64_t num_instan
 }
 
 template<typename T, typename K>
-__global__ RERUEN_VOID_IF_FLOAT16 ComputeNllOutNone(const int64_t num_instances,
+__global__ RETURN_VOID_IF_FLOAT16 ComputeNllOutNone(const int64_t num_instances,
                                                     const K num_classes, const K ignore_index,
                                                     const T* input, const K* target, T* out,
                                                     const T* weight, T* total_weight) {
@@ -76,7 +76,7 @@ __global__ RERUEN_VOID_IF_FLOAT16 ComputeNllOutNone(const int64_t num_instances,
 }
 
 template<typename T, typename K>
-__global__ RERUEN_VOID_IF_NOT_FLOAT16 ComputeNllOutReduce(const int64_t num_instances,
+__global__ RETURN_VOID_IF_NOT_FLOAT16 ComputeNllOutReduce(const int64_t num_instances,
                                                           const K num_classes, const K ignore_index,
                                                           const T* input, const K* target, T* out,
                                                           const T* weight, T* total_weight,
@@ -105,7 +105,7 @@ __global__ RERUEN_VOID_IF_NOT_FLOAT16 ComputeNllOutReduce(const int64_t num_inst
 }
 
 template<typename T, typename K>
-__global__ RERUEN_VOID_IF_FLOAT16 ComputeNllOutReduce(const int64_t num_instances,
+__global__ RETURN_VOID_IF_FLOAT16 ComputeNllOutReduce(const int64_t num_instances,
                                                       const K num_classes, const K ignore_index,
                                                       const T* input, const K* target, T* out,
                                                       const T* weight, T* total_weight,
@@ -144,7 +144,7 @@ __global__ RERUEN_VOID_IF_FLOAT16 ComputeNllOutReduce(const int64_t num_instance
 }
 
 template<typename T, typename K>
-__global__ RERUEN_VOID_IF_NOT_FLOAT16 ComputeNllGradOut(const int64_t num_instances,
+__global__ RETURN_VOID_IF_NOT_FLOAT16 ComputeNllGradOut(const int64_t num_instances,
                                                         const K num_classes, const K ignore_index,
                                                         const K* target, const T* dy, T* dx,
                                                         const T* weight, const T* total_weight,
@@ -162,7 +162,7 @@ __global__ RERUEN_VOID_IF_NOT_FLOAT16 ComputeNllGradOut(const int64_t num_instan
 }
 
 template<typename T, typename K>
-__global__ RERUEN_VOID_IF_FLOAT16 ComputeNllGradOut(const int64_t num_instances,
+__global__ RETURN_VOID_IF_FLOAT16 ComputeNllGradOut(const int64_t num_instances,
                                                     const K num_classes, const K ignore_index,
                                                     const K* target, const T* dy, T* dx,
                                                     const T* weight, const T* total_weight,
