@@ -31,7 +31,8 @@ void TransportStreamType::InitInstructionStatus(const Stream& stream,
 
 void TransportStreamType::DeleteInstructionStatus(const Stream& stream,
                                                   InstructionStatusBuffer* status_buffer) const {
-  // do nothing
+  auto* ptr = reinterpret_cast<RefCntType*>(status_buffer->mut_buffer()->mut_data());
+  ptr->~RefCntType();
 }
 
 bool TransportStreamType::QueryInstructionStatusDone(
