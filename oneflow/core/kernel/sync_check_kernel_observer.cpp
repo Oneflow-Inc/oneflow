@@ -15,8 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/sync_check_kernel_observer.h"
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/device/cuda_device_context.h"
-#include "oneflow/core/stream/stream_context.h"
 
 namespace oneflow {
 
