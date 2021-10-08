@@ -186,7 +186,7 @@ bool CheckVecEqual(size_t size, const T* in0, const T* in1) {
 }  // namespace
 
 template<typename T>
-Maybe<void> DetaConsistencyCheck(py::array_t<T> array, size_t elem_cnt,
+Maybe<void> DataConsistencyCheck(py::array_t<T> array, size_t elem_cnt,
                                  Symbol<ParallelDesc> placement) {
   const auto& rank_group = JUST(RankGroup::New(placement));
   size_t data_size = elem_cnt * sizeof(T);
@@ -225,7 +225,7 @@ Maybe<void> DetaConsistencyCheck(py::array_t<T> array, size_t elem_cnt,
 }
 
 #define MAKE_SWITCH_ENTRY(func_name, dtype) func_name<dtype>
-DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, DetaConsistencyCheck, MAKE_SWITCH_ENTRY,
+DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, DataConsistencyCheck, MAKE_SWITCH_ENTRY,
                           MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ));
 
 Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
@@ -244,7 +244,7 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
   const Shape shape(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));
   DataType data_type = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
 
-  JUST(SwitchDetaConsistencyCheck(SwitchCase(data_type), np_arr_raii, shape.elem_cnt(), placement));
+  JUST(SwitchDataConsistencyCheck(SwitchCase(data_type), np_arr_raii, shape.elem_cnt(), placement));
 
   const std::string& device_tag = placement->device_tag();
   Symbol<Device> device;
