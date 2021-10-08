@@ -627,27 +627,6 @@ class CombinedMarginLossFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class Norm2Functor {
- public:
-  Norm2Functor() {}
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                            const float& p) const {
-    std::shared_ptr<one::Tensor> norm; 
-    int32_t ndim = x->ndim()-1;
-    std::vector<int32_t> axis(1, ndim);
-    if(p == 2.0)
-    {
-      norm= JUST(Sqrt(JUST(ReduceSum(JUST(Square(JUST(Abs(x)))), axis, false))));
-    }
-    else
-    {
-      norm=JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), p)), axis, false)), 1.0/p));
-    }
-    return norm;
-  }
-
-};
-
 class TripletMarginLossFunctor {
  public:
   TripletMarginLossFunctor() {}
@@ -1434,7 +1413,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");
   m.add_functor<impl::SmoothL1LossFunctor>("SmoothL1Loss");
   m.add_functor<impl::CombinedMarginLossFunctor>("CombinedMarginLoss");
-  m.add_functor<impl::Norm2Functor>("Norm2"); 
   m.add_functor<impl::TripletMarginLossFunctor>("TripletMarginLoss");
   m.add_functor<impl::AffineGridFunctor>("AffineGrid");
   m.add_functor<impl::GridSampleFunctor>("GridSample");

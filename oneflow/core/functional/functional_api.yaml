@@ -628,10 +628,6 @@
   signature: "Tensor (Tensor dy, Tensor label, Tensor theta, Float m1, Float m2, Float m3, Int64 depth) => CombinedMarginLossGrad"
   bind_python: False
 
-- name: "norm2"
-  signature: "Tensor (Tensor x, Float p) => Norm2"
-  bind_python: True
-
 - name: "triplet_margin_loss"
   signature: "Tensor (Tensor anchor, Tensor positive, Tensor negative, *, Float margin, Float p, Float eps, Bool swap, String reduction) => TripletMarginLoss"
   bind_python: True
