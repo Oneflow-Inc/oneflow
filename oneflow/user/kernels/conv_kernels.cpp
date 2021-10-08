@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/user/ops/nn_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/primitive/include/add.h"
 
 namespace oneflow {
 
@@ -527,9 +528,11 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), dx->data_type());
       CHECK_EQ(add_to_output->shape(), dx->shape());
-      KernelUtil<DeviceType::kCPU, T>::Addition(
-          ctx->device_ctx(), add_to_output->shape().elem_cnt(), dx->mut_dptr<T>(), dx->dptr<T>(),
-          add_to_output->dptr<T>());
+      std::unique_ptr<primitive::Add> primitive = primitive::NewPrimitive<primitive::AddFactory>(
+          DeviceType::kCPU, add_to_output->data_type());
+      CHECK(primitive);
+      primitive->Launch(ctx->stream_ctx(), add_to_output->dptr<T>(), dx->dptr<T>(),
+                        dx->mut_dptr<T>(), add_to_output->shape().elem_cnt());
     }
   }
 };
