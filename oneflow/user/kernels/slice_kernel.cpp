@@ -269,13 +269,13 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
 }
 
 #define MAKE_WRITE_SLICE_SWITCH_ENTRY(func_name, N, T) func_name<N, T>
-DEFINE_STATIC_SWITCH_FUNC(void, WriteSlice, MAKE_WRITE_SLICE_SWITCH_ENTRY,
-                          MAKE_NDIM_CTRV_SEQ(DIM_SEQ),
-                          MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ
+DEFINE_STATIC_SWITCH_FUNC(
+    void, WriteSlice, MAKE_WRITE_SLICE_SWITCH_ENTRY, MAKE_NDIM_CTRV_SEQ(DIM_SEQ),
+    MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
 #if defined(WITH_CUDA)
-                                                      HALF_DATA_TYPE_SEQ
+                                HALF_DATA_TYPE_SEQ
 #endif
-                                                  ));
+                            ));
 #undef MAKE_WRITE_SLICE_SWITCH_ENTRY
 
 std::shared_ptr<user_op::OpKernelState> CreateSliceState(user_op::KernelInitContext* ctx,

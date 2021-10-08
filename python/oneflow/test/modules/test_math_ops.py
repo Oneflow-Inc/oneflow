@@ -353,10 +353,6 @@ class TestPow(flow.unittest.TestCase):
         return torch.pow(x, y)
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 @flow.unittest.skip_unless_1n1d()
 class TestArccosh(flow.unittest.TestCase):
     @autotest()
@@ -367,10 +363,6 @@ class TestArccosh(flow.unittest.TestCase):
         return y
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 @flow.unittest.skip_unless_1n1d()
 class TestAcosh(flow.unittest.TestCase):
     @autotest()
@@ -381,10 +373,6 @@ class TestAcosh(flow.unittest.TestCase):
         return y
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 @flow.unittest.skip_unless_1n1d()
 class TestAtan2(flow.unittest.TestCase):
     @autotest()
@@ -396,10 +384,6 @@ class TestAtan2(flow.unittest.TestCase):
         return y
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 @flow.unittest.skip_unless_1n1d()
 class TestMinimum(flow.unittest.TestCase):
     @autotest()
@@ -420,10 +404,6 @@ class TestMinimum(flow.unittest.TestCase):
         return torch.minimum(x, y)
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestMaximum(flow.unittest.TestCase):
     @autotest()
     def test_flow_elementwise_mximum_with_random_data(test_case):
