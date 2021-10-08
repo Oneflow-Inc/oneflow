@@ -1457,7 +1457,7 @@ class TestTensor(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
         return x.diag()
-  
+
     @flow.unittest.skip_unless_1n1d()
     @autotest(auto_backward=False)
     def test_floordiv_elementwise_tensor_with_random_data(test_case):
