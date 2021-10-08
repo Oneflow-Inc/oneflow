@@ -98,6 +98,35 @@ def compare_eager_consistent_with_tensorflow(
             of_logits_grad.numpy(), tf_logits_diff.numpy(), rtol=1e-03, atol=1e-04
         )
 
+    # 2D sbp
+    placement = flow.placement("cuda", {0: range(4)}, hierarchy=(2, 2))
+    of_logits = flow.tensor(
+        np_logits, device=device_type, dtype=data_type, requires_grad=True
+    )
+    flow.comm.broadcast(of_logits, 0)
+    of_logits = of_logits.to_consistent(placement=placement, sbp=[flow.sbp.broadcast, flow.sbp.broadcast])
+    of_logits = of_logits.to_consistent(placement=placement, sbp=[flow.sbp.split(0), flow.sbp.split(1)])
+    of_labels = flow.tensor(np_labels, device=device_type, dtype=label_type)
+    flow.comm.broadcast(of_labels, 0)
+    of_labels = of_labels.to_consistent(placement=placement, sbp=[flow.sbp.broadcast, flow.sbp.broadcast])
+
+    of_output = flow.nn.functional.sparse_softmax_cross_entropy(
+        labels=of_labels, logits=of_logits
+    ).to(device_type)
+    of_output.sum().backward()
+    of_logits_grad = of_logits.grad.to_consistent(
+        placement=placement, sbp=[flow.sbp.broadcast, flow.sbp.broadcast]
+    )
+    of_logits_grad = of_logits_grad.to_local()
+    of_output = of_output.to_consistent(placement=placement, sbp=[flow.sbp.broadcast, flow.sbp.broadcast])
+    of_output = of_output.to_local()
+
+    if rank == 0:
+        assert np.allclose(of_output.numpy(), tf_output.numpy(), rtol=1e-03, atol=1e-04)
+        assert np.allclose(
+            of_logits_grad.numpy(), tf_logits_diff.numpy(), rtol=1e-03, atol=1e-04
+        )
+
 
 def compare_lazy_consistent_with_tensorflow(
     device_type, data_type, label_type, batch_size, num_classes,
