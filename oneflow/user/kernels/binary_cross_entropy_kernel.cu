@@ -36,19 +36,25 @@ __global__ void ComputeBinaryCrossEntropyOut(int64_t elem_cnt, const T* input, c
   }
 }
 
-__global__ void ComputeBinaryCrossEntropyOutHalf(int64_t elem_cnt, const half* input,
-                                                 const half* target, half* out,
-                                                 const half* weight) {
+template<>
+__global__ void ComputeBinaryCrossEntropyOut(int64_t elem_cnt, const float16* input,
+                                             const float16* target, float16* out,
+                                             const float16* weight) {
+  FLOAT16_TO_HALF(input)
+  FLOAT16_TO_HALF(target)
+  FLOAT16_TO_HALF(out)
+  FLOAT16_TO_HALF(weight)
+
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    float input_val = __half2float(input[i]);
-    float target_val = __half2float(target[i]);
+    float input_val = __half2float(input_[i]);
+    float target_val = __half2float(target_[i]);
 
     assert(input_val >= 0.0);
     assert(input_val <= 1.0);
 
-    out[i] = __float2half((target_val - 1.0) * max(__logf(1.0 - input_val), -100.0)
-                          - target_val * max(__logf(input_val), -100.0));
-    if (weight != nullptr) { out[i] = __hmul(out[i], weight[i]); }
+    out_[i] = __float2half((target_val - 1.0) * max(__logf(1.0 - input_val), -100.0)
+                           - target_val * max(__logf(input_val), -100.0));
+    if (weight_ != nullptr) { out_[i] = __hmul(out_[i], weight_[i]); }
   }
 }
 
@@ -67,20 +73,28 @@ __global__ void ComputeBinaryCrossEntropyGradOut(int64_t elem_cnt, const T* inpu
     if (reduction_type == ReductionType::kMean) { dx[i] /= elem_cnt; }
   }
 }
-__global__ void ComputeBinaryCrossEntropyGradOutHalf(int64_t elem_cnt, const half* input,
-                                                     const half* target, const half* dy, half* dx,
-                                                     const half* weight,
-                                                     const ReductionType reduction_type) {
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    float input_val = __half2float(input[i]);
-    float target_val = __half2float(target[i]);
-    float dy_val = __half2float(reduction_type == ReductionType::kNone ? dy[i] : *dy);
 
-    dx[i] =
+template<>
+__global__ void ComputeBinaryCrossEntropyGradOut(int64_t elem_cnt, const float16* input,
+                                                 const float16* target, const float16* dy,
+                                                 float16* dx, const float16* weight,
+                                                 const ReductionType reduction_type) {
+  FLOAT16_TO_HALF(input)
+  FLOAT16_TO_HALF(target)
+  FLOAT16_TO_HALF(dy)
+  FLOAT16_TO_HALF(dx)
+  FLOAT16_TO_HALF(weight)
+
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+    float input_val = __half2float(input_[i]);
+    float target_val = __half2float(target_[i]);
+    float dy_val = __half2float(reduction_type == ReductionType::kNone ? dy_[i] : *dy_);
+
+    dx_[i] =
         __float2half(dy_val * (input_val - target_val) / max((1.0 - input_val) * input_val, 1e-12));
-    if (weight != nullptr) { dx[i] = __hmul(dx[i], weight[i]); }
+    if (weight_ != nullptr) { dx_[i] = __hmul(dx_[i], weight_[i]); }
     if (reduction_type == ReductionType::kMean) {
-      dx[i] = __float2half(__half2float(dx[i]) / elem_cnt);
+      dx_[i] = __float2half(__half2float(dx_[i]) / elem_cnt);
     }
   }
 }
@@ -113,43 +127,8 @@ class BinaryCrossEntropyKernel final : public user_op::OpKernel {
                                    ctx->device_ctx()->cuda_stream()>>>(
         elem_cnt, input, target, reduction == ReductionType::kNone ? out : tmp_out, weight);
 
-    ApplyLossReductionIfNeed<T>(ctx->device_ctx(), elem_cnt, tmp_out, out, reduction);
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-template<>
-class BinaryCrossEntropyKernel<float16> final : public user_op::OpKernel {
- public:
-  BinaryCrossEntropyKernel() = default;
-  ~BinaryCrossEntropyKernel() = default;
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto* input_blob = ctx->Tensor4ArgNameAndIndex("input", 0);
-    const auto* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
-    auto* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    auto* tmp_buffer_blob = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
-
-    const int64_t elem_cnt = input_blob->shape().elem_cnt();
-
-    const float16* input = input_blob->dptr<float16>();
-    const float16* target = target_blob->dptr<float16>();
-    float16* out = out_blob->mut_dptr<float16>();
-    float16* tmp_buffer = tmp_buffer_blob->mut_dptr<float16>();
-    float16* tmp_out = tmp_buffer;
-    const float16* weight = ctx->has_input("weight", 0)
-                                ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<float16>()
-                                : nullptr;
-    ComputeBinaryCrossEntropyOutHalf<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                       ctx->device_ctx()->cuda_stream()>>>(
-        elem_cnt, reinterpret_cast<const half*>(input), reinterpret_cast<const half*>(target),
-        reduction == ReductionType::kNone ? reinterpret_cast<half*>(out)
-                                          : reinterpret_cast<half*>(tmp_out),
-        reinterpret_cast<const half*>(weight));
-
-    ApplyLossReductionIfNeed<float16>(ctx->device_ctx(), elem_cnt, tmp_out, out, reduction);
+    ApplyLossReductionIfNeed<DeviceType::kGPU, T>(ctx->device_ctx(), elem_cnt, tmp_out, out,
+                                                  reduction);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -180,39 +159,6 @@ class BinaryCrossEntropyGradKernel final : public user_op::OpKernel {
     ComputeBinaryCrossEntropyGradOut<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                                        ctx->device_ctx()->cuda_stream()>>>(
         elem_cnt, input, target, dy, dx, weight, reduction);
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-template<>
-class BinaryCrossEntropyGradKernel<float16> final : public user_op::OpKernel {
- public:
-  BinaryCrossEntropyGradKernel() = default;
-  ~BinaryCrossEntropyGradKernel() = default;
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto* input_blob = ctx->Tensor4ArgNameAndIndex("input", 0);
-    const auto* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
-    const auto* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    auto* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
-
-    const int64_t elem_cnt = input_blob->shape().elem_cnt();
-
-    const float16* dy = dy_blob->dptr<float16>();
-    const float16* input = input_blob->dptr<float16>();
-    const float16* target = target_blob->dptr<float16>();
-    float16* dx = dx_blob->mut_dptr<float16>();
-    const float16* weight = ctx->has_input("weight", 0)
-                                ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<float16>()
-                                : nullptr;
-    ComputeBinaryCrossEntropyGradOutHalf<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock,
-                                           0, ctx->device_ctx()->cuda_stream()>>>(
-        elem_cnt, reinterpret_cast<const half*>(input), reinterpret_cast<const half*>(target),
-        reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx),
-        reinterpret_cast<const half*>(weight), reduction);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
