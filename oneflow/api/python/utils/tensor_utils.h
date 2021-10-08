@@ -43,6 +43,7 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tenso
                                                      Maybe<void> (*Copy)(uint64_t, py::array_t<T>),
                                                      const std::string& modifier) {
   std::shared_ptr<MirroredTensor> tensor;
+  CHECK_OR_RETURN(t->is_eager()) << "eager tensors supported only";
   if (t->is_local()) {
     tensor = JUST(t->AsMirroredTensor());
   } else {
@@ -57,7 +58,6 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tenso
         functional::ToConsistent(t, tensor_meta->parallel_desc(), sbp_tuple, GetNoneSbpList()));
     tensor = JUST(consistent_tensor->cur_rank_phy_tensor());
   }
-  CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
 
   const auto& Callback = std::make_shared<std::function<void(uint64_t)>>(
       [&array, &Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array)); });
