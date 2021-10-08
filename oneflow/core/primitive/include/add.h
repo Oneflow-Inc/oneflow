@@ -30,6 +30,8 @@ class Add : public Primitive {
 
   virtual void Launch(StreamContext* stream_ctx, const void* const* srcs, size_t arity, void* dst,
                       size_t count) = 0;
+  virtual void Launch(StreamContext* stream_ctx, const void* src0, const void* src1, void* dst,
+                      size_t count);
 };
 
 class AddFactory : public Factory<Add> {
