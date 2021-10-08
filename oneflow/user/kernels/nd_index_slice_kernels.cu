@@ -76,13 +76,13 @@ struct DeviceAdd<DeviceType::kGPU, T> {
 };
 
 template<>
-struct DeviceAdd<DeviceType::kGPU, int8_t> {
-  __device__ __forceinline__ static void Invoke(const int8_t* x, int8_t* y) { *y += *x; }
+struct DeviceAdd<DeviceType::kGPU, uint8_t> {
+  __device__ __forceinline__ static void Invoke(const uint8_t* x, uint8_t* y) { *y += *x; }
 };
 
 template<>
-struct DeviceAdd<DeviceType::kGPU, uint8_t> {
-  __device__ __forceinline__ static void Invoke(const uint8_t* x, uint8_t* y) { *y += *x; }
+struct DeviceAdd<DeviceType::kGPU, int8_t> {
+  __device__ __forceinline__ static void Invoke(const int8_t* x, int8_t* y) { *y += *x; }
 };
 
 template<>

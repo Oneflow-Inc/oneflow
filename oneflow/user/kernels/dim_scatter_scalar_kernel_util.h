@@ -62,14 +62,14 @@ struct UpdateScalarFunctor {
 };
 
 #define INSTANTIATE_DIM_SCATTER_SCARLAR_FUNCTORS(device_type, opt)             \
-  template struct DimScatterScalarFunctor<device_type, int8_t, int32_t, opt>;  \
   template struct DimScatterScalarFunctor<device_type, uint8_t, int32_t, opt>; \
+  template struct DimScatterScalarFunctor<device_type, int8_t, int32_t, opt>;  \
   template struct DimScatterScalarFunctor<device_type, int32_t, int32_t, opt>; \
   template struct DimScatterScalarFunctor<device_type, int64_t, int32_t, opt>; \
   template struct DimScatterScalarFunctor<device_type, float, int32_t, opt>;   \
   template struct DimScatterScalarFunctor<device_type, double, int32_t, opt>;  \
-  template struct DimScatterScalarFunctor<device_type, int8_t, int64_t, opt>;  \
   template struct DimScatterScalarFunctor<device_type, uint8_t, int64_t, opt>; \
+  template struct DimScatterScalarFunctor<device_type, int8_t, int64_t, opt>;  \
   template struct DimScatterScalarFunctor<device_type, int32_t, int64_t, opt>; \
   template struct DimScatterScalarFunctor<device_type, int64_t, int64_t, opt>; \
   template struct DimScatterScalarFunctor<device_type, float, int64_t, opt>;   \
