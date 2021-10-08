@@ -749,7 +749,7 @@ class MatrixNorm2Functor {
     {
       UNIMPLEMENTED_THEN_RETURN() << "Not support ord is nuc.";
     }
-    else if(ord=="fro"|| ord=="")
+    else if(ord=="fro")
     {  
       res=JUST(Sqrt(JUST(ReduceSum(JUST(Square(x)), input_dim, keepdim))));
     }

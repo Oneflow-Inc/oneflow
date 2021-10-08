@@ -78,7 +78,6 @@ class Vector_Norm(Module):
         dim = check_dim(num_dims, self.dim)
         if isinstance(dim, int):
             dim = [dim]
-        print("#####dim=",dim,"self.ord:",self.ord)
         if dim == None:
             return flow._C.vector_norm(x.flatten(), ord=self.ord, dim=self.dim, keepdim=self.keepdim)
         else:
@@ -97,9 +96,7 @@ class Matrix_Norm(Module):
 
     def forward(self, x):
         num_dims = len(x.shape)
-        dim = check_dim(num_dims, self.dim)#变成整的
-        print("num_dims:",num_dims,"sele.dim:",self.dim,"dim:",dim)
-        
+        dim = check_dim(num_dims, self.dim)       
         if self.ord in ["nuc", "fro"]:
             return flow._C.matrix_norm(x, self.ord, dim, self.keepdim)
         else:
@@ -225,9 +222,8 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
         dim = [dim]
     if isinstance(ord, (int, float)):
         ord=float(ord)
-    #是否加上
-    #elif ord==None:
-        #ord = "fro"
+    elif ord==None:
+        ord = "fro"
     return flow._C.norm(input, ord, dim, keepdim)
 
 
