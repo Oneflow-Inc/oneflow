@@ -173,6 +173,7 @@ jobs:
         id: find-cache
         timeout-minutes: 5
         with:
+          delete-cache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           runner-labels: |
             self-hosted
             linux
