@@ -65,7 +65,7 @@ namespace oneflow {
 
 // Get field number by field name
 // note: field numbers start from 1 instead of 0.
-#define INTRUSIVE_FIELD_NUMBER(cls, field_name) cls::OF_PP_CAT(field_name, kDssFieldFieldNumber)
+#define INTRUSIVE_FIELD_NUMBER(cls, field_name) cls::OF_PP_CAT(field_name, kDssFieldNumber)
 
 // Get field type by field number
 #define INTRUSIVE_FIELD_TYPE(cls, field_number) cls::template __DssFieldType__<field_number>::type
