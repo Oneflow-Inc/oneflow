@@ -35,9 +35,10 @@ void ComputeKLDivOut(int64_t elem_cnt, const T* input, const T* target, T* out,
     }
   }
 }
+
 template<typename T>
 void ComputeKLDivGradOut(int64_t elem_cnt, const T* input, const T* target, const T* dy, T* dx,
-                         const bool log_target, const ReductionType reduction_type) {
+                         const ReductionType reduction_type, const bool log_target) {
 #define SET_DY_VAL const T dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
 #define DEAL_REDUCE_MEAN \
   if (reduction_type == ReductionType::kMean) { dx[i] /= elem_cnt; };
@@ -63,88 +64,29 @@ void ComputeKLDivGradOut(int64_t elem_cnt, const T* input, const T* target, cons
 }
 
 template<typename T>
-class KLDivKernel final : public user_op::OpKernel {
+class KLDivKernel : public SimpleLossKernel<DeviceType::kCPU, T, KLDivKernel<T>> {
  public:
-  KLDivKernel() = default;
-  ~KLDivKernel() = default;
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto* input_blob = ctx->Tensor4ArgNameAndIndex("input", 0);
-    const auto* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
-    auto* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    auto* tmp_buffer_blob = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
+  void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
+                  const T* target, T* out) const {
     const bool log_target = ctx->Attr<bool>("log_target");
-
-    const int64_t elem_cnt = input_blob->shape().elem_cnt();
-
-    const T* input = input_blob->dptr<T>();
-    const T* target = target_blob->dptr<T>();
-    T* out = out_blob->mut_dptr<T>();
-    T* tmp_buffer = tmp_buffer_blob->mut_dptr<T>();
-    T* tmp_out = tmp_buffer;
-
-    ComputeKLDivOut(elem_cnt, input, target, reduction == ReductionType::kNone ? out : tmp_out,
-                    log_target);
-
-    ApplyLossReductionIfNeed<T>(elem_cnt, tmp_out, out, reduction);
+    ComputeKLDivOut(elem_cnt, input, target, out, log_target);
   }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<typename T>
-class KLDivGradKernel final : public user_op::OpKernel {
+class KLDivGradKernel : public SimpleLossGradKernel<DeviceType::kCPU, T, KLDivGradKernel<T>> {
  public:
-  KLDivGradKernel() = default;
-  ~KLDivGradKernel() = default;
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto* input_blob = ctx->Tensor4ArgNameAndIndex("input", 0);
-    const auto* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
-    const auto* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    auto* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
+  void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
+                  const T* target, const T* dy, T* dx, const ReductionType reduction) const {
     const bool log_target = ctx->Attr<bool>("log_target");
-
-    const int64_t elem_cnt = input_blob->shape().elem_cnt();
-
-    const T* dy = dy_blob->dptr<T>();
-    const T* input = input_blob->dptr<T>();
-    const T* target = target_blob->dptr<T>();
-    T* dx = dx_blob->mut_dptr<T>();
-    ComputeKLDivGradOut(elem_cnt, input, target, dy, dx, log_target, reduction);
+    ComputeKLDivGradOut(elem_cnt, input, target, dy, dx, reduction, log_target);
   }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 }  // namespace
 
-#define REGISTER_KL_DIV_KERNEL(dtype)                                                     \
-  REGISTER_USER_KERNEL("kl_div")                                                          \
-      .SetCreateFn<KLDivKernel<dtype>>()                                                  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU)                      \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
-                       & (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))   \
-      .SetInferTmpSizeFn(loss::GenDefaultInferTmpSizeFn<dtype>());
-
-#define REGISTER_KL_DIV_GRAD_KERNEL(dtype)                                                \
-  REGISTER_USER_KERNEL("kl_div_grad")                                                     \
-      .SetCreateFn<KLDivGradKernel<dtype>>()                                              \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU)                      \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
-                       & (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)     \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
-
-REGISTER_KL_DIV_KERNEL(float)
-REGISTER_KL_DIV_KERNEL(double)
-REGISTER_KL_DIV_GRAD_KERNEL(float)
-REGISTER_KL_DIV_GRAD_KERNEL(double)
+REGISTER_SIMPLE_LOSS_KERNEL_CPU("kl_div", KLDivKernel)
+REGISTER_SIMPLE_LOSS_GRAD_KERNEL_CPU("kl_div_grad", KLDivGradKernel)
 
 }  // namespace user_op
 }  // namespace oneflow

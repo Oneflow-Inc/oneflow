@@ -36,25 +36,30 @@ __global__ void ComputeKLDivOut(int64_t elem_cnt, const T* input, const T* targe
   }
 }
 
-__global__ void ComputeKLDivOutHalf(int64_t elem_cnt, const half* input, const half* target,
-                                    half* out, const bool log_target) {
+template<>
+__global__ void ComputeKLDivOut(int64_t elem_cnt, const float16* input, const float16* target,
+                                float16* out, const bool log_target) {
+  FLOAT16_TO_HALF(input)
+  FLOAT16_TO_HALF(target)
+  FLOAT16_TO_HALF(out)
+
   const half zero_half = __float2half(0.0);
   if (log_target) {
     CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-      out[i] = __hmul(hexp(target[i]), __hsub(target[i], input[i]));
+      out_[i] = __hmul(hexp(target_[i]), __hsub(target_[i], input_[i]));
     }
   } else {
     CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-      const half out_val = __hmul(target[i], __hsub(SafeLog(target[i]), input[i]));
-      out[i] = __hgt(target[i], zero_half) ? out_val : zero_half;
+      const half out_val = __hmul(target_[i], __hsub(SafeLog(target_[i]), input_[i]));
+      out_[i] = __hgt(target_[i], zero_half) ? out_val : zero_half;
     }
   }
 }
 
 template<typename T>
 __global__ void ComputeKLDivGradOut(int64_t elem_cnt, const T* input, const T* target, const T* dy,
-                                    T* dx, const bool log_target,
-                                    const ReductionType reduction_type) {
+                                    T* dx, const ReductionType reduction_type,
+                                    const bool log_target) {
 #define SET_DY_VAL const T dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
 #define DEAL_REDUCE_MEAN \
   if (reduction_type == ReductionType::kMean) { dx[i] /= elem_cnt; }
@@ -79,13 +84,18 @@ __global__ void ComputeKLDivGradOut(int64_t elem_cnt, const T* input, const T* t
 #undef DEAL_REDUCE_MEAN
 }
 
-__global__ void ComputeKLDivGradOutHalf(int64_t elem_cnt, const half* input, const half* target,
-                                        const half* dy, half* dx, const bool log_target,
-                                        const ReductionType reduction_type) {
-#define SET_DY_VAL const half dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
-#define DEAL_REDUCE_MEAN                                               \
-  if (reduction_type == ReductionType::kMean) {                        \
-    dx[i] = __hdiv(dx[i], __float2half(static_cast<float>(elem_cnt))); \
+template<>
+__global__ void ComputeKLDivGradOut(int64_t elem_cnt, const float16* input, const float16* target,
+                                    const float16* dy, float16* dx,
+                                    const ReductionType reduction_type, const bool log_target) {
+  FLOAT16_TO_HALF(input)
+  FLOAT16_TO_HALF(target)
+  FLOAT16_TO_HALF(dy)
+  FLOAT16_TO_HALF(dx)
+#define SET_DY_VAL const half dy_val = reduction_type == ReductionType::kNone ? dy_[i] : *dy_;
+#define DEAL_REDUCE_MEAN                                                 \
+  if (reduction_type == ReductionType::kMean) {                          \
+    dx_[i] = __hdiv(dx_[i], __float2half(static_cast<float>(elem_cnt))); \
   }
 
   {
@@ -93,13 +103,13 @@ __global__ void ComputeKLDivGradOutHalf(int64_t elem_cnt, const half* input, con
     if (log_target) {
       FOR_RANGE(int64_t, i, 0, elem_cnt) {
         SET_DY_VAL
-        dx[i] = __hneg(__hmul(hexp(target[i]), dy_val));
+        dx_[i] = __hneg(__hmul(hexp(target_[i]), dy_val));
         DEAL_REDUCE_MEAN
       }
     } else {
       FOR_RANGE(int64_t, i, 0, elem_cnt) {
         SET_DY_VAL
-        dx[i] = __hgt(target[i], zero_half) ? __hneg(__hmul(target[i], dy_val)) : zero_half;
+        dx_[i] = __hgt(target_[i], zero_half) ? __hneg(__hmul(target_[i], dy_val)) : zero_half;
         DEAL_REDUCE_MEAN
       }
     }
@@ -107,162 +117,35 @@ __global__ void ComputeKLDivGradOutHalf(int64_t elem_cnt, const half* input, con
 
 #undef SET_DY_VAL
 #undef DEAL_REDUCE_MEAN
-}  // namespace
+}
 
 template<typename T>
-class KLDivKernel final : public user_op::OpKernel {
+class KLDivKernel : public SimpleLossKernel<DeviceType::kGPU, T, KLDivKernel<T>> {
  public:
-  KLDivKernel() = default;
-  ~KLDivKernel() = default;
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto* input_blob = ctx->Tensor4ArgNameAndIndex("input", 0);
-    const auto* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
-    auto* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    auto* tmp_buffer_blob = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
+  void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
+                  const T* target, T* out) const {
     const bool log_target = ctx->Attr<bool>("log_target");
-
-    const int64_t elem_cnt = input_blob->shape().elem_cnt();
-
-    const T* input = input_blob->dptr<T>();
-    const T* target = target_blob->dptr<T>();
-    T* out = out_blob->mut_dptr<T>();
-    T* tmp_buffer = tmp_buffer_blob->mut_dptr<T>();
-    T* tmp_out = tmp_buffer;
-
     ComputeKLDivOut<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                      ctx->device_ctx()->cuda_stream()>>>(
-        elem_cnt, input, target, reduction == ReductionType::kNone ? out : tmp_out, log_target);
-
-    ApplyLossReductionIfNeed<T>(ctx->device_ctx(), elem_cnt, tmp_out, out, reduction);
+                      ctx->device_ctx()->cuda_stream()>>>(elem_cnt, input, target, out, log_target);
   }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-template<>
-class KLDivKernel<float16> final : public user_op::OpKernel {
- public:
-  KLDivKernel() = default;
-  ~KLDivKernel() = default;
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto* input_blob = ctx->Tensor4ArgNameAndIndex("input", 0);
-    const auto* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
-    auto* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    auto* tmp_buffer_blob = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
-    const bool log_target = ctx->Attr<bool>("log_target");
-
-    const int64_t elem_cnt = input_blob->shape().elem_cnt();
-
-    const float16* input = input_blob->dptr<float16>();
-    const float16* target = target_blob->dptr<float16>();
-    float16* out = out_blob->mut_dptr<float16>();
-    float16* tmp_buffer = tmp_buffer_blob->mut_dptr<float16>();
-    float16* tmp_out = tmp_buffer;
-
-    ComputeKLDivOutHalf<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                          ctx->device_ctx()->cuda_stream()>>>(
-        elem_cnt, reinterpret_cast<const half*>(input), reinterpret_cast<const half*>(target),
-        reduction == ReductionType::kNone ? reinterpret_cast<half*>(out)
-                                          : reinterpret_cast<half*>(tmp_out),
-        log_target);
-
-    ApplyLossReductionIfNeed<float16>(ctx->device_ctx(), elem_cnt, tmp_out, out, reduction);
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<typename T>
-class KLDivGradKernel final : public user_op::OpKernel {
+class KLDivGradKernel : public SimpleLossGradKernel<DeviceType::kGPU, T, KLDivGradKernel<T>> {
  public:
-  KLDivGradKernel() = default;
-  ~KLDivGradKernel() = default;
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto* input_blob = ctx->Tensor4ArgNameAndIndex("input", 0);
-    const auto* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
-    const auto* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    auto* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
+  void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
+                  const T* target, const T* dy, T* dx, const ReductionType reduction) const {
     const bool log_target = ctx->Attr<bool>("log_target");
-
-    const int64_t elem_cnt = input_blob->shape().elem_cnt();
-
-    const T* dy = dy_blob->dptr<T>();
-    const T* input = input_blob->dptr<T>();
-    const T* target = target_blob->dptr<T>();
-    T* dx = dx_blob->mut_dptr<T>();
     ComputeKLDivGradOut<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                           ctx->device_ctx()->cuda_stream()>>>(elem_cnt, input, target, dy, dx,
-                                                              log_target, reduction);
+                                                              reduction, log_target);
   }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-template<>
-class KLDivGradKernel<float16> final : public user_op::OpKernel {
- public:
-  KLDivGradKernel() = default;
-  ~KLDivGradKernel() = default;
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto* input_blob = ctx->Tensor4ArgNameAndIndex("input", 0);
-    const auto* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
-    const auto* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    auto* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
-    const bool log_target = ctx->Attr<bool>("log_target");
-
-    const int64_t elem_cnt = input_blob->shape().elem_cnt();
-
-    const float16* dy = dy_blob->dptr<float16>();
-    const float16* input = input_blob->dptr<float16>();
-    const float16* target = target_blob->dptr<float16>();
-    float16* dx = dx_blob->mut_dptr<float16>();
-    ComputeKLDivGradOutHalf<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                              ctx->device_ctx()->cuda_stream()>>>(
-        elem_cnt, reinterpret_cast<const half*>(input), reinterpret_cast<const half*>(target),
-        reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx), log_target, reduction);
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 }  // namespace
 
-#define REGISTER_KL_DIV_KERNEL(dtype)                                                     \
-  REGISTER_USER_KERNEL("kl_div")                                                          \
-      .SetCreateFn<KLDivKernel<dtype>>()                                                  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                      \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
-                       & (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))   \
-      .SetInferTmpSizeFn(loss::GenDefaultInferTmpSizeFn<dtype>());
-
-#define REGISTER_KL_DIV_GRAD_KERNEL(dtype)                                                \
-  REGISTER_USER_KERNEL("kl_div_grad")                                                     \
-      .SetCreateFn<KLDivGradKernel<dtype>>()                                              \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                      \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
-                       & (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)     \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
-
-REGISTER_KL_DIV_KERNEL(float)
-REGISTER_KL_DIV_KERNEL(double)
-REGISTER_KL_DIV_KERNEL(float16)
-REGISTER_KL_DIV_GRAD_KERNEL(float)
-REGISTER_KL_DIV_GRAD_KERNEL(double)
-REGISTER_KL_DIV_GRAD_KERNEL(float16)
+REGISTER_SIMPLE_LOSS_KERNEL_GPU("kl_div", KLDivKernel)
+REGISTER_SIMPLE_LOSS_GRAD_KERNEL_GPU("kl_div_grad", KLDivGradKernel)
 
 }  // namespace user_op
 }  // namespace oneflow
