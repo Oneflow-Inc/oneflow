@@ -22,9 +22,9 @@ namespace oneflow {
 namespace one {
 
 struct SmoothL1LossCaptureState : public AutoGradCaptureState {
-  std::string reduction;
-  float beta;
-  bool requires_grad;
+  std::string reduction = "none";
+  float beta = 0.0;
+  bool requires_grad = false;
 };
 
 class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossCaptureState> {

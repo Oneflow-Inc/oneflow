@@ -20,7 +20,7 @@ namespace oneflow {
 namespace one {
 
 struct KLDivLossCaptureState : public AutoGradCaptureState {
-  bool log_target;
+  bool log_target = false;
   std::string reduction = "";
 };
 
