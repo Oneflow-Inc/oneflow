@@ -39,28 +39,12 @@ void ComputeKLDivOut(int64_t elem_cnt, const T* input, const T* target, T* out,
 template<typename T>
 void ComputeKLDivGradOut(int64_t elem_cnt, const T* input, const T* target, const T* dy, T* dx,
                          const ReductionType reduction_type, const bool log_target) {
-#define SET_DY_VAL const T dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
-#define DEAL_REDUCE_MEAN \
-  if (reduction_type == ReductionType::kMean) { dx[i] /= elem_cnt; };
-
-  {
-    if (log_target) {
-      FOR_RANGE(int64_t, i, 0, elem_cnt) {
-        SET_DY_VAL
-        dx[i] = -std::exp(target[i]) * dy_val;
-        DEAL_REDUCE_MEAN
-      }
-    } else {
-      FOR_RANGE(int64_t, i, 0, elem_cnt) {
-        SET_DY_VAL
-        dx[i] = target[i] > 0 ? -target[i] * dy_val : 0;
-        DEAL_REDUCE_MEAN
-      }
-    }
+  FOR_RANGE(int64_t, i, 0, elem_cnt) {
+    const T dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
+    dx[i] =
+        log_target ? (-std::exp(target[i]) * dy_val) : (target[i] > 0 ? -target[i] * dy_val : 0);
+    if (reduction_type == ReductionType::kMean) { dx[i] /= elem_cnt; };
   }
-
-#undef SET_DY_VAL
-#undef DEAL_REDUCE_MEAN
 }
 
 template<typename T>

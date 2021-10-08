@@ -56,59 +56,27 @@ template<typename T>
 __global__ void ComputeKLDivGradOut(int64_t elem_cnt, const T* input, const T* target, const T* dy,
                                     T* dx, const ReductionType reduction_type,
                                     const bool log_target) {
-#define SET_DY_VAL const T dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
-#define DEAL_REDUCE_MEAN \
-  if (reduction_type == ReductionType::kMean) { dx[i] /= elem_cnt; }
-
-  {
-    if (log_target) {
-      FOR_RANGE(int64_t, i, 0, elem_cnt) {
-        SET_DY_VAL
-        dx[i] = -exp(target[i]) * dy_val;
-        DEAL_REDUCE_MEAN
-      }
-    } else {
-      FOR_RANGE(int64_t, i, 0, elem_cnt) {
-        SET_DY_VAL
-        dx[i] = target[i] > 0 ? -target[i] * dy_val : 0;
-        DEAL_REDUCE_MEAN
-      }
-    }
+  FOR_RANGE(int64_t, i, 0, elem_cnt) {
+    const T dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
+    dx[i] = log_target ? -exp(target[i]) * dy_val : target[i] > 0 ? -target[i] * dy_val : 0;
+    if (reduction_type == ReductionType::kMean) { dx[i] /= elem_cnt; }
   }
-
-#undef SET_DY_VAL
-#undef DEAL_REDUCE_MEAN
 }
 
 template<>
 __global__ void ComputeKLDivGradOut(int64_t elem_cnt, const half* input, const half* target,
                                     const half* dy, half* dx, const ReductionType reduction_type,
                                     const bool log_target) {
-#define SET_DY_VAL const half dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
-#define DEAL_REDUCE_MEAN                                               \
-  if (reduction_type == ReductionType::kMean) {                        \
-    dx[i] = __hdiv(dx[i], __float2half(static_cast<float>(elem_cnt))); \
-  }
-
-  {
-    const half zero_half = __float2half(0.0);
-    if (log_target) {
-      FOR_RANGE(int64_t, i, 0, elem_cnt) {
-        SET_DY_VAL
-        dx[i] = __hneg(__hmul(hexp(target[i]), dy_val));
-        DEAL_REDUCE_MEAN
-      }
-    } else {
-      FOR_RANGE(int64_t, i, 0, elem_cnt) {
-        SET_DY_VAL
-        dx[i] = __hgt(target[i], zero_half) ? __hneg(__hmul(target[i], dy_val)) : zero_half;
-        DEAL_REDUCE_MEAN
-      }
+  const half zero_half = __float2half(0.0);
+  FOR_RANGE(int64_t, i, 0, elem_cnt) {
+    const half dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
+    dx[i] = log_target
+                ? __hneg(__hmul(hexp(target[i]), dy_val))
+                : (__hgt(target[i], zero_half) ? __hneg(__hmul(target[i], dy_val)) : zero_half);
+    if (reduction_type == ReductionType::kMean) {
+      dx[i] = __hdiv(dx[i], __float2half(static_cast<float>(elem_cnt)));
     }
   }
-
-#undef SET_DY_VAL
-#undef DEAL_REDUCE_MEAN
 }
 
 template<typename T>
