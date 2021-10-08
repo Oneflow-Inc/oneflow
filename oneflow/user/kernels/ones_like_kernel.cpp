@@ -30,8 +30,9 @@ void FillOnes(DeviceCtx* device_ctx, user_op::Tensor* output) {
 template<DeviceType device_type>
 struct FillOnesUtil {
 #define MAKE_FILL_ONES_SWITCH_ENTRY(func_name, T) func_name<device_type, T>
-  DEFINE_STATIC_SWITCH_FUNC(void, FillOnes, MAKE_FILL_ONES_SWITCH_ENTRY,
-                            MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ));
+  DEFINE_STATIC_SWITCH_FUNC(
+      void, FillOnes, MAKE_FILL_ONES_SWITCH_ENTRY,
+      MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ));
 #undef MAKE_FILL_ONES_SWITCH_ENTRY
 };
 
