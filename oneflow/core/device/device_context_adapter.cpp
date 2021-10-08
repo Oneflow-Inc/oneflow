@@ -16,12 +16,13 @@ limitations under the License.
 #include "oneflow/core/device/device_context_adapter.h"
 #include "oneflow/core/stream/cuda_stream_context.h"
 #include "oneflow/core/vm/cpu_allocator.h"
+#include "oneflow/core/device/cuda_event_record.h"
 
 namespace oneflow {
 
 namespace {
 
-class CpuDeviceCtxAdapter final : public DeviceCtx {
+class CpuDeviceCtxAdapter final : public DeviceCtx, public EventRecordProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDeviceCtxAdapter);
   explicit CpuDeviceCtxAdapter(StreamContext* stream_ctx) : stream_ctx_(stream_ctx) {}
@@ -38,13 +39,17 @@ class CpuDeviceCtxAdapter final : public DeviceCtx {
 
   DeviceType device_type() const override { return stream_ctx_->device_type(); }
 
+  std::shared_ptr<EventRecord> MakeEventRecord() override {
+    return std::make_shared<NaiveEventRecord>();
+  }
+
  private:
   StreamContext* stream_ctx_;
 };
 
 #ifdef WITH_CUDA
 
-class CudaDeviceCtxAdapter : public DeviceCtx {
+class CudaDeviceCtxAdapter : public DeviceCtx, public EventRecordProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaDeviceCtxAdapter);
   explicit CudaDeviceCtxAdapter(CudaStreamContext* stream_ctx) : stream_ctx_(stream_ctx) {}
@@ -65,6 +70,10 @@ class CudaDeviceCtxAdapter : public DeviceCtx {
   }
 
   DeviceType device_type() const override { return stream_ctx_->device_type(); }
+
+  std::shared_ptr<EventRecord> MakeEventRecord() override {
+    return std::make_shared<CudaEventRecord>(this);
+  }
 
  protected:
   CudaStreamContext* stream_ctx_;
