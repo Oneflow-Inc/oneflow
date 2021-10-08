@@ -168,11 +168,12 @@ jobs:
         with:
           repository: Oneflow-Inc/oneflow
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@refine-tar-ball-size
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@add-input-delete-cache
         name: find cache
         id: find-cache
         timeout-minutes: 5
         with:
+          delete-cache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           runner-labels: |
             self-hosted
             linux
@@ -211,7 +212,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@refine-tar-ball-size
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-input-delete-cache
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -225,7 +226,7 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
-      - uses: Oneflow-Inc/get-oneflow@refine-tar-ball-size
+      - uses: Oneflow-Inc/get-oneflow@add-input-delete-cache
         name: Build manylinux cpu only
         id: build-cpu
         if: ${{ matrix.entry =='cpu' && !matrix.cache-hit }}
@@ -246,7 +247,7 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@refine-tar-ball-size
+      - uses: Oneflow-Inc/get-oneflow@add-input-delete-cache
         name: Build manylinux cu102
         id: build-cuda
         if: ${{ matrix.entry =='cu102' && !matrix.cache-hit }}
@@ -267,7 +268,7 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@refine-tar-ball-size
+      - uses: Oneflow-Inc/get-oneflow@add-input-delete-cache
         name: Build manylinux cu101_xla
         id: build-xla
         if: ${{ matrix.entry =='cu101_xla' && !matrix.cache-hit && needs.changed_files.outputs.should_run_single_client_tests == '1' }}
@@ -289,7 +290,7 @@ jobs:
             3.6
       - name: Upload bin
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@refine-tar-ball-size
+        uses: Oneflow-Inc/get-oneflow/digest/upload@add-input-delete-cache
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -300,7 +301,7 @@ jobs:
           dst-dir: bin
       - name: Upload whl
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@refine-tar-ball-size
+        uses: Oneflow-Inc/get-oneflow/digest/upload@add-input-delete-cache
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -321,7 +322,7 @@ jobs:
     steps:
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@refine-tar-ball-size
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@add-input-delete-cache
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -362,7 +363,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@refine-tar-ball-size
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-input-delete-cache
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -378,7 +379,7 @@ jobs:
           exit 1
       - name: Download wheel and binary
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (!fromJson(matrix.is-xla) || (fromJson(matrix.is-xla) && needs.changed_files.outputs.should_run_single_client_tests == '1')) }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@refine-tar-ball-size
+        uses: Oneflow-Inc/get-oneflow/digest/download@add-input-delete-cache
         id: download-digest
         timeout-minutes: 10
         with:
@@ -658,7 +659,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@refine-tar-ball-size
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-input-delete-cache
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -718,7 +719,7 @@ jobs:
             -DBUILD_TESTING=ON \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           cd ..
-          git diff -U0 ${{ github.event.pull_request.base.sha }} | ./clang-tidy-diff.py -clang-tidy-binary ./clang-tidy-489012f-x86_64.AppImage -path build -allow-enabling-alpha-checkers -j $(nproc) -p1 -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" -warnings-as-errors="*,-maybe-glog-fatal,-clang-analyzer-alpha.*"
+          git diff -U0 ${{ github.event.pull_request.base.sha }} | ./clang-tidy-diff.py -clang-tidy-binary ./clang-tidy-489012f-x86_64.AppImage -path build -allow-enabling-alpha-checkers -j $(nproc) -p1 -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" -warnings-as-errors="*,-maybe-glog-fatal,-clang-analyzer-alpha.*,-clang-diagnostic-*"
       - name: Remove automerge
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) && failure() && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge') }}
         uses: actions/github-script@v4
