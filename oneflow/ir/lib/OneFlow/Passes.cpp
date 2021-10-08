@@ -137,6 +137,7 @@ using namespace mlir::oneflow;
           /* attributes */ mul_op->getAttrs());
       builder.create<ReturnOp>(mul_op->getLoc(), scalar_mul.y());
       jit_module->push_back(function);
+      // TODO: break this function into two parts and two ops, JITFunction and JITOp
       std::string mlir;
       llvm::raw_string_ostream os_mlir(mlir);
       jit_module->print(os_mlir);
