@@ -29,10 +29,10 @@ enum ChannelStatus {
   kChannelStatusErrorClosed,
 };
 
-template<typename LinkField>
+template<typename EntryField>
 class Channel {
  public:
-  using value_type = typename LinkField::struct_type;
+  using value_type = typename EntryField::struct_type;
 
   Channel(const Channel&) = delete;
   Channel(Channel&&) = delete;
@@ -69,7 +69,7 @@ class Channel {
     return kChannelStatusSuccess;
   }
 
-  ChannelStatus MoveFrom(intrusive::List<LinkField>* src) {
+  ChannelStatus MoveFrom(intrusive::List<EntryField>* src) {
     std::unique_lock<std::mutex> lock(*mut_mutex());
     if (is_closed_) { return kChannelStatusErrorClosed; }
     src->MoveToDstBack(&list_head_);
@@ -77,7 +77,7 @@ class Channel {
     return kChannelStatusSuccess;
   }
 
-  ChannelStatus MoveTo(intrusive::List<LinkField>* dst) {
+  ChannelStatus MoveTo(intrusive::List<EntryField>* dst) {
     std::unique_lock<std::mutex> lock(*mut_mutex());
     mut_cond()->wait(lock, [this]() { return (!list_head_.empty()) || is_closed_; });
     if (list_head_.empty()) { return kChannelStatusErrorClosed; }
@@ -85,7 +85,7 @@ class Channel {
     return kChannelStatusSuccess;
   }
 
-  ChannelStatus TryMoveTo(intrusive::List<LinkField>* dst) {
+  ChannelStatus TryMoveTo(intrusive::List<EntryField>* dst) {
     std::unique_lock<std::mutex> lock(*mut_mutex());
     if (list_head_.empty()) { return kChannelStatusSuccess; }
     mut_cond()->wait(lock, [this]() { return (!list_head_.empty()) || is_closed_; });
@@ -113,7 +113,7 @@ class Channel {
     return reinterpret_cast<std::condition_variable*>(&cond_buff_[0]);
   }
 
-  intrusive::List<LinkField> list_head_;
+  intrusive::List<EntryField> list_head_;
   union {
     char mutex_buff_[sizeof(std::mutex)];
     int64_t mutex_buff_align_;

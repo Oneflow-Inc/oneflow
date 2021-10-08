@@ -36,7 +36,7 @@ class SkipList {
   using key_type = typename ElemKeyField::field_type::key_type;
   using elem_key_level0_entry_struct_field =
       StructField<typename ElemKeyField::field_type, intrusive::ListEntry,
-                  ElemKeyField::field_type::LevelZeroLinkOffset()>;
+                  ElemKeyField::field_type::LevelZeroEntryOffset()>;
   using iterator_struct_field =
       typename ComposeStructField<ElemKeyField, elem_key_level0_entry_struct_field>::type;
   template<typename Enabled = void>

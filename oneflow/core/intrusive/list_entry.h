@@ -93,12 +93,12 @@ struct ListEntry {
   for (intrusive::ListEntry* __head_entry__ = (head_entry), *elem_entry = __head_entry__->next(); \
        (elem_entry != __head_entry__) && ((expr), true); elem_entry = elem_entry->next())
 
-template<typename LinkField>
+template<typename EntryField>
 class ListHead {
  public:
   ListHead() { Clear(); }
-  using value_type = typename LinkField::struct_type;
-  static_assert(std::is_same<typename LinkField::field_type, ListEntry>::value,
+  using value_type = typename EntryField::struct_type;
+  static_assert(std::is_same<typename EntryField::field_type, ListEntry>::value,
                 "no ListEntry found");
 
   template<typename Enabled = void>
@@ -122,22 +122,22 @@ class ListHead {
   }
   const value_type& Begin() const { return Next(End()); }
   const value_type& ReverseBegin() const { return Prev(End()); }
-  const value_type& End() const { return *LinkField::StructPtr4FieldPtr(&container()); }
+  const value_type& End() const { return *EntryField::StructPtr4FieldPtr(&container()); }
   const value_type& Next(const value_type& current) const {
-    return *LinkField::StructPtr4FieldPtr(LinkField::FieldPtr4StructPtr(&current)->next());
+    return *EntryField::StructPtr4FieldPtr(EntryField::FieldPtr4StructPtr(&current)->next());
   }
   const value_type& Prev(const value_type& current) const {
-    return *LinkField::StructPtr4FieldPtr(LinkField::FieldPtr4StructPtr(&current)->prev());
+    return *EntryField::StructPtr4FieldPtr(EntryField::FieldPtr4StructPtr(&current)->prev());
   }
 
   value_type* Begin() { return Next(End()); }
   value_type* Last() { return Prev(End()); }
-  value_type* End() { return LinkField::StructPtr4FieldPtr(mut_container()); }
+  value_type* End() { return EntryField::StructPtr4FieldPtr(mut_container()); }
   value_type* Next(value_type* current) {
-    return LinkField::StructPtr4FieldPtr(LinkField::FieldPtr4StructPtr(current)->next());
+    return EntryField::StructPtr4FieldPtr(EntryField::FieldPtr4StructPtr(current)->next());
   }
   value_type* Prev(value_type* current) {
-    return LinkField::StructPtr4FieldPtr(LinkField::FieldPtr4StructPtr(current)->prev());
+    return EntryField::StructPtr4FieldPtr(EntryField::FieldPtr4StructPtr(current)->prev());
   }
   void __Init__() { Clear(); }
 
@@ -149,7 +149,7 @@ class ListHead {
   void Erase(value_type* elem) {
     CHECK_GT(size_, 0);
     CHECK_NE(elem, End());
-    ListEntry* list_entry = LinkField::FieldPtr4StructPtr(elem);
+    ListEntry* list_entry = EntryField::FieldPtr4StructPtr(elem);
     CHECK(!list_entry->empty());
     list_entry->Erase();
     --size_;
@@ -158,7 +158,7 @@ class ListHead {
     CHECK(!container_.empty());
     auto* dst_rbegin = dst->container_.prev();
     auto* dst_end = &dst->container_;
-    ListEntry* elem_entry = LinkField::FieldPtr4StructPtr(elem);
+    ListEntry* elem_entry = EntryField::FieldPtr4StructPtr(elem);
     elem_entry->next()->AppendTo(elem_entry->prev());
     elem_entry->AppendTo(dst_rbegin);
     dst_end->AppendTo(elem_entry);
@@ -169,7 +169,7 @@ class ListHead {
     CHECK(!container_.empty());
     auto* dst_end = &dst->container_;
     auto* dst_begin = dst->container_.next();
-    ListEntry* elem_entry = LinkField::FieldPtr4StructPtr(elem);
+    ListEntry* elem_entry = EntryField::FieldPtr4StructPtr(elem);
     elem_entry->next()->AppendTo(elem_entry->prev());
     elem_entry->AppendTo(dst_end);
     dst_begin->AppendTo(elem_entry);
@@ -204,9 +204,9 @@ class ListHead {
 
  private:
   void InsertAfter(value_type* prev_elem, value_type* new_elem) {
-    ListEntry* prev_list_entry = LinkField::FieldPtr4StructPtr(prev_elem);
+    ListEntry* prev_list_entry = EntryField::FieldPtr4StructPtr(prev_elem);
     ListEntry* next_list_entry = prev_list_entry->next();
-    ListEntry* new_list_entry = LinkField::FieldPtr4StructPtr(new_elem);
+    ListEntry* new_list_entry = EntryField::FieldPtr4StructPtr(new_elem);
     CHECK(new_list_entry->empty());
     new_list_entry->AppendTo(prev_list_entry);
     next_list_entry->AppendTo(new_list_entry);

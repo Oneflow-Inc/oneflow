@@ -25,21 +25,22 @@ namespace oneflow {
 
 namespace intrusive {
 
-template<typename ValueLinkField>
+template<typename ValueEntryField>
 class List {
  public:
-  static_assert(std::is_same<typename ValueLinkField::field_type, intrusive::ListEntry>::value, "");
+  static_assert(std::is_same<typename ValueEntryField::field_type, intrusive::ListEntry>::value,
+                "");
   List(const List&) = delete;
   List(List&&) = delete;
   List() { this->__Init__(); }
   ~List() { this->Clear(); }
 
-  using value_type = typename ValueLinkField::struct_type;
-  using iterator_struct_field = ValueLinkField;
+  using value_type = typename ValueEntryField::struct_type;
+  using iterator_struct_field = ValueEntryField;
 
   template<typename Enabled = void>
   static constexpr int IteratorEntryOffset() {
-    return offsetof(List, list_head_) + intrusive::ListHead<ValueLinkField>::IteratorEntryOffset();
+    return offsetof(List, list_head_) + intrusive::ListHead<ValueEntryField>::IteratorEntryOffset();
   }
 
   std::size_t size() const { return list_head_.size(); }
@@ -129,20 +130,21 @@ class List {
   }
 
  private:
-  intrusive::ListHead<ValueLinkField> list_head_;
+  intrusive::ListHead<ValueEntryField> list_head_;
 };
 
-template<typename ValueLinkField, int field_counter>
+template<typename ValueEntryField, int field_counter>
 class HeadFreeList {
  public:
-  static_assert(std::is_same<typename ValueLinkField::field_type, intrusive::ListEntry>::value, "");
+  static_assert(std::is_same<typename ValueEntryField::field_type, intrusive::ListEntry>::value,
+                "");
   HeadFreeList(const HeadFreeList&) = delete;
   HeadFreeList(HeadFreeList&&) = delete;
   HeadFreeList() { this->__Init__(); }
   ~HeadFreeList() { this->Clear(); }
 
-  using value_type = typename ValueLinkField::struct_type;
-  using iterator_struct_field = ValueLinkField;
+  using value_type = typename ValueEntryField::struct_type;
+  using iterator_struct_field = ValueEntryField;
 
   // field_counter is last field_number
   static const int field_number_in_countainter = field_counter + 1;
@@ -150,7 +152,7 @@ class HeadFreeList {
   template<typename Enabled = void>
   static constexpr int IteratorEntryOffset() {
     return offsetof(HeadFreeList, list_head_)
-           + intrusive::ListHead<ValueLinkField>::IteratorEntryOffset();
+           + intrusive::ListHead<ValueEntryField>::IteratorEntryOffset();
   }
 
   std::size_t size() const { return list_head_.size(); }
@@ -285,7 +287,7 @@ class HeadFreeList {
     }
   }
 
-  intrusive::ListHead<ValueLinkField> list_head_;
+  intrusive::ListHead<ValueEntryField> list_head_;
   const value_type* container_;
 };
 
