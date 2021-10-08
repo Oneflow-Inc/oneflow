@@ -35,7 +35,7 @@ template<typename T>
 OF_DEVICE_FUNC void SetOneInDiag(const int64_t cols, const int64_t rows, T* out) {
   const T one = static_cast<T>(1);
   XPU_1D_KERNEL_LOOP(i, rows) {
-    int64_t index = i * cols + i;
+    const int64_t index = i * cols + i;
     out[index] = one;
   }
 }
