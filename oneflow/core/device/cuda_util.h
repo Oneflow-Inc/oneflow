@@ -91,9 +91,6 @@ const char* NvjpegGetErrorString(nvjpegStatus_t error);
 
 #endif
 
-template<typename T>
-void CudaCheck(T error);
-
 // CUDA: grid stride looping
 #define CUDA_1D_KERNEL_LOOP(i, n)                                                                 \
   for (int32_t i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < (n); \
@@ -133,30 +130,6 @@ inline int32_t SMBlocksNum4ThreadsNum(const int32_t n) {
 size_t GetAvailableGpuMemSize(int dev_id);
 
 void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size);
-
-template<typename T>
-void NumaAwareCudaMallocHost(int32_t dev, T** ptr, size_t size) {
-  NumaAwareCudaMallocHost(dev, reinterpret_cast<void**>(ptr), size);
-}
-
-// Set the CPU affinity to the closest processor(s) of a particular GPU.
-void CudaDeviceSetCpuAffinity(int32_t dev);
-
-#define CUDA_DATA_TYPE_SEQ                 \
-  OF_PP_MAKE_TUPLE_SEQ(float, CUDA_R_32F)  \
-  OF_PP_MAKE_TUPLE_SEQ(double, CUDA_R_64F) \
-  OF_PP_MAKE_TUPLE_SEQ(float16, CUDA_R_16F)
-
-cudaDataType_t GetCudaDataType(DataType);
-
-template<typename T>
-struct CudaDataType;
-
-#define SPECIALIZE_CUDA_DATA_TYPE(type_cpp, type_cuda) \
-  template<>                                           \
-  struct CudaDataType<type_cpp> : std::integral_constant<cudaDataType_t, type_cuda> {};
-OF_PP_FOR_EACH_TUPLE(SPECIALIZE_CUDA_DATA_TYPE, CUDA_DATA_TYPE_SEQ);
-#undef SPECIALIZE_CUDA_DATA_TYPE
 
 class CudaCurrentDeviceGuard final {
  public:
