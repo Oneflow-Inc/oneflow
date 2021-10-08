@@ -51,12 +51,19 @@ class GpuScalarPowKernel final : public OpKernel {
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const T* in_ptr = in_tensor->dptr<T>();
     T* out_ptr = out_tensor->mut_dptr<T>();
-    const T exponent = static_cast<T>(ctx->Attr<double>("exponent"));
+    T scalar_operand = static_cast<T>(0);
+    if (ctx->Attr<bool>("has_int_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<int64_t>("int_operand"));
+    } else if (ctx->Attr<bool>("has_float_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<double>("float_operand"));
+    } else {
+      UNIMPLEMENTED();
+    }
 
     const int64_t elem_cnt = in_tensor->shape().elem_cnt();
     OF_CUDA_CHECK(
-        (oneflow::cuda::elementwise::Unary(ScalarPowFunctor<T>(exponent), elem_cnt, out_ptr, in_ptr,
-                                           ctx->device_ctx()->cuda_stream())));
+        (oneflow::cuda::elementwise::Unary(ScalarPowFunctor<T>(scalar_operand), elem_cnt, out_ptr,
+                                           in_ptr, ctx->device_ctx()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -67,6 +74,10 @@ class GpuScalarPowKernel final : public OpKernel {
       .SetIsMatchedHob((HobDeviceTag() == device)       \
                        & (HobDataType("out", 0) == GetDataType<dtype>::value));
 
+REGISTER_GPU_SCALAR_POW_KERNEL(DeviceType::kGPU, uint8_t);
+REGISTER_GPU_SCALAR_POW_KERNEL(DeviceType::kGPU, int8_t);
+REGISTER_GPU_SCALAR_POW_KERNEL(DeviceType::kGPU, int32_t);
+REGISTER_GPU_SCALAR_POW_KERNEL(DeviceType::kGPU, int64_t);
 REGISTER_GPU_SCALAR_POW_KERNEL(DeviceType::kGPU, float);
 REGISTER_GPU_SCALAR_POW_KERNEL(DeviceType::kGPU, double);
 
@@ -85,24 +96,34 @@ class GpuScalarPowGradKernel final : public OpKernel {
     const T* x_ptr = x_tensor->dptr<T>();
     const T* dy_ptr = dy_tensor->dptr<T>();
     T* dx_ptr = dx_tensor->mut_dptr<T>();
-    const T exponent = static_cast<T>(ctx->Attr<double>("exponent"));
-
+    T scalar_operand = static_cast<T>(0);
+    if (ctx->Attr<bool>("has_int_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<int64_t>("int_operand"));
+    } else if (ctx->Attr<bool>("has_float_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<double>("float_operand"));
+    } else {
+      UNIMPLEMENTED();
+    }
     const int32_t elem_cnt = x_tensor->shape().elem_cnt();
-    OF_CUDA_CHECK(
-        (oneflow::cuda::elementwise::Binary(ScalarPowGradFunctor<T>(exponent), elem_cnt, dx_ptr,
-                                            x_ptr, dy_ptr, ctx->device_ctx()->cuda_stream())));
+    OF_CUDA_CHECK((oneflow::cuda::elementwise::Binary(ScalarPowGradFunctor<T>(scalar_operand),
+                                                      elem_cnt, dx_ptr, x_ptr, dy_ptr,
+                                                      ctx->device_ctx()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_ELU_BACKWARD_KERNEL(device, dtype)     \
-  REGISTER_USER_KERNEL("scalar_pow_grad")                   \
-      .SetCreateFn<GpuScalarPowGradKernel<device, dtype>>() \
-      .SetIsMatchedHob((HobDeviceTag() == device)           \
+#define REGISTER_GPU_SCALAR_POW_BACKWARD_KERNEL(device, dtype) \
+  REGISTER_USER_KERNEL("scalar_pow_grad")                      \
+      .SetCreateFn<GpuScalarPowGradKernel<device, dtype>>()    \
+      .SetIsMatchedHob((HobDeviceTag() == device)              \
                        & (HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_ELU_BACKWARD_KERNEL(DeviceType::kGPU, float);
-REGISTER_GPU_ELU_BACKWARD_KERNEL(DeviceType::kGPU, double);
+REGISTER_GPU_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kGPU, uint8_t);
+REGISTER_GPU_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kGPU, int8_t);
+REGISTER_GPU_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kGPU, int32_t);
+REGISTER_GPU_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kGPU, int64_t);
+REGISTER_GPU_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kGPU, float);
+REGISTER_GPU_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kGPU, double);
 
 }  // namespace user_op
 

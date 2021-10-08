@@ -177,6 +177,10 @@ def _contiguous(self):
     return self
 
 
+def _transpose(self, dim0, dim1):
+    return flow._C.transpose(self, dim0, dim1)
+
+
 def _getstate(self):
     assert self.is_local, "Only support local tensor to pickle"
     return {"data": self.numpy(), "dtype": self.dtype}
@@ -273,6 +277,10 @@ def _rtruediv(self, other):
     return flow.div(other, self)
 
 
+def _floor_divide(self, other):
+    return flow.floor_divide(self, other)
+
+
 def _neg(self):
     return flow.neg(self)
 
@@ -287,6 +295,10 @@ def _abs(self):
 
 def _exp(self):
     return flow.exp(self)
+
+
+def _expand_as(input, other):
+    return flow.expand(input, other.size())
 
 
 def _acos(self):
@@ -640,6 +652,7 @@ def RegisterMethods():
     Tensor.__neg__ = _neg
     Tensor.__pow__ = _pow
     Tensor.__format__ = _format
+    Tensor.__floordiv__ = _floor_divide
     Tensor.uniform_ = _uniform
     Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform
@@ -653,6 +666,7 @@ def RegisterMethods():
     Tensor._meta_repr = _meta_repr
     Tensor.abs = _abs
     Tensor.exp = _exp
+    Tensor.floor_divide = _floor_divide
     Tensor.acos = _acos
     Tensor.acosh = _acosh
     Tensor.arccosh = _arccosh
@@ -691,6 +705,7 @@ def RegisterMethods():
     Tensor.clip = _clip
     Tensor.cos = _cos
     Tensor.cosh = _cosh
+    Tensor.expand_as = _expand_as
     Tensor.erf = _erf
     Tensor.erfc = _erfc
     Tensor.expm1 = _expm1
@@ -708,6 +723,7 @@ def RegisterMethods():
     Tensor.tril = _tril
     Tensor.triu = _triu
     Tensor.contiguous = _contiguous
+    Tensor.transpose = _transpose
 
 
 def register_tensor_op(op_name):
