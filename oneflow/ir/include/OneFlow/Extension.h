@@ -16,9 +16,6 @@ limitations under the License.
 
 #ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_EXTENSION_H_
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_EXTENSION_H_
-
-#ifdef WITH_MLIR
-
 #include <unordered_set>
 
 namespace oneflow {
@@ -26,8 +23,6 @@ namespace oneflow {
 using SharedLibs = std::unordered_set<std::string>;
 SharedLibs* MutSharedLibPaths();
 const SharedLibs* SharedLibPaths();
-
-#endif  // WITH_MLIR
 
 }  // namespace oneflow
 

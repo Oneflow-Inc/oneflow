@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 #ifdef WITH_MLIR
-
 #include <glog/logging.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/ir/include/OneFlow/Extension.h"
