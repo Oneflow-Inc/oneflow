@@ -65,7 +65,7 @@ bool IsCtrlOutTrimmed(oneflow::UserOp& op) { return !op.ctrl_output(); }
 bool IsCtrlInAbsent(oneflow::UserOp& op) { return op.ctrl_inputs().empty(); }
 
 struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
-  ConcreteUserOps(mlir::MLIRContext* context)
+  explicit ConcreteUserOps(mlir::MLIRContext* context)
       : OpRewritePattern<oneflow::UserOp>(context, /*benefit=*/1) {}
   mlir::LogicalResult matchAndRewrite(oneflow::UserOp op,
                                       mlir::PatternRewriter& rewriter) const override {
@@ -138,7 +138,7 @@ void UserOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
 }
 
 struct ConcreteSystemOps : public mlir::OpRewritePattern<oneflow::SystemOp> {
-  ConcreteSystemOps(mlir::MLIRContext* context)
+  explicit ConcreteSystemOps(mlir::MLIRContext* context)
       : OpRewritePattern<oneflow::SystemOp>(context, /*benefit=*/1) {}
   mlir::LogicalResult matchAndRewrite(oneflow::SystemOp op,
                                       mlir::PatternRewriter& rewriter) const override {
