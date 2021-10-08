@@ -277,6 +277,10 @@ def _rtruediv(self, other):
     return flow.div(other, self)
 
 
+def _floor_divide(self, other):
+    return flow.floor_divide(self, other)
+
+
 def _neg(self):
     return flow.neg(self)
 
@@ -648,6 +652,7 @@ def RegisterMethods():
     Tensor.__neg__ = _neg
     Tensor.__pow__ = _pow
     Tensor.__format__ = _format
+    Tensor.__floordiv__ = _floor_divide
     Tensor.uniform_ = _uniform
     Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform
@@ -661,6 +666,7 @@ def RegisterMethods():
     Tensor._meta_repr = _meta_repr
     Tensor.abs = _abs
     Tensor.exp = _exp
+    Tensor.floor_divide = _floor_divide
     Tensor.acos = _acos
     Tensor.acosh = _acosh
     Tensor.arccosh = _arccosh

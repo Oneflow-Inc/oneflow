@@ -1373,6 +1373,7 @@ class TensorSetItemFunctor {
 
     if (tensor_indices.size() == ndims) {  // advance indexing
       std::shared_ptr<Tensor> indices = JUST(functional::Stack(tensor_indices, 0));
+      if (indices->shape()->elem_cnt() == 0) { return Maybe<void>::Ok(); }
       indices = JUST(functional::Transpose(indices, {1, 0}));
       value_tensor = JUST(functional::Expand(value_tensor, {indices->shape()->At(0)}));
       JUST(functional::TensorScatterNdUpdate(x, indices, value_tensor, /*inplace=*/true));
