@@ -37,21 +37,17 @@ __global__ void ComputeKLDivOut(int64_t elem_cnt, const T* input, const T* targe
 }
 
 template<>
-__global__ void ComputeKLDivOut(int64_t elem_cnt, const float16* input, const float16* target,
-                                float16* out, const bool log_target) {
-  FLOAT16_TO_HALF(input)
-  FLOAT16_TO_HALF(target)
-  FLOAT16_TO_HALF(out)
-
+__global__ void ComputeKLDivOut(int64_t elem_cnt, const half* input, const half* target, half* out,
+                                const bool log_target) {
   const half zero_half = __float2half(0.0);
   if (log_target) {
     CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-      out_[i] = __hmul(hexp(target_[i]), __hsub(target_[i], input_[i]));
+      out[i] = __hmul(hexp(target[i]), __hsub(target[i], input[i]));
     }
   } else {
     CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-      const half out_val = __hmul(target_[i], __hsub(SafeLog(target_[i]), input_[i]));
-      out_[i] = __hgt(target_[i], zero_half) ? out_val : zero_half;
+      const half out_val = __hmul(target[i], __hsub(SafeLog(target[i]), input[i]));
+      out[i] = __hgt(target[i], zero_half) ? out_val : zero_half;
     }
   }
 }
@@ -85,17 +81,13 @@ __global__ void ComputeKLDivGradOut(int64_t elem_cnt, const T* input, const T* t
 }
 
 template<>
-__global__ void ComputeKLDivGradOut(int64_t elem_cnt, const float16* input, const float16* target,
-                                    const float16* dy, float16* dx,
-                                    const ReductionType reduction_type, const bool log_target) {
-  FLOAT16_TO_HALF(input)
-  FLOAT16_TO_HALF(target)
-  FLOAT16_TO_HALF(dy)
-  FLOAT16_TO_HALF(dx)
-#define SET_DY_VAL const half dy_val = reduction_type == ReductionType::kNone ? dy_[i] : *dy_;
-#define DEAL_REDUCE_MEAN                                                 \
-  if (reduction_type == ReductionType::kMean) {                          \
-    dx_[i] = __hdiv(dx_[i], __float2half(static_cast<float>(elem_cnt))); \
+__global__ void ComputeKLDivGradOut(int64_t elem_cnt, const half* input, const half* target,
+                                    const half* dy, half* dx, const ReductionType reduction_type,
+                                    const bool log_target) {
+#define SET_DY_VAL const half dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
+#define DEAL_REDUCE_MEAN                                               \
+  if (reduction_type == ReductionType::kMean) {                        \
+    dx[i] = __hdiv(dx[i], __float2half(static_cast<float>(elem_cnt))); \
   }
 
   {
@@ -103,13 +95,13 @@ __global__ void ComputeKLDivGradOut(int64_t elem_cnt, const float16* input, cons
     if (log_target) {
       FOR_RANGE(int64_t, i, 0, elem_cnt) {
         SET_DY_VAL
-        dx_[i] = __hneg(__hmul(hexp(target_[i]), dy_val));
+        dx[i] = __hneg(__hmul(hexp(target[i]), dy_val));
         DEAL_REDUCE_MEAN
       }
     } else {
       FOR_RANGE(int64_t, i, 0, elem_cnt) {
         SET_DY_VAL
-        dx_[i] = __hgt(target_[i], zero_half) ? __hneg(__hmul(target_[i], dy_val)) : zero_half;
+        dx[i] = __hgt(target[i], zero_half) ? __hneg(__hmul(target[i], dy_val)) : zero_half;
         DEAL_REDUCE_MEAN
       }
     }

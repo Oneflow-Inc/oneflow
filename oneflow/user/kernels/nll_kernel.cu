@@ -24,14 +24,14 @@ namespace {
 
 using namespace loss;
 
-#define RETURN_VOID_IF_NOT_FLOAT16 typename std::enable_if_t<!std::is_same<T, float16>::value, void>
-#define RETURN_VOID_IF_FLOAT16 typename std::enable_if_t<std::is_same<T, float16>::value, void>
+#define RETURN_VOID_IF_NOT_HALF typename std::enable_if_t<!std::is_same<T, half>::value, void>
+#define RETURN_VOID_IF_HALF typename std::enable_if_t<std::is_same<T, half>::value, void>
 
 template<typename T, typename K>
-__global__ RETURN_VOID_IF_NOT_FLOAT16 ComputeNllOutNone(const int64_t num_instances,
-                                                        const K num_classes, const K ignore_index,
-                                                        const T* input, const K* target, T* out,
-                                                        const T* weight, T* total_weight) {
+__global__ RETURN_VOID_IF_NOT_HALF ComputeNllOutNone(const int64_t num_instances,
+                                                     const K num_classes, const K ignore_index,
+                                                     const T* input, const K* target, T* out,
+                                                     const T* weight, T* total_weight) {
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
     assert(target[i] >= 0);
     assert(target[i] < num_classes);
@@ -47,27 +47,22 @@ __global__ RETURN_VOID_IF_NOT_FLOAT16 ComputeNllOutNone(const int64_t num_instan
 }
 
 template<typename T, typename K>
-__global__ RETURN_VOID_IF_FLOAT16 ComputeNllOutNone(const int64_t num_instances,
-                                                    const K num_classes, const K ignore_index,
-                                                    const T* input, const K* target, T* out,
-                                                    const T* weight, T* total_weight) {
-  FLOAT16_TO_HALF(input)
-  FLOAT16_TO_HALF(out)
-  FLOAT16_TO_HALF(weight)
-  FLOAT16_TO_HALF(total_weight)
-
+__global__ RETURN_VOID_IF_HALF ComputeNllOutNone(const int64_t num_instances, const K num_classes,
+                                                 const K ignore_index, const T* input,
+                                                 const K* target, T* out, const T* weight,
+                                                 T* total_weight) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
     assert(target[i] >= 0);
     assert(target[i] < num_classes);
     K label = target[i];
     if (label == ignore_index) {
-      out_[i] = 0;
+      out[i] = 0;
       continue;
     }
-    const half cur_weight = weight_ == nullptr ? __float2half(1.0) : weight_[label];
-    *total_weight_ = __hadd(*total_weight_, cur_weight);
-    out_[i] = __float2half(-__half2float(input_[i * num_classes + label] * cur_weight));
+    const half cur_weight = weight == nullptr ? __float2half(1.0) : weight[label];
+    *total_weight = __hadd(*total_weight, cur_weight);
+    out[i] = __float2half(-__half2float(input[i * num_classes + label] * cur_weight));
   }
 #else
   printf("use half need nvcc arch >= 530");
@@ -76,11 +71,11 @@ __global__ RETURN_VOID_IF_FLOAT16 ComputeNllOutNone(const int64_t num_instances,
 }
 
 template<typename T, typename K>
-__global__ RETURN_VOID_IF_NOT_FLOAT16 ComputeNllOutReduce(const int64_t num_instances,
-                                                          const K num_classes, const K ignore_index,
-                                                          const T* input, const K* target, T* out,
-                                                          const T* weight, T* total_weight,
-                                                          bool is_reduce_mean) {
+__global__ RETURN_VOID_IF_NOT_HALF ComputeNllOutReduce(const int64_t num_instances,
+                                                       const K num_classes, const K ignore_index,
+                                                       const T* input, const K* target, T* out,
+                                                       const T* weight, T* total_weight,
+                                                       bool is_reduce_mean) {
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
   T weight_thread_sum = static_cast<T>(0);
@@ -105,16 +100,10 @@ __global__ RETURN_VOID_IF_NOT_FLOAT16 ComputeNllOutReduce(const int64_t num_inst
 }
 
 template<typename T, typename K>
-__global__ RETURN_VOID_IF_FLOAT16 ComputeNllOutReduce(const int64_t num_instances,
-                                                      const K num_classes, const K ignore_index,
-                                                      const T* input, const K* target, T* out,
-                                                      const T* weight, T* total_weight,
-                                                      bool is_reduce_mean) {
-  FLOAT16_TO_HALF(input)
-  FLOAT16_TO_HALF(out)
-  FLOAT16_TO_HALF(weight)
-  FLOAT16_TO_HALF(total_weight)
-
+__global__ RETURN_VOID_IF_HALF ComputeNllOutReduce(const int64_t num_instances, const K num_classes,
+                                                   const K ignore_index, const T* input,
+                                                   const K* target, T* out, const T* weight,
+                                                   T* total_weight, bool is_reduce_mean) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   typedef cub::BlockReduce<half, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
@@ -125,17 +114,17 @@ __global__ RETURN_VOID_IF_FLOAT16 ComputeNllOutReduce(const int64_t num_instance
     assert(target[i] < num_classes);
     K label = target[i];
     if (label == ignore_index) { continue; }
-    const half cur_weight = weight_ == nullptr ? __float2half(1.0) : weight_[label];
+    const half cur_weight = weight == nullptr ? __float2half(1.0) : weight[label];
     weight_thread_sum = __hadd(weight_thread_sum, cur_weight);
-    out_thread_sum = __hsub(out_thread_sum, __hmul(input_[i * num_classes + label], cur_weight));
+    out_thread_sum = __hsub(out_thread_sum, __hmul(input[i * num_classes + label], cur_weight));
   }
   __syncthreads();
   half weight_block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(weight_thread_sum, cub::Sum());
   half out_block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(out_thread_sum, cub::Sum());
   if (threadIdx.x == 0) {
-    *out_ = out_block_sum;
-    *total_weight_ = weight_block_sum;
-    if (is_reduce_mean) { *out_ = __hdiv(*out_, *total_weight_); }
+    *out = out_block_sum;
+    *total_weight = weight_block_sum;
+    if (is_reduce_mean) { *out = __hdiv(*out, *total_weight); }
   }
 #else
   printf("use half need nvcc arch >= 530");
@@ -144,11 +133,11 @@ __global__ RETURN_VOID_IF_FLOAT16 ComputeNllOutReduce(const int64_t num_instance
 }
 
 template<typename T, typename K>
-__global__ RETURN_VOID_IF_NOT_FLOAT16 ComputeNllGradOut(const int64_t num_instances,
-                                                        const K num_classes, const K ignore_index,
-                                                        const K* target, const T* dy, T* dx,
-                                                        const T* weight, const T* total_weight,
-                                                        const ReductionType reduction_type) {
+__global__ RETURN_VOID_IF_NOT_HALF ComputeNllGradOut(const int64_t num_instances,
+                                                     const K num_classes, const K ignore_index,
+                                                     const K* target, const T* dy, T* dx,
+                                                     const T* weight, const T* total_weight,
+                                                     const ReductionType reduction_type) {
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
     assert(target[i] >= 0);
     assert(target[i] < num_classes);
@@ -162,27 +151,21 @@ __global__ RETURN_VOID_IF_NOT_FLOAT16 ComputeNllGradOut(const int64_t num_instan
 }
 
 template<typename T, typename K>
-__global__ RETURN_VOID_IF_FLOAT16 ComputeNllGradOut(const int64_t num_instances,
-                                                    const K num_classes, const K ignore_index,
-                                                    const K* target, const T* dy, T* dx,
-                                                    const T* weight, const T* total_weight,
-                                                    const ReductionType reduction_type) {
-  FLOAT16_TO_HALF(dy)
-  FLOAT16_TO_HALF(dx)
-  FLOAT16_TO_HALF(weight)
-  FLOAT16_TO_HALF(total_weight)
-
+__global__ RETURN_VOID_IF_HALF ComputeNllGradOut(const int64_t num_instances, const K num_classes,
+                                                 const K ignore_index, const K* target, const T* dy,
+                                                 T* dx, const T* weight, const T* total_weight,
+                                                 const ReductionType reduction_type) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
     assert(target[i] >= 0);
     assert(target[i] < num_classes);
     K label = target[i];
     if (label == ignore_index) { continue; }
-    const half cur_weight = weight_ == nullptr ? __float2half(-1.0) : __hneg(weight_[label]);
-    dx_[i * num_classes + label] =
-        __hmul(reduction_type == ReductionType::kNone ? dy_[i] : (*dy_), cur_weight);
+    const half cur_weight = weight == nullptr ? __float2half(-1.0) : __hneg(weight[label]);
+    dx[i * num_classes + label] =
+        __hmul(reduction_type == ReductionType::kNone ? dy[i] : (*dy), cur_weight);
     if (reduction_type == ReductionType::kMean) {
-      dx_[i * num_classes + label] = __hdiv(dx_[i * num_classes + label], *total_weight_);
+      dx[i * num_classes + label] = __hdiv(dx[i * num_classes + label], *total_weight);
     }
   }
 #else
@@ -286,11 +269,11 @@ class NllGradKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("dy", 0) == OF_PP_PAIR_SECOND(dtype_pair))       \
                        & (user_op::HobDataType("dx", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_NLL_KERNEL, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_NLL_KERNEL, FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_NLL_GRAD_KERNEL,
-                                 FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                 FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 }  // namespace user_op
 }  // namespace oneflow

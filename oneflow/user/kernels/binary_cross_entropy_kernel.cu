@@ -37,24 +37,18 @@ __global__ void ComputeBinaryCrossEntropyOut(int64_t elem_cnt, const T* input, c
 }
 
 template<>
-__global__ void ComputeBinaryCrossEntropyOut(int64_t elem_cnt, const float16* input,
-                                             const float16* target, float16* out,
-                                             const float16* weight) {
-  FLOAT16_TO_HALF(input)
-  FLOAT16_TO_HALF(target)
-  FLOAT16_TO_HALF(out)
-  FLOAT16_TO_HALF(weight)
-
+__global__ void ComputeBinaryCrossEntropyOut(int64_t elem_cnt, const half* input,
+                                             const half* target, half* out, const half* weight) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    float input_val = __half2float(input_[i]);
-    float target_val = __half2float(target_[i]);
+    float input_val = __half2float(input[i]);
+    float target_val = __half2float(target[i]);
 
     assert(input_val >= 0.0);
     assert(input_val <= 1.0);
 
-    out_[i] = __float2half((target_val - 1.0) * max(__logf(1.0 - input_val), -100.0)
-                           - target_val * max(__logf(input_val), -100.0));
-    if (weight_ != nullptr) { out_[i] = __hmul(out_[i], weight_[i]); }
+    out[i] = __float2half((target_val - 1.0) * max(__logf(1.0 - input_val), -100.0)
+                          - target_val * max(__logf(input_val), -100.0));
+    if (weight != nullptr) { out[i] = __hmul(out[i], weight[i]); }
   }
 }
 
@@ -75,26 +69,20 @@ __global__ void ComputeBinaryCrossEntropyGradOut(int64_t elem_cnt, const T* inpu
 }
 
 template<>
-__global__ void ComputeBinaryCrossEntropyGradOut(int64_t elem_cnt, const float16* input,
-                                                 const float16* target, const float16* dy,
-                                                 float16* dx, const float16* weight,
+__global__ void ComputeBinaryCrossEntropyGradOut(int64_t elem_cnt, const half* input,
+                                                 const half* target, const half* dy, half* dx,
+                                                 const half* weight,
                                                  const ReductionType reduction_type) {
-  FLOAT16_TO_HALF(input)
-  FLOAT16_TO_HALF(target)
-  FLOAT16_TO_HALF(dy)
-  FLOAT16_TO_HALF(dx)
-  FLOAT16_TO_HALF(weight)
-
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    float input_val = __half2float(input_[i]);
-    float target_val = __half2float(target_[i]);
-    float dy_val = __half2float(reduction_type == ReductionType::kNone ? dy_[i] : *dy_);
+    float input_val = __half2float(input[i]);
+    float target_val = __half2float(target[i]);
+    float dy_val = __half2float(reduction_type == ReductionType::kNone ? dy[i] : *dy);
 
-    dx_[i] =
+    dx[i] =
         __float2half(dy_val * (input_val - target_val) / max((1.0 - input_val) * input_val, 1e-12));
-    if (weight_ != nullptr) { dx_[i] = __hmul(dx_[i], weight_[i]); }
+    if (weight != nullptr) { dx[i] = __hmul(dx[i], weight[i]); }
     if (reduction_type == ReductionType::kMean) {
-      dx_[i] = __float2half(__half2float(dx_[i]) / elem_cnt);
+      dx[i] = __float2half(__half2float(dx[i]) / elem_cnt);
     }
   }
 }
@@ -183,12 +171,13 @@ class BinaryCrossEntropyGradKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)     \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
+REGISTER_BINARY_CROSS_ENTROPY_KERNEL(half)
 REGISTER_BINARY_CROSS_ENTROPY_KERNEL(float)
 REGISTER_BINARY_CROSS_ENTROPY_KERNEL(double)
-REGISTER_BINARY_CROSS_ENTROPY_KERNEL(float16)
+
+REGISTER_BINARY_CROSS_ENTROPY_GRAD_KERNEL(half)
 REGISTER_BINARY_CROSS_ENTROPY_GRAD_KERNEL(float)
 REGISTER_BINARY_CROSS_ENTROPY_GRAD_KERNEL(double)
-REGISTER_BINARY_CROSS_ENTROPY_GRAD_KERNEL(float16)
 
 }  // namespace user_op
 }  // namespace oneflow

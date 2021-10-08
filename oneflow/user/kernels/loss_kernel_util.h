@@ -24,27 +24,6 @@ namespace oneflow {
 namespace user_op {
 namespace loss {
 
-#ifdef WITH_CUDA
-
-template<typename T>
-struct Float16To;
-
-template<>
-struct Float16To<const float16*> {
-  using type = const half*;
-};
-
-template<>
-struct Float16To<float16*> {
-  using type = half*;
-};
-
-#define FLOAT16_TO_HALF(x)                     \
-  typename Float16To<decltype(x)>::type x##_ = \
-      reinterpret_cast<typename Float16To<decltype(x)>::type>(x);
-
-#endif  // WITH_CUDA
-
 enum class ReductionType { kNone, kSum, kMean, kNotImplemented };
 
 inline ReductionType GetReductionType(const std::string& reduction) {
@@ -167,19 +146,19 @@ namespace {
   REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kCPU, float) \
   REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kCPU, double)
 
-#define REGISTER_SIMPLE_LOSS_KERNEL_GPU(name, kernel)                 \
-  REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kGPU, float)  \
-  REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kGPU, double) \
-  REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kGPU, float16)
+#define REGISTER_SIMPLE_LOSS_KERNEL_GPU(name, kernel)                \
+  REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kGPU, half)  \
+  REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kGPU, float) \
+  REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kGPU, double)
 
 #define REGISTER_SIMPLE_LOSS_GRAD_KERNEL_CPU(name, kernel)                \
   REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kCPU, float) \
   REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kCPU, double)
 
-#define REGISTER_SIMPLE_LOSS_GRAD_KERNEL_GPU(name, kernel)                 \
-  REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kGPU, float)  \
-  REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kGPU, double) \
-  REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kGPU, float16)
+#define REGISTER_SIMPLE_LOSS_GRAD_KERNEL_GPU(name, kernel)                \
+  REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kGPU, half)  \
+  REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kGPU, float) \
+  REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kGPU, double)
 
 }  // namespace loss
 }  // namespace user_op

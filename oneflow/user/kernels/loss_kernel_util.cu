@@ -38,22 +38,19 @@ __global__ void ApplyLossReductionImpl(int64_t elem_cnt, const T* tmp_out, T* ou
 }
 
 template<>
-__global__ void ApplyLossReductionImpl<float16>(int64_t elem_cnt, const float16* tmp_out,
-                                                float16* out, bool is_reduce_mean) {
-  FLOAT16_TO_HALF(tmp_out)
-  FLOAT16_TO_HALF(out)
-
+__global__ void ApplyLossReductionImpl<half>(int64_t elem_cnt, const half* tmp_out, half* out,
+                                             bool is_reduce_mean) {
   typedef cub::BlockReduce<half, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
   half thread_sum = __float2half(0.0);
   for (int i = threadIdx.x; i < elem_cnt; i += kCudaThreadsNumPerBlock) {
-    thread_sum = __hadd(thread_sum, tmp_out_[i]);
+    thread_sum = __hadd(thread_sum, tmp_out[i]);
   }
   __syncthreads();
   half block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(thread_sum, cub::Sum());
   if (threadIdx.x == 0) {
-    *out_ = block_sum;
-    if (is_reduce_mean) { *out_ = __float2half(__half2float(*out_) / elem_cnt); }
+    *out = block_sum;
+    if (is_reduce_mean) { *out = __float2half(__half2float(*out) / elem_cnt); }
   }
 }
 
@@ -75,9 +72,9 @@ ApplyLossReductionIfNeed(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* 
       DeviceCtx * ctx, int64_t elem_cnt, const dtype* tmp_out, dtype* out,               \
       const ReductionType reduction_type);
 
+SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kGPU, half)
 SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kGPU, float)
 SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kGPU, double)
-SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kGPU, float16)
 
 }  // namespace loss
 }  // namespace user_op

@@ -35,21 +35,18 @@ __global__ void ComputeSmoothL1Out(int64_t elem_cnt, const T* input, const T* ta
     }
   }
 }
-template<>
-__global__ void ComputeSmoothL1Out<float16>(int64_t elem_cnt, const float16* input,
-                                            const float16* target, float16* out, const float beta) {
-  FLOAT16_TO_HALF(input)
-  FLOAT16_TO_HALF(target)
-  FLOAT16_TO_HALF(out)
 
+template<>
+__global__ void ComputeSmoothL1Out(int64_t elem_cnt, const half* input, const half* target,
+                                   half* out, const float beta) {
   const half half_one = __float2half(0.5);
   const half half_beta = __float2half(beta);
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    const half abs_diff = __habs(__hsub(input_[i], target_[i]));
+    const half abs_diff = __habs(__hsub(input[i], target[i]));
     if (__hlt(abs_diff, half_beta)) {
-      out_[i] = __hmul(__hmul(half_one, abs_diff), __hdiv(abs_diff, half_beta));
+      out[i] = __hmul(__hmul(half_one, abs_diff), __hdiv(abs_diff, half_beta));
     } else {
-      out_[i] = __hsub(abs_diff, __hmul(half_one, half_beta));
+      out[i] = __hsub(abs_diff, __hmul(half_one, half_beta));
     }
   }
 }
@@ -73,33 +70,27 @@ __global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, const T* input, const T
 }
 
 template<>
-__global__ void ComputeSmoothL1GradOut<float16>(int64_t elem_cnt, const float16* input,
-                                                const float16* target, const float16* dy,
-                                                float16* dx, const ReductionType reduction_type,
-                                                const float beta) {
-  FLOAT16_TO_HALF(input)
-  FLOAT16_TO_HALF(target)
-  FLOAT16_TO_HALF(dy)
-  FLOAT16_TO_HALF(dx)
-
+__global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, const half* input, const half* target,
+                                       const half* dy, half* dx, const ReductionType reduction_type,
+                                       const float beta) {
   const half half_zero = GetZeroVal<half>();
   const half half_one = GetOneVal<half>();
   const half half_beta = __float2half(beta);
 
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    const half diff = __hsub(input_[i], target_[i]);
+    const half diff = __hsub(input[i], target[i]);
     const half abs_diff = __habs(diff);
     if (__hlt(abs_diff, half_beta)) {
-      dx_[i] = __hdiv(diff, half_beta);
+      dx[i] = __hdiv(diff, half_beta);
     } else {
       const half left = __hgt(diff, half_zero) ? half_one : half_zero;
       const half right = __hlt(diff, half_zero) ? half_one : half_zero;
-      dx_[i] = __hsub(left, right);
+      dx[i] = __hsub(left, right);
     }
-    const half dy_val = reduction_type == ReductionType::kNone ? dy_[i] : *dy_;
-    dx_[i] = __hmul(dx_[i], dy_val);
+    const half dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
+    dx[i] = __hmul(dx[i], dy_val);
     if (reduction_type == ReductionType::kMean) {
-      dx_[i] = __hdiv(dx_[i], __float2half(static_cast<float>(elem_cnt)));
+      dx[i] = __hdiv(dx[i], __float2half(static_cast<float>(elem_cnt)));
     };
   }
 }
