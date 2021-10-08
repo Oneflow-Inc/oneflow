@@ -479,8 +479,8 @@ class ConsistentEyeFunctor {
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
   }
 
-  private:
-   std::shared_ptr<OpExpr> op_;
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class Transpose2dimFunctor {
