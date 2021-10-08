@@ -41,6 +41,7 @@ def _test_permute_impl(test_case, device):
     test_case.assertTrue(np.array_equal(of_out1.numpy().flatten(), np_out.flatten()))
     test_case.assertTrue(np.array_equal(of_out2.numpy().flatten(), np_out.flatten()))
     test_case.assertTrue(np.array_equal(of_out3.numpy().flatten(), np_out.flatten()))
+    test_case.assertTrue(np.array_equal(of_out4.numpy().flatten(), np_out.flatten()))
     of_out = of_out1.sum()
     of_out.backward()
     np_grad = np.ones((2, 6, 5, 3))
