@@ -642,15 +642,15 @@ class SmoothL1LossFunctor {
  public:
   SmoothL1LossFunctor() {
     op_ = CHECK_JUST(
-        one::OpBuilder("smooth_l1_loss").Input("prediction").Input("label").Output("loss").Build());
+        one::OpBuilder("smooth_l1_loss").Input("input").Input("target").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits,
-                           const std::shared_ptr<one::Tensor>& label, const float& beta,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target, const float& beta,
                            const std::string& reduction) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("beta", beta));
     JUST(attrs.SetAttr<std::string>("reduction", reduction));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {logits, label}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs);
   }
 
  private:

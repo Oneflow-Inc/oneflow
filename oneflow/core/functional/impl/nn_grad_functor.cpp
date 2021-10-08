@@ -232,20 +232,20 @@ class SmoothL1LossGradFunctor {
  public:
   SmoothL1LossGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("smooth_l1_loss_grad")
-                         .Input("loss_grad")
-                         .Input("prediction")
-                         .Input("label")
-                         .Output("prediction_grad")
+                         .Input("dy")
+                         .Input("input")
+                         .Input("target")
+                         .Output("dx")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& loss_grad,
-                           const std::shared_ptr<one::Tensor>& prediction,
-                           const std::shared_ptr<one::Tensor>& label, const float& beta,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target, const float& beta,
                            const std::string& reduction) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("beta", beta));
     JUST(attrs.SetAttr<std::string>("reduction", reduction));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {loss_grad, prediction, label}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, input, target}, attrs);
   }
 
  private:
