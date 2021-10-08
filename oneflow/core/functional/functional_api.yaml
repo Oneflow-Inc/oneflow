@@ -568,8 +568,8 @@
   signature: "Tensor (Tensor dy, Tensor label, Tensor theta, Float m1, Float m2, Float m3, Int64 depth) => CombinedMarginLossGrad"
   bind_python: False
 
-- name: "norm"
-  signature: "Tensor (Tensor x, Float p) => Norm"
+- name: "norm2"
+  signature: "Tensor (Tensor x, Float p) => Norm2"
   bind_python: True
 
 - name: "triplet_margin_loss"
@@ -947,15 +947,23 @@
 
 - name: "vector_norm"
   signature: "Tensor (Tensor input, Scalar ord=2, Int32List dim=None, Bool keepdim=False) => VectorNorm"
-  bind_python: true
+  bind_python: True
 
 - name: "matrix_norm"
   signature: 
     [
-      "Tensor (Tensor input, Scalar ord, Int32List dim=(-2, -1), Bool keepdim=False) => MatrixNorm",
-      "Tensor (Tensor input, String ord, Int32List dim=(-2, -1), Bool keepdim=False) => MatrixNorm2",
+      "Tensor (Tensor input, Scalar ord, Int32List dim, Bool keepdim=False) => MatrixNorm",
+      "Tensor (Tensor input, String ord, Int32List dim, Bool keepdim=False) => MatrixNorm",
     ]
-  bind_python: true
+  bind_python: True
+
+- name: "norm"
+  signature: 
+    [
+      "Tensor (Tensor input, Scalar ord=None, Int32List dim=None, Bool keepdim=False) => Norm",
+      "Tensor (Tensor input, String ord, Int32List dim=None, Bool keepdim=False) => Norm",
+    ]
+  bind_python: True
 
 - name: "dropout"
   signature: "Tensor (Tensor x, Float p=0.5, Bool training=True, Generator generator=None) => Dropout"

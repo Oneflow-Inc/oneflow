@@ -465,9 +465,9 @@ class CombinedMarginLossFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class NormFunctor {
+class Norm2Functor {
  public:
-  NormFunctor() {}
+  Norm2Functor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                             const float& p) const {
     std::shared_ptr<one::Tensor> norm; 
@@ -496,11 +496,11 @@ class TripletMarginLossFunctor {
                            const float& margin, const float& p, const float& eps,
                            const bool& swap, const std::string& reduction) const {
     
-    auto da_p=JUST(Norm(JUST(ScalarAdd2(eps, JUST(Sub(anchor, positive)))), p));
-    auto da_n=JUST(Norm(JUST(ScalarAdd2(eps, JUST(Sub(anchor, negative)))), p));
+    auto da_p=JUST(Norm2(JUST(ScalarAdd(eps, JUST(Sub(anchor, positive)))), p));
+    auto da_n=JUST(Norm2(JUST(ScalarAdd(eps, JUST(Sub(anchor, negative)))), p));
     if(swap)
     {
-      auto distance_swap = JUST(Norm(JUST(ScalarAdd2(eps, JUST(Sub(positive, negative)))), p));
+      auto distance_swap = JUST(Norm2(JUST(ScalarAdd(eps, JUST(Sub(positive, negative)))), p));
       da_n = JUST(Minimum(distance_swap, da_n));
     }   
     const Optional<Scalar> max;
@@ -1240,7 +1240,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");
   m.add_functor<impl::SmoothL1LossFunctor>("SmoothL1Loss");
   m.add_functor<impl::CombinedMarginLossFunctor>("CombinedMarginLoss");
-  m.add_functor<impl::NormFunctor>("Norm"); 
+  m.add_functor<impl::Norm2Functor>("Norm2"); 
   m.add_functor<impl::TripletMarginLossFunctor>("TripletMarginLoss");
   m.add_functor<impl::AffineGridFunctor>("AffineGrid");
   m.add_functor<impl::GridSampleFunctor>("GridSample");

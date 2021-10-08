@@ -463,91 +463,79 @@ class VectorNormFunctor {
  public:
   VectorNormFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                            const Optional<Scalar>& ord, const std::vector<int32_t>& input_dim, 
+                            const Scalar& ord, const Optional<std::vector<int32_t>>& input_dim, 
                             const bool& keepdim) const {
     std::shared_ptr<one::Tensor> rd;
-    std::shared_ptr<one::Tensor> rd_tmp; 
     int32_t num_dims = x->ndim();
     std::vector<int32_t> dim;
-    
+    std::cout << "@@@@come in:"<<std::endl;
     std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
     std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-    /*
-    if(input_dim.empty())
-    {
-      dim = input_dim;
-    }
-    else {
-      for (auto i=0; i < input_dim.size(); ++i) {
-        if(input_dim[i] >=0)
-        {
-          dim.push_back(input_dim[i]);
-        }
-        else {
-          dim[i] = input_dim[i] + num_dims;
-        }
-        CHECK_OR_RETURN(dim[i] >= num_dims || dim[i] < 0) << "Dimension out of range";
-      }
-    }//check_dim()
-    */
 
-    //vector_norm
     const DType obj(kInt32);
     Symbol<DType> dtype(obj);
-    if(ord.has_value())
+
+    if (!input_dim.has_value()) 
     {
-      const auto& ord_val = JUST(ord.value());
-      if(ord_val == 0)
+      dim = reduce_axis;
+    }
+    else
+    {
+      dim = *JUST(input_dim);
+    }
+    if(ord.IsFloatingPoint())//ord:float
+    {
+      double_t ord_val = JUST(ord.As<double_t>());
+      std::cout << "222@@@@@@@print ord_val:"<<ord_val<<"INFINITY:"<<INFINITY<<std::endl;
+      if(ord_val == 0)//ok
       {
-        //sum(x != 0)
-        rd_tmp=JUST(ArgWhere(x, dtype));
-        auto num_rd = rd_tmp->dim(0);//一个int
-        //变成tensor
-        rd=JUST(ScalarAdd(num_rd, rd));
+        auto rd_tmp=JUST(ArgWhere(x, dtype));
+        auto num_rd = rd_tmp->at(0);
+        std::cout << "4444@@@@print num_rd.shape(0):"<<num_rd->shape()->At(0)<<std::endl;
+        const DType obj_tmp(kFloat);
+        Symbol<DType> dtype_tmp(obj_tmp);
+        DimVector dims(1, 1);
+        Shape shape(dims);
+        rd=JUST(Constant(shape, num_rd->shape()->At(0), dtype_tmp, JUST(x->device())));
+        
       }
-      else if (ord_val == DBL_MAX) //正无穷大
+      else if (ord_val==INFINITY)
       {
-        //`max(abs(x))` TensorGetItem由索引找到元素
-        //rd = JUST(TensorGetItem(JUST(Abs(x)), JUST(ArgMax(JUST(Abs(x))))));
-        std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
-        std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-        rd = JUST(ReduceMax(JUST(Abs(x)), reduce_axis, false));
+        //`max(abs(x))`
+        std::cout << "777@@@@DBL_MAX:"<<DBL_MAX<<std::endl;
+        rd = JUST(ReduceMax(JUST(Abs(x)), dim, false));    
       }
-      else if (ord_val == -DBL_MAX) //负无穷大
+      else if (ord_val==-INFINITY)
       {
         //`min(abs(x))`
-        //rd = JUST(ArgSort(JUST(Abs(x)), "ASCENDING"));//从小到大索引排序
-        //rd = JUST(TensorGetItem(JUST(Abs(x)), rd->at(0)));
-        RD= JUST(ReduceMin(JUST(Abs(x)), reduce_axis, false));
+        std::cout << "8888@@@@-DBL_MAX:"<<DBL_MAX<<std::endl;
+        rd= JUST(ReduceMin(JUST(Abs(x)), dim, false));
       }
       else
       {
-        // `sum(abs(x)^{ord})^{(1 / ord)}`
-        rd = JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord)), input_dim, keepdim)), 1.0 / ord));
+        std::cout << "8558@@@@-DBL_MAX:"<<std::endl;
+        rd = JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord)), dim, keepdim)), Scalar(1.0) / ord));
       }
     }
-    return rd;    
+    return rd;
   }
 };
 
-//2维
+//2维.其中input_dim为len（），x为至少2维
 class MatrixNormFunctor {
  public:
   MatrixNormFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                            const Optional<Scalar>& ord, const std::vector<int32_t>& input_dim, 
+                            const Scalar& ord, const std::vector<int32_t>& input_dim, 
                             const bool& keepdim) const {
     std::shared_ptr<one::Tensor> res; 
     std::vector<int32_t> dim;
-    CHECK_OR_RETURN(ord.has_value()) 
-        <<"ord must be a int or float data";
+    CHECK_OR_RETURN(x->shape()->NumAxes()>=2) <<"input tensor must be a matrix or batch of matrices";
+    CHECK_OR_RETURN(input_dim.size()==2 && input_dim[0] != input_dim[1]) <<"input_dim must be a 2-tuple of ints with different elements";
+    double_t ord_tmp = JUST(ord.As<double_t>());
 
-    CHECK_OR_RETURN(input_dim.size()==2 && input_dim[0] != input_dim[1]) 
-        <<"input_dim must be a 2-tuple of ints with different elements";
-    
-    //判断ord,dim是tuple并且dim的len为2，且dim[0]!=dim[1]
-    auto ord_tmp=JUST(ord.value());
-    if(ord_tmp == DBL_MAX || ord_tmp == -DBL_MAX)
+    std::cout << "11##ord_tmp:"<<ord_tmp<<std::endl;
+    if(ord_tmp == INFINITY || ord_tmp == -INFINITY)
     {
       dim=input_dim;
       dim[0] = input_dim[1];
@@ -559,24 +547,26 @@ class MatrixNormFunctor {
     }
     else
     {
-      UNIMPLEMENTED_THEN_RETURN() << "Only support DBL_MAX,-DBL_MAX,1 or -1 data type.";
+      UNIMPLEMENTED_THEN_RETURN() << "Only support INFINITY,-INFINITY,1 or -1 data type.";
     }
-
+    std::cout << "22##dim:"<<dim[0]<<"dim[1]="<<dim[1]<<std::endl;
     if(dim[1] >dim[0] && keepdim == false)
     {
-      dim[1]-=dim[1];
+      dim[1]-=1;
     }
-    res=JUST(ReduceSum(JUST(Abs(x)), dim[0], keepdim));
-
-    if(ord_tmp==DBL_MAX || ord_tmp==1)
+    std::vector<int32_t> dim_tmp0(1,dim[0]);
+    std::vector<int32_t> dim_tmp1(1,dim[1]);
+    res=JUST(ReduceSum(JUST(Abs(x)), dim_tmp0, keepdim));
+    std::cout << "33##res:"<<res<<std::endl;
+    if(ord_tmp==INFINITY || ord_tmp==1)
     {
-      //res = JUST(max(res, dim[1], keepdim));
-      res = JUST(ReduceMax(res, dim[1], keepdim));
+      std::cout << "44##dim:"<<dim_tmp1[0]<<std::endl;
+      res = JUST(ReduceMax(res, dim_tmp1, keepdim));
     }
-    else if(ord_tmp==-DBL_MAX || ord_tmp==-1)
+    else if(ord_tmp==-INFINITY || ord_tmp==-1)
     {
-      //res = JUST(min(res, dim[1], keepdim));
-      res = JUST(ReduceMin(res, dim[1], keepdim));
+      std::cout << "55##dim:"<<dim_tmp1[0]<<std::endl;
+      res = JUST(ReduceMin(res, dim_tmp1, keepdim));
     } 
     return res;
   }
@@ -591,16 +581,125 @@ class MatrixNorm2Functor {
                             const std::string& ord, const std::vector<int32_t>& input_dim, 
                             const bool& keepdim) const {
     std::shared_ptr<one::Tensor> res; 
+    CHECK_OR_RETURN(input_dim.size()==2 && input_dim[0] != input_dim[1]) <<"input_dim must be a 2-tuple of ints with different elements";
     if(ord=="nuc") 
     {
       UNIMPLEMENTED_THEN_RETURN() << "Not support ord is nuc.";
     }
-    else if(ord=="fro")
+    else if(ord=="fro"|| ord=="")
     {  
+      std::cout << "00##axis:fro"<<std::endl;
       res=JUST(Sqrt(JUST(ReduceSum(JUST(Square(x)), input_dim, keepdim))));
+    }
+    else
+    {
+      UNIMPLEMENTED_THEN_RETURN() << "Not support ord.";
     }
     return res;
   }
+};
+
+
+class NormFunctor {
+ public:
+  NormFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                            const Optional<Scalar>& ord, const Optional<std::vector<int32_t>>& input_dim, 
+                            const bool& keepdim) const {
+    std::shared_ptr<one::Tensor> res;   
+    if(input_dim.has_value())
+    {
+      auto axis=(*JUST(input_dim)).size();
+      std::cout << "00##axis:"<<axis<<std::endl;
+      Scalar ord_tmp;
+
+      if(axis == 1)
+      {
+        std::cout << "11##axis:"<<std::endl;
+        if(!ord.has_value())
+        {
+          ord_tmp=Scalar(2.0);
+        }
+        else
+        {
+          ord_tmp=*JUST(ord);
+        }
+        res=JUST(VectorNorm(x, ord_tmp, input_dim, keepdim));//ord_tmp变成float
+      }
+      else if(axis > 2)
+      {
+        std::cout << "22##axis:"<<std::endl;
+        res=JUST(MatrixNorm(x, *JUST(ord), *JUST(input_dim), keepdim));
+      }
+      else if(axis==2)
+      {
+        if(!ord.has_value())
+        {
+          std::cout << "0999##axis:"<<std::endl;
+          res=JUST(MatrixNorm(x, "fro", *JUST(input_dim), keepdim));
+        }
+        else
+        {
+          res=JUST(MatrixNorm(x, *JUST(ord), *JUST(input_dim), keepdim));
+        }
+      }
+      else
+      {
+
+      }
+    }
+    else
+    {
+        if(ord.has_value())
+        {
+          std::cout << "33##axis:"<<std::endl;
+          CHECK_OR_RETURN(x->shape()->NumAxes()<=2) <<"input must be 1-D or 2-D when dim is None and ord is not None";
+          if(x->shape()->NumAxes()==1)
+          {
+            Optional<std::vector<int32_t>> dim;
+            std::cout << "445##axis:"<<std::endl;
+            res = JUST(VectorNorm(x, *JUST(ord), input_dim, keepdim));
+          }
+          else
+          {
+            std::vector<int32_t> dim(2,0);
+            dim[1]=1;
+            std::cout << "55##axis:"<<std::endl;
+            res=JUST(MatrixNorm(x, *JUST(ord), dim, keepdim));
+          }
+        }
+        else
+        {
+          std::vector<int32_t> dim(1,2);
+          std::cout << "66##axis:"<<std::endl;
+          res = JUST(VectorNorm(JUST(Flatten(x,0,-1)), Scalar(2.0), input_dim, keepdim));
+        }
+    }
+    return res;
+  }                          
+};
+
+
+class NormstringFunctor {
+ public:
+  NormstringFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                            const std::string& ord, const Optional<std::vector<int32_t>>& input_dim, 
+                            const bool& keepdim) const {
+    std::shared_ptr<one::Tensor> res;
+    std::vector<int32_t> dim(x->shape()->NumAxes());
+    std::iota(dim.begin(), dim.end(), 0);
+    if(input_dim.has_value())
+    {
+      std::cout << "77##axis:"<<std::endl;
+      res=JUST(MatrixNorm(x, ord, *JUST(input_dim), keepdim));
+    }
+    else
+    {
+      res=JUST(MatrixNorm(x, ord, dim, keepdim));
+    }    
+    return res;
+  }                          
 };
 
 class ClampGradFunctor {
@@ -919,8 +1018,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<VectorNormFunctor>("VectorNorm");
-  m.add_functor<MatrixNormFunctor>("MatrixNorm");
-  m.add_functor<MatrixNorm2Functor>("MatrixNorm2");
+  m.add_functor<MatrixNormFunctor, MatrixNorm2Functor>("MatrixNorm");
+  m.add_functor<NormFunctor, NormstringFunctor>("Norm");
   m.add_functor<ClampGradFunctor>("ClampGrad");
   m.add_functor<SelectTopNFunctor>("SelectTopN");
   m.add_functor<MinimumFunctor>("Minimum");
