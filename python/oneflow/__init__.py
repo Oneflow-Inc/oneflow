@@ -361,5 +361,5 @@ import oneflow.multiprocessing
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__
-    print("mlir will load:", oneflow_internal_path)
+    print("MLIR JIT engine will load:", oneflow_internal_path)
     oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)
