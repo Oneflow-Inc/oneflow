@@ -25,6 +25,7 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
 
+
 def _test_permute_impl(test_case, device):
     input = flow.tensor(
         np.random.randn(2, 6, 5, 3),
@@ -39,6 +40,7 @@ def _test_permute_impl(test_case, device):
     of_out.backward()
     np_grad = np.ones((2, 6, 5, 3))
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 0.0001, 0.0001))
+
 
 def _test_tensor_permute_impl(test_case, device):
     input = flow.tensor(
