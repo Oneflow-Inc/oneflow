@@ -63,6 +63,7 @@ def eye_op(
         ), "placement should be oneflow._oneflow_internal.placement type."
         assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
         if isinstance(sbp, flow.sbp.sbp):
+            assert sbp == flow.sbp.broadcast
             sbp = (sbp,)
         else:
             for elem in sbp:
