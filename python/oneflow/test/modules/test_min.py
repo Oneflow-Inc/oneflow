@@ -33,7 +33,6 @@ def _test_min(test_case, device, shape, dim, keepdims):
         input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     of_out = flow.min(x, dim, keepdims)
-
     if dim != None:
         of_out = of_out[0]
 
@@ -57,7 +56,6 @@ def _test_min_tensor_function(test_case, device, shape, dim, keepdims):
         input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     of_out = x.min(dim, keepdims)
-
     if dim != None:
         of_out = of_out[0]
 

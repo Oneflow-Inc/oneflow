@@ -658,11 +658,17 @@ class TripletMarginLossFunctor {
                            const float& margin, const float& p, const float& eps,
                            const bool& swap, const std::string& reduction) const {
     
-    auto da_p=JUST(Norm2(JUST(ScalarAdd(eps, JUST(Sub(anchor, positive)))), p));
-    auto da_n=JUST(Norm2(JUST(ScalarAdd(eps, JUST(Sub(anchor, negative)))), p));
+    //auto da_p=JUST(Norm2(JUST(ScalarAdd(eps, JUST(Sub(anchor, positive)))), p));
+    //Optional<std::vector<int32_t>> dim;
+
+    int32_t dim_norm = anchor->ndim()-1;
+    std::vector<int32_t> dim(1, dim_norm);
+
+    auto da_p=JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, positive)))), p, dim, false));
+    auto da_n=JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, negative)))), p,dim, false));
     if(swap)
     {
-      auto distance_swap = JUST(Norm2(JUST(ScalarAdd(eps, JUST(Sub(positive, negative)))), p));
+      auto distance_swap = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(positive, negative)))), p,dim, false));
       da_n = JUST(Minimum(distance_swap, da_n));
     }   
     const Optional<Scalar> max;

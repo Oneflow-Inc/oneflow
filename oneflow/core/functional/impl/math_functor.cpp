@@ -639,7 +639,6 @@ class VectorNormFunctor {
     std::shared_ptr<one::Tensor> rd;
     int32_t num_dims = x->ndim();
     std::vector<int32_t> dim;
-    std::cout << "@@@@come in:"<<std::endl;
     std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
     std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
 
@@ -657,12 +656,10 @@ class VectorNormFunctor {
     if(ord.IsFloatingPoint())//ord:float
     {
       double_t ord_val = JUST(ord.As<double_t>());
-      std::cout << "222@@@@@@@print ord_val:"<<ord_val<<"INFINITY:"<<INFINITY<<std::endl;
       if(ord_val == 0)//ok
       {
         auto rd_tmp=JUST(ArgWhere(x, dtype));
         auto num_rd = rd_tmp->at(0);
-        std::cout << "4444@@@@print num_rd.shape(0):"<<num_rd->shape()->At(0)<<std::endl;
         const DType obj_tmp(kFloat);
         Symbol<DType> dtype_tmp(obj_tmp);
         DimVector dims(1, 1);
@@ -673,18 +670,15 @@ class VectorNormFunctor {
       else if (ord_val==INFINITY)
       {
         //`max(abs(x))`
-        std::cout << "777@@@@DBL_MAX:"<<DBL_MAX<<std::endl;
         rd = JUST(ReduceMax(JUST(Abs(x)), dim, false));    
       }
       else if (ord_val==-INFINITY)
       {
         //`min(abs(x))`
-        std::cout << "8888@@@@-DBL_MAX:"<<DBL_MAX<<std::endl;
         rd= JUST(ReduceMin(JUST(Abs(x)), dim, false));
       }
       else
       {
-        std::cout << "8558@@@@-DBL_MAX:"<<std::endl;
         rd = JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord)), dim, keepdim)), Scalar(1.0) / ord));
       }
     }
@@ -692,7 +686,7 @@ class VectorNormFunctor {
   }
 };
 
-//2维.其中input_dim为len（），x为至少2维
+
 class MatrixNormFunctor {
  public:
   MatrixNormFunctor() {}
@@ -705,7 +699,7 @@ class MatrixNormFunctor {
     CHECK_OR_RETURN(input_dim.size()==2 && input_dim[0] != input_dim[1]) <<"input_dim must be a 2-tuple of ints with different elements";
     double_t ord_tmp = JUST(ord.As<double_t>());
 
-    std::cout << "11##ord_tmp:"<<ord_tmp<<std::endl;
+
     if(ord_tmp == INFINITY || ord_tmp == -INFINITY)
     {
       dim=input_dim;
@@ -720,7 +714,7 @@ class MatrixNormFunctor {
     {
       UNIMPLEMENTED_THEN_RETURN() << "Only support INFINITY,-INFINITY,1 or -1 data type.";
     }
-    std::cout << "22##dim:"<<dim[0]<<"dim[1]="<<dim[1]<<std::endl;
+
     if(dim[1] >dim[0] && keepdim == false)
     {
       dim[1]-=1;
@@ -728,15 +722,13 @@ class MatrixNormFunctor {
     std::vector<int32_t> dim_tmp0(1,dim[0]);
     std::vector<int32_t> dim_tmp1(1,dim[1]);
     res=JUST(ReduceSum(JUST(Abs(x)), dim_tmp0, keepdim));
-    std::cout << "33##res:"<<res<<std::endl;
+
     if(ord_tmp==INFINITY || ord_tmp==1)
     {
-      std::cout << "44##dim:"<<dim_tmp1[0]<<std::endl;
       res = JUST(ReduceMax(res, dim_tmp1, keepdim));
     }
     else if(ord_tmp==-INFINITY || ord_tmp==-1)
     {
-      std::cout << "55##dim:"<<dim_tmp1[0]<<std::endl;
       res = JUST(ReduceMin(res, dim_tmp1, keepdim));
     } 
     return res;
@@ -759,7 +751,6 @@ class MatrixNorm2Functor {
     }
     else if(ord=="fro"|| ord=="")
     {  
-      std::cout << "00##axis:fro"<<std::endl;
       res=JUST(Sqrt(JUST(ReduceSum(JUST(Square(x)), input_dim, keepdim))));
     }
     else
@@ -781,12 +772,10 @@ class NormFunctor {
     if(input_dim.has_value())
     {
       auto axis=(*JUST(input_dim)).size();
-      std::cout << "00##axis:"<<axis<<std::endl;
       Scalar ord_tmp;
 
       if(axis == 1)
       {
-        std::cout << "11##axis:"<<std::endl;
         if(!ord.has_value())
         {
           ord_tmp=Scalar(2.0);
@@ -795,18 +784,16 @@ class NormFunctor {
         {
           ord_tmp=*JUST(ord);
         }
-        res=JUST(VectorNorm(x, ord_tmp, input_dim, keepdim));//ord_tmp变成float
+        res=JUST(VectorNorm(x, ord_tmp, input_dim, keepdim));
       }
       else if(axis > 2)
       {
-        std::cout << "22##axis:"<<std::endl;
         res=JUST(MatrixNorm(x, *JUST(ord), *JUST(input_dim), keepdim));
       }
       else if(axis==2)
       {
         if(!ord.has_value())
         {
-          std::cout << "0999##axis:"<<std::endl;
           res=JUST(MatrixNorm(x, "fro", *JUST(input_dim), keepdim));
         }
         else
@@ -816,33 +803,29 @@ class NormFunctor {
       }
       else
       {
-
+        UNIMPLEMENTED_THEN_RETURN() << "Not support.";
       }
     }
     else
     {
         if(ord.has_value())
         {
-          std::cout << "33##axis:"<<std::endl;
           CHECK_OR_RETURN(x->shape()->NumAxes()<=2) <<"input must be 1-D or 2-D when dim is None and ord is not None";
           if(x->shape()->NumAxes()==1)
           {
             Optional<std::vector<int32_t>> dim;
-            std::cout << "445##axis:"<<std::endl;
             res = JUST(VectorNorm(x, *JUST(ord), input_dim, keepdim));
           }
           else
           {
             std::vector<int32_t> dim(2,0);
             dim[1]=1;
-            std::cout << "55##axis:"<<std::endl;
             res=JUST(MatrixNorm(x, *JUST(ord), dim, keepdim));
           }
         }
         else
         {
           std::vector<int32_t> dim(1,2);
-          std::cout << "66##axis:"<<std::endl;
           res = JUST(VectorNorm(JUST(Flatten(x,0,-1)), Scalar(2.0), input_dim, keepdim));
         }
     }
@@ -862,7 +845,6 @@ class NormstringFunctor {
     std::iota(dim.begin(), dim.end(), 0);
     if(input_dim.has_value())
     {
-      std::cout << "77##axis:"<<std::endl;
       res=JUST(MatrixNorm(x, ord, *JUST(input_dim), keepdim));
     }
     else
