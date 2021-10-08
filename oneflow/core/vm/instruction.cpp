@@ -50,6 +50,7 @@ void InitFromProto(InstructionMsg* that, const T& proto) {
   for (int i = 0; i < proto.operand_size(); ++i) {
     that->mutable_operand()->at(i)->__Init__(proto.operand(i));
   }
+  if (proto.has_time_stamp()) { that->set_time_stamp(proto.time_stamp()); }
 }
 
 }  // namespace
@@ -95,6 +96,7 @@ void InstructionMsg::ToProto(InstructionProto* proto) const {
   for (const auto& operand : operand_list().operand()) {
     operand->ToProto(proto->mutable_operand()->Add());
   }
+  if (has_time_stamp()) { proto->set_time_stamp(time_stamp()); }
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_parallel_desc(int64_t symbol_id) {

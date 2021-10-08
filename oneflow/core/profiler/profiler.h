@@ -22,6 +22,8 @@ namespace oneflow {
 
 namespace profiler {
 
+uint64_t nanos();
+
 void NameThisHostThread(const std::string& name);
 
 void RangePush(const std::string& name);
@@ -33,6 +35,10 @@ void LogHostMemoryUsage(const std::string& name);
 void ProfilerStart();
 
 void ProfilerStop();
+
+void EnableProfiler();
+
+void DisableProfiler();
 
 class RangeGuardCtx;
 

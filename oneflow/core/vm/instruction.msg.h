@@ -75,6 +75,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OF_PUBLIC std::vector<FlatMsg<InstructionOperand>>* mutable_operand() {
     return mutable_operand_list()->mut_operand();
   }
+
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> Clone() const;
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> MakeInferInstrMsg() const;
 
@@ -86,6 +87,8 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<const ParallelDesc>, parallel_desc);
   OBJECT_MSG_DEFINE_OPTIONAL(InstructionOperandList, operand_list);
   OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<PhyInstrOperand>, phy_instr_operand);
+
+  OBJECT_MSG_DEFINE_OPTIONAL(uint64_t, time_stamp);
 
 
   // links

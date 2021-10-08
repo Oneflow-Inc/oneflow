@@ -24,6 +24,8 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/extension/python/numpy.h"
 
+#include "oneflow/core/profiler/profiler.h"
+
 namespace py = pybind11;
 
 namespace oneflow {
@@ -144,9 +146,14 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   } else {
     device_ = JUST(Device::New("cpu"));
   }
+
+  OF_PROFILER_RANGE_PUSH("Empty");
   std::shared_ptr<Tensor> tensor =
       JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device_));
+  OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_PUSH("Load array");
   JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(data_type), tensor, np_arr_raii));
+  OF_PROFILER_RANGE_POP();
 
   // Cast to float if data is double sequence, rather than numpy array.
   Symbol<DType> dtype_;

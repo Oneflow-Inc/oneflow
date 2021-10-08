@@ -20,6 +20,8 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/object_msg/object_msg.h"
 
+#include "oneflow/core/profiler/profiler.h"
+
 namespace oneflow {
 namespace vm {
 
@@ -42,6 +44,12 @@ const StreamTypeId& LookupInferStreamTypeId(const StreamTypeId& compute_stream_t
 }
 
 void StreamType::Run(Instruction* instruction) const {
+  if (instruction->has_instr_msg() && instruction->instr_msg().has_time_stamp()) {
+    uint64_t time_stamp = profiler::nanos();
+    std::cout << "start_time_stamp = " << instruction->instr_msg().time_stamp()
+              << ", end_time_stamp = " << time_stamp
+              << ", elapsed = " << time_stamp - instruction->instr_msg().time_stamp() << std::endl;
+  }
   const auto& stream_type_id = instruction->stream().stream_id().stream_type_id();
   auto interpret_type = stream_type_id.interpret_type();
   if (interpret_type == InterpretType::kCompute) {
@@ -54,6 +62,12 @@ void StreamType::Run(Instruction* instruction) const {
 }
 
 void StreamType::Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+  if (instr_msg->has_time_stamp()) {
+    uint64_t time_stamp = profiler::nanos();
+    std::cout << "start_time_stamp = " << instr_msg->time_stamp()
+              << ", end_time_stamp = " << time_stamp
+              << ", elapsed = " << time_stamp - instr_msg->time_stamp() << std::endl;
+  }
   InterpretType interpret_type = instr_msg->instr_type_id().stream_type_id().interpret_type();
   if (interpret_type == InterpretType::kCompute) {
     Compute(vm, instr_msg);
@@ -65,6 +79,12 @@ void StreamType::Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
 }
 
 void StreamType::Run(VirtualMachine* vm, Instruction* instruction) const {
+  if (instruction->has_instr_msg() && instruction->instr_msg().has_time_stamp()) {
+    uint64_t time_stamp = profiler::nanos();
+    std::cout << "start_time_stamp = " << instruction->instr_msg().time_stamp()
+              << ", end_time_stamp = " << time_stamp
+              << ", elapsed = " << time_stamp - instruction->instr_msg().time_stamp() << std::endl;
+  }
   auto interpret_type = instruction->stream().stream_id().stream_type_id().interpret_type();
   if (interpret_type == InterpretType::kCompute) {
     Compute(vm, instruction);

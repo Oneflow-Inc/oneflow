@@ -26,7 +26,10 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/framework/instruction_time_stamp.h"
 #include "oneflow/core/framework/tensor.h"
+
+#include "oneflow/core/profiler/profiler.h"
 
 namespace py = pybind11;
 
@@ -43,15 +46,23 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tenso
   auto tensor = JUST(t->AsMirroredTensor());
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
 
-  const auto& Callback = std::make_shared<std::function<void(uint64_t)>>(
-      [&array, &Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array)); });
+  const auto& Callback =
+      std::make_shared<std::function<void(uint64_t)>>([&array, &Copy](uint64_t ofblob_ptr) {
+        OF_PROFILER_RANGE_PUSH("Copy");
+        CHECK_JUST(Copy(ofblob_ptr, array));
+        OF_PROFILER_RANGE_POP();
+      });
   bool is_printed = false;
   JUST(SpinCounter::SpinWait(
       1,
       [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-        return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+        OF_PROFILER_RANGE_PUSH("PhysicalRun");
+        RecordInstructionTimeStampMode mode(true);
+        auto res = PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
           return builder->SyncAccessBlobByCallback(tensor, sc, Callback, modifier);
         });
+        OF_PROFILER_RANGE_POP();
+        return res;
       },
       [&is_printed]() {
         if (!is_printed) {

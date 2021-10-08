@@ -23,6 +23,8 @@ limitations under the License.
 #include "oneflow/api/python/functional/unpack_call.h"
 #include "oneflow/api/python/framework/throw.h"
 
+#include "oneflow/core/profiler/profiler.h"
+
 namespace py = pybind11;
 
 namespace oneflow {
@@ -70,6 +72,8 @@ class PyFunctionDispatcher {
     return py::none();
   }
 
+  const std::string& func_name() const { return func_name_; }
+
  private:
   template<size_t... I>
   void InitSignatures(std::index_sequence<I...>) {
@@ -86,7 +90,10 @@ class PyFunctionDispatcher {
 template<typename... SchemaT>
 inline py::object PyFunction(const py::args& args, const py::kwargs& kwargs) {
   static PyFunctionDispatcher<SchemaT...> dispatcher;
-  return dispatcher.call(args, kwargs, std::make_index_sequence<sizeof...(SchemaT)>{});
+  OF_PROFILER_RANGE_PUSH("PyFunction_" + dispatcher.func_name());
+  auto res = dispatcher.call(args, kwargs, std::make_index_sequence<sizeof...(SchemaT)>{});
+  OF_PROFILER_RANGE_POP();
+  return res;
 }
 
 }  // namespace functional
