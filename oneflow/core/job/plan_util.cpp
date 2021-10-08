@@ -18,13 +18,13 @@ limitations under the License.
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/str_util.h"
-#include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/memory/chunk_manager.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/graph/id_serialization.h"
 
 namespace oneflow {
 
@@ -270,11 +270,6 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     int64_t regst_main_size = rt_regst_desc.TotalMainByteSize4AllRegst();
     int64_t regst_separated_size = rt_regst_desc.TotalSeparatedHeaderByteSize4AllRegst();
 
-    if (is_variable_regst) {
-      CHECK_GT(regst_separated_size,
-               0);  // NOTE(chengcheng): variable regst header ALWAYS separated
-    }
-
     if (mem_block_id2mem_block.find(mem_block_id) == mem_block_id2mem_block.end()) {
       MemBlockProto mem_block;
       mem_block.set_mem_block_id(mem_block_id);
@@ -460,10 +455,10 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
       return;
     }
     if (pass_tag == kNoPassTag) {
-      if (Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task_proto.thrd_id()) == DeviceType::kGPU) {
-        int64_t device_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(task_proto.thrd_id());
+      const StreamId stream_id = PlanUtil::GetStreamId(task_proto);
+      if (stream_id.device_id().device_type() == DeviceType::kGPU) {
         machine_id2job_id_device_id2node_list[task_proto.machine_id()][task_proto.job_id()]
-                                             [device_id]
+                                             [stream_id.device_id().device_index()]
                                                  .push_back(node_def);
         machine_id2device_id2node_list_job_ids[task_proto.machine_id()].insert(task_proto.job_id());
       } else {
@@ -757,13 +752,10 @@ struct CollectiveBoxingRequestInfo {
 
 void GetDeviceDesc(const TaskProto* task_proto, boxing::collective::DeviceDesc* device_desc) {
   device_desc->set_machine_id(task_proto->machine_id());
-  const int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(task_proto->task_id());
-  device_desc->set_device_type(Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(thrd_id));
-  if (device_desc->device_type() == DeviceType::kGPU) {
-    device_desc->set_device_id(Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id));
-  } else {
-    UNIMPLEMENTED();
-  }
+  const StreamId stream_id = PlanUtil::GetStreamId(*task_proto);
+  const DeviceId& device_id = stream_id.device_id();
+  device_desc->set_device_type(device_id.device_type());
+  device_desc->set_device_id(device_id.device_index());
 }
 
 }  // namespace
@@ -979,6 +971,14 @@ void PlanUtil::PopulateOpAttibute(
       }
     }
   }
+}
+
+/*static*/ StreamId PlanUtil::GetStreamId(const TaskProto& task) {
+  return DeserializeStreamIdFromInt64(task.thrd_id());
+}
+
+/*static*/ int64_t PlanUtil::GetDeviceIndex(const TaskProto& task) {
+  return GetStreamId(task).device_id().device_index();
 }
 
 }  // namespace oneflow

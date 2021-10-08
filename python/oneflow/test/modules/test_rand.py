@@ -22,7 +22,8 @@ import oneflow as flow
 
 import oneflow.unittest
 from test_util import GenArgList
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_rand(test_case, device, shape):
@@ -30,6 +31,15 @@ def _test_rand(test_case, device, shape):
     y2 = flow.rand(*shape, device=flow.device(device))
 
     test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
+    test_case.assertTrue(shape == y1.shape)
+
+
+def _test_0d_rand(test_case, device, shape):
+    y1 = flow.rand(*shape, device=flow.device(device))
+    y2 = flow.rand(*shape, device=flow.device(device))
+    test_case.assertTrue(
+        np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4)
+    )  # 0d is [] and []
     test_case.assertTrue(shape == y1.shape)
 
 
@@ -58,12 +68,11 @@ def _test_with_generator(test_case, device, shape):
     y1 = flow.rand(
         *shape, dtype=flow.float32, device=flow.device(device), generator=gen
     )
-    y1_np = y1.numpy()
     gen.manual_seed(0)
     y2 = flow.rand(
         *shape, dtype=flow.float32, device=flow.device(device), generator=gen
     )
-    test_case.assertTrue(np.allclose(y1_np, y2.numpy(), atol=1e-4, rtol=1e-4))
+    test_case.assertTrue(np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -75,7 +84,15 @@ class TestConstantModule(flow.unittest.TestCase):
         test_case.assertEqual(x.sbp, sbp)
         test_case.assertEqual(x.placement, placement)
 
-    def test_cast(test_case):
+    def test_0d_randint(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [_test_0d_rand]
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["shape"] = [(2, 0, 4), (2, 0, 2)]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+    def test_cases(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_rand,

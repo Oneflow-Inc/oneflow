@@ -21,6 +21,8 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/functional/impl/common.h"
+#include "oneflow/core/functional/functional.h"
+#include "oneflow/core/functional/tensor_processor.h"
 
 namespace oneflow {
 namespace one {
@@ -58,6 +60,23 @@ class InplaceableUnaryFunctor {
  protected:
   InplaceableUnaryFunctor() = default;
   virtual ~InplaceableUnaryFunctor() = default;
+
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FloatUnaryFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    // The functor lowest Dtype is Float32. (For sigmoid, tanh and etc. )
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({x}, DType::Float()).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, input_tuple);
+  }
+
+ protected:
+  FloatUnaryFunctor() = default;
+  virtual ~FloatUnaryFunctor() = default;
 
   std::shared_ptr<OpExpr> op_;
 };

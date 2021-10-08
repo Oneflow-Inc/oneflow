@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/tensor_api.yaml.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -27,7 +28,6 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
-#include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/framework/nd_sbp.h"
 
@@ -176,7 +176,7 @@ class TensorWithShapeCtorFunctor {
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     Symbol<Device> device_;
     if (device) {
-      device_ = JUST(device.value());
+      device_ = JUST(device);
     } else {
       device_ = JUST(Device::New("cpu"));
     }
@@ -194,6 +194,23 @@ class ConsistentTensorWithShapeCtorFunctor {
   }
 };
 
+class AssignLocalTensorFunctor {
+ public:
+  AssignLocalTensorFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("assign").Input("ref").Input("value").Build());
+  }
+  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ref,
+                         const std::shared_ptr<one::Tensor>& value) const {
+    CHECK_OR_RETURN(ref->is_local() && value->is_local())
+        << "Both ref and value must be local tensor.";
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, value}));
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -206,6 +223,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConsistentTensorWithDataCtorFunctor>("ConsistentTensorWithDataCtor");
   m.add_functor<impl::TensorWithShapeCtorFunctor>("TensorWithShapeCtor");
   m.add_functor<impl::ConsistentTensorWithShapeCtorFunctor>("ConsistentTensorWithShapeCtor");
+  m.add_functor<impl::AssignLocalTensorFunctor>("AssignLocalTensorFunctor");
 }
 
 }  // namespace functional

@@ -92,9 +92,6 @@ class PReLU(Module):
         self.weight = flow.nn.Parameter(flow.Tensor(num_parameters).fill_(init))
 
     def forward(self, x):
-        assert (
-            self.num_parameters == 1 or self.num_parameters == x.shape[1]
-        ), f"num_parameters in prelu must be 1 or {x.shape[1]}"
         return flow._C.prelu(x, self.weight)
 
 
@@ -960,6 +957,50 @@ class Softsign(Module):
 
     def forward(self, x):
         return flow._C.softsign(x)
+
+
+class GLU(Module):
+    r"""The GLU activation.
+
+    Args:
+        input (Tensor, float): input tensor. 
+        dim (int, optional): dimension on which to split the input. Default: -1
+
+    Shape:
+        - Input: :math:`(\ast_1, N, \ast_2)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(\ast_1, M, \ast_2)` where :math:`M=N/2`
+
+    The formula is: 
+    
+    .. math::  
+
+        GLU(input) = GLU(a, b) = a \otimes sigmoid(b)
+
+    .. note::
+        where input is split in half along dim to form a and b, ⊗ is the element-wise product between matrices.
+
+    For example:
+    
+    .. code-block:: python
+    
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+        >>> m = nn.GLU()
+        >>> x = flow.tensor([[1, 2, 3, 4], [5, 6, 7, 8]], dtype=flow.float32)
+        >>> y = m(x)
+        >>> y
+        tensor([[0.9526, 1.9640],
+                [4.9954, 5.9980]], dtype=oneflow.float32)
+    
+    """
+
+    def __init__(self, dim: Optional[int] = -1):
+        super().__init__()
+        self.dim = dim
+
+    def forward(self, input):
+        return flow._C.glu(input, self.dim)
 
 
 if __name__ == "__main__":

@@ -18,27 +18,26 @@ limitations under the License.
 #include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/device/device_context.h"
+#include "oneflow/core/device/event_record.h"
 #include "oneflow/core/vm/cpu_allocator.h"
 #include "oneflow/core/kernel/chain_kernel_observer.h"
 #include "oneflow/core/kernel/cpu_check_numerics_kernel_observer.h"
 
 namespace oneflow {
 
-class CpuStreamContext;
-
-class CpuStreamContext : public StreamContext, public KernelObserverProvider {
+class CpuStreamContext : public StreamContext,
+                         public KernelObserverProvider,
+                         public DeviceCtxProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuStreamContext);
   explicit CpuStreamContext();
   virtual ~CpuStreamContext();
 
-  Maybe<void> OnActorThreadSetup() override;
-  Maybe<void> OnActorThreadTeardown() override;
-
   Maybe<void> AddCallback(std::function<void()> callback) override;
   Maybe<void> Sync() override;
-  std::shared_ptr<DeviceCtx> device_ctx() override;
+  std::shared_ptr<DeviceCtx> GetDeviceCtx() override;
   KernelObserver* GetKernelObserver() override;
+  DeviceType device_type() const override { return DeviceType::kCPU; }
 
  private:
   std::shared_ptr<DeviceCtx> device_ctx_;
@@ -47,7 +46,7 @@ class CpuStreamContext : public StreamContext, public KernelObserverProvider {
 
 namespace {
 
-class DeviceCtxImpl final : public DeviceCtx, public StreamContextProvider {
+class DeviceCtxImpl final : public DeviceCtx, public EventRecordProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DeviceCtxImpl);
   explicit DeviceCtxImpl(CpuStreamContext* stream_ctx) : stream_ctx_(stream_ctx) {}
@@ -62,7 +61,11 @@ class DeviceCtxImpl final : public DeviceCtx, public StreamContextProvider {
 
   vm::Allocator* mut_allocator() override { return Global<vm::CpuAllocator>::Get(); }
 
-  StreamContext* GetStreamContext() override { return stream_ctx_; }
+  DeviceType device_type() const override { return stream_ctx_->device_type(); }
+
+  std::shared_ptr<EventRecord> MakeEventRecord() override {
+    return std::make_shared<NaiveEventRecord>();
+  }
 
  private:
   CpuStreamContext* stream_ctx_;
@@ -81,10 +84,6 @@ CpuStreamContext::CpuStreamContext() {
 
 CpuStreamContext::~CpuStreamContext() = default;
 
-Maybe<void> CpuStreamContext::OnActorThreadSetup() { return Maybe<void>::Ok(); }
-
-Maybe<void> CpuStreamContext::OnActorThreadTeardown() { return Maybe<void>::Ok(); }
-
 Maybe<void> CpuStreamContext::AddCallback(std::function<void()> callback) {
   callback();
   return Maybe<void>::Ok();
@@ -92,7 +91,7 @@ Maybe<void> CpuStreamContext::AddCallback(std::function<void()> callback) {
 
 Maybe<void> CpuStreamContext::Sync() { return Maybe<void>::Ok(); }
 
-std::shared_ptr<DeviceCtx> CpuStreamContext::device_ctx() { return device_ctx_; }
+std::shared_ptr<DeviceCtx> CpuStreamContext::GetDeviceCtx() { return device_ctx_; }
 
 KernelObserver* CpuStreamContext::GetKernelObserver() { return kernel_observer_.get(); }
 

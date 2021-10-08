@@ -14,3 +14,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.nn.utils.clip_grad import clip_grad_norm_
+from oneflow.nn.utils.weight_norm import weight_norm
+from oneflow.nn.utils.weight_norm import remove_weight_norm

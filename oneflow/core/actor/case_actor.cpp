@@ -62,7 +62,8 @@ class CaseActor final : public Actor {
 
 void CaseActor::VirtualActorInit(const TaskProto& task_proto) {
   CHECK_EQ(1, exec_kernel_vec().size());
-  case_status_ = static_cast<CaseStatus*>(exec_kernel_vec().at(0).kernel_ctx->state());
+  case_status_ =
+      CHECK_NOTNULL(dynamic_cast<CaseStatus*>(exec_kernel_vec().at(0).kernel_ctx->state().get()));
   const int32_t output_bns_size =
       task_proto.exec_sequence().exec_node().Get(0).kernel_conf().op_attribute().output_bns_size();
   FOR_RANGE(int64_t, i, 0, output_bns_size) {

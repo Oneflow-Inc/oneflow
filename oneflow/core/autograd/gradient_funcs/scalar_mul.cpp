@@ -22,7 +22,7 @@ namespace one {
 
 struct ScalarMulCaptureState : public AutoGradCaptureState {
   bool requires_grad;
-  functional::Scalar operand;
+  Scalar operand;
 };
 
 class ScalarMul : public OpExprGradFunction<ScalarMulCaptureState> {
@@ -42,9 +42,9 @@ class ScalarMul : public OpExprGradFunction<ScalarMulCaptureState> {
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     bool has_float_operand = JUST(composed_attrs.GetAttr<bool>("has_float_operand"));
     if (has_float_operand) {
-      ctx->operand = functional::Scalar(JUST(composed_attrs.GetAttr<double>("float_operand")));
+      ctx->operand = Scalar(JUST(composed_attrs.GetAttr<double>("float_operand")));
     } else {
-      ctx->operand = functional::Scalar(JUST(composed_attrs.GetAttr<int64_t>("int_operand")));
+      ctx->operand = Scalar(JUST(composed_attrs.GetAttr<int64_t>("int_operand")));
     }
     return Maybe<void>::Ok();
   }

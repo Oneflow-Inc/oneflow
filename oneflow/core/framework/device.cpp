@@ -46,11 +46,12 @@ Device::Device(const std::string& type, int64_t device_id)
       schedule_local_dep_object_(nullptr) {}
 
 Maybe<void> Device::Init() {
+  if (type_ == "auto") { return Maybe<void>::Ok(); }
   DeviceType dev_type = JUST(DeviceType4DeviceTag(JUST(of_type())));
   mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, device_id_);
   const auto& opt_device_transport_tag = JUST(GetSharedTransportDeviceType());
   if (opt_device_transport_tag.has_value()) {
-    const auto& device_transport_tag = *JUST(opt_device_transport_tag.value());
+    const auto& device_transport_tag = *JUST(opt_device_transport_tag);
     transport_local_dep_object_ = JUST(GetLocalDepObject4Device(Device(device_transport_tag, 0)));
   }
   const auto& schedule_device_type = JUST(GetSharedScheduleDeviceType());
@@ -91,6 +92,8 @@ Maybe<const std::string&> Device::of_type() const {
       {"comm_net", "cpu"},
       {"sync_launched_nccl", "gpu"},
       {"async_launched_nccl", "gpu"},
+      {"critical_section", "cpu"},
+      {"auto", "auto"},  // Only used for auto generator currently.
   };
   return MapAt(type2device_tag, type());
 }
@@ -106,6 +109,7 @@ Maybe<const Optional<std::string>&> Device::GetSharedTransportDeviceType() const
       {"comm_net", Optional<std::string>()},
       {"sync_launched_nccl", Optional<std::string>("async_launched_nccl")},
       {"async_launched_nccl", Optional<std::string>("async_launched_nccl")},
+      {"critical_section", Optional<std::string>()},
   };
   return MapAt(type2type_for_shared_local_dep_object, type());
 }
@@ -121,38 +125,45 @@ Maybe<const std::string&> Device::GetSharedScheduleDeviceType() const {
       {"comm_net", "comm_net"},
       {"sync_launched_nccl", "comm_net"},
       {"async_launched_nccl", "async_launched_nccl"},
+      {"critical_section", "critical_section"},
   };
   return MapAt(type2type_for_shared_local_dep_object, type());
 }
 
 Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
-  // gpu.LocalCallOpKernel is shared between device `cuda` and device `cuda_h2d`.
   static const HashMap<std::string, std::string> type2instr_name{
       {"cpu", "cpu.LocalCallOpKernel"},
       {"gpu", "gpu.LocalCallOpKernel"},
       {"cuda", "gpu.LocalCallOpKernel"},
-      {"cuda_h2d", "gpu.LocalCallOpKernel"},
+      {"cuda_h2d", "cuda_h2d.LocalCallOpKernel"},
       {"cuda_d2h", "cuda_d2h.LocalCallOpKernel"},
       {"comm_net", "cpu.LocalCallOpKernel"},
       {"sync_launched_nccl", "gpu.LocalCallOpKernel"},
       {"async_launched_nccl", "async.gpu.LocalCallOpKernel"},
+      // no compute instruction on critical_section device.
+      {"critical_section", "UNIMPLEMENTED INSTRUCTION NAME"},
   };
   return MapAt(type2instr_name, type);
 }
 
 Maybe<size_t> Device::instr_local_dep_object_pool_size() const {
-  static const size_t kDoubleBufferPoolSize = 2;
+  static const size_t kSmallPoolSize = 4;
   static const HashMap<std::string, size_t> type2pool_size{
       {"cpu", GetInstructionHighWaterMark()},
       {"gpu", GetInstructionHighWaterMark()},
       {"cuda", GetInstructionHighWaterMark()},
-      {"cuda_h2d", kDoubleBufferPoolSize},
-      {"cuda_d2h", kDoubleBufferPoolSize},
+      {"cuda_h2d", kSmallPoolSize},
+      {"cuda_d2h", GetInstructionHighWaterMark()},
       {"comm_net", GetInstructionHighWaterMark()},
       {"sync_launched_nccl", GetInstructionHighWaterMark()},
       {"async_launched_nccl", GetInstructionHighWaterMark()},
   };
   return MapAt(type2pool_size, type());
+}
+
+// TODO(jianhao): move this configuration into stream
+Maybe<bool> Device::need_soft_sync_stream() const {
+  return JUST(local_call_instruction_name()) == "gpu.LocalCallOpKernel";
 }
 
 Maybe<const std::string&> Device::local_call_instruction_name() const {
@@ -216,5 +227,20 @@ Maybe<Symbol<ParallelDesc>> RawPlacement4Device(Symbol<Device> device) {
 decltype(Device::GetPlacement) Device::GetPlacement =
     DECORATE(&RawGetPlacement, ThreadLocalCopiable);
 decltype(Placement4Device) Placement4Device = DECORATE(&RawPlacement4Device, ThreadLocal);
+
+Maybe<void> ParsingDeviceTag(const std::string& device_tag, std::string* device_name,
+                             int* device_index) {
+  std::string::size_type pos = device_tag.find(':');
+  if (pos == std::string::npos) {
+    *device_name = device_tag;
+    *device_index = -1;
+  } else {
+    std::string index_str = device_tag.substr(pos + 1);
+    CHECK_OR_RETURN(IsStrInt(index_str)) << "Invalid device " << device_tag;
+    *device_name = device_tag.substr(0, pos);
+    *device_index = std::stoi(index_str);
+  }
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow

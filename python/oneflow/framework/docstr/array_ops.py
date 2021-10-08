@@ -104,3 +104,76 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.batch_gather,
+    """Gather the element in batch dims. 
+    
+    Args:
+        in (Tensor): the input tensor. 
+        indices (Tensor): the indices tensor, its dtype must be int32/64. 
+
+    For example:
+
+    Example 1: 
+
+    .. code-block:: python
+
+        >>> import oneflow as flow 
+        >>> import numpy as np 
+
+        >>> x = flow.Tensor(np.array([[1, 2, 3], 
+        ...                           [4, 5, 6]]))
+        >>> indices = flow.tensor(np.array([1, 0]).astype(np.int64))
+        >>> out = flow.batch_gather(x, indices)
+
+        tensor([[4., 5., 6.],
+                [1., 2., 3.]], dtype=oneflow.float32)
+
+    Example 2: 
+
+    .. code-block:: python
+
+        >>> import oneflow as flow 
+        >>> import numpy as np 
+
+        >>> x = flow.Tensor(np.array([[[1, 2, 3], [4, 5, 6]], 
+        ...                           [[1, 2, 3], [4, 5, 6]]]))
+        >>> indices = flow.tensor(np.array([[1, 0], 
+        ...                                 [0, 1]]).astype(np.int64))
+        >>> out = flow.batch_gather(x, indices)
+
+        tensor([[[4., 5., 6.],
+                 [1., 2., 3.]],
+                [[1., 2., 3.],
+                 [4., 5., 6.]]], dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow._C.transpose,
+    """Returns a tensor that is a transposed version of input. The given dimensions dim0 and dim1 are swapped.
+
+    The resulting out tensor shares its underlying storage with the input tensor, so changing the content of one would change the content of the other.
+
+    Args:
+        input (oneflow.Tensor): The input tensor.
+        dim0 (int): the first dimension to be transposed.
+        dim1 (int): the second dimension to be transposed.
+    Returns:
+        Tensor: A transposed tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> input = flow.tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> out = flow.transpose(input, 0, 1).shape
+        >>> out
+        oneflow.Size([6, 2, 5, 3])
+
+    """,
+)

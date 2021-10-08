@@ -42,7 +42,7 @@ def matmul_op(input, other):
         >>> input2 = flow.tensor(np.random.randn(6, 5), dtype=flow.float32)
         >>> of_out = flow.matmul(input1, input2)
         >>> of_out.shape
-        flow.Size([2, 5])
+        oneflow.Size([2, 5])
 
     """
     return flow._C.matmul(input, other)

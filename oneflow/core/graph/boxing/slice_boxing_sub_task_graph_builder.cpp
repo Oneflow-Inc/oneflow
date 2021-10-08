@@ -151,7 +151,8 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
       thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(src_node->machine_id());
     } else if (src_node->device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
-      thrd_id = GetBoxingGpuThrdId(src_node->machine_id(), src_node->GpuPhyId(), "D2H");
+      thrd_id = GetBoxingGpuThrdId(src_node->machine_id(),
+                                   src_node->stream_id().device_id().device_index(), "D2H");
 #else
       UNIMPLEMENTED();
 #endif
@@ -275,7 +276,8 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
           } else if (in_pd.device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
             TaskNode* node = in_nodes.at(in_parallel_ids.at(out_id % in_parallel_ids.size()));
-            local_concat_thrd_id = GetBoxingGpuThrdId(node->machine_id(), node->GpuPhyId(), "D2H");
+            local_concat_thrd_id = GetBoxingGpuThrdId(
+                node->machine_id(), node->stream_id().device_id().device_index(), "D2H");
 #else
             UNIMPLEMENTED();
 #endif
@@ -336,7 +338,8 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
               } else if (in_pd.device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
                 TaskNode* node = in_nodes.at(in_parallel_ids.at(out_id % in_parallel_ids.size()));
-                local_add_thrd_id = GetBoxingGpuThrdId(node->machine_id(), node->GpuPhyId(), "D2H");
+                local_add_thrd_id = GetBoxingGpuThrdId(
+                    node->machine_id(), node->stream_id().device_id().device_index(), "D2H");
 #else
                 UNIMPLEMENTED();
 #endif
@@ -382,7 +385,8 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
         } else if (in_pd.device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
           TaskNode* node = in_nodes.at(in_ids_on_machine.front());
-          local_add_thrd_id = GetBoxingGpuThrdId(node->machine_id(), node->GpuPhyId(), "H2D");
+          local_add_thrd_id = GetBoxingGpuThrdId(
+              node->machine_id(), node->stream_id().device_id().device_index(), "H2D");
 #else
           UNIMPLEMENTED();
 #endif

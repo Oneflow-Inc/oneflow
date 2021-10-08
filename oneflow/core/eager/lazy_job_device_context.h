@@ -62,6 +62,11 @@ class LazyJobDeviceCtx final : public DeviceCtx {
     return (vm::Allocator*)nullptr;
   }
 
+  DeviceType device_type() const override {
+    UNIMPLEMENTED();
+    return DeviceType::kInvalidDevice;
+  }
+
   std::queue<std::weak_ptr<NNGraphIf>>* mut_queue() { return &queue_; }
   std::mutex* mut_mutex() { return &mutex_; }
   std::condition_variable* mut_cond() { return &cond_; }

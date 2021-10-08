@@ -34,10 +34,6 @@ class IDMgr final {
   int64_t NewMemBlockId() { return mem_block_id_count_++; }
   int64_t NewChunkId() { return chunk_id_count_++; }
 
-  // GetFromThrdId
-  DeviceType GetDeviceTypeFromThrdId(int64_t thrd_id) const;
-  int64_t GetGpuPhyIdFromThrdId(int64_t thrd_id) const;
-
   // Runtime
   DeviceType GetDeviceTypeFromActorId(int64_t actor_id) const;
   int64_t MachineId4ActorId(int64_t actor_id) const;

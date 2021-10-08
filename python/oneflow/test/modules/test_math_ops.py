@@ -18,7 +18,8 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 import oneflow as flow
@@ -158,6 +159,16 @@ class TestSqrt(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         z = x.sqrt()
         return z
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestExp(flow.unittest.TestCase):
+    @autotest()
+    def test_flow_exp_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.exp(x)
+        return y
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -430,6 +441,24 @@ class TestMaximum(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=3, dim0=k1, dim1=1, dim2=1)
         y = random_pytorch_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3)
         return torch.maximum(x, y)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestFloordiv(flow.unittest.TestCase):
+    @autotest(auto_backward=False)
+    def test_elementwise_floordiv_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        y = random_pytorch_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+
+        return torch.floor_divide(x, y)
+
+    @autotest(auto_backward=False)
+    def test_tensor_floordiv_scalar_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        y = random().to(int)
+        return torch.floor_divide(x, y)
 
 
 if __name__ == "__main__":

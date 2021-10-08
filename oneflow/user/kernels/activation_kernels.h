@@ -185,6 +185,18 @@ struct SoftSignGradFunctor {
   }
 };
 
+template<typename T>
+struct ReluFunctor {
+  OF_DEVICE_FUNC explicit ReluFunctor() {}
+  OF_DEVICE_FUNC T operator()(T x) const { return x > static_cast<T>(0) ? x : static_cast<T>(0); }
+};
+
+template<typename T>
+struct ReluGradFunctor {
+  OF_DEVICE_FUNC explicit ReluGradFunctor() {}
+  OF_DEVICE_FUNC T operator()(T y, T dy) const { return (y > static_cast<T>(0)) * dy; }
+};
+
 #define REGISTER_ELU_KERNEL(device, dtype)                        \
   REGISTER_UNARY_ELEMWISE_USER_KERNEL(                            \
       device, "elu", EluFunctor, dtype, dtype,                    \
@@ -288,6 +300,38 @@ struct SoftSignGradFunctor {
       device, "softsign_grad", SoftSignGradFunctor, dtype, dtype, dtype,                          \
       [](user_op::KernelComputeContext* ctx) { return SoftSignGradFunctor<dtype>(); }, "dx", "x", \
       "dy");
+
+// For Relu Inplace Proposal Fn.
+#define REGISTER_RELU_FORWARD_KERNEL(device, dtype)                                                \
+  REGISTER_USER_KERNEL("relu")                                                                     \
+      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                         \
+        return new UnaryElemwiseXpuKernel<device, ReluFunctor<dtype>, dtype, dtype>(               \
+            [](user_op::KernelComputeContext* ctx) { return ReluFunctor<dtype>(); }, "out", "in"); \
+      })                                                                                           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                         \
+                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))            \
+      .SetInplaceProposalFn(                                                                       \
+          [](const user_op::InferContext&,                                                         \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {               \
+            OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                      \
+            return Maybe<void>::Ok();                                                              \
+          });
+
+#define REGISTER_RELU_BACKWARD_KERNEL(device, dtype)                                             \
+  REGISTER_USER_KERNEL("relu_grad")                                                              \
+      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                       \
+        return new BinaryElemwiseXpuKernel<device, ReluGradFunctor<dtype>, dtype, dtype, dtype>( \
+            [](user_op::KernelComputeContext* ctx) { return ReluGradFunctor<dtype>(); }, "dx",   \
+            "y", "dy");                                                                          \
+      })                                                                                         \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
+                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))           \
+      .SetInplaceProposalFn(                                                                     \
+          [](const user_op::InferContext&,                                                       \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {             \
+            OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                     \
+            return Maybe<void>::Ok();                                                            \
+          });
 
 }  // namespace oneflow
 

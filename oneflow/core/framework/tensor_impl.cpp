@@ -34,9 +34,16 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-void TensorImpl::set_requires_grad(bool requires_grad) {
+Maybe<void> TensorImpl::set_requires_grad(bool requires_grad) {
+  if (requires_grad) {
+    const DataType tensor_dtype = dtype();
+    CHECK_OR_RETURN(IsFloatingDataType(tensor_dtype) || tensor_dtype == DataType::kBFloat16
+                    || tensor_dtype == DataType::kFloat16)
+        << "RuntimeError: only Tensors of floating point can require gradients";
+  }
   requires_grad_ = requires_grad;
   if (autograd_meta_) { autograd_meta_->set_requires_grad(requires_grad); }
+  return Maybe<void>::Ok();
 }
 
 Maybe<Tensor> TensorImpl::acc_grad() const {
@@ -92,6 +99,11 @@ Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
       [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorBuffer>&) {
         CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
           JUST(builder->ReleaseTensor(eager_blob_object, parallel_desc));
+          if (eager_blob_object->last_used_device().has_value()) {
+            const auto& device = JUST(eager_blob_object->producer_op_device());
+            auto* local_dep_object = JUST(eager_blob_object->compute_local_dep_object());
+            JUST(PutLocalDepObjectToDevicePool(device, local_dep_object));
+          }
           return Maybe<void>::Ok();
         }));
       });
@@ -207,7 +219,7 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_s
                               const ParallelDesc& parallel_desc,
                               const Optional<int64_t>& parallel_id) {
   if (parallel_id.has_value()) {
-    return GetPhysicalShape(logical_shape, nd_sbp, parallel_desc, JUST(parallel_id.value()));
+    return GetPhysicalShape(logical_shape, nd_sbp, parallel_desc, JUST(parallel_id));
   } else {
     return std::make_shared<Shape>(DimVector(logical_shape.NumAxes(), 0));
   }
@@ -237,7 +249,7 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_s
     const auto& dtype_symbol = JUST(DType::Get(dtype));
     const auto& empty = JUST(functional::Empty(*cur_rank_phy_shape, dtype_symbol, device));
     cur_rank_phy_tensor = JUST(empty->AsMirroredTensor());
-    cur_rank_phy_tensor->set_requires_grad(requires_grad);
+    JUST(cur_rank_phy_tensor->set_requires_grad(requires_grad));
     cur_rank_phy_tensor->set_is_leaf(is_leaf);
   }
   auto* tensor_impl =

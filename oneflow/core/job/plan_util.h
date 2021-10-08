@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/common/id_util.h"
 
 namespace oneflow {
 
@@ -45,6 +46,8 @@ struct PlanUtil {
   static void PopulateOpAttibute(
       Plan* plan,
       const PbMap<int64_t, ::oneflow::OpAttributeRefTable>& job_id2op_attribute_ref_table);
+  static StreamId GetStreamId(const TaskProto& task);
+  static int64_t GetDeviceIndex(const TaskProto& task);
 };
 
 }  // namespace oneflow

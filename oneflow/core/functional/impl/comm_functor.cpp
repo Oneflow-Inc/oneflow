@@ -27,7 +27,6 @@ limitations under the License.
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
-#include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/job/rank_group_scope.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
@@ -114,18 +113,30 @@ Maybe<one::UserOpExpr> EagerNcclS2S(Symbol<ParallelDesc> parallel_desc,
 
 auto* CachedEagerNcclS2SOpExpr = DECORATE(&EagerNcclS2S, ThreadLocal);
 
+Maybe<one::UserOpExpr> EagerNcclReduce(Symbol<ParallelDesc> parallel_desc, int64_t root) {
+  return one::OpBuilder("eager_nccl_reduce", *JUST(UniqueStr("eager_nccl_reduce")))
+      .Input("in")
+      .Output("out")
+      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Attr<int64_t>("root", root)
+      .Build();
+}
+
+auto* CachedEagerNcclReduceOpExpr = DECORATE(&EagerNcclReduce, ThreadLocal);
+
 }  // namespace
 
 class BroadcastFunctor {
  public:
   BroadcastFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool inplace) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t src_rank,
+                           bool inplace) const {
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
     std::string device_type_str = JUST(x->device())->type();
     CHECK_OR_RETURN(device_type_str == "cuda" || device_type_str == "cpu");
     DeviceType device_type = device_type_str == "cuda" ? DeviceType::kGPU : DeviceType::kCPU;
     const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
-    return one::Broadcast(x, parallel_desc, inplace);
+    return one::Broadcast(x, src_rank, parallel_desc, inplace);
   }
 };
 
@@ -178,7 +189,6 @@ class ConsistentAllReduceFunctor {
     {
       CHECK_OR_RETURN(x->is_consistent());
       CHECK_OR_RETURN(IsAllPartialSumNdSbp(JUST(x->nd_sbp())));
-      CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllReduceOpExpr(JUST(x->parallel_desc())));
@@ -195,12 +205,12 @@ class ConsistentReduceScatterFunctor {
       CHECK_OR_RETURN(x->is_consistent());
       if (op_type == "max") {
         CHECK_OR_RETURN(IsAllBroadcastNdSbp(JUST(x->nd_sbp())));
+        CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
       } else if (op_type == "sum") {
         CHECK_OR_RETURN(IsAllPartialSumNdSbp(JUST(x->nd_sbp())));
       } else {
         UNIMPLEMENTED_THEN_RETURN();
       }
-      CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedNcclReduceScatterOpExpr(JUST(x->parallel_desc()), op_type));
@@ -215,7 +225,6 @@ class ConsistentAllGatherFunctor {
     {
       CHECK_OR_RETURN(x->is_consistent());
       CHECK_OR_RETURN(IsAllSplitNdSbp(JUST(x->nd_sbp()), 0));
-      CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllGatherOpExpr(JUST(x->parallel_desc())));
@@ -238,7 +247,6 @@ class ConsistentS2SFunctor {
       CHECK_OR_RETURN(IsSplitSbp(out_nd_sbp->sbp_parallel(0)));
       CHECK_NE_OR_RETURN(in_nd_sbp->sbp_parallel(0).split_parallel().axis(),
                          out_nd_sbp->sbp_parallel(0).split_parallel().axis());
-      CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
     }
     std::shared_ptr<OpExpr> op_expr = JUST(
         CachedEagerNcclS2SOpExpr(JUST(x->parallel_desc()), SymbolOf(in_nd_sbp->sbp_parallel(0)),
@@ -286,9 +294,9 @@ class RecvFunctor {
     DataType data_type = DataType::kInvalidDataType;
     Symbol<Device> device;
     if (optional_shape.has_value() && optional_dtype.has_value() && optional_device.has_value()) {
-      shape = *JUST(optional_shape.value());
-      data_type = JUST(optional_dtype.value())->data_type();
-      device = JUST(optional_device.value());
+      shape = *JUST(optional_shape);
+      data_type = JUST(optional_dtype)->data_type();
+      device = JUST(optional_device);
     } else if (!optional_shape.has_value() && !optional_dtype.has_value()
                && !optional_device.has_value()) {
       FlatShape flat_shape{};
@@ -314,7 +322,7 @@ class RecvFunctor {
     OpExprInterpContext op_expr_interp_context(attrs, device);
 
     if (out.has_value()) {
-      std::shared_ptr<one::Tensor> out_tensor = JUST(out.value());
+      std::shared_ptr<one::Tensor> out_tensor = JUST(out);
       Symbol<Device> out_tensor_device = JUST(out_tensor->device());
       CHECK_OR_RETURN(out_tensor_device == device);
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
@@ -328,6 +336,42 @@ class RecvFunctor {
  private:
   std::shared_ptr<OpExpr> op_expr_;
 };
+
+class LocalReduceFunctor {
+ public:
+  LocalReduceFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t dst, bool inplace) const {
+    const auto& device = JUST(x->device());
+    { CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank()); }
+    static thread_local std::unordered_map<Symbol<RankGroup>, Symbol<ParallelDesc>>
+        rank_group2parallel_desc;
+    const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
+    auto iter = rank_group2parallel_desc.find(rank_group);
+    Symbol<ParallelDesc> parallel_desc;
+    if (iter == rank_group2parallel_desc.end()) {
+      ParallelConf parallel_conf;
+      parallel_conf.set_device_tag(JUST(device->of_type()));
+      JUST(rank_group->ForEachRank([&parallel_conf](int64_t rank) -> Maybe<void> {
+        parallel_conf.add_device_name("@" + std::to_string(rank) + ":"
+                                      + std::to_string(GlobalProcessCtx::LocalRank(rank)));
+        return Maybe<void>::Ok();
+      }));
+      parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
+      rank_group2parallel_desc[rank_group] = parallel_desc;
+    } else {
+      parallel_desc = iter->second;
+    }
+    std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerNcclReduceOpExpr(parallel_desc, dst));
+    if (inplace) {
+      TensorTuple outputs{x};
+      JUST(OpInterpUtil::Dispatch(*op_expr, {x}, &outputs));
+      return x;
+    } else {
+      return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+    }
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -339,6 +383,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConsistentS2SFunctor>("ConsistentS2S");
   m.add_functor<impl::SendFunctor>("Send");
   m.add_functor<impl::RecvFunctor>("Recv");
+  m.add_functor<impl::LocalReduceFunctor>("LocalReduce");
 };
 
 }  // namespace functional

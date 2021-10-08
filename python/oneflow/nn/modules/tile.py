@@ -61,7 +61,7 @@ def tile_op(input, reps):
         >>> input = flow.Tensor(x)
         >>> out = input.tile(reps=(3, 4))
         >>> out.size()
-        flow.Size([5, 6, 4])
+        oneflow.Size([5, 6, 4])
 
     """
 

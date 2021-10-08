@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/actor/actor.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/kernel/esac_kernel.h"
 
 namespace oneflow {
 
@@ -49,7 +50,7 @@ class EsacActor final : public Actor {
   int64_t GetCurProcessedRegstDescId() const;
 
   RegstSlot consumed_rs_;
-  int64_t cur_processed_regst_desc_id_;
+  int64_t cur_processed_regst_desc_id_{};
   HashMap<int64_t, int64_t> regst_desc_id2in_bn_id_;
 };
 
@@ -88,7 +89,8 @@ void EsacActor::Act() {
   CHECK(cur_regst);
   int64_t in_bn_id = InBnId4RegstDescId(cur_processed_regst_desc_id_);
   CHECK_EQ(exec_kernel_vec().size(), 1);
-  *static_cast<int64_t*>(exec_kernel_vec().at(0).kernel_ctx->state()) = in_bn_id;
+  CHECK_NOTNULL(dynamic_cast<EsacKernelState*>(exec_kernel_vec().at(0).kernel_ctx->state().get()))
+      ->value = in_bn_id;
   AsyncLaunchKernel([&](int64_t regst_desc_id) -> Regst* {
     if (cur_processed_regst_desc_id_ != regst_desc_id) { return nullptr; }
     return cur_regst;

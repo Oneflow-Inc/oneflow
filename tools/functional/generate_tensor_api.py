@@ -54,11 +54,11 @@ header_fmt = (
 #include <Python.h>
 
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/random_generator.h"
-#include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/functional/tensor_index.h"
 
 namespace oneflow {{

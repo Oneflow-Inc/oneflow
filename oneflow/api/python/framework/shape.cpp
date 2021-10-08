@@ -44,7 +44,7 @@ struct ShapeExportUtil final {
 
   static int GetItem(const Shape& shape, int idx) {
     const int len = shape.dim_vec().size();
-    if (idx < -len || idx >= len) { throw py::index_error("flow.Size index out of range"); }
+    if (idx < -len || idx >= len) { throw py::index_error("oneflow.Size index out of range"); }
     if (idx < 0) { idx += len; }
     return shape.At(idx);
   }
@@ -65,7 +65,7 @@ struct ShapeExportUtil final {
   static std::string ToString(const Shape& shape) {
     std::stringstream ss;
     int32_t idx = 0;
-    ss << "flow.Size([";
+    ss << "oneflow.Size([";
     for (int64_t dim : shape.dim_vec()) {
       ss << dim;
       if (++idx != shape.dim_vec().size()) { ss << ", "; }

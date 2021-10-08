@@ -33,7 +33,8 @@ void DeviceHelperStreamType::InitInstructionStatus(const Stream& stream,
 
 void DeviceHelperStreamType::DeleteInstructionStatus(const Stream& stream,
                                                      InstructionStatusBuffer* status_buffer) const {
-  // do nothing
+  auto* ptr = NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  ptr->~NaiveInstrStatusQuerier();
 }
 
 bool DeviceHelperStreamType::QueryInstructionStatusDone(

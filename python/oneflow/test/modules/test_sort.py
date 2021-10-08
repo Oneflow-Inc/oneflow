@@ -22,7 +22,8 @@ from test_util import GenArgList, type_name_to_flow_type
 
 import oneflow as flow
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_sort(test_case, data_shape, axis, descending, data_type, device):

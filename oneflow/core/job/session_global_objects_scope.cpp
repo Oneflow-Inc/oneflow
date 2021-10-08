@@ -91,7 +91,7 @@ AvailableMemDesc GetDryRunAvailableMemDesc() {
 
   AvailableMemDesc ret;
   AvailableMemDescOfMachine machine_amd_i;
-  for (int64_t i : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
+  for (int64_t i = 0; i < Global<ResourceDesc, ForSession>::Get()->process_ranks().size(); ++i) {
     *ret.add_machine_amd() = this_machine_mem_desc;
   }
   return ret;

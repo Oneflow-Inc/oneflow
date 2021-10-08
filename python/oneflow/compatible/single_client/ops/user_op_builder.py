@@ -266,6 +266,8 @@ class UserOpConfBuilder(object):
         """
         assert isinstance(input_blob_list, (tuple, list))
         input_conf = self.user_op_.op_conf_.user_conf.input
+        if input_name not in input_conf:
+            self.user_op_.op_conf_.user_conf.input_order.append(input_name)
         input_conf[input_name].ClearField("s")
         for input_blob in input_blob_list:
             input_conf[input_name].s.append(input_blob.unique_name)
@@ -275,6 +277,7 @@ class UserOpConfBuilder(object):
         input_conf = self.user_op_.op_conf_.user_conf.input
         assert input_blob_size >= 0
         assert input_name not in input_conf
+        self.user_op_.op_conf_.user_conf.input_order.append(input_name)
         for i in range(input_blob_size):
             unique_name = "%s/%s_%s" % (self.user_op_.op_conf_.name, input_name, i)
             input_conf[input_name].s.append(unique_name)
@@ -296,6 +299,7 @@ class UserOpConfBuilder(object):
             lbn = "{}/{}_{}".format(self.user_op_.op_conf_.name, output_name, i)
             out_lbns.append(lbn)
         self.user_op_.op_conf_.user_conf.output[output_name].s[:] = out_lbns
+        self.user_op_.op_conf_.user_conf.output_order.append(output_name)
         self.user_op_.output_arg_key_list_.append(output_name)
         return self
 

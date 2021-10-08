@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
-#include "oneflow/core/boxing/eager_boxing_interpreter_util.h"
 #include "oneflow/core/boxing/boxing_dividor_util.h"
 
 namespace oneflow {
@@ -44,11 +43,6 @@ Maybe<BoxingExprIf> NcclSxToBBoxingExpr() {
                          JUST(BoxingExpr("nccl-s-to-b"))));
 }
 
-Maybe<BoxingExprIf> NcclBToSxBoxingExpr() {
-  return JUST(BoxingExpr(JUST(InPlacementAndSplit(0)), JUST(BoxingExpr("nccl-b-to-s")),
-                         JUST(OptionalBoxing("nccl-s-to-s"))));
-}
-
 Maybe<BoxingExprIf> NcclPToSxBoxingExpr() {
   return JUST(BoxingExpr(JUST(OutPlacementAndSplit(0)), JUST(BoxingExpr("nccl-p-to-s")),
                          JUST(OptionalBoxing("nccl-s-to-s"))));
@@ -71,8 +65,8 @@ Maybe<BoxingExprIf> GenericBoxingExpr() {
   // in_placement contain out_placement or out_placement contain in_placement
   const auto& boxing_expr_with_inclusive_placement =
       JUST(BoxingExpr(JUST(OutPlacementAndBroadcast()), JUST(BoxingExpr("asymmetric-x-to-b")),
-                      JUST(BoxingExpr("identity")) | JUST(BoxingExpr("naive-b-to-p"))
-                          | JUST(NcclBToSxBoxingExpr())));
+                      JUST(BoxingExpr("identity")) | JUST(BoxingExpr("symmetric-b-to-p"))
+                          | JUST(BoxingExpr("symmetric-b-to-s"))));
   // in_placement and out_placement have no containment relationship
   // n to 1
   const auto& lhs_boxing = JUST(NToOneBoxingExpr());
@@ -85,17 +79,20 @@ Maybe<BoxingExprIf> GenericBoxingExpr() {
 }
 
 Maybe<BoxingExprIf> RawMainBoxingExpr() {
-  const auto& core =
-      JUST(BoxingExpr("identity")) | JUST(BoxingExpr("flatten-hierarchy"))
-      | JUST(BoxingExpr("cuda-copy-h2d")) | JUST(BoxingExpr("cuda-copy-d2h"))
-      | JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("nccl-p-to-s"))
-      | JUST(BoxingExpr("nccl-b-to-s")) | JUST(BoxingExpr("nccl-s-to-b"))
-      | JUST(BoxingExpr("nccl-s-to-s")) | JUST(BoxingExpr("naive-b-to-p"))
-      | JUST(BoxingExpr("symmetric-nd-sbp-to-nd-sbp"))
-      | JUST(BoxingExpr(JUST(InPlacementAndBroadcast()), JUST(BoxingExpr("nccl-s-to-b")),
-                        JUST(BoxingExpr("naive-b-to-p"))))
-      | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(OneToNBoxingExpr()) | JUST(NToOneBoxingExpr())
-      | JUST(BoxingExpr("naive-1-to-1")) | JUST(GenericBoxingExpr());
+  const auto& core = JUST(BoxingExpr("identity")) | JUST(BoxingExpr("flatten-hierarchy"))
+                     | JUST(BoxingExpr("cuda-copy-h2d")) | JUST(BoxingExpr("cuda-copy-d2h"))
+                     | JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("ccl-p-to-b"))
+                     | JUST(BoxingExpr("nccl-s-to-b")) | JUST(BoxingExpr("ccl-s-to-b"))
+                     | JUST(BoxingExpr("nccl-s-to-s")) | JUST(BoxingExpr("ccl-s-to-s"))
+                     | JUST(BoxingExpr("nccl-p-to-s")) | JUST(BoxingExpr("ccl-p-to-s"))
+                     | JUST(BoxingExpr("symmetric-b-to-p")) | JUST(BoxingExpr("symmetric-b-to-s"))
+                     | JUST(BoxingExpr("symmetric-s-to-p"))
+                     | JUST(BoxingExpr("symmetric-nd-sbp-to-nd-sbp"))
+                     | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(BoxingExpr("naive-s-to-s"))
+                     | JUST(BoxingExpr("naive-1-to-1")) | JUST(BoxingExpr("naive-s-to-b"))
+                     | JUST(BoxingExpr("naive-b-to-s")) | JUST(BoxingExpr("naive-p-to-b"))
+                     | JUST(BoxingExpr("naive-p-to-s")) | JUST(OneToNBoxingExpr())
+                     | JUST(NToOneBoxingExpr()) | JUST(GenericBoxingExpr());
   return core | JUST(OptionalCudaCopy(core));
 }
 

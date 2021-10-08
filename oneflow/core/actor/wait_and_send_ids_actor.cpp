@@ -44,8 +44,8 @@ class WaitAndSendIdsActor final : public Actor {
 
 void WaitAndSendIdsActor::VirtualActorInit(const TaskProto& task_proto) {
   CHECK_EQ(exec_kernel_vec().size(), 1);
-  wait_and_send_ids_status_ =
-      static_cast<WaitAndSendIdsStatus*>(exec_kernel_vec().at(0).kernel_ctx->state());
+  wait_and_send_ids_status_ = CHECK_NOTNULL(
+      dynamic_cast<WaitAndSendIdsStatus*>(exec_kernel_vec().at(0).kernel_ctx->state().get()));
   wait_and_send_ids_status_->buffer_status_ = kBufferStatusSuccess;
   wait_and_send_ids_status_->in_id_ = 0;
   wait_and_send_ids_status_->out_idx_ = 0;

@@ -42,7 +42,7 @@ def concat_op(inputs, dim=0):
 
         >>> out = flow.cat([input1, input2, input3], dim=1)
         >>> out.shape
-        flow.Size([2, 18, 5, 3])
+        oneflow.Size([2, 18, 5, 3])
 
     """
     if len(inputs) == 1:

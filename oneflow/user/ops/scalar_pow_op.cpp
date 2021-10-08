@@ -21,7 +21,10 @@ namespace {
 
 REGISTER_USER_OP("scalar_pow")
     .Input("in")
-    .Attr<double>("exponent")
+    .Attr<bool>("has_int_operand")
+    .Attr<bool>("has_float_operand")
+    .Attr<int64_t>("int_operand")
+    .Attr<double>("float_operand")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
@@ -45,7 +48,10 @@ REGISTER_USER_OP("scalar_pow")
 REGISTER_USER_OP("scalar_pow_grad")
     .Input("x")
     .Input("dy")
-    .Attr<double>("exponent")
+    .Attr<bool>("has_int_operand")
+    .Attr<bool>("has_float_operand")
+    .Attr<int64_t>("int_operand")
+    .Attr<double>("float_operand")
     .Output("dx")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("dx", 0) = ctx->InputShape("x", 0);
@@ -75,7 +81,10 @@ REGISTER_USER_OP_GRAD("scalar_pow")
         return builder.OpTypeName("scalar_pow_grad")
             .InputBind("x", ctx->FwOp().input("in", 0))
             .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-            .Attr<double>("exponent", ctx->FwOp().attr<double>("exponent"))
+            .Attr<bool>("has_int_operand", ctx->FwOp().attr<bool>("has_int_operand"))
+            .Attr<bool>("has_float_operand", ctx->FwOp().attr<bool>("has_float_operand"))
+            .Attr<int64_t>("int_operand", ctx->FwOp().attr<int64_t>("int_operand"))
+            .Attr<double>("float_operand", ctx->FwOp().attr<double>("float_operand"))
             .Output("dx")
             .Build();
       });
