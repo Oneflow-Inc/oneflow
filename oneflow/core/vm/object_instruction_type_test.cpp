@@ -57,7 +57,7 @@ TEST(ControlStreamType, new_object) {
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
-    INTRUSIVE_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    INTRUSIVE_LIST_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }
 
@@ -73,7 +73,7 @@ TEST(ControlStreamType, delete_object) {
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
-    INTRUSIVE_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    INTRUSIVE_LIST_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }
 

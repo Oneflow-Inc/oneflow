@@ -54,7 +54,7 @@ void TestInitSymbolInstructionType(const std::string& instr_type_name) {
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
-    INTRUSIVE_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    INTRUSIVE_LIST_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
   auto* logical_object = vm->mut_id2logical_object()->FindPtr(vm::IdUtil::GetTypeId(symbol_id));
   ASSERT_NE(logical_object, nullptr);

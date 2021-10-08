@@ -210,7 +210,7 @@ TEST(List, UNSAFE_FOR_EACH_PTR) {
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   int i = 0;
-  INTRUSIVE_LIST_UNSAFE_FOR_EACH_PTR(&foo_list, item) {
+  INTRUSIVE_LIST_UNSAFE_FOR_EACH_PTR(item, &foo_list) {
     if (i == 0) {
       ASSERT_TRUE(item == item0.Mutable());
     } else if (i == 1) {
@@ -228,7 +228,7 @@ TEST(List, FOR_EACH) {
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   int i = 0;
-  INTRUSIVE_LIST_FOR_EACH(&foo_list, item) {
+  INTRUSIVE_LIST_FOR_EACH(item, &foo_list) {
     if (i == 0) {
       ASSERT_TRUE(item == item0);
       foo_list.Erase(item.Mutable());
@@ -270,7 +270,7 @@ TEST(List, intrusive_list_for_each) {
   ASSERT_EQ(item0->ref_cnt(), 2);
   ASSERT_EQ(item1->ref_cnt(), 2);
   int i = 0;
-  INTRUSIVE_LIST_FOR_EACH(&foo_list, item) {
+  INTRUSIVE_LIST_FOR_EACH(item, &foo_list) {
     if (i == 0) {
       ASSERT_TRUE(item == item0);
       foo_list.Erase(item.Mutable());
@@ -319,7 +319,7 @@ TEST(List, nested_list_delete) {
   ASSERT_EQ(item0->ref_cnt(), 2);
   ASSERT_EQ(item1->ref_cnt(), 2);
   int i = 0;
-  INTRUSIVE_LIST_UNSAFE_FOR_EACH_PTR(&foo_list, item) {
+  INTRUSIVE_LIST_UNSAFE_FOR_EACH_PTR(item, &foo_list) {
     if (i == 0) {
       ASSERT_TRUE(item == item0.Mutable());
     } else if (i == 1) {

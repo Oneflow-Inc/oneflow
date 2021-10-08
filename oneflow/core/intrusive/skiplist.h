@@ -21,20 +21,20 @@ limitations under the License.
 
 namespace oneflow {
 
-#define INTRUSIVE_SKIPLIST_FOR_EACH(skiplist_ptr, elem)                                         \
-  _INTRUSIVE_SKIPLIST_FOR_EACH(std::remove_pointer<decltype(skiplist_ptr)>::type, skiplist_ptr, \
-                               elem)
+#define INTRUSIVE_SKIPLIST_FOR_EACH(elem, skiplist_ptr)                                 \
+  _INTRUSIVE_SKIPLIST_FOR_EACH(std::remove_pointer<decltype(skiplist_ptr)>::type, elem, \
+                               skiplist_ptr)
 
-#define INTRUSIVE_SKIPLIST_FOR_EACH_PTR(skiplist_ptr, elem)                           \
-  _INTRUSIVE_SKIPLIST_FOR_EACH_PTR(std::remove_pointer<decltype(skiplist_ptr)>::type, \
-                                   skiplist_ptr, elem)
+#define INTRUSIVE_SKIPLIST_FOR_EACH_PTR(elem, skiplist_ptr)                                 \
+  _INTRUSIVE_SKIPLIST_FOR_EACH_PTR(std::remove_pointer<decltype(skiplist_ptr)>::type, elem, \
+                                   skiplist_ptr)
 
-#define INTRUSIVE_SKIPLIST_UNSAFE_FOR_EACH_PTR(skiplist_ptr, elem)                           \
-  _INTRUSIVE_SKIPLIST_UNSAFE_FOR_EACH_PTR(std::remove_pointer<decltype(skiplist_ptr)>::type, \
-                                          skiplist_ptr, elem)
+#define INTRUSIVE_SKIPLIST_UNSAFE_FOR_EACH_PTR(elem, skiplist_ptr)                                 \
+  _INTRUSIVE_SKIPLIST_UNSAFE_FOR_EACH_PTR(std::remove_pointer<decltype(skiplist_ptr)>::type, elem, \
+                                          skiplist_ptr)
 // details
 
-#define _INTRUSIVE_SKIPLIST_FOR_EACH(skiplist_type, skiplist_ptr, elem)                      \
+#define _INTRUSIVE_SKIPLIST_FOR_EACH(skiplist_type, elem, skiplist_ptr)                      \
   for (intrusive::SharedPtr<skiplist_type::value_type> elem, *end_if_not_null = nullptr;     \
        end_if_not_null == nullptr; end_if_not_null = nullptr, ++end_if_not_null)             \
   LIST_ENTRY_FOR_EACH_WITH_EXPR(                                                             \
@@ -43,14 +43,14 @@ namespace oneflow {
           skiplist_type::ContainerLevelZeroLinkOffset()>::FieldPtr4StructPtr(skiplist_ptr)), \
       skiplist_type::elem_level0_entry_struct_field, elem_ptr, (elem.Reset(elem_ptr), true))
 
-#define _INTRUSIVE_SKIPLIST_FOR_EACH_PTR(skiplist_type, skiplist_ptr, elem)                  \
+#define _INTRUSIVE_SKIPLIST_FOR_EACH_PTR(skiplist_type, elem, skiplist_ptr)                  \
   LIST_ENTRY_FOR_EACH(                                                                       \
       (StructField<                                                                          \
           skiplist_type, intrusive::ListEntry,                                               \
           skiplist_type::ContainerLevelZeroLinkOffset()>::FieldPtr4StructPtr(skiplist_ptr)), \
       skiplist_type::elem_level0_entry_struct_field, elem)
 
-#define _INTRUSIVE_SKIPLIST_UNSAFE_FOR_EACH_PTR(skiplist_type, skiplist_ptr, elem)           \
+#define _INTRUSIVE_SKIPLIST_UNSAFE_FOR_EACH_PTR(skiplist_type, elem, skiplist_ptr)           \
   LIST_ENTRY_UNSAFE_FOR_EACH(                                                                \
       (StructField<                                                                          \
           skiplist_type, intrusive::ListEntry,                                               \

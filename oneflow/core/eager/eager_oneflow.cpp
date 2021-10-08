@@ -103,7 +103,7 @@ Maybe<void> EagerOneflow::RunLogicalInstruction(vm::InstructionMsgList* instruct
   auto* repeated_instruction_proto = cluster_instruction.mutable_eager_instruction()
                                          ->mutable_instruction_list()
                                          ->mutable_instruction();
-  INTRUSIVE_LIST_FOR_EACH_PTR(instruction_list, instruction_msg) {
+  INTRUSIVE_LIST_FOR_EACH_PTR(instruction_msg, instruction_list) {
     instruction_msg->ToProto(repeated_instruction_proto->Add());
   }
   eager_symbol_list.ToProto(

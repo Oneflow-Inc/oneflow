@@ -23,18 +23,18 @@ limitations under the License.
 
 namespace oneflow {
 
-#define INTRUSIVE_LIST_FOR_EACH(list_ptr, elem) \
-  _INTRUSIVE_LIST_FOR_EACH(std::remove_pointer<decltype(list_ptr)>::type, list_ptr, elem)
+#define INTRUSIVE_LIST_FOR_EACH(elem, list_ptr) \
+  _INTRUSIVE_LIST_FOR_EACH(std::remove_pointer<decltype(list_ptr)>::type, elem, list_ptr)
 
-#define INTRUSIVE_LIST_FOR_EACH_PTR(list_ptr, elem) \
-  _INTRUSIVE_LIST_FOR_EACH_PTR(std::remove_pointer<decltype(list_ptr)>::type, list_ptr, elem)
+#define INTRUSIVE_LIST_FOR_EACH_PTR(elem, list_ptr) \
+  _INTRUSIVE_LIST_FOR_EACH_PTR(std::remove_pointer<decltype(list_ptr)>::type, elem, list_ptr)
 
-#define INTRUSIVE_LIST_UNSAFE_FOR_EACH_PTR(list_ptr, elem) \
-  _INTRUSIVE_LIST_UNSAFE_FOR_EACH_PTR(std::remove_pointer<decltype(list_ptr)>::type, list_ptr, elem)
+#define INTRUSIVE_LIST_UNSAFE_FOR_EACH_PTR(elem, list_ptr) \
+  _INTRUSIVE_LIST_UNSAFE_FOR_EACH_PTR(std::remove_pointer<decltype(list_ptr)>::type, elem, list_ptr)
 
 // details
 
-#define _INTRUSIVE_LIST_FOR_EACH(list_type, list_ptr, elem)                                   \
+#define _INTRUSIVE_LIST_FOR_EACH(list_type, elem, list_ptr)                                   \
   for (intrusive::SharedPtr<typename list_type::value_type> elem, *end_if_not_null = nullptr; \
        end_if_not_null == nullptr; end_if_not_null = nullptr, ++end_if_not_null)              \
   LIST_ENTRY_FOR_EACH_WITH_EXPR(                                                              \
@@ -42,13 +42,13 @@ namespace oneflow {
                    list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)),          \
       list_type::value_entry_struct_field, elem_ptr, (elem.Reset(elem_ptr), true))
 
-#define _INTRUSIVE_LIST_FOR_EACH_PTR(list_type, list_ptr, elem)                      \
+#define _INTRUSIVE_LIST_FOR_EACH_PTR(list_type, elem, list_ptr)                      \
   LIST_ENTRY_FOR_EACH(                                                               \
       (StructField<typename list_type, intrusive::ListEntry,                         \
                    list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)), \
       list_type::value_entry_struct_field, elem)
 
-#define _INTRUSIVE_LIST_UNSAFE_FOR_EACH_PTR(list_type, list_ptr, elem)               \
+#define _INTRUSIVE_LIST_UNSAFE_FOR_EACH_PTR(list_type, elem, list_ptr)               \
   LIST_ENTRY_UNSAFE_FOR_EACH(                                                        \
       (StructField<typename list_type, intrusive::ListEntry,                         \
                    list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)), \

@@ -243,7 +243,7 @@ TEST(SkipList, FOR_EACH) {
       ASSERT_EQ(exists[i]->ref_cnt(), 2);
     }
     int value = -50;
-    INTRUSIVE_SKIPLIST_UNSAFE_FOR_EACH_PTR(&foo_map, foo) {
+    INTRUSIVE_SKIPLIST_UNSAFE_FOR_EACH_PTR(foo, &foo_map) {
       ASSERT_EQ(foo->foo_map_key(), value);
       ++value;
     }

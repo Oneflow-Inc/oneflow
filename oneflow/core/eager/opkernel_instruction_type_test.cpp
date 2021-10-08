@@ -128,7 +128,7 @@ TEST(OpkernelInstructionType, new_opkernel) {
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
-    INTRUSIVE_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    INTRUSIVE_LIST_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }
 
@@ -157,7 +157,7 @@ TEST(OpkernelInstructionType, delete_opkernel) {
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
-    INTRUSIVE_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    INTRUSIVE_LIST_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }
 
@@ -202,7 +202,7 @@ TEST(OpkernelInstructionType, call_opkernel) {
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
-    INTRUSIVE_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    INTRUSIVE_LIST_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }
 
@@ -280,7 +280,7 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
-    INTRUSIVE_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    INTRUSIVE_LIST_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }
 #endif
@@ -329,7 +329,7 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
-    INTRUSIVE_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    INTRUSIVE_LIST_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }
 
@@ -406,7 +406,7 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
-    INTRUSIVE_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    INTRUSIVE_LIST_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }
 #endif
