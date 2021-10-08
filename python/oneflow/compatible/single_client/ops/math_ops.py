@@ -87,12 +87,11 @@ def add(
         return broadcast_add(x, y, name)
 
 
-def _recursive_build_add_n(inputs, name=None):
+def _build_add_n(inputs, name=None):
     inputs = list(inputs)
-    kernel_max_inputs = 8
     if len(inputs) == 1:
         return inputs[0]
-    elif len(inputs) <= kernel_max_inputs:
+    else:
         return (
             flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("AddN_")
@@ -104,11 +103,6 @@ def _recursive_build_add_n(inputs, name=None):
             .InferAndTryRun()
             .RemoteBlobList()[0]
         )
-    else:
-        assert len(inputs) > kernel_max_inputs
-        new_inputs = inputs[kernel_max_inputs:]
-        new_inputs.append(_recursive_build_add_n(inputs[:kernel_max_inputs]))
-        return _recursive_build_add_n(new_inputs)
 
 
 def add_n(
@@ -145,7 +139,7 @@ def add_n(
         # out [2., 3., 4.]
 
     """
-    return _recursive_build_add_n(inputs, name)
+    return _build_add_n(inputs, name)
 
 
 def subtract(
