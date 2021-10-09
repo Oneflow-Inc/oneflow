@@ -26,6 +26,5 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
         [](const std::string& lib_path) { MutSharedLibPaths()->insert(lib_path); });
 }
 
-#endif  // WITH_MLIR
-
 }  // namespace oneflow
+#endif  // WITH_MLIR
