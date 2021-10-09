@@ -1478,7 +1478,7 @@ class TestTensor(flow.unittest.TestCase):
         return y
 
 
-def _test_consistent_tensor_numpy(test_case, device, sbp):
+def _test_1d_sbp_tensor_numpy_1n2d(test_case, device, sbp):
     x = flow.tensor([1, 2, 3, 4]) + flow.env.get_rank()
     placement = flow.env.all_device_placement(device)
     x = x.to_consistent(placement=placement, sbp=sbp)
@@ -1492,10 +1492,10 @@ def _test_consistent_tensor_numpy(test_case, device, sbp):
 
 class TestTensorNumpy(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
-    def test_consistent_tensor_numpy(test_case):
+    def test_1d_sbp_tensor_numpy_1n2d(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_consistent_tensor_numpy,
+            _test_1d_sbp_tensor_numpy_1n2d,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["sbp"] = [flow.sbp.split(0), flow.sbp.broadcast, flow.sbp.partial_sum]
@@ -1503,7 +1503,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
     @flow.unittest.skip_unless_1n2d()
-    def test_consistent_tensor_numpy_1n2d(test_case):
+    def test_2d_sbp_tensor_numpy_1n2d(test_case):
         ori_x = flow.tensor(np.ones((2, 2))) + flow.env.get_rank()
         placement = flow.placement("cpu", {0: range(2)}, hierarchy=(2, 1))
         x = ori_x.to_consistent(
@@ -1522,7 +1522,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(x.numpy(), [[3, 3], [3, 3]]))
 
     @flow.unittest.skip_unless_1n4d()
-    def test_consistent_tensor_numpy_1n4d(test_case):
+    def test_2d_sbp_tensor_numpy_1n4d(test_case):
         ori_x = flow.tensor(np.ones((2, 2))) + flow.env.get_rank()
         placement = flow.placement("cpu", {0: range(4)}, hierarchy=(2, 2))
 
