@@ -1,5 +1,5 @@
 *.cu @liujuncheng
-*.py @daquexian
+*.py @daquexian @jackalcooper
 /oneflow/core/cuda @liujuncheng
 /oneflow/core/eager @lixinqi @daquexian
 /oneflow/core/framework @chengtbf
