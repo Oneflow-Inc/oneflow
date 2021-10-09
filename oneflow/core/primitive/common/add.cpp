@@ -13,19 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/device/cuda_device_context.h"
-#include "oneflow/core/thread/thread_context.h"
+#include "oneflow/core/primitive/include/add.h"
 
 namespace oneflow {
 
-#ifdef WITH_CUDA
+namespace primitive {
 
-REGISTER_DEVICE_CONTEXT(DeviceType::kGPU, ([](const ThreadCtx& thread_ctx) -> DeviceCtx* {
-                          CudaStreamHandle* cuda_handle = nullptr;
-                          cuda_handle = thread_ctx.g_cuda_stream.get();
-                          return new CudaDeviceCtx(cuda_handle);
-                        }));
+void Add::Launch(StreamContext* stream_ctx, const void* src0, const void* src1, void* dst,
+                 size_t count) {
+  const void* srcs[2];
+  srcs[0] = src0;
+  srcs[1] = src1;
+  Launch(stream_ctx, srcs, 2, dst, count);
+}
 
-#endif  // WITH_CUDA
+}  // namespace primitive
 
 }  // namespace oneflow

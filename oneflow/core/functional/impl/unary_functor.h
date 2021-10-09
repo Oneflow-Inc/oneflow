@@ -81,6 +81,31 @@ class FloatUnaryFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class InplaceableFloatUnaryFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool inplace) const {
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({x}, DType::Float()).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    if (inplace) {
+      JUST(CheckInplaceCastValid(x, input_tuple[0]));
+      JUST(CheckInplaceValid(x));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get()));
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple);
+    }
+  }
+
+ protected:
+  InplaceableFloatUnaryFunctor() = default;
+  virtual ~InplaceableFloatUnaryFunctor() = default;
+
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 }  // namespace functional
