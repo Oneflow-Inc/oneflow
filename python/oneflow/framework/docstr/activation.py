@@ -263,20 +263,7 @@ add_docstr(
 )
 
 
-add_docstr(
-    oneflow._C.relu,
-    """
-    relu(x: Tensor, inplace: bool =False) -> Tensor
 
-    Applies the rectified linear unit function element-wise. See
-    :class:`~oneflow.nn.ReLU` for more details.
-
-    Args:
-        inplace: If set to ``True``, will do this operation in-place. Default: ``False``
-
-
-    """,
-)
 add_docstr(
     oneflow._C.hardsigmoid,
     """
