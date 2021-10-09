@@ -45,7 +45,7 @@ std::unique_ptr<DynamicLibrary> DynamicLibrary::Load(const std::vector<std::stri
     if (handle != nullptr) {
       DynamicLibrary* lib = new DynamicLibrary(handle);
 #ifdef __linux__
-      std::cout << "loaded library: " << lib->AbsolutePath() << "\n";
+      std::cerr << "loaded library: " << lib->AbsolutePath() << "\n";
 #endif  // __linux__
       return std::unique_ptr<DynamicLibrary>(lib);
     }
