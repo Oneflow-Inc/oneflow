@@ -636,8 +636,11 @@ class TripletMarginLossFunctor {
                            const float& margin, const float& p, const float& eps,
                            const bool& swap, const std::string& reduction) const {
     int32_t dim_norm = anchor->ndim()-1;
-    //std::vector<int32_t> dim(1, dim_norm);
-    CHECK_OR_RETURN(LossReductionTypeIsRight(reduction));
+    std::vector<int32_t> dim(1, dim_norm);
+    CHECK_OR_RETURN([&]() -> bool {
+      if ((reduction != "none") && (reduction != "sum") && (reduction != "mean")) return false;
+      return true;
+    }());
     auto da_p=JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, positive)))), p, dim, false));
     auto da_n=JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, negative)))), p,dim, false));
     if(swap)

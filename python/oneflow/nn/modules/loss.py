@@ -1115,11 +1115,6 @@ class TripletMarginLoss(Module):
        self.p = p
        self.eps = eps
        self.swap = swap
-       assert reduction in [
-           "sum",
-           "none",
-           "mean",
-       ], "only 'sum', 'mean' and 'none' supported by now"
        self.reduction = reduction  
 
     def forward(self, anchor, positive, negative):
