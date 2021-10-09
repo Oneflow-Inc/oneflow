@@ -1,3 +1,5 @@
+*.cu @liujuncheng
+*.py @daquexian
 /oneflow/core/framework @chengtbf
 /oneflow/core/functional @hjchen2
 /oneflow/core/graph @chengtbf
@@ -13,5 +15,3 @@
 /.github @jackalcooper
 /docs @doombeaker @jackalcooper
 /oneflow/extension @strint
-*.cu @liujuncheng
-*.py @daquexian
