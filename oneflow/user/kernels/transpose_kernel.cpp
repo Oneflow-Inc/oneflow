@@ -49,6 +49,7 @@ class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport 
                        & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("output", 0) == GetDataType<dtype>::value));
 
+REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, uint8_t)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, int8_t)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, int32_t)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, int64_t)
@@ -56,6 +57,7 @@ REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, float)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, double)
 
 #ifdef WITH_CUDA
+REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, uint8_t)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, int8_t)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, int32_t)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, int64_t)
