@@ -52,9 +52,11 @@ class PermuteImpl : public Permute {
   PermuteImpl() = default;
   ~PermuteImpl() override = default;
 
+  using Permute::Launch; 
   void Launch(StreamContext* stream_ctx, DataType data_type, size_t num_dims,
               const int64_t* src_dims, const void* src, const int* permutation,
               void* dst) override {
+    printf("Here use permute !"); 
     SimplifyThenLaunch(stream_ctx, data_type, num_dims, src_dims, src, permutation, dst);
   }
 };
@@ -67,6 +69,7 @@ class PermuteFactoryImpl : public PermuteFactory {
 
   std::unique_ptr<Permute> New(size_t max_num_dims) override {
     if (max_num_dims <= kMaxNumDims) {
+      printf("is less! \n"); 
       return std::unique_ptr<Permute>(new PermuteImpl());
     } else {
       return nullptr;
