@@ -56,7 +56,7 @@ Maybe<void> GenerateCloneGradOpIfNeed(
       const auto& op_conf = JUST(job_builder->OpConf4OpName(lbi.op_name()));
       const auto add_op =
           add_op_builder.Output("out").ScopeSymbolId(op_conf.scope_symbol_id()).Build();
-      job_builder->AddOps(job_builder->ParallelConf4Lbi(lbi), {add_op.op_conf()});
+      job_builder->AddOps(JUST(job_builder->ParallelConf4Lbi(lbi)), {add_op.op_conf()});
       CHECK(out_oba2clone_bw_add_out_lbi->emplace(oba, lbis_to_add.front()).second);
       out_oba2out_diff_lbi->emplace(oba, GenLogicalBlobId(add_op.output("out", 0)));
     }
