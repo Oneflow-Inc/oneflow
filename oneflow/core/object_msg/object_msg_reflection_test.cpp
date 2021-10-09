@@ -92,11 +92,6 @@ TEST(ObjectMsgReflection, RecursivelyReflectObjectMsgFields) {
   ASSERT_TRUE(name2field_list.find(typeid(FooListItem).name()) != name2field_list.end());
 }
 
-TEST(ObjectMsgFieldListUtil, ToDot) {
-  //  std::cerr << std::endl;
-  //  std::cerr << ObjectMsgListReflection<FooBar>().ToDot() << std::endl;
-  //  std::cerr << std::endl;
-}
 }  // namespace
 
 }  // namespace test

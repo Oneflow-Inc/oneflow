@@ -40,13 +40,6 @@ TEST(VirtualMachine, __Init__) {
   ASSERT_EQ(vm->stream_type_id2stream_rt_desc().size(), 2);
 }
 
-TEST(VirtualMachine, ToDot) {
-  std::string dot_str = ObjectMsgListReflection<VirtualMachine>().ToDot("VirtualMachine");
-  // std::cerr << std::endl;
-  // std::cerr << dot_str << std::endl;
-  // std::cerr << std::endl;
-}
-
 }  // namespace
 
 }  // namespace test
