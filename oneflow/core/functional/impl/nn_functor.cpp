@@ -29,7 +29,6 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
-#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -637,7 +636,8 @@ class TripletMarginLossFunctor {
                            const float& margin, const float& p, const float& eps,
                            const bool& swap, const std::string& reduction) const {
     int32_t dim_norm = anchor->ndim()-1;
-    std::vector<int32_t> dim(1, dim_norm);
+    //std::vector<int32_t> dim(1, dim_norm);
+    CHECK_OR_RETURN(LossReductionTypeIsRight(reduction));
     auto da_p=JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, positive)))), p, dim, false));
     auto da_n=JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, negative)))), p,dim, false));
     if(swap)
@@ -645,8 +645,7 @@ class TripletMarginLossFunctor {
       auto distance_swap = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(positive, negative)))), p,dim, false));
       da_n = JUST(Minimum(distance_swap, da_n));
     }   
-    const Optional<Scalar> max;
-    auto triplet_loss = JUST(Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n)), margin, false)), 0.0, max));
+    auto triplet_loss = JUST(Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n)), margin, false)), 0.0, NullOpt));
     int32_t ndim = triplet_loss->ndim()-1;
     std::vector<int32_t> axis(1, ndim);
 

@@ -1119,7 +1119,7 @@ class TripletMarginLoss(Module):
            "sum",
            "none",
            "mean",
-       ], "only 'sum', 'mean' and none supported by now"
+       ], "only 'sum', 'mean' and 'none' supported by now"
        self.reduction = reduction  
 
     def forward(self, anchor, positive, negative):

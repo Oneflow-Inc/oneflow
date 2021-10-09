@@ -57,22 +57,6 @@ class Vector_Norm(Module):
         self.dim = dim
         self.keepdim = keepdim
 
-    def _vector_norm(self, x, ord, dim, keepdim=False):
-        if ord == 0:
-            return flow.cast(flow.tensor([flow.argwhere(x).shape[0]]), flow.float32)
-        elif ord == float("inf"):
-            temp = flow.max(flow.abs(x), dim=dim, keepdim=keepdim)
-            return temp if dim == None else temp[0]
-        elif ord == float("-inf"):
-            temp = flow.min(flow.abs(x), dim=dim, keepdim=keepdim)
-            return temp if dim == None else temp[0]
-        else:
-            return flow.pow(
-                flow.sum(flow.pow(flow.abs(x), ord), dim=dim, keepdim=keepdim),
-                1.0 / ord,
-            )
-
-
     def forward(self, x):
         num_dims = len(x.shape)
         dim = check_dim(num_dims, self.dim)

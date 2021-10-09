@@ -182,17 +182,6 @@ def mean_op(input, dim=None, keepdim=False):
         return input
     return flow._C.reduce_mean(input, axis=axis_checked, keepdims=keepdim)
 
-@register_tensor_op("mean")
-def mean_tensor_op(input, dim=None, keepdim=False):
-    """
-    input.mean(dim, index) -> Tensor
-    See :func:`oneflow.mean`
-    """
-    axis_checked = _check_axis(dim, input.shape)
-    if len(axis_checked) == 0:
-        return input
-    return flow._C.reduce_mean(input, axis=axis_checked, keepdims=keepdim)
-
 
 @register_tensor_op("mean")
 def mean_tensor_op(input, dim=None, keepdim=False):

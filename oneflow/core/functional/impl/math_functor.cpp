@@ -653,10 +653,10 @@ class VectorNormFunctor {
     {
       dim = *JUST(input_dim);
     }
-    if(ord.IsFloatingPoint())//ord:float
+    if(ord.IsFloatingPoint())
     {
-      double_t ord_val = JUST(ord.As<double_t>());
-      if(ord_val == 0)//ok
+      double ord_val = JUST(ord.As<double>());
+      if(ord_val == 0)
       {
         auto rd_tmp=JUST(ArgWhere(x, dtype));
         auto num_rd = rd_tmp->at(0);
@@ -697,7 +697,7 @@ class MatrixNormFunctor {
     std::vector<int32_t> dim;
     CHECK_OR_RETURN(x->shape()->NumAxes()>=2) <<"input tensor must be a matrix or batch of matrices";
     CHECK_OR_RETURN(input_dim.size()==2 && input_dim[0] != input_dim[1]) <<"input_dim must be a 2-tuple of ints with different elements";
-    double_t ord_tmp = JUST(ord.As<double_t>());
+    double ord_tmp = JUST(ord.As<double>());
 
 
     if(ord_tmp == INFINITY || ord_tmp == -INFINITY)
@@ -719,17 +719,17 @@ class MatrixNormFunctor {
     {
       dim[1]-=1;
     }
-    std::vector<int32_t> dim_tmp0(1,dim[0]);
-    std::vector<int32_t> dim_tmp1(1,dim[1]);
-    res=JUST(ReduceSum(JUST(Abs(x)), dim_tmp0, keepdim));
+    std::vector<int32_t> dim_tmp0_vec(1,dim[0]);
+    std::vector<int32_t> dim_tmp1_vec(1,dim[1]);
+    res=JUST(ReduceSum(JUST(Abs(x)), dim_tmp0_vec, keepdim));
 
     if(ord_tmp==INFINITY || ord_tmp==1)
     {
-      res = JUST(ReduceMax(res, dim_tmp1, keepdim));
+      res = JUST(ReduceMax(res, dim_tmp1_vec, keepdim));
     }
     else if(ord_tmp==-INFINITY || ord_tmp==-1)
     {
-      res = JUST(ReduceMin(res, dim_tmp1, keepdim));
+      res = JUST(ReduceMin(res, dim_tmp1_vec, keepdim));
     } 
     return res;
   }
@@ -772,19 +772,19 @@ class NormFunctor {
     if(input_dim.has_value())
     {
       auto axis=(*JUST(input_dim)).size();
-      Scalar ord_tmp;
+      Scalar ord_val;
 
       if(axis == 1)
       {
         if(!ord.has_value())
         {
-          ord_tmp=Scalar(2.0);
+          ord_val=Scalar(2.0);
         }
         else
         {
-          ord_tmp=*JUST(ord);
+          ord_val=*JUST(ord);
         }
-        res=JUST(VectorNorm(x, ord_tmp, input_dim, keepdim));
+        res=JUST(VectorNorm(x, ord_val, input_dim, keepdim));
       }
       else if(axis > 2)
       {
@@ -818,8 +818,7 @@ class NormFunctor {
           }
           else
           {
-            std::vector<int32_t> dim(2,0);
-            dim[1]=1;
+            std::vector<int32_t> dim{0, 1};
             res=JUST(MatrixNorm(x, *JUST(ord), dim, keepdim));
           }
         }
@@ -834,9 +833,9 @@ class NormFunctor {
 };
 
 
-class NormstringFunctor {
+class Norm2Functor {
  public:
-  NormstringFunctor() {}
+  Norm2Functor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                             const std::string& ord, const Optional<std::vector<int32_t>>& input_dim, 
                             const bool& keepdim) const {
@@ -1187,7 +1186,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<VectorNormFunctor>("VectorNorm");
   m.add_functor<MatrixNormFunctor, MatrixNorm2Functor>("MatrixNorm");
-  m.add_functor<NormFunctor, NormstringFunctor>("Norm");
+  m.add_functor<NormFunctor, Norm2Functor>("Norm");
   m.add_functor<ClampGradFunctor>("ClampGrad");
   m.add_functor<SelectTopNFunctor>("SelectTopN");
   m.add_functor<MinimumFunctor>("Minimum");
