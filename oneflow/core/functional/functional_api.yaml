@@ -115,6 +115,15 @@
     ]
   bind_python: true
 
+- name: "logical_not"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => BroadcastLogicalNot",
+      "Tensor (Tensor input, Scalar other) => ScalarLogicalNot",
+      "Tensor (Scalar input, Tensor other) => ScalarLogicalNot",
+    ]
+  bind_python: true
+
 - name: "logical_xor"
   signature:
     [
