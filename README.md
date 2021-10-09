@@ -7,16 +7,16 @@
 
 ## Latest News
 
-- Version 0.5rc2 is out!
+- Version 0.5.0 is out!
   - First class support for eager execution. The deprecated APIs are moved to `oneflow.compatible.single_client`
   - Drop-in replacement of `import torch` for existing Pytorch projects. You could test it by inter-changing `import oneflow as torch` and `import torch as flow`.
-  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.5rc2)
+  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.5.0)
 
 ## Install OneFlow
 
 ### System Requirements
 
-- Python 3.6, 3.7, 3.8 (3.9 is available in nightly version)
+- Python 3.6, 3.7, 3.8, 3.9
 - (**Highly recommended**) Upgrade pip
 
   ```
@@ -34,7 +34,7 @@
 - To install latest stable release of OneFlow with CUDA support:
 
   ```bash
-  python3 -m pip install -f https://release.oneflow.info oneflow==0.5rc2+cu102
+  python3 -m pip install -f https://release.oneflow.info oneflow==0.5.0+cu102
   ```
 
 - To install nightly release of OneFlow with CUDA support:
@@ -47,7 +47,7 @@
 
   - Stable
     ```bash
-    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.5rc2+[PLATFORM]
+    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.5.0+[PLATFORM]
     ```
   - Nightly
     ```
