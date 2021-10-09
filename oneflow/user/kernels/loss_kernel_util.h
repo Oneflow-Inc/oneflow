@@ -84,7 +84,7 @@ class SimpleLossKernel : public user_op::OpKernel {
     const T* input = input_blob->dptr<T>();
     const T* target = target_blob->dptr<T>();
     T* out = out_blob->mut_dptr<T>();
-    T* tmp_buffer = tmp_buffer_blob->mut_dptr<T>();
+    T* tmp_buffer = reduction != ReductionType::kNone ? tmp_buffer_blob->mut_dptr<T>() : nullptr;
     T* tmp_out = tmp_buffer;
 
     static_cast<const R*>(this)->ComputeOut(ctx, elem_cnt, input, target,
