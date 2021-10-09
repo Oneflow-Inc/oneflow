@@ -25,7 +25,6 @@ limitations under the License.
 #include "oneflow/core/common/shape.cfg.h"
 #include "oneflow/core/register/logical_blob_id.cfg.h"
 #include "oneflow/core/operator/interface_blob_conf.cfg.h"
-#include "oneflow/core/register/pod.cfg.h"
 #include "oneflow/core/register/blob_desc.cfg.h"
 #include "oneflow/core/operator/op_node_signature.cfg.h"
 #include "oneflow/core/job/parallel_signature.cfg.h"
@@ -42,6 +41,9 @@ class OpArgBlobAttribute {
                      const std::string& logical_blob_name);
 
   OpArgBlobAttribute(const OpArgBlobAttribute& op_arg_blob_attr) = default;
+  OpArgBlobAttribute(OpArgBlobAttribute&& op_arg_blob_attr) = delete;
+  OpArgBlobAttribute& operator=(const OpArgBlobAttribute&) = delete;
+  OpArgBlobAttribute& operator=(OpArgBlobAttribute&&) = delete;
   virtual ~OpArgBlobAttribute() = default;
 
   std::shared_ptr<cfg::BlobDescProto> blob_desc() const;
@@ -78,6 +80,9 @@ class OpArgParallelAttribute {
                          const std::shared_ptr<cfg::OptMirroredParallel>& opt_mirrored_parallel);
 
   OpArgParallelAttribute(const OpArgParallelAttribute& op_arg_para_attr) = default;
+  OpArgParallelAttribute(OpArgParallelAttribute&& op_arg_blob_attr) = delete;
+  OpArgParallelAttribute& operator=(const OpArgParallelAttribute&) = delete;
+  OpArgParallelAttribute& operator=(OpArgParallelAttribute&&) = delete;
   virtual ~OpArgParallelAttribute() = default;
 
   std::shared_ptr<ParallelDesc> parallel_desc_symbol() const;
