@@ -1495,6 +1495,7 @@ class TestTensor(flow.unittest.TestCase):
 
 
 class TestTensorNumpy(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n2d()
     def test_1d_sbp_tensor_numpy_1n2d(test_case):
         ori_x = flow.tensor([1, 2, 3, 4]) + flow.env.get_rank()
