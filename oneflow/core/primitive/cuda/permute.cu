@@ -27,7 +27,6 @@ namespace permute_internal {
 
 namespace {
 
-// constexpr int32_t tile_size = 32;
 constexpr int32_t kBlockRows = 8;
 
 template<size_t num_dims, size_t movement_size, typename IndexType>
@@ -48,39 +47,43 @@ __global__ void PermuteKernel(PermuteKernelParams<num_dims, IndexType> params) {
   }
 }
 
+
 // (B, X, Y) -> (B, Y, X), refer from
 // https://developer.nvidia.com/blog/efficient-matrix-transpose-cuda-cc/
 // have BUG!
 // N is redundant?
 template<size_t num_dims, size_t movement_size, size_t tile_size, typename IndexType>
 __global__ void BatchPermuteKernel(PermuteKernelParams<num_dims, IndexType> params, IndexType N,
-                                   IndexType H, IndexType W, IndexType dh, IndexType dw) {
+                                   IndexType H, IndexType W, IndexType dh, IndexType dw, int32_t total_grid_size) {
   using T = typename std::aligned_storage<movement_size, movement_size>::type;
   __shared__ T tile[tile_size][tile_size + 1];  // To avoid bank conflict.
   const T* src = reinterpret_cast<const T*>(params.src);
   T* dst = reinterpret_cast<T*>(params.dst);
-  const IndexType n = blockIdx.x / (dh * dw);  // the index of batch.
-  const IndexType k = blockIdx.x % (dh * dw);  // the flatten index of tile in a batch.
-  const IndexType r = k / dw;                  // the row index of tile in a batch.
-  const IndexType c = k % dw;                  // the col index of tile in a batch.
-  // const IndexType c = k - r * dw;                  // equal to k% dw. the col index of tile in a batch.
-  const IndexType offset = n * H * W;
-  int x = c * tile_size + threadIdx.x;
-  int y = r * tile_size + threadIdx.y;
-  if (x < W) {
-#pragma unroll
-    // each thread process 4 elements.
-    for (int i = 0; threadIdx.y + i < tile_size && y + i < H; i += kBlockRows) {
-      tile[threadIdx.y + i][threadIdx.x] = src[offset + (y + i) * W + x];
+  for(int i = blockIdx.x, step=gridDim.x; i < total_grid_size; i+=step){
+    const IndexType n = i / (dh * dw);  // the index of batch.
+    const IndexType k = i % (dh * dw);  // the flatten index of tile in a batch.
+    
+    const IndexType r = k / dw;                  // the row index of tile in a batch.
+    const IndexType c = k % dw;                  // the col index of tile in a batch.
+    // const IndexType c = k - r * dw;                  // equal to k% dw. the col index of tile in a batch.
+    const IndexType offset = n * H * W;
+    int x = c * tile_size + threadIdx.x;
+    int y = r * tile_size + threadIdx.y;
+    if (x < W) {
+  #pragma unroll
+      // each thread process 4 elements.
+      for (int i = 0; threadIdx.y + i < tile_size && y + i < H; i += kBlockRows) {
+        tile[threadIdx.y + i][threadIdx.x] = src[offset + (y + i) * W + x];
+      }
     }
-  }
-  __syncthreads();
-  x = r * tile_size + threadIdx.x;
-  y = c * tile_size + threadIdx.y;
-  if (x < H) {
-#pragma unroll
-    for (int i = 0; threadIdx.y + i < tile_size && y + i < W; i += kBlockRows) {
-      dst[offset + (y + i) * H + x] = tile[threadIdx.x][threadIdx.y + i];
+    __syncthreads();
+    x = r * tile_size + threadIdx.x;
+    y = c * tile_size + threadIdx.y;
+    if (x < H) {
+  #pragma unroll
+      for (int i = 0; threadIdx.y + i < tile_size && y + i < W; i += kBlockRows) {
+        dst[offset + (y + i) * H + x] = tile[threadIdx.x][threadIdx.y + i];
+      }
     }
   }
 }
@@ -91,27 +94,19 @@ void LaunchBatchPermuteKernel(StreamContext* stream_ctx,
   cudaStream_t cuda_stream =
       CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
 
-  // IndexType global_index[3];
-  // printf("params count is: %d \n", params.count); 
-  // params.src_index_helper.OffsetToNdIndex(params.count-1, global_index);
-
-  // IndexType N = global_index[0] + 1;
-  // IndexType H = global_index[1] + 1;
-  // IndexType W = global_index[2] + 1;
-  // printf("N is: %d \n", N); 
-  // printf("H is: %d \n", H); 
-  // printf("W is: %d \n", W); 
-
   IndexType dh = h / tile_size;
   IndexType dw = w / tile_size;
   const int32_t batch_permute_block_size = tile_size*tile_size;  // 32 * 32 == share memory tile size.
   const int32_t grid_size =
       (params.count + batch_permute_block_size - 1) / batch_permute_block_size;
   int32_t checked_grid_size = std::min(grid_size, kCudaMaxBlocksNum);
-  printf("Use Batch Permute Kernel!!!"); 
+  printf("Use Batch Permute Kernel!!! \n"); 
+  printf("Checked grid size is: %d \n", checked_grid_size); 
+  printf("kCudaMaxBlocks is: %d \n", kCudaMaxBlocksNum); 
+
   BatchPermuteKernel<num_dims, movement_size, tile_size, IndexType><<<checked_grid_size, dim3(tile_size, kBlockRows), 0, cuda_stream>>>(
       params, n, h, w, dh,
-      dw);  // Set threads num as 32x8 cause each threads process 4 elements to 32x32 share memory.
+      dw, checked_grid_size);  // Set threads num as 32x8 cause each threads process 4 elements to 32x32 share memory.
 }
 
 template<size_t tile_size, typename IndexType>
@@ -123,13 +118,17 @@ bool CheckIfGreaterThanTileSize(IndexType& h, IndexType& w){
   return true; 
 }
 
+template<size_t tile_size, typename IndexType>
+bool CheckIfDivideByTileSize(IndexType& h, IndexType& w){
+  if(h % tile_size == 0 && w % tile_size == 0){
+    return true; 
+  }
+  return false; 
+}
+
 template<size_t num_dims, size_t tile_size, typename IndexType>
 bool CheckLaunchBatchPermute(PermuteKernelParams<num_dims, IndexType> params, IndexType& n, IndexType& h, IndexType& w) {
   if(CheckIfGreaterThanTileSize<tile_size, IndexType>(h, w)){
-    // if(n==1 || (params.permutation[2] == 1 && params.permutation[1] == 2)){
-    //   // condtion1: (0, 1) -> (1, 0) condition2: (0, 1, 2) -> (0, 2, 1)
-    //   return true; 
-    // }
     if(n == 1){
       return true; 
     }
@@ -148,7 +147,6 @@ void LaunchKernel(StreamContext* stream_ctx, PermuteKernelParams<num_dims, Index
   cudaStream_t cuda_stream =
       CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
   constexpr int32_t tile_size = 32;
-
   
   if(num_dims==2 || num_dims==3){
     IndexType n;
@@ -165,9 +163,6 @@ void LaunchKernel(StreamContext* stream_ctx, PermuteKernelParams<num_dims, Index
       n = 1;
       h = global_index[0] + 1;
       w = global_index[1] + 1;
-      printf("n is: %d \n", n); 
-      printf("h is: %d \n", h); 
-      printf("w is: %d \n", w); 
     }else{
       IndexType global_index[3];
       params.src_index_helper.OffsetToNdIndex(params.count-1, global_index);
@@ -175,8 +170,20 @@ void LaunchKernel(StreamContext* stream_ctx, PermuteKernelParams<num_dims, Index
       h = global_index[1] + 1;
       w = global_index[2] + 1;
     }
+    printf("n is: %d \n", n); 
+    printf("h is: %d \n", h); 
+    printf("w is: %d \n", w); 
     if(CheckLaunchBatchPermute<num_dims, tile_size>(params, n, h, w)){
+      printf("Use batch permute"); 
       LaunchBatchPermuteKernel<num_dims, movement_size, tile_size, IndexType>(stream_ctx, params, n, h, w);
+      if(!CheckIfDivideByTileSize<tile_size, IndexType>(h, w)){
+        IndexType rest_count = n * (h%tile_size) * (w%tile_size); 
+        printf("Rest count is: %d", rest_count); 
+        params.count = rest_count; 
+        printf("now count is: %d", params.count); 
+        PermuteKernel<num_dims, movement_size, IndexType>
+          <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params);
+      }
     } else {
       PermuteKernel<num_dims, movement_size, IndexType>
         <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params);
