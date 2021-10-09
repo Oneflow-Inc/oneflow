@@ -46,6 +46,29 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow.relu,
+    """
+    Applies the rectified linear unit function element-wise. See :class:`~oneflow.nn.ReLU` for more details. 
+
+    Args:
+        inplace: If set to ``True``, will do this operation in-place. Default: ``False``
+    
+    For examples:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> ndarr = np.asarray([1, -2, 3])
+        >>> input = flow.Tensor(ndarr)
+        >>> output = flow.relu(input)
+        >>> output
+        tensor([1., 0., 3.], dtype=oneflow.float32)
+
+    """,
+)
 
 add_docstr(
     oneflow.gelu,

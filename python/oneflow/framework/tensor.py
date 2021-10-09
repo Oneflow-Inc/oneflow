@@ -485,6 +485,10 @@ def _triu(self, diagonal=0):
     return flow.triu(self, diagonal=diagonal)
 
 
+def _relu(self, inplace=False):
+    return flow.relu(self, inplace=inplace)
+
+
 def _uniform(self, a=0, b=1):
     if isinstance(a, Tensor):
         assert a.ndim == 0 and a.nelement() == 1, "a must be a number or scalar tensor!"
@@ -730,6 +734,7 @@ def RegisterMethods():
     Tensor.triu = _triu
     Tensor.contiguous = _contiguous
     Tensor.transpose = _transpose
+    Tensor.relu = _relu
 
 
 def register_tensor_op(op_name):
