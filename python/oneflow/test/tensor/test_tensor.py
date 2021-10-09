@@ -21,7 +21,6 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 import oneflow.unittest
-from oneflow.test.modules.test_util import GenArgList
 from oneflow.test_utils.automated_test_util import *
 
 
@@ -1495,29 +1494,19 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(y.placement, placement)
 
 
-def _test_1d_sbp_tensor_numpy_1n2d(test_case, device, sbp):
-    x = flow.tensor([1, 2, 3, 4]) + flow.env.get_rank()
-    placement = flow.env.all_device_placement(device)
-    x = x.to_consistent(placement=placement, sbp=sbp)
-    if sbp == flow.sbp.broadcast:
-        test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4]))
-    elif sbp == flow.sbp.partial_sum:
-        test_case.assertTrue(np.allclose(x.numpy(), [3, 5, 7, 9]))
-    elif sbp == flow.sbp.split(0):
-        test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4, 2, 3, 4, 5]))
-
-
 class TestTensorNumpy(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_1d_sbp_tensor_numpy_1n2d(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_1d_sbp_tensor_numpy_1n2d,
-        ]
-        arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["sbp"] = [flow.sbp.split(0), flow.sbp.broadcast, flow.sbp.partial_sum]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+        ori_x = flow.tensor([1, 2, 3, 4]) + flow.env.get_rank()
+        placement = flow.env.all_device_placement("cpu")
+        x = ori_x.to_consistent(placement=placement, sbp=flow.sbp.split(0))
+        test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4, 2, 3, 4, 5]))
+
+        x = ori_x.to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+        test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4]))
+
+        x = ori_x.to_consistent(placement=placement, sbp=flow.sbp.partial_sum)
+        test_case.assertTrue(np.allclose(x.numpy(), [3, 5, 7, 9]))
 
     @flow.unittest.skip_unless_1n2d()
     def test_2d_sbp_tensor_numpy_1n2d(test_case):
