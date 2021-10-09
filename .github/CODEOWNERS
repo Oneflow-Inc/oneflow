@@ -1,6 +1,7 @@
 *.cu @liujuncheng
 *.py @daquexian
 /oneflow/core/cuda @liujuncheng
+/oneflow/core/eager @lixinqi @daquexian
 /oneflow/core/framework @chengtbf
 /oneflow/core/functional @hjchen2
 /oneflow/core/graph @chengtbf
