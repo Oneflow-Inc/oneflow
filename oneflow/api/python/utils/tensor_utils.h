@@ -27,6 +27,8 @@ limitations under the License.
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 
 namespace py = pybind11;
 
@@ -40,8 +42,22 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tenso
                                                      py::array_t<T> array,
                                                      Maybe<void> (*Copy)(uint64_t, py::array_t<T>),
                                                      const std::string& modifier) {
-  auto tensor = JUST(t->AsMirroredTensor());
-  CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
+  std::shared_ptr<MirroredTensor> tensor;
+  CHECK_OR_RETURN(t->is_eager()) << "eager tensors supported only";
+  if (t->is_local()) {
+    tensor = JUST(t->AsMirroredTensor());
+  } else {
+    const Symbol<ConsistentTensorMeta>& tensor_meta = JUST(t->consistent_tensor_meta());
+    const Symbol<cfg::NdSbp>& nd_sbp = tensor_meta->nd_sbp();
+    CHECK_OR_RETURN(!nd_sbp->sbp_parallel().empty());
+    cfg::SbpParallel broadcast_sbp;
+    broadcast_sbp.mutable_broadcast_parallel();
+    std::vector<Symbol<cfg::SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel_size(),
+                                                    SymbolOf(broadcast_sbp));
+    auto consistent_tensor = JUST(
+        functional::ToConsistent(t, tensor_meta->parallel_desc(), sbp_tuple, GetNoneSbpList()));
+    tensor = JUST(consistent_tensor->cur_rank_phy_tensor());
+  }
 
   const auto& Callback = std::make_shared<std::function<void(uint64_t)>>(
       [&array, &Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array)); });
