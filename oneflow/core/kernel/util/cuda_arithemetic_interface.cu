@@ -164,6 +164,16 @@ void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t nu
 void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
                                                 const ShapeView& x_shape, const ShapeView& y_shape,
                                                 const std::vector<int32_t>& permutation,
+                                                const int64_t elem_cnt, const uint8_t* x,
+                                                uint8_t* y) {
+  TRANSPOSE_CHECK;
+  TransposeUtil<uint8_t>::SwitchTransposeImpl(SwitchCase(num_axis), ctx, x_shape, y_shape,
+                                              permutation, elem_cnt, x, y);
+}
+
+void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
+                                                const std::vector<int32_t>& permutation,
                                                 const int64_t elem_cnt, const int32_t* x,
                                                 int32_t* y) {
   TRANSPOSE_CHECK;
@@ -217,6 +227,16 @@ void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t nu
                                                 const PbRf<int32_t>& permutation,
                                                 const int64_t elem_cnt, const int8_t* x,
                                                 int8_t* y) {
+  ArithemeticIf<DeviceType::kGPU>::Transpose(
+      ctx, num_axis, x_shape, y_shape,
+      std::vector<int32_t>({permutation.cbegin(), permutation.cend()}), elem_cnt, x, y);
+}
+
+void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
+                                                const PbRf<int32_t>& permutation,
+                                                const int64_t elem_cnt, const uint8_t* x,
+                                                uint8_t* y) {
   ArithemeticIf<DeviceType::kGPU>::Transpose(
       ctx, num_axis, x_shape, y_shape,
       std::vector<int32_t>({permutation.cbegin(), permutation.cend()}), elem_cnt, x, y);
