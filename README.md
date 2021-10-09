@@ -16,7 +16,7 @@
 
 ### System Requirements
 
-- Python 3.6, 3.7, 3.8 (3.9 is available in nightly version)
+- Python 3.6, 3.7, 3.8, 3.9
 - (**Highly recommended**) Upgrade pip
 
   ```
