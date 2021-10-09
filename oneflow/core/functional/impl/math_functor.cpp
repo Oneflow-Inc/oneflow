@@ -429,6 +429,17 @@ class TransposeFunctor {
                            const std::vector<int32_t>& permute) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
+    int32_t ndims = x->shape()->NumAxes();
+    for (int i = 0; i < permute.size(); i++) {
+      int32_t dim = permute.at(i);
+      if (dim < 0) { dim += ndims; }
+      CHECK_GE_OR_RETURN(dim, 0)
+          << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
+          << ndims << " ] but got " << ndims;
+      CHECK_LT_OR_RETURN(dim, ndims)
+          << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
+          << ndims << " ] but got " << ndims;
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -793,13 +804,14 @@ class ScalarLogicalBaseFunctor {
   }
   virtual ~ScalarLogicalBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    const DataType dtype = x->dtype()->data_type();
     MutableAttrMap attrs;
 
-    if (IsFloatingDataType(x->dtype()->data_type())) {
+    if (IsFloatingDataType(dtype)) {
       JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
-    } else if (IsIntegralDataType(x->dtype()->data_type())) {
+    } else if (IsIntegralDataType(dtype) || dtype == DataType::kUInt8) {
       JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));

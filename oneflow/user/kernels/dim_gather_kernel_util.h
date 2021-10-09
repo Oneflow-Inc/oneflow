@@ -24,8 +24,8 @@ limitations under the License.
 namespace oneflow {
 
 #define DIM_GATHER_SCATTER_DATA_TYPE_CPU_SEQ \
-  FLOATING_DATA_TYPE_SEQ                     \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
+  ARITHMETIC_DATA_TYPE_SEQ                   \
+  UNSIGNED_INT_DATA_TYPE_SEQ
 
 #define DIM_GATHER_SCATTER_DATA_TYPE_GPU_SEQ \
   DIM_GATHER_SCATTER_DATA_TYPE_CPU_SEQ       \

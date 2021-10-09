@@ -53,7 +53,7 @@ __global__ void FillGpu(T* dst, T value, size_t count) {
 
 template<typename T>
 T GetValue(Scalar value) {
-  return CHECK_JUST(value.As<T>());
+  return value.Value<T>();
 }
 
 template<>
