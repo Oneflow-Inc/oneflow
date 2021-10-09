@@ -23,6 +23,9 @@ limitations under the License.
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/extension/python/numpy.h"
+#include "oneflow/core/framework/transport_util.h"
+#include "oneflow/core/job/rank_group_scope.h"
+#include "oneflow/core/common/decorator.h"
 
 namespace py = pybind11;
 
@@ -158,6 +161,120 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   if (dtype_) { tensor = JUST(functional::Cast(tensor, dtype_)); }
   JUST(tensor->set_requires_grad(requires_grad));
   return tensor;
+}
+
+namespace {
+
+Maybe<Symbol<cfg::NdSbp>> GetAllBroadcastNdSbp(size_t ndim) {
+  cfg::NdSbp broadcast_nd_sbp;
+  for (size_t i = 0; i < ndim; ++i) {
+    broadcast_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+  }
+  return SymbolOf(broadcast_nd_sbp);
+}
+
+auto* CachedGetAllBroadcastNdSbp = DECORATE(&GetAllBroadcastNdSbp, ThreadLocal);
+
+template<typename T>
+bool CheckVecEqual(size_t size, const T* in0, const T* in1) {
+  for (size_t i = 0; i < size; ++i) {
+    if (*(in0 + i) != *(in1 + i)) { return false; }
+  }
+  return true;
+}
+
+}  // namespace
+
+template<typename T>
+Maybe<void> DataConsistencyCheck(py::array_t<T> array, size_t elem_cnt,
+                                 Symbol<ParallelDesc> placement) {
+  const auto& rank_group = JUST(RankGroup::New(placement));
+  size_t data_size = elem_cnt * sizeof(T);
+
+  TransportToken transport_token = JUST(TransportToken::NewTransportToken(kTransportTokenTypeData));
+  py::array contiguous_array = py::reinterpret_steal<py::array>(reinterpret_cast<PyObject*>(
+      PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(array.ptr()))));
+  py::buffer_info buf = contiguous_array.request();
+  T* buf_ptr = (T*)buf.ptr;
+  size_t array_size = buf.size;
+  CHECK_EQ_OR_RETURN(array_size, elem_cnt);
+
+  std::vector<T> recv_buffer(elem_cnt);
+  T* recv_ptr = recv_buffer.data();
+
+  NaiveAsyncTransportCtx ctx(
+      transport_token,
+      [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+        *buffer = reinterpret_cast<void*>(buf_ptr);
+        *size = data_size;
+        *Cb = [] {};
+        return Maybe<void>::Ok();
+      },
+      [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+        *buffer = recv_ptr;
+        *size = data_size;
+        *Cb = [] {};
+        return Maybe<void>::Ok();
+      });
+  JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
+  JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
+  JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+  CHECK_OR_RETURN(CheckVecEqual(elem_cnt, buf_ptr, recv_ptr))
+      << "Each rank must have same input sequence or numpy array";
+  return Maybe<void>::Ok();
+}
+
+#define MAKE_SWITCH_ENTRY(func_name, dtype) func_name<dtype>
+DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, DataConsistencyCheck, MAKE_SWITCH_ENTRY,
+                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ));
+
+Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
+                                           Symbol<ParallelDesc> placement,
+                                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                                           bool requires_grad) {
+  auto* np_arr_pyobject = PyArray_FromAny(data, nullptr, 0, 0, NPY_ARRAY_DEFAULT, nullptr);
+  if (!np_arr_pyobject) {
+    return Error::RuntimeError() << "Can not convert input data to a numpy array.";
+  }
+  // transfer the ownership to np_arr_raii so that the ref count
+  // can be decreased automatically when function exits either normally or abnormally
+  auto np_arr_raii = py::reinterpret_steal<py::array>(np_arr_pyobject);
+  auto* np_arr = reinterpret_cast<PyArrayObject*>(np_arr_pyobject);
+  const npy_intp* dims_ptr = PyArray_SHAPE(np_arr);
+  const Shape shape(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));
+  DataType data_type = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
+
+  JUST(SwitchDataConsistencyCheck(SwitchCase(data_type), np_arr_raii, shape.elem_cnt(), placement));
+
+  const std::string& device_tag = placement->device_tag();
+  Symbol<Device> device;
+  if (device_tag == "cpu") {
+    device = JUST(Device::New("cpu"));
+  } else {
+    device = JUST(Device::New("cuda"));
+  }
+  std::shared_ptr<Tensor> local_tensor =
+      JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device));
+  JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(data_type), local_tensor, np_arr_raii));
+
+  // Cast to float if data is double sequence, rather than numpy array.
+  Symbol<DType> dtype_;
+  if (dtype) {
+    dtype_ = JUST(dtype);
+  } else if (!dtype && data_type == DataType::kDouble && !PyArray_Check(data)) {
+    dtype_ = DType::Float();
+  }
+  if (dtype_) { local_tensor = JUST(functional::Cast(local_tensor, dtype_)); }
+  JUST(local_tensor->set_requires_grad(requires_grad));
+
+  size_t sbp_dims = sbp_tuple.size();
+  Symbol<cfg::NdSbp> broadcast_nd_sbp = JUST(CachedGetAllBroadcastNdSbp(sbp_dims));
+
+  std::shared_ptr<Tensor> broadcast_tensor = JUST(functional::LocalToConsistent(
+      local_tensor, placement, *JUST(GetSbpList(broadcast_nd_sbp)), shape, dtype_));
+
+  std::vector<Symbol<cfg::SbpParallel>> grad_sbp_tuple;
+  return JUST(functional::ToConsistent(broadcast_tensor, placement, sbp_tuple, grad_sbp_tuple));
 }
 
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other) {
