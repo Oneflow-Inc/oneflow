@@ -316,6 +316,9 @@ Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const Te
         !input_mirrored_tensor->requires_grad()));
     consistent_tensor = std::make_shared<ConsistentTensor>(consistent_tensor_impl);
     if (parallel_id.has_value()) {
+      const auto& pyhsical_shape = JUST(GetPhysicalShape(tensor_meta));
+      const auto& input_mirrored_tensor_shape = input_mirrored_tensor->shape();
+      CHECK_EQ_OR_RETURN(*pyhsical_shape, *input_mirrored_tensor_shape);
       CHECK_OR_RETURN(dtype == input_mirrored_tensor->dtype()->data_type());
       consistent_tensor_impl->reset_cur_rank_phy_tensor(input_mirrored_tensor);
     }
