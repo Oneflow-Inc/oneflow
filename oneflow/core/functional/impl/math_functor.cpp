@@ -647,7 +647,7 @@ class VectorNormFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                             const Scalar& ord, const Optional<std::vector<int32_t>>& input_dim, 
                             const bool& keepdim) const {
-    std::shared_ptr<one::Tensor> rd;
+    std::shared_ptr<one::Tensor> res;
     int32_t num_dims = x->ndim();
     std::vector<int32_t> dim;
     std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
@@ -674,24 +674,28 @@ class VectorNormFunctor {
         auto num_rd = rd_tmp->at(0);
         DimVector dims(1, 1);
         Shape shape(dims);
-        rd=JUST(Constant(shape, num_rd->shape()->At(0), x->dtype(), JUST(x->device())));
+        res=JUST(Constant(shape, num_rd->shape()->At(0), x->dtype(), JUST(x->device())));
       }
       else if (ord_val==INFINITY)
       {
         //`max(abs(x))`
-        rd = JUST(ReduceMax(JUST(Abs(x)), dim, false));    
+        res = JUST(ReduceMax(JUST(Abs(x)), dim, false));    
       }
       else if (ord_val==-INFINITY)
       {
         //`min(abs(x))`
-        rd= JUST(ReduceMin(JUST(Abs(x)), dim, false));
+        res= JUST(ReduceMin(JUST(Abs(x)), dim, false));
       }
       else
       {
-        rd = JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord)), dim, keepdim)), Scalar(1.0) / ord));
+        res = JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord)), dim, keepdim)), Scalar(1.0) / ord));
       }
+      return res;
     }
-    return rd;
+    else
+    {
+      UNIMPLEMENTED_THEN_RETURN() << "Not support.";
+    }   
   }
 };
 
@@ -744,7 +748,6 @@ class MatrixNormFunctor {
     } 
     return res;
   }
-
 };
 
 
