@@ -17,6 +17,7 @@ jobs:
   cancel_previous:
     name: Cancel previous runs
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
       - name: Cancel previous runs of outdated commit
         uses: styfle/cancel-workflow-action@0.9.0
@@ -134,6 +135,7 @@ jobs:
   changed_files:
     name: "Changed files"
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     outputs:
       should_run_single_client_tests: ${{ steps.changes.outputs.should_run_single_client_tests }}
     steps:
@@ -156,6 +158,7 @@ jobs:
 
   find-build-cache:
     name: "Find build cache"
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     runs-on: ubuntu-latest
     env:
       ONEFLOW_SRC: .
@@ -186,6 +189,7 @@ jobs:
 
   build-manylinux:
     name: "Build manylinux"
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     runs-on: ${{ matrix.runs-on }}
     needs: [find-build-cache, changed_files]
     strategy:
@@ -313,6 +317,7 @@ jobs:
 
   find-test-cache:
     name: "Find test cache"
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     runs-on: ubuntu-latest
     needs: [build-manylinux]
     env:
