@@ -38,7 +38,8 @@ struct ArgWhereKernelUtil {
 
 #define INSTANTIATE_ARG_WHERE_KERNEL_UTIL_FOR_DEVICE(device)                                    \
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_ARG_WHERE_KERNEL_UTIL_WITH_DTYPE_PAIR, (device), \
-                                   ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ, DIM_SEQ)
+                                   ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,         \
+                                   INDEX_DATA_TYPE_SEQ, DIM_SEQ)
 
 }  // namespace oneflow
 

@@ -28,6 +28,34 @@ struct ScalarFloorDivFunctor {
   const T scalar;
 };
 
+template<>
+struct ScalarFloorDivFunctor<int8_t> {
+  OF_DEVICE_FUNC explicit ScalarFloorDivFunctor(int8_t scalar) : scalar(scalar) {}
+  __device__ int8_t operator()(int8_t x) const { return x / scalar; }
+  const int8_t scalar;
+};
+
+template<>
+struct ScalarFloorDivFunctor<uint8_t> {
+  OF_DEVICE_FUNC explicit ScalarFloorDivFunctor(uint8_t scalar) : scalar(scalar) {}
+  __device__ uint8_t operator()(uint8_t x) const { return x / scalar; }
+  const uint8_t scalar;
+};
+
+template<>
+struct ScalarFloorDivFunctor<int32_t> {
+  OF_DEVICE_FUNC explicit ScalarFloorDivFunctor(int32_t scalar) : scalar(scalar) {}
+  __device__ int32_t operator()(int32_t x) const { return x / scalar; }
+  const int32_t scalar;
+};
+
+template<>
+struct ScalarFloorDivFunctor<int64_t> {
+  OF_DEVICE_FUNC explicit ScalarFloorDivFunctor(int64_t scalar) : scalar(scalar) {}
+  __device__ int64_t operator()(int64_t x) const { return x / scalar; }
+  const int64_t scalar;
+};
+
 template<DeviceType device_type, typename T>
 class GpuScalarFloorDivKernel final : public OpKernel {
  public:

@@ -90,7 +90,7 @@ class GpuMemoryPool : public DeviceMemoryPool {
     cudaGetDevice(&device_ordinal);
     if (device_ordinal != device_ordinal_) { cudaSetDevice(device_ordinal_); }
 
-    CudaCheck(cudaMalloc(&mem_buffer_, size));
+    OF_CUDA_CHECK(cudaMalloc(&mem_buffer_, size));
 
     if (device_ordinal != device_ordinal_) { cudaSetDevice(device_ordinal); }
 #else
@@ -106,7 +106,7 @@ class GpuMemoryPool : public DeviceMemoryPool {
     cudaGetDevice(&device_ordinal);
     if (device_ordinal != device_ordinal_) { cudaSetDevice(device_ordinal_); }
 
-    if (capacity_ > 0 && mem_buffer_) { CudaCheck(cudaFree(mem_buffer_)); }
+    if (capacity_ > 0 && mem_buffer_) { OF_CUDA_CHECK(cudaFree(mem_buffer_)); }
 
     if (device_ordinal != device_ordinal_) { cudaSetDevice(device_ordinal); }
 #else
