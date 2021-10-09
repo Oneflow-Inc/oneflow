@@ -11,7 +11,7 @@
 /ci @jackalcooper
 /cmake @jackalcooper
 /.github @jackalcooper
-/docs @doombeaker
+/docs @doombeaker @jackalcooper
 /oneflow/extension @strint
 *.cu @liujuncheng
 *.py @daquexian
