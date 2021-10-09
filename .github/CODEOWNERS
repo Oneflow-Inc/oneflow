@@ -1,5 +1,6 @@
 *.cu @liujuncheng
 *.py @daquexian
+/oneflow/core/cuda @liujuncheng
 /oneflow/core/framework @chengtbf
 /oneflow/core/functional @hjchen2
 /oneflow/core/graph @chengtbf
@@ -7,6 +8,8 @@
 /oneflow/core/object_msg @lixinqi
 /oneflow/core/platform @jackalcooper
 /oneflow/core/primitive @liujuncheng
+/oneflow/core/rpc @jackalcooper
+/oneflow/core/stream @liujuncheng
 /oneflow/core/transport @chengtbf
 /oneflow/core/vm @lixinqi
 /oneflow/xrt @hjchen2
