@@ -24,7 +24,6 @@ limitations under the License.
 #include "oneflow/core/device/cuda_device_descriptor.h"
 #include "oneflow/core/device/cuda_event_record.h"
 #include "oneflow/core/common/device_type.h"
-#include "oneflow/core/device/device_context.h"
 #include "oneflow/core/kernel/chain_kernel_observer.h"
 #include "oneflow/core/kernel/cuda_check_numerics_kernel_observer.h"
 
@@ -50,12 +49,11 @@ void SetAffinityByDevice(int64_t dev_id) {
 #define CUDA_STREAM_CONTEXT_IMPL_BASE                                        \
  public                                                                      \
   CudaStreamContext, public CudaGraphContext, public KernelObserverProvider, \
-      public ExecutionContextHook, public DeviceCtxProvider
+      public ExecutionContextHook
 #else
-#define CUDA_STREAM_CONTEXT_IMPL_BASE                                            \
- public                                                                          \
-  CudaStreamContext, public KernelObserverProvider, public ExecutionContextHook, \
-      public DeviceCtxProvider
+#define CUDA_STREAM_CONTEXT_IMPL_BASE \
+ public                               \
+  CudaStreamContext, public KernelObserverProvider, public ExecutionContextHook
 #endif
 
 class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
@@ -70,7 +68,6 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
   Maybe<void> AddCallback(std::function<void()> callback) override;
   Maybe<void> Sync() override;
   DeviceType device_type() const override { return DeviceType::kGPU; }
-  std::shared_ptr<DeviceCtx> GetDeviceCtx() override;
   KernelObserver* GetKernelObserver() override;
 
   cudaStream_t cuda_stream() const override;
@@ -104,41 +101,10 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
   std::mutex global_event_queue_mutex_;
   std::thread poller_thread_;
   StreamId stream_id_;
-  std::shared_ptr<DeviceCtx> device_ctx_;
   std::unique_ptr<KernelObserver> kernel_observer_;
 #ifdef WITH_CUDA_GRAPHS
   std::unique_ptr<GenericCudaGraphContext> cuda_graph_ctx_impl_;
 #endif  // WITH_CUDA_GRAPHS
-};
-
-class DeviceCtxImpl : public DeviceCtx, public EventRecordProvider {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(DeviceCtxImpl);
-  explicit DeviceCtxImpl(CudaStreamContextImpl* stream_ctx) : stream_ctx_(stream_ctx) {}
-  ~DeviceCtxImpl() override = default;
-
-  cudaStream_t cuda_stream() const override { return stream_ctx_->cuda_stream(); }
-  cublasHandle_t cublas_pmh_handle() const override { return stream_ctx_->cublas_pmh_handle(); }
-  cublasHandle_t cublas_tensor_op_math_handle() const override {
-    return stream_ctx_->cublas_tensor_op_math_handle();
-  }
-  cublasHandle_t cublas_pmd_handle() const override { return stream_ctx_->cublas_pmd_handle(); }
-  cudnnHandle_t cudnn_handle() const override { return stream_ctx_->cudnn_handle(); }
-
-  void SyncDevice() override { CHECK_JUST(stream_ctx_->Sync()); }
-
-  void AddCallBack(std::function<void()> callback) const override {
-    CHECK_JUST(stream_ctx_->AddCallback(std::move(callback)));
-  }
-
-  DeviceType device_type() const override { return stream_ctx_->device_type(); }
-
-  std::shared_ptr<EventRecord> MakeEventRecord() override {
-    return std::make_shared<CudaEventRecord>(this);
-  }
-
- protected:
-  CudaStreamContextImpl* stream_ctx_;
 };
 
 }  // namespace
@@ -198,8 +164,6 @@ CudaStreamContextImpl::CudaStreamContextImpl(const StreamId& stream_id) : stream
     kernel_observers.emplace_back(new CudaCheckNumericsKernelObserver());
   }
   kernel_observer_.reset(new ChainKernelObserver(kernel_observers));
-
-  device_ctx_.reset(new DeviceCtxImpl(this));
 
 #ifdef WITH_CUDA_GRAPHS
   cuda_graph_ctx_impl_.reset(new GenericCudaGraphContext(cuda_stream_));
@@ -291,8 +255,6 @@ Maybe<void> CudaStreamContextImpl::Sync() {
     return Error::RuntimeError() << cudaGetErrorString(err) << " (" << err << ") ";
   }
 }
-
-std::shared_ptr<DeviceCtx> CudaStreamContextImpl::GetDeviceCtx() { return device_ctx_; }
 
 KernelObserver* CudaStreamContextImpl::GetKernelObserver() { return kernel_observer_.get(); }
 

@@ -93,7 +93,7 @@ from oneflow._C import add
 from oneflow._C import div
 from oneflow._C import floor_divide
 from oneflow._C import mul
-from oneflow._C import reciprocal_no_nan as reciprocal
+from oneflow._C import reciprocal as reciprocal
 from oneflow._C import sub
 from oneflow._C import asin
 from oneflow._C import asin as arcsin
