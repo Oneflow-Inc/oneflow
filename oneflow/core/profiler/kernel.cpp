@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/profiler/kernel.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/device/cuda_device_context.h"
+#include "oneflow/core/stream/cuda_stream_context.h"
 
 namespace oneflow {
 
@@ -49,12 +49,12 @@ void TraceKernelForwardDataContentStart(KernelContext* kernel_ctx, const Kernel*
   if (profile_cuda_memory_bandwidth) {
     CHECK(cuda_memory_bandwidth_profile_start_event == nullptr);
     CHECK(cuda_memory_bandwidth_profile_end_event == nullptr);
-    auto* cuda_device_ctx = dynamic_cast<CudaDeviceCtx*>(kernel_ctx->device_ctx());
-    if (cuda_device_ctx) {
+    auto* cuda_stream_ctx = dynamic_cast<CudaStreamContext*>(kernel_ctx->stream_ctx());
+    if (cuda_stream_ctx) {
       OF_CUDA_CHECK(cudaEventCreate(&cuda_memory_bandwidth_profile_start_event));
       OF_CUDA_CHECK(cudaEventCreate(&cuda_memory_bandwidth_profile_end_event));
       OF_CUDA_CHECK(cudaEventRecord(cuda_memory_bandwidth_profile_start_event,
-                                    cuda_device_ctx->cuda_stream()));
+                                    cuda_stream_ctx->cuda_stream()));
     }
   }
   if (profile_kernel_forward_range) { OF_PROFILER_RANGE_PUSH(kernel->op_conf().name()); }
@@ -66,15 +66,15 @@ void TraceKernelForwardDataContentEnd(KernelContext* kernel_ctx, const Kernel* k
   if (profile_kernel_forward_range) { OF_PROFILER_RANGE_POP(); }
   // The memory bandwidth profiler only works in lazy mode.
   if (profile_cuda_memory_bandwidth) {
-    auto* cuda_device_ctx = dynamic_cast<CudaDeviceCtx*>(kernel_ctx->device_ctx());
+    auto* cuda_stream_ctx = dynamic_cast<CudaStreamContext*>(kernel_ctx->stream_ctx());
     cudaEvent_t start_event = cuda_memory_bandwidth_profile_start_event;
     cudaEvent_t end_event = cuda_memory_bandwidth_profile_end_event;
     cuda_memory_bandwidth_profile_start_event = nullptr;
     cuda_memory_bandwidth_profile_end_event = nullptr;
-    if (cuda_device_ctx) {
+    if (cuda_stream_ctx) {
       CHECK_NOTNULL(start_event);
       CHECK_NOTNULL(end_event);
-      OF_CUDA_CHECK(cudaEventRecord(end_event, cuda_device_ctx->cuda_stream()));
+      OF_CUDA_CHECK(cudaEventRecord(end_event, cuda_stream_ctx->cuda_stream()));
       int64_t memory_size = 0;
       for (const auto& bn : kernel->op_attribute().input_bns()) {
         const Blob* blob = kernel_ctx->BnInOp2Blob(bn);

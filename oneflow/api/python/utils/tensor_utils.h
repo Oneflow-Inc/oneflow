@@ -76,6 +76,11 @@ Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor);
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                       const Optional<Symbol<Device>>& device, bool requires_grad);
 
+Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
+                                           Symbol<ParallelDesc> placement,
+                                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                                           bool requires_grad);
+
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other);
 
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
