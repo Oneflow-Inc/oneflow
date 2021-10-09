@@ -62,11 +62,11 @@ void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
 }
 
 // Specifies copy_d2h stream description of the virtual machine to be used.
-intrusive::SharedPtr<StreamDesc> CudaCopyD2HStreamType::MakeStreamDesc(
+intrusive::shared_ptr<StreamDesc> CudaCopyD2HStreamType::MakeStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
-  if (!resource.has_gpu_device_num()) { return intrusive::SharedPtr<StreamDesc>(); }
+  if (!resource.has_gpu_device_num()) { return intrusive::shared_ptr<StreamDesc>(); }
   std::size_t device_num = resource.gpu_device_num();
-  auto ret = intrusive::MakeShared<StreamDesc>();
+  auto ret = intrusive::make_shared<StreamDesc>();
   ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CudaCopyD2HStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(device_num);

@@ -56,11 +56,11 @@ void CpuStreamType::Compute(Instruction* instruction) const {
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 
-intrusive::SharedPtr<StreamDesc> CpuStreamType::MakeStreamDesc(const Resource& resource,
-                                                               int64_t this_machine_id) const {
-  if (!resource.has_cpu_device_num()) { return intrusive::SharedPtr<StreamDesc>(); }
+intrusive::shared_ptr<StreamDesc> CpuStreamType::MakeStreamDesc(const Resource& resource,
+                                                                int64_t this_machine_id) const {
+  if (!resource.has_cpu_device_num()) { return intrusive::shared_ptr<StreamDesc>(); }
   std::size_t device_num = resource.cpu_device_num();
-  auto ret = intrusive::MakeShared<StreamDesc>();
+  auto ret = intrusive::make_shared<StreamDesc>();
   ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CpuStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(device_num);

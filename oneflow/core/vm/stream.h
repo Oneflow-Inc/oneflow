@@ -56,8 +56,8 @@ INTRUSIVE_BEGIN(Stream);
   // methods
   void __Init__();
   void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id, const int64_t max_device_num_per_machine);
-  intrusive::SharedPtr<Instruction> NewInstruction(InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc);
-  void DeleteInstruction(intrusive::SharedPtr<Instruction>&&);
+  intrusive::shared_ptr<Instruction> NewInstruction(InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc);
+  void DeleteInstruction(intrusive::shared_ptr<Instruction>&&);
   int64_t global_device_id() const { return stream_id().global_device_id(); }
   int64_t machine_id() const;
   int64_t device_id() const;
@@ -65,7 +65,7 @@ INTRUSIVE_BEGIN(Stream);
   const StreamTypeId& stream_type_id() const;
 
  private:
-  void MoveToFreeList(intrusive::SharedPtr<Instruction>&& instruction);
+  void MoveToFreeList(intrusive::shared_ptr<Instruction>&& instruction);
   void MoveFromZombieListToFreeList();
 
   // fields

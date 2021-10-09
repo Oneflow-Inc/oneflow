@@ -44,8 +44,8 @@ class LazyJobStreamType final : public StreamType {
   void Compute(Instruction* instruction) const override;
   bool SharingVirtualMachineThread() const override { return false; }
   bool SupportingTransportInstructions() const override { return false; }
-  intrusive::SharedPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                                  int64_t this_machine_id) const override;
+  intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
+                                                   int64_t this_machine_id) const override;
 };
 
 }  // namespace vm

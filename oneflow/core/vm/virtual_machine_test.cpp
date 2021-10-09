@@ -32,9 +32,9 @@ namespace test {
 namespace {
 
 TEST(VirtualMachine, __Init__) {
-  auto vm_desc = intrusive::MakeShared<VmDesc>(TestUtil::NewVmResourceDesc().Get());
+  auto vm_desc = intrusive::make_shared<VmDesc>(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
-  auto vm = intrusive::MakeShared<VirtualMachine>(vm_desc.Get());
+  auto vm = intrusive::make_shared<VirtualMachine>(vm_desc.Get());
   ASSERT_EQ(vm->thread_ctx_list().size(), 2);
   ASSERT_EQ(vm->stream_type_id2stream_rt_desc().size(), 2);
 }

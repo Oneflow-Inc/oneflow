@@ -73,7 +73,7 @@ TEST(SkipList, empty) {
 
 TEST(SkipList, insert_naive) {
   Key2SkipListFoo foo_map;
-  auto elem0 = intrusive::MakeShared<SkipListFoo>();
+  auto elem0 = intrusive::make_shared<SkipListFoo>();
   elem0->set_foo_map_key(0);
   foo_map.Insert(elem0.Mutable());
   ASSERT_EQ(foo_map.size(), 1);
@@ -89,9 +89,9 @@ TEST(SkipList, insert_naive) {
 
 TEST(SkipList, insert_twice) {
   Key2SkipListFoo foo_map;
-  auto elem0 = intrusive::MakeShared<SkipListFoo>();
+  auto elem0 = intrusive::make_shared<SkipListFoo>();
   elem0->set_foo_map_key(0);
-  auto elem1 = intrusive::MakeShared<SkipListFoo>();
+  auto elem1 = intrusive::make_shared<SkipListFoo>();
   elem1->set_foo_map_key(0);
   ASSERT_TRUE(foo_map.Insert(elem0.Mutable()).second);
   ASSERT_TRUE(!foo_map.Insert(elem1.Mutable()).second);
@@ -99,7 +99,7 @@ TEST(SkipList, insert_twice) {
 
 TEST(SkipList, erase_by_key) {
   Key2SkipListFoo foo_map;
-  auto elem0 = intrusive::MakeShared<SkipListFoo>();
+  auto elem0 = intrusive::make_shared<SkipListFoo>();
   elem0->set_foo_map_key(0);
   foo_map.Insert(elem0.Mutable());
   ASSERT_EQ(foo_map.size(), 1);
@@ -111,7 +111,7 @@ TEST(SkipList, erase_by_key) {
 
 TEST(SkipList, erase_by_elem) {
   Key2SkipListFoo foo_map;
-  auto elem0 = intrusive::MakeShared<SkipListFoo>();
+  auto elem0 = intrusive::make_shared<SkipListFoo>();
   elem0->set_foo_map_key(0);
   foo_map.Insert(elem0.Mutable());
   ASSERT_EQ(foo_map.size(), 1);
@@ -123,16 +123,16 @@ TEST(SkipList, erase_by_elem) {
 
 TEST(SkipList, insert_many) {
   Key2SkipListFoo foo_map;
-  intrusive::SharedPtr<SkipListFoo> exists[100];
+  intrusive::shared_ptr<SkipListFoo> exists[100];
   for (int i = 0; i < 100; ++i) {
-    exists[i] = intrusive::MakeShared<SkipListFoo>();
+    exists[i] = intrusive::make_shared<SkipListFoo>();
     int key = i - 50;
     if (key >= 0) { ++key; }
     exists[i]->set_foo_map_key(key);
     foo_map.Insert(exists[i].Mutable());
     ASSERT_TRUE(foo_map.Find(key) == exists[i]);
   }
-  auto elem0 = intrusive::MakeShared<SkipListFoo>();
+  auto elem0 = intrusive::make_shared<SkipListFoo>();
   elem0->set_foo_map_key(0);
   foo_map.Insert(elem0.Mutable());
   ASSERT_EQ(foo_map.size(), 101);
@@ -150,16 +150,16 @@ TEST(SkipList, insert_many) {
 
 TEST(SkipList, erase_many_by_key) {
   Key2SkipListFoo foo_map;
-  intrusive::SharedPtr<SkipListFoo> exists[100];
+  intrusive::shared_ptr<SkipListFoo> exists[100];
   for (int i = 0; i < 100; ++i) {
-    exists[i] = intrusive::MakeShared<SkipListFoo>();
+    exists[i] = intrusive::make_shared<SkipListFoo>();
     int key = i - 50;
     if (key >= 0) { ++key; }
     exists[i]->set_foo_map_key(key);
     foo_map.Insert(exists[i].Mutable());
     ASSERT_TRUE(foo_map.Find(key) == exists[i]);
   }
-  auto elem0 = intrusive::MakeShared<SkipListFoo>();
+  auto elem0 = intrusive::make_shared<SkipListFoo>();
   elem0->set_foo_map_key(0);
   foo_map.Insert(elem0.Mutable());
   ASSERT_EQ(foo_map.size(), 101);
@@ -173,16 +173,16 @@ TEST(SkipList, erase_many_by_key) {
 
 TEST(SkipList, erase_many_by_elem) {
   Key2SkipListFoo foo_map;
-  intrusive::SharedPtr<SkipListFoo> exists[100];
+  intrusive::shared_ptr<SkipListFoo> exists[100];
   for (int i = 0; i < 100; ++i) {
-    exists[i] = intrusive::MakeShared<SkipListFoo>();
+    exists[i] = intrusive::make_shared<SkipListFoo>();
     int key = i - 50;
     if (key >= 0) { ++key; }
     exists[i]->set_foo_map_key(key);
     foo_map.Insert(exists[i].Mutable());
     ASSERT_TRUE(foo_map.Find(key) == exists[i]);
   }
-  auto elem0 = intrusive::MakeShared<SkipListFoo>();
+  auto elem0 = intrusive::make_shared<SkipListFoo>();
   elem0->set_foo_map_key(0);
   foo_map.Insert(elem0.Mutable());
   ASSERT_EQ(foo_map.size(), 101);
@@ -197,11 +197,11 @@ TEST(SkipList, erase_many_by_elem) {
 TEST(SkipList, MAP_HEAD) {
   int elem_cnt = 0;
   {
-    auto foo_map_container = intrusive::MakeShared<SkipListFooContainer>();
+    auto foo_map_container = intrusive::make_shared<SkipListFooContainer>();
     auto& foo_map = *foo_map_container->mut_foo_map();
-    intrusive::SharedPtr<SkipListFoo> exists[100];
+    intrusive::shared_ptr<SkipListFoo> exists[100];
     for (int i = 0; i < 100; ++i) {
-      exists[i] = intrusive::MakeShared<SkipListFoo>();
+      exists[i] = intrusive::make_shared<SkipListFoo>();
       int key = i - 50;
       if (key >= 0) { ++key; }
       exists[i]->set_foo_map_key(key);
@@ -210,7 +210,7 @@ TEST(SkipList, MAP_HEAD) {
       ASSERT_TRUE(foo_map.Find(key) == exists[i]);
       ASSERT_EQ(exists[i]->ref_cnt(), 2);
     }
-    auto elem0 = intrusive::MakeShared<SkipListFoo>();
+    auto elem0 = intrusive::make_shared<SkipListFoo>();
     elem0->set_foo_map_key(0);
     elem0->set_is_deleted(&elem_cnt);
     foo_map.Insert(elem0.Mutable());
@@ -230,11 +230,11 @@ TEST(SkipList, MAP_HEAD) {
 TEST(SkipList, FOR_EACH) {
   int elem_cnt = 0;
   {
-    auto foo_map_container = intrusive::MakeShared<SkipListFooContainer>();
+    auto foo_map_container = intrusive::make_shared<SkipListFooContainer>();
     auto& foo_map = *foo_map_container->mut_foo_map();
-    intrusive::SharedPtr<SkipListFoo> exists[100];
+    intrusive::shared_ptr<SkipListFoo> exists[100];
     for (int i = 0; i < 100; ++i) {
-      exists[i] = intrusive::MakeShared<SkipListFoo>();
+      exists[i] = intrusive::make_shared<SkipListFoo>();
       int key = i - 50;
       exists[i]->set_foo_map_key(key);
       exists[i]->set_is_deleted(&elem_cnt);

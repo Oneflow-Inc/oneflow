@@ -93,33 +93,33 @@ class List {
     PtrUtil::Ref(ptr);
   }
 
-  void EmplaceBack(intrusive::SharedPtr<value_type>&& ptr) {
+  void EmplaceBack(intrusive::shared_ptr<value_type>&& ptr) {
     value_type* raw_ptr = nullptr;
     ptr.__UnsafeMoveTo__(&raw_ptr);
     list_head_.PushBack(raw_ptr);
   }
 
-  void EmplaceFront(intrusive::SharedPtr<value_type>&& ptr) {
+  void EmplaceFront(intrusive::shared_ptr<value_type>&& ptr) {
     value_type* raw_ptr = nullptr;
     ptr.__UnsafeMoveTo__(&raw_ptr);
     list_head_.PushFront(raw_ptr);
   }
 
-  intrusive::SharedPtr<value_type> Erase(value_type* ptr) {
+  intrusive::shared_ptr<value_type> Erase(value_type* ptr) {
     list_head_.Erase(ptr);
-    return intrusive::SharedPtr<value_type>::__UnsafeMove__(ptr);
+    return intrusive::shared_ptr<value_type>::__UnsafeMove__(ptr);
   }
 
-  intrusive::SharedPtr<value_type> PopBack() {
+  intrusive::shared_ptr<value_type> PopBack() {
     value_type* raw_ptr = nullptr;
     if (!list_head_.empty()) { raw_ptr = list_head_.PopBack(); }
-    return intrusive::SharedPtr<value_type>::__UnsafeMove__(raw_ptr);
+    return intrusive::shared_ptr<value_type>::__UnsafeMove__(raw_ptr);
   }
 
-  intrusive::SharedPtr<value_type> PopFront() {
+  intrusive::shared_ptr<value_type> PopFront() {
     value_type* raw_ptr = nullptr;
     if (!list_head_.empty()) { raw_ptr = list_head_.PopFront(); }
-    return intrusive::SharedPtr<value_type>::__UnsafeMove__(raw_ptr);
+    return intrusive::shared_ptr<value_type>::__UnsafeMove__(raw_ptr);
   }
 
   void MoveTo(List* list) { MoveToDstBack(list); }
@@ -215,7 +215,7 @@ class HeadFreeList {
     if (container_ != ptr) { PtrUtil::Ref(ptr); }
   }
 
-  void EmplaceBack(intrusive::SharedPtr<value_type>&& ptr) {
+  void EmplaceBack(intrusive::shared_ptr<value_type>&& ptr) {
     value_type* raw_ptr = nullptr;
     if (container_ != ptr.Mutable()) {
       ptr.__UnsafeMoveTo__(&raw_ptr);
@@ -225,7 +225,7 @@ class HeadFreeList {
     list_head_.PushBack(raw_ptr);
   }
 
-  void EmplaceFront(intrusive::SharedPtr<value_type>&& ptr) {
+  void EmplaceFront(intrusive::shared_ptr<value_type>&& ptr) {
     value_type* raw_ptr = nullptr;
     if (container_ != ptr.Mutable()) {
       ptr.__UnsafeMoveTo__(&raw_ptr);
@@ -235,32 +235,32 @@ class HeadFreeList {
     list_head_.PushFront(raw_ptr);
   }
 
-  intrusive::SharedPtr<value_type> Erase(value_type* ptr) {
+  intrusive::shared_ptr<value_type> Erase(value_type* ptr) {
     list_head_.Erase(ptr);
     if (container_ != ptr) {
-      return intrusive::SharedPtr<value_type>::__UnsafeMove__(ptr);
+      return intrusive::shared_ptr<value_type>::__UnsafeMove__(ptr);
     } else {
-      return intrusive::SharedPtr<value_type>(ptr);
+      return intrusive::shared_ptr<value_type>(ptr);
     }
   }
 
-  intrusive::SharedPtr<value_type> PopBack() {
+  intrusive::shared_ptr<value_type> PopBack() {
     value_type* raw_ptr = nullptr;
     if (!list_head_.empty()) { raw_ptr = list_head_.PopBack(); }
     if (container_ != raw_ptr) {
-      return intrusive::SharedPtr<value_type>::__UnsafeMove__(raw_ptr);
+      return intrusive::shared_ptr<value_type>::__UnsafeMove__(raw_ptr);
     } else {
-      return intrusive::SharedPtr<value_type>(raw_ptr);
+      return intrusive::shared_ptr<value_type>(raw_ptr);
     }
   }
 
-  intrusive::SharedPtr<value_type> PopFront() {
+  intrusive::shared_ptr<value_type> PopFront() {
     value_type* raw_ptr = nullptr;
     if (!list_head_.empty()) { raw_ptr = list_head_.PopFront(); }
     if (container_ != raw_ptr) {
-      return intrusive::SharedPtr<value_type>::__UnsafeMove__(raw_ptr);
+      return intrusive::shared_ptr<value_type>::__UnsafeMove__(raw_ptr);
     } else {
-      return intrusive::SharedPtr<value_type>(raw_ptr);
+      return intrusive::shared_ptr<value_type>(raw_ptr);
     }
   }
 

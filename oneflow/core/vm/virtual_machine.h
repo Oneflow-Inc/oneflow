@@ -54,7 +54,7 @@ INTRUSIVE_BEGIN(VirtualMachine);
   // Getters
   const VmResourceDesc& vm_resource_desc() const {
     if (vm_resource_desc_) { return vm_resource_desc_.Get(); }
-    static const auto default_val = intrusive::MakeShared<VmResourceDesc>();
+    static const auto default_val = intrusive::make_shared<VmResourceDesc>();
     return default_val.Get();
   }
   const Range& machine_id_range() const { return machine_id_range_; }
@@ -71,7 +71,7 @@ INTRUSIVE_BEGIN(VirtualMachine);
   const Id2LogicalObject& id2logical_object() const { return id2logical_object_; }
   //Setters
   VmResourceDesc* mut_vm_resource_desc() {
-    if (!vm_resource_desc_) { vm_resource_desc_ = intrusive::MakeShared<VmResourceDesc>(); }
+    if (!vm_resource_desc_) { vm_resource_desc_ = intrusive::make_shared<VmResourceDesc>(); }
     return vm_resource_desc_.Mutable();
   }
   Range* mut_machine_id_range() { return &machine_id_range_; }
@@ -90,7 +90,7 @@ INTRUSIVE_BEGIN(VirtualMachine);
   // methods
   void __Init__(const VmDesc& vm_desc);
   Maybe<void> Receive(InstructionMsgList* instr_list);
-  Maybe<void> Receive(intrusive::SharedPtr<InstructionMsg>&& instruction_msg);
+  Maybe<void> Receive(intrusive::shared_ptr<InstructionMsg>&& instruction_msg);
   void Schedule();
   bool ThreadUnsafeEmpty() const;
   bool Empty() const;
@@ -168,7 +168,7 @@ INTRUSIVE_BEGIN(VirtualMachine);
   void TryDeleteLogicalObjects();
 
   // fields
-  INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<VmResourceDesc>, vm_resource_desc_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<VmResourceDesc>, vm_resource_desc_);
   INTRUSIVE_DEFINE_FIELD(Range, machine_id_range_);
   INTRUSIVE_DEFINE_FIELD(std::atomic<int64_t>, flying_instruction_cnt_);
   // lists or maps

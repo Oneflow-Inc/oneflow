@@ -35,14 +35,14 @@ INTRUSIVE_BEGIN(StreamRtDesc);
   // Getters
   const StreamDesc& stream_desc() const {
     if (stream_desc_) { return stream_desc_.Get(); }
-    static const auto default_val = intrusive::MakeShared<StreamDesc>();
+    static const auto default_val = intrusive::make_shared<StreamDesc>();
     return default_val.Get();
   }
   const StreamTypeId& stream_type_id() const { return stream_type_id_.key().Get(); }
   const StreamId2Stream& stream_id2stream() const { return stream_id2stream_; }
   // Setters
   StreamDesc* mut_stream_desc() { 
-    if (!stream_desc_) { stream_desc_ = intrusive::MakeShared<StreamDesc>(); }
+    if (!stream_desc_) { stream_desc_ = intrusive::make_shared<StreamDesc>(); }
     return stream_desc_.Mutable();
   }
   void reset_stream_desc(StreamDesc* stream_desc) { stream_desc_.Reset(stream_desc); }
@@ -55,7 +55,7 @@ INTRUSIVE_BEGIN(StreamRtDesc);
 
  private:
   // fields
-  INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<StreamDesc>, stream_desc_); 
+  INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<StreamDesc>, stream_desc_); 
   // list entries
   using StreamTypeIdKey = intrusive::SkipListEntry<FlatMsg<StreamTypeId>, 7>;
   INTRUSIVE_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);

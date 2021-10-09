@@ -23,35 +23,36 @@ namespace oneflow {
 namespace intrusive {
 
 template<typename T>
-class SharedPtr final {
+class shared_ptr final {
  public:
   static_assert(T::__has_intrusive_ref__, "T is not a intrusive-referenced class");
   using value_type = T;
-  SharedPtr() : ptr_(nullptr) {}
-  SharedPtr(value_type* ptr) : ptr_(nullptr) { Reset(ptr); }
-  SharedPtr(const SharedPtr& obj_ptr) {
+  shared_ptr() : ptr_(nullptr) {}
+  shared_ptr(value_type* ptr) : ptr_(nullptr) { Reset(ptr); }
+  shared_ptr(const shared_ptr& obj_ptr) {
     ptr_ = nullptr;
     Reset(obj_ptr.ptr_);
   }
-  SharedPtr(SharedPtr&& obj_ptr) {
+  shared_ptr(shared_ptr&& obj_ptr) {
     ptr_ = obj_ptr.ptr_;
     obj_ptr.ptr_ = nullptr;
   }
-  ~SharedPtr() { Clear(); }
+  ~shared_ptr() { Clear(); }
 
   template<typename... Args>
-  static SharedPtr MakeShared(Args&&... args) {
-    SharedPtr ret;
+  static shared_ptr make_shared(Args&&... args) {
+    shared_ptr ret;
     PtrUtil::NewAndInitRef(&ret.ptr_);
     ret.Mutable()->__Init__(std::forward<Args>(args)...);
     return ret;
   }
 
   operator bool() const { return ptr_ != nullptr; }
+  value_type* get() const { return ptr_; }
   const value_type& Get() const { return *ptr_; }
   const value_type* operator->() const { return ptr_; }
   const value_type& operator*() const { return *ptr_; }
-  bool operator==(const SharedPtr& rhs) const { return this->ptr_ == rhs.ptr_; }
+  bool operator==(const shared_ptr& rhs) const { return this->ptr_ == rhs.ptr_; }
 
   value_type* Mutable() { return ptr_; }
   value_type* operator->() { return ptr_; }
@@ -66,13 +67,13 @@ class SharedPtr final {
     PtrUtil::Ref<value_type>(ptr_);
   }
 
-  SharedPtr& operator=(const SharedPtr& rhs) {
+  shared_ptr& operator=(const shared_ptr& rhs) {
     Reset(rhs.ptr_);
     return *this;
   }
 
-  static SharedPtr __UnsafeMove__(value_type* ptr) {
-    SharedPtr ret;
+  static shared_ptr __UnsafeMove__(value_type* ptr) {
+    shared_ptr ret;
     ret.ptr_ = ptr;
     return ret;
   }
@@ -87,12 +88,12 @@ class SharedPtr final {
     PtrUtil::ReleaseRef<value_type>(ptr_);
     ptr_ = nullptr;
   }
-  value_type* ptr_;
+  mutable value_type* ptr_;
 };
 
 template<typename T, typename... Args>
-SharedPtr<T> MakeShared(Args&&... args) {
-  return SharedPtr<T>::MakeShared(std::forward<Args>(args)...);
+shared_ptr<T> make_shared(Args&&... args) {
+  return shared_ptr<T>::make_shared(std::forward<Args>(args)...);
 }
 
 }  // namespace intrusive

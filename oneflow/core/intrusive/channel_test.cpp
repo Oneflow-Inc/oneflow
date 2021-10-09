@@ -44,14 +44,14 @@ using ChannelFoo = intrusive::Channel<INTRUSIVE_FIELD(Foo, entry_)>;
 
 void CallFromSenderThread(ChannelFoo* condition_list, Range range) {
   for (int i = range.begin(); i < range.end(); ++i) {
-    auto foo = intrusive::MakeShared<Foo>();
+    auto foo = intrusive::make_shared<Foo>();
     foo->set_x(i);
     if (condition_list->EmplaceBack(std::move(foo)) != intrusive::kChannelStatusSuccess) { break; }
   }
 }
 
 void CallFromReceiverThreadByPopFront(std::vector<int>* visit, ChannelFoo* condition_list) {
-  intrusive::SharedPtr<Foo> foo;
+  intrusive::shared_ptr<Foo> foo;
   while (condition_list->PopFront(&foo) == intrusive::kChannelStatusSuccess) {
     ++visit->at(foo->x());
   }

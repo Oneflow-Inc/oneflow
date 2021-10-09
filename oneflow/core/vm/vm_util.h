@@ -25,7 +25,7 @@ namespace vm {
 
 struct InstructionMsg;
 
-intrusive::SharedPtr<InstructionMsg> NewInstruction(const std::string& instr_type_name);
+intrusive::shared_ptr<InstructionMsg> NewInstruction(const std::string& instr_type_name);
 
 Maybe<void> Run(vm::InstructionMsgList* instr_msg_list);
 Maybe<void> ClusterSync();

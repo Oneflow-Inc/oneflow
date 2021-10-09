@@ -61,10 +61,10 @@ TEST(List, empty) {
 
 TEST(List, empty_Begin) {
   TestList foo_list;
-  intrusive::SharedPtr<TestListItem> obj_ptr;
+  intrusive::shared_ptr<TestListItem> obj_ptr;
   obj_ptr = foo_list.Begin();
   ASSERT_TRUE(!obj_ptr);
-  intrusive::SharedPtr<TestListItem> next;
+  intrusive::shared_ptr<TestListItem> next;
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(!obj_ptr);
@@ -72,8 +72,8 @@ TEST(List, empty_Begin) {
 
 TEST(List, empty_Next) {
   TestList foo_list;
-  intrusive::SharedPtr<TestListItem> obj_ptr;
-  intrusive::SharedPtr<TestListItem> next;
+  intrusive::shared_ptr<TestListItem> obj_ptr;
+  intrusive::shared_ptr<TestListItem> next;
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(!obj_ptr);
@@ -88,12 +88,12 @@ TEST(List, empty_Next) {
 
 TEST(List, PushFront) {
   TestList foo_list;
-  auto item0 = intrusive::MakeShared<TestListItem>();
-  auto item1 = intrusive::MakeShared<TestListItem>();
+  auto item0 = intrusive::make_shared<TestListItem>();
+  auto item1 = intrusive::make_shared<TestListItem>();
   foo_list.PushFront(item0.Mutable());
   foo_list.PushFront(item1.Mutable());
-  intrusive::SharedPtr<TestListItem> obj_ptr;
-  intrusive::SharedPtr<TestListItem> next;
+  intrusive::shared_ptr<TestListItem> obj_ptr;
+  intrusive::shared_ptr<TestListItem> next;
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(obj_ptr == item1);
@@ -104,20 +104,20 @@ TEST(List, destructor) {
   int elem_cnt = 2;
   {
     TestList foo_list;
-    auto item0 = intrusive::MakeShared<TestListItem>();
+    auto item0 = intrusive::make_shared<TestListItem>();
     item0->set_cnt(&elem_cnt);
-    auto item1 = intrusive::MakeShared<TestListItem>();
+    auto item1 = intrusive::make_shared<TestListItem>();
     item1->set_cnt(&elem_cnt);
     foo_list.PushFront(item0.Mutable());
     foo_list.PushFront(item1.Mutable());
   }
   ASSERT_EQ(elem_cnt, 0);
   elem_cnt = 2;
-  auto item0 = intrusive::MakeShared<TestListItem>();
+  auto item0 = intrusive::make_shared<TestListItem>();
   {
     TestList foo_list;
     item0->set_cnt(&elem_cnt);
-    auto item1 = intrusive::MakeShared<TestListItem>();
+    auto item1 = intrusive::make_shared<TestListItem>();
     item1->set_cnt(&elem_cnt);
     foo_list.PushFront(item0.Mutable());
     foo_list.PushFront(item1.Mutable());
@@ -127,12 +127,12 @@ TEST(List, destructor) {
 
 TEST(List, PushBack) {
   TestList foo_list;
-  auto item0 = intrusive::MakeShared<TestListItem>();
-  auto item1 = intrusive::MakeShared<TestListItem>();
+  auto item0 = intrusive::make_shared<TestListItem>();
+  auto item1 = intrusive::make_shared<TestListItem>();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
-  intrusive::SharedPtr<TestListItem> obj_ptr;
-  intrusive::SharedPtr<TestListItem> next;
+  intrusive::shared_ptr<TestListItem> obj_ptr;
+  intrusive::shared_ptr<TestListItem> next;
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(obj_ptr == item0);
@@ -141,15 +141,15 @@ TEST(List, PushBack) {
 
 TEST(List, Erase) {
   TestList foo_list;
-  auto item0 = intrusive::MakeShared<TestListItem>();
-  auto item1 = intrusive::MakeShared<TestListItem>();
+  auto item0 = intrusive::make_shared<TestListItem>();
+  auto item1 = intrusive::make_shared<TestListItem>();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   ASSERT_EQ(item1->ref_cnt(), 2);
   foo_list.Erase(item1.Mutable());
   ASSERT_EQ(item1->ref_cnt(), 1);
-  intrusive::SharedPtr<TestListItem> obj_ptr;
-  intrusive::SharedPtr<TestListItem> next;
+  intrusive::shared_ptr<TestListItem> obj_ptr;
+  intrusive::shared_ptr<TestListItem> next;
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(obj_ptr == item0);
@@ -158,15 +158,15 @@ TEST(List, Erase) {
 
 TEST(List, PopBack) {
   TestList foo_list;
-  auto item0 = intrusive::MakeShared<TestListItem>();
-  auto item1 = intrusive::MakeShared<TestListItem>();
+  auto item0 = intrusive::make_shared<TestListItem>();
+  auto item1 = intrusive::make_shared<TestListItem>();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   ASSERT_EQ(item1->ref_cnt(), 2);
   foo_list.PopBack();
   ASSERT_EQ(item1->ref_cnt(), 1);
-  intrusive::SharedPtr<TestListItem> obj_ptr;
-  intrusive::SharedPtr<TestListItem> next;
+  intrusive::shared_ptr<TestListItem> obj_ptr;
+  intrusive::shared_ptr<TestListItem> next;
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(obj_ptr == item0);
@@ -175,15 +175,15 @@ TEST(List, PopBack) {
 
 TEST(List, PopFront) {
   TestList foo_list;
-  auto item0 = intrusive::MakeShared<TestListItem>();
-  auto item1 = intrusive::MakeShared<TestListItem>();
+  auto item0 = intrusive::make_shared<TestListItem>();
+  auto item1 = intrusive::make_shared<TestListItem>();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   ASSERT_EQ(item0->ref_cnt(), 2);
   foo_list.PopFront();
   ASSERT_EQ(item0->ref_cnt(), 1);
-  intrusive::SharedPtr<TestListItem> obj_ptr;
-  intrusive::SharedPtr<TestListItem> next;
+  intrusive::shared_ptr<TestListItem> obj_ptr;
+  intrusive::shared_ptr<TestListItem> next;
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(!next);
@@ -191,8 +191,8 @@ TEST(List, PopFront) {
 
 TEST(List, Clear) {
   TestList foo_list;
-  auto item0 = intrusive::MakeShared<TestListItem>();
-  auto item1 = intrusive::MakeShared<TestListItem>();
+  auto item0 = intrusive::make_shared<TestListItem>();
+  auto item1 = intrusive::make_shared<TestListItem>();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   ASSERT_EQ(item0->ref_cnt(), 2);
@@ -205,8 +205,8 @@ TEST(List, Clear) {
 
 TEST(List, UNSAFE_FOR_EACH_PTR) {
   TestList foo_list;
-  auto item0 = intrusive::MakeShared<TestListItem>();
-  auto item1 = intrusive::MakeShared<TestListItem>();
+  auto item0 = intrusive::make_shared<TestListItem>();
+  auto item1 = intrusive::make_shared<TestListItem>();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   int i = 0;
@@ -223,8 +223,8 @@ TEST(List, UNSAFE_FOR_EACH_PTR) {
 
 TEST(List, FOR_EACH) {
   TestList foo_list;
-  auto item0 = intrusive::MakeShared<TestListItem>();
-  auto item1 = intrusive::MakeShared<TestListItem>();
+  auto item0 = intrusive::make_shared<TestListItem>();
+  auto item1 = intrusive::make_shared<TestListItem>();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   int i = 0;
@@ -261,10 +261,10 @@ INTRUSIVE_END(TestIntrusiveListHead);
 // clang-format on
 
 TEST(List, intrusive_list_for_each) {
-  auto foo_list_head = intrusive::MakeShared<TestIntrusiveListHead>();
+  auto foo_list_head = intrusive::make_shared<TestIntrusiveListHead>();
   auto& foo_list = *foo_list_head->mut_foo_list();
-  auto item0 = intrusive::MakeShared<TestListItem>();
-  auto item1 = intrusive::MakeShared<TestListItem>();
+  auto item0 = intrusive::make_shared<TestListItem>();
+  auto item1 = intrusive::make_shared<TestListItem>();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   ASSERT_EQ(item0->ref_cnt(), 2);
@@ -292,12 +292,12 @@ INTRUSIVE_BEGIN(TestIntrusiveListHeadWrapper);
   // Getters
   const TestIntrusiveListHead& head() const {
     if (head_) { return head_.Get(); }
-    static const auto default_val = intrusive::MakeShared<TestIntrusiveListHead>();
+    static const auto default_val = intrusive::make_shared<TestIntrusiveListHead>();
     return default_val.Get();
   }
   // Setters
   TestIntrusiveListHead* mut_head() {
-    if (!head_) { head_ = intrusive::MakeShared<TestIntrusiveListHead>(); }
+    if (!head_) { head_ = intrusive::make_shared<TestIntrusiveListHead>(); }
     return head_.Mutable();
   }
   void clear_head() {
@@ -305,15 +305,15 @@ INTRUSIVE_BEGIN(TestIntrusiveListHeadWrapper);
   }
 
  private:
-  INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<TestIntrusiveListHead>, head_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<TestIntrusiveListHead>, head_);
 INTRUSIVE_END(TestIntrusiveListHeadWrapper);
 // clang-format on
 
 TEST(List, nested_list_delete) {
-  auto foo_list_head = intrusive::MakeShared<TestIntrusiveListHeadWrapper>();
+  auto foo_list_head = intrusive::make_shared<TestIntrusiveListHeadWrapper>();
   auto& foo_list = *foo_list_head->mut_head()->mut_foo_list();
-  auto item0 = intrusive::MakeShared<TestListItem>();
-  auto item1 = intrusive::MakeShared<TestListItem>();
+  auto item0 = intrusive::make_shared<TestListItem>();
+  auto item1 = intrusive::make_shared<TestListItem>();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   ASSERT_EQ(item0->ref_cnt(), 2);
@@ -336,8 +336,8 @@ TEST(List, nested_list_delete) {
 TEST(List, MoveTo) {
   TestList foo_list;
   TestList foo_list0;
-  auto item0 = intrusive::MakeShared<TestListItem>();
-  auto item1 = intrusive::MakeShared<TestListItem>();
+  auto item0 = intrusive::make_shared<TestListItem>();
+  auto item1 = intrusive::make_shared<TestListItem>();
   ASSERT_EQ(item0->is_foo_list_empty(), true);
   ASSERT_EQ(item1->is_foo_list_empty(), true);
   foo_list.PushBack(item0.Mutable());
@@ -395,7 +395,7 @@ INTRUSIVE_END(SelfLoopContainer);
 
 TEST(IntrusiveSelfLoopList, __Init__) {
   bool deleted = false;
-  auto self_loop_head = intrusive::MakeShared<SelfLoopContainer>(&deleted);
+  auto self_loop_head = intrusive::make_shared<SelfLoopContainer>(&deleted);
   ASSERT_EQ(self_loop_head->mut_head()->container_, self_loop_head.Mutable());
 }
 
@@ -403,8 +403,8 @@ TEST(IntrusiveSelfLoopList, PushBack) {
   bool deleted0 = false;
   bool deleted1 = false;
   {
-    auto self_loop_head0 = intrusive::MakeShared<SelfLoopContainer>(&deleted0);
-    auto self_loop_head1 = intrusive::MakeShared<SelfLoopContainer>(&deleted1);
+    auto self_loop_head0 = intrusive::make_shared<SelfLoopContainer>(&deleted0);
+    auto self_loop_head1 = intrusive::make_shared<SelfLoopContainer>(&deleted1);
     ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
     ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
     self_loop_head0->mut_head()->PushBack(self_loop_head0.Mutable());
@@ -422,8 +422,8 @@ TEST(IntrusiveSelfLoopList, PushFront) {
   bool deleted0 = false;
   bool deleted1 = false;
   {
-    auto self_loop_head0 = intrusive::MakeShared<SelfLoopContainer>(&deleted0);
-    auto self_loop_head1 = intrusive::MakeShared<SelfLoopContainer>(&deleted1);
+    auto self_loop_head0 = intrusive::make_shared<SelfLoopContainer>(&deleted0);
+    auto self_loop_head1 = intrusive::make_shared<SelfLoopContainer>(&deleted1);
     ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
     ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
     self_loop_head0->mut_head()->PushFront(self_loop_head0.Mutable());
@@ -441,16 +441,16 @@ TEST(IntrusiveSelfLoopList, EmplaceBack) {
   bool deleted0 = false;
   bool deleted1 = false;
   {
-    auto self_loop_head0 = intrusive::MakeShared<SelfLoopContainer>(&deleted0);
-    auto self_loop_head1 = intrusive::MakeShared<SelfLoopContainer>(&deleted1);
+    auto self_loop_head0 = intrusive::make_shared<SelfLoopContainer>(&deleted0);
+    auto self_loop_head1 = intrusive::make_shared<SelfLoopContainer>(&deleted1);
     ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
     ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
     self_loop_head0->mut_head()->EmplaceBack(
-        intrusive::SharedPtr<SelfLoopContainer>(self_loop_head0));
+        intrusive::shared_ptr<SelfLoopContainer>(self_loop_head0));
     ASSERT_EQ(self_loop_head0->head().size(), 1);
     ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
     self_loop_head0->mut_head()->EmplaceBack(
-        intrusive::SharedPtr<SelfLoopContainer>(self_loop_head1));
+        intrusive::shared_ptr<SelfLoopContainer>(self_loop_head1));
     ASSERT_EQ(self_loop_head1->ref_cnt(), 2);
     ASSERT_EQ(self_loop_head0->head().size(), 2);
   }
@@ -462,16 +462,16 @@ TEST(IntrusiveSelfLoopList, EmplaceFront) {
   bool deleted0 = false;
   bool deleted1 = false;
   {
-    auto self_loop_head0 = intrusive::MakeShared<SelfLoopContainer>(&deleted0);
-    auto self_loop_head1 = intrusive::MakeShared<SelfLoopContainer>(&deleted1);
+    auto self_loop_head0 = intrusive::make_shared<SelfLoopContainer>(&deleted0);
+    auto self_loop_head1 = intrusive::make_shared<SelfLoopContainer>(&deleted1);
     ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
     ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
     self_loop_head0->mut_head()->EmplaceFront(
-        intrusive::SharedPtr<SelfLoopContainer>(self_loop_head0));
+        intrusive::shared_ptr<SelfLoopContainer>(self_loop_head0));
     ASSERT_EQ(self_loop_head0->head().size(), 1);
     ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
     self_loop_head0->mut_head()->EmplaceFront(
-        intrusive::SharedPtr<SelfLoopContainer>(self_loop_head1));
+        intrusive::shared_ptr<SelfLoopContainer>(self_loop_head1));
     ASSERT_EQ(self_loop_head1->ref_cnt(), 2);
     ASSERT_EQ(self_loop_head0->head().size(), 2);
   }
@@ -483,8 +483,8 @@ TEST(IntrusiveSelfLoopList, Erase) {
   bool deleted0 = false;
   bool deleted1 = false;
   {
-    auto self_loop_head0 = intrusive::MakeShared<SelfLoopContainer>(&deleted0);
-    auto self_loop_head1 = intrusive::MakeShared<SelfLoopContainer>(&deleted1);
+    auto self_loop_head0 = intrusive::make_shared<SelfLoopContainer>(&deleted0);
+    auto self_loop_head1 = intrusive::make_shared<SelfLoopContainer>(&deleted1);
     self_loop_head0->mut_head()->PushBack(self_loop_head0.Mutable());
     self_loop_head0->mut_head()->PushBack(self_loop_head1.Mutable());
     self_loop_head0->mut_head()->Erase(self_loop_head0.Mutable());
@@ -500,8 +500,8 @@ TEST(IntrusiveSelfLoopList, PopBack) {
   bool deleted0 = false;
   bool deleted1 = false;
   {
-    auto self_loop_head0 = intrusive::MakeShared<SelfLoopContainer>(&deleted0);
-    auto self_loop_head1 = intrusive::MakeShared<SelfLoopContainer>(&deleted1);
+    auto self_loop_head0 = intrusive::make_shared<SelfLoopContainer>(&deleted0);
+    auto self_loop_head1 = intrusive::make_shared<SelfLoopContainer>(&deleted1);
     self_loop_head0->mut_head()->PushBack(self_loop_head0.Mutable());
     self_loop_head0->mut_head()->PushBack(self_loop_head1.Mutable());
     self_loop_head0->mut_head()->PopBack();
@@ -517,8 +517,8 @@ TEST(IntrusiveSelfLoopList, PopFront) {
   bool deleted0 = false;
   bool deleted1 = false;
   {
-    auto self_loop_head0 = intrusive::MakeShared<SelfLoopContainer>(&deleted0);
-    auto self_loop_head1 = intrusive::MakeShared<SelfLoopContainer>(&deleted1);
+    auto self_loop_head0 = intrusive::make_shared<SelfLoopContainer>(&deleted0);
+    auto self_loop_head1 = intrusive::make_shared<SelfLoopContainer>(&deleted1);
     self_loop_head0->mut_head()->PushBack(self_loop_head0.Mutable());
     self_loop_head0->mut_head()->PushBack(self_loop_head1.Mutable());
     self_loop_head0->mut_head()->PopFront();
@@ -534,8 +534,8 @@ TEST(IntrusiveSelfLoopList, MoveTo) {
   bool deleted0 = false;
   bool deleted1 = false;
   {
-    auto self_loop_head0 = intrusive::MakeShared<SelfLoopContainer>(&deleted0);
-    auto self_loop_head1 = intrusive::MakeShared<SelfLoopContainer>(&deleted1);
+    auto self_loop_head0 = intrusive::make_shared<SelfLoopContainer>(&deleted0);
+    auto self_loop_head1 = intrusive::make_shared<SelfLoopContainer>(&deleted1);
     self_loop_head0->mut_head()->PushBack(self_loop_head0.Mutable());
     self_loop_head0->mut_head()->PushBack(self_loop_head1.Mutable());
     self_loop_head0->mut_head()->MoveTo(self_loop_head1->mut_head());
@@ -550,8 +550,8 @@ TEST(IntrusiveSelfLoopList, Clear) {
   bool deleted0 = false;
   bool deleted1 = false;
   {
-    auto self_loop_head0 = intrusive::MakeShared<SelfLoopContainer>(&deleted0);
-    auto self_loop_head1 = intrusive::MakeShared<SelfLoopContainer>(&deleted1);
+    auto self_loop_head0 = intrusive::make_shared<SelfLoopContainer>(&deleted0);
+    auto self_loop_head1 = intrusive::make_shared<SelfLoopContainer>(&deleted1);
     self_loop_head0->mut_head()->PushBack(self_loop_head0.Mutable());
     self_loop_head0->mut_head()->PushBack(self_loop_head1.Mutable());
     self_loop_head0->mut_head()->Clear();

@@ -33,12 +33,12 @@ INTRUSIVE_BEGIN(LocalDepObject);
   // Getters
   const vm::LogicalObject& logical_object() const {
     if (logical_object_) { return logical_object_.Get(); }
-    static const auto default_val = intrusive::MakeShared<vm::LogicalObject>();
+    static const auto default_val = intrusive::make_shared<vm::LogicalObject>();
     return default_val.Get();
   }
   const vm::MirroredObject& mirrored_object() const {
     if (mirrored_object_) { return mirrored_object_.Get(); }
-    static const auto default_val = intrusive::MakeShared<vm::MirroredObject>();
+    static const auto default_val = intrusive::make_shared<vm::MirroredObject>();
     return default_val.Get();
   }
   bool is_pool_entry_empty() const { return pool_entry_.empty(); }
@@ -47,23 +47,23 @@ INTRUSIVE_BEGIN(LocalDepObject);
 
   // Setters
   vm::LogicalObject* mut_logical_object() {
-    if (!logical_object_) { logical_object_ = intrusive::MakeShared<vm::LogicalObject>(); }
+    if (!logical_object_) { logical_object_ = intrusive::make_shared<vm::LogicalObject>(); }
     return logical_object_.Mutable();
   }
   vm::MirroredObject* mut_mirrored_object() {
-    if (!mirrored_object_) { mirrored_object_ = intrusive::MakeShared<vm::MirroredObject>(); }
+    if (!mirrored_object_) { mirrored_object_ = intrusive::make_shared<vm::MirroredObject>(); }
     return mirrored_object_.Mutable();
   }
 
   // methods
-  static Maybe<intrusive::SharedPtr<LocalDepObject>> New(const Device& device);
+  static Maybe<intrusive::shared_ptr<LocalDepObject>> New(const Device& device);
 
  private:
   Maybe<void> Init(const Device& device);
 
   // fields
-  INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<vm::LogicalObject>, logical_object_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<vm::MirroredObject>, mirrored_object_); 
+  INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<vm::LogicalObject>, logical_object_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<vm::MirroredObject>, mirrored_object_); 
 
   // list entries
   INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, pool_entry_);

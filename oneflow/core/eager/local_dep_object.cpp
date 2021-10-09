@@ -48,8 +48,8 @@ Maybe<void> LocalDepObject::Init(const Device& device) {
   return Maybe<void>::Ok();
 }
 
-Maybe<intrusive::SharedPtr<LocalDepObject>> LocalDepObject::New(const Device& device) {
-  auto local_dep_obj = intrusive::MakeShared<LocalDepObject>();
+Maybe<intrusive::shared_ptr<LocalDepObject>> LocalDepObject::New(const Device& device) {
+  auto local_dep_obj = intrusive::make_shared<LocalDepObject>();
   JUST(local_dep_obj.Mutable()->Init(device));
   return local_dep_obj;
 }
@@ -86,7 +86,7 @@ static constexpr auto* GlobalLifetimeLocalDepObjectList =
 }  // namespace
 
 Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device) {
-  intrusive::SharedPtr<LocalDepObject> local_dep_object;
+  intrusive::shared_ptr<LocalDepObject> local_dep_object;
   auto* pool_list = ThreadLocalPoolLocalDepObjectList(device);
   auto* stored_list = GlobalStoredLocalDepObjectList(device);
   if (!pool_list->empty()) {

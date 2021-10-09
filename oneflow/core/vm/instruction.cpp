@@ -98,43 +98,44 @@ void InstructionMsg::ToProto(InstructionProto* proto) const {
   }
 }
 
-intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_parallel_desc(int64_t symbol_id) {
+intrusive::shared_ptr<InstructionMsg> InstructionMsg::add_parallel_desc(int64_t symbol_id) {
   set_parallel_desc_symbol_id(symbol_id);
   return this;
 }
 
-intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_double_operand(double double_operand) {
+intrusive::shared_ptr<InstructionMsg> InstructionMsg::add_double_operand(double double_operand) {
   add_instr_operand()->set_double_operand(double_operand);
   return this;
 }
 
-intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_int64_operand(int64_t int64_operand) {
+intrusive::shared_ptr<InstructionMsg> InstructionMsg::add_int64_operand(int64_t int64_operand) {
   add_instr_operand()->set_int64_operand(int64_operand);
   return this;
 }
 
-intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_uint64_operand(uint64_t uint64_operand) {
+intrusive::shared_ptr<InstructionMsg> InstructionMsg::add_uint64_operand(uint64_t uint64_operand) {
   add_instr_operand()->set_uint64_operand(uint64_operand);
   return this;
 }
 
-intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_bool_operand(bool bool_operand) {
+intrusive::shared_ptr<InstructionMsg> InstructionMsg::add_bool_operand(bool bool_operand) {
   add_instr_operand()->set_bool_operand(bool_operand);
   return this;
 }
 
-intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_separator() {
+intrusive::shared_ptr<InstructionMsg> InstructionMsg::add_separator() {
   add_instr_operand()->mut_separator();
   return this;
 }
 
-intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_const_operand(ObjectId logical_object_id) {
+intrusive::shared_ptr<InstructionMsg> InstructionMsg::add_const_operand(
+    ObjectId logical_object_id) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mut_const_operand()->mut_operand()->__Init__(logical_object_id);
   return this;
 }
 
-intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_const_operand(
+intrusive::shared_ptr<InstructionMsg> InstructionMsg::add_const_operand(
     ObjectId logical_object_id, const SoleMirroredObject& sole_mirrored_object) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mut_const_operand()->mut_operand()->__Init__(logical_object_id,
@@ -142,7 +143,7 @@ intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_const_operand(
   return this;
 }
 
-intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_const_operand(
+intrusive::shared_ptr<InstructionMsg> InstructionMsg::add_const_operand(
     ObjectId logical_object_id, const AllMirroredObject& all_mirrored_object) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mut_const_operand()->mut_operand()->__Init__(logical_object_id,
@@ -150,7 +151,7 @@ intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_const_operand(
   return this;
 }
 
-intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_symbol_operand(
+intrusive::shared_ptr<InstructionMsg> InstructionMsg::add_symbol_operand(
     ObjectId logical_object_id) {
   CHECK(IdUtil::IsSymbolId(logical_object_id));
   add_instr_operand()->mut_symbol_operand()->mut_operand()->__Init__(logical_object_id,
@@ -158,13 +159,13 @@ intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_symbol_operand(
   return this;
 }
 
-intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_mut_operand(ObjectId logical_object_id) {
+intrusive::shared_ptr<InstructionMsg> InstructionMsg::add_mut_operand(ObjectId logical_object_id) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mut_mut_operand()->mut_operand()->__Init__(logical_object_id);
   return this;
 }
 
-intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_mut_operand(
+intrusive::shared_ptr<InstructionMsg> InstructionMsg::add_mut_operand(
     ObjectId logical_object_id, const SoleMirroredObject& sole_mirrored_object) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mut_mut_operand()->mut_operand()->__Init__(logical_object_id,
@@ -172,7 +173,7 @@ intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_mut_operand(
   return this;
 }
 
-intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_mut_operand(
+intrusive::shared_ptr<InstructionMsg> InstructionMsg::add_mut_operand(
     ObjectId logical_object_id, const AllMirroredObject& all_mirrored_object) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mut_mut_operand()->mut_operand()->__Init__(logical_object_id,
@@ -180,7 +181,7 @@ intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_mut_operand(
   return this;
 }
 
-intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_init_symbol_operand(
+intrusive::shared_ptr<InstructionMsg> InstructionMsg::add_init_symbol_operand(
     ObjectId logical_object_id) {
   CHECK(IdUtil::IsSymbolId(logical_object_id));
   add_instr_operand()->mut_init_symbol_operand()->mut_operand()->__Init__(logical_object_id,
@@ -188,13 +189,13 @@ intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_init_symbol_operand(
   return this;
 }
 
-intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_mut2_operand(ObjectId logical_object_id) {
+intrusive::shared_ptr<InstructionMsg> InstructionMsg::add_mut2_operand(ObjectId logical_object_id) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mut_mut2_operand()->mut_operand()->__Init__(logical_object_id);
   return this;
 }
 
-intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_mut2_operand(
+intrusive::shared_ptr<InstructionMsg> InstructionMsg::add_mut2_operand(
     ObjectId logical_object_id, const SoleMirroredObject& sole_mirrored_object) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mut_mut2_operand()->mut_operand()->__Init__(logical_object_id,
@@ -202,7 +203,7 @@ intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_mut2_operand(
   return this;
 }
 
-intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_mut2_operand(
+intrusive::shared_ptr<InstructionMsg> InstructionMsg::add_mut2_operand(
     ObjectId logical_object_id, const AllMirroredObject& all_mirrored_object) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mut_mut2_operand()->mut_operand()->__Init__(logical_object_id,
@@ -210,19 +211,19 @@ intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_mut2_operand(
   return this;
 }
 
-intrusive::SharedPtr<InstructionMsg> InstructionMsg::add_del_operand(ObjectId logical_object_id) {
+intrusive::shared_ptr<InstructionMsg> InstructionMsg::add_del_operand(ObjectId logical_object_id) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
   auto* operand = add_instr_operand()->mut_del_operand()->mut_operand();
   operand->__Init__(logical_object_id, AllMirroredObject());
   return this;
 }
 
-intrusive::SharedPtr<InstructionMsg> InstructionMsg::Clone() const {
-  return intrusive::MakeShared<InstructionMsg>(*this);
+intrusive::shared_ptr<InstructionMsg> InstructionMsg::Clone() const {
+  return intrusive::make_shared<InstructionMsg>(*this);
 }
 
-intrusive::SharedPtr<InstructionMsg> InstructionMsg::MakeInferInstrMsg() const {
-  auto infer_instr_msg = intrusive::MakeShared<InstructionMsg>(*this);
+intrusive::shared_ptr<InstructionMsg> InstructionMsg::MakeInferInstrMsg() const {
+  auto infer_instr_msg = intrusive::make_shared<InstructionMsg>(*this);
   auto* stream_type_id = infer_instr_msg->mut_instr_type_id()->mut_stream_type_id();
   CHECK_EQ(stream_type_id->interpret_type(), InterpretType::kCompute);
   stream_type_id->CopyFrom(LookupInferStreamTypeId(*stream_type_id));

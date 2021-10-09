@@ -36,9 +36,9 @@ namespace test {
 namespace {
 
 TEST(ControlStreamType, new_symbol_symbol) {
-  auto vm_desc = intrusive::MakeShared<VmDesc>(TestUtil::NewVmResourceDesc().Get());
+  auto vm_desc = intrusive::make_shared<VmDesc>(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol"});
-  auto vm = intrusive::MakeShared<VirtualMachine>(vm_desc.Get());
+  auto vm = intrusive::make_shared<VirtualMachine>(vm_desc.Get());
   InstructionMsgList list;
   int64_t symbol_id = IdUtil::NewLogicalSymbolId();
   list.EmplaceBack(NewInstruction("NewSymbol")->add_int64_operand(symbol_id));

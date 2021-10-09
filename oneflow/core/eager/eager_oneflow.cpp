@@ -71,7 +71,7 @@ Maybe<void> EagerOneflow::RunPhysicalInstruction(
   vm::InstructionMsgList instruction_list;
   const auto& eager_instructions = cluster_instruction->eager_instruction();
   for (const auto& instr_proto : eager_instructions.instruction_list().instruction()) {
-    instruction_list.EmplaceBack(intrusive::MakeShared<vm::InstructionMsg>(instr_proto));
+    instruction_list.EmplaceBack(intrusive::make_shared<vm::InstructionMsg>(instr_proto));
   }
   return RunPhysicalInstruction(&instruction_list, eager_instructions.eager_symbol_list());
 }

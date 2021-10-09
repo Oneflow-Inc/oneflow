@@ -52,7 +52,7 @@ void DeviceHelperStreamType::Compute(Instruction* instruction) const {
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 
-intrusive::SharedPtr<StreamDesc> DeviceHelperStreamType::MakeStreamDesc(
+intrusive::shared_ptr<StreamDesc> DeviceHelperStreamType::MakeStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
   std::size_t device_num = 0;
   if (resource.has_cpu_device_num()) {
@@ -61,9 +61,9 @@ intrusive::SharedPtr<StreamDesc> DeviceHelperStreamType::MakeStreamDesc(
   if (resource.has_gpu_device_num()) {
     device_num = std::max<std::size_t>(device_num, resource.gpu_device_num());
   }
-  if (device_num == 0) { return intrusive::SharedPtr<StreamDesc>(); }
+  if (device_num == 0) { return intrusive::shared_ptr<StreamDesc>(); }
   CHECK_GT(device_num, 0);
-  auto ret = intrusive::MakeShared<StreamDesc>();
+  auto ret = intrusive::make_shared<StreamDesc>();
   ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<DeviceHelperStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(device_num);

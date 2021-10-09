@@ -48,7 +48,7 @@ void TransportStreamType::Compute(Instruction* instruction) const {
 }
 
 template<typename DerivedT>
-intrusive::SharedPtr<StreamDesc> TransportStreamType::MakeTransportStreamDesc(
+intrusive::shared_ptr<StreamDesc> TransportStreamType::MakeTransportStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
   std::size_t device_num = 0;
   if (resource.has_cpu_device_num()) {
@@ -57,7 +57,7 @@ intrusive::SharedPtr<StreamDesc> TransportStreamType::MakeTransportStreamDesc(
   if (resource.has_gpu_device_num()) {
     device_num = std::max<std::size_t>(device_num, resource.gpu_device_num());
   }
-  auto ret = intrusive::MakeShared<StreamDesc>();
+  auto ret = intrusive::make_shared<StreamDesc>();
   ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<DerivedT>());
   // TODO(lixinqi): remove this ugly field
   ret->set_num_machines(1);
@@ -67,12 +67,12 @@ intrusive::SharedPtr<StreamDesc> TransportStreamType::MakeTransportStreamDesc(
   return ret;
 }
 
-intrusive::SharedPtr<StreamDesc> TransportSenderStreamType::MakeStreamDesc(
+intrusive::shared_ptr<StreamDesc> TransportSenderStreamType::MakeStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
   return MakeTransportStreamDesc<TransportSenderStreamType>(resource, this_machine_id);
 }
 
-intrusive::SharedPtr<StreamDesc> TransportReceiverStreamType::MakeStreamDesc(
+intrusive::shared_ptr<StreamDesc> TransportReceiverStreamType::MakeStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
   return MakeTransportStreamDesc<TransportReceiverStreamType>(resource, this_machine_id);
 }

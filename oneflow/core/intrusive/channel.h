@@ -51,7 +51,7 @@ class Channel {
     return list_head_.empty();
   }
 
-  ChannelStatus EmplaceBack(intrusive::SharedPtr<value_type>&& ptr) {
+  ChannelStatus EmplaceBack(intrusive::shared_ptr<value_type>&& ptr) {
     std::unique_lock<std::mutex> lock(*mut_mutex());
     if (is_closed_) { return kChannelStatusErrorClosed; }
     list_head_.EmplaceBack(std::move(ptr));
@@ -59,9 +59,9 @@ class Channel {
     return kChannelStatusSuccess;
   }
   ChannelStatus PushBack(value_type* ptr) {
-    return EmplaceBack(intrusive::SharedPtr<value_type>(ptr));
+    return EmplaceBack(intrusive::shared_ptr<value_type>(ptr));
   }
-  ChannelStatus PopFront(intrusive::SharedPtr<value_type>* ptr) {
+  ChannelStatus PopFront(intrusive::shared_ptr<value_type>* ptr) {
     std::unique_lock<std::mutex> lock(*mut_mutex());
     mut_cond()->wait(lock, [this]() { return (!list_head_.empty()) || is_closed_; });
     if (list_head_.empty()) { return kChannelStatusErrorClosed; }

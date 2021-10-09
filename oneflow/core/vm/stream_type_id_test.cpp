@@ -59,10 +59,10 @@ INTRUSIVE_END(StreamTypeIdItem);
 using StreamTypeIdSet = intrusive::SkipList<INTRUSIVE_FIELD(StreamTypeIdItem, stream_type_id_)>;
 
 TEST(StreamTypeId, map_key) {
-  auto stream_type_id0 = intrusive::MakeShared<StreamTypeIdItem>();
+  auto stream_type_id0 = intrusive::make_shared<StreamTypeIdItem>();
   stream_type_id0->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<ControlStreamType>(),
                                                   InterpretType::kCompute);
-  auto stream_type_id1 = intrusive::MakeShared<StreamTypeIdItem>();
+  auto stream_type_id1 = intrusive::make_shared<StreamTypeIdItem>();
   stream_type_id1->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<ControlStreamType>(),
                                                   InterpretType::kCompute);
   StreamTypeIdSet stream_type_id_set;

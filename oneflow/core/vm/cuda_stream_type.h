@@ -44,8 +44,8 @@ class CudaStreamType final : public StreamType {
                                   const InstructionStatusBuffer& status_buffer) const override;
   void set_has_event_record(InstructionStatusBuffer* status_buffer, bool val) const override;
   void Compute(Instruction* instruction) const override;
-  intrusive::SharedPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                                  int64_t this_machine_id) const override;
+  intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
+                                                   int64_t this_machine_id) const override;
   bool SharingVirtualMachineThread() const override { return true; }
   bool SupportingTransportInstructions() const override { return true; }
 };

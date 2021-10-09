@@ -69,11 +69,11 @@ void CudaStreamType::Compute(Instruction* instruction) const {
   CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
 
-intrusive::SharedPtr<StreamDesc> CudaStreamType::MakeStreamDesc(const Resource& resource,
-                                                                int64_t this_machine_id) const {
-  if (!resource.has_gpu_device_num()) { return intrusive::SharedPtr<StreamDesc>(); }
+intrusive::shared_ptr<StreamDesc> CudaStreamType::MakeStreamDesc(const Resource& resource,
+                                                                 int64_t this_machine_id) const {
+  if (!resource.has_gpu_device_num()) { return intrusive::shared_ptr<StreamDesc>(); }
   std::size_t device_num = resource.gpu_device_num();
-  auto ret = intrusive::MakeShared<StreamDesc>();
+  auto ret = intrusive::make_shared<StreamDesc>();
   ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CudaStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(device_num);

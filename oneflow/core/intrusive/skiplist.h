@@ -50,24 +50,24 @@ class SkipList {
   std::size_t size() const { return skiplist_head_.size(); }
   bool empty() const { return skiplist_head_.empty(); }
   value_type* Begin() { return skiplist_head_.Begin(); }
-  intrusive::SharedPtr<value_type> Find(const key_type& key) {
-    intrusive::SharedPtr<value_type> ret;
+  intrusive::shared_ptr<value_type> Find(const key_type& key) {
+    intrusive::shared_ptr<value_type> ret;
     ret.Reset(skiplist_head_.Find(key));
     return ret;
   }
   value_type* FindPtr(const key_type& key) { return skiplist_head_.Find(key); }
   const value_type* FindPtr(const key_type& key) const { return skiplist_head_.Find(key); }
-  bool EqualsEnd(const intrusive::SharedPtr<value_type>& ptr) { return !ptr; }
+  bool EqualsEnd(const intrusive::shared_ptr<value_type>& ptr) { return !ptr; }
   void Erase(const key_type& key) { PtrUtil::ReleaseRef(skiplist_head_.Erase(key)); }
   void Erase(value_type* elem_ptr) {
     skiplist_head_.Erase(elem_ptr);
     PtrUtil::ReleaseRef(elem_ptr);
   }
-  std::pair<intrusive::SharedPtr<value_type>, bool> Insert(value_type* elem_ptr) {
+  std::pair<intrusive::shared_ptr<value_type>, bool> Insert(value_type* elem_ptr) {
     value_type* ret_elem = nullptr;
     bool success = false;
     std::tie(ret_elem, success) = skiplist_head_.Insert(elem_ptr);
-    std::pair<intrusive::SharedPtr<value_type>, bool> ret;
+    std::pair<intrusive::shared_ptr<value_type>, bool> ret;
     ret.first.Reset(ret_elem);
     ret.second = success;
     if (success) { PtrUtil::Ref(elem_ptr); }

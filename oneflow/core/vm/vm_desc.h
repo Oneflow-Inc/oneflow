@@ -34,14 +34,14 @@ INTRUSIVE_BEGIN(VmDesc);
   // Getters
   const VmResourceDesc& vm_resource_desc() const {
     if (vm_resource_desc_) { return vm_resource_desc_.Get(); }
-    static const auto default_val = intrusive::MakeShared<VmResourceDesc>();
+    static const auto default_val = intrusive::make_shared<VmResourceDesc>();
     return default_val.Get();
   }
   const Range& machine_id_range() const { return machine_id_range_; }
   const StreamTypeId2StreamDesc& stream_type_id2desc() const { return stream_type_id2desc_; }
   //Setters
   VmResourceDesc* mut_vm_resource_desc() {
-    if (!vm_resource_desc_) { vm_resource_desc_ = intrusive::MakeShared<VmResourceDesc>(); }
+    if (!vm_resource_desc_) { vm_resource_desc_ = intrusive::make_shared<VmResourceDesc>(); }
     return vm_resource_desc_.Mutable();
   }
   Range* mut_machine_id_range() { return &machine_id_range_; }
@@ -57,16 +57,16 @@ INTRUSIVE_BEGIN(VmDesc);
   }
  private:  
   // fields
-  INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<VmResourceDesc>, vm_resource_desc_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<VmResourceDesc>, vm_resource_desc_);
   INTRUSIVE_DEFINE_FIELD(Range, machine_id_range_);
   // maps
   INTRUSIVE_DEFINE_FIELD(StreamTypeId2StreamDesc, stream_type_id2desc_);
 INTRUSIVE_END(VmDesc);
 // clang-format on
 
-intrusive::SharedPtr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id);
-intrusive::SharedPtr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id,
-                                        const std::set<std::string>& instr_type_names);
+intrusive::shared_ptr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id);
+intrusive::shared_ptr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id,
+                                         const std::set<std::string>& instr_type_names);
 
 }  // namespace vm
 }  // namespace oneflow

@@ -81,7 +81,7 @@ void IntrusiveFoo::__Delete__() {
 }
 
 TEST(intrusive, naive) {
-  auto foo = intrusive::MakeShared<IntrusiveFoo>();
+  auto foo = intrusive::make_shared<IntrusiveFoo>();
   foo->set_bar(9527);
   ASSERT_TRUE(foo->bar() == 9527);
 }
@@ -89,7 +89,7 @@ TEST(intrusive, naive) {
 TEST(intrusive, __delete__) {
   std::string is_deleted;
   {
-    auto foo = intrusive::MakeShared<IntrusiveFoo>();
+    auto foo = intrusive::make_shared<IntrusiveFoo>();
     foo->set_bar(9527);
     foo->set_is_deleted(&is_deleted);
     ASSERT_EQ(foo->bar(), 9527);
@@ -108,7 +108,7 @@ INTRUSIVE_BEGIN(IntrusiveBar)
   // Getters
   const IntrusiveFoo& foo() const {
     if (foo_) { return foo_.Get(); }
-    static const auto default_val = intrusive::MakeShared<IntrusiveFoo>();
+    static const auto default_val = intrusive::make_shared<IntrusiveFoo>();
     return default_val.Get();
   }
   const std::string& is_deleted() const { return *is_deleted_; }
@@ -116,7 +116,7 @@ INTRUSIVE_BEGIN(IntrusiveBar)
 
   // Setters
   IntrusiveFoo* mut_foo() {
-    if (!foo_) { foo_ = intrusive::MakeShared<IntrusiveFoo>(); }
+    if (!foo_) { foo_ = intrusive::make_shared<IntrusiveFoo>(); }
     return foo_.Mutable();
   }
   std::string* mut_is_deleted() { return is_deleted_; }
@@ -124,13 +124,13 @@ INTRUSIVE_BEGIN(IntrusiveBar)
   void clear_is_deleted() { is_deleted_ = nullptr; }
 
  private:
-  INTRUSIVE_DEFINE_FIELD(intrusive::SharedPtr<IntrusiveFoo>, foo_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<IntrusiveFoo>, foo_);
   INTRUSIVE_DEFINE_FIELD(std::string*, is_deleted_);
 INTRUSIVE_END(IntrusiveBar)
 // clang-format on
 
 TEST(intrusive, nested_objects) {
-  auto bar = intrusive::MakeShared<IntrusiveBar>();
+  auto bar = intrusive::make_shared<IntrusiveBar>();
   bar->mut_foo()->set_bar(9527);
   ASSERT_TRUE(bar->foo().bar() == 9527);
 }
@@ -139,7 +139,7 @@ TEST(intrusive, nested_delete) {
   std::string bar_is_deleted;
   std::string is_deleted;
   {
-    auto bar = intrusive::MakeShared<IntrusiveBar>();
+    auto bar = intrusive::make_shared<IntrusiveBar>();
     bar->set_is_deleted(&bar_is_deleted);
     auto* foo = bar->mut_foo();
     foo->set_bar(9527);
@@ -174,7 +174,7 @@ INTRUSIVE_END(IntrusiveContainerDemo)
 // clang-format on
 
 TEST(intrusive, flat_msg_field) {
-  auto obj = intrusive::MakeShared<IntrusiveContainerDemo>();
+  auto obj = intrusive::make_shared<IntrusiveContainerDemo>();
   ASSERT_TRUE(!obj->flat_field().has_int32_field());
   obj->mut_flat_field()->set_int32_field(33);
   ASSERT_TRUE(obj->flat_field().has_int32_field());

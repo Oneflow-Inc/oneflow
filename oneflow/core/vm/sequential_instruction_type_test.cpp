@@ -52,10 +52,10 @@ struct GlobalProcessCtxScope {
 
 TEST(SequentialInstruction, front_seq_compute) {
   GlobalProcessCtxScope scope;
-  auto vm_desc = intrusive::MakeShared<VmDesc>(TestUtil::NewVmResourceDesc().Get());
+  auto vm_desc = intrusive::make_shared<VmDesc>(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(),
                                       {"NewObject", "ComputeRankFrontSeqCallback"});
-  auto vm = intrusive::MakeShared<VirtualMachine>(vm_desc.Get());
+  auto vm = intrusive::make_shared<VirtualMachine>(vm_desc.Get());
   InstructionMsgList list;
   {
     int64_t logical_object_id = TestUtil::NewObject(&list, "cpu", "0:0");
