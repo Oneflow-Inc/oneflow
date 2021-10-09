@@ -584,6 +584,22 @@
     Double alpha=1.0) => BatchMatMul"
   bind_python: True
 
+- name: "l1_loss"
+  signature: "Tensor(Tensor input, Tensor target, String reduction) => L1Loss"
+  bind_python: True
+
+- name: "mse_loss"
+  signature: "Tensor(Tensor input, Tensor target, String reduction) => MseLoss"
+  bind_python: True
+
+- name: "kl_div_loss"
+  signature: "Tensor(Tensor input, Tensor target, Bool log_target, String reduction) => KLDivLoss"
+  bind_python: True
+
+- name: "kl_div_loss_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Bool log_target, String reduction) => KLDivLossGrad"
+  bind_python: False
+
 - name: "nll_loss"
   signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction) => NllLoss"
   bind_python: True
@@ -625,20 +641,28 @@
   bind_python: True
 
 - name: "smooth_l1_loss"
-  signature: "Tensor (Tensor logits, Tensor label, Float beta) => SmoothL1Loss"
+  signature: "Tensor (Tensor logits, Tensor label, Float beta, String reduction) => SmoothL1Loss"
   bind_python: True
 
 - name: "smooth_l1_loss_grad"
-  signature: "Tensor (Tensor loss_grad, Tensor prediction, Tensor label, Float beta) => SmoothL1LossGrad"
+  signature: "Tensor (Tensor loss_grad, Tensor prediction, Tensor label, Float beta, String reduction) => SmoothL1LossGrad"
   bind_python: False
 
 - name: "combined_margin_loss"
-  signature: "TensorTuple (Tensor x, Tensor label, Float m1, Float m2, Float m3, Int64 depth) => CombinedMarginLoss"
+  signature: "Tensor (Tensor x, Tensor label, Float m1, Float m2, Float m3) => CombinedMarginLoss"
   bind_python: True
 
 - name: "combined_margin_loss_grad"
   signature: "Tensor (Tensor dy, Tensor label, Tensor theta, Float m1, Float m2, Float m3, Int64 depth) => CombinedMarginLossGrad"
   bind_python: False
+
+- name: "margin_ranking_loss"
+  signature: "Tensor (Tensor input_1, Tensor input_2, Tensor target, Float margin, String reduction) => MarginRankingLoss"
+  bind_python: True
+
+- name: "ctc_loss"
+  signature: "Tensor (Tensor log_probs, Tensor targets, Tensor input_lengths, Tensor target_lengths, Int32 blank, Bool zero_infinity, String reduction) => CtcLoss"
+  bind_python: True
 
 - name: "affine_grid"
   signature: "Tensor (Tensor theta, *, Shape size, Bool align_corners) => AffineGrid"

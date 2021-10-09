@@ -21,8 +21,8 @@ namespace user_op {
 namespace loss {
 
 template<typename T>
-__global__ void ApplyLossReductionImplKernel(int64_t elem_cnt, const T* tmp_out, T* out,
-                                             bool is_reduce_mean) {
+__global__ void ApplyLossReductionImpl(int64_t elem_cnt, const T* tmp_out, T* out,
+                                       bool is_reduce_mean) {
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
   T thread_sum = static_cast<T>(0);
@@ -38,8 +38,9 @@ __global__ void ApplyLossReductionImplKernel(int64_t elem_cnt, const T* tmp_out,
 }
 
 template<>
-__global__ void ApplyLossReductionImplKernel<half>(int64_t elem_cnt, const half* tmp_out, half* out,
-                                                   bool is_reduce_mean) {
+__global__ void ApplyLossReductionImpl<half>(int64_t elem_cnt, const half* tmp_out, half* out,
+                                             bool is_reduce_mean) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   typedef cub::BlockReduce<half, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
   half thread_sum = __float2half(0.0);
@@ -52,36 +53,33 @@ __global__ void ApplyLossReductionImplKernel<half>(int64_t elem_cnt, const half*
     *out = block_sum;
     if (is_reduce_mean) { *out = __float2half(__half2float(*out) / elem_cnt); }
   }
+#else
+  printf("use half need nvcc arch >= 530");
+  assert(false);
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 
-template<typename T>
-void ApplyLossReduction(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* out,
-                        const ReductionType reduction_type) {
+template<DeviceType device_type, typename T>
+RETURN_VOID_IF_GPU(device_type)
+ApplyLossReductionIfNeed(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* out,
+                         const ReductionType reduction_type) {
+  if (reduction_type == ReductionType::kNone) { return; }
   if ((reduction_type != ReductionType::kMean) && (reduction_type != ReductionType::kSum)) {
     UNIMPLEMENTED();
     return;
   }
-  ApplyLossReductionImplKernel<<<1, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+  ApplyLossReductionImpl<<<1, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       elem_cnt, tmp_out, out, reduction_type == ReductionType::kMean);
 }
-template<>
-void ApplyLossReduction<float16>(DeviceCtx* ctx, int64_t elem_cnt, const float16* tmp_out,
-                                 float16* out, const ReductionType reduction_type) {
-  if ((reduction_type != ReductionType::kMean) && (reduction_type != ReductionType::kSum)) {
-    UNIMPLEMENTED();
-    return;
-  }
-  ApplyLossReductionImplKernel<<<1, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      elem_cnt, reinterpret_cast<const half*>(tmp_out), reinterpret_cast<half*>(out),
-      reduction_type == ReductionType::kMean);
-}
-#define SPECIALIZE_APPLY_LOSS_REDUCTION(dtype)                                                     \
-  template void ApplyLossReduction<dtype>(DeviceCtx * ctx, int64_t elem_cnt, const dtype* tmp_out, \
-                                          dtype* out, const ReductionType reduction_type);
 
-SPECIALIZE_APPLY_LOSS_REDUCTION(float)
-SPECIALIZE_APPLY_LOSS_REDUCTION(double)
-SPECIALIZE_APPLY_LOSS_REDUCTION(float16)
+#define SPECIALIZE_APPLY_LOSS_REDUCTION(device_type, dtype)                              \
+  template RETURN_VOID_IF_GPU(device_type) ApplyLossReductionIfNeed<device_type, dtype>( \
+      DeviceCtx * ctx, int64_t elem_cnt, const dtype* tmp_out, dtype* out,               \
+      const ReductionType reduction_type);
+
+SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kGPU, half)
+SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kGPU, float)
+SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kGPU, double)
 
 }  // namespace loss
 }  // namespace user_op
