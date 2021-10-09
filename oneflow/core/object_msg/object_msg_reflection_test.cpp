@@ -93,9 +93,9 @@ TEST(ObjectMsgReflection, RecursivelyReflectObjectMsgFields) {
 }
 
 TEST(ObjectMsgFieldListUtil, ToDot) {
-  //  std::cout << std::endl;
-  //  std::cout << ObjectMsgListReflection<FooBar>().ToDot() << std::endl;
-  //  std::cout << std::endl;
+  //  std::cerr << std::endl;
+  //  std::cerr << ObjectMsgListReflection<FooBar>().ToDot() << std::endl;
+  //  std::cerr << std::endl;
 }
 }  // namespace
 
