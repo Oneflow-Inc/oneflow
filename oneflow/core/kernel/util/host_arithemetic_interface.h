@@ -38,6 +38,9 @@ struct ArithemeticIf<DeviceType::kCPU> {
                         int64_t elem_cnt, const int8_t* x, int8_t* y);
   static void Transpose(DeviceCtx* ctx, int32_t num_axis, const ShapeView& x_shape,
                         const ShapeView& y_shape, const std::vector<int32_t>& permutation,
+                        int64_t elem_cnt, const uint8_t* x, uint8_t* y);
+  static void Transpose(DeviceCtx* ctx, int32_t num_axis, const ShapeView& x_shape,
+                        const ShapeView& y_shape, const std::vector<int32_t>& permutation,
                         int64_t elem_cnt, const int32_t* x, int32_t* y);
   static void Transpose(DeviceCtx* ctx, int32_t num_axis, const ShapeView& x_shape,
                         const ShapeView& y_shape, const std::vector<int32_t>& permutation,
@@ -52,6 +55,9 @@ struct ArithemeticIf<DeviceType::kCPU> {
   static void Transpose(DeviceCtx* ctx, int32_t num_axis, const ShapeView& x_shape,
                         const ShapeView& y_shape, const PbRf<int32_t>& permutation,
                         int64_t elem_cnt, const int8_t* x, int8_t* y);
+  static void Transpose(DeviceCtx* ctx, int32_t num_axis, const ShapeView& x_shape,
+                        const ShapeView& y_shape, const PbRf<int32_t>& permutation,
+                        int64_t elem_cnt, const uint8_t* x, uint8_t* y);
   static void Transpose(DeviceCtx* ctx, int32_t num_axis, const ShapeView& x_shape,
                         const ShapeView& y_shape, const PbRf<int32_t>& permutation,
                         int64_t elem_cnt, const int32_t* x, int32_t* y);
@@ -139,6 +145,9 @@ struct ArithemeticIf<DeviceType::kCPU> {
   static void CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
                              const double* x, const int64_t x_col_offset, const int64_t x_lda,
                              double* y, const int64_t y_col_offset, const int64_t y_lda);
+  static void CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
+                             const uint8_t* x, const int64_t x_col_offset, const int64_t x_lda,
+                             uint8_t* y, const int64_t y_col_offset, const int64_t y_lda);
   static void CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
                              const int8_t* x, const int64_t x_col_offset, const int64_t x_lda,
                              int8_t* y, const int64_t y_col_offset, const int64_t y_lda);

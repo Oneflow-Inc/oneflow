@@ -65,6 +65,7 @@ struct DiagGradFunctor<DeviceType::kGPU, T> final {
 REGISTER_DIAG_KERNELS(DeviceType::kGPU, half);
 REGISTER_DIAG_KERNELS(DeviceType::kGPU, float);
 REGISTER_DIAG_KERNELS(DeviceType::kGPU, double);
+REGISTER_DIAG_KERNELS(DeviceType::kGPU, uint8_t);
 REGISTER_DIAG_KERNELS(DeviceType::kGPU, int8_t);
 REGISTER_DIAG_KERNELS(DeviceType::kGPU, int32_t);
 REGISTER_DIAG_KERNELS(DeviceType::kGPU, int64_t);

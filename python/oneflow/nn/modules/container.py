@@ -46,6 +46,7 @@ class Sequential(Module):
     .. code-block:: python
 
         >>> import oneflow.nn as nn
+        >>> from collections import OrderedDict
         >>> nn.Sequential(nn.Conv2d(1,20,5), nn.ReLU(), nn.Conv2d(20,64,5), nn.ReLU()) #doctest: +ELLIPSIS
         Sequential(
           (0): Conv2d(1, 20, kernel_size=(5, 5), stride=(1, 1))

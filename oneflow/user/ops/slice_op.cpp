@@ -23,7 +23,7 @@ namespace {
 bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   if (step != 1) { return false; }
   if (start != 0) { return false; }
-  if (stop != std::numeric_limits<int64_t>::max()) { return false; }
+  if (stop != size) { return false; }
   return true;
 }
 

@@ -1,3 +1,22 @@
-* @willzhang4a58
-*test.cpp @lixinqi
-/oneflow/core/kernel/opkernel_test_case.* @lixinqi
+*.cu @liujuncheng
+*.py @daquexian @jackalcooper
+/oneflow/core/cuda @liujuncheng
+/oneflow/core/eager @lixinqi @daquexian
+/oneflow/core/framework @chengtbf
+/oneflow/core/functional @hjchen2
+/oneflow/core/graph @chengtbf
+/oneflow/core/ndarray @lixinqi
+/oneflow/core/object_msg @lixinqi
+/oneflow/core/platform @jackalcooper
+/oneflow/core/primitive @liujuncheng
+/oneflow/core/rpc @jackalcooper
+/oneflow/core/stream @liujuncheng
+/oneflow/core/transport @chengtbf
+/oneflow/core/vm @lixinqi
+/oneflow/xrt @hjchen2
+/ci @jackalcooper
+/cmake @jackalcooper
+/.github @jackalcooper
+/tools @jackalcooper
+/docs @doombeaker @jackalcooper
+/oneflow/extension @strint

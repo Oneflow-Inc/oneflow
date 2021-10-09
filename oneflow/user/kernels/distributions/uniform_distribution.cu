@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/distributions/uniform_distribution.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/user/kernels/distributions/uniform_distribution.h"
 
 namespace oneflow {
 
@@ -23,22 +23,20 @@ namespace {
 template<typename T>
 __device__ T GenUniform(curandState* state, const T low, const T high);
 
-#define INITIATE_GENUNIFORM(T, typeproto)                                      \
-  template<>                                                                   \
-  __device__ T GenUniform<T>(curandState * state, const T low, const T high) { \
-    return curand_uniform(state) * (high - low) + low;                         \
-  }
-
-OF_PP_FOR_EACH_TUPLE(INITIATE_GENUNIFORM, INT_DATA_TYPE_SEQ)
-
 template<>
 __device__ float GenUniform<float>(curandState* state, const float low, const float high) {
-  return curand_uniform(state) * (high - low) + low;
+  auto rand_num = curand_uniform(state);
+  // curand_uniform generates (0.0, 1.0], but we want [0.0, 1.0) here
+  if (rand_num == 1.0) { rand_num = 0.0; }
+  return rand_num * (high - low) + low;
 }
 
 template<>
 __device__ double GenUniform<double>(curandState* state, const double low, const double high) {
-  return curand_uniform_double(state) * (high - low) + low;
+  auto rand_num = curand_uniform_double(state);
+  // curand_uniform_double generates (0.0, 1.0], but we want [0.0, 1.0) here
+  if (rand_num == 1.0) { rand_num = 0.0; }
+  return rand_num * (high - low) + low;
 }
 
 template<typename T>
@@ -46,7 +44,7 @@ __global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, T* dptr,
                             const T high) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
   curandState localState = state[id];
-  if (id < elem_cnt) { dptr[id] = GenUniform<T>(&localState, low, high); }
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) { dptr[i] = GenUniform<T>(&localState, low, high); }
   state[id] = localState;
 }
 
@@ -71,6 +69,5 @@ void UniformDistribution<DeviceType::kGPU, T>::operator()(
       const std::shared_ptr<one::Generator>& generator) const;
 
 OF_PP_FOR_EACH_TUPLE(INITIATE_GPU_UNIFORM_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
-OF_PP_FOR_EACH_TUPLE(INITIATE_GPU_UNIFORM_DISTRIBUTION, INT_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
