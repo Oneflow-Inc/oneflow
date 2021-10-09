@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
 
@@ -224,7 +225,6 @@ class HardSigmoidFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
-
 class HardSigmoidGradFunctor : public BinaryFunctor {
  public:
   HardSigmoidGradFunctor() {

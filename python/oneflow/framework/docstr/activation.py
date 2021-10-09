@@ -143,14 +143,14 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow._C.log_sigmoid,
+    oneflow._C.logsigmoid,
     r"""
-    log_sigmoid(x: Tensor) -> Tensor 
+    logsigmoid(x: Tensor) -> Tensor 
 
     Applies the element-wise function:
 
     .. math::
-        \text{log_sigmoid}(x) = \log\left(\frac{ 1 }{ 1 + \exp(-x)}\right)
+        \text{logsigmoid}(x) = \log\left(\frac{ 1 }{ 1 + \exp(-x)}\right)
    
     For example:
 
@@ -163,7 +163,7 @@ add_docstr(
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.tensor(x)     
           
-        >>> out = flow.nn.functional.log_sigmoid(input)
+        >>> out = flow.nn.functional.logsigmoid(input)
         >>> out
         tensor([-0.9741, -0.6931, -0.4741], dtype=oneflow.float32)
 
@@ -261,7 +261,6 @@ add_docstr(
     
     """,
 )
-
 
 
 add_docstr(

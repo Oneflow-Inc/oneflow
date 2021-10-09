@@ -949,7 +949,7 @@
   signature: "Tensor (Tensor x) => Log1p"
   bind_python: True
 
-- name: "log_sigmoid"
+- name: "logsigmoid"
   signature: "Tensor (Tensor x) => LogSigmoid"
   bind_python: True
 

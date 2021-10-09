@@ -567,9 +567,7 @@ class LogSigmoid(Module):
         super().__init__()
 
     def forward(self, x):
-        sigmoid_res = flow.sigmoid(x)
-        res = flow.log(sigmoid_res)
-        return res
+        return flow._C.logsigmoid(x)
 
 
 class Softplus(Module):
