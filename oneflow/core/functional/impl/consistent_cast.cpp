@@ -131,7 +131,7 @@ Maybe<FlatShapeAndDataType> BroadcastShapeAndDtype(const Shape& shape, DataType 
   const auto& rank_group_parallel_desc =
       JUST(RankGroup::GetDefaultParallelDesc(parallel_desc->device_type(), rank_group));
   const auto& process_id2broadcast_group =
-      JUST(GetBroadcastGroupWithoutAcrossNode(parallel_desc, rank_group_parallel_desc));
+      JUST(GetBroadcastGroup(parallel_desc, rank_group_parallel_desc));
   const auto& broadcast_parallel_desc =
       JUST(MapAt(*process_id2broadcast_group, GlobalProcessCtx::Rank()));
 

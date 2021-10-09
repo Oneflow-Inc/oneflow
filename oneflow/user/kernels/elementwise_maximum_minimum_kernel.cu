@@ -46,9 +46,9 @@ struct ElemwiseXimumFunctor<DeviceType::kGPU, Opt, T> final {
 };
 }  // namespace
 
-REGISTER_MAXIMUM_KERNELS(DeviceType::kGPU, float);
-REGISTER_MAXIMUM_KERNELS(DeviceType::kGPU, double);
-REGISTER_MINIMUM_KERNELS(DeviceType::kGPU, float);
-REGISTER_MINIMUM_KERNELS(DeviceType::kGPU, double);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MAXIMUM_KERNELS, (DeviceType::kGPU),
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MINIMUM_KERNELS, (DeviceType::kGPU),
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
 }  // namespace oneflow
 #endif  // WITH_CUDA
