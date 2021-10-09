@@ -364,6 +364,18 @@
     Tensor gamma, Tensor beta, Tensor reserve_space, Tensor y, Int32 axis=1, Float epsilon=1e-5) => NormalizationAddReluGrad"
   bind_python: False
 
+- name: "eye"
+  signature: [
+      "Tensor (Scalar n, Scalar m=None, *, DataType dtype=None, Device device=None) => Eye",
+    ]
+  bind_python: True
+
+- name: "consistent_eye"
+  signature: [
+      "Tensor (Scalar n, Scalar m=None, *, DataType dtype=None, Placement placement, SbpList sbp) => ConsistentEye",
+    ]
+  bind_python: True
+
 - name: "arange"
   signature: [
       "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=kInt64,
