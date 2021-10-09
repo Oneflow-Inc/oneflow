@@ -47,6 +47,7 @@ TEST(Ref, ref_cnt) {
 // clang-format off
 INTRUSIVE_BEGIN(IntrusiveFoo)
  public:
+  IntrusiveFoo() = default;
   void __Init__() { clear_is_deleted(); }
   void __Delete__();
 
@@ -100,6 +101,7 @@ TEST(intrusive, __delete__) {
 // clang-format off
 INTRUSIVE_BEGIN(IntrusiveBar)
  public:
+  IntrusiveBar() = default;
   void __Init__() { clear_is_deleted(); }
   void __Delete__(){
     if (mut_is_deleted()) { *mut_is_deleted() = "bar_deleted"; }
@@ -163,6 +165,7 @@ FLAT_MSG_END(FlatMsgDemo)
 // clang-format off
 INTRUSIVE_BEGIN(IntrusiveContainerDemo)
  public:
+  IntrusiveContainerDemo() = default;
   // Getters
   const FlatMsgDemo& flat_field() const { return flat_field_.Get(); }
   // Setters
@@ -183,6 +186,7 @@ TEST(intrusive, flat_msg_field) {
 
 // clang-format off
 INTRUSIVE_BEGIN(TestIntrusiveField);
+  TestIntrusiveField() = default;
   static_assert(INTRUSIVE_FIELD_COUNTER == 0, "");
   static_assert(INTRUSIVE_FIELD_COUNTER == 0, "");
   INTRUSIVE_DEFINE_FIELD(int32_t, a);

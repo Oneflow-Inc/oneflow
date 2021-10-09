@@ -37,6 +37,7 @@ struct VmDesc;
 // clang-format off
 INTRUSIVE_BEGIN(VirtualMachine);
  public:
+  VirtualMachine() = default;
   // types
   using ActiveStreamList = intrusive::List<INTRUSIVE_FIELD(Stream, active_stream_entry_)>;
   using ThreadCtxList = intrusive::List<INTRUSIVE_FIELD(ThreadCtx, thread_ctx_entry_)>;

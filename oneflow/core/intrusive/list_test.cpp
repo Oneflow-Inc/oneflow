@@ -30,6 +30,7 @@ namespace {
 // clang-format off
 INTRUSIVE_BEGIN(TestListItem)
  public:
+  TestListItem() = default;
   void __Init__() { clear_cnt(); }
   void __Delete__() {
     if (has_cnt()) { --*mut_cnt(); }
@@ -289,6 +290,7 @@ TEST(List, intrusive_list_for_each) {
 // clang-format off
 INTRUSIVE_BEGIN(TestIntrusiveListHeadWrapper);
  public:
+  TestIntrusiveListHeadWrapper() = default;
   // Getters
   const TestIntrusiveListHead& head() const {
     if (head_) { return head_.Get(); }
@@ -360,6 +362,7 @@ TEST(List, MoveTo) {
 // clang-format off
 INTRUSIVE_BEGIN(SelfLoopContainer);
  public:
+  SelfLoopContainer() = default;
   void __Init__() { clear_deleted(); }
   // Getters
   bool has_deleted() const { return deleted_ != nullptr; }

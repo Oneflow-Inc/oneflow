@@ -30,6 +30,7 @@ class Device;
 // Helps VirtualMachine building instruction edges
 INTRUSIVE_BEGIN(LocalDepObject);
  public:
+  LocalDepObject() = default;
   // Getters
   const vm::LogicalObject& logical_object() const {
     if (logical_object_) { return logical_object_.Get(); }

@@ -28,6 +28,7 @@ namespace vm {
 // clang-format off
 INTRUSIVE_BEGIN(ThreadCtx);
  public:
+  ThreadCtx() = default;
   void __Init__() { clear_stream_rt_desc(); }
 
   // types

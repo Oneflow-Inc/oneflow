@@ -28,6 +28,7 @@ struct ThreadCtx;
 // clang-format off
 INTRUSIVE_BEGIN(Stream);
  public:
+  Stream() = default;
   // types
   using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, instruction_entry_)>;
 

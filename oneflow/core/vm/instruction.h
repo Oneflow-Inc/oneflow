@@ -37,6 +37,7 @@ namespace vm {
 // clang-format off
 INTRUSIVE_BEGIN(InstructionOperandList);
  public:
+  InstructionOperandList() = default;
   void __Init__() {}
   // Getters
   const std::vector<FlatMsg<InstructionOperand>>& operand() const { return operand_; }
@@ -49,6 +50,7 @@ INTRUSIVE_END(InstructionOperandList);
 
 INTRUSIVE_BEGIN(InstructionMsg);
  public:
+  InstructionMsg() = default;
   // Getters
   bool has_parallel_desc_symbol_id() const { return 0 != parallel_desc_symbol_id_; }
   int64_t parallel_desc_symbol_id() const { return parallel_desc_symbol_id_; }
@@ -147,6 +149,7 @@ struct Instruction;
 // clang-format off
 INTRUSIVE_BEGIN(InstructionEdge);
  public:
+  InstructionEdge() = default;
   void __Init__() {
     clear_src_instruction();
     clear_dst_instruction();
@@ -184,6 +187,7 @@ struct Stream;
 // clang-format off
 INTRUSIVE_BEGIN(Instruction);
  public:
+  Instruction() = default;
   // types
   using InEdgeList = intrusive::List<INTRUSIVE_FIELD(InstructionEdge, in_edge_entry_)>;
   using OutEdgeList = intrusive::List<INTRUSIVE_FIELD(InstructionEdge, out_edge_entry_)>;

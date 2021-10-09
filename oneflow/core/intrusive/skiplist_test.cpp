@@ -27,6 +27,7 @@ namespace {
 // clang-format off
 INTRUSIVE_BEGIN(SkipListFoo);
  public:
+  SkipListFoo() = default;
   void __Init__() { clear_is_deleted(); }
   void __Delete__() {
     if (has_is_deleted()) { ++*mut_is_deleted(); }
@@ -51,6 +52,7 @@ INTRUSIVE_END(SkipListFoo);
 // clang-format off
 INTRUSIVE_BEGIN(SkipListFooContainer);
  public:
+  SkipListFooContainer() = default;
   // types
   using Key2SkipListFoo = intrusive::SkipList<INTRUSIVE_FIELD(SkipListFoo, foo_map_key_)>;
   // Getters

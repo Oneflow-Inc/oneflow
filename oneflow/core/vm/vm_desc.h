@@ -28,6 +28,7 @@ namespace vm {
 // clang-format off
 INTRUSIVE_BEGIN(VmDesc);
  public:
+  VmDesc() = default;
   // types
   using StreamTypeId2StreamDesc =
       intrusive::SkipList<INTRUSIVE_FIELD(StreamDesc, stream_type_id_)>;

@@ -46,6 +46,7 @@ TEST(StreamTypeId, logical_compare) {
 // clang-format off
 INTRUSIVE_BEGIN(StreamTypeIdItem);
  public:
+  StreamTypeIdItem() = default;
   // Getters
   const StreamTypeId& stream_type_id() const { return stream_type_id_.key().Get(); }
   // Setters

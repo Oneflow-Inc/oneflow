@@ -91,8 +91,8 @@ INTRUSIVE_END(RwMutexedObjectAccess);
 struct LogicalObject;
 INTRUSIVE_BEGIN(RwMutexedObject);
  public:
+  RwMutexedObject() = default;
   void __Init__() {}
-
   // types
   using RwMutexedObjectAccessList = intrusive::List<INTRUSIVE_FIELD(RwMutexedObjectAccess, rw_mutexed_object_access_entry_)>;
 
@@ -142,6 +142,7 @@ INTRUSIVE_END(RwMutexedObject);
 
 INTRUSIVE_BEGIN(MirroredObject);
  public:
+  MirroredObject() = default;
   // Getters
   bool has_deleting_access() const { return deleting_access_ != nullptr; }
   const RwMutexedObjectAccess& deleting_access() const { return *deleting_access_; }
