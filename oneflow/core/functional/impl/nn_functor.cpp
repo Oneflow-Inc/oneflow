@@ -1317,6 +1317,34 @@ class FusedScaleTrilFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class CtcLossFunctor {
+ public:
+  CtcLossFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("ctc_loss")
+                         .Input("log_probs")
+                         .Input("targets")
+                         .Input("input_lengths")
+                         .Input("target_lengths")
+                         .Output("loss")
+                         .Output("alpha")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& log_probs,
+                                const std::shared_ptr<one::Tensor>& targets,
+                                const std::shared_ptr<one::Tensor>& input_lengths,
+                                const std::shared_ptr<one::Tensor>& target_lengths,
+                                const int32_t& blank, const bool& zero_infinity) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("blank", blank));
+    JUST(attrs.SetAttr<bool>("zero_infinity", zero_infinity));
+    return OpInterpUtil::Dispatch<TensorTuple>(
+        *op_, {log_probs, targets, input_lengths, target_lengths}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class CtcGreedyDecoderFunctor {
  public:
   CtcGreedyDecoderFunctor() {
@@ -1388,6 +1416,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedBiasAddGeluGradFunctor>("FusedBiasAddGeluGrad");
   m.add_functor<impl::FusedBiasAddDropoutFunctor>("FusedBiasAddDropout");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
+  m.add_functor<impl::CtcLossFunctor>("CtcLoss");
   m.add_functor<impl::CtcGreedyDecoderFunctor>("CtcGreedyDecoder");
 };
 

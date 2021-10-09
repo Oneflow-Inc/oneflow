@@ -735,22 +735,8 @@ class CTCLoss(_Loss):
     ) -> None:
         super(CTCLoss, self).__init__(reduction)
 
+        self.blank = blank
         self.zero_infinity = zero_infinity
-        self._op = (
-            flow.builtin_op("ctc_loss")
-            .Input("log_probs")
-            .Input("targets")
-            .Input("input_lengths")
-            .Input("target_lengths")
-            .Output("loss")
-            .Output("alpha")
-            .Attr("blank", int(blank))
-            .Attr("zero_infinity", zero_infinity)
-            .Build()
-        )
-        self._xdivy_op = (
-            flow.builtin_op("xdivy").Input("x").Input("y").Output("z").Build()
-        )
         self.constant = _ConstantBase
 
     def forward(
@@ -760,7 +746,14 @@ class CTCLoss(_Loss):
         input_lengths: Tensor,
         target_lengths: Tensor,
     ) -> Tensor:
-        (loss, _) = self._op(log_probs, targets, input_lengths, target_lengths)
+        (loss, _) = flow._C.ctc_loss(
+            log_probs,
+            targets,
+            input_lengths,
+            target_lengths,
+            self.blank,
+            self.zero_infinity,
+        )
         if self.zero_infinity:
             cond = flow.eq(
                 loss,
@@ -777,12 +770,7 @@ class CTCLoss(_Loss):
                 loss,
             )
         if self.reduction == "mean":
-            return flow.mean(
-                self._xdivy_op(
-                    loss,
-                    flow.cast(flow.clamp(target_lengths, min=1), dtype=log_probs.dtype),
-                )[0]
-            )
+            return flow.mean((loss / flow.clamp(target_lengths, min=1),)[0])
         elif self.reduction == "sum":
             return flow.sum(loss)
         else:
