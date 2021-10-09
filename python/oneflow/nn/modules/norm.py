@@ -206,8 +206,6 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
         dim = [dim]
     if isinstance(ord, (int, float)):
         ord=float(ord)
-    elif ord==None:
-        ord = "fro"
     return flow._C.norm(input, ord, dim, keepdim)
 
 

@@ -652,10 +652,10 @@ class VectorNormFunctor {
     std::vector<int32_t> dim;
     std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
     std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-
-    const DType obj(kInt32);
-    Symbol<DType> dtype(obj);
-
+    if (!IsFloatingDataType(x->dtype()->data_type())
+    {
+      UNIMPLEMENTED_THEN_RETURN() << "Can only calculate the mean of floating types.";
+    }
     if (!input_dim.has_value()) 
     {
       dim = reduce_axis;
@@ -667,16 +667,14 @@ class VectorNormFunctor {
     if(ord.IsFloatingPoint())
     {
       double ord_val = JUST(ord.As<double>());
+      
       if(ord_val == 0)
       {
-        auto rd_tmp=JUST(ArgWhere(x, dtype));
+        auto rd_tmp=JUST(ArgWhere(x, DType::Int64()));
         auto num_rd = rd_tmp->at(0);
-        const DType obj_tmp(kFloat);
-        Symbol<DType> dtype_tmp(obj_tmp);
         DimVector dims(1, 1);
         Shape shape(dims);
-        rd=JUST(Constant(shape, num_rd->shape()->At(0), dtype_tmp, JUST(x->device())));
-        
+        rd=JUST(Constant(shape, num_rd->shape()->At(0), x->dtype(), JUST(x->device())));
       }
       else if (ord_val==INFINITY)
       {
@@ -708,9 +706,11 @@ class MatrixNormFunctor {
     std::vector<int32_t> dim;
     CHECK_OR_RETURN(x->shape()->NumAxes()>=2) <<"input tensor must be a matrix or batch of matrices";
     CHECK_OR_RETURN(input_dim.size()==2 && input_dim[0] != input_dim[1]) <<"input_dim must be a 2-tuple of ints with different elements";
+    if (!IsFloatingDataType(x->dtype()->data_type()))
+    {
+      UNIMPLEMENTED_THEN_RETURN() << "Can only calculate floating types";
+    }
     double ord_tmp = JUST(ord.As<double>());
-
-
     if(ord_tmp == INFINITY || ord_tmp == -INFINITY)
     {
       dim=input_dim;
@@ -754,8 +754,11 @@ class MatrixNorm2Functor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                             const std::string& ord, const std::vector<int32_t>& input_dim, 
                             const bool& keepdim) const {
-    std::shared_ptr<one::Tensor> res; 
-    CHECK_OR_RETURN(input_dim.size()==2 && input_dim[0] != input_dim[1]) <<"input_dim must be a 2-tuple of ints with different elements";
+    std::shared_ptr<one::Tensor> res;
+    if (!IsFloatingDataType(x->dtype()->data_type()))
+    {
+      UNIMPLEMENTED_THEN_RETURN() << "Can only calculate floating types.";
+    }
     if(ord=="nuc") 
     {
       UNIMPLEMENTED_THEN_RETURN() << "Not support ord is nuc.";
