@@ -36,15 +36,8 @@ class Channel {
 
   Channel(const Channel&) = delete;
   Channel(Channel&&) = delete;
-  Channel() { this->__Init__(); }
-  ~Channel() { this->__Delete__(); }
-
-  void __Init__() {
-    list_head_.__Init__();
-    is_closed_ = false;
-    new (mutex_buff_) std::mutex();
-    new (cond_buff_) std::condition_variable();
-  }
+  Channel() : list_head_(), mutex_(), cond_(), is_closed_(false) {}
+  ~Channel() = default;
 
   bool Empty() {
     std::unique_lock<std::mutex> lock(*mut_mutex());
@@ -100,28 +93,13 @@ class Channel {
     mut_cond()->notify_all();
   }
 
-  void __Delete__() {
-    list_head_.Clear();
-    using namespace std;
-    mut_mutex()->mutex::~mutex();
-    mut_cond()->condition_variable::~condition_variable();
-  }
-
  private:
-  std::mutex* mut_mutex() { return reinterpret_cast<std::mutex*>(&mutex_buff_[0]); }
-  std::condition_variable* mut_cond() {
-    return reinterpret_cast<std::condition_variable*>(&cond_buff_[0]);
-  }
+  std::mutex* mut_mutex() { return &mutex_; }
+  std::condition_variable* mut_cond() { return &cond_; }
 
   intrusive::List<EntryField> list_head_;
-  union {
-    char mutex_buff_[sizeof(std::mutex)];
-    int64_t mutex_buff_align_;
-  };
-  union {
-    char cond_buff_[sizeof(std::condition_variable)];
-    int64_t cond_buff_align_;
-  };
+  std::mutex mutex_;
+  std::condition_variable cond_;
   bool is_closed_;
 };
 
