@@ -429,6 +429,17 @@ class TransposeFunctor {
                            const std::vector<int32_t>& permute) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
+    int32_t ndims = x->shape()->NumAxes();
+    for (int i = 0; i < permute.size(); i++) {
+      int32_t dim = permute.at(i);
+      if (dim < 0) { dim += ndims; }
+      CHECK_GE_OR_RETURN(dim, 0)
+          << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
+          << ndims << " ] but got " << ndims;
+      CHECK_LT_OR_RETURN(dim, ndims)
+          << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
+          << ndims << " ] but got " << ndims;
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
