@@ -1494,8 +1494,8 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(y.placement, placement)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestTensorNumpy(flow.unittest.TestCase):
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n2d()
     def test_1d_sbp_tensor_numpy_1n2d(test_case):
         ori_x = flow.tensor([1, 2, 3, 4]) + flow.env.get_rank()
@@ -1522,7 +1522,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_2d_sbp_tensor_numpy_1n2d(test_case):
         ori_x = flow.tensor(np.ones((2, 2))) + flow.env.get_rank()
-        placement = flow.placement("cpu", {0: range(2)}, hierarchy=(2, 1))
+        placement = flow.placement("cuda", {0: range(2)}, hierarchy=(2, 1))
         x = ori_x.to_consistent(
             placement=placement, sbp=[flow.sbp.split(0), flow.sbp.split(1)]
         )
@@ -1541,7 +1541,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
     def test_2d_sbp_tensor_numpy_1n4d(test_case):
         ori_x = flow.tensor(np.ones((2, 2))) + flow.env.get_rank()
-        placement = flow.placement("cpu", {0: range(4)}, hierarchy=(2, 2))
+        placement = flow.placement("cuda", {0: range(4)}, hierarchy=(2, 2))
 
         x = ori_x.to_consistent(
             placement=placement, sbp=[flow.sbp.split(0), flow.sbp.split(1)]
