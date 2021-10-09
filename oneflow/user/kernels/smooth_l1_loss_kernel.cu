@@ -40,10 +40,12 @@ template<>
 __global__ void ComputeSmoothL1Out(int64_t elem_cnt, const half* input, const half* target,
                                    half* out, const float beta) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  const half half_zero = __float2half(0.0);
   const half half_one = __float2half(0.5);
   const half half_beta = __float2half(beta);
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    const half abs_diff = __habs(__hsub(input[i], target[i]));
+    const half diff = __hsub(input[i], target[i]);
+    const half abs_diff = __hlt(diff, half_zero) ? __hneg(diff) : diff;
     if (__hlt(abs_diff, half_beta)) {
       out[i] = __hmul(__hmul(half_one, abs_diff), __hdiv(abs_diff, half_beta));
     } else {
@@ -79,13 +81,13 @@ __global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, const half* input, cons
                                        const half* dy, half* dx, const ReductionType reduction_type,
                                        const float beta) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  const half half_zero = GetZeroVal<half>();
-  const half half_one = GetOneVal<half>();
+  const half half_zero = __float2half(0.0);
+  const half half_one = __float2half(1.0);
   const half half_beta = __float2half(beta);
 
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const half diff = __hsub(input[i], target[i]);
-    const half abs_diff = __habs(diff);
+    const half abs_diff = __hlt(diff, half_zero) ? __hneg(diff) : diff;
     if (__hlt(abs_diff, half_beta)) {
       dx[i] = __hdiv(diff, half_beta);
     } else {
