@@ -108,18 +108,14 @@ void SliceBoxingAddKernel::ForwardDataContent(KernelContext* ctx) const {
                                                   in_i);
     } else {
       if (in_i->shape() == out->shape()) {
-        const void* srcs[2];
-        srcs[0] = in_i->dptr();
-        srcs[1] = out->dptr();
-        primitive->Launch(ctx->stream_ctx(), srcs, 2, out->mut_dptr(), out->shape().elem_cnt());
+        primitive->Launch(ctx->stream_ctx(), in_i->dptr(), out->dptr(), out->mut_dptr(),
+                          out->shape().elem_cnt());
       } else {
         Blob* buf = ctx->BnInOp2Blob("buf");
         this->tensor_slice_copier_vec().at(i)->Copy(ctx->device_ctx(), *this->memory_copier(), buf,
                                                     in_i);
-        const void* srcs[2];
-        srcs[0] = buf->dptr();
-        srcs[1] = out->dptr();
-        primitive->Launch(ctx->stream_ctx(), srcs, 2, out->mut_dptr(), out->shape().elem_cnt());
+        primitive->Launch(ctx->stream_ctx(), buf->dptr(), out->dptr(), out->mut_dptr(),
+                          out->shape().elem_cnt());
       }
     }
   }
