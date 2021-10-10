@@ -13,19 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/device/cuda_device_context.h"
-#include "oneflow/core/thread/thread_context.h"
+#include "oneflow/user/kernels/eye_kernel_util.h"
 
 namespace oneflow {
 
-#ifdef WITH_CUDA
+namespace user_op {
 
-REGISTER_DEVICE_CONTEXT(DeviceType::kGPU, ([](const ThreadCtx& thread_ctx) -> DeviceCtx* {
-                          CudaStreamHandle* cuda_handle = nullptr;
-                          cuda_handle = thread_ctx.g_cuda_stream.get();
-                          return new CudaDeviceCtx(cuda_handle);
-                        }));
+template<typename T>
+struct EyeFunctor<DeviceType::kCPU, T> final {
+  void operator()(DeviceCtx* ctx, const int64_t& cols, const int64_t& rows, T* out) {
+    SetOneInDiag(cols, rows, out);
+  }
+};
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_EYE_FUNCTOR, (DeviceType::kCPU), RANGE_DATA_TYPE_SEQ);
 
-#endif  // WITH_CUDA
-
+}  // namespace user_op
 }  // namespace oneflow

@@ -58,7 +58,7 @@ class ModelLoadKernel final : public Kernel {
       if (reader.HasKey(key)) {
         reader.Read(key, out_i);
       } else {
-        std::cout << "WARNING! CANNOT find variable path in : " << JoinPath(path, key)
+        std::cerr << "WARNING! CANNOT find variable path in : " << JoinPath(path, key)
                   << ". It will be initialized. \n";
         std::mt19937 random_seed_gen(original_variable_conf.random_seed());
         CHECK(original_variable_conf.has_initializer())

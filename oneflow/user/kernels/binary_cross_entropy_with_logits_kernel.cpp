@@ -130,9 +130,8 @@ class BinaryCrossEntropyWithLogitsKernel final : public user_op::OpKernel {
                                            reduction == ReductionType::kNone ? out : tmp_out,
                                            weight, pos_weight_processed);
 
-    if (reduction != ReductionType::kNone) {
-      ApplyLossReduction<T>(elem_cnt, tmp_out, out, reduction);
-    }
+    ApplyLossReductionIfNeed<DeviceType::kCPU, T>(ctx->device_ctx(), elem_cnt, tmp_out, out,
+                                                  reduction);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
