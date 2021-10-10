@@ -29,7 +29,6 @@ struct StreamDesc;
 // clang-format off
 INTRUSIVE_BEGIN(StreamRtDesc);
  public:
-  StreamRtDesc() = default;
   // types
   using StreamId2Stream = intrusive::SkipList<INTRUSIVE_FIELD(Stream, stream_id_)>;
   // Getters
@@ -54,6 +53,11 @@ INTRUSIVE_BEGIN(StreamRtDesc);
   const StreamType& stream_type() const;
 
  private:
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+
+  StreamRtDesc() : intrusive_ref_(), stream_desc_(), stream_type_id_(), stream_id2stream_() {}
+  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<StreamDesc>, stream_desc_); 
   // list entries

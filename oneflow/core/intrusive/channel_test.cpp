@@ -29,13 +29,16 @@ namespace {
 // clang-format off
 INTRUSIVE_BEGIN(Foo);
  public:
-  Foo() : x_() {}
   int x() const { return x_; }
   void set_x(int val) { x_ = val; }
 
+ private:
+  Foo() : intrusive_ref_(), x_(), entry_() {}
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(int, x_);
-
   // list entries
   INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, entry_);
 INTRUSIVE_END(Foo);

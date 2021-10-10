@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_INTRUSIVE_LIST_H_
 
 #include <typeinfo>
-#include "oneflow/core/intrusive/intrusive_core.h"
+#include "oneflow/core/intrusive/ref.h"
 #include "oneflow/core/intrusive/list_entry.h"
 #include "oneflow/core/intrusive/struct_traits.h"
 
@@ -85,12 +85,12 @@ class List {
 
   void PushBack(value_type* ptr) {
     list_head_.PushBack(ptr);
-    PtrUtil::Ref(ptr);
+    Ref::IncreaseRef(ptr);
   }
 
   void PushFront(value_type* ptr) {
     list_head_.PushFront(ptr);
-    PtrUtil::Ref(ptr);
+    Ref::IncreaseRef(ptr);
   }
 
   void EmplaceBack(intrusive::shared_ptr<value_type>&& ptr) {
@@ -126,7 +126,7 @@ class List {
   void MoveToDstBack(List* list) { list_head_.MoveToDstBack(&list->list_head_); }
 
   void Clear() {
-    while (!empty()) { PtrUtil::ReleaseRef(list_head_.PopFront()); }
+    while (!empty()) { Ref::DecreaseRef(list_head_.PopFront()); }
   }
 
  private:
@@ -163,7 +163,7 @@ class HeadFreeList {
     static_assert(
         std::is_same<HeadFreeList,
                      INTRUSIVE_FIELD_TYPE(typename value_type, field_number_in_countainter)>::value,
-        "");
+        "It's invalid to define fields between definition of head-free list type and it's field.");
     using ThisInContainer =
         StructField<value_type, HeadFreeList,
                     INTRUSIVE_FIELD_OFFSET(value_type, field_number_in_countainter)>;
@@ -207,12 +207,12 @@ class HeadFreeList {
 
   void PushBack(value_type* ptr) {
     list_head_.PushBack(ptr);
-    if (container_ != ptr) { PtrUtil::Ref(ptr); }
+    if (container_ != ptr) { Ref::IncreaseRef(ptr); }
   }
 
   void PushFront(value_type* ptr) {
     list_head_.PushFront(ptr);
-    if (container_ != ptr) { PtrUtil::Ref(ptr); }
+    if (container_ != ptr) { Ref::IncreaseRef(ptr); }
   }
 
   void EmplaceBack(intrusive::shared_ptr<value_type>&& ptr) {
@@ -272,16 +272,16 @@ class HeadFreeList {
   void Clear() {
     while (!empty()) {
       auto* ptr = list_head_.PopFront();
-      if (container_ != ptr) { PtrUtil::ReleaseRef(ptr); }
+      if (container_ != ptr) { Ref::DecreaseRef(ptr); }
     }
   }
 
  private:
   void MoveReference(value_type* ptr, HeadFreeList* dst) {
     if (ptr == container_ && ptr != dst->container_) {
-      PtrUtil::Ref(ptr);
+      Ref::IncreaseRef(ptr);
     } else if (ptr != container_ && ptr == dst->container_) {
-      PtrUtil::ReleaseRef(ptr);
+      Ref::DecreaseRef(ptr);
     } else {
       // do nothing
     }

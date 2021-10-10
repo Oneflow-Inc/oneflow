@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_INTRUSIVE_SHARED_PTR_H_
 #define ONEFLOW_CORE_INTRUSIVE_SHARED_PTR_H_
 
-#include "oneflow/core/intrusive/intrusive_core.h"
+#include "oneflow/core/intrusive/ref.h"
 
 namespace oneflow {
 
@@ -42,7 +42,7 @@ class shared_ptr final {
   template<typename... Args>
   static shared_ptr make_shared(Args&&... args) {
     shared_ptr ret;
-    PtrUtil::NewAndInitRef(&ret.ptr_);
+    Ref::NewAndInitRef(&ret.ptr_);
     ret.Mutable()->__Init__(std::forward<Args>(args)...);
     return ret;
   }
@@ -64,7 +64,7 @@ class shared_ptr final {
     Clear();
     if (ptr == nullptr) { return; }
     ptr_ = ptr;
-    PtrUtil::Ref<value_type>(ptr_);
+    Ref::IncreaseRef<value_type>(ptr_);
   }
 
   shared_ptr& operator=(const shared_ptr& rhs) {
@@ -85,7 +85,7 @@ class shared_ptr final {
  private:
   void Clear() {
     if (ptr_ == nullptr) { return; }
-    PtrUtil::ReleaseRef<value_type>(ptr_);
+    Ref::DecreaseRef<value_type>(ptr_);
     ptr_ = nullptr;
   }
   mutable value_type* ptr_;

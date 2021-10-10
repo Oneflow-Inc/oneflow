@@ -59,7 +59,6 @@ class StreamId final {
 // clang-format off
 INTRUSIVE_BEGIN(StreamDesc);
  public:
-  StreamDesc() = default;
   // Getters
   int32_t num_machines() const { return num_machines_; }
   int32_t num_streams_per_machine() const { return num_streams_per_machine_; }
@@ -79,6 +78,11 @@ INTRUSIVE_BEGIN(StreamDesc);
   int32_t parallel_num() const { return num_machines() * num_streams_per_machine(); }
 
  private:
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+  
+  StreamDesc() : intrusive_ref_(), num_machines_(), num_streams_per_machine_(), num_streams_per_thread_(), stream_type_id_() {}
+  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(int32_t, num_machines_);
   INTRUSIVE_DEFINE_FIELD(int32_t, num_streams_per_machine_);

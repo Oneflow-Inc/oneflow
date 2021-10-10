@@ -31,7 +31,6 @@ using DeviceTag2DeviceNum = std::unordered_map<std::string, int64_t>;
 // clang-format off
 INTRUSIVE_BEGIN(VmResourceDesc);
  public:
-  VmResourceDesc() = default;
   void __Init__() {}
   // Getters
   int64_t machine_num() const { return machine_num_; }
@@ -51,6 +50,11 @@ INTRUSIVE_BEGIN(VmResourceDesc);
   int64_t GetGlobalDeviceId(int64_t machine_id, int64_t device_id) const;
 
  private:
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+
+  VmResourceDesc() : intrusive_ref_(), machine_num_(), max_device_num_per_machine_(), device_tag2device_num_() {}
+  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(int64_t, machine_num_);
   INTRUSIVE_DEFINE_FIELD(int64_t, max_device_num_per_machine_);

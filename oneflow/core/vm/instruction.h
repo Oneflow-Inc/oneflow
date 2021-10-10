@@ -37,7 +37,6 @@ namespace vm {
 // clang-format off
 INTRUSIVE_BEGIN(InstructionOperandList);
  public:
-  InstructionOperandList() = default;
   void __Init__() {}
   // Getters
   const std::vector<FlatMsg<InstructionOperand>>& operand() const { return operand_; }
@@ -45,12 +44,16 @@ INTRUSIVE_BEGIN(InstructionOperandList);
   std::vector<FlatMsg<InstructionOperand>>* mut_operand() { return &operand_; }
 
  private:
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+
+  InstructionOperandList() : intrusive_ref_(), operand_() {}
+  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   INTRUSIVE_DEFINE_FIELD(std::vector<FlatMsg<InstructionOperand>>, operand_);
 INTRUSIVE_END(InstructionOperandList);
 
 INTRUSIVE_BEGIN(InstructionMsg);
  public:
-  InstructionMsg() = default;
   // Getters
   bool has_parallel_desc_symbol_id() const { return 0 != parallel_desc_symbol_id_; }
   int64_t parallel_desc_symbol_id() const { return parallel_desc_symbol_id_; }
@@ -114,7 +117,11 @@ INTRUSIVE_BEGIN(InstructionMsg);
 
  private:
   InstructionOperand* add_instr_operand();
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
+  InstructionMsg() : intrusive_ref_(), instr_type_id_(), instr_type_name_(), parallel_desc_symbol_id_(), parallel_desc_(), operand_list_(), phy_instr_operand_(), instr_msg_entry_() {}
+  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(InstrTypeId, instr_type_id_);
   // instr_type_name is a necessary reduandant field for method ToProto
@@ -149,7 +156,6 @@ struct Instruction;
 // clang-format off
 INTRUSIVE_BEGIN(InstructionEdge);
  public:
-  InstructionEdge() = default;
   void __Init__() {
     clear_src_instruction();
     clear_dst_instruction();
@@ -174,6 +180,11 @@ INTRUSIVE_BEGIN(InstructionEdge);
   }
 
  private:
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+
+  InstructionEdge() : intrusive_ref_(), src_instruction_(), dst_instruction_(), in_edge_entry_(), out_edge_entry_() {}
+  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(Instruction*, src_instruction_); 
   INTRUSIVE_DEFINE_FIELD(Instruction*, dst_instruction_); 
@@ -187,7 +198,6 @@ struct Stream;
 // clang-format off
 INTRUSIVE_BEGIN(Instruction);
  public:
-  Instruction() = default;
   // types
   using InEdgeList = intrusive::List<INTRUSIVE_FIELD(InstructionEdge, in_edge_entry_)>;
   using OutEdgeList = intrusive::List<INTRUSIVE_FIELD(InstructionEdge, out_edge_entry_)>;
@@ -293,6 +303,8 @@ INTRUSIVE_BEGIN(Instruction);
   MirroredObject* mut_type_mirrored_object(const MutOperand& mut_operand);
   MirroredObject* mut_value_mirrored_object(const MutOperand& mut_operand);
 
+  intrusive::Ref::RefCntType ref_cnt() const { return intrusive_ref_.ref_cnt(); }
+
  private:
   template<int64_t(*TransformLogicalObjectId)(int64_t)>
           MirroredObject* MutMirroredObject(const Operand& operand,
@@ -319,6 +331,11 @@ INTRUSIVE_BEGIN(Instruction);
     static MirroredObject* Mut(Instruction*, const MutOperand&);
   };
 
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+
+  Instruction() : intrusive_ref_(), status_buffer_(), instr_msg_(), parallel_desc_(), stream_(), instruction_entry_(), vm_stat_running_instruction_entry_(), pending_instruction_entry_(), front_seq_infer_instr_entry_(), front_seq_compute_instr_entry_(), mirrored_object_id2access_(), access_list_(), in_edges_(), out_edges_() {}
+  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(FlatMsg<InstructionStatusBuffer>, status_buffer_);
   INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<InstructionMsg>, instr_msg_);

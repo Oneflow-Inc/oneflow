@@ -30,7 +30,6 @@ class Device;
 // Helps VirtualMachine building instruction edges
 INTRUSIVE_BEGIN(LocalDepObject);
  public:
-  LocalDepObject() = default;
   // Getters
   const vm::LogicalObject& logical_object() const {
     if (logical_object_) { return logical_object_.Get(); }
@@ -62,6 +61,11 @@ INTRUSIVE_BEGIN(LocalDepObject);
  private:
   Maybe<void> Init(const Device& device);
 
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+
+  LocalDepObject() : intrusive_ref_(), logical_object_(), mirrored_object_(), pool_entry_(), stored_entry_(), lifetime_entry_() {}
+  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<vm::LogicalObject>, logical_object_);
   INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<vm::MirroredObject>, mirrored_object_); 

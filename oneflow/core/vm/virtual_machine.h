@@ -37,7 +37,6 @@ struct VmDesc;
 // clang-format off
 INTRUSIVE_BEGIN(VirtualMachine);
  public:
-  VirtualMachine() = default;
   // types
   using ActiveStreamList = intrusive::List<INTRUSIVE_FIELD(Stream, active_stream_entry_)>;
   using ThreadCtxList = intrusive::List<INTRUSIVE_FIELD(ThreadCtx, thread_ctx_entry_)>;
@@ -168,6 +167,25 @@ INTRUSIVE_BEGIN(VirtualMachine);
 
   void TryDeleteLogicalObjects();
 
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+
+  VirtualMachine()
+      : intrusive_ref_(),
+        vm_resource_desc_(),
+        machine_id_range_(),
+        flying_instruction_cnt_(),
+        active_stream_list_(),
+        thread_ctx_list_(),
+        stream_type_id2stream_rt_desc_(),
+        id2logical_object_(),
+        delete_logical_object_list_(),
+        pending_msg_list_(),
+        waiting_instruction_list_(),
+        ready_instruction_list_(),
+        vm_stat_running_instruction_list_(),
+        front_seq_compute_instr_list_() {}
+  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<VmResourceDesc>, vm_resource_desc_);
   INTRUSIVE_DEFINE_FIELD(Range, machine_id_range_);

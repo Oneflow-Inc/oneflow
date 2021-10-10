@@ -28,7 +28,6 @@ struct ThreadCtx;
 // clang-format off
 INTRUSIVE_BEGIN(Stream);
  public:
-  Stream() = default;
   // types
   using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, instruction_entry_)>;
 
@@ -69,6 +68,11 @@ INTRUSIVE_BEGIN(Stream);
   void MoveToFreeList(intrusive::shared_ptr<Instruction>&& instruction);
   void MoveFromZombieListToFreeList();
 
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+
+  Stream() : intrusive_ref_(), thread_ctx_(), device_ctx_(), max_device_num_per_machine_(), active_stream_entry_(), thread_ctx_stream_entry_(), stream_id_(), free_instruction_list_(), zombie_instruction_list_(), running_instruction_list_() {}
+  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(ThreadCtx*, thread_ctx_); 
   INTRUSIVE_DEFINE_FIELD(std::unique_ptr<DeviceCtx>, device_ctx_);

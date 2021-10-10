@@ -27,7 +27,6 @@ namespace {
 // clang-format off
 INTRUSIVE_BEGIN(SkipListFoo);
  public:
-  SkipListFoo() : is_deleted_() {}
   void __Init__() { clear_is_deleted(); }
   void __Delete__() {
     if (has_is_deleted()) { ++*mut_is_deleted(); }
@@ -43,7 +42,14 @@ INTRUSIVE_BEGIN(SkipListFoo);
   int* mut_is_deleted() { return is_deleted_; }
   void set_foo_map_key(int32_t val) { *foo_map_key_.mut_key() = val; }
 
+  size_t ref_cnt() const { return intrusive_ref_.ref_cnt(); }
+
  private:
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+
+  SkipListFoo() : intrusive_ref_(), is_deleted_(), foo_map_key_() {}
+  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   INTRUSIVE_DEFINE_FIELD(int*, is_deleted_);
   INTRUSIVE_DEFINE_FIELD(intrusive::SkipListEntry<int32_t>, foo_map_key_);
 INTRUSIVE_END(SkipListFoo);
@@ -52,7 +58,6 @@ INTRUSIVE_END(SkipListFoo);
 // clang-format off
 INTRUSIVE_BEGIN(SkipListFooContainer);
  public:
-  SkipListFooContainer() = default;
   // types
   using Key2SkipListFoo = intrusive::SkipList<INTRUSIVE_FIELD(SkipListFoo, foo_map_key_)>;
   // Getters
@@ -61,6 +66,11 @@ INTRUSIVE_BEGIN(SkipListFooContainer);
   Key2SkipListFoo* mut_foo_map() { return &foo_map_; }
 
  private:
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+
+  SkipListFooContainer() : intrusive_ref_(), foo_map_() {}
+  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // maps
   INTRUSIVE_DEFINE_FIELD(Key2SkipListFoo, foo_map_);
 INTRUSIVE_END(SkipListFooContainer);

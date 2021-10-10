@@ -17,10 +17,8 @@ limitations under the License.
 #define ONEFLOW_CORE_INTRUSIVE_INTRUSIVE_CORE_H_
 
 #include <cstring>
-#include <atomic>
 #include <memory>
 #include <type_traits>
-#include <set>
 #include <glog/logging.h>
 #include "oneflow/core/intrusive/dss.h"
 #include "oneflow/core/intrusive/static_counter.h"
@@ -39,7 +37,6 @@ namespace oneflow {
     DSS_BEGIN(STATIC_COUNTER(field_counter), class_name);
 
 #define INTRUSIVE_END(class_name)                                                   \
-  _INTRUSIVE_DEFINE_REF();                                                          \
   static_assert(__has_intrusive_ref__, "this class is not intrusive-referenced");   \
                                                                                     \
  public:                                                                            \
@@ -89,67 +86,11 @@ namespace oneflow {
 // INTRUSIVE_END(Foo);
 #define INTRUSIVE_FIELD_COUNTER STATIC_COUNTER(field_counter)
 
-// details
-
-#define _INTRUSIVE_DEFINE_REF()                                                                 \
- public:                                                                                        \
-  intrusive::Ref* __mut_intrusive_ref__() { return &__intrusive_ref__; } /* NOLINT */           \
-  int32_t ref_cnt() const { return __intrusive_ref__.ref_cnt(); }                               \
-                                                                                                \
- private:                                                                                       \
-  intrusive::Ref __intrusive_ref__;                                                             \
-                                                                                                \
- private:                                                                                       \
-  INCREASE_STATIC_COUNTER(field_counter);                                                       \
-  DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "intrusive-referenced class", intrusive::Ref, \
-                   __intrusive_ref__);
-
-#define _INTRUSIVE_DEFINE_FIELD(field_counter, field_type, field_name) \
- private:                                                              \
-  field_type field_name;                                               \
-  DSS_DEFINE_FIELD(field_counter, "intrusive-referenced class", field_type, field_name);
-
 namespace intrusive {
 
 struct Base {
   void __Init__() {}
   void __Delete__() {}
-};
-
-class Ref {
- public:
-  Ref() = default;
-
-  int32_t ref_cnt() const { return ref_cnt_; }
-
- private:
-  friend struct PtrUtil;
-  void InitRefCount() { ref_cnt_ = 0; }
-  void IncreaseRefCount() { ref_cnt_++; }
-  int32_t DecreaseRefCount() { return --ref_cnt_; }
-
-  std::atomic<int32_t> ref_cnt_;
-};
-
-struct PtrUtil final {
-  template<typename T>
-  static void NewAndInitRef(T** ptr) {
-    *ptr = new T();
-    (*ptr)->__mut_intrusive_ref__()->InitRefCount();
-    Ref(*ptr);
-  }
-  template<typename T>
-  static void Ref(T* ptr) {
-    ptr->__mut_intrusive_ref__()->IncreaseRefCount();
-  }
-  template<typename T>
-  static void ReleaseRef(T* ptr) {
-    CHECK_NOTNULL(ptr);
-    int32_t ref_cnt = ptr->__mut_intrusive_ref__()->DecreaseRefCount();
-    if (ref_cnt > 0) { return; }
-    ptr->__Delete__();
-    delete ptr;
-  }
 };
 
 }  // namespace intrusive

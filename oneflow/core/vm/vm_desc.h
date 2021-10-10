@@ -28,7 +28,6 @@ namespace vm {
 // clang-format off
 INTRUSIVE_BEGIN(VmDesc);
  public:
-  VmDesc() = default;
   // types
   using StreamTypeId2StreamDesc =
       intrusive::SkipList<INTRUSIVE_FIELD(StreamDesc, stream_type_id_)>;
@@ -57,6 +56,11 @@ INTRUSIVE_BEGIN(VmDesc);
     *mut_machine_id_range() = machine_id_range;
   }
  private:  
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+
+  VmDesc() : intrusive_ref_(), vm_resource_desc_(), machine_id_range_(), stream_type_id2desc_() {}
+  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<VmResourceDesc>, vm_resource_desc_);
   INTRUSIVE_DEFINE_FIELD(Range, machine_id_range_);

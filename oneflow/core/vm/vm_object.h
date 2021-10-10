@@ -41,7 +41,6 @@ enum OperandAccessType {
 // clang-format off
 INTRUSIVE_BEGIN(RwMutexedObjectAccess);
  public:
-  RwMutexedObjectAccess() = default;
   void __Init__();
   // Getters
   OperandAccessType access_type() const { return access_type_; }
@@ -75,7 +74,14 @@ INTRUSIVE_BEGIN(RwMutexedObjectAccess);
   bool is_const_operand() const;
   bool is_mut_operand() const;
 
+  intrusive::Ref::RefCntType ref_cnt() const { return intrusive_ref_.ref_cnt(); }
+
  private:
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+
+  RwMutexedObjectAccess() : intrusive_ref_(), access_type_(), instruction_(), mirrored_object_(), rw_mutexed_object_(), instruction_access_entry_(), rw_mutexed_object_access_entry_(), mirrored_object_id_() {}
+  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(OperandAccessType, access_type_);
   INTRUSIVE_DEFINE_FIELD(Instruction*, instruction_);
@@ -91,7 +97,6 @@ INTRUSIVE_END(RwMutexedObjectAccess); // NOLINT
 struct LogicalObject;
 INTRUSIVE_BEGIN(RwMutexedObject);
  public:
-  RwMutexedObject() = default;
   void __Init__() {}
   // types
   using RwMutexedObjectAccessList = intrusive::List<INTRUSIVE_FIELD(RwMutexedObjectAccess, rw_mutexed_object_access_entry_)>;
@@ -133,6 +138,14 @@ INTRUSIVE_BEGIN(RwMutexedObject);
   void reset_object(Object* object) { object_ptr_.reset(object); }
   void reset_object() { reset_object(nullptr); }
 
+  intrusive::Ref::RefCntType ref_cnt() const { return intrusive_ref_.ref_cnt(); }
+
+ private:
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+
+  RwMutexedObject() : intrusive_ref_(), object_ptr_(), access_list_() {}
+  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(std::unique_ptr<Object>, object_ptr_);
 
@@ -142,7 +155,6 @@ INTRUSIVE_END(RwMutexedObject);
 
 INTRUSIVE_BEGIN(MirroredObject);
  public:
-  MirroredObject() = default;
   // Getters
   bool has_deleting_access() const { return deleting_access_ != nullptr; }
   const RwMutexedObjectAccess& deleting_access() const { return *deleting_access_; }
@@ -175,7 +187,14 @@ INTRUSIVE_BEGIN(MirroredObject);
   void __Init__() { clear_deleting_access(); }
   void __Init__(LogicalObject* logical_object, int64_t global_device_id);
 
+  intrusive::Ref::RefCntType ref_cnt() const { return intrusive_ref_.ref_cnt(); }
+
  private:
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+
+  MirroredObject() : intrusive_ref_(), mirrored_object_id_(), rw_mutexed_object_(), deleting_access_(), global_device_id_() {}
+  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   //fields
   INTRUSIVE_DEFINE_FIELD(FlatMsg<MirroredObjectId>, mirrored_object_id_);
   INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<RwMutexedObject>, rw_mutexed_object_);
@@ -188,7 +207,6 @@ INTRUSIVE_END(MirroredObject);
 struct VirtualMachine;
 INTRUSIVE_BEGIN(LogicalObject);
  public:
-  LogicalObject() = default;
   // types
   using GlobalDeviceId2MirroredObject =
       intrusive::SkipList<INTRUSIVE_FIELD(MirroredObject, global_device_id_)>;
@@ -217,7 +235,14 @@ INTRUSIVE_BEGIN(LogicalObject);
     *mut_parallel_desc() = parallel_desc;
   }
 
+  intrusive::Ref::RefCntType ref_cnt() const { return intrusive_ref_.ref_cnt(); }
+
  private:
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+
+  LogicalObject() : intrusive_ref_(), parallel_desc_(), logical_object_id_(), delete_entry_(), global_device_id2mirrored_object_() {}
+  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
   // map entries

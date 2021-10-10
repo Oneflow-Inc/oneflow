@@ -46,13 +46,17 @@ TEST(StreamTypeId, logical_compare) {
 // clang-format off
 INTRUSIVE_BEGIN(StreamTypeIdItem);
  public:
-  StreamTypeIdItem() = default;
   // Getters
   const StreamTypeId& stream_type_id() const { return stream_type_id_.key().Get(); }
   // Setters
   StreamTypeId* mut_stream_type_id() { return stream_type_id_.mut_key()->Mutable(); }
 
  private:
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+
+  StreamTypeIdItem() : intrusive_ref_(), stream_type_id_() {}
+  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   using StreamTypeIdKey = intrusive::SkipListEntry<FlatMsg<StreamTypeId>, 20>;
   INTRUSIVE_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);
 INTRUSIVE_END(StreamTypeIdItem);

@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_INTRUSIVE_INTRUSIVE_SKIPLIST_H_
 #define ONEFLOW_CORE_INTRUSIVE_INTRUSIVE_SKIPLIST_H_
 
-#include "oneflow/core/intrusive/intrusive_core.h"
+#include "oneflow/core/intrusive/ref.h"
 #include "oneflow/core/intrusive/skiplist_entry.h"
 
 namespace oneflow {
@@ -58,10 +58,10 @@ class SkipList {
   value_type* FindPtr(const key_type& key) { return skiplist_head_.Find(key); }
   const value_type* FindPtr(const key_type& key) const { return skiplist_head_.Find(key); }
   bool EqualsEnd(const intrusive::shared_ptr<value_type>& ptr) { return !ptr; }
-  void Erase(const key_type& key) { PtrUtil::ReleaseRef(skiplist_head_.Erase(key)); }
+  void Erase(const key_type& key) { Ref::DecreaseRef(skiplist_head_.Erase(key)); }
   void Erase(value_type* elem_ptr) {
     skiplist_head_.Erase(elem_ptr);
-    PtrUtil::ReleaseRef(elem_ptr);
+    Ref::DecreaseRef(elem_ptr);
   }
   std::pair<intrusive::shared_ptr<value_type>, bool> Insert(value_type* elem_ptr) {
     value_type* ret_elem = nullptr;
@@ -70,12 +70,12 @@ class SkipList {
     std::pair<intrusive::shared_ptr<value_type>, bool> ret;
     ret.first.Reset(ret_elem);
     ret.second = success;
-    if (success) { PtrUtil::Ref(elem_ptr); }
+    if (success) { Ref::IncreaseRef(elem_ptr); }
     return ret;
   }
 
   void Clear() {
-    skiplist_head_.Clear([](value_type* elem) { PtrUtil::ReleaseRef(elem); });
+    skiplist_head_.Clear([](value_type* elem) { Ref::DecreaseRef(elem); });
   }
 
  private:

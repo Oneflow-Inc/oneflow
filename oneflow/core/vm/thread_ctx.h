@@ -28,7 +28,6 @@ namespace vm {
 // clang-format off
 INTRUSIVE_BEGIN(ThreadCtx);
  public:
-  ThreadCtx() = default;
   void __Init__() { clear_stream_rt_desc(); }
 
   // types
@@ -57,6 +56,12 @@ INTRUSIVE_BEGIN(ThreadCtx);
   
  private:
   intrusive::ChannelStatus ReceiveAndRun();
+
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+
+  ThreadCtx() : intrusive_ref_(), stream_rt_desc_(), thread_ctx_entry_(), stream_list_(), pending_instruction_list_() {}
+  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(const StreamRtDesc*, stream_rt_desc_); 
   // list entries
