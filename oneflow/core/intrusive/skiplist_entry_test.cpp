@@ -28,6 +28,8 @@ class TestSkipListHead final : public SkipListHead<ElemKeyField> {
   TestSkipListHead() { this->__Init__(); }
   TestSkipListHead(const TestSkipListHead&) = delete;
   TestSkipListHead(TestSkipListHead&&) = delete;
+  TestSkipListHead& operator==(const TestSkipListHead&) = delete;
+  TestSkipListHead& operator==(TestSkipListHead&&) = delete;
   ~TestSkipListHead() { this->Clear(); }
 };
 

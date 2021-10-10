@@ -78,7 +78,7 @@ INTRUSIVE_BEGIN(RwMutexedObjectAccess);
 
  private:
   friend class intrusive::Ref;
-  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; } // NOLINT
 
   RwMutexedObjectAccess() : intrusive_ref_(), access_type_(), instruction_(), mirrored_object_(), rw_mutexed_object_(), instruction_access_entry_(), rw_mutexed_object_access_entry_(), mirrored_object_id_() {}
   INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
