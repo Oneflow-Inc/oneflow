@@ -22,21 +22,6 @@ namespace oneflow {
 
 namespace {
 
-template<typename T>
-size_t GetProbTmpSize(int64_t n, int64_t w) {
-  return GetCudaAlignedSize(n * sizeof(T));
-}
-
-template<typename T>
-size_t GetDiffTmpSize(int64_t n, int64_t w) {
-  return GetCudaAlignedSize(n * sizeof(T));
-}
-
-template<typename T>
-size_t GetReduceTempStorageSize(int64_t n, int64_t w) {
-  return GetCudaAlignedSize(n * w * sizeof(T));
-}
-
 constexpr int64_t kSoftmaxGpuBlockSize = 128;
 
 int64_t GetSoftmaxBlockSize() { return kSoftmaxGpuBlockSize; }
@@ -97,24 +82,16 @@ void BroadcastSubExpGpu<float16>(DeviceCtx* ctx, const int64_t num_instances,
 
 }  // namespace
 
-template<typename T>
-struct SoftmaxKernelUtil<DeviceType::kGPU, T> {
-  static size_t GetComputeProbTempStorageSizeInBytes(int64_t n, int64_t w) {
-    return GetProbTmpSize<T>(n, w) + GetReduceTempStorageSize<T>(n, w);
-  }
-
-  static size_t GetComputeDiffTempStorageSizeInBytes(int64_t n, int64_t w) {
-    return GetDiffTmpSize<T>(n, w) + GetReduceTempStorageSize<T>(n, w);
-  }
-
+template<SoftmaxAlgorithm softmax_algorithm, typename T>
+struct SoftmaxKernelUtil<DeviceType::kGPU, softmax_algorithm, T> {
   static void ComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* in, T* prob,
                           void* temp_storage, const size_t temp_storage_bytes) {
     auto Val = NdarrayUtil<DeviceType::kGPU, T>::GetValNdarrayBuilder();
     auto Var = NdarrayUtil<DeviceType::kGPU, T>::GetVarNdarrayBuilder();
     const size_t min_temp_storage_bytes =
-        SoftmaxKernelUtil<DeviceType::kGPU, T>::GetComputeProbTempStorageSizeInBytes(n, w);
+        SoftmaxComputeProbTempStorageSize<T, softmax_algorithm>(n, w);
     CHECK_GE(temp_storage_bytes, min_temp_storage_bytes);
-    const size_t reduce_temp_storage_bytes = GetReduceTempStorageSize<T>(n, w);
+    const size_t reduce_temp_storage_bytes = SoftmaxReduceOperationStorageSize<T>(n, w);
     T* reduce_storage = reinterpret_cast<T*>(temp_storage);
     auto reduce_storage_var =
         Var({static_cast<int64_t>(reduce_temp_storage_bytes / sizeof(T))}, reduce_storage);
@@ -146,9 +123,9 @@ struct SoftmaxKernelUtil<DeviceType::kGPU, T> {
     auto Val = NdarrayUtil<DeviceType::kGPU, T>::GetValNdarrayBuilder();
     auto Var = NdarrayUtil<DeviceType::kGPU, T>::GetVarNdarrayBuilder();
     const size_t min_temp_storage_bytes =
-        SoftmaxKernelUtil<DeviceType::kGPU, T>::GetComputeProbTempStorageSizeInBytes(n, w);
+        SoftmaxComputeProbTempStorageSize<T, softmax_algorithm>(n, w);
     CHECK_GE(temp_storage_bytes, min_temp_storage_bytes);
-    const size_t reduce_temp_storage_bytes = GetReduceTempStorageSize<T>(n, w);
+    const size_t reduce_temp_storage_bytes = SoftmaxReduceOperationStorageSize<T>(n, w);
     T* reduce_storage = reinterpret_cast<T*>(temp_storage);
     auto reduce_storage_var =
         Var({static_cast<int64_t>(reduce_temp_storage_bytes / sizeof(T))}, reduce_storage);
@@ -170,7 +147,7 @@ struct SoftmaxKernelUtil<DeviceType::kGPU, T> {
 };
 
 #define INSTANTIATE_SOFTMAX_KERNEL_UTIL(data_type) \
-  template struct SoftmaxKernelUtil<DeviceType::kGPU, data_type>;
+  template struct SoftmaxKernelUtil<DeviceType::kGPU, SoftmaxAlgorithm::kSoftmax, data_type>;
 INSTANTIATE_SOFTMAX_KERNEL_UTIL(float16)
 INSTANTIATE_SOFTMAX_KERNEL_UTIL(float)
 INSTANTIATE_SOFTMAX_KERNEL_UTIL(double)
