@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/thread/thread_pool.h"
+#include "oneflow/core/common/prior_mutex.h"
 
 namespace oneflow {
 
@@ -32,6 +33,8 @@ class OneflowVM final {
   ~OneflowVM();
 
   Maybe<void> Receive(vm::InstructionMsgList* instr_list);
+
+  Maybe<void> HighPriorSchedule();
 
   const vm::VirtualMachine& vm() const { return *vm_; }
 
@@ -47,6 +50,7 @@ class OneflowVM final {
   std::thread schedule_thread_;
   std::atomic<bool> exiting_;
   Notifier notifier_;
+  PriorMutex prior_mutex_;
 };
 
 }  // namespace oneflow

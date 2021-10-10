@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/thread/thread_consistent_id.h"
 #include "oneflow/core/framework/transport_token.h"
+#include "oneflow/core/thread/thread_consistent_id.h"
 
 namespace oneflow {
 
@@ -136,6 +137,9 @@ Maybe<void> OneflowVM::Receive(vm::InstructionMsgList* instr_list) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> OneflowVM::HighPriorSchedule() {
+}
+
 void OneflowVM::Loop(const std::function<void()>& Initializer) {
   Initializer();
   auto* vm = mut_vm();
@@ -147,7 +151,13 @@ void OneflowVM::Loop(const std::function<void()>& Initializer) {
     // get handled in the next iteration.
     //  OneflowVM::Receive may be less effiencient if the thread safe version `vm->Empty()` used
     //  here, because OneflowVM::Loop is more likely to get the mutex lock.
-    while (!vm->ThreadUnsafeEmpty()) { vm->Schedule(); }
+    while (!vm->ThreadUnsafeEmpty()) {
+      LowPriorUniqueLock<PriorMutex> lock(prior_mutex_);
+      while (!vm->ThreadUnsafeEmpty()) {
+        if (lock.TestIsHurryAndClearHurry) { break; }
+        vm->Schedule();
+      }
+    }
   }
   while (!vm->Empty()) { vm->Schedule(); }
   CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
