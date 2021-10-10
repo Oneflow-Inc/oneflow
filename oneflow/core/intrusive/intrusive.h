@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/intrusive/ref.h"
 #include "oneflow/core/intrusive/shared_ptr.h"
 #include "oneflow/core/intrusive/list.h"
+#include "oneflow/core/intrusive/head_free_list.h"
 #include "oneflow/core/intrusive/skiplist.h"
 #include "oneflow/core/intrusive/for_each.h"
 
