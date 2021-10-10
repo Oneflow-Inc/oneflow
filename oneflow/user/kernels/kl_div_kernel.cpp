@@ -14,69 +14,63 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/kernel_util.cuh"
 #include "oneflow/user/kernels/loss_kernel_util.h"
 
 namespace oneflow {
 namespace user_op {
-
 namespace {
 
 using namespace loss;
 
 template<typename T>
-void ComputeSmoothL1Out(int64_t elem_cnt, const T* input, const T* target, T* out,
-                        const float beta) {
-  FOR_RANGE(int64_t, i, 0, elem_cnt) {
-    const T abs_diff = std::abs(input[i] - target[i]);
-    if (abs_diff < beta) {
-      out[i] = 0.5 * abs_diff * abs_diff / beta;
-    } else {
-      out[i] = abs_diff - 0.5 * beta;
+void ComputeKLDivOut(int64_t elem_cnt, const T* input, const T* target, T* out,
+                     const bool log_target) {
+  if (log_target) {
+    FOR_RANGE(int64_t, i, 0, elem_cnt) { out[i] = std::exp(target[i]) * (target[i] - input[i]); }
+  } else {
+    FOR_RANGE(int64_t, i, 0, elem_cnt) {
+      const auto out_val = target[i] * (SafeLog(target[i]) - input[i]);
+      out[i] = target[i] > 0 ? out_val : static_cast<T>(0);
     }
   }
 }
+
 template<typename T>
-void ComputeSmoothL1GradOut(int64_t elem_cnt, const T* input, const T* target, const T* dy, T* dx,
-                            const ReductionType reduction_type, const float beta) {
+void ComputeKLDivGradOut(int64_t elem_cnt, const T* input, const T* target, const T* dy, T* dx,
+                         const ReductionType reduction_type, const bool log_target) {
   FOR_RANGE(int64_t, i, 0, elem_cnt) {
-    const T diff = input[i] - target[i];
-    const T abs_diff = std::abs(diff);
-    if (abs_diff < beta) {
-      dx[i] = diff / beta;
-    } else {
-      dx[i] = (diff > GetZeroVal<T>()) - (diff < GetZeroVal<T>());
-    }
     const T dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
-    dx[i] = dx[i] * dy_val;
+    dx[i] =
+        log_target ? (-std::exp(target[i]) * dy_val) : (target[i] > 0 ? -target[i] * dy_val : 0);
     if (reduction_type == ReductionType::kMean) { dx[i] /= elem_cnt; };
   }
 }
 
 template<typename T>
-class SmoothL1LossKernel : public SimpleLossKernel<DeviceType::kCPU, T, SmoothL1LossKernel<T>> {
+class KLDivKernel : public SimpleLossKernel<DeviceType::kCPU, T, KLDivKernel<T>> {
  public:
   void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
                   const T* target, T* out) const {
-    const float beta = ctx->Attr<float>("beta");
-    ComputeSmoothL1Out(elem_cnt, input, target, out, beta);
+    const bool log_target = ctx->Attr<bool>("log_target");
+    ComputeKLDivOut(elem_cnt, input, target, out, log_target);
   }
 };
 
 template<typename T>
-class SmoothL1LossGradKernel
-    : public SimpleLossGradKernel<DeviceType::kCPU, T, SmoothL1LossGradKernel<T>> {
+class KLDivGradKernel : public SimpleLossGradKernel<DeviceType::kCPU, T, KLDivGradKernel<T>> {
  public:
   void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
                   const T* target, const T* dy, T* dx, const ReductionType reduction) const {
-    const float beta = ctx->Attr<float>("beta");
-    ComputeSmoothL1GradOut(elem_cnt, input, target, dy, dx, reduction, beta);
+    const bool log_target = ctx->Attr<bool>("log_target");
+    ComputeKLDivGradOut(elem_cnt, input, target, dy, dx, reduction, log_target);
   }
 };
 
 }  // namespace
 
-REGISTER_SIMPLE_LOSS_KERNEL_CPU("smooth_l1_loss", SmoothL1LossKernel)
-REGISTER_SIMPLE_LOSS_GRAD_KERNEL_CPU("smooth_l1_loss_grad", SmoothL1LossGradKernel)
+REGISTER_SIMPLE_LOSS_KERNEL_CPU("kl_div_loss", KLDivKernel)
+REGISTER_SIMPLE_LOSS_GRAD_KERNEL_CPU("kl_div_loss_grad", KLDivGradKernel)
 
 }  // namespace user_op
 }  // namespace oneflow
