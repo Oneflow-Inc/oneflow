@@ -23,7 +23,7 @@ namespace intrusive {
 namespace test {
 
 template<typename ElemKeyField>
-class TestSkipListHead final : public SkipListHead<ElemKeyField> {
+class TestSkipListHead final : public SkipListHead<ElemKeyField> { // NOLINT
  public:
   TestSkipListHead() { this->__Init__(); }
   TestSkipListHead(const TestSkipListHead&) = delete;
