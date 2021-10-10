@@ -26,14 +26,16 @@ template<typename ElemKeyField>
 class TestSkipListHead final : public SkipListHead<ElemKeyField> {
  public:
   TestSkipListHead() { this->__Init__(); }
+  TestSkipListHead(const TestSkipListHead&) = delete;
+  TestSkipListHead(TestSkipListHead&&) = delete;
   ~TestSkipListHead() { this->Clear(); }
 };
 
 struct FooSkipListElem {
-  FooSkipListElem() { key.__Init__(); }
+  FooSkipListElem() : value() { key.__Init__(); }
 
-  SkipListEntry<int> key;
   int value;
+  SkipListEntry<int> key;
 };
 
 using FooSkipList = TestSkipListHead<STRUCT_FIELD(FooSkipListElem, key)>;

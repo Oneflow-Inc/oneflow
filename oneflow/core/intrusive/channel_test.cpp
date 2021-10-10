@@ -29,7 +29,7 @@ namespace {
 // clang-format off
 INTRUSIVE_BEGIN(Foo);
  public:
-  Foo() = default;
+  Foo() : x_() {}
   int x() const { return x_; }
   void set_x(int val) { x_ = val; }
 

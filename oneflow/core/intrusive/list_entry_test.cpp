@@ -28,7 +28,7 @@ namespace intrusive {
 namespace test {
 
 struct ListItemBar final {
-  ListItemBar() { bar_list.__Init__(); }
+  ListItemBar() : value() { bar_list.__Init__(); }
   int value;
   ListEntry bar_list;
 };

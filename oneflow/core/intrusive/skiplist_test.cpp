@@ -27,7 +27,7 @@ namespace {
 // clang-format off
 INTRUSIVE_BEGIN(SkipListFoo);
  public:
-  SkipListFoo() = default;
+  SkipListFoo() : is_deleted_() {}
   void __Init__() { clear_is_deleted(); }
   void __Delete__() {
     if (has_is_deleted()) { ++*mut_is_deleted(); }
@@ -44,8 +44,8 @@ INTRUSIVE_BEGIN(SkipListFoo);
   void set_foo_map_key(int32_t val) { *foo_map_key_.mut_key() = val; }
 
  private:
-  INTRUSIVE_DEFINE_FIELD(intrusive::SkipListEntry<int32_t>, foo_map_key_);
   INTRUSIVE_DEFINE_FIELD(int*, is_deleted_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::SkipListEntry<int32_t>, foo_map_key_);
 INTRUSIVE_END(SkipListFoo);
 // clang-format on
 

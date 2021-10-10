@@ -55,7 +55,7 @@ class shared_ptr final {
   bool operator==(const shared_ptr& rhs) const { return this->ptr_ == rhs.ptr_; }
 
   value_type* Mutable() { return ptr_; }
-  value_type* operator->() { return ptr_; }
+  value_type* operator->() { return ptr_; }  // NOLINT
   value_type& operator*() { return *ptr_; }
 
   void Reset() { Reset(nullptr); }

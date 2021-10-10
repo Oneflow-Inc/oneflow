@@ -47,7 +47,7 @@ TEST(Ref, ref_cnt) {
 // clang-format off
 INTRUSIVE_BEGIN(IntrusiveFoo)
  public:
-  IntrusiveFoo() = default;
+  IntrusiveFoo() : x_(), foo_(), bar_(), foobar_(), is_deleted_() {}
   void __Init__() { clear_is_deleted(); }
   void __Delete__();
 
@@ -101,7 +101,7 @@ TEST(intrusive, __delete__) {
 // clang-format off
 INTRUSIVE_BEGIN(IntrusiveBar)
  public:
-  IntrusiveBar() = default;
+  IntrusiveBar() : foo_(), is_deleted_() {}
   void __Init__() { clear_is_deleted(); }
   void __Delete__(){
     if (mut_is_deleted()) { *mut_is_deleted() = "bar_deleted"; }

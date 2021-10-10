@@ -28,7 +28,7 @@ struct ListEntry {
   ListEntry() { Clear(); }
 
   ListEntry* prev() const { return prev_; }
-  ListEntry* next() const { return next_; }
+  ListEntry* next() const { return next_; }  // NOLINT
 
   void __Init__() { Clear(); }
   void Clear() {

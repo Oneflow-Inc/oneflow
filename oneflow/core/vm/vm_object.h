@@ -86,7 +86,7 @@ INTRUSIVE_BEGIN(RwMutexedObjectAccess);
   INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, rw_mutexed_object_access_entry_);
   using MirroredObjectIdKey = intrusive::SkipListEntry<FlatMsg<MirroredObjectId>, 10>;
   INTRUSIVE_DEFINE_FIELD(MirroredObjectIdKey, mirrored_object_id_);
-INTRUSIVE_END(RwMutexedObjectAccess);
+INTRUSIVE_END(RwMutexedObjectAccess); // NOLINT
 
 struct LogicalObject;
 INTRUSIVE_BEGIN(RwMutexedObject);

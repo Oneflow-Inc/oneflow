@@ -93,7 +93,7 @@ namespace oneflow {
 
 #define _INTRUSIVE_DEFINE_REF()                                                                 \
  public:                                                                                        \
-  intrusive::Ref* __mut_intrusive_ref__() { return &__intrusive_ref__; }                        \
+  intrusive::Ref* __mut_intrusive_ref__() { return &__intrusive_ref__; } /* NOLINT */           \
   int32_t ref_cnt() const { return __intrusive_ref__.ref_cnt(); }                               \
                                                                                                 \
  private:                                                                                       \
@@ -118,6 +118,8 @@ struct Base {
 
 class Ref {
  public:
+  Ref() = default;
+
   int32_t ref_cnt() const { return ref_cnt_; }
 
  private:

@@ -30,7 +30,7 @@ namespace {
 // clang-format off
 INTRUSIVE_BEGIN(TestListItem)
  public:
-  TestListItem() = default;
+  TestListItem() : cnt_(), foo_list_() {}
   void __Init__() { clear_cnt(); }
   void __Delete__() {
     if (has_cnt()) { --*mut_cnt(); }
@@ -47,8 +47,8 @@ INTRUSIVE_BEGIN(TestListItem)
   int* mut_cnt() { return cnt_; }
 
  private:
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, foo_list_);
   INTRUSIVE_DEFINE_FIELD(int*, cnt_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, foo_list_);
 INTRUSIVE_END(TestListItem)
 // clang-format on
 
@@ -362,7 +362,7 @@ TEST(List, MoveTo) {
 // clang-format off
 INTRUSIVE_BEGIN(SelfLoopContainer);
  public:
-  SelfLoopContainer() = default;
+  SelfLoopContainer() : deleted_() {}
   void __Init__() { clear_deleted(); }
   // Getters
   bool has_deleted() const { return deleted_ != nullptr; }
