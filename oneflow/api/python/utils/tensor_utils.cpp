@@ -18,8 +18,6 @@ limitations under the License.
 #include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/framework/nd_sbp.h"
