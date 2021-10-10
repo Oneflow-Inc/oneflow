@@ -49,6 +49,7 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
 
   return Maybe<void>::Ok();
 }
+
 Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   const auto& input_desc = ctx->InputTensorDesc("input", 0);
   const auto& target_desc = ctx->InputTensorDesc("target", 0);
