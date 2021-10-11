@@ -294,7 +294,7 @@ class Graph(object):
             v_level (int): choose verbose debug info level, default v_level is 0, max v_level is 1.
             ranks (int or list(int)): choose ranks to print the debug information. Default rank ``0``.
                 You can choose any valid rank. Ranks equals ``-1`` means debug on all ranks.
-            mode (bool): whether to set debug mode ("True") or not (``False``). Default: ``True``.
+            mode (bool): whether to set debug mode (``True``) or not (``False``). Default: ``True``.
         """
         assert isinstance(v_level, int)
         assert isinstance(mode, bool)
