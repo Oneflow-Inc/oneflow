@@ -232,6 +232,12 @@ class TestTensor(flow.unittest.TestCase):
         ):
             x.placement
 
+        if x.dtype != flow.tensor_buffer:
+            with test_case.assertRaises(
+                oneflow._oneflow_internal.exception.RuntimeException
+            ):
+                x._tensor_buffer_shapes_and_dtypes
+
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_to_bool(test_case):
         x = flow.tensor([0.0])

@@ -82,9 +82,10 @@ Maybe<std::string> GetCopyMirroredTensorFromNumpyFuncName(DataType dtype) {
 Maybe<std::tuple<std::vector<Shape>, std::vector<Symbol<DType>>>>
 MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
   const auto& tensor = JUST(t->AsMirroredTensor());
+  if (tensor->tensor_meta().data_type() != DataType::kTensorBuffer) {
+    return Error::RuntimeError() << "tensor buffer supported only";
+  }
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
-  CHECK_OR_RETURN(tensor->tensor_meta().data_type() == DataType::kTensorBuffer)
-      << "tensor buffer supported only";
   std::vector<Shape> shapes;
   std::vector<Symbol<DType>> dtypes;
 
