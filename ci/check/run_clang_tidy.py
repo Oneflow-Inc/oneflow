@@ -92,7 +92,11 @@ if __name__ == "__main__":
     if downloaded is None:
         downloaded = download(args.build_dir)
     assert downloaded is not None
-    warnings_as_errors = (Path(__file__).parent / "clang_tidy_warnings_as_errors_on_diff").read_text().strip()
+    warnings_as_errors = (
+        (Path(__file__).parent / "clang_tidy_warnings_as_errors_on_diff")
+        .read_text()
+        .strip()
+    )
     ret_code = loop.run_until_complete(
         run_command(
             f"cd .. && git diff -U0 master | {downloaded[1]} -clang-tidy-binary {downloaded[0]} -path {args.build_dir} -j $(nproc) -p1  -allow-enabling-alpha-checkers -extra-arg=-Xclang -extra-arg=-analyzer-config -extra-arg=-Xclang -extra-arg=aggressive-binary-operation-simplification=true -warnings-as-errors='{warnings_as_errors}'"
