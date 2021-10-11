@@ -282,7 +282,7 @@
   bind_python: True
 
 - name: "elu"
-  signature: "Tensor (Tensor x, Double alpha) => Elu"
+  signature: "Tensor (Tensor x, Double alpha, Bool inplace=False) => Elu"
   bind_python: True
 
 - name: "elu_grad"

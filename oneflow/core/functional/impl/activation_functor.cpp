@@ -138,13 +138,13 @@ class HardTanhGradFunctor {
   HardTanhGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("hardtanh_grad").Input("y").Input("dy").Output("dx").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
-                           const std::shared_ptr<one::Tensor>& dy, const double& min_val,
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& y,
+                           const std::shared_ptr<Tensor>& dy, const double& min_val,
                            const double& max_val) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("min_val", min_val));
     JUST(attrs.SetAttr<double>("max_val", max_val));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {y, dy}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy}, attrs);
   }
 
  private:
@@ -154,10 +154,18 @@ class HardTanhGradFunctor {
 class EluFunctor {
  public:
   EluFunctor() { op_ = CHECK_JUST(one::OpBuilder("elu").Input("in").Output("out").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& alpha) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& alpha, bool inplace) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), AttrMap{}));
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    }
   }
 
  private:

@@ -275,9 +275,7 @@ class ELU(Module):
         self.inplace = inplace
 
     def forward(self, x):
-        if self.inplace:
-            warnings.warn("ELU module do not support inplace now")
-        return flow._C.elu(x, alpha=self.alpha)
+        return flow._C.elu(x, alpha=self.alpha, inplace=self.inplace)
 
     def extra_repr(self):
         param_str = f"alpha={self.alpha}"
