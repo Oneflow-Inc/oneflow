@@ -97,10 +97,10 @@ def _test_alexnet_graph_repr(test_case, args):
 
     alexnet_graph = AlexNetGraph()
 
-    print("repr(alexnet_graph) before run: \n", repr(alexnet_graph))
+    # print("repr(alexnet_graph) before run: \n", repr(alexnet_graph))
 
     # debug graph build
-    alexnet_graph.debug(True, 1)
+    alexnet_graph.debug(1)
 
     alexnet_module.train()
     image, label = train_data_loader()
@@ -108,7 +108,7 @@ def _test_alexnet_graph_repr(test_case, args):
     label = label.to(args.device)
     loss = alexnet_graph(image, label)
 
-    print("repr(alexnet_graph) after run: \n", repr(alexnet_graph))
+    # print("repr(alexnet_graph) after run: \n", repr(alexnet_graph))
 
 
 def _test_alexnet_graph(test_case, args):
@@ -223,12 +223,12 @@ class TestAlexnetGraph(oneflow.unittest.TestCase):
         args.device = "cuda"
         _test_alexnet_graph_repr(test_case, args)
 
-    def _test_alexnet_graph_gpu(test_case):
+    def test_alexnet_graph_gpu(test_case):
         args, unknown_args = _parse_args()
         args.device = "cuda"
         _test_alexnet_graph(test_case, args)
 
-    def _test_alexnet_graph_cpu(test_case):
+    def test_alexnet_graph_cpu(test_case):
         args, unknown_args = _parse_args()
         args.device = "cpu"
         args.train_batch_size = 40

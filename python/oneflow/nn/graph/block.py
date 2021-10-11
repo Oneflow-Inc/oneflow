@@ -57,9 +57,7 @@ class BlockType:
 
 class Block(object):
     def __init__(
-        self,
-        prefix: str = "",
-        name: str = "",
+        self, prefix: str = "", name: str = "",
     ):
         self._name = name
         self._name_prefix = prefix
@@ -80,7 +78,7 @@ class Block(object):
     @property
     def type(self):
         return self._type
-    
+
     @property
     def prev_scope(self):
         if self._prev_scope is None:
@@ -99,10 +97,7 @@ class Block(object):
 
 class ModuleBlock(Block):
     def __init__(
-        self,
-        prefix: str = "",
-        name: str = "",
-        origin: Module = None,
+        self, prefix: str = "", name: str = "", origin: Module = None,
     ):
         assert not isinstance(origin, Block)
         super().__init__(prefix, name)
@@ -121,27 +116,33 @@ class ModuleBlock(Block):
     @property
     def origin(self):
         return self._origin
-    
+
     def set_origin(self, origin):
         self._origin = origin
         if origin is None:
             return
         assert isinstance(origin, Module)
         for (n, m) in list(origin.named_children()):
-            self.__setattr__(n, get_block_cls(m)(self._name_prefix + self._name + ".", n, m))
+            self.__setattr__(
+                n, get_block_cls(m)(self._name_prefix + self._name + ".", n, m)
+            )
         for (n, p) in list(origin.named_parameters("", False)):
-            self.__setattr__(n, get_block_cls(p)(self._name_prefix + self._name + ".", n, p))
+            self.__setattr__(
+                n, get_block_cls(p)(self._name_prefix + self._name + ".", n, p)
+            )
         for (n, b) in list(origin.named_buffers("", False)):
-            self.__setattr__(n, get_block_cls(b)(self._name_prefix + self._name + ".", n, b))
-
+            self.__setattr__(
+                n, get_block_cls(b)(self._name_prefix + self._name + ".", n, b)
+            )
 
     def debug(
         self,
-        mode: bool = True,
         v_level: int = 0,
         ranks: Optional[Union[int, List[int]]] = None,
+        mode: bool = True,
     ) -> None:
         assert isinstance(mode, bool)
+        assert isinstance(v_level, int)
 
         if ranks is None:
             rank_list = [0]
@@ -162,11 +163,9 @@ class ModuleBlock(Block):
 
                 def _set_child(d):
                     for (_, n) in d.items():
-                        n.debug(mode, v_level, ranks)
+                        n.debug(v_level, ranks, mode)
 
                 _set_child(self._modules)
-                _set_child(self._parameters)
-                _set_child(self._buffers)
 
     def __call__(self, *args):
         assert self._type == BlockType.MODULE
@@ -269,13 +268,18 @@ class ModuleBlock(Block):
             )
         return args
 
-
     def add_module(self, name: str, module: Optional[Module]) -> None:
-        self.__setattr__(name, get_block_cls(module)(self._name_prefix + self._name + ".", name, module))
+        self.__setattr__(
+            name,
+            get_block_cls(module)(self._name_prefix + self._name + ".", name, module),
+        )
 
     def register_parameter(self, name: str, param: Optional[Parameter]) -> None:
-        self.__setattr__(name, get_block_cls(param)(self._name_prefix + self._name + ".", name, param))
-    
+        self.__setattr__(
+            name,
+            get_block_cls(param)(self._name_prefix + self._name + ".", name, param),
+        )
+
     def modules(self, memo: Optional[Set["Block"]] = None) -> Iterator["Block"]:
         assert self._type == BlockType.MODULE
         if memo is None:
@@ -534,12 +538,20 @@ class ModuleBlock(Block):
         )
         return shallow_repr
 
+    def _print(self, s_level=2, v_level=0, msg: str = ""):
+        r"""Do print according to info level.
+        """
+        assert isinstance(s_level, int)
+        assert isinstance(v_level, int)
+        assert isinstance(msg, str)
+        if s_level >= self._debug_min_s_level:
+            if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
+                print(msg)
+
+
 class TensorBlock(Block):
     def __init__(
-        self,
-        prefix: str = "",
-        name: str = "",
-        origin: Union[Parameter, Tensor] = None,
+        self, prefix: str = "", name: str = "", origin: Union[Parameter, Tensor] = None,
     ):
         assert not isinstance(origin, Block)
         super().__init__(prefix, name)
@@ -549,20 +561,14 @@ class TensorBlock(Block):
             self._type = BlockType.BUFFER
         else:
             raise NotImplementedError()
-        self._debug = False
         self._lazy_origin = None
         self._lazy_origin_builder = None
         self.set_origin(origin)
 
-    def debug(self, mode: bool = True) -> None:
-        if get_rank() != 0:
-            return
-        self._debug = mode
-
     @property
     def origin(self):
         return self._origin
-    
+
     def set_origin(self, origin):
         self._origin = origin
 
@@ -593,16 +599,6 @@ class TensorBlock(Block):
         main_str += ")"
         return main_str
 
-    def _print(self, s_level=2, v_level=0, msg: str = ""):
-        r"""Do print according to info level.
-        """
-        assert isinstance(s_level, int)
-        assert isinstance(v_level, int)
-        assert isinstance(msg, str)
-        if s_level >= self._debug_min_s_level:
-            if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
-                print(msg)
-
     def _shallow_repr(self):
         shallow_repr = (
             "("
@@ -616,24 +612,20 @@ class TensorBlock(Block):
         )
         return shallow_repr
 
+
 class SequentialBlock(get_seq(ModuleBlock)):
     def __init__(
-        self,
-        prefix: str = "",
-        name: str = "",
-        origin: Sequential= None,
+        self, prefix: str = "", name: str = "", origin: Sequential = None,
     ):
         super().__init__()
         self._name_prefix = prefix
         self._name = name
         self.set_origin(origin)
 
+
 class ModuleListBlock(get_list(ModuleBlock)):
     def __init__(
-        self,
-        prefix: str = "",
-        name: str = "",
-        origin: ModuleList = None,
+        self, prefix: str = "", name: str = "", origin: ModuleList = None,
     ):
         super().__init__()
         self._name_prefix = prefix
@@ -643,22 +635,17 @@ class ModuleListBlock(get_list(ModuleBlock)):
 
 class ModuleDictBlock(get_dict(ModuleBlock)):
     def __init__(
-        self,
-        prefix: str = "",
-        name: str = "",
-        origin: ModuleDict = None,
+        self, prefix: str = "", name: str = "", origin: ModuleDict = None,
     ):
         super().__init__()
         self._name_prefix = prefix
         self._name = name
         self.set_origin(origin)
-    
+
+
 class ParameterListBlock(get_para_list(ModuleBlock)):
     def __init__(
-        self,
-        prefix: str = "",
-        name: str = "",
-        origin: ParameterList = None,
+        self, prefix: str = "", name: str = "", origin: ParameterList = None,
     ):
         super().__init__()
         self._name_prefix = prefix
@@ -668,15 +655,13 @@ class ParameterListBlock(get_para_list(ModuleBlock)):
 
 class ParameterDictBlock(get_para_dict(ModuleBlock)):
     def __init__(
-        self,
-        prefix: str = "",
-        name: str = "",
-        origin: ParameterDict= None,
+        self, prefix: str = "", name: str = "", origin: ParameterDict = None,
     ):
         super().__init__()
         self._name_prefix = prefix
         self._name = name
         self.set_origin(origin)
+
 
 class BlockConfig(object):
     r"""Configurations on Block in nn.Graph.
