@@ -1071,7 +1071,7 @@
   bind_python: False
 
 - name: "selu"
-  signature: "Tensor (Tensor x) => Selu"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Selu"
   bind_python: True
 
 - name: "selu_grad"

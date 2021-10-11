@@ -364,7 +364,7 @@ class MishGradFunctor : public BinaryFunctor {
   }
 };
 
-class SeluFunctor : public UnaryFunctor {
+class SeluFunctor : public InplaceableUnaryFunctor {
  public:
   SeluFunctor() { op_ = CHECK_JUST(one::OpBuilder("selu").Input("in").Output("out").Build()); }
 };

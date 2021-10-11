@@ -918,7 +918,7 @@ class SELU(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow._C.selu(x)
+        return flow._C.selu(x, inplace=self.inplace)
 
 
 class Softsign(Module):
