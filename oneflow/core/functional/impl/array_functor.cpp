@@ -89,6 +89,17 @@ class ArgMaxV2Functor {
     return result;
   }
 };
+
+class ArgMinV2Functor {
+ public:
+  ArgMinV2Functor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int32_t>& dim,
+                           const Optional<bool>& keepdim,
+                           const Optional<Symbol<DType>>& dtype) const {
+    auto neg_input = JUST(Negative(input));
+    return JUST(ArgMaxV2(neg_input, dim, keepdim, dtype));
+  }
+};
 class ConsistentConstantFunctor {
  public:
   ConsistentConstantFunctor() {
@@ -1764,6 +1775,7 @@ class UnsortedBatchSegmentSumFunctor {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ArgMaxV2Functor>("ArgMaxV2");
+  m.add_functor<impl::ArgMinV2Functor>("ArgMinV2");
   m.add_functor<impl::ConsistentConstantFunctor>("ConsistentConstant");
   m.add_functor<impl::ConstantFunctor>("Constant");
   m.add_functor<impl::ConsistentEmptyFunctor>("ConsistentEmpty");

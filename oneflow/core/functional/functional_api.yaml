@@ -392,6 +392,10 @@
   signature: "Tensor (Tensor x, *, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMaxV2"
   bind_python: True
 
+- name: "argminv2"
+  signature: "Tensor (Tensor x, *, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMinV2"
+  bind_python: True
+
 - name: "argmin"
   signature: "Tensor (Tensor x) => ArgMin"
   bind_python: True
