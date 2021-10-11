@@ -13,20 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_THREAD_THREAD_CONTEXT_H_
-#define ONEFLOW_CORE_THREAD_THREAD_CONTEXT_H_
+#ifndef ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_ADAPTER_H_
+#define ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_ADAPTER_H_
 
-#include "oneflow/core/device/cuda_stream_handle.h"
+#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/stream/stream_context.h"
 
 namespace oneflow {
 
-struct ThreadCtx {
-#ifdef WITH_CUDA
-  std::unique_ptr<CudaStreamHandle> g_cuda_stream;
-  Channel<CudaCBEvent>* cb_event_chan;
-#endif
-};
+DeviceCtx* NewDeviceCtxAdapter(StreamContext* ctx);
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_THREAD_THREAD_CONTEXT_H_
+#endif  // ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_ADAPTER_H_

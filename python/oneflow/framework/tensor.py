@@ -486,6 +486,12 @@ def _triu(self, diagonal=0):
 
 
 def _uniform(self, a=0, b=1):
+    if isinstance(a, Tensor):
+        assert a.ndim == 0 and a.nelement() == 1, "a must be a number or scalar tensor!"
+        a = a.numpy().item()
+    if isinstance(b, Tensor):
+        assert b.ndim == 0 and b.nelement() == 1, "b must be a number or scalar tensor!"
+        b = b.numpy().item()
     initializer_conf = flow.random_uniform_initializer(
         minval=a, maxval=b, dtype=self.dtype
     )
