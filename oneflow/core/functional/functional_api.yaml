@@ -207,7 +207,7 @@
   bind_python: True
 
 - name: "sin_"
-  signature: "Tensor (Tensor x) => Sin_"
+  signature: "Tensor (Tensor x, Tensor x_) => Sin_"
   bind_python: True
 
 - name: "cos"

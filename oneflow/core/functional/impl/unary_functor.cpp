@@ -64,7 +64,7 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("erfc", Erfc)          \
   OF_PP_MAKE_TUPLE_SEQ("expm1", Expm1)
 
-#define INPLACE_UNARY_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("tanh", SinInplace)
+#define INPLACE_UNARY_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("sin_inplace", SinInplace)
 
 #define UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, base)                    \
   class class_name##Functor : public base {                                          \
@@ -86,16 +86,36 @@ namespace impl {
   UNARY_ELEMENTWISE_FUNCTOR(                     \
       op_type_name, class_name,                  \
       UnaryFunctor)  // TODO(yaochi): replace UNARY_FUNC_SEQ with INPLACEABLE_UNARY_FUNC_SEQ SEQ
-#define INPLACE_UNARY_FUNCOTRS(op_type_name, class_name) \
-  UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, InplaceUnaryFunctor)
+// #define INPLACE_UNARY_FUNCOTRS(op_type_name, class_name) \
+//   UNARY_ELEMENTWISE_INPLACE_FUNCTOR(op_type_name, class_name, InplaceUnaryFunctor)
 #define CAST_INT_FLOAT_UNARY_FUNCOTRS(op_type_name, class_name) \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, CastIntToFloatUnaryFunctor)
 #define FLOAT_UNARY_FUNCOTRS(op_type_name, class_name) \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, FloatUnaryFunctor)
 
 OF_PP_FOR_EACH_TUPLE(UNARY_FUNCOTRS, UNARY_FUNC_SEQ);
-OF_PP_FOR_EACH_TUPLE(INPLACE_UNARY_FUNCOTRS, INPLACE_UNARY_FUNC_SEQ);
+// OF_PP_FOR_EACH_TUPLE(INPLACE_UNARY_FUNCOTRS, INPLACE_UNARY_FUNC_SEQ);
 OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_FUNCOTRS, FLOAT_UNARY_FUNC_SEQ);
+
+class SinInplaceFunctor {
+ public:
+  SinInplaceFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("sin_inplace").Input("x").Input("x_copy").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& x_) const {
+    JUST(CheckInplaceValid(x));
+    printf("running operator()\n");
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get()));
+    return outputs->at(0);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
+};
 
 }  // namespace impl
 

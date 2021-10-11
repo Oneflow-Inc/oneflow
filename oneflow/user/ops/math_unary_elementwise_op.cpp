@@ -52,6 +52,7 @@ namespace oneflow {
 #define REGISTER_MATH_UNARY_INPLACE_ELEMENTWISE_OP_AND_GRAD(math_unary_elementwise_type, func_prefix) \
   REGISTER_USER_OP(math_unary_elementwise_type)                                               \
       .Input("x")                                                                             \
+      .Input("x_copy")                                                                             \
       .Output("y")                                                                            \
       .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged)                        \
       .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)                                   \
