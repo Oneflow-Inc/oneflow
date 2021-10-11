@@ -90,7 +90,10 @@ Operators for neural networks
         MinMaxObserver,
         MovingAverageMinMaxObserver,
         FakeQuantization,
-        Quantization
+        Quantization, 
+        FusedBatchNorm1d, 
+        FusedBatchNorm2d, 
+        FusedBatchNorm3d
 
 .. autofunction:: oneflow.nn.parallel.DistributedDataParallel
 
