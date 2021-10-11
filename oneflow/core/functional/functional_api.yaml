@@ -219,7 +219,7 @@
   bind_python: True
 
 - name: "image_flip"
-  signature: "Tensor (Tensor x, Int32 flip_code) => ImageFlip"
+  signature: "Tensor (Tensor x, Tensor flip_code) => ImageFlip"
   bind_python: True
 
 - name: "sin"
@@ -404,11 +404,11 @@
   bind_python: True
 
 - name: "argmax"
-  signature: "Tensor (Tensor x) => ArgMax"
+  signature: "Tensor (Tensor x, *, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMax"
   bind_python: True
 
 - name: "argmin"
-  signature: "Tensor (Tensor x) => ArgMin"
+  signature: "Tensor (Tensor x, *, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMin"
   bind_python: True
 
 - name: "argwhere"
@@ -996,7 +996,7 @@
   signature: "Tensor (Tensor x) => Log1p"
   bind_python: True
 
-- name: "log_sigmoid"
+- name: "logsigmoid"
   signature: "Tensor (Tensor x) => LogSigmoid"
   bind_python: True
 

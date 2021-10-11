@@ -127,6 +127,9 @@ from oneflow._C import tril
 from oneflow._C import triu
 from oneflow._C import pad
 from oneflow._C import transpose
+from oneflow._C import relu
+from oneflow._C import argmax
+from oneflow._C import argmin
 
 from . import sbp
 import atexit
@@ -242,8 +245,6 @@ from oneflow.nn.modules.pooling import (
     adaptive_avg_pool3d,
 )
 from oneflow.nn.modules.arange import arange_op as arange
-from oneflow.nn.modules.argmax import argmax_op as argmax
-from oneflow.nn.modules.argmin import argmin_op as argmin
 from oneflow.nn.modules.argsort import argsort_op as argsort
 from oneflow.nn.modules.argwhere import argwhere_op as argwhere
 from oneflow.nn.modules.bmm import bmm_op as bmm
@@ -278,7 +279,6 @@ from oneflow.nn.modules.index_select import index_select_op as index_select
 from oneflow.nn.modules.masked_fill import masked_fill_op as masked_fill
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
-from oneflow.nn.modules.relu import relu_op as relu
 from oneflow.nn.modules.math_ops import std_op as std
 from oneflow.nn.modules.math_ops import topk_op as topk
 from oneflow.nn.modules.math_ops import variance_op as var
@@ -353,7 +353,6 @@ from . import (
 )  # , saved_model NOTE(chengcheng): unavailable now
 import oneflow.utils.data
 import oneflow.utils.vision
-from oneflow.nn.modules.relu import relu_op as relu
 import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
