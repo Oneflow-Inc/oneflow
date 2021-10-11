@@ -232,18 +232,44 @@ class SmoothL1LossGradFunctor {
  public:
   SmoothL1LossGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("smooth_l1_loss_grad")
-                         .Input("loss_grad")
-                         .Input("prediction")
-                         .Input("label")
-                         .Output("prediction_grad")
+                         .Input("dy")
+                         .Input("input")
+                         .Input("target")
+                         .Output("dx")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& loss_grad,
-                           const std::shared_ptr<one::Tensor>& prediction,
-                           const std::shared_ptr<one::Tensor>& label, const float& beta) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target, const float& beta,
+                           const std::string& reduction) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("beta", beta));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {loss_grad, prediction, label}, attrs);
+    JUST(attrs.SetAttr<std::string>("reduction", reduction));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, input, target}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class KLDivLossGradFunctor {
+ public:
+  KLDivLossGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("kl_div_loss_grad")
+                         .Input("input")
+                         .Input("target")
+                         .Input("dy")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target, const bool log_target,
+                           const std::string& reduction) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("log_target", log_target));
+    JUST(attrs.SetAttr<std::string>("reduction", reduction));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, target, dy}, attrs);
   }
 
  private:
@@ -290,6 +316,7 @@ class NllLossGradFunctor {
   std::shared_ptr<OpExpr> op_;
   std::shared_ptr<OpExpr> op_weight_;
 };
+
 class BinaryCrossEntropyLossGradFunctor {
  public:
   BinaryCrossEntropyLossGradFunctor() {
@@ -716,6 +743,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConvDataGradFunctor>("ConvDataGrad");
   m.add_functor<impl::PoolNdGradFunctor>("PoolNdGrad");
   m.add_functor<impl::AdaptivePoolNdGradFunctor>("AdaptivePoolNdGrad");
+  m.add_functor<impl::KLDivLossGradFunctor>("KLDivLossGrad");
   m.add_functor<impl::NllLossGradFunctor>("NllLossGrad");
   m.add_functor<impl::BinaryCrossEntropyLossGradFunctor>("BinaryCrossEntropyLossGrad");
   m.add_functor<impl::BinaryCrossEntropyWithLogitsLossGradFunctor>(
