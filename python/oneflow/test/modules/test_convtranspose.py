@@ -15,14 +15,15 @@ limitations under the License.
 """
 
 import unittest
-
-import oneflow as flow
-import oneflow.unittest
 from collections import OrderedDict
-from oneflow.test_utils.automated_test_util import *
 
 import numpy as np
 from test_util import GenArgList
+from oneflow.test_utils.automated_test_util import *
+
+import oneflow as flow
+import oneflow.nn as nn
+import oneflow.unittest
 
 
 def _test_convtranspose1d_bias_false(test_case, device):
@@ -52,7 +53,7 @@ def _test_convtranspose1d_bias_false(test_case, device):
     input_flow = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    m_f = flow.nn.ConvTranspose1d(1, 2, 3, stride=1, bias=False)
+    m_f = nn.ConvTranspose1d(1, 2, 3, stride=1, bias=False)
     m_f.weight.data = flow.tensor(weight, dtype=flow.float32)
     m_f = m_f.to(device)
     out_flow = m_f(input_flow)
@@ -96,9 +97,9 @@ def _test_convtranspose1d_bias_true(test_case, device):
     input_flow = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    m_f = flow.nn.ConvTranspose1d(1, 2, 3, stride=1, bias=True)
+    m_f = nn.ConvTranspose1d(1, 2, 3, stride=1, bias=True)
     m_f.weight.data = flow.tensor(weight, dtype=flow.float32)
-    m_f.bias = flow.nn.Parameter(flow.Tensor(bias))
+    m_f.bias = nn.Parameter(flow.Tensor(bias))
     m_f = m_f.to(device)
     out_flow = m_f(input_flow)
     test_case.assertTrue(
@@ -140,7 +141,7 @@ def _test_convtranspose1d_group_bias_false(test_case, device):
     input_flow = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    m_f = flow.nn.ConvTranspose1d(2, 2, 3, stride=1, groups=2, bias=False)
+    m_f = nn.ConvTranspose1d(2, 2, 3, stride=1, groups=2, bias=False)
     m_f.weight.data = flow.tensor(weight, dtype=flow.float32)
     m_f = m_f.to(device)
     out_flow = m_f(input_flow)
@@ -196,9 +197,9 @@ def _test_convtranspose1d_group_bias_true(test_case, device):
     input_flow = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    m_f = flow.nn.ConvTranspose1d(2, 2, 3, stride=1, groups=2, bias=True)
+    m_f = nn.ConvTranspose1d(2, 2, 3, stride=1, groups=2, bias=True)
     m_f.weight.data = flow.tensor(weight, dtype=flow.float32)
-    m_f.bias = flow.nn.Parameter(flow.Tensor(bias))
+    m_f.bias = nn.Parameter(flow.Tensor(bias))
     m_f = m_f.to(device)
     out_flow = m_f(input_flow)
     test_case.assertTrue(
@@ -260,7 +261,7 @@ def _test_convtranspose1d_group_large_out_channel(test_case, device):
     input_flow = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    m_f = flow.nn.ConvTranspose1d(2, 6, 3, stride=1, groups=2, bias=False)
+    m_f = nn.ConvTranspose1d(2, 6, 3, stride=1, groups=2, bias=False)
     m_f.weight.data = flow.tensor(weight, dtype=flow.float32)
     m_f = m_f.to(device)
     out_flow = m_f(input_flow)
@@ -323,7 +324,7 @@ def _test_convtranspose1d_group_large_in_channel(test_case, device):
     input_flow = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    m_f = flow.nn.ConvTranspose1d(4, 2, 3, stride=1, groups=2, bias=False)
+    m_f = nn.ConvTranspose1d(4, 2, 3, stride=1, groups=2, bias=False)
     m_f.weight.data = flow.tensor(weight, dtype=flow.float32)
     m_f = m_f.to(device)
     out_flow = m_f(input_flow)
@@ -349,23 +350,22 @@ class TestConvTranspose(flow.unittest.TestCase):
             _test_convtranspose1d_group_large_out_channel,
             _test_convtranspose1d_group_large_in_channel,
         ]
-        arg_dict["device"] = ["cuda"]
+        arg_dict["device"] = ["cpu","cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(5)
+    @autotest()
     def test_ConvTranspose1d_(test_case):
-        channels = random(1, 6).to(int)
+        channels = random(1, 6)
         m = torch.nn.ConvTranspose1d(
             in_channels=channels,
-            out_channels=random(1, 20).to(int),
-            kernel_size=random(1, 4).to(int),
-            stride=random().to(int) | nothing(),
+            out_channels=random(1, 20),
+            kernel_size=random(1, 4),
+            stride=random() | nothing(),
             padding=random(1, 3).to(int) | nothing(),
-            dilation=random(1, 5).to(int) | nothing(),
-            groups=1,
-            padding_mode=constant("zeros"),
-            bias=False
+            dilation=random(1, 5) | nothing(),
+            groups=random(1, 5) | nothing(),
+            padding_mode=constant("zeros") | nothing(),
         )
         m.train(random())
         device = random_device()
@@ -373,6 +373,27 @@ class TestConvTranspose(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=3, dim1=channels).to(device)
         y = m(x)
         return y
+
+    @autotest()
+    def test_ConvTranspose3d_(test_case):
+        channels = random(1, 6)
+        m = torch.nn.ConvTranspose3d(
+            in_channels=channels,
+            out_channels=random(1, 20),
+            kernel_size=random(1, 4),
+            stride=random() | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(1, 5) | nothing(),
+            groups=1,
+            padding_mode=constant("zeros") | nothing(),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=5, dim1=channels).to(device)
+        y = m(x)
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()

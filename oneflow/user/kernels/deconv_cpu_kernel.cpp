@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/user/ops/nn_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
@@ -265,7 +266,7 @@ struct ConvOpKernelState final : public user_op::OpKernelState {
 };
 
 template<typename T>
-std::shared_ptr<user_op::OpKernelState> CreateConvOpKernelState(user_op::KernelInitContext* ctx,
+std::shared_ptr<ConvOpKernelState<T>> CreateConvOpKernelState(user_op::KernelComputeContext* ctx,
                                                                 const std::string& in_name,
                                                                 const std::string& out_name,
                                                                 const std::string& weight_name) {
@@ -325,14 +326,14 @@ class DeconvCpuKernel final : public user_op::OpKernel {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
+  std::shared_ptr<ConvOpKernelState<T>> DoCreateOpKernelState(
+      user_op::KernelComputeContext* ctx) const {
     return CreateConvOpKernelState<T>(ctx, "out", "in", "weight");
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* conv_state = dynamic_cast<ConvOpKernelState<T>*>(state);
+    auto conv_state = DoCreateOpKernelState(ctx);
     CHECK_NOTNULL(conv_state);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
