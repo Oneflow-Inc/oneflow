@@ -50,7 +50,7 @@ class TestInplaceSin(flow.unittest.TestCase):
     @autotest()
     def test_flow_inplace_sin_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=1, dim0=4).to(device)
+        x = random_pytorch_tensor().to(device)
         x.sin_()
         return x
 
