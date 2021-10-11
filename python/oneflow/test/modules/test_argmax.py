@@ -93,13 +93,13 @@ class TestArgmax(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=5, auto_backward=False, rtol=1e-5, atol=1e-5)
-    def test_argmax_with_random_data(test_case):
-        device = random_device()
-        ndim = random(1, 6).to(int)
-        x = random_pytorch_tensor(ndim=ndim).to(device)
-        y = torch.argmax(x, dim=random(0, ndim).to(int), keepdim=random().to(bool))
-        return y
+    # @autotest(n=5, auto_backward=False, rtol=1e-5, atol=1e-5)
+    # def test_argmax_with_random_data(test_case):
+    #     device = random_device()
+    #     ndim = random(1, 6).to(int)
+    #     x = random_pytorch_tensor(ndim=ndim).to(device)
+    #     y = torch.argmax(x, dim=random(0, ndim).to(int), keepdim=random().to(bool))
+    #     return y
 
 
 if __name__ == "__main__":

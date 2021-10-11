@@ -45,7 +45,8 @@ class ArgMaxV2Functor {
  public:
   ArgMaxV2Functor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int32_t>& dim,
-                           const Optional<bool>& keepdim, const Symbol<DType>& dtype) const {
+                           const Optional<bool>& keepdim,
+                           const Optional<Symbol<DType>>& dtype) const {
     if (dim.has_value() == false) { return JUST(ArgMax(JUST(Flatten(input, 0, -1)))); }
     int new_dim = JUST(dim);
     int32_t ndims = input->shape()->NumAxes();
@@ -70,19 +71,21 @@ class ArgMaxV2Functor {
         }
       }
       permute.push_back(new_dim);
-      result = JUST(Transpose(result, permute));
-      result = JUST(ArgMax(input));
+      result = JUST(Transpose(input, permute));
+      result = JUST(ArgMax(result));
       result = JUST(ExpandDims(result, -1));
       std::vector<int32_t> permute_inv;
-      permute_inv.reserve(ndims);
+      permute_inv.resize(ndims);
       for (int32_t i = 0; i < ndims; i++) { permute_inv[i] = -1; }
       for (int32_t i = 0; i < ndims; i++) { permute_inv[permute[i]] = i; }
       result = JUST(Transpose(result, permute_inv));
-      if (keepdim.has_value() && JUST(keepdim) == true) {
-        result = JUST(ExpandDims(result, new_dim));
+      std::vector<int32_t> squeeze_dim;
+      squeeze_dim.push_back(new_dim);
+      if ((!keepdim.has_value()) || (keepdim.has_value() && JUST(keepdim) == false)) {
+        result = JUST(Squeeze(result, squeeze_dim));
       }
     }
-    if (dtype.hash_value()) { result = JUST(Cast(result, dtype)); }
+    if (dtype.has_value()) { result = JUST(Cast(result, JUST(dtype))); }
     return result;
   }
 };

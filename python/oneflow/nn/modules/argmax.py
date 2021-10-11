@@ -52,7 +52,7 @@ class Argmax(Module):
 
 
 @register_tensor_op("argmax")
-def argmax_op(input, dim: int = None, keepdim: bool = False):
+def argmax_op(input, dim: int = None, keepdim: bool = None, dtype: flow.dtype = None):
     """The op computes the index with the largest value of a Tensor at specified axis.
 
     Args:
@@ -79,7 +79,8 @@ def argmax_op(input, dim: int = None, keepdim: bool = False):
         tensor([2, 1], dtype=oneflow.int64)
 
     """
-    return Argmax(dim=dim, keepdim=keepdim)(input)
+    # return Argmax(dim=dim, keepdim=keepdim)(input)
+    return flow._C.argmaxv2(input, dim=dim, keepdim=keepdim, dtype=dtype)
 
 
 if __name__ == "__main__":
