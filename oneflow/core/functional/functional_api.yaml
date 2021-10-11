@@ -385,19 +385,11 @@
   bind_python: True
 
 - name: "argmax"
-  signature: "Tensor (Tensor x) => ArgMax"
-  bind_python: True
-
-- name: "argmaxv2"
-  signature: "Tensor (Tensor x, *, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMaxV2"
-  bind_python: True
-
-- name: "argminv2"
-  signature: "Tensor (Tensor x, *, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMinV2"
+  signature: "Tensor (Tensor x, *, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMax"
   bind_python: True
 
 - name: "argmin"
-  signature: "Tensor (Tensor x) => ArgMin"
+  signature: "Tensor (Tensor x, *, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMin"
   bind_python: True
 
 - name: "argwhere"

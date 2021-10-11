@@ -41,13 +41,17 @@ namespace functional {
 
 namespace impl {
 
-class ArgMaxV2Functor {
+class ArgMaxFunctor {
  public:
-  ArgMaxV2Functor() {}
+  ArgMaxFunctor() { op_ = CHECK_JUST(one::OpBuilder("argmax").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int32_t>& dim,
                            const Optional<bool>& keepdim,
                            const Optional<Symbol<DType>>& dtype) const {
-    if (dim.has_value() == false) { return JUST(ArgMax(JUST(Flatten(input, 0, -1)))); }
+    std::shared_ptr<Tensor> result;
+    if (dim.has_value() == false) {
+      result = JUST(Flatten(input, 0, -1));
+      return JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {result}));
+    }
     int new_dim = JUST(dim);
     int32_t ndims = input->shape()->NumAxes();
     if (new_dim < 0) { new_dim += ndims; }
@@ -57,9 +61,8 @@ class ArgMaxV2Functor {
     CHECK_LT_OR_RETURN(new_dim, ndims)
         << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
         << ndims << " ] but got " << ndims;
-    std::shared_ptr<Tensor> result;
     if (new_dim == ndims - 1) {
-      result = JUST(ArgMax(input));
+      result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input}));
       if (keepdim.has_value() && JUST(keepdim) == true) { result = JUST(ExpandDims(result, -1)); }
     } else {
       std::vector<int32_t> permute;
@@ -72,7 +75,7 @@ class ArgMaxV2Functor {
       }
       permute.push_back(new_dim);
       result = JUST(Transpose(input, permute));
-      result = JUST(ArgMax(result));
+      result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {result}));
       result = JUST(ExpandDims(result, -1));
       std::vector<int32_t> permute_inv;
       permute_inv.resize(ndims);
@@ -88,16 +91,19 @@ class ArgMaxV2Functor {
     if (dtype.has_value()) { result = JUST(Cast(result, JUST(dtype))); }
     return result;
   }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
-class ArgMinV2Functor {
+class ArgMinFunctor {
  public:
-  ArgMinV2Functor() {}
+  ArgMinFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int32_t>& dim,
                            const Optional<bool>& keepdim,
                            const Optional<Symbol<DType>>& dtype) const {
     auto neg_input = JUST(Negative(input));
-    return JUST(ArgMaxV2(neg_input, dim, keepdim, dtype));
+    return JUST(ArgMax(neg_input, dim, keepdim, dtype));
   }
 };
 class ConsistentConstantFunctor {
@@ -1774,8 +1780,8 @@ class UnsortedBatchSegmentSumFunctor {
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  m.add_functor<impl::ArgMaxV2Functor>("ArgMaxV2");
-  m.add_functor<impl::ArgMinV2Functor>("ArgMinV2");
+  m.add_functor<impl::ArgMaxFunctor>("ArgMax");
+  m.add_functor<impl::ArgMinFunctor>("ArgMin");
   m.add_functor<impl::ConsistentConstantFunctor>("ConsistentConstant");
   m.add_functor<impl::ConstantFunctor>("Constant");
   m.add_functor<impl::ConsistentEmptyFunctor>("ConsistentEmpty");

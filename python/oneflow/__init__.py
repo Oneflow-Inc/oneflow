@@ -127,8 +127,8 @@ from oneflow._C import triu
 from oneflow._C import pad
 from oneflow._C import transpose
 from oneflow._C import relu
-from oneflow._C import argmaxv2 as argmax
-from oneflow._C import argminv2 as argmin
+from oneflow._C import argmax
+from oneflow._C import argmin
 
 from . import sbp
 import atexit
