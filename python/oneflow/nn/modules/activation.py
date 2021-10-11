@@ -499,7 +499,7 @@ class LogSoftmax(Module):
             self.dim = None
 
     def forward(self, x):
-        return flow._C.logsoftmax(x, self.dim)
+        return flow._C.log_softmax(x, self.dim)
 
     def extra_repr(self):
         return f"dim={self.dim}"
