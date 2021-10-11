@@ -513,7 +513,7 @@ class LogSoftmax(Module):
         (need_transpose, permute) = _softmax_need_transpose(x, self.dim)
         if need_transpose:
             x = flow._C.transpose(x, perm=permute)
-        x = flow._C.logsoftmax(x)
+        x = flow._C.log_softmax(x)
         if need_transpose:
             x = flow._C.transpose(x, perm=permute)
         return x
