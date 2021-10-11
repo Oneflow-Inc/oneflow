@@ -317,9 +317,8 @@ jobs:
 
   build-with-clang:
     name: Build with clang
-    if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'need-simple-ci'))
+    if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
     runs-on: [self-hosted, linux, build]
-    needs: [cancel_previous]
     steps:
       - uses: Oneflow-Inc/get-oneflow/cache-complete@add-input-delete-cache
         name: Save cache if successful
