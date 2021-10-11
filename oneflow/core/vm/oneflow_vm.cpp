@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/thread/thread_consistent_id.h"
 #include "oneflow/core/framework/transport_token.h"
-#include "oneflow/core/thread/thread_consistent_id.h"
+#include "oneflow/core/framework/device.h"
 
 namespace oneflow {
 
@@ -132,12 +132,25 @@ OneflowVM::~OneflowVM() {
 }
 
 Maybe<void> OneflowVM::Receive(vm::InstructionMsgList* instr_list) {
-  JUST(vm_->Receive(instr_list));
-  notifier_.Notify();
+  static const int64_t kHighWaterMark = GetInstructionHighWaterMark();
+  static const int64_t kLowWaterMark = GetInstructionLowWaterMark();
+  auto* vm = mut_vm();
+  if (*vm->mut_flying_instruction_cnt() > kHighWaterMark) {
+    JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
+      return ThisThreadScheduleUntil(
+          [&]() -> Maybe<bool> { return *vm->mut_flying_instruction_cnt() < kLowWaterMark; });
+    }));
+  }
+  // Use ThreadUnsafeEmpty to avoid acquiring mutex lock.
+  // It's safe to use ThreadUnsafeEmpty here.
+  if (vm->ThreadUnsafeEmpty()) {
+    // restart vm faster by directly scheduling vm in the current thread.
+    JUST(ThisThreadScheduleUntil(instr_list, []() -> Maybe<bool> { return true; }));
+  } else {
+    JUST(vm->Receive(instr_list));
+    notifier_.Notify();
+  }
   return Maybe<void>::Ok();
-}
-
-Maybe<void> OneflowVM::HighPriorSchedule() {
 }
 
 void OneflowVM::Loop(const std::function<void()>& Initializer) {
@@ -154,7 +167,7 @@ void OneflowVM::Loop(const std::function<void()>& Initializer) {
     while (!vm->ThreadUnsafeEmpty()) {
       LowPriorUniqueLock<PriorMutex> lock(prior_mutex_);
       while (!vm->ThreadUnsafeEmpty()) {
-        if (lock.TestIsHurryAndClearHurry) { break; }
+        if (lock.TestIsHurryAndClearHurry()) { break; }
         vm->Schedule();
       }
     }

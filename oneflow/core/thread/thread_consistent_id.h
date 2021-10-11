@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <string>
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/optional.h"
 
 namespace oneflow {
 
@@ -25,13 +26,22 @@ const static int kThreadConsistentIdMain = 0;
 const static int kThreadConsistentIdHook = 1;
 const static int kThreadConsistentIdScheduler = 2;
 
+class ThreadConsistentIdGurad final {
+ public:
+  ThreadConsistentIdGurad(int id);
+  ~ThreadConsistentIdGurad();
+
+ private:
+  Optional<int> old_;
+};
+
 size_t GetThreadConsistentIdCount();
 
-Maybe<void> InitThisThreadUniqueConsistentId(int64_t thread_consistent_id,
+Maybe<void> InitThisThreadUniqueConsistentId(int thread_consistent_id,
                                              const std::string& debug_string);
-Maybe<void> InitThisThreadConsistentId(int64_t thread_consistent_id,
-                                       const std::string& debug_string);
-Maybe<int64_t> GetThisThreadConsistentId();
+Maybe<void> InitThisThreadConsistentId(int thread_consistent_id, const std::string& debug_string);
+
+const Optional<int>& GetThisThreadConsistentId();
 
 }  // namespace oneflow
 

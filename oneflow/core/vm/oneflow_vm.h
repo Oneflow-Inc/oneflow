@@ -22,6 +22,8 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/prior_mutex.h"
+#include "oneflow/core/thread/thread_consistent_id.h"
+#include "oneflow/api/foreign_lock_helper.h"
 
 namespace oneflow {
 
@@ -34,11 +36,39 @@ class OneflowVM final {
 
   Maybe<void> Receive(vm::InstructionMsgList* instr_list);
 
-  Maybe<void> HighPriorSchedule();
-
   const vm::VirtualMachine& vm() const { return *vm_; }
 
  private:
+  template<typename FinishConditionT>
+  Maybe<void> ThisThreadScheduleUntil(vm::InstructionMsgList* instr_list,
+                                      const FinishConditionT& FinishCondition) {
+    const auto& Prepare = [&]() -> Maybe<void> { return mut_vm()->Receive(instr_list); };
+    return HighPriorPrepareAndScheduleUntil(Prepare, FinishCondition);
+  }
+  template<typename FinishConditionT>
+  Maybe<void> ThisThreadScheduleUntil(const FinishConditionT& FinishCondition) {
+    return HighPriorPrepareAndScheduleUntil(&Maybe<void>::Ok, FinishCondition);
+  }
+  template<typename PrepareT, typename FinishConditionT>
+  Maybe<void> HighPriorPrepareAndScheduleUntil(const PrepareT& Parpare,
+                                               const FinishConditionT& FinishCondition) {
+    // schedule vm until completion.
+    {
+      // make sure the thread_consistent_id be kThreadConsistentIdScheduler.
+      // thread_consistent_id is essential for communicating with scheduler threads in other
+      // processes.
+      ThreadConsistentIdGurad guard(kThreadConsistentIdScheduler);
+      HighPriorUniqueLock<PriorMutex> lock(prior_mutex_);
+      JUST(Parpare());
+      auto* vm = mut_vm();
+      do { vm->Schedule(); } while (!JUST(FinishCondition()));
+    }
+    // It's quite likely that there are instructions left unscheduled even if FinishCondition() ==
+    // true. Notify other threads do the remainder scheduling.
+    notifier_.Notify();
+    return Maybe<void>::Ok();
+  }
+
   void Loop(const std::function<void()>& Initializer);
 
   vm::VirtualMachine* mut_vm() { return vm_.Mutable(); }
