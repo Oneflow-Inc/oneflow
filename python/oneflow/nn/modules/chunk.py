@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.ops.array_ops import check_slice_tup_list
+from oneflow.ops.array_ops import parse_slice_tuple_list
 
 
 @register_tensor_op("chunk")
@@ -99,7 +99,7 @@ def chunk_op(input, chunks, dim):
                         tup_list.append([None, None, None])
                     else:
                         tup_list.append(v_chunk)
-                (start_tup, stop_tup, step_tup) = check_slice_tup_list(
+                (start_tup, stop_tup, step_tup) = parse_slice_tuple_list(
                     tup_list, input.shape
                 )
                 splits.append(

@@ -22,11 +22,12 @@ python3 $src_dir/ci/test/parallel_run.py \
     --timeout=1 \
     --verbose \
     --chunk=1
-
-if [ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_backend_grpc())')" == True ]; then
+if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_backend_grpc())')" == *"True"* ]]; then
     export ONEFLOW_TEST_DEVICE_NUM=2
     python3 -m oneflow.distributed.launch --nproc_per_node 2 -m unittest discover ${PWD} --failfast --verbose
 
     export ONEFLOW_TEST_DEVICE_NUM=4
     python3 -m oneflow.distributed.launch --nproc_per_node 4 -m unittest discover ${PWD} --failfast --verbose
+else
+    python3 -c 'import oneflow.sysconfig;assert(oneflow.sysconfig.has_rpc_backend_grpc() == False)'
 fi

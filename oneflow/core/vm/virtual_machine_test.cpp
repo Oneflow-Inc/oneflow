@@ -34,17 +34,14 @@ namespace {
 
 TEST(VirtualMachine, __Init__) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
-  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewObject"});
+  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
   auto vm = ObjectMsgPtr<VirtualMachine>::New(vm_desc.Get());
-  ASSERT_EQ(vm->thread_ctx_list().size(), 2 * 2);
-  ASSERT_EQ(vm->stream_type_id2stream_rt_desc().size(), 2 * 2);
+  ASSERT_EQ(vm->thread_ctx_list().size(), 2);
+  ASSERT_EQ(vm->stream_type_id2stream_rt_desc().size(), 2);
 }
 
 TEST(VirtualMachine, ToDot) {
   std::string dot_str = ObjectMsgListReflection<VirtualMachine>().ToDot("VirtualMachine");
-  // std::cout << std::endl;
-  // std::cout << dot_str << std::endl;
-  // std::cout << std::endl;
 }
 
 }  // namespace
