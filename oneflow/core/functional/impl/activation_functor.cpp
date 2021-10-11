@@ -37,7 +37,7 @@ class ReluFunctor {
   ReluFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("relu").Input("in", 1).Output("out", 1).Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, bool inplace) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const bool inplace) const {
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
@@ -112,7 +112,7 @@ class HardTanhFunctor {
     op_ = CHECK_JUST(one::OpBuilder("hardtanh").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& min_val,
-                           const double& max_val, bool inplace) const {
+                           const double& max_val, const bool inplace) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("min_val", min_val));
     JUST(attrs.SetAttr<double>("max_val", max_val));
@@ -154,7 +154,7 @@ class HardTanhGradFunctor {
 class EluFunctor {
  public:
   EluFunctor() { op_ = CHECK_JUST(one::OpBuilder("elu").Input("in").Output("out").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& alpha, bool inplace) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& alpha, const bool inplace) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("alpha", alpha));
     if (inplace) {
@@ -227,7 +227,7 @@ class HardSigmoidFunctor {
     op_ = CHECK_JUST(one::OpBuilder("hardsigmoid").Input("in").Output("out").Build());
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, bool inplace) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const bool inplace) const {
     if (inplace) {
       JUST(CheckInplaceValid(input));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
@@ -276,7 +276,7 @@ class HardSwishFunctor {
     op_ = CHECK_JUST(one::OpBuilder("hardswish").Input("in").Output("out").Build());
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, bool inplace) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const bool inplace) const {
     if (inplace) {
       JUST(CheckInplaceValid(input));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
@@ -304,10 +304,20 @@ class LeakyReluFunctor {
   LeakyReluFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("leaky_relu").Input("x").Output("y").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& alpha) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& alpha, const bool inplace) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    JUST(attrs.SetAttr<bool>("inplace", inplace));
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), AttrMap{}));
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    }
+
   }
 
  private:

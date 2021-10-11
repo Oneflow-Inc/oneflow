@@ -330,7 +330,7 @@
   bind_python: False
 
 - name: "leaky_relu"
-  signature: "Tensor (Tensor x, Float alpha) => LeakyRelu"
+  signature: "Tensor (Tensor x, Float alpha, Bool inplace=False) => LeakyRelu"
   bind_python: True
 
 - name: "leaky_relu_grad"
