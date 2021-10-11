@@ -25,7 +25,6 @@ class _FusedNormBase(Module):
     def __init__(
         self,
         num_features: int,
-        has_addend: bool = False,
         eps: float = 1e-05,
         momentum: float = 0.1,
         affine: bool = True,
@@ -33,7 +32,6 @@ class _FusedNormBase(Module):
     ) -> None:
         super().__init__()
         self.num_features = num_features
-        self.has_addend = has_addend
         self.eps = eps
         self.momentum = momentum
         self.affine = affine
@@ -67,7 +65,7 @@ class _FusedNormBase(Module):
         raise NotImplementedError
 
     def extra_repr(self):
-        return "num_features={num_features}, has_addend={has_addend}, eps={eps}, momentum={momentum}, affine={affine}, track_running_stats={track_running_stats}".format(
+        return "num_features={num_features}, eps={eps}, momentum={momentum}, affine={affine}, track_running_stats={track_running_stats}".format(
             **self.__dict__
         )
 
@@ -76,22 +74,19 @@ class _FusedBatchNorm(_FusedNormBase):
     def __init__(
         self,
         num_features,
-        has_addend=False,
         eps=1e-05,
         momentum=0.1,
         affine=True,
         track_running_stats=True,
     ):
-        super().__init__(
-            num_features, has_addend, eps, momentum, affine, track_running_stats
-        )
+        super().__init__(num_features, eps, momentum, affine, track_running_stats)
 
-    def forward(self, x, addend):
+    def forward(self, x, addend=None):
         self._check_input_dim(x)
         # TODO(zwx): Use `tensor.device_type()` method to help checking if x is on cpu.
         # Using `if x.device == flow.device("cpu"):` will fail as consistent tensor has
         # no device, however using `x.is_cuda` is not a good choice.
-        if self.has_addend is False:
+        if addend is None:
             if not x.is_cuda:
                 # TODO(zzk) add CPU version.
                 raise NotImplementedError(
@@ -109,7 +104,7 @@ class _FusedBatchNorm(_FusedNormBase):
             is_training = (self.running_mean is None) and (self.running_var is None)
         return flow._C.normalization_add_relu(
             x,
-            addend if self.has_addend else None,
+            addend if addend is not None else None,
             self.running_mean
             if not self.training or self.track_running_stats
             else None,
@@ -124,10 +119,13 @@ class _FusedBatchNorm(_FusedNormBase):
 
 
 class FusedBatchNorm1d(_FusedBatchNorm):
-    """Applies Batch Normalization over a 2D or 3D input (a mini-batch of 1D
-    inputs with optional additional channel dimension) as described in the paper
-    `Batch Normalization: Accelerating Deep Network Training by Reducing
-    Internal Covariate Shift <https://arxiv.org/abs/1502.03167>`__ .
+    """Applies Fused Batch Normalization over a 2D or 3D input, the formula is: 
+    
+    .. math:: 
+
+        out = ReLU(BatchNorm(input) + addend)
+
+    The formula of Batch Normalization is: 
 
     .. math::
 
@@ -201,14 +199,17 @@ class FusedBatchNorm1d(_FusedBatchNorm):
 
 
 class FusedBatchNorm2d(_FusedBatchNorm):
-    """Applies Batch Normalization over a 4D input (a mini-batch of 2D inputs
-    with additional channel dimension) as described in the paper
-    `Batch Normalization: Accelerating Deep Network Training by Reducing
-    Internal Covariate Shift <https://arxiv.org/abs/1502.03167>`__ .
+    """Applies Fused Batch Normalization over a 4D input, the formula is: 
+    
+    .. math:: 
+
+        out = ReLU(BatchNorm(input) + addend)
+
+    The formula of Batch Normalization is: 
 
     .. math::
 
-        y = \\frac{x - \\mathrm{E}[x]}{ \\sqrt{\\mathrm{Var}[x] + \\epsilon}} * \\gamma + \\beta
+        y = \\frac{x - \\mathrm{E}[x]}{\\sqrt{\\mathrm{Var}[x] + \\epsilon}} * \\gamma + \\beta
 
     The mean and standard-deviation are calculated per-dimension over
     the mini-batches and :math:`\\gamma` and :math:`\\beta` are learnable parameter vectors
@@ -276,14 +277,17 @@ class FusedBatchNorm2d(_FusedBatchNorm):
 
 
 class FusedBatchNorm3d(_FusedBatchNorm):
-    r"""Applies Batch Normalization over a 5D input (a mini-batch of 3D inputs
-    with additional channel dimension) as described in the paper
-    `Batch Normalization: Accelerating Deep Network Training by Reducing
-    Internal Covariate Shift <https://arxiv.org/abs/1502.03167>`__ .
+    r"""Applies Fused Batch Normalization over a 5D input, the formula is: 
+    
+    .. math:: 
+
+        out = ReLU(BatchNorm(input) + addend)
+
+    The formula of Batch Normalization is: 
 
     .. math::
 
-        y = \frac{x - \mathrm{E}[x]}{ \sqrt{\mathrm{Var}[x] + \epsilon}} * \gamma + \beta
+        y = \\frac{x - \\mathrm{E}[x]}{\\sqrt{\\mathrm{Var}[x] + \\epsilon}} * \\gamma + \\beta
 
     The mean and standard-deviation are calculated per-dimension over
     the mini-batches and :math:`\gamma` and :math:`\beta` are learnable parameter vectors
