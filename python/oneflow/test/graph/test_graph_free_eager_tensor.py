@@ -57,6 +57,70 @@ class TestGraphWithEagerTensorCaught(oneflow.unittest.TestCase):
             np.allclose(graph_out.numpy(), eager_out.numpy(), atol=1e-4, rtol=1e-4)
         )
 
+    def test_eager_tensor_to(test_case):
+        class EagerTensorToModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+
+            def forward(self):
+                # test free eager tensor to
+                t = flow.tensor([1.0], dtype=flow.float32).to("cuda")
+                return t
+
+        e_m = EagerTensorToModule()
+
+        class EagerTensorToGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.e_m = e_m
+
+            def build(self):
+                return self.e_m()
+
+        e_g = EagerTensorToGraph()
+        graph_out = e_g()
+        eager_out = e_m()
+        test_case.assertTrue(
+            np.allclose(graph_out.numpy(), eager_out.numpy(), atol=1e-4, rtol=1e-4)
+        )
+
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n2d()
+class ConsistentFreeEagerTensorGraphTestCase(oneflow.unittest.TestCase):
+    def test_consistent_eager_tensor_to(test_case):
+        rank = flow.env.get_rank()
+        placement = flow.placement("cpu", {0: [0, 1]})
+        t_l = flow.tensor([1.0, 2.0], dtype=flow.float32)
+        t = t_l.to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+
+        class ConsistentEagerTensorToModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+
+            def forward(self):
+                # test free eager tensor to
+                nonlocal t
+                t = t.to("cuda")
+                return t
+
+        e_m = ConsistentEagerTensorToModule()
+
+        class ConsistentEagerTensorToGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.e_m = e_m
+
+            def build(self):
+                return self.e_m()
+
+        e_g = ConsistentEagerTensorToGraph()
+        graph_out = e_g().to_local()
+        print("g ", graph_out.numpy())
+        test_case.assertTrue(
+            np.allclose(graph_out.numpy(), t_l.numpy(), atol=1e-4, rtol=1e-4)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

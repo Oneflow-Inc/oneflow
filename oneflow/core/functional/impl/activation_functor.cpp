@@ -224,7 +224,6 @@ class HardSigmoidFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
-
 class HardSigmoidGradFunctor : public BinaryFunctor {
  public:
   HardSigmoidGradFunctor() {
@@ -280,7 +279,7 @@ class SoftmaxFunctor {
 class LogSoftmaxFunctor {
  public:
   LogSoftmaxFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("logsoftmax").Input("in").Output("out").Output("prob").Build());
+    op_ = CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits, int32_t dim) const {
     std::vector<int32_t> permute;

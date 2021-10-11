@@ -177,6 +177,10 @@ def _contiguous(self):
     return self
 
 
+def _transpose(self, dim0, dim1):
+    return flow._C.transpose(self, dim0, dim1)
+
+
 def _getstate(self):
     assert self.is_local, "Only support local tensor to pickle"
     return {"data": self.numpy(), "dtype": self.dtype}
@@ -271,6 +275,10 @@ def _truediv(self, other):
 
 def _rtruediv(self, other):
     return flow.div(other, self)
+
+
+def _floor_divide(self, other):
+    return flow.floor_divide(self, other)
 
 
 def _neg(self):
@@ -477,7 +485,25 @@ def _triu(self, diagonal=0):
     return flow.triu(self, diagonal=diagonal)
 
 
+def _relu(self, inplace=False):
+    return flow.relu(self, inplace=inplace)
+
+
+def _argmax(self, dim=None, keepdim=None):
+    return flow.argmax(self, dim=dim, keepdim=keepdim)
+
+
+def _argmin(self, dim=None, keepdim=None):
+    return flow.argmin(self, dim=dim, keepdim=keepdim)
+
+
 def _uniform(self, a=0, b=1):
+    if isinstance(a, Tensor):
+        assert a.ndim == 0 and a.nelement() == 1, "a must be a number or scalar tensor!"
+        a = a.numpy().item()
+    if isinstance(b, Tensor):
+        assert b.ndim == 0 and b.nelement() == 1, "b must be a number or scalar tensor!"
+        b = b.numpy().item()
     initializer_conf = flow.random_uniform_initializer(
         minval=a, maxval=b, dtype=self.dtype
     )
@@ -644,6 +670,7 @@ def RegisterMethods():
     Tensor.__neg__ = _neg
     Tensor.__pow__ = _pow
     Tensor.__format__ = _format
+    Tensor.__floordiv__ = _floor_divide
     Tensor.uniform_ = _uniform
     Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform
@@ -657,6 +684,9 @@ def RegisterMethods():
     Tensor._meta_repr = _meta_repr
     Tensor.abs = _abs
     Tensor.exp = _exp
+    Tensor.floor_divide = _floor_divide
+    Tensor.argmax = _argmax
+    Tensor.argmin = _argmin
     Tensor.acos = _acos
     Tensor.acosh = _acosh
     Tensor.arccosh = _arccosh
@@ -713,6 +743,8 @@ def RegisterMethods():
     Tensor.tril = _tril
     Tensor.triu = _triu
     Tensor.contiguous = _contiguous
+    Tensor.transpose = _transpose
+    Tensor.relu = _relu
 
 
 def register_tensor_op(op_name):
