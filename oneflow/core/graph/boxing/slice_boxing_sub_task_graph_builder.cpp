@@ -84,37 +84,10 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     return Error::BoxingNotSupportedError();
   }
 
-  const auto GetBoxingGpuThrdId = [](int64_t machine_id, int64_t dev_id,
-                                     const std::string& stream_name) -> int64_t {
-    int64_t thrd_id = -1;
-#ifdef WITH_CUDA
-    DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kGPU,
-                       static_cast<DeviceId::device_index_t>(dev_id)};
-    auto* generator = dynamic_cast<CudaStreamIndexGenerator*>(
-        Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
-    CHECK_NOTNULL(generator);
-    StreamId::stream_index_t stream_index = 0;
-    if (stream_name == "H2D") {
-      stream_index = generator->GenerateH2DStreamIndex();
-    } else if (stream_name == "D2H") {
-      stream_index = generator->GenerateD2HStreamIndex();
-    } else if (stream_name == "MIX") {
-      stream_index = generator->GenerateNamedStreamIndex("MIX");
-    } else {
-      UNIMPLEMENTED();
-    }
-    thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
-#else
-    UNIMPLEMENTED();
-#endif
-    return thrd_id;
-  };
-
   const auto NewEdge = [&ctx]() -> TaskEdge* { return ctx->task_graph()->NewEdge(); };
-  const auto CreateBoxingNode121 = [&ctx, &lbi, &GetBoxingGpuThrdId](
-                                       const ParallelDesc& pd, const int64_t parallel_id,
-                                       const TensorSliceView& slice,
-                                       SliceBoxingTaskMode mode) -> SliceBoxingTaskNode* {
+  const auto CreateBoxingNode121 = [&ctx, &lbi](const ParallelDesc& pd, const int64_t parallel_id,
+                                                const TensorSliceView& slice,
+                                                SliceBoxingTaskMode mode) -> SliceBoxingTaskNode* {
     SliceBoxingTaskNode* node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
     const int64_t machine_id = CHECK_JUST(pd.MachineId4ParallelId(parallel_id));
     int64_t thrd_id = -1;
@@ -123,7 +96,12 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     } else if (pd.device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
       int64_t dev_id = CHECK_JUST(pd.DeviceId4ParallelId(parallel_id));
-      thrd_id = GetBoxingGpuThrdId(machine_id, dev_id, "H2D");
+      DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kGPU,
+                         static_cast<DeviceId::device_index_t>(dev_id)};
+      auto* stream_index_generator =
+          Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
+      auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
+      thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
 #else
       UNIMPLEMENTED();
 #endif
