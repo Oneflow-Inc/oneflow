@@ -53,13 +53,12 @@ __global__ void PermuteKernel(PermuteKernelParams<num_dims, IndexType> params) {
 // have BUG!
 // N is redundant?
 template<size_t num_dims, size_t movement_size, size_t tile_size, typename IndexType>
-__global__ void BatchPermuteKernel(PermuteKernelParams<num_dims, IndexType> params, IndexType N,
-                                   IndexType H, IndexType W, IndexType dh, IndexType dw, int32_t total_grid_size) {
+__global__ void BatchPermuteKernel(PermuteKernelParams<num_dims, IndexType> params, IndexType H, IndexType W, IndexType dh, IndexType dw, int32_t grid_size) {
   using T = typename std::aligned_storage<movement_size, movement_size>::type;
   __shared__ T tile[tile_size][tile_size + 1];  // To avoid bank conflict.
   const T* src = reinterpret_cast<const T*>(params.src);
   T* dst = reinterpret_cast<T*>(params.dst);
-  for(int i = blockIdx.x, step=gridDim.x; i < total_grid_size; i+=step){
+  for(int i = blockIdx.x, step=gridDim.x; i < grid_size; i+=step){
     const IndexType n = i / (dh * dw);  // the index of batch.
     const IndexType k = i % (dh * dw);  // the flatten index of tile in a batch.
     
@@ -90,7 +89,7 @@ __global__ void BatchPermuteKernel(PermuteKernelParams<num_dims, IndexType> para
 
 template<size_t num_dims, size_t movement_size, size_t tile_size, typename IndexType>
 void LaunchBatchPermuteKernel(StreamContext* stream_ctx,
-                              PermuteKernelParams<num_dims, IndexType> params, IndexType& n, IndexType& h, IndexType& w) {
+                              PermuteKernelParams<num_dims, IndexType> params, IndexType& h, IndexType& w) {
   cudaStream_t cuda_stream =
       CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
 
@@ -105,8 +104,8 @@ void LaunchBatchPermuteKernel(StreamContext* stream_ctx,
   printf("kCudaMaxBlocks is: %d \n", kCudaMaxBlocksNum); 
 
   BatchPermuteKernel<num_dims, movement_size, tile_size, IndexType><<<checked_grid_size, dim3(tile_size, kBlockRows), 0, cuda_stream>>>(
-      params, n, h, w, dh,
-      dw, checked_grid_size);  // Set threads num as 32x8 cause each threads process 4 elements to 32x32 share memory.
+      params, h, w, dh,
+      dw, grid_size);  // Set threads num as 32x8 cause each threads process 4 elements to 32x32 share memory.
 }
 
 template<size_t tile_size, typename IndexType>
@@ -175,15 +174,15 @@ void LaunchKernel(StreamContext* stream_ctx, PermuteKernelParams<num_dims, Index
     printf("w is: %d \n", w); 
     if(CheckLaunchBatchPermute<num_dims, tile_size>(params, n, h, w)){
       printf("Use batch permute"); 
-      LaunchBatchPermuteKernel<num_dims, movement_size, tile_size, IndexType>(stream_ctx, params, n, h, w);
-      if(!CheckIfDivideByTileSize<tile_size, IndexType>(h, w)){
-        IndexType rest_count = n * (h%tile_size) * (w%tile_size); 
-        printf("Rest count is: %d", rest_count); 
-        params.count = rest_count; 
-        printf("now count is: %d", params.count); 
-        PermuteKernel<num_dims, movement_size, IndexType>
-          <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params);
-      }
+      LaunchBatchPermuteKernel<num_dims, movement_size, tile_size, IndexType>(stream_ctx, params, h, w);
+      // if(!CheckIfDivideByTileSize<tile_size, IndexType>(h, w)){
+      //   IndexType rest_count = n * (h%tile_size) * (w%tile_size); 
+      //   printf("Rest count is: %d", rest_count); 
+      //   params.count = rest_count; 
+      //   printf("now count is: %d", params.count); 
+      //   PermuteKernel<num_dims, movement_size, IndexType>
+      //     <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params);
+      // }
     } else {
       PermuteKernel<num_dims, movement_size, IndexType>
         <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params);
