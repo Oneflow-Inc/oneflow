@@ -1063,7 +1063,7 @@
   bind_python: False
 
 - name: "mish"
-  signature: "Tensor (Tensor x) => Mish"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Mish"
   bind_python: True
 
 - name: "mish_grad"

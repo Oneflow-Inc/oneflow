@@ -825,7 +825,7 @@ class Mish(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow._C.mish(x)
+        return flow._C.mish(x, inplace=self.inplace)
 
 
 class SiLU(Module):
