@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/util/cuda_blas_interface.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/register/blob.h"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
 
 namespace oneflow {
@@ -56,11 +55,6 @@ void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE tra
   std::tie(lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
       PrepareToCallCublasGemm(trans_a, trans_b, m, n, k);
 
-  CublasMathModeGuard guard(ctx->cublas_handle());
-#if CUDA_VERSION < 11000
-  if (std::is_same<T, half>::value) { guard.SetMathMode(CUBLAS_TENSOR_OP_MATH); }
-#endif  // CUDA_VERSION < 11000
-
   const T alpha_val = static_cast<T>(alpha);
   const T beta_val = static_cast<T>(beta);
   cublas_gemm<T>(ctx->cublas_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha_val, b, ldb,
@@ -79,6 +73,8 @@ void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE tra
       PrepareToCallCublasGemm(trans_a, trans_b, m, n, k);
 #if CUDA_VERSION < 11000
   CublasMathModeGuard guard(ctx->cublas_handle(), CUBLAS_TENSOR_OP_MATH);
+#else
+  CublasMathModeGuard guard(ctx->cublas_handle(), CUBLAS_DEFAULT_MATH);
 #endif  // CUDA_VERSION < 11000
   if (GetCudaSmVersion() >= 500) {
     OF_CUBLAS_CHECK(cublasGemmEx(ctx->cublas_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
@@ -168,7 +164,9 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
       PrepareToCallBatchedGemm(trans_a, trans_b, batch_size, m, n, k);
 #if CUDA_VERSION < 11000
   CublasMathModeGuard guard(ctx->cublas_handle(), CUBLAS_TENSOR_OP_MATH);
-#endif
+#else
+  CublasMathModeGuard guard(ctx->cublas_handle(), CUBLAS_DEFAULT_MATH);
+#endif  // CUDA_VERSION < 11000
   if (GetCudaSmVersion() >= 500) {
     const float alpha_f = static_cast<float>(alpha);
     const float beta_f = static_cast<float>(beta);
