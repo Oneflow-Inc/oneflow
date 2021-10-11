@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/scalar.h"
-#include "oneflow/core/primitive/fill.h"
+#include "oneflow/core/primitive/include/fill.h"
 
 namespace oneflow {
 

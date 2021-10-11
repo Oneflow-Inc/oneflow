@@ -353,10 +353,6 @@ class TestPow(flow.unittest.TestCase):
         return torch.pow(x, y)
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 @flow.unittest.skip_unless_1n1d()
 class TestArccosh(flow.unittest.TestCase):
     @autotest()
@@ -367,10 +363,6 @@ class TestArccosh(flow.unittest.TestCase):
         return y
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 @flow.unittest.skip_unless_1n1d()
 class TestAcosh(flow.unittest.TestCase):
     @autotest()
@@ -381,10 +373,6 @@ class TestAcosh(flow.unittest.TestCase):
         return y
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 @flow.unittest.skip_unless_1n1d()
 class TestAtan2(flow.unittest.TestCase):
     @autotest()
@@ -396,10 +384,6 @@ class TestAtan2(flow.unittest.TestCase):
         return y
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 @flow.unittest.skip_unless_1n1d()
 class TestMinimum(flow.unittest.TestCase):
     @autotest()
@@ -420,10 +404,6 @@ class TestMinimum(flow.unittest.TestCase):
         return torch.minimum(x, y)
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestMaximum(flow.unittest.TestCase):
     @autotest()
     def test_flow_elementwise_mximum_with_random_data(test_case):
@@ -441,6 +421,24 @@ class TestMaximum(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=3, dim0=k1, dim1=1, dim2=1)
         y = random_pytorch_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3)
         return torch.maximum(x, y)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestFloordiv(flow.unittest.TestCase):
+    @autotest(auto_backward=False)
+    def test_elementwise_floordiv_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        y = random_pytorch_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+
+        return torch.floor_divide(x, y)
+
+    @autotest(auto_backward=False)
+    def test_tensor_floordiv_scalar_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        y = random().to(int)
+        return torch.floor_divide(x, y)
 
 
 if __name__ == "__main__":

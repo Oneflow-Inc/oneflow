@@ -52,14 +52,18 @@ Maybe<void> LogicalTensorDescInferFn(user_op::InferContext* ctx) {
   } else {
     CHECK_GE_OR_RETURN(shape.NumAxes(), 1);
     CHECK_GE_OR_RETURN(in_shape.NumAxes(), 1);
-    for (int i = 1 /* skip dim 0 */; i < shape.NumAxes(); ++i) {
-      // NOTE(chengcheng): ONLY dim-0 may be -1 for infer
-      CHECK_GE_OR_RETURN(shape.At(i), 0);
+    int need_infer_axis = -1;
+    size_t count = 1;
+    for (int i = 0; i < shape.NumAxes(); ++i) {
+      if (shape.At(i) == -1) {
+        CHECK_EQ_OR_RETURN(need_infer_axis, -1)
+            << "Shape " << shape.ToString() << " has more than 1 axis that needs to be infered.";
+        need_infer_axis = i;
+      } else {
+        count *= shape.At(i);
+      }
     }
-    if (shape.At(0) == -1) {
-      // NOTE(chengcheng): dim-0 unchanged for input.
-      shape.Set(0, in_shape.At(0));
-    }
+    if (need_infer_axis != -1) { shape.Set(need_infer_axis, in_shape.elem_cnt() / count); }
   }
   *out_shape = shape;
   CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());
@@ -67,31 +71,47 @@ Maybe<void> LogicalTensorDescInferFn(user_op::InferContext* ctx) {
 }
 
 Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
-  Shape shape = ctx->Attr<Shape>("shape");
+  Shape logical_shape = ctx->Attr<Shape>("shape");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
   const Shape& in_shape = in_tensor_desc.shape();
   Shape* out_shape = out_tensor_desc->mut_shape();
   *out_tensor_desc->mut_shape() = in_tensor_desc.shape();
   *out_tensor_desc->mut_is_dynamic() = in_tensor_desc.is_dynamic();
-  if (in_shape.NumAxes() == 0 || shape.NumAxes() == 0) {
+  if (in_shape.NumAxes() == 0 || logical_shape.NumAxes() == 0) {
     // NOTE(chengcheng): input/output Scalar
     // do nothing
   } else {
-    CHECK_GE_OR_RETURN(shape.NumAxes(), 1);
+    CHECK_GE_OR_RETURN(logical_shape.NumAxes(), 1);
     CHECK_GE_OR_RETURN(in_shape.NumAxes(), 1);
-    for (int i = 1 /* skip dim 0 */; i < shape.NumAxes(); ++i) {
-      // NOTE(chengcheng): ONLY dim-0 may be -1 for infer
-      CHECK_GE_OR_RETURN(shape.At(i), 0);
+    const auto& in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
+    const Shape in_logical_shape =
+        *JUST(GetLogicalShape(in_shape, in_nd_sbp, ctx->parallel_desc()));
+    int need_infer_axis = -1;
+    size_t count = 1;
+    for (int i = 0; i < logical_shape.NumAxes(); ++i) {
+      if (logical_shape.At(i) == -1) {
+        CHECK_EQ_OR_RETURN(need_infer_axis, -1)
+            << "Shape " << logical_shape.ToString()
+            << " has more than 1 axis that needs to be infered.";
+        need_infer_axis = i;
+      } else {
+        count *= logical_shape.At(i);
+      }
     }
-    if (shape.At(0) == -1) {
-      // NOTE(chengcheng): dim-0 unchanged for input.
-      shape.Set(0, in_shape.At(0));
+    if (need_infer_axis != -1) {
+      logical_shape.Set(need_infer_axis, in_logical_shape.elem_cnt() / count);
     }
   }
   const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
-  *out_shape = *JUST(GetPhysicalShape(shape, nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
-  CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());
+  *out_shape =
+      *JUST(GetPhysicalShape(logical_shape, nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
+  CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt())
+      << " Reshape infer ERROR! in op_name: " << ctx->op_name()
+      << " input shape is : " << in_shape.ToString()
+      << " , output shape is : " << out_shape->ToString() << " , output logical shape is "
+      << logical_shape.ToString()
+      << " , And reshape shape conf is : " << ctx->Attr<Shape>("shape").ToString();
   return Maybe<void>::Ok();
 }
 

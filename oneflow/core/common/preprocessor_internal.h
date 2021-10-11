@@ -24,8 +24,8 @@ limitations under the License.
 
 #define OF_PP_TUPLE2VARADIC_II(...) __VA_ARGS__
 
-#define OF_PP_INTERNAL_STRINGIZE(text) OF_PP_INTERNAL_STRINGIZE_I(text)
-#define OF_PP_INTERNAL_STRINGIZE_I(text) #text
+#define OF_PP_INTERNAL_STRINGIZE(...) OF_PP_INTERNAL_STRINGIZE_I(__VA_ARGS__)
+#define OF_PP_INTERNAL_STRINGIZE_I(...) #__VA_ARGS__
 
 #define OF_PP_INTERNAL_CAT(a, b) OF_PP_INTERNAL_CAT_I(a, b)
 #define OF_PP_INTERNAL_CAT_I(a, b) a##b
