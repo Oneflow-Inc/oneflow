@@ -112,11 +112,21 @@ class HardTanhFunctor {
     op_ = CHECK_JUST(one::OpBuilder("hardtanh").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& min_val,
-                           const double& max_val) const {
+                           const double& max_val, bool inplace) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("min_val", min_val));
     JUST(attrs.SetAttr<double>("max_val", max_val));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    JUST(attrs.SetAttr<bool>("inplace", inplace));
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), AttrMap{}));
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    }
+
   }
 
  private:

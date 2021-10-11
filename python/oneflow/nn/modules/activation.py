@@ -163,7 +163,7 @@ class ReLU6(Module):
         >>> import oneflow as flow
         
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
-        >>> input = flow.Tensor(x)
+        >>> input = flow.tensor(x)
         >>> relu6 = flow.nn.ReLU6()
 
         >>> out = relu6(input)
@@ -177,9 +177,7 @@ class ReLU6(Module):
         self.inplace = inplace
 
     def forward(self, x):
-        if self.inplace:
-            warnings.warn("ReLU6 module do not support inplace now")
-        return flow._C.hardtanh(x, min_val=0.0, max_val=6.0)
+        return flow._C.hardtanh(x, min_val=0.0, max_val=6.0, inplace=self.inplace)
 
     def extra_repr(self):
         inplace_str = "inplace=True" if self.inplace else ""
@@ -193,9 +191,7 @@ def relu6(input, inplace=False):
 
     See :class:`~oneflow.nn.ReLU6` for more details.
     """
-    if inplace:
-        warnings.warn("nn.functional.relu6 do not support inplace now")
-    return flow._C.hardtanh(input, min_val=0.0, max_val=6.0)
+    return flow._C.hardtanh(input, min_val=0.0, max_val=6.0, inplace=inplace)
 
 
 class Tanh(Module):
@@ -743,8 +739,6 @@ class Hardtanh(Module):
         self.inplace = inplace
 
     def forward(self, x):
-        if self.inplace:
-            warnings.warn("Hardtanh module do not support inplace now")
         return flow._C.hardtanh(x, min_val=self.min_val, max_val=self.max_val)
 
     def extra_repr(self):

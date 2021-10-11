@@ -266,7 +266,7 @@
   bind_python: False
 
 - name: "hardtanh"
-  signature: "Tensor (Tensor x, Double min_val, Double max_val) => HardTanh"
+  signature: "Tensor (Tensor x, Double min_val, Double max_val, Bool inplace=False) => HardTanh"
   bind_python: True
 
 - name: "hardtanh_grad"
