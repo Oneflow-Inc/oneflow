@@ -376,7 +376,7 @@ class SeluGradFunctor : public BinaryFunctor {
   }
 };
 
-class SoftSignFunctor : public UnaryFunctor {
+class SoftSignFunctor : public InplaceableUnaryFunctor {
  public:
   SoftSignFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("softsign").Input("in").Output("out").Build());

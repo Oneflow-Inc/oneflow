@@ -942,7 +942,7 @@ class Softsign(Module):
         >>> import numpy as np
         >>> import oneflow as flow
         >>> x = np.array([1, 2, 3]).astype(np.float32)
-        >>> input = flow.Tensor(x)
+        >>> input = flow.tensor(x)
         >>> softsign = flow.nn.Softsign()
         >>> out = softsign(input)
         >>> out
@@ -954,7 +954,7 @@ class Softsign(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow._C.softsign(x)
+        return flow._C.softsign(x, inplace=self.inplace)
 
 
 class GLU(Module):

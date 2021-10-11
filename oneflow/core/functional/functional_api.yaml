@@ -1079,7 +1079,7 @@
   bind_python: False
 
 - name: "softsign"
-  signature: "Tensor (Tensor x) => SoftSign"
+  signature: "Tensor (Tensor x, Bool inplace=False) => SoftSign"
   bind_python: True
 
 - name: "softsign_grad"
