@@ -869,7 +869,7 @@ class SiLU(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow._C.silu(x)
+        return flow._C.silu(x, inplace=self.inplace)
 
 
 class SELU(Module):

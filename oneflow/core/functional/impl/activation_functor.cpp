@@ -340,7 +340,7 @@ class LeakyReluGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class SiluFunctor : public UnaryFunctor {
+class SiluFunctor : public InplaceableUnaryFunctor {
  public:
   SiluFunctor() { op_ = CHECK_JUST(one::OpBuilder("silu").Input("in").Output("out").Build()); }
 };
@@ -352,26 +352,9 @@ class SiluGradFunctor : public BinaryFunctor {
   }
 };
 
-
-class MishFunctor {
+class MishFunctor : public InplaceableUnaryFunctor {
  public:
-  MishFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("mish").Input("in", 1).Output("out", 1).Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const bool inplace) const {
-    if (inplace) {
-      JUST(CheckInplaceValid(x));
-      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), AttrMap{}));
-      return outputs->at(0);
-    } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
-    }
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
+  MishFunctor() { op_ = CHECK_JUST(one::OpBuilder("mish").Input("in").Output("out").Build()); }
 };
 
 class MishGradFunctor : public BinaryFunctor {
