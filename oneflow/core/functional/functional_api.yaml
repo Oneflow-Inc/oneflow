@@ -322,7 +322,7 @@
   bind_python: True
 
 - name: "hardswish"
-  signature: "Tensor (Tensor x) => HardSwish"
+  signature: "Tensor (Tensor x, Bool inplace=False) => HardSwish"
   bind_python: True
 
 - name: "hardswish_grad"

@@ -658,9 +658,7 @@ class Hardswish(Module):
         self.inplace = inplace
 
     def forward(self, x):
-        if self.inplace:
-            warnings.warn("Hardswish module do not support inplace now")
-        return flow._C.hardswish(x)
+        return flow._C.hardswish(x, inplace=self.inplace)
 
     def extra_repr(self):
         inplace_str = "inplace=True" if self.inplace else ""
