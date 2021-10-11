@@ -18,12 +18,11 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-
-from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
-
 import oneflow as flow
 import oneflow.unittest
+from oneflow.test_utils.automated_test_util import *
+
+from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -42,8 +41,18 @@ class TestSin(flow.unittest.TestCase):
     def test_flow_sin_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
-        y = torch.sin(x)
+        y = x.sin()
         return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestInplaceSin(flow.unittest.TestCase):
+    @autotest()
+    def test_flow_inplace_sin_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=1, dim0=4).to(device)
+        x.sin_()
+        return x
 
 
 def _test_cos(test_case, shape, device):

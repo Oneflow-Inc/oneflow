@@ -95,6 +95,7 @@ from oneflow._C import floor_divide
 from oneflow._C import mul
 from oneflow._C import reciprocal as reciprocal
 from oneflow._C import sub
+from oneflow._C import sin, sin_
 from oneflow._C import asin
 from oneflow._C import asin as arcsin
 from oneflow._C import asinh
@@ -277,7 +278,6 @@ from oneflow.nn.modules.index_select import index_select_op as index_select
 from oneflow.nn.modules.masked_fill import masked_fill_op as masked_fill
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
-from oneflow.nn.modules.math_ops import sin_op as sin
 from oneflow.nn.modules.relu import relu_op as relu
 from oneflow.nn.modules.math_ops import std_op as std
 from oneflow.nn.modules.math_ops import topk_op as topk
