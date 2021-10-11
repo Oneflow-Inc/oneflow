@@ -97,7 +97,7 @@ def _test_alexnet_graph_repr(test_case, args):
 
     alexnet_graph = AlexNetGraph()
 
-    # print("repr(alexnet_graph) before run: \n", repr(alexnet_graph))
+    print("repr(alexnet_graph) before run: \n", repr(alexnet_graph))
 
     # debug graph build
     alexnet_graph.debug(1)
@@ -108,7 +108,7 @@ def _test_alexnet_graph_repr(test_case, args):
     label = label.to(args.device)
     loss = alexnet_graph(image, label)
 
-    # print("repr(alexnet_graph) after run: \n", repr(alexnet_graph))
+    print("repr(alexnet_graph) after run: \n", repr(alexnet_graph))
 
 
 def _test_alexnet_graph(test_case, args):
