@@ -218,7 +218,7 @@
   bind_python: True
 
 - name: "image_flip"
-  signature: "Tensor (Tensor x, Int32 flip_code) => ImageFlip"
+  signature: "Tensor (Tensor x, Tensor flip_code) => ImageFlip"
   bind_python: True
 
 - name: "sin"
