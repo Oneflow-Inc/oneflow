@@ -317,7 +317,7 @@
   signature: "Tensor (Tensor x) => Softmax"
   bind_python: True
 
-- name: "logsoftmax"
+- name: "log_softmax"
   signature: "Tensor (Tensor x) => LogSoftmax"
   bind_python: True
 
@@ -363,6 +363,18 @@
     "TensorTuple (Tensor x, Tensor dy, Tensor moving_mean, Tensor moving_variance,
     Tensor gamma, Tensor beta, Tensor reserve_space, Tensor y, Int32 axis=1, Float epsilon=1e-5) => NormalizationAddReluGrad"
   bind_python: False
+
+- name: "eye"
+  signature: [
+      "Tensor (Scalar n, Scalar m=None, *, DataType dtype=None, Device device=None) => Eye",
+    ]
+  bind_python: True
+
+- name: "consistent_eye"
+  signature: [
+      "Tensor (Scalar n, Scalar m=None, *, DataType dtype=None, Placement placement, SbpList sbp) => ConsistentEye",
+    ]
+  bind_python: True
 
 - name: "arange"
   signature: [
@@ -572,6 +584,22 @@
     Double alpha=1.0) => BatchMatMul"
   bind_python: True
 
+- name: "l1_loss"
+  signature: "Tensor(Tensor input, Tensor target, String reduction) => L1Loss"
+  bind_python: True
+
+- name: "mse_loss"
+  signature: "Tensor(Tensor input, Tensor target, String reduction) => MseLoss"
+  bind_python: True
+
+- name: "kl_div_loss"
+  signature: "Tensor(Tensor input, Tensor target, Bool log_target, String reduction) => KLDivLoss"
+  bind_python: True
+
+- name: "kl_div_loss_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Bool log_target, String reduction) => KLDivLossGrad"
+  bind_python: False
+
 - name: "nll_loss"
   signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction) => NllLoss"
   bind_python: True
@@ -596,6 +624,10 @@
   signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None, String reduction) => BinaryCrossEntropyWithLogitsLossGrad"
   bind_python: True
 
+- name: "cross_entropy"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction) => CrossEntropy"
+  bind_python: True
+
 - name: "sparse_softmax_cross_entropy"
   signature: "Tensor (Tensor logits, Tensor label, Int64 depth) => SparseSoftmaxCrossEntropy"
   bind_python: True
@@ -613,20 +645,28 @@
   bind_python: True
 
 - name: "smooth_l1_loss"
-  signature: "Tensor (Tensor logits, Tensor label, Float beta) => SmoothL1Loss"
+  signature: "Tensor (Tensor logits, Tensor label, Float beta, String reduction) => SmoothL1Loss"
   bind_python: True
 
 - name: "smooth_l1_loss_grad"
-  signature: "Tensor (Tensor loss_grad, Tensor prediction, Tensor label, Float beta) => SmoothL1LossGrad"
+  signature: "Tensor (Tensor loss_grad, Tensor prediction, Tensor label, Float beta, String reduction) => SmoothL1LossGrad"
   bind_python: False
 
 - name: "combined_margin_loss"
-  signature: "TensorTuple (Tensor x, Tensor label, Float m1, Float m2, Float m3, Int64 depth) => CombinedMarginLoss"
+  signature: "Tensor (Tensor x, Tensor label, Float m1, Float m2, Float m3) => CombinedMarginLoss"
   bind_python: True
 
 - name: "combined_margin_loss_grad"
   signature: "Tensor (Tensor dy, Tensor label, Tensor theta, Float m1, Float m2, Float m3, Int64 depth) => CombinedMarginLossGrad"
   bind_python: False
+
+- name: "margin_ranking_loss"
+  signature: "Tensor (Tensor input_1, Tensor input_2, Tensor target, Float margin, String reduction) => MarginRankingLoss"
+  bind_python: True
+
+- name: "ctc_loss"
+  signature: "Tensor (Tensor log_probs, Tensor targets, Tensor input_lengths, Tensor target_lengths, Int32 blank, Bool zero_infinity, String reduction) => CtcLoss"
+  bind_python: True
 
 - name: "affine_grid"
   signature: "Tensor (Tensor theta, *, Shape size, Bool align_corners) => AffineGrid"
