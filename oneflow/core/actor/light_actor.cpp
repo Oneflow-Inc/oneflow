@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/stream/cuda_graph_context.h"
 #include "oneflow/core/kernel/user_kernel.h"
 #include "oneflow/core/stream/stream_context.h"
+#include "oneflow/core/device/device_context_adapter.h"
 
 namespace oneflow {
 
@@ -588,8 +589,7 @@ class LightActor : public ActorBase, public KernelContext {
 
 std::shared_ptr<DeviceCtx> NewDefaultDeviceCtx(const TaskProto& task_proto,
                                                StreamContext* stream_ctx) {
-  auto* provider = CHECK_NOTNULL(dynamic_cast<DeviceCtxProvider*>(stream_ctx));
-  return provider->GetDeviceCtx();
+  return std::shared_ptr<DeviceCtx>(CHECK_NOTNULL(NewDeviceCtxAdapter(stream_ctx)));
 }
 
 template<int kernel_exec, int inplace, typename IndexType, typename RegstIndex,
