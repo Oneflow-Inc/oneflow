@@ -223,17 +223,17 @@ class ImageFlipKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
+    const user_op::Tensor* flip_code_tensor = ctx->Tensor4ArgNameAndIndex("flip_code", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     int num_images = in_tensor->shape().elem_cnt();
     CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
 
-    FlipCode flip_code =
-        static_cast<FlipCode>(static_cast<int8_t>(ctx->Attr<int32_t>("flip_code")));
     MultiThreadLoop(num_images, [&](size_t i) {
       const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
       CHECK_EQ(in_buffer.shape().NumAxes(), 3);
       TensorBuffer* out_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
       out_buffer->CopyFrom(in_buffer);
+      FlipCode flip_code = static_cast<FlipCode>(flip_code_tensor->dptr<int8_t>()[i]);
       if (flip_code != FlipCode::kNonFlip) { FlipImage(out_buffer, flip_code); }
     });
   }
@@ -443,6 +443,7 @@ REGISTER_USER_KERNEL("image_flip")
     .SetCreateFn<ImageFlipKernel>()
     .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
+                     & (user_op::HobDataType("flip_code", 0) == DataType::kInt8)
                      & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
     .SetInplaceProposalFn(MakeInplaceProposalFn("in"));
 

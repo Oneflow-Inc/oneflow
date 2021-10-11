@@ -19,8 +19,6 @@ from typing import Optional, Sequence, Union
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
-from oneflow.nn.modules.argmax import Argmax
-from oneflow.nn.modules.argmin import Argmin
 from oneflow.nn.modules.utils import _check_axis
 
 
@@ -62,7 +60,7 @@ def max_op(input, dim=None, keepdim=False):
     else:
         return (
             flow._C.reduce_max(input, axis=axis_checked, keepdims=keepdim),
-            Argmax(dim=dim, keepdim=keepdim)(input),
+            input.argmax(dim=dim, keepdim=keepdim),
         )
 
 
@@ -114,7 +112,7 @@ def min_op(input, dim=None, keepdim=False):
     else:
         return (
             flow._C.reduce_min(input, axis=axis_checked, keepdims=keepdim),
-            Argmin(dim=dim, keepdim=keepdim)(input),
+            input.argmin(dim=dim, keepdim=keepdim),
         )
 
 
