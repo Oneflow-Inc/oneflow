@@ -224,7 +224,6 @@ class HardSigmoidFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
-
 class HardSigmoidGradFunctor : public BinaryFunctor {
  public:
   HardSigmoidGradFunctor() {
