@@ -257,9 +257,7 @@ class TestRMSprop(flow.unittest.TestCase):
         arg_dict["train_iters"] = [10]
         arg_dict["alpha"] = [0.9, 0.99]
         arg_dict["eps"] = [1e-08, 1e-05]
-        arg_dict["weight_decay"] = [
-            0.0
-        ]  # NOTE(Liang Depeng): test will fail when weight_decay > 0
+        arg_dict["weight_decay"] = [0.0, 0.9]
         arg_dict["centered"] = [False, True]
         arg_dict["clip_grad_max_norm"] = [1.0]
         arg_dict["clip_grad_norm_type"] = [2.0]
