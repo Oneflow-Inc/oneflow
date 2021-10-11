@@ -36,7 +36,9 @@ inline ncclDataType_t GetNcclDataType(const DataType& dt) {
     NCCL_DATA_TYPE_CASE(Int32);
     NCCL_DATA_TYPE_CASE(Int64);
     NCCL_DATA_TYPE_CASE(Float16);
+#if NCCL_VERSION_CODE >= 21003
     case DataType::kBFloat16: return ncclBfloat16;
+#endif
     default: UNIMPLEMENTED();
   }
   return ncclDataType_t::ncclFloat;
