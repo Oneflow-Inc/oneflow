@@ -127,6 +127,7 @@ from oneflow._C import triu
 from oneflow._C import pad
 from oneflow._C import transpose
 from oneflow._C import relu
+from oneflow._C import argmaxv2 as argmax
 
 from . import sbp
 import atexit
@@ -242,7 +243,6 @@ from oneflow.nn.modules.pooling import (
     adaptive_avg_pool3d,
 )
 from oneflow.nn.modules.arange import arange_op as arange
-from oneflow.nn.modules.argmax import argmax_op as argmax
 from oneflow.nn.modules.argmin import argmin_op as argmin
 from oneflow.nn.modules.argsort import argsort_op as argsort
 from oneflow.nn.modules.argwhere import argwhere_op as argwhere
