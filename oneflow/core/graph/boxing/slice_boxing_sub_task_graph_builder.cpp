@@ -111,6 +111,22 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     node->Init(lbi, slice, mode, machine_id, thrd_id);
     return node;
   };
+  const auto CreateScatterNode = [&CreateBoxingNode121, &NewEdge](
+                                     TaskNode* in_node, const TensorSliceView& in_slice,
+                                     const ParallelDesc& in_pd, const int64_t in_id,
+                                     const TensorSliceView& intersection,
+                                     TensorSliceView* slice) -> TaskNode* {
+    if (IsCopyContiguous(in_slice, intersection)) {
+      *slice = in_slice;
+      return in_node;
+    } else {
+      SliceBoxingTaskNode* scatter_node =
+          CreateBoxingNode121(in_pd, in_id, intersection, kSliceBoxingTaskModeCopy);
+      scatter_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
+      *slice = intersection;
+      return scatter_node;
+    }
+  };
   const auto BuildSubTaskGphS2B =
       [&ctx, &CreateBoxingNode121, &NewEdge, &lbi](
           const ParallelDesc& in_pd, const ParallelDesc& out_pd, const cfg::SbpParallel& in_sbp,
@@ -135,7 +151,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
         }
       };
   const auto BuildSubTaskGphS2S =
-      [&ctx, &lbi, &CreateBoxingNode121, &NewEdge](
+      [&ctx, &lbi, &CreateBoxingNode121, &CreateScatterNode, &NewEdge](
           const ParallelDesc& in_pd, const ParallelDesc& out_pd, const cfg::SbpParallel& in_sbp,
           const cfg::SbpParallel& out_sbp, const BlobDesc& blob_desc,
           const std::vector<TaskNode*>& in_nodes, std::vector<TaskNode*>* out_nodes) {
@@ -155,18 +171,18 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
             const TensorSliceView& intersection = out_slice.Intersect(in_slice);
             if (intersection.IsEmpty()) { continue; }
             TaskNode* in_node = in_nodes.at(in_id);
-            SliceBoxingTaskNode* scatter_node =
-                CreateBoxingNode121(in_pd, in_id, intersection, kSliceBoxingTaskModeCopy);
-            scatter_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
+            TensorSliceView slice;
+            TaskNode* scatter_node =
+                CreateScatterNode(in_node, in_slice, in_pd, in_id, intersection, &slice);
             TaskNode* proxy_node = ctx->task_graph()->GetProxyNode(
                 scatter_node, lbi, dynamic_cast<TaskNode*>(out_node)->MemZoneId121());
-            out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), intersection);
+            out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), slice);
           }
           out_nodes->push_back(out_node);
         }
       };
   const auto BuildSubTaskGphP2S =
-      [&ctx, &lbi, &CreateBoxingNode121, &NewEdge](
+      [&ctx, &lbi, &CreateBoxingNode121, &CreateScatterNode, &NewEdge](
           const ParallelDesc& in_pd, const ParallelDesc& out_pd, const cfg::SbpParallel& in_sbp,
           const cfg::SbpParallel& out_sbp, const BlobDesc& blob_desc,
           const std::vector<TaskNode*>& in_nodes, std::vector<TaskNode*>* out_nodes) {
@@ -183,12 +199,12 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
             const TensorSliceView& intersection = out_slice.Intersect(in_slice);
             if (intersection.IsEmpty()) { continue; }
             TaskNode* in_node = in_nodes.at(in_id);
-            SliceBoxingTaskNode* scatter_node =
-                CreateBoxingNode121(in_pd, in_id, intersection, kSliceBoxingTaskModeCopy);
-            scatter_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
+            TensorSliceView slice;
+            TaskNode* scatter_node =
+                CreateScatterNode(in_node, in_slice, in_pd, in_id, intersection, &slice);
             TaskNode* proxy_node = ctx->task_graph()->GetProxyNode(
                 scatter_node, lbi, dynamic_cast<TaskNode*>(out_node)->MemZoneId121());
-            out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), intersection);
+            out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), slice);
           }
           out_nodes->push_back(out_node);
         }
