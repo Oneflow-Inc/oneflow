@@ -289,6 +289,24 @@ class ELU(Module):
         return param_str
 
 
+class CELU(Module):
+
+    def __init__(self, alpha: float = 1.0, inplace: bool = False):
+        super().__init__()
+        self.alpha = alpha
+        self.inplace = inplace
+
+    def forward(self, x):
+        if self.inplace:
+            warnings.warn("CELU module do not support inplace now")
+        return flow.F.celu(x, alpha=self.alpha)
+
+    def extra_repr(self):
+        param_str = f"alpha={self.alpha}"
+        param_str += ", inplace=True" if self.inplace else ""
+        return param_str
+
+
 class GELU(Module):
     """Gelu activation operator.
 

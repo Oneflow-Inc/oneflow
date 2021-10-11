@@ -289,6 +289,14 @@
   signature: "Tensor (Tensor x, Tensor dy, Double alpha) => EluGrad"
   bind_python: False
 
+- name: "celu"
+  signature: "Tensor (Tensor x, Double alpha) => Celu"
+  bind_python: True
+
+- name: "celu_grad"
+  signature: "Tensor (Tensor x, Tensor dy, Double alpha) => CeluGrad"
+  bind_python: False
+
 - name: "gelu"
   signature: "Tensor (Tensor x) => Gelu"
   bind_python: True
