@@ -32,10 +32,9 @@ limitations under the License.
 #include <nvjpeg.h>
 #include <npp.h>
 
-#endif // CUDA_VERSION >= 10020
+#endif  // CUDA_VERSION >= 10020
 
-#endif // WITH_CUDA
-
+#endif  // WITH_CUDA
 
 namespace oneflow {
 
@@ -447,7 +446,7 @@ DecodeHandleFactory CreateDecodeHandleFactory<DeviceType::kGPU>(int target_width
   };
 }
 
-#endif // defined(WITH_NVJPEG)
+#endif  // defined(WITH_NVJPEG)
 
 class Worker final {
  public:
@@ -602,6 +601,6 @@ NEW_REGISTER_KERNEL(OperatorConf::kImageDecoderRandomCropResizeConf,
       return conf.op_attribute().op_conf().device_tag() == "gpu";
     });
 
-#endif // defined(WITH_NVJPEG)
+#endif  // defined(WITH_NVJPEG)
 
 }  // namespace oneflow
