@@ -52,12 +52,42 @@ limitations under the License.
 using namespace mlir;
 using namespace mlir::oneflow;
 
+LogicalResult dumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
+  auto context = rewriter.getContext();
+  OpBuilder builder(context);
+  OwningModuleRef jit_module(
+      ModuleOp::create(FileLineColLoc::get(context, "", /*line=*/0, /*column=*/0)));
+  auto func_type = rewriter.getFunctionType(op->getOperandTypes(), op->getResultTypes());
+  auto function = builder.create<mlir::FuncOp>(op->getLoc(), op.op_name(), func_type);
+  function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(context));
+  if (op.body().empty()) {
+    op->dump();
+    op->emitError("JIT op has an empty body, op name: " + op.op_name());
+    return failure();
+  }
+  rewriter.cloneRegionBefore(op.body(), function.body(), function.body().end());
+  // return success();
+  jit_module->push_back(function);
+  jit_module->dump();
+  std::string mlir;
+  llvm::raw_string_ostream os_mlir(mlir);
+  jit_module->print(os_mlir);
+  op->setAttr("mlir_assembly", rewriter.getStringAttr(mlir));
+  function.body().walk([](Operation* op) { op->dump(); });
+  jit_module->body().walk([](Operation* op) {
+    ;
+    op->dump();
+  });
+  function->erase();
+  return success();
+}
+
 ::llvm::SmallVector<::mlir::Value, 4> OutlineFunction(::mlir::PatternRewriter& rewriter,
                                                       mlir::OpResult mul_res,
                                                       mlir::OpResult cast_res) {
   // get matched scale and cast
   // create JIT op and kernel
-
+  if (llvm::dyn_cast<MlirJitOp>(mul_res.getParentBlock()->getParentOp())) { return {}; }
   if (auto mul_op = llvm::dyn_cast<ScalarMulByTensorOp>(mul_res.getDefiningOp())) {
     if (auto cast_op = llvm::dyn_cast<CastOp>(cast_res.getDefiningOp())) {
       NamedAttrList attributes;
@@ -105,48 +135,24 @@ using namespace mlir::oneflow;
                                                 /* operands */ operands,
                                                 /* attributes */ attributes);
       cast_op.replaceAllUsesWith(created);
-
-      // TODO: add dedicated op definition for this kind OneFlow_JitFunc
-      // TODO: save input output alias info in OneFlow_JitFunc's attr
-      auto* context = rewriter.getContext();
-      OpBuilder builder(context);
-
-      // TODO: save outlined function as a block in OneFlow_JitFunc
-      OwningModuleRef jit_module(
-          ModuleOp::create(FileLineColLoc::get(context, "", /*line=*/0, /*column=*/0)));
-
-      // create a function to be lowered
-      // TODO: erase tensor shapes in the outlined function
-      // TODO: use infer shape interface to infer shapes at different passes and runtime
-      auto func_type =
-          rewriter.getFunctionType(created->getOperandTypes(), created->getResultTypes());
-      auto function = builder.create<mlir::FuncOp>(mul_op->getLoc(), op_name, func_type);
-      function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
-      auto& entry_block = *function.addEntryBlock();
-      builder.setInsertionPointToStart(&entry_block);
-
-      // TODO: make this transformation generic, using a value => arg mapping and walk the graph
+      created.body().emplaceBlock();
+      created.body().addArguments(created->getOperandTypes());
+      rewriter.setInsertionPointToStart(&created.body().front());
       auto cast_op_ =
-          builder.create<CastOp>(cast_op->getLoc(), /* resultTypes */ cast_op->getResultTypes(),
-                                 /* operands */ entry_block.getArguments().take_front(),
-                                 /* attributes */ cast_op->getAttrs());
-      auto scalar_mul = builder.create<ScalarMulByTensorOp>(
+          rewriter.create<CastOp>(cast_op->getLoc(), /* resultTypes */ cast_op->getResultTypes(),
+                                  /* operands */ created.body().front().getArguments().take_front(),
+                                  /* attributes */ cast_op->getAttrs());
+      auto scalar_mul = rewriter.create<ScalarMulByTensorOp>(
           mul_op->getLoc(), /* resultTypes */ mul_op->getResultTypes(),
           /* operands */
-          SmallVector<::mlir::Value, 2>({cast_op_.y(), entry_block.getArgument(1)}),
+          SmallVector<::mlir::Value, 2>({cast_op_.y(), created.body().front().getArgument(1)}),
           /* attributes */ mul_op->getAttrs());
-      builder.create<ReturnOp>(mul_op->getLoc(), scalar_mul.y());
-      jit_module->push_back(function);
-      // TODO: break this function into two parts and two ops, JITFunction and JITOp
-      std::string mlir;
-      llvm::raw_string_ostream os_mlir(mlir);
-      jit_module->print(os_mlir);
-      created->setAttr("mlir_assembly", rewriter.getStringAttr(mlir));
+      rewriter.create<ReturnOp>(mul_op->getLoc(), scalar_mul.y());
+      assert(dumpAssembly(rewriter, created).succeeded());
       cast_op.erase();
       return created->getResults();
     }
   }
-  // TODO: raise a more reasonable error
   return {};
 }
 

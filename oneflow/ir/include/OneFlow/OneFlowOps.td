@@ -176,6 +176,7 @@ def OneFlow_MlirJitOp : OneFlow_UserBaseOp<"mlir_jit", []> {
   let attrs = (ins
     StrAttr:$mlir_assembly
   );
+  let regions = (region AnyRegion:$body);
 }
 
 #endif // ONEFLOW_OPS
@@ -183,6 +184,7 @@ def OneFlow_MlirJitOp : OneFlow_UserBaseOp<"mlir_jit", []> {
 #ifndef ONEFLOW_PATTERNS
 #define ONEFLOW_PATTERNS
 
+def IsNotNestedInJit: Constraint<CPred<"!llvm::dyn_cast<MlirJitOp>($0.getParentBlock()->getParentOp())">, "">;
 def OutlineFunction : NativeCodeCall<"OutlineFunction($_builder, $0, $1)">;
 // TODO: remove attr binding if possible
 def OutlineFuseCastScale : Pat<
@@ -206,7 +208,10 @@ def OutlineFuseCastScale : Pat<
     $mul_scope_symbol_id,
     $mul_hierarchy
   ),
-  (OutlineFunction $mul_op, $cast_op)
+  (OutlineFunction $mul_op, $cast_op),
+  [
+    (IsNotNestedInJit $mul_op)
+  ]
 >;
 
 #endif // ONEFLOW_PATTERNS

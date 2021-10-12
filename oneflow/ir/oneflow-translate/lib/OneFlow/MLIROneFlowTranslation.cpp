@@ -99,7 +99,7 @@ class Importer {
   LogicalResult TryToUpdateJob();
 
   DenseIntElementsAttr DenseIntElementsAttrFromShape(const ::oneflow::ShapeProto& shape);
-  LogicalResult ConvertUseropAttributes(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
+  LogicalResult ConvertUserOpAttributes(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                         ::oneflow::OperatorConf& op_conf);
 
   IntegerAttr getSI64IntegerAttr(int64_t value) {
@@ -642,7 +642,7 @@ LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf)
   return success();
 }
 
-LogicalResult ConvertUseropInputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
+LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                   ::oneflow::UserOpConf* user_conf) {
   const std::string op_name = user_op_adaptor.op_name().getValue().str();
   int32_t input_idx = 0;
@@ -670,7 +670,8 @@ LogicalResult ConvertUseropInputs(Operation* op, oneflow::UserOpAdaptor& user_op
           *((*user_conf->mutable_input())[input_key].mutable_s()->Add()) = output_lbn_in_source_op;
           input_idx += 1;
         } else {
-          op->emitError() << "fail to cast result, name: " + op_name;
+          op->emitError() << "fail to convert MLIR result to protobuf, name: " + op_name;
+          op->dump();
           return failure();
         }
       }
@@ -682,11 +683,11 @@ LogicalResult ConvertUseropInputs(Operation* op, oneflow::UserOpAdaptor& user_op
   return success();
 }
 
-LogicalResult ConvertUseropOutputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
+LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                    ::oneflow::UserOpConf* user_conf) {
   int32_t output_key_idx = -1;
   int32_t segment_offset = 0;
-  for (auto result_and_idx : llvm::enumerate(GetDataOutputResults(op))) {
+  for (const auto& result_and_idx : llvm::enumerate(GetDataOutputResults(op))) {
     const size_t result_idx = result_and_idx.index();
     if (result_idx == segment_offset) {
       output_key_idx += 1;
@@ -732,7 +733,7 @@ LogicalResult ConvertDT(Attribute attr, ::oneflow::DataType& data_type) {
   return success();
 }
 
-LogicalResult Importer::ConvertUseropAttributes(Operation* op,
+LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
                                                 oneflow::UserOpAdaptor& user_op_adaptor,
                                                 ::oneflow::OperatorConf& op_conf) {
   auto user_conf = op_conf.mutable_user_conf();
@@ -862,15 +863,18 @@ LogicalResult Importer::TryToUpdateJob() {
   new_job.clear_net();
   new_job.mutable_placement()->clear_placement_group();
   auto convertOps = [&](Operation* op) {
+    if (op->getParentOp() && llvm::dyn_cast<oneflow::MlirJitOp>(op->getParentOp())) {
+      return WalkResult::skip();
+    }
     if (llvm::dyn_cast<oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
       oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
       UpdatePlacement(op, user_op_adaptor, new_job);
       ::oneflow::OperatorConf op_conf;
       const std::string op_name = user_op_adaptor.op_name().getValue().str();
       auto user_conf = op_conf.mutable_user_conf();
-      if (succeeded(ConvertUseropInputs(op, user_op_adaptor, user_conf))
-          && succeeded(ConvertUseropOutputs(op, user_op_adaptor, user_conf))
-          && succeeded(ConvertUseropAttributes(op, user_op_adaptor, op_conf))
+      if (succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))
+          && succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))
+          && succeeded(ConvertUserOpAttributes(op, user_op_adaptor, op_conf))
           && succeeded(ConvertCtrlInputs(op, op_conf))) {
         *(new_job.mutable_net()->add_op()) = op_conf;
       } else {
@@ -936,6 +940,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
 LogicalResult ApplyFuserPatterns(RoundTripOneFlowJobWrapperInterface& job_wrapper,
                                  MLIRContext* context, OwningModuleRef& module) {
   RewritePatternSet patterns(module->getContext());
+  llvm::errs() << "ApplyFuserPatterns\n";
   oneflow::populateFuserPasses(patterns);
   if (failed(applyPatternsAndFoldGreedily(module.get(), std::move(patterns)))) {
     module->emitError("Failed to run fusers");
@@ -975,7 +980,7 @@ void RoundTripOneFlowJob(
     // TODO: Add flag in oneflow to define if failure in MLIR is allowed
     if (failed(imp.TryToUpdateJob())) {
       llvm::errs() << "fail to update job with IR, job will stay intact, job_name: "
-                   << job->job_conf().job_name();
+                   << job->job_conf().job_name() << "\n";
       exit(EXIT_FAILURE);
     }
 
