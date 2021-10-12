@@ -258,12 +258,6 @@ class Optional final : private internal::OptionalBase<T> {
   bool has_value() const { return base::has_value(); }
   explicit operator bool() const { return has_value(); }
 
-  const_return_type Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const& {
-    return base::value();
-  }
-
-  return_type Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() & { return base::value(); }
-
   move_return_type Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() && {
     return std::move(*this).base::value();
   }

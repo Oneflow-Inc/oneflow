@@ -95,16 +95,7 @@ class L1Loss(_Loss):
         super(L1Loss, self).__init__(reduction)
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
-        assert (
-            input.shape == target.shape
-        ), "The Input shape must be the same as Target shape"
-        l1_value = flow.abs(flow.sub(input, target))
-        if self.reduction == "mean":
-            return flow.mean(l1_value)
-        elif self.reduction == "sum":
-            return flow.sum(l1_value)
-        else:
-            return l1_value
+        return flow._C.l1_loss(input, target, self.reduction)
 
 
 class CrossEntropyLoss(_WeightedLoss):
@@ -172,38 +163,9 @@ class CrossEntropyLoss(_WeightedLoss):
         self.ignore_index = ignore_index
 
     def forward(self, input, target):
-        assert len(input.shape) <= 5
-        assert len(target.shape) == len(input.shape) - 1
-        assert input.shape[0] == target.shape[0]
-        for i in range(2, len(input.shape)):
-            assert input.shape[i] == target.shape[i - 1]
-        input = flow._C.transpose(
-            input, perm=(0,) + tuple(range(2, len(input.shape))) + (1,)
+        return flow._C.cross_entropy(
+            input, target, self.weight, self.ignore_index, self.reduction
         )
-        input = flow.reshape(input, shape=[-1, input.shape[-1]])
-        target_shape = target.shape
-        target = target.flatten()
-        out = flow._C.sparse_softmax_cross_entropy(
-            input, target, depth=input.shape[len(input.shape) - 1]
-        )
-        if self.ignore_index != -100:
-            zeros = flow.zeros(out.shape, dtype=out.dtype, device=out.device)
-            condition = flow.eq(target, self.ignore_index)
-            ones = flow.ones(
-                condition.shape, dtype=condition.dtype, device=condition.device
-            )
-            condition = flow.reshape(ones.sub(condition), tuple(out.shape))
-            out = flow.where(condition, out, zeros)
-            if self.reduction == "mean":
-                reduce_sum = out.sum()
-                reduce_count = condition.argwhere().shape[0]
-                out = flow.mul(reduce_sum, 1.0 / reduce_count)
-        if self.reduction == "mean":
-            return out.mean()
-        elif self.reduction == "sum":
-            return out.sum()
-        else:
-            return out.reshape(*target_shape)
 
 
 class BCELoss(_WeightedLoss):
@@ -464,23 +426,7 @@ class KLDivLoss(_Loss):
         self.log_target = log_target
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
-        if self.log_target:
-            _kl_div_loss = flow.exp(target) * (target - input)
-        else:
-            _kl_div_out_loss = target * (flow.log(target) - input)
-            _zeros = flow.zeros(
-                _kl_div_out_loss.shape,
-                dtype=_kl_div_out_loss.dtype,
-                device=_kl_div_out_loss.device,
-            )
-            _condition = flow.gt(target, 0)
-            _kl_div_loss = flow.where(_condition, _kl_div_out_loss, _zeros)
-        if self.reduction == "mean":
-            return flow.mean(_kl_div_loss)
-        elif self.reduction == "sum":
-            return flow.sum(_kl_div_loss)
-        else:
-            return _kl_div_loss
+        return flow._C.kl_div_loss(input, target, self.log_target, self.reduction)
 
 
 class MSELoss(_Loss):
@@ -557,13 +503,7 @@ class MSELoss(_Loss):
         super(MSELoss, self).__init__(reduction)
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
-        mean_squared_difference = flow.square(flow.sub(input, target))
-        if self.reduction == "mean":
-            return flow.mean(mean_squared_difference)
-        elif self.reduction == "sum":
-            return flow.sum(mean_squared_difference)
-        else:
-            return mean_squared_difference
+        return flow._C.mse_loss(input, target, self.reduction)
 
 
 class MarginRankingLoss(_Loss):
@@ -626,18 +566,9 @@ class MarginRankingLoss(_Loss):
         self.margin = margin
 
     def forward(self, input1: Tensor, input2: Tensor, target: Tensor) -> Tensor:
-        res = flow.clip(
-            flow.add(
-                self.margin, flow.mul(target, flow.mul(-1, flow.sub(input1, input2)))
-            ),
-            min=0.0,
+        return flow._C.margin_ranking_loss(
+            input1, input2, target, self.margin, self.reduction
         )
-        if self.reduction == "none":
-            return res
-        elif self.reduction == "sum":
-            return res.sum()
-        else:
-            return res.mean()
 
 
 class CTCLoss(_Loss):
@@ -734,24 +665,8 @@ class CTCLoss(_Loss):
         self, blank: int = 0, reduction: str = "mean", zero_infinity: bool = False
     ) -> None:
         super(CTCLoss, self).__init__(reduction)
-
+        self.blank = blank
         self.zero_infinity = zero_infinity
-        self._op = (
-            flow.builtin_op("ctc_loss")
-            .Input("log_probs")
-            .Input("targets")
-            .Input("input_lengths")
-            .Input("target_lengths")
-            .Output("loss")
-            .Output("alpha")
-            .Attr("blank", int(blank))
-            .Attr("zero_infinity", zero_infinity)
-            .Build()
-        )
-        self._xdivy_op = (
-            flow.builtin_op("xdivy").Input("x").Input("y").Output("z").Build()
-        )
-        self.constant = _ConstantBase
 
     def forward(
         self,
@@ -760,33 +675,15 @@ class CTCLoss(_Loss):
         input_lengths: Tensor,
         target_lengths: Tensor,
     ) -> Tensor:
-        (loss, _) = self._op(log_probs, targets, input_lengths, target_lengths)
-        if self.zero_infinity:
-            cond = flow.eq(
-                loss,
-                self.constant(
-                    size=loss.shape,
-                    value=float("inf"),
-                    dtype=loss.dtype,
-                    device=loss.device,
-                )(),
-            )
-            loss = flow.where(
-                cond,
-                flow.zeros(loss.shape, dtype=loss.dtype, device=loss.device),
-                loss,
-            )
-        if self.reduction == "mean":
-            return flow.mean(
-                self._xdivy_op(
-                    loss,
-                    flow.cast(flow.clamp(target_lengths, min=1), dtype=log_probs.dtype),
-                )[0]
-            )
-        elif self.reduction == "sum":
-            return flow.sum(loss)
-        else:
-            return loss
+        return flow._C.ctc_loss(
+            log_probs,
+            targets,
+            input_lengths,
+            target_lengths,
+            self.blank,
+            self.zero_infinity,
+            self.reduction,
+        )
 
 
 class BCEWithLogitsLoss(_WeightedLoss):
@@ -974,25 +871,10 @@ class SmoothL1Loss(_Loss):
 
     def __init__(self, reduction: str = "mean", beta: float = 1.0) -> None:
         super(SmoothL1Loss, self).__init__(reduction)
-
         self.beta = beta
-        self._op = (
-            flow.builtin_op("smooth_l1_loss")
-            .Input("prediction")
-            .Input("label")
-            .Output("loss")
-            .Attr("beta", float(beta))
-            .Build()
-        )
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
-        loss = self._op(input, target)[0]
-        if self.reduction == "none":
-            return loss
-        elif self.reduction == "sum":
-            return flow.sum(loss)
-        elif self.reduction == "mean":
-            return flow.mean(loss)
+        return flow._C.smooth_l1_loss(input, target, self.beta, self.reduction)
 
 
 class CombinedMarginLoss(Module):
@@ -1037,11 +919,9 @@ class CombinedMarginLoss(Module):
         self.m3 = m3
 
     def forward(self, x: Tensor, label: Tensor) -> Tensor:
-        depth = x.shape[1]
-        (y, _) = flow._C.combined_margin_loss(
-            x, label, m1=self.m1, m2=self.m2, m3=self.m3, depth=depth
+        return flow._C.combined_margin_loss(
+            x, label, m1=self.m1, m2=self.m2, m3=self.m3
         )
-        return y
 
 
 if __name__ == "__main__":
