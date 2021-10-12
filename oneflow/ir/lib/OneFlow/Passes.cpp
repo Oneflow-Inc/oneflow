@@ -71,7 +71,6 @@ LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
   llvm::raw_string_ostream os_mlir(mlir);
   jit_module->print(os_mlir);
   op->setAttr("mlir_assembly", rewriter.getStringAttr(mlir));
-  function->erase();
   return success();
 }
 
