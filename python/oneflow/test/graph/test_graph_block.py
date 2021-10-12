@@ -149,7 +149,7 @@ class TestGraphBlock(flow.unittest.TestCase):
         output_m = seq_m(input)
         output_g = seq_g(input)
 
-        print(seq_g)
+        # print(seq_g)
         test_case.assertTrue(np.array_equal(output_m.numpy(), output_g.numpy()))
 
     def test_block_with_list_container(test_case):
@@ -187,17 +187,12 @@ class TestGraphBlock(flow.unittest.TestCase):
                 # self.linears.config.activation_checkpointing = True
                 for i, _ in enumerate(self.linears):
                     self.linears[i].config.activation_checkpointing = True
-                # self.params = flow.nn.ParameterList(
-                #    [flow.nn.Parameter(flow.randn(10, 10), True) for i in range(10)]
-                # )
 
             def build(self, x):
                 # ModuleList can act as an iterable, or be indexed using ints
                 for i, _ in enumerate(self.linears):
                     x = self.linears[i](x)
 
-                # for i, _ in enumerate(self.params):
-                #    self.params[i // 2].config._stage_id = 0
                 return x
 
         module_list_m = ModuleListModule()
@@ -207,7 +202,7 @@ class TestGraphBlock(flow.unittest.TestCase):
         output_m = module_list_m(input)
         output_g = module_list_g(input)
 
-        print(module_list_g)
+        # print(module_list_g)
         test_case.assertTrue(np.array_equal(output_m.numpy(), output_g.numpy()))
 
     def test_block_with_dict_container(test_case):
@@ -260,7 +255,78 @@ class TestGraphBlock(flow.unittest.TestCase):
         output_m = module_dict_m(input)
         output_g = module_dict_g(input)
 
-        print(module_dict_g)
+        # print(module_dict_g)
+        test_case.assertTrue(np.array_equal(output_m.numpy(), output_g.numpy()))
+
+    def test_block_with_para_list_container(test_case):
+        list_of_p = [flow.nn.Parameter(flow.randn(10, 10)) for i in range(2)]
+
+        class ParaListModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.params = flow.nn.ParameterList(list_of_p)
+
+            def forward(self, x):
+                for i, _ in enumerate(self.params):
+                    x = flow._C.matmul(x, self.params[i])
+                return x
+
+        class ParaListGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.params = flow.nn.ParameterList(list_of_p)
+
+            def build(self, x):
+                for i, _ in enumerate(self.params):
+                    x = flow._C.matmul(x, self.params[i])
+                return x
+
+        para_list_m = ParaListModule()
+        para_list_g = ParaListGraph()
+        # print(para_list_g)
+
+        input = flow.tensor(np.random.randn(4, 10), dtype=flow.float32)
+        output_m = para_list_m(input)
+        # print(output_m)
+        output_g = para_list_g(input)
+
+        # print(para_list_g)
+        test_case.assertTrue(np.array_equal(output_m.numpy(), output_g.numpy()))
+
+    def test_block_with_para_dict_container(test_case):
+        dict_of_p = {
+            "0": flow.nn.Parameter(flow.randn(10, 3)),
+            "1": flow.nn.Parameter(flow.randn(10, 10)),
+        }
+
+        class ParaDictModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.params = flow.nn.ParameterDict(dict_of_p)
+
+            def forward(self, x):
+                x = flow._C.matmul(x, self.params["0"])
+                return x
+
+        class ParaDictGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.params = flow.nn.ParameterDict(dict_of_p)
+
+            def build(self, x):
+                x = flow._C.matmul(x, self.params["0"])
+                return x
+
+        para_dict_m = ParaDictModule()
+        para_dict_g = ParaDictGraph()
+        # print(para_dict_g)
+
+        input = flow.tensor(np.random.randn(4, 10), dtype=flow.float32)
+        output_m = para_dict_m(input)
+        # print(output_m)
+        output_g = para_dict_g(input)
+
+        # print(para_dict_g)
         test_case.assertTrue(np.array_equal(output_m.numpy(), output_g.numpy()))
 
 

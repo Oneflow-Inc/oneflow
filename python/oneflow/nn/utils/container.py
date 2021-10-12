@@ -351,16 +351,6 @@ def get_para_list(T):
             idx = self._get_abs_string_index(idx)
             return self.register_parameter(str(idx), param)
 
-        def __setattr__(self, key: Any, value: Any) -> None:
-            if getattr(self, "_initialized", False):
-                if not hasattr(self, key) and (
-                    not isinstance(value, flow.nn.Parameter)
-                ):
-                    warnings.warn(
-                        "Setting attributes on ParameterList is not supported."
-                    )
-            super(ParameterListContainer, self).__setattr__(key, value)
-
         def __len__(self) -> int:
             return len(self._parameters)
 
@@ -447,16 +437,6 @@ def get_para_dict(T):
 
         def __delitem__(self, key: str) -> None:
             del self._parameters[key]
-
-        def __setattr__(self, key: Any, value: Any) -> None:
-            if getattr(self, "_initialized", False):
-                if not hasattr(self, key) and (
-                    not isinstance(value, flow.nn.Parameter)
-                ):
-                    warnings.warn(
-                        "Setting attributes on ParameterDict is not supported."
-                    )
-            super(ParameterDictContainer, self).__setattr__(key, value)
 
         def __len__(self) -> int:
             return len(self._parameters)

@@ -446,11 +446,11 @@ class ModuleBlock(Block):
             if name in modules:
                 return modules[name]
         # support get parameter
-        p_state = self._get_in_states(name, "_parameters")
+        p_state = self._get_from_states(name, "_parameters")
         if p_state is not None:
             return p_state
         # support get buffer
-        b_state = self._get_in_states(name, "_buffers")
+        b_state = self._get_from_states(name, "_buffers")
         if b_state is not None:
             return b_state
         # support get normal attr
@@ -465,7 +465,7 @@ class ModuleBlock(Block):
             )
         )
 
-    def _get_in_states(self, name, states_name):
+    def _get_from_states(self, name, states_name):
         if states_name not in self.__dict__:
             return None
 
@@ -659,6 +659,17 @@ class ParameterListBlock(get_para_list(ModuleBlock)):
         self._name_prefix = prefix
         self._name = name
         self.set_origin(origin)
+        self._is_executing_forward = True
+
+    def __getitem__(self, idx):
+        assert isinstance(idx, int)
+        idx = self._get_abs_string_index(idx)
+        key = str(idx)
+        p_state = self._get_from_states(key, "_parameters")
+        if p_state is not None:
+            return p_state
+        else:
+            raise AttributeError("ParameterList dosen't contain ", key)
 
 
 class ParameterDictBlock(get_para_dict(ModuleBlock)):
@@ -669,3 +680,11 @@ class ParameterDictBlock(get_para_dict(ModuleBlock)):
         self._name_prefix = prefix
         self._name = name
         self.set_origin(origin)
+        self._is_executing_forward = True
+
+    def __getitem__(self, key: str):
+        p_state = self._get_from_states(key, "_parameters")
+        if p_state is not None:
+            return p_state
+        else:
+            raise AttributeError("ParameterDict dosen't contain key ", key)
