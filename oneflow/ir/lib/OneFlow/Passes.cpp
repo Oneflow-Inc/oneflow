@@ -66,18 +66,11 @@ LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
     return failure();
   }
   rewriter.cloneRegionBefore(op.body(), function.body(), function.body().end());
-  // return success();
   jit_module->push_back(function);
-  jit_module->dump();
   std::string mlir;
   llvm::raw_string_ostream os_mlir(mlir);
   jit_module->print(os_mlir);
   op->setAttr("mlir_assembly", rewriter.getStringAttr(mlir));
-  function.body().walk([](Operation* op) { op->dump(); });
-  jit_module->body().walk([](Operation* op) {
-    ;
-    op->dump();
-  });
   function->erase();
   return success();
 }
