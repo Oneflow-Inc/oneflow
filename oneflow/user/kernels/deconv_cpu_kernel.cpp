@@ -267,9 +267,9 @@ struct ConvOpKernelState final : public user_op::OpKernelState {
 
 template<typename T>
 std::shared_ptr<ConvOpKernelState<T>> CreateConvOpKernelState(user_op::KernelComputeContext* ctx,
-                                                                const std::string& in_name,
-                                                                const std::string& out_name,
-                                                                const std::string& weight_name) {
+                                                              const std::string& in_name,
+                                                              const std::string& out_name,
+                                                              const std::string& weight_name) {
   const auto& data_format = ctx->Attr<std::string>("data_format");
 
   std::shared_ptr<ConvOpKernelState<T>> state(new ConvOpKernelState<T>());
@@ -348,9 +348,11 @@ class DeconvCpuKernel final : public user_op::OpKernel {
       // channels first:  col_buf' = weight(T) * in[i]'
       // channels last :  col_buf' = weight(T) * in[i]'(T)
       // m, n, k
+      int32_t idx_offset = conv_state->idx_offset_;
       NewKernelUtil<DeviceType::kCPU>::OFGemm(
           nullptr, CblasTrans, conv_state->is_out_diff_need_trans_,
-          conv_state->weight_5d_shape_.Count(1), conv_state->out_5d_shape_.Count(3),
+          conv_state->weight_5d_shape_.Count(1),
+          conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3),
           conv_state->weight_5d_shape_.At(0), static_cast<T>(1), weight->dptr<T>(),
           GetImgDptr<T>(in, i), static_cast<T>(0), col_buf->mut_dptr<T>());
 
@@ -364,7 +366,7 @@ class DeconvCpuKernel final : public user_op::OpKernel {
   }
 };
 
-#define REGISTER_DECONV_DATA_GRAD_KERNEL(op_name, dtype)                                \
+#define REGISTER_DECONV_DATA_KERNEL(op_name, dtype)                                     \
   REGISTER_USER_KERNEL(#op_name)                                                        \
       .SetCreateFn<DeconvCpuKernel<dtype>>()                                            \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                               \
@@ -381,12 +383,12 @@ class DeconvCpuKernel final : public user_op::OpKernel {
         return tmp_buffer_size;                                                         \
       })
 
-REGISTER_DECONV_DATA_GRAD_KERNEL(deconv1d, float);
-REGISTER_DECONV_DATA_GRAD_KERNEL(deconv1d, double);
-REGISTER_DECONV_DATA_GRAD_KERNEL(deconv2d, float);
-REGISTER_DECONV_DATA_GRAD_KERNEL(deconv2d, double);
-REGISTER_DECONV_DATA_GRAD_KERNEL(deconv3d, float);
-REGISTER_DECONV_DATA_GRAD_KERNEL(deconv3d, double);
+REGISTER_DECONV_DATA_KERNEL(deconv1d, float);
+REGISTER_DECONV_DATA_KERNEL(deconv1d, double);
+REGISTER_DECONV_DATA_KERNEL(deconv2d, float);
+REGISTER_DECONV_DATA_KERNEL(deconv2d, double);
+REGISTER_DECONV_DATA_KERNEL(deconv3d, float);
+REGISTER_DECONV_DATA_KERNEL(deconv3d, double);
 
 }  // namespace
 
