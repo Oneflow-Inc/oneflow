@@ -199,7 +199,11 @@ class ModuleBlock(Block):
             _print_state(self._parameters)
             _print_state(self._buffers)
 
-        result = self._origin.__class__.__call__(self, *args)
+        # NOTE: The original nn.Moudle's __call__ method is ignored, which means
+        # that hooks of nn.Modules are ignored. It is not recommended
+        # to use hooks of nn.Module in nn.Graph for the moment.
+        # result = self._origin.__class__.__call__(self, *args)
+        result = self._forward(*args)
 
         outputs = ()
         if not (type(result) is tuple or type(result) is list):
@@ -227,7 +231,7 @@ class ModuleBlock(Block):
 
         return result
 
-    def forward(self, *args):
+    def _forward(self, *args):
         self._is_executing_forward = True
         args = self._pre_forward_mapping_out_scope(*args)
         with self.scope_context():

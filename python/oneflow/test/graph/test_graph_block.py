@@ -106,6 +106,52 @@ class TestGraphBlock(flow.unittest.TestCase):
 
         linear_t_g(x)
 
+    def test_block_with_seq_container(test_case):
+        class SubModule0(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linear = flow.nn.Linear(10, 10, False)
+
+            def forward(self, x):
+                if graph_build_util.lazy_mode.is_enabled():
+                    scope = oneflow.current_scope()
+                    scope_proto = graph_build_util.scope_to_proto(scope)
+                    ck_bool = scope_proto.attr_name2attr_value["checkpointing"].at_bool
+                    test_case.assertEqual(ck_bool, True)
+                out = self.linear(x)
+                return out
+
+        list_of_m = [SubModule0() for i in range(3)]
+
+        class SeqModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linears = flow.nn.Sequential(*list_of_m)
+
+            def forward(self, x):
+                x = self.linears(x)
+                return x
+
+        class SeqGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.linears = flow.nn.Sequential(*list_of_m)
+                self.linears.config.activation_checkpointing = True
+
+            def build(self, x):
+                x = self.linears(x)
+                return x
+
+        seq_m = SeqModule()
+        seq_g = SeqGraph()
+
+        input = flow.tensor(np.random.randn(4, 10), dtype=flow.float32)
+        output_m = seq_m(input)
+        output_g = seq_g(input)
+
+        print(seq_g)
+        test_case.assertTrue(np.array_equal(output_m.numpy(), output_g.numpy()))
+
     def test_block_with_list_container(test_case):
         class SubModule0(flow.nn.Module):
             def __init__(self):
@@ -137,8 +183,10 @@ class TestGraphBlock(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.linears = flow.nn.ModuleList(list_of_m)
+                # NOTE: ModuleList doesn't have config.
+                # self.linears.config.activation_checkpointing = True
                 for i, _ in enumerate(self.linears):
-                    x = self.linears[i].config.activation_checkpointing = True
+                    self.linears[i].config.activation_checkpointing = True
                 # self.params = flow.nn.ParameterList(
                 #    [flow.nn.Parameter(flow.randn(10, 10), True) for i in range(10)]
                 # )
