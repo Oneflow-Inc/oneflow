@@ -187,7 +187,6 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
     JUST(ScaleModelDiffByLossInstanceNum(op_graph, job_builder.get(), &model_lbi2model_diff_lbi));
     ScaleModelDiffByLossScale(ctx, op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     JUST(CountNotFiniteIfNeeded(ctx, op_graph, job_builder.get(), model_lbi2model_diff_lbi));
-    RegularizeGradient(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     for (const auto& optimizer_conf : job->job_conf().train_conf().optimizer_conf()) {
       HashMap<LogicalBlobId, LogicalBlobId> cur_model_lbi2model_diff_lbi;
       FilterCurModelLbi2ModelDiffLbiByName(optimizer_conf.variable_op_names(),
@@ -196,6 +195,7 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
         ClipGradient(op_graph, job_builder.get(), &cur_model_lbi2model_diff_lbi,
                      optimizer_conf.clip_conf());
       }
+      RegularizeGradient(op_graph, job_builder.get(), &cur_model_lbi2model_diff_lbi);
       op_graph.ForEachNode([&](OpNode* op_node) {
         const VariableOp* var_op = dynamic_cast<const VariableOp*>(&op_node->op());
         if (var_op == nullptr

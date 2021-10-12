@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/primitive/fill.h"
+#include "oneflow/core/primitive/include/fill.h"
 #include "oneflow/core/primitive/cpu/type_seq.h"
 #include "oneflow/core/common/scalar.h"
 
@@ -25,7 +25,7 @@ namespace {
 
 template<typename T>
 T GetValue(Scalar value) {
-  return CHECK_JUST(value.As<T>());
+  return value.Value<T>();
 }
 
 template<>

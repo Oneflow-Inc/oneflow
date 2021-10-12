@@ -40,8 +40,7 @@ from oneflow._C import sigmoid
 from oneflow._C import prelu
 from oneflow._C import gelu
 from oneflow._C import glu
-from oneflow._C import log_sigmoid as logsigmoid
-from oneflow._C import log_sigmoid
+from oneflow._C import logsigmoid
 from oneflow._C import softsign
 from oneflow._C import softmax
 from oneflow._C import softplus
@@ -53,4 +52,8 @@ from oneflow._C import dropout
 from oneflow._C import smooth_l1_loss
 from oneflow._C import pad
 from oneflow._C import upsample
+from oneflow._C import ctc_greedy_decoder
 from oneflow.nn.modules.one_hot import one_hot
+from oneflow.nn.modules.sparse import embedding
+from oneflow.nn.modules.linear import linear
+from oneflow.nn.modules.activation import relu6

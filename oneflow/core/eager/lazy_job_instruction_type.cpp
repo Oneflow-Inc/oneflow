@@ -16,7 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/eager/lazy_job_stream_type.h"
 #include "oneflow/core/eager/lazy_job_device_context.h"
-#include "oneflow/core/eager/run_lazy_job_phy_instr_operand.h"
+#include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/vm/instruction.msg.h"
@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
@@ -78,15 +79,17 @@ class LazyJobInstance final : public JobInstance {
 
 namespace vm {
 
-class RunLazyJobInstructionType final : public InstructionType {
+class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
  public:
-  RunLazyJobInstructionType(const RunLazyJobInstructionType&) = delete;
-  RunLazyJobInstructionType(RunLazyJobInstructionType&&) = delete;
-  RunLazyJobInstructionType() = default;
-  ~RunLazyJobInstructionType() = default;
+  LaunchLazyJobInstructionType(const LaunchLazyJobInstructionType&) = delete;
+  LaunchLazyJobInstructionType(LaunchLazyJobInstructionType&&) = delete;
+  LaunchLazyJobInstructionType() = default;
+  ~LaunchLazyJobInstructionType() = default;
   using stream_type = LazyJobStreamType;
   void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
   void Compute(vm::Instruction* instruction) const override {
+    const auto* ptr = instruction->instr_msg().phy_instr_operand().get();
+    const auto* phy_instr_operand = dynamic_cast<const LaunchLazyJobPhyInstrOperand*>(ptr);
     const auto& cur_nn_graph = GetCurNNGraph(instruction);
     auto* device_ctx = GetLazyJobDeviceCtx(instruction);
 
@@ -131,47 +134,75 @@ class RunLazyJobInstructionType final : public InstructionType {
 
   std::shared_ptr<NNGraphIf> GetCurNNGraph(Instruction* instruction) const {
     const auto* ptr = instruction->instr_msg().phy_instr_operand().get();
-    const auto* phy_instr_operand = dynamic_cast<const RunLazyJobPhyInstrOperand*>(ptr);
+    const auto* phy_instr_operand = dynamic_cast<const LaunchLazyJobPhyInstrOperand*>(ptr);
     CHECK_NOTNULL(phy_instr_operand);
     return phy_instr_operand->nn_graph();
   }
 
   std::shared_ptr<LazyJobInstance> MakeJobInstance(Instruction* instruction) const {
     const auto* ptr = instruction->instr_msg().phy_instr_operand().get();
-    const auto* phy_instr_operand = dynamic_cast<const RunLazyJobPhyInstrOperand*>(ptr);
+    const auto* phy_instr_operand = dynamic_cast<const LaunchLazyJobPhyInstrOperand*>(ptr);
     CHECK_NOTNULL(phy_instr_operand);
     const auto& nn_graph = phy_instr_operand->nn_graph();
     HashMap<std::string, std::function<void(int64_t)>> push_cbs;
-    CHECK_EQ(nn_graph->inputs_op_names().size(), phy_instr_operand->inputs()->size());
     for (int i = 0; i < nn_graph->inputs_op_names().size(); ++i) {
+      const auto& input_op_name = nn_graph->inputs_op_names().at(i);
+      const auto& end_event_record =
+          CHECK_JUST(phy_instr_operand->EndEventRecord4OpName(input_op_name));
       if (nn_graph->inputs_valid().at(i)) {
-        const auto* blob = &phy_instr_operand->inputs()->at(i)->blob();
-        CHECK(blob != nullptr);
-        const auto& op_name = nn_graph->inputs_op_names().at(i);
-        const auto& PushCb = [blob](int64_t of_blob_ptr) {
+        const auto& input_blob_object = phy_instr_operand->input_blob_objects()->at(i);
+        const auto& PushCb = [input_op_name, end_event_record,
+                              input_blob_object](int64_t of_blob_ptr) {
           OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+          const Blob* blob = &input_blob_object->blob();
+          CHECK_NOTNULL(blob);
           of_blob->mut_blob()->CopyHeaderFrom(of_blob->mut_device_ctx(), blob);
-          AutoMemcpy(of_blob->mut_device_ctx(), of_blob->mut_blob(), blob);
+          if (blob->dptr() == nullptr) {
+            end_event_record->Init(std::make_shared<NaiveEventRecord>());
+          } else {
+            AutoMemcpy(of_blob->mut_device_ctx(), of_blob->mut_blob(), blob);
+            auto* event_record_provider =
+                CHECK_NOTNULL(dynamic_cast<EventRecordProvider*>(of_blob->mut_device_ctx()));
+            end_event_record->Init(event_record_provider->MakeEventRecord());
+          }
         };
-        CHECK(push_cbs.emplace(op_name, PushCb).second);
+        CHECK(push_cbs.emplace(input_op_name, PushCb).second);
+      } else {
+        end_event_record->Init(std::make_shared<NaiveEventRecord>());
       }
     }
     HashMap<std::string, std::function<void(int64_t)>> pull_cbs;
-    CHECK_EQ(nn_graph->outputs_op_names().size(), phy_instr_operand->outputs()->size());
     for (int i = 0; i < nn_graph->outputs_op_names().size(); ++i) {
+      const auto& output_op_name = nn_graph->outputs_op_names().at(i);
+      const auto& end_event_record =
+          CHECK_JUST(phy_instr_operand->EndEventRecord4OpName(output_op_name));
       if (nn_graph->outputs_valid().at(i)) {
-        auto* mut_blob = phy_instr_operand->outputs()->at(i)->mut_blob();
-        CHECK(mut_blob != nullptr);
-        const auto& op_name = nn_graph->outputs_op_names().at(i);
-        const auto& PullCb = [mut_blob](int64_t of_blob_ptr) {
+        const auto& output_blob_object = phy_instr_operand->output_blob_objects()->at(i);
+        const auto& PullCb = [output_op_name, end_event_record,
+                              output_blob_object](int64_t of_blob_ptr) {
           OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+          Blob* mut_blob = output_blob_object->mut_blob();
+          CHECK_NOTNULL(mut_blob);
           mut_blob->CopyHeaderFrom(of_blob->mut_device_ctx(), &of_blob->blob());
-          AutoMemcpy(of_blob->mut_device_ctx(), mut_blob, &of_blob->blob());
+          if (mut_blob->dptr() == nullptr) {
+            end_event_record->Init(std::make_shared<NaiveEventRecord>());
+          } else {
+            AutoMemcpy(of_blob->mut_device_ctx(), mut_blob, &of_blob->blob());
+            auto* event_record_provider =
+                CHECK_NOTNULL(dynamic_cast<EventRecordProvider*>(of_blob->mut_device_ctx()));
+            end_event_record->Init(event_record_provider->MakeEventRecord());
+          }
         };
-        CHECK(pull_cbs.emplace(op_name, PullCb).second);
+        CHECK(pull_cbs.emplace(output_op_name, PullCb).second);
+      } else {
+        end_event_record->Init(std::make_shared<NaiveEventRecord>());
       }
     }
-    const auto& FinishCb = [this, instruction]() {
+    const auto& op_name2end_event_record = phy_instr_operand->op_name2end_event_record();
+    const auto& FinishCb = [this, instruction, op_name2end_event_record]() {
+      for (const auto& pair : *op_name2end_event_record) {
+        pair.second->TryInit(std::make_shared<NaiveEventRecord>());
+      }
       auto* device_ctx = GetLazyJobDeviceCtx(instruction);
       device_ctx->DequeueNNGraph();
       auto* status_buffer = instruction->mut_status_buffer();
@@ -181,7 +212,7 @@ class RunLazyJobInstructionType final : public InstructionType {
   }
 };
 
-COMMAND(RegisterInstructionType<RunLazyJobInstructionType>("RunLazyJob"));
+COMMAND(RegisterInstructionType<LaunchLazyJobInstructionType>("LaunchLazyJob"));
 
 }  // namespace vm
 }  // namespace oneflow

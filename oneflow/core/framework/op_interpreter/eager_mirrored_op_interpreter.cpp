@@ -296,7 +296,7 @@ Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const Te
     input_mirrored_tensor = JUST(input_tensor->AsMirroredTensor());
     CHECK_OR_RETURN(input_mirrored_tensor) << Error::InvalidValueError("Tensor Cast Error");
     bool requires_grad = autograd::GradMode::is_enabled() && inputs.at(0)->requires_grad();
-    input_mirrored_tensor->set_requires_grad(requires_grad);
+    JUST(input_mirrored_tensor->set_requires_grad(requires_grad));
     input_mirrored_tensor->set_is_leaf(!requires_grad);
   }
   std::shared_ptr<ConsistentTensor> consistent_tensor;
@@ -316,6 +316,9 @@ Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const Te
         !input_mirrored_tensor->requires_grad()));
     consistent_tensor = std::make_shared<ConsistentTensor>(consistent_tensor_impl);
     if (parallel_id.has_value()) {
+      const auto& pyhsical_shape = JUST(GetPhysicalShape(tensor_meta));
+      const auto& input_mirrored_tensor_shape = input_mirrored_tensor->shape();
+      CHECK_EQ_OR_RETURN(*pyhsical_shape, *input_mirrored_tensor_shape);
       CHECK_OR_RETURN(dtype == input_mirrored_tensor->dtype()->data_type());
       consistent_tensor_impl->reset_cur_rank_phy_tensor(input_mirrored_tensor);
     }

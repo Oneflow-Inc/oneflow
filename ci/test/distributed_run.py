@@ -12,6 +12,7 @@ import pathlib
 import asyncio
 import glob
 from datetime import date
+from pathlib import Path
 
 HARD_CODED_AFFILIATIONS = {
     "192.168.1.11": ["192.168.1.12",],
@@ -106,6 +107,15 @@ async def create_remote_workspace_dir(
     print("create_remote_workspace_dir done")
 
 
+def get_docker_cache_args():
+    return " ".join(
+        [
+            f"-v {Path.home() / 'test-container-cache/dot-local'}:/root/.local",
+            f"-v {Path.home() / 'test-container-cache/dot-cache'}:/root/.cache",
+        ]
+    )
+
+
 async def launch_remote_container(
     remote_host=None,
     survival_time=None,
@@ -126,11 +136,14 @@ async def launch_remote_container(
         pythonpath_args = f"--env PYTHONPATH={workspace_dir}/python"
     else:
         raise ValueError("must have oneflow_wheel_path or oneflow_python_path")
-    docker_cmd = f"""docker run --privileged -d --network host --shm-size=8g --rm -v {workspace_dir}:{workspace_dir} -w {workspace_dir} -v /dataset:/dataset -v /model_zoo:/model_zoo --name {container_name} {pythonpath_args} {img_tag} sleep {survival_time}
+    docker_cmd = f"""docker run --privileged -d --network host --shm-size=8g --rm {get_docker_cache_args()} -v {workspace_dir}:{workspace_dir} -w {workspace_dir} -v /dataset:/dataset -v /model_zoo:/model_zoo --name {container_name} {pythonpath_args} {img_tag} sleep {survival_time}
 """
     await spawn_shell_and_check(f"ssh {remote_host} {docker_cmd}")
     if oneflow_wheel_path:
         whl_basename = os.path.basename(oneflow_wheel_path)
+        await spawn_shell_and_check(
+            f"ssh {remote_host} docker exec {container_name} python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple"
+        )
         await spawn_shell_and_check(
             f"ssh {remote_host} docker exec {container_name} python3 -m pip install {workspace_dir}/{whl_basename}"
         )
@@ -208,6 +221,7 @@ class DockerAgent:
         oneflow_wheel_path=None,
         oneflow_python_path=None,
         oneflow_test_tmp_dir=None,
+        extra_docker_args: str = None,
     ) -> None:
         # info
         self.this_host = this_host
@@ -227,6 +241,7 @@ class DockerAgent:
         self.remote_docker_proc = {}
         self.agent_port = port
         self.agent_authkey = authkey
+        self.extra_docker_args = extra_docker_args
 
     def __enter__(self):
         return self
@@ -244,6 +259,7 @@ export ONEFLOW_TEST_TMP_DIR="{self.oneflow_test_tmp_dir}"
 export NCCL_DEBUG=INFO
 export ONEFLOW_TEST_WORKER_AGENT_PORT={agent_port}
 export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
+python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 """
         if self.oneflow_wheel_path:
             exports += f"python3 -m pip install {self.oneflow_wheel_path}"
@@ -269,7 +285,7 @@ bash {bash_script}
             f_name = f.name
             f.write(cmd)
             f.flush()
-            return f"docker run {self.common_docker_args} -v /tmp:/host/tmp:ro -v $PWD:$PWD -w $PWD --name {self.container_name} {self.img_tag} bash /host{f_name}"
+            return f"docker run {self.common_docker_args} {self.extra_docker_args} {get_docker_cache_args()} -v /tmp:/host/tmp:ro -v $PWD:$PWD -w $PWD --name {self.container_name} {self.img_tag} bash /host{f_name}"
 
         f = tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8", delete=True)
         run_docker_cmd = get_docker_cmd(f, bash_cmd)
@@ -434,7 +450,12 @@ if __name__ == "__main__":
         ), "--skip_libs only works with --oneflow_python_path"
 
     oneflow_wheel_path = args.oneflow_wheel_path
+    main_node_extra_docker_args = []
     if oneflow_wheel_path and os.path.isdir(oneflow_wheel_path):
+        assert os.path.isabs(oneflow_wheel_path)
+        main_node_extra_docker_args.append(
+            f"-v {oneflow_wheel_path}:{oneflow_wheel_path}:ro"
+        )
         whl_paths = [
             name for name in glob.glob(os.path.join(oneflow_wheel_path, f"*.whl",))
         ]
@@ -681,6 +702,7 @@ if __name__ == "__main__":
             oneflow_python_path=args.oneflow_python_path,
             img_tag=img_tag,
             oneflow_test_tmp_dir=args.oneflow_test_tmp_dir,
+            extra_docker_args=" ".join(main_node_extra_docker_args),
         ) as agent:
             if args.bash_script:
                 agent.run_bash_script_async(bash_script=args.bash_script,)

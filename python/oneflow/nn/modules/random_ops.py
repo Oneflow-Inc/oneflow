@@ -71,7 +71,7 @@ class Rand(Module):
 
     def forward(self):
         if self.placement is not None:
-            res = flow._C.consistent_rand(
+            res = flow._C.rand(
                 self.size,
                 placement=self.placement,
                 sbp=self.sbp,
@@ -169,12 +169,13 @@ class RandN(Module):
 
     def forward(self):
         if self.placement is not None:
-            res = flow._C.consistent_randn(
+            res = flow._C.randn(
                 self.size,
                 placement=self.placement,
                 sbp=self.sbp,
                 dtype=self.dtype,
                 generator=self.generator,
+                requires_grad=self.requires_grad,
             )
         else:
             res = flow._C.randn(
@@ -182,8 +183,8 @@ class RandN(Module):
                 dtype=self.dtype,
                 device=self.device,
                 generator=self.generator,
+                requires_grad=self.requires_grad,
             )
-        res.requires_grad = self.requires_grad
         return res
 
 
@@ -276,26 +277,27 @@ class RandInt(Module):
 
     def forward(self):
         if self.placement is not None:
-            res = flow._C.consistent_randint(
+            res = flow._C.randint(
                 self.low,
                 self.high,
-                shape=self.size,
+                size=self.size,
                 placement=self.placement,
                 sbp_tuple=self.sbp,
                 dtype=self.dtype,
                 generator=self.generator,
+                requires_grad=self.requires_grad,
             )
         else:
             res = flow._C.randint(
                 self.low,
                 self.high,
-                shape=self.size,
+                size=self.size,
                 dtype=self.dtype,
                 device=self.device,
                 generator=self.generator,
+                requires_grad=self.requires_grad,
             )
-        res.requires_grad = self.requires_grad
-        return res.to(dtype=self.dtype)
+        return res
 
 
 def randint_op(
@@ -381,12 +383,20 @@ class RandPerm(Module):
 
     def forward(self, out=None):
         if self.placement is not None:
-            res = flow._C.consistent_randperm(
-                self.n, placement=self.placement, sbp=self.sbp, generator=self.generator
+            res = flow._C.randperm(
+                self.n,
+                placement=self.placement,
+                sbp=self.sbp,
+                generator=self.generator,
+                requires_grad=self.requires_grad,
             )
         else:
-            res = flow._C.randperm(self.n, device=self.device, generator=self.generator)
-        res.requires_grad = self.requires_grad
+            res = flow._C.randperm(
+                self.n,
+                device=self.device,
+                generator=self.generator,
+                requires_grad=self.requires_grad,
+            )
         return res.to(dtype=self.dtype)
 
 

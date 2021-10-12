@@ -129,6 +129,9 @@ class FlipGrad1DGpuKernel final : public user_op::OpKernel {
 
 REGISTER_FLIP_GPU_KERNEL(float)
 REGISTER_FLIP_GPU_KERNEL(double)
-REGISTER_FLIP_GPU_KERNEL(int)
+REGISTER_FLIP_GPU_KERNEL(uint8_t)
+REGISTER_FLIP_GPU_KERNEL(int8_t)
+REGISTER_FLIP_GPU_KERNEL(int32_t)
+REGISTER_FLIP_GPU_KERNEL(int64_t)
 
 }  // namespace oneflow

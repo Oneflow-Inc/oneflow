@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/primitive/memcpy.h"
+#include "oneflow/core/primitive/include/memcpy.h"
 
 namespace oneflow {
 

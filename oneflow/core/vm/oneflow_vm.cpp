@@ -140,7 +140,7 @@ void OneflowVM::Loop(const std::function<void()>& Initializer) {
   Initializer();
   auto* vm = mut_vm();
   while (notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
-    // Using ThreadUnsafeEmpty to avoid acquiring mutex lock.
+    // Use ThreadUnsafeEmpty to avoid acquiring mutex lock.
     // It's safe to use ThreadUnsafeEmpty here. notifier_.notified_cnt_ will be greater than zero
     // when inconsistency between vm->pending_msg_list.list_head_.list_head_.container_ and
     // vm->pending_msg_list.list_head_.list_head_.size_ occured. hence the pending instructions will

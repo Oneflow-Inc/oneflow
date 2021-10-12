@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
+#include "oneflow/core/device/event_record.h"
 #include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/scope.cfg.h"
@@ -30,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
@@ -238,15 +240,103 @@ Maybe<int64_t> InstructionsBuilder::NewObjectId(
   return object_id;
 }
 
-Maybe<void> InstructionsBuilder::RunLazyJob(const one::EagerBlobObjectListPtr& inputs,
-                                            const one::EagerBlobObjectListPtr& outputs,
-                                            const one::EagerBlobObjectListPtr& parameters,
-                                            const std::shared_ptr<NNGraphIf>& nn_graph) const {
-  static std::string instr_name("RunLazyJob");
-  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
-  *instruction->mutable_phy_instr_operand() =
-      std::make_shared<vm::RunLazyJobPhyInstrOperand>(inputs, outputs, parameters, nn_graph);
+namespace {
+
+Maybe<Symbol<Device>> RawGetCriticalSectionDevice() { return Device::New("critical_section"); }
+
+static constexpr auto* GetCriticalSectionDevice =
+    DECORATE(&RawGetCriticalSectionDevice, ThreadLocal);
+
+}  // namespace
+
+template<typename T>
+Maybe<ObjectMsgPtr<LocalDepObject>> InstructionsBuilder::MakeCriticalSectionBegin(
+    const one::EagerBlobObjectListPtr& eager_blob_objects) {
+  static std::string instr_name("CriticalSectionBegin");
+  auto instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
+  const auto& device = JUST(GetCriticalSectionDevice());
+  const auto local_dep_object = JUST(LocalDepObject::New(*device));
+  const auto& operand = std::make_shared<T>(eager_blob_objects, *local_dep_object);
+  *instruction->mutable_phy_instr_operand() = operand;
   instruction_list_->EmplaceBack(std::move(instruction));
+  return local_dep_object;
+}
+
+template<typename PhyInstrOperandT>
+Maybe<void> InstructionsBuilder::MakeCriticalSectionEnd(
+    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+    const std::shared_ptr<SharedEventRecord>& event_record) {
+  static std::string instr_name("CriticalSectionEnd");
+  auto instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
+  const auto& operand = std::make_shared<PhyInstrOperandT>(eager_blob_object, event_record);
+  *instruction->mutable_phy_instr_operand() = operand;
+  instruction_list_->EmplaceBack(std::move(instruction));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::LaunchLazyJob(const one::EagerBlobObjectListPtr& inputs,
+                                               const one::EagerBlobObjectListPtr& outputs,
+                                               const one::EagerBlobObjectListPtr& parameters,
+                                               const std::shared_ptr<NNGraphIf>& nn_graph) {
+  JUST(SoftSyncNNGraphBuffers(inputs, nn_graph));
+  JUST(SoftSyncNNGraphBuffers(outputs, nn_graph));
+  JUST(SoftSyncNNGraphBuffers(parameters, nn_graph));
+  {
+    // instruction list: [CriticalSectionBegin] -> LaunchLazyJob -> [CriticalSectionEnd]
+    const auto& in_local_dep_object =
+        JUST(MakeCriticalSectionBegin<vm::InputCriticalSectionBeginPhyInstrOperand>(inputs));
+    const auto& out_local_dep_object =
+        JUST(MakeCriticalSectionBegin<vm::OutputCriticalSectionBeginPhyInstrOperand>(outputs));
+    const auto& op_name2end_event_record =
+        std::make_shared<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>();
+    for (const auto& op_name : nn_graph->inputs_op_names()) {
+      const auto& event_record = std::make_shared<SharedEventRecord>();
+      CHECK_OR_RETURN(op_name2end_event_record->emplace(op_name, event_record).second);
+    }
+    for (const auto& op_name : nn_graph->outputs_op_names()) {
+      const auto& event_record = std::make_shared<SharedEventRecord>();
+      CHECK_OR_RETURN(op_name2end_event_record->emplace(op_name, event_record).second);
+    }
+    {
+      static std::string instr_name("LaunchLazyJob");
+      ObjectMsgPtr<vm::InstructionMsg> instruction =
+          ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
+      *instruction->mutable_phy_instr_operand() =
+          std::make_shared<vm::LaunchLazyJobPhyInstrOperand>(
+              *in_local_dep_object, *out_local_dep_object, op_name2end_event_record, inputs,
+              outputs, parameters, nn_graph);
+      instruction_list_->EmplaceBack(std::move(instruction));
+    }
+    for (int i = 0; i < nn_graph->inputs_op_names().size(); ++i) {
+      const auto& eager_blob_object = inputs->at(i);
+      const auto& op_name = nn_graph->inputs_op_names().at(i);
+      const auto& event_record = JUST(MapAt(*op_name2end_event_record, op_name));
+      JUST(MakeCriticalSectionEnd<vm::InputCriticalSecondEndPhyInstrOperand>(eager_blob_object,
+                                                                             event_record));
+    }
+    for (int i = 0; i < nn_graph->outputs_op_names().size(); ++i) {
+      const auto& eager_blob_object = outputs->at(i);
+      const auto& op_name = nn_graph->outputs_op_names().at(i);
+      const auto& event_record = JUST(MapAt(*op_name2end_event_record, op_name));
+      JUST(MakeCriticalSectionEnd<vm::OutputCriticalSecondEndPhyInstrOperand>(eager_blob_object,
+                                                                              event_record));
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::SoftSyncNNGraphBuffers(
+    const one::EagerBlobObjectListPtr& eager_blob_objects,
+    const std::shared_ptr<NNGraphIf>& nn_graph) {
+  const auto& op_device = JUST(GetCriticalSectionDevice());
+  for (const auto& eager_blob_object : *eager_blob_objects) {
+    const auto& blob_last_used_device = JUST(eager_blob_object->last_used_device());
+    if (blob_last_used_device != op_device) {
+      auto* dep_object = JUST(eager_blob_object->compute_local_dep_object());
+      JUST(SoftSyncStream(dep_object, "mut", blob_last_used_device));
+    }
+    eager_blob_object->set_last_used_device(op_device);
+  }
   return Maybe<void>::Ok();
 }
 

@@ -20,7 +20,7 @@ Functional operations for neural networks
 .. autofunction:: sigmoid
 .. autofunction:: pad
 .. autofunction:: prelu
-.. autofunction:: log_sigmoid 
+.. autofunction:: logsigmoid 
 .. autofunction:: gelu
 .. autofunction:: glu
 .. autofunction:: softsign
@@ -36,3 +36,7 @@ Functional operations for neural networks
 .. autofunction:: grid_sample
 .. autofunction:: interpolate
 .. autofunction:: layer_norm
+.. autofunction:: ctc_greedy_decoder
+.. autofunction:: embedding
+.. autofunction:: linear
+

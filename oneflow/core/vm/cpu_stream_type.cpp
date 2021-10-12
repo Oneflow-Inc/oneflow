@@ -37,7 +37,8 @@ void CpuStreamType::InitInstructionStatus(const Stream& stream,
 
 void CpuStreamType::DeleteInstructionStatus(const Stream& stream,
                                             InstructionStatusBuffer* status_buffer) const {
-  // do nothing
+  auto* ptr = NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  ptr->~NaiveInstrStatusQuerier();
 }
 
 bool CpuStreamType::QueryInstructionStatusDone(const Stream& stream,

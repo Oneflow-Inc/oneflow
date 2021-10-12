@@ -58,6 +58,18 @@ class PyTorchDoesNotSupportError(Exception):
         return f"PyTorch error: {str(self.exc)}"
 
 
+class BothDoNotSupportError(Exception):
+    def __init__(self, th_exc, of_exc):
+        self.th_exc = th_exc
+        self.of_exc = of_exc
+
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        return f"PyTorch error: {str(self.th_exc)}\nOneFlow error: {str(self.of_exc)}"
+
+
 call_pytorch = None
 
 
@@ -173,6 +185,7 @@ def get_args(callable, *args, **kwargs):
 
 
 counter = 0
+align_exception = os.getenv("ONEFLOW_TEST_ALIGN_EXCEPTION") is not None
 
 
 def GetDualObject(name, pytorch, oneflow):
@@ -234,6 +247,16 @@ def GetDualObject(name, pytorch, oneflow):
                                     call_tensor_id.append(id(pytorch_res))
 
                         except Exception as e:
+                            if align_exception:
+                                try:
+                                    oneflow_res = oneflow(
+                                        *oneflow_args, **oneflow_kwargs
+                                    )
+                                except Exception as ee:
+                                    raise BothDoNotSupportError(e, ee) from None
+                                print(
+                                    "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
+                                )
                             raise PyTorchDoesNotSupportError(e)
 
                         if name in postulate:
@@ -261,6 +284,16 @@ def GetDualObject(name, pytorch, oneflow):
                             if isinstance(pytorch_res, torch_original.Tensor):
                                 call_tensor_id.append(id(pytorch_res))
                         except Exception as e:
+                            if align_exception:
+                                try:
+                                    oneflow_res = oneflow_method(
+                                        *oneflow_args, **oneflow_kwargs
+                                    )
+                                except Exception as ee:
+                                    raise BothDoNotSupportError(e, ee) from None
+                                print(
+                                    "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
+                                )
                             raise PyTorchDoesNotSupportError(e)
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
                         return GetDualObject("unused", pytorch_res, oneflow_res)
@@ -473,8 +506,9 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                     testing = True
                     res = f(test_case)
                     testing = False
-                except PyTorchDoesNotSupportError as e:
+                except (PyTorchDoesNotSupportError, BothDoNotSupportError) as e:
                     if verbose:
+                        print(f"{f.__name__}")
                         print(e)
                     loop += 1
                     continue
@@ -547,7 +581,8 @@ def random_pytorch_tensor(
         .requires_grad_(requires_grad and dtype != int)
     )
     flow_tensor = flow.tensor(
-        pytorch_tensor.detach().cpu().numpy(), requires_grad=requires_grad
+        pytorch_tensor.detach().cpu().numpy(),
+        requires_grad=(requires_grad and dtype != int),
     )
     return GetDualObject("unused", pytorch_tensor, flow_tensor)
 

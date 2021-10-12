@@ -18,8 +18,18 @@ limitations under the License.
 
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
+
+#if defined(__CUDACC__)
+#define XPU_1D_KERNEL_LOOP_BEGIN(i, n) CUDA_1D_KERNEL_LOOP(i, n) {
+#define XPU_1D_KERNEL_LOOP_END() }
+#else
+#define XPU_1D_KERNEL_LOOP_BEGIN(i, n) MultiThreadLoop(n, [&](size_t i) {
+#define XPU_1D_KERNEL_LOOP_END() \
+  });
+#endif
 
 #if defined(__CUDACC__)
 #define XPU_1D_KERNEL_LOOP(i, n) CUDA_1D_KERNEL_LOOP(i, n)
