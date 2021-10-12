@@ -18,8 +18,9 @@ limitations under the License.
 namespace oneflow {
 
 template<typename IDX>
-int get_target_prime(const int* targets_ptr, int64_t max_target_length, int64_t b, int64_t s,
-                     int blank, const int32_t targets_ndim, const IDX* target_lengths_ptr) {
+int get_target_prime(const int* targets_ptr, const IDX* target_lengths_ptr,
+                     int64_t max_target_length, int64_t b, int64_t s, int blank,
+                     const int32_t targets_ndim) {
   if (s % 2 == 0) {
     return blank;
   } else {
@@ -77,15 +78,15 @@ void CtcLossKernelUtil<DeviceType::kCPU, T, IDX>::CtcLossForward(
     for (IDX s = 0; s < 2 * target_length + 1; s++) { alpha_ptr[alpha_idx + s] = neginf; }
     alpha_ptr[alpha_idx] = log_probs_ptr[input_helper.NdIndexToOffset(0, b, blank)];
     if (target_length > 0) {
-      int target = get_target_prime(targets_ptr, max_target_length, b, 1, blank, targets_ndim,
-                                    target_lengths_ptr);
+      int target = get_target_prime(targets_ptr, target_lengths_ptr, max_target_length, b, 1, blank,
+                                    targets_ndim);
       alpha_ptr[alpha_idx + 1] = log_probs_ptr[input_helper.NdIndexToOffset(0, b, target)];
     }
 
     for (IDX t = 1; t < input_length; t++) {
       for (IDX s = 0; s < 2 * target_length + 1; s++) {
-        int current_target_prime = get_target_prime(targets_ptr, max_target_length, b, s, blank,
-                                                    targets_ndim, target_lengths_ptr);
+        int current_target_prime = get_target_prime(targets_ptr, target_lengths_ptr,
+                                                    max_target_length, b, s, blank, targets_ndim);
         T la1 = alpha_ptr[alpha_helper.NdIndexToOffset(b, t - 1, s)];
         T la2, la3, lamax = la1;
         if (s > 0) {
@@ -95,8 +96,8 @@ void CtcLossKernelUtil<DeviceType::kCPU, T, IDX>::CtcLossForward(
           la2 = neginf;
         }
         if ((s > 1)
-            && (get_target_prime(targets_ptr, max_target_length, b, s - 2, blank, targets_ndim,
-                                 target_lengths_ptr)
+            && (get_target_prime(targets_ptr, target_lengths_ptr, max_target_length, b, s - 2,
+                                 blank, targets_ndim)
                 != current_target_prime)) {
           la3 = alpha_ptr[alpha_helper.NdIndexToOffset(b, t - 1, s - 2)];
           if (la3 > lamax) lamax = la3;
@@ -164,8 +165,8 @@ void CtcLossKernelUtil<DeviceType::kCPU, T, IDX>::CtcLossBackward(
           + beta_ptr[beta_helper.NdIndexToOffset(b, input_length - 1, 2 * target_length)];
 
       if (target_length > 0) {
-        int target = get_target_prime(targets_ptr, max_target_length, b, 2 * target_length - 1,
-                                      blank, targets_ndim, target_lengths_ptr);
+        int target = get_target_prime(targets_ptr, target_lengths_ptr, max_target_length, b,
+                                      2 * target_length - 1, blank, targets_ndim);
         beta_ptr[beta_helper.NdIndexToOffset(b, input_length - 1, 2 * target_length - 1)] =
             log_probs_ptr[input_helper.NdIndexToOffset(input_length - 1, b, target)];
         grad_ptr[input_helper.NdIndexToOffset(input_length - 1, b, target)] =
@@ -176,8 +177,8 @@ void CtcLossKernelUtil<DeviceType::kCPU, T, IDX>::CtcLossBackward(
 
     for (IDX t = input_length - 2; t >= 0; t--) {
       for (IDX s = 2 * target_length; s >= 0; s--) {
-        int current_target_prime = get_target_prime(targets_ptr, max_target_length, b, s, blank,
-                                                    targets_ndim, target_lengths_ptr);
+        int current_target_prime = get_target_prime(targets_ptr, target_lengths_ptr,
+                                                    max_target_length, b, s, blank, targets_ndim);
         T lb1 = beta_ptr[beta_helper.NdIndexToOffset(b, t + 1, s)];
         T lb2, lb3, lbmax = lb1;
 
@@ -189,8 +190,8 @@ void CtcLossKernelUtil<DeviceType::kCPU, T, IDX>::CtcLossBackward(
         }
 
         if ((s < 2 * target_length - 1)
-            && (get_target_prime(targets_ptr, max_target_length, b, s + 2, blank, targets_ndim,
-                                 target_lengths_ptr)
+            && (get_target_prime(targets_ptr, target_lengths_ptr, max_target_length, b, s + 2,
+                                 blank, targets_ndim)
                 != current_target_prime)) {
           lb3 = beta_ptr[beta_helper.NdIndexToOffset(b, t + 1, s + 2)];
           if (lb3 > lbmax) lbmax = lb3;

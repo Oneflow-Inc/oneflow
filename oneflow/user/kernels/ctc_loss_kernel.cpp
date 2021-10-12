@@ -125,9 +125,9 @@ class CtcLossGradKernel final : public user_op::OpKernel {
           & (user_op::HobDataType("input_lengths", 0) == OF_PP_PAIR_SECOND(idx_dtype)))      \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                    \
         const Shape& log_probs_shape = ctx->InputShape("log_probs", 0);                      \
-        const Shape& targets_shape = ctx->InputShape("targets", 0);                          \
+        const int64_t max_target_length = ctx->Attr<int64_t>("max_target_length");           \
         int64_t elem_cnt =                                                                   \
-            log_probs_shape.At(1) * log_probs_shape.At(0) * (2 * targets_shape.At(1) + 1);   \
+            log_probs_shape.At(1) * log_probs_shape.At(0) * (2 * max_target_length + 1);     \
         return elem_cnt * sizeof(OF_PP_PAIR_FIRST(dtype));                                   \
       });
 

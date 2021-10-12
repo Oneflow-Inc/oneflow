@@ -20,10 +20,10 @@ namespace oneflow {
 namespace {
 
 template<typename IDX>
-__device__ __inline__ static int get_target_prime(const int* targets_ptr, int64_t max_target_length,
-                                                  int64_t b, int64_t s, int blank,
-                                                  const int32_t targets_ndim,
-                                                  const IDX* target_lengths_ptr) {
+__device__ __inline__ static int get_target_prime(const int* targets_ptr,
+                                                  const IDX* target_lengths_ptr,
+                                                  int64_t max_target_length, int64_t b, int64_t s,
+                                                  int blank, const int32_t targets_ndim) {
   if (s % 2 == 0) {
     return blank;
   } else {
@@ -65,8 +65,8 @@ __global__ void CtcLossGpu(const T* log_probs_ptr, const int* targets_ptr,
       alpha_ptr[alpha_helper.NdIndexToOffset(b, 0, 0)] =
           log_probs_ptr[input_helper.NdIndexToOffset(0, b, blank)];
       if (target_length > 0) {
-        int target = get_target_prime(targets_ptr, max_target_length, b, 1, blank, targets_ndim,
-                                      target_lengths_ptr);
+        int target = get_target_prime(targets_ptr, target_lengths_ptr, max_target_length, b, 1,
+                                      blank, targets_ndim);
         alpha_ptr[alpha_helper.NdIndexToOffset(b, 0, 1)] =
             log_probs_ptr[input_helper.NdIndexToOffset(0, b, target)];
       }
@@ -74,8 +74,8 @@ __global__ void CtcLossGpu(const T* log_probs_ptr, const int* targets_ptr,
     __syncthreads();
     for (IDX t = 1; t < input_length; t++) {
       for (IDX s = tid; s < 2 * target_length + 1; s += blockDim.x) {
-        int current_target_prime = get_target_prime(targets_ptr, max_target_length, b, s, blank,
-                                                    targets_ndim, target_lengths_ptr);
+        int current_target_prime = get_target_prime(targets_ptr, target_lengths_ptr,
+                                                    max_target_length, b, s, blank, targets_ndim);
         T la1 = alpha_ptr[alpha_helper.NdIndexToOffset(b, t - 1, s)];
         T la2, la3, lamax = la1;
         if (s > 0) {
@@ -85,8 +85,8 @@ __global__ void CtcLossGpu(const T* log_probs_ptr, const int* targets_ptr,
           la2 = neginf;
         }
         if ((s > 1)
-            && (get_target_prime(targets_ptr, max_target_length, b, s - 2, blank, targets_ndim,
-                                 target_lengths_ptr)
+            && (get_target_prime(targets_ptr, target_lengths_ptr, max_target_length, b, s - 2,
+                                 blank, targets_ndim)
                 != current_target_prime)) {
           la3 = alpha_ptr[alpha_helper.NdIndexToOffset(b, t - 1, s - 2)];
           if (la3 > lamax) lamax = la3;
@@ -154,8 +154,8 @@ __global__ void CtcLossGradGpu(
         beta_ptr[beta_helper.NdIndexToOffset(b, input_length - 1, 2 * target_length)] =
             log_probs_ptr[input_helper.NdIndexToOffset(input_length - 1, b, blank)];
         if (target_length > 0) {
-          int target = get_target_prime(targets_ptr, max_target_length, b, 2 * target_length - 1,
-                                        blank, targets_ndim, target_lengths_ptr);
+          int target = get_target_prime(targets_ptr, target_lengths_ptr, max_target_length, b,
+                                        2 * target_length - 1, blank, targets_ndim);
           beta_ptr[beta_helper.NdIndexToOffset(b, input_length - 1, 2 * target_length - 1)] =
               log_probs_ptr[input_helper.NdIndexToOffset(input_length - 1, b, target)];
         }
@@ -164,8 +164,8 @@ __global__ void CtcLossGradGpu(
     }
     for (IDX t = input_length - 2; t >= 0; t--) {
       for (IDX s = tid; s < 2 * target_length + 1; s += blockDim.x) {
-        int current_target_prime = get_target_prime(targets_ptr, max_target_length, b, s, blank,
-                                                    targets_ndim, target_lengths_ptr);
+        int current_target_prime = get_target_prime(targets_ptr, target_lengths_ptr,
+                                                    max_target_length, b, s, blank, targets_ndim);
         T lb1 = beta_ptr[beta_helper.NdIndexToOffset(b, t + 1, s)];
         T lb2, lb3, lbmax = lb1;
         if (s < 2 * target_length) {
@@ -175,8 +175,8 @@ __global__ void CtcLossGradGpu(
           lb2 = neginf;
         }
         if ((s < 2 * target_length - 1)
-            && (get_target_prime(targets_ptr, max_target_length, b, s + 2, blank, targets_ndim,
-                                 target_lengths_ptr)
+            && (get_target_prime(targets_ptr, target_lengths_ptr, max_target_length, b, s + 2,
+                                 blank, targets_ndim)
                 != current_target_prime)) {
           lb3 = beta_ptr[beta_helper.NdIndexToOffset(b, t + 1, s + 2)];
           if (lb3 > lbmax) lbmax = lb3;
@@ -203,8 +203,8 @@ __global__ void CtcLossGradGpu(
           alpha_ptr[beta_helper.NdIndexToOffset(b, input_length - 1, 2 * target_length)]
           + beta_ptr[beta_helper.NdIndexToOffset(b, input_length - 1, 2 * target_length)];
       if (target_length > 0) {
-        int target = get_target_prime(targets_ptr, max_target_length, b, 2 * target_length - 1,
-                                      blank, targets_ndim, target_lengths_ptr);
+        int target = get_target_prime(targets_ptr, target_lengths_ptr, max_target_length, b,
+                                      2 * target_length - 1, blank, targets_ndim);
         grad_ptr[input_helper.NdIndexToOffset(input_length - 1, b, target)] =
             alpha_ptr[beta_helper.NdIndexToOffset(b, input_length - 1, 2 * target_length - 1)]
             + beta_ptr[beta_helper.NdIndexToOffset(b, input_length - 1, 2 * target_length - 1)];
@@ -213,8 +213,8 @@ __global__ void CtcLossGradGpu(
     __syncthreads();
     for (IDX t = tid; t < input_length; t += blockDim.x) {
       for (IDX s = 0; (t < input_length - 1) && (s < 2 * target_length + 1); s += 1) {
-        int current_target_prime = get_target_prime(targets_ptr, max_target_length, b, s, blank,
-                                                    targets_ndim, target_lengths_ptr);
+        int current_target_prime = get_target_prime(targets_ptr, target_lengths_ptr,
+                                                    max_target_length, b, s, blank, targets_ndim);
         int64_t idx_t_s = beta_helper.NdIndexToOffset(b, t, s);
         T log_alpha_beta = alpha_ptr[idx_t_s] + beta_ptr[idx_t_s];
         T& lcab = grad_ptr[input_helper.NdIndexToOffset(t, b, current_target_prime)];
