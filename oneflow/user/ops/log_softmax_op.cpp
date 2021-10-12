@@ -19,12 +19,10 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("logsoftmax")
+REGISTER_USER_OP("log_softmax")
     .Input("in")
     .Output("prob")
-    .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       *ctx->OutputShape("prob", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
@@ -34,18 +32,16 @@ REGISTER_USER_OP("logsoftmax")
         ctx->NewBuilder()
             .Split(user_op::OpArg("in", 0), axis)
             .Split(user_op::OpArg("prob", 0), axis)
-            .Split(user_op::OpArg("out", 0), axis)
             .Build();
       }
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("prob", 0) = ctx->InputDType("in", 0);
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("logsoftmax_grad")
+REGISTER_USER_OP("log_softmax_grad")
     .Input("prob")
     .Input("dy")
     .Output("dx")
@@ -74,15 +70,15 @@ REGISTER_USER_OP("logsoftmax_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("logsoftmax")
+REGISTER_USER_OP_GRAD("log_softmax")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("in", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper logsoftmax_grad_op =
-            builder.Op("logsoftmax_grad")
+            builder.Op("log_softmax_grad")
                 .Input("prob", op.output("prob", 0))
-                .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
+                .Input("dy", op.GetGradTensorWithOpOutput("prob", 0))
                 .Output("dx")
                 .Build();
         op.BindGradTensorWithOpInput(logsoftmax_grad_op.output("dx", 0), "in", 0);
@@ -92,5 +88,4 @@ REGISTER_USER_OP_GRAD("logsoftmax")
     });
 
 }  // namespace
-
 }  // namespace oneflow

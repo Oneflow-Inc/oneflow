@@ -77,7 +77,7 @@ def compare_with_tensorflow(
         tf_out = tf.math.square(tf_out)
     loss_diff = test_global_storage.Get("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
-    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-05, atol=1e-05)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-4, atol=1e-04)
     assert np.allclose(
         test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-05, atol=1e-05
     )
