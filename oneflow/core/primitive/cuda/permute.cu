@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/primitive/include/permute.h"
 #include "oneflow/core/primitive/common/permute.h"
 #include "oneflow/core/stream/cuda_stream_context.h"
@@ -27,7 +28,6 @@ namespace permute_internal {
 
 namespace {
 
-constexpr int32_t kBlockRows = 8;
 
 template<size_t num_dims, size_t movement_size, typename IndexType>
 __global__ void PermuteKernel(PermuteKernelParams<num_dims, IndexType> params) {
@@ -46,6 +46,14 @@ __global__ void PermuteKernel(PermuteKernelParams<num_dims, IndexType> params) {
     dst[i] = src[src_offset];
   }
 }
+
+// tile_size = 32 x 32
+constexpr int32_t tile_size = 32;
+constexpr int32_t kBlockRows = 8;
+
+// tile_size = 64x64
+// constexpr int32_t tile_size = 64;
+// constexpr int32_t kBlockRows = 16;
 
 // (B, X, Y) -> (B, Y, X), refer from
 // https://developer.nvidia.com/blog/efficient-matrix-transpose-cuda-cc/
@@ -113,6 +121,46 @@ void LaunchBatchPermuteKernel(StreamContext* stream_ctx,
                                              // elements to 32x32 share memory.
 }
 
+// (B, X, Y) -> (B, Y, X), refer from
+// https://developer.nvidia.com/blog/efficient-matrix-transpose-cuda-cc/
+// have BUG!
+// N is redundant?
+template<size_t num_dims, size_t movement_size, typename IndexType>
+__global__ void CopyKernel(PermuteKernelParams<num_dims, IndexType> params, IndexType H,
+                                   IndexType W) {
+  using T = typename std::aligned_storage<movement_size, movement_size>::type;
+  const T* src = reinterpret_cast<const T*>(params.src);
+  T* dst = reinterpret_cast<T*>(params.dst);
+  CUDA_1D_KERNEL_LOOP(i, params.count){
+    dst[i] = src[i]; 
+  }
+}
+
+template<size_t num_dims, size_t tile_size, size_t movement_size, int32_t kBlockRows, typename IndexType>
+void LaunchCopyKernel(StreamContext* stream_ctx,
+                      PermuteKernelParams<num_dims, IndexType> params, IndexType& n,
+                      IndexType& h, IndexType& w) {
+  cudaStream_t cuda_stream =
+      CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
+
+  // IndexType dh = (h + tile_size - 1) / tile_size;
+  // IndexType dw = (w + tile_size - 1) / tile_size;
+  // printf("Dh is: %d \n", dh);
+  // printf("Dw is: %d \n", dw);
+
+  // const int32_t grid_size = n * dh * dw;
+  const int32_t thread_num = tile_size*kBlockRows; 
+  const int32_t grid_size = (params.count + thread_num -1) / thread_num; 
+  int32_t checked_grid_size = std::min(grid_size, kCudaMaxBlocksNum);
+  printf("Use Copy Kernel!!! \n");
+  printf("Checked grid size is: %d \n", checked_grid_size);
+
+  CopyKernel<num_dims, 1, IndexType>
+      <<<checked_grid_size, thread_num, 0, cuda_stream>>>(params, h, w); 
+}
+
+
+
 template<size_t tile_size, typename IndexType>
 bool CheckIfGreaterThanTileSize(IndexType& h, IndexType& w) {
   // H W should be less than tile size.
@@ -139,49 +187,54 @@ template<size_t num_dims, size_t movement_size, typename IndexType>
 void LaunchKernel(StreamContext* stream_ctx, PermuteKernelParams<num_dims, IndexType> params) {
   cudaStream_t cuda_stream =
       CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
-  constexpr int32_t tile_size = 32;
 
-  if (num_dims == 2 || num_dims == 3) {
-    IndexType n;
-    IndexType h;
-    IndexType w;
-    if (num_dims == 2) {
-      IndexType global_index[2];
-      params.src_index_helper.OffsetToNdIndex(params.count - 1, global_index);
-      /*
-      For example: assume dim is (4, 6), offset = 24.
-      offset-1=23, convet back to NdIndex is (3, 5), cause index start from zero and we need to
-      subtract 1. then we add 1 to all the NdIndex to get the actual dim.
-      */
-      n = 1;
-      h = global_index[0] + 1;
-      w = global_index[1] + 1;
-    } else {
-      IndexType global_index[3];
-      params.src_index_helper.OffsetToNdIndex(params.count - 1, global_index);
-      n = global_index[0] + 1;
-      h = global_index[1] + 1;
-      w = global_index[2] + 1;
-    }
-    printf("n is: %d \n", n);
-    printf("h is: %d \n", h);
-    printf("w is: %d \n", w);
-    if (CheckLaunchBatchPermute<num_dims, tile_size>(params, n, h, w)) {
-      LaunchBatchPermuteKernel<num_dims, movement_size, tile_size, IndexType>(stream_ctx, params, n,
-                                                                              h, w);
-    } else {
-      PermuteKernel<num_dims, movement_size, IndexType>
-          <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params);
-    }
-  } else {
-    PermuteKernel<num_dims, movement_size, IndexType>
-        <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params);
-  }
+  // if (num_dims == 2 || num_dims == 3) {
+  //   IndexType n;
+  //   IndexType h;
+  //   IndexType w;
+  //   if (num_dims == 2) {
+  //     IndexType global_index[2];
+  //     params.src_index_helper.OffsetToNdIndex(params.count - 1, global_index);
+  //     /*
+  //     For example: assume dim is (4, 6), offset = 24.
+  //     offset-1=23, convet back to NdIndex is (3, 5), cause index start from zero and we need to
+  //     subtract 1. then we add 1 to all the NdIndex to get the actual dim.
+  //     */
+  //     n = 1;
+  //     h = global_index[0] + 1;
+  //     w = global_index[1] + 1;
+  //   } else {
+  //     IndexType global_index[3];
+  //     params.src_index_helper.OffsetToNdIndex(params.count - 1, global_index);
+  //     n = global_index[0] + 1;
+  //     h = global_index[1] + 1;
+  //     w = global_index[2] + 1;
+  //   }
+  //   printf("n is: %d \n", n);
+  //   printf("h is: %d \n", h);
+  //   printf("w is: %d \n", w);
+  //   if (CheckLaunchBatchPermute<num_dims, tile_size>(params, n, h, w)) {
+  //     LaunchBatchPermuteKernel<num_dims, movement_size, tile_size, IndexType>(stream_ctx, params, n,
+  //                                                                             h, w);
+  //   } else {
+  //     PermuteKernel<num_dims, movement_size, IndexType>
+  //         <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params);
+  //   }
+  // } else {
+  //   PermuteKernel<num_dims, movement_size, IndexType>
+  //       <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params);
+  // }
 
   // // ZZK： Just for profile!
   // PermuteKernel<num_dims, movement_size, IndexType>
   //       <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0,
   //       cuda_stream>>>(params);
+
+  // // ZZK: Just for Baseline!
+  IndexType n = 0; 
+  IndexType h = 0; 
+  IndexType w = 0; 
+  LaunchCopyKernel<num_dims, tile_size, movement_size, kBlockRows, IndexType>(stream_ctx, params, n, h, w);  
 }
 
 class PermuteImpl : public Permute, public CudaGraphSupport {
