@@ -512,11 +512,11 @@ template<typename perf_t>
 perf_t FindCudnnConvAlgorithmWithResource(CudnnConvArgs* args, CudnnConvResource* res) {
   auto Infer = [args, res](const CudnnConvParams& params) {
     std::vector<perf_t> perf_vec;
-    if (args->heuristic) {
-      CudnnConvAlgorithmSearch<perf_t>::HeuristicSearch(*args, res, &perf_vec);
-    } else {
-      CudnnConvAlgorithmSearch<perf_t>::ExhaustiveSearch(*args, res, &perf_vec);
-    }
+    // if (args->heuristic) {
+    //   CudnnConvAlgorithmSearch<perf_t>::HeuristicSearch(*args, res, &perf_vec);
+    // } else {
+    CudnnConvAlgorithmSearch<perf_t>::ExhaustiveSearch(*args, res, &perf_vec);
+    // }
     return GetBestAlgorithm<perf_t>(*args, res, perf_vec);
   };
   return Global<CudnnConvAlgoCache>::Get()->Remember<perf_t>(args->params, Infer);

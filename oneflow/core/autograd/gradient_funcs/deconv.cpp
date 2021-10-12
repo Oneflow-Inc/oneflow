@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -78,19 +79,32 @@ Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdCaptureState* ctx,
                                    const TensorTuple& out_grads, TensorTuple* in_grads) const {
   in_grads->resize(2);
   if (ctx->activation_requires_grad) {
+    const auto& x = ctx->SavedTensors().at(1);
+    std::vector<int64_t> start, stop, step;
+    for (int i = 0; i < x->shape()->NumAxes(); i++) {
+      start.push_back(0);
+      stop.push_back(x->shape()->At(i));
+      step.push_back(1);
+    }
     const auto& weight = ctx->SavedTensors().at(0);
     if (ctx->ndims == 1) {
-      in_grads->at(0) =
+      std::shared_ptr<Tensor> result =
           JUST(functional::Conv1d(out_grads.at(0), weight, Optional<Tensor>(), ctx->strides,
                                   ctx->padding_before, ctx->dilation_rate, /*groups=*/1));
+      result = JUST(functional::Slice(result, start, stop, step));
+      in_grads->at(0) = result;
     } else if (ctx->ndims == 2) {
-      in_grads->at(0) =
+      std::shared_ptr<Tensor> result =
           JUST(functional::Conv2d(out_grads.at(0), weight, Optional<Tensor>(), ctx->strides,
                                   ctx->padding_before, ctx->dilation_rate, /*groups=*/1));
+      result = JUST(functional::Slice(result, start, stop, step));
+      in_grads->at(0) = result;
     } else if (ctx->ndims == 3) {
-      in_grads->at(0) =
+      std::shared_ptr<Tensor> result =
           JUST(functional::Conv3d(out_grads.at(0), weight, Optional<Tensor>(), ctx->strides,
                                   ctx->padding_before, ctx->dilation_rate, /*groups=*/1));
+      result = JUST(functional::Slice(result, start, stop, step));
+      in_grads->at(0) = result;
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Invalid ndim " << ctx->ndims << " for conv functor";
     }

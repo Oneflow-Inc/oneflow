@@ -287,6 +287,7 @@ class TestConvTranspose(flow.unittest.TestCase):
             kernel_size=random(1, 4),
             stride=random() | nothing(),
             padding=random(1, 3).to(int) | nothing(),
+            output_padding=random(1, 3).to(int) | nothing(),
             dilation=random(1, 5) | nothing(),
             groups=random(1, 5) | nothing(),
             padding_mode=constant("zeros") | nothing(),
