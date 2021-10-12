@@ -1385,7 +1385,7 @@ class TensorGetItemFunctor {
     }();
     std::shared_ptr<one::Tensor> result;
     if (is_identity) {
-      result = JUST(Identity(expand_input));
+      result = expand_input;
     } else {
       result = JUST(Slice(expand_input, start, end, step));
     }
@@ -1393,6 +1393,9 @@ class TensorGetItemFunctor {
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
     if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
     if (!tensor_indices.empty()) { result = JUST(ApplyAdvancedIndexing(result, tensor_indices)); }
+
+    // TODO(): Returns a view of tensor `x`.
+    if (result == x) { result = JUST(Identity(x)); }
     return result;
   }
 };
