@@ -69,7 +69,6 @@ class PermuteFactoryImpl : public PermuteFactory {
 
   std::unique_ptr<Permute> New(size_t max_num_dims) override {
     if (max_num_dims <= kMaxNumDims) {
-      printf("is less! \n");
       return std::unique_ptr<Permute>(new PermuteImpl());
     } else {
       return nullptr;
