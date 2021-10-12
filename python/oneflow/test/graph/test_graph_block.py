@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
+import oneflow.framework.graph_build_util as graph_build_util
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -104,6 +105,62 @@ class TestGraphBlock(flow.unittest.TestCase):
         linear_t_g = LinearTrainGraph()
 
         linear_t_g(x)
+
+    def test_block_with_list_container(test_case):
+        class SubModule0(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linear = flow.nn.Linear(10, 10, False)
+
+            def forward(self, x):
+                if graph_build_util.lazy_mode.is_enabled():
+                    scope = oneflow.current_scope()
+                    scope_proto = graph_build_util.scope_to_proto(scope)
+                    ck_bool = scope_proto.attr_name2attr_value["checkpointing"].at_bool
+                    test_case.assertEqual(ck_bool, True)
+                out = self.linear(x)
+                return out
+
+        list_of_m = [SubModule0() for i in range(3)]
+
+        class ModuleListModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linears = flow.nn.ModuleList(list_of_m)
+
+            def forward(self, x):
+                for i, _ in enumerate(self.linears):
+                    x = self.linears[i](x)
+                return x
+
+        class ModuleListGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.linears = flow.nn.ModuleList(list_of_m)
+                for i, _ in enumerate(self.linears):
+                    x = self.linears[i].config.activation_checkpointing = True
+                # self.params = flow.nn.ParameterList(
+                #    [flow.nn.Parameter(flow.randn(10, 10), True) for i in range(10)]
+                # )
+
+            def build(self, x):
+                # ModuleList can act as an iterable, or be indexed using ints
+                for i, _ in enumerate(self.linears):
+                    x = self.linears[i](x)
+
+                # for i, _ in enumerate(self.params):
+                #    self.params[i // 2].config._stage_id = 0
+                return x
+
+        module_list_m = ModuleListModule()
+        module_list_g = ModuleListGraph()
+
+        input = flow.tensor(np.random.randn(4, 10), dtype=flow.float32)
+        output_m = module_list_m(input)
+        output_g = module_list_g(input)
+
+        print(module_list_g)
+        test_case.assertTrue(np.array_equal(output_m.numpy(), output_g.numpy()))
 
 
 if __name__ == "__main__":

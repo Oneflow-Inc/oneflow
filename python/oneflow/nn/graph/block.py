@@ -26,6 +26,7 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.container import *
 from oneflow.nn.utils.container import *
 from oneflow.nn.parameter import Parameter
+from oneflow.nn.graph.block_config import BlockConfig
 from oneflow.nn.graph.util import add_indent, seq_to_func_return
 
 
@@ -63,9 +64,9 @@ class Block(object):
         self._name_prefix = prefix
         self._type = BlockType.NONE
         self._origin = None
-        self.config = BlockConfig()
         self._scope = None
         self._prev_scope = None
+        self.config = BlockConfig()
 
     @property
     def name(self):
@@ -494,7 +495,7 @@ class ModuleBlock(Block):
     def __repr__(self):
         lines = None
         child_lines = []
-        if not self.config._is_null:
+        if (self.config is not None) and (not self.config._is_null):
             child_lines.append(add_indent(repr(self.config), 2))
         if len(self._args_repr) > 0:
             for in_str in self._args_repr:
@@ -631,6 +632,9 @@ class ModuleListBlock(get_list(ModuleBlock)):
         self._name_prefix = prefix
         self._name = name
         self.set_origin(origin)
+        # MoudleList is a container without forward() method,
+        # so it will not be executed or has an execution config.
+        self.config = None
 
 
 class ModuleDictBlock(get_dict(ModuleBlock)):
@@ -661,65 +665,3 @@ class ParameterDictBlock(get_para_dict(ModuleBlock)):
         self._name_prefix = prefix
         self._name = name
         self.set_origin(origin)
-
-
-class BlockConfig(object):
-    r"""Configurations on Block in nn.Graph.
-    """
-
-    def __init__(self):
-        self._is_null = True
-        self._stage_id = None
-        self._activation_checkpointing = None
-
-    @property
-    def stage_id(self):
-        r"""Get stage id of Block in pipeline parallelism.
-        """
-        return self._stage_id
-
-    @stage_id.setter
-    def stage_id(self, value: int = None):
-        r"""Set stage id of Block in pipeline parallelism.
-        Set different module's stage id to hint the graph preparing right num of buffers in pipeline.
-        """
-        self._is_null = False
-        self._stage_id = value
-
-    @property
-    def activation_checkpointing(self):
-        r"""Get whether do activation checkpointing in this Block.
-        """
-        return self._activation_checkpointing
-
-    @activation_checkpointing.setter
-    def activation_checkpointing(self, value: bool = False):
-        r"""Set whether do activation checkpointing in this Block.
-        """
-        self._is_null = False
-        self._activation_checkpointing = value
-
-    def __repr__(self):
-        main_str = (
-            "("
-            + "CONFIG"
-            + ":config:"
-            + self.__class__.__name__
-            + "("
-            + (
-                ("stage_id=" + str(self.stage_id) + ", ")
-                if self.stage_id is not None
-                else ""
-            )
-            + (
-                (
-                    "activation_checkpointing="
-                    + str(self.activation_checkpointing)
-                    + ", "
-                )
-                if self.activation_checkpointing is not None
-                else ""
-            )
-            + "))"
-        )
-        return main_str
