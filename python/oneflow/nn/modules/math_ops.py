@@ -27,7 +27,7 @@ from oneflow.ops.transpose_util import (
 
 
 @register_tensor_op("var")
-def variance_op(input, dim=None, unbiased=True, keepdim=False):
+def variance_op(input, dim=None, unbiased=None, keepdim=False):
     """Returns the variance of each row of the `input` tensor in the given dimension `dim`.
 
     If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension(s) `dim` 
@@ -50,25 +50,16 @@ def variance_op(input, dim=None, unbiased=True, keepdim=False):
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> np_arr = np.random.randn(2,3,4,5)
-        >>> input = flow.Tensor(np_arr)
+        >>> input = flow.tensor(np.random.randn(2, 3, 4, 5))
         >>> output = flow.var(input, 1, True)
 
     """
-    input_shape = input.shape
-    axis = _check_axis(dim, input_shape)
-    input_shape_dim = 1
-    for x in axis:
-        input_shape_dim *= input_shape[x]
-    if unbiased:
-        input_shape_dim -= 1
-    res = flow.sum(
-        flow.square(input - flow.mean(input, dim=axis, keepdim=True)),
-        dim=axis,
-        keepdim=keepdim,
-    )
-    return res / input_shape_dim
+    return flow._C.var(input, dim, unbiased, keepdim)
 
+
+def variance_op(input, unbiased=False):
+    dim = [i for i in range(input.ndim)]
+    return flow._C.var(input, dim, unbiased, False)
 
 @register_tensor_op("sub")
 def _sub(input, other):
@@ -622,7 +613,7 @@ def std_op(input, dim, unbiased=False, keepdim=False):
         >>> import numpy as np
         
         >>> arr = np.array([1.0, 2.0, 3.0])
-        >>> input = flow.Tensor(arr)
+        >>> input = flow.tensor(arr)
         >>> output = flow.std(input, dim=0).numpy()
         >>> output
         array(0.8164968, dtype=float32)
