@@ -210,6 +210,59 @@ class TestGraphBlock(flow.unittest.TestCase):
         print(module_list_g)
         test_case.assertTrue(np.array_equal(output_m.numpy(), output_g.numpy()))
 
+    def test_block_with_dict_container(test_case):
+        class SubModule0(flow.nn.Module):
+            def __init__(self, out):
+                super().__init__()
+                self.linear = flow.nn.Linear(10, out, False)
+
+            def forward(self, x):
+                if graph_build_util.lazy_mode.is_enabled():
+                    scope = oneflow.current_scope()
+                    scope_proto = graph_build_util.scope_to_proto(scope)
+                    ck_bool = scope_proto.attr_name2attr_value["checkpointing"].at_bool
+                    test_case.assertEqual(ck_bool, True)
+                out = self.linear(x)
+                return out
+
+        dict_of_m = {"0": SubModule0(10), "1": SubModule0(6)}
+
+        class ModuleDictModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linears = flow.nn.ModuleDict(dict_of_m)
+
+            def forward(self, x):
+                x = self.linears["0"](x)
+                x = self.linears["1"](x)
+                return x
+
+        class ModuleDictGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.linears = flow.nn.ModuleDict(dict_of_m)
+
+                # NOTE: ModuleDict doesn't have config.
+                # self.linears.config.activation_checkpointing = True
+                for k, _ in self.linears.items():
+                    self.linears[k].config.activation_checkpointing = True
+
+            def build(self, x):
+                # ModuleDict can act as an iterable, or get using key
+                x = self.linears["0"](x)
+                x = self.linears["1"](x)
+                return x
+
+        module_dict_m = ModuleDictModule()
+        module_dict_g = ModuleDictGraph()
+
+        input = flow.tensor(np.random.randn(4, 10), dtype=flow.float32)
+        output_m = module_dict_m(input)
+        output_g = module_dict_g(input)
+
+        print(module_dict_g)
+        test_case.assertTrue(np.array_equal(output_m.numpy(), output_g.numpy()))
+
 
 if __name__ == "__main__":
     unittest.main()
