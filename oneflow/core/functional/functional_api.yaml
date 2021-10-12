@@ -257,6 +257,10 @@
   signature: "Tensor (Tensor x) => Square"
   bind_python: True
 
+- name: "std"
+  signature: "Tensor (Tensor x, Int32List[1] dim, Bool unbiased=False, Bool keepdim=False) => StandardDeviation"
+  bind_python: True
+
 - name: "relu"
   signature: "Tensor (Tensor x, Bool inplace=False) => Relu"
   bind_python: True

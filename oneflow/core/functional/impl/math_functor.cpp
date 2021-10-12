@@ -980,6 +980,46 @@ class ScalarLogicalXor2Functor {
   }
 };
 
+
+class StandardDeviationFunctor {
+ public:
+  Maybe<Tensor> operator()(
+    const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& dim, const bool unbiased, const bool keepdim
+  ) const {
+    const int32_t ndim = input->shape()->NumAxes();
+    CHECK_GE_OR_RETURN(ndim, dim.size()) 
+      << "Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim-1 << "], but got " << dim.size();
+    
+    std::vector<int32_t> axis(dim.begin(), dim.end());
+    CheckAxis(axis, *input->shape());
+
+    if(axis.size()==0){
+      return functional::Constant(*input->shape(), Scalar(0), *input->dtype(), NullOpt); 
+    }
+
+    int32_t reduce_count = 1;
+    if (axis.size()==1){
+      for(int i=0; i <= axis[0]; ++i){
+        reduce_count *= input->shape()->At(i);
+      }
+    }else{
+      for(int i=0; i < axis.size(); ++i){
+        reduce_count *= input->shape()->At(axis[i]);
+      }
+    }
+    
+    const auto& mean = JUST(functional::ReduceMean(input, axis, keepdim));
+    const auto& sub = JUST(functional::Sub(input, mean));
+    const auto& square = JUST(functional::Square(sub));
+    const auto& sum = JUST(functional::ReduceSum(square, axis, keepdim));
+    if (unbiased){
+      reduce_count -= 1;
+    }
+    return functional::Sqrt(JUST(functional::ScalarDiv(sum, Scalar(reduce_count))));
+  }
+
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -1023,6 +1063,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarLogicalAndFunctor, ScalarLogicalAnd2Functor>("ScalarLogicalAnd");
   m.add_functor<ScalarLogicalOrFunctor, ScalarLogicalOr2Functor>("ScalarLogicalOr");
   m.add_functor<ScalarLogicalXorFunctor, ScalarLogicalXor2Functor>("ScalarLogicalXor");
+  m.add_functor<StandardDeviationFunctor>("StandardDeviation");
 };
 
 }  // namespace functional

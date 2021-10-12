@@ -628,24 +628,7 @@ def std_op(input, dim, unbiased=False, keepdim=False):
         array(0.8164968, dtype=float32)
 
     """
-
-    assert unbiased == False, "Only support 'unbiased=False' for now!"
-    reduce_count = 1
-
-    axis = _check_axis(dim, input.shape)
-    if isinstance(axis, list) and len(axis) == 0:
-        return flow.zeros(input.shape)
-    else:
-        if len(axis) == 0:
-            reduce_count = input.nelement()
-        else:
-            for i in axis:
-                reduce_count *= input.shape[i]
-        sum = flow.sum(flow._C.square(input), axis, keepdim) / reduce_count
-        square = flow._C.square(flow.sum(input, axis, keepdim) / reduce_count)
-        subtract = flow._C.sub(sum, square)
-        res = flow._C.sqrt(subtract)
-        return res
+    return flow._C.std(input, dim, unbiased, keepdim)
 
 
 def addmm(x, mat1, mat2, alpha=1, beta=1):
