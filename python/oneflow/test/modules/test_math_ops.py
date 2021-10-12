@@ -51,8 +51,9 @@ class TestInplaceSin(flow.unittest.TestCase):
     def test_flow_inplace_sin_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
-        x.sin_()
-        return x
+        y = x + 1  # transform to non-leaf tensor
+        y.sin_()
+        return y
 
 
 def _test_cos(test_case, shape, device):
