@@ -315,6 +315,48 @@ jobs:
           src-dir: ${{ env.WHEELHOUSE_DIR }}
           dst-dir: whl
 
+  build-with-clang:
+    name: Build with clang
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    runs-on: [self-hosted, linux, build]
+    steps:
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-input-delete-cache
+        name: Save cache if successful
+        id: save-cache
+        timeout-minutes: 5
+        with:
+          oneflow-src: .
+          entry: build-with-clang
+          digest-type: build
+          mark-as-completed: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+      - name: Fix permissions
+        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
+        run: |
+          set -x
+          docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
+      - name: Checkout Oneflow-Inc/oneflow
+        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
+        uses: actions/checkout@v2
+      - name: Checkout Oneflow-Inc/conda-env
+        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/conda-env
+          ref: 30a7f00eb48ee9009d85a848e720823e5054c66b
+          path: conda-env
+      - uses: Oneflow-Inc/get-oneflow@add-input-delete-cache
+        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
+        name: Build with clang10
+        with:
+          cmake-init-cache: cmake/caches/ci/gh-hosted/cpu-clang.cmake
+          oneflow-src: .
+          oneflow-build-env: conda
+          conda-env-file: conda-env/dev/clang10/environment-v2.yml
+          conda-env-name: oneflow-dev-clang10-v2
+          conda-installer-url: https://oneflow-static.oss-cn-beijing.aliyuncs.com/downloads/conda-installers/Miniconda3-py39_4.10.3-Linux-x86_64.sh
+          conda-prefix: ~/miniconda3-prefixes/py39_4.10.3
+          self-hosted: true
+
   find-test-cache:
     name: "Find test cache"
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
