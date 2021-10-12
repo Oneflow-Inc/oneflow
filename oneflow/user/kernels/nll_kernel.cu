@@ -33,13 +33,13 @@ __global__ RETURN_VOID_IF_NOT_HALF ComputeNllOutNone(const int64_t num_instances
                                                      const T* input, const K* target, T* out,
                                                      const T* weight, T* total_weight) {
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
-    assert(target[i] >= 0);
-    assert(target[i] < num_classes);
     K label = target[i];
     if (label == ignore_index) {
       out[i] = 0;
       continue;
     }
+    assert(label >= 0);
+    assert(label < num_classes);
     T cur_weight = weight == nullptr ? 1 : weight[label];
     *total_weight += cur_weight;
     out[i] = -input[i * num_classes + label] * cur_weight;
@@ -53,13 +53,13 @@ __global__ RETURN_VOID_IF_HALF ComputeNllOutNone(const int64_t num_instances, co
                                                  T* total_weight) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
-    assert(target[i] >= 0);
-    assert(target[i] < num_classes);
     K label = target[i];
     if (label == ignore_index) {
       out[i] = 0;
       continue;
     }
+    assert(label >= 0);
+    assert(label < num_classes);
     const half cur_weight = weight == nullptr ? __float2half(1.0) : weight[label];
     *total_weight = __hadd(*total_weight, cur_weight);
     out[i] = __float2half(-__half2float(input[i * num_classes + label] * cur_weight));
@@ -81,10 +81,10 @@ __global__ RETURN_VOID_IF_NOT_HALF ComputeNllOutReduce(const int64_t num_instanc
   T weight_thread_sum = static_cast<T>(0);
   T out_thread_sum = static_cast<T>(0);
   for (int i = threadIdx.x; i < num_instances; i += kCudaThreadsNumPerBlock) {
-    assert(target[i] >= 0);
-    assert(target[i] < num_classes);
     K label = target[i];
     if (label == ignore_index) { continue; }
+    assert(label >= 0);
+    assert(label < num_classes);
     T cur_weight = weight == nullptr ? 1 : weight[label];
     weight_thread_sum += cur_weight;
     out_thread_sum -= input[i * num_classes + label] * cur_weight;
@@ -110,10 +110,10 @@ __global__ RETURN_VOID_IF_HALF ComputeNllOutReduce(const int64_t num_instances, 
   half weight_thread_sum = __float2half(0);
   half out_thread_sum = __float2half(0);
   for (int i = threadIdx.x; i < num_instances; i += kCudaThreadsNumPerBlock) {
-    assert(target[i] >= 0);
-    assert(target[i] < num_classes);
     K label = target[i];
     if (label == ignore_index) { continue; }
+    assert(label >= 0);
+    assert(label < num_classes);
     const half cur_weight = weight == nullptr ? __float2half(1.0) : weight[label];
     weight_thread_sum = __hadd(weight_thread_sum, cur_weight);
     out_thread_sum = __hsub(out_thread_sum, __hmul(input[i * num_classes + label], cur_weight));
@@ -139,10 +139,10 @@ __global__ RETURN_VOID_IF_NOT_HALF ComputeNllGradOut(const int64_t num_instances
                                                      const T* weight, const T* total_weight,
                                                      const ReductionType reduction_type) {
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
-    assert(target[i] >= 0);
-    assert(target[i] < num_classes);
     K label = target[i];
     if (label == ignore_index) { continue; }
+    assert(label >= 0);
+    assert(label < num_classes);
     T cur_weight = weight == nullptr ? -1 : -weight[label];
     dx[i * num_classes + label] =
         (reduction_type == ReductionType::kNone ? dy[i] : (*dy)) * cur_weight;
@@ -157,10 +157,10 @@ __global__ RETURN_VOID_IF_HALF ComputeNllGradOut(const int64_t num_instances, co
                                                  const ReductionType reduction_type) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
-    assert(target[i] >= 0);
-    assert(target[i] < num_classes);
     K label = target[i];
     if (label == ignore_index) { continue; }
+    assert(label >= 0);
+    assert(label < num_classes);
     const half cur_weight = weight == nullptr ? __float2half(-1.0) : __hneg(weight[label]);
     dx[i * num_classes + label] =
         __hmul(reduction_type == ReductionType::kNone ? dy[i] : (*dy), cur_weight);
