@@ -39,37 +39,6 @@ T = TypeVar("T")
 
 def get_seq(T):
     class SequentialContainer(T):
-        """A sequential container.
-        Modules will be added to it in the order they are passed in the constructor.
-        Alternatively, an ordered dict of modules can also be passed in.
-    
-        To make it easier to understand, here is a small example:
-    
-        .. code-block:: python
-    
-            >>> import oneflow.nn as nn
-            >>> nn.Sequential(nn.Conv2d(1,20,5), nn.ReLU(), nn.Conv2d(20,64,5), nn.ReLU()) #doctest: +ELLIPSIS
-            Sequential(
-              (0): Conv2d(1, 20, kernel_size=(5, 5), stride=(1, 1))
-              (1): ReLU()
-              (2): Conv2d(20, 64, kernel_size=(5, 5), stride=(1, 1))
-              (3): ReLU()
-            )
-            >>> nn.Sequential(OrderedDict([
-            ...    ('conv1', nn.Conv2d(1,20,5)),
-            ...    ('relu1', nn.ReLU()),
-            ...    ('conv2', nn.Conv2d(20,64,5)),
-            ...    ('relu2', nn.ReLU())
-            ... ])) #doctest: +ELLIPSIS
-            Sequential(
-              (conv1): Conv2d(1, 20, kernel_size=(5, 5), stride=(1, 1))
-              (relu1): ReLU()
-              (conv2): Conv2d(20, 64, kernel_size=(5, 5), stride=(1, 1))
-              (relu2): ReLU()
-            )
-    
-        """
-
         @overload
         def __init__(self, *args: T) -> None:
             ...
@@ -548,9 +517,3 @@ def get_para_dict(T):
             return super(ParameterDictContainer, self)._replicate_for_data_parallel()
 
     return ParameterDictContainer
-
-
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod(raise_on_error=True)
