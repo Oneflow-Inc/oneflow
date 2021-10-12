@@ -46,10 +46,12 @@ namespace oneflow {
 
 enum class SocketMsgType {
   kActor,
-#define MAKE_ENTRY(x, y) k##x,
-  OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ)
-#undef MAKE_ENTRY
-
+  kRequestWrite,
+  kRequestRead,
+  kTransport,
+// #define MAKE_ENTRY(x, y) k##x,
+//   OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ)
+// #undef MAKE_ENTRY
 };
 
 struct RequestWriteMsg {

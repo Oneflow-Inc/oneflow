@@ -50,6 +50,7 @@ void SocketWriteHelper::AsyncWrite(const SocketMsg& msg) {
   bool need_send_event = pending_msg_queue_->empty();
   pending_msg_queue_->push(msg);
   pending_msg_queue_mtx_.unlock();
+  std::cout<<"SocketWriteHelper::AsyncWrit,the msg_type:"<<msg.msg_type << std::endl;
   std::cout<<"SocketWriteHelper,::AsyncWrite, the sockfd_:"<<sockfd_ <<" and the queue_not_empty_fd:"<<queue_not_empty_fd_<<std::endl;
   std::cout<<"SocketWriteHelper::AsyncWrite,the write_size:"<<write_size_ << std::endl;
   if (need_send_event) { SendQueueNotEmptyEvent(); }
