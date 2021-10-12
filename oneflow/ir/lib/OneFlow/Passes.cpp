@@ -52,7 +52,7 @@ limitations under the License.
 using namespace mlir;
 using namespace mlir::oneflow;
 
-LogicalResult dumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
+LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
   auto context = rewriter.getContext();
   OpBuilder builder(context);
   OwningModuleRef jit_module(
@@ -148,7 +148,7 @@ LogicalResult dumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
           SmallVector<::mlir::Value, 2>({cast_op_.y(), created.body().front().getArgument(1)}),
           /* attributes */ mul_op->getAttrs());
       rewriter.create<ReturnOp>(mul_op->getLoc(), scalar_mul.y());
-      assert(dumpAssembly(rewriter, created).succeeded());
+      assert(DumpAssembly(rewriter, created).succeeded());
       cast_op.erase();
       return created->getResults();
     }
