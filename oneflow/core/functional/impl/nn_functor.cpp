@@ -126,7 +126,7 @@ class DeConvBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& weight,
                            const Optional<one::Tensor>& bias, const int32_t& filters,
-                           const std::vector<int32_t>& padding, const std::string data_format,
+                           const std::vector<int32_t>& padding, const std::string& data_format,
                            const std::vector<int32_t>& kernel_size,
                            const std::vector<int32_t>& output_padding,
                            const std::vector<int32_t>& strides,
