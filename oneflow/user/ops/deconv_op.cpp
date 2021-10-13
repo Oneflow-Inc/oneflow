@@ -50,8 +50,6 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
       out_shape.at(idx_offset + i) = (in.shape().At(idx_offset + i) - 1) * strides.at(i)
                                      - 2 * padding_before.at(i) + output_padding.at(i)
                                      + effective_filter_size;
-      std::stringstream err;
-      std::cout << out_shape.at(idx_offset + i) << std::endl;
     }
     for (int i = 0; i < out_shape.size(); i++) {
       CHECK_GT_OR_RETURN(out_shape[i], 0)
