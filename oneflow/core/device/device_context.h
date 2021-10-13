@@ -37,15 +37,7 @@ class DeviceCtx {
     UNIMPLEMENTED();
     return nullptr;
   }
-  virtual cublasHandle_t cublas_pmh_handle() const {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-  virtual cublasHandle_t cublas_pmd_handle() const {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-  virtual cublasHandle_t cublas_tensor_op_math_handle() const {
+  virtual cublasHandle_t cublas_handle() const {
     UNIMPLEMENTED();
     return nullptr;
   }

@@ -34,9 +34,7 @@ class CudaStreamContext : public StreamContext {
   ~CudaStreamContext() override = default;
 
   virtual cudaStream_t cuda_stream() const = 0;
-  virtual cublasHandle_t cublas_pmh_handle() const = 0;
-  virtual cublasHandle_t cublas_tensor_op_math_handle() const = 0;
-  virtual cublasHandle_t cublas_pmd_handle() const = 0;
+  virtual cublasHandle_t cublas_handle() const = 0;
   virtual cudnnHandle_t cudnn_handle() const = 0;
 };
 
