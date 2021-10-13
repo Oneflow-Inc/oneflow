@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/util/cuda_blas_interface.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/register/blob.h"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
 
 namespace oneflow {
@@ -56,16 +55,10 @@ void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE tra
   std::tie(lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
       PrepareToCallCublasGemm(trans_a, trans_b, m, n, k);
 
-  cublasHandle_t handle;
-  if (std::is_same<T, half>::value) {
-    handle = ctx->cublas_tensor_op_math_handle();
-  } else {
-    handle = ctx->cublas_pmh_handle();
-  }
   const T alpha_val = static_cast<T>(alpha);
   const T beta_val = static_cast<T>(beta);
-  cublas_gemm<T>(handle, cublas_trans_b, cublas_trans_a, n, m, k, &alpha_val, b, ldb, a, lda,
-                 &beta_val, c, ldc);
+  cublas_gemm<T>(ctx->cublas_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha_val, b, ldb,
+                 a, lda, &beta_val, c, ldc);
 }
 
 template<>
@@ -78,15 +71,19 @@ void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE tra
   cublasOperation_t cublas_trans_a, cublas_trans_b;
   std::tie(lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
       PrepareToCallCublasGemm(trans_a, trans_b, m, n, k);
+#if CUDA_VERSION < 11000
+  CublasMathModeGuard guard(ctx->cublas_handle(), CUBLAS_TENSOR_OP_MATH);
+#else
+  CublasMathModeGuard guard(ctx->cublas_handle(), CUBLAS_DEFAULT_MATH);
+#endif  // CUDA_VERSION < 11000
   if (GetCudaSmVersion() >= 500) {
-    OF_CUBLAS_CHECK(cublasGemmEx(ctx->cublas_tensor_op_math_handle(), cublas_trans_b,
-                                 cublas_trans_a, n, m, k, &alpha_f, b, CUDA_R_16F, ldb, a,
-                                 CUDA_R_16F, lda, &beta_f, c, CUDA_R_16F, ldc, CUDA_R_32F,
-                                 CUBLAS_GEMM_DFALT_TENSOR_OP));
+    OF_CUBLAS_CHECK(cublasGemmEx(ctx->cublas_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
+                                 &alpha_f, b, CUDA_R_16F, ldb, a, CUDA_R_16F, lda, &beta_f, c,
+                                 CUDA_R_16F, ldc, CUDA_R_32F, CUBLAS_GEMM_DFALT_TENSOR_OP));
   } else {
-    OF_CUBLAS_CHECK(cublasSgemmEx(ctx->cublas_tensor_op_math_handle(), cublas_trans_b,
-                                  cublas_trans_a, n, m, k, &alpha_f, b, CUDA_R_16F, ldb, a,
-                                  CUDA_R_16F, lda, &beta_f, c, CUDA_R_16F, ldc));
+    OF_CUBLAS_CHECK(cublasSgemmEx(ctx->cublas_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
+                                  &alpha_f, b, CUDA_R_16F, ldb, a, CUDA_R_16F, lda, &beta_f, c,
+                                  CUDA_R_16F, ldc));
   }
 }
 
@@ -141,14 +138,14 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
 #if CUDA_VERSION >= 9010
     cudaDataType_t data_type = GetCudaDataType4BatchedGemm<T>();
     OF_CUBLAS_CHECK(cublasGemmStridedBatchedEx(
-        ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
+        ctx->cublas_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
         reinterpret_cast<const void*>(&alpha_val), reinterpret_cast<const void*>(b), data_type, ldb,
         b_stride, reinterpret_cast<const void*>(a), data_type, lda, a_stride,
         reinterpret_cast<const void*>(&beta_val), reinterpret_cast<void*>(c), data_type, ldc,
         c_stride, batch_size, data_type, CUBLAS_GEMM_DEFAULT));
 #endif
   } else {
-    cublas_gemmStridedBatched<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
+    cublas_gemmStridedBatched<T>(ctx->cublas_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
                                  &alpha_val, b, ldb, b_stride, a, lda, a_stride, &beta_val, c, ldc,
                                  c_stride, batch_size);
   }
@@ -165,7 +162,11 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
   cublasOperation_t cublas_trans_a, cublas_trans_b;
   std::tie(a_stride, b_stride, c_stride, lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
       PrepareToCallBatchedGemm(trans_a, trans_b, batch_size, m, n, k);
-
+#if CUDA_VERSION < 11000
+  CublasMathModeGuard guard(ctx->cublas_handle(), CUBLAS_TENSOR_OP_MATH);
+#else
+  CublasMathModeGuard guard(ctx->cublas_handle(), CUBLAS_DEFAULT_MATH);
+#endif  // CUDA_VERSION < 11000
   if (GetCudaSmVersion() >= 500) {
     const float alpha_f = static_cast<float>(alpha);
     const float beta_f = static_cast<float>(beta);
@@ -175,16 +176,16 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
     cublasGemmAlgo_t algo = CUBLAS_GEMM_DFALT_TENSOR_OP;
 #endif
     OF_CUBLAS_CHECK(cublasGemmStridedBatchedEx(
-        ctx->cublas_tensor_op_math_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha_f,
+        ctx->cublas_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha_f,
         reinterpret_cast<const void*>(b), CUDA_R_16F, ldb, b_stride,
         reinterpret_cast<const void*>(a), CUDA_R_16F, lda, a_stride, &beta_f,
         reinterpret_cast<void*>(c), CUDA_R_16F, ldc, c_stride, batch_size, CUDA_R_32F, algo));
   } else {
     const half alpha_h = static_cast<half>(alpha);
     const half beta_h = static_cast<half>(beta);
-    cublas_gemmStridedBatched<half>(ctx->cublas_tensor_op_math_handle(), cublas_trans_b,
-                                    cublas_trans_a, n, m, k, &alpha_h, b, ldb, b_stride, a, lda,
-                                    a_stride, &beta_h, c, ldc, c_stride, batch_size);
+    cublas_gemmStridedBatched<half>(ctx->cublas_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
+                                    &alpha_h, b, ldb, b_stride, a, lda, a_stride, &beta_h, c, ldc,
+                                    c_stride, batch_size);
   }
 }
 #endif
@@ -260,12 +261,12 @@ void BlasIf<DeviceType::kGPU>::OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOS
 
 void BlasIf<DeviceType::kGPU>::Axpy(DeviceCtx* ctx, const int n, const float alpha, const float* x,
                                     const int incx, float* y, const int incy) {
-  cublas_axpy<float>(ctx->cublas_pmh_handle(), n, &alpha, x, incx, y, incy);
+  cublas_axpy<float>(ctx->cublas_handle(), n, &alpha, x, incx, y, incy);
 }
 
 void BlasIf<DeviceType::kGPU>::Axpy(DeviceCtx* ctx, const int n, const double alpha,
                                     const double* x, const int incx, double* y, const int incy) {
-  cublas_axpy<double>(ctx->cublas_pmh_handle(), n, &alpha, x, incx, y, incy);
+  cublas_axpy<double>(ctx->cublas_handle(), n, &alpha, x, incx, y, incy);
 }
 
 void BlasIf<DeviceType::kGPU>::Axpy(DeviceCtx* ctx, const int n, const float16 alpha,
