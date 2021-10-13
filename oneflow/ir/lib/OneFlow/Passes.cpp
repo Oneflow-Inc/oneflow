@@ -155,17 +155,19 @@ namespace mlir {
 namespace oneflow {
 
 void AddLowerToLinalgMemRefPasses(PassManager& pm) {
-  pm.addPass(createLowerOneFlowToTosaPass());                       // lower-oneflow-to-tosa
-  pm.addPass(createCSEPass());                                      // cse
-  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgOnTensors());    // tosa-to-linalg-on-tensors
-  pm.addNestedPass<FuncOp>(createLinalgElementwiseOpFusionPass());  // linalg-fuse-elementwise-ops
-  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());            // linalg-bufferize
-  pm.addNestedPass<FuncOp>(createTensorBufferizePass());            // tensor-bufferize
-  pm.addPass(createTensorConstantBufferizePass());                  // tensor-constant-bufferize
-  pm.addPass(createFuncBufferizePass());                            // func-bufferize
-  pm.addPass(createBufferResultsToOutParamsPass());                 // buffer-results-to-out-params
-  pm.addPass(createCanonicalizerPass());                            // canonicalize
-  pm.addNestedPass<FuncOp>(createFinalizingBufferizePass());        // finalizing-bufferize
+  pm.addPass(createLowerOneFlowToTosaPass());                     // lower-oneflow-to-tosa
+  pm.addPass(createCSEPass());                                    // cse
+  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgOnTensors());  // tosa-to-linalg-on-tensors
+  auto p = createLinalgElementwiseOpFusionPass();
+  assert(p->initializeOptions("allow-folding-unit-dim-reshapes").succeeded());
+  pm.addNestedPass<FuncOp>(std::move(p));                     // linalg-fuse-elementwise-ops
+  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());      // linalg-bufferize
+  pm.addNestedPass<FuncOp>(createTensorBufferizePass());      // tensor-bufferize
+  pm.addPass(createTensorConstantBufferizePass());            // tensor-constant-bufferize
+  pm.addPass(createFuncBufferizePass());                      // func-bufferize
+  pm.addPass(createBufferResultsToOutParamsPass());           // buffer-results-to-out-params
+  pm.addPass(createCanonicalizerPass());                      // canonicalize
+  pm.addNestedPass<FuncOp>(createFinalizingBufferizePass());  // finalizing-bufferize
 }
 
 LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
