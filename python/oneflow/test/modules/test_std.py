@@ -22,7 +22,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestStd(flow.unittest.TestCase):
-    @autotest(auto_backward=False, rtol=0.01, atol=0.01)
+    @autotest(n=10, auto_backward=True, rtol=0.01, atol=0.01)
     def test_std_flow_with_random_data(test_case):
         device = random_device()
         all_dim = random().to(int)
@@ -37,12 +37,12 @@ class TestStd(flow.unittest.TestCase):
         )
         return z
 
-    @autotest(auto_backward=False, rtol=0.01, atol=0.01)
+    @autotest(n=10, auto_backward=True, rtol=0.01, atol=0.01)
     def test_std_tensor_with_random_data(test_case):
         device = random_device()
         dim = random(low=0, high=4).to(int)
         x = random_pytorch_tensor(
-            ndim=4, dim0=random(2, 4), dim1=random(2, 4), dim2=random(2, 4), dim3=random(2, 4), requires_grad=False
+            ndim=4, dim0=random(2, 4), dim1=random(2, 4), dim2=random(2, 4), dim3=random(2, 4)
         ).to(device)
         z = x.std(
             dim=dim,

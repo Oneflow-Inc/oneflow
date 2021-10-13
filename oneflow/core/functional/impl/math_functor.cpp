@@ -1030,7 +1030,7 @@ class StandardDeviationFunctor {
     const auto& sub = JUST(functional::Sub(sum, square));
     const auto& abs = JUST(functional::Abs(sub));
     if(unbias){
-      return functional::Sqrt(JUST(functional::ScalarMul(abs, Scalar((double)reduce_count/(double)(reduce_count-1)))));
+      return functional::Sqrt(JUST(functional::ScalarMul(sub, Scalar((double)reduce_count/(double)(reduce_count-1)))));
     }
     return functional::Sqrt(abs);
   }
