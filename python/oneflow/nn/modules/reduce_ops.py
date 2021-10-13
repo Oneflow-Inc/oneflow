@@ -78,7 +78,6 @@ def max_tensor_op(input, dim=None, keepdim=False):
 
 def min_op(input, dim=None, keepdim=False):
     """Computes the minimum value of all elements in the input tensor.
-
     
     Args:
         input (oneflow.Tensor): the Input Tensor
@@ -146,6 +145,7 @@ def sum_op(input, dim=None, keepdim=False):
         tensor([ 6., 15.], dtype=oneflow.float32)
 
     """
+
     axis_checked = _check_axis(dim, input.shape)
     if len(axis_checked) == 0:
         return input
@@ -158,7 +158,9 @@ def sum_tensor_op(input, dim=None, keepdim=False):
     input.sum(dim, index) -> Tensor
     See :func:`oneflow.sum`
     """
+
     return sum_op(input, dim, keepdim)
+
 
 def mean_op(input, dim=None, keepdim=False):
     """Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
@@ -189,6 +191,7 @@ def mean_tensor_op(input, dim=None, keepdim=False):
     input.mean(dim, index) -> Tensor
     See :func:`oneflow.mean`
     """
+
     return mean_op(input, dim, keepdim)
 
 

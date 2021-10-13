@@ -16,10 +16,10 @@ limitations under the License.
 import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
+
 add_docstr(
     oneflow._C.vector_norm,
-    r"""
-    linalg.vector_norm(input, ord=2, dim=None, keepdim=False, *, dtype=None, out=None) -> Tensor
+    """linalg.vector_norm(input, ord=2, dim=None, keepdim=False, *, dtype=None, out=None) -> Tensor
 
     Computes a vector norm.
 
@@ -61,7 +61,9 @@ add_docstr(
     Returns:
         A real-valued tensor.
 
-    Examples::
+    For example:
+
+    .. code-block:: python
 
         >>> import oneflow as flow
         >>> import numpy as np
@@ -77,13 +79,14 @@ add_docstr(
         tensor(5.4345, dtype=oneflow.float32)
         >>> flow._C.vector_norm(b, ord=3.5)
         tensor(5.4345, dtype=oneflow.float32)
-        """,
+    
+    """,
 )
+
 
 add_docstr(
     oneflow._C.matrix_norm,
-    r"""
-    linalg.matrix_norm(input, ord='fro', dim=(-2, -1), keepdim=False, *, dtype=None, out=None) -> Tensor
+    """linalg.matrix_norm(input, ord='fro', dim=(-2, -1), keepdim=False, *, dtype=None, out=None) -> Tensor
 
     Computes a matrix norm.
 
@@ -122,7 +125,9 @@ add_docstr(
     Returns:
         A real-valued tensor.
 
-    Examples::
+    For example:
+
+    .. code-block:: python
 
         >>> import oneflow as flow
         >>> import numpy as np
@@ -148,13 +153,14 @@ add_docstr(
         tensor([14.2829, 14.2829], dtype=oneflow.float32)
         >>> flow._C.matrix_norm(b, dim=(0, 2))
         tensor([ 3.1623, 10.0000, 17.2627], dtype=oneflow.float32)
-        """,
+    
+    """,
 )
+
 
 add_docstr(
     oneflow._C.norm,
-    r"""
-    linalg.norm(input, ord=None, dim=None, keepdim=False, *, out=None) -> Tensor
+    """linalg.norm(input, ord=None, dim=None, keepdim=False, *, dtype=None, out=None) -> Tensor
 
     Returns the matrix norm or vector norm of a given tensor.
 
@@ -204,7 +210,9 @@ add_docstr(
 
         out (Tensor, optional): The output tensor.
 
-    Examples::
+    For example:
+
+    .. code-block:: python
 
         >>> import oneflow as flow
         >>> import numpy as np
@@ -249,8 +257,6 @@ add_docstr(
         >>> flow._C.norm(a, -3)
         tensor(0., dtype=oneflow.float32)
 
-    Using the :attr:`dim` argument to compute vector norms::
-
         >>> c = flow.tensor([[1., 2., 3.],
         ...                   [-1, 1, 4]])
         >>> flow._C.norm(c, dim=0)
@@ -261,11 +267,10 @@ add_docstr(
         >>> flow._C.norm(c, ord=1, dim=1)
         tensor([6., 6.], dtype=oneflow.float32)
 
-    Using the :attr:`dim` argument to compute matrix norms::
-
         >>> m = flow.tensor(np.arange(8, dtype=np.float32)).reshape(2, 2, 2)
         >>> flow._C.norm(m, dim=(1,2))
         tensor([ 3.7417, 11.2250], dtype=oneflow.float32)
-        """,
+
+    """,
 )
 

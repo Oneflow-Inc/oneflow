@@ -42,20 +42,15 @@ def check_dim(num_dims, input_dim):
     return dim
 
 class Vector_Norm(Module):
-    def __init__(self, ord=2, dim=None, keepdim=False) -> None:
+    def __init__(self, ord=2, dim=None, keepdim=False, dtype=None) -> None:
         super().__init__()
         if ord == None:
             self.ord = 2.0
-        elif isinstance(ord, (int, float)):
-            self.ord = float(ord)
         else:
-            raise TypeError(
-                "linalg_vector_norm(): argument 'ord' must be Number, not {}".format(
-                    type(ord)
-                )
-            )
+            self.ord=ord
         self.dim = dim
         self.keepdim = keepdim
+        self.dtype = dtype
 
     def forward(self, x):
         num_dims = len(x.shape)
@@ -63,13 +58,13 @@ class Vector_Norm(Module):
         if isinstance(dim, int):
             dim = [dim]
         if dim == None:
-            return flow._C.vector_norm(x.flatten(), ord=self.ord, dim=self.dim, keepdim=self.keepdim)
+            return flow._C.vector_norm(x.flatten(), ord=self.ord, dim=self.dim, keepdim=self.keepdim, dtype = self.dtype)
         else:
-            return flow._C.vector_norm(x, ord=self.ord, dim=dim, keepdim=self.keepdim)
+            return flow._C.vector_norm(x, ord=self.ord, dim=dim, keepdim=self.keepdim, dtype = self.dtype)
         
 
 class Matrix_Norm(Module):
-    def __init__(self, ord="fro", dim=(-2, -1), keepdim=False) -> None:
+    def __init__(self, ord="fro", dim=(-2, -1), keepdim=False, dtype=None) -> None:
         super().__init__()
         if ord == None:
             self.ord = "fro"
@@ -77,19 +72,16 @@ class Matrix_Norm(Module):
             self.ord = ord           
         self.dim = dim
         self.keepdim = keepdim
+        self.dtype = dtype
 
     def forward(self, x):
         num_dims = len(x.shape)
         dim = check_dim(num_dims, self.dim)       
-        if self.ord in ["nuc", "fro"]:
-            return flow._C.matrix_norm(x, self.ord, dim, self.keepdim)
-        else:
-            return flow._C.matrix_norm(x, self.ord, dim, self.keepdim)
+        return flow._C.matrix_norm(x, self.ord, dim, self.keepdim, dtype=self.dtype)
 
-
-def norm_op(input, ord=None, dim=None, keepdim=False):
-    """linalg.norm(input, ord=None, dim=None, keepdim=False, *, out=None) -> Tensor
-
+        
+def norm_op(input, ord=None, dim=None, keepdim=False, dtype=None):
+    """linalg.norm(input, ord=None, dim=None, keepdim=False, *, dtype=None, out=None) -> Tensor
     Returns the matrix norm or vector norm of a given tensor.
 
     This function can calculate one of eight different types of matrix norms, or one
@@ -103,11 +95,9 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
             inputs, the norm is calculated on of the absolute values of each element. If the input is
             complex and neither :attr:`dtype` nor :attr:`out` is specified, the result's data type will
             be the corresponding floating point type (e.g. float if :attr:`input` is complexfloat).
-
         ord (int, float, inf, -inf, 'fro', 'nuc', optional): The order of norm.
             inf refers to :attr:`float('inf')`, numpy's :attr:`inf` object, or any equivalent object.
             The following norms can be calculated:
-
             =====  ============================  ==========================
             ord    norm for matrices             norm for vectors
             =====  ============================  ==========================
@@ -123,22 +113,20 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
             -2     -- not supported yet --       as below
             other  -- not supported --           sum(abs(x)**ord)**(1./ord)
             =====  ============================  ==========================
-
             Default: ``None``
-
         dim (int, 2-tuple of ints, 2-list of ints, optional): If :attr:`dim` is an int,
             vector norm will be calculated over the specified dimension. If :attr:`dim`
             is a 2-tuple of ints, matrix norm will be calculated over the specified
             dimensions. If :attr:`dim` is None, matrix norm will be calculated
             when the input tensor has two dimensions, and vector norm will be
             calculated when the input tensor has one dimension. Default: ``None``
-
         keepdim (bool, optional): If set to True, the reduced dimensions are retained
             in the result as dimensions with size one. Default: ``False``
-
         out (Tensor, optional): The output tensor.
 
-    Examples::
+    For example:
+
+    .. code-block:: python
 
         >>> import oneflow as flow
         >>> from oneflow import linalg as LA
@@ -151,7 +139,6 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
         tensor([[-4., -3., -2.],
                 [-1.,  0.,  1.],
                 [ 2.,  3.,  4.]], dtype=oneflow.float32)
-
         >>> LA.norm(a)
         tensor(7.7460, dtype=oneflow.float32)
         >>> LA.norm(b)
@@ -166,7 +153,6 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
         tensor(0., dtype=oneflow.float32)
         >>> LA.norm(b, -float('inf'))
         tensor(2., dtype=oneflow.float32)
-
         >>> LA.norm(a, 1)
         tensor(20., dtype=oneflow.float32)
         >>> LA.norm(b, 1)
@@ -183,9 +169,6 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
         tensor(5.8480, dtype=oneflow.float32)
         >>> LA.norm(a, -3)
         tensor(0., dtype=oneflow.float32)
-
-    Using the :attr:`dim` argument to compute vector norms::
-
         >>> c = flow.tensor([[1., 2., 3.],
         ...                   [-1, 1, 4]])
         >>> LA.norm(c, dim=0)
@@ -195,29 +178,14 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
                 [4.2426]], dtype=oneflow.float32)
         >>> LA.norm(c, ord=1, dim=1)
         tensor([6., 6.], dtype=oneflow.float32)
-
-    Using the :attr:`dim` argument to compute matrix norms::
-
         >>> m = flow.tensor(np.arange(8, dtype=np.float32)).reshape(2, 2, 2)
         >>> LA.norm(m, dim=(1,2))
         tensor([ 3.7417, 11.2250], dtype=oneflow.float32)
     """
-    if isinstance(dim, int):
-        dim = [dim]
-    if isinstance(ord, (int, float)):
-        ord=float(ord)
-    return flow._C.norm(input, ord, dim, keepdim)
+    print("ord:",ord,"dim:",dim,"input:",input)
+    return flow._C.norm(input, ord, dim, keepdim, dtype=dtype)
 
-
-@register_tensor_op("norm")
-def norm_tensor_op(input, ord=None, dim=None, keepdim=False):
-    """
-    See :func:`oneflow.linalg.norm`
-    """
-    return flow._C.norm(input, ord, dim, keepdim)
-
-
-def vector_norm_tensor_op(input, ord=2, dim=None, keepdim=False):
+def vector_norm_tensor_op(input, ord=2, dim=None, keepdim=False, dtype=None):
     """
     linalg.vector_norm(input, ord=2, dim=None, keepdim=False, *, dtype=None, out=None) -> Tensor
 
@@ -261,7 +229,9 @@ def vector_norm_tensor_op(input, ord=2, dim=None, keepdim=False):
     Returns:
         A real-valued tensor.
 
-    Examples::
+    Examples:
+
+    .. code-block:: python
 
         >>> import oneflow as flow
         >>> from oneflow import linalg as LA
@@ -279,10 +249,10 @@ def vector_norm_tensor_op(input, ord=2, dim=None, keepdim=False):
         >>> LA.vector_norm(b, ord=3.5)
         tensor(5.4345, dtype=oneflow.float32)
     """
-    return Vector_Norm(ord, dim, keepdim)(input)
+    return Vector_Norm(ord, dim, keepdim, dtype)(input)
 
 
-def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False):
+def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False,dtype=None):
     """
     linalg.matrix_norm(input, ord='fro', dim=(-2, -1), keepdim=False, *, dtype=None, out=None) -> Tensor
 
@@ -304,8 +274,8 @@ def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False):
     `-inf`                   `min(sum(abs(x), dim=1))`
     `1`                      `max(sum(abs(x), dim=0))`
     `-1`                     `min(sum(abs(x), dim=0))`
-    `2`                      -- not supported yet --
-    `-2`                     -- not supported yet --
+    `2`                      'largest singular value'
+    `-2`                     'smallest singular value'
     ======================   ========================================================
 
     where `inf` refers to `float('inf')`, NumPy's `inf` object, or any equivalent object.
@@ -323,7 +293,9 @@ def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False):
     Returns:
         A real-valued tensor.
 
-    Examples::
+    Examples:
+
+    .. code-block:: python
 
         >>> import oneflow as flow
         >>> from oneflow import linalg as LA
@@ -351,7 +323,7 @@ def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False):
         >>> LA.matrix_norm(b, dim=(0, 2))
         tensor([ 3.1623, 10.0000, 17.2627], dtype=oneflow.float32)
     """
-    return Matrix_Norm(ord, dim, keepdim)(input)
+    return Matrix_Norm(ord, dim, keepdim,dtype)(input)
 
 
 def l2_normalize(input, dim=0, epsilon=1e-12):

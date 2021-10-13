@@ -126,6 +126,7 @@ from oneflow._C import tril
 from oneflow._C import triu
 from oneflow._C import pad
 from oneflow._C import transpose
+from oneflow._C import norm
 
 from . import sbp
 import atexit

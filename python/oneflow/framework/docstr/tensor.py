@@ -82,6 +82,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.norm,
+    """
+    See :func:`oneflow.linalg.norm`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.transpose,
     """
     See :func:`oneflow.transpose`

@@ -1044,22 +1044,24 @@
   bind_python: False
 
 - name: "vector_norm"
-  signature: "Tensor (Tensor input, Scalar ord=2, Int32List dim=None, Bool keepdim=False) => VectorNorm"
+  signature: "Tensor (Tensor input, Scalar ord=2, Int32List dim=None, Bool keepdim=False, *, DataType dtype=None) => VectorNorm"
   bind_python: True
 
 - name: "matrix_norm"
   signature: 
     [
-      "Tensor (Tensor input, Scalar ord, Int32List dim, Bool keepdim=False) => MatrixNorm",
-      "Tensor (Tensor input, String ord, Int32List dim, Bool keepdim=False) => MatrixNorm",
+      "Tensor (Tensor input, Scalar ord, Int32List dim, Bool keepdim=False, *, DataType dtype=None) => MatrixNorm",
+      "Tensor (Tensor input, String ord, Int32List dim, Bool keepdim=False, *, DataType dtype=None) => MatrixNorm",
     ]
   bind_python: True
 
 - name: "norm"
   signature: 
     [
-      "Tensor (Tensor input, Scalar ord=None, Int32List dim=None, Bool keepdim=False) => Norm",
-      "Tensor (Tensor input, String ord, Int32List dim=None, Bool keepdim=False) => Norm",
+      "Tensor (Tensor input, Scalar ord=None, Int32List dim=None, Bool keepdim=False, *, DataType dtype=None) => Norm",
+      "Tensor (Tensor input, String ord, Int32List dim=None, Bool keepdim=False, *, DataType dtype=None) => Norm",
+      "Tensor (Tensor input, Scalar ord=None, Scalar dim, Bool keepdim=False, *, DataType dtype=None) => ScalarNorm",
+      "Tensor (Tensor input, String ord, Scalar dim, Bool keepdim=False, *, DataType dtype=None) => ScalarNorm",
     ]
   bind_python: True
 
