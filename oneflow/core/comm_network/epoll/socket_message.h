@@ -74,7 +74,7 @@ struct SocketMsg {
     OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ)
 #undef MAKE_ENTRY
     struct {
-      char data[256];
+      char data[400];
       size_t size ;
     }actor_msg;
   };
