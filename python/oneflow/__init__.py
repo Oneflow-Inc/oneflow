@@ -265,6 +265,7 @@ from oneflow.nn.modules.comparison import eq_op as equal
 from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
 from oneflow.nn.modules.logical_ops import logical_or_op as logical_or
 from oneflow.nn.modules.logical_ops import logical_xor_op as logical_xor
+from oneflow.nn.modules.logical_ops import logical_not_op as logical_not
 from oneflow.nn.modules.comparison import less_op as lt
 from oneflow.nn.modules.comparison import less_equal_op as le
 from oneflow.nn.modules.comparison import ne_op as ne

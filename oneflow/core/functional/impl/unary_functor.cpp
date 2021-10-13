@@ -87,6 +87,13 @@ OF_PP_FOR_EACH_TUPLE(INPLACEABLE_FLOAT_UNARY_FUNCOTRS, INPLACEABLE_UNARY_FLOAT_F
 OF_PP_FOR_EACH_TUPLE(UNARY_FUNCOTRS, UNARY_FUNC_SEQ);
 OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_FUNCOTRS, FLOAT_UNARY_FUNC_SEQ);
 
+class LogicalNotFunctor : public UnaryFunctor {
+  public:
+    LogicalNotFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("logical_not").Input("x").Output("y").Build());
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -124,6 +131,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SquareFunctor>("Square");
   m.add_functor<impl::TanFunctor>("Tan");
   m.add_functor<impl::TanhFunctor>("Tanh");
+  m.add_functor<impl::LogicalNotFunctor>("LogicalNot");
 };
 
 }  // namespace functional
