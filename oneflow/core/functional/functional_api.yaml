@@ -167,9 +167,11 @@
   bind_python: False
 
 - name: "floor_divide"
-  signature: 
-    ["Tensor (Tensor x, Tensor y) => FloorDiv", 
-     "Tensor (Tensor input, Scalar scalar) => ScalarFloorDiv"]
+  signature:
+    [
+      "Tensor (Tensor x, Tensor y) => FloorDiv",
+      "Tensor (Tensor input, Scalar scalar) => ScalarFloorDiv",
+    ]
   bind_python: True
 
 - name: "floordiv_x_grad"
@@ -179,7 +181,6 @@
 - name: "floordiv_y_grad"
   signature: "Tensor (Tensor dz, Tensor x, Tensor y, Tensor z) => FloorDivYGrad"
   bind_python: False
-
 
 - name: "reduce_max"
   signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceMax"
@@ -203,10 +204,10 @@
 
 - name: "transpose"
   signature:
-      [
-        "Tensor (Tensor x, Int32List perm) => Transpose",
-        "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Transpose2dim",
-      ]
+    [
+      "Tensor (Tensor x, Int32List perm) => Transpose",
+      "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Transpose2dim",
+    ]
   bind_python: True
 
 - name: "reciprocal"
@@ -218,11 +219,15 @@
   bind_python: True
 
 - name: "image_flip"
-  signature: "Tensor (Tensor x, Int32 flip_code) => ImageFlip"
+  signature: "Tensor (Tensor x, Tensor flip_code) => ImageFlip"
   bind_python: True
 
 - name: "sin"
-  signature: "Tensor (Tensor x, Bool inplace=False) => Sin"
+  signature: "Tensor (Tensor x) => Sin"
+  bind_python: True
+
+- name: "sin_"
+  signature: "Tensor (Tensor x) => Sin_"
   bind_python: True
 
 - name: "cos"
@@ -373,13 +378,15 @@
   bind_python: False
 
 - name: "eye"
-  signature: [
+  signature:
+    [
       "Tensor (Scalar n, Scalar m=None, *, DataType dtype=None, Device device=None) => Eye",
     ]
   bind_python: True
 
 - name: "consistent_eye"
-  signature: [
+  signature:
+    [
       "Tensor (Scalar n, Scalar m=None, *, DataType dtype=None, Placement placement, SbpList sbp) => ConsistentEye",
     ]
   bind_python: True
@@ -535,6 +542,20 @@
   signature: 'Tensor (Tensor dy, Int32 num_spatial_dims,
     String data_format="channels_first") => ConvBiasGrad'
   bind_python: False
+
+- name: "deconv1d"
+  signature:
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32 filters,
+    Int32List padding, String data_format, Int32List kernel_size, 
+    Int32List output_padding, Int32List strides, Int32List dilation, Int32 groups=1) => Deconv1d"
+  bind_python: True
+
+- name: "deconv3d"
+  signature:
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32 filters,
+    Int32List padding, String data_format, Int32List kernel_size, 
+    Int32List output_padding, Int32List strides, Int32List dilation, Int32 groups=1) => Deconv3d"
+  bind_python: True
 
 - name: "expand"
   signature: "Tensor (Tensor x, Shape shape) => Expand"
@@ -766,26 +787,26 @@
 
 - name: "max_pool1d"
   signature:
-    'TensorTuple (Tensor input, Int32List[1] kernel_size, Int32List[1] stride=None, 
-                  Int32List[1] padding=0, Int32List[1] dilation=1, 
-                  Bool return_indices=True, Bool ceil_mode=False, 
-                  String data_format="channels_first") => Maxpool1D'
+    'TensorTuple (Tensor input, Int32List[1] kernel_size, Int32List[1] stride=None,
+    Int32List[1] padding=0, Int32List[1] dilation=1,
+    Bool return_indices=True, Bool ceil_mode=False,
+    String data_format="channels_first") => Maxpool1D'
   bind_python: True
 
 - name: "max_pool2d"
   signature:
-    'TensorTuple (Tensor input, Int32List[2] kernel_size, Int32List[2] stride=None, 
-                  Int32List[2] padding=0, Int32List[2] dilation=1, 
-                  Bool return_indices=True, Bool ceil_mode=False, 
-                  String data_format="channels_first") => Maxpool2D'
+    'TensorTuple (Tensor input, Int32List[2] kernel_size, Int32List[2] stride=None,
+    Int32List[2] padding=0, Int32List[2] dilation=1,
+    Bool return_indices=True, Bool ceil_mode=False,
+    String data_format="channels_first") => Maxpool2D'
   bind_python: True
 
 - name: "max_pool3d"
   signature:
-    'TensorTuple (Tensor input, Int32List[3] kernel_size, Int32List[3] stride=None, 
-                  Int32List[3] padding=0, Int32List[3] dilation=1, 
-                  Bool return_indices=True, Bool ceil_mode=False, 
-                  String data_format="channels_first") => Maxpool3D'
+    'TensorTuple (Tensor input, Int32List[3] kernel_size, Int32List[3] stride=None,
+    Int32List[3] padding=0, Int32List[3] dilation=1,
+    Bool return_indices=True, Bool ceil_mode=False,
+    String data_format="channels_first") => Maxpool3D'
   bind_python: True
 
 - name: "pooling_grad"

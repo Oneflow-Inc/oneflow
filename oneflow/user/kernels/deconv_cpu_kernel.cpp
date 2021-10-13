@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/user/ops/nn_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
@@ -265,10 +266,10 @@ struct ConvOpKernelState final : public user_op::OpKernelState {
 };
 
 template<typename T>
-std::shared_ptr<user_op::OpKernelState> CreateConvOpKernelState(user_op::KernelInitContext* ctx,
-                                                                const std::string& in_name,
-                                                                const std::string& out_name,
-                                                                const std::string& weight_name) {
+std::shared_ptr<ConvOpKernelState<T>> CreateConvOpKernelState(user_op::KernelComputeContext* ctx,
+                                                              const std::string& in_name,
+                                                              const std::string& out_name,
+                                                              const std::string& weight_name) {
   const auto& data_format = ctx->Attr<std::string>("data_format");
 
   std::shared_ptr<ConvOpKernelState<T>> state(new ConvOpKernelState<T>());
@@ -313,7 +314,7 @@ std::shared_ptr<user_op::OpKernelState> CreateConvOpKernelState(user_op::KernelI
     }
   }
 
-  return std::move(state);
+  return state;
 }
 
 template<typename T>
@@ -325,14 +326,14 @@ class DeconvCpuKernel final : public user_op::OpKernel {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
+  std::shared_ptr<ConvOpKernelState<T>> DoCreateOpKernelState(
+      user_op::KernelComputeContext* ctx) const {
     return CreateConvOpKernelState<T>(ctx, "out", "in", "weight");
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* conv_state = dynamic_cast<ConvOpKernelState<T>*>(state);
+    auto conv_state = DoCreateOpKernelState(ctx);
     CHECK_NOTNULL(conv_state);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
@@ -347,9 +348,11 @@ class DeconvCpuKernel final : public user_op::OpKernel {
       // channels first:  col_buf' = weight(T) * in[i]'
       // channels last :  col_buf' = weight(T) * in[i]'(T)
       // m, n, k
+      int32_t idx_offset = conv_state->idx_offset_;
       NewKernelUtil<DeviceType::kCPU>::OFGemm(
           nullptr, CblasTrans, conv_state->is_out_diff_need_trans_,
-          conv_state->weight_5d_shape_.Count(1), conv_state->out_5d_shape_.Count(3),
+          conv_state->weight_5d_shape_.Count(1),
+          conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3),
           conv_state->weight_5d_shape_.At(0), static_cast<T>(1), weight->dptr<T>(),
           GetImgDptr<T>(in, i), static_cast<T>(0), col_buf->mut_dptr<T>());
 
@@ -363,7 +366,7 @@ class DeconvCpuKernel final : public user_op::OpKernel {
   }
 };
 
-#define REGISTER_DECONV_DATA_GRAD_KERNEL(op_name, dtype)                                \
+#define REGISTER_DECONV_DATA_KERNEL(op_name, dtype)                                     \
   REGISTER_USER_KERNEL(#op_name)                                                        \
       .SetCreateFn<DeconvCpuKernel<dtype>>()                                            \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                               \
@@ -380,12 +383,12 @@ class DeconvCpuKernel final : public user_op::OpKernel {
         return tmp_buffer_size;                                                         \
       })
 
-REGISTER_DECONV_DATA_GRAD_KERNEL(deconv1d, float);
-REGISTER_DECONV_DATA_GRAD_KERNEL(deconv1d, double);
-REGISTER_DECONV_DATA_GRAD_KERNEL(deconv2d, float);
-REGISTER_DECONV_DATA_GRAD_KERNEL(deconv2d, double);
-REGISTER_DECONV_DATA_GRAD_KERNEL(deconv3d, float);
-REGISTER_DECONV_DATA_GRAD_KERNEL(deconv3d, double);
+REGISTER_DECONV_DATA_KERNEL(deconv1d, float);
+REGISTER_DECONV_DATA_KERNEL(deconv1d, double);
+REGISTER_DECONV_DATA_KERNEL(deconv2d, float);
+REGISTER_DECONV_DATA_KERNEL(deconv2d, double);
+REGISTER_DECONV_DATA_KERNEL(deconv3d, float);
+REGISTER_DECONV_DATA_KERNEL(deconv3d, double);
 
 }  // namespace
 
