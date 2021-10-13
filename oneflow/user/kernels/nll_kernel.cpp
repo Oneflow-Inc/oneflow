@@ -29,13 +29,13 @@ void ComputeNllOut(int64_t num_instances, K num_classes, K ignore_index, const T
                    const K* target, T* out, const T* weight, T* total_weight) {
   *total_weight = 0;
   FOR_RANGE(int64_t, i, 0, num_instances) {
-    CHECK_GE(target[i], 0);
-    CHECK_LT(target[i], num_classes);
     K label = target[i];
     if (label == ignore_index) {
       out[i] = 0;
       continue;
     }
+    CHECK_GE(label, 0);
+    CHECK_LT(label, num_classes);
     T cur_weight = weight == nullptr ? 1 : weight[label];
     *total_weight += cur_weight;
     out[i] = -input[i * num_classes + label] * cur_weight;
@@ -46,10 +46,10 @@ void ComputeNllGradOut(int64_t num_instances, K num_classes, K ignore_index, con
                        const T* dy, T* dx, const T* weight, const T* total_weight,
                        const ReductionType reduction_type) {
   FOR_RANGE(int64_t, i, 0, num_instances) {
-    CHECK_GE(target[i], 0);
-    CHECK_LT(target[i], num_classes);
     K label = target[i];
     if (label == ignore_index) { continue; }
+    CHECK_GE(label, 0);
+    CHECK_LT(label, num_classes);
     T cur_weight = weight == nullptr ? -1 : -weight[label];
     dx[i * num_classes + label] =
         (reduction_type == ReductionType::kNone ? dy[i] : (*dy)) * cur_weight;

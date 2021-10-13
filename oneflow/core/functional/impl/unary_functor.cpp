@@ -25,7 +25,8 @@ namespace one {
 namespace functional {
 
 namespace impl {
-#define INPLACEABLE_UNARY_FLOAT_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("sin", Sin)
+
+#define INPLACE_UNARY_FLOAT_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("sin", InplaceSin)
 
 #define UNARY_FUNC_SEQ                                       \
   OF_PP_MAKE_TUPLE_SEQ("abs", Abs)                           \
@@ -46,6 +47,7 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("asinh", Asinh)           \
   OF_PP_MAKE_TUPLE_SEQ("atan", Atan)             \
   OF_PP_MAKE_TUPLE_SEQ("atanh", Atanh)           \
+  OF_PP_MAKE_TUPLE_SEQ("sin", Sin)               \
   OF_PP_MAKE_TUPLE_SEQ("cos", Cos)               \
   OF_PP_MAKE_TUPLE_SEQ("erf", Erf)               \
   OF_PP_MAKE_TUPLE_SEQ("erfc", Erfc)             \
@@ -72,18 +74,16 @@ namespace impl {
     }                                                                                \
   };
 
-#define INPLACEABLE_UNARY_FUNCOTRS(op_type_name, class_name) \
-  UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, InplaceableUnaryFunctor)
-#define INPLACEABLE_FLOAT_UNARY_FUNCOTRS(op_type_name, class_name) \
-  UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, InplaceableFloatUnaryFunctor)
+#define INPLACE_UNARY_FUNCOTRS(op_type_name, class_name) \
+  UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, InplaceUnaryFunctor)
+#define INPLACE_FLOAT_UNARY_FUNCOTRS(op_type_name, class_name) \
+  UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, InplaceFloatUnaryFunctor)
 #define UNARY_FUNCOTRS(op_type_name, class_name) \
-  UNARY_ELEMENTWISE_FUNCTOR(                     \
-      op_type_name, class_name,                  \
-      UnaryFunctor)  // TODO(yaochi): replace UNARY_FUNC_SEQ with INPLACEABLE_UNARY_FUNC_SEQ SEQ
+  UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, UnaryFunctor)
 #define FLOAT_UNARY_FUNCOTRS(op_type_name, class_name) \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, FloatUnaryFunctor)
 
-OF_PP_FOR_EACH_TUPLE(INPLACEABLE_FLOAT_UNARY_FUNCOTRS, INPLACEABLE_UNARY_FLOAT_FUNC_SEQ);
+OF_PP_FOR_EACH_TUPLE(INPLACE_FLOAT_UNARY_FUNCOTRS, INPLACE_UNARY_FLOAT_FUNC_SEQ);
 OF_PP_FOR_EACH_TUPLE(UNARY_FUNCOTRS, UNARY_FUNC_SEQ);
 OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_FUNCOTRS, FLOAT_UNARY_FUNC_SEQ);
 
@@ -118,6 +118,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SigmoidFunctor>("Sigmoid");
   m.add_functor<impl::SignFunctor>("Sign");
   m.add_functor<impl::SinFunctor>("Sin");
+  m.add_functor<impl::InplaceSinFunctor>("Sin_");
   m.add_functor<impl::SinhFunctor>("Sinh");
   m.add_functor<impl::SoftplusFunctor>("Softplus");
   m.add_functor<impl::SqrtFunctor>("Sqrt");
