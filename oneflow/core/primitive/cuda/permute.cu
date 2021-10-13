@@ -94,6 +94,7 @@ __global__ void BatchPermuteKernel(PermuteKernelParams<num_dims, IndexType> para
         dst[offset + (y + i) * H + x] = tile[threadIdx.x][threadIdx.y + i];
       }
     }
+    __syncthreads();
   }
 }
 
