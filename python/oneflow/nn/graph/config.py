@@ -96,6 +96,20 @@ class GraphConfig(object):
         """
         self.proto.set_num_gradient_accumulation_steps(value)
 
+    def set_zero_redundancy_optimizer_mode(self, mode: str = "distributed_split"):
+        """Set mode to remove redundancy of optimizer states.
+        This optimzation will reduce optimizer states memory consumption as described
+        by ZeRO https://arxiv.org/abs/1910.02054 .
+
+
+        Args:
+            mode (str): "distributed_split" or "non_distributed". "distributed_split" mode
+                         will shard each optimizer state across devices. "non_distributed" mode
+                         will place each optimizer state to only one device.
+        """
+        assert mode in ("distributed_split", "non_distributed")
+        self.proto.set_optimizer_placement_optimization_mode(mode)
+
     def _generate_optimizer_and_variable_configs(
         self, opt_dict: OptDict = None, variables_conf: OrderedDict = None,
     ):

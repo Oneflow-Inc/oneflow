@@ -41,6 +41,71 @@ namespace functional {
 
 namespace impl {
 
+class ArgMaxFunctor {
+ public:
+  ArgMaxFunctor() { op_ = CHECK_JUST(one::OpBuilder("argmax").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int32_t>& dim,
+                           const Optional<bool>& keepdim,
+                           const Optional<Symbol<DType>>& dtype) const {
+    std::shared_ptr<Tensor> result;
+    if (dim.has_value() == false) {
+      result = JUST(Flatten(input, 0, -1));
+      return JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {result}));
+    }
+    int new_dim = JUST(dim);
+    int32_t ndims = input->shape()->NumAxes();
+    if (new_dim < 0) { new_dim += ndims; }
+    CHECK_GE_OR_RETURN(new_dim, 0)
+        << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
+        << ndims << " ] but got " << ndims;
+    CHECK_LT_OR_RETURN(new_dim, ndims)
+        << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
+        << ndims << " ] but got " << ndims;
+    if (new_dim == ndims - 1) {
+      result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input}));
+      if (keepdim.has_value() && JUST(keepdim) == true) { result = JUST(ExpandDims(result, -1)); }
+    } else {
+      std::vector<int32_t> permute;
+      for (int32_t i = 0; i < ndims - 1; i++) {
+        if (i < new_dim) {
+          permute.push_back(i);
+        } else {
+          permute.push_back(i + 1);
+        }
+      }
+      permute.push_back(new_dim);
+      result = JUST(Transpose(input, permute));
+      result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {result}));
+      result = JUST(ExpandDims(result, -1));
+      std::vector<int32_t> permute_inv;
+      permute_inv.resize(ndims);
+      for (int32_t i = 0; i < ndims; i++) { permute_inv[i] = -1; }
+      for (int32_t i = 0; i < ndims; i++) { permute_inv[permute[i]] = i; }
+      result = JUST(Transpose(result, permute_inv));
+      std::vector<int32_t> squeeze_dim;
+      squeeze_dim.push_back(new_dim);
+      if ((!keepdim.has_value()) || (keepdim.has_value() && JUST(keepdim) == false)) {
+        result = JUST(Squeeze(result, squeeze_dim));
+      }
+    }
+    if (dtype.has_value()) { result = JUST(Cast(result, JUST(dtype))); }
+    return result;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ArgMinFunctor {
+ public:
+  ArgMinFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int32_t>& dim,
+                           const Optional<bool>& keepdim,
+                           const Optional<Symbol<DType>>& dtype) const {
+    auto neg_input = JUST(Negative(input));
+    return JUST(ArgMax(neg_input, dim, keepdim, dtype));
+  }
+};
 class ConsistentConstantFunctor {
  public:
   ConsistentConstantFunctor() {
@@ -607,6 +672,37 @@ class ScatterNdFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {indices, updates}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class TensorScatterNdUpdateFunctor {
+ public:
+  TensorScatterNdUpdateFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("tensor_scatter_nd_update")
+                         .Input("params")
+                         .Input("indices")
+                         .Input("updates")
+                         .Output("out")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& tensor,
+                           const std::shared_ptr<one::Tensor>& indices,
+                           const std::shared_ptr<one::Tensor>& updates, bool inplace) const {
+    CHECK_OR_RETURN(*tensor->dtype() == *updates->dtype())
+        << "The dtype of tensor and updates must be same.";
+    if (inplace) {
+      JUST(CheckInplaceValid(tensor));
+      auto outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = tensor;
+      JUST(OpInterpUtil::Dispatch(*op_, {tensor, indices, updates}, outputs.get()));
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {tensor, indices, updates});
+    }
   }
 
  private:
@@ -1289,7 +1385,7 @@ class TensorGetItemFunctor {
     }();
     std::shared_ptr<one::Tensor> result;
     if (is_identity) {
-      result = JUST(Identity(expand_input));
+      result = expand_input;
     } else {
       result = JUST(Slice(expand_input, start, end, step));
     }
@@ -1297,6 +1393,9 @@ class TensorGetItemFunctor {
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
     if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
     if (!tensor_indices.empty()) { result = JUST(ApplyAdvancedIndexing(result, tensor_indices)); }
+
+    // TODO(): Returns a view of tensor `x`.
+    if (result == x) { result = JUST(Identity(x)); }
     return result;
   }
 };
@@ -1317,9 +1416,14 @@ class TensorSetItemFunctor {
     }
     int64_t ndims = x->shape()->NumAxes();
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
-    CHECK_EQ_OR_RETURN(tensor_indices.size(), 0)
-        << "Advanced indexing is not support for tensor setitem currently, please use basic "
-           "indexing instead.";
+    // Not support combined indexing now
+    if (!tensor_indices.empty()) {
+      CHECK_OR_RETURN(tensor_indices.size() == ndims
+                      && std::all_of(tensor_indices.begin(), tensor_indices.end(),
+                                     [](const std::shared_ptr<Tensor>& index) { return index; }))
+          << "Combining indexing is not support for tensor setitem currently";
+    }
+
     Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
     if (target_shape.Count(0) == 0) { return Maybe<void>::Ok(); }
 
@@ -1334,39 +1438,47 @@ class TensorSetItemFunctor {
                              << target_shape.ToString()
                              << ", value sizes: " << value_shape->ToString();
     std::shared_ptr<one::Tensor> value_tensor(value);
-    if (target_shape.NumAxes() != 0 &&  // NOLINT
-        /*need_expand=*/value_shape->Count(0) != target_shape.Count(0)) {
-      // Remove the beginning redundant 1-dimensions.
-      if (value_shape->NumAxes() > target_shape.NumAxes()) {
-        int64_t start_axis = value_shape->NumAxes() - target_shape.NumAxes();
-        const auto& shape = JUST(value_shape->Slice(start_axis, value_shape->NumAxes()));
-        value_tensor = JUST(Reshape(value, *shape));
-      }
-      value_tensor = JUST(Expand(value_tensor, target_shape));
-    }
 
-    std::vector<int64_t> start(ndims), end(ndims), step(ndims);
-    DimVector slice_dims(ndims);
-    for (int i = 0; i < ndims; ++i) {
-      const auto& slice = slice_indices.at(i);
-      start[i] = slice.start();
-      end[i] = slice.end();
-      step[i] = slice.step();
-      slice_dims[i] = (end[i] - start[i] + step[i] - 1) / step[i];
-    }
-    Shape slice_shape(slice_dims);
-    if (slice_shape != *(value_tensor->shape())) {
-      value_tensor = JUST(Reshape(value_tensor, slice_shape));
-    }
-    if (x->is_local()) {
-      JUST(SliceUpdate(x, value_tensor, start, end, step, /*inplace=*/true));
-    } else {
-      if (x->requires_grad() && autograd::GradMode::is_enabled()) {
-        return Error::RuntimeError() << "Backward is not support for consistent tensor setitem,"
-                                        "please use oneflow.no_grad() to disable autograd "
-                                        "currently. We will fix this problem soon.";
+    if (tensor_indices.size() == ndims) {  // advance indexing
+      std::shared_ptr<Tensor> indices = JUST(functional::Stack(tensor_indices, 0));
+      if (indices->shape()->elem_cnt() == 0) { return Maybe<void>::Ok(); }
+      indices = JUST(functional::Transpose(indices, {1, 0}));
+      value_tensor = JUST(functional::Expand(value_tensor, {indices->shape()->At(0)}));
+      JUST(functional::TensorScatterNdUpdate(x, indices, value_tensor, /*inplace=*/true));
+    } else {                              // slice update
+      if (target_shape.NumAxes() != 0 &&  // NOLINT
+          /*need_expand=*/value_shape->Count(0) != target_shape.Count(0)) {
+        // Remove the beginning redundant 1-dimensions.
+        if (value_shape->NumAxes() > target_shape.NumAxes()) {
+          int64_t start_axis = value_shape->NumAxes() - target_shape.NumAxes();
+          const auto& shape = JUST(value_shape->Slice(start_axis, value_shape->NumAxes()));
+          value_tensor = JUST(Reshape(value, *shape));
+        }
+        value_tensor = JUST(Expand(value_tensor, target_shape));
       }
-      JUST(LogicalSliceAssign(x, value_tensor, start, end, step));
+      std::vector<int64_t> start(ndims), end(ndims), step(ndims);
+      DimVector slice_dims(ndims);
+      for (int i = 0; i < ndims; ++i) {
+        const auto& slice = slice_indices.at(i);
+        start[i] = slice.start();
+        end[i] = slice.end();
+        step[i] = slice.step();
+        slice_dims[i] = (end[i] - start[i] + step[i] - 1) / step[i];
+      }
+      Shape slice_shape(slice_dims);
+      if (slice_shape != *(value_tensor->shape())) {
+        value_tensor = JUST(Reshape(value_tensor, slice_shape));
+      }
+      if (x->is_local()) {
+        JUST(SliceUpdate(x, value_tensor, start, end, step, /*inplace=*/true));
+      } else {
+        if (x->requires_grad() && autograd::GradMode::is_enabled()) {
+          return Error::RuntimeError() << "Backward is not support for consistent tensor setitem,"
+                                          "please use oneflow.no_grad() to disable autograd "
+                                          "currently. We will fix this problem soon.";
+        }
+        JUST(LogicalSliceAssign(x, value_tensor, start, end, step));
+      }
     }
     return Maybe<void>::Ok();
   }
@@ -1671,6 +1783,8 @@ class UnsortedBatchSegmentSumFunctor {
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::ArgMaxFunctor>("ArgMax");
+  m.add_functor<impl::ArgMinFunctor>("ArgMin");
   m.add_functor<impl::ConsistentConstantFunctor>("ConsistentConstant");
   m.add_functor<impl::ConstantFunctor>("Constant");
   m.add_functor<impl::ConsistentEmptyFunctor>("ConsistentEmpty");
@@ -1693,6 +1807,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ArgSortFunctor>("ArgSort");
   m.add_functor<impl::GatherNdFunctor>("GatherNd");
   m.add_functor<impl::ScatterNdFunctor>("ScatterNd");
+  m.add_functor<impl::TensorScatterNdUpdateFunctor>("TensorScatterNdUpdate");
   m.add_functor<impl::ScatterNdLikeFunctor>("ScatterNdLike");
   m.add_functor<impl::ReshapeFunctor>("Reshape");
   m.add_functor<impl::SliceFunctor>("Slice");
