@@ -473,7 +473,6 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
     )
     if equality_res == False:
         print_note_fake_program()
-    print_note_fake_program()
     return equality_res
 
 

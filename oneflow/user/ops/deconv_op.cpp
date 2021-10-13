@@ -50,6 +50,14 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
       out_shape.at(idx_offset + i) = (in.shape().At(idx_offset + i) - 1) * strides.at(i)
                                      - 2 * padding_before.at(i) + output_padding.at(i)
                                      + effective_filter_size;
+      std::stringstream err;
+      std::cout << out_shape.at(idx_offset + i) << std::endl;
+    }
+    for (int i = 0; i < out_shape.size(); i++) {
+      CHECK_GT_OR_RETURN(out_shape[i], 0)
+          << "RuntimeError: Given input size per channel: (" << Shape(in.shape())
+          << "). Calculated output size per channel: (" << Shape(out_shape)
+          << "). Output size is too small";
     }
     *out->mut_is_dynamic() = in.is_dynamic();
     *out->mut_shape() = Shape(out_shape);
