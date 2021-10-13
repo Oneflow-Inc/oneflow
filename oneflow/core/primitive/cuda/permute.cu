@@ -188,42 +188,42 @@ void LaunchKernel(StreamContext* stream_ctx, PermuteKernelParams<num_dims, Index
   cudaStream_t cuda_stream =
       CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
 
-  // if (num_dims == 2 || num_dims == 3) {
-  //   IndexType n;
-  //   IndexType h;
-  //   IndexType w;
-  //   if (num_dims == 2) {
-  //     IndexType global_index[2];
-  //     params.src_index_helper.OffsetToNdIndex(params.count - 1, global_index);
-  //     /*
-  //     For example: assume dim is (4, 6), offset = 24.
-  //     offset-1=23, convet back to NdIndex is (3, 5), cause index start from zero and we need to
-  //     subtract 1. then we add 1 to all the NdIndex to get the actual dim.
-  //     */
-  //     n = 1;
-  //     h = global_index[0] + 1;
-  //     w = global_index[1] + 1;
-  //   } else {
-  //     IndexType global_index[3];
-  //     params.src_index_helper.OffsetToNdIndex(params.count - 1, global_index);
-  //     n = global_index[0] + 1;
-  //     h = global_index[1] + 1;
-  //     w = global_index[2] + 1;
-  //   }
-  //   printf("n is: %d \n", n);
-  //   printf("h is: %d \n", h);
-  //   printf("w is: %d \n", w);
-  //   if (CheckLaunchBatchPermute<num_dims, tile_size>(params, n, h, w)) {
-  //     LaunchBatchPermuteKernel<num_dims, movement_size, tile_size, IndexType>(stream_ctx, params, n,
-  //                                                                             h, w);
-  //   } else {
-  //     PermuteKernel<num_dims, movement_size, IndexType>
-  //         <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params);
-  //   }
-  // } else {
-  //   PermuteKernel<num_dims, movement_size, IndexType>
-  //       <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params);
-  // }
+  if (num_dims == 2 || num_dims == 3) {
+    IndexType n;
+    IndexType h;
+    IndexType w;
+    if (num_dims == 2) {
+      IndexType global_index[2];
+      params.src_index_helper.OffsetToNdIndex(params.count - 1, global_index);
+      /*
+      For example: assume dim is (4, 6), offset = 24.
+      offset-1=23, convet back to NdIndex is (3, 5), cause index start from zero and we need to
+      subtract 1. then we add 1 to all the NdIndex to get the actual dim.
+      */
+      n = 1;
+      h = global_index[0] + 1;
+      w = global_index[1] + 1;
+    } else {
+      IndexType global_index[3];
+      params.src_index_helper.OffsetToNdIndex(params.count - 1, global_index);
+      n = global_index[0] + 1;
+      h = global_index[1] + 1;
+      w = global_index[2] + 1;
+    }
+    printf("n is: %d \n", n);
+    printf("h is: %d \n", h);
+    printf("w is: %d \n", w);
+    if (CheckLaunchBatchPermute<num_dims, tile_size>(params, n, h, w)) {
+      LaunchBatchPermuteKernel<num_dims, movement_size, tile_size, IndexType>(stream_ctx, params, n,
+                                                                              h, w);
+    } else {
+      PermuteKernel<num_dims, movement_size, IndexType>
+          <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params);
+    }
+  } else {
+    PermuteKernel<num_dims, movement_size, IndexType>
+        <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params);
+  }
 
   // // ZZK： Just for profile!
   // PermuteKernel<num_dims, movement_size, IndexType>
@@ -231,10 +231,7 @@ void LaunchKernel(StreamContext* stream_ctx, PermuteKernelParams<num_dims, Index
   //       cuda_stream>>>(params);
 
   // // ZZK: Just for Baseline!
-  IndexType n = 0; 
-  IndexType h = 0; 
-  IndexType w = 0; 
-  LaunchCopyKernel<num_dims, tile_size, movement_size, kBlockRows, IndexType>(stream_ctx, params);  
+  // LaunchCopyKernel<num_dims, tile_size, movement_size, kBlockRows, IndexType>(stream_ctx, params);  
 }
 
 class PermuteImpl : public Permute, public CudaGraphSupport {
