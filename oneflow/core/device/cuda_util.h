@@ -142,6 +142,21 @@ class CudaCurrentDeviceGuard final {
   int32_t saved_dev_id_ = -1;
 };
 
+class CublasMathModeGuard final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CublasMathModeGuard);
+  CublasMathModeGuard(cublasHandle_t handle, cublasMath_t new_mode);
+  explicit CublasMathModeGuard(cublasHandle_t handle);
+  ~CublasMathModeGuard();
+
+  void SetMathMode(cublasMath_t new_mode);
+
+ private:
+  cublasHandle_t handle_{};
+  cublasMath_t saved_mode_{};
+  cublasMath_t new_mode_{};
+};
+
 int GetCudaSmVersion();
 
 int GetCudaPtxVersion();

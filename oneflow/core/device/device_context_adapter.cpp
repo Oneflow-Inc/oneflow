@@ -56,11 +56,7 @@ class CudaDeviceCtxAdapter : public DeviceCtx, public EventRecordProvider {
   ~CudaDeviceCtxAdapter() override = default;
 
   cudaStream_t cuda_stream() const override { return stream_ctx_->cuda_stream(); }
-  cublasHandle_t cublas_pmh_handle() const override { return stream_ctx_->cublas_pmh_handle(); }
-  cublasHandle_t cublas_tensor_op_math_handle() const override {
-    return stream_ctx_->cublas_tensor_op_math_handle();
-  }
-  cublasHandle_t cublas_pmd_handle() const override { return stream_ctx_->cublas_pmd_handle(); }
+  cublasHandle_t cublas_handle() const override { return stream_ctx_->cublas_handle(); }
   cudnnHandle_t cudnn_handle() const override { return stream_ctx_->cudnn_handle(); }
 
   void SyncDevice() override { CHECK_JUST(stream_ctx_->Sync()); }
