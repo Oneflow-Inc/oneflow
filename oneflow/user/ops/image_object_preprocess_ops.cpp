@@ -28,15 +28,15 @@ Maybe<void> GetSbp(user_op::SbpContext* ctx) {
 
 REGISTER_NO_GRAD_CPU_ONLY_USER_OP("image_flip")
     .Input("in")
-    .Attr<int32_t>("flip_code")
+    .Input("flip_code")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
       CHECK_EQ_OR_RETURN(in_desc.shape().NumAxes(), 1);
+      const int N = in_desc.shape().elem_cnt();
 
-      const int32_t& flip_code = ctx->Attr<int32_t>("flip_code");
-      CHECK_GE_OR_RETURN(flip_code, 0x00) << "flip_code should >= 0, but got " << flip_code;
-      CHECK_LE_OR_RETURN(flip_code, 0x03) << "flip_code should <= 3, but got " << flip_code;
+      const user_op::TensorDesc& flip_code_desc = ctx->InputTensorDesc("flip_code", 0);
+      CHECK_EQ_OR_RETURN(flip_code_desc.shape().elem_cnt(), N);
 
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
