@@ -1072,11 +1072,14 @@ class ConvTranspose3d(Module):
 
     Examples::
 
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+
         >>> # With square kernels and equal stride
         >>> m = nn.ConvTranspose3d(16, 33, 3, stride=2)
         >>> # non-square kernels and unequal stride and with padding
         >>> m = nn.ConvTranspose3d(16, 33, (3, 5, 2), stride=(2, 1, 1), padding=(0, 4, 2))
-        >>> input = torch.randn(20, 16, 10, 50, 100)
+        >>> input = flow.randn(20, 16, 10, 50, 100)
         >>> output = m(input)
 
     .. _cross-correlation:
@@ -1145,4 +1148,4 @@ class ConvTranspose3d(Module):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=True)
+    doctest.testmod(raise_on_error=False)
