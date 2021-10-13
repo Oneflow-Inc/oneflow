@@ -1109,3 +1109,69 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.std,
+    """
+    Returns the standard-deviation of each row of the :attr:`input` tensor in the
+    dimension :attr:`dim`. If :attr:`dim` is a list of dimensions,
+    reduce over all of them.
+
+    If keepdim is True, the output tensor is of the same size as input except in 
+    the dimension(s) dim where it is of size 1. Otherwise, dim is squeezed, 
+    resulting in the output tensor having 1 (or len(dim)) fewer dimension(s).
+
+    If :attr:`unbiased` is ``False``, then the standard-deviation will be calculated
+    via the biased estimator. Otherwise, Bessel's correction will be used.
+
+    Args:
+        input (Tensor): the input tensor.
+        dim (int or tuple of python:ints): the dimension or dimensions to reduce.
+        unbiased (bool): whether to use the unbiased estimation or not
+        keepdim (bool): whether the output tensor has `dim` retained or not.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> arr = np.array([1.0, 2.0, 3.0])
+        >>> input = flow.tensor(arr)
+        >>> output = flow.std(input, dim=0).numpy()
+        >>> output
+        array(0.8164968, dtype=float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow.var,
+    """Returns the variance of each row of the `input` tensor in the given dimension `dim`.
+
+    If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension(s) `dim` 
+    where it is of size 1. Otherwise, dim is squeezed (see `flow.squeeze()`), resulting in the output 
+    tensor having 1 (or `len(dim)`) fewer dimension(s).
+
+    Args:
+        input (Tensor): the input tensor.
+        dim (int or tuple of python:ints): the dimension or dimensions to reduce. Defaults to None.
+        unbiased (bool, optional): whether to use Bessel’s correction (:math:`\delta N = 1`). Defaults to True.
+        keepdim (bool, optional): whether the output tensor has dim retained or not. Defaults to False.
+
+    Returns:
+        Tensor: The result of variance on the specified axis of input Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        
+        >>> input = flow.tensor(np.random.randn(2, 3, 4, 5))
+        >>> output = flow.var(input, 1, True)
+
+    """,
+)

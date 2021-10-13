@@ -465,16 +465,12 @@ def _square(self):
     return flow.square(self)
 
 
-def _var(self, dim, unbiased=False, keepdim=False):
-    if dim is None:
-        dim = [i for i in range(self.ndim)]
-    return flow.var(self, dim, unbiased, keepdim)
+def _var(self, dim, unbiased=True, keepdim=False):
+    return flow._C.std(self, dim=dim, unbiased=unbiased, keepdim=keepdim)
 
 
-def _std(self, dim=None, unbiased=False, keepdim=False):
-    if dim is None:
-        dim = [i for i in range(self.ndim)]
-    return flow.std(self, dim, unbiased, keepdim)
+def _std(self, dim=None, unbiased=True, keepdim=False):
+    return flow._C.std(self, dim=dim, unbiased=unbiased, keepdim=keepdim)
 
 
 def _matmul(self, other):

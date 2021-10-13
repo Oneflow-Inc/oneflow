@@ -984,13 +984,33 @@ class ScalarLogicalXor2Functor {
 class StandardDeviationFunctor {
  public:
   Maybe<Tensor> operator()(
-    const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& dim, const bool unbiased, const bool keepdim
+    const std::shared_ptr<Tensor>& input, 
+    const Optional<std::vector<int32_t>>& dim, 
+    const Optional<bool> unbiased, 
+    const Optional<bool> keepdim
   ) const {
     const int32_t ndim = input->shape()->NumAxes();
-    CHECK_GE_OR_RETURN(ndim, dim.size()) 
-      << "Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim-1 << "], but got " << dim.size();
- 
-    std::vector<int32_t> axis(dim.begin(), dim.end());
+    std::vector<int32_t> axis(0);
+    if (dim.has_value() == false) {
+      for(int i=0; i < ndim; ++i){
+        axis.push_back(i);
+      }
+    }else{
+      std::vector<int32_t>& dims = *JUST(dim);
+      CHECK_GE_OR_RETURN(ndim, dims.size()) 
+      << "Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim-1 << "], but got " << dims.size();
+      axis.assign(dims.begin(), dims.end());
+    }
+
+    bool unbias=true;
+    bool keepdims=false;
+    if(unbiased.has_value()){
+      unbias = JUST(unbiased);
+    }
+    if(keepdim.has_value()){
+      keepdims = JUST(keepdim);
+    }
+    
     CheckAxis(axis, *input->shape());
     if(axis.size()==0){
       return functional::Constant(*input->shape(), Scalar(0), *input->dtype(), NullOpt); 
@@ -1005,41 +1025,57 @@ class StandardDeviationFunctor {
       }
     }
  
-    const auto& sum = JUST(functional::ScalarDiv(JUST(functional::ReduceSum(JUST(functional::Square(input)), axis, keepdim)), Scalar(reduce_count)));
-    const auto& square = JUST(functional::Square(JUST(functional::ScalarDiv(JUST(functional::ReduceSum(input, axis, keepdim)), Scalar(reduce_count)))));
+    const auto& sum = JUST(functional::ScalarDiv(JUST(functional::ReduceSum(JUST(functional::Square(input)), axis, keepdims)), Scalar(reduce_count)));
+    const auto& square = JUST(functional::Square(JUST(functional::ScalarDiv(JUST(functional::ReduceSum(input, axis, keepdims)), Scalar(reduce_count)))));
     const auto& sub = JUST(functional::Sub(sum, square));
-    // const auto& abs = JUST(functional::Abs(sub));
-    if(unbiased){
-      // Scalar scalar1 = Scalar((double)reduce_count);
-      // Scalar scalar2 = Scalar((double)(reduce_count-1));
-      // return functional::ScalarDiv(JUST(functional::Sqrt(JUST(functional::ScalarMul(abs, scalar1)))), scalar2);
-      return functional::Sqrt(JUST(functional::ScalarMul(sub, Scalar((double)reduce_count/(double)(reduce_count-1)))));
+    const auto& abs = JUST(functional::Abs(sub));
+    if(unbias){
+      return functional::Sqrt(JUST(functional::ScalarMul(abs, Scalar((double)reduce_count/(double)(reduce_count-1)))));
     }
-    return functional::Sqrt(sub);
+    return functional::Sqrt(abs);
   }
 };
 
 class VarianceFunctor {
  public:
   Maybe<Tensor> operator()(
-    const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& dim, const bool unbiased, const bool keepdim
+    const std::shared_ptr<Tensor>& input, 
+    const Optional<std::vector<int32_t>>& dim, 
+    const Optional<bool> unbiased, 
+    const Optional<bool> keepdim
   ) const {
     const int32_t ndim = input->shape()->NumAxes();
-    CHECK_GE_OR_RETURN(ndim, dim.size()) 
-      << "Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim-1 << "], but got " << dim.size();
- 
-    std::vector<int32_t> axis(dim.begin(), dim.end());
-    CheckAxis(axis, *input->shape());
+    std::vector<int32_t> axis(0);
+    if (dim.has_value() == false) {
+      for(int i=0; i < ndim; ++i){
+        axis.push_back(i);
+      }
+    }else{
+      std::vector<int32_t>& dims = *JUST(dim);
+      CHECK_GE_OR_RETURN(ndim, dims.size()) 
+      << "Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim-1 << "], but got " << dims.size();
+      axis.assign(dims.begin(), dims.end());
+    }
+    bool unbias=true;
+    bool keepdims=false;
+    if(unbiased.has_value()){
+      unbias = JUST(unbiased);
+    }
+    if(keepdim.has_value()){
+      keepdims = JUST(keepdim);
+    }
 
+
+    CheckAxis(axis, *input->shape());
     int32_t reduce_count = 1;
     for(int i=0; i < axis.size(); ++i){
       reduce_count *= input->shape()->At(axis[i]);
     }
-    if (unbiased){
+    if (unbias){
       reduce_count -= 1;
     }
     const auto& sub = JUST(functional::Sub(input, JUST(functional::ReduceMean(input, axis, (bool)true))));
-    const auto& sum = JUST(functional::ReduceSum(JUST(functional::Square(sub)), axis, keepdim));
+    const auto& sum = JUST(functional::ReduceSum(JUST(functional::Square(sub)), axis, keepdims));
     return functional::ScalarDiv(sum, Scalar(reduce_count));
   }
 };
