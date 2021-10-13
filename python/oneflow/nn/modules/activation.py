@@ -186,6 +186,18 @@ class ReLU6(Module):
         return inplace_str
 
 
+def relu6(input, inplace=False):
+    r"""relu6(input, inplace=False) -> Tensor
+
+    Applies the element-wise function :math:`\text{ReLU6}(x) = \min(\max(0,x), 6)`.
+
+    See :class:`~oneflow.nn.ReLU6` for more details.
+    """
+    if inplace:
+        warnings.warn("nn.functional.relu6 do not support inplace now")
+    return flow._C.hardtanh(input, min_val=0.0, max_val=6.0)
+
+
 class Tanh(Module):
     """This operator computes the hyperbolic tangent value of Tensor.
 
@@ -513,7 +525,7 @@ class LogSoftmax(Module):
         (need_transpose, permute) = _softmax_need_transpose(x, self.dim)
         if need_transpose:
             x = flow._C.transpose(x, perm=permute)
-        x = flow._C.logsoftmax(x)
+        x = flow._C.log_softmax(x)
         if need_transpose:
             x = flow._C.transpose(x, perm=permute)
         return x
@@ -555,9 +567,7 @@ class LogSigmoid(Module):
         super().__init__()
 
     def forward(self, x):
-        sigmoid_res = flow.sigmoid(x)
-        res = flow.log(sigmoid_res)
-        return res
+        return flow._C.logsigmoid(x)
 
 
 class Softplus(Module):

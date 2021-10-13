@@ -555,6 +555,14 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.sin_,
+    """
+    In-place version of :func:`oneflow.sin`
+
+    """,
+)
+
+add_docstr(
     oneflow.sinh,
     """Returns a new tensor with the hyperbolic sine of the elements of :attr:`input`.
 

@@ -105,7 +105,7 @@ class TestSmoothL1Loss(flow.unittest.TestCase):
                 flow.watch_diff(v, assert_prediction_grad)
                 prediction += v
                 with flow.scope.placement(device_type, "0:0"):
-                    loss = flow.smooth_l1_loss(prediction, label, beta)
+                    loss = flow.smooth_l1_loss(prediction, label, "none", beta)
                     flow.optimizer.SGD(
                         flow.optimizer.PiecewiseConstantScheduler([], [0.0001]),
                         momentum=0,

@@ -40,7 +40,7 @@ def _test_bn_add_relu(test_case, channel, height, width):
     fused_weight_tensor = flow.nn.Parameter(flow.Tensor(weight_numpy).to("cuda"))
     fused_bias_tensor = flow.nn.Parameter(flow.Tensor(bias_numpy).to("cuda"))
 
-    fused_bn = flow.nn.FusedBatchNorm2d(channel, has_addend=True).to("cuda")
+    fused_bn = flow.nn.FusedBatchNorm2d(channel).to("cuda")
     fused_bn.weight = fused_weight_tensor
     fused_bn.bias = fused_bias_tensor
     fused_out = fused_bn(fused_x_tensor, fused_addend_tensor)
@@ -134,7 +134,7 @@ def _test_bn_relu(test_case, channel, height, width):
     fused_weight_tensor = flow.nn.Parameter(flow.Tensor(weight_numpy).to("cuda"))
     fused_bias_tensor = flow.nn.Parameter(flow.Tensor(bias_numpy).to("cuda"))
 
-    fused_bn = flow.nn.FusedBatchNorm2d(channel, has_addend=False).to("cuda")
+    fused_bn = flow.nn.FusedBatchNorm2d(channel).to("cuda")
     fused_bn.weight = fused_weight_tensor
     fused_bn.bias = fused_bias_tensor
     fused_out = fused_bn(fused_x_tensor, None)
@@ -218,9 +218,7 @@ def _test_bn_relu_track_running_states_false(test_case, channel, height, width):
     fused_weight_tensor = flow.nn.Parameter(flow.Tensor(weight_numpy).to("cuda"))
     fused_bias_tensor = flow.nn.Parameter(flow.Tensor(bias_numpy).to("cuda"))
 
-    fused_bn = flow.nn.FusedBatchNorm2d(
-        channel, has_addend=False, track_running_stats=False
-    ).to("cuda")
+    fused_bn = flow.nn.FusedBatchNorm2d(channel, track_running_stats=False).to("cuda")
     fused_bn.weight = fused_weight_tensor
     fused_bn.bias = fused_bias_tensor
     fused_out = fused_bn(fused_x_tensor, None)
