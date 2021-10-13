@@ -247,7 +247,13 @@ class OptionalBase<
     }
   }
 
-  const value_type& value_or(const value_type& other) const& {
+  // we introduce a dependent name `U` to delay the instantiation,
+  // so only the default parameter of `U` is allowed
+  template<typename U = value_type>
+  typename std::enable_if<!std::is_abstract<U>::value, const U&>::type value_or(
+      const value_type& other) const& {
+    static_assert(std::is_same<U, value_type>::value, "expected default U");
+
     if (has_value()) {
       return *value_;
     } else {
@@ -255,7 +261,11 @@ class OptionalBase<
     }
   }
 
-  value_type value_or(const value_type& other) && {
+  template<typename U = value_type>
+  typename std::enable_if<!std::is_abstract<U>::value, U>::type value_or(
+      const value_type& other) && {
+    static_assert(std::is_same<U, value_type>::value, "expected default U");
+
     if (has_value()) {
       return std::move(*value_);
     } else {
@@ -263,7 +273,11 @@ class OptionalBase<
     }
   }
 
-  value_type value_or(value_type&& other) const& {
+  template<typename U = value_type>
+  typename std::enable_if<!std::is_abstract<U>::value, U>::type value_or(
+      value_type&& other) const& {
+    static_assert(std::is_same<U, value_type>::value, "expected default U");
+
     if (has_value()) {
       return *value_;
     } else {
@@ -271,7 +285,10 @@ class OptionalBase<
     }
   }
 
-  value_type value_or(value_type&& other) && {
+  template<typename U = value_type>
+  typename std::enable_if<!std::is_abstract<U>::value, U>::type value_or(value_type&& other) && {
+    static_assert(std::is_same<U, value_type>::value, "expected default U");
+
     if (has_value()) {
       return std::move(*value_);
     } else {
