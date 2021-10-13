@@ -62,7 +62,8 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("sqrt", Sqrt)             \
   OF_PP_MAKE_TUPLE_SEQ("square", Square)         \
   OF_PP_MAKE_TUPLE_SEQ("tan", Tan)               \
-  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)
+  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)             \
+  OF_PP_MAKE_TUPLE_SEQ("logical_not", LogicalNot)
 
 #define UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, base)                    \
   class class_name##Functor : public base {                                          \
@@ -86,13 +87,6 @@ namespace impl {
 OF_PP_FOR_EACH_TUPLE(INPLACEABLE_FLOAT_UNARY_FUNCOTRS, INPLACEABLE_UNARY_FLOAT_FUNC_SEQ);
 OF_PP_FOR_EACH_TUPLE(UNARY_FUNCOTRS, UNARY_FUNC_SEQ);
 OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_FUNCOTRS, FLOAT_UNARY_FUNC_SEQ);
-
-class LogicalNotFunctor : public UnaryFunctor {
-  public:
-    LogicalNotFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("logical_not").Input("x").Output("y").Build());
-  }
-};
 
 }  // namespace impl
 
