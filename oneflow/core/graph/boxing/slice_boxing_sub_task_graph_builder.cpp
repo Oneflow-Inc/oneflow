@@ -28,30 +28,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-bool ContainsEmptySlice(const std::vector<TensorSliceView>& slices) {
-  return std::any_of(slices.cbegin(), slices.cend(),
-                     [](const TensorSliceView& slice) { return slice.IsEmpty(); });
-}
-
-bool IsCopyContiguous(const TensorSliceView& src, const TensorSliceView& dst) {
-  CHECK_EQ(src.range_vec().size(), dst.range_vec().size());
-  FOR_RANGE(int64_t, i, 1, src.range_vec().size()) {
-    if (src.range_vec().at(i) != dst.range_vec().at(i)) { return false; }
-  }
-  return true;
-}
-
-bool IsSameDevice(const ParallelDesc& in_pd, const ParallelDesc& out_pd,
-                  const int64_t in_parallel_id, const int64_t out_parallel_id) {
-  return in_pd.device_type() == out_pd.device_type()
-         && CHECK_JUST(in_pd.DeviceId4ParallelId(in_parallel_id))
-                == CHECK_JUST(out_pd.DeviceId4ParallelId(out_parallel_id));
-}
-
-}  // namespace
-
 Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
     std::vector<TaskNode*>* sorted_out_tasks,
@@ -60,12 +36,6 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     const BlobDesc& logical_blob_desc, const cfg::SbpParallel& in_sbp_parallel,
     const cfg::SbpParallel& out_sbp_parallel, const Shape& time_shape) const {
   if (SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)) {
-    return Error::BoxingNotSupportedError();
-  }
-  if (!SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(in_parallel_desc)) {
-    return Error::BoxingNotSupportedError();
-  }
-  if (!SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(out_parallel_desc)) {
     return Error::BoxingNotSupportedError();
   }
   if (SubTskGphBuilderUtil::HasEmptySliceIfSplit(in_parallel_desc.parallel_num(), in_sbp_parallel,
@@ -126,7 +96,6 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
         CHECK(SubTskGphBuilderUtil::IsBoxingS2B(in_sbp, out_sbp));
         const std::vector<TensorSliceView> in_slices =
             GetTensorSliceView(in_pd.parallel_num(), in_sbp, blob_desc);
-        CHECK(!ContainsEmptySlice(in_slices));
         const TensorSliceView& out_slice = GetBroadcastTensorSliceView(blob_desc);
         FOR_RANGE(int64_t, out_id, 0, out_pd.parallel_num()) {
           SliceBoxingTaskNode* out_node =
@@ -150,10 +119,8 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     CHECK(SubTskGphBuilderUtil::IsBoxingS2S(in_sbp, out_sbp));
     const std::vector<TensorSliceView> in_slices =
         GetTensorSliceView(in_pd.parallel_num(), in_sbp, blob_desc);
-    CHECK(!ContainsEmptySlice(in_slices));
     const std::vector<TensorSliceView> out_slices =
         GetTensorSliceView(out_pd.parallel_num(), out_sbp, blob_desc);
-    CHECK(!ContainsEmptySlice(out_slices));
     for (int64_t out_id = 0; out_id < out_pd.parallel_num(); ++out_id) {
       const TensorSliceView& out_slice = out_slices.at(out_id);
       SliceBoxingTaskNode* out_node =
@@ -181,7 +148,6 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     const TensorSliceView& in_slice = GetBroadcastTensorSliceView(blob_desc);
     const std::vector<TensorSliceView> out_slices =
         GetTensorSliceView(out_pd.parallel_num(), out_sbp, blob_desc);
-    CHECK(!ContainsEmptySlice(out_slices));
     for (int64_t out_id = 0; out_id < out_pd.parallel_num(); ++out_id) {
       const TensorSliceView& out_slice = out_slices.at(out_id);
       SliceBoxingTaskNode* out_node =
@@ -228,7 +194,6 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
         const TensorSliceView& in_slice = GetBroadcastTensorSliceView(blob_desc);
         const std::vector<TensorSliceView> out_slices =
             GetTensorSliceView(out_pd.parallel_num(), out_sbp, blob_desc);
-        CHECK(!ContainsEmptySlice(out_slices));
         FOR_RANGE(int64_t, out_id, 0, out_pd.parallel_num()) {
           const TensorSliceView& out_slice = out_slices.at(out_id);
           const int64_t nearest_idx =
