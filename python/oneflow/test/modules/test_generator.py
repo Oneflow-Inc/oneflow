@@ -42,6 +42,14 @@ class TestGenerator(flow.unittest.TestCase):
         generator.manual_seed(2)
         test_case.assertTrue(generator.initial_seed() == 2)
 
+    def test_generator_in_dropout(test_case):
+        tgt = flow.ones(2000000)
+        output = flow._C.dropout(tgt, 0.1, True, flow.Generator())
+        output.numpy()
+        if not os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+            output = flow._C.dropout(tgt.cuda(), 0.1, True, flow.Generator())
+            output.numpy()
+
 
 class TestDefaultGenerator(flow.unittest.TestCase):
     def test_global_manual_seed(test_case):
