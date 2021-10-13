@@ -123,18 +123,46 @@ void LaunchBatchPermuteKernel(StreamContext* stream_ctx,
 }
 
 
-// Naive Copy Baseline
-template<size_t num_dims, size_t movement_size, typename IndexType>
-__global__ void CopyKernel(const void* src_ptr, void*dst_ptr) {
-  using T = float; 
-  // const T* src = reinterpret_cast<const T*>(params.src);
-  // T* dst = reinterpret_cast<T*>(params.dst);
-  // CUDA_1D_KERNEL_LOOP(i, params.count){
-  //   dst[i] = src[i]; 
-  // }
-  const T* src = reinterpret_cast<const T*>(src_ptr);
-  T* dst = reinterpret_cast<T*>(dst_ptr);
+// // Quick Copy Baseline
+// template<size_t num_dims, size_t movement_size, typename IndexType>
+// __global__ void CopyKernel(const void* src_ptr, void*dst_ptr) {
+//   using T = float; 
+//   // const T* src = reinterpret_cast<const T*>(params.src);
+//   // T* dst = reinterpret_cast<T*>(params.dst);
+//   // CUDA_1D_KERNEL_LOOP(i, params.count){
+//   //   dst[i] = src[i]; 
+//   // }
+//   const T* src = reinterpret_cast<const T*>(src_ptr);
+//   T* dst = reinterpret_cast<T*>(dst_ptr);
 
+//   int32_t idx = blockIdx.x * blockDim.x + threadIdx.x; 
+//   dst[idx] = src[idx]; 
+// }
+
+// template<size_t num_dims, size_t tile_size, size_t movement_size, int32_t kBlockRows, typename IndexType>
+// void LaunchCopyKernel(StreamContext* stream_ctx,
+//                       PermuteKernelParams<num_dims, IndexType> params) {
+//   cudaStream_t cuda_stream =
+//       CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
+
+//   const int32_t thread_num = tile_size*kBlockRows; 
+//   const int32_t grid_size = (params.count + thread_num -1) / thread_num; 
+//   printf("Use Copy Kernel!!! \n");
+//   printf("grid size is: %d \n", grid_size);
+//   printf("Count is: %d \n", params.count);
+//   const void* src = params.src; 
+//   void* dst = params.dst; 
+
+//   CopyKernel<num_dims, 1, IndexType>
+//       <<<grid_size, thread_num, 0, cuda_stream>>>(src, dst); 
+// }
+
+// slow copy baseline
+template<size_t num_dims, size_t movement_size, typename IndexType>
+__global__ void SlowCopyKernel(PermuteKernelParams<num_dims, IndexType> params) {
+  using T = float; 
+  const T* src = reinterpret_cast<const T*>(params.src);
+  T* dst = reinterpret_cast<T*>(params.dst);
   int32_t idx = blockIdx.x * blockDim.x + threadIdx.x; 
   dst[idx] = src[idx]; 
 }
@@ -147,48 +175,48 @@ void LaunchCopyKernel(StreamContext* stream_ctx,
 
   const int32_t thread_num = tile_size*kBlockRows; 
   const int32_t grid_size = (params.count + thread_num -1) / thread_num; 
-  printf("Use Copy Kernel!!! \n");
+  printf("Use Slow Copy Kernel!!! \n");
   printf("grid size is: %d \n", grid_size);
   printf("Count is: %d \n", params.count);
-  const void* src = params.src; 
-  void* dst = params.dst; 
-
-  CopyKernel<num_dims, 1, IndexType>
-      <<<grid_size, thread_num, 0, cuda_stream>>>(src, dst); 
+  // const void* src = params.src; 
+  // void* dst = params.dst; 
+  SlowCopyKernel<num_dims, 1, IndexType>
+      <<<grid_size, thread_num, 0, cuda_stream>>>(params); 
 }
 
-template<size_t num_dims, size_t movement_size, size_t tile_size, typename IndexType>
-__global__ void CopyTileKernel(PermuteKernelParams<num_dims, IndexType> params, int32_t grid_size) {
-  using T = float;
-  __shared__ T tile[256];  // To avoid bank conflict.
-  const T* src = reinterpret_cast<const T*>(params.src);
-  T* dst = reinterpret_cast<T*>(params.dst);
 
-  for (int i = blockIdx.x, step = gridDim.x; i < grid_size; i += step) {
-    IndexType idx = blockIdx.x * blockDim.x + threadIdx.x; 
-    tile[threadIdx.x] = src[idx]; 
-    dst[idx] = tile[threadIdx.x]; 
-    __syncthreads();
-  }
-}
+// template<size_t num_dims, size_t movement_size, size_t tile_size, typename IndexType>
+// __global__ void CopyTileKernel(PermuteKernelParams<num_dims, IndexType> params, int32_t grid_size) {
+//   using T = float;
+//   __shared__ T tile[256];  // To avoid bank conflict.
+//   const T* src = reinterpret_cast<const T*>(params.src);
+//   T* dst = reinterpret_cast<T*>(params.dst);
 
-template<size_t num_dims, size_t tile_size, size_t movement_size, size_t kBlockRows, typename IndexType>
-void LaunchCopyTileKernel(StreamContext* stream_ctx,
-                          PermuteKernelParams<num_dims, IndexType> params) {
-  cudaStream_t cuda_stream =
-      CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
+//   for (int i = blockIdx.x, step = gridDim.x; i < grid_size; i += step) {
+//     IndexType idx = blockIdx.x * blockDim.x + threadIdx.x; 
+//     tile[threadIdx.x] = src[idx]; 
+//     dst[idx] = tile[threadIdx.x]; 
+//     __syncthreads();
+//   }
+// }
+
+// template<size_t num_dims, size_t tile_size, size_t movement_size, size_t kBlockRows, typename IndexType>
+// void LaunchCopyTileKernel(StreamContext* stream_ctx,
+//                           PermuteKernelParams<num_dims, IndexType> params) {
+//   cudaStream_t cuda_stream =
+//       CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
 
   
-  const int32_t thread_num = 256; 
-  const int32_t grid_size = (params.count + thread_num -1) / thread_num; 
-  printf("Use CopyTile Kernel!!! \n");
-  printf("grid size is: %d \n", grid_size);
-  printf("Count is: %d \n", params.count);
+//   const int32_t thread_num = 256; 
+//   const int32_t grid_size = (params.count + thread_num -1) / thread_num; 
+//   printf("Use CopyTile Kernel!!! \n");
+//   printf("grid size is: %d \n", grid_size);
+//   printf("Count is: %d \n", params.count);
 
-  CopyTileKernel<num_dims, movement_size, tile_size, IndexType>
-      <<<grid_size, thread_num, 0, cuda_stream>>>(
-          params, grid_size); 
-}
+//   CopyTileKernel<num_dims, movement_size, tile_size, IndexType>
+//       <<<grid_size, thread_num, 0, cuda_stream>>>(
+//           params, grid_size); 
+// }
 
 
 
@@ -262,6 +290,7 @@ void LaunchKernel(StreamContext* stream_ctx, PermuteKernelParams<num_dims, Index
   //       cuda_stream>>>(params);
 
   // ZZK: Just for Baseline!
+  printf("size of param is: %d \n", sizeof(params)); 
   LaunchCopyKernel<num_dims, tile_size, movement_size, kBlockRows, IndexType>(stream_ctx, params);  
 
   // ZZK: Just for Baseline!
