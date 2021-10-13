@@ -19,6 +19,7 @@ import oneflow.framework.check_point_v2 as check_point_v2
 import oneflow.framework.tensor_str as tensor_str_util
 import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
+import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 
 import numpy as np
 from typing import Union
@@ -179,15 +180,6 @@ def _contiguous(self):
 
 def _transpose(self, dim0, dim1):
     return flow._C.transpose(self, dim0, dim1)
-
-
-def _getstate(self):
-    assert self.is_local, "Only support local tensor to pickle"
-    return {"data": self.numpy(), "dtype": self.dtype}
-
-
-def _setstate(self, pickle_dict):
-    return self.__init__(flow.tensor(pickle_dict["data"], dtype=pickle_dict["dtype"]))
 
 
 def is_nonzero(input):
@@ -632,8 +624,8 @@ def RegisterMethods():
     Tensor.backward = _backward
     Tensor.__getitem__ = _getitem
     Tensor.__setitem__ = _setitem
-    Tensor.__setstate__ = _setstate
-    Tensor.__getstate__ = _getstate
+    Tensor.__setstate__ = check_point_v2.tensor_setstate
+    Tensor.__getstate__ = check_point_v2.tensor_getstate
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
     Tensor.__eq__ = _eq

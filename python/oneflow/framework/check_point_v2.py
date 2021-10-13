@@ -16,6 +16,8 @@ limitations under the License.
 import os
 import warnings
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from pathlib import Path
+import pickle
 
 import numpy as np
 from google.protobuf import text_format
@@ -25,6 +27,7 @@ import oneflow as flow
 import oneflow._oneflow_internal
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 import oneflow.framework.dtype as dtype_util
+import oneflow.framework.id_util as id_util
 import pickle
 
 SNAPSHOT_DONE_FILENAME = "snapshot_done"
@@ -96,6 +99,21 @@ class FileBackendVariableBlob:
         ).reshape(self.shape)
 
 
+def _save_tensor_to_disk(tensor: "oneflow.Tensor", dir_name: str) -> None:
+    os.makedirs(dir_name, exist_ok=True)
+    meta_info = variable_meta_info_pb.VariableMetaInfo()
+    meta_info.shape.dim[:] = tensor.shape
+    meta_info.data_type = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(
+        tensor.dtype
+    )
+    data_path = os.path.join(dir_name, DATA_FILENAME)
+    with open(data_path, "wb") as f:
+        f.write(tensor.numpy().tobytes())
+
+    with open(os.path.join(dir_name, META_INFO_FILENAME), "w") as f:
+        f.write(text_format.MessageToString(meta_info))
+
+
 ValueContainer = Union[FileBackendVariableBlob, np.ndarray, "oneflow.Tensor"]
 
 
@@ -117,6 +135,7 @@ def _LoadSingleVariable(
         else:
             loaded = flow.tensor([]).to("cuda")
         loaded = loaded.to_consistent(
+                # FIXME: 0 should be `consistent_src_rank`, sbp should be nd
             flow.placement("cuda", {0: [0]}), flow.sbp.broadcast
         )
         return loaded
@@ -134,30 +153,61 @@ def _broadcast_py_object(obj, src: int = 0):
         return pickle.loads(flow._oneflow_internal.cpu_broadcast(None, src))
 
 
+# NOTE(jianhao): 
+# 1. tensor_getstate and tensor_setstate is binded to tensor.__getstate__ 
+# and __setstate__ in tensor.py, and can only be called inside flow.save
+# or flow.load
+# 2. (de)serializing a container of consistent tensors requires the order
+# of those tensors are the same across all ranks.
+def tensor_getstate(self):
+    assert isinstance(current_path, Path)
+    if consistent_src_dst_rank is None:
+        assert self.is_local
+        rel_dir_name = id_util.UniqueStr("tensor_")
+        abs_dir_name = current_path / rel_dir_name
+
+        tensor = self
+    else:
+        assert not self.is_local
+        rel_dir_name = f'consistent_tensor_{self.consistent_id()}'
+        abs_dir_name = current_path / rel_dir_name
+
+        tensor = self.to_consistent(sbp=flow.sbp.broadcast).to_local()
+    if consistent_src_dst_rank is None or consistent_src_dst_rank == flow.env.get_rank():
+        _save_tensor_to_disk(tensor, abs_dir_name)
+
+    return {"path": rel_dir_name}
+
+
+def tensor_setstate(self, pickle_dict):
+    assert isinstance(current_path, Path)
+    rel_dir_name = pickle_dict['path']
+    abs_dir_name = current_path / rel_dir_name
+    self.__init__(_LoadSingleVariable(str(abs_dir_name), consistent_src_dst_rank))
+
+
 def Load(
     path: str, consistent_src_rank: Optional[int] = None,
 ) -> Dict[str, "flow.Tensor"]:
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
+    global current_path
+    global consistent_src_dst_rank
+    consistent_src_dst_rank = consistent_src_rank
+    current_path = Path(path)
+    meta_path = current_path / 'meta'
     rank = flow.env.get_rank()
-    var_dict = {}
-    if consistent_src_rank is None or rank == consistent_src_rank:
-        all_files = os.listdir(path)
-        assert SNAPSHOT_DONE_FILENAME in all_files
-        all_files.remove(SNAPSHOT_DONE_FILENAME)
-        if consistent_src_rank is not None:
-            _broadcast_py_object(all_files, consistent_src_rank)
+    if consistent_src_rank is not None:
+        if rank == consistent_src_rank:
+            meta_bytes = meta_path.read_bytes()
+            _broadcast_py_object(meta_bytes, consistent_src_rank)
+        else:
+            meta_bytes = _broadcast_py_object(None, consistent_src_rank)
     else:
-        all_files = _broadcast_py_object(None, consistent_src_rank)
-    for f in all_files:
-        var_dir = os.path.join(path, f)
-        try:
-            var_dict[f] = _LoadSingleVariable(var_dir, consistent_src_rank)
-        except FileNotFoundError:
-            warnings.warn(
-                f"'{var_dir}' does not have valid tensor data. Please check it if it is unexpected.",
-                stacklevel=2,
-            )
-    return var_dict
+        meta_bytes = meta_path.read_bytes()
+
+    res = pickle.loads(meta_bytes)
+    consistent_src_dst_rank = None
+    return res
 
 
 def save(
@@ -165,43 +215,27 @@ def save(
     path: str,
     consistent_dst_rank: Optional[int] = None,
 ) -> None:
-    consistent_mode = consistent_dst_rank is not None
-    for (name, var) in var_dict.items():
-        if consistent_mode:
-            assert (
-                var.is_consistent
-            ), f"consistent tensor is needed, but {name} is a local tensor"
-            var_dict[name] = var.to_consistent(sbp=flow.sbp.broadcast).to_local()
-        else:
-            assert (
-                not var.is_consistent
-            ), f"local tensor is needed, but {name} is a consistent tensor"
+    global current_path
+    global consistent_src_dst_rank
+    consistent_src_dst_rank = consistent_dst_rank
+    current_path = Path(path)
 
+    pickled_bytes = pickle.dumps(var_dict)
     rank = flow.env.get_rank()
-    if consistent_mode and rank != consistent_dst_rank:
-        return
+    if rank == consistent_dst_rank:
+        current_path.mkdir(exist_ok=True)
+        meta_path = current_path / 'meta'
+        meta_path.write_bytes(pickled_bytes)
 
-    os.makedirs(path, exist_ok=True)
-
-    for (name, var) in var_dict.items():
-        meta_info = variable_meta_info_pb.VariableMetaInfo()
-        meta_info.shape.dim[:] = var.shape
-        meta_info.data_type = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(
-            var.dtype
-        )
-        var_dir = os.path.join(path, name)
-        param_path = os.path.join(var_dir, DATA_FILENAME)
-        os.makedirs(os.path.dirname(param_path))
-        with open(param_path, "wb") as f:
-            f.write(var.numpy().tobytes())
-
-        with open(os.path.join(var_dir, META_INFO_FILENAME), "w") as f:
-            f.write(text_format.MessageToString(meta_info))
-    with open(os.path.join(path, SNAPSHOT_DONE_FILENAME), "w"):
-        pass
+    consistent_src_dst_rank = None
+    current_path = None
 
 
 def generate_values_by_initializer(initializer, shape, dtype):
     np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(dtype))
     length = _ElemCnt(shape)
     return np.array(initializer(length)).astype(np_dtype).reshape(shape)
+
+
+current_path = None
+consistent_src_dst_rank = None
