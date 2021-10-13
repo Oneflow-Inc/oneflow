@@ -141,8 +141,7 @@ class DeConvBaseFunctor {
     JUST(deconv_attrs.SetAttr<std::string>("data_format", data_format));
     std::shared_ptr<one::Tensor> deconv_out = nullptr;
     if (groups == 1) {
-      deconv_out =
-          std::move(JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {x, weight}, deconv_attrs)));
+      deconv_out = JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {x, weight}, deconv_attrs));
     } else {
       auto nc = x->dim(1) / groups;
       auto split_x = JUST(functional::Split(x, nc, 1));
@@ -155,7 +154,7 @@ class DeConvBaseFunctor {
         max_dim_size += deconv_i->dim(1);
         split_out.push_back(deconv_i);
       }
-      deconv_out = std::move(JUST(functional::Concat(split_out, 1, max_dim_size)));
+      deconv_out = JUST(functional::Concat(split_out, 1, max_dim_size));
     }
 
     if (bias) {
