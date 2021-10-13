@@ -17,16 +17,12 @@ limitations under the License.
 #define ONEFLOW_CORE_PRIMITIVE_MATMUL_H_
 
 #include "oneflow/core/primitive/include/primitive.h"
+#include "oneflow/core/primitive/include/blas.h"
 #include "oneflow/core/common/scalar.h"
 
 namespace oneflow {
 
 namespace primitive {
-
-enum class MatmulTransposeType {
-  N = 0,
-  T,
-};
 
 class Matmul : public Primitive {
  public:
@@ -37,8 +33,8 @@ class Matmul : public Primitive {
   virtual DataType a_type() const = 0;
   virtual DataType b_type() const = 0;
   virtual DataType c_type() const = 0;
-  virtual MatmulTransposeType transpose_a() const = 0;
-  virtual MatmulTransposeType transpose_b() const = 0;
+  virtual BlasTransposeType transpose_a() const = 0;
+  virtual BlasTransposeType transpose_b() const = 0;
 
   virtual void Launch(StreamContext* stream_ctx, size_t m, size_t n, size_t k, Scalar alpha,
                       const void* a, const void* b, Scalar beta, void* c) = 0;
@@ -50,8 +46,8 @@ class MatmulFactory : public Factory<Matmul> {
   MatmulFactory() = default;
   ~MatmulFactory() override = default;
 
-  virtual std::unique_ptr<Matmul> New(DataType data_type, MatmulTranposeType transpose_a,
-                                      MatmulTranposeType transpose_b) = 0;
+  virtual std::unique_ptr<Matmul> New(DataType data_type, BlasTransposeType transpose_a,
+                                      BlasTransposeType transpose_b) = 0;
 };
 
 }  // namespace primitive
