@@ -151,10 +151,6 @@ def compare_eager_2d_consistent_with_tensorflow(
     of_output = of_output.to_local()
 
     if rank == 0:
-        print(of_logits_grad)
-        print(tf_logits_diff)
-        print(of_output)
-        print(tf_output)
         assert np.allclose(of_output.numpy(), tf_output.numpy(), rtol=1e-03, atol=1e-04)
         assert np.allclose(
             of_logits_grad.numpy(), tf_logits_diff.numpy(), rtol=1e-03, atol=1e-04
