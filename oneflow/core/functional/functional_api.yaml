@@ -258,11 +258,11 @@
   bind_python: True
 
 - name: "std"
-  signature: "Tensor (Tensor x, Int32List[1] dim=None, Bool unbiased=False, Bool keepdim=False) => StandardDeviation"
+  signature: "Tensor (Tensor x, Int32List[1] dim, Bool unbiased=False, Bool keepdim=False) => StandardDeviation"
   bind_python: True
 
 - name: "var"
-  signature: "Tensor (Tensor x, Int32List[1] dim=None, Bool unbiased=False, Bool keepdim=False) => Variance"
+  signature: "Tensor (Tensor x, Int32List[1] dim, Bool unbiased=False, Bool keepdim=False) => Variance"
   bind_python: True
 
 - name: "relu"

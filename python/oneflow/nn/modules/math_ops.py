@@ -26,7 +26,6 @@ from oneflow.ops.transpose_util import (
 )
 
 
-@register_tensor_op("var")
 def variance_op(input, dim=None, unbiased=None, keepdim=False):
     """Returns the variance of each row of the `input` tensor in the given dimension `dim`.
 
@@ -585,7 +584,6 @@ def square_op(input):
     return flow._C.square(input)
 
 
-@register_tensor_op("std")
 def std_op(input, dim, unbiased=False, keepdim=False):
     """
     Returns the standard-deviation of each row of the :attr:`input` tensor in the
@@ -620,6 +618,24 @@ def std_op(input, dim, unbiased=False, keepdim=False):
 
     """
     return flow._C.std(input, dim, unbiased, keepdim)
+    # reduce_count = 1
+    # axis = _check_axis(dim, input.shape)
+    # if isinstance(axis, list) and len(axis) == 0:
+    #     return flow.zeros(input.shape)
+    # else:
+    #     if len(axis) == 0:
+    #         reduce_count = input.nelement()
+    #     else:
+    #         for i in axis:
+    #             reduce_count *= input.shape[i]
+
+    #     sum = flow.sum(flow.square(input), axis, keepdim) / (reduce_count)
+    #     square = flow.square(flow.sum(input, axis, keepdim) / (reduce_count))
+    #     sub = flow.sub(sum, square)
+    #     # abs = flow.abs(sub)
+    #     if unbiased:
+    #         return flow.sqrt(sub*reduce_count/(reduce_count-1))
+    #     return flow.sqrt(sub)
 
 
 def addmm(x, mat1, mat2, alpha=1, beta=1):

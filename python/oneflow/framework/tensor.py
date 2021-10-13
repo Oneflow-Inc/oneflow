@@ -465,6 +465,18 @@ def _square(self):
     return flow.square(self)
 
 
+def _var(self, dim, unbiased=False, keepdim=False):
+    if dim is None:
+        dim = [i for i in range(self.ndim)]
+    return flow.var(self, dim, unbiased, keepdim)
+
+
+def _std(self, dim=None, unbiased=False, keepdim=False):
+    if dim is None:
+        dim = [i for i in range(self.ndim)]
+    return flow.std(self, dim, unbiased, keepdim)
+
+
 def _matmul(self, other):
     return flow.matmul(self, other)
 
@@ -737,6 +749,8 @@ def RegisterMethods():
     Tensor.rsqrt = _rsqrt
     Tensor.sqrt = _sqrt
     Tensor.square = _square
+    Tensor.var = _var
+    Tensor.std = _std
     Tensor.matmul = _matmul
     Tensor.round = _round
     Tensor.softplus = _softplus

@@ -1004,12 +1004,17 @@ class StandardDeviationFunctor {
         reduce_count *= input->shape()->At(axis[i]);
       }
     }
-    if (unbiased){
-      reduce_count -= 1;
-    }
+ 
     const auto& sum = JUST(functional::ScalarDiv(JUST(functional::ReduceSum(JUST(functional::Square(input)), axis, keepdim)), Scalar(reduce_count)));
     const auto& square = JUST(functional::Square(JUST(functional::ScalarDiv(JUST(functional::ReduceSum(input, axis, keepdim)), Scalar(reduce_count)))));
     const auto& sub = JUST(functional::Sub(sum, square));
+    // const auto& abs = JUST(functional::Abs(sub));
+    if(unbiased){
+      // Scalar scalar1 = Scalar((double)reduce_count);
+      // Scalar scalar2 = Scalar((double)(reduce_count-1));
+      // return functional::ScalarDiv(JUST(functional::Sqrt(JUST(functional::ScalarMul(abs, scalar1)))), scalar2);
+      return functional::Sqrt(JUST(functional::ScalarMul(sub, Scalar((double)reduce_count/(double)(reduce_count-1)))));
+    }
     return functional::Sqrt(sub);
   }
 };
