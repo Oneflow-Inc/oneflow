@@ -125,13 +125,18 @@ void LaunchBatchPermuteKernel(StreamContext* stream_ctx,
 
 // Naive Copy Baseline
 template<size_t num_dims, size_t movement_size, typename IndexType>
-__global__ void CopyKernel(PermuteKernelParams<num_dims, IndexType> params) {
+__global__ void CopyKernel(const void* src_ptr, void*dst_ptr) {
   using T = float; 
-  const T* src = reinterpret_cast<const T*>(params.src);
-  T* dst = reinterpret_cast<T*>(params.dst);
-  CUDA_1D_KERNEL_LOOP(i, params.count){
-    dst[i] = src[i]; 
-  }
+  // const T* src = reinterpret_cast<const T*>(params.src);
+  // T* dst = reinterpret_cast<T*>(params.dst);
+  // CUDA_1D_KERNEL_LOOP(i, params.count){
+  //   dst[i] = src[i]; 
+  // }
+  const T* src = reinterpret_cast<const T*>(src_ptr);
+  T* dst = reinterpret_cast<T*>(dst_ptr);
+
+  int32_t idx = blockIdx.x * blockDim.x + threadIdx.x; 
+  dst[idx] = src[idx]; 
 }
 
 template<size_t num_dims, size_t tile_size, size_t movement_size, int32_t kBlockRows, typename IndexType>
@@ -145,9 +150,11 @@ void LaunchCopyKernel(StreamContext* stream_ctx,
   printf("Use Copy Kernel!!! \n");
   printf("grid size is: %d \n", grid_size);
   printf("Count is: %d \n", params.count);
+  const void* src = params.src; 
+  void* dst = params.dst; 
 
   CopyKernel<num_dims, 1, IndexType>
-      <<<grid_size, thread_num, 0, cuda_stream>>>(params); 
+      <<<grid_size, thread_num, 0, cuda_stream>>>(src, dst); 
 }
 
 template<size_t num_dims, size_t movement_size, size_t tile_size, typename IndexType>
@@ -254,11 +261,11 @@ void LaunchKernel(StreamContext* stream_ctx, PermuteKernelParams<num_dims, Index
   //       <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0,
   //       cuda_stream>>>(params);
 
-  // // ZZK: Just for Baseline!
-  // LaunchCopyKernel<num_dims, tile_size, movement_size, kBlockRows, IndexType>(stream_ctx, params);  
+  // ZZK: Just for Baseline!
+  LaunchCopyKernel<num_dims, tile_size, movement_size, kBlockRows, IndexType>(stream_ctx, params);  
 
   // ZZK: Just for Baseline!
-  LaunchCopyTileKernel<num_dims, tile_size, movement_size, kBlockRows, IndexType>(stream_ctx, params);  
+  // LaunchCopyTileKernel<num_dims, tile_size, movement_size, kBlockRows, IndexType>(stream_ctx, params);  
 }
 
 class PermuteImpl : public Permute, public CudaGraphSupport {
