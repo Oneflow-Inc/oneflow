@@ -168,8 +168,8 @@ jobs:
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
         with:
-          repository: Oneflow-Inc/oneflow
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
       - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@add-input-delete-cache
         name: find cache
         id: find-cache
