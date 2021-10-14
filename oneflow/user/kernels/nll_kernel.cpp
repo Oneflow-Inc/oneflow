@@ -29,13 +29,13 @@ void ComputeNllOut(int64_t num_instances, K num_classes, K ignore_index, const T
                    const K* target, T* out, const T* weight, T* total_weight) {
   *total_weight = 0;
   FOR_RANGE(int64_t, i, 0, num_instances) {
-    CHECK_GE(target[i], 0);
-    CHECK_LT(target[i], num_classes);
     K label = target[i];
     if (label == ignore_index) {
       out[i] = 0;
       continue;
     }
+    CHECK_GE(label, 0);
+    CHECK_LT(label, num_classes);
     T cur_weight = weight == nullptr ? 1 : weight[label];
     *total_weight += cur_weight;
     out[i] = -input[i * num_classes + label] * cur_weight;
@@ -46,10 +46,10 @@ void ComputeNllGradOut(int64_t num_instances, K num_classes, K ignore_index, con
                        const T* dy, T* dx, const T* weight, const T* total_weight,
                        const ReductionType reduction_type) {
   FOR_RANGE(int64_t, i, 0, num_instances) {
-    CHECK_GE(target[i], 0);
-    CHECK_LT(target[i], num_classes);
     K label = target[i];
     if (label == ignore_index) { continue; }
+    CHECK_GE(label, 0);
+    CHECK_LT(label, num_classes);
     T cur_weight = weight == nullptr ? -1 : -weight[label];
     dx[i * num_classes + label] =
         (reduction_type == ReductionType::kNone ? dy[i] : (*dy)) * cur_weight;
@@ -135,17 +135,6 @@ class NllGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T>
-user_op::InferTmpSizeFn GenFwInferTmpSizeFn() {
-  return [](user_op::InferContext* ctx) {
-    const int64_t n = ctx->InputShape("target", 0).elem_cnt();
-    const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
-
-    if (reduction != ReductionType::kNone) { return GetCudaAlignedSize(n * sizeof(T)); }
-    return static_cast<size_t>(0);
-  };
-}
-
 }  // namespace
 #define REGISTER_NLL_KERNEL(dtype_pair, ltype_pair)                                           \
   REGISTER_USER_KERNEL("nll")                                                                 \
@@ -153,7 +142,7 @@ user_op::InferTmpSizeFn GenFwInferTmpSizeFn() {
       .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU)                          \
                        & (user_op::HobDataType("target", 0) == OF_PP_PAIR_SECOND(ltype_pair)) \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))   \
-      .SetInferTmpSizeFn(GenFwInferTmpSizeFn<OF_PP_PAIR_FIRST(dtype_pair)>());
+      .SetInferTmpSizeFn(loss::GenDefaultInferTmpSizeFn<OF_PP_PAIR_FIRST(dtype_pair)>());
 
 #define REGISTER_NLL_GRAD_KERNEL(dtype_pair, ltype_pair)                                        \
   REGISTER_USER_KERNEL("nll_grad")                                                              \
@@ -167,6 +156,5 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_NLL_KERNEL, FLOATING_DATA_TYPE_SEQ, IN
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_NLL_GRAD_KERNEL, FLOATING_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
-
 }  // namespace user_op
 }  // namespace oneflow
