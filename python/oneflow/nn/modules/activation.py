@@ -411,20 +411,14 @@ class Hardsigmoid(Module):
 
 class Softmax(Module):
     def __init__(self, dim: Optional[int] = None):
-        super().__init__()
-        self.axis = 1 if dim is None else dim
+        super(Softmax, self).__init__()
+        self.dim = dim
 
     def forward(self, x):
-        (need_transpose, permute) = _softmax_need_transpose(x, self.axis)
-        if need_transpose:
-            x = flow._C.transpose(x, perm=permute)
-        res = flow._C.softmax(x)
-        if need_transpose:
-            res = flow._C.transpose(res, perm=permute)
-        return res
+        return flow._C.softmax(x, self.dim)
 
     def extra_repr(self):
-        return f"axis={self.axis}"
+        return f"dim={self.dim}"
 
 
 @register_tensor_op("softmax")
@@ -512,23 +506,12 @@ class LogSoftmax(Module):
                 [-0.4877, -3.3176, -1.0506]], dtype=oneflow.float32)
     """
 
-    def __init__(self, dim: Optional[int] = 1):
-        super().__init__()
+    def __init__(self, dim: Optional[int] = None):
+        super(LogSoftmax, self).__init__()
         self.dim = dim
 
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        if not hasattr(self, "dim"):
-            self.dim = None
-
     def forward(self, x):
-        (need_transpose, permute) = _softmax_need_transpose(x, self.dim)
-        if need_transpose:
-            x = flow._C.transpose(x, perm=permute)
-        x = flow._C.log_softmax(x)
-        if need_transpose:
-            x = flow._C.transpose(x, perm=permute)
-        return x
+        return flow._C.log_softmax(x, self.dim)
 
     def extra_repr(self):
         return f"dim={self.dim}"
