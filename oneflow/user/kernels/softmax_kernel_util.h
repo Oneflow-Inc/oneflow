@@ -20,10 +20,47 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
+enum class SoftmaxAlgorithm {
+  kSoftmax = 0,
+  kLogSoftmax = 1,
+};
+
+template<typename T>
+size_t SoftmaxReduceResultStorageSize(int64_t n) {
+  return GetCudaAlignedSize(n * sizeof(T));
+}
+
+template<typename T>
+size_t SoftmaxReduceOperationStorageSize(int64_t n, int64_t w) {
+  return GetCudaAlignedSize(n * w * sizeof(T));
+}
+
+template<typename T, SoftmaxAlgorithm softmax_algorithm>
+typename std::enable_if<softmax_algorithm == SoftmaxAlgorithm::kSoftmax, size_t>::type
+SoftmaxComputeProbTempStorageSize(int64_t n, int64_t w) {
+  return SoftmaxReduceResultStorageSize<T>(n) + SoftmaxReduceOperationStorageSize<T>(n, w);
+}
+
+template<typename T, SoftmaxAlgorithm softmax_algorithm>
+typename std::enable_if<softmax_algorithm == SoftmaxAlgorithm::kLogSoftmax, size_t>::type
+SoftmaxComputeProbTempStorageSize(int64_t n, int64_t w) {
+  return SoftmaxReduceResultStorageSize<T>(n) + SoftmaxReduceOperationStorageSize<T>(n, w) * 2;
+}
+
+template<typename T, SoftmaxAlgorithm softmax_algorithm>
+typename std::enable_if<softmax_algorithm == SoftmaxAlgorithm::kSoftmax, size_t>::type
+SoftmaxComputeDiffTempStorageSize(int64_t n, int64_t w) {
+  return SoftmaxReduceResultStorageSize<T>(n) + SoftmaxReduceOperationStorageSize<T>(n, w);
+}
+
+template<typename T, SoftmaxAlgorithm softmax_algorithm>
+typename std::enable_if<softmax_algorithm == SoftmaxAlgorithm::kLogSoftmax, size_t>::type
+SoftmaxComputeDiffTempStorageSize(int64_t n, int64_t w) {
+  return SoftmaxReduceResultStorageSize<T>(n) + SoftmaxReduceOperationStorageSize<T>(n, w) * 2;
+}
+
+template<DeviceType device_type, SoftmaxAlgorithm softmax_algorithm, typename T>
 struct SoftmaxKernelUtil {
-  static size_t GetComputeProbTempStorageSizeInBytes(int64_t n, int64_t w);
-  static size_t GetComputeDiffTempStorageSizeInBytes(int64_t n, int64_t w);
   static void ComputeProb(DeviceCtx* ctx, int64_t n, int64_t w, const T* in, T* prob,
                           void* temp_storage, size_t temp_storage_bytes);
   static void ComputeDiff(DeviceCtx* ctx, int64_t n, int64_t w, const T* dy, const T* out, T* dx,

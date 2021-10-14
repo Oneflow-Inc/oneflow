@@ -465,6 +465,14 @@ def _square(self):
     return flow.square(self)
 
 
+def _var(self, dim=None, unbiased=True, keepdim=False):
+    return flow._C.var(self, dim=dim, unbiased=unbiased, keepdim=keepdim)
+
+
+def _std(self, dim=None, unbiased=True, keepdim=False):
+    return flow._C.std(self, dim=dim, unbiased=unbiased, keepdim=keepdim)
+
+
 def _matmul(self, other):
     return flow.matmul(self, other)
 
@@ -483,6 +491,26 @@ def _tril(self, diagonal=0):
 
 def _triu(self, diagonal=0):
     return flow.triu(self, diagonal=diagonal)
+
+
+def _relu(self, inplace=False):
+    return flow.relu(self, inplace=inplace)
+
+
+def _softmax(self, dim=None):
+    return flow.softmax(self, dim=dim)
+
+
+def _log_softmax(self, dim=None):
+    return flow.log_softmax(self, dim=dim)
+
+
+def _argmax(self, dim=None, keepdim=None):
+    return flow.argmax(self, dim=dim, keepdim=keepdim)
+
+
+def _argmin(self, dim=None, keepdim=None):
+    return flow.argmin(self, dim=dim, keepdim=keepdim)
 
 
 def _uniform(self, a=0, b=1):
@@ -673,6 +701,8 @@ def RegisterMethods():
     Tensor.abs = _abs
     Tensor.exp = _exp
     Tensor.floor_divide = _floor_divide
+    Tensor.argmax = _argmax
+    Tensor.argmin = _argmin
     Tensor.acos = _acos
     Tensor.acosh = _acosh
     Tensor.arccosh = _arccosh
@@ -723,6 +753,8 @@ def RegisterMethods():
     Tensor.rsqrt = _rsqrt
     Tensor.sqrt = _sqrt
     Tensor.square = _square
+    Tensor.var = _var
+    Tensor.std = _std
     Tensor.matmul = _matmul
     Tensor.round = _round
     Tensor.softplus = _softplus
@@ -730,6 +762,9 @@ def RegisterMethods():
     Tensor.triu = _triu
     Tensor.contiguous = _contiguous
     Tensor.transpose = _transpose
+    Tensor.relu = _relu
+    Tensor.softmax = _softmax
+    Tensor.log_softmax = _log_softmax
 
 
 def register_tensor_op(op_name):

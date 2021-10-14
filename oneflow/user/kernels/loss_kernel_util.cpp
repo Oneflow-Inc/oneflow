@@ -18,9 +18,12 @@ namespace oneflow {
 namespace user_op {
 namespace loss {
 
-template<typename T>
-void ApplyLossReduction(int64_t elem_cnt, const T* tmp_out, T* out,
-                        const ReductionType reduction_type) {
+template<DeviceType device_type, typename T>
+RETURN_VOID_IF_CPU(device_type)
+ApplyLossReductionIfNeed(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* out,
+                         const ReductionType reduction_type) {
+  (void)ctx;
+  if (reduction_type == ReductionType::kNone) { return; }
   if ((reduction_type != ReductionType::kMean) && (reduction_type != ReductionType::kSum)) {
     UNIMPLEMENTED();
     return;
@@ -30,12 +33,13 @@ void ApplyLossReduction(int64_t elem_cnt, const T* tmp_out, T* out,
   if (reduction_type == ReductionType::kMean) { *out /= elem_cnt; }
 }
 
-#define SPECIALIZE_APPLY_LOSS_REDUCTION(dtype)                                                \
-  template void ApplyLossReduction<dtype>(int64_t elem_cnt, const dtype* tmp_out, dtype* out, \
-                                          const ReductionType reduction_type);
+#define SPECIALIZE_APPLY_LOSS_REDUCTION(device_type, dtype)                              \
+  template RETURN_VOID_IF_CPU(device_type) ApplyLossReductionIfNeed<device_type, dtype>( \
+      DeviceCtx * ctx, int64_t elem_cnt, const dtype* tmp_out, dtype* out,               \
+      const ReductionType reduction_type);
 
-SPECIALIZE_APPLY_LOSS_REDUCTION(float)
-SPECIALIZE_APPLY_LOSS_REDUCTION(double)
+SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kCPU, float)
+SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kCPU, double)
 
 }  // namespace loss
 }  // namespace user_op

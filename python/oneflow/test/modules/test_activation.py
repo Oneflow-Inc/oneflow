@@ -174,19 +174,6 @@ class TestSigmoidModule(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestSoftmax(flow.unittest.TestCase):
-    @autotest()
-    def test_softmax_module_with_random_data(test_case):
-        m = torch.nn.Softmax(dim=random(low=1, high=4).to(int) | nothing())
-        m.train(random())
-        device = random_device()
-        m.to(device)
-        x = random_pytorch_tensor(ndim=4).to(device)
-        y = m(x)
-        return y
-
-
-@flow.unittest.skip_unless_1n1d()
 class TestHardsigmoidModule(flow.unittest.TestCase):
     def test_hardsigmoid_inplace(test_case):
         def np_hardsigmoid(input):
@@ -244,17 +231,59 @@ class TestHardsigmoidModule(flow.unittest.TestCase):
         return y
 
 
+def test_softmax(batch_size: int, log_softmax: bool = False):
+    num_dims = random(low=1, high=5).to(int)
+    m = torch.nn.Softmax(dim=random(low=0, high=num_dims).to(int) | nothing())
+    if log_softmax:
+        m = torch.nn.LogSoftmax(dim=random(low=0, high=num_dims).to(int) | nothing())
+    m.train(random())
+    device = random_device()
+    m.to(device)
+    x = (
+        random_pytorch_tensor(ndim=num_dims).to(device)
+        if batch_size < 0
+        else random_pytorch_tensor(ndim=num_dims, dim0=batch_size).to(device)
+    )
+    y = m(x)
+    return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestSoftmax(flow.unittest.TestCase):
+    @autotest()
+    def test_softmax_module_with_random_data(test_case):
+        return test_softmax(batch_size=-1, log_softmax=False)
+
+    @autotest()
+    def test_softmax_module_with_batch_size_equal_1024(test_case):
+        return test_softmax(batch_size=1024, log_softmax=False)
+
+    @autotest(n=5)
+    def test_softmax_module_with_batch_size_equal_5120(test_case):
+        return test_softmax(batch_size=5120, log_softmax=False)
+
+    @autotest(n=2)
+    def test_softmax_module_with_batch_size_equal_10240(test_case):
+        return test_softmax(batch_size=10240, log_softmax=False)
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestLogSoftmaxModule(flow.unittest.TestCase):
     @autotest()
     def test_logsoftmax_module_with_random_data(test_case):
-        m = torch.nn.LogSoftmax(dim=random(low=1, high=4).to(int) | nothing())
-        m.train(random())
-        device = random_device()
-        m.to(device)
-        x = random_pytorch_tensor(ndim=4).to(device)
-        y = m(x)
-        return y
+        return test_softmax(batch_size=-1, log_softmax=True)
+
+    @autotest()
+    def test_softmax_module_with_batch_size_equal_1024(test_case):
+        return test_softmax(batch_size=1024, log_softmax=True)
+
+    @autotest(n=5)
+    def test_softmax_module_with_batch_size_equal_5120(test_case):
+        return test_softmax(batch_size=5120, log_softmax=True)
+
+    @autotest(n=2)
+    def test_softmax_module_with_batch_size_equal_10240(test_case):
+        return test_softmax(batch_size=10240, log_softmax=True)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -444,6 +473,26 @@ class TestReluFunction(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor(ndim=2, dim1=3).to(device)
         y = torch.relu(x)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestRelu6Function(flow.unittest.TestCase):
+    @autotest()
+    def test_flow_nn_functional_relu6_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim1=3).to(device)
+        y = torch.nn.functional.relu6(x)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestLogSigmoidFunction(flow.unittest.TestCase):
+    @autotest()
+    def test_flow_nn_functional_logsigmoid_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim1=3).to(device)
+        y = torch.nn.functional.logsigmoid(x)
         return y
 
 
