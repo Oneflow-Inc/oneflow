@@ -103,7 +103,7 @@ void LaunchBatchPermuteKernel(StreamContext* stream_ctx,
   printf("Dw is: %d \n", dw);
 
   const int32_t grid_size = n * dh * dw;
-  int32_t checked_grid_size = std::min(grid_size, kCudaMaxBlocksNum);
+  int32_t checked_grid_size = std::min(grid_size, kCudaMaxBlocksNum) / 2; // divide 2 for half2 to validate. 
   printf("Use Batch Permute Kernel!!! \n");
   printf("Checked grid size is: %d \n", checked_grid_size);
   printf("kCudaMaxBlocks is: %d \n", kCudaMaxBlocksNum);
