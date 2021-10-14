@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/instruction_operand.h"
 #include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/vm/instruction.cfg.h"

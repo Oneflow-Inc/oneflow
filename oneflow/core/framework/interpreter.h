@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <functional>
 #include "oneflow/core/vm/id_generator.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
 
 namespace oneflow {
