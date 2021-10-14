@@ -1149,7 +1149,7 @@ add_docstr(
         >>> input = flow.tensor(arr)
         >>> output = flow.std(input, dim=0).numpy()
         >>> output
-        array(0.8164968, dtype=float32)
+        array(1.)
 
     """,
 )
