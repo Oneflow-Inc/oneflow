@@ -1002,7 +1002,7 @@ class StandardDeviationFunctor {
     if (unbiased.has_value()) { unbias = JUST(unbiased); }
     if (keepdim.has_value()) { keepdims = JUST(keepdim); }
 
-    CheckAxis(axis, *input->shape());
+    JUST(CheckAxis(axis, *input->shape()));
     if (axis.size() == 0) {
       return functional::Constant(*input->shape(), Scalar(0), *input->dtype(), NullOpt);
     }
@@ -1063,7 +1063,7 @@ class VarianceFunctor {
     if (unbiased.has_value()) { unbias = JUST(unbiased); }
     if (keepdim.has_value()) { keepdims = JUST(keepdim); }
 
-    CheckAxis(axis, *input->shape());
+    JUST(CheckAxis(axis, *input->shape()));
     int32_t reduce_count = 1;
     for (int i = 0; i < axis.size(); ++i) { reduce_count *= input->shape()->At(axis[i]); }
     if (unbias) { reduce_count -= 1; }
