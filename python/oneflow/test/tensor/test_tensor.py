@@ -232,6 +232,12 @@ class TestTensor(flow.unittest.TestCase):
         ):
             x.placement
 
+        if x.dtype != flow.tensor_buffer:
+            with test_case.assertRaises(
+                oneflow._oneflow_internal.exception.RuntimeException
+            ):
+                x._tensor_buffer_shapes_and_dtypes
+
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_to_bool(test_case):
         x = flow.tensor([0.0])
@@ -1475,6 +1481,90 @@ class TestTensor(flow.unittest.TestCase):
         other = random().to(int)
         y = input.floor_divide(other)
         return y
+
+    @flow.unittest.skip_unless_1n4d()
+    def test_construct_consistent_tensor_by_numpy(test_case):
+        x = np.ones((4, 4), dtype=np.int32)
+        placement = flow.placement("cuda", {0: [0, 1, 2, 3]})
+        y = flow.tensor(
+            x,
+            dtype=flow.float32,
+            placement=placement,
+            sbp=[flow.sbp.split(0)],
+            requires_grad=False,
+        )
+        test_case.assertTrue(y.dtype == flow.float32)
+        test_case.assertTrue(
+            np.allclose(y.to_local().numpy(), np.ones((1, 4), dtype=np.float32))
+        )
+        test_case.assertEqual(y.placement, placement)
+
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class TestTensorNumpy(flow.unittest.TestCase):
+    @flow.unittest.skip_unless_1n2d()
+    def test_1d_sbp_tensor_numpy_1n2d(test_case):
+        ori_x = flow.tensor([1, 2, 3, 4]) + flow.env.get_rank()
+        placement = flow.env.all_device_placement("cpu")
+        x = ori_x.to_consistent(placement=placement, sbp=flow.sbp.split(0))
+        test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4, 2, 3, 4, 5]))
+
+        x = ori_x.to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+        test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4]))
+
+        x = ori_x.to_consistent(placement=placement, sbp=flow.sbp.partial_sum)
+        test_case.assertTrue(np.allclose(x.numpy(), [3, 5, 7, 9]))
+
+        placement = flow.env.all_device_placement("cuda")
+        x = ori_x.to_consistent(placement=placement, sbp=flow.sbp.split(0))
+        test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4, 2, 3, 4, 5]))
+
+        x = ori_x.to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+        test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4]))
+
+        x = ori_x.to_consistent(placement=placement, sbp=flow.sbp.partial_sum)
+        test_case.assertTrue(np.allclose(x.numpy(), [3, 5, 7, 9]))
+
+    @flow.unittest.skip_unless_1n2d()
+    def test_2d_sbp_tensor_numpy_1n2d(test_case):
+        ori_x = flow.tensor(np.ones((2, 2))) + flow.env.get_rank()
+        placement = flow.placement("cuda", {0: range(2)}, hierarchy=(2, 1))
+        x = ori_x.to_consistent(
+            placement=placement, sbp=[flow.sbp.split(0), flow.sbp.split(1)]
+        )
+        test_case.assertTrue(np.allclose(x.numpy(), [[1, 1], [1, 1], [2, 2], [2, 2]]))
+
+        x = ori_x.to_consistent(
+            placement=placement, sbp=[flow.sbp.broadcast, flow.sbp.split(0)]
+        )
+        test_case.assertTrue(np.allclose(x.numpy(), [[1, 1], [1, 1]]))
+
+        x = ori_x.to_consistent(
+            placement=placement, sbp=[flow.sbp.partial_sum, flow.sbp.broadcast]
+        )
+        test_case.assertTrue(np.allclose(x.numpy(), [[3, 3], [3, 3]]))
+
+    @flow.unittest.skip_unless_1n4d()
+    def test_2d_sbp_tensor_numpy_1n4d(test_case):
+        ori_x = flow.tensor(np.ones((2, 2))) + flow.env.get_rank()
+        placement = flow.placement("cuda", {0: range(4)}, hierarchy=(2, 2))
+
+        x = ori_x.to_consistent(
+            placement=placement, sbp=[flow.sbp.split(0), flow.sbp.split(1)]
+        )
+        test_case.assertTrue(
+            np.allclose(
+                x.numpy(), [[1, 1, 2, 2], [1, 1, 2, 2], [3, 3, 4, 4], [3, 3, 4, 4]]
+            )
+        )
+
+        x = ori_x.to_consistent(
+            placement=placement, sbp=[flow.sbp.split(0), flow.sbp.partial_sum]
+        )
+        test_case.assertTrue(np.allclose(x.numpy(), [[3, 3], [3, 3], [7, 7], [7, 7]]))
+
+        # TODO: (s0, b) has bug
+        # x = ori_x.to_consistent(placement=placement, sbp=[flow.sbp.split(0), flow.sbp.broadcast])
 
 
 if __name__ == "__main__":
