@@ -46,6 +46,29 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow.relu,
+    """
+    Applies the rectified linear unit function element-wise. See :class:`~oneflow.nn.ReLU` for more details. 
+
+    Args:
+        inplace: If set to ``True``, will do this operation in-place. Default: ``False``
+    
+    For examples:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> ndarr = np.asarray([1, -2, 3])
+        >>> input = flow.Tensor(ndarr)
+        >>> output = flow.relu(input)
+        >>> output
+        tensor([1., 0., 3.], dtype=oneflow.float32)
+
+    """,
+)
 
 add_docstr(
     oneflow.gelu,
@@ -81,7 +104,7 @@ add_docstr(
 add_docstr(
     oneflow._C.softmax,
     r"""
-    softmax(x: Tensor) -> Tensor 
+    softmax(x: Tensor, dim: int) -> Tensor 
 
     Softmax is defined as:
 
@@ -91,6 +114,21 @@ add_docstr(
     See :class:`~oneflow.nn.Softmax` for more details.
     """,
 )
+
+add_docstr(
+    oneflow._C.log_softmax,
+    r"""
+    log_softmax(x: Tensor, dim: int) -> Tensor 
+
+    LogSoftmax is defined as:
+
+    .. math::
+        \text{LogSoftmax}(x_{i}) = \log\left(\frac{\exp(x_i) }{ \sum_j \exp(x_j)} \right) = x_i - \log({ \sum_j \exp(x_j)})
+    
+    See :class:`~oneflow.nn.LogSoftmax` for more details.
+    """,
+)
+
 add_docstr(
     oneflow.softplus,
     r"""
@@ -120,14 +158,14 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow._C.log_sigmoid,
+    oneflow._C.logsigmoid,
     r"""
-    log_sigmoid(x: Tensor) -> Tensor 
+    logsigmoid(x: Tensor) -> Tensor 
 
     Applies the element-wise function:
 
     .. math::
-        \text{log_sigmoid}(x) = \log\left(\frac{ 1 }{ 1 + \exp(-x)}\right)
+        \text{logsigmoid}(x) = \log\left(\frac{ 1 }{ 1 + \exp(-x)}\right)
    
     For example:
 
@@ -140,7 +178,7 @@ add_docstr(
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.tensor(x)     
           
-        >>> out = flow.nn.functional.log_sigmoid(input)
+        >>> out = flow.nn.functional.logsigmoid(input)
         >>> out
         tensor([-0.9741, -0.6931, -0.4741], dtype=oneflow.float32)
 
@@ -240,20 +278,6 @@ add_docstr(
 )
 
 
-add_docstr(
-    oneflow._C.relu,
-    """
-    relu(x: Tensor, inplace: bool =False) -> Tensor
-
-    Applies the rectified linear unit function element-wise. See
-    :class:`~oneflow.nn.ReLU` for more details.
-
-    Args:
-        inplace: If set to ``True``, will do this operation in-place. Default: ``False``
-
-
-    """,
-)
 add_docstr(
     oneflow._C.hardsigmoid,
     """

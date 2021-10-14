@@ -52,8 +52,6 @@ Maybe<void> CPUSynchronize() {
 
 }  // namespace
 
-CPUGeneratorImpl::~CPUGeneratorImpl() { CHECK_JUST(CPUSynchronize()); }
-
 struct CPUGeneratorState {
   static constexpr int64_t state_size = std::mt19937::state_size;  // 624
   int64_t states[state_size] = {};
@@ -169,7 +167,7 @@ CUDAGeneratorImpl::CUDAGeneratorImpl(uint64_t seed, int device_index)
 
 CUDAGeneratorImpl::~CUDAGeneratorImpl() {
   CudaCurrentDeviceGuard dev_guard(this->device_index());
-  CHECK_JUST(CUDASynchronize());
+  OF_CUDA_CHECK(cudaDeviceSynchronize());
   OF_CUDA_CHECK(cudaFree(curand_states_));
 }
 

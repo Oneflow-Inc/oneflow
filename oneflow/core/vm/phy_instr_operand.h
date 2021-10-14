@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_PHY_INSTR_OPERAND_H_
 
 #include <functional>
-#include "oneflow/core/object_msg/object_msg_core.h"
+#include "oneflow/core/intrusive/intrusive.h"
 
 namespace oneflow {
 namespace vm {

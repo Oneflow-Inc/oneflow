@@ -23,24 +23,6 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _check_inplace_valid
 
 
-def _softmax_need_transpose(x, axis):
-    assert type(axis) is int
-    dim_num = len(x.shape)
-    if dim_num == 1:
-        return (False, None)
-    if axis < 0:
-        axis += dim_num
-    assert axis >= 0
-    assert axis < dim_num
-    need_transpose = False
-    permute = list(range(dim_num))
-    if axis != dim_num - 1:
-        need_transpose = True
-        permute[axis] = permute[-1]
-        permute[-1] = axis
-    return (need_transpose, permute)
-
-
 class PReLU(Module):
     """Applies the element-wise function:
 
@@ -184,6 +166,18 @@ class ReLU6(Module):
     def extra_repr(self):
         inplace_str = "inplace=True" if self.inplace else ""
         return inplace_str
+
+
+def relu6(input, inplace=False):
+    r"""relu6(input, inplace=False) -> Tensor
+
+    Applies the element-wise function :math:`\text{ReLU6}(x) = \min(\max(0,x), 6)`.
+
+    See :class:`~oneflow.nn.ReLU6` for more details.
+    """
+    if inplace:
+        warnings.warn("nn.functional.relu6 do not support inplace now")
+    return flow._C.hardtanh(input, min_val=0.0, max_val=6.0)
 
 
 class Tanh(Module):
@@ -398,25 +392,6 @@ class Hardsigmoid(Module):
 
 
 class Softmax(Module):
-    def __init__(self, dim: Optional[int] = None):
-        super().__init__()
-        self.axis = 1 if dim is None else dim
-
-    def forward(self, x):
-        (need_transpose, permute) = _softmax_need_transpose(x, self.axis)
-        if need_transpose:
-            x = flow._C.transpose(x, perm=permute)
-        res = flow._C.softmax(x)
-        if need_transpose:
-            res = flow._C.transpose(res, perm=permute)
-        return res
-
-    def extra_repr(self):
-        return f"axis={self.axis}"
-
-
-@register_tensor_op("softmax")
-def softmax_op(tensor, dim=None):
     """Applies the Softmax function to an n-dimensional input Tensor
     rescaling them so that the elements of the n-dimensional output Tensor
     lie in the range [0,1] and sum to 1.
@@ -461,7 +436,16 @@ def softmax_op(tensor, dim=None):
         tensor([[[0.1575, 0.3754, 0.4671],
                  [0.0507, 0.1230, 0.8263]]], dtype=oneflow.float32)
     """
-    return Softmax(dim)(tensor)
+
+    def __init__(self, dim: Optional[int] = None):
+        super(Softmax, self).__init__()
+        self.dim = dim
+
+    def forward(self, x):
+        return flow._C.softmax(x, self.dim)
+
+    def extra_repr(self):
+        return f"dim={self.dim}"
 
 
 class LogSoftmax(Module):
@@ -500,23 +484,12 @@ class LogSoftmax(Module):
                 [-0.4877, -3.3176, -1.0506]], dtype=oneflow.float32)
     """
 
-    def __init__(self, dim: Optional[int] = 1):
-        super().__init__()
+    def __init__(self, dim: Optional[int] = None):
+        super(LogSoftmax, self).__init__()
         self.dim = dim
 
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        if not hasattr(self, "dim"):
-            self.dim = None
-
     def forward(self, x):
-        (need_transpose, permute) = _softmax_need_transpose(x, self.dim)
-        if need_transpose:
-            x = flow._C.transpose(x, perm=permute)
-        x = flow._C.logsoftmax(x)
-        if need_transpose:
-            x = flow._C.transpose(x, perm=permute)
-        return x
+        return flow._C.log_softmax(x, self.dim)
 
     def extra_repr(self):
         return f"dim={self.dim}"
@@ -555,9 +528,7 @@ class LogSigmoid(Module):
         super().__init__()
 
     def forward(self, x):
-        sigmoid_res = flow.sigmoid(x)
-        res = flow.log(sigmoid_res)
-        return res
+        return flow._C.logsigmoid(x)
 
 
 class Softplus(Module):
