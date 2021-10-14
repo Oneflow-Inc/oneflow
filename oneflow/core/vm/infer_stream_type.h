@@ -17,11 +17,9 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_INFER_STREAM_TYPE_H_
 
 #include <glog/logging.h>
-#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/control_stream_type.h"
-#include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/stream_desc.msg.h"
 #include "oneflow/core/device/device_context.h"
 
 namespace oneflow {
@@ -67,8 +65,8 @@ class InferStreamType final : public StreamType {
   void Infer(Instruction* instruction) const override { InferStreamTypeUtil::Infer(instruction); }
   void Compute(Instruction* instruction) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
 
-  ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                          int64_t this_machine_id) const override {
+  intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
+                                                   int64_t this_machine_id) const override {
     auto stream_desc = T().MakeStreamDesc(resource, this_machine_id);
     if (stream_desc) {
       stream_desc->mut_stream_type_id()->CopyFrom(
@@ -116,8 +114,8 @@ class InferStreamType<ControlStreamType> final : public StreamType {
   bool SupportingTransportInstructions() const override { return false; }
   bool IsControlStreamType() const override { return true; }
 
-  ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                          int64_t this_machine_id) const override {
+  intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
+                                                   int64_t this_machine_id) const override {
     auto stream_desc = ControlStreamType().MakeStreamDesc(resource, this_machine_id);
     stream_desc->mut_stream_type_id()->CopyFrom(
         LookupInferStreamTypeId(stream_desc->stream_type_id()));
