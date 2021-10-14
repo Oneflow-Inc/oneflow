@@ -497,6 +497,14 @@ def _relu(self, inplace=False):
     return flow.relu(self, inplace=inplace)
 
 
+def _softmax(self, dim=None):
+    return flow.softmax(self, dim=dim)
+
+
+def _log_softmax(self, dim=None):
+    return flow.log_softmax(self, dim=dim)
+
+
 def _argmax(self, dim=None, keepdim=None):
     return flow.argmax(self, dim=dim, keepdim=keepdim)
 
@@ -755,6 +763,8 @@ def RegisterMethods():
     Tensor.contiguous = _contiguous
     Tensor.transpose = _transpose
     Tensor.relu = _relu
+    Tensor.softmax = _softmax
+    Tensor.log_softmax = _log_softmax
 
 
 def register_tensor_op(op_name):
