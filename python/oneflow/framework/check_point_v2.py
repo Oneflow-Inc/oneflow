@@ -135,8 +135,7 @@ def _LoadSingleVariable(
         else:
             loaded = flow.tensor([]).to("cuda")
         loaded = loaded.to_consistent(
-                # FIXME: 0 should be `consistent_src_rank`, sbp should be nd
-            flow.placement("cuda", {0: [0]}), flow.sbp.broadcast
+            flow.placement("cuda", [consistent_src_rank]), flow.sbp.broadcast
         )
         return loaded
 
@@ -172,7 +171,7 @@ def tensor_getstate(self):
         rel_dir_name = f'consistent_tensor_{self.consistent_id()}'
         abs_dir_name = current_path / rel_dir_name
 
-        tensor = self.to_consistent(sbp=flow.sbp.broadcast).to_local()
+        tensor = self.to_consistent(sbp=[flow.sbp.broadcast] * len(self.sbp)).to_local()
     if consistent_src_dst_rank is None or consistent_src_dst_rank == flow.env.get_rank():
         _save_tensor_to_disk(tensor, abs_dir_name)
 
