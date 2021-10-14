@@ -983,8 +983,8 @@ class ScalarLogicalXor2Functor {
 class StandardDeviationFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
-                           const Optional<std::vector<int32_t>>& dim, const Optional<bool>& unbiased,
-                           const Optional<bool>& keepdim) const {
+                           const Optional<std::vector<int32_t>>& dim,
+                           const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
     const int32_t ndim = input->shape()->NumAxes();
     std::vector<int32_t> axis(0);
     if (dim.has_value() == false) {
@@ -1045,8 +1045,8 @@ class StandardDeviationFunctor {
 class VarianceFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
-                           const Optional<std::vector<int32_t>>& dim, const Optional<bool>& unbiased,
-                           const Optional<bool>& keepdim) const {
+                           const Optional<std::vector<int32_t>>& dim,
+                           const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
     const int32_t ndim = input->shape()->NumAxes();
     std::vector<int32_t> axis(0);
     if (dim.has_value() == false) {
