@@ -262,9 +262,10 @@ class SoftmaxFunctor {
     op_ = CHECK_JUST(one::OpBuilder("softmax").Input("in").Output("out").Build());
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, int32_t dim) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const Optional<int32_t>& dim) const {
+    int new_dim = dim.has_value() ? JUST(dim) : 1;
     std::vector<int32_t> permute;
-    bool need_transpose = JUST(CheckSoftmaxNeedTranspose(x, dim, &permute));
+    bool need_transpose = JUST(CheckSoftmaxNeedTranspose(x, new_dim, &permute));
     if(need_transpose) {
       return Transpose(JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {JUST(Transpose(x, permute))})), permute);
     } else {
@@ -281,9 +282,10 @@ class LogSoftmaxFunctor {
   LogSoftmaxFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits, int32_t dim) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits, const Optional<int32_t>& dim) const {
+    int new_dim = dim.has_value() ? JUST(dim) : 1;
     std::vector<int32_t> permute;
-    bool need_transpose = JUST(CheckSoftmaxNeedTranspose(logits, dim, &permute));
+    bool need_transpose = JUST(CheckSoftmaxNeedTranspose(logits, new_dim, &permute));
     if(need_transpose) {
       return Transpose(JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {JUST(Transpose(logits, permute))})), permute);
     } else {

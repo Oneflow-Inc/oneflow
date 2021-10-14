@@ -129,6 +129,8 @@ from oneflow._C import transpose
 from oneflow._C import relu
 from oneflow._C import argmax
 from oneflow._C import argmin
+from oneflow._C import softmax
+from oneflow._C import logsoftmax
 
 from . import sbp
 import atexit
@@ -237,7 +239,6 @@ from oneflow.framework.generator import default_generator, manual_seed
 from oneflow.framework.scope_util import api_current_scope as current_scope
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
-from oneflow.nn.modules.activation import softmax_op as softmax
 from oneflow.nn.modules.pooling import (
     adaptive_avg_pool1d,
     adaptive_avg_pool2d,

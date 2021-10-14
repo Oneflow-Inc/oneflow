@@ -403,56 +403,6 @@ class Softmax(Module):
         return f"axis={self.axis}"
 
 
-@register_tensor_op("softmax")
-def softmax_op(tensor, dim=None):
-    """Applies the Softmax function to an n-dimensional input Tensor
-    rescaling them so that the elements of the n-dimensional output Tensor
-    lie in the range [0,1] and sum to 1.
-
-    Softmax is defined as:
-
-    .. math::
-        \\text{Softmax}(x_{i}) = \\frac{\\exp(x_i)}{\\sum_j \\exp(x_j)}
-
-    When the input Tensor is a sparse tensor then the unspecifed
-    values are treated as ``-inf``.
-
-    Shape:
-        - Input: :math:`(*)` where `*` means, any number of additional
-          dimensions
-        - Output: :math:`(*)`, same shape as the input
-
-    Returns:
-        a Tensor of the same dimension and shape as the input with
-        values in the range [0, 1]
-
-    Args:
-        dim (int): A dimension along which Softmax will be computed (so every slice
-            along dim will sum to 1).
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        
-        >>> m = flow.nn.Softmax(dim = 2)
-        >>> x = flow.Tensor(
-        ...    np.array(
-        ...        [[[-0.46716809,  0.40112534,  0.61984003],
-        ...        [-1.31244969, -0.42528763,  1.47953856]]]
-        ...    )
-        ... )
-        >>> out = m(x)
-        >>> out
-        tensor([[[0.1575, 0.3754, 0.4671],
-                 [0.0507, 0.1230, 0.8263]]], dtype=oneflow.float32)
-    """
-    axis = 1 if dim is None else dim
-    return flow._C.softmax(x, axis)
-
-
 class LogSoftmax(Module):
     r"""Applies the LogSoftmax function to an n-dimensional
     input Tensor.
@@ -499,7 +449,7 @@ class LogSoftmax(Module):
             self.dim = None
 
     def forward(self, x):
-        return flow._C.log_softmax(x, self.dim)
+        return flow._C.logsoftmax(x, self.dim)
 
     def extra_repr(self):
         return f"dim={self.dim}"

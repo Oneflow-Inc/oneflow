@@ -314,11 +314,11 @@
   bind_python: False
 
 - name: "softmax"
-  signature: "Tensor (Tensor x) => Softmax"
+  signature: "Tensor (Tensor x, Int32 dim=None) => Softmax"
   bind_python: True
 
-- name: "log_softmax"
-  signature: "Tensor (Tensor x) => LogSoftmax"
+- name: "logsoftmax"
+  signature: "Tensor (Tensor x, Int32 dim=None) => LogSoftmax"
   bind_python: True
 
 - name: "hardswish"

@@ -87,3 +87,10 @@ add_docstr(
     See :func:`oneflow.transpose`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.softmax,
+    """
+    See :func:`oneflow.softmax`
+    """,
+)

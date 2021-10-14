@@ -496,6 +496,9 @@ def _argmax(self, dim=None, keepdim=None):
 def _argmin(self, dim=None, keepdim=None):
     return flow.argmin(self, dim=dim, keepdim=keepdim)
 
+def _softmax(self, dim=None):
+    return flow.softmax(self, dim=dim)
+
 
 def _uniform(self, a=0, b=1):
     if isinstance(a, Tensor):
@@ -745,6 +748,7 @@ def RegisterMethods():
     Tensor.contiguous = _contiguous
     Tensor.transpose = _transpose
     Tensor.relu = _relu
+    Tensor.softmax = _softmax
 
 
 def register_tensor_op(op_name):
