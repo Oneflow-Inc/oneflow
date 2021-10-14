@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
 #ifdef __linux__
 
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
@@ -113,7 +114,14 @@ char * EpollCommNet::SerialTokenToData(void *token, size_t *token_size) {
     *token_size = sizeof(SocketMemDesc);
     return data;*/
     *token_size = sizeof(SocketMemDesc);
-    return (char*)token;
+    uint64_t addr = reinterpret_cast<uint64_t>(token);
+    //return (char*)&addr;
+    char * return_addr =reinterpret_cast<char*>(&addr);
+    return return_addr;
+    //char * return_addr = *addr;
+    // char ** addr_addr  ;
+    // *addr_addr = addr;
+    // return addr_addr;
 }
 
 void * EpollCommNet::DeSerialDataToToken(char *data, size_t  * token_size) {
