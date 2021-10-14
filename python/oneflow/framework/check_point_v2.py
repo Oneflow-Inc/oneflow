@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from contextlib import contextmanager
 import os
 import warnings
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union
@@ -32,7 +33,9 @@ import pickle
 
 SNAPSHOT_DONE_FILENAME = "snapshot_done"
 META_INFO_FILENAME = "meta"
+PICKLE_FILENAME = "pickled_data"
 DATA_FILENAME = "out"
+PROTOCOL_VERSION = 1
 
 
 class FileBackendVariableBlob:
@@ -160,7 +163,7 @@ def _broadcast_py_object(obj, src: int = 0):
 # of those tensors are the same across all ranks.
 def tensor_getstate(self):
     assert isinstance(current_path, Path)
-    if consistent_src_dst_rank is None:
+    if current_consistent_src_dst_rank is None:
         assert self.is_local
         rel_dir_name = id_util.UniqueStr("tensor_")
         abs_dir_name = current_path / rel_dir_name
@@ -172,7 +175,7 @@ def tensor_getstate(self):
         abs_dir_name = current_path / rel_dir_name
 
         tensor = self.to_consistent(sbp=[flow.sbp.broadcast] * len(self.sbp)).to_local()
-    if consistent_src_dst_rank is None or consistent_src_dst_rank == flow.env.get_rank():
+    if current_consistent_src_dst_rank is None or current_consistent_src_dst_rank == flow.env.get_rank():
         _save_tensor_to_disk(tensor, abs_dir_name)
 
     return {"path": rel_dir_name}
@@ -182,52 +185,93 @@ def tensor_setstate(self, pickle_dict):
     assert isinstance(current_path, Path)
     rel_dir_name = pickle_dict['path']
     abs_dir_name = current_path / rel_dir_name
-    self.__init__(_LoadSingleVariable(str(abs_dir_name), consistent_src_dst_rank))
+    self.__init__(_LoadSingleVariable(str(abs_dir_name), current_consistent_src_dst_rank))
 
 
-def Load(
-    path: str, consistent_src_rank: Optional[int] = None,
+def legacy_load(
+    path: Union[str, Path], consistent_src_rank: Optional[int] = None,
 ) -> Dict[str, "flow.Tensor"]:
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
-    global current_path
-    global consistent_src_dst_rank
-    consistent_src_dst_rank = consistent_src_rank
-    current_path = Path(path)
-    meta_path = current_path / 'meta'
     rank = flow.env.get_rank()
+    var_dict = {}
+    if consistent_src_rank is None or rank == consistent_src_rank:
+        all_files = os.listdir(path)
+        assert SNAPSHOT_DONE_FILENAME in all_files
+        all_files.remove(SNAPSHOT_DONE_FILENAME)
+        if consistent_src_rank is not None:
+            _broadcast_py_object(all_files, consistent_src_rank)
+    else:
+        all_files = _broadcast_py_object(None, consistent_src_rank)
+    for f in all_files:
+        var_dir = os.path.join(path, f)
+        try:
+            var_dict[f] = _LoadSingleVariable(var_dir, consistent_src_rank)
+        except FileNotFoundError:
+            warnings.warn(
+                f"'{var_dir}' does not have valid tensor data. Please check it if it is unexpected.",
+                stacklevel=2,
+            )
+    return var_dict
+
+
+@contextmanager
+def tensor_pickling_context(path: Path, consistent_src_dst_rank: int):
+    global current_path
+    global current_consistent_src_dst_rank
+    current_consistent_src_dst_rank = consistent_src_dst_rank
+    current_path = path
+    try:
+        yield
+    finally:
+        current_consistent_src_dst_rank = None
+        current_path = None
+
+
+def load(
+    path: str, consistent_src_rank: Optional[int] = None,
+) -> Dict[str, "flow.Tensor"]:
+    path: Path = Path(path)
+    assert path.is_dir(), "Directory {} doesn't exist!".format(path)
+    pickle_path = path / PICKLE_FILENAME
+    rank = flow.env.get_rank()
+    if consistent_src_rank is None or consistent_src_rank == rank:
+        is_legacy = not pickle_path.exists()
+        if consistent_src_rank is not None:
+            _broadcast_py_object(is_legacy, consistent_src_rank)
+    else:
+        is_legacy = _broadcast_py_object(None, consistent_src_rank)
+    if is_legacy:
+        return legacy_load(path, consistent_src_rank)
+
     if consistent_src_rank is not None:
         if rank == consistent_src_rank:
-            meta_bytes = meta_path.read_bytes()
-            _broadcast_py_object(meta_bytes, consistent_src_rank)
+            pickle_bytes = pickle_path.read_bytes()
+            _broadcast_py_object(pickle_bytes, consistent_src_rank)
         else:
-            meta_bytes = _broadcast_py_object(None, consistent_src_rank)
+            pickle_bytes = _broadcast_py_object(None, consistent_src_rank)
     else:
-        meta_bytes = meta_path.read_bytes()
+        pickle_bytes = pickle_path.read_bytes()
 
-    res = pickle.loads(meta_bytes)
-    consistent_src_dst_rank = None
-    return res
+    with tensor_pickling_context(path, consistent_src_rank):
+        res = pickle.loads(pickle_bytes)
+    assert res['protocol_version'] == PROTOCOL_VERSION
+    return res['data']
 
 
 def save(
-    var_dict: Dict[str, "flow.Tensor"],
-    path: str,
+    obj: Any,
+    path: Union[str, Path],
     consistent_dst_rank: Optional[int] = None,
 ) -> None:
-    global current_path
-    global consistent_src_dst_rank
-    consistent_src_dst_rank = consistent_dst_rank
-    current_path = Path(path)
-
-    pickled_bytes = pickle.dumps(var_dict)
+    path: Path = Path(path)
+    obj = {'protocol_version': PROTOCOL_VERSION, 'data': obj}
+    with tensor_pickling_context(path, consistent_dst_rank):
+        pickled_bytes = pickle.dumps(obj)
     rank = flow.env.get_rank()
-    if rank == consistent_dst_rank:
-        current_path.mkdir(exist_ok=True)
-        meta_path = current_path / 'meta'
-        meta_path.write_bytes(pickled_bytes)
-
-    consistent_src_dst_rank = None
-    current_path = None
+    if consistent_dst_rank is None or consistent_dst_rank == rank:
+        path.mkdir(exist_ok=True)
+        pickle_path = path / PICKLE_FILENAME
+        pickle_path.write_bytes(pickled_bytes)
 
 
 def generate_values_by_initializer(initializer, shape, dtype):
@@ -237,4 +281,4 @@ def generate_values_by_initializer(initializer, shape, dtype):
 
 
 current_path = None
-consistent_src_dst_rank = None
+current_consistent_src_dst_rank = None
