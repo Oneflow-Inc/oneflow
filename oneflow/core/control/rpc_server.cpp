@@ -75,7 +75,7 @@ void RpcServer::Init() {
               .emplace(barrier_name, std::make_pair(std::list<CtrlCallIf*>{}, barrier_num))
               .first;
     }
-    CHECK_EQ(barrier_num, barrier_call_it->second.second);
+    CHECK_EQ(barrier_num, barrier_call_it->second.second) << barrier_name;
     barrier_call_it->second.first.push_back(call);
     if (barrier_call_it->second.first.size() == barrier_call_it->second.second) {
       for (CtrlCallIf* pending_call : barrier_call_it->second.first) {

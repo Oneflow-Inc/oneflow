@@ -429,7 +429,65 @@ class TransposeFunctor {
                            const std::vector<int32_t>& permute) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
+    int32_t ndims = x->shape()->NumAxes();
+    for (int i = 0; i < permute.size(); i++) {
+      int32_t dim = permute.at(i);
+      if (dim < 0) { dim += ndims; }
+      CHECK_GE_OR_RETURN(dim, 0)
+          << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
+          << ndims << " ] but got " << ndims;
+      CHECK_LT_OR_RETURN(dim, ndims)
+          << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
+          << ndims << " ] but got " << ndims;
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class EyeFunctor {
+ public:
+  EyeFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
+  Maybe<Tensor> operator()(const Scalar& n, const Optional<Scalar>& m,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Optional<Symbol<Device>>& device) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("n", JUST(n.As<int64_t>())));
+    JUST(attrs.SetAttr<int64_t>("m", m ? JUST(JUST(m)->As<int64_t>()) : JUST(n.As<int64_t>())));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype ? JUST(dtype)->data_type() : DataType::kFloat));
+    OpExprInterpContext ctx(attrs);
+    if (device) { ctx.device = JUST(device); }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ConsistentEyeFunctor {
+ public:
+  ConsistentEyeFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
+  Maybe<Tensor> operator()(const Scalar& n, const Optional<Scalar>& m,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("n", JUST(n.As<int64_t>())));
+    JUST(attrs.SetAttr<int64_t>("m", m ? JUST(JUST(m)->As<int64_t>()) : JUST(n.As<int64_t>())));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype ? JUST(dtype)->data_type() : DataType::kFloat));
+    if (LazyMode::is_enabled()) {
+      std::vector<std::string> nd_sbp(sbp_tuple.size());
+      {
+        for (int i = 0; i < sbp_tuple.size(); ++i) {
+          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+        }
+      }
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
+    }
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
   }
 
  private:
@@ -544,19 +602,6 @@ class ConsistentArange2Functor {
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     return ConsistentArange(Scalar(0), limit, Scalar(1), dtype, placement, sbp_tuple);
-  }
-};
-
-class ArgMaxFunctor : public UnaryFunctor {
- public:
-  ArgMaxFunctor() { op_ = CHECK_JUST(one::OpBuilder("argmax").Input("in").Output("out").Build()); }
-};
-
-class ArgMinFunctor {
- public:
-  ArgMinFunctor() {}
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    return ArgMax(JUST(functional::Negative(x)));
   }
 };
 
@@ -953,11 +998,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceSumFunctor>("ReduceSum");
   m.add_functor<ReduceProdFunctor>("ReduceProd");
   m.add_functor<TransposeFunctor>("Transpose");
+  m.add_functor<EyeFunctor>("Eye");
+  m.add_functor<ConsistentEyeFunctor>("ConsistentEye");
   m.add_functor<Transpose2dimFunctor>("Transpose2dim");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
-  m.add_functor<ArgMaxFunctor>("ArgMax");
-  m.add_functor<ArgMinFunctor>("ArgMin");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<ClampGradFunctor>("ClampGrad");

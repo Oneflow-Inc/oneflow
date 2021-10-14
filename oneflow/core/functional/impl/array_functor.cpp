@@ -41,6 +41,71 @@ namespace functional {
 
 namespace impl {
 
+class ArgMaxFunctor {
+ public:
+  ArgMaxFunctor() { op_ = CHECK_JUST(one::OpBuilder("argmax").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int32_t>& dim,
+                           const Optional<bool>& keepdim,
+                           const Optional<Symbol<DType>>& dtype) const {
+    std::shared_ptr<Tensor> result;
+    if (dim.has_value() == false) {
+      result = JUST(Flatten(input, 0, -1));
+      return JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {result}));
+    }
+    int new_dim = JUST(dim);
+    int32_t ndims = input->shape()->NumAxes();
+    if (new_dim < 0) { new_dim += ndims; }
+    CHECK_GE_OR_RETURN(new_dim, 0)
+        << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
+        << ndims << " ] but got " << ndims;
+    CHECK_LT_OR_RETURN(new_dim, ndims)
+        << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
+        << ndims << " ] but got " << ndims;
+    if (new_dim == ndims - 1) {
+      result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input}));
+      if (keepdim.has_value() && JUST(keepdim) == true) { result = JUST(ExpandDims(result, -1)); }
+    } else {
+      std::vector<int32_t> permute;
+      for (int32_t i = 0; i < ndims - 1; i++) {
+        if (i < new_dim) {
+          permute.push_back(i);
+        } else {
+          permute.push_back(i + 1);
+        }
+      }
+      permute.push_back(new_dim);
+      result = JUST(Transpose(input, permute));
+      result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {result}));
+      result = JUST(ExpandDims(result, -1));
+      std::vector<int32_t> permute_inv;
+      permute_inv.resize(ndims);
+      for (int32_t i = 0; i < ndims; i++) { permute_inv[i] = -1; }
+      for (int32_t i = 0; i < ndims; i++) { permute_inv[permute[i]] = i; }
+      result = JUST(Transpose(result, permute_inv));
+      std::vector<int32_t> squeeze_dim;
+      squeeze_dim.push_back(new_dim);
+      if ((!keepdim.has_value()) || (keepdim.has_value() && JUST(keepdim) == false)) {
+        result = JUST(Squeeze(result, squeeze_dim));
+      }
+    }
+    if (dtype.has_value()) { result = JUST(Cast(result, JUST(dtype))); }
+    return result;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ArgMinFunctor {
+ public:
+  ArgMinFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int32_t>& dim,
+                           const Optional<bool>& keepdim,
+                           const Optional<Symbol<DType>>& dtype) const {
+    auto neg_input = JUST(Negative(input));
+    return JUST(ArgMax(neg_input, dim, keepdim, dtype));
+  }
+};
 class ConsistentConstantFunctor {
  public:
   ConsistentConstantFunctor() {
@@ -1320,7 +1385,7 @@ class TensorGetItemFunctor {
     }();
     std::shared_ptr<one::Tensor> result;
     if (is_identity) {
-      result = JUST(Identity(expand_input));
+      result = expand_input;
     } else {
       result = JUST(Slice(expand_input, start, end, step));
     }
@@ -1328,6 +1393,9 @@ class TensorGetItemFunctor {
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
     if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
     if (!tensor_indices.empty()) { result = JUST(ApplyAdvancedIndexing(result, tensor_indices)); }
+
+    // TODO(): Returns a view of tensor `x`.
+    if (result == x) { result = JUST(Identity(x)); }
     return result;
   }
 };
@@ -1715,6 +1783,8 @@ class UnsortedBatchSegmentSumFunctor {
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::ArgMaxFunctor>("ArgMax");
+  m.add_functor<impl::ArgMinFunctor>("ArgMin");
   m.add_functor<impl::ConsistentConstantFunctor>("ConsistentConstant");
   m.add_functor<impl::ConstantFunctor>("Constant");
   m.add_functor<impl::ConsistentEmptyFunctor>("ConsistentEmpty");

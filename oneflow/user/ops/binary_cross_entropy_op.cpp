@@ -49,6 +49,7 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
 
   return Maybe<void>::Ok();
 }
+
 Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   const auto& input_desc = ctx->InputTensorDesc("input", 0);
   const auto& target_desc = ctx->InputTensorDesc("target", 0);
@@ -142,7 +143,7 @@ REGISTER_USER_OP_GRAD("binary_cross_entropy")
           builder.Input("weight", op.input("weight", 0));
         }
         user_op::UserOpConfWrapper grad_op = builder.Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "dx", 0);
+        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "input", 0);
         AddOp(grad_op);
       }
       return Maybe<void>::Ok();
