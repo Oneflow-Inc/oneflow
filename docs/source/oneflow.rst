@@ -99,6 +99,7 @@ oneflow
             scatter_nd, 
             tensor_scatter_nd_update,
             sin, 
+            sin_, 
             sinh, 
             sign, 
             selu, 
