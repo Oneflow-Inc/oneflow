@@ -1,10 +1,9 @@
 ---
 name: Bug report
 about: Create a report to help us improve
-title: ''
-labels: ''
-assignees: ''
-
+title: ""
+labels: ""
+assignees: ""
 ---
 
 ## Summary
@@ -19,7 +18,7 @@ Please post a minimal example to repro the bug. GitHub Gist or repo is highly re
 
 - What is your OneFlow installation (pip, source, dockerhub):
 - OS:
-- OneFlow version:
+- OneFlow version (run `python3 -m oneflow --doctor`):
 - Python version:
 - CUDA driver version:
 - GPU models:
