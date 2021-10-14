@@ -63,13 +63,10 @@ __global__ void BatchPermuteKernel(PermuteKernelParams<num_dims, IndexType> para
   IndexType dh_mul_dw = dh * dw; 
   for (int i = blockIdx.x, step = gridDim.x; i < grid_size; i += step) {
     const IndexType n = i / dh_mul_dw;  // the index of batch.
-    // const IndexType k = i % (dh * dw);  // the flatten index of tile in a batch. TODO! optimize it!
-    const IndexType k = i - n * dh_mul_dw;  // the flatten index of tile in a batch. TODO! optimize it!
+    const IndexType k = i - n * dh_mul_dw;  // equal to i%(dh*dw). the flatten index of tile in a batch. TODO! optimize it!
 
     const IndexType r = k / dw;  // the row index of tile in a batch.
-    // const IndexType c = k % dw;  // the col index of tile in a batch.
-    const IndexType c = k - r * dw;                  // TODO! equal to k% dw. the col index of tile in
-    // a batch.
+    const IndexType c = k - r * dw; // equal to k% dw. the col index of tile in a batch.
     const IndexType offset = n * H * W;
     int x = c * tile_size + threadIdx.x;
     int y = r * tile_size + threadIdx.y;
@@ -140,6 +137,17 @@ bool CheckLaunchBatchPermute(PermuteKernelParams<num_dims, IndexType> params, In
   return false;
 }
 
+template<typename IndexType, size_t movement_size>
+bool CheckUseHalf2(IndexType& h, IndexType& w) {
+  if(movement_size == 2){ // movement_size = 2, means half type
+    if(h % 2 == 0 && w % 2 ==0){
+      return true; 
+    }
+  }
+  return false;
+}
+
+
 template<size_t num_dims, size_t movement_size, typename IndexType>
 void LaunchKernel(StreamContext* stream_ctx, PermuteKernelParams<num_dims, IndexType> params) {
   cudaStream_t cuda_stream =
@@ -171,8 +179,14 @@ void LaunchKernel(StreamContext* stream_ctx, PermuteKernelParams<num_dims, Index
     printf("h is: %d \n", h);
     printf("w is: %d \n", w);
     if (CheckLaunchBatchPermute<num_dims, tile_size>(params, n, h, w)) {
-      LaunchBatchPermuteKernel<num_dims, movement_size, tile_size, IndexType>(stream_ctx, params, n,
-                                                                              h, w);
+      if(CheckUseHalf2<IndexType, movement_size>(h, w)){
+        // use half2. 
+        printf("Here use half2!"); 
+        LaunchBatchPermuteKernel<num_dims, movement_size, 4, IndexType>(stream_ctx, params, n, h, w);  
+      }else{
+        LaunchBatchPermuteKernel<num_dims, movement_size, tile_size, IndexType>(stream_ctx, params, n,
+                                                                                      h, w);    
+      }
     } else {
       PermuteKernel<num_dims, movement_size, IndexType>
           <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params);
