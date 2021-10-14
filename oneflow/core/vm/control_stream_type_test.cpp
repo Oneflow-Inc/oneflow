@@ -20,8 +20,8 @@ limitations under the License.
 #define private public
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
-#include "oneflow/core/vm/vm_desc.msg.h"
+#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/stream_type.h"
@@ -36,9 +36,9 @@ namespace test {
 namespace {
 
 TEST(ControlStreamType, new_symbol_symbol) {
-  auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
+  auto vm_desc = intrusive::make_shared<VmDesc>(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol"});
-  auto vm = ObjectMsgPtr<VirtualMachine>::New(vm_desc.Get());
+  auto vm = intrusive::make_shared<VirtualMachine>(vm_desc.Get());
   InstructionMsgList list;
   int64_t symbol_id = IdUtil::NewLogicalSymbolId();
   list.EmplaceBack(NewInstruction("NewSymbol")->add_int64_operand(symbol_id));

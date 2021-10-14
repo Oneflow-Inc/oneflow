@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_CRITICAL_SECTION_PHY_INSTR_OPERAND_H_
 #define ONEFLOW_CORE_EAGER_CRITICAL_SECTION_PHY_INSTR_OPERAND_H_
 
-#include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/instruction_operand.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/device/event_record.h"
 #include "oneflow/core/framework/nn_graph_if.h"
@@ -43,7 +43,7 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
 
   explicit CriticalSectionBeginPhyInstrOperand(
       const one::EagerBlobObjectListPtr& eager_blob_objects,
-      ObjectMsgPtr<LocalDepObject> local_dep_object)
+      intrusive::shared_ptr<LocalDepObject> local_dep_object)
       : eager_blob_objects_(eager_blob_objects), local_dep_object_(local_dep_object) {}
 
   void ForEachMirroredObject(
@@ -53,11 +53,11 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
       const override;
 
-  ObjectMsgPtr<LocalDepObject> local_dep_object() const { return local_dep_object_; }
+  intrusive::shared_ptr<LocalDepObject> local_dep_object() const { return local_dep_object_; }
 
  protected:
   one::EagerBlobObjectListPtr eager_blob_objects_;
-  mutable ObjectMsgPtr<LocalDepObject> local_dep_object_;
+  mutable intrusive::shared_ptr<LocalDepObject> local_dep_object_;
 };
 
 class InputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeginPhyInstrOperand {
