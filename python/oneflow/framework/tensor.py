@@ -168,6 +168,10 @@ def _or(self, other):
     return self.logical_or(other)
 
 
+def _not(self):
+    return flow._C.logical_not(self)
+
+
 def _xor(self, other):
     return self.logical_xor(other)
 
@@ -645,6 +649,7 @@ def RegisterMethods():
     Tensor.__le__ = _le
     Tensor.__and__ = _and
     Tensor.__or__ = _or
+    Tensor.__not__ = _not
     Tensor.__xor__ = _xor
     Tensor.__mul__ = _mul
     Tensor.__rmul__ = _rmul

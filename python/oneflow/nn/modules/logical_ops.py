@@ -171,15 +171,6 @@ def logical_xor_op_tensor(input, other):
     return logical_xor_op(input, other)
 
 
-def logical_not_op(input):
-    return flow._C.logical_not(input)
-
-
-@register_tensor_op("logical_not")
-def logical_not_op_tensor(input):
-    return logical_not_op(input)
-
-
 if __name__ == "__main__":
     import doctest
 
