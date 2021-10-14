@@ -43,23 +43,23 @@ class UnaryFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class InplaceableUnaryFunctor {
+class InplaceUnaryFunctor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool inplace) const {
-    if (inplace) {
-      JUST(CheckInplaceValid(x));
-      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get()));
-      return outputs->at(0);
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    JUST(CheckInplaceValid(x));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    if (x->requires_grad()) {
+      JUST(OpInterpUtil::Dispatch(*op_, {JUST(functional::Identity(x))}, outputs.get()));
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get()));
     }
+    return outputs->at(0);
   }
 
  protected:
-  InplaceableUnaryFunctor() = default;
-  virtual ~InplaceableUnaryFunctor() = default;
+  InplaceUnaryFunctor() = default;
+  virtual ~InplaceUnaryFunctor() = default;
 
   std::shared_ptr<OpExpr> op_;
 };
@@ -77,6 +77,33 @@ class FloatUnaryFunctor {
  protected:
   FloatUnaryFunctor() = default;
   virtual ~FloatUnaryFunctor() = default;
+
+  std::shared_ptr<OpExpr> op_;
+};
+
+class InplaceFloatUnaryFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({x}, DType::Float()).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    JUST(CheckInplaceCastValid(x, input_tuple.at(0)));
+    JUST(CheckInplaceValid(x));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    if (x->requires_grad()) {
+      // It should copy input tensor in autograd_mode because these operators can't calculate
+      // in_grad with output.
+      JUST(OpInterpUtil::Dispatch(*op_, {JUST(functional::Identity(x))}, outputs.get()));
+    } else {
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get()));
+    }
+    return outputs->at(0);
+  }
+
+ protected:
+  InplaceFloatUnaryFunctor() = default;
+  virtual ~InplaceFloatUnaryFunctor() = default;
 
   std::shared_ptr<OpExpr> op_;
 };

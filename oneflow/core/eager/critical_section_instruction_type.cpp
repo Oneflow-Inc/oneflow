@@ -15,16 +15,17 @@ limitations under the License.
 */
 
 #include "oneflow/core/eager/critical_section_stream_type.h"
+#include "oneflow/core/eager/critical_section_status_querier.h"
 #include "oneflow/core/eager/critical_section_phy_instr_operand.h"
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/global.h"
-#include "oneflow/core/vm/stream.msg.h"
-#include "oneflow/core/vm/thread_ctx.msg.h"
+#include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/ref_cnt_instruction_status_querier.h"
 #include "oneflow/core/profiler/profiler.h"
@@ -33,13 +34,37 @@ namespace oneflow {
 
 namespace vm {
 
-template<typename PhyInstrOperandT>
-class CriticalSectionInstructionType final : public InstructionType {  // NOLINT
+class CriticalSectionBeginInstructionType final : public InstructionType {
  public:
-  CriticalSectionInstructionType(const CriticalSectionInstructionType&) = delete;
-  CriticalSectionInstructionType(CriticalSectionInstructionType&&) = delete;
-  CriticalSectionInstructionType() = default;
-  ~CriticalSectionInstructionType() = default;
+  CriticalSectionBeginInstructionType(const CriticalSectionBeginInstructionType&) = delete;
+  CriticalSectionBeginInstructionType(CriticalSectionBeginInstructionType&&) = delete;
+  CriticalSectionBeginInstructionType& operator=(const CriticalSectionBeginInstructionType&) =
+      delete;
+  CriticalSectionBeginInstructionType& operator=(CriticalSectionBeginInstructionType&&) = delete;
+  CriticalSectionBeginInstructionType() = default;
+  ~CriticalSectionBeginInstructionType() = default;
+
+  using stream_type = CriticalSectionStreamType;
+
+  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
+
+  void Compute(vm::Instruction* instruction) const override {
+    auto* status_buffer_data = instruction->mut_status_buffer()->mut_buffer()->mut_data();
+    auto* status_querier = CriticalSectionStatusQuerier::MutCast(status_buffer_data);
+    status_querier->SetLaunched(std::make_shared<NaiveEventRecord>());
+  }
+};
+
+COMMAND(RegisterInstructionType<CriticalSectionBeginInstructionType>("CriticalSectionBegin"));
+
+class CriticalSectionEndInstructionType final : public InstructionType {
+ public:
+  CriticalSectionEndInstructionType(const CriticalSectionEndInstructionType&) = delete;
+  CriticalSectionEndInstructionType(CriticalSectionEndInstructionType&&) = delete;
+  CriticalSectionEndInstructionType& operator=(const CriticalSectionEndInstructionType&) = delete;
+  CriticalSectionEndInstructionType& operator=(CriticalSectionEndInstructionType&&) = delete;
+  CriticalSectionEndInstructionType() = default;
+  ~CriticalSectionEndInstructionType() = default;
 
   using stream_type = CriticalSectionStreamType;
 
@@ -47,30 +72,15 @@ class CriticalSectionInstructionType final : public InstructionType {  // NOLINT
 
   void Compute(vm::Instruction* instruction) const override {
     const auto* ptr = instruction->instr_msg().phy_instr_operand().get();
-    const auto* phy_instr_operand = dynamic_cast<const PhyInstrOperandT*>(ptr);
+    const auto* phy_instr_operand = dynamic_cast<const CriticalSectionEndPhyInstrOperand*>(ptr);
     CHECK_NOTNULL(phy_instr_operand);
-    // Reset to zero when critical section ready.
-    *phy_instr_operand->critical_section_ready_ref_cnt() = 0;
     auto* status_buffer_data = instruction->mut_status_buffer()->mut_buffer()->mut_data();
-    auto* status_querier = RefCntInstrStatusQuerier::MutCast(status_buffer_data);
-    status_querier->SetRefCntAndSetLaunched(phy_instr_operand->consumer_ref_cnt());
+    auto* status_querier = CriticalSectionStatusQuerier::MutCast(status_buffer_data);
+    status_querier->SetLaunched(phy_instr_operand->event_record());
   }
 };
 
-COMMAND(
-    RegisterInstructionType<CriticalSectionInstructionType<InputCriticalSectionPhyInstrOperand>>(
-        "InputCriticalSection"));
-
-COMMAND(
-    RegisterInstructionType<CriticalSectionInstructionType<OutputCriticalSectionPhyInstrOperand>>(
-        "OutputCriticalSection"));
-
-COMMAND(RegisterInstructionType<
-        CriticalSectionInstructionType<ParameterCriticalSectionPhyInstrOperand>>(
-    "ParameterCriticalSection"));
-
-COMMAND(RegisterInstructionType<CriticalSectionInstructionType<NcclCriticalSectionPhyInstrOperand>>(
-    "NcclCriticalSection"));
+COMMAND(RegisterInstructionType<CriticalSectionEndInstructionType>("CriticalSectionEnd"));
 
 }  // namespace vm
 }  // namespace oneflow
