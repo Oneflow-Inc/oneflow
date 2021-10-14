@@ -17,13 +17,14 @@ limitations under the License.
 #define ONEFLOW_CORE_KERNEL_CUDA_CHECK_DEVICE_KERNEL_OBSERVER_H_
 
 #include "oneflow/core/kernel/kernel_observer.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
 class CudaCheckDeviceKernelObserver final : public KernelObserver {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaCheckDeviceKernelObserver);
-  CudaCheckDeviceKernelObserver(int device_id);
+  CudaCheckDeviceKernelObserver(int device_id, cublasMath_t cublas_math_mode, cublasPointerMode_t cublas_pointer_mode, cudaStream_t cublas_stream);
   ~CudaCheckDeviceKernelObserver() override = default;
 
   void DidInit(KernelContext* kernel_ctx, const Kernel* kernel) override;
@@ -32,6 +33,9 @@ class CudaCheckDeviceKernelObserver final : public KernelObserver {
 
  private:
   int device_id_;
+  cublasMath_t cublas_math_mode_{};
+  cublasPointerMode_t cublas_pointer_mode_{};
+  cudaStream_t cublas_stream_{};
 };
 
 }  // namespace oneflow

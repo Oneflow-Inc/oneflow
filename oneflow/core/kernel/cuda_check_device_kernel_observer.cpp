@@ -15,17 +15,29 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/cuda_check_device_kernel_observer.h"
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/stream/cuda_stream_context.h"
 
 namespace oneflow {
 
-CudaCheckDeviceKernelObserver::CudaCheckDeviceKernelObserver(int device_id)
-    : device_id_(device_id) {}
+CudaCheckDeviceKernelObserver::CudaCheckDeviceKernelObserver(int device_id, cublasMath_t cublas_math_mode, cublasPointerMode_t cublas_pointer_mode, cudaStream_t cublas_stream)
+    : device_id_(device_id), cublas_math_mode_(cublas_math_mode), cublas_pointer_mode_(cublas_pointer_mode), cublas_stream_(cublas_stream) {}
 
 void CudaCheckDeviceKernelObserver::DidInit(KernelContext* kernel_ctx, const Kernel* kernel) {
 #ifdef WITH_CUDA
   int device_id;
   OF_CUDA_CHECK(cudaGetDevice(&device_id));
   CHECK_EQ(device_id_, device_id) << kernel->op_conf().name() << " has set cuda device";
+  cublasHandle_t cublas_handle =
+        CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(kernel_ctx->stream_ctx()))->cublas_handle();
+  cublasMath_t cublas_math_mode;
+  OF_CUBLAS_CHECK(cublasGetMathMode(cublas_handle, &cublas_math_mode));
+  CHECK(cublas_math_mode_ == cublas_math_mode) << kernel->op_conf().name() << " has set cublas math_mode";
+  cublasPointerMode_t cublas_pointer_mode{};
+  OF_CUBLAS_CHECK(cublasGetPointerMode(cublas_handle, &cublas_pointer_mode));
+  CHECK(cublas_pointer_mode_ == cublas_pointer_mode) << kernel->op_conf().name() << " has set cublas pointer_mode";
+  cudaStream_t cublas_stream{};
+  OF_CUBLAS_CHECK(cublasGetStream(cublas_handle, &cublas_stream));
+  CHECK(cublas_stream_ == cublas_stream) << kernel->op_conf().name() << " has set cublas stream";
 #endif  // WITH_CUDA
 }
 
@@ -34,6 +46,17 @@ void CudaCheckDeviceKernelObserver::DidForward(KernelContext* kernel_ctx, const 
   int device_id;
   OF_CUDA_CHECK(cudaGetDevice(&device_id));
   CHECK_EQ(device_id_, device_id) << kernel->op_conf().name() << " has set cuda device";
+  cublasHandle_t cublas_handle =
+        CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(kernel_ctx->stream_ctx()))->cublas_handle();
+  cublasMath_t cublas_math_mode;
+  OF_CUBLAS_CHECK(cublasGetMathMode(cublas_handle, &cublas_math_mode));
+  CHECK(cublas_math_mode_ == cublas_math_mode) << kernel->op_conf().name() << " has set cublas math_mode";
+  cublasPointerMode_t cublas_pointer_mode{};
+  OF_CUBLAS_CHECK(cublasGetPointerMode(cublas_handle, &cublas_pointer_mode));
+  CHECK(cublas_pointer_mode_ == cublas_pointer_mode) << kernel->op_conf().name() << " has set cublas pointer_mode";
+  cudaStream_t cublas_stream{};
+  OF_CUBLAS_CHECK(cublasGetStream(cublas_handle, &cublas_stream));
+  CHECK(cublas_stream_ == cublas_stream) << kernel->op_conf().name() << " has set cublas stream";
 #endif  // WITH_CUDA
 }
 

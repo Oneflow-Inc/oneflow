@@ -155,8 +155,12 @@ CudaStreamContextImpl::CudaStreamContextImpl(const StreamId& stream_id) : stream
     kernel_observers.emplace_back(new CudaCheckNumericsKernelObserver());
   }
   if (ParseBooleanFromEnv("ONEFLOW_DEBUG_KERNEL_CHECK_DEVICE", false)) {
+    cublasMath_t math_mode;
+    OF_CUBLAS_CHECK(cublasGetMathMode(cublas_handle_, &math_mode));
+    cublasPointerMode_t pointer_mode{};
+    OF_CUBLAS_CHECK(cublasGetPointerMode(cublas_handle_, &pointer_mode));
     kernel_observers.emplace_back(
-        new CudaCheckDeviceKernelObserver(stream_id_.device_id().device_index()));
+        new CudaCheckDeviceKernelObserver(stream_id_.device_id().device_index(), math_mode, pointer_mode, cuda_stream_));
   }
   kernel_observer_.reset(new ChainKernelObserver(kernel_observers));
 
