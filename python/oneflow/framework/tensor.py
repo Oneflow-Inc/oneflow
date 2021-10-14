@@ -465,7 +465,7 @@ def _square(self):
     return flow.square(self)
 
 
-def _var(self, dim, unbiased=True, keepdim=False):
+def _var(self, dim=None, unbiased=True, keepdim=False):
     return flow._C.var(self, dim=dim, unbiased=unbiased, keepdim=keepdim)
 
 
