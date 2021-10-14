@@ -25,7 +25,7 @@ namespace {
 
 template<typename T>
 T GetValue(Scalar value) {
-  return CHECK_JUST(value.As<T>());
+  return value.Value<T>();
 }
 
 template<>

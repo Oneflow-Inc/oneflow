@@ -24,6 +24,7 @@ from oneflow.compatible.single_client.framework import remote_blob as remote_blo
 def smooth_l1_loss(
     prediction: oneflow._oneflow_internal.BlobDesc,
     label: oneflow._oneflow_internal.BlobDesc,
+    reduction: str = "mean",
     beta: float = 1.0,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -41,6 +42,7 @@ def smooth_l1_loss(
     Args:
         prediction (oneflow._oneflow_internal.BlobDesc): The prediction Blob
         label (oneflow._oneflow_internal.BlobDesc): The label Blob
+        reduction (string, optional): Specifies the reduction to apply to the output.
         beta (float, optional): The :math:`\\beta` in the equation. Defaults to 1.0.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
@@ -76,10 +78,11 @@ def smooth_l1_loss(
             name if name is not None else id_util.UniqueStr("SmoothL1Loss_")
         )
         .Op("smooth_l1_loss")
-        .Input("prediction", [prediction])
-        .Input("label", [label])
-        .Output("loss")
+        .Input("input", [prediction])
+        .Input("target", [label])
+        .Output("out")
     )
+    op.Attr("reduction", reduction)
     op.Attr("beta", float(beta))
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 

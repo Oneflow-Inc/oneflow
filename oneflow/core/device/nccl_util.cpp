@@ -19,8 +19,6 @@ namespace oneflow {
 
 #ifdef WITH_CUDA
 
-void NcclCheck(ncclResult_t error) { CHECK_EQ(error, ncclSuccess) << ncclGetErrorString(error); }
-
 std::string NcclUniqueIdToString(const ncclUniqueId& unique_id) {
   return std::string(unique_id.internal, NCCL_UNIQUE_ID_BYTES);
 }

@@ -38,7 +38,8 @@ void AsyncCudaStreamType::InitInstructionStatus(const Stream& stream,
 
 void AsyncCudaStreamType::DeleteInstructionStatus(const Stream& stream,
                                                   InstructionStatusBuffer* status_buffer) const {
-  // do nothing
+  auto* ptr = CudaInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  ptr->~CudaInstrStatusQuerier();
 }
 
 bool AsyncCudaStreamType::QueryInstructionStatusDone(

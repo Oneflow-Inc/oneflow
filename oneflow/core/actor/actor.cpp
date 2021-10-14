@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/stream/stream_context.h"
+#include "oneflow/core/device/device_context_adapter.h"
 
 namespace oneflow {
 
@@ -297,10 +298,6 @@ void Actor::ForEachProducedRegst(const std::function<void(Regst*)>& Handler) con
   }
 }
 
-DeviceType Actor::GetDeviceType() const {
-  return Global<IDMgr>::Get()->GetDeviceTypeFromActorId(actor_id_);
-}
-
 int64_t Actor::Name2SoleRegstDescId(const std::string& name) const {
   auto find_it = name2regst_desc_id_.find(name);
   if (find_it != name2regst_desc_id_.end()) {
@@ -323,8 +320,7 @@ void Actor::IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t val) {
 }
 
 void Actor::InitDeviceCtx(StreamContext* stream_ctx) {
-  auto* provider = CHECK_NOTNULL(dynamic_cast<DeviceCtxProvider*>(stream_ctx));
-  device_ctx_ = provider->GetDeviceCtx();
+  device_ctx_.reset(CHECK_NOTNULL(NewDeviceCtxAdapter(stream_ctx)));
 }
 
 void Actor::ForEachCurNaiveReadableDataRegst(std::function<void(const Regst*)> func) const {

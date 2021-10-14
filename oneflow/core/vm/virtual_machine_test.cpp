@@ -42,9 +42,6 @@ TEST(VirtualMachine, __Init__) {
 
 TEST(VirtualMachine, ToDot) {
   std::string dot_str = ObjectMsgListReflection<VirtualMachine>().ToDot("VirtualMachine");
-  // std::cout << std::endl;
-  // std::cout << dot_str << std::endl;
-  // std::cout << std::endl;
 }
 
 }  // namespace

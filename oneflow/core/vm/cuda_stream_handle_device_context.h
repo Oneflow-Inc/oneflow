@@ -38,14 +38,11 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx {
       : cuda_handler_(new CudaStreamHandle(nullptr)),
         callback_msg_list_(callback_msg_list),
         cuda_allocator_(
-            new ThreadSafeAllocator(std::unique_ptr<Allocator>(new CudaAllocator(device_id)))) {}
+            new ThreadSafeAllocator(std::unique_ptr<Allocator>(new CudaAllocator(device_id)))),
+        device_id_(device_id) {}
 
   cudaStream_t cuda_stream() const override { return cuda_handler_->cuda_stream(); }
-  cublasHandle_t cublas_pmh_handle() const override { return cuda_handler_->cublas_pmh_handle(); }
-  cublasHandle_t cublas_tensor_op_math_handle() const override {
-    return cuda_handler_->cublas_tensor_op_math_handle();
-  }
-  cublasHandle_t cublas_pmd_handle() const override { return cuda_handler_->cublas_pmd_handle(); }
+  cublasHandle_t cublas_handle() const override { return cuda_handler_->cublas_handle(); }
   cudnnHandle_t cudnn_handle() const override { return cuda_handler_->cudnn_handle(); }
 
   void SyncDevice() override { OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream())); }
@@ -62,6 +59,7 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx {
   std::unique_ptr<CudaStreamHandle> cuda_handler_;
   CallbackMsgListPtr callback_msg_list_;
   std::unique_ptr<Allocator> cuda_allocator_;
+  int64_t device_id_;
 };
 
 #endif  // WITH_CUDA
