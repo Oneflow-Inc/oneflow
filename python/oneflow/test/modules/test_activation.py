@@ -447,5 +447,25 @@ class TestReluFunction(flow.unittest.TestCase):
         return y
 
 
+@flow.unittest.skip_unless_1n1d()
+class TestRelu6Function(flow.unittest.TestCase):
+    @autotest()
+    def test_flow_nn_functional_relu6_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim1=3).to(device)
+        y = torch.nn.functional.relu6(x)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestLogSigmoidFunction(flow.unittest.TestCase):
+    @autotest()
+    def test_flow_nn_functional_logsigmoid_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim1=3).to(device)
+        y = torch.nn.functional.logsigmoid(x)
+        return y
+
+
 if __name__ == "__main__":
     unittest.main()
