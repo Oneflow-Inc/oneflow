@@ -980,68 +980,61 @@ class ScalarLogicalXor2Functor {
   }
 };
 
-
 class StandardDeviationFunctor {
  public:
-  Maybe<Tensor> operator()(
-    const std::shared_ptr<Tensor>& input, 
-    const Optional<std::vector<int32_t>>& dim, 
-    const Optional<bool> unbiased, 
-    const Optional<bool> keepdim
-  ) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
+                           const Optional<std::vector<int32_t>>& dim, const Optional<bool> unbiased,
+                           const Optional<bool> keepdim) const {
     const int32_t ndim = input->shape()->NumAxes();
     std::vector<int32_t> axis(0);
     if (dim.has_value() == false) {
-      for(int i=0; i < ndim; ++i){
-        axis.push_back(i);
-      }
-    }else{
+      for (int i = 0; i < ndim; ++i) { axis.push_back(i); }
+    } else {
       std::vector<int32_t>& dims = *JUST(dim);
-      CHECK_GE_OR_RETURN(ndim, dims.size()) 
-      << "Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim-1 << "], but got " << dims.size();
+      CHECK_GE_OR_RETURN(ndim, dims.size())
+          << "Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
+          << "], but got " << dims.size();
       axis.assign(dims.begin(), dims.end());
     }
 
-    bool unbias=true;
-    bool keepdims=false;
-    if(unbiased.has_value()){
-      unbias = JUST(unbiased);
-    }
-    if(keepdim.has_value()){
-      keepdims = JUST(keepdim);
-    }
-    
+    bool unbias = true;
+    bool keepdims = false;
+    if (unbiased.has_value()) { unbias = JUST(unbiased); }
+    if (keepdim.has_value()) { keepdims = JUST(keepdim); }
+
     CheckAxis(axis, *input->shape());
-    if(axis.size()==0){
-      return functional::Constant(*input->shape(), Scalar(0), *input->dtype(), NullOpt); 
+    if (axis.size() == 0) {
+      return functional::Constant(*input->shape(), Scalar(0), *input->dtype(), NullOpt);
     }
 
     int32_t reduce_count = 1;
-    if (axis.size()==1){
+    if (axis.size() == 1) {
       reduce_count *= input->shape()->At(axis[0]);
-    }else{
-      for(int i=0; i < axis.size(); ++i){
-        reduce_count *= input->shape()->At(axis[i]);
-      }
+    } else {
+      for (int i = 0; i < axis.size(); ++i) { reduce_count *= input->shape()->At(axis[i]); }
     }
- 
-    const auto& sum = JUST(functional::ScalarDiv(JUST(functional::ReduceSum(JUST(functional::Square(input)), axis, keepdims)), Scalar(reduce_count)));
-    const auto& square = JUST(functional::Square(JUST(functional::ScalarDiv(JUST(functional::ReduceSum(input, axis, keepdims)), Scalar(reduce_count)))));
+
+    const auto& sum = JUST(functional::ScalarDiv(
+        JUST(functional::ReduceSum(JUST(functional::Square(input)), axis, keepdims)),
+        Scalar(reduce_count)));
+    const auto& square = JUST(functional::Square(JUST(functional::ScalarDiv(
+        JUST(functional::ReduceSum(input, axis, keepdims)), Scalar(reduce_count)))));
     const auto& sub = JUST(functional::Sub(sum, square));
-    if(unbias){
-      return functional::Sqrt(JUST(functional::ScalarMul(sub, Scalar((double)reduce_count/(double)(reduce_count-1)))));
+    if (unbias) {
+      return functional::Sqrt(JUST(
+          functional::ScalarMul(sub, Scalar((double)reduce_count / (double)(reduce_count - 1)))));
     }
     /*
-    According to the std calculation formula, 
-    StandardDeviation = \sqrt {\frac {\sum _ {i=1}^ {N}X_ {i}^ {2}}{N}  -  \mu ^ {2}} 
-      = \sqrt{\frac {1}{N}\sum _ {i=1}^ {n} (x_ {i}-\mu )^ {2}  -\frac {1}{N}  N \mu ^ {2}} 
+    According to the std calculation formula,
+    StandardDeviation = \sqrt {\frac {\sum _ {i=1}^ {N}X_ {i}^ {2}}{N}  -  \mu ^ {2}}
+      = \sqrt{\frac {1}{N}\sum _ {i=1}^ {n} (x_ {i}-\mu )^ {2}  -\frac {1}{N}  N \mu ^ {2}}
       = \sqrt{\frac {\sum _ {i=1}^ {N}X_ {i}^ {2}}{N}  -  \mu ^ {2}}
-    
-    when we are in the last sqrt, 
-    if the value in the radical is <= 0, it may cause the result gradient to appear undefined(nan), 
+
+    when we are in the last sqrt,
+    if the value in the radical is <= 0, it may cause the result gradient to appear undefined(nan),
     which is normal. In this case, the gradient of ours and pytorch are different.
     Use abs(absolute value) can keep it consistent with pytorch:
-  
+
     const auto& abs = JUST(functional::Abs(sub));
     return functional::Sqrt(abs);
     */
@@ -1051,43 +1044,31 @@ class StandardDeviationFunctor {
 
 class VarianceFunctor {
  public:
-  Maybe<Tensor> operator()(
-    const std::shared_ptr<Tensor>& input, 
-    const Optional<std::vector<int32_t>>& dim, 
-    const Optional<bool> unbiased, 
-    const Optional<bool> keepdim
-  ) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
+                           const Optional<std::vector<int32_t>>& dim, const Optional<bool> unbiased,
+                           const Optional<bool> keepdim) const {
     const int32_t ndim = input->shape()->NumAxes();
     std::vector<int32_t> axis(0);
     if (dim.has_value() == false) {
-      for(int i=0; i < ndim; ++i){
-        axis.push_back(i);
-      }
-    }else{
+      for (int i = 0; i < ndim; ++i) { axis.push_back(i); }
+    } else {
       std::vector<int32_t>& dims = *JUST(dim);
-      CHECK_GE_OR_RETURN(ndim, dims.size()) 
-      << "Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim-1 << "], but got " << dims.size();
+      CHECK_GE_OR_RETURN(ndim, dims.size())
+          << "Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
+          << "], but got " << dims.size();
       axis.assign(dims.begin(), dims.end());
     }
-    bool unbias=true;
-    bool keepdims=false;
-    if(unbiased.has_value()){
-      unbias = JUST(unbiased);
-    }
-    if(keepdim.has_value()){
-      keepdims = JUST(keepdim);
-    }
-
+    bool unbias = true;
+    bool keepdims = false;
+    if (unbiased.has_value()) { unbias = JUST(unbiased); }
+    if (keepdim.has_value()) { keepdims = JUST(keepdim); }
 
     CheckAxis(axis, *input->shape());
     int32_t reduce_count = 1;
-    for(int i=0; i < axis.size(); ++i){
-      reduce_count *= input->shape()->At(axis[i]);
-    }
-    if (unbias){
-      reduce_count -= 1;
-    }
-    const auto& sub = JUST(functional::Sub(input, JUST(functional::ReduceMean(input, axis, (bool)true))));
+    for (int i = 0; i < axis.size(); ++i) { reduce_count *= input->shape()->At(axis[i]); }
+    if (unbias) { reduce_count -= 1; }
+    const auto& sub =
+        JUST(functional::Sub(input, JUST(functional::ReduceMean(input, axis, (bool)true))));
     const auto& sum = JUST(functional::ReduceSum(JUST(functional::Square(sub)), axis, keepdims));
     return functional::ScalarDiv(sum, Scalar(reduce_count));
   }
@@ -1138,7 +1119,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarLogicalXorFunctor, ScalarLogicalXor2Functor>("ScalarLogicalXor");
   m.add_functor<StandardDeviationFunctor>("StandardDeviation");
   m.add_functor<VarianceFunctor>("Variance");
-
 };
 
 }  // namespace functional
