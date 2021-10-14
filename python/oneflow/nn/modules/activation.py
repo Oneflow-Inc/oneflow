@@ -392,19 +392,6 @@ class Hardsigmoid(Module):
 
 
 class Softmax(Module):
-    def __init__(self, dim: Optional[int] = None):
-        super(Softmax, self).__init__()
-        self.dim = dim
-
-    def forward(self, x):
-        return flow._C.softmax(x, self.dim)
-
-    def extra_repr(self):
-        return f"dim={self.dim}"
-
-
-@register_tensor_op("softmax")
-def softmax_op(tensor, dim=None):
     """Applies the Softmax function to an n-dimensional input Tensor
     rescaling them so that the elements of the n-dimensional output Tensor
     lie in the range [0,1] and sum to 1.
@@ -449,7 +436,16 @@ def softmax_op(tensor, dim=None):
         tensor([[[0.1575, 0.3754, 0.4671],
                  [0.0507, 0.1230, 0.8263]]], dtype=oneflow.float32)
     """
-    return Softmax(dim)(tensor)
+
+    def __init__(self, dim: Optional[int] = None):
+        super(Softmax, self).__init__()
+        self.dim = dim
+
+    def forward(self, x):
+        return flow._C.softmax(x, self.dim)
+
+    def extra_repr(self):
+        return f"dim={self.dim}"
 
 
 class LogSoftmax(Module):
