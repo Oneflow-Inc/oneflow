@@ -50,6 +50,7 @@ int32_t main(int32_t argc, char** argv) {
 #ifdef WITH_CUDA
   mlir::oneflow::registerGpuSerializeToCubinPass();
 #endif  // WITH_CUDA
+  mlir::registerOutlineJitFunctionPassPass();
   mlir::DialectRegistry registry;
   registry.insert<mlir::oneflow::OneFlowDialect>();
   registry.insert<mlir::StandardOpsDialect>();
