@@ -167,9 +167,11 @@
   bind_python: False
 
 - name: "floor_divide"
-  signature: 
-    ["Tensor (Tensor x, Tensor y) => FloorDiv", 
-     "Tensor (Tensor input, Scalar scalar) => ScalarFloorDiv"]
+  signature:
+    [
+      "Tensor (Tensor x, Tensor y) => FloorDiv",
+      "Tensor (Tensor input, Scalar scalar) => ScalarFloorDiv",
+    ]
   bind_python: True
 
 - name: "floordiv_x_grad"
@@ -179,7 +181,6 @@
 - name: "floordiv_y_grad"
   signature: "Tensor (Tensor dz, Tensor x, Tensor y, Tensor z) => FloorDivYGrad"
   bind_python: False
-
 
 - name: "reduce_max"
   signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceMax"
@@ -203,10 +204,10 @@
 
 - name: "transpose"
   signature:
-      [
-        "Tensor (Tensor x, Int32List perm) => Transpose",
-        "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Transpose2dim",
-      ]
+    [
+      "Tensor (Tensor x, Int32List perm) => Transpose",
+      "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Transpose2dim",
+    ]
   bind_python: True
 
 - name: "reciprocal"
@@ -218,11 +219,15 @@
   bind_python: True
 
 - name: "image_flip"
-  signature: "Tensor (Tensor x, Int32 flip_code) => ImageFlip"
+  signature: "Tensor (Tensor x, Tensor flip_code) => ImageFlip"
   bind_python: True
 
 - name: "sin"
-  signature: "Tensor (Tensor x, Bool inplace=False) => Sin"
+  signature: "Tensor (Tensor x) => Sin"
+  bind_python: True
+
+- name: "sin_"
+  signature: "Tensor (Tensor x) => Sin_"
   bind_python: True
 
 - name: "cos"
@@ -255,6 +260,14 @@
 
 - name: "square"
   signature: "Tensor (Tensor x) => Square"
+  bind_python: True
+
+- name: "std"
+  signature: "Tensor (Tensor x, Int32List[1] dim=None, Bool unbiased=None, Bool keepdim=None) => StandardDeviation"
+  bind_python: True
+
+- name: "var"
+  signature: "Tensor (Tensor x, Int32List[1] dim=None, Bool unbiased=None, Bool keepdim=None) => Variance"
   bind_python: True
 
 - name: "relu"
@@ -314,11 +327,11 @@
   bind_python: False
 
 - name: "softmax"
-  signature: "Tensor (Tensor x) => Softmax"
+  signature: "Tensor (Tensor x, Int64 dim=None) => Softmax"
   bind_python: True
 
-- name: "logsoftmax"
-  signature: "Tensor (Tensor x) => LogSoftmax"
+- name: "log_softmax"
+  signature: "Tensor (Tensor x, Int64 dim=None) => LogSoftmax"
   bind_python: True
 
 - name: "hardswish"
@@ -364,6 +377,20 @@
     Tensor gamma, Tensor beta, Tensor reserve_space, Tensor y, Int32 axis=1, Float epsilon=1e-5) => NormalizationAddReluGrad"
   bind_python: False
 
+- name: "eye"
+  signature:
+    [
+      "Tensor (Scalar n, Scalar m=None, *, DataType dtype=None, Device device=None) => Eye",
+    ]
+  bind_python: True
+
+- name: "consistent_eye"
+  signature:
+    [
+      "Tensor (Scalar n, Scalar m=None, *, DataType dtype=None, Placement placement, SbpList sbp) => ConsistentEye",
+    ]
+  bind_python: True
+
 - name: "arange"
   signature: [
       "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=kInt64,
@@ -385,11 +412,11 @@
   bind_python: True
 
 - name: "argmax"
-  signature: "Tensor (Tensor x) => ArgMax"
+  signature: "Tensor (Tensor x, *, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMax"
   bind_python: True
 
 - name: "argmin"
-  signature: "Tensor (Tensor x) => ArgMin"
+  signature: "Tensor (Tensor x, *, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMin"
   bind_python: True
 
 - name: "argwhere"
@@ -516,6 +543,20 @@
     String data_format="channels_first") => ConvBiasGrad'
   bind_python: False
 
+- name: "deconv1d"
+  signature:
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32 filters,
+    Int32List padding, String data_format, Int32List kernel_size, 
+    Int32List output_padding, Int32List strides, Int32List dilation, Int32 groups=1) => Deconv1d"
+  bind_python: True
+
+- name: "deconv3d"
+  signature:
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32 filters,
+    Int32List padding, String data_format, Int32List kernel_size, 
+    Int32List output_padding, Int32List strides, Int32List dilation, Int32 groups=1) => Deconv3d"
+  bind_python: True
+
 - name: "expand"
   signature: "Tensor (Tensor x, Shape shape) => Expand"
   bind_python: True
@@ -572,6 +613,22 @@
     Double alpha=1.0) => BatchMatMul"
   bind_python: True
 
+- name: "l1_loss"
+  signature: "Tensor(Tensor input, Tensor target, String reduction) => L1Loss"
+  bind_python: True
+
+- name: "mse_loss"
+  signature: "Tensor(Tensor input, Tensor target, String reduction) => MseLoss"
+  bind_python: True
+
+- name: "kl_div_loss"
+  signature: "Tensor(Tensor input, Tensor target, Bool log_target, String reduction) => KLDivLoss"
+  bind_python: True
+
+- name: "kl_div_loss_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Bool log_target, String reduction) => KLDivLossGrad"
+  bind_python: False
+
 - name: "nll_loss"
   signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction) => NllLoss"
   bind_python: True
@@ -596,6 +653,10 @@
   signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None, String reduction) => BinaryCrossEntropyWithLogitsLossGrad"
   bind_python: True
 
+- name: "cross_entropy"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction) => CrossEntropy"
+  bind_python: True
+
 - name: "sparse_softmax_cross_entropy"
   signature: "Tensor (Tensor logits, Tensor label, Int64 depth) => SparseSoftmaxCrossEntropy"
   bind_python: True
@@ -613,20 +674,28 @@
   bind_python: True
 
 - name: "smooth_l1_loss"
-  signature: "Tensor (Tensor logits, Tensor label, Float beta) => SmoothL1Loss"
+  signature: "Tensor (Tensor logits, Tensor label, Float beta, String reduction) => SmoothL1Loss"
   bind_python: True
 
 - name: "smooth_l1_loss_grad"
-  signature: "Tensor (Tensor loss_grad, Tensor prediction, Tensor label, Float beta) => SmoothL1LossGrad"
+  signature: "Tensor (Tensor loss_grad, Tensor prediction, Tensor label, Float beta, String reduction) => SmoothL1LossGrad"
   bind_python: False
 
 - name: "combined_margin_loss"
-  signature: "TensorTuple (Tensor x, Tensor label, Float m1, Float m2, Float m3, Int64 depth) => CombinedMarginLoss"
+  signature: "Tensor (Tensor x, Tensor label, Float m1, Float m2, Float m3) => CombinedMarginLoss"
   bind_python: True
 
 - name: "combined_margin_loss_grad"
   signature: "Tensor (Tensor dy, Tensor label, Tensor theta, Float m1, Float m2, Float m3, Int64 depth) => CombinedMarginLossGrad"
   bind_python: False
+
+- name: "margin_ranking_loss"
+  signature: "Tensor (Tensor input_1, Tensor input_2, Tensor target, Float margin, String reduction) => MarginRankingLoss"
+  bind_python: True
+
+- name: "ctc_loss"
+  signature: "Tensor (Tensor log_probs, Tensor targets, Tensor input_lengths, Tensor target_lengths, Int32 blank, Bool zero_infinity, String reduction) => CtcLoss"
+  bind_python: True
 
 - name: "affine_grid"
   signature: "Tensor (Tensor theta, *, Shape size, Bool align_corners) => AffineGrid"
@@ -718,26 +787,26 @@
 
 - name: "max_pool1d"
   signature:
-    'TensorTuple (Tensor input, Int32List[1] kernel_size, Int32List[1] stride=None, 
-                  Int32List[1] padding=0, Int32List[1] dilation=1, 
-                  Bool return_indices=True, Bool ceil_mode=False, 
-                  String data_format="channels_first") => Maxpool1D'
+    'TensorTuple (Tensor input, Int32List[1] kernel_size, Int32List[1] stride=None,
+    Int32List[1] padding=0, Int32List[1] dilation=1,
+    Bool return_indices=True, Bool ceil_mode=False,
+    String data_format="channels_first") => Maxpool1D'
   bind_python: True
 
 - name: "max_pool2d"
   signature:
-    'TensorTuple (Tensor input, Int32List[2] kernel_size, Int32List[2] stride=None, 
-                  Int32List[2] padding=0, Int32List[2] dilation=1, 
-                  Bool return_indices=True, Bool ceil_mode=False, 
-                  String data_format="channels_first") => Maxpool2D'
+    'TensorTuple (Tensor input, Int32List[2] kernel_size, Int32List[2] stride=None,
+    Int32List[2] padding=0, Int32List[2] dilation=1,
+    Bool return_indices=True, Bool ceil_mode=False,
+    String data_format="channels_first") => Maxpool2D'
   bind_python: True
 
 - name: "max_pool3d"
   signature:
-    'TensorTuple (Tensor input, Int32List[3] kernel_size, Int32List[3] stride=None, 
-                  Int32List[3] padding=0, Int32List[3] dilation=1, 
-                  Bool return_indices=True, Bool ceil_mode=False, 
-                  String data_format="channels_first") => Maxpool3D'
+    'TensorTuple (Tensor input, Int32List[3] kernel_size, Int32List[3] stride=None,
+    Int32List[3] padding=0, Int32List[3] dilation=1,
+    Bool return_indices=True, Bool ceil_mode=False,
+    String data_format="channels_first") => Maxpool3D'
   bind_python: True
 
 - name: "pooling_grad"
@@ -949,7 +1018,7 @@
   signature: "Tensor (Tensor x) => Log1p"
   bind_python: True
 
-- name: "log_sigmoid"
+- name: "logsigmoid"
   signature: "Tensor (Tensor x) => LogSigmoid"
   bind_python: True
 

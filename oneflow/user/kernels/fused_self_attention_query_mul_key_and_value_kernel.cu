@@ -129,7 +129,7 @@ void BatchedGemm(DeviceCtx* ctx, char opa, char opb, int64_t m, int64_t n, int64
                  const T* a, int64_t lda, int64_t stridea, const T* b, int64_t ldb, int64_t strideb,
                  float beta, T* c, int64_t ldc, int64_t stridec, int64_t batch_size) {
   // swap m and n, a and b to convert from row-major to col-major
-  CublasBatchGemm<T>(ctx->cublas_pmh_handle(), opb, opa, n, m, k, static_cast<T>(alpha), b, ldb,
+  CublasBatchGemm<T>(ctx->cublas_handle(), opb, opa, n, m, k, static_cast<T>(alpha), b, ldb,
                      strideb, a, lda, stridea, static_cast<T>(beta), c, ldc, stridec, batch_size);
 }
 

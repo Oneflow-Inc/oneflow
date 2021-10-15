@@ -17,7 +17,7 @@ limitations under the License.
 #include <list>
 #include "oneflow/core/framework/instruction_replay.h"
 #include "oneflow/core/vm/vm_util.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 
 namespace oneflow {
 
@@ -28,8 +28,8 @@ bool* RecordingInstructionsFlag() {
   return &recording_instruction;
 }
 
-std::list<ObjectMsgPtr<vm::InstructionMsg>>* RecordedInstructionList() {
-  static thread_local std::list<ObjectMsgPtr<vm::InstructionMsg>> list;
+std::list<intrusive::shared_ptr<vm::InstructionMsg>>* RecordedInstructionList() {
+  static thread_local std::list<intrusive::shared_ptr<vm::InstructionMsg>> list;
   return &list;
 }
 
@@ -45,7 +45,7 @@ void EndRecordingInstructions() { *RecordingInstructionsFlag() = false; }
 
 void ClearRecordedInstructions() { RecordedInstructionList()->clear(); }
 
-void RecordInstruction(const ObjectMsgPtr<vm::InstructionMsg>& instruction) {
+void RecordInstruction(const intrusive::shared_ptr<vm::InstructionMsg>& instruction) {
   RecordedInstructionList()->push_back(instruction);
 }
 

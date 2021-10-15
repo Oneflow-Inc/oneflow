@@ -13,10 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
+#include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
-
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -224,7 +224,6 @@ class HardSigmoidFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
-
 class HardSigmoidGradFunctor : public BinaryFunctor {
  public:
   HardSigmoidGradFunctor() {
@@ -232,25 +231,61 @@ class HardSigmoidGradFunctor : public BinaryFunctor {
         CHECK_JUST(one::OpBuilder("hardsigmoid_grad").Input("dy").Input("x").Output("dx").Build());
   }
 };
+class SoftmaxFunctorBase {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const Optional<int64_t>& dim) const {
+    const auto input_shape = input->shape();
+    const int64_t num_axes = input_shape->NumAxes();
 
-class SoftmaxFunctor : public UnaryFunctor {
+    const auto get_dim = [num_axes]() -> int64_t {
+      const int64_t ndim = num_axes;
+      if (ndim == 0 || ndim == 1 || ndim == 3) {
+        return 0;
+      } else {
+        return 1;
+      }
+    };
+
+    int64_t dim_ = dim ? JUST(dim) : get_dim();
+    if (dim_ < 0) { dim_ += num_axes; }
+
+    CHECK_GE_OR_RETURN(dim_, 0);
+    CHECK_LT_OR_RETURN(dim_, num_axes);
+
+    if (dim_ != num_axes - 1) {
+      std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
+      for (size_t i = 1; i < input_perm.size(); ++i) { input_perm[i] = i; }
+      input_perm[dim_] = input_perm[input_perm.size() - 1];
+      input_perm[input_perm.size() - 1] = dim_;
+
+      auto result = JUST(functional::Transpose(input, input_perm));
+      result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {result}));
+      return functional::Transpose(result, input_perm);
+    }
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input});
+  }
+
+ protected:
+  SoftmaxFunctorBase() = default;
+  virtual ~SoftmaxFunctorBase() = default;
+
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SoftmaxFunctor : public SoftmaxFunctorBase {
  public:
   SoftmaxFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("softmax").Input("in").Output("out").Build());
   }
 };
 
-class LogSoftmaxFunctor : public UnaryFunctor {
+class LogSoftmaxFunctor : public SoftmaxFunctorBase {
  public:
   LogSoftmaxFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("logsoftmax").Input("in").Output("out").Output("prob").Build());
+    op_ = CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {logits});
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
 class HardSwishFunctor : public UnaryFunctor {

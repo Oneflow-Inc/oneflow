@@ -23,9 +23,8 @@ limitations under the License.
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/extension/python/numpy.h"
-#include "oneflow/core/framework/transport_util.h"
-#include "oneflow/core/job/rank_group_scope.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/framework/data_consistency_check.h"
 
 namespace py = pybind11;
 
@@ -85,6 +84,9 @@ Maybe<std::string> GetCopyMirroredTensorFromNumpyFuncName(DataType dtype) {
 Maybe<std::tuple<std::vector<Shape>, std::vector<Symbol<DType>>>>
 MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
   const auto& tensor = JUST(t->AsMirroredTensor());
+  if (tensor->dtype() != DType::TensorBuffer()) {
+    return Error::RuntimeError() << "tensor buffer supported only";
+  }
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
   std::vector<Shape> shapes;
   std::vector<Symbol<DType>> dtypes;
@@ -175,58 +177,7 @@ Maybe<Symbol<cfg::NdSbp>> GetAllBroadcastNdSbp(size_t ndim) {
 
 auto* CachedGetAllBroadcastNdSbp = DECORATE(&GetAllBroadcastNdSbp, ThreadLocal);
 
-template<typename T>
-bool CheckVecEqual(size_t size, const T* in0, const T* in1) {
-  for (size_t i = 0; i < size; ++i) {
-    if (*(in0 + i) != *(in1 + i)) { return false; }
-  }
-  return true;
-}
-
 }  // namespace
-
-template<typename T>
-Maybe<void> DataConsistencyCheck(py::array_t<T> array, size_t elem_cnt,
-                                 Symbol<ParallelDesc> placement) {
-  const auto& rank_group = JUST(RankGroup::New(placement));
-  size_t data_size = elem_cnt * sizeof(T);
-
-  TransportToken transport_token = JUST(TransportToken::NewTransportToken(kTransportTokenTypeData));
-  py::array contiguous_array = py::reinterpret_steal<py::array>(reinterpret_cast<PyObject*>(
-      PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(array.ptr()))));
-  py::buffer_info buf = contiguous_array.request();
-  T* buf_ptr = (T*)buf.ptr;
-  size_t array_size = buf.size;
-  CHECK_EQ_OR_RETURN(array_size, elem_cnt);
-
-  std::vector<T> recv_buffer(elem_cnt);
-  T* recv_ptr = recv_buffer.data();
-
-  NaiveAsyncTransportCtx ctx(
-      transport_token,
-      [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
-        *buffer = reinterpret_cast<void*>(buf_ptr);
-        *size = data_size;
-        *Cb = [] {};
-        return Maybe<void>::Ok();
-      },
-      [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
-        *buffer = recv_ptr;
-        *size = data_size;
-        *Cb = [] {};
-        return Maybe<void>::Ok();
-      });
-  JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
-  JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
-  CHECK_OR_RETURN(CheckVecEqual(elem_cnt, buf_ptr, recv_ptr))
-      << "Each rank must have same input sequence or numpy array";
-  return Maybe<void>::Ok();
-}
-
-#define MAKE_SWITCH_ENTRY(func_name, dtype) func_name<dtype>
-DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, DataConsistencyCheck, MAKE_SWITCH_ENTRY,
-                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ));
 
 Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                            Symbol<ParallelDesc> placement,
@@ -244,7 +195,16 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
   const Shape shape(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));
   DataType data_type = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
 
-  JUST(SwitchDataConsistencyCheck(SwitchCase(data_type), np_arr_raii, shape.elem_cnt(), placement));
+  if (placement->parallel_num() > 1) {
+    py::array contiguous_array = py::reinterpret_steal<py::array>(reinterpret_cast<PyObject*>(
+        PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(np_arr_raii.ptr()))));
+    py::buffer_info buf = contiguous_array.request();
+    const void* buf_ptr = (const void*)buf.ptr;
+    size_t array_size = buf.size;
+    CHECK_EQ_OR_RETURN(array_size, shape.elem_cnt());
+    size_t byte_size = array_size * GetSizeOfDataType(data_type);
+    JUST(DataConsistencyCheck(buf_ptr, byte_size, placement));
+  }
 
   const std::string& device_tag = placement->device_tag();
   Symbol<Device> device;

@@ -447,6 +447,53 @@ class TransposeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class EyeFunctor {
+ public:
+  EyeFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
+  Maybe<Tensor> operator()(const Scalar& n, const Optional<Scalar>& m,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Optional<Symbol<Device>>& device) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("n", JUST(n.As<int64_t>())));
+    JUST(attrs.SetAttr<int64_t>("m", m ? JUST(JUST(m)->As<int64_t>()) : JUST(n.As<int64_t>())));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype ? JUST(dtype)->data_type() : DataType::kFloat));
+    OpExprInterpContext ctx(attrs);
+    if (device) { ctx.device = JUST(device); }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ConsistentEyeFunctor {
+ public:
+  ConsistentEyeFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
+  Maybe<Tensor> operator()(const Scalar& n, const Optional<Scalar>& m,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("n", JUST(n.As<int64_t>())));
+    JUST(attrs.SetAttr<int64_t>("m", m ? JUST(JUST(m)->As<int64_t>()) : JUST(n.As<int64_t>())));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype ? JUST(dtype)->data_type() : DataType::kFloat));
+    if (LazyMode::is_enabled()) {
+      std::vector<std::string> nd_sbp(sbp_tuple.size());
+      {
+        for (int i = 0; i < sbp_tuple.size(); ++i) {
+          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+        }
+      }
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
+    }
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class Transpose2dimFunctor {
  public:
   Transpose2dimFunctor() {
@@ -555,19 +602,6 @@ class ConsistentArange2Functor {
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     return ConsistentArange(Scalar(0), limit, Scalar(1), dtype, placement, sbp_tuple);
-  }
-};
-
-class ArgMaxFunctor : public UnaryFunctor {
- public:
-  ArgMaxFunctor() { op_ = CHECK_JUST(one::OpBuilder("argmax").Input("in").Output("out").Build()); }
-};
-
-class ArgMinFunctor {
- public:
-  ArgMinFunctor() {}
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    return ArgMax(JUST(functional::Negative(x)));
   }
 };
 
@@ -946,6 +980,100 @@ class ScalarLogicalXor2Functor {
   }
 };
 
+class StandardDeviationFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
+                           const Optional<std::vector<int32_t>>& dim,
+                           const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
+    const int32_t ndim = input->shape()->NumAxes();
+    std::vector<int32_t> axis(0);
+    if (dim.has_value() == false) {
+      for (int i = 0; i < ndim; ++i) { axis.push_back(i); }
+    } else {
+      std::vector<int32_t>& dims = *JUST(dim);
+      CHECK_GE_OR_RETURN(ndim, dims.size())
+          << "Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
+          << "], but got " << dims.size();
+      axis.assign(dims.begin(), dims.end());
+    }
+
+    bool unbias = true;
+    bool keepdims = false;
+    if (unbiased.has_value()) { unbias = JUST(unbiased); }
+    if (keepdim.has_value()) { keepdims = JUST(keepdim); }
+
+    JUST(CheckAxis(axis, *input->shape()));
+    if (axis.size() == 0) {
+      return functional::Constant(*input->shape(), Scalar(0), *input->dtype(), NullOpt);
+    }
+
+    int32_t reduce_count = 1;
+    if (axis.size() == 1) {
+      reduce_count *= input->shape()->At(axis[0]);
+    } else {
+      for (int i = 0; i < axis.size(); ++i) { reduce_count *= input->shape()->At(axis[i]); }
+    }
+
+    const auto& sum = JUST(functional::ScalarDiv(
+        JUST(functional::ReduceSum(JUST(functional::Square(input)), axis, keepdims)),
+        Scalar(reduce_count)));
+    const auto& square = JUST(functional::Square(JUST(functional::ScalarDiv(
+        JUST(functional::ReduceSum(input, axis, keepdims)), Scalar(reduce_count)))));
+    const auto& sub = JUST(functional::Sub(sum, square));
+    if (unbias) {
+      return functional::Sqrt(JUST(
+          functional::ScalarMul(sub, Scalar((double)reduce_count / (double)(reduce_count - 1)))));
+    }
+    /*
+    According to the std calculation formula,
+    StandardDeviation = \sqrt {\frac {\sum _ {i=1}^ {N}X_ {i}^ {2}}{N}  -  \mu ^ {2}}
+      = \sqrt{\frac {1}{N}\sum _ {i=1}^ {n} (x_ {i}-\mu )^ {2}  -\frac {1}{N}  N \mu ^ {2}}
+      = \sqrt{\frac {\sum _ {i=1}^ {N}X_ {i}^ {2}}{N}  -  \mu ^ {2}}
+
+    when we are in the last sqrt,
+    if the value in the radical is <= 0, it may cause the result gradient to appear undefined(nan),
+    which is normal. In this case, the gradient of ours and pytorch are different.
+    Use abs(absolute value) can keep it consistent with pytorch:
+
+    const auto& abs = JUST(functional::Abs(sub));
+    return functional::Sqrt(abs);
+    */
+    return functional::Sqrt(sub);
+  }
+};
+
+class VarianceFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
+                           const Optional<std::vector<int32_t>>& dim,
+                           const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
+    const int32_t ndim = input->shape()->NumAxes();
+    std::vector<int32_t> axis(0);
+    if (dim.has_value() == false) {
+      for (int i = 0; i < ndim; ++i) { axis.push_back(i); }
+    } else {
+      std::vector<int32_t>& dims = *JUST(dim);
+      CHECK_GE_OR_RETURN(ndim, dims.size())
+          << "Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
+          << "], but got " << dims.size();
+      axis.assign(dims.begin(), dims.end());
+    }
+    bool unbias = true;
+    bool keepdims = false;
+    if (unbiased.has_value()) { unbias = JUST(unbiased); }
+    if (keepdim.has_value()) { keepdims = JUST(keepdim); }
+
+    JUST(CheckAxis(axis, *input->shape()));
+    int32_t reduce_count = 1;
+    for (int i = 0; i < axis.size(); ++i) { reduce_count *= input->shape()->At(axis[i]); }
+    if (unbias) { reduce_count -= 1; }
+    const auto& sub =
+        JUST(functional::Sub(input, JUST(functional::ReduceMean(input, axis, (bool)true))));
+    const auto& sum = JUST(functional::ReduceSum(JUST(functional::Square(sub)), axis, keepdims));
+    return functional::ScalarDiv(sum, Scalar(reduce_count));
+  }
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -964,11 +1092,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceSumFunctor>("ReduceSum");
   m.add_functor<ReduceProdFunctor>("ReduceProd");
   m.add_functor<TransposeFunctor>("Transpose");
+  m.add_functor<EyeFunctor>("Eye");
+  m.add_functor<ConsistentEyeFunctor>("ConsistentEye");
   m.add_functor<Transpose2dimFunctor>("Transpose2dim");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
-  m.add_functor<ArgMaxFunctor>("ArgMax");
-  m.add_functor<ArgMinFunctor>("ArgMin");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<ClampGradFunctor>("ClampGrad");
@@ -989,6 +1117,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarLogicalAndFunctor, ScalarLogicalAnd2Functor>("ScalarLogicalAnd");
   m.add_functor<ScalarLogicalOrFunctor, ScalarLogicalOr2Functor>("ScalarLogicalOr");
   m.add_functor<ScalarLogicalXorFunctor, ScalarLogicalXor2Functor>("ScalarLogicalXor");
+  m.add_functor<StandardDeviationFunctor>("StandardDeviation");
+  m.add_functor<VarianceFunctor>("Variance");
 };
 
 }  // namespace functional

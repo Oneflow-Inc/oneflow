@@ -95,6 +95,7 @@ from oneflow._C import floor_divide
 from oneflow._C import mul
 from oneflow._C import reciprocal as reciprocal
 from oneflow._C import sub
+from oneflow._C import sin, sin_
 from oneflow._C import asin
 from oneflow._C import asin as arcsin
 from oneflow._C import asinh
@@ -126,6 +127,13 @@ from oneflow._C import tril
 from oneflow._C import triu
 from oneflow._C import pad
 from oneflow._C import transpose
+from oneflow._C import relu
+from oneflow._C import softmax
+from oneflow._C import log_softmax
+from oneflow._C import argmax
+from oneflow._C import argmin
+from oneflow._C import std
+from oneflow._C import var
 
 from . import sbp
 import atexit
@@ -234,15 +242,12 @@ from oneflow.framework.generator import default_generator, manual_seed
 from oneflow.framework.scope_util import api_current_scope as current_scope
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
-from oneflow.nn.modules.activation import softmax_op as softmax
 from oneflow.nn.modules.pooling import (
     adaptive_avg_pool1d,
     adaptive_avg_pool2d,
     adaptive_avg_pool3d,
 )
 from oneflow.nn.modules.arange import arange_op as arange
-from oneflow.nn.modules.argmax import argmax_op as argmax
-from oneflow.nn.modules.argmin import argmin_op as argmin
 from oneflow.nn.modules.argsort import argsort_op as argsort
 from oneflow.nn.modules.argwhere import argwhere_op as argwhere
 from oneflow.nn.modules.bmm import bmm_op as bmm
@@ -277,11 +282,7 @@ from oneflow.nn.modules.index_select import index_select_op as index_select
 from oneflow.nn.modules.masked_fill import masked_fill_op as masked_fill
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
-from oneflow.nn.modules.math_ops import sin_op as sin
-from oneflow.nn.modules.relu import relu_op as relu
-from oneflow.nn.modules.math_ops import std_op as std
 from oneflow.nn.modules.math_ops import topk_op as topk
-from oneflow.nn.modules.math_ops import variance_op as var
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
 from oneflow.nn.modules.narrow import narrow_op as narrow
 from oneflow.nn.modules.nonzero import nonzero_op as nonzero
@@ -353,7 +354,6 @@ from . import (
 )  # , saved_model NOTE(chengcheng): unavailable now
 import oneflow.utils.data
 import oneflow.utils.vision
-from oneflow.nn.modules.relu import relu_op as relu
 import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
