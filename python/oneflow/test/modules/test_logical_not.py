@@ -24,6 +24,7 @@ import oneflow as flow
 
 from oneflow.test_utils.automated_test_util import *
 
+
 def _test_logical_not(test_case, shape, device):
     np_input = np.random.randint(3, size=shape)
     input = flow.tensor(np_input, dtype=flow.float32, device=flow.device(device))
