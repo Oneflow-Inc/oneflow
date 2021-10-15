@@ -899,8 +899,8 @@ class StandardDeviationFunctor {
         JUST(functional::ReduceSum(input, axis, keepdims)), Scalar(reduce_count)))));
     const auto& sub = JUST(functional::Sub(sum, square));
     if (unbias) {
-      return functional::Sqrt(JUST(
-          functional::ScalarMul(sub, Scalar((double)reduce_count / (double)(reduce_count - 1)))));
+      return functional::Sqrt(JUST(functional::ScalarMul(
+          sub, Scalar((double)reduce_count / (double)(reduce_count - 1)), false)));
     }
     /*
     According to the std calculation formula,
