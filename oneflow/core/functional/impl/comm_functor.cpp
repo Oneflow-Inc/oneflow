@@ -389,6 +389,7 @@ class LocalScatterFunctor {
   LocalScatterFunctor() = default;
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& tensor,
                          const Optional<one::TensorTuple>& tensor_list, int64_t root) const {
+    CHECK_OR_RETURN(tensor->is_local());
     const auto& device = JUST(tensor->device());
     Symbol<DType> dtype = tensor->dtype();
     const std::shared_ptr<const Shape>& shape = tensor->shape();
@@ -412,7 +413,6 @@ class LocalScatterFunctor {
       parallel_desc = iter->second;
     }
 
-    CHECK_OR_RETURN(tensor->is_local());
     TensorTuple output({tensor});
 
     MutableAttrMap attrs;
