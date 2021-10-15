@@ -104,7 +104,7 @@ add_docstr(
 add_docstr(
     oneflow._C.softmax,
     r"""
-    softmax(x: Tensor) -> Tensor 
+    softmax(x: Tensor, dim: int) -> Tensor 
 
     Softmax is defined as:
 
@@ -114,6 +114,21 @@ add_docstr(
     See :class:`~oneflow.nn.Softmax` for more details.
     """,
 )
+
+add_docstr(
+    oneflow._C.log_softmax,
+    r"""
+    log_softmax(x: Tensor, dim: int) -> Tensor 
+
+    LogSoftmax is defined as:
+
+    .. math::
+        \text{LogSoftmax}(x_{i}) = \log\left(\frac{\exp(x_i) }{ \sum_j \exp(x_j)} \right) = x_i - \log({ \sum_j \exp(x_j)})
+    
+    See :class:`~oneflow.nn.LogSoftmax` for more details.
+    """,
+)
+
 add_docstr(
     oneflow.softplus,
     r"""

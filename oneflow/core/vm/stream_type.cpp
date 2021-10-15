@@ -15,10 +15,10 @@ limitations under the License.
 */
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/stream.msg.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/intrusive/intrusive.h"
 
 namespace oneflow {
 namespace vm {
