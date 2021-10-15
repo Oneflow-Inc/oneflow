@@ -19,7 +19,7 @@ limitations under the License.
 #define ONEFLOW_CORE_EAGER_SEND_BLOB_INSTRUCTION_TYPE_H_
 
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/instruction_operand.h"
 #include "oneflow/core/vm/transport_stream_type.h"
 
 namespace oneflow {
