@@ -56,7 +56,7 @@ Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t elem_cnt,
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
   JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
-  CHECK_OR_RETURN(CheckVecEqual(data_size, (buffer_ptr), reinterpret_cast<const void*>(recv_ptr)))
+  CHECK_OR_RETURN(CheckVecEqual(data_size, buffer_ptr, reinterpret_cast<const void*>(recv_ptr)))
       << "Each rank must have same input sequence or numpy array";
   return Maybe<void>::Ok();
 }
