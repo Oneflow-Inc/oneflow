@@ -196,14 +196,14 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
   DataType data_type = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
 
   if (placement->parallel_num() > 1) {
-      py::array contiguous_array = py::reinterpret_steal<py::array>(reinterpret_cast<PyObject*>(
-      PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(np_arr_raii.ptr()))));
-      py::buffer_info buf = contiguous_array.request();
-      const void* buf_ptr = (const void*)buf.ptr;
-      size_t array_size = buf.size;
-      CHECK_EQ_OR_RETURN(array_size, shape.elem_cnt());
-      size_t byte_size = array_size * GetSizeOfDataType(data_type);
-      JUST(DataConsistencyCheck(buf_ptr, byte_size, placement));
+    py::array contiguous_array = py::reinterpret_steal<py::array>(reinterpret_cast<PyObject*>(
+        PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(np_arr_raii.ptr()))));
+    py::buffer_info buf = contiguous_array.request();
+    const void* buf_ptr = (const void*)buf.ptr;
+    size_t array_size = buf.size;
+    CHECK_EQ_OR_RETURN(array_size, shape.elem_cnt());
+    size_t byte_size = array_size * GetSizeOfDataType(data_type);
+    JUST(DataConsistencyCheck(buf_ptr, byte_size, placement));
   }
 
   const std::string& device_tag = placement->device_tag();
