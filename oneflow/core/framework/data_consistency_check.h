@@ -13,18 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_SLICE_BOXING_KERNEL_UTIL_H_
-#define ONEFLOW_CORE_KERNEL_SLICE_BOXING_KERNEL_UTIL_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_DATA_CONSISTENCY_CHECK_H_
+#define ONEFLOW_CORE_FRAMEWORK_DATA_CONSISTENCY_CHECK_H_
 
-#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/symbol.h"
+#include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-struct SliceBoxingKernelUtil {
-  static void Add(DeviceCtx* ctx, int64_t n, const T* a, const T* b, T* out);
-};
+Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
+                                 Symbol<ParallelDesc> placement);
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_SLICE_BOXING_KERNEL_UTIL_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_DATA_CONSISTENCY_CHECK_H_
