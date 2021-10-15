@@ -19,6 +19,8 @@ import os
 import oneflow as flow
 import oneflow.unittest
 import unittest
+import torch
+import torch.distributed as dist
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -92,6 +94,29 @@ class TestScatter(flow.unittest.TestCase):
                     output.numpy(), np.array([[5, 6], [7, 8]]) + flow.env.get_rank()
                 )
             )
+
+
+    @flow.unittest.skip_unless_1n4d()
+    def test_scatter_with_pytorch_1n4d(test_case):
+        of_output = flow.tensor([[1, 2], [3, 4]], device="cpu")
+        torch_output = torch.tensor([[1, 2], [3, 4]])
+        if not torch.distributed.is_initialized():
+            dist.init_process_group("gloo")
+        if flow.env.get_rank() == 1:
+            of_tensor_list = [
+                flow.tensor([[5, 6], [7, 8]], device="cpu") + i for i in range(4)
+            ]
+            flow._C.local_scatter(of_output, of_tensor_list, src=1)
+
+            torch_tensor_list = [torch.tensor(x.numpy()) for x in of_tensor_list]
+            dist.scatter(torch_output, torch_tensor_list, src=1)
+            test_case.assertTrue(np.allclose(of_output.numpy(), torch_output.numpy()))
+        else:
+            flow._C.local_scatter(of_output, src=1)
+
+            dist.scatter(torch_output, src=1)
+            test_case.assertTrue(np.allclose(of_output.numpy(), torch_output.numpy()))
+        dist.destroy_process_group()
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
