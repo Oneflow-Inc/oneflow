@@ -21,42 +21,35 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t elem_cnt,
+Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
                                  Symbol<ParallelDesc> placement) {
   const auto& rank_group = JUST(RankGroup::New(placement));
-  size_t data_size = elem_cnt * sizeof(T);
 
-  std::vector<T> recv_buffer(elem_cnt);
-  T* recv_ptr = recv_buffer.data();
+  std::vector<char> recv_buffer(buffer_size);
+  char* recv_ptr = recv_buffer.data();
 
   TransportToken transport_token = JUST(TransportToken::NewTransportToken(kTransportTokenTypeData));
   NaiveAsyncTransportCtx ctx(
       transport_token,
       [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
         *buffer = const_cast<void*>(buffer_ptr);
-        *size = data_size;
+        *size = buffer_size;
         *Cb = [] {};
         return Maybe<void>::Ok();
       },
       [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
         *buffer = recv_ptr;
-        *size = data_size;
+        *size = buffer_size;
         *Cb = [] {};
         return Maybe<void>::Ok();
       });
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
   JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
-  CHECK_OR_RETURN(std::memcmp(buffer_ptr, reinterpret_cast<const void*>(recv_ptr), data_size) == 0)
+  CHECK_OR_RETURN(std::memcmp(buffer_ptr, reinterpret_cast<const void*>(recv_ptr), buffer_size)
+                  == 0)
       << "Each rank must have same input sequence or numpy array";
   return Maybe<void>::Ok();
 }
-
-#define INSTATIATION_DATA_CONSISTENCY_CHECK(type_cpp, type_proto)                              \
-  template Maybe<void> DataConsistencyCheck<type_cpp>(const void* buffer_ptr, size_t elem_cnt, \
-                                                      Symbol<ParallelDesc> placement);
-
-OF_PP_FOR_EACH_TUPLE(INSTATIATION_DATA_CONSISTENCY_CHECK, POD_DATA_TYPE_SEQ)
-#undef INSTATIATION_DATA_CONSISTENCY_CHECK
 
 }  // namespace oneflow

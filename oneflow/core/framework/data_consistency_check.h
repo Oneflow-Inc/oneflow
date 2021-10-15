@@ -18,21 +18,14 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
-#include "oneflow/core/common/switch_func.h"
-#include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
 
 template<typename T>
-Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t elem_cnt,
+Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
                                  Symbol<ParallelDesc> placement);
 
-#define MAKE_SWITCH_ENTRY(func_name, dtype) func_name<dtype>
-DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, DataConsistencyCheck, MAKE_SWITCH_ENTRY,
-                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ));
-
-#undef MAKE_SWITCH_ENTRY
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_DATA_CONSISTENCY_CHECK_H_
