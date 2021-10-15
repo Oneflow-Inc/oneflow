@@ -59,7 +59,7 @@ INTRUSIVE_BEGIN(VmResourceDesc);
   INTRUSIVE_DEFINE_FIELD(int64_t, machine_num_);
   INTRUSIVE_DEFINE_FIELD(int64_t, max_device_num_per_machine_);
   // maps
-  INTRUSIVE_DEFINE_FIELD(intrusive::StandardLayout<DeviceTag2DeviceNum>, device_tag2device_num_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ForceStandardLayout<DeviceTag2DeviceNum>, device_tag2device_num_);
 INTRUSIVE_END(VmResourceDesc);
 // clang-format on
 

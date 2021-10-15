@@ -13,39 +13,39 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_INTRUSIVE_STANDARD_LAYOUT_H_
-#define ONEFLOW_CORE_INTRUSIVE_STANDARD_LAYOUT_H_
+#ifndef ONEFLOW_CORE_INTRUSIVE_FORCE_STANDARD_LAYOUT_H_
+#define ONEFLOW_CORE_INTRUSIVE_FORCE_STANDARD_LAYOUT_H_
 
 namespace oneflow {
 namespace intrusive {
 
 template<typename T>
-class StandardLayout final {
+class ForceStandardLayout final {
  public:
-  StandardLayout() { new (&object_) T(); }
-  template<typename Arg,
-           typename std::enable_if<
-               !std::is_same<StandardLayout, typename std::decay<Arg>::type>::value, int>::type = 0>
-  explicit StandardLayout(Arg&& arg) {
+  ForceStandardLayout() { new (&object_) T(); }
+  template<typename Arg, typename = typename std::enable_if<!std::is_same<
+                             ForceStandardLayout, typename std::decay<Arg>::type>::value>::type>
+  explicit ForceStandardLayout(Arg&& arg) {
     new (&object_) T(std::forward<Arg>(arg));
   }
   template<typename Arg0, typename Arg1, typename... Args>
-  StandardLayout(Arg0&& arg0, Arg1&& arg1, Args&&... args) {
+  ForceStandardLayout(Arg0&& arg0, Arg1&& arg1, Args&&... args) {
     new (&object_)
         T(std::forward<Arg0>(arg0), std::forward<Arg1>(arg1), std::forward<Args>(args)...);
   }
 
-  ~StandardLayout() { Mutable()->~T(); }
+  ~ForceStandardLayout() { Mutable()->~T(); }
 
-  StandardLayout(const StandardLayout& other) { new (&object_) T(other.Get()); }
-  StandardLayout(StandardLayout&& other) { new (&object_) T(std::move(*other.Mutable())); }
-  StandardLayout(StandardLayout& other) { new (&object_) T(other.Get()); }
+  ForceStandardLayout(const ForceStandardLayout& other) { new (&object_) T(other.Get()); }
+  ForceStandardLayout(ForceStandardLayout&& other) {
+    new (&object_) T(std::move(*other.Mutable()));
+  }
 
-  StandardLayout& operator=(const StandardLayout& other) {
+  ForceStandardLayout& operator=(const ForceStandardLayout& other) {
     *Mutable() = other.Get();
     return *this;
   }
-  StandardLayout& operator=(StandardLayout&& other) {
+  ForceStandardLayout& operator=(ForceStandardLayout&& other) {
     *Mutable() = std::move(*other.Mutable());
     return *this;
   }
@@ -67,4 +67,4 @@ class StandardLayout final {
 }  // namespace intrusive
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_INTRUSIVE_STANDARD_LAYOUT_H_
+#endif  // ONEFLOW_CORE_INTRUSIVE_FORCE_STANDARD_LAYOUT_H_

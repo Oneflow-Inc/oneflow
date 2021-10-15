@@ -19,7 +19,7 @@ limitations under the License.
 #include <sstream>
 #define private public
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/intrusive/standard_layout.h"
+#include "oneflow/core/intrusive/force_standard_layout.h"
 
 namespace oneflow {
 
@@ -51,47 +51,47 @@ struct Unstandard {
   int* ptr_;
 };
 
-TEST(StandardLayout, default_constructor) {
+TEST(ForceStandardLayout, default_constructor) {
   int value = Unstandard::standard_value;
-  StandardLayout<Unstandard> sl(&value);
+  ForceStandardLayout<Unstandard> sl(&value);
   ASSERT_EQ(sl.Get().x, Unstandard::unstandard_value);
   ASSERT_EQ(sl.Get().ptr(), &value);
 }
 
-TEST(StandardLayout, copy_constructor) {
+TEST(ForceStandardLayout, copy_constructor) {
   int value = Unstandard::standard_value;
-  const StandardLayout<Unstandard> const_sl(&value);
-  StandardLayout<Unstandard> sl(const_sl);
+  const ForceStandardLayout<Unstandard> const_sl(&value);
+  ForceStandardLayout<Unstandard> sl(const_sl);
   ASSERT_EQ(sl.Get().x, Unstandard::unstandard_value);
   ASSERT_EQ(sl.Get().ptr(), &value);
 }
 
-TEST(StandardLayout, move_constructor) {
+TEST(ForceStandardLayout, move_constructor) {
   int value = Unstandard::standard_value;
-  StandardLayout<Unstandard> old_sl(&value);
-  StandardLayout<Unstandard> sl(std::move(old_sl));
+  ForceStandardLayout<Unstandard> old_sl(&value);
+  ForceStandardLayout<Unstandard> sl(std::move(old_sl));
   ASSERT_EQ(sl.Get().x, Unstandard::unstandard_value);
   ASSERT_EQ(sl.Get().ptr(), &value);
 }
 
-TEST(StandardLayout, copy_assign) {
+TEST(ForceStandardLayout, copy_assign) {
   int value = Unstandard::standard_value;
-  const StandardLayout<Unstandard> const_sl(&value);
-  StandardLayout<Unstandard> sl = const_sl;
+  const ForceStandardLayout<Unstandard> const_sl(&value);
+  ForceStandardLayout<Unstandard> sl = const_sl;
   ASSERT_EQ(sl.Get().x, Unstandard::unstandard_value);
   ASSERT_EQ(sl.Get().ptr(), &value);
 }
 
-TEST(StandardLayout, move_assign) {
+TEST(ForceStandardLayout, move_assign) {
   int value = Unstandard::standard_value;
-  StandardLayout<Unstandard> sl = StandardLayout<Unstandard>(&value);
+  ForceStandardLayout<Unstandard> sl = ForceStandardLayout<Unstandard>(&value);
   ASSERT_EQ(sl.Get().x, Unstandard::unstandard_value);
   ASSERT_EQ(sl.Get().ptr(), &value);
 }
 
-TEST(StandardLayout, destructor) {
+TEST(ForceStandardLayout, destructor) {
   int value = Unstandard::standard_value;
-  { StandardLayout<Unstandard> sl(&value); }
+  { ForceStandardLayout<Unstandard> sl(&value); }
   ASSERT_EQ(value, Unstandard::unstandard_value);
 }
 
