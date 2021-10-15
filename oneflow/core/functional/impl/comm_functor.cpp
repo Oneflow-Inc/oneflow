@@ -124,6 +124,18 @@ Maybe<one::UserOpExpr> EagerNcclReduce(Symbol<ParallelDesc> parallel_desc, int64
 
 auto* CachedEagerNcclReduceOpExpr = DECORATE(&EagerNcclReduce, ThreadLocal);
 
+Maybe<one::UserOpExpr> EagercclScatter(Symbol<ParallelDesc> parallel_desc, int64_t root,
+                                       int64_t input_num) {
+  return one::OpBuilder("eager_ccl_scatter", *JUST(UniqueStr("eager_ccl_scatter")))
+      .Input("in", input_num)
+      .Output("out")
+      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Attr<int64_t>("root", root)
+      .Build();
+}
+
+auto* CachedEagerNcclScatterOpExpr = DECORATE(&EagercclScatter, ThreadLocal);
+
 }  // namespace
 
 class BroadcastFunctor {
@@ -372,6 +384,70 @@ class LocalReduceFunctor {
   }
 };
 
+class LocalScatterFunctor {
+ public:
+  LocalScatterFunctor() = default;
+  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& tensor,
+                         const Optional<one::TensorTuple>& tensor_list, int64_t root) const {
+    const auto& device = JUST(tensor->device());
+    Symbol<DType> dtype = tensor->dtype();
+    const std::shared_ptr<const Shape>& shape = tensor->shape();
+
+    static thread_local std::unordered_map<Symbol<RankGroup>, Symbol<ParallelDesc>>
+        rank_group2parallel_desc;
+    auto rank_group = JUST(RankGroupScope::CurrentRankGroup());
+    auto iter = rank_group2parallel_desc.find(rank_group);
+    Symbol<ParallelDesc> parallel_desc;
+    if (iter == rank_group2parallel_desc.end()) {
+      ParallelConf parallel_conf;
+      parallel_conf.set_device_tag(JUST(device->of_type()));
+      JUST(rank_group->ForEachRank([&parallel_conf](int64_t rank) -> Maybe<void> {
+        parallel_conf.add_device_name("@" + std::to_string(rank) + ":"
+                                      + std::to_string(GlobalProcessCtx::LocalRank(rank)));
+        return Maybe<void>::Ok();
+      }));
+      parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
+      rank_group2parallel_desc[rank_group] = parallel_desc;
+    } else {
+      parallel_desc = iter->second;
+    }
+
+    CHECK_OR_RETURN(tensor->is_local());
+    TensorTuple output({tensor});
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("root", root));
+    JUST(attrs.SetAttr<Shape>("shape", *shape));
+    JUST(attrs.SetAttr<DataType>("data_type", dtype->data_type()));
+    JUST(attrs.SetAttr<std::string>("device_type", device->type()));
+    JUST(attrs.SetAttr<int64_t>("device_id", device->device_id()));
+    if (GlobalProcessCtx::Rank() == root) {
+      int64_t input_num = JUST(tensor_list)->size();
+      std::shared_ptr<OpExpr> op_expr =
+          JUST(CachedEagerNcclScatterOpExpr(parallel_desc, root, input_num));
+      CHECK_OR_RETURN(tensor_list);
+      const std::shared_ptr<TensorTuple>& root_input = JUST(tensor_list);
+      CHECK_OR_RETURN(root_input->size() == parallel_desc->parallel_num())
+          << ". tensor_list size vs parallel_num (" << root_input->size() << " vs "
+          << parallel_desc->parallel_num() << ")";
+
+      for (auto& tensor : *root_input) {
+        CHECK_OR_RETURN(tensor->is_local());
+        CHECK_OR_RETURN(dtype == tensor->dtype());
+        CHECK_OR_RETURN(*shape == *tensor->shape());
+        CHECK_OR_RETURN(device == JUST(tensor->device()));
+      }
+      JUST(OpInterpUtil::Dispatch(*op_expr, *root_input, &output, OpExprInterpContext(attrs)));
+    } else {
+      std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerNcclScatterOpExpr(parallel_desc, root, 2));
+      CHECK_OR_RETURN(!tensor_list);
+      const TensorTuple non_root_input({tensor, tensor});
+      JUST(OpInterpUtil::Dispatch(*op_expr, non_root_input, &output, OpExprInterpContext(attrs)));
+    }
+    return Maybe<void>::Ok();
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -384,6 +460,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SendFunctor>("Send");
   m.add_functor<impl::RecvFunctor>("Recv");
   m.add_functor<impl::LocalReduceFunctor>("LocalReduce");
+  m.add_functor<impl::LocalScatterFunctor>("LocalScatter");
 };
 
 }  // namespace functional

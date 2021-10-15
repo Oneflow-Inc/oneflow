@@ -224,4 +224,34 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_s2s")
     })
     .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
+
+namespace {
+
+Maybe<Symbol<Device>> GetRecvOutputDeivce(user_op::DeviceInferContext* ctx) {
+  const std::string& device_type = ctx->Attr<std::string>("device_type");
+  const int device_id = ctx->Attr<int64_t>("device_id");
+  return Device::New(device_type, device_id);
+}
+
+REGISTER_NO_GRAD_USER_OP("eager_ccl_scatter")
+    .InputWithMinimum("in", 2)
+    .Output("out")
+    .Attr<int64_t>("root", 0)
+    .Attr<std::string>("parallel_conf")
+    .Attr<std::string>("device_type")
+    .Attr<int64_t>("device_id")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputShape("out", 0) = ctx->Attr<Shape>("shape");
+      return Maybe<void>::Ok();
+    })
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched, &GetRecvOutputDeivce>)
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      UNIMPLEMENTED_THEN_RETURN() << "consistent tensor are not supported";
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("data_type");
+      return Maybe<void>::Ok();
+    });
+}  // namespace
+
 }  // namespace oneflow

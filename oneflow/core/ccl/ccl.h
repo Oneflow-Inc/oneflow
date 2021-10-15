@@ -74,6 +74,10 @@ Maybe<void> Reduce(const void* in, void* out, size_t elem_cnt, DataType dtype,
 
 Maybe<void> CpuBroadcast(const void* in, void* out, size_t buffer_size, int64_t root,
                          Symbol<ParallelDesc> parallel_desc, const TransportToken& transport_token);
+template<DeviceType device_type>
+Maybe<void> Scatter(const void* void_in, void* void_out, const int64_t& root,
+                    const int64_t& elem_cnt, DataType dtype, Symbol<ParallelDesc> parallel_desc,
+                    DeviceCtx* ctx);
 
 }  // namespace ccl
 

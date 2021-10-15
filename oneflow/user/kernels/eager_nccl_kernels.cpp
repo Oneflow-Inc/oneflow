@@ -379,4 +379,62 @@ REGISTER_EAGER_CCL_S2S_KERNEL(int64_t)
 REGISTER_EAGER_CCL_S2S_KERNEL(float)
 REGISTER_EAGER_CCL_S2S_KERNEL(double)
 
+namespace {
+size_t InferLocalScatterKernelTmpBufferSize(user_op::InferContext* ctx) {
+  size_t root = ctx->Attr<int64_t>("root");
+  if (GlobalProcessCtx::Rank() == root) {
+    const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
+    const size_t in_num = ctx->inputs().size();
+    size_t input_byte_size =
+        in_tensor.shape().elem_cnt() * GetSizeOfDataType(in_tensor.data_type()) * in_num;
+    return input_byte_size;
+  } else {
+    return 0;
+  }
+}
+}  // namespace
+
+class EagerCclScatterKernel final : public user_op::OpKernel {
+ public:
+  EagerCclScatterKernel() = default;
+  ~EagerCclScatterKernel() override = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<EagerCclOpKernelState>(ctx);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* kernel_state = dynamic_cast<EagerCclOpKernelState*>(state);
+    CHECK(kernel_state != nullptr);
+    Symbol<ParallelDesc> parallel_desc = kernel_state->parallel_desc();
+    int64_t parallel_num = parallel_desc->parallel_num();
+    const int64_t root = ctx->Attr<int64_t>("root");
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    char* tmp_ptr = reinterpret_cast<char*>(tmp_buffer->mut_dptr());
+    if (GlobalProcessCtx::Rank() == root) {
+      size_t in_num = ctx->inputs().size();
+      CHECK(parallel_num == in_num);
+      char* dst_ptr = tmp_ptr;
+      for (int i = 0; i < in_num; i++) {
+        const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", i);
+        int64_t copy_size = in->shape().elem_cnt() * GetSizeOfDataType(in->data_type());
+        memcpy(dst_ptr, in->dptr(), copy_size);
+        dst_ptr += copy_size;
+      }
+    }
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK_JUST(ccl::Scatter<DeviceType::kCPU>(tmp_ptr, out->mut_dptr(), root,
+                                              out->shape().elem_cnt() * parallel_num,
+                                              out->data_type(), parallel_desc, ctx->device_ctx()));
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("eager_ccl_scatter")
+    .SetCreateFn<EagerCclScatterKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "cpu")
+    .SetInferTmpSizeFn(InferLocalScatterKernelTmpBufferSize);
+
 }  // namespace oneflow
