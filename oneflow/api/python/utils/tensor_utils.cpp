@@ -202,9 +202,10 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
   size_t array_size = buf.size;
   CHECK_EQ_OR_RETURN(array_size, shape.elem_cnt());
 
-  size_t byte_size = shape.elem_cnt() * GetSizeOfDataType(data_type);
-
-  if (placement->parallel_num() > 1) { JUST(DataConsistencyCheck(buf_ptr, byte_size, placement)); }
+  if (placement->parallel_num() > 1) {
+      size_t byte_size = shape.elem_cnt() * GetSizeOfDataType(data_type);
+      JUST(DataConsistencyCheck(buf_ptr, byte_size, placement));
+  }
 
   const std::string& device_tag = placement->device_tag();
   Symbol<Device> device;
