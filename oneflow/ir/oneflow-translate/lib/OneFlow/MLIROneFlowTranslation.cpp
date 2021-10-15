@@ -741,8 +741,9 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
   for (auto id_attr : op->getAttrDictionary()) {
     auto id = id_attr.first;
     // mlir only attrs
-    if (id.strref().equals("device_name") || id.strref().equals("hierarchy")
-        || id.strref().equals("input_lbn_segment_keys")
+    // TODO: find a way to skip attrs like callee in a declarative way
+    if (id.strref().equals("callee") || id.strref().equals("device_name")
+        || id.strref().equals("hierarchy") || id.strref().equals("input_lbn_segment_keys")
         || id.strref().equals("input_lbn_segment_sizes") || id.strref().equals("output_lbns")
         || id.strref().equals("output_lbn_segment_keys")
         || id.strref().equals("output_lbn_segment_sizes")
@@ -863,8 +864,10 @@ LogicalResult Importer::TryToUpdateJob() {
   new_job.clear_net();
   new_job.mutable_placement()->clear_placement_group();
   auto convertOps = [&](Operation* op) {
-    if (op->getParentOp() && llvm::dyn_cast<oneflow::MlirJitOp>(op->getParentOp())) {
-      return WalkResult::skip();
+    if (op->getParentOp()) {
+      if (auto func = llvm::dyn_cast<FuncOp>(op->getParentOp())) {
+        if (func->hasAttr("llvm.emit_c_interface")) { return WalkResult::skip(); }
+      }
     }
     if (llvm::dyn_cast<oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
       oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
@@ -923,6 +926,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   mlir::PassManager pm(context);
   pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
   std::string graphviz;
+  pm.addPass(oneflow::createOutlineJitFunctionPass());
   llvm::raw_string_ostream os_graphviz(graphviz);
   pm.addPass(createPrintOpGraphPass(os_graphviz));
   if (mlir::failed(pm.run(*module))) {
@@ -934,17 +938,6 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   llvm::raw_string_ostream os_mlir(mlir);
   module->print(os_mlir);
   job_wrapper.DumpLog("RoundTripOneFlowJob.mlir", mlir);
-  return success();
-}
-
-LogicalResult ApplyFuserPatterns(RoundTripOneFlowJobWrapperInterface& job_wrapper,
-                                 MLIRContext* context, OwningModuleRef& module) {
-  RewritePatternSet patterns(module->getContext());
-  oneflow::populateFuserPasses(patterns);
-  if (failed(applyPatternsAndFoldGreedily(module.get(), std::move(patterns)))) {
-    module->emitError("Failed to run fusers");
-    return failure();
-  }
   return success();
 }
 
@@ -974,7 +967,6 @@ void RoundTripOneFlowJob(
   // TODO: Add flag in job desc to decide whether to run mlir optimizer
   if (succeeded(imp.ProcessJob())) {
     if (failed(ApplyRoundTripPatterns(job_wrapper, &context, module))) { exit(EXIT_FAILURE); }
-    if (failed(ApplyFuserPatterns(job_wrapper, &context, module))) { exit(EXIT_FAILURE); }
     if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
     // TODO: Add flag in oneflow to define if failure in MLIR is allowed
     if (failed(imp.TryToUpdateJob())) {

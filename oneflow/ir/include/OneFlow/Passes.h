@@ -26,6 +26,7 @@ limitations under the License.
 #include "OneFlow/Conversion/OneFlowToTosa.h"
 #include "OneFlow/Conversion/SCFToGPU.h"
 #include "OneFlow/Transform/BufferHostRegister.h"
+#include "OneFlow/Transform/OutlineJitFunction.h"
 #ifdef WITH_CUDA
 #include "OneFlow/Conversion/PTXToCubin.h"
 #endif  // WITH_CUDA
