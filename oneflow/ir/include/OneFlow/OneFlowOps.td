@@ -4,6 +4,7 @@
 include "OneFlowDialect.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Pass/PassBase.td"
+include "mlir/Interfaces/CallInterfaces.td"
 
 class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, traits> {
@@ -172,11 +173,51 @@ def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", []> {}
 
 // JIT ops
 
-def OneFlow_MlirJitOp : OneFlow_UserBaseOp<"mlir_jit", []> {
+def OneFlow_MlirJitOp : OneFlow_UserBaseOp<"mlir_jit", [
+      CallOpInterface
+    ]
+  > {
   let attrs = (ins
+    FlatSymbolRefAttr:$callee,
     StrAttr:$mlir_assembly
   );
-  let regions = (region AnyRegion:$body);
+  let builders = [
+    OpBuilder<(ins
+      "FuncOp":$callee,
+      "NamedAttrList":$attributes,
+      CArg<"ValueRange", "{}">:$data_input
+    ), [{
+      $_state.addOperands(data_input);
+      $_state.addAttribute("callee",$_builder.getSymbolRefAttr(callee));
+      $_state.addTypes(callee.getType().getResults());
+      $_state.addAttributes(attributes);
+    }]>,
+    OpBuilder<(ins
+      "SymbolRefAttr":$callee,
+      "TypeRange":$results,
+      "NamedAttrList":$attributes,
+      CArg<"ValueRange", "{}">:$data_input
+    ), [{
+      $_state.addOperands(data_input);
+      $_state.addAttribute("callee", callee);
+      $_state.addTypes(results);
+      $_state.addAttributes(attributes);
+    }]>
+  ];
+    let extraClassDeclaration = [{
+    operand_range getArgOperands() {
+      return {arg_operand_begin(), arg_operand_end()};
+    }
+
+    operand_iterator arg_operand_begin() { return operand_begin(); }
+    operand_iterator arg_operand_end() { return operand_end(); }
+    CallInterfaceCallable getCallableForCallee() {
+      return (*this)->getAttrOfType<SymbolRefAttr>("callee");
+    }
+  }];
+  let assemblyFormat = [{
+    $callee `(` $data_input `)` attr-dict `:` functional-type($data_input, results)
+  }];
 }
 
 #endif // ONEFLOW_OPS
@@ -184,7 +225,7 @@ def OneFlow_MlirJitOp : OneFlow_UserBaseOp<"mlir_jit", []> {
 #ifndef ONEFLOW_PATTERNS
 #define ONEFLOW_PATTERNS
 
-def IsNotNestedInJit: Constraint<CPred<"!llvm::dyn_cast<MlirJitOp>($0.getParentBlock()->getParentOp())">, "">;
+def IsNotNestedInJit: Constraint<CPred<"(!$0.getDefiningOp()->getParentOfType<FuncOp>()->hasAttr(\"llvm.emit_c_interface\"))">, "">;
 def OutlineFunction : NativeCodeCall<"OutlineFunction($_builder, $0, $1)">;
 // TODO: remove attr binding if possible
 def OutlineFuseCastScale : Pat<

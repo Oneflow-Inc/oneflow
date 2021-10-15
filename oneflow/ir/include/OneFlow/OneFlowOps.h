@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "mlir/IR/Builders.h"
@@ -26,6 +27,9 @@ limitations under the License.
 #include "OneFlow/OneFlowEnums.h.inc"
 
 namespace mlir {
+
+class FuncOp;
+
 namespace OpTrait {
 
 namespace impl {

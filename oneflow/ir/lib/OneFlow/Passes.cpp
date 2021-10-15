@@ -36,6 +36,7 @@ limitations under the License.
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LogicalResult.h"
@@ -53,25 +54,50 @@ using namespace mlir;
 using namespace mlir::oneflow;
 
 LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
-  auto context = rewriter.getContext();
-  OpBuilder builder(context);
-  OwningModuleRef jit_module(
-      ModuleOp::create(FileLineColLoc::get(context, "", /*line=*/0, /*column=*/0)));
-  auto func_type = rewriter.getFunctionType(op->getOperandTypes(), op->getResultTypes());
-  auto function = builder.create<mlir::FuncOp>(op->getLoc(), op.op_name(), func_type);
-  function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(context));
-  if (op.body().empty()) {
-    op->dump();
-    op->emitError("JIT op has an empty body, op name: " + op.op_name());
-    return failure();
-  }
-  rewriter.cloneRegionBefore(op.body(), function.body(), function.body().end());
-  jit_module->push_back(function);
+  // TODO: now we only need one JIT engine
+  auto parent_func_op = op->getParentOfType<FuncOp>();
+  auto parent_module_op = parent_func_op->getParentOfType<ModuleOp>();
+  SymbolTable symbol_table(parent_module_op);
   std::string mlir;
   llvm::raw_string_ostream os_mlir(mlir);
-  jit_module->print(os_mlir);
+  symbol_table.lookup(op.op_name())->print(os_mlir);
   op->setAttr("mlir_assembly", rewriter.getStringAttr(mlir));
   return success();
+}
+
+FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, StringRef func_name,
+                         ValueRange operands, ValueRange results, SmallVector<Operation*, 4> ops) {
+  BlockAndValueMapping mapping;
+  SmallVector<Type, 4> argument_types;
+  argument_types.reserve(operands.size());
+  SmallVector<Type, 4> result_types;
+  argument_types.reserve(results.size());
+  for (auto argument : operands) { argument_types.push_back(argument.getType()); }
+  for (auto result : results) { result_types.push_back(result.getType()); }
+  auto func_type = rewriter.getFunctionType(argument_types, result_types);
+  auto first_op = *ops.begin();
+  auto parent_func_op = first_op->getParentOfType<FuncOp>();
+  auto parent_module_op = parent_func_op->getParentOfType<ModuleOp>();
+  SymbolTable symbol_table(parent_module_op);
+  OpBuilder::InsertionGuard guard(rewriter);
+  Block::iterator insertPt(parent_func_op->getNextNode());
+  rewriter.setInsertionPointToStart(&parent_module_op.body().getBlocks().back());
+  assert(!parent_func_op->hasAttr("llvm.emit_c_interface"));
+  auto function = rewriter.create<mlir::FuncOp>(loc, func_name, func_type);
+  function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
+  function.body().emplaceBlock();
+  function.body().addArguments(argument_types);
+  for (auto argument : llvm::zip(operands, function.body().getArguments())) {
+    mapping.map(std::get<0>(argument), std::get<1>(argument));
+  }
+  rewriter.setInsertionPointToStart(&function.body().front());
+  ImplicitLocOpBuilder nb(loc, rewriter);
+  for (auto op : ops) { nb.clone(*op, mapping); }
+  SmallVector<::mlir::Value, 4> mapped_results;
+  for (auto result : results) { mapped_results.push_back(mapping.lookup(result)); }
+  rewriter.create<ReturnOp>(loc, mapped_results);
+  assert(!symbol_table.lookup(func_name));
+  return function;
 }
 
 ::llvm::SmallVector<::mlir::Value, 4> OutlineFunction(::mlir::PatternRewriter& rewriter,
@@ -122,25 +148,14 @@ LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
       SmallVector<::mlir::Value, 2> operands;
       operands.push_back(cast_op.x());
       operands.push_back(mul_op.scalar());
-      auto created = rewriter.create<MlirJitOp>(mul_op.getLoc(),
-                                                /* resultTypes */ mul_op->getResultTypes(),
-                                                /* operands */ operands,
-                                                /* attributes */ attributes);
-      cast_op.replaceAllUsesWith(created);
-      created.body().emplaceBlock();
-      created.body().addArguments(created->getOperandTypes());
-      rewriter.setInsertionPointToStart(&created.body().front());
-      auto cast_op_ =
-          rewriter.create<CastOp>(cast_op->getLoc(), /* resultTypes */ cast_op->getResultTypes(),
-                                  /* operands */ created.body().front().getArguments().take_front(),
-                                  /* attributes */ cast_op->getAttrs());
-      auto scalar_mul = rewriter.create<ScalarMulByTensorOp>(
-          mul_op->getLoc(), /* resultTypes */ mul_op->getResultTypes(),
-          /* operands */
-          SmallVector<::mlir::Value, 2>({cast_op_.y(), created.body().front().getArgument(1)}),
-          /* attributes */ mul_op->getAttrs());
-      rewriter.create<ReturnOp>(mul_op->getLoc(), scalar_mul.y());
+      SmallVector<::mlir::Value, 1> results;
+      results.push_back(mul_op.y());
+      SmallVector<Operation*, 4> ops = {cast_op, mul_op};
+      auto function =
+          GetOrInsertFuncOp(rewriter, mul_op->getLoc(), op_name, operands, results, ops);
+      auto created = rewriter.create<MlirJitOp>(mul_op.getLoc(), function, attributes, operands);
       assert(DumpAssembly(rewriter, created).succeeded());
+      cast_op->dropAllUses();
       cast_op.erase();
       return created->getResults();
     }

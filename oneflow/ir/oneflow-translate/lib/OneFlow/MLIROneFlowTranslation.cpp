@@ -741,8 +741,9 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
   for (auto id_attr : op->getAttrDictionary()) {
     auto id = id_attr.first;
     // mlir only attrs
-    if (id.strref().equals("device_name") || id.strref().equals("hierarchy")
-        || id.strref().equals("input_lbn_segment_keys")
+    // TODO: find a way to skip attrs like callee in a declarative way
+    if (id.strref().equals("callee") || id.strref().equals("device_name")
+        || id.strref().equals("hierarchy") || id.strref().equals("input_lbn_segment_keys")
         || id.strref().equals("input_lbn_segment_sizes") || id.strref().equals("output_lbns")
         || id.strref().equals("output_lbn_segment_keys")
         || id.strref().equals("output_lbn_segment_sizes")
@@ -863,8 +864,10 @@ LogicalResult Importer::TryToUpdateJob() {
   new_job.clear_net();
   new_job.mutable_placement()->clear_placement_group();
   auto convertOps = [&](Operation* op) {
-    if (op->getParentOp() && llvm::dyn_cast<oneflow::MlirJitOp>(op->getParentOp())) {
-      return WalkResult::skip();
+    if (op->getParentOp()) {
+      if (auto func = llvm::dyn_cast<FuncOp>(op->getParentOp())) {
+        if (func->hasAttr("llvm.emit_c_interface")) { return WalkResult::skip(); }
+      }
     }
     if (llvm::dyn_cast<oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
       oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());

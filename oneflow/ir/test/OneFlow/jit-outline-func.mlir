@@ -10,4 +10,4 @@ builtin.module  {
     return
   }
 }
-// CHECK: %0 = "oneflow.mlir_jit"
+// CHECK: %0 = oneflow.mlir_jit
