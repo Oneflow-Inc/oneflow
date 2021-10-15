@@ -564,9 +564,9 @@ Maybe<void> Scatter<DeviceType::kCPU>(const void* void_in, void* void_out, const
   if (GlobalProcessCtx::Rank() == root) {
     for (int64_t i = 0; i < parallel_num; i++) {
       const char* send_ptr = &in[bs.At(i).begin() * GetSizeOfDataType(dtype)];
+      // elem cnt
       int64_t send_size = bs.At(i).size();
       int64_t dst_rank = JUST(parallel_desc->MachineId4ParallelId(i));
-      // elem_cnt
       if (i == parallel_id_of_root) {
         memcpy(out, send_ptr, send_size * GetSizeOfDataType(dtype));
         continue;
