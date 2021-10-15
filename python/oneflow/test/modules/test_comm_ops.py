@@ -95,7 +95,6 @@ class TestScatter(flow.unittest.TestCase):
                 )
             )
 
-
     @flow.unittest.skip_unless_1n4d()
     def test_scatter_with_pytorch_1n4d(test_case):
         of_output = flow.tensor([[1, 2], [3, 4]], device="cpu")
