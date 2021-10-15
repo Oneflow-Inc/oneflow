@@ -127,7 +127,7 @@ class ScalarAddFunctor : public ScalarMathBaseFunctor {
 class ScalarAdd2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
-    return ScalarAdd(x, scalar, /*inplace*/ false);
+    return ScalarAdd(x, scalar, /*inplace=*/false);
   }
 };
 
@@ -142,7 +142,7 @@ class ScalarSubFunctor {
 class ScalarSub2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
-    return ScalarAdd(JUST(ScalarMul(x, Scalar(-1), false)), scalar, /*inplace*/ false);
+    return ScalarAdd(JUST(ScalarMul(x, Scalar(-1), false)), scalar, /*inplace=*/false);
   }
 };
 
@@ -161,14 +161,14 @@ class ScalarMul2Functor {
 class ScalarDivFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
-    return ScalarMul(x, Scalar(1.0) / scalar, false);
+    return ScalarMul(x, Scalar(1.0) / scalar, /*inplace=*/false);
   }
 };
 
 class ScalarDiv2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
-    return functional::ScalarMul(JUST(functional::ReciprocalNoNan(x)), scalar, false);
+    return functional::ScalarMul(JUST(functional::ReciprocalNoNan(x)), scalar, /*inplace=*/false);
   }
 };
 
@@ -727,7 +727,8 @@ class ScalarLogicalBaseFunctor {
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
     } else {
-      UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarAdd should be float or int.";
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
+                                  << " should be float or int.";
     }
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
