@@ -19,15 +19,15 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/eager/opkernel_object.h"
 #include "oneflow/core/eager/blob_object.h"
-#include "oneflow/core/eager/opkernel_instruction.msg.h"
+#include "oneflow/core/eager/opkernel_instruction.h"
 #include "oneflow/core/eager/opkernel_instruction_type.h"
 #include "oneflow/core/vm/string_object.h"
-#include "oneflow/core/vm/stream.msg.h"
+#include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/cuda_stream_type.h"
 #include "oneflow/core/vm/async_cuda_stream_type.h"
 #include "oneflow/core/vm/cuda_copy_h2d_stream_type.h"
 #include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/object.h"
 
 namespace oneflow {

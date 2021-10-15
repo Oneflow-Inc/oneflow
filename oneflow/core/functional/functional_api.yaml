@@ -265,6 +265,14 @@
   signature: "Tensor (Tensor x) => Square"
   bind_python: True
 
+- name: "std"
+  signature: "Tensor (Tensor x, Int32List[1] dim=None, Bool unbiased=None, Bool keepdim=None) => StandardDeviation"
+  bind_python: True
+
+- name: "var"
+  signature: "Tensor (Tensor x, Int32List[1] dim=None, Bool unbiased=None, Bool keepdim=None) => Variance"
+  bind_python: True
+
 - name: "relu"
   signature: "Tensor (Tensor x, Bool inplace=False) => Relu"
   bind_python: True
@@ -322,11 +330,11 @@
   bind_python: False
 
 - name: "softmax"
-  signature: "Tensor (Tensor x) => Softmax"
+  signature: "Tensor (Tensor x, Int64 dim=None) => Softmax"
   bind_python: True
 
 - name: "log_softmax"
-  signature: "Tensor (Tensor x) => LogSoftmax"
+  signature: "Tensor (Tensor x, Int64 dim=None) => LogSoftmax"
   bind_python: True
 
 - name: "hardswish"
@@ -537,6 +545,20 @@
   signature: 'Tensor (Tensor dy, Int32 num_spatial_dims,
     String data_format="channels_first") => ConvBiasGrad'
   bind_python: False
+
+- name: "deconv1d"
+  signature:
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32 filters,
+    Int32List padding, String data_format, Int32List kernel_size, 
+    Int32List output_padding, Int32List strides, Int32List dilation, Int32 groups=1) => Deconv1d"
+  bind_python: True
+
+- name: "deconv3d"
+  signature:
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32 filters,
+    Int32List padding, String data_format, Int32List kernel_size, 
+    Int32List output_padding, Int32List strides, Int32List dilation, Int32 groups=1) => Deconv3d"
+  bind_python: True
 
 - name: "expand"
   signature: "Tensor (Tensor x, Shape shape) => Expand"
