@@ -22,7 +22,6 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename T>
 Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
                                  Symbol<ParallelDesc> placement);
 
