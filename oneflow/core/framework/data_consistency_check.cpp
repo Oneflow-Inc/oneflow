@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/util.h"
+#include <cstring>
 #include "oneflow/core/framework/data_consistency_check.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/framework/transport_util.h"
@@ -22,12 +22,9 @@ namespace oneflow {
 
 namespace {
 
-template<typename T>
-bool CheckVecEqual(size_t size, const T* in0, const T* in1) {
-  for (size_t i = 0; i < size; ++i) {
-    if (*(in0 + i) != *(in1 + i)) { return false; }
-  }
-  return true;
+bool CheckVecEqual(size_t size, const void* in0, const void* in1) {
+  int comp_res = std::memcmp(in0, in1, size);
+  return comp_res == 0;
 }
 
 }  // namespace
@@ -59,7 +56,7 @@ Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t elem_cnt,
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
   JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
-  CHECK_OR_RETURN(CheckVecEqual(elem_cnt, reinterpret_cast<const T*>(buffer_ptr), recv_ptr))
+  CHECK_OR_RETURN(CheckVecEqual(data_size, (buffer_ptr), reinterpret_cast<const void*>(recv_ptr)))
       << "Each rank must have same input sequence or numpy array";
   return Maybe<void>::Ok();
 }
