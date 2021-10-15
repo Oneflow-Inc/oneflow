@@ -69,27 +69,25 @@ struct ListHook {
 #define LIST_HOOK_FOR_EACH(head_hook, elem_hook_struct_field, elem) \
   LIST_HOOK_FOR_EACH_WITH_EXPR(head_hook, elem_hook_struct_field, elem, 0)
 
-#define LIST_HOOK_FOR_EACH_WITH_EXPR(head_hook, elem_hook_struct_field, elem, expr) \
+#define LIST_HOOK_FOR_EACH_WITH_EXPR(head_hook, elem_hook_struct_field, elem, expr)   \
   for (typename elem_hook_struct_field::struct_type* elem = nullptr; elem == nullptr; \
-       elem = nullptr, elem++)                                                         \
-  LIST_HOOK_FOR_EACH_I(                                                               \
-      head_hook, __elem_hook__,                                                      \
-      ((elem = elem_hook_struct_field::StructPtr4FieldPtr(__elem_hook__)), expr))
+       elem = nullptr, elem++)                                                        \
+  LIST_HOOK_FOR_EACH_I(head_hook, __elem_hook__,                                      \
+                       ((elem = elem_hook_struct_field::StructPtr4FieldPtr(__elem_hook__)), expr))
 
-#define LIST_HOOK_FOR_EACH_I(head_hook, elem_hook, expr)                                       \
+#define LIST_HOOK_FOR_EACH_I(head_hook, elem_hook, expr)                                     \
   for (intrusive::ListHook* __head_hook__ = (head_hook), *elem_hook = __head_hook__->next(), \
-                             *__next_hook__ = elem_hook->next();                                \
-       (elem_hook != __head_hook__) && ((expr) || true);                                        \
+                            *__next_hook__ = elem_hook->next();                              \
+       (elem_hook != __head_hook__) && ((expr) || true);                                     \
        elem_hook = __next_hook__, __next_hook__ = __next_hook__->next())
 
-#define LIST_HOOK_UNSAFE_FOR_EACH(head_hook, elem_hook_struct_field, elem)          \
+#define LIST_HOOK_UNSAFE_FOR_EACH(head_hook, elem_hook_struct_field, elem)            \
   for (typename elem_hook_struct_field::struct_type* elem = nullptr; elem == nullptr; \
-       elem = nullptr, elem++)                                                         \
-  LIST_HOOK_UNSAFE_FOR_EACH_I(                                                        \
-      head_hook, __elem_hook__,                                                      \
-      (elem = elem_hook_struct_field::StructPtr4FieldPtr(__elem_hook__)))
+       elem = nullptr, elem++)                                                        \
+  LIST_HOOK_UNSAFE_FOR_EACH_I(head_hook, __elem_hook__,                               \
+                              (elem = elem_hook_struct_field::StructPtr4FieldPtr(__elem_hook__)))
 
-#define LIST_HOOK_UNSAFE_FOR_EACH_I(head_hook, elem_hook, expr)                                \
+#define LIST_HOOK_UNSAFE_FOR_EACH_I(head_hook, elem_hook, expr)                              \
   for (intrusive::ListHook* __head_hook__ = (head_hook), *elem_hook = __head_hook__->next(); \
        (elem_hook != __head_hook__) && ((expr), true); elem_hook = elem_hook->next())
 
@@ -98,8 +96,7 @@ class ListHead {
  public:
   ListHead() { Clear(); }
   using value_type = typename HookField::struct_type;
-  static_assert(std::is_same<typename HookField::field_type, ListHook>::value,
-                "no ListHook found");
+  static_assert(std::is_same<typename HookField::field_type, ListHook>::value, "no ListHook found");
 
   template<typename Enabled = void>
   static constexpr int IteratorHookOffset() {

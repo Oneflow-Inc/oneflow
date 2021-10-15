@@ -26,8 +26,7 @@ namespace intrusive {
 template<typename ValueHookField, int field_counter>
 class HeadFreeList {
  public:
-  static_assert(std::is_same<typename ValueHookField::field_type, intrusive::ListHook>::value,
-                "");
+  static_assert(std::is_same<typename ValueHookField::field_type, intrusive::ListHook>::value, "");
   HeadFreeList(const HeadFreeList&) = delete;
   HeadFreeList(HeadFreeList&&) = delete;
   HeadFreeList() { this->__Init__(); }

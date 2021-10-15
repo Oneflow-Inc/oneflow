@@ -65,8 +65,7 @@ struct ListHookArray final {
   }
   static ListHookArray* ThisPtr4HookPtr(ListHook* slist_ptr, int level) {
     auto* hooks_ptr = (std::array<intrusive::ListHook, max_level>*)(slist_ptr - level);
-    return StructField<self_type, decltype(hooks_), HooksOffset()>::StructPtr4FieldPtr(
-        hooks_ptr);
+    return StructField<self_type, decltype(hooks_), HooksOffset()>::StructPtr4FieldPtr(hooks_ptr);
   }
   void CheckEmpty() const {
     for (const auto& hook : hooks_) { CHECK(hook.empty()); }
@@ -171,7 +170,7 @@ struct SkipListHook {
   }
 
   static ListHook* SearchLastBottomHookLessThan(const key_type& key, hook_type* head,
-                                                  int size_shift) {
+                                                int size_shift) {
     int max_num_level = std::min(size_shift, N);
     ListHook* list_hook = head->mutable_hook(max_num_level);
     for (int level = max_num_level - 1; level >= 0; --level) {
@@ -203,8 +202,7 @@ class SkipListHead {
   static const int max_level = key_hook_type::max_level;
   template<typename Enabled = void>
   static constexpr int IteratorHookOffset() {
-    return offsetof(SkipListHead, skiplist_head_)
-           + ListHookArray<max_level>::LevelZeroHookOffset();
+    return offsetof(SkipListHead, skiplist_head_) + ListHookArray<max_level>::LevelZeroHookOffset();
   }
 
   void __Init__() {

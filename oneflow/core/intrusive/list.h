@@ -26,8 +26,7 @@ namespace intrusive {
 template<typename ValueHookField>
 class List {
  public:
-  static_assert(std::is_same<typename ValueHookField::field_type, intrusive::ListHook>::value,
-                "");
+  static_assert(std::is_same<typename ValueHookField::field_type, intrusive::ListHook>::value, "");
   List(const List&) = delete;
   List(List&&) = delete;
   List() { this->__Init__(); }
