@@ -104,6 +104,12 @@ struct UnaryFuncExp<half> final {
 };
 #endif
 
+template<typename T>
+struct UnaryFuncLogicalNot final {
+  static OF_DEVICE_FUNC const int8_t Invoke(const T x) { return static_cast<int8_t>(!x); }
+};
+SPECIALIZE_CONST_TYPE_UNARY_FUNC(UnaryFuncLogicalNot);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_NDARRAY_UNARY_FUNC_H_

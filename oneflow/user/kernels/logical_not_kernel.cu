@@ -24,7 +24,7 @@ namespace {
 
 template<typename T>
 struct LogicalNotFunctor {
-  OF_DEVICE_FUNC int8_t operator()(T x) const { return static_cast<int8_t>(!x); }
+  OF_DEVICE_FUNC int8_t operator()(T x) const { return !x; }
 };
 
 }  // namespace
