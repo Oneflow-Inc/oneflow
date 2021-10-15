@@ -36,7 +36,7 @@ class BatchMatmul : public Primitive {
   virtual BlasTransposeType transpose_a() const = 0;
   virtual BlasTransposeType transpose_b() const = 0;
 
-  virtual void Launch(StreamContext* stream_ctx, size_t b, size_t m, size_t n, size_t k,
+  virtual void Launch(StreamContext* stream_ctx, size_t num_batches, size_t m, size_t n, size_t k,
                       Scalar alpha, const void* a, const void* b, Scalar beta, void* c) = 0;
 };
 
@@ -46,9 +46,8 @@ class BatchMatmulFactory : public Factory<BatchMatmul> {
   BatchMatmulFactory() = default;
   ~BatchMatmulFactory() override = default;
 
-  virtual std::unique_ptr<BroadcastMatmulFactory> New(DataType data_type,
-                                                      BlasTransposeType transpose_a,
-                                                      BlasTransposeType transpose_b) = 0;
+  virtual std::unique_ptr<BatchMatmul> New(DataType data_type, BlasTransposeType transpose_a,
+                                           BlasTransposeType transpose_b) = 0;
 };
 
 }  // namespace primitive
