@@ -75,6 +75,15 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tenso
           is_printed = true;
         }
       }));
+  // JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+  //   //   JUST(builder->AccessBlobByCallback(
+  //     //       tensor,
+  //       //       [array, Copy](uint64_t ofblob_ptr) {
+  //         //         CHECK_JUST(Copy(ofblob_ptr, array));
+  //           //       },
+  //             //       modifier));
+  //               //   return Maybe<void>::Ok();
+  //                 // }));
   return Maybe<void>::Ok();
 }
 
