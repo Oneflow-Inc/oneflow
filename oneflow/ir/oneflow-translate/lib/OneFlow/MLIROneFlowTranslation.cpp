@@ -923,6 +923,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   mlir::PassManager pm(context);
   pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
   std::string graphviz;
+  pm.addPass(oneflow::createOutlineJitFunctionPass());
   llvm::raw_string_ostream os_graphviz(graphviz);
   pm.addPass(createPrintOpGraphPass(os_graphviz));
   if (mlir::failed(pm.run(*module))) {
@@ -934,17 +935,6 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   llvm::raw_string_ostream os_mlir(mlir);
   module->print(os_mlir);
   job_wrapper.DumpLog("RoundTripOneFlowJob.mlir", mlir);
-  return success();
-}
-
-LogicalResult ApplyFuserPatterns(RoundTripOneFlowJobWrapperInterface& job_wrapper,
-                                 MLIRContext* context, OwningModuleRef& module) {
-  RewritePatternSet patterns(module->getContext());
-  oneflow::populateFuserPasses(patterns);
-  if (failed(applyPatternsAndFoldGreedily(module.get(), std::move(patterns)))) {
-    module->emitError("Failed to run fusers");
-    return failure();
-  }
   return success();
 }
 
@@ -974,7 +964,6 @@ void RoundTripOneFlowJob(
   // TODO: Add flag in job desc to decide whether to run mlir optimizer
   if (succeeded(imp.ProcessJob())) {
     if (failed(ApplyRoundTripPatterns(job_wrapper, &context, module))) { exit(EXIT_FAILURE); }
-    if (failed(ApplyFuserPatterns(job_wrapper, &context, module))) { exit(EXIT_FAILURE); }
     if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
     // TODO: Add flag in oneflow to define if failure in MLIR is allowed
     if (failed(imp.TryToUpdateJob())) {
