@@ -65,6 +65,7 @@ LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
   return success();
 }
 
+// TODO: cfg/multi block support
 FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, StringRef func_name,
                          ValueRange operands, ValueRange results, SmallVector<Operation*, 4> ops) {
   BlockAndValueMapping mapping;
