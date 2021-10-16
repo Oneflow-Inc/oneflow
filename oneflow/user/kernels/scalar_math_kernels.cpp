@@ -77,7 +77,8 @@ class ScalarMathKernel final : public user_op::OpKernel {
 
 // we register uint8_t, int8_t, int32_t, int64_t, float, double, float16.
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_MATH_KERNEL, (DeviceType::kCPU),
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
+                                     FLOAT16_DATA_TYPE_SEQ)
 
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_MATH_KERNEL, (DeviceType::kGPU),

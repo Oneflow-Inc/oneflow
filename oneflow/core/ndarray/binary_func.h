@@ -480,6 +480,13 @@ struct BinaryFuncFloorDiv<half> final {
 #endif
   }
 };
+#else
+template<>
+struct BinaryFuncFloorDiv<float16> final {
+  static __device__ __forceinline__ float16 Invoke(float16 x, float16 y) {
+    return static_cast<float16>(std::floor(static_cast<float>(x) / static_cast<float>(y)));
+  }
+};
 
 #endif  // defined(__CUDACC__)
 template<typename T, template<typename> class binary_func>
