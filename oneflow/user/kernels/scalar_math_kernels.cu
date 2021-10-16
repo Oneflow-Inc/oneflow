@@ -32,15 +32,15 @@ struct ScalarMathFunctor<DeviceType::kGPU, BIN_OP, T> final {
   }
 };
 
-#define INSTANTIATE_SCALAR_MATH_HALF_FUNCTORS(BIN_OP)                                        \
-  template<>                                                                                 \
-  struct ScalarMathFunctor<DeviceType::kGPU, BIN_OP, float16> final {                        \
-    void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const float16 scalar,            \
-                    const float16* in, float16* out) {                                       \
-      RUN_CUDA_KERNEL((DoCUDAScalarMath<BIN_OP, half>), ctx, BlocksNum4ThreadsNum(elem_cnt), \
-                      elem_cnt, float16_2half(scalar), reinterpret_cast<const half*>(in),    \
-                      reinterpret_cast<half*>(out));                                         \
-    }                                                                                        \
+#define INSTANTIATE_SCALAR_MATH_HALF_FUNCTORS(BIN_OP)                                          \
+  template<>                                                                                   \
+  struct ScalarMathFunctor<DeviceType::kGPU, BIN_OP, float16> final {                          \
+    void operator()(DeviceCtx* ctx, const int64_t elem_cnt, float16 scalar, const float16* in, \
+                    float16* out) {                                                            \
+      RUN_CUDA_KERNEL((DoCUDAScalarMath<BIN_OP, half>), ctx, BlocksNum4ThreadsNum(elem_cnt),   \
+                      elem_cnt, float16_2half(scalar), reinterpret_cast<const half*>(in),      \
+                      reinterpret_cast<half*>(out));                                           \
+    }                                                                                          \
   };
 
 INSTANTIATE_SCALAR_MATH_HALF_FUNCTORS(BinaryFuncAdd)
