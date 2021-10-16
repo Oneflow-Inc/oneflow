@@ -828,6 +828,8 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
           }
         }
       } else if (attr_type == ::oneflow::kAtListString) {
+        // attr like nd_sbp requires the existence of list even it is empty
+        user_attr.mutable_at_list_string();
         for (auto s : attr.dyn_cast<ArrayAttr>().getValue()) {
           user_attr.mutable_at_list_string()->add_val(s.dyn_cast<StringAttr>().getValue().str());
         }
