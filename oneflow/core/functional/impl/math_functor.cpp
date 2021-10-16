@@ -70,13 +70,17 @@ class AddNFunctor {
   std::vector<std::shared_ptr<OpExpr>> op_;
 };
 
-class ScalarAddFunctor {
+class ScalarMathBaseFunctor {
  public:
-  ScalarAddFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("scalar_add").Input("in").Output("out").Build());
+  explicit ScalarMathBaseFunctor(std::string op_name) {
+    op_ = CHECK_JUST(one::OpBuilder(op_name).Input("in").Output("out").Build());
   }
+  virtual ~ScalarMathBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
                            bool inplace) const {
+    if (std::dynamic_pointer_cast<StaticZerosTensor>(x) && op_->op_type_name() == "scalar_mul") {
+      return x;
+    }
     MutableAttrMap attrs;
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
@@ -97,7 +101,8 @@ class ScalarAddFunctor {
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
       lowest_dtype = x->dtype();
     } else {
-      UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarAdd should be float or int.";
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
+                                  << " should be float or int.";
     }
     JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
     TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
@@ -117,10 +122,15 @@ class ScalarAddFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ScalarAddFunctor : public ScalarMathBaseFunctor {
+ public:
+  ScalarAddFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_add") {}
+};
+
 class ScalarAdd2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
-    return ScalarAdd(x, scalar, /*inplace*/ false);
+    return ScalarAdd(x, scalar, /*inplace=*/false);
   }
 };
 
@@ -135,104 +145,39 @@ class ScalarSubFunctor {
 class ScalarSub2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
-    return ScalarAdd(JUST(ScalarMul(x, Scalar(-1))), scalar, /*inplace*/ false);
+    return ScalarAdd(JUST(ScalarMul(x, Scalar(-1), false)), scalar, /*inplace=*/false);
   }
 };
 
-class ScalarMulFunctor {
+class ScalarMulFunctor : public ScalarMathBaseFunctor {
  public:
-  ScalarMulFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("scalar_mul").Input("in").Output("out").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
-    if (std::dynamic_pointer_cast<StaticZerosTensor>(x)) { return x; }
-    MutableAttrMap attrs;
-    TensorProcessor tensor_processor;
-    Symbol<DType> lowest_dtype;
-    if (scalar.IsFloatingPoint()) {
-      JUST(attrs.SetAttr<bool>("has_float_operand", true));
-      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
-      JUST(attrs.SetAttr<bool>("has_int_operand", false));
-      // Only promote type to Float32 when tensor is Int type but scalar is float type.
-      if (DType::priority_order[x->dtype()->data_type()]
-          < DType::priority_order[DType::Float16()->data_type()]) {
-        lowest_dtype = DType::Float();
-      } else {
-        lowest_dtype = x->dtype();
-      }
-    } else if (scalar.IsIntegral()) {
-      JUST(attrs.SetAttr<bool>("has_float_operand", false));
-      JUST(attrs.SetAttr<bool>("has_int_operand", true));
-      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
-      lowest_dtype = x->dtype();
-    } else {
-      UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarMul should be float or int.";
-    }
-    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
-    TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, casted_vec, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
+  ScalarMulFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_mul") {}
 };
 
 class ScalarMul2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
-    return ScalarMul(x, scalar);
+    return ScalarMul(x, scalar, false);
   }
 };
 
 class ScalarDivFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
-    return ScalarMul(x, Scalar(1.0) / scalar);
+    return ScalarMul(x, Scalar(1.0) / scalar, /*inplace=*/false);
   }
 };
 
 class ScalarDiv2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
-    return functional::ScalarMul(JUST(functional::ReciprocalNoNan(x)), scalar);
+    return functional::ScalarMul(JUST(functional::ReciprocalNoNan(x)), scalar, /*inplace=*/false);
   }
 };
 
-class ScalarPowFunctor {
+class ScalarPowFunctor : public ScalarMathBaseFunctor {
  public:
-  ScalarPowFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("scalar_pow").Input("in").Output("out").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
-    MutableAttrMap attrs;
-    TensorProcessor tensor_processor;
-    Symbol<DType> lowest_dtype;
-    if (scalar.IsFloatingPoint()) {
-      JUST(attrs.SetAttr<bool>("has_float_operand", true));
-      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
-      JUST(attrs.SetAttr<bool>("has_int_operand", false));
-      // Only promote type to Float32 when tensor is Int type but scalar is float type.
-      if (DType::priority_order[x->dtype()->data_type()]
-          < DType::priority_order[DType::Float16()->data_type()]) {
-        lowest_dtype = DType::Float();
-      } else {
-        lowest_dtype = x->dtype();
-      }
-    } else if (scalar.IsIntegral()) {
-      JUST(attrs.SetAttr<bool>("has_float_operand", false));
-      JUST(attrs.SetAttr<bool>("has_int_operand", true));
-      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
-      lowest_dtype = x->dtype();
-    } else {
-      UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarPow should be float or int.";
-    }
-    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
-    TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, casted_vec, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
+  ScalarPowFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_pow") {}
 };
 
 class ScalarPowGradFunctor {
@@ -261,42 +206,14 @@ class ScalarPowGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ScalarFloorDivFunctor {
+class ScalarFloorDivFunctor : public ScalarMathBaseFunctor {
  public:
-  ScalarFloorDivFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("scalar_floordiv").Input("in").Output("out").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
-    if (std::dynamic_pointer_cast<StaticZerosTensor>(x)) { return x; }
-    MutableAttrMap attrs;
-    TensorProcessor tensor_processor;
-    Symbol<DType> lowest_dtype;
-    if (scalar.IsFloatingPoint()) {
-      JUST(attrs.SetAttr<bool>("has_float_operand", true));
-      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
-      JUST(attrs.SetAttr<bool>("has_int_operand", false));
-      // Only promote type to Float32 when tensor is Int type but scalar is float type.
-      if (DType::priority_order[x->dtype()->data_type()]
-          < DType::priority_order[DType::Float16()->data_type()]) {
-        lowest_dtype = DType::Float();
-      } else {
-        lowest_dtype = x->dtype();
-      }
-    } else if (scalar.IsIntegral()) {
-      JUST(attrs.SetAttr<bool>("has_float_operand", false));
-      JUST(attrs.SetAttr<bool>("has_int_operand", true));
-      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
-      lowest_dtype = x->dtype();
-    } else {
-      UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarFloorDiv should be float or int.";
-    }
-    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
-    TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, casted_vec, attrs);
-  }
+  ScalarFloorDivFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_floordiv") {}
+};
 
- private:
-  std::shared_ptr<OpExpr> op_;
+class ScalarFModFunctor : public ScalarMathBaseFunctor {
+ public:
+  ScalarFModFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_fmod") {}
 };
 
 class ReduceMaxFunctor {
@@ -392,7 +309,7 @@ class ReduceMeanFunctor {
     }
     if (reduce_count == 1) { return sum; }
     CHECK_GT_OR_RETURN(reduce_count, 0);
-    return functional::ScalarMul(sum, 1.0 / reduce_count);
+    return functional::ScalarMul(sum, 1.0 / reduce_count, false);
   }
 };
 
@@ -794,43 +711,6 @@ class MaximumFunctor {
   std::shared_ptr<OpExpr> broadcast_maximum_op_;
 };
 
-class ScalarFModFunctor {
- public:
-  ScalarFModFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("scalar_fmod").Input("in").Output("out").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
-    MutableAttrMap attrs;
-    TensorProcessor tensor_processor;
-    Symbol<DType> lowest_dtype;
-    if (IsFloatingDataType(x->dtype()->data_type())) {
-      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
-      JUST(attrs.SetAttr<bool>("has_float_operand", true));
-      JUST(attrs.SetAttr<bool>("has_int_operand", false));
-      // Only promote type to Float32 when tensor is Int type but scalar is float type.
-      if (DType::priority_order[x->dtype()->data_type()]
-          < DType::priority_order[DType::Float16()->data_type()]) {
-        lowest_dtype = DType::Float();
-      } else {
-        lowest_dtype = x->dtype();
-      }
-    } else if (IsIntegralDataType(x->dtype()->data_type())) {
-      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
-      JUST(attrs.SetAttr<bool>("has_float_operand", false));
-      JUST(attrs.SetAttr<bool>("has_int_operand", true));
-      lowest_dtype = x->dtype();
-    } else {
-      UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarAdd should be float or int.";
-    }
-    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
-    TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, casted_vec, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
 class ScalarLogicalBaseFunctor {
  public:
   explicit ScalarLogicalBaseFunctor(std::string op_name) {
@@ -850,7 +730,8 @@ class ScalarLogicalBaseFunctor {
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
     } else {
-      UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarAdd should be float or int.";
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
+                                  << " should be float or int.";
     }
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -1021,8 +902,8 @@ class StandardDeviationFunctor {
         JUST(functional::ReduceSum(input, axis, keepdims)), Scalar(reduce_count)))));
     const auto& sub = JUST(functional::Sub(sum, square));
     if (unbias) {
-      return functional::Sqrt(JUST(
-          functional::ScalarMul(sub, Scalar((double)reduce_count / (double)(reduce_count - 1)))));
+      return functional::Sqrt(JUST(functional::ScalarMul(
+          sub, Scalar((double)reduce_count / (double)(reduce_count - 1)), false)));
     }
     /*
     According to the std calculation formula,
