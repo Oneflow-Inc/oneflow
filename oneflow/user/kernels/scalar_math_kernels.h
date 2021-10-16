@@ -29,7 +29,7 @@ namespace oneflow {
   template struct ScalarMathFunctor<device_type, binary_op, float>;   \
   template struct ScalarMathFunctor<device_type, binary_op, double>;
 
-template<DeviceType device_type, template<typename T> class BIN_OP, typename T>
+template<DeviceType device_type, template<typename> class BIN_OP, typename T>
 struct ScalarMathFunctor final {
   void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const T scalar, const T* in, T* out);
 };

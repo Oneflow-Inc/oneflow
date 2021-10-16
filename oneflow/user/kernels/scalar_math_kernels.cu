@@ -15,21 +15,39 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/scalar_math_kernels.h"
 #include "oneflow/user/kernels/elementwise_xpu_kernel.cuh"
+#include "oneflow/core/kernel/util/cuda_half_util.h"
 
 namespace oneflow {
 
-template<template<typename T> class BIN_OP, typename T>
+template<template<typename> class BIN_OP, typename T>
 __global__ void DoCUDAScalarMath(const int64_t elem_cnt, const T scalar, const T* in, T* out) {
   DoScalarMath<BIN_OP, T>(elem_cnt, scalar, in, out);
 }
 
-template<template<typename T> class BIN_OP, typename T>
+template<template<typename> class BIN_OP, typename T>
 struct ScalarMathFunctor<DeviceType::kGPU, BIN_OP, T> final {
   void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const T scalar, const T* in, T* out) {
     RUN_CUDA_KERNEL((DoCUDAScalarMath<BIN_OP, T>), ctx, BlocksNum4ThreadsNum(elem_cnt), elem_cnt,
                     scalar, in, out);
   }
 };
+
+#define INSTANTIATE_SCALAR_MATH_HALF_FUNCTORS(BIN_OP)                                        \
+  template<>                                                                                 \
+  struct ScalarMathFunctor<DeviceType::kGPU, BIN_OP, float16> final {                        \
+    void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const float16 scalar,            \
+                    const float16* in, float16* out) {                                       \
+      RUN_CUDA_KERNEL((DoCUDAScalarMath<BIN_OP, half>), ctx, BlocksNum4ThreadsNum(elem_cnt), \
+                      elem_cnt, float16_2half(scalar), reinterpret_cast<const half*>(in),    \
+                      reinterpret_cast<half*>(out));                                         \
+    }                                                                                        \
+  };
+
+INSTANTIATE_SCALAR_MATH_HALF_FUNCTORS(BinaryFuncAdd)
+INSTANTIATE_SCALAR_MATH_HALF_FUNCTORS(BinaryFuncFloorDiv)
+INSTANTIATE_SCALAR_MATH_HALF_FUNCTORS(BinaryFuncFMod)
+INSTANTIATE_SCALAR_MATH_HALF_FUNCTORS(BinaryFuncMul)
+INSTANTIATE_SCALAR_MATH_HALF_FUNCTORS(BinaryFuncPow)
 
 INSTANTIATE_SCALAR_MATH_FUNCTORS(DeviceType::kGPU, BinaryFuncAdd);
 INSTANTIATE_SCALAR_MATH_FUNCTORS(DeviceType::kGPU, BinaryFuncFloorDiv);

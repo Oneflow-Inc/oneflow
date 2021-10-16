@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-template<template<typename T> class BIN_OP, typename T>
+template<template<typename> class BIN_OP, typename T>
 struct ScalarMathFunctor<DeviceType::kCPU, BIN_OP, T> final {
   void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const T scalar, const T* in, T* out) {
     DoScalarMath<BIN_OP, T>(elem_cnt, scalar, in, out);
