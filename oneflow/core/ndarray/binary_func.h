@@ -483,7 +483,7 @@ struct BinaryFuncFloorDiv<half> final {
 #else
 template<>
 struct BinaryFuncFloorDiv<float16> final {
-  static __device__ __forceinline__ float16 Invoke(float16 x, float16 y) {
+  static inline float16 Invoke(float16 x, float16 y) {
     return static_cast<float16>(std::floor(static_cast<float>(x) / static_cast<float>(y)));
   }
 };
