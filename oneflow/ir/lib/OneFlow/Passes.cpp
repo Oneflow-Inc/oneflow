@@ -102,6 +102,7 @@ FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, 
 }
 
 NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op_name,
+                                 int32_t input_size, int32_t output_size,
                                  Operation* op_to_replace) {
   oneflow::UserOpAdaptor op_to_replace_adaptor(op_to_replace->getOperands(),
                                                op_to_replace->getAttrDictionary());
@@ -117,7 +118,7 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
   LBNVec input_lbn_segment_keys;
   LBNSegVec input_lbn_segment_sizes;
   input_lbn_segment_keys.push_back("in");
-  input_lbn_segment_sizes.push_back(2);
+  input_lbn_segment_sizes.push_back(input_size);
 
   attributes.set("input_lbn_segment_keys", rewriter.getStrArrayAttr(input_lbn_segment_keys));
   attributes.set("input_lbn_segment_sizes", rewriter.getI32ArrayAttr(input_lbn_segment_sizes));
@@ -129,9 +130,12 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
   LBNSegVec output_lbn_segment_sizes;
   // TODO: use functions in oneflow to genearated bn
   SmallString<64> output_lbn_storage;
-  output_lbns.push_back((op_name + "/" + "out_0").toStringRef(output_lbn_storage));
-  output_lbn_segment_keys.push_back("out");
-  output_lbn_segment_sizes.push_back(1);
+  for (size_t i = 0; i < output_size; i++) {
+    output_lbns.push_back(
+        (op_name + "/" + "out_" + std::to_string(i)).toStringRef(output_lbn_storage));
+    output_lbn_segment_keys.push_back("out");
+    output_lbn_segment_sizes.push_back(output_size);
+  }
   attributes.set("output_lbns", rewriter.getStrArrayAttr(output_lbns));
   attributes.set("output_lbn_segment_keys", rewriter.getStrArrayAttr(output_lbn_segment_keys));
   attributes.set("output_lbn_segment_sizes", rewriter.getI32ArrayAttr(output_lbn_segment_sizes));
@@ -151,12 +155,13 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
       SmallString<64> op_name_storage;
       auto op_name =
           (cast_op.op_name() + "__FUSE__" + mul_op.op_name()).toStringRef(op_name_storage);
-      NamedAttrList attributes = GetJitOpAttributes(rewriter, op_name, mul_op);
       SmallVector<::mlir::Value, 2> operands;
       operands.push_back(cast_op.x());
       operands.push_back(mul_op.scalar());
       SmallVector<::mlir::Value, 1> results;
       results.push_back(mul_op.y());
+      NamedAttrList attributes =
+          GetJitOpAttributes(rewriter, op_name, operands.size(), results.size(), mul_op);
       SmallVector<Operation*, 4> ops = {cast_op, mul_op};
       auto function =
           GetOrInsertFuncOp(rewriter, mul_op->getLoc(), op_name, operands, results, ops);
