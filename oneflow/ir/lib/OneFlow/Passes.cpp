@@ -101,6 +101,44 @@ FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, 
   return function;
 }
 
+NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op_name,
+                                 Operation* op_to_replace) {
+  oneflow::UserOpAdaptor op_to_replace_adaptor(op_to_replace->getOperands(),
+                                               op_to_replace->getAttrDictionary());
+  NamedAttrList attributes;
+  attributes.set("op_type_name", rewriter.getStringAttr("mlir_jit"));
+  // TODO: extract a function to strip attrs from an op to be replace
+  attributes.set("device_tag", op_to_replace_adaptor.device_tag());
+  attributes.set("device_name", op_to_replace_adaptor.device_name());
+  attributes.set("hierarchy", op_to_replace_adaptor.hierarchy());
+  using LBNVec = SmallVector<StringRef, 8>;
+  using LBNSegVec = SmallVector<int32_t, 8>;
+
+  LBNVec input_lbn_segment_keys;
+  LBNSegVec input_lbn_segment_sizes;
+  input_lbn_segment_keys.push_back("in");
+  input_lbn_segment_sizes.push_back(2);
+
+  attributes.set("input_lbn_segment_keys", rewriter.getStrArrayAttr(input_lbn_segment_keys));
+  attributes.set("input_lbn_segment_sizes", rewriter.getI32ArrayAttr(input_lbn_segment_sizes));
+
+  attributes.set("op_name", rewriter.getStringAttr(op_name));
+
+  LBNVec output_lbns;
+  LBNVec output_lbn_segment_keys;
+  LBNSegVec output_lbn_segment_sizes;
+  // TODO: use functions in oneflow to genearated bn
+  SmallString<64> output_lbn_storage;
+  output_lbns.push_back((op_name + "/" + "out_0").toStringRef(output_lbn_storage));
+  output_lbn_segment_keys.push_back("out");
+  output_lbn_segment_sizes.push_back(1);
+  attributes.set("output_lbns", rewriter.getStrArrayAttr(output_lbns));
+  attributes.set("output_lbn_segment_keys", rewriter.getStrArrayAttr(output_lbn_segment_keys));
+  attributes.set("output_lbn_segment_sizes", rewriter.getI32ArrayAttr(output_lbn_segment_sizes));
+  attributes.set("scope_symbol_id", op_to_replace_adaptor.scope_symbol_id());
+  return attributes;
+}
+
 ::llvm::SmallVector<::mlir::Value, 4> OutlineFunction(::mlir::PatternRewriter& rewriter,
                                                       mlir::OpResult mul_res,
                                                       mlir::OpResult cast_res) {
@@ -109,43 +147,11 @@ FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, 
   if (llvm::dyn_cast<MlirJitOp>(mul_res.getParentBlock()->getParentOp())) { return {}; }
   if (auto mul_op = llvm::dyn_cast<ScalarMulByTensorOp>(mul_res.getDefiningOp())) {
     if (auto cast_op = llvm::dyn_cast<CastOp>(cast_res.getDefiningOp())) {
-      NamedAttrList attributes;
-      attributes.set("op_type_name", rewriter.getStringAttr("mlir_jit"));
-      // TODO: extract a function to strip attrs from an op to be replace
-      attributes.set("device_tag", mul_op.device_tagAttr());
-      attributes.set("device_name", mul_op.device_nameAttr());
-      attributes.set("hierarchy", mul_op.hierarchyAttr());
-      using LBNVec = SmallVector<StringRef, 8>;
-      using LBNSegVec = SmallVector<int32_t, 8>;
-
-      LBNVec input_lbn_segment_keys;
-      LBNSegVec input_lbn_segment_sizes;
-      input_lbn_segment_keys.push_back("in");
-      input_lbn_segment_sizes.push_back(2);
-
-      attributes.set("input_lbn_segment_keys", rewriter.getStrArrayAttr(input_lbn_segment_keys));
-      attributes.set("input_lbn_segment_sizes", rewriter.getI32ArrayAttr(input_lbn_segment_sizes));
-
       // TODO: extract a function to generate op name for jit op from ops being fused
       SmallString<64> op_name_storage;
       auto op_name =
           (cast_op.op_name() + "__FUSE__" + mul_op.op_name()).toStringRef(op_name_storage);
-      attributes.set("op_name", rewriter.getStringAttr(op_name));
-
-      LBNVec output_lbns;
-      LBNVec output_lbn_segment_keys;
-      LBNSegVec output_lbn_segment_sizes;
-      // TODO: use functions in oneflow to genearated bn
-      SmallString<64> output_lbn_storage;
-      output_lbns.push_back((op_name + "/" + "out_0").toStringRef(output_lbn_storage));
-      output_lbn_segment_keys.push_back("out");
-      output_lbn_segment_sizes.push_back(1);
-      attributes.set("output_lbns", rewriter.getStrArrayAttr(output_lbns));
-      attributes.set("output_lbn_segment_keys", rewriter.getStrArrayAttr(output_lbn_segment_keys));
-      attributes.set("output_lbn_segment_sizes",
-                     rewriter.getI32ArrayAttr(output_lbn_segment_sizes));
-
-      attributes.set("scope_symbol_id", mul_op.scope_symbol_idAttr());
+      NamedAttrList attributes = GetJitOpAttributes(rewriter, op_name, mul_op);
       SmallVector<::mlir::Value, 2> operands;
       operands.push_back(cast_op.x());
       operands.push_back(mul_op.scalar());
