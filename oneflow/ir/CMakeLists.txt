@@ -83,8 +83,6 @@ if(NOT llvm_monorepo_POPULATED)
   set(MLIR_DIR ${LLVM_INSTALL_DIR}/lib/cmake/mlir)
 endif()
 
-set(LLVM_EXTERNAL_LIT "${llvm_monorepo_BINARY_DIR}/bin/llvm-lit")
-message(STATUS "LLVM_EXTERNAL_LIT: ${LLVM_EXTERNAL_LIT}")
 find_package(MLIR REQUIRED CONFIG)
 
 message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
