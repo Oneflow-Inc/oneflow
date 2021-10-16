@@ -616,7 +616,6 @@ LogicalResult Importer::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
 
 LogicalResult Importer::ProcessJob() {
   auto func_type = builder_.getFunctionType(llvm::None, llvm::None);
-  // TODO: Add a OneFlow_JobOp with FunctionLike trait
   auto function = mlir::FuncOp::create(unknown_loc_, job_->job_conf().job_name(), func_type);
   auto& entryBlock = *function.addEntryBlock();
   builder_.setInsertionPointToStart(&entryBlock);
@@ -882,8 +881,9 @@ LogicalResult Importer::TryToUpdateJob() {
   auto convertOps = [&](Operation* op) {
     if (op->getParentOp()) {
       if (auto func = llvm::dyn_cast<FuncOp>(op->getParentOp())) {
-        // TODO: find by symbol in module and only walk job function
         // TODO: remove this workaround
+        // option1: Find by symbol in module and only walk job function
+        // option2: Add a OneFlow_JobOp with FunctionLike trait
         if (func->hasAttr("llvm.emit_c_interface")) { return WalkResult::skip(); }
       }
     }
