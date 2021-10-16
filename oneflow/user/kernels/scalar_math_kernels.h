@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/user/kernels/elementwise_xpu_kernel.h"
 #include "oneflow/core/ndarray/binary_func.h"
 #include "oneflow/core/ndarray/xpu_util.h"
+#include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
 
