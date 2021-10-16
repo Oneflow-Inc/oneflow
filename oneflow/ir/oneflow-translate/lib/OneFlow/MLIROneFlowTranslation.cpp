@@ -138,10 +138,11 @@ LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorCo
   LBNVec input_lbn_segment_keys;
   LBNSegVec input_lbn_segment_sizes;
   int32_t data_input_size = 0;
-  for (auto& input : op.user_conf().input()) {
-    input_lbn_segment_keys.push_back(input.first);
-    input_lbn_segment_sizes.push_back(input.second.s_size());
-    data_input_size += input.second.s_size();
+  for (const auto& key : op.user_conf().input_order()) {
+    auto& value = op.user_conf().input().at(key);
+    input_lbn_segment_keys.push_back(key);
+    input_lbn_segment_sizes.push_back(value.s_size());
+    data_input_size += value.s_size();
   }
   attr_vec.push_back(builder_.getNamedAttr("input_lbn_segment_keys",
                                            builder_.getStrArrayAttr(input_lbn_segment_keys)));
@@ -152,11 +153,12 @@ LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorCo
   LBNVec output_lbn_segment_keys;
   LBNSegVec output_lbn_segment_sizes;
   int32_t data_output_size = 0;
-  for (auto& output : op.user_conf().output()) {
-    output_lbns.insert(output_lbns.end(), output.second.s().begin(), output.second.s().end());
-    output_lbn_segment_keys.push_back(output.first);
-    output_lbn_segment_sizes.push_back(output.second.s_size());
-    data_output_size += output.second.s_size();
+  for (const auto& key : op.user_conf().output_order()) {
+    auto& value = op.user_conf().output().at(key);
+    output_lbns.insert(output_lbns.end(), value.s().begin(), value.s().end());
+    output_lbn_segment_keys.push_back(key);
+    output_lbn_segment_sizes.push_back(value.s_size());
+    data_output_size += value.s_size();
   }
   attr_vec.push_back(builder_.getNamedAttr("output_lbns", builder_.getStrArrayAttr(output_lbns)));
   attr_vec.push_back(builder_.getNamedAttr("output_lbn_segment_keys",
@@ -498,8 +500,9 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
       builder_.getNamedAttr("op_type_name", builder_.getStringAttr(op.user_conf().op_type_name())));
   std::vector<::mlir::Value> operand_vec;
   if (failed(namedAttributesFromUserOp(op, attr_vec))) { return failure(); }
-  for (const auto& kv : op.user_conf().input()) {
-    for (const std::string& lbn : kv.second.s()) {
+  for (const auto& key : op.user_conf().input_order()) {
+    auto& value = op.user_conf().input().at(key);
+    for (const std::string& lbn : value.s()) {
       if (failed(AppendDataInOperand(lbn, operand_vec))) { return failure(); }
     }
   }
@@ -509,8 +512,9 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   Operation* created_op = nullptr;
 
   auto out_types = llvm::SmallVector<Type, 8>();
-  for (const auto& kv : op.user_conf().output()) {
-    for (const auto& output_lbn : kv.second.s()) {
+  for (const auto& key : op.user_conf().output_order()) {
+    auto& value = op.user_conf().output().at(key);
+    for (const auto& output_lbn : value.s()) {
       out_types.push_back(GetTensorTypeOfLbn(output_lbn));
     }
   }
