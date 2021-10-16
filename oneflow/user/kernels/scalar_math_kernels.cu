@@ -46,6 +46,18 @@ struct ScalarPowGradFunctor {
   const T exponent;
 };
 
+template<>
+struct ScalarPowGradFunctor<half> {
+  OF_DEVICE_FUNC explicit ScalarPowGradFunctor(half exponent) : exponent(exponent) {}
+  __device__ half operator()(half x, half dy) const {
+    return __float2half(
+        __half2float(exponent)
+        * (__powf(__half2float(x), __half2float(exponent) - static_cast<float>(1.0)))
+        * __half2float(dy));
+  }
+  const half exponent;
+};
+
 template<DeviceType device_type, typename T>
 class GpuScalarPowGradKernel final : public user_op::OpKernel {
  public:

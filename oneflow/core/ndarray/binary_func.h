@@ -470,6 +470,17 @@ struct BinaryFuncFloorDiv<int64_t> final {
   static __device__ __forceinline__ int64_t Invoke(int64_t x, int64_t y) { return x / y; }
 };
 
+template<>
+struct BinaryFuncFloorDiv<half> final {
+  static __device__ __forceinline__ half Invoke(const half x, const half y) {
+#if __CUDA_ARCH__ >= 530
+    return __float2half(floor(fdividef(__half2float(x), __half2float(y))));
+#else
+    NO_HALF_UTIL_FOUND;
+#endif
+  }
+};
+
 #endif  // defined(__CUDACC__)
 template<typename T, template<typename> class binary_func>
 struct UnitOfBinaryFunc;
