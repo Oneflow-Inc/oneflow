@@ -176,7 +176,8 @@ class EluGradFunctor {
 class CeluFunctor {
  public:
   CeluFunctor() { op_ = CHECK_JUST(one::OpBuilder("celu").Input("in").Output("out").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& alpha, bool inplace) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& alpha,
+                           bool inplace) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("alpha", alpha));
     if (inplace) {
@@ -185,8 +186,7 @@ class CeluFunctor {
       outputs->at(0) = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
       return outputs->at(0);
-    }
-    else {
+    } else {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
     }
   }
@@ -197,13 +197,16 @@ class CeluFunctor {
 
 class CeluGradFunctor {
  public:
-  CeluGradFunctor() { op_ = CHECK_JUST(one::OpBuilder("celu_grad").Input("x").Input("dy").Output("dx").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, 
+  CeluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("celu_grad").Input("x").Input("dy").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& dy, const double& alpha) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("alpha", alpha));
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
   }
+
  private:
   std::shared_ptr<OpExpr> op_;
 };
