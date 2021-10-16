@@ -298,8 +298,8 @@ class CELU(Module):
 
     def forward(self, x):
         if self.inplace:
-            warnings.warn("CELU module do not support inplace now")
-        return flow.F.celu(x, alpha=self.alpha)
+            _check_inplace_valid(x)
+        return flow._C.celu(x, alpha=self.alpha, inplace=self.inplace)
 
     def extra_repr(self):
         param_str = f"alpha={self.alpha}"

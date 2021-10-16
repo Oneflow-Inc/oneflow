@@ -18,8 +18,8 @@ namespace {
 
 REGISTER_USER_OP("celu")
     .Input("in")
-    .Attr<double>("alpha")
     .Output("out")
+    .Attr<double>("alpha")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
@@ -42,8 +42,8 @@ REGISTER_USER_OP("celu")
 REGISTER_USER_OP("celu_grad")
     .Input("x")
     .Input("dy")
-    .Attr<double>("alpha")
     .Output("dx")
+    .Attr<double>("alpha")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& x_shape = ctx->InputShape("x", 0);
       const Shape& dy_shape = ctx->InputShape("dy", 0);

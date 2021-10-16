@@ -290,7 +290,7 @@
   bind_python: False
 
 - name: "celu"
-  signature: "Tensor (Tensor x, Double alpha) => Celu"
+  signature: "Tensor (Tensor x, Double alpha, *, Bool inplace=False) => Celu"
   bind_python: True
 
 - name: "celu_grad"
