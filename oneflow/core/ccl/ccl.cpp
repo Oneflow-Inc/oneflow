@@ -571,14 +571,14 @@ Maybe<void> Scatter<DeviceType::kCPU>(const void* void_in, void* void_out, const
         memcpy(out, send_ptr, send_size * GetSizeOfDataType(dtype));
         continue;
       }
-      Send<DeviceType::kCPU>(send_ptr, send_size, dtype, dst_rank, ctx);
+      JUST(Send<DeviceType::kCPU>(send_ptr, send_size, dtype, dst_rank, ctx));
     }
   } else {
     Optional<int64_t> parallel_id;
     JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
     if (parallel_id) {
       int64_t send_size = bs.At(JUST(parallel_id)).size();
-      Recv<DeviceType::kCPU>(out, send_size, dtype, root, ctx);
+      JUST(Recv<DeviceType::kCPU>(out, send_size, dtype, root, ctx));
     }
   }
   return Maybe<void>::Ok();
