@@ -171,7 +171,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@add-input-delete-cache
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@add-experimental
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -217,7 +217,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-input-delete-cache
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-experimental
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -231,7 +231,7 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
-      - uses: Oneflow-Inc/get-oneflow@add-input-delete-cache
+      - uses: Oneflow-Inc/get-oneflow@add-experimental
         name: Build manylinux cpu only
         id: build-cpu
         if: ${{ matrix.entry =='cpu' && !matrix.cache-hit }}
@@ -252,7 +252,7 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@add-input-delete-cache
+      - uses: Oneflow-Inc/get-oneflow@add-experimental
         name: Build manylinux cu102
         id: build-cuda
         if: ${{ matrix.entry =='cu102' && !matrix.cache-hit }}
@@ -273,7 +273,7 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@add-input-delete-cache
+      - uses: Oneflow-Inc/get-oneflow@add-experimental
         name: Build manylinux cu101_xla
         id: build-xla
         if: ${{ matrix.entry =='cu101_xla' && !matrix.cache-hit && needs.changed_files.outputs.should_run_single_client_tests == '1' }}
@@ -295,7 +295,7 @@ jobs:
             3.6
       - name: Upload bin
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@add-input-delete-cache
+        uses: Oneflow-Inc/get-oneflow/digest/upload@add-experimental
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -306,7 +306,7 @@ jobs:
           dst-dir: bin
       - name: Upload whl
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@add-input-delete-cache
+        uses: Oneflow-Inc/get-oneflow/digest/upload@add-experimental
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -321,7 +321,7 @@ jobs:
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     runs-on: [self-hosted, linux, build]
     steps:
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-input-delete-cache
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-experimental
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -345,7 +345,7 @@ jobs:
           repository: Oneflow-Inc/conda-env
           ref: 30a7f00eb48ee9009d85a848e720823e5054c66b
           path: conda-env
-      - uses: Oneflow-Inc/get-oneflow@add-input-delete-cache
+      - uses: Oneflow-Inc/get-oneflow@add-experimental
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         name: Build with clang10
         with:
@@ -373,7 +373,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@add-input-delete-cache
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@add-experimental
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -415,7 +415,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-input-delete-cache
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-experimental
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -431,7 +431,7 @@ jobs:
           exit 1
       - name: Download wheel and binary
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (!fromJson(matrix.is-xla) || (fromJson(matrix.is-xla) && needs.changed_files.outputs.should_run_single_client_tests == '1')) }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@add-input-delete-cache
+        uses: Oneflow-Inc/get-oneflow/digest/download@add-experimental
         id: download-digest
         timeout-minutes: 10
         with:
@@ -460,6 +460,13 @@ jobs:
           echo "ONEFLOW_TEST_CACHE_DIR=$HOME/ci-cache/test_cache" >> $GITHUB_ENV
 
           echo "ONEFLOW_WHEEL_PATH=${{ steps.download-digest.outputs.entry-dir }}/whl" >> $GITHUB_ENV
+      - name: Set environment variables (environmental flags)
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && fromJson(matrix.is-experimental) }}
+        run: |
+          EXTRA_DOCKER_ARGS+=" --env ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH=1"
+          EXTRA_DOCKER_ARGS+=" --env ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE=1"
+          EXTRA_DOCKER_ARGS+=" --env ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER=1"
+          echo "EXTRA_DOCKER_ARGS=${EXTRA_DOCKER_ARGS}" >> $GITHUB_ENV
       - name: Set environment variables (distributed)
         if: ${{ fromJson(matrix.is-distributed) }}
         run: |
@@ -711,7 +718,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-input-delete-cache
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-experimental
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
