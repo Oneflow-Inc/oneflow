@@ -282,7 +282,7 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
     else if (value.has_at_list_shape()) {
       auto dense_attr_list = llvm::map_range(
           value.at_list_shape().val(),
-          [&](::oneflow::ShapeProto s) { return DenseIntElementsAttrFromShape(s); });
+          [&](const ::oneflow::ShapeProto& s) { return DenseIntElementsAttrFromShape(s); });
       std::vector<mlir::Attribute> dense_attr_vector{dense_attr_list.begin(),
                                                      dense_attr_list.end()};
       attr_vec.emplace_back(builder_.getNamedAttr(name, builder_.getArrayAttr(dense_attr_vector)));
@@ -498,8 +498,8 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
       builder_.getNamedAttr("op_type_name", builder_.getStringAttr(op.user_conf().op_type_name())));
   std::vector<::mlir::Value> operand_vec;
   if (failed(namedAttributesFromUserOp(op, attr_vec))) { return failure(); }
-  for (auto kv : op.user_conf().input()) {
-    for (std::string lbn : kv.second.s()) {
+  for (const auto& kv : op.user_conf().input()) {
+    for (const std::string& lbn : kv.second.s()) {
       if (failed(AppendDataInOperand(lbn, operand_vec))) { return failure(); }
     }
   }
@@ -509,8 +509,10 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   Operation* created_op = nullptr;
 
   auto out_types = llvm::SmallVector<Type, 8>();
-  for (auto kv : op.user_conf().output()) {
-    for (auto output_lbn : kv.second.s()) { out_types.push_back(GetTensorTypeOfLbn(output_lbn)); }
+  for (const auto& kv : op.user_conf().output()) {
+    for (const auto& output_lbn : kv.second.s()) {
+      out_types.push_back(GetTensorTypeOfLbn(output_lbn));
+    }
   }
   if (op_type_name == "constant") {
     if (failed(AddOperandSegmentSizes(0, op.ctrl_in_op_name_size(), attr_vec))) {
@@ -588,12 +590,14 @@ LogicalResult Importer::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
   if (failed(AddResultSegmentSizes(output_lbns.size(), attr_vec))) { return failure(); }
   state.addAttributes(attr_vec);
   std::vector<::mlir::Value> operand_vec;
-  for (auto input_lbn : input_lbns) {
+  for (const auto& input_lbn : input_lbns) {
     if (failed(AppendDataInOperand(input_lbn, operand_vec))) { return failure(); }
   }
   if (failed(AppendCtrlInOperand(op, operand_vec))) { return failure(); }
   auto out_types = llvm::SmallVector<Type, 8>();
-  for (auto output_lbn : output_lbns) { out_types.push_back(GetTensorTypeOfLbn(output_lbn)); }
+  for (const auto& output_lbn : output_lbns) {
+    out_types.push_back(GetTensorTypeOfLbn(output_lbn));
+  }
   if (failed(AppendCtrlOutType(out_types))) { return failure(); }
   state.addOperands(operand_vec);
   state.addTypes(out_types);
@@ -783,7 +787,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
       } else if (attr_type == ::oneflow::kAtShape) {
         WriteDenseIntElementsToShape(attr, user_attr.mutable_at_shape());
       } else if (attr_type == ::oneflow::kAtDataType) {
-        ::oneflow::DataType dt;
+        ::oneflow::DataType dt = ::oneflow::kInvalidDataType;
         if (succeeded(ConvertDT(attr, dt))) {
           user_attr.set_at_data_type(dt);
         } else {
@@ -811,7 +815,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
         }
       } else if (attr_type == ::oneflow::kAtListDataType) {
         for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
-          ::oneflow::DataType dt;
+          ::oneflow::DataType dt = ::oneflow::kInvalidDataType;
           if (succeeded(ConvertDT(v, dt))) {
             user_attr.mutable_at_list_data_type()->add_val(dt);
           } else {
@@ -957,7 +961,7 @@ OwningModuleRef TranslateOneFlowJobToModule(llvm::StringRef str, MLIRContext* co
 
 void RoundTripOneFlowJob(
     RoundTripOneFlowJobWrapperInterface& job_wrapper,
-    std::function<bool(::oneflow::Job* job, std::string& reason)> is_legit_job) {
+    const std::function<bool(::oneflow::Job* job, std::string& reason)>& is_legit_job) {
   const ::oneflow::Job* job = job_wrapper.job();
   mlir::MLIRContext context;
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
