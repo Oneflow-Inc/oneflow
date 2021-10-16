@@ -882,6 +882,8 @@ LogicalResult Importer::TryToUpdateJob() {
   auto convertOps = [&](Operation* op) {
     if (op->getParentOp()) {
       if (auto func = llvm::dyn_cast<FuncOp>(op->getParentOp())) {
+        // TODO: find by symbol in module and only walk job function
+        // TODO: remove this workaround
         if (func->hasAttr("llvm.emit_c_interface")) { return WalkResult::skip(); }
       }
     }
