@@ -751,10 +751,8 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
     // mlir only attrs
     // TODO: find a way to skip attrs like callee in a declarative way
     if (id.strref().equals("callee") || id.strref().equals("device_name")
-        || id.strref().equals("hierarchy") || id.strref().equals("input_lbn_segment_keys")
-        || id.strref().equals("input_lbn_segment_sizes") || id.strref().equals("output_lbns")
-        || id.strref().equals("output_lbn_segment_keys")
-        || id.strref().equals("output_lbn_segment_sizes")
+        || id.strref().equals("hierarchy") || id.strref().equals("input_lbn_segment_sizes")
+        || id.strref().equals("output_lbns") || id.strref().equals("output_lbn_segment_sizes")
         || id.strref().equals("operand_segment_sizes")
         || id.strref().equals("result_segment_sizes")) {
       continue;
@@ -768,6 +766,14 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
       op_conf.set_device_tag(user_op_adaptor.device_tag().getValue().str());
     } else if (id.strref().equals("scope_symbol_id")) {
       op_conf.set_scope_symbol_id(user_op_adaptor.scope_symbol_id().getInt());
+    } else if (id.strref().equals("input_lbn_segment_keys")) {
+      for (auto s : user_op_adaptor.input_lbn_segment_keys().dyn_cast<ArrayAttr>().getValue()) {
+        op_conf.mutable_user_conf()->add_input_order(s.dyn_cast<StringAttr>().getValue().str());
+      }
+    } else if (id.strref().equals("output_lbn_segment_keys")) {
+      for (auto s : user_op_adaptor.output_lbn_segment_keys().dyn_cast<ArrayAttr>().getValue()) {
+        op_conf.mutable_user_conf()->add_output_order(s.dyn_cast<StringAttr>().getValue().str());
+      }
     }
     // convert user conf attributes
     else {
