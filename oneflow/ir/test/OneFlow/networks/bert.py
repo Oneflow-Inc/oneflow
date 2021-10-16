@@ -15,7 +15,7 @@ limitations under the License.
 """
 import math
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 

@@ -18,7 +18,7 @@ import os, sys
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 from absl import flags
 from pretrain import PreTrain
 
