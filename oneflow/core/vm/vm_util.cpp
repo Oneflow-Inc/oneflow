@@ -30,8 +30,8 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-ObjectMsgPtr<InstructionMsg> NewInstruction(const std::string& instr_type_name) {
-  return ObjectMsgPtr<InstructionMsg>::New(instr_type_name);
+intrusive::shared_ptr<InstructionMsg> NewInstruction(const std::string& instr_type_name) {
+  return intrusive::make_shared<InstructionMsg>(instr_type_name);
 }
 
 Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {

@@ -27,8 +27,8 @@ from oneflow.env import get_rank
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
-from oneflow.nn.graph.block import Block, BlockType
-from oneflow.nn.graph.config import GraphConfig
+from oneflow.nn.graph.block import Block, BlockType, get_block_cls
+from oneflow.nn.graph.graph_config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import add_indent, seq_to_func_return, sys_exc_error_msg
 from oneflow.nn.module import Module
@@ -269,9 +269,9 @@ class Graph(object):
 
     def debug(
         self,
-        mode: bool = True,
         v_level: int = 0,
         ranks: Optional[Union[int, List[int]]] = None,
+        mode: bool = True,
     ) -> None:
         r"""Open or close debug mode of the graph.
 
@@ -279,6 +279,8 @@ class Graph(object):
         printed. Otherwise, only errors will be printed.
 
         Use ``v_level`` to choose verbose debug info level, default level is 0, max level is 1.
+        ``v_level`` 0 will print warning and graph creating stages. ``v_level`` 1 will additionally
+        print graph build info of each module.
         
         Use ``ranks`` to choose which rank to print the debug information.
 
@@ -289,11 +291,12 @@ class Graph(object):
             out_tensors = g(input_tensors)  # Will print log for debug at the first call
 
         Args:
-            mode (bool): whether to set debug mode ("True") or not (``False``). Default: ``True``.
             v_level (int): choose verbose debug info level, default v_level is 0, max v_level is 1.
             ranks (int or list(int)): choose ranks to print the debug information. Default rank ``0``.
                 You can choose any valid rank. Ranks equals ``-1`` means debug on all ranks.
+            mode (bool): whether to set debug mode (``True``) or not (``False``). Default: ``True``.
         """
+        assert isinstance(v_level, int)
         assert isinstance(mode, bool)
 
         if ranks is None:
@@ -313,7 +316,7 @@ class Graph(object):
                 self._debug_max_v_level = v_level
             for name, block in self._blocks.items():
                 assert block.type == BlockType.MODULE
-                block.debug(mode, v_level, ranks)
+                block.debug(v_level, ranks, mode)
 
     def __repr__(self):
         r"""For printing the graph structure.
@@ -930,7 +933,8 @@ class Graph(object):
             raise KeyError('module name can\'t contain ".", got: {}'.format(name))
         elif name == "":
             raise KeyError('module name can\'t be empty string ""')
-        self._blocks[name] = Block("", name, module)
+
+        self._blocks[name] = get_block_cls(module)("", name, module)
 
     def __setattr__(self, name: str, value=None):
         if isinstance(value, Module):

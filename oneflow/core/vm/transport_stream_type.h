@@ -19,9 +19,9 @@ limitations under the License.
 #include <atomic>
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
-#include "oneflow/core/vm/stream.msg.h"
-#include "oneflow/core/vm/thread_ctx.msg.h"
+#include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/resource.pb.h"
@@ -49,8 +49,8 @@ class TransportStreamType : public StreamType {
   void Compute(Instruction* instruction) const override;
 
   template<typename DerivedT>
-  ObjectMsgPtr<StreamDesc> MakeTransportStreamDesc(const Resource& resource,
-                                                   int64_t this_machine_id) const;
+  intrusive::shared_ptr<StreamDesc> MakeTransportStreamDesc(const Resource& resource,
+                                                            int64_t this_machine_id) const;
   bool SharingVirtualMachineThread() const override { return true; }
   // not support transport instructions because the entire TransportStreamType is deperecated.
   bool SupportingTransportInstructions() const override { return false; }
@@ -61,8 +61,8 @@ class TransportSenderStreamType : public TransportStreamType {
   TransportSenderStreamType() = default;
   ~TransportSenderStreamType() override = default;
 
-  ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                          int64_t this_machine_id) const override;
+  intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
+                                                   int64_t this_machine_id) const override;
 };
 
 class TransportReceiverStreamType : public TransportStreamType {
@@ -70,8 +70,8 @@ class TransportReceiverStreamType : public TransportStreamType {
   TransportReceiverStreamType() = default;
   ~TransportReceiverStreamType() override = default;
 
-  ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                          int64_t this_machine_id) const override;
+  intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
+                                                   int64_t this_machine_id) const override;
 };
 
 }  // namespace vm
