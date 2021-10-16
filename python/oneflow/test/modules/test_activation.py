@@ -134,6 +134,29 @@ class TestELUModule(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n1d()
+class TestCELUModule(flow.unittest.TestCase):
+    @autotest()
+    def test_celu_module_with_random_data(test_case):
+        m = torch.nn.CELU(alpha=random() | nothing())
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor().to(device)
+        y = m(x)
+        return y
+
+    @autotest(auto_backward=False)
+    def test_celu_module_with_0shape_data(test_case):
+        m = torch.nn.CELU(alpha=random() | nothing())
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(4, 2, 3, 0, 3).to(device)
+        y = m(x)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
 class TestGelu(flow.unittest.TestCase):
     @autotest()
     def test_gelu_module_with_random_data(test_case):
