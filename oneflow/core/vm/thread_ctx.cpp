@@ -26,7 +26,7 @@ void ThreadCtx::LoopRun(const std::function<void(ThreadCtx*)>& Initializer) {
 
 intrusive::ChannelStatus ThreadCtx::ReceiveAndRun() {
   const StreamType& stream_type = stream_rt_desc().stream_type();
-  intrusive::List<INTRUSIVE_FIELD(Instruction, pending_instruction_entry_)> tmp_list;
+  intrusive::List<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)> tmp_list;
   intrusive::ChannelStatus status = mut_pending_instruction_list()->MoveTo(&tmp_list);
   INTRUSIVE_FOR_EACH(instruction, &tmp_list) {
     tmp_list.Erase(instruction.Mutable());
@@ -37,7 +37,7 @@ intrusive::ChannelStatus ThreadCtx::ReceiveAndRun() {
 
 intrusive::ChannelStatus ThreadCtx::TryReceiveAndRun() {
   const StreamType& stream_type = stream_rt_desc().stream_type();
-  intrusive::List<INTRUSIVE_FIELD(Instruction, pending_instruction_entry_)> tmp_list;
+  intrusive::List<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)> tmp_list;
   intrusive::ChannelStatus status = mut_pending_instruction_list()->TryMoveTo(&tmp_list);
   INTRUSIVE_FOR_EACH_PTR(instruction, &tmp_list) {
     CHECK_GT(instruction->ref_cnt(), 1);

@@ -60,8 +60,8 @@ INTRUSIVE_BEGIN(StreamRtDesc);
   INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<StreamDesc>, stream_desc_); 
-  // list entries
-  using StreamTypeIdKey = intrusive::SkipListEntry<FlatMsg<StreamTypeId>, 7>;
+  // list hooks
+  using StreamTypeIdKey = intrusive::SkipListHook<FlatMsg<StreamTypeId>, 7>;
   INTRUSIVE_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);
   INTRUSIVE_DEFINE_FIELD(StreamId2Stream, stream_id2stream_);
 INTRUSIVE_END(StreamRtDesc);

@@ -258,7 +258,7 @@ class DeleteObjectInstructionType final : public InstructionType {
       logical_object_id = GetLogicalObjectId(logical_object_id);
       auto* logical_object = vm->mut_id2logical_object()->FindPtr(logical_object_id);
       CHECK_NOTNULL(logical_object);
-      CHECK(logical_object->is_delete_entry_empty());
+      CHECK(logical_object->is_delete_hook_empty());
       vm->mut_delete_logical_object_list()->PushBack(logical_object);
     }
   }
