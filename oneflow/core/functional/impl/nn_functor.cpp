@@ -659,21 +659,21 @@ class SparseSoftmaxCrossEntropyFunctor {
     std::shared_ptr<Tensor> max_global_stage_input1 = max_device_stage->at(2);
 
     const cfg::NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
-    std::vector<Symbol<cfg::SbpParallel>> sbp_parallels;
+    std::vector<Symbol<cfg::SbpParallel>> s0b_sbp_parallels;
+    std::vector<Symbol<cfg::SbpParallel>> s0s1_sbp_parallels;
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
       cfg::SbpParallel sbp;
       sbp.mutable_broadcast_parallel();
-      sbp_parallels.push_back(logits_nd_sbp.sbp_parallel(0));
-      sbp_parallels.push_back(sbp);
-      std::vector<Symbol<cfg::SbpParallel>> grad_sbp_parallels;
-      grad_sbp_parallels.push_back(logits_nd_sbp.sbp_parallel(0));
-      grad_sbp_parallels.push_back(logits_nd_sbp.sbp_parallel(1));
+      s0b_sbp_parallels.push_back(logits_nd_sbp.sbp_parallel(0));
+      s0b_sbp_parallels.push_back(sbp);
+      s0s1_sbp_parallels.push_back(logits_nd_sbp.sbp_parallel(0));
+      s0s1_sbp_parallels.push_back(logits_nd_sbp.sbp_parallel(1));
       max_global_stage_input0 = JUST(functional::ToConsistent(
-          max_device_stage->at(0), JUST(max_device_stage->at(0)->parallel_desc()), sbp_parallels,
-          grad_sbp_parallels));
+          max_device_stage->at(0), JUST(max_device_stage->at(0)->parallel_desc()), s0b_sbp_parallels,
+          s0s1_sbp_parallels));
       max_global_stage_input1 = JUST(functional::ToConsistent(
-          max_device_stage->at(2), JUST(max_device_stage->at(0)->parallel_desc()), sbp_parallels,
-          grad_sbp_parallels));
+          max_device_stage->at(2), JUST(max_device_stage->at(0)->parallel_desc()), s0b_sbp_parallels,
+          s0s1_sbp_parallels));
     }
 
     attrs.clear();
@@ -682,9 +682,18 @@ class SparseSoftmaxCrossEntropyFunctor {
     const auto& max_global_stage = JUST(OpInterpUtil::Dispatch<TensorTuple>(
         *op_reduce_max_global_stage_, {max_global_stage_input0, max_global_stage_input1}, attrs));
 
+    auto& broadcast_sub_input = max_global_stage->at(0);
+
+    if (logits_nd_sbp.sbp_parallel_size() == 2) {
+      LOG(INFO) << "broadcast_sub_input->nd_sbp(): " << JUST(broadcast_sub_input->nd_sbp())->DebugString();
+      broadcast_sub_input = JUST(functional::ToConsistent(
+          broadcast_sub_input, JUST(max_device_stage->at(0)->parallel_desc()), s0b_sbp_parallels,
+          s0b_sbp_parallels));
+    }
+
     attrs.clear();
     const auto& output_broadcast_sub = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-        *op_broadcast_sub_, {logits, max_global_stage->at(0)}, attrs));
+        *op_broadcast_sub_, {logits, broadcast_sub_input}, attrs));
 
     const auto& output_exp =
         JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_exp_, {output_broadcast_sub->at(0)}, attrs));
@@ -698,8 +707,8 @@ class SparseSoftmaxCrossEntropyFunctor {
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
       std::vector<Symbol<cfg::SbpParallel>> empty_grad_sbp_parallels;
       broadcast_div_input1 = JUST(functional::ToConsistent(
-          output_reduce_sum->at(0), JUST(output_reduce_sum->at(0)->parallel_desc()), sbp_parallels,
-          empty_grad_sbp_parallels));
+          output_reduce_sum->at(0), JUST(output_reduce_sum->at(0)->parallel_desc()), s0b_sbp_parallels,
+          s0b_sbp_parallels));
     }
 
     attrs.clear();

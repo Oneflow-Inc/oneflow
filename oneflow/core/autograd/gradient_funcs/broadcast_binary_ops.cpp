@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 namespace one {
@@ -112,24 +111,7 @@ class BroadcastDiv : public BroadcastBinaryGrad {
       const auto& x_grad = JUST(functional::Div(out_grads.at(0), y));
       in_grads->at(0) = JUST(functional::BroadcastReduceSumLike(x_grad, x));
     }
-    if (y->requires_grad()) { 
-      const auto& dy = JUST(functional::DivGrad(out_grads.at(0), z, y));
-      const cfg::NdSbp& y_nd_sbp = *(JUST(y->nd_sbp()));
-      const cfg::NdSbp& dy_nd_sbp = *(JUST(dy->nd_sbp()));
-
-      if (!LazyMode::is_enabled() && !(y_nd_sbp == dy_nd_sbp)) {
-        const cfg::NdSbp& nd_sbp = *(JUST(y->nd_sbp()));
-        std::vector<Symbol<cfg::SbpParallel>> sbp_parallels;
-        std::vector<Symbol<cfg::SbpParallel>> grad_sbp_parallels;
-        for (int i = 0; i < nd_sbp.sbp_parallel_size(); i++) {
-          sbp_parallels.push_back(nd_sbp.sbp_parallel(i));
-        }
-        in_grads->at(1) = JUST(functional::ToConsistent(dy, JUST(y->parallel_desc()), sbp_parallels,
-                                        grad_sbp_parallels));
-      } else {
-        in_grads->at(1) = dy;
-      }
-    }
+    if (y->requires_grad()) { in_grads->at(1) = JUST(functional::DivGrad(out_grads.at(0), z, y)); }
 
     return Maybe<void>::Ok();
   }

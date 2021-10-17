@@ -34,7 +34,6 @@ limitations under the License.
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 namespace one {
@@ -1539,21 +1538,10 @@ class BroadcastReduceSumLikeFunctor {
         return JUST(ReshapeLike(input, like));
       } else {
         const AxisVector& broadcast_axis_vec = left_extended_shape.Axes4BroadcastTo(in_shape);
-        const auto& result = JUST(ReduceSumLike(
+        return JUST(ReduceSumLike(
             input, like,
             std::vector<int32_t>{broadcast_axis_vec.begin(), broadcast_axis_vec.end()}));
 
-        if (!LazyMode::is_enabled() && *(JUST(result->nd_sbp())) != *(JUST(like->nd_sbp()))) {
-          const cfg::NdSbp& nd_sbp = *(JUST(like->nd_sbp()));
-          std::vector<Symbol<cfg::SbpParallel>> sbp_parallels;
-          std::vector<Symbol<cfg::SbpParallel>> grad_sbp_parallels;
-          for (int i = 0; i < nd_sbp.sbp_parallel_size(); i++) {
-            sbp_parallels.push_back(nd_sbp.sbp_parallel(i));
-          }
-          return JUST(functional::ToConsistent(result, JUST(like->parallel_desc()), sbp_parallels,
-                                          grad_sbp_parallels));
-        }
-        return result;
       }
     }
     return JUST(Identity(input));
