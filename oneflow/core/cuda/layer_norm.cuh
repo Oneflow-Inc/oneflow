@@ -28,71 +28,6 @@ namespace layer_norm {
 
 constexpr int kWarpSize = 32;
 
-template<typename T>
-struct WelfordData {
-  T mean;
-  T m2;
-  T n;
-  __host__ __device__ WelfordData() : mean(0), m2(0), n(0) {}
-  __host__ __device__ WelfordData(T mean, T m2, T n) : mean(mean), m2(m2), n(n) {}
-};
-template<typename T>
-struct WelfordOps {
-  using acc_t = WelfordData<T>;
-  inline __device__ acc_t reduce(acc_t acc, T data) const {
-    // Use Welford Online algorithem to compute mean and variance
-    // For more details you can refer to:
-    // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
-    T delta1 = data - acc.mean;
-    T updated_mean = acc.mean + delta1 / (acc.n + 1);
-    T delta2 = data - updated_mean;
-    return {updated_mean,
-            acc.m2 + delta1 * delta2,  // For numerical instability, we update m2 = m2 +
-                                       // (x-mean)*(x-updated_mean), and finally variance = m2 / n,
-                                       // n is the count
-            acc.n + static_cast<T>(1.0)};
-  }
-  inline __device__ T project(acc_t& acc) const { return acc.m2 / acc.n; }
-  inline __device__ acc_t combine(acc_t a, acc_t b) const {
-    if (a.n == 0) { return b; }
-    if (b.n == 0) { return a; }
-    T delta = b.mean - a.mean;
-    T new_count = a.n + b.n;
-    T nb_over_n = b.n / new_count;
-    return {a.mean + delta * nb_over_n, a.m2 + b.m2 + delta * delta * a.n * nb_over_n, new_count};
-  }
-  inline __device__ acc_t shfl_xor_sync(acc_t acc, int mask) const {
-    return {__shfl_xor_sync(0xffffffff, acc.mean, mask), __shfl_xor_sync(0xffffffff, acc.m2, mask),
-            __shfl_xor_sync(0xffffffff, acc.n, mask)};
-  }
-  __host__ __device__ WelfordOps() {}
-};
-
-template<class ReductionOp, typename T, int thread_group_width = kWarpSize>
-__inline__ __device__ T WelfordWarpAllReduce(T val, const ReductionOp& op) {
-  for (int mask = thread_group_width / 2; mask > 0; mask /= 2) {
-    val = op.combine(val, op.shfl_xor_sync(val, mask));
-  }
-  return val;
-}
-
-template<typename T, class ReduceOp>
-__inline__ __device__ T WelfordBlockAllReduce(T val, const ReduceOp& op, const T& identity_element,
-                                              T* shared) {
-  __shared__ T result_broadcast;
-  const int lid = threadIdx.x % 32;
-  const int wid = threadIdx.x / 32;
-  val = WelfordWarpAllReduce(val, op);
-  __syncthreads();
-  if (lid == 0) { shared[wid] = val; }
-  __syncthreads();
-  val = (threadIdx.x < blockDim.x / 32) ? shared[lid] : identity_element;
-  if (wid == 0) { val = WelfordWarpAllReduce(val, op); }
-  if (threadIdx.x == 0) { result_broadcast = val; }
-  __syncthreads();
-  return result_broadcast;
-}
-
 inline int GetNumBlocks(int64_t block_size, int64_t max_blocks, int64_t waves) {
   int dev;
   OF_CUDA_CHECK(cudaGetDevice(&dev));
@@ -161,6 +96,74 @@ struct DirectStore {
   int64_t row_size;
 };
 
+template<typename T>
+struct WelfordAggregate {
+  T mean;
+  T m2;
+  int count;
+  __device__ WelfordAggregate() : mean(0), m2(0), count(0) {}
+  __device__ WelfordAggregate(T mean, T m2, int count) : mean(mean), m2(m2), count(count) {}
+  inline __device__ void reduce(T val) {
+    count = count + 1;
+    T delta1 = val - mean;
+    mean += delta1 / count;
+    T delta2 = val - mean;
+    m2 += delta1 * delta2;
+  }
+  inline __device__ void combine(WelfordAggregate<T> data) {
+    if (data.count == 0) { return; }
+    T new_count = count + data.count;
+    T nb_over_n = data.count / new_count;
+    T delta = data.mean - mean;
+    mean += delta * nb_over_n;
+    m2 += data.m2 + delta * delta * count * nb_over_n;
+    count = new_count;
+  }
+  inline __device__ T project() const { return m2 / count; }
+};
+
+template<typename T, int thread_group_width = kWarpSize>
+__inline__ __device__ WelfordAggregate<T> WelfordAggregateWarpAllReduce(WelfordAggregate<T> val) {
+  for (int mask = thread_group_width / 2; mask > 0; mask /= 2) {
+    WelfordAggregate<T> shfl_xor_val(__shfl_xor_sync(0xffffffff, val.mean, mask),
+                                     __shfl_xor_sync(0xffffffff, val.m2, mask),
+                                     __shfl_xor_sync(0xffffffff, val.count, mask));
+    val.combine(shfl_xor_val);
+  }
+  return val;
+}
+
+template<typename T>
+__inline__ __device__ WelfordAggregate<T> WelfordAggregateWarpReduce(WelfordAggregate<T> val) {
+  for (int mask = kWarpSize / 2; mask > 0; mask /= 2) {
+    WelfordAggregate<T> shfl_down_val(__shfl_down_sync(0xffffffff, val.mean, mask),
+                                      __shfl_down_sync(0xffffffff, val.m2, mask),
+                                      __shfl_down_sync(0xffffffff, val.count, mask));
+    val.combine(shfl_down_val);
+  }
+  return val;
+}
+
+template<typename T>
+__inline__ __device__ WelfordAggregate<T> WelfordAggregateBlockAllReduce(
+    WelfordAggregate<T> val, WelfordAggregate<T>* shared) {
+  __shared__ WelfordAggregate<T> result_broadcast;
+  const int lid = threadIdx.x % 32;
+  const int wid = threadIdx.x / 32;
+  val = WelfordAggregateWarpReduce(val);
+  __syncthreads();
+  if (lid == 0) { shared[wid] = val; }
+  __syncthreads();
+  if (wid == 0) {
+    val = (threadIdx.x < blockDim.x / 32) ? shared[lid] : WelfordAggregate<T>(0, 0, 0);
+    __syncwarp();
+    val = WelfordAggregateWarpReduce(val);
+    if (lid == 0) { result_broadcast = val; }
+  }
+  __syncthreads();
+  return result_broadcast;
+}
+
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int cols_per_thread,
          int thread_group_width, int rows_per_access, bool padding>
 __global__ void LayerNormWarpImpl(LOAD load, STORE store, const int64_t rows, const int64_t cols,
@@ -172,9 +175,7 @@ __global__ void LayerNormWarpImpl(LOAD load, STORE store, const int64_t rows, co
   constexpr int num_packs = cols_per_thread / pack_size;
   assert(cols <= cols_per_thread * thread_group_width);
   ComputeType buf[rows_per_access][cols_per_thread];
-  using WelfordType = WelfordData<ComputeType>;
-  using WelfordOp = WelfordOps<ComputeType>;
-  const WelfordOp welop;
+  using WelfordType = WelfordAggregate<ComputeType>;
   const int global_thread_group_id = blockIdx.x * blockDim.y + threadIdx.y;
   const int num_global_thread_group = gridDim.x * blockDim.y;
   const int lane_id = threadIdx.x;
@@ -191,7 +192,7 @@ __global__ void LayerNormWarpImpl(LOAD load, STORE store, const int64_t rows, co
           load.template load<pack_size>(row_buf + pack_id * pack_size, row + row_id, col);
 #pragma unroll
           for (int i = 0; i < pack_size; ++i) {
-            weldata[row_id] = welop.reduce(weldata[row_id], row_buf[pack_id * pack_size + i]);
+            weldata[row_id].reduce(row_buf[pack_id * pack_size + i]);
           }
         } else {
 #pragma unroll
@@ -204,10 +205,9 @@ __global__ void LayerNormWarpImpl(LOAD load, STORE store, const int64_t rows, co
     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
       ComputeType* row_buf = buf[row_id];
       warp_welford[row_id] =
-          WelfordWarpAllReduce<WelfordOp, WelfordType, thread_group_width>(weldata[row_id], welop);
+          WelfordAggregateWarpAllReduce<ComputeType, thread_group_width>(weldata[row_id]);
       ComputeType row_mean = warp_welford[row_id].mean;
-      ComputeType row_variance =
-          max(welop.project(warp_welford[row_id]), static_cast<ComputeType>(0.0));
+      ComputeType row_variance = max(warp_welford[row_id].project(), static_cast<ComputeType>(0.0));
       ComputeType row_inv_var = rsqrt(row_variance + static_cast<ComputeType>(epsilon));
       if (lane_id == 0) {
         mean[row + row_id] = row_mean;
@@ -377,13 +377,59 @@ typename std::enable_if<pack_size == 2, void>::type DispatchLayerNormWarpImplCol
     UNIMPLEMENTED();
   }
 }
+template<typename LOAD, typename STORE, typename ComputeType, int pack_size>
+typename std::enable_if<pack_size == 4, void>::type DispatchLayerNormWarpImplCols(
+    cudaStream_t stream, LOAD load, STORE store, const int64_t rows, const int64_t cols,
+    const double epsilon, ComputeType* mean, ComputeType* inv_variance) {
+  if (cols <= 0) { UNIMPLEMENTED(); }
+#define DEFINE_ONE_ELIF(thread_group_width)                                                    \
+  else if (cols <= (thread_group_width)*pack_size) {                                           \
+    if (rows % 2 == 0) {                                                                       \
+      DispatchLayerNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,         \
+                                       thread_group_width, 2>(stream, load, store, rows, cols, \
+                                                              epsilon, mean, inv_variance);    \
+    } else {                                                                                   \
+      DispatchLayerNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,         \
+                                       thread_group_width, 1>(stream, load, store, rows, cols, \
+                                                              epsilon, mean, inv_variance);    \
+    }                                                                                          \
+  }
+  DEFINE_ONE_ELIF(1)
+  DEFINE_ONE_ELIF(2)
+  DEFINE_ONE_ELIF(4)
+  DEFINE_ONE_ELIF(8)
+  DEFINE_ONE_ELIF(16)
+  DEFINE_ONE_ELIF(32)
+#undef DEFINE_ONE_ELIF
+#define DEFINE_ONE_ELIF(col)                                                                  \
+  else if (cols <= (col)*kWarpSize) {                                                         \
+    DispatchLayerNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, col, kWarpSize, 1>( \
+        stream, load, store, rows, cols, epsilon, mean, inv_variance);                        \
+  }
+  DEFINE_ONE_ELIF(8)
+  DEFINE_ONE_ELIF(12)
+  DEFINE_ONE_ELIF(16)
+  DEFINE_ONE_ELIF(20)
+  DEFINE_ONE_ELIF(24)
+  DEFINE_ONE_ELIF(28)
+  DEFINE_ONE_ELIF(32)
+  DEFINE_ONE_ELIF(64)
+  DEFINE_ONE_ELIF(128)
+#undef DEFINE_ONE_ELIF
+  else {
+    UNIMPLEMENTED();
+  }
+}
 
 template<typename LOAD, typename STORE, typename ComputeType>
 struct DispatchLayerNormWarpImplPackSize {
   void operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
                   const int64_t cols, const double epsilon, ComputeType* mean,
                   ComputeType* inv_variance) {
-    if (cols % 2 == 0) {
+    if (cols % 4 == 0) {
+      DispatchLayerNormWarpImplCols<LOAD, STORE, ComputeType, 4>(stream, load, store, rows, cols,
+                                                                 epsilon, mean, inv_variance);
+    } else if (cols % 2 == 0) {
       DispatchLayerNormWarpImplCols<LOAD, STORE, ComputeType, 2>(stream, load, store, rows, cols,
                                                                  epsilon, mean, inv_variance);
     } else {
@@ -410,12 +456,10 @@ __global__ void LayerNormBlockSMemImpl(LOAD load, STORE store, const int64_t row
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = cols / pack_size;
-  using WelfordType = WelfordData<ComputeType>;
-  using WelfordOp = WelfordOps<ComputeType>;
+  using WelfordType = WelfordAggregate<ComputeType>;
   __shared__
       typename std::aligned_storage<sizeof(WelfordType), alignof(WelfordType)>::type val_shared[32];
   WelfordType* val_shared_ptr = reinterpret_cast<WelfordType*>(val_shared);
-  const WelfordOp welop;
   for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
     WelfordType weldata;
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
@@ -424,14 +468,13 @@ __global__ void LayerNormBlockSMemImpl(LOAD load, STORE store, const int64_t row
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
         buf[i * num_packs + pack_id] = pack[i];
-        weldata = welop.reduce(weldata, pack[i]);
+        weldata.reduce(pack[i]);
       }
     }
-    WelfordType block_welford = WelfordBlockAllReduce<WelfordType, WelfordOp>(
-        weldata, welop, /*identity_element=*/WelfordType(0, 0, 0), val_shared_ptr);
-
+    WelfordType block_welford =
+        WelfordAggregateBlockAllReduce<ComputeType>(weldata, val_shared_ptr);
     ComputeType row_mean = block_welford.mean;
-    ComputeType row_variance = max(welop.project(block_welford), static_cast<ComputeType>(0.0));
+    ComputeType row_variance = max(block_welford.project(), static_cast<ComputeType>(0.0));
     ComputeType row_inv_var = rsqrt(row_variance + static_cast<ComputeType>(epsilon));
     if (threadIdx.x == 0) {
       mean[row] = row_mean;
@@ -516,7 +559,10 @@ struct TryDispatchLayerNormBlockSMemImplPackSize {
   bool operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
                   const int64_t cols, const double epsilon, ComputeType* mean,
                   ComputeType* inv_variance) {
-    if (cols % 2 == 0) {
+    if (cols % 4 == 0) {
+      return TryDispatchLayerNormBlockSMemImplBlockSize<LOAD, STORE, ComputeType, 4>(
+          stream, load, store, rows, cols, epsilon, mean, inv_variance);
+    } else if (cols % 2 == 0) {
       return TryDispatchLayerNormBlockSMemImplBlockSize<LOAD, STORE, ComputeType, 2>(
           stream, load, store, rows, cols, epsilon, mean, inv_variance);
     } else {
@@ -542,24 +588,22 @@ __global__ void LayerNormBlockUncachedImpl(LOAD load, STORE store, const int64_t
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = cols / pack_size;
-  using WelfordType = WelfordData<ComputeType>;
-  using WelfordOp = WelfordOps<ComputeType>;
+  using WelfordType = WelfordAggregate<ComputeType>;
   __shared__
       typename std::aligned_storage<sizeof(WelfordType), alignof(WelfordType)>::type val_shared[32];
   WelfordType* val_shared_ptr = reinterpret_cast<WelfordType*>(val_shared);
-  const WelfordOp welop;
   for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
     WelfordType weldata;
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType pack[pack_size];
       load.template load<pack_size>(pack, row, pack_id * pack_size);
 #pragma unroll
-      for (int i = 0; i < pack_size; ++i) { weldata = welop.reduce(weldata, pack[i]); }
+      for (int i = 0; i < pack_size; ++i) { weldata.reduce(pack[i]); }
     }
-    WelfordType block_welford = WelfordBlockAllReduce<WelfordType, WelfordOp>(
-        weldata, welop, /*identity_element=*/WelfordType(0, 0, 0), val_shared_ptr);
+    WelfordType block_welford =
+        WelfordAggregateBlockAllReduce<ComputeType>(weldata, val_shared_ptr);
     ComputeType row_mean = block_welford.mean;
-    ComputeType row_variance = max(welop.project(block_welford), static_cast<ComputeType>(0.0));
+    ComputeType row_variance = max(block_welford.project(), static_cast<ComputeType>(0.0));
     ComputeType row_inv_var = rsqrt(row_variance + static_cast<ComputeType>(epsilon));
     if (threadIdx.x == 0) {
       mean[row] = row_mean;
@@ -592,7 +636,10 @@ struct DispatchLayerNormBlockUncachedImplPackSize {
   void operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
                   const int64_t cols, const double epsilon, ComputeType* mean,
                   ComputeType* inv_variance) {
-    if (cols % 2 == 0) {
+    if (cols % 4 == 0) {
+      LaunchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, 4>(stream, load, store, rows, cols,
+                                                                    epsilon, mean, inv_variance);
+    } else if (cols % 2 == 0) {
       LaunchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, 2>(stream, load, store, rows, cols,
                                                                     epsilon, mean, inv_variance);
     } else {
