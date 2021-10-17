@@ -262,6 +262,14 @@
   signature: "Tensor (Tensor x) => Square"
   bind_python: True
 
+- name: "std"
+  signature: "Tensor (Tensor x, Int32List[1] dim=None, Bool unbiased=None, Bool keepdim=None) => StandardDeviation"
+  bind_python: True
+
+- name: "var"
+  signature: "Tensor (Tensor x, Int32List[1] dim=None, Bool unbiased=None, Bool keepdim=None) => Variance"
+  bind_python: True
+
 - name: "relu"
   signature: "Tensor (Tensor x, Bool inplace=False) => Relu"
   bind_python: True
@@ -319,11 +327,11 @@
   bind_python: False
 
 - name: "softmax"
-  signature: "Tensor (Tensor x) => Softmax"
+  signature: "Tensor (Tensor x, Int64 dim=None) => Softmax"
   bind_python: True
 
 - name: "log_softmax"
-  signature: "Tensor (Tensor x) => LogSoftmax"
+  signature: "Tensor (Tensor x, Int64 dim=None) => LogSoftmax"
   bind_python: True
 
 - name: "hardswish"

@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_LAZY_JOB_PHY_INSTR_OPERAND_H_
 #define ONEFLOW_CORE_EAGER_LAZY_JOB_PHY_INSTR_OPERAND_H_
 
-#include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/instruction_operand.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/device/event_record.h"
@@ -42,8 +42,8 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
   ~LaunchLazyJobPhyInstrOperand() override = default;
 
   LaunchLazyJobPhyInstrOperand(
-      const ObjectMsgPtr<LocalDepObject>& inputs_local_dep_object,
-      const ObjectMsgPtr<LocalDepObject>& outputs_local_dep_object,
+      const intrusive::shared_ptr<LocalDepObject>& inputs_local_dep_object,
+      const intrusive::shared_ptr<LocalDepObject>& outputs_local_dep_object,
       const std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>&
           op_name2end_event_record,
       const one::EagerBlobObjectListPtr& input_blob_objects,
@@ -81,8 +81,8 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
       const override;
 
  private:
-  mutable ObjectMsgPtr<LocalDepObject> inputs_local_dep_object_;
-  mutable ObjectMsgPtr<LocalDepObject> outputs_local_dep_object_;
+  mutable intrusive::shared_ptr<LocalDepObject> inputs_local_dep_object_;
+  mutable intrusive::shared_ptr<LocalDepObject> outputs_local_dep_object_;
   std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>
       op_name2end_event_record_;
   one::EagerBlobObjectListPtr input_blob_objects_;

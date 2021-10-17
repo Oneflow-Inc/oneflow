@@ -18,10 +18,10 @@ limitations under the License.
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
+#include "oneflow/core/primitive/include/add.h"
 
 namespace oneflow {
 
@@ -91,6 +91,9 @@ class EagerPToBKernel final : public user_op::OpKernel {
 
     Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
                         total_elem_cnt * GetSizeOfDataType(out->data_type()));
+    std::unique_ptr<primitive::Add> add_primitive =
+        primitive::NewPrimitive<primitive::AddFactory>(ctx->device_type(), in->data_type());
+    CHECK(add_primitive);
     for (const auto& pair : p2p_pair) {
       int64_t src = pair.first;
       int64_t dst = pair.second;
@@ -102,9 +105,8 @@ class EagerPToBKernel final : public user_op::OpKernel {
       if (GlobalProcessCtx::Rank() == dst) {
         CHECK_JUST(Recv<device_type>(tmp_buffer_ptr, total_elem_cnt, out->data_type(), src,
                                      ctx->device_ctx()));
-        NewKernelUtil<device_type>::Axpy(ctx->device_ctx(), total_elem_cnt, static_cast<T>(1),
-                                         reinterpret_cast<const T*>(tmp_buffer_ptr), 1,
-                                         out->mut_dptr<T>(), 1);
+        add_primitive->Launch(ctx->stream_ctx(), tmp_buffer_ptr, out->dptr(), out->mut_dptr(),
+                              total_elem_cnt);
       }
     }
   };
