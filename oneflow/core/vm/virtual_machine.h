@@ -38,16 +38,16 @@ struct VmDesc;
 INTRUSIVE_BEGIN(VirtualMachine);
  public:
   // types
-  using ActiveStreamList = intrusive::List<INTRUSIVE_FIELD(Stream, active_stream_entry_)>;
-  using ThreadCtxList = intrusive::List<INTRUSIVE_FIELD(ThreadCtx, thread_ctx_entry_)>;
-  using LogicalObjectDeleteList = intrusive::List<INTRUSIVE_FIELD(LogicalObject, delete_entry_)>;
-  using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, instruction_entry_)>;
+  using ActiveStreamList = intrusive::List<INTRUSIVE_FIELD(Stream, active_stream_hook_)>;
+  using ThreadCtxList = intrusive::List<INTRUSIVE_FIELD(ThreadCtx, thread_ctx_hook_)>;
+  using LogicalObjectDeleteList = intrusive::List<INTRUSIVE_FIELD(LogicalObject, delete_hook_)>;
+  using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, instruction_hook_)>;
   using VmStatRunningInstructionList =
-      intrusive::List<INTRUSIVE_FIELD(Instruction, vm_stat_running_instruction_entry_)>;
+      intrusive::List<INTRUSIVE_FIELD(Instruction, vm_stat_running_instruction_hook_)>;
   using FrontSeqInstructionList =
-      intrusive::List<INTRUSIVE_FIELD(Instruction, front_seq_compute_instr_entry_)>;
+      intrusive::List<INTRUSIVE_FIELD(Instruction, front_seq_compute_instr_hook_)>;
   using InstructionMsgMutextList =
-      intrusive::MutexedList<INTRUSIVE_FIELD(InstructionMsg, instr_msg_entry_)>;
+      intrusive::MutexedList<INTRUSIVE_FIELD(InstructionMsg, instr_msg_hook_)>;
   using StreamTypeId2StreamRtDesc = intrusive::SkipList<INTRUSIVE_FIELD(StreamRtDesc, stream_type_id_)>;
   using Id2LogicalObject = intrusive::SkipList<INTRUSIVE_FIELD(LogicalObject, logical_object_id_)>;
 
@@ -105,7 +105,7 @@ INTRUSIVE_BEGIN(VirtualMachine);
   }
 
  private:
-  using TmpPendingInstrMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, instr_msg_entry_)>;
+  using TmpPendingInstrMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, instr_msg_hook_)>;
   using NewInstructionList = InstructionList;
   using PrescheduledInstructionList = InstructionList;
   using WaitingInstructionList = InstructionList;

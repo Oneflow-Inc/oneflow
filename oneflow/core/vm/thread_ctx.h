@@ -31,9 +31,9 @@ INTRUSIVE_BEGIN(ThreadCtx);
   void __Init__() { clear_stream_rt_desc(); }
 
   // types
-  using StreamList = intrusive::List<INTRUSIVE_FIELD(Stream, thread_ctx_stream_entry_)>;
+  using StreamList = intrusive::List<INTRUSIVE_FIELD(Stream, thread_ctx_stream_hook_)>;
   using PendingInstructionChannel =
-      intrusive::Channel<INTRUSIVE_FIELD(Instruction, pending_instruction_entry_)>;
+      intrusive::Channel<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)>;
 
   // Getters
   bool has_stream_rt_desc() const { return stream_rt_desc_ != nullptr; }
@@ -60,12 +60,12 @@ INTRUSIVE_BEGIN(ThreadCtx);
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  ThreadCtx() : intrusive_ref_(), stream_rt_desc_(), thread_ctx_entry_(), stream_list_(), pending_instruction_list_() {}
+  ThreadCtx() : intrusive_ref_(), stream_rt_desc_(), thread_ctx_hook_(), stream_list_(), pending_instruction_list_() {}
   INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(const StreamRtDesc*, stream_rt_desc_); 
-  // list entries
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, thread_ctx_entry_);
+  // list hooks
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, thread_ctx_hook_);
   // lists
   INTRUSIVE_DEFINE_FIELD(StreamList, stream_list_);
   INTRUSIVE_DEFINE_FIELD(PendingInstructionChannel, pending_instruction_list_);

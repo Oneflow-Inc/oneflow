@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_INTRUSIVE_INTRUSIVE_SKIPLIST_H_
 
 #include "oneflow/core/intrusive/ref.h"
-#include "oneflow/core/intrusive/skiplist_entry.h"
+#include "oneflow/core/intrusive/skiplist_hook.h"
 
 namespace oneflow {
 
@@ -34,15 +34,15 @@ class SkipList {
 
   using value_type = typename ElemKeyField::struct_type;
   using key_type = typename ElemKeyField::field_type::key_type;
-  using elem_key_level0_entry_struct_field =
-      StructField<typename ElemKeyField::field_type, intrusive::ListEntry,
-                  ElemKeyField::field_type::LevelZeroEntryOffset()>;
+  using elem_key_level0_hook_struct_field =
+      StructField<typename ElemKeyField::field_type, intrusive::ListHook,
+                  ElemKeyField::field_type::LevelZeroHookOffset()>;
   using iterator_struct_field =
-      typename ComposeStructField<ElemKeyField, elem_key_level0_entry_struct_field>::type;
+      typename ComposeStructField<ElemKeyField, elem_key_level0_hook_struct_field>::type;
   template<typename Enabled = void>
-  static constexpr int IteratorEntryOffset() {
+  static constexpr int IteratorHookOffset() {
     return offsetof(SkipList, skiplist_head_)
-           + intrusive::SkipListHead<ElemKeyField>::IteratorEntryOffset();
+           + intrusive::SkipListHead<ElemKeyField>::IteratorHookOffset();
   }
 
   void __Init__() { skiplist_head_.__Init__(); }

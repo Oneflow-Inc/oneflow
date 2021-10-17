@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/util/cuda_blas_interface.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/kernel/util/cuda_half_util.h"
 
 namespace oneflow {
 
@@ -190,27 +189,6 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
 }
 #endif
 
-__global__ void AxpyHalfGpu(const int n, const half alpha, const half* x, const int incx, half* y,
-                            const int incy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i * incy] = __hfma(alpha, x[i * incx], y[i * incy]); }
-#else
-  HALF_CHECK_FAILED;
-#endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-}
-
-__global__ void AxpyHalf2Gpu(const int n, const half alpha, const half* x, half* y) {
-  const int h2_n = n / 2;
-  const auto* x_h2 = reinterpret_cast<const half2*>(x);
-  auto* y_h2 = reinterpret_cast<half2*>(y);
-  half2 alpha_h2 = __half2half2(alpha);
-  CUDA_1D_KERNEL_LOOP(i, h2_n) { y_h2[i] = __hfma2(alpha_h2, x_h2[i], y_h2[i]); }
-  if (n % 2 != 0 && blockIdx.x == 0 && threadIdx.x == 0) {
-    const int last_idx = n - 1;
-    y[last_idx] = __hfma(alpha, x[last_idx], y[last_idx]);
-  }
-}
-
 }  // namespace
 
 void BlasIf<DeviceType::kGPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
@@ -257,28 +235,6 @@ void BlasIf<DeviceType::kGPU>::OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOS
   BatchedGemmImpl<half>(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha,
                         reinterpret_cast<const half*>(a), reinterpret_cast<const half*>(b), beta,
                         reinterpret_cast<half*>(c));
-}
-
-void BlasIf<DeviceType::kGPU>::Axpy(DeviceCtx* ctx, const int n, const float alpha, const float* x,
-                                    const int incx, float* y, const int incy) {
-  cublas_axpy<float>(ctx->cublas_handle(), n, &alpha, x, incx, y, incy);
-}
-
-void BlasIf<DeviceType::kGPU>::Axpy(DeviceCtx* ctx, const int n, const double alpha,
-                                    const double* x, const int incx, double* y, const int incy) {
-  cublas_axpy<double>(ctx->cublas_handle(), n, &alpha, x, incx, y, incy);
-}
-
-void BlasIf<DeviceType::kGPU>::Axpy(DeviceCtx* ctx, const int n, const float16 alpha,
-                                    const float16* x, const int incx, float16* y, const int incy) {
-  if (incx == 1 && incy == 1) {
-    AxpyHalf2Gpu<<<BlocksNum4ThreadsNum(n / 2), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        n, float16_2half(alpha), reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y));
-  } else {
-    AxpyHalfGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        n, float16_2half(alpha), reinterpret_cast<const half*>(x), incx, reinterpret_cast<half*>(y),
-        incy);
-  }
 }
 
 }  // namespace oneflow

@@ -57,7 +57,7 @@ INTRUSIVE_BEGIN(StreamTypeIdItem);
 
   StreamTypeIdItem() : intrusive_ref_(), stream_type_id_() {}
   INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
-  using StreamTypeIdKey = intrusive::SkipListEntry<FlatMsg<StreamTypeId>, 20>;
+  using StreamTypeIdKey = intrusive::SkipListHook<FlatMsg<StreamTypeId>, 20>;
   INTRUSIVE_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);
 INTRUSIVE_END(StreamTypeIdItem);
 // clang-format on

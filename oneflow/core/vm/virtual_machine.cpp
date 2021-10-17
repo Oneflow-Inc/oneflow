@@ -59,7 +59,7 @@ void VirtualMachine::ReleaseInstruction(Instruction* instruction,
       rw_mutexed_object_accesses->Erase(access.Mutable());
     }
     auto* mirrored_object = access->mut_mirrored_object();
-    if (!access->is_rw_mutexed_object_access_entry_empty()) {
+    if (!access->is_rw_mutexed_object_access_hook_empty()) {
       CHECK_EQ(access->mut_rw_mutexed_object(), mirrored_object->mut_rw_mutexed_object());
       mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Erase(access.Mutable());
     }
@@ -82,7 +82,7 @@ void VirtualMachine::TryReleaseFinishedInstructions(
     if (interpret_type == kInfer) {
       // do nothing
     } else if (interpret_type == kCompute) {
-      CHECK(!instruction_ptr->is_front_seq_compute_instr_entry_empty());
+      CHECK(!instruction_ptr->is_front_seq_compute_instr_hook_empty());
       front_seq_compute_list->Erase(instruction_ptr);
     } else {
       UNIMPLEMENTED();
@@ -521,7 +521,7 @@ void VirtualMachine::DispatchAndPrescheduleInstructions(
     vm_stat_running_list->PushBack(instruction);
     auto* stream = instruction->mut_stream();
     ready_instruction_list->MoveToDstBack(instruction, stream->mut_running_instruction_list());
-    if (stream->is_active_stream_entry_empty()) { active_stream_list->PushBack(stream); }
+    if (stream->is_active_stream_hook_empty()) { active_stream_list->PushBack(stream); }
     const auto& stream_type = stream->stream_type();
     if (stream_type.SharingVirtualMachineThread()) {
       stream_type.Run(this, instruction);
@@ -622,7 +622,7 @@ void VirtualMachine::TryRunFrontSeqInstruction(
   const auto& instr_type_id = instruction->instr_msg().instr_type_id();
   const auto& instruction_type = instr_type_id.instruction_type();
   if (!instruction_type.IsFrontSequential()) { return; }
-  if (!instruction->is_vm_stat_running_instruction_entry_empty()) { return; }
+  if (!instruction->is_vm_stat_running_instruction_hook_empty()) { return; }
   const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
   if (stream_type.SharingVirtualMachineThread()) {
     stream_type.Run(this, instruction);
