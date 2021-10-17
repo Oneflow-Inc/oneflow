@@ -125,10 +125,16 @@ void ExecutorImpl::Init(std::shared_ptr<RequestStore> request_store) {
 #endif
 }
 
-void ExecutorImpl::InitJob(int64_t job_id) { backends_.at(Backend::kBackendNCCL)->InitJob(job_id); }
+void ExecutorImpl::InitJob(int64_t job_id) {
+#ifdef WITH_CUDA
+  backends_.at(Backend::kBackendNCCL)->InitJob(job_id);
+#endif
+}
 
 void ExecutorImpl::DeinitJob(int64_t job_id) {
+#ifdef WITH_CUDA
   backends_.at(Backend::kBackendNCCL)->DeinitJob(job_id);
+#endif
 }
 
 GroupToken* ExecutorImpl::CreateGroupToken(const std::vector<RequestId>& group,
@@ -155,7 +161,13 @@ void ExecutorImpl::GroupRequests(
     if (group_buffer_.empty()) { return; }
     const auto backend =
         request_store_->MutRequestEntry(group_buffer_.front())->desc().op_desc().backend();
-    backends_.at(backend)->GroupRequests(group_buffer_, BackendHandler);
+    if (backend == Backend::kBackendNCCL) {
+#ifdef WITH_CUDA
+      backends_.at(backend)->GroupRequests(group_buffer_, BackendHandler);
+#endif
+    } else {
+      UNIMPLEMENTED();
+    }
     group_buffer_.clear();
   };
   request_store_->ForEachMutRequestEntryForIdsInJob(
