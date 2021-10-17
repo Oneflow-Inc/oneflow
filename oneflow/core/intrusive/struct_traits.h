@@ -51,8 +51,9 @@ struct OffsetStructField {
   }
 };
 
-#define OFFSET_STRUCT_FIELD(T, field) \
-  intrusive::OffsetStructField<T, decltype(((T*)nullptr)->field), offsetof(T, field)>
+#define INTRUSIVE_FIELD(struct_type, field_name)                                        \
+  intrusive::PtrStructField<struct_type, decltype(((struct_type*)nullptr)->field_name), \
+                            &struct_type::field_name>
 
 template<typename X, typename Y>
 struct ComposeStructField {
