@@ -26,7 +26,7 @@ namespace vm {
 struct ThreadCtx;
 
 // clang-format off
-INTRUSIVE_BEGIN(Stream);
+class Stream final : public intrusive::Base {
  public:
   // types
   using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, instruction_hook_)>;
@@ -71,22 +71,23 @@ INTRUSIVE_BEGIN(Stream);
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  Stream() : intrusive_ref_(), thread_ctx_(), device_ctx_(), max_device_num_per_machine_(), active_stream_hook_(), thread_ctx_stream_hook_(), stream_id_(), free_instruction_list_(), zombie_instruction_list_(), running_instruction_list_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
+  Stream() : intrusive_ref_(), thread_ctx_(), device_ctx_(), max_device_num_per_machine_(), free_instruction_list_(), zombie_instruction_list_(), running_instruction_list_(), stream_id_(), active_stream_hook_(), thread_ctx_stream_hook_() {}
+  intrusive::Ref intrusive_ref_;
   // fields
-  INTRUSIVE_DEFINE_FIELD(ThreadCtx*, thread_ctx_); 
-  INTRUSIVE_DEFINE_FIELD(std::unique_ptr<DeviceCtx>, device_ctx_);
-  INTRUSIVE_DEFINE_FIELD(int64_t, max_device_num_per_machine_);
-  // list hooks
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, active_stream_hook_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, thread_ctx_stream_hook_);
-  using StreamIdKey = intrusive::SkipListHook<StreamId, 10>;
-  INTRUSIVE_DEFINE_FIELD(StreamIdKey, stream_id_);
+  ThreadCtx* thread_ctx_; 
+  std::unique_ptr<DeviceCtx> device_ctx_;
+  int64_t max_device_num_per_machine_;
   // lists 
-  INTRUSIVE_DEFINE_FIELD(InstructionList, free_instruction_list_);
-  INTRUSIVE_DEFINE_FIELD(InstructionList, zombie_instruction_list_);
-  INTRUSIVE_DEFINE_FIELD(InstructionList, running_instruction_list_);
-INTRUSIVE_END(Stream);
+  InstructionList free_instruction_list_;
+  InstructionList zombie_instruction_list_;
+  InstructionList running_instruction_list_;
+ public:
+  // skiplist hooks
+  intrusive::SkipListHook<StreamId, 10> stream_id_;
+  // list hooks
+  intrusive::ListHook active_stream_hook_;
+  intrusive::ListHook thread_ctx_stream_hook_;
+};
 // clang-format on
 
 }  // namespace vm

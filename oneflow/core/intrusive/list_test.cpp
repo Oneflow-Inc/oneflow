@@ -27,8 +27,7 @@ namespace test {
 
 namespace {
 
-// clang-format off
-INTRUSIVE_BEGIN(TestListItem)
+class TestListItem : public intrusive::Base {
  public:
   void __Init__() { clear_cnt(); }
   void __Delete__() {
@@ -47,16 +46,16 @@ INTRUSIVE_BEGIN(TestListItem)
 
   size_t ref_cnt() const { return intrusive_ref_.ref_cnt(); }
 
+  intrusive::ListHook foo_list_;
+
  private:
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
   TestListItem() : intrusive_ref_(), cnt_(), foo_list_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
-  INTRUSIVE_DEFINE_FIELD(int*, cnt_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, foo_list_);
-INTRUSIVE_END(TestListItem)
-// clang-format on
+  intrusive::Ref intrusive_ref_;
+  int* cnt_;
+};
 
 using TestList = intrusive::List<INTRUSIVE_FIELD(TestListItem, foo_list_)>;
 
@@ -252,7 +251,7 @@ TEST(List, FOR_EACH) {
 }
 
 // clang-format off
-INTRUSIVE_BEGIN(TestIntrusiveListHead);
+class TestIntrusiveListHead final : public intrusive::Base {
  public:
   // types
   using FooList = intrusive::List<INTRUSIVE_FIELD(TestListItem, foo_list_)>;
@@ -266,9 +265,9 @@ INTRUSIVE_BEGIN(TestIntrusiveListHead);
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
   TestIntrusiveListHead() : intrusive_ref_(), foo_list_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
-  INTRUSIVE_DEFINE_FIELD(FooList, foo_list_);
-INTRUSIVE_END(TestIntrusiveListHead);
+  intrusive::Ref intrusive_ref_;
+  FooList foo_list_;
+};
 // clang-format on
 
 TEST(List, intrusive_list_for_each) {
@@ -298,7 +297,7 @@ TEST(List, intrusive_list_for_each) {
 }
 
 // clang-format off
-INTRUSIVE_BEGIN(TestIntrusiveListHeadWrapper);
+class TestIntrusiveListHeadWrapper final : public intrusive::Base {
  public:
   // Getters
   const TestIntrusiveListHead& head() const {
@@ -320,9 +319,9 @@ INTRUSIVE_BEGIN(TestIntrusiveListHeadWrapper);
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
   TestIntrusiveListHeadWrapper() : intrusive_ref_(), head_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<TestIntrusiveListHead>, head_);
-INTRUSIVE_END(TestIntrusiveListHeadWrapper);
+  intrusive::Ref intrusive_ref_;
+  intrusive::shared_ptr<TestIntrusiveListHead> head_;
+};
 // clang-format on
 
 TEST(List, nested_list_delete) {
@@ -409,10 +408,11 @@ INTRUSIVE_BEGIN(SelfLoopContainer);
  public:
   // Do not insert other INTRUSIVE_DEFINE_FIELDs between `using SelfLoopContainerList = ...;` and
   // `INTRUSIVE_DEFINE_FIELD(SelfLoopContainerList, ...);` 
-  using SelfLoopContainerList = intrusive::HeadFreeList<INTRUSIVE_FIELD(SelfLoopContainer, hook_), INTRUSIVE_FIELD_COUNTER>;
+  using SelfLoopContainerList = intrusive::HeadFreeList<INTRUSIVE_FIELD_BY_OFFSET(SelfLoopContainer, hook_), INTRUSIVE_FIELD_COUNTER>;
   const SelfLoopContainerList& head() const { return head_; }
   SelfLoopContainerList* mut_head() { return &head_; }
 
+ private:
   INTRUSIVE_DEFINE_FIELD(SelfLoopContainerList, head_);
 INTRUSIVE_END(SelfLoopContainer);
 // clang-format on

@@ -29,7 +29,7 @@ namespace vm {
 using DeviceTag2DeviceNum = std::unordered_map<std::string, int64_t>;
 
 // clang-format off
-INTRUSIVE_BEGIN(VmResourceDesc);
+class VmResourceDesc final : public intrusive::Base {
  public:
   void __Init__() {}
   // Getters
@@ -54,13 +54,13 @@ INTRUSIVE_BEGIN(VmResourceDesc);
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
   VmResourceDesc() : intrusive_ref_(), machine_num_(), max_device_num_per_machine_(), device_tag2device_num_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
+  intrusive::Ref intrusive_ref_;
   // fields
-  INTRUSIVE_DEFINE_FIELD(int64_t, machine_num_);
-  INTRUSIVE_DEFINE_FIELD(int64_t, max_device_num_per_machine_);
+  int64_t machine_num_;
+  int64_t max_device_num_per_machine_;
   // maps
-  INTRUSIVE_DEFINE_FIELD(DeviceTag2DeviceNum, device_tag2device_num_);
-INTRUSIVE_END(VmResourceDesc);
+  DeviceTag2DeviceNum device_tag2device_num_;
+};
 // clang-format on
 
 }  // namespace vm

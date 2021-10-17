@@ -35,7 +35,7 @@ namespace oneflow {
 namespace vm {
 
 // clang-format off
-INTRUSIVE_BEGIN(InstructionOperandList);
+class InstructionOperandList final : public intrusive::Base {
  public:
   void __Init__() {}
   // Getters
@@ -48,11 +48,11 @@ INTRUSIVE_BEGIN(InstructionOperandList);
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
   InstructionOperandList() : intrusive_ref_(), operand_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
-  INTRUSIVE_DEFINE_FIELD(std::vector<FlatMsg<InstructionOperand>>, operand_);
-INTRUSIVE_END(InstructionOperandList);
+  intrusive::Ref intrusive_ref_;
+  std::vector<FlatMsg<InstructionOperand>> operand_;
+};
 
-INTRUSIVE_BEGIN(InstructionMsg);
+class InstructionMsg final : public intrusive::Base {
  public:
   // Getters
   bool has_parallel_desc_symbol_id() const { return 0 != parallel_desc_symbol_id_; }
@@ -121,18 +121,19 @@ INTRUSIVE_BEGIN(InstructionMsg);
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
   InstructionMsg() : intrusive_ref_(), instr_type_id_(), instr_type_name_(), parallel_desc_symbol_id_(), parallel_desc_(), operand_list_(), phy_instr_operand_(), instr_msg_hook_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
+  intrusive::Ref intrusive_ref_;
   // fields
-  INTRUSIVE_DEFINE_FIELD(InstrTypeId, instr_type_id_);
+  InstrTypeId instr_type_id_;
   // instr_type_name is a necessary reduandant field for method ToProto
-  INTRUSIVE_DEFINE_FIELD(std::string, instr_type_name_);
-  INTRUSIVE_DEFINE_FIELD(int64_t, parallel_desc_symbol_id_);
-  INTRUSIVE_DEFINE_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<InstructionOperandList>, operand_list_);
-  INTRUSIVE_DEFINE_FIELD(std::shared_ptr<PhyInstrOperand>, phy_instr_operand_);
+  std::string instr_type_name_;
+  int64_t parallel_desc_symbol_id_;
+  std::shared_ptr<const ParallelDesc> parallel_desc_;
+  intrusive::shared_ptr<InstructionOperandList> operand_list_;
+  std::shared_ptr<PhyInstrOperand> phy_instr_operand_;
+ public:
   // list hooks
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, instr_msg_hook_);
-INTRUSIVE_END(InstructionMsg);
+  intrusive::ListHook instr_msg_hook_;
+};
 // clang-format on
 
 using InstructionMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, instr_msg_hook_)>;
@@ -154,7 +155,7 @@ FLAT_MSG_END(InstructionStatusBuffer);
 
 struct Instruction;
 // clang-format off
-INTRUSIVE_BEGIN(InstructionEdge);
+class InstructionEdge final : public intrusive::Base {
  public:
   void __Init__() {
     clear_src_instruction();
@@ -184,19 +185,20 @@ INTRUSIVE_BEGIN(InstructionEdge);
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
   InstructionEdge() : intrusive_ref_(), src_instruction_(), dst_instruction_(), in_edge_hook_(), out_edge_hook_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
+  intrusive::Ref intrusive_ref_;
   // fields
-  INTRUSIVE_DEFINE_FIELD(Instruction*, src_instruction_); 
-  INTRUSIVE_DEFINE_FIELD(Instruction*, dst_instruction_); 
+  Instruction* src_instruction_; 
+  Instruction* dst_instruction_; 
+ public:
   // list hooks
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, in_edge_hook_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, out_edge_hook_);
-INTRUSIVE_END(InstructionEdge);
+  intrusive::ListHook in_edge_hook_;
+  intrusive::ListHook out_edge_hook_;
+};
 // clang-format on
 
 struct Stream;
 // clang-format off
-INTRUSIVE_BEGIN(Instruction);
+class Instruction final : public intrusive::Base {
  public:
   // types
   using InEdgeList = intrusive::List<INTRUSIVE_FIELD(InstructionEdge, in_edge_hook_)>;
@@ -334,27 +336,28 @@ INTRUSIVE_BEGIN(Instruction);
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  Instruction() : intrusive_ref_(), status_buffer_(), instr_msg_(), parallel_desc_(), stream_(), instruction_hook_(), vm_stat_running_instruction_hook_(), pending_instruction_hook_(), front_seq_infer_instr_hook_(), front_seq_compute_instr_hook_(), mirrored_object_id2access_(), access_list_(), in_edges_(), out_edges_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
+  Instruction() : intrusive_ref_(), status_buffer_(), instr_msg_(), parallel_desc_(), stream_(), mirrored_object_id2access_(), access_list_(), in_edges_(), out_edges_(), instruction_hook_(), vm_stat_running_instruction_hook_(), pending_instruction_hook_(), front_seq_infer_instr_hook_(), front_seq_compute_instr_hook_() {}
+  intrusive::Ref intrusive_ref_;
   // fields
-  INTRUSIVE_DEFINE_FIELD(FlatMsg<InstructionStatusBuffer>, status_buffer_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<InstructionMsg>, instr_msg_);
-  INTRUSIVE_DEFINE_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
-  INTRUSIVE_DEFINE_FIELD(Stream*, stream_); 
-  // list hooks
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, instruction_hook_);
-  // `vm_stat_running_instruction_hook` valid from instruction ready to instruction done 
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, vm_stat_running_instruction_hook_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, pending_instruction_hook_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, front_seq_infer_instr_hook_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, front_seq_compute_instr_hook_);
+  FlatMsg<InstructionStatusBuffer> status_buffer_;
+  intrusive::shared_ptr<InstructionMsg> instr_msg_;
+  std::shared_ptr<const ParallelDesc> parallel_desc_;
+  Stream* stream_; 
   // maps
-  INTRUSIVE_DEFINE_FIELD(MirroredObjectId2RwMutexedObjectAccess, mirrored_object_id2access_);
+  MirroredObjectId2RwMutexedObjectAccess mirrored_object_id2access_;
   // lists
-  INTRUSIVE_DEFINE_FIELD(RwMutexedObjectAccessList, access_list_);
-  INTRUSIVE_DEFINE_FIELD(InEdgeList, in_edges_);
-  INTRUSIVE_DEFINE_FIELD(OutEdgeList, out_edges_);
-INTRUSIVE_END(Instruction);
+  RwMutexedObjectAccessList access_list_;
+  InEdgeList in_edges_;
+  OutEdgeList out_edges_;
+ public:
+  // list hooks
+  intrusive::ListHook instruction_hook_;
+  // `vm_stat_running_instruction_hook` valid from instruction ready to instruction done 
+  intrusive::ListHook vm_stat_running_instruction_hook_;
+  intrusive::ListHook pending_instruction_hook_;
+  intrusive::ListHook front_seq_infer_instr_hook_;
+  intrusive::ListHook front_seq_compute_instr_hook_;
+};
 // clang-format on
 
 }  // namespace vm

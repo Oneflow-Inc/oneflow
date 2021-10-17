@@ -55,8 +55,8 @@ class HeadFreeList {
         "It's invalid to define fields between definition of head-free list type and definition of "
         "head-free list field.");
     using ThisInContainer =
-        StructField<value_type, HeadFreeList,
-                    INTRUSIVE_FIELD_OFFSET(value_type, field_number_in_countainter)>;
+        OffsetStructField<value_type, HeadFreeList,
+                          INTRUSIVE_FIELD_OFFSET(value_type, field_number_in_countainter)>;
     container_ = ThisInContainer::StructPtr4FieldPtr(this);
   }
 

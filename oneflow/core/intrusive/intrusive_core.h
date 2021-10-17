@@ -49,16 +49,19 @@ namespace oneflow {
   ;
 
 #define INTRUSIVE_DEFINE_FIELD(field_type, field_name)                                      \
- private:                                                                                   \
   static_assert(__has_intrusive_ref__, "this class is not intrusive-referenced");           \
   field_type field_name;                                                                    \
   INCREASE_STATIC_COUNTER(field_counter);                                                   \
   DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "intrusive-referenced class", field_type, \
                    field_name);
 
-#define INTRUSIVE_FIELD(struct_type, field_name)                             \
-  StructField<struct_type, struct_type::OF_PP_CAT(field_name, DssFieldType), \
-              struct_type::OF_PP_CAT(field_name, kDssFieldOffset)>
+#define INTRUSIVE_FIELD(struct_type, field_name)                                        \
+  intrusive::PtrStructField<struct_type, decltype(((struct_type*)nullptr)->field_name), \
+                            &struct_type::field_name>
+
+#define INTRUSIVE_FIELD_BY_OFFSET(struct_type, field_name)                                    \
+  intrusive::OffsetStructField<struct_type, struct_type::OF_PP_CAT(field_name, DssFieldType), \
+                               struct_type::OF_PP_CAT(field_name, kDssFieldOffset)>
 
 // Get field number by field name
 // note: field numbers start from 1 instead of 0.

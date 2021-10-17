@@ -26,7 +26,7 @@ namespace oneflow {
 namespace vm {
 
 // clang-format off
-INTRUSIVE_BEGIN(VmDesc);
+class VmDesc final : public intrusive::Base {
  public:
   // types
   using StreamTypeId2StreamDesc =
@@ -60,13 +60,13 @@ INTRUSIVE_BEGIN(VmDesc);
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
   VmDesc() : intrusive_ref_(), vm_resource_desc_(), machine_id_range_(), stream_type_id2desc_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
+  intrusive::Ref intrusive_ref_;
   // fields
-  INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<VmResourceDesc>, vm_resource_desc_);
-  INTRUSIVE_DEFINE_FIELD(Range, machine_id_range_);
+  intrusive::shared_ptr<VmResourceDesc> vm_resource_desc_;
+  Range machine_id_range_;
   // maps
-  INTRUSIVE_DEFINE_FIELD(StreamTypeId2StreamDesc, stream_type_id2desc_);
-INTRUSIVE_END(VmDesc);
+  StreamTypeId2StreamDesc stream_type_id2desc_;
+};
 // clang-format on
 
 intrusive::shared_ptr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id);

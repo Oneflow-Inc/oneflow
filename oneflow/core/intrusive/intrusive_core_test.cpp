@@ -45,7 +45,7 @@ TEST(Ref, ref_cnt) {
 }
 
 // clang-format off
-INTRUSIVE_BEGIN(IntrusiveFoo)
+class IntrusiveFoo final : public intrusive::Base {
  public:
   void __Init__() { clear_is_deleted(); }
   void __Delete__();
@@ -74,13 +74,13 @@ INTRUSIVE_BEGIN(IntrusiveFoo)
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
   IntrusiveFoo() : intrusive_ref_(), x_(), foo_(), bar_(), foobar_(), is_deleted_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
-  INTRUSIVE_DEFINE_FIELD(int8_t, x_);
-  INTRUSIVE_DEFINE_FIELD(int32_t, foo_);
-  INTRUSIVE_DEFINE_FIELD(int16_t, bar_);
-  INTRUSIVE_DEFINE_FIELD(int64_t, foobar_);
-  INTRUSIVE_DEFINE_FIELD(std::string*, is_deleted_);
-INTRUSIVE_END(IntrusiveFoo)
+  intrusive::Ref intrusive_ref_;
+  int8_t x_;
+  int32_t foo_;
+  int16_t bar_;
+  int64_t foobar_;
+  std::string* is_deleted_;
+};
 // clang-format on
 
 void IntrusiveFoo::__Delete__() {
@@ -105,7 +105,7 @@ TEST(intrusive, __delete__) {
 }
 
 // clang-format off
-INTRUSIVE_BEGIN(IntrusiveBar)
+class IntrusiveBar final : public intrusive::Base {
  public:
   void __Init__() { clear_is_deleted(); }
   void __Delete__(){
@@ -137,10 +137,10 @@ INTRUSIVE_BEGIN(IntrusiveBar)
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
   IntrusiveBar() : intrusive_ref_(), foo_(), is_deleted_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<IntrusiveFoo>, foo_);
-  INTRUSIVE_DEFINE_FIELD(std::string*, is_deleted_);
-INTRUSIVE_END(IntrusiveBar)
+  intrusive::Ref intrusive_ref_;
+  intrusive::shared_ptr<IntrusiveFoo> foo_;
+  std::string* is_deleted_;
+};
 // clang-format on
 
 TEST(intrusive, nested_objects) {
@@ -175,7 +175,7 @@ FLAT_MSG_END(FlatMsgDemo)
 // clang-format on
 
 // clang-format off
-INTRUSIVE_BEGIN(IntrusiveContainerDemo)
+class IntrusiveContainerDemo final : public intrusive::Base {
  public:
   // Getters
   const FlatMsgDemo& flat_field() const { return flat_field_.Get(); }
@@ -187,9 +187,9 @@ INTRUSIVE_BEGIN(IntrusiveContainerDemo)
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
   IntrusiveContainerDemo() : intrusive_ref_(), flat_field_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
-  INTRUSIVE_DEFINE_FIELD(FlatMsg<FlatMsgDemo>, flat_field_);
-INTRUSIVE_END(IntrusiveContainerDemo)
+  intrusive::Ref intrusive_ref_;
+  FlatMsg<FlatMsgDemo> flat_field_;
+};
 // clang-format on
 
 TEST(intrusive, flat_msg_field) {

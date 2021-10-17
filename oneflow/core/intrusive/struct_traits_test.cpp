@@ -30,38 +30,42 @@ struct OneflowTestNamespaceFoo {
   const int const_bar;
 };
 
-TEST(StructField, mutable_struct_mutable_field) {
+TEST(OffsetStructField, mutable_struct_mutable_field) {
   OneflowTestNamespaceFoo foo;
   auto* bar = &foo.bar;
-  auto* struct_ptr = STRUCT_FIELD(OneflowTestNamespaceFoo, bar)::StructPtr4FieldPtr(bar);
-  auto* field_ptr = STRUCT_FIELD(OneflowTestNamespaceFoo, bar)::FieldPtr4StructPtr(&foo);
+  auto* struct_ptr = OFFSET_STRUCT_FIELD(OneflowTestNamespaceFoo, bar)::StructPtr4FieldPtr(bar);
+  auto* field_ptr = OFFSET_STRUCT_FIELD(OneflowTestNamespaceFoo, bar)::FieldPtr4StructPtr(&foo);
   ASSERT_EQ(struct_ptr, &foo);
   ASSERT_EQ(field_ptr, bar);
 }
 
-TEST(StructField, mutable_struct_const_field) {
+TEST(OffsetStructField, mutable_struct_const_field) {
   OneflowTestNamespaceFoo foo;
   auto* bar = &foo.const_bar;
-  auto* struct_ptr = STRUCT_FIELD(OneflowTestNamespaceFoo, const_bar)::StructPtr4FieldPtr(bar);
-  auto* field_ptr = STRUCT_FIELD(OneflowTestNamespaceFoo, const_bar)::FieldPtr4StructPtr(&foo);
+  auto* struct_ptr =
+      OFFSET_STRUCT_FIELD(OneflowTestNamespaceFoo, const_bar)::StructPtr4FieldPtr(bar);
+  auto* field_ptr =
+      OFFSET_STRUCT_FIELD(OneflowTestNamespaceFoo, const_bar)::FieldPtr4StructPtr(&foo);
   ASSERT_EQ(struct_ptr, &foo);
   ASSERT_EQ(field_ptr, bar);
 }
 
-TEST(StructField, const_struct_mutable_field) {
+TEST(OffsetStructField, const_struct_mutable_field) {
   const OneflowTestNamespaceFoo foo;
   auto* bar = &foo.bar;
-  auto* struct_ptr = STRUCT_FIELD(OneflowTestNamespaceFoo, bar)::StructPtr4FieldPtr(bar);
-  auto* field_ptr = STRUCT_FIELD(OneflowTestNamespaceFoo, bar)::FieldPtr4StructPtr(&foo);
+  auto* struct_ptr = OFFSET_STRUCT_FIELD(OneflowTestNamespaceFoo, bar)::StructPtr4FieldPtr(bar);
+  auto* field_ptr = OFFSET_STRUCT_FIELD(OneflowTestNamespaceFoo, bar)::FieldPtr4StructPtr(&foo);
   ASSERT_EQ(struct_ptr, &foo);
   ASSERT_EQ(field_ptr, bar);
 }
 
-TEST(StructField, const_struct_const_field) {
+TEST(OffsetStructField, const_struct_const_field) {
   const OneflowTestNamespaceFoo foo;
   auto* bar = &foo.const_bar;
-  auto* struct_ptr = STRUCT_FIELD(OneflowTestNamespaceFoo, const_bar)::StructPtr4FieldPtr(bar);
-  auto* field_ptr = STRUCT_FIELD(OneflowTestNamespaceFoo, const_bar)::FieldPtr4StructPtr(&foo);
+  auto* struct_ptr =
+      OFFSET_STRUCT_FIELD(OneflowTestNamespaceFoo, const_bar)::StructPtr4FieldPtr(bar);
+  auto* field_ptr =
+      OFFSET_STRUCT_FIELD(OneflowTestNamespaceFoo, const_bar)::FieldPtr4StructPtr(&foo);
   ASSERT_EQ(struct_ptr, &foo);
   ASSERT_EQ(field_ptr, bar);
 }
@@ -76,8 +80,9 @@ struct Y {
   X d;
 };
 
-TEST(StructField, compose) {
-  using BFieldInY = typename ComposeStructField<STRUCT_FIELD(Y, d), STRUCT_FIELD(X, b)>::type;
+TEST(OffsetStructField, compose) {
+  using BFieldInY =
+      intrusive::ComposeStructField<OFFSET_STRUCT_FIELD(Y, d), OFFSET_STRUCT_FIELD(X, b)>;
   Y y;
   int* field_b = &y.d.b;
   ASSERT_EQ(BFieldInY::FieldPtr4StructPtr(&y), field_b);

@@ -57,7 +57,7 @@ class StreamId final {
 };
 
 // clang-format off
-INTRUSIVE_BEGIN(StreamDesc);
+class StreamDesc final : public intrusive::Base {
  public:
   // Getters
   int32_t num_machines() const { return num_machines_; }
@@ -82,15 +82,16 @@ INTRUSIVE_BEGIN(StreamDesc);
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
   
   StreamDesc() : intrusive_ref_(), num_machines_(), num_streams_per_machine_(), num_streams_per_thread_(), stream_type_id_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
+  intrusive::Ref intrusive_ref_;
   // fields
-  INTRUSIVE_DEFINE_FIELD(int32_t, num_machines_);
-  INTRUSIVE_DEFINE_FIELD(int32_t, num_streams_per_machine_);
-  INTRUSIVE_DEFINE_FIELD(int32_t, num_streams_per_thread_);
+  int32_t num_machines_;
+  int32_t num_streams_per_machine_;
+  int32_t num_streams_per_thread_;
+ public:
   // skiplist hooks
   using StreamTypeIdKey = intrusive::SkipListHook<FlatMsg<StreamTypeId>, 7>;
-  INTRUSIVE_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);
-INTRUSIVE_END(StreamDesc);
+  StreamTypeIdKey stream_type_id_;
+};
 // clang-format on
 
 }  // namespace vm

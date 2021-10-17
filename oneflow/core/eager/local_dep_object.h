@@ -28,7 +28,7 @@ class Device;
 // clang-format off
 
 // Helps VirtualMachine building instruction edges
-INTRUSIVE_BEGIN(LocalDepObject);
+class LocalDepObject final : public intrusive::Base {
  public:
   // Getters
   const vm::LogicalObject& logical_object() const {
@@ -65,16 +65,17 @@ INTRUSIVE_BEGIN(LocalDepObject);
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
   LocalDepObject() : intrusive_ref_(), logical_object_(), mirrored_object_(), pool_hook_(), stored_hook_(), lifetime_hook_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
+  intrusive::Ref intrusive_ref_;
   // fields
-  INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<vm::LogicalObject>, logical_object_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<vm::MirroredObject>, mirrored_object_); 
+  intrusive::shared_ptr<vm::LogicalObject> logical_object_;
+  intrusive::shared_ptr<vm::MirroredObject> mirrored_object_; 
 
+ public:
   // list hooks
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, pool_hook_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, stored_hook_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, lifetime_hook_);
-INTRUSIVE_END(LocalDepObject);
+  intrusive::ListHook pool_hook_;
+  intrusive::ListHook stored_hook_;
+  intrusive::ListHook lifetime_hook_;
+};
 // clang-format on
 
 Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device);
