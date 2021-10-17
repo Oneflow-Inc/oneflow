@@ -25,7 +25,6 @@ namespace vm {
 
 struct ThreadCtx;
 
-// clang-format off
 class Stream final : public intrusive::Base {
  public:
   // types
@@ -55,8 +54,10 @@ class Stream final : public intrusive::Base {
 
   // methods
   void __Init__();
-  void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id, const int64_t max_device_num_per_machine);
-  intrusive::shared_ptr<Instruction> NewInstruction(InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc);
+  void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id,
+                const int64_t max_device_num_per_machine);
+  intrusive::shared_ptr<Instruction> NewInstruction(
+      InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc);
   void DeleteInstruction(intrusive::shared_ptr<Instruction>&&);
   int64_t global_device_id() const { return stream_id().global_device_id(); }
   int64_t machine_id() const;
@@ -71,16 +72,27 @@ class Stream final : public intrusive::Base {
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  Stream() : intrusive_ref_(), thread_ctx_(), device_ctx_(), max_device_num_per_machine_(), free_instruction_list_(), zombie_instruction_list_(), running_instruction_list_(), stream_id_(), active_stream_hook_(), thread_ctx_stream_hook_() {}
+  Stream()
+      : intrusive_ref_(),
+        thread_ctx_(),
+        device_ctx_(),
+        max_device_num_per_machine_(),
+        free_instruction_list_(),
+        zombie_instruction_list_(),
+        running_instruction_list_(),
+        stream_id_(),
+        active_stream_hook_(),
+        thread_ctx_stream_hook_() {}
   intrusive::Ref intrusive_ref_;
   // fields
-  ThreadCtx* thread_ctx_; 
+  ThreadCtx* thread_ctx_;
   std::unique_ptr<DeviceCtx> device_ctx_;
   int64_t max_device_num_per_machine_;
-  // lists 
+  // lists
   InstructionList free_instruction_list_;
   InstructionList zombie_instruction_list_;
   InstructionList running_instruction_list_;
+
  public:
   // skiplist hooks
   intrusive::SkipListHook<StreamId, 10> stream_id_;
@@ -88,7 +100,6 @@ class Stream final : public intrusive::Base {
   intrusive::ListHook active_stream_hook_;
   intrusive::ListHook thread_ctx_stream_hook_;
 };
-// clang-format on
 
 }  // namespace vm
 }  // namespace oneflow

@@ -16,12 +16,16 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_INTRUSIVE_INTRUSIVE_H_
 #define ONEFLOW_CORE_INTRUSIVE_INTRUSIVE_H_
 
-#include "oneflow/core/intrusive/intrusive_core.h"
 #include "oneflow/core/intrusive/ref.h"
 #include "oneflow/core/intrusive/shared_ptr.h"
 #include "oneflow/core/intrusive/list.h"
 #include "oneflow/core/intrusive/head_free_list.h"
 #include "oneflow/core/intrusive/skiplist.h"
 #include "oneflow/core/intrusive/for_each.h"
+#include "oneflow/core/intrusive/reflective.h"
+
+#define INTRUSIVE_FIELD(struct_type, field_name)                                        \
+  intrusive::PtrStructField<struct_type, decltype(((struct_type*)nullptr)->field_name), \
+                            &struct_type::field_name>
 
 #endif  // ONEFLOW_CORE_INTRUSIVE_INTRUSIVE_H_

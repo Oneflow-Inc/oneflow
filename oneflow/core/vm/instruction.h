@@ -34,7 +34,6 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-// clang-format off
 class InstructionOperandList final : public intrusive::Base {
  public:
   void __Init__() {}
@@ -84,7 +83,7 @@ class InstructionMsg final : public intrusive::Base {
   void __Init__();
   void __Init__(const std::string& instr_type_name);
   void __Init__(const InstructionProto& proto);
-  void __Init__(const cfg::InstructionProto& proto); 
+  void __Init__(const cfg::InstructionProto& proto);
   void __Init__(const InstructionMsg& instr_msg);
 
   void ToProto(InstructionProto* proto) const;
@@ -95,16 +94,22 @@ class InstructionMsg final : public intrusive::Base {
   intrusive::shared_ptr<InstructionMsg> add_bool_operand(bool bool_operand);
   intrusive::shared_ptr<InstructionMsg> add_separator();
   intrusive::shared_ptr<InstructionMsg> add_const_operand(ObjectId logical_object_id);
-  intrusive::shared_ptr<InstructionMsg> add_const_operand(ObjectId logical_object_id, const SoleMirroredObject&);
-  intrusive::shared_ptr<InstructionMsg> add_const_operand(ObjectId logical_object_id, const AllMirroredObject&);
+  intrusive::shared_ptr<InstructionMsg> add_const_operand(ObjectId logical_object_id,
+                                                          const SoleMirroredObject&);
+  intrusive::shared_ptr<InstructionMsg> add_const_operand(ObjectId logical_object_id,
+                                                          const AllMirroredObject&);
   intrusive::shared_ptr<InstructionMsg> add_symbol_operand(ObjectId logical_object_id);
   intrusive::shared_ptr<InstructionMsg> add_mut_operand(ObjectId logical_object_id);
-  intrusive::shared_ptr<InstructionMsg> add_mut_operand(ObjectId logical_object_id, const SoleMirroredObject&);
-  intrusive::shared_ptr<InstructionMsg> add_mut_operand(ObjectId logical_object_id, const AllMirroredObject&);
+  intrusive::shared_ptr<InstructionMsg> add_mut_operand(ObjectId logical_object_id,
+                                                        const SoleMirroredObject&);
+  intrusive::shared_ptr<InstructionMsg> add_mut_operand(ObjectId logical_object_id,
+                                                        const AllMirroredObject&);
   intrusive::shared_ptr<InstructionMsg> add_init_symbol_operand(ObjectId logical_object_id);
   intrusive::shared_ptr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id);
-  intrusive::shared_ptr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const SoleMirroredObject&);
-  intrusive::shared_ptr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const AllMirroredObject&);
+  intrusive::shared_ptr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id,
+                                                         const SoleMirroredObject&);
+  intrusive::shared_ptr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id,
+                                                         const AllMirroredObject&);
   intrusive::shared_ptr<InstructionMsg> add_del_operand(ObjectId logical_object_id);
   const std::vector<FlatMsg<InstructionOperand>>& operand() const {
     return operand_list().operand();
@@ -120,7 +125,15 @@ class InstructionMsg final : public intrusive::Base {
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  InstructionMsg() : intrusive_ref_(), instr_type_id_(), instr_type_name_(), parallel_desc_symbol_id_(), parallel_desc_(), operand_list_(), phy_instr_operand_(), instr_msg_hook_() {}
+  InstructionMsg()
+      : intrusive_ref_(),
+        instr_type_id_(),
+        instr_type_name_(),
+        parallel_desc_symbol_id_(),
+        parallel_desc_(),
+        operand_list_(),
+        phy_instr_operand_(),
+        instr_msg_hook_() {}
   intrusive::Ref intrusive_ref_;
   // fields
   InstrTypeId instr_type_id_;
@@ -130,11 +143,11 @@ class InstructionMsg final : public intrusive::Base {
   std::shared_ptr<const ParallelDesc> parallel_desc_;
   intrusive::shared_ptr<InstructionOperandList> operand_list_;
   std::shared_ptr<PhyInstrOperand> phy_instr_operand_;
+
  public:
   // list hooks
   intrusive::ListHook instr_msg_hook_;
 };
-// clang-format on
 
 using InstructionMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, instr_msg_hook_)>;
 
@@ -154,7 +167,6 @@ FLAT_MSG_END(InstructionStatusBuffer);
 // clang-format on
 
 struct Instruction;
-// clang-format off
 class InstructionEdge final : public intrusive::Base {
  public:
   void __Init__() {
@@ -162,17 +174,17 @@ class InstructionEdge final : public intrusive::Base {
     clear_dst_instruction();
   }
   // Getters
-  bool has_src_instruction() const { return src_instruction_ != nullptr; } 
-  bool has_dst_instruction() const { return dst_instruction_ != nullptr; } 
+  bool has_src_instruction() const { return src_instruction_ != nullptr; }
+  bool has_dst_instruction() const { return dst_instruction_ != nullptr; }
   const Instruction& src_instruction() const { return *src_instruction_; }
-  const Instruction& dst_instruction() const { return *dst_instruction_; } 
+  const Instruction& dst_instruction() const { return *dst_instruction_; }
   // Setters
-  void set_src_instruction(Instruction* val) { src_instruction_ = val; } 
-  void set_dst_instruction(Instruction* val) { dst_instruction_ = val; } 
-  void clear_src_instruction() { src_instruction_ = nullptr; } 
-  void clear_dst_instruction() { dst_instruction_ = nullptr; } 
-  Instruction* mut_src_instruction() { return src_instruction_; } 
-  Instruction* mut_dst_instruction() { return dst_instruction_; } 
+  void set_src_instruction(Instruction* val) { src_instruction_ = val; }
+  void set_dst_instruction(Instruction* val) { dst_instruction_ = val; }
+  void clear_src_instruction() { src_instruction_ = nullptr; }
+  void clear_dst_instruction() { dst_instruction_ = nullptr; }
+  Instruction* mut_src_instruction() { return src_instruction_; }
+  Instruction* mut_dst_instruction() { return dst_instruction_; }
   // methods
   void __Init__(Instruction* src_instruction, Instruction* dst_instruction) {
     __Init__();
@@ -184,20 +196,24 @@ class InstructionEdge final : public intrusive::Base {
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  InstructionEdge() : intrusive_ref_(), src_instruction_(), dst_instruction_(), in_edge_hook_(), out_edge_hook_() {}
+  InstructionEdge()
+      : intrusive_ref_(),
+        src_instruction_(),
+        dst_instruction_(),
+        in_edge_hook_(),
+        out_edge_hook_() {}
   intrusive::Ref intrusive_ref_;
   // fields
-  Instruction* src_instruction_; 
-  Instruction* dst_instruction_; 
+  Instruction* src_instruction_;
+  Instruction* dst_instruction_;
+
  public:
   // list hooks
   intrusive::ListHook in_edge_hook_;
   intrusive::ListHook out_edge_hook_;
 };
-// clang-format on
 
 struct Stream;
-// clang-format off
 class Instruction final : public intrusive::Base {
  public:
   // types
@@ -210,8 +226,8 @@ class Instruction final : public intrusive::Base {
 
   // Getters
   void __Init__() { clear_stream(); }
-  bool has_stream() const { return stream_ != nullptr;  }
-  const Stream& stream() const { return *stream_;  }
+  bool has_stream() const { return stream_ != nullptr; }
+  const Stream& stream() const { return *stream_; }
   const InstructionMsg& instr_msg() const {
     if (instr_msg_) { return instr_msg_.Get(); }
     static const auto default_val = intrusive::make_shared<InstructionMsg>();
@@ -220,14 +236,19 @@ class Instruction final : public intrusive::Base {
   const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
   const InstructionStatusBuffer& status_buffer() const { return status_buffer_.Get(); }
   bool is_instruction_hook_empty() const { return instruction_hook_.empty(); }
-  bool is_vm_stat_running_instruction_hook_empty() const { return vm_stat_running_instruction_hook_.empty(); }
+  bool is_vm_stat_running_instruction_hook_empty() const {
+    return vm_stat_running_instruction_hook_.empty();
+  }
   bool is_pending_instruction_hook_empty() const { return pending_instruction_hook_.empty(); }
-  bool is_front_seq_compute_instr_hook_empty() const { return front_seq_compute_instr_hook_.empty(); }
+  bool is_front_seq_compute_instr_hook_empty() const {
+    return front_seq_compute_instr_hook_.empty();
+  }
   const InEdgeList& in_edges() const { return in_edges_; }
   const OutEdgeList& out_edges() const { return out_edges_; }
   const RwMutexedObjectAccessList& access_list() const { return access_list_; }
   const MirroredObjectId2RwMutexedObjectAccess& mirrored_object_id2access() const {
-      return mirrored_object_id2access_; }
+    return mirrored_object_id2access_;
+  }
 
   // Setters
   void set_stream(Stream* val) { stream_ = val; }
@@ -245,32 +266,33 @@ class Instruction final : public intrusive::Base {
   OutEdgeList* mut_out_edges() { return &out_edges_; }
   RwMutexedObjectAccessList* mut_access_list() { return &access_list_; }
   MirroredObjectId2RwMutexedObjectAccess* mut_mirrored_object_id2access() {
-      return &mirrored_object_id2access_;
+    return &mirrored_object_id2access_;
   }
 
   // methods
-  void __Init__(InstructionMsg* instr_msg, Stream* stream, const std::shared_ptr<const ParallelDesc>& parallel_desc);
+  void __Init__(InstructionMsg* instr_msg, Stream* stream,
+                const std::shared_ptr<const ParallelDesc>& parallel_desc);
   void __Delete__();
   bool Done() const;
   void set_has_event_record(bool val);
   const StreamType& stream_type() const;
   template<OperandMemZoneModifier mem_zone_modifier>
-      const RwMutexedObject* operand_type(const Operand& operand) const {
+  const RwMutexedObject* operand_type(const Operand& operand) const {
     CheckOperand<mem_zone_modifier>(operand);
     return operand_type(operand, GetOperandDefaultGlobalDeviceId());
   }
   template<OperandMemZoneModifier mem_zone_modifier>
-      const RwMutexedObject* operand_value(const Operand& operand) const {
+  const RwMutexedObject* operand_value(const Operand& operand) const {
     CheckOperand<mem_zone_modifier>(operand);
     return operand_value(operand, GetOperandDefaultGlobalDeviceId());
   }
   template<OperandMemZoneModifier mem_zone_modifier>
-      RwMutexedObject* mut_operand_type(const Operand& operand) {
+  RwMutexedObject* mut_operand_type(const Operand& operand) {
     CheckOperand<mem_zone_modifier>(operand);
     return mut_operand_type(operand, GetOperandDefaultGlobalDeviceId());
   }
   template<OperandMemZoneModifier mem_zone_modifier>
-      RwMutexedObject* mut_operand_value(const Operand& operand) {
+  RwMutexedObject* mut_operand_value(const Operand& operand) {
     CheckOperand<mem_zone_modifier>(operand);
     return mut_operand_value(operand, GetOperandDefaultGlobalDeviceId());
   }
@@ -295,11 +317,11 @@ class Instruction final : public intrusive::Base {
     return mut_operand_value<mem_zone_modifier>(operand.operand());
   }
   template<InterpretType interpret_type>
-         MirroredObject* MutMirroredObject(const MutOperand& mut_operand) {
+  MirroredObject* MutMirroredObject(const MutOperand& mut_operand) {
     return MirroredObjectUtil<interpret_type>::Mut(this, mut_operand);
   }
   template<InterpretType interpret_type>
-         const MirroredObject* GetMirroredObject(const ConstOperand& const_operand) const {
+  const MirroredObject* GetMirroredObject(const ConstOperand& const_operand) const {
     return MirroredObjectUtil<interpret_type>::Get(*this, const_operand);
   }
   MirroredObject* mut_type_mirrored_object(const MutOperand& mut_operand);
@@ -308,22 +330,18 @@ class Instruction final : public intrusive::Base {
   intrusive::Ref::RefCntType ref_cnt() const { return intrusive_ref_.ref_cnt(); }
 
  private:
-  template<int64_t(*TransformLogicalObjectId)(int64_t)>
-          MirroredObject* MutMirroredObject(const Operand& operand,
-                                            int64_t default_global_device_id);
-  template<int64_t(*TransformLogicalObjectId)(int64_t)>
-          const MirroredObject* GetMirroredObject(const Operand& operand,
-                                                  int64_t default_global_device_id) const;
+  template<int64_t (*TransformLogicalObjectId)(int64_t)>
+  MirroredObject* MutMirroredObject(const Operand& operand, int64_t default_global_device_id);
+  template<int64_t (*TransformLogicalObjectId)(int64_t)>
+  const MirroredObject* GetMirroredObject(const Operand& operand,
+                                          int64_t default_global_device_id) const;
   const RwMutexedObject* operand_type(const Operand& operand,
-                                              int64_t default_global_device_id) const;
+                                      int64_t default_global_device_id) const;
   const RwMutexedObject* operand_value(const Operand& operand,
-                                               int64_t default_global_device_id) const;
-  RwMutexedObject* mut_operand_type(const Operand& operand,
-                                            int64_t default_global_device_id);
-  RwMutexedObject* mut_operand_value(const Operand& operand,  
-                                             int64_t default_global_device_id);
-  MirroredObject* MutMirroredObject(const Operand& operand,
-                                                     int64_t default_global_device_id) {
+                                       int64_t default_global_device_id) const;
+  RwMutexedObject* mut_operand_type(const Operand& operand, int64_t default_global_device_id);
+  RwMutexedObject* mut_operand_value(const Operand& operand, int64_t default_global_device_id);
+  MirroredObject* MutMirroredObject(const Operand& operand, int64_t default_global_device_id) {
     return MutMirroredObject<&IdUtil::GetValueId>(operand, default_global_device_id);
   }
   int64_t GetOperandDefaultGlobalDeviceId() const;
@@ -336,29 +354,43 @@ class Instruction final : public intrusive::Base {
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  Instruction() : intrusive_ref_(), status_buffer_(), instr_msg_(), parallel_desc_(), stream_(), mirrored_object_id2access_(), access_list_(), in_edges_(), out_edges_(), instruction_hook_(), vm_stat_running_instruction_hook_(), pending_instruction_hook_(), front_seq_infer_instr_hook_(), front_seq_compute_instr_hook_() {}
+  Instruction()
+      : intrusive_ref_(),
+        status_buffer_(),
+        instr_msg_(),
+        parallel_desc_(),
+        stream_(),
+        mirrored_object_id2access_(),
+        access_list_(),
+        in_edges_(),
+        out_edges_(),
+        instruction_hook_(),
+        vm_stat_running_instruction_hook_(),
+        pending_instruction_hook_(),
+        front_seq_infer_instr_hook_(),
+        front_seq_compute_instr_hook_() {}
   intrusive::Ref intrusive_ref_;
   // fields
   FlatMsg<InstructionStatusBuffer> status_buffer_;
   intrusive::shared_ptr<InstructionMsg> instr_msg_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
-  Stream* stream_; 
+  Stream* stream_;
   // maps
   MirroredObjectId2RwMutexedObjectAccess mirrored_object_id2access_;
   // lists
   RwMutexedObjectAccessList access_list_;
   InEdgeList in_edges_;
   OutEdgeList out_edges_;
+
  public:
   // list hooks
   intrusive::ListHook instruction_hook_;
-  // `vm_stat_running_instruction_hook` valid from instruction ready to instruction done 
+  // `vm_stat_running_instruction_hook` valid from instruction ready to instruction done
   intrusive::ListHook vm_stat_running_instruction_hook_;
   intrusive::ListHook pending_instruction_hook_;
   intrusive::ListHook front_seq_infer_instr_hook_;
   intrusive::ListHook front_seq_compute_instr_hook_;
 };
-// clang-format on
 
 }  // namespace vm
 }  // namespace oneflow

@@ -44,7 +44,6 @@ TEST(Ref, ref_cnt) {
   ASSERT_EQ(foo.DecreaseRefCount(), 0);
 }
 
-// clang-format off
 class IntrusiveFoo final : public intrusive::Base {
  public:
   void __Init__() { clear_is_deleted(); }
@@ -81,7 +80,6 @@ class IntrusiveFoo final : public intrusive::Base {
   int64_t foobar_;
   std::string* is_deleted_;
 };
-// clang-format on
 
 void IntrusiveFoo::__Delete__() {
   if (mut_is_deleted()) { *mut_is_deleted() = "deleted"; }
@@ -104,11 +102,10 @@ TEST(intrusive, __delete__) {
   ASSERT_TRUE(is_deleted == "deleted");
 }
 
-// clang-format off
 class IntrusiveBar final : public intrusive::Base {
  public:
   void __Init__() { clear_is_deleted(); }
-  void __Delete__(){
+  void __Delete__() {
     if (mut_is_deleted()) { *mut_is_deleted() = "bar_deleted"; }
   }
 
@@ -141,7 +138,6 @@ class IntrusiveBar final : public intrusive::Base {
   intrusive::shared_ptr<IntrusiveFoo> foo_;
   std::string* is_deleted_;
 };
-// clang-format on
 
 TEST(intrusive, nested_objects) {
   auto bar = intrusive::make_shared<IntrusiveBar>();
@@ -174,7 +170,6 @@ FLAT_MSG_BEGIN(FlatMsgDemo)
 FLAT_MSG_END(FlatMsgDemo)
 // clang-format on
 
-// clang-format off
 class IntrusiveContainerDemo final : public intrusive::Base {
  public:
   // Getters
@@ -190,7 +185,6 @@ class IntrusiveContainerDemo final : public intrusive::Base {
   intrusive::Ref intrusive_ref_;
   FlatMsg<FlatMsgDemo> flat_field_;
 };
-// clang-format on
 
 TEST(intrusive, flat_msg_field) {
   auto obj = intrusive::make_shared<IntrusiveContainerDemo>();
@@ -201,44 +195,44 @@ TEST(intrusive, flat_msg_field) {
 }
 
 // clang-format off
-INTRUSIVE_BEGIN(TestIntrusiveField);
+REFLECTIVE_CLASS_BEGIN(TestIntrusiveField);
   TestIntrusiveField() = default;
-  static_assert(INTRUSIVE_FIELD_COUNTER == 0, "");
-  static_assert(INTRUSIVE_FIELD_COUNTER == 0, "");
-  INTRUSIVE_DEFINE_FIELD(int32_t, a);
-  static_assert(INTRUSIVE_FIELD_COUNTER == 1, "");
-  static_assert(INTRUSIVE_FIELD_COUNTER == 1, "");
-  INTRUSIVE_DEFINE_FIELD(int64_t, b);
-  static_assert(INTRUSIVE_FIELD_COUNTER == 2, "");
-  static_assert(INTRUSIVE_FIELD_COUNTER == 2, "");
-  INTRUSIVE_DEFINE_FIELD(int8_t, c);
-  static_assert(INTRUSIVE_FIELD_COUNTER == 3, "");
-  static_assert(INTRUSIVE_FIELD_COUNTER == 3, "");
-  INTRUSIVE_DEFINE_FIELD(int64_t, d);
-  static_assert(INTRUSIVE_FIELD_COUNTER == 4, "");
-  static_assert(INTRUSIVE_FIELD_COUNTER == 4, "");
-INTRUSIVE_END(TestIntrusiveField);
+  static_assert(REFLECTIVE_FIELD_COUNTER == 0, "");
+  static_assert(REFLECTIVE_FIELD_COUNTER == 0, "");
+  REFLECTIVE_CLASS_DEFINE_FIELD(int32_t, a);
+  static_assert(REFLECTIVE_FIELD_COUNTER == 1, "");
+  static_assert(REFLECTIVE_FIELD_COUNTER == 1, "");
+  REFLECTIVE_CLASS_DEFINE_FIELD(int64_t, b);
+  static_assert(REFLECTIVE_FIELD_COUNTER == 2, "");
+  static_assert(REFLECTIVE_FIELD_COUNTER == 2, "");
+  REFLECTIVE_CLASS_DEFINE_FIELD(int8_t, c);
+  static_assert(REFLECTIVE_FIELD_COUNTER == 3, "");
+  static_assert(REFLECTIVE_FIELD_COUNTER == 3, "");
+  REFLECTIVE_CLASS_DEFINE_FIELD(int64_t, d);
+  static_assert(REFLECTIVE_FIELD_COUNTER == 4, "");
+  static_assert(REFLECTIVE_FIELD_COUNTER == 4, "");
+REFLECTIVE_CLASS_END(TestIntrusiveField);
 // clang-format on
 
 TEST(intrusive, intrusive_field_number) {
-  static_assert(INTRUSIVE_FIELD_NUMBER(TestIntrusiveField, a) == 1, "");
-  static_assert(INTRUSIVE_FIELD_NUMBER(TestIntrusiveField, b) == 2, "");
-  static_assert(INTRUSIVE_FIELD_NUMBER(TestIntrusiveField, c) == 3, "");
-  static_assert(INTRUSIVE_FIELD_NUMBER(TestIntrusiveField, d) == 4, "");
+  static_assert(REFLECTIVE_FIELD_NUMBER(TestIntrusiveField, a) == 1, "");
+  static_assert(REFLECTIVE_FIELD_NUMBER(TestIntrusiveField, b) == 2, "");
+  static_assert(REFLECTIVE_FIELD_NUMBER(TestIntrusiveField, c) == 3, "");
+  static_assert(REFLECTIVE_FIELD_NUMBER(TestIntrusiveField, d) == 4, "");
 }
 
 TEST(intrusive, intrusive_field_type) {
-  static_assert(std::is_same<INTRUSIVE_FIELD_TYPE(TestIntrusiveField, 1), int32_t>::value, "");
-  static_assert(std::is_same<INTRUSIVE_FIELD_TYPE(TestIntrusiveField, 2), int64_t>::value, "");
-  static_assert(std::is_same<INTRUSIVE_FIELD_TYPE(TestIntrusiveField, 3), int8_t>::value, "");
-  static_assert(std::is_same<INTRUSIVE_FIELD_TYPE(TestIntrusiveField, 4), int64_t>::value, "");
+  static_assert(std::is_same<REFLECTIVE_FIELD_TYPE(TestIntrusiveField, 1), int32_t>::value, "");
+  static_assert(std::is_same<REFLECTIVE_FIELD_TYPE(TestIntrusiveField, 2), int64_t>::value, "");
+  static_assert(std::is_same<REFLECTIVE_FIELD_TYPE(TestIntrusiveField, 3), int8_t>::value, "");
+  static_assert(std::is_same<REFLECTIVE_FIELD_TYPE(TestIntrusiveField, 4), int64_t>::value, "");
 }
 
 TEST(intrusive, intrusive_field_offset) {
-  static_assert(INTRUSIVE_FIELD_OFFSET(TestIntrusiveField, 1) == 0, "");
-  static_assert(INTRUSIVE_FIELD_OFFSET(TestIntrusiveField, 2) == 8, "");
-  static_assert(INTRUSIVE_FIELD_OFFSET(TestIntrusiveField, 3) == 16, "");
-  static_assert(INTRUSIVE_FIELD_OFFSET(TestIntrusiveField, 4) == 24, "");
+  static_assert(REFLECTIVE_FIELD_OFFSET(TestIntrusiveField, 1) == 0, "");
+  static_assert(REFLECTIVE_FIELD_OFFSET(TestIntrusiveField, 2) == 8, "");
+  static_assert(REFLECTIVE_FIELD_OFFSET(TestIntrusiveField, 3) == 16, "");
+  static_assert(REFLECTIVE_FIELD_OFFSET(TestIntrusiveField, 4) == 24, "");
 }
 
 }  // namespace

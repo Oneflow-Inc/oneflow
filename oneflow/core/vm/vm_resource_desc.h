@@ -28,7 +28,6 @@ namespace vm {
 
 using DeviceTag2DeviceNum = std::unordered_map<std::string, int64_t>;
 
-// clang-format off
 class VmResourceDesc final : public intrusive::Base {
  public:
   void __Init__() {}
@@ -41,11 +40,9 @@ class VmResourceDesc final : public intrusive::Base {
   void set_max_device_num_per_machine(int64_t val) { max_device_num_per_machine_ = val; }
   DeviceTag2DeviceNum* mut_device_tag2device_num() { return &device_tag2device_num_; }
 
-
   // methods
   void __Init__(const Resource& resource);
-  void __Init__(
-      int64_t machine_num, const DeviceTag2DeviceNum& device_tag2device_num);
+  void __Init__(int64_t machine_num, const DeviceTag2DeviceNum& device_tag2device_num);
   void CopyFrom(const VmResourceDesc& vm_resource_desc);
   int64_t GetGlobalDeviceId(int64_t machine_id, int64_t device_id) const;
 
@@ -53,7 +50,8 @@ class VmResourceDesc final : public intrusive::Base {
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  VmResourceDesc() : intrusive_ref_(), machine_num_(), max_device_num_per_machine_(), device_tag2device_num_() {}
+  VmResourceDesc()
+      : intrusive_ref_(), machine_num_(), max_device_num_per_machine_(), device_tag2device_num_() {}
   intrusive::Ref intrusive_ref_;
   // fields
   int64_t machine_num_;
@@ -61,7 +59,6 @@ class VmResourceDesc final : public intrusive::Base {
   // maps
   DeviceTag2DeviceNum device_tag2device_num_;
 };
-// clang-format on
 
 }  // namespace vm
 }  // namespace oneflow

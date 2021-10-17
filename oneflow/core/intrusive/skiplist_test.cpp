@@ -24,7 +24,6 @@ namespace test {
 
 namespace {
 
-// clang-format off
 class SkipListFoo final : public intrusive::Base {
  public:
   void __Init__() { clear_is_deleted(); }
@@ -51,12 +50,11 @@ class SkipListFoo final : public intrusive::Base {
   SkipListFoo() : intrusive_ref_(), is_deleted_(), foo_map_key_() {}
   intrusive::Ref intrusive_ref_;
   int* is_deleted_;
+
  public:
   intrusive::SkipListHook<int32_t> foo_map_key_;
 };
-// clang-format on
 
-// clang-format off
 class SkipListFooContainer final : public intrusive::Base {
  public:
   // types
@@ -75,7 +73,6 @@ class SkipListFooContainer final : public intrusive::Base {
   // maps
   Key2SkipListFoo foo_map_;
 };
-// clang-format on
 
 using Key2SkipListFoo = intrusive::SkipList<INTRUSIVE_FIELD(SkipListFoo, foo_map_key_)>;
 TEST(SkipList, empty) {

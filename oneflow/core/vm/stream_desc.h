@@ -56,7 +56,6 @@ class StreamId final {
   int64_t global_device_id_;
 };
 
-// clang-format off
 class StreamDesc final : public intrusive::Base {
  public:
   // Getters
@@ -72,27 +71,31 @@ class StreamDesc final : public intrusive::Base {
 
   // methods
   void __Init__() {}
-  void __Init__(const StreamTypeId& stream_type_id, int32_t num_machines, int32_t num_streams_per_machine,
-             int32_t num_streams_per_thread);
+  void __Init__(const StreamTypeId& stream_type_id, int32_t num_machines,
+                int32_t num_streams_per_machine, int32_t num_streams_per_thread);
   int32_t num_threads() const;
   int32_t parallel_num() const { return num_machines() * num_streams_per_machine(); }
 
  private:
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
-  
-  StreamDesc() : intrusive_ref_(), num_machines_(), num_streams_per_machine_(), num_streams_per_thread_(), stream_type_id_() {}
+
+  StreamDesc()
+      : intrusive_ref_(),
+        num_machines_(),
+        num_streams_per_machine_(),
+        num_streams_per_thread_(),
+        stream_type_id_() {}
   intrusive::Ref intrusive_ref_;
   // fields
   int32_t num_machines_;
   int32_t num_streams_per_machine_;
   int32_t num_streams_per_thread_;
+
  public:
   // skiplist hooks
-  using StreamTypeIdKey = intrusive::SkipListHook<FlatMsg<StreamTypeId>, 7>;
-  StreamTypeIdKey stream_type_id_;
+  intrusive::SkipListHook<FlatMsg<StreamTypeId>, 7> stream_type_id_;
 };
-// clang-format on
 
 }  // namespace vm
 }  // namespace oneflow

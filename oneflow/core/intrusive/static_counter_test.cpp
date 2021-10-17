@@ -46,10 +46,10 @@ static_assert(STATIC_COUNTER(static_counter) == 2, "");
 TEST(StaticCounter, eq2) { static_assert(STATIC_COUNTER(static_counter) == 2, ""); }
 
 // clang-format off
-INTRUSIVE_BEGIN(FooBar);
+REFLECTIVE_CLASS_BEGIN(FooBar);
   FooBar() = default;
   static_assert(STATIC_COUNTER(field_counter) == 0, "");
-INTRUSIVE_END(FooBar);
+REFLECTIVE_CLASS_END(FooBar);
 // clang-format on
 
 }  // namespace

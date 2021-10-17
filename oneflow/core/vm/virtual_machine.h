@@ -34,7 +34,6 @@ namespace oneflow {
 namespace vm {
 
 struct VmDesc;
-// clang-format off
 class VirtualMachine final : public intrusive::Base {
  public:
   // types
@@ -48,7 +47,8 @@ class VirtualMachine final : public intrusive::Base {
       intrusive::List<INTRUSIVE_FIELD(Instruction, front_seq_compute_instr_hook_)>;
   using InstructionMsgMutextList =
       intrusive::MutexedList<INTRUSIVE_FIELD(InstructionMsg, InstructionMsg::instr_msg_hook_)>;
-  using StreamTypeId2StreamRtDesc = intrusive::SkipList<INTRUSIVE_FIELD(StreamRtDesc, stream_type_id_)>;
+  using StreamTypeId2StreamRtDesc =
+      intrusive::SkipList<INTRUSIVE_FIELD(StreamRtDesc, stream_type_id_)>;
   using Id2LogicalObject = intrusive::SkipList<INTRUSIVE_FIELD(LogicalObject, logical_object_id_)>;
 
   // Getters
@@ -61,15 +61,23 @@ class VirtualMachine final : public intrusive::Base {
   const std::atomic<int64_t>& flying_instruction_cnt() const { return flying_instruction_cnt_; }
   const ActiveStreamList& active_stream_list() const { return active_stream_list_; }
   const ThreadCtxList& thread_ctx_list() const { return thread_ctx_list_; }
-  const LogicalObjectDeleteList& delete_logical_object_list() const { return delete_logical_object_list_; }
+  const LogicalObjectDeleteList& delete_logical_object_list() const {
+    return delete_logical_object_list_;
+  }
   const InstructionList& waiting_instruction_list() const { return waiting_instruction_list_; }
   const InstructionList& ready_instruction_list() const { return ready_instruction_list_; }
-  const VmStatRunningInstructionList& vm_stat_running_instruction_list() const { return vm_stat_running_instruction_list_; }
-  const FrontSeqInstructionList& front_seq_compute_instr_list() const { return front_seq_compute_instr_list_; }
+  const VmStatRunningInstructionList& vm_stat_running_instruction_list() const {
+    return vm_stat_running_instruction_list_;
+  }
+  const FrontSeqInstructionList& front_seq_compute_instr_list() const {
+    return front_seq_compute_instr_list_;
+  }
   const InstructionMsgMutextList& pending_msg_list() const { return pending_msg_list_; }
-  const StreamTypeId2StreamRtDesc& stream_type_id2stream_rt_desc() const { return stream_type_id2stream_rt_desc_; }
+  const StreamTypeId2StreamRtDesc& stream_type_id2stream_rt_desc() const {
+    return stream_type_id2stream_rt_desc_;
+  }
   const Id2LogicalObject& id2logical_object() const { return id2logical_object_; }
-  //Setters
+  // Setters
   VmResourceDesc* mut_vm_resource_desc() {
     if (!vm_resource_desc_) { vm_resource_desc_ = intrusive::make_shared<VmResourceDesc>(); }
     return vm_resource_desc_.Mutable();
@@ -81,10 +89,16 @@ class VirtualMachine final : public intrusive::Base {
   LogicalObjectDeleteList* mut_delete_logical_object_list() { return &delete_logical_object_list_; }
   InstructionList* mut_waiting_instruction_list() { return &waiting_instruction_list_; }
   InstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
-  VmStatRunningInstructionList* mut_vm_stat_running_instruction_list() { return &vm_stat_running_instruction_list_; }
-  FrontSeqInstructionList* mut_front_seq_compute_instr_list() { return &front_seq_compute_instr_list_; }
+  VmStatRunningInstructionList* mut_vm_stat_running_instruction_list() {
+    return &vm_stat_running_instruction_list_;
+  }
+  FrontSeqInstructionList* mut_front_seq_compute_instr_list() {
+    return &front_seq_compute_instr_list_;
+  }
   InstructionMsgMutextList* mut_pending_msg_list() { return &pending_msg_list_; }
-  StreamTypeId2StreamRtDesc* mut_stream_type_id2stream_rt_desc() { return &stream_type_id2stream_rt_desc_; }
+  StreamTypeId2StreamRtDesc* mut_stream_type_id2stream_rt_desc() {
+    return &stream_type_id2stream_rt_desc_;
+  }
   Id2LogicalObject* mut_id2logical_object() { return &id2logical_object_; }
 
   // methods
@@ -96,8 +110,7 @@ class VirtualMachine final : public intrusive::Base {
   bool Empty() const;
   Maybe<const ParallelDesc> GetInstructionParallelDesc(const InstructionMsg&);
   MirroredObject* MutMirroredObject(int64_t logical_object_id, int64_t global_device_id);
-  const MirroredObject* GetMirroredObject(int64_t logical_object_id,
-                                       int64_t global_device_id);
+  const MirroredObject* GetMirroredObject(int64_t logical_object_id, int64_t global_device_id);
 
   int64_t this_machine_id() const;
   int64_t this_start_global_device_id() const {
@@ -113,52 +126,52 @@ class VirtualMachine final : public intrusive::Base {
 
   template<typename ContainerT>
   void TryRunFrontSeqInstruction(ContainerT* front_seq_list,
-                                        /*out*/ ReadyInstructionList* ready_instruction_list);
+                                 /*out*/ ReadyInstructionList* ready_instruction_list);
   void TryRunFrontSeqInstruction(/*out*/ ReadyInstructionList* ready_instruction_list);
   void ReleaseInstruction(Instruction* instruction,
-                            /*out*/ ReadyInstructionList* ready_instruction_list);
-  void TryReleaseFinishedInstructions(
-          Stream* stream, /*out*/ ReadyInstructionList* ready_instruction_list);
+                          /*out*/ ReadyInstructionList* ready_instruction_list);
+  void TryReleaseFinishedInstructions(Stream* stream,
+                                      /*out*/ ReadyInstructionList* ready_instruction_list);
   void FilterAndRunInstructionsInAdvance(TmpPendingInstrMsgList* instr_msg_list);
   void MakeInstructions(TmpPendingInstrMsgList*, /*out*/ NewInstructionList* ret_instruction_list);
   template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
-  void ForEachMirroredObject(Id2LogicalObject* id2logical_object,
-                             const Operand& operand,
+  void ForEachMirroredObject(Id2LogicalObject* id2logical_object, const Operand& operand,
                              int64_t global_device_id, const DoEachT& DoEach);
   template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
-  void ForEachConstMirroredObject(const InterpretType interpret_type,
-                                  Id2LogicalObject* id2logical_object,
-                                  const ModifiedOperand<kConstModifier, mem_zone_modifier>& const_operand,
-                                  int64_t global_device_id, const DoEachT& DoEach);
+  void ForEachConstMirroredObject(
+      const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
+      const ModifiedOperand<kConstModifier, mem_zone_modifier>& const_operand,
+      int64_t global_device_id, const DoEachT& DoEach);
   template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
-  void ForEachConstMirroredObject(const InterpretType interpret_type,
-                                  Id2LogicalObject* id2logical_object,
-                                  const ModifiedOperand<kDataMutableModifier, mem_zone_modifier>& mutable_operand,
-                                  int64_t global_device_id, const DoEachT& DoEach);
+  void ForEachConstMirroredObject(
+      const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
+      const ModifiedOperand<kDataMutableModifier, mem_zone_modifier>& mutable_operand,
+      int64_t global_device_id, const DoEachT& DoEach);
   template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
-  void ForEachMutMirroredObject(const InterpretType interpret_type,
-                                Id2LogicalObject* id2logical_object,
-                                const ModifiedOperand<kDataMutableModifier, mem_zone_modifier>& mutable_operand,
-                                int64_t global_device_id, const DoEachT& DoEach);
+  void ForEachMutMirroredObject(
+      const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
+      const ModifiedOperand<kDataMutableModifier, mem_zone_modifier>& mutable_operand,
+      int64_t global_device_id, const DoEachT& DoEach);
   template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
-  void ForEachMutMirroredObject(const InterpretType interpret_type,
-                                Id2LogicalObject* id2logical_object,
-                                const ModifiedOperand<kTypeAndDataMutableModifier, mem_zone_modifier>& mut2_operand,
-                                int64_t global_device_id, const DoEachT& DoEach);
+  void ForEachMutMirroredObject(
+      const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
+      const ModifiedOperand<kTypeAndDataMutableModifier, mem_zone_modifier>& mut2_operand,
+      int64_t global_device_id, const DoEachT& DoEach);
 
   template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
-  void ForEachMutMirroredObject(const InterpretType interpret_type,
-                                Id2LogicalObject* id2logical_object,
-                                const ModifiedOperand<kDeleteModifier, mem_zone_modifier>& mut2_operand,
-                                int64_t global_device_id, const DoEachT& DoEach);
+  void ForEachMutMirroredObject(
+      const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
+      const ModifiedOperand<kDeleteModifier, mem_zone_modifier>& mut2_operand,
+      int64_t global_device_id, const DoEachT& DoEach);
 
   void ConnectInstruction(Instruction* src_instruction, Instruction* dst_instruction);
-  RwMutexedObjectAccess* ConsumeMirroredObject(OperandAccessType access_type, MirroredObject* mirrored_object,
-                             Instruction* instrution);
+  RwMutexedObjectAccess* ConsumeMirroredObject(OperandAccessType access_type,
+                                               MirroredObject* mirrored_object,
+                                               Instruction* instrution);
   void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                               NewInstructionList* new_instruction_list);
   void FilterReadyInstructions(NewInstructionList* new_instruction_list,
-                         /*out*/ ReadyInstructionList* ready_instruction_list);
+                               /*out*/ ReadyInstructionList* ready_instruction_list);
   void DispatchAndPrescheduleInstructions(ReadyInstructionList* ready_instruction_list);
 
   template<typename ReadyList, typename IsEdgeReadyT>
@@ -191,7 +204,7 @@ class VirtualMachine final : public intrusive::Base {
   Range machine_id_range_;
   std::atomic<int64_t> flying_instruction_cnt_;
   // lists or maps
-  // Do not change the order of the following fields 
+  // Do not change the order of the following fields
   ActiveStreamList active_stream_list_;
   ThreadCtxList thread_ctx_list_;
   StreamTypeId2StreamRtDesc stream_type_id2stream_rt_desc_;
@@ -203,7 +216,6 @@ class VirtualMachine final : public intrusive::Base {
   VmStatRunningInstructionList vm_stat_running_instruction_list_;
   FrontSeqInstructionList front_seq_compute_instr_list_;
 };
-// clang-format on
 
 }  // namespace vm
 

@@ -38,7 +38,6 @@ enum OperandAccessType {
   kMutableOperandAccess,
 };
 
-// clang-format off
 class RwMutexedObjectAccess final : public intrusive::Base {
  public:
   void __Init__();
@@ -50,7 +49,9 @@ class RwMutexedObjectAccess final : public intrusive::Base {
   const Instruction& instruction() const { return *instruction_; }
   const MirroredObject& mirrored_object() const { return *mirrored_object_; }
   const RwMutexedObject& rw_mutexed_object() const { return *rw_mutexed_object_; }
-  bool is_rw_mutexed_object_access_hook_empty() const { return rw_mutexed_object_access_hook_.empty(); }
+  bool is_rw_mutexed_object_access_hook_empty() const {
+    return rw_mutexed_object_access_hook_.empty();
+  }
   const MirroredObjectId& mirrored_object_id() const { return mirrored_object_id_.key().Get(); }
   bool is_mirrored_object_id_inserted() const { return !mirrored_object_id_.empty(); }
 
@@ -69,7 +70,7 @@ class RwMutexedObjectAccess final : public intrusive::Base {
 
   // methods
   void __Init__(Instruction* instruction, MirroredObject* mirrored_object,
-                       OperandAccessType access_type);
+                OperandAccessType access_type);
 
   bool is_const_operand() const;
   bool is_mut_operand() const;
@@ -78,29 +79,39 @@ class RwMutexedObjectAccess final : public intrusive::Base {
 
  private:
   friend class intrusive::Ref;
-  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; } // NOLINT
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }  // NOLINT
 
-  RwMutexedObjectAccess() : intrusive_ref_(), access_type_(), instruction_(), mirrored_object_(), rw_mutexed_object_(), mirrored_object_id_(), instruction_access_hook_(), rw_mutexed_object_access_hook_() {}
+  RwMutexedObjectAccess()
+      : intrusive_ref_(),
+        access_type_(),
+        instruction_(),
+        mirrored_object_(),
+        rw_mutexed_object_(),
+        mirrored_object_id_(),
+        instruction_access_hook_(),
+        rw_mutexed_object_access_hook_() {}
   intrusive::Ref intrusive_ref_;
   // fields
   OperandAccessType access_type_;
   Instruction* instruction_;
   MirroredObject* mirrored_object_;
   RwMutexedObject* rw_mutexed_object_;
+
  public:
   // skiplist hooks
   intrusive::SkipListHook<FlatMsg<MirroredObjectId>, 10> mirrored_object_id_;
   // list hooks
   intrusive::ListHook instruction_access_hook_;
   intrusive::ListHook rw_mutexed_object_access_hook_;
-}; // NOLINT
+};  // NOLINT
 
 struct LogicalObject;
 class RwMutexedObject final : public intrusive::Base {
  public:
   void __Init__() {}
   // types
-  using RwMutexedObjectAccessList = intrusive::List<INTRUSIVE_FIELD(RwMutexedObjectAccess, rw_mutexed_object_access_hook_)>;
+  using RwMutexedObjectAccessList =
+      intrusive::List<INTRUSIVE_FIELD(RwMutexedObjectAccess, rw_mutexed_object_access_hook_)>;
 
   // Getters
   const RwMutexedObjectAccessList& access_list() const { return access_list_; }
@@ -108,26 +119,30 @@ class RwMutexedObject final : public intrusive::Base {
   RwMutexedObjectAccessList* mut_access_list() { return &access_list_; }
 
   // methods
-  template<typename T> bool Has() const {
+  template<typename T>
+  bool Has() const {
     return dynamic_cast<const T*>(&object()) != nullptr;
   }
-  template<typename T> Maybe<const T&> Get() const {
+  template<typename T>
+  Maybe<const T&> Get() const {
     const T* obj = dynamic_cast<const T*>(&object());
-    const auto &origin_obj = *object_ptr_;
-    CHECK_NOTNULL_OR_RETURN(obj)
-      << "cast to " << typeid(T).name() << "failed. "
-      << "type: " << (object_ptr_ ? typeid(origin_obj).name() : "nullptr");
+    const auto& origin_obj = *object_ptr_;
+    CHECK_NOTNULL_OR_RETURN(obj) << "cast to " << typeid(T).name() << "failed. "
+                                 << "type: "
+                                 << (object_ptr_ ? typeid(origin_obj).name() : "nullptr");
     return *obj;
   }
-  template<typename T> Maybe<T*> Mut() {
+  template<typename T>
+  Maybe<T*> Mut() {
     T* obj = dynamic_cast<T*>(object_ptr_.get());
-    const auto &origin_obj = *object_ptr_;
-    CHECK_NOTNULL_OR_RETURN(obj)
-      << "cast to " << typeid(T).name() << "failed. "
-      << "type: " << (object_ptr_ ? typeid(origin_obj).name() : "nullptr");
+    const auto& origin_obj = *object_ptr_;
+    CHECK_NOTNULL_OR_RETURN(obj) << "cast to " << typeid(T).name() << "failed. "
+                                 << "type: "
+                                 << (object_ptr_ ? typeid(origin_obj).name() : "nullptr");
     return obj;
   }
-  template<typename T, typename... Args> T* Init(Args&&... args) {
+  template<typename T, typename... Args>
+  T* Init(Args&&... args) {
     T* object = dynamic_cast<T*>(object_ptr_.get());
     CHECK(object == nullptr);
     object = new T(std::forward<Args>(args)...);
@@ -183,7 +198,6 @@ class MirroredObject final : public intrusive::Base {
   MirroredObjectId* mut_mirrored_object_id() { return mirrored_object_id_.Mutable(); }
   void set_global_device_id(int64_t val) { *global_device_id_.mut_key() = val; }
 
-
   // methods
   void __Init__() { clear_deleting_access(); }
   void __Init__(LogicalObject* logical_object, int64_t global_device_id);
@@ -194,12 +208,18 @@ class MirroredObject final : public intrusive::Base {
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  MirroredObject() : intrusive_ref_(), mirrored_object_id_(), rw_mutexed_object_(), deleting_access_(), global_device_id_() {}
+  MirroredObject()
+      : intrusive_ref_(),
+        mirrored_object_id_(),
+        rw_mutexed_object_(),
+        deleting_access_(),
+        global_device_id_() {}
   intrusive::Ref intrusive_ref_;
-  //fields
+  // fields
   FlatMsg<MirroredObjectId> mirrored_object_id_;
   intrusive::shared_ptr<RwMutexedObject> rw_mutexed_object_;
   RwMutexedObjectAccess* deleting_access_;
+
  public:
   // skiplist hooks
   intrusive::SkipListHook<int64_t, 10> global_device_id_;
@@ -226,12 +246,13 @@ class LogicalObject final : public intrusive::Base {
   }
 
   // methods
-  void __Init__() { /* Do nothing */ }
+  void __Init__() { /* Do nothing */
+  }
   void __Init__(const ObjectId& logical_object_id) {
     __Init__(logical_object_id, std::shared_ptr<const ParallelDesc>());
   }
   void __Init__(const ObjectId& logical_object_id,
-                       const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+                const std::shared_ptr<const ParallelDesc>& parallel_desc) {
     set_logical_object_id(logical_object_id);
     *mut_parallel_desc() = parallel_desc;
   }
@@ -242,19 +263,24 @@ class LogicalObject final : public intrusive::Base {
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  LogicalObject() : intrusive_ref_(), parallel_desc_(), global_device_id2mirrored_object_(), logical_object_id_(), delete_hook_() {}
+  LogicalObject()
+      : intrusive_ref_(),
+        parallel_desc_(),
+        global_device_id2mirrored_object_(),
+        logical_object_id_(),
+        delete_hook_() {}
   intrusive::Ref intrusive_ref_;
   // fields
   std::shared_ptr<const ParallelDesc> parallel_desc_;
   // maps
   GlobalDeviceId2MirroredObject global_device_id2mirrored_object_;
+
  public:
   // skiplist hooks
   intrusive::SkipListHook<ObjectId, 24> logical_object_id_;
   // list hooks
   intrusive::ListHook delete_hook_;
 };
-// clang-format on
 
 }  // namespace vm
 

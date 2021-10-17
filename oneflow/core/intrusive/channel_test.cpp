@@ -26,7 +26,6 @@ namespace test {
 
 namespace {
 
-// clang-format off
 class Foo final : public intrusive::Base {
  public:
   int x() const { return x_; }
@@ -39,11 +38,11 @@ class Foo final : public intrusive::Base {
   intrusive::Ref intrusive_ref_;
   // fields
   int x_;
+
  public:
   // list hooks
   intrusive::ListHook hook_;
 };
-// clang-format on
 
 using ChannelFoo = intrusive::Channel<INTRUSIVE_FIELD(Foo, hook_)>;
 

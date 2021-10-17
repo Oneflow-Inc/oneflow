@@ -25,8 +25,6 @@ namespace oneflow {
 
 class Device;
 
-// clang-format off
-
 // Helps VirtualMachine building instruction edges
 class LocalDepObject final : public intrusive::Base {
  public:
@@ -64,11 +62,17 @@ class LocalDepObject final : public intrusive::Base {
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  LocalDepObject() : intrusive_ref_(), logical_object_(), mirrored_object_(), pool_hook_(), stored_hook_(), lifetime_hook_() {}
+  LocalDepObject()
+      : intrusive_ref_(),
+        logical_object_(),
+        mirrored_object_(),
+        pool_hook_(),
+        stored_hook_(),
+        lifetime_hook_() {}
   intrusive::Ref intrusive_ref_;
   // fields
   intrusive::shared_ptr<vm::LogicalObject> logical_object_;
-  intrusive::shared_ptr<vm::MirroredObject> mirrored_object_; 
+  intrusive::shared_ptr<vm::MirroredObject> mirrored_object_;
 
  public:
   // list hooks
@@ -76,7 +80,6 @@ class LocalDepObject final : public intrusive::Base {
   intrusive::ListHook stored_hook_;
   intrusive::ListHook lifetime_hook_;
 };
-// clang-format on
 
 Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device);
 Maybe<void> PutLocalDepObjectToDevicePool(Symbol<Device> device, LocalDepObject* local_dep_object);

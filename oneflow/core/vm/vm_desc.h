@@ -25,12 +25,10 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-// clang-format off
 class VmDesc final : public intrusive::Base {
  public:
   // types
-  using StreamTypeId2StreamDesc =
-      intrusive::SkipList<INTRUSIVE_FIELD(StreamDesc, stream_type_id_)>;
+  using StreamTypeId2StreamDesc = intrusive::SkipList<INTRUSIVE_FIELD(StreamDesc, stream_type_id_)>;
   // Getters
   const VmResourceDesc& vm_resource_desc() const {
     if (vm_resource_desc_) { return vm_resource_desc_.Get(); }
@@ -39,7 +37,7 @@ class VmDesc final : public intrusive::Base {
   }
   const Range& machine_id_range() const { return machine_id_range_; }
   const StreamTypeId2StreamDesc& stream_type_id2desc() const { return stream_type_id2desc_; }
-  //Setters
+  // Setters
   VmResourceDesc* mut_vm_resource_desc() {
     if (!vm_resource_desc_) { vm_resource_desc_ = intrusive::make_shared<VmResourceDesc>(); }
     return vm_resource_desc_.Mutable();
@@ -48,14 +46,13 @@ class VmDesc final : public intrusive::Base {
   StreamTypeId2StreamDesc* mut_stream_type_id2desc() { return &stream_type_id2desc_; }
 
   // methods
-  void __Init__(const VmResourceDesc& vm_resource_desc) {
-    __Init__(vm_resource_desc, Range(0, 1));
-  }
+  void __Init__(const VmResourceDesc& vm_resource_desc) { __Init__(vm_resource_desc, Range(0, 1)); }
   void __Init__(const VmResourceDesc& vm_resource_desc, const Range& machine_id_range) {
     mut_vm_resource_desc()->CopyFrom(vm_resource_desc);
     *mut_machine_id_range() = machine_id_range;
   }
- private:  
+
+ private:
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
@@ -67,7 +64,6 @@ class VmDesc final : public intrusive::Base {
   // maps
   StreamTypeId2StreamDesc stream_type_id2desc_;
 };
-// clang-format on
 
 intrusive::shared_ptr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id);
 intrusive::shared_ptr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id,

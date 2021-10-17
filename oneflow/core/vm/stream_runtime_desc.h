@@ -26,7 +26,6 @@ class StreamType;
 struct StreamDesc;
 
 // Rt is short for Runtime
-// clang-format off
 class StreamRtDesc final : public intrusive::Base {
  public:
   // types
@@ -40,7 +39,7 @@ class StreamRtDesc final : public intrusive::Base {
   const StreamTypeId& stream_type_id() const { return stream_type_id_.key().Get(); }
   const StreamId2Stream& stream_id2stream() const { return stream_id2stream_; }
   // Setters
-  StreamDesc* mut_stream_desc() { 
+  StreamDesc* mut_stream_desc() {
     if (!stream_desc_) { stream_desc_ = intrusive::make_shared<StreamDesc>(); }
     return stream_desc_.Mutable();
   }
@@ -59,14 +58,14 @@ class StreamRtDesc final : public intrusive::Base {
   StreamRtDesc() : intrusive_ref_(), stream_desc_(), stream_id2stream_(), stream_type_id_() {}
   intrusive::Ref intrusive_ref_;
   // fields
-  intrusive::shared_ptr<StreamDesc> stream_desc_; 
+  intrusive::shared_ptr<StreamDesc> stream_desc_;
   // maps
   StreamId2Stream stream_id2stream_;
+
  public:
   // skiplist hooks
   intrusive::SkipListHook<FlatMsg<StreamTypeId>, 7> stream_type_id_;
 };
-// clang-format on
 
 }  // namespace vm
 }  // namespace oneflow

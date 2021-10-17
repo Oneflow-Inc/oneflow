@@ -250,7 +250,6 @@ TEST(List, FOR_EACH) {
   ASSERT_EQ(item1->ref_cnt(), 1);
 }
 
-// clang-format off
 class TestIntrusiveListHead final : public intrusive::Base {
  public:
   // types
@@ -268,7 +267,6 @@ class TestIntrusiveListHead final : public intrusive::Base {
   intrusive::Ref intrusive_ref_;
   FooList foo_list_;
 };
-// clang-format on
 
 TEST(List, intrusive_list_for_each) {
   auto foo_list_head = intrusive::make_shared<TestIntrusiveListHead>();
@@ -296,7 +294,6 @@ TEST(List, intrusive_list_for_each) {
   ASSERT_EQ(item1->ref_cnt(), 1);
 }
 
-// clang-format off
 class TestIntrusiveListHeadWrapper final : public intrusive::Base {
  public:
   // Getters
@@ -322,7 +319,6 @@ class TestIntrusiveListHeadWrapper final : public intrusive::Base {
   intrusive::Ref intrusive_ref_;
   intrusive::shared_ptr<TestIntrusiveListHead> head_;
 };
-// clang-format on
 
 TEST(List, nested_list_delete) {
   auto foo_list_head = intrusive::make_shared<TestIntrusiveListHeadWrapper>();
@@ -373,7 +369,7 @@ TEST(List, MoveTo) {
 }
 
 // clang-format off
-INTRUSIVE_BEGIN(SelfLoopContainer);
+REFLECTIVE_CLASS_BEGIN(SelfLoopContainer);
  public:
   void __Init__() { clear_deleted(); }
   // Getters
@@ -399,22 +395,22 @@ INTRUSIVE_BEGIN(SelfLoopContainer);
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
   SelfLoopContainer() : intrusive_ref_(), deleted_(), hook_(), head_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
+  REFLECTIVE_CLASS_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
-  INTRUSIVE_DEFINE_FIELD(bool*, deleted_);
+  REFLECTIVE_CLASS_DEFINE_FIELD(bool*, deleted_);
   // list hooks
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, hook_);
+  REFLECTIVE_CLASS_DEFINE_FIELD(intrusive::ListHook, hook_);
 
  public:
-  // Do not insert other INTRUSIVE_DEFINE_FIELDs between `using SelfLoopContainerList = ...;` and
-  // `INTRUSIVE_DEFINE_FIELD(SelfLoopContainerList, ...);` 
-  using SelfLoopContainerList = intrusive::HeadFreeList<INTRUSIVE_FIELD_BY_OFFSET(SelfLoopContainer, hook_), INTRUSIVE_FIELD_COUNTER>;
+  // Do not insert other REFLECTIVE_CLASS_DEFINE_FIELD between `using SelfLoopContainerList = ...;` and `REFLECTIVE_CLASS_DEFINE_FIELD(SelfLoopContainerList, ...);` 
+  using SelfLoopContainerList =
+      intrusive::HeadFreeList<REFLECTIVE_FIELD(SelfLoopContainer, hook_), REFLECTIVE_FIELD_COUNTER>;
   const SelfLoopContainerList& head() const { return head_; }
   SelfLoopContainerList* mut_head() { return &head_; }
 
  private:
-  INTRUSIVE_DEFINE_FIELD(SelfLoopContainerList, head_);
-INTRUSIVE_END(SelfLoopContainer);
+  REFLECTIVE_CLASS_DEFINE_FIELD(SelfLoopContainerList, head_);
+REFLECTIVE_CLASS_END(SelfLoopContainer);
 // clang-format on
 
 TEST(IntrusiveSelfLoopList, __Init__) {

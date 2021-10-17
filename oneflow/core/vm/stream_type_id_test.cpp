@@ -43,7 +43,6 @@ TEST(StreamTypeId, logical_compare) {
   LookupInferStreamTypeId(stream_type_id0);
 }
 
-// clang-format off
 class StreamTypeIdItem final : public intrusive::Base {
  public:
   // Getters
@@ -57,12 +56,11 @@ class StreamTypeIdItem final : public intrusive::Base {
 
   StreamTypeIdItem() : intrusive_ref_(), stream_type_id_() {}
   intrusive::Ref intrusive_ref_;
+
  public:
   // skiplist hooks
-  using StreamTypeIdKey = intrusive::SkipListHook<FlatMsg<StreamTypeId>, 20>;
-  StreamTypeIdKey stream_type_id_;
+  intrusive::SkipListHook<FlatMsg<StreamTypeId>, 20> stream_type_id_;
 };
-// clang-format on
 using StreamTypeIdSet = intrusive::SkipList<INTRUSIVE_FIELD(StreamTypeIdItem, stream_type_id_)>;
 
 TEST(StreamTypeId, map_key) {

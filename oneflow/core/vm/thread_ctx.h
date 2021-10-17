@@ -25,7 +25,6 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-// clang-format off
 class ThreadCtx final : public intrusive::Base {
  public:
   void __Init__() { clear_stream_rt_desc(); }
@@ -53,25 +52,30 @@ class ThreadCtx final : public intrusive::Base {
   }
   void LoopRun(const std::function<void(ThreadCtx*)>& Initializer);
   intrusive::ChannelStatus TryReceiveAndRun();
-  
+
  private:
   intrusive::ChannelStatus ReceiveAndRun();
 
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  ThreadCtx() : intrusive_ref_(), stream_rt_desc_(), stream_list_(), pending_instruction_list_(), thread_ctx_hook_() {}
+  ThreadCtx()
+      : intrusive_ref_(),
+        stream_rt_desc_(),
+        stream_list_(),
+        pending_instruction_list_(),
+        thread_ctx_hook_() {}
   intrusive::Ref intrusive_ref_;
   // fields
-  const StreamRtDesc* stream_rt_desc_; 
+  const StreamRtDesc* stream_rt_desc_;
   // lists
   StreamList stream_list_;
   PendingInstructionChannel pending_instruction_list_;
+
  public:
   // list hooks
   intrusive::ListHook thread_ctx_hook_;
 };
-// clang-format on
 
 }  // namespace vm
 }  // namespace oneflow
