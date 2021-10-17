@@ -826,14 +826,13 @@ class SparseSoftmaxCrossEntropyFunctor {
 
   Maybe<Tensor> EagerSparseSoftmaxCrossEntropyMsOperator(
       const std::shared_ptr<one::Tensor>& logits, const std::shared_ptr<one::Tensor>& label) const {
+    // op_reduce_max_device_stage_
     MutableAttrMap attrs;
     int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
     int32_t axis = logits->shape()->NumAxes() - 1;
-
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", {axis}));
     const auto& max_device_stage =
         JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_reduce_max_device_stage_, {logits}, attrs));
-
     std::shared_ptr<Tensor> max_global_stage_input0 = max_device_stage->at(0);
     std::shared_ptr<Tensor> max_global_stage_input1 = max_device_stage->at(2);
 
@@ -854,34 +853,30 @@ class SparseSoftmaxCrossEntropyFunctor {
           max_device_stage->at(2), JUST(max_device_stage->at(0)->parallel_desc()), s0b_sbp_parallels,
           s0s1_sbp_parallels));
     }
-
+    // op_reduce_max_global_stage_
     attrs.clear();
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", {axis}));
     JUST(attrs.SetAttr<bool>("keepdims", true));
     const auto& max_global_stage = JUST(OpInterpUtil::Dispatch<TensorTuple>(
         *op_reduce_max_global_stage_, {max_global_stage_input0, max_global_stage_input1}, attrs));
-
     auto& broadcast_sub_input = max_global_stage->at(0);
-
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
-      LOG(INFO) << "broadcast_sub_input->nd_sbp(): " << JUST(broadcast_sub_input->nd_sbp())->DebugString();
       broadcast_sub_input = JUST(functional::ToConsistent(
           broadcast_sub_input, JUST(max_device_stage->at(0)->parallel_desc()), s0b_sbp_parallels,
           s0b_sbp_parallels));
     }
-
+    // op_broadcast_sub_
     attrs.clear();
     const auto& output_broadcast_sub = JUST(OpInterpUtil::Dispatch<TensorTuple>(
         *op_broadcast_sub_, {logits, broadcast_sub_input}, attrs));
-
+    // op_exp_
     const auto& output_exp =
         JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_exp_, {output_broadcast_sub->at(0)}, attrs));
-
+    // op_reduce_sum_
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", {axis}));
     JUST(attrs.SetAttr<bool>("keepdims", true));
     const auto& output_reduce_sum =
         JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_reduce_sum_, {output_exp->at(0)}, attrs));
-
     std::shared_ptr<Tensor> broadcast_div_input1 = output_reduce_sum->at(0);
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
       std::vector<Symbol<cfg::SbpParallel>> empty_grad_sbp_parallels;
@@ -889,15 +884,14 @@ class SparseSoftmaxCrossEntropyFunctor {
           output_reduce_sum->at(0), JUST(output_reduce_sum->at(0)->parallel_desc()), s0b_sbp_parallels,
           s0b_sbp_parallels));
     }
-
+    // op_broadcast_div_
     attrs.clear();
     const auto& predictions = JUST(OpInterpUtil::Dispatch<TensorTuple>(
         *op_broadcast_div_, {output_exp->at(0), broadcast_div_input1}, attrs));
-
+    // op_sparse_cross_entropy_ms_
     JUST(attrs.SetAttr<int64_t>("depth", depth));
     const auto& output = JUST(OpInterpUtil::Dispatch<Tensor>(*op_sparse_cross_entropy_ms_,
                                                              {predictions->at(0), label}, attrs));
-
     return output;
   }
 
