@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/intrusive/dss.h"
 #include "oneflow/core/intrusive/static_counter.h"
 #include "oneflow/core/intrusive/struct_traits.h"
+#include "oneflow/core/intrusive/base.h"
 
 namespace oneflow {
 
@@ -80,15 +81,6 @@ namespace oneflow {
 //   REFLECTIVE_CLASS_DEFINE_FIELD(int64_t, d);
 // REFLECTIVE_CLASS_END(Foo);
 #define REFLECTIVE_FIELD_COUNTER STATIC_COUNTER(field_counter)
-
-namespace intrusive {
-
-struct Base {
-  void __Init__() {}
-  void __Delete__() {}
-};
-
-}  // namespace intrusive
 
 }  // namespace oneflow
 
