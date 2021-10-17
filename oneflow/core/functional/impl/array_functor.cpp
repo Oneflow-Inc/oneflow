@@ -1541,7 +1541,6 @@ class BroadcastReduceSumLikeFunctor {
         return JUST(ReduceSumLike(
             input, like,
             std::vector<int32_t>{broadcast_axis_vec.begin(), broadcast_axis_vec.end()}));
-
       }
     }
     return JUST(Identity(input));

@@ -112,7 +112,6 @@ class BroadcastDiv : public BroadcastBinaryGrad {
       in_grads->at(0) = JUST(functional::BroadcastReduceSumLike(x_grad, x));
     }
     if (y->requires_grad()) { in_grads->at(1) = JUST(functional::DivGrad(out_grads.at(0), z, y)); }
-
     return Maybe<void>::Ok();
   }
 };
