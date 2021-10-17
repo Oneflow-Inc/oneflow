@@ -104,6 +104,9 @@ struct WelfordAggregate {
   __device__ WelfordAggregate() : mean(0), m2(0), count(0) {}
   __device__ WelfordAggregate(T mean, T m2, int count) : mean(mean), m2(m2), count(count) {}
   inline __device__ void reduce(T val) {
+    // Use Welford Online algorithem to compute mean and variance
+    // For more details you can refer to:
+    // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
     count = count + 1;
     T delta1 = val - mean;
     mean += delta1 / count;
