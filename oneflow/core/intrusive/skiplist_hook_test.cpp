@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/intrusive/skiplist_entry.h"
+#include "oneflow/core/intrusive/skiplist_hook.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -37,18 +37,18 @@ struct FooSkipListElem {
   FooSkipListElem() : value() { key.__Init__(); }
 
   int value;
-  SkipListEntry<int> key;
+  SkipListHook<int> key;
 };
 
 using FooSkipList = TestSkipListHead<STRUCT_FIELD(FooSkipListElem, key)>;
 
-TEST(SkipListEntry, empty) {
+TEST(SkipListHook, empty) {
   FooSkipList skiplist;
   ASSERT_TRUE(skiplist.empty_debug());
   ASSERT_EQ(skiplist.size(), 0);
 }
 
-TEST(SkipListEntry, insert_naive) {
+TEST(SkipListHook, insert_naive) {
   FooSkipList skiplist;
   FooSkipListElem elem0;
   *elem0.key.mut_key() = 0;
@@ -65,7 +65,7 @@ TEST(SkipListEntry, insert_naive) {
   }
 }
 
-TEST(SkipListEntry, erase_by_key) {
+TEST(SkipListHook, erase_by_key) {
   FooSkipList skiplist;
   FooSkipListElem elem0;
   *elem0.key.mut_key() = 0;
@@ -78,7 +78,7 @@ TEST(SkipListEntry, erase_by_key) {
   ASSERT_TRUE(skiplist.Find(int(0)) == nullptr);
 }
 
-TEST(SkipListEntry, erase_by_elem) {
+TEST(SkipListHook, erase_by_elem) {
   FooSkipList skiplist;
   FooSkipListElem elem0;
   *elem0.key.mut_key() = 0;
@@ -91,7 +91,7 @@ TEST(SkipListEntry, erase_by_elem) {
   ASSERT_TRUE(skiplist.Find(int(0)) == nullptr);
 }
 
-TEST(SkipListEntry, insert_many) {
+TEST(SkipListHook, insert_many) {
   FooSkipList skiplist;
   FooSkipListElem exists[100];
   for (int i = 0; i < 100; ++i) {
@@ -118,7 +118,7 @@ TEST(SkipListEntry, insert_many) {
   ASSERT_TRUE(skiplist.empty_debug());
 }
 
-TEST(SkipListEntry, erase_many_by_key) {
+TEST(SkipListHook, erase_many_by_key) {
   FooSkipList skiplist;
   FooSkipListElem exists[100];
   for (int i = 0; i < 100; ++i) {
@@ -141,7 +141,7 @@ TEST(SkipListEntry, erase_many_by_key) {
   ASSERT_TRUE(skiplist.empty_debug());
 }
 
-TEST(SkipListEntry, erase_many_by_elem) {
+TEST(SkipListHook, erase_many_by_elem) {
   FooSkipList skiplist;
   FooSkipListElem exists[100];
   for (int i = 0; i < 100; ++i) {
