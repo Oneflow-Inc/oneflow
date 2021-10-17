@@ -29,7 +29,10 @@ bool IsStaticZerosTensor(const std::shared_ptr<Tensor>& x);
 bool IsInplaceValid(const std::shared_ptr<Tensor>& x);
 bool IsShapeCanExpandTo(const Shape& shape, const Shape& expand_shape);
 
+Maybe<void> CheckAxis(std::vector<int32_t>& axis, const Shape& shape);
 Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x);
+Maybe<void> CheckInplaceCastValid(const std::shared_ptr<Tensor>& x,
+                                  const std::shared_ptr<Tensor>& x_cast);
 
 Maybe<void> CheckShapeCanExpandTo(const Shape& shape, const Shape& expand_shape);
 

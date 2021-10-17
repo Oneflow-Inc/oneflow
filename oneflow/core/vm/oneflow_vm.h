@@ -18,8 +18,8 @@ limitations under the License.
 
 #include "oneflow/core/common/notifier.h"
 #include "oneflow/core/vm/interpret_type.h"
-#include "oneflow/core/vm/vm_desc.msg.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
+#include "oneflow/core/vm/vm_desc.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/thread/thread_pool.h"
 
 namespace oneflow {
@@ -41,11 +41,10 @@ class OneflowVM final {
   vm::VirtualMachine* mut_vm() { return vm_.Mutable(); }
   void ControlSync();
 
-  ObjectMsgPtr<vm::VirtualMachine> vm_;
+  intrusive::shared_ptr<vm::VirtualMachine> vm_;
   // for asynchronized execution
   std::list<std::unique_ptr<std::thread>> worker_threads_;
   std::thread schedule_thread_;
-  std::atomic<bool> exiting_;
   Notifier notifier_;
 };
 

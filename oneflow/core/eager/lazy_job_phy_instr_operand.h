@@ -16,9 +16,10 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_LAZY_JOB_PHY_INSTR_OPERAND_H_
 #define ONEFLOW_CORE_EAGER_LAZY_JOB_PHY_INSTR_OPERAND_H_
 
-#include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/instruction_operand.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/eager/local_dep_object.h"
+#include "oneflow/core/device/event_record.h"
 #include "oneflow/core/eager/critical_section_phy_instr_operand.h"
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/common/notifier.h"
@@ -41,43 +42,35 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
   ~LaunchLazyJobPhyInstrOperand() override = default;
 
   LaunchLazyJobPhyInstrOperand(
-      const std::shared_ptr<InputCriticalSectionPhyInstrOperand>& inputs_critical_section,
-      ObjectMsgPtr<LocalDepObject> in_dep_object,
-      const std::shared_ptr<OutputCriticalSectionPhyInstrOperand>& outputs_critical_section,
-      ObjectMsgPtr<LocalDepObject> out_dep_object,
-      const std::shared_ptr<ParameterCriticalSectionPhyInstrOperand>& params_critical_section,
-      ObjectMsgPtr<LocalDepObject> param_dep_object,
-      const std::shared_ptr<NcclCriticalSectionPhyInstrOperand>& nccl_critical_section,
-      ObjectMsgPtr<LocalDepObject> nccl_dep_object, const std::shared_ptr<NNGraphIf>& nn_graph)
-      : inputs_critical_section_(inputs_critical_section),
-        in_dep_object_(in_dep_object),
-        outputs_critical_section_(outputs_critical_section),
-        out_dep_object_(out_dep_object),
-        params_critical_section_(params_critical_section),
-        param_dep_object_(param_dep_object),
-        nccl_critical_section_(nccl_critical_section),
-        nccl_dep_object_(nccl_dep_object),
+      const intrusive::shared_ptr<LocalDepObject>& inputs_local_dep_object,
+      const intrusive::shared_ptr<LocalDepObject>& outputs_local_dep_object,
+      const std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>&
+          op_name2end_event_record,
+      const one::EagerBlobObjectListPtr& input_blob_objects,
+      const one::EagerBlobObjectListPtr& output_blob_objects,
+      const one::EagerBlobObjectListPtr& param_blob_objects,
+      const std::shared_ptr<NNGraphIf>& nn_graph)
+      : inputs_local_dep_object_(inputs_local_dep_object),
+        outputs_local_dep_object_(outputs_local_dep_object),
+        op_name2end_event_record_(op_name2end_event_record),
+        input_blob_objects_(input_blob_objects),
+        output_blob_objects_(output_blob_objects),
+        param_blob_objects_(param_blob_objects),
         nn_graph_(nn_graph) {}
 
-  const std::shared_ptr<InputCriticalSectionPhyInstrOperand>& inputs_critical_section() const {
-    return inputs_critical_section_;
-  }
-  const std::shared_ptr<OutputCriticalSectionPhyInstrOperand>& outputs_critical_section() const {
-    return outputs_critical_section_;
-  }
-  const std::shared_ptr<ParameterCriticalSectionPhyInstrOperand>& params_critical_section() const {
-    return params_critical_section_;
-  }
-  const std::shared_ptr<NcclCriticalSectionPhyInstrOperand>& nccl_critical_section() const {
-    return nccl_critical_section_;
-  }
+  const one::EagerBlobObjectListPtr& input_blob_objects() const { return input_blob_objects_; }
+  const one::EagerBlobObjectListPtr& output_blob_objects() const { return output_blob_objects_; }
   const std::shared_ptr<NNGraphIf>& nn_graph() const { return nn_graph_; }
+
+  Maybe<SharedEventRecord> EndEventRecord4OpName(const std::string& op_name) const;
+  const std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>&
+  op_name2end_event_record() const {
+    return op_name2end_event_record_;
+  }
 
   void ForEachConstMirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override {
-    // Do nothing because lifetime of inputs are managed by inputs_critical_section_.
-  }
+      const override;
 
   void ForEachMutMirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
@@ -85,19 +78,16 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
 
   void ForEachMut2MirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override {
-    // Do nothing because lifetime of outputs are managed by outputs_critical_section_.
-  }
+      const override;
 
  private:
-  std::shared_ptr<InputCriticalSectionPhyInstrOperand> inputs_critical_section_;
-  mutable ObjectMsgPtr<LocalDepObject> in_dep_object_;
-  std::shared_ptr<OutputCriticalSectionPhyInstrOperand> outputs_critical_section_;
-  mutable ObjectMsgPtr<LocalDepObject> out_dep_object_;
-  std::shared_ptr<ParameterCriticalSectionPhyInstrOperand> params_critical_section_;
-  mutable ObjectMsgPtr<LocalDepObject> param_dep_object_;
-  std::shared_ptr<NcclCriticalSectionPhyInstrOperand> nccl_critical_section_;
-  mutable ObjectMsgPtr<LocalDepObject> nccl_dep_object_;
+  mutable intrusive::shared_ptr<LocalDepObject> inputs_local_dep_object_;
+  mutable intrusive::shared_ptr<LocalDepObject> outputs_local_dep_object_;
+  std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>
+      op_name2end_event_record_;
+  one::EagerBlobObjectListPtr input_blob_objects_;
+  one::EagerBlobObjectListPtr output_blob_objects_;
+  one::EagerBlobObjectListPtr param_blob_objects_;
   std::shared_ptr<NNGraphIf> nn_graph_;
 };
 }  // namespace vm

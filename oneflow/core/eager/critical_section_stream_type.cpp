@@ -16,9 +16,9 @@ limitations under the License.
 
 #include "oneflow/core/eager/critical_section_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
-#include "oneflow/core/vm/thread_ctx.msg.h"
-#include "oneflow/core/vm/ref_cnt_instruction_status_querier.h"
+#include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/vm/thread_ctx.h"
+#include "oneflow/core/eager/critical_section_status_querier.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -31,18 +31,19 @@ void CriticalSectionStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device
 
 void CriticalSectionStreamType::InitInstructionStatus(
     const Stream& stream, InstructionStatusBuffer* status_buffer) const {
-  static_assert(sizeof(RefCntInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
-  RefCntInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data());
+  static_assert(sizeof(CriticalSectionStatusQuerier) < kInstructionStatusBufferBytes, "");
+  CriticalSectionStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data());
 }
 
 void CriticalSectionStreamType::DeleteInstructionStatus(
     const Stream& stream, InstructionStatusBuffer* status_buffer) const {
-  // do nothing
+  auto* ptr = CriticalSectionStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  ptr->~CriticalSectionStatusQuerier();
 }
 
 bool CriticalSectionStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
-  return RefCntInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
+  return CriticalSectionStatusQuerier::Cast(status_buffer.buffer().data())->QueryDone();
 }
 
 void CriticalSectionStreamType::Compute(Instruction* instruction) const {
@@ -53,10 +54,10 @@ void CriticalSectionStreamType::Compute(Instruction* instruction) const {
   }
 }
 
-ObjectMsgPtr<StreamDesc> CriticalSectionStreamType::MakeStreamDesc(const Resource& resource,
-                                                                   int64_t this_machine_id) const {
-  auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CriticalSectionStreamType>());
+intrusive::shared_ptr<StreamDesc> CriticalSectionStreamType::MakeStreamDesc(
+    const Resource& resource, int64_t this_machine_id) const {
+  auto ret = intrusive::make_shared<StreamDesc>();
+  ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CriticalSectionStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);

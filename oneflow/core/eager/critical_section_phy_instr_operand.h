@@ -16,8 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_CRITICAL_SECTION_PHY_INSTR_OPERAND_H_
 #define ONEFLOW_CORE_EAGER_CRITICAL_SECTION_PHY_INSTR_OPERAND_H_
 
-#include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/instruction_operand.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/device/event_record.h"
 #include "oneflow/core/framework/nn_graph_if.h"
 
 namespace oneflow {
@@ -31,68 +32,39 @@ using EagerBlobObjectListPtr =
 
 namespace vm {
 
-class CriticalSectionPhyInstrOperand : public PhyInstrOperand {
+class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
  public:
-  CriticalSectionPhyInstrOperand(const CriticalSectionPhyInstrOperand&) = delete;
-  CriticalSectionPhyInstrOperand(CriticalSectionPhyInstrOperand&&) = delete;
-  virtual ~CriticalSectionPhyInstrOperand() = default;
+  CriticalSectionBeginPhyInstrOperand(const CriticalSectionBeginPhyInstrOperand&) = delete;
+  CriticalSectionBeginPhyInstrOperand(CriticalSectionBeginPhyInstrOperand&&) = delete;
+  CriticalSectionBeginPhyInstrOperand& operator=(const CriticalSectionBeginPhyInstrOperand&) =
+      delete;
+  CriticalSectionBeginPhyInstrOperand& operator=(CriticalSectionBeginPhyInstrOperand&&) = delete;
+  virtual ~CriticalSectionBeginPhyInstrOperand() = default;
 
-  explicit CriticalSectionPhyInstrOperand(int64_t ref_cnt);
-
-  const std::shared_ptr<std::atomic<int64_t>>& critical_section_ready_ref_cnt() const {
-    return critical_section_ready_ref_cnt_;
-  }
-
-  const std::shared_ptr<std::atomic<int64_t>>& consumer_ref_cnt() const {
-    return consumer_ref_cnt_;
-  }
-
- protected:
-  // Initiliazed with 1.
-  // Reset to 0 when critical section ready.
-  std::shared_ptr<std::atomic<int64_t>> critical_section_ready_ref_cnt_;
-  // Number of working consumers.
-  std::shared_ptr<std::atomic<int64_t>> consumer_ref_cnt_;
-};
-
-class TensorCriticalSectionPhyInstrOperand : public CriticalSectionPhyInstrOperand {
- public:
-  TensorCriticalSectionPhyInstrOperand(const TensorCriticalSectionPhyInstrOperand&) = delete;
-  TensorCriticalSectionPhyInstrOperand(TensorCriticalSectionPhyInstrOperand&&) = delete;
-  virtual ~TensorCriticalSectionPhyInstrOperand() = default;
-
-  TensorCriticalSectionPhyInstrOperand(const one::EagerBlobObjectListPtr& eager_blob_objects,
-                                       const HashMap<std::string, int64_t>& op_name2index,
-                                       const std::shared_ptr<NNGraphIf>& nn_graph);
-
-  const std::shared_ptr<NNGraphIf>& nn_graph() const { return nn_graph_; }
-
-  // Called by consumer.
-  void ConsumerFetchBlobAndDecreaseRefCnt(const std::string& op_name,
-                                          const std::function<void(Blob*)>& Callback) const;
+  explicit CriticalSectionBeginPhyInstrOperand(
+      const one::EagerBlobObjectListPtr& eager_blob_objects,
+      intrusive::shared_ptr<LocalDepObject> local_dep_object)
+      : eager_blob_objects_(eager_blob_objects), local_dep_object_(local_dep_object) {}
 
   void ForEachMirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&) const;
 
-  const std::shared_ptr<std::atomic<int64_t>>& consumer_ref_cnt() const {
-    return consumer_ref_cnt_;
-  };
-  const HashMap<std::string, int64_t>& op_name2index() const { return op_name2index_; }
+  void ForEachMutMirroredObject(
+      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
+      const override;
+
+  intrusive::shared_ptr<LocalDepObject> local_dep_object() const { return local_dep_object_; }
 
  protected:
   one::EagerBlobObjectListPtr eager_blob_objects_;
-  std::shared_ptr<NNGraphIf> nn_graph_;
-  // op_name to index within `eager_blob_objects_`.
-  HashMap<std::string, int64_t> op_name2index_;
+  mutable intrusive::shared_ptr<LocalDepObject> local_dep_object_;
 };
 
-class InputCriticalSectionPhyInstrOperand final : public TensorCriticalSectionPhyInstrOperand {
+class InputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeginPhyInstrOperand {
  public:
-  InputCriticalSectionPhyInstrOperand(const one::EagerBlobObjectListPtr& eager_blob_objects,
-                                      const std::shared_ptr<NNGraphIf>& nn_graph)
-      : TensorCriticalSectionPhyInstrOperand(eager_blob_objects, GetOpNames(*nn_graph), nn_graph) {}
+  using CriticalSectionBeginPhyInstrOperand::CriticalSectionBeginPhyInstrOperand;
 
-  ~InputCriticalSectionPhyInstrOperand() override = default;
+  ~InputCriticalSectionBeginPhyInstrOperand() override = default;
 
   // for inputs
   void ForEachConstMirroredObject(
@@ -101,41 +73,22 @@ class InputCriticalSectionPhyInstrOperand final : public TensorCriticalSectionPh
     ForEachMirroredObject(DoEach);
   }
 
-  void ForEachMutMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
-
   // for outputs
   void ForEachMut2MirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
       const override {}
-
- private:
-  HashMap<std::string, int64_t> GetOpNames(const NNGraphIf& nn_graph) const {
-    HashMap<std::string, int64_t> ret;
-    const auto& op_names = nn_graph.inputs_op_names();
-    for (int i = 0; i < op_names.size(); ++i) { CHECK(ret.emplace(op_names.at(i), i).second); }
-    return ret;
-  }
 };
 
-class OutputCriticalSectionPhyInstrOperand final : public TensorCriticalSectionPhyInstrOperand {
+class OutputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeginPhyInstrOperand {
  public:
-  OutputCriticalSectionPhyInstrOperand(const one::EagerBlobObjectListPtr& eager_blob_objects,
-                                       const std::shared_ptr<NNGraphIf>& nn_graph)
-      : TensorCriticalSectionPhyInstrOperand(eager_blob_objects, GetOpNames(*nn_graph), nn_graph) {}
+  using CriticalSectionBeginPhyInstrOperand::CriticalSectionBeginPhyInstrOperand;
 
-  ~OutputCriticalSectionPhyInstrOperand() override = default;
+  ~OutputCriticalSectionBeginPhyInstrOperand() override = default;
 
   // for inputs
   void ForEachConstMirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
       const override {}
-
-  // for params
-  void ForEachMutMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
 
   // for outputs
   void ForEachMut2MirroredObject(
@@ -143,57 +96,61 @@ class OutputCriticalSectionPhyInstrOperand final : public TensorCriticalSectionP
       const override {
     ForEachMirroredObject(DoEach);
   }
-
- private:
-  HashMap<std::string, int64_t> GetOpNames(const NNGraphIf& nn_graph) const {
-    HashMap<std::string, int64_t> ret;
-    const auto& op_names = nn_graph.outputs_op_names();
-    for (int i = 0; i < op_names.size(); ++i) { CHECK(ret.emplace(op_names.at(i), i).second); }
-    return ret;
-  }
 };
 
-class ParameterCriticalSectionPhyInstrOperand final : public TensorCriticalSectionPhyInstrOperand {
+class CriticalSectionEndPhyInstrOperand : public PhyInstrOperand {
  public:
-  ParameterCriticalSectionPhyInstrOperand(const one::EagerBlobObjectListPtr& eager_blob_objects,
-                                          const std::shared_ptr<NNGraphIf>& nn_graph)
-      : TensorCriticalSectionPhyInstrOperand(eager_blob_objects, {}, nn_graph) {}
+  CriticalSectionEndPhyInstrOperand(const std::shared_ptr<EagerBlobObject>& eager_blob_object,
+                                    const std::shared_ptr<SharedEventRecord>& event_record)
+      : eager_blob_object_(eager_blob_object), event_record_(event_record) {}
+  virtual ~CriticalSectionEndPhyInstrOperand() = default;
 
-  ~ParameterCriticalSectionPhyInstrOperand() override = default;
+  const std::shared_ptr<SharedEventRecord>& event_record() const { return event_record_; }
+
+  void ForEachMirroredObject(
+      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&) const;
+
+  void ForEachMutMirroredObject(
+      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
+      const override;
+
+ private:
+  std::shared_ptr<EagerBlobObject> eager_blob_object_;
+  std::shared_ptr<SharedEventRecord> event_record_;
+};
+
+class InputCriticalSecondEndPhyInstrOperand final : public CriticalSectionEndPhyInstrOperand {
+ public:
+  using CriticalSectionEndPhyInstrOperand::CriticalSectionEndPhyInstrOperand;
+  ~InputCriticalSecondEndPhyInstrOperand() override = default;
+
+  void ForEachConstMirroredObject(
+      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
+      const override {
+    ForEachMirroredObject(DoEach);
+  }
+
+  void ForEachMut2MirroredObject(
+      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
+      const override {}
+};
+
+class OutputCriticalSecondEndPhyInstrOperand final : public CriticalSectionEndPhyInstrOperand {
+ public:
+  using CriticalSectionEndPhyInstrOperand::CriticalSectionEndPhyInstrOperand;
+  ~OutputCriticalSecondEndPhyInstrOperand() override = default;
 
   // for inputs
   void ForEachConstMirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
       const override {}
 
-  // for params
-  void ForEachMutMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-      const override;
-
   // for outputs
   void ForEachMut2MirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override {}
-};
-
-class NcclCriticalSectionPhyInstrOperand final : public CriticalSectionPhyInstrOperand {
- public:
-  NcclCriticalSectionPhyInstrOperand() : CriticalSectionPhyInstrOperand(1) {}
-
-  ~NcclCriticalSectionPhyInstrOperand() override = default;
-
-  void ForEachConstMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override {}
-
-  void ForEachMutMirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-      const override;
-
-  void ForEachMut2MirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override {}
+      const override {
+    ForEachMirroredObject(DoEach);
+  }
 };
 
 }  // namespace vm

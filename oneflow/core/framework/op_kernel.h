@@ -260,21 +260,10 @@ class OpKernel;
 template<typename T>
 OpKernel* NewOpKernel();
 
-enum OpKernelStatefulness {
-  kInvalidOpKernelStatefulness = 0,
-  kStatefulOpKernel,
-  kStatelessOpKernel,
-};
-
 class OpKernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpKernel);
   virtual ~OpKernel() = default;
-
-  bool is_stateless() const {
-    CHECK_NE(statefullness_, kInvalidOpKernelStatefulness);
-    return statefullness_ == kStatelessOpKernel;
-  }
 
   virtual std::shared_ptr<OpKernelState> CreateOpKernelState(KernelInitContext* ctx) const {
     return std::shared_ptr<OpKernelState>();
@@ -286,38 +275,25 @@ class OpKernel {
   virtual bool AlwaysComputeWhenAllOutputsEmpty() const = 0;
 
  protected:
-  OpKernel() : statefullness_(kInvalidOpKernelStatefulness) {}
+  OpKernel() {}
 
  private:
   template<typename T>
   friend OpKernel* NewOpKernel();
   template<typename T>
   friend OpKernel* NewOpKernelWithCtx(KernelCreateContext* ctx);
-  OpKernelStatefulness statefullness_;
 };
 
 template<typename T>
 OpKernel* NewOpKernel() {
-  OpKernel* opkernel = new T();
-  if (typeid(&OpKernel::CreateOpKernelState) == typeid(&T::CreateOpKernelState)) {
-    opkernel->statefullness_ = kStatelessOpKernel;
-  } else {
-    opkernel->statefullness_ = kStatefulOpKernel;
-  }
-  return opkernel;
+  return new T();
 }
 
 class KernelCreateContext;
 
 template<typename T>
 OpKernel* NewOpKernelWithCtx(KernelCreateContext* ctx) {
-  OpKernel* opkernel = new T(ctx);
-  if (typeid(&OpKernel::CreateOpKernelState) == typeid(&T::CreateOpKernelState)) {
-    opkernel->statefullness_ = kStatelessOpKernel;
-  } else {
-    opkernel->statefullness_ = kStatefulOpKernel;
-  }
-  return opkernel;
+  return new T(ctx);
 }
 
 }  // namespace user_op

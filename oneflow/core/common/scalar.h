@@ -60,6 +60,11 @@ class Scalar {
     }
   }
 
+  template<typename T, typename std::enable_if<std::is_scalar<T>::value, int>::type = 0>
+  T Value() const {
+    return CHECK_JUST(As<T>());
+  }
+
   bool IsIntegral() const { return active_tag_ == HAS_S || active_tag_ == HAS_U; }
   bool IsFloatingPoint() const { return active_tag_ == HAS_D; }
   bool IsSigned() const { return active_tag_ == HAS_S || active_tag_ == HAS_D; }

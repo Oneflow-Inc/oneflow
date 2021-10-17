@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/vm_desc.msg.h"
-#include "oneflow/core/vm/stream_desc.msg.h"
+#include "oneflow/core/vm/vm_desc.h"
+#include "oneflow/core/vm/stream_desc.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/common/util.h"
@@ -28,15 +28,16 @@ void SetMachineIdRange(Range* range, int64_t machine_num, int64_t this_machine_i
   *range = Range(this_machine_id, this_machine_id + 1);
 }
 
-ObjectMsgPtr<VmDesc> MakeVmDesc(
+intrusive::shared_ptr<VmDesc> MakeVmDesc(
     const Resource& resource, int64_t this_machine_id,
     const std::function<void(const std::function<void(const InstrTypeId&)>&)>& ForEachInstrTypeId) {
   std::set<StreamTypeId> stream_type_ids;
   ForEachInstrTypeId([&](const InstrTypeId& instr_type_id) {
     stream_type_ids.insert(instr_type_id.stream_type_id());
   });
-  auto vm_desc = ObjectMsgPtr<VmDesc>::New(ObjectMsgPtr<VmResourceDesc>::New(resource).Get());
-  SetMachineIdRange(vm_desc->mutable_machine_id_range(), resource.machine_num(), this_machine_id);
+  auto vm_desc =
+      intrusive::make_shared<VmDesc>(intrusive::make_shared<VmResourceDesc>(resource).Get());
+  SetMachineIdRange(vm_desc->mut_machine_id_range(), resource.machine_num(), this_machine_id);
   int cnt = 0;
   for (const auto& stream_type_id : stream_type_ids) {
     const StreamType& stream_type = stream_type_id.stream_type();
@@ -52,12 +53,12 @@ ObjectMsgPtr<VmDesc> MakeVmDesc(
 
 }  // namespace
 
-ObjectMsgPtr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id) {
+intrusive::shared_ptr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id) {
   return MakeVmDesc(resource, this_machine_id, &ForEachInstrTypeId);
 }
 
-ObjectMsgPtr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id,
-                                const std::set<std::string>& instr_type_names) {
+intrusive::shared_ptr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id,
+                                         const std::set<std::string>& instr_type_names) {
   const auto& ForEachInstrTypeId = [&](const std::function<void(const InstrTypeId&)>& Handler) {
     for (const auto& instr_type_name : instr_type_names) {
       Handler(LookupInstrTypeId(instr_type_name));
