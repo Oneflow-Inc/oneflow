@@ -18,7 +18,7 @@ limitations under the License.
 // reference: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65899
 #include <sstream>
 #define private public
-#include "oneflow/core/intrusive/list_entry.h"
+#include "oneflow/core/intrusive/list_hook.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -30,12 +30,12 @@ namespace test {
 struct ListItemBar final {
   ListItemBar() : value() { bar_list.__Init__(); }
   int value;
-  ListEntry bar_list;
+  ListHook bar_list;
 };
 
-class TestListEntry final : public ListEntry {
+class TestListHook final : public ListHook {
  public:
-  TestListEntry() { this->__Init__(); }
+  TestListHook() { this->__Init__(); }
 };
 
 template<typename ItemField>
@@ -46,23 +46,23 @@ class TestListHead : public intrusive::ListHead<ItemField> {
 
 using BarListHead = TestListHead<STRUCT_FIELD(ListItemBar, bar_list)>;
 
-TEST(TestListEntry, init) {
-  TestListEntry list_iterator;
+TEST(TestListHook, init) {
+  TestListHook list_iterator;
   ASSERT_EQ(&list_iterator, list_iterator.prev());
   ASSERT_EQ(&list_iterator, list_iterator.next());
 }
 
-TEST(TestListEntry, append_to) {
-  TestListEntry list_iter0;
-  TestListEntry list_iter1;
+TEST(TestListHook, append_to) {
+  TestListHook list_iter0;
+  TestListHook list_iter1;
   list_iter1.AppendTo(&list_iter0);
   ASSERT_EQ(&list_iter0, list_iter1.prev());
   ASSERT_EQ(&list_iter1, list_iter0.next());
 }
 
-TEST(TestListEntry, clear) {
-  TestListEntry list_head0;
-  TestListEntry list_head1;
+TEST(TestListHook, clear) {
+  TestListHook list_head0;
+  TestListHook list_head1;
   list_head1.AppendTo(&list_head0);
   list_head1.__Init__();
   ASSERT_EQ(&list_head1, list_head1.prev());
@@ -76,7 +76,7 @@ TEST(ListHead, empty) {
 
 TEST(ListHead, push_front) {
   BarListHead list_head;
-  ListEntry& head = list_head.container_;
+  ListHook& head = list_head.container_;
   ListItemBar item0;
   list_head.PushFront(&item0);
   ASSERT_EQ(head.next(), &item0.bar_list);
