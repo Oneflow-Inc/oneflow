@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/vm/stream_type_id.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/common/util.h"
@@ -44,17 +44,30 @@ TEST(StreamTypeId, logical_compare) {
 }
 
 // clang-format off
-OBJECT_MSG_BEGIN(StreamTypeIdItem);
-  OBJECT_MSG_DEFINE_MAP_KEY(StreamTypeId, stream_type_id);
-OBJECT_MSG_END(StreamTypeIdItem);
+INTRUSIVE_BEGIN(StreamTypeIdItem);
+ public:
+  // Getters
+  const StreamTypeId& stream_type_id() const { return stream_type_id_.key().Get(); }
+  // Setters
+  StreamTypeId* mut_stream_type_id() { return stream_type_id_.mut_key()->Mutable(); }
+
+ private:
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+
+  StreamTypeIdItem() : intrusive_ref_(), stream_type_id_() {}
+  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
+  using StreamTypeIdKey = intrusive::SkipListHook<FlatMsg<StreamTypeId>, 20>;
+  INTRUSIVE_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);
+INTRUSIVE_END(StreamTypeIdItem);
 // clang-format on
-using StreamTypeIdSet = OBJECT_MSG_MAP(StreamTypeIdItem, stream_type_id);
+using StreamTypeIdSet = intrusive::SkipList<INTRUSIVE_FIELD(StreamTypeIdItem, stream_type_id_)>;
 
 TEST(StreamTypeId, map_key) {
-  auto stream_type_id0 = ObjectMsgPtr<StreamTypeIdItem>::New();
+  auto stream_type_id0 = intrusive::make_shared<StreamTypeIdItem>();
   stream_type_id0->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<ControlStreamType>(),
                                                   InterpretType::kCompute);
-  auto stream_type_id1 = ObjectMsgPtr<StreamTypeIdItem>::New();
+  auto stream_type_id1 = intrusive::make_shared<StreamTypeIdItem>();
   stream_type_id1->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<ControlStreamType>(),
                                                   InterpretType::kCompute);
   StreamTypeIdSet stream_type_id_set;
