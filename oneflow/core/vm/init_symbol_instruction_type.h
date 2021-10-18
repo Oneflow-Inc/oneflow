@@ -16,11 +16,11 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_INIT_SYMBOL_INSTRUCTION_TYPE_H_
 #define ONEFLOW_CORE_VM_INIT_SYMBOL_INSTRUCTION_TYPE_H_
 
-#include "oneflow/core/object_msg/flat_msg_view.h"
+#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/vm/host_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
-#include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/vm/instruction_operand.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/vm/object_wrapper.h"
 
