@@ -276,11 +276,6 @@ def tolist_op(input):
     return input.numpy().tolist()
 
 
-@register_tensor_op("logical_not")
-def logical_not_op_tensor(input):
-    return flow._C.logical_not(input)
-
-
 if __name__ == "__main__":
     import doctest
 

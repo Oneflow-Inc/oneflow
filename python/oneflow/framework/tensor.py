@@ -677,7 +677,6 @@ def RegisterMethods():
     Tensor.__le__ = _le
     Tensor.__and__ = _and
     Tensor.__or__ = _or
-    Tensor.__not__ = _not
     Tensor.__xor__ = _xor
     Tensor.__mul__ = _mul
     Tensor.__rmul__ = _rmul
@@ -770,6 +769,7 @@ def RegisterMethods():
     Tensor.relu = _relu
     Tensor.softmax = _softmax
     Tensor.log_softmax = _log_softmax
+    Tensor.logical_not = _not
 
 
 def register_tensor_op(op_name):
