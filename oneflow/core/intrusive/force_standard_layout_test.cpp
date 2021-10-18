@@ -77,7 +77,7 @@ TEST(ForceStandardLayout, move_constructor) {
 TEST(ForceStandardLayout, copy_assign) {
   int value = Unstandard::standard_value;
   const ForceStandardLayout<Unstandard> const_sl(&value);
-  ForceStandardLayout<Unstandard> sl = const_sl;
+  ForceStandardLayout<Unstandard> sl = const_sl; // NOLINT
   ASSERT_EQ(sl.Get().x, Unstandard::unstandard_value);
   ASSERT_EQ(sl.Get().ptr(), &value);
 }
