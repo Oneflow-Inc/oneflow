@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/vm_resource_desc.msg.h"
+#include "oneflow/core/vm/vm_resource_desc.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/common/util.h"
 
@@ -28,7 +28,7 @@ void VmResourceDesc::__Init__(const Resource& resource) {
 void VmResourceDesc::__Init__(int64_t machine_num,
                               const DeviceTag2DeviceNum& device_tag2device_num) {
   set_machine_num(machine_num);
-  *mutable_device_tag2device_num() = device_tag2device_num;
+  *mut_device_tag2device_num() = device_tag2device_num;
   set_max_device_num_per_machine(0);
   for (const auto& pair : device_tag2device_num) {
     if (max_device_num_per_machine() < pair.second) { set_max_device_num_per_machine(pair.second); }
