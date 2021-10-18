@@ -174,12 +174,9 @@ __global__ void BatchPermuteMovement2Kernel(const void* src_ptr, void* dst_ptr, 
 }
 
 template<size_t num_dims, size_t movement_size, size_t tile_size, typename IndexType>
-void LaunchBatchPermuteKernel(StreamContext* stream_ctx,
+void LaunchBatchPermuteKernel(cudaStream_t& cuda_stream,
                               PermuteKernelParams<num_dims, IndexType>& params, IndexType& n,
                               IndexType& h, IndexType& w) {
-  cudaStream_t cuda_stream =
-      CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
-
   IndexType dh = (h + tile_size - 1) / tile_size;
   IndexType dw = (w + tile_size - 1) / tile_size;
 
@@ -267,10 +264,10 @@ void LaunchKernel(StreamContext* stream_ctx, const int64_t* src_dims, const void
     InferBatchPermuteShape<num_dims, IndexType>(params, &n, &h, &w);
     if (CheckLaunchBatchPermute<num_dims, kTileSize>(params, &n, &h, &w)) {
       if (CheckUseHalf2<IndexType, movement_size>(&h, &w)) {
-        LaunchBatchPermuteKernel<num_dims, 2, kHalfTileSize, IndexType>(stream_ctx, params, n, h,
+        LaunchBatchPermuteKernel<num_dims, 2, kHalfTileSize, IndexType>(cuda_stream, params, n, h,
                                                                         w);
       } else {
-        LaunchBatchPermuteKernel<num_dims, movement_size, kTileSize, IndexType>(stream_ctx, params,
+        LaunchBatchPermuteKernel<num_dims, movement_size, kTileSize, IndexType>(cuda_stream, params,
                                                                                 n, h, w);
       }
     } else {
