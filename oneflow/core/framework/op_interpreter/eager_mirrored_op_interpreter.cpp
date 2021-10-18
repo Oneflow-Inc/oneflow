@@ -232,7 +232,7 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
   int64_t root = JUST(parallel_desc->MachineId4ParallelId(src_rank));
   std::shared_ptr<UserOpExpr> op_expr = JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, root));
   MutableAttrMap attrs;
-  JUST(attrs.SetAttr<int64_t>("root", src_rank));
+  JUST(attrs.SetAttr<int64_t>("root", root));
   if (root == GlobalProcessCtx::Rank() || inplace) {
     TensorTuple outputs{tensor};
     JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs,
