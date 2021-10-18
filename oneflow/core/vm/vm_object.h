@@ -50,7 +50,7 @@ INTRUSIVE_BEGIN(RwMutexedObjectAccess);
   const Instruction& instruction() const { return *instruction_; }
   const MirroredObject& mirrored_object() const { return *mirrored_object_; }
   const RwMutexedObject& rw_mutexed_object() const { return *rw_mutexed_object_; }
-  bool is_rw_mutexed_object_access_entry_empty() const { return rw_mutexed_object_access_entry_.empty(); }
+  bool is_rw_mutexed_object_access_hook_empty() const { return rw_mutexed_object_access_hook_.empty(); }
   const MirroredObjectId& mirrored_object_id() const { return mirrored_object_id_.key().Get(); }
   bool is_mirrored_object_id_inserted() const { return !mirrored_object_id_.empty(); }
 
@@ -80,17 +80,17 @@ INTRUSIVE_BEGIN(RwMutexedObjectAccess);
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; } // NOLINT
 
-  RwMutexedObjectAccess() : intrusive_ref_(), access_type_(), instruction_(), mirrored_object_(), rw_mutexed_object_(), instruction_access_entry_(), rw_mutexed_object_access_entry_(), mirrored_object_id_() {}
+  RwMutexedObjectAccess() : intrusive_ref_(), access_type_(), instruction_(), mirrored_object_(), rw_mutexed_object_(), instruction_access_hook_(), rw_mutexed_object_access_hook_(), mirrored_object_id_() {}
   INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(OperandAccessType, access_type_);
   INTRUSIVE_DEFINE_FIELD(Instruction*, instruction_);
   INTRUSIVE_DEFINE_FIELD(MirroredObject*, mirrored_object_);
   INTRUSIVE_DEFINE_FIELD(RwMutexedObject*, rw_mutexed_object_);
-  // list entries
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, instruction_access_entry_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, rw_mutexed_object_access_entry_);
-  using MirroredObjectIdKey = intrusive::SkipListEntry<FlatMsg<MirroredObjectId>, 10>;
+  // list hooks
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, instruction_access_hook_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, rw_mutexed_object_access_hook_);
+  using MirroredObjectIdKey = intrusive::SkipListHook<FlatMsg<MirroredObjectId>, 10>;
   INTRUSIVE_DEFINE_FIELD(MirroredObjectIdKey, mirrored_object_id_);
 INTRUSIVE_END(RwMutexedObjectAccess); // NOLINT
 
@@ -99,7 +99,7 @@ INTRUSIVE_BEGIN(RwMutexedObject);
  public:
   void __Init__() {}
   // types
-  using RwMutexedObjectAccessList = intrusive::List<INTRUSIVE_FIELD(RwMutexedObjectAccess, rw_mutexed_object_access_entry_)>;
+  using RwMutexedObjectAccessList = intrusive::List<INTRUSIVE_FIELD(RwMutexedObjectAccess, rw_mutexed_object_access_hook_)>;
 
   // Getters
   const RwMutexedObjectAccessList& access_list() const { return access_list_; }
@@ -149,7 +149,7 @@ INTRUSIVE_BEGIN(RwMutexedObject);
   // fields
   INTRUSIVE_DEFINE_FIELD(std::unique_ptr<Object>, object_ptr_);
 
-  // list entries
+  // list hooks
   INTRUSIVE_DEFINE_FIELD(RwMutexedObjectAccessList, access_list_);
 INTRUSIVE_END(RwMutexedObject);
 
@@ -199,8 +199,8 @@ INTRUSIVE_BEGIN(MirroredObject);
   INTRUSIVE_DEFINE_FIELD(FlatMsg<MirroredObjectId>, mirrored_object_id_);
   INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<RwMutexedObject>, rw_mutexed_object_);
   INTRUSIVE_DEFINE_FIELD(RwMutexedObjectAccess*, deleting_access_);
-  // map entries
-  using Int64Key = intrusive::SkipListEntry<int64_t, 10>;
+  // map hooks
+  using Int64Key = intrusive::SkipListHook<int64_t, 10>;
   INTRUSIVE_DEFINE_FIELD(Int64Key, global_device_id_);
 INTRUSIVE_END(MirroredObject);
 
@@ -212,7 +212,7 @@ INTRUSIVE_BEGIN(LogicalObject);
       intrusive::SkipList<INTRUSIVE_FIELD(MirroredObject, global_device_id_)>;
   // Getters
   const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
-  bool is_delete_entry_empty() const { return delete_entry_.empty(); }
+  bool is_delete_hook_empty() const { return delete_hook_.empty(); }
   const ObjectId& logical_object_id() const { return logical_object_id_.key(); }
   const GlobalDeviceId2MirroredObject& global_device_id2mirrored_object() const {
     return global_device_id2mirrored_object_;
@@ -241,15 +241,15 @@ INTRUSIVE_BEGIN(LogicalObject);
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  LogicalObject() : intrusive_ref_(), parallel_desc_(), logical_object_id_(), delete_entry_(), global_device_id2mirrored_object_() {}
+  LogicalObject() : intrusive_ref_(), parallel_desc_(), logical_object_id_(), delete_hook_(), global_device_id2mirrored_object_() {}
   INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(std::shared_ptr<const ParallelDesc>, parallel_desc_);
-  // map entries
-  using ObjectIdKey = intrusive::SkipListEntry<ObjectId, 24>;
+  // map hooks
+  using ObjectIdKey = intrusive::SkipListHook<ObjectId, 24>;
   INTRUSIVE_DEFINE_FIELD(ObjectIdKey, logical_object_id_);
-  // list entries
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, delete_entry_);
+  // list hooks
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, delete_hook_);
   // maps
   INTRUSIVE_DEFINE_FIELD(GlobalDeviceId2MirroredObject, global_device_id2mirrored_object_);
 INTRUSIVE_END(LogicalObject);

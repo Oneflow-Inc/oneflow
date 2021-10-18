@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/primitive/include/add.h"
 
 namespace oneflow {
 
@@ -32,8 +33,11 @@ class AccKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt());
     CHECK_EQ(in->data_type(), out->data_type());
-    NewKernelUtil<device_type>::Axpy(ctx->device_ctx(), in->shape().elem_cnt(), GetOneVal<T>(),
-                                     in->dptr<T>(), 1, out->mut_dptr<T>(), 1);
+    std::unique_ptr<primitive::Add> primitive =
+        primitive::NewPrimitive<primitive::AddFactory>(ctx->device_type(), in->data_type());
+    CHECK(primitive);
+    primitive->Launch(ctx->stream_ctx(), in->dptr(), out->dptr(), out->mut_dptr(),
+                      in->shape().elem_cnt());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -13,18 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_SLICE_BOXING_KERNEL_UTIL_H_
-#define ONEFLOW_CORE_KERNEL_SLICE_BOXING_KERNEL_UTIL_H_
-
-#include "oneflow/core/kernel/kernel_util.h"
+#ifndef ONEFLOW_CORE_PRIMITIVE_BLAS_H_
+#define ONEFLOW_CORE_PRIMITIVE_BLAS_H_
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-struct SliceBoxingKernelUtil {
-  static void Add(DeviceCtx* ctx, int64_t n, const T* a, const T* b, T* out);
+namespace primitive {
+
+enum class BlasTransposeType {
+  N = 0,
+  T,
 };
+
+}  // namespace primitive
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_SLICE_BOXING_KERNEL_UTIL_H_
+#endif  // ONEFLOW_CORE_PRIMITIVE_BLAS_H_

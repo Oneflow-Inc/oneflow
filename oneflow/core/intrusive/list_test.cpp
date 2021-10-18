@@ -54,7 +54,7 @@ INTRUSIVE_BEGIN(TestListItem)
   TestListItem() : intrusive_ref_(), cnt_(), foo_list_() {}
   INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   INTRUSIVE_DEFINE_FIELD(int*, cnt_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, foo_list_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, foo_list_);
 INTRUSIVE_END(TestListItem)
 // clang-format on
 
@@ -380,7 +380,7 @@ INTRUSIVE_BEGIN(SelfLoopContainer);
   // Getters
   bool has_deleted() const { return deleted_ != nullptr; }
   bool deleted() const { return *deleted_; } 
-  bool is_entry_empty() const { return entry_.empty(); }
+  bool is_hook_empty() const { return hook_.empty(); }
   // Setters
   bool* mut_deleted() { return deleted_; }
   void set_deleted(bool* val) { deleted_ = val; }
@@ -399,17 +399,17 @@ INTRUSIVE_BEGIN(SelfLoopContainer);
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  SelfLoopContainer() : intrusive_ref_(), deleted_(), entry_(), head_() {}
+  SelfLoopContainer() : intrusive_ref_(), deleted_(), hook_(), head_() {}
   INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(bool*, deleted_);
-  // list entries
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, entry_);
+  // list hooks
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, hook_);
 
  public:
   // Do not insert other INTRUSIVE_DEFINE_FIELDs between `using SelfLoopContainerList = ...;` and
   // `INTRUSIVE_DEFINE_FIELD(SelfLoopContainerList, ...);` 
-  using SelfLoopContainerList = intrusive::HeadFreeList<INTRUSIVE_FIELD(SelfLoopContainer, entry_), INTRUSIVE_FIELD_COUNTER>;
+  using SelfLoopContainerList = intrusive::HeadFreeList<INTRUSIVE_FIELD(SelfLoopContainer, hook_), INTRUSIVE_FIELD_COUNTER>;
   const SelfLoopContainerList& head() const { return head_; }
   SelfLoopContainerList* mut_head() { return &head_; }
 
