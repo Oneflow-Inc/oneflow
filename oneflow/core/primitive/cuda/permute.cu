@@ -112,14 +112,14 @@ __global__ void BatchPermuteMovement2Kernel(const void* src_ptr, void* dst_ptr, 
   using T_MOV2 = typename std::aligned_storage<2, 2>::type;
   using T_MOV4 = typename std::aligned_storage<4, 4>::type;
 
-  // const T_MOV4* src = reinterpret_cast<const T_MOV4*>(src_ptr);
-  const half2* src = reinterpret_cast<const half2*>(src_ptr);
-  // T_MOV4* dst = reinterpret_cast<T_MOV4*>(dst_ptr);
-  half2* dst = reinterpret_cast<half2*>(dst_ptr);
+  const T_MOV4* src = reinterpret_cast<const T_MOV4*>(src_ptr);
+  // const half2* src = reinterpret_cast<const half2*>(src_ptr);
+  T_MOV4* dst = reinterpret_cast<T_MOV4*>(dst_ptr);
+  // half2* dst = reinterpret_cast<half2*>(dst_ptr);
 
   __shared__ union {
-    half tile_half[tile_size][tile_size + 2];        // half [64][66]
-    half2 tile_half2[tile_size][tile_size / 2 + 1];  // half2 [64][33]
+    T_MOV2 tile_half[tile_size][tile_size + 2];        // half [64][66]
+    T_MOV4 tile_half2[tile_size][tile_size / 2 + 1];  // half2 [64][33]
   } tile_mem;
 
   IndexType dh_mul_dw = dh * dw;
@@ -156,10 +156,18 @@ __global__ void BatchPermuteMovement2Kernel(const void* src_ptr, void* dst_ptr, 
         When write back as column, it cannot be stored as half2 directly.
         So we split as 2 half elements, and write back separately.
         */
-        half2 tmp;
-        tmp.x = tile_mem.tile_half[threadIdx.x * 2][threadIdx.y + i];
-        tmp.y = tile_mem.tile_half[threadIdx.x * 2 + 1][threadIdx.y + i]; 
-        dst[(offset + (y + i) * H + x)/2] = tmp;
+        union {
+          T_MOV4 m4;
+          T_MOV2 m2[2];
+        } tmp_half2_storage;
+        // half2 tmp;
+        // tmp.x = tile_mem.tile_half[threadIdx.x * 2][threadIdx.y + i];
+        // tmp.y = tile_mem.tile_half[threadIdx.x * 2 + 1][threadIdx.y + i]; 
+        // dst[(offset + (y + i) * H + x)/2] = tmp;
+
+        tmp_half2_storage.m2[0] = tile_mem.tile_half[threadIdx.x * 2][threadIdx.y + i];
+        tmp_half2_storage.m2[1] = tile_mem.tile_half[threadIdx.x * 2 + 1][threadIdx.y + i]; 
+        dst[(offset + (y + i) * H + x)/2] = tmp_half2_storage.m4;
       }
     }
     __syncthreads();
