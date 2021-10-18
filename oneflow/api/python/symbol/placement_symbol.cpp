@@ -76,7 +76,6 @@ struct PlacementSymbolExportUtil {
       for (const auto& pair : machine_device_id_dict) {
         CHECK_OR_RETURN(py::isinstance<py::int_>(pair.first))
             << "Key of device_ids dict must be int.";
-        std::string device_name = "";
         int64_t machine_id = pair.first.cast<int64_t>();
         if (py::isinstance<py::int_>(pair.second)) {
           machine_device_id_vec.push_back({machine_id, pair.second.cast<int64_t>()});
