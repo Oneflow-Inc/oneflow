@@ -161,13 +161,7 @@ void ExecutorImpl::GroupRequests(
     if (group_buffer_.empty()) { return; }
     const auto backend =
         request_store_->MutRequestEntry(group_buffer_.front())->desc().op_desc().backend();
-    if (backend == Backend::kBackendNCCL) {
-#ifdef WITH_CUDA
-      backends_.at(backend)->GroupRequests(group_buffer_, BackendHandler);
-#endif
-    } else {
-      UNIMPLEMENTED();
-    }
+    backends_.at(backend)->GroupRequests(group_buffer_, BackendHandler);
     group_buffer_.clear();
   };
   request_store_->ForEachMutRequestEntryForIdsInJob(
