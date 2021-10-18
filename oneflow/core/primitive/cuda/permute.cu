@@ -75,9 +75,10 @@ template<size_t num_dims, size_t movement_size, size_t tile_size, typename Index
     IndexType x = c * tile_size + threadIdx.x;
     IndexType y = r * tile_size + threadIdx.y;
     if (x < W) {
+      IndexType y_range = ((tile_size - threadIdx.y) < (H - y))? (tile_size - threadIdx.y): (H - y);
 #pragma unroll
       // each thread process 4 elements.
-      for (int i = 0; threadIdx.y + i < tile_size && y + i < H; i += kBlockRows) {
+      for (int i = 0; i < y_range; i += kBlockRows) {
         tile[threadIdx.y + i][threadIdx.x] = src[offset + (y + i) * W + x];
       }
     }
@@ -85,8 +86,9 @@ template<size_t num_dims, size_t movement_size, size_t tile_size, typename Index
     x = r * tile_size + threadIdx.x;
     y = c * tile_size + threadIdx.y;
     if (x < H) {
+      IndexType x_range = ((tile_size - threadIdx.y) < (W - y))? (tile_size - threadIdx.y): (W-y);
 #pragma unroll
-      for (int i = 0; threadIdx.y + i < tile_size && y + i < W; i += kBlockRows) {
+      for (int i = 0; i < x_range; i += kBlockRows) {
         dst[offset + (y + i) * H + x] = tile[threadIdx.x][threadIdx.y + i];
       }
     }
@@ -223,14 +225,6 @@ __global__ void BatchPermuteMovement2Kernel(const void* src_ptr, void* dst_ptr, 
         tmp.x = tile_mem.tile_half[threadIdx.x * 2][threadIdx.y + i];
         tmp.y = tile_mem.tile_half[threadIdx.x * 2 + 1][threadIdx.y + i]; 
         dst[(offset + (y + i) * H + x)/2] = tmp;
-      
-        // dst[offset + (y + i) * H + x].x = tile_mem.tile_half[threadIdx.x * 2][threadIdx.y + i];
-        // dst[offset + (y + i) * H + x].y = tile_mem.tile_half[threadIdx.x * 2 + 1][threadIdx.y + i];
-      
-
-        // dst[offset + (y + i) * H + x] = tile_mem.tile_half[threadIdx.x * 2][threadIdx.y + i];
-        // dst[offset + (y + i) * H + x + 1] = tile_mem.tile_half[threadIdx.x * 2 + 1][threadIdx.y + i];
-      
       }
     }
     __syncthreads();
