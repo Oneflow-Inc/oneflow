@@ -55,23 +55,25 @@ __global__ void PermuteKernel(PermuteKernelParams<num_dims, IndexType> params) {
 // (B, X, Y) -> (B, Y, X)
 // refer from https://developer.nvidia.com/blog/efficient-matrix-transpose-cuda-cc/
 template<size_t num_dims, size_t movement_size, size_t tile_size, typename IndexType>
-__global__ void BatchPermuteKernel(PermuteKernelParams<num_dims, IndexType> params, IndexType H,
-                                   IndexType W, IndexType dh, IndexType dw, int32_t grid_size) {
+  __global__ void BatchPermuteKernel(const void* src_ptr, void* dst_ptr, IndexType H,
+                                     IndexType W, IndexType dh, IndexType dw, int32_t grid_size) {
   using T = typename std::aligned_storage<movement_size, movement_size>::type;
   __shared__ T tile[tile_size][tile_size + 1];  // To avoid bank conflict.
-  const T* src = reinterpret_cast<const T*>(params.src);
-  T* dst = reinterpret_cast<T*>(params.dst);
+     
+  const T* src = reinterpret_cast<const T*>(src_ptr);
+  T* dst = reinterpret_cast<T*>(dst_ptr);
+
   IndexType dh_mul_dw = dh * dw;
   for (int i = blockIdx.x, step = gridDim.x; i < grid_size; i += step) {
-    const IndexType n = i / dh_mul_dw;  // the index of batch.
+    const IndexType batch_index = i / dh_mul_dw;  // the index of batch.
     const IndexType k =
-        i - n * dh_mul_dw;  // equal to i % (dh*dw). the flatten index of tile in a batch.
+        i - batch_index * dh_mul_dw;  // equal to i % (dh*dw). the flatten index of tile in a batch.
 
     const IndexType r = k / dw;      // the row index of tile in a batch.
     const IndexType c = k - r * dw;  // equal to k % dw. the col index of tile in a batch.
-    const IndexType offset = n * H * W;
-    int x = c * tile_size + threadIdx.x;
-    int y = r * tile_size + threadIdx.y;
+    const IndexType offset = batch_index * H * W;
+    IndexType x = c * tile_size + threadIdx.x;
+    IndexType y = r * tile_size + threadIdx.y;
     if (x < W) {
 #pragma unroll
       // each thread process 4 elements.
@@ -99,30 +101,39 @@ We design a union structure to store half and half2 share memory.
 Actually here shared memory size is Half[64][66].
 */
 template<size_t num_dims, size_t movement_size, size_t tile_size, typename IndexType>
-__global__ void BatchPermuteHalf2Kernel(const half2* src, half* dst, IndexType H, IndexType W,
-                                        IndexType dh, IndexType dw, int32_t grid_size) {
+__global__ void BatchPermuteMovement2Kernel(const void* src_ptr, void* dst_ptr, IndexType H, IndexType W,
+    IndexType dh, IndexType dw, int32_t grid_size) {
+  static_assert(tile_size % 2 == 0); 
   // Use union structure to process Load and Store.
+  using T_MOV2 = typename std::aligned_storage<2, 2>::type;
+  using T_MOV4 = typename std::aligned_storage<4, 4>::type;
+
+  const T_MOV4* src = reinterpret_cast<const T_MOV4*>(src_ptr);
+  T_MOV2* dst = reinterpret_cast<T_MOV2*>(dst_ptr);
+
   __shared__ union {
-    half tile_half[tile_size][tile_size + 2];            // [64][66]
-    half2 tile_half2[tile_size / 2][tile_size / 2 + 1];  // [32][33]
+    T_MOV2 tile_half[tile_size][tile_size + 2];        // half [64][66]
+    T_MOV4 tile_half2[tile_size][tile_size / 2 + 1];  // half2 [64][33]
   } tile_mem;
 
   IndexType dh_mul_dw = dh * dw;
   for (int i = blockIdx.x, step = gridDim.x; i < grid_size; i += step) {
-    const IndexType n = i / dh_mul_dw;      // the index of batch.
-    const IndexType k = i - n * dh_mul_dw;  // equal to i%(dh*dw). the flatten index of tile in a
+    const IndexType batch_index = i / dh_mul_dw;      // the index of batch.
+    const IndexType k = i - batch_index * dh_mul_dw;  // equal to i%(dh*dw). the flatten index of tile in a
                                             // batch. TODO! optimize it!
 
     const IndexType r = k / dw;      // the row index of tile in a batch.
     const IndexType c = k - r * dw;  // equal to k % dw. the col index of tile in a batch.
-    const IndexType offset = n * H * W;
+    const IndexType offset = batch_index * H * W;
     int x = c * tile_size + threadIdx.x * 2;  // cause each thread process a half2 element, we need
                                               // to multiply 2 for threadIdx.x.
     int y = r * tile_size + threadIdx.y;
     if (x < W) {
-#pragma unroll
       // each thread process 4 elements.
-      for (int i = 0; threadIdx.y + i < tile_size && y + i < H; i += kBlockRows) {
+      IndexType y_range = ((tile_size - threadIdx.y) < (H - y))? (tile_size - threadIdx.y): (H - y);
+
+      #pragma unroll
+      for (int i = 0; i < y_range; i += kBlockRows) {
         // each thread load a half2.
         tile_mem.tile_half2[threadIdx.y + i][threadIdx.x] = src[(offset + (y + i) * W + x) / 2];
       }
@@ -132,8 +143,9 @@ __global__ void BatchPermuteHalf2Kernel(const half2* src, half* dst, IndexType H
                                           // multiply 2 for threadIdx.x.
     y = c * tile_size + threadIdx.y;
     if (x < H) {
+      IndexType x_range = ((tile_size - threadIdx.y) < (W - y))? (tile_size - threadIdx.y): (W-y);
 #pragma unroll
-      for (int i = 0; threadIdx.y + i < tile_size && y + i < W; i += kBlockRows) {
+      for (int i = 0; i < x_range; i += kBlockRows) {
         /*
         When write back as column, it cannot be stored as half2 directly.
         So we split as 2 half elements, and write back separately.
@@ -162,31 +174,29 @@ void LaunchBatchPermuteKernel(StreamContext* stream_ctx,
   if (tile_size == kHalfTileSize) {
     const int32_t half2_thread = tile_size / 2;  // cause each thread process two half elements.
     // Only specialized movementsize==2 to avoid using too much shared memory.
-    const half2* src = reinterpret_cast<const half2*>(params.src);
-    half* dst = reinterpret_cast<half*>(params.dst);
-    BatchPermuteHalf2Kernel<num_dims, 2, kHalfTileSize, IndexType>
+    BatchPermuteMovement2Kernel<num_dims, 2, kHalfTileSize, IndexType>
         <<<checked_grid_size, dim3(half2_thread, kBlockRows), 0, cuda_stream>>>(
-            src, dst, h, w, dh, dw, grid_size);  // Set threads num as 32x8 cause each threads
+            params.src, params.dst, h, w, dh, dw, grid_size);  // Set threads num as 32x8 cause each threads
                                                  // process 4 elements to 32x32 share memory.
   } else {
     BatchPermuteKernel<num_dims, movement_size, tile_size, IndexType>
-        <<<checked_grid_size, dim3(tile_size, kBlockRows), 0, cuda_stream>>>(params, h, w, dh, dw,
+        <<<checked_grid_size, dim3(tile_size, kBlockRows), 0, cuda_stream>>>(params.src, params.dst, h, w, dh, dw,
                                                                              grid_size);
   }
 }
 
 template<size_t tile_size, typename IndexType>
-bool CheckIfGreaterThanTileSize(IndexType& h, IndexType& w) {
+bool CheckIfGreaterEqualThanTileSize(IndexType* h, IndexType* w) {
   // H W should be less than tile size.
-  if (h < tile_size || w < tile_size) { return false; }
+  if (*h < tile_size || *w < tile_size) { return false; }
   return true;
 }
 
 template<size_t num_dims, size_t tile_size, typename IndexType>
-bool CheckLaunchBatchPermute(PermuteKernelParams<num_dims, IndexType> params, IndexType& n,
-                             IndexType& h, IndexType& w) {
-  if (CheckIfGreaterThanTileSize<tile_size, IndexType>(h, w)) {
-    if (n == 1) {
+bool CheckLaunchBatchPermute(PermuteKernelParams<num_dims, IndexType> params, IndexType* n,
+                             IndexType* h, IndexType* w) {
+  if (CheckIfGreaterEqualThanTileSize<tile_size, IndexType>(h, w)) {
+    if (*n == 1) {
       // 2d tensor case: (0, 1) -> (1, 0)
       return true;
     } else if (num_dims == 3 && params.permutation[2] == 1 && params.permutation[1] == 2) {
@@ -200,20 +210,13 @@ bool CheckLaunchBatchPermute(PermuteKernelParams<num_dims, IndexType> params, In
 }
 
 template<typename IndexType, size_t movement_size>
-bool CheckUseHalf2(IndexType& h, IndexType& w) {
-  if (movement_size == 2) {  // movement_size = 2, means half type
-    if (h % 2 == 0 && w % 2 == 0) {
-      // When h and w can both divided by 2, it means we can use half2 type to improve load
-      // efficiency.
-      return true;
-    }
-  }
-  return false;
+bool CheckUseHalf2(IndexType* h, IndexType* w) {
+  return movement_size == 2 && *h % 2 == 0 && *w % 2 == 0; 
 }
 
 template<size_t num_dims, typename IndexType>
-void InferBatchPermuteShape(PermuteKernelParams<num_dims, IndexType>& params, IndexType& n,
-                            IndexType& h, IndexType& w) {
+void InferBatchPermuteShape(PermuteKernelParams<num_dims, IndexType>& params, IndexType* n,
+                            IndexType* h, IndexType* w) {
   if (num_dims == 2) {
     IndexType global_index[2];
     /*
@@ -222,15 +225,15 @@ void InferBatchPermuteShape(PermuteKernelParams<num_dims, IndexType>& params, In
     subtract 1. then we add 1 to all the NdIndex to get the actual dim.
     */
     params.src_index_helper.OffsetToNdIndex(params.count - 1, global_index);
-    n = 1;
-    h = global_index[0] + 1;
-    w = global_index[1] + 1;
+    *n = 1;
+    *h = global_index[0] + 1;
+    *w = global_index[1] + 1;
   } else {
     IndexType global_index[3];
     params.src_index_helper.OffsetToNdIndex(params.count - 1, global_index);
-    n = global_index[0] + 1;
-    h = global_index[1] + 1;
-    w = global_index[2] + 1;
+    *n = global_index[0] + 1;
+    *h = global_index[1] + 1;
+    *w = global_index[2] + 1;
   }
 }
 
@@ -246,9 +249,9 @@ void LaunchKernel(StreamContext* stream_ctx, const int64_t* src_dims, const void
     IndexType n;
     IndexType h;
     IndexType w;
-    InferBatchPermuteShape<num_dims, IndexType>(params, n, h, w);
-    if (CheckLaunchBatchPermute<num_dims, kTileSize>(params, n, h, w)) {
-      if (CheckUseHalf2<IndexType, movement_size>(h, w)) {
+    InferBatchPermuteShape<num_dims, IndexType>(params, &n, &h, &w);
+    if (CheckLaunchBatchPermute<num_dims, kTileSize>(params, &n, &h, &w)) {
+      if (CheckUseHalf2<IndexType, movement_size>(&h, &w)) {
         LaunchBatchPermuteKernel<num_dims, 2, kHalfTileSize, IndexType>(stream_ctx, params, n, h,
                                                                         w);
       } else {
