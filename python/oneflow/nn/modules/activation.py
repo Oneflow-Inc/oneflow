@@ -294,9 +294,9 @@ class CELU(Module):
 
     .. math::
 
-        \\text{CELU}(x) = \\begin{cases}
-				x & \\text{ if } x \\gt 0  \\\\
-                \\alpha*(exp(x/\\alpha)-1) & \\text{ if } x \\le 0 \\\\
+        \\text{CELU}(x, \\alpha) = \\begin{cases}
+				x & \\text{ if } x \\ge 0  \\\\
+                \\alpha*(exp(\\frac{x}{\\alpha})-1) & \\text{ otherwise } \\\\
     		    \\end{cases}
 
     Args:

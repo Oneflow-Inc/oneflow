@@ -155,6 +155,16 @@ class TestCELUModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @autotest()
+    def test_inplace_celu_module(test_case):
+        m = torch.nn.CELU(alpha=random() | nothing(), inplace=True)
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor().to(device)
+        y = x + 0.001
+        m(y)
+        return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestGelu(flow.unittest.TestCase):

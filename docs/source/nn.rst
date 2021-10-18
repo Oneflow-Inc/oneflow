@@ -30,6 +30,7 @@ Operators for neural networks
         CrossEntropyLoss,
         Dropout,
         ELU,
+        CELU,
         Embedding,
         Flatten,
         GELU,
