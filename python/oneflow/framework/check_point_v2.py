@@ -158,7 +158,7 @@ def _broadcast_py_object(obj, src: int = 0):
 # NOTE(jianhao): 
 # 1. tensor_getstate and tensor_setstate is binded to tensor.__getstate__ 
 # and __setstate__ in tensor.py, and can only be called inside flow.save
-# or flow.load
+# or flow.load because they use global variables `current_path` etc.
 # 2. (de)serializing a container of consistent tensors requires the order
 # of those tensors are the same across all ranks.
 def tensor_getstate(self):
@@ -229,7 +229,21 @@ def tensor_pickling_context(path: Path, consistent_src_dst_rank: int):
 
 def load(
     path: str, consistent_src_rank: Optional[int] = None,
-) -> Dict[str, "flow.Tensor"]:
+) -> Any:
+    r"""Loads an object saved with oneflow.save() from a directory.
+
+    Args:
+        path (str): The directory containing the object
+        consistent_src_rank (int, optional): The source rank for 
+            loading consistent tensors. When specified, only the 
+            process whose rank == consistent_src_rank will really
+            read the files in `path`, and tensors in the loaded
+            object will be consistent with placement = 
+            `flow.placement('cuda', [consistent_src_rank])`
+
+    Returns:
+        The loaded object
+    """
     path: Path = Path(path)
     assert path.is_dir(), "Directory {} doesn't exist!".format(path)
     pickle_path = path / PICKLE_FILENAME
@@ -263,6 +277,17 @@ def save(
     path: Union[str, Path],
     consistent_dst_rank: Optional[int] = None,
 ) -> None:
+    r"""Save an object to a directory.
+
+    Args:
+        obj: The object to be saved
+        path (str): The directory in which the object is saved
+        consistent_dst_rank (int, optional): The destination rank for 
+            saving consistent tensors. When specified, whole tensors
+            will be saved by the process whose rank == 
+            consistent_src_rank, while other processes will not do any
+            disk I/O.
+    """
     path: Path = Path(path)
     obj = {'protocol_version': PROTOCOL_VERSION, 'data': obj}
     with tensor_pickling_context(path, consistent_dst_rank):
