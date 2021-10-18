@@ -879,14 +879,6 @@ LogicalResult Importer::TryToUpdateJob() {
   new_job.clear_net();
   new_job.mutable_placement()->clear_placement_group();
   auto convertOps = [&](Operation* op) {
-    if (op->getParentOp()) {
-      if (auto func = llvm::dyn_cast<FuncOp>(op->getParentOp())) {
-        // TODO: remove this workaround
-        // option1: Find by symbol in module and only walk job function
-        // option2: Add a OneFlow_JobOp with FunctionLike trait
-        if (func->hasAttr("llvm.emit_c_interface")) { return WalkResult::skip(); }
-      }
-    }
     if (llvm::dyn_cast<oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
       oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
       UpdatePlacement(op, user_op_adaptor, new_job);
@@ -931,7 +923,10 @@ LogicalResult Importer::TryToUpdateJob() {
     } /* convert op conf */
     return WalkResult::advance();
   };
-  if (module_->walk(convertOps).wasInterrupted()) {
+  SymbolTable symbol_table(module_);
+  if (symbol_table.lookup(job_wrapper_.job()->job_conf().job_name())
+          ->walk(convertOps)
+          .wasInterrupted()) {
     return failure();
   } else {
     job_wrapper_.UpdateJob(&new_job);
