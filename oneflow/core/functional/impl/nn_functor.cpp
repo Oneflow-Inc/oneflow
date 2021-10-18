@@ -675,7 +675,7 @@ class CrossEntropyFunctor {
                            const Optional<one::Tensor>& weight, const int64_t& ignore_index,
                            const std::string& reduction) const {
     const auto& input_shape = input->shape();
-    const auto target_shape = target->shape();
+    const auto& target_shape = target->shape();
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
     JUST(attrs.SetAttr<std::string>("reduction", reduction));

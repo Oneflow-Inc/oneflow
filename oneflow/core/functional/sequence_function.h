@@ -44,7 +44,7 @@ class SequenceFunction<R(Args...)> {
     return *this;
   }
 
-  SequenceFunction<R(Args...)>& operator>>(f_type&& f) { return then(std::forward<f_type>(f)); }
+  SequenceFunction<R(Args...)>& operator<<(f_type&& f) { return then(std::forward<f_type>(f)); }
 
   R call(Args&&... args) const { return fn_(std::forward<Args>(args)...); }
 
