@@ -118,6 +118,20 @@ def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", []> {
   let output = (outs AnyType:$y);
 }
 
+def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", []> {
+  let input = (ins
+    AnyType:$a,
+    AnyType:$b
+  );
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    BoolAttr:$transpose_a,
+    BoolAttr:$transpose_b,
+    OptionalAttr<BoolAttr>:$_add_to_output,
+    F64Attr:$alpha
+  );
+}
+
 class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType, NoSideEffect])> {
     let summary = "";

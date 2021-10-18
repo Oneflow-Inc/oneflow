@@ -100,6 +100,21 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
           op->erase();
           return success();
         }
+      } else if (op_type_name.equals("matmul")) {
+        assert(op.data_input().size() == 2);
+        assert(op.data_output().size() == 1);
+        NamedAttrList attributes(op->getAttrDictionary());
+        attributes.erase("operand_segment_sizes");
+        attributes.erase("result_segment_sizes");
+        OperationState state(op->getLoc(), "oneflow." + op_type_name.str());
+        state.addAttributes(attributes);
+        state.addOperands(op.data_input());
+        state.addTypes(op.getODSResults(0 /* data out */).getTypes());
+        if (auto created = rewriter.createOperation(state)) {
+          op.data_output().front().replaceAllUsesWith(created->getResult(0));
+          op->erase();
+          return success();
+        }
       } else if (op_type_name.equals("scalar_mul_by_tensor")) {
         assert(op.data_input().size() == 2);
         assert(op.data_output().size() == 1);
@@ -110,18 +125,10 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
         auto unknownLoc = UnknownLoc::get(rewriter.getContext());
         OperationState state(unknownLoc, "oneflow." + op_type_name.str());
         state.addAttributes(attributes);
-        SmallVector<::mlir::Value, 2> operands;
-        for (std::tuple<const mlir::Attribute&, mlir::Value> kv :
-             llvm::zip(op.input_lbn_segment_keysAttr(), op.data_input())) {
-          auto k = std::get<0>(kv).dyn_cast<StringAttr>().getValue();
-          auto v = std::get<1>(kv);
-          if (k.equals("x")) { operands.insert(operands.begin(), v); }
-          if (k.equals("scalar")) { operands.insert(operands.end(), v); }
-        }
-        state.addOperands(operands);
+        state.addOperands(op.data_input());
         state.addTypes(op.getODSResults(0 /* data out */).getTypes());
-        if (auto elementwise = rewriter.createOperation(state)) {
-          op.data_output().front().replaceAllUsesWith(elementwise->getResult(0));
+        if (auto created = rewriter.createOperation(state)) {
+          op.data_output().front().replaceAllUsesWith(created->getResult(0));
           op->erase();
           return success();
         }
