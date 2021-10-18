@@ -36,9 +36,9 @@ class BroadcastMatmul : public Primitive {
   virtual BlasTransposeType transpose_a() const = 0;
   virtual BlasTransposeType transpose_b() const = 0;
 
-  virtual void Launch(StreamContext* stream_ctx, Scalar alpha, size_t num_a_dims, int64_t* a_dims,
-                      const void* a, size_t num_b_dims, int64_t* b_dims, const void* b, Scalar beta,
-                      void* c) = 0;
+  virtual void Launch(StreamContext* stream_ctx, Scalar alpha, size_t num_a_dims,
+                      const int64_t* a_dims, const void* a, size_t num_b_dims,
+                      const int64_t* b_dims, const void* b, Scalar beta, void* c) = 0;
 };
 
 class BroadcastMatmulFactory : public Factory<BroadcastMatmul> {
