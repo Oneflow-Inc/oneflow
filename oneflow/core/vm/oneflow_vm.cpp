@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include <typeinfo>
 #include "oneflow/core/vm/oneflow_vm.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/common/blocking_counter.h"
@@ -30,7 +30,7 @@ namespace {
 
 Maybe<void> ForEachThreadCtx(vm::VirtualMachine* vm,
                              const std::function<Maybe<void>(vm::ThreadCtx*)>& DoEach) {
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm->mut_thread_ctx_list(), thread_ctx) {
+  INTRUSIVE_UNSAFE_FOR_EACH_PTR(thread_ctx, vm->mut_thread_ctx_list()) {
     const auto& stream_type = thread_ctx->stream_rt_desc().stream_type_id().stream_type();
     if (stream_type.SharingVirtualMachineThread()) { continue; }
     JUST(DoEach(thread_ctx));
@@ -61,10 +61,10 @@ std::type_index GetStreamTypeIndex(const vm::ThreadCtx* thread_ctx) {
 //   thread #7 is active in process #7, while others are not.
 //   to make them communicate with each other, we can allocate thread_consistent_id 1 to all those
 //   gpu threads in all processes.
-void GetWorkerThreadInitializer(ObjectMsgPtr<vm::VirtualMachine> vm,
+void GetWorkerThreadInitializer(intrusive::shared_ptr<vm::VirtualMachine> vm,
                                 std::function<void(vm::ThreadCtx*)>* Initializer) {
   std::set<std::type_index> stream_type_indexes;
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm->mut_thread_ctx_list(), thread_ctx) {
+  INTRUSIVE_UNSAFE_FOR_EACH_PTR(thread_ctx, vm->mut_thread_ctx_list()) {
     const auto& stream_type = thread_ctx->stream_rt_desc().stream_type_id().stream_type();
     if (!stream_type.SupportingTransportInstructions()) { continue; }
     stream_type_indexes.insert(GetStreamTypeIndex(thread_ctx));
@@ -88,7 +88,8 @@ void GetWorkerThreadInitializer(ObjectMsgPtr<vm::VirtualMachine> vm,
 }  // namespace
 
 OneflowVM::OneflowVM(const Resource& resource, int64_t this_machine_id)
-    : vm_(ObjectMsgPtr<vm::VirtualMachine>::New(vm::MakeVmDesc(resource, this_machine_id).Get())) {
+    : vm_(intrusive::make_shared<vm::VirtualMachine>(
+        vm::MakeVmDesc(resource, this_machine_id).Get())) {
   std::function<void()> SchedulerInitializer;
   GetSchedulerThreadInitializer(&SchedulerInitializer);
   std::function<void(vm::ThreadCtx*)> WorkerInitializer;
@@ -108,7 +109,7 @@ void MakeCtrlSeqInstructions(vm::InstructionMsgList* list,
                              const std::function<void()>& ComputeCallback) {
   auto instruction = vm::NewInstruction("CtrlComputeRankFrontSeqCallback");
   instruction->add_int64_operand(GlobalProcessCtx::Rank());
-  *instruction->mutable_phy_instr_operand() =
+  *instruction->mut_phy_instr_operand() =
       std::make_shared<vm::NoArgCbPhyInstrOperand>(ComputeCallback);
   list->EmplaceBack(std::move(instruction));
 }
@@ -140,7 +141,7 @@ void OneflowVM::Loop(const std::function<void()>& Initializer) {
   Initializer();
   auto* vm = mut_vm();
   while (notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
-    // Using ThreadUnsafeEmpty to avoid acquiring mutex lock.
+    // Use ThreadUnsafeEmpty to avoid acquiring mutex lock.
     // It's safe to use ThreadUnsafeEmpty here. notifier_.notified_cnt_ will be greater than zero
     // when inconsistency between vm->pending_msg_list.list_head_.list_head_.container_ and
     // vm->pending_msg_list.list_head_.list_head_.size_ occured. hence the pending instructions will

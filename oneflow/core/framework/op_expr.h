@@ -136,8 +136,13 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   bool has_device_infer_fn() const { return static_cast<bool>(device_infer_fn_); }
   const user_op::DeviceInferFn& device_infer_fn() const { return device_infer_fn_; }
 
-  Maybe<void> InferLogicalShapeAndDType(
+  Maybe<void> InferPhysicalShapeAndDType(
       const AttrMap& attrs, const std::string& device_tag,
+      const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
+      const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
+
+  Maybe<void> InferLogicalShapeAndDType(
+      const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc,
       const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
       const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
   Maybe<Symbol<Device>> InferDevices(const AttrMap& attrs, const TensorTuple& inputs,
@@ -239,14 +244,14 @@ using DistributeCloneOpExpr = BuiltinOpExprImpl<DistributeCloneOpConf>;
 using DistributeConcatOpExpr = BuiltinOpExprImpl<DistributeConcatOpConf>;
 using DistributeAddOpExpr = BuiltinOpExprImpl<DistributeAddOpConf>;
 
-class SelectFirstOpExpr final : public OpExpr {
+class SelectTopNOpExpr final : public OpExpr {
  public:
-  static Maybe<SelectFirstOpExpr> New() {
-    return std::shared_ptr<SelectFirstOpExpr>(new SelectFirstOpExpr());
+  static Maybe<SelectTopNOpExpr> New() {
+    return std::shared_ptr<SelectTopNOpExpr>(new SelectTopNOpExpr());
   }
 
   const std::string& op_type_name() const override {
-    static const std::string kOpTypeName = "select_first";
+    static const std::string kOpTypeName = "select_top_n";
     return kOpTypeName;
   }
 
@@ -255,14 +260,17 @@ class SelectFirstOpExpr final : public OpExpr {
     return 0;
   }
 
-  int output_size() const override { return 1; }
+  int output_size() const override {
+    // output should be resized in apply function
+    return 0;
+  }
 
   Maybe<bool> IsGradDisabled() const override { return false; }
 
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
-  SelectFirstOpExpr() = default;
+  SelectTopNOpExpr() = default;
 
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };

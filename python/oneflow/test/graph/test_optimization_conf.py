@@ -68,6 +68,7 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
         flow.boxing.nccl.set_stream_num(3)
         flow.boxing.nccl.enable_all_to_all(True)
         flow.boxing.nccl.enable_use_compute_stream(True)
+        flow.boxing.nccl.disable_group_boxing_by_dst_parallel(True)
 
         flow.backends.cudnn.set_reserved_mem_mbytes(1000)
         flow.backends.cudnn.enable_fused_normalization_add_relu(True)
@@ -93,6 +94,7 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
                 self.config.allow_fuse_add_to_output(True)
                 self.config.allow_fuse_cast_scale(True)
                 self.config.set_gradient_accumulation_steps(100)
+                self.config.set_zero_redundancy_optimizer_mode("distributed_split")
 
             def build(self, x):
                 x = self.m(x)
@@ -103,3 +105,7 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
         print("optimization conf: \n", g._optimization_conf_proto)
         g._generate_config_proto()
         print("graph conf: \n", g._config_proto)
+
+
+if __name__ == "__main__":
+    unittest.main()

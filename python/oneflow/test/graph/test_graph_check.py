@@ -39,12 +39,14 @@ class TestGraphCheck(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.m = CustomModuleIOCheck()
+                self.m.config.activation_checkpointing = True
 
             def build(self, t, lt, n):
                 rt, rlt, n, ri, rs = self.m(t, lt, n, 1, "2")
                 return t, lt, n
 
         g = CustomGraphIOCheck()
+        g.debug(1)
 
         x = np.ones((10, 10))
         x = flow.tensor(x, dtype=flow.float32)
@@ -58,7 +60,7 @@ class TestGraphCheck(flow.unittest.TestCase):
         lt0.append(t3)
 
         ot, olt, on = g(x, lt0, None)
-        print(g)
+        # print(g)
         test_case.assertTrue(np.array_equal(x.numpy(), ot.numpy()))
 
         test_case.assertTrue(isinstance(olt, list))

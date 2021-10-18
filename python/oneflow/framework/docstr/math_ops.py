@@ -18,7 +18,7 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.abs,
-    """Return the absolute value of each element in input tensor:math:`y = |x|` element-wise.
+    r"""Return the absolute value of each element in input tensor:math:`y = |x|` element-wise.
 
     Args:
         input (Tensor): the input tensor.
@@ -39,7 +39,7 @@ add_docstr(
 
 add_docstr(
     oneflow.add,
-    """Computes the addition of `input` by `other` for each element, scalar and broadcast promotation are supported.
+    r"""Computes the addition of `input` by `other` for each element, scalar and broadcast promotation are supported.
     The formula is:
 
     .. math::
@@ -78,7 +78,7 @@ add_docstr(
 
 add_docstr(
     oneflow.div,
-    """Computes the division of input by other for each element, scalar and broadcast promotation are supported.
+    r"""Computes the division of input by other for each element, scalar and broadcast promotation are supported.
     The formula is:
 
     .. math::
@@ -121,7 +121,7 @@ add_docstr(
 
 add_docstr(
     oneflow.mul,
-    """Computes the multiplication of input by other for each element, scalar and broadcast promotation are supported.
+    r"""Computes the multiplication of input by other for each element, scalar and broadcast promotation are supported.
     
     The formula is:
 
@@ -161,7 +161,7 @@ add_docstr(
 
 add_docstr(
     oneflow.reciprocal,
-    """Computes the safe reciprocal of x. If x is zero, the reciprocal will
+    r"""Computes the safe reciprocal of x. If x is zero, the reciprocal will
     be also set to zero.
 
     For example:
@@ -181,7 +181,7 @@ add_docstr(
 
 add_docstr(
     oneflow.sub,
-    """Computes the subtraction of input by other for each element, scalar and broadcast promotation are supported.
+    r"""Computes the subtraction of input by other for each element, scalar and broadcast promotation are supported.
     The formula is:
 
     .. math::
@@ -220,7 +220,7 @@ add_docstr(
 
 add_docstr(
     oneflow.asin,
-    """
+    r"""
     Returns a new tensor with the arcsine of the elements of :attr:`input`.
 
     .. math::
@@ -238,13 +238,13 @@ add_docstr(
         >>> input = flow.tensor(np.array([-0.5,  0.8, 1.0,  -0.8]), dtype=flow.float32)
         >>> output = flow.asin(input)
         >>> output.shape
-        flow.Size([4])
+        oneflow.Size([4])
         >>> output
         tensor([-0.5236,  0.9273,  1.5708, -0.9273], dtype=oneflow.float32)
         >>> input1 = flow.tensor(np.array([[0.8, 1.0], [-0.6, -1.0]]), dtype=flow.float32)
         >>> output1 = input1.asin()
         >>> output1.shape
-        flow.Size([2, 2])
+        oneflow.Size([2, 2])
         >>> output1
         tensor([[ 0.9273,  1.5708],
                 [-0.6435, -1.5708]], dtype=oneflow.float32)
@@ -253,7 +253,7 @@ add_docstr(
 
 add_docstr(
     oneflow.asinh,
-    """
+    r"""
     Returns a new tensor with the inverse hyperbolic sine of the elements of :attr:`input`.
 
     .. math::
@@ -271,14 +271,14 @@ add_docstr(
         >>> input = flow.tensor(np.array([2, 3, 4]), dtype=flow.float32)
         >>> output = flow.asinh(input)
         >>> output.shape
-        flow.Size([3])
+        oneflow.Size([3])
         >>> output
         tensor([1.4436, 1.8184, 2.0947], dtype=oneflow.float32)
 
         >>> input1 = flow.tensor(np.array([[-1, 0, -0.4], [5, 7, 0.8]]), dtype=flow.float32)
         >>> output1 = input1.asinh()
         >>> output1.shape
-        flow.Size([2, 3])
+        oneflow.Size([2, 3])
         >>> output1
         tensor([[-0.8814,  0.0000, -0.3900],
                 [ 2.3124,  2.6441,  0.7327]], dtype=oneflow.float32)
@@ -288,7 +288,7 @@ add_docstr(
 
 add_docstr(
     oneflow.atan,
-    """
+    r"""
     Returns a new tensor with the arctangent of the elements of :attr:`input`.
 
     .. math::
@@ -306,14 +306,14 @@ add_docstr(
         >>> input = flow.tensor(np.array([0.5, 0.6, 0.7]), dtype=flow.float32)
         >>> output = flow.atan(input)
         >>> output.shape
-        flow.Size([3])
+        oneflow.Size([3])
         
     """,
 )
 
 add_docstr(
     oneflow.ceil,
-    """Returns a new tensor with the ceil of the elements of :attr:`input`,
+    r"""Returns a new tensor with the ceil of the elements of :attr:`input`,
     the smallest integer greater than or equal to each element.
 
     The equation is: 
@@ -337,20 +337,20 @@ add_docstr(
         >>> x = flow.tensor(np.array([0.1, -2, 3.4]).astype(np.float32))
         >>> y = flow.ceil(x)
         >>> y.shape
-        flow.Size([3])
+        oneflow.Size([3])
         >>> y
         tensor([ 1., -2.,  4.], dtype=oneflow.float32)
         >>> x = flow.tensor(np.array([[2.5, 4.6, 0.6],[7.8, 8.3, 9.2]]).astype(np.float32))
         >>> y = x.ceil()
         >>> y.shape
-        flow.Size([2, 3])
+        oneflow.Size([2, 3])
         >>> y
         tensor([[ 3.,  5.,  1.],
                 [ 8.,  9., 10.]], dtype=oneflow.float32)
         >>> x = flow.tensor(np.array([[[2.2, 4.4, 6.5],[7.1, 8.2, 9.3]],[[10.6,11.2,12.2],[13.5,14.8,15.9]]]).astype(np.float32))
         >>> y = flow.ceil(x)
         >>> y.shape
-        flow.Size([2, 2, 3])
+        oneflow.Size([2, 2, 3])
         >>> y
         tensor([[[ 3.,  5.,  7.],
                  [ 8.,  9., 10.]],
@@ -363,7 +363,7 @@ add_docstr(
 
 add_docstr(
     oneflow.log1p,
-    """Returns a new tensor with the natural logarithm of (1 + input).
+    r"""Returns a new tensor with the natural logarithm of (1 + input).
 
     .. math::
         \\text{out}_{i}=\\log_e(1+\\text{input}_{i})
@@ -384,7 +384,7 @@ add_docstr(
 
 add_docstr(
     oneflow.exp,
-    """
+    r"""
 
     This operator computes the exponential of Tensor.
 
@@ -417,7 +417,7 @@ add_docstr(
 
 add_docstr(
     oneflow.acos,
-    """
+    r"""
     Returns a new tensor with the inverse cosine of the elements of :attr:`input`.
 
     .. math::
@@ -443,7 +443,7 @@ add_docstr(
 
 add_docstr(
     oneflow.acosh,
-    """
+    r"""
     Returns a new tensor with the inverse hyperbolic cosine of the elements of :attr:`input`.
 
     .. math::
@@ -472,7 +472,7 @@ add_docstr(
 
 add_docstr(
     oneflow.atanh,
-    """Returns a new tensor with the inverse hyperbolic tangent of the elements of :attr:`input`.
+    r"""Returns a new tensor with the inverse hyperbolic tangent of the elements of :attr:`input`.
 
     .. math::
         \\text{out}_{i} = \\tanh^{-1}(\\text{input}_{i})
@@ -497,7 +497,7 @@ add_docstr(
 
 add_docstr(
     oneflow.sign,
-    """Computes the sign of Tensor.
+    r"""Computes the sign of Tensor.
 
     .. math::
 
@@ -525,8 +525,46 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.sin,
+    r"""Returns a new tensor with the sine of the elements of :attr:`input`.
+
+    sin(x: Tensor) -> Tensor
+    
+    .. math::
+        \text{y}_{i} = \sin(\text{x}_{i})
+    
+    Args:
+        x (Tensor): the input tensor.
+        
+    For example:
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> x1 = flow.tensor(np.array([-0.5461,  0.1347, -2.7266, -0.2746]).astype(np.float32))
+        >>> y1 = flow.sin(x1)
+        >>> y1
+        tensor([-0.5194,  0.1343, -0.4032, -0.2712], dtype=oneflow.float32)
+        
+        >>> x2 = flow.tensor(np.array([-1.4, 2.6, 3.7]).astype(np.float32), device=flow.device('cuda'))
+        >>> y2 = flow.sin(x2)
+        >>> y2
+        tensor([-0.9854,  0.5155, -0.5298], device='cuda:0', dtype=oneflow.float32)
+        
+    """,
+)
+
+add_docstr(
+    oneflow.sin_,
+    r"""
+    In-place version of :func:`oneflow.sin`
+
+    """,
+)
+
+add_docstr(
     oneflow.sinh,
-    """Returns a new tensor with the hyperbolic sine of the elements of :attr:`input`.
+    r"""Returns a new tensor with the hyperbolic sine of the elements of :attr:`input`.
 
     .. math::
         \\text{out}_{i} = \\sinh(\\text{input}_{i})
@@ -557,7 +595,7 @@ add_docstr(
 
 add_docstr(
     oneflow.tan,
-    """Returns  the tan value of the elements of :attr:`input`.
+    r"""Returns  the tan value of the elements of :attr:`input`.
 
     .. math::
         \\text{out}_{i} = \\tan(\\text{input}_{i})
@@ -581,40 +619,8 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow._C.sin,
-    """
-    sin(x: Tensor) -> Tensor
-
-    Returns a new tensor with the sine of the elements of :attr:`input`.
-
-    .. math::
-
-        \text{y}_{i} = \sin(\text{x}_{i})
-
-    Args:
-        x (Tensor): the input tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-
-        >>> x1 = flow.tensor(np.array([-0.5461,  0.1347, -2.7266, -0.2746]).astype(np.float32))
-        >>> y1 = flow._C.sin(x1)
-        >>> y1
-        tensor([-0.5194,  0.1343, -0.4032, -0.2712], dtype=oneflow.float32)
-        >>> x2 = flow.tensor(np.array([-1.4, 2.6, 3.7]).astype(np.float32), device=flow.device('cuda'))
-        >>> y2 = flow._C.sin(x2)
-        >>> y2
-        tensor([-0.9854,  0.5155, -0.5298], device='cuda:0', dtype=oneflow.float32)
-    """,
-)
-
-add_docstr(
     oneflow.clamp,
-    """
+    r"""
     Clamp all elements in :attr:`input` into the range `[` :attr:`min`, :attr:`max` `]` and return
     a resulting tensor:
 
@@ -664,7 +670,7 @@ add_docstr(
 
 add_docstr(
     oneflow.cos,
-    """
+    r"""
     Returns a new tensor with the cosine  of the elements of :attr:`input`.
     
     .. math::
@@ -688,7 +694,7 @@ add_docstr(
 
 add_docstr(
     oneflow.cosh,
-    """
+    r"""
     Returns a new tensor with the hyperbolic cosine of the elements of :attr:`input`.
 
     .. math::
@@ -715,7 +721,7 @@ add_docstr(
 
 add_docstr(
     oneflow.erf,
-    """Computes the error function of each element. The error function is defined as follows:
+    r"""Computes the error function of each element. The error function is defined as follows:
 
     .. math::
             \\operatorname{erf}(x)=\\frac{2}{\\sqrt{\\pi}} \\int_{0}^{x} e^{-t^{2}} d t
@@ -736,14 +742,14 @@ add_docstr(
         >>> x = flow.tensor(np.array([0, -1., 10.]), dtype=flow.float32)
         >>> out = flow.erf(x)
         >>> out.shape
-        flow.Size([3])
+        oneflow.Size([3])
         >>> out.numpy()
         array([ 0.       , -0.8427008,  1.       ], dtype=float32)
 
         >>> x = flow.tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
         >>> out = flow.erf(x)
         >>> out.shape
-        flow.Size([2, 3])
+        oneflow.Size([2, 3])
         >>> out.numpy()
         array([[ 0.        , -0.8427008 ,  1.        ],
                [ 1.        ,  1.        ,  0.74210095]], dtype=float32)
@@ -751,7 +757,7 @@ add_docstr(
         >>> x = flow.tensor(np.array([[0, -1., 10.], [5, 7, 0.8], [2, 3, 4]]), dtype=flow.float32)
         >>> out = x.erf()
         >>> out.shape
-        flow.Size([3, 3])
+        oneflow.Size([3, 3])
         >>> out.numpy()
         array([[ 0.        , -0.8427008 ,  1.        ],
                [ 1.        ,  1.        ,  0.74210095],
@@ -762,7 +768,7 @@ add_docstr(
 
 add_docstr(
     oneflow.erfc,
-    """Computes the complementary error function of each element of input. The complementary error 
+    r"""Computes the complementary error function of each element of input. The complementary error 
     function is defined as follows:
 
     .. math::
@@ -797,7 +803,7 @@ add_docstr(
 
 add_docstr(
     oneflow.expm1,
-    """Returns a new tensor with the exponential of the elements minus 1
+    r"""Returns a new tensor with the exponential of the elements minus 1
     of :attr:`input`.
 
 
@@ -821,14 +827,14 @@ add_docstr(
         >>> x = flow.tensor(np.array([1, 2, 3]).astype(np.float32))
         >>> y = flow.expm1(x)
         >>> y.shape
-        flow.Size([3])
+        oneflow.Size([3])
         >>> y
         tensor([ 1.7183,  6.3891, 19.0855], dtype=oneflow.float32)
 
         >>> x = flow.tensor(np.array([[[2, 4, 6],[7, 8, 9]],[[10,11,12],[13,14,15]]]).astype(np.float32))
         >>> y = flow.expm1(x)
         >>> print(y.shape)
-        flow.Size([2, 2, 3])
+        oneflow.Size([2, 2, 3])
         >>> print(y.numpy())
         [[[6.3890562e+00 5.3598152e+01 4.0242880e+02]
           [1.0956332e+03 2.9799580e+03 8.1020840e+03]]
@@ -842,7 +848,7 @@ add_docstr(
 
 add_docstr(
     oneflow.fmod,
-    """
+    r"""
     fmod(input, other, *, out=None) -> Tensor
 
     Computes the element-wise remainder of division.
@@ -875,7 +881,7 @@ add_docstr(
 
 add_docstr(
     oneflow.log,
-    """
+    r"""
     Returns a new tensor with the natural logarithm of the elements of :attr:`input`.
     
     .. math::
@@ -900,7 +906,7 @@ add_docstr(
 
 add_docstr(
     oneflow.minimum,
-    """Computes the element-wise minimum of x and y.
+    r"""Computes the element-wise minimum of x and y.
 
     For example:
 
@@ -923,7 +929,7 @@ add_docstr(
 
 add_docstr(
     oneflow.maximum,
-    """Computes the element-wise maximum of x and y.
+    r"""Computes the element-wise maximum of x and y.
 
     For example:
 
@@ -946,7 +952,7 @@ add_docstr(
 
 add_docstr(
     oneflow.pow,
-    """Takes the power of each element in input with exponent and returns a tensor with the result. Exponent can be either a single float number, a single int number, or a tensor with the same shape as input.
+    r"""Takes the power of each element in input with exponent and returns a tensor with the result. Exponent can be either a single float number, a single int number, or a tensor with the same shape as input.
     When exponent is a scalar value, the operation applied is:
 
     .. math::
@@ -987,7 +993,7 @@ add_docstr(
 
 add_docstr(
     oneflow.rsqrt,
-    """Returns a new tensor with the reciprocal of the square-root of each of
+    r"""Returns a new tensor with the reciprocal of the square-root of each of
         the elements of :attr:`input`.
 
         .. math::
@@ -1012,7 +1018,7 @@ add_docstr(
 
 add_docstr(
     oneflow.sqrt,
-    """Returns a new tensor with the square-root of the elements of :attr:`input`.
+    r"""Returns a new tensor with the square-root of the elements of :attr:`input`.
 
         .. math::
             \\text{out}_{i} = \\sqrt{\\text{input}_{i}}
@@ -1038,7 +1044,7 @@ add_docstr(
 
 add_docstr(
     oneflow.square,
-    """Returns a new tensor with the square of the elements of :attr:`input`.
+    r"""Returns a new tensor with the square of the elements of :attr:`input`.
 
         .. math::
             \\text{out}_{i} = \\sqrt{\\text{input}_{i}}
@@ -1063,7 +1069,7 @@ add_docstr(
 
 add_docstr(
     oneflow.matmul,
-    """This operator applies matrix multiplication to two Tensor.
+    r"""This operator applies matrix multiplication to two Tensor.
 
     Args:
         a (oneflow.Tensor): A Tensor
@@ -1082,14 +1088,14 @@ add_docstr(
         >>> input2 = flow.tensor(np.random.randn(6, 5), dtype=flow.float32)
         >>> of_out = flow.matmul(input1, input2)
         >>> of_out.shape
-        flow.Size([2, 5])
+        oneflow.Size([2, 5])
 
     """,
 )
 
 add_docstr(
     oneflow.round,
-    """This operator rounds the value of Blob to the nearest integer.
+    r"""This operator rounds the value of Blob to the nearest integer.
     Args:
         input (oneflow.Tensor): A Tensor
     Returns:
@@ -1108,6 +1114,72 @@ add_docstr(
         >>> out2 = flow.round(x2)
         >>> out2.numpy()
         array([2., 8., 5., 7.], dtype=float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow.std,
+    r"""
+    Returns the standard-deviation of each row of the :attr:`input` tensor in the
+    dimension :attr:`dim`. If :attr:`dim` is a list of dimensions,
+    reduce over all of them.
+
+    If keepdim is True, the output tensor is of the same size as input except in 
+    the dimension(s) dim where it is of size 1. Otherwise, dim is squeezed, 
+    resulting in the output tensor having 1 (or len(dim)) fewer dimension(s).
+
+    If :attr:`unbiased` is ``False``, then the standard-deviation will be calculated
+    via the biased estimator. Otherwise, Bessel's correction will be used.
+
+    Args:
+        input (Tensor): the input tensor.
+        dim (int or tuple of python:ints): the dimension or dimensions to reduce.
+        unbiased (bool): whether to use the unbiased estimation or not
+        keepdim (bool): whether the output tensor has `dim` retained or not.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> arr = np.array([1.0, 2.0, 3.0])
+        >>> input = flow.tensor(arr)
+        >>> output = flow.std(input, dim=0).numpy()
+        >>> output
+        array(1.)
+
+    """,
+)
+
+add_docstr(
+    oneflow.var,
+    r"""Returns the variance of each row of the `input` tensor in the given dimension `dim`.
+
+    If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension(s) `dim` 
+    where it is of size 1. Otherwise, dim is squeezed (see `flow.squeeze()`), resulting in the output 
+    tensor having 1 (or `len(dim)`) fewer dimension(s).
+
+    Args:
+        input (Tensor): the input tensor.
+        dim (int or tuple of python:ints): the dimension or dimensions to reduce. Defaults to None.
+        unbiased (bool, optional): whether to use Bessel’s correction (:math:`\delta N = 1`). Defaults to True.
+        keepdim (bool, optional): whether the output tensor has dim retained or not. Defaults to False.
+
+    Returns:
+        Tensor: The result of variance on the specified axis of input Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        
+        >>> input = flow.tensor(np.random.randn(2, 3, 4, 5))
+        >>> output = flow.var(input, 1, True)
 
     """,
 )

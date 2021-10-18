@@ -67,7 +67,7 @@ void CollectiveBoxingPackKernel<device_type, T>::ForwardDataContent(KernelContex
         ctx->device_ctx(), transpose_in_shape.NumAxes(), transpose_in_shape, transpose_out_shape,
         perm, transpose_in_shape.elem_cnt(), in->dptr<T>(), out->mut_dptr<T>());
   } else {
-    out->CopyDataContentFrom(ctx->device_ctx(), in);
+    AutoMemcpy(ctx->stream_ctx(), out, in);
   }
 }
 

@@ -13,17 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/stream_desc.msg.h"
+#include "oneflow/core/vm/stream_desc.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/infer_stream_type.h"
 #include "oneflow/core/vm/string_object.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/vm/object_wrapper.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/object_msg/flat_msg_view.h"
+#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/register/register_manager.h"
@@ -90,8 +90,7 @@ class NewObjectInstructionType final : public InstructionType {
     CHECK(static_cast<bool>(parallel_desc));
     FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
       int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id(i));
-      auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(vm->mut_vm_thread_only_allocator(),
-                                                                 logical_object_id, parallel_desc);
+      auto logical_object = intrusive::make_shared<LogicalObject>(logical_object_id, parallel_desc);
       CHECK(vm->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
       auto* global_device_id2mirrored_object =
           logical_object->mut_global_device_id2mirrored_object();
@@ -99,8 +98,8 @@ class NewObjectInstructionType final : public InstructionType {
           *parallel_desc, vm->machine_id_range(), [&](int64_t machine_id, int64_t device_id) {
             int64_t global_device_id =
                 vm->vm_resource_desc().GetGlobalDeviceId(machine_id, device_id);
-            auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(
-                vm->mut_allocator(), logical_object.Mutable(), global_device_id);
+            auto mirrored_object =
+                intrusive::make_shared<MirroredObject>(logical_object.Mutable(), global_device_id);
             CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
           });
     }
@@ -149,16 +148,15 @@ class BroadcastObjectReferenceInstructionType final : public InstructionType {
     }
     CHECK(static_cast<bool>(parallel_desc));
     int64_t new_object = GetLogicalObjectId(args->new_object());
-    auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(vm->mut_vm_thread_only_allocator(),
-                                                               new_object, parallel_desc);
+    auto logical_object = intrusive::make_shared<LogicalObject>(new_object, parallel_desc);
     CHECK(vm->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
     auto* global_device_id2mirrored_object = logical_object->mut_global_device_id2mirrored_object();
     ForEachMachineIdAndDeviceIdInRange(
         *parallel_desc, vm->machine_id_range(), [&](int64_t machine_id, int64_t device_id) {
           int64_t global_device_id =
               vm->vm_resource_desc().GetGlobalDeviceId(machine_id, device_id);
-          auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(
-              vm->mut_allocator(), logical_object.Mutable(), global_device_id);
+          auto mirrored_object =
+              intrusive::make_shared<MirroredObject>(logical_object.Mutable(), global_device_id);
           mirrored_object->reset_rw_mutexed_object(*sole_rw_mutexed_object);
           CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
         });
@@ -260,7 +258,7 @@ class DeleteObjectInstructionType final : public InstructionType {
       logical_object_id = GetLogicalObjectId(logical_object_id);
       auto* logical_object = vm->mut_id2logical_object()->FindPtr(logical_object_id);
       CHECK_NOTNULL(logical_object);
-      CHECK(logical_object->is_delete_link_empty());
+      CHECK(logical_object->is_delete_hook_empty());
       vm->mut_delete_logical_object_list()->PushBack(logical_object);
     }
   }

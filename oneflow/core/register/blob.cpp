@@ -42,21 +42,6 @@ void Blob::Init(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* hea
   MutShapeView(shape_ptr, static_shape().NumAxes()).set_shape(static_shape());
 }
 
-void Blob::CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs) { return; }
-  this->blob_access_checker()->CheckBodyMutable();
-  AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), ByteSizeOfBlobBody(), mem_case(),
-             rhs->mem_case());
-}
-
-void Blob::CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs) { return; }
-  this->blob_access_checker()->CheckBodyMutable();
-  const size_t body_byte_size = ByteSizeOfBlobBody();
-  CHECK_EQ(rhs->ByteSizeOfBlobBody(), body_byte_size);
-  AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), body_byte_size, mem_case(), rhs->mem_case());
-}
-
 void Blob::CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   size_t header_size = blob_desc().ByteSizeOfBlobHeader();
   CHECK_EQ(header_size, rhs->blob_desc().ByteSizeOfBlobHeader());

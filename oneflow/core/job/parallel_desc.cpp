@@ -364,14 +364,6 @@ ParallelConf GenParallelConfOfCpuZeroOnAllMachines() {
   return parallel_conf;
 }
 
-bool IsMirroredParallelContext(const ParallelContext& parallel_ctx) {
-  if (CHECK_JUST(GlobalMultiClientEnv())) {
-    return parallel_ctx.parallel_id() == 0 && parallel_ctx.parallel_num() == 1
-           && GlobalProcessCtx::WorldSize() > 1;
-  }
-  return false;
-}
-
 namespace {
 
 Maybe<Optional<int64_t>> CalcParallelId4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc) {
@@ -458,6 +450,12 @@ Maybe<Symbol<Device>> RawGetTensorDevice(Symbol<ParallelDesc> parallel_desc) {
   return JUST(Device::ThreadLocalGetOrNew(type, device_id));
 }
 
+Maybe<Symbol<ParallelDesc>> RawTxtStringToPlacement(const std::string& parallel_conf_str) {
+  ParallelConf parallel_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf));
+  return SymbolOf(ParallelDesc(parallel_conf));
+}
+
 }  // namespace
 
 decltype(GetParallelId4CurrentProcessCtx) GetParallelId4CurrentProcessCtx =
@@ -467,5 +465,7 @@ decltype(GetParallelContext4CurrentProcessCtx) GetParallelContext4CurrentProcess
 decltype(ReplaceDeviceType) ReplaceDeviceType = DECORATE(&RawReplaceDeviceType, ThreadLocal);
 decltype(PlacementToString) PlacementToString = DECORATE(&RawPlacementToString, ThreadLocal);
 decltype(GetTensorDevice) GetTensorDevice = DECORATE(&RawGetTensorDevice, ThreadLocal);
+decltype(TxtStringToPlacement) TxtStringToPlacement =
+    DECORATE(&RawTxtStringToPlacement, ThreadLocalCopiable);
 
 }  // namespace oneflow

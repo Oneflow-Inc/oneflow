@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/vm/instr_type_id.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {

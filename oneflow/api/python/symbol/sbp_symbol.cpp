@@ -63,7 +63,8 @@ Maybe<Symbol<cfg::SbpParallel>> GetPartialSumSbpParallel() {
 
 ONEFLOW_API_PYBIND11_MODULE("sbp", m) {
   m.attr("max_split_axis") = kMaxSplitAxis;
-  py::class_<Symbol<cfg::SbpParallel>, std::shared_ptr<Symbol<cfg::SbpParallel>>>(m, "sbp")
+  py::class_<Symbol<cfg::SbpParallel>, std::shared_ptr<Symbol<cfg::SbpParallel>>>(
+      m, "sbp", py::dynamic_attr())
       .def("__str__", &SbpParallelSymbolToString)
       .def("__repr__", &SbpParallelSymbolToString)
       .def(py::self == py::self)

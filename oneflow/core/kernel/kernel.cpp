@@ -47,8 +47,6 @@ void Kernel::Init(const KernelConf& kernel_conf, KernelContext* ctx) {
   VirtualKernelInit(ctx);
 }
 
-void Kernel::DestroyState(void* state) const { CHECK(state == nullptr); }
-
 void Kernel::Launch(KernelContext* ctx) const {
   ctx->WillForward(ctx, this);
   Forward(ctx);

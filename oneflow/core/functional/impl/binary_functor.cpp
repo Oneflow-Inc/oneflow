@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/functional/impl/binary_functor.h"
 
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -24,7 +25,6 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
-#include "oneflow/core/functional/scalar.h"
 
 namespace oneflow {
 namespace one {
@@ -52,27 +52,36 @@ class AddFunctor {
     }
 
     const OpExpr* op = nullptr;
-    if (*x->shape() == *y->shape()) {
+
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    TensorTuple input_vec = JUST(tensor_processor.GetInputs());
+    const std::shared_ptr<one::Tensor>& x_cast = input_vec[0];
+    const std::shared_ptr<one::Tensor>& y_cast = input_vec[1];
+
+    if (*x_cast->shape() == *y_cast->shape()) {
       op = add_op_.get();
     } else {
       op = broadcast_add_op_.get();
     }
     if (inplace) {
+      JUST(CheckInplaceCastValid(x, x_cast));
       JUST(CheckInplaceValid(x));
-      JUST(CheckShapeCanExpandTo(*y->shape(), *x->shape()));
+      JUST(CheckShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op, {x, y}, outputs.get()));
+      outputs->at(0) = x_cast;
+      JUST(OpInterpUtil::Dispatch(*op, input_vec, outputs.get()));
       return outputs->at(0);
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op, {x, y});
+    return OpInterpUtil::Dispatch<Tensor>(*op, input_vec);
   }
 
  private:
   std::shared_ptr<OpExpr> add_op_;
   std::shared_ptr<OpExpr> broadcast_add_op_;
 };
-class BroadcastPowFunctor : public BinaryFunctor {
+
+class BroadcastPowFunctor : public BinaryFloatFunctor {
  public:
   BroadcastPowFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("broadcast_pow").Input("x").Input("y").Output("z").Build());
@@ -95,8 +104,12 @@ class MulFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
-    if (*x->shape() == *y->shape()) { return OpInterpUtil::Dispatch<Tensor>(*mul_op_, {x, y}); }
-    return OpInterpUtil::Dispatch<Tensor>(*broadcast_mul_op_, {x, y});
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    TensorTuple input_vec = JUST(tensor_processor.GetInputs());
+
+    if (*x->shape() == *y->shape()) { return OpInterpUtil::Dispatch<Tensor>(*mul_op_, input_vec); }
+    return OpInterpUtil::Dispatch<Tensor>(*broadcast_mul_op_, input_vec);
   }
 
  private:
@@ -104,14 +117,21 @@ class MulFunctor {
   std::shared_ptr<OpExpr> broadcast_mul_op_;
 };
 
-class DivFunctor : public BinaryFunctor {
+class DivFunctor : public BinaryFloatFunctor {
  public:
   DivFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("broadcast_div").Input("x").Input("y").Output("z").Build());
   }
 };
 
-class PowFunctor : public BinaryFunctor {
+class Atan2Functor : public BinaryFloatFunctor {
+ public:
+  Atan2Functor() {
+    op_ = CHECK_JUST(one::OpBuilder("atan2").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class PowFunctor : public BinaryFloatFunctor {
  public:
   PowFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("pow").Input("x").Input("y").Output("z").Build());
@@ -119,6 +139,17 @@ class PowFunctor : public BinaryFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     if (*x->shape() != *y->shape()) { return BroadcastPow(x, y); }
+    return BinaryFloatFunctor::operator()(x, y);
+  }
+};
+
+class FloorDivFunctor : public BinaryFunctor {
+ public:
+  FloorDivFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("floordiv").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
     return BinaryFunctor::operator()(x, y);
   }
 };
@@ -243,6 +274,7 @@ class ReshapeLikeFunctor : public BinaryFunctor {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AddFunctor>("Add");
+  m.add_functor<impl::Atan2Functor>("Atan2");
   m.add_functor<impl::SubFunctor>("Sub");
   m.add_functor<impl::MulFunctor>("Mul");
   m.add_functor<impl::DivFunctor>("Div");
@@ -263,6 +295,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ScalarDivByTensorFunctor>("ScalarDivByTensor");
   m.add_functor<impl::BroadcastFModFunctor>("BroadcastFMod");
   m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
+  m.add_functor<impl::FloorDivFunctor>("FloorDiv");
 };
 
 }  // namespace functional

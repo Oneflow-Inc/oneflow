@@ -75,12 +75,28 @@ struct DeviceAdd<DeviceType::kGPU, T> {
   __device__ __forceinline__ static void Invoke(const T* x, T* y) { cuda::atomic::Add(y, *x); }
 };
 
+template<>
+struct DeviceAdd<DeviceType::kGPU, uint8_t> {
+  __device__ __forceinline__ static void Invoke(const uint8_t* x, uint8_t* y) { *y += *x; }
+};
+
+template<>
+struct DeviceAdd<DeviceType::kGPU, int8_t> {
+  __device__ __forceinline__ static void Invoke(const int8_t* x, int8_t* y) { *y += *x; }
+};
+
+template<>
+struct DeviceAdd<DeviceType::kGPU, int64_t> {
+  __device__ __forceinline__ static void Invoke(const int64_t* x, int64_t* y) { *y += *x; }
+};
+
 #define GPU_ATOMIC_ADD_SUPPORTED_DATA_TYPE_SEQ \
   FLOATING_DATA_TYPE_SEQ                       \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_GATHER_ND_FUNCTOR, (DeviceType::kGPU),
-                                 ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_SCATTER_ND_ADD_FUNCTOR, (DeviceType::kGPU),
                                  GPU_ATOMIC_ADD_SUPPORTED_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
@@ -89,16 +105,19 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_FILL_BY_ND_INDEX_FUNCTOR, (DeviceTy
                                  ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_GATHER_ND_KERNELS, (DeviceType::kGPU),
-                                 ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCATTER_ND_KERNELS, (DeviceType::kGPU),
-                                 GPU_ATOMIC_ADD_SUPPORTED_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCATTER_ND_LIKE_KERNELS, (DeviceType::kGPU),
                                  GPU_ATOMIC_ADD_SUPPORTED_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_TENSOR_GATHER_ND_UPDATE_KERNELS, (DeviceType::kGPU),
-                                 GPU_ATOMIC_ADD_SUPPORTED_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_TENSOR_GATHER_ND_ADD_KERNELS, (DeviceType::kGPU),
                                  GPU_ATOMIC_ADD_SUPPORTED_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)

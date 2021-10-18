@@ -17,13 +17,14 @@ limitations under the License.
 #define ONEFLOW_CORE_DEVICE_COLLECTIVE_BOXING_DEVICE_CONTEXT_H_
 
 #include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/device/event_record.h"
 #include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
 
 namespace oneflow {
 
 using namespace boxing::collective;
 
-class CollectiveBoxingDeviceCtx final : public DeviceCtx {
+class CollectiveBoxingDeviceCtx final : public DeviceCtx, public EventRecordProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingDeviceCtx);
   CollectiveBoxingDeviceCtx() = default;
@@ -31,6 +32,16 @@ class CollectiveBoxingDeviceCtx final : public DeviceCtx {
 
   std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint> AddCheckpoint();
   void AddCallBack(std::function<void()> callback) const override;
+
+  DeviceType device_type() const override {
+    UNIMPLEMENTED();
+    return DeviceType::kInvalidDevice;
+  }
+
+  std::shared_ptr<EventRecord> MakeEventRecord() override {
+    UNIMPLEMENTED();
+    return std::shared_ptr<EventRecord>();
+  }
 
  private:
   std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint> current_checkpoint_;

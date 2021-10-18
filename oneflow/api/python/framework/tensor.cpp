@@ -45,7 +45,8 @@ Parameter::Parameter(std::shared_ptr<Tensor> tensor, bool requires_grad) {
   while (auto parameter = std::dynamic_pointer_cast<Parameter>(tensor)) {
     tensor = parameter->tensor_;
   }
-  this->tensor_ = std::move(tensor);
+  this->tensor_ = tensor->detach().GetPtrOrThrow();
+  // this->tensor_ = std::move(tensor);
   // TODO: in `y = flow.nn.Parameter(x)`, y should have its own "requires_grad" field
   // (align with PyTorch) instead of sharing it with x
   this->tensor_->set_requires_grad(requires_grad);
@@ -121,8 +122,7 @@ std::shared_ptr<Tensor> ApiNewTensor(py::args args, py::kwargs kwargs) {
 
 void ApiSetRequiresGrad(Tensor& tensor, bool requires_grad) {
   if (tensor.is_leaf()) {
-    tensor.set_requires_grad(requires_grad);
-    if (!requires_grad) { tensor.set_grad_fn_node(nullptr); }
+    tensor.set_requires_grad(requires_grad).GetOrThrow();
   } else {
     throw std::runtime_error("You can only change requires_grad flags of leaf tensors.");
   }
@@ -165,6 +165,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
               throw std::runtime_error("You can only change gradient of leaf tensors.");
             }
           })
+      .def_property(
+          "data", [](Tensor& t) { return t.data().GetPtrOrThrow(); },
+          [](Tensor& t, const std::shared_ptr<Tensor>& other) { t.set_data(other).GetOrThrow(); })
       .def("storage_offset", [](const Tensor& t) { return t.storage_offset().GetOrThrow(); })
       .def("stride",
            [](const Tensor& t) {
@@ -199,7 +202,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       // local tensor only
       .def_property_readonly("_tensor_buffer_shapes_and_dtypes", &GetTensorBufferShapesAndDTypes)
       .def_property_readonly("device", &TensorGetDevice)
-      .def_property_readonly("data", &Tensor::data)
       .def("consistent_id",
            [](const one::Tensor& tensor) -> int64_t {
              return static_cast<uint64_t>(tensor.transport_token().GetOrThrow());

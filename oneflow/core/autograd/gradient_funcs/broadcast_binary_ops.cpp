@@ -69,7 +69,7 @@ class BroadcastSub : public BroadcastBinaryGrad {
       in_grads->at(0) = JUST(functional::BroadcastReduceSumLike(out_grads.at(0), x));
     }
     if (y->requires_grad()) {
-      const auto& grad = JUST(functional::ScalarMul(out_grads.at(0), functional::Scalar(-1.f)));
+      const auto& grad = JUST(functional::ScalarMul(out_grads.at(0), Scalar(-1.f), false));
       in_grads->at(1) = JUST(functional::BroadcastReduceSumLike(grad, y));
     }
     return Maybe<void>::Ok();

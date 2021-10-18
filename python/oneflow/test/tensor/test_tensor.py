@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
 import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
-
 import oneflow as flow
 import oneflow.unittest
+from oneflow.test_utils.automated_test_util import *
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -96,6 +96,27 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(output.dtype, flow.float32)
         test_case.assertTrue(np.allclose(output.numpy(), np_arr))
 
+    @autotest()
+    def test_tensor_sign_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.sign()
+        return y
+
+    @autotest()
+    def test_flow_tensor_gather_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
+        dim = random(0, 4).to(int)
+        index = random_pytorch_tensor(
+            ndim=4,
+            dim1=random(1, 3).to(int),
+            dim2=random(1, 4).to(int),
+            dim3=random(1, 5).to(int),
+            dtype=int,
+        ).to(device)
+        return input.gather(dim, index)
+
     def _test_tensor_init_methods(test_case, tensor_creator, get_numpy):
         shape = (2, 3, 4, 5)
         x = tensor_creator(*shape)
@@ -128,6 +149,8 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(get_numpy(x), np_zeros))
         flow.nn.init.constant_(x, random_fill_val)
         test_case.assertTrue(np.allclose(get_numpy(x), random_fill_val * np_ones))
+        x.zeros_()
+        test_case.assertTrue(np.array_equal(get_numpy(x), np_zeros))
         test_case.assertEqual(flow.nn.init.calculate_gain("conv2d"), 1)
         test_case.assertEqual(flow.nn.init.calculate_gain("tanh"), 5.0 / 3)
 
@@ -167,6 +190,27 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(not x.is_cuda)
 
     @flow.unittest.skip_unless_1n1d()
+    @autotest(n=1)
+    def test_tensor_set_data_autograd_meta(test_case):
+        x = torch.ones(2, 3).requires_grad_(True)
+        y = x + x
+        z = torch.zeros(2, 3)
+        z.data = y
+        return z.grad_fn, z.is_leaf
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_tensor_set_data(test_case):
+        a = flow.ones(2, 3, requires_grad=False)
+        b = flow.ones(4, 5, requires_grad=True).to("cuda")
+        old_id = id(a)
+        a.data = b
+        test_case.assertEqual(old_id, id(a))
+        test_case.assertTrue(a.shape == (4, 5))
+        test_case.assertTrue(a.device == flow.device("cuda"))
+        test_case.assertFalse(a.requires_grad)
+        test_case.assertTrue(a.is_leaf)
+
+    @flow.unittest.skip_unless_1n1d()
     def test_tensor_unsupported_property(test_case):
 
         shape = (2, 3, 4, 5)
@@ -187,6 +231,12 @@ class TestTensor(flow.unittest.TestCase):
             oneflow._oneflow_internal.exception.RuntimeException
         ):
             x.placement
+
+        if x.dtype != flow.tensor_buffer:
+            with test_case.assertRaises(
+                oneflow._oneflow_internal.exception.RuntimeException
+            ):
+                x._tensor_buffer_shapes_and_dtypes
 
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_to_bool(test_case):
@@ -362,7 +412,7 @@ class TestTensor(flow.unittest.TestCase):
             tensor[slices] = value
             test_case.assertTrue(np.allclose(np_arr, tensor.numpy()))
 
-        x = flow.Tensor(5, 5)
+        x = flow.randn(5, 5)
         v = flow.Tensor([[0, 1, 2, 3, 4]])
         compare_getitem_with_numpy(x, se[-4:-1:2])
         compare_getitem_with_numpy(x, se[-1:])
@@ -558,12 +608,12 @@ class TestTensor(flow.unittest.TestCase):
         y = x.argsort(dim=random(low=-4, high=4).to(int), descending=random_bool())
         return y
 
-    @flow.unittest.skip_unless_1n1d()
-    def test_mean(test_case):
-        input = flow.tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = input.mean(dim=0)
-        np_out = np.mean(input.numpy(), axis=0)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
+    @autotest()
+    def test_mean_with_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_pytorch_tensor(ndim=4, dtype=float).to(device)
+        return x.mean(dim)
 
     @autotest()
     def test_log_tensor_with_random_data(test_case):
@@ -874,9 +924,9 @@ class TestTensor(flow.unittest.TestCase):
     def test_std_tensor_function(test_case):
         np_arr = np.random.randn(9, 8, 7, 6)
         input = flow.Tensor(np_arr)
-        of_out = input.std(dim=1, keepdim=False)
+        of_out = input.std(dim=1, unbiased=False, keepdim=False)
         np_out = np.std(np_arr, axis=1)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-04, 1e-04))
 
     @flow.unittest.skip_unless_1n1d()
     def test_sqrt_tensor_function(test_case):
@@ -1384,12 +1434,137 @@ class TestTensor(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=1, dim0=random()).to(device)
         return x.diag()
 
+    @autotest()
+    def test_flow_tensor_expand_with_random_data(test_case):
+        random_expand_size = random(1, 6).to(int).value()
+        x = random_pytorch_tensor(ndim=5, dim0=1, dim1=1, dim2=1, dim3=1, dim4=1)
+        ndim = 5
+        expand_size = random_expand_size
+        dim_size = [1,] * ndim
+        random_index = random(0, ndim).to(int).value()
+        dim_size[random_index] = expand_size
+        return x.expand(*dim_size)
+
+    @autotest()
+    def test_flow_tensor_expand_with_random_data(test_case):
+        random_expand_size = random(1, 6).to(int).value()
+        x = random_pytorch_tensor(ndim=5, dim0=1, dim1=1, dim2=1, dim3=1, dim4=1)
+        ndim = 5
+        expand_size = random_expand_size
+        dim_size = [1,] * ndim
+        random_index = random(0, ndim).to(int).value()
+        dim_size[random_index] = expand_size
+        y = torch.ones(dim_size)
+        return x.expand_as(y)
+
     @flow.unittest.skip_unless_1n1d()
     @autotest()
     def test_tensor_diag_other_dim(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
         return x.diag()
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(auto_backward=False)
+    def test_floordiv_elementwise_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2, dim0=4, dim1=8).to(device)
+        other = random_pytorch_tensor(ndim=2, dim0=4, dim1=8).to(device)
+        y = input.floor_divide(other)
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(auto_backward=False)
+    def test_scalar_floordiv_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2, dim0=4, dim1=8).to(device)
+        other = random().to(int)
+        y = input.floor_divide(other)
+        return y
+
+    @flow.unittest.skip_unless_1n4d()
+    def test_construct_consistent_tensor_by_numpy(test_case):
+        x = np.ones((4, 4), dtype=np.int32)
+        placement = flow.placement("cuda", {0: [0, 1, 2, 3]})
+        y = flow.tensor(
+            x,
+            dtype=flow.float32,
+            placement=placement,
+            sbp=[flow.sbp.split(0)],
+            requires_grad=False,
+        )
+        test_case.assertTrue(y.dtype == flow.float32)
+        test_case.assertTrue(
+            np.allclose(y.to_local().numpy(), np.ones((1, 4), dtype=np.float32))
+        )
+        test_case.assertEqual(y.placement, placement)
+
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class TestTensorNumpy(flow.unittest.TestCase):
+    @flow.unittest.skip_unless_1n2d()
+    def test_1d_sbp_tensor_numpy_1n2d(test_case):
+        ori_x = flow.tensor([1, 2, 3, 4]) + flow.env.get_rank()
+        placement = flow.env.all_device_placement("cpu")
+        x = ori_x.to_consistent(placement=placement, sbp=flow.sbp.split(0))
+        test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4, 2, 3, 4, 5]))
+
+        x = ori_x.to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+        test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4]))
+
+        x = ori_x.to_consistent(placement=placement, sbp=flow.sbp.partial_sum)
+        test_case.assertTrue(np.allclose(x.numpy(), [3, 5, 7, 9]))
+
+        placement = flow.env.all_device_placement("cuda")
+        x = ori_x.to_consistent(placement=placement, sbp=flow.sbp.split(0))
+        test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4, 2, 3, 4, 5]))
+
+        x = ori_x.to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+        test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4]))
+
+        x = ori_x.to_consistent(placement=placement, sbp=flow.sbp.partial_sum)
+        test_case.assertTrue(np.allclose(x.numpy(), [3, 5, 7, 9]))
+
+    @flow.unittest.skip_unless_1n2d()
+    def test_2d_sbp_tensor_numpy_1n2d(test_case):
+        ori_x = flow.tensor(np.ones((2, 2))) + flow.env.get_rank()
+        placement = flow.placement("cuda", {0: range(2)}, hierarchy=(2, 1))
+        x = ori_x.to_consistent(
+            placement=placement, sbp=[flow.sbp.split(0), flow.sbp.split(1)]
+        )
+        test_case.assertTrue(np.allclose(x.numpy(), [[1, 1], [1, 1], [2, 2], [2, 2]]))
+
+        x = ori_x.to_consistent(
+            placement=placement, sbp=[flow.sbp.broadcast, flow.sbp.split(0)]
+        )
+        test_case.assertTrue(np.allclose(x.numpy(), [[1, 1], [1, 1]]))
+
+        x = ori_x.to_consistent(
+            placement=placement, sbp=[flow.sbp.partial_sum, flow.sbp.broadcast]
+        )
+        test_case.assertTrue(np.allclose(x.numpy(), [[3, 3], [3, 3]]))
+
+    @flow.unittest.skip_unless_1n4d()
+    def test_2d_sbp_tensor_numpy_1n4d(test_case):
+        ori_x = flow.tensor(np.ones((2, 2))) + flow.env.get_rank()
+        placement = flow.placement("cuda", {0: range(4)}, hierarchy=(2, 2))
+
+        x = ori_x.to_consistent(
+            placement=placement, sbp=[flow.sbp.split(0), flow.sbp.split(1)]
+        )
+        test_case.assertTrue(
+            np.allclose(
+                x.numpy(), [[1, 1, 2, 2], [1, 1, 2, 2], [3, 3, 4, 4], [3, 3, 4, 4]]
+            )
+        )
+
+        x = ori_x.to_consistent(
+            placement=placement, sbp=[flow.sbp.split(0), flow.sbp.partial_sum]
+        )
+        test_case.assertTrue(np.allclose(x.numpy(), [[3, 3], [3, 3], [7, 7], [7, 7]]))
+
+        # TODO: (s0, b) has bug
+        # x = ori_x.to_consistent(placement=placement, sbp=[flow.sbp.split(0), flow.sbp.broadcast])
 
 
 if __name__ == "__main__":

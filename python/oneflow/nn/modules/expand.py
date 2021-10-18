@@ -42,7 +42,7 @@ def expand_op(input, *sizes):
 
     Args:
         input (oneflow.Tensor): The input Tensor.
-        *sizes  (flow.Size or int): The desired expanded size.
+        *sizes  (oneflow.Size or int): The desired expanded size.
 
     Returns:
         oneflow.Tensor: The result Tensor.
@@ -56,12 +56,12 @@ def expand_op(input, *sizes):
         >>> x = np.array([[[[0, 1]],
         ...               [[2, 3]],
         ...               [[4, 5]]]]).astype(np.int32)
-
         >>> input = flow.Tensor(x)
-
+        >>> input.shape
+        oneflow.Size([1, 3, 1, 2])
         >>> out = input.expand(1, 3, 2, 2)
         >>> out.shape
-        flow.Size([1, 3, 2, 2])
+        oneflow.Size([1, 3, 2, 2])
 
     """
     if _input_args_is_int(sizes):

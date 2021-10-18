@@ -18,6 +18,7 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.activation import (
     ELU,
     GELU,
+    GLU,
     Hardsigmoid,
     Hardswish,
     Hardtanh,
@@ -39,6 +40,11 @@ from oneflow.nn.modules.activation import (
 
 from oneflow.nn.modules.all_reduce import AllReduce
 from oneflow.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d, BatchNorm3d
+from oneflow.nn.modules.batchnorm_fused import (
+    FusedBatchNorm1d,
+    FusedBatchNorm2d,
+    FusedBatchNorm3d,
+)
 from oneflow.nn.modules.container import (
     ModuleDict,
     ModuleList,
@@ -46,7 +52,14 @@ from oneflow.nn.modules.container import (
     ParameterList,
     Sequential,
 )
-from oneflow.nn.modules.conv import Conv1d, Conv2d, Conv3d, ConvTranspose2d
+from oneflow.nn.modules.conv import (
+    Conv1d,
+    Conv2d,
+    Conv3d,
+    ConvTranspose1d,
+    ConvTranspose2d,
+    ConvTranspose3d,
+)
 from oneflow.nn.modules.min_max_observer import MinMaxObserver
 from oneflow.nn.modules.moving_average_min_max_observer import (
     MovingAverageMinMaxObserver,
@@ -125,3 +138,5 @@ from oneflow.nn import utils
 from . import functional
 
 from . import parallel
+
+from oneflow.nn.modules.rnn import RNN, LSTM, GRU

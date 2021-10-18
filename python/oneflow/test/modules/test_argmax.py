@@ -22,10 +22,11 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
-def _test_argmax_aixs_negative(test_case, device):
+def _test_argmax_axis_negative(test_case, device):
     input = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
@@ -82,7 +83,7 @@ class TestArgmax(flow.unittest.TestCase):
     def test_argmax(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_argmax_aixs_negative,
+            _test_argmax_axis_negative,
             _test_tensor_argmax,
             _test_argmax_axis_postive,
             _test_argmax_keepdims,

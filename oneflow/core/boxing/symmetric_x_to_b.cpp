@@ -18,12 +18,26 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
-#include "oneflow/core/boxing/eager_boxing_interpreter_util.h"
 #include "oneflow/core/common/decorator.h"
 
 namespace oneflow {
 
 namespace {
+
+bool IsBroadcastSbp(const cfg::SbpParallel& sbp) { return sbp.has_broadcast_parallel(); }
+
+bool IsPartialSumSbp(const cfg::SbpParallel& sbp) { return sbp.has_partial_sum_parallel(); }
+
+bool IsSplitSbp(const cfg::SbpParallel& sbp, int64_t axis) {
+  return (sbp.has_split_parallel() && sbp.split_parallel().axis() == axis);
+}
+
+bool IsAllBroadcastNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
+  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
+    if (!sbp_parallel.has_broadcast_parallel()) { return false; }
+  }
+  return true;
+}
 
 bool IsSplitSbpWithAxisNotEqualZero(const cfg::SbpParallel& sbp) {
   return sbp.has_split_parallel() && sbp.split_parallel().axis() != 0;
@@ -43,7 +57,7 @@ auto* CachedGetAllSplitNdSbpWithAxisEqualZero =
 Maybe<void> RawCheckSymmetricXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(out->nd_sbp()));
+  CHECK_OR_RETURN(IsAllBroadcastNdSbp(out->nd_sbp()));
   CHECK_OR_RETURN(in->placement() == out->placement());
   CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kGPU);
   return Maybe<void>::Ok();
@@ -59,12 +73,12 @@ Maybe<one::Tensor> SymmetricXToB(const std::shared_ptr<one::Tensor>& tensor, Sym
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
-  if (EagerBoxingInterpreterUtil::IsBroadcastSbp(tensor_nd_sbp->sbp_parallel(0))) { return tensor; }
-  if (EagerBoxingInterpreterUtil::IsPartialSumSbp(tensor_nd_sbp->sbp_parallel(0))) {
+  if (IsBroadcastSbp(tensor_nd_sbp->sbp_parallel(0))) { return tensor; }
+  if (IsPartialSumSbp(tensor_nd_sbp->sbp_parallel(0))) {
     const auto& NcclPToBBoxingFunction = *JUST(GetBoxingFunction("nccl-p-to-b", in, out));
     return JUST(NcclPToBBoxingFunction(tensor, in, out));
   }
-  if (EagerBoxingInterpreterUtil::IsSplitSbp(tensor_nd_sbp->sbp_parallel(0), 0)) {
+  if (IsSplitSbp(tensor_nd_sbp->sbp_parallel(0), 0)) {
     const auto& NcclSToBBoxingFunction = *JUST(GetBoxingFunction("nccl-s-to-b", in, out));
     return JUST(NcclSToBBoxingFunction(tensor, in, out));
   }

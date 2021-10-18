@@ -79,7 +79,7 @@ class OpExprInterpreter {
 
 #define FOR_EACH_BUILTIN_OPS(_macro) \
   _macro(UserOp);                    \
-  _macro(SelectFirstOp);             \
+  _macro(SelectTopNOp);              \
   _macro(VariableOp);                \
   _macro(CastToMirroredOp);          \
   _macro(CastFromMirroredOp);        \

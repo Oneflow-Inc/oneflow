@@ -13,90 +13,60 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import numpy as np
 
 
-def check_slice_tup_list(slice_tup_list, shape):
+def parse_slice_tuple_list(slice_tup_list, shape):
     ndim = len(shape)
     if not isinstance(slice_tup_list, (list, tuple)) or len(slice_tup_list) > ndim:
         raise ValueError(
-            "slice_tup_list must be a list or tuple with length less than or equal to number of dimensions of input tensor"
+            "slice_tup_list must be a list or tuple with length less than or equal "
+            "to number of dimensions of input tensor"
         )
+
     if len(slice_tup_list) < ndim:
-        slice_tup_list += type(slice_tup_list)(
-            [(None, None, None)] * (ndim - len(slice_tup_list))
-        )
-    start_list = []
-    stop_list = []
-    step_list = []
-    for (slice_tup, dim_size) in zip(slice_tup_list, shape):
+        supple_ndim = ndim - len(slice_tup_list)
+        slice_tup_list += type(slice_tup_list)([(None, None, None)] * supple_ndim)
+
+    start_list, stop_list, step_list = [], [], []
+    for (slice_tup, dim) in zip(slice_tup_list, shape):
         if not isinstance(slice_tup, (tuple, list)) or len(slice_tup) != 3:
             raise ValueError(
                 "element of slice_tup_list must be a list or tuple with form (start, stop, step)"
             )
-        if not all((isinstance(idx, int) or idx is None for idx in slice_tup)):
+
+        if not all((isinstance(elem, int) or elem is None for elem in slice_tup)):
             raise ValueError("element of slice tuple must int or None")
+
         (start, stop, step) = slice_tup
+
         if step is None:
             step = 1
+
         if step == 0:
             raise ValueError("slice step can't be 0")
+
         if start is None:
-            start = 0 if step > 0 else np.iinfo(np.int64).max
-        elif start < -dim_size or start >= dim_size:
-            start, stop, step = 0, 0, 1
+            start = 0 if step > 0 else dim
+
         if stop is None:
-            stop = np.iinfo(np.int64).max if step > 0 else np.iinfo(np.int64).min
-        elif stop < -dim_size - 1 or stop > dim_size:
-            raise ValueError("slice start must be in range [-size-1, size]")
+            stop = dim if step > 0 else -dim - 1
+
+        # start range is [-dim, dim-1]
+        start = max(min(start, dim - 1), -dim)
+        # stop range is [-dim-1, dim]
+        stop = max(min(stop, dim), -dim - 1)
+
+        reg_start = start if start >= 0 else start + dim
+        reg_stop = stop if stop >= 0 else stop + dim
+
+        if step > 0 and reg_stop < reg_start:
+            stop = start
+
+        if step < 0 and reg_start < reg_stop:
+            stop = start
+
         start_list.append(start)
         stop_list.append(stop)
         step_list.append(step)
-    return (start_list, stop_list, step_list)
 
-
-def GetSliceAttrs(slice_tup_list, input_shape):
-    ndim = len(input_shape)
-    if not (isinstance(slice_tup_list, (list, tuple)) and len(slice_tup_list) <= ndim):
-        raise ValueError(
-            "slice_tup_list must be a list or tuple with length less than or equal to number of dimensions of input tensor"
-        )
-    if len(slice_tup_list) < ndim:
-        slice_tup_list += type(slice_tup_list)(
-            [(None, None, None)] * (ndim - len(slice_tup_list))
-        )
-    start_list = []
-    stop_list = []
-    step_list = []
-    for (slice_tup, dim_size) in zip(slice_tup_list, input_shape):
-        if not (isinstance(slice_tup, (tuple, list)) and len(slice_tup) == 3):
-            raise ValueError(
-                "element of slice_tup_list must be a list or tuple with form (start, stop, step)"
-            )
-        if not all((isinstance(idx, int) or idx is None for idx in slice_tup)):
-            raise ValueError("element of slice tuple must int or None")
-        (start, stop, step) = slice_tup
-        if step is None:
-            step = 1
-        if step <= 0:
-            raise ValueError("slice_assign/logical_slice step must be greater than 0")
-        if start is None:
-            start = 0
-        elif start < -dim_size or start >= dim_size:
-            raise ValueError(
-                "slice_assign/logical_slice start must be in range [-size, size)"
-            )
-        elif start < 0:
-            start += dim_size
-        if stop is None:
-            stop = dim_size
-        elif stop < -dim_size or stop > dim_size:
-            raise ValueError(
-                "slice_assign/logical_slice start must be in range [-size, size]"
-            )
-        elif stop < 0:
-            stop += dim_size
-        start_list.append(start)
-        stop_list.append(stop)
-        step_list.append(step)
-    return (start_list, stop_list, step_list)
+    return start_list, stop_list, step_list

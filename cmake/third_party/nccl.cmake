@@ -19,23 +19,24 @@ endif()
 if(USE_SYSTEM_NCCL)
     include(FindPackageHandleStandardArgs)
     find_path(NCCL_INCLUDE_DIR nccl.h
-            HINTS ${NCCL_ROOT_DIR} ${CUDA_TOOLKIT_ROOT_DIR}
+            HINTS ${NCCL_ROOT_DIR} ${CUDAToolkit_INCLUDE_DIRS}
             PATH_SUFFIXES cuda/include include)
     unset(NCCL_LIBRARY CACHE)
     find_library(NCCL_LIBRARY ${NCCL_LIBRARY_NAME}
-            HINTS ${NCCL_ROOT_DIR} ${CUDA_TOOLKIT_ROOT_DIR}
+            HINTS ${NCCL_ROOT_DIR} ${CUDAToolkit_LIBRARY_DIR} ${CUDAToolkit_LIBRARY_ROOT}
             PATH_SUFFIXES lib lib64 cuda/lib cuda/lib64 lib/x64)
     find_package_handle_standard_args(
             NCCL DEFAULT_MSG NCCL_INCLUDE_DIR NCCL_LIBRARY)
     set(NCCL_LIBRARIES ${NCCL_LIBRARY})
     add_custom_target(nccl)
 else()
+    get_filename_component(CUDATOOLKIT_BIN_ROOT ${CUDAToolkit_BIN_DIR} DIRECTORY)
     include (ExternalProject)
     set(NCCL_INSTALL_DIR ${THIRD_PARTY_DIR}/nccl)
     set(NCCL_INCLUDE_DIR ${NCCL_INSTALL_DIR}/include)
     set(NCCL_LIBRARY_DIR ${NCCL_INSTALL_DIR}/lib)
 
-    set(NCCL_URL https://github.com/NVIDIA/nccl/archive/refs/tags/v2.9.8-1.tar.gz)
+    set(NCCL_URL https://github.com/NVIDIA/nccl/archive/30ca3fcacf8a73c48d7b8f7aaa54ae8bff89e884.zip)
     use_mirror(VARIABLE NCCL_URL URL ${NCCL_URL})
 
     list(APPEND NCCL_LIBRARIES ${NCCL_LIBRARY_DIR}/${NCCL_LIBRARY_NAME})
@@ -47,11 +48,11 @@ else()
         ExternalProject_Add(nccl
             PREFIX nccl
             URL ${NCCL_URL}
-            URL_MD5 9894dffc51d9d276f01286094ac220ac
+            URL_MD5 84d390b56922332486bb92f4e7895d1d
             UPDATE_COMMAND ""
             CONFIGURE_COMMAND ""
             BUILD_IN_SOURCE 1
-            BUILD_COMMAND make -j${PROC_NUM} src.build CUDA_HOME=${CUDA_TOOLKIT_ROOT_DIR}
+            BUILD_COMMAND make -j${PROC_NUM} src.build CUDA_HOME=${CUDATOOLKIT_BIN_ROOT}
             INSTALL_COMMAND make src.install PREFIX=${NCCL_INSTALL_DIR}
             BUILD_BYPRODUCTS ${NCCL_LIBRARIES}
         )
@@ -59,4 +60,3 @@ else()
     endif(THIRD_PARTY)
 
 endif()
-

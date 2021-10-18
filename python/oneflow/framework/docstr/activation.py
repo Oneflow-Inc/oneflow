@@ -35,9 +35,10 @@ add_docstr(
 
         >>> x = flow.tensor(np.asarray([[[[1, -2], [3, 4]]]]), dtype=flow.float32)
         >>> alpha = flow.nn.Parameter(flow.tensor([1], dtype=flow.float32).fill_(0.25))
-        >>> print(flow._C.prelu(x, alpha).numpy())
-        [[[[ 1.  -0.5]
-           [ 3.   4. ]]]]
+        >>> flow.nn.functional.prelu(x, alpha)
+        tensor([[[[ 1.0000, -0.5000],
+                  [ 3.0000,  4.0000]]]], dtype=oneflow.float32,
+               grad_fn=<prelu_backward>)
    
     See
     :class:`~oneflow.nn.PReLU` for more details.
@@ -45,6 +46,29 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow.relu,
+    """
+    Applies the rectified linear unit function element-wise. See :class:`~oneflow.nn.ReLU` for more details. 
+
+    Args:
+        inplace: If set to ``True``, will do this operation in-place. Default: ``False``
+    
+    For examples:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> ndarr = np.asarray([1, -2, 3])
+        >>> input = flow.Tensor(ndarr)
+        >>> output = flow.relu(input)
+        >>> output
+        tensor([1., 0., 3.], dtype=oneflow.float32)
+
+    """,
+)
 
 add_docstr(
     oneflow.gelu,
@@ -80,7 +104,7 @@ add_docstr(
 add_docstr(
     oneflow._C.softmax,
     r"""
-    softmax(x: Tensor) -> Tensor 
+    softmax(x: Tensor, dim: int) -> Tensor 
 
     Softmax is defined as:
 
@@ -90,6 +114,21 @@ add_docstr(
     See :class:`~oneflow.nn.Softmax` for more details.
     """,
 )
+
+add_docstr(
+    oneflow._C.log_softmax,
+    r"""
+    log_softmax(x: Tensor, dim: int) -> Tensor 
+
+    LogSoftmax is defined as:
+
+    .. math::
+        \text{LogSoftmax}(x_{i}) = \log\left(\frac{\exp(x_i) }{ \sum_j \exp(x_j)} \right) = x_i - \log({ \sum_j \exp(x_j)})
+    
+    See :class:`~oneflow.nn.LogSoftmax` for more details.
+    """,
+)
+
 add_docstr(
     oneflow.softplus,
     r"""
@@ -119,14 +158,14 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow._C.log_sigmoid,
+    oneflow._C.logsigmoid,
     r"""
-    log_sigmoid(x: Tensor) -> Tensor 
+    logsigmoid(x: Tensor) -> Tensor 
 
     Applies the element-wise function:
 
     .. math::
-        \text{log_sigmoid}(x) = \log\left(\frac{ 1 }{ 1 + \exp(-x)}\right)
+        \text{logsigmoid}(x) = \log\left(\frac{ 1 }{ 1 + \exp(-x)}\right)
    
     For example:
 
@@ -139,7 +178,7 @@ add_docstr(
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.tensor(x)     
           
-        >>> out = flow._C.log_sigmoid(input)
+        >>> out = flow.nn.functional.logsigmoid(input)
         >>> out
         tensor([-0.9741, -0.6931, -0.4741], dtype=oneflow.float32)
 
@@ -168,7 +207,7 @@ add_docstr(
 
         >>> x = np.array([1, 2, 3]).astype(np.float32)
         >>> input = flow.tensor(x) 
-        >>> out = flow._C.softsign(input)
+        >>> out = flow.nn.functional.softsign(input)
         >>> out
         tensor([0.5000, 0.6667, 0.7500], dtype=oneflow.float32)
  
@@ -239,20 +278,6 @@ add_docstr(
 )
 
 
-add_docstr(
-    oneflow._C.relu,
-    """
-    relu(x: Tensor, inplace: bool =False) -> Tensor
-
-    Applies the rectified linear unit function element-wise. See
-    :class:`~oneflow.nn.ReLU` for more details.
-
-    Args:
-        inplace: If set to ``True``, will do this operation in-place. Default: ``False``
-
-
-    """,
-)
 add_docstr(
     oneflow._C.hardsigmoid,
     """
@@ -385,5 +410,35 @@ add_docstr(
         >>> out = flow.nn.functional.selu(input)
         >>> out
         tensor([1.0507, 2.1014, 3.1521], dtype=oneflow.float32)
+    """,
+)
+add_docstr(
+    oneflow._C.glu,
+    """
+    glu(input: Tensor, dim: int) -> Tensor 
+
+    The equation is:
+
+    .. math::
+         GLU(input) = GLU(a, b) = a \otimes sigmoid(b)
+    
+    .. note::
+        where input is split in half along dim to form a and b, ⊗ is the element-wise product between matrices.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+        >>> x = flow.tensor([[1, 2, 3, 4], [5, 6, 7, 8]], dtype=flow.float32)
+        >>> y = nn.functional.glu(x)
+        >>> y
+        tensor([[0.9526, 1.9640],
+                [4.9954, 5.9980]], dtype=oneflow.float32)
+
+    See    
+    :class:`~oneflow.nn.GLU` for more details.
+ 
     """,
 )

@@ -22,7 +22,8 @@ import oneflow as flow
 
 import oneflow.unittest
 from test_util import GenArgList
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_randn(test_case, device, shape):
@@ -68,12 +69,11 @@ def _test_with_generator(test_case, device, shape):
     y1 = flow.randn(
         *shape, dtype=flow.float32, device=flow.device(device), generator=gen
     )
-    y1_np = y1.numpy()
     gen.manual_seed(0)
     y2 = flow.randn(
         *shape, dtype=flow.float32, device=flow.device(device), generator=gen
     )
-    test_case.assertTrue(np.allclose(y1_np, y2.numpy(), atol=1e-4, rtol=1e-4))
+    test_case.assertTrue(np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
 
 
 @flow.unittest.skip_unless_1n1d()

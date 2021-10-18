@@ -13,15 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/stream_desc.msg.h"
+#include "oneflow/core/vm/stream_desc.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/infer_stream_type.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/object_msg/flat_msg_view.h"
+#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {
@@ -58,13 +58,11 @@ class NewSymbolInstructionType final : public InstructionType {
     CHECK(view.Match(instr_msg->operand()));
     FOR_RANGE(int, i, 0, view->symbol_id_size()) {
       int64_t symbol_id = GetLogicalObjectId(view->symbol_id(i));
-      auto logical_object =
-          ObjectMsgPtr<LogicalObject>::NewFrom(vm->mut_vm_thread_only_allocator(), symbol_id);
+      auto logical_object = intrusive::make_shared<LogicalObject>(symbol_id);
       CHECK(vm->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
       auto* global_device_id2mirrored_object =
           logical_object->mut_global_device_id2mirrored_object();
-      auto mirrored_object =
-          ObjectMsgPtr<MirroredObject>::NewFrom(vm->mut_allocator(), logical_object.Mutable(), 0);
+      auto mirrored_object = intrusive::make_shared<MirroredObject>(logical_object.Mutable(), 0);
       CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
     }
   }
@@ -107,7 +105,8 @@ void ControlStreamType::InitInstructionStatus(const Stream& stream,
 
 void ControlStreamType::DeleteInstructionStatus(const Stream& stream,
                                                 InstructionStatusBuffer* status_buffer) const {
-  // do nothing
+  auto* ptr = NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  ptr->~NaiveInstrStatusQuerier();
 }
 
 bool ControlStreamType::QueryInstructionStatusDone(
@@ -117,10 +116,10 @@ bool ControlStreamType::QueryInstructionStatusDone(
 
 void ControlStreamType::Compute(Instruction* instruction) const { UNIMPLEMENTED(); }
 
-ObjectMsgPtr<StreamDesc> ControlStreamType::MakeStreamDesc(const Resource& resource,
-                                                           int64_t this_machine_id) const {
-  auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<ControlStreamType>());
+intrusive::shared_ptr<StreamDesc> ControlStreamType::MakeStreamDesc(const Resource& resource,
+                                                                    int64_t this_machine_id) const {
+  auto ret = intrusive::make_shared<StreamDesc>();
+  ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<ControlStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);

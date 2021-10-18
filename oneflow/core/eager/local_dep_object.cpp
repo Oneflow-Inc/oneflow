@@ -19,9 +19,9 @@ limitations under the License.
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/static_global.h"
 #include "oneflow/core/vm/id_util.h"
-#include "oneflow/core/vm/vm_object.msg.h"
+#include "oneflow/core/vm/vm_object.h"
 #include "oneflow/core/vm/oneflow_vm.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
@@ -43,46 +43,87 @@ Maybe<void> LocalDepObject::Init(const Device& device) {
       global_device_id = vm.this_start_global_device_id() + device_id;
     }
   }
-  mutable_logical_object()->__Init__(object_id,
-                                     std::const_pointer_cast<ParallelDesc>(parallel_desc));
-  mutable_mirrored_object()->__Init__(mutable_logical_object(), global_device_id);
+  mut_logical_object()->__Init__(object_id, std::const_pointer_cast<ParallelDesc>(parallel_desc));
+  mut_mirrored_object()->__Init__(mut_logical_object(), global_device_id);
   return Maybe<void>::Ok();
 }
 
-Maybe<ObjectMsgPtr<LocalDepObject>> LocalDepObject::New(const Device& device) {
-  auto local_dep_obj = ObjectMsgPtr<LocalDepObject>::New();
+Maybe<intrusive::shared_ptr<LocalDepObject>> LocalDepObject::New(const Device& device) {
+  auto local_dep_obj = intrusive::make_shared<LocalDepObject>();
   JUST(local_dep_obj.Mutable()->Init(device));
   return local_dep_obj;
 }
 
 namespace {
 
-Maybe<std::vector<ObjectMsgPtr<LocalDepObject>>> RawGetLocalDepObjectPool(Symbol<Device> device) {
-  const auto pool = std::make_shared<std::vector<ObjectMsgPtr<LocalDepObject>>>();
-  size_t pool_size = JUST(device->instr_local_dep_object_pool_size());
-  pool->reserve(pool_size);
-  for (int64_t i = 0; i < pool_size; ++i) {
-    auto local_dep_object = *JUST(LocalDepObject::New(*device));
-    pool->push_back(local_dep_object);
-  }
-  return pool;
+using PoolLocalDepObjectList = intrusive::List<INTRUSIVE_FIELD(LocalDepObject, pool_hook_)>;
+using StoredLocalDepObjectList =
+    intrusive::MutexedList<INTRUSIVE_FIELD(LocalDepObject, stored_hook_)>;
+using LifetimeLocalDepObjectList =
+    intrusive::MutexedList<INTRUSIVE_FIELD(LocalDepObject, lifetime_hook_)>;
+
+PoolLocalDepObjectList* RawThreadLocalPoolLocalDepObjectList(Symbol<Device> device) {
+  static thread_local PoolLocalDepObjectList pool_list;
+  return &pool_list;
 }
+static constexpr auto* ThreadLocalPoolLocalDepObjectList =
+    DECORATE(&RawThreadLocalPoolLocalDepObjectList, ThreadLocal);
+
+StoredLocalDepObjectList* RawGlobalStoredLocalDepObjectList(Symbol<Device> device) {
+  static StoredLocalDepObjectList stored_list;
+  return &stored_list;
+}
+static constexpr auto* GlobalStoredLocalDepObjectList =
+    DECORATE(&RawGlobalStoredLocalDepObjectList, StaticGlobalCopiable);
+
+LifetimeLocalDepObjectList* RawGlobalLifetimeLocalDepObjectList(Symbol<Device> device) {
+  static LifetimeLocalDepObjectList lifetime_list;
+  return &lifetime_list;
+}
+static constexpr auto* GlobalLifetimeLocalDepObjectList =
+    DECORATE(&RawGlobalLifetimeLocalDepObjectList, StaticGlobalCopiable);
 
 }  // namespace
 
-static constexpr auto* GetLocalDepObjectPool = DECORATE(&RawGetLocalDepObjectPool, ThreadLocal);
-
 Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device) {
-  const auto& local_dep_object_pool = JUST(GetLocalDepObjectPool(device));
-  CHECK_OR_RETURN(!local_dep_object_pool->empty());
-  size_t pool_size = local_dep_object_pool->size();
-  static thread_local int64_t index = 0;
-  return local_dep_object_pool->at(index++ % pool_size).Mutable();
+  intrusive::shared_ptr<LocalDepObject> local_dep_object;
+  auto* pool_list = ThreadLocalPoolLocalDepObjectList(device);
+  auto* stored_list = GlobalStoredLocalDepObjectList(device);
+  if (!pool_list->empty()) {
+    // When running stable, fetch recycled local_dep_object from pool_list which acting as a
+    // object pool.
+    local_dep_object = pool_list->PopFront();
+  } else if (!stored_list->empty()) {
+    // When running unstable, try fetch local_dep_object from stored_list
+    local_dep_object = stored_list->PopFront();
+  } else {
+    // When running unstable and no stored objects, directly new LocalDepObject
+    local_dep_object = *JUST(LocalDepObject::New(*device));
+    GlobalLifetimeLocalDepObjectList(device)->PushBack(local_dep_object.Mutable());
+  }
+  CHECK_OR_RETURN(local_dep_object->is_pool_hook_empty());
+  CHECK_OR_RETURN(local_dep_object->is_stored_hook_empty());
+  CHECK_OR_RETURN(!local_dep_object->is_lifetime_hook_empty());
+  return local_dep_object.Mutable();
+}
+
+Maybe<void> PutLocalDepObjectToDevicePool(Symbol<Device> device, LocalDepObject* local_dep_object) {
+  CHECK_OR_RETURN(local_dep_object->is_pool_hook_empty());
+  CHECK_OR_RETURN(local_dep_object->is_stored_hook_empty());
+  CHECK_OR_RETURN(!local_dep_object->is_lifetime_hook_empty());
+  auto* pool_list = ThreadLocalPoolLocalDepObjectList(device);
+  const auto& pool_size = JUST(device->instr_local_dep_object_pool_size());
+  // Keep pool_list->size() not bigger than pool_size
+  if (pool_list->size() < pool_size) {
+    pool_list->PushBack(local_dep_object);
+  } else {
+    GlobalStoredLocalDepObjectList(device)->PushBack(local_dep_object);
+  }
+  return Maybe<void>::Ok();
 }
 
 Maybe<LocalDepObject*> GetLocalDepObject4Device(const Device& device) {
   static constexpr auto* GetObj = DECORATE(&LocalDepObject::New, StaticGlobalCopiable);
   return JUST(GetObj(device))->Mutable();
 }
-
 }  // namespace oneflow

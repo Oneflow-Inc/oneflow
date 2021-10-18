@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/functional/impl/common.h"
 
+#include "oneflow/core/autograd/autograd_mode.h"
+
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -24,12 +26,35 @@ bool IsStaticZerosTensor(const std::shared_ptr<Tensor>& x) {
 }
 
 bool IsInplaceValid(const std::shared_ptr<Tensor>& x) {
-  return !(x->is_leaf() && x->requires_grad());
+  return !autograd::GradMode::is_enabled() || !(x->is_leaf() && x->requires_grad());
+}
+
+Maybe<void> CheckAxis(std::vector<int32_t>& axis, const Shape& shape) {
+  int32_t ndim = shape.NumAxes();
+  if (axis.size() == 0) {
+    for (int32_t i = 0; i < axis.size(); ++i) { axis[i] = i; }
+  } else {
+    for (int i = 0; i < axis.size(); ++i) {
+      CHECK_OR_RETURN((-ndim < axis[i]) || (axis[i] < ndim - 1))
+          << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
+          << "], but got " << axis[i];
+      if (axis[i] < 0) { axis[i] += ndim; }
+    }
+  }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x) {
   CHECK_OR_RETURN(IsInplaceValid(x))
       << "a leaf Tensor that requires grad is being used in an in-place operation.";
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CheckInplaceCastValid(const std::shared_ptr<Tensor>& x,
+                                  const std::shared_ptr<Tensor>& x_cast) {
+  CHECK_OR_RETURN(*x->dtype() == *x_cast->dtype())
+      << "RuntimeError: result type " << x_cast->dtype()->name()
+      << " can't be cast to the desired output type " << x->dtype()->name();
   return Maybe<void>::Ok();
 }
 

@@ -38,10 +38,9 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
 
     if (input_tensor->shape().elem_cnt() == 0) {
       if (output_tensor->shape().elem_cnt() != 0) {
-        AutoMemset(
+        Memset<device_type>(
             ctx->device_ctx(), output_tensor->mut_dptr<T>(), 0,
-            output_tensor->shape().elem_cnt() * GetSizeOfDataType(output_tensor->data_type()),
-            output_tensor->mem_case());
+            output_tensor->shape().elem_cnt() * GetSizeOfDataType(output_tensor->data_type()));
       }
       return;
     }
@@ -77,6 +76,7 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, float)          \
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, double)         \
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int8_t)         \
+  REGISTER_REDUCE_ARITHMETIC_KERNELS(device, uint8_t)        \
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int32_t)        \
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int64_t)
 
