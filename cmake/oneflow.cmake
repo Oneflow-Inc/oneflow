@@ -45,6 +45,9 @@ function(target_treat_warnings_as_errors target)
       -Wno-error=unused-lambda-capture
     )
 
+    # there is some strict-overflow warnings in oneflow/user/kernels/ctc_loss_kernel_util.cpp for unknown reason, disable them for now
+    target_try_compile_options(${target} -Wno-error=strict-overflow)
+
     target_try_compile_options(${target} -Wno-error=instantiation-after-specialization)
 
     # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
