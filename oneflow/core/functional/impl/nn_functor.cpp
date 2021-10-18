@@ -853,9 +853,11 @@ class CtcLossFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& log_probs,
                            const std::shared_ptr<one::Tensor>& targets,
                            const std::shared_ptr<one::Tensor>& input_lengths,
-                           const std::shared_ptr<one::Tensor>& target_lengths, const int blank,
-                           const bool zero_infinity, const std::string& reduction) const {
+                           const std::shared_ptr<one::Tensor>& target_lengths,
+                           const int64_t& max_target_length, const int& blank,
+                           const bool& zero_infinity, const std::string& reduction) const {
     MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("max_target_length", max_target_length));
     JUST(attrs.SetAttr<int32_t>("blank", blank));
     JUST(attrs.SetAttr<bool>("zero_infinity", zero_infinity));
     auto out = JUST(OpInterpUtil::Dispatch<Tensor>(
