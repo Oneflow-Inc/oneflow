@@ -92,6 +92,7 @@ void IBVerbsCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size)
 char * IBVerbsCommNet::SerialTokenToData(void *token, size_t *token_size) {
   char * data = (char*)malloc(sizeof(IBVerbsCommNetRMADesc));
   *token_size = sizeof(IBVerbsCommNetRMADesc);
+  std::cout<<"sizeof(IBVerbsCommNetRMADesc):"<<sizeof(IBVerbsCommNetRMADesc)<<std::endl;
   auto * mem_desc = reinterpret_cast<IBVerbsMemDesc*>(token);
   IBVerbsCommNetRMADesc rma_desc{};
   rma_desc.mem_ptr = reinterpret_cast<uint64_t>(mem_desc->mem_ptr());

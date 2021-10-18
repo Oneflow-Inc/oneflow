@@ -25,6 +25,8 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include <netinet/tcp.h>
 
+#include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h" //some try by lambda 
+
 namespace oneflow {
 
 namespace {
@@ -108,19 +110,16 @@ void EpollCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) {
 }
 
 char * EpollCommNet::SerialTokenToData(void *token, size_t *token_size) {
-    /*char *data = (char*)malloc(sizeof(SocketMemDesc));
-    std::memcpy(data,token,sizeof(SocketMemDesc));
-    *token_size = sizeof(SocketMemDesc);
+    /*char *data = (char*)malloc(sizeof(IBVerbsCommNetRMADesc));
+    std::memcpy(data,token,sizeof(IBVerbsCommNetRMADesc));
+    *token_size = sizeof(IBVerbsCommNetRMADesc);
     return data;*/
-    *token_size = sizeof(SocketMemDesc);
+
+    /**token_size = sizeof(SocketMemDesc);
     uint64_t addr = reinterpret_cast<uint64_t>(token);
-    //return (char*)&addr;
     char * return_addr =reinterpret_cast<char*>(&addr);
-    return return_addr;
-    //char * return_addr = *addr;
-    // char ** addr_addr  ;
-    // *addr_addr = addr;
-    // return addr_addr;
+    return return_addr;*/
+    return nullptr;
 }
 
 void * EpollCommNet::DeSerialDataToToken(char *data, size_t  * token_size) {
