@@ -23,5 +23,6 @@ limitations under the License.
 #include "oneflow/core/intrusive/head_free_list.h"
 #include "oneflow/core/intrusive/skiplist.h"
 #include "oneflow/core/intrusive/for_each.h"
+#include "oneflow/core/intrusive/force_standard_layout.h"
 
 #endif  // ONEFLOW_CORE_INTRUSIVE_INTRUSIVE_H_
