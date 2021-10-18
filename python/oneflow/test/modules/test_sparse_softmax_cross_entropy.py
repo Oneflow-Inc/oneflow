@@ -99,6 +99,7 @@ def compare_eager_consistent_with_tensorflow(
             of_logits_grad.numpy(), tf_logits_diff.numpy(), rtol=1e-03, atol=1e-04
         )
 
+
 def compare_eager_2d_consistent_with_tensorflow(
     device_type, data_type, label_type, batch_size, num_classes,
 ):
