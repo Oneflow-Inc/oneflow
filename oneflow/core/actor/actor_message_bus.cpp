@@ -67,7 +67,7 @@ void ActorMsgBus::SendMsgWithoutCommNet(const ActorMsg& msg) {
 
 void ActorMsgBus::HandleRecvData(void *data, size_t size) {
   uint64_t addr = reinterpret_cast<uint64_t>(data);
-  std::cout<<"ActorMsgBus::HandleRecvData,the addr:0x"<<std::hex << addr << " and size:"<<size<< std::endl;
+  std::cout<<"ActorMsgBus::HandleRecvData,the addr:" << addr << " and size:"<<size<< std::endl;
   ActorMsg msg = *(reinterpret_cast<ActorMsg*>(data));
   ActorMsg new_msg = msg;
   size_t token_size = 0;
