@@ -56,11 +56,11 @@ Maybe<intrusive::shared_ptr<LocalDepObject>> LocalDepObject::New(const Device& d
 
 namespace {
 
-using PoolLocalDepObjectList = intrusive::List<INTRUSIVE_FIELD(LocalDepObject, pool_entry_)>;
+using PoolLocalDepObjectList = intrusive::List<INTRUSIVE_FIELD(LocalDepObject, pool_hook_)>;
 using StoredLocalDepObjectList =
-    intrusive::MutexedList<INTRUSIVE_FIELD(LocalDepObject, stored_entry_)>;
+    intrusive::MutexedList<INTRUSIVE_FIELD(LocalDepObject, stored_hook_)>;
 using LifetimeLocalDepObjectList =
-    intrusive::MutexedList<INTRUSIVE_FIELD(LocalDepObject, lifetime_entry_)>;
+    intrusive::MutexedList<INTRUSIVE_FIELD(LocalDepObject, lifetime_hook_)>;
 
 PoolLocalDepObjectList* RawThreadLocalPoolLocalDepObjectList(Symbol<Device> device) {
   static thread_local PoolLocalDepObjectList pool_list;
@@ -101,16 +101,16 @@ Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device) {
     local_dep_object = *JUST(LocalDepObject::New(*device));
     GlobalLifetimeLocalDepObjectList(device)->PushBack(local_dep_object.Mutable());
   }
-  CHECK_OR_RETURN(local_dep_object->is_pool_entry_empty());
-  CHECK_OR_RETURN(local_dep_object->is_stored_entry_empty());
-  CHECK_OR_RETURN(!local_dep_object->is_lifetime_entry_empty());
+  CHECK_OR_RETURN(local_dep_object->is_pool_hook_empty());
+  CHECK_OR_RETURN(local_dep_object->is_stored_hook_empty());
+  CHECK_OR_RETURN(!local_dep_object->is_lifetime_hook_empty());
   return local_dep_object.Mutable();
 }
 
 Maybe<void> PutLocalDepObjectToDevicePool(Symbol<Device> device, LocalDepObject* local_dep_object) {
-  CHECK_OR_RETURN(local_dep_object->is_pool_entry_empty());
-  CHECK_OR_RETURN(local_dep_object->is_stored_entry_empty());
-  CHECK_OR_RETURN(!local_dep_object->is_lifetime_entry_empty());
+  CHECK_OR_RETURN(local_dep_object->is_pool_hook_empty());
+  CHECK_OR_RETURN(local_dep_object->is_stored_hook_empty());
+  CHECK_OR_RETURN(!local_dep_object->is_lifetime_hook_empty());
   auto* pool_list = ThreadLocalPoolLocalDepObjectList(device);
   const auto& pool_size = JUST(device->instr_local_dep_object_pool_size());
   // Keep pool_list->size() not bigger than pool_size
