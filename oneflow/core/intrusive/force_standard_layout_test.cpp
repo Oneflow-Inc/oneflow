@@ -27,11 +27,10 @@ namespace intrusive {
 namespace test {
 
 constexpr const int unstandard_value = 999;
-constexpr const int standard_value = 666;   
+constexpr const int standard_value = 666;
 
 struct Unstandard {
  public:
-
   explicit Unstandard(int* ptr) : x(unstandard_value), ptr_(ptr) {}
   ~Unstandard() { *ptr_ = unstandard_value; }
 
