@@ -55,11 +55,11 @@ __global__ void PermuteKernel(PermuteKernelParams<num_dims, IndexType> params) {
 // (B, X, Y) -> (B, Y, X)
 // refer from https://developer.nvidia.com/blog/efficient-matrix-transpose-cuda-cc/
 template<size_t num_dims, size_t movement_size, size_t tile_size, typename IndexType>
-  __global__ void BatchPermuteKernel(const void* src_ptr, void* dst_ptr, IndexType H,
-                                     IndexType W, IndexType dh, IndexType dw, int32_t grid_size) {
+__global__ void BatchPermuteKernel(const void* src_ptr, void* dst_ptr, IndexType H, IndexType W,
+                                   IndexType dh, IndexType dw, int32_t grid_size) {
   using T = typename std::aligned_storage<movement_size, movement_size>::type;
   __shared__ T tile[tile_size][tile_size + 1];  // To avoid bank conflict.
-     
+
   const T* src = reinterpret_cast<const T*>(src_ptr);
   T* dst = reinterpret_cast<T*>(dst_ptr);
 
@@ -75,10 +75,11 @@ template<size_t num_dims, size_t movement_size, size_t tile_size, typename Index
     IndexType x = c * tile_size + threadIdx.x;
     IndexType y = r * tile_size + threadIdx.y;
     if (x < W) {
-      IndexType y_range = ((tile_size - threadIdx.y) < (H - y))? (tile_size - threadIdx.y): (H - y);
+      IndexType y_range =
+          ((tile_size - threadIdx.y) < (H - y)) ? (tile_size - threadIdx.y) : (H - y);
 #pragma unroll
       // each thread process 4 elements.
-      // `i < y_range` equals to: `threadIdx.y + i < tile_size && y + i < H`. 
+      // `i < y_range` equals to: `threadIdx.y + i < tile_size && y + i < H`.
       for (int i = 0; i < y_range; i += kBlockRows) {
         tile[threadIdx.y + i][threadIdx.x] = src[offset + (y + i) * W + x];
       }
@@ -87,9 +88,10 @@ template<size_t num_dims, size_t movement_size, size_t tile_size, typename Index
     x = r * tile_size + threadIdx.x;
     y = c * tile_size + threadIdx.y;
     if (x < H) {
-      IndexType x_range = ((tile_size - threadIdx.y) < (W - y))? (tile_size - threadIdx.y): (W-y);
+      IndexType x_range =
+          ((tile_size - threadIdx.y) < (W - y)) ? (tile_size - threadIdx.y) : (W - y);
 #pragma unroll
-      // `i < x_range` equals to: `threadIdx.y + i < tile_size && y + i < W`. 
+      // `i < x_range` equals to: `threadIdx.y + i < tile_size && y + i < W`.
       for (int i = 0; i < x_range; i += kBlockRows) {
         dst[offset + (y + i) * H + x] = tile[threadIdx.x][threadIdx.y + i];
       }
@@ -105,27 +107,27 @@ We design a union structure to store half and half2 share memory.
 Actually here shared memory size is Half[64][66].
 */
 template<size_t num_dims, size_t movement_size, size_t tile_size, typename IndexType>
-__global__ void BatchPermuteMovement2Kernel(const void* src_ptr, void* dst_ptr, IndexType H, IndexType W,
-    IndexType dh, IndexType dw, int32_t grid_size) {
-  static_assert(tile_size % 2 == 0); 
-  // Use union structure to process Load and Store.
+__global__ void BatchPermuteMovement2Kernel(const void* src_ptr, void* dst_ptr, IndexType H,
+                                            IndexType W, IndexType dh, IndexType dw,
+                                            int32_t grid_size) {
+  static_assert(tile_size % 2 == 0);
   using T_MOV2 = typename std::aligned_storage<2, 2>::type;
   using T_MOV4 = typename std::aligned_storage<4, 4>::type;
 
   const T_MOV4* src = reinterpret_cast<const T_MOV4*>(src_ptr);
-  // const half2* src = reinterpret_cast<const half2*>(src_ptr);
   T_MOV4* dst = reinterpret_cast<T_MOV4*>(dst_ptr);
-  // half2* dst = reinterpret_cast<half2*>(dst_ptr);
 
+  // Use union structure to process Load and Store.
   __shared__ union {
-    T_MOV2 tile_half[tile_size][tile_size + 2];        // half [64][66]
+    T_MOV2 tile_half[tile_size][tile_size + 2];       // half [64][66]
     T_MOV4 tile_half2[tile_size][tile_size / 2 + 1];  // half2 [64][33]
   } tile_mem;
 
   IndexType dh_mul_dw = dh * dw;
   for (int i = blockIdx.x, step = gridDim.x; i < grid_size; i += step) {
-    const IndexType batch_index = i / dh_mul_dw;      // the index of batch.
-    const IndexType k = i - batch_index * dh_mul_dw;  // equal to i%(dh*dw). the flatten index of tile in a batch. 
+    const IndexType batch_index = i / dh_mul_dw;  // the index of batch.
+    const IndexType k =
+        i - batch_index * dh_mul_dw;  // equal to i%(dh*dw). the flatten index of tile in a batch.
 
     const IndexType r = k / dw;      // the row index of tile in a batch.
     const IndexType c = k - r * dw;  // equal to k % dw. the col index of tile in a batch.
@@ -135,9 +137,10 @@ __global__ void BatchPermuteMovement2Kernel(const void* src_ptr, void* dst_ptr, 
     int y = r * tile_size + threadIdx.y;
     if (x < W) {
       // each thread process 4 elements.
-      IndexType y_range = ((tile_size - threadIdx.y) < (H - y))? (tile_size - threadIdx.y): (H - y);
-      #pragma unroll
-      // `i < y_range` equals to: `threadIdx.y + i < tile_size && y + i < H`. 
+      IndexType y_range =
+          ((tile_size - threadIdx.y) < (H - y)) ? (tile_size - threadIdx.y) : (H - y);
+#pragma unroll
+      // `i < y_range` equals to: `threadIdx.y + i < tile_size && y + i < H`.
       for (int i = 0; i < y_range; i += kBlockRows) {
         // each thread load a half2.
         tile_mem.tile_half2[threadIdx.y + i][threadIdx.x] = src[(offset + (y + i) * W + x) / 2];
@@ -148,9 +151,10 @@ __global__ void BatchPermuteMovement2Kernel(const void* src_ptr, void* dst_ptr, 
                                           // multiply 2 for threadIdx.x.
     y = c * tile_size + threadIdx.y;
     if (x < H) {
-      IndexType x_range = ((tile_size - threadIdx.y) < (W - y))? (tile_size - threadIdx.y): (W-y);
+      IndexType x_range =
+          ((tile_size - threadIdx.y) < (W - y)) ? (tile_size - threadIdx.y) : (W - y);
 #pragma unroll
-      // `i < x_range` equals to: `threadIdx.y + i < tile_size && y + i < W`. 
+      // `i < x_range` equals to: `threadIdx.y + i < tile_size && y + i < W`.
       for (int i = 0; i < x_range; i += kBlockRows) {
         /*
         When write back as column, it cannot be stored as half2 directly.
@@ -160,14 +164,9 @@ __global__ void BatchPermuteMovement2Kernel(const void* src_ptr, void* dst_ptr, 
           T_MOV4 m4;
           T_MOV2 m2[2];
         } tmp_half2_storage;
-        // half2 tmp;
-        // tmp.x = tile_mem.tile_half[threadIdx.x * 2][threadIdx.y + i];
-        // tmp.y = tile_mem.tile_half[threadIdx.x * 2 + 1][threadIdx.y + i]; 
-        // dst[(offset + (y + i) * H + x)/2] = tmp;
-
         tmp_half2_storage.m2[0] = tile_mem.tile_half[threadIdx.x * 2][threadIdx.y + i];
-        tmp_half2_storage.m2[1] = tile_mem.tile_half[threadIdx.x * 2 + 1][threadIdx.y + i]; 
-        dst[(offset + (y + i) * H + x)/2] = tmp_half2_storage.m4;
+        tmp_half2_storage.m2[1] = tile_mem.tile_half[threadIdx.x * 2 + 1][threadIdx.y + i];
+        dst[(offset + (y + i) * H + x) / 2] = tmp_half2_storage.m4;
       }
     }
     __syncthreads();
@@ -191,12 +190,13 @@ void LaunchBatchPermuteKernel(StreamContext* stream_ctx,
     // Only specialized movementsize==2 to avoid using too much shared memory.
     BatchPermuteMovement2Kernel<num_dims, 2, kHalfTileSize, IndexType>
         <<<checked_grid_size, dim3(half2_thread, kBlockRows), 0, cuda_stream>>>(
-            params.src, params.dst, h, w, dh, dw, grid_size);  // Set threads num as 32x8 cause each threads
-                                                 // process 4 elements to 32x32 share memory.
+            params.src, params.dst, h, w, dh, dw,
+            grid_size);  // Set threads num as 32x8 cause each threads
+                         // process 4 elements to 32x32 share memory.
   } else {
     BatchPermuteKernel<num_dims, movement_size, tile_size, IndexType>
-        <<<checked_grid_size, dim3(tile_size, kBlockRows), 0, cuda_stream>>>(params.src, params.dst, h, w, dh, dw,
-                                                                             grid_size);
+        <<<checked_grid_size, dim3(tile_size, kBlockRows), 0, cuda_stream>>>(
+            params.src, params.dst, h, w, dh, dw, grid_size);
   }
 }
 
@@ -226,7 +226,7 @@ bool CheckLaunchBatchPermute(PermuteKernelParams<num_dims, IndexType> params, In
 
 template<typename IndexType, size_t movement_size>
 bool CheckUseHalf2(IndexType* h, IndexType* w) {
-  return movement_size == 2 && *h % 2 == 0 && *w % 2 == 0; 
+  return movement_size == 2 && *h % 2 == 0 && *w % 2 == 0;
 }
 
 template<size_t num_dims, typename IndexType>
