@@ -101,7 +101,7 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
     // 2. make conversion and code gen more doable
     // 3. enable the reuse of established MLIR infra like built-in traits
     else if (IsCtrlOutTrimmed(op) && IsCtrlInAbsent(op)) {
-      if (op_type_name.equals("relu") || op_type_name.equals("cast")
+      if (op_type_name.equals("relu") || op_type_name.equals("gelu") || op_type_name.equals("cast")
           || GetUnaryOpTypeNames().contains(op_type_name)
           || GetFloatUnaryOpTypeNames().contains(op_type_name)) {
         NamedAttrList attributes(op->getAttrDictionary());
@@ -120,7 +120,7 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
           return success();
         }
       } else if (op_type_name.equals("scalar_mul_by_tensor") || op_type_name.equals("matmul")
-                 || op_type_name.equals("gather")) {
+                 || op_type_name.equals("gather") || op_type_name.equals("gelu_grad")) {
         assert(op.data_input().size() == 2);
         assert(op.data_output().size() == 1);
         NamedAttrList attributes(op->getAttrDictionary());

@@ -143,6 +143,14 @@ def OneFlow_GatherOp : OneFlow_BaseOp<"gather", []> {
   );
 }
 
+def OneFlow_GeluGradOp : OneFlow_BaseOp<"gelu_grad", []> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$dy
+  );
+  let output = (outs AnyType:$dx);
+}
+
 class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType, NoSideEffect])> {
     let summary = "";
@@ -150,6 +158,11 @@ class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
     let output = (outs AnyType:$y);
 }
 
+def OneFlow_GeluOp : OneFlow_UnaryBaseOp<"gelu", []> {}
+
+def OneFlow_RsqrtOp : OneFlow_UnaryBaseOp<"rsqrt", []> {}
+
+def OneFlow_TanhOp : OneFlow_UnaryBaseOp<"tanh", []> {}
 
 // Idempotent ops
 
@@ -177,11 +190,7 @@ def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", []> {}
 
 def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", []> {}
 
-def OneFlow_RsqrtOp : OneFlow_IdempotentBaseOp<"rsqrt", []> {}
-
 def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", []> {}
-
-def OneFlow_TanhOp : OneFlow_IdempotentBaseOp<"tanh", []> {}
 
 // TODO: pattern match constant_like to create zeros_like when constant_like is port to user op
 def OneFlow_ZerosLikeOp : OneFlow_IdempotentBaseOp<"zeros_like", []> {}
