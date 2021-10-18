@@ -100,25 +100,9 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
           op->erase();
           return success();
         }
-      } else if (op_type_name.equals("matmul")) {
+      } else if (op_type_name.equals("scalar_mul_by_tensor") || op_type_name.equals("matmul")) {
         assert(op.data_input().size() == 2);
         assert(op.data_output().size() == 1);
-        NamedAttrList attributes(op->getAttrDictionary());
-        attributes.erase("operand_segment_sizes");
-        attributes.erase("result_segment_sizes");
-        OperationState state(op->getLoc(), "oneflow." + op_type_name.str());
-        state.addAttributes(attributes);
-        state.addOperands(op.data_input());
-        state.addTypes(op.getODSResults(0 /* data out */).getTypes());
-        if (auto created = rewriter.createOperation(state)) {
-          op.data_output().front().replaceAllUsesWith(created->getResult(0));
-          op->erase();
-          return success();
-        }
-      } else if (op_type_name.equals("scalar_mul_by_tensor")) {
-        assert(op.data_input().size() == 2);
-        assert(op.data_output().size() == 1);
-        // TODO: refine repetitive code
         NamedAttrList attributes(op->getAttrDictionary());
         attributes.erase("operand_segment_sizes");
         attributes.erase("result_segment_sizes");
