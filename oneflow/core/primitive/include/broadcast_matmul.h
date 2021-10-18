@@ -47,7 +47,7 @@ class BroadcastMatmulFactory : public Factory<BroadcastMatmul> {
   BroadcastMatmulFactory() = default;
   ~BroadcastMatmulFactory() override = default;
 
-  virtual std::unique_ptr<BroadcastMatmulFactory> New(DataType data_type,
+  virtual std::unique_ptr<BroadcastMatmul> New(DataType data_type,
                                                       BlasTransposeType transpose_a,
                                                       BlasTransposeType transpose_b,
                                                       size_t max_num_dims) = 0;
