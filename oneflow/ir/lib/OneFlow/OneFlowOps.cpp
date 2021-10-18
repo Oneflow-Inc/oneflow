@@ -66,8 +66,24 @@ bool IsCtrlOutTrimmed(oneflow::UserOp& op) { return !op.ctrl_output(); }
 bool IsCtrlInAbsent(oneflow::UserOp& op) { return op.ctrl_inputs().empty(); }
 
 StringSet<>* GetPrintedOpTypeNames() {
-  static llvm::StringSet<> printed({});
-  return &printed;
+  static llvm::StringSet<> names({});
+  return &names;
+}
+
+const StringSet<>& GetUnaryOpTypeNames() {
+  static llvm::StringSet<> names({"abs", "acos", "ceil", "cosh", "floor", "lgamma", "log_sigmoid",
+                                  "reciprocal_no_nan", "rint", "round", "softplus"
+
+  });
+  return names;
+}
+
+const StringSet<>& GetFloatUnaryOpTypeNames() {
+  static llvm::StringSet<> names({"acosh", "asin",     "asinh",      "atan",  "atanh",      "sin",
+                                  "cos",   "erf",      "erfc",       "exp",   "expm1",      "log",
+                                  "log1p", "negative", "reciprocal", "rsqrt", "sigmoid_v2", "sign",
+                                  "sinh",  "sqrt",     "square",     "tan",   "tanh"});
+  return names;
 }
 
 struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
@@ -85,12 +101,9 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
     // 2. make conversion and code gen more doable
     // 3. enable the reuse of established MLIR infra like built-in traits
     else if (IsCtrlOutTrimmed(op) && IsCtrlInAbsent(op)) {
-      if (/* convert opaque elementwise user op to a concrete op */ op_type_name.equals("abs")
-          || op_type_name.equals("ceil") || op_type_name.equals("floor")
-          || op_type_name.equals("relu") || op_type_name.equals("rint")
-          || op_type_name.equals("round") || op_type_name.equals("sign")
-          || op_type_name.equals("negative") || op_type_name.equals("reciprocal")
-          || op_type_name.equals("cast")) {
+      if (op_type_name.equals("relu") || op_type_name.equals("cast")
+          || GetUnaryOpTypeNames().contains(op_type_name)
+          || GetFloatUnaryOpTypeNames().contains(op_type_name)) {
         NamedAttrList attributes(op->getAttrDictionary());
         attributes.erase("operand_segment_sizes");
         attributes.erase("result_segment_sizes");

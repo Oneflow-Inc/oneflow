@@ -166,7 +166,11 @@ def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", []> {}
 
 def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", []> {}
 
+def OneFlow_RsqrtOp : OneFlow_IdempotentBaseOp<"rsqrt", []> {}
+
 def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", []> {}
+
+def OneFlow_TanhOp : OneFlow_IdempotentBaseOp<"tanh", []> {}
 
 // TODO: pattern match constant_like to create zeros_like when constant_like is port to user op
 def OneFlow_ZerosLikeOp : OneFlow_IdempotentBaseOp<"zeros_like", []> {}
