@@ -25,41 +25,34 @@ namespace one {
 namespace functional {
 
 template<typename T>
-struct pointer_inside_maybe {};
-
-template<typename T>
-struct pointer_inside_maybe<Maybe<T>> {
-  using type = std::shared_ptr<T>;
-};
-
-template<typename T>
-class Caller;
+class SequenceFunction;
 
 template<typename R, typename... Args>
-class Caller<R(Args...)> {
+class SequenceFunction<R(Args...)> {
  public:
   using first_f_type = std::function<R(Args...)>;
-  using f_type = std::function<R(const typename pointer_inside_maybe<R>::type&)>;
+  using f_type = std::function<R(
+      const decltype(std::declval<R>().Data_YouAreNotAllowedToCallThisFuncOutsideThisFile())&)>;
 
-  explicit Caller(first_f_type&& f) : fn_(std::move(f)) {}
+  explicit SequenceFunction(first_f_type&& f) : fn_(std::forward<first_f_type>(f)) {}
 
-  explicit Caller(const first_f_type& f) : fn_(f) {}
+  explicit SequenceFunction(const first_f_type& f) : fn_(f) {}
 
-  R call(Args&&... args) const { return fn_(std::forward<Args>(args)...); }
-
-  const Caller<R(Args...)> then(f_type&& f) const {
+  SequenceFunction<R(Args...)>& then(f_type&& f) {
     auto fn_ = std::move(this->fn_);
-    return Caller<R(Args...)>(
-        [fn_, f](Args&&... args) -> R { return f(JUST(fn_(std::forward<Args>(args)...))); });
+    this->fn_ = [fn_, f](Args&&... args) -> R { return f(JUST(fn_(std::forward<Args>(args)...))); };
+    return *this;
   }
 
-  const Caller<R(Args...)> operator>>(f_type&& f) const { return then(std::forward(f)); }
+  SequenceFunction<R(Args...)>& operator>>(f_type&& f) { return then(std::forward<f_type>(f)); }
+
+  R call(Args&&... args) const { return fn_(std::forward<Args>(args)...); }
 
  private:
   std::function<R(Args...)> fn_;
 };
 
-#define make_caller(f) Caller<decltype(f)>(f)
+#define sequence_function(f) SequenceFunction<decltype(f)>(f)
 
 }  // namespace functional
 }  // namespace one

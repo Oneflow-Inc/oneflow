@@ -30,7 +30,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/core/functional/function_caller.h"
+#include "oneflow/core/functional/sequence_function.h"
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -435,10 +435,8 @@ class AdaptiveAvgPool3DFunctor : public AdaptivePoolNDFunctor {
 class SimpleLossFunctorBase {
  public:
   Maybe<Tensor> apply_reduction(const Maybe<Tensor>& x, const std::string& reduction) const {
-    CHECK_OR_RETURN([&]() -> bool {
-      if ((reduction != "none") && (reduction != "sum") && (reduction != "mean")) return false;
-      return true;
-    }());
+    CHECK_OR_RETURN(reduction == "none" || reduction == "sum" || reduction == "mean")
+        << "Reduction should be none, sum or mean.";
     if (reduction == "sum") { return functional::ReduceSum(JUST(x), {}, false); }
     if (reduction == "mean") { return functional::ReduceMean(JUST(x), {}, false); }
     return x;
@@ -455,7 +453,7 @@ class L1LossFunctor : public SimpleLossFunctorBase {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
                            const std::string& reduction) const {
-    const auto out = make_caller(functional::Sub).then(functional::Abs).call(input, target);
+    const auto out = sequence_function(functional::Sub).then(functional::Abs).call(input, target);
     return apply_reduction(out, reduction);
   }
 };
@@ -467,7 +465,7 @@ class MseLossFunctor : public SimpleLossFunctorBase {
                            const std::shared_ptr<one::Tensor>& target,
                            const std::string& reduction) const {
     const auto out =
-        JUST(make_caller(functional::Sub).then(functional::Square).call(input, target));
+        JUST(sequence_function(functional::Sub).then(functional::Square).call(input, target));
     return apply_reduction(out, reduction);
   }
 };
@@ -479,7 +477,7 @@ class MarginRankingLossFunctor : public SimpleLossFunctorBase {
                            const std::shared_ptr<one::Tensor>& target, const float margin,
                            const std::string& reduction) const {
     const auto out =
-        JUST(make_caller(functional::Sub)
+        JUST(sequence_function(functional::Sub)
                  .then(functional::Negative)
                  .then(std::bind(functional::Mul, target, std::placeholders::_1))
                  .then([&margin](const std::shared_ptr<one::Tensor>& x) {
@@ -544,7 +542,7 @@ class NllLossFunctor {
     input_perm[input_perm.size() - 1] = 1;
     for (size_t i = 1; i < input_perm.size() - 1; ++i) { input_perm[i] = i + 1; }
 
-    const auto input_ = JUST(make_caller(functional::Transpose)
+    const auto input_ = JUST(sequence_function(functional::Transpose)
                                  .then(std::bind(functional::Reshape, std::placeholders::_1,
                                                  Shape({-1, input_shape->At(1)})))
                                  .call(input, input_perm));
@@ -686,7 +684,7 @@ class CrossEntropyFunctor {
     input_perm[input_perm.size() - 1] = 1;
     for (size_t i = 1; i < input_perm.size() - 1; ++i) { input_perm[i] = i + 1; }
 
-    const auto input_ = JUST(make_caller(functional::Transpose)
+    const auto input_ = JUST(sequence_function(functional::Transpose)
                                  .then(std::bind(functional::Reshape, std::placeholders::_1,
                                                  Shape({-1, input_shape->At(1)})))
                                  .then([this](const std::shared_ptr<one::Tensor>& x) {
@@ -867,7 +865,7 @@ class CtcLossFunctor {
         return functional::Constant(*out->shape(), scalar, out->dtype(), JUST(out->device()));
       };
 
-      out = JUST(make_caller(functional::Constant)
+      out = JUST(sequence_function(functional::Constant)
                      .then(std::bind(functional::BroadcastEqual, out, std::placeholders::_1))
                      .then(std::bind(functional::Where, std::placeholders::_1,
                                      JUST(create_constant(Scalar(0))), out))
@@ -880,7 +878,7 @@ class CtcLossFunctor {
     }());
     if (reduction == "sum") { return functional::ReduceSum(out, {}, false); }
     if (reduction == "mean") {
-      return make_caller(functional::Clamp)
+      return sequence_function(functional::Clamp)
           .then(std::bind(functional::Cast, std::placeholders::_1, log_probs->dtype()))
           .then([&](const std::shared_ptr<one::Tensor>& x) {
             return OpInterpUtil::Dispatch<Tensor>(*op_xdivy_, {out, x});
