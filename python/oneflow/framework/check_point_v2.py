@@ -155,8 +155,8 @@ def _broadcast_py_object(obj, src: int = 0):
         return pickle.loads(flow._oneflow_internal.cpu_broadcast(None, src))
 
 
-# NOTE(jianhao): 
-# 1. tensor_getstate and tensor_setstate is binded to tensor.__getstate__ 
+# NOTE(jianhao):
+# 1. tensor_getstate and tensor_setstate is binded to tensor.__getstate__
 # and __setstate__ in tensor.py, and can only be called inside flow.save
 # or flow.load because they use global variables `current_path` etc.
 # 2. (de)serializing a container of consistent tensors requires the order
@@ -171,11 +171,14 @@ def tensor_getstate(self):
         tensor = self
     else:
         assert not self.is_local
-        rel_dir_name = f'consistent_tensor_{self.consistent_id()}'
+        rel_dir_name = f"consistent_tensor_{self.consistent_id()}"
         abs_dir_name = current_path / rel_dir_name
 
         tensor = self.to_consistent(sbp=[flow.sbp.broadcast] * len(self.sbp)).to_local()
-    if current_consistent_src_dst_rank is None or current_consistent_src_dst_rank == flow.env.get_rank():
+    if (
+        current_consistent_src_dst_rank is None
+        or current_consistent_src_dst_rank == flow.env.get_rank()
+    ):
         _save_tensor_to_disk(tensor, abs_dir_name)
 
     return {"path": rel_dir_name}
@@ -183,9 +186,11 @@ def tensor_getstate(self):
 
 def tensor_setstate(self, pickle_dict):
     assert isinstance(current_path, Path)
-    rel_dir_name = pickle_dict['path']
+    rel_dir_name = pickle_dict["path"]
     abs_dir_name = current_path / rel_dir_name
-    self.__init__(_LoadSingleVariable(str(abs_dir_name), current_consistent_src_dst_rank))
+    self.__init__(
+        _LoadSingleVariable(str(abs_dir_name), current_consistent_src_dst_rank)
+    )
 
 
 def legacy_load(
@@ -227,9 +232,7 @@ def tensor_pickling_context(path: Path, consistent_src_dst_rank: int):
         current_path = None
 
 
-def load(
-    path: str, consistent_src_rank: Optional[int] = None,
-) -> Any:
+def load(path: str, consistent_src_rank: Optional[int] = None,) -> Any:
     r"""Loads an object saved with oneflow.save() from a directory.
 
     Args:
@@ -268,14 +271,12 @@ def load(
 
     with tensor_pickling_context(path, consistent_src_rank):
         res = pickle.loads(pickle_bytes)
-    assert res['protocol_version'] == PROTOCOL_VERSION
-    return res['data']
+    assert res["protocol_version"] == PROTOCOL_VERSION
+    return res["data"]
 
 
 def save(
-    obj: Any,
-    path: Union[str, Path],
-    consistent_dst_rank: Optional[int] = None,
+    obj: Any, path: Union[str, Path], consistent_dst_rank: Optional[int] = None,
 ) -> None:
     r"""Save an object to a directory.
 
@@ -289,7 +290,7 @@ def save(
             disk I/O.
     """
     path: Path = Path(path)
-    obj = {'protocol_version': PROTOCOL_VERSION, 'data': obj}
+    obj = {"protocol_version": PROTOCOL_VERSION, "data": obj}
     with tensor_pickling_context(path, consistent_dst_rank):
         pickled_bytes = pickle.dumps(obj)
     rank = flow.env.get_rank()

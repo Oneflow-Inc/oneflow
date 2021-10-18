@@ -218,7 +218,7 @@ class TestModule(flow.unittest.TestCase):
         res1 = m1() + m2()
         state_dict1 = m1.state_dict()
         state_dict2 = m2.state_dict()
-        state_dict = {'m1': state_dict1, 'm2': state_dict2}
+        state_dict = {"m1": state_dict1, "m2": state_dict2}
 
         with tempfile.TemporaryDirectory() as f:
             with test_case.assertRaises(Exception):
@@ -231,20 +231,24 @@ class TestModule(flow.unittest.TestCase):
                 test_case.assertEqual(len(os.listdir(f)), 0)
 
             m1 = CustomModule()
-            m1 = m1.to_consistent(flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast)
+            m1 = m1.to_consistent(
+                flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast
+            )
             m2 = CustomModule()
-            m2 = m2.to_consistent(flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast)
+            m2 = m2.to_consistent(
+                flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast
+            )
 
             with test_case.assertRaises(Exception):
                 loaded_state_dict = flow.load(f)
-                m1.load_state_dict(loaded_state_dict['m1'])
+                m1.load_state_dict(loaded_state_dict["m1"])
 
             loaded_state_dict = flow.load(
                 f, consistent_src_rank=consistent_src_dst_rank
             )
             test_case.assertEqual(len(loaded_state_dict), 2)
-            m1.load_state_dict(loaded_state_dict['m1'])
-            m2.load_state_dict(loaded_state_dict['m2'])
+            m1.load_state_dict(loaded_state_dict["m1"])
+            m2.load_state_dict(loaded_state_dict["m2"])
             res2 = m1() + m2()
 
         test_case.assertTrue(
