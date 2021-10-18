@@ -130,10 +130,12 @@ __global__ void BatchPermuteMovement2Kernel(const void* src_ptr, void* dst_ptr, 
     int y = r * tile_size + threadIdx.y;
     if (x < W) {
       // each thread process 4 elements.
-      IndexType y_range = ((tile_size - threadIdx.y) < (H - y))? (tile_size - threadIdx.y): (H - y);
+      // IndexType y_range = ((tile_size - threadIdx.y) < (H - y))? (tile_size - threadIdx.y): (H - y);
 
+      // #pragma unroll
+      // for (int i = 0; i < y_range; i += kBlockRows) {
       #pragma unroll
-      for (int i = 0; i < y_range; i += kBlockRows) {
+      for (int i = 0; threadIdx.y + i < tile_size && y + i < H; i += kBlockRows) {
         // each thread load a half2.
         tile_mem.tile_half2[threadIdx.y + i][threadIdx.x] = src[(offset + (y + i) * W + x) / 2];
       }
@@ -143,13 +145,24 @@ __global__ void BatchPermuteMovement2Kernel(const void* src_ptr, void* dst_ptr, 
                                           // multiply 2 for threadIdx.x.
     y = c * tile_size + threadIdx.y;
     if (x < H) {
-      IndexType x_range = ((tile_size - threadIdx.y) < (W - y))? (tile_size - threadIdx.y): (W-y);
-#pragma unroll
-      for (int i = 0; i < x_range; i += kBlockRows) {
+//       IndexType x_range = ((tile_size - threadIdx.y) < (W - y))? (tile_size - threadIdx.y): (W-y);
+// #pragma unroll
+//       for (int i = 0; i < x_range; i += kBlockRows) {
+
+    #pragma unroll
+        for (int i = 0; threadIdx.y + i < tile_size && y + i < W; i += kBlockRows) {
+          // each thread load a half2.
         /*
         When write back as column, it cannot be stored as half2 directly.
         So we split as 2 half elements, and write back separately.
         */
+        // // simplify
+        // half2 tmp;
+        // tmp.x = tile_mem.tile_half[threadIdx.x * 2][threadIdx.y + i];
+        // tmp.y = tile_mem.tile_half[threadIdx.x * 2 + 1][threadIdx.y + i]; // todo
+        // auto* dst_2 = reinterpret_cast<half2*>(dst);
+        // dst_2[(offset + (y + i) * H + x) / 2] = tmp;
+
         dst[offset + (y + i) * H + x] = tile_mem.tile_half[threadIdx.x * 2][threadIdx.y + i];
         dst[offset + (y + i) * H + x + 1] =
             tile_mem.tile_half[threadIdx.x * 2 + 1][threadIdx.y + i];
