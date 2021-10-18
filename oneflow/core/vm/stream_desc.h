@@ -87,8 +87,8 @@ INTRUSIVE_BEGIN(StreamDesc);
   INTRUSIVE_DEFINE_FIELD(int32_t, num_machines_);
   INTRUSIVE_DEFINE_FIELD(int32_t, num_streams_per_machine_);
   INTRUSIVE_DEFINE_FIELD(int32_t, num_streams_per_thread_);
-  // skiplist entries
-  using StreamTypeIdKey = intrusive::SkipListEntry<FlatMsg<StreamTypeId>, 7>;
+  // skiplist hooks
+  using StreamTypeIdKey = intrusive::SkipListHook<FlatMsg<StreamTypeId>, 7>;
   INTRUSIVE_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);
 INTRUSIVE_END(StreamDesc);
 // clang-format on
