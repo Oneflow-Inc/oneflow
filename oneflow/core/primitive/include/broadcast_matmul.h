@@ -47,10 +47,9 @@ class BroadcastMatmulFactory : public Factory<BroadcastMatmul> {
   BroadcastMatmulFactory() = default;
   ~BroadcastMatmulFactory() override = default;
 
-  virtual std::unique_ptr<BroadcastMatmul> New(DataType data_type,
-                                                      BlasTransposeType transpose_a,
-                                                      BlasTransposeType transpose_b,
-                                                      size_t max_num_dims) = 0;
+  virtual std::unique_ptr<BroadcastMatmul> New(DataType data_type, BlasTransposeType transpose_a,
+                                               BlasTransposeType transpose_b,
+                                               size_t max_num_dims) = 0;
 };
 
 }  // namespace primitive
