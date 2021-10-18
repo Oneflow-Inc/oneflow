@@ -39,21 +39,23 @@ struct EluGradFunctor {
 
 template<typename T>
 struct CeluFunctor {
-  OF_DEVICE_FUNC explicit CeluFunctor(float alpha) : alpha(alpha) {}
+  OF_DEVICE_FUNC explicit CeluFunctor(float alpha) : alpha(alpha), inv_alpha(1.0f / alpha) {}
   OF_DEVICE_FUNC T operator()(T x) const {
-    return (x > static_cast<T>(0)) ? x
-                                   : static_cast<T>(alpha * (exp(x / alpha) - static_cast<T>(1)));
+    return (x > static_cast<T>(0))
+               ? x
+               : static_cast<T>(alpha * (exp(x * inv_alpha) - static_cast<T>(1)));
   }
   const T alpha;
+  const T inv_alpha;
 };
 
 template<typename T>
 struct CeluGradFunctor {
-  OF_DEVICE_FUNC explicit CeluGradFunctor(float alpha) : alpha(alpha) {}
+  OF_DEVICE_FUNC explicit CeluGradFunctor(float alpha) : inv_alpha(1.0f / alpha) {}
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
-    return (x > static_cast<T>(0)) ? dy : dy * static_cast<T>(exp(x / alpha));
+    return (x > static_cast<T>(0)) ? dy : dy * static_cast<T>(exp(x * inv_alpha));
   }
-  const T alpha;
+  const T inv_alpha;
 };
 
 template<typename T>
