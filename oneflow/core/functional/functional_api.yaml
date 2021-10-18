@@ -1222,6 +1222,10 @@
   signature: "Tensor (Tensor x, *, Int64 dst=0, Bool inplace=True) => LocalReduce"
   bind_python: True
 
+- name: "local_alltoall"
+  signature: "Void (TensorTuple output_tensor_list, TensorTuple input_tensor_list) => LocalAllToAll"
+  bind_python: True
+
 - name: "eager_p_to_b"
   signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, Shape shape) => EagerPToB"
   bind_python: False

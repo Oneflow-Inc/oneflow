@@ -549,5 +549,45 @@ Maybe<void> Recv<DeviceType::kGPU>(void* out, size_t elem_cnt, DataType dtype, i
 }
 #endif
 
+template<>
+Maybe<void> AllToAll<DeviceType::kCPU>(const void* void_in, void* void_out, size_t elem_cnt,
+                                       DataType dtype, DeviceCtx* ctx,
+                                       Symbol<ParallelDesc> parallel_desc) {
+  const char* in = reinterpret_cast<const char*>(void_in);
+  char* out = reinterpret_cast<char*>(void_out);
+
+  int64_t parallel_num = parallel_desc->parallel_num();
+  CHECK_GE_OR_RETURN(parallel_num, 2);
+  BalancedSplitter bs(elem_cnt, parallel_num);
+  size_t size_of_dtype = GetSizeOfDataType(dtype);
+
+  Optional<int64_t> parallel_id;
+  JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
+  if (!parallel_id) { return Maybe<void>::Ok(); }
+  for (int parallel_id = 0; parallel_id < parallel_num; parallel_id++) {
+    int64_t rank_of_parallel_id = JUST(parallel_desc->MachineId4ParallelId(parallel_id));
+    size_t trans_size = bs.At(parallel_id).size();
+    if (rank_of_parallel_id == GlobalProcessCtx::Rank()) {
+      // send data
+      for (int send_id = 0; send_id < parallel_num; send_id++) {
+        const char* send_ptr = &in[bs.At(send_id).begin() * size_of_dtype];
+        int64_t dst_rank = JUST(parallel_desc->MachineId4ParallelId(send_id));
+        if (dst_rank == GlobalProcessCtx::Rank()) {
+          char* recv_ptr = &out[bs.At(parallel_id).begin() * size_of_dtype];
+          memcpy(recv_ptr, send_ptr, trans_size * size_of_dtype);
+          continue;
+        }
+        Send<DeviceType::kCPU>(send_ptr, trans_size, dtype, dst_rank, ctx);
+      }
+    } else {
+      // recv data
+      char* recv_ptr = &out[bs.At(parallel_id).begin() * size_of_dtype];
+      Recv<DeviceType::kCPU>(recv_ptr, trans_size, dtype, rank_of_parallel_id, ctx);
+    }
+  }
+
+  return Maybe<void>::Ok();
+}
+
 }  // namespace ccl
 }  // namespace oneflow

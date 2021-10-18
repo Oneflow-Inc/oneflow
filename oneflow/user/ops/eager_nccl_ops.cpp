@@ -224,4 +224,28 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_s2s")
     })
     .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
+
+REGISTER_NO_GRAD_USER_OP("eager_ccl_alltoall")
+    .InputWithMinimum("in", 2)
+    .Output("out")
+    .Attr<std::string>("parallel_conf")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const size_t out_num = ctx->output_size("out");
+      for (size_t i = 0; i < out_num; i++) {
+        *ctx->OutputShape("out", i) = ctx->Attr<Shape>("shape");
+      }
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const size_t out_num = ctx->output_size("out");
+      for (size_t i = 0; i < out_num; i++) {
+        *ctx->OutputDType("out", i) = ctx->Attr<DataType>("data_type");
+      }
+      return Maybe<void>::Ok();
+    })
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      UNIMPLEMENTED_THEN_RETURN() << "consistent tensor are not supported";
+    });
+
 }  // namespace oneflow

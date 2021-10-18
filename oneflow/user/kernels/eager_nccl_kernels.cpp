@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/user/kernels/communicate_util.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -378,5 +379,68 @@ REGISTER_EAGER_CCL_S2S_KERNEL(int32_t)
 REGISTER_EAGER_CCL_S2S_KERNEL(int64_t)
 REGISTER_EAGER_CCL_S2S_KERNEL(float)
 REGISTER_EAGER_CCL_S2S_KERNEL(double)
+
+namespace {
+size_t InferEagerCclAllToAllKernelTmpBufferSize(user_op::InferContext* ctx) {
+  int64_t in_num = ctx->inputs().size();
+  int64_t out_num = ctx->outputs().size();
+  CHECK(in_num == out_num);
+  CHECK(in_num >= 2);
+  CHECK(out_num >= 2);
+  const user_op::TensorDesc& tensor = ctx->InputTensorDesc("in", 0);
+  return in_num * tensor.shape().elem_cnt() * GetSizeOfDataType(tensor.data_type()) * 2;
+}
+}  // namespace
+
+class EagerCclAllToAllKernel final : public user_op::OpKernel {
+ public:
+  EagerCclAllToAllKernel() = default;
+  ~EagerCclAllToAllKernel() override = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<EagerCclOpKernelState>(ctx);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* kernel_state = dynamic_cast<EagerCclOpKernelState*>(state);
+    CHECK(kernel_state != nullptr);
+    Symbol<ParallelDesc> parallel_desc = kernel_state->parallel_desc();
+    const int64_t parallel_num = parallel_desc->parallel_num();
+    const int64_t in_num = ctx->input_size("in");
+    const int64_t out_num = ctx->output_size("out");
+    CHECK(in_num == out_num);
+    CHECK(parallel_num == in_num);
+
+    const DataType& dtype = ctx->TensorDesc4ArgNameAndIndex("in", 0)->data_type();
+    const Shape& shape = ctx->TensorDesc4ArgNameAndIndex("in", 0)->shape();
+
+    const size_t size_of_dtype = GetSizeOfDataType(dtype);
+    const size_t total_input_elem_cnt = in_num * shape.elem_cnt();
+    const size_t total_input_byte_size = total_input_elem_cnt * size_of_dtype;
+    BalancedSplitter bs(total_input_byte_size, parallel_num);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    char* tmp_ptr = reinterpret_cast<char*>(tmp_buffer->mut_dptr());
+    const size_t tensor_size = shape.elem_cnt() * size_of_dtype;
+    for (int parallel_id = 0; parallel_id < parallel_num; parallel_id++) {
+      const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", parallel_id);
+      memcpy(&tmp_ptr[bs.At(parallel_id).begin()], in->dptr(), tensor_size);
+    }
+    char* tmp_out_ptr = tmp_ptr + total_input_byte_size;
+    CHECK_JUST(ccl::AllToAll<DeviceType::kCPU>(tmp_ptr, tmp_out_ptr, total_input_elem_cnt, dtype,
+                                               ctx->device_ctx(), parallel_desc));
+    for (int parallel_id = 0; parallel_id < parallel_num; parallel_id++) {
+      user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", parallel_id);
+      memcpy(out->mut_dptr(), &tmp_out_ptr[bs.At(parallel_id).begin()], tensor_size);
+    }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("eager_ccl_alltoall")
+    .SetCreateFn<EagerCclAllToAllKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "cpu")
+    .SetInferTmpSizeFn(InferEagerCclAllToAllKernelTmpBufferSize);
 
 }  // namespace oneflow

@@ -75,6 +75,10 @@ Maybe<void> Reduce(const void* in, void* out, size_t elem_cnt, DataType dtype,
 Maybe<void> CpuBroadcast(const void* in, void* out, size_t buffer_size, int64_t root,
                          Symbol<ParallelDesc> parallel_desc, const TransportToken& transport_token);
 
+template<DeviceType device_type>
+Maybe<void> AllToAll(const void* in, void* out, size_t elem_cnt, DataType dtype, DeviceCtx* ctx,
+                     Symbol<ParallelDesc> parallel_desc);
+
 }  // namespace ccl
 
 }  // namespace oneflow

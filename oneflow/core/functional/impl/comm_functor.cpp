@@ -124,6 +124,16 @@ Maybe<one::UserOpExpr> EagerNcclReduce(Symbol<ParallelDesc> parallel_desc, int64
 
 auto* CachedEagerNcclReduceOpExpr = DECORATE(&EagerNcclReduce, ThreadLocal);
 
+Maybe<one::UserOpExpr> EagerCclAllToAll(Symbol<ParallelDesc> parallel_desc, const int64_t& in_num,
+                                        const int64_t& out_num) {
+  return one::OpBuilder("eager_ccl_alltoall")
+      .Input("in", in_num)
+      .Output("out", out_num)
+      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Build();
+}
+
+auto* CachedEagerCclAllToAllOpExpr = DECORATE(&EagerCclAllToAll, ThreadLocal);
 }  // namespace
 
 class BroadcastFunctor {
@@ -372,11 +382,77 @@ class LocalReduceFunctor {
   }
 };
 
+class LocalAllToAllFunctor {
+ public:
+  LocalAllToAllFunctor() = default;
+  Maybe<void> operator()(const one::TensorTuple& input_list,
+                         const one::TensorTuple& output_list) const {
+    const int64_t in_num = input_list.size();
+    const int64_t out_num = output_list.size();
+    CHECK_EQ_OR_RETURN(in_num, out_num);
+    CHECK_GE_OR_RETURN(in_num, 2);
+    CHECK_GE_OR_RETURN(out_num, 2);
+
+    const std::shared_ptr<const Shape>& shape = input_list.at(0)->shape();
+    Symbol<DType> dtype = input_list.at(0)->dtype();
+    Symbol<Device> device = JUST(input_list.at(0)->device());
+    CHECK_OR_RETURN(*shape == *output_list.at(0)->shape());
+    CHECK_OR_RETURN(dtype == output_list.at(0)->dtype());
+    CHECK_OR_RETURN(device == JUST(output_list.at(0)->device()));
+
+    auto check_list = [&](const TensorTuple& tensor_list) -> Maybe<void> {
+      for (auto& tensor : tensor_list) {
+        CHECK_OR_RETURN(tensor->is_local());
+        CHECK_OR_RETURN(*tensor->shape() == *shape);
+        CHECK_OR_RETURN(JUST(tensor->device()) == device);
+        CHECK_OR_RETURN(tensor->dtype() == dtype);
+      }
+      return Maybe<void>::Ok();
+    };
+    if (!TRY(check_list(input_list).IsOk())) {
+      return Error::CheckFailedError() << "tensor meta mismatching";
+    }
+    if (!TRY(check_list(output_list).IsOk())) {
+      return Error::CheckFailedError() << "tensor meta mismatchine";
+    }
+
+    static thread_local std::unordered_map<Symbol<RankGroup>, Symbol<ParallelDesc>>
+        rank_group2parallel_desc;
+    const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
+    auto iter = rank_group2parallel_desc.find(rank_group);
+    Symbol<ParallelDesc> parallel_desc;
+    if (iter == rank_group2parallel_desc.end()) {
+      ParallelConf parallel_conf;
+      parallel_conf.set_device_tag(JUST(device->of_type()));
+      JUST(rank_group->ForEachRank([&parallel_conf](int64_t rank) -> Maybe<void> {
+        parallel_conf.add_device_name("@" + std::to_string(rank) + ":"
+                                      + std::to_string(GlobalProcessCtx::LocalRank(rank)));
+        return Maybe<void>::Ok();
+      }));
+      parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
+      rank_group2parallel_desc[rank_group] = parallel_desc;
+    } else {
+      parallel_desc = iter->second;
+    }
+    CHECK_OR_RETURN(in_num == parallel_desc->parallel_num());
+    std::shared_ptr<OpExpr> op_expr =
+        JUST(CachedEagerCclAllToAllOpExpr(parallel_desc, in_num, out_num));
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<DataType>("data_type", dtype->data_type()));
+    JUST(attrs.SetAttr<Shape>("shape", *shape));
+    JUST(OpInterpUtil::Dispatch(*op_expr, input_list, const_cast<TensorTuple*>(&output_list),
+                                OpExprInterpContext(attrs)));
+    return Maybe<void>::Ok();
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastFunctor>("Broadcast");
   m.add_functor<impl::LocalAllReduceFunctor>("LocalAllReduce");
+  m.add_functor<impl::LocalAllToAllFunctor>("LocalAllToAll");
   m.add_functor<impl::ConsistentAllReduceFunctor>("ConsistentAllReduce");
   m.add_functor<impl::ConsistentReduceScatterFunctor>("ConsistentReduceScatter");
   m.add_functor<impl::ConsistentAllGatherFunctor>("ConsistentAllGather");
