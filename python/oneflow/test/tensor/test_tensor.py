@@ -924,9 +924,9 @@ class TestTensor(flow.unittest.TestCase):
     def test_std_tensor_function(test_case):
         np_arr = np.random.randn(9, 8, 7, 6)
         input = flow.Tensor(np_arr)
-        of_out = input.std(dim=1, keepdim=False)
+        of_out = input.std(dim=1, unbiased=False, keepdim=False)
         np_out = np.std(np_arr, axis=1)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-04, 1e-04))
 
     @flow.unittest.skip_unless_1n1d()
     def test_sqrt_tensor_function(test_case):

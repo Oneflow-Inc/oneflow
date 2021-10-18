@@ -22,7 +22,7 @@ namespace oneflow {
 
 namespace primitive {
 
-enum MemcpyKind {
+enum class MemcpyKind {
   kAuto = 0,
   kHtoD,
   kDtoH,

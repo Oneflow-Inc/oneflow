@@ -18,9 +18,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_CUDA_STREAM_TYPE_H_
 #define ONEFLOW_CORE_VM_CUDA_STREAM_TYPE_H_
 
-#include "oneflow/core/object_msg/flat_msg_view.h"
+#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
 
@@ -44,8 +44,8 @@ class CudaStreamType final : public StreamType {
                                   const InstructionStatusBuffer& status_buffer) const override;
   void set_has_event_record(InstructionStatusBuffer* status_buffer, bool val) const override;
   void Compute(Instruction* instruction) const override;
-  ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                          int64_t this_machine_id) const override;
+  intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
+                                                   int64_t this_machine_id) const override;
   bool SharingVirtualMachineThread() const override { return true; }
   bool SupportingTransportInstructions() const override { return true; }
 };

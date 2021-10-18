@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
-#include "oneflow/core/common/callback.msg.h"
 #include "oneflow/core/vm/cuda_host_allocator.h"
 
 namespace oneflow {
@@ -33,9 +32,8 @@ class CudaCopyD2HDeviceCtx : public DeviceCtx {
   CudaCopyD2HDeviceCtx() = delete;
   ~CudaCopyD2HDeviceCtx() override = default;
 
-  CudaCopyD2HDeviceCtx(CallbackMsgListPtr callback_msg_list, int64_t device_id)
+  CudaCopyD2HDeviceCtx(int64_t device_id)
       : cuda_handler_(new CudaStreamHandle(nullptr)),
-        callback_msg_list_(callback_msg_list),
         cuda_allocator_(std::make_unique<CudaHostAllocator>(device_id)),
         device_id_(device_id) {}
 
@@ -45,9 +43,7 @@ class CudaCopyD2HDeviceCtx : public DeviceCtx {
 
   void SyncDevice() override { OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream())); }
 
-  void AddCallBack(std::function<void()> callback) const override {
-    callback_msg_list_->EmplaceBack(ObjectMsgPtr<CallbackMsg>::New(callback));
-  }
+  void AddCallBack(std::function<void()> callback) const override { UNIMPLEMENTED(); }
 
   vm::Allocator* mut_allocator() override { return cuda_allocator_.get(); }
 
@@ -55,7 +51,6 @@ class CudaCopyD2HDeviceCtx : public DeviceCtx {
 
  protected:
   std::unique_ptr<CudaStreamHandle> cuda_handler_;
-  CallbackMsgListPtr callback_msg_list_;
   std::unique_ptr<CudaHostAllocator> cuda_allocator_;
   int64_t device_id_;
 };

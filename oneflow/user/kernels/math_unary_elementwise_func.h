@@ -627,7 +627,7 @@ struct SqrtFunctor<double> {
   static OF_DEVICE_FUNC double Forward(const double x) { return MATH_FUNC_D(sqrt, x); }
 
   static OF_DEVICE_FUNC double Backward(const double x, const double dy) {
-    return dy * 0.5 / MATH_FUNC_D(sqrt, x);
+    return dy * (double)0.5 / MATH_FUNC_D(sqrt, x);
   }
 };
 
