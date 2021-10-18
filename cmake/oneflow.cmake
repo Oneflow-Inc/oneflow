@@ -327,6 +327,11 @@ target_compile_options(of_ccobj PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror=return
 target_treat_warnings_as_errors(of_ccobj)
 target_compile_definitions(of_ccobj PRIVATE GOOGLE_LOGGING)
 
+if(WITH_ASAN)
+  target_compile_options(of_ccobj PUBLIC -fno-omit-frame-pointer -fsanitize=address)
+  target_link_options(of_ccobj PUBLIC -fno-omit-frame-pointer -fsanitize=address)
+endif()
+
 # py ext lib
 add_library(of_pyext_obj ${of_pyext_obj_cc})
 target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
