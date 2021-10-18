@@ -34,7 +34,7 @@ struct Unstandard {
   static const int unstandard_value = 999;
   static const int standard_value = 666;
 
-  Unstandard(int* ptr) : x(unstandard_value), ptr_(ptr) {}
+  explicit Unstandard(int* ptr) : x(unstandard_value), ptr_(ptr) {}
   ~Unstandard() { *ptr_ = unstandard_value; }
 
   Unstandard(const Unstandard&) = default;
