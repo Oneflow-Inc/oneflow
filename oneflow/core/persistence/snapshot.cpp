@@ -61,10 +61,9 @@ void SnapshotReader::Read(const std::string& key, const Shape& logical_blob_shap
     std::vector<char> buffer(logical_blob_size);
     PersistentInStream in_stream(SnapshotFS(), path);
     in_stream.ReadFully(buffer.data(), logical_blob_size);
-    TensorSliceCopier copier(slice, logical_blob_slice, data_type);
+    TensorSliceCopier copier(slice, logical_blob_slice, data_type, DeviceType::kCPU);
     CpuDeviceCtx device_ctx;
-    std::unique_ptr<MemoryCopier> host_memory_copier(NewDefaultMemoryCopier(DeviceType::kCPU));
-    copier.Copy(&device_ctx, *host_memory_copier, dst, buffer.data());
+    copier.Copy(&device_ctx, dst, buffer.data());
   }
 }
 
