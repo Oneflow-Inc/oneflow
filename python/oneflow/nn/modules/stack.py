@@ -47,24 +47,7 @@ def stack(inputs: Tensor, dim: int = 0) -> None:
         >>> out.shape
         oneflow.Size([1, 3, 5, 2])
     """
-
-    assert isinstance(inputs, (List, Tuple))
-    input_shape = inputs[0].shape
-    max_dim = len(input_shape)
-    if dim < 0:
-        dim = dim + max_dim + 1
-    assert dim >= 0 and dim <= max_dim
-    input_list_length = len(inputs)
-    unsqueezed = list()
-    for i in range(input_list_length):
-        current_shape = inputs[i].shape
-        assert (
-            input_shape == current_shape
-        ), "Each tensor should have the same shape ! Found a tensor instance shape is: {}".format(
-            current_shape
-        )
-        unsqueezed.append(inputs[i].unsqueeze(dim))
-    return flow.cat(unsqueezed, dim)
+    return flow._C.stack(inputs, dim=dim)
 
 
 if __name__ == "__main__":
