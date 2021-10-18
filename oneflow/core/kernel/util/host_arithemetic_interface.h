@@ -138,7 +138,6 @@ struct ArithemeticIf<DeviceType::kCPU> {
   static void Fill(DeviceCtx* ctx, const int64_t n, const int8_t value, int8_t* y);
   static void Fill(DeviceCtx* ctx, const int64_t n, const int32_t value, int32_t* y);
   static void Fill(DeviceCtx* ctx, const int64_t n, const int64_t value, int64_t* y);
-
 };
 
 }  // namespace oneflow
