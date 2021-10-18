@@ -692,7 +692,9 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
       if (!dtr_blob_object->is_in_memory()) {
         CHECK_GT_OR_RETURN(dtr_blob_object->input_size(), 0);
         // TODO: recursive recompute the inputs
-        std::cout << "Input tensor is not in memory (Recompute...)" << std::endl;
+        if (oneflow::DTRDebugEnabled()) {
+          std::cout << "Input tensor is not in memory (Recompute...)" << std::endl;
+        }
         JUST(recompute(dtr_blob_object, stream));
       }
       dtr_blob_object->update_access_time();
@@ -769,7 +771,8 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
     CHECK_NOTNULL_OR_RETURN(operand);
     JUST(DoInfer(operand, stream));
     JUST(FullCompute(operand, device_ctx));
-    if (oneflow::DTRDebugEnabled() || !object->is_in_memory()) {
+    if (oneflow::DTRDebugEnabled()) {
+    // if (oneflow::DTRDebugEnabled() || !object->is_in_memory()) {
       std::cout << "Now in memory? " << object->is_in_memory() << std::endl;
     }
 

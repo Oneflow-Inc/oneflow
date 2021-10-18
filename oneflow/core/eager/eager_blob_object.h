@@ -65,6 +65,7 @@ class EagerBlobObject : public BlobObject {
   }
 
   BlobDesc* mut_blob_desc() override { return &blob_desc_; }
+  std::size_t BlobBodyBytes() {return blob_body_bytes_; }
 
   const Blob& blob() const override { return *blob_; }
   Blob* mut_blob() override { return blob_.get(); }
@@ -83,6 +84,7 @@ class EagerBlobObject : public BlobObject {
   }
 
   std::shared_ptr<TensorBuffer>& tensor_buffer() { return tensor_buffer_; }
+  char* object_dptr() {return tensor_buffer_->blob_dptr(); }
 
   bool is_shape_synced() const { return is_shape_synced_; }
 
@@ -178,8 +180,8 @@ class DTREagerBlobObject final : public EagerBlobObject {
   int num_user_ops() const { return user_ops_.size(); }
   bool is_evictable() const {return could_evict_; }
 
-  void pin() { pinned_++; if (oneflow::DTRDebugEnabled()) {std::cout << "pinned" << std::endl;} }
-  void unpin() { pinned_--; if (oneflow::DTRDebugEnabled()) {std::cout << "unpinned" << std::endl;} }
+  void pin() { pinned_++; if (oneflow::DTRDebugEnabled()) {std::cout << "pinned " << this << std::endl;} }
+  void unpin() { pinned_--; if (oneflow::DTRDebugEnabled()) {std::cout << "unpinned " << this << std::endl;} }
   void update_access_time();
   void update_user_ops(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
   Maybe<void> evict() {

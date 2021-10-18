@@ -34,6 +34,7 @@ struct DTRTensorPool {
         std::cout << "Destruct DTRTensorPool." << std::endl;
         std::cout << "Times of eviction: " << num_eviction_ << std::endl;
         std::cout << "Times of recomputation: " << num_recomputation_ << std::endl;
+        std::cout << "Times of destruction: " << num_destruction_ << std::endl;
         display();
     }
 
@@ -58,6 +59,7 @@ private:
     std::chrono::steady_clock::time_point start_time_;
     int num_eviction_;
     int num_recomputation_;
+    int num_destruction_;
 };
 
 }   // namespace one

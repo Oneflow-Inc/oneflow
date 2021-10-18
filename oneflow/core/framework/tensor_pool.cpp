@@ -22,6 +22,7 @@ namespace one {
 DTRTensorPool::DTRTensorPool() {
     num_recomputation_ = 0;
     num_eviction_ = 0;
+    num_destruction_ = 0;
     candidates_ = std::set<vm::DTREagerBlobObject*>();
     // candidates_ = std::unordered_set<vm::DTREagerBlobObject*>();
     // candidates_ = std::vector<vm::DTREagerBlobObject*>();
@@ -36,9 +37,11 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
     if (oneflow::DTRDebugEnabled()) {
         std::cout << "Finding best tensor to evict..." << std::endl;
     }
+    int id = 0;
     for (auto tensor : candidates_) {
         if (oneflow::DTRDebugEnabled()) {
-            std::cout << "Is_in_memory: " << static_cast<bool>(tensor->is_in_memory()) << " " << "Is pinned: " << (tensor->num_pinned()) << ", Address: " << tensor << std::endl;
+            std::cout << "id " << id++ << ", is_in_memory: " << static_cast<bool>(tensor->is_in_memory()) << " " << "is pinned: " << (tensor->num_pinned()) << ", Address: " << static_cast<const void *>(tensor->object_dptr()) << ", shape: " << tensor->mut_blob_desc()->shape() << ", data_type: " << tensor->mut_blob_desc()->data_type() << ", body_bytes: " << tensor->BlobBodyBytes() << std::endl;
+            // std::cout << "id " << id++ << ", is_in_memory: " << static_cast<bool>(tensor->is_in_memory()) << " " << "is pinned: " << (tensor->num_pinned()) << ", Address: " << tensor << ", shape: " << tensor->mut_blob_desc()->shape() << ", data_type: " << tensor->mut_blob_desc()->data_type() << ", body_bytes: " << tensor->BlobBodyBytes() << std::endl;
         }
         if (static_cast<bool>(tensor->compute_op()) && !tensor->is_pinned() && (tensor->is_evictable()) && tensor->is_in_memory()) {
             auto cur_cost = JUST(tensor->cost());
@@ -82,13 +85,15 @@ Maybe<void> DTRTensorPool::evict(vm::DTREagerBlobObject* blob_object) {
     // for unordered_set version
     if (candidates_.find(blob_object) != candidates_.end()) {
         candidates_.erase(blob_object);
+        num_destruction_++;
         if (oneflow::DTRDebugEnabled()) {
-            std::cout << "Successfully erase candidates before deconstruction." << std::endl;
+            std::cout << "Successfully erase candidates before deconstruction: " << blob_object << std::endl;
+            display();
         }
     }
     else {
         if (oneflow::DTRDebugEnabled()) {
-            std::cout << "Unsuccessfully erase candidates before deconstruction." << std::endl;
+            std::cout << "Unsuccessfully erase candidates before deconstruction: " << blob_object << std::endl;
         }
     }
     // for vector version
@@ -112,7 +117,9 @@ void DTRTensorPool::display() {
     std::cout << "Number of candidates: " << candidates_.size() << std::endl;
     size_t id = 0;
     for (const auto& candidate : candidates_) {
-        std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", input size: " << candidate->input_size() << ", is_evictable: " << candidate->is_evictable() << ", number of user_ops: " << candidate->num_user_ops() << ", address: " << candidate << std::endl;
+        const auto* tmp = dynamic_cast<vm::DTREagerBlobObject*>(candidate);
+        std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", input size: " << candidate->input_size() << ", is_evictable: " << candidate->is_evictable() << ", number of user_ops: " << candidate->num_user_ops() << ", address: " << static_cast<const void *>(candidate->object_dptr()) << ", nullptr? " << (tmp == nullptr) << std::endl;
+        // std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", input size: " << candidate->input_size() << ", is_evictable: " << candidate->is_evictable() << ", number of user_ops: " << candidate->num_user_ops() << ", address: " << candidate << ", nullptr? " << (tmp == nullptr) << std::endl;
     }
     // std::cout << "===== End info =====" << std::endl;
 }
