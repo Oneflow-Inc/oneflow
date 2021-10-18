@@ -119,7 +119,8 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
           op->erase();
           return success();
         }
-      } else if (op_type_name.equals("scalar_mul_by_tensor") || op_type_name.equals("matmul")) {
+      } else if (op_type_name.equals("scalar_mul_by_tensor") || op_type_name.equals("matmul")
+                 || op_type_name.equals("gather")) {
         assert(op.data_input().size() == 2);
         assert(op.data_output().size() == 1);
         NamedAttrList attributes(op->getAttrDictionary());

@@ -132,6 +132,17 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", []> {
   );
 }
 
+def OneFlow_GatherOp : OneFlow_BaseOp<"gather", []> {
+  let input = (ins
+    AnyType:$in,
+    AnyType:$indices
+  );
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    SI64Attr:$axis
+  );
+}
+
 class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType, NoSideEffect])> {
     let summary = "";
