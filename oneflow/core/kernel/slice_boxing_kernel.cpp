@@ -99,7 +99,11 @@ void SliceBoxingAddKernel::ForwardDataContent(KernelContext* ctx) const {
   FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
     const Blob* in_i = ctx->BnInOp2Blob(GenRepeatedBn("in", i));
     if (i == 0) {
-      this->tensor_slice_copier_vec().at(i)->Copy(ctx->stream_ctx(), out, in_i);
+      if (in_i->shape().NumAxes() == 0 && out->shape().NumAxes() == 0) {
+        AutoMemcpy(ctx->stream_ctx(), out, in_i);
+      } else {
+        this->tensor_slice_copier_vec().at(i)->Copy(ctx->stream_ctx(), out, in_i);
+      }
     } else {
       if (in_i->shape() == out->shape()) {
         primitive->Launch(ctx->stream_ctx(), in_i->dptr(), out->dptr(), out->mut_dptr(),
