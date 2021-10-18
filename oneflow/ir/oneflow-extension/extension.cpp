@@ -130,6 +130,37 @@ llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
   return args;
 }
 
+void WithMlirContext(
+    user_op::KernelComputeContext* ctx, llvm::SmallVector<llvm::StringRef, 4> ext_libs,
+    const std::function<mlir::OwningModuleRef(mlir::MLIRContext* mlir_ctx)>& parse,
+    const std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)>& lower) {
+  mlir::DialectRegistry registry;
+  registry
+      .insert<mlir::oneflow::OneFlowDialect, mlir::StandardOpsDialect, mlir::memref::MemRefDialect,
+              mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect>();
+  mlir::registerLLVMDialectTranslation(registry);
+  mlir::MLIRContext mlir_ctx(registry);
+  mlir::OwningModuleRef module = parse(&mlir_ctx);
+  CHECK(!!module) << "fail to parse MLIR, op: " << ctx->op_name();
+  if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
+  llvm::InitializeNativeTarget();
+  llvm::InitializeNativeTargetAsmPrinter();
+  lower(&mlir_ctx, *module);
+  if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
+  auto jit_or_error = mlir::ExecutionEngine::create(
+      /* m */ *module, /* llvmModuleBuilder */ nullptr, /* transformer */ {},
+      /* jitCodeGenOptLevel */ llvm::None, /* sharedLibPaths */ ext_libs);
+  CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
+                        << llvm::toString(jit_or_error.takeError());
+  auto jit = std::move(jit_or_error.get());
+  llvm::SmallVector<OpaqueMemRefDescriptor> args /* args must outlive JIT invocation */ =
+      GetMLIRCInterfaceArgs(ctx);
+  llvm::SmallVector<void*> packed_args{};
+  for (auto& arg /* arg must be a reference*/ : args) { packed_args.push_back(&arg); }
+  auto error = jit->invokePacked(GetMLIRCInterface(ctx->op_name()), packed_args);
+  CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
+}
+
 template<typename T>
 class MlirJitCpuKernel final : public user_op::OpKernel {
  public:
@@ -138,32 +169,16 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    // TODO: extract a function
-    mlir::DialectRegistry registry;
-    registry.insert<mlir::oneflow::OneFlowDialect, mlir::StandardOpsDialect,
-                    mlir::memref::MemRefDialect, mlir::tosa::TosaDialect,
-                    mlir::linalg::LinalgDialect>();
-    mlir::registerLLVMDialectTranslation(registry);
-    mlir::MLIRContext mlir_ctx(registry);
-    mlir::OwningModuleRef module =
-        mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
-    CHECK(!!module) << "fail to parse MLIR, op: " << ctx->op_name();
-    if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
-    llvm::InitializeNativeTarget();
-    llvm::InitializeNativeTargetAsmPrinter();
-    CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToLLVM(&mlir_ctx, *module)))
-        << "fail to lower OneFlow to LLVM";
-    if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
-    auto jit_or_error = mlir::ExecutionEngine::create(*module);
-    CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
-                          << llvm::toString(jit_or_error.takeError());
-    auto jit = std::move(jit_or_error.get());
-    llvm::SmallVector<OpaqueMemRefDescriptor> args /* args must outlive JIT invocation */ =
-        GetMLIRCInterfaceArgs(ctx);
-    llvm::SmallVector<void*> packed_args{};
-    for (auto& arg /* arg must be a reference*/ : args) { packed_args.push_back(&arg); }
-    auto error = jit->invokePacked(GetMLIRCInterface(ctx->op_name()), packed_args);
-    CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
+    WithMlirContext(
+        ctx, {},
+        [&ctx](mlir::MLIRContext* mlir_ctx) {
+          return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
+                                                         mlir_ctx);
+        },
+        [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
+          CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToLLVM(mlir_ctx, module)))
+              << "fail to lower OneFlow to LLVM";
+        });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -194,37 +209,19 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
   ~MlirJitGpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {  // TODO: extract a function
-    mlir::DialectRegistry registry;
-    registry.insert<mlir::oneflow::OneFlowDialect, mlir::StandardOpsDialect,
-                    mlir::memref::MemRefDialect, mlir::tosa::TosaDialect,
-                    mlir::linalg::LinalgDialect>();
-    mlir::registerLLVMDialectTranslation(registry);
-    mlir::MLIRContext mlir_ctx(registry);
-    mlir::OwningModuleRef module =
-        mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
-    CHECK(!!module) << "fail to parse MLIR, op: " << ctx->op_name();
-    if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
-    llvm::InitializeNativeTarget();
-    llvm::InitializeNativeTargetAsmPrinter();
-    CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToCUDALLVM(&mlir_ctx, *module)))
-        << "fail to lower OneFlow to CUDA LLVM";
-    if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
-    llvm::SmallVector<llvm::StringRef> ext_libs(
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    llvm::SmallVector<llvm::StringRef, 4> ext_libs(
         {SharedLibPaths()->begin(), SharedLibPaths()->end()});
-    // TODO: cache the jit engine with uniq ptr
-    auto jit_or_error = mlir::ExecutionEngine::create(
-        /* m */ *module, /* llvmModuleBuilder */ nullptr, /* transformer */ {},
-        /* jitCodeGenOptLevel */ llvm::None, /* sharedLibPaths */ ext_libs);
-    CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
-                          << llvm::toString(jit_or_error.takeError());
-    auto jit = std::move(jit_or_error.get());
-    llvm::SmallVector<OpaqueMemRefDescriptor> args /* args must outlive JIT invocation */ =
-        GetMLIRCInterfaceArgs(ctx);
-    llvm::SmallVector<void*> packed_args{};
-    for (auto& arg /* arg must be a reference*/ : args) { packed_args.push_back(&arg); }
-    auto error = jit->invokePacked(GetMLIRCInterface(ctx->op_name()), packed_args);
-    CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
+    WithMlirContext(
+        ctx, ext_libs,
+        [&ctx](mlir::MLIRContext* mlir_ctx) {
+          return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
+                                                         mlir_ctx);
+        },
+        [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
+          CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToCUDALLVM(mlir_ctx, module)))
+              << "fail to lower OneFlow to CUDA LLVM";
+        });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
