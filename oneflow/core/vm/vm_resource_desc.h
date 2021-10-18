@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_VM_RESOURCE_DESC__H_
-#define ONEFLOW_CORE_VM_VM_RESOURCE_DESC__H_
+#ifndef ONEFLOW_CORE_VM_VM_RESOURCE_DESC_H_
+#define ONEFLOW_CORE_VM_VM_RESOURCE_DESC_H_
 
 #include <unordered_map>
 #include "oneflow/core/intrusive/intrusive.h"
@@ -63,4 +63,4 @@ class VmResourceDesc final : public intrusive::Base {
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_VM_RESOURCE_DESC__H_
+#endif  // ONEFLOW_CORE_VM_VM_RESOURCE_DESC_H_
