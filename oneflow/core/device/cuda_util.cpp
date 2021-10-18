@@ -149,6 +149,25 @@ CudaCurrentDeviceGuard::CudaCurrentDeviceGuard() { OF_CUDA_CHECK(cudaGetDevice(&
 
 CudaCurrentDeviceGuard::~CudaCurrentDeviceGuard() { OF_CUDA_CHECK(cudaSetDevice(saved_dev_id_)); }
 
+CublasMathModeGuard::CublasMathModeGuard(cublasHandle_t handle, cublasMath_t new_mode)
+    : CublasMathModeGuard(handle) {
+  SetMathMode(new_mode);
+}
+
+CublasMathModeGuard::CublasMathModeGuard(cublasHandle_t handle) : handle_(handle) {
+  OF_CUBLAS_CHECK(cublasGetMathMode(handle_, &saved_mode_));
+  new_mode_ = saved_mode_;
+}
+
+CublasMathModeGuard::~CublasMathModeGuard() {
+  if (new_mode_ != saved_mode_) { OF_CUBLAS_CHECK(cublasSetMathMode(handle_, saved_mode_)); }
+}
+
+void CublasMathModeGuard::SetMathMode(cublasMath_t new_mode) {
+  new_mode_ = new_mode;
+  if (new_mode_ != saved_mode_) { OF_CUBLAS_CHECK(cublasSetMathMode(handle_, saved_mode_)); }
+}
+
 #endif  // WITH_CUDA
 
 }  // namespace oneflow
