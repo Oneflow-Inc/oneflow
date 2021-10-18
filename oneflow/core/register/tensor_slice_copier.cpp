@@ -40,14 +40,13 @@ TensorSliceCopier::TensorSliceCopier(const TensorSliceView& dst_view,
                                      const TensorSliceView& src_view,
                                      const TensorSliceView& copy_view, const DataType data_type,
                                      const DeviceType device_type)
-    : dst_view_(dst_view), src_view_(src_view), data_type_(data_type) {
+    : dst_view_(dst_view), src_view_(src_view), extent_(copy_view.shape()), data_type_(data_type) {
   copy_nd_primitive_ =
       primitive::NewPrimitive<primitive::CopyNdFactory>(device_type, dst_view_.shape().NumAxes());
   CHECK(dst_view.Contains(copy_view));
   CHECK(src_view.Contains(copy_view));
   dst_pos_ = copy_view.OffsetTo(dst_view);
   src_pos_ = copy_view.OffsetTo(src_view);
-  extent_ = copy_view.shape();
 }
 
 TensorSliceCopier::TensorSliceCopier(const TensorSliceView& dst_view,
