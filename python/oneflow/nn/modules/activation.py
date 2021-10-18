@@ -310,7 +310,7 @@ class CELU(Module):
 
     def __init__(self, alpha: float = 1.0, inplace: bool = False):
         super().__init__()
-        self.alpha = float(alpha)
+        self.alpha = alpha
         self.inplace = inplace
 
     def forward(self, x):
