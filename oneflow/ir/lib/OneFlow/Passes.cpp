@@ -108,7 +108,6 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
                                                op_to_replace->getAttrDictionary());
   NamedAttrList attributes;
   attributes.set("op_type_name", rewriter.getStringAttr("mlir_jit"));
-  // TODO: extract a function to strip attrs from an op to be replace
   attributes.set("device_tag", op_to_replace_adaptor.device_tag());
   attributes.set("device_name", op_to_replace_adaptor.device_name());
   attributes.set("hierarchy", op_to_replace_adaptor.hierarchy());
