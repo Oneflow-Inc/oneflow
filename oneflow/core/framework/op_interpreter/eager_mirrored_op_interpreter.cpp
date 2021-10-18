@@ -229,10 +229,11 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
                         Symbol<ParallelDesc> parallel_desc, bool inplace) {
   CHECK_OR_RETURN(parallel_desc->containing_current_rank());
   if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
-  int64_t root = JUST(parallel_desc->MachineId4ParallelId(src_rank));
-  std::shared_ptr<UserOpExpr> op_expr = JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, root));
+  std::shared_ptr<UserOpExpr> op_expr =
+      JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, src_rank));
   MutableAttrMap attrs;
-  JUST(attrs.SetAttr<int64_t>("root", root));
+  JUST(attrs.SetAttr<int64_t>("root", src_rank));
+  int64_t root = JUST(parallel_desc->MachineId4ParallelId(src_rank));
   if (root == GlobalProcessCtx::Rank() || inplace) {
     TensorTuple outputs{tensor};
     JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs,
