@@ -607,7 +607,7 @@ class CTCLoss(_Loss):
           sequence is a class index. And the target index cannot be blank (default=0).
           In the :math:`(N, S)` form, targets are padded to the
           length of the longest sequence, and stacked.
-          In the :math:`(\\operatorname{sum}(\\text{target\_lengths}))` form,
+          In the :math:`(\\operatorname{sum}(\\text{target_lengths}))` form,
           the targets are assumed to be un-padded and
           concatenated within 1 dimension.
         - Input_lengths: Tuple or tensor of size :math:`(N)`,
