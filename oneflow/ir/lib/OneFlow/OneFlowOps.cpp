@@ -22,6 +22,7 @@ limitations under the License.
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "llvm/ADT/StringSet.h"
 #include "mlir/Support/LogicalResult.h"
 
 using namespace mlir;
@@ -63,6 +64,11 @@ LogicalResult TrimRedundantCtrl(OpType& op, PatternRewriter& rewriter) {
 bool IsCtrlOutTrimmed(oneflow::UserOp& op) { return !op.ctrl_output(); }
 
 bool IsCtrlInAbsent(oneflow::UserOp& op) { return op.ctrl_inputs().empty(); }
+
+StringSet<>* GetPrintedOpTypeNames() {
+  static llvm::StringSet<> printed({});
+  return &printed;
+}
 
 struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
   explicit ConcreteUserOps(mlir::MLIRContext* context)
@@ -116,9 +122,13 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
           op->erase();
           return success();
         }
+      } else {
+        if (!GetPrintedOpTypeNames()->contains(op.op_type_name())) {
+          llvm::errs() << "MLIR opaque user op: " << op.op_type_name() << "\n";
+          GetPrintedOpTypeNames()->insert(op.op_type_name());
+        }
       }
     }
-
     return failure();
   }
 };
