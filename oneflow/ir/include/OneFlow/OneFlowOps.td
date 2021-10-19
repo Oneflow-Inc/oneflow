@@ -132,6 +132,28 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", []> {
   );
 }
 
+def OneFlow_Convolution2dOp : OneFlow_BaseOp<"conv2d", []> {
+  let summary = "OneFlow Conv2d operation";
+  let description = [{
+  "The convolution operator consumes an input tensor and a filter, and"
+  "computes the output."
+  }];
+  let input = (ins
+    AnyType:$in,
+    AnyType:$weight,
+  );
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    SI32Attr:$filters,
+    I32ArrayAttr:$padding_before,
+    StrAttr:$data_format,
+    I32ArrayAttr:$kernel_size,
+    I32ArrayAttr:$strides,
+    I32ArrayAttr:$dilation_rate,
+    DefaultValuedAttr<SI32Attr, "1">:$group
+  );  
+}
+
 class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType, NoSideEffect])> {
     let summary = "";

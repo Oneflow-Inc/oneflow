@@ -116,6 +116,19 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
           op->erase();
           return success();
         }
+      } else if(op_type_name.equals("conv2d")){
+        assert(op.data_input().size() == 2);
+        assert(op.data_output().size() == 1);
+        NamedAttrList attributes(op->getAttrDictionary());
+        OperationState state(op->getLoc(), "oneflow." + op_type_name.str());
+        state.addAttributes(attributes);
+        state.addOperands(op.data_input());
+        state.addTypes(op.getODSResults(0 /* conv2d out */).getTypes());
+        if (auto created = rewriter.createOperation(state)) {
+          op.data_output().front().replaceAllUsesWith(created->getResult(0));
+          op->erase();
+          return success();
+        }
       }
     }
 
