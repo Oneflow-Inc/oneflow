@@ -180,12 +180,12 @@ class PadGradKernel final : public OpKernel, public CudaGraphSupport {
         if (pad_after_vec[i] < 0) { extent_vec[i] = extent_vec[i] + pad_after_vec[i]; }
       }
     }
-    std::unique_ptr<primitive::CopyNd> primitive =
+    std::unique_ptr<primitive::CopyNd> copy_nd_primitive =
         primitive::NewPrimitive<primitive::CopyNdFactory>(ctx->device_type(), ndims);
-    CHECK(primitive);
-    primitive->Launch(ctx->stream_ctx(), dy->data_type(), ndims, dst, dx->shape().ptr(),
-                      dst_pos_vec.data(), dy->dptr(), dy->shape().ptr(), src_pos_vec.data(),
-                      extent_vec.data());
+    CHECK(copy_nd_primitive);
+    copy_nd_primitive->Launch(ctx->stream_ctx(), dy->data_type(), ndims, dst, dx->shape().ptr(),
+                              dst_pos_vec.data(), dy->dptr(), dy->shape().ptr(), src_pos_vec.data(),
+                              extent_vec.data());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
