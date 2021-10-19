@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/rpc/include/base.h"
+#include "oneflow/core/job/version.h"
 
 namespace oneflow {
 
@@ -33,6 +34,8 @@ inline Maybe<std::string> CurrentResource() {
   CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForSession>::Get()));
   return PbMessage2TxtString(Global<ResourceDesc, ForSession>::Get()->resource());
 }
+
+
 
 inline Maybe<std::string> EnvResource() {
   CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForEnv>::Get()));
@@ -92,6 +95,10 @@ inline Maybe<size_t> GetNodeSize() { return GlobalProcessCtx::NodeSize(); }
 inline Maybe<size_t> GetLocalRank() { return GlobalProcessCtx::LocalRank(); }
 inline Maybe<size_t> CudaGetDeviceCount() {
   return Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
+}
+
+inline Maybe<const char*> GetGitVersion() {
+  return GetOneFlowGitVersion();
 }
 
 }  // namespace oneflow

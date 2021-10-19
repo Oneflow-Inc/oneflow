@@ -57,3 +57,6 @@ def get_world_size():
 
 def is_multi_client():
     return oneflow._oneflow_internal.IsMultiClient()
+
+def get_git_version():
+    return oneflow._oneflow_internal.GetGitVersion()
