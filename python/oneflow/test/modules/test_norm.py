@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from random import randint
 import unittest
 from collections import OrderedDict
 
@@ -241,8 +240,7 @@ def _test_2d_digits_order_norm_backward(test_case, device):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestNormModule(flow.unittest.TestCase):
-    
+class TestNormModule(flow.unittest.TestCase):   
     def test_norm(test_case):
         arg_dict = OrderedDict()
         arg_dict["fun"] = [

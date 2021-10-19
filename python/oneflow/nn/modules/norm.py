@@ -117,8 +117,7 @@ def norm_op(input, ord=None, dim=None, keepdim=False, dtype=None):
         >>> LA.norm(c, ord=1, dim=1)
         tensor([6., 6.], dtype=oneflow.float32)
         >>> m = flow.tensor(np.arange(8, dtype=np.float32)).reshape(2, 2, 2)
-        >>> LA.norm(m, dim=(1,2))
-        tensor([ 3.7417, 11.2250], dtype=oneflow.float32)
+
     """
     return flow._C.norm(input, ord, dim, keepdim, dtype=dtype)
  
@@ -212,8 +211,8 @@ def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False,dtype=No
     `-inf`                   `min(sum(abs(x), dim=1))`
     `1`                      `max(sum(abs(x), dim=0))`
     `-1`                     `min(sum(abs(x), dim=0))`
-    `2`                      'largest singular value'
-    `-2`                     'smallest singular value'
+    `2`                      -- not supported yet --
+    `-2`                     -- not supported yet --
     ======================   ========================================================
 
     where `inf` refers to `float('inf')`, NumPy's `inf` object, or any equivalent object.
@@ -226,7 +225,6 @@ def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False,dtype=No
         dim (Tuple[int, int], optional): dimensions over which to compute the norm. Default: `(-2, -1)`
         keepdim (bool, optional): If set to `True`, the reduced dimensions are retained
             in the result as dimensions with size one. Default: `False`
-
 
     Returns:
         A real-valued tensor.
@@ -256,10 +254,9 @@ def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False,dtype=No
                 [[0., 1., 2.],
                  [3., 4., 5.],
                  [6., 7., 8.]]], dtype=oneflow.float32)
-        >>> LA.matrix_norm(b)
-        tensor([14.2829, 14.2829], dtype=oneflow.float32)
         >>> LA.matrix_norm(b, dim=(0, 2))
         tensor([ 3.1623, 10.0000, 17.2627], dtype=oneflow.float32)
+
     """
     return flow._C.matrix_norm(input, ord, dim, keepdim, dtype=dtype)
 

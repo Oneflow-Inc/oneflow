@@ -34,8 +34,7 @@ def _test_max(test_case, device, shape, dim, keepdims):
     )
     of_out = flow.max(x, dim, keepdims)
     if dim != None:
-        of_out = of_out[0]
-    
+        of_out = of_out[0] 
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
     of_out = of_out.sum()
     of_out.backward()
