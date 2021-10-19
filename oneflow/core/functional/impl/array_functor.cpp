@@ -417,18 +417,19 @@ class StackFunctor {
   Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim) const {
     CHECK_GE_OR_RETURN(inputs.size(), 1) << "Needs one input at least.";
     int64_t ndims = inputs.at(0)->shape()->NumAxes();
+    int64_t stack_dim = dim;
     for (int i = 1; i < inputs.size(); ++i) {
       CHECK_EQ_OR_RETURN(inputs.at(i)->shape()->NumAxes(), ndims)
           << "The input dimensions are not equal.";
     }
-    if(dim < 0){ dim = dim + ndims + 1 }
-    CHECK_OR_RETURN(dim >= 0 && dim <= ndims)
+    if(dim < 0){ stack_dim = stack_dim + ndims + 1; }
+    CHECK_OR_RETURN(stack_dim >= 0 && stack_dim <= ndims)
         << "The stack dim has to be between 0 and the input dimensions of " << ndims;
     TensorTuple expand_inputs(inputs.size());
     for (int i = 0; i < inputs.size(); ++i) {
-      expand_inputs[i] = JUST(ExpandDims(inputs.at(i), dim));
+      expand_inputs[i] = JUST(ExpandDims(inputs.at(i), stack_dim));
     }
-    return Concat(expand_inputs, dim, inputs.size());
+    return Concat(expand_inputs, stack_dim, inputs.size());
   }
 };
 
