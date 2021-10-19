@@ -35,9 +35,7 @@ class CudaStreamHandle final {
   CudaStreamHandle(Channel<CudaCBEvent>* cb_event_chan);
 
   cudaStream_t cuda_stream();
-  cublasHandle_t cublas_pmh_handle();
-  cublasHandle_t cublas_pmd_handle();
-  cublasHandle_t cublas_tensor_op_math_handle();
+  cublasHandle_t cublas_handle();
   cudnnHandle_t cudnn_handle();
 
   void AddCallBack(std::function<void()> callback);
@@ -48,9 +46,7 @@ class CudaStreamHandle final {
  private:
   Channel<CudaCBEvent>* cb_event_chan_;
   cudaStream_t cuda_stream_;
-  cublasHandle_t cublas_pmh_handle_;
-  cublasHandle_t cublas_pmd_handle_;
-  cublasHandle_t cublas_tensor_op_math_handle_;
+  cublasHandle_t cublas_handle_;
   cudnnHandle_t cudnn_handle_;
   int cuda_event_flags_;
   bool reuse_cuda_event_;
