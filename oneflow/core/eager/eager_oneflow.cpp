@@ -71,7 +71,7 @@ Maybe<void> EagerOneflow::RunPhysicalInstruction(
   vm::InstructionMsgList instruction_list;
   const auto& eager_instructions = cluster_instruction->eager_instruction();
   for (const auto& instr_proto : eager_instructions.instruction_list().instruction()) {
-    instruction_list.EmplaceBack(ObjectMsgPtr<vm::InstructionMsg>::New(instr_proto));
+    instruction_list.EmplaceBack(intrusive::make_shared<vm::InstructionMsg>(instr_proto));
   }
   return RunPhysicalInstruction(&instruction_list, eager_instructions.eager_symbol_list());
 }
@@ -103,7 +103,7 @@ Maybe<void> EagerOneflow::RunLogicalInstruction(vm::InstructionMsgList* instruct
   auto* repeated_instruction_proto = cluster_instruction.mutable_eager_instruction()
                                          ->mutable_instruction_list()
                                          ->mutable_instruction();
-  OBJECT_MSG_LIST_FOR_EACH_PTR(instruction_list, instruction_msg) {
+  INTRUSIVE_FOR_EACH_PTR(instruction_msg, instruction_list) {
     instruction_msg->ToProto(repeated_instruction_proto->Add());
   }
   eager_symbol_list.ToProto(

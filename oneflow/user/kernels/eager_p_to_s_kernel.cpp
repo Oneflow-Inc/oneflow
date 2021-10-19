@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/register/tensor_slice_copier.h"
+#include "oneflow/core/primitive/include/add.h"
 
 namespace oneflow {
 
@@ -154,7 +155,9 @@ class EagerPToSKernel final : public user_op::OpKernel {
 
     Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
                         elem_cnt_per_chunk * GetSizeOfDataType(out->data_type()));
-
+    std::unique_ptr<primitive::Add> add_primitive =
+        primitive::NewPrimitive<primitive::AddFactory>(ctx->device_type(), in->data_type());
+    CHECK(add_primitive);
     for (int64_t i = 0; i < sorted_p2p_pair.size(); ++i) {
       const auto& p2p_pair = sorted_p2p_pair.at(i);
       int64_t src = p2p_pair.first;
@@ -168,9 +171,8 @@ class EagerPToSKernel final : public user_op::OpKernel {
       if (GlobalProcessCtx::Rank() == dst) {
         CHECK_JUST(Recv<device_type>(tmp_buffer_ptr, elem_cnt_per_chunk, out->data_type(), src,
                                      ctx->device_ctx()));
-        NewKernelUtil<device_type>::Axpy(ctx->device_ctx(), elem_cnt_per_chunk, static_cast<T>(1),
-                                         reinterpret_cast<const T*>(tmp_buffer_ptr), 1,
-                                         out->mut_dptr<T>(), 1);
+        add_primitive->Launch(ctx->stream_ctx(), tmp_buffer_ptr, out->dptr(), out->mut_dptr(),
+                              elem_cnt_per_chunk);
       }
     }
   }
