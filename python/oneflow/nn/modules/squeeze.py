@@ -49,12 +49,11 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
         oneflow.Size([1, 3])
 
     """
-    if isinstance(dim, int):
-        dim = [dim]
-    elif dim is None:
-        dim = range(input.ndim)
-    dim = list(filter(lambda i: input.size(i) == 1, dim))
-
+    # if isinstance(dim, int):
+    #     dim = [dim]
+    # elif dim is None:
+    #     dim = range(input.ndim)
+    # dim = list(filter(lambda i: input.size(i) == 1, dim))
     return flow._C.squeeze(input, dim)
 
 

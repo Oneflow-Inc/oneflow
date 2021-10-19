@@ -915,10 +915,26 @@ class SqueezeFunctor {
   SqueezeFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("squeeze").Input("in").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::vector<int32_t>& axes) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<int32_t>& dim) const {
+    int32_t ndim = x->shape()->NumAxes();
+    std::vector<int32_t> squeeze_dims(0);
+    if (dim.has_value()==true) {
+      int squeeze_dim = JUST(dim);
+      CHECK_OR_RETURN((squeeze_dim>= -(ndim+1)) && (squeeze_dim <=ndim)) << "Dimension out of range (expected to be in range of  [" << -ndim << "," << ndim-1 << "], but got " << squeeze_dim; 
+      if(squeeze_dim < 0){ squeeze_dim+=ndim; }
+       if(x->shape()->At(squeeze_dim)==1){
+          squeeze_dims.push_back(squeeze_dim);
+        }
+    }else{
+      for(int i=0; i<ndim; ++i){
+          if(x->shape()->At(i)==1){
+            squeeze_dims.push_back(i);
+          }
+        }
+    }
+
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axes", axes));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axes", squeeze_dims));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 

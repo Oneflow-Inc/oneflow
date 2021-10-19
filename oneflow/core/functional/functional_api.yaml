@@ -860,7 +860,7 @@
   bind_python: True
 
 - name: "squeeze"
-  signature: "Tensor (Tensor x, Int32List dim) => Squeeze"
+  signature: "Tensor (Tensor x, Int32 dim=None) => Squeeze"
   bind_python: True
 
 - name: "copy"
