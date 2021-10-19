@@ -31,9 +31,9 @@ void SliceBoxingTaskNode::Init(const LogicalBlobId& lbi, const TensorSliceView& 
 }
 
 void SliceBoxingTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::shared_ptr<RegstDesc> out_regst_desc = ProduceRegst("out", false, 2, 2);
+  std::shared_ptr<RegstDesc> out_regst_desc = ProduceRegst("out", true);
   this->ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", out_regst_desc); });
-  ProduceRegst("tmp", false, 1, 1);
+  ProduceRegst("tmp", true);
 }
 
 void SliceBoxingTaskNode::ConsumeAllRegsts() {
