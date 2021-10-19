@@ -118,7 +118,6 @@ void* EpollCommNet::DeSerialDataToToken(char* data, size_t* token_size) {
   char** addr = reinterpret_cast<char**>(data);
   void* token = new void*;
   token = reinterpret_cast<void*>(*addr);
-  *token_size = sizeof(SocketMemDesc);
   return token;
 }
 
