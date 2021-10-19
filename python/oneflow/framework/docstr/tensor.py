@@ -87,3 +87,11 @@ add_docstr(
     See :func:`oneflow.transpose`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.logical_not,
+    """
+    logical_not() -> Tensor
+    See :func:`oneflow.logical_not`
+    """,
+)

@@ -1205,11 +1205,3 @@ add_docstr(
         tensor([0, 1, 0], dtype=oneflow.int8)
     """,
 )
-
-add_docstr(
-    oneflow.Tensor.logical_not,
-    r"""
-    logical_not() -> Tensor
-    See :func:`oneflow.logical_not`
-    """,
-)

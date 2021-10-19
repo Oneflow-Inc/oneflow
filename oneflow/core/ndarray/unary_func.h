@@ -106,7 +106,7 @@ struct UnaryFuncExp<half> final {
 
 template<typename T>
 struct UnaryFuncLogicalNot final {
-  static OF_DEVICE_FUNC int8_t Invoke(const T x) { return static_cast<int8_t>(!x); }
+  static OF_DEVICE_FUNC int8_t Invoke(const T x) { return !x; }
 };
 SPECIALIZE_CONST_TYPE_UNARY_FUNC(UnaryFuncLogicalNot);
 
