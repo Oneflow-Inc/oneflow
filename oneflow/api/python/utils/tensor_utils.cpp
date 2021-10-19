@@ -195,6 +195,7 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
     CHECK_EQ_OR_RETURN(array_size, shape.elem_cnt());
     size_t byte_size = array_size * GetSizeOfDataType(data_type);
     JUST(DataConsistencyCheck(buf_ptr, byte_size, placement));
+    Py_DECREF(contiguous_data);
   }
 
   const std::string& device_tag = placement->device_tag();
