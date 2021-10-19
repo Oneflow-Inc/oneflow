@@ -167,7 +167,6 @@ CUDAGeneratorImpl::CUDAGeneratorImpl(uint64_t seed, int device_index)
 
 CUDAGeneratorImpl::~CUDAGeneratorImpl() {
   CudaCurrentDeviceGuard dev_guard(this->device_index());
-  OF_CUDA_CHECK(cudaDeviceSynchronize());
   OF_CUDA_CHECK(cudaFree(curand_states_));
 }
 

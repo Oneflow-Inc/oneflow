@@ -31,7 +31,6 @@ limitations under the License.
 #include <numpy/arrayobject.h>
 
 namespace oneflow {
-
 namespace numpy {
 
 Maybe<int> OFDataTypeToNumpyType(DataType of_data_type);
