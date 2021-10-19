@@ -253,7 +253,7 @@ Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
   JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   if (!parallel_id.has_value()) { return tensor; }
   const auto& broadcast_parallel_desc = JUST(GetBroadcastSubParallelDesc(parallel_desc, nd_sbp));
-  int64_t root = JUST(parallel_desc->MachineId4ParallelId(0));
+  int64_t root = JUST(broadcast_parallel_desc->MachineId4ParallelId(0));
   return Broadcast(tensor, root, broadcast_parallel_desc, false);
 }
 
