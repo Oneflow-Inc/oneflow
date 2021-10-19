@@ -13,16 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_INTRUSIVE_INTRUSIVE_H_
-#define ONEFLOW_CORE_INTRUSIVE_INTRUSIVE_H_
+#ifndef ONEFLOW_CORE_JOB_COLLECTIVE_BOXING_RUNTIME_REQUEST_INFO_H_
+#define ONEFLOW_CORE_JOB_COLLECTIVE_BOXING_RUNTIME_REQUEST_INFO_H_
 
-#include "oneflow/core/intrusive/intrusive_core.h"
-#include "oneflow/core/intrusive/ref.h"
-#include "oneflow/core/intrusive/shared_ptr.h"
-#include "oneflow/core/intrusive/list.h"
-#include "oneflow/core/intrusive/head_free_list.h"
-#include "oneflow/core/intrusive/skiplist.h"
-#include "oneflow/core/intrusive/for_each.h"
-#include "oneflow/core/intrusive/force_standard_layout.h"
+#include "oneflow/core/common/util.h"
 
-#endif  // ONEFLOW_CORE_INTRUSIVE_INTRUSIVE_H_
+namespace oneflow {
+
+namespace boxing {
+
+namespace collective {
+
+struct RuntimeRequestInfo {
+  const void* send_buff;
+  void* recv_buff;
+  std::function<void(const Maybe<void>&)> callback;
+};
+
+}  // namespace collective
+
+}  // namespace boxing
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_JOB_COLLECTIVE_BOXING_RUNTIME_REQUEST_INFO_H_
