@@ -18,12 +18,17 @@ limitations under the License.
 #include <glog/logging.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/ir/include/OneFlow/Extension.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("ir", m) {
   m.def("load_jit_shared_lib",
         [](const std::string& lib_path) { MutSharedLibPaths()->insert(lib_path); });
+  m.def("toggle_jit", []() {
+    *one::MutJitEnabled() = !*one::MutJitEnabled();
+    return *one::MutJitEnabled();
+  });
 }
 
 }  // namespace oneflow

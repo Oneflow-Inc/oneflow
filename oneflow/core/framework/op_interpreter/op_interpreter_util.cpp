@@ -31,6 +31,15 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+#ifdef WITH_MLIR
+
+bool* MutJitEnabled() {
+  static bool jit_enabled = false;
+  return &jit_enabled;
+}
+
+#endif  // WITH_MLIR
+
 namespace {
 
 std::shared_ptr<AutogradInterpreter> BuildEagerInterpreter(const bool& is_mirrored) {

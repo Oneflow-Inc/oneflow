@@ -29,6 +29,12 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+#ifdef WITH_MLIR
+
+bool* MutJitEnabled();
+
+#endif  // WITH_MLIR
+
 class OpInterpUtil {
  public:
   template<typename T>
