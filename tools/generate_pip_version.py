@@ -60,4 +60,4 @@ print(f"-- Generating pip version: {version}, writing to: {args.out}")
 assert args.out
 with open(args.out, "w+") as f:
     f.write(f'__version__ = "{version}"\n')
-    f.write(f'__git_commit__ = "{git_hash}"')
+    f.write(f'__git_commit__ = "{git_hash}"\n')
