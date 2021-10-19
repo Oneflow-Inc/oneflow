@@ -17,7 +17,7 @@ import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 
-        
+       
 def norm_op(input, ord=None, dim=None, keepdim=False, dtype=None):
     """linalg.norm(input, ord=None, dim=None, keepdim=False, *, dtype=None, out=None) -> Tensor
     Returns the matrix norm or vector norm of a given tensor.
@@ -121,7 +121,7 @@ def norm_op(input, ord=None, dim=None, keepdim=False, dtype=None):
         tensor([ 3.7417, 11.2250], dtype=oneflow.float32)
     """
     return flow._C.norm(input, ord, dim, keepdim, dtype=dtype)
-
+ 
 def vector_norm_tensor_op(input, ord=2, dim=None, keepdim=False, dtype=None):
     """
     linalg.vector_norm(input, ord=2, dim=None, keepdim=False, *, dtype=None, out=None) -> Tensor

@@ -177,8 +177,8 @@ def _contiguous(self):
     return self
 
 
-def _norm(self, other):
-    return flow._C.norm(self, other)
+def _norm(self, ord=None, dim=None, keepdim=False, dtype=None):
+    return flow.linalg.norm(self, ord, dim, keepdim, dtype=dtype)
 
 
 def _transpose(self, dim0, dim1):

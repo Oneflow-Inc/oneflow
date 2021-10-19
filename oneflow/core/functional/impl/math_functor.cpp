@@ -592,6 +592,7 @@ class ClampFunctor {
   std::shared_ptr<OpExpr> clip_max_op_;
 };
 
+
 class VectorNormFunctor {
  public:
   VectorNormFunctor() {}
@@ -601,37 +602,33 @@ class VectorNormFunctor {
     std::shared_ptr<one::Tensor> res;
     int32_t num_dims = x->ndim();
     Symbol<DType> dtype_val;
-    std::cout<<"VectorNormFunctor"<<std::endl;
     if(dtype)
     {
       dtype_val = JUST(dtype);
       if(!(dtype_val->data_type()==DataType::kFloat || dtype_val->data_type() == DataType::kDouble || dtype_val->data_type() == DataType::kFloat16 || dtype_val->data_type() == DataType::kBFloat16))
       {
-        UNIMPLEMENTED_THEN_RETURN() << "linalg.vector_norm only supports floating point and complex dtypes, but got: Int.";
+        UNIMPLEMENTED_THEN_RETURN() << "linalg.vector_norm(): only supports floating point and complex dtypes, but got: Int.";
       }
     }
     else
     {
       if(!IsFloatingDataType(x->dtype()->data_type()))
       {
-        UNIMPLEMENTED_THEN_RETURN() << "linalg.vector_norm only supports floating point and complex dtypes, but got: Int.";
+        UNIMPLEMENTED_THEN_RETURN() << "linalg.vector_norm(): only supports floating point and complex dtypes, but got: Int.";
       }
       dtype_val = x->dtype();
     }
-    //将dim变成正的
     std::vector<int32_t> dim;
     if (!input_dim.has_value()) 
     {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
       dim = reduce_axis;
-      std::cout<<"!!!!!dim_check[0]"<<std::endl;
     }
     else
     {
       std::vector<int32_t> dim_check;
       dim_check = *JUST(input_dim);
-      std::cout<<"dim_check[0]"<<dim_check[0]<<std::endl;
       for(int i=0; i<dim_check.size(); ++i)
       {
         if(dim_check[i]>=0)
@@ -643,34 +640,26 @@ class VectorNormFunctor {
           dim.push_back(dim_check[i]+x->shape()->NumAxes());
         }
       }
-      std::cout<<"dim[0]"<<dim[0]<<std::endl;
     }
-    //变成float
     if(ord.IsIntegral() || ord.IsFloatingPoint())
     {
       double ord_val = JUST(ord.As<double>());     
       if(ord_val == 0)
       {
         std::vector<int32_t> dim_column(1, 0);
-        std::cout<<"0000"<<std::endl;
         res=JUST(ReduceSum(JUST(ScalarLogicalNotEqual(x,0)), dim_column, keepdim));
       }
-      else if (ord_val==INFINITY)//
+      else if (ord_val==INFINITY)
       {
-        //`max(abs(x))`
-        std::cout<<"222222"<<std::endl;
         res = JUST(ReduceMax(JUST(Abs(x)), dim, keepdim));    
       }
-      else if (ord_val==-INFINITY)//
+      else if (ord_val==-INFINITY)
       {
-        //`min(abs(x))`
-        std::cout<<"33333"<<std::endl;
         res= JUST(ReduceMin(JUST(Abs(x)), dim, keepdim));
       }
-      else//
+      else
       {
-        std::cout<<"4444"<<std::endl;
-        res = JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord)), dim, keepdim)), Scalar(1.0) / ord));
+        res = JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord, false)), dim, keepdim)), Scalar(1.0) / ord, false));
       }
       res = JUST(Cast(res, dtype_val));
       return res;
@@ -689,20 +678,19 @@ class ScalarVectorNormFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                             const Scalar& ord, const Scalar& input_dim, 
                             const bool& keepdim, const Optional<Symbol<DType>>& dtype) const {
-    std::cout<<"ScalarVectorNormFunctor"<<std::endl;
     if(dtype)
     {
       Symbol<DType> dtype_val = JUST(dtype);
       if(!(dtype_val->data_type()==DataType::kFloat || dtype_val->data_type() == DataType::kDouble || dtype_val->data_type() == DataType::kFloat16 || dtype_val->data_type() == DataType::kBFloat16))
       {
-        UNIMPLEMENTED_THEN_RETURN() << "linalg.norm(): only supports the float, double, cfloat and cdouble dtypes, but got: Int.";
+        UNIMPLEMENTED_THEN_RETURN() << "linalg.vector_norm(): only supports the float, double, cfloat and cdouble dtypes, but got: Int.";
       }
     }
     else
     {
       if(!IsFloatingDataType(x->dtype()->data_type()))
       {
-        UNIMPLEMENTED_THEN_RETURN() << "linalg.norm(): only supports the float, double, cfloat and cdouble dtypes, but got: Int.";
+        UNIMPLEMENTED_THEN_RETURN() << "linalg.vector_norm(): only supports the float, double, cfloat and cdouble dtypes, but got: Int.";
       }
     }
     if(input_dim.IsIntegral())
@@ -712,7 +700,7 @@ class ScalarVectorNormFunctor {
     }
     else
     {
-      UNIMPLEMENTED_THEN_RETURN() << "Not support.";
+      UNIMPLEMENTED_THEN_RETURN() << "linalg.vector_norm(): only support int dim.";
     }
   }
 };
@@ -732,7 +720,6 @@ class ScalarMatrixNormFunctor {
     CHECK_OR_RETURN(axis==2 && input_dim[0] != input_dim[1]) <<"linalg.matrix_norm(): input_dim must be a 2-tuple of ints with different elements";
 
     Symbol<DType> dtype_val;
-    std::cout<<"ScalarMatrixNormFunctor"<<std::endl;
     if(dtype)
     {
       dtype_val = JUST(dtype);
@@ -749,8 +736,6 @@ class ScalarMatrixNormFunctor {
       }
       dtype_val = x->dtype();
     }
-    //将dim变成全正
-
     std::vector<int32_t> dim_tmp;
     for(int i=0; i< axis;++i)
     {
@@ -810,7 +795,6 @@ class MatrixNormFunctor {
                             const bool& keepdim, const Optional<Symbol<DType>>& dtype) const {
     std::shared_ptr<one::Tensor> res;
     Symbol<DType> dtype_val;
-    std::cout<<"MatrixNormFunctor"<<std::endl;
     if(dtype)
     {
       dtype_val = JUST(dtype);
@@ -827,7 +811,6 @@ class MatrixNormFunctor {
       }
       dtype_val = x->dtype();
     }
-    //将dim变成全正
     auto num_dims=x->shape()->NumAxes();
     auto axis=input_dim.size();
     std::vector<int32_t> dim_tmp(axis);
@@ -842,10 +825,9 @@ class MatrixNormFunctor {
         dim_tmp.push_back(input_dim[i]+num_dims);
       }
     }
-
     if(ord=="nuc") 
     {
-      UNIMPLEMENTED_THEN_RETURN() << "Not support ord is nuc.";
+      UNIMPLEMENTED_THEN_RETURN() << "linalg.matrix_norm(): Not support ord is nuc.";
     }
     else if(ord=="fro")
     {  
@@ -853,7 +835,7 @@ class MatrixNormFunctor {
     }
     else
     {
-      UNIMPLEMENTED_THEN_RETURN() << "Not support ord.";
+      UNIMPLEMENTED_THEN_RETURN() << "linalg.matrix_norm(): could not convert string to float:"<< ord;
     }
     res = JUST(Cast(res, dtype_val));
     return res;
@@ -868,8 +850,6 @@ class NormFunctor {
                             const Optional<Scalar>& ord, const Optional<std::vector<int32_t>>& input_dim, 
                             const bool& keepdim, const Optional<Symbol<DType>>& dtype) const {
     std::shared_ptr<one::Tensor> res;
-    //ord转成float 
-    std::cout<<"NormFunctor"<<std::endl;
     if(dtype)
     {
       Symbol<DType> dtype_val = JUST(dtype);
@@ -888,22 +868,17 @@ class NormFunctor {
     Scalar ord_sca;
     if(ord.has_value())
     {
-      auto ord_type=(*JUST(ord)).IsIntegral();
-      std::cout<<"ord_type:"<<ord_type<<std::endl;
-      
+      auto ord_type=(*JUST(ord)).IsIntegral();      
       if(ord_type)
       {
         
         ord_sca = Scalar(JUST((*JUST(ord)).As<double>()));
-        std::cout<<"int ord_type:"<<ord_type<<std::endl;
       }
       else
       {
         ord_sca = *JUST(ord);
-        std::cout<<"double ord_type:"<<ord_type<<std::endl;
       }
     }
-
     if(input_dim.has_value())
     {
       auto axis=(*JUST(input_dim)).size();
@@ -934,10 +909,6 @@ class NormFunctor {
         {
           res=JUST(MatrixNorm(x, ord_sca, *JUST(input_dim), keepdim, dtype));
         }
-      }
-      else
-      {
-        UNIMPLEMENTED_THEN_RETURN() << "Not support.";
       }
     }
     else
@@ -975,7 +946,6 @@ class Norm2Functor {
     std::shared_ptr<one::Tensor> res;
     std::vector<int32_t> dim(x->shape()->NumAxes());
     std::iota(dim.begin(), dim.end(), 0);
-    std::cout<<"Norm2Functor"<<std::endl;
     if(dtype)
     {
       Symbol<DType> dtype_val = JUST(dtype);
@@ -1003,14 +973,13 @@ class Norm2Functor {
   }                          
 };
 
-//dim为int
+
 class ScalarNormFunctor {
  public:
   ScalarNormFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                             const Optional<Scalar>& ord, const Scalar& input_dim, 
                             const bool& keepdim, const Optional<Symbol<DType>>& dtype) const {
-    std::cout<<"ScalarNormFunctor"<<std::endl;
     if(dtype)
     {
       Symbol<DType> dtype_val = JUST(dtype);
@@ -1033,7 +1002,7 @@ class ScalarNormFunctor {
     }
     else
     {
-      UNIMPLEMENTED_THEN_RETURN() << "Not support.";
+      UNIMPLEMENTED_THEN_RETURN() << "linalg_norm(): only supports int dim.";
     }
   }
 };
@@ -1044,7 +1013,6 @@ class ScalarNorm2Functor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                             const std::string& ord, const Scalar& input_dim, 
                             const bool& keepdim, const Optional<Symbol<DType>>& dtype) const {
-    std::cout<<"ScalarNorm2Functor"<<std::endl;
     if(dtype)
     {
       Symbol<DType> dtype_val = JUST(dtype);
@@ -1062,13 +1030,12 @@ class ScalarNorm2Functor {
     }
     if(input_dim.IsIntegral())
     {
-      //把int变成vector
       std::vector<int32_t> dim(1, JUST(input_dim.As<int>()));
       return functional::Norm(x, ord, dim,keepdim, dtype);
     }
     else
     {
-      UNIMPLEMENTED_THEN_RETURN() << "Not support.";
+      UNIMPLEMENTED_THEN_RETURN() << "linalg_norm(): only supports int dim.";
     }
   }
 };
