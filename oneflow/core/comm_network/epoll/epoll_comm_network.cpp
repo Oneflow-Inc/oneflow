@@ -94,32 +94,32 @@ EpollCommNet::~EpollCommNet() {
 }
 
 void EpollCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) {
-    char* data = reinterpret_cast<char*>(addr);
-    SocketMsg msg;
-    msg.actor_msg.size = 0;
-    msg.msg_type = SocketMsgType::kActor;
-    std::memcpy(msg.actor_msg.data,data,size);
-    msg.actor_msg.size = size;
-    std::cout<<"EpollCommNet::SendMsg,the msg.msg_type:"<<msg.msg_type<<std::endl;
-    std::cout<<"EpollCommNet::SendMsg, size:"<<size << std::endl;
-    std::cout<<"EpollCommNet::SendMsg,msg.actor_msg.size:"<<msg.actor_msg.size << std::endl;
-    std::cout<<std::endl << std::endl;
-    GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
+  char* data = reinterpret_cast<char*>(addr);
+  SocketMsg msg;
+  msg.actor_msg.size = 0;
+  msg.msg_type = SocketMsgType::kActor;
+  std::memcpy(msg.actor_msg.data, data, size);
+  msg.actor_msg.size = size;
+  std::cout << "EpollCommNet::SendMsg,the msg.msg_type:" << msg.msg_type << std::endl;
+  std::cout << "EpollCommNet::SendMsg, size:" << size << std::endl;
+  std::cout << "EpollCommNet::SendMsg,msg.actor_msg.size:" << msg.actor_msg.size << std::endl;
+  std::cout << std::endl << std::endl;
+  GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
 
-char * EpollCommNet::SerialTokenToData(void *token, size_t *token_size) {
-    uint64_t **  y = new uint64_t*;
-    *y = reinterpret_cast<uint64_t *>(token);
-    char * addr = reinterpret_cast<char*>(y);
-    return addr; 
+char* EpollCommNet::SerialTokenToData(void* token, size_t* token_size) {
+  uint64_t** y = new uint64_t*;
+  *y = reinterpret_cast<uint64_t*>(token);
+  char* addr = reinterpret_cast<char*>(y);
+  return addr;
 }
 
-void * EpollCommNet::DeSerialDataToToken(char *data, size_t * token_size) {
-    char ** addr = reinterpret_cast<char ** >(data);
-    void * token = new void *;
-    token = reinterpret_cast<void *>(*addr);
-    *token_size = sizeof(SocketMemDesc);
-    return token;
+void* EpollCommNet::DeSerialDataToToken(char* data, size_t* token_size) {
+  char** addr = reinterpret_cast<char**>(data);
+  void* token = new void*;
+  token = reinterpret_cast<void*>(*addr);
+  *token_size = sizeof(SocketMemDesc);
+  return token;
 }
 
 void EpollCommNet::SendTransportMsg(int64_t dst_machine_id, const TransportMsg& transport_msg) {

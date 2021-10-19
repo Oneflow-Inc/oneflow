@@ -35,23 +35,21 @@ limitations under the License.
 
 namespace oneflow {
 
-#define kMessageSize = 256 
+#define kMessageSize = 256
 
 #define SOCKET_MSG_TYPE_SEQ                         \
   OF_PP_MAKE_TUPLE_SEQ(RequestWrite, request_write) \
   OF_PP_MAKE_TUPLE_SEQ(RequestRead, request_read)   \
   OF_PP_MAKE_TUPLE_SEQ(Transport, transport)
 
- 
-
 enum class SocketMsgType {
   kActor,
   kRequestWrite,
   kRequestRead,
   kTransport,
-// #define MAKE_ENTRY(x, y) k##x,
-//   OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ)
-// #undef MAKE_ENTRY
+  // #define MAKE_ENTRY(x, y) k##x,
+  //   OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ)
+  // #undef MAKE_ENTRY
 };
 
 struct RequestWriteMsg {
@@ -75,8 +73,8 @@ struct SocketMsg {
 #undef MAKE_ENTRY
     struct {
       char data[400];
-      size_t size ;
-    }actor_msg;
+      size_t size;
+    } actor_msg;
   };
 };
 

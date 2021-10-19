@@ -40,7 +40,8 @@ void SocketReadHelper::SwitchToMsgHeadReadHandle() {
   cur_read_handle_ = &SocketReadHelper::MsgHeadReadHandle;
   read_ptr_ = reinterpret_cast<char*>(&cur_msg_);
   read_size_ = sizeof(cur_msg_);
-  std::cout<<"SocketReadHelper::SwitchToMsgHeadReadHandle, and the sockfd_:"<< sockfd_  <<"  and the read_size_:"<<read_size_ << std::endl;
+  std::cout << "SocketReadHelper::SwitchToMsgHeadReadHandle, and the sockfd_:" << sockfd_
+            << "  and the read_size_:" << read_size_ << std::endl;
 }
 
 void SocketReadHelper::ReadUntilSocketNotReadable() {
@@ -58,8 +59,9 @@ bool SocketReadHelper::MsgBodyReadHandle() {
 bool SocketReadHelper::DoCurRead(void (SocketReadHelper::*set_cur_read_done)()) {
   ssize_t n = read(sockfd_, read_ptr_, read_size_);
   const int val = 1;
-  std::cout<<"1 SocketReadHelper::DoCurRead,the sockfd_:"<< sockfd_ <<" and the read_size_:"<<read_size_ <<" and n:"<<n<< std::endl;
-  std::cout<<std::endl;
+  std::cout << "1 SocketReadHelper::DoCurRead,the sockfd_:" << sockfd_
+            << " and the read_size_:" << read_size_ << " and n:" << n << std::endl;
+  std::cout << std::endl;
   PCHECK(setsockopt(sockfd_, IPPROTO_TCP, TCP_QUICKACK, (char*)&val, sizeof(int)) == 0);
   if (n == read_size_) {
     (this->*set_cur_read_done)();
@@ -67,7 +69,8 @@ bool SocketReadHelper::DoCurRead(void (SocketReadHelper::*set_cur_read_done)()) 
   } else if (n >= 0) {
     read_ptr_ += n;
     read_size_ -= n;
-    std::cout<<"2 SocketReadHelper::DoCurRead,the sockfd_:"<< sockfd_ <<" and the read_size_:"<<read_size_ <<" and n:"<<n<< std::endl;
+    std::cout << "2 SocketReadHelper::DoCurRead,the sockfd_:" << sockfd_
+              << " and the read_size_:" << read_size_ << " and n:" << n << std::endl;
     return true;
   } else {
     CHECK_EQ(n, -1);
@@ -78,10 +81,10 @@ bool SocketReadHelper::DoCurRead(void (SocketReadHelper::*set_cur_read_done)()) 
 
 void SocketReadHelper::SetStatusWhenMsgHeadDone() {
   switch (cur_msg_.msg_type) {
-  case SocketMsgType::kActor: SetStatusWhenActorMsgHeadDone();break;
+    case SocketMsgType::kActor: SetStatusWhenActorMsgHeadDone(); break;
 #define MAKE_ENTRY(x, y) \
   case SocketMsgType::k##x: SetStatusWhen##x##MsgHeadDone(); break;
-    OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ);
+      OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ);
 #undef MAKE_ENTRY
     default: UNIMPLEMENTED();
   }
@@ -109,17 +112,18 @@ void SocketReadHelper::SetStatusWhenRequestReadMsgHeadDone() {
   auto mem_desc = static_cast<const SocketMemDesc*>(cur_msg_.request_read_msg.dst_token);
   read_ptr_ = reinterpret_cast<char*>(mem_desc->mem_ptr);
   read_size_ = mem_desc->byte_size;
-  std::cout<<"SocketReadHelper::SetStatusWhenRequestReadMsgHeadDone,the sockfd_:"<< sockfd_ << "the read_size_:" << read_size_<<std::endl;
+  std::cout << "SocketReadHelper::SetStatusWhenRequestReadMsgHeadDone,the sockfd_:" << sockfd_
+            << "the read_size_:" << read_size_ << std::endl;
   cur_read_handle_ = &SocketReadHelper::MsgBodyReadHandle;
 }
 
 void SocketReadHelper::SetStatusWhenActorMsgHeadDone() {
   size_t size = cur_msg_.actor_msg.size;
-  char * data =(char*) malloc(size);
-  std::memcpy(data,cur_msg_.actor_msg.data,size);
-  std::cout<<"SocketReadHelper::SetStatusWhenActorMsgHeadDone,the size:"<<size << std::endl;
-  Global<ActorMsgBus>::Get()->HandleRecvData(data,size);
- // Global<EpollCommNet>::Get()->msghandle_(cur_msg_.actor_msg.data,cur_msg_.actor_msg.size);
+  char* data = (char*)malloc(size);
+  std::memcpy(data, cur_msg_.actor_msg.data, size);
+  std::cout << "SocketReadHelper::SetStatusWhenActorMsgHeadDone,the size:" << size << std::endl;
+  Global<ActorMsgBus>::Get()->HandleRecvData(data, size);
+  // Global<EpollCommNet>::Get()->msghandle_(cur_msg_.actor_msg.data,cur_msg_.actor_msg.size);
   SwitchToMsgHeadReadHandle();
 }
 

@@ -41,8 +41,8 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
   ~IBVerbsCommNet();
 
   void SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) override;
-  char * SerialTokenToData(void * token,size_t * size) override;
-  void * DeSerialDataToToken(char * data, size_t * size ) override;
+  char* SerialTokenToData(void* token, size_t* size) override;
+  void* DeSerialDataToToken(char* data, size_t* size) override;
   void RecvMsg(void* data, size_t size);
 
  private:

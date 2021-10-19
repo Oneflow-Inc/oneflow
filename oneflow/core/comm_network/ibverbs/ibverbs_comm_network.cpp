@@ -89,30 +89,28 @@ void IBVerbsCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size)
   qp_vec_.at(dst_machine_id)->PostSendRequest(data, size);
 }
 
-char * IBVerbsCommNet::SerialTokenToData(void *token, size_t *token_size) {
-  char * data = (char*)malloc(sizeof(IBVerbsCommNetRMADesc));
+char* IBVerbsCommNet::SerialTokenToData(void* token, size_t* token_size) {
+  char* data = (char*)malloc(sizeof(IBVerbsCommNetRMADesc));
   *token_size = sizeof(IBVerbsCommNetRMADesc);
-  std::cout<<"sizeof(IBVerbsCommNetRMADesc):"<<sizeof(IBVerbsCommNetRMADesc)<<std::endl;
-  auto * mem_desc = reinterpret_cast<IBVerbsMemDesc*>(token);
+  std::cout << "sizeof(IBVerbsCommNetRMADesc):" << sizeof(IBVerbsCommNetRMADesc) << std::endl;
+  auto* mem_desc = reinterpret_cast<IBVerbsMemDesc*>(token);
   IBVerbsCommNetRMADesc rma_desc{};
   rma_desc.mem_ptr = reinterpret_cast<uint64_t>(mem_desc->mem_ptr());
   rma_desc.mem_size = mem_desc->mem_size();
   rma_desc.mr_rkey = mem_desc->mr()->rkey;
   static_assert(sizeof(IBVerbsCommNetRMADesc) <= kActorMsgUserDataMaxSize, "");
-  std::memcpy(data,&rma_desc,sizeof(IBVerbsCommNetRMADesc));
+  std::memcpy(data, &rma_desc, sizeof(IBVerbsCommNetRMADesc));
   return data;
 }
 
-void * IBVerbsCommNet::DeSerialDataToToken(char *data, size_t  * token_size) {
-  void * token = malloc(sizeof(IBVerbsCommNetRMADesc));                                               
-   std::memcpy(token, data, sizeof(IBVerbsCommNetRMADesc));
+void* IBVerbsCommNet::DeSerialDataToToken(char* data, size_t* token_size) {
+  void* token = malloc(sizeof(IBVerbsCommNetRMADesc));
+  std::memcpy(token, data, sizeof(IBVerbsCommNetRMADesc));
   *token_size = sizeof(IBVerbsCommNetRMADesc);
-   return token;
+  return token;
 }
 
-void IBVerbsCommNet::RecvMsg(void* data, size_t size) {
-   msghandle_(data,size);
-}
+void IBVerbsCommNet::RecvMsg(void* data, size_t size) { msghandle_(data, size); }
 
 IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT) {
   int num_device;
