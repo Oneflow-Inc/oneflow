@@ -16,58 +16,22 @@ limitations under the License.
 #ifndef ONEFLOW_EXTENSION_PYTHON_NUMPY_H_
 #define ONEFLOW_EXTENSION_PYTHON_NUMPY_H_
 
-#include <pybind11/pybind11.h>
-#include "oneflow/api/python/framework/throw.h"
-
 #define NO_IMPORT_ARRAY
 #include "oneflow/extension/python/numpy_internal.h"
 
-namespace py = pybind11;
-
 namespace oneflow {
 
-class NumPyArrayHolder {
- public:
-  NumPyArrayHolder(PyObject* obj, const std::function<void()>& deleter) {
-    CHECK_OR_THROW(PyArray_Check(obj)) << "Object is not numpy array.";
-    obj_ = PyArray_GETCONTIGUOUS((PyArrayObject*)obj);
-    deleter_ = [deleter, this]() {
-      {
-        py::gil_scoped_acquire acquire;
-        Py_DECREF(obj_);
-      }
-      if (deleter) { deleter(); }
-    };
-    size_ = PyArray_SIZE(obj_);
-    data_ = PyArray_DATA(obj_);
-  }
-
-  ~NumPyArrayHolder() {
-    if (deleter_) { deleter_(); }
-  }
-
-  void* data() const { return data_; }
-
-  size_t size() const { return size_; }
-
- private:
-  PyArrayObject* obj_;
-  void* data_;
-  size_t size_;
-  std::function<void()> deleter_;
-};
-
-class NumPyArrayPtr {
+class NumPyArrayPtr final {
  public:
   NumPyArrayPtr(PyObject* obj, const std::function<void()>& deleter)
-      : holder_(std::make_shared<NumPyArrayHolder>(obj, deleter)) {}
+      : internal_(std::make_shared<numpy::NumPyArrayInternal>(obj, deleter)) {}
 
-  void* data() const { return holder_->data(); }
+  void* data() const { return internal_->data(); }
 
-  size_t size() const { return holder_->size(); }
+  size_t size() const { return internal_->size(); }
 
  private:
-  std::shared_ptr<NumPyArrayHolder> holder_;
+  std::shared_ptr<numpy::NumPyArrayInternal> internal_;
 };
 
 }  // namespace oneflow
