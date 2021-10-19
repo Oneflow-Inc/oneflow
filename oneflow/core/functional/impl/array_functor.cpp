@@ -82,8 +82,10 @@ class ArgMaxFunctor {
       for (int32_t i = 0; i < ndims; i++) { permute_inv[i] = -1; }
       for (int32_t i = 0; i < ndims; i++) { permute_inv[permute[i]] = i; }
       result = JUST(Transpose(result, permute_inv));
+      std::vector<int32_t> squeeze_dim;
+      squeeze_dim.push_back(new_dim);
       if ((!keepdim.has_value()) || (keepdim.has_value() && JUST(keepdim) == false)) {
-        result = JUST(Squeeze(result, new_dim));
+        result = JUST(Squeeze(result, squeeze_dim));
       }
     }
     if (dtype.has_value()) { result = JUST(Cast(result, JUST(dtype))); }
@@ -913,22 +915,23 @@ class SqueezeFunctor {
   SqueezeFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("squeeze").Input("in").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<int32_t>& dim) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<std::vector<int32_t>>& dim) const {
     int32_t ndim = x->shape()->NumAxes();
     std::vector<int32_t> squeeze_dims(0);
-    if (dim.has_value()==true) {
-      int squeeze_dim = JUST(dim);
-      CHECK_OR_RETURN((squeeze_dim>= -(ndim+1)) && (squeeze_dim <=ndim)) << "Dimension out of range (expected to be in range of  [" << -ndim << "," << ndim-1 << "], but got " << squeeze_dim; 
-      if(squeeze_dim < 0){ squeeze_dim+=ndim; }
-       if(x->shape()->At(squeeze_dim)==1){
-          squeeze_dims.push_back(squeeze_dim);
-        }
-    }else{
-      for(int i=0; i<ndim; ++i){
-          if(x->shape()->At(i)==1){
-            squeeze_dims.push_back(i);
-          }
-        }
+    if (dim.has_value() == true) {
+      std::vector<int32_t> dims = *JUST(dim);
+      for (int32_t dim_i : dims) {
+        CHECK_OR_RETURN((dim_i >= -(ndim + 1)) && (dim_i <= ndim))
+            << "Dimension out of range (expected to be in range of  [" << -ndim << "," << ndim - 1
+            << "], but got " << dim_i;
+        if (dim_i < 0) { dim_i += ndim; }
+        if (x->shape()->At(dim_i) == 1) { squeeze_dims.push_back(dim_i); }
+      }
+    } else {
+      for (int i = 0; i < ndim; ++i) {
+        if (x->shape()->At(i) == 1) { squeeze_dims.push_back(i); }
+      }
     }
 
     MutableAttrMap attrs;
