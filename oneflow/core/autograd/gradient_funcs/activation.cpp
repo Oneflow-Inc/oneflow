@@ -293,8 +293,8 @@ class Elu : public OpExprGradFunction<EluCaptureState> {
 };
 
 struct CeluCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  double alpha;
+  bool requires_grad = true;
+  double alpha = 1.0;
 };
 
 class Celu : public OpExprGradFunction<CeluCaptureState> {
