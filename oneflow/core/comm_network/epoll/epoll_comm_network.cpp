@@ -119,10 +119,18 @@ char * EpollCommNet::SerialTokenToData(void *token, size_t *token_size) {
     uint64_t addr = reinterpret_cast<uint64_t>(token);
     char * return_addr =reinterpret_cast<char*>(&addr);
     return return_addr;*/
-    char *data = (char*)malloc(sizeof(EpollCommNetRMADesc));
+   // void * addr  = new void();
+   /*char * addr = reinterpret_cast<char*>(token);
+    char ** x = new char*;
+    *x = addr;*/
+    /*char *data = (char*)malloc(sizeof(EpollCommNetRMADesc));
     std::memcpy(data,token,sizeof(EpollCommNetRMADesc));
     *token_size = sizeof(EpollCommNetRMADesc);
-    return data;
+    return data;*/
+    uint64_t **  y = new uint64_t*;
+    *y = reinterpret_cast<uint64_t *>(token);
+    char * addr = reinterpret_cast<char*>(y);
+    return addr; 
 }
 
 void * EpollCommNet::DeSerialDataToToken(char *data, size_t  * token_size) {
