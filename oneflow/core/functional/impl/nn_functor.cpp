@@ -1523,26 +1523,29 @@ class FusedBiasAddDropoutFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b, const float& p,
                            const int32_t& axis, const Optional<one::Generator>& generator) const {
+    std::shared_ptr<one::Generator> gen =
+        generator ? JUST(generator) : JUST(one::DefaultAutoGenerator());
     MutableAttrMap random_mask_like_attrs;
     JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
-    std::shared_ptr<one::Generator> gen;
-    if (!generator) {
-      gen = JUST(one::DefaultAutoGenerator());
-    } else {
-      gen = JUST(generator);
-    }
     JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *random_mask_like_op_, {a},
-        OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
+
     float scale = 1.0;
     if (p != 1.0) { scale = 1.0 / (1.0 - p); }
     MutableAttrMap fused_bias_add_mask_attrs;
     JUST(fused_bias_add_mask_attrs.SetAttr<float>("scale", scale));
     JUST(fused_bias_add_mask_attrs.SetAttr<int32_t>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, mask},
-                                          fused_bias_add_mask_attrs);
+
+    return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
+             return OpInterpUtil::Dispatch<Tensor>(
+                 *random_mask_like_op_, {a},
+                 OpExprInterpContext(random_mask_like_attrs, random_mask_like_state));
+           })
+        .then([&](const std::shared_ptr<one::Tensor>& x) {
+          return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, x},
+                                                fused_bias_add_mask_attrs);
+        })
+        .call();
   }
 
  private:
