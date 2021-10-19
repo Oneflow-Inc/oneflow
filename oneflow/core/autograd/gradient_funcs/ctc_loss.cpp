@@ -24,6 +24,7 @@ namespace oneflow {
 namespace one {
 
 struct CTCLossCaptureState : public AutoGradCaptureState {
+  int64_t max_target_length;
   int32_t blank;
   bool zero_infinity;
   bool requires_grad;
@@ -57,6 +58,7 @@ Maybe<void> CTCLoss::Capture(CTCLossCaptureState* ctx, const TensorTuple& inputs
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
+  ctx->max_target_length = JUST(composed_attrs.GetAttr<int64_t>("max_target_length"));
   ctx->blank = JUST(composed_attrs.GetAttr<int32_t>("blank"));
   ctx->zero_infinity = JUST(composed_attrs.GetAttr<bool>("zero_infinity"));
 
@@ -84,6 +86,7 @@ Maybe<void> CTCLoss::Apply(const CTCLossCaptureState* ctx, const TensorTuple& ou
   const auto& input_lengths = ctx->SavedTensors().at(4);
   const auto& target_lengths = ctx->SavedTensors().at(5);
   MutableAttrMap attrs;
+  JUST(attrs.SetAttr<int64_t>("max_target_length", ctx->max_target_length));
   JUST(attrs.SetAttr<int32_t>("blank", ctx->blank));
   JUST(attrs.SetAttr<bool>("zero_infinity", ctx->zero_infinity));
   in_grads->resize(4);

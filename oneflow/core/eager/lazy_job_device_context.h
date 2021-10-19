@@ -35,15 +35,7 @@ class LazyJobDeviceCtx final : public DeviceCtx {
     UNIMPLEMENTED();
     return nullptr;
   }
-  cublasHandle_t cublas_pmh_handle() const override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-  cublasHandle_t cublas_tensor_op_math_handle() const override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-  cublasHandle_t cublas_pmd_handle() const override {
+  cublasHandle_t cublas_handle() const override {
     UNIMPLEMENTED();
     return nullptr;
   }

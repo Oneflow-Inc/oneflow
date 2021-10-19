@@ -46,13 +46,6 @@ struct BlasIf<DeviceType::kGPU> {
                             enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
                             const int n, const int k, const double alpha, const float16* a,
                             const float16* b, const double beta, float16* c);
-
-  static void Axpy(DeviceCtx* ctx, const int n, const float alpha, const float* x, const int incx,
-                   float* y, const int incy);
-  static void Axpy(DeviceCtx* ctx, const int n, const double alpha, const double* x, const int incx,
-                   double* y, const int incy);
-  static void Axpy(DeviceCtx* ctx, const int n, const float16 alpha, const float16* x,
-                   const int incx, float16* y, const int incy);
 };
 
 }  // namespace oneflow

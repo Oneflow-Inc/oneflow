@@ -600,14 +600,14 @@ class CTCLoss(_Loss):
           :math:`N = \\text{batch size}`, and
           :math:`C = \\text{number of classes (including blank)}`.
         - Targets: Tensor of size :math:`(N, S)` or
-          :math:`(\\operatorname{sum}(\\text{target\\_lengths}))`,
+          :math:`(\\operatorname{sum}(\\text{target_lengths}))`,
           where :math:`N = \\text{batch size}` and
           :math:`S = \\text{max target length, if shape is } (N, S)`.
           It represent the target sequences. Each element in the target
           sequence is a class index. And the target index cannot be blank (default=0).
           In the :math:`(N, S)` form, targets are padded to the
           length of the longest sequence, and stacked.
-          In the :math:`(\\operatorname{sum}(\\text{target\\_lengths}))` form,
+          In the :math:`(\\operatorname{sum}(\\text{target_lengths}))` form,
           the targets are assumed to be un-padded and
           concatenated within 1 dimension.
         - Input_lengths: Tuple or tensor of size :math:`(N)`,
@@ -635,20 +635,18 @@ class CTCLoss(_Loss):
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> import numpy as np
-        >>> log_probs = np.array(
-        ...             [
-        ...                 [[-1.1031, -0.7998, -1.5200], [-0.9808, -1.1363, -1.1908]],
-        ...                 [[-1.2258, -1.0665, -1.0153], [-1.1135, -1.2331, -0.9671]],
-        ...                 [[-1.3348, -0.6611, -1.5118], [-0.9823, -1.2355, -1.0941]],
-        ...                 [[-1.3850, -1.3273, -0.7247], [-0.8235, -1.4783, -1.0994]],
-        ...                 [[-0.9049, -0.8867, -1.6962], [-1.4938, -1.3630, -0.6547]],
-        ...             ]
-        ...         ).astype(np.float32)
-        >>> log_probs = flow.tensor(log_probs, dtype=flow.float32)
-        >>> targets = flow.tensor(np.array([[1, 2, 2], [1, 2, 2]]).astype("int32"), dtype=flow.int32)
-        >>> input_lengths = flow.tensor(np.array([5, 5]).astype("int32"), dtype=flow.int32)
-        >>> target_lengths = flow.tensor(np.array([3, 3]).astype("int32"), dtype=flow.int32)
+        
+        >>> log_probs = flow.tensor(
+        ...    [
+        ...        [[-1.1031, -0.7998, -1.5200], [-0.9808, -1.1363, -1.1908]],
+        ...        [[-1.2258, -1.0665, -1.0153], [-1.1135, -1.2331, -0.9671]],
+        ...        [[-1.3348, -0.6611, -1.5118], [-0.9823, -1.2355, -1.0941]],
+        ...        [[-1.3850, -1.3273, -0.7247], [-0.8235, -1.4783, -1.0994]],
+        ...        [[-0.9049, -0.8867, -1.6962], [-1.4938, -1.3630, -0.6547]],
+        ...    ], dtype=flow.float32)
+        >>> targets = flow.tensor([[1, 2, 2], [1, 2, 2]], dtype=flow.int32)
+        >>> input_lengths = flow.tensor([5, 5], dtype=flow.int32)
+        >>> target_lengths = flow.tensor([3, 3], dtype=flow.int32)
         >>> loss_mean = flow.nn.CTCLoss()
         >>> out = loss_mean(log_probs, targets, input_lengths, target_lengths)
         >>> out
@@ -657,7 +655,6 @@ class CTCLoss(_Loss):
         >>> out = loss_sum(log_probs, targets, input_lengths, target_lengths)
         >>> out
         tensor(6.8257, dtype=oneflow.float32)
-        >>>
 
     """
 
@@ -675,11 +672,17 @@ class CTCLoss(_Loss):
         input_lengths: Tensor,
         target_lengths: Tensor,
     ) -> Tensor:
+        max_target_length = 0
+        if targets.ndim == 1:
+            max_target_length = target_lengths.max().item()
+        elif targets.ndim == 2:
+            max_target_length = targets.shape[1]
         return flow._C.ctc_loss(
             log_probs,
             targets,
             input_lengths,
             target_lengths,
+            max_target_length,
             self.blank,
             self.zero_infinity,
             self.reduction,
