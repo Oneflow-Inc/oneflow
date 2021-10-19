@@ -107,8 +107,7 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
         NamedAttrList attributes(op->getAttrDictionary());
         attributes.erase("operand_segment_sizes");
         attributes.erase("result_segment_sizes");
-        auto unknownLoc = UnknownLoc::get(rewriter.getContext());
-        OperationState state(unknownLoc, "oneflow." + op_type_name.str());
+        OperationState state(op->getLoc(), "oneflow." + op_type_name.str());
         state.addAttributes(attributes);
         state.addOperands(op->getOperands());
         assert(op.data_input().size() == 1);
@@ -126,8 +125,7 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
         NamedAttrList attributes(op->getAttrDictionary());
         attributes.erase("operand_segment_sizes");
         attributes.erase("result_segment_sizes");
-        auto unknownLoc = UnknownLoc::get(rewriter.getContext());
-        OperationState state(unknownLoc, "oneflow." + op_type_name.str());
+        OperationState state(op->getLoc(), "oneflow." + op_type_name.str());
         state.addAttributes(attributes);
         state.addOperands(op.data_input());
         state.addTypes(op.getODSResults(0 /* data out */).getTypes());
