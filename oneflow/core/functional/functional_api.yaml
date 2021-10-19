@@ -1406,3 +1406,7 @@
 - name: "ctc_greedy_decoder"
   signature: "TensorTuple (Tensor log_probs, Tensor input_lengths, Bool merge_repeated=True) => CtcGreedyDecoder"
   bind_python: True
+
+- name: "meshgrid"
+  signature: "TensorTuple (TensorTuple tensors) => Meshgrid"
+  bind_python: True
