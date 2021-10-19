@@ -277,6 +277,10 @@
   signature: "Tensor (Tensor x, Bool inplace=False) => Relu"
   bind_python: True
 
+- name: "relu_"
+  signature: "Tensor (Tensor x) => InplaceRelu"
+  bind_python: True 
+
 - name: "relu_grad"
   signature: "Tensor (Tensor dy, Tensor y) => ReluGrad"
   bind_python: False
