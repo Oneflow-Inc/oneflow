@@ -148,6 +148,7 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
           op.data_output().front().replaceAllUsesWith(created->getResult(0));
           op->erase();
           return success();
+        }
       } else {
         if (!GetPrintedOpTypeNames()->contains(op.op_type_name())) {
           llvm::errs() << "MLIR opaque user op: " << op.op_type_name() << "\n";
