@@ -35,11 +35,11 @@ INTRUSIVE_BEGIN(VmResourceDesc);
   // Getters
   int64_t machine_num() const { return machine_num_; }
   int64_t max_device_num_per_machine() const { return max_device_num_per_machine_; }
-  const DeviceTag2DeviceNum& device_tag2device_num() const { return device_tag2device_num_; }
+  const DeviceTag2DeviceNum& device_tag2device_num() const { return device_tag2device_num_.Get(); }
   // Setters
   void set_machine_num(int64_t val) { machine_num_ = val; }
   void set_max_device_num_per_machine(int64_t val) { max_device_num_per_machine_ = val; }
-  DeviceTag2DeviceNum* mut_device_tag2device_num() { return &device_tag2device_num_; }
+  DeviceTag2DeviceNum* mut_device_tag2device_num() { return device_tag2device_num_.Mutable(); }
 
 
   // methods
@@ -59,7 +59,7 @@ INTRUSIVE_BEGIN(VmResourceDesc);
   INTRUSIVE_DEFINE_FIELD(int64_t, machine_num_);
   INTRUSIVE_DEFINE_FIELD(int64_t, max_device_num_per_machine_);
   // maps
-  INTRUSIVE_DEFINE_FIELD(DeviceTag2DeviceNum, device_tag2device_num_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ForceStandardLayout<DeviceTag2DeviceNum>, device_tag2device_num_);
 INTRUSIVE_END(VmResourceDesc);
 // clang-format on
 
