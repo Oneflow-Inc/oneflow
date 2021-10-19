@@ -233,8 +233,7 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
       JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, src_rank));
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<int64_t>("root", src_rank));
-  int64_t root = JUST(parallel_desc->MachineId4ParallelId(src_rank));
-  if (root == GlobalProcessCtx::Rank() || inplace) {
+  if (src_rank == GlobalProcessCtx::Rank() || inplace) {
     TensorTuple outputs{tensor};
     JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs,
                                 one::OpExprInterpContext(attrs, parallel_desc)));
@@ -254,7 +253,8 @@ Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
   JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   if (!parallel_id.has_value()) { return tensor; }
   const auto& broadcast_parallel_desc = JUST(GetBroadcastSubParallelDesc(parallel_desc, nd_sbp));
-  return Broadcast(tensor, /* root */ 0, broadcast_parallel_desc, false);
+  int64_t root = JUST(parallel_desc->MachineId4ParallelId(JUST(parallel_id)));
+  return Broadcast(tensor, root, broadcast_parallel_desc, false);
 }
 
 Maybe<Shape> CalcPhysicalShape(Symbol<ConsistentTensorMeta> consistent_tensor_meta) {
