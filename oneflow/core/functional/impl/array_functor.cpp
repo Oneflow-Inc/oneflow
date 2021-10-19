@@ -82,10 +82,8 @@ class ArgMaxFunctor {
       for (int32_t i = 0; i < ndims; i++) { permute_inv[i] = -1; }
       for (int32_t i = 0; i < ndims; i++) { permute_inv[permute[i]] = i; }
       result = JUST(Transpose(result, permute_inv));
-      std::vector<int32_t> squeeze_dim;
-      squeeze_dim.push_back(new_dim);
       if ((!keepdim.has_value()) || (keepdim.has_value() && JUST(keepdim) == false)) {
-        result = JUST(Squeeze(result, squeeze_dim));
+        result = JUST(Squeeze(result, new_dim));
       }
     }
     if (dtype.has_value()) { result = JUST(Cast(result, JUST(dtype))); }
