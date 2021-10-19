@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_MEMORY_DESC_H_
 #define ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_MEMORY_DESC_H_
 
-#include "oneflow/core/comm_network/epoll/socket_memory_desc.h"
+
 
 #ifdef OF_PLATFORM_POSIX
 

@@ -115,12 +115,7 @@ char * EpollCommNet::SerialTokenToData(void *token, size_t *token_size) {
     return addr; 
 }
 
-void * EpollCommNet::DeSerialDataToToken(char *data, size_t  * token_size) {
-    char ** addr = reinterpret_cast<char ** >(data);
-    void * token = reinterpret_cast<void *>(*addr);
-    *token_size = sizeof(SocketMemDesc);
-    return token;
-}
+
 
 void EpollCommNet::SendTransportMsg(int64_t dst_machine_id, const TransportMsg& transport_msg) {
   SocketMsg msg;
