@@ -19,14 +19,14 @@ import os
 from collections import OrderedDict
 
 import numpy as np
-import tensorflow as tf
+import torch
 
 import oneflow as flow
 import oneflow.unittest
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
-def compare_with_tensorflow(
+def compare_with_torch(
     device_type, data_type, label_type, batch_size, num_classes,
 ):
     data_type = type_name_to_flow_type[data_type]
@@ -34,10 +34,12 @@ def compare_with_tensorflow(
     np_labels = np.random.randint(0, num_classes, size=(batch_size,)).astype(np.int32)
     np_logits = np.random.random((batch_size, num_classes)).astype(np.float32)
 
-    with tf.GradientTape(persistent=True) as tape:
-        tf_logits = tf.Variable(np_logits)
-        tf_output = tf.nn.sparse_softmax_cross_entropy_with_logits(np_labels, tf_logits)
-    tf_logits_diff = tape.gradient(tf_output, tf_logits)
+    torch_logits = torch.tensor(np_logits, dtype=torch.float32, requires_grad=True)
+    torch_labels = torch.tensor(np_labels, dtype=torch.int64)
+    torch_output = torch.nn.functional.cross_entropy(
+        torch_logits, torch_labels, reduction="none"
+    )
+    torch_output.sum().backward()
 
     of_logits = flow.tensor(
         np_logits, device=device_type, dtype=data_type, requires_grad=True
@@ -48,13 +50,15 @@ def compare_with_tensorflow(
     ).to(device_type)
     of_output.sum().backward()
 
-    assert np.allclose(of_output.numpy(), tf_output.numpy(), rtol=1e-03, atol=1e-04)
     assert np.allclose(
-        of_logits.grad.numpy(), tf_logits_diff.numpy(), rtol=1e-03, atol=1e-04
+        of_output.numpy(), torch_output.detach().numpy(), rtol=1e-03, atol=1e-04
+    )
+    assert np.allclose(
+        of_logits.grad.numpy(), torch_logits.grad, rtol=1e-03, atol=1e-04
     )
 
 
-def compare_eager_consistent_with_tensorflow(
+def compare_eager_consistent_with_torch(
     device_type, data_type, label_type, batch_size, num_classes,
 ):
     data_type = type_name_to_flow_type[data_type]
@@ -64,12 +68,12 @@ def compare_eager_consistent_with_tensorflow(
     placement = flow.placement(device_type, {0: range(4)})
     rank = flow.env.get_rank()
     if rank == 0:
-        with tf.GradientTape(persistent=True) as tape:
-            tf_logits = tf.Variable(np_logits)
-            tf_output = tf.nn.sparse_softmax_cross_entropy_with_logits(
-                np_labels, tf_logits
-            )
-        tf_logits_diff = tape.gradient(tf_output, tf_logits)
+        torch_logits = torch.tensor(np_logits, dtype=torch.float32, requires_grad=True)
+        torch_labels = torch.tensor(np_labels, dtype=torch.int64)
+        torch_output = torch.nn.functional.cross_entropy(
+            torch_logits, torch_labels, reduction="none"
+        )
+        torch_output.sum().backward()
 
     # 1D sbp
     of_logits = flow.tensor(
@@ -94,13 +98,15 @@ def compare_eager_consistent_with_tensorflow(
     of_output = of_output.to_local()
 
     if rank == 0:
-        assert np.allclose(of_output.numpy(), tf_output.numpy(), rtol=1e-03, atol=1e-04)
         assert np.allclose(
-            of_logits_grad.numpy(), tf_logits_diff.numpy(), rtol=1e-03, atol=1e-04
+            of_output.numpy(), torch_output.detach().numpy(), rtol=1e-03, atol=1e-04
+        )
+        assert np.allclose(
+            of_logits_grad.numpy(), torch_logits.grad, rtol=1e-03, atol=1e-04
         )
 
 
-def compare_eager_2d_consistent_with_tensorflow(
+def compare_eager_2d_consistent_with_torch(
     device_type, data_type, label_type, batch_size, num_classes,
 ):
     data_type = type_name_to_flow_type[data_type]
@@ -110,12 +116,12 @@ def compare_eager_2d_consistent_with_tensorflow(
 
     rank = flow.env.get_rank()
     if rank == 0:
-        with tf.GradientTape(persistent=True) as tape:
-            tf_logits = tf.Variable(np_logits)
-            tf_output = tf.nn.sparse_softmax_cross_entropy_with_logits(
-                np_labels, tf_logits
-            )
-        tf_logits_diff = tape.gradient(tf_output, tf_logits)
+        torch_logits = torch.tensor(np_logits, dtype=torch.float32, requires_grad=True)
+        torch_labels = torch.tensor(np_labels, dtype=torch.int64)
+        torch_output = torch.nn.functional.cross_entropy(
+            torch_logits, torch_labels, reduction="none"
+        )
+        torch_output.sum().backward()
 
     # 2D sbp
     placement = flow.placement("cuda", {0: range(4)}, hierarchy=(2, 2))
@@ -152,13 +158,15 @@ def compare_eager_2d_consistent_with_tensorflow(
     of_output = of_output.to_local()
 
     if rank == 0:
-        assert np.allclose(of_output.numpy(), tf_output.numpy(), rtol=1e-03, atol=1e-04)
         assert np.allclose(
-            of_logits_grad.numpy(), tf_logits_diff.numpy(), rtol=1e-03, atol=1e-04
+            of_output.numpy(), torch_output.detach().numpy(), rtol=1e-03, atol=1e-04
+        )
+        assert np.allclose(
+            of_logits_grad.numpy(), torch_logits.grad, rtol=1e-03, atol=1e-04
         )
 
 
-def compare_lazy_consistent_with_tensorflow(
+def compare_lazy_consistent_with_torch(
     device_type, data_type, label_type, batch_size, num_classes,
 ):
     data_type = type_name_to_flow_type[data_type]
@@ -169,12 +177,12 @@ def compare_lazy_consistent_with_tensorflow(
     rank = flow.env.get_rank()
 
     if rank == 0:
-        with tf.GradientTape(persistent=True) as tape:
-            tf_logits = tf.Variable(np_logits)
-            tf_output = tf.nn.sparse_softmax_cross_entropy_with_logits(
-                np_labels, tf_logits
-            )
-        tf_logits_diff = tape.gradient(tf_output, tf_logits)
+        torch_logits = torch.tensor(np_logits, dtype=torch.float32, requires_grad=True)
+        torch_labels = torch.tensor(np_labels, dtype=torch.int64)
+        torch_output = torch.nn.functional.cross_entropy(
+            torch_logits, torch_labels, reduction="none"
+        )
+        torch_output.sum().backward()
 
     class MyModule(flow.nn.Graph):
         def __init__(self):
@@ -205,7 +213,9 @@ def compare_lazy_consistent_with_tensorflow(
     flow._oneflow_internal.eager.multi_client.Sync()
 
     if rank == 0:
-        assert np.allclose(of_output.numpy(), tf_output.numpy(), rtol=1e-03, atol=1e-04)
+        assert np.allclose(
+            of_output.numpy(), torch_output.detach().numpy(), rtol=1e-03, atol=1e-04
+        )
 
 
 class TestSparseSoftmaxCrossEntropyWithLogits(flow.unittest.TestCase):
@@ -218,7 +228,7 @@ class TestSparseSoftmaxCrossEntropyWithLogits(flow.unittest.TestCase):
         arg_dict["batch_size"] = [64, 16]
         arg_dict["num_classes"] = [100, 1000]
         for arg in GenArgList(arg_dict):
-            compare_with_tensorflow(*arg)
+            compare_with_torch(*arg)
 
 
 class TestSparseSoftmaxCrossEntropyMsWithLogits(flow.unittest.TestCase):
@@ -232,9 +242,9 @@ class TestSparseSoftmaxCrossEntropyMsWithLogits(flow.unittest.TestCase):
         arg_dict["batch_size"] = [64]
         arg_dict["num_classes"] = [1000]
         for arg in GenArgList(arg_dict):
-            # compare_eager_consistent_with_tensorflow(*arg)
-            compare_eager_2d_consistent_with_tensorflow(*arg)
-            compare_lazy_consistent_with_tensorflow(*arg)
+            # compare_eager_consistent_with_torch(*arg)
+            compare_eager_2d_consistent_with_torch(*arg)
+            compare_lazy_consistent_with_torch(*arg)
 
 
 if __name__ == "__main__":
