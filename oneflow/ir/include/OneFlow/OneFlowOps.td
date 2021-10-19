@@ -140,7 +140,7 @@ def OneFlow_Convolution2dOp : OneFlow_BaseOp<"conv2d", []> {
   }];
   let input = (ins
     AnyType:$in,
-    AnyType:$weight,
+    AnyType:$weight
   );
   let output = (outs AnyType:$out);
   let attrs = (ins
