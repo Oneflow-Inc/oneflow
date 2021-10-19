@@ -18,66 +18,28 @@ from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 
 
-def check_dim(num_dims, input_dim):
-    if input_dim == None:
-        dim = input_dim
-    elif isinstance(input_dim, (int, tuple)):
-        if isinstance(input_dim, int):
-            dim = input_dim if input_dim >= 0 else input_dim + num_dims
-            if dim >= num_dims or dim < 0:
-                raise IndexError("Dimension out of range")
-        else:
-            temp = list(input_dim)
-            for i in range(len(temp)):
-                temp[i] = temp[i] if temp[i] >= 0 else temp[i] + num_dims
-                if temp[i] >= num_dims or temp[i] < 0:
-                    raise IndexError("Dimension out of range")
-            dim = temp
-    else:
-        raise TypeError(
-            "linalg_vector_norm(): argument 'dim' must be tuple of ints, not {}".format(
-                type(input_dim)
-            )
-        )
-    return dim
-
 class Vector_Norm(Module):
     def __init__(self, ord=2, dim=None, keepdim=False, dtype=None) -> None:
         super().__init__()
-        if ord == None:
-            self.ord = 2.0
-        else:
-            self.ord=ord
+        self.ord=ord
         self.dim = dim
         self.keepdim = keepdim
         self.dtype = dtype
 
     def forward(self, x):
-        num_dims = len(x.shape)
-        dim = check_dim(num_dims, self.dim)
-        if isinstance(dim, int):
-            dim = [dim]
-        if dim == None:
-            return flow._C.vector_norm(x.flatten(), ord=self.ord, dim=self.dim, keepdim=self.keepdim, dtype = self.dtype)
-        else:
-            return flow._C.vector_norm(x, ord=self.ord, dim=dim, keepdim=self.keepdim, dtype = self.dtype)
+        return flow._C.vector_norm(x, ord=self.ord, dim=self.dim, keepdim=self.keepdim, dtype = self.dtype)
         
 
 class Matrix_Norm(Module):
     def __init__(self, ord="fro", dim=(-2, -1), keepdim=False, dtype=None) -> None:
         super().__init__()
-        if ord == None:
-            self.ord = "fro"
-        else:
-            self.ord = ord           
+        self.ord = ord           
         self.dim = dim
         self.keepdim = keepdim
         self.dtype = dtype
 
-    def forward(self, x):
-        num_dims = len(x.shape)
-        dim = check_dim(num_dims, self.dim)       
-        return flow._C.matrix_norm(x, self.ord, dim, self.keepdim, dtype=self.dtype)
+    def forward(self, x):  
+        return flow._C.matrix_norm(x, self.ord, self.dim, self.keepdim, dtype=self.dtype)
 
         
 def norm_op(input, ord=None, dim=None, keepdim=False, dtype=None):
@@ -182,7 +144,6 @@ def norm_op(input, ord=None, dim=None, keepdim=False, dtype=None):
         >>> LA.norm(m, dim=(1,2))
         tensor([ 3.7417, 11.2250], dtype=oneflow.float32)
     """
-    print("ord:",ord,"dim:",dim,"input:",input)
     return flow._C.norm(input, ord, dim, keepdim, dtype=dtype)
 
 def vector_norm_tensor_op(input, ord=2, dim=None, keepdim=False, dtype=None):

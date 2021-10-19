@@ -1051,7 +1051,11 @@
   bind_python: False
 
 - name: "vector_norm"
-  signature: "Tensor (Tensor input, Scalar ord=2, Int32List dim=None, Bool keepdim=False, *, DataType dtype=None) => VectorNorm"
+  signature: 
+    [
+      "Tensor (Tensor input, Scalar ord=2, Int32List dim=None, Bool keepdim=False, *, DataType dtype=None) => VectorNorm",
+      "Tensor (Tensor input, Scalar ord=2, Scalar dim, Bool keepdim=False, *, DataType dtype=None) => VectorNorm",
+    ]
   bind_python: True
 
 - name: "matrix_norm"
