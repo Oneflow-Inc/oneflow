@@ -154,6 +154,25 @@ def OneFlow_Convolution2dOp : OneFlow_BaseOp<"conv2d", []> {
   );  
 }
 
+def OneFlow_GatherOp : OneFlow_BaseOp<"gather", []> {
+  let input = (ins
+    AnyType:$in,
+    AnyType:$indices
+  );
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    SI64Attr:$axis
+  );
+}
+
+def OneFlow_GeluGradOp : OneFlow_BaseOp<"gelu_grad", []> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$dy
+  );
+  let output = (outs AnyType:$dx);
+}
+
 class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType, NoSideEffect])> {
     let summary = "";
@@ -161,6 +180,11 @@ class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
     let output = (outs AnyType:$y);
 }
 
+def OneFlow_GeluOp : OneFlow_UnaryBaseOp<"gelu", []> {}
+
+def OneFlow_RsqrtOp : OneFlow_UnaryBaseOp<"rsqrt", []> {}
+
+def OneFlow_TanhOp : OneFlow_UnaryBaseOp<"tanh", []> {}
 
 // Idempotent ops
 
