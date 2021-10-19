@@ -6,6 +6,11 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Pass/PassBase.td"
 include "mlir/Interfaces/CallInterfaces.td"
 
+def SI32ArrayAttr : TypedArrayAttrBase<SI32Attr,
+                                      "signed 32-bit integer array attribute"> {
+  let constBuilderCall = "$_builder.getArrayAttr(llvm::to_vector<8>(llvm::map_range(values, [this](int32_t v) -> Attribute { return builder_.getSI32IntegerAttr($0); })))";
+}
+
 class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, traits> {
   dag sys_attrs = (ins
@@ -129,6 +134,28 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", []> {
     BoolAttr:$transpose_b,
     OptionalAttr<BoolAttr>:$_add_to_output,
     F64Attr:$alpha
+  );
+}
+
+def OneFlow_Convolution2dOp : OneFlow_BaseOp<"conv2d", []> {
+  let summary = "OneFlow Conv2d operation";
+  let description = [{
+  "The convolution operator consumes an input tensor and a filter, and"
+  "computes the output."
+  }];
+  let input = (ins
+    AnyType:$in,
+    AnyType:$weight
+  );
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    SI32Attr:$filters,
+    SI32ArrayAttr:$padding_before,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$strides,
+    SI32ArrayAttr:$dilation_rate,
+    DefaultValuedAttr<SI32Attr, "1">:$group
   );
 }
 
