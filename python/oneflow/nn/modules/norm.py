@@ -17,30 +17,6 @@ import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 
-
-class Vector_Norm(Module):
-    def __init__(self, ord=2, dim=None, keepdim=False, dtype=None) -> None:
-        super().__init__()
-        self.ord=ord
-        self.dim = dim
-        self.keepdim = keepdim
-        self.dtype = dtype
-
-    def forward(self, x):
-        return flow._C.vector_norm(x, ord=self.ord, dim=self.dim, keepdim=self.keepdim, dtype = self.dtype)
-        
-
-class Matrix_Norm(Module):
-    def __init__(self, ord="fro", dim=(-2, -1), keepdim=False, dtype=None) -> None:
-        super().__init__()
-        self.ord = ord           
-        self.dim = dim
-        self.keepdim = keepdim
-        self.dtype = dtype
-
-    def forward(self, x):  
-        return flow._C.matrix_norm(x, self.ord, self.dim, self.keepdim, dtype=self.dtype)
-
         
 def norm_op(input, ord=None, dim=None, keepdim=False, dtype=None):
     """linalg.norm(input, ord=None, dim=None, keepdim=False, *, dtype=None, out=None) -> Tensor
@@ -210,7 +186,8 @@ def vector_norm_tensor_op(input, ord=2, dim=None, keepdim=False, dtype=None):
         >>> LA.vector_norm(b, ord=3.5)
         tensor(5.4345, dtype=oneflow.float32)
     """
-    return Vector_Norm(ord, dim, keepdim, dtype)(input)
+    return flow._C.vector_norm(input, ord, dim, keepdim, dtype = dtype)
+
 
 
 def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False,dtype=None):
@@ -284,7 +261,8 @@ def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False,dtype=No
         >>> LA.matrix_norm(b, dim=(0, 2))
         tensor([ 3.1623, 10.0000, 17.2627], dtype=oneflow.float32)
     """
-    return Matrix_Norm(ord, dim, keepdim,dtype)(input)
+    return flow._C.matrix_norm(input, ord, dim, keepdim, dtype=dtype)
+
 
 
 def l2_normalize(input, dim=0, epsilon=1e-12):
