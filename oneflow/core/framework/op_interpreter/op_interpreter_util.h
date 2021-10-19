@@ -33,6 +33,8 @@ namespace one {
 
 bool* MutJitEnabled();
 
+bool IsJitEnabled();
+
 #endif  // WITH_MLIR
 
 class OpInterpUtil {

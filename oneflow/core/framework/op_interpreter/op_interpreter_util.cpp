@@ -38,6 +38,8 @@ bool* MutJitEnabled() {
   return &jit_enabled;
 }
 
+bool IsJitEnabled() { return *MutJitEnabled(); }
+
 #endif  // WITH_MLIR
 
 namespace {
@@ -49,6 +51,12 @@ std::shared_ptr<AutogradInterpreter> BuildEagerInterpreter(const bool& is_mirror
   } else {
     internal = std::make_shared<EagerConsistentInterpreter>();
   }
+  return std::make_shared<AutogradInterpreter>(internal);
+}
+
+std::shared_ptr<AutogradInterpreter> BuildJITInterpreter() {
+  std::shared_ptr<OpExprInterpreter> internal;
+  internal = std::make_shared<JitInterpreter>();
   return std::make_shared<AutogradInterpreter>(internal);
 }
 
@@ -79,6 +87,8 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExp
   static const auto& g_lazy_interpreter = BuildLazyInterpreter();
   static const auto& g_eager_consistent_interpreter = BuildEagerInterpreter(/*is_mirrored=*/false);
   static const auto& g_eager_mirrored_interpreter = BuildEagerInterpreter(/*is_mirrored=*/true);
+  static const auto& g_jit_mirrored_interpreter = BuildJITInterpreter();
+  if (one::IsJitEnabled()) { return g_jit_mirrored_interpreter; }
   if (!LazyMode::is_enabled()) {
     if (inputs.empty()) {
       if (ctx.parallel_desc.has_value()) {
@@ -152,6 +162,11 @@ template<>
                                                 TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) {
   return JUST(GetInterpreter(inputs, ctx, op_expr))->Apply(op_expr, inputs, outputs, ctx);
+}
+
+Maybe<void> ToMlir() {
+  for (auto op : cached_op_expr_) { MlirAddJitOp(op->to_proto()); }
+  MlirExecOps(inputs, outputs);
 }
 
 /* static */ Maybe<cfg::OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(

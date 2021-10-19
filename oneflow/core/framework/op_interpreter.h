@@ -160,6 +160,18 @@ class EagerMirroredInterpreter : public EagerInterpreter {
   FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);
 };
 
+class JitInterpreter : public EagerInterpreter {
+ public:
+  JitInterpreter() : EagerInterpreter() {}
+  Maybe<void> ToMlir(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
+                     const OpExprInterpContext& ctx) const;
+  virtual ~JitInterpreter() = default;
+
+ private:
+  FOR_EACH_BUILTIN_OPS(DECLARE_NORMAL_APPLY_FUNC);
+  std::vector<const OpExpr*> cached_op_expr_;
+};
+
 #undef DECLARE_OVERRIDE_APPLY_FUNC
 #undef DECLARE_PURE_VIRTUAL_APPLY_FUNC
 #undef DECLARE_NORMAL_APPLY_FUNC

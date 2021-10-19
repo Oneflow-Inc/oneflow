@@ -10,10 +10,12 @@ class MyModule(torch.nn.Module):
         # When this submodule is used, it will be compiled
         self.linear = torch.nn.Linear(N, M)
 
-    @torch.jit.script
+    @torch.jit.trace
     def forward(self, input):
         print("linear before")
         output = self.linear(input)
+        output_exp = Exp.apply(output)
+        output2 = self.linear(output_exp)
         print("linear after")
         return output
 

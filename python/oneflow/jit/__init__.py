@@ -1,7 +1,7 @@
 import oneflow
 
 
-def script(f):
+def trace(f):
     def wrapper(*args, **kwargs):
         assert oneflow._oneflow_internal.ir.toggle_jit()
         print("JIT enabled")

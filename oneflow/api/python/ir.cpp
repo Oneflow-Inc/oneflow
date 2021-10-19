@@ -27,6 +27,8 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
         [](const std::string& lib_path) { MutSharedLibPaths()->insert(lib_path); });
   m.def("toggle_jit", []() {
     *one::MutJitEnabled() = !*one::MutJitEnabled();
+    // TODO: when false => true, sync vm, empty instructions
+    // TODO: when true => false, start compile op expressions and exec
     return *one::MutJitEnabled();
   });
 }
