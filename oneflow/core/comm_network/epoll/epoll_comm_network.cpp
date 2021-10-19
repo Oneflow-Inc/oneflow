@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <cstdint>
+#include "oneflow/core/comm_network/epoll/socket_memory_desc.h"
 #ifdef __linux__
 
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
@@ -24,8 +25,6 @@ limitations under the License.
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include <netinet/tcp.h>
-
-#include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h" //some try by lambda 
 
 namespace oneflow {
 
@@ -110,23 +109,6 @@ void EpollCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) {
 }
 
 char * EpollCommNet::SerialTokenToData(void *token, size_t *token_size) {
-    /*char *data = (char*)malloc(sizeof(IBVerbsCommNetRMADesc));
-    std::memcpy(data,token,sizeof(IBVerbsCommNetRMADesc));
-    *token_size = sizeof(IBVerbsCommNetRMADesc);
-    return data;*/
-
-    /**token_size = sizeof(SocketMemDesc);
-    uint64_t addr = reinterpret_cast<uint64_t>(token);
-    char * return_addr =reinterpret_cast<char*>(&addr);
-    return return_addr;*/
-   // void * addr  = new void();
-   /*char * addr = reinterpret_cast<char*>(token);
-    char ** x = new char*;
-    *x = addr;*/
-    /*char *data = (char*)malloc(sizeof(EpollCommNetRMADesc));
-    std::memcpy(data,token,sizeof(EpollCommNetRMADesc));
-    *token_size = sizeof(EpollCommNetRMADesc);
-    return data;*/
     uint64_t **  y = new uint64_t*;
     *y = reinterpret_cast<uint64_t *>(token);
     char * addr = reinterpret_cast<char*>(y);
@@ -134,10 +116,10 @@ char * EpollCommNet::SerialTokenToData(void *token, size_t *token_size) {
 }
 
 void * EpollCommNet::DeSerialDataToToken(char *data, size_t  * token_size) {
-  void * token = malloc(sizeof(EpollCommNetRMADesc));
-  std::memcpy(token,data,sizeof(EpollCommNetRMADesc));
-  *token_size = sizeof(EpollCommNetRMADesc);
-  return token;
+    char ** addr = reinterpret_cast<char ** >(data);
+    void * token = reinterpret_cast<void *>(*addr);
+    *token_size = sizeof(SocketMemDesc);
+    return token;
 }
 
 void EpollCommNet::SendTransportMsg(int64_t dst_machine_id, const TransportMsg& transport_msg) {

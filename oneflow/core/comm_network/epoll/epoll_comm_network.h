@@ -24,12 +24,6 @@ limitations under the License.
 
 namespace oneflow {
 
- struct EpollCommNetRMADesc {
-  uint64_t mem_ptr;
-  uint64_t mem_size;
-  uint32_t mr_rkey;
-};
-
 class EpollCommNet final : public CommNetIf<SocketMemDesc> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EpollCommNet);
