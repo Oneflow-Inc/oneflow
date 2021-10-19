@@ -22,7 +22,7 @@ from oneflow.nn.module import Module
 
 
 @register_tensor_op("squeeze")
-def squeeze_op(input, dim: Optional[Sequence[int]] = None):
+def squeeze_op(input, dim: Optional[int] = None):
     """This operator removes the specified dimention which size is 1 of the input Tensor.
     If the `dim` is not specified, this operator will remove all the dimention which size is 1 of the input Tensor.
 
@@ -30,7 +30,7 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
 
     Args:
         input (oneflow.Tensor): The input Tensor.
-        dim (Optional[Sequence[int]]): The dim. Defaults to None.
+        dim (int, optinal): Defaults to None, if given, the input will be squeezed only in this dimension.
 
     Returns:
         Tensor: The result Tensor.
@@ -41,7 +41,7 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input = flow.Tensor(np.array([[[[1, 1, 1]]]]).astype(np.int32))
+        >>> input = flow.tensor(np.array([[[[1, 1, 1]]]]).astype(np.int32))
         >>> input.shape
         oneflow.Size([1, 1, 1, 3])
         >>> out = flow.squeeze(input, dim=[1, 2]).shape
@@ -49,11 +49,6 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
         oneflow.Size([1, 3])
 
     """
-    # if isinstance(dim, int):
-    #     dim = [dim]
-    # elif dim is None:
-    #     dim = range(input.ndim)
-    # dim = list(filter(lambda i: input.size(i) == 1, dim))
     return flow._C.squeeze(input, dim)
 
 
