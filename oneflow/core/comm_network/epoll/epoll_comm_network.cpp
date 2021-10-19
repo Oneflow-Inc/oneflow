@@ -13,11 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstdint>
-#include "oneflow/core/comm_network/epoll/socket_memory_desc.h"
 #ifdef __linux__
 
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
+#include "oneflow/core/comm_network/epoll/socket_memory_desc.h"
 #include "glog/logging.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
