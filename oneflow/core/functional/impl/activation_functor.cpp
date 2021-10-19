@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
 #include "oneflow/core/framework/attr_map.h"
