@@ -103,7 +103,7 @@ class RandFunctor {
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, distribution_state);
-    if (device) { ctx.device = JUST(device); }
+    ctx.device = device;
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
@@ -192,7 +192,7 @@ class RandNFunctor {
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
     OpExprInterpContext ctx(attrs, distribution_state);
-    if (device) { ctx.device = JUST(device); }
+    ctx.device = device;
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
@@ -276,7 +276,7 @@ class RandIntFunctor {
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
     OpExprInterpContext ctx(attrs, distribution_state);
-    if (device) { ctx.device = JUST(device); }
+    ctx.device = device;
 
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
@@ -384,7 +384,7 @@ class RandPermFunctor {
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
     OpExprInterpContext ctx(attrs, distribution_state);
-    if (device) { ctx.device = JUST(device); }
+    ctx.device = device;
 
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
