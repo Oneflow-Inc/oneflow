@@ -19,13 +19,10 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("scalar_pow")
+REGISTER_USER_OP("celu")
     .Input("in")
-    .Attr<bool>("has_int_operand")
-    .Attr<bool>("has_float_operand")
-    .Attr<int64_t>("int_operand")
-    .Attr<double>("float_operand")
     .Output("out")
+    .Attr<double>("alpha")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
@@ -45,16 +42,17 @@ REGISTER_USER_OP("scalar_pow")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("scalar_pow_grad")
+REGISTER_USER_OP("celu_grad")
     .Input("x")
     .Input("dy")
-    .Attr<bool>("has_int_operand")
-    .Attr<bool>("has_float_operand")
-    .Attr<int64_t>("int_operand")
-    .Attr<double>("float_operand")
     .Output("dx")
+    .Attr<double>("alpha")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputShape("dx", 0) = ctx->InputShape("x", 0);
+      const Shape& x_shape = ctx->InputShape("x", 0);
+      const Shape& dy_shape = ctx->InputShape("dy", 0);
+      Shape* dx_shape = ctx->OutputShape("dx", 0);
+      CHECK_OR_RETURN(dy_shape == x_shape);
+      *dx_shape = dy_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -62,35 +60,32 @@ REGISTER_USER_OP("scalar_pow_grad")
       FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("x", 0), i)
-            .Split(user_op::OpArg("dx", 0), i)
             .Split(user_op::OpArg("dy", 0), i)
+            .Split(user_op::OpArg("dx", 0), i)
             .Build();
       }
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0));
+      CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), ctx->InputDType("x", 0));
       *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("scalar_pow")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      const auto scalar_pow_grad_op_name = ctx->FwOp().op_name() + "_grad";
-      ctx->DefineOp(scalar_pow_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("scalar_pow_grad")
+REGISTER_USER_OP_GRAD("celu").SetBackwardOpConfGenFn(
+    [](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
+      const auto celu_grad_op_name = ctx->FwOp().op_name() + "_grad";
+      ctx->DefineOp(celu_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+        return builder.OpTypeName("celu_grad")
             .InputBind("x", ctx->FwOp().input("in", 0))
             .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-            .Attr<bool>("has_int_operand", ctx->FwOp().attr<bool>("has_int_operand"))
-            .Attr<bool>("has_float_operand", ctx->FwOp().attr<bool>("has_float_operand"))
-            .Attr<int64_t>("int_operand", ctx->FwOp().attr<int64_t>("int_operand"))
-            .Attr<double>("float_operand", ctx->FwOp().attr<double>("float_operand"))
+            .Attr("alpha", ctx->FwOp().attr<double>("alpha"))
             .Output("dx")
             .Build();
       });
       ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
-                                [&ctx, &scalar_pow_grad_op_name]() -> const std::string& {
-                                  return ctx->GetOp(scalar_pow_grad_op_name).output("dx", 0);
+                                [&ctx, &celu_grad_op_name]() -> const std::string& {
+                                  return ctx->GetOp(celu_grad_op_name).output("dx", 0);
                                 });
       return Maybe<void>::Ok();
     });
