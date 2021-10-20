@@ -813,9 +813,9 @@ class SparseSoftmaxCrossEntropyFunctor {
 
   Maybe<bool> RunWithMsVersion(const std::shared_ptr<one::Tensor>& logits,
                                const std::shared_ptr<one::Tensor>& label) const {
-    if (!(logits->is_consistent() && label->is_consistent())) return false;
+    if (!(logits->is_consistent() && label->is_consistent())) { return false; }
 
-    if (logits->shape()->NumAxes() != 2) return false;
+    if (logits->shape()->NumAxes() != 2) { return false; }
 
     const cfg::NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
     const int32_t split_axis = logits->shape()->NumAxes() - 1;
@@ -825,10 +825,10 @@ class SparseSoftmaxCrossEntropyFunctor {
       if (sbp.has_split_parallel() && sbp.split_parallel().axis() == split_axis) {
         has_split_axis_parallel = true;
       } else {
-        if (sbp.has_partial_sum_parallel()) return false;
+        if (sbp.has_partial_sum_parallel()) { return false; }
       }
     }
-    if (!has_split_axis_parallel) return false;
+    if (!has_split_axis_parallel) { return false; }
 
     return true;
   }

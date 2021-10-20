@@ -292,10 +292,11 @@ class ReduceSumFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ReduceMinDeviceStageFunctor {
+template<class T>
+class ReduceDeviceStageBaseFunctor {
  public:
-  ReduceMinDeviceStageFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("reduce_min_device_stage")
+  ReduceDeviceStageBaseFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder(T::GetOpName())
                          .Input("in")
                          .Output("out")
                          .Output("mask")
@@ -305,24 +306,20 @@ class ReduceMinDeviceStageFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
                                 const std::vector<int32_t>& axis) const {
     MutableAttrMap attrs;
-    if (axis.empty()) {
-      std::vector<int32_t> reduce_axis(in->shape()->NumAxes());
-      std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
-    } else {
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    }
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in}, attrs);
   }
+  virtual ~ReduceDeviceStageBaseFunctor() {}
 
  private:
   std::shared_ptr<OpExpr> op_;
 };
 
-class ReduceMinDeviceStageGradFunctor {
+template<class T>
+class ReduceDeviceStageGradBaseFunctor {
  public:
-  ReduceMinDeviceStageGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("reduce_min_device_stage_grad")
+  ReduceDeviceStageGradBaseFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder(T::GetOpName())
                          .Input("out_diff")
                          .Input("mask")
                          .Input("count")
@@ -337,65 +334,41 @@ class ReduceMinDeviceStageGradFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, count}, attrs);
   }
+  virtual ~ReduceDeviceStageGradBaseFunctor() {}
 
  private:
   std::shared_ptr<OpExpr> op_;
 };
 
-class ReduceMaxDeviceStageFunctor {
+class ReduceMinDeviceStageFunctor
+    : public ReduceDeviceStageBaseFunctor<ReduceMinDeviceStageFunctor> {
  public:
-  ReduceMaxDeviceStageFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("reduce_max_device_stage")
-                         .Input("in")
-                         .Output("out")
-                         .Output("mask")
-                         .Output("count")
-                         .Build());
-  }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
-                                const std::vector<int32_t>& axis) const {
-    MutableAttrMap attrs;
-    if (axis.empty()) {
-      std::vector<int32_t> reduce_axis(in->shape()->NumAxes());
-      std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
-    } else {
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    }
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
+  static std::string GetOpName() { return "reduce_min_device_stage"; }
 };
 
-class ReduceMaxDeviceStageGradFunctor {
+class ReduceMaxDeviceStageFunctor
+    : public ReduceDeviceStageBaseFunctor<ReduceMaxDeviceStageFunctor> {
  public:
-  ReduceMaxDeviceStageGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("reduce_max_device_stage_grad")
-                         .Input("out_diff")
-                         .Input("mask")
-                         .Input("count")
-                         .Output("in_diff")
-                         .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& out_diff,
-                           const std::shared_ptr<one::Tensor>& mask,
-                           const std::shared_ptr<one::Tensor>& count,
-                           const std::vector<int32_t>& axis) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, count}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
+  static std::string GetOpName() { return "reduce_max_device_stage"; }
 };
 
-class ReduceMinGlobalStageFunctor {
+class ReduceMinDeviceStageGradFunctor
+    : public ReduceDeviceStageGradBaseFunctor<ReduceMinDeviceStageGradFunctor> {
  public:
-  ReduceMinGlobalStageFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("reduce_min_global_stage")
+  static std::string GetOpName() { return "reduce_min_device_stage_grad"; }
+};
+
+class ReduceMaxDeviceStageGradFunctor
+    : public ReduceDeviceStageGradBaseFunctor<ReduceMaxDeviceStageGradFunctor> {
+ public:
+  static std::string GetOpName() { return "reduce_max_device_stage_grad"; }
+};
+
+template<class T>
+class ReduceGlobalStageBaseFunctor {
+ public:
+  ReduceGlobalStageBaseFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder(T::GetOpName())
                          .Input("in")
                          .Input("device_count")
                          .Output("out")
@@ -406,25 +379,21 @@ class ReduceMinGlobalStageFunctor {
                                 const std::shared_ptr<one::Tensor>& device_count,
                                 const std::vector<int32_t>& axis, const bool& keepdims) const {
     MutableAttrMap attrs;
-    if (axis.empty()) {
-      std::vector<int32_t> reduce_axis(in->shape()->NumAxes());
-      std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
-    } else {
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    }
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in, device_count}, attrs);
   }
+  virtual ~ReduceGlobalStageBaseFunctor() {}
 
  private:
   std::shared_ptr<OpExpr> op_;
 };
 
-class ReduceMinGlobalStageGradFunctor {
+template<class T>
+class ReduceGlobalStageGradBaseFunctor {
  public:
-  ReduceMinGlobalStageGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("reduce_min_global_stage_grad")
+  ReduceGlobalStageGradBaseFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder(T::GetOpName())
                          .Input("out_diff")
                          .Input("mask")
                          .Input("device_count")
@@ -440,62 +409,34 @@ class ReduceMinGlobalStageGradFunctor {
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, device_count}, attrs);
   }
+  virtual ~ReduceGlobalStageGradBaseFunctor() {}
 
  private:
   std::shared_ptr<OpExpr> op_;
 };
 
-class ReduceMaxGlobalStageFunctor {
+class ReduceMinGlobalStageFunctor
+    : public ReduceGlobalStageBaseFunctor<ReduceMinGlobalStageFunctor> {
  public:
-  ReduceMaxGlobalStageFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("reduce_max_global_stage")
-                         .Input("in")
-                         .Input("device_count")
-                         .Output("out")
-                         .Output("mask")
-                         .Build());
-  }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
-                                const std::shared_ptr<one::Tensor>& device_count,
-                                const std::vector<int32_t>& axis, const bool& keepdims) const {
-    MutableAttrMap attrs;
-    if (axis.empty()) {
-      std::vector<int32_t> reduce_axis(in->shape()->NumAxes());
-      std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
-    } else {
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    }
-    JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in, device_count}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
+  static std::string GetOpName() { return "reduce_min_global_stage"; }
 };
 
-class ReduceMaxGlobalStageGradFunctor {
+class ReduceMinGlobalStageGradFunctor
+    : public ReduceGlobalStageGradBaseFunctor<ReduceMinGlobalStageGradFunctor> {
  public:
-  ReduceMaxGlobalStageGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("reduce_max_global_stage_grad")
-                         .Input("out_diff")
-                         .Input("mask")
-                         .Input("device_count")
-                         .Output("in_diff")
-                         .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& out_diff,
-                           const std::shared_ptr<one::Tensor>& mask,
-                           const std::shared_ptr<one::Tensor>& device_count,
-                           const std::vector<int32_t>& axis, const bool& keepdims) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, device_count}, attrs);
-  }
+  static std::string GetOpName() { return "reduce_min_global_stage_grad"; }
+};
 
- private:
-  std::shared_ptr<OpExpr> op_;
+class ReduceMaxGlobalStageFunctor
+    : public ReduceGlobalStageBaseFunctor<ReduceMaxGlobalStageFunctor> {
+ public:
+  static std::string GetOpName() { return "reduce_max_global_stage"; }
+};
+
+class ReduceMaxGlobalStageGradFunctor
+    : public ReduceGlobalStageGradBaseFunctor<ReduceMaxGlobalStageGradFunctor> {
+ public:
+  static std::string GetOpName() { return "reduce_max_global_stage_grad"; }
 };
 
 class ReduceMeanFunctor {
