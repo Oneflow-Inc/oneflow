@@ -58,11 +58,11 @@ union CublasScalarParameter {
   float s;
 };
 
-CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cublasComputeType_t compute_type) {
+CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cudaDataType_t compute_type) {
   CublasScalarParameter sp{};
-  if (compute_type == CUBLAS_COMPUTE_64F) {
+  if (compute_type == CUDA_R_64F) {
     sp.d = scalar.Value<double>();
-  } else if (compute_type == CUBLAS_COMPUTE_32F) {
+  } else if (compute_type == CUDA_R_32F) {
     sp.s = scalar.Value<float>();
   } else {
     UNIMPLEMENTED();
@@ -70,15 +70,15 @@ CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cublasComputeType_
   return sp;
 }
 
-cublasComputeType_t GetComputeType(DataType data_type) {
+cudaDataType_t GetComputeType(DataType data_type) {
   switch (data_type) {
-    case kFloat: return CUBLAS_COMPUTE_32F;
-    case kDouble: return CUBLAS_COMPUTE_64F;
-    case kFloat16: return CUBLAS_COMPUTE_32F;
+    case kFloat: return CUDA_R_32F;
+    case kDouble: return CUDA_R_64F;
+    case kFloat16: return CUDA_R_32F;
 #if CUDA_VERSION >= 11000
-    case kBFloat16: return CUBLAS_COMPUTE_32F;
+    case kBFloat16: return CUDA_R_32F;
 #endif  // CUDA_VERSION >= 11000
-    default: UNIMPLEMENTED(); return CUBLAS_COMPUTE_32F;
+    default: UNIMPLEMENTED(); return CUDA_R_32F;
   }
 }
 
@@ -90,8 +90,8 @@ void LaunchBroadcastMatmul(StreamContext* stream_ctx, DataType data_type,
                            Scalar alpha, const void* a, const void* b, Scalar beta, void* c) {
   auto* cuda_stream_ctx = CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx));
   const auto cuda_data_type = GetCudaDataType(data_type);
-  const auto cublas_compute_type = GetComputeType(data_type);
-  const auto sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_type);
+  const auto compute_type = GetComputeType(data_type);
+  const auto sp_alpha = GetCublasScalarParameter(alpha, compute_type);
   const auto GetCublasOperation = [](BlasTransposeType transpose_type) {
     if (transpose_type == BlasTransposeType::N) {
       return CUBLAS_OP_N;
@@ -150,22 +150,22 @@ void LaunchBroadcastMatmul(StreamContext* stream_ctx, DataType data_type,
     const long long int cublas_stride_a = b_batch_count == 1 ? 0 : cublas_m * cublas_k;
     const long long int cublas_stride_b = a_batch_count == 1 ? 0 : cublas_k * cublas_n;
     const long long int cublas_stride_c = cublas_m * cublas_n;
-    const auto sp_beta = GetCublasScalarParameter(beta, cublas_compute_type);
+    const auto sp_beta = GetCublasScalarParameter(beta, compute_type);
     OF_CUBLAS_CHECK(cublasGemmStridedBatchedEx(
         cuda_stream_ctx->cublas_handle(), cublas_trans_a, cublas_trans_b, cublas_m, cublas_n,
         cublas_k, &sp_alpha, cublas_a, cuda_data_type, cublas_lda, cublas_stride_a, cublas_b,
         cuda_data_type, cublas_ldb, cublas_stride_b, &sp_beta, cublas_c, cuda_data_type, cublas_ldc,
-        cublas_stride_c, batch_count, cublas_compute_type, algo));
+        cublas_stride_c, batch_count, compute_type, algo));
   } else {
     auto func = [&](const void* batch_a, const void* batch_b, void* batch_c, Scalar batch_beta) {
-      const auto sp_beta = GetCublasScalarParameter(batch_beta, cublas_compute_type);
+      const auto sp_beta = GetCublasScalarParameter(batch_beta, compute_type);
       const void* cublas_a = batch_b;
       const void* cublas_b = batch_a;
       void* cublas_c = batch_c;
       OF_CUBLAS_CHECK(cublasGemmEx(
           cuda_stream_ctx->cublas_handle(), cublas_trans_a, cublas_trans_b, cublas_m, cublas_n,
           cublas_k, &sp_alpha, cublas_a, cuda_data_type, cublas_lda, cublas_b, cuda_data_type,
-          cublas_ldb, &sp_beta, cublas_c, cuda_data_type, cublas_ldc, cublas_compute_type, algo));
+          cublas_ldb, &sp_beta, cublas_c, cuda_data_type, cublas_ldc, compute_type, algo));
     };
     ForEachMatmul<kMaxNumDims>(data_type, m, n, k, beta, num_batch_dims, broadcast_batch_dims,
                                a_batch_dims, b_batch_dims, c_batch_dims, a, b, c, func);
