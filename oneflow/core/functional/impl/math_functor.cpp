@@ -323,9 +323,7 @@ class ReduceDeviceStageGradBaseFunctor {
                            .Input("mask")
                            .Input("count")
                            .Output("in_diff")
-                           .Build())) {
-    ;
-  }
+                           .Build())) {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& out_diff,
                            const std::shared_ptr<one::Tensor>& mask,
                            const std::shared_ptr<one::Tensor>& count,
@@ -373,9 +371,7 @@ class ReduceGlobalStageBaseFunctor {
                            .Input("device_count")
                            .Output("out")
                            .Output("mask")
-                           .Build())) {
-    ;
-  }
+                           .Build())) {}
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
                                 const std::shared_ptr<one::Tensor>& device_count,
                                 const std::vector<int32_t>& axis, const bool& keepdims) const {
