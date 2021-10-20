@@ -18,12 +18,11 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-
-from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
-
 import oneflow as flow
 import oneflow.unittest
+from oneflow.test_utils.automated_test_util import *
+
+from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -42,7 +41,18 @@ class TestSin(flow.unittest.TestCase):
     def test_flow_sin_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
-        y = torch.sin(x)
+        y = x.sin()
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestInplaceSin(flow.unittest.TestCase):
+    @autotest()
+    def test_flow_inplace_sin_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x + 1  # transform to non-leaf tensor
+        y.sin_()
         return y
 
 
@@ -87,61 +97,6 @@ class TestLogModule(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         return torch.log(x)
-
-
-def _test_std(test_case, shape, device):
-    np_arr = np.random.randn(*shape)
-    input = flow.tensor(np_arr, dtype=flow.float32, device=flow.device(device))
-    of_out = flow.std(input, dim=2)
-    np_out = np.std(np_arr, axis=2)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
-
-
-def _test_std_dim1(test_case, shape, device):
-    np_arr = np.random.randn(*shape)
-    input = flow.tensor(np_arr, dtype=flow.float32, device=flow.device(device))
-    of_out = flow.std(input, dim=1)
-    np_out = np.std(np_arr, axis=1)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
-
-
-def _test_std_negative_dim(test_case, shape, device):
-    np_arr = np.random.randn(4, 2, 3, 5)
-    input = flow.tensor(np_arr, dtype=flow.float32, device=flow.device(device))
-    of_out = input.std(dim=(-2, -1, -3), keepdim=False)
-    np_out = np.std(np_arr, axis=(-2, -1, -3))
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
-
-
-@flow.unittest.skip_unless_1n1d()
-class TestStd(flow.unittest.TestCase):
-    def test_std(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_std, _test_std_dim1, _test_std_negative_dim]
-        arg_dict["shape"] = [(2, 3, 4), (2, 3, 4, 5)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
-
-    @unittest.skip("std has bug")
-    @autotest()
-    def test_std_flow_with_random_data(test_case):
-        device = random_device()
-        all_dim = random().to(int)
-        dim = random(low=0, high=all_dim).to(int)
-        x = random_pytorch_tensor(ndim=all_dim).to(device)
-        z = torch.std(x, dim=dim)
-        return z
-
-    @unittest.skip("std has bug")
-    @autotest()
-    def test_std_tensor_with_random_data(test_case):
-        device = random_device()
-        all_dim = random().to(int)
-        dim = random(low=0, high=all_dim).to(int)
-        x = random_pytorch_tensor(ndim=all_dim).to(device)
-        z = x.std(dim=dim)
-        return z
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -353,10 +308,6 @@ class TestPow(flow.unittest.TestCase):
         return torch.pow(x, y)
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 @flow.unittest.skip_unless_1n1d()
 class TestArccosh(flow.unittest.TestCase):
     @autotest()
@@ -367,10 +318,6 @@ class TestArccosh(flow.unittest.TestCase):
         return y
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 @flow.unittest.skip_unless_1n1d()
 class TestAcosh(flow.unittest.TestCase):
     @autotest()
@@ -381,10 +328,6 @@ class TestAcosh(flow.unittest.TestCase):
         return y
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 @flow.unittest.skip_unless_1n1d()
 class TestAtan2(flow.unittest.TestCase):
     @autotest()
@@ -396,10 +339,6 @@ class TestAtan2(flow.unittest.TestCase):
         return y
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 @flow.unittest.skip_unless_1n1d()
 class TestMinimum(flow.unittest.TestCase):
     @autotest()
@@ -420,10 +359,6 @@ class TestMinimum(flow.unittest.TestCase):
         return torch.minimum(x, y)
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestMaximum(flow.unittest.TestCase):
     @autotest()
     def test_flow_elementwise_mximum_with_random_data(test_case):
@@ -441,6 +376,24 @@ class TestMaximum(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=3, dim0=k1, dim1=1, dim2=1)
         y = random_pytorch_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3)
         return torch.maximum(x, y)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestFloordiv(flow.unittest.TestCase):
+    @autotest(auto_backward=False)
+    def test_elementwise_floordiv_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        y = random_pytorch_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+
+        return torch.floor_divide(x, y)
+
+    @autotest(auto_backward=False)
+    def test_tensor_floordiv_scalar_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        y = random().to(int)
+        return torch.floor_divide(x, y)
 
 
 if __name__ == "__main__":

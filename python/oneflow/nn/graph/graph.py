@@ -27,8 +27,8 @@ from oneflow.env import get_rank
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
-from oneflow.nn.graph.block import Block, BlockType
-from oneflow.nn.graph.config import GraphConfig
+from oneflow.nn.graph.block import Block, BlockType, get_block_cls
+from oneflow.nn.graph.graph_config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import add_indent, seq_to_func_return, sys_exc_error_msg
 from oneflow.nn.module import Module
@@ -107,6 +107,8 @@ class Graph(object):
         self._args_repr = []
         self._outs_repr = []
         self._debug = False
+        self._debug_min_s_level = 2
+        self._debug_max_v_level = 0
         self._outputs_buffer_size = 2
         self._cur_index_of_ouputs_buffer = 0
 
@@ -266,13 +268,20 @@ class Graph(object):
         return self.config.training
 
     def debug(
-        self, mode: bool = True, ranks: Optional[Union[int, List[int]]] = None
+        self,
+        v_level: int = 0,
+        ranks: Optional[Union[int, List[int]]] = None,
+        mode: bool = True,
     ) -> None:
         r"""Open or close debug mode of the graph.
 
-        If in debug mode, logs of computation graph building will be
-        printed. The log includes inputs/outputs/parameters/buffers/modules meta information.
+        If in debug mode, logs of computation graph building infos or warnings will be
+        printed. Otherwise, only errors will be printed.
 
+        Use ``v_level`` to choose verbose debug info level, default level is 0, max level is 1.
+        ``v_level`` 0 will print warning and graph creating stages. ``v_level`` 1 will additionally
+        print graph build info of each module.
+        
         Use ``ranks`` to choose which rank to print the debug information.
 
         .. code-block:: python
@@ -282,10 +291,12 @@ class Graph(object):
             out_tensors = g(input_tensors)  # Will print log for debug at the first call
 
         Args:
-            mode (bool): whether to set debug mode ("True") or not (``False``). Default: ``True``.
+            v_level (int): choose verbose debug info level, default v_level is 0, max v_level is 1.
             ranks (int or list(int)): choose ranks to print the debug information. Default rank ``0``.
                 You can choose any valid rank. Ranks equals ``-1`` means debug on all ranks.
+            mode (bool): whether to set debug mode (``True``) or not (``False``). Default: ``True``.
         """
+        assert isinstance(v_level, int)
         assert isinstance(mode, bool)
 
         if ranks is None:
@@ -300,9 +311,12 @@ class Graph(object):
         my_rank = get_rank()
         if -1 in rank_list or my_rank in rank_list:
             self._debug = mode
+            if self._debug:
+                self._debug_min_s_level = 0
+                self._debug_max_v_level = v_level
             for name, block in self._blocks.items():
                 assert block.type == BlockType.MODULE
-                block.debug(mode, ranks)
+                block.debug(v_level, ranks, mode)
 
     def __repr__(self):
         r"""For printing the graph structure.
@@ -349,10 +363,15 @@ class Graph(object):
         shallow_repr = "(GRAPH:" + self._name + ":" + self.__class__.__name__ + ")"
         return shallow_repr
 
-    def _rank0_print(self, msg: str = ""):
-        if get_rank() != 0:
-            return
-        print(msg)
+    def _print(self, s_level=2, v_level=0, msg: str = ""):
+        r"""Do print according to info level.
+        """
+        assert isinstance(s_level, int)
+        assert isinstance(v_level, int)
+        assert isinstance(msg, str)
+        if s_level >= self._debug_min_s_level:
+            if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
+                print(msg)
 
     @property
     def _config_proto(self):
@@ -367,18 +386,22 @@ class Graph(object):
     @property
     def _graph_proto(self):
         if not self._is_compiled:
-            self._rank0_print(
+            self._print(
+                2,
+                0,
                 f"[ERROR]{self._shallow_repr()} has not been compiled, so it's graph proto is None."
-                " You can call the graph to trigger it's compilation."
+                " You can call the graph to trigger it's compilation.",
             )
         return self._forward_job_proto
 
     @property
     def _full_graph_proto(self):
         if not self._is_compiled:
-            self._rank0_print(
+            self._print(
+                2,
+                0,
                 f"[ERROR]{self._shallow_repr()} has not been compiled, so it's full graph proto is None."
-                " You can call the graph to trigger it's compilation."
+                " You can call the graph to trigger it's compilation.",
             )
         return self._full_job_proto
 
@@ -420,41 +443,44 @@ class Graph(object):
     def _compile(self, *args):
         # Build graph
         try:
-            if self._debug:
-                print(self._shallow_repr() + " start building graph.")
+            self._print(0, 0, self._shallow_repr() + " start building graph.")
             assert not self._is_compiled, (
                 "nn.Graph " + self._name + " has already been compiled."
             )
 
             eager_outputs = self._build_graph(*args)
 
-            if self._debug:
-                print(self._shallow_repr() + " end building graph.")
+            self._print(0, 0, self._shallow_repr() + " end building graph.")
         except:
-            print(
+            self._print(
+                2,
+                0,
                 "[ERROR]"
                 + self._shallow_repr()
                 + " build graph got error: "
-                + sys_exc_error_msg()
+                + sys_exc_error_msg(),
             )
             raise
 
         # Complie graph to execution plan and init Runtime
         try:
-            if self._debug:
-                print(
-                    self._shallow_repr()
-                    + " start compiling plan and init graph runtime."
-                )
+            self._print(
+                0,
+                0,
+                self._shallow_repr() + " start compiling plan and init graph runtime.",
+            )
 
             self._c_nn_graph.complie_and_init_runtime()
 
-            if self._debug:
-                print(
-                    self._shallow_repr() + " end compiling plan and init graph rumtime."
-                )
+            self._print(
+                0,
+                0,
+                self._shallow_repr() + " end compiling plan and init graph rumtime.",
+            )
         except:
-            print(
+            self._print(
+                2,
+                0,
                 "[ERROR]"
                 + self._shallow_repr()
                 + " compiling plan or initialing graph runtime got error : ",
@@ -551,11 +577,19 @@ class Graph(object):
 
             return eager_out
 
+        def convert_to_synced_tensor_tuple(*args):
+            tensor_tuple = convert_to_tensor_tuple(*args)
+            # tensors acting as buffer should be synced once upon created.
+            oneflow._oneflow_internal.nn.graph.SoftSyncNNGraphBuffers(
+                tensor_tuple, self._c_nn_graph
+            )
+            return tensor_tuple
+
         self._eager_outputs = self._mapping_io(
             "output", build_real_output, *self._eager_outputs
         )
 
-        self._outputs_tensor_tuple = convert_to_tensor_tuple(
+        self._outputs_tensor_tuple = convert_to_synced_tensor_tuple(
             self._flatten_io("output", *self._eager_outputs)
         )
         self._eager_outputs_buffer = [
@@ -566,18 +600,13 @@ class Graph(object):
         ]
 
         # Make outputs buffer
-        if self._outputs_buffer_size >= 2:
-            for i in range(self._outputs_buffer_size - 1):
-                outputs_buffer_item = self._empty_like_io(
-                    "output", *self._eager_outputs
-                )
-                self._eager_outputs_buffer.append(outputs_buffer_item)
-                outputs_tensor_tuple_buffer_item = convert_to_tensor_tuple(
-                    self._flatten_io("output", *outputs_buffer_item)
-                )
-                self._outputs_tensor_tuple_buffer.append(
-                    outputs_tensor_tuple_buffer_item
-                )
+        for i in range(self._outputs_buffer_size - 1):
+            outputs_buffer_item = self._empty_like_io("output", *self._eager_outputs)
+            self._eager_outputs_buffer.append(outputs_buffer_item)
+            outputs_tensor_tuple_buffer_item = convert_to_synced_tensor_tuple(
+                self._flatten_io("output", *outputs_buffer_item)
+            )
+            self._outputs_tensor_tuple_buffer.append(outputs_tensor_tuple_buffer_item)
         self._check_outputs_buffer()
 
     def _check_outputs_buffer(self):
@@ -622,11 +651,13 @@ class Graph(object):
             if self._cur_index_of_ouputs_buffer >= self._outputs_buffer_size:
                 self._cur_index_of_ouputs_buffer = 0
         except:
-            print(
+            self._print(
+                2,
+                0,
                 "[ERROR]"
                 + self._shallow_repr()
                 + " run got error : "
-                + sys_exc_error_msg()
+                + sys_exc_error_msg(),
             )
             raise
 
@@ -660,8 +691,7 @@ class Graph(object):
                 build_arg = None
 
             args_repr.append(repr_str)
-            if self._debug:
-                print(repr_str)
+            self._print(0, 1, repr_str)
             return build_arg
 
         for idx, arg in enumerate(args):
@@ -778,7 +808,7 @@ class Graph(object):
             repr_str = (
                 "[ERROR](" + io_type.upper() + ":" + name + ":" + str(type(item)) + ")"
             )
-            print(repr_str)
+            self._print(2, 0, repr_str)
             raise NotImplementedError(
                 "nn.Graph.build()'s input/output only support types: Tensor/list(Tensor)/None."
             )
@@ -825,7 +855,7 @@ class Graph(object):
             repr_str = (
                 "[ERROR](" + io_type.upper() + ":" + name + ":" + str(type(item)) + ")"
             )
-            print(repr_str)
+            self._print(2, 0, repr_str)
             raise NotImplementedError(
                 "nn.Graph.build()'s input/output only support types: Tensor/list(Tensor)/None."
             )
@@ -838,7 +868,10 @@ class Graph(object):
             state_tensor = state_block.origin
             state_op_names.append(op_name)
             state_tensors.append(state_tensor)
-            if state_block.type == BlockType.PARAMETER:
+            if (
+                state_block.type == BlockType.PARAMETER
+                and state_block.origin in self._variables_conf
+            ):
                 state_config = self._variables_conf[state_block.origin]
             else:
                 state_config = None
@@ -900,7 +933,8 @@ class Graph(object):
             raise KeyError('module name can\'t contain ".", got: {}'.format(name))
         elif name == "":
             raise KeyError('module name can\'t be empty string ""')
-        self._blocks[name] = Block("", name, module)
+
+        self._blocks[name] = get_block_cls(module)("", name, module)
 
     def __setattr__(self, name: str, value=None):
         if isinstance(value, Module):

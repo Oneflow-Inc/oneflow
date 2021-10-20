@@ -35,7 +35,6 @@ class IDMgr final {
   int64_t NewChunkId() { return chunk_id_count_++; }
 
   // Runtime
-  DeviceType GetDeviceTypeFromActorId(int64_t actor_id) const;
   int64_t MachineId4ActorId(int64_t actor_id) const;
   int64_t ThrdId4ActorId(int64_t actor_id) const;
 

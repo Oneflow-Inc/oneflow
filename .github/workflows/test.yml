@@ -17,6 +17,7 @@ jobs:
   cancel_previous:
     name: Cancel previous runs
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
       - name: Cancel previous runs of outdated commit
         uses: styfle/cancel-workflow-action@0.9.0
@@ -86,11 +87,19 @@ jobs:
         id: git_push
         if: ${{ failure() }}
         run: |
+          git diff -p > license_and_format.patch
+          cat license_and_format.patch
           git config --global user.email "ci-bot@oneflow.org"
           git config --global user.name "oneflow-ci-bot"
           git add -u
           git commit -m "auto format by CI"
           git push
+      - name: Upload patch
+        if: ${{ failure() && steps.git_push.outcome == 'failure' }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: license_and_format-${{ github.sha }}.patch
+          path: license_and_format.patch
       - name: Please request CI again
         if: ${{ failure() }}
         run: |
@@ -126,6 +135,7 @@ jobs:
   changed_files:
     name: "Changed files"
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     outputs:
       should_run_single_client_tests: ${{ steps.changes.outputs.should_run_single_client_tests }}
     steps:
@@ -148,23 +158,24 @@ jobs:
 
   find-build-cache:
     name: "Find build cache"
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     runs-on: ubuntu-latest
     env:
       ONEFLOW_SRC: .
     outputs:
       matrix: ${{ steps.find-cache.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v2
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
         with:
-          repository: Oneflow-Inc/oneflow
-          ref: ${{ github.event.pull_request.head.sha }}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@2a9efceab8d45b725a687e73f870f9b75a15e472
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@add-experimental
         name: find cache
         id: find-cache
         timeout-minutes: 5
         with:
+          delete-cache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           runner-labels: |
             self-hosted
             linux
@@ -177,6 +188,7 @@ jobs:
 
   build-manylinux:
     name: "Build manylinux"
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     runs-on: ${{ matrix.runs-on }}
     needs: [find-build-cache, changed_files]
     strategy:
@@ -194,7 +206,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           set -x
-          docker run --rm -v $PWD:/p -w /p busybox chown -R $(id -u):$(id -g) .
+          docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
       - name: Remove leftover cuda-installer.log
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
@@ -202,8 +214,9 @@ jobs:
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@2a9efceab8d45b725a687e73f870f9b75a15e472
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-experimental
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -217,13 +230,13 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
-      - uses: Oneflow-Inc/get-oneflow@2a9efceab8d45b725a687e73f870f9b75a15e472
+      - uses: Oneflow-Inc/get-oneflow@add-experimental
         name: Build manylinux cpu only
         id: build-cpu
         if: ${{ matrix.entry =='cpu' && !matrix.cache-hit }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/cpu.cmake
-          build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc7.sh
+          build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build.sh
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           oneflow-build-env: manylinux
           wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
@@ -234,10 +247,11 @@ jobs:
           docker-run-use-system-http-proxy: false
           docker-run-use-lld: true
           retry-failed-build: true
+          clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@2a9efceab8d45b725a687e73f870f9b75a15e472
+      - uses: Oneflow-Inc/get-oneflow@add-experimental
         name: Build manylinux cu102
         id: build-cuda
         if: ${{ matrix.entry =='cu102' && !matrix.cache-hit }}
@@ -254,10 +268,11 @@ jobs:
           docker-run-use-system-http-proxy: false
           docker-run-use-lld: false
           retry-failed-build: true
+          clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@2a9efceab8d45b725a687e73f870f9b75a15e472
+      - uses: Oneflow-Inc/get-oneflow@add-experimental
         name: Build manylinux cu101_xla
         id: build-xla
         if: ${{ matrix.entry =='cu101_xla' && !matrix.cache-hit && needs.changed_files.outputs.should_run_single_client_tests == '1' }}
@@ -274,11 +289,12 @@ jobs:
           docker-run-use-system-http-proxy: true
           docker-run-use-lld: true
           retry-failed-build: true
+          clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.6
       - name: Upload bin
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
-        uses: Oneflow-Inc/get-oneflow/degist/upload@2a9efceab8d45b725a687e73f870f9b75a15e472
+        uses: Oneflow-Inc/get-oneflow/digest/upload@add-experimental
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -289,7 +305,7 @@ jobs:
           dst-dir: bin
       - name: Upload whl
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
-        uses: Oneflow-Inc/get-oneflow/degist/upload@2a9efceab8d45b725a687e73f870f9b75a15e472
+        uses: Oneflow-Inc/get-oneflow/digest/upload@add-experimental
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -299,8 +315,51 @@ jobs:
           src-dir: ${{ env.WHEELHOUSE_DIR }}
           dst-dir: whl
 
+  build-with-clang:
+    name: Build with clang
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    runs-on: [self-hosted, linux, build]
+    steps:
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-experimental
+        name: Save cache if successful
+        id: save-cache
+        timeout-minutes: 5
+        with:
+          oneflow-src: .
+          entry: build-with-clang
+          digest-type: build
+          mark-as-completed: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+      - name: Fix permissions
+        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
+        run: |
+          set -x
+          docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
+      - name: Checkout Oneflow-Inc/oneflow
+        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
+        uses: actions/checkout@v2
+      - name: Checkout Oneflow-Inc/conda-env
+        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/conda-env
+          ref: 30a7f00eb48ee9009d85a848e720823e5054c66b
+          path: conda-env
+      - uses: Oneflow-Inc/get-oneflow@add-experimental
+        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
+        name: Build with clang10
+        with:
+          cmake-init-cache: cmake/caches/ci/gh-hosted/cpu-clang.cmake
+          oneflow-src: .
+          oneflow-build-env: conda
+          conda-env-file: conda-env/dev/clang10/environment-v2.yml
+          conda-env-name: oneflow-dev-clang10-v2
+          conda-installer-url: https://oneflow-static.oss-cn-beijing.aliyuncs.com/downloads/conda-installers/Miniconda3-py39_4.10.3-Linux-x86_64.sh
+          conda-prefix: ~/miniconda3-prefixes/py39_4.10.3
+          self-hosted: true
+
   find-test-cache:
     name: "Find test cache"
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     runs-on: ubuntu-latest
     needs: [build-manylinux]
     env:
@@ -310,7 +369,10 @@ jobs:
     steps:
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@2a9efceab8d45b725a687e73f870f9b75a15e472
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@add-experimental
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -341,17 +403,18 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           set -x
-          docker run --rm -v $PWD:/p -w /p busybox chown -R $(id -u):$(id -g) .
+          docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
       - name: Remove container
         timeout-minutes: 45
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@2a9efceab8d45b725a687e73f870f9b75a15e472
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-experimental
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -367,7 +430,7 @@ jobs:
           exit 1
       - name: Download wheel and binary
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (!fromJson(matrix.is-xla) || (fromJson(matrix.is-xla) && needs.changed_files.outputs.should_run_single_client_tests == '1')) }}
-        uses: Oneflow-Inc/get-oneflow/degist/download@2a9efceab8d45b725a687e73f870f9b75a15e472
+        uses: Oneflow-Inc/get-oneflow/digest/download@add-experimental
         id: download-digest
         timeout-minutes: 10
         with:
@@ -396,6 +459,19 @@ jobs:
           echo "ONEFLOW_TEST_CACHE_DIR=$HOME/ci-cache/test_cache" >> $GITHUB_ENV
 
           echo "ONEFLOW_WHEEL_PATH=${{ steps.download-digest.outputs.entry-dir }}/whl" >> $GITHUB_ENV
+      - name: Set environment variables (environmental flags)
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && fromJson(matrix.is-experimental) }}
+        run: |
+          EXTRA_DOCKER_ARGS+=" --env ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH=1"
+          EXTRA_DOCKER_ARGS+=" --env ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE=1"
+          EXTRA_DOCKER_ARGS+=" --env ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER=1"
+          echo "EXTRA_DOCKER_ARGS=${EXTRA_DOCKER_ARGS}" >> $GITHUB_ENV
+      - name: Set environment variables (distributed)
+        if: ${{ fromJson(matrix.is-distributed) }}
+        run: |
+          set -x
+          EXTRA_DOCKER_ARGS+=" --network host "
+          echo "EXTRA_DOCKER_ARGS=${EXTRA_DOCKER_ARGS}" >> $GITHUB_ENV
       - name: Start container
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         working-directory: ${{ env.ONEFLOW_SRC }}
@@ -403,7 +479,7 @@ jobs:
           ONEFLOW_BIN_PATH: ${{ steps.download-digest.outputs.entry-dir }}/bin
         run: |
           docker pull ${{ env.TEST_IMG_TAG }}
-          docker run -d --rm --privileged --network host --shm-size=8g \
+          docker run -d --rm --privileged --shm-size=8g \
             --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
             --runtime=nvidia \
             -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro \
@@ -628,7 +704,7 @@ jobs:
         if: ${{ always() && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-          docker run --rm -v $PWD:/p -w /p busybox chown -R $(id -u):$(id -g) . || true
+          docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
 
   static_analysis_with_clang_on_diff:
     name: Static analysis with clang on diff
@@ -641,7 +717,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@2a9efceab8d45b725a687e73f870f9b75a15e472
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-experimental
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -701,7 +777,7 @@ jobs:
             -DBUILD_TESTING=ON \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           cd ..
-          git diff -U0 ${{ github.event.pull_request.base.sha }} | ./clang-tidy-diff.py -clang-tidy-binary ./clang-tidy-489012f-x86_64.AppImage -path build -allow-enabling-alpha-checkers -j $(nproc) -p1 -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" -warnings-as-errors="*,-maybe-glog-fatal,-clang-analyzer-alpha.*"
+          git diff -U0 ${{ github.event.pull_request.base.sha }} | ./clang-tidy-diff.py -clang-tidy-binary ./clang-tidy-489012f-x86_64.AppImage -path build -allow-enabling-alpha-checkers -j $(nproc) -p1 -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" -warnings-as-errors="$(cat ./ci/check/clang_tidy_warnings_as_errors_on_diff)"
       - name: Remove automerge
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) && failure() && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge') }}
         uses: actions/github-script@v4

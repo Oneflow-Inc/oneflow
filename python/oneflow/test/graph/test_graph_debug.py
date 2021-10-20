@@ -35,7 +35,7 @@ def _graph_debug(test_case, ranks=None):
             return x
 
     d_g = DebugGraph()
-    d_g.debug(True, ranks)
+    d_g.debug(0, ranks)
 
     if ranks is None:
         rank_list = [0]
@@ -57,16 +57,16 @@ def _graph_debug(test_case, ranks=None):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n4d()
 class TestGraphDebug(oneflow.unittest.TestCase):
-    def _test_graph_debug_rank_null(test_case):
+    def test_graph_debug_rank_null(test_case):
         _graph_debug(test_case)
 
-    def _test_graph_debug_rank_0(test_case):
+    def test_graph_debug_rank_0(test_case):
         _graph_debug(test_case, 0)
 
-    def _test_graph_debug_rank_1(test_case):
+    def test_graph_debug_rank_1(test_case):
         _graph_debug(test_case, 1)
 
-    def _test_graph_debug_rank_1_and_2(test_case):
+    def test_graph_debug_rank_1_and_2(test_case):
         _graph_debug(test_case, [1, 2])
 
     def test_graph_debug_rank_all(test_case):
