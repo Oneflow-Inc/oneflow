@@ -18,7 +18,6 @@ from typing import Sequence
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _single
 
 
 def _input_args_is_int(args):
@@ -87,10 +86,12 @@ def reshape_tensor_op(input, *shape):
         oneflow.Size([2, 2, 2, 2])
 
     """
-    if _input_args_is_int(shape):
-        new_shape = _single(shape)
+    if len(shape) == 1:
+        new_shape = shape[0]
+        if isinstance(new_shape, int):
+            new_shape = (new_shape,)
     else:
-        raise ValueError("the input shape parameter of reshape is not illegal!")
+        new_shape = shape
     return flow._C.reshape(input, new_shape)
 
 
@@ -143,12 +144,12 @@ def view_op(input, *shape):
         (2, 2, 2, 2)
 
     """
-    if _input_args_is_int(shape):
-        new_shape = _single(shape)
-    elif _input_args_is_flow_size(shape):
-        new_shape = _single(*shape)
+    if len(shape) == 1:
+        new_shape = shape[0]
+        if isinstance(new_shape, int):
+            new_shape = tuple(new_shape)
     else:
-        raise ValueError("the input shape parameter of view is not illegal!")
+        new_shape = shape
     return flow._C.reshape(input, new_shape)
 
 
