@@ -13,11 +13,17 @@ class SimpleRuntime {
   OF_DISALLOW_COPY_AND_MOVE(SimpleRuntime);
   SimpleRuntime() = default;
   ~SimpleRuntime() = default;
-  void CacheOpExpr(const UserOpExpr& user_op_expr);
+  virtual void CacheOpExpr(const UserOpExpr& user_op_expr) = 0;
   // TODO: should this function be wrapped in uniq ptr?
-  std::function<void(const TensorTuple& inputs, TensorTuple* outputs)> ComplieCachedOpExpr(
-      const UserOpExpr& user_op_expr);
+  virtual std::function<void(const TensorTuple& inputs, TensorTuple* outputs)> ComplieCachedOpExpr(
+      const UserOpExpr& user_op_expr) = 0;
 };
+
+using InitRuntime = std::function<std::unique_ptr<SimpleRuntime>()>;
+using RuntimeCreatorRegistry = HashMap<std::string, InitRuntime>;
+RuntimeCreatorRegistry* GetRuntimeCreatorRegistry();
+std::shared_ptr<SimpleRuntime> StartRuntime(const std::string& name);
+void RegisterRuntimeCreator(const std::string& name, const InitRuntime& creator);
 
 }  // namespace ir
 

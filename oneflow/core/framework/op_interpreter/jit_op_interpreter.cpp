@@ -17,10 +17,33 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/framework/op_interpreter/jit.h"
 
 namespace oneflow {
 
 namespace one {
+
+namespace ir {
+
+RuntimeCreatorRegistry* GetRuntimeRegistry() {
+  static RuntimeCreatorRegistry registry;
+  return &registry;
+}
+
+std::shared_ptr<SimpleRuntime> StartRuntime(const std::string& name) {
+  static std::shared_ptr<SimpleRuntime> runtime;
+  std::unique_ptr<SimpleRuntime> created = GetRuntimeRegistry()->at(name)();
+  runtime = std::move(created);
+  return runtime;
+}
+
+void RegisterRuntimeCreator(const std::string& name, const InitRuntime& creator) {
+  if (GetRuntimeRegistry()->find(name) == GetRuntimeRegistry()->end()) {
+    CHECK(GetRuntimeRegistry()->emplace(name, creator).second);
+  }
+}
+
+}  // namespace ir
 
 Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
                                       TensorTuple* outputs, const OpExprInterpContext& ctx) const {
