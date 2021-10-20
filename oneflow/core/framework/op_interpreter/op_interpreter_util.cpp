@@ -56,7 +56,7 @@ std::shared_ptr<AutogradInterpreter> BuildEagerInterpreter(const bool& is_mirror
 }
 
 std::shared_ptr<AutogradInterpreter> BuildJITInterpreter() {
-  auto internal = std::make_shared<JitInterpreter>();
+  std::shared_ptr <OpExprInterpreter> internal = std::make_shared<JitInterpreter>();
   return std::make_shared<AutogradInterpreter>(internal);
 }
 
@@ -164,11 +164,6 @@ template<>
   return JUST(GetInterpreter(inputs, ctx, op_expr))->Apply(op_expr, inputs, outputs, ctx);
 }
 
-Maybe<void> ToMlir() {
-  // for (auto op : cached_op_expr_) { MlirAddJitOp(op->to_proto()); }
-  // MlirExecOps(inputs, outputs);
-  return Maybe<void>::Ok();
-}
 
 /* static */ Maybe<cfg::OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(
     const OperatorConf& op_conf, const bool is_mirrored_strategy_enabled) {
