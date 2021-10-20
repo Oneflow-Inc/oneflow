@@ -1259,15 +1259,15 @@ class DiagonalFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& offset,
                            const int32_t& dim1, const int32_t& dim2) const {
     int64_t ndims = x->shape()->NumAxes();
-    CHECK_GE_OR_RETURN(ndims, 2);
-    CHECK_GE_OR_RETURN(dim1, -ndims);
-    CHECK_LT_OR_RETURN(dim1, ndims);
-    CHECK_GE_OR_RETURN(dim2, -ndims);
-    CHECK_LT_OR_RETURN(dim2, ndims);
+    // CHECK_GE_OR_RETURN(ndims, 2);
+    CHECK_GE_OR_RETURN(dim1, -ndims) << ", Dimension out of range (expected to be in range of [" << -ndims << ", "<< ndims-1 << "], but got " << dim1 << ");";
+    CHECK_LT_OR_RETURN(dim1, ndims) << ", Dimension out of range (expected to be in range of [" << -ndims << ", " << ndims-1 << "], but got " << dim1 << ");";
+    CHECK_GE_OR_RETURN(dim2, -ndims) << ", Dimension out of range (expected to be in range of [" << -ndims << ", " << ndims-1 << "], but got " << dim2 << ");";
+    CHECK_LT_OR_RETURN(dim2, ndims) << ", Dimension out of range (expected to be in range of [" << -ndims << ", " << ndims-1 << "], but got " << dim2 << ");";
 
     int32_t p_dim1 = dim1 >= 0 ? dim1 : dim1 + ndims;
     int32_t p_dim2 = dim2 >= 0 ? dim2 : dim2 + ndims;
-    CHECK_NE_OR_RETURN(p_dim1, p_dim2);
+    CHECK_NE_OR_RETURN(p_dim1, p_dim2) << ", diagonal dimensions cannot be identical " << dim1 << ", " << dim2;
 
     std::vector<int32_t> input_index{p_dim1, p_dim2};
     for (int32_t i = 0; i < ndims; i++) {
