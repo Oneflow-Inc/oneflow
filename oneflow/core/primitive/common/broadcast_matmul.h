@@ -78,12 +78,12 @@ inline void Simplify(size_t num_a_dims, const int64_t* a_dims, size_t num_b_dims
     const int64_t c_dim = GetCBatchDim(i);
     const int64_t broadcast_dim = std::max(std::max(a_dim, b_dim), c_dim);
     CHECK_GT(broadcast_dim, 0);
-    const bool broadcast_a = (a_dim == broadcast_dim);
-    const bool broadcast_b = (b_dim == broadcast_dim);
-    const bool broadcast_c = (c_dim == broadcast_dim);
-    CHECK(a_dim == 1 || broadcast_a);
-    CHECK(b_dim == 1 || broadcast_b);
-    CHECK(c_dim == 1 || broadcast_c);
+    const bool broadcast_a = (a_dim == 1);
+    const bool broadcast_b = (b_dim == 1);
+    const bool broadcast_c = (c_dim == 1);
+    CHECK((a_dim == broadcast_dim) || broadcast_a);
+    CHECK((b_dim == broadcast_dim) || broadcast_b);
+    CHECK((c_dim == broadcast_dim) || broadcast_c);
     if (broadcast_dim == 1) {
       continue;
     } else if (*num_batch_dims != 0
