@@ -98,11 +98,13 @@ void EpollCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) {
   char* data = reinterpret_cast<char*>(addr);
   std::cout<<std::endl;
   std::cout<<"********"<<std::endl;
-  std::cout<<"EpollCommNet::SendMsg,the addr:0x"<<std::hex <<addr <<  std::endl;
+  std::cout<<"EpollCommNet::SendMsg,1 the addr:0x"<<std::hex <<addr <<  std::endl;
   SocketMsg msg;
   msg.actor_msg.size = 0;
   msg.msg_type = SocketMsgType::kActor;
   std::memcpy(msg.actor_msg.data, data, size);
+  addr = reinterpret_cast<uint64_t>(msg.actor_msg.data);
+  std::cout<<"EpollCommNet::SendMsg,2 the  addr of msg.actor_msg.data:0x"<<std::hex <<addr <<  std::endl;
   msg.actor_msg.size = size;
   std::cout << "EpollCommNet::SendMsg,the msg.msg_type:" << msg.msg_type << std::endl;
   std::cout << "EpollCommNet::SendMsg, size:" << size << std::endl;
