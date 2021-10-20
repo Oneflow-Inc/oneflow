@@ -149,8 +149,10 @@ class DataLoader(Generic[T_co]):
             :attr:`batch_size`, :attr:`shuffle`, :attr:`sampler`,
             and :attr:`drop_last`.
         num_workers (int, optional): how many subprocesses to use for data
-            loading. ``0`` means that the data will be loaded in the main process.
-            (default: ``0``)
+            loading (default: ``0``). ``0`` means that the data will be loaded in the main process.
+            if set num_workers > 1, than you may need to set up how multiprocesses start,
+            currently, we only supports start-up in the spawn way(not fork), 
+            you can set it like the code-block bellow.
         collate_fn (callable, optional): merges a list of samples to form a
             mini-batch of Tensor(s).  Used when using batched loading from a
             map-style dataset.
@@ -170,6 +172,15 @@ class DataLoader(Generic[T_co]):
             the worker processes after a dataset has been consumed once. This allows to
             maintain the workers `Dataset` instances alive. (default: ``False``)
 
+    Set multiproccing start method 'spawn':
+
+    .. code-block:: python
+
+        if __name__ == "__main__":
+            import multiprocessing as mp
+            mp.set_start_method("spawn")
+            ...
+            ...
 
     .. warning:: If the ``spawn`` start method is used, :attr:`worker_init_fn`
                  cannot be an unpicklable object, e.g., a lambda function.
@@ -223,13 +234,17 @@ class DataLoader(Generic[T_co]):
                 "num_workers option should be non-negative; "
                 "use num_workers=0 to disable multiprocessing."
             )
-        elif num_workers > 1:
-            print("multiprocessing dataloader is still experimental!")
+        elif num_workers == 0 or num_workers == 1:
+            self.num_workers = 0
+        else:
+            self.num_workers = num_workers
+            warnings.warn("Using multiprocessing dataloader, currently, we only supports start-up in the spawn way(not fork)")
+
 
         if timeout < 0:
             raise ValueError("timeout option should be non-negative")
 
-        if num_workers == 0 and prefetch_factor != 2:
+        if self.num_workers == 0 and prefetch_factor != 2:
             raise ValueError(
                 "prefetch_factor option could only be specified in multiprocessing."
                 "let num_workers > 0 to enable multiprocessing."
@@ -240,7 +255,6 @@ class DataLoader(Generic[T_co]):
             raise ValueError("persistent_workers option needs num_workers > 0")
 
         self.dataset = dataset
-        self.num_workers = num_workers
         self.prefetch_factor = prefetch_factor
         self.timeout = timeout
         self.worker_init_fn = worker_init_fn
