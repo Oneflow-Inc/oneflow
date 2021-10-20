@@ -96,6 +96,9 @@ EpollCommNet::~EpollCommNet() {
 
 void EpollCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) {
   char* data = reinterpret_cast<char*>(addr);
+  std::cout<<std::endl;
+  std::cout<<"********"<<std::endl;
+  std::cout<<"EpollCommNet::SendMsg,the addr:0x"<<std::hex << std::endl;
   SocketMsg msg;
   msg.actor_msg.size = 0;
   msg.msg_type = SocketMsgType::kActor;
@@ -111,7 +114,7 @@ void EpollCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) {
 char* EpollCommNet::SerialTokenToData(void* token, size_t* token_size) {
   uint64_t token_addr = reinterpret_cast<uint64_t>(token);
   std::cout<<"*******************"<<std::endl;
-  std::cout<<"EpollCommNet::SerialTokenToData,the token_addr:"<<token_addr << std::endl;
+  std::cout<<"EpollCommNet::SerialTokenToData,the token_addr:0x"<< std::hex <<token_addr << std::endl;
   std::cout<<std::endl;
   uint64_t** y = new uint64_t*;
   *y = reinterpret_cast<uint64_t*>(token);
@@ -127,7 +130,7 @@ void* EpollCommNet::DeSerialDataToToken(char* data, size_t* token_size) {
   *token_size = sizeof(char *);
   uint64_t token_addr = reinterpret_cast<uint64_t>(token);
   std::cout<<"*******************"<<std::endl;
-  std::cout<<"EpollCommNet::DeSerialDataToToken,the token_addr:"<<token_addr << std::endl;
+  std::cout<<"EpollCommNet::DeSerialDataToToken,the token_addr:0x"<<std::hex <<token_addr << std::endl;
   std::cout<<std::endl;
   return token;
 }
