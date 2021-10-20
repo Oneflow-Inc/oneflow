@@ -14,8 +14,6 @@ class MyModule(torch.nn.Module):
     def forward(self, input):
         print("linear before")
         output = self.linear(input)
-        output_exp = Exp.apply(output)
-        output2 = self.linear(output_exp)
         print("linear after")
         return output
 
