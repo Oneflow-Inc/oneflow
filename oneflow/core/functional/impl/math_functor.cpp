@@ -372,10 +372,10 @@ class EyeFunctor {
                            const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("n", JUST(n.As<int64_t>())));
-    JUST(attrs.SetAttr<int64_t>("m", m ? JUST(JUST(m)->As<int64_t>()) : JUST(n.As<int64_t>())));
+    JUST(attrs.SetAttr<int64_t>("m", JUST(m.value_or(n).As<int64_t>())));
     JUST(attrs.SetAttr<DataType>("dtype", dtype ? JUST(dtype)->data_type() : DataType::kFloat));
     OpExprInterpContext ctx(attrs);
-    if (device) { ctx.device = JUST(device); }
+    ctx.device = device;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }
 
@@ -392,7 +392,7 @@ class ConsistentEyeFunctor {
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("n", JUST(n.As<int64_t>())));
-    JUST(attrs.SetAttr<int64_t>("m", m ? JUST(JUST(m)->As<int64_t>()) : JUST(n.As<int64_t>())));
+    JUST(attrs.SetAttr<int64_t>("m", JUST(m.value_or(n).As<int64_t>())));
     JUST(attrs.SetAttr<DataType>("dtype", dtype ? JUST(dtype)->data_type() : DataType::kFloat));
     if (LazyMode::is_enabled()) {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
@@ -461,7 +461,7 @@ class ArangeFunctor {
       JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
     }
     OpExprInterpContext ctx(attrs);
-    if (device) { ctx.device = JUST(device); }
+    ctx.device = device;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }
 
@@ -895,31 +895,55 @@ class StandardDeviationFunctor {
       for (int i = 0; i < axis.size(); ++i) { reduce_count *= input->shape()->At(axis[i]); }
     }
 
-    const auto& sum = JUST(functional::ScalarDiv(
-        JUST(functional::ReduceSum(JUST(functional::Square(input)), axis, keepdims)),
-        Scalar(reduce_count)));
-    const auto& square = JUST(functional::Square(JUST(functional::ScalarDiv(
-        JUST(functional::ReduceSum(input, axis, keepdims)), Scalar(reduce_count)))));
-    const auto& sub = JUST(functional::Sub(sum, square));
-    if (unbias) {
-      return functional::Sqrt(JUST(functional::ScalarMul(
-          sub, Scalar((double)reduce_count / (double)(reduce_count - 1)), false)));
+    bool is_double = input->dtype()->data_type() == DataType::kDouble;
+    if (is_double) {
+      const auto& sum = JUST(functional::ScalarDiv(
+          JUST(functional::ReduceSum(JUST(functional::Square(input)), axis, keepdims)),
+          Scalar((double)reduce_count)));
+      const auto& square = JUST(functional::Square(JUST(functional::ScalarDiv(
+          JUST(functional::ReduceSum(input, axis, keepdims)), Scalar((double)reduce_count)))));
+      const auto& sub = JUST(functional::Sub(sum, square));
+      if (unbias) {
+        return functional::Sqrt(JUST(functional::ScalarMul(
+            sub, Scalar((double)reduce_count / (double)(reduce_count - 1)), false)));
+      }
+      /*
+      According to the std calculation formula,
+      StandardDeviation = \sqrt {\frac {\sum _ {i=1}^ {N}X_ {i}^ {2}}{N}  -  \mu ^ {2}}
+        = \sqrt{\frac {1}{N}\sum _ {i=1}^ {n} (x_ {i}-\mu )^ {2}  -\frac {1}{N}  N \mu ^ {2}}
+        = \sqrt{\frac {\sum _ {i=1}^ {N}X_ {i}^ {2}}{N}  -  \mu ^ {2}}
+
+      when we are in the last sqrt,
+      if the value in the radical is <= 0, it may cause the result gradient to appear
+      undefined(nan), which is normal. In this case, the gradient of ours and pytorch are different.
+      Use abs(absolute value) can keep it consistent with pytorch:
+
+      const auto& abs = JUST(functional::Abs(sub));
+      return functional::Sqrt(abs);
+      */
+      // const auto& abs = JUST(functional::Abs(sub));
+      // return functional::Sqrt(abs);
+      return functional::Sqrt(sub);
+    } else {
+      //  If input tensor's dtype is float32, than cast it to double dtype,
+      //  because float dtype has accuracy problem in float dtype, see:
+      //  https://github.com/Oneflow-Inc/oneflow/issues/6526
+      const auto& double_input = JUST(functional::Cast(input, DType::Double()));
+      const auto& sum = JUST(functional::ScalarDiv(
+          JUST(functional::ReduceSum(JUST(functional::Square(double_input)), axis, keepdims)),
+          Scalar((double)reduce_count)));
+      const auto& square = JUST(functional::Square(
+          JUST(functional::ScalarDiv(JUST(functional::ReduceSum(double_input, axis, keepdims)),
+                                     Scalar((double)reduce_count)))));
+      const auto& sub = JUST(functional::Sub(sum, square));
+      if (unbias) {
+        return functional::Cast(
+            JUST(functional::Sqrt(JUST(functional::ScalarMul(
+                sub, Scalar((double)reduce_count / (double)(reduce_count - 1)), false)))),
+            input->dtype());
+      }
+      return functional::Cast(JUST(functional::Sqrt(sub)), input->dtype());
     }
-    /*
-    According to the std calculation formula,
-    StandardDeviation = \sqrt {\frac {\sum _ {i=1}^ {N}X_ {i}^ {2}}{N}  -  \mu ^ {2}}
-      = \sqrt{\frac {1}{N}\sum _ {i=1}^ {n} (x_ {i}-\mu )^ {2}  -\frac {1}{N}  N \mu ^ {2}}
-      = \sqrt{\frac {\sum _ {i=1}^ {N}X_ {i}^ {2}}{N}  -  \mu ^ {2}}
-
-    when we are in the last sqrt,
-    if the value in the radical is <= 0, it may cause the result gradient to appear undefined(nan),
-    which is normal. In this case, the gradient of ours and pytorch are different.
-    Use abs(absolute value) can keep it consistent with pytorch:
-
-    const auto& abs = JUST(functional::Abs(sub));
-    return functional::Sqrt(abs);
-    */
-    return functional::Sqrt(sub);
   }
 };
 

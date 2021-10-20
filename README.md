@@ -202,9 +202,9 @@ docker pull oneflowinc/oneflow:nightly-cuda11.1
 
   - Simple validation
 
-        ```
-        python3 -m oneflow --doctor
-        ```
+    ```
+    python3 -m oneflow --doctor
+    ```
 
     </details>
 
