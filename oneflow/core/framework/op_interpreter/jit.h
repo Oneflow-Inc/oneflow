@@ -10,11 +10,8 @@ namespace ir {
 
 class SimpleRuntime {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(SimpleRuntime);
   SimpleRuntime() = default;
-  SimpleRuntime(SimpleRuntime&&) = delete;
-  SimpleRuntime(const SimpleRuntime&) = delete;
-  SimpleRuntime& operator=(SimpleRuntime&&) = delete;
-  SimpleRuntime& operator=(const SimpleRuntime&) = delete;
   ~SimpleRuntime() = default;
   void CacheOpExpr(const UserOpExpr& user_op_expr);
   std::function<void(const TensorTuple& inputs, TensorTuple* outputs)> ComplieCachedOpExpr(
