@@ -18,7 +18,7 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.diag,
-    """
+    r"""
     If input is a vector (1-D tensor), then returns a 2-D square tensor with the elements of input as the diagonal.
     If input is a matrix (2-D tensor), then returns a 1-D tensor with diagonal elements of input.
 
@@ -52,7 +52,7 @@ add_docstr(
 
 add_docstr(
     oneflow.tril,
-    """Returns the lower triangular part of a matrix (2-D tensor) or batch of matrices input along the specified diagonal, 
+    r"""Returns the lower triangular part of a matrix (2-D tensor) or batch of matrices input along the specified diagonal, 
     the other elements of the result tensor out are set to 0.
     
     .. note::
@@ -82,7 +82,7 @@ add_docstr(
 
 add_docstr(
     oneflow.triu,
-    """Returns the upper triangular part of a matrix (2-D tensor) or batch of matrices input, 
+    r"""Returns the upper triangular part of a matrix (2-D tensor) or batch of matrices input, 
     the other elements of the result tensor out are set to 0.
     
     Args:
@@ -107,7 +107,7 @@ add_docstr(
 
 add_docstr(
     oneflow.argmax,
-    """The op computes the index with the largest value of a Tensor at specified axis.
+    r"""The op computes the index with the largest value of a Tensor at specified axis.
 
     Args:
         input (oneflow.Tensor): Input Tensor
@@ -137,7 +137,7 @@ add_docstr(
 
 add_docstr(
     oneflow.argmin,
-    """The op computes the index with the largest value of a Tensor at specified axis.
+    r"""The op computes the index with the largest value of a Tensor at specified axis.
 
     Args:
         input (oneflow.Tensor): Input Tensor
@@ -167,7 +167,7 @@ add_docstr(
 
 add_docstr(
     oneflow.batch_gather,
-    """Gather the element in batch dims. 
+    r"""Gather the element in batch dims. 
     
     Args:
         in (Tensor): the input tensor. 
@@ -213,7 +213,7 @@ add_docstr(
 
 add_docstr(
     oneflow._C.transpose,
-    """Returns a tensor that is a transposed version of input. The given dimensions dim0 and dim1 are swapped.
+    r"""Returns a tensor that is a transposed version of input. The given dimensions dim0 and dim1 are swapped.
 
     The resulting out tensor shares its underlying storage with the input tensor, so changing the content of one would change the content of the other.
 
@@ -237,3 +237,35 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow._C.stack,
+    r"""Concatenates a sequence of tensors along a new dimension.
+    The returned tensor shares the same underlying data with input tensors.
+
+    A :attr:`dim` value within the range `[-input.ndimension() - 1, input.ndimension() + 1]`
+    can be used. Negative :attr:`dim` will correspond to :meth:`stack`
+    applied at :attr:`dim` = ``dim + input.ndimension() + 1``.
+
+    Args:
+        inputs (List[oneflow.Tensor]): the list of input tensors. Each tensor should have the same shape.
+        dim (int): the index at which to insert the concatenated dimension.
+
+    Returns:
+        A `Tensor`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> x1 = flow.tensor(np.random.rand(1, 3, 5))
+        >>> x2 = flow.tensor(np.random.rand(1, 3, 5))
+        >>> y = flow.stack([x1, x2], dim = -1)
+        >>> y.shape
+        oneflow.Size([1, 3, 5, 2])
+    """,
+)
+

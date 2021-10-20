@@ -422,9 +422,9 @@ class StackFunctor {
       CHECK_EQ_OR_RETURN(inputs.at(i)->shape()->NumAxes(), ndims)
           << "The input dimensions are not equal.";
     }
+    CHECK_OR_RETURN(dim >= -(ndims+1) && dim <= ndims)
+        << "( Dimension out of range, expected to be in range of [" << -(ndims+1) << ", " << ndims << "], but got " << dim << " )";
     if (dim < 0) { stack_dim = stack_dim + ndims + 1; }
-    CHECK_OR_RETURN(stack_dim >= 0 && stack_dim <= ndims)
-        << "The stack dim has to be between 0 and the input dimensions of " << ndims;
     TensorTuple expand_inputs(inputs.size());
     for (int i = 0; i < inputs.size(); ++i) {
       expand_inputs[i] = JUST(ExpandDims(inputs.at(i), stack_dim));
