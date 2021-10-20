@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace vm {
@@ -523,11 +524,13 @@ void VirtualMachine::DispatchAndPrescheduleInstructions(
     ready_instruction_list->MoveToDstBack(instruction, stream->mut_running_instruction_list());
     if (stream->is_active_stream_hook_empty()) { active_stream_list->PushBack(stream); }
     const auto& stream_type = stream->stream_type();
+    OF_PROFILER_RANGE_PUSH(instruction->instr_msg().instr_type_name());
     if (stream_type.SharingVirtualMachineThread()) {
       stream_type.Run(this, instruction);
     } else {
       stream->mut_thread_ctx()->mut_pending_instruction_list()->PushBack(instruction);
     }
+    OF_PROFILER_RANGE_POP();
     TryMoveWaitingToReady(instruction, &prescheduled,
                           [stream](Instruction* dst) { return &dst->stream() == stream; });
   }

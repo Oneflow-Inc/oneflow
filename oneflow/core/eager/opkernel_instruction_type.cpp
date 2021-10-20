@@ -40,6 +40,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_node_signature_desc.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace vm {
@@ -456,6 +457,7 @@ struct LocalCallOpKernelUtil final {
 
   static inline Maybe<void> Compute(vm::Instruction* instruction) {
     auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
+    OF_PROFILER_RANGE_PUSH(std::string("LocalCallOpKernel:") + operand->opkernel().op_type_name());
     DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
@@ -464,6 +466,7 @@ struct LocalCallOpKernelUtil final {
     JUST(OpKernelCompute(operand, device_ctx, state));
     JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
     operand->set_user_opkernel(nullptr);
+    OF_PROFILER_RANGE_POP();
     return Maybe<void>::Ok();
   }
 

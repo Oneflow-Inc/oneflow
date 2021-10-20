@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/thread/thread_consistent_id.h"
 #include "oneflow/core/framework/transport_token.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
@@ -132,8 +133,11 @@ OneflowVM::~OneflowVM() {
 }
 
 Maybe<void> OneflowVM::Receive(vm::InstructionMsgList* instr_list) {
+  OF_PROFILER_RANGE_PUSH(std::string() + "OneflowVM::Receive flying_cnt:less_than_"
+                         + std::to_string((*vm_->mut_flying_instruction_cnt() / 100 + 1) * 100));
   JUST(vm_->Receive(instr_list));
   notifier_.Notify();
+  OF_PROFILER_RANGE_POP();
   return Maybe<void>::Ok();
 }
 

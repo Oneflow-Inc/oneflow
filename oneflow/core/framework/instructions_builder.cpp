@@ -43,6 +43,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instruction_replay.h"
 #include "oneflow/core/job/env_desc.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
@@ -1045,9 +1046,8 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(LocalDepObject* compute_local_de
                                                 const std::string& modifier,
                                                 Symbol<Device> op_device) {
   if (!JUST(op_device->need_soft_sync_stream())) { return Maybe<void>::Ok(); }
-
+  OF_PROFILER_RANGE_PUSH("SoftStream");
   const auto& parallel_desc = JUST(Placement4Device(op_device)).shared_from_symbol();
-
   {
     intrusive::shared_ptr<vm::InstructionMsg> instruction =
         intrusive::make_shared<vm::InstructionMsg>(parallel_desc->device_tag() + ".RecordEvent");
@@ -1066,6 +1066,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(LocalDepObject* compute_local_de
     *instruction->mut_parallel_desc() = parallel_desc;
     instruction_list_->EmplaceBack(std::move(instruction));
   }
+  OF_PROFILER_RANGE_POP();
   return Maybe<void>::Ok();
 }
 
