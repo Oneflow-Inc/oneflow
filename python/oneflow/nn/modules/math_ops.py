@@ -26,50 +26,6 @@ from oneflow.ops.transpose_util import (
 )
 
 
-@register_tensor_op("var")
-def variance_op(input, dim=None, unbiased=True, keepdim=False):
-    """Returns the variance of each row of the `input` tensor in the given dimension `dim`.
-
-    If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension(s) `dim` 
-    where it is of size 1. Otherwise, dim is squeezed (see `flow.squeeze()`), resulting in the output 
-    tensor having 1 (or `len(dim)`) fewer dimension(s).
-
-    Args:
-        input (Tensor): the input tensor.
-        dim (int or tuple of python:ints): the dimension or dimensions to reduce. Defaults to None.
-        unbiased (bool, optional): whether to use Bessel’s correction (:math:`\delta N = 1`). Defaults to True.
-        keepdim (bool, optional): whether the output tensor has dim retained or not. Defaults to False.
-
-    Returns:
-        Tensor: The result of variance on the specified axis of input Tensor
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        
-        >>> np_arr = np.random.randn(2,3,4,5)
-        >>> input = flow.Tensor(np_arr)
-        >>> output = flow.var(input, 1, True)
-
-    """
-    input_shape = input.shape
-    axis = _check_axis(dim, input_shape)
-    input_shape_dim = 1
-    for x in axis:
-        input_shape_dim *= input_shape[x]
-    if unbiased:
-        input_shape_dim -= 1
-    res = flow.sum(
-        flow.square(input - flow.mean(input, dim=axis, keepdim=True)),
-        dim=axis,
-        keepdim=keepdim,
-    )
-    return res / input_shape_dim
-
-
 @register_tensor_op("sub")
 def _sub(input, other):
     """Computes the subtraction of input by other for each element, scalar and broadcast promotation are supported.
@@ -343,11 +299,6 @@ def arcsinh_op_tensor(input):
     return flow._C.asinh(input)
 
 
-def sin_op(input):
-
-    return flow._C.sin(input, False)
-
-
 @register_tensor_op("sin")
 def sin_op_tensor(input):
     """
@@ -357,7 +308,7 @@ def sin_op_tensor(input):
     See :func:`oneflow.sin`
     
     """
-    return flow._C.sin(input, False)
+    return flow._C.sin(input)
 
 
 @register_tensor_op("sin_")
@@ -366,7 +317,7 @@ def inplace_sin_op_tensor(input):
     In-place version of :func:`oneflow.sin`
     
     """
-    return flow._C.sin(input, True)
+    return flow._C.sin_(input)
 
 
 @register_tensor_op("cos")
@@ -592,60 +543,6 @@ def square_op(input):
             array([1., 4., 9.], dtype=float32)
         """
     return flow._C.square(input)
-
-
-@register_tensor_op("std")
-def std_op(input, dim, unbiased=False, keepdim=False):
-    """
-    Returns the standard-deviation of each row of the :attr:`input` tensor in the
-    dimension :attr:`dim`. If :attr:`dim` is a list of dimensions,
-    reduce over all of them.
-
-    If keepdim is True, the output tensor is of the same size as input except in 
-    the dimension(s) dim where it is of size 1. Otherwise, dim is squeezed, 
-    resulting in the output tensor having 1 (or len(dim)) fewer dimension(s).
-
-    If :attr:`unbiased` is ``False``, then the standard-deviation will be calculated
-    via the biased estimator. Otherwise, Bessel's correction will be used.
-
-    Args:
-        input (Tensor): the input tensor.
-        dim (int or tuple of python:ints): the dimension or dimensions to reduce.
-        unbiased (bool): whether to use the unbiased estimation or not
-        keepdim (bool): whether the output tensor has `dim` retained or not.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        
-        >>> arr = np.array([1.0, 2.0, 3.0])
-        >>> input = flow.Tensor(arr)
-        >>> output = flow.std(input, dim=0).numpy()
-        >>> output
-        array(0.8164968, dtype=float32)
-
-    """
-
-    assert unbiased == False, "Only support 'unbiased=False' for now!"
-    reduce_count = 1
-
-    axis = _check_axis(dim, input.shape)
-    if isinstance(axis, list) and len(axis) == 0:
-        return flow.zeros(input.shape)
-    else:
-        if len(axis) == 0:
-            reduce_count = input.nelement()
-        else:
-            for i in axis:
-                reduce_count *= input.shape[i]
-        sum = flow.sum(flow._C.square(input), axis, keepdim) / reduce_count
-        square = flow._C.square(flow.sum(input, axis, keepdim) / reduce_count)
-        subtract = flow._C.sub(sum, square)
-        res = flow._C.sqrt(subtract)
-        return res
 
 
 def addmm(x, mat1, mat2, alpha=1, beta=1):

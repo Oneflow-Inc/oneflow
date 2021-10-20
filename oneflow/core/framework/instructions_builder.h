@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
 #include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
 #include "oneflow/core/vm/instruction.cfg.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/id_generator.h"
 #include "oneflow/core/vm/string_symbol.h"
 #include "oneflow/core/job/job_desc.h"
@@ -466,7 +466,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
  private:
   template<typename PhyInstrOperandT>
-  Maybe<ObjectMsgPtr<LocalDepObject>> MakeCriticalSectionBegin(
+  Maybe<intrusive::shared_ptr<LocalDepObject>> MakeCriticalSectionBegin(
       const one::EagerBlobObjectListPtr& eager_blob_objects);
 
   template<typename PhyInstrOperandT>
