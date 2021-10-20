@@ -23,7 +23,7 @@ from oneflow.nn.module import Module
 
 @register_tensor_op("squeeze")
 def squeeze_op(input, dim: Optional[int] = None):
-    """This operator removes the specified dimention which size is 1 of the input Tensor.
+    r"""This operator removes the specified dimention which size is 1 of the input Tensor.
     If the `dim` is not specified, this operator will remove all the dimention which size is 1 of the input Tensor.
 
     The amount of element in return value is the same as Tensor `input`.

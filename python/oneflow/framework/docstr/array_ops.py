@@ -269,3 +269,33 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow._C.squeeze,
+    r"""This operator removes the specified dimention which size is 1 of the input Tensor.
+    If the `dim` is not specified, this operator will remove all the dimention which size is 1 of the input Tensor.
+
+    The amount of element in return value is the same as Tensor `input`.
+
+    Args:
+        input (oneflow.Tensor): The input Tensor.
+        dim (int, optinal): Defaults to None, if given, the input will be squeezed only in this dimension.
+
+    Returns:
+        Tensor: The result Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> input = flow.tensor(np.array([[[[1, 1, 1]]]]).astype(np.int32))
+        >>> input.shape
+        oneflow.Size([1, 1, 1, 3])
+        >>> out = flow.squeeze(input, dim=[1, 2]).shape
+        >>> out
+        oneflow.Size([1, 3])
+
+    """,
+)
+
