@@ -295,21 +295,20 @@ class ReduceSumFunctor {
 template<class T>
 class ReduceDeviceStageBaseFunctor {
  public:
-  ReduceDeviceStageBaseFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder(T::GetOpName())
-                         .Input("in")
-                         .Output("out")
-                         .Output("mask")
-                         .Output("count")
-                         .Build());
-  }
+  ReduceDeviceStageBaseFunctor()
+      : op_(CHECK_JUST(one::OpBuilder(T::GetOpName())
+                           .Input("in")
+                           .Output("out")
+                           .Output("mask")
+                           .Output("count")
+                           .Build())) {}
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
                                 const std::vector<int32_t>& axis) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in}, attrs);
   }
-  virtual ~ReduceDeviceStageBaseFunctor() {}
+  virtual ~ReduceDeviceStageBaseFunctor() = default;
 
  private:
   std::shared_ptr<OpExpr> op_;
@@ -318,13 +317,14 @@ class ReduceDeviceStageBaseFunctor {
 template<class T>
 class ReduceDeviceStageGradBaseFunctor {
  public:
-  ReduceDeviceStageGradBaseFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder(T::GetOpName())
-                         .Input("out_diff")
-                         .Input("mask")
-                         .Input("count")
-                         .Output("in_diff")
-                         .Build());
+  ReduceDeviceStageGradBaseFunctor()
+      : op_(CHECK_JUST(one::OpBuilder(T::GetOpName())
+                           .Input("out_diff")
+                           .Input("mask")
+                           .Input("count")
+                           .Output("in_diff")
+                           .Build())) {
+    ;
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& out_diff,
                            const std::shared_ptr<one::Tensor>& mask,
@@ -334,7 +334,7 @@ class ReduceDeviceStageGradBaseFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, count}, attrs);
   }
-  virtual ~ReduceDeviceStageGradBaseFunctor() {}
+  virtual ~ReduceDeviceStageGradBaseFunctor() = default;
 
  private:
   std::shared_ptr<OpExpr> op_;
@@ -367,13 +367,14 @@ class ReduceMaxDeviceStageGradFunctor
 template<class T>
 class ReduceGlobalStageBaseFunctor {
  public:
-  ReduceGlobalStageBaseFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder(T::GetOpName())
-                         .Input("in")
-                         .Input("device_count")
-                         .Output("out")
-                         .Output("mask")
-                         .Build());
+  ReduceGlobalStageBaseFunctor()
+      : op_(CHECK_JUST(one::OpBuilder(T::GetOpName())
+                           .Input("in")
+                           .Input("device_count")
+                           .Output("out")
+                           .Output("mask")
+                           .Build())) {
+    ;
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
                                 const std::shared_ptr<one::Tensor>& device_count,
@@ -383,7 +384,7 @@ class ReduceGlobalStageBaseFunctor {
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in, device_count}, attrs);
   }
-  virtual ~ReduceGlobalStageBaseFunctor() {}
+  virtual ~ReduceGlobalStageBaseFunctor() = default;
 
  private:
   std::shared_ptr<OpExpr> op_;
@@ -392,14 +393,13 @@ class ReduceGlobalStageBaseFunctor {
 template<class T>
 class ReduceGlobalStageGradBaseFunctor {
  public:
-  ReduceGlobalStageGradBaseFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder(T::GetOpName())
-                         .Input("out_diff")
-                         .Input("mask")
-                         .Input("device_count")
-                         .Output("in_diff")
-                         .Build());
-  }
+  ReduceGlobalStageGradBaseFunctor()
+      : op_(CHECK_JUST(one::OpBuilder(T::GetOpName())
+                           .Input("out_diff")
+                           .Input("mask")
+                           .Input("device_count")
+                           .Output("in_diff")
+                           .Build())) {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& out_diff,
                            const std::shared_ptr<one::Tensor>& mask,
                            const std::shared_ptr<one::Tensor>& device_count,
@@ -409,7 +409,7 @@ class ReduceGlobalStageGradBaseFunctor {
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, device_count}, attrs);
   }
-  virtual ~ReduceGlobalStageGradBaseFunctor() {}
+  virtual ~ReduceGlobalStageGradBaseFunctor() = default;
 
  private:
   std::shared_ptr<OpExpr> op_;
