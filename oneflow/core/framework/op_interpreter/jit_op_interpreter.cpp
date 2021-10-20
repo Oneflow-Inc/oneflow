@@ -45,6 +45,11 @@ void RegisterRuntimeCreator(const std::string& name, const InitRuntime& creator)
 
 }  // namespace ir
 
+Maybe<void> JitInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
+                                  TensorTuple* outputs, const OpExprInterpContext& ctx) const {
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
                                       TensorTuple* outputs, const OpExprInterpContext& ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), op_expr.input_size());
