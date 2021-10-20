@@ -108,7 +108,8 @@ class HasApply2 {
 };
 
 template<int pack_size, typename FunctorT, typename R, typename... IN>
-__device__ typename std::enable_if<HasApply2<FunctorT>::value == true, PackType<R, pack_size>>::type
+__device__ typename std::enable_if<HasApply2<FunctorT>::value == true && pack_size % 2 == 0,
+                                   PackType<R, pack_size>>::type
 ApplyPack(const FunctorT& functor, const IN... in[pack_size]) {
   Pack<R, pack_size> ret;
 #pragma unroll
