@@ -171,8 +171,6 @@ class JitInterpreter : public OpExprInterpreter {
   }
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const OpExprInterpContext& ctx) const override;
-  Maybe<void> ToMlir(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
-                     const OpExprInterpContext& ctx) const;
 
  private:
   DECLARE_NORMAL_APPLY_FUNC(UserOp);  // note(BBuf) jit deal with user op only, now.
