@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
 #ifdef __linux__
 
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
@@ -108,9 +109,14 @@ void EpollCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) {
 }
 
 char* EpollCommNet::SerialTokenToData(void* token, size_t* token_size) {
+  uint64_t token_addr = reinterpret_cast<uint64_t>(token);
+  std::cout<<"*******************"<<std::endl;
+  std::cout<<"EpollCommNet::SerialTokenToData,the token_addr:"<<token_addr << std::endl;
+  std::cout<<std::endl;
   uint64_t** y = new uint64_t*;
   *y = reinterpret_cast<uint64_t*>(token);
   char* addr = reinterpret_cast<char*>(y);
+  *token_size = sizeof(char*);
   return addr;
 }
 
@@ -118,6 +124,11 @@ void* EpollCommNet::DeSerialDataToToken(char* data, size_t* token_size) {
   char** addr = reinterpret_cast<char**>(data);
   void* token = new void*;
   token = reinterpret_cast<void*>(*addr);
+  *token_size = sizeof(char *);
+  uint64_t token_addr = reinterpret_cast<uint64_t>(token);
+  std::cout<<"*******************"<<std::endl;
+  std::cout<<"EpollCommNet::DeSerialDataToToken,the token_addr:"<<token_addr << std::endl;
+  std::cout<<std::endl;
   return token;
 }
 
