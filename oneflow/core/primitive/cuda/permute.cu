@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/primitive/include/permute.h"
 #include "oneflow/core/primitive/common/permute.h"
@@ -181,8 +180,8 @@ __global__ void BatchPermuteMovement2Kernel(const void* src_ptr, void* dst_ptr, 
 
 template<size_t num_dims, size_t movement_size, size_t tile_size, typename IndexType>
 void LaunchBatchPermuteKernel(cudaStream_t& cuda_stream,
-                              PermuteKernelParams<num_dims, IndexType>& params, IndexType& n,
-                              IndexType& h, IndexType& w) {
+                              const PermuteKernelParams<num_dims, IndexType>& params,
+                              const IndexType& n, const IndexType& h, const IndexType& w) {
   IndexType num_tile_rows = (h + tile_size - 1) / tile_size;
   IndexType num_tile_cols = (w + tile_size - 1) / tile_size;
 
@@ -232,7 +231,7 @@ bool CheckUseHalf2(IndexType* h, IndexType* w) {
 }
 
 template<size_t num_dims, typename IndexType>
-void InferBatchPermuteShape(NdIndexOffsetHelper<IndexType, num_dims>* src_dims,
+void InferBatchPermuteShape(const NdIndexOffsetHelper<IndexType, num_dims>* src_dims,
                             const IndexType* count, IndexType* num_batches, IndexType* rows,
                             IndexType* cols) {
   if (num_dims == 2) {
