@@ -86,6 +86,14 @@ class OptionalBase<T, typename std::enable_if<IsScalarType<T>::value>::type> {
 
   bool has_value() const { return init_; }
 
+  T value_or(const T& other) const {
+    if (has_value()) {
+      return value();
+    } else {
+      return other;
+    }
+  }
+
   void reset() { init_ = false; }
 
  private:
@@ -125,6 +133,14 @@ class OptionalBase<T, typename std::enable_if<std::is_reference<T>::value>::type
   T value() { return *value_; }
 
   bool has_value() const { return value_; }
+
+  const value_type& value_or(const value_type& other) const {
+    if (has_value()) {
+      return value();
+    } else {
+      return other;
+    }
+  }
 
   void reset() { value_ = nullptr; }
 
@@ -199,6 +215,87 @@ class OptionalBase<
 
   bool has_value() const { return bool(value_); }
 
+  const storage_type& value_or(const storage_type& other) const& {
+    if (has_value()) {
+      return value_;
+    } else {
+      return other;
+    }
+  }
+
+  storage_type value_or(const storage_type& other) && {
+    if (has_value()) {
+      return std::move(value_);
+    } else {
+      return other;
+    }
+  }
+
+  storage_type value_or(storage_type&& other) const& {
+    if (has_value()) {
+      return value_;
+    } else {
+      return std::move(other);
+    }
+  }
+
+  storage_type value_or(storage_type&& other) && {
+    if (has_value()) {
+      return std::move(value_);
+    } else {
+      return std::move(other);
+    }
+  }
+
+  // we introduce a dependent name `U` to delay the instantiation,
+  // so only the default parameter of `U` is allowed
+  template<typename U = value_type>
+  typename std::enable_if<!std::is_abstract<U>::value, const U&>::type value_or(
+      const value_type& other) const& {
+    static_assert(std::is_same<U, value_type>::value, "expected default U");
+
+    if (has_value()) {
+      return *value_;
+    } else {
+      return other;
+    }
+  }
+
+  template<typename U = value_type>
+  typename std::enable_if<!std::is_abstract<U>::value, U>::type value_or(
+      const value_type& other) && {
+    static_assert(std::is_same<U, value_type>::value, "expected default U");
+
+    if (has_value()) {
+      return std::move(*value_);
+    } else {
+      return other;
+    }
+  }
+
+  template<typename U = value_type>
+  typename std::enable_if<!std::is_abstract<U>::value, U>::type value_or(
+      value_type&& other) const& {
+    static_assert(std::is_same<U, value_type>::value, "expected default U");
+
+    if (has_value()) {
+      return *value_;
+    } else {
+      return std::move(other);
+    }
+  }
+
+  template<typename U = value_type>
+  typename std::enable_if<!std::is_abstract<U>::value, U>::type value_or(value_type&& other) && {
+    static_assert(std::is_same<U, value_type>::value, "expected default U");
+
+    if (has_value()) {
+      return std::move(*value_);
+    } else {
+      return std::move(other);
+    }
+  }
+
   void reset() { value_.reset(); }
 
  private:
@@ -215,10 +312,6 @@ class Optional final : private internal::OptionalBase<T> {
  public:
   using value_type = typename base::value_type;
   using storage_type = typename base::storage_type;
-
-  using const_return_type = decltype(std::declval<const base&>().value());
-  using return_type = decltype(std::declval<base&>().value());
-  using move_return_type = decltype(std::declval<base&&>().value());
 
   Optional() = default;
   ~Optional() = default;
@@ -247,18 +340,21 @@ class Optional final : private internal::OptionalBase<T> {
   Optional& operator=(const Optional& rhs) = default;
   Optional& operator=(Optional&& rhs) noexcept = default;
 
-  const_return_type value_or(const_return_type default_) const {
-    if (has_value()) {
-      return base::value();
-    } else {
-      return default_;
-    }
+  template<typename U>
+  auto value_or(U&& other) const& -> decltype(base::value_or(std::forward<U>(other))) {
+    return base::value_or(std::forward<U>(other));
+  }
+
+  template<typename U>
+  auto value_or(U&& other) && -> decltype(std::move(*this).base::value_or(std::forward<U>(other))) {
+    return std::move(*this).base::value_or(std::forward<U>(other));
   }
 
   bool has_value() const { return base::has_value(); }
   explicit operator bool() const { return has_value(); }
 
-  move_return_type Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() && {
+  auto Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() && -> decltype(
+      std::move(*this).base::value()) {
     return std::move(*this).base::value();
   }
 
