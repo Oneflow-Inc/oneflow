@@ -170,6 +170,44 @@ class EluGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class CeluFunctor {
+ public:
+  CeluFunctor() { op_ = CHECK_JUST(one::OpBuilder("celu").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& alpha,
+                           bool inplace) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("alpha", alpha));
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class CeluGradFunctor {
+ public:
+  CeluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("celu_grad").Input("x").Input("dy").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& dy, const double& alpha) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("alpha", alpha));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class GeluFunctor : public UnaryFunctor {
  public:
   GeluFunctor() { op_ = CHECK_JUST(one::OpBuilder("gelu").Input("in").Output("out").Build()); }
@@ -394,6 +432,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::HardTanhGradFunctor>("HardTanhGrad");
   m.add_functor<impl::EluFunctor>("Elu");
   m.add_functor<impl::EluGradFunctor>("EluGrad");
+  m.add_functor<impl::CeluFunctor>("Celu");
+  m.add_functor<impl::CeluGradFunctor>("CeluGrad");
   m.add_functor<impl::GeluFunctor>("Gelu");
   m.add_functor<impl::GeluGradFunctor>("GeluGrad");
   m.add_functor<impl::GluFunctor>("Glu");
