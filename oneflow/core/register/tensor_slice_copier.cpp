@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/register/tensor_slice_copier.h"
-#include "oneflow/core/stream/stream_context_adapter.h"
 
 namespace oneflow {
 
@@ -61,11 +60,6 @@ void TensorSliceCopier::Copy(StreamContext* stream_ctx, void* dst, const void* s
                              extent_.dim_vec().data());
 }
 
-void TensorSliceCopier::Copy(DeviceCtx* ctx, void* dst, const void* src) const {
-  std::unique_ptr<StreamContext> stream_ctx(NewStreamContextAdapter(ctx));
-  Copy(stream_ctx.get(), dst, src);
-}
-
 void TensorSliceCopier::Copy(StreamContext* stream_ctx, Blob* dst_blob,
                              const Blob* src_blob) const {
   CHECK_EQ(dst_blob->data_type(), data_type_);
@@ -73,11 +67,6 @@ void TensorSliceCopier::Copy(StreamContext* stream_ctx, Blob* dst_blob,
   CHECK_EQ(dst_view_.shape().elem_cnt(), dst_blob->shape().elem_cnt());
   CHECK_EQ(src_view_.shape().elem_cnt(), src_blob->shape().elem_cnt());
   Copy(stream_ctx, dst_blob->mut_dptr(), src_blob->dptr());
-}
-
-void TensorSliceCopier::Copy(DeviceCtx* ctx, Blob* dst_blob, const Blob* src_blob) const {
-  std::unique_ptr<StreamContext> stream_ctx(NewStreamContextAdapter(ctx));
-  Copy(stream_ctx.get(), dst_blob, src_blob);
 }
 
 }  // namespace oneflow

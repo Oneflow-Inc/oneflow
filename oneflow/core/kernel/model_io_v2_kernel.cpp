@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/persistence/snapshot.h"
+#include "oneflow/core/stream/stream_context_adapter.h"
 
 namespace oneflow {
 
@@ -136,9 +137,10 @@ std::string GetTmpPartKey(const std::string& base, const ParallelContext& parall
 
 void HostSliceCopy(Blob* dst, const TensorSliceView& dst_slice, const Blob* src,
                    const TensorSliceView& src_slice) {
-  CpuDeviceCtx cpu_device_ctx;
   TensorSliceCopier copier(dst_slice, src_slice, dst->data_type(), DeviceType::kCPU);
-  copier.Copy(&cpu_device_ctx, dst, src);
+  CpuDeviceCtx device_ctx;
+  std::unique_ptr<StreamContext> stream_ctx(NewStreamContextAdapter(&device_ctx));
+  copier.Copy(stream_ctx.get(), dst, src);
 }
 
 template<DeviceType device_type>
