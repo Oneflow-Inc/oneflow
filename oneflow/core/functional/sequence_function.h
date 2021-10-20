@@ -44,6 +44,10 @@ class SequenceFunction<R(Args...)> {
     return *this;
   }
 
+  SequenceFunction<R(Args...)>& then_if(bool condition, f_type&& f) {
+    return condition ? then(std::forward<f_type>(f)) : *this;
+  }
+
   SequenceFunction<R(Args...)>& operator<<(f_type&& f) { return then(std::forward<f_type>(f)); }
 
   R call(Args&&... args) const { return fn_(std::forward<Args>(args)...); }
