@@ -14,6 +14,7 @@ class SimpleRuntime {
   SimpleRuntime() = default;
   ~SimpleRuntime() = default;
   void CacheOpExpr(const UserOpExpr& user_op_expr);
+  // TODO: should this function be wrapped in uniq ptr?
   std::function<void(const TensorTuple& inputs, TensorTuple* outputs)> ComplieCachedOpExpr(
       const UserOpExpr& user_op_expr);
 };
