@@ -39,8 +39,8 @@ class no_grad(AutoGradMode):
         super().__init__(False)
 
     def __call__(self, func):
-        def warpper(*args, **kwargs):
+        def wrapper(*args, **kwargs):
             with AutoGradMode(False):
                 return func(*args, **kwargs)
 
-        return warpper
+        return wrapper
