@@ -160,15 +160,22 @@ class EagerMirroredInterpreter : public EagerInterpreter {
   FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);
 };
 
-class JitInterpreter : public EagerInterpreter {
+class JitInterpreter : OpExprInterpreter {
  public:
-  JitInterpreter() : EagerInterpreter() {}
-  Maybe<void> ToMlir(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
-                     const OpExprInterpContext& ctx) const;
+  JitInterpreter() : OpExprInterpreter() {}
   virtual ~JitInterpreter() = default;
 
+  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
+                    const AttrMap& attrs) const {
+    return Apply(op_expr, inputs, outputs, OpExprInterpContext(attrs));
+  }
+  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
+                    const OpExprInterpContext& ctx) const override;
+  Maybe<void> ToMlir(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
+                     const OpExprInterpContext& ctx) const;
+
  private:
-  FOR_EACH_BUILTIN_OPS(DECLARE_NORMAL_APPLY_FUNC);
+  FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);
   std::vector<const OpExpr*> cached_op_expr_;
 };
 
