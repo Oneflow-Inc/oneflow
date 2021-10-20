@@ -17,6 +17,7 @@ limitations under the License.
 #include <cstddef>
 #include <memory>
 
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
@@ -55,8 +56,7 @@ std::shared_ptr<AutogradInterpreter> BuildEagerInterpreter(const bool& is_mirror
 }
 
 std::shared_ptr<AutogradInterpreter> BuildJITInterpreter() {
-  std::shared_ptr<OpExprInterpreter> internal;
-  internal = std::make_shared<JitInterpreter>();
+  auto internal = std::make_shared<JitInterpreter>();
   return std::make_shared<AutogradInterpreter>(internal);
 }
 
@@ -165,8 +165,9 @@ template<>
 }
 
 Maybe<void> ToMlir() {
-  for (auto op : cached_op_expr_) { MlirAddJitOp(op->to_proto()); }
-  MlirExecOps(inputs, outputs);
+  // for (auto op : cached_op_expr_) { MlirAddJitOp(op->to_proto()); }
+  // MlirExecOps(inputs, outputs);
+  return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<cfg::OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(
