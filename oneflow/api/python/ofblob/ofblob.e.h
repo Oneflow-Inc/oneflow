@@ -53,12 +53,24 @@ struct OfBlob_CopyBuffer {
 }  // namespace oneflow
 
 #define DEFINE_COPIER(T, type_proto)                                                          \
-  inline void OfBlob_CopyToBuffer_##T(uint64_t of_blob_ptr, oneflow::NumPyArrayPtr array) {   \
-    oneflow::OfBlob_CopyBuffer::To<T>(of_blob_ptr, array).GetOrThrow();                       \
+  inline void OfBlob_CopyToBuffer_##T(uint64_t of_blob_ptr, py::array_t<T> array) {           \
+    PyObject* array_raw_ptr = array.ptr();                                                    \
+    Py_INCREF(array_raw_ptr);                                                                 \
+    oneflow::NumPyArrayPtr array_ptr(array_raw_ptr, [array_raw_ptr]() {                       \
+      py::gil_scoped_acquire acquire;                                                         \
+      Py_DECREF(array_raw_ptr);                                                               \
+    });                                                                                       \
+    oneflow::OfBlob_CopyBuffer::To<T>(of_blob_ptr, array_ptr).GetOrThrow();                   \
   }                                                                                           \
-  inline void OfBlob_CopyFromBuffer_##T(uint64_t of_blob_ptr, oneflow::NumPyArrayPtr array) { \
-    oneflow::OfBlob_CopyBuffer::From<T>(of_blob_ptr, array).GetOrThrow();                     \
-  }
+  inline void OfBlob_CopyFromBuffer_##T(uint64_t of_blob_ptr, py::array_t<T> array) {         \
+  PyObject* array_raw_ptr = array.ptr();                                                      \
+    Py_INCREF(array_raw_ptr);                                                                 \
+    oneflow::NumPyArrayPtr array_ptr(array_raw_ptr, [array_raw_ptr]() {                       \
+      py::gil_scoped_acquire acquire;                                                         \
+      Py_DECREF(array_raw_ptr);                                                               \
+    });                                                                                       \
+    oneflow::OfBlob_CopyBuffer::From<T>(of_blob_ptr, array_ptr).GetOrThrow();                 \
+  }                                                                                           \
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_COPIER, POD_DATA_TYPE_SEQ);
 
