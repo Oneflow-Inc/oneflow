@@ -42,7 +42,8 @@ template<typename T>
 inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tensor>& t,
                                                      PyObject* array,
                                                      Maybe<void> (*Copy)(uint64_t, NumPyArrayPtr),
-                                                     const std::string& modifier) {
+                                                     const std::string& modifier,
+                                                     bool block_host_until_done) {
   std::shared_ptr<MirroredTensor> tensor;
   CHECK_OR_RETURN(t->is_eager()) << "eager tensors supported only";
   if (t->is_local()) {
@@ -65,11 +66,32 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tenso
     py::gil_scoped_acquire acquire;
     Py_DECREF(array);
   });
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->AccessBlobByCallback(
-        tensor, [array_ptr, Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array_ptr)); },
-        modifier);
-  }));
+
+  if (block_host_until_done) {
+    const auto& Callback = std::make_shared<std::function<void(uint64_t)>>(
+        [array_ptr, Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array_ptr)); });
+    bool is_printed = false;
+    JUST(SpinCounter::SpinWait(
+        1,
+        [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
+          return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+            return builder->SyncAccessBlobByCallback(tensor, sc, Callback, modifier);
+          });
+        },
+        [&is_printed]() {
+          if (!is_printed) {
+            blocking::StackInfoCallback();
+            is_printed = true;
+          }
+        }));
+  } else {
+    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->AccessBlobByCallback(
+          tensor,
+          [array_ptr, Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array_ptr)); },
+          modifier);
+    }));
+  }
   return Maybe<void>::Ok();
 }
 
