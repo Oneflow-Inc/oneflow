@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/arg_tuple.h"
+#include "oneflow/core/autograd/autograd_function.h"
 
 namespace oneflow {
 namespace one {
@@ -276,26 +277,18 @@ class SelectTopNOpExpr final : public OpExpr {
 };
 
 class AutoGradCaptureState;
-// TODO(): Finish the class definition of `FunctionOpExpr`.
-class FunctionOpExpr : public OpExpr {
+// TODO(wyg): Finish the class definition of `FunctionOpExpr`.
+class FunctionOpExpr final : public OpExpr {
  public:
-  using FType = std::function<Maybe<void>(const std::shared_ptr<AutoGradCaptureState>& /*ctx*/,
-                                          const TensorTuple& /*inputs or out_grads*/,
-                                          TensorTuple* /*outputs or in_grads*/)>;
-
-  FunctionOpExpr(const FType& forward, const FType& backward)
-      : OpExpr(), forward_(forward), backward_(backward) {}
-  virtual ~FunctionOpExpr() = default;
+  using FType = AutogradFunctionBase::FType;
+  FunctionOpExpr() = default;  // TODO(wyg): re-define a static function to construct FunctionOpExpr
 
   const std::string& op_type_name() const override {
-    static const std::string& name("function");
-    return name;
+    UNIMPLEMENTED();
+    return function_name_;
   }
 
-  int input_size() const override {
-    UNIMPLEMENTED();
-    return 0;
-  }
+  int input_size() const override { return input_size_; }
   int output_size() const override {
     UNIMPLEMENTED();
     return 0;
@@ -308,12 +301,18 @@ class FunctionOpExpr : public OpExpr {
   std::shared_ptr<AutoGradCaptureState> mutable_state() { return state_; }
 
   Maybe<bool> IsGradDisabled() const override { return false; }
-  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override { OF_UNIMPLEMENTED(); }
+  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override {
+    // TODO(wyg): construct autograd.Function OpGradClosure
+    OF_UNIMPLEMENTED();
+  }
 
  private:
   FType forward_;
   FType backward_;
   std::shared_ptr<AutoGradCaptureState> state_;
+  std::string function_name_;  // TODO(wyg): pass from python class name
+  int input_size_;
+  mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
 }  // namespace one

@@ -38,8 +38,24 @@ class AutoGradCaptureState {
     return offset;
   }
 
- private:
+ protected:
   TensorTuple saved_tensors_;
+};
+
+class FunctionAutoGradCaptureState final : public AutoGradCaptureState {
+ public:
+  FunctionAutoGradCaptureState() = default;
+  using AutoGradCaptureState::SavedTensors;
+  using AutoGradCaptureState::SaveTensorForBackward;
+
+  size_t MarkNonDifferentiable(const std::shared_ptr<Tensor>& tensor) {
+    size_t offset = saved_tensors_.size();
+    non_differentiable_tensors_.push_back(tensor);
+    return offset;
+  }
+
+ private:
+  TensorTuple non_differentiable_tensors_;
 };
 
 // Stateless container base of the backward op exprs.
@@ -95,6 +111,7 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
     return Apply(state, out_grads, in_grads);
   }
 
+ protected:
   virtual Maybe<void> Capture(StateT* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                               const OpExprInterpContext& interp_ctx) const {
     return Capture(ctx, inputs, outputs, interp_ctx.attrs);
@@ -108,10 +125,37 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
   virtual Maybe<void> Apply(const StateT* ctx, const TensorTuple& out_grads,
                             TensorTuple* in_grads) const = 0;
 
- protected:
   std::string GradientOpName(const std::string& prefix) const {
     return prefix + std::string(kGradientOpSuffix);
   }
+};
+
+class CustomOpExprGradFunction final : public OpExprGradFunctionIf {
+ public:
+  using FType = AutogradFunctionBase::FType;
+  explicit CustomOpExprGradFunction(const FType& backward_fn) : backward_fn_(backward_fn) {}
+
+  std::shared_ptr<AutoGradCaptureState> MakeCustomState() const override {
+    PRINT_BUG_PROMPT_AND_ABORT()
+        << "You should not construct AutoGradCaptureState by calling this function";
+    return std::make_shared<FunctionAutoGradCaptureState>();
+  }
+
+  Maybe<void> CaptureIf(AutoGradCaptureState* ctx, const TensorTuple& inputs,
+                        const TensorTuple& outputs,
+                        const OpExprInterpContext& interp_ctx) const override {
+    // do nothing
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> ApplyIf(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,
+                      TensorTuple* in_grads) const override {
+    // TODO(wyg): Call backward_fn_
+    OF_UNIMPLEMENTED();
+  }
+
+ protected:
+  FType backward_fn_;
 };
 
 // Stateful wrapper of the `OpExprGradFunction`.

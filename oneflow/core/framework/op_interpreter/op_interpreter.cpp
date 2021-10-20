@@ -76,9 +76,8 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
 Maybe<void> EagerInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const TensorTuple& inputs,
                                         TensorTuple* outputs,
                                         const OpExprInterpContext& ctx) const {
-  // TODO(hjchen2)
-  UNIMPLEMENTED();
-  return Maybe<void>::Ok();
+  // TODO(wyg): Call op_expr.forward function to calculate outputs
+  OF_UNIMPLEMENTED();
 }
 
 Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,

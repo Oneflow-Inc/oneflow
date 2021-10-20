@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,23 +12,18 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
+*/
 
-from oneflow.autograd.autograd import backward, grad
-from oneflow.autograd.autograd_function import Function
-from oneflow.autograd.autograd_mode import (
-    grad_enable,
-    inference_mode,
-    is_grad_enabled,
-    no_grad,
-)
+#include "oneflow/core/autograd/autograd_function.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 
-__all__ = [
-    "backward",
-    "grad",
-    "Function",
-    "grad_enable",
-    "inference_mode",
-    "is_grad_enabled",
-    "no_grad",
-]
+namespace oneflow {
+namespace one {
+
+Maybe<TensorTuple> AutogradFunctionBase::Apply(const TensorTuple& inputs) const {
+  // TODO(wyg): construct FunctionOpExpr, do forward and process outputs autograd_meta
+  OF_UNIMPLEMENTED();
+}
+
+}  // namespace one
+}  // namespace oneflow
