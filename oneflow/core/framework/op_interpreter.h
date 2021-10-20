@@ -160,7 +160,7 @@ class EagerMirroredInterpreter : public EagerInterpreter {
   FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);
 };
 
-class JitInterpreter : OpExprInterpreter {
+class JitInterpreter : public OpExprInterpreter {
  public:
   JitInterpreter() : OpExprInterpreter() {}
   virtual ~JitInterpreter() = default;
