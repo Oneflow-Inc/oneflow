@@ -260,6 +260,7 @@ from oneflow.nn.modules.constant import full_op as full
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow.nn.modules.expand import expand_op as expand
+from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flatten import _flow_flatten as flatten
 from oneflow.nn.modules.flip import flip_op as flip
 from oneflow.nn.modules.floor import floor_op as floor
