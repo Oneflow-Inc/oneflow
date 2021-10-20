@@ -175,8 +175,7 @@ class JitInterpreter : OpExprInterpreter {
                      const OpExprInterpContext& ctx) const;
 
  private:
-  DECLARE_NORMAL_APPLY_FUNC(UserOp); //note(BBuf) jit deal with user op only, now.
-  std::vector<const UserOpExpr*> cached_op_expr_;
+  DECLARE_NORMAL_APPLY_FUNC(UserOp);  // note(BBuf) jit deal with user op only, now.
 };
 
 #undef DECLARE_OVERRIDE_APPLY_FUNC

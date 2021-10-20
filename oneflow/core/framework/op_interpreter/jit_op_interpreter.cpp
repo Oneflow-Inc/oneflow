@@ -22,30 +22,27 @@ namespace oneflow {
 
 namespace one {
 
-namespace{
-
 Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
-                                       TensorTuple* outputs, const OpExprInterpContext& ctx) const {
-    CHECK_EQ_OR_RETURN(inputs.size(), op_expr.input_size());
-    //note
-    if (inputs.size() == 0) {
-        // NOTE(BBuf): handle for source UserOp like OFRecordReader, CoinFlip to MLIR.
-        
-        return Maybe<void>::Ok();
-    }
-    if (op_expr.op_type_name() == "copy") {
-        // NOTE(BBuf): handle for copy UserOp which will NOT add op to MLIR.
+                                      TensorTuple* outputs, const OpExprInterpContext& ctx) const {
+  CHECK_EQ_OR_RETURN(inputs.size(), op_expr.input_size());
+  // note
+  if (inputs.size() == 0) {
+    // NOTE(BBuf): handle for source UserOp like OFRecordReader, CoinFlip to MLIR.
 
-        return Maybe<void>::Ok();
-    }
-    //   Normal UserOp inputs size >= 1 for infer parallel_desc.
-    CHECK_GE_OR_RETURN(inputs.size(), 1);
-    //update cached_op_expr_
-    cached_op_expr_.push_back(*op_expr);
+    return Maybe<void>::Ok();
+  }
+  if (op_expr.op_type_name() == "copy") {
+    // NOTE(BBuf): handle for copy UserOp which will NOT add op to MLIR.
+
+    return Maybe<void>::Ok();
+  }
+  //   Normal UserOp inputs size >= 1 for infer parallel_desc.
+  CHECK_GE_OR_RETURN(inputs.size(), 1);
+  // update cached_op_expr_
+  // TODO: MLIR add op expr
+  return Maybe<void>::Ok();
 }
 
-}
+}  // namespace one
 
-}
-
-}
+}  // namespace oneflow
