@@ -11,10 +11,10 @@ namespace ir {
 class SimpleRuntime {
  public:
   SimpleRuntime() = default;
-  SimpleRuntime(SimpleRuntime&&) = default;
-  SimpleRuntime(const SimpleRuntime&) = default;
-  SimpleRuntime& operator=(SimpleRuntime&&) = default;
-  SimpleRuntime& operator=(const SimpleRuntime&) = default;
+  SimpleRuntime(SimpleRuntime&&) = delete;
+  SimpleRuntime(const SimpleRuntime&) = delete;
+  SimpleRuntime& operator=(SimpleRuntime&&) = delete;
+  SimpleRuntime& operator=(const SimpleRuntime&) = delete;
   ~SimpleRuntime() = default;
   void CacheOpExpr(const UserOpExpr& user_op_expr);
   std::function<void(const TensorTuple& inputs, TensorTuple* outputs)> ComplieCachedOpExpr(
