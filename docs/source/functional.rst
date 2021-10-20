@@ -16,6 +16,7 @@ Functional operations for neural networks
 .. autofunction:: l2_normalize
 .. autofunction:: leaky_relu
 .. autofunction:: elu
+.. autofunction:: celu
 .. autofunction:: selu
 .. autofunction:: sigmoid
 .. autofunction:: pad
