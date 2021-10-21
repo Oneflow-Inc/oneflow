@@ -462,10 +462,15 @@ class ExpandDimsFunctor {
   ExpandDimsFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("expand_dims").Input("in").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& axis) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim) const {
+    int32_t expand_dim = dim;
+    const int32_t ndim = input->shape()->NumAxes();
+    CHECK_OR_RETURN(-(ndim+1) <= dim && dim <= ndim)
+      << " Dimension out of range, expected to be in range of [" << -(ndim+1) <<", " << ndim << "], but got: " << dim; 
+    if(dim < 0){ expand_dim = dim + ndim + 1; }
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    JUST(attrs.SetAttr<int32_t>("axis", expand_dim));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
  private:

@@ -478,6 +478,10 @@ def _narrow(self, dimension, start, length):
     return flow._C.narrow(self, dim=dimension, start=start, length=length)
 
 
+def _unsqueeze(self, dim):
+    return flow._C.unsqueeze(self, dim=dim)
+
+
 def _matmul(self, other):
     return flow.matmul(self, other)
 
@@ -772,6 +776,7 @@ def RegisterMethods():
     Tensor.log_softmax = _log_softmax
     Tensor.squeeze = _squeeze
     Tensor.narrow = _narrow
+    Tensor.unsqueeze = _unsqueeze
     
 
 

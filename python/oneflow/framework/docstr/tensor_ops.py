@@ -42,3 +42,33 @@ add_docstr(
                 [8, 9]], dtype=oneflow.int64)
     """,
 )
+
+add_docstr(
+    oneflow.unsqueeze,
+    r"""Returns a new tensor with a dimension of size one inserted at the
+    specified position.
+
+    The returned tensor shares the same underlying data with this tensor.
+
+    A :attr:`dim` value within the range `[-input.ndimension() - 1, input.ndimension() + 1)`
+    can be used. Negative :attr:`dim` will correspond to :meth:`unsqueeze`
+    applied at :attr:`dim` = ``dim + input.ndimension() + 1``.
+
+    Args:
+        input (Tensor): the input tensor.
+        dim (int): the index at which to insert the singleton dimension
+
+    For example: 
+
+    .. code-block:: python 
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        
+        >>> x = flow.randn(2, 3, 4)
+        >>> y = x.unsqueeze(2)
+        >>> y.shape
+        oneflow.Size([2, 3, 1, 4])
+    """,
+)
+

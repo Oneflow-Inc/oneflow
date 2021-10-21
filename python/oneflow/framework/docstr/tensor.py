@@ -122,3 +122,10 @@ add_docstr(
     See :func:`oneflow.narrow`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.unsqueeze,
+    """
+    See :func:`oneflow.unsqueeze`
+    """,
+)

@@ -138,6 +138,7 @@ from oneflow._C import var
 from oneflow._C import stack
 from oneflow._C import squeeze
 from oneflow._C import narrow
+from oneflow._C import unsqueeze
 
 from . import sbp
 import atexit
@@ -319,7 +320,6 @@ from oneflow.nn.modules.tile import tile_op as tile
 from oneflow.nn.modules.to import to_op as to
 from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
 from oneflow.nn.modules.consistent_cast import to_local_op as to_local
-from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
 from oneflow.ops.builtin_ops import BuiltinOp as builtin_op

@@ -605,7 +605,11 @@
   bind_python: True
 
 - name: "expand_dims"
-  signature: "Tensor (Tensor x, Int32 axis) => ExpandDims"
+  signature: "Tensor (Tensor input, Int32 dim) => ExpandDims"
+  bind_python: True
+
+- name: "unsqueeze"
+  signature: "Tensor (Tensor input, Int32 dim) => ExpandDims"
   bind_python: True
 
 - name: "exp"
