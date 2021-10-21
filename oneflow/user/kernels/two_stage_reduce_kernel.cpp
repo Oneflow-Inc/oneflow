@@ -17,30 +17,9 @@ limitations under the License.
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/user/kernels/two_stage_reduce_kernel_util.h"
+#include "oneflow/core/primitive/include/cast.h"
 
 namespace oneflow {
-namespace {
-
-template<DeviceType device_type, typename T, typename U>
-struct CopyTensor;
-
-template<typename T, typename U>
-struct CopyTensor<DeviceType::kCPU, T, U> {
-  static void Call(DeviceCtx* ctx, const int64_t n, const T* src, U* dst) { CopyElem(src, dst, n); }
-};
-
-template<typename T, typename U>
-struct CopyTensor<DeviceType::kGPU, T, U> {
-  static void Call(DeviceCtx* ctx, const int64_t n, const T* src, U* dst) {
-#ifdef WITH_CUDA
-    CopyElemOnGpu(ctx, src, dst, n);
-#else
-    UNIMPLEMENTED();
-#endif
-  }
-};
-
-}  // namespace
 
 namespace user_op {
 
@@ -73,8 +52,11 @@ class ReduceDeviceStageKernel final : public OpKernel {
         XpuVarNdarray<const T>(in->shape(), in->dptr<T>()),
         XpuVarNdarray<const T>(out->shape(), out->dptr<T>()));
 
-    CopyTensor<device_type, int8_t, int32_t>::Call(ctx->device_ctx(), mask->shape().elem_cnt(),
-                                                   mask->dptr<int8_t>(), mask_tmp_buf);
+    auto cast = primitive::NewPrimitive<primitive::CastFactory>(ctx->device_type(), DataType::kInt8,
+                                                                DataType::kInt32);
+    CHECK(cast);
+
+    cast->Launch(ctx->stream_ctx(), mask->dptr<int8_t>(), mask_tmp_buf, mask->shape().elem_cnt());
     NdarrayUtil<device_type, int32_t>::ReduceSum(
         ctx->device_ctx(), XpuVarNdarray<int32_t>(count->shape(), count->mut_dptr<int32_t>()),
         XpuVarNdarray<const int32_t>(mask->shape(), mask_tmp_buf),
