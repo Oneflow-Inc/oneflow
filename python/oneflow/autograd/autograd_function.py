@@ -30,8 +30,12 @@ class Function(AutogradFunctionBase):
 
     @staticmethod
     def forward(ctx, *inputs):
-        raise NotImplementedError("You must implement the forward function for custom autograd.Function.")
+        raise NotImplementedError(
+            "You must implement the forward function for custom autograd.Function."
+        )
 
     @staticmethod
     def backward(ctx, *out_grads):
-        raise NotImplementedError("You must implement the backward function for custom autograd.Function.")
+        raise NotImplementedError(
+            "You must implement the backward function for custom autograd.Function."
+        )
