@@ -32,9 +32,7 @@ constexpr int kCudaEventReuseRecycleThreshold = 32;
 CudaStreamHandle::CudaStreamHandle(Channel<CudaCBEvent>* cb_event_chan)
     : cb_event_chan_(cb_event_chan),
       cuda_stream_(nullptr),
-      cublas_pmh_handle_(nullptr),
-      cublas_pmd_handle_(nullptr),
-      cublas_tensor_op_math_handle_(nullptr),
+      cublas_handle_(nullptr),
       cudnn_handle_(nullptr) {
   cuda_event_flags_ = cudaEventDisableTiming;
   if (ParseBooleanFromEnv("ONEFLOW_STREAM_CUDA_EVENT_FLAG_BLOCKING_SYNC", false)) {
@@ -48,39 +46,17 @@ cudaStream_t CudaStreamHandle::cuda_stream() {
   return cuda_stream_;
 }
 
-cublasHandle_t CudaStreamHandle::cublas_pmh_handle() {
-  if (cublas_pmh_handle_ == nullptr) {
-    OF_CUBLAS_CHECK(cublasCreate(&cublas_pmh_handle_));
-    OF_CUBLAS_CHECK(cublasSetStream(cublas_pmh_handle_, cuda_stream()));
+cublasHandle_t CudaStreamHandle::cublas_handle() {
+  if (cublas_handle_ == nullptr) {
+    OF_CUBLAS_CHECK(cublasCreate(&cublas_handle_));
+    OF_CUBLAS_CHECK(cublasSetStream(cublas_handle_, cuda_stream()));
 #if CUDA_VERSION >= 11000
     if (Global<ResourceDesc, ForSession>::Get()->enable_tensor_float_32_compute()) {
-      OF_CUBLAS_CHECK(cublasSetMathMode(cublas_pmh_handle_, CUBLAS_TF32_TENSOR_OP_MATH));
+      OF_CUBLAS_CHECK(cublasSetMathMode(cublas_handle_, CUBLAS_TF32_TENSOR_OP_MATH));
     }
 #endif
   }
-  return cublas_pmh_handle_;
-}
-
-cublasHandle_t CudaStreamHandle::cublas_pmd_handle() {
-  if (cublas_pmd_handle_ == nullptr) {
-    OF_CUBLAS_CHECK(cublasCreate(&cublas_pmd_handle_));
-    OF_CUBLAS_CHECK(cublasSetStream(cublas_pmd_handle_, cuda_stream()));
-    OF_CUBLAS_CHECK(cublasSetPointerMode(cublas_pmd_handle_, CUBLAS_POINTER_MODE_DEVICE));
-  }
-  return cublas_pmd_handle_;
-}
-
-cublasHandle_t CudaStreamHandle::cublas_tensor_op_math_handle() {
-  if (cublas_tensor_op_math_handle_ == nullptr) {
-    OF_CUBLAS_CHECK(cublasCreate(&cublas_tensor_op_math_handle_));
-    OF_CUBLAS_CHECK(cublasSetStream(cublas_tensor_op_math_handle_, cuda_stream()));
-#if CUDA_VERSION >= 11000
-    OF_CUBLAS_CHECK(cublasSetMathMode(cublas_tensor_op_math_handle_, CUBLAS_DEFAULT_MATH));
-#else
-    OF_CUBLAS_CHECK(cublasSetMathMode(cublas_tensor_op_math_handle_, CUBLAS_TENSOR_OP_MATH));
-#endif
-  }
-  return cublas_tensor_op_math_handle_;
+  return cublas_handle_;
 }
 
 cudnnHandle_t CudaStreamHandle::cudnn_handle() {
@@ -143,11 +119,7 @@ CudaStreamHandle::~CudaStreamHandle() {
   for (cudaEvent_t event : producer_event_queue_) { OF_CUDA_CHECK(cudaEventDestroy(event)); }
   for (cudaEvent_t event : global_event_queue_) { OF_CUDA_CHECK(cudaEventDestroy(event)); }
   if (cudnn_handle_ != nullptr) { OF_CUDNN_CHECK(cudnnDestroy(cudnn_handle_)); }
-  if (cublas_pmh_handle_ != nullptr) { OF_CUBLAS_CHECK(cublasDestroy(cublas_pmh_handle_)); }
-  if (cublas_pmd_handle_ != nullptr) { OF_CUBLAS_CHECK(cublasDestroy(cublas_pmd_handle_)); }
-  if (cublas_tensor_op_math_handle_ != nullptr) {
-    OF_CUBLAS_CHECK(cublasDestroy(cublas_tensor_op_math_handle_));
-  }
+  if (cublas_handle_ != nullptr) { OF_CUBLAS_CHECK(cublasDestroy(cublas_handle_)); }
   if (cuda_stream_ != nullptr) { OF_CUDA_CHECK(cudaStreamDestroy(cuda_stream_)); }
 }
 

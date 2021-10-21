@@ -63,14 +63,11 @@ def _ndim(self):
 
 
 def _nelement(self):
-    prod = 1
-    for dim in self.shape:
-        prod *= dim
-    return prod
+    return self.shape.numel()
 
 
 def _numel(self):
-    return self.nelement()
+    return self.shape.numel()
 
 
 def _element_size(self):
@@ -465,6 +462,18 @@ def _square(self):
     return flow.square(self)
 
 
+def _var(self, dim=None, unbiased=True, keepdim=False):
+    return flow._C.var(self, dim=dim, unbiased=unbiased, keepdim=keepdim)
+
+
+def _std(self, dim=None, unbiased=True, keepdim=False):
+    return flow._C.std(self, dim=dim, unbiased=unbiased, keepdim=keepdim)
+
+
+def _squeeze(self, dim=None):
+    return flow._C.squeeze(self, dim=dim)
+
+
 def _matmul(self, other):
     return flow.matmul(self, other)
 
@@ -487,6 +496,14 @@ def _triu(self, diagonal=0):
 
 def _relu(self, inplace=False):
     return flow.relu(self, inplace=inplace)
+
+
+def _softmax(self, dim=None):
+    return flow.softmax(self, dim=dim)
+
+
+def _log_softmax(self, dim=None):
+    return flow.log_softmax(self, dim=dim)
 
 
 def _argmax(self, dim=None, keepdim=None):
@@ -737,6 +754,8 @@ def RegisterMethods():
     Tensor.rsqrt = _rsqrt
     Tensor.sqrt = _sqrt
     Tensor.square = _square
+    Tensor.var = _var
+    Tensor.std = _std
     Tensor.matmul = _matmul
     Tensor.round = _round
     Tensor.softplus = _softplus
@@ -745,6 +764,9 @@ def RegisterMethods():
     Tensor.contiguous = _contiguous
     Tensor.transpose = _transpose
     Tensor.relu = _relu
+    Tensor.softmax = _softmax
+    Tensor.log_softmax = _log_softmax
+    Tensor.squeeze = _squeeze
 
 
 def register_tensor_op(op_name):
