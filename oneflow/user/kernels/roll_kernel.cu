@@ -51,6 +51,36 @@ void GpuRollFunctor<float16>::operator()(DeviceCtx* ctx, const float16* in_ptr, 
                   shifts, shape, stride, dims, elements, reinterpret_cast<half*>(out_ptr));
 }
 
+template<typename T>
+__global__ void RollCudaKernel1D(const T* in_ptr, const int32_t shifts, const int32_t elements,
+                                 T* out_ptr) {
+  int32_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
+  int32_t step = gridDim.x * blockDim.x;
+
+  while (gid < elements) {
+    int32_t shifted_idx = (gid - shifts) % elements;
+    if (shifted_idx < 0) shifted_idx = shifted_idx + elements;
+    out_ptr[gid] = in_ptr[shifted_idx];
+    gid += step;
+  }
+}
+
+template<typename T>
+struct GpuRoll1DFunctor final {
+  void operator()(DeviceCtx* ctx, const T* in_ptr, const int32_t shifts, const int32_t elements,
+                  T* out_ptr) {
+    RUN_CUDA_KERNEL((RollCudaKernel1D<T>), ctx, elements, in_ptr, shifts, elements, out_ptr);
+  }
+};
+
+template<>
+void GpuRoll1DFunctor<float16>::operator()(DeviceCtx* ctx, const float16* in_ptr,
+                                           const int32_t shifts, const int32_t elements,
+                                           float16* out_ptr) {
+  RUN_CUDA_KERNEL((RollCudaKernel1D<half>), ctx, elements, reinterpret_cast<const half*>(in_ptr),
+                  shifts, elements, reinterpret_cast<half*>(out_ptr));
+}
+
 }  // namespace
 
 template<typename T>
@@ -67,20 +97,24 @@ class GpuRollKernel final : public user_op::OpKernel {
     const std::vector<int32_t>& shifts = ctx->Attr<std::vector<int32_t>>("shifts");
     const std::vector<int32_t>& dims = ctx->Attr<std::vector<int32_t>>("dims");
 
-    SHAPE new_shape;
-    SHIFTS new_shifts;
-    int32_t num_axes;
-    computeParams(in->shape(), shifts, dims, new_shifts.val, new_shape.val, &num_axes);
-
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
     const int32_t size = out->shape().elem_cnt();
 
-    STRIDE stride;
-    initStride(stride.val, new_shape.val, num_axes);
+    if (dims[0] == -1) {
+      GpuRoll1DFunctor<T>()(ctx->device_ctx(), in_ptr, shifts[0], size, out_ptr);
+    } else {
+      SHAPE new_shape;
+      SHIFTS new_shifts;
+      int32_t num_axes;
+      computeParams(in->shape(), shifts, dims, new_shifts.val, new_shape.val, &num_axes);
 
-    GpuRollFunctor<T>()(ctx->device_ctx(), in_ptr, new_shifts, new_shape, stride, num_axes, size,
-                        out_ptr);
+      STRIDE stride;
+      initStride(stride.val, new_shape.val, num_axes);
+
+      GpuRollFunctor<T>()(ctx->device_ctx(), in_ptr, new_shifts, new_shape, stride, num_axes, size,
+                          out_ptr);
+    }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
