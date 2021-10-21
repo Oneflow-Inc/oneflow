@@ -1,0 +1,33 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/memory/memory_case.proto";
+
+message MemBlockProto {
+  required int64 mem_block_id = 1;
+  repeated int64 job_id = 2;
+  required int64 machine_id = 3;
+  required MemoryCase mem_case = 4;
+  required bool enable_reuse_mem = 5;
+  optional int64 chunk_id = 6 [default = -1];
+  optional int64 chunk_offset = 7 [default = -1];
+  required int64 mem_size = 8;
+  // NOTE(chengcheng): thrd id hint is used by packed separated block group order.
+  optional int64 thrd_id_hint = 9 [default = -1];
+  // NOTE(chengcheng): mark this block memory is shared with EagerParameter.
+  optional string variable_op_name = 10 [default = ""];
+  optional bool is_separated_header = 11 [default = false];
+}
+
+message ChunkProto {
+  required int64 chunk_id = 1;
+  repeated int64 job_id = 2;
+  required int64 machine_id = 3;
+  required MemoryCase mem_case = 4;
+  required int64 mem_size = 5;
+}
+
+message MemBlockAndChunkList {
+  repeated MemBlockProto mem_block = 1;
+  repeated ChunkProto chunk = 2;
+}

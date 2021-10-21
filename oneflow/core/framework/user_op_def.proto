@@ -1,0 +1,24 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/framework/user_op_attr.proto";
+
+message UserOpDef {
+  required string name = 1;
+
+  message ArgDef {
+    required string name = 1;
+    optional bool is_optional = 2 [default = false];
+    required int32 num = 3;
+    required bool num_as_min = 4;
+  }
+  repeated ArgDef input = 2;
+  repeated ArgDef output = 3;
+
+  message AttrDef {
+    required string name = 1;
+    required AttrType type = 2;
+    optional AttrValue default_val = 3;
+  }
+  repeated AttrDef attr = 4;
+}

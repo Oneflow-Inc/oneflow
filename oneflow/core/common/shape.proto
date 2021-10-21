@@ -1,0 +1,15 @@
+syntax = "proto2";
+package oneflow;
+
+message ShapeProto {
+  repeated int64 dim = 1;
+}
+
+message ShapeSignature {
+  optional string name = 1;
+  map<string, ShapeProto> field2shape_proto = 2;
+}
+
+message ShapeSignatureList {
+  repeated ShapeSignature shape_signature = 1;
+}

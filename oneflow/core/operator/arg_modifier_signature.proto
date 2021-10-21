@@ -1,0 +1,22 @@
+syntax = "proto2";
+package oneflow;
+
+message InputBlobModifier {
+  optional bool is_mutable = 1 [default = false];
+  optional bool requires_grad = 3 [default = false];
+}
+
+message OutputBlobModifier {
+  optional bool is_mutable = 1 [default = false];
+  optional bool requires_grad = 2 [default = false];
+  optional bool header_infered_before_compute = 3 [default = true];
+  oneof inplace_type {
+    string mutable_inplace_ibn = 20;
+    string const_inplace_ibn = 21;
+  }
+}
+
+message ArgModifierSignature {
+  map<string, InputBlobModifier> ibn2input_blob_modifier = 1;
+  map<string, OutputBlobModifier> obn2output_blob_modifier = 2;
+}

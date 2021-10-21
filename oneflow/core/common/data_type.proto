@@ -1,0 +1,20 @@
+syntax = "proto2";
+package oneflow;
+
+enum DataType {
+  kInvalidDataType = 0;
+  kChar = 1;
+  kFloat = 2;
+  kDouble = 3;
+  kInt8 = 4;
+  kInt32 = 5;
+  kInt64 = 6;
+  kUInt8 = 7;
+  kOFRecord = 8;
+  kFloat16 = 9;
+  kTensorBuffer = 10;
+}
+
+message OptInt64 {
+  optional int64 value = 1 [ default = -1 ];
+}

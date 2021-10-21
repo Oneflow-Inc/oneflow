@@ -1,0 +1,15 @@
+syntax = "proto2";
+package oneflow.summary;
+
+import "oneflow/core/summary/summary.proto";
+
+message Event {
+  required double wall_time = 1;
+  optional int64 step = 2;
+  oneof what {
+    string file_version = 3;
+    bytes graph_def = 4;
+    Summary summary = 5;
+    bytes meta_graph_def = 9;
+  }
+}

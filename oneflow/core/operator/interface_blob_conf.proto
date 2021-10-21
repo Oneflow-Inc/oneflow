@@ -1,0 +1,13 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/common/shape.proto";
+import "oneflow/core/common/data_type.proto";
+import "oneflow/core/job/sbp_parallel.proto";
+
+message InterfaceBlobConf {
+  optional ShapeProto shape = 1;
+  optional DataType data_type = 2;
+  optional bool is_dynamic = 3;
+  optional ParallelDistribution parallel_distribution = 4;
+}

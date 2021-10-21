@@ -1,0 +1,14 @@
+inputs:
+  name:
+    description: 'Placeholder'
+    default: 'Placeholder'
+runs:
+  using: "composite"
+  steps:
+    - run: |
+        echo $HOSTNAME
+        rm -rf build/third_party
+        bash ci/setup_submodule.sh
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --recursive
+      shell: bash

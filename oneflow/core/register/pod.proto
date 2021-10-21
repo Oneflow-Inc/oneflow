@@ -1,0 +1,41 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/common/shape.proto";
+import "oneflow/core/common/data_type.proto";
+import "oneflow/core/register/logical_blob_id.proto";
+
+message TensorPodProto {
+  required ShapeProto shape = 1;
+  required DataType data_type = 2;
+}
+
+message StructPodProto {
+  repeated FieldPodProto field = 1;
+}
+
+enum FieldKey {
+  kInvalidFieldKey = 0;
+  kTensorShape = 1;
+  kFieldKeySize = 2;
+}
+
+message FieldId {
+  oneof field_id_type {
+    FieldKey key = 1;
+    LogicalBlobId lbi = 2;
+  }
+}
+
+message FieldPodProto {
+  required FieldId field_id = 1;
+  required int32 alignment = 2;
+  required PodProto pod = 3;
+}
+
+message PodProto {
+  oneof pod_type {
+    TensorPodProto tensor_pod = 1;
+    StructPodProto struct_pod = 2;
+  }
+}

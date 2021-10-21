@@ -1,0 +1,12 @@
+syntax = "proto2";
+package oneflow;
+
+message IBVerbsConnectionInfo {
+  required uint32 lid = 1;
+  required uint32 qp_num = 2;
+  required uint64 subnet_prefix = 3;
+  required uint64 interface_id = 4;
+  required uint32 port_num = 5;
+  required int32 mtu = 6;
+}
+

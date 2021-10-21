@@ -1,0 +1,21 @@
+syntax = "proto2";
+package oneflow;
+
+message OpBlobArg {
+  required string op_name = 1;
+  // blob name in op
+  required string bn_in_op = 2;
+}
+
+message OpBlobArgPair {
+  required OpBlobArg first = 1;
+  required OpBlobArg second = 2;
+}
+
+message OpBlobArgPairs {
+  repeated OpBlobArgPair pair = 1;
+}
+
+message OpBlobArgList {
+  repeated OpBlobArg oba = 1;
+}

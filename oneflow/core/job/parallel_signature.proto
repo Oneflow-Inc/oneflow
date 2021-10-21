@@ -1,0 +1,7 @@
+syntax = "proto2";
+package oneflow;
+
+message ParallelSignature {
+  optional int64 op_parallel_desc_symbol_id = 1;
+  map<string, int64> bn_in_op2parallel_desc_symbol_id = 2;
+}

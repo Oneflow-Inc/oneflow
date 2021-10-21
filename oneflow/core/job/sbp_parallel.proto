@@ -1,0 +1,79 @@
+syntax = "proto2";
+package oneflow;
+
+// Take matmal_op as an example.
+
+//   Y     =   A    *   B
+// (m, n)    (m, k) , (k, n)
+
+
+// candidate signature 0:
+//     Y:Split(0), A:Split(0), B:Broadcast
+//     -----------------------------------
+//     device0:   Y0    =   A0    *   B
+//             (m0, n)    (m0, k) , (k, n)
+//     -----------------------------------
+//     device1:   Y1    =   A1    *   B
+//             (m1, n)    (m1, k) , (k, n)
+//     -----------------------------------
+//     where (m0 + m1 == m)
+//            and (A0 == A[0:m0, :]) and (A1 == A[m0:, :])
+//            and (Y0 == Y[0:m0, :]) and (Y1 == Y[m0:, :])
+
+// candidate signature 1:
+//     Y:Split(1), A:Broadcast, B:Split(1)
+//     -----------------------------------
+//     device0:   Y0    =   A    *   B0
+//             (m, n0)    (m, k) , (k, n0)
+//     -----------------------------------
+//     device1:   Y1    =   A    *   B1
+//             (m, n1)    (m, k) , (k, n1)
+//     -----------------------------------
+//     where (n0 + n1 == n)
+//            and (B0 == B[:, 0:n0]) and (B1 == B[:, n0:])
+//            and (Y0 == Y[:, 0:n0]) and (Y1 == Y[:, n0:])
+
+// candidate signature 2:
+//     Y:PartialSum, A:Split(1), B:Split(0)
+//     ------------------------------------
+//     device0:   Y0    =   A0    *   B0
+//              (m, n)    (m, k0) , (k0, n)
+//     ------------------------------------
+//     device1:   Y1    =   A1    *   B1
+//              (m, n)    (m, k1) , (k1, n)
+//     ------------------------------------
+//     where (k0 + k1 == k) and (Y0 + Y1 == Y)
+
+message SplitParallel {
+  required int64 axis = 1;
+}
+
+message BroadcastParallel {
+}
+
+message PartialSumParallel {
+}
+
+message SbpParallel {
+  oneof parallel_type {
+    SplitParallel split_parallel = 1;
+    BroadcastParallel broadcast_parallel = 2;
+    PartialSumParallel partial_sum_parallel = 3;
+  }
+}
+
+message SbpSignature {
+  map<string, SbpParallel> bn_in_op2sbp_parallel = 1;
+}
+
+message ParallelDistribution {
+  repeated SbpParallel sbp_parallel = 1;
+}
+
+message ParallelDistributionSignature {
+  map<string, ParallelDistribution> bn_in_op2parallel_distribution = 1;
+}
+
+message SbpSignatureList {
+  repeated SbpSignature sbp_signature = 1;
+}
