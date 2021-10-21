@@ -66,16 +66,11 @@ namespace {
 
 using PbMessage = google::protobuf::Message;
 
-class JobImporter {
+class JobImporter : Importer {
  public:
   JobImporter(RoundTripOneFlowJobWrapperInterface& job_wrapper, MLIRContext* context,
               ModuleOp module)
-      : builder_(context),
-        context_(context),
-        module_(module),
-        unknown_loc_(FileLineColLoc::get(context, job_wrapper.job()->job_conf().job_name(), 0, 0)),
-        job_(job_wrapper.job()),
-        job_wrapper_(job_wrapper) {}
+      : Importer(context, module), job_(job_wrapper.job()), job_wrapper_(job_wrapper) {}
 
   LogicalResult namedAttributesFromUserOp(const ::oneflow::OperatorConf& op,
                                           std::vector<NamedAttribute>& attr_vec);
@@ -104,28 +99,24 @@ class JobImporter {
                                         ::oneflow::OperatorConf& op_conf);
 
   IntegerAttr getSI64IntegerAttr(int64_t value) {
-    return IntegerAttr::get(builder_.getIntegerType(64, /*isSigned=*/true),
+    return IntegerAttr::get(GetBuilder().getIntegerType(64, /*isSigned=*/true),
                             APInt(64, value, /*isSigned=*/true));
   }
   ArrayAttr getSI32ArrayAttr(ArrayRef<int32_t> values) {
     auto attrs = llvm::to_vector<8>(llvm::map_range(
-        values, [this](int32_t v) -> Attribute { return builder_.getSI32IntegerAttr(v); }));
-    return builder_.getArrayAttr(attrs);
+        values, [this](int32_t v) -> Attribute { return GetBuilder().getSI32IntegerAttr(v); }));
+    return GetBuilder().getArrayAttr(attrs);
   }
   ArrayAttr getSI64ArrayAttr(ArrayRef<int64_t> values) {
     auto attrs = llvm::to_vector<8>(
         llvm::map_range(values, [this](int64_t v) -> Attribute { return getSI64IntegerAttr(v); }));
-    return builder_.getArrayAttr(attrs);
+    return GetBuilder().getArrayAttr(attrs);
   }
 
   llvm::Optional<Type> GetTypeFromOneFlowDataType(::oneflow::DataType dt);
   Type GetTensorTypeOfLbn(const std::string& lbn);
 
  private:
-  OpBuilder builder_;
-  MLIRContext* context_;
-  ModuleOp module_;
-  Location unknown_loc_;
   std::unordered_map<std::string, mlir::OpResult> lbn2result_;
   std::unordered_map<std::string, mlir::OpResult> op_name2ctrl_result_;
   const ::oneflow::Job* job_;
@@ -145,10 +136,10 @@ LogicalResult JobImporter::AddUserOpInputOutputSegments(const ::oneflow::Operato
     input_lbn_segment_sizes.push_back(value.s_size());
     data_input_size += value.s_size();
   }
-  attr_vec.push_back(builder_.getNamedAttr("input_lbn_segment_keys",
-                                           builder_.getStrArrayAttr(input_lbn_segment_keys)));
-  attr_vec.push_back(builder_.getNamedAttr("input_lbn_segment_sizes",
-                                           builder_.getI32ArrayAttr(input_lbn_segment_sizes)));
+  attr_vec.push_back(GetBuilder().getNamedAttr(
+      "input_lbn_segment_keys", GetBuilder().getStrArrayAttr(input_lbn_segment_keys)));
+  attr_vec.push_back(GetBuilder().getNamedAttr(
+      "input_lbn_segment_sizes", GetBuilder().getI32ArrayAttr(input_lbn_segment_sizes)));
 
   LBNVec output_lbns;
   LBNVec output_lbn_segment_keys;
@@ -161,11 +152,12 @@ LogicalResult JobImporter::AddUserOpInputOutputSegments(const ::oneflow::Operato
     output_lbn_segment_sizes.push_back(value.s_size());
     data_output_size += value.s_size();
   }
-  attr_vec.push_back(builder_.getNamedAttr("output_lbns", builder_.getStrArrayAttr(output_lbns)));
-  attr_vec.push_back(builder_.getNamedAttr("output_lbn_segment_keys",
-                                           builder_.getStrArrayAttr(output_lbn_segment_keys)));
-  attr_vec.push_back(builder_.getNamedAttr("output_lbn_segment_sizes",
-                                           builder_.getI32ArrayAttr(output_lbn_segment_sizes)));
+  attr_vec.push_back(
+      GetBuilder().getNamedAttr("output_lbns", GetBuilder().getStrArrayAttr(output_lbns)));
+  attr_vec.push_back(GetBuilder().getNamedAttr(
+      "output_lbn_segment_keys", GetBuilder().getStrArrayAttr(output_lbn_segment_keys)));
+  attr_vec.push_back(GetBuilder().getNamedAttr(
+      "output_lbn_segment_sizes", GetBuilder().getI32ArrayAttr(output_lbn_segment_sizes)));
   return success();
 }
 
@@ -198,7 +190,7 @@ DenseIntElementsAttr JobImporter::DenseIntElementsAttrFromShape(
     const ::oneflow::ShapeProto& shape) {
   ArrayRef<int64_t> values = {shape.dim().begin(), shape.dim().end()};
   RankedTensorType tt = RankedTensorType::get({static_cast<int64_t>(values.size())},
-                                              builder_.getIntegerType(64, true));
+                                              GetBuilder().getIntegerType(64, true));
   ;
   return DenseIntElementsAttr::get(tt, values);
 }
@@ -213,7 +205,7 @@ void WriteDenseIntElementsToShape(mlir::Attribute& attr, ::oneflow::ShapeProto* 
 LogicalResult JobImporter::namedAttributesFromUserOp(const ::oneflow::OperatorConf& op,
                                                      std::vector<NamedAttribute>& attr_vec) {
   if (op.has_user_conf() == false) {
-    module_.emitError("Not a user op. op name: " + op.name());
+    GetModule().emitError("Not a user op. op name: " + op.name());
     return failure();
   }
   for (const google::protobuf::MapPair<class std::basic_string<char>, ::oneflow::AttrValue>& attr :
@@ -222,18 +214,18 @@ LogicalResult JobImporter::namedAttributesFromUserOp(const ::oneflow::OperatorCo
     const ::oneflow::AttrValue& value = attr.second;
     if (value.has_at_int32()) {
       std::pair<mlir::Identifier, mlir::Attribute> kv =
-          builder_.getNamedAttr(name, builder_.getSI32IntegerAttr(value.at_int32()));
+          GetBuilder().getNamedAttr(name, GetBuilder().getSI32IntegerAttr(value.at_int32()));
       attr_vec.emplace_back(kv);
     } else if (value.has_at_int64()) {
       std::pair<mlir::Identifier, mlir::Attribute> kv =
-          builder_.getNamedAttr(name, getSI64IntegerAttr(value.at_int64()));
+          GetBuilder().getNamedAttr(name, getSI64IntegerAttr(value.at_int64()));
       attr_vec.emplace_back(kv);
     }
-#define DEFINE_ONE_ELIF(at_key, get_attr)                               \
-  else if (value.has_##at_key()) {                                      \
-    std::pair<mlir::Identifier, mlir::Attribute> kv =                   \
-        builder_.getNamedAttr(name, builder_.get_attr(value.at_key())); \
-    attr_vec.emplace_back(kv);                                          \
+#define DEFINE_ONE_ELIF(at_key, get_attr)                                       \
+  else if (value.has_##at_key()) {                                              \
+    std::pair<mlir::Identifier, mlir::Attribute> kv =                           \
+        GetBuilder().getNamedAttr(name, GetBuilder().get_attr(value.at_key())); \
+    attr_vec.emplace_back(kv);                                                  \
   }
     DEFINE_ONE_ELIF(at_bool, getBoolAttr)
     DEFINE_ONE_ELIF(at_float, getF32FloatAttr)
@@ -242,33 +234,33 @@ LogicalResult JobImporter::namedAttributesFromUserOp(const ::oneflow::OperatorCo
 #undef DEFINE_ONE_ELIF
     else if (value.has_at_shape()) {
       attr_vec.emplace_back(
-          builder_.getNamedAttr(name, DenseIntElementsAttrFromShape(value.at_shape())));
+          GetBuilder().getNamedAttr(name, DenseIntElementsAttrFromShape(value.at_shape())));
     }
 #define DEFINE_ONE_ELIF(at_key, get_attr, field)                                         \
   else if (value.has_##at_key()) {                                                       \
-    std::pair<mlir::Identifier, mlir::Attribute> kv = builder_.getNamedAttr(             \
+    std::pair<mlir::Identifier, mlir::Attribute> kv = GetBuilder().getNamedAttr(         \
         name, get_attr({value.at_key().field().begin(), value.at_key().field().end()})); \
     attr_vec.emplace_back(kv);                                                           \
   }
     DEFINE_ONE_ELIF(at_list_int32, getSI32ArrayAttr, val)
     DEFINE_ONE_ELIF(at_list_int64, getSI64ArrayAttr, val)
-    DEFINE_ONE_ELIF(at_list_float, builder_.getF32ArrayAttr, val)
+    DEFINE_ONE_ELIF(at_list_float, GetBuilder().getF32ArrayAttr, val)
 #undef DEFINE_ONE_ELIF
     else if (value.has_at_list_string()) {
       std::vector<llvm::StringRef> r_vec = {value.at_list_string().val().begin(),
                                             value.at_list_string().val().end()};
       std::pair<mlir::Identifier, mlir::Attribute> kv =
-          builder_.getNamedAttr(name, builder_.getStrArrayAttr(r_vec));
+          GetBuilder().getNamedAttr(name, GetBuilder().getStrArrayAttr(r_vec));
       attr_vec.emplace_back(kv);
     }
     else if (value.has_at_data_type()) {
       std::string stringified = "";
       if (failed(StringifyDataType(value.at_data_type(), stringified))) {
-        module_.emitError("fail to convert op attr, key: " + name);
+        GetModule().emitError("fail to convert op attr, key: " + name);
         return failure();
       }
       std::pair<mlir::Identifier, mlir::Attribute> kv =
-          builder_.getNamedAttr(name, builder_.getStringAttr(stringified));
+          GetBuilder().getNamedAttr(name, GetBuilder().getStringAttr(stringified));
       attr_vec.emplace_back(kv);
     }
     else if (value.has_at_list_data_type()) {
@@ -279,8 +271,8 @@ LogicalResult JobImporter::namedAttributesFromUserOp(const ::oneflow::OperatorCo
       });
       std::vector<std::string> stringified_vector = {stringified_list.begin(),
                                                      stringified_list.end()};
-      attr_vec.emplace_back(builder_.getNamedAttr(
-          name, builder_.getStrArrayAttr(std::vector<StringRef>(
+      attr_vec.emplace_back(GetBuilder().getNamedAttr(
+          name, GetBuilder().getStrArrayAttr(std::vector<StringRef>(
                     {stringified_vector.begin(), stringified_vector.end()}))));
     }
     else if (value.has_at_list_shape()) {
@@ -289,17 +281,18 @@ LogicalResult JobImporter::namedAttributesFromUserOp(const ::oneflow::OperatorCo
           [&](const ::oneflow::ShapeProto& s) { return DenseIntElementsAttrFromShape(s); });
       std::vector<mlir::Attribute> dense_attr_vector{dense_attr_list.begin(),
                                                      dense_attr_list.end()};
-      attr_vec.emplace_back(builder_.getNamedAttr(name, builder_.getArrayAttr(dense_attr_vector)));
+      attr_vec.emplace_back(
+          GetBuilder().getNamedAttr(name, GetBuilder().getArrayAttr(dense_attr_vector)));
     }
     else {
-      module_.emitError("can't handle user op attr: " + name + ", op name: " + op.name()
-                        + ", op type name: " + op.user_conf().op_type_name());
+      GetModule().emitError("can't handle user op attr: " + name + ", op name: " + op.name()
+                            + ", op type name: " + op.user_conf().op_type_name());
       return failure();
     }
   }
 
   if (failed(AddUserOpInputOutputSegments(op, attr_vec))) {
-    module_.emitError("fail to add input output segments: " + op.name());
+    GetModule().emitError("fail to add input output segments: " + op.name());
     return failure();
   }
 
@@ -311,7 +304,7 @@ LogicalResult JobImporter::AppendCtrlInOperand(const ::oneflow::OperatorConf& op
   for (auto& ctrl_in_op_name : op.ctrl_in_op_name()) {
     auto it = op_name2ctrl_result_.find(ctrl_in_op_name);
     if (it == op_name2ctrl_result_.end()) {
-      module_.emitError("IR result not found for ctrl in op: " + ctrl_in_op_name);
+      GetModule().emitError("IR result not found for ctrl in op: " + ctrl_in_op_name);
       return failure();
     } else {
       operand_vec.push_back(it->second);
@@ -324,7 +317,7 @@ LogicalResult JobImporter::AppendDataInOperand(const std::string& lbn,
                                                std::vector<::mlir::Value>& operand_vec) {
   auto it = lbn2result_.find(lbn);
   if (it == lbn2result_.end()) {
-    module_.emitError("IR result not found for: " + lbn);
+    GetModule().emitError("IR result not found for: " + lbn);
     return failure();
   } else {
     operand_vec.push_back(it->second);
@@ -334,16 +327,16 @@ LogicalResult JobImporter::AppendDataInOperand(const std::string& lbn,
 
 LogicalResult JobImporter::AddOperandSegmentSizes(int32_t input_lbns_size, int32_t ctrl_in_size,
                                                   std::vector<NamedAttribute>& attr_vec) {
-  attr_vec.push_back(builder_.getNamedAttr(
-      "operand_segment_sizes", builder_.getI32VectorAttr({input_lbns_size, ctrl_in_size})));
+  attr_vec.push_back(GetBuilder().getNamedAttr(
+      "operand_segment_sizes", GetBuilder().getI32VectorAttr({input_lbns_size, ctrl_in_size})));
   return success();
 }
 
 LogicalResult JobImporter::AddResultSegmentSizes(int32_t output_lbns_size,
                                                  std::vector<NamedAttribute>& attr_vec) {
-  attr_vec.push_back(builder_.getNamedAttr(
+  attr_vec.push_back(GetBuilder().getNamedAttr(
       "result_segment_sizes",
-      builder_.getI32VectorAttr({output_lbns_size, 1} /* {data_out_size, ctrl_out_size} */)));
+      GetBuilder().getI32VectorAttr({output_lbns_size, 1} /* {data_out_size, ctrl_out_size} */)));
   return success();
 }
 
@@ -429,7 +422,7 @@ LogicalResult JobImporter::InsertOpResults(Operation* created_op) {
 }
 
 LogicalResult JobImporter::AppendCtrlOutType(llvm::SmallVector<Type, 8>& out_types) {
-  out_types.append({RankedTensorType::get({}, builder_.getI1Type())});
+  out_types.append({RankedTensorType::get({}, GetBuilder().getI1Type())});
   return success();
 }
 
@@ -437,24 +430,25 @@ LogicalResult JobImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
                                          std::vector<NamedAttribute>& attr_vec) {
   const ::oneflow::ParallelConf& pc = job_wrapper_.ParallelConf4OpName(op.name());
   std::vector<llvm::StringRef> device_vec = {pc.device_name().begin(), pc.device_name().end()};
-  attr_vec.push_back(builder_.getNamedAttr("device_name", builder_.getStrArrayAttr(device_vec)));
+  attr_vec.push_back(
+      GetBuilder().getNamedAttr("device_name", GetBuilder().getStrArrayAttr(device_vec)));
   if (pc.has_hierarchy()) {
-    attr_vec.push_back(builder_.getNamedAttr(
+    attr_vec.push_back(GetBuilder().getNamedAttr(
         "hierarchy",
-        builder_.getI64ArrayAttr({pc.hierarchy().dim().begin(), pc.hierarchy().dim().end()})));
+        GetBuilder().getI64ArrayAttr({pc.hierarchy().dim().begin(), pc.hierarchy().dim().end()})));
   }
   return success();
 }
 
 LogicalResult JobImporter::AddOpConf(const ::oneflow::OperatorConf& op,
                                      std::vector<NamedAttribute>& attr_vec) {
-  attr_vec.push_back(builder_.getNamedAttr("op_name", builder_.getStringAttr(op.name())));
+  attr_vec.push_back(GetBuilder().getNamedAttr("op_name", GetBuilder().getStringAttr(op.name())));
   if (op.has_device_tag()) {
     attr_vec.push_back(
-        builder_.getNamedAttr("device_tag", builder_.getStringAttr(op.device_tag())));
+        GetBuilder().getNamedAttr("device_tag", GetBuilder().getStringAttr(op.device_tag())));
   }
-  attr_vec.push_back(
-      builder_.getNamedAttr("scope_symbol_id", builder_.getI64IntegerAttr(op.scope_symbol_id())));
+  attr_vec.push_back(GetBuilder().getNamedAttr(
+      "scope_symbol_id", GetBuilder().getI64IntegerAttr(op.scope_symbol_id())));
   return success();
 }
 
@@ -462,21 +456,21 @@ llvm::Optional<Type> JobImporter::GetTypeFromOneFlowDataType(::oneflow::DataType
   {
     if (dt == ::oneflow::DataType::kInvalidDataType) { return llvm::None; }
     if (dt == ::oneflow::DataType::kChar) { return llvm::None; }
-    if (dt == ::oneflow::DataType::kFloat) { return builder_.getF32Type(); }
-    if (dt == ::oneflow::DataType::kDouble) { return builder_.getF64Type(); }
-    if (dt == ::oneflow::DataType::kInt8) { return builder_.getIntegerType(8, true); }
-    if (dt == ::oneflow::DataType::kInt32) { return builder_.getI32Type(); }
-    if (dt == ::oneflow::DataType::kInt64) { return builder_.getI64Type(); }
-    if (dt == ::oneflow::DataType::kUInt8) { return builder_.getIntegerType(8, false); }
+    if (dt == ::oneflow::DataType::kFloat) { return GetBuilder().getF32Type(); }
+    if (dt == ::oneflow::DataType::kDouble) { return GetBuilder().getF64Type(); }
+    if (dt == ::oneflow::DataType::kInt8) { return GetBuilder().getIntegerType(8, true); }
+    if (dt == ::oneflow::DataType::kInt32) { return GetBuilder().getI32Type(); }
+    if (dt == ::oneflow::DataType::kInt64) { return GetBuilder().getI64Type(); }
+    if (dt == ::oneflow::DataType::kUInt8) { return GetBuilder().getIntegerType(8, false); }
     if (dt == ::oneflow::DataType::kOFRecord) { return llvm::None; }
-    if (dt == ::oneflow::DataType::kFloat16) { return builder_.getF16Type(); }
+    if (dt == ::oneflow::DataType::kFloat16) { return GetBuilder().getF16Type(); }
     if (dt == ::oneflow::DataType::kTensorBuffer) { return llvm::None; }
     return llvm::None;
   }
 }
 
 Type JobImporter::GetTensorTypeOfLbn(const std::string& lbn) {
-  Type ret = this->builder_.getNoneType();
+  Type ret = this->GetBuilder().getNoneType();
   job_wrapper_.QueryLogicalBlob(
       lbn,
       [this, &ret](const int64_t* shape_begin, const int64_t* shape_end, ::oneflow::DataType dt) {
@@ -489,7 +483,7 @@ Type JobImporter::GetTensorTypeOfLbn(const std::string& lbn) {
 
 LogicalResult JobImporter::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   if (op.has_user_conf() == false) {
-    module_.emitError("Not a user op. op name: " + op.name());
+    GetModule().emitError("Not a user op. op name: " + op.name());
     return failure();
   }
   const ::oneflow::UserOpConf& user_conf = op.user_conf();
@@ -498,8 +492,8 @@ LogicalResult JobImporter::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   std::vector<NamedAttribute> attr_vec;
   if (failed(AddOpConf(op, attr_vec))) { return failure(); }
   if (failed(AddDeviceName(op, attr_vec))) { return failure(); }
-  attr_vec.push_back(
-      builder_.getNamedAttr("op_type_name", builder_.getStringAttr(op.user_conf().op_type_name())));
+  attr_vec.push_back(GetBuilder().getNamedAttr(
+      "op_type_name", GetBuilder().getStringAttr(op.user_conf().op_type_name())));
   std::vector<::mlir::Value> operand_vec;
   if (failed(namedAttributesFromUserOp(op, attr_vec))) { return failure(); }
   for (const auto& key : op.user_conf().input_order()) {
@@ -525,11 +519,12 @@ LogicalResult JobImporter::ProcessUserOp(const ::oneflow::OperatorConf& op) {
       return failure();
     }
     ArrayRef<NamedAttribute> named_attributes(attr_vec);
-    created_op = builder_.create<oneflow::ConstantOp>(
-        FileLineColLoc::get(context_, op.name(), 0, 0), out_types, operands, named_attributes);
+    created_op = GetBuilder().create<oneflow::ConstantOp>(
+        FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0), out_types, operands,
+        named_attributes);
   } else {
     if (failed(AppendCtrlOutType(out_types))) { return failure(); }
-    OperationState state(FileLineColLoc::get(context_, op.name(), 0, 0), "oneflow.user");
+    OperationState state(FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0), "oneflow.user");
     for (auto na : attr_vec) {
       if (na.first.str() == "input_lbn_segment_sizes") {
         int32_t data_input_size = 0;
@@ -545,7 +540,7 @@ LogicalResult JobImporter::ProcessUserOp(const ::oneflow::OperatorConf& op) {
           return failure();
         }
         if (na.second.dyn_cast<ArrayAttr>().size() != out_types.size() - 1) {
-          module_->emitError("len(out_types) - 1 != len(output_lbns), op: " + op.name());
+          GetModule()->emitError("len(out_types) - 1 != len(output_lbns), op: " + op.name());
           return failure();
         }
       }
@@ -554,12 +549,12 @@ LogicalResult JobImporter::ProcessUserOp(const ::oneflow::OperatorConf& op) {
     state.addAttributes(named_attributes);
     state.addOperands(operands);
     state.addTypes(out_types);
-    created_op = builder_.createOperation(state);
+    created_op = GetBuilder().createOperation(state);
   }
 
   if (created_op == nullptr) {
-    module_->emitError("fail to create " + op.user_conf().op_type_name()
-                       + " op, name: " + op.name());
+    GetModule()->emitError("fail to create " + op.user_conf().op_type_name()
+                           + " op, name: " + op.name());
     return failure();
   }
   if (failed(InsertOpResults(created_op))) { return failure(); }
@@ -569,7 +564,7 @@ LogicalResult JobImporter::ProcessUserOp(const ::oneflow::OperatorConf& op) {
 
 LogicalResult JobImporter::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
   if (op.has_user_conf()) {
-    module_.emitError("Not a sys op. op name: " + op.name());
+    GetModule().emitError("Not a sys op. op name: " + op.name());
     return failure();
   }
   auto input_bns_lbns = job_wrapper_.InputBns4OpName(op.name());
@@ -580,15 +575,15 @@ LogicalResult JobImporter::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
   std::vector<NamedAttribute> attr_vec;
   if (failed(AddOpConf(op, attr_vec))) { return failure(); }
   if (failed(AddDeviceName(op, attr_vec))) { return failure(); }
-  attr_vec.push_back(builder_.getNamedAttr(
-      "input_bns", builder_.getStrArrayAttr(
+  attr_vec.push_back(GetBuilder().getNamedAttr(
+      "input_bns", GetBuilder().getStrArrayAttr(
                        std::vector<llvm::StringRef>({input_bns.begin(), input_bns.end()}))));
-  attr_vec.push_back(builder_.getNamedAttr(
-      "output_lbns", builder_.getStrArrayAttr(
+  attr_vec.push_back(GetBuilder().getNamedAttr(
+      "output_lbns", GetBuilder().getStrArrayAttr(
                          std::vector<llvm::StringRef>({output_lbns.begin(), output_lbns.end()}))));
-  OperationState state(FileLineColLoc::get(context_, op.name(), 0, 0), "oneflow.system");
+  OperationState state(FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0), "oneflow.system");
   attr_vec.push_back(
-      builder_.getNamedAttr("op_type_case", builder_.getI32IntegerAttr(op.op_type_case())));
+      GetBuilder().getNamedAttr("op_type_case", GetBuilder().getI32IntegerAttr(op.op_type_case())));
   if (failed(AddOperandSegmentSizes(static_cast<int>(input_lbns.size()), op.ctrl_in_op_name_size(),
                                     attr_vec))) {
     return failure();
@@ -607,20 +602,20 @@ LogicalResult JobImporter::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
   if (failed(AppendCtrlOutType(out_types))) { return failure(); }
   state.addOperands(operand_vec);
   state.addTypes(out_types);
-  auto created_op = builder_.createOperation(state);
+  auto created_op = GetBuilder().createOperation(state);
   if (failed(InsertOpResults(created_op))) { return failure(); }
   if (!created_op) {
-    module_->emitError("fail to create op, name: " + op.name());
+    GetModule()->emitError("fail to create op, name: " + op.name());
     return failure();
   }
   return success();
 }
 
 LogicalResult JobImporter::ProcessJob() {
-  auto func_type = builder_.getFunctionType(llvm::None, llvm::None);
-  auto function = mlir::FuncOp::create(unknown_loc_, job_->job_conf().job_name(), func_type);
+  auto func_type = GetBuilder().getFunctionType(llvm::None, llvm::None);
+  auto function = mlir::FuncOp::create(GetRootLocation(), job_->job_conf().job_name(), func_type);
   auto& entryBlock = *function.addEntryBlock();
-  builder_.setInsertionPointToStart(&entryBlock);
+  GetBuilder().setInsertionPointToStart(&entryBlock);
 
   bool is_succeeded = true;
   job_wrapper_.TopoForEachOpConf([&](const ::oneflow::OperatorConf* op_conf) {
@@ -636,8 +631,8 @@ LogicalResult JobImporter::ProcessJob() {
 
   ReturnOp returnOp;
   if (!entryBlock.empty()) { returnOp = dyn_cast<ReturnOp>(entryBlock.back()); }
-  if (!returnOp) { builder_.create<ReturnOp>(unknown_loc_); }
-  module_.push_back(function);
+  if (!returnOp) { GetBuilder().create<ReturnOp>(GetRootLocation()); }
+  GetModule().push_back(function);
   return success();
 }
 
@@ -925,7 +920,7 @@ LogicalResult JobImporter::TryToUpdateJob() {
     } /* convert op conf */
     return WalkResult::advance();
   };
-  SymbolTable symbol_table(module_);
+  SymbolTable symbol_table(GetModule());
   if (symbol_table.lookup(job_wrapper_.job()->job_conf().job_name())
           ->walk(convertOps)
           .wasInterrupted()) {

@@ -16,12 +16,35 @@ limitations under the License.
 #ifndef ONEFLOW_MLIRONEFLOWTRANSLATION_H
 #define ONEFLOW_MLIRONEFLOWTRANSLATION_H
 
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/MLIRContext.h"
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include <functional>
 #include <string>
 namespace mlir {
+
+class Importer {
+ public:
+  Importer(MLIRContext* context, ModuleOp module)
+      : builder_(context),
+        context_(context),
+        module_(module),
+        unknown_loc_(FileLineColLoc::get(context, "unknown_loc", 0, 0)) {}
+
+  OpBuilder& GetBuilder() { return builder_; }
+  MLIRContext* GetMLIRContext() { return context_; }
+  ModuleOp& GetModule() { return module_; }
+  Location& GetRootLocation() { return unknown_loc_; }
+
+ private:
+  OpBuilder builder_;
+  MLIRContext* context_;
+  ModuleOp module_;
+  Location unknown_loc_;
+};
 
 class RoundTripOneFlowJobWrapperInterface {
  public:
