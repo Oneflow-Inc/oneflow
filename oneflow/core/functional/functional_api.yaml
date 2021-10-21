@@ -1071,6 +1071,14 @@
   signature: 'Tensor (Tensor x, Int64List pad, String mode="constant", Scalar value=0) => Pad'
   bind_python: True
 
+- name: "pack_padded_sequence"
+  signature: 'Tensor (Tensor x, Tensor lengths, Bool batch_first =false, Bool enforce_sorted=True) => PackPaddedSequence'
+  bind_python: True
+
+- name: "pad_packed_sequence"
+  signature: 'Tensor (Tensor x, Bool batch_first =false, Float padding_value=0.0, Scalar total_length=None) => PadPackedSequence'
+  bind_python: True
+
 - name: "pad_grad"
   signature: 'Tensor (Tensor dy, Int64List pad, String mode="constant", Scalar value=0) => PadGrad'
   bind_python: False

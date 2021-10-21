@@ -1574,6 +1574,54 @@ class FusedScaleTrilFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class PackPaddedSequenceFunctor {
+ public:
+  PackPaddedSequenceFunctor() {}
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::shared_ptr<one::Tensor>& lengths,
+                           const bool& batch_first, const bool& enforce_sorted) const {
+    
+    auto input = batch_first? JUST(Transpose2dim(x, 0, 1)) : x;
+    int64_t batch_size = (input->shape())->At(1);//批次
+    CHECK_GT_OR_RETURN(input->nelement(), 0) << "Cannot pack empty tensors.";
+    CHECK_EQ_OR_RETURN((lengths->shape())->At(0), batch_size)
+        << "Expected `len(lengths)` to be equal to batch_size, but got"
+        <<(lengths->shape())->At(0) << "(batch_size=" << batch_size<<")";
+    //和0tensor比较，lengths中不能有一个0
+    for(int32_t i=0; i < batch_size;++i)
+    {
+      //查看表示是否时按照长度降序排列的。前长后短
+    }
+    TensorTuple steps(batch_size);
+    // == [-1, *input.shape[2:]]
+    auto input_sizes = input->shape();
+    std::vector<int64_t> step_shape;
+    step_shape.reserve(input->shape()->NumAxes());
+    auto s_input_sizes= JUST(Slice(input_sizes, 0, 2,1));
+    step_shape.push_back(-1);
+    step_shape.insert(step_shape.end(), s_input_sizes.begin(), s_input_sizes.end());
+    //
+
+    int64_t prev_l = 0;
+    //batch_size表示批次大小
+    for (int64_t i = 0; i < batch_size; ++i) {
+      int64_t l = lengths[batch_size - 1 - i];//倒序
+      //每个比较大小,最初是和0比较
+      if (l > prev_l) {
+        auto current_batch_size = batch_size - i;
+        //slice（）dim start end input的0维为最长序列的长度， 第1维为batch_size批次大小
+        steps.push_back(input.slice(0, prev_l, l).slice(1, 0, current_batch_size).contiguous().view(step_shape));
+        for (int64_t j = 0; j < (l - prev_l); ++j) {
+          (*batch_sizes++) = current_batch_size;
+        }
+        prev_l = l;
+      }
+      CHECK_LE_OR_RETURN(prev_l, 1);
+    }
+    return std::make_tuple(at::cat(steps), batch_sizes_t);//batch_sizes_t
+  }
+};
+
 class CtcGreedyDecoderFunctor {
  public:
   CtcGreedyDecoderFunctor() {
@@ -1653,6 +1701,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedBiasAddGeluGradFunctor>("FusedBiasAddGeluGrad");
   m.add_functor<impl::FusedBiasAddDropoutFunctor>("FusedBiasAddDropout");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
+  m.add_functor<impl::PackPaddedSequenceFunctor>("PackPaddedSequence");
   m.add_functor<impl::CtcGreedyDecoderFunctor>("CtcGreedyDecoder");
 };
 
