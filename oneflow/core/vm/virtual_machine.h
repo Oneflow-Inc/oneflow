@@ -103,7 +103,7 @@ INTRUSIVE_BEGIN(VirtualMachine);
  private:
   using TmpPendingInstrMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, instr_msg_hook_)>;
   using NewInstructionList = InstructionList;
-  using WaitingInstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, waiting_instruction_hook_)>;
+  using WaitingInstructionList = InstructionList;
   using ReadyInstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, dispatched_instruction_hook_)>;
 
   const WaitingInstructionList& waiting_instruction_list() const { return waiting_instruction_list_; }
@@ -152,7 +152,7 @@ INTRUSIVE_BEGIN(VirtualMachine);
                              Instruction* instrution);
   void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                               NewInstructionList* new_instruction_list);
-  void DispatchOrMoveToWaiting(NewInstructionList* new_instruction_list);
+  void MoveToReadyOrWaiting(NewInstructionList* new_instruction_list);
   void DispatchInstruction(Instruction* instruction);
   void TryDeleteLogicalObjects();
 

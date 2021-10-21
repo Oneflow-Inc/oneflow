@@ -522,15 +522,14 @@ bool VirtualMachine::Dispatchable(Instruction* instruction) const {
   return true;
 }
 
-void VirtualMachine::DispatchOrMoveToWaiting(NewInstructionList* new_instruction_list) {
+void VirtualMachine::MoveToReadyOrWaiting(NewInstructionList* new_instruction_list) {
   INTRUSIVE_FOR_EACH_PTR(instruction, new_instruction_list) {
     if (Dispatchable(instruction)) {
-      DispatchInstruction(instruction);
-    } else {
-      mut_waiting_instruction_list()->PushBack(instruction);
+      mut_ready_instruction_list()->PushBack(instruction);
+      new_instruction_list->Erase(instruction);
     }
-    new_instruction_list->Erase(instruction);
   }
+  new_instruction_list->MoveTo(mut_waiting_instruction_list());
 }
 
 void VirtualMachine::DispatchInstruction(Instruction* instruction) {
@@ -657,7 +656,6 @@ void VirtualMachine::TryDeleteLogicalObjects() {
 
 void VirtualMachine::TryMoveFromWaitingToReady(Instruction* instruction) {
   if (Dispatchable(instruction)) {
-    CHECK(!instruction->is_waiting_instruction_hook_empty());
     // For memory safety, do not swap the following two lines.
     mut_ready_instruction_list()->PushBack(instruction);
     mut_waiting_instruction_list()->Erase(instruction);
@@ -689,8 +687,6 @@ void VirtualMachine::Schedule() {
   TryDeleteLogicalObjects();
   // Try run sequential instructions
   TryRunFrontSeqInstruction();
-  // Dispatch ready instructions and put prescheduled instructions onto ready_instruction_list_.
-  TryDispatchReadyInstructionsAndPreschedule();
   // Use thread_unsafe_size to avoid acquiring mutex lock.
   // The inconsistency between pending_msg_list.list_head_.list_head_.container_ and
   // pending_msg_list.list_head_.list_head_.size_ is not a fatal error because
@@ -707,8 +703,10 @@ void VirtualMachine::Schedule() {
     NewInstructionList new_instruction_list;
     MakeInstructions(&tmp_pending_msg_list, /*out*/ &new_instruction_list);
     ConsumeMirroredObjects(mut_id2logical_object(), &new_instruction_list);
-    DispatchOrMoveToWaiting(&new_instruction_list);
+    MoveToReadyOrWaiting(&new_instruction_list);
   }
+  // Dispatch ready instructions and put prescheduled instructions onto ready_instruction_list_.
+  TryDispatchReadyInstructionsAndPreschedule();
   *mut_flying_instruction_cnt() = mut_waiting_instruction_list()->size()
                                   + mut_ready_instruction_list()->size()
                                   + mut_vm_stat_running_instruction_list()->size();
