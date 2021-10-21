@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
 
 
 def diagonal_op(input, offset=0, dim1=0, dim2=1):
@@ -29,10 +28,14 @@ def diagonal_op(input, offset=0, dim1=0, dim2=1):
     
     Returns:
         oneflow.Tensor: the output Tensor.
+
     For example:
+    
     .. code-block:: python
+
         >>> import oneflow as flow
         >>> import numpy as np
+
         >>> arr = np.array(
         ...     [
         ...        [1.0, 2.0, 3.0],
@@ -40,9 +43,10 @@ def diagonal_op(input, offset=0, dim1=0, dim2=1):
         ...        [7.0, 8.0, 9.0],
         ...     ]
         ... )
-        >>> input = flow.tensor(arr, dtype=flow.float32)
+        >>> input = flow.Tensor(arr)
         >>> flow.diagonal(input,offset=1,dim1=1,dim2=0)
         tensor([4., 8.], dtype=oneflow.float32)
+
     """
     out = flow._C.diagonal(input, offset, dim1, dim2)
     return out
