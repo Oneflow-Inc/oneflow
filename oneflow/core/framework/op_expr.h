@@ -277,25 +277,29 @@ class SelectTopNOpExpr final : public OpExpr {
 };
 
 class AutoGradCaptureState;
-// TODO(wyg): Finish the class definition of `FunctionOpExpr`.
+
 class FunctionOpExpr final : public OpExpr {
  public:
   using FType = AutogradFunctionBase::FType;
-  FunctionOpExpr() = default;  // TODO(wyg): re-define a static function to construct FunctionOpExpr
-
-  const std::string& op_type_name() const override {
-    UNIMPLEMENTED();
-    return function_name_;
+  FunctionOpExpr() = delete;
+  static Maybe<FunctionOpExpr> New(const std::string& func_name, const FType& forward_fn,
+                                   const FType& backward_fn) {
+    return std::shared_ptr<FunctionOpExpr>(new FunctionOpExpr(func_name, forward_fn, backward_fn));
   }
 
-  int input_size() const override { return input_size_; }
+  const std::string& op_type_name() const override { return func_name_; }
+
+  int input_size() const override {
+    PRINT_BUG_PROMPT_AND_ABORT() << "You cannot get input_size here.";
+    return 0;
+  }
   int output_size() const override {
-    UNIMPLEMENTED();
+    PRINT_BUG_PROMPT_AND_ABORT() << "You cannot get output_size here.";
     return 0;
   }
 
-  FType forward() const { return forward_; }
-  FType backward() const { return backward_; }
+  FType forward() const { return forward_fn_; }
+  FType backward() const { return backward_fn_; }
 
   std::shared_ptr<const AutoGradCaptureState> state() const { return state_; }
   std::shared_ptr<AutoGradCaptureState> mutable_state() { return state_; }
@@ -307,11 +311,13 @@ class FunctionOpExpr final : public OpExpr {
   }
 
  private:
-  FType forward_;
-  FType backward_;
+  FunctionOpExpr(const std::string& func_name, const FType& forward_fn, const FType& backward_fn)
+      : forward_fn_(forward_fn), backward_fn_(backward_fn), func_name_(func_name) {}
+
+  FType forward_fn_;
+  FType backward_fn_;
+  std::string func_name_;
   std::shared_ptr<AutoGradCaptureState> state_;
-  std::string function_name_;  // TODO(wyg): pass from python class name
-  int input_size_;
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 

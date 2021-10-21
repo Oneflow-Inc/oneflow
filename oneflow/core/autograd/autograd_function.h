@@ -24,6 +24,7 @@ namespace one {
 
 class TensorTuple;
 class FunctionAutoGradCaptureState;
+class OpExpr;
 
 class AutogradFunctionBase {
  public:
@@ -31,14 +32,13 @@ class AutogradFunctionBase {
       const std::shared_ptr<FunctionAutoGradCaptureState>& ctx, const TensorTuple&)>;
   AutogradFunctionBase() = delete;
   virtual ~AutogradFunctionBase() = default;
-  AutogradFunctionBase(const FType& forward_fn, const FType& backward_fn)
-      : forward_fn_(forward_fn), backward_fn_(backward_fn) {}
+  AutogradFunctionBase(const std::string& func_name, const FType& forward_fn,
+                       const FType& backward_fn);
 
   Maybe<TensorTuple> Apply(const TensorTuple& inputs) const;
 
  protected:
-  FType forward_fn_;
-  FType backward_fn_;
+  std::shared_ptr<OpExpr> op_;
 };
 
 }  // namespace one

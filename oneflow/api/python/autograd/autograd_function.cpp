@@ -31,9 +31,9 @@ namespace one {
 
 ONEFLOW_API_PYBIND11_MODULE("autograd", m) {
   py::class_<AutogradFunctionBase, std::shared_ptr<AutogradFunctionBase>>(m, "AutogradFunctionBase")
-      .def(py::init([](const AutogradFunctionBase::FType& forward_fn,
+      .def(py::init([](const std::string& func_name, const AutogradFunctionBase::FType& forward_fn,
                        const AutogradFunctionBase::FType& backward_fn) {
-        return std::make_shared<AutogradFunctionBase>(forward_fn, backward_fn);
+        return std::make_shared<AutogradFunctionBase>(func_name, forward_fn, backward_fn);
       }))
       .def("apply", [](const AutogradFunctionBase& func, const TensorTuple& inputs) {
         return func.Apply(inputs).GetPtrOrThrow();

@@ -20,7 +20,7 @@ from oneflow._oneflow_internal.autograd import AutogradFunctionBase
 
 class Function(AutogradFunctionBase):
     def __init__(self):
-        super().__init__(self.forward, self.backward)
+        super().__init__(self.__class__.__name__, self.forward, self.backward)
 
     def __call__(self, *inputs):
         return self.apply(*inputs)

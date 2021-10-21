@@ -114,7 +114,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     //   - If the inplaced output `requires_grad` is true, then the autograd must be disabled,
     //     so the output `requires_grad` should never be changed.
     //   - If the inplaced output `requires_grad` is false, then the output `requires_grad`
-    //     shoule be infered by autograd mode and inputs. For example,
+    //     shoule be inferred by autograd mode and inputs. For example,
     //
     //     >>> import oneflow as flow
     //     >>> x = flow.ones(4, 4, requires_grad=False)
@@ -127,7 +127,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     //     >>> x.requires_grad
     //     False
     //
-    //   - If there is no inplace, the output `requires_grad` should be infered by autograd
+    //   - If there is no inplace, the output `requires_grad` should be inferred by autograd
     //     mode and inputs.
     if (!output->requires_grad()) {
       JUST(output->set_requires_grad(

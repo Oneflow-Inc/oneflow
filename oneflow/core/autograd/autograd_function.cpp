@@ -16,12 +16,18 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_function.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/op_expr.h"
 
 namespace oneflow {
 namespace one {
 
+AutogradFunctionBase::AutogradFunctionBase(const std::string& func_name, const FType& forward_fn,
+                                           const FType& backward_fn) {
+  op_ = CHECK_JUST(FunctionOpExpr::New(func_name, forward_fn, backward_fn));
+}
+
 Maybe<TensorTuple> AutogradFunctionBase::Apply(const TensorTuple& inputs) const {
-  // TODO(wyg): construct FunctionOpExpr, do forward and process outputs autograd_meta
+  // TODO(wyg): construct ctx, do forward and process outputs autograd_meta
   OF_UNIMPLEMENTED();
 }
 
