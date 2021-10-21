@@ -138,7 +138,6 @@ void SocketWriteHelper::SetStatusWhenRequestReadMsgHeadDone() {
 }
 
 void SocketWriteHelper::SetStatusWhenActorMsgHeadDone() {
-  std::cout << std::endl;
   cur_write_handle_ = &SocketWriteHelper::InitMsgWriteHandle;
 }
 
