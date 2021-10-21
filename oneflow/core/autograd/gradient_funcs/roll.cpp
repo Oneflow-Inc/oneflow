@@ -26,7 +26,7 @@ namespace one {
 struct RollCaptureState : public AutoGradCaptureState {
   std::vector<int32_t> shifts;
   std::vector<int32_t> dims;
-  bool requires_grad;
+  bool requires_grad = false;
 };
 
 class Roll : public OpExprGradFunction<RollCaptureState> {

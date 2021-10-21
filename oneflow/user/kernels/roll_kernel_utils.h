@@ -31,6 +31,9 @@ struct SHAPE {
 };
 
 struct STRIDE {
+  STRIDE() {
+    for (int i = 0; i < MAX_DIMS; ++i) { val[i] = 1; }
+  }
   int32_t val[MAX_DIMS];
 };
 
@@ -56,9 +59,8 @@ OF_DEVICE_FUNC int32_t getShiftedOffset(const int32_t offset, const int32_t* shi
   return out_offset;
 }
 
-static void initStride(int32_t* stride, const int32_t* dim_vec, const int32_t dims) {
-  stride[dims - 1] = 1;
-  for (int i = dims - 2; i >= 0; --i) { stride[i] = dim_vec[i + 1] * stride[i + 1]; }
+static void initStride(STRIDE& stride, const SHAPE& dim_vec, const int32_t dims) {
+  for (int i = dims - 2; i >= 0; --i) { stride.val[i] = dim_vec.val[i + 1] * stride.val[i + 1]; }
 }
 
 static void computeParams(const ShapeView& in_shape, const std::vector<int32_t>& shifts,

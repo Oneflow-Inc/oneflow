@@ -43,7 +43,7 @@ class CpuRollKernel final : public user_op::OpKernel {
     const int32_t size = out->shape().elem_cnt();
 
     STRIDE stride{};
-    initStride(stride.val, new_shape.val, num_axes);
+    initStride(stride, new_shape, num_axes);
 
     for (int32_t i = 0; i < size; ++i) {
       int offset = getShiftedOffset(i, new_shifts.val, new_shape.val, stride.val, num_axes);
