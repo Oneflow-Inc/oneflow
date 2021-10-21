@@ -298,3 +298,29 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow._C.matmul,
+    r"""This operator applies matrix multiplication to two Tensor.
+
+    Args:
+        input (oneflow.Tensor): the first tensor to be multiplied
+        other (oneflow.Tensor): the second tensor to be multiplied
+
+    Returns:
+        oneflow.Tensor: the output tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> input = flow.tensor(np.random.randn(2, 6), dtype=flow.float32)
+        >>> other = flow.tensor(np.random.randn(6, 5), dtype=flow.float32)
+        >>> output = flow.matmul(input, other)
+        >>> output.shape
+        oneflow.Size([2, 5])
+
+    """,
+)

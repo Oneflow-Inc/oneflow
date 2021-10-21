@@ -767,6 +767,7 @@ def RegisterMethods():
     Tensor.softmax = _softmax
     Tensor.log_softmax = _log_softmax
     Tensor.squeeze = _squeeze
+    Tensor.matmul = _matmul
 
 
 def register_tensor_op(op_name):

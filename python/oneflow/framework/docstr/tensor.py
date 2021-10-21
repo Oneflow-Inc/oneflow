@@ -108,3 +108,10 @@ add_docstr(
     See :func:`oneflow.squeeze`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.matmul,
+    """
+    See :func:`oneflow.matmul`
+    """,
+)
