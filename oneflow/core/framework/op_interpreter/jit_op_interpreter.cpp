@@ -2,7 +2,7 @@
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
-#include "oneflow/core/framework/op_interpreter.h"
+#include "oneflow/core/framework/op_interpreter/jit_op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/op_arg_util.h"

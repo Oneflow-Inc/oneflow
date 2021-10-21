@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/framework/op_interpreter/jit_op_interpreter.h"
 
 namespace oneflow {
 namespace one {
@@ -56,7 +57,7 @@ std::shared_ptr<AutogradInterpreter> BuildEagerInterpreter(const bool& is_mirror
 }
 
 std::shared_ptr<AutogradInterpreter> BuildJITInterpreter() {
-  std::shared_ptr <OpExprInterpreter> internal = std::make_shared<JitInterpreter>();
+  std::shared_ptr<OpExprInterpreter> internal = std::make_shared<JitInterpreter>();
   return std::make_shared<AutogradInterpreter>(internal);
 }
 
@@ -163,7 +164,6 @@ template<>
                                                 const OpExprInterpContext& ctx) {
   return JUST(GetInterpreter(inputs, ctx, op_expr))->Apply(op_expr, inputs, outputs, ctx);
 }
-
 
 /* static */ Maybe<cfg::OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(
     const OperatorConf& op_conf, const bool is_mirrored_strategy_enabled) {

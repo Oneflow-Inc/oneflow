@@ -155,27 +155,6 @@ class EagerMirroredInterpreter : public EagerInterpreter {
   FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);
 };
 
-class JitInterpreter : public OpExprInterpreter {
- public:
-  JitInterpreter() : OpExprInterpreter() {}
-  virtual ~JitInterpreter() = default;
-
-  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
-                    const AttrMap& attrs) const {
-    return Apply(op_expr, inputs, outputs, OpExprInterpContext(attrs));
-  }
-  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
-                    const OpExprInterpContext& ctx) const override;
-
- private:
-  DECLARE_NORMAL_APPLY_FUNC(UserOp);  // note(BBuf) jit deal with user op only, now.
-};
-
-#undef DECLARE_OVERRIDE_APPLY_FUNC
-#undef DECLARE_PURE_VIRTUAL_APPLY_FUNC
-#undef DECLARE_NORMAL_APPLY_FUNC
-#undef FOR_EACH_BUILTIN_OPS
-
 class AutogradInterpreter {
  public:
   AutogradInterpreter() = delete;
