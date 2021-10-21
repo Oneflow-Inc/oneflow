@@ -101,6 +101,11 @@ include(HandleLLVMOptions)
 
 include_directories(${LLVM_INCLUDE_DIRS})
 include_directories(${MLIR_INCLUDE_DIRS})
+# set variables in parent scope so oneflow could access it
+# oneflow should only have access to LLVM/MLIR in-tree headers
+# for the purpose of modularity oneflow dialects should not be directly accessable to oneflow
+set(LLVM_INCLUDE_DIRS ${LLVM_INCLUDE_DIRS} PARENT_SCOPE)
+set(MLIR_INCLUDE_DIRS ${MLIR_INCLUDE_DIRS} PARENT_SCOPE)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_BINARY_DIR}/include)
 link_directories(${LLVM_BUILD_LIBRARY_DIR})
@@ -112,3 +117,4 @@ add_subdirectory(test)
 add_subdirectory(oneflow-opt)
 add_subdirectory(oneflow-translate)
 add_subdirectory(oneflow-extension)
+add_subdirectory(oneflow-jit)

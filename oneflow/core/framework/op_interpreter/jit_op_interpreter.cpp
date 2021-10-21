@@ -18,6 +18,8 @@
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/framework/op_interpreter/jit.h"
+#include "mlir/IR/MLIRContext.h"
+#include "oneflow/ir/include/OneFlow/JIT.h"
 
 namespace oneflow {
 
@@ -59,11 +61,43 @@ Maybe<void> JitInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inpu
   return Maybe<void>::Ok();
 }
 
+std::string GetDeviceTag(const std::shared_ptr<Tensor>& tensor) {
+  if (tensor->is_cuda()) {
+    return "gpu";
+  } else {
+    return "cpu";
+  }
+}
+
+Maybe<const ParallelDesc> GetParallelDesc(const std::shared_ptr<Tensor>& tensor) {
+  if (tensor->is_local()) {
+    const auto& device = JUST(tensor->device());
+    const auto& placement = JUST(Placement4Device(device));
+    return placement.shared_from_symbol();
+  } else {
+    return JUST(tensor->parallel_desc()).shared_from_symbol();
+  }
+}
+
 Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
                                       TensorTuple* outputs, const OpExprInterpContext& ctx) const {
-  // update cached_op_expr_
-  // TODO: MLIR add op expr
+  auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
+  const std::string device_tag = GetDeviceTag(inputs.at(0));
+  const bool is_local = inputs.at(0)->is_local();
+  const std::shared_ptr<const ParallelDesc> parallel_desc = JUST(GetParallelDesc(inputs.at(0)));
+  op_conf->set_device_tag(device_tag);
 
+  for (int i = 0; i < inputs.size(); ++i) {
+    const auto& input_tensor = inputs.at(i);
+    CHECK_OR_RETURN(device_tag == GetDeviceTag(input_tensor));
+    CHECK_OR_RETURN(parallel_desc->EqualsIgnoringHierarchy(*JUST(GetParallelDesc(input_tensor))));
+    CHECK_EQ_OR_RETURN(is_local, input_tensor->is_local());
+  }
+
+  CHECK_EQ_OR_RETURN(outputs->size(), op_expr.output_size());
+  // TODO: MLIR add op expr
+  mlir::MLIRContext context;
+  auto module = ir::CreateJitModule(&context);
   return Maybe<void>::Ok();
 }
 
