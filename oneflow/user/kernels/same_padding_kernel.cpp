@@ -14,13 +14,43 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/device/memory_copier.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/user/ops/nn_util.h"
+#include "oneflow/core/primitive/include/copy_nd.h"
+#include "oneflow/core/primitive/include/fill.h"
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
+namespace {
+
+template<typename Context>
+std::unique_ptr<primitive::Fill> NewFillPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("y", 0)->data_type();
+  return primitive::NewPrimitive<primitive::FillFactory>(ctx->device_type(), data_type);
+}
+
+template<typename Context>
+std::unique_ptr<primitive::CopyNd> NewCopyNdPrimitive(Context* ctx) {
+  const auto& in_arg_pair = ctx->inputs().front();
+  const int64_t ndims =
+      ctx->TensorDesc4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second)->shape().NumAxes();
+  return primitive::NewPrimitive<primitive::CopyNdFactory>(ctx->device_type(), ndims);
+}
+
+hob::HobContextGetter<user_op::KernelRegContext, bool> FillPrimitiveExists() {
+  return user_op::HobCtxGetter<bool>(
+      "FillPrimitiveExists",
+      [](const user_op::KernelRegContext& ctx) { return NewFillPrimitive(&ctx).operator bool(); });
+}
+
+hob::HobContextGetter<user_op::KernelRegContext, bool> CopyNdPrimitiveExists() {
+  return user_op::HobCtxGetter<bool>("CopyNdPrimitiveExists",
+                                     [](const user_op::KernelRegContext& ctx) {
+                                       return NewCopyNdPrimitive(&ctx).operator bool();
+                                     });
+}
+
+}  // namespace
+
 class SamePaddingKernel final : public user_op::OpKernel {
  public:
   SamePaddingKernel() = default;
@@ -56,53 +86,24 @@ class SamePaddingKernel final : public user_op::OpKernel {
                x->shape().At(idx_offset + i) + padding_small + padding_large);
     }
     CHECK_EQ(padding_before.size(), num_axes);
-    NewKernelUtil<device_type>::Fill(ctx->device_ctx(), y->shape().elem_cnt(), static_cast<T>(0),
-                                     y->mut_dptr<T>());
-
-    MemoryCopyNdDesc memory_copy_nd_desc;
-    Shape x_shape;
-    x->shape().ToShape(&x_shape);
-    memory_copy_nd_desc.src_shape = Shape(x_shape);
-    Shape y_shape;
-    y->shape().ToShape(&y_shape);
-    memory_copy_nd_desc.dst_shape = Shape(y_shape);
-
+    std::unique_ptr<primitive::Fill> fill_primitive = NewFillPrimitive(ctx);
+    CHECK(fill_primitive);
+    fill_primitive->Launch(ctx->stream_ctx(), y->mut_dptr(), Scalar(0), y->shape().elem_cnt());
     DimVector src_pos_vec(num_axes, 0);
     DimVector dst_pos_vec(padding_before.cbegin(), padding_before.cend());
-
-    memory_copy_nd_desc.dst_pos = NdIndex(dst_pos_vec);
-    memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
-    memory_copy_nd_desc.extent = memory_copy_nd_desc.src_shape;
-    MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
-
-    std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
-    device_memory_copier->CopyElem<T>(ctx->device_ctx(), y->mut_dptr<T>(), x->dptr<T>(),
-                                      reduced_memory_copy_nd_desc);
+    std::unique_ptr<primitive::CopyNd> copy_nd_primitive = NewCopyNdPrimitive(ctx);
+    CHECK(copy_nd_primitive);
+    copy_nd_primitive->Launch(ctx->stream_ctx(), x->data_type(), num_axes, y->mut_dptr(),
+                              y->shape().ptr(), dst_pos_vec.data(), x->dptr(), x->shape().ptr(),
+                              src_pos_vec.data(), x->shape().ptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SAME_PADDING_KERNEL(dev, dtype)        \
-  REGISTER_USER_KERNEL("same_padding")                  \
-      .SetCreateFn<SamePaddingKernel<dev, dtype>>()     \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == dev) \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+REGISTER_USER_KERNEL("same_padding")
+    .SetCreateFn<SamePaddingKernel>()
+    .SetIsMatchedHob((FillPrimitiveExists() == true) & (CopyNdPrimitiveExists() == true));
 
-#ifdef WITH_CUDA
-REGISTER_SAME_PADDING_KERNEL(DeviceType::kGPU, double)
-REGISTER_SAME_PADDING_KERNEL(DeviceType::kGPU, float)
-REGISTER_SAME_PADDING_KERNEL(DeviceType::kGPU, float16)
-REGISTER_SAME_PADDING_KERNEL(DeviceType::kGPU, int32_t)
-REGISTER_SAME_PADDING_KERNEL(DeviceType::kGPU, int64_t)
-REGISTER_SAME_PADDING_KERNEL(DeviceType::kGPU, int8_t)
-#endif
-REGISTER_SAME_PADDING_KERNEL(DeviceType::kCPU, double)
-REGISTER_SAME_PADDING_KERNEL(DeviceType::kCPU, float)
-REGISTER_SAME_PADDING_KERNEL(DeviceType::kCPU, int32_t)
-REGISTER_SAME_PADDING_KERNEL(DeviceType::kCPU, int64_t)
-REGISTER_SAME_PADDING_KERNEL(DeviceType::kCPU, int8_t)
-
-template<DeviceType device_type, typename T>
 class SamePaddingGradKernel final : public user_op::OpKernel {
  public:
   SamePaddingGradKernel() = default;
@@ -137,48 +138,19 @@ class SamePaddingGradKernel final : public user_op::OpKernel {
       CHECK_EQ(dy->shape().At(idx_offset + i),
                dx->shape().At(idx_offset + i) + padding_small + padding_large);
     }
-
-    MemoryCopyNdDesc memory_copy_nd_desc;
-    Shape dy_shape;
-    dy->shape().ToShape(&dy_shape);
-    memory_copy_nd_desc.src_shape = Shape(dy_shape);
-    Shape dx_shape;
-    dx->shape().ToShape(&dx_shape);
-    memory_copy_nd_desc.dst_shape = Shape(dx_shape);
-
     DimVector dst_pos_vec(num_axes, 0);
     DimVector src_pos_vec(padding_before.cbegin(), padding_before.cend());
-
-    memory_copy_nd_desc.dst_pos = NdIndex(dst_pos_vec);
-    memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
-    memory_copy_nd_desc.extent = memory_copy_nd_desc.dst_shape;
-    MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
-
-    std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
-    device_memory_copier->CopyElem<T>(ctx->device_ctx(), dx->mut_dptr<T>(), dy->dptr<T>(),
-                                      reduced_memory_copy_nd_desc);
+    std::unique_ptr<primitive::CopyNd> primitive = NewCopyNdPrimitive(ctx);
+    CHECK(primitive);
+    primitive->Launch(ctx->stream_ctx(), dy->data_type(), num_axes, dx->mut_dptr(),
+                      dx->shape().ptr(), dst_pos_vec.data(), dy->dptr(), dy->shape().ptr(),
+                      src_pos_vec.data(), dx->shape().ptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SAME_PADDING_GRAD_KERNEL(dev, dtype)   \
-  REGISTER_USER_KERNEL("same_padding_grad")             \
-      .SetCreateFn<SamePaddingGradKernel<dev, dtype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == dev) \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
-
-#ifdef WITH_CUDA
-REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kGPU, double)
-REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kGPU, float)
-REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kGPU, float16)
-REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kGPU, int32_t)
-REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kGPU, int64_t)
-REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kGPU, int8_t)
-#endif
-REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kCPU, double)
-REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kCPU, float)
-REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kCPU, int32_t)
-REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kCPU, int64_t)
-REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kCPU, int8_t)
+REGISTER_USER_KERNEL("same_padding_grad")
+    .SetCreateFn<SamePaddingGradKernel>()
+    .SetIsMatchedHob(CopyNdPrimitiveExists() == true);
 
 }  // namespace oneflow
