@@ -74,8 +74,11 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
 }
 
 Maybe<void> EagerInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const TensorTuple& inputs,
-                                        TensorTuple* outputs,
-                                        const OpExprInterpContext& ctx) const {
+                                        TensorTuple* outputs, const OpExprInterpContext&) const {
+  std::shared_ptr<FunctionAutoGradCaptureState> ctx =
+      std::make_shared<FunctionAutoGradCaptureState>();
+  const std::shared_ptr<TensorTuple>& out = op_expr.forward()(ctx, inputs);
+  return Maybe<void>::Ok();
   // TODO(wyg): Call op_expr.forward function to calculate outputs
   OF_UNIMPLEMENTED();
 }
