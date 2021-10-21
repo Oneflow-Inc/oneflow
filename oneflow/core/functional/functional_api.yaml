@@ -892,7 +892,7 @@
   bind_python: False
 
 - name: "narrow"
-  signature: "Tensor (Tensor in, Int64 dim, Int64 start, Int64 length) => Narrow"
+  signature: "Tensor (Tensor input, Int64 dim, Int64 start, Int64 length) => Narrow"
   bind_python: True
 
 - name: "narrow_grad"

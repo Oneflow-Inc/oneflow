@@ -115,3 +115,10 @@ add_docstr(
     See :func:`oneflow.matmul`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.narrow,
+    """
+    See :func:`oneflow.narrow`
+    """,
+)

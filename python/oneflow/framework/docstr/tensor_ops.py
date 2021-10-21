@@ -13,32 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import numpy as np
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
 
-import oneflow as flow
-from oneflow.framework.tensor import Tensor, register_tensor_op
-from oneflow.nn.module import Module
-
-
-class Narrow(Module):
-    def __init__(self, dim: int, start: int, length: int) -> None:
-        super().__init__()
-        self.dim = dim
-        self.start = start
-        self.length = length
-
-    def forward(self, x):
-        dim = dim + x.dim if self.dim < 0 else self.dim
-        return flow._C.narrow(x, dim=dim, start=self.start, length=self.length)
-
-
-@register_tensor_op("narrow")
-def narrow_op(x, dim: int, start: int, length: int):
-    """Returns a new tensor that is a narrowed version of `x` tensor.
+add_docstr(
+    oneflow.narrow,
+    r"""Returns a new tensor that is a narrowed version of `input` tensor.
     The dimension `dim` is input from `start` to `start + length`.
 
     Args:
-        x: the tensor to narrow.
+        input: the tensor to narrow.
         dim: the dimension along which to narrow.
         start: the starting dimension.
         length: the distance to the ending dimension.
@@ -48,19 +32,13 @@ def narrow_op(x, dim: int, start: int, length: int):
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> x = flow.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
-        >>> flow.narrow(x, 0, 0, 2)
+        >>> input = flow.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        >>> flow.narrow(input, 0, 0, 2)
         tensor([[1, 2, 3],
                 [4, 5, 6]], dtype=oneflow.int64)
-        >>> flow.narrow(x, 1, 1, 2)
+        >>> flow.narrow(input, 1, 1, 2)
         tensor([[2, 3],
                 [5, 6],
                 [8, 9]], dtype=oneflow.int64)
-    """
-    return Narrow(dim, start, length)(x)
-
-
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod(raise_on_error=True)
+    """,
+)

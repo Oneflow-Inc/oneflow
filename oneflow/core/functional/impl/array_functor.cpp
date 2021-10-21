@@ -824,13 +824,20 @@ class SliceGradFunctor : public SliceGradBaseFunctor {
 class NarrowFunctor {
  public:
   NarrowFunctor() { op_ = CHECK_JUST(one::OpBuilder("narrow").Input("in").Output("out").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, const int64_t& dim,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& dim,
                            const int64_t& start, const int64_t& length) const {
+    int64_t narrow_dim = dim;
+    const int64_t ndim = input->shape()->NumAxes();
+    CHECK_OR_RETURN((-ndim <= dim) && (dim <= ndim-1)) 
+      << " (Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim-1 << "], but got:" << dim << ")";
+    if(narrow_dim < 0){ 
+      narrow_dim += ndim;
+    }
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("dim", dim));
+    JUST(attrs.SetAttr<int64_t>("dim", narrow_dim));
     JUST(attrs.SetAttr<int64_t>("start", start));
     JUST(attrs.SetAttr<int64_t>("length", length));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
  private:
