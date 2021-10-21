@@ -525,12 +525,11 @@ bool VirtualMachine::Dispatchable(Instruction* instruction) const {
 void VirtualMachine::DispatchOrMoveToWaiting(NewInstructionList* new_instruction_list) {
   INTRUSIVE_FOR_EACH_PTR(instruction, new_instruction_list) {
     if (Dispatchable(instruction)) {
-      // For memory safety, do not swap the following two lines.
       DispatchInstruction(instruction);
-      new_instruction_list->Erase(instruction);
     } else {
-      new_instruction_list->MoveToDstBack(instruction, mut_waiting_instruction_list());
+      mut_waiting_instruction_list()->PushBack(instruction);
     }
+    new_instruction_list->Erase(instruction);
   }
 }
 
@@ -658,6 +657,7 @@ void VirtualMachine::TryDeleteLogicalObjects() {
 
 void VirtualMachine::TryMoveFromWaitingToReady(Instruction* instruction) {
   if (Dispatchable(instruction)) {
+    CHECK(!instruction->is_waiting_instruction_hook_empty());
     // For memory safety, do not swap the following two lines.
     mut_ready_instruction_list()->PushBack(instruction);
     mut_waiting_instruction_list()->Erase(instruction);
@@ -709,8 +709,9 @@ void VirtualMachine::Schedule() {
     ConsumeMirroredObjects(mut_id2logical_object(), &new_instruction_list);
     DispatchOrMoveToWaiting(&new_instruction_list);
   }
-  *mut_flying_instruction_cnt() =
-      mut_waiting_instruction_list()->size() + mut_vm_stat_running_instruction_list()->size();
+  *mut_flying_instruction_cnt() = mut_waiting_instruction_list()->size()
+                                  + mut_ready_instruction_list()->size()
+                                  + mut_vm_stat_running_instruction_list()->size();
 }
 
 bool VirtualMachine::ThreadUnsafeEmpty() const {

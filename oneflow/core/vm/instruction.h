@@ -218,6 +218,7 @@ INTRUSIVE_BEGIN(Instruction);
   const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
   const InstructionStatusBuffer& status_buffer() const { return status_buffer_.Get(); }
   bool is_instruction_hook_empty() const { return instruction_hook_.empty(); }
+  bool is_waiting_instruction_hook_empty() const { return waiting_instruction_hook_.empty(); }
   bool is_dispatched_instruction_hook_empty() const { return dispatched_instruction_hook_.empty(); }
   bool is_vm_stat_running_instruction_hook_empty() const { return vm_stat_running_instruction_hook_.empty(); }
   bool is_pending_instruction_hook_empty() const { return pending_instruction_hook_.empty(); }
@@ -335,7 +336,7 @@ INTRUSIVE_BEGIN(Instruction);
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  Instruction() : intrusive_ref_(), status_buffer_(), instr_msg_(), parallel_desc_(), stream_(), instruction_hook_(), dispatched_instruction_hook_(), vm_stat_running_instruction_hook_(), pending_instruction_hook_(), front_seq_infer_instr_hook_(), front_seq_compute_instr_hook_(), mirrored_object_id2access_(), access_list_(), in_edges_(), out_edges_() {}
+  Instruction() : intrusive_ref_(), status_buffer_(), instr_msg_(), parallel_desc_(), stream_(), instruction_hook_(), waiting_instruction_hook_(), dispatched_instruction_hook_(), vm_stat_running_instruction_hook_(), pending_instruction_hook_(), front_seq_infer_instr_hook_(), front_seq_compute_instr_hook_(), mirrored_object_id2access_(), access_list_(), in_edges_(), out_edges_() {}
   INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(FlatMsg<InstructionStatusBuffer>, status_buffer_);
@@ -344,6 +345,8 @@ INTRUSIVE_BEGIN(Instruction);
   INTRUSIVE_DEFINE_FIELD(Stream*, stream_); 
   // list hooks
   INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, instruction_hook_);
+  // waitng list
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, waiting_instruction_hook_);
   // dispatched to Stream
   INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, dispatched_instruction_hook_);
   // `vm_stat_running_instruction_hook` valid from instruction ready to instruction done 
