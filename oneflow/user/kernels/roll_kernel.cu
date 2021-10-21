@@ -52,8 +52,8 @@ void GpuRollFunctor<float16>::operator()(DeviceCtx* ctx, const float16* in_ptr, 
 }
 
 template<typename T>
-__global__ void RollCudaKernel1D(const T* in_ptr, const int32_t shifts, const int32_t elements,
-                                 T* out_ptr) {
+__global__ void RollFlattenCudaKernel(const T* in_ptr, const int32_t shifts, const int32_t elements,
+                                      T* out_ptr) {
   int32_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
   int32_t step = gridDim.x * blockDim.x;
 
@@ -66,19 +66,60 @@ __global__ void RollCudaKernel1D(const T* in_ptr, const int32_t shifts, const in
 }
 
 template<typename T>
-struct GpuRoll1DFunctor final {
+struct GpuRollFlattenFunctor final {
   void operator()(DeviceCtx* ctx, const T* in_ptr, const int32_t shifts, const int32_t elements,
                   T* out_ptr) {
-    RUN_CUDA_KERNEL((RollCudaKernel1D<T>), ctx, elements, in_ptr, shifts, elements, out_ptr);
+    RUN_CUDA_KERNEL((RollFlattenCudaKernel<T>), ctx, elements, in_ptr, shifts, elements, out_ptr);
   }
 };
 
 template<>
-void GpuRoll1DFunctor<float16>::operator()(DeviceCtx* ctx, const float16* in_ptr,
-                                           const int32_t shifts, const int32_t elements,
-                                           float16* out_ptr) {
-  RUN_CUDA_KERNEL((RollCudaKernel1D<half>), ctx, elements, reinterpret_cast<const half*>(in_ptr),
-                  shifts, elements, reinterpret_cast<half*>(out_ptr));
+void GpuRollFlattenFunctor<float16>::operator()(DeviceCtx* ctx, const float16* in_ptr,
+                                                const int32_t shifts, const int32_t elements,
+                                                float16* out_ptr) {
+  RUN_CUDA_KERNEL((RollFlattenCudaKernel<half>), ctx, elements,
+                  reinterpret_cast<const half*>(in_ptr), shifts, elements,
+                  reinterpret_cast<half*>(out_ptr));
+}
+
+template<typename T>
+__global__ void Roll1DimCudaKernel(const T* in_ptr, const int32_t start, const int32_t size,
+                                   const int32_t stride, const int32_t elements, T* out_ptr) {
+  int32_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
+  int32_t step = gridDim.x * blockDim.x;
+
+  while (gid < elements) {
+    // roll dim idx is the index of linear_index along the rolling dimension.
+    int32_t roll_dim_idx = gid % (stride * size) / stride;
+    // index into the source data to find appropriate value.
+    int32_t source_idx = 0;
+    if (roll_dim_idx >= (size - start)) {
+      source_idx = gid - ((size - start) * stride);
+    } else {
+      source_idx = gid + (start * stride);
+    }
+    out_ptr[gid] = in_ptr[source_idx];
+
+    gid += step;
+  }
+}
+
+template<typename T>
+struct GpuRoll1DimFunctor final {
+  void operator()(DeviceCtx* ctx, const T* in_ptr, const int32_t start, const int32_t size,
+                  const int32_t stride, const int32_t elements, T* out_ptr) {
+    RUN_CUDA_KERNEL((Roll1DimCudaKernel<T>), ctx, elements, in_ptr, start, size, stride, elements,
+                    out_ptr);
+  }
+};
+
+template<>
+void GpuRoll1DimFunctor<float16>::operator()(DeviceCtx* ctx, const float16* in_ptr,
+                                             const int32_t start, const int32_t size,
+                                             const int32_t stride, const int32_t elements,
+                                             float16* out_ptr) {
+  RUN_CUDA_KERNEL((Roll1DimCudaKernel<half>), ctx, elements, reinterpret_cast<const half*>(in_ptr),
+                  start, size, stride, elements, reinterpret_cast<half*>(out_ptr));
 }
 
 }  // namespace
@@ -99,21 +140,34 @@ class GpuRollKernel final : public user_op::OpKernel {
 
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
-    const int32_t size = out->shape().elem_cnt();
+    const int32_t elem_count = out->shape().elem_cnt();
 
     if (dims[0] == -1) {
-      GpuRoll1DFunctor<T>()(ctx->device_ctx(), in_ptr, shifts[0], size, out_ptr);
+      GpuRollFlattenFunctor<T>()(ctx->device_ctx(), in_ptr, shifts[0], elem_count, out_ptr);
     } else {
-      SHAPE new_shape;
-      SHIFTS new_shifts;
-      int32_t num_axes;
+      SHAPE new_shape{};
+      SHIFTS new_shifts{};
+      int32_t num_axes = 0;
       computeParams(in->shape(), shifts, dims, new_shifts.val, new_shape.val, &num_axes);
 
-      STRIDE stride;
+      STRIDE stride{};
       initStride(stride.val, new_shape.val, num_axes);
 
-      GpuRollFunctor<T>()(ctx->device_ctx(), in_ptr, new_shifts, new_shape, stride, num_axes, size,
-                          out_ptr);
+      if (dims.size() == 1) {
+        // NOTE(Liang Depeng): borrow the implementation of pytorch
+        const int32_t size = new_shape.val[dims[0]];
+        int32_t start = (size - new_shifts.val[dims[0]]) % size;
+        // Behavior of % is different in C++ vs Python for negative numbers. This
+        // corrects the difference.
+        if (start < 0) start = start + size;
+
+        GpuRoll1DimFunctor<T>()(ctx->device_ctx(), in_ptr, start, size, stride.val[dims[0]],
+                                elem_count, out_ptr);
+
+      } else {
+        GpuRollFunctor<T>()(ctx->device_ctx(), in_ptr, new_shifts, new_shape, stride, num_axes,
+                            elem_count, out_ptr);
+      }
     }
   }
 

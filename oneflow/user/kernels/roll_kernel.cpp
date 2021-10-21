@@ -33,16 +33,16 @@ class CpuRollKernel final : public user_op::OpKernel {
     const std::vector<int32_t>& shifts = ctx->Attr<std::vector<int32_t>>("shifts");
     const std::vector<int32_t>& dims = ctx->Attr<std::vector<int32_t>>("dims");
 
-    SHAPE new_shape;
-    SHIFTS new_shifts;
-    int32_t num_axes;
+    SHAPE new_shape{};
+    SHIFTS new_shifts{};
+    int32_t num_axes = 0;
     computeParams(in->shape(), shifts, dims, new_shifts.val, new_shape.val, &num_axes);
 
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
     const int32_t size = out->shape().elem_cnt();
 
-    STRIDE stride;
+    STRIDE stride{};
     initStride(stride.val, new_shape.val, num_axes);
 
     for (int32_t i = 0; i < size; ++i) {
