@@ -24,28 +24,6 @@ namespace oneflow {
 
 namespace one {
 
-namespace ir {
-
-RuntimeCreatorRegistry* GetRuntimeRegistry() {
-  static RuntimeCreatorRegistry registry;
-  return &registry;
-}
-
-std::shared_ptr<SimpleRuntime> StartRuntime(const std::string& name) {
-  static std::shared_ptr<SimpleRuntime> runtime;
-  std::unique_ptr<SimpleRuntime> created = GetRuntimeRegistry()->at(name)();
-  runtime = std::move(created);
-  return runtime;
-}
-
-void RegisterRuntimeCreator(const std::string& name, const InitRuntime& creator) {
-  if (GetRuntimeRegistry()->find(name) == GetRuntimeRegistry()->end()) {
-    CHECK(GetRuntimeRegistry()->emplace(name, creator).second);
-  }
-}
-
-}  // namespace ir
-
 Maybe<void> JitInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                   TensorTuple* outputs, const OpExprInterpContext& ctx) const {
 #define APPLY_IF(op_type)                                              \
