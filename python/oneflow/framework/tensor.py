@@ -782,7 +782,6 @@ def RegisterMethods():
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
     Tensor.permute = _permute
-    
 
 
 def register_tensor_op(op_name):

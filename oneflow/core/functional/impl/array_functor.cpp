@@ -465,9 +465,10 @@ class ExpandDimsFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim) const {
     int32_t expand_dim = dim;
     const int32_t ndim = input->shape()->NumAxes();
-    CHECK_OR_RETURN(-(ndim+1) <= dim && dim <= ndim)
-      << " Dimension out of range, expected to be in range of [" << -(ndim+1) <<", " << ndim << "], but got: " << dim; 
-    if(dim < 0){ expand_dim = dim + ndim + 1; }
+    CHECK_OR_RETURN(-(ndim + 1) <= dim && dim <= ndim)
+        << " Dimension out of range, expected to be in range of [" << -(ndim + 1) << ", " << ndim
+        << "], but got: " << dim;
+    if (dim < 0) { expand_dim = dim + ndim + 1; }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", expand_dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
@@ -833,11 +834,10 @@ class NarrowFunctor {
                            const int64_t& start, const int64_t& length) const {
     int64_t narrow_dim = dim;
     const int64_t ndim = input->shape()->NumAxes();
-    CHECK_OR_RETURN((-ndim <= dim) && (dim <= ndim-1)) 
-      << " (Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim-1 << "], but got:" << dim << ")";
-    if(narrow_dim < 0){ 
-      narrow_dim += ndim;
-    }
+    CHECK_OR_RETURN((-ndim <= dim) && (dim <= ndim - 1))
+        << " (Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got:" << dim << ")";
+    if (narrow_dim < 0) { narrow_dim += ndim; }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("dim", narrow_dim));
     JUST(attrs.SetAttr<int64_t>("start", start));
