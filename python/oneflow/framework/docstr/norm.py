@@ -172,33 +172,38 @@ add_docstr(
             inputs, the norm is calculated on of the absolute values of each element. If the input is
             complex and neither :attr:`dtype` nor :attr:`out` is specified, the result's data type will
             be the corresponding floating point type (e.g. float if :attr:`input` is complexfloat).
-        ord (int, float, inf, -inf, 'fro', 'nuc', optional): The order of norm.
-            inf refers to :attr:`float('inf')`, numpy's :attr:`inf` object, or any equivalent object.
+
+        ord (int, inf, -inf, 'fro', 'nuc', optional): order of norm. Default: `'None'`
             The following norms can be calculated:
-            =====  ============================  ==========================
-            ord    norm for matrices             norm for vectors
-            =====  ============================  ==========================
-            None   Frobenius norm                2-norm
-            'fro'  Frobenius norm                -- not supported --
-            'nuc'  -- not supported yet --       -- not supported --
-            inf    max(sum(abs(x), dim=1))       max(abs(x))
-            -inf   min(sum(abs(x), dim=1))       min(abs(x))
-            0      -- not supported --           sum(x != 0)
-            1      max(sum(abs(x), dim=0))       as below
-            -1     min(sum(abs(x), dim=0))       as below
-            2      -- not supported yet --       as below
-            -2     -- not supported yet --       as below
-            other  -- not supported --           sum(abs(x)**ord)**(1./ord)
-            =====  ============================  ==========================
-            Default: ``None``
+
+            ==============  ============================  =================================
+            :attr:`ord`       norm for matrices             norm for vectors
+            ==============  ============================  =================================
+            None             Frobenius norm                `2`-norm
+            `'fro'`          Frobenius norm                -- not supported --
+            `'nuc'`          -- not supported yet --       -- not supported --
+            `inf`            `max(sum(abs(x), dim=1))`     `max(abs(x))`
+            `-inf`           `min(sum(abs(x), dim=1))`     `min(abs(x))`
+            `0`              -- not supported --           `sum(x != 0)`
+            `1`              `max(sum(abs(x), dim=0))`     as below
+            `-1`             `min(sum(abs(x), dim=0))`     as below
+            `2`              -- not supported yet --       as below
+            `-2`             -- not supported yet --       as below
+            other            -- not supported --           `sum(abs(x)^{ord})^{(1 / ord)}`
+            ==============  ============================  =================================
+
+            where `inf` refers to `float('inf')`, NumPy's `inf` object, or any equivalent object.
+
         dim (int, 2-tuple of ints, 2-list of ints, optional): If :attr:`dim` is an int,
             vector norm will be calculated over the specified dimension. If :attr:`dim`
             is a 2-tuple of ints, matrix norm will be calculated over the specified
             dimensions. If :attr:`dim` is None, matrix norm will be calculated
             when the input tensor has two dimensions, and vector norm will be
             calculated when the input tensor has one dimension. Default: ``None``
+
         keepdim (bool, optional): If set to True, the reduced dimensions are retained
             in the result as dimensions with size one. Default: ``False``
+
         out (Tensor, optional): The output tensor.
 
     For example:
