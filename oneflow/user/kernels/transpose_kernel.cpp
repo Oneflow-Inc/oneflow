@@ -23,6 +23,7 @@ namespace oneflow {
 
 namespace user_op {
 
+// todo!
 template<typename Context>
 std::unique_ptr<primitive::Permute> NewPermutePrimitive(Context* ctx) {
   const int32_t num_dims = ctx->TensorDesc4ArgNameAndIndex("output", 0)->shape().NumAxes();
@@ -54,29 +55,16 @@ class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_TRANSPOSE_KERNEL(device, dtype)                                         \
-  REGISTER_USER_KERNEL("transpose")                                                      \
-      .SetCreateFn<TransposeKernel>()                                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("output", 0) == GetDataType<dtype>::value));
+hob::HobContextGetter<user_op::KernelRegContext, bool> PermutePrimitiveExists() {
+  return user_op::HobCtxGetter<bool>("PermutePrimitiveExists",
+                                     [](const user_op::KernelRegContext& ctx) {
+                                       return NewPermutePrimitive(&ctx).operator bool();
+                                     });
+}
 
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, uint8_t)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, int8_t)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, int32_t)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, int64_t)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, float)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, double)
-
-#ifdef WITH_CUDA
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, uint8_t)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, int8_t)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, int32_t)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, int64_t)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, float)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, double)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, float16)
-#endif
+REGISTER_USER_KERNEL("transpose")              \
+      .SetCreateFn<TransposeKernel>()            \
+      .SetIsMatchedHob(PermutePrimitiveExists() == true);
 
 }  // namespace user_op
 }  // namespace oneflow
