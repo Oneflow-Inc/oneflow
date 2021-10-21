@@ -72,3 +72,24 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow.permute,
+    r"""Returns a view of the original tensor with its dimensions permuted.
+
+    Args:
+        dims (tuple of python:ints): The desired ordering of dimensions
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        
+        >>> input = flow.tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> output = flow.permute(input, (1, 0, 2, 3)).shape
+        >>> output
+        oneflow.Size([6, 2, 5, 3])
+
+    """,
+)

@@ -129,3 +129,10 @@ add_docstr(
     See :func:`oneflow.unsqueeze`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.permute,
+    """
+    See :func:`oneflow.permute`
+    """,
+)
