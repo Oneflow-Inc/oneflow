@@ -65,7 +65,6 @@ class SocketWriteHelper final {
   bool (SocketWriteHelper::*cur_write_handle_)();
   const char* write_ptr_;
   size_t write_size_;
-  std::mutex debug_mutex_;//为了调试加的锁
 };
 
 }  // namespace oneflow

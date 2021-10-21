@@ -40,8 +40,6 @@ void SocketReadHelper::SwitchToMsgHeadReadHandle() {
   cur_read_handle_ = &SocketReadHelper::MsgHeadReadHandle;
   read_ptr_ = reinterpret_cast<char*>(&cur_msg_);
   read_size_ = sizeof(cur_msg_);
-  std::cout << "SocketReadHelper::SwitchToMsgHeadReadHandle, and the sockfd_:" << sockfd_
-            << "  and the read_size_:" << read_size_ << std::endl;
 }
 
 void SocketReadHelper::ReadUntilSocketNotReadable() {
@@ -59,9 +57,6 @@ bool SocketReadHelper::MsgBodyReadHandle() {
 bool SocketReadHelper::DoCurRead(void (SocketReadHelper::*set_cur_read_done)()) {
   ssize_t n = read(sockfd_, read_ptr_, read_size_);
   const int val = 1;
-  std::cout << "1 SocketReadHelper::DoCurRead,the sockfd_:" << sockfd_
-            << " and the read_size_:" << read_size_ << " and n:" << n << std::endl;
-  std::cout << std::endl;
   PCHECK(setsockopt(sockfd_, IPPROTO_TCP, TCP_QUICKACK, (char*)&val, sizeof(int)) == 0);
   if (n == read_size_) {
     (this->*set_cur_read_done)();
@@ -69,8 +64,6 @@ bool SocketReadHelper::DoCurRead(void (SocketReadHelper::*set_cur_read_done)()) 
   } else if (n >= 0) {
     read_ptr_ += n;
     read_size_ -= n;
-    std::cout << "2 SocketReadHelper::DoCurRead,the sockfd_:" << sockfd_
-              << " and the read_size_:" << read_size_ << " and n:" << n << std::endl;
     return true;
   } else {
     CHECK_EQ(n, -1);
@@ -112,25 +105,15 @@ void SocketReadHelper::SetStatusWhenRequestReadMsgHeadDone() {
   auto mem_desc = static_cast<const SocketMemDesc*>(cur_msg_.request_read_msg.dst_token);
   read_ptr_ = reinterpret_cast<char*>(mem_desc->mem_ptr);
   read_size_ = mem_desc->byte_size;
-  std::cout << "SocketReadHelper::SetStatusWhenRequestReadMsgHeadDone,the sockfd_:" << sockfd_
-            << "the read_size_:" << read_size_ << std::endl;
   cur_read_handle_ = &SocketReadHelper::MsgBodyReadHandle;
 }
 
 void SocketReadHelper::SetStatusWhenActorMsgHeadDone() {
   size_t size = cur_msg_.actor_msg.size;
   char* data = (char*)malloc(size);
-  uint64_t addr = reinterpret_cast<uint64_t>(cur_msg_.actor_msg.data);
-  std::cout<<std::endl;
-  std::cout<<"**************"<<std::endl;
-  std::cout<<"SocketReadHelper::SetStatusWhenActorMsgHeadDone,the addr:0x"<<std::hex << addr << std::endl;
   std::memcpy(data, cur_msg_.actor_msg.data, size);
-  std::cout << "SocketReadHelper::SetStatusWhenActorMsgHeadDone,the size:" << size << std::endl;
-  addr = reinterpret_cast<uint64_t>(data);
-  std::cout<<"SocketReadHelper::SetStatusWhenActorMsgHeadDone,2 the addr of data:0x"<<std::hex << addr << std::endl;
   Global<ActorMsgBus>::Get()->HandleRecvData(data, size);
   std::cout<<std::endl;
-  // Global<EpollCommNet>::Get()->msghandle_(cur_msg_.actor_msg.data,cur_msg_.actor_msg.size);
   SwitchToMsgHeadReadHandle();
 }
 

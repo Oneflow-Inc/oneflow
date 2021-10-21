@@ -96,47 +96,26 @@ EpollCommNet::~EpollCommNet() {
 
 void EpollCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) {
   char* data = reinterpret_cast<char*>(addr);
-  std::cout<<std::endl;
-  std::cout<<"********"<<std::endl;
-  std::cout<<"EpollCommNet::SendMsg,1 the addr:0x"<<std::hex <<addr <<  std::endl;
   SocketMsg msg;
   msg.actor_msg.size = 0;
   msg.msg_type = SocketMsgType::kActor;
   std::memcpy(msg.actor_msg.data, data, size);
-  addr = reinterpret_cast<uint64_t>(msg.actor_msg.data);
-  std::cout<<"EpollCommNet::SendMsg,2 the  addr of msg.actor_msg.data:0x"<<std::hex <<addr <<  std::endl;
   msg.actor_msg.size = size;
-  std::cout << "EpollCommNet::SendMsg,the msg.msg_type:" << msg.msg_type << std::endl;
-  std::cout << "EpollCommNet::SendMsg, size:" << size << std::endl;
-  std::cout << "EpollCommNet::SendMsg,msg.actor_msg.size:" << msg.actor_msg.size << std::endl;
-  std::cout << std::endl << std::endl;
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
 
 char* EpollCommNet::SerialTokenToData(void* token, size_t* token_size) {
-  uint64_t token_addr = reinterpret_cast<uint64_t>(token);
-  // 打印出token的地址，便于调试
-  std::cout<<"*******************"<<std::endl;
-  std::cout<<"EpollCommNet::SerialTokenToData,the token_addr:0x"<< std::hex <<token_addr << std::endl;
-  std::cout<<std::endl;
-  uint64_t** y = new uint64_t*; //用new生成一个指针的指针
-  *y = reinterpret_cast<uint64_t*>(token); //这个指针指向token
-  char* addr = reinterpret_cast<char*>(y);//将y转为char*,因为返回类型为char *
-  *token_size = sizeof(char*);//设置token_size为指针大小
-  return addr;
+  char * data=(char*) malloc(sizeof(void*));
+  std::memcpy(data,&token,sizeof(void*));
+  *token_size = sizeof(void*);
+  return data;
 }
 
 void* EpollCommNet::DeSerialDataToToken(char* data, size_t* token_size) {
-  char** addr = reinterpret_cast<char**>(data);//将data转为一个指针的指针
-  //序列化的逆过程
-  void* token = new void*;
-  token = reinterpret_cast<void*>(*addr);//token为addr的内容
-  *token_size = sizeof(char *);
-  uint64_t token_addr = reinterpret_cast<uint64_t>(token);//将token转为地址，便于发送端和接收端比对token是否一致
-  std::cout<<"*******************"<<std::endl;
-  std::cout<<"EpollCommNet::DeSerialDataToToken,the token_addr:0x"<<std::hex <<token_addr << std::endl;
-  std::cout<<std::endl;
-  return token;
+    char * token = (char*) malloc(sizeof(void*));
+    std::memcpy(token,data,sizeof(void*));
+    *token_size = sizeof(void*);
+    return token;
 }
 
 void EpollCommNet::SendTransportMsg(int64_t dst_machine_id, const TransportMsg& transport_msg) {
