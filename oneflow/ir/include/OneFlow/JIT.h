@@ -14,7 +14,7 @@ namespace ir {
 using namespace mlir;
 using ValueMapping = std::unordered_map<Tensor*, mlir::Value>;
 void MapTensorToMlirValue(Tensor* tensor, mlir::Value value, ValueMapping* mapping);
-OwningModuleRef CreateJitModule(MLIRContext* context);
+OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context);
 
 }  // namespace ir
 

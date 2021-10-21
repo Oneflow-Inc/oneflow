@@ -14,10 +14,10 @@ void MapTensorToMlirValue(Tensor* tensor, mlir::Value value, ValueMapping* mappi
   mapping->emplace(tensor, value);
 }
 
-OwningModuleRef CreateJitModule(MLIRContext* context) {
+OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context) {
   context->loadDialect<mlir::oneflow::OneFlowDialect>();
   context->loadDialect<StandardOpsDialect>();
-  OwningModuleRef module(
+  OwningOpRef<ModuleOp> module(
       ModuleOp::create(FileLineColLoc::get(context, "", /*line=*/0, /*column=*/0)));
   return module;
 }

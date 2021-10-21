@@ -17,12 +17,12 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/vm/vm_util.h"
-#include "mlir/IR/MLIRContext.h"
-#include "oneflow/ir/include/OneFlow/JIT.h"
 
 namespace oneflow {
 
 namespace one {
+
+using namespace mlir;
 
 Maybe<void> JitInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                   TensorTuple* outputs, const OpExprInterpContext& ctx) const {
@@ -58,6 +58,7 @@ Maybe<const ParallelDesc> GetParallelDesc(const std::shared_ptr<Tensor>& tensor)
 
 Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
                                       TensorTuple* outputs, const OpExprInterpContext& ctx) const {
+  LOG(ERROR) << "adding: " << op_expr.proto().DebugString();
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
   const std::string device_tag = GetDeviceTag(inputs.at(0));
   const bool is_local = inputs.at(0)->is_local();
@@ -73,8 +74,6 @@ Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTup
 
   CHECK_EQ_OR_RETURN(outputs->size(), op_expr.output_size());
   // TODO: MLIR add op expr
-  mlir::MLIRContext context;
-  auto module = ir::CreateJitModule(&context);
   return Maybe<void>::Ok();
 }
 

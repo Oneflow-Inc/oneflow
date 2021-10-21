@@ -17,15 +17,20 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_JIT_OP_INTERPRETER_H_
 
 #include "oneflow/core/framework/op_interpreter.h"
+#include "oneflow/ir/include/OneFlow/JIT.h"
+#include "mlir/IR/Builders.h"
 
 namespace oneflow {
 
 namespace one {
 
+using namespace mlir;
+
 class JitInterpreter : public OpExprInterpreter {
  public:
-  JitInterpreter() : OpExprInterpreter() {}
-  virtual ~JitInterpreter() = default;
+  JitInterpreter()
+      : context_(new MLIRContext()), builder_(context_), module_(ir::CreateJitModule(context_)) {}
+  ~JitInterpreter() = default;
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const AttrMap& attrs) const {
@@ -36,6 +41,9 @@ class JitInterpreter : public OpExprInterpreter {
 
  private:
   DECLARE_NORMAL_APPLY_FUNC(UserOp);  // note(BBuf) jit deal with user op only, now.
+  MLIRContext* context_;
+  ::mlir::OpBuilder builder_;
+  OwningOpRef<ModuleOp> module_;
 };
 
 }  // namespace one
