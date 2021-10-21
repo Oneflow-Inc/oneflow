@@ -62,6 +62,7 @@ INTRUSIVE_BEGIN(VirtualMachine);
   const ActiveStreamList& active_stream_list() const { return active_stream_list_; }
   const ThreadCtxList& thread_ctx_list() const { return thread_ctx_list_; }
   const LogicalObjectDeleteList& delete_logical_object_list() const { return delete_logical_object_list_; }
+  const InstructionList& waiting_instruction_list() const { return waiting_instruction_list_; }
   const VmStatRunningInstructionList& vm_stat_running_instruction_list() const { return vm_stat_running_instruction_list_; }
   const FrontSeqInstructionList& front_seq_compute_instr_list() const { return front_seq_compute_instr_list_; }
   const InstructionMsgMutextList& pending_msg_list() const { return pending_msg_list_; }
@@ -77,6 +78,7 @@ INTRUSIVE_BEGIN(VirtualMachine);
   ActiveStreamList* mut_active_stream_list() { return &active_stream_list_; }
   ThreadCtxList* mut_thread_ctx_list() { return &thread_ctx_list_; }
   LogicalObjectDeleteList* mut_delete_logical_object_list() { return &delete_logical_object_list_; }
+  InstructionList* mut_waiting_instruction_list() { return &waiting_instruction_list_; }
   VmStatRunningInstructionList* mut_vm_stat_running_instruction_list() { return &vm_stat_running_instruction_list_; }
   FrontSeqInstructionList* mut_front_seq_compute_instr_list() { return &front_seq_compute_instr_list_; }
   InstructionMsgMutextList* mut_pending_msg_list() { return &pending_msg_list_; }
@@ -103,11 +105,8 @@ INTRUSIVE_BEGIN(VirtualMachine);
  private:
   using TmpPendingInstrMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, instr_msg_hook_)>;
   using NewInstructionList = InstructionList;
-  using WaitingInstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, waiting_instruction_hook_)>;
   using ReadyInstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, dispatched_instruction_hook_)>;
 
-  const WaitingInstructionList& waiting_instruction_list() const { return waiting_instruction_list_; }
-  WaitingInstructionList* mut_waiting_instruction_list() { return &waiting_instruction_list_; }
   ReadyInstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
 
 
@@ -152,14 +151,14 @@ INTRUSIVE_BEGIN(VirtualMachine);
                              Instruction* instrution);
   void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                               NewInstructionList* new_instruction_list);
-  void DispatchOrMoveToWaiting(NewInstructionList* new_instruction_list);
+  void DispatchAndPrescheduleInstructions();
+  void MoveToReadyOrWaiting(NewInstructionList* new_instruction_list);
   void DispatchInstruction(Instruction* instruction);
   void TryDeleteLogicalObjects();
 
   bool Dispatchable(Instruction* instruction) const;
   void TryDispatchReadyInstructions();
   void TryMoveFromWaitingToReady(Instruction* instruction);
-  void TryDispatchReadyInstructionsAndPreschedule();
 
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
@@ -193,10 +192,10 @@ INTRUSIVE_BEGIN(VirtualMachine);
   INTRUSIVE_DEFINE_FIELD(Id2LogicalObject, id2logical_object_);
   INTRUSIVE_DEFINE_FIELD(LogicalObjectDeleteList, delete_logical_object_list_);
   INTRUSIVE_DEFINE_FIELD(InstructionMsgMutextList, pending_msg_list_);
-  INTRUSIVE_DEFINE_FIELD(WaitingInstructionList, waiting_instruction_list_);
+  INTRUSIVE_DEFINE_FIELD(InstructionList, waiting_instruction_list_);
   INTRUSIVE_DEFINE_FIELD(ReadyInstructionList, ready_instruction_list_);
   INTRUSIVE_DEFINE_FIELD(VmStatRunningInstructionList, vm_stat_running_instruction_list_);
-  // rename to sequential_instruction_list 
+  // TODO(lixinqi): rename to sequential_instruction_list 
   INTRUSIVE_DEFINE_FIELD(FrontSeqInstructionList, front_seq_compute_instr_list_);
 INTRUSIVE_END(VirtualMachine);
 // clang-format on
