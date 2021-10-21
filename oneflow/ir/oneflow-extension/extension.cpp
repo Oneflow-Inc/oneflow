@@ -27,40 +27,8 @@ limitations under the License.
 #include "oneflow/ir/include/OneFlow/Passes.h"
 #include "oneflow/ir/include/OneFlow/Extension.h"
 #include "oneflow/ir/include/OneFlow/Extension.h"
-#include "oneflow/core/framework/op_interpreter/jit.h"
 
 namespace oneflow {
-
-namespace one {
-
-namespace ir {
-
-class MlirJitRuntime : public SimpleRuntime {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(MlirJitRuntime);
-  MlirJitRuntime();
-  ~MlirJitRuntime() = default;
-  void CacheOpExpr(const UserOpExpr& user_op_expr) override;
-  std::function<void(const TensorTuple& inputs, TensorTuple* outputs)> ComplieCachedOpExpr(
-      const UserOpExpr& user_op_expr) override;
-
- private:
-};
-
-MlirJitRuntime::MlirJitRuntime() {}
-void MlirJitRuntime::CacheOpExpr(const UserOpExpr& user_op_expr) {
-  LOG(ERROR) << "cache expr: " << user_op_expr.proto().DebugString();
-}
-std::function<void(const TensorTuple& inputs, TensorTuple* outputs)>
-MlirJitRuntime::ComplieCachedOpExpr(const UserOpExpr& user_op_expr) {
-  return [](const TensorTuple& inputs, TensorTuple* outputs) {
-    // invoke jit
-  };
-}
-
-}  // namespace ir
-
-}  // namespace one
 
 SharedLibs* MutSharedLibPaths() {
   static SharedLibs libs = {};

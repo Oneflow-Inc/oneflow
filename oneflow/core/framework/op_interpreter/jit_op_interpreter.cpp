@@ -17,7 +17,6 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/vm/vm_util.h"
-#include "oneflow/core/framework/op_interpreter/jit.h"
 #include "mlir/IR/MLIRContext.h"
 #include "oneflow/ir/include/OneFlow/JIT.h"
 
