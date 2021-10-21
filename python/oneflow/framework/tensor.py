@@ -482,6 +482,10 @@ def _unsqueeze(self, dim):
     return flow._C.unsqueeze(self, dim=dim)
 
 
+def _permute(self, dims):
+    return flow._C.permute(self, dims=dims)
+
+
 def _matmul(self, other):
     return flow.matmul(self, other)
 
@@ -777,6 +781,7 @@ def RegisterMethods():
     Tensor.squeeze = _squeeze
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
+    Tensor.permute = _permute
     
 
 
