@@ -48,7 +48,7 @@ class BernoulliFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Symbol<DType>& dtype,
                            const Optional<one::Generator>& generator) const {
-    const auto gen = GET_GENERATOR(generator);
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap bernoulli_attrs;
     JUST(bernoulli_attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     JUST(bernoulli_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
@@ -78,7 +78,7 @@ class RandFunctor {
       }
     }
 
-    const auto gen = GET_GENERATOR(generator);
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("low", 0));
     JUST(attrs.SetAttr<double>("high", 1));
@@ -115,7 +115,7 @@ class ConsistentRandFunctor {
       }
     }
 
-    const auto gen = GET_GENERATOR(generator);
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("low", 0));
     JUST(attrs.SetAttr<double>("high", 1));
@@ -152,7 +152,7 @@ class RandNFunctor {
       OF_UNIMPLEMENTED() << "Only support float and double in randn().";
     }
 
-    const auto gen = GET_GENERATOR(generator);
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("mean", 0));
     JUST(attrs.SetAttr<double>("std", 1));
@@ -187,7 +187,7 @@ class ConsistentRandNFunctor {
       OF_UNIMPLEMENTED() << "Only support float and double in randn().";
     }
 
-    const auto gen = GET_GENERATOR(generator);
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("mean", 0));
     JUST(attrs.SetAttr<double>("std", 1));
@@ -223,7 +223,7 @@ class RandIntFunctor {
     DataType dtype_val = DataType::kInt64;
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
 
-    const auto gen = GET_GENERATOR(generator);
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<int64_t>("low", low));
@@ -271,7 +271,7 @@ class ConsistentRandIntFunctor {
     DataType dtype_val = DataType::kInt64;
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
 
-    const auto gen = GET_GENERATOR(generator);
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<int64_t>("low", low));
@@ -322,7 +322,7 @@ class RandPermFunctor {
   Maybe<Tensor> operator()(const int32_t n, const Optional<one::Generator>& generator,
                            const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device,
                            const bool& requires_grad) const {
-    const auto gen = GET_GENERATOR(generator);
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("n", n));
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
@@ -350,7 +350,7 @@ class ConsistentRandPermFunctor {
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
                            const Optional<one::Generator>& generator, const Symbol<DType>& dtype,
                            const bool& requires_grad) const {
-    const auto gen = GET_GENERATOR(generator);
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("n", n));
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));

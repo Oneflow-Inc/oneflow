@@ -1200,7 +1200,7 @@ class DropoutFunctor {
                            const bool& training, const Optional<one::Generator>& generator) const {
     if (!training || p == 0.0) return a;
 
-    const auto gen = GET_GENERATOR(generator);
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap random_mask_like_attrs;
     JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
     JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
@@ -1522,7 +1522,7 @@ class FusedBiasAddDropoutFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b, const float& p,
                            const int32_t& axis, const Optional<one::Generator>& generator) const {
-    const auto gen = GET_GENERATOR(generator);
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap random_mask_like_attrs;
     JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
     JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
