@@ -17,6 +17,7 @@ import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 
+
 def l2_normalize(input, dim=0, epsilon=1e-12):
     """Use L2 norm to normalizes along dimension `dim`
 

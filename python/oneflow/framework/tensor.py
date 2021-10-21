@@ -63,14 +63,11 @@ def _ndim(self):
 
 
 def _nelement(self):
-    prod = 1
-    for dim in self.shape:
-        prod *= dim
-    return prod
+    return self.shape.numel()
 
 
 def _numel(self):
-    return self.nelement()
+    return self.shape.numel()
 
 
 def _element_size(self):
@@ -185,7 +182,7 @@ def _vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
     return flow._C.vector_norm(self, ord, dim, keepdim, dtype=dtype)
 
 
-def _matrix_norm(self, ord="fro", dim=(-2,-1), keepdim=False, dtype=None):
+def _matrix_norm(self, ord="fro", dim=(-2, -1), keepdim=False, dtype=None):
     return flow._C.matrix_norm(self, ord, dim, keepdim, dtype=dtype)
 
 

@@ -1086,43 +1086,40 @@ class CtcLossFunctor {
 class TripletMarginLossFunctor {
  public:
   TripletMarginLossFunctor() {}
-  
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& anchor,
                            const std::shared_ptr<one::Tensor>& positive,
-                           const std::shared_ptr<one::Tensor>& negative,
-                           const float& margin, const float& p, const float& eps,
-                           const bool& swap, const std::string& reduction) const {
-    int32_t dim_norm = anchor->ndim()-1;
+                           const std::shared_ptr<one::Tensor>& negative, const float& margin,
+                           const float& p, const float& eps, const bool& swap,
+                           const std::string& reduction) const {
+    int32_t dim_norm = anchor->ndim() - 1;
     std::vector<int32_t> dim(1, dim_norm);
     CHECK_OR_RETURN([&]() -> bool {
       if ((reduction != "none") && (reduction != "sum") && (reduction != "mean")) return false;
       return true;
     }());
-    auto da_p=JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, positive)))), p, dim, false,anchor->dtype()));
-    auto da_n=JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, negative)))), p,dim, false,anchor->dtype()));
-    if(swap)
-    {
-      auto distance_swap = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(positive, negative)))), p,dim, false,positive->dtype()));
+    auto da_p = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, positive)))), p, dim, false,
+                                anchor->dtype()));
+    auto da_n = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, negative)))), p, dim, false,
+                                anchor->dtype()));
+    if (swap) {
+      auto distance_swap = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(positive, negative)))), p,
+                                           dim, false, positive->dtype()));
       da_n = JUST(Minimum(distance_swap, da_n));
-    }   
-    auto triplet_loss = JUST(Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n)), margin, false)), 0.0, NullOpt));
-    int32_t ndim = triplet_loss->ndim()-1;
+    }
+    auto triplet_loss =
+        JUST(Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n)), margin, false)), 0.0, NullOpt));
+    int32_t ndim = triplet_loss->ndim() - 1;
     std::vector<int32_t> axis(1, ndim);
 
-    if(reduction == "mean")
-    {
-      triplet_loss=JUST(ReduceMean(triplet_loss, axis, false));
-    }
-    else if(reduction == "sum")
-    {
-      triplet_loss=JUST(ReduceSum(triplet_loss, axis, false));
-    }
-    else
-    {
-      triplet_loss=triplet_loss;
+    if (reduction == "mean") {
+      triplet_loss = JUST(ReduceMean(triplet_loss, axis, false));
+    } else if (reduction == "sum") {
+      triplet_loss = JUST(ReduceSum(triplet_loss, axis, false));
+    } else {
+      triplet_loss = triplet_loss;
     }
     return triplet_loss;
-
   }
 };
 
