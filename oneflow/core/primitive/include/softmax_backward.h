@@ -28,8 +28,8 @@ class SoftmaxBackward : public Primitive {
   SoftmaxBackward() = default;
   ~SoftmaxBackward() override = default;
 
-  virtual void Launch(StreamContext* stream_ctx, const void* y, const void* dy, void* dx,
-                      size_t rows, size_t cols) = 0;
+  virtual void Launch(StreamContext* stream_ctx, size_t rows, size_t cols, const void* y,
+                      const void* dy, void* dx) = 0;
 };
 
 class SoftmaxBackwardFactory : public Factory<SoftmaxBackward> {
