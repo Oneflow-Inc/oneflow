@@ -2,6 +2,11 @@
 
 **OneFlow is a performance-centered and open-source deep learning framework.**
 
+[![website](https://badgen.net/badge/Website/visit/yellow)](https://oneflow.org/)
+[![qq](https://badgen.net/badge/QQ/join/red)](https://jq.qq.com/?_wv=1027&k=9fhQh7Is)
+[![zhihu](https://badgen.net/badge/Zhihu/discuss/cyan)](https://www.zhihu.com/org/oneflow-17)
+[![Discord](https://badgen.net/badge/Discord/join/purple?icon=discord)](https://discord.gg/wZgdEuR)
+
 [![Simple CI](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml/badge.svg)](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml)
 [![Nightly Docker Image](https://github.com/Oneflow-Inc/docker-images/actions/workflows/oneflow-nightly.yml/badge.svg)](https://github.com/Oneflow-Inc/docker-images/actions/workflows/oneflow-nightly.yml)
 [![Nightly Release](https://github.com/Oneflow-Inc/oneflow/actions/workflows/release.yml/badge.svg)](https://github.com/Oneflow-Inc/oneflow/actions/workflows/release.yml)
