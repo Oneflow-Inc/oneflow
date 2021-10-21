@@ -17,6 +17,7 @@ from oneflow.nn.graph import Graph
 from oneflow.nn.module import Module
 from oneflow.nn.modules.activation import (
     ELU,
+    CELU,
     GELU,
     GLU,
     Hardsigmoid,
@@ -52,7 +53,14 @@ from oneflow.nn.modules.container import (
     ParameterList,
     Sequential,
 )
-from oneflow.nn.modules.conv import Conv1d, Conv2d, Conv3d, ConvTranspose2d
+from oneflow.nn.modules.conv import (
+    Conv1d,
+    Conv2d,
+    Conv3d,
+    ConvTranspose1d,
+    ConvTranspose2d,
+    ConvTranspose3d,
+)
 from oneflow.nn.modules.min_max_observer import MinMaxObserver
 from oneflow.nn.modules.moving_average_min_max_observer import (
     MovingAverageMinMaxObserver,

@@ -23,24 +23,6 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _check_inplace_valid
 
 
-def _softmax_need_transpose(x, axis):
-    assert type(axis) is int
-    dim_num = len(x.shape)
-    if dim_num == 1:
-        return (False, None)
-    if axis < 0:
-        axis += dim_num
-    assert axis >= 0
-    assert axis < dim_num
-    need_transpose = False
-    permute = list(range(dim_num))
-    if axis != dim_num - 1:
-        need_transpose = True
-        permute[axis] = permute[-1]
-        permute[-1] = axis
-    return (need_transpose, permute)
-
-
 class PReLU(Module):
     """Applies the element-wise function:
 
@@ -289,6 +271,59 @@ class ELU(Module):
         return param_str
 
 
+class CELU(Module):
+    """Applies the element-wise function:
+
+    .. math::
+
+        \\text{CELU}(x, \\alpha) = \\begin{cases}
+				x & \\text{ if } x \\ge 0  \\\\
+                \\alpha*(exp(\\frac{x}{\\alpha})-1) & \\text{ otherwise } \\\\
+    		    \\end{cases}
+
+    Args:
+        alpha: the :math:`\\alpha` value for the CELU formulation. Default: 1.0
+        inplace: can optionally do the operation in-place. Default: ``False``
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> celu = flow.nn.CELU(alpha=0.5)
+
+        >>> out = celu(input)
+        >>> out
+        tensor([-0.3161,  0.0000,  0.5000], dtype=oneflow.float32)
+
+    """
+
+    def __init__(self, alpha: float = 1.0, inplace: bool = False):
+        super().__init__()
+        self.alpha = alpha
+        self.inplace = inplace
+
+    def forward(self, x):
+        if self.inplace:
+            _check_inplace_valid(x)
+        return flow._C.celu(x, alpha=self.alpha, inplace=self.inplace)
+
+    def extra_repr(self):
+        param_str = f"alpha={self.alpha}"
+        param_str += ", inplace=True" if self.inplace else ""
+        return param_str
+
+
 class GELU(Module):
     """Gelu activation operator.
 
@@ -410,25 +445,6 @@ class Hardsigmoid(Module):
 
 
 class Softmax(Module):
-    def __init__(self, dim: Optional[int] = None):
-        super().__init__()
-        self.axis = 1 if dim is None else dim
-
-    def forward(self, x):
-        (need_transpose, permute) = _softmax_need_transpose(x, self.axis)
-        if need_transpose:
-            x = flow._C.transpose(x, perm=permute)
-        res = flow._C.softmax(x)
-        if need_transpose:
-            res = flow._C.transpose(res, perm=permute)
-        return res
-
-    def extra_repr(self):
-        return f"axis={self.axis}"
-
-
-@register_tensor_op("softmax")
-def softmax_op(tensor, dim=None):
     """Applies the Softmax function to an n-dimensional input Tensor
     rescaling them so that the elements of the n-dimensional output Tensor
     lie in the range [0,1] and sum to 1.
@@ -473,7 +489,16 @@ def softmax_op(tensor, dim=None):
         tensor([[[0.1575, 0.3754, 0.4671],
                  [0.0507, 0.1230, 0.8263]]], dtype=oneflow.float32)
     """
-    return Softmax(dim)(tensor)
+
+    def __init__(self, dim: Optional[int] = None):
+        super(Softmax, self).__init__()
+        self.dim = dim
+
+    def forward(self, x):
+        return flow._C.softmax(x, self.dim)
+
+    def extra_repr(self):
+        return f"dim={self.dim}"
 
 
 class LogSoftmax(Module):
@@ -512,23 +537,12 @@ class LogSoftmax(Module):
                 [-0.4877, -3.3176, -1.0506]], dtype=oneflow.float32)
     """
 
-    def __init__(self, dim: Optional[int] = 1):
-        super().__init__()
+    def __init__(self, dim: Optional[int] = None):
+        super(LogSoftmax, self).__init__()
         self.dim = dim
 
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        if not hasattr(self, "dim"):
-            self.dim = None
-
     def forward(self, x):
-        (need_transpose, permute) = _softmax_need_transpose(x, self.dim)
-        if need_transpose:
-            x = flow._C.transpose(x, perm=permute)
-        x = flow._C.log_softmax(x)
-        if need_transpose:
-            x = flow._C.transpose(x, perm=permute)
-        return x
+        return flow._C.log_softmax(x, self.dim)
 
     def extra_repr(self):
         return f"dim={self.dim}"

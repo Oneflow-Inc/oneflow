@@ -163,6 +163,7 @@ def ctc_loss(
         .Input("target_lengths", [target_lengths])
         .Output("loss")
         .Output("alpha")
+        .Attr("max_target_length", int(targets.shape[1]))
         .Attr("blank", int(blank))
         .Attr("zero_infinity", zero_infinity)
         .Build()

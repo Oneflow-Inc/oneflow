@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <gtest/gtest.h>
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/exception.h"
@@ -91,6 +92,14 @@ TEST(Optional, non_scalar) {
 
   auto x = std::make_shared<std::vector<int>>(1);
   ASSERT_EQ(b.value_or(x), x);
+
+  ASSERT_EQ(b.value_or(std::vector<int>{1, 2, 3}), (std::vector<int>{1, 2, 3}));
+  ASSERT_EQ(b.value_or(*x), *x);
+  ASSERT_EQ(a.value_or(*x), *CHECK_JUST(a));
+
+  ASSERT_EQ(Optional<std::vector<int>>().value_or(*x), *x);
+  ASSERT_EQ(Optional<std::vector<int>>().value_or(std::vector<int>{1, 2, 3}),
+            (std::vector<int>{1, 2, 3}));
 
   Optional<const std::vector<int>> c(std::vector<int>{1, 2, 3});
 
