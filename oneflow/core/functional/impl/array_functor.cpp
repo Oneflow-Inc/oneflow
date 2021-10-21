@@ -473,12 +473,20 @@ class RollFunctor {
   RollFunctor() { op_ = CHECK_JUST(one::OpBuilder("roll").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int32_t>& shifts,
-                           const std::vector<int32_t>& dims) const {
-    CHECK_GE_OR_RETURN(shifts.size(), dims.size())
-        << "The `shifts` and `dims` parameters should have the same size.";
+                           const Optional<std::vector<int32_t>>& dims) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("shifts", shifts));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("dims", dims));
+
+    std::vector<int32_t> actual_dims;
+    if (dims.has_value()) {
+      actual_dims = *JUST(dims);
+    } else {
+      actual_dims.push_back(-1);
+    }
+    CHECK_GE_OR_RETURN(shifts.size(), actual_dims.size())
+        << "The `shifts` and `dims` parameters should have the same size.";
+    JUST(attrs.SetAttr<std::vector<int32_t>>("dims", actual_dims));
+
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 

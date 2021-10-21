@@ -53,14 +53,9 @@ def roll_op(input, shifts, dims=None):
         oneflow.Size([4, 2])
 
     """
-    assert isinstance(shifts, (int, tuple))
+    assert isinstance(shifts, (int, tuple, list))
     if dims is not None:
-        assert isinstance(dims, (int, tuple))
-
-    if input.dtype == flow.int8:
-        input = flow.cast(input, flow.int32)
-    shifts = [shifts] if isinstance(shifts, int) else list(shifts)
-    dims = [-1] if dims is None else [dims] if isinstance(dims, int) else list(dims)
+        assert isinstance(dims, (int, tuple, list))
 
     return flow._C.roll(input, shifts, dims)
 
