@@ -17,8 +17,6 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 
-from torch._C import NoneType
-
 import numpy as np
 from test_util import GenArgList
 from oneflow.test_utils.automated_test_util import *
