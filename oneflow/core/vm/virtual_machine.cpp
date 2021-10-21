@@ -522,6 +522,22 @@ bool VirtualMachine::Dispatchable(Instruction* instruction) const {
   return true;
 }
 
+// Dispatch ready instructions.
+// Collect prescheduled instructions onto ready_instruction_list_.
+void VirtualMachine::DispatchAndPrescheduleInstructions() {
+  if (mut_ready_instruction_list()->size() == 0) { return; }
+  ReadyInstructionList tmp_ready_instruction_list;
+  mut_ready_instruction_list()->MoveTo(&tmp_ready_instruction_list);
+  INTRUSIVE_FOR_EACH(instruction, &tmp_ready_instruction_list) {
+    tmp_ready_instruction_list.Erase(instruction.Mutable());
+    DispatchInstruction(instruction.Mutable());
+    // preschedule instructions
+    INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_out_edges()) {
+      TryMoveFromWaitingToReady(edge->mut_dst_instruction());
+    }
+  }
+}
+
 void VirtualMachine::MoveToReadyOrWaiting(NewInstructionList* new_instruction_list) {
   INTRUSIVE_FOR_EACH_PTR(instruction, new_instruction_list) {
     if (Dispatchable(instruction)) {
@@ -662,22 +678,6 @@ void VirtualMachine::TryMoveFromWaitingToReady(Instruction* instruction) {
   }
 }
 
-// Dispatch ready instructions.
-// Collect prescheduled instructions onto ready_instruction_list_.
-void VirtualMachine::TryDispatchReadyInstructionsAndPreschedule() {
-  if (mut_ready_instruction_list()->size() == 0) { return; }
-  ReadyInstructionList tmp_ready_instruction_list;
-  mut_ready_instruction_list()->MoveTo(&tmp_ready_instruction_list);
-  INTRUSIVE_FOR_EACH(instruction, &tmp_ready_instruction_list) {
-    tmp_ready_instruction_list.Erase(instruction.Mutable());
-    DispatchInstruction(instruction.Mutable());
-    // preschedule instructions
-    INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_out_edges()) {
-      TryMoveFromWaitingToReady(edge->mut_dst_instruction());
-    }
-  }
-}
-
 void VirtualMachine::Schedule() {
   INTRUSIVE_FOR_EACH_PTR(stream, mut_active_stream_list()) {
     // Collect ready instructions onto ready_instruction_list_.
@@ -706,7 +706,7 @@ void VirtualMachine::Schedule() {
     MoveToReadyOrWaiting(&new_instruction_list);
   }
   // Dispatch ready instructions and put prescheduled instructions onto ready_instruction_list_.
-  TryDispatchReadyInstructionsAndPreschedule();
+  DispatchAndPrescheduleInstructions();
   *mut_flying_instruction_cnt() = mut_waiting_instruction_list()->size()
                                   + mut_ready_instruction_list()->size()
                                   + mut_vm_stat_running_instruction_list()->size();
