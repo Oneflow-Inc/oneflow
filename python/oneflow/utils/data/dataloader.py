@@ -238,8 +238,9 @@ class DataLoader(Generic[T_co]):
             self.num_workers = 0
         else:
             self.num_workers = num_workers
-            warnings.warn("Using multiprocessing dataloader, currently, we only supports start-up in the spawn way(not fork)")
-
+            warnings.warn(
+                "Using multiprocessing dataloader, currently, we only supports start-up in the spawn way(not fork)"
+            )
 
         if timeout < 0:
             raise ValueError("timeout option should be non-negative")
