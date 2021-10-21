@@ -743,7 +743,6 @@ class VectorNormFunctor {
                             const Scalar& ord, const Optional<std::vector<int32_t>>& input_dim, 
                             const bool& keepdim, const Optional<Symbol<DType>>& dtype) const {
     std::shared_ptr<one::Tensor> res;
-    int32_t num_dims = x->ndim();
     Symbol<DType> dtype_val;
     if(dtype)
     {
