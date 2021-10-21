@@ -23,13 +23,13 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct BinaryMathOpExprInterpState : public OpExprInterpState {
+struct BinaryMathCaptureState : public AutoGradCaptureState {
   bool x_requires_grad;
   bool y_requires_grad;
 };
 
-class BinaryMathOp : public OpExprGradFunction<BinaryMathOpExprInterpState> {
-  Maybe<void> Capture(BinaryMathOpExprInterpState* ctx, const TensorTuple& inputs,
+class BinaryMathOp : public OpExprGradFunction<BinaryMathCaptureState> {
+  Maybe<void> Capture(BinaryMathCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     ctx->x_requires_grad = inputs.at(0)->requires_grad();
     ctx->y_requires_grad = inputs.at(1)->requires_grad();
@@ -38,7 +38,7 @@ class BinaryMathOp : public OpExprGradFunction<BinaryMathOpExprInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const BinaryMathOpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const BinaryMathCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!(ctx->x_requires_grad || ctx->y_requires_grad)) { return Maybe<void>::Ok(); }
 

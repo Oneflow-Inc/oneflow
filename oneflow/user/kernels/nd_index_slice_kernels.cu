@@ -35,9 +35,10 @@ __global__ void CudaScatterNdAdd(NdIndexSliceArgs<T, I> args, const I* indices, 
 }
 
 template<typename T, typename I>
-__global__ void CudaZeroByNdIndex(NdIndexSliceArgs<T, I> args, const I* indices, T* dense) {
-  DoZeroByNdIndex(args.num_slices * args.slice_size, args.slice_size, args.index_ndims,
-                  args.dense_shape, indices, dense);
+__global__ void CudaFillByNdIndex(NdIndexSliceArgs<T, I> args, const I* indices, T* dense,
+                                  T value) {
+  DoFillByNdIndex(args.num_slices * args.slice_size, args.slice_size, args.index_ndims,
+                  args.dense_shape, indices, dense, value);
 }
 
 }  // namespace
@@ -61,11 +62,11 @@ struct ScatterNdAddFunctor<DeviceType::kGPU, T, I> final {
 };
 
 template<typename T, typename I>
-struct ZeroByNdIndexFunctor<DeviceType::kGPU, T, I> final {
-  void operator()(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
-                  T* dense) const {
-    RUN_CUDA_KERNEL((CudaZeroByNdIndex<T, I>), ctx, args.num_slices * args.slice_size, args,
-                    indices, dense);
+struct FillByNdIndexFunctor<DeviceType::kGPU, T, I> final {
+  void operator()(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices, T* dense,
+                  T value) const {
+    RUN_CUDA_KERNEL((CudaFillByNdIndex<T, I>), ctx, args.num_slices * args.slice_size, args,
+                    indices, dense, value);
   }
 };
 
@@ -74,30 +75,49 @@ struct DeviceAdd<DeviceType::kGPU, T> {
   __device__ __forceinline__ static void Invoke(const T* x, T* y) { cuda::atomic::Add(y, *x); }
 };
 
+template<>
+struct DeviceAdd<DeviceType::kGPU, uint8_t> {
+  __device__ __forceinline__ static void Invoke(const uint8_t* x, uint8_t* y) { *y += *x; }
+};
+
+template<>
+struct DeviceAdd<DeviceType::kGPU, int8_t> {
+  __device__ __forceinline__ static void Invoke(const int8_t* x, int8_t* y) { *y += *x; }
+};
+
+template<>
+struct DeviceAdd<DeviceType::kGPU, int64_t> {
+  __device__ __forceinline__ static void Invoke(const int64_t* x, int64_t* y) { *y += *x; }
+};
+
 #define GPU_ATOMIC_ADD_SUPPORTED_DATA_TYPE_SEQ \
   FLOATING_DATA_TYPE_SEQ                       \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_GATHER_ND_FUNCTOR, (DeviceType::kGPU),
-                                 ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_SCATTER_ND_ADD_FUNCTOR, (DeviceType::kGPU),
                                  GPU_ATOMIC_ADD_SUPPORTED_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_ZERO_BY_ND_INDEX_FUNCTOR, (DeviceType::kGPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_FILL_BY_ND_INDEX_FUNCTOR, (DeviceType::kGPU),
                                  ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_GATHER_ND_KERNELS, (DeviceType::kGPU),
-                                 ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCATTER_ND_KERNELS, (DeviceType::kGPU),
-                                 GPU_ATOMIC_ADD_SUPPORTED_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCATTER_ND_LIKE_KERNELS, (DeviceType::kGPU),
                                  GPU_ATOMIC_ADD_SUPPORTED_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_TENSOR_GATHER_ND_UPDATE_KERNELS, (DeviceType::kGPU),
-                                 GPU_ATOMIC_ADD_SUPPORTED_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_TENSOR_GATHER_ND_ADD_KERNELS, (DeviceType::kGPU),
                                  GPU_ATOMIC_ADD_SUPPORTED_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)

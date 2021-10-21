@@ -19,22 +19,20 @@ limitations under the License.
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class BroadcastToCompatibleWithKernel final : public KernelIf<device_type> {
+class BroadcastToCompatibleWithKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BroadcastToCompatibleWithKernel);
   BroadcastToCompatibleWithKernel() = default;
   ~BroadcastToCompatibleWithKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type, typename T>
-void BroadcastToCompatibleWithKernel<device_type, T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* x = BnInOp2Blob("x");
-  Blob* y = BnInOp2Blob("y");
+void BroadcastToCompatibleWithKernel<device_type, T>::ForwardDataContent(KernelContext* ctx) const {
+  const Blob* x = ctx->BnInOp2Blob("x");
+  Blob* y = ctx->BnInOp2Blob("y");
   const auto& broadcast_axes =
       this->kernel_conf().broadcast_to_compatible_with_conf().broadcast_axes();
   int64_t num_axes = y->shape().NumAxes();
@@ -46,7 +44,7 @@ void BroadcastToCompatibleWithKernel<device_type, T>::ForwardDataContent(
       CHECK_EQ(x_extend_shape.At(i), 1);
     }
   }
-  NdarrayUtil<device_type, T>::BroadcastTo(ctx.device_ctx, XpuVarNdarray<T>(y, num_axes),
+  NdarrayUtil<device_type, T>::BroadcastTo(ctx->device_ctx(), XpuVarNdarray<T>(y, num_axes),
                                            XpuVarNdarray<const T>(x, num_axes));
 }
 

@@ -20,6 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 #define INSERT_CHECK(expr) CHECK(expr.second)
+#define INSERT_CHECK_OR_RETURN(expr) CHECK_OR_RETURN(expr.second)
 
 template<typename MapT, typename KeyT>
 bool IsKeyFound(const MapT& m, const KeyT& k) {

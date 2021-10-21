@@ -129,10 +129,11 @@ REGISTER_USER_OP("gather_nd")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
-      CHECK(indices_modifier != nullptr);
+      CHECK_OR_RETURN(indices_modifier != nullptr);
       indices_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& params_tensor =
@@ -175,10 +176,11 @@ REGISTER_USER_OP("scatter_nd")
     .SetTensorDescInferFn(InferScatterNdTensorDesc)
     .SetDataTypeInferFn(InferScatterNdDataType)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
-      CHECK(indices_modifier != nullptr);
+      CHECK_OR_RETURN(indices_modifier != nullptr);
       indices_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& indices_desc =
@@ -257,10 +259,11 @@ REGISTER_USER_OP("tensor_scatter_nd_update")
     .SetDataTypeInferFn(InferTensorScatterNdOptDataType)
     .SetGetSbpFn(GetTensorScatterNdOptSbpSignatures)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
-      CHECK(indices_modifier != nullptr);
+      CHECK_OR_RETURN(indices_modifier != nullptr);
       indices_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("tensor_scatter_nd_add")
@@ -272,14 +275,16 @@ REGISTER_USER_OP("tensor_scatter_nd_add")
     .SetDataTypeInferFn(InferTensorScatterNdOptDataType)
     .SetGetSbpFn(GetTensorScatterNdOptSbpSignatures)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
-      CHECK(indices_modifier != nullptr);
+      CHECK_OR_RETURN(indices_modifier != nullptr);
       indices_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("gather_nd")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("params", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -292,10 +297,12 @@ REGISTER_USER_OP_GRAD("gather_nd")
         op.BindGradTensorWithOpInput(grad_op.output("out", 0), "params", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("scatter_nd")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("updates", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -307,10 +314,12 @@ REGISTER_USER_OP_GRAD("scatter_nd")
         op.BindGradTensorWithOpInput(grad_op.output("out", 0), "updates", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("tensor_scatter_nd_update")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("updates", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_updates_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -340,10 +349,12 @@ REGISTER_USER_OP_GRAD("tensor_scatter_nd_update")
         op.BindGradTensorWithOpInput(grad_op.output("out", 0), "params", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("tensor_scatter_nd_add")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("updates", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_updates_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -358,5 +369,6 @@ REGISTER_USER_OP_GRAD("tensor_scatter_nd_add")
       if (op.NeedGenGradTensor4OpInput("params", 0)) {
         op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", 0), "params", 0);
       }
+      return Maybe<void>::Ok();
     });
 }  // namespace oneflow

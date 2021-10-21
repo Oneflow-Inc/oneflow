@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/user/kernels/slice_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -133,13 +134,25 @@ SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
   const int64_t ndim = entire->shape().NumAxes();
   CHECK_LE(ndim, kSliceMaxDims);
-  CHECK_EQ(sliced->shape().NumAxes(), ndim);
+  if (entire->shape().NumAxes() == 1) {
+    CHECK_LE(sliced->shape().NumAxes(), 1);
+  } else {
+    CHECK_EQ(sliced->shape().NumAxes(), ndim);
+  }
   CHECK_EQ(start_vec.size(), ndim);
   CHECK_EQ(stop_vec.size(), ndim);
   CHECK_EQ(step_vec.size(), ndim);
 
   SliceParams params;
   std::memset(&params, 0, sizeof(SliceParams));
+  if (entire->shape().NumAxes() == 1 && sliced->shape().NumAxes() == 0) {
+    params.ndim = ndim;
+    params.dims[0] = entire->shape().At(0);
+    params.start[0] = RegulateSliceStart(start_vec.at(0), entire->shape().At(0));
+    params.step[0] = step_vec.at(0);
+    params.size[0] = 1;
+    return params;
+  }
   params.ndim = ndim;
   FOR_RANGE(int, i, 0, params.ndim) {
     const int64_t dim_size = entire->shape().At(i);
@@ -164,7 +177,7 @@ SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_
 }  // namespace
 
 template<DeviceType device_type, typename T>
-class SliceKernel final : public user_op::OpKernel {
+class SliceKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   SliceKernel() = default;
   ~SliceKernel() = default;
@@ -181,7 +194,7 @@ class SliceKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class SliceGradKernel final : public user_op::OpKernel {
+class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   SliceGradKernel() = default;
   ~SliceGradKernel() = default;
@@ -256,13 +269,13 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
 }
 
 #define MAKE_WRITE_SLICE_SWITCH_ENTRY(func_name, N, T) func_name<N, T>
-DEFINE_STATIC_SWITCH_FUNC(void, WriteSlice, MAKE_WRITE_SLICE_SWITCH_ENTRY,
-                          MAKE_NDIM_CTRV_SEQ(DIM_SEQ),
-                          MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ
+DEFINE_STATIC_SWITCH_FUNC(
+    void, WriteSlice, MAKE_WRITE_SLICE_SWITCH_ENTRY, MAKE_NDIM_CTRV_SEQ(DIM_SEQ),
+    MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
 #if defined(WITH_CUDA)
-                                                      HALF_DATA_TYPE_SEQ
+                                HALF_DATA_TYPE_SEQ
 #endif
-                                                  ));
+                            ));
 #undef MAKE_WRITE_SLICE_SWITCH_ENTRY
 
 std::shared_ptr<user_op::OpKernelState> CreateSliceState(user_op::KernelInitContext* ctx,

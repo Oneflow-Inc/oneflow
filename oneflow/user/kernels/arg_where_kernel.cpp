@@ -31,6 +31,7 @@ class ArgWhereKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     int64_t ndims = ctx->Tensor4ArgNameAndIndex("input", 0)->shape().NumAxes();
+    if (ndims == 0) { return; }
     SwitchNdimCompute(SwitchCase(ndims), ctx);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -62,11 +63,10 @@ size_t GetWorkspaceBytesSize(int64_t elem_cnt) {
 struct SwitchUtil {
 #define SWITCH_ENTRY(func_name, device, itype, otype, ndim) func_name<device, itype, otype, ndim>
 
-  DEFINE_STATIC_SWITCH_FUNC(size_t, GetWorkspaceBytesSize, SWITCH_ENTRY,
-                            MAKE_DEVICE_TYPE_CTRV_SEQ(DEVICE_TYPE_SEQ),
-                            MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ),
-                            MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ),
-                            MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+  DEFINE_STATIC_SWITCH_FUNC(
+      size_t, GetWorkspaceBytesSize, SWITCH_ENTRY, MAKE_DEVICE_TYPE_CTRV_SEQ(DEVICE_TYPE_SEQ),
+      MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ),
+      MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ), MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
 #undef SWITCH_ENTRY
 };
 
@@ -74,6 +74,7 @@ size_t InferTempStorageBytesSize(user_op::InferContext* ctx) {
   const std::string& device_tag = ctx->device_tag();
   DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(device_tag));
   const Shape& input_shape = ctx->InputShape("input", 0);
+  if (input_shape.NumAxes() == 0) { return 0; }
   const DataType& input_dtype = ctx->InputDType("input", 0);
   DataType output_dtype = *ctx->OutputDType("output", 0);
   return SwitchUtil::SwitchGetWorkspaceBytesSize(
@@ -96,6 +97,7 @@ size_t InferTempStorageBytesSize(user_op::InferContext* ctx) {
   REGISTER_ARG_WHERE_KERNEL(device, OF_PP_PAIR_FIRST(itype_pair), OF_PP_PAIR_FIRST(otype_pair))
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ARG_WHERE_KERNEL_WITH_DTYPE_PAIR, DEVICE_TYPE_SEQ,
-                                 ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

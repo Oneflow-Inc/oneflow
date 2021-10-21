@@ -21,11 +21,11 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-// Initializes CudaCopyD2HDeviceCtx which contains CudaStreamHandle object and CallbackMsgListPtr
+// Initializes CudaCopyD2HDeviceCtx which contains CudaStreamHandle
 // object, The related istructions will be handled with CudaCopyD2HDeviceCtx
 void CudaCopyD2HStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                           Stream* stream) const {
-  device_ctx->reset(new CudaCopyD2HDeviceCtx(stream->mut_callback_list()));
+  device_ctx->reset(new CudaCopyD2HDeviceCtx(stream->device_id()));
 }
 
 // Reinterprets status_buffer as CudaInstrStatusQuerier
@@ -37,7 +37,8 @@ void CudaCopyD2HStreamType::InitInstructionStatus(const Stream& stream,
 
 void CudaCopyD2HStreamType::DeleteInstructionStatus(const Stream& stream,
                                                     InstructionStatusBuffer* status_buffer) const {
-  // do nothing
+  auto* ptr = CudaInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  ptr->~CudaInstrStatusQuerier();
 }
 
 // Returns true if the instruction launched and the cuda event completed.
@@ -56,18 +57,17 @@ void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
     instr_type_id.instruction_type().Compute(instruction);
     OF_CUDA_CHECK(cudaGetLastError());
   }
-  stream->mut_callback_list()->MoveTo(instruction->mut_callback_list());
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
   CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
 
 // Specifies copy_d2h stream description of the virtual machine to be used.
-ObjectMsgPtr<StreamDesc> CudaCopyD2HStreamType::MakeStreamDesc(const Resource& resource,
-                                                               int64_t this_machine_id) const {
-  if (!resource.has_gpu_device_num()) { return ObjectMsgPtr<StreamDesc>(); }
+intrusive::shared_ptr<StreamDesc> CudaCopyD2HStreamType::MakeStreamDesc(
+    const Resource& resource, int64_t this_machine_id) const {
+  if (!resource.has_gpu_device_num()) { return intrusive::shared_ptr<StreamDesc>(); }
   std::size_t device_num = resource.gpu_device_num();
-  auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CudaCopyD2HStreamType>());
+  auto ret = intrusive::make_shared<StreamDesc>();
+  ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CudaCopyD2HStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(device_num);
   ret->set_num_streams_per_thread(1);

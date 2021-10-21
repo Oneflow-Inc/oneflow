@@ -33,8 +33,8 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-void DecodeOneRawOFRecord(const Feature& feature, T* dptr, int64_t sample_elem_cnt,
-                          bool dim1_varying_length, bool auto_zero_padding) {
+void DecodeOneRawOFRecord(const Feature& feature, T* dptr, int64_t sample_elem_cnt, bool truncate,
+                          bool dim1_varying_length) {
   if (feature.has_bytes_list()) {
     CHECK_EQ(feature.bytes_list().value_size(), 1);
     const auto& value0 = feature.bytes_list().value(0);
@@ -42,21 +42,24 @@ void DecodeOneRawOFRecord(const Feature& feature, T* dptr, int64_t sample_elem_c
     sample_elem_cnt = std::min<int64_t>(sample_elem_cnt, value0.size());
     CopyElem<int8_t, T>(in_dptr, dptr, sample_elem_cnt);
   }
-#define DEFINE_ONE_ELIF(PbT, CppT)                                                                \
-  else if (feature.has_##PbT##_list()) {                                                          \
-    const auto& list = feature.PbT##_list();                                                      \
-    const CppT* in_dptr = list.value().data();                                                    \
-    const int64_t padding_elem_num = auto_zero_padding ? sample_elem_cnt - list.value_size() : 0; \
-    if (dim1_varying_length || auto_zero_padding) {                                               \
-      CHECK_LE(list.value_size(), sample_elem_cnt);                                               \
-      sample_elem_cnt = list.value_size();                                                        \
-    } else {                                                                                      \
-      CHECK_EQ(sample_elem_cnt, list.value_size());                                               \
-    }                                                                                             \
-    CopyElem<CppT, T>(in_dptr, dptr, sample_elem_cnt);                                            \
-    if (padding_elem_num > 0) {                                                                   \
-      std::memset(dptr + sample_elem_cnt, 0, padding_elem_num * sizeof(T));                       \
-    }                                                                                             \
+#define DEFINE_ONE_ELIF(PbT, CppT)                                                       \
+  else if (feature.has_##PbT##_list()) {                                                 \
+    const auto& list = feature.PbT##_list();                                             \
+    const CppT* in_dptr = list.value().data();                                           \
+    const int64_t padding_elem_num = truncate ? sample_elem_cnt - list.value_size() : 0; \
+    if (truncate) {                                                                      \
+      sample_elem_cnt = std::min<int64_t>(sample_elem_cnt, list.value_size());           \
+    } else {                                                                             \
+      if (dim1_varying_length) {                                                         \
+        sample_elem_cnt = list.value_size();                                             \
+      } else {                                                                           \
+        CHECK_EQ(sample_elem_cnt, list.value_size());                                    \
+      }                                                                                  \
+    }                                                                                    \
+    CopyElem<CppT, T>(in_dptr, dptr, sample_elem_cnt);                                   \
+    if (padding_elem_num > 0) {                                                          \
+      std::memset(dptr + sample_elem_cnt, 0, padding_elem_num * sizeof(T));              \
+    }                                                                                    \
   }
   DEFINE_ONE_ELIF(float, float)
   DEFINE_ONE_ELIF(double, double)
@@ -88,7 +91,7 @@ class OFRecordRawDecoderKernel final : public user_op::OpKernel {
     T* out_dptr = out_blob->mut_dptr<T>();
     const std::string& name = ctx->Attr<std::string>("name");
 
-    bool auto_zero_padding = ctx->Attr<bool>("auto_zero_padding");
+    bool truncate = ctx->Attr<bool>("truncate");
     bool dim1_varying_length = ctx->Attr<bool>("dim1_varying_length");
 
     MultiThreadLoop(record_num, [&](size_t i) {
@@ -97,7 +100,7 @@ class OFRecordRawDecoderKernel final : public user_op::OpKernel {
       CHECK(record.feature().find(name) != record.feature().end())
           << "Field " << name << " not found";
       const Feature& feature = record.feature().at(name);
-      DecodeOneRawOFRecord(feature, dptr, sample_elem_cnt, auto_zero_padding, dim1_varying_length);
+      DecodeOneRawOFRecord(feature, dptr, sample_elem_cnt, truncate, dim1_varying_length);
     });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

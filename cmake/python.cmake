@@ -23,14 +23,18 @@ message(STATUS "PIP_INDEX_MIRROR: ${PIP_INDEX_MIRROR}")
 if(PIP_INDEX_MIRROR)
   set(extra_index_arg "-i")
 endif()
-execute_process(
-  COMMAND ${Python_EXECUTABLE} -m pip install ${extra_index_arg} ${PIP_INDEX_MIRROR} -r ${requirements_txt} --user
-  RESULT_VARIABLE PIP_INSTALL_STATUS
-)
-if(NOT PIP_INSTALL_STATUS EQUAL 0)
-  message(FATAL_ERROR "fail to install pip packages")
-endif()
-message(STATUS "Python packages are installed.")
+
+function(install_py_dev_deps)
+  execute_process(
+    COMMAND ${ARGV0} -m pip install ${extra_index_arg} ${PIP_INDEX_MIRROR} -r ${requirements_txt} --user
+    RESULT_VARIABLE PIP_INSTALL_STATUS
+  )
+  if(NOT PIP_INSTALL_STATUS EQUAL 0)
+    message(FATAL_ERROR "fail to install pip packages")
+  endif()
+  message(STATUS "Python packages are installed.")
+endfunction(install_py_dev_deps)
+install_py_dev_deps(${Python_EXECUTABLE})
 
 find_package(Python3 COMPONENTS Development NumPy)
 if (Python3_Development_FOUND AND Python3_INCLUDE_DIRS)
@@ -76,3 +80,8 @@ message(STATUS "Found numpy include directory ${Python_NumPy_INCLUDE_DIRS}")
 # PYTHON_EXECUTABLE will be used by pybind11
 set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
 include(pybind11)
+
+set(CODEGEN_PYTHON_EXECUTABLE ${Python_EXECUTABLE} CACHE STRING "Python executable to generate .cpp/.h files")
+if(NOT "${CODEGEN_PYTHON_EXECUTABLE}" STREQUAL "${Python_EXECUTABLE}")
+  install_py_dev_deps(${CODEGEN_PYTHON_EXECUTABLE})
+endif()

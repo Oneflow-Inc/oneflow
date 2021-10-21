@@ -48,6 +48,7 @@ void LaunchSliceForward(DeviceCtx* ctx, const SliceParams& params, const T* enti
   int64_t elem_cnt = params.elem_cnt();
   SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
   SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
+  if (elem_cnt == 0) { return; }
   SliceForwardGpu<T, NDIM>
       <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           elem_cnt, params, entire_idx_cvtr, sliced_idx_cvtr, entire, sliced);
@@ -68,10 +69,10 @@ template<typename T>
 struct SliceSwitchUtil final {
 #define MAKE_SLICE_SWITCH_ENTRY(func_name, N) func_name<T, N>
 #define DEFINE_SLICE_SWITCH_UTIL_STATIC_METHOD(func_name) \
-  DEFINE_STATIC_SWITCH_FUNC(void, func_name, MAKE_SLICE_SWITCH_ENTRY, MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+  DEFINE_STATIC_SWITCH_FUNC(void, func_name, MAKE_SLICE_SWITCH_ENTRY, MAKE_NDIM_CTRV_SEQ(DIM_SEQ))
 
-  DEFINE_SLICE_SWITCH_UTIL_STATIC_METHOD(LaunchSliceForward);
-  DEFINE_SLICE_SWITCH_UTIL_STATIC_METHOD(LaunchSliceBackward);
+  DEFINE_SLICE_SWITCH_UTIL_STATIC_METHOD(LaunchSliceForward)
+  DEFINE_SLICE_SWITCH_UTIL_STATIC_METHOD(LaunchSliceBackward)
 #undef DEFINE_SLICE_SWITCH_UTIL_STATIC_METHOD
 #undef MAKE_SLICE_SWITCH_ENTRY
 };

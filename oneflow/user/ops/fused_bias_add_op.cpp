@@ -103,7 +103,8 @@ REGISTER_USER_OP("fused_bias_add_gelu_grad")
     });
 
 REGISTER_USER_OP_GRAD("fused_bias_add_gelu")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("a", 0) || op.NeedGenGradTensor4OpInput("b", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_gelu_grad");
         user_op::UserOpConfWrapper bias_add_gelu_grad_op =
@@ -137,6 +138,7 @@ REGISTER_USER_OP_GRAD("fused_bias_add_gelu")
           op.BindGradTensorWithOpInput(grad_op.output("output_tensor", 0), "b", 0);
         }
       }
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("fused_bias_add_mask_scale")
@@ -167,10 +169,11 @@ REGISTER_USER_OP("fused_bias_add_mask_scale")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* mask_modifier = GetInputArgModifierFn("mask", 0);
-      CHECK(mask_modifier != nullptr);
+      CHECK_OR_RETURN(mask_modifier != nullptr);
       mask_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const auto axis = ctx->Attr<int32_t>("axis");
@@ -191,7 +194,8 @@ REGISTER_USER_OP("fused_bias_add_mask_scale")
     });
 
 REGISTER_USER_OP_GRAD("fused_bias_add_mask_scale")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("a", 0) || op.NeedGenGradTensor4OpInput("b", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_gelu_grad");
         user_op::UserOpConfWrapper dropout_grad_op =
@@ -224,6 +228,7 @@ REGISTER_USER_OP_GRAD("fused_bias_add_mask_scale")
           op.BindGradTensorWithOpInput(grad_op.output("output_tensor", 0), "b", 0);
         }
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

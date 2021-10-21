@@ -89,6 +89,7 @@ class GpuL2NormalizeKernel final : public user_op::OpKernel {
   ~GpuL2NormalizeKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -119,6 +120,7 @@ class GpuL2NormalizeGradKernel final : public user_op::OpKernel {
   ~GpuL2NormalizeGradKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);

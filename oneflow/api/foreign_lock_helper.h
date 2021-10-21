@@ -16,12 +16,13 @@ limitations under the License.
 #ifndef ONEFLOW_API_FOREIGN_LOCK_HELPER_H
 #define ONEFLOW_API_FOREIGN_LOCK_HELPER_H
 #include <functional>
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 class ForeignLockHelper {
  public:
-  virtual void WithScopedRelease(const std::function<void()>&) const = 0;
-  virtual void WithScopedAcquire(const std::function<void()>&) const = 0;
+  virtual Maybe<void> WithScopedRelease(const std::function<Maybe<void>()>&) const = 0;
+  virtual Maybe<void> WithScopedAcquire(const std::function<Maybe<void>()>&) const = 0;
 };
 }  // namespace oneflow
 

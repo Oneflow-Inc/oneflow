@@ -33,16 +33,6 @@ static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSP
 }
 
 template<typename T>
-static void AxpyImpl(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, T* y,
-                     const int incy) {
-  FOR_RANGE(int, i, 0, n) {
-    *y += alpha * *x;
-    x += incx;
-    y += incy;
-  }
-}
-
-template<typename T>
 void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
                      const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
                      int batch_size, int m, int n, int k, const double alpha, const T* a,
@@ -88,16 +78,6 @@ void BlasIf<DeviceType::kCPU>::OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOS
                                              const double beta, double* c) {
   BatchedGemmImpl<double>(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha, a, b,
                           beta, c);
-}
-
-void BlasIf<DeviceType::kCPU>::Axpy(DeviceCtx* ctx, const int n, const float alpha, const float* x,
-                                    const int incx, float* y, const int incy) {
-  AxpyImpl<float>(ctx, n, alpha, x, incx, y, incy);
-}
-
-void BlasIf<DeviceType::kCPU>::Axpy(DeviceCtx* ctx, const int n, const double alpha,
-                                    const double* x, const int incx, double* y, const int incy) {
-  AxpyImpl<double>(ctx, n, alpha, x, incx, y, incy);
 }
 
 }  // namespace oneflow

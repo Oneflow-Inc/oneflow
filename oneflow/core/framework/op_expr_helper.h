@@ -67,9 +67,6 @@ Maybe<one::UserOpExpr> ReduceSumLikeOp(const std::vector<int32_t>& axis, const s
 Maybe<one::UserOpExpr> ScalarPowOp(const double& exponent);
 Maybe<one::UserOpExpr> ScalarPowOp(const double& exponent, const std::string& name);
 
-Maybe<one::UserOpExpr> ScalarPowGradOp(const double& exponent);
-Maybe<one::UserOpExpr> ScalarPowGradOp(const double& exponent, const std::string& name);
-
 template<typename T>
 Maybe<one::UserOpExpr> ScalarAddOp(const T& scalar);
 
@@ -120,24 +117,9 @@ Maybe<one::UserOpExpr> NormalizationGradOp(const int32_t& axis, const float& eps
 Maybe<one::UserOpExpr> BroadcastDivGradOp();
 Maybe<one::UserOpExpr> BroadcastDivGradOp(const std::string& name);
 
-Maybe<one::UserOpExpr> LayerNormGradOp(const int64_t& begin_norm_axis, const double& epsilon);
-Maybe<one::UserOpExpr> LayerNormGradOp(const int64_t& begin_norm_axis, const double& epsilon,
-                                       const std::string& name);
-
-Maybe<one::UserOpExpr> LayerNormParamGradOp(const int64_t& begin_params_axis,
-                                            const bool& has_beta_diff, const bool& has_gamma_diff,
-                                            const bool& has_normalized_diff);
-Maybe<one::UserOpExpr> LayerNormParamGradOp(const int64_t& begin_params_axis,
-                                            const bool& has_beta_diff, const bool& has_gamma_diff,
-                                            const bool& has_normalized_diff,
-                                            const std::string& name);
-
 Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t& max_dim_size);
 Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t& max_dim_size,
                                 const std::string& name);
-
-Maybe<one::UserOpExpr> UnsortedBatchSegmentSumOp(const int& num_segments);
-Maybe<one::UserOpExpr> UnsortedBatchSegmentSumOp(const int& num_segments, const std::string& name);
 
 Maybe<one::UserOpExpr> ScalarAddByTensorOp();
 Maybe<one::UserOpExpr> ScalarAddByTensorOp(const std::string& name);
@@ -252,16 +234,6 @@ Maybe<one::UserOpExpr> BroadcastMatmulOp(const bool& transpose_a, const bool& tr
 Maybe<one::UserOpExpr> BroadcastMatmulGradBOp(const double& alpha);
 Maybe<one::UserOpExpr> BroadcastMatmulGradBOp(const double& alpha, const std::string& name);
 
-Maybe<one::UserOpExpr> DropoutGradOp(const float& scale);
-Maybe<one::UserOpExpr> DropoutGradOp(const float& scale, const std::string& name);
-
-Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
-                                   const std::vector<int64_t>& stop,
-                                   const std::vector<int64_t>& step);
-Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
-                                   const std::vector<int64_t>& stop,
-                                   const std::vector<int64_t>& step, const std::string& name);
-
 Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& data_format,
                                     const std::string& padding,
                                     const std::vector<int32_t>& padding_before,
@@ -275,9 +247,6 @@ Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& 
                                     const std::vector<int32_t>& pool_size,
                                     const std::vector<int32_t>& strides, const bool& ceil_mode,
                                     const std::string& name);
-
-Maybe<one::UserOpExpr> AdaptivePoolGradOp();
-Maybe<one::UserOpExpr> AdaptivePoolGradOp(const std::string& name);
 
 Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis);
 Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis, const std::string& name);

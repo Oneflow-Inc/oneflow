@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_STREAM_TYPE_ID_H_
 
 #include "oneflow/core/vm/interpret_type.h"
-#include "oneflow/core/object_msg/flat_msg.h"
+#include "oneflow/core/intrusive/flat_msg.h"
 
 namespace oneflow {
 namespace vm {
@@ -29,7 +29,7 @@ class StreamTypeId final {
   using self_type = StreamTypeId;
   StreamTypeId() { __Init__(); }
   StreamTypeId(const StreamTypeId& rhs) { __Init__(rhs.stream_type_, rhs.interpret_type_); }
-  void __Init__() { std::memset(this, 0, sizeof(StreamTypeId)); }
+  void __Init__() { std::memset(reinterpret_cast<char*>(this), 0, sizeof(StreamTypeId)); }
   void __Init__(const StreamType* stream_type, InterpretType interpret_type) {
     __Init__();
     stream_type_ = stream_type;

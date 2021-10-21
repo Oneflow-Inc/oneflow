@@ -13,26 +13,37 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/identity_kernel.h"
+#include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/primitive/include/memcpy.h"
 
 namespace oneflow {
 
-template<DeviceType device_type>
-void IdentityKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("out")->CopyValidDataContentFrom(ctx.device_ctx, BnInOp2Blob("in"));
+class IdentityKernel final : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(IdentityKernel);
+  IdentityKernel() = default;
+  ~IdentityKernel() = default;
+
+ private:
+  void ForwardDataContent(KernelContext* ctx) const override;
+  void ForwardHeader(KernelContext* ctx) const override;
+};
+
+void IdentityKernel::ForwardDataContent(KernelContext* ctx) const {
+  const Blob* in_blob = ctx->BnInOp2Blob("in");
+  Blob* out_blob = ctx->BnInOp2Blob("out");
+  AutoMemcpy(ctx->stream_ctx(), out_blob, in_blob);
 }
 
-template<DeviceType device_type>
-void IdentityKernel<device_type>::ForwardHeader(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("out")->CopyHeaderFrom(ctx.device_ctx, BnInOp2Blob("in"));
+void IdentityKernel::ForwardHeader(KernelContext* ctx) const {
+  ctx->BnInOp2Blob("out")->CopyHeaderFrom(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kIdentityConf, IdentityKernel);
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kCopyConf, IdentityKernel);
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kCastToMirroredConf, IdentityKernel);
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kCastFromMirroredConf, IdentityKernel);
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kBoxingIdentityConf, IdentityKernel);
+REGISTER_KERNEL(OperatorConf::kIdentityConf, IdentityKernel);
+REGISTER_KERNEL(OperatorConf::kCopyConf, IdentityKernel);
+REGISTER_KERNEL(OperatorConf::kCastToMirroredConf, IdentityKernel);
+REGISTER_KERNEL(OperatorConf::kCastFromMirroredConf, IdentityKernel);
+REGISTER_KERNEL(OperatorConf::kBoxingIdentityConf, IdentityKernel);
 
 }  // namespace oneflow

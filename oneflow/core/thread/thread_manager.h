@@ -19,6 +19,8 @@ limitations under the License.
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/auto_registration_factory.h"
+#include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/thread/thread.h"
 #include "oneflow/core/thread/thread_pool.h"
 
@@ -42,10 +44,25 @@ class ThreadMgr final {
 };
 
 void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);
-void MultiThreadLoop(size_t num, std::function<void(size_t i)> Callback);
 
-#define REGISTER_DEVICE_THREAD_CREATOR_WITH_STREAM_ID(device, creator) \
-  REGISTER_CLASS_CREATOR(int, device, Thread, creator, const StreamId&)
+template<typename DoEachT>
+void MultiThreadLoop(size_t num, const DoEachT& DoEach) {
+  if (num == 0) { return; }
+  size_t thread_num = Global<ThreadPool>::Get()->thread_num();
+  thread_num = std::min(num, thread_num);
+  BalancedSplitter bs(num, thread_num);
+  BlockingCounter bc(thread_num);
+  FOR_RANGE(size_t, range_id, 0, thread_num) {
+    Global<ThreadPool>::Get()->AddWork([&bc, &bs, range_id, DoEach] {
+      size_t start = bs.At(range_id).begin();
+      size_t end = bs.At(range_id).end();
+      FOR_RANGE(size_t, i, start, end) { DoEach(i); }
+      bc.Decrease();
+    });
+  }
+  // buzy loop wait.
+  bc.WaitUntilCntEqualZero();
+}
 
 }  // namespace oneflow
 

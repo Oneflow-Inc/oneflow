@@ -14,62 +14,79 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/job/collective_boxing_executor.h"
+#include "oneflow/core/job/collective_boxing/scheduler.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/device/collective_boxing_device_context.h"
 
 namespace oneflow {
 
+class CollectiveBoxingKernelState final : public KernelState {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingKernelState);
+  explicit CollectiveBoxingKernelState(const RankDesc& rank_desc)
+      : request_handle_(Global<Scheduler>::Get()->CreateRequestHandle(rank_desc)) {}
+  ~CollectiveBoxingKernelState() override {
+    Global<Scheduler>::Get()->DestroyRequestHandle(request_handle_);
+  }
+  RequestHandle* request_handle() { return request_handle_; }
+
+ private:
+  RequestHandle* request_handle_ = nullptr;
+};
+
 using namespace boxing::collective;
 
-template<DeviceType device_type>
-class CollectiveBoxingGenericKernel final : public KernelIf<device_type> {
+class CollectiveBoxingGenericKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingGenericKernel);
   CollectiveBoxingGenericKernel() = default;
   ~CollectiveBoxingGenericKernel() override = default;
 
  private:
+  void VirtualKernelInit(KernelContext* ctx) override;
   bool IsKernelLaunchSynchronized() const override { return false; }
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
-template<DeviceType device_type>
-void CollectiveBoxingGenericKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  RuntimeRequestInfo request;
+void CollectiveBoxingGenericKernel::VirtualKernelInit(KernelContext* ctx) {
+  const RankDesc& rank_desc = this->op_conf().collective_boxing_generic_conf().rank_desc();
+  ctx->set_state(std::make_shared<CollectiveBoxingKernelState>(rank_desc));
+}
+
+void CollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) const {
+  RequestHandle* request_handle =
+      CHECK_NOTNULL(dynamic_cast<CollectiveBoxingKernelState*>(ctx->state().get()))
+          ->request_handle();
+  auto request = std::make_shared<RuntimeRequestInfo>();
   const RankDesc& rank_desc = this->op_conf().collective_boxing_generic_conf().rank_desc();
   const DataType data_type = rank_desc.op_desc().data_type();
   if (GenericOpHasInput(rank_desc)) {
-    const Blob* in = BnInOp2Blob("in");
+    const Blob* in = ctx->BnInOp2Blob("in");
     CHECK_EQ(in->data_type(), data_type);
     CHECK(in->shape() == ShapeView(GenericOpGetInputShape(rank_desc)));
-    request.send_buff = in->dptr();
+    request->send_buff = in->dptr();
   } else {
-    request.send_buff = nullptr;
+    request->send_buff = nullptr;
   }
   if (GenericOpHasOutput(rank_desc)) {
-    Blob* out = BnInOp2Blob("out");
+    Blob* out = ctx->BnInOp2Blob("out");
     CHECK_EQ(out->data_type(), data_type);
     CHECK(out->shape() == ShapeView(GenericOpGetOutputShape(rank_desc)));
-    request.recv_buff = out->mut_dptr();
+    request->recv_buff = out->mut_dptr();
   } else {
-    request.recv_buff = nullptr;
+    request->recv_buff = nullptr;
   }
-  auto* device_ctx = dynamic_cast<CollectiveBoxingDeviceCtx*>(ctx.device_ctx);
+  auto* device_ctx = dynamic_cast<CollectiveBoxingDeviceCtx*>(ctx->device_ctx());
   CHECK_NOTNULL(device_ctx);
   std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint> checkpoint = device_ctx->AddCheckpoint();
-  request.callback = std::make_shared<const std::function<void(const Maybe<void>&)>>(
-      [checkpoint](const Maybe<void>& status) {
-        CHECK(status.IsOk());
-        checkpoint->SetDone();
-      });
-  Global<CollectiveBoxingExecutor>::Get()->Enqueue(rank_desc, request);
+  request->callback = [checkpoint](const Maybe<void>& status) {
+    CHECK(status.IsOk());
+    checkpoint->SetDone();
+  };
+  Global<Scheduler>::Get()->Schedule(request_handle, request);
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kCollectiveBoxingGenericConf,
-                               CollectiveBoxingGenericKernel);
+REGISTER_KERNEL(OperatorConf::kCollectiveBoxingGenericConf, CollectiveBoxingGenericKernel);
 
 }  // namespace oneflow

@@ -13,29 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
 
-struct BatchGatherInterpState : public OpExprInterpState {
-  int32_t num_segments;
+struct BatchGatherCaptureState : public AutoGradCaptureState {
+  int64_t num_segments;
   bool requires_grad;
 };
 
-class BatchGather : public OpExprGradFunction<BatchGatherInterpState> {
+class BatchGather : public OpExprGradFunction<BatchGatherCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(BatchGatherInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(BatchGatherCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const BatchGatherInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const BatchGatherCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
-
 };
 
 Maybe<void> BatchGather::Init(const OpExpr& op) {
@@ -44,7 +40,7 @@ Maybe<void> BatchGather::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> BatchGather::Capture(BatchGatherInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> BatchGather::Capture(BatchGatherCaptureState* ctx, const TensorTuple& inputs,
                                  const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -55,12 +51,13 @@ Maybe<void> BatchGather::Capture(BatchGatherInterpState* ctx, const TensorTuple&
   return Maybe<void>::Ok();
 }
 
-Maybe<void> BatchGather::Apply(const BatchGatherInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> BatchGather::Apply(const BatchGatherCaptureState* ctx, const TensorTuple& out_grads,
                                TensorTuple* in_grads) const {
   in_grads->resize(2);
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   const auto& indices = ctx->SavedTensors().at(0);
-  in_grads->at(0) = JUST(functional::UnsortedBatchSegmentSum(out_grads.at(0), indices, ctx->num_segments));
+  in_grads->at(0) =
+      JUST(functional::UnsortedBatchSegmentSum(out_grads.at(0), indices, ctx->num_segments));
   return Maybe<void>::Ok();
 }
 

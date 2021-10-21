@@ -13,15 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/foreign_input_kernel.h"
+#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/job/job_instance.h"
 
 namespace oneflow {
 
-void ForeignInputKernel::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+class ForeignInputKernel final : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ForeignInputKernel);
+  ForeignInputKernel() = default;
+  ~ForeignInputKernel() = default;
+
+  void Forward(KernelContext* ctx) const override { ForwardDataContent(ctx); }
+
+ private:
+  void ForwardDataContent(KernelContext* ctx) const override;
+};
+
+void ForeignInputKernel::ForwardDataContent(KernelContext* ctx) const {
   const auto& buffer_name = op_conf().foreign_input_conf().ofblob_buffer_name();
   std::shared_ptr<JobInstance> foreign_job_instance;
   BufferStatus buffer_status = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get()
@@ -29,7 +40,7 @@ void ForeignInputKernel::ForwardDataContent(
                                    ->TryReceive(&foreign_job_instance);
   CHECK_NE(buffer_status, kBufferStatusEmpty);
   if (buffer_status == kBufferStatusSuccess) {
-    OfBlob ofblob(ctx.device_ctx, BnInOp2Blob("out"));
+    OfBlob ofblob(ctx->device_ctx(), ctx->BnInOp2Blob("out"));
     foreign_job_instance->PushBlob(reinterpret_cast<uint64_t>(&ofblob));
   }
 }

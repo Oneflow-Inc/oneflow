@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/user/kernels/sparse_cross_entropy_kernel_util.h"
-#include "oneflow/core/job/parallel_distribution_util.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 
 namespace oneflow {
 namespace user_op {
@@ -70,15 +70,13 @@ class SparseCrossEntropyMsKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
-      const cfg::ParallelDistribution& parallel_distribution =
-          ctx->ParallelDistribution4ArgNameAndIndex("prediction", 0);
+      const cfg::NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("prediction", 0);
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
       const TensorDesc* prediction_logical_desc =
           ctx->LogicalTensorDesc4ArgNameAndIndex("prediction", 0);
       const int64_t class_axis = prediction_logical_desc->shape().NumAxes() - 1;
-      TensorSliceView view = GetTensorSliceView4ParallelId(hierarchy, parallel_distribution,
-                                                           prediction_logical_desc->shape(),
-                                                           ctx->parallel_ctx().parallel_id());
+      TensorSliceView view = GetTensorSliceView4ParallelId(
+          hierarchy, nd_sbp, prediction_logical_desc->shape(), ctx->parallel_ctx().parallel_id());
       return std::make_shared<SparseCrossEntropyOpKernelState>(view.At(class_axis).begin(),
                                                                view.At(class_axis).end());
     } else {
@@ -173,8 +171,25 @@ class SparseCrossEntropyMsGradKernel final : public user_op::OpKernel {
   SparseCrossEntropyMsGradKernel() = default;
   ~SparseCrossEntropyMsGradKernel() = default;
 
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    if (ctx->parallel_ctx().parallel_num() > 1) {
+      const cfg::NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("prediction", 0);
+      const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
+      const TensorDesc* prediction_logical_desc =
+          ctx->LogicalTensorDesc4ArgNameAndIndex("prediction", 0);
+      const int64_t class_axis = prediction_logical_desc->shape().NumAxes() - 1;
+      TensorSliceView view = GetTensorSliceView4ParallelId(
+          hierarchy, nd_sbp, prediction_logical_desc->shape(), ctx->parallel_ctx().parallel_id());
+      return std::make_shared<SparseCrossEntropyOpKernelState>(view.At(class_axis).begin(),
+                                                               view.At(class_axis).end());
+    } else {
+      return std::shared_ptr<OpKernelState>(nullptr);
+    }
+  }
+
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -184,9 +199,11 @@ class SparseCrossEntropyMsGradKernel final : public user_op::OpKernel {
     const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
     const int64_t depth = ctx->Attr<int64_t>("depth");
     int64_t lower_bound = 0;
-    if (ctx->parallel_ctx().parallel_num() > 1) {
-      BalancedSplitter bs(depth, ctx->parallel_ctx().parallel_num());
-      lower_bound = bs.At(ctx->parallel_ctx().parallel_id()).begin();
+    if (state != nullptr) {
+      auto* kernel_state = dynamic_cast<SparseCrossEntropyOpKernelState*>(state);
+      CHECK_NOTNULL(kernel_state);
+      CHECK_EQ(num_classes, kernel_state->upper() - kernel_state->lower());
+      lower_bound = kernel_state->lower();
     }
     size_t prediction_diff_bytes_size =
         prediction_diff->shape().elem_cnt() * GetSizeOfDataType(prediction_diff->data_type());

@@ -18,6 +18,9 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.cuh"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
+#include "oneflow/core/cuda/atomic.cuh"
+#include "oneflow/core/operator/operator_util.h"
+#include "oneflow/user/utils/pool_util.h"
 
 #include <algorithm>
 #include <cfloat>
@@ -43,16 +46,29 @@ __global__ void InitPtr(int elements, T* ptr) {
   }
 }
 
+inline Shape GetShape5D(const Shape& shape, const std::string& data_format, int32_t dim) {
+  FixedDimVector shape_3d = {GetInDim(shape, data_format, 0, dim),
+                             GetInDim(shape, data_format, 1, dim),
+                             GetInDim(shape, data_format, 2, dim)};
+  return Shape({shape.At(0), shape.At(1), shape_3d.at(0), shape_3d.at(1), shape_3d.at(2)});
+}
+
 template<typename T>
-__global__ void AdaptiveAvgPool2dCudaKernel(const T* input, T* output, int num_elems, int in_h,
-                                            int in_w, int out_h, int out_w) {
-  const int out_panel_size = out_h * out_w;
-  const int in_panel_size = in_h * in_w;
+__global__ void AdaptiveAvgPoolCudaKernel(const T* input, T* output, int num_elems, int in_d,
+                                          int in_h, int in_w, int out_d, int out_h, int out_w) {
+  const int out_panel_size = out_d * out_h * out_w;
+  const int in_panel_size = in_d * in_h * in_w;
 
   CUDA_1D_KERNEL_LOOP(idx, num_elems) {
+    // TODO (Tianyu): Replace following codes with 'NdIndexOffsetHelper'
     int bc_idx = idx / out_panel_size;
-    int out_h_idx = (idx % out_panel_size) / out_w;
-    int out_w_idx = (idx % out_panel_size) % out_w;
+    int out_d_idx = (idx % out_panel_size) / out_w / out_h;
+    int out_h_idx = (idx % out_panel_size) % (out_h * out_w) / out_w;
+    int out_w_idx = (idx % out_panel_size) % (out_h * out_w) % out_w;
+
+    int in_start_d = START_IND(out_d_idx, out_d, in_d);
+    int in_end_d = END_IND(out_d_idx, out_d, in_d);
+    int k_d = in_end_d - in_start_d;
 
     int in_start_h = START_IND(out_h_idx, out_h, in_h);
     int in_end_h = END_IND(out_h_idx, out_h, in_h);
@@ -62,30 +78,39 @@ __global__ void AdaptiveAvgPool2dCudaKernel(const T* input, T* output, int num_e
     int in_end_w = END_IND(out_w_idx, out_w, in_w);
     int k_w = in_end_w - in_start_w;
 
-    const T* in_ptr = input + bc_idx * in_panel_size + in_start_h * in_w + in_start_w;
+    const T* in_ptr =
+        input + bc_idx * in_panel_size + in_start_d * in_h * in_w + in_start_h * in_w + in_start_w;
     T sum = static_cast<T>(0);
-    for (int ih = 0; ih < k_h; ++ih) {
-      for (int iw = 0; iw < k_w; ++iw) {
-        T val = in_ptr[iw];
-        sum += val;
+    for (int id = 0; id < k_d; ++id) {
+      for (int ih = 0; ih < k_h; ++ih) {
+        for (int iw = 0; iw < k_w; ++iw) {
+          T val = *(in_ptr + ih * in_w + iw);
+          sum += val;
+        }
       }
-      in_ptr += in_w;  // next input line
+      in_ptr += in_h * in_w;  // next input depth
     }
     // Update output
-    output[idx] = sum / k_h / k_w;
+    output[idx] = sum / k_d / k_h / k_w;
   }
 }
 
 template<typename T>
-__global__ void AdaptiveAvgPool2dGradCudaKernel(T* input, const T* output, int num_elems, int in_h,
-                                                int in_w, int out_h, int out_w) {
-  const int out_panel_size = out_h * out_w;
-  const int in_panel_size = in_h * in_w;
+__global__ void AdaptiveAvgPoolGradCudaKernel(T* input, const T* output, int num_elems, int in_d,
+                                              int in_h, int in_w, int out_d, int out_h, int out_w) {
+  const int out_panel_size = out_d * out_h * out_w;
+  const int in_panel_size = in_d * in_h * in_w;
 
   CUDA_1D_KERNEL_LOOP(idx, num_elems) {
+    // TODO (Tianyu): Replace following codes with 'NdIndexOffsetHelper'
     int bc_idx = idx / out_panel_size;
-    int out_h_idx = (idx % out_panel_size) / out_w;
-    int out_w_idx = (idx % out_panel_size) % out_w;
+    int out_d_idx = (idx % out_panel_size) / out_w / out_h;
+    int out_h_idx = (idx % out_panel_size) % (out_h * out_w) / out_w;
+    int out_w_idx = (idx % out_panel_size) % (out_h * out_w) % out_w;
+
+    int in_start_d = START_IND(out_d_idx, out_d, in_d);
+    int in_end_d = END_IND(out_d_idx, out_d, in_d);
+    int k_d = in_end_d - in_start_d;
 
     int in_start_h = START_IND(out_h_idx, out_h, in_h);
     int in_end_h = END_IND(out_h_idx, out_h, in_h);
@@ -95,32 +120,76 @@ __global__ void AdaptiveAvgPool2dGradCudaKernel(T* input, const T* output, int n
     int in_end_w = END_IND(out_w_idx, out_w, in_w);
     int k_w = in_end_w - in_start_w;
 
-    const T grad_delta = output[idx] / k_h / k_w;
-    T* input_ptr = input + bc_idx * in_panel_size + in_start_h * in_w + in_start_w;
-    for (int ih = 0; ih < k_h; ++ih) {
-      for (int iw = 0; iw < k_w; ++iw) { input_ptr[iw] += grad_delta; }
-      input_ptr += in_w;
+    const T grad_delta = output[idx] / k_d / k_h / k_w;
+    T* input_ptr =
+        input + bc_idx * in_panel_size + in_start_d * in_h * in_w + in_start_h * in_w + in_start_w;
+    for (int id = 0; id < k_d; ++id) {
+      for (int ih = 0; ih < k_h; ++ih) {
+        for (int iw = 0; iw < k_w; ++iw) {
+          // TODO (Tianyu): Use 'atmoic::Add' when necessary
+          cuda::atomic::Add(input_ptr + ih * in_w + iw, grad_delta);
+        }
+      }
+      input_ptr += in_h * in_w;  // next input depth
     }
   }
 }
 
 template<typename T>
-struct GpuAdaptiveAvgPool2dFunctor final {
-  void operator()(DeviceCtx* ctx, const T* input, T* output, int num_elems, int in_h, int in_w,
-                  int out_h, int out_w) {
-    RUN_CUDA_KERNEL((AdaptiveAvgPool2dCudaKernel<T>), ctx, num_elems, input, output, num_elems,
-                    in_h, in_w, out_h, out_w);
-  }
-};
+void AvgForwardCompute(KernelComputeContext* ctx, const int32_t& dim) {
+  const Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
+  Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
+  const T* in_ptr = in_tensor->dptr<T>();
+  T* out_ptr = out_tensor->mut_dptr<T>();
+
+  const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
+  const Shape& y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
+
+  // TODO (Tianyu): Support 'channels_last'
+  std::string data_format = "channels_first";
+  const Shape& in = GetShape5D(x_shape, data_format, dim);
+  const Shape& out = GetShape5D(y_shape, data_format, dim);
+
+  const int out_elems = out_tensor->shape().elem_cnt();
+
+  RUN_CUDA_KERNEL((AdaptiveAvgPoolCudaKernel<T>), ctx->device_ctx(), out_elems, in_ptr, out_ptr,
+                  out_elems, in.At(2), in.At(3), in.At(4), out.At(2), out.At(3), out.At(4));
+}
 
 template<typename T>
-struct GpuAdaptiveAvgpool2dGradFunctor final {
-  void operator()(DeviceCtx* ctx, T* input, const T* output, int num_elems, int input_elems,
-                  int in_h, int in_w, int out_h, int out_w) {
-    RUN_CUDA_KERNEL((InitPtr<T>), ctx, input_elems, input_elems, input);
-    RUN_CUDA_KERNEL((AdaptiveAvgPool2dGradCudaKernel<T>), ctx, num_elems, input, output, num_elems,
-                    in_h, in_w, out_h, out_w);
-  }
+void AvgBackwardCompute(KernelComputeContext* ctx, const int32_t& dim) {
+  const Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
+  Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
+  const T* out_ptr = out_tensor->dptr<T>();
+  T* in_ptr = in_tensor->mut_dptr<T>();
+
+  const Shape& dx_shape = ctx->TensorDesc4ArgNameAndIndex("dx", 0)->shape();
+  const Shape& dy_shape = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->shape();
+
+  // TODO (Tianyu): Support 'channels_last'
+  std::string data_format = "channels_first";
+  const Shape& in = GetShape5D(dx_shape, data_format, dim);
+  const Shape& out = GetShape5D(dy_shape, data_format, dim);
+
+  const int in_elems = in_tensor->shape().elem_cnt();
+  const int out_elems = out_tensor->shape().elem_cnt();
+
+  RUN_CUDA_KERNEL((InitPtr<T>), ctx->device_ctx(), in_elems, in_elems, in_ptr);
+  RUN_CUDA_KERNEL((AdaptiveAvgPoolGradCudaKernel<T>), ctx->device_ctx(), out_elems, in_ptr, out_ptr,
+                  out_elems, in.At(2), in.At(3), in.At(4), out.At(2), out.At(3), out.At(4));
+}
+
+template<DeviceType device_type, typename T>
+class GpuAdaptiveAvgPool1dKernel final : public OpKernel {
+ public:
+  GpuAdaptiveAvgPool1dKernel() = default;
+  ~GpuAdaptiveAvgPool1dKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(KernelComputeContext* ctx) const override { AvgForwardCompute<T>(ctx, 1); }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<DeviceType device_type, typename T>
@@ -130,40 +199,36 @@ class GpuAdaptiveAvgPool2dKernel final : public OpKernel {
   ~GpuAdaptiveAvgPool2dKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
-    const Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
-    Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const T* in_ptr = in_tensor->dptr<T>();
-    T* out_ptr = out_tensor->mut_dptr<T>();
-
-    const int ndims = in_tensor->shape().NumAxes();
-    CHECK_EQ(ndims, 4);
-
-    const int out_elems = out_tensor->shape().elem_cnt();
-
-    const int h_idx = 2;
-    const int w_idx = 3;
-
-    const int in_h = in_tensor->shape().At(h_idx);
-    const int in_w = in_tensor->shape().At(w_idx);
-    const int out_h = out_tensor->shape().At(h_idx);
-    const int out_w = out_tensor->shape().At(w_idx);
-
-    GpuAdaptiveAvgPool2dFunctor<T>()(ctx->device_ctx(), in_ptr, out_ptr, out_elems, in_h, in_w,
-                                     out_h, out_w);
-  }
+  using user_op::OpKernel::Compute;
+  void Compute(KernelComputeContext* ctx) const override { AvgForwardCompute<T>(ctx, 2); }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_ADAPTIVE_AVGPOOL2D_KERNEL(device, dtype)   \
-  REGISTER_USER_KERNEL("adaptive_avg_pool2d")                   \
-      .SetCreateFn<GpuAdaptiveAvgPool2dKernel<device, dtype>>() \
-      .SetIsMatchedHob((HobDeviceTag() == device)               \
-                       & (HobDataType("y", 0) == GetDataType<dtype>::value));
+template<DeviceType device_type, typename T>
+class GpuAdaptiveAvgPool3dKernel final : public OpKernel {
+ public:
+  GpuAdaptiveAvgPool3dKernel() = default;
+  ~GpuAdaptiveAvgPool3dKernel() = default;
 
-REGISTER_GPU_ADAPTIVE_AVGPOOL2D_KERNEL(DeviceType::kGPU, float);
-REGISTER_GPU_ADAPTIVE_AVGPOOL2D_KERNEL(DeviceType::kGPU, double);
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(KernelComputeContext* ctx) const override { AvgForwardCompute<T>(ctx, 3); }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+template<DeviceType device_type, typename T>
+class GpuAdaptiveAvgPool1dGradKernel final : public OpKernel {
+ public:
+  GpuAdaptiveAvgPool1dGradKernel() = default;
+  ~GpuAdaptiveAvgPool1dGradKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(KernelComputeContext* ctx) const override { AvgBackwardCompute<T>(ctx, 1); }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
 
 template<DeviceType device_type, typename T>
 class GpuAdaptiveAvgPool2dGradKernel final : public OpKernel {
@@ -172,40 +237,58 @@ class GpuAdaptiveAvgPool2dGradKernel final : public OpKernel {
   ~GpuAdaptiveAvgPool2dGradKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
-    const Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const T* out_ptr = out_tensor->dptr<T>();
-    T* in_ptr = in_tensor->mut_dptr<T>();
-
-    const int64_t ndims = out_tensor->shape().NumAxes();
-    CHECK_EQ(ndims, 4);
-
-    const int in_elems = in_tensor->shape().elem_cnt();
-    const int out_elems = out_tensor->shape().elem_cnt();
-
-    const int64_t h_idx = 2;
-    const int64_t w_idx = 3;
-
-    const int in_h = in_tensor->shape().At(h_idx);
-    const int in_w = in_tensor->shape().At(w_idx);
-    const int out_h = out_tensor->shape().At(h_idx);
-    const int out_w = out_tensor->shape().At(w_idx);
-
-    GpuAdaptiveAvgpool2dGradFunctor<T>()(ctx->device_ctx(), in_ptr, out_ptr, out_elems, in_elems,
-                                         in_h, in_w, out_h, out_w);
-  }
+  using user_op::OpKernel::Compute;
+  void Compute(KernelComputeContext* ctx) const override { AvgBackwardCompute<T>(ctx, 2); }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_ADAPTIVE_AVGPOOL2D_BACKWARD_KERNEL(device, dtype) \
-  REGISTER_USER_KERNEL("adaptive_avg_pool2d_grad")                     \
-      .SetCreateFn<GpuAdaptiveAvgPool2dGradKernel<device, dtype>>()    \
-      .SetIsMatchedHob((HobDeviceTag() == device)                      \
+template<DeviceType device_type, typename T>
+class GpuAdaptiveAvgPool3dGradKernel final : public OpKernel {
+ public:
+  GpuAdaptiveAvgPool3dGradKernel() = default;
+  ~GpuAdaptiveAvgPool3dGradKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(KernelComputeContext* ctx) const override { AvgBackwardCompute<T>(ctx, 3); }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(device, dtype)                   \
+  REGISTER_USER_KERNEL("adaptive_avg_pool1d")                                 \
+      .SetCreateFn<GpuAdaptiveAvgPool1dKernel<device, dtype>>()               \
+      .SetIsMatchedHob((HobDeviceTag() == device)                             \
+                       & (HobDataType("y", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("adaptive_avg_pool2d")                                 \
+      .SetCreateFn<GpuAdaptiveAvgPool2dKernel<device, dtype>>()               \
+      .SetIsMatchedHob((HobDeviceTag() == device)                             \
+                       & (HobDataType("y", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("adaptive_avg_pool3d")                                 \
+      .SetCreateFn<GpuAdaptiveAvgPool3dKernel<device, dtype>>()               \
+      .SetIsMatchedHob((HobDeviceTag() == device)                             \
+                       & (HobDataType("y", 0) == GetDataType<dtype>::value));
+
+REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, float);
+REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, double);
+REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, int);
+
+#define REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(device, dtype)           \
+  REGISTER_USER_KERNEL("adaptive_avg_pool1d_grad")                             \
+      .SetCreateFn<GpuAdaptiveAvgPool1dGradKernel<device, dtype>>()            \
+      .SetIsMatchedHob((HobDeviceTag() == device)                              \
+                       & (HobDataType("dx", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("adaptive_avg_pool2d_grad")                             \
+      .SetCreateFn<GpuAdaptiveAvgPool2dGradKernel<device, dtype>>()            \
+      .SetIsMatchedHob((HobDeviceTag() == device)                              \
+                       & (HobDataType("dx", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("adaptive_avg_pool3d_grad")                             \
+      .SetCreateFn<GpuAdaptiveAvgPool3dGradKernel<device, dtype>>()            \
+      .SetIsMatchedHob((HobDeviceTag() == device)                              \
                        & (HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_ADAPTIVE_AVGPOOL2D_BACKWARD_KERNEL(DeviceType::kGPU, float);
-REGISTER_GPU_ADAPTIVE_AVGPOOL2D_BACKWARD_KERNEL(DeviceType::kGPU, double);
+REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kGPU, float);
+REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kGPU, double);
+REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kGPU, int);
 
 }  // namespace user_op
 

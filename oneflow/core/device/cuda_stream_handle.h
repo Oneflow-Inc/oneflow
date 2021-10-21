@@ -32,25 +32,28 @@ class CudaStreamHandle final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaStreamHandle);
   CudaStreamHandle() = delete;
-  CudaStreamHandle(Channel<CudaCBEvent>* cb_event_chan) : cb_event_chan_(cb_event_chan) {}
+  CudaStreamHandle(Channel<CudaCBEvent>* cb_event_chan);
 
-  const cudaStream_t* cuda_stream();
-  const cublasHandle_t* cublas_pmh_handle();
-  const cublasHandle_t* cublas_pmd_handle();
-  const cublasHandle_t* cublas_tensor_op_math_handle();
-  const cudnnHandle_t* cudnn_handle();
+  cudaStream_t cuda_stream();
+  cublasHandle_t cublas_handle();
+  cudnnHandle_t cudnn_handle();
 
   void AddCallBack(std::function<void()> callback);
+  void SyncRecycleEvent(cudaEvent_t event);
 
   ~CudaStreamHandle();
 
  private:
   Channel<CudaCBEvent>* cb_event_chan_;
-  std::unique_ptr<cudaStream_t> cuda_stream_;
-  std::unique_ptr<cublasHandle_t> cublas_pmh_handle_;
-  std::unique_ptr<cublasHandle_t> cublas_pmd_handle_;
-  std::unique_ptr<cublasHandle_t> cublas_tensor_op_math_handle_;
-  std::unique_ptr<cudnnHandle_t> cudnn_handle_;
+  cudaStream_t cuda_stream_;
+  cublasHandle_t cublas_handle_;
+  cudnnHandle_t cudnn_handle_;
+  int cuda_event_flags_;
+  bool reuse_cuda_event_;
+  std::deque<cudaEvent_t> consumer_event_queue_;
+  std::deque<cudaEvent_t> producer_event_queue_;
+  std::deque<cudaEvent_t> global_event_queue_;
+  std::mutex global_event_queue_mutex_;
 };
 
 #endif  // WITH_CUDA

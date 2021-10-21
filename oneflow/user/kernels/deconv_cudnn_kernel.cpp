@@ -31,7 +31,6 @@ struct CudnnDeConvArgsAndAlgo final {
   CudnnConvArgs args;
   PerfT algo_perf;
 
-  // TODO(hanbinbin): remove arg job_desc and set cudnn_conv config as args of
   // CudnnDeConvArgsAndAlgo
   CudnnDeConvArgsAndAlgo(const user_op::Tensor* x, const user_op::Tensor* w,
                          const user_op::Tensor* y, user_op::Tensor* buf,
@@ -77,7 +76,6 @@ size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::Tensor
                              const user_op::TensorDesc* y, const user_op::InferContext& ctx,
                              bool has_forced_algo, int32_t forced_algo) {
   using AlgoT = decltype(std::declval<PerfT>().algo);
-
   const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
   size_t workspace_size = cudnn_conf.cudnn_buf_limit_mbyte() * 1024 * 1024;
   if (!x->is_dynamic()) {
@@ -121,6 +119,7 @@ class DeConvGpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    if (in->shape().elem_cnt() == 0) return;
     const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
 
     CudnnDeConvArgsAndAlgo<cudnnConvolutionBwdDataAlgoPerf_t> args_and_algo(

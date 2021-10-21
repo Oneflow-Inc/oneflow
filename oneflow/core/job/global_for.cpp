@@ -22,6 +22,6 @@ namespace oneflow {
 
 COMMAND(Global<bool, EagerExecution>::SetAllocated(new bool(false)));
 COMMAND(Global<Maybe<bool>, MultiClient>::SetAllocated(
-    new Maybe<bool>(Error::ValueError("is_multi_client is not set"))));
+    new Maybe<bool>(Error::InvalidValueError("is_multi_client is not set"))));
 
 }  // namespace oneflow

@@ -25,13 +25,23 @@ bool IsScalarTensor(const user_op::TensorDesc* tensor) {
   return tensor->shape().NumAxes() == 1 && tensor->shape().At(0) == 1;
 }
 
+bool IsZeroDimTensor(const user_op::TensorDesc* tensor) {
+  return tensor->shape().NumAxes() == 0 && tensor->shape().elem_cnt() == 1;
+}
+
 Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
   const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
   user_op::TensorDesc* tensor_z = ctx->OutputTensorDesc("z", 0);
 
   size_t output_num_axes = std::max(tensor_x.shape().NumAxes(), tensor_y.shape().NumAxes());
-  if (IsScalarTensor(&tensor_x)) {
+  if (IsZeroDimTensor(&tensor_x)) {
+    *ctx->OutputShape("z", 0) = ctx->InputShape("y", 0);
+    *ctx->OutputIsDynamic("z", 0) = ctx->InputIsDynamic("y", 0);
+  } else if (IsZeroDimTensor(&tensor_y)) {
+    *ctx->OutputShape("z", 0) = ctx->InputShape("x", 0);
+    *ctx->OutputIsDynamic("z", 0) = ctx->InputIsDynamic("x", 0);
+  } else if (IsScalarTensor(&tensor_x)) {
     *ctx->OutputShape("z", 0) = ctx->InputShape("y", 0);
     *ctx->OutputIsDynamic("z", 0) = ctx->InputIsDynamic("y", 0);
   } else if (IsScalarTensor(&tensor_y)) {
@@ -47,7 +57,9 @@ Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
       CHECK_OR_RETURN(x_shape.At(i) == 1 || y_shape.At(i) == 1 || x_shape.At(i) == y_shape.At(i))
           << "op: " << ctx->op_name() << ", type: " << ctx->op_type_name() << ", i: " << i
           << ", x_shape: " << x_shape << ", y_shape: " << y_shape;
-      out_shape.Set(i, std::max(x_shape.At(i), y_shape.At(i)));
+      out_shape.Set(i, (x_shape.At(i) == 0 || y_shape.At(i) == 0)
+                           ? 0
+                           : std::max(x_shape.At(i), y_shape.At(i)));
     }
     *tensor_z->mut_shape() = out_shape;
   }

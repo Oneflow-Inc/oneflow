@@ -19,13 +19,14 @@ limitations under the License.
 #include "oneflow/core/ndarray/binary_func.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/user/ops/math_binary_broadcast_seq.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T, typename K,
          void (*binary_func)(DeviceCtx* ctx, const XpuVarNdarray<K>& z,
                              const XpuVarNdarray<const T>& x, const XpuVarNdarray<const T>& y)>
-class MathBinaryBroadcastKernel final : public user_op::OpKernel {
+class MathBinaryBroadcastKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   MathBinaryBroadcastKernel() = default;
   ~MathBinaryBroadcastKernel() = default;
@@ -57,7 +58,7 @@ class MathBinaryBroadcastKernel final : public user_op::OpKernel {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
                                  MATH_BINARY_BROADCAST_FUNC_SEQ, DEVICE_TYPE_SEQ,
-                                 ARITHMETIC_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
 // gpu half
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
@@ -77,6 +78,6 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_LOGICAL_KERNEL,
                                  MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ, DEVICE_TYPE_SEQ,
-                                 ARITHMETIC_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

@@ -16,6 +16,8 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/data/gpt_dataset.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 
@@ -24,10 +26,10 @@ namespace {
 using namespace user_op;
 using namespace data;
 
-size_t GetNumShards(const Shape& hierarchy, const cfg::ParallelDistribution& parallel_dist) {
+size_t GetNumShards(const Shape& hierarchy, const cfg::NdSbp& nd_sbp) {
   size_t num_shards = 1;
-  FOR_RANGE(size_t, i, 0, parallel_dist.sbp_parallel_size()) {
-    const auto& sbp_parallel = parallel_dist.sbp_parallel(i);
+  FOR_RANGE(size_t, i, 0, nd_sbp.sbp_parallel_size()) {
+    const auto& sbp_parallel = nd_sbp.sbp_parallel(i);
     if (sbp_parallel.has_split_parallel()) {
       num_shards *= hierarchy.At(sbp_parallel.split_parallel().axis());
     }
@@ -35,8 +37,7 @@ size_t GetNumShards(const Shape& hierarchy, const cfg::ParallelDistribution& par
   return num_shards;
 }
 
-size_t GetShardIndex(const Shape& hierarchy, const cfg::ParallelDistribution& parallel_dist,
-                     size_t rank) {
+size_t GetShardIndex(const Shape& hierarchy, const cfg::NdSbp& nd_sbp, size_t rank) {
   using index_helper_t = NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE>;
   size_t ndim = hierarchy.NumAxes();
   CHECK_GT(ndim, 0);
@@ -47,7 +48,7 @@ size_t GetShardIndex(const Shape& hierarchy, const cfg::ParallelDistribution& pa
   size_t stride = 1;
   size_t index = 0;
   for (int i = ndim - 1; i >= 0; --i) {
-    const auto& sbp_parallel = parallel_dist.sbp_parallel(i);
+    const auto& sbp_parallel = nd_sbp.sbp_parallel(i);
     if (sbp_parallel.has_split_parallel()) {
       index += nd_index[i] * stride;
       stride *= hierarchy.At(i);
@@ -68,19 +69,27 @@ class GPTDataLoader final : public OpKernelState {
         ctx->Attr<std::vector<int64_t>>("split_sizes"), ctx->Attr<int64_t>("split_index"),
         ctx->Attr<bool>("shuffle"), ctx->Attr<int64_t>("random_seed"));
 
-    const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
-    const cfg::ParallelDistribution& paral_dist =
-        ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
-    CHECK_EQ(hierarchy.NumAxes(), paral_dist.sbp_parallel_size());
-    num_shards_ = GetNumShards(hierarchy, paral_dist);
-    CHECK_EQ(num_samples % num_shards_, 0);
-    shard_index_ = GetShardIndex(hierarchy, paral_dist, ctx->parallel_ctx().parallel_id());
+    batch_size_ = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().At(0);
+
+    // NOTE(zwx): GPTDataLoader is not consistent since attr nd_sbp is empty,
+    // we assume that it works in DDP
+    auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
+    if (nd_sbp_str_vec.empty() && CHECK_JUST(GlobalMultiClientEnv())) {
+      num_shards_ = GlobalProcessCtx::WorldSize();
+      shard_index_ = GlobalProcessCtx::Rank();
+    } else {
+      const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
+      const cfg::NdSbp& paral_dist = ctx->NdSbp4ArgNameAndIndex("out", 0);
+      CHECK_EQ(hierarchy.NumAxes(), paral_dist.sbp_parallel_size());
+      num_shards_ = GetNumShards(hierarchy, paral_dist);
+      CHECK_EQ(num_samples % num_shards_, 0);
+      shard_index_ = GetShardIndex(hierarchy, paral_dist, ctx->parallel_ctx().parallel_id());
+
+      size_t logical_batch_size = ctx->LogicalTensorDesc4ArgNameAndIndex("out", 0)->shape().At(0);
+      CHECK_EQ(logical_batch_size % num_shards_, 0);
+      CHECK_EQ(logical_batch_size / num_shards_, batch_size_);
+    }
     CHECK_LT(shard_index_, num_shards_);
-    size_t logical_batch_size = ctx->LogicalTensorDesc4ArgNameAndIndex("out", 0)->shape().At(0);
-    size_t device_batch_size = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().At(0);
-    CHECK_EQ(logical_batch_size % num_shards_, 0);
-    CHECK_EQ(logical_batch_size / num_shards_, device_batch_size);
-    batch_size_ = device_batch_size;
   }
   ~GPTDataLoader() = default;
 

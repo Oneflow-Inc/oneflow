@@ -75,18 +75,44 @@ struct MomentumUpdateFunctor {
 template<typename T, typename G>
 struct AdamUpdateFunctor {
   OF_DEVICE_FUNC
-  void operator()(const G* model_diff, T* model, T* m, T* v, T scale, float l1, float l2,
-                  float beta1, float beta2, float epsilon, float weight_decay,
-                  float learning_rate) const {
+  void operator()(const G* model_diff, T* model, T* m, T* v, T* max_v, T scale, float l1, float l2,
+                  float beta1, float beta2, float epsilon, float weight_decay, bool amsgrad,
+                  float bias_correction1, float bias_correction2, float learning_rate) const {
     const T model_val = *model;
     T model_diff_t =
         CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);
+
     const T next_m = beta1 * *m + (1 - beta1) * model_diff_t;
     *m = next_m;
+
     const T next_v = beta2 * *v + (1 - beta2) * model_diff_t * model_diff_t;
     *v = next_v;
-    *model =
-        model_val - learning_rate * (next_m / (sqrt(next_v) + epsilon) + weight_decay * model_val);
+
+    T denom = 0;
+    if (amsgrad) {
+      const T next_max_v =
+          *max_v > next_v ? *max_v : next_v;  // use std::max has bug in GPU kernel.
+      *max_v = next_max_v;
+      denom = (sqrt(next_max_v) / sqrt(bias_correction2)) + epsilon;
+    } else {
+      denom = (sqrt(next_v) / sqrt(bias_correction2)) + epsilon;
+    }
+    const T step_size = learning_rate / bias_correction1;
+    *model = model_val - step_size * (next_m / denom) - learning_rate * weight_decay * model_val;
+  }
+};
+
+template<typename T, typename G>
+struct AdagradUpdateFunctor {
+  OF_DEVICE_FUNC
+  void operator()(const G* model_diff, T* model, T* sum, T scale, float l1, float l2, float epsilon,
+                  float weight_decay, float learning_rate) {
+    const T model_val = *model;
+    T model_diff_t =
+        CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);
+    const T next_sum = *sum + model_diff_t * model_diff_t;
+    *sum = next_sum;
+    *model = model_val - learning_rate / (sqrt(next_sum) + epsilon) * model_diff_t;
   }
 };
 
@@ -110,10 +136,10 @@ struct LambGradFunctor {
 template<typename T>
 struct LambLRFunctor {
   OF_DEVICE_FUNC
-  float operator()(const float learning_rate, const T* w_norm, const T* g_norm) const {
+  float operator()(const float learning_rate, const T* w_norm_2, const T* g_norm_2) const {
     float lr = learning_rate;
-    const T w_norm_val = *w_norm;
-    const T g_norm_val = *g_norm;
+    const T w_norm_val = std::sqrt(*w_norm_2);
+    const T g_norm_val = std::sqrt(*g_norm_2);
     T trust_ratio = 1;
     if (w_norm_val > 0 && g_norm_val > 0) { trust_ratio = w_norm_val / g_norm_val; }
     lr *= trust_ratio;
@@ -129,6 +155,13 @@ struct LambUpdateFunctor {
     const T model_val = *model;
     *model = model_val - learning_rate * (*adam_diff + weight_decay * model_val);
   }
+};
+
+template<DeviceType device_type>
+struct BiasCorrectionFactorKernelUtil {
+ public:
+  static void BiasCorrectionFactorCompute(DeviceCtx* ctx, float beta, const int64_t* train_step,
+                                          float* out);
 };
 
 template<DeviceType device_type, typename T, typename G>
@@ -150,18 +183,31 @@ struct IndexedSlicesMomentumMdUpdateKernelUtil {
 template<DeviceType device_type, typename T, typename G>
 struct AdamUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta1,
-                     float beta2, float epsilon, float weight_decay, float learning_rate_val,
-                     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
-                     const G* model_diff, T* model, T* m, T* v);
+                     float beta2, float epsilon, float weight_decay, bool amsgrad,
+                     bool do_bias_correction, float learning_rate_val, float bias_correction1_val,
+                     float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,
+                     const int64_t* skip_if, const float* bias_correction1,
+                     const float* bias_correction2, const G* model_diff, T* model, T* m, T* v,
+                     T* max_v);
+};
+
+template<DeviceType device_type, typename T, typename G>
+struct AdagradUpdateKernelUtil {
+  static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float lr_decay,
+                     float epsilon, float weight_decay, float learning_rate_val, int64_t train_step,
+                     const float* learning_rate, const int64_t* train_step_ptr,
+                     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
+                     T* sum);
 };
 
 template<DeviceType device_type, typename T, typename K, typename IDX>
 struct IndexedSlicesAdamMdUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, float beta1, float beta2, float epsilon, float weight_decay,
-                     int64_t num_instance, int64_t feature_size, int64_t lower_bound,
-                     int64_t upper_bound, const IDX* num_unique_instance,
-                     const float* learning_rate, const K* indices, const T* values, T* model, T* m,
-                     T* v);
+                     bool amsgrad, bool do_bias_correction, float lr, int64_t num_instance,
+                     int64_t feature_size, int64_t lower_bound, int64_t upper_bound,
+                     const IDX* num_unique_instance, const float* learning_rate,
+                     const float* bias_correction1_ptr, const float* bias_correction2_ptr,
+                     const K* indices, const T* values, T* model, T* m, T* v, T* max_v);
 };
 
 template<DeviceType device_type, typename T, typename G>
@@ -171,14 +217,6 @@ struct LambUpdateKernelUtil {
                      float beta2, float epsilon, float weight_decay, const float* learning_rate,
                      const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff,
                      T* adam_diff, T* model, T* m, T* v, T* norm_buffer, T* beta1_t, T* beta2_t);
-};
-
-template<DeviceType device_type>
-struct AdamBiasCorrectionLearningRateKernelUtil {
- public:
-  static void AdamBiasCorrectionLearningRate(DeviceCtx* ctx, float beta1, float beta2,
-                                             const float* learning_rate, const int64_t* train_step,
-                                             float* out);
 };
 
 template<typename T, typename G, bool centered>

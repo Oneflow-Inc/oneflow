@@ -13,8 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_API_PYTHON_FUNCTIONAL_PY_FUNCTION_H_
+#define ONEFLOW_API_PYTHON_FUNCTIONAL_PY_FUNCTION_H_
+
 #include <pybind11/pybind11.h>
 
+#include "oneflow/api/python/functional/function_def.h"
 #include "oneflow/api/python/functional/python_arg.h"
 #include "oneflow/api/python/functional/unpack_call.h"
 #include "oneflow/api/python/framework/throw.h"
@@ -25,33 +29,68 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-template<typename SchemaT>
-inline py::object PyFunction(py::args args, py::kwargs kwargs) {
-  // TODO(): Support multiple function signatures.
-  CHECK_LE_OR_THROW(args.size(), SchemaT::max_positionals)
-      << "The maximum count of positional arguments is " << SchemaT::max_positionals;
-  CHECK_LE_OR_THROW(kwargs.size(), SchemaT::max_keywords)
-      << "The maximum count of keyword arguments is " << SchemaT::max_keywords;
+bool ParseArgs(const py::args& args, const py::kwargs& kwargs,  // NOLINT
+               std::vector<PythonArg>* parsed_args, const FunctionDef& function,
+               size_t max_pos_args, bool raise_exception);
 
-  // TODO(): Check argument types.
-  std::vector<PythonArg> _args(SchemaT::max_args);
-  for (int i = 0; i < args.size(); ++i) { _args[i] = PythonArg(args[i]); }
-  for (int i = args.size(); i < SchemaT::max_args; ++i) {
-    const auto& arg = SchemaT::argument_def.at(i);
-    if (kwargs.contains(arg.name.c_str())) {
-      _args[i] = PythonArg(kwargs[arg.name.c_str()]);
-    } else {
-      CHECK_OR_THROW(arg.has_default_value)
-          << "Argument " << arg.name << " is required, and the function def is \""
-          << SchemaT::signature << "\".";
-      _args[i] = PythonArg(arg.default_value);
-    }
+template<typename... SchemaT>
+class PyFunctionDispatcher {
+ public:
+  static_assert(sizeof...(SchemaT) >= 1, "Requires 1 template argument at least.");
+
+  template<size_t I>
+  using schema_t = typename std::tuple_element<I, std::tuple<SchemaT...>>::type;
+
+  PyFunctionDispatcher()
+      : schema_size_(sizeof...(SchemaT)), func_name_(schema_t<0>::function_def.name) {
+    signatures_.resize(schema_size_);
+    InitSignatures(std::make_index_sequence<sizeof...(SchemaT)>{});
   }
-  using FType = typename SchemaT::FType;
-  using R = typename SchemaT::R;
-  return py::cast(detail::unpack_call<FType, R>::apply(*SchemaT::func, _args));
+
+  template<size_t I0, size_t... I>
+  py::object call(const py::args& args, const py::kwargs& kwargs,
+                  std::index_sequence<I0, I...>) const {
+    using T = schema_t<I0>;
+    std::vector<PythonArg> parsed_args(T::max_args);
+    if (ParseArgs(args, kwargs, &parsed_args, T::function_def, T::max_pos_args,
+                  /*raise_exception*/ schema_size_ == 1)) {
+      return detail::unpack_call(*T::func, parsed_args);
+    }
+    return call(args, kwargs, std::index_sequence<I...>{});
+  }
+
+  py::object call(const py::args& args, const py::kwargs& kwargs, std::index_sequence<>) const {
+    std::ostringstream ss;
+    ss << func_name_
+       << "(): received an invalid combination of arguments. The valid signatures are:";
+    for (int i = 0; i < signatures_.size(); ++i) {
+      ss << "\n\t*" << i << ": " << signatures_.at(i);
+    }
+    THROW(TypeError) << ss.str();
+    return py::none();
+  }
+
+ private:
+  template<size_t... I>
+  void InitSignatures(std::index_sequence<I...>) {
+    __attribute__((__unused__)) int dummy[] = {
+        ((void)(signatures_[I] = schema_t<I>::signature), 0)...};
+  }
+
+ private:
+  size_t schema_size_;
+  const std::string func_name_;
+  std::vector<const char*> signatures_;
+};
+
+template<typename... SchemaT>
+inline py::object PyFunction(const py::args& args, const py::kwargs& kwargs) {
+  static PyFunctionDispatcher<SchemaT...> dispatcher;
+  return dispatcher.call(args, kwargs, std::make_index_sequence<sizeof...(SchemaT)>{});
 }
 
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
+
+#endif  // ONEFLOW_API_PYTHON_FUNCTIONAL_PY_FUNCTION_H_

@@ -26,7 +26,23 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
   if (dst_machine_id == GlobalProcessCtx::Rank()) {
     SendMsgWithoutCommNet(msg);
   } else {
-    Global<CommNet>::Get()->SendActorMsg(dst_machine_id, msg);
+    if (msg.IsDataRegstMsgToConsumer()) {
+      int64_t comm_net_sequence;
+      {
+        std::unique_lock<std::mutex> lock(
+            regst_desc_id_dst_actor_id2comm_net_sequence_number_mutex_);
+        int64_t& comm_net_sequence_ref =
+            regst_desc_id_dst_actor_id2comm_net_sequence_number_[std::make_pair(
+                msg.regst_desc_id(), msg.dst_actor_id())];
+        comm_net_sequence = comm_net_sequence_ref;
+        comm_net_sequence_ref += 1;
+      }
+      ActorMsg new_msg = msg;
+      new_msg.set_comm_net_sequence_number(comm_net_sequence);
+      Global<CommNet>::Get()->SendActorMsg(dst_machine_id, new_msg);
+    } else {
+      Global<CommNet>::Get()->SendActorMsg(dst_machine_id, msg);
+    }
   }
 }
 

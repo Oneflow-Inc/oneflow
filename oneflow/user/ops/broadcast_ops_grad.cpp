@@ -21,7 +21,7 @@ namespace {
 
 std::string CreateReduceSumLikeBlob(const std::string& in_lbn, const Shape& in_shape,
                                     const std::string& like_lbn, const Shape& like_shape,
-                                    const std::string& op_name, user_op::AddOpFn AddOp) {
+                                    const std::string& op_name, const user_op::AddOpFn& AddOp) {
   const Shape& left_extended_shape =
       CreateLeftExtendedShape(ShapeView(like_shape), in_shape.NumAxes());
   if (in_shape == like_shape) {
@@ -54,7 +54,8 @@ std::string CreateReduceSumLikeBlob(const std::string& in_lbn, const Shape& in_s
 }  // namespace
 
 REGISTER_USER_OP_GRAD("broadcast_add")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       const Shape& z_shape = op.TensorDesc4ArgNameAndIndex("z", 0).shape();
       const std::string& dz_lbn = op.GetGradTensorWithOpOutput("z", 0);
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
@@ -71,10 +72,12 @@ REGISTER_USER_OP_GRAD("broadcast_add")
             CreateReduceSumLikeBlob(dz_lbn, z_shape, y_lbn, y_shape, op.op_name() + "_y", AddOp);
         op.BindGradTensorWithOpInput(out_lbn, "y", 0);
       }
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("broadcast_sub")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       const Shape& z_shape = op.TensorDesc4ArgNameAndIndex("z", 0).shape();
       const std::string& dz_lbn = op.GetGradTensorWithOpOutput("z", 0);
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
@@ -102,10 +105,12 @@ REGISTER_USER_OP_GRAD("broadcast_sub")
             scalar_mul_op.output("out", 0), z_shape, y_lbn, y_shape, op.op_name() + "_y", AddOp);
         op.BindGradTensorWithOpInput(out_lbn, "y", 0);
       }
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("broadcast_mul")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       const Shape& z_shape = op.TensorDesc4ArgNameAndIndex("z", 0).shape();
       const std::string& dz_lbn = op.GetGradTensorWithOpOutput("z", 0);
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
@@ -136,10 +141,12 @@ REGISTER_USER_OP_GRAD("broadcast_mul")
             broadcast_mul_op.output("z", 0), z_shape, y_lbn, y_shape, op.op_name() + "_y", AddOp);
         op.BindGradTensorWithOpInput(out_lbn, "y", 0);
       }
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("broadcast_div")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       const std::string& dz_lbn = op.GetGradTensorWithOpOutput("z", 0);
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         const Shape& z_shape = op.TensorDesc4ArgNameAndIndex("z", 0).shape();
@@ -167,6 +174,55 @@ REGISTER_USER_OP_GRAD("broadcast_div")
         op.BindGradTensorWithOpInput(grad_op.output("dy", 0), "y", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP_GRAD("broadcast_pow")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
+      const std::string& dz_lbn = op.GetGradTensorWithOpOutput("z", 0);
+      if (op.NeedGenGradTensor4OpInput("x", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_x_grad");
+        user_op::UserOpConfWrapper grad_op = builder.Op("broadcast_pow_x_grad")
+                                                 .Input("x", op.input("x", 0))
+                                                 .Input("y", op.input("y", 0))
+                                                 .Input("z", op.output("z", 0))
+                                                 .Input("dz", dz_lbn)
+                                                 .Output("dx")
+                                                 .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
+        AddOp(grad_op);
+      }
+      if (op.NeedGenGradTensor4OpInput("y", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_y_grad");
+        user_op::UserOpConfWrapper grad_op = builder.Op("broadcast_pow_y_grad")
+                                                 .Input("x", op.input("x", 0))
+                                                 .Input("y", op.input("y", 0))
+                                                 .Input("z", op.output("z", 0))
+                                                 .Input("dz", dz_lbn)
+                                                 .Output("dy")
+                                                 .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("dy", 0), "y", 0);
+        AddOp(grad_op);
+      }
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP_GRAD("broadcast_floor_mod")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
+      if (op.NeedGenGradTensor4OpInput("x", 0)) {
+        op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("z", 0), "x", 0);
+      }
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP_GRAD("broadcast_fmod")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
+      if (op.NeedGenGradTensor4OpInput("x", 0)) {
+        op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("z", 0), "x", 0);
+      }
+      return Maybe<void>::Ok();
+    });
 }  // namespace oneflow

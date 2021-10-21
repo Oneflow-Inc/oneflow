@@ -26,7 +26,7 @@ enum CaseCmd {
   kCaseCmdHandleOutput = 2,
 };
 
-struct CaseStatus final {
+struct CaseStatus final : public KernelState {
   CaseStatus() : cmd(kCaseCmdInvalid), cur_selected_id(-1) {}
   ~CaseStatus() = default;
 
@@ -36,15 +36,15 @@ struct CaseStatus final {
 };
 
 template<typename T>
-class CaseKernel final : public KernelIf<DeviceType::kCPU> {
+class CaseKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CaseKernel);
   CaseKernel() = default;
   ~CaseKernel() override = default;
 
  private:
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
+  void VirtualKernelInit(KernelContext* ctx) override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 }  // namespace oneflow

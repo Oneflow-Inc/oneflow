@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/job/plan_util.h"
 
 namespace oneflow {
 
@@ -54,7 +55,7 @@ void PlanToPhysicalGraphFile(const Plan& plan) {
     node->set_name(task_id2op_name.at(task.task_id()));
     const OperatorConf& op_conf =
         task.exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf();
-    DeviceType device_type = Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task.thrd_id());
+    DeviceType device_type = PlanUtil::GetStreamId(task).device_id().device_type();
     node->set_device(*CHECK_JUST(DeviceTag4DeviceType(device_type)));
     if (op_conf.has_user_conf()) {
       const UserOpConf& user_op = op_conf.user_conf();

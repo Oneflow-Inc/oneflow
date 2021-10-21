@@ -13,15 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/stream.msg.h"
-#include "oneflow/core/vm/thread_ctx.msg.h"
+#include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
 namespace vm {
 
+void Stream::__Init__() { clear_thread_ctx(); }
+
 void Stream::__Init__(ThreadCtx* thread_ctx, const StreamId& stream_id,
                       const int64_t max_device_num_per_machine) {
+  __Init__();
   set_thread_ctx(thread_ctx);
   mut_stream_id()->CopyFrom(stream_id);
   // InitDeviceCtx may use max_device_num_per_machine,
@@ -42,17 +45,17 @@ const StreamTypeId& Stream::stream_type_id() const {
   return thread_ctx().stream_rt_desc().stream_type_id();
 }
 
-ObjectMsgPtr<Instruction> Stream::NewInstruction(
+intrusive::shared_ptr<Instruction> Stream::NewInstruction(
     InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   if (free_instruction_list().empty()) {
-    return ObjectMsgPtr<Instruction>::NewFrom(mut_allocator(), instr_msg, this, parallel_desc);
+    return intrusive::make_shared<Instruction>(instr_msg, this, parallel_desc);
   }
-  ObjectMsgPtr<Instruction> instruction = mut_free_instruction_list()->PopFront();
+  intrusive::shared_ptr<Instruction> instruction = mut_free_instruction_list()->PopFront();
   instruction->__Init__(instr_msg, this, parallel_desc);
   return instruction;
 }
 
-void Stream::MoveToFreeList(ObjectMsgPtr<Instruction>&& instruction) {
+void Stream::MoveToFreeList(intrusive::shared_ptr<Instruction>&& instruction) {
   CHECK_EQ(instruction->ref_cnt(), 1);
   instruction->clear_instr_msg();
   auto* instruction_ptr = instruction.Mutable();
@@ -64,7 +67,7 @@ void Stream::MoveFromZombieListToFreeList() {
   auto* zombie_list = mut_zombie_instruction_list();
   static const size_t kTryCount = 2;
   for (int i = 0; i < kTryCount; ++i) {
-    ObjectMsgPtr<Instruction> first = zombie_list->Begin();
+    intrusive::shared_ptr<Instruction> first = zombie_list->Begin();
     if (!first) { break; }
     zombie_list->Erase(first.Mutable());
     size_t ref_cnt = first->ref_cnt();
@@ -82,9 +85,9 @@ void Stream::MoveFromZombieListToFreeList() {
   }
 }
 
-void Stream::DeleteInstruction(ObjectMsgPtr<Instruction>&& instruction) {
-  CHECK(instruction->is_pending_instruction_link_empty());
-  CHECK(instruction->is_instruction_link_empty());
+void Stream::DeleteInstruction(intrusive::shared_ptr<Instruction>&& instruction) {
+  CHECK(instruction->is_pending_instruction_hook_empty());
+  CHECK(instruction->is_instruction_hook_empty());
   // the value of instruction->ref_cnt() may be updated by a worker thread
   size_t ref_cnt = instruction->ref_cnt();
   if (ref_cnt == 1) {

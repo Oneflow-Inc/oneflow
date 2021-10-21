@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/object_msg/flat_msg_view.h"
+#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/instruction_operand.h"
 
 namespace oneflow {
 namespace vm {
@@ -51,10 +51,10 @@ class AccessBlobByCallbackInstructionType : public vm::InstructionType {
   void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
 };
 
-class SoftSyncStreamInstructionType : public vm::InstructionType {
+class RecordEventInstructionType : public vm::InstructionType {
  public:
-  SoftSyncStreamInstructionType() = default;
-  ~SoftSyncStreamInstructionType() override = default;
+  RecordEventInstructionType() = default;
+  ~RecordEventInstructionType() override = default;
 
   void Compute(vm::Instruction* instruction) const override {
     instruction->set_has_event_record(true);

@@ -147,6 +147,7 @@ class GpuTrilKernel final : public user_op::OpKernel {
   ~GpuTrilKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     const auto shape = x->shape();
@@ -185,6 +186,7 @@ class GpuTrilKernel final : public user_op::OpKernel {
 
 REGISTER_GPU_TRIL_KERNEL(float)
 REGISTER_GPU_TRIL_KERNEL(double)
+REGISTER_GPU_TRIL_KERNEL(uint8_t)
 REGISTER_GPU_TRIL_KERNEL(int8_t)
 REGISTER_GPU_TRIL_KERNEL(int32_t)
 REGISTER_GPU_TRIL_KERNEL(int64_t)
@@ -197,6 +199,7 @@ class GpuFusedScaleTrilKernel final : public user_op::OpKernel {
   ~GpuFusedScaleTrilKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     const auto shape = x->shape();
@@ -239,6 +242,7 @@ class GpuFusedScaleTrilKernel final : public user_op::OpKernel {
 
 REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(float)
 REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(double)
+REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(uint8_t)
 REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(int8_t)
 REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(int32_t)
 REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(int64_t)

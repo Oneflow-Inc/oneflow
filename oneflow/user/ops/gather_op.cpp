@@ -42,10 +42,11 @@ REGISTER_USER_OP("gather")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
-      CHECK(indices_modifier != nullptr);
+      CHECK_OR_RETURN(indices_modifier != nullptr);
       indices_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const int64_t in_num_axes =
@@ -89,7 +90,7 @@ REGISTER_USER_OP("gather")
     });
 
 REGISTER_USER_OP_GRAD("gather").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                          user_op::AddOpFn AddOp) {
+                                                          user_op::AddOpFn AddOp) -> Maybe<void> {
   bool need_grad_in = op.NeedGenGradTensor4OpInput("in", 0);
   if (need_grad_in) {
     user_op::UserOpConfWrapperBuilder in_grad_builder(op.op_name() + "_grad");
@@ -104,6 +105,7 @@ REGISTER_USER_OP_GRAD("gather").SetGenBackwardOpConfFn([](const user_op::UserOpW
     op.BindGradTensorWithOpInput(in_grad_op.output("out", 0), "in", 0);
     AddOp(in_grad_op);
   }
+  return Maybe<void>::Ok();
 });
 
 }  // namespace oneflow

@@ -81,21 +81,25 @@ void ReentrantLockStatus::ReleaseLock(int64_t lock_id, std::queue<int64_t>* unlo
 }
 
 template<typename T>
-void ReentrantLockKernel<T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  auto* const status = static_cast<ReentrantLockStatus*>(ctx.other);
+void ReentrantLockKernel<T>::VirtualKernelInit(KernelContext* ctx) {
+  ctx->set_state(std::make_shared<ReentrantLockStatus>());
+}
+
+template<typename T>
+void ReentrantLockKernel<T>::ForwardDataContent(KernelContext* ctx) const {
+  auto* const status = CHECK_NOTNULL(dynamic_cast<ReentrantLockStatus*>(ctx->state().get()));
   if (status->cur_ibn() == "start") {
-    T lock_id = *BnInOp2Blob("start")->dptr<T>();
+    T lock_id = *ctx->BnInOp2Blob("start")->dptr<T>();
     status->RequestLock(lock_id, status->mut_cur_unlocked_ids());
   } else if (status->cur_ibn() == "end") {
-    status->ReleaseLock(*BnInOp2Blob("end")->dptr<T>(), status->mut_cur_unlocked_ids());
+    status->ReleaseLock(*ctx->BnInOp2Blob("end")->dptr<T>(), status->mut_cur_unlocked_ids());
   } else {
     CHECK_EQ(status->cur_ibn(), ReentrantLockStatus::kEmptyIbn);
   }
   if (status->cur_unlocked_ids().size() > 0) {
     T lock_id = status->cur_unlocked_ids().front();
     status->mut_cur_unlocked_ids()->pop();
-    *BnInOp2Blob("out")->mut_dptr<T>() = lock_id;
+    *ctx->BnInOp2Blob("out")->mut_dptr<T>() = lock_id;
     status->set_acquired_lock_to_be_sent(true);
   } else {
     status->set_acquired_lock_to_be_sent(false);

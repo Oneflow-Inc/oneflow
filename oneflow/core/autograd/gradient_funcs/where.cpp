@@ -15,77 +15,116 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
 
-struct WhereInterpState : public OpExprInterpState {
+struct WhereCaptureState : public AutoGradCaptureState {
   bool requires_grad_x;
   bool requires_grad_y;
 };
 
-class Where : public OpExprGradFunction<WhereInterpState> {
- public:
-  Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(WhereInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const AttrMap& attrs) const override;
-  Maybe<void> Apply(const WhereInterpState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override;
-
- private:
-  AttrMap base_attrs_;
-  std::shared_ptr<OpExpr> zero_like_op_;
-  std::shared_ptr<OpExpr> where_op_x_;
-  std::shared_ptr<OpExpr> where_op_y_;
+struct WhereScalarCaptureState : public AutoGradCaptureState {
+  bool requires_grad;
 };
 
-Maybe<void> Where::Init(const OpExpr& op) {
-  const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  const std::string& op_name = fw_op_expr->op_name();
-  zero_like_op_ = JUST(op_expr_helper::ZeroLikeOp("zeros_like_" + GradientOpName(op_name)));
-  where_op_x_ = JUST(op_expr_helper::WhereOp("where_x_" + GradientOpName(op_name)));
-  where_op_y_ = JUST(op_expr_helper::WhereOp("where_y_" + GradientOpName(op_name)));
-  return Maybe<void>::Ok();
-}
+class Where : public OpExprGradFunction<WhereCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override;
+  Maybe<void> Capture(WhereCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrMap& attrs) const override;
+  Maybe<void> Apply(const WhereCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override;
+};
 
-Maybe<void> Where::Capture(WhereInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> Where::Init(const OpExpr& op) { return Maybe<void>::Ok(); }
+
+Maybe<void> Where::Capture(WhereCaptureState* ctx, const TensorTuple& inputs,
                            const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad_x = inputs.at(1)->requires_grad();
   ctx->requires_grad_y = inputs.at(2)->requires_grad();
   if ((!ctx->requires_grad_x) && (!ctx->requires_grad_y)) { return Maybe<void>::Ok(); }
 
-  ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->SaveTensorForBackward(inputs.at(0));  // condition
   ctx->SaveTensorForBackward(inputs.at(1));  // x
+  ctx->SaveTensorForBackward(inputs.at(2));  // y
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Where::Apply(const WhereInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> Where::Apply(const WhereCaptureState* ctx, const TensorTuple& out_grads,
                          TensorTuple* in_grads) const {
   if ((!ctx->requires_grad_x) && (!ctx->requires_grad_y)) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-  MutableAttrMap attrs;
-  const std::shared_ptr<oneflow::one::Tensor>& condtion = ctx->SavedTensors().at(0);
+  const std::shared_ptr<oneflow::one::Tensor>& condition = ctx->SavedTensors().at(0);
   const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(1);
+  const std::shared_ptr<oneflow::one::Tensor>& y = ctx->SavedTensors().at(2);
 
-  std::shared_ptr<oneflow::one::Tensor> zero_out =
-      JUST(OpInterpUtil::Dispatch<Tensor>(*zero_like_op_, {x}));
+  std::shared_ptr<oneflow::one::Tensor> zero_out = JUST(functional::ZerosLike(x));
   in_grads->resize(3);
-  if (ctx->requires_grad_x)
-    in_grads->at(1) =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*where_op_x_, {condtion, out_grads.at(0), zero_out}));
-  if (ctx->requires_grad_y)
-    in_grads->at(2) =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*where_op_y_, {condtion, zero_out, out_grads.at(0)}));
+  if (ctx->requires_grad_x) {
+    auto broad_x_grad = JUST(functional::Where(condition, out_grads.at(0), zero_out));
+    in_grads->at(1) = JUST(functional::BroadcastReduceSumLike(broad_x_grad, x));
+  }
+  if (ctx->requires_grad_y) {
+    auto broad_y_grad = JUST(functional::Where(condition, zero_out, out_grads.at(0)));
+    in_grads->at(2) = JUST(functional::BroadcastReduceSumLike(broad_y_grad, y));
+  }
   return Maybe<void>::Ok();
 }
 
+class WhereScalar : public OpExprGradFunction<WhereScalarCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
+  Maybe<void> Capture(WhereScalarCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    ctx->requires_grad = inputs.at(1)->requires_grad();
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+
+    ctx->SaveTensorForBackward(inputs.at(0));
+    ctx->SaveTensorForBackward(inputs.at(1));
+    return Maybe<void>::Ok();
+  }
+};
+
+class WhereScalarX : public WhereScalar {
+ public:
+  Maybe<void> Apply(const WhereScalarCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    const std::shared_ptr<oneflow::one::Tensor>& condition = ctx->SavedTensors().at(0);
+    const std::shared_ptr<oneflow::one::Tensor>& y = ctx->SavedTensors().at(1);
+
+    std::shared_ptr<oneflow::one::Tensor> zero_out = JUST(functional::ZerosLike(y));
+    in_grads->resize(2);
+    auto broad_y_grad = JUST(functional::Where(condition, zero_out, out_grads.at(0)));
+    in_grads->at(1) = JUST(functional::BroadcastReduceSumLike(broad_y_grad, y));
+    return Maybe<void>::Ok();
+  }
+};
+
+class WhereScalarY : public WhereScalar {
+ public:
+  Maybe<void> Apply(const WhereScalarCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    const std::shared_ptr<oneflow::one::Tensor>& condition = ctx->SavedTensors().at(0);
+    const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(1);
+
+    std::shared_ptr<oneflow::one::Tensor> zero_out = JUST(functional::ZerosLike(x));
+    in_grads->resize(2);
+    auto broad_x_grad = JUST(functional::Where(condition, out_grads.at(0), zero_out));
+    in_grads->at(1) = JUST(functional::BroadcastReduceSumLike(broad_x_grad, x));
+    return Maybe<void>::Ok();
+  }
+};
+
 REGISTER_OP_EXPR_GRAD_FUNCTION("where", Where);
+REGISTER_OP_EXPR_GRAD_FUNCTION("where_scalar_x", WhereScalarX);
+REGISTER_OP_EXPR_GRAD_FUNCTION("where_scalar_y", WhereScalarY);
 
 }  // namespace one
 }  // namespace oneflow

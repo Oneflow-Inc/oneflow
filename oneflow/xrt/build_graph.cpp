@@ -57,8 +57,7 @@ GraphBuilder::GraphBuilder(const OpGraph* op_graph) : graph_(std::make_shared<Xr
   });
 }
 
-GraphBuilder::GraphBuilder(const XrtLaunchOpConf::Function& function, const DeviceType& device_type,
-                           const JobDesc& job_desc)
+GraphBuilder::GraphBuilder(const XrtLaunchOpConf::Function& function, const DeviceType& device_type)
     : graph_(std::make_shared<XrtGraph>()) {
   for (const auto& arg_conf : function.argument()) {
     XrtNode* node = graph_->AddNode(arg_conf);
@@ -76,7 +75,7 @@ GraphBuilder::GraphBuilder(const XrtLaunchOpConf::Function& function, const Devi
     XrtNode* node = graph_->AddNode(node_conf);
     SetupXrtNode(node, node_conf);
     auto& input_output_keys = node_info_[node].input_output_keys;
-    auto op = ConstructOp(node_conf, device_type);
+    auto op = CHECK_JUST(ConstructOp(node_conf, device_type));
     for (const std::string& bn : op->output_bns()) {
       std::string output = BlobIdToName(op->BnInOp2Lbi(bn));
       producers_[output] = node;
@@ -135,8 +134,8 @@ void GraphBuilder::SetupGraphEdges() {
 }
 
 std::shared_ptr<XrtGraph> BuildGraph(const XrtLaunchOpConf::Function& function,
-                                     const DeviceType& device_type, const JobDesc& job_desc) {
-  return GraphBuilder(function, device_type, job_desc).Build();
+                                     const DeviceType& device_type) {
+  return GraphBuilder(function, device_type).Build();
 }
 
 std::shared_ptr<XrtGraph> BuildGraph(const OpGraph* op_graph) {

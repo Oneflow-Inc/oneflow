@@ -21,6 +21,15 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/device/cuda_util.h"
 
+#ifdef WITH_CUDA
+
+#include <cuda.h>
+#if CUDA_VERSION >= 11000
+#include <cuda_bf16.h>
+#endif  // CUDA_VERSION >= 11000
+
+#endif  // WITH_CUDA
+
 namespace oneflow {
 
 #ifdef WITH_CUDA
@@ -36,15 +45,19 @@ inline ncclDataType_t GetNcclDataType(const DataType& dt) {
     NCCL_DATA_TYPE_CASE(Int32);
     NCCL_DATA_TYPE_CASE(Int64);
     NCCL_DATA_TYPE_CASE(Float16);
+#if defined(__CUDA_BF16_TYPES_EXIST__) && NCCL_VERSION_CODE >= 21003
+    case DataType::kBFloat16: return ncclBfloat16;
+#endif
     default: UNIMPLEMENTED();
   }
+  return ncclDataType_t::ncclFloat;
 }
-
-void NcclCheck(ncclResult_t error);
 
 std::string NcclUniqueIdToString(const ncclUniqueId& unique_id);
 
 void NcclUniqueIdFromString(const std::string& str, ncclUniqueId* unique_id);
+
+#define HAS_GPU_SEND_RECV NCCL_VERSION_CODE > 2700
 
 #endif  // WITH_CUDA
 

@@ -16,9 +16,10 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_ONEFLOW_VM_H_
 #define ONEFLOW_CORE_VM_ONEFLOW_VM_H_
 
+#include "oneflow/core/common/notifier.h"
 #include "oneflow/core/vm/interpret_type.h"
-#include "oneflow/core/vm/vm_desc.msg.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
+#include "oneflow/core/vm/vm_desc.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/thread/thread_pool.h"
 
 namespace oneflow {
@@ -30,18 +31,21 @@ class OneflowVM final {
   OneflowVM(const Resource& resource, int64_t this_machine_id);
   ~OneflowVM();
 
-  vm::VirtualMachine* mut_vm() { return vm_.Mutable(); }
+  Maybe<void> Receive(vm::InstructionMsgList* instr_list);
+
   const vm::VirtualMachine& vm() const { return *vm_; }
 
  private:
-  void Loop();
+  void Loop(const std::function<void()>& Initializer);
 
-  ObjectMsgPtr<vm::VirtualMachine> vm_;
+  vm::VirtualMachine* mut_vm() { return vm_.Mutable(); }
+  void ControlSync();
+
+  intrusive::shared_ptr<vm::VirtualMachine> vm_;
   // for asynchronized execution
   std::list<std::unique_ptr<std::thread>> worker_threads_;
   std::thread schedule_thread_;
-  std::atomic<bool> exiting_;
-  std::atomic<bool> scheduler_exited_;
+  Notifier notifier_;
 };
 
 }  // namespace oneflow

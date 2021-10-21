@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_BIAS_ADD_KERNEL_H_
 
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -27,12 +28,13 @@ struct BiasAddCalculation {
 };
 
 template<DeviceType device_type, typename T>
-class BiasAddUserKernel final : public user_op::OpKernel {
+class BiasAddUserKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   BiasAddUserKernel() = default;
   ~BiasAddUserKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* a_tensor = ctx->Tensor4ArgNameAndIndex("a", 0);
     const auto* b_tensor = ctx->Tensor4ArgNameAndIndex("b", 0);

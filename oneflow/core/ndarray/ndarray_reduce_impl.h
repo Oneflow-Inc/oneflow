@@ -34,7 +34,6 @@ namespace oneflow {
 DECLARE_NDARRAY_REDUCE_IMPL(NdarrayScalarReduce);
 DECLARE_NDARRAY_REDUCE_IMPL(NdarrayMatrixRowReduce);
 DECLARE_NDARRAY_REDUCE_IMPL(NdarrayMatrixColReduce);
-DECLARE_NDARRAY_REDUCE_IMPL(NdarrayXYZCubeYReduce);
 DECLARE_NDARRAY_REDUCE_IMPL(NdarrayXYZCubeXZReduce);
 #undef DECLARE_NDARRAY_REDUCE_IMPL
 
@@ -64,7 +63,7 @@ struct NdarrayDefaultReduce final {
 
  private:
 #define DEFINE_NDARRAY_REDUCE(func_name, NDIMS) func_name<NDIMS>
-  DEFINE_STATIC_SWITCH_FUNC(void, Reduce, DEFINE_NDARRAY_REDUCE, MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+  DEFINE_STATIC_SWITCH_FUNC(void, Reduce, DEFINE_NDARRAY_REDUCE, MAKE_NDIM_CTRV_SEQ(DIM_SEQ))
 #undef DEFINE_NDARRAY_REDUCE
 
   template<int NDIMS>
@@ -107,17 +106,17 @@ struct NdarrayReduceCore final {
                                         int axis) {
     size_t n = dst_reduced.shape().ElemNum();
     int64_t dst_dim_val = dst_reduced.shape().At(axis);
-    XPU_1D_KERNEL_LOOP(i, n) {
-      T* dst_reduced_ptr = dst_reduced.template Mut(i);
-      int64_t coord[NDIMS];
-      dst_reduced.shape().template Offset2Coordinate<NDIMS>(i, coord);
-      T reduced = UnitOfBinaryFunc<T, binary_func>::Val();
-      while (coord[axis] < x.shape().At(axis)) {
-        reduced = binary_func<T>::Invoke(reduced, x.template Get<NDIMS>(coord));
-        coord[axis] += dst_dim_val;
-      }
-      *dst_reduced_ptr = reduced;
+    XPU_1D_KERNEL_LOOP_BEGIN(i, n);
+    T* dst_reduced_ptr = dst_reduced.template Mut(i);
+    int64_t coord[NDIMS];
+    dst_reduced.shape().template Offset2Coordinate<NDIMS>(i, coord);
+    T reduced = UnitOfBinaryFunc<T, binary_func>::Val();
+    while (coord[axis] < x.shape().At(axis)) {
+      reduced = binary_func<T>::Invoke(reduced, x.template Get<NDIMS>(coord));
+      coord[axis] += dst_dim_val;
     }
+    *dst_reduced_ptr = reduced;
+    XPU_1D_KERNEL_LOOP_END();
   }
 };
 

@@ -19,24 +19,21 @@ limitations under the License.
 #include <string>
 #include <typeindex>
 #include <glog/logging.h>
-#include "oneflow/core/vm/stream_desc.msg.h"
+#include "oneflow/core/vm/stream_desc.h"
 #include "oneflow/core/vm/instr_type_id.h"
 #include "oneflow/core/vm/interpret_type.h"
-#include "oneflow/core/common/callback.msg.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {
 
-class ObjectMsgAllocator;
-
 namespace vm {
 
-class Stream;
-class InstructionStatusBuffer;
-class Instruction;
-class VirtualMachine;
-class InstructionMsg;
+struct Stream;
+struct InstructionStatusBuffer;
+struct Instruction;
+struct VirtualMachine;
+struct InstructionMsg;
 class InstructionType;
 
 class StreamType {
@@ -51,10 +48,9 @@ class StreamType {
 
   virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const = 0;
 
-  virtual void InitInstructionStatus(const Stream& stream,
-                                     InstructionStatusBuffer* status_buffer) const = 0;
-  virtual void DeleteInstructionStatus(const Stream& stream,
-                                       InstructionStatusBuffer* status_buffer) const = 0;
+  void InitInstructionStatusIf(const Stream& stream, InstructionStatusBuffer* status_buffer) const;
+  void DeleteInstructionStatusIf(const Stream& stream,
+                                 InstructionStatusBuffer* status_buffer) const;
   virtual bool QueryInstructionStatusDone(const Stream& stream,
                                           const InstructionStatusBuffer& status_buffer) const = 0;
   virtual void set_has_event_record(InstructionStatusBuffer* status_buffer, bool val) const {
@@ -63,10 +59,11 @@ class StreamType {
   virtual void Compute(Instruction* instruction) const = 0;
   virtual void Infer(Instruction* instruction) const { LOG(FATAL) << "UNIMPLEMENTED"; }
 
-  virtual ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                                  int64_t this_machine_id) const = 0;
+  virtual intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
+                                                           int64_t this_machine_id) const = 0;
 
   virtual bool SharingVirtualMachineThread() const = 0;
+  virtual bool SupportingTransportInstructions() const = 0;
   virtual bool IsControlStreamType() const { return false; }
   virtual void Infer(VirtualMachine* vm, Instruction* instruction) const { Infer(instruction); }
   virtual void Compute(VirtualMachine* vm, Instruction* instruction) const { Compute(instruction); }
@@ -79,6 +76,11 @@ class StreamType {
 
  protected:
   StreamType() = default;
+
+  virtual void InitInstructionStatus(const Stream& stream,
+                                     InstructionStatusBuffer* status_buffer) const = 0;
+  virtual void DeleteInstructionStatus(const Stream& stream,
+                                       InstructionStatusBuffer* status_buffer) const = 0;
 };
 
 HashMap<std::type_index, const StreamType*>* StreamType4TypeIndex();

@@ -20,15 +20,15 @@ limitations under the License.
 
 namespace oneflow {
 
-void CalcOutAndPadding(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
-                       int32_t stride, const std::string& padding_type, int64_t* output_size,
-                       int32_t* padding_before, int32_t* padding_after);
+Maybe<void> CalcOutAndPadding(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
+                              int32_t stride, const std::string& padding_type, int64_t* output_size,
+                              int32_t* padding_before, int32_t* padding_after);
 
-void CalcSamePadding(int64_t input_size, int32_t filter_size, int32_t dilation_rate, int32_t stride,
-                     int32_t* padding_small, int32_t* padding_large);
+Maybe<void> CalcSamePadding(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
+                            int32_t stride, int32_t* padding_small, int32_t* padding_large);
 
-void CalcConvOut(int64_t input_size, int32_t filter_size, int32_t dilation_rate, int32_t stride,
-                 int32_t padding_before, int64_t* output_size);
+Maybe<void> CalcConvOut(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
+                        int32_t stride, int32_t padding_before, int64_t* output_size);
 
 const size_t IdxOffset(const std::string& data_format);
 const int32_t ChannelIdx(const std::string& data_format, int32_t num_axes);

@@ -18,10 +18,16 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-void EsacKernel<T>::ForwardDataContent(const KernelCtx& ctx,
-                                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  T value = static_cast<T>(*static_cast<int64_t*>(ctx.other));
-  KernelUtil<DeviceType::kCPU, T>::Set(ctx.device_ctx, value, BnInOp2Blob("out")->mut_dptr<T>());
+void EsacKernel<T>::VirtualKernelInit(KernelContext* ctx) {
+  ctx->set_state(std::make_shared<EsacKernelState>());
+}
+
+template<typename T>
+void EsacKernel<T>::ForwardDataContent(KernelContext* ctx) const {
+  T value =
+      static_cast<T>(CHECK_NOTNULL(dynamic_cast<EsacKernelState*>(ctx->state().get()))->value);
+  NewKernelUtil<DeviceType::kCPU>::Fill(ctx->device_ctx(), 1, value,
+                                        ctx->BnInOp2Blob("out")->mut_dptr<T>());
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kEsacConf, EsacKernel, INT_DATA_TYPE_SEQ)

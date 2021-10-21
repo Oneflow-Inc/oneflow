@@ -58,7 +58,7 @@ class BroadcastToCompatibleWithOp final : public Operator {
   BroadcastToCompatibleWithOp() = default;
   ~BroadcastToCompatibleWithOp() override = default;
 
-  Maybe<void> InitFromOpConf() {
+  Maybe<void> InitFromOpConf() override {
     CHECK(op_conf().has_broadcast_to_compatible_with_conf());
     EnrollInputBn("x");
     EnrollRepeatedInputBn("compatible", false);
@@ -80,7 +80,8 @@ class BroadcastToCompatibleWithOp final : public Operator {
 
  private:
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+                            const ParallelContext* parallel_ctx,
+                            KernelConf* kernel_conf) const override {
     auto* conf = kernel_conf->mutable_broadcast_to_compatible_with_conf();
     const BlobDesc* x_desc = GetBlobDesc4BnInOp("x");
     const BlobDesc* y_desc = GetBlobDesc4BnInOp("y");
@@ -96,14 +97,14 @@ class BroadcastToCompatibleWithOp final : public Operator {
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       cfg::SbpSignatureList* sbp_sig_list) const override {
     Shape broadcasted_shape{1};
-    for (const std::string ibn : input_bns()) {
+    for (const std::string& ibn : input_bns()) {
       const Shape& input_shape = JUST(LogicalBlobDesc4Ibn(ibn)).shape();
       JUST(GetBroadcastShape(broadcasted_shape, input_shape, &broadcasted_shape));
     }
 
     const int64_t broadcast_num_axes = broadcasted_shape.NumAxes();
     HashMap<std::string, Shape> ibn2extend_shape;
-    for (const std::string ibn : input_bns()) {
+    for (const std::string& ibn : input_bns()) {
       const Shape& input_shape = JUST(LogicalBlobDesc4Ibn(ibn)).shape();
       CHECK_OR_RETURN(
           ibn2extend_shape

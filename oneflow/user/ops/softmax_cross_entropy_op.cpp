@@ -23,9 +23,10 @@ REGISTER_USER_OP("softmax_cross_entropy")
     .Output("prob")  //'prob' is just for compute prediction's grad, prob's grad will be ignored
     .Output("out")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* cond_arg_modifier = GetInputArgModifierFn("label", 0);
       cond_arg_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
@@ -113,7 +114,8 @@ REGISTER_USER_OP("softmax_cross_entropy_grad")
     });
 
 REGISTER_USER_OP_GRAD("softmax_cross_entropy")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("prediction", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -126,6 +128,7 @@ REGISTER_USER_OP_GRAD("softmax_cross_entropy")
         op.BindGradTensorWithOpInput(grad_op.output("prediction_diff", 0), "prediction", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

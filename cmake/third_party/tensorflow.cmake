@@ -81,6 +81,7 @@ else()
   use_mirror(VARIABLE XRT_TF_URL URL ${XRT_TF_URL})
 endif()
 
+set(XRT_TF_BAZEL_OUTPUT_DIR ${PROJECT_BINARY_DIR}/xla_tf_bazel_output CACHE STRING "")
 if (THIRD_PARTY)
   ExternalProject_Add(${TENSORFLOW_PROJECT}
     PREFIX ${TENSORFLOW_SOURCES_DIR}
@@ -88,7 +89,7 @@ if (THIRD_PARTY)
     DOWNLOAD_NO_EXTRACT ${XRT_TF_DOWNLOAD_NO_EXTRACT}
     CONFIGURE_COMMAND ""
     BUILD_COMMAND cd ${TENSORFLOW_SRCS_DIR} &&
-                  ${BAZEL_ENV_ARGS} bazel build ${TENSORFLOW_BUILD_CMD} -j HOST_CPUS //tensorflow/compiler/jit/xla_lib:libxla_core.so
+                  ${BAZEL_ENV_ARGS} bazel --output_user_root=${XRT_TF_BAZEL_OUTPUT_DIR} build ${TENSORFLOW_BUILD_CMD} -j HOST_CPUS //tensorflow/compiler/jit/xla_lib:libxla_core.so
     INSTALL_COMMAND ""
   )
 
@@ -123,6 +124,19 @@ if (THIRD_PARTY)
         ${dst}
     )
   endforeach()
+
+  add_custom_command(TARGET tensorflow_symlink_headers
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+      ${GLOG_INCLUDE_DIR}/glog
+      ${TENSORFLOW_INSTALL_DIR}/include/tensorflow_inc/tensorflow/core/platform/google
+  )
+
+  add_custom_command(TARGET tensorflow_symlink_headers
+    COMMAND patch --forward
+    ${TENSORFLOW_INSTALL_DIR}/include/tensorflow_inc/tensorflow/stream_executor/platform/logging.h
+    ${CMAKE_SOURCE_DIR}/cmake/third_party/patches/tensorflow-logging.patch
+    || true
+  )
 
 endif(THIRD_PARTY)
 
