@@ -36,10 +36,7 @@ def numel_op(input):
         >>> flow.numel(a)
         16
     """
-    prod = 1
-    for dim in input.shape:
-        prod *= dim
-    return prod
+    return input.numel()
 
 
 if __name__ == "__main__":
