@@ -138,7 +138,6 @@ OneFlow Tensor Class
             sqrt, 
             square, 
             squeeze, 
-            stack, 
             std, 
             storage_offset, 
             stride, 

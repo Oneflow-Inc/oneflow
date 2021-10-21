@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/primitive/include/cast.h"
 
 namespace oneflow {
 
@@ -156,17 +157,22 @@ class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::Cuda
           GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
       CHECK_LE(in_tmp_buffer_bytes + out_tmp_buffer_bytes + reduce_tmp_buffer_bytes,
                tmp_buffer->shape().elem_cnt());
-      CopyElemOnGpu<float16, float>(ctx->device_ctx(), input_tensor->dptr<float16>(), in_tmp_buffer,
-                                    in_shape.elem_cnt());
+      auto h2f = primitive::NewPrimitive<primitive::CastFactory>(
+          ctx->device_type(), DataType::kFloat16, DataType::kFloat);
+      CHECK(h2f);
+      auto f2h = primitive::NewPrimitive<primitive::CastFactory>(
+          ctx->device_type(), DataType::kFloat, DataType::kFloat16);
+      CHECK(f2h);
+      h2f->Launch(ctx->stream_ctx(), input_tensor->dptr<float16>(), in_tmp_buffer,
+                  in_shape.elem_cnt());
 
       NdarrayReduce<DeviceType::kGPU, float, BinaryFuncSum>::Reduce(
           ctx->device_ctx(), XpuVarNdarray<float>(reduced_shape, out_tmp_buffer),
           XpuVarNdarray<const float>(in_shape, in_tmp_buffer),
           XpuVarNdarray<float>(in_shape, reduce_tmp_buffer));
 
-      CopyElemOnGpu<float, float16>(ctx->device_ctx(), out_tmp_buffer,
-                                    output_tensor->mut_dptr<float16>(),
-                                    output_tensor->shape().elem_cnt());
+      f2h->Launch(ctx->stream_ctx(), out_tmp_buffer, output_tensor->mut_dptr<float16>(),
+                  output_tensor->shape().elem_cnt());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

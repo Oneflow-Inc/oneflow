@@ -228,6 +228,52 @@ class AdaptivePoolNdGradFunctor {
   std::unordered_map<std::string, std::shared_ptr<OpExpr>> op_expr_map_;
 };
 
+class SparseCrossEntropyGradFunctor {
+ public:
+  SparseCrossEntropyGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("sparse_cross_entropy_grad")
+                         .Input("prediction")
+                         .Input("label")
+                         .Input("dy")
+                         .Output("prediction_diff")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& prediction,
+                           const std::shared_ptr<one::Tensor>& label,
+                           const std::shared_ptr<one::Tensor>& dy, const int64_t& depth) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("depth", depth));
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {prediction, label, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SparseCrossEntropyMsGradFunctor {
+ public:
+  SparseCrossEntropyMsGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("sparse_cross_entropy_ms_grad")
+                         .Input("prediction")
+                         .Input("label")
+                         .Input("dy")
+                         .Output("prediction_diff")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& prediction,
+                           const std::shared_ptr<one::Tensor>& label,
+                           const std::shared_ptr<one::Tensor>& dy, const int64_t& depth) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("depth", depth));
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {prediction, label, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SmoothL1LossGradFunctor {
  public:
   SmoothL1LossGradFunctor() {
@@ -748,6 +794,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BinaryCrossEntropyLossGradFunctor>("BinaryCrossEntropyLossGrad");
   m.add_functor<impl::BinaryCrossEntropyWithLogitsLossGradFunctor>(
       "BinaryCrossEntropyWithLogitsLossGrad");
+  m.add_functor<impl::SparseCrossEntropyGradFunctor>("SparseCrossEntropyGrad");
+  m.add_functor<impl::SparseCrossEntropyMsGradFunctor>("SparseCrossEntropyMsGrad");
   m.add_functor<impl::SmoothL1LossGradFunctor>("SmoothL1LossGrad");
   m.add_functor<impl::CombinedMarginLossGradFunctor>("CombinedMarginLossGrad");
   m.add_functor<impl::AffineGridGradFunctor>("AffineGridGrad");
