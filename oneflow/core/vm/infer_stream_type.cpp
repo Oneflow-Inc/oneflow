@@ -43,7 +43,8 @@ bool InferStreamTypeUtil::QueryInstructionStatusDone(const Stream& stream,
 void InferStreamTypeUtil::Infer(Instruction* instruction) {
   {
     const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
-    CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kInfer);
+    CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kInfer)
+        << "instr_type_name: " << instruction->instr_msg().instr_type_name();
     instr_type_id.instruction_type().Infer(instruction);
   }
   auto* status_buffer = instruction->mut_status_buffer();
