@@ -63,14 +63,11 @@ def _ndim(self):
 
 
 def _nelement(self):
-    prod = 1
-    for dim in self.shape:
-        prod *= dim
-    return prod
+    return self.shape.numel()
 
 
 def _numel(self):
-    return self.nelement()
+    return self.shape.numel()
 
 
 def _element_size(self):
