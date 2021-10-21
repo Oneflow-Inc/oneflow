@@ -149,6 +149,35 @@ class TestLrScheduler(flow.unittest.TestCase):
             for (lr1, lr2) in zip(lambda_lr.get_last_lr(), new_lrs):
                 test_case.assertAlmostEqual(lr1, lr2, places=5)
 
+    def test_reduce_lr_on_plateau(test_case):
+        optimizer = flow.optim.SGD(
+            [{"params": [Parameter(flow.Tensor([1.0]))]},],
+            lr=TestLrScheduler.base_lr,
+            momentum=0.9,
+        )
+
+        factor = 0.3
+        patience = 2
+        last_reduce_step = 0
+
+        def reduce_lr_step(base_lr, current_step):
+            nonlocal last_reduce_step
+            if current_step - last_reduce_step >= patience + 1:
+                last_reduce_step = current_step
+            exp = last_reduce_step // (patience + 1)
+            return [base_lr * factor ** exp]
+
+        scheduler = flow.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, "min", factor, patience
+        )
+        val_loss = 0.1
+        for epoch in range(15):
+            val_loss = val_loss + 0.01
+            scheduler.step(val_loss)
+            new_lr = reduce_lr_step(TestLrScheduler.base_lr, epoch)
+            for (lr1, lr2) in zip(scheduler._last_lr, new_lr):
+                test_case.assertAlmostEqual(lr1, lr2, places=5)
+
 
 if __name__ == "__main__":
     unittest.main()
