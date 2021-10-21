@@ -55,7 +55,7 @@ __global__ void PermuteKernel(PermuteKernelParams<num_dims, IndexType> params) {
 template<size_t num_dims, size_t movement_size, size_t tile_size, typename IndexType>
 __global__ void BatchTransposeKernel(const void* src_ptr, void* dst_ptr, IndexType H, IndexType W,
                                      IndexType num_tile_rows, IndexType num_tile_cols,
-                                     int32_t grid_size) {
+                                     int32_t block_nums) {
   using T = typename std::aligned_storage<movement_size, movement_size>::type;
   __shared__ T tile[tile_size][tile_size + 1];  // To avoid bank conflict.
 
@@ -63,7 +63,7 @@ __global__ void BatchTransposeKernel(const void* src_ptr, void* dst_ptr, IndexTy
   T* dst = reinterpret_cast<T*>(dst_ptr);
 
   IndexType batch_num_tile = num_tile_rows * num_tile_cols;
-  for (int i = blockIdx.x, step = gridDim.x; i < grid_size; i += step) {
+  for (int i = blockIdx.x, step = gridDim.x; i < block_nums; i += step) {
     const IndexType batch_index = i / batch_num_tile;  // the index of batch.
     const IndexType flatten_index =
         i - batch_index * batch_num_tile;  // equal to i % (num_tile_rows*num_tile_cols). the
@@ -111,7 +111,7 @@ movementsize=2.
 template<size_t num_dims, size_t tile_size, typename IndexType>
 __global__ void BatchTransposeMovement2Kernel(const void* src_ptr, void* dst_ptr, IndexType rows,
                                               IndexType cols, IndexType num_tile_rows,
-                                              IndexType num_tile_cols, int32_t grid_size) {
+                                              IndexType num_tile_cols, int32_t block_nums) {
   static_assert(tile_size % 2 == 0);
   using T_MOV2 = typename std::aligned_storage<2, 2>::type;
   using T_MOV4 = typename std::aligned_storage<4, 4>::type;
@@ -126,7 +126,7 @@ __global__ void BatchTransposeMovement2Kernel(const void* src_ptr, void* dst_ptr
   } tile_mem;
 
   IndexType batch_num_tile = num_tile_rows * num_tile_cols;
-  for (int i = blockIdx.x, step = gridDim.x; i < grid_size; i += step) {
+  for (int i = blockIdx.x, step = gridDim.x; i < block_nums; i += step) {
     const IndexType batch_index = i / batch_num_tile;  // the index of batch.
     const IndexType flatten_index =
         i - batch_index * batch_num_tile;  // equal to i%(num_tile_rows*num_tile_cols). the flatten
@@ -188,19 +188,19 @@ void LaunchBatchTransposeKernel(cudaStream_t& cuda_stream,
   IndexType num_tile_rows = (rows + tile_size - 1) / tile_size;
   IndexType num_tile_cols = (cols + tile_size - 1) / tile_size;
 
-  const int32_t grid_size = num_batches * num_tile_rows * num_tile_cols;
-  int32_t checked_grid_size = std::min(grid_size, kCudaMaxBlocksNum);
+  const int32_t block_nums = num_batches * num_tile_rows * num_tile_cols;
+  int32_t checked_block_nums = std::min(block_nums, kCudaMaxBlocksNum);
   if (tile_size == kMov2TileSize) {
     const int32_t half2_thread = tile_size / 2;  // cause each thread process two half elements.
     BatchTransposeMovement2Kernel<num_dims, kMov2TileSize, IndexType>
-        <<<checked_grid_size, dim3(half2_thread, kBlockRows), 0, cuda_stream>>>(
+        <<<checked_block_nums, dim3(half2_thread, kBlockRows), 0, cuda_stream>>>(
             params.src, params.dst, rows, cols, num_tile_rows, num_tile_cols,
-            grid_size);  // Set threads num as 32x8 cause each threads
-                         // process 4 elements to 32x32 share memory.
+            block_nums);  // Set threads num as 32x8 cause each threads
+                          // process 4 elements to 32x32 share memory.
   } else {
     BatchTransposeKernel<num_dims, movement_size, tile_size, IndexType>
-        <<<checked_grid_size, dim3(tile_size, kBlockRows), 0, cuda_stream>>>(
-            params.src, params.dst, rows, cols, num_tile_rows, num_tile_cols, grid_size);
+        <<<checked_block_nums, dim3(tile_size, kBlockRows), 0, cuda_stream>>>(
+            params.src, params.dst, rows, cols, num_tile_rows, num_tile_cols, block_nums);
   }
 }
 
@@ -228,8 +228,12 @@ bool CheckLaunchBatchTranspose(const int* permutation, const IndexType& num_batc
 }
 
 template<typename IndexType, size_t movement_size>
-bool CheckUseHalf2(const IndexType& rows, const IndexType& cols) {
-  return movement_size == 2 && rows % 2 == 0 && cols % 2 == 0;
+bool CheckUseHalf2(const IndexType& rows, const IndexType& cols, const void* src, void* dst) {
+  auto src_ptr = reinterpret_cast<std::uintptr_t>(src);
+  auto dst_ptr = reinterpret_cast<std::uintptr_t>(dst);
+  return (movement_size == 2) && (rows % 2 == 0) && (cols % 2 == 0) && (src_ptr % 4 == 0)
+         && (dst_ptr % 4 == 0);
+  ;
 }
 
 template<size_t num_dims, typename IndexType>
@@ -261,7 +265,7 @@ void LaunchKernel(StreamContext* stream_ctx, const int64_t* src_dims, const void
     InferBatchTransposeShape<num_dims, IndexType>(src_dims, &num_batches, &rows, &cols);
     if (CheckLaunchBatchTranspose<num_dims, kTileSize>(params.permutation, num_batches, rows,
                                                        cols)) {
-      if (CheckUseHalf2<IndexType, movement_size>(rows, cols)) {
+      if (CheckUseHalf2<IndexType, movement_size>(rows, cols, src, dst)) {
         LaunchBatchTransposeKernel<num_dims, 2, kMov2TileSize, IndexType>(cuda_stream, params,
                                                                           num_batches, rows, cols);
       } else {
