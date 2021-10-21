@@ -41,8 +41,8 @@ def diagonal_op(input, offset=0, dim1=0, dim2=1):
         ...     ]
         ... )
         >>> input = flow.tensor(arr, dtype=flow.float32)
-        >>> flow.diagonal(input)
-        tensor([1., 5., 9.], dtype=oneflow.float32)
+        >>> flow.diagonal(input,offset=1,dim1=1,dim2=0)
+        tensor([4., 8.], dtype=oneflow.float32)
     """
     out = flow._C.diagonal(input, offset, dim1, dim2)
     return out
