@@ -53,6 +53,22 @@ class Importer {
   virtual LogicalResult InsertOpResults(Operation*) = 0;
   virtual LogicalResult ProcessUserOp(const ::oneflow::OperatorConf& op) = 0;
   virtual LogicalResult ProcessSystemOp(const ::oneflow::OperatorConf& op) = 0;
+
+  IntegerAttr getSI64IntegerAttr(int64_t value) {
+    return IntegerAttr::get(GetBuilder().getIntegerType(64, /*isSigned=*/true),
+                            APInt(64, value, /*isSigned=*/true));
+  }
+  ArrayAttr getSI32ArrayAttr(ArrayRef<int32_t> values) {
+    auto attrs = llvm::to_vector<8>(llvm::map_range(
+        values, [this](int32_t v) -> Attribute { return GetBuilder().getSI32IntegerAttr(v); }));
+    return GetBuilder().getArrayAttr(attrs);
+  }
+  ArrayAttr getSI64ArrayAttr(ArrayRef<int64_t> values) {
+    auto attrs = llvm::to_vector<8>(
+        llvm::map_range(values, [this](int64_t v) -> Attribute { return getSI64IntegerAttr(v); }));
+    return GetBuilder().getArrayAttr(attrs);
+  }
+
   OpBuilder& GetBuilder() { return builder_; }
   MLIRContext* GetMLIRContext() { return context_; }
   ModuleOp& GetModule() { return module_; }

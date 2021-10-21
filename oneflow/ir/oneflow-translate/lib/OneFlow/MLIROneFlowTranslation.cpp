@@ -96,22 +96,6 @@ class JobImporter : Importer {
   DenseIntElementsAttr DenseIntElementsAttrFromShape(const ::oneflow::ShapeProto& shape);
   LogicalResult ConvertUserOpAttributes(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                         ::oneflow::OperatorConf& op_conf);
-
-  IntegerAttr getSI64IntegerAttr(int64_t value) {
-    return IntegerAttr::get(GetBuilder().getIntegerType(64, /*isSigned=*/true),
-                            APInt(64, value, /*isSigned=*/true));
-  }
-  ArrayAttr getSI32ArrayAttr(ArrayRef<int32_t> values) {
-    auto attrs = llvm::to_vector<8>(llvm::map_range(
-        values, [this](int32_t v) -> Attribute { return GetBuilder().getSI32IntegerAttr(v); }));
-    return GetBuilder().getArrayAttr(attrs);
-  }
-  ArrayAttr getSI64ArrayAttr(ArrayRef<int64_t> values) {
-    auto attrs = llvm::to_vector<8>(
-        llvm::map_range(values, [this](int64_t v) -> Attribute { return getSI64IntegerAttr(v); }));
-    return GetBuilder().getArrayAttr(attrs);
-  }
-
   llvm::Optional<Type> GetTypeFromOneFlowDataType(::oneflow::DataType dt);
   Type GetTensorTypeOfLbn(const std::string& lbn);
 
