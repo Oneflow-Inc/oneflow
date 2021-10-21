@@ -105,17 +105,17 @@ void EpollCommNet::SendMsg(int64_t dst_machine_id, uint64_t addr, size_t size) {
 }
 
 char* EpollCommNet::SerialTokenToData(void* token, size_t* token_size) {
-  char * data=(char*) malloc(sizeof(void*));
-  std::memcpy(data,&token,sizeof(void*));
+  char* data = (char*)malloc(sizeof(void*));
+  std::memcpy(data, &token, sizeof(void*));
   *token_size = sizeof(void*);
   return data;
 }
 
 void* EpollCommNet::DeSerialDataToToken(char* data, size_t* token_size) {
-    char * token = (char*) malloc(sizeof(void*));
-    std::memcpy(token,data,sizeof(void*));
-    *token_size = sizeof(void*);
-    return token;
+  char* token = (char*)malloc(sizeof(void*));
+  std::memcpy(token, data, sizeof(void*));
+  *token_size = sizeof(void*);
+  return token;
 }
 
 void EpollCommNet::SendTransportMsg(int64_t dst_machine_id, const TransportMsg& transport_msg) {
