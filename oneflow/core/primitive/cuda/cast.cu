@@ -33,12 +33,25 @@ struct CastFunctor {
 template<typename To>
 struct CastFunctor<To, half, typename std::enable_if<!std::is_same<To, half>::value>::type> {
   __device__ To operator()(half from) const { return static_cast<To>(static_cast<float>(from)); }
+
+  __device__ void Apply2(To* to, const half* from) const {
+    const float2 f2 = __half22float2(*reinterpret_cast<const half2*>(from));
+    to[0] = static_cast<To>(f2.x);
+    to[1] = static_cast<To>(f2.y);
+  }
 };
 
 template<typename From>
 struct CastFunctor<half, From, typename std::enable_if<!std::is_same<From, half>::value>::type> {
   __device__ half operator()(From from) const {
     return static_cast<half>(static_cast<float>(from));
+  }
+
+  __device__ void Apply2(half* to, const From* from) const {
+    float2 f2;
+    f2.x = static_cast<float>(from[0]);
+    f2.y = static_cast<float>(from[1]);
+    *reinterpret_cast<half2*>(to) = __float22half2_rn(f2);
   }
 };
 
