@@ -58,8 +58,6 @@ class EagerPToSOpKernelState final : public user_op::OpKernelState {
 
   int64_t elem_cnt_per_chunk() const { return elem_cnt_per_chunk_; }
 
-  MemoryCopier* memory_copier() const { return memory_copier_.get(); }
-
   const std::vector<std::shared_ptr<TensorSliceCopier>>& sorted_in_tensor_slice_copier() const {
     return sorted_in_tensor_slice_copier_;
   }
@@ -101,16 +99,14 @@ class EagerPToSOpKernelState final : public user_op::OpKernelState {
         CHECK(!intersection.IsEmpty());
         sorted_p2p_pair_.emplace_back(std::make_pair(src, dst));
         sorted_in_tensor_slice_copier_.emplace_back(
-            std::make_shared<TensorSliceCopier>(intersection, in_slice, data_type));
+            std::make_shared<TensorSliceCopier>(intersection, in_slice, data_type, device_type));
       }
     }
-    memory_copier_.reset(NewDefaultMemoryCopier(device_type));
   }
 
   int64_t elem_cnt_per_chunk_;
   std::vector<std::shared_ptr<TensorSliceCopier>> sorted_in_tensor_slice_copier_;
   std::vector<std::pair<int64_t, int64_t>> sorted_p2p_pair_;
-  std::unique_ptr<MemoryCopier> memory_copier_;
 };
 
 size_t InferEagerPToSKernelTmpBufferSize(user_op::InferContext* ctx) {
@@ -150,7 +146,6 @@ class EagerPToSKernel final : public user_op::OpKernel {
     int64_t elem_cnt_per_chunk = kernel_state->elem_cnt_per_chunk();
     const auto& sorted_in_tensor_slice_copier = kernel_state->sorted_in_tensor_slice_copier();
     const auto& sorted_p2p_pair = kernel_state->sorted_p2p_pair();
-    MemoryCopier* memory_copier = kernel_state->memory_copier();
     CHECK_EQ(sorted_in_tensor_slice_copier.size(), sorted_p2p_pair.size());
 
     Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
@@ -164,7 +159,7 @@ class EagerPToSKernel final : public user_op::OpKernel {
       int64_t dst = p2p_pair.second;
       if (GlobalProcessCtx::Rank() == src) {
         const auto& tensor_slice_copier = sorted_in_tensor_slice_copier.at(i);
-        tensor_slice_copier->Copy(ctx->device_ctx(), *memory_copier, tmp_buffer_ptr, in_ptr);
+        tensor_slice_copier->Copy(ctx->stream_ctx(), tmp_buffer_ptr, in_ptr);
         CHECK_JUST(Send<device_type>(reinterpret_cast<const void*>(tmp_buffer_ptr),
                                      elem_cnt_per_chunk, in->data_type(), dst, ctx->device_ctx()));
       }
