@@ -46,8 +46,7 @@ class MaskedFill : public OpExprGradFunction<MaskedFillCaptureState> {
 
     std::shared_ptr<oneflow::one::Tensor> zero_out = JUST(functional::ZerosLike(x));
     in_grads->resize(2);
-    auto broad_x_grad = JUST(functional::Where(mask, zero_out, out_grads.at(0)));
-    in_grads->at(0) = JUST(functional::BroadcastReduceSumLike(broad_x_grad, x));
+    in_grads->at(0) = JUST(functional::Where(mask, zero_out, out_grads.at(0)));
     return Maybe<void>::Ok();
   }
 };

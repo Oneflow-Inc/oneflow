@@ -1820,6 +1820,20 @@ class MaskedFillFunctor {
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
     }
+    const auto& x_shape = *(x->shape());
+    const auto& mask_shape = *(mask->shape());
+    if (x_shape != mask_shape) {
+      Shape max_shape = Shape::Ones(std::max(x_shape.NumAxes(), mask_shape.NumAxes()));
+      const Shape& x_extend_shape =
+          CreateLeftExtendedShape(ShapeView(x_shape), max_shape.NumAxes());
+      const Shape& mask_extend_shape =
+          CreateLeftExtendedShape(ShapeView(mask_shape), max_shape.NumAxes());
+      FOR_RANGE(int64_t, i, 0, max_shape.NumAxes()) {
+        max_shape.Set(i, std::max(x_extend_shape.At(i), mask_extend_shape.At(i)));
+      }
+      return OpInterpUtil::Dispatch<Tensor>(
+          *op_, {JUST(Expand(x, max_shape)), JUST(Expand(mask, max_shape))}, attrs);
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mask}, attrs);
   }
 

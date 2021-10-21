@@ -29,7 +29,6 @@ class MaskedFillKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     T scalar_operand = static_cast<T>(0);
     if (ctx->Attr<bool>("has_int_operand")) {
@@ -39,44 +38,20 @@ class MaskedFillKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED() << "The scalar in MaskedFill should be float or int.";
     }
-    if (!(x->shape() == mask->shape())) {
-      size_t num_axes = out->shape().NumAxes();
-      int64_t elem_cnt = out->shape().elem_cnt();
-      const size_t x_bytes = GetCudaAlignedSize(elem_cnt * sizeof(T));
-      CondT* mask_tmp_buf = reinterpret_cast<CondT*>(tmp_buffer->mut_dptr<char>() + x_bytes);
-      NdarrayUtil<device_type, T>::BroadcastTo(
-          ctx->device_ctx(), XpuVarNdarray<T>(out->shape(), tmp_buffer->mut_dptr<T>()),
-          XpuVarNdarray<const T>(x->shape(), x->dptr<T>(), num_axes));
-      NdarrayUtil<device_type, CondT>::BroadcastTo(
-          ctx->device_ctx(), XpuVarNdarray<CondT>(out->shape(), mask_tmp_buf),
-          XpuVarNdarray<const CondT>(mask->shape(), mask->dptr<CondT>(), num_axes));
-      WhereKernelUtil<device_type, T, CondT>::WhereXScalar(
-          ctx->device_ctx(), out->shape().elem_cnt(), mask_tmp_buf, scalar_operand,
-          tmp_buffer->mut_dptr<T>(), out->mut_dptr<T>());
-    } else {
-      WhereKernelUtil<device_type, T, CondT>::WhereXScalar(
-          ctx->device_ctx(), out->shape().elem_cnt(), mask->dptr<CondT>(), scalar_operand,
-          x->dptr<T>(), out->mut_dptr<T>());
-    }
+    WhereKernelUtil<device_type, T, CondT>::WhereXScalar(ctx->device_ctx(), out->shape().elem_cnt(),
+                                                         mask->dptr<CondT>(), scalar_operand,
+                                                         x->dptr<T>(), out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MASKED_FILL_KERNEL(device_type_v, dtype_pair, ctype_pair)                    \
-  REGISTER_USER_KERNEL("masked_fill")                                                         \
-      .SetCreateFn<MaskedFillKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),              \
-                                    OF_PP_PAIR_FIRST(ctype_pair)>>()                          \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                             \
-                       & (user_op::HobDataType("mask", 0) == OF_PP_PAIR_SECOND(ctype_pair))   \
-                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))   \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                     \
-        Shape* out_shape = ctx->OutputShape("out", 0);                                        \
-        const size_t x_bytes =                                                                \
-            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair))); \
-        const size_t mask_bytes =                                                             \
-            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(ctype_pair))); \
-        return x_bytes + mask_bytes;                                                          \
-      });
+#define REGISTER_MASKED_FILL_KERNEL(device_type_v, dtype_pair, ctype_pair)                  \
+  REGISTER_USER_KERNEL("masked_fill")                                                       \
+      .SetCreateFn<MaskedFillKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),            \
+                                    OF_PP_PAIR_FIRST(ctype_pair)>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                           \
+                       & (user_op::HobDataType("mask", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
+                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MASKED_FILL_KERNEL, DEVICE_TYPE_SEQ,
                                  ARITHMETIC_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
