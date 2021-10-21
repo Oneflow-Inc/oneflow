@@ -13,20 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/primitive/include/permute.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-
+#include "oneflow/core/primitive/include/permute.h"
 namespace oneflow {
 
 namespace user_op {
 
-// todo!
 template<typename Context>
 std::unique_ptr<primitive::Permute> NewPermutePrimitive(Context* ctx) {
-  const int32_t num_dims = ctx->TensorDesc4ArgNameAndIndex("output", 0)->shape().NumAxes();
+  const int64_t num_dims = ctx->TensorDesc4ArgNameAndIndex("output", 0)->shape().NumAxes();
   return primitive::NewPrimitive<primitive::PermuteFactory>(ctx->device_type(), num_dims);
 }
 
@@ -62,9 +58,9 @@ hob::HobContextGetter<user_op::KernelRegContext, bool> PermutePrimitiveExists() 
                                      });
 }
 
-REGISTER_USER_KERNEL("transpose")              \
-      .SetCreateFn<TransposeKernel>()            \
-      .SetIsMatchedHob(PermutePrimitiveExists() == true);
+REGISTER_USER_KERNEL("transpose")
+    .SetCreateFn<TransposeKernel>()
+    .SetIsMatchedHob(PermutePrimitiveExists() == true);
 
 }  // namespace user_op
 }  // namespace oneflow
