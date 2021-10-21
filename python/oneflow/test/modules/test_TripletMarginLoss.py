@@ -30,12 +30,14 @@ class TestTripletMarginLoss(flow.unittest.TestCase):
         margin = random().to(float)
         p = random().to(float)
         swap = random_bool()
-        reduction=oneof("none", "sum", "mean", nothing())
-        m = torch.nn.TripletMarginLoss(margin=margin, p=p, swap=swap, reduction=reduction)
+        reduction = oneof("none", "sum", "mean", nothing())
+        m = torch.nn.TripletMarginLoss(
+            margin=margin, p=p, swap=swap, reduction=reduction
+        )
         m.train(random())
         device = random_device()
         m.to(device)
-        shape = random_tensor(ndim=2, dim0 = random(1, 8)).value().shape
+        shape = random_tensor(ndim=2, dim0=random(1, 8)).value().shape
         anchor = random_pytorch_tensor(len(shape), *shape).to(device)
         pos = random_pytorch_tensor(len(shape), *shape).to(device)
         neg = random_pytorch_tensor(len(shape), *shape).to(device)

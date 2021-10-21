@@ -983,17 +983,34 @@ class TripletMarginLoss(Module):
         tensor(6.2971, dtype=oneflow.float32)
 
     """
-    def __init__(self, margin: float=1.0, p: float=2.0, eps: float=1e-6, swap: bool=False, size_average=None, reduce=None, reduction: str="mean") -> None:
-       super().__init__()
-       self.margin = margin
-       self.p = p
-       self.eps = eps
-       self.swap = swap
-       self.reduction = reduction  
+
+    def __init__(
+        self,
+        margin: float = 1.0,
+        p: float = 2.0,
+        eps: float = 1e-6,
+        swap: bool = False,
+        size_average=None,
+        reduce=None,
+        reduction: str = "mean",
+    ) -> None:
+        super().__init__()
+        self.margin = margin
+        self.p = p
+        self.eps = eps
+        self.swap = swap
+        self.reduction = reduction
 
     def forward(self, anchor, positive, negative):
         triplet_loss = flow._C.triplet_margin_loss(
-            anchor, positive, negative, margin=self.margin, p=self.p, eps=self.eps,swap=self.swap, reduction =self.reduction
+            anchor,
+            positive,
+            negative,
+            margin=self.margin,
+            p=self.p,
+            eps=self.eps,
+            swap=self.swap,
+            reduction=self.reduction,
         )
         return triplet_loss
 
