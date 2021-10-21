@@ -219,9 +219,9 @@ INTRUSIVE_BEGIN(Instruction);
   const InstructionStatusBuffer& status_buffer() const { return status_buffer_.Get(); }
   bool is_instruction_hook_empty() const { return instruction_hook_.empty(); }
   bool is_dispatched_instruction_hook_empty() const { return dispatched_instruction_hook_.empty(); }
-  bool is_vm_stat_running_instruction_hook_empty() const { return vm_stat_running_instruction_hook_.empty(); }
+  bool is_vm_lifetime_instruction_hook_empty() const { return vm_lifetime_instruction_hook_.empty(); }
   bool is_pending_instruction_hook_empty() const { return pending_instruction_hook_.empty(); }
-  bool is_front_seq_compute_instr_hook_empty() const { return front_seq_compute_instr_hook_.empty(); }
+  bool is_sequential_instruction_hook_empty() const { return sequential_instruction_hook_.empty(); }
   const InEdgeList& in_edges() const { return in_edges_; }
   const OutEdgeList& out_edges() const { return out_edges_; }
   const RwMutexedObjectAccessList& access_list() const { return access_list_; }
@@ -335,7 +335,7 @@ INTRUSIVE_BEGIN(Instruction);
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  Instruction() : intrusive_ref_(), status_buffer_(), instr_msg_(), parallel_desc_(), stream_(), instruction_hook_(), dispatched_instruction_hook_(), vm_stat_running_instruction_hook_(), pending_instruction_hook_(), front_seq_infer_instr_hook_(), front_seq_compute_instr_hook_(), mirrored_object_id2access_(), access_list_(), in_edges_(), out_edges_() {}
+  Instruction() : intrusive_ref_(), status_buffer_(), instr_msg_(), parallel_desc_(), stream_(), instruction_hook_(), dispatched_instruction_hook_(), vm_lifetime_instruction_hook_(), pending_instruction_hook_(), sequential_instruction_hook_(), mirrored_object_id2access_(), access_list_(), in_edges_(), out_edges_() {}
   INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(FlatMsg<InstructionStatusBuffer>, status_buffer_);
@@ -346,12 +346,11 @@ INTRUSIVE_BEGIN(Instruction);
   INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, instruction_hook_);
   // dispatched to Stream
   INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, dispatched_instruction_hook_);
-  // `vm_stat_running_instruction_hook` valid from instruction ready to instruction done 
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, vm_stat_running_instruction_hook_);
+  // valid during vm processing 
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, vm_lifetime_instruction_hook_);
   // pending to ThreadCtx
   INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, pending_instruction_hook_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, front_seq_infer_instr_hook_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, front_seq_compute_instr_hook_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, sequential_instruction_hook_);
   // maps
   INTRUSIVE_DEFINE_FIELD(MirroredObjectId2RwMutexedObjectAccess, mirrored_object_id2access_);
   // lists

@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/thread/thread_consistent_id.h"
 #include "oneflow/core/framework/transport_token.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
@@ -141,14 +142,16 @@ void OneflowVM::Loop(const std::function<void()>& Initializer) {
   Initializer();
   auto* vm = mut_vm();
   while (notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
+    OF_PROFILER_RANGE_PUSH("OneflowVM::Loop");
     // Use ThreadUnsafeEmpty to avoid acquiring mutex lock.
     // It's safe to use ThreadUnsafeEmpty here. notifier_.notified_cnt_ will be greater than zero
     // when inconsistency between vm->pending_msg_list.list_head_.list_head_.container_ and
-    // vm->pending_msg_list.list_head_.list_head_.size_ occured. hence the pending instructions will
-    // get handled in the next iteration.
+    // vm->pending_msg_list.list_head_.list_head_.size_ occured. hence the pending instructions
+    // will get handled in the next iteration.
     //  OneflowVM::Receive may be less effiencient if the thread safe version `vm->Empty()` used
     //  here, because OneflowVM::Loop is more likely to get the mutex lock.
     while (!vm->ThreadUnsafeEmpty()) { vm->Schedule(); }
+    OF_PROFILER_RANGE_POP();
   }
   while (!vm->Empty()) { vm->Schedule(); }
   CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {

@@ -42,10 +42,10 @@ INTRUSIVE_BEGIN(VirtualMachine);
   using ThreadCtxList = intrusive::List<INTRUSIVE_FIELD(ThreadCtx, thread_ctx_hook_)>;
   using LogicalObjectDeleteList = intrusive::List<INTRUSIVE_FIELD(LogicalObject, delete_hook_)>;
   using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, instruction_hook_)>;
-  using VmStatRunningInstructionList =
-      intrusive::List<INTRUSIVE_FIELD(Instruction, vm_stat_running_instruction_hook_)>;
-  using FrontSeqInstructionList =
-      intrusive::List<INTRUSIVE_FIELD(Instruction, front_seq_compute_instr_hook_)>;
+  using VmLifetimeInstructionList =
+      intrusive::List<INTRUSIVE_FIELD(Instruction, vm_lifetime_instruction_hook_)>;
+  using SequentialInstructionList =
+      intrusive::List<INTRUSIVE_FIELD(Instruction, sequential_instruction_hook_)>;
   using InstructionMsgMutextList =
       intrusive::MutexedList<INTRUSIVE_FIELD(InstructionMsg, instr_msg_hook_)>;
   using StreamTypeId2StreamRtDesc = intrusive::SkipList<INTRUSIVE_FIELD(StreamRtDesc, stream_type_id_)>;
@@ -58,13 +58,15 @@ INTRUSIVE_BEGIN(VirtualMachine);
     return default_val.Get();
   }
   const Range& machine_id_range() const { return machine_id_range_; }
-  const std::atomic<int64_t>& flying_instruction_cnt() const { return flying_instruction_cnt_; }
+  std::size_t flying_instruction_cnt() const {
+    return pending_msg_list().thread_unsafe_size() + vm_lifetime_instruction_list_.size();
+  }
   const ActiveStreamList& active_stream_list() const { return active_stream_list_; }
   const ThreadCtxList& thread_ctx_list() const { return thread_ctx_list_; }
   const LogicalObjectDeleteList& delete_logical_object_list() const { return delete_logical_object_list_; }
   const InstructionList& waiting_instruction_list() const { return waiting_instruction_list_; }
-  const VmStatRunningInstructionList& vm_stat_running_instruction_list() const { return vm_stat_running_instruction_list_; }
-  const FrontSeqInstructionList& front_seq_compute_instr_list() const { return front_seq_compute_instr_list_; }
+  const VmLifetimeInstructionList& vm_lifetime_instruction_list() const { return vm_lifetime_instruction_list_; }
+  const SequentialInstructionList& sequential_instruction_list() const { return sequential_instruction_list_; }
   const InstructionMsgMutextList& pending_msg_list() const { return pending_msg_list_; }
   const StreamTypeId2StreamRtDesc& stream_type_id2stream_rt_desc() const { return stream_type_id2stream_rt_desc_; }
   const Id2LogicalObject& id2logical_object() const { return id2logical_object_; }
@@ -74,13 +76,12 @@ INTRUSIVE_BEGIN(VirtualMachine);
     return vm_resource_desc_.Mutable();
   }
   Range* mut_machine_id_range() { return &machine_id_range_; }
-  std::atomic<int64_t>* mut_flying_instruction_cnt() { return &flying_instruction_cnt_; }
   ActiveStreamList* mut_active_stream_list() { return &active_stream_list_; }
   ThreadCtxList* mut_thread_ctx_list() { return &thread_ctx_list_; }
   LogicalObjectDeleteList* mut_delete_logical_object_list() { return &delete_logical_object_list_; }
   InstructionList* mut_waiting_instruction_list() { return &waiting_instruction_list_; }
-  VmStatRunningInstructionList* mut_vm_stat_running_instruction_list() { return &vm_stat_running_instruction_list_; }
-  FrontSeqInstructionList* mut_front_seq_compute_instr_list() { return &front_seq_compute_instr_list_; }
+  VmLifetimeInstructionList* mut_vm_lifetime_instruction_list() { return &vm_lifetime_instruction_list_; }
+  SequentialInstructionList* mut_sequential_instruction_list() { return &sequential_instruction_list_; }
   InstructionMsgMutextList* mut_pending_msg_list() { return &pending_msg_list_; }
   StreamTypeId2StreamRtDesc* mut_stream_type_id2stream_rt_desc() { return &stream_type_id2stream_rt_desc_; }
   Id2LogicalObject* mut_id2logical_object() { return &id2logical_object_; }
@@ -109,10 +110,12 @@ INTRUSIVE_BEGIN(VirtualMachine);
 
   ReadyInstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
 
+  void ReleaseFinishedInstructions();
+  void MovePendingToReadyOrWaiting();
+  void TryRunSequentialInstruction();
+  void DispatchAndPrescheduleInstructions();
 
-  void TryRunFrontSeqInstruction();
   void ReleaseInstruction(Instruction* instruction);
-  void TryReleaseFinishedInstructions(Stream* stream);
   void FilterAndRunInstructionsInAdvance(TmpPendingInstrMsgList* instr_msg_list);
   void MakeInstructions(TmpPendingInstrMsgList*, /*out*/ NewInstructionList* ret_instruction_list);
   template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
@@ -151,7 +154,6 @@ INTRUSIVE_BEGIN(VirtualMachine);
                              Instruction* instrution);
   void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                               NewInstructionList* new_instruction_list);
-  void DispatchAndPrescheduleInstructions();
   void MoveToReadyOrWaiting(NewInstructionList* new_instruction_list);
   void DispatchInstruction(Instruction* instruction);
   void TryDeleteLogicalObjects();
@@ -167,7 +169,6 @@ INTRUSIVE_BEGIN(VirtualMachine);
       : intrusive_ref_(),
         vm_resource_desc_(),
         machine_id_range_(),
-        flying_instruction_cnt_(),
         active_stream_list_(),
         thread_ctx_list_(),
         stream_type_id2stream_rt_desc_(),
@@ -176,14 +177,13 @@ INTRUSIVE_BEGIN(VirtualMachine);
         pending_msg_list_(),
         waiting_instruction_list_(),
         ready_instruction_list_(),
-        vm_stat_running_instruction_list_(),
-        front_seq_compute_instr_list_() {}
+        vm_lifetime_instruction_list_(),
+        sequential_instruction_list_() {}
 
   INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<VmResourceDesc>, vm_resource_desc_);
   INTRUSIVE_DEFINE_FIELD(Range, machine_id_range_);
-  INTRUSIVE_DEFINE_FIELD(std::atomic<int64_t>, flying_instruction_cnt_);
   // lists or maps
   // Do not change the order of the following fields 
   INTRUSIVE_DEFINE_FIELD(ActiveStreamList, active_stream_list_);
@@ -194,9 +194,9 @@ INTRUSIVE_BEGIN(VirtualMachine);
   INTRUSIVE_DEFINE_FIELD(InstructionMsgMutextList, pending_msg_list_);
   INTRUSIVE_DEFINE_FIELD(InstructionList, waiting_instruction_list_);
   INTRUSIVE_DEFINE_FIELD(ReadyInstructionList, ready_instruction_list_);
-  INTRUSIVE_DEFINE_FIELD(VmStatRunningInstructionList, vm_stat_running_instruction_list_);
+  INTRUSIVE_DEFINE_FIELD(VmLifetimeInstructionList, vm_lifetime_instruction_list_);
   // TODO(lixinqi): rename to sequential_instruction_list 
-  INTRUSIVE_DEFINE_FIELD(FrontSeqInstructionList, front_seq_compute_instr_list_);
+  INTRUSIVE_DEFINE_FIELD(SequentialInstructionList, sequential_instruction_list_);
 INTRUSIVE_END(VirtualMachine);
 // clang-format on
 
