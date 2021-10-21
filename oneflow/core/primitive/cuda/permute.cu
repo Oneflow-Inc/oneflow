@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/primitive/include/permute.h"
 #include "oneflow/core/primitive/common/permute.h"
 #include "oneflow/core/stream/cuda_stream_context.h"
-#include "oneflow/core/primitive/cuda/cuda_graph_support.h"
 #include <cuda_runtime.h>
 
 namespace oneflow {
@@ -281,7 +280,7 @@ void LaunchKernel(StreamContext* stream_ctx, const int64_t* src_dims, const void
   }
 }
 
-class PermuteImpl : public Permute, public CudaGraphSupport {
+class PermuteImpl : public Permute {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PermuteImpl);
   PermuteImpl() = default;
