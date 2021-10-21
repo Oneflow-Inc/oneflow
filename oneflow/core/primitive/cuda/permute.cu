@@ -27,9 +27,8 @@ namespace permute_internal {
 
 namespace {
 
-constexpr int32_t kTileSize = 32;  // float tile size.
-constexpr int32_t kMov2TileSize =
-    64;  // cause float16 is half of float32, we need to double tilesize for half kernel.
+constexpr int32_t kMov4TileSize = 32;
+constexpr int32_t kMov2TileSize = 64;
 constexpr int32_t kBlockRows = 8;
 
 template<size_t num_dims, size_t movement_size, typename IndexType>
@@ -228,7 +227,7 @@ bool CheckLaunchBatchTranspose(const int* permutation, const IndexType& num_batc
 }
 
 template<typename IndexType, size_t movement_size>
-bool CheckUseHalf2(const IndexType& rows, const IndexType& cols, const void* src, void* dst) {
+bool CheckUseMov2(const IndexType& rows, const IndexType& cols, const void* src, void* dst) {
   auto src_ptr = reinterpret_cast<std::uintptr_t>(src);
   auto dst_ptr = reinterpret_cast<std::uintptr_t>(dst);
   return (movement_size == 2) && (rows % 2 == 0) && (cols % 2 == 0) && (src_ptr % 4 == 0)
@@ -263,13 +262,13 @@ void LaunchKernel(StreamContext* stream_ctx, const int64_t* src_dims, const void
     IndexType rows;
     IndexType cols;
     InferBatchTransposeShape<num_dims, IndexType>(src_dims, &num_batches, &rows, &cols);
-    if (CheckLaunchBatchTranspose<num_dims, kTileSize>(params.permutation, num_batches, rows,
-                                                       cols)) {
-      if (CheckUseHalf2<IndexType, movement_size>(rows, cols, src, dst)) {
+    if (CheckLaunchBatchTranspose<num_dims, kMov4TileSize>(params.permutation, num_batches, rows,
+                                                           cols)) {
+      if (CheckUseMov2<IndexType, movement_size>(rows, cols, src, dst)) {
         LaunchBatchTransposeKernel<num_dims, 2, kMov2TileSize, IndexType>(cuda_stream, params,
                                                                           num_batches, rows, cols);
       } else {
-        LaunchBatchTransposeKernel<num_dims, movement_size, kTileSize, IndexType>(
+        LaunchBatchTransposeKernel<num_dims, movement_size, kMov4TileSize, IndexType>(
             cuda_stream, params, num_batches, rows, cols);
       }
     } else {
