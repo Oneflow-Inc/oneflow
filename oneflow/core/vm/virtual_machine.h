@@ -107,8 +107,7 @@ INTRUSIVE_BEGIN(VirtualMachine);
   using NewInstructionList = InstructionList;
   using WaitingInstructionList = InstructionList;
 
-  template<typename ContainerT>
-  void TryRunFrontSeqInstruction(ContainerT* front_seq_list);
+  void TryRunFrontSeqInstruction();
   void ReleaseInstruction(Instruction* instruction);
   void TryReleaseFinishedInstructions(Stream* stream);
   void FilterAndRunInstructionsInAdvance(TmpPendingInstrMsgList* instr_msg_list);
@@ -157,6 +156,11 @@ INTRUSIVE_BEGIN(VirtualMachine);
 
   ReadyInstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
 
+  bool Dispatchable(Instruction* instruction) const;
+  void TryDispatchReadyInstructions();
+  void TryMoveFromWaitingToReady(Instruction* instruction);
+  void TryDispatchReadyInstructionsAndPreschedule();
+
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
@@ -175,6 +179,7 @@ INTRUSIVE_BEGIN(VirtualMachine);
         ready_instruction_list_(),
         vm_stat_running_instruction_list_(),
         front_seq_compute_instr_list_() {}
+
   INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<VmResourceDesc>, vm_resource_desc_);
@@ -191,6 +196,7 @@ INTRUSIVE_BEGIN(VirtualMachine);
   INTRUSIVE_DEFINE_FIELD(InstructionList, waiting_instruction_list_);
   INTRUSIVE_DEFINE_FIELD(ReadyInstructionList, ready_instruction_list_);
   INTRUSIVE_DEFINE_FIELD(VmStatRunningInstructionList, vm_stat_running_instruction_list_);
+  // rename to sequential_instruction_list 
   INTRUSIVE_DEFINE_FIELD(FrontSeqInstructionList, front_seq_compute_instr_list_);
 INTRUSIVE_END(VirtualMachine);
 // clang-format on
