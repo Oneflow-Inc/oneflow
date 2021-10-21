@@ -39,11 +39,10 @@ namespace one {
 Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t);
 
 template<typename T>
-inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tensor>& t,
-                                                     PyObject* array,
-                                                     Maybe<void> (*Copy)(uint64_t, NumPyArrayPtr),
-                                                     const std::string& modifier,
-                                                     bool block_host_until_done) {
+inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
+    const std::shared_ptr<Tensor>& t, PyObject* array,
+    Maybe<void> (*Copy)(uint64_t, const NumPyArrayPtr&), const std::string& modifier,
+    bool block_host_until_done) {
   std::shared_ptr<MirroredTensor> tensor;
   CHECK_OR_RETURN(t->is_eager()) << "eager tensors supported only";
   if (t->is_local()) {

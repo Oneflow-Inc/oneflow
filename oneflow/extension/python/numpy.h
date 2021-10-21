@@ -23,6 +23,8 @@ namespace oneflow {
 
 class NumPyArrayPtr final {
  public:
+  NumPyArrayPtr(PyObject* obj)
+      : internal_(std::make_shared<numpy::NumPyArrayInternal>(obj, []() -> void {})) {}
   NumPyArrayPtr(PyObject* obj, const std::function<void()>& deleter)
       : internal_(std::make_shared<numpy::NumPyArrayInternal>(obj, deleter)) {}
 
