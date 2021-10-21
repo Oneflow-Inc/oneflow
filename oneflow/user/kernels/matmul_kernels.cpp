@@ -160,7 +160,7 @@ REGISTER_USER_KERNEL("matmul")
     .SetCreateFn<MatmulKernel>()
     .SetIsMatchedHob((MemcpyPrimitiveExists() == true) & (MatmulPrimitiveExists() == true))
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
-                             user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
+                             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.has_input("_add_to_output", 0)) {
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));
       }
@@ -223,7 +223,7 @@ REGISTER_USER_KERNEL("batch_matmul")
     .SetCreateFn<BatchMatmulKernel>()
     .SetIsMatchedHob((MemcpyPrimitiveExists() == true) & (BatchMatmulPrimitiveExists() == true))
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
-                             user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
+                             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.has_input("_add_to_output", 0)) {
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));
       }
@@ -283,7 +283,7 @@ REGISTER_USER_KERNEL("broadcast_matmul")
     .SetCreateFn<BroadcastMatmulKernel>()
     .SetIsMatchedHob((MemcpyPrimitiveExists() == true) & (MatmulPrimitiveExists() == true))
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
-                             user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
+                             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.has_input("_add_to_output", 0)) {
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));
       }
@@ -347,7 +347,7 @@ REGISTER_USER_KERNEL("broadcast_matmul_grad_b")
     .SetIsMatchedHob((MemcpyPrimitiveExists() == true)
                      & (PrimitiveExistsForBroadcastMatmulGradB() == true))
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
-                             user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
+                             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.has_input("_add_to_output", 0)) {
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));
       }
