@@ -417,17 +417,21 @@ class StackFunctor {
   Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim) const {
     CHECK_GE_OR_RETURN(inputs.size(), 1) << "Needs one input at least.";
     int64_t ndims = inputs.at(0)->shape()->NumAxes();
+    int64_t stack_dim = dim;
     for (int i = 1; i < inputs.size(); ++i) {
       CHECK_EQ_OR_RETURN(inputs.at(i)->shape()->NumAxes(), ndims)
           << "The input dimensions are not equal.";
     }
-    CHECK_OR_RETURN(dim >= 0 && dim <= ndims)
-        << "The stack dim has to be between 0 and the input dimensions of " << ndims;
+    CHECK_OR_RETURN(dim >= -(ndims + 1) && dim <= ndims)
+        << "( Dimension out of range, expected to be in range of [" << -(ndims + 1) << ", " << ndims
+        << "], but got " << dim << " )";
+    if (dim < 0) { stack_dim = stack_dim + ndims + 1; }
     TensorTuple expand_inputs(inputs.size());
+    if (inputs.size() == 1) { return ExpandDims(inputs.at(0), stack_dim); }
     for (int i = 0; i < inputs.size(); ++i) {
-      expand_inputs[i] = JUST(ExpandDims(inputs.at(i), dim));
+      expand_inputs[i] = JUST(ExpandDims(inputs.at(i), stack_dim));
     }
-    return Concat(expand_inputs, dim, inputs.size());
+    return Concat(expand_inputs, stack_dim, inputs.size());
   }
 };
 
@@ -914,9 +918,26 @@ class SqueezeFunctor {
     op_ = CHECK_JUST(one::OpBuilder("squeeze").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::vector<int32_t>& axes) const {
+                           const Optional<std::vector<int32_t>>& dim) const {
+    int32_t ndim = x->shape()->NumAxes();
+    std::vector<int32_t> squeeze_dims(0);
+    if (dim.has_value() == true) {
+      std::vector<int32_t> dims = *JUST(dim);
+      for (int32_t dim_i : dims) {
+        CHECK_OR_RETURN((dim_i >= -(ndim + 1)) && (dim_i <= ndim))
+            << "Dimension out of range (expected to be in range of  [" << -ndim << "," << ndim - 1
+            << "], but got " << dim_i;
+        if (dim_i < 0) { dim_i += ndim; }
+        if (x->shape()->At(dim_i) == 1) { squeeze_dims.push_back(dim_i); }
+      }
+    } else {
+      for (int i = 0; i < ndim; ++i) {
+        if (x->shape()->At(i) == 1) { squeeze_dims.push_back(i); }
+      }
+    }
+
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axes", axes));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axes", squeeze_dims));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -1780,6 +1801,43 @@ class UnsortedBatchSegmentSumFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class MeshgridFunctor {
+ public:
+  Maybe<TensorTuple> operator()(const TensorTuple& tensors) const {
+    int size = tensors.size();
+    CHECK_GT_OR_RETURN(size, 0) << "meshgrid expects a non-empty TensorList";
+    DimVector shape_vec(size);
+    for (int i = 0; i < size; ++i) {
+      CHECK_LE_OR_RETURN(tensors[i]->shape()->NumAxes(), 1)
+          << "Expected scalar or 1D tensor in the tensor list but got: "
+          << tensors[i]->shape()->NumAxes();
+      if (tensors[i]->shape()->NumAxes() == 0) {
+        shape_vec[i] = 1;
+      } else {
+        shape_vec[i] = tensors[i]->shape()->At(0);
+      }
+    }
+    Shape shape(shape_vec);
+
+    for (int i = 0; i < size - 1; ++i) {
+      CHECK_OR_RETURN(
+          (tensors[i]->dtype() == tensors[i + 1]->dtype())
+          && (JUST(tensors[i]->device())->type() == JUST(tensors[i + 1]->device())->type()))
+          << "meshgrid expects all tensors to have the same dtype and device";
+    }
+    TensorTuple outputs(size);
+    for (int i = 0; i < size; ++i) {
+      DimVector view_shape_vec(size, 1);
+      view_shape_vec[i] = -1;
+      Shape view_shape(view_shape_vec);
+      std::shared_ptr<one::Tensor> reshaped = JUST(Reshape(tensors.at(i), view_shape));
+      outputs[i] = JUST(Expand(reshaped, shape));
+    }
+
+    return outputs;
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -1864,6 +1922,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");
   m.add_functor<impl::BatchGatherFunctor>("BatchGather");
   m.add_functor<impl::UnsortedBatchSegmentSumFunctor>("UnsortedBatchSegmentSum");
+  m.add_functor<impl::MeshgridFunctor>("Meshgrid");
 };
 
 }  // namespace functional

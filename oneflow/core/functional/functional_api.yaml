@@ -912,7 +912,9 @@
   bind_python: True
 
 - name: "squeeze"
-  signature: "Tensor (Tensor x, Int32List dim) => Squeeze"
+  signature: [
+    "Tensor (Tensor x, Int32List[1] dim=None) => Squeeze",
+  ]
   bind_python: True
 
 - name: "copy"
@@ -1457,4 +1459,8 @@
 
 - name: "ctc_greedy_decoder"
   signature: "TensorTuple (Tensor log_probs, Tensor input_lengths, Bool merge_repeated=True) => CtcGreedyDecoder"
+  bind_python: True
+
+- name: "meshgrid"
+  signature: "TensorTuple (TensorTuple tensors) => Meshgrid"
   bind_python: True
