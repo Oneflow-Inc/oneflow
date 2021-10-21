@@ -1116,8 +1116,6 @@ class TripletMarginLossFunctor {
       triplet_loss = JUST(ReduceMean(triplet_loss, axis, false));
     } else if (reduction == "sum") {
       triplet_loss = JUST(ReduceSum(triplet_loss, axis, false));
-    } else {
-      triplet_loss = triplet_loss;
     }
     return triplet_loss;
   }
