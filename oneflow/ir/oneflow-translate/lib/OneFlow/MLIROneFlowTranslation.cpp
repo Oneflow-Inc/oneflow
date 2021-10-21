@@ -62,8 +62,6 @@ limitations under the License.
 
 namespace mlir {
 
-namespace {
-
 using PbMessage = google::protobuf::Message;
 
 class JobImporter : Importer {
@@ -961,7 +959,6 @@ OwningModuleRef TranslateOneFlowJobToModule(llvm::StringRef str, MLIRContext* co
       ModuleOp::create(FileLineColLoc::get(context, "", /*line=*/0, /*column=*/0)));
   return module;
 }
-}  // namespace
 
 void RoundTripOneFlowJob(
     RoundTripOneFlowJobWrapperInterface& job_wrapper,
