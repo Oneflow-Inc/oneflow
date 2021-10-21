@@ -71,24 +71,25 @@ class JobImporter : Importer {
       : Importer(context, module), job_(job_wrapper.job()), job_wrapper_(job_wrapper) {}
 
   LogicalResult namedAttributesFromUserOp(const ::oneflow::OperatorConf& op,
-                                          std::vector<NamedAttribute>& attr_vec);
+                                          std::vector<NamedAttribute>& attr_vec) override;
   LogicalResult AppendDataInOperand(const std::string& lbn,
-                                    std::vector<::mlir::Value>& operand_vec);
+                                    std::vector<::mlir::Value>& operand_vec) override;
   LogicalResult AppendCtrlInOperand(const ::oneflow::OperatorConf& op,
-                                    std::vector<::mlir::Value>& operand_vec);
-  LogicalResult AppendCtrlOutType(llvm::SmallVector<Type, 8>& out_types);
-  LogicalResult AddOpConf(const ::oneflow::OperatorConf& op, std::vector<NamedAttribute>& attr_vec);
+                                    std::vector<::mlir::Value>& operand_vec) override;
+  LogicalResult AppendCtrlOutType(llvm::SmallVector<Type, 8>& out_types) override;
+  LogicalResult AddOpConf(const ::oneflow::OperatorConf& op,
+                          std::vector<NamedAttribute>& attr_vec) override;
   LogicalResult AddUserOpInputOutputSegments(const ::oneflow::OperatorConf& op,
-                                             std::vector<NamedAttribute>& attr_vec);
+                                             std::vector<NamedAttribute>& attr_vec) override;
   LogicalResult AddDeviceName(const ::oneflow::OperatorConf& op,
-                              std::vector<NamedAttribute>& attr_vec);
+                              std::vector<NamedAttribute>& attr_vec) override;
   LogicalResult AddOperandSegmentSizes(int32_t input_lbns_size, int32_t ctrl_in_size,
-                                       std::vector<NamedAttribute>& attr_vec);
+                                       std::vector<NamedAttribute>& attr_vec) override;
   LogicalResult AddResultSegmentSizes(int32_t output_lbns_size,
-                                      std::vector<NamedAttribute>& attr_vec);
-  LogicalResult InsertOpResults(Operation*);
-  LogicalResult ProcessUserOp(const ::oneflow::OperatorConf& op);
-  LogicalResult ProcessSystemOp(const ::oneflow::OperatorConf& op);
+                                      std::vector<NamedAttribute>& attr_vec) override;
+  LogicalResult InsertOpResults(Operation*) override;
+  LogicalResult ProcessUserOp(const ::oneflow::OperatorConf& op) override;
+  LogicalResult ProcessSystemOp(const ::oneflow::OperatorConf& op) override;
   LogicalResult ProcessJob();
   LogicalResult TryToUpdateJob();
 

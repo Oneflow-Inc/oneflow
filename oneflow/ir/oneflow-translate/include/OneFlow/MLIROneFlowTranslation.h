@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_MLIRONEFLOWTRANSLATION_H
-#define ONEFLOW_MLIRONEFLOWTRANSLATION_H
+#ifndef ONEFLOW_IR_ONEFLOW_TRANSLATE_INCLUDE_ONEFLOW_MLIRONEFLOWTRANSLATION_H_
+#define ONEFLOW_IR_ONEFLOW_TRANSLATE_INCLUDE_ONEFLOW_MLIRONEFLOWTRANSLATION_H_
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Builders.h"
@@ -33,7 +33,26 @@ class Importer {
         context_(context),
         module_(module),
         unknown_loc_(FileLineColLoc::get(context, "unknown_loc", 0, 0)) {}
-
+  virtual LogicalResult namedAttributesFromUserOp(const ::oneflow::OperatorConf& op,
+                                                  std::vector<NamedAttribute>& attr_vec) = 0;
+  virtual LogicalResult AppendDataInOperand(const std::string& lbn,
+                                            std::vector<::mlir::Value>& operand_vec) = 0;
+  virtual LogicalResult AppendCtrlInOperand(const ::oneflow::OperatorConf& op,
+                                            std::vector<::mlir::Value>& operand_vec) = 0;
+  virtual LogicalResult AppendCtrlOutType(llvm::SmallVector<Type, 8>& out_types) = 0;
+  virtual LogicalResult AddOpConf(const ::oneflow::OperatorConf& op,
+                                  std::vector<NamedAttribute>& attr_vec) = 0;
+  virtual LogicalResult AddUserOpInputOutputSegments(const ::oneflow::OperatorConf& op,
+                                                     std::vector<NamedAttribute>& attr_vec) = 0;
+  virtual LogicalResult AddDeviceName(const ::oneflow::OperatorConf& op,
+                                      std::vector<NamedAttribute>& attr_vec) = 0;
+  virtual LogicalResult AddOperandSegmentSizes(int32_t input_lbns_size, int32_t ctrl_in_size,
+                                               std::vector<NamedAttribute>& attr_vec) = 0;
+  virtual LogicalResult AddResultSegmentSizes(int32_t output_lbns_size,
+                                              std::vector<NamedAttribute>& attr_vec) = 0;
+  virtual LogicalResult InsertOpResults(Operation*) = 0;
+  virtual LogicalResult ProcessUserOp(const ::oneflow::OperatorConf& op) = 0;
+  virtual LogicalResult ProcessSystemOp(const ::oneflow::OperatorConf& op) = 0;
   OpBuilder& GetBuilder() { return builder_; }
   MLIRContext* GetMLIRContext() { return context_; }
   ModuleOp& GetModule() { return module_; }
@@ -77,4 +96,4 @@ void registerFromOneFlowJobTranslation();
 
 }  // namespace mlir
 
-#endif /* ONEFLOW_MLIRONEFLOWTRANSLATION_H */
+#endif  // ONEFLOW_IR_ONEFLOW_TRANSLATE_INCLUDE_ONEFLOW_MLIRONEFLOWTRANSLATION_H_
