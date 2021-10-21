@@ -427,6 +427,9 @@ class StackFunctor {
         << "], but got " << dim << " )";
     if (dim < 0) { stack_dim = stack_dim + ndims + 1; }
     TensorTuple expand_inputs(inputs.size());
+    if(inputs.size()==1){
+      return ExpandDims(inputs.at(0), stack_dim);
+    }
     for (int i = 0; i < inputs.size(); ++i) {
       expand_inputs[i] = JUST(ExpandDims(inputs.at(i), stack_dim));
     }
