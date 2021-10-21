@@ -1,8 +1,0 @@
-syntax = "proto2";
-package oneflow;
-
-import "oneflow/core/common/range.proto";
-
-message TensorSliceViewProto {
-    repeated RangeProto dim = 1;
-}
