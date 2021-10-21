@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/random_generator_impl.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
@@ -34,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 namespace one {
@@ -924,19 +926,38 @@ class SqueezeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+namespace {
+
+  void InitCudaRuntimeOnce(int device_id) {
+  if (device_id == -1) { 
+    device_id = one::detail::GetCudaDeviceIndex();
+  }
+  cudaSetDevice(device_id);
+  OF_CUDA_CHECK(cudaDeviceSynchronize());
+  }
+} // namespace
+
 class CopyFunctor {
  public:
-  CopyFunctor() { op_ = CHECK_JUST(one::OpBuilder("copy").Input("in").Output("out").Build()); }
+  CopyFunctor() { 
+    op_ = CHECK_JUST(one::OpBuilder("copy").Input("in").Output("out").Build());
+    int device_count = one::detail::GetCudaDeviceCount();
+    init_flags_ = std::vector<std::once_flag>(device_count);
+  }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& device_type,
                            const int64_t& device_id) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("device_type", device_type));
     JUST(attrs.SetAttr<int64_t>("device_id", device_id));
+    if (!LazyMode::is_enabled() && device_type == "cuda") {
+      std::call_once(init_flags_[device_id], InitCudaRuntimeOnce, device_id);
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+  static std::vector<std::once_flag> init_flags_;
 };
 
 class FlipFunctor {
