@@ -131,9 +131,17 @@ DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, CopyMirroredTensorFromUntypedArray, MAKE_
 
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                       const Optional<Symbol<Device>>& device, bool requires_grad) {
-  auto* array = PyArray_FromAny(data, nullptr, 0, 0, NPY_ARRAY_DEFAULT, nullptr);
-  if (!array) { return Error::RuntimeError() << "Can not convert input data to a numpy array."; }
-
+  PyObject* array = NULL;
+  if (PyArray_Check(data)) {
+    // If order is NPY_ANYORDER, then the array returned is Fortran-style
+    // contiguous only if the old one is; otherwise, it is C-style contiguous.
+    array = PyArray_NewCopy((PyArrayObject*)data, NPY_ANYORDER);
+  } else {
+    // NPY_ARRAY_DEFAULT is NPY_ARRAY_C_CONTIGUOUS | NPY_ARRAY_BEHAVED, so the
+    // array with NPY_ARRAY_DEFAULT flag is C-style contiguous.
+    array = PyArray_FromAny(data, nullptr, 0, 0, NPY_ARRAY_DEFAULT, nullptr);
+    if (!array) { return Error::RuntimeError() << "Can not convert input data to a numpy array."; }
+  }
   auto* np_arr = reinterpret_cast<PyArrayObject*>(array);
   const npy_intp* dims_ptr = PyArray_SHAPE(np_arr);
   const Shape shape(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));
@@ -180,22 +188,28 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
                                            Symbol<ParallelDesc> placement,
                                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
                                            bool requires_grad) {
-  auto* array = PyArray_FromAny(data, nullptr, 0, 0, NPY_ARRAY_DEFAULT, nullptr);
-  if (!array) { return Error::RuntimeError() << "Can not convert input data to a numpy array."; }
-
+  PyObject* array = NULL;
+  if (PyArray_Check(data)) {
+    // If order is NPY_ANYORDER, then the array returned is Fortran-style
+    // contiguous only if the old one is; otherwise, it is C-style contiguous.
+    array = PyArray_NewCopy((PyArrayObject*)data, NPY_ANYORDER);
+  } else {
+    // NPY_ARRAY_DEFAULT is NPY_ARRAY_C_CONTIGUOUS | NPY_ARRAY_BEHAVED, so the
+    // array with NPY_ARRAY_DEFAULT flag is C-style contiguous.
+    array = PyArray_FromAny(data, nullptr, 0, 0, NPY_ARRAY_DEFAULT, nullptr);
+    if (!array) { return Error::RuntimeError() << "Can not convert input data to a numpy array."; }
+  }
   auto* np_arr = reinterpret_cast<PyArrayObject*>(array);
   const npy_intp* dims_ptr = PyArray_SHAPE(np_arr);
   const Shape shape(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));
   DataType data_type = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
 
   if (placement->parallel_num() > 1) {
-    auto* contiguous_data = PyArray_GETCONTIGUOUS(np_arr);
-    const void* buf_ptr = PyArray_DATA(contiguous_data);
-    size_t array_size = PyArray_SIZE(contiguous_data);
+    const void* buf_ptr = PyArray_DATA(np_arr);
+    size_t array_size = PyArray_SIZE(np_arr);
     CHECK_EQ_OR_RETURN(array_size, shape.elem_cnt());
     size_t byte_size = array_size * GetSizeOfDataType(data_type);
     JUST(DataConsistencyCheck(buf_ptr, byte_size, placement));
-    Py_DECREF(contiguous_data);
   }
 
   const std::string& device_tag = placement->device_tag();

@@ -25,18 +25,14 @@ namespace oneflow {
 namespace numpy {
 
 NumPyArrayInternal::NumPyArrayInternal(PyObject* obj, const std::function<void()>& deleter)
-    : deleter_(deleter) {
-  CHECK_OR_THROW(PyArray_Check(obj)) << "Object is not a numpy array.";
-  obj_ = PyArray_GETCONTIGUOUS((PyArrayObject*)obj);
+    : obj_((PyArrayObject*)obj), deleter_(deleter) {
+  CHECK_OR_THROW(PyArray_Check(obj)) << "The object is not a numpy array.";
+  CHECK_OR_THROW(PyArray_ISCONTIGUOUS(obj_)) << "Contiguous array is expected.";
   size_ = PyArray_SIZE(obj_);
   data_ = PyArray_DATA(obj_);
 }
 
 NumPyArrayInternal::~NumPyArrayInternal() {
-  {
-    py::gil_scoped_acquire acquire;
-    Py_DECREF(obj_);
-  }
   if (deleter_) { deleter_(); }
 }
 

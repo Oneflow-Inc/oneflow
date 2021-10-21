@@ -61,7 +61,10 @@ void ApiCopyMirroredTensorToNumpy(const std::shared_ptr<Tensor>& tensor, py::arr
 
 template<typename T>
 void ApiCopyMirroredTensorFromNumpy(const std::shared_ptr<Tensor>& tensor, py::array_t<T> array) {
-  return CopyBetweenMirroredTensorAndNumpy<T>(tensor, array.ptr(),
+  // When asynchronously copying array data to tensor, we need to back up the
+  // array at the same time.
+  auto* copied_array = PyArray_NewCopy((PyArrayObject*)array.ptr(), NPY_ANYORDER);
+  return CopyBetweenMirroredTensorAndNumpy<T>(tensor, copied_array,
                                               OfBlob_CopyBuffer::template From<T>, "mut",
                                               /*block_host_until_done=*/false)
       .GetOrThrow();

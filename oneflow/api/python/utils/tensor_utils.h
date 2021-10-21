@@ -60,13 +60,8 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
     tensor = JUST(consistent_tensor->cur_rank_phy_tensor());
   }
 
-  Py_INCREF(array);
-  NumPyArrayPtr array_ptr(array, [array]() {
-    py::gil_scoped_acquire acquire;
-    Py_DECREF(array);
-  });
-
   if (block_host_until_done) {
+    NumPyArrayPtr array_ptr(array);
     const auto& Callback = std::make_shared<std::function<void(uint64_t)>>(
         [array_ptr, Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array_ptr)); });
     bool is_printed = false;
@@ -84,6 +79,12 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
           }
         }));
   } else {
+    Py_INCREF(array);
+    NumPyArrayPtr array_ptr(array, [array]() {
+      py::gil_scoped_acquire acquire;
+      Py_DECREF(array);
+    });
+
     JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
       return builder->AccessBlobByCallback(
           tensor,
