@@ -50,8 +50,6 @@ class EagerSymmetricSToPOpKernelState final : public user_op::OpKernelState {
   explicit EagerSymmetricSToPOpKernelState(user_op::KernelInitContext* ctx) { Init(ctx); }
   ~EagerSymmetricSToPOpKernelState() override = default;
 
-  MemoryCopier* memory_copier() const { return memory_copier_.get(); }
-
   const std::shared_ptr<TensorSliceCopier>& tensor_slice_copier() const {
     return tensor_slice_copier_;
   }
@@ -80,12 +78,11 @@ class EagerSymmetricSToPOpKernelState final : public user_op::OpKernelState {
     CHECK(!out_slice.IsEmpty());
     const TensorSliceView& intersection = out_slice.Intersect(in_slice);
     CHECK(!intersection.IsEmpty());
-    tensor_slice_copier_ = std::make_shared<TensorSliceCopier>(out_slice, in_slice, data_type);
-    memory_copier_.reset(NewDefaultMemoryCopier(device_type));
+    tensor_slice_copier_ =
+        std::make_shared<TensorSliceCopier>(out_slice, in_slice, data_type, device_type);
   }
 
   std::shared_ptr<TensorSliceCopier> tensor_slice_copier_;
-  std::unique_ptr<MemoryCopier> memory_copier_;
 };
 
 }  // namespace
@@ -116,8 +113,7 @@ class EagerSymmetricSToPKernel final : public user_op::OpKernel {
                         out_shape_view.elem_cnt() * GetSizeOfDataType(out->data_type()));
 
     const auto& tensor_slice_copier = kernel_state->tensor_slice_copier();
-    MemoryCopier* memory_copier = kernel_state->memory_copier();
-    tensor_slice_copier->Copy(ctx->device_ctx(), *memory_copier, out_ptr, in_ptr);
+    tensor_slice_copier->Copy(ctx->stream_ctx(), out_ptr, in_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
