@@ -22,7 +22,7 @@ namespace oneflow {
 namespace one {
 
 struct MaskedFillCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
+  bool requires_grad = true;
 };
 
 class MaskedFill : public OpExprGradFunction<MaskedFillCaptureState> {
