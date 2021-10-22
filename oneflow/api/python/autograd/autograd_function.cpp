@@ -33,9 +33,10 @@ namespace {
 
 // wrap PyFunction, unpack the inputs from TensorTuple and pack outputs to TensorTuple
 one::AutogradFunctionBase::FType PackPyFunctionToFType(const py::function& func) {
-  return [&func](const std::shared_ptr<one::FunctionAutoGradCaptureState>& ctx,
-                 const one::TensorTuple& inputs) {
-    py::object res = func(ctx, py::args(py::make_tuple(inputs)));
+  return [func](const std::shared_ptr<one::FunctionAutoGradCaptureState>& ctx,
+                const one::TensorTuple& inputs) {
+    const py::tuple& a = py::cast(inputs);
+    py::object res = func(ctx, *a);
     const auto& outputs = std::make_shared<one::TensorTuple>();
     if (py::isinstance<one::Tensor>(res)) {
       outputs->emplace_back(res.cast<std::shared_ptr<one::Tensor>>());
