@@ -147,7 +147,7 @@ def view_op(input, *shape):
     if len(shape) == 1:
         new_shape = shape[0]
         if isinstance(new_shape, int):
-            new_shape = tuple(new_shape)
+            new_shape = (new_shape,)
     else:
         new_shape = shape
     return flow._C.reshape(input, new_shape)
