@@ -725,7 +725,7 @@ def RegisterMethods():
     Tensor.softsign = _softsign
     Tensor.cast = _cast
     Tensor.diag = _diag
-    Tensor.dianonal = _diagonal
+    Tensor.diagonal = _diagonal
     Tensor.log1p = _log1p
     Tensor.add = _add
     Tensor.add_ = _add_inplace
