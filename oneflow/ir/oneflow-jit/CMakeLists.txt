@@ -11,6 +11,8 @@ function(add_llvm_static_library)
 endfunction()
 add_llvm_static_library(MLIROneFlowJIT
   JIT.cpp
+  ADDITIONAL_HEADER_DIRS
+  ${PROJECT_SOURCE_DIR}/oneflow-translate/include
   DEPENDS
 	LINK_LIBS PUBLIC
 	MLIRIR

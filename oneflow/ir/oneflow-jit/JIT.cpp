@@ -22,6 +22,17 @@ OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context) {
   return module;
 }
 
+LogicalResult JitImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
+                                         std::vector<NamedAttribute>& attr_vec) {
+  return success();
+}
+LogicalResult JitImporter::InsertOpResults(Operation*) { return success(); }
+Type JitImporter::GetTensorTypeOfLbn(const std::string& lbn) { return GetBuilder().getF128Type(); }
+::oneflow::AttrType JitImporter::QueryAttrType(const std::string& op_type_name,
+                                               const std::string& attr_name) {
+  return ::oneflow::AttrType::kAtDataType;
+}
+
 }  // namespace ir
 
 }  // namespace one
