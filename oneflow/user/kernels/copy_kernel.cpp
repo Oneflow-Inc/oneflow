@@ -15,9 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/job/lazy_mode.h"
-#include "oneflow/core/job/env_desc.h"
-#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
