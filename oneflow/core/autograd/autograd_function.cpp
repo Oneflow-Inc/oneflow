@@ -24,7 +24,8 @@ namespace one {
 
 AutogradFunctionBase::AutogradFunctionBase(const std::string& func_name, const FType& forward_fn,
                                            const FType& backward_fn) {
-  op_ = CHECK_JUST(FunctionOpExpr::New(func_name, forward_fn, backward_fn));
+  std::string t = std::string(func_name);
+  op_ = CHECK_JUST(FunctionOpExpr::New(t, forward_fn, backward_fn));
 }
 
 Maybe<TensorTuple> AutogradFunctionBase::Apply(const TensorTuple& inputs) const {
