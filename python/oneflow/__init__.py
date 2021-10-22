@@ -42,6 +42,7 @@ locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
 locals()["bfloat16"] = oneflow._oneflow_internal.bfloat16
 from oneflow.version import __version__
+from oneflow.version import __git_commit__
 
 _DEPRECATED = set()
 
@@ -134,6 +135,8 @@ from oneflow._C import argmax
 from oneflow._C import argmin
 from oneflow._C import std
 from oneflow._C import var
+from oneflow._C import stack
+from oneflow._C import squeeze
 
 from . import sbp
 import atexit
@@ -305,8 +308,6 @@ from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.slice import logical_slice_assign_op as logical_slice_assign
 from oneflow.nn.modules.sort import sort_op as sort
 from oneflow.nn.modules.split import split_op as split
-from oneflow.nn.modules.squeeze import squeeze_op as squeeze
-from oneflow.nn.modules.stack import stack
 from oneflow.nn.modules.eye import eye_op as eye
 from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (
