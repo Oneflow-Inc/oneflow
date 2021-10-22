@@ -20,6 +20,7 @@ from itertools import chain
 from typing import Any, Callable, Dict, Union
 
 from oneflow.framework.tensor import Tensor
+from oneflow.nn.graph.block import TensorBlock
 from oneflow.nn.parameter import Parameter
 from oneflow.nn.utils.clip_grad import clip_grad_norm_
 
@@ -31,7 +32,18 @@ class ParamGroup(object):
         # ParamGroup must be constructed by Dict["params": parameters: List[Parameter or Tensor], "...": ...]
         assert isinstance(parameters, dict) and "params" in parameters
         assert not isinstance(parameters["params"], (Parameter, Tensor))
-        self._parameters = list(parameters["params"])
+        self._parameters = list()
+        for p in parameters["params"]:
+            if isinstance(p, (Parameter, Tensor)):
+                self._parameters.append(p)
+            elif isinstance(p, TensorBlock):
+                # Add parameter from nn.Graph
+                self._parameters.append(p.origin)
+            else:
+                raise ValueError(
+                    "parameters in ParamGroup must be Tensor or TensorBlock."
+                )
+
         self._options = deepcopy(default_options)
         for key in self._options:
             if key in parameters:
