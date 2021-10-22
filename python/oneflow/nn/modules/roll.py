@@ -49,9 +49,16 @@ def roll_op(input, shifts, dims=None):
         >>> input.shape
         oneflow.Size([4, 2])
         >>> out = flow.roll(input, 1, 0)
-        >>> out.shape
-        oneflow.Size([4, 2])
-
+        >>> out
+        tensor([[7., 8.],
+                [1., 2.],
+                [3., 4.],
+                [5., 6.]], dtype=oneflow.float32)
+        >>> input.roll(-1, 1)
+        tensor([[2., 1.],
+                [4., 3.],
+                [6., 5.],
+                [8., 7.]], dtype=oneflow.float32)
     """
     assert isinstance(shifts, (int, tuple, list))
     if dims is not None:
