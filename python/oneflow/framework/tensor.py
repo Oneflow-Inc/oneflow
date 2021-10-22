@@ -63,14 +63,11 @@ def _ndim(self):
 
 
 def _nelement(self):
-    prod = 1
-    for dim in self.shape:
-        prod *= dim
-    return prod
+    return self.shape.numel()
 
 
 def _numel(self):
-    return self.nelement()
+    return self.shape.numel()
 
 
 def _element_size(self):
@@ -473,6 +470,10 @@ def _std(self, dim=None, unbiased=True, keepdim=False):
     return flow._C.std(self, dim=dim, unbiased=unbiased, keepdim=keepdim)
 
 
+def _squeeze(self, dim=None):
+    return flow._C.squeeze(self, dim=dim)
+
+
 def _matmul(self, other):
     return flow.matmul(self, other)
 
@@ -765,6 +766,7 @@ def RegisterMethods():
     Tensor.relu = _relu
     Tensor.softmax = _softmax
     Tensor.log_softmax = _log_softmax
+    Tensor.squeeze = _squeeze
 
 
 def register_tensor_op(op_name):
