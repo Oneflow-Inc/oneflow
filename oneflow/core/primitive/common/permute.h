@@ -50,15 +50,27 @@ void SimplifyPermutation(size_t num_dims, const int64_t* src_dims, const int* pe
                          size_t* simplified_num_dims, int64_t* simplified_src_dims,
                          int* simplified_permutation) {
   CHECK_NE(num_dims, 0);
-  int inverse[max_num_dims];
-  for (size_t i = 0; i < num_dims; ++i) { inverse[permutation[i]] = i; }
-  int mapping[max_num_dims];
+  int64_t coalesced_dims[max_num_dims];
+  size_t start_permutation_index = 0;
+  while (start_permutation_index < num_dims) {
+    const size_t start_dim_index = permutation[start_permutation_index];
+    coalesced_dims[start_dim_index] = src_dims[start_dim_index];
+    size_t end_permutation_index = start_permutation_index + 1;
+    const size_t end_dim_index = permutation[end_permutation_index];
+    while (end_permutation_index < num_dims
+           && end_dim_index == permutation[end_permutation_index - 1]) {
+      coalesced_dims[start_dim_index] *= coalesced_dims[end_dim_index];
+      coalesced_dims[end_dim_index] = 1;
+      end_permutation_index += 1;
+    }
+    start_permutation_index = end_permutation_index;
+  }
   size_t valid_num_dims = 0;
+  int mapping[max_num_dims];
   for (size_t i = 0; i < num_dims; ++i) {
-    const int src_dim = src_dims[i];
-    if (src_dim == 1 || (i != 0 && inverse[i] == inverse[i - 1] + 1)) {
+    const int src_dim = coalesced_dims[i];
+    if (src_dim == 1) {
       mapping[i] = -1;
-      if (src_dim != 1) { simplified_src_dims[valid_num_dims - 1] *= src_dim; }
     } else {
       mapping[i] = valid_num_dims;
       simplified_src_dims[valid_num_dims] = src_dim;
