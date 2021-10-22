@@ -58,7 +58,7 @@ void SimplifyPermutation(size_t num_dims, const int64_t* src_dims, const int* pe
     size_t end_permutation_index = start_permutation_index + 1;
     const size_t end_dim_index = permutation[end_permutation_index];
     while (end_permutation_index < num_dims
-           && end_dim_index == permutation[end_permutation_index - 1]) {
+           && end_dim_index == permutation[end_permutation_index - 1] + 1) {
       coalesced_dims[start_dim_index] *= coalesced_dims[end_dim_index];
       coalesced_dims[end_dim_index] = 1;
       end_permutation_index += 1;
