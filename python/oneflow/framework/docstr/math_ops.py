@@ -1199,8 +1199,8 @@ add_docstr(
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> input = flow.tensor([1, 0, -1]), dtype=flow.float32)
-        >>> out = flow.logical_or(input1)
+        >>> input = flow.tensor([1, 0, -1], dtype=flow.float32)
+        >>> out = flow.logical_not(input)
         >>> out
         tensor([0, 1, 0], dtype=oneflow.int8)
     """,
