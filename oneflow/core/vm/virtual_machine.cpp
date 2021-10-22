@@ -103,7 +103,7 @@ void VirtualMachine::ReleaseFinishedInstructions() {
       OF_PROFILER_RANGE_PUSH("ReleaseFinishedInstructions");
       ReleaseInstruction(instruction_ptr);
       stream->mut_running_instruction_list()->Erase(instruction_ptr);
-      stream->DeleteInstruction(mut_vm_lifetime_instruction_list()->Erase(instruction_ptr));
+      stream->DeleteInstruction(mut_lively_instruction_list()->Erase(instruction_ptr));
       OF_PROFILER_RANGE_POP();
     }
     if (stream->running_instruction_list().empty()) { mut_active_stream_list()->Erase(stream); }
@@ -153,15 +153,15 @@ void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
       const auto& stream_type = stream_type_id.stream_type();
       LOG(FATAL) << typeid(instruction_type).name() << " " << typeid(stream_type).name();
     }
-    bool is_sequential_instruction = instruction_type.IsFrontSequential();
-    if (is_sequential_instruction) { CHECK_EQ(stream_rt_desc->stream_id2stream().size(), 1); }
+    bool is_barrier_instruction = instruction_type.IsFrontSequential();
+    if (is_barrier_instruction) { CHECK_EQ(stream_rt_desc->stream_id2stream().size(), 1); }
     const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(stream, stream_rt_desc->mut_stream_id2stream()) {
       if (!IsStreamInParallelDesc(parallel_desc.get(), *stream)) { continue; }
       intrusive::shared_ptr<Instruction> instr = stream->NewInstruction(instr_msg, parallel_desc);
-      mut_vm_lifetime_instruction_list()->PushBack(instr.Mutable());
-      if (is_sequential_instruction) {
-        mut_sequential_instruction_list()->PushBack(instr.Mutable());
+      mut_lively_instruction_list()->PushBack(instr.Mutable());
+      if (is_barrier_instruction) {
+        mut_barrier_instruction_list()->PushBack(instr.Mutable());
       } else {
         new_instruction_list->PushBack(instr.Mutable());
       }
@@ -636,21 +636,21 @@ Maybe<void> VirtualMachine::Receive(intrusive::shared_ptr<InstructionMsg>&& comp
   return Receive(&instr_msg_list);
 }
 
-void VirtualMachine::TryRunSequentialInstruction() {
-  auto* sequnential_instruction = mut_sequential_instruction_list()->Begin();
+void VirtualMachine::TryRunBarrierInstruction() {
+  auto* sequnential_instruction = mut_barrier_instruction_list()->Begin();
   if (likely(sequnential_instruction == nullptr)) { return; }
-  if (likely(sequnential_instruction != mut_vm_lifetime_instruction_list()->Begin())) { return; }
+  if (likely(sequnential_instruction != mut_lively_instruction_list()->Begin())) { return; }
   // All instructions before `sequnential_instruction` are handled now, it's time to handle
   // `sequnential_instruction`.
-  OF_PROFILER_RANGE_PUSH("RunSequentialInstruction");
+  OF_PROFILER_RANGE_PUSH("RunBarrierInstruction");
   const auto& instr_type_id = sequnential_instruction->instr_msg().instr_type_id();
   const auto& instruction_type = instr_type_id.instruction_type();
   CHECK(instruction_type.IsFrontSequential());
   const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
   CHECK(stream_type.SharingVirtualMachineThread());
   stream_type.Run(this, sequnential_instruction);
-  mut_sequential_instruction_list()->Erase(sequnential_instruction);
-  mut_vm_lifetime_instruction_list()->Erase(sequnential_instruction);
+  mut_barrier_instruction_list()->Erase(sequnential_instruction);
+  mut_lively_instruction_list()->Erase(sequnential_instruction);
   OF_PROFILER_RANGE_POP();
 }
 
@@ -689,8 +689,8 @@ void VirtualMachine::Schedule() {
   if (unlikely(pending_msg_list().thread_unsafe_size())) { MovePendingToReadyOrWaiting(); }
   // Release finished instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_active_stream_list()->size())) { ReleaseFinishedInstructions(); }
-  // Try run the first sequential instruction.
-  if (unlikely(mut_sequential_instruction_list()->size())) { TryRunSequentialInstruction(); }
+  // Try run the first barrier instruction.
+  if (unlikely(mut_barrier_instruction_list()->size())) { TryRunBarrierInstruction(); }
   // dispatch ready instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_ready_instruction_list()->size())) { DispatchAndPrescheduleInstructions(); }
 }
