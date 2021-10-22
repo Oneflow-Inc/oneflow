@@ -64,12 +64,13 @@ class SoftmaxBackwardFactoryImpl : public SoftmaxBackwardFactory {
   ~SoftmaxBackwardFactoryImpl() override = default;
 
   std::unique_ptr<SoftmaxBackward> New(DataType data_type) override {
-#define MAKE_NEW_SOFTMAX_ENTRY(type_cpp, type_proto) {type_proto, NewSoftmaxBackward<type_cpp>},
+#define MAKE_NEW_SOFTMAX_BACKWARD_ENTRY(type_cpp, type_proto) \
+  {type_proto, NewSoftmaxBackward<type_cpp>},
 
     static const std::map<DataType, std::function<std::unique_ptr<SoftmaxBackward>()>>
         new_softmax_backward_handle{
-            OF_PP_FOR_EACH_TUPLE(MAKE_NEW_SOFTMAX_ENTRY, CPU_PRIMITIVE_FLOATING_TYPE_SEQ)};
-#undef MAKE_NEW_SOFTMAX_ENTRY
+            OF_PP_FOR_EACH_TUPLE(MAKE_NEW_SOFTMAX_BACKWARD_ENTRY, CPU_PRIMITIVE_FLOATING_TYPE_SEQ)};
+#undef MAKE_NEW_SOFTMAX_BACKWARD_ENTRY
     const auto it = new_softmax_backward_handle.find(data_type);
     if (it != new_softmax_backward_handle.end()) {
       return it->second();
