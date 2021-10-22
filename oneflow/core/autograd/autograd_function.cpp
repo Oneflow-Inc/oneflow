@@ -30,7 +30,7 @@ AutogradFunctionBase::AutogradFunctionBase(const std::string& func_name, const F
 Maybe<TensorTuple> AutogradFunctionBase::Apply(const TensorTuple& inputs) const {
   std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>();
   JUST(OpInterpUtil::Dispatch(*op_, inputs, outputs.get(), {}));
-  // TODO(wyg): construct ctx, do forward and process outputs autograd_meta
+  // TODO(wyg): process outputs autograd_meta
   return outputs;
 }
 

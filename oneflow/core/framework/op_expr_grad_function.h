@@ -130,15 +130,20 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
   }
 };
 
-class CustomOpExprGradFunction final : public OpExprGradFunctionIf {
+class FunctionOpExprGradFunction final : public OpExprGradFunctionIf {
  public:
   using FType = AutogradFunctionBase::FType;
-  explicit CustomOpExprGradFunction(const FType& backward_fn) : backward_fn_(backward_fn) {}
+  explicit FunctionOpExprGradFunction(const FType& backward_fn) : backward_fn_(backward_fn) {}
 
   std::shared_ptr<AutoGradCaptureState> MakeCustomState() const override {
     PRINT_BUG_PROMPT_AND_ABORT()
         << "You should not construct AutoGradCaptureState by calling this function";
     return std::make_shared<FunctionAutoGradCaptureState>();
+  }
+
+  Maybe<void> Init(const OpExpr& op) override {
+    // do nothing
+    return Maybe<void>::Ok();
   }
 
   Maybe<void> CaptureIf(AutoGradCaptureState* ctx, const TensorTuple& inputs,
@@ -150,8 +155,12 @@ class CustomOpExprGradFunction final : public OpExprGradFunctionIf {
 
   Maybe<void> ApplyIf(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,
                       TensorTuple* in_grads) const override {
-    // TODO(wyg): Call backward_fn_
-    OF_UNIMPLEMENTED();
+    const FunctionAutoGradCaptureState* func_ctx =
+        dynamic_cast<const FunctionAutoGradCaptureState*>(ctx);
+    CHECK_NOTNULL_OR_RETURN(func_ctx);
+    const std::shared_ptr<TensorTuple>& out = backward_fn_(func_ctx, out_grads);
+    in_grads->assign(out->begin(), out->end());
+    return Maybe<void>::Ok();
   }
 
  protected:

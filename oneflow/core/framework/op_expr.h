@@ -301,14 +301,11 @@ class FunctionOpExpr final : public OpExpr {
   FType forward() const { return forward_fn_; }
   FType backward() const { return backward_fn_; }
 
-  std::shared_ptr<const AutoGradCaptureState> state() const { return state_; }
-  std::shared_ptr<AutoGradCaptureState> mutable_state() { return state_; }
+  std::shared_ptr<FunctionAutoGradCaptureState> state() const { return state_; }
+  void reset_state() const;
 
   Maybe<bool> IsGradDisabled() const override { return false; }
-  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override {
-    // TODO(wyg): construct autograd.Function OpGradClosure
-    OF_UNIMPLEMENTED();
-  }
+  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
   FunctionOpExpr(const std::string& func_name, const FType& forward_fn, const FType& backward_fn)
@@ -317,7 +314,7 @@ class FunctionOpExpr final : public OpExpr {
   FType forward_fn_;
   FType backward_fn_;
   std::string func_name_;
-  std::shared_ptr<AutoGradCaptureState> state_;
+  mutable std::shared_ptr<FunctionAutoGradCaptureState> state_;
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 

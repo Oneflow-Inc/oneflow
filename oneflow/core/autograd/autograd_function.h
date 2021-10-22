@@ -28,8 +28,8 @@ class OpExpr;
 
 class AutogradFunctionBase {
  public:
-  using FType = std::function<std::shared_ptr<TensorTuple>(
-      const std::shared_ptr<FunctionAutoGradCaptureState>&, const TensorTuple&)>;
+  using FType = std::function<std::shared_ptr<TensorTuple>(const FunctionAutoGradCaptureState*,
+                                                           const TensorTuple&)>;
   AutogradFunctionBase() = delete;
   virtual ~AutogradFunctionBase() = default;
   AutogradFunctionBase(const std::string& func_name, const FType& forward_fn,
