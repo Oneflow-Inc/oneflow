@@ -37,39 +37,36 @@ TensorSliceView GetRawTenserSliceView(const TensorSliceView& view, DataType data
 
 TensorSliceCopier::TensorSliceCopier(const TensorSliceView& dst_view,
                                      const TensorSliceView& src_view,
-                                     const TensorSliceView& copy_view, const DataType data_type)
-    : dst_view_(dst_view), src_view_(src_view), data_type_(data_type) {
+                                     const TensorSliceView& copy_view, const DataType data_type,
+                                     const DeviceType device_type)
+    : dst_view_(dst_view), src_view_(src_view), extent_(copy_view.shape()), data_type_(data_type) {
+  copy_nd_primitive_ =
+      primitive::NewPrimitive<primitive::CopyNdFactory>(device_type, dst_view_.shape().NumAxes());
   CHECK(dst_view.Contains(copy_view));
   CHECK(src_view.Contains(copy_view));
-  TensorSliceView dst_raw_view = GetRawTenserSliceView(dst_view, data_type);
-  TensorSliceView src_raw_view = GetRawTenserSliceView(src_view, data_type);
-  TensorSliceView copy_raw_view = GetRawTenserSliceView(copy_view, data_type);
-  MemoryCopyNdDesc raw_copy_desc;
-  raw_copy_desc.dst_shape = dst_raw_view.shape();
-  raw_copy_desc.src_shape = src_raw_view.shape();
-  raw_copy_desc.dst_pos = copy_raw_view.OffsetTo(dst_raw_view);
-  raw_copy_desc.src_pos = copy_raw_view.OffsetTo(src_raw_view);
-  raw_copy_desc.extent = copy_raw_view.shape();
-  memory_copy_nd_desc_ = raw_copy_desc.CreateDimReducedDesc();
-  memory_copy_nd_desc_.data_type = data_type;
+  dst_pos_ = copy_view.OffsetTo(dst_view);
+  src_pos_ = copy_view.OffsetTo(src_view);
 }
 
 TensorSliceCopier::TensorSliceCopier(const TensorSliceView& dst_view,
-                                     const TensorSliceView& src_view, const DataType data_type)
-    : TensorSliceCopier(dst_view, src_view, dst_view.Intersect(src_view), data_type) {}
+                                     const TensorSliceView& src_view, const DataType data_type,
+                                     const DeviceType device_type)
+    : TensorSliceCopier(dst_view, src_view, dst_view.Intersect(src_view), data_type, device_type) {}
 
-void TensorSliceCopier::Copy(DeviceCtx* ctx, const MemoryCopier& copier, void* dst,
-                             const void* src) const {
-  copier.Copy(ctx, dst, src, memory_copy_nd_desc_);
+void TensorSliceCopier::Copy(StreamContext* stream_ctx, void* dst, const void* src) const {
+  copy_nd_primitive_->Launch(stream_ctx, data_type_, dst_view_.shape().NumAxes(), dst,
+                             dst_view_.shape().dim_vec().data(), dst_pos_.dim_vec().data(), src,
+                             src_view_.shape().dim_vec().data(), src_pos_.dim_vec().data(),
+                             extent_.dim_vec().data());
 }
 
-void TensorSliceCopier::Copy(DeviceCtx* ctx, const MemoryCopier& copier, Blob* dst_blob,
+void TensorSliceCopier::Copy(StreamContext* stream_ctx, Blob* dst_blob,
                              const Blob* src_blob) const {
   CHECK_EQ(dst_blob->data_type(), data_type_);
   CHECK_EQ(src_blob->data_type(), data_type_);
   CHECK_EQ(dst_view_.shape().elem_cnt(), dst_blob->shape().elem_cnt());
   CHECK_EQ(src_view_.shape().elem_cnt(), src_blob->shape().elem_cnt());
-  Copy(ctx, copier, dst_blob->mut_dptr(), src_blob->dptr());
+  Copy(stream_ctx, dst_blob->mut_dptr(), src_blob->dptr());
 }
 
 }  // namespace oneflow

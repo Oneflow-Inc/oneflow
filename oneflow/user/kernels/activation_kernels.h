@@ -38,6 +38,27 @@ struct EluGradFunctor {
 };
 
 template<typename T>
+struct CeluFunctor {
+  OF_DEVICE_FUNC explicit CeluFunctor(float alpha) : alpha(alpha), inv_alpha(1.0f / alpha) {}
+  OF_DEVICE_FUNC T operator()(T x) const {
+    return (x > static_cast<T>(0))
+               ? x
+               : static_cast<T>(alpha * (exp(x * inv_alpha) - static_cast<T>(1)));
+  }
+  const T alpha;
+  const T inv_alpha;
+};
+
+template<typename T>
+struct CeluGradFunctor {
+  OF_DEVICE_FUNC explicit CeluGradFunctor(float alpha) : inv_alpha(1.0f / alpha) {}
+  OF_DEVICE_FUNC T operator()(T x, T dy) const {
+    return (x > static_cast<T>(0)) ? dy : dy * static_cast<T>(exp(x * inv_alpha));
+  }
+  const T inv_alpha;
+};
+
+template<typename T>
 struct HardswishFunctor {
   OF_DEVICE_FUNC T operator()(const T x) const {
     if (x <= static_cast<T>(-3)) {
@@ -209,6 +230,20 @@ struct ReluGradFunctor {
       [](user_op::KernelComputeContext* ctx) {                    \
         return EluGradFunctor<dtype>(ctx->Attr<double>("alpha")); \
       },                                                          \
+      "dx", "x", "dy");
+
+#define REGISTER_CELU_KERNEL(device, dtype)                        \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                             \
+      device, "celu", CeluFunctor, dtype, dtype,                   \
+      [](user_op::KernelComputeContext* ctx) {                     \
+        return CeluFunctor<dtype>(ctx->Attr<double>("alpha"));     \
+      },                                                           \
+      "out", "in");                                                \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                            \
+      device, "celu_grad", CeluGradFunctor, dtype, dtype, dtype,   \
+      [](user_op::KernelComputeContext* ctx) {                     \
+        return CeluGradFunctor<dtype>(ctx->Attr<double>("alpha")); \
+      },                                                           \
       "dx", "x", "dy");
 
 #define REGISTER_HARDSWISH_KERNEL(device, dtype)                                                   \

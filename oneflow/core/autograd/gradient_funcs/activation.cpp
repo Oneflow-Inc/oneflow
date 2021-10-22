@@ -292,6 +292,47 @@ class Elu : public OpExprGradFunction<EluCaptureState> {
   AttrMap base_attrs_;
 };
 
+struct CeluCaptureState : public AutoGradCaptureState {
+  bool requires_grad = true;
+  double alpha = 1.0;
+};
+
+class Celu : public OpExprGradFunction<CeluCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Capture(CeluCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    ctx->requires_grad = inputs.at(0)->requires_grad();
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    ctx->alpha = JUST(composed_attrs.GetAttr<double>("alpha"));
+    ctx->SaveTensorForBackward(inputs.at(0));
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const CeluCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    in_grads->resize(1);
+    if (ctx->requires_grad) {
+      const auto& x = ctx->SavedTensors().at(0);
+      in_grads->at(0) = JUST(functional::CeluGrad(x, out_grads.at(0), ctx->alpha));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  AttrMap base_attrs_;
+};
+
 struct PReLUCaptureState : public AutoGradCaptureState {
   bool input_requires_grad;
   bool alpha_requires_grad;
@@ -342,6 +383,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("hardswish", HardSwish);
 REGISTER_OP_EXPR_GRAD_FUNCTION("leaky_relu", LeakyRelu);
 REGISTER_OP_EXPR_GRAD_FUNCTION("hardtanh", HardTanh);
 REGISTER_OP_EXPR_GRAD_FUNCTION("elu", Elu);
+REGISTER_OP_EXPR_GRAD_FUNCTION("celu", Celu);
 REGISTER_OP_EXPR_GRAD_FUNCTION("prelu", PReLU);
 
 }  // namespace one
