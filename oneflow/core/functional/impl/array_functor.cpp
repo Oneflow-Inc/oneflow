@@ -1804,6 +1804,46 @@ class UnsortedBatchSegmentSumFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class MaskedFillFunctor {
+ public:
+  MaskedFillFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("masked_fill").Input("x").Input("mask").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& mask, const Scalar& value) const {
+    MutableAttrMap attrs;
+    if (IsFloatingDataType(x->dtype()->data_type())) {
+      JUST(attrs.SetAttr<double>("float_operand", JUST(value.As<double>())));
+      JUST(attrs.SetAttr<bool>("has_float_operand", true));
+      JUST(attrs.SetAttr<bool>("has_int_operand", false));
+    } else if (IsIntegralDataType(x->dtype()->data_type())) {
+      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(value.As<int64_t>())));
+      JUST(attrs.SetAttr<bool>("has_float_operand", false));
+      JUST(attrs.SetAttr<bool>("has_int_operand", true));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
+    }
+    const auto& x_shape = *(x->shape());
+    const auto& mask_shape = *(mask->shape());
+    if (x_shape != mask_shape) {
+      Shape max_shape = Shape::Ones(std::max(x_shape.NumAxes(), mask_shape.NumAxes()));
+      const Shape& x_extend_shape =
+          CreateLeftExtendedShape(ShapeView(x_shape), max_shape.NumAxes());
+      const Shape& mask_extend_shape =
+          CreateLeftExtendedShape(ShapeView(mask_shape), max_shape.NumAxes());
+      FOR_RANGE(int64_t, i, 0, max_shape.NumAxes()) {
+        max_shape.Set(i, std::max(x_extend_shape.At(i), mask_extend_shape.At(i)));
+      }
+      return OpInterpUtil::Dispatch<Tensor>(
+          *op_, {JUST(Expand(x, max_shape)), JUST(Expand(mask, max_shape))}, attrs);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mask}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class MeshgridFunctor {
  public:
   Maybe<TensorTuple> operator()(const TensorTuple& tensors) const {
@@ -1925,6 +1965,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");
   m.add_functor<impl::BatchGatherFunctor>("BatchGather");
   m.add_functor<impl::UnsortedBatchSegmentSumFunctor>("UnsortedBatchSegmentSum");
+  m.add_functor<impl::MaskedFillFunctor>("MaskedFill");
   m.add_functor<impl::MeshgridFunctor>("Meshgrid");
 };
 

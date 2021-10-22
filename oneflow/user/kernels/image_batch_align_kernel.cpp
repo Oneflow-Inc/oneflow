@@ -35,7 +35,7 @@ void CopyFromTensorBuffer(T* image_ptr, const TensorBuffer& image_buffer, const 
   FOR_RANGE(int, i, 0, h) {
     const F* from = image_buffer.data<F>() + i * w * c;
     T* to = image_ptr + i * batch_width * channels;
-    CopyElem(from, to, w * c);
+    std::transform(from, from + w * c, to, [](F v) { return static_cast<T>(v); });
   }
 }
 
