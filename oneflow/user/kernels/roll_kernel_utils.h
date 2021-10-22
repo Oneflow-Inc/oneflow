@@ -20,18 +20,21 @@ limitations under the License.
 
 namespace oneflow {
 
-const int32_t NDIMS = 16;
+const int32_t MAX_DIMS = 16;
 
 struct SHIFTS {
-  int32_t val[NDIMS];
+  int32_t val[MAX_DIMS];
 };
 
 struct SHAPE {
-  int32_t val[NDIMS];
+  int32_t val[MAX_DIMS];
 };
 
 struct STRIDE {
-  int32_t val[NDIMS];
+  STRIDE() {
+    for (int i = 0; i < MAX_DIMS; ++i) { val[i] = 1; }
+  }
+  int32_t val[MAX_DIMS];
 };
 
 OF_DEVICE_FUNC int32_t getShiftedOffset(const int32_t offset, const int32_t* shifts,
@@ -46,19 +49,18 @@ OF_DEVICE_FUNC int32_t getShiftedOffset(const int32_t offset, const int32_t* shi
     const int32_t idx = remaining / stride[i];
     // NOTE(Liang Depeng):
     // Compute the shifted index of each axis.
-    // In C++ the sign of the result of `%` operation is the same of the dividend,
-    // but we want to the circle index when `idx - shifts[i]` is negative.
-    // So we just add the divisor `shape[i]` to the result and do the `%` operation one more time.
-    const int32_t shifted_idx = (((idx - shifts[i]) % shape[i]) + shape[i]) % shape[i];
+    int32_t shifted_idx = (idx - shifts[i]) % shape[i];
+    // In C++ the sign of the result of `%` operation is the same of the dividend.
+    // This correct the result when `idx - shifts[i]` is negative.
+    if (shifted_idx < 0) shifted_idx = shifted_idx + shape[i];
     out_offset += shifted_idx * stride[i];
     remaining = remaining - idx * stride[i];
   }
   return out_offset;
 }
 
-static void initStride(int32_t* stride, const int32_t* dim_vec, const int32_t dims) {
-  stride[dims - 1] = 1;
-  for (int i = dims - 2; i >= 0; --i) { stride[i] = dim_vec[i + 1] * stride[i + 1]; }
+static void initStride(STRIDE& stride, const SHAPE& dim_vec, const int32_t dims) {
+  for (int i = dims - 2; i >= 0; --i) { stride.val[i] = dim_vec.val[i + 1] * stride.val[i + 1]; }
 }
 
 static void computeParams(const ShapeView& in_shape, const std::vector<int32_t>& shifts,
