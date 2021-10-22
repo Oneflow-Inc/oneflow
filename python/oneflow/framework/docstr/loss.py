@@ -67,7 +67,7 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> triplet_loss = flow._C.triplet_margin_loss(margin=1.0, p=2)
+        >>> triplet_loss = flow.nn.TripletMarginLoss(margin=1.0, p=2)
         >>> anchor = np.array([[1, -1, 1],[-1, 1, -1], [1, 1, 1]])
         >>> positive = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
         >>> negative = np.array([[2, 2, 2], [2, 2, 2], [2, 2, 2]])
