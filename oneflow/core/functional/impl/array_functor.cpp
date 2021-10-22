@@ -16,6 +16,10 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -32,9 +36,6 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"
-#include "oneflow/core/common/global.h"
-#include "oneflow/core/common/optional.h"
-#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 namespace one {
@@ -925,32 +926,15 @@ class SqueezeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-namespace {
-
-  void InitCudaRuntimeOnce(int device_id) {
-  if (device_id == -1) { 
-    device_id = one::detail::GetCudaDeviceIndex();
-  }
-  cudaSetDevice(device_id);
-  OF_CUDA_CHECK(cudaDeviceSynchronize());
-  }
-} // namespace
-
 class CopyFunctor {
  public:
-  CopyFunctor() { 
-    op_ = CHECK_JUST(one::OpBuilder("copy").Input("in").Output("out").Build());
-  }
+  CopyFunctor() { op_ = CHECK_JUST(one::OpBuilder("copy").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& device_type,
                            const int64_t& device_id) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("device_type", device_type));
     JUST(attrs.SetAttr<int64_t>("device_id", device_id));
-    int device_count = one::detail::GetCudaDeviceCount();
-    std::vector<std::once_flag> init_flags_ = std::vector<std::once_flag>(device_count);
-    if (!LazyMode::is_enabled() && device_type == "cuda") {
-      std::call_once(init_flags_[device_id], InitCudaRuntimeOnce, device_id);
-    }
+    if (device_type == "cuda") { InitCudaContextOnce(device_id); }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
