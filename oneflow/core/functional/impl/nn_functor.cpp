@@ -1359,6 +1359,10 @@ class PadFunctor {
       return OpInterpUtil::Dispatch<Tensor>(*pad_, {x}, attrs);
 
     } else if (mode == "reflect") {
+      const int64_t pad_h = x->shape()->dim_vec().at(2);
+      const int64_t pad_w = x->shape()->dim_vec().at(3);
+      CHECK_OR_RETURN(pad[2] < pad_h && pad[3] < pad_h && pad[0] < pad_w && pad[1] < pad_w)
+          << "padding size should be less than the corresponding input dimension!";
       return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_, {x}, attrs);
     } else if (mode == "replicate") {
       return OpInterpUtil::Dispatch<Tensor>(*replicate_pad_, {x}, attrs);
