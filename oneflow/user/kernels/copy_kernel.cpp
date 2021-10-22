@@ -23,24 +23,6 @@ namespace oneflow {
 
 namespace {
 
-static int GetCudaDeviceIndex() {
-  int cuda_device_index = 0;
-  if (CHECK_JUST(GlobalMultiClientEnv())) {
-    cuda_device_index = GlobalProcessCtx::LocalRank();
-  } else {
-    OF_CUDA_CHECK(cudaGetDevice(&cuda_device_index));
-  }
-  return cuda_device_index;
-}
-
-static void InitCudaRuntimeOnce(int device_id) {
-  if (device_id == -1) { 
-    device_id = GetCudaDeviceIndex();
-  }
-  cudaSetDevice(device_id);
-  OF_CUDA_CHECK(cudaDeviceSynchronize());
-}
-
 class CopyKernel final : public user_op::OpKernel {
  public:
   CopyKernel() = default;
@@ -54,11 +36,6 @@ class CopyKernel final : public user_op::OpKernel {
     CHECK_EQ(out->shape(), in_shape);
     const DataType in_data_type = in->data_type();
     CHECK_EQ(out->data_type(), in_data_type);
-    std::string out_device_type = ctx->Attr<std::string>("device_type");
-    int64_t out_device_id = ctx->Attr<int64_t>("device_id");
-    if (!LazyMode::is_enabled() && out_device_type == "cuda") {
-      InitCudaRuntimeOnce(out_device_id);
-    }
     if (in_shape.elem_cnt() == 0) {
       CHECK_ISNULL(in->raw_dptr());
       CHECK_ISNULL(out->mut_raw_dptr());
