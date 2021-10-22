@@ -1,6 +1,6 @@
 add_llvm_library(MLIROneFlowTranslation
         MLIROneFlowTranslation.cpp
-
+        Importer.cpp
         ADDITIONAL_HEADER_DIRS
         ${PROJECT_SOURCE_DIR}/oneflow-translate/include/OneFlow
 

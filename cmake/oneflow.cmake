@@ -350,6 +350,8 @@ if (WITH_MLIR)
   set(ONEFLOW_MLIR_LIBS -Wl,--no-as-needed MLIROneFlowExtension -Wl,--as-needed)
   include_directories(${LLVM_INCLUDE_DIRS})
   include_directories(${MLIR_INCLUDE_DIRS})
+  include_directories(${ONEFLOW_MLIR_SOURCE_INCLUDE_DIRS})
+  include_directories(${ONEFLOW_MLIR_BINARY_INCLUDE_DIRS})
 endif()
 
 if(APPLE)
