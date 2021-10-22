@@ -372,8 +372,10 @@ def _cast(self, dtype):
 def _diag(self, diagonal=0):
     return flow.diag(self, diagonal=diagonal)
 
-def _diagonal(self,offset=0,dim1=0,dim2=1):
+
+def _diagonal(self, offset=0, dim1=0, dim2=1):
     return flow.diagonal(self, offset=offset, dim1=dim1, dim2=dim2)
+
 
 def _log1p(self):
     return flow.log1p(self)
