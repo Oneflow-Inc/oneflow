@@ -133,13 +133,12 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
                                       const Optional<Symbol<Device>>& device, bool requires_grad) {
   PyObject* array = NULL;
   if (PyArray_Check(data)) {
-    // If order is NPY_ANYORDER, then the array returned is Fortran-style
-    // contiguous only if the old one is; otherwise, it is C-style contiguous.
-    array = PyArray_NewCopy((PyArrayObject*)data, NPY_ANYORDER);
+    // Only NPY_CORDER is supported, and returns a new C-style contiguous array.
+    array = PyArray_NewCopy((PyArrayObject*)data, NPY_CORDER);
   } else {
     // NPY_ARRAY_DEFAULT is NPY_ARRAY_C_CONTIGUOUS | NPY_ARRAY_BEHAVED, so the
     // array with NPY_ARRAY_DEFAULT flag is C-style contiguous.
-    array = PyArray_FromAny(data, nullptr, 0, 0, NPY_ARRAY_DEFAULT, nullptr);
+    array = PyArray_FromAny(data, nullptr, 0, 0, NPY_ARRAY_DEFAULT | NPY_ARRAY_ENSURECOPY, nullptr);
     if (!array) { return Error::RuntimeError() << "Can not convert input data to a numpy array."; }
   }
   auto* np_arr = reinterpret_cast<PyArrayObject*>(array);
@@ -190,13 +189,12 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
                                            bool requires_grad) {
   PyObject* array = NULL;
   if (PyArray_Check(data)) {
-    // If order is NPY_ANYORDER, then the array returned is Fortran-style
-    // contiguous only if the old one is; otherwise, it is C-style contiguous.
-    array = PyArray_NewCopy((PyArrayObject*)data, NPY_ANYORDER);
+    // Only NPY_CORDER is supported, and returns a new C-style contiguous array.
+    array = PyArray_NewCopy((PyArrayObject*)data, NPY_CORDER);
   } else {
     // NPY_ARRAY_DEFAULT is NPY_ARRAY_C_CONTIGUOUS | NPY_ARRAY_BEHAVED, so the
     // array with NPY_ARRAY_DEFAULT flag is C-style contiguous.
-    array = PyArray_FromAny(data, nullptr, 0, 0, NPY_ARRAY_DEFAULT, nullptr);
+    array = PyArray_FromAny(data, nullptr, 0, 0, NPY_ARRAY_DEFAULT | NPY_ARRAY_ENSURECOPY, nullptr);
     if (!array) { return Error::RuntimeError() << "Can not convert input data to a numpy array."; }
   }
   auto* np_arr = reinterpret_cast<PyArrayObject*>(array);
