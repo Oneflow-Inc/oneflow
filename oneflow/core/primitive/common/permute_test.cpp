@@ -28,9 +28,9 @@ template<size_t max_num_dims>
 void TestSimplifyPermutation(size_t num_dims, const int64_t* src_dims, const int* permutation,
                              size_t expected_num_dims, const int64_t* expected_src_dims,
                              const int* expected_permutation) {
-  size_t simplified_num_dims;
-  int64_t simplified_src_dims[max_num_dims];
-  int simplified_permutation[max_num_dims];
+  size_t simplified_num_dims = 0;
+  int64_t simplified_src_dims[max_num_dims]{};
+  int simplified_permutation[max_num_dims]{};
   SimplifyPermutation<max_num_dims>(num_dims, src_dims, permutation, &simplified_num_dims,
                                     simplified_src_dims, simplified_permutation);
   ASSERT_EQ(simplified_num_dims, expected_num_dims);
