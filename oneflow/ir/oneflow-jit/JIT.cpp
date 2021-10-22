@@ -22,6 +22,11 @@ OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context) {
   return module;
 }
 
+LogicalResult JitImporter::AppendDataInOperand(const std::string& lbn,
+                                               std::vector<::mlir::Value>& operand_vec) {
+  llvm::errs() << "[AppendDataInOperand] " << lbn << "\n";
+  return success();
+}
 LogicalResult JitImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
                                          std::vector<NamedAttribute>& attr_vec) {
   return success();

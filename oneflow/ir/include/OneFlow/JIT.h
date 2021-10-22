@@ -20,9 +20,7 @@ class JitImporter : public Importer {
   using Importer::Importer;
   ~JitImporter() = default;
   LogicalResult AppendDataInOperand(const std::string& lbn,
-                                    std::vector<::mlir::Value>& operand_vec) override {
-    return success();
-  };
+                                    std::vector<::mlir::Value>& operand_vec) override;
   LogicalResult AppendCtrlInOperand(const ::oneflow::OperatorConf& op,
                                     std::vector<::mlir::Value>& operand_vec) override {
     return success();
