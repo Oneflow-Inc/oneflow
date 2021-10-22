@@ -38,8 +38,9 @@ template<typename T>
 struct GpuRollFunctor final {
   void operator()(DeviceCtx* ctx, const T* in_ptr, const SHIFTS shifts, const SHAPE shape,
                   const STRIDE stride, const int32_t dims, const int64_t elements, T* out_ptr) {
-    RUN_CUDA_KERNEL((RollCudaKernel<T>), ctx, elements, in_ptr, shifts, shape, stride, dims,
-                    elements, out_ptr);
+    RollCudaKernel<T>
+        <<<BlocksNum4ThreadsNum(elements), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+            in_ptr, shifts, shape, stride, dims, elements, out_ptr);
   }
 };
 
@@ -47,8 +48,10 @@ template<>
 void GpuRollFunctor<float16>::operator()(DeviceCtx* ctx, const float16* in_ptr, const SHIFTS shifts,
                                          const SHAPE shape, const STRIDE stride, const int32_t dims,
                                          const int64_t elements, float16* out_ptr) {
-  RUN_CUDA_KERNEL((RollCudaKernel<half>), ctx, elements, reinterpret_cast<const half*>(in_ptr),
-                  shifts, shape, stride, dims, elements, reinterpret_cast<half*>(out_ptr));
+  RollCudaKernel<half>
+      <<<BlocksNum4ThreadsNum(elements), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          reinterpret_cast<const half*>(in_ptr), shifts, shape, stride, dims, elements,
+          reinterpret_cast<half*>(out_ptr));
 }
 
 template<typename T>
@@ -69,7 +72,9 @@ template<typename T>
 struct GpuRollFlattenFunctor final {
   void operator()(DeviceCtx* ctx, const T* in_ptr, const int32_t shifts, const int64_t elements,
                   T* out_ptr) {
-    RUN_CUDA_KERNEL((RollFlattenCudaKernel<T>), ctx, elements, in_ptr, shifts, elements, out_ptr);
+    RollFlattenCudaKernel<T>
+        <<<BlocksNum4ThreadsNum(elements), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+            in_ptr, shifts, elements, out_ptr);
   }
 };
 
@@ -77,9 +82,10 @@ template<>
 void GpuRollFlattenFunctor<float16>::operator()(DeviceCtx* ctx, const float16* in_ptr,
                                                 const int32_t shifts, const int64_t elements,
                                                 float16* out_ptr) {
-  RUN_CUDA_KERNEL((RollFlattenCudaKernel<half>), ctx, elements,
-                  reinterpret_cast<const half*>(in_ptr), shifts, elements,
-                  reinterpret_cast<half*>(out_ptr));
+  RollFlattenCudaKernel<half>
+      <<<BlocksNum4ThreadsNum(elements), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          reinterpret_cast<const half*>(in_ptr), shifts, elements,
+          reinterpret_cast<half*>(out_ptr));
 }
 
 template<typename T>
@@ -108,8 +114,9 @@ template<typename T>
 struct GpuRoll1DimFunctor final {
   void operator()(DeviceCtx* ctx, const T* in_ptr, const int32_t start, const int32_t size,
                   const int32_t stride, const int64_t elements, T* out_ptr) {
-    RUN_CUDA_KERNEL((Roll1DimCudaKernel<T>), ctx, elements, in_ptr, start, size, stride, elements,
-                    out_ptr);
+    Roll1DimCudaKernel<T>
+        <<<BlocksNum4ThreadsNum(elements), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+            in_ptr, start, size, stride, elements, out_ptr);
   }
 };
 
@@ -118,8 +125,10 @@ void GpuRoll1DimFunctor<float16>::operator()(DeviceCtx* ctx, const float16* in_p
                                              const int32_t start, const int32_t size,
                                              const int32_t stride, const int64_t elements,
                                              float16* out_ptr) {
-  RUN_CUDA_KERNEL((Roll1DimCudaKernel<half>), ctx, elements, reinterpret_cast<const half*>(in_ptr),
-                  start, size, stride, elements, reinterpret_cast<half*>(out_ptr));
+  Roll1DimCudaKernel<half>
+      <<<BlocksNum4ThreadsNum(elements), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          reinterpret_cast<const half*>(in_ptr), start, size, stride, elements,
+          reinterpret_cast<half*>(out_ptr));
 }
 
 }  // namespace
