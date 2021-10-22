@@ -24,17 +24,17 @@ namespace {
 
 template<typename T>
 void SoftmaxCpu(size_t rows, size_t cols, const T* x, T* y) {
-  std::vector<T> exp_x;
-  exp_x.resize(cols);
-  FOR_RANGE(int64_t, i, 0, rows) {
+  for (size_t i = 0; i < rows; ++i) {
     T row_max = x[i * cols];
-    FOR_RANGE(int64_t, j, 0, cols) { row_max = std::max(row_max, x[i * cols + j]); }
+    for (size_t j = 0; j < cols; ++j) { row_max = std::max(row_max, x[i * cols + j]); }
     T row_sum = 0;
-    FOR_RANGE(int64_t, j, 0, cols) {
-      exp_x.at(j) = std::exp(x[i * cols + j] - row_max);
-      row_sum += exp_x.at(j);
+    for (size_t j = 0; j < cols; ++j) {
+      const size_t offset = i * cols + j;
+      T exp_x = std::exp(x[offset] - row_max);
+      row_sum += exp_x;
+      y[offset] = exp_x;
     }
-    FOR_RANGE(int64_t, j, 0, cols) { y[i * cols + j] = exp_x.at(j) / row_sum; }
+    for (size_t j = 0; j < cols; ++j) { y[i * cols + j] /= row_sum; }
   }
 }
 
