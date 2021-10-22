@@ -260,7 +260,6 @@ add_docstr(
                 [4.2426]], dtype=oneflow.float32)
         >>> LA.norm(c, ord=1, dim=1)
         tensor([6., 6.], dtype=oneflow.float32)
-        >>> m = flow.tensor(np.arange(8, dtype=np.float32)).reshape(2, 2, 2)
 
     """,
 )
