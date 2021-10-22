@@ -13,18 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/primitive/cuda/cuda_graph_support.h"
+#ifndef ONEFLOW_CORE_PRIMITIVE_UNARY_OP_H_
+#define ONEFLOW_CORE_PRIMITIVE_UNARY_OP_H_
+
+#include "oneflow/core/primitive/include/primitive.h"
 
 namespace oneflow {
 
 namespace primitive {
 
-bool IsCudaGraphPrimitive(const Primitive* primitive) {
-  auto* cuda_graph_support = dynamic_cast<const CudaGraphSupport*>(primitive);
-  if (cuda_graph_support == nullptr) { return false; }
-  return cuda_graph_support->IsCudaGraphSupported();
-}
+enum class UnaryOp {
+  kIdentity,
+};
 
 }  // namespace primitive
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_PRIMITIVE_UNARY_OP_H_
