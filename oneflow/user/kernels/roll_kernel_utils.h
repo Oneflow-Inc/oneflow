@@ -20,6 +20,8 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
 const int32_t MAX_DIMS = 16;
 
 struct SHIFTS {
@@ -91,6 +93,8 @@ static void computeParams(const ShapeView& in_shape, const std::vector<int32_t>&
     *new_num_axes = in_shape.NumAxes();
   }
 }
+
+}  // namespace
 
 }  // namespace oneflow
 

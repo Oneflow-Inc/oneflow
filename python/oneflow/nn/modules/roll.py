@@ -17,7 +17,6 @@ import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 
 
-@register_tensor_op("roll")
 def roll_op(input, shifts, dims=None):
     """Roll the tensor along the given dimension(s). 
     
@@ -60,10 +59,6 @@ def roll_op(input, shifts, dims=None):
                 [6., 5.],
                 [8., 7.]], dtype=oneflow.float32)
     """
-    assert isinstance(shifts, (int, tuple, list))
-    if dims is not None:
-        assert isinstance(dims, (int, tuple, list))
-
     return flow._C.roll(input, shifts, dims)
 
 
