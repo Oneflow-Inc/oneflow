@@ -58,8 +58,9 @@ Maybe<const ParallelDesc> GetParallelDesc(const std::shared_ptr<Tensor>& tensor)
 
 Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
                                       TensorTuple* outputs, const OpExprInterpContext& ctx) const {
-  LOG(ERROR) << "adding: " << op_expr.proto().DebugString();
+  LOG(ERROR) << "[adding] " << op_expr.proto().DebugString();
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
+  LOG(ERROR) << "[op_conf] " << op_conf->DebugString();
   const std::string device_tag = GetDeviceTag(inputs.at(0));
   const bool is_local = inputs.at(0)->is_local();
   const std::shared_ptr<const ParallelDesc> parallel_desc = JUST(GetParallelDesc(inputs.at(0)));
@@ -71,8 +72,21 @@ Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTup
     CHECK_OR_RETURN(parallel_desc->EqualsIgnoringHierarchy(*JUST(GetParallelDesc(input_tensor))));
     CHECK_EQ_OR_RETURN(is_local, input_tensor->is_local());
   }
-
   CHECK_EQ_OR_RETURN(outputs->size(), op_expr.output_size());
+  auto op = JUST(ConstructOp(*op_conf));
+  std::vector<NamedAttribute> attr_vec;
+  std::vector<::mlir::Value> operand_vec;
+  // JUST(op->InferLogicalOutBlobDescs(
+  //     [](const std::string& bn_in_op) {
+  //       LOG(ERROR) << "bn_in_op: " << bn_in_op;
+  //       auto bd = new BlobDesc(DataType::kInvalidDataType);
+  //       return bd;
+  //     },
+  //     *parallel_desc));
+  CHECK_OR_RETURN(importer_.ProcessUserOp(*op_conf).succeeded());
+  LOG(ERROR) << "[func name] " << GetJitFuncName();
+  LOG(ERROR) << "[applied] " << op->op_name();
+  module_->dump();
   // TODO: MLIR add op expr
   return Maybe<void>::Ok();
 }

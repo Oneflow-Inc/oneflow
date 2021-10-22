@@ -42,6 +42,13 @@ bool* MutJitEnabled() {
 
 bool IsJitEnabled() { return *MutJitEnabled(); }
 
+std::string* MutJitFuncName() {
+  static std::string func_name = "";
+  return &func_name;
+}
+
+const std::string& GetJitFuncName() { return *MutJitFuncName(); }
+
 #endif  // WITH_MLIR
 
 namespace {

@@ -25,8 +25,9 @@ namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("ir", m) {
   m.def("load_jit_shared_lib",
         [](const std::string& lib_path) { MutSharedLibPaths()->insert(lib_path); });
-  m.def("toggle_jit", []() {
+  m.def("toggle_jit", [](const std::string func_name) {
     *one::MutJitEnabled() = !*one::MutJitEnabled();
+    *one::MutJitFuncName() = func_name;
     // TODO: when false => true, sync vm, empty instructions
     // TODO: when true => false, start compile op expressions and exec
     return *one::MutJitEnabled();

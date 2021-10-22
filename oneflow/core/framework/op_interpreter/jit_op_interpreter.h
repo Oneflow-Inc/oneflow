@@ -43,9 +43,9 @@ class JitInterpreter : public OpExprInterpreter {
 
  private:
   DECLARE_NORMAL_APPLY_FUNC(UserOp);  // note(BBuf) jit deal with user op only, now.
-  MLIRContext* context_;
-  OwningOpRef<ModuleOp> module_;
-  ir::JitImporter importer_;
+  mutable MLIRContext* context_;
+  mutable OwningOpRef<ModuleOp> module_;
+  mutable ir::JitImporter importer_;
 };
 
 }  // namespace one

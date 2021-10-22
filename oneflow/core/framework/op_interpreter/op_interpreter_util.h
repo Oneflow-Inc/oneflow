@@ -35,6 +35,10 @@ bool* MutJitEnabled();
 
 bool IsJitEnabled();
 
+std::string* MutJitFuncName();
+
+const std::string& GetJitFuncName();
+
 #endif  // WITH_MLIR
 
 class OpInterpUtil {
