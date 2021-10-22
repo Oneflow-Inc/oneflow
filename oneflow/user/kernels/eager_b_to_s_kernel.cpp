@@ -53,8 +53,6 @@ class EagerBToSOpKernelState final : public user_op::OpKernelState {
   explicit EagerBToSOpKernelState(user_op::KernelInitContext* ctx) { Init(ctx); }
   ~EagerBToSOpKernelState() override = default;
 
-  MemoryCopier* memory_copier() const { return memory_copier_.get(); }
-
   const std::vector<std::pair<int64_t, std::shared_ptr<TensorSliceCopier>>>&
   sorted_elem_cnt2in_tensor_slice_copier_pair() const {
     return sorted_elem_cnt2in_tensor_slice_copier_pair_;
@@ -120,14 +118,13 @@ class EagerBToSOpKernelState final : public user_op::OpKernelState {
       CHECK(!in_slice.IsEmpty());
       CHECK(!intersection.IsEmpty());
       sorted_p2p_pair_.emplace_back(std::make_pair(src, dst));
-      sorted_elem_cnt2in_tensor_slice_copier_pair_.emplace_back(
-          std::make_pair(intersection.shape().elem_cnt(),
-                         std::make_shared<TensorSliceCopier>(intersection, in_slice, data_type)));
-      sorted_elem_cnt2out_tensor_slice_copier_pair_.emplace_back(
-          std::make_pair(intersection.shape().elem_cnt(),
-                         std::make_shared<TensorSliceCopier>(out_slice, intersection, data_type)));
+      sorted_elem_cnt2in_tensor_slice_copier_pair_.emplace_back(std::make_pair(
+          intersection.shape().elem_cnt(),
+          std::make_shared<TensorSliceCopier>(intersection, in_slice, data_type, device_type)));
+      sorted_elem_cnt2out_tensor_slice_copier_pair_.emplace_back(std::make_pair(
+          intersection.shape().elem_cnt(),
+          std::make_shared<TensorSliceCopier>(out_slice, intersection, data_type, device_type)));
     }
-    memory_copier_.reset(NewDefaultMemoryCopier(device_type));
   }
 
   std::vector<std::pair<int64_t, std::shared_ptr<TensorSliceCopier>>>
@@ -135,7 +132,6 @@ class EagerBToSOpKernelState final : public user_op::OpKernelState {
   std::vector<std::pair<int64_t, std::shared_ptr<TensorSliceCopier>>>
       sorted_elem_cnt2out_tensor_slice_copier_pair_;
   std::vector<std::pair<int64_t, int64_t>> sorted_p2p_pair_;
-  std::unique_ptr<MemoryCopier> memory_copier_;
 };
 
 size_t InferEagerBToSKernelTmpBufferSize(user_op::InferContext* ctx) {
@@ -178,7 +174,6 @@ class EagerBToSKernel final : public user_op::OpKernel {
     const auto& sorted_elem_cnt2out_tensor_slice_copier_pair =
         kernel_state->sorted_elem_cnt2out_tensor_slice_copier_pair();
     const auto& sorted_p2p_pair = kernel_state->sorted_p2p_pair();
-    MemoryCopier* memory_copier = kernel_state->memory_copier();
     CHECK_EQ(sorted_elem_cnt2in_tensor_slice_copier_pair.size(), sorted_p2p_pair.size());
     CHECK_EQ(sorted_elem_cnt2out_tensor_slice_copier_pair.size(), sorted_p2p_pair.size());
 
@@ -190,7 +185,7 @@ class EagerBToSKernel final : public user_op::OpKernel {
         const auto& elem_cnt2tensor_slice_copier_pair =
             sorted_elem_cnt2in_tensor_slice_copier_pair.at(i);
         const auto& tensor_slice_copier = elem_cnt2tensor_slice_copier_pair.second;
-        tensor_slice_copier->Copy(ctx->device_ctx(), *memory_copier, out_ptr, in_ptr);
+        tensor_slice_copier->Copy(ctx->stream_ctx(), out_ptr, in_ptr);
         continue;
       }
       if (GlobalProcessCtx::Rank() == src) {
@@ -198,7 +193,7 @@ class EagerBToSKernel final : public user_op::OpKernel {
             sorted_elem_cnt2in_tensor_slice_copier_pair.at(i);
         const auto& elem_cnt = elem_cnt2tensor_slice_copier_pair.first;
         const auto& tensor_slice_copier = elem_cnt2tensor_slice_copier_pair.second;
-        tensor_slice_copier->Copy(ctx->device_ctx(), *memory_copier, tmp_buffer_ptr, in_ptr);
+        tensor_slice_copier->Copy(ctx->stream_ctx(), tmp_buffer_ptr, in_ptr);
         CHECK_JUST(Send<device_type>(reinterpret_cast<const void*>(tmp_buffer_ptr), elem_cnt,
                                      in->data_type(), dst, ctx->device_ctx()));
       }
@@ -209,7 +204,7 @@ class EagerBToSKernel final : public user_op::OpKernel {
         const auto& tensor_slice_copier = elem_cnt2tensor_slice_copier_pair.second;
         CHECK_JUST(
             Recv<device_type>(tmp_buffer_ptr, elem_cnt, out->data_type(), src, ctx->device_ctx()));
-        tensor_slice_copier->Copy(ctx->device_ctx(), *memory_copier, out_ptr,
+        tensor_slice_copier->Copy(ctx->stream_ctx(), out_ptr,
                                   reinterpret_cast<const void*>(tmp_buffer_ptr));
       }
     }
