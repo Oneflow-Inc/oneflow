@@ -162,6 +162,8 @@ int GetCudaSmVersion();
 
 int GetCudaPtxVersion();
 
+cudaError_t CudaDriverGetPrimaryCtxActive(int dev, int* active);
+
 }  // namespace oneflow
 
 #endif  // WITH_CUDA
