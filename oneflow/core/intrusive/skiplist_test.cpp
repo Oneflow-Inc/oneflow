@@ -51,7 +51,7 @@ INTRUSIVE_BEGIN(SkipListFoo);
   SkipListFoo() : intrusive_ref_(), is_deleted_(), foo_map_key_() {}
   INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   INTRUSIVE_DEFINE_FIELD(int*, is_deleted_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::SkipListEntry<int32_t>, foo_map_key_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::SkipListHook<int32_t>, foo_map_key_);
 INTRUSIVE_END(SkipListFoo);
 // clang-format on
 

@@ -29,14 +29,14 @@ struct ThreadCtx;
 INTRUSIVE_BEGIN(Stream);
  public:
   // types
-  using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, instruction_entry_)>;
+  using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, instruction_hook_)>;
 
   // Getters
   int64_t max_device_num_per_machine() const { return max_device_num_per_machine_; }
   const ThreadCtx& thread_ctx() const { return *thread_ctx_; }
   bool has_thread_ctx() const { return thread_ctx_ != nullptr; }
   const std::unique_ptr<DeviceCtx>& device_ctx() const { return device_ctx_; }
-  bool is_active_stream_entry_empty() const { return active_stream_entry_.empty(); }
+  bool is_active_stream_hook_empty() const { return active_stream_hook_.empty(); }
   const InstructionList& free_instruction_list() const { return free_instruction_list_; }
   const InstructionList& zombie_instruction_list() const { return zombie_instruction_list_; }
   const InstructionList& running_instruction_list() const { return running_instruction_list_; }
@@ -71,16 +71,16 @@ INTRUSIVE_BEGIN(Stream);
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  Stream() : intrusive_ref_(), thread_ctx_(), device_ctx_(), max_device_num_per_machine_(), active_stream_entry_(), thread_ctx_stream_entry_(), stream_id_(), free_instruction_list_(), zombie_instruction_list_(), running_instruction_list_() {}
+  Stream() : intrusive_ref_(), thread_ctx_(), device_ctx_(), max_device_num_per_machine_(), active_stream_hook_(), thread_ctx_stream_hook_(), stream_id_(), free_instruction_list_(), zombie_instruction_list_(), running_instruction_list_() {}
   INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
   // fields
   INTRUSIVE_DEFINE_FIELD(ThreadCtx*, thread_ctx_); 
   INTRUSIVE_DEFINE_FIELD(std::unique_ptr<DeviceCtx>, device_ctx_);
   INTRUSIVE_DEFINE_FIELD(int64_t, max_device_num_per_machine_);
-  // list entries
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, active_stream_entry_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, thread_ctx_stream_entry_);
-  using StreamIdKey = intrusive::SkipListEntry<StreamId, 10>;
+  // list hooks
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, active_stream_hook_);
+  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, thread_ctx_stream_hook_);
+  using StreamIdKey = intrusive::SkipListHook<StreamId, 10>;
   INTRUSIVE_DEFINE_FIELD(StreamIdKey, stream_id_);
   // lists 
   INTRUSIVE_DEFINE_FIELD(InstructionList, free_instruction_list_);

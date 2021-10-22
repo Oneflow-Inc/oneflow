@@ -43,7 +43,7 @@
   signature:
     [
       "Tensor (Tensor input, Tensor other) => Mul",
-      "Tensor (Tensor input, Scalar other) => ScalarMul",
+      "Tensor (Tensor input, Scalar other, *, Bool inplace=False) => ScalarMul",
       "Tensor (Scalar input, Tensor other) => ScalarMul",
     ]
   bind_python: true
@@ -150,6 +150,7 @@
   signature:
     [
       "Tensor (Tensor input, Tensor exponent) => Pow",
+      "Tensor (Tensor input, Scalar exponent, *, Bool inplace=False) => ScalarPow",
       "Tensor (Tensor input, Scalar exponent) => ScalarPow",
     ]
   bind_python: True
@@ -174,6 +175,7 @@
   signature:
     [
       "Tensor (Tensor x, Tensor y) => FloorDiv",
+      "Tensor (Tensor input, Scalar scalar, *, Bool inplace=False) => ScalarFloorDiv",
       "Tensor (Tensor input, Scalar scalar) => ScalarFloorDiv",
     ]
   bind_python: True
@@ -205,6 +207,38 @@
 - name: "reduce_prod"
   signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceProd"
   bind_python: True
+
+- name: "reduce_min_device_stage"
+  signature: "TensorTuple (Tensor in, Int32List axis) => ReduceMinDeviceStage"
+  bind_python: True
+
+- name: "reduce_min_device_stage_grad"
+  signature: "Tensor (Tensor out_diff, Tensor mask, Tensor count, Int32List axis) => ReduceMinDeviceStageGrad"
+  bind_python: False
+
+- name: "reduce_max_device_stage"
+  signature: "TensorTuple (Tensor in, Int32List axis) => ReduceMaxDeviceStage"
+  bind_python: True
+
+- name: "reduce_max_device_stage_grad"
+  signature: "Tensor (Tensor out_diff, Tensor mask, Tensor count, Int32List axis) => ReduceMaxDeviceStageGrad"
+  bind_python: False
+
+- name: "reduce_min_global_stage"
+  signature: "TensorTuple (Tensor in, Tensor device_count, Int32List axis, Bool keepdims=False) => ReduceMinGlobalStage"
+  bind_python: True
+
+- name: "reduce_min_global_stage_grad"
+  signature: "Tensor (Tensor out_diff, Tensor mask, Tensor device_count, Int32List axis, Bool keepdims=False) => ReduceMinGlobalStageGrad"
+  bind_python: False
+
+- name: "reduce_max_global_stage"
+  signature: "TensorTuple (Tensor in, Tensor device_count, Int32List axis, Bool keepdims=False) => ReduceMaxGlobalStage"
+  bind_python: True
+
+- name: "reduce_max_global_stage_grad"
+  signature: "Tensor (Tensor out_diff, Tensor mask, Tensor device_count, Int32List axis, Bool keepdims=False) => ReduceMaxGlobalStageGrad"
+  bind_python: False
 
 - name: "transpose"
   signature:
@@ -246,6 +280,7 @@
   signature:
     [
       "Tensor (Tensor input, Tensor other) => BroadcastFMod",
+      "Tensor (Tensor input, Scalar other, *, Bool inplace=False) => ScalarFMod",
       "Tensor (Tensor input, Scalar other) => ScalarFMod",
     ]
   bind_python: true
@@ -304,6 +339,14 @@
 
 - name: "elu_grad"
   signature: "Tensor (Tensor x, Tensor dy, Double alpha) => EluGrad"
+  bind_python: False
+
+- name: "celu"
+  signature: "Tensor (Tensor x, *, Double alpha=1.0, Bool inplace=False) => Celu"
+  bind_python: True
+
+- name: "celu_grad"
+  signature: "Tensor (Tensor x, Tensor dy, Double alpha=1.0) => CeluGrad"
   bind_python: False
 
 - name: "gelu"
@@ -657,16 +700,28 @@
   signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None, String reduction) => BinaryCrossEntropyWithLogitsLossGrad"
   bind_python: True
 
+- name: "sparse_cross_entropy"
+  signature: "Tensor (Tensor prediction, Tensor label, Int64 depth) => SparseCrossEntropy"
+  bind_python: True
+
+- name: "sparse_cross_entropy_grad"
+  signature: "Tensor (Tensor prediction, Tensor label, Tensor dy, Int64 depth) => SparseCrossEntropyGrad"
+  bind_python: False
+
+- name: "distributed_sparse_cross_entropy"
+  signature: "Tensor (Tensor prediction, Tensor label, Int64 depth) => SparseCrossEntropyMs"
+  bind_python: True
+
 - name: "cross_entropy"
   signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction) => CrossEntropy"
   bind_python: True
 
-- name: "sparse_softmax_cross_entropy"
-  signature: "Tensor (Tensor logits, Tensor label, Int64 depth) => SparseSoftmaxCrossEntropy"
-  bind_python: True
+- name: "distributed_sparse_cross_entropy_grad"
+  signature: "Tensor (Tensor prediction, Tensor label, Tensor dy, Int64 depth) => SparseCrossEntropyMsGrad"
+  bind_python: False
 
-- name: "sparse_softmax_cross_entropy_ms"
-  signature: "Tensor (Tensor logits, Tensor label, Int64 depth) => SparseSoftmaxCrossEntropyMs"
+- name: "sparse_softmax_cross_entropy"
+  signature: "Tensor (Tensor logits, Tensor label) => SparseSoftmaxCrossEntropy"
   bind_python: True
 
 - name: "softmax_cross_entropy"
@@ -698,7 +753,7 @@
   bind_python: True
 
 - name: "ctc_loss"
-  signature: "Tensor (Tensor log_probs, Tensor targets, Tensor input_lengths, Tensor target_lengths, Int32 blank, Bool zero_infinity, String reduction) => CtcLoss"
+  signature: "Tensor (Tensor log_probs, Tensor targets, Tensor input_lengths, Tensor target_lengths, Int64 max_target_length, Int32 blank, Bool zero_infinity, String reduction) => CtcLoss"
   bind_python: True
 
 - name: "affine_grid"
@@ -861,7 +916,9 @@
   bind_python: True
 
 - name: "squeeze"
-  signature: "Tensor (Tensor x, Int32List dim) => Squeeze"
+  signature: [
+    "Tensor (Tensor x, Int32List[1] dim=None) => Squeeze",
+  ]
   bind_python: True
 
 - name: "copy"
@@ -1406,4 +1463,8 @@
 
 - name: "ctc_greedy_decoder"
   signature: "TensorTuple (Tensor log_probs, Tensor input_lengths, Bool merge_repeated=True) => CtcGreedyDecoder"
+  bind_python: True
+
+- name: "meshgrid"
+  signature: "TensorTuple (TensorTuple tensors) => Meshgrid"
   bind_python: True
