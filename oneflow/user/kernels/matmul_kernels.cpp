@@ -195,7 +195,7 @@ class BatchMatmulKernel final : public user_op::OpKernel, public user_op::CudaGr
     size_t batch_size = 1;
     for (size_t i = 0; i < num_axes - 2; ++i) {
       const int64_t dim_size = a->shape().At(i);
-      CHECK_GT(dim_size, 1);
+      CHECK_GT(dim_size, 0);
       CHECK_EQ(b->shape().At(i), dim_size);
       CHECK_EQ(out->shape().At(i), dim_size);
       batch_size *= dim_size;
