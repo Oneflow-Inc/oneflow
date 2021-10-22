@@ -16,6 +16,10 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -23,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/random_generator_impl.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/sequence_function.h"
@@ -32,9 +37,6 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"
-#include "oneflow/core/common/global.h"
-#include "oneflow/core/common/optional.h"
-#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 namespace one {
@@ -963,6 +965,9 @@ class CopyFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("device_type", device_type));
     JUST(attrs.SetAttr<int64_t>("device_id", device_id));
+#ifdef WITH_CUDA
+    if (device_type == "cuda") { InitCudaContextOnce(device_id); }
+#endif
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
