@@ -941,14 +941,14 @@ class CopyFunctor {
  public:
   CopyFunctor() { 
     op_ = CHECK_JUST(one::OpBuilder("copy").Input("in").Output("out").Build());
-    int device_count = one::detail::GetCudaDeviceCount();
-    init_flags_ = std::vector<std::once_flag>(device_count);
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& device_type,
                            const int64_t& device_id) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("device_type", device_type));
     JUST(attrs.SetAttr<int64_t>("device_id", device_id));
+    int device_count = one::detail::GetCudaDeviceCount();
+    std::vector<std::once_flag> init_flags_ = std::vector<std::once_flag>(device_count);
     if (!LazyMode::is_enabled() && device_type == "cuda") {
       std::call_once(init_flags_[device_id], InitCudaRuntimeOnce, device_id);
     }
@@ -957,7 +957,6 @@ class CopyFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
-  static std::vector<std::once_flag> init_flags_;
 };
 
 class FlipFunctor {
