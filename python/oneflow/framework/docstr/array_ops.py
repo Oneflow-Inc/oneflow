@@ -17,6 +17,41 @@ import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
+    oneflow.diagonal,
+    """
+    Returns a partial view of input with the its diagonal elements with respect to dim1 and dim2 
+    appended as a dimension at the end of the shape.
+    Args:
+        input (Tensor): the input tensor.Must be at least 2-dimensional.
+        offset (Optional[int], 0): which diagonal to consider. Default: 0 (main diagonal)
+        dim1 (Optional[int], 0): first dimension with respect to which to take diagonal. Default: 0
+        dim2 (Optional[int], 1): second dimension with respect to which to take diagonal. Default: 1
+    
+    Returns:
+        oneflow.Tensor: the output Tensor.
+
+    For example:
+    
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> arr = np.array(
+        ...     [
+        ...        [1.0, 2.0, 3.0],
+        ...        [4.0, 5.0, 6.0],
+        ...        [7.0, 8.0, 9.0],
+        ...     ]
+        ... )
+        >>> input = flow.Tensor(arr)
+        >>> flow.diagonal(input,offset=1,dim1=1,dim2=0)
+        tensor([4., 8.], dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
     oneflow.diag,
     """
     If input is a vector (1-D tensor), then returns a 2-D square tensor with the elements of input as the diagonal.
