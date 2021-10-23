@@ -336,8 +336,10 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   if (failed(namedAttributesFromUserOp(op, attr_vec))) { return failure(); }
   for (const auto& key : op.user_conf().input_order()) {
     auto& value = op.user_conf().input().at(key);
+    int32_t index = 0;
     for (const std::string& lbn : value.s()) {
-      if (failed(AppendDataInOperand(lbn, operand_vec))) { return failure(); }
+      if (failed(AppendDataInOperand(key, index, lbn, operand_vec))) { return failure(); }
+      index += 1;
     }
   }
   if (failed(AppendCtrlInOperand(op, operand_vec))) { return failure(); }

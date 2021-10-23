@@ -58,7 +58,6 @@ Maybe<const ParallelDesc> GetParallelDesc(const std::shared_ptr<Tensor>& tensor)
 
 Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
                                       TensorTuple* outputs, const OpExprInterpContext& ctx) const {
-  LOG(ERROR) << "[adding] " << op_expr.proto().DebugString();
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
   LOG(ERROR) << "[op_conf] " << op_conf->DebugString();
   const std::string device_tag = GetDeviceTag(inputs.at(0));
@@ -85,8 +84,8 @@ Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTup
   //     *parallel_desc));
   auto indexed_arg_name_and_index = op_expr.input_arg_tuple()->indexed_arg_name_and_index();
   CHECK_EQ_OR_RETURN(indexed_arg_name_and_index.size(), inputs.size());
-  importer_.GetOrInsertFuncAndCreateMapping(GetJitFuncName(), indexed_arg_name_and_index, inputs,
-                                            outputs);
+  importer_.GetOrInsertFunc(GetJitFuncName(), inputs, outputs);
+  importer_.CreateOperandMapping(indexed_arg_name_and_index, inputs);
   CHECK_OR_RETURN(importer_.ProcessUserOp(*op_conf).succeeded());
   LOG(ERROR) << "[func name] " << GetJitFuncName();
   LOG(ERROR) << "[applied] " << op->op_name();

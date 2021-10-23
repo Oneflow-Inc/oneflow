@@ -49,7 +49,14 @@ class Importer {
   LogicalResult namedAttributesFromUserOp(const ::oneflow::OperatorConf& op,
                                           std::vector<NamedAttribute>& attr_vec);
   virtual LogicalResult AppendDataInOperand(const std::string& lbn,
-                                            std::vector<::mlir::Value>& operand_vec) = 0;
+                                            std::vector<::mlir::Value>& operand_vec) {
+    return failure();
+  }
+  virtual LogicalResult AppendDataInOperand(const std::string& key, const int32_t index,
+                                            const std::string& lbn,
+                                            std::vector<::mlir::Value>& operand_vec) {
+    return AppendDataInOperand(lbn, operand_vec);
+  }
   virtual LogicalResult AppendCtrlInOperand(const ::oneflow::OperatorConf& op,
                                             std::vector<::mlir::Value>& operand_vec) = 0;
   LogicalResult AppendCtrlOutType(llvm::SmallVector<Type, 8>& out_types);

@@ -23,7 +23,8 @@ class JitImporter : public Importer {
  public:
   using Importer::Importer;
   ~JitImporter() = default;
-  LogicalResult AppendDataInOperand(const std::string& lbn,
+  LogicalResult AppendDataInOperand(const std::string& key, const int32_t index,
+                                    const std::string& lbn,
                                     std::vector<::mlir::Value>& operand_vec) override;
   LogicalResult AppendCtrlInOperand(const ::oneflow::OperatorConf& op,
                                     std::vector<::mlir::Value>& operand_vec) override {
@@ -41,10 +42,11 @@ class JitImporter : public Importer {
   // 2. if input tensor absent in tensor=>value mapping, udpate function arg
   // 3. add input to tensor=>value mapping
   // 4. insert to PlaceholderBn => value mapping (only for one op)
-  mlir::FuncOp GetOrInsertFuncAndCreateMapping(
-      const std::string& func_name,
+  mlir::FuncOp GetOrInsertFunc(const std::string& func_name, const TensorTuple& inputs,
+                               TensorTuple* outputs);
+  void CreateOperandMapping(
       const std::vector<std::pair<std::string, int32_t>>& indexed_arg_name_and_index,
-      const TensorTuple& inputs, TensorTuple* outputs);
+      const TensorTuple& inputs);
   mlir::Value GetOperandByPlaceholderBn(const std::string bn);
   // get blob decs from inferred op
   mlir::Type GetResultTypeByBn(const std::string bn);

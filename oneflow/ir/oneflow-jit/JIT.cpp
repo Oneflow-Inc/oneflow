@@ -23,9 +23,11 @@ OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context) {
   return module;
 }
 
-LogicalResult JitImporter::AppendDataInOperand(const std::string& lbn,
+LogicalResult JitImporter::AppendDataInOperand(const std::string& key, const int32_t index,
+                                               const std::string& lbn,
                                                std::vector<::mlir::Value>& operand_vec) {
-  llvm::errs() << "[AppendDataInOperand] " << lbn << "\n";
+  LOG(ERROR) << "[getting]" << key << "/" << index;
+  operand_vec.push_back(operand_mapping_.at(std::make_pair(key, index)));
   return success();
 }
 LogicalResult JitImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
@@ -39,10 +41,8 @@ Type JitImporter::GetTensorTypeOfLbn(const std::string& lbn) { return GetBuilder
   return ::oneflow::AttrType::kAtDataType;
 }
 
-mlir::FuncOp JitImporter::GetOrInsertFuncAndCreateMapping(
-    const std::string& func_name,
-    const std::vector<std::pair<std::string, int32_t>>& indexed_arg_name_and_index,
-    const TensorTuple& inputs, TensorTuple* outputs) {
+mlir::FuncOp JitImporter::GetOrInsertFunc(const std::string& func_name, const TensorTuple& inputs,
+                                          TensorTuple* outputs) {
   // convert data types from oneflow
   auto result_types = llvm::SmallVector<Type, 8>();
   // for (const auto& output : *outputs) {
@@ -67,22 +67,38 @@ mlir::FuncOp JitImporter::GetOrInsertFuncAndCreateMapping(
     }
     auto func_type = GetBuilder().getFunctionType(arg_types, llvm::NoneType());
     FuncOp function = mlir::FuncOp::create(GetRootLocation(), func_name, func_type);
+    auto entryBlock = function.addEntryBlock();
+    CHECK_EQ(arg_tensors.size(), function.body().getArguments().size());
     for (auto argument_pair : llvm::zip(arg_tensors, function.body().getArguments())) {
+      LOG(ERROR) << "[result_mapping_ tensor]" << std::get<0>(argument_pair).get();
       CHECK(result_mapping_.emplace(std::get<0>(argument_pair).get(), std::get<1>(argument_pair))
                 .second);
     }
-    auto entryBlock = function.addEntryBlock();
     GetBuilder().setInsertionPointToStart(entryBlock);
     GetModule().push_back(function);
+    function->dump();
     return function;
   }
+}
+
+void JitImporter::CreateOperandMapping(
+    const std::vector<std::pair<std::string, int32_t>>& indexed_arg_name_and_index,
+    const TensorTuple& inputs) {
   operand_mapping_.clear();
   for (auto pair : llvm::zip(indexed_arg_name_and_index, inputs)) {
     const auto& arg_name_index_tuple = std::get<0>(pair);
     const auto& tensor = std::get<1>(pair);
-    assert(operand_mapping_.emplace(arg_name_index_tuple, result_mapping_.at(tensor.get())).second);
+    auto result_it = result_mapping_.find(tensor.get());
+    if (result_it == result_mapping_.end()) {
+      LOG(FATAL) << "result not found, arg/index: " << arg_name_index_tuple.first << "/"
+                 << arg_name_index_tuple.second << ", tensor: " << tensor.get();
+    } else {
+      assert(
+          operand_mapping_.emplace(arg_name_index_tuple, result_mapping_.at(tensor.get())).second);
+    }
   }
 }
+
 }  // namespace ir
 
 }  // namespace one
