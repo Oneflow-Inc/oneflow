@@ -79,15 +79,17 @@ const StringSet<>& GetUnaryOpTypeNames() {
 }
 
 const StringSet<>& GetScalarMathOpTypeNames() {
-  static llvm::StringSet<> names({"scalar_add", "scalar_floordiv", "scalar_fmod", "scalar_mul", "scalar_pow"
+  static llvm::StringSet<> names(
+      {"scalar_add", "scalar_floordiv", "scalar_fmod", "scalar_mul", "scalar_pow"
 
-  });
+      });
   return names;
 }
 
 const StringSet<>& GetPoolOpTypeNames() {
-  static llvm::StringSet<> names({"avgpool_1d", "avgpool_2d", "avgpool_3d", "avg_pool_1d", "avg_pool_2d", 
-                                  "avg_pool_3d", "max_pool_1d", "max_pool_2d", "max_pool_3d"
+  static llvm::StringSet<> names({"avgpool_1d", "avgpool_2d", "avgpool_3d", "avg_pool_1d",
+                                  "avg_pool_2d", "avg_pool_3d", "max_pool_1d", "max_pool_2d",
+                                  "max_pool_3d"
 
   });
   return names;
@@ -118,7 +120,8 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
     else if (IsCtrlOutTrimmed(op) && IsCtrlInAbsent(op)) {
       if (op_type_name.equals("relu") || op_type_name.equals("gelu") || op_type_name.equals("cast")
           || GetUnaryOpTypeNames().contains(op_type_name)
-          || GetFloatUnaryOpTypeNames().contains(op_type_name) || GetScalarMathOpTypeNames().contains(op_type_name)
+          || GetFloatUnaryOpTypeNames().contains(op_type_name)
+          || GetScalarMathOpTypeNames().contains(op_type_name)
           || GetPoolOpTypeNames().contains(op_type_name)) {
         NamedAttrList attributes(op->getAttrDictionary());
         attributes.erase("operand_segment_sizes");
@@ -135,8 +138,8 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
           return success();
         }
       } else if (op_type_name.equals("scalar_mul_by_tensor") || op_type_name.equals("matmul")
-                 || op_type_name.equals("gather") || op_type_name.equals("gelu_grad") || op_type_name.equals("conv2d") 
-                 || op_type_name.equals("bias_add")) {
+                 || op_type_name.equals("gather") || op_type_name.equals("gelu_grad")
+                 || op_type_name.equals("conv2d") || op_type_name.equals("bias_add")) {
         assert(op.data_input().size() == 2);
         assert(op.data_output().size() == 1);
         NamedAttrList attributes(op->getAttrDictionary());
@@ -151,8 +154,7 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
           op->erase();
           return success();
         }
-      }
-      else {
+      } else {
         if (!GetPrintedOpTypeNames()->contains(op.op_type_name())) {
           llvm::errs() << "MLIR opaque user op: " << op.op_type_name() << "\n";
           GetPrintedOpTypeNames()->insert(op.op_type_name());
