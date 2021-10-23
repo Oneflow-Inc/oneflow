@@ -93,9 +93,9 @@ void JitImporter::CreateOperandMapping(
         std::string result_str;
         llvm::raw_string_ostream os(result_str);
         kv.second.print(os);
-        LOG(ERROR) << "tensor/value: " << kv.first << "/" << result_str;
+        LOG(ERROR) << "[tensor]/[value]: " << kv.first << "/" << result_str;
       }
-      LOG(FATAL) << "result not found, arg/index: " << arg_name_index_tuple.first << "/"
+      LOG(FATAL) << "result not found, [arg]/[index]: " << arg_name_index_tuple.first << "/"
                  << arg_name_index_tuple.second << ", tensor: " << tensor.get();
     } else {
       assert(
