@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FUNCTIONAL_FUNCTION_CALLER_H_
-#define ONEFLOW_CORE_FUNCTIONAL_FUNCTION_CALLER_H_
+#ifndef ONEFLOW_CORE_FUNCTIONAL_SEQUENCE_FUNCTION_H_
+#define ONEFLOW_CORE_FUNCTIONAL_SEQUENCE_FUNCTION_H_
 
 #include <functional>
 #include <utility>
@@ -44,6 +44,10 @@ class SequenceFunction<R(Args...)> {
     return *this;
   }
 
+  SequenceFunction<R(Args...)>& then_if(bool condition, f_type&& f) {
+    return condition ? then(std::forward<f_type>(f)) : *this;
+  }
+
   SequenceFunction<R(Args...)>& operator<<(f_type&& f) { return then(std::forward<f_type>(f)); }
 
   R call(Args&&... args) const { return fn_(std::forward<Args>(args)...); }
@@ -58,4 +62,4 @@ class SequenceFunction<R(Args...)> {
 }  // namespace one
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FUNCTIONAL_FUNCTION_CALLER_H_
+#endif  // ONEFLOW_CORE_FUNCTIONAL_SEQUENCE_FUNCTION_H_
