@@ -140,6 +140,8 @@ from oneflow._C import squeeze
 from oneflow._C import narrow
 from oneflow._C import unsqueeze
 from oneflow._C import permute
+from oneflow._C import cat
+from oneflow._C import cat as concat
 
 from . import sbp
 import atexit
@@ -259,7 +261,6 @@ from oneflow.nn.modules.argwhere import argwhere_op as argwhere
 from oneflow.nn.modules.bmm import bmm_op as bmm
 from oneflow.nn.modules.broadcast_like import broadcast_like_op as broadcast_like
 from oneflow.nn.modules.chunk import chunk_op as chunk
-from oneflow.nn.modules.concat import concat_op as cat
 from oneflow.nn.modules.constant import ones_op as ones
 from oneflow.nn.modules.constant import zeros_op as zeros
 from oneflow.nn.modules.constant import full_op as full

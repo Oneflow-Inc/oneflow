@@ -523,6 +523,10 @@
   signature: "Tensor (TensorTuple inputs, Int64 axis, Int64 max_dim_size) => Concat"
   bind_python: True
 
+- name: "cat"
+  signature: "Tensor (TensorTuple inputs, Int64 dim=0) => Cat"
+  bind_python: True
+
 - name: "bias_add"
   signature: "Tensor (Tensor x, Tensor bias, Int32 axis=1) => BiasAdd"
   bind_python: True

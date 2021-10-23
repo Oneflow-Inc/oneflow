@@ -411,6 +411,61 @@ class ConcatFunctor {
   std::vector<std::shared_ptr<OpExpr>> ops_;
 };
 
+class CatFunctor {
+ public:
+  CatFunctor() {
+    ops_.resize(kMaxInputCount);
+    for (int n = 1; n < ops_.size(); ++n) {
+      ops_[n] = CHECK_JUST(one::OpBuilder("concat").Input("in", n + 1).Output("out").Build());
+    }
+  }
+  Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim) const {
+    if(inputs.size()==1){
+      return inputs.at(0);
+    }
+    int64_t axis = dim;
+    int64_t ndim = inputs.at(0)->ndim();
+    int64_t max_dim_size = 0;
+    CHECK_GE_OR_RETURN(inputs.size(), 2);
+    CHECK_OR_RETURN((-(ndim) <= dim) && (dim <= (ndim-1))) << " IndexError: Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim-1 << "], but got " << dim; 
+    if(dim < 0){
+      axis += ndim;
+    }
+
+    const std::shared_ptr<const Shape>& shape = inputs.at(0)->shape();
+    for(auto input: inputs){
+      CHECK_OR_RETURN(input->ndim() == ndim) 
+        << " Tensors must have same number of dimensions: got " << input->ndim() << " and " << ndim << " is expected.";
+      for(int i=0; i<ndim; ++i){
+        if(axis == i){
+          max_dim_size += input->shape()->At(i);
+        }else{
+          CHECK_OR_RETURN(input->shape()->At(i) == shape->At(i))
+            << " Sizes of tensors must match except in dimension " << axis <<". Got " << input->shape()->At(i) << " and " << shape->At(i) << " is expected in dimension 1.";
+        }
+      }
+    }
+
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("axis", axis));
+    JUST(attrs.SetAttr<int64_t>("max_dim_size", max_dim_size));
+    TensorTuple outputs;
+    for (int i = 0; i < inputs.size(); i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < inputs.size() ? kMaxInputCount : inputs.size() - i;
+      TensorTuple partial_inputs(size);
+      for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
+      outputs.push_back(
+          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
+    }
+    if (outputs.size() == 1) { return outputs.at(0); }
+    return this->operator()(outputs, axis);
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> ops_;
+};
+
 class StackFunctor {
  public:
   StackFunctor() = default;
@@ -1869,6 +1924,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ArgWhereFunctor>("ArgWhere");
   m.add_functor<impl::BroadcastLikeFunctor>("BroadcastLike");
   m.add_functor<impl::ConcatFunctor>("Concat");
+  m.add_functor<impl::CatFunctor>("Cat");
   m.add_functor<impl::StackFunctor>("Stack");
   m.add_functor<impl::ExpandFunctor>("Expand");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
