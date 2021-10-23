@@ -32,6 +32,7 @@ limitations under the License.
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/sequence_function.h"
+#include "oneflow/core/register/ofblob.h"
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -1541,15 +1542,48 @@ class FoldFunctor {
   std::shared_ptr<OpExpr> fold_op_;
 };
 
+Maybe<void> SyncAccessTensorWithTimeOut(
+    const std::shared_ptr<Tensor>& tensor,
+    const std::shared_ptr<std::function<void(uint64_t)>>& callback, const std::string& modifier) {
+  return SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
+    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
+                                               modifier);
+    });
+  });
+}
+
 class OneHotFunctor {
  public:
   OneHotFunctor() {
     one_hot_op_ = CHECK_JUST(one::OpBuilder("one_hot").Input("indices").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& num_classes,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& num_classes,
                            const Scalar& on_value, const Scalar& off_value) const {
+
+    if (IsFloatingDataType(input->dtype()->data_type())){
+      OF_RUNTIME_ERROR() << "one_hot is only applicable to index tensor.";
+    }
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("depth", num_classes));
+    if(input->is_consistent()){
+      OF_RUNTIME_ERROR() << "A consistent tensor can not be applied to onehot, and use tensor.to_local() to convert it to local tensor first.";
+    }
+    if(num_classes == -1){
+      std::vector<int32_t> axis(input->ndim());
+      std::iota(axis.begin(), axis.end(), 0);
+      auto tensor_max = JUST(functional::ReduceMax(input, axis, false));
+
+      int64_t max;
+      const auto& callback = std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
+        auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+        of_blob->AutoMemCopyTo<int64_t>(&max, 1); // copy 1 scalar(int64_t) tensor's value to max
+      });
+      JUST(SyncAccessTensorWithTimeOut(tensor_max, callback, "const"));
+      JUST(attrs.SetAttr<int64_t>("depth", max+1));
+      
+    }else{
+      JUST(attrs.SetAttr<int64_t>("depth", num_classes));
+    }
     bool is_on_value_double = on_value.IsFloatingPoint();
     bool is_off_value_double = off_value.IsFloatingPoint();
     if (is_on_value_double || is_off_value_double) {
@@ -1565,7 +1599,7 @@ class OneHotFunctor {
       JUST(attrs.SetAttr<int64_t>("integer_on_value", JUST(on_value.As<int64_t>())));
       JUST(attrs.SetAttr<int64_t>("integer_off_value", JUST(off_value.As<int64_t>())));
     }
-    return OpInterpUtil::Dispatch<Tensor>(*one_hot_op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*one_hot_op_, {input}, attrs);
   }
 
  private:

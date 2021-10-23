@@ -1872,6 +1872,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::StackFunctor>("Stack");
   m.add_functor<impl::ExpandFunctor>("Expand");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
+  m.add_functor<impl::ExpandDimsFunctor>("Unsqueeze");
   m.add_functor<impl::GatherFunctor>("Gather");
   m.add_functor<impl::DimGatherFunctor>("DimGather");
   m.add_functor<impl::ArgSortFunctor>("ArgSort");

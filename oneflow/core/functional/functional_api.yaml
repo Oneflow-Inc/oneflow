@@ -239,13 +239,13 @@
 - name: "transpose"
   signature:
     [
-      "Tensor (Tensor x, Int32List perm) => Transpose",
+      "Tensor (Tensor input, Int32List perm) => Transpose",
       "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Transpose2dim",
     ]
   bind_python: True
 
 - name: "permute"
-  signature: "Tensor (Tensor input, Int32List dims) => Transpose"
+  signature: "Tensor (Tensor input, Int32List dims) => Permute"
   bind_python: True
 
 - name: "reciprocal"
@@ -613,7 +613,7 @@
   bind_python: True
 
 - name: "unsqueeze"
-  signature: "Tensor (Tensor input, Int32 dim) => ExpandDims"
+  signature: "Tensor (Tensor input, Int32 dim) => Unsqueeze"
   bind_python: True
 
 - name: "exp"
@@ -1108,7 +1108,7 @@
   bind_python: True
 
 - name: "one_hot"
-  signature: "Tensor (Tensor x, Int64 num_classes=-1, Scalar on_value=1, Scalar off_value=0) => OneHot"
+  signature: "Tensor (Tensor input, Int64 num_classes=-1, Scalar on_value=1, Scalar off_value=0) => OneHot"
   bind_python: True
 
 - name: "unsorted_segment_sum_like"
