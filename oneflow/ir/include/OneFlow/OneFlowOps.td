@@ -182,6 +182,18 @@ def OneFlow_Convolution2dOp : OneFlow_BaseOp<"conv2d", []> {
   );
 }
 
+def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", []> {
+  let summary = "Oneflow Bias Add operation";
+  let input = (ins
+    AnyType:$a,
+    AnyType:$b
+  );
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    SI32Attr:$axis
+  );
+}
+
 class OneFlow_LazyPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
     let summary = "OneFlow Lazy Pooling operation";
