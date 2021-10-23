@@ -182,6 +182,57 @@ def OneFlow_Convolution2dOp : OneFlow_BaseOp<"conv2d", []> {
   );
 }
 
+class OneFlow_LazyPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
+    let summary = "OneFlow Lazy Pooling operation";
+    let input = (ins AnyType:$x);
+    let output = (outs AnyType:$y);
+    let attrs = (ins
+    StrAttr:$padding,
+    SI32ArrayAttr:$padding_before,
+    SI32ArrayAttr:$padding_after,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$pool_size,
+    SI32ArrayAttr:$strides,
+    BoolAttr:$ceil_mode
+  );
+}
+
+class OneFlow_EagerPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
+    let summary = "OneFlow Eager Pooling operation";
+    let input = (ins AnyType:$x);
+    let output = (outs AnyType:$y);
+    let attrs = (ins
+    SI32ArrayAttr:$padding,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$stride,
+    BoolAttr:$ceil_mode,
+    BoolAttr:$count_include_pad,
+    SI64Attr:$divisor_override
+  );
+}
+
+def OneFlow_LazyMaxPool1dOp : OneFlow_LazyPoolBaseOp<"max_pool_1d", []> {}
+
+def OneFlow_LazyMaxPool2dOp : OneFlow_LazyPoolBaseOp<"max_pool_2d", []> {}
+
+def OneFlow_LazyMaxPool3dOp : OneFlow_LazyPoolBaseOp<"max_pool_3d", []> {}
+
+def OneFlow_LazyAvgPool1dOp : OneFlow_LazyPoolBaseOp<"avg_pool_1d", []> {}
+
+def OneFlow_LazyAvgPool2dOp : OneFlow_LazyPoolBaseOp<"avg_pool_2d", []> {}
+
+def OneFlow_LazyAvgPool3dOp : OneFlow_LazyPoolBaseOp<"avg_pool_3d", []> {}
+
+def OneFlow_EagerAvgPool1dOp : OneFlow_EagerPoolBaseOp<"avgpool_1d", []> {}
+
+def OneFlow_EagerAvgPool2dOp : OneFlow_EagerPoolBaseOp<"avgpool_2d", []> {}
+
+def OneFlow_EagerAvgPool3dOp : OneFlow_EagerPoolBaseOp<"avgpool_3d", []> {}
+
+
 def OneFlow_GatherOp : OneFlow_BaseOp<"gather", []> {
   let input = (ins
     AnyType:$in,
