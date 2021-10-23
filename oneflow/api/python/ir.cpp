@@ -16,6 +16,8 @@ limitations under the License.
 
 #ifdef WITH_MLIR
 #include <glog/logging.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/ir/include/OneFlow/Extension.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -31,6 +33,9 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
     // TODO: when false => true, sync vm, empty instructions
     // TODO: when true => false, start compile op expressions and exec
     return *one::MutJitEnabled();
+  });
+  m.def("set_jit_forward_args", [](const std::vector<std::shared_ptr<one::Tensor>>& tensors) {
+    // for (const auto& t : tensors) { LOG(ERROR) << t->tensor_meta().shape(); }
   });
 }
 
