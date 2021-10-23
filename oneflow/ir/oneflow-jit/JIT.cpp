@@ -66,6 +66,10 @@ mlir::FuncOp JitImporter::GetOrInsertFuncAndCreateMapping(const std::string& fun
     }
     auto func_type = GetBuilder().getFunctionType(arg_types, llvm::NoneType());
     FuncOp function = mlir::FuncOp::create(GetRootLocation(), func_name, func_type);
+    for (auto argument_pair : llvm::zip(arg_tensors, function.body().getArguments())) {
+      CHECK(result_mapping_.emplace(std::get<0>(argument_pair).get(), std::get<1>(argument_pair))
+                .second);
+    }
     auto entryBlock = function.addEntryBlock();
     GetBuilder().setInsertionPointToStart(entryBlock);
     GetModule().push_back(function);
