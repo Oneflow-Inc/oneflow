@@ -8,7 +8,9 @@ def trace(f):
         func_name = f"jit{func_name}"
         assert oneflow._oneflow_internal.ir.toggle_jit(func_name)
         print("JIT enabled")
+        # TODO: SetJitForwardArgs(args)
         result = f(*args, **kwargs)
+        # TODO: SetJitForwardResults(result)
         print("JIT disabled")
         assert not oneflow._oneflow_internal.ir.toggle_jit(func_name)
         return result

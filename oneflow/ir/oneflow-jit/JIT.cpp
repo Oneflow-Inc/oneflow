@@ -38,6 +38,34 @@ Type JitImporter::GetTensorTypeOfLbn(const std::string& lbn) { return GetBuilder
   return ::oneflow::AttrType::kAtDataType;
 }
 
+mlir::FuncOp JitImporter::GetOrInsertFuncAndCreateMapping(const std::string& func_name,
+                                                          const TensorTuple& inputs,
+                                                          TensorTuple* outputs) {
+  // convert data types from oneflow
+  auto arg_types = llvm::SmallVector<Type, 8>();
+  auto result_types = llvm::SmallVector<Type, 8>();
+  for (const auto& input : inputs) {
+    auto mlir_type = GetTypeFromOneFlowDataType(input->dtype()->data_type());
+    arg_types.push_back(mlir_type.getValue());
+  }
+  for (const auto& output : *outputs) {
+    auto mlir_type = GetTypeFromOneFlowDataType(output->dtype()->data_type());
+    result_types.push_back(mlir_type.getValue());
+  }
+  // found existing func or create new one
+  SymbolTable symbol_table(GetModule());
+  FuncOp found_func = symbol_table.lookup<FuncOp>(func_name);
+  if (found_func) {
+    return found_func;
+  } else {
+    auto func_type = GetBuilder().getFunctionType(arg_types, llvm::NoneType());
+    FuncOp function = mlir::FuncOp::create(GetRootLocation(), func_name, func_type);
+    auto entryBlock = function.addEntryBlock();
+    GetBuilder().setInsertionPointToStart(entryBlock);
+    GetModule().push_back(function);
+    return function;
+  }
+}
 }  // namespace ir
 
 }  // namespace one
