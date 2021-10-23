@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,25 +12,19 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-from .math_ops import *
-from .random import *
-from .conv import *
-from .pooling import *
-from .activation import *
-from .dropout import *
-from .vision import *
-from .norm import *
-from .loss import *
-from .onehot import *
-from .comparison import *
-from .cast import *
-from .constant import *
-from .array_ops import *
-from .tensor import *
-from .comm import *
-from .ctc_decode import *
-from .placement import *
-from .sbp import *
-from .trigonometric_ops import *
-from .tensor_ops import *
+*/
+#ifndef ONEFLOW_CORE_COMMON_FOREIGN_LOCK_HELPER_H
+#define ONEFLOW_CORE_COMMON_FOREIGN_LOCK_HELPER_H
+#include <functional>
+#include "oneflow/core/common/maybe.h"
+
+namespace oneflow {
+class ForeignLockHelper {
+ public:
+  virtual ~ForeignLockHelper() = default;
+  virtual Maybe<void> WithScopedRelease(const std::function<Maybe<void>()>&) const = 0;
+  virtual Maybe<void> WithScopedAcquire(const std::function<Maybe<void>()>&) const = 0;
+};
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_COMMON_FOREIGN_LOCK_HELPER_H
