@@ -161,7 +161,7 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", []> {
 }
 
 def OneFlow_Convolution2dOp : OneFlow_BaseOp<"conv2d", []> {
-  let summary = "Oneflow Conv2d operation";
+  let summary = "OneFlow Conv2d operation";
   let description = [{
   "The convolution operator consumes an input tensor and a filter, and"
   "computes the output."
@@ -183,7 +183,19 @@ def OneFlow_Convolution2dOp : OneFlow_BaseOp<"conv2d", []> {
 }
 
 def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", []> {
-  let summary = "Oneflow Bias Add operation";
+  let summary = "OneFlow Bias Add operation";
+  let input = (ins
+    AnyType:$a,
+    AnyType:$b
+  );
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    SI32Attr:$axis
+  );
+}
+
+def OneFlow_ReshapeOp : OneFlow_BaseOp<"bias_add", []> {
+  let summary = "OneFlow Bias Add operation";
   let input = (ins
     AnyType:$a,
     AnyType:$b
