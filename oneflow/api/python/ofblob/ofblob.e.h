@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_API_PYTHON_OFBLOB_OFBLOB_E_H_
 #define ONEFLOW_API_PYTHON_OFBLOB_OFBLOB_E_H_
 
-#include "oneflow/api/foreign_lock_helper.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
 #include "oneflow/core/common/type_traits.h"
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>

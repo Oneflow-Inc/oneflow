@@ -16,7 +16,7 @@ limitations under the License.
 #include <chrono>
 #include "oneflow/core/common/spin_counter.h"
 #include "oneflow/core/common/global.h"
-#include "oneflow/api/foreign_lock_helper.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
 
 namespace oneflow {
 

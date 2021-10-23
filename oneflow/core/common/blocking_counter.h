@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_BLOCKING_COUNTER_H_
 #define ONEFLOW_CORE_COMMON_BLOCKING_COUNTER_H_
 
-#include "oneflow/api/foreign_lock_helper.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/util.h"
 
