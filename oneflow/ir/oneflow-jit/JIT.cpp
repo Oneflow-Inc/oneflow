@@ -1,6 +1,7 @@
 #include "OneFlow/JIT.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "OneFlow/OneFlowDialect.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 
 namespace oneflow {
 
@@ -42,22 +43,27 @@ mlir::FuncOp JitImporter::GetOrInsertFuncAndCreateMapping(const std::string& fun
                                                           const TensorTuple& inputs,
                                                           TensorTuple* outputs) {
   // convert data types from oneflow
-  auto arg_types = llvm::SmallVector<Type, 8>();
   auto result_types = llvm::SmallVector<Type, 8>();
-  for (const auto& input : inputs) {
-    auto mlir_type = GetTypeFromOneFlowDataType(input->dtype()->data_type());
-    arg_types.push_back(mlir_type.getValue());
-  }
-  for (const auto& output : *outputs) {
-    auto mlir_type = GetTypeFromOneFlowDataType(output->dtype()->data_type());
-    result_types.push_back(mlir_type.getValue());
-  }
+  // for (const auto& output : *outputs) {
+  //   auto mlir_type = GetTypeFromOneFlowDataType(output->dtype()->data_type());
+  //   result_types.push_back(mlir_type.getValue());
+  // }
   // found existing func or create new one
   SymbolTable symbol_table(GetModule());
   FuncOp found_func = symbol_table.lookup<FuncOp>(func_name);
   if (found_func) {
     return found_func;
   } else {
+    auto arg_tensors = GetJitForwardArgs();
+    auto arg_types = llvm::SmallVector<Type, 8>();
+    for (const auto& arg_tensor : arg_tensors) {
+      auto mlir_dtype = GetTypeFromOneFlowDataType(arg_tensor->dtype()->data_type());
+      auto mlir_tensor_type =
+          RankedTensorType::get(ArrayRef<int64_t>(arg_tensor->shape()->dim_vec().begin(),
+                                                  arg_tensor->shape()->dim_vec().end()),
+                                mlir_dtype.getValue());
+      arg_types.push_back(mlir_tensor_type);
+    }
     auto func_type = GetBuilder().getFunctionType(arg_types, llvm::NoneType());
     FuncOp function = mlir::FuncOp::create(GetRootLocation(), func_name, func_type);
     auto entryBlock = function.addEntryBlock();
