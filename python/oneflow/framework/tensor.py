@@ -482,8 +482,14 @@ def _unsqueeze(self, dim):
     return flow._C.unsqueeze(self, dim=dim)
 
 
-def _permute(self, dims):
-    return flow._C.permute(self, dims=dims)
+def _permute(self, *dims):
+    if len(dims) == 1:
+        new_dims = dims[0]
+        if isinstance(new_dims, int):
+            new_dims = (new_dims, )
+    else:
+        new_dims = dims
+    return flow._C.transpose(self, new_dims)
 
 
 def _matmul(self, other):
