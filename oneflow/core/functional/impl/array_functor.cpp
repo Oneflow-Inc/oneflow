@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator_impl.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -49,13 +50,16 @@ class ArgMaxFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int32_t>& dim,
                            const Optional<bool>& keepdim,
                            const Optional<Symbol<DType>>& dtype) const {
-    std::shared_ptr<Tensor> result;
     if (dim.has_value() == false) {
-      result = JUST(Flatten(input, 0, -1));
-      return JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {result}));
+      return SequenceFunction<Maybe<Tensor>()>([&]() { return Flatten(input, 0, -1); })
+          .then([&](const std::shared_ptr<one::Tensor>& x) {
+            return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+          })
+          .call();
     }
+
     int new_dim = JUST(dim);
-    int32_t ndims = input->shape()->NumAxes();
+    const int32_t ndims = input->shape()->NumAxes();
     if (new_dim < 0) { new_dim += ndims; }
     CHECK_GE_OR_RETURN(new_dim, 0)
         << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
@@ -63,35 +67,40 @@ class ArgMaxFunctor {
     CHECK_LT_OR_RETURN(new_dim, ndims)
         << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
         << ndims << " ] but got " << ndims;
+
+    const auto do_cast = [&](const std::shared_ptr<one::Tensor>& x) -> Maybe<Tensor> {
+      return Cast(x, JUST(dtype));
+    };
+
     if (new_dim == ndims - 1) {
-      result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input}));
-      if (keepdim.has_value() && JUST(keepdim) == true) { result = JUST(ExpandDims(result, -1)); }
-    } else {
-      std::vector<int32_t> permute;
-      for (int32_t i = 0; i < ndims - 1; i++) {
-        if (i < new_dim) {
-          permute.push_back(i);
-        } else {
-          permute.push_back(i + 1);
-        }
-      }
-      permute.push_back(new_dim);
-      result = JUST(Transpose(input, permute));
-      result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {result}));
-      result = JUST(ExpandDims(result, -1));
-      std::vector<int32_t> permute_inv;
-      permute_inv.resize(ndims);
-      for (int32_t i = 0; i < ndims; i++) { permute_inv[i] = -1; }
-      for (int32_t i = 0; i < ndims; i++) { permute_inv[permute[i]] = i; }
-      result = JUST(Transpose(result, permute_inv));
-      std::vector<int32_t> squeeze_dim;
-      squeeze_dim.push_back(new_dim);
-      if ((!keepdim.has_value()) || (keepdim.has_value() && JUST(keepdim) == false)) {
-        result = JUST(Squeeze(result, squeeze_dim));
-      }
+      return SequenceFunction<Maybe<Tensor>()>(
+                 [&]() { return OpInterpUtil::Dispatch<Tensor>(*op_, {input}); })
+          .then_if(keepdim.has_value() && JUST(keepdim) == true,
+                   std::bind(ExpandDims, std::placeholders::_1, -1))
+          .then_if(dtype.has_value(), do_cast)
+          .call();
     }
-    if (dtype.has_value()) { result = JUST(Cast(result, JUST(dtype))); }
-    return result;
+
+    std::vector<int32_t> permute;
+    for (int32_t i = 0; i < ndims - 1; i++) { permute.push_back(i < new_dim ? i : i + 1); }
+    permute.push_back(new_dim);
+
+    std::vector<int32_t> permute_inv(ndims, 0);
+    for (int32_t i = 0; i < ndims; i++) { permute_inv[i] = -1; }
+    for (int32_t i = 0; i < ndims; i++) { permute_inv[permute[i]] = i; }
+
+    std::vector<int32_t> squeeze_dim = {new_dim};
+
+    return SequenceFunction<Maybe<Tensor>()>([&]() { return Transpose(input, permute); })
+        .then([&](const std::shared_ptr<one::Tensor>& x) {
+          return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+        })
+        .then(std::bind(ExpandDims, std::placeholders::_1, -1))
+        .then(std::bind(Transpose, std::placeholders::_1, permute_inv))
+        .then_if((!keepdim.has_value()) || (keepdim.has_value() && JUST(keepdim) == false),
+                 std::bind(Squeeze, std::placeholders::_1, squeeze_dim))
+        .then_if(dtype.has_value(), do_cast)
+        .call();
   }
 
  private:
@@ -104,8 +113,9 @@ class ArgMinFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int32_t>& dim,
                            const Optional<bool>& keepdim,
                            const Optional<Symbol<DType>>& dtype) const {
-    auto neg_input = JUST(Negative(input));
-    return JUST(ArgMax(neg_input, dim, keepdim, dtype));
+    return sequence_function(Negative)
+        .then(std::bind(ArgMax, std::placeholders::_1, dim, keepdim, dtype))
+        .call(input);
   }
 };
 class ConsistentConstantFunctor {
