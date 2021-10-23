@@ -85,7 +85,7 @@ const StringSet<>& GetScalarMathOpTypeNames() {
   return names;
 }
 
-const StringSet<>& GetAvgPoolOpTypeNames() {
+const StringSet<>& GetPoolOpTypeNames() {
   static llvm::StringSet<> names({"avgpool_1d", "avgpool_2d", "avgpool_3d", "avg_pool_1d", "avg_pool_2d", 
                                   "avg_pool_3d", "max_pool_1d", "max_pool_2d", "max_pool_3d"
 
@@ -119,7 +119,7 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
       if (op_type_name.equals("relu") || op_type_name.equals("gelu") || op_type_name.equals("cast")
           || GetUnaryOpTypeNames().contains(op_type_name)
           || GetFloatUnaryOpTypeNames().contains(op_type_name) || GetScalarMathOpTypeNames().contains(op_type_name)
-          || GetAvgPoolOpTypeNames().contains(op_type_name)) {
+          || GetPoolOpTypeNames().contains(op_type_name)) {
         NamedAttrList attributes(op->getAttrDictionary());
         attributes.erase("operand_segment_sizes");
         attributes.erase("result_segment_sizes");
