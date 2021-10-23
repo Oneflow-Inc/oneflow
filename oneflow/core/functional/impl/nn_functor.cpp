@@ -1560,28 +1560,30 @@ class OneHotFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& num_classes,
                            const Scalar& on_value, const Scalar& off_value) const {
-
-    if (IsFloatingDataType(input->dtype()->data_type())){
+    if (IsFloatingDataType(input->dtype()->data_type())) {
       OF_RUNTIME_ERROR() << "one_hot is only applicable to index tensor.";
     }
     MutableAttrMap attrs;
-    if(input->is_consistent()){
-      OF_RUNTIME_ERROR() << "A consistent tensor can not be applied to onehot, and use tensor.to_local() to convert it to local tensor first.";
+    if (input->is_consistent()) {
+      OF_RUNTIME_ERROR() << "A consistent tensor can not be applied to onehot, and use "
+                            "tensor.to_local() to convert it to local tensor first.";
     }
-    if(num_classes == -1){
+    if (num_classes == -1) {
       std::vector<int32_t> axis(input->ndim());
       std::iota(axis.begin(), axis.end(), 0);
       auto tensor_max = JUST(functional::ReduceMax(input, axis, false));
 
       int64_t max;
-      const auto& callback = std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
-        auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-        of_blob->AutoMemCopyTo<int64_t>(&max, 1); // copy 1 scalar(int64_t) tensor's value to max
-      });
+      const auto& callback =
+          std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
+            auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+            of_blob->AutoMemCopyTo<int64_t>(&max,
+                                            1);  // copy 1 scalar(int64_t) tensor's value to max
+          });
       JUST(SyncAccessTensorWithTimeOut(tensor_max, callback, "const"));
-      JUST(attrs.SetAttr<int64_t>("depth", max+1));
-      
-    }else{
+      JUST(attrs.SetAttr<int64_t>("depth", max + 1));
+
+    } else {
       JUST(attrs.SetAttr<int64_t>("depth", num_classes));
     }
     bool is_on_value_double = on_value.IsFloatingPoint();

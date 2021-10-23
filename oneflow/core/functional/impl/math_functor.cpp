@@ -480,7 +480,6 @@ class ReduceProdFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-
 class TransposeFunctor {
  public:
   TransposeFunctor() {
