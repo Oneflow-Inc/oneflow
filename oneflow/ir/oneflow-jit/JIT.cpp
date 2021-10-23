@@ -39,9 +39,10 @@ Type JitImporter::GetTensorTypeOfLbn(const std::string& lbn) { return GetBuilder
   return ::oneflow::AttrType::kAtDataType;
 }
 
-mlir::FuncOp JitImporter::GetOrInsertFuncAndCreateMapping(const std::string& func_name,
-                                                          const TensorTuple& inputs,
-                                                          TensorTuple* outputs) {
+mlir::FuncOp JitImporter::GetOrInsertFuncAndCreateMapping(
+    const std::string& func_name,
+    const std::vector<std::pair<std::string, int32_t>>& indexed_arg_name_and_index,
+    const TensorTuple& inputs, TensorTuple* outputs) {
   // convert data types from oneflow
   auto result_types = llvm::SmallVector<Type, 8>();
   // for (const auto& output : *outputs) {
@@ -74,6 +75,12 @@ mlir::FuncOp JitImporter::GetOrInsertFuncAndCreateMapping(const std::string& fun
     GetBuilder().setInsertionPointToStart(entryBlock);
     GetModule().push_back(function);
     return function;
+  }
+  operand_mapping_.clear();
+  for (auto pair : llvm::zip(indexed_arg_name_and_index, inputs)) {
+    const auto& arg_name_index_tuple = std::get<0>(pair);
+    const auto& tensor = std::get<1>(pair);
+    assert(operand_mapping_.emplace(arg_name_index_tuple, result_mapping_.at(tensor.get())).second);
   }
 }
 }  // namespace ir

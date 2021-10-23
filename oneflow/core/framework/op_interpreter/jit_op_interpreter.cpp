@@ -83,7 +83,10 @@ Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTup
   //       return bd;
   //     },
   //     *parallel_desc));
-  importer_.GetOrInsertFuncAndCreateMapping(GetJitFuncName(), inputs, outputs);
+  auto indexed_arg_name_and_index = op_expr.input_arg_tuple()->indexed_arg_name_and_index();
+  CHECK_EQ_OR_RETURN(indexed_arg_name_and_index.size(), inputs.size());
+  importer_.GetOrInsertFuncAndCreateMapping(GetJitFuncName(), indexed_arg_name_and_index, inputs,
+                                            outputs);
   CHECK_OR_RETURN(importer_.ProcessUserOp(*op_conf).succeeded());
   LOG(ERROR) << "[func name] " << GetJitFuncName();
   LOG(ERROR) << "[applied] " << op->op_name();
