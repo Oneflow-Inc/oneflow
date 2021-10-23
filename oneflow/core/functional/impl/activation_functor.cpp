@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -25,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/functional/sequence_function.h"
 
 namespace oneflow {
 namespace one {
@@ -235,9 +237,10 @@ class GluFunctor {
                                   << " is size " << nc;
     nc = nc / 2;
     std::vector<int64_t> split_sizes(2, nc);
-    auto split_x = JUST(SplitWithSize(input, split_sizes, dim));
-    auto sgmd_x1 = JUST(Sigmoid(split_x->at(1)));
-    return Mul(split_x->at(0), sgmd_x1);
+    const auto split_x = JUST(SplitWithSize(input, split_sizes, dim));
+    return sequence_function(functional::Sigmoid)
+        .then(std::bind(functional::Mul, split_x->at(0), std::placeholders::_1))
+        .call(split_x->at(1));
   }
 };
 
@@ -297,9 +300,12 @@ class SoftmaxFunctorBase {
       input_perm[dim_] = input_perm[input_perm.size() - 1];
       input_perm[input_perm.size() - 1] = dim_;
 
-      auto result = JUST(functional::Transpose(input, input_perm));
-      result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {result}));
-      return functional::Transpose(result, input_perm);
+      return sequence_function(functional::Transpose)
+          .then([&](const std::shared_ptr<one::Tensor>& x) {
+            return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+          })
+          .then(std::bind(functional::Transpose, std::placeholders::_1, input_perm))
+          .call(input, input_perm);
     }
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input});
