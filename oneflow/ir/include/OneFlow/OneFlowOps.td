@@ -123,6 +123,29 @@ def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", []> {
   let output = (outs AnyType:$y);
 }
 
+class OneFlow_ScalarMathOp<string mnemonic, list<OpTrait> traits = []> :
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType, NoSideEffect])> {
+    let summary = "OneFlow Scalar Math Ops";
+    let input = (ins AnyType:$x);
+    let output = (outs AnyType:$y);
+    let attrs = (ins
+    BoolAttr:$has_int_operand,
+    BoolAttr:$has_float_operand,
+    SI64Attr:$int_operand,
+    F64Attr:$float_operand
+  );
+}
+
+def OneFlow_ScalarAddOp : OneFlow_ScalarMathOp<"scalar_add", []> {}
+
+def OneFlow_ScalarFloorDivOp : OneFlow_ScalarMathOp<"scalar_floordiv", []> {}
+
+def OneFlow_ScalarFmodOp : OneFlow_ScalarMathOp<"scalar_fmod", []> {}
+
+def OneFlow_ScalarMulOp : OneFlow_ScalarMathOp<"scalar_mul", []> {}
+
+def OneFlow_ScalarPowOp : OneFlow_ScalarMathOp<"scalar_pow", []> {}
+
 def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", []> {
   let input = (ins
     AnyType:$a,
@@ -138,7 +161,7 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", []> {
 }
 
 def OneFlow_Convolution2dOp : OneFlow_BaseOp<"conv2d", []> {
-  let summary = "OneFlow Conv2d operation";
+  let summary = "Oneflow Conv2d operation";
   let description = [{
   "The convolution operator consumes an input tensor and a filter, and"
   "computes the output."

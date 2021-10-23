@@ -78,6 +78,13 @@ const StringSet<>& GetUnaryOpTypeNames() {
   return names;
 }
 
+const StringSet<>& GetScalarMathOpTypeNames() {
+  static llvm::StringSet<> names({"scalar_add", "scalar_floordiv", "scalar_fmod", "scalar_mul", "scalar_pow"
+
+  });
+  return names;
+}
+
 const StringSet<>& GetFloatUnaryOpTypeNames() {
   static llvm::StringSet<> names({"acosh", "asin",     "asinh",      "atan",  "atanh",      "sin",
                                   "cos",   "erf",      "erfc",       "exp",   "expm1",      "log",
@@ -103,7 +110,7 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
     else if (IsCtrlOutTrimmed(op) && IsCtrlInAbsent(op)) {
       if (op_type_name.equals("relu") || op_type_name.equals("gelu") || op_type_name.equals("cast")
           || GetUnaryOpTypeNames().contains(op_type_name)
-          || GetFloatUnaryOpTypeNames().contains(op_type_name)) {
+          || GetFloatUnaryOpTypeNames().contains(op_type_name) || GetScalarMathOpTypeNames().contains(op_type_name)) {
         NamedAttrList attributes(op->getAttrDictionary());
         attributes.erase("operand_segment_sizes");
         attributes.erase("result_segment_sizes");
@@ -134,7 +141,8 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
           op->erase();
           return success();
         }
-      } else {
+      }
+      else {
         if (!GetPrintedOpTypeNames()->contains(op.op_type_name())) {
           llvm::errs() << "MLIR opaque user op: " << op.op_type_name() << "\n";
           GetPrintedOpTypeNames()->insert(op.op_type_name());
