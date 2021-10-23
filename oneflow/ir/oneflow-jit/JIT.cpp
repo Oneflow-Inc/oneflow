@@ -97,7 +97,8 @@ void JitImporter::CreateOperandMapping(
       }
       LOG(FATAL) << "result not found, arg/index: " << arg_name_index_tuple.first << "/"
                  << arg_name_index_tuple.second << ", tensor: " << tensor.get()
-                 << ", shape: " << tensor->shape()->DebugStr();
+                 << ", shape: " << tensor->shape()->DebugStr()
+                 << ", dtype: " << tensor->dtype()->name();
     } else {
       assert(
           operand_mapping_.emplace(arg_name_index_tuple, result_mapping_.at(tensor.get())).second);
