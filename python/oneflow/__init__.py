@@ -246,6 +246,7 @@ from oneflow.framework.generator import default_generator, manual_seed
 from oneflow.framework.scope_util import api_current_scope as current_scope
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
+
 from oneflow.nn.modules.pooling import (
     adaptive_avg_pool1d,
     adaptive_avg_pool2d,
