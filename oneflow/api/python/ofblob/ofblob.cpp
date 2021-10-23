@@ -34,10 +34,17 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("Dtype_GetOfBlobCopyToBufferFuncName", &Dtype_GetOfBlobCopyToBufferFuncName);
   m.def("Dtype_GetOfBlobCopyFromBufferFuncName", &Dtype_GetOfBlobCopyFromBufferFuncName);
 
-#define EXPORT_COPY_DATA_API(T, type_proto)                                   \
-  m.def("OfBlob_CopyToBuffer_" OF_PP_STRINGIZE(T), &OfBlob_CopyToBuffer_##T); \
-  m.def("OfBlob_CopyFromBuffer_" OF_PP_STRINGIZE(T), &OfBlob_CopyFromBuffer_##T);
-
+#define EXPORT_COPY_DATA_API(T, type_proto)                  \
+  m.def("OfBlob_CopyToBuffer_" OF_PP_STRINGIZE(T),           \
+        [](uint64_t of_blob_ptr, py::array_t<T> array) {     \
+          oneflow::NumPyArrayPtr array_ptr(array.ptr());     \
+          OfBlob_CopyToBuffer_##T(of_blob_ptr, array_ptr);   \
+        });                                                  \
+  m.def("OfBlob_CopyFromBuffer_" OF_PP_STRINGIZE(T),         \
+        [](uint64_t of_blob_ptr, py::array_t<T> array) {     \
+          oneflow::NumPyArrayPtr array_ptr(array.ptr());     \
+          OfBlob_CopyFromBuffer_##T(of_blob_ptr, array_ptr); \
+        });
   OF_PP_FOR_EACH_TUPLE(EXPORT_COPY_DATA_API, POD_DATA_TYPE_SEQ);
 
 #undef EXPORT_COPY_DATA_API
