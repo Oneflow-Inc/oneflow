@@ -18,7 +18,10 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.narrow,
-    r"""Returns a new tensor that is a narrowed version of `input` tensor.
+    r"""
+    narrow(x, dim: int, start: int, length: int) -> Tensor
+    
+    Returns a new tensor that is a narrowed version of `input` tensor.
     The dimension `dim` is input from `start` to `start + length`.
 
     Args:
@@ -45,7 +48,10 @@ add_docstr(
 
 add_docstr(
     oneflow.unsqueeze,
-    r"""Returns a new tensor with a dimension of size one inserted at the
+    r"""
+    unsqueeze(input, dim) -> Tensor
+    
+    Returns a new tensor with a dimension of size one inserted at the
     specified position.
 
     The returned tensor shares the same underlying data with this tensor.
@@ -74,7 +80,10 @@ add_docstr(
 
 add_docstr(
     oneflow.permute,
-    r"""Returns a view of the original tensor with its dimensions permuted.
+    r"""
+    permute(input, *dims) -> Tensor
+
+    Returns a view of the original tensor with its dimensions permuted.
 
     Args:
         dims (tuple of python:ints): The desired ordering of dimensions

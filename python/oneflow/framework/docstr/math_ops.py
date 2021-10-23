@@ -1069,7 +1069,10 @@ add_docstr(
 
 add_docstr(
     oneflow.matmul,
-    r"""This operator applies matrix multiplication to two Tensor.
+    r"""
+    matmul(input, other) -> Tensor
+
+    This operator applies matrix multiplication to two Tensor.
 
     Args:
         a (oneflow.Tensor): A Tensor

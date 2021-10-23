@@ -420,32 +420,30 @@ class CatFunctor {
     }
   }
   Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim) const {
-    if(inputs.size()==1){
-      return inputs.at(0);
-    }
+    if (inputs.size() == 1) { return inputs.at(0); }
     int64_t axis = dim;
     int64_t ndim = inputs.at(0)->ndim();
     int64_t max_dim_size = 0;
     CHECK_GE_OR_RETURN(inputs.size(), 2);
-    CHECK_OR_RETURN((-(ndim) <= dim) && (dim <= (ndim-1))) << " IndexError: Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim-1 << "], but got " << dim; 
-    if(dim < 0){
-      axis += ndim;
-    }
+    CHECK_OR_RETURN((-(ndim) <= dim) && (dim <= (ndim - 1)))
+        << " IndexError: Dimension out of range, expected to be in range of [" << -ndim << ", "
+        << ndim - 1 << "], but got " << dim;
+    if (dim < 0) { axis += ndim; }
 
     const std::shared_ptr<const Shape>& shape = inputs.at(0)->shape();
-    for(auto input: inputs){
-      CHECK_OR_RETURN(input->ndim() == ndim) 
-        << " Tensors must have same number of dimensions: got " << input->ndim() << " and " << ndim << " is expected.";
-      for(int i=0; i<ndim; ++i){
-        if(axis == i){
+    for (auto input : inputs) {
+      CHECK_OR_RETURN(input->ndim() == ndim) << " Tensors must have same number of dimensions: got "
+                                             << input->ndim() << " and " << ndim << " is expected.";
+      for (int i = 0; i < ndim; ++i) {
+        if (axis == i) {
           max_dim_size += input->shape()->At(i);
-        }else{
+        } else {
           CHECK_OR_RETURN(input->shape()->At(i) == shape->At(i))
-            << " Sizes of tensors must match except in dimension " << axis <<". Got " << input->shape()->At(i) << " and " << shape->At(i) << " is expected in dimension 1.";
+              << " Sizes of tensors must match except in dimension " << axis << ". Got "
+              << input->shape()->At(i) << " and " << shape->At(i) << " is expected in dimension 1.";
         }
       }
     }
-
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("axis", axis));
