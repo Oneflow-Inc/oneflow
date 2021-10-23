@@ -122,7 +122,8 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
           || GetUnaryOpTypeNames().contains(op_type_name)
           || GetFloatUnaryOpTypeNames().contains(op_type_name)
           || GetScalarMathOpTypeNames().contains(op_type_name)
-          || GetPoolOpTypeNames().contains(op_type_name)) {
+          || GetPoolOpTypeNames().contains(op_type_name)
+          || op_type_name.equals("reshape")) {
         NamedAttrList attributes(op->getAttrDictionary());
         attributes.erase("operand_segment_sizes");
         attributes.erase("result_segment_sizes");

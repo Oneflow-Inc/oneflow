@@ -146,6 +146,22 @@ def OneFlow_ScalarMulOp : OneFlow_ScalarMathOp<"scalar_mul", []> {}
 
 def OneFlow_ScalarPowOp : OneFlow_ScalarMathOp<"scalar_pow", []> {}
 
+def OneFlow_Reshape : OneFlow_BaseOp<"reshape", []> {
+  let summary = "OneFlow Reshape operation";
+  let description = [{
+  "Reshape the input tensor similar to numpy.reshape."
+  "First input is the data tensor, second input is a shape tensor which specifies the output shape. It outputs the reshaped tensor."
+  "At most one dimension of the new shape can be -1. In this case, the value is"
+  "inferred from the size of the tensor and the remaining dimensions. A dimension"
+  "could also be 0, in which case the actual dimension value is unchanged (i.e. taken"
+  "from the input tensor)."
+  }];
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs AnyType:$out);
+}
+
 def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", []> {
   let input = (ins
     AnyType:$a,
@@ -179,18 +195,6 @@ def OneFlow_Convolution2dOp : OneFlow_BaseOp<"conv2d", []> {
     SI32ArrayAttr:$strides,
     SI32ArrayAttr:$dilation_rate,
     DefaultValuedAttr<SI32Attr, "1">:$group
-  );
-}
-
-def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", []> {
-  let summary = "OneFlow Bias Add operation";
-  let input = (ins
-    AnyType:$a,
-    AnyType:$b
-  );
-  let output = (outs AnyType:$out);
-  let attrs = (ins
-    SI32Attr:$axis
   );
 }
 
