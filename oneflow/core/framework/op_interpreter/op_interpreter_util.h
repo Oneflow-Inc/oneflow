@@ -39,6 +39,10 @@ std::string* MutJitFuncName();
 
 const std::string& GetJitFuncName();
 
+void SetJitForwardArgs(const std::vector<std::shared_ptr<one::Tensor>>& tensors);
+
+const std::vector<std::shared_ptr<one::Tensor>>& GetJitForwardArgs();
+
 #endif  // WITH_MLIR
 
 class OpInterpUtil {
