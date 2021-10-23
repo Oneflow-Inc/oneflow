@@ -13,17 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_API_FOREIGN_LOCK_HELPER_H
-#define ONEFLOW_API_FOREIGN_LOCK_HELPER_H
-#include <functional>
-#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
+#include "oneflow/core/common/global.h"
 
 namespace oneflow {
-class ForeignLockHelper {
- public:
-  virtual Maybe<void> WithScopedRelease(const std::function<Maybe<void>()>&) const = 0;
-  virtual Maybe<void> WithScopedAcquire(const std::function<Maybe<void>()>&) const = 0;
-};
-}  // namespace oneflow
+class NoForeignLockHelper final : public ForeignLockHelper {
+  Maybe<void> WithScopedRelease(const std::function<Maybe<void>()>& Callback) const override {
+    return Callback();
+  }
 
-#endif  // ONEFLOW_API_FOREIGN_LOCK_HELPER_H
+  Maybe<void> WithScopedAcquire(const std::function<Maybe<void>()>& Callback) const override {
+    return Callback();
+  }
+};
+
+static int __register_no_foreign_lock_helper __attribute__((unused)) = []() {
+  Global<ForeignLockHelper>::SetAllocated(new NoForeignLockHelper());
+  return 0;
+}();
+
+}  // namespace oneflow
