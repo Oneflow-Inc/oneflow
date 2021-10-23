@@ -70,7 +70,6 @@ mlir::FuncOp JitImporter::GetOrInsertFunc(const std::string& func_name, const Te
     auto entryBlock = function.addEntryBlock();
     CHECK_EQ(arg_tensors.size(), function.body().getArguments().size());
     for (auto argument_pair : llvm::zip(arg_tensors, function.body().getArguments())) {
-      LOG(ERROR) << "[result_mapping_ tensor]" << std::get<0>(argument_pair).get();
       CHECK(result_mapping_.emplace(std::get<0>(argument_pair).get(), std::get<1>(argument_pair))
                 .second);
     }
@@ -90,6 +89,12 @@ void JitImporter::CreateOperandMapping(
     const auto& tensor = std::get<1>(pair);
     auto result_it = result_mapping_.find(tensor.get());
     if (result_it == result_mapping_.end()) {
+      for (auto kv : result_mapping_) {
+        std::string result_str;
+        llvm::raw_string_ostream os(result_str);
+        kv.second.print(os);
+        LOG(ERROR) << "tensor/value: " << kv.first << "/" << result_str;
+      }
       LOG(FATAL) << "result not found, arg/index: " << arg_name_index_tuple.first << "/"
                  << arg_name_index_tuple.second << ", tensor: " << tensor.get();
     } else {
