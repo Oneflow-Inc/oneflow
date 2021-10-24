@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/api/foreign_lock_helper.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/infer_stream_type.h"
@@ -28,7 +28,6 @@ limitations under the License.
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/global.h"
-#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 namespace vm {
@@ -62,7 +61,7 @@ void VirtualMachine::ReleaseInstruction(Instruction* instruction) {
       rw_mutexed_object_accesses->Erase(access.Mutable());
     }
     auto* mirrored_object = access->mut_mirrored_object();
-    if (!access->is_rw_mutexed_object_access_hook_empty()) {
+    if (!access->rw_mutexed_object_access_hook().empty()) {
       CHECK_EQ(access->mut_rw_mutexed_object(), mirrored_object->mut_rw_mutexed_object());
       mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Erase(access.Mutable());
     }
@@ -89,8 +88,7 @@ void VirtualMachine::MovePendingToReadyOrWaiting() {
   MakeInstructions(&tmp_pending_msg_list, /*out*/ &new_instruction_list);
   ConsumeMirroredObjects(mut_id2logical_object(), &new_instruction_list);
   MoveToReadyOrWaiting(&new_instruction_list);
-  static thread_local bool single_client = !CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get());
-  if (unlikely(single_client)) { TryDeleteLogicalObjects(); }
+  if (unlikely(mut_delete_logical_object_list()->size())) { TryDeleteLogicalObjects(); }
   OF_PROFILER_RANGE_POP();
 }
 
@@ -519,12 +517,12 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
 }
 
 bool VirtualMachine::Dispatchable(Instruction* instruction) const {
-  if (!instruction->is_dispatched_instruction_hook_empty()) { return false; }
+  if (!instruction->dispatched_instruction_hook().empty()) { return false; }
   const auto* stream = &instruction->stream();
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_in_edges()) {
     const auto& src_instruction = edge->src_instruction();
     if (!(&src_instruction.stream() == stream /* same stream*/
-          && !src_instruction.is_dispatched_instruction_hook_empty() /* dispatched */)) {
+          && !src_instruction.dispatched_instruction_hook().empty() /* dispatched */)) {
       return false;
     }
   }
@@ -561,7 +559,7 @@ void VirtualMachine::DispatchInstruction(Instruction* instruction) {
   OF_PROFILER_RANGE_PUSH("Dispatch-" + instruction->instr_msg().instr_type_name());
   auto* stream = instruction->mut_stream();
   stream->mut_running_instruction_list()->PushBack(instruction);
-  if (stream->is_active_stream_hook_empty()) { mut_active_stream_list()->PushBack(stream); }
+  if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
   const auto& stream_type = stream->stream_type();
   if (stream_type.SharingVirtualMachineThread()) {
     stream_type.Run(this, instruction);
@@ -638,7 +636,7 @@ Maybe<void> VirtualMachine::Receive(intrusive::shared_ptr<InstructionMsg>&& comp
 
 void VirtualMachine::TryRunBarrierInstruction() {
   auto* sequnential_instruction = mut_barrier_instruction_list()->Begin();
-  if (likely(sequnential_instruction == nullptr)) { return; }
+  CHECK(sequnential_instruction != nullptr);
   if (likely(sequnential_instruction != mut_lively_instruction_list()->Begin())) { return; }
   // All instructions before `sequnential_instruction` are handled now, it's time to handle
   // `sequnential_instruction`.

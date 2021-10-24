@@ -36,7 +36,7 @@ INTRUSIVE_BEGIN(Stream);
   const ThreadCtx& thread_ctx() const { return *thread_ctx_; }
   bool has_thread_ctx() const { return thread_ctx_ != nullptr; }
   const std::unique_ptr<DeviceCtx>& device_ctx() const { return device_ctx_; }
-  bool is_active_stream_hook_empty() const { return active_stream_hook_.empty(); }
+  const intrusive::ListHook& active_stream_hook() const { return active_stream_hook_; }
   const DispatchedInstructionList& free_instruction_list() const { return free_instruction_list_; }
   const DispatchedInstructionList& zombie_instruction_list() const { return zombie_instruction_list_; }
   const DispatchedInstructionList& running_instruction_list() const { return running_instruction_list_; }

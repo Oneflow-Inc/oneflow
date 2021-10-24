@@ -50,7 +50,7 @@ INTRUSIVE_BEGIN(RwMutexedObjectAccess);
   const Instruction& instruction() const { return *instruction_; }
   const MirroredObject& mirrored_object() const { return *mirrored_object_; }
   const RwMutexedObject& rw_mutexed_object() const { return *rw_mutexed_object_; }
-  bool is_rw_mutexed_object_access_hook_empty() const { return rw_mutexed_object_access_hook_.empty(); }
+  const intrusive::ListHook& rw_mutexed_object_access_hook() const { return rw_mutexed_object_access_hook_; }
   const MirroredObjectId& mirrored_object_id() const { return mirrored_object_id_.key().Get(); }
   bool is_mirrored_object_id_inserted() const { return !mirrored_object_id_.empty(); }
 
@@ -212,7 +212,7 @@ INTRUSIVE_BEGIN(LogicalObject);
       intrusive::SkipList<INTRUSIVE_FIELD(MirroredObject, global_device_id_)>;
   // Getters
   const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
-  bool is_delete_hook_empty() const { return delete_hook_.empty(); }
+  const intrusive::ListHook& delete_hook() const { return delete_hook_; }
   const ObjectId& logical_object_id() const { return logical_object_id_.key(); }
   const GlobalDeviceId2MirroredObject& global_device_id2mirrored_object() const {
     return global_device_id2mirrored_object_;

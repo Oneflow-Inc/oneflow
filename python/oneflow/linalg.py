@@ -13,6 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.nn.modules.norm import matrix_norm_tensor_op as matrix_norm
-from oneflow.nn.modules.norm import norm_op as norm
-from oneflow.nn.modules.norm import vector_norm_tensor_op as vector_norm
+from oneflow.framework.tensor import _norm as norm
+from oneflow.framework.tensor import _vector_norm as vector_norm
+from oneflow.framework.tensor import _matrix_norm as matrix_norm
