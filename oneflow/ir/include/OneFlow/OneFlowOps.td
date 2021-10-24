@@ -123,48 +123,32 @@ def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", []> {
   let output = (outs AnyType:$y);
 }
 
-class OneFlow_ScalarIntMathOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType, NoSideEffect])> {
-    let summary = "OneFlow Scalar Int Math Ops";
-    let input = (ins AnyType:$x);
-    let output = (outs AnyType:$y);
-    let attrs = (ins
-    SI64Attr:$int_operand
-  );
-}
 
-class OneFlow_ScalarFloatMathOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_ScalarMathOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType, NoSideEffect])> {
-    let summary = "OneFlow Scalar Float Math Ops";
+    let summary = "OneFlow Scalar Math Ops";
     let input = (ins AnyType:$x);
     let output = (outs AnyType:$y);
     let attrs = (ins
+    BoolAttr:$has_int_operand,
+    BoolAttr:$has_float_operand,
+    SI64Attr:$int_operand,
     F64Attr:$float_operand
   );
 }
 
-def OneFlow_ScalarIntAddOp : OneFlow_ScalarIntMathOp<"scalar_add_int", []> {}
+def OneFlow_ScalarAddOp : OneFlow_ScalarMathOp<"scalar_add", []> {}
 
-def OneFlow_ScalarFloatAddOp : OneFlow_ScalarFloatMathOp<"scalar_add_float", []> {}
+def OneFlow_ScalarFloorDivOp : OneFlow_ScalarMathOp<"scalar_floordiv", []> {}
 
-def OneFlow_ScalarIntFloorDivOp : OneFlow_ScalarIntMathOp<"scalar_floordiv_int", []> {}
+def OneFlow_ScalarFmodOp : OneFlow_ScalarMathOp<"scalar_fmod", []> {}
 
-def OneFlow_ScalarFloatFloorDivOp : OneFlow_ScalarFloatMathOp<"scalar_floordiv_float", []> {}
+def OneFlow_ScalarMulOp : OneFlow_ScalarMathOp<"scalar_mul", []> {}
 
-def OneFlow_ScalarIntFmodOp : OneFlow_ScalarIntMathOp<"scalar_fmod_int", []> {}
-
-def OneFlow_ScalarFloatFmodOp : OneFlow_ScalarFloatMathOp<"scalar_fmod_float", []> {}
-
-def OneFlow_ScalarIntMulOp : OneFlow_ScalarIntMathOp<"scalar_mul_int", []> {}
-
-def OneFlow_ScalarFloatMulOp : OneFlow_ScalarFloatMathOp<"scalar_mul_float", []> {}
-
-def OneFlow_ScalarIntPowOp : OneFlow_ScalarIntMathOp<"scalar_pow_int", []> {}
-
-def OneFlow_ScalarFloatPowOp : OneFlow_ScalarFloatMathOp<"scalar_pow_float", []> {}
+def OneFlow_ScalarPowOp : OneFlow_ScalarMathOp<"scalar_pow", []> {}
 
 class OneFlow_ReduceBaseOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType, NoSideEffect])> {
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
     let summary = "OneFlow Reduce Mean Ops";
     let input = (ins AnyType:$input_tensor);
     let output = (outs AnyType:$output_tensor);
