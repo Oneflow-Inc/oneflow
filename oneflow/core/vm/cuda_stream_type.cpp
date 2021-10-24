@@ -59,10 +59,10 @@ void CudaStreamType::set_has_event_record(InstructionStatusBuffer* status_buffer
 }
 
 void CudaStreamType::Compute(Instruction* instruction) const {
-  if (oneflow::DTRDebugEnabled()) {
-    std::cout << "Begin cuda_stream_type.cpp:CudaStreamType::Compute " << std::endl;
-    Global<one::DTRTensorPool>::Get()->display();
-  }
+  // if (oneflow::DTRDebugEnabled()) {
+  //   std::cout << "Begin cuda_stream_type.cpp:CudaStreamType::Compute " << std::endl;
+  //   Global<one::DTRTensorPool>::Get()->display();
+  // }
   auto* stream = instruction->mut_stream();
   cudaSetDevice(stream->device_id());
   {
@@ -73,10 +73,10 @@ void CudaStreamType::Compute(Instruction* instruction) const {
   }
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
   CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
-  if (oneflow::DTRDebugEnabled()) {
-    std::cout << "End cuda_stream_type.cpp:CudaStreamType::Compute " << std::endl;
-    Global<one::DTRTensorPool>::Get()->display();
-  }
+  // if (oneflow::DTRDebugEnabled()) {
+  //   std::cout << "End cuda_stream_type.cpp:CudaStreamType::Compute " << std::endl;
+  //   Global<one::DTRTensorPool>::Get()->display();
+  // }
 }
 
 intrusive::shared_ptr<StreamDesc> CudaStreamType::MakeStreamDesc(const Resource& resource,

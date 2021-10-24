@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_ENV_ENV_API_H_
 
 #include "oneflow/api/python/env/env.h"
+#include "oneflow/core/framework/config_dtr.h"
 
 inline std::string CurrentResource() { return oneflow::CurrentResource().GetOrThrow(); }
 

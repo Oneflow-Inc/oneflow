@@ -48,21 +48,6 @@ inline Maybe<void> EnableEagerEnvironment(bool enable_eager_execution) {
   return Maybe<void>::Ok();
 }
 
-inline Maybe<void> EnableDTRStrategy(bool enable_dtr, double thres, bool enable_debug) {
-  CHECK_NOTNULL_OR_RETURN((Global<bool, EnableDTR>::Get()));
-  CHECK_NOTNULL_OR_RETURN((Global<double, DTRMemoryThreshold>::Get()));
-  CHECK_NOTNULL_OR_RETURN((Global<size_t, DTRRemainMemory>::Get()));
-  CHECK_NOTNULL_OR_RETURN((Global<bool, EnableDTRDebug>::Get()));
-  *Global<bool, EnableDTR>::Get() = enable_dtr;
-  *Global<double, DTRMemoryThreshold>::Get() = thres;
-  *Global<bool, EnableDTRDebug>::Get() = enable_debug;
-  size_t free_bytes = -1;
-  size_t total_bytes = -1;
-  OF_CUDA_CHECK(cudaMemGetInfo(&free_bytes, &total_bytes));
-  *Global<size_t, DTRRemainMemory>::Get() = (1 - thres) * free_bytes;
-  return Maybe<void>::Ok();
-}
-
 inline Maybe<bool>* IsMultiClientPtr() { return Global<Maybe<bool>, MultiClient>::Get(); }
 
 inline Maybe<bool> IsMultiClient() {

@@ -46,7 +46,7 @@ struct DTRTensorPool {
     // do not need Maybe
     const std::chrono::steady_clock::time_point start_time() { return start_time_; }
     double duration();
-    void display();
+    Maybe<void> display();
     void add_recompute_times() { num_recomputation_++; }
 
     // TODO: Implementation of disjoint-set data structure

@@ -56,6 +56,20 @@ Parameter::Parameter(std::shared_ptr<Tensor> tensor, bool requires_grad) {
   }
 }
 
+Maybe<void> Parameter::set_data(const std::shared_ptr<Tensor>& other) {
+    CHECK_OR_RETURN(is_local() == other->is_local() && is_eager() == other->is_eager())
+        << "You can't assign copy between tensors with different type";
+    bool old_requires_grad = tensor_->requires_grad();
+    this->tensor_ = JUST(other->detach());
+    JUST(this->tensor_->set_requires_grad(old_requires_grad));
+
+    auto blob_object = CHECK_JUST(this->tensor_->eager_blob_object());
+    if (auto* dtr_eager_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(blob_object.get())) {
+      dtr_eager_blob_object->set_evict_attr(false);
+    }
+    return Maybe<void>::Ok();
+  }
+
 namespace {
 
 const Symbol<DType>* GetTensorDType(const Tensor& tensor) {

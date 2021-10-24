@@ -80,10 +80,10 @@ void StreamType::Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
 }
 
 void StreamType::Run(VirtualMachine* vm, Instruction* instruction) const {
-  if (oneflow::DTRDebugEnabled()) {
-    std::cout << "Begin stream_type.cpp:StreamType::Run " << std::endl;
-    Global<one::DTRTensorPool>::Get()->display();
-  }
+  // if (oneflow::DTRDebugEnabled()) {
+  //   std::cout << "Begin stream_type.cpp:StreamType::Run " << std::endl;
+  //   Global<one::DTRTensorPool>::Get()->display();
+  // }
   auto interpret_type = instruction->stream().stream_id().stream_type_id().interpret_type();
   if (interpret_type == InterpretType::kCompute) {
     Compute(vm, instruction);
@@ -92,10 +92,10 @@ void StreamType::Run(VirtualMachine* vm, Instruction* instruction) const {
   } else {
     UNIMPLEMENTED();
   }
-  if (oneflow::DTRDebugEnabled()) {
-    std::cout << "End stream_type.cpp:StreamType::Run " << std::endl;
-    Global<one::DTRTensorPool>::Get()->display();
-  }
+  // if (oneflow::DTRDebugEnabled()) {
+  //   std::cout << "End stream_type.cpp:StreamType::Run " << std::endl;
+  //   Global<one::DTRTensorPool>::Get()->display();
+  // }
 }
 
 void TryRegisterInferStreamTypeId(const StreamType* infer_stream_type,

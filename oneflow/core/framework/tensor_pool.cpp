@@ -14,10 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
 #include "oneflow/core/framework/tensor_pool.h"
 
 namespace oneflow {
+
+namespace vm {
+class LocalCallOpKernelPhyInstrOperand;
+}
+
 namespace one {
+
 
 DTRTensorPool::DTRTensorPool() {
     num_recomputation_ = 0;
@@ -112,16 +119,45 @@ double DTRTensorPool::duration() {
     return time_span.count();
 }
 
-void DTRTensorPool::display() {
+Maybe<void> DTRTensorPool::display() {
     // std::cout << "===== Info of current tensor pool =====" << std::endl;
     std::cout << "Number of candidates: " << candidates_.size() << std::endl;
     size_t id = 0;
     for (const auto& candidate : candidates_) {
         const auto* tmp = dynamic_cast<vm::DTREagerBlobObject*>(candidate);
-        std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", input size: " << candidate->input_size() << ", is_evictable: " << candidate->is_evictable() << ", number of user_ops: " << candidate->num_user_ops() << ", address: " << static_cast<const void *>(candidate->object_dptr()) << ", nullptr? " << (tmp == nullptr) << std::endl;
+        std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", input size: " << candidate->input_size() << ", is_evictable: " << candidate->is_evictable() << ", number of user_ops: " << candidate->num_user_ops() << ", address: " << candidate << ", nullptr? " << (tmp == nullptr) << std::endl;
+        // std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", address: " << candidate << std::endl;
+    }
+    for (const auto& candidate : candidates_) {
+        const auto* tmp = dynamic_cast<vm::DTREagerBlobObject*>(candidate);
+        std::cout << "Input info--------------- " << std::endl;
+        size_t iid = 0;
+        const auto* ptr = dynamic_cast<vm::LocalCallOpKernelPhyInstrOperand*>(candidate->compute_op());
+        CHECK_NOTNULL_OR_RETURN(ptr);
+        for (const auto& input : *ptr->inputs()) {
+            CHECK_OR_RETURN(static_cast<bool>(input.get()));
+            const auto* dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(input.get());
+            CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+            std::cout << "Input id: " << iid++ << ", address: " << dtr_blob_object << ", ref_cnt: " << input.use_count() << std::endl;
+        }
+
+        // std::cout << "Output info--------------- " << std::endl;
+        // for (int i = 0; i < candidate->num_user_ops(); ++i) {
+        //     size_t oid = 0;
+        //     std::cout << "The " << i << "th user_op: " << std::endl;
+        //     const auto* ptr = dynamic_cast<vm::LocalCallOpKernelPhyInstrOperand*>(CHECK_JUST(candidate->user_op(i)));
+        //     for (const auto& output: *ptr->outputs()) {
+        //         CHECK_OR_RETURN(static_cast<bool>(output.get()));
+        //         const auto* dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(output.get());
+        //         CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+        //         std::cout << "Output id: " << oid++ << ", address: " << dtr_blob_object << ", ref_cnt: " << output.use_count() << std::endl;
+        //     }
+        // }
+        // std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", input size: " << candidate->input_size() << ", is_evictable: " << candidate->is_evictable() << ", number of user_ops: " << candidate->num_user_ops() << ", address: " << static_cast<const void *>(candidate->object_dptr()) << ", nullptr? " << (tmp == nullptr) << std::endl;
         // std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", input size: " << candidate->input_size() << ", is_evictable: " << candidate->is_evictable() << ", number of user_ops: " << candidate->num_user_ops() << ", address: " << candidate << ", nullptr? " << (tmp == nullptr) << std::endl;
     }
     // std::cout << "===== End info =====" << std::endl;
+    return Maybe<void>::Ok();
 }
 
 }   // namespace one
