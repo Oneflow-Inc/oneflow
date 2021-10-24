@@ -39,9 +39,10 @@ class LocalDepObject final : public intrusive::Base {
     static const auto default_val = intrusive::make_shared<vm::MirroredObject>();
     return default_val.Get();
   }
-  bool is_pool_hook_empty() const { return pool_hook_.empty(); }
-  bool is_stored_hook_empty() const { return stored_hook_.empty(); }
-  bool is_lifetime_hook_empty() const { return lifetime_hook_.empty(); }
+
+  const intrusive::ListHook& pool_hook() const { return pool_hook_; }
+  const intrusive::ListHook& stored_hook() const { return stored_hook_; }
+  const intrusive::ListHook& lifetime_hook() const { return lifetime_hook_; }
 
   // Setters
   vm::LogicalObject* mut_logical_object() {

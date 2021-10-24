@@ -164,8 +164,8 @@ class FusedTrilScaleSoftmaxMaskScaleKernel final : public user_op::OpKernel {
     MaskAndScaleStore<ComputeType, T> store(y->mut_dptr<T>(), softmax_y->mut_dptr<T>(),
                                             mask->dptr<int8_t>(), cols,
                                             ctx->Attr<float>("mask_scale_value"));
-    cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
-        ctx->device_ctx()->cuda_stream(), load, store, rows, cols);
+    OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
+        ctx->device_ctx()->cuda_stream(), load, store, rows, cols)));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -206,9 +206,9 @@ class FusedTrilScaleSoftmaxMaskScaleGradKernel final : public user_op::OpKernel 
     TrilScaleStore<ComputeType, T> store(dx->mut_dptr<T>(), tril_num_rows, cols,
                                          ctx->Attr<int64_t>("diagonal"), static_cast<T>(0.0),
                                          ctx->Attr<float>("tril_scale_value"));
-    cuda::softmax::DispatchSoftmaxGrad<decltype(load_softmax_y), decltype(load_dy), decltype(store),
-                                       ComputeType>(ctx->device_ctx()->cuda_stream(),
-                                                    load_softmax_y, load_dy, store, rows, cols);
+    OF_CUDA_CHECK((cuda::softmax::DispatchSoftmaxGrad<decltype(load_softmax_y), decltype(load_dy),
+                                                      decltype(store), ComputeType>(
+        ctx->device_ctx()->cuda_stream(), load_softmax_y, load_dy, store, rows, cols)));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/primitive/include/copy_nd.h"
 #include "oneflow/core/primitive/common/copy_nd.h"
 #include "oneflow/core/stream/cuda_stream_context.h"
-#include "oneflow/core/primitive/cuda/cuda_graph_support.h"
 #include <cuda_runtime.h>
 
 namespace oneflow {
@@ -55,7 +54,7 @@ void LaunchKernel(StreamContext* stream_ctx, CopyNdKernelParams<num_dims, IndexT
       <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params);
 }
 
-class CopyNdImpl : public CopyNd, public CudaGraphSupport {
+class CopyNdImpl : public CopyNd {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CopyNdImpl);
   CopyNdImpl() = default;

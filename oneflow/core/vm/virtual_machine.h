@@ -65,7 +65,6 @@ class VirtualMachine final : public intrusive::Base {
     return delete_logical_object_list_;
   }
   const InstructionList& waiting_instruction_list() const { return waiting_instruction_list_; }
-  const InstructionList& ready_instruction_list() const { return ready_instruction_list_; }
   const VmStatRunningInstructionList& vm_stat_running_instruction_list() const {
     return vm_stat_running_instruction_list_;
   }
@@ -88,7 +87,6 @@ class VirtualMachine final : public intrusive::Base {
   ThreadCtxList* mut_thread_ctx_list() { return &thread_ctx_list_; }
   LogicalObjectDeleteList* mut_delete_logical_object_list() { return &delete_logical_object_list_; }
   InstructionList* mut_waiting_instruction_list() { return &waiting_instruction_list_; }
-  InstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
   VmStatRunningInstructionList* mut_vm_stat_running_instruction_list() {
     return &vm_stat_running_instruction_list_;
   }
@@ -120,18 +118,14 @@ class VirtualMachine final : public intrusive::Base {
  private:
   using TmpPendingInstrMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, instr_msg_hook_)>;
   using NewInstructionList = InstructionList;
-  using PrescheduledInstructionList = InstructionList;
-  using WaitingInstructionList = InstructionList;
-  using ReadyInstructionList = InstructionList;
+  using ReadyInstructionList =
+      intrusive::List<INTRUSIVE_FIELD(Instruction, dispatched_instruction_hook_)>;
 
-  template<typename ContainerT>
-  void TryRunFrontSeqInstruction(ContainerT* front_seq_list,
-                                 /*out*/ ReadyInstructionList* ready_instruction_list);
-  void TryRunFrontSeqInstruction(/*out*/ ReadyInstructionList* ready_instruction_list);
-  void ReleaseInstruction(Instruction* instruction,
-                          /*out*/ ReadyInstructionList* ready_instruction_list);
-  void TryReleaseFinishedInstructions(Stream* stream,
-                                      /*out*/ ReadyInstructionList* ready_instruction_list);
+  ReadyInstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
+
+  void TryRunFrontSeqInstruction();
+  void ReleaseInstruction(Instruction* instruction);
+  void TryReleaseFinishedInstructions(Stream* stream);
   void FilterAndRunInstructionsInAdvance(TmpPendingInstrMsgList* instr_msg_list);
   void MakeInstructions(TmpPendingInstrMsgList*, /*out*/ NewInstructionList* ret_instruction_list);
   template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
@@ -170,15 +164,14 @@ class VirtualMachine final : public intrusive::Base {
                                                Instruction* instrution);
   void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                               NewInstructionList* new_instruction_list);
-  void FilterReadyInstructions(NewInstructionList* new_instruction_list,
-                               /*out*/ ReadyInstructionList* ready_instruction_list);
-  void DispatchAndPrescheduleInstructions(ReadyInstructionList* ready_instruction_list);
-
-  template<typename ReadyList, typename IsEdgeReadyT>
-  void TryMoveWaitingToReady(Instruction* instruction, ReadyList* ready_list,
-                             const IsEdgeReadyT& IsEdgeReady);
-
+  void DispatchAndPrescheduleInstructions();
+  void MoveToReadyOrWaiting(NewInstructionList* new_instruction_list);
+  void DispatchInstruction(Instruction* instruction);
   void TryDeleteLogicalObjects();
+
+  bool Dispatchable(Instruction* instruction) const;
+  void TryDispatchReadyInstructions();
+  void TryMoveFromWaitingToReady(Instruction* instruction);
 
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
@@ -212,7 +205,7 @@ class VirtualMachine final : public intrusive::Base {
   LogicalObjectDeleteList delete_logical_object_list_;
   InstructionMsgMutextList pending_msg_list_;
   InstructionList waiting_instruction_list_;
-  InstructionList ready_instruction_list_;
+  ReadyInstructionList ready_instruction_list_;
   VmStatRunningInstructionList vm_stat_running_instruction_list_;
   FrontSeqInstructionList front_seq_compute_instr_list_;
 };

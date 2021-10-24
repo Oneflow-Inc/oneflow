@@ -28,17 +28,22 @@ struct ThreadCtx;
 class Stream final : public intrusive::Base {
  public:
   // types
-  using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, instruction_hook_)>;
+  using DispatchedInstructionList =
+      intrusive::List<INTRUSIVE_FIELD(Instruction, dispatched_instruction_hook_)>;
 
   // Getters
   int64_t max_device_num_per_machine() const { return max_device_num_per_machine_; }
   const ThreadCtx& thread_ctx() const { return *thread_ctx_; }
   bool has_thread_ctx() const { return thread_ctx_ != nullptr; }
   const std::unique_ptr<DeviceCtx>& device_ctx() const { return device_ctx_; }
-  bool is_active_stream_hook_empty() const { return active_stream_hook_.empty(); }
-  const InstructionList& free_instruction_list() const { return free_instruction_list_; }
-  const InstructionList& zombie_instruction_list() const { return zombie_instruction_list_; }
-  const InstructionList& running_instruction_list() const { return running_instruction_list_; }
+  const intrusive::ListHook& active_stream_hook() const { return active_stream_hook_; }
+  const DispatchedInstructionList& free_instruction_list() const { return free_instruction_list_; }
+  const DispatchedInstructionList& zombie_instruction_list() const {
+    return zombie_instruction_list_;
+  }
+  const DispatchedInstructionList& running_instruction_list() const {
+    return running_instruction_list_;
+  }
   const StreamId& stream_id() const { return stream_id_.key(); }
 
   // Setters
@@ -47,9 +52,9 @@ class Stream final : public intrusive::Base {
   void set_thread_ctx(ThreadCtx* val) { thread_ctx_ = val; }
   void clear_thread_ctx() { thread_ctx_ = nullptr; }
   std::unique_ptr<DeviceCtx>* mut_device_ctx() { return &device_ctx_; }
-  InstructionList* mut_free_instruction_list() { return &free_instruction_list_; }
-  InstructionList* mut_zombie_instruction_list() { return &zombie_instruction_list_; }
-  InstructionList* mut_running_instruction_list() { return &running_instruction_list_; }
+  DispatchedInstructionList* mut_free_instruction_list() { return &free_instruction_list_; }
+  DispatchedInstructionList* mut_zombie_instruction_list() { return &zombie_instruction_list_; }
+  DispatchedInstructionList* mut_running_instruction_list() { return &running_instruction_list_; }
   StreamId* mut_stream_id() { return stream_id_.mut_key(); }
 
   // methods
@@ -89,9 +94,9 @@ class Stream final : public intrusive::Base {
   std::unique_ptr<DeviceCtx> device_ctx_;
   int64_t max_device_num_per_machine_;
   // lists
-  InstructionList free_instruction_list_;
-  InstructionList zombie_instruction_list_;
-  InstructionList running_instruction_list_;
+  DispatchedInstructionList free_instruction_list_;
+  DispatchedInstructionList zombie_instruction_list_;
+  DispatchedInstructionList running_instruction_list_;
 
  public:
   // skiplist hooks

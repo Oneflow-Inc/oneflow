@@ -87,3 +87,24 @@ add_docstr(
     See :func:`oneflow.transpose`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.std,
+    """
+    See :func:`oneflow.std`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.var,
+    """
+    See :func:`oneflow.var`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.squeeze,
+    """
+    See :func:`oneflow.squeeze`
+    """,
+)

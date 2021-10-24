@@ -177,14 +177,14 @@ Maybe<void> GetReduceDeviceStageGradSbpFn(user_op::SbpContext* ctx) {
   int32_t num_axes = 0;
   HashSet<int32_t> conf_axes;
   {
-    const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-    num_axes = in_tensor.shape().NumAxes();
+    const auto& output_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("out_diff", 0);
+    num_axes = output_tensor.shape().NumAxes();
     const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
     conf_axes = {reduced_axes.begin(), reduced_axes.end()};
   }
   auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, num_axes);
   FOR_RANGE(int64_t, i, 0, num_axes) {
-    if (IsReducedAxis(i)) {
+    if (IsReducedAxis(i) || i == 0) {
       ctx->NewBuilder()
           .Split(user_op::OpArg("out_diff", 0), i)
           .Split(user_op::OpArg("count", 0), i)
@@ -295,7 +295,15 @@ REGISTER_REDUCE_GLOBAL_STAGE_USER_OP("reduce_max_global_stage")
       .Attr<bool>("keepdims")                                       \
       .SetTensorDescInferFn(InferReduceGlobalStageGradTensorDescFn) \
       .SetDataTypeInferFn(InferReduceGlobalStageGradDtypeFn)        \
-      .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); });
+      .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {    \
+        ctx->NewBuilder()                                           \
+            .Split(user_op::OpArg("out_diff", 0), 0)                \
+            .Split(user_op::OpArg("mask", 0), 0)                    \
+            .Split(user_op::OpArg("device_count", 0), 0)            \
+            .Split(user_op::OpArg("in_diff", 0), 0)                 \
+            .Build();                                               \
+        return Maybe<void>::Ok();                                   \
+      });
 
 REGISTER_REDUCE_GLOBAL_STAGE_GRAD_USER_OP("reduce_min_global_stage_grad")
 REGISTER_REDUCE_GLOBAL_STAGE_GRAD_USER_OP("reduce_max_global_stage_grad")

@@ -235,13 +235,16 @@ class Instruction final : public intrusive::Base {
   }
   const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
   const InstructionStatusBuffer& status_buffer() const { return status_buffer_.Get(); }
-  bool is_instruction_hook_empty() const { return instruction_hook_.empty(); }
-  bool is_vm_stat_running_instruction_hook_empty() const {
-    return vm_stat_running_instruction_hook_.empty();
+  const intrusive::ListHook& instruction_hook() const { return instruction_hook_; }
+  const intrusive::ListHook& dispatched_instruction_hook() const {
+    return dispatched_instruction_hook_;
   }
-  bool is_pending_instruction_hook_empty() const { return pending_instruction_hook_.empty(); }
-  bool is_front_seq_compute_instr_hook_empty() const {
-    return front_seq_compute_instr_hook_.empty();
+  const intrusive::ListHook& vm_stat_running_instruction_hook() const {
+    return vm_stat_running_instruction_hook_;
+  }
+  const intrusive::ListHook& pending_instruction_hook() const { return pending_instruction_hook_; }
+  const intrusive::ListHook& front_seq_compute_instr_hook() const {
+    return front_seq_compute_instr_hook_;
   }
   const InEdgeList& in_edges() const { return in_edges_; }
   const OutEdgeList& out_edges() const { return out_edges_; }
@@ -365,6 +368,7 @@ class Instruction final : public intrusive::Base {
         in_edges_(),
         out_edges_(),
         instruction_hook_(),
+        dispatched_instruction_hook_(),
         vm_stat_running_instruction_hook_(),
         pending_instruction_hook_(),
         front_seq_infer_instr_hook_(),
@@ -385,8 +389,11 @@ class Instruction final : public intrusive::Base {
  public:
   // list hooks
   intrusive::ListHook instruction_hook_;
+  // dispatched to Stream
+  intrusive::ListHook dispatched_instruction_hook_;
   // `vm_stat_running_instruction_hook` valid from instruction ready to instruction done
   intrusive::ListHook vm_stat_running_instruction_hook_;
+  // pending to ThreadCtx
   intrusive::ListHook pending_instruction_hook_;
   intrusive::ListHook front_seq_infer_instr_hook_;
   intrusive::ListHook front_seq_compute_instr_hook_;
