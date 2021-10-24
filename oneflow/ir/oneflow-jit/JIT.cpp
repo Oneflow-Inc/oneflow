@@ -27,7 +27,7 @@ LogicalResult JitImporter::AppendDataInOperand(const std::string& key, const int
                                                const std::string& lbn,
                                                std::vector<::mlir::Value>& operand_vec) {
   LOG(ERROR) << "[getting]" << key << "/" << index;
-  operand_vec.push_back(operand_mapping_.at(std::make_pair(key, index)));
+  operand_vec.push_back(GetResultByBnAndIndex(key, index));
   return success();
 }
 LogicalResult JitImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
@@ -80,12 +80,13 @@ mlir::FuncOp JitImporter::GetOrInsertFunc(const std::string& func_name, const Te
   }
 }
 
-void JitImporter::CreateOperandMapping(
-    const std::vector<std::pair<std::string, int32_t>>& indexed_arg_name_and_index,
-    const TensorTuple& inputs) {
+void JitImporter::CreateOperandMapping(const std::shared_ptr<const ArgTuple>& input_arg_tuple,
+                                       const TensorTuple& inputs) {
   operand_mapping_.clear();
-  for (auto pair : llvm::zip(indexed_arg_name_and_index, inputs)) {
-    const auto& arg_name_index_tuple = std::get<0>(pair);
+  input_arg_tuple_ = input_arg_tuple;
+  inputs_ = inputs;
+  for (auto pair : llvm::zip(input_arg_tuple->indexed_bns(), inputs)) {
+    const auto& indexed_bn = std::get<0>(pair);
     const auto& tensor = std::get<1>(pair);
     auto result_it = result_mapping_.find(tensor.get());
     if (result_it == result_mapping_.end()) {
@@ -95,14 +96,31 @@ void JitImporter::CreateOperandMapping(
         kv.second.print(os);
         LOG(ERROR) << "tensor/value: " << kv.first << "/" << result_str;
       }
-      LOG(FATAL) << "result not found, arg/index: " << arg_name_index_tuple.first << "/"
-                 << arg_name_index_tuple.second << ", tensor: " << tensor.get()
+      LOG(FATAL) << "result not found, indexed_bn: " << indexed_bn << ", tensor: " << tensor.get()
                  << ", shape: " << tensor->shape()->DebugStr()
                  << ", dtype: " << tensor->dtype()->name();
     } else {
-      assert(
-          operand_mapping_.emplace(arg_name_index_tuple, result_mapping_.at(tensor.get())).second);
+      assert(operand_mapping_.emplace(indexed_bn, result_mapping_.at(tensor.get())).second);
     }
+  }
+}
+
+mlir::Value JitImporter::GetResultByBnAndIndex(const std::string& bn, const int32_t index) {
+  auto idx = input_arg_tuple_->TensorTupleIndex4ArgNameAndIndex(bn, index);
+  auto tensor = inputs_[idx];
+  auto result_it = result_mapping_.find(tensor.get());
+  if (result_it == result_mapping_.end()) {
+    for (auto kv : result_mapping_) {
+      std::string result_str;
+      llvm::raw_string_ostream os(result_str);
+      kv.second.print(os);
+      LOG(ERROR) << "tensor/value: " << kv.first << "/" << result_str;
+    }
+    LOG(FATAL) << "result not found, arg/index: " << bn << "/" << index
+               << ", tensor: " << tensor.get() << ", shape: " << tensor->shape()->DebugStr()
+               << ", dtype: " << tensor->dtype()->name();
+  } else {
+    return result_it->second;
   }
 }
 

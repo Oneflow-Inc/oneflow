@@ -2,6 +2,7 @@
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_JIT_H_
 
 #include "mlir/IR/Value.h"
+#include "oneflow/core/framework/arg_tuple.h"
 #include "oneflow/core/framework/tensor.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -16,7 +17,7 @@ namespace ir {
 
 using namespace mlir;
 using ValueMapping = std::unordered_map<Tensor*, mlir::Value>;
-using OperandMapping = std::unordered_map<std::pair<std::string, int32_t>, mlir::Value>;
+using OperandMapping = std::unordered_map<std::string, mlir::Value>;
 using ResultTypeMapping = std::unordered_map<std::string, mlir::Type>;
 
 class JitImporter : public Importer {
@@ -44,19 +45,20 @@ class JitImporter : public Importer {
   // 4. insert to PlaceholderBn => value mapping (only for one op)
   mlir::FuncOp GetOrInsertFunc(const std::string& func_name, const TensorTuple& inputs,
                                TensorTuple* outputs);
-  void CreateOperandMapping(
-      const std::vector<std::pair<std::string, int32_t>>& indexed_arg_name_and_index,
-      const TensorTuple& inputs);
-  mlir::Value GetOperandByPlaceholderBn(const std::string bn);
+  void CreateOperandMapping(const std::shared_ptr<const ArgTuple>& input_arg_tuple,
+                            const TensorTuple& inputs);
+  mlir::Value GetOperandByPlaceholderBn(const std::string& bn);
   // get blob decs from inferred op
-  mlir::Type GetResultTypeByBn(const std::string bn);
+  mlir::Type GetResultTypeByBn(const std::string& bn);
+  mlir::Value GetResultByBnAndIndex(const std::string& bn, const int32_t index);
 
  private:
   ValueMapping result_mapping_;
+  std::shared_ptr<const ArgTuple> input_arg_tuple_;
   // members below should be reset every op by calling CreateMapping
   OperandMapping operand_mapping_;
   ResultTypeMapping output_bn_mapping_;
-  //   TensorTuple& inputs_;
+  TensorTuple inputs_;
   //   TensorTuple* outputs_;
 };
 
