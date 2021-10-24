@@ -35,9 +35,9 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
     return *one::MutJitEnabled();
   });
   m.def("set_jit_forward_args", [](const std::vector<std::shared_ptr<one::Tensor>>& tensors,
-                                   const std::vector<std::shared_ptr<one::Parameter>>& parameters) {
+                                   const std::vector<std::shared_ptr<one::Tensor>>& parameters) {
     auto arg_tensors(tensors);
-    for (const auto& p : parameters) { arg_tensors.push_back((p->data().GetPtrOrThrow())); }
+    for (const auto& p : parameters) { arg_tensors.push_back((p)); }
     SetJitForwardArgs(arg_tensors);
   });
 }
