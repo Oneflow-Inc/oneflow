@@ -80,11 +80,11 @@ void VirtualMachine::ReleaseInstruction(Instruction* instruction) {
 // Handle pending instructions, schedule them to waiting list or ready list.
 void VirtualMachine::MovePendingToReadyOrWaiting() {
   OF_PROFILER_RANGE_PUSH("MovePendingToReadyOrWaiting");
-  TmpPendingInstrMsgList tmp_pending_msg_list;
+  InstructionMsgList tmp_pending_msg_list;
   // MoveTo is under a lock.
   mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
   FilterAndRunInstructionsInAdvance(&tmp_pending_msg_list);
-  NewInstructionList new_instruction_list;
+  InstructionList new_instruction_list;
   MakeInstructions(&tmp_pending_msg_list, /*out*/ &new_instruction_list);
   ConsumeMirroredObjects(mut_id2logical_object(), &new_instruction_list);
   MoveToReadyOrWaiting(&new_instruction_list);
@@ -108,7 +108,7 @@ void VirtualMachine::ReleaseFinishedInstructions() {
   }
 }
 
-void VirtualMachine::FilterAndRunInstructionsInAdvance(TmpPendingInstrMsgList* instr_msg_list) {
+void VirtualMachine::FilterAndRunInstructionsInAdvance(InstructionMsgList* instr_msg_list) {
   INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_msg_list) {
     const auto& instr_type_id = instr_msg->instr_type_id();
     if (instr_type_id.instruction_type().ResettingIdToObjectMap()) {
@@ -141,8 +141,8 @@ bool IsStreamInParallelDesc(const ParallelDesc* parallel_desc, const Stream& str
 
 }  // namespace
 
-void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
-                                      /*out*/ NewInstructionList* new_instruction_list) {
+void VirtualMachine::MakeInstructions(InstructionMsgList* instr_msg_list,
+                                      /*out*/ InstructionList* new_instruction_list) {
   INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_msg_list) {
     const StreamTypeId& stream_type_id = instr_msg->instr_type_id().stream_type_id();
     auto* stream_rt_desc = mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
@@ -401,7 +401,7 @@ void VirtualMachine::ConnectInstruction(Instruction* src_instruction,
 }
 
 void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
-                                            NewInstructionList* new_instruction_list) {
+                                            InstructionList* new_instruction_list) {
   INTRUSIVE_FOR_EACH_PTR(instruction, new_instruction_list) {
     int64_t global_device_id = instruction->stream().global_device_id();
     const InterpretType interpret_type = instruction->stream().stream_type_id().interpret_type();
@@ -545,7 +545,7 @@ void VirtualMachine::DispatchAndPrescheduleInstructions() {
   OF_PROFILER_RANGE_POP();
 }
 
-void VirtualMachine::MoveToReadyOrWaiting(NewInstructionList* new_instruction_list) {
+void VirtualMachine::MoveToReadyOrWaiting(InstructionList* new_instruction_list) {
   INTRUSIVE_FOR_EACH_PTR(instruction, new_instruction_list) {
     if (Dispatchable(instruction)) {
       mut_ready_instruction_list()->PushBack(instruction);

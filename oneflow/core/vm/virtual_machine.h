@@ -111,8 +111,7 @@ class VirtualMachine final : public intrusive::Base {
   }
 
  private:
-  using TmpPendingInstrMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, instr_msg_hook_)>;
-  using NewInstructionList = InstructionList;
+  using InstructionMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, instr_msg_hook_)>;
   using ReadyInstructionList =
       intrusive::List<INTRUSIVE_FIELD(Instruction, dispatched_instruction_hook_)>;
 
@@ -124,8 +123,8 @@ class VirtualMachine final : public intrusive::Base {
   void DispatchAndPrescheduleInstructions();
 
   void ReleaseInstruction(Instruction* instruction);
-  void FilterAndRunInstructionsInAdvance(TmpPendingInstrMsgList* instr_msg_list);
-  void MakeInstructions(TmpPendingInstrMsgList*, /*out*/ NewInstructionList* ret_instruction_list);
+  void FilterAndRunInstructionsInAdvance(InstructionMsgList* instr_msg_list);
+  void MakeInstructions(InstructionMsgList*, /*out*/ InstructionList* ret_instruction_list);
   template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
   void ForEachMirroredObject(Id2LogicalObject* id2logical_object, const Operand& operand,
                              int64_t global_device_id, const DoEachT& DoEach);
@@ -161,8 +160,8 @@ class VirtualMachine final : public intrusive::Base {
                                                MirroredObject* mirrored_object,
                                                Instruction* instrution);
   void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
-                              NewInstructionList* new_instruction_list);
-  void MoveToReadyOrWaiting(NewInstructionList* new_instruction_list);
+                              InstructionList* new_instruction_list);
+  void MoveToReadyOrWaiting(InstructionList* new_instruction_list);
   void DispatchInstruction(Instruction* instruction);
   void TryDeleteLogicalObjects();
 

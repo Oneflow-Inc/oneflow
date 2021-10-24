@@ -382,7 +382,7 @@ class Instruction final : public intrusive::Base {
   OutEdgeList out_edges_;
 
  public:
-  // list hooks
+  // pending or waiting list hooks
   intrusive::ListHook instruction_hook_;
   // dispatched to Stream
   intrusive::ListHook dispatched_instruction_hook_;
