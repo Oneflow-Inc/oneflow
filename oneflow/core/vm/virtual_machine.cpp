@@ -634,6 +634,66 @@ Maybe<void> VirtualMachine::Receive(intrusive::shared_ptr<InstructionMsg>&& comp
   return Receive(&instr_msg_list);
 }
 
+// Barrier instructions wait all non-barrier instructions to be done.
+//
+// `instruction.lively_instruction_hook_` is linked to `vm.lively_instruction_list_` for all
+// instructions. `instruction.barrier_instruction_list_` is linked to `vm.barrier_instruction_list_`
+// only for barrier instructions.
+//
+//
+//  e.g. case0: waiting other instructions done.
+//
+//  +---------------------------+   +---------------------------+   +---------------------------+
+//  |      virtual_machine      |   |        instruction0       |   |        instruction1       |
+//  +---------------------------+   +---------------------------+   +---------------------------+
+//  |            ...            |   |            ...            |   |            ...            |
+//  |---------------------------|   |---------------------------|   |---------------------------|
+//  | lively_instruction_list_  |<->| lively_instruction_hook_  |<->| lively_instruction_hook_  |
+//  |---------------------------|   |---------------------------|   |---------------------------|
+//  |            ...            |   |            ...            |   |            ...            |
+//  |---------------------------|   |---------------------------|   |---------------------------|
+//  | barrier_instruction_list_ |<+ | barrier_instruction_hook_ | +>| barrier_instruction_hook_ |
+//  |---------------------------| | |---------------------------| | |---------------------------|
+//  |            ...            | | |            ...            | | |            ...            |
+//  +---------------------------+ | +---------------------------+ | +---------------------------+
+//                                |                               |
+//                                +-------------------------------+
+//
+// `instruction1` is a barrier instructions with barrier_instruction_hook_ linked, while
+// instruction0 is not. From the `virtual_machine`'s view, `barrier_instruction_hook_.Begin() !=
+// lively_instruction_hook_.Begin()`, so it's not the time to run barrier instruction
+// `barrier_instruction_hook_.Begin()`.
+//
+//
+//  e.g. case1: run barrier instructions.
+//
+//  +---------------------------+   +---------------------------+   +---------------------------+
+//  |      virtual_machine      |   |        instruction0       |   |        instruction1       |
+//  +---------------------------+   +---------------------------+   +---------------------------+
+//  |            ...            |   |            ...            |   |            ...            |
+//  |---------------------------|   |---------------------------|   |---------------------------|
+//  | lively_instruction_list_  |<->| lively_instruction_hook_  |<->| lively_instruction_hook_  |
+//  |---------------------------|   |---------------------------|   |---------------------------|
+//  |            ...            |   |            ...            |   |            ...            |
+//  |---------------------------|   |---------------------------|   |---------------------------|
+//  | barrier_instruction_list_ |<->| barrier_instruction_hook_ |   | barrier_instruction_hook_ |
+//  |---------------------------|   |---------------------------|   |---------------------------|
+//  |            ...            |   |            ...            |   |            ...            |
+//  +---------------------------+   +---------------------------+   +---------------------------+
+//
+// `instruction0` is a barrier instructions with barrier_instruction_hook_ linked.
+// From the `virtual_machine`'s view, `barrier_instruction_hook_.Begin() ==
+// lively_instruction_hook_.Begin()`, so it's the time to run barrier instruction
+// `barrier_instruction_hook_.Begin()`.
+//
+//
+// With the introduction of barrier_instruction_list_/barrier_instruction_hook_, the function
+// VirtualMachine::Schedule can achive higher performance. For the most cases, barrier instructions
+// are scarcely received by vm, there is no need for vm to run
+// VirtualMachine::TryRunBarrierInstruction every time VirtualMachine::Schedule run. On the other
+// hand, `barrier_instruction_hook_.size() == 0` is more lighware than
+// `lively_instruction_hook_.Begin()?->instr_msg().instr_type_id().instruction_type().IsFrontSequential()`
+//
 void VirtualMachine::TryRunBarrierInstruction() {
   auto* sequnential_instruction = mut_barrier_instruction_list()->Begin();
   CHECK(sequnential_instruction != nullptr);
