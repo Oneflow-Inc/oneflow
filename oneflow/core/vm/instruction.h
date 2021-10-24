@@ -217,11 +217,11 @@ INTRUSIVE_BEGIN(Instruction);
   }
   const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
   const InstructionStatusBuffer& status_buffer() const { return status_buffer_.Get(); }
-  bool is_instruction_hook_empty() const { return instruction_hook_.empty(); }
-  bool is_dispatched_instruction_hook_empty() const { return dispatched_instruction_hook_.empty(); }
-  bool is_vm_stat_running_instruction_hook_empty() const { return vm_stat_running_instruction_hook_.empty(); }
-  bool is_pending_instruction_hook_empty() const { return pending_instruction_hook_.empty(); }
-  bool is_front_seq_compute_instr_hook_empty() const { return front_seq_compute_instr_hook_.empty(); }
+  const intrusive::ListHook& instruction_hook() const { return instruction_hook_; }
+  const intrusive::ListHook& dispatched_instruction_hook() const { return dispatched_instruction_hook_; }
+  const intrusive::ListHook& vm_stat_running_instruction_hook() const { return vm_stat_running_instruction_hook_; }
+  const intrusive::ListHook& pending_instruction_hook() const { return pending_instruction_hook_; }
+  const intrusive::ListHook& front_seq_compute_instr_hook() const { return front_seq_compute_instr_hook_; }
   const InEdgeList& in_edges() const { return in_edges_; }
   const OutEdgeList& out_edges() const { return out_edges_; }
   const RwMutexedObjectAccessList& access_list() const { return access_list_; }

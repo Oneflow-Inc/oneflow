@@ -59,7 +59,7 @@ void VirtualMachine::ReleaseInstruction(Instruction* instruction) {
       rw_mutexed_object_accesses->Erase(access.Mutable());
     }
     auto* mirrored_object = access->mut_mirrored_object();
-    if (!access->is_rw_mutexed_object_access_hook_empty()) {
+    if (!access->rw_mutexed_object_access_hook().empty()) {
       CHECK_EQ(access->mut_rw_mutexed_object(), mirrored_object->mut_rw_mutexed_object());
       mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Erase(access.Mutable());
     }
@@ -88,7 +88,7 @@ void VirtualMachine::TryReleaseFinishedInstructions(Stream* stream) {
     if (interpret_type == kInfer) {
       // do nothing
     } else if (interpret_type == kCompute) {
-      CHECK(!instruction_ptr->is_front_seq_compute_instr_hook_empty());
+      CHECK(!instruction_ptr->front_seq_compute_instr_hook().empty());
       front_seq_compute_list->Erase(instruction_ptr);
     } else {
       UNIMPLEMENTED();
@@ -510,12 +510,12 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
 }
 
 bool VirtualMachine::Dispatchable(Instruction* instruction) const {
-  if (!instruction->is_dispatched_instruction_hook_empty()) { return false; }
+  if (!instruction->dispatched_instruction_hook().empty()) { return false; }
   const auto* stream = &instruction->stream();
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_in_edges()) {
     const auto& src_instruction = edge->src_instruction();
     if (!(&src_instruction.stream() == stream /* same stream*/
-          && !src_instruction.is_dispatched_instruction_hook_empty() /* dispatched */)) {
+          && !src_instruction.dispatched_instruction_hook().empty() /* dispatched */)) {
       return false;
     }
   }
@@ -553,7 +553,7 @@ void VirtualMachine::DispatchInstruction(Instruction* instruction) {
   mut_vm_stat_running_instruction_list()->PushBack(instruction);
   auto* stream = instruction->mut_stream();
   stream->mut_running_instruction_list()->PushBack(instruction);
-  if (stream->is_active_stream_hook_empty()) { mut_active_stream_list()->PushBack(stream); }
+  if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
   const auto& stream_type = stream->stream_type();
   if (stream_type.SharingVirtualMachineThread()) {
     stream_type.Run(this, instruction);
@@ -637,8 +637,8 @@ void VirtualMachine::TryRunFrontSeqInstruction() {
   if (!instruction_type.IsFrontSequential()) { return; }
   // All instructions before `instruction` are handled now, it's time to handle `instruction`.
   // TODO(lixinqi): Should replace the `if` with
-  // CHECK(instruction->is_vm_stat_running_instruction_hook_empty()) ?
-  if (!instruction->is_vm_stat_running_instruction_hook_empty()) { return; }
+  // CHECK(instruction->vm_stat_running_instruction_hook().empty()) ?
+  if (!instruction->vm_stat_running_instruction_hook().empty()) { return; }
   const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
   if (stream_type.SharingVirtualMachineThread()) {
     stream_type.Run(this, instruction);
