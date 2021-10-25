@@ -30,7 +30,10 @@ LogicalResult JitImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
                                          std::vector<NamedAttribute>& attr_vec) {
   return success();
 }
-Type JitImporter::GetTensorTypeOfLbn(const std::string& lbn) { return GetBuilder().getF128Type(); }
+Type JitImporter::GetTensorTypeOfLbn(const std::string& lbn) {
+  llvm::errs() << "[GetTensorTypeOfLbn] " << lbn << "\n";
+  return GetBuilder().getF128Type();
+}
 std::shared_ptr<MirroredTensor> JitImporter::MakeIntermediateTensor(
     const std::string& lbn, Value result, const std::shared_ptr<ParallelDesc>& parallel_desc) {
   auto tensor_shape = result.getType().cast<TensorType>();
@@ -42,8 +45,10 @@ std::shared_ptr<MirroredTensor> JitImporter::MakeIntermediateTensor(
     LOG(FATAL) << "fail to creat tensor";
   }
   const auto& device = CHECK_JUST(Device::MakeDeviceByParallelDesc(*parallel_desc));
-  auto shape_from_mlir = Shape({tensor_shape.getShape().begin(), tensor_shape.getShape().end()});
-  auto shape = std::make_shared<Shape>(shape_from_mlir);
+  auto shape_from_mlir =
+      new Shape({tensor_shape.getShape().begin(), tensor_shape.getShape().end()});
+  auto shape = std::make_shared<Shape>();
+  shape.reset(shape_from_mlir);
   auto tensor = MirroredTensor::MakeTensor(shape, dtype, device, /* is_lazy */ true,
                                            /* requires_grad= */ false, /* is_leaf= */ true)
                     .GetPtrOrThrow();
