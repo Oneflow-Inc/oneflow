@@ -26,25 +26,25 @@ namespace test {
 
 namespace {
 
-// clang-format off
-INTRUSIVE_BEGIN(Foo);
+class Foo final : public intrusive::Base {
  public:
   int x() const { return x_; }
   void set_x(int val) { x_ = val; }
 
  private:
-  Foo() : intrusive_ref_(), x_(), entry_() {}
+  Foo() : intrusive_ref_(), x_(), hook_() {}
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
+  intrusive::Ref intrusive_ref_;
   // fields
-  INTRUSIVE_DEFINE_FIELD(int, x_);
-  // list entries
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, entry_);
-INTRUSIVE_END(Foo);
-// clang-format on
+  int x_;
 
-using ChannelFoo = intrusive::Channel<INTRUSIVE_FIELD(Foo, entry_)>;
+ public:
+  // list hooks
+  intrusive::ListHook hook_;
+};
+
+using ChannelFoo = intrusive::Channel<INTRUSIVE_FIELD(Foo, hook_)>;
 
 void CallFromSenderThread(ChannelFoo* condition_list, Range range) {
   for (int i = range.begin(); i < range.end(); ++i) {
@@ -62,7 +62,7 @@ void CallFromReceiverThreadByPopFront(std::vector<int>* visit, ChannelFoo* condi
 }
 
 void CallFromReceiverThreadByMoveTo(std::vector<int>* visit, ChannelFoo* condition_list) {
-  intrusive::List<INTRUSIVE_FIELD(Foo, entry_)> tmp_list;
+  intrusive::List<INTRUSIVE_FIELD(Foo, hook_)> tmp_list;
   while (condition_list->MoveTo(&tmp_list) == intrusive::kChannelStatusSuccess) {
     INTRUSIVE_FOR_EACH_PTR(foo, &tmp_list) {
       ++visit->at(foo->x());

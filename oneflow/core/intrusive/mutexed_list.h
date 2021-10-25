@@ -23,10 +23,11 @@ namespace oneflow {
 
 namespace intrusive {
 
-template<typename EntryField>
+template<typename HookField>
 class MutexedList {
  public:
-  using value_type = typename EntryField::struct_type;
+  using value_type = typename HookField::struct_type;
+  using list_type = List<HookField>;
 
   MutexedList(const MutexedList&) = delete;
   MutexedList(MutexedList&&) = delete;
@@ -67,12 +68,12 @@ class MutexedList {
     return list_head_.PopFront();
   }
 
-  void MoveFrom(List<EntryField>* src) {
+  void MoveFrom(list_type* src) {
     std::unique_lock<std::mutex> lock(mutex_);
     src->MoveToDstBack(&list_head_);
   }
 
-  void MoveTo(List<EntryField>* dst) {
+  void MoveTo(list_type* dst) {
     std::unique_lock<std::mutex> lock(mutex_);
     list_head_.MoveToDstBack(dst);
   }
@@ -83,7 +84,7 @@ class MutexedList {
   }
 
  private:
-  List<EntryField> list_head_;
+  list_type list_head_;
   mutable std::mutex mutex_;
 };
 

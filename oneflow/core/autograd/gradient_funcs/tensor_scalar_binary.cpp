@@ -79,7 +79,7 @@ class TensorScalarSub : public TensorScalarAddOrSub {
       std::iota(axes_vec.begin(), axes_vec.end(), 0);
       const auto& reduce_sum =
           JUST(functional::ReduceSum(out_grads.at(0), axes_vec, /*keepdims=*/false));
-      in_grads->at(1) = JUST(functional::ScalarMul(reduce_sum, /*other=*/1.0));
+      in_grads->at(1) = JUST(functional::ScalarMul(reduce_sum, /*other=*/1.0, false));
     }
     return Maybe<void>::Ok();
   }

@@ -17,32 +17,32 @@ limitations under the License.
 #define ONEFLOW_CORE_INTRUSIVE_HEAD_FREE_LIST_H_
 
 #include "oneflow/core/intrusive/ref.h"
-#include "oneflow/core/intrusive/list_entry.h"
+#include "oneflow/core/intrusive/list_hook.h"
 #include "oneflow/core/intrusive/struct_traits.h"
+#include "oneflow/core/intrusive/reflective.h"
 
 namespace oneflow {
 namespace intrusive {
 
-template<typename ValueEntryField, int field_counter>
+template<typename ValueHookField, int field_counter>
 class HeadFreeList {
  public:
-  static_assert(std::is_same<typename ValueEntryField::field_type, intrusive::ListEntry>::value,
-                "");
+  static_assert(std::is_same<typename ValueHookField::field_type, intrusive::ListHook>::value, "");
   HeadFreeList(const HeadFreeList&) = delete;
   HeadFreeList(HeadFreeList&&) = delete;
   HeadFreeList() { this->__Init__(); }
   ~HeadFreeList() { this->Clear(); }
 
-  using value_type = typename ValueEntryField::struct_type;
-  using iterator_struct_field = ValueEntryField;
+  using value_type = typename ValueHookField::struct_type;
+  using iterator_struct_field = ValueHookField;
 
   // field_counter is last field_number
   static const int field_number_in_countainter = field_counter + 1;
 
   template<typename Enabled = void>
-  static constexpr int IteratorEntryOffset() {
+  static constexpr int IteratorHookOffset() {
     return offsetof(HeadFreeList, list_head_)
-           + intrusive::ListHead<ValueEntryField>::IteratorEntryOffset();
+           + intrusive::ListHead<ValueHookField>::IteratorHookOffset();
   }
 
   std::size_t size() const { return list_head_.size(); }
@@ -51,13 +51,13 @@ class HeadFreeList {
   void __Init__() {
     list_head_.__Init__();
     static_assert(
-        std::is_same<HeadFreeList,
-                     INTRUSIVE_FIELD_TYPE(typename value_type, field_number_in_countainter)>::value,
+        std::is_same<HeadFreeList, REFLECTIVE_FIELD_TYPE(typename value_type,
+                                                         field_number_in_countainter)>::value,
         "It's invalid to define fields between definition of head-free list type and definition of "
         "head-free list field.");
     using ThisInContainer =
-        StructField<value_type, HeadFreeList,
-                    INTRUSIVE_FIELD_OFFSET(value_type, field_number_in_countainter)>;
+        OffsetStructField<value_type, HeadFreeList,
+                          REFLECTIVE_FIELD_OFFSET(value_type, field_number_in_countainter)>;
     container_ = ThisInContainer::StructPtr4FieldPtr(this);
   }
 
@@ -178,7 +178,7 @@ class HeadFreeList {
     }
   }
 
-  intrusive::ListHead<ValueEntryField> list_head_;
+  intrusive::ListHead<ValueHookField> list_head_;
   const value_type* container_;
 };
 

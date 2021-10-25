@@ -26,8 +26,7 @@ class StreamType;
 struct StreamDesc;
 
 // Rt is short for Runtime
-// clang-format off
-INTRUSIVE_BEGIN(StreamRtDesc);
+class StreamRtDesc final : public intrusive::Base {
  public:
   // types
   using StreamId2Stream = intrusive::SkipList<INTRUSIVE_FIELD(Stream, stream_id_)>;
@@ -40,7 +39,7 @@ INTRUSIVE_BEGIN(StreamRtDesc);
   const StreamTypeId& stream_type_id() const { return stream_type_id_.key().Get(); }
   const StreamId2Stream& stream_id2stream() const { return stream_id2stream_; }
   // Setters
-  StreamDesc* mut_stream_desc() { 
+  StreamDesc* mut_stream_desc() {
     if (!stream_desc_) { stream_desc_ = intrusive::make_shared<StreamDesc>(); }
     return stream_desc_.Mutable();
   }
@@ -56,16 +55,17 @@ INTRUSIVE_BEGIN(StreamRtDesc);
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  StreamRtDesc() : intrusive_ref_(), stream_desc_(), stream_type_id_(), stream_id2stream_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
+  StreamRtDesc() : intrusive_ref_(), stream_desc_(), stream_id2stream_(), stream_type_id_() {}
+  intrusive::Ref intrusive_ref_;
   // fields
-  INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<StreamDesc>, stream_desc_); 
-  // list entries
-  using StreamTypeIdKey = intrusive::SkipListEntry<FlatMsg<StreamTypeId>, 7>;
-  INTRUSIVE_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);
-  INTRUSIVE_DEFINE_FIELD(StreamId2Stream, stream_id2stream_);
-INTRUSIVE_END(StreamRtDesc);
-// clang-format on
+  intrusive::shared_ptr<StreamDesc> stream_desc_;
+  // maps
+  StreamId2Stream stream_id2stream_;
+
+ public:
+  // skiplist hooks
+  intrusive::SkipListHook<FlatMsg<StreamTypeId>, 7> stream_type_id_;
+};
 
 }  // namespace vm
 }  // namespace oneflow
