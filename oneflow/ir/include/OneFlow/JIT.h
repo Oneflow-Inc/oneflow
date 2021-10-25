@@ -53,10 +53,10 @@ class JitImporter : public Importer {
   mlir::Value GetResultByBnAndIndex(const std::string& bn, const int32_t index);
 
  private:
-  ValueMapping result_mapping_;
-  std::shared_ptr<const ArgTuple> input_arg_tuple_;
+  ValueMapping result_mapping_;  // tensor* => %result
   // members below should be reset every op by calling CreateMapping
-  OperandMapping operand_mapping_;
+  std::shared_ptr<const ArgTuple> input_arg_tuple_;
+  OperandMapping operand_mapping_;  // "a0" => %result
   ResultTypeMapping output_bn_mapping_;
   TensorTuple inputs_;
   //   TensorTuple* outputs_;
