@@ -73,14 +73,6 @@ Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTup
   }
   CHECK_EQ_OR_RETURN(outputs->size(), op_expr.output_size());
   auto op = JUST(ConstructOp(*op_conf));
-  std::vector<NamedAttribute> attr_vec;
-  std::vector<::mlir::Value> operand_vec;
-  HashMap<std::string, BlobDesc> bn2blob_desc;
-  for (auto pair : llvm::zip(op_expr.input_arg_tuple()->indexed_bns(), inputs)) {
-    auto bd = new BlobDesc(std::get<1>(pair)->dtype()->data_type());
-    bd->set_shape(*std::get<1>(pair)->shape());
-    bn2blob_desc.emplace(std::get<0>(pair), *bd);
-  }
   auto indexed_arg_name_and_index = op_expr.input_arg_tuple()->indexed_arg_name_and_index();
   CHECK_EQ_OR_RETURN(indexed_arg_name_and_index.size(), inputs.size());
   importer_.GetOrInsertFunc(GetJitFuncName(), inputs, outputs);

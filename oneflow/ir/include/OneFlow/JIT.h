@@ -16,9 +16,6 @@ namespace one {
 namespace ir {
 
 using namespace mlir;
-using ValueMapping = std::unordered_map<Tensor*, mlir::Value>;
-using OperandMapping = std::unordered_map<std::string, mlir::Value>;
-using ResultTypeMapping = std::unordered_map<std::string, mlir::Type>;
 
 class JitImporter : public Importer {
  public:
@@ -47,22 +44,27 @@ class JitImporter : public Importer {
                                TensorTuple* outputs);
   void CreateOperandMapping(const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                             const TensorTuple& inputs);
-  mlir::Value GetOperandByPlaceholderBn(const std::string& bn);
   // get blob decs from inferred op
-  mlir::Type GetResultTypeByBn(const std::string& bn);
   mlir::Value GetResultByBnAndIndex(const std::string& bn, const int32_t index);
+  std::shared_ptr<MirroredTensor> MakeIntermediateTensor(
+      Value result, const std::shared_ptr<ParallelDesc>& parallel_desc);
 
  private:
-  ValueMapping result_mapping_;  // tensor* => %result
+  std::unordered_map<Tensor*, mlir::Value> result_mapping_;  // tensor* => %result
+  // JIT interpreter owns the intermediate tensors
+  // An intermediate tensor will be materialized if:
+  // 1. it is a result tensor
+  // 2. it is being evaluated before forward function returning (print, etc)
+  std::unordered_map<std::string, std::shared_ptr<std::shared_ptr<MirroredTensor>>>
+      intermediate_tensors_;
   // members below should be reset every op by calling CreateMapping
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
-  OperandMapping operand_mapping_;  // "a0" => %result
-  ResultTypeMapping output_bn_mapping_;
+  std::unordered_map<std::string, mlir::Value> operand_mapping_;     // "a0" => %result
+  std::unordered_map<std::string, mlir::Type> result_type_mapping_;  // "a0" => tensor<2x2xf32>
   TensorTuple inputs_;
   //   TensorTuple* outputs_;
 };
 
-void MapTensorToMlirValue(Tensor* tensor, mlir::Value value, ValueMapping* mapping);
 OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context);
 
 }  // namespace ir

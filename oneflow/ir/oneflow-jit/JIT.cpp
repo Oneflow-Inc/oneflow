@@ -11,10 +11,6 @@ namespace one {
 namespace ir {
 
 using namespace mlir;
-using ValueMapping = std::unordered_map<Tensor*, mlir::Value>;
-void MapTensorToMlirValue(Tensor* tensor, mlir::Value value, ValueMapping* mapping) {
-  mapping->emplace(tensor, value);
-}
 
 OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context) {
   context->loadDialect<mlir::oneflow::OneFlowDialect>();
@@ -34,7 +30,33 @@ LogicalResult JitImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
                                          std::vector<NamedAttribute>& attr_vec) {
   return success();
 }
-LogicalResult JitImporter::InsertOpResults(const ::oneflow::OperatorConf& op_conf, Operation*) {
+std::shared_ptr<MirroredTensor> JitImporter::MakeIntermediateTensor(
+    Value result, const std::shared_ptr<ParallelDesc>& parallel_desc) {
+  auto tensor_shape = result.getType().cast<TensorType>();
+  auto dtype = DataType::kInvalidDataType;
+  if (tensor_shape.getElementType().isF32()) {
+    dtype = DataType::kFloat;
+  } else {
+    result.dump();
+    LOG(FATAL) << "fail to creat tensor";
+  }
+  const auto& device = CHECK_JUST(Device::MakeDeviceByParallelDesc(*parallel_desc));
+  auto shape_from_mlir = Shape({tensor_shape.getShape().begin(), tensor_shape.getShape().end()});
+  auto shape = std::make_shared<Shape>(shape_from_mlir);
+  auto tensor = MirroredTensor::MakeTensor(shape, dtype, device, /* is_lazy */ true,
+                                           /* requires_grad= */ false, /* is_leaf= */ true)
+                    .GetPtrOrThrow();
+  // intermediate_tensors_.emplace(result, tensor);
+  CHECK(result_mapping_.emplace(tensor.get(), result).second);
+  return tensor;
+}
+LogicalResult JitImporter::InsertOpResults(const ::oneflow::OperatorConf& op_conf,
+                                           Operation* created_op) {
+  // for (auto data_out : llvm::enumerate(GetDataOutputResults(created_op))) {
+  //   auto output_lbns = created_op->getAttrOfType<ArrayAttr>("output_lbns");
+  //   lbn2result_.insert({output_lbns[data_out.index()].dyn_cast<StringAttr>().getValue().str(),
+  //                       data_out.value().dyn_cast<OpResult>()});
+  // }
   return success();
 }
 Type JitImporter::GetTensorTypeOfLbn(const std::string& lbn) { return GetBuilder().getF128Type(); }
