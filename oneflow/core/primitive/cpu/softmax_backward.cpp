@@ -24,14 +24,15 @@ namespace {
 
 template<typename T>
 void SoftmaxBackwardCpu(size_t rows, size_t cols, const T* y, const T* dy, T* dx) {
-  FOR_RANGE(int64_t, i, 0, rows) {
+  for (size_t i = 0; i < rows; ++i) {
+    size_t row_offset = i * cols;
     T row_sum = 0;
-    FOR_RANGE(int64_t, j, 0, cols) {
-      const int64_t offset = i * cols + j;
+    for (size_t j = 0; j < cols; ++j) {
+      const size_t offset = row_offset + j;
       row_sum += y[offset] * dy[offset];
     }
-    FOR_RANGE(int64_t, j, 0, cols) {
-      const int64_t offset = i * cols + j;
+    for (size_t j = 0; j < cols; ++j) {
+      const size_t offset = row_offset + j;
       dx[offset] = (dy[offset] - row_sum) * y[offset];
     }
   }

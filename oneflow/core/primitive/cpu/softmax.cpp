@@ -28,10 +28,10 @@ void SoftmaxCpu(size_t rows, size_t cols, const T* x, T* y) {
     size_t row_offset = i * cols;
     const T* row_x = x + row_offset;
     T* row_y = y + row_offset;
-    size_t max_idx = std::max_element(row_x, row_x + cols) - row_x;
+    const T row_max = *std::max_element(row_x, row_x + cols);
     T row_sum = 0;
     for (size_t j = 0; j < cols; ++j) {
-      T exp_x = std::exp(row_x[j] - row_x[max_idx]);
+      T exp_x = std::exp(row_x[j] - row_max);
       row_sum += exp_x;
       row_y[j] = exp_x;
     }
