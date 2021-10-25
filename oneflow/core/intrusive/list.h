@@ -23,21 +23,20 @@ namespace oneflow {
 
 namespace intrusive {
 
-template<typename ValueHookField>
+template<typename HookField>
 class List {
  public:
-  static_assert(std::is_same<typename ValueHookField::field_type, intrusive::ListHook>::value, "");
   List(const List&) = delete;
   List(List&&) = delete;
   List() { this->__Init__(); }
   ~List() { this->Clear(); }
 
-  using value_type = typename ValueHookField::struct_type;
-  using iterator_struct_field = ValueHookField;
+  using value_type = typename HookField::struct_type;
+  using iterator_struct_field = HookField;
 
   template<typename Enabled = void>
   static constexpr int IteratorHookOffset() {
-    return offsetof(List, list_head_) + intrusive::ListHead<ValueHookField>::IteratorHookOffset();
+    return offsetof(List, list_head_) + intrusive::ListHead<HookField>::IteratorHookOffset();
   }
 
   std::size_t size() const { return list_head_.size(); }
@@ -127,7 +126,7 @@ class List {
   }
 
  private:
-  intrusive::ListHead<ValueHookField> list_head_;
+  intrusive::ListHead<HookField> list_head_;
 };
 
 }  // namespace intrusive
