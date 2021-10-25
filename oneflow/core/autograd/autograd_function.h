@@ -24,7 +24,7 @@ namespace one {
 
 class TensorTuple;
 class FunctionAutoGradCaptureState;
-class OpExpr;
+class FunctionOpExpr;
 
 class AutogradFunctionBase {
  public:
@@ -38,7 +38,7 @@ class AutogradFunctionBase {
   Maybe<TensorTuple> Apply(const TensorTuple& inputs) const;
 
  protected:
-  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<FunctionOpExpr> op_;
 };
 
 }  // namespace one

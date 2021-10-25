@@ -48,14 +48,14 @@ class FunctionAutoGradCaptureState final : public AutoGradCaptureState {
   using AutoGradCaptureState::SavedTensors;
   using AutoGradCaptureState::SaveTensorForBackward;
 
-  size_t MarkNonDifferentiable(const std::shared_ptr<Tensor>& tensor) {
-    size_t offset = saved_tensors_.size();
-    non_differentiable_tensors_.push_back(tensor);
-    return offset;
+  void MarkNonDifferentiable(const std::shared_ptr<Tensor>& tensor) {
+    non_differentiable_tensors_.emplace(tensor.get());
   }
 
+  HashSet<Tensor*> NonDifferentiableTensors() const { return non_differentiable_tensors_; }
+
  private:
-  TensorTuple non_differentiable_tensors_;
+  HashSet<Tensor*> non_differentiable_tensors_;
 };
 
 // Stateless container base of the backward op exprs.

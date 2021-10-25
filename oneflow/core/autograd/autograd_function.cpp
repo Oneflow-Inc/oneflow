@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/op_expr_grad_function.h"
 
 namespace oneflow {
 namespace one {
@@ -31,7 +32,12 @@ AutogradFunctionBase::AutogradFunctionBase(const std::string& func_name, const F
 Maybe<TensorTuple> AutogradFunctionBase::Apply(const TensorTuple& inputs) const {
   std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>();
   JUST(OpInterpUtil::Dispatch(*op_, inputs, outputs.get(), {}));
-  // TODO(wyg): process outputs autograd_meta
+  const HashSet<Tensor*>& non_differentiable_tensors = op_->state()->NonDifferentiableTensors();
+  for (const auto& tensor : *outputs) {
+    if (non_differentiable_tensors.find(tensor.get()) != non_differentiable_tensors.end()) {
+      tensor->set_requires_grad(false);
+    }
+  }
   return outputs;
 }
 

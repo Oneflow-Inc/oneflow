@@ -78,6 +78,38 @@ class TestAutogradFunction(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(a.grad.numpy(), np_arr1))
         test_case.assertTrue(np.allclose(b.grad.numpy(), np_arr0))
 
+    @flow.unittest.skip_unless_1n1d()
+    def test_non_differentiable_interface(test_case):
+        class MyModule(autograd.Function):
+            @staticmethod
+            def forward(ctx, x, y):
+                mul_res = x * y
+                add_res = x + y
+                ctx.save_for_backward(x, y)
+                ctx.mark_non_differentiable(add_res)
+                return mul_res, add_res
+
+            @staticmethod
+            def backward(ctx, mul_grad, add_grad=None):
+                x, y = ctx.saved_tensors()
+                x_grad = y * mul_grad
+                y_grad = x * mul_grad
+                return x_grad, y_grad
+
+        np_arr0 = np.random.randn(4, 5)
+        np_arr1 = np.random.randn(4, 5)
+        a = flow.tensor(np_arr0).requires_grad_()
+        b = flow.tensor(np_arr1).requires_grad_()
+        # forward
+        c, d = MyModule().apply(a, b)
+        test_case.assertTrue(np.allclose(c.numpy(), np_arr0 * np_arr1))
+        test_case.assertFalse(d.requires_grad)
+        test_case.assertTrue(d.grad_fn is None)
+        # backward
+        c.sum().backward()
+        test_case.assertTrue(np.allclose(a.grad.numpy(), np_arr1))
+        test_case.assertTrue(np.allclose(b.grad.numpy(), np_arr0))
+
 
 if __name__ == "__main__":
     unittest.main()
