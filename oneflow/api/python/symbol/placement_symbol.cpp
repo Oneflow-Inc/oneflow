@@ -197,7 +197,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                                                                    hierarchy);
       }))
       .def_property_readonly("symbol_id",
-                             [](const ParallelDesc& x) { return x.symbol_id().GetOrThrow(); })
+                             [](const ParallelDesc& x) { return x.symbol_id(); })
       .def_property_readonly("parallel_conf", &ParallelDesc::cfg_parallel_conf)
       .def_property_readonly("parallel_num", &ParallelDesc::parallel_num)
       .def_property_readonly("device_tag", &ParallelDesc::device_tag)

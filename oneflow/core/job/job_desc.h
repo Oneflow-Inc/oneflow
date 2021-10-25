@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_JOB_DESC_H_
 #define ONEFLOW_CORE_JOB_JOB_DESC_H_
 
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/dlnet_conf.pb.h"
 #include "oneflow/core/job/job.pb.h"

@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_STRING_DESC_H_
 
 #include <string>
-#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/optional.h"
 
 namespace oneflow {
 

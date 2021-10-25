@@ -38,7 +38,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
             return CreateScopeSymbol(symbol_id, symbol_conf).GetPtrOrThrow();
           }))
       .def_property_readonly(
-          "symbol_id", [](const OpNodeSignatureDesc& x) { return x.symbol_id().GetOrThrow(); })
+          "symbol_id", [](const OpNodeSignatureDesc& x) { return x.symbol_id(); })
       .def("data", &OpNodeSignatureDesc::op_node_signature);
 }
 

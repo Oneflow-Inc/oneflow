@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_OPERATOR_OP_CONF_SYMBOL_H_
 
 #include <string>
-#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/op_conf.cfg.h"
 
