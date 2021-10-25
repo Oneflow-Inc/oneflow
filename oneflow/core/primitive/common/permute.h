@@ -50,15 +50,27 @@ void SimplifyPermutation(size_t num_dims, const int64_t* src_dims, const int* pe
                          size_t* simplified_num_dims, int64_t* simplified_src_dims,
                          int* simplified_permutation) {
   CHECK_NE(num_dims, 0);
-  int inverse[max_num_dims];
-  for (size_t i = 0; i < num_dims; ++i) { inverse[permutation[i]] = i; }
-  int mapping[max_num_dims];
+  int64_t coalesced_dims[max_num_dims];
+  size_t start_permutation_index = 0;
+  while (start_permutation_index < num_dims) {
+    const size_t start_dim_index = permutation[start_permutation_index];
+    coalesced_dims[start_dim_index] = src_dims[start_dim_index];
+    size_t end_permutation_index = start_permutation_index + 1;
+    const size_t end_dim_index = permutation[end_permutation_index];
+    while (end_permutation_index < num_dims
+           && end_dim_index == permutation[end_permutation_index - 1] + 1) {
+      coalesced_dims[start_dim_index] *= src_dims[end_dim_index];
+      coalesced_dims[end_dim_index] = 1;
+      end_permutation_index += 1;
+    }
+    start_permutation_index = end_permutation_index;
+  }
   size_t valid_num_dims = 0;
+  int mapping[max_num_dims];
   for (size_t i = 0; i < num_dims; ++i) {
-    const int src_dim = src_dims[i];
-    if (src_dim == 1 || (i != 0 && inverse[i] == inverse[i - 1] + 1)) {
+    const int src_dim = coalesced_dims[i];
+    if (src_dim == 1) {
       mapping[i] = -1;
-      if (src_dim != 1) { simplified_src_dims[valid_num_dims - 1] *= src_dim; }
     } else {
       mapping[i] = valid_num_dims;
       simplified_src_dims[valid_num_dims] = src_dim;
@@ -87,17 +99,17 @@ void SimplifyPermutation(size_t num_dims, const int64_t* src_dims, const int* pe
                          size_t* simplified_num_dims, int64_t* simplified_src_dims,
                          int* simplified_permutation, size_t elem_size, const void* src, void* dst,
                          size_t* movement_size) {
-  const size_t pre_simpified_movement_size =
+  const size_t pre_simplified_movement_size =
       GetMovementSize<max_movement_size>(elem_size, num_dims, src_dims, src, permutation, dst);
   int64_t tmp_dims[max_num_dims];
   for (size_t i = 0; i < num_dims; ++i) { tmp_dims[i] = src_dims[i]; }
-  tmp_dims[num_dims - 1] /= (pre_simpified_movement_size / elem_size);
+  tmp_dims[num_dims - 1] /= (pre_simplified_movement_size / elem_size);
   SimplifyPermutation<max_num_dims>(num_dims, tmp_dims, permutation, simplified_num_dims,
                                     simplified_src_dims, simplified_permutation);
   *movement_size =
-      GetMovementSize<max_movement_size>(pre_simpified_movement_size, *simplified_num_dims,
+      GetMovementSize<max_movement_size>(pre_simplified_movement_size, *simplified_num_dims,
                                          simplified_src_dims, src, simplified_permutation, dst);
-  simplified_src_dims[*simplified_num_dims - 1] /= (*movement_size / pre_simpified_movement_size);
+  simplified_src_dims[*simplified_num_dims - 1] /= (*movement_size / pre_simplified_movement_size);
 }
 
 template<size_t num_dims, typename IndexType>

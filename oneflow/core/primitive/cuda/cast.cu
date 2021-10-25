@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/primitive/include/cast.h"
 #include "oneflow/core/primitive/cuda/type_seq.h"
-#include "oneflow/core/primitive/cuda/cuda_graph_support.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/stream/cuda_stream_context.h"
 
@@ -78,7 +77,7 @@ struct CastFunctor<nv_bfloat16, From,
 #endif  // CUDA_VERSION >= 11000
 
 template<typename From, typename To>
-class CastImpl : public Cast, public CudaGraphSupport {
+class CastImpl : public Cast {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CastImpl);
   explicit CastImpl() = default;
