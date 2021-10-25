@@ -109,7 +109,8 @@ mlir::FuncOp JitImporter::GetOrInsertFunc(const std::string& func_name, const Te
   }
 }
 
-void JitImporter::CreateOperandMapping(const std::shared_ptr<const ArgTuple>& input_arg_tuple,
+void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op,
+                                       const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                        const TensorTuple& inputs) {
   operand_mapping_.clear();
   input_arg_tuple_ = input_arg_tuple;

@@ -6,6 +6,7 @@
 #include "oneflow/core/framework/tensor.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/operator/operator.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 #include "oneflow/core/framework/util.h"
 
@@ -42,7 +43,8 @@ class JitImporter : public Importer {
   // 4. insert to PlaceholderBn => value mapping (only for one op)
   mlir::FuncOp GetOrInsertFunc(const std::string& func_name, const TensorTuple& inputs,
                                TensorTuple* outputs);
-  void CreateOperandMapping(const std::shared_ptr<const ArgTuple>& input_arg_tuple,
+  void CreateOperandMapping(const ::oneflow::OperatorConf& op,
+                            const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                             const TensorTuple& inputs);
   // get blob decs from inferred op
   mlir::Value GetResultByBnAndIndex(const std::string& bn, const int32_t index);
@@ -61,6 +63,7 @@ class JitImporter : public Importer {
   std::unordered_map<std::string, mlir::Value> operand_mapping_;     // "a0" => %result
   std::unordered_map<std::string, mlir::Type> result_type_mapping_;  // "a0" => tensor<2x2xf32>
   TensorTuple inputs_;
+  std::shared_ptr<Operator> op_;
   //   TensorTuple* outputs_;
 };
 
