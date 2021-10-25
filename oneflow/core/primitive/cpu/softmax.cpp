@@ -28,7 +28,7 @@ enum class Algorithm {
   kLogSoftmax,
 };
 
-template<typename T, Algorithm algorithm>
+template<Algorithm algorithm, typename T>
 void SoftmaxCpu(size_t rows, size_t cols, const T* x, T* y) {
   for (size_t i = 0; i < rows; ++i) {
     size_t row_offset = i * cols;
@@ -60,8 +60,8 @@ void SoftmaxCpu(size_t rows, size_t cols, const T* x, T* y) {
   }
 }
 
-template<typename T>
-class SoftmaxImpl : public Softmax {
+template<typename SoftmaxBase, Algorithm algorithm, typename T>
+class SoftmaxImpl : public SoftmaxBase {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SoftmaxImpl);
   SoftmaxImpl() = default;
@@ -69,27 +69,29 @@ class SoftmaxImpl : public Softmax {
 
   void Launch(StreamContext* stream_ctx, size_t rows, size_t cols, const void* x,
               void* y) override {
-    SoftmaxCpu<T, Algorithm::kSoftmax>(rows, cols, reinterpret_cast<const T*>(x),
-                                       reinterpret_cast<T*>(y));
+    SoftmaxCpu<algorithm, T>(rows, cols, reinterpret_cast<const T*>(x), reinterpret_cast<T*>(y));
   }
 };
 
-template<typename T>
-std::unique_ptr<Softmax> NewSoftmax() {
-  return std::unique_ptr<Softmax>(new SoftmaxImpl<T>());
+template<typename SoftmaxBase, Algorithm algorithm, typename T>
+std::unique_ptr<SoftmaxBase> NewSoftmax() {
+  return std::unique_ptr<SoftmaxBase>(new SoftmaxImpl<SoftmaxBase, algorithm, T>());
 }
 
-class SoftmaxFactoryImpl : public SoftmaxFactory {
+template<typename FactoryBase, typename SoftmaxBase, Algorithm algorithm>
+class GenericSoftmaxFactoryImpl : public FactoryBase {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(SoftmaxFactoryImpl);
-  SoftmaxFactoryImpl() = default;
-  ~SoftmaxFactoryImpl() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(GenericSoftmaxFactoryImpl);
+  GenericSoftmaxFactoryImpl() = default;
+  ~GenericSoftmaxFactoryImpl() override = default;
 
-  std::unique_ptr<Softmax> New(DataType data_type) override {
-#define MAKE_NEW_SOFTMAX_ENTRY(type_cpp, type_proto) {type_proto, NewSoftmax<type_cpp>},
+  std::unique_ptr<SoftmaxBase> New(DataType data_type) override {
+#define MAKE_NEW_SOFTMAX_ENTRY(type_cpp, type_proto) \
+  {type_proto, NewSoftmax<SoftmaxBase, algorithm, type_cpp>},
 
-    static const std::map<DataType, std::function<std::unique_ptr<Softmax>()>> new_softmax_handle{
-        OF_PP_FOR_EACH_TUPLE(MAKE_NEW_SOFTMAX_ENTRY, CPU_PRIMITIVE_FLOATING_TYPE_SEQ)};
+    static const std::map<DataType, std::function<std::unique_ptr<SoftmaxBase>()>>
+        new_softmax_handle{
+            OF_PP_FOR_EACH_TUPLE(MAKE_NEW_SOFTMAX_ENTRY, CPU_PRIMITIVE_FLOATING_TYPE_SEQ)};
 #undef MAKE_NEW_SOFTMAX_ENTRY
     const auto it = new_softmax_handle.find(data_type);
     if (it != new_softmax_handle.end()) {
@@ -100,49 +102,10 @@ class SoftmaxFactoryImpl : public SoftmaxFactory {
   }
 };
 
+using SoftmaxFactoryImpl = GenericSoftmaxFactoryImpl<SoftmaxFactory, Softmax, Algorithm::kSoftmax>;
+using LogSoftmaxFactoryImpl =
+    GenericSoftmaxFactoryImpl<LogSoftmaxFactory, LogSoftmax, Algorithm::kLogSoftmax>;
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, SoftmaxFactory, SoftmaxFactoryImpl);
-
-template<typename T>
-class LogSoftmaxImpl : public LogSoftmax {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(LogSoftmaxImpl);
-  LogSoftmaxImpl() = default;
-  ~LogSoftmaxImpl() override = default;
-
-  void Launch(StreamContext* stream_ctx, size_t rows, size_t cols, const void* x,
-              void* y) override {
-    SoftmaxCpu<T, Algorithm::kLogSoftmax>(rows, cols, reinterpret_cast<const T*>(x),
-                                          reinterpret_cast<T*>(y));
-  }
-};
-
-template<typename T>
-std::unique_ptr<LogSoftmax> NewLogSoftmax() {
-  return std::unique_ptr<LogSoftmax>(new LogSoftmaxImpl<T>());
-}
-
-class LogSoftmaxFactoryImpl : public LogSoftmaxFactory {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(LogSoftmaxFactoryImpl);
-  LogSoftmaxFactoryImpl() = default;
-  ~LogSoftmaxFactoryImpl() override = default;
-
-  std::unique_ptr<LogSoftmax> New(DataType data_type) override {
-#define MAKE_NEW_LOG_SOFTMAX_ENTRY(type_cpp, type_proto) {type_proto, NewLogSoftmax<type_cpp>},
-
-    static const std::map<DataType, std::function<std::unique_ptr<LogSoftmax>()>>
-        new_log_softmax_handle{
-            OF_PP_FOR_EACH_TUPLE(MAKE_NEW_LOG_SOFTMAX_ENTRY, CPU_PRIMITIVE_FLOATING_TYPE_SEQ)};
-#undef MAKE_NEW_LOG_SOFTMAX_ENTRY
-    const auto it = new_log_softmax_handle.find(data_type);
-    if (it != new_log_softmax_handle.end()) {
-      return it->second();
-    } else {
-      return nullptr;
-    }
-  }
-};
-
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, LogSoftmaxFactory, LogSoftmaxFactoryImpl);
 
 }  // namespace

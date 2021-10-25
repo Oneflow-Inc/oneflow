@@ -28,7 +28,7 @@ enum class Algorithm {
   kLogSoftmax,
 };
 
-template<typename T, Algorithm algorithm>
+template<Algorithm algorithm, typename T>
 void SoftmaxBackwardCpu(size_t rows, size_t cols, const T* y, const T* dy, T* dx) {
   for (size_t i = 0; i < rows; ++i) {
     size_t row_offset = i * cols;
@@ -57,8 +57,8 @@ void SoftmaxBackwardCpu(size_t rows, size_t cols, const T* y, const T* dy, T* dx
   }
 }
 
-template<typename T>
-class SoftmaxBackwardImpl : public SoftmaxBackward {
+template<typename SoftmaxBackwardBase, Algorithm algorithm, typename T>
+class SoftmaxBackwardImpl : public SoftmaxBackwardBase {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SoftmaxBackwardImpl);
   SoftmaxBackwardImpl() = default;
@@ -66,28 +66,29 @@ class SoftmaxBackwardImpl : public SoftmaxBackward {
 
   void Launch(StreamContext* stream_ctx, size_t rows, size_t cols, const void* y, const void* dy,
               void* dx) override {
-    SoftmaxBackwardCpu<T, Algorithm::kSoftmax>(rows, cols, reinterpret_cast<const T*>(y),
-                                               reinterpret_cast<const T*>(dy),
-                                               reinterpret_cast<T*>(dx));
+    SoftmaxBackwardCpu<algorithm, T>(rows, cols, reinterpret_cast<const T*>(y),
+                                     reinterpret_cast<const T*>(dy), reinterpret_cast<T*>(dx));
   }
 };
 
-template<typename T>
-std::unique_ptr<SoftmaxBackward> NewSoftmaxBackward() {
-  return std::unique_ptr<SoftmaxBackward>(new SoftmaxBackwardImpl<T>());
+template<typename SoftmaxBackwardBase, Algorithm algorithm, typename T>
+std::unique_ptr<SoftmaxBackwardBase> NewSoftmaxBackward() {
+  return std::unique_ptr<SoftmaxBackwardBase>(
+      new SoftmaxBackwardImpl<SoftmaxBackwardBase, algorithm, T>());
 }
 
-class SoftmaxBackwardFactoryImpl : public SoftmaxBackwardFactory {
+template<typename BackwardFactoryBase, typename SoftmaxBackwardBase, Algorithm algorithm>
+class GenericSoftmaxBackwardFactoryImpl : public BackwardFactoryBase {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(SoftmaxBackwardFactoryImpl);
-  SoftmaxBackwardFactoryImpl() = default;
-  ~SoftmaxBackwardFactoryImpl() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(GenericSoftmaxBackwardFactoryImpl);
+  GenericSoftmaxBackwardFactoryImpl() = default;
+  ~GenericSoftmaxBackwardFactoryImpl() override = default;
 
-  std::unique_ptr<SoftmaxBackward> New(DataType data_type) override {
+  std::unique_ptr<SoftmaxBackwardBase> New(DataType data_type) override {
 #define MAKE_NEW_SOFTMAX_BACKWARD_ENTRY(type_cpp, type_proto) \
-  {type_proto, NewSoftmaxBackward<type_cpp>},
+  {type_proto, NewSoftmaxBackward<SoftmaxBackwardBase, algorithm, type_cpp>},
 
-    static const std::map<DataType, std::function<std::unique_ptr<SoftmaxBackward>()>>
+    static const std::map<DataType, std::function<std::unique_ptr<SoftmaxBackwardBase>()>>
         new_softmax_backward_handle{
             OF_PP_FOR_EACH_TUPLE(MAKE_NEW_SOFTMAX_BACKWARD_ENTRY, CPU_PRIMITIVE_FLOATING_TYPE_SEQ)};
 #undef MAKE_NEW_SOFTMAX_BACKWARD_ENTRY
@@ -100,51 +101,12 @@ class SoftmaxBackwardFactoryImpl : public SoftmaxBackwardFactory {
   }
 };
 
+using SoftmaxBackwardFactoryImpl =
+    GenericSoftmaxBackwardFactoryImpl<SoftmaxBackwardFactory, SoftmaxBackward, Algorithm::kSoftmax>;
+using LogSoftmaxBackwardFactoryImpl =
+    GenericSoftmaxBackwardFactoryImpl<LogSoftmaxBackwardFactory, LogSoftmaxBackward,
+                                      Algorithm::kLogSoftmax>;
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, SoftmaxBackwardFactory, SoftmaxBackwardFactoryImpl);
-
-template<typename T>
-class LogSoftmaxBackwardImpl : public LogSoftmaxBackward {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(LogSoftmaxBackwardImpl);
-  LogSoftmaxBackwardImpl() = default;
-  ~LogSoftmaxBackwardImpl() override = default;
-
-  void Launch(StreamContext* stream_ctx, size_t rows, size_t cols, const void* y, const void* dy,
-              void* dx) override {
-    SoftmaxBackwardCpu<T, Algorithm::kLogSoftmax>(rows, cols, reinterpret_cast<const T*>(y),
-                                                  reinterpret_cast<const T*>(dy),
-                                                  reinterpret_cast<T*>(dx));
-  }
-};
-
-template<typename T>
-std::unique_ptr<LogSoftmaxBackward> NewLogSoftmaxBackward() {
-  return std::unique_ptr<LogSoftmaxBackward>(new LogSoftmaxBackwardImpl<T>());
-}
-
-class LogSoftmaxBackwardFactoryImpl : public LogSoftmaxBackwardFactory {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(LogSoftmaxBackwardFactoryImpl);
-  LogSoftmaxBackwardFactoryImpl() = default;
-  ~LogSoftmaxBackwardFactoryImpl() override = default;
-
-  std::unique_ptr<LogSoftmaxBackward> New(DataType data_type) override {
-#define MAKE_NEW_LOG_SOFTMAX_BACKWARD_ENTRY(type_cpp, type_proto) \
-  {type_proto, NewLogSoftmaxBackward<type_cpp>},
-
-    static const std::map<DataType, std::function<std::unique_ptr<LogSoftmaxBackward>()>>
-        new_log_softmax_backward_handle{OF_PP_FOR_EACH_TUPLE(MAKE_NEW_LOG_SOFTMAX_BACKWARD_ENTRY,
-                                                             CPU_PRIMITIVE_FLOATING_TYPE_SEQ)};
-#undef MAKE_NEW_LOG_SOFTMAX_BACKWARD_ENTRY
-    const auto it = new_log_softmax_backward_handle.find(data_type);
-    if (it != new_log_softmax_backward_handle.end()) {
-      return it->second();
-    } else {
-      return nullptr;
-    }
-  }
-};
-
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, LogSoftmaxBackwardFactory,
                            LogSoftmaxBackwardFactoryImpl);
 
