@@ -26,15 +26,12 @@ template<typename T>
 void SoftmaxBackwardCpu(size_t rows, size_t cols, const T* y, const T* dy, T* dx) {
   for (size_t i = 0; i < rows; ++i) {
     size_t row_offset = i * cols;
+    const T* row_y = y + row_offset;
+    const T* row_dy = dy + row_offset;
+    T* row_dx = dx + row_offset;
     T row_sum = 0;
-    for (size_t j = 0; j < cols; ++j) {
-      const size_t offset = row_offset + j;
-      row_sum += y[offset] * dy[offset];
-    }
-    for (size_t j = 0; j < cols; ++j) {
-      const size_t offset = row_offset + j;
-      dx[offset] = (dy[offset] - row_sum) * y[offset];
-    }
+    for (size_t j = 0; j < cols; ++j) { row_sum += row_y[j] * row_dy[j]; }
+    for (size_t j = 0; j < cols; ++j) { row_dx[j] = (row_dy[j] - row_sum) * row_y[j]; }
   }
 }
 
