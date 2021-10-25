@@ -19,23 +19,65 @@ from oneflow._oneflow_internal.autograd import AutogradFunctionBase
 
 
 class Function(AutogradFunctionBase):
+    r"""
+    Function(self)
+
+    Base class to create custom autograd.Function.
+
+    To create a custom autograd.Function, subclass this class and implement the ``forward()``
+    and ``backward()`` static methods. Then, to use your custom op in the forward pass, call the
+    class method ``apply()`` or ``__call__()``. Do not call ``forward()`` directly.
+
+    For example:
+
+    .. code-block:: python
+
+        class Exp(Function):
+            @staticmethod
+            def forward(ctx, i):
+                result = i.exp()
+                ctx.save_for_backward(result)
+                return result
+
+            @staticmethod
+            def backward(ctx, grad_output):
+                result, = ctx.saved_tensors
+                return grad_output * result
+
+        my_module = Exp()
+        # Use it by calling the apply method or __call__ method
+        output = my_module.apply(input)  # output = my_module(input)
+    """
+
     def __init__(self):
         super().__init__(self.__class__.__name__, self.forward, self.backward)
 
     def __call__(self, *inputs):
+        r"""
+        See :meth:`self.apply`.
+        """
         return self.apply(*inputs)
 
     def apply(self, *inputs):
+        r"""
+        Calculate output tensors and build backward graph.
+        """
         return super().apply(inputs)
 
     @staticmethod
     def forward(ctx, *inputs):
+        r"""
+        Override this function for custom forward calculation.
+        """
         raise NotImplementedError(
             "You must implement the forward function for custom autograd.Function."
         )
 
     @staticmethod
     def backward(ctx, *out_grads):
+        r"""
+        Override this function for custom backward calculation.
+        """
         raise NotImplementedError(
             "You must implement the backward function for custom autograd.Function."
         )
