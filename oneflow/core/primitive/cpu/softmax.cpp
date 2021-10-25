@@ -25,16 +25,17 @@ namespace {
 template<typename T>
 void SoftmaxCpu(size_t rows, size_t cols, const T* x, T* y) {
   for (size_t i = 0; i < rows; ++i) {
-    T row_max = x[i * cols];
-    for (size_t j = 0; j < cols; ++j) { row_max = std::max(row_max, x[i * cols + j]); }
+    size_t row_offset = i * cols;
+    const T* row_x = x + row_offset;
+    T* row_y = y + row_offset;
+    size_t max_idx = std::max_element(row_x, row_x + cols) - row_x;
     T row_sum = 0;
     for (size_t j = 0; j < cols; ++j) {
-      const size_t offset = i * cols + j;
-      T exp_x = std::exp(x[offset] - row_max);
+      T exp_x = std::exp(row_x[j] - row_x[max_idx]);
       row_sum += exp_x;
-      y[offset] = exp_x;
+      row_y[j] = exp_x;
     }
-    for (size_t j = 0; j < cols; ++j) { y[i * cols + j] /= row_sum; }
+    for (size_t j = 0; j < cols; ++j) { row_y[j] /= row_sum; }
   }
 }
 
@@ -45,7 +46,6 @@ class SoftmaxImpl : public Softmax {
   SoftmaxImpl() = default;
   ~SoftmaxImpl() override = default;
 
-  using Softmax::Launch;
   void Launch(StreamContext* stream_ctx, size_t rows, size_t cols, const void* x,
               void* y) override {
     SoftmaxCpu(rows, cols, reinterpret_cast<const T*>(x), reinterpret_cast<T*>(y));

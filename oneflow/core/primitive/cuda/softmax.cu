@@ -31,7 +31,6 @@ class SoftmaxImpl : public Softmax {
   SoftmaxImpl() = default;
   ~SoftmaxImpl() override = default;
 
-  using Softmax::Launch;
   void Launch(StreamContext* stream_ctx, size_t rows, size_t cols, const void* x,
               void* y) override {
     using ComputeType = typename cuda::softmax::DefaultComputeType<T>::type;
