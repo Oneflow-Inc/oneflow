@@ -34,6 +34,22 @@ namespace oneflow {
 
 namespace numpy {
 
+class NumPyArrayInternal final {
+ public:
+  NumPyArrayInternal(PyObject* obj, const std::function<void()>& deleter);
+  ~NumPyArrayInternal();
+
+  void* data() const { return data_; }
+
+  size_t size() const { return size_; }
+
+ private:
+  PyArrayObject* obj_;
+  void* data_;
+  size_t size_;
+  std::function<void()> deleter_;
+};
+
 Maybe<int> OFDataTypeToNumpyType(DataType of_data_type);
 
 Maybe<DataType> NumpyTypeToOFDataType(int np_array_type);

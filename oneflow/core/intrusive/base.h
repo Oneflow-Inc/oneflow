@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,24 +12,20 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-from .math_ops import *
-from .random import *
-from .conv import *
-from .pooling import *
-from .activation import *
-from .dropout import *
-from .vision import *
-from .norm import *
-from .loss import *
-from .onehot import *
-from .comparison import *
-from .cast import *
-from .constant import *
-from .array_ops import *
-from .tensor import *
-from .comm import *
-from .ctc_decode import *
-from .placement import *
-from .sbp import *
-from .trigonometric_ops import *
+*/
+#ifndef ONEFLOW_CORE_INTRUSIVE_BASE_H_
+#define ONEFLOW_CORE_INTRUSIVE_BASE_H_
+
+namespace oneflow {
+namespace intrusive {
+
+class Base {
+ public:
+  void __Init__() {}
+  void __Delete__() {}
+};
+
+}  // namespace intrusive
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_INTRUSIVE_BASE_H_
