@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/primitive/include/softmax.h"
+#include "oneflow/core/primitive/include/log_softmax.h"
 #include "oneflow/core/primitive/cuda/type_seq.h"
 #include "oneflow/core/cuda/softmax.cuh"
 #include "oneflow/core/stream/cuda_stream_context.h"
@@ -24,6 +25,27 @@ namespace primitive {
 
 namespace {
 
+enum class Algorithm {
+  kSoftmax = 0,
+  kLogSoftmax = 1,
+};
+
+template<typename T, Algorithm algorithm>
+void SoftmaxGpu(cudaStream_t cuda_stream, size_t rows, size_t cols, const T* x, T* y) {
+  using ComputeType = typename cuda::softmax::DefaultComputeType<T>::type;
+  oneflow::cuda::softmax::DirectLoad<T, ComputeType> load(x, cols);
+  oneflow::cuda::softmax::DirectStore<ComputeType, T> store(y, cols);
+  if (algorithm == Algorithm::kSoftmax) {
+    OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
+        cuda_stream, load, store, rows, cols)));
+  } else if (algorithm == Algorithm::kLogSoftmax) {
+    OF_CUDA_CHECK((cuda::softmax::DispatchLogSoftmax<decltype(load), decltype(store), ComputeType>(
+        cuda_stream, load, store, rows, cols)));
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 template<typename T>
 class SoftmaxImpl : public Softmax {
  public:
@@ -33,13 +55,10 @@ class SoftmaxImpl : public Softmax {
 
   void Launch(StreamContext* stream_ctx, size_t rows, size_t cols, const void* x,
               void* y) override {
-    using ComputeType = typename cuda::softmax::DefaultComputeType<T>::type;
-    oneflow::cuda::softmax::DirectLoad<T, ComputeType> load(reinterpret_cast<const T*>(x), cols);
-    oneflow::cuda::softmax::DirectStore<ComputeType, T> store(reinterpret_cast<T*>(y), cols);
     cudaStream_t cuda_stream =
-        CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
-    OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
-        cuda_stream, load, store, rows, cols)));
+      CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
+    SoftmaxGpu<T, Algorithm::kSoftmax>(cuda_stream, rows, cols, reinterpret_cast<const T*>(x),
+                                       reinterpret_cast<T*>(y));
   }
 };
 
@@ -72,6 +91,53 @@ class SoftmaxFactoryImpl : public SoftmaxFactory {
 };
 
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, SoftmaxFactory, SoftmaxFactoryImpl);
+
+template<typename T>
+class LogSoftmaxImpl : public LogSoftmax {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(LogSoftmaxImpl);
+  LogSoftmaxImpl() = default;
+  ~LogSoftmaxImpl() override = default;
+
+  void Launch(StreamContext* stream_ctx, size_t rows, size_t cols, const void* x,
+              void* y) override {
+    cudaStream_t cuda_stream =
+      CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
+    SoftmaxGpu<T, Algorithm::kLogSoftmax>(cuda_stream, rows, cols, reinterpret_cast<const T*>(x),
+                                          reinterpret_cast<T*>(y));
+  }
+};
+
+template<typename T>
+std::unique_ptr<LogSoftmax> NewLogSoftmax() {
+  return std::unique_ptr<LogSoftmax>(new LogSoftmaxImpl<T>());
+}
+
+class LogSoftmaxFactoryImpl : public LogSoftmaxFactory {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(LogSoftmaxFactoryImpl);
+  LogSoftmaxFactoryImpl() = default;
+  ~LogSoftmaxFactoryImpl() override = default;
+
+  std::unique_ptr<LogSoftmax> New(DataType data_type) override {
+#define MAKE_NEW_LOG_SOFTMAX_ENTRY(type_cpp, type_proto) {type_proto, NewLogSoftmax<type_cpp>},
+
+    static const std::map<DataType, std::function<std::unique_ptr<LogSoftmax>()>>
+        new_log_softmax_handle{
+            OF_PP_FOR_EACH_TUPLE(MAKE_NEW_LOG_SOFTMAX_ENTRY, CUDA_PRIMITIVE_FLOATING_TYPE_SEQ)};
+
+#undef MAKE_NEW_LOG_SOFTMAX_ENTRY
+
+    const auto it = new_log_softmax_handle.find(data_type);
+    if (it != new_log_softmax_handle.end()) {
+      return it->second();
+    } else {
+      return nullptr;
+    }
+  }
+};
+
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, LogSoftmaxFactory, LogSoftmaxFactoryImpl);
 
 }  // namespace
 
