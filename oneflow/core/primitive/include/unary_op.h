@@ -16,8 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_PRIMITIVE_UNARY_OP_H_
 #define ONEFLOW_CORE_PRIMITIVE_UNARY_OP_H_
 
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/primitive/include/primitive.h"
-
 namespace oneflow {
 
 namespace primitive {
@@ -25,6 +25,9 @@ namespace primitive {
 enum class UnaryOpList:int32_t {
   kIdentity,
 };
+
+template<DeviceType device, UnaryOpList unary_enum, typename Out, typename In>
+struct UnaryFunctor; 
 class UnaryOp: public Primitive{
   public: 
     OF_DISALLOW_COPY_AND_MOVE(UnaryOp); 
@@ -45,8 +48,8 @@ class UnaryOpFactory: public Factory<UnaryOp>{
 
 template<typename Out, typename In>
 struct IdentityFunctor {
-  explicit IdentityFunctor(){}
-  void operator()(Out* dst, const In* src, size_t count) const {
+  OF_DEVICE_FUNC explicit IdentityFunctor(){}
+  OF_DEVICE_FUNC void operator()(Out* dst, const In* src, size_t count) const {
     for (size_t i = 0; i < count; ++i) { dst[i] = src[i]; }
   }
 };

@@ -1,14 +1,16 @@
 #include "oneflow/core/primitive/include/unary_op.h"
-#include <memory>
-#include "oneflow/core/common/device_type.pb.h"
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/primitive/cpu/type_seq.h"
-#include "oneflow/core/stream/stream_context.h"
-#include "oneflow/user/kernels/elementwise_xpu_kernel.h"
 
 namespace oneflow{
 
 namespace primitive{
+
+template<typename Out, typename In>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOpList::kIdentity, Out, In>{
+  Out operator()(In src) const {
+    return src; 
+  }
+}; 
 
 namespace{
 
@@ -60,16 +62,6 @@ namespace{
 
 // REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, UnaryOpFactory, UnaryOpFactoryImpl);
 
-template<DeviceType device, UnaryOpList unary_enum, typename Out, typename In>
-struct UnaryFunctor; 
-
-template<typename Out, typename In>
-struct UnaryFunctor<DeviceType::kCPU, UnaryOpList::kIdentity, Out, In>{
-  Out operator()(In src) const {
-    return src; 
-  }
-}; 
-
 
 template<UnaryOpList unary_enum, typename Out, typename In>
 class UnaryOpImpl: public UnaryOp{
@@ -119,6 +111,6 @@ class UnaryOpFactoryImpl : public UnaryOpFactory {
 
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, UnaryOpFactory, UnaryOpFactoryImpl);
 
-}
-}
-}
+} // namespace 
+} // namespace primitive
+} // namespace oneflow
