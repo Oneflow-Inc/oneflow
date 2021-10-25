@@ -13,9 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/primitive/cast.h"
+#include "oneflow/core/primitive/include/cast.h"
 #include "oneflow/core/primitive/cuda/type_seq.h"
-#include "oneflow/core/primitive/cuda/cuda_graph_support.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/stream/cuda_stream_context.h"
 
@@ -33,12 +32,25 @@ struct CastFunctor {
 template<typename To>
 struct CastFunctor<To, half, typename std::enable_if<!std::is_same<To, half>::value>::type> {
   __device__ To operator()(half from) const { return static_cast<To>(static_cast<float>(from)); }
+
+  __device__ void Apply2(To* to, const half* from) const {
+    const float2 f2 = __half22float2(*reinterpret_cast<const half2*>(from));
+    to[0] = static_cast<To>(f2.x);
+    to[1] = static_cast<To>(f2.y);
+  }
 };
 
 template<typename From>
 struct CastFunctor<half, From, typename std::enable_if<!std::is_same<From, half>::value>::type> {
   __device__ half operator()(From from) const {
     return static_cast<half>(static_cast<float>(from));
+  }
+
+  __device__ void Apply2(half* to, const From* from) const {
+    float2 f2;
+    f2.x = static_cast<float>(from[0]);
+    f2.y = static_cast<float>(from[1]);
+    *reinterpret_cast<half2*>(to) = __float22half2_rn(f2);
   }
 };
 
@@ -65,33 +77,23 @@ struct CastFunctor<nv_bfloat16, From,
 #endif  // CUDA_VERSION >= 11000
 
 template<typename From, typename To>
-void LaunchCast(cudaStream_t stream, const void* from, void* to, size_t count) {
-  OF_CUDA_CHECK((cuda::elementwise::Unary<CastFunctor<To, From>, To, From>(
-      CastFunctor<To, From>(), count, reinterpret_cast<To*>(to),
-      reinterpret_cast<const From*>(from), stream)));
-}
-
-using LaunchFn = std::function<void(cudaStream_t /*stream*/, const void* /*from*/, void* /*to*/,
-                                    size_t /*count*/)>;
-
-class CastImpl : public Cast, public CudaGraphSupport {
+class CastImpl : public Cast {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CastImpl);
-  explicit CastImpl(LaunchFn launch_fn) : launch_fn_(std::move(launch_fn)) {}
+  explicit CastImpl() = default;
   ~CastImpl() override = default;
 
   void Launch(StreamContext* stream_ctx, const void* from, void* to, size_t count) override {
     auto* cuda_stream_ctx = CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx));
-    launch_fn_(cuda_stream_ctx->cuda_stream(), from, to, count);
+    OF_CUDA_CHECK((cuda::elementwise::Unary<CastFunctor<To, From>, To, From>(
+        CastFunctor<To, From>(), count, reinterpret_cast<To*>(to),
+        reinterpret_cast<const From*>(from), cuda_stream_ctx->cuda_stream())));
   }
-
- private:
-  LaunchFn launch_fn_;
 };
 
 template<typename From, typename To>
 std::unique_ptr<Cast> NewCast() {
-  return std::unique_ptr<Cast>(new CastImpl(LaunchCast<From, To>));
+  return std::unique_ptr<Cast>(new CastImpl<From, To>());
 }
 
 class CastFactoryImpl : public CastFactory {

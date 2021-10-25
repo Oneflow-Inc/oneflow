@@ -137,8 +137,6 @@ class CUDAGeneratorImpl : public DeviceGeneratorImpl {
 
 namespace detail {
 
-int GetCudaDeviceCount();
-
 void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, curandState* states);
 
 }  // namespace detail

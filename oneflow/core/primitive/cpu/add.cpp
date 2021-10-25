@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/primitive/add.h"
+#include "oneflow/core/primitive/include/add.h"
 #include "oneflow/core/primitive/cpu/type_seq.h"
 
 namespace oneflow {
@@ -47,6 +47,7 @@ class AddImpl : public Add {
   AddImpl() = default;
   ~AddImpl() override = default;
 
+  using Add::Launch;
   void Launch(StreamContext* stream_ctx, const void* const* srcs, size_t arity, void* dst,
               size_t count) override {
 #define ONE_IF(a)                                                                            \

@@ -24,12 +24,15 @@ Operators for neural networks
         Conv1d,
         Conv2d,
         Conv3d,
+        ConvTranspose1d,
         ConvTranspose2d,
+        ConvTranspose3d,
         CombinedMarginLoss,
         CropMirrorNormalize,
         CrossEntropyLoss,
         Dropout,
         ELU,
+        CELU,
         Embedding,
         Flatten,
         GELU,
@@ -51,6 +54,7 @@ Operators for neural networks
         LogSoftmax,
         MSELoss,
         MarginRankingLoss,
+        TripletMarginLoss,
         MaxPool1d,
         MaxPool2d,
         MaxPool3d,
@@ -88,9 +92,14 @@ Operators for neural networks
         MinMaxObserver,
         MovingAverageMinMaxObserver,
         FakeQuantization,
-        Quantization
+        Quantization, 
+        FusedBatchNorm1d, 
+        FusedBatchNorm2d, 
+        FusedBatchNorm3d
 
 .. autofunction:: oneflow.nn.parallel.DistributedDataParallel
 
 .. currentmodule:: oneflow.nn.utils
 .. autofunction:: oneflow.nn.utils.clip_grad_norm_
+.. autofunction:: oneflow.nn.utils.weight_norm
+.. autofunction:: oneflow.nn.utils.remove_weight_norm

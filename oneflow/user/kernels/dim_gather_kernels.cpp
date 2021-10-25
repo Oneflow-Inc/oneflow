@@ -66,27 +66,22 @@ class DimGatherKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DIM_GATHER_KERNEL(device, dtype, itype)                                 \
-  REGISTER_USER_KERNEL("dim_gather")                                                     \
-      .SetCreateFn<DimGatherKernel<device, dtype, itype>>()                              \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));
+#define REGISTER_DIM_GATHER_KERNEL(device, dtype_pair, itype_pair)                               \
+  REGISTER_USER_KERNEL("dim_gather")                                                             \
+      .SetCreateFn<                                                                              \
+          DimGatherKernel<device, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>>() \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
+                       & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair))     \
+                       & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
 
-#define REGISTER_DIM_GATHER_KERNELS_WITH_DEVICE(device) \
-  REGISTER_DIM_GATHER_KERNEL(device, float, int32_t)    \
-  REGISTER_DIM_GATHER_KERNEL(device, double, int32_t)   \
-  REGISTER_DIM_GATHER_KERNEL(device, int32_t, int32_t)  \
-  REGISTER_DIM_GATHER_KERNEL(device, float, int64_t)    \
-  REGISTER_DIM_GATHER_KERNEL(device, double, int64_t)   \
-  REGISTER_DIM_GATHER_KERNEL(device, int32_t, int64_t)
-
-REGISTER_DIM_GATHER_KERNELS_WITH_DEVICE(DeviceType::kCPU);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_GATHER_KERNEL, (DeviceType::kCPU),
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
 
 #ifdef WITH_CUDA
-REGISTER_DIM_GATHER_KERNELS_WITH_DEVICE(DeviceType::kGPU);
-REGISTER_DIM_GATHER_KERNEL(DeviceType::kGPU, float16, int32_t);
-REGISTER_DIM_GATHER_KERNEL(DeviceType::kGPU, float16, int64_t);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+    REGISTER_DIM_GATHER_KERNEL, (DeviceType::kGPU),
+    ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 #endif  // WITH_CUDA
 
 }  // namespace user_op

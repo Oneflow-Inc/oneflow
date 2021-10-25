@@ -122,29 +122,31 @@ class ElemwiseXimumBackwardKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MAXIMUM_KERNELS(device, dtype)                                        \
-  REGISTER_USER_KERNEL("elementwise_maximum")                                          \
-      .SetCreateFn<ElemwiseXimumKernel<device, MaximumFunctor, dtype>>()               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("elementwise_maximum_backward")                                 \
-      .SetCreateFn<ElemwiseXimumBackwardKernel<device, MaximumGradFunctor, dtype>>()   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+#define REGISTER_MAXIMUM_KERNELS(device, dtype_pair)                                               \
+  REGISTER_USER_KERNEL("elementwise_maximum")                                                      \
+      .SetCreateFn<ElemwiseXimumKernel<device, MaximumFunctor, OF_PP_PAIR_FIRST(dtype_pair)>>()    \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                         \
+                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair))           \
+                       & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype_pair)));         \
+  REGISTER_USER_KERNEL("elementwise_maximum_backward")                                             \
+      .SetCreateFn<                                                                                \
+          ElemwiseXimumBackwardKernel<device, MaximumGradFunctor, OF_PP_PAIR_FIRST(dtype_pair)>>() \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                         \
+                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair))           \
+                       & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
-#define REGISTER_MINIMUM_KERNELS(device, dtype)                                        \
-  REGISTER_USER_KERNEL("elementwise_minimum")                                          \
-      .SetCreateFn<ElemwiseXimumKernel<device, MinimumFunctor, dtype>>()               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("elementwise_minimum_backward")                                 \
-      .SetCreateFn<ElemwiseXimumBackwardKernel<device, MinimumGradFunctor, dtype>>()   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+#define REGISTER_MINIMUM_KERNELS(device, dtype_pair)                                               \
+  REGISTER_USER_KERNEL("elementwise_minimum")                                                      \
+      .SetCreateFn<ElemwiseXimumKernel<device, MinimumFunctor, OF_PP_PAIR_FIRST(dtype_pair)>>()    \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                         \
+                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair))           \
+                       & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype_pair)));         \
+  REGISTER_USER_KERNEL("elementwise_minimum_backward")                                             \
+      .SetCreateFn<                                                                                \
+          ElemwiseXimumBackwardKernel<device, MinimumGradFunctor, OF_PP_PAIR_FIRST(dtype_pair)>>() \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                         \
+                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair))           \
+                       & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
 }  // namespace oneflow
 

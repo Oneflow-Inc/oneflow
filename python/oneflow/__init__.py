@@ -19,6 +19,7 @@ import collections
 
 import oneflow._oneflow_internal
 
+oneflow._oneflow_internal.InitNumpyCAPI()
 oneflow._oneflow_internal.CheckAndClearRegistryFlag()
 Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
@@ -41,6 +42,7 @@ locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
 locals()["bfloat16"] = oneflow._oneflow_internal.bfloat16
 from oneflow.version import __version__
+from oneflow.version import __git_commit__
 
 _DEPRECATED = set()
 
@@ -90,15 +92,18 @@ from oneflow._C import diag
 from oneflow._C import log1p
 from oneflow._C import add
 from oneflow._C import div
+from oneflow._C import floor_divide
 from oneflow._C import mul
-from oneflow._C import reciprocal_no_nan as reciprocal
+from oneflow._C import reciprocal as reciprocal
 from oneflow._C import sub
+from oneflow._C import sin, sin_
 from oneflow._C import asin
 from oneflow._C import asin as arcsin
 from oneflow._C import asinh
 from oneflow._C import asinh as arcsinh
 from oneflow._C import atan
 from oneflow._C import atan as arctan
+from oneflow._C import atan2
 from oneflow._C import ceil
 from oneflow._C import clamp
 from oneflow._C import clamp as clip
@@ -122,6 +127,16 @@ from oneflow._C import softplus
 from oneflow._C import tril
 from oneflow._C import triu
 from oneflow._C import pad
+from oneflow._C import transpose
+from oneflow._C import relu
+from oneflow._C import softmax
+from oneflow._C import log_softmax
+from oneflow._C import argmax
+from oneflow._C import argmin
+from oneflow._C import std
+from oneflow._C import var
+from oneflow._C import stack
+from oneflow._C import squeeze
 
 from . import sbp
 import atexit
@@ -213,7 +228,6 @@ from oneflow._C import tensor, batch_gather
 
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
-from oneflow.nn.modules.trigonometric_ops import atan2_op as atan2
 
 from oneflow.framework.check_point_v2 import Load as load
 from oneflow.framework.check_point_v2 import save
@@ -231,14 +245,13 @@ from oneflow.framework.generator import default_generator, manual_seed
 from oneflow.framework.scope_util import api_current_scope as current_scope
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
-from oneflow.nn.modules.activation import softmax_op as softmax
+
 from oneflow.nn.modules.pooling import (
     adaptive_avg_pool1d,
     adaptive_avg_pool2d,
     adaptive_avg_pool3d,
 )
 from oneflow.nn.modules.arange import arange_op as arange
-from oneflow.nn.modules.argmax import argmax_op as argmax
 from oneflow.nn.modules.argsort import argsort_op as argsort
 from oneflow.nn.modules.argwhere import argwhere_op as argwhere
 from oneflow.nn.modules.bmm import bmm_op as bmm
@@ -274,35 +287,29 @@ from oneflow.nn.modules.index_select import index_select_op as index_select
 from oneflow.nn.modules.masked_fill import masked_fill_op as masked_fill
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
-from oneflow.nn.modules.math_ops import sin_op as sin
-from oneflow.nn.modules.relu import relu_op as relu
-from oneflow.nn.modules.math_ops import std_op as std
 from oneflow.nn.modules.math_ops import topk_op as topk
-from oneflow.nn.modules.math_ops import variance_op as var
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
 from oneflow.nn.modules.narrow import narrow_op as narrow
 from oneflow.nn.modules.nonzero import nonzero_op as nonzero
+from oneflow.nn.modules.numel import numel_op as numel
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.random_ops import randint_op as randint
 from oneflow.nn.modules.random_ops import randperm_op as randperm
-from oneflow.nn.modules.reduce_ops import _max as max
-from oneflow.nn.modules.reduce_ops import _mean as mean
-from oneflow.nn.modules.reduce_ops import _min as min
-from oneflow.nn.modules.reduce_ops import _sum as sum
+from oneflow.nn.modules.reduce_ops import max_op as max
+from oneflow.nn.modules.reduce_ops import min_op as min
+from oneflow.nn.modules.reduce_ops import sum_op as sum
+from oneflow.nn.modules.reduce_ops import mean_op as mean
 from oneflow.nn.modules.reduce_ops import prod_op as prod
 from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.permute import permute_op as permute
-from oneflow.nn.modules.scatter import _scatter_nd_op as scatter_nd
 from oneflow.nn.modules.slice import slice_op as slice
 from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.slice import logical_slice_assign_op as logical_slice_assign
 from oneflow.nn.modules.sort import sort_op as sort
 from oneflow.nn.modules.split import split_op as split
-from oneflow.nn.modules.squeeze import squeeze_op as squeeze
-from oneflow.nn.modules.stack import stack
 from oneflow.nn.modules.eye import eye_op as eye
 from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (
@@ -314,7 +321,6 @@ from oneflow.nn.modules.tile import tile_op as tile
 from oneflow.nn.modules.to import to_op as to
 from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
 from oneflow.nn.modules.consistent_cast import to_local_op as to_local
-from oneflow.nn.modules.transpose import transpose_op as transpose
 from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
@@ -351,7 +357,7 @@ from . import (
 )  # , saved_model NOTE(chengcheng): unavailable now
 import oneflow.utils.data
 import oneflow.utils.vision
-from oneflow.nn.modules.relu import relu_op as relu
 import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
+import oneflow.multiprocessing

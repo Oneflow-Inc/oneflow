@@ -13,9 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/primitive/fill.h"
+#include "oneflow/core/primitive/include/fill.h"
 #include "oneflow/core/primitive/cuda/type_seq.h"
-#include "oneflow/core/primitive/cuda/cuda_graph_support.h"
 #include "oneflow/core/stream/cuda_stream_context.h"
 
 namespace oneflow {
@@ -53,7 +52,7 @@ __global__ void FillGpu(T* dst, T value, size_t count) {
 
 template<typename T>
 T GetValue(Scalar value) {
-  return CHECK_JUST(value.As<T>());
+  return value.Value<T>();
 }
 
 template<>
@@ -100,7 +99,7 @@ void LaunchFill(cudaStream_t stream, T* dst, T value, size_t count) {
 }
 
 template<typename T>
-class FillImpl : public Fill, public CudaGraphSupport {
+class FillImpl : public Fill {
  public:
   OF_DISALLOW_COPY_AND_MOVE(FillImpl);
   FillImpl() = default;

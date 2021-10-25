@@ -115,9 +115,13 @@ jobs:
           fi
           extra_flags+=" --extra_oneflow_cmake_args=-DBUILD_PROFILER=OFF"
           extra_flags+=" --extra_oneflow_cmake_args=-DTREAT_WARNINGS_AS_ERRORS=OFF"
+          extra_flags+=" --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple"
           echo "cuda_version=${cuda_version}" >> $GITHUB_ENV
           echo "python_version=${python_version}" >> $GITHUB_ENV
           echo "compute_platforms=${compute_platforms}" >> $GITHUB_ENV
+          container_name=release-run-id-${{ github.run_id }}-${{ matrix.compute_platform }}
+          echo "container_name=${container_name}" >> $GITHUB_ENV
+          extra_flags+=" --container_name ${container_name}"
           echo "extra_flags=${extra_flags}" >> $GITHUB_ENV
 
           tmp_dir=$HOME/ci-tmp-rel
@@ -133,10 +137,6 @@ jobs:
 
           $(python3 tools/oss_file_exist.py --bucket oneflow-staging --path ${oss_dir}/oneflow)
           echo "is_built=${OSS_FILE_EXISTED}" >> $GITHUB_ENV
-
-          container_name=release-run-id-${{ github.run_id }}-${{ matrix.compute_platform }}
-          echo "container_name=${container_name}" >> $GITHUB_ENV
-          extra_docker_args+=" --name ${container_name}"
           # if release_version not given, it is a nightly build
           if [ -z "${{ github.event.inputs.release_version }}" ]; then
             extra_docker_args+=" --env ONEFLOW_RELEASE_NIGHTLY=1"
@@ -170,7 +170,7 @@ jobs:
         run: |
           python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           python3 -m pip install oss2 beautifulsoup4 --user
-          python3 tools/create_pip_index.py --dir_key ${oss_dir} -b oneflow-staging --index_key=${oss_branch_dir}/index.html --index_key=${oss_dir}/index.html
+          python3 tools/create_pip_index.py --dir_key ${oss_dir} -b oneflow-staging --index_key=${oss_branch_dir}/index.html --index_key=${oss_dir}/index.html --index_key=commit/${GITHUB_SHA}/${{ matrix.compute_platform }}/index.html
       - name: Update API docs
         if: github.ref == 'refs/heads/master' && matrix.compute_platform == 'cpu' && contains(env.compute_platforms, matrix.compute_platform)
         env:

@@ -230,9 +230,7 @@ class TestAdagrad(flow.unittest.TestCase):
         arg_dict["learning_rate"] = [1, 1e-3]
         arg_dict["train_iters"] = [10]
         arg_dict["lr_decay"] = [0.9, 0.75]
-        arg_dict["weight_decay"] = [
-            0.0
-        ]  # NOTE(Liang Depeng): test will fail when weight_decay > 0
+        arg_dict["weight_decay"] = [0.0, 0.9]
         arg_dict["initial_accumulator_value"] = [1.0, 2.1]
         arg_dict["eps"] = [1e-8]
         arg_dict["clip_grad_max_norm"] = [1.0]

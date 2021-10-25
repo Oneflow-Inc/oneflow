@@ -28,6 +28,8 @@ int64_t GetParallelHierarchyNumAxes(
   CHECK(it != op_name2parallel_conf.end());
   if (!it->second->has_hierarchy()) {
     return 1;
+  } else if (it->second->hierarchy().dim_size() == 0) {
+    return 1;
   } else {
     return it->second->hierarchy().dim_size();
   }
