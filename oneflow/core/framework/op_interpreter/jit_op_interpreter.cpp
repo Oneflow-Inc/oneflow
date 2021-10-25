@@ -81,11 +81,6 @@ Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTup
     bd->set_shape(*std::get<1>(pair)->shape());
     bn2blob_desc.emplace(std::get<0>(pair), *bd);
   }
-  // JUST(op->InferLogicalOutBlobDescs(
-  //     [&bn2blob_desc](const std::string& bn_in_op) {
-
-  //     },
-  //     *parallel_desc));
   auto indexed_arg_name_and_index = op_expr.input_arg_tuple()->indexed_arg_name_and_index();
   CHECK_EQ_OR_RETURN(indexed_arg_name_and_index.size(), inputs.size());
   importer_.GetOrInsertFunc(GetJitFuncName(), inputs, outputs);

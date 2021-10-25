@@ -2,6 +2,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -26,7 +27,6 @@ OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context) {
 LogicalResult JitImporter::AppendDataInOperand(const std::string& key, const int32_t index,
                                                const std::string& lbn,
                                                std::vector<::mlir::Value>& operand_vec) {
-  LOG(ERROR) << "[getting]" << key << "/" << index;
   operand_vec.push_back(GetResultByBnAndIndex(key, index));
   return success();
 }
@@ -34,7 +34,7 @@ LogicalResult JitImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
                                          std::vector<NamedAttribute>& attr_vec) {
   return success();
 }
-LogicalResult JitImporter::InsertOpResults(const ::oneflow::OperatorConf& op, Operation*) {
+LogicalResult JitImporter::InsertOpResults(const ::oneflow::OperatorConf& op_conf, Operation*) {
   return success();
 }
 Type JitImporter::GetTensorTypeOfLbn(const std::string& lbn) { return GetBuilder().getF128Type(); }
@@ -87,6 +87,7 @@ void JitImporter::CreateOperandMapping(const std::shared_ptr<const ArgTuple>& in
   operand_mapping_.clear();
   input_arg_tuple_ = input_arg_tuple;
   inputs_ = inputs;
+  // TODO: refactor using GetResultByBnAndIndex
   for (auto pair : llvm::zip(input_arg_tuple->indexed_bns(), inputs)) {
     const auto& indexed_bn = std::get<0>(pair);
     const auto& tensor = std::get<1>(pair);
