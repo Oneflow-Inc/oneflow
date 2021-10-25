@@ -22,6 +22,12 @@ limitations under the License.
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/lazy_mode.h"
 
+#ifdef WITH_CUDA
+
+#include <cuda.h>
+
+#endif  // WITH_CUDA
+
 namespace oneflow {
 
 #ifdef WITH_CUDA
@@ -198,6 +204,41 @@ void InitCudaContextOnce(int device_id) {
     OF_CUDA_CHECK(cudaSetDevice(device_id));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
   });
+}
+
+cudaError_t CudaDriverGetPrimaryCtxActive(int dev, int* active) {
+#if CUDA_VERSION >= 11030
+  CUdevice cu_device{};
+  {
+    CUresult (*fnCuDeviceGet)(CUdevice*, int) = nullptr;
+    cudaError_t err =
+        cudaGetDriverEntryPoint("cuDeviceGet", (void**)&fnCuDeviceGet, cudaEnableDefault);
+    if (err != cudaSuccess) { return err; }
+    CUresult result = fnCuDeviceGet(&cu_device, dev);
+    if (result == CUDA_SUCCESS) {
+      // do nothing
+    } else if (result == CUresult::CUDA_ERROR_INVALID_DEVICE) {
+      return cudaErrorInvalidDevice;
+    } else {
+      return cudaErrorUnknown;
+    }
+  }
+  {
+    CUresult (*fnCuDevicePrimaryCtxGetState)(CUdevice, unsigned int*, int*) = nullptr;
+    cudaError_t err = cudaGetDriverEntryPoint(
+        "cuDevicePrimaryCtxGetState", (void**)&fnCuDevicePrimaryCtxGetState, cudaEnableDefault);
+    if (err != cudaSuccess) { return err; }
+    unsigned int flags{};
+    CUresult result = fnCuDevicePrimaryCtxGetState(cu_device, &flags, active);
+    if (result == CUDA_SUCCESS) {
+      return cudaSuccess;
+    } else {
+      return cudaErrorUnknown;
+    }
+  }
+#else
+  return cudaErrorNotSupported;
+#endif  // CUDA_VERSION < 11030
 }
 
 #endif  // WITH_CUDA
