@@ -544,6 +544,10 @@ def _argmin(self, dim=None, keepdim=None):
     return flow.argmin(self, dim=dim, keepdim=keepdim)
 
 
+def _roll(self, shifts, dims=None):
+    return flow.roll(self, shifts=shifts, dims=dims)
+
+
 def _uniform(self, a=0, b=1):
     if isinstance(a, Tensor):
         assert a.ndim == 0 and a.nelement() == 1, "a must be a number or scalar tensor!"
@@ -799,6 +803,7 @@ def RegisterMethods():
     Tensor.relu = _relu
     Tensor.softmax = _softmax
     Tensor.log_softmax = _log_softmax
+    Tensor.roll = _roll
     Tensor.squeeze = _squeeze
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
