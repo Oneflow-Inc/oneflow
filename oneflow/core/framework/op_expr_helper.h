@@ -210,6 +210,13 @@ Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
 Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
                                     const std::vector<int32_t>& stride, const std::string& name);
 
+Maybe<one::UserOpExpr> UnfoldTensorGradOp(const int32_t& dimension,
+                                    const int32_t& size,
+                                    const int32_t& step);
+Maybe<one::UserOpExpr> UnfoldTensorGradOp(const int32_t& dimension,
+                                    const int32_t& size, 
+                                    const int32_t& step, const std::string& name);
+
 Maybe<one::UserOpExpr> UnaryGradOp(const std::string& unary_op_type);
 Maybe<one::UserOpExpr> UnaryGradOp(const std::string& unary_op_type, const std::string& name);
 
