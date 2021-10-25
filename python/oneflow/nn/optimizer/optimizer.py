@@ -29,7 +29,7 @@ class ParamGroup(object):
     def __init__(
         self, parameters: Dict[str, Any], default_options: Dict,
     ):
-        # ParamGroup must be constructed by Dict["params": parameters: List[Parameter or Tensor], "...": ...]
+        # ParamGroup must be constructed by Dict["params": parameters: List[Parameter, Tensor or TensorBlock], "...": ...]
         assert isinstance(parameters, dict) and "params" in parameters
         assert not isinstance(parameters["params"], (Parameter, Tensor))
         self._parameters = list()
