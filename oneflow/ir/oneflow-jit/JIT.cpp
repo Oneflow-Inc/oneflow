@@ -30,8 +30,9 @@ LogicalResult JitImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
                                          std::vector<NamedAttribute>& attr_vec) {
   return success();
 }
+Type JitImporter::GetTensorTypeOfLbn(const std::string& lbn) { return GetBuilder().getF128Type(); }
 std::shared_ptr<MirroredTensor> JitImporter::MakeIntermediateTensor(
-    Value result, const std::shared_ptr<ParallelDesc>& parallel_desc) {
+    const std::string& lbn, Value result, const std::shared_ptr<ParallelDesc>& parallel_desc) {
   auto tensor_shape = result.getType().cast<TensorType>();
   auto dtype = DataType::kInvalidDataType;
   if (tensor_shape.getElementType().isF32()) {
@@ -46,7 +47,7 @@ std::shared_ptr<MirroredTensor> JitImporter::MakeIntermediateTensor(
   auto tensor = MirroredTensor::MakeTensor(shape, dtype, device, /* is_lazy */ true,
                                            /* requires_grad= */ false, /* is_leaf= */ true)
                     .GetPtrOrThrow();
-  // intermediate_tensors_.emplace(result, tensor);
+  CHECK(intermediate_tensors_.emplace(lbn, tensor).second);
   CHECK(result_mapping_.emplace(tensor.get(), result).second);
   return tensor;
 }
@@ -59,7 +60,6 @@ LogicalResult JitImporter::InsertOpResults(const ::oneflow::OperatorConf& op_con
   // }
   return success();
 }
-Type JitImporter::GetTensorTypeOfLbn(const std::string& lbn) { return GetBuilder().getF128Type(); }
 ::oneflow::AttrType JitImporter::QueryAttrType(const std::string& op_type_name,
                                                const std::string& attr_name) {
   return ::oneflow::AttrType::kAtDataType;
