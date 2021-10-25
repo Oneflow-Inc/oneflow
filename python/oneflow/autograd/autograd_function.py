@@ -26,7 +26,7 @@ class Function(AutogradFunctionBase):
         return self.apply(*inputs)
 
     def apply(self, *inputs):
-        return super().apply(TensorTuple(inputs))
+        return super().apply(inputs)
 
     @staticmethod
     def forward(ctx, *inputs):

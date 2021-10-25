@@ -89,8 +89,9 @@ ONEFLOW_API_PYBIND11_MODULE("autograd", m) {
         return std::make_shared<AutogradFunctionBase>(func_name, PackPyFunctionToFType(forward_fn),
                                                       PackPyFunctionToFType(backward_fn));
       }))
-      .def("apply", [](const AutogradFunctionBase& func, const TensorTuple& inputs) {
-        const std::shared_ptr<TensorTuple>& res = func.Apply(inputs).GetPtrOrThrow();
+      .def("apply", [](const AutogradFunctionBase& func, const py::object& input) {
+        const auto& input_tensor_tuple = ToTensorTuple(input).GetOrThrow();
+        const std::shared_ptr<TensorTuple>& res = func.Apply(input_tensor_tuple).GetPtrOrThrow();
         return UnpackTensorTuple(*res);
       });
 
