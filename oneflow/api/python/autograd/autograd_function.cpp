@@ -99,9 +99,9 @@ ONEFLOW_API_PYBIND11_MODULE("autograd", m) {
       m, "FunctionAutoGradCaptureState")
       .def(py::init([]() { return std::make_shared<FunctionAutoGradCaptureState>(); }))
       .def("save_for_backward",
-           [](const std::shared_ptr<FunctionAutoGradCaptureState>& ctx, const py::object& input) {
+           [](FunctionAutoGradCaptureState& ctx, const py::args& input) {
              const auto& tensors = ToTensorTuple(input).GetOrThrow();
-             for (const auto& tensor : tensors) { ctx->SaveTensorForBackward(tensor); }
+             for (const auto& tensor : tensors) { ctx.SaveTensorForBackward(tensor); }
            })
       .def("saved_tensors",
            [](const FunctionAutoGradCaptureState& ctx) {
