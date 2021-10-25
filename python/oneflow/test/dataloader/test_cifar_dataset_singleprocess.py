@@ -16,6 +16,9 @@ limitations under the License.
 import os
 import unittest
 
+import flowvision as vision
+import flowvision.transforms as transforms
+
 import oneflow.unittest
 import oneflow as flow
 import oneflow.nn as nn
@@ -69,10 +72,10 @@ def test(test_case):
     criterion = nn.CrossEntropyLoss()
     criterion.to(device)
 
-    transform = flow.utils.vision.transforms.Compose(
+    transform = transforms.Compose(
         [
-            flow.utils.vision.transforms.ToTensor(),
-            flow.utils.vision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
         ]
     )
 
