@@ -103,10 +103,9 @@ ONEFLOW_API_PYBIND11_MODULE("autograd", m) {
              const auto& tensors = ToTensorTuple(input).GetOrThrow();
              for (const auto& tensor : tensors) { ctx.SaveTensorForBackward(tensor); }
            })
-      .def("saved_tensors",
-           [](const FunctionAutoGradCaptureState& ctx) {
-             return UnpackTensorTuple(ctx.SavedTensors());
-           })
+      .def_property_readonly(
+          "saved_tensors",
+          [](const FunctionAutoGradCaptureState& ctx) { return py::cast(ctx.SavedTensors()); })
       .def("mark_non_differentiable",
            [](FunctionAutoGradCaptureState& ctx, const py::object& input) {
              const auto& tensors = ToTensorTuple(input).GetOrThrow();
