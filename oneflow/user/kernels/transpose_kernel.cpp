@@ -45,8 +45,14 @@ class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport 
     size_t num_dims = tensor_in->shape().NumAxes();
     const int64_t* src_dims = in_shape.ptr();
 
-    primitive->Launch(ctx->stream_ctx(), dtype, num_dims, src_dims, tensor_in->dptr(), perm.data(),
-                      tensor_out->mut_dptr());
+    int64_t elem_cnt = tensor_out->shape().elem_cnt();
+    if (elem_cnt != 0) {
+      primitive->Launch(ctx->stream_ctx(), dtype, num_dims, src_dims, tensor_in->dptr(),
+                        perm.data(), tensor_out->mut_dptr());
+    } else {
+      // For 0-d Tensor
+      return;
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
