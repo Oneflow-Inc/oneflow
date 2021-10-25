@@ -26,12 +26,12 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
-#include "oneflow/core/functional/functional.h"
-#include "oneflow/core/functional/sequence_function.h"
+
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -1083,6 +1083,44 @@ class CtcLossFunctor {
   std::shared_ptr<OpExpr> op_xdivy_;
 };
 
+class TripletMarginLossFunctor {
+ public:
+  TripletMarginLossFunctor() {}
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& anchor,
+                           const std::shared_ptr<one::Tensor>& positive,
+                           const std::shared_ptr<one::Tensor>& negative, const float& margin,
+                           const float& p, const float& eps, const bool& swap,
+                           const std::string& reduction) const {
+    int32_t dim_norm = anchor->ndim() - 1;
+    std::vector<int32_t> dim(1, dim_norm);
+    CHECK_OR_RETURN([&]() -> bool {
+      if ((reduction != "none") && (reduction != "sum") && (reduction != "mean")) return false;
+      return true;
+    }());
+    auto da_p = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, positive)))), p, dim, false,
+                                anchor->dtype()));
+    auto da_n = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, negative)))), p, dim, false,
+                                anchor->dtype()));
+    if (swap) {
+      auto distance_swap = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(positive, negative)))), p,
+                                           dim, false, positive->dtype()));
+      da_n = JUST(Minimum(distance_swap, da_n));
+    }
+    auto triplet_loss =
+        JUST(Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n)), margin, false)), 0.0, NullOpt));
+    int32_t ndim = triplet_loss->ndim() - 1;
+    std::vector<int32_t> axis(1, ndim);
+
+    if (reduction == "mean") {
+      triplet_loss = JUST(ReduceMean(triplet_loss, axis, false));
+    } else if (reduction == "sum") {
+      triplet_loss = JUST(ReduceSum(triplet_loss, axis, false));
+    }
+    return triplet_loss;
+  }
+};
+
 class AffineGridFunctor {
  public:
   AffineGridFunctor() {
@@ -1386,31 +1424,30 @@ class DropoutFunctor {
     dropout_op_ =
         CHECK_JUST(one::OpBuilder("dropout").Input("in").Input("mask").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a, const float& p,
                            const bool& training, const Optional<one::Generator>& generator) const {
-    if (!training || p == 0.0) return x;
+    if (!training || p == 0.0) return a;
 
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap random_mask_like_attrs;
     JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
-
-    std::shared_ptr<one::Generator> gen;
-    if (!generator) {
-      gen = JUST(one::DefaultAutoGenerator());
-    } else {
-      gen = JUST(generator);
-    }
-
     JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
 
-    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *random_mask_like_op_, {x},
-        OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
     float scale = 1.0;
     if (p != 1.0) { scale = 1.0 / (1.0 - p); }
     MutableAttrMap dropout_attrs;
     JUST(dropout_attrs.SetAttr<float>("scale", scale));
-    return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {x, mask}, dropout_attrs);
+
+    return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
+             return OpInterpUtil::Dispatch<Tensor>(
+                 *random_mask_like_op_, {a},
+                 OpExprInterpContext(random_mask_like_attrs, random_mask_like_state));
+           })
+        .then([&](const std::shared_ptr<one::Tensor>& x) {
+          return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {a, x}, dropout_attrs);
+        })
+        .call();
   }
 
  private:
@@ -1713,26 +1750,28 @@ class FusedBiasAddDropoutFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b, const float& p,
                            const int32_t& axis, const Optional<one::Generator>& generator) const {
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap random_mask_like_attrs;
     JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
-    std::shared_ptr<one::Generator> gen;
-    if (!generator) {
-      gen = JUST(one::DefaultAutoGenerator());
-    } else {
-      gen = JUST(generator);
-    }
     JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *random_mask_like_op_, {a},
-        OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
+
     float scale = 1.0;
     if (p != 1.0) { scale = 1.0 / (1.0 - p); }
     MutableAttrMap fused_bias_add_mask_attrs;
     JUST(fused_bias_add_mask_attrs.SetAttr<float>("scale", scale));
     JUST(fused_bias_add_mask_attrs.SetAttr<int32_t>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, mask},
-                                          fused_bias_add_mask_attrs);
+
+    return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
+             return OpInterpUtil::Dispatch<Tensor>(
+                 *random_mask_like_op_, {a},
+                 OpExprInterpContext(random_mask_like_attrs, random_mask_like_state));
+           })
+        .then([&](const std::shared_ptr<one::Tensor>& x) {
+          return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, x},
+                                                fused_bias_add_mask_attrs);
+        })
+        .call();
   }
 
  private:
@@ -1883,6 +1922,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");
   m.add_functor<impl::SmoothL1LossFunctor>("SmoothL1Loss");
   m.add_functor<impl::CombinedMarginLossFunctor>("CombinedMarginLoss");
+  m.add_functor<impl::TripletMarginLossFunctor>("TripletMarginLoss");
   m.add_functor<impl::MarginRankingLossFunctor>("MarginRankingLoss");
   m.add_functor<impl::CtcLossFunctor>("CtcLoss");
   m.add_functor<impl::AffineGridFunctor>("AffineGrid");
