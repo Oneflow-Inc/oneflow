@@ -31,7 +31,7 @@ add_docstr(
         off_value (Union[int, float], optional): The fill value when `x[i] != i`. Defaults to 0.
     Note:
 
-        The data type of input blob should be `int32` or `int64`.
+        The data type of input tensor should be `int32` or `int64`.
 
     Returns:
         oneflow.Tensor.
