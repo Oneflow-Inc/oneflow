@@ -30,15 +30,10 @@ class BroadcastMatmul : public Primitive {
   BroadcastMatmul() = default;
   ~BroadcastMatmul() override = default;
 
-  virtual DataType a_type() const = 0;
-  virtual DataType b_type() const = 0;
-  virtual DataType c_type() const = 0;
-  virtual BlasTransposeType transpose_a() const = 0;
-  virtual BlasTransposeType transpose_b() const = 0;
-
   virtual void Launch(StreamContext* stream_ctx, Scalar alpha, size_t num_a_dims,
                       const int64_t* a_dims, const void* a, size_t num_b_dims,
-                      const int64_t* b_dims, const void* b, Scalar beta, void* c) = 0;
+                      const int64_t* b_dims, const void* b, Scalar beta, size_t num_c_dims,
+                      const int64_t* c_dims, void* c) = 0;
 };
 
 class BroadcastMatmulFactory : public Factory<BroadcastMatmul> {

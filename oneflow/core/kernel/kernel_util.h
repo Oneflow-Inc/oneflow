@@ -85,23 +85,6 @@ template<typename T>
 struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T>::value>::type>
     : public GpuKernelUtilIf<T, KernelUtil<DeviceType::kGPU, T>> {};
 
-template<typename T, typename U>
-typename std::enable_if<std::is_same<T, U>::value>::type CopyElem(const T* in_dptr, U* out_dptr,
-                                                                  int64_t elem_num) {
-  Memcpy<DeviceType::kCPU>(nullptr, out_dptr, in_dptr, elem_num * sizeof(T));
-}
-
-template<typename T, typename U>
-typename std::enable_if<!std::is_same<T, U>::value>::type CopyElem(const T* in_dptr, U* out_dptr,
-                                                                   int64_t elem_num) {
-  FOR_RANGE(int64_t, i, 0, elem_num) { *(out_dptr++) = static_cast<U>(*(in_dptr++)); }
-}
-
-#ifdef WITH_CUDA
-template<typename T, typename U>
-void CopyElemOnGpu(DeviceCtx* ctx, const T* in_dptr, U* out_dptr, int64_t elem_num);
-#endif
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_
