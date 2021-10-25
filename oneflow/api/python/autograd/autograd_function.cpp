@@ -51,6 +51,33 @@ one::AutogradFunctionBase::FType PackPyFunctionToFType(const py::function& func)
   };
 }
 
+// Transform input to TensorTuple
+Maybe<one::TensorTuple> ToTensorTuple(const py::object& input) {
+  one::TensorTuple tp;
+  if (py::isinstance<one::Tensor>(input)) {
+    tp.emplace_back(input.cast<std::shared_ptr<one::Tensor>>());
+  } else if (py::isinstance<py::tuple>(input)) {
+    for (const auto& tensor : input.cast<py::tuple>()) {
+      CHECK_OR_RETURN(py::isinstance<one::Tensor>(tensor));
+      tp.emplace_back(tensor.cast<std::shared_ptr<one::Tensor>>());
+    }
+  } else {
+    throw std::runtime_error("Only support tensor or list of tensors");
+  }
+  return tp;
+}
+
+// Return single Tensor when TensorTuple's size is one, otherwise py::tuple
+py::object UnpackTensorTuple(const one::TensorTuple& tp) {
+  py::object out;
+  if (tp.size() == 1) {
+    out = py::cast(tp.at(0));
+  } else {
+    out = py::cast(tp);
+  }
+  return out;
+}
+
 }  // namespace
 
 namespace one {
@@ -64,29 +91,26 @@ ONEFLOW_API_PYBIND11_MODULE("autograd", m) {
       }))
       .def("apply", [](const AutogradFunctionBase& func, const TensorTuple& inputs) {
         const std::shared_ptr<TensorTuple>& res = func.Apply(inputs).GetPtrOrThrow();
-        py::object out;
-        if (res->size() == 1) {
-          out = py::cast(res->at(0));
-        } else {
-          out = py::cast(res);
-        }
-        return out;
+        return UnpackTensorTuple(*res);
       });
 
   py::class_<FunctionAutoGradCaptureState, std::shared_ptr<FunctionAutoGradCaptureState>>(
       m, "FunctionAutoGradCaptureState")
       .def(py::init([]() { return std::make_shared<FunctionAutoGradCaptureState>(); }))
-      .def(
-          "save_for_backward",
-          [](const std::shared_ptr<FunctionAutoGradCaptureState>& ctx, const TensorTuple& tensors) {
-            for (const auto& tensor : tensors) { ctx->SaveTensorForBackward(tensor); }
-          })
+      .def("save_for_backward",
+           [](const std::shared_ptr<FunctionAutoGradCaptureState>& ctx, const py::object& input) {
+             const auto& tensors = ToTensorTuple(input).GetOrThrow();
+             for (const auto& tensor : tensors) { ctx->SaveTensorForBackward(tensor); }
+           })
       .def("saved_tensors",
-           [](const FunctionAutoGradCaptureState& ctx) { return ctx.SavedTensors(); })
-      .def("mark_non_differentiable", [](const std::shared_ptr<FunctionAutoGradCaptureState>& ctx,
-                                         const TensorTuple& tensors) {
-        for (const auto& tensor : tensors) { ctx->MarkNonDifferentiable(tensor); }
-      });
+           [](const FunctionAutoGradCaptureState& ctx) {
+             return UnpackTensorTuple(ctx.SavedTensors());
+           })
+      .def("mark_non_differentiable",
+           [](const std::shared_ptr<FunctionAutoGradCaptureState>& ctx, const py::object& input) {
+             const auto& tensors = ToTensorTuple(input).GetOrThrow();
+             for (const auto& tensor : tensors) { ctx->MarkNonDifferentiable(tensor); }
+           });
 }
 
 }  // namespace one
