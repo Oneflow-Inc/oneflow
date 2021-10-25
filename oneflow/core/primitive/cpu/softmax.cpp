@@ -24,8 +24,8 @@ namespace primitive {
 namespace {
 
 enum class Algorithm {
-  kSoftmax = 0,
-  kLogSoftmax = 1,
+  kSoftmax,
+  kLogSoftmax,
 };
 
 template<typename T, Algorithm algorithm>

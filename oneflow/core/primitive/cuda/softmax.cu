@@ -26,8 +26,8 @@ namespace primitive {
 namespace {
 
 enum class Algorithm {
-  kSoftmax = 0,
-  kLogSoftmax = 1,
+  kSoftmax,
+  kLogSoftmax,
 };
 
 template<typename T, Algorithm algorithm>
@@ -56,7 +56,7 @@ class SoftmaxImpl : public Softmax {
   void Launch(StreamContext* stream_ctx, size_t rows, size_t cols, const void* x,
               void* y) override {
     cudaStream_t cuda_stream =
-      CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
+        CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
     SoftmaxGpu<T, Algorithm::kSoftmax>(cuda_stream, rows, cols, reinterpret_cast<const T*>(x),
                                        reinterpret_cast<T*>(y));
   }
@@ -102,7 +102,7 @@ class LogSoftmaxImpl : public LogSoftmax {
   void Launch(StreamContext* stream_ctx, size_t rows, size_t cols, const void* x,
               void* y) override {
     cudaStream_t cuda_stream =
-      CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
+        CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
     SoftmaxGpu<T, Algorithm::kLogSoftmax>(cuda_stream, rows, cols, reinterpret_cast<const T*>(x),
                                           reinterpret_cast<T*>(y));
   }
