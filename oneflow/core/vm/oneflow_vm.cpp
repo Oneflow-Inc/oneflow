@@ -138,19 +138,48 @@ Maybe<void> OneflowVM::Receive(vm::InstructionMsgList* instr_list) {
   return Maybe<void>::Ok();
 }
 
+namespace {
+
+template<typename T>
+int MicrosecondsFrom(const T& start) {
+  return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()
+                                                               - start)
+      .count();
+}
+
+}  // namespace
+
 void OneflowVM::Loop(const std::function<void()>& Initializer) {
   Initializer();
   auto* vm = mut_vm();
   while (notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
     OF_PROFILER_RANGE_PUSH("OneflowVM::Loop");
-    // Use ThreadUnsafeEmpty to avoid acquiring mutex lock.
-    // It's safe to use ThreadUnsafeEmpty here. notifier_.notified_cnt_ will be greater than zero
-    // when inconsistency between vm->pending_msg_list.list_head_.list_head_.container_ and
-    // vm->pending_msg_list.list_head_.list_head_.size_ occured. hence the pending instructions
-    // will get handled in the next iteration.
-    //  OneflowVM::Receive may be less effiencient if the thread safe version `vm->Empty()` used
-    //  here, because OneflowVM::Loop is more likely to get the mutex lock.
-    while (!vm->ThreadUnsafeEmpty()) { vm->Schedule(); }
+    auto start = std::chrono::steady_clock::now();
+    static constexpr int kWorkingMicroseconds = 1000;
+    // Every time this thread wakes up, vm is scheduled for about `kWorkingMicroseconds`.
+    // The cost of os thread switching is about 5-10 microseconds. Doing more scheduling in
+    // a single waiting up can reach higher performance.
+    do {
+      static constexpr int kNumSchedulingPerTimoutTest = 10000;
+      // Every time kWorkingMicroseconds timeout tested, vm is scheduled for about
+      // kNumSchedulingPerTimoutTest.
+      // The cost of `MicrosecondsFrom(start)` is about 400ns, while the empty scheduling costs
+      // about 10ns.
+      int i = 0;
+      do {
+        // Use ThreadUnsafeEmpty to avoid acquiring mutex lock.
+        // It's safe to use ThreadUnsafeEmpty here. notifier_.notified_cnt_ will be greater than
+        // zero
+        // when inconsistency between vm->pending_msg_list.list_head_.list_head_.container_ and
+        // vm->pending_msg_list.list_head_.list_head_.size_ occured. hence the pending
+        // instructions
+        // will get handled in the next iteration.
+        //  OneflowVM::Receive may be less effiencient if the thread safe version `vm->Empty()`
+        // used
+        //  here, because OneflowVM::Loop is more likely to get the mutex lock.
+        do { vm->Schedule(); } while (!vm->ThreadUnsafeEmpty());
+      } while (++i < kNumSchedulingPerTimoutTest);
+    } while (MicrosecondsFrom(start) < kWorkingMicroseconds);
     OF_PROFILER_RANGE_POP();
   }
   while (!vm->Empty()) { vm->Schedule(); }

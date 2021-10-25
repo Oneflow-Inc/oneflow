@@ -532,16 +532,18 @@ bool VirtualMachine::Dispatchable(Instruction* instruction) const {
 // Dispatch ready instructions and put prescheduled instructions onto ready_instruction_list_.
 void VirtualMachine::DispatchAndPrescheduleInstructions() {
   OF_PROFILER_RANGE_PUSH("DispatchAndPrescheduleInstructions");
-  ReadyInstructionList tmp_ready_instruction_list;
-  mut_ready_instruction_list()->MoveTo(&tmp_ready_instruction_list);
-  INTRUSIVE_FOR_EACH(instruction, &tmp_ready_instruction_list) {
-    tmp_ready_instruction_list.Erase(instruction.Mutable());
-    DispatchInstruction(instruction.Mutable());
-    // preschedule instructions
-    INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_out_edges()) {
-      TryMoveFromWaitingToReady(edge->mut_dst_instruction());
+  do {
+    ReadyInstructionList tmp_ready_instruction_list;
+    mut_ready_instruction_list()->MoveTo(&tmp_ready_instruction_list);
+    INTRUSIVE_FOR_EACH(instruction, &tmp_ready_instruction_list) {
+      tmp_ready_instruction_list.Erase(instruction.Mutable());
+      DispatchInstruction(instruction.Mutable());
+      // preschedule instructions
+      INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_out_edges()) {
+        TryMoveFromWaitingToReady(edge->mut_dst_instruction());
+      }
     }
-  }
+  } while (unlikely(mut_ready_instruction_list()->size()));
   OF_PROFILER_RANGE_POP();
 }
 
@@ -743,14 +745,14 @@ void VirtualMachine::TryMoveFromWaitingToReady(Instruction* instruction) {
 }
 
 void VirtualMachine::Schedule() {
+  // dispatch ready instructions and try to schedule out instructions in DAG onto ready list.
+  if (unlikely(mut_ready_instruction_list()->size())) { DispatchAndPrescheduleInstructions(); }
   // Handle pending instructions, schedule them to waiting list or ready list.
   if (unlikely(pending_msg_list().thread_unsafe_size())) { MovePendingToReadyOrWaiting(); }
   // Release finished instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_active_stream_list()->size())) { ReleaseFinishedInstructions(); }
   // Try run the first barrier instruction.
   if (unlikely(mut_barrier_instruction_list()->size())) { TryRunBarrierInstruction(); }
-  // dispatch ready instructions and try to schedule out instructions in DAG onto ready list.
-  if (unlikely(mut_ready_instruction_list()->size())) { DispatchAndPrescheduleInstructions(); }
 }
 
 bool VirtualMachine::ThreadUnsafeEmpty() const {
