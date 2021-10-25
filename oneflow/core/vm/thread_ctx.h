@@ -25,15 +25,14 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-// clang-format off
-INTRUSIVE_BEGIN(ThreadCtx);
+class ThreadCtx final : public intrusive::Base {
  public:
   void __Init__() { clear_stream_rt_desc(); }
 
   // types
-  using StreamList = intrusive::List<INTRUSIVE_FIELD(Stream, thread_ctx_stream_entry_)>;
+  using StreamList = intrusive::List<INTRUSIVE_FIELD(Stream, thread_ctx_stream_hook_)>;
   using PendingInstructionChannel =
-      intrusive::Channel<INTRUSIVE_FIELD(Instruction, pending_instruction_entry_)>;
+      intrusive::Channel<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)>;
 
   // Getters
   bool has_stream_rt_desc() const { return stream_rt_desc_ != nullptr; }
@@ -53,24 +52,30 @@ INTRUSIVE_BEGIN(ThreadCtx);
   }
   void LoopRun(const std::function<void(ThreadCtx*)>& Initializer);
   intrusive::ChannelStatus TryReceiveAndRun();
-  
+
  private:
   intrusive::ChannelStatus ReceiveAndRun();
 
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  ThreadCtx() : intrusive_ref_(), stream_rt_desc_(), thread_ctx_entry_(), stream_list_(), pending_instruction_list_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
+  ThreadCtx()
+      : intrusive_ref_(),
+        stream_rt_desc_(),
+        stream_list_(),
+        pending_instruction_list_(),
+        thread_ctx_hook_() {}
+  intrusive::Ref intrusive_ref_;
   // fields
-  INTRUSIVE_DEFINE_FIELD(const StreamRtDesc*, stream_rt_desc_); 
-  // list entries
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListEntry, thread_ctx_entry_);
+  const StreamRtDesc* stream_rt_desc_;
   // lists
-  INTRUSIVE_DEFINE_FIELD(StreamList, stream_list_);
-  INTRUSIVE_DEFINE_FIELD(PendingInstructionChannel, pending_instruction_list_);
-INTRUSIVE_END(ThreadCtx);
-// clang-format on
+  StreamList stream_list_;
+  PendingInstructionChannel pending_instruction_list_;
+
+ public:
+  // list hooks
+  intrusive::ListHook thread_ctx_hook_;
+};
 
 }  // namespace vm
 }  // namespace oneflow

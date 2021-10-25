@@ -41,6 +41,13 @@ REGISTER_USER_OP("broadcast_div_grad")
               .Split(user_op::OpArg("dz", 0), axis_z)
               .Split(user_op::OpArg("dy", 0), axis_y)
               .Build();
+        } else {
+          ctx->NewBuilder()
+              .Broadcast(user_op::OpArg("y", 0))
+              .Split(user_op::OpArg("z", 0), axis_z)
+              .Split(user_op::OpArg("dz", 0), axis_z)
+              .PartialSum(user_op::OpArg("dy", 0))
+              .Build();
         }
       }
       ctx->NewBuilder()

@@ -43,7 +43,7 @@ namespace oneflow {
     using PartialF = F<field_counter, WalkCtxType, __DssFieldType>;                             \
     static void Call(WalkCtxType* ctx, DssFieldType* field_ptr) {                               \
       switch (field_ptr->field_case) {                                                          \
-        OF_PP_FOR_EACH_TUPLE(_DSS_MAKE_UNION_FIELD_VISITOR_ENTRY, type7field7case_tuple_seq)    \
+        OF_PP_FOR_EACH_TUPLE(_DSS_MAKE_UNION_FIELD_VISITOR_HOOK, type7field7case_tuple_seq)     \
         default:;                                                                               \
       }                                                                                         \
     }                                                                                           \
@@ -55,7 +55,7 @@ namespace oneflow {
     using PartialF = F<field_counter, WalkCtxType, __DssFieldType>;                             \
     static void Call(WalkCtxType* ctx, DssFieldType* field_ptr, const char* __field_name__) {   \
       switch (field_ptr->field_case) {                                                          \
-        OF_PP_FOR_EACH_TUPLE(_DSS_MAKE_UNION_FIELD_VISITOR_ENTRY_VERBOSE,                       \
+        OF_PP_FOR_EACH_TUPLE(_DSS_MAKE_UNION_FIELD_VISITOR_HOOK_VERBOSE,                        \
                              type7field7case_tuple_seq)                                         \
         default:;                                                                               \
       }                                                                                         \
@@ -67,7 +67,7 @@ namespace oneflow {
     template<typename __DssFieldType>                                                           \
     using PartialF = F<__DssSelfType__, field_counter, WalkCtxType, __DssFieldType, true>;      \
     static void Call(WalkCtxType* ctx, const char* __oneof_name__) {                            \
-      OF_PP_FOR_EACH_TUPLE(_DSS_MAKE_UNION_FIELD_VISITOR_ENTRY_STATIC_VERBOSE,                  \
+      OF_PP_FOR_EACH_TUPLE(_DSS_MAKE_UNION_FIELD_VISITOR_HOOK_STATIC_VERBOSE,                   \
                            type7field7case_tuple_seq)                                           \
     }                                                                                           \
   };                                                                                            \
@@ -78,28 +78,28 @@ namespace oneflow {
     using PartialF = F<field_counter, WalkCtxType, __DssFieldType>;                             \
     static bool Call(WalkCtxType* ctx, DssFieldType* field_ptr) {                               \
       switch (field_ptr->field_case) {                                                          \
-        OF_PP_FOR_EACH_TUPLE(_DSS_MAKE_UNION_FIELD_VISITOR_ENTRY, type7field7case_tuple_seq)    \
+        OF_PP_FOR_EACH_TUPLE(_DSS_MAKE_UNION_FIELD_VISITOR_HOOK, type7field7case_tuple_seq)     \
         default:;                                                                               \
       }                                                                                         \
     }                                                                                           \
   };
 
-#define _DSS_MAKE_UNION_FIELD_VISITOR_ENTRY(field_type, field_name, field_case_value) \
-  case field_case_value: {                                                            \
-    return PartialF<field_type>::Call(ctx, &field_ptr->field_name);                   \
+#define _DSS_MAKE_UNION_FIELD_VISITOR_HOOK(field_type, field_name, field_case_value) \
+  case field_case_value: {                                                           \
+    return PartialF<field_type>::Call(ctx, &field_ptr->field_name);                  \
   }
 
-#define _DSS_MAKE_UNION_FIELD_VISITOR_ENTRY_VERBOSE(field_type, field_name, field_case_value) \
-  case field_case_value: {                                                                    \
-    const char* case_field_name = OF_PP_STRINGIZE(field_name);                                \
-    return PartialF<field_type>::Call(ctx, &field_ptr->field_name, case_field_name);          \
+#define _DSS_MAKE_UNION_FIELD_VISITOR_HOOK_VERBOSE(field_type, field_name, field_case_value) \
+  case field_case_value: {                                                                   \
+    const char* case_field_name = OF_PP_STRINGIZE(field_name);                               \
+    return PartialF<field_type>::Call(ctx, &field_ptr->field_name, case_field_name);         \
   }
 
-#define _DSS_MAKE_UNION_FIELD_VISITOR_ENTRY_STATIC_VERBOSE(field_type, field_name, \
-                                                           field_case_value)       \
-  {                                                                                \
-    const char* case_field_name = OF_PP_STRINGIZE(field_name);                     \
-    PartialF<field_type>::Call(ctx, case_field_name, __oneof_name__);              \
+#define _DSS_MAKE_UNION_FIELD_VISITOR_HOOK_STATIC_VERBOSE(field_type, field_name, \
+                                                          field_case_value)       \
+  {                                                                               \
+    const char* case_field_name = OF_PP_STRINGIZE(field_name);                    \
+    PartialF<field_type>::Call(ctx, case_field_name, __oneof_name__);             \
   }
 
 #define _DSS_BEGIN(field_counter, type)                                                       \

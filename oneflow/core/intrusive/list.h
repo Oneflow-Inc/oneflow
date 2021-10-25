@@ -17,28 +17,26 @@ limitations under the License.
 #define ONEFLOW_CORE_INTRUSIVE_LIST_H_
 
 #include "oneflow/core/intrusive/ref.h"
-#include "oneflow/core/intrusive/list_entry.h"
+#include "oneflow/core/intrusive/list_hook.h"
 
 namespace oneflow {
 
 namespace intrusive {
 
-template<typename ValueEntryField>
+template<typename HookField>
 class List {
  public:
-  static_assert(std::is_same<typename ValueEntryField::field_type, intrusive::ListEntry>::value,
-                "");
   List(const List&) = delete;
   List(List&&) = delete;
   List() { this->__Init__(); }
   ~List() { this->Clear(); }
 
-  using value_type = typename ValueEntryField::struct_type;
-  using iterator_struct_field = ValueEntryField;
+  using value_type = typename HookField::struct_type;
+  using iterator_struct_field = HookField;
 
   template<typename Enabled = void>
-  static constexpr int IteratorEntryOffset() {
-    return offsetof(List, list_head_) + intrusive::ListHead<ValueEntryField>::IteratorEntryOffset();
+  static constexpr int IteratorHookOffset() {
+    return offsetof(List, list_head_) + intrusive::ListHead<HookField>::IteratorHookOffset();
   }
 
   std::size_t size() const { return list_head_.size(); }
@@ -128,7 +126,7 @@ class List {
   }
 
  private:
-  intrusive::ListHead<ValueEntryField> list_head_;
+  intrusive::ListHead<HookField> list_head_;
 };
 
 }  // namespace intrusive

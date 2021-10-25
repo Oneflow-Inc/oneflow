@@ -600,14 +600,14 @@ class CTCLoss(_Loss):
           :math:`N = \\text{batch size}`, and
           :math:`C = \\text{number of classes (including blank)}`.
         - Targets: Tensor of size :math:`(N, S)` or
-          :math:`(\\operatorname{sum}(\\text{target\\_lengths}))`,
+          :math:`(\\operatorname{sum}(\\text{target_lengths}))`,
           where :math:`N = \\text{batch size}` and
           :math:`S = \\text{max target length, if shape is } (N, S)`.
           It represent the target sequences. Each element in the target
           sequence is a class index. And the target index cannot be blank (default=0).
           In the :math:`(N, S)` form, targets are padded to the
           length of the longest sequence, and stacked.
-          In the :math:`(\\operatorname{sum}(\\text{target\\_lengths}))` form,
+          In the :math:`(\\operatorname{sum}(\\text{target_lengths}))` form,
           the targets are assumed to be un-padded and
           concatenated within 1 dimension.
         - Input_lengths: Tuple or tensor of size :math:`(N)`,
@@ -635,20 +635,18 @@ class CTCLoss(_Loss):
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> import numpy as np
-        >>> log_probs = np.array(
-        ...             [
-        ...                 [[-1.1031, -0.7998, -1.5200], [-0.9808, -1.1363, -1.1908]],
-        ...                 [[-1.2258, -1.0665, -1.0153], [-1.1135, -1.2331, -0.9671]],
-        ...                 [[-1.3348, -0.6611, -1.5118], [-0.9823, -1.2355, -1.0941]],
-        ...                 [[-1.3850, -1.3273, -0.7247], [-0.8235, -1.4783, -1.0994]],
-        ...                 [[-0.9049, -0.8867, -1.6962], [-1.4938, -1.3630, -0.6547]],
-        ...             ]
-        ...         ).astype(np.float32)
-        >>> log_probs = flow.tensor(log_probs, dtype=flow.float32)
-        >>> targets = flow.tensor(np.array([[1, 2, 2], [1, 2, 2]]).astype("int32"), dtype=flow.int32)
-        >>> input_lengths = flow.tensor(np.array([5, 5]).astype("int32"), dtype=flow.int32)
-        >>> target_lengths = flow.tensor(np.array([3, 3]).astype("int32"), dtype=flow.int32)
+        
+        >>> log_probs = flow.tensor(
+        ...    [
+        ...        [[-1.1031, -0.7998, -1.5200], [-0.9808, -1.1363, -1.1908]],
+        ...        [[-1.2258, -1.0665, -1.0153], [-1.1135, -1.2331, -0.9671]],
+        ...        [[-1.3348, -0.6611, -1.5118], [-0.9823, -1.2355, -1.0941]],
+        ...        [[-1.3850, -1.3273, -0.7247], [-0.8235, -1.4783, -1.0994]],
+        ...        [[-0.9049, -0.8867, -1.6962], [-1.4938, -1.3630, -0.6547]],
+        ...    ], dtype=flow.float32)
+        >>> targets = flow.tensor([[1, 2, 2], [1, 2, 2]], dtype=flow.int32)
+        >>> input_lengths = flow.tensor([5, 5], dtype=flow.int32)
+        >>> target_lengths = flow.tensor([3, 3], dtype=flow.int32)
         >>> loss_mean = flow.nn.CTCLoss()
         >>> out = loss_mean(log_probs, targets, input_lengths, target_lengths)
         >>> out
@@ -657,7 +655,6 @@ class CTCLoss(_Loss):
         >>> out = loss_sum(log_probs, targets, input_lengths, target_lengths)
         >>> out
         tensor(6.8257, dtype=oneflow.float32)
-        >>>
 
     """
 
@@ -675,11 +672,17 @@ class CTCLoss(_Loss):
         input_lengths: Tensor,
         target_lengths: Tensor,
     ) -> Tensor:
+        max_target_length = 0
+        if targets.ndim == 1:
+            max_target_length = target_lengths.max().item()
+        elif targets.ndim == 2:
+            max_target_length = targets.shape[1]
         return flow._C.ctc_loss(
             log_probs,
             targets,
             input_lengths,
             target_lengths,
+            max_target_length,
             self.blank,
             self.zero_infinity,
             self.reduction,
@@ -922,6 +925,94 @@ class CombinedMarginLoss(Module):
         return flow._C.combined_margin_loss(
             x, label, m1=self.m1, m2=self.m2, m3=self.m3
         )
+
+
+class TripletMarginLoss(Module):
+    r"""Creates a criterion that measures the triplet loss given an input
+    tensors :math:`x1`, :math:`x2`, :math:`x3` and a margin with a value greater than :math:`0`.
+    This is used for measuring a relative similarity between samples. A triplet
+    is composed by `a`, `p` and `n` (i.e., `anchor`, `positive examples` and `negative
+    examples` respectively). The shapes of all input tensors should be
+    :math:`(N, D)`.
+
+    The distance swap is described in detail in the paper `Learning shallow
+    convolutional feature descriptors with triplet losses <http://www.bmva.org/bmvc/2016/papers/paper119/index.html>`__ by
+    V. Balntas, E. Riba et al.
+
+    The loss function for each sample in the mini-batch is:
+
+    .. math::
+        L(a, p, n) = \max \{d(a_i, p_i) - d(a_i, n_i) + {\rm margin}, 0\}
+
+
+    where
+
+    .. math::
+        d(x_i, y_i) = \left\lVert {\bf x}_i - {\bf y}_i \right\rVert_p
+
+    Args:
+        margin (float, optional): Default: :math:`1`.
+        p (float, optional): The norm degree for pairwise distance. Default: :math:`2.0`.
+        swap (bool, optional): The distance swap is described in detail in the paper
+            `Learning shallow convolutional feature descriptors with triplet losses` by
+            V. Balntas, E. Riba et al. Default: ``False``.
+        reduction (string, optional): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
+            ``'mean'``: the sum of the output will be divided by the number of
+            elements in the output, ``'sum'``: the output will be summed. Note: :attr:`size_average`
+            and :attr:`reduce` are in the process of being deprecated, and in the meantime,
+            specifying either of those two args will override :attr:`reduction`. Default: ``'mean'``
+
+    Shape:
+        - Input: :math:`(N, D)` where :math:`D` is the vector dimension.
+        - Output: A Tensor of shape :math:`(N)` if :attr:`reduction` is ``'none'``, or a scalar
+          otherwise.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> triplet_loss = flow.nn.TripletMarginLoss(margin=1.0, p=2)
+        >>> anchor = np.array([[1, -1, 1],[-1, 1, -1], [1, 1, 1]])
+        >>> positive = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        >>> negative = np.array([[2, 2, 2], [2, 2, 2], [2, 2, 2]])
+        >>> output = triplet_loss(flow.Tensor(anchor), flow.Tensor(positive), flow.Tensor(negative))
+        >>> output
+        tensor(6.2971, dtype=oneflow.float32)
+
+    """
+
+    def __init__(
+        self,
+        margin: float = 1.0,
+        p: float = 2.0,
+        eps: float = 1e-6,
+        swap: bool = False,
+        size_average=None,
+        reduce=None,
+        reduction: str = "mean",
+    ) -> None:
+        super().__init__()
+        self.margin = margin
+        self.p = p
+        self.eps = eps
+        self.swap = swap
+        self.reduction = reduction
+
+    def forward(self, anchor, positive, negative):
+        triplet_loss = flow._C.triplet_margin_loss(
+            anchor,
+            positive,
+            negative,
+            margin=self.margin,
+            p=self.p,
+            eps=self.eps,
+            swap=self.swap,
+            reduction=self.reduction,
+        )
+        return triplet_loss
 
 
 if __name__ == "__main__":
