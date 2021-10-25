@@ -36,7 +36,7 @@ void LocalCallOpKernelPhyInstrOperand::ForEachMutMirroredObject(
   const auto& device = opkernel().device();
   const auto& opt_transport_dep_object = device->mut_transport_local_dep_object();
   if (opt_transport_dep_object.has_value()) {
-    DoEach(nullptr, CHECK_JUST(opt_transport_dep_object.value())->mut_mirrored_object());
+    DoEach(nullptr, CHECK_JUST(opt_transport_dep_object)->mut_mirrored_object());
   }
   auto* device_schedule_dep_object = device->mut_schedule_local_dep_object();
   if (device->type() == "async_launched_nccl") {

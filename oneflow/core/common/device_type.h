@@ -29,4 +29,27 @@ struct hash<oneflow::DeviceType> final {
 
 }  // namespace std
 
+namespace oneflow {
+
+inline std::string DeviceTypeName(DeviceType device_type) {
+  switch (device_type) {
+    case kCPU: return "cpu";
+    case kGPU: return "cuda";
+    default: return "invalid";
+  }
+}
+
+inline std::string PrintAvailableDevices() {
+  std::string str("[");
+  str += "\"cpu\"";
+#ifdef WITH_CUDA
+  str += ", \"cuda\"";
+#endif
+  str += ", \"auto\"";  // "auto" is a fake device type for random generator.
+  str += "]";
+  return str;
+}
+
+}  // namespace oneflow
+
 #endif  // ONEFLOW_CORE_COMMON_DEVICE_TYPE_H_

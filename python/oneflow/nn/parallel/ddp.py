@@ -16,8 +16,8 @@ limitations under the License.
 from collections import OrderedDict
 
 import oneflow as flow
-from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
+from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
 
 
 def allreduce_fn(ddp_state_for_reversed_params, param):
@@ -53,7 +53,7 @@ def DistributedDataParallel(
             x.requires_grad_(requires_grad)
 
     ddp_state_for_reversed_params = OrderedDict(
-        reversed([(x, [False, False]) for x in module.parameters()])
+        reversed([(x, [False, False]) for x in module.parameters() if x.requires_grad])
     )
     module._ddp_state_for_reversed_params = ddp_state_for_reversed_params
     for param in module.parameters():
@@ -64,9 +64,20 @@ def DistributedDataParallel(
         ddp_state_for_reversed_params = module._ddp_state_for_reversed_params
         for state in ddp_state_for_reversed_params.values():
             state[0], state[1] = False, False
-        output = flow._C.select_first(
-            convert_to_tensor_tuple([output, *ddp_state_for_reversed_params.keys()])
-        )
+        if isinstance(output, tuple):
+            output = flow._C.select_top_n(
+                convert_to_tensor_tuple(
+                    [*output, *ddp_state_for_reversed_params.keys()]
+                ),
+                n=len(output),
+            )
+        else:
+            output = flow._C.select_top_n(
+                convert_to_tensor_tuple(
+                    [output, *ddp_state_for_reversed_params.keys()]
+                ),
+                n=1,
+            )[0]
         return output
 
     module.register_forward_hook(post_forward_hook)

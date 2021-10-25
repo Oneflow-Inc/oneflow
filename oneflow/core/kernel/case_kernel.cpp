@@ -36,8 +36,8 @@ void CaseKernel<T>::ForwardDataContent(KernelContext* ctx) const {
     if (case_status->select_id2request_cnt[cur_selected_id] == 0) {
       case_status->select_id2request_cnt.erase(cur_selected_id);
     }
-    KernelUtil<DeviceType::kCPU, T>::Set(
-        ctx->device_ctx(), cur_selected_id,
+    NewKernelUtil<DeviceType::kCPU>::Fill(
+        ctx->device_ctx(), 1, cur_selected_id,
         ctx->BnInOp2Blob(GenRepeatedBn("out", cur_selected_id))->mut_dptr<T>());
   } else {
     UNIMPLEMENTED();

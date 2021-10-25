@@ -41,7 +41,7 @@ class FunctionLibrary {
   };
 
   template<typename Func>
-  void add_functor(const std::string& func_name) {
+  void add_one_functor(const std::string& func_name) {
     using func_type = typename function_traits<Func>::func_type;
     using FType = typename PackedFunctorMaker<func_type>::FType;
     auto* functors = PackedFuncMap<FType>::Get();
@@ -51,6 +51,13 @@ class FunctionLibrary {
       Func func;
       return PackedFunctorMaker<func_type>::make(func_name, func);
     });
+  }
+
+  template<typename... Fs>
+  void add_functor(const std::string& func_name) {
+    static_assert(sizeof...(Fs) > 0, "at least one functor is expected");
+
+    __attribute__((__unused__)) int dummy[] = {(add_one_functor<Fs>(func_name), 0)...};
   }
 
   template<typename R, typename... Args>

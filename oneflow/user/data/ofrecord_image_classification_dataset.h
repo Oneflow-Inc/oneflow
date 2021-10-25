@@ -99,7 +99,7 @@ void LoadWorker(BaseDataset* record_dataset,
     for (const auto& record : records) {
       auto& current_in_buffer = decode_in_buffers->at(thread_idx);
       thread_idx = (thread_idx + 1) % decode_in_buffers->size();
-      auto status = current_in_buffer->Send(record);
+      auto status = current_in_buffer->Push(record);
       if (status == kBufferStatusErrorClosed) {
         shutdown = true;
         break;
@@ -114,7 +114,7 @@ void DecodeWorker(const std::string image_feature_name, const std::string label_
                   Buffer<std::shared_ptr<ImageClassificationDataInstance>>* out_buffer) {
   while (true) {
     BaseLoadTargetPtr serialized_record;
-    auto receive_status = in_buffer->Receive(&serialized_record);
+    auto receive_status = in_buffer->Pull(&serialized_record);
     if (receive_status == kBufferStatusErrorClosed) { break; }
     CHECK(receive_status == kBufferStatusSuccess);
     OFRecord record;
@@ -126,7 +126,7 @@ void DecodeWorker(const std::string image_feature_name, const std::string label_
     DecodeImageFromOFRecord(record, image_feature_name, color_space, instance->image.get());
     instance->label.reset(new TensorBuffer());
     DecodeLabelFromFromOFRecord(record, label_feature_name, instance->label.get());
-    auto send_status = out_buffer->Send(instance);
+    auto send_status = out_buffer->Push(instance);
     if (send_status == kBufferStatusErrorClosed) { break; }
     CHECK(send_status == kBufferStatusSuccess);
   }
@@ -185,7 +185,7 @@ class OFRecordImageClassificationDataset final : public Dataset<ImageClassificat
     LoadTargetPtr sample_ptr;
     size_t thread_idx =
         out_thread_idx_.fetch_add(1, std::memory_order_relaxed) % decode_out_buffers_.size();
-    auto status = decode_out_buffers_.at(thread_idx)->Receive(&sample_ptr);
+    auto status = decode_out_buffers_.at(thread_idx)->Pull(&sample_ptr);
     CHECK_EQ(status, kBufferStatusSuccess);
     ret.push_back(std::move(sample_ptr));
     return ret;

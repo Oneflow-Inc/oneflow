@@ -20,7 +20,8 @@ import numpy as np
 
 import oneflow as flow
 from test_util import GenArgList
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n1d()

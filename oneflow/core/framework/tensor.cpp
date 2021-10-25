@@ -56,11 +56,6 @@ Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
 
 bool MirroredTensor::is_cuda() const { return CHECK_JUST(device())->type() == "cuda"; }
 
-std::shared_ptr<Tensor> MirroredTensor::data() const {
-  std::shared_ptr<MirroredTensor> t = std::make_shared<MirroredTensor>(impl_);
-  return t;
-}
-
 Maybe<Tensor> MirroredTensor::detach() const {
   std::shared_ptr<Tensor> tensor = std::make_shared<MirroredTensor>(JUST(impl_->detach()));
   return tensor;
@@ -103,11 +98,6 @@ Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(const std::shared_ptr<const
 
 bool ConsistentTensor::is_cuda() const {
   return CHECK_JUST(parallel_desc())->device_type() == DeviceType::kGPU;
-}
-
-std::shared_ptr<Tensor> ConsistentTensor::data() const {
-  std::shared_ptr<ConsistentTensor> t = std::make_shared<ConsistentTensor>(impl_);
-  return t;
 }
 
 Maybe<Tensor> ConsistentTensor::detach() const {

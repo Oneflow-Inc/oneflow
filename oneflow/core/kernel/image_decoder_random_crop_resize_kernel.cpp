@@ -21,12 +21,20 @@ limitations under the License.
 #include "oneflow/user/image/random_crop_generator.h"
 #include <opencv2/opencv.hpp>
 
-#if defined(WITH_CUDA) && CUDA_VERSION >= 10020
+#ifdef WITH_CUDA
+
+#include <cuda.h>
+
+#if CUDA_VERSION >= 10020
+
+#define WITH_NVJPEG
 
 #include <nvjpeg.h>
 #include <npp.h>
 
-#endif
+#endif  // CUDA_VERSION >= 10020
+
+#endif  // WITH_CUDA
 
 namespace oneflow {
 
@@ -165,7 +173,7 @@ DecodeHandleFactory CreateDecodeHandleFactory<DeviceType::kCPU>(int target_width
   return []() -> std::shared_ptr<DecodeHandle> { return std::make_shared<CpuDecodeHandle>(); };
 }
 
-#if defined(WITH_CUDA) && CUDA_VERSION >= 10020
+#if defined(WITH_NVJPEG)
 
 int GpuDeviceMalloc(void** p, size_t s) { return (int)cudaMalloc(p, s); }
 
@@ -438,7 +446,7 @@ DecodeHandleFactory CreateDecodeHandleFactory<DeviceType::kGPU>(int target_width
   };
 }
 
-#endif
+#endif  // defined(WITH_NVJPEG)
 
 class Worker final {
  public:
@@ -585,7 +593,7 @@ NEW_REGISTER_KERNEL(OperatorConf::kImageDecoderRandomCropResizeConf,
       return conf.op_attribute().op_conf().device_tag() == "cpu";
     });
 
-#if defined(WITH_CUDA) && CUDA_VERSION >= 10020
+#if defined(WITH_NVJPEG)
 
 NEW_REGISTER_KERNEL(OperatorConf::kImageDecoderRandomCropResizeConf,
                     ImageDecoderRandomCropResizeKernel<DeviceType::kGPU>)
@@ -593,6 +601,6 @@ NEW_REGISTER_KERNEL(OperatorConf::kImageDecoderRandomCropResizeConf,
       return conf.op_attribute().op_conf().device_tag() == "gpu";
     });
 
-#endif
+#endif  // defined(WITH_NVJPEG)
 
 }  // namespace oneflow

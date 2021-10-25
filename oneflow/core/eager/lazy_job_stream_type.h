@@ -17,9 +17,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_LAZY_JOB_STREAM_TYPE_H_
 #define ONEFLOW_CORE_EAGER_LAZY_JOB_STREAM_TYPE_H_
 
-#include "oneflow/core/object_msg/flat_msg_view.h"
+#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
 
@@ -29,7 +29,7 @@ namespace vm {
 class LazyJobStreamType final : public StreamType {
  public:
   LazyJobStreamType() = default;
-  ~LazyJobStreamType() override = default;
+  virtual ~LazyJobStreamType() = default;
 
   const char* device_tag() const override { return "lazy_job"; }
 
@@ -42,10 +42,10 @@ class LazyJobStreamType final : public StreamType {
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
   void Compute(Instruction* instruction) const override;
-  ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                          int64_t this_machine_id) const override;
   bool SharingVirtualMachineThread() const override { return false; }
   bool SupportingTransportInstructions() const override { return false; }
+  intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
+                                                   int64_t this_machine_id) const override;
 };
 
 }  // namespace vm

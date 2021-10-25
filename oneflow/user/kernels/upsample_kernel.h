@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/nd_index_offset_helper.h"
+#include <math.h>
 
 template<typename T>
 OF_DEVICE_FUNC T GetLinearInputIndex(const int64_t out_dim_idx, const T scale, bool align_corners) {
@@ -27,9 +28,8 @@ OF_DEVICE_FUNC T GetLinearInputIndex(const int64_t out_dim_idx, const T scale, b
 
 OF_DEVICE_FUNC static int64_t GetNearestInputIndex(const int64_t out_dim_idx, const float scale,
                                                    const int64_t in_dim_size) {
-  int64_t index = static_cast<int64_t>(std::floor((static_cast<float>(out_dim_idx) * scale)));
+  int64_t index = static_cast<int64_t>(floorf(out_dim_idx * scale));
   index = index > in_dim_size - 1 ? in_dim_size - 1 : index;
-  index = index < static_cast<int64_t>(0) ? static_cast<int64_t>(0) : index;
   return index;
 }
 

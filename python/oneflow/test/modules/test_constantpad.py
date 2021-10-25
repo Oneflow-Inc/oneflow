@@ -19,7 +19,8 @@ from collections import OrderedDict
 
 import numpy as np
 
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from oneflow.nn.common_types import _size_2_t, _size_4_t, _size_6_t
 import oneflow as flow
 import oneflow.unittest
@@ -77,6 +78,24 @@ class TestConstantPad3d(flow.unittest.TestCase):
             dim4=random(1, 6),
         ).to(device)
         y = m(x)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestFunctionalConstantPad2d(flow.unittest.TestCase):
+    @autotest(n=20, rtol=0.001, atol=0.001)
+    def test_functional_constantpad2d(test_case):
+        device = random_device()
+        padding = random(-1, 6).to(_size_4_t)
+        value = random().to(float)
+        x = random_pytorch_tensor(
+            ndim=4,
+            dim0=random(1, 6),
+            dim1=random(1, 6),
+            dim2=random(2, 6),
+            dim3=random(2, 6),
+        ).to(device)
+        y = torch.nn.functional.pad(x, pad=padding, mode="constant", value=value)
         return y
 
 

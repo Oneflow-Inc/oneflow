@@ -47,6 +47,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
+  void AddCtrlEdgeBetweenSrcDstTickAndInputOutputInSameRank();
   void MergeChainAndAddOrderingCtrlEdgeInSameChain();
 
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&

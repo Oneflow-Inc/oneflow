@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/primitive/include/cast.h"
 
 namespace oneflow {
 
@@ -44,9 +45,9 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel, public user_op::Cu
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
     if (tensor_x->shape().elem_cnt() == 0) {
       if (tensor_y->shape().elem_cnt() != 0) {
-        AutoMemset(ctx->device_ctx(), tensor_y->mut_dptr<T>(), 0,
-                   tensor_y->shape().elem_cnt() * GetSizeOfDataType(tensor_y->data_type()),
-                   tensor_y->mem_case());
+        Memset<device_type>(
+            ctx->device_ctx(), tensor_y->mut_dptr<T>(), 0,
+            tensor_y->shape().elem_cnt() * GetSizeOfDataType(tensor_y->data_type()));
       }
       return;
     }
@@ -150,16 +151,22 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
             GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
         CHECK_LE(in_tmp_buffer_bytes + out_tmp_buffer_bytes + reduce_tmp_buffer_bytes,
                  tmp_buffer->shape().elem_cnt());
-        CopyElemOnGpu<float16, float>(ctx->device_ctx(), tensor_x->dptr<float16>(), in_tmp_buffer,
-                                      in_shape.elem_cnt());
+        auto h2f = primitive::NewPrimitive<primitive::CastFactory>(
+            ctx->device_type(), DataType::kFloat16, DataType::kFloat);
+        CHECK(h2f);
+        auto f2h = primitive::NewPrimitive<primitive::CastFactory>(
+            ctx->device_type(), DataType::kFloat, DataType::kFloat16);
+        CHECK(f2h);
+        h2f->Launch(ctx->stream_ctx(), tensor_x->dptr<float16>(), in_tmp_buffer,
+                    in_shape.elem_cnt());
 
         NdarrayReduce<DeviceType::kGPU, float, BinaryFuncSum>::Reduce(
             ctx->device_ctx(), XpuVarNdarray<float>(reduced_shape, out_tmp_buffer),
             XpuVarNdarray<const float>(in_shape, in_tmp_buffer),
             XpuVarNdarray<float>(in_shape, reduce_tmp_buffer));
 
-        CopyElemOnGpu<float, float16>(ctx->device_ctx(), out_tmp_buffer,
-                                      tensor_y->mut_dptr<float16>(), tensor_y->shape().elem_cnt());
+        f2h->Launch(ctx->stream_ctx(), out_tmp_buffer, tensor_y->mut_dptr<float16>(),
+                    tensor_y->shape().elem_cnt());
       }
     }
   }

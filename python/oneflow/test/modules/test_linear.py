@@ -18,7 +18,8 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
 
 import oneflow as flow
@@ -190,6 +191,28 @@ class TestLinear(flow.unittest.TestCase):
         m.to(device)
         x = random_pytorch_tensor(ndim=2, dim1=input_size).to(device)
         y = m(x)
+        return y
+
+    @autotest()
+    def test_nn_functional_linear_with_random_data(test_case):
+        input_size = random()
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim1=input_size).to(device)
+        weight = random_pytorch_tensor(ndim=2, dim1=input_size).to(device)
+        y = torch.nn.functional.linear(x, weight)
+        return y
+
+    @autotest()
+    def test_nn_functional_bias_linear_with_random_data(test_case):
+        input_size = random()
+        bias_size = random()
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim1=input_size).to(device)
+        weight = random_pytorch_tensor(ndim=2, dim0=bias_size, dim1=input_size).to(
+            device
+        )
+        bias = random_pytorch_tensor(ndim=1, dim0=bias_size).to(device)
+        y = torch.nn.functional.linear(x, weight, bias)
         return y
 
     @autotest()

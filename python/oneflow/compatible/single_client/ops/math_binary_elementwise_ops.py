@@ -153,16 +153,34 @@ def pow(
     if name is None:
         name = id_util.UniqueStr("Pow_")
     if isinstance(y, (int, float)):
-        return (
-            flow.user_op_builder(name)
-            .Op("scalar_pow")
-            .Input("in", [x])
-            .Attr("exponent", float(y))
-            .Output("out")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
+        if isinstance(y, int):
+            return (
+                flow.user_op_builder(name)
+                .Op("scalar_pow")
+                .Input("in", [x])
+                .Attr("has_int_operand", True)
+                .Attr("has_float_operand", False)
+                .Attr("int_operand", y)
+                .Attr("float_operand", 0.0)
+                .Output("out")
+                .Build()
+                .InferAndTryRun()
+                .RemoteBlobList()[0]
+            )
+        elif isinstance(y, float):
+            return (
+                flow.user_op_builder(name)
+                .Op("scalar_pow")
+                .Input("in", [x])
+                .Attr("has_int_operand", False)
+                .Attr("has_float_operand", True)
+                .Attr("int_operand", 0)
+                .Attr("float_operand", y)
+                .Output("out")
+                .Build()
+                .InferAndTryRun()
+                .RemoteBlobList()[0]
+            )
     else:
         return build_math_binary_elementwise_op("pow", x, y, name)
 

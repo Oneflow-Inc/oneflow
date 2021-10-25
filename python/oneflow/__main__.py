@@ -46,7 +46,9 @@ def main():
 
         print("path:", oneflow.__path__)
         print("version:", oneflow.__version__)
+        print("git_commit:", oneflow.__git_commit__)
         print("cmake_build_type:", oneflow.sysconfig.cmake_build_type())
+        print("rdma:", oneflow.sysconfig.with_rdma())
 
 
 if __name__ == "__main__":

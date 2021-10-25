@@ -70,14 +70,14 @@ class DataReader {
  private:
   std::shared_ptr<LoadTargetPtrList> FetchBatchData() {
     std::shared_ptr<LoadTargetPtrList> batch_data(nullptr);
-    CHECK_EQ(batch_buffer_.Receive(&batch_data), BufferStatus::kBufferStatusSuccess);
+    CHECK_EQ(batch_buffer_.Pull(&batch_data), BufferStatus::kBufferStatusSuccess);
     return batch_data;
   }
 
   bool LoadBatch() {
     std::shared_ptr<LoadTargetPtrList> batch_data =
         std::make_shared<LoadTargetPtrList>(std::move(loader_->Next()));
-    return batch_buffer_.Send(batch_data) == BufferStatus::kBufferStatusSuccess;
+    return batch_buffer_.Push(batch_data) == BufferStatus::kBufferStatusSuccess;
   }
 
   std::atomic<bool> is_closed_;

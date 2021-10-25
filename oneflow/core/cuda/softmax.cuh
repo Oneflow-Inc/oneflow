@@ -19,6 +19,7 @@ limitations under the License.
 
 #include <cub/cub.cuh>
 #include <math_constants.h>
+#include <assert.h>
 
 namespace oneflow {
 
@@ -104,14 +105,42 @@ __inline__ __device__ double Div<double>(double a, double b) {
   return a / b;
 }
 
-inline int GetNumBlocks(int64_t block_size, int64_t max_blocks, int64_t waves) {
+template<typename T>
+__inline__ __device__ T Log(T x);
+
+template<>
+__inline__ __device__ float Log<float>(float x) {
+#ifdef OF_SOFTMAX_USE_FAST_MATH
+  return __logf(x);
+#else
+  return log(x);
+#endif
+}
+template<>
+__inline__ __device__ double Log<double>(double x) {
+  return log(x);
+}
+
+inline cudaError_t GetNumBlocks(int64_t block_size, int64_t max_blocks, int64_t waves,
+                                int* num_blocks) {
   int dev;
-  OF_CUDA_CHECK(cudaGetDevice(&dev));
+  {
+    cudaError_t err = cudaGetDevice(&dev);
+    if (err != cudaSuccess) { return err; }
+  }
   int sm_count;
-  OF_CUDA_CHECK(cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev));
+  {
+    cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
+    if (err != cudaSuccess) { return err; }
+  }
   int tpm;
-  OF_CUDA_CHECK(cudaDeviceGetAttribute(&tpm, cudaDevAttrMaxThreadsPerMultiProcessor, dev));
-  return std::max<int>(1, std::min<int64_t>(max_blocks, sm_count * tpm / block_size * waves));
+  {
+    cudaError_t err = cudaDeviceGetAttribute(&tpm, cudaDevAttrMaxThreadsPerMultiProcessor, dev);
+    if (err != cudaSuccess) { return err; }
+  }
+  *num_blocks =
+      std::max<int>(1, std::min<int64_t>(max_blocks, sm_count * tpm / block_size * waves));
+  return cudaSuccess;
 }
 
 template<typename T>
@@ -172,8 +201,13 @@ struct DirectStore {
   int64_t row_size;
 };
 
+enum class Algorithm {
+  kSoftmax = 0,
+  kLogSoftmax = 1,
+};
+
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int cols_per_thread,
-         int thread_group_width, int rows_per_access, bool padding>
+         int thread_group_width, int rows_per_access, bool padding, Algorithm algorithm>
 __global__ void SoftmaxWarpImpl(LOAD load, STORE store, const int64_t rows, const int64_t cols) {
   static_assert(cols_per_thread % pack_size == 0, "");
   static_assert(thread_group_width <= kWarpSize, "");
@@ -220,8 +254,15 @@ __global__ void SoftmaxWarpImpl(LOAD load, STORE store, const int64_t rows, cons
       ComputeType* row_buf = buf[row_id];
 #pragma unroll
       for (int i = 0; i < cols_per_thread; ++i) {
-        row_buf[i] = Exp(row_buf[i] - warp_max[row_id]);
-        thread_sum[row_id] += row_buf[i];
+        if (algorithm == Algorithm::kSoftmax) {
+          row_buf[i] = Exp(row_buf[i] - warp_max[row_id]);
+          thread_sum[row_id] += row_buf[i];
+        } else if (algorithm == Algorithm::kLogSoftmax) {
+          row_buf[i] -= warp_max[row_id];
+          thread_sum[row_id] += Exp(row_buf[i]);
+        } else {
+          __trap();
+        }
       }
     }
     ComputeType warp_sum[rows_per_access];
@@ -233,7 +274,15 @@ __global__ void SoftmaxWarpImpl(LOAD load, STORE store, const int64_t rows, cons
     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
       ComputeType* row_buf = buf[row_id];
 #pragma unroll
-      for (int i = 0; i < cols_per_thread; ++i) { row_buf[i] = Div(row_buf[i], warp_sum[row_id]); }
+      for (int i = 0; i < cols_per_thread; ++i) {
+        if (algorithm == Algorithm::kSoftmax) {
+          row_buf[i] = Div(row_buf[i], warp_sum[row_id]);
+        } else if (algorithm == Algorithm::kLogSoftmax) {
+          row_buf[i] -= Log(warp_sum[row_id]);
+        } else {
+          __trap();
+        }
+      }
 #pragma unroll
       for (int i = 0; i < num_packs; ++i) {
         const int col = (i * thread_group_width + lane_id) * pack_size;
@@ -246,47 +295,56 @@ __global__ void SoftmaxWarpImpl(LOAD load, STORE store, const int64_t rows, cons
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int cols_per_thread,
-         int thread_group_width, int rows_per_access, bool padding>
-inline void LaunchSoftmaxWarpImpl(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
-                                  const int64_t cols) {
+         int thread_group_width, int rows_per_access, bool padding, Algorithm algorithm>
+inline cudaError_t LaunchSoftmaxWarpImpl(cudaStream_t stream, LOAD load, STORE store,
+                                         const int64_t rows, const int64_t cols) {
   constexpr int block_size = 128;
   constexpr int waves = 32;
   static_assert(block_size % thread_group_width == 0, "");
   constexpr int rows_per_block = block_size / thread_group_width;
   dim3 block_dim(thread_group_width, rows_per_block);
   const int64_t num_blocks = (rows + rows_per_block - 1) / rows_per_block;
-  const int grid_dim_x = GetNumBlocks(block_size, num_blocks, waves);
+  int grid_dim_x;
+  {
+    cudaError_t err = GetNumBlocks(block_size, num_blocks, waves, &grid_dim_x);
+    if (err != cudaSuccess) { return err; }
+  }
   SoftmaxWarpImpl<LOAD, STORE, ComputeType, pack_size, cols_per_thread, thread_group_width,
-                  rows_per_access, padding>
+                  rows_per_access, padding, algorithm>
       <<<grid_dim_x, block_dim, 0, stream>>>(load, store, rows, cols);
+  return cudaPeekAtLastError();
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int cols_per_thread,
-         int thread_group_width, int rows_per_access>
-inline void DispatchSoftmaxWarpImplPadding(cudaStream_t stream, LOAD load, STORE store,
-                                           const int64_t rows, const int64_t cols) {
+         int thread_group_width, int rows_per_access, Algorithm algorithm>
+inline cudaError_t DispatchSoftmaxWarpImplPadding(cudaStream_t stream, LOAD load, STORE store,
+                                                  const int64_t rows, const int64_t cols) {
   if (cols == cols_per_thread * thread_group_width) {
-    LaunchSoftmaxWarpImpl<LOAD, STORE, ComputeType, pack_size, cols_per_thread, thread_group_width,
-                          rows_per_access, false>(stream, load, store, rows, cols);
+    return LaunchSoftmaxWarpImpl<LOAD, STORE, ComputeType, pack_size, cols_per_thread,
+                                 thread_group_width, rows_per_access, false, algorithm>(
+        stream, load, store, rows, cols);
   } else {
-    LaunchSoftmaxWarpImpl<LOAD, STORE, ComputeType, pack_size, cols_per_thread, thread_group_width,
-                          rows_per_access, true>(stream, load, store, rows, cols);
+    return LaunchSoftmaxWarpImpl<LOAD, STORE, ComputeType, pack_size, cols_per_thread,
+                                 thread_group_width, rows_per_access, true, algorithm>(
+        stream, load, store, rows, cols);
   }
 }
 
-template<typename LOAD, typename STORE, typename ComputeType, int pack_size>
-typename std::enable_if<pack_size == 1, void>::type DispatchSoftmaxWarpImplCols(
+template<typename LOAD, typename STORE, typename ComputeType, int pack_size, Algorithm algorithm>
+typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchSoftmaxWarpImplCols(
     cudaStream_t stream, LOAD load, STORE store, const int64_t rows, const int64_t cols) {
-  if (cols <= 0) { UNIMPLEMENTED(); }
-#define DEFINE_ONE_ELIF(thread_group_width)                                                   \
-  else if (cols <= (thread_group_width)*pack_size) {                                          \
-    if (rows % 2 == 0) {                                                                      \
-      DispatchSoftmaxWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,          \
-                                     thread_group_width, 2>(stream, load, store, rows, cols); \
-    } else {                                                                                  \
-      DispatchSoftmaxWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,          \
-                                     thread_group_width, 1>(stream, load, store, rows, cols); \
-    }                                                                                         \
+  if (cols <= 0) { return cudaErrorInvalidValue; }
+#define DEFINE_ONE_ELIF(thread_group_width)                                                        \
+  else if (cols <= (thread_group_width)*pack_size) {                                               \
+    if (rows % 2 == 0) {                                                                           \
+      return DispatchSoftmaxWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,        \
+                                            thread_group_width, 2, algorithm>(stream, load, store, \
+                                                                              rows, cols);         \
+    } else {                                                                                       \
+      return DispatchSoftmaxWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,        \
+                                            thread_group_width, 1, algorithm>(stream, load, store, \
+                                                                              rows, cols);         \
+    }                                                                                              \
   }
   DEFINE_ONE_ELIF(1)
   DEFINE_ONE_ELIF(2)
@@ -295,10 +353,10 @@ typename std::enable_if<pack_size == 1, void>::type DispatchSoftmaxWarpImplCols(
   DEFINE_ONE_ELIF(16)
   DEFINE_ONE_ELIF(32)
 #undef DEFINE_ONE_ELIF
-#define DEFINE_ONE_ELIF(col)                                                                \
-  else if (cols <= (col)*kWarpSize) {                                                       \
-    DispatchSoftmaxWarpImplPadding<LOAD, STORE, ComputeType, pack_size, col, kWarpSize, 1>( \
-        stream, load, store, rows, cols);                                                   \
+#define DEFINE_ONE_ELIF(col)                                                                      \
+  else if (cols <= (col)*kWarpSize) {                                                             \
+    return DispatchSoftmaxWarpImplPadding<LOAD, STORE, ComputeType, pack_size, col, kWarpSize, 1, \
+                                          algorithm>(stream, load, store, rows, cols);            \
   }
   DEFINE_ONE_ELIF(2)
   DEFINE_ONE_ELIF(3)
@@ -333,23 +391,25 @@ typename std::enable_if<pack_size == 1, void>::type DispatchSoftmaxWarpImplCols(
   DEFINE_ONE_ELIF(32)
 #undef DEFINE_ONE_ELIF
   else {
-    UNIMPLEMENTED();
+    return cudaErrorInvalidValue;
   }
 }
 
-template<typename LOAD, typename STORE, typename ComputeType, int pack_size>
-typename std::enable_if<pack_size == 2, void>::type DispatchSoftmaxWarpImplCols(
+template<typename LOAD, typename STORE, typename ComputeType, int pack_size, Algorithm algorithm>
+typename std::enable_if<pack_size == 2, cudaError_t>::type DispatchSoftmaxWarpImplCols(
     cudaStream_t stream, LOAD load, STORE store, const int64_t rows, const int64_t cols) {
-  if (cols <= 0) { UNIMPLEMENTED(); }
-#define DEFINE_ONE_ELIF(thread_group_width)                                                   \
-  else if (cols <= (thread_group_width)*pack_size) {                                          \
-    if (rows % 2 == 0) {                                                                      \
-      DispatchSoftmaxWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,          \
-                                     thread_group_width, 2>(stream, load, store, rows, cols); \
-    } else {                                                                                  \
-      DispatchSoftmaxWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,          \
-                                     thread_group_width, 1>(stream, load, store, rows, cols); \
-    }                                                                                         \
+  if (cols <= 0) { return cudaErrorInvalidValue; }
+#define DEFINE_ONE_ELIF(thread_group_width)                                                        \
+  else if (cols <= (thread_group_width)*pack_size) {                                               \
+    if (rows % 2 == 0) {                                                                           \
+      return DispatchSoftmaxWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,        \
+                                            thread_group_width, 2, algorithm>(stream, load, store, \
+                                                                              rows, cols);         \
+    } else {                                                                                       \
+      return DispatchSoftmaxWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,        \
+                                            thread_group_width, 1, algorithm>(stream, load, store, \
+                                                                              rows, cols);         \
+    }                                                                                              \
   }
   DEFINE_ONE_ELIF(1)
   DEFINE_ONE_ELIF(2)
@@ -358,10 +418,10 @@ typename std::enable_if<pack_size == 2, void>::type DispatchSoftmaxWarpImplCols(
   DEFINE_ONE_ELIF(16)
   DEFINE_ONE_ELIF(32)
 #undef DEFINE_ONE_ELIF
-#define DEFINE_ONE_ELIF(col)                                                                \
-  else if (cols <= (col)*kWarpSize) {                                                       \
-    DispatchSoftmaxWarpImplPadding<LOAD, STORE, ComputeType, pack_size, col, kWarpSize, 1>( \
-        stream, load, store, rows, cols);                                                   \
+#define DEFINE_ONE_ELIF(col)                                                                      \
+  else if (cols <= (col)*kWarpSize) {                                                             \
+    return DispatchSoftmaxWarpImplPadding<LOAD, STORE, ComputeType, pack_size, col, kWarpSize, 1, \
+                                          algorithm>(stream, load, store, rows, cols);            \
   }
   DEFINE_ONE_ELIF(4)
   DEFINE_ONE_ELIF(6)
@@ -380,29 +440,33 @@ typename std::enable_if<pack_size == 2, void>::type DispatchSoftmaxWarpImplCols(
   DEFINE_ONE_ELIF(32)
 #undef DEFINE_ONE_ELIF
   else {
-    UNIMPLEMENTED();
+    return cudaErrorInvalidValue;
   }
 }
 
-template<typename LOAD, typename STORE, typename ComputeType>
+template<typename LOAD, typename STORE, typename ComputeType, Algorithm algorithm>
 struct DispatchSoftmaxWarpImplPackSize {
-  void operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
-                  const int64_t cols) {
+  cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
+                         const int64_t cols) {
     if (cols % 2 == 0) {
-      DispatchSoftmaxWarpImplCols<LOAD, STORE, ComputeType, 2>(stream, load, store, rows, cols);
+      return DispatchSoftmaxWarpImplCols<LOAD, STORE, ComputeType, 2, algorithm>(stream, load,
+                                                                                 store, rows, cols);
     } else {
-      DispatchSoftmaxWarpImplCols<LOAD, STORE, ComputeType, 1>(stream, load, store, rows, cols);
+      return DispatchSoftmaxWarpImplCols<LOAD, STORE, ComputeType, 1, algorithm>(stream, load,
+                                                                                 store, rows, cols);
     }
   }
 };
 
-template<typename LOAD, typename STORE, typename ComputeType>
-inline void DispatchSoftmaxWarpImpl(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
-                                    const int64_t cols) {
-  DispatchSoftmaxWarpImplPackSize<LOAD, STORE, ComputeType>()(stream, load, store, rows, cols);
+template<typename LOAD, typename STORE, typename ComputeType, Algorithm algorithm>
+inline cudaError_t DispatchSoftmaxWarpImpl(cudaStream_t stream, LOAD load, STORE store,
+                                           const int64_t rows, const int64_t cols) {
+  return DispatchSoftmaxWarpImplPackSize<LOAD, STORE, ComputeType, algorithm>()(stream, load, store,
+                                                                                rows, cols);
 }
 
-template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size>
+template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size,
+         Algorithm algorithm>
 __global__ void SoftmaxBlockSMemImpl(LOAD load, STORE store, const int64_t rows,
                                      const int64_t cols) {
   extern __shared__ __align__(sizeof(double)) unsigned char shared_buf[];
@@ -424,16 +488,28 @@ __global__ void SoftmaxBlockSMemImpl(LOAD load, STORE store, const int64_t rows,
     const ComputeType row_max = BlockAllReduce<MaxOp, ComputeType, block_size>(thread_max);
     ComputeType thread_sum = 0;
     for (int col = tid; col < cols; col += block_size) {
-      const ComputeType exp_x = Exp(buf[col] - row_max);
-      buf[col] = exp_x;
-      thread_sum += exp_x;
+      if (algorithm == Algorithm::kSoftmax) {
+        const ComputeType exp_x = Exp(buf[col] - row_max);
+        buf[col] = exp_x;
+        thread_sum += exp_x;
+      } else {
+        const ComputeType x = buf[col] - row_max;
+        buf[col] = x;
+        thread_sum += Exp(x);
+      }
     }
     const ComputeType row_sum = BlockAllReduce<SumOp, ComputeType, block_size>(thread_sum);
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType pack[pack_size];
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
-        pack[i] = Div(buf[i * num_packs + pack_id], row_sum);
+        if (algorithm == Algorithm::kSoftmax) {
+          pack[i] = Div(buf[i * num_packs + pack_id], row_sum);
+        } else if (algorithm == Algorithm::kLogSoftmax) {
+          pack[i] = buf[i * num_packs + pack_id] - Log(row_sum);
+        } else {
+          __trap();
+        }
         thread_max = max(thread_max, pack[i]);
       }
       store.template store<pack_size>(pack, row, pack_id * pack_size);
@@ -441,86 +517,110 @@ __global__ void SoftmaxBlockSMemImpl(LOAD load, STORE store, const int64_t rows,
   }
 }
 
-template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size>
-inline void LaunchSoftmaxBlockSMemImpl(cudaStream_t stream, LOAD load, STORE store, int smem,
-                                       const int64_t rows, const int64_t cols) {
+template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size,
+         Algorithm algorithm>
+inline cudaError_t LaunchSoftmaxBlockSMemImpl(cudaStream_t stream, LOAD load, STORE store, int smem,
+                                              const int64_t rows, const int64_t cols) {
   constexpr int waves = 32;
-  const int grid_dim_x = GetNumBlocks(block_size, rows, waves);
-  SoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size>
+  int grid_dim_x;
+  {
+    cudaError_t err = GetNumBlocks(block_size, rows, waves, &grid_dim_x);
+    if (err != cudaSuccess) { return err; }
+  }
+  SoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size, algorithm>
       <<<grid_dim_x, block_size, smem, stream>>>(load, store, rows, cols);
+  return cudaPeekAtLastError();
 }
 
-template<typename LOAD, typename STORE, typename ComputeType, int pack_size>
-inline bool TryDispatchSoftmaxBlockSMemImplBlockSize(cudaStream_t stream, LOAD load, STORE store,
-                                                     const int64_t rows, const int64_t cols) {
+template<typename LOAD, typename STORE, typename ComputeType, int pack_size, Algorithm algorithm>
+inline cudaError_t TryDispatchSoftmaxBlockSMemImplBlockSize(cudaStream_t stream, LOAD load,
+                                                            STORE store, const int64_t rows,
+                                                            const int64_t cols, bool* success) {
   constexpr int block_size_conf_1 = 128;
   constexpr int block_size_conf_2 = 256;
   constexpr int block_size_conf_3 = 512;
   constexpr int block_size_conf_4 = 1024;
   const size_t smem = cols * sizeof(ComputeType);
   int max_active_blocks_conf_1;
-  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &max_active_blocks_conf_1,
-      SoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_1>,
-      block_size_conf_1, smem));
-  if (max_active_blocks_conf_1 <= 0) { return false; }
+  {
+    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &max_active_blocks_conf_1,
+        SoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_1, algorithm>,
+        block_size_conf_1, smem);
+    if (err != cudaSuccess) { return err; }
+  }
+  if (max_active_blocks_conf_1 <= 0) {
+    *success = false;
+    return cudaSuccess;
+  }
   int max_active_blocks_conf_4;
-  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &max_active_blocks_conf_4,
-      SoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_4>,
-      block_size_conf_4, smem));
+  {
+    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &max_active_blocks_conf_4,
+        SoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_4, algorithm>,
+        block_size_conf_4, smem);
+    if (err != cudaSuccess) { return err; }
+  }
   if (max_active_blocks_conf_4 == max_active_blocks_conf_1) {
-    LaunchSoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_4>(
-        stream, load, store, smem, rows, cols);
-    return true;
+    *success = true;
+    return LaunchSoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_4,
+                                      algorithm>(stream, load, store, smem, rows, cols);
   }
   int max_active_blocks_conf_3;
-  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &max_active_blocks_conf_3,
-      SoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_3>,
-      block_size_conf_3, smem));
+  {
+    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &max_active_blocks_conf_3,
+        SoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_3, algorithm>,
+        block_size_conf_3, smem);
+    if (err != cudaSuccess) { return err; }
+  }
   if (max_active_blocks_conf_3 == max_active_blocks_conf_1) {
-    LaunchSoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_3>(
-        stream, load, store, smem, rows, cols);
-    return true;
+    *success = true;
+    return LaunchSoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_3,
+                                      algorithm>(stream, load, store, smem, rows, cols);
   }
   int max_active_blocks_conf_2;
-  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &max_active_blocks_conf_2,
-      SoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_2>,
-      block_size_conf_2, smem));
-  if (max_active_blocks_conf_2 == max_active_blocks_conf_1) {
-    LaunchSoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_2>(
-        stream, load, store, smem, rows, cols);
-    return true;
+  {
+    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &max_active_blocks_conf_2,
+        SoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_2, algorithm>,
+        block_size_conf_2, smem);
+    if (err != cudaSuccess) { return err; }
   }
-  LaunchSoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_1>(
-      stream, load, store, smem, rows, cols);
-  return true;
+  if (max_active_blocks_conf_2 == max_active_blocks_conf_1) {
+    *success = true;
+    return LaunchSoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_2,
+                                      algorithm>(stream, load, store, smem, rows, cols);
+  }
+  *success = true;
+  return LaunchSoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_1,
+                                    algorithm>(stream, load, store, smem, rows, cols);
 }
 
-template<typename LOAD, typename STORE, typename ComputeType>
+template<typename LOAD, typename STORE, typename ComputeType, Algorithm algorithm>
 struct TryDispatchSoftmaxBlockSMemImplPackSize {
-  bool operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
-                  const int64_t cols) {
+  cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
+                         const int64_t cols, bool* success) {
     if (cols % 2 == 0) {
-      return TryDispatchSoftmaxBlockSMemImplBlockSize<LOAD, STORE, ComputeType, 2>(
-          stream, load, store, rows, cols);
+      return TryDispatchSoftmaxBlockSMemImplBlockSize<LOAD, STORE, ComputeType, 2, algorithm>(
+          stream, load, store, rows, cols, success);
     } else {
-      return TryDispatchSoftmaxBlockSMemImplBlockSize<LOAD, STORE, ComputeType, 1>(
-          stream, load, store, rows, cols);
+      return TryDispatchSoftmaxBlockSMemImplBlockSize<LOAD, STORE, ComputeType, 1, algorithm>(
+          stream, load, store, rows, cols, success);
     }
   }
 };
 
-template<typename LOAD, typename STORE, typename ComputeType>
-inline bool TryDispatchSoftmaxBlockSMemImpl(cudaStream_t stream, LOAD load, STORE store,
-                                            const int64_t rows, const int64_t cols) {
-  return TryDispatchSoftmaxBlockSMemImplPackSize<LOAD, STORE, ComputeType>()(stream, load, store,
-                                                                             rows, cols);
+template<typename LOAD, typename STORE, typename ComputeType, Algorithm algorithm>
+inline cudaError_t TryDispatchSoftmaxBlockSMemImpl(cudaStream_t stream, LOAD load, STORE store,
+                                                   const int64_t rows, const int64_t cols,
+                                                   bool* success) {
+  return TryDispatchSoftmaxBlockSMemImplPackSize<LOAD, STORE, ComputeType, algorithm>()(
+      stream, load, store, rows, cols, success);
 }
 
-template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size>
+template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size,
+         Algorithm algorithm>
 __global__ void SoftmaxBlockUncachedImpl(LOAD load, STORE store, const int64_t rows,
                                          const int64_t cols) {
   const int tid = threadIdx.x;
@@ -547,54 +647,103 @@ __global__ void SoftmaxBlockUncachedImpl(LOAD load, STORE store, const int64_t r
       ComputeType pack[pack_size];
       load.template load<pack_size>(pack, row, pack_id * pack_size);
 #pragma unroll
-      for (int i = 0; i < pack_size; ++i) { pack[i] = Div(Exp(pack[i] - row_max), row_sum); }
+      for (int i = 0; i < pack_size; ++i) {
+        if (algorithm == Algorithm::kSoftmax) {
+          pack[i] = Div(Exp(pack[i] - row_max), row_sum);
+        } else if (algorithm == Algorithm::kLogSoftmax) {
+          pack[i] = (pack[i] - row_max) - Log(row_sum);
+        } else {
+          __trap();
+        }
+      }
       store.template store<pack_size>(pack, row, pack_id * pack_size);
     }
   }
 }
 
-template<typename LOAD, typename STORE, typename ComputeType, int pack_size>
-inline void LaunchSoftmaxBlockUncachedImpl(cudaStream_t stream, LOAD load, STORE store,
-                                           const int64_t rows, const int64_t cols) {
+template<typename LOAD, typename STORE, typename ComputeType, int pack_size, Algorithm algorithm>
+inline cudaError_t LaunchSoftmaxBlockUncachedImpl(cudaStream_t stream, LOAD load, STORE store,
+                                                  const int64_t rows, const int64_t cols) {
   constexpr int block_size = 1024;
   constexpr int waves = 32;
-  const int grid_dim_x = GetNumBlocks(block_size, rows, waves);
-  SoftmaxBlockUncachedImpl<LOAD, STORE, ComputeType, pack_size, block_size>
+  int grid_dim_x;
+  {
+    cudaError_t err = GetNumBlocks(block_size, rows, waves, &grid_dim_x);
+    if (err != cudaSuccess) { return err; }
+  }
+  SoftmaxBlockUncachedImpl<LOAD, STORE, ComputeType, pack_size, block_size, algorithm>
       <<<grid_dim_x, block_size, 0, stream>>>(load, store, rows, cols);
+  return cudaPeekAtLastError();
 }
 
-template<typename LOAD, typename STORE, typename ComputeType>
+template<typename LOAD, typename STORE, typename ComputeType, Algorithm algorithm>
 struct DispatchSoftmaxBlockUncachedImplPackSize {
-  void operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
-                  const int64_t cols) {
+  cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
+                         const int64_t cols) {
     if (cols % 2 == 0) {
-      LaunchSoftmaxBlockUncachedImpl<LOAD, STORE, ComputeType, 2>(stream, load, store, rows, cols);
+      return LaunchSoftmaxBlockUncachedImpl<LOAD, STORE, ComputeType, 2, algorithm>(
+          stream, load, store, rows, cols);
     } else {
-      LaunchSoftmaxBlockUncachedImpl<LOAD, STORE, ComputeType, 1>(stream, load, store, rows, cols);
+      return LaunchSoftmaxBlockUncachedImpl<LOAD, STORE, ComputeType, 1, algorithm>(
+          stream, load, store, rows, cols);
     }
   }
 };
 
-template<typename LOAD, typename STORE, typename ComputeType>
-inline void DispatchSoftmaxBlockUncachedImpl(cudaStream_t stream, LOAD load, STORE store,
-                                             const int64_t rows, const int64_t cols) {
-  return DispatchSoftmaxBlockUncachedImplPackSize<LOAD, STORE, ComputeType>()(stream, load, store,
-                                                                              rows, cols);
+template<typename LOAD, typename STORE, typename ComputeType, Algorithm algorithm>
+inline cudaError_t DispatchSoftmaxBlockUncachedImpl(cudaStream_t stream, LOAD load, STORE store,
+                                                    const int64_t rows, const int64_t cols) {
+  return DispatchSoftmaxBlockUncachedImplPackSize<LOAD, STORE, ComputeType, algorithm>()(
+      stream, load, store, rows, cols);
 }
 
 template<typename LOAD, typename STORE, typename ComputeType>
-inline void DispatchSoftmax(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
-                            const int64_t cols) {
+inline cudaError_t DispatchSoftmax(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
+                                   const int64_t cols) {
   if (cols <= 1024) {
-    DispatchSoftmaxWarpImpl<LOAD, STORE, ComputeType>(stream, load, store, rows, cols);
-  } else if (!TryDispatchSoftmaxBlockSMemImpl<LOAD, STORE, ComputeType>(stream, load, store, rows,
-                                                                        cols)) {
-    DispatchSoftmaxBlockUncachedImpl<LOAD, STORE, ComputeType>(stream, load, store, rows, cols);
+    return DispatchSoftmaxWarpImpl<LOAD, STORE, ComputeType, Algorithm::kSoftmax>(
+        stream, load, store, rows, cols);
+  } else {
+    bool dispatch_smem_impl_success;
+    {
+      cudaError_t err =
+          TryDispatchSoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, Algorithm::kSoftmax>(
+              stream, load, store, rows, cols, &dispatch_smem_impl_success);
+      if (err != cudaSuccess) { return err; }
+    }
+    if (!dispatch_smem_impl_success) {
+      return DispatchSoftmaxBlockUncachedImpl<LOAD, STORE, ComputeType, Algorithm::kSoftmax>(
+          stream, load, store, rows, cols);
+    }
+    return cudaSuccess;
+  }
+}
+
+template<typename LOAD, typename STORE, typename ComputeType>
+inline cudaError_t DispatchLogSoftmax(cudaStream_t stream, LOAD load, STORE store,
+                                      const int64_t rows, const int64_t cols) {
+  if (cols <= 1024) {
+    return DispatchSoftmaxWarpImpl<LOAD, STORE, ComputeType, Algorithm::kLogSoftmax>(
+        stream, load, store, rows, cols);
+  } else {
+    bool dispatch_smem_impl_success;
+    {
+      cudaError_t err =
+          TryDispatchSoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, Algorithm::kLogSoftmax>(
+              stream, load, store, rows, cols, &dispatch_smem_impl_success);
+      if (err != cudaSuccess) { return err; }
+    }
+    if (!dispatch_smem_impl_success) {
+      return DispatchSoftmaxBlockUncachedImpl<LOAD, STORE, ComputeType, Algorithm::kLogSoftmax>(
+          stream, load, store, rows, cols);
+    }
+    return cudaSuccess;
   }
 }
 
 template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
-         int cols_per_thread, int thread_group_width, int rows_per_access, bool padding>
+         int cols_per_thread, int thread_group_width, int rows_per_access, bool padding,
+         Algorithm algorithm>
 __global__ void SoftmaxGradWarpImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE store, const int64_t rows,
                                     const int64_t cols) {
   static_assert(cols_per_thread % pack_size == 0, "");
@@ -623,8 +772,14 @@ __global__ void SoftmaxGradWarpImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE store,
           load_dy.template load<pack_size>(row_dy_buf + pack_id * pack_size, row + row_id, col);
 #pragma unroll
           for (int i = 0; i < pack_size; ++i) {
-            thread_sum[row_id] +=
-                row_y_buf[pack_id * pack_size + i] * row_dy_buf[pack_id * pack_size + i];
+            if (algorithm == Algorithm::kSoftmax) {
+              thread_sum[row_id] +=
+                  row_y_buf[pack_id * pack_size + i] * row_dy_buf[pack_id * pack_size + i];
+            } else if (algorithm == Algorithm::kLogSoftmax) {
+              thread_sum[row_id] += row_dy_buf[pack_id * pack_size + i];
+            } else {
+              __trap();
+            }
           }
         }
       }
@@ -643,9 +798,16 @@ __global__ void SoftmaxGradWarpImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE store,
         const int col = (pack_id * thread_group_width + lane_id) * pack_size;
         if (!padding || col < cols) {
           for (int i = 0; i < pack_size; ++i) {
-            row_dy_buf[pack_id * pack_size + i] =
-                (row_dy_buf[pack_id * pack_size + i] - warp_sum[row_id])
-                * row_y_buf[pack_id * pack_size + i];
+            if (algorithm == Algorithm::kSoftmax) {
+              row_dy_buf[pack_id * pack_size + i] =
+                  (row_dy_buf[pack_id * pack_size + i] - warp_sum[row_id])
+                  * row_y_buf[pack_id * pack_size + i];
+            } else if (algorithm == Algorithm::kLogSoftmax) {
+              row_dy_buf[pack_id * pack_size + i] -=
+                  Exp(row_y_buf[pack_id * pack_size + i]) * warp_sum[row_id];
+            } else {
+              __trap();
+            }
           }
           store.template store<pack_size>(row_dy_buf + pack_id * pack_size, row + row_id, col);
         }
@@ -655,53 +817,60 @@ __global__ void SoftmaxGradWarpImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE store,
 }
 
 template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
-         int cols_per_thread, int thread_group_width, int rows_per_access, bool padding>
-inline void LaunchSoftmaxGradWarpImpl(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy,
-                                      STORE store, const int64_t rows, const int64_t cols) {
+         int cols_per_thread, int thread_group_width, int rows_per_access, bool padding,
+         Algorithm algorithm>
+inline cudaError_t LaunchSoftmaxGradWarpImpl(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy,
+                                             STORE store, const int64_t rows, const int64_t cols) {
   constexpr int block_size = 128;
   constexpr int waves = 32;
   static_assert(block_size % thread_group_width == 0, "");
   constexpr int rows_per_block = block_size / thread_group_width;
   dim3 block_dim(thread_group_width, rows_per_block);
   const int64_t num_blocks = (rows + rows_per_block - 1) / rows_per_block;
-  const int grid_dim_x = GetNumBlocks(block_size, num_blocks, waves);
+  int grid_dim_x;
+  {
+    cudaError_t err = GetNumBlocks(block_size, num_blocks, waves, &grid_dim_x);
+    if (err != cudaSuccess) { return err; }
+  }
   SoftmaxGradWarpImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, cols_per_thread,
-                      thread_group_width, rows_per_access, padding>
+                      thread_group_width, rows_per_access, padding, algorithm>
       <<<grid_dim_x, block_dim, 0, stream>>>(load_y, load_dy, store, rows, cols);
+  return cudaPeekAtLastError();
 }
 
 template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
-         int cols_per_thread, int thread_group_width, int rows_per_access>
-inline void DispatchSoftmaxGradWarpImplPadding(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy,
-                                               STORE store, const int64_t rows,
-                                               const int64_t cols) {
+         int cols_per_thread, int thread_group_width, int rows_per_access, Algorithm algorithm>
+inline cudaError_t DispatchSoftmaxGradWarpImplPadding(cudaStream_t stream, LOAD_Y load_y,
+                                                      LOAD_DY load_dy, STORE store,
+                                                      const int64_t rows, const int64_t cols) {
   if (cols == cols_per_thread * thread_group_width) {
-    LaunchSoftmaxGradWarpImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, cols_per_thread,
-                              thread_group_width, rows_per_access, false>(stream, load_y, load_dy,
-                                                                          store, rows, cols);
+    return LaunchSoftmaxGradWarpImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size,
+                                     cols_per_thread, thread_group_width, rows_per_access, false,
+                                     algorithm>(stream, load_y, load_dy, store, rows, cols);
   } else {
-    LaunchSoftmaxGradWarpImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, cols_per_thread,
-                              thread_group_width, rows_per_access, true>(stream, load_y, load_dy,
-                                                                         store, rows, cols);
+    return LaunchSoftmaxGradWarpImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size,
+                                     cols_per_thread, thread_group_width, rows_per_access, true,
+                                     algorithm>(stream, load_y, load_dy, store, rows, cols);
   }
 }
 
-template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size>
-typename std::enable_if<pack_size == 1, void>::type DispatchSoftmaxGradWarpImplCols(
+template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
+         Algorithm algorithm>
+typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchSoftmaxGradWarpImplCols(
     cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy, STORE store, const int64_t rows,
     const int64_t cols) {
-  if (cols <= 0) { UNIMPLEMENTED(); }
-#define DEFINE_ONE_ELIF(thread_group_width)                                              \
-  else if (cols <= (thread_group_width)*pack_size) {                                     \
-    if (rows % 2 == 0) {                                                                 \
-      DispatchSoftmaxGradWarpImplPadding<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, \
-                                         pack_size, thread_group_width, 2>(              \
-          stream, load_y, load_dy, store, rows, cols);                                   \
-    } else {                                                                             \
-      DispatchSoftmaxGradWarpImplPadding<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, \
-                                         pack_size, thread_group_width, 1>(              \
-          stream, load_y, load_dy, store, rows, cols);                                   \
-    }                                                                                    \
+  if (cols <= 0) { return cudaErrorInvalidValue; }
+#define DEFINE_ONE_ELIF(thread_group_width)                                                     \
+  else if (cols <= (thread_group_width)*pack_size) {                                            \
+    if (rows % 2 == 0) {                                                                        \
+      return DispatchSoftmaxGradWarpImplPadding<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, \
+                                                pack_size, thread_group_width, 2, algorithm>(   \
+          stream, load_y, load_dy, store, rows, cols);                                          \
+    } else {                                                                                    \
+      return DispatchSoftmaxGradWarpImplPadding<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, \
+                                                pack_size, thread_group_width, 1, algorithm>(   \
+          stream, load_y, load_dy, store, rows, cols);                                          \
+    }                                                                                           \
   }
   DEFINE_ONE_ELIF(1)
   DEFINE_ONE_ELIF(2)
@@ -710,10 +879,11 @@ typename std::enable_if<pack_size == 1, void>::type DispatchSoftmaxGradWarpImplC
   DEFINE_ONE_ELIF(16)
   DEFINE_ONE_ELIF(32)
 #undef DEFINE_ONE_ELIF
-#define DEFINE_ONE_ELIF(col)                                                                      \
-  else if (cols <= (col)*kWarpSize) {                                                             \
-    DispatchSoftmaxGradWarpImplPadding<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, col,       \
-                                       kWarpSize, 1>(stream, load_y, load_dy, store, rows, cols); \
+#define DEFINE_ONE_ELIF(col)                                                                       \
+  else if (cols <= (col)*kWarpSize) {                                                              \
+    return DispatchSoftmaxGradWarpImplPadding<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, col, \
+                                              kWarpSize, 1, algorithm>(stream, load_y, load_dy,    \
+                                                                       store, rows, cols);         \
   }
   DEFINE_ONE_ELIF(2)
   DEFINE_ONE_ELIF(3)
@@ -748,26 +918,27 @@ typename std::enable_if<pack_size == 1, void>::type DispatchSoftmaxGradWarpImplC
   DEFINE_ONE_ELIF(32)
 #undef DEFINE_ONE_ELIF
   else {
-    UNIMPLEMENTED();
+    return cudaErrorInvalidValue;
   }
 }
 
-template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size>
-typename std::enable_if<pack_size == 2, void>::type DispatchSoftmaxGradWarpImplCols(
+template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
+         Algorithm algorithm>
+typename std::enable_if<pack_size == 2, cudaError_t>::type DispatchSoftmaxGradWarpImplCols(
     cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy, STORE store, const int64_t rows,
     const int64_t cols) {
-  if (cols <= 0) { UNIMPLEMENTED(); }
-#define DEFINE_ONE_ELIF(thread_group_width)                                              \
-  else if (cols <= (thread_group_width)*pack_size) {                                     \
-    if (rows % 2 == 0) {                                                                 \
-      DispatchSoftmaxGradWarpImplPadding<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, \
-                                         pack_size, thread_group_width, 2>(              \
-          stream, load_y, load_dy, store, rows, cols);                                   \
-    } else {                                                                             \
-      DispatchSoftmaxGradWarpImplPadding<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, \
-                                         pack_size, thread_group_width, 2>(              \
-          stream, load_y, load_dy, store, rows, cols);                                   \
-    }                                                                                    \
+  if (cols <= 0) { return cudaErrorInvalidValue; }
+#define DEFINE_ONE_ELIF(thread_group_width)                                                     \
+  else if (cols <= (thread_group_width)*pack_size) {                                            \
+    if (rows % 2 == 0) {                                                                        \
+      return DispatchSoftmaxGradWarpImplPadding<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, \
+                                                pack_size, thread_group_width, 2, algorithm>(   \
+          stream, load_y, load_dy, store, rows, cols);                                          \
+    } else {                                                                                    \
+      return DispatchSoftmaxGradWarpImplPadding<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, \
+                                                pack_size, thread_group_width, 2, algorithm>(   \
+          stream, load_y, load_dy, store, rows, cols);                                          \
+    }                                                                                           \
   }
   DEFINE_ONE_ELIF(1)
   DEFINE_ONE_ELIF(2)
@@ -776,10 +947,11 @@ typename std::enable_if<pack_size == 2, void>::type DispatchSoftmaxGradWarpImplC
   DEFINE_ONE_ELIF(16)
   DEFINE_ONE_ELIF(32)
 #undef DEFINE_ONE_ELIF
-#define DEFINE_ONE_ELIF(col)                                                                      \
-  else if (cols <= (col)*kWarpSize) {                                                             \
-    DispatchSoftmaxGradWarpImplPadding<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, col,       \
-                                       kWarpSize, 1>(stream, load_y, load_dy, store, rows, cols); \
+#define DEFINE_ONE_ELIF(col)                                                                       \
+  else if (cols <= (col)*kWarpSize) {                                                              \
+    return DispatchSoftmaxGradWarpImplPadding<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, col, \
+                                              kWarpSize, 1, algorithm>(stream, load_y, load_dy,    \
+                                                                       store, rows, cols);         \
   }
   DEFINE_ONE_ELIF(4)
   DEFINE_ONE_ELIF(6)
@@ -798,33 +970,36 @@ typename std::enable_if<pack_size == 2, void>::type DispatchSoftmaxGradWarpImplC
   DEFINE_ONE_ELIF(32)
 #undef DEFINE_ONE_ELIF
   else {
-    UNIMPLEMENTED();
+    return cudaErrorInvalidValue;
   }
 }
 
-template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType>
+template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType,
+         Algorithm algorithm>
 struct DispatchSoftmaxGradWarpImplPackSize {
-  void operator()(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy, STORE store,
-                  const int64_t rows, const int64_t cols) {
+  cudaError_t operator()(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy, STORE store,
+                         const int64_t rows, const int64_t cols) {
     if (cols % 2 == 0) {
-      DispatchSoftmaxGradWarpImplCols<LOAD_Y, LOAD_DY, STORE, ComputeType, 2>(
+      return DispatchSoftmaxGradWarpImplCols<LOAD_Y, LOAD_DY, STORE, ComputeType, 2, algorithm>(
           stream, load_y, load_dy, store, rows, cols);
     } else {
-      DispatchSoftmaxGradWarpImplCols<LOAD_Y, LOAD_DY, STORE, ComputeType, 1>(
+      return DispatchSoftmaxGradWarpImplCols<LOAD_Y, LOAD_DY, STORE, ComputeType, 1, algorithm>(
           stream, load_y, load_dy, store, rows, cols);
     }
   }
 };
 
-template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType>
-inline void DispatchSoftmaxGradWarpImpl(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy,
-                                        STORE store, const int64_t rows, const int64_t cols) {
-  DispatchSoftmaxGradWarpImplPackSize<LOAD_Y, LOAD_DY, STORE, ComputeType>()(
+template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType,
+         Algorithm algorithm>
+inline cudaError_t DispatchSoftmaxGradWarpImpl(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy,
+                                               STORE store, const int64_t rows,
+                                               const int64_t cols) {
+  return DispatchSoftmaxGradWarpImplPackSize<LOAD_Y, LOAD_DY, STORE, ComputeType, algorithm>()(
       stream, load_y, load_dy, store, rows, cols);
 }
 
 template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
-         int block_size>
+         int block_size, Algorithm algorithm>
 __global__ void SoftmaxGradBlockSMemImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE store,
                                          const int64_t rows, const int64_t cols) {
   extern __shared__ __align__(sizeof(double)) unsigned char grad_shared_buf[];
@@ -844,7 +1019,13 @@ __global__ void SoftmaxGradBlockSMemImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE s
       for (int i = 0; i < pack_size; ++i) {
         y_buf[i * num_packs + pack_id] = y_pack[i];
         dy_buf[i * num_packs + pack_id] = dy_pack[i];
-        thread_sum += y_pack[i] * dy_pack[i];
+        if (algorithm == Algorithm::kSoftmax) {
+          thread_sum += y_pack[i] * dy_pack[i];
+        } else if (algorithm == Algorithm::kLogSoftmax) {
+          thread_sum += dy_pack[i];
+        } else {
+          __trap();
+        }
       }
     }
     const ComputeType row_sum = BlockAllReduce<SumOp, ComputeType, block_size>(thread_sum);
@@ -852,7 +1033,13 @@ __global__ void SoftmaxGradBlockSMemImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE s
       ComputeType pack[pack_size];
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
-        pack[i] = (dy_buf[i * num_packs + pack_id] - row_sum) * y_buf[i * num_packs + pack_id];
+        if (algorithm == Algorithm::kSoftmax) {
+          pack[i] = (dy_buf[i * num_packs + pack_id] - row_sum) * y_buf[i * num_packs + pack_id];
+        } else if (algorithm == Algorithm::kLogSoftmax) {
+          pack[i] = dy_buf[i * num_packs + pack_id] - Exp(y_buf[i * num_packs + pack_id]) * row_sum;
+        } else {
+          __trap();
+        }
       }
       store.template store<pack_size>(pack, row, pack_id * pack_size);
     }
@@ -860,93 +1047,126 @@ __global__ void SoftmaxGradBlockSMemImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE s
 }
 
 template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
-         int block_size>
-inline void LaunchSoftmaxGradBlockSMemImpl(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy,
-                                           STORE store, int smem, const int64_t rows,
-                                           const int64_t cols) {
+         int block_size, Algorithm algorithm>
+inline cudaError_t LaunchSoftmaxGradBlockSMemImpl(cudaStream_t stream, LOAD_Y load_y,
+                                                  LOAD_DY load_dy, STORE store, int smem,
+                                                  const int64_t rows, const int64_t cols) {
   constexpr int waves = 32;
-  const int grid_dim_x = GetNumBlocks(block_size, rows, waves);
-  SoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, block_size>
+  int grid_dim_x;
+  {
+    cudaError_t err = GetNumBlocks(block_size, rows, waves, &grid_dim_x);
+    if (err != cudaSuccess) { return err; }
+  }
+  SoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, block_size, algorithm>
       <<<grid_dim_x, block_size, smem, stream>>>(load_y, load_dy, store, rows, cols);
+  return cudaPeekAtLastError();
 }
 
-template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size>
-inline bool TryDispatchSoftmaxGradBlockSMemImplBlockSize(cudaStream_t stream, LOAD_Y load_y,
-                                                         LOAD_DY load_dy, STORE store,
-                                                         const int64_t rows, const int64_t cols) {
+template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
+         Algorithm algorithm>
+inline cudaError_t TryDispatchSoftmaxGradBlockSMemImplBlockSize(cudaStream_t stream, LOAD_Y load_y,
+                                                                LOAD_DY load_dy, STORE store,
+                                                                const int64_t rows,
+                                                                const int64_t cols, bool* success) {
   constexpr int block_size_conf_1 = 128;
   constexpr int block_size_conf_2 = 256;
   constexpr int block_size_conf_3 = 512;
   constexpr int block_size_conf_4 = 1024;
   const size_t smem = cols * sizeof(ComputeType) * 2;
   int max_active_blocks_conf_1;
-  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &max_active_blocks_conf_1,
-      SoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, block_size_conf_1>,
-      block_size_conf_1, smem));
-  if (max_active_blocks_conf_1 <= 0) { return false; }
+  {
+    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &max_active_blocks_conf_1,
+        SoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, block_size_conf_1,
+                                 algorithm>,
+        block_size_conf_1, smem);
+    if (err != cudaSuccess) { return err; }
+  }
+  if (max_active_blocks_conf_1 <= 0) {
+    *success = false;
+    return cudaSuccess;
+  }
   int max_active_blocks_conf_4;
-  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &max_active_blocks_conf_4,
-      SoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, block_size_conf_4>,
-      block_size_conf_4, smem));
+  {
+    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &max_active_blocks_conf_4,
+        SoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, block_size_conf_4,
+                                 algorithm>,
+        block_size_conf_4, smem);
+    if (err != cudaSuccess) { return err; }
+  }
   if (max_active_blocks_conf_4 == max_active_blocks_conf_1) {
-    LaunchSoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size,
-                                   block_size_conf_4>(stream, load_y, load_dy, store, smem, rows,
-                                                      cols);
-    return true;
+    *success = true;
+    return LaunchSoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size,
+                                          block_size_conf_4, algorithm>(stream, load_y, load_dy,
+                                                                        store, smem, rows, cols);
   }
   int max_active_blocks_conf_3;
-  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &max_active_blocks_conf_3,
-      SoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, block_size_conf_3>,
-      block_size_conf_3, smem));
+  {
+    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &max_active_blocks_conf_3,
+        SoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, block_size_conf_3,
+                                 algorithm>,
+        block_size_conf_3, smem);
+    if (err != cudaSuccess) { return err; }
+  }
   if (max_active_blocks_conf_3 == max_active_blocks_conf_1) {
-    LaunchSoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size,
-                                   block_size_conf_3>(stream, load_y, load_dy, store, smem, rows,
-                                                      cols);
-    return true;
+    *success = true;
+    return LaunchSoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size,
+                                          block_size_conf_3, algorithm>(stream, load_y, load_dy,
+                                                                        store, smem, rows, cols);
   }
   int max_active_blocks_conf_2;
-  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &max_active_blocks_conf_2,
-      SoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, block_size_conf_2>,
-      block_size_conf_2, smem));
-  if (max_active_blocks_conf_2 == max_active_blocks_conf_1) {
-    LaunchSoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size,
-                                   block_size_conf_2>(stream, load_y, load_dy, store, smem, rows,
-                                                      cols);
-    return true;
+  {
+    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &max_active_blocks_conf_2,
+        SoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, block_size_conf_2,
+                                 algorithm>,
+        block_size_conf_2, smem);
+    if (err != cudaSuccess) { return err; }
   }
-  LaunchSoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, block_size_conf_1>(
-      stream, load_y, load_dy, store, smem, rows, cols);
-  return true;
+  if (max_active_blocks_conf_2 == max_active_blocks_conf_1) {
+    *success = true;
+    return LaunchSoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size,
+                                          block_size_conf_2, algorithm>(stream, load_y, load_dy,
+                                                                        store, smem, rows, cols);
+  }
+  *success = true;
+  return LaunchSoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size,
+                                        block_size_conf_1, algorithm>(stream, load_y, load_dy,
+                                                                      store, smem, rows, cols);
 }
 
-template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType>
+template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType,
+         Algorithm algorithm>
 struct TryDispatchSoftmaxGradBlockSMemImplPackSize {
-  bool operator()(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy, STORE store,
-                  const int64_t rows, const int64_t cols) {
+  cudaError_t operator()(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy, STORE store,
+                         const int64_t rows, const int64_t cols, bool* success) {
     if (cols % 2 == 0) {
-      return TryDispatchSoftmaxGradBlockSMemImplBlockSize<LOAD_Y, LOAD_DY, STORE, ComputeType, 2>(
-          stream, load_y, load_dy, store, rows, cols);
+      return TryDispatchSoftmaxGradBlockSMemImplBlockSize<LOAD_Y, LOAD_DY, STORE, ComputeType, 2,
+                                                          algorithm>(stream, load_y, load_dy, store,
+                                                                     rows, cols, success);
     } else {
-      return TryDispatchSoftmaxGradBlockSMemImplBlockSize<LOAD_Y, LOAD_DY, STORE, ComputeType, 1>(
-          stream, load_y, load_dy, store, rows, cols);
+      return TryDispatchSoftmaxGradBlockSMemImplBlockSize<LOAD_Y, LOAD_DY, STORE, ComputeType, 1,
+                                                          algorithm>(stream, load_y, load_dy, store,
+                                                                     rows, cols, success);
     }
   }
 };
 
-template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType>
-inline bool TryDispatchSoftmaxGradBlockSMemImpl(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy,
-                                                STORE store, const int64_t rows,
-                                                const int64_t cols) {
-  return TryDispatchSoftmaxGradBlockSMemImplPackSize<LOAD_Y, LOAD_DY, STORE, ComputeType>()(
-      stream, load_y, load_dy, store, rows, cols);
+template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType,
+         Algorithm algorithm>
+inline cudaError_t TryDispatchSoftmaxGradBlockSMemImpl(cudaStream_t stream, LOAD_Y load_y,
+                                                       LOAD_DY load_dy, STORE store,
+                                                       const int64_t rows, const int64_t cols,
+                                                       bool* success) {
+  return TryDispatchSoftmaxGradBlockSMemImplPackSize<LOAD_Y, LOAD_DY, STORE, ComputeType,
+                                                     algorithm>()(stream, load_y, load_dy, store,
+                                                                  rows, cols, success);
 }
 
 template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
-         int block_size>
+         int block_size, Algorithm algorithm>
 __global__ void SoftmaxGradBlockUncachedImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE store,
                                              const int64_t rows, const int64_t cols) {
   const int tid = threadIdx.x;
@@ -961,7 +1181,15 @@ __global__ void SoftmaxGradBlockUncachedImpl(LOAD_Y load_y, LOAD_DY load_dy, STO
       load_dy.template load<pack_size>(dy_pack, row, pack_id * pack_size);
 
 #pragma unroll
-      for (int i = 0; i < pack_size; ++i) { thread_sum += y_pack[i] * dy_pack[i]; }
+      for (int i = 0; i < pack_size; ++i) {
+        if (algorithm == Algorithm::kSoftmax) {
+          thread_sum += y_pack[i] * dy_pack[i];
+        } else if (algorithm == Algorithm::kLogSoftmax) {
+          thread_sum += dy_pack[i];
+        } else {
+          __trap();
+        }
+      }
     }
     const ComputeType row_sum = BlockAllReduce<SumOp, ComputeType, block_size>(thread_sum);
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
@@ -970,55 +1198,105 @@ __global__ void SoftmaxGradBlockUncachedImpl(LOAD_Y load_y, LOAD_DY load_dy, STO
       load_y.template load<pack_size>(y_pack, row, pack_id * pack_size);
       load_dy.template load<pack_size>(dy_pack, row, pack_id * pack_size);
 #pragma unroll
-      for (int i = 0; i < pack_size; ++i) { dy_pack[i] = (dy_pack[i] - row_sum) * y_pack[i]; }
+      for (int i = 0; i < pack_size; ++i) {
+        if (algorithm == Algorithm::kSoftmax) {
+          dy_pack[i] = (dy_pack[i] - row_sum) * y_pack[i];
+        } else if (algorithm == Algorithm::kLogSoftmax) {
+          dy_pack[i] -= Exp(y_pack[i]) * row_sum;
+        } else {
+          __trap();
+        }
+      }
       store.template store<pack_size>(dy_pack, row, pack_id * pack_size);
     }
   }
 }
 
-template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size>
-inline void LaunchSoftmaxGradBlockUncachedImpl(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy,
-                                               STORE store, const int64_t rows,
-                                               const int64_t cols) {
+template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
+         Algorithm algorithm>
+inline cudaError_t LaunchSoftmaxGradBlockUncachedImpl(cudaStream_t stream, LOAD_Y load_y,
+                                                      LOAD_DY load_dy, STORE store,
+                                                      const int64_t rows, const int64_t cols) {
   constexpr int block_size = 1024;
   constexpr int waves = 32;
-  const int grid_dim_x = GetNumBlocks(block_size, rows, waves);
-  SoftmaxGradBlockUncachedImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, block_size>
+  int grid_dim_x;
+  {
+    cudaError_t err = GetNumBlocks(block_size, rows, waves, &grid_dim_x);
+    if (err != cudaSuccess) { return err; }
+  }
+  SoftmaxGradBlockUncachedImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, block_size,
+                               algorithm>
       <<<grid_dim_x, block_size, 0, stream>>>(load_y, load_dy, store, rows, cols);
+  return cudaPeekAtLastError();
 }
 
-template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType>
+template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType,
+         Algorithm algorithm>
 struct DispatchSoftmaxGradBlockUncachedImplPackSize {
-  void operator()(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy, STORE store,
-                  const int64_t rows, const int64_t cols) {
+  cudaError_t operator()(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy, STORE store,
+                         const int64_t rows, const int64_t cols) {
     if (cols % 2 == 0 && cols > kWarpSize) {
-      LaunchSoftmaxGradBlockUncachedImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, 2>(
+      return LaunchSoftmaxGradBlockUncachedImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, 2, algorithm>(
           stream, load_y, load_dy, store, rows, cols);
     } else {
-      LaunchSoftmaxGradBlockUncachedImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, 1>(
+      return LaunchSoftmaxGradBlockUncachedImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, 1, algorithm>(
           stream, load_y, load_dy, store, rows, cols);
     }
   }
 };
 
-template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType>
-inline void DispatchSoftmaxGradBlockUncachedImpl(cudaStream_t stream, LOAD_Y load_y,
-                                                 LOAD_DY load_dy, STORE store, const int64_t rows,
-                                                 const int64_t cols) {
-  return DispatchSoftmaxGradBlockUncachedImplPackSize<LOAD_Y, LOAD_DY, STORE, ComputeType>()(
-      stream, load_y, load_dy, store, rows, cols);
+template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType,
+         Algorithm algorithm>
+inline cudaError_t DispatchSoftmaxGradBlockUncachedImpl(cudaStream_t stream, LOAD_Y load_y,
+                                                        LOAD_DY load_dy, STORE store,
+                                                        const int64_t rows, const int64_t cols) {
+  return DispatchSoftmaxGradBlockUncachedImplPackSize<LOAD_Y, LOAD_DY, STORE, ComputeType,
+                                                      algorithm>()(stream, load_y, load_dy, store,
+                                                                   rows, cols);
 }
 
 template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType>
-inline void DispatchSoftmaxGrad(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy, STORE store,
-                                const int64_t rows, const int64_t cols) {
+inline cudaError_t DispatchSoftmaxGrad(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy,
+                                       STORE store, const int64_t rows, const int64_t cols) {
   if (cols <= 1024) {
-    DispatchSoftmaxGradWarpImpl<LOAD_Y, LOAD_DY, STORE, ComputeType>(stream, load_y, load_dy, store,
-                                                                     rows, cols);
-  } else if (!TryDispatchSoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType>(
-                 stream, load_y, load_dy, store, rows, cols)) {
-    DispatchSoftmaxGradBlockUncachedImpl<LOAD_Y, LOAD_DY, STORE, ComputeType>(
+    return DispatchSoftmaxGradWarpImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, Algorithm::kSoftmax>(
         stream, load_y, load_dy, store, rows, cols);
+  } else {
+    bool dispatch_smem_impl_success;
+    {
+      cudaError_t err = TryDispatchSoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType,
+                                                            Algorithm::kSoftmax>(
+          stream, load_y, load_dy, store, rows, cols, &dispatch_smem_impl_success);
+      if (err != cudaSuccess) { return err; }
+    }
+    if (!dispatch_smem_impl_success) {
+      return DispatchSoftmaxGradBlockUncachedImpl<LOAD_Y, LOAD_DY, STORE, ComputeType,
+                                                  Algorithm::kSoftmax>(stream, load_y, load_dy,
+                                                                       store, rows, cols);
+    }
+    return cudaSuccess;
+  }
+}
+template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType>
+inline cudaError_t DispatchLogSoftmaxGrad(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy,
+                                          STORE store, const int64_t rows, const int64_t cols) {
+  if (cols <= 1024) {
+    return DispatchSoftmaxGradWarpImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, Algorithm::kLogSoftmax>(
+        stream, load_y, load_dy, store, rows, cols);
+  } else {
+    bool dispatch_smem_impl_success;
+    {
+      cudaError_t err = TryDispatchSoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType,
+                                                            Algorithm::kLogSoftmax>(
+          stream, load_y, load_dy, store, rows, cols, &dispatch_smem_impl_success);
+      if (err != cudaSuccess) { return err; }
+    }
+    if (!dispatch_smem_impl_success) {
+      return DispatchSoftmaxGradBlockUncachedImpl<LOAD_Y, LOAD_DY, STORE, ComputeType,
+                                                  Algorithm::kLogSoftmax>(stream, load_y, load_dy,
+                                                                          store, rows, cols);
+    }
+    return cudaSuccess;
   }
 }
 

@@ -39,7 +39,7 @@ __global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, T* dptr,
                             const T std) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
   curandState localState = state[id];
-  if (id < elem_cnt) { dptr[id] = GenNormal<T>(&localState, mean, std); }
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) { dptr[i] = GenNormal<T>(&localState, mean, std); }
   state[id] = localState;
 }
 

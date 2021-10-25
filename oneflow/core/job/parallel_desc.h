@@ -146,6 +146,7 @@ extern Maybe<const ParallelContext> (*GetParallelContext4CurrentProcessCtx)(
 extern Maybe<Symbol<ParallelDesc>> (*ReplaceDeviceType)(Symbol<ParallelDesc>, DeviceType);
 extern Maybe<std::string> (*PlacementToString)(Symbol<ParallelDesc> placement);
 extern Maybe<Symbol<Device>> (*GetTensorDevice)(Symbol<ParallelDesc> parallel_desc);
+extern Maybe<Symbol<ParallelDesc>> (*TxtStringToPlacement)(const std::string& parallel_conf_str);
 
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
   return ParallelDesc(lhs) == ParallelDesc(rhs);
@@ -161,13 +162,13 @@ std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
 ParallelConf GenParallelConfOfCpuZeroOnMaster();
 ParallelConf GenParallelConfOfCpuZeroOnAllMachines();
 
-bool IsMirroredParallelContext(const ParallelContext& parallel_ctx);
-
 namespace private_details {
 
 Maybe<Symbol<ParallelDesc>> RawReplaceDeviceType(Symbol<ParallelDesc>, DeviceType);
 
 Maybe<std::string> RawPlacementToString(Symbol<ParallelDesc> placement);
+
+Maybe<Symbol<ParallelDesc>> RawTxtStringToPlacement(const std::string& parallel_conf_str);
 
 }  // namespace private_details
 }  // namespace oneflow

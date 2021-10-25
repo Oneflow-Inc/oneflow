@@ -22,7 +22,8 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_arange(test_case, device):
@@ -45,7 +46,7 @@ def _test_arange_more_params(test_case, device):
 
 def _test_arange_backward(test_case, device):
     np_out = np.arange(13)
-    x = flow.arange(13, device=device)
+    x = flow.arange(13, dtype=flow.float32, device=device)
     x.requires_grad = True
     y = x.sum()
     y.backward()

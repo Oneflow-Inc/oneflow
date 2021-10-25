@@ -67,9 +67,6 @@ Maybe<one::UserOpExpr> ReduceSumLikeOp(const std::vector<int32_t>& axis, const s
 Maybe<one::UserOpExpr> ScalarPowOp(const double& exponent);
 Maybe<one::UserOpExpr> ScalarPowOp(const double& exponent, const std::string& name);
 
-Maybe<one::UserOpExpr> ScalarPowGradOp(const double& exponent);
-Maybe<one::UserOpExpr> ScalarPowGradOp(const double& exponent, const std::string& name);
-
 template<typename T>
 Maybe<one::UserOpExpr> ScalarAddOp(const T& scalar);
 
@@ -123,9 +120,6 @@ Maybe<one::UserOpExpr> BroadcastDivGradOp(const std::string& name);
 Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t& max_dim_size);
 Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t& max_dim_size,
                                 const std::string& name);
-
-Maybe<one::UserOpExpr> UnsortedBatchSegmentSumOp(const int& num_segments);
-Maybe<one::UserOpExpr> UnsortedBatchSegmentSumOp(const int& num_segments, const std::string& name);
 
 Maybe<one::UserOpExpr> ScalarAddByTensorOp();
 Maybe<one::UserOpExpr> ScalarAddByTensorOp(const std::string& name);

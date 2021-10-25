@@ -76,7 +76,7 @@ if __name__ == "__main__":
                 {
                     "test_suite": "cuda",
                     "cuda_version": 10.2,
-                    "extra_flags": "--extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple",
+                    "extra_flags": "--extra_oneflow_cmake_args=-DCUDA_ARCHITECTURES=61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple",
                     "os": ["self-hosted", "linux", "build"],
                     "allow_fail": False,
                     "python_version": "3.6,3.7",
@@ -92,7 +92,7 @@ if __name__ == "__main__":
                 {
                     "test_suite": "xla",
                     "cuda_version": 10.1,
-                    "extra_flags": "--extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple",
+                    "extra_flags": "--extra_oneflow_cmake_args=-DCUDA_ARCHITECTURES=61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple",
                     "os": ["self-hosted", "linux", "build"],
                     "allow_fail": True,
                     "python_version": 3.6,

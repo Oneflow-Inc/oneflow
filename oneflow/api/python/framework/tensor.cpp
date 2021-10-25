@@ -53,14 +53,24 @@ void ApiEagerMirroredTensorZeros(const std::shared_ptr<Tensor>& tensor) {
 
 template<typename T>
 void ApiCopyMirroredTensorToNumpy(const std::shared_ptr<Tensor>& tensor, py::array_t<T> array) {
-  return CopyBetweenMirroredTensorAndNumpy(tensor, array, OfBlob_CopyToBuffer, "const")
+  CopyBetweenMirroredTensorAndNumpy<T>(tensor, array.ptr(), OfBlob_CopyBuffer::template To<T>,
+                                       "const",
+                                       /*block_host_until_done=*/true)
       .GetOrThrow();
 }
 
 template<typename T>
 void ApiCopyMirroredTensorFromNumpy(const std::shared_ptr<Tensor>& tensor, py::array_t<T> array) {
-  return CopyBetweenMirroredTensorAndNumpy(tensor, array, OfBlob_CopyFromBuffer, "mut")
+  // When asynchronously copying array data to tensor, we need to back up the
+  // array at the same time.
+  // Only NPY_CORDER is supported, and it makes sure that the array is C-style contiguous.
+  auto* copied_array = PyArray_NewCopy((PyArrayObject*)array.ptr(), NPY_CORDER);
+  CopyBetweenMirroredTensorAndNumpy<T>(tensor, copied_array, OfBlob_CopyBuffer::template From<T>,
+                                       "mut",
+                                       /*block_host_until_done=*/false)
       .GetOrThrow();
+
+  Py_DECREF(copied_array);
 }
 
 const std::string& ApiGetCopyMirroredTensorToNumpyFuncName(const Tensor& tensor) {
@@ -107,8 +117,7 @@ std::shared_ptr<Tensor> ApiNewTensor(py::args args, py::kwargs kwargs) {
 
 void ApiSetRequiresGrad(Tensor& tensor, bool requires_grad) {
   if (tensor.is_leaf()) {
-    tensor.set_requires_grad(requires_grad);
-    if (!requires_grad) { tensor.set_grad_fn_node(nullptr); }
+    tensor.set_requires_grad(requires_grad).GetOrThrow();
   } else {
     throw std::runtime_error("You can only change requires_grad flags of leaf tensors.");
   }
@@ -151,6 +160,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
               throw std::runtime_error("You can only change gradient of leaf tensors.");
             }
           })
+      .def_property(
+          "data", [](Tensor& t) { return t.data().GetPtrOrThrow(); },
+          [](Tensor& t, const std::shared_ptr<Tensor>& other) { t.set_data(other).GetOrThrow(); })
       .def("storage_offset", [](const Tensor& t) { return t.storage_offset().GetOrThrow(); })
       .def("stride",
            [](const Tensor& t) {
@@ -185,7 +197,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       // local tensor only
       .def_property_readonly("_tensor_buffer_shapes_and_dtypes", &GetTensorBufferShapesAndDTypes)
       .def_property_readonly("device", &TensorGetDevice)
-      .def_property_readonly("data", &Tensor::data)
       .def("consistent_id",
            [](const one::Tensor& tensor) -> int64_t {
              return static_cast<uint64_t>(tensor.transport_token().GetOrThrow());

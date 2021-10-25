@@ -14,57 +14,66 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/primitive/include/add.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 
 namespace oneflow {
 
+namespace user_op {
+
 namespace {
 
-template<typename T>
-void cpu_add(const int64_t n, T* out, const std::vector<const T*>& in) {
-  for (int64_t i = 0; i != n; ++i) {
-    out[i] = in.at(0)[i];
-    for (int32_t j = 1; j < in.size(); ++j) { out[i] += in.at(j)[i]; }
-  }
+template<typename Context>
+std::unique_ptr<primitive::Add> NewAddPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
+  return primitive::NewPrimitive<primitive::AddFactory>(ctx->device_type(), data_type);
 }
 
-}  // namespace
-
-template<typename T>
-class CpuAddNKernel : public user_op::OpKernel {
+class AddNKernel : public OpKernel, public CudaGraphSupport {
  public:
-  CpuAddNKernel() = default;
-  ~CpuAddNKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(AddNKernel);
+  AddNKernel() = default;
+  ~AddNKernel() override = default;
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(KernelComputeContext* ctx, OpKernelState* state) const override {
+    auto primitive = NewAddPrimitive(ctx);
+    CHECK(primitive);
+    Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const DataType data_type = out->data_type();
+    const size_t count = out->shape().elem_cnt();
     size_t in_num = ctx->inputs().size();
-
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t n = out->shape().elem_cnt();
-    T* out_dptr = out->mut_dptr<T>();
-
-    std::vector<const T*> in_dptrs(in_num);
-    for (int32_t i = 0; i < in_num; ++i) {
-      in_dptrs.at(i) = ctx->Tensor4ArgNameAndIndex("in", i)->dptr<T>();
+    std::vector<const void*> srcs(in_num);
+    for (size_t i = 0; i < in_num; ++i) {
+      const Tensor* in_i = ctx->Tensor4ArgNameAndIndex("in", i);
+      CHECK_EQ(in_i->shape().elem_cnt(), count);
+      CHECK_EQ(in_i->data_type(), data_type);
+      srcs[i] = in_i->template dptr();
     }
-
-    cpu_add<T>(n, out_dptr, in_dptrs);
+    primitive->Launch(ctx->stream_ctx(), srcs.data(), in_num, out->mut_dptr(), count);
   }
 };
 
-#define REGISTER_CPU_ADDN_KERNEL(cpp_type, dtype)                                               \
-  REGISTER_USER_KERNEL("add_n")                                                                 \
-      .SetCreateFn<CpuAddNKernel<cpp_type>>()                                                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                       \
-                       & (user_op::HobDataType("in", 0) == dtype))                              \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
-        return Maybe<void>::Ok();                                                               \
-      });
+hob::HobContextGetter<KernelRegContext, bool> AddPrimitiveExists() {
+  return HobCtxGetter<bool>("AddPrimitiveExists", [](const KernelRegContext& ctx) {
+    return NewAddPrimitive(&ctx).operator bool();
+  });
+}
 
-OF_PP_FOR_EACH_TUPLE(REGISTER_CPU_ADDN_KERNEL, ARITHMETIC_DATA_TYPE_SEQ);
+REGISTER_USER_KERNEL("add_n")
+    .SetCreateFn<AddNKernel>()
+    .SetIsMatchedHob(AddPrimitiveExists() == true)
+    .SetInplaceProposalFn([](const InferContext&,
+                             const AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
+      OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));
+      return Maybe<void>::Ok();
+    });
+
+}  // namespace
+
+}  // namespace user_op
 
 }  // namespace oneflow

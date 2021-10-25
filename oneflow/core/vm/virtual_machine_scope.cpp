@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/virtual_machine_scope.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/oneflow_vm.h"
 #include "oneflow/core/control/global_process_ctx.h"
 

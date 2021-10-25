@@ -193,6 +193,12 @@ Error Error::CheckFailedError() {
   return error;
 }
 
+Error Error::ValueNotFoundError() {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  error->mutable_value_not_found_error();
+  return error;
+}
+
 Error Error::TodoError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_todo_error();
