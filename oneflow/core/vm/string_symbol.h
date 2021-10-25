@@ -29,11 +29,11 @@ class StringSymbol final {
 
   ~StringSymbol() = default;
 
-  const Maybe<int64_t>& symbol_id() const { return symbol_id_; }
+  const Optional<int64_t>& symbol_id() const { return symbol_id_; }
   const std::string& data() const { return data_; }
 
  private:
-  Maybe<int64_t> symbol_id_;
+  Optional<int64_t> symbol_id_;
   std::string data_;
 };
 

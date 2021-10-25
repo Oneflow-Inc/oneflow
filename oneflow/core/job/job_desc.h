@@ -41,7 +41,7 @@ class JobDesc final {
   ~JobDesc() = default;
 
   static Maybe<JobDesc> New(int64_t symbol_id, const JobConfigProto& job_conf);
-  const Maybe<int64_t>& symbol_id() const { return symbol_id_; }
+  const Optional<int64_t>& symbol_id() const { return symbol_id_; }
   const std::shared_ptr<cfg::JobConfigProto>& cfg_job_conf() const { return cfg_job_conf_; }
 
   // Common

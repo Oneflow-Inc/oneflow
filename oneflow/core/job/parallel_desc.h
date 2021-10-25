@@ -58,7 +58,7 @@ class ParallelDesc final {
   Maybe<void> MaybeInit(const ParallelConf& user_conf);
 
   // Getters
-  const Maybe<int64_t>& symbol_id() const { return symbol_id_; }
+  const Optional<int64_t>& symbol_id() const { return symbol_id_; }
   bool containing_current_rank() const { return containing_current_rank_; }
   DeviceType device_type() const { return device_type_; }
   const std::string& device_tag() const { return parallel_conf_.device_tag(); }
@@ -117,7 +117,7 @@ class ParallelDesc final {
   Maybe<void> CheckWithResourceDesc(const ResourceDesc& resource_desc);
   bool EqualsMachineId2SortedDevPhyIds(const ParallelDesc& rhs) const;
 
-  Maybe<int64_t> symbol_id_;
+  Optional<int64_t> symbol_id_;
   DeviceType device_type_;
   ParallelConf parallel_conf_;
   std::shared_ptr<Shape> hierarchy_;

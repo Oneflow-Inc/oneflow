@@ -32,11 +32,11 @@ class OperatorConfSymbol final {
   ~OperatorConfSymbol() = default;
 
   const OperatorConf& op_conf() const { return op_conf_; }
-  const Maybe<int64_t>& symbol_id() const { return symbol_id_; }
+  const Optional<int64_t>& symbol_id() const { return symbol_id_; }
   std::shared_ptr<cfg::OperatorConf> data() const { return data_; }
 
  private:
-  Maybe<int64_t> symbol_id_;
+  Optional<int64_t> symbol_id_;
   OperatorConf op_conf_;
   std::shared_ptr<cfg::OperatorConf> data_;
 };

@@ -45,7 +45,7 @@ inline Maybe<void> EnableEagerEnvironment(bool enable_eager_execution) {
   return Maybe<void>::Ok();
 }
 
-inline Maybe<bool>* IsMultiClientPtr() { return Global<Maybe<bool>, MultiClient>::Get(); }
+inline Maybe<bool>* IsMultiClientPtr() { return Global<Optional<bool>, MultiClient>::Get(); }
 
 inline Maybe<bool> IsMultiClient() {
   CHECK_NOTNULL_OR_RETURN(IsMultiClientPtr());

@@ -32,7 +32,7 @@ class ReturnKernel final : public Kernel {
 };
 
 void ReturnKernel::ForwardDataContent(KernelContext* ctx) const {
-  if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+  if (CHECK_JUST(*Global<Optional<bool>, MultiClient>::Get())) {
     CHECK(this->op_conf().return_conf().has_job_name());
     const auto& job_name = this->op_conf().return_conf().job_name();
     const auto& op_name = this->op_conf().name();
@@ -52,7 +52,7 @@ void ReturnKernel::ForwardDataContent(KernelContext* ctx) const {
 }
 
 void ReturnKernel::ForwardHeader(KernelContext* ctx) const {
-  if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+  if (CHECK_JUST(*Global<Optional<bool>, MultiClient>::Get())) {
     // Do nothing.
   } else {
     ctx->BnInOp2Blob("out")->CopyHeaderFrom(ctx->device_ctx(), ctx->BnInOp2Blob("in"));

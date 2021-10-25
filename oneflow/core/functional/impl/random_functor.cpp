@@ -147,7 +147,7 @@ class ConsistentRandFunctor {
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+    if (!JUST(*Global<Optional<bool>, MultiClient>::Get())) {
       JUST(attrs.SetAttr<std::string>("nd_sbp", nd_sbp->DebugString()));
     }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
@@ -234,7 +234,7 @@ class ConsistentRandNFunctor {
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+    if (!JUST(*Global<Optional<bool>, MultiClient>::Get())) {
       JUST(attrs.SetAttr<std::string>("nd_sbp", nd_sbp->DebugString()));
     }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
