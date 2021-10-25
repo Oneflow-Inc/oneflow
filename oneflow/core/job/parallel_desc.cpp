@@ -71,8 +71,7 @@ Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf) {
   return machine2device_list;
 }
 
-ParallelDesc::ParallelDesc(const ParallelConf& user_conf)
-    : symbol_id_(NullOpt) {
+ParallelDesc::ParallelDesc(const ParallelConf& user_conf) : symbol_id_(NullOpt) {
   CHECK_JUST(MaybeInit(user_conf));
   CHECK_JUST(CheckWithResourceDesc(*(Global<ResourceDesc, ForSession>::Get())));
 }

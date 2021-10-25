@@ -35,8 +35,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::init([](int64_t symbol_id, const std::shared_ptr<cfg::JobConfigProto>& symbol_conf) {
         return CreateJobConfSymbol(symbol_id, symbol_conf).GetPtrOrThrow();
       }))
-      .def_property_readonly("symbol_id",
-                             [](const JobDesc& x) { return x.symbol_id(); })
+      .def_property_readonly("symbol_id", [](const JobDesc& x) { return x.symbol_id(); })
       .def_property_readonly("data", &JobDesc::cfg_job_conf);
 }
 

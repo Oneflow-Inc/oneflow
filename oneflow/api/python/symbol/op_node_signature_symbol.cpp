@@ -37,8 +37,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
           py::init([](int64_t symbol_id, const std::shared_ptr<cfg::OpNodeSignature>& symbol_conf) {
             return CreateScopeSymbol(symbol_id, symbol_conf).GetPtrOrThrow();
           }))
-      .def_property_readonly(
-          "symbol_id", [](const OpNodeSignatureDesc& x) { return x.symbol_id(); })
+      .def_property_readonly("symbol_id",
+                             [](const OpNodeSignatureDesc& x) { return x.symbol_id(); })
       .def("data", &OpNodeSignatureDesc::op_node_signature);
 }
 
