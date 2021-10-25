@@ -32,21 +32,21 @@ LogicalResult JitImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
 }
 Type JitImporter::GetTensorTypeOfLbn(const std::string& lbn) {
   llvm::errs() << "[GetTensorTypeOfLbn] " << lbn << "\n";
-  return GetBuilder().getF128Type();
+  LogicalBlobId lbi = GenLogicalBlobId(lbn);
+  return result_type_mapping_.at(lbi.blob_name());
 }
 std::shared_ptr<MirroredTensor> JitImporter::MakeIntermediateTensor(
     const std::string& lbn, Value result, const std::shared_ptr<ParallelDesc>& parallel_desc) {
-  auto tensor_shape = result.getType().cast<TensorType>();
+  auto tensor_type = result.getType().cast<TensorType>();
   auto dtype = DataType::kInvalidDataType;
-  if (tensor_shape.getElementType().isF32()) {
+  if (tensor_type.getElementType().isF32()) {
     dtype = DataType::kFloat;
   } else {
     result.dump();
     LOG(FATAL) << "fail to creat tensor";
   }
   const auto& device = CHECK_JUST(Device::MakeDeviceByParallelDesc(*parallel_desc));
-  auto shape_from_mlir =
-      new Shape({tensor_shape.getShape().begin(), tensor_shape.getShape().end()});
+  auto shape_from_mlir = new Shape({tensor_type.getShape().begin(), tensor_type.getShape().end()});
   auto shape = std::make_shared<Shape>();
   shape.reset(shape_from_mlir);
   auto tensor = MirroredTensor::MakeTensor(shape, dtype, device, /* is_lazy */ true,
@@ -109,12 +109,37 @@ mlir::FuncOp JitImporter::GetOrInsertFunc(const std::string& func_name, const Te
   }
 }
 
+std::unique_ptr<BlobDesc> GetBlobDescFromMlirTensorType(TensorType tensor_type) {
+  auto dtype = DataType::kInvalidDataType;
+  if (tensor_type.getElementType().isF32()) {
+    dtype = DataType::kFloat;
+  } else {
+    tensor_type.dump();
+    LOG(FATAL) << "fail to get BlobDesc from TensorType";
+  }
+  auto shape_from_mlir = new Shape({tensor_type.getShape().begin(), tensor_type.getShape().end()});
+  return std::make_unique<BlobDesc>(*shape_from_mlir, dtype);
+}
+
+llvm::Optional<TensorType> JitImporter::GetMlirTensorTypeFromBlobDesc(const BlobDesc& blob_desc) {
+  if (auto t = GetTypeFromOneFlowDataType(blob_desc.data_type())) {
+    return RankedTensorType::get(
+        ArrayRef<int64_t>(blob_desc.shape().dim_vec().begin(), blob_desc.shape().dim_vec().end()),
+        t.getValue());
+  } else {
+    return llvm::None;
+  }
+}
+
 void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op_conf,
+                                       const std::shared_ptr<const ParallelDesc> parallel_desc,
                                        const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                        const TensorTuple& inputs) {
   operand_mapping_.clear();
   input_arg_tuple_ = input_arg_tuple;
   inputs_ = inputs;
+  HashMap<std::string, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
+  auto op = CHECK_JUST(ConstructOp(op_conf));
   // TODO: refactor using GetResultByBnAndIndex
   for (auto pair : llvm::zip(input_arg_tuple->indexed_bns(), inputs)) {
     const auto& indexed_bn = std::get<0>(pair);
@@ -133,6 +158,27 @@ void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op_conf,
     } else {
       assert(operand_mapping_.emplace(indexed_bn, result_mapping_.at(tensor.get())).second);
     }
+  }
+  // TODO: refine here
+  auto GetLogicalBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
+    LOG(ERROR) << "[GetLogicalBlobDesc4BnInOp] " << bn;
+    if (lbi2logical_blob_desc_.find(bn) == lbi2logical_blob_desc_.end()) {
+      auto operand_it = operand_mapping_.find(bn);
+      if (operand_it == operand_mapping_.end()) {
+        auto blob_desc = std::make_unique<BlobDesc>(DataType::kInvalidDataType);
+        CHECK(lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc)).second);
+      } else {
+        auto found = GetBlobDescFromMlirTensorType(operand_it->second.getType().cast<TensorType>());
+        CHECK(lbi2logical_blob_desc_.emplace(bn, std::move(found)).second);
+      }
+    }
+    return lbi2logical_blob_desc_.at(bn).get();
+  };
+  CHECK_JUST(op->InferLogicalOutBlobDescs(GetLogicalBlobDesc4BnInOp, *parallel_desc));
+  for (auto& kv : lbi2logical_blob_desc_) {
+    CHECK(
+        result_type_mapping_.emplace(kv.first, GetMlirTensorTypeFromBlobDesc(*kv.second).getValue())
+            .second);
   }
 }
 

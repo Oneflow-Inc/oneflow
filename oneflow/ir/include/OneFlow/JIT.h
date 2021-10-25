@@ -44,12 +44,14 @@ class JitImporter : public Importer {
   mlir::FuncOp GetOrInsertFunc(const std::string& func_name, const TensorTuple& inputs,
                                TensorTuple* outputs);
   void CreateOperandMapping(const ::oneflow::OperatorConf& op,
+                            const std::shared_ptr<const ParallelDesc>,
                             const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                             const TensorTuple& inputs);
   // get blob decs from inferred op
   mlir::Value GetResultByBnAndIndex(const std::string& bn, const int32_t index);
   std::shared_ptr<MirroredTensor> MakeIntermediateTensor(
       const std::string& lbn, Value result, const std::shared_ptr<ParallelDesc>& parallel_desc);
+  llvm::Optional<TensorType> GetMlirTensorTypeFromBlobDesc(const BlobDesc& blob_desc);
 
  private:
   std::unordered_map<Tensor*, mlir::Value> result_mapping_;  // tensor* => %result

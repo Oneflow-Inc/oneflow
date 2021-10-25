@@ -72,14 +72,12 @@ Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTup
     CHECK_EQ_OR_RETURN(is_local, input_tensor->is_local());
   }
   CHECK_EQ_OR_RETURN(outputs->size(), op_expr.output_size());
-  auto op = JUST(ConstructOp(*op_conf));
   auto indexed_arg_name_and_index = op_expr.input_arg_tuple()->indexed_arg_name_and_index();
   CHECK_EQ_OR_RETURN(indexed_arg_name_and_index.size(), inputs.size());
   importer_.GetOrInsertFunc(GetJitFuncName(), inputs, outputs);
-  importer_.CreateOperandMapping(*op_conf, op_expr.input_arg_tuple(), inputs);
+  importer_.CreateOperandMapping(*op_conf, parallel_desc, op_expr.input_arg_tuple(), inputs);
   CHECK_OR_RETURN(importer_.ProcessUserOp(*op_conf).succeeded());
   LOG(ERROR) << "[func name] " << GetJitFuncName();
-  LOG(ERROR) << "[applied] " << op->op_name();
   module_->dump();
   // TODO: MLIR add op expr
   return Maybe<void>::Ok();
