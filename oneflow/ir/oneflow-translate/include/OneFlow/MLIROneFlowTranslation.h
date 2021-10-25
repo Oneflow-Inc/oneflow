@@ -69,7 +69,7 @@ class Importer {
                                        std::vector<NamedAttribute>& attr_vec);
   LogicalResult AddResultSegmentSizes(int32_t output_lbns_size,
                                       std::vector<NamedAttribute>& attr_vec);
-  virtual LogicalResult InsertOpResults(Operation*) = 0;
+  virtual LogicalResult InsertOpResults(const ::oneflow::OperatorConf& op, Operation*) = 0;
   LogicalResult ProcessUserOp(const ::oneflow::OperatorConf& op);
   virtual LogicalResult ProcessSystemOp(const ::oneflow::OperatorConf& op) = 0;
 

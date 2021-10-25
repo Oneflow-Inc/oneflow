@@ -399,7 +399,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
                            + " op, name: " + op.name());
     return failure();
   }
-  if (failed(InsertOpResults(created_op))) { return failure(); }
+  if (failed(InsertOpResults(op, created_op))) { return failure(); }
 
   return success();
 }  // namespace

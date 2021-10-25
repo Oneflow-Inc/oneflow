@@ -76,7 +76,7 @@ class JobImporter : Importer {
                                     std::vector<::mlir::Value>& operand_vec) override;
   LogicalResult AddDeviceName(const ::oneflow::OperatorConf& op,
                               std::vector<NamedAttribute>& attr_vec) override;
-  LogicalResult InsertOpResults(Operation*) override;
+  LogicalResult InsertOpResults(const ::oneflow::OperatorConf& op, Operation*) override;
   LogicalResult ProcessSystemOp(const ::oneflow::OperatorConf& op) override;
   LogicalResult ProcessJob();
   LogicalResult TryToUpdateJob();
@@ -119,7 +119,8 @@ LogicalResult JobImporter::AppendDataInOperand(const std::string& lbn,
   }
 }
 
-LogicalResult JobImporter::InsertOpResults(Operation* created_op) {
+LogicalResult JobImporter::InsertOpResults(const ::oneflow::OperatorConf& op,
+                                           Operation* created_op) {
   for (auto data_out : llvm::enumerate(GetDataOutputResults(created_op))) {
     auto output_lbns = created_op->getAttrOfType<ArrayAttr>("output_lbns");
     lbn2result_.insert({output_lbns[data_out.index()].dyn_cast<StringAttr>().getValue().str(),
@@ -199,7 +200,7 @@ LogicalResult JobImporter::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
   state.addOperands(operand_vec);
   state.addTypes(out_types);
   auto created_op = GetBuilder().createOperation(state);
-  if (failed(InsertOpResults(created_op))) { return failure(); }
+  if (failed(InsertOpResults(op, created_op))) { return failure(); }
   if (!created_op) {
     GetModule()->emitError("fail to create op, name: " + op.name());
     return failure();

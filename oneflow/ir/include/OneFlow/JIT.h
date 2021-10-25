@@ -35,7 +35,7 @@ class JitImporter : public Importer {
   LogicalResult AddDeviceName(const ::oneflow::OperatorConf& op,
                               std::vector<NamedAttribute>& attr_vec) override;
   // save tensor=>value mapping
-  LogicalResult InsertOpResults(Operation*) override;
+  LogicalResult InsertOpResults(const ::oneflow::OperatorConf& op, Operation*) override;
   Type GetTensorTypeOfLbn(const std::string& lbn) override;
   ::oneflow::AttrType QueryAttrType(const std::string& op_type_name,
                                     const std::string& attr_name) override;
