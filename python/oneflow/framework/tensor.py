@@ -174,6 +174,18 @@ def _contiguous(self):
     return self
 
 
+def _norm(self, ord=None, dim=None, keepdim=False, dtype=None):
+    return flow._C.norm(self, ord, dim, keepdim, dtype=dtype)
+
+
+def _vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
+    return flow._C.vector_norm(self, ord, dim, keepdim, dtype=dtype)
+
+
+def _matrix_norm(self, ord="fro", dim=(-2, -1), keepdim=False, dtype=None):
+    return flow._C.matrix_norm(self, ord, dim, keepdim, dtype=dtype)
+
+
 def _transpose(self, dim0, dim1):
     return flow._C.transpose(self, dim0, dim1)
 
@@ -766,6 +778,9 @@ def RegisterMethods():
     Tensor.tril = _tril
     Tensor.triu = _triu
     Tensor.contiguous = _contiguous
+    Tensor.norm = _norm
+    Tensor.vector_norm = _vector_norm
+    Tensor.matrix_norm = _matrix_norm
     Tensor.transpose = _transpose
     Tensor.relu = _relu
     Tensor.softmax = _softmax

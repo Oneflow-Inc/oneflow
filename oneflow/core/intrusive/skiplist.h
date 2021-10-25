@@ -35,10 +35,9 @@ class SkipList {
   using value_type = typename ElemKeyField::struct_type;
   using key_type = typename ElemKeyField::field_type::key_type;
   using elem_key_level0_hook_struct_field =
-      StructField<typename ElemKeyField::field_type, intrusive::ListHook,
-                  ElemKeyField::field_type::LevelZeroHookOffset()>;
-  using iterator_struct_field =
-      typename ComposeStructField<ElemKeyField, elem_key_level0_hook_struct_field>::type;
+      OffsetStructField<typename ElemKeyField::field_type, intrusive::ListHook,
+                        ElemKeyField::field_type::LevelZeroHookOffset()>;
+  using iterator_struct_field = ComposeStructField<ElemKeyField, elem_key_level0_hook_struct_field>;
   template<typename Enabled = void>
   static constexpr int IteratorHookOffset() {
     return offsetof(SkipList, skiplist_head_)
