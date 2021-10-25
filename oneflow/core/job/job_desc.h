@@ -84,7 +84,7 @@ class JobDesc final {
 
   JobConfigProto job_conf_;
   int64_t job_id_;
-  Maybe<int64_t> symbol_id_;
+  Optional<int64_t> symbol_id_;
   // merge job_conf_ and cfg_job_conf_ after cfg::JobConfigProto taken as a constructor argument
   std::shared_ptr<cfg::JobConfigProto> cfg_job_conf_;
 };
