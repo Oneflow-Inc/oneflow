@@ -66,11 +66,11 @@ Maybe<Generator> DefaultCPUGenerator() {
 
 #ifdef WITH_CUDA
 Maybe<Generator> DefaultCUDAGenerator(int device_index) {
-  static int device_count = detail::GetCudaDeviceCount();
+  static int device_count = GetCudaDeviceCount();
   static std::vector<std::once_flag> init_flags(device_count);
   static std::vector<std::shared_ptr<Generator>> default_cuda_generator(device_count);
 
-  if (device_index == -1) { device_index = detail::GetCudaDeviceIndex(); }
+  if (device_index == -1) { device_index = GetCudaDeviceIndex(); }
   CHECK_OR_RETURN(device_index >= 0 && device_index < device_count)
       << "Invalid device index " << device_index;
   std::call_once(init_flags[device_index], [&]() {
@@ -91,8 +91,8 @@ Maybe<Generator> MakeCPUGenerator() {
 
 #ifdef WITH_CUDA
 Maybe<Generator> MakeCUDAGenerator(int device_index) {
-  if (device_index == -1) { device_index = detail::GetCudaDeviceIndex(); }
-  CHECK_OR_RETURN(device_index >= 0 && device_index < detail::GetCudaDeviceCount())
+  if (device_index == -1) { device_index = GetCudaDeviceIndex(); }
+  CHECK_OR_RETURN(device_index >= 0 && device_index < GetCudaDeviceCount())
       << "Invalid device index " << device_index;
   return std::make_shared<Generator>(
       std::make_shared<CUDAGeneratorImpl>(default_rng_seed_val, device_index));

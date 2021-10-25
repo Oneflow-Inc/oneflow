@@ -26,8 +26,7 @@ namespace test {
 
 namespace {
 
-// clang-format off
-INTRUSIVE_BEGIN(Foo);
+class Foo final : public intrusive::Base {
  public:
   int x() const { return x_; }
   void set_x(int val) { x_ = val; }
@@ -36,13 +35,14 @@ INTRUSIVE_BEGIN(Foo);
   Foo() : intrusive_ref_(), x_(), hook_() {}
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
+  intrusive::Ref intrusive_ref_;
   // fields
-  INTRUSIVE_DEFINE_FIELD(int, x_);
+  int x_;
+
+ public:
   // list hooks
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, hook_);
-INTRUSIVE_END(Foo);
-// clang-format on
+  intrusive::ListHook hook_;
+};
 
 using ChannelFoo = intrusive::Channel<INTRUSIVE_FIELD(Foo, hook_)>;
 

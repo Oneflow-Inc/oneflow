@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_ACCESS_BLOB_ARG_CB_PHY_INSTR_OPERAND_H_
 
 #include <functional>
+#include <memory>
 #include "oneflow/core/vm/phy_instr_operand.h"
 
 namespace oneflow {
