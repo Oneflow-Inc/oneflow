@@ -52,9 +52,9 @@ py::object PackTensorTuple(const one::TensorTuple& tp) {
   if (tp.size() == 1) {
     return py::cast(tp.at(0));
   } else {
-    const py::tuple& out = py::tuple(tp.size());
+    py::tuple out = py::tuple(tp.size());
     for (int i = 0; i < tp.size(); ++i) { out[i] = tp.at(i); }
-    return out;
+    return py::cast<py::object>(out);
   }
 }
 
