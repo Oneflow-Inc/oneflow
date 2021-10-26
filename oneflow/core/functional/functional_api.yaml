@@ -248,8 +248,16 @@
   signature: "Tensor (Tensor x) => Reciprocal"
   bind_python: True
 
+- name: "reciprocal_"
+  signature: "Tensor (Tensor x) => Reciprocal_"
+  bind_python: True
+
 - name: "reciprocal_no_nan"
   signature: "Tensor (Tensor x) => ReciprocalNoNan"
+  bind_python: True
+
+- name: "reciprocal_no_nan_"
+  signature: "Tensor (Tensor x) => ReciprocalNoNan_"
   bind_python: True
 
 - name: "image_flip"
@@ -285,16 +293,32 @@
   signature: "Tensor (Tensor x) => Log"
   bind_python: True
 
+- name: "log_"
+  signature: "Tensor (Tensor x) => Log_"
+  bind_python: True
+
 - name: "sqrt"
   signature: "Tensor (Tensor x) => Sqrt"
+  bind_python: True
+  
+- name: "sqrt_"
+  signature: "Tensor (Tensor x) => Sqrt_"
   bind_python: True
 
 - name: "rsqrt"
   signature: "Tensor (Tensor x) => Rsqrt"
   bind_python: True
 
+- name: "rsqrt_"
+  signature: "Tensor (Tensor x) => Rsqrt_"
+  bind_python: True
+
 - name: "square"
   signature: "Tensor (Tensor x) => Square"
+  bind_python: True
+
+- name: "square_"
+  signature: "Tensor (Tensor x) => Square_"
   bind_python: True
 
 - name: "std"
@@ -329,8 +353,16 @@
   signature: "Tensor (Tensor x) => Tan"
   bind_python: True
 
+- name: "tan_"
+  signature: "Tensor (Tensor x) => Tan_"
+  bind_python: True
+
 - name: "tanh"
   signature: "Tensor (Tensor x) => Tanh"
+  bind_python: True
+
+- name: "tanh_"
+  signature: "Tensor (Tensor x) => Tanh_"
   bind_python: True
 
 - name: "elu"
@@ -363,6 +395,10 @@
 
 - name: "sigmoid"
   signature: "Tensor (Tensor x) => Sigmoid"
+  bind_python: True
+
+- name: "sigmoid_"
+  signature: "Tensor (Tensor x) => Sigmoid_"
   bind_python: True
 
 - name: "hardsigmoid"
@@ -616,6 +652,10 @@
   signature: "Tensor (Tensor x) => Exp"
   bind_python: True
 
+- name: "exp_"
+  signature: "Tensor (Tensor x) => Exp_"
+  bind_python: True
+
 - name: "gather"
   signature: "Tensor (Tensor x, Tensor indices, Int64 axis) => Gather"
   bind_python: True
@@ -788,6 +828,10 @@
 
 - name: "negative"
   signature: "Tensor (Tensor x) => Negative"
+  bind_python: True
+
+- name: "negative_"
+  signature: "Tensor (Tensor x) => Negative_"
   bind_python: True
 
 - name: "layer_norm_affine"
@@ -1027,20 +1071,40 @@
   signature: "Tensor (Tensor x) => Abs"
   bind_python: True
 
+- name: "abs_"
+  signature: "Tensor (Tensor x) => Abs_"
+  bind_python: True
+
 - name: "acos"
   signature: "Tensor (Tensor x) => Acos"
+  bind_python: True
+
+- name: "acos_"
+  signature: "Tensor (Tensor x) => Acos_"
   bind_python: True
 
 - name: "acosh"
   signature: "Tensor (Tensor x) => Acosh"
   bind_python: True
 
+- name: "acosh_"
+  signature: "Tensor (Tensor x) => Acosh_"
+  bind_python: True
+
 - name: "asin"
   signature: "Tensor (Tensor x) => Asin"
   bind_python: True
 
+- name: "asin_"
+  signature: "Tensor (Tensor x) => Asin_"
+  bind_python: True
+
 - name: "asinh"
   signature: "Tensor (Tensor x) => Asinh"
+  bind_python: True
+
+- name: "asinh_"
+  signature: "Tensor (Tensor x) => Asinh_"
   bind_python: True
 
 - name: "atan"
@@ -1055,56 +1119,112 @@
   signature: "Tensor (Tensor x) => Atanh"
   bind_python: True
 
+- name: "atanh_"
+  signature: "Tensor (Tensor x) => Atanh_"
+  bind_python: True
+
 - name: "ceil"
   signature: "Tensor (Tensor x) => Ceil"
+  bind_python: True
+
+- name: "ceil_"
+  signature: "Tensor (Tensor x) => Ceil_"
   bind_python: True
 
 - name: "erf"
   signature: "Tensor (Tensor x) => Erf"
   bind_python: True
 
+- name: "erf_"
+  signature: "Tensor (Tensor x) => Erf_"
+  bind_python: True
+
 - name: "erfc"
   signature: "Tensor (Tensor x) => Erfc"
+  bind_python: True
+
+- name: "erfc_"
+  signature: "Tensor (Tensor x) => Erfc_"
   bind_python: True
 
 - name: "expm1"
   signature: "Tensor (Tensor x) => Expm1"
   bind_python: True
 
+- name: "expm1_"
+  signature: "Tensor (Tensor x) => Expm1_"
+  bind_python: True
+
 - name: "floor"
   signature: "Tensor (Tensor x) => Floor"
+  bind_python: True
+
+- name: "floor_"
+  signature: "Tensor (Tensor x) => Floor_"
   bind_python: True
 
 - name: "lgamma"
   signature: "Tensor (Tensor x) => Lgamma"
   bind_python: True
 
+- name: "lgamma_"
+  signature: "Tensor (Tensor x) => Lgamma_"
+  bind_python: True
+
 - name: "log1p"
   signature: "Tensor (Tensor x) => Log1p"
+  bind_python: True
+
+- name: "log1p_"
+  signature: "Tensor (Tensor x) => Log1p_"
   bind_python: True
 
 - name: "logsigmoid"
   signature: "Tensor (Tensor x) => LogSigmoid"
   bind_python: True
 
+- name: "logsigmoid_"
+  signature: "Tensor (Tensor x) => LogSigmoid_"
+  bind_python: True
+
 - name: "rint"
   signature: "Tensor (Tensor x) => Rint"
+  bind_python: True
+
+- name: "rint_"
+  signature: "Tensor (Tensor x) => Rint_"
   bind_python: True
 
 - name: "round"
   signature: "Tensor (Tensor x) => Round"
   bind_python: True
 
+- name: "round_"
+  signature: "Tensor (Tensor x) => Round_"
+  bind_python: True
+
 - name: "sign"
   signature: "Tensor (Tensor x) => Sign"
+  bind_python: True
+
+- name: "sign_"
+  signature: "Tensor (Tensor x) => Sign_"
   bind_python: True
 
 - name: "sinh"
   signature: "Tensor (Tensor x) => Sinh"
   bind_python: True
 
+- name: "sinh_"
+  signature: "Tensor (Tensor x) => Sinh_"
+  bind_python: True
+
 - name: "softplus"
   signature: "Tensor (Tensor x) => Softplus"
+  bind_python: True
+  
+- name: "softplus_"
+  signature: "Tensor (Tensor x) => Softplus_"
   bind_python: True
 
 - name: "one_hot"

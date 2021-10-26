@@ -108,3 +108,17 @@ add_docstr(
     See :func:`oneflow.squeeze`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.negative,
+    """
+    See :func:`oneflow.negative`
+    """
+)
+
+add_docstr(
+    oneflow.Tensor.negative_,
+    """
+    In-place version of :func:`oneflow.Tensor.negative`
+    """
+)
