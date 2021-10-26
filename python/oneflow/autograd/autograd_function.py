@@ -62,7 +62,7 @@ class Function(AutogradFunctionBase):
         r"""
         Calculate output tensors and build backward graph.
         """
-        return super().apply(inputs)
+        return super().apply(*inputs)
 
     @staticmethod
     def forward(ctx, *inputs):

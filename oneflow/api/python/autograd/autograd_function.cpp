@@ -49,13 +49,13 @@ Maybe<one::TensorTuple> UnpackTensorTuple(const py::object& input) {
 
 // Return single Tensor when TensorTuple's size is one, otherwise py::tuple
 py::object PackTensorTuple(const one::TensorTuple& tp) {
-  py::object out;
   if (tp.size() == 1) {
-    out = py::cast(tp.at(0));
+    return py::cast(tp.at(0));
   } else {
-    out = py::cast(tp);
+    const py::tuple& out = py::tuple(tp.size());
+    for (int i = 0; i < tp.size(); ++i) { out[i] = tp.at(i); }
+    return out;
   }
-  return out;
 }
 
 // wrap PyFunction, unpack the inputs from TensorTuple and pack outputs to TensorTuple
@@ -79,7 +79,7 @@ ONEFLOW_API_PYBIND11_MODULE("autograd", m) {
         return std::make_shared<AutogradFunctionBase>(func_name, PackPyFunctionToFType(forward_fn),
                                                       PackPyFunctionToFType(backward_fn));
       }))
-      .def("apply", [](const AutogradFunctionBase& func, const py::object& input) {
+      .def("apply", [](const AutogradFunctionBase& func, const py::args& input) {
         const auto& input_tensor_tuple = UnpackTensorTuple(input).GetOrThrow();
         const std::shared_ptr<TensorTuple>& res = func.Apply(input_tensor_tuple).GetPtrOrThrow();
         return PackTensorTuple(*res);
@@ -96,11 +96,10 @@ ONEFLOW_API_PYBIND11_MODULE("autograd", m) {
       .def_property_readonly(
           "saved_tensors",
           [](const FunctionAutoGradCaptureState& ctx) { return py::cast(ctx.SavedTensors()); })
-      .def("mark_non_differentiable",
-           [](FunctionAutoGradCaptureState& ctx, const py::object& input) {
-             const auto& tensors = UnpackTensorTuple(input).GetOrThrow();
-             for (const auto& tensor : tensors) { ctx.MarkNonDifferentiable(tensor); }
-           });
+      .def("mark_non_differentiable", [](FunctionAutoGradCaptureState& ctx, const py::args& input) {
+        const auto& tensors = UnpackTensorTuple(input).GetOrThrow();
+        for (const auto& tensor : tensors) { ctx.MarkNonDifferentiable(tensor); }
+      });
 }
 
 }  // namespace one
