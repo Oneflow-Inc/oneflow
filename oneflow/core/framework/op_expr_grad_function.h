@@ -42,7 +42,9 @@ class AutoGradCaptureState {
   TensorTuple saved_tensors_;
 };
 
-class FunctionAutoGradCaptureState final : public AutoGradCaptureState {
+class FunctionAutoGradCaptureState final
+    : public AutoGradCaptureState,
+      public std::enable_shared_from_this<FunctionAutoGradCaptureState> {
  public:
   FunctionAutoGradCaptureState() = default;
   using AutoGradCaptureState::SavedTensors;
@@ -53,6 +55,8 @@ class FunctionAutoGradCaptureState final : public AutoGradCaptureState {
   }
 
   HashSet<Tensor*> NonDifferentiableTensors() const { return non_differentiable_tensors_; }
+
+  std::shared_ptr<FunctionAutoGradCaptureState> GetSharedFromThis() { return shared_from_this(); }
 
  private:
   HashSet<Tensor*> non_differentiable_tensors_;
@@ -158,7 +162,8 @@ class FunctionOpExprGradFunction final : public OpExprGradFunctionIf {
     const FunctionAutoGradCaptureState* func_ctx =
         dynamic_cast<const FunctionAutoGradCaptureState*>(ctx);
     CHECK_NOTNULL_OR_RETURN(func_ctx);
-    const std::shared_ptr<TensorTuple>& out = backward_fn_(func_ctx, out_grads);
+    const std::shared_ptr<TensorTuple>& out = backward_fn_(
+        const_cast<FunctionAutoGradCaptureState*>(func_ctx)->GetSharedFromThis(), out_grads);
     in_grads->assign(out->begin(), out->end());
     return Maybe<void>::Ok();
   }
