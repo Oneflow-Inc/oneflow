@@ -19,6 +19,7 @@ limitations under the License.
 
 #include <cub/cub.cuh>
 #include <math_constants.h>
+#include <assert.h>
 
 namespace oneflow {
 
@@ -28,14 +29,43 @@ namespace layer_norm {
 
 constexpr int kWarpSize = 32;
 
-inline int GetNumBlocks(int64_t block_size, int64_t max_blocks, int64_t waves) {
+
+template<typename T>
+__inline__ __device__ T Div(T a, T b);
+
+template<>
+__inline__ __device__ float Div<float>(float a, float b) {
+#ifdef OF_SOFTMAX_USE_FAST_MATH
+  return __fdividef(a, b);
+#else
+  return a / b;
+#endif
+}
+
+template<>
+__inline__ __device__ double Div<double>(double a, double b) {
+  return a / b;
+}
+inline cudaError_t GetNumBlocks(int64_t block_size, int64_t max_blocks, int64_t waves,
+                                int* num_blocks) {
   int dev;
-  OF_CUDA_CHECK(cudaGetDevice(&dev));
+  {
+    cudaError_t err = cudaGetDevice(&dev);
+    if (err != cudaSuccess) { return err; }
+  }
   int sm_count;
-  OF_CUDA_CHECK(cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev));
+  {
+    cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
+    if (err != cudaSuccess) { return err; }
+  }
   int tpm;
-  OF_CUDA_CHECK(cudaDeviceGetAttribute(&tpm, cudaDevAttrMaxThreadsPerMultiProcessor, dev));
-  return std::max<int>(1, std::min<int64_t>(max_blocks, sm_count * tpm / block_size * waves));
+  {
+    cudaError_t err = cudaDeviceGetAttribute(&tpm, cudaDevAttrMaxThreadsPerMultiProcessor, dev);
+    if (err != cudaSuccess) { return err; }
+  }
+  *num_blocks =
+      std::max<int>(1, std::min<int64_t>(max_blocks, sm_count * tpm / block_size * waves));
+  return cudaSuccess;
 }
 
 template<typename T>
@@ -100,29 +130,30 @@ template<typename T>
 struct WelfordAggregate {
   T mean;
   T m2;
-  int count;
-  __device__ WelfordAggregate() : mean(0), m2(0), count(0) {}
-  __device__ WelfordAggregate(T mean, T m2, int count) : mean(mean), m2(m2), count(count) {}
+  T count;
+  //__device__ WelfordAggregate() : mean(0), m2(0), count(0) {}
+  __device__ WelfordAggregate() {}
+  __device__ WelfordAggregate(T mean, T m2, T count) : mean(mean), m2(m2), count(count) {}
   inline __device__ void reduce(T val) {
     // Use Welford Online algorithem to compute mean and variance
     // For more details you can refer to:
     // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
     count = count + 1;
     T delta1 = val - mean;
-    mean += delta1 / count;
+    mean += Div(delta1, count);
     T delta2 = val - mean;
     m2 += delta1 * delta2;
   }
   inline __device__ void combine(WelfordAggregate<T> data) {
     if (data.count == 0) { return; }
     T new_count = count + data.count;
-    T nb_over_n = data.count / new_count;
+    T nb_over_n = Div(data.count, new_count);
     T delta = data.mean - mean;
     mean += delta * nb_over_n;
     m2 += data.m2 + delta * delta * count * nb_over_n;
     count = new_count;
   }
-  inline __device__ T project() const { return m2 / count; }
+  inline __device__ T project() const { return Div(m2, count); }
 };
 
 template<typename T, int thread_group_width = kWarpSize>
@@ -150,6 +181,7 @@ __inline__ __device__ WelfordAggregate<T> WelfordAggregateWarpReduce(WelfordAggr
 template<typename T>
 __inline__ __device__ WelfordAggregate<T> WelfordAggregateBlockAllReduce(
     WelfordAggregate<T> val, WelfordAggregate<T>* shared) {
+  typedef WelfordAggregate<T> WelfordType;
   __shared__ WelfordAggregate<T> result_broadcast;
   const int lid = threadIdx.x % 32;
   const int wid = threadIdx.x / 32;
@@ -233,7 +265,7 @@ __global__ void LayerNormWarpImpl(LOAD load, STORE store, const int64_t rows, co
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int cols_per_thread,
          int thread_group_width, int rows_per_access, bool padding>
-inline void LaunchLayerNormWarpImpl(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
+inline cudaError_t LaunchLayerNormWarpImpl(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
                                     const int64_t cols, const double epsilon, ComputeType* mean,
                                     ComputeType* inv_variance) {
   constexpr int block_size = 128;
@@ -242,42 +274,47 @@ inline void LaunchLayerNormWarpImpl(cudaStream_t stream, LOAD load, STORE store,
   constexpr int rows_per_block = block_size / thread_group_width;
   dim3 block_dim(thread_group_width, rows_per_block);
   const int64_t num_blocks = (rows + rows_per_block - 1) / rows_per_block;
-  const int grid_dim_x = GetNumBlocks(block_size, num_blocks, waves);
+  int grid_dim_x;
+  {
+    cudaError_t err = GetNumBlocks(block_size, num_blocks, waves, &grid_dim_x);
+    if (err != cudaSuccess) { return err; }
+  }
   LayerNormWarpImpl<LOAD, STORE, ComputeType, pack_size, cols_per_thread, thread_group_width,
                     rows_per_access, padding>
       <<<grid_dim_x, block_dim, 0, stream>>>(load, store, rows, cols, epsilon, mean, inv_variance);
+  return cudaPeekAtLastError();
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int cols_per_thread,
          int thread_group_width, int rows_per_access>
-inline void DispatchLayerNormWarpImplPadding(cudaStream_t stream, LOAD load, STORE store,
+inline cudaError_t DispatchLayerNormWarpImplPadding(cudaStream_t stream, LOAD load, STORE store,
                                              const int64_t rows, const int64_t cols,
                                              const double epsilon, ComputeType* mean,
                                              ComputeType* inv_variance) {
   if (cols == cols_per_thread * thread_group_width) {
-    LaunchLayerNormWarpImpl<LOAD, STORE, ComputeType, pack_size, cols_per_thread,
+    return LaunchLayerNormWarpImpl<LOAD, STORE, ComputeType, pack_size, cols_per_thread,
                             thread_group_width, rows_per_access, false>(
         stream, load, store, rows, cols, epsilon, mean, inv_variance);
   } else {
-    LaunchLayerNormWarpImpl<LOAD, STORE, ComputeType, pack_size, cols_per_thread,
+    return LaunchLayerNormWarpImpl<LOAD, STORE, ComputeType, pack_size, cols_per_thread,
                             thread_group_width, rows_per_access, true>(
         stream, load, store, rows, cols, epsilon, mean, inv_variance);
   }
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size>
-typename std::enable_if<pack_size == 1, void>::type DispatchLayerNormWarpImplCols(
+typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchLayerNormWarpImplCols(
     cudaStream_t stream, LOAD load, STORE store, const int64_t rows, const int64_t cols,
     const double epsilon, ComputeType* mean, ComputeType* inv_variance) {
-  if (cols <= 0) { UNIMPLEMENTED(); }
+  if (cols <= 0) { return cudaErrorInvalidValue; }
 #define DEFINE_ONE_ELIF(thread_group_width)                                                    \
   else if (cols <= (thread_group_width)*pack_size) {                                           \
     if (rows % 2 == 0) {                                                                       \
-      DispatchLayerNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,         \
+      return DispatchLayerNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,         \
                                        thread_group_width, 2>(stream, load, store, rows, cols, \
                                                               epsilon, mean, inv_variance);    \
     } else {                                                                                   \
-      DispatchLayerNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,         \
+      return DispatchLayerNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,         \
                                        thread_group_width, 1>(stream, load, store, rows, cols, \
                                                               epsilon, mean, inv_variance);    \
     }                                                                                          \
@@ -291,7 +328,7 @@ typename std::enable_if<pack_size == 1, void>::type DispatchLayerNormWarpImplCol
 #undef DEFINE_ONE_ELIF
 #define DEFINE_ONE_ELIF(col)                                                                  \
   else if (cols <= (col)*kWarpSize) {                                                         \
-    DispatchLayerNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, col, kWarpSize, 1>( \
+    return DispatchLayerNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, col, kWarpSize, 1>( \
         stream, load, store, rows, cols, epsilon, mean, inv_variance);                        \
   }
   DEFINE_ONE_ELIF(2)
@@ -327,23 +364,23 @@ typename std::enable_if<pack_size == 1, void>::type DispatchLayerNormWarpImplCol
   DEFINE_ONE_ELIF(32)
 #undef DEFINE_ONE_ELIF
   else {
-    UNIMPLEMENTED();
+    return cudaErrorInvalidValue;
   }
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size>
-typename std::enable_if<pack_size == 2, void>::type DispatchLayerNormWarpImplCols(
+typename std::enable_if<pack_size == 2, cudaError_t>::type DispatchLayerNormWarpImplCols(
     cudaStream_t stream, LOAD load, STORE store, const int64_t rows, const int64_t cols,
     const double epsilon, ComputeType* mean, ComputeType* inv_variance) {
-  if (cols <= 0) { UNIMPLEMENTED(); }
+  if (cols <= 0) { return cudaErrorInvalidValue; }
 #define DEFINE_ONE_ELIF(thread_group_width)                                                    \
   else if (cols <= (thread_group_width)*pack_size) {                                           \
     if (rows % 2 == 0) {                                                                       \
-      DispatchLayerNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,         \
+      return DispatchLayerNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,         \
                                        thread_group_width, 2>(stream, load, store, rows, cols, \
                                                               epsilon, mean, inv_variance);    \
     } else {                                                                                   \
-      DispatchLayerNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,         \
+      return DispatchLayerNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,         \
                                        thread_group_width, 1>(stream, load, store, rows, cols, \
                                                               epsilon, mean, inv_variance);    \
     }                                                                                          \
@@ -357,7 +394,7 @@ typename std::enable_if<pack_size == 2, void>::type DispatchLayerNormWarpImplCol
 #undef DEFINE_ONE_ELIF
 #define DEFINE_ONE_ELIF(col)                                                                  \
   else if (cols <= (col)*kWarpSize) {                                                         \
-    DispatchLayerNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, col, kWarpSize, 1>( \
+    return DispatchLayerNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, col, kWarpSize, 1>( \
         stream, load, store, rows, cols, epsilon, mean, inv_variance);                        \
   }
   DEFINE_ONE_ELIF(4)
@@ -377,22 +414,22 @@ typename std::enable_if<pack_size == 2, void>::type DispatchLayerNormWarpImplCol
   DEFINE_ONE_ELIF(32)
 #undef DEFINE_ONE_ELIF
   else {
-    UNIMPLEMENTED();
+    return cudaErrorInvalidValue;
   }
 }
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size>
-typename std::enable_if<pack_size == 4, void>::type DispatchLayerNormWarpImplCols(
+typename std::enable_if<pack_size == 4, cudaError_t>::type DispatchLayerNormWarpImplCols(
     cudaStream_t stream, LOAD load, STORE store, const int64_t rows, const int64_t cols,
     const double epsilon, ComputeType* mean, ComputeType* inv_variance) {
-  if (cols <= 0) { UNIMPLEMENTED(); }
+  if (cols <= 0) { return cudaErrorInvalidValue; }
 #define DEFINE_ONE_ELIF(thread_group_width)                                                    \
   else if (cols <= (thread_group_width)*pack_size) {                                           \
     if (rows % 2 == 0) {                                                                       \
-      DispatchLayerNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,         \
+      return DispatchLayerNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,         \
                                        thread_group_width, 2>(stream, load, store, rows, cols, \
                                                               epsilon, mean, inv_variance);    \
     } else {                                                                                   \
-      DispatchLayerNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,         \
+      return DispatchLayerNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, pack_size,         \
                                        thread_group_width, 1>(stream, load, store, rows, cols, \
                                                               epsilon, mean, inv_variance);    \
     }                                                                                          \
@@ -406,7 +443,7 @@ typename std::enable_if<pack_size == 4, void>::type DispatchLayerNormWarpImplCol
 #undef DEFINE_ONE_ELIF
 #define DEFINE_ONE_ELIF(col)                                                                  \
   else if (cols <= (col)*kWarpSize) {                                                         \
-    DispatchLayerNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, col, kWarpSize, 1>( \
+    return DispatchLayerNormWarpImplPadding<LOAD, STORE, ComputeType, pack_size, col, kWarpSize, 1>( \
         stream, load, store, rows, cols, epsilon, mean, inv_variance);                        \
   }
   DEFINE_ONE_ELIF(8)
@@ -420,33 +457,33 @@ typename std::enable_if<pack_size == 4, void>::type DispatchLayerNormWarpImplCol
   DEFINE_ONE_ELIF(128)
 #undef DEFINE_ONE_ELIF
   else {
-    UNIMPLEMENTED();
+    return cudaErrorInvalidValue;
   }
 }
 
 template<typename LOAD, typename STORE, typename ComputeType>
 struct DispatchLayerNormWarpImplPackSize {
-  void operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
+  cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
                   const int64_t cols, const double epsilon, ComputeType* mean,
                   ComputeType* inv_variance) {
     if (cols % 4 == 0) {
-      DispatchLayerNormWarpImplCols<LOAD, STORE, ComputeType, 4>(stream, load, store, rows, cols,
+      return DispatchLayerNormWarpImplCols<LOAD, STORE, ComputeType, 4>(stream, load, store, rows, cols,
                                                                  epsilon, mean, inv_variance);
     } else if (cols % 2 == 0) {
-      DispatchLayerNormWarpImplCols<LOAD, STORE, ComputeType, 2>(stream, load, store, rows, cols,
+      return DispatchLayerNormWarpImplCols<LOAD, STORE, ComputeType, 2>(stream, load, store, rows, cols,
                                                                  epsilon, mean, inv_variance);
     } else {
-      DispatchLayerNormWarpImplCols<LOAD, STORE, ComputeType, 1>(stream, load, store, rows, cols,
+      return DispatchLayerNormWarpImplCols<LOAD, STORE, ComputeType, 1>(stream, load, store, rows, cols,
                                                                  epsilon, mean, inv_variance);
     }
   }
 };
 
 template<typename LOAD, typename STORE, typename ComputeType>
-inline void DispatchLayerNormWarpImpl(cudaStream_t stream, LOAD load, STORE store,
+inline cudaError_t DispatchLayerNormWarpImpl(cudaStream_t stream, LOAD load, STORE store,
                                       const int64_t rows, const int64_t cols, const double epsilon,
                                       ComputeType* mean, ComputeType* inv_variance) {
-  DispatchLayerNormWarpImplPackSize<LOAD, STORE, ComputeType>()(stream, load, store, rows, cols,
+  return DispatchLayerNormWarpImplPackSize<LOAD, STORE, ComputeType>()(stream, load, store, rows, cols,
                                                                 epsilon, mean, inv_variance);
 }
 
@@ -495,93 +532,117 @@ __global__ void LayerNormBlockSMemImpl(LOAD load, STORE store, const int64_t row
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size>
-inline void LaunchLayerNormBlockSMemImpl(cudaStream_t stream, LOAD load, STORE store, int smem,
+inline cudaError_t LaunchLayerNormBlockSMemImpl(cudaStream_t stream, LOAD load, STORE store, int smem,
                                          const int64_t rows, const int64_t cols,
                                          const double epsilon, ComputeType* mean,
                                          ComputeType* inv_variance) {
   constexpr int waves = 32;
-  const int grid_dim_x = GetNumBlocks(block_size, rows, waves);
+  int grid_dim_x;
+  {
+    cudaError_t err = GetNumBlocks(block_size, rows, waves, &grid_dim_x);
+    if (err != cudaSuccess) { return err; }
+  }
   LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size>
       <<<grid_dim_x, block_size, smem, stream>>>(load, store, rows, cols, epsilon, mean,
                                                  inv_variance);
+  return cudaPeekAtLastError();
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size>
-inline bool TryDispatchLayerNormBlockSMemImplBlockSize(cudaStream_t stream, LOAD load, STORE store,
+inline cudaError_t TryDispatchLayerNormBlockSMemImplBlockSize(cudaStream_t stream, LOAD load, STORE store,
                                                        const int64_t rows, const int64_t cols,
                                                        const double epsilon, ComputeType* mean,
-                                                       ComputeType* inv_variance) {
+                                                       ComputeType* inv_variance, bool* success) {
   constexpr int block_size_conf_1 = 128;
   constexpr int block_size_conf_2 = 256;
   constexpr int block_size_conf_3 = 512;
   constexpr int block_size_conf_4 = 1024;
   const size_t smem = cols * sizeof(ComputeType);
   int max_active_blocks_conf_1;
-  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+  
+  {
+    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
       &max_active_blocks_conf_1,
       LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_1>,
-      block_size_conf_1, smem));
-  if (max_active_blocks_conf_1 <= 0) { return false; }
+      block_size_conf_1, smem);
+    if (err != cudaSuccess) { return err; }
+  }
+  if (max_active_blocks_conf_1 <= 0) {
+    *success = false;
+    return cudaSuccess;
+  }
   int max_active_blocks_conf_4;
-  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &max_active_blocks_conf_4,
-      LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_4>,
-      block_size_conf_4, smem));
+  {
+    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &max_active_blocks_conf_4,
+        LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_4>,
+        block_size_conf_4, smem);
+    if (err != cudaSuccess) { return err; }
+  }
+
   if (max_active_blocks_conf_4 == max_active_blocks_conf_1) {
-    LaunchLayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_4>(
+    *success = true;
+    return LaunchLayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_4>(
         stream, load, store, smem, rows, cols, epsilon, mean, inv_variance);
-    return true;
   }
   int max_active_blocks_conf_3;
-  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &max_active_blocks_conf_3,
-      LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_3>,
-      block_size_conf_3, smem));
+  {
+    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &max_active_blocks_conf_3,
+        LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_3>,
+        block_size_conf_3, smem);
+    if (err != cudaSuccess) { return err; }
+  }
+
   if (max_active_blocks_conf_3 == max_active_blocks_conf_1) {
-    LaunchLayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_3>(
+    *success = true;
+    return LaunchLayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_3>(
         stream, load, store, smem, rows, cols, epsilon, mean, inv_variance);
-    return true;
   }
   int max_active_blocks_conf_2;
-  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &max_active_blocks_conf_2,
-      LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_2>,
-      block_size_conf_2, smem));
-  if (max_active_blocks_conf_2 == max_active_blocks_conf_1) {
-    LaunchLayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_2>(
-        stream, load, store, smem, rows, cols, epsilon, mean, inv_variance);
-    return true;
+  {
+    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &max_active_blocks_conf_2,
+        LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_2>,
+        block_size_conf_2, smem);
+    if (err != cudaSuccess) { return err; }
   }
-  LaunchLayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_1>(
+
+  if (max_active_blocks_conf_2 == max_active_blocks_conf_1) {
+    *success = true;
+    return LaunchLayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_2>(
+        stream, load, store, smem, rows, cols, epsilon, mean, inv_variance);
+  }
+  *success = true;
+  return LaunchLayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_1>(
       stream, load, store, smem, rows, cols, epsilon, mean, inv_variance);
-  return true;
 }
 
 template<typename LOAD, typename STORE, typename ComputeType>
 struct TryDispatchLayerNormBlockSMemImplPackSize {
-  bool operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
+  cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
                   const int64_t cols, const double epsilon, ComputeType* mean,
-                  ComputeType* inv_variance) {
+                  ComputeType* inv_variance, bool* success) {
     if (cols % 4 == 0) {
       return TryDispatchLayerNormBlockSMemImplBlockSize<LOAD, STORE, ComputeType, 4>(
-          stream, load, store, rows, cols, epsilon, mean, inv_variance);
+          stream, load, store, rows, cols, epsilon, mean, inv_variance, success);
     } else if (cols % 2 == 0) {
       return TryDispatchLayerNormBlockSMemImplBlockSize<LOAD, STORE, ComputeType, 2>(
-          stream, load, store, rows, cols, epsilon, mean, inv_variance);
+          stream, load, store, rows, cols, epsilon, mean, inv_variance, success);
     } else {
       return TryDispatchLayerNormBlockSMemImplBlockSize<LOAD, STORE, ComputeType, 1>(
-          stream, load, store, rows, cols, epsilon, mean, inv_variance);
+          stream, load, store, rows, cols, epsilon, mean, inv_variance, success);
     }
   }
 };
 
 template<typename LOAD, typename STORE, typename ComputeType>
-inline bool TryDispatchLayerNormBlockSMemImpl(cudaStream_t stream, LOAD load, STORE store,
+inline cudaError_t TryDispatchLayerNormBlockSMemImpl(cudaStream_t stream, LOAD load, STORE store,
                                               const int64_t rows, const int64_t cols,
                                               const double epsilon, ComputeType* mean,
-                                              ComputeType* inv_variance) {
+                                              ComputeType* inv_variance, bool* success) {
   return TryDispatchLayerNormBlockSMemImplPackSize<LOAD, STORE, ComputeType>()(
-      stream, load, store, rows, cols, epsilon, mean, inv_variance);
+      stream, load, store, rows, cols, epsilon, mean, inv_variance, success);
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size>
@@ -623,37 +684,42 @@ __global__ void LayerNormBlockUncachedImpl(LOAD load, STORE store, const int64_t
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size>
-inline void LaunchLayerNormBlockUncachedImpl(cudaStream_t stream, LOAD load, STORE store,
+inline cudaError_t LaunchLayerNormBlockUncachedImpl(cudaStream_t stream, LOAD load, STORE store,
                                              const int64_t rows, const int64_t cols,
                                              const double epsilon, ComputeType* mean,
                                              ComputeType* inv_variance) {
   constexpr int block_size = 1024;
   constexpr int waves = 32;
-  const int grid_dim_x = GetNumBlocks(block_size, rows, waves);
+  int grid_dim_x;
+  {
+    cudaError_t err = GetNumBlocks(block_size, rows, waves, &grid_dim_x);
+    if (err != cudaSuccess) { return err; }
+  }
   LayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, pack_size, block_size>
       <<<grid_dim_x, block_size, 0, stream>>>(load, store, rows, cols, epsilon, mean, inv_variance);
+  return cudaPeekAtLastError();
 }
 
 template<typename LOAD, typename STORE, typename ComputeType>
 struct DispatchLayerNormBlockUncachedImplPackSize {
-  void operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
+  cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
                   const int64_t cols, const double epsilon, ComputeType* mean,
                   ComputeType* inv_variance) {
     if (cols % 4 == 0) {
-      LaunchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, 4>(stream, load, store, rows, cols,
+      return LaunchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, 4>(stream, load, store, rows, cols,
                                                                     epsilon, mean, inv_variance);
     } else if (cols % 2 == 0) {
-      LaunchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, 2>(stream, load, store, rows, cols,
+      return LaunchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, 2>(stream, load, store, rows, cols,
                                                                     epsilon, mean, inv_variance);
     } else {
-      LaunchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, 1>(stream, load, store, rows, cols,
+      return LaunchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, 1>(stream, load, store, rows, cols,
                                                                     epsilon, mean, inv_variance);
     }
   }
 };
 
 template<typename LOAD, typename STORE, typename ComputeType>
-inline void DispatchLayerNormBlockUncachedImpl(cudaStream_t stream, LOAD load, STORE store,
+inline cudaError_t DispatchLayerNormBlockUncachedImpl(cudaStream_t stream, LOAD load, STORE store,
                                                const int64_t rows, const int64_t cols,
                                                const double epsilon, ComputeType* mean,
                                                ComputeType* inv_variance) {
@@ -662,16 +728,25 @@ inline void DispatchLayerNormBlockUncachedImpl(cudaStream_t stream, LOAD load, S
 }
 
 template<typename LOAD, typename STORE, typename ComputeType>
-inline void DispatchLayerNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
+inline cudaError_t DispatchLayerNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
                               const int64_t cols, const double epsilon, ComputeType* mean,
                               ComputeType* inv_variance) {
   if (cols <= 1024) {
-    DispatchLayerNormWarpImpl<LOAD, STORE, ComputeType>(stream, load, store, rows, cols, epsilon,
+    return DispatchLayerNormWarpImpl<LOAD, STORE, ComputeType>(stream, load, store, rows, cols, epsilon,
                                                         mean, inv_variance);
-  } else if (!TryDispatchLayerNormBlockSMemImpl<LOAD, STORE, ComputeType>(
-                 stream, load, store, rows, cols, epsilon, mean, inv_variance)) {
-    DispatchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType>(stream, load, store, rows, cols,
+  } else {
+    bool dispatch_smem_impl_success;
+    {
+      cudaError_t err = TryDispatchLayerNormBlockSMemImpl<LOAD, STORE, ComputeType>(
+                 stream, load, store, rows, cols, epsilon, mean, inv_variance, &dispatch_smem_impl_success);
+      if (err != cudaSuccess) { return err; }
+    }
+    if(!dispatch_smem_impl_success) {
+      return     DispatchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType>(stream, load, store, rows, cols,
                                                                  epsilon, mean, inv_variance);
+
+    }
+    return cudaSuccess;
   }
 }
 
