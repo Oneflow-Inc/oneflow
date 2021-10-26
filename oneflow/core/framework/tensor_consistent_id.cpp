@@ -44,7 +44,7 @@ Maybe<void> InitConsistentId(TensorTuple* outputs) {
     CHECK_OR_RETURN(output);
     const auto& consistent_tensor = JUST(output->AsConsistentTensor());
     CHECK_OR_RETURN(consistent_tensor)
-        << Error::Unimplemented() << "consistent tensors suppported only.";
+        << Error::UnimplementedError() << "consistent tensors suppported only.";
     const auto& transport_token = JUST(NewTensorConsistentId());
     JUST(consistent_tensor->mut_impl()->set_transport_token(transport_token));
   }

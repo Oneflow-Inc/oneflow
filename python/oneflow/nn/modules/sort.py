@@ -34,13 +34,13 @@ class Sort(Module):
         assert 0 <= dim < num_dims, "dim out of range"
         if dim == num_dims - 1:
             indices = flow._C.arg_sort(input, self.direction)
-            return (flow.gather(input, indices, dim), indices)
+            return (flow.gather(input, dim, indices), indices)
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_dims, dim)
             x = flow._C.transpose(input, perm=perm)
             indices = flow._C.arg_sort(x, self.direction)
             indices = flow._C.transpose(indices, perm=get_inversed_perm(perm))
-            return (flow.gather(input, indices, dim), indices)
+            return (flow.gather(input, dim, indices), indices)
 
 
 @register_tensor_op("sort")

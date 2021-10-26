@@ -62,6 +62,7 @@ class TestGraphOptimizer(flow.unittest.TestCase):
 
             def build(self, x):
                 out = self.m(x)
+                out = out.mean()
                 out.backward()
                 return out
 
@@ -192,6 +193,7 @@ class TestGraphOptimizer(flow.unittest.TestCase):
 
             def build(self, x):
                 out = self.m(x)
+                out = out.sum()
                 out.backward()
                 return out
 

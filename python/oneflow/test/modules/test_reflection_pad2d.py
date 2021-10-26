@@ -79,7 +79,7 @@ def gen_numpy_test_sample(input, padding):
 
 def _test_reflection_pad2d(test_case, shape, padding, device):
     np_input = np.random.randn(*shape).astype(np.float32)
-    of_input = flow.Tensor(
+    of_input = flow.tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     if isinstance(padding, int):

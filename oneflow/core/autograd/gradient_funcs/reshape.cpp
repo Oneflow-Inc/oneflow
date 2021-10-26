@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -29,7 +29,6 @@ class ReshapeOpExprGrad : public OpExprGradFunction<AutoGradCaptureState> {
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-    backward_op_ = JUST(op_expr_helper::ReshapeLikeOp(GradientOpName(fw_op_expr->op_name())));
     return Maybe<void>::Ok();
   }
 
@@ -43,13 +42,9 @@ class ReshapeOpExprGrad : public OpExprGradFunction<AutoGradCaptureState> {
                     TensorTuple* in_grads) const override {
     const auto& saved_tensors = ctx->SavedTensors();
     in_grads->resize(1);
-    in_grads->at(0) =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*backward_op_, {out_grads.at(0), saved_tensors.at(0)}));
+    in_grads->at(0) = JUST(functional::ReshapeLike(out_grads.at(0), saved_tensors.at(0)));
     return Maybe<void>::Ok();
   }
-
- private:
-  std::shared_ptr<OpExpr> backward_op_;
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("reshape", ReshapeOpExprGrad);

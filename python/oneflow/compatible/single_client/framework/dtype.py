@@ -32,6 +32,7 @@ _dtypes = [
     flow.uint8,
     flow.record,
     flow.tensor_buffer,
+    flow.bfloat16,
 ]
 
 

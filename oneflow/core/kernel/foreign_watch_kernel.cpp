@@ -22,7 +22,7 @@ limitations under the License.
 namespace oneflow {
 
 template<DeviceType device_type>
-class ForeignWatchKernel final : public KernelIf<device_type> {
+class ForeignWatchKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ForeignWatchKernel);
   ForeignWatchKernel() = default;
@@ -30,15 +30,12 @@ class ForeignWatchKernel final : public KernelIf<device_type> {
 
  private:
   bool IsStateless() const override { return false; }
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type>
-void ForeignWatchKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  OfBlob of_blob(ctx.device_ctx, BnInOp2Blob("in"));
+void ForeignWatchKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
+  OfBlob of_blob(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
   (*Global<std::shared_ptr<ForeignWatcher>>::Get())
       ->Call(this->op_conf().foreign_watch_conf().handler_uuid(),
              reinterpret_cast<int64_t>(&of_blob));

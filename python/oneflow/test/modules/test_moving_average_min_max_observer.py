@@ -19,7 +19,8 @@ from collections import OrderedDict
 
 import math
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
@@ -137,7 +138,7 @@ def _run_test_moving_average_min_max_observer(
 ):
     moving_max_np = np.zeros((1,))
     moving_min_np = np.zeros((1,))
-    current_train_step_tensor = flow.Tensor(
+    current_train_step_tensor = flow.tensor(
         np.zeros((1,)).astype(np.float32),
         dtype=flow.int64,
         device=flow.device(device_type),
@@ -146,7 +147,9 @@ def _run_test_moving_average_min_max_observer(
         activation = (np.random.random(activation_shape) - 0.5).astype(
             type_name_to_np_type[dtype]
         )
-        activation_tensor = flow.Tensor(activation, device=flow.device(device_type))
+        activation_tensor = flow.tensor(
+            activation, dtype=flow.float32, device=flow.device(device_type)
+        )
         moving_average_min_max_observer = flow.nn.MovingAverageMinMaxObserver(
             training=True,
             quantization_formula=quantization_formula,

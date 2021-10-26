@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/functional/impl/common.h"
+#include "oneflow/core/functional/tensor_processor.h"
 
 namespace oneflow {
 namespace one {
@@ -32,12 +33,32 @@ class BinaryFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, y});
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple);
   }
 
  protected:
   BinaryFunctor() = default;
   virtual ~BinaryFunctor() = default;
+
+  std::shared_ptr<OpExpr> op_;
+};
+
+class BinaryFloatFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({x, y}, DType::Float()).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple);
+  }
+
+ protected:
+  BinaryFloatFunctor() = default;
+  virtual ~BinaryFloatFunctor() = default;
 
   std::shared_ptr<OpExpr> op_;
 };

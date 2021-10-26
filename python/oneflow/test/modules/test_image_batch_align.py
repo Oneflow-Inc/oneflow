@@ -72,7 +72,7 @@ class TestImageBatchAlign(flow.unittest.TestCase):
         images_np_arr_static = np.zeros(image_shape, dtype=np.float32)
         for (idx, np_arr) in enumerate(images):
             images_np_arr_static[idx, : np_arr.shape[0], : np_arr.shape[1], :] = np_arr
-        input = flow.Tensor(
+        input = flow.tensor(
             images_np_arr_static, dtype=flow.float, device=flow.device("cpu")
         )
         images_buffer = flow.tensor_to_tensor_buffer(input, instance_dims=3)

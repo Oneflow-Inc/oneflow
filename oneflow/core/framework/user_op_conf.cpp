@@ -184,7 +184,9 @@ void UserOpWrapper::InputGradBind(const user_op::OpArg& input,
 
 UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::InputBind(
     const std::string& arg_name, const std::string& logical_blob_name) {
+  if (input_.find(arg_name) == input_.end()) { input_order_.push_back(arg_name); }
   input_[arg_name].push_back(logical_blob_name);
+  CHECK_EQ(input_.size(), input_order_.size());
   return *this;
 }
 
@@ -200,11 +202,13 @@ UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Output(const std::string& ar
 UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Output(const std::string& arg_name,
                                                            int32_t num) {
   CHECK(num >= 0);
+  if (output_.find(arg_name) == output_.end()) { output_order_.push_back(arg_name); }
   output_[arg_name].resize(num);
   for (int32_t i = 0; i < num; ++i) {
     std::string bn = GenRepeatedBn(arg_name, i);
     output_[arg_name].at(i) = GenLogicalBlobName(op_name_, bn);
   }
+  CHECK_EQ(output_.size(), output_order_.size());
   return *this;
 }
 
@@ -227,6 +231,8 @@ UserOpConfWrapper UserOpConfWrapperBuilder::Build() {
   };
   GenArgs(input_, user_conf->mutable_input());
   GenArgs(output_, user_conf->mutable_output());
+  for (const auto& arg_name : input_order_) { user_conf->add_input_order(arg_name); }
+  for (const auto& arg_name : output_order_) { user_conf->add_output_order(arg_name); }
   for (const auto& pair : attr_) { (*user_conf->mutable_attr())[pair.first] = pair.second; }
   wrapper_ = UserOpConfWrapper(*CHECK_JUST(CheckAndCompleteUserOpConfImpl(op_conf)));
   return wrapper_;
@@ -294,6 +300,21 @@ Maybe<void> CheckArgDefIsValidInUserOpConf(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> CheckUserOpConfArgOrderValid(
+    const OperatorConf& op_conf, const PbMap<std::string, UserOpConf_ListString>& arg_name2lbns,
+    const PbRpf<std::string>& arg_order) {
+  CHECK_EQ_OR_RETURN(arg_name2lbns.size(), arg_order.size())
+      << " op_conf: " << op_conf.DebugString() << " io order is not valid.";
+  HashSet<std::string> arg_names;
+  for (const std::string& arg_name : arg_order) {
+    CHECK_OR_RETURN(arg_names.insert(arg_name).second)
+        << " op_conf: " << op_conf.DebugString() << " io order is not valid.";
+    CHECK_OR_RETURN(arg_name2lbns.find(arg_name) != arg_name2lbns.end())
+        << " op_conf: " << op_conf.DebugString() << " io order is not valid.";
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> AddAttrDefaultValueAndCheckValid(const UserOpDef& op_def, UserOpConf* user_conf,
                                              const std::string& error_msg_prefix) {
   auto* attr_name2attr = user_conf->mutable_attr();
@@ -346,8 +367,10 @@ Maybe<void> AddUserOpConfOutputDefaultArg(const UserOpDef& op_def, OperatorConf*
       for (int32_t i = 0; i < output_arg.num(); ++i) {
         std::string lbn = GenLogicalBlobName(op_conf->name(), GenRepeatedBn(output_arg.name(), i));
         (*(user_conf->mutable_output()))[output_arg.name()].add_s(lbn);
-        CHECK_EQ(i + 1, user_conf->output().at(output_arg.name()).s_size());
+        CHECK_EQ_OR_RETURN(i + 1, user_conf->output().at(output_arg.name()).s_size());
       }
+      user_conf->add_output_order(output_arg.name());
+      CHECK_EQ_OR_RETURN(user_conf->output().size(), user_conf->output_order().size());
     }
   }
   return Maybe<void>::Ok();
@@ -378,6 +401,8 @@ Maybe<OperatorConf> CheckAndCompleteUserOpConfImpl(const OperatorConf& op_conf) 
   // check input and output valid
   JUST(CheckArgDefIsValidInUserOpConf(op_conf, user_conf->input(), op_def.input()));
   JUST(CheckArgDefIsValidInUserOpConf(op_conf, user_conf->output(), op_def.output()));
+  JUST(CheckUserOpConfArgOrderValid(op_conf, user_conf->input(), user_conf->input_order()));
+  JUST(CheckUserOpConfArgOrderValid(op_conf, user_conf->output(), user_conf->output_order()));
   // check attr valid by user
   JUST(val->check_fn(user_op::UserOpDefWrapper(op_def), user_op::UserOpConfWrapper(ret)));
   return ret;

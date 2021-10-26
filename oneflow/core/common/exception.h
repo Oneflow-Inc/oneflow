@@ -68,7 +68,8 @@ class Exception : public std::exception {
   OF_PP_MAKE_TUPLE_SEQ(SymbolIdUninitialized)     \
   OF_PP_MAKE_TUPLE_SEQ(Unknown)                   \
   OF_PP_MAKE_TUPLE_SEQ(CompileOptionWrong)        \
-  OF_PP_MAKE_TUPLE_SEQ(Value)                     \
+  OF_PP_MAKE_TUPLE_SEQ(InvalidValue)              \
+  OF_PP_MAKE_TUPLE_SEQ(ValueNotFound)             \
   OF_PP_MAKE_TUPLE_SEQ(Index)                     \
   OF_PP_MAKE_TUPLE_SEQ(Type)                      \
   OF_PP_MAKE_TUPLE_SEQ(Timeout)                   \

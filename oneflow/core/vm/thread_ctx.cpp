@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/thread_ctx.msg.h"
+#include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -21,25 +21,25 @@ namespace vm {
 
 void ThreadCtx::LoopRun(const std::function<void(ThreadCtx*)>& Initializer) {
   Initializer(this);
-  while (ReceiveAndRun() == kObjectMsgConditionListStatusSuccess) {}
+  while (ReceiveAndRun() == intrusive::kChannelStatusSuccess) {}
 }
 
-ObjectMsgConditionListStatus ThreadCtx::ReceiveAndRun() {
+intrusive::ChannelStatus ThreadCtx::ReceiveAndRun() {
   const StreamType& stream_type = stream_rt_desc().stream_type();
-  OBJECT_MSG_LIST(Instruction, pending_instruction_link) tmp_list;
-  ObjectMsgConditionListStatus status = mut_pending_instruction_list()->MoveTo(&tmp_list);
-  OBJECT_MSG_LIST_FOR_EACH(&tmp_list, instruction) {
+  intrusive::List<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)> tmp_list;
+  intrusive::ChannelStatus status = mut_pending_instruction_list()->MoveTo(&tmp_list);
+  INTRUSIVE_FOR_EACH(instruction, &tmp_list) {
     tmp_list.Erase(instruction.Mutable());
     stream_type.Run(instruction.Mutable());
   }
   return status;
 }
 
-ObjectMsgConditionListStatus ThreadCtx::TryReceiveAndRun() {
+intrusive::ChannelStatus ThreadCtx::TryReceiveAndRun() {
   const StreamType& stream_type = stream_rt_desc().stream_type();
-  OBJECT_MSG_LIST(Instruction, pending_instruction_link) tmp_list;
-  ObjectMsgConditionListStatus status = mut_pending_instruction_list()->TryMoveTo(&tmp_list);
-  OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_list, instruction) {
+  intrusive::List<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)> tmp_list;
+  intrusive::ChannelStatus status = mut_pending_instruction_list()->TryMoveTo(&tmp_list);
+  INTRUSIVE_FOR_EACH_PTR(instruction, &tmp_list) {
     CHECK_GT(instruction->ref_cnt(), 1);
     tmp_list.Erase(instruction);
     stream_type.Run(instruction);

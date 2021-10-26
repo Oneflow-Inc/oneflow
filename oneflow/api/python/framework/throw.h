@@ -69,9 +69,11 @@ class Throw final {
 
 #define CHECK_ISNULL_OR_THROW(ptr) CHECK_OR_THROW(ptr == nullptr)
 
-#define TODO_THEN_THROW() \
-  oneflow::Throw(oneflow::Error::Todo().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)).error()
-#define UNIMPLEMENTED_THEN_THROW() \
-  Throw(oneflow::Error::Unimplemented().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)).error()
+#define TODO_THEN_THROW()                                                                     \
+  oneflow::Throw(oneflow::Error::TodoError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)) \
+      .error()
+#define UNIMPLEMENTED_THEN_THROW()                                                            \
+  Throw(oneflow::Error::UnimplementedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)) \
+      .error()
 
 #endif  // ONEFLOW_API_PYTHON_FRAMEWORK_THROW_H_

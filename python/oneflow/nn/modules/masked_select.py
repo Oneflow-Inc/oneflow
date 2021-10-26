@@ -35,7 +35,7 @@ def masked_select_op(input, mask):
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> input = flow.Tensor(np.array([[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]), dtype=flow.float32)
+        >>> input = flow.tensor(np.array([[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]), dtype=flow.float32)
         >>> mask = input.gt(0.05)
         >>> out = flow.masked_select(input, mask)
         >>> out

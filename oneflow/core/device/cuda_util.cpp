@@ -13,10 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <mutex>
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/device/node_device_descriptor_manager.h"
 #include "oneflow/core/device/cuda_device_descriptor.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
+#include "oneflow/core/job/lazy_mode.h"
+
+#ifdef WITH_CUDA
+
+#include <cuda.h>
+
+#endif  // WITH_CUDA
 
 namespace oneflow {
 
@@ -105,26 +115,6 @@ bool IsCuda9OnTuringDevice() {
          && global_device_prop.minor == 5;
 }
 
-template<>
-void CudaCheck(cudaError_t error) {
-  CHECK_EQ(error, cudaSuccess) << cudaGetErrorString(error);
-}
-
-template<>
-void CudaCheck(cudnnStatus_t error) {
-  CHECK_EQ(error, CUDNN_STATUS_SUCCESS) << cudnnGetErrorString(error);
-}
-
-template<>
-void CudaCheck(cublasStatus_t error) {
-  CHECK_EQ(error, CUBLAS_STATUS_SUCCESS) << CublasGetErrorString(error);
-}
-
-template<>
-void CudaCheck(curandStatus_t error) {
-  CHECK_EQ(error, CURAND_STATUS_SUCCESS) << CurandGetErrorString(error);
-}
-
 size_t GetAvailableGpuMemSize(int dev_id) {
   cudaDeviceProp prop;
   cudaGetDeviceProperties(&prop, dev_id);
@@ -160,14 +150,6 @@ void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
   fn(ptr, size);
 }
 
-cudaDataType_t GetCudaDataType(DataType val) {
-#define MAKE_ENTRY(type_cpp, type_cuda) \
-  if (val == GetDataType<type_cpp>::value) { return type_cuda; }
-  OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, CUDA_DATA_TYPE_SEQ);
-#undef MAKE_ENTRY
-  UNIMPLEMENTED();
-}
-
 CudaCurrentDeviceGuard::CudaCurrentDeviceGuard(int32_t dev_id) {
   OF_CUDA_CHECK(cudaGetDevice(&saved_dev_id_));
   OF_CUDA_CHECK(cudaSetDevice(dev_id));
@@ -176,6 +158,88 @@ CudaCurrentDeviceGuard::CudaCurrentDeviceGuard(int32_t dev_id) {
 CudaCurrentDeviceGuard::CudaCurrentDeviceGuard() { OF_CUDA_CHECK(cudaGetDevice(&saved_dev_id_)); }
 
 CudaCurrentDeviceGuard::~CudaCurrentDeviceGuard() { OF_CUDA_CHECK(cudaSetDevice(saved_dev_id_)); }
+
+CublasMathModeGuard::CublasMathModeGuard(cublasHandle_t handle, cublasMath_t new_mode)
+    : CublasMathModeGuard(handle) {
+  SetMathMode(new_mode);
+}
+
+CublasMathModeGuard::CublasMathModeGuard(cublasHandle_t handle) : handle_(handle) {
+  OF_CUBLAS_CHECK(cublasGetMathMode(handle_, &saved_mode_));
+  new_mode_ = saved_mode_;
+}
+
+CublasMathModeGuard::~CublasMathModeGuard() {
+  if (new_mode_ != saved_mode_) { OF_CUBLAS_CHECK(cublasSetMathMode(handle_, saved_mode_)); }
+}
+
+void CublasMathModeGuard::SetMathMode(cublasMath_t new_mode) {
+  new_mode_ = new_mode;
+  if (new_mode_ != saved_mode_) { OF_CUBLAS_CHECK(cublasSetMathMode(handle_, saved_mode_)); }
+}
+
+int GetCudaDeviceIndex() {
+  int cuda_device_index = 0;
+  if (CHECK_JUST(GlobalMultiClientEnv())) {
+    cuda_device_index = GlobalProcessCtx::LocalRank();
+  } else {
+    OF_CUDA_CHECK(cudaGetDevice(&cuda_device_index));
+  }
+  return cuda_device_index;
+}
+
+int GetCudaDeviceCount() {
+  /* static */ int cuda_device_count = 0;
+  CudaCurrentDeviceGuard dev_guard(GetCudaDeviceIndex());
+  OF_CUDA_CHECK(cudaGetDeviceCount(&cuda_device_count));
+  return cuda_device_count;
+}
+
+void InitCudaContextOnce(int device_id) {
+  static int device_count = GetCudaDeviceCount();
+  static std::vector<std::once_flag> init_flags = std::vector<std::once_flag>(device_count);
+  if (LazyMode::is_enabled()) { return; }
+  if (device_id == -1) { device_id = GetCudaDeviceIndex(); }
+  std::call_once(init_flags[device_id], [&]() {
+    OF_CUDA_CHECK(cudaSetDevice(device_id));
+    OF_CUDA_CHECK(cudaDeviceSynchronize());
+  });
+}
+
+cudaError_t CudaDriverGetPrimaryCtxActive(int dev, int* active) {
+#if CUDA_VERSION >= 11030
+  CUdevice cu_device{};
+  {
+    CUresult (*fnCuDeviceGet)(CUdevice*, int) = nullptr;
+    cudaError_t err =
+        cudaGetDriverEntryPoint("cuDeviceGet", (void**)&fnCuDeviceGet, cudaEnableDefault);
+    if (err != cudaSuccess) { return err; }
+    CUresult result = fnCuDeviceGet(&cu_device, dev);
+    if (result == CUDA_SUCCESS) {
+      // do nothing
+    } else if (result == CUresult::CUDA_ERROR_INVALID_DEVICE) {
+      return cudaErrorInvalidDevice;
+    } else {
+      return cudaErrorUnknown;
+    }
+  }
+  {
+    CUresult (*fnCuDevicePrimaryCtxGetState)(CUdevice, unsigned int*, int*) = nullptr;
+    cudaError_t err = cudaGetDriverEntryPoint(
+        "cuDevicePrimaryCtxGetState", (void**)&fnCuDevicePrimaryCtxGetState, cudaEnableDefault);
+    if (err != cudaSuccess) { return err; }
+    unsigned int flags{};
+    CUresult result = fnCuDevicePrimaryCtxGetState(cu_device, &flags, active);
+    if (result == CUDA_SUCCESS) {
+      return cudaSuccess;
+    } else {
+      return cudaErrorUnknown;
+    }
+  }
+#else
+  return cudaErrorNotSupported;
+#endif  // CUDA_VERSION < 11030
+}
 
 #endif  // WITH_CUDA
 

@@ -34,14 +34,6 @@ bool IsLetterNumberOrUnderline(char c) {
   return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_');
 }
 
-std::string StripBrackets(std::string str) {
-  if (str.size() == 0) { return ""; }
-  if (str.at(0) != '(') { return str; }
-  // "()" come from OF_PP_STRINGIZE((__VA_ARGS__)), so size() >= 2
-  str = str.substr(1, str.size() - 2);
-  return str;
-}
-
 Maybe<std::string> ShortenMsg(std::string str) {
   // 150 characters is the threshold
   const int num_character_threshold = 150;
@@ -105,7 +97,6 @@ std::string FormatFunctionOfStackFrame(const std::string& function) {
 
 // msg in stack frame
 Maybe<std::string> FormatMsgOfStackFrame(std::string error_msg, bool is_last_stack_frame) {
-  error_msg = StripBrackets(error_msg);
   if (!is_last_stack_frame) { error_msg = *JUST(ShortenMsg(error_msg)); }
   // error_msg of last stack frame come from "<<"
   if (is_last_stack_frame) { error_msg = StripSpace(error_msg); }

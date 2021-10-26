@@ -33,9 +33,14 @@ class CopyKernel final : public user_op::OpKernel {
     CHECK_EQ(out->shape(), in_shape);
     const DataType in_data_type = in->data_type();
     CHECK_EQ(out->data_type(), in_data_type);
-    AutoMemcpy(ctx->device_ctx(), out->mut_raw_dptr(), in->raw_dptr(),
-               in_shape.elem_cnt() * GetSizeOfDataType(in_data_type), out->mem_case(),
-               in->mem_case());
+    if (in_shape.elem_cnt() == 0) {
+      CHECK_ISNULL(in->raw_dptr());
+      CHECK_ISNULL(out->mut_raw_dptr());
+    } else {
+      AutoMemcpy(ctx->device_ctx(), out->mut_raw_dptr(), in->raw_dptr(),
+                 in_shape.elem_cnt() * GetSizeOfDataType(in_data_type), out->mem_case(),
+                 in->mem_case());
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

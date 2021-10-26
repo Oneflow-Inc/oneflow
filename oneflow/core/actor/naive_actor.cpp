@@ -18,8 +18,7 @@ limitations under the License.
 namespace oneflow {
 
 void NaiveActor::Act() {
-  KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* { return nullptr; });
+  AsyncLaunchKernel([&](int64_t regst_desc_id) -> Regst* { return nullptr; });
 }
 
 void NaiveActor::VirtualActorInit(const TaskProto&) {

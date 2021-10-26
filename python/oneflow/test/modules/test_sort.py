@@ -22,11 +22,12 @@ from test_util import GenArgList, type_name_to_flow_type
 
 import oneflow as flow
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_sort(test_case, data_shape, axis, descending, data_type, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(*data_shape),
         dtype=type_name_to_flow_type[data_type],
         device=flow.device(device),
@@ -45,7 +46,7 @@ def _test_sort(test_case, data_shape, axis, descending, data_type, device):
 
 
 def _test_tensor_sort(test_case, data_shape, axis, descending, data_type, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(*data_shape),
         dtype=type_name_to_flow_type[data_type],
         device=flow.device(device),

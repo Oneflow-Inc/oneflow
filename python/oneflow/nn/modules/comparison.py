@@ -38,8 +38,8 @@ def eq_op(input, other):
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> input = flow.Tensor(np.array([2, 3, 4, 5]), dtype=flow.float32)
-        >>> other = flow.Tensor(np.array([2, 3, 4, 1]), dtype=flow.float32)
+        >>> input = flow.tensor(np.array([2, 3, 4, 5]), dtype=flow.float32)
+        >>> other = flow.tensor(np.array([2, 3, 4, 1]), dtype=flow.float32)
 
         >>> y = flow.eq(input, other)
         >>> y
@@ -70,8 +70,8 @@ def ne_op(input, other):
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> input = flow.Tensor(np.array([2, 3, 4, 5]), dtype=flow.float32)
-        >>> other = flow.Tensor(np.array([2, 3, 4, 1]), dtype=flow.float32)
+        >>> input = flow.tensor(np.array([2, 3, 4, 5]), dtype=flow.float32)
+        >>> other = flow.tensor(np.array([2, 3, 4, 1]), dtype=flow.float32)
 
         >>> y = flow.ne(input, other)
         >>> y
@@ -79,86 +79,6 @@ def ne_op(input, other):
 
     """
     return flow._C.not_equal(input, other)
-
-
-def greater_op(input, other):
-    """Returns the truth value of :math:`input > other` element-wise.
-
-    Args:
-        input (oneflow.Tensor): A Tensor
-        other (oneflow.Tensor): A Tensor
-
-    Returns:
-        oneflow.Tensor: A Tensor with int8 type.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        
-        >>> input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-
-        >>> out = flow.gt(input1, input2).shape
-        >>> out
-        flow.Size([2, 6, 5, 3])
-
-    """
-    return flow._C.greater(input, other)
-
-
-@register_tensor_op("gt")
-def greater_op_tensor(input, other):
-    """
-
-    gt() -> Tensor
-
-    See :func:`oneflow.gt`
-
-    """
-    return greater_op(input, other)
-
-
-def greater_equal_op(input, other):
-    """Returns the truth value of :math:`input >= other` element-wise.
-
-    Args:
-        input (oneflow.Tensor): A Tensor
-        other (oneflow.Tensor): A Tensor
-
-    Returns:
-        oneflow.Tensor: A Tensor with int8 type.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        
-        >>> input1 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.array([1, 1, 4]).astype(np.float32), dtype=flow.float32)
-
-        >>> out = flow.ge(input1, input2)
-        >>> out
-        tensor([1, 1, 0], dtype=oneflow.int8)
-
-    """
-    return flow._C.greater_equal(input, other)
-
-
-@register_tensor_op("ge")
-def greater_equal_op_tensor(input, other):
-    """
-
-    ge() -> Tensor
-
-    See :func:`oneflow.ge`
-
-    """
-    return greater_equal_op(input, other)
 
 
 @register_tensor_op("lt")
@@ -179,8 +99,8 @@ def less_op(input, other):
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> input1 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.array([1, 2, 4]).astype(np.float32), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
+        >>> input2 = flow.tensor(np.array([1, 2, 4]).astype(np.float32), dtype=flow.float32)
 
         >>> out = flow.lt(input1, input2)
         >>> out
@@ -208,8 +128,8 @@ def less_equal_op(input, other):
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> input1 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.array([1, 1, 4]).astype(np.float32), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
+        >>> input2 = flow.tensor(np.array([1, 1, 4]).astype(np.float32), dtype=flow.float32)
 
         >>> out = flow.le(input1, input2)
         >>> out
@@ -240,8 +160,8 @@ def ne_op(input, other):
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> input = flow.Tensor(np.array([2, 3, 4, 5]), dtype=flow.float32)
-        >>> other = flow.Tensor(np.array([2, 3, 4, 1]), dtype=flow.float32)
+        >>> input = flow.tensor(np.array([2, 3, 4, 5]), dtype=flow.float32)
+        >>> other = flow.tensor(np.array([2, 3, 4, 1]), dtype=flow.float32)
 
         >>> y = flow.ne(input, other)
         >>> y

@@ -13,12 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
-#include "oneflow/core/framework/user_op_conf_trait.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -26,6 +27,12 @@ namespace one {
 struct DeConvolutionNdCaptureState : public AutoGradCaptureState {
   bool weight_requires_grad = false;
   bool activation_requires_grad = false;
+  size_t ndims;
+  std::string data_format;
+  std::vector<int32_t> padding_before;
+  std::vector<int32_t> kernel_size;
+  std::vector<int32_t> strides;
+  std::vector<int32_t> dilation_rate;
 };
 
 class DeConvolutionNd : public OpExprGradFunction<DeConvolutionNdCaptureState> {
@@ -37,37 +44,13 @@ class DeConvolutionNd : public OpExprGradFunction<DeConvolutionNdCaptureState> {
                     TensorTuple* in_grads) const override;
 
  private:
-  std::shared_ptr<user_op::UserOpConfTrait> op_trait_;
-  std::shared_ptr<std::string> data_format_;
-  std::shared_ptr<std::vector<int32_t>> padding_before_;
-  std::shared_ptr<std::vector<int32_t>> kernel_size_;
-  std::shared_ptr<std::vector<int32_t>> strides_;
-  std::shared_ptr<std::vector<int32_t>> dilation_rate_;
-
-  std::shared_ptr<OpExpr> activation_grad_op_;
-  std::shared_ptr<OpExpr> weight_grad_op_;
+  AttrMap base_attrs_;
 };
 
 Maybe<void> DeConvolutionNd::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  const std::string& op_name = fw_op_expr->op_name();
-  op_trait_ = std::make_shared<user_op::UserOpConfTrait>(op_name, fw_op_expr->proto());
-
-  data_format_ = JUST(op_trait_->GetAttr<std::string>("data_format"));
-  padding_before_ = JUST(op_trait_->GetAttr<std::vector<int32_t>>("padding_before"));
-  kernel_size_ = JUST(op_trait_->GetAttr<std::vector<int32_t>>("kernel_size"));
-  strides_ = JUST(op_trait_->GetAttr<std::vector<int32_t>>("strides"));
-  dilation_rate_ = JUST(op_trait_->GetAttr<std::vector<int32_t>>("dilation_rate"));
-  int32_t ndims = kernel_size_->size();
-  CHECK_EQ_OR_RETURN(ndims, strides_->size());
-  CHECK_EQ_OR_RETURN(ndims, dilation_rate_->size());
-  // int32_t filters = JUST(op_trait_->GetAttr<int32_t>("filters"));
-  activation_grad_op_ =
-      JUST(op_expr_helper::ConvNdOp(/*filters=1*/ 1, *kernel_size_, *strides_, *padding_before_,
-                                    *dilation_rate_, /*groups=*/1, *data_format_));
-  weight_grad_op_ = JUST(op_expr_helper::ConvNdFilterGradOp(
-      *kernel_size_, *strides_, *padding_before_, *dilation_rate_, /*groups=*/1, *data_format_));
+  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
 
@@ -81,6 +64,14 @@ Maybe<void> DeConvolutionNd::Capture(DeConvolutionNdCaptureState* ctx, const Ten
   if (ctx->weight_requires_grad) {
     ctx->SaveTensorForBackward(inputs.at(0));  // x
   }
+
+  ComposedAttrMap composed_attrs(attrs, base_attrs_);
+  ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
+  ctx->padding_before = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding_before"));
+  ctx->kernel_size = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("kernel_size"));
+  ctx->strides = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("strides"));
+  ctx->dilation_rate = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("dilation_rate"));
+  ctx->ndims = ctx->kernel_size.size();
   return Maybe<void>::Ok();
 }
 
@@ -88,17 +79,42 @@ Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdCaptureState* ctx,
                                    const TensorTuple& out_grads, TensorTuple* in_grads) const {
   in_grads->resize(2);
   if (ctx->activation_requires_grad) {
+    const auto& x = ctx->SavedTensors().at(1);
+    std::vector<int64_t> start, stop, step;
+    for (int i = 0; i < x->shape()->NumAxes(); i++) {
+      start.push_back(0);
+      stop.push_back(x->shape()->At(i));
+      step.push_back(1);
+    }
     const auto& weight = ctx->SavedTensors().at(0);
-    MutableAttrMap attrs;
-    const int32_t filters = weight->shape()->At(0);
-    JUST(attrs.SetAttr<int32_t>("filters", filters));
-    in_grads->at(0) = JUST(
-        OpInterpUtil::Dispatch<Tensor>(*activation_grad_op_, {out_grads.at(0), weight}, attrs));
+    if (ctx->ndims == 1) {
+      std::shared_ptr<Tensor> result =
+          JUST(functional::Conv1d(out_grads.at(0), weight, Optional<Tensor>(), ctx->strides,
+                                  ctx->padding_before, ctx->dilation_rate, /*groups=*/1));
+      result = JUST(functional::Slice(result, start, stop, step));
+      in_grads->at(0) = result;
+    } else if (ctx->ndims == 2) {
+      std::shared_ptr<Tensor> result =
+          JUST(functional::Conv2d(out_grads.at(0), weight, Optional<Tensor>(), ctx->strides,
+                                  ctx->padding_before, ctx->dilation_rate, /*groups=*/1));
+      result = JUST(functional::Slice(result, start, stop, step));
+      in_grads->at(0) = result;
+    } else if (ctx->ndims == 3) {
+      std::shared_ptr<Tensor> result =
+          JUST(functional::Conv3d(out_grads.at(0), weight, Optional<Tensor>(), ctx->strides,
+                                  ctx->padding_before, ctx->dilation_rate, /*groups=*/1));
+      result = JUST(functional::Slice(result, start, stop, step));
+      in_grads->at(0) = result;
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Invalid ndim " << ctx->ndims << " for conv functor";
+    }
   }
   if (ctx->weight_requires_grad) {
     int idx = ctx->activation_requires_grad;
     const auto& x = ctx->SavedTensors().at(idx);
-    in_grads->at(1) = JUST(OpInterpUtil::Dispatch<Tensor>(*weight_grad_op_, {x, out_grads.at(0)}));
+    in_grads->at(1) = JUST(functional::ConvFilterGrad(
+        x, out_grads.at(0), ctx->ndims, ctx->kernel_size, ctx->strides, ctx->padding_before,
+        ctx->dilation_rate, /*groups=*/1, ctx->data_format));
   }
   return Maybe<void>::Ok();
 }

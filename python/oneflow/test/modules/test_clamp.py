@@ -22,11 +22,12 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_clamp(test_case, shape, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
     )
     of_out = flow.clamp(input, 0.1, 0.5)
@@ -35,7 +36,7 @@ def _test_clamp(test_case, shape, device):
 
 
 def _test_tensor_clamp(test_case, shape, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
     )
     of_out = input.clamp(0.1, 0.5)
@@ -44,7 +45,7 @@ def _test_tensor_clamp(test_case, shape, device):
 
 
 def _test_clamp_scalar_min(test_case, shape, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
     )
     of_out = flow.clamp(input, 0.1, None)
@@ -53,7 +54,7 @@ def _test_clamp_scalar_min(test_case, shape, device):
 
 
 def _test_clamp_scalar_max(test_case, shape, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
     )
     of_out = flow.clamp(input, None, 0.5)
@@ -62,7 +63,7 @@ def _test_clamp_scalar_max(test_case, shape, device):
 
 
 def _test_clamp_integral(test_case, shape, device):
-    input = flow.Tensor(np.random.randint(3, 10, shape), device=flow.device(device))
+    input = flow.tensor(np.random.randint(3, 10, shape), device=flow.device(device))
     of_out = flow.clamp(input, 1, 5)
     np_out = np.clip(input.numpy(), 1, 5)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
@@ -75,7 +76,7 @@ def _numpy_clamp_grad(arr, min, max):
 
 
 def _test_clamp_backward(test_case, shape, device):
-    x = flow.Tensor(
+    x = flow.tensor(
         np.random.randn(*shape),
         dtype=flow.float32,
         device=flow.device(device),

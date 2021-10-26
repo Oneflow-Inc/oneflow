@@ -43,7 +43,7 @@ class Embedding(Module):
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> indices = flow.Tensor([[1, 2, 4, 5], [4, 3, 2, 9]], dtype=flow.int)
+        >>> indices = flow.tensor([[1, 2, 4, 5], [4, 3, 2, 9]], dtype=flow.int)
         >>> m = flow.nn.Embedding(10, 3)
         >>> y = m(indices)
 
@@ -101,6 +101,61 @@ class Embedding(Module):
     def forward(self, indices):
         res = flow._C.gather(self.weight, indices, axis=0)
         return res
+
+
+def embedding(
+    input,
+    weight,
+    padding_idx=None,
+    max_norm=None,
+    norm_type=None,
+    scale_grad_by_freq=False,
+    sparse=False,
+):
+    r"""A simple lookup table that looks up embeddings in a fixed dictionary and size.
+
+    This module is often used to retrieve word embeddings using indices.
+    The input to the module is a list of indices, and the embedding matrix,
+    and the output is the corresponding word embeddings.
+
+    See :class:`oneflow.nn.Embedding` for more details.
+
+    Args:
+        input (LongTensor): Tensor containing indices into the embedding matrix
+        weight (Tensor): The embedding matrix with number of rows equal to the maximum possible index + 1,
+            and number of columns equal to the embedding size
+        padding_idx (int, optional): If specified, the entries at :attr:`padding_idx` do not contribute to the gradient;
+                                     therefore, the embedding vector at :attr:`padding_idx` is not updated during training,
+                                     i.e. it remains as a fixed "pad".
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn.functional as F
+
+        >>> # a batch of 2 samples of 4 indices each
+        >>> input = flow.tensor([[1,2,4,5],[4,3,2,9]])
+        >>> # an embedding matrix containing 10 tensors of size 3
+        >>> embedding_matrix = flow.rand(10, 3)
+        >>> output = F.embedding(input, embedding_matrix)
+        >>> output.shape
+        oneflow.Size([2, 4, 3])
+        >>> # example with padding_idx
+        >>> input = flow.tensor([[0,2,0,5]])
+        >>> output = F.embedding(input, embedding_matrix, padding_idx=0)
+        >>> output.shape
+        oneflow.Size([1, 4, 3])
+    """
+    assert max_norm is None, "Not support max_norm yet!"
+    assert norm_type is None, "Not support norm_type yet!"
+    assert scale_grad_by_freq is False, "Not support scale_grad_by_freq=True yet!"
+    assert sparse is False, "Not support sparse=True yet!"
+    if padding_idx is not None:
+        weight[padding_idx].fill_(0)
+    res = flow._C.gather(weight, input, axis=0)
+    return res
 
 
 if __name__ == "__main__":

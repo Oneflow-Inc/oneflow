@@ -100,7 +100,7 @@ def _test_alexnet_graph_repr(test_case, args):
     print("repr(alexnet_graph) before run: \n", repr(alexnet_graph))
 
     # debug graph build
-    alexnet_graph.debug()
+    alexnet_graph.debug(1)
 
     alexnet_module.train()
     image, label = train_data_loader()

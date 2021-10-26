@@ -21,12 +21,23 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
+CudaOptionalEventRecordStatusQuerier::~CudaOptionalEventRecordStatusQuerier() {
+  if (has_event_record_) {
+    cudaSetDevice(device_id_);
+    cudaEventDestroy(event_);
+  }
+}
+
 bool CudaOptionalEventRecordStatusQuerier::event_completed() const {
   cudaSetDevice(device_id_);
-  return cudaEventQuery(event_) == cudaSuccess;
+  return cudaEventQuery(event_) != cudaErrorNotReady;
 }
 
 void CudaOptionalEventRecordStatusQuerier::SetLaunched(DeviceCtx* device_ctx) {
+  // No lock needed. This function will be called only one time.
+  // In most cases, errors will be successfully detected by CHECK
+  // even though run in different threads.
+  CHECK(!launched_);
   if (has_event_record_) {
     cudaSetDevice(device_id_);
     OF_CUDA_CHECK(

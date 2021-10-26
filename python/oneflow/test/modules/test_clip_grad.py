@@ -48,7 +48,7 @@ def _clip_grad_norm_np(input, max_norm, norm_type):
 
 def _test_clip_grad_norm_impl(test_case, shape, device, max_norm, norm_type):
     np_input = np.random.rand(*shape)
-    of_input = flow.Tensor(
+    of_input = flow.tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     m = flow.nn.ReLU()

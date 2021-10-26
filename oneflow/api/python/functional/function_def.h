@@ -22,7 +22,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 
 #include "oneflow/api/python/functional/python_arg.h"
-#include "oneflow/core/functional/value_types.h"
+#include "oneflow/api/python/functional/value_types.h"
 
 namespace py = pybind11;
 

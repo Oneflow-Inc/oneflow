@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/device/device_context.h"
+#include "oneflow/core/stream/stream_context.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
 
@@ -73,9 +74,11 @@ class KernelCreateContext {
 
 class KernelInitContext {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelInitContext);
   virtual ~KernelInitContext() = default;
 
   virtual DeviceCtx* device_ctx() = 0;
+  virtual StreamContext* stream_ctx() = 0;
 
   virtual DeviceType device_type() const = 0;
   virtual const ParallelContext& parallel_ctx() const = 0;
@@ -123,7 +126,6 @@ class KernelInitContext {
 
  protected:
   KernelInitContext() = default;
-  KernelInitContext(const KernelInitContext&) = delete;
 
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
   virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
@@ -131,6 +133,7 @@ class KernelInitContext {
 
 class KernelInferContext {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelInferContext);
   virtual ~KernelInferContext() = default;
 
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
@@ -140,6 +143,7 @@ class KernelInferContext {
   virtual const ParallelContext& parallel_ctx() const = 0;
 
   virtual DeviceCtx* device_ctx() = 0;
+  virtual StreamContext* stream_ctx() = 0;
   virtual Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) = 0;
   virtual const ShapeView& ShapeView4ArgNameAndIndex(const std::string& arg_name,
                                                      int32_t arg_index) = 0;
@@ -185,7 +189,6 @@ class KernelInferContext {
 
  protected:
   KernelInferContext() = default;
-  KernelInferContext(const KernelInferContext&) = delete;
 
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
   virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
@@ -195,16 +198,17 @@ class Tensor;
 
 class KernelComputeContext {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelComputeContext);
   virtual ~KernelComputeContext() = default;
 
   virtual Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) = 0;
   virtual DeviceCtx* device_ctx() = 0;
+  virtual StreamContext* stream_ctx() = 0;
 
   virtual const TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                        int32_t index) const = 0;
   virtual DeviceType device_type() const = 0;
   virtual const ParallelContext& parallel_ctx() const = 0;
-  virtual const JobDesc& job_desc() const = 0;
 
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
@@ -237,7 +241,6 @@ class KernelComputeContext {
 
  protected:
   KernelComputeContext() = default;
-  KernelComputeContext(const KernelComputeContext&) = delete;
 
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
 
@@ -257,21 +260,10 @@ class OpKernel;
 template<typename T>
 OpKernel* NewOpKernel();
 
-enum OpKernelStatefulness {
-  kInvalidOpKernelStatefulness = 0,
-  kStatefulOpKernel,
-  kStatelessOpKernel,
-};
-
 class OpKernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpKernel);
   virtual ~OpKernel() = default;
-
-  bool is_stateless() const {
-    CHECK_NE(statefullness_, kInvalidOpKernelStatefulness);
-    return statefullness_ == kStatelessOpKernel;
-  }
 
   virtual std::shared_ptr<OpKernelState> CreateOpKernelState(KernelInitContext* ctx) const {
     return std::shared_ptr<OpKernelState>();
@@ -283,38 +275,25 @@ class OpKernel {
   virtual bool AlwaysComputeWhenAllOutputsEmpty() const = 0;
 
  protected:
-  OpKernel() : statefullness_(kInvalidOpKernelStatefulness) {}
+  OpKernel() {}
 
  private:
   template<typename T>
   friend OpKernel* NewOpKernel();
   template<typename T>
   friend OpKernel* NewOpKernelWithCtx(KernelCreateContext* ctx);
-  OpKernelStatefulness statefullness_;
 };
 
 template<typename T>
 OpKernel* NewOpKernel() {
-  OpKernel* opkernel = new T();
-  if (typeid(&OpKernel::CreateOpKernelState) == typeid(&T::CreateOpKernelState)) {
-    opkernel->statefullness_ = kStatelessOpKernel;
-  } else {
-    opkernel->statefullness_ = kStatefulOpKernel;
-  }
-  return opkernel;
+  return new T();
 }
 
 class KernelCreateContext;
 
 template<typename T>
 OpKernel* NewOpKernelWithCtx(KernelCreateContext* ctx) {
-  OpKernel* opkernel = new T(ctx);
-  if (typeid(&OpKernel::CreateOpKernelState) == typeid(&T::CreateOpKernelState)) {
-    opkernel->statefullness_ = kStatelessOpKernel;
-  } else {
-    opkernel->statefullness_ = kStatefulOpKernel;
-  }
-  return opkernel;
+  return new T(ctx);
 }
 
 }  // namespace user_op

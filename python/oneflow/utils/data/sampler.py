@@ -141,36 +141,26 @@ class RandomSampler(Sampler[int]):
         n = len(self.data_source)
         if self.generator is None:
             generator = flow.Generator()
-            generator.manual_seed(
-                # TODO: replace with flow.randint
-                flow.Tensor(1, dtype=flow.int64)
-                .uniform_(0, 999)
-                .numpy()
-                .item()
-            )
+            generator.manual_seed(np.random.randint(0, np.iinfo(np.int64).max))
+            # TODO: use Tensor.random_
+            # generator.manual_seed(
+            #     int(flow.empty((), dtype=flow.int64).random_().item())
+            # )
         else:
             generator = self.generator
         if self.replacement:
-            np.random.randint()
             for _ in range(self.num_samples // 32):
-                yield from np.random.randint(
-                    high=n, size=(32,), dtype=np.int64
-                ).tolist()
-                # TODO: use flow.randint replace np.randint
-                # yield from flow.randint(
-                #     high=n, size=(32,), dtype=flow.int64, generator=generator
-                # ).tolist()
-            yield from np.random.randint(
-                high=n, size=(self.num_samples % 32,), dtype=np.int64
-            ).tolist()
-            # yield from flow.randint(
-            #     high=n,
-            #     size=(self.num_samples % 32,),
-            #     dtype=flow.int64,
-            #     generator=generator,
-            # ).tolist()
+                yield from flow._C.randint(
+                    high=n, size=(32,), dtype=flow.int64, generator=generator
+                ).numpy().tolist()
+            yield from flow._C.randint(
+                high=n,
+                size=(self.num_samples % 32,),
+                dtype=flow.int64,
+                generator=generator,
+            ).numpy().tolist()
         else:
-            yield from flow.randperm(n, generator=generator).tolist()
+            yield from flow._C.randperm(n, generator=generator).numpy().tolist()
 
     def __len__(self):
         return self.num_samples
@@ -192,7 +182,7 @@ class SubsetRandomSampler(Sampler[int]):
     def __iter__(self):
         return (
             self.indices[i]
-            for i in flow.randperm(len(self.indices), generator=self.generator)
+            for i in flow._C.randperm(len(self.indices), generator=self.generator)
         )
 
     def __len__(self):

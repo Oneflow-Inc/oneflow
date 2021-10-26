@@ -13,21 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/data_type.h"
+#ifndef ONEFLOW_EXTENSION_PYTHON_NUMPY_H_
+#define ONEFLOW_EXTENSION_PYTHON_NUMPY_H_
 
-// PyArrayObject cannot be forward declared, or compile error will occur
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-#include <numpy/arrayobject.h>
+#define NO_IMPORT_ARRAY
+#include "oneflow/extension/python/numpy_internal.h"
 
 namespace oneflow {
 
-namespace numpy {
+class NumPyArrayPtr final {
+ public:
+  NumPyArrayPtr(PyObject* obj)
+      : internal_(std::make_shared<numpy::NumPyArrayInternal>(obj, []() -> void {})) {}
+  NumPyArrayPtr(PyObject* obj, const std::function<void()>& deleter)
+      : internal_(std::make_shared<numpy::NumPyArrayInternal>(obj, deleter)) {}
 
-Maybe<int> OFDataTypeToNumpyType(DataType of_data_type);
+  void* data() const { return internal_->data(); }
 
-Maybe<DataType> NumpyTypeToOFDataType(int np_array_type);
+  size_t size() const { return internal_->size(); }
 
-Maybe<DataType> GetOFDataTypeFromNpArray(PyArrayObject* array);
+ private:
+  std::shared_ptr<numpy::NumPyArrayInternal> internal_;
+};
 
-}  // namespace numpy
 }  // namespace oneflow
+
+#endif  // ONEFLOW_EXTENSION_PYTHON_NUMPY_H_

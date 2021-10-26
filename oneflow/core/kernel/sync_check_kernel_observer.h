@@ -26,8 +26,7 @@ class SyncCheckKernelObserver final : public KernelObserver {
   SyncCheckKernelObserver() = default;
   ~SyncCheckKernelObserver() override = default;
 
-  void DidForwardDataContent(const KernelCtx& kernel_ctx, const Kernel* kernel,
-                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) override;
+  void DidForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) override;
 };
 
 }  // namespace oneflow

@@ -16,9 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_CALL_OPKERNEL_INSTRUCTION_H_
 #define ONEFLOW_CORE_EAGER_CALL_OPKERNEL_INSTRUCTION_H_
 
-#include "oneflow/core/eager/opkernel_instruction.msg.h"
+#include "oneflow/core/eager/opkernel_instruction.h"
 #include "oneflow/core/vm/instr_type_id.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 

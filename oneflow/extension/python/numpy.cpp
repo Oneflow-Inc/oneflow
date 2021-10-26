@@ -13,11 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/extension/python/numpy.h"
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/framework/throw.h"
+#include "oneflow/core/common/registry_error.h"
+#include "oneflow/extension/python/numpy_internal.h"
+
+namespace py = pybind11;
 
 namespace oneflow {
 
 namespace numpy {
+
+NumPyArrayInternal::NumPyArrayInternal(PyObject* obj, const std::function<void()>& deleter)
+    : obj_((PyArrayObject*)obj), deleter_(deleter) {
+  CHECK_OR_THROW(PyArray_Check(obj)) << "The object is not a numpy array.";
+  CHECK_OR_THROW(PyArray_ISCONTIGUOUS(obj_)) << "Contiguous array is expected.";
+  size_ = PyArray_SIZE(obj_);
+  data_ = PyArray_DATA(obj_);
+}
+
+NumPyArrayInternal::~NumPyArrayInternal() {
+  if (deleter_) { deleter_(); }
+}
 
 Maybe<int> OFDataTypeToNumpyType(DataType of_data_type) {
   switch (of_data_type) {
@@ -29,8 +46,8 @@ Maybe<int> OFDataTypeToNumpyType(DataType of_data_type) {
     case DataType::kUInt8: return NPY_UINT8;
     case DataType::kFloat16: return NPY_FLOAT16;
     default:
-      return Error::ValueError("OneFlow data type " + DataType_Name(of_data_type)
-                               + " is not valid to Numpy data type.");
+      return Error::InvalidValueError("OneFlow data type " + DataType_Name(of_data_type)
+                                      + " is not valid to Numpy data type.");
   }
 }
 
@@ -44,14 +61,26 @@ Maybe<DataType> NumpyTypeToOFDataType(int np_type) {
     case NPY_UINT8: return DataType::kUInt8;
     case NPY_FLOAT16: return DataType::kFloat16;
     default:
-      return Error::ValueError("Numpy data type " + std::to_string(np_type)
-                               + " is not valid to OneFlow data type.");
+      return Error::InvalidValueError("Numpy data type " + std::to_string(np_type)
+                                      + " is not valid to OneFlow data type.");
   }
 }
 
 Maybe<DataType> GetOFDataTypeFromNpArray(PyArrayObject* array) {
   int np_array_type = PyArray_TYPE(array);
   return NumpyTypeToOFDataType(np_array_type);
+}
+
+// Executing any numpy c api before _import_array() results in segfault
+// NOTE: this InitNumpyCAPI() works because of `PY_ARRAY_UNIQUE_SYMBOL`
+// defined in numpy_internal.h
+// Reference:
+// https://numpy.org/doc/stable/reference/c-api/array.html#importing-the-api
+Maybe<void> InitNumpyCAPI() {
+  CHECK_ISNULL_OR_RETURN(PyArray_API);
+  CHECK_EQ_OR_RETURN(_import_array(), 0)
+      << ". Unable to import Numpy array, try to upgrade Numpy version!";
+  return Maybe<void>::Ok();
 }
 
 }  // namespace numpy

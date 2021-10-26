@@ -79,6 +79,51 @@ class RMSprop(Optimizer):
         centered (bool, optional) : if ``True``, compute the centered RMSProp,
             the gradient is normalized by an estimation of its variance
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
+
+    For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        # Assume net is a custom model. 
+        rmsprop = flow.optim.RMSprop(net.parameters(), lr=1e-3)
+
+        for epoch in range(epochs):
+            # Read data, Compute the loss and so on. 
+            # ...
+            loss.backward()
+            rmsprop.step()
+            rmsprop.zero_grad()
+
+    Example 2: 
+
+    .. code-block:: python 
+
+        # Assume net is a custom model. 
+        rmsprop = flow.optim.RMSprop(
+            [
+                {
+                    "params": net.parameters(),
+                    "lr": learning_rate,
+                    "clip_grad_max_norm": 0.5,
+                    "clip_grad_norm_type": 2.0,
+                }
+            ],
+        )
+
+        for epoch in range(epochs):
+            # Read data, Compute the loss and so on. 
+            # ...
+            loss.backward()
+            rmsprop.clip_grad()
+            rmsprop.step()
+            rmsprop.zero_grad()
+
+    If you want to use clip_grad, you can refer this example. 
+
+    For more details of `clip_grad_max_norm` and `clip_grad_norm_type`, you can refer to :func:`oneflow.nn.utils.clip_grad_norm_`. 
+
     """
 
     def __init__(
@@ -108,9 +153,7 @@ class RMSprop(Optimizer):
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
-                self._state[param]["square_avg"] = flow.zeros_like(param)
-                if param_group["centered"]:
-                    self._state[param]["grad_avg"] = flow.zeros_like(param)
+
         self._centered_rmsprop = (
             flow.builtin_op("rmsprop_update")
             .Input("model")
@@ -154,8 +197,14 @@ class RMSprop(Optimizer):
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
+
+                    if "square_avg" not in self._state[param]:
+                        self._state[param]["square_avg"] = flow.zeros_like(param)
                     ms_tensor = self._state[param]["square_avg"]
+
                     if param_group["centered"]:
+                        if "grad_avg" not in self._state[param]:
+                            self._state[param]["grad_avg"] = flow.zeros_like(param)
                         mg_tensor = self._state[param]["grad_avg"]
                         self._centered_rmsprop(
                             param, param.grad, ms_tensor, mg_tensor, **kwargs
@@ -165,7 +214,7 @@ class RMSprop(Optimizer):
             self._state["step"] = self._state["step"] + 1
             return loss
 
-    def generate_conf_for_graph(self, train_conf, vars_conf):
+    def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
             optimizer_conf = train_conf.mutable_optimizer_conf().Add()

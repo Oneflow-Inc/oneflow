@@ -37,7 +37,7 @@ def sys_exc_error_msg():
     return msg
 
 
-def list_to_func_return(li):
+def seq_to_func_return(li):
     if len(li) == 0:
         return None
     elif len(li) == 1:

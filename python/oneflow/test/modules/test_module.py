@@ -33,6 +33,7 @@ def np_relu(np_arr):
     return np.where(np_arr > 0, np_arr, 0)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestModule(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_nested_module(test_case):
@@ -280,8 +281,8 @@ class TestModule(flow.unittest.TestCase):
                 self.param1 = param1
                 self.param2 = param2
 
-        tensor0 = flow.nn.Parameter(flow.Tensor(2, 3, dtype=flow.float64))
-        tensor1 = flow.nn.Parameter(flow.Tensor(2, 3, dtype=flow.float64))
+        tensor0 = flow.nn.Parameter(flow.Tensor(2, 3).to(dtype=flow.float64))
+        tensor1 = flow.nn.Parameter(flow.Tensor(2, 3).to(dtype=flow.float64))
         m = CustomModule(tensor0, tensor1)
         m = m.float()
         state_dict = m.state_dict()

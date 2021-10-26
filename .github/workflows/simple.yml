@@ -16,10 +16,11 @@ jobs:
   cancel_previous:
     name: Cancel previous runs
     runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'need-simple-ci')) }}
     steps:
       - name: Cancel previous runs of outdated commit
-        if: github.ref != 'refs/heads/master'
         uses: styfle/cancel-workflow-action@0.9.0
+        if: ${{ github.ref != 'refs/heads/master' }}
         with:
           access_token: ${{ github.token }}
 
@@ -49,7 +50,7 @@ jobs:
           cmake .. -C ../cmake/caches/international/cpu.cmake \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON
-          cmake --build . -j$(nproc) --target oneflow_deps of_cfgobj of_protoobj of_functional_obj
+          cmake --build . -j$(nproc) --target oneflow_deps of_cfgobj of_protoobj of_functional_obj of_functional_tensor_obj
       - name: Run clang-tidy for all translation units
         # use clang as compiler for correct compiler flags
         run: |
@@ -74,16 +75,13 @@ jobs:
       CXXFLAGS: "-w"
     strategy:
       fail-fast: true
-      max-parallel: 3
+      max-parallel: 1
       matrix:
-        test_suite: ["conda", "mac", "ubuntu"]
+        test_suite: ["mac", "ubuntu"]
         cmake_generator: ["Ninja", "Unix Makefiles"]
         cmake_build_type: ["Debug", "Release"]
         build_shared_libs: ["ON", "OFF"]
         include:
-          - test_suite: conda
-            os: "ubuntu-20.04"
-            make_concurrency: 2
           - test_suite: mac
             os: "macos-10.15"
             make_concurrency: 2
@@ -91,13 +89,19 @@ jobs:
             os: "ubuntu-20.04"
             make_concurrency: 2
         exclude:
-          - test_suite: conda
-            cmake_generator: "Ninja"
           - test_suite: mac
             cmake_build_type: "Debug"
+          - test_suite: mac
+            cmake_generator: "Ninja"
           - test_suite: ubuntu
             cmake_generator: "Ninja"
             cmake_build_type: "Debug"
+          - test_suite: ubuntu
+            cmake_generator: "Ninja"
+            build_shared_libs: "OFF"
+          - test_suite: ubuntu
+            cmake_generator: "Unix Makefiles"
+            cmake_build_type: "Release"
     steps:
       - uses: actions/checkout@v2
         with:
@@ -111,7 +115,7 @@ jobs:
         run: |
           sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip ninja-build
       - name: Cache pip (Linux)
-        if: startsWith(runner.os, 'Linux') && matrix.test_suite != 'conda'
+        if: startsWith(runner.os, 'Linux')
         uses: actions/cache@v2
         with:
           path: ~/.cache/pip
@@ -123,27 +127,9 @@ jobs:
           path: ~/Library/Caches/pip
           key: ${{ matrix.os }}-pip-${{ hashFiles('**/requirements.txt') }}
       - name: Install dependencies (pip)
-        if: matrix.test_suite != 'conda'
         run: |
           python3 -m pip install -r ci/requirements.txt
           python3 -m pip install -r dev-requirements.txt
-      - name: Download conda environment.yml
-        if: matrix.test_suite == 'conda'
-        run: |
-          wget https://raw.githubusercontent.com/Oneflow-Inc/conda-env/5b985c863ef73fc3f3b597289fdcf740d52cf71c/dev/gcc7/environment.yml
-      - uses: conda-incubator/setup-miniconda@v2
-        if: matrix.test_suite == 'conda'
-        name: Setup conda
-        with:
-          activate-environment: oneflow-dev-gcc7
-          environment-file: environment.yml
-          python-version: 3.6
-          auto-activate-base: false
-      - name: Set environment variables (conda)
-        if: matrix.test_suite == 'conda'
-        run: |
-          conda env config vars set CXXFLAGS="-w -fPIC"
-        shell: bash -l {0}
       - name: Set environment variables
         run: |
           set -x
@@ -156,7 +142,6 @@ jobs:
           cmake_flags+=" -DCMAKE_MACOSX_RPATH=FALSE"
           cmake_flags+=" -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
           echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
-        shell: bash -l {0}
       - name: Build (third party)
         if: matrix.cmake_generator != 'Ninja'
         run: |
@@ -166,7 +151,6 @@ jobs:
           cd build-third_party
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=ON -DONEFLOW=OFF -DTHIRD_PARTY_DIR=$PWD/../third_party_install
           cmake --build . -j $(nproc)
-        shell: bash -l {0}
       - name: Build (of_ccobj)
         if: matrix.cmake_generator != 'Ninja'
         run: |
@@ -174,7 +158,6 @@ jobs:
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON -DTHIRD_PARTY_DIR=$PWD/../third_party_install
           cmake --build . -j ${{ matrix.make_concurrency }} --target of_ccobj
-        shell: bash -l {0}
       - name: Build (oneflow_internal)
         if: always() && matrix.cmake_generator != 'Ninja'
         run: |
@@ -182,7 +165,6 @@ jobs:
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
           cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_internal
-        shell: bash -l {0}
       - name: Build (oneflow_py)
         if: always() && matrix.cmake_generator != 'Ninja'
         run: |
@@ -190,7 +172,6 @@ jobs:
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
           cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_py
-        shell: bash -l {0}
       - name: Build (oneflow_testexe)
         if: always() && matrix.cmake_generator != 'Ninja'
         run: |
@@ -198,7 +179,6 @@ jobs:
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
           cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_testexe
-        shell: bash -l {0}
       - name: Build (ALL)
         if: always()
         continue-on-error: ${{ startsWith(runner.os, 'macOS') && matrix.cmake_generator == 'Ninja' && matrix.build_shared_libs == 'ON' }}
@@ -207,7 +187,6 @@ jobs:
           cd build
           cmake .. ${{ env.cmake_flags }}
           cmake --build . -j ${{ matrix.make_concurrency }}
-        shell: bash -l {0}
       - name: Exe test
         if: always()
         continue-on-error: true
@@ -218,7 +197,6 @@ jobs:
           mkdir -p build
           cd build
           ./bin/oneflow_testexe
-        shell: bash -l {0}
       - name: Op test
         if: always()
         continue-on-error: true
@@ -228,7 +206,6 @@ jobs:
           ulimit -c
           source build/source.sh
           ONEFLOW_TEST_GITHUB_HOSTED=1 ONEFLOW_TEST_CPU_ONLY=1 bash ci/test/1node_op_test.sh
-        shell: bash -l {0}
       - name: "Tar logs"
         if: always() && contains(github.event.pull_request.labels.*.name, 'need-simple-ci-upload-artifact')
         continue-on-error: true
@@ -250,3 +227,41 @@ jobs:
           path: |
             home_oneflow_temp.tar
             cwd_test_tmp_dir.tar
+
+  conda:
+    name: Build with conda
+    if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'need-simple-ci'))
+    runs-on: ubuntu-latest
+    needs: [cancel_previous]
+    strategy:
+      fail-fast: true
+      max-parallel: 1
+      matrix:
+        build-type: ["gcc7", "clang10"]
+    steps:
+      - name: Checkout Oneflow-Inc/oneflow
+        uses: actions/checkout@v2
+      - name: Checkout Oneflow-Inc/conda-env
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/conda-env
+          ref: 30a7f00eb48ee9009d85a848e720823e5054c66b
+          path: conda-env
+      - uses: Oneflow-Inc/get-oneflow@add-experimental
+        name: Build with gcc7
+        if: ${{ matrix.build-type == 'gcc7'}}
+        with:
+          cmake-init-cache: cmake/caches/ci/gh-hosted/cpu-gcc.cmake
+          oneflow-src: .
+          oneflow-build-env: conda
+          conda-env-file: conda-env/dev/gcc7/environment-v2.yml
+          conda-env-name: oneflow-dev-gcc7-v2
+      - uses: Oneflow-Inc/get-oneflow@add-experimental
+        name: Build with clang10
+        if: ${{ matrix.build-type == 'clang10'}}
+        with:
+          cmake-init-cache: cmake/caches/ci/gh-hosted/cpu-clang.cmake
+          oneflow-src: .
+          oneflow-build-env: conda
+          conda-env-file: conda-env/dev/clang10/environment-v2.yml
+          conda-env-name: oneflow-dev-clang10-v2

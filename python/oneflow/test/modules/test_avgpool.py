@@ -16,13 +16,15 @@ limitations under the License.
 import unittest
 
 import oneflow as flow
+from oneflow.test_utils.automated_test_util.generators import constant, random_bool
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestAvgPoolingModule(flow.unittest.TestCase):
-    @autotest(n=100)
+    @autotest()
     def test_avgpool1d_with_random_data(test_case):
         m = torch.nn.AvgPool1d(
             kernel_size=random(4, 6),
@@ -38,7 +40,7 @@ class TestAvgPoolingModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(n=100)
+    @autotest()
     def test_avgpool2d_with_random_data(test_case):
         m = torch.nn.AvgPool2d(
             kernel_size=random(4, 6),
@@ -57,7 +59,7 @@ class TestAvgPoolingModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(n=100)
+    @autotest()
     def test_avgpool3d_with_random_data(test_case):
         m = torch.nn.AvgPool3d(
             kernel_size=random(4, 6),
@@ -74,6 +76,55 @@ class TestAvgPoolingModule(flow.unittest.TestCase):
             ndim=5, dim2=random(20, 22), dim3=random(20, 22), dim4=random(20, 22)
         ).to(device)
         y = m(x)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestAvgPoolingFunctional(flow.unittest.TestCase):
+    @autotest()
+    def test_avgpool1d_functional(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=3, dim2=random(20, 22)).to(device)
+        y = torch.nn.functional.avg_pool1d(
+            x,
+            kernel_size=random(1, 6).to(int),
+            stride=random(1, 3).to(int) | nothing(),
+            padding=random(1, 3).to(int),
+            ceil_mode=random_bool(),
+            count_include_pad=random_bool(),
+        )
+        return y
+
+    @autotest()
+    def test_avgpool2d_functional(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(
+            device
+        )
+        y = torch.nn.functional.avg_pool2d(
+            x,
+            kernel_size=random(1, 6).to(int),
+            stride=random(1, 3).to(int) | nothing(),
+            padding=random(1, 3).to(int),
+            ceil_mode=random_bool(),
+            count_include_pad=random_bool(),
+        )
+        return y
+
+    @autotest()
+    def test_avgpool3d_functional(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(
+            ndim=5, dim2=random(20, 22), dim3=random(20, 22), dim4=random(20, 22)
+        ).to(device)
+        y = torch.nn.functional.avg_pool3d(
+            x,
+            kernel_size=random(1, 6).to(int),
+            stride=random(1, 3).to(int) | nothing(),
+            padding=random(1, 3).to(int),
+            ceil_mode=random_bool(),
+            count_include_pad=random_bool(),
+        )
         return y
 
 

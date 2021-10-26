@@ -18,6 +18,9 @@ limitations under the License.
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/primitive/include/memcpy.h"
+#include "oneflow/core/primitive/include/memset.h"
+#include "oneflow/core/stream/stream_context_adapter.h"
 
 namespace oneflow {
 
@@ -225,301 +228,76 @@ void IntSequenceInitializer(const IntRangeInitializerConf& initializer_conf, uin
   RangeInitializer<T, IntRangeInitializerConf>(initializer_conf, random_seed, blob);
 }
 
-void ComputeOffset(const int32_t num_axes, const int64_t* shape, const int32_t* permutation,
-                   DimVector& offset) {
-  offset.resize(num_axes);
-  DimVector buff(num_axes);
-  int64_t cur_offset = 1;
-  for (int32_t i = num_axes - 1; i >= 0; --i) {
-    buff[i] = cur_offset;
-    cur_offset *= shape[i];
-  }
-  for (int32_t i = 0; i < num_axes; ++i) { offset[permutation[i]] = buff[i]; }
-}
-
-void IncreaseIndex(const int64_t* shape, DimVector& index) {
-  for (int32_t i = index.size() - 1; i >= 0; --i) {
-    ++index[i];
-    if (index[i] >= shape[i]) {
-      index[i] -= shape[i];
-    } else {
-      break;
-    }
-  }
-}
-
-template<typename T, T (*reduce_core_func)(const T, const T)>
-void MatrixRowReduce(const int64_t row_num, const int64_t col_num, const T* x, T* y) {
-  FOR_RANGE(int64_t, i, 0, row_num) {
-    y[i] = x[i * col_num];
-    FOR_RANGE(int64_t, j, 1, col_num) { y[i] = reduce_core_func(y[i], x[i * col_num + j]); }
-  }
-}
-
 }  // namespace
 
 void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
                 const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
-  void (*func)(DeviceCtx*, void* dst, const void* src, size_t sz);
-  if (src_mem_case.has_host_mem() && dst_mem_case.has_host_mem()) {
-    func = &Memcpy<DeviceType::kCPU>;
+  std::unique_ptr<StreamContext> stream_ctx(NewStreamContextAdapter(ctx));
+  AutoMemcpy(stream_ctx.get(), dst, src, sz, dst_mem_case, src_mem_case);
+}
+
+void AutoMemcpy(DeviceCtx* ctx, Blob* dst, const Blob* src) {
+  std::unique_ptr<StreamContext> stream_ctx(NewStreamContextAdapter(ctx));
+  AutoMemcpy(stream_ctx.get(), dst, src);
+}
+
+void AutoMemcpy(StreamContext* stream_ctx, void* dst, const void* src, size_t sz,
+                const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
+  primitive::MemcpyKind kind{};
+  if (stream_ctx->device_type() == DeviceType::kCPU) {
+    CHECK(src_mem_case.has_host_mem());
+    CHECK(dst_mem_case.has_host_mem());
+    kind = primitive::MemcpyKind::kDtoD;
   } else {
-#ifdef WITH_CUDA
-    func = &Memcpy<DeviceType::kGPU>;
-#else
-    UNIMPLEMENTED();
-#endif  // WITH_CUDA
+    if (src_mem_case.has_host_mem()) {
+      CHECK(!dst_mem_case.has_host_mem());
+      kind = primitive::MemcpyKind::kHtoD;
+    } else if (dst_mem_case.has_host_mem()) {
+      CHECK(!src_mem_case.has_host_mem());
+      kind = primitive::MemcpyKind::kDtoH;
+    } else {
+      kind = primitive::MemcpyKind::kDtoD;
+    }
   }
-  func(ctx, dst, src, sz);
+  std::unique_ptr<primitive::Memcpy> primitive =
+      primitive::NewPrimitive<primitive::MemcpyFactory>(stream_ctx->device_type(), kind);
+  CHECK(primitive);
+  primitive->Launch(stream_ctx, dst, src, sz);
+}
+
+void AutoMemcpy(StreamContext* stream_ctx, Blob* dst, const Blob* src) {
+  const size_t body_bytes = src->ByteSizeOfBlobBody();
+  CHECK_EQ(dst->ByteSizeOfBlobBody(), body_bytes);
+  AutoMemcpy(stream_ctx, dst->mut_dptr(), src->dptr(), body_bytes, dst->mem_case(),
+             src->mem_case());
 }
 
 void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
                     const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
   AutoMemcpy(ctx, dst, src, sz, dst_mem_case, src_mem_case);
-  if (src_mem_case.has_device_cuda_mem() || dst_mem_case.has_device_cuda_mem()) {
-#ifdef WITH_CUDA
-    OF_CUDA_CHECK(cudaStreamSynchronize(ctx->cuda_stream()));
-#else
-    UNIMPLEMENTED();
-#endif  // WITH_CUDA
-  }
+  ctx->SyncDevice();
 }
 
 void AutoMemset(DeviceCtx* ctx, void* dst, const char value, size_t sz,
                 const MemoryCase& dst_mem_case) {
-  void (*func)(DeviceCtx*, void* dst, const char value, size_t sz);
-  if (dst_mem_case.has_host_mem()) {
-    func = &Memset<DeviceType::kCPU>;
-  } else {
-#ifdef WITH_CUDA
-    func = &Memset<DeviceType::kGPU>;
-#else
-    UNIMPLEMENTED();
-#endif  // WITH_CUDA
-  }
-  func(ctx, dst, value, sz);
+  std::unique_ptr<StreamContext> stream_ctx(NewStreamContextAdapter(ctx));
+  AutoMemset(stream_ctx.get(), dst, value, sz, dst_mem_case);
+}
+
+void AutoMemset(StreamContext* stream_ctx, void* dst, const char value, size_t sz,
+                const MemoryCase& /*dst_mem_case*/) {
+  std::unique_ptr<primitive::Memset> primitive =
+      primitive::NewPrimitive<primitive::MemsetFactory>(stream_ctx->device_type());
+  primitive->Launch(stream_ctx, dst, value, sz);
 }
 
 #define KU_IF_METHOD                     \
   template<typename T, typename Derived> \
   void CpuKernelUtilIf<T, Derived>::
 
-KU_IF_METHOD Axpy(DeviceCtx* ctx, const int n, const T* alpha, const T* x, const int incx, T* y,
-                  const int incy) {
-  Derived::Axpy(ctx, n, *alpha, x, incx, y, incy);
-}
-KU_IF_METHOD Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr) {
-  *max_ptr = *std::max_element(x, x + n);
-}
-KU_IF_METHOD Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr, T* temp_storage,
-                 size_t temp_storage_bytes) {
-  Max(ctx, n, x, max_ptr);
-}
-KU_IF_METHOD Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr) {
-  *sum_ptr = 0;
-  for (int64_t i = 0; i < n; ++i) { *sum_ptr += x[i]; }
-}
-KU_IF_METHOD Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr, T* temp_storage,
-                 size_t temp_storage_bytes) {
-  Sum(ctx, n, x, sum_ptr);
-}
-KU_IF_METHOD CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
-                            const T* x, const int64_t x_col_offset, const int64_t x_lda, T* y,
-                            const int64_t y_col_offset, const int64_t y_lda) {
-  for (int64_t i = 0; i < row_num; ++i) {
-    for (int64_t j = 0; j < col_num; ++j) {
-      y[i * y_lda + y_col_offset + j] = x[i * x_lda + x_col_offset + j];
-    }
-  }
-}
-KU_IF_METHOD RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x,
-                    T* y) {
-  MatrixRowReduce<T, ReduceCoreMax>(row_num, col_num, x, y);
-}
-KU_IF_METHOD RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x,
-                    T* y) {
-  MatrixRowReduce<T, ReduceCoreAdd>(row_num, col_num, x, y);
-}
-KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const ShapeView& x_shape,
-                       const ShapeView& y_shape, const PbRf<int32_t>& permutation,
-                       const int64_t elem_cnt, const T* x, T* y) {
-  int64_t block_size = 1;
-  int32_t shared_idxs_num = 0;
-  for (int32_t i = num_axis - 1; i >= 0 && permutation[i] == i; --i) {
-    block_size *= y_shape.At(i);
-    ++shared_idxs_num;
-  }
-  if (num_axis < 2 || shared_idxs_num == num_axis) {
-    memcpy(y, x, elem_cnt * sizeof(T));
-    return;
-  }
-  int32_t trans_axis = num_axis - shared_idxs_num;
-  DimVector x_to_y_offset;
-  ComputeOffset(trans_axis, y_shape.ptr(), permutation.data(), x_to_y_offset);
-  DimVector x_index_digits(trans_axis, 0);
-  int64_t num_blocks = elem_cnt / block_size;
-  FOR_RANGE(int64_t, x_idx, 0, num_blocks) {
-    int64_t y_idx = std::inner_product(x_to_y_offset.cbegin(), x_to_y_offset.cend(),
-                                       x_index_digits.cbegin(), 0);
-    if (block_size == 1) {
-      y[y_idx] = x[x_idx];
-    } else {
-      memcpy(y + block_size * y_idx, x + block_size * x_idx, block_size * sizeof(T));
-    }
-    IncreaseIndex(x_shape.ptr(), x_index_digits);
-  }
-}
-KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }
-KU_IF_METHOD Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x) {
-  for (int64_t i = 0; i < n; ++i) { y[i] = *x; }
-}
-
 #define KU_FLOATING_METHOD \
   template<typename T>     \
   void KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::value>::type>::
-
-KU_FLOATING_METHOD Dot(DeviceCtx* ctx, const int n, const T* x, const int incx, const T* y,
-                       const int incy, T* result) {
-  *result = cblas_dot<T>(n, x, incx, y, incy);
-}
-KU_FLOATING_METHOD Copy(DeviceCtx* ctx, const int n, const T* x, const int incx, T* y,
-                        const int incy) {
-  cblas_copy<T>(n, x, incx, y, incy);
-}
-KU_FLOATING_METHOD Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx,
-                        T* y, const int incy) {
-  cblas_axpy<T>(n, alpha, x, incx, y, incy);
-}
-KU_FLOATING_METHOD Scal(DeviceCtx* ctx, const int n, const T alpha, T* x, const int incx) {
-  cblas_scal<T>(n, alpha, x, incx);
-}
-KU_FLOATING_METHOD Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x, const int incx) {
-  Scal(ctx, n, *alpha, x, incx);
-}
-KU_FLOATING_METHOD Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m, int n,
-                        const T alpha, const T* a, int lda, const T* x, const int incx,
-                        const T beta, T* y, const int incy) {
-  // Set col major to keep it as the same with cublas
-  cblas_gemv<T>(CBLAS_ORDER::CblasColMajor, trans, n, m, alpha, a, lda, x, incx, beta, y, incy);
-}
-KU_FLOATING_METHOD Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
-                        const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
-                        const int m, const int n, const int k, const T alpha, const T* a,
-                        const int lda, const T* b, const int ldb, const T beta, T* c,
-                        const int ldc) {
-  cblas_gemm<T>(order, trans_a, trans_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
-}
-KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
-                               const enum CBLAS_TRANSPOSE trans_a,
-                               const enum CBLAS_TRANSPOSE trans_b, int batch_size, int m, int n,
-                               int k, const T alpha, const T* a, const T* b, const T beta, T* c,
-                               T** buf) {
-  const int a_stride = m * k;
-  const int b_stride = k * n;
-  const int c_stride = m * n;
-  FOR_RANGE(int32_t, i, 0, batch_size) {
-    KernelUtil<DeviceType::kCPU, T>::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a + i * a_stride,
-                                            b + i * b_stride, beta, c + i * c_stride);
-  }
-}
-
-KU_FLOATING_METHOD Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
-  for (int64_t i = 0; i < n; ++i) { y[i] = std::exp(x[i]); }
-}
-KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha) {
-  for (int64_t i = 0; i < n; ++i) { x[i] = x[i] / (*alpha); }
-}
-KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, T* x, const T alpha) {
-  for (int64_t i = 0; i < n; ++i) { x[i] = x[i] / alpha; }
-}
-KU_FLOATING_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
-  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
-}
-KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
-  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] / y[i]; }
-}
-KU_FLOATING_METHOD Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
-  for (int64_t i = 0; i < n; ++i) { y[i] = x[i] * x[i]; }
-}
-KU_FLOATING_METHOD Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
-  for (int64_t i = 0; i < n; ++i) { y[i] = std::sqrt(x[i]); }
-}
-KU_FLOATING_METHOD Reciprocal(DeviceCtx* ctx, const int n, const T* x, T* y) {
-  for (int64_t i = 0; i < n; ++i) { y[i] = static_cast<T>(1.0) / x[i]; }
-}
-KU_FLOATING_METHOD Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon) {
-  for (int64_t i = 0; i < n; ++i) { x[i] = 1.0 / std::sqrt(x[i] + epsilon); }
-}
-KU_FLOATING_METHOD Rsqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y, const float epsilon) {
-  for (int64_t i = 0; i < n; ++i) { y[i] = 1.0 / std::sqrt(x[i] + epsilon); }
-}
-KU_FLOATING_METHOD Powx(DeviceCtx* ctx, const int64_t n, const T* x, const float power, T* y) {
-  for (int64_t i = 0; i < n; ++i) { y[i] = std::pow(x[i], power); }
-}
-
-KU_FLOATING_METHOD Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
-  T half = static_cast<T>(0.5);
-  for (int64_t i = 0; i != n; ++i) { y[i] = half * std::tanh(half * x[i]) + half; }
-}
-KU_FLOATING_METHOD SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
-                                   const T* dy, T* dx) {
-  for (int64_t i = 0; i != n; ++i) { dx[i] = y[i] * (1 - y[i]) * dy[i]; }
-}
-KU_FLOATING_METHOD Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
-  T zero = GetZeroVal<T>();
-  for (int64_t i = 0; i != n; ++i) { y[i] = std::max(x[i], zero); }
-}
-KU_FLOATING_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
-                                const T* dy, T* dx) {
-  T zero = GetZeroVal<T>();
-  for (int64_t i = 0; i != n; ++i) { dx[i] = (y[i] > zero) * dy[i]; }
-}
-KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0) {
-  for (int64_t i = 0; i != n; ++i) { out[i] = in_0[i]; }
-}
-KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1) {
-  for (int64_t i = 0; i != n; ++i) { out[i] = in_0[i] + in_1[i]; }
-}
-KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                            const T* in_2) {
-  for (int64_t i = 0; i != n; ++i) { out[i] = in_0[i] + in_1[i] + in_2[i]; }
-}
-KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                            const T* in_2, const T* in_3) {
-  for (int64_t i = 0; i != n; ++i) { out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i]; }
-}
-KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                            const T* in_2, const T* in_3, const T* in_4) {
-  for (int64_t i = 0; i != n; ++i) { out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i]; }
-}
-KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                            const T* in_2, const T* in_3, const T* in_4, const T* in_5) {
-  for (int64_t i = 0; i != n; ++i) {
-    out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i];
-  }
-}
-KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                            const T* in_2, const T* in_3, const T* in_4, const T* in_5,
-                            const T* in_6) {
-  for (int64_t i = 0; i != n; ++i) {
-    out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i] + in_6[i];
-  }
-}
-KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                            const T* in_2, const T* in_3, const T* in_4, const T* in_5,
-                            const T* in_6, const T* in_7) {
-  for (int64_t i = 0; i != n; ++i) {
-    out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i] + in_6[i] + in_7[i];
-  }
-}
-KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                            const T* in_2, const T* in_3, const T* in_4, const T* in_5,
-                            const T* in_6, const T* in_7, const T* in_8) {
-  for (int64_t i = 0; i != n; ++i) {
-    out[i] =
-        in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i] + in_6[i] + in_7[i] + in_8[i];
-  }
-}
 
 KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                       uint32_t random_seed, Blob* blob) {
@@ -552,14 +330,6 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
   template<typename T>     \
   void KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsIntegral<T>::value>::type>::
 
-KU_INTEGRAL_METHOD Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx,
-                        T* y, const int incy) {
-  FOR_RANGE(int, i, 0, n) {
-    *y += alpha * *x;
-    x += incx;
-    y += incy;
-  }
-}
 KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                       uint32_t random_seed, Blob* blob) {
   if (initializer_conf.has_constant_int_conf()) {
@@ -573,10 +343,6 @@ KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
   } else {
     UNIMPLEMENTED();
   }
-}
-
-KU_INTEGRAL_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
-  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
 }
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto)                                \

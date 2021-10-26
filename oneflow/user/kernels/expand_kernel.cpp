@@ -30,19 +30,23 @@ class CpuExpandKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const std::vector<int32_t>& logical_expand_shape =
+        ctx->Attr<std::vector<int32_t>>("logical_expand_shape");
 
-    const std::vector<int32_t> expand_stride = ctx->Attr<std::vector<int32_t>>("stride");
+    std::vector<int32_t> in_shape;
+    in_shape.resize(in->shape().NumAxes());
+    for (int i = 0; i < in->shape().NumAxes(); ++i) { in_shape[i] = in->shape().At(i); }
+
+    std::vector<int32_t> out_shape;
+    std::vector<int32_t> expand_stride;
+    CHECK_JUST(getOutShapeAndStrideForFp(in_shape, logical_expand_shape, out_shape, expand_stride));
 
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
     const int32_t out_dims = out->shape().NumAxes();
     const int32_t out_size = out->shape().elem_cnt();
-
-    DimVector out_dim_vec;
-    out->shape().ToDimVector(&out_dim_vec);
-
     int32_t out_stride[out_dims];
-    InitStride(out_stride, out_dim_vec.data(), out_dims);
+    InitStride(out_stride, out_shape.data(), out_dims);
     for (int32_t i = 0; i < out_size; ++i) {
       int offset = OffsetToNdIndexToOffset(i, out_stride, expand_stride.data(), out_dims);
       out_ptr[i] = in_ptr[offset];
@@ -59,7 +63,9 @@ class CpuExpandKernel final : public user_op::OpKernel {
 
 REGISTER_EXPAND_KERNEL(float);
 REGISTER_EXPAND_KERNEL(double);
-REGISTER_EXPAND_KERNEL(int);
+REGISTER_EXPAND_KERNEL(uint8_t);
+REGISTER_EXPAND_KERNEL(int8_t);
+REGISTER_EXPAND_KERNEL(int32_t);
 REGISTER_EXPAND_KERNEL(int64_t);
 
 template<typename T>
@@ -72,20 +78,26 @@ class CpuExpandGradKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const std::vector<int32_t>& logical_out_shape =
+        ctx->Attr<std::vector<int32_t>>("logical_out_shape");
+    const std::vector<int32_t>& logical_expand_shape =
+        ctx->Attr<std::vector<int32_t>>("logical_expand_shape");
 
-    const std::vector<int32_t> expand_stride = ctx->Attr<std::vector<int32_t>>("stride");
+    std::vector<int32_t> in_shape;
+    in_shape.resize(in->shape().NumAxes());
+    for (int i = 0; i < in->shape().NumAxes(); ++i) { in_shape[i] = in->shape().At(i); }
+    std::vector<int32_t> out_shape;
+    std::vector<int32_t> expand_stride;
+    CHECK_JUST(getOutShapeAndStrideForBp(logical_out_shape, logical_expand_shape, in_shape,
+                                         out_shape, expand_stride));
 
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
 
     const int32_t in_dims = in->shape().NumAxes();
     const int32_t in_size = in->shape().elem_cnt();
-
-    DimVector in_dim_vec;
-    in->shape().ToDimVector(&in_dim_vec);
-
     int32_t in_stride[in_dims];
-    InitStride(in_stride, in_dim_vec.data(), in_dims);
+    InitStride(in_stride, in_shape.data(), in_dims);
 
     std::fill(out_ptr, out_ptr + out->shape().elem_cnt(), static_cast<T>(0));
     for (int i = 0; i < in_size; ++i) {
@@ -105,7 +117,7 @@ class CpuExpandGradKernel final : public user_op::OpKernel {
 
 REGISTER_EXPAND_GRAD_KERNEL(float);
 REGISTER_EXPAND_GRAD_KERNEL(double);
-REGISTER_EXPAND_GRAD_KERNEL(int);
+REGISTER_EXPAND_GRAD_KERNEL(int32_t);
 REGISTER_EXPAND_GRAD_KERNEL(int64_t);
 
 }  // namespace oneflow

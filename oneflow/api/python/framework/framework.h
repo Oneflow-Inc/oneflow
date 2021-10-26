@@ -71,13 +71,13 @@ inline Maybe<void> LaunchJob(const std::shared_ptr<oneflow::JobInstance>& cb) {
   auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
   int64_t job_id = Global<JobName2JobId>::Get()->at(job_name);
   if (IsPullJob(job_name, *Global<InterUserJobInfo>::Get())) {
-    buffer_mgr->Get(GetForeignOutputBufferName(job_name))->Send(cb);
+    buffer_mgr->Get(GetForeignOutputBufferName(job_name))->Push(cb);
   }
   if (IsPushJob(job_name, *Global<InterUserJobInfo>::Get())) {
-    buffer_mgr->Get(GetForeignInputBufferName(job_name))->Send(cb);
+    buffer_mgr->Get(GetForeignInputBufferName(job_name))->Push(cb);
   }
-  buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Send(cb);
-  Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Send(job_id);
+  buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Push(cb);
+  Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Push(job_id);
   return Maybe<void>::Ok();
 }
 

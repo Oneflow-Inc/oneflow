@@ -18,13 +18,25 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/actor/actor.h"
 #include "oneflow/core/actor/light_actor.h"
+#include "oneflow/core/stream/stream_context.h"
+#include "oneflow/core/stream/execution_context_hook.h"
+#include "oneflow/core/graph/id_serialization.h"
 
 namespace oneflow {
 
-Thread::Thread() {
+Thread::Thread(const StreamId& stream_id) : thrd_id_(SerializeStreamIdToInt64(stream_id)) {
   local_msg_queue_enabled_ =
       ParseBooleanFromEnv("ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE", false);
   light_actor_enabled_ = ParseBooleanFromEnv("ONEFLOW_ACTOR_ENABLE_LIGHT_ACTOR", false);
+  StreamContext* stream_ctx =
+      NewObj<int, StreamContext, const StreamId&>(stream_id.device_id().device_type(), stream_id);
+  stream_ctx_.reset(stream_ctx);
+  actor_thread_ = std::thread([this]() {
+    auto* hook = dynamic_cast<ExecutionContextHook*>(stream_ctx_.get());
+    if (hook != nullptr) { CHECK_JUST(hook->OnExecutionContextSetup()); }
+    PollMsgChannel();
+    if (hook != nullptr) { CHECK_JUST(hook->OnExecutionContextTeardown()); }
+  });
 }
 
 Thread::~Thread() {
@@ -38,7 +50,7 @@ void Thread::AddTask(const TaskProto& task) {
   CHECK(id2task_.emplace(task.task_id(), task).second);
 }
 
-void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
+void Thread::PollMsgChannel() {
   while (true) {
     if (local_msg_queue_.empty()) {
       CHECK_EQ(msg_channel_.ReceiveMany(&local_msg_queue_), kChannelStatusSuccess);
@@ -50,7 +62,7 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
         CHECK(id2actor_ptr_.empty());
         break;
       } else if (msg.actor_cmd() == ActorCmd::kConstructActor) {
-        ConstructActor(msg.dst_actor_id(), thread_ctx);
+        ConstructActor(msg.dst_actor_id());
         continue;
       } else {
         // do nothing
@@ -73,14 +85,14 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
   }
 }
 
-void Thread::ConstructActor(int64_t actor_id, const ThreadCtx& thread_ctx) {
+void Thread::ConstructActor(int64_t actor_id) {
   std::unique_lock<std::mutex> lck(id2task_mtx_);
   auto task_it = id2task_.find(actor_id);
   std::unique_ptr<ActorBase> actor_ptr;
   const TaskProto& task = task_it->second;
-  if (light_actor_enabled_) { actor_ptr = TryNewLightActor(task, thread_ctx); }
+  if (light_actor_enabled_) { actor_ptr = TryNewLightActor(task, stream_ctx_.get()); }
   if (!actor_ptr) {
-    actor_ptr = NewActor(task, thread_ctx);
+    actor_ptr = NewActor(task, stream_ctx_.get());
     LOG(INFO) << "Thread " << thrd_id_ << " construct Actor " << TaskType_Name(task.task_type())
               << " " << actor_id;
   } else {

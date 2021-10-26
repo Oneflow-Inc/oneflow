@@ -19,6 +19,7 @@ limitations under the License.
 #include <functional>
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
@@ -54,9 +55,7 @@ namespace std {
 template<>
 struct hash<oneflow::PlacedNdSbp> final {
   size_t operator()(const oneflow::PlacedNdSbp& placed_nd_sbp) const {
-    using namespace oneflow;
-    return std::hash<Symbol<cfg::NdSbp>>()(placed_nd_sbp.nd_sbp())
-           ^ std::hash<Symbol<ParallelDesc>>()(placed_nd_sbp.placement());
+    return oneflow::Hash(placed_nd_sbp.nd_sbp(), placed_nd_sbp.placement());
   }
 };
 

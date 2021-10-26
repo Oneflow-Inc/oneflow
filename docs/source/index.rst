@@ -16,13 +16,16 @@ OneFlow API Reference
     nn
     functional
     module
-    _C
     graph
     linalg
     image
     optim
     utils
+    cuda
     distributed
+    comm
+    placement
+    sbp
 
 
 

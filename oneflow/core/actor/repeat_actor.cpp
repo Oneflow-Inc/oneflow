@@ -73,10 +73,7 @@ void RepeatActor::Act() {
   // reset repeat_count if need
   if (repeat_count_ == repeat_num_) { repeat_count_ = 0; }
 
-  if (repeat_count_ == 0) {
-    KernelCtx kernel_ctx = GenDefaultKernelCtx();
-    AsyncLaunchKernel(kernel_ctx);
-  }
+  if (repeat_count_ == 0) { AsyncLaunchKernel(); }
 
   repeat_count_ += 1;
 }

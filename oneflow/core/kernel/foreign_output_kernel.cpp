@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-class ForeignOutputKernel final : public KernelIf<DeviceType::kCPU> {
+class ForeignOutputKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ForeignOutputKernel);
   ForeignOutputKernel() = default;
@@ -28,13 +28,10 @@ class ForeignOutputKernel final : public KernelIf<DeviceType::kCPU> {
 
  private:
   bool IsStateless() const override { return false; }
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
-void ForeignOutputKernel::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+void ForeignOutputKernel::ForwardDataContent(KernelContext* ctx) const {
   const auto& buffer_name = op_conf().foreign_output_conf().ofblob_buffer_name();
   std::shared_ptr<JobInstance> foreign_job_instance;
   BufferStatus buffer_status = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get()
@@ -42,7 +39,7 @@ void ForeignOutputKernel::ForwardDataContent(
                                    ->TryReceive(&foreign_job_instance);
   CHECK_NE(buffer_status, kBufferStatusEmpty);
   if (buffer_status == kBufferStatusSuccess) {
-    OfBlob ofblob(ctx.device_ctx, BnInOp2Blob("in"));
+    OfBlob ofblob(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
     foreign_job_instance->PullBlob(reinterpret_cast<uint64_t>(&ofblob));
   }
 }

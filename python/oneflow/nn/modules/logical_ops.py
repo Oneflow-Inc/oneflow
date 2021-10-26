@@ -23,8 +23,10 @@ class LogicalAnd(Module):
         super().__init__()
 
     def forward(self, input, other):
-        if other.dtype != input.dtype:
-            other = flow.cast(other, input.dtype)
+        if type(input) == type(other):  # input and other are tensor.
+            assert input.shape == other.shape, "shape of input and other should be same"
+            if other.dtype != input.dtype:
+                other = flow.cast(other, input.dtype)
         return flow._C.logical_and(input, other)
 
 
@@ -47,8 +49,8 @@ def logical_and_op(input, other):
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> input1 = flow.Tensor(np.array([1, 0, 1]).astype(np.float32), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.array([1, 1, 0]).astype(np.float32), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.array([1, 0, 1]).astype(np.float32), dtype=flow.float32)
+        >>> input2 = flow.tensor(np.array([1, 1, 0]).astype(np.float32), dtype=flow.float32)
 
         >>> out = flow.logical_and(input1, input2)
         >>> out
@@ -75,8 +77,10 @@ class LogicalOr(Module):
         super().__init__()
 
     def forward(self, input, other):
-        if other.dtype != input.dtype:
-            other = flow.cast(other, input.dtype)
+        if type(input) == type(other):  # input and other are tensor.
+            assert input.shape == other.shape, "shape of input and other should be same"
+            if other.dtype != input.dtype:
+                other = flow.cast(other, input.dtype)
         return flow._C.logical_or(input, other)
 
 
@@ -99,8 +103,8 @@ def logical_or_op(input, other):
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> input1 = flow.Tensor(np.array([1, 0, 1]).astype(np.float32), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.array([1, 0, 0]).astype(np.float32), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.array([1, 0, 1]).astype(np.float32), dtype=flow.float32)
+        >>> input2 = flow.tensor(np.array([1, 0, 0]).astype(np.float32), dtype=flow.float32)
 
         >>> out = flow.logical_or(input1, input2)
         >>> out
@@ -141,17 +145,18 @@ def logical_xor_op(input, other):
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> input1 = flow.Tensor(np.array([1, 0, 1]).astype(np.float32), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.array([1, 0, 0]).astype(np.float32), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.array([1, 0, 1]).astype(np.float32), dtype=flow.float32)
+        >>> input2 = flow.tensor(np.array([1, 0, 0]).astype(np.float32), dtype=flow.float32)
         >>> out = flow.logical_xor(input1, input2)
         >>> out
         tensor([0, 0, 1], dtype=oneflow.int8)
 
     """
-    assert input.shape == other.shape, "shape of input and other should be same"
 
-    if other.dtype != input.dtype:
-        other = flow.cast(other, input.dtype)
+    if type(input) == type(other):  # input and other are tensor.
+        assert input.shape == other.shape, "shape of input and other should be same"
+        if other.dtype != input.dtype:
+            other = flow.cast(other, input.dtype)
     return flow._C.logical_xor(input, other)
 
 

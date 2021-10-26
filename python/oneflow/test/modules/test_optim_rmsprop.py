@@ -64,8 +64,11 @@ def compare_with_numpy_rmsprop(
         )
 
         def train_one_iter(grad):
-            grad_tensor = flow.Tensor(
-                grad, requires_grad=False, device=flow.device(device)
+            grad_tensor = flow.tensor(
+                grad,
+                dtype=flow.float32,
+                requires_grad=False,
+                device=flow.device(device),
             )
             loss = flow.sum(x * grad_tensor)
             loss.backward()
@@ -160,8 +163,11 @@ def compare_with_numpy_rmsprop_clip_grad(
         )
 
         def train_one_iter(grad):
-            grad_tensor = flow.Tensor(
-                grad, requires_grad=False, device=flow.device(device)
+            grad_tensor = flow.tensor(
+                grad,
+                dtype=flow.float32,
+                requires_grad=False,
+                device=flow.device(device),
             )
             loss = flow.sum(x * grad_tensor)
             loss.backward()

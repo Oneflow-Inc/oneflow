@@ -54,8 +54,7 @@ class ConsistentToConsistentGradFunction : public OpExprGradFunction<ConsistentT
     const auto& out_grad = out_grads.at(0);
     CHECK_OR_RETURN(out_grad->is_consistent());
     in_grads->resize(1);
-    const auto& grad_nd_sbp =
-        grad_nd_sbp_.has_value() ? JUST(grad_nd_sbp_.value()) : JUST(out_grad->nd_sbp());
+    const auto& grad_nd_sbp = grad_nd_sbp_.value_or(JUST(out_grad->nd_sbp()));
     const auto& grad_sbp_list = JUST(GetSbpList(grad_nd_sbp));
     const auto& grad_grad_sbp_list = JUST(GetSbpList(ctx->nd_sbp));
     in_grads->at(0) = JUST(one::functional::ToConsistent(out_grad, ctx->parallel_desc,
