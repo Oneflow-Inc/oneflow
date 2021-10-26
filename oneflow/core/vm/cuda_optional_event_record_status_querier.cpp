@@ -21,6 +21,13 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
+CudaOptionalEventRecordStatusQuerier::~CudaOptionalEventRecordStatusQuerier() {
+  if (has_event_record_) {
+    cudaSetDevice(device_id_);
+    cudaEventDestroy(event_);
+  }
+}
+
 bool CudaOptionalEventRecordStatusQuerier::event_completed() const {
   cudaSetDevice(device_id_);
   return cudaEventQuery(event_) != cudaErrorNotReady;
