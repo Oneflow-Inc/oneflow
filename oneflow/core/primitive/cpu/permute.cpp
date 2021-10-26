@@ -14,13 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/primitive/include/permute.h"
-#include "oneflow/core/primitive/common/permute.h"
+#include "oneflow/core/primitive/common/permute_impl.h"
 
 namespace oneflow {
 
 namespace primitive {
 
-namespace permute_internal {
+namespace permute {
+
+namespace internal {
 
 namespace {
 
@@ -81,7 +83,9 @@ REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, PermuteFactory, PermuteFactoryImpl)
 
 }  // namespace
 
-}  // namespace permute_internal
+}  // namespace internal
+
+}  // namespace permute
 
 }  // namespace primitive
 
