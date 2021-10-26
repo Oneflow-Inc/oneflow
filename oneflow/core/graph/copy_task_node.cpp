@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/id_util.h"
 #include "oneflow/core/graph/id_serialization.h"
-#include "oneflow/core/device/cpu_stream_index.h"
 
 namespace oneflow {
 

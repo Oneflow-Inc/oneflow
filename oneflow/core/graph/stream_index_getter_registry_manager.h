@@ -19,10 +19,6 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/graph/stream_index_getter_registry.h"
-#include "oneflow/core/device/cpu_stream_index.h"
-#ifdef WITH_CUDA
-#include "oneflow/core/device/cuda_stream_index.h"
-#endif
 
 namespace oneflow {
 
