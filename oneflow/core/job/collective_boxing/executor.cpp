@@ -13,28 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_PRIMITIVE_CUDA_CUDA_GRAPH_SUPPORT_H_
-#define ONEFLOW_CORE_PRIMITIVE_CUDA_CUDA_GRAPH_SUPPORT_H_
-
-#include "oneflow/core/primitive/include/primitive.h"
+#include "oneflow/core/job/collective_boxing/executor.h"
 
 namespace oneflow {
 
-namespace primitive {
+namespace boxing {
 
-class CudaGraphSupport {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CudaGraphSupport);
-  CudaGraphSupport() = default;
-  virtual ~CudaGraphSupport() = default;
+namespace collective {
 
-  virtual bool IsCudaGraphSupported() const { return true; }
-};
+void Executor::ExecuteRequests(const std::vector<RequestId>& request_ids) {
+  GroupRequests(request_ids, [&](std::vector<RequestId>&& group, GroupToken* group_token) {
+    ExecuteGroup(group_token);
+  });
+}
 
-bool IsCudaGraphPrimitive(const Primitive* primitive);
+}  // namespace collective
 
-}  // namespace primitive
+}  // namespace boxing
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_PRIMITIVE_CUDA_CUDA_GRAPH_SUPPORT_H_

@@ -73,7 +73,8 @@ const char* NvjpegGetErrorString(nvjpegStatus_t error);
 #define OF_NCCL_CHECK(condition)                                                                \
   for (ncclResult_t _of_nccl_check_status = (condition); _of_nccl_check_status != ncclSuccess;) \
   LOG(FATAL) << "Check failed: " #condition " : " << ncclGetErrorString(_of_nccl_check_status)  \
-             << " (" << _of_nccl_check_status << ") "
+             << " (" << _of_nccl_check_status << "). "                                          \
+             << "To see more detail, please run OneFlow with system variable NCCL_DEBUG=INFO"
 
 #define OF_NCCL_CHECK_OR_RETURN(condition)                                                         \
   for (ncclResult_t _of_nccl_check_status = (condition); _of_nccl_check_status != ncclSuccess;)    \
@@ -160,6 +161,14 @@ class CublasMathModeGuard final {
 int GetCudaSmVersion();
 
 int GetCudaPtxVersion();
+
+int GetCudaDeviceIndex();
+
+int GetCudaDeviceCount();
+
+void InitCudaContextOnce(int device_id);
+
+cudaError_t CudaDriverGetPrimaryCtxActive(int dev, int* active);
 
 }  // namespace oneflow
 
