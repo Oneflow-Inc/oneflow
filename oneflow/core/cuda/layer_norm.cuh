@@ -190,13 +190,15 @@ __inline__ __device__ void WelfordWarpReduce(T cur_mean, T cur_m2, int cur_count
 
 template<typename T>
 __inline__ __device__ void WelfordBlockAllReduce(T cur_mean, T cur_m2, int cur_count,
-                                                 T* result_mean, T* result_m2, int* result_count,
-                                                 T* mean_shared, T* m2_shared, int* count_shared) {
+                                                 T* result_mean, T* result_m2, int* result_count) {
+  __shared__ T mean_shared[kWarpSize];
+  __shared__ T m2_shared[kWarpSize];
+  __shared__ int count_shared[kWarpSize];
   __shared__ T mean_result_broadcast;
   __shared__ T m2_result_broadcast;
   __shared__ int count_result_broadcast;
-  const int lid = threadIdx.x % 32;
-  const int wid = threadIdx.x / 32;
+  const int lid = threadIdx.x % kWarpSize;
+  const int wid = threadIdx.x / kWarpSize;
   T warp_mean = 0;
   T warp_m2 = 0;
   int warp_count = 0;
@@ -209,7 +211,7 @@ __inline__ __device__ void WelfordBlockAllReduce(T cur_mean, T cur_m2, int cur_c
   }
   __syncthreads();
   if (wid == 0) {
-    if (threadIdx.x < blockDim.x / 32) {
+    if (threadIdx.x < blockDim.x / kWarpSize) {
       warp_mean = mean_shared[lid];
       warp_m2 = m2_shared[lid];
       warp_count = count_shared[lid];
@@ -547,15 +549,6 @@ __global__ void LayerNormBlockSMemImpl(LOAD load, STORE store, const int64_t row
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = cols / pack_size;
-  __shared__ typename std::aligned_storage<sizeof(ComputeType), alignof(ComputeType)>::type
-      mean_shared[32];
-  ComputeType* mean_shared_ptr = reinterpret_cast<ComputeType*>(mean_shared);
-  __shared__
-      typename std::aligned_storage<sizeof(ComputeType), alignof(ComputeType)>::type m2_shared[32];
-  ComputeType* m2_shared_ptr = reinterpret_cast<ComputeType*>(m2_shared);
-  __shared__ typename std::aligned_storage<sizeof(int), alignof(int)>::type count_shared[32];
-  int* count_shared_ptr = reinterpret_cast<int*>(count_shared);
-
   for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
     ComputeType thread_mean = 0;
     ComputeType thread_m2 = 0;
@@ -573,8 +566,7 @@ __global__ void LayerNormBlockSMemImpl(LOAD load, STORE store, const int64_t row
     ComputeType row_m2 = 0;
     int row_count = 0;
     WelfordBlockAllReduce<ComputeType>(thread_mean, thread_m2, thread_count, &row_mean, &row_m2,
-                                       &row_count, mean_shared_ptr, m2_shared_ptr,
-                                       count_shared_ptr);
+                                       &row_count);
     ComputeType row_variance =
         max(Div(row_m2, static_cast<ComputeType>(row_count)), static_cast<ComputeType>(0.0));
     ComputeType row_inv_var = rsqrt(row_variance + static_cast<ComputeType>(epsilon));
@@ -713,14 +705,6 @@ __global__ void LayerNormBlockUncachedImpl(LOAD load, STORE store, const int64_t
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = cols / pack_size;
-  __shared__ typename std::aligned_storage<sizeof(ComputeType), alignof(ComputeType)>::type
-      mean_shared[32];
-  ComputeType* mean_shared_ptr = reinterpret_cast<ComputeType*>(mean_shared);
-  __shared__
-      typename std::aligned_storage<sizeof(ComputeType), alignof(ComputeType)>::type m2_shared[32];
-  ComputeType* m2_shared_ptr = reinterpret_cast<ComputeType*>(m2_shared);
-  __shared__ typename std::aligned_storage<sizeof(int), alignof(int)>::type count_shared[32];
-  int* count_shared_ptr = reinterpret_cast<int*>(count_shared);
   for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
     ComputeType thread_mean = 0;
     ComputeType thread_m2 = 0;
@@ -737,8 +721,7 @@ __global__ void LayerNormBlockUncachedImpl(LOAD load, STORE store, const int64_t
     ComputeType row_m2 = 0;
     int row_count = 0;
     WelfordBlockAllReduce<ComputeType>(thread_mean, thread_m2, thread_count, &row_mean, &row_m2,
-                                       &row_count, mean_shared_ptr, m2_shared_ptr,
-                                       count_shared_ptr);
+                                       &row_count);
     ComputeType row_variance =
         max(Div(row_m2, static_cast<ComputeType>(row_count)), static_cast<ComputeType>(0.0));
     ComputeType row_inv_var = rsqrt(row_variance + static_cast<ComputeType>(epsilon));
