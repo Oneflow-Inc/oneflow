@@ -22,30 +22,31 @@ namespace oneflow {
 
 namespace primitive {
 
-enum class UnaryOpList:int32_t {
+enum class UnaryOpList : int32_t {
   kRelu,
 };
 
-class ElementwiseUnaryOp: public Primitive{
-  public: 
-    OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnaryOp); 
-    ElementwiseUnaryOp() = default; 
-    ~ElementwiseUnaryOp() override = default; 
-  private: 
-    virtual void Launch(StreamContext* ctx, size_t count, void* dst, const void* src); 
-}; 
+class ElementwiseUnaryOp : public Primitive {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnaryOp);
+  ElementwiseUnaryOp() = default;
+  ~ElementwiseUnaryOp() override = default;
 
-class ElementwiseUnaryOpFactory: public Factory<ElementwiseUnaryOp>{
-  public: 
-    OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnaryOpFactory);
-    ElementwiseUnaryOpFactory() = default;
-    ~ElementwiseUnaryOpFactory() override = default;
-  private: 
-    virtual std::unique_ptr<ElementwiseUnaryOp> New(UnaryOpList op_enum, DataType out_dtype, DataType in_dtype) = 0; 
-}; 
+ private:
+  virtual void Launch(StreamContext* ctx, size_t count, void* dst, const void* src);
+};
 
-#define CPU_PRIMITIVE_UNARY_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOpList::kRelu, UnaryOpList::kRelu)
+class ElementwiseUnaryOpFactory : public Factory<ElementwiseUnaryOp> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnaryOpFactory);
+  ElementwiseUnaryOpFactory() = default;
+  ~ElementwiseUnaryOpFactory() override = default;
 
+ private:
+  virtual std::unique_ptr<ElementwiseUnaryOp> New(UnaryOpList op_enum, DataType dtype) = 0;
+};
+
+#define PRIMITIVE_UNARY_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOpList::kRelu, UnaryOpList::kRelu)
 
 }  // namespace primitive
 

@@ -1,39 +1,47 @@
-#include "oneflow/core/primitive/include/unary_op.h"
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#include "oneflow/core/primitive/common/unary_op_utils.h"
 #include "oneflow/core/primitive/cpu/type_seq.h"
 
-namespace oneflow{
+namespace oneflow {
 
-namespace primitive{
+namespace primitive {
 
-template<DeviceType device, UnaryOpList unary_enum, typename Out, typename In>
-struct UnaryFunctor; 
+namespace {
 
-template<typename Out, typename In>
-struct UnaryFunctor<DeviceType::kCPU, UnaryOpList::kRelu, Out, In>{
-  Out operator()(In src) const {
-    return src ? src > static_cast<In>(0) : static_cast<Out>(0); 
-  }
-}; 
+template<UnaryOpList unary_enum, typename T>
+class ElementwiseUnaryOpImpl : public ElementwiseUnaryOp {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnaryOpImpl);
+  ElementwiseUnaryOpImpl() = default;
+  ~ElementwiseUnaryOpImpl() override = default;
 
-namespace{
-
-template<UnaryOpList unary_enum, typename Out, typename In>
-class ElementwiseUnaryOpImpl: public ElementwiseUnaryOp{
-public: 
-    OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnaryOpImpl); 
-    ElementwiseUnaryOpImpl() = default;
-    ~ElementwiseUnaryOpImpl() override = default; 
-
-    void Launch(StreamContext* stream_ctx, size_t count, void* dst_ptr, const void* src_ptr) override{
-        Out* dst = reinterpret_cast<Out*>(dst_ptr); 
-        const In* src = reinterpret_cast<const In*>(src_ptr); 
-        for (size_t i = 0; i < count; ++i) {dst[i] = UnaryFunctor<DeviceType::kCPU, unary_enum, Out, In>()(src[i]); }
+  void Launch(StreamContext* stream_ctx, size_t count, void* dst_ptr,
+              const void* src_ptr) override {
+    T* dst = reinterpret_cast<T*>(dst_ptr);
+    const T* src = reinterpret_cast<const T*>(src_ptr);
+    for (size_t i = 0; i < count; ++i) {
+      dst[i] = UnaryFunctor<DeviceType::kCPU, unary_enum, T>()(src[i]);
     }
-}; 
+  }
+};
 
-template<UnaryOpList unary_enum, typename Out, typename In>
+template<UnaryOpList unary_enum, typename T>
 std::unique_ptr<ElementwiseUnaryOp> NewElementwiseUnaryOp() {
-  return std::unique_ptr<ElementwiseUnaryOp>(new ElementwiseUnaryOpImpl<unary_enum, Out, In>());
+  return std::unique_ptr<ElementwiseUnaryOp>(new ElementwiseUnaryOpImpl<unary_enum, T>());
 }
 
 class ElementwiseUnaryOpFactoryImpl : public ElementwiseUnaryOpFactory {
@@ -42,19 +50,19 @@ class ElementwiseUnaryOpFactoryImpl : public ElementwiseUnaryOpFactory {
   ElementwiseUnaryOpFactoryImpl() = default;
   ~ElementwiseUnaryOpFactoryImpl() override = default;
 
+  std::unique_ptr<ElementwiseUnaryOp> New(UnaryOpList op_enum, DataType dtype) override {
+#define MAKE_NEW_UNARYOP_ENTRY(op_pair, dtype_pair)                           \
+  {std::make_pair(OF_PP_PAIR_SECOND(op_pair), OF_PP_PAIR_SECOND(dtype_pair)), \
+   NewElementwiseUnaryOp<OF_PP_PAIR_SECOND(op_pair), OF_PP_PAIR_FIRST(dtype_pair)>},
 
-  std::unique_ptr<ElementwiseUnaryOp> New(UnaryOpList op_enum, DataType out, DataType in) override {
-#define MAKE_NEW_UNARYOP_ENTRY(op_pair, out_pair, in_pair)                              \
-  {std::make_tuple(OF_PP_PAIR_SECOND(op_pair), OF_PP_PAIR_SECOND(out_pair), OF_PP_PAIR_SECOND(in_pair)), \
-   NewElementwiseUnaryOp<OF_PP_PAIR_SECOND(op_pair), OF_PP_PAIR_FIRST(out_pair), OF_PP_PAIR_FIRST(in_pair)>},
-
-    static const std::map<std::tuple<UnaryOpList, DataType, DataType>, std::function<std::unique_ptr<ElementwiseUnaryOp>()>>
+    static const std::map<std::pair<UnaryOpList, DataType>,
+                          std::function<std::unique_ptr<ElementwiseUnaryOp>()>>
         new_elementwise_unary_op_handle{OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-            MAKE_NEW_UNARYOP_ENTRY, CPU_PRIMITIVE_UNARY_OP_SEQ, CPU_PRIMITIVE_NATIVE_TYPE_SEQ, CPU_PRIMITIVE_NATIVE_TYPE_SEQ)};
+            MAKE_NEW_UNARYOP_ENTRY, PRIMITIVE_UNARY_OP_SEQ, CPU_PRIMITIVE_NATIVE_TYPE_SEQ)};
 
 #undef MAKE_NEW_UNARYOP_ENTRY
 
-    const auto it = new_elementwise_unary_op_handle.find(std::make_tuple(op_enum, out, in));
+    const auto it = new_elementwise_unary_op_handle.find(std::make_pair(op_enum, dtype));
     if (it != new_elementwise_unary_op_handle.end()) {
       return it->second();
     } else {
@@ -63,8 +71,9 @@ class ElementwiseUnaryOpFactoryImpl : public ElementwiseUnaryOpFactory {
   }
 };
 
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, ElementwiseUnaryOpFactory, ElementwiseUnaryOpFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, ElementwiseUnaryOpFactory,
+                           ElementwiseUnaryOpFactoryImpl);
 
-} // namespace 
-} // namespace primitive
-} // namespace oneflow
+}  // namespace
+}  // namespace primitive
+}  // namespace oneflow
