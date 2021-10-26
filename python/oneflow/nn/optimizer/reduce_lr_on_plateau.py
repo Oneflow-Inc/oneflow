@@ -14,17 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from math import inf
-
-from .lr_scheduler import LrScheduler
 from .optimizer import Optimizer
-
-
-EPOCH_DEPRECATION_WARNING = (
-    "The epoch parameter in `scheduler.step()` was not necessary and is being "
-    "deprecated where possible. Please use `scheduler.step()` to step the "
-    "scheduler. During the deprecation, if epoch is different from None, the "
-    "closed form is used instead of the new chainable form, where available. "
-)
 
 
 class ReduceLROnPlateau(object):
@@ -70,13 +60,13 @@ class ReduceLROnPlateau(object):
     
     .. code-block:: python
 
-        >>> optimizer = flow.optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
-        >>> scheduler = flow.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
-        >>> for epoch in range(10):
-        >>>     train(...)
-        >>>     val_loss = validate(...)
-        >>>     # Note that step should be called after validate()
-        >>>     scheduler.step(val_loss)
+        optimizer = flow.optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
+        scheduler = flow.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
+        for epoch in range(10):
+            train(...)
+            val_loss = validate(...)
+            # Note that step should be called after validate()
+            scheduler.step(val_loss)
     """
 
     def __init__(
@@ -121,44 +111,48 @@ class ReduceLROnPlateau(object):
         self.threshold = threshold
         self.threshold_mode = threshold_mode
         self.best = None
-        self.num_bad_epochs = None
+        self.num_bad_steps = None
         self.mode_worse = None  # the worse value for the chosen mode
         self.eps = eps
-        self.last_epoch = 0
+        self.last_step = 0
         self._init_is_better(
             mode=mode, threshold=threshold, threshold_mode=threshold_mode
         )
         self._reset()
 
     def _reset(self):
-        """Resets num_bad_epochs counter and cooldown counter."""
+        """Resets num_bad_steps counter and cooldown counter."""
         self.best = self.mode_worse
         self.cooldown_counter = 0
-        self.num_bad_epochs = 0
+        self.num_bad_steps = 0
 
     def step(self, metrics, epoch=None):
+        """Step forward once.
+
+        Arguments:
+            metrics (float): a metrics quantity of Measuring the effect of model training.
+            epoch (int): the step of current training or the steps wanted to start.
+        """
         # convert `metrics` to float, in case it's a zero-dim Tensor
         current = float(metrics)
         if epoch is None:
-            epoch = self.last_epoch + 1
-        else:
-            Warning(EPOCH_DEPRECATION_WARNING, UserWarning)
-        self.last_epoch = epoch
+            epoch = self.last_step + 1
+        self.last_step = epoch
 
         if self.is_better(current, self.best):
             self.best = current
-            self.num_bad_epochs = 0
+            self.num_bad_steps = 0
         else:
-            self.num_bad_epochs += 1
+            self.num_bad_steps += 1
 
         if self.in_cooldown:
             self.cooldown_counter -= 1
-            self.num_bad_epochs = 0  # ignore any bad epochs in cooldown
+            self.num_bad_steps = 0  # ignore any bad epochs in cooldown
 
-        if self.num_bad_epochs > self.patience:
+        if self.num_bad_steps > self.patience:
             self._reduce_lr(epoch)
             self.cooldown_counter = self.cooldown
-            self.num_bad_epochs = 0
+            self.num_bad_steps = 0
 
         self._last_lr = [group["lr"] for group in self.optimizer.param_groups]
 
@@ -209,11 +203,22 @@ class ReduceLROnPlateau(object):
         self.threshold_mode = threshold_mode
 
     def state_dict(self):
+        """Returns the state of the scheduler as a :class:`dict`.
+
+        It contains an entry for every variable in self.__dict__ which
+        is not the optimizer.
+        """
         return {
             key: value for key, value in self.__dict__.items() if key != "optimizer"
         }
 
     def load_state_dict(self, state_dict):
+        """Loads the schedulers state.
+
+        Arguments:
+            state_dict (dict): scheduler state. Should be an object returned
+                from a call to :meth:`state_dict`.
+        """
         self.__dict__.update(state_dict)
         self._init_is_better(
             mode=self.mode, threshold=self.threshold, threshold_mode=self.threshold_mode
