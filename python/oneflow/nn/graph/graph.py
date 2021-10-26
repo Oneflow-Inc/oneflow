@@ -941,8 +941,15 @@ class Graph(object):
             self._add_block(name, value)
         elif isinstance(value, Optimizer):
             raise AttributeError(
-                "'{}' object are not allowed to set Optimizer attribute named '{}', "
-                "please use add_optimizer(...) instead.".format(
+                "'{}' nn.Graph is not allowed to set Optimizer attribute named '{}'. "
+                "Please use add_optimizer(...) instead.".format(
+                    type(self).__name__, name
+                )
+            )
+        elif isinstance(value, Tensor):
+            raise AttributeError(
+                "'{}' nn.Graph is not allowed to set Tensor attribute named '{}'. "
+                "Please use nn.Module to hold the tensor, then add the nn.Module to nn.Graph.".format(
                     type(self).__name__, name
                 )
             )
