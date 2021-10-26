@@ -32,8 +32,7 @@ class AutogradFunctionBase {
       const std::shared_ptr<FunctionAutoGradCaptureState>&, const TensorTuple&)>;
   AutogradFunctionBase() = delete;
   virtual ~AutogradFunctionBase() = default;
-  AutogradFunctionBase(const std::string& func_name, const FType& forward_fn,
-                       const FType& backward_fn);
+  AutogradFunctionBase(const std::string& name, const FType& forward_fn, const FType& backward_fn);
 
   Maybe<TensorTuple> Apply(const TensorTuple& inputs) const;
 
