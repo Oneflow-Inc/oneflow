@@ -49,7 +49,7 @@ inline Optional<bool>* IsMultiClientPtr() { return Global<Optional<bool>, MultiC
 
 inline Maybe<bool> IsMultiClient() {
   CHECK_NOTNULL_OR_RETURN(IsMultiClientPtr());
-  return IsMultiClientPtr()->value_or(false);
+  return JUST(*IsMultiClientPtr());
 }
 
 inline Maybe<void> SetIsMultiClient(bool is_multi_client) {
