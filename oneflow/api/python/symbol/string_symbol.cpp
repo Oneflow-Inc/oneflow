@@ -31,7 +31,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::init([](int64_t symbol_id, const std::string& data) {
         return CreateStringSymbol(symbol_id, data).GetPtrOrThrow();
       }))
-      .def_property_readonly("symbol_id", [](const StringSymbol& x) { return x.symbol_id(); })
+      .def_property_readonly("symbol_id", [](const StringSymbol& x) { return x.symbol_id().value_or(0); })
       .def_property_readonly("data", &StringSymbol::data);
 }
 
