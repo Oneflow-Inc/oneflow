@@ -22,11 +22,9 @@ namespace oneflow {
 
 namespace primitive {
 
-enum class UnaryOp : int32_t {
+enum class UnaryOp {
   kRelu,
 };
-
-#define PRIMITIVE_UNARY_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu, UnaryOp::kRelu)
 
 }  // namespace primitive
 

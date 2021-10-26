@@ -32,9 +32,10 @@ struct UnaryFunctor<device, UnaryOp::kRelu, T> {
     } else {
       return zero_val;
     }
-
   }
 };
+
+#define PRIMITIVE_UNARY_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu, UnaryOp::kRelu)
 
 }  // namespace primitive
 }  // namespace oneflow
