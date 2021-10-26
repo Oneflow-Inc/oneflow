@@ -49,12 +49,12 @@ OF_DEVICE_FUNC int32_t getShiftedIndex(const int32_t global_index, const int32_t
 #endif
   for (int32_t i = 0; i < Dim; ++i) {
     const int32_t idx = remaining / stride[i];
-    // NOTE(Liang Depeng):
-    // Compute the shifted index of each axis.
-    int32_t shifted_idx = (idx - shifts[i]) % shape[i];
-    // In C++ the sign of the result of `%` operation is the same of the dividend.
-    // This correct the result when `idx - shifts[i]` is negative.
+    // NOTE(Liang Depeng): Compute the shifted index of each axis.
+    int32_t shifted_idx = (idx - shifts[i]);
+    // NOTE(Liang Depeng): This correct the results.
     if (shifted_idx < 0) shifted_idx = shifted_idx + shape[i];
+    if (shifted_idx >= shape[i]) shifted_idx = shifted_idx - shape[i];
+
     shifted_global_index += shifted_idx * stride[i];
     remaining = remaining - idx * stride[i];
   }
@@ -86,6 +86,10 @@ OF_DEVICE_FUNC int32_t switchGetShiftedIndex(const int32_t global_index, const i
 
 static void initStride(STRIDE& stride, const SHAPE& dim_vec, const int32_t dims) {
   for (int i = dims - 2; i >= 0; --i) { stride.val[i] = dim_vec.val[i + 1] * stride.val[i + 1]; }
+}
+
+static void transformShifts(int32_t* shifts, int32_t* shape, int n) {
+  for (int i = 0; i < n; ++i) { shifts[i] = shifts[i] % shape[i]; }
 }
 
 static void computeParams(const ShapeView& in_shape, const std::vector<int32_t>& shifts,

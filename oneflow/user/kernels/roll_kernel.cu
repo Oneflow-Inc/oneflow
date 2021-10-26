@@ -201,6 +201,7 @@ class GpuRollKernel final : public user_op::OpKernel {
                                 elem_count, out_ptr);
 
       } else {
+        transformShifts(new_shifts.val, new_shape.val, num_axes);
         switch (num_axes) {
           case 1:
             GpuRollFunctor<T, 1>()(ctx->device_ctx(), in_ptr, new_shifts, new_shape, stride,
