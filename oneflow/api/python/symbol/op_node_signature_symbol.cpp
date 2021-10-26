@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
+#include "oneflow/api/python/framework/throw.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
@@ -38,7 +39,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
             return CreateScopeSymbol(symbol_id, symbol_conf).GetPtrOrThrow();
           }))
       .def_property_readonly("symbol_id",
-                             [](const OpNodeSignatureDesc& x) { return x.symbol_id().value_or(0); })
+                             [](const OpNodeSignatureDesc& x) {  
+        if (!x.symbol_id().has_value()) { THROW(RuntimeError) << "symbol_id not initialized"; }
+        return x.symbol_id().value_or(0);
+      })
       .def("data", &OpNodeSignatureDesc::op_node_signature);
 }
 

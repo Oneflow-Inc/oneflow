@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
+#include "oneflow/api/python/framework/throw.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
 
@@ -25,7 +26,10 @@ namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<OperatorConfSymbol, std::shared_ptr<OperatorConfSymbol>>(m, "OpConfSymbol")
       .def_property_readonly("symbol_id",
-                             [](const OperatorConfSymbol& x) { return x.symbol_id().value_or(0); })
+                             [](const OperatorConfSymbol& x) {  
+        if (!x.symbol_id().has_value()) { THROW(RuntimeError) << "symbol_id not initialized"; }
+        return x.symbol_id().value_or(0); 
+      })
       .def_property_readonly("data", &OperatorConfSymbol::data);
 }
 

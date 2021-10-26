@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
+#include "oneflow/api/python/framework/throw.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_conf.cfg.h"
@@ -38,7 +39,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("symbol_id",
                              [](const JobDesc& x) { 
         if (!x.symbol_id().has_value()) { THROW(RuntimeError) << "symbol_id not initialized"; }
-        return x.symbol_id().value();
+        return x.symbol_id().value_or(0);
       })
       .def_property_readonly("data", &JobDesc::cfg_job_conf);
 }
