@@ -42,12 +42,10 @@ struct PermuteKernelParams {
 constexpr size_t kMaxMovementSize = 16;
 constexpr size_t kMaxNumDims = 8;
 
-template<size_t num_dims, size_t movement_size, typename IndexType>
-void LaunchKernel(StreamContext* stream_ctx, PermuteKernelParams<num_dims, IndexType> params);
-
-template<size_t num_dims, size_t movement_size, typename IndexType>
-void LaunchKernel(StreamContext* stream_ctx, const int64_t* src_dims, const void* src,
-                  const int* permutation, void* dst, size_t count) {
+template<size_t num_dims, typename IndexType>
+PermuteKernelParams<num_dims, IndexType> MakePermuteParams(const int64_t* src_dims, const void* src,
+                                                           const int* permutation, void* dst,
+                                                           size_t count) {
   PermuteKernelParams<num_dims, IndexType> params;
   params.src_index_helper = NdIndexOffsetHelper<IndexType, num_dims>(src_dims);
   int64_t dst_dims[num_dims];
@@ -57,8 +55,12 @@ void LaunchKernel(StreamContext* stream_ctx, const int64_t* src_dims, const void
   params.src = src;
   params.dst = dst;
   params.count = static_cast<IndexType>(count);
-  LaunchKernel<num_dims, movement_size, IndexType>(stream_ctx, params);
+  return params;
 }
+
+template<size_t num_dims, size_t movement_size, typename IndexType>
+void LaunchKernel(StreamContext* stream_ctx, const int64_t* src_dims, const void* src,
+                  const int* permutation, void* dst, size_t count);
 
 template<size_t num_dims, size_t movement_size>
 void DispatchIndexType(StreamContext* stream_ctx, const int64_t* src_dims, const void* src,
