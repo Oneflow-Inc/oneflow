@@ -604,6 +604,10 @@
   signature: "Tensor (Tensor x, Shape shape) => Expand"
   bind_python: True
 
+- name: "roll"
+  signature: "Tensor (Tensor x, Int32List[1] shifts, Int32List[1] dims=None) => Roll"
+  bind_python: True
+
 - name: "expand_dims"
   signature: "Tensor (Tensor x, Int32 axis) => ExpandDims"
   bind_python: True
@@ -744,6 +748,11 @@
   signature: "Tensor (Tensor dy, Tensor label, Tensor theta, Float m1, Float m2, Float m3, Int64 depth) => CombinedMarginLossGrad"
   bind_python: False
 
+
+- name: "triplet_margin_loss"
+  signature: "Tensor (Tensor anchor, Tensor positive, Tensor negative, *, Float margin, Float p, Float eps, Bool swap, String reduction) => TripletMarginLoss"
+  bind_python: True
+  
 - name: "margin_ranking_loss"
   signature: "Tensor (Tensor input_1, Tensor input_2, Tensor target, Float margin, String reduction) => MarginRankingLoss"
   bind_python: True
@@ -1127,6 +1136,32 @@
 - name: "clamp_grad"
   signature: "Tensor (Tensor dy, Tensor x, Scalar min=None, Scalar max=None) => ClampGrad"
   bind_python: False
+
+- name: "vector_norm"
+  signature: 
+    [
+      "Tensor (Tensor input, Scalar ord=2, Int32List dim=None, Bool keepdim=False, *, DataType dtype=None) => VectorNorm",
+      "Tensor (Tensor input, Scalar ord=2, Scalar dim, Bool keepdim=False, *, DataType dtype=None) => VectorNorm",
+    ]
+  bind_python: True
+
+- name: "matrix_norm"
+  signature: 
+    [
+      "Tensor (Tensor input, Scalar ord, Int32List dim, Bool keepdim=False, *, DataType dtype=None) => MatrixNorm",
+      "Tensor (Tensor input, String ord, Int32List dim, Bool keepdim=False, *, DataType dtype=None) => MatrixNorm",
+    ]
+  bind_python: True
+
+- name: "norm"
+  signature: 
+    [
+      "Tensor (Tensor input, Scalar ord=None, Int32List dim=None, Bool keepdim=False, *, DataType dtype=None) => Norm",
+      "Tensor (Tensor input, String ord, Int32List dim=None, Bool keepdim=False, *, DataType dtype=None) => Norm",
+      "Tensor (Tensor input, Scalar ord=None, Scalar dim, Bool keepdim=False, *, DataType dtype=None) => ScalarNorm",
+      "Tensor (Tensor input, String ord, Scalar dim, Bool keepdim=False, *, DataType dtype=None) => ScalarNorm",
+    ]
+  bind_python: True
 
 - name: "dropout"
   signature: "Tensor (Tensor x, Float p=0.5, Bool training=True, Generator generator=None) => Dropout"
