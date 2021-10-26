@@ -35,7 +35,7 @@ class TestAutogradFunction(flow.unittest.TestCase):
             @staticmethod
             def backward(ctx, y_grad):
                 x_grad = y_grad.clone()
-                x, = ctx.saved_tensors
+                (x,) = ctx.saved_tensors
                 x_grad[x < 0] = 0
                 return x_grad
 
