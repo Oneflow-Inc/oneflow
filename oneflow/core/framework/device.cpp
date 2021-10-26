@@ -146,8 +146,16 @@ Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
   return MapAt(type2instr_name, type);
 }
 
+Maybe<size_t> Device::instr_local_dep_object_pool_low_watermark() const {
+  return instr_local_dep_object_pool_size();
+}
+
+Maybe<size_t> Device::instr_local_dep_object_pool_high_watermark() const {
+  return JUST(instr_local_dep_object_pool_size()) * 2;
+}
+
 Maybe<size_t> Device::instr_local_dep_object_pool_size() const {
-  static const size_t kSmallPoolSize = 4;
+  static const size_t kSmallPoolSize = 2;
   static const HashMap<std::string, size_t> type2pool_size{
       {"cpu", GetInstructionHighWaterMark()},
       {"gpu", GetInstructionHighWaterMark()},

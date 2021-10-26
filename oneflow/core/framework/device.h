@@ -69,13 +69,18 @@ class Device final {
     return transport_local_dep_object_;
   }
   LocalDepObject* mut_schedule_local_dep_object() const { return schedule_local_dep_object_; }
-  Maybe<size_t> instr_local_dep_object_pool_size() const;
+
+  Maybe<size_t> instr_local_dep_object_pool_low_watermark() const;
+
+  Maybe<size_t> instr_local_dep_object_pool_high_watermark() const;
 
   Maybe<bool> need_soft_sync_stream() const;
 
  private:
   Device(const std::string& type, int64_t device_id);
   Maybe<void> Init();
+
+  Maybe<size_t> instr_local_dep_object_pool_size() const;
 
   const std::string type_;
   const int64_t device_id_;

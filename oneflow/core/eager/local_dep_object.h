@@ -41,7 +41,6 @@ class LocalDepObject final : public intrusive::Base {
   }
 
   const intrusive::ListHook& pool_hook() const { return pool_hook_; }
-  const intrusive::ListHook& stored_hook() const { return stored_hook_; }
   const intrusive::ListHook& lifetime_hook() const { return lifetime_hook_; }
 
   // Setters
@@ -64,12 +63,7 @@ class LocalDepObject final : public intrusive::Base {
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
   LocalDepObject()
-      : intrusive_ref_(),
-        logical_object_(),
-        mirrored_object_(),
-        pool_hook_(),
-        stored_hook_(),
-        lifetime_hook_() {}
+      : intrusive_ref_(), logical_object_(), mirrored_object_(), pool_hook_(), lifetime_hook_() {}
   intrusive::Ref intrusive_ref_;
   // fields
   intrusive::shared_ptr<vm::LogicalObject> logical_object_;
@@ -78,7 +72,6 @@ class LocalDepObject final : public intrusive::Base {
  public:
   // list hooks
   intrusive::ListHook pool_hook_;
-  intrusive::ListHook stored_hook_;
   intrusive::ListHook lifetime_hook_;
 };
 
