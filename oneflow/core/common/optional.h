@@ -21,7 +21,6 @@ limitations under the License.
 #include <type_traits>
 #include <utility>
 #include "oneflow/core/common/error.cfg.h"
-#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/type_traits.h"
 #include "oneflow/core/common/just.h"
 
