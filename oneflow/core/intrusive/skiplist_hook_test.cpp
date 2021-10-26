@@ -40,7 +40,7 @@ struct FooSkipListElem {
   SkipListHook<int> key;
 };
 
-using FooSkipList = TestSkipListHead<STRUCT_FIELD(FooSkipListElem, key)>;
+using FooSkipList = TestSkipListHead<INTRUSIVE_FIELD(FooSkipListElem, key)>;
 
 TEST(SkipListHook, empty) {
   FooSkipList skiplist;
