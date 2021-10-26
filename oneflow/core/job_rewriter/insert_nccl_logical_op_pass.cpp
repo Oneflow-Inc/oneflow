@@ -915,7 +915,9 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
       const ParallelDesc& this_parallel_desc = this_node->parallel_desc();
       std::string key = GenParallelConfKey(this_parallel_desc.parallel_conf());
       auto it = placement2subgraphs.find(key);
-      if (it != placement2subgraphs.end()) { it->second.ordered_acc_op_nodes.emplace_back(this_node); }
+      if (it != placement2subgraphs.end()) {
+        it->second.ordered_acc_op_nodes.emplace_back(this_node);
+      }
     }
   }
 

@@ -625,9 +625,9 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
             job_builder->AddOps(parallel_desc.parallel_conf(), {square_sum_op.op_conf()});
             lbns_to_add.emplace_back(square_sum_op.output("y", 0));
           }
-          partial_square_sum_lbns.emplace_back(AddLbns(job_builder, lbns_to_add,
-                                                    parallel_desc.parallel_conf(), scope_symbol_id,
-                                                    "System-ClipGradient-GlobalNorm-Add-"));
+          partial_square_sum_lbns.emplace_back(
+              AddLbns(job_builder, lbns_to_add, parallel_desc.parallel_conf(), scope_symbol_id,
+                      "System-ClipGradient-GlobalNorm-Add-"));
         }
       });
   ParallelConf global_norm_parallel_conf = all_same_parallel_desc
@@ -639,8 +639,8 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   if (!all_group_broadcast) {
     for (int64_t i = 0; i < partial_square_sum_lbns.size(); ++i) {
       square_sum_lbns_for_add.emplace_back(AddCastToP(job_builder, partial_square_sum_lbns.at(i),
-                                                   param_group_parallel_confs.at(i),
-                                                   "System-ClipGradient-ParallelCast-"));
+                                                      param_group_parallel_confs.at(i),
+                                                      "System-ClipGradient-ParallelCast-"));
     }
     global_norm_parallel_conf.mutable_hierarchy()->clear_dim();
   } else {

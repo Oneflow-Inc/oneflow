@@ -296,7 +296,7 @@ void NodeDeviceDescriptor::Serialize(std::string* serialized) const {
     auto clz = DeviceDescriptorClass::GetRegisteredClass(pair.first);
     CHECK(clz);
     clz->SerializeDeviceDescriptorList(pair.second, &serialized_descriptor_list);
-    json_object[kJsonKeyClasses].emplace_back(
+    json_object[kJsonKeyClasses].push_back(
         {{kJsonKeyClassName, clz->Name()},
          {kJsonKeySerializedDescriptorList, serialized_descriptor_list}});
   }

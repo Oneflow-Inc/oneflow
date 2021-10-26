@@ -58,7 +58,8 @@ class AddNFunctor {
         JUST(OpInterpUtil::Dispatch(*op_.at(size - 1), partial_inputs, outs.get()));
         outputs.emplace_back(outs->at(0));
       } else {
-        outputs.emplace_back(JUST(OpInterpUtil::Dispatch<Tensor>(*op_.at(size - 1), partial_inputs)));
+        outputs.emplace_back(
+            JUST(OpInterpUtil::Dispatch<Tensor>(*op_.at(size - 1), partial_inputs)));
       }
     }
     if (outputs.size() == 1) { return outputs.at(0); }
