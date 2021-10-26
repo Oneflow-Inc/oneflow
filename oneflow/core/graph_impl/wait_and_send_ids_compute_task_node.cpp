@@ -60,8 +60,8 @@ void WaitAndSendIdsCompTaskNode::InferProducedDataRegstTimeShape() {
 }
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kWaitAndSendIds)
-    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
-      return generator->GenerateIndependentTaskStreamIndex(TaskType::kWaitAndSendIds);
+    .SetStreamIndexGetterFn([](StreamIndexGenerator* generator) -> uint32_t {
+      return generator->GenerateStreamIndex();
     });
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kWaitAndSendIdsConf,

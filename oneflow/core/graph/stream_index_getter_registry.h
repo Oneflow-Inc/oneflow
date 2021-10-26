@@ -16,43 +16,36 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_STREAM_INDEX_GETTER_REGISTRY_H_
 #define ONEFLOW_CORE_GRAPH_STREAM_INDEX_GETTER_REGISTRY_H_
 
+#include <functional>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/device/stream_index.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/common/device_type.h"
 
 namespace oneflow {
 
 class CompTaskNode;
-using StreamIndexGetterFn = std::function<uint32_t(DeviceId device_id)>;
+
+using StreamIndexGetterFn = std::function<StreamId::stream_index_t(DeviceId)>;
+using StreamIndexGeneratorFn = std::function<StreamId::stream_index_t(StreamIndexGenerator*)>;
 
 class StreamIndexGetterRegistry final {
  public:
   StreamIndexGetterRegistry(DeviceType dev_type, TaskType task_type)
       : dev_task_type_(std::make_pair(dev_type, task_type)) {}
-  template<class T>
-  StreamIndexGetterRegistry& SetStreamIndexGetterFn(T&& func) {
-    // "+ trick": https://stackoverflow.com/a/43843606
-    // It is used to convert lambda to a plain function pointer
-    // (NOTE: only lambda function without capture can be converted)
-    // and thus "GeneratorType" can be deduced
-    return SetStreamIndexGetterFnImpl(+func);
+  StreamIndexGetterRegistry& SetStreamIndexGetterFn(const StreamIndexGeneratorFn& gen) {
+    auto fn = [gen](DeviceId device_id) -> StreamId::stream_index_t {
+      auto* generator =
+          Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetOrCreateGenerator(device_id);
+      return gen(generator);
+    };
+    return SetFn(fn);
   }
   StreamIndexGetterRegistry& SetFn(StreamIndexGetterFn func);
 
  private:
   std::pair<DeviceType, TaskType> dev_task_type_;
-
-  template<class GeneratorType>
-  StreamIndexGetterRegistry& SetStreamIndexGetterFnImpl(uint32_t (*func)(GeneratorType)) {
-    auto new_func = [func](DeviceId device_id) -> uint32_t {
-      auto* generator = dynamic_cast<GeneratorType>(
-          Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
-      CHECK_NOTNULL(generator);
-      return func(generator);
-    };
-    return SetFn(new_func);
-  }
 };
 
 };  // namespace oneflow

@@ -48,11 +48,9 @@ void CallbackNotifyCompTaskNode::BuildExecGphAndRegst() {
   CHECK(node->op()->output_bns().empty());
 }
 
-REGISTER_INDEPENDENT_THREAD_NUM(TaskType::kCallbackNotify, 1);
-
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kCallbackNotify)
-    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
-      return generator->GenerateIndependentTaskStreamIndex(TaskType::kCallbackNotify);
+    .SetStreamIndexGetterFn([](StreamIndexGenerator* generator) -> uint32_t {
+      return generator->GenerateStreamIndex();
     });
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kCallbackNotifyConf,

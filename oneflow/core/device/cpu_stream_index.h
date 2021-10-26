@@ -21,32 +21,32 @@ limitations under the License.
 
 namespace oneflow {
 
-class CPUStreamIndexGenerator final : public StreamIndexGenerator {
- public:
-  CPUStreamIndexGenerator();
-  OF_DISALLOW_COPY_AND_MOVE(CPUStreamIndexGenerator);
-  ~CPUStreamIndexGenerator() = default;
+// class CPUStreamIndexGenerator final : public StreamIndexGenerator {
+//  public:
+//   CPUStreamIndexGenerator();
+//   OF_DISALLOW_COPY_AND_MOVE(CPUStreamIndexGenerator);
+//   ~CPUStreamIndexGenerator() = default;
 
-  stream_index_t GenerateComputeStreamIndex() override;
-  stream_index_t GenerateH2DStreamIndex() override { UNIMPLEMENTED(); }
-  stream_index_t GenerateD2HStreamIndex() override { UNIMPLEMENTED(); }
-  stream_index_t GenerateCommNetStreamIndex();
-  stream_index_t GenerateTickTockStreamIndex();
-  stream_index_t GenerateIndependentTaskStreamIndex(TaskType task_type);
+//   stream_index_t GenerateComputeStreamIndex() override;
+//   stream_index_t GenerateH2DStreamIndex() override { UNIMPLEMENTED(); }
+//   stream_index_t GenerateD2HStreamIndex() override { UNIMPLEMENTED(); }
+//   stream_index_t GenerateCommNetStreamIndex();
+//   stream_index_t GenerateTickTockStreamIndex();
+//   stream_index_t GenerateIndependentTaskStreamIndex(TaskType task_type);
 
- private:
-  stream_index_t next_stream_index_;
-  stream_index_t compute_stream_index_begin_;
-  stream_index_t compute_stream_num_;
-  stream_index_t comm_net_stream_index_;
-  stream_index_t tick_tock_stream_index_;
-  // for GenerateComputeStreamIndex
-  stream_index_t compute_stream_index_counter_;
-  // for GenerateIndependentStreamIndex
-  HashMap<TaskType, size_t> task_type2max_stream_num_;
-  HashMap<TaskType, std::vector<stream_index_t>> task_type2allocated_stream_index_vec_;
-  HashMap<TaskType, size_t> task_type2allocated_stream_index_vec_index_;
-};
+//  private:
+//   stream_index_t next_stream_index_;
+//   stream_index_t compute_stream_index_begin_;
+//   stream_index_t compute_stream_num_;
+//   stream_index_t comm_net_stream_index_;
+//   stream_index_t tick_tock_stream_index_;
+//   // for GenerateComputeStreamIndex
+//   stream_index_t compute_stream_index_counter_;
+//   // for GenerateIndependentStreamIndex
+//   HashMap<TaskType, size_t> task_type2max_stream_num_;
+//   HashMap<TaskType, std::vector<stream_index_t>> task_type2allocated_stream_index_vec_;
+//   HashMap<TaskType, size_t> task_type2allocated_stream_index_vec_index_;
+// };
 
 }  // namespace oneflow
 

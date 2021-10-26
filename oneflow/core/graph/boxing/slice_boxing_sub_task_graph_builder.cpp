@@ -57,18 +57,29 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
                    SliceBoxingTaskMode mode) -> SliceBoxingTaskNode* {
     SliceBoxingTaskNode* node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
     const int64_t machine_id = CHECK_JUST(pd.MachineId4ParallelId(parallel_id));
-    int64_t dev_id = -1;
+    int64_t thrd_id = -1;
     if (pd.device_type() == DeviceType::kCPU) {
-      dev_id = DeviceId::kCPUDeviceIndex;
+      DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kCPU,
+                         DeviceId::kCPUDeviceIndex};
+      auto stream_index =
+          Global<IDMgr>::Get()
+              ->GetStreamIndexGeneratorManager()
+              ->GetOrCreateGenerator(device_id)
+              ->GenerateStreamIndex("cpu_compute",
+                                    Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum());
+      thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
     } else {
-      dev_id = CHECK_JUST(pd.DeviceId4ParallelId(parallel_id));
+      DeviceId device_id{
+          static_cast<DeviceId::rank_t>(machine_id), pd.device_type(),
+          static_cast<DeviceId::device_index_t>(CHECK_JUST(pd.DeviceId4ParallelId(parallel_id)))};
+      auto stream_index =
+          Global<IDMgr>::Get()
+              ->GetStreamIndexGeneratorManager()
+              ->GetOrCreateGenerator(device_id)
+              ->GenerateStreamIndex("compute");
+      thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
     }
-    DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), pd.device_type(),
-                       static_cast<DeviceId::device_index_t>(dev_id)};
-    auto* stream_index_generator =
-        Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
-    auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
-    int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
+
     node->Init(lbi, slice, mode, machine_id, thrd_id);
     return node;
   };

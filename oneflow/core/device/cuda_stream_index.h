@@ -20,25 +20,25 @@ limitations under the License.
 
 namespace oneflow {
 
-class CudaStreamIndexGenerator final : public StreamIndexGenerator {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CudaStreamIndexGenerator);
-  CudaStreamIndexGenerator();
-  ~CudaStreamIndexGenerator();
-  stream_index_t GenerateComputeStreamIndex() override { return kCompute; }
-  stream_index_t GenerateH2DStreamIndex() override { return kH2D; }
-  stream_index_t GenerateD2HStreamIndex() override { return kD2H; }
-  stream_index_t GenerateNamedStreamIndex(const std::string& name);
-  bool IsNamedStreamIndex(const std::string& name, stream_index_t index);
+// class CudaStreamIndexGenerator final : public StreamIndexGenerator {
+//  public:
+//   OF_DISALLOW_COPY_AND_MOVE(CudaStreamIndexGenerator);
+//   CudaStreamIndexGenerator();
+//   ~CudaStreamIndexGenerator();
+//   stream_index_t GenerateComputeStreamIndex() override { return kCompute; }
+//   stream_index_t GenerateH2DStreamIndex() override { return kH2D; }
+//   stream_index_t GenerateD2HStreamIndex() override { return kD2H; }
+//   stream_index_t GenerateNamedStreamIndex(const std::string& name);
+//   bool IsNamedStreamIndex(const std::string& name, stream_index_t index);
 
- private:
-  static const stream_index_t kCompute = 0;
-  static const stream_index_t kH2D = 1;
-  static const stream_index_t kD2H = 2;
-  HashMap<std::string, stream_index_t> named_stream_index_;
-  std::mutex named_stream_index_mutex_;
-  stream_index_t next_stream_index_;
-};
+//  private:
+//   static const stream_index_t kCompute = 0;
+//   static const stream_index_t kH2D = 1;
+//   static const stream_index_t kD2H = 2;
+//   HashMap<std::string, stream_index_t> named_stream_index_;
+//   std::mutex named_stream_index_mutex_;
+//   stream_index_t next_stream_index_;
+// };
 
 }  // namespace oneflow
 

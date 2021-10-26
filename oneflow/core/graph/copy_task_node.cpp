@@ -46,12 +46,12 @@ void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, const DeviceId& device_i
   copy_type_ = copy_type;
   set_machine_id(device_id.rank());
   auto* stream_index_generator =
-      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
+      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetOrCreateGenerator(device_id);
   StreamId::stream_index_t stream_index = 0;
   if (copy_type == CopyHdOpConf::H2D) {
-    stream_index = stream_index_generator->GenerateH2DStreamIndex();
+    stream_index = stream_index_generator->GenerateStreamIndex("H2D");
   } else if (copy_type == CopyHdOpConf::D2H) {
-    stream_index = stream_index_generator->GenerateD2HStreamIndex();
+    stream_index = stream_index_generator->GenerateStreamIndex("D2H");
   } else {
     UNIMPLEMENTED();
   }
@@ -88,10 +88,9 @@ void CopyCommNetTaskNode::Init(int64_t machine_id, const LogicalBlobId& lbi) {
   set_machine_id(machine_id);
   DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kCPU,
                      DeviceId::kCPUDeviceIndex};
-  auto* generator = dynamic_cast<CPUStreamIndexGenerator*>(
-      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
-  CHECK_NOTNULL(generator);
-  StreamId stream_id{device_id, generator->GenerateCommNetStreamIndex()};
+  auto* stream_index_generator =
+      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetOrCreateGenerator(device_id);
+  StreamId stream_id{device_id, stream_index_generator->GenerateStreamIndex("commnet")};
   set_thrd_id(SerializeStreamIdToInt64(stream_id));
   set_lbi(lbi);
 }

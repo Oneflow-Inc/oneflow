@@ -59,8 +59,8 @@ void DecodeH2DCompTaskNode::BuildExecGphAndRegst() {
 #ifdef WITH_CUDA
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kDecodeH2D)
-    .SetStreamIndexGetterFn([](CudaStreamIndexGenerator* generator) -> uint32_t {
-      return generator->GenerateNamedStreamIndex("DECODE_H2D");
+    .SetStreamIndexGetterFn([](StreamIndexGenerator* generator) -> uint32_t {
+      return generator->GenerateStreamIndex("DECODE_H2D");
     });
 
 #endif

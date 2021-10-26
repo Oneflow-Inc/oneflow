@@ -78,8 +78,8 @@ void CaseCompTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDat
 REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kCase);
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kCase)
-    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
-      return generator->GenerateTickTockStreamIndex();
+    .SetStreamIndexGetterFn([](StreamIndexGenerator* generator) -> uint32_t {
+      return generator->GenerateStreamIndex("tick");
     });
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kCaseConf, CaseCompTaskNode);

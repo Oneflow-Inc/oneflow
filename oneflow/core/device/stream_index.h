@@ -22,14 +22,23 @@ limitations under the License.
 
 namespace oneflow {
 
-class StreamIndexGenerator {
+class StreamIndexGenerator final {
  public:
-  virtual ~StreamIndexGenerator() {}
   using stream_index_t = StreamId::stream_index_t;
 
-  virtual stream_index_t GenerateComputeStreamIndex() = 0;
-  virtual stream_index_t GenerateH2DStreamIndex() = 0;
-  virtual stream_index_t GenerateD2HStreamIndex() = 0;
+  StreamIndexGenerator();
+  OF_DISALLOW_COPY_AND_MOVE(StreamIndexGenerator);
+  ~StreamIndexGenerator() = default;
+
+  stream_index_t GenerateStreamIndex();
+  stream_index_t GenerateStreamIndex(const std::string& name, size_t num = 1);
+
+ private:
+  std::atomic<stream_index_t> next_stream_index_;
+  HashMap<std::string, std::pair<stream_index_t, size_t>> name2round_robin_range_;
+  HashMap<std::string, int> name2round_robine_offset;
+  std::mutex named_rr_range_mutex_;
+  std::mutex named_rr_offset_mutex_;
 };
 
 class StreamIndexGeneratorManager final {
@@ -38,22 +47,12 @@ class StreamIndexGeneratorManager final {
   OF_DISALLOW_COPY_AND_MOVE(StreamIndexGeneratorManager);
   ~StreamIndexGeneratorManager() = default;
 
-  StreamIndexGenerator* GetGenerator(const DeviceId& device_id) {
-    auto iter = generators_.find(device_id);
-    if (iter == generators_.end()) {
-      auto* generator = NewObj<int, StreamIndexGenerator>(device_id.device_type());
-      generators_[device_id].reset(generator);
-      return generator;
-    }
-    return iter->second.get();
-  }
+  StreamIndexGenerator* GetOrCreateGenerator(const DeviceId& device_id);
 
  private:
   HashMap<DeviceId, std::unique_ptr<StreamIndexGenerator>> generators_;
+  std::mutex mtx_;
 };
-
-#define REGISTER_STREAM_INDEX_GENERATOR(device_type_v, stream_index_generator_class) \
-  REGISTER_CLASS(int, device_type_v, StreamIndexGenerator, stream_index_generator_class)
 
 }  // namespace oneflow
 

@@ -41,8 +41,8 @@ StreamIndexGetterFn StreamIndexGetterRegistryManager::GetStreamIndexGetterFunc(D
     auto return_compute_stream_index_fn = [](DeviceId device_id) -> uint32_t {
       return Global<IDMgr>::Get()
           ->GetStreamIndexGeneratorManager()
-          ->GetGenerator(device_id)
-          ->GenerateComputeStreamIndex();
+          ->GetOrCreateGenerator(device_id)
+          ->GenerateStreamIndex("compute");
     };
     return return_compute_stream_index_fn;
   }

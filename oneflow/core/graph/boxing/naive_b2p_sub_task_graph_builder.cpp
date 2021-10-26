@@ -63,8 +63,9 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
           DeviceId device_id{static_cast<DeviceId::rank_t>(out_machine_id), DeviceType::kGPU,
                              static_cast<DeviceId::device_index_t>(out_dev_phy_id)};
           auto* stream_index_generator =
-              Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
-          auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
+              Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetOrCreateGenerator(
+                  device_id);
+          auto stream_index = stream_index_generator->GenerateStreamIndex("compute");
           thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
 #else
           UNIMPLEMENTED();
