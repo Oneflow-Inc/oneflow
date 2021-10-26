@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_DEVICE_DEVICE_ID_H_
 #define ONEFLOW_CORE_DEVICE_DEVICE_ID_H_
 
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/device_type.h"
 
 namespace oneflow {
@@ -30,10 +31,10 @@ class DeviceId {
  public:
   using index_t = uint32_t;
 
-  constexpr static size_t kRankBits = 19;
+  constexpr static size_t kNodeIndexBits = 19;
   constexpr static size_t kDeviceTypeBits = 5;
   constexpr static size_t kDeviceIndexBits = 7;
-  constexpr static index_t kMaxNodeIndex = (index_t{1} << kRankBits) - index_t{1};
+  constexpr static index_t kMaxNodeIndex = (index_t{1} << kNodeIndexBits) - index_t{1};
   constexpr static index_t kMaxDeviceTypeVal = (index_t{1} << kDeviceTypeBits) - index_t{1};
   constexpr static index_t kMaxDeviceIndex = (index_t{1} << kDeviceIndexBits) - index_t{1};
   constexpr static index_t kCPUDeviceIndex = 0;

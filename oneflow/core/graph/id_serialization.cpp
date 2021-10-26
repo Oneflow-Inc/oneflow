@@ -39,14 +39,14 @@ namespace stream_id_const {
 constexpr size_t kDeviceIndexShift = StreamId::kStreamIndexBits;
 constexpr size_t kDeviceTypeShift = kDeviceIndexShift + DeviceId::kDeviceIndexBits;
 constexpr size_t kRankShift = kDeviceTypeShift + DeviceId::kDeviceTypeBits;
-static_assert(kInt64Bits == kRankShift + DeviceId::kRankBits + TaskId::kTaskIndexBits, "");
+static_assert(kInt64Bits == kRankShift + DeviceId::kNodeIndexBits + TaskId::kTaskIndexBits, "");
 
 constexpr int64_t kStreamIndexInt64Mask = (int64_t{1} << StreamId::kStreamIndexBits) - 1;
 constexpr int64_t kDeviceIndexInt64Mask = ((int64_t{1} << DeviceId::kDeviceIndexBits) - 1)
                                           << kDeviceIndexShift;
 constexpr int64_t kDeviceTypeInt64Mask = ((int64_t{1} << DeviceId::kDeviceTypeBits) - 1)
                                          << kDeviceTypeShift;
-constexpr int64_t kRankInt64Mask = ((int64_t{1} << DeviceId::kRankBits) - 1) << kRankShift;
+constexpr int64_t kRankInt64Mask = ((int64_t{1} << DeviceId::kNodeIndexBits) - 1) << kRankShift;
 
 }  // namespace stream_id_const
 
@@ -79,7 +79,7 @@ constexpr size_t kStreamIndexShift = TaskId::kTaskIndexBits;
 constexpr size_t kDeviceIndexShift = kStreamIndexShift + StreamId::kStreamIndexBits;
 constexpr size_t kDeviceTypeShift = kDeviceIndexShift + DeviceId::kDeviceIndexBits;
 constexpr size_t kRankShift = kDeviceTypeShift + DeviceId::kDeviceTypeBits;
-static_assert(kInt64Bits == kRankShift + DeviceId::kRankBits, "");
+static_assert(kInt64Bits == kRankShift + DeviceId::kNodeIndexBits, "");
 
 constexpr int64_t kTaskIndexInt64Mask = (int64_t{1} << TaskId::kTaskIndexBits) - 1;
 constexpr int64_t kStreamIndexInt64Mask = ((int64_t{1} << StreamId::kStreamIndexBits) - 1)
@@ -88,7 +88,7 @@ constexpr int64_t kDeviceIndexInt64Mask = ((int64_t{1} << DeviceId::kDeviceIndex
                                           << kDeviceIndexShift;
 constexpr int64_t kDeviceTypeInt64Mask = ((int64_t{1} << DeviceId::kDeviceTypeBits) - 1)
                                          << kDeviceTypeShift;
-constexpr int64_t kRankInt64Mask = ((int64_t{1} << DeviceId::kRankBits) - 1) << kRankShift;
+constexpr int64_t kRankInt64Mask = ((int64_t{1} << DeviceId::kNodeIndexBits) - 1) << kRankShift;
 
 }  // namespace task_id_const
 
