@@ -45,9 +45,11 @@ class CpuRollKernel final : public user_op::OpKernel {
     STRIDE stride{};
     initStride(stride, new_shape, num_axes);
 
+    transformShifts(new_shifts.val, new_shape.val, num_axes);
+
     for (int32_t i = 0; i < size; ++i) {
-      int offset = getShiftedOffset(i, new_shifts.val, new_shape.val, stride.val, num_axes);
-      out_ptr[i] = in_ptr[offset];
+      int shifted_i = switchGetShiftedIndex(i, new_shifts.val, new_shape.val, stride.val, num_axes);
+      out_ptr[i] = in_ptr[shifted_i];
     }
   }
 
