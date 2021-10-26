@@ -129,10 +129,10 @@ void XrtLaunchKernel<device_type>::MakeInputOutputAlias(
   for (int i = 0; i < entry_params.size(); ++i) {
     const std::string& entry_name = entry_params[i].name();
     if (mutability_table.count(entry_name) > 0) {
-      aliases->push_back({{static_cast<int>(return_params->size())} /*output_index*/,
+      aliases->emplace_back({{static_cast<int>(return_params->size())} /*output_index*/,
                           i /*param_number=*/,
                           {} /*param_index=*/});
-      return_params->push_back(entry_params[i]);
+      return_params->emplace_back(entry_params[i]);
     }
   }
 }
@@ -163,13 +163,13 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(KernelContext* ctx) const 
     const LogicalBlobId& lbi = BnInOp2Lbi(*this, bn);
     std::string blob_name = xrt::BlobIdToName(lbi);
     xrt::Parameter input = xrt::BuildParameter(*BnInOp2Blob(bn), blob_name);
-    entry_params.push_back(input);
+    entry_params.emplace_back(input);
   }
   for (const std::string& bn : this->op_attribute().output_bns()) {
     const LogicalBlobId& lbi = BnInOp2Lbi(*this, bn);
     std::string blob_name = xrt::BlobIdToName(lbi);
     xrt::Parameter output = xrt::BuildParameter(*BnInOp2Blob(bn), blob_name);
-    return_params.push_back(output);
+    return_params.emplace_back(output);
   }
 
   xrt::XrtDevice device = xrt::DeviceTypeToXrtDevice(device_type);

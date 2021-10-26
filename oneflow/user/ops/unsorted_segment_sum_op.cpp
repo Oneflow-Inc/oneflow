@@ -33,7 +33,7 @@ REGISTER_USER_OP("unsorted_segment_sum")
       DimVector dim_vec;
       dim_vec.insert(dim_vec.end(), data_shape.dim_vec().cbegin(),
                      data_shape.dim_vec().cbegin() + axis);
-      dim_vec.push_back(num_segments);
+      dim_vec.emplace_back(num_segments);
       dim_vec.insert(dim_vec.end(),
                      data_shape.dim_vec().cbegin() + axis + segment_ids_shape.NumAxes(),
                      data_shape.dim_vec().end());

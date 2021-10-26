@@ -181,8 +181,8 @@ class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKern
     DimVector transpose_out_dim_vec;
     std::vector<int32_t> perm;
     FOR_RANGE(int64_t, i, 1, unpack_from_shape.NumAxes()) {
-      perm.push_back(i);
-      transpose_out_dim_vec.push_back(unpack_from_shape.At(i));
+      perm.emplace_back(i);
+      transpose_out_dim_vec.emplace_back(unpack_from_shape.At(i));
     }
     perm.insert(perm.begin() + in_split_axis, 0);
     transpose_out_dim_vec.insert(transpose_out_dim_vec.begin() + in_split_axis,
@@ -253,12 +253,12 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
       const Shape transpose_in_shape(transpose_in_dim_vec);
       DimVector pack_to_dim_vec;
       std::vector<int32_t> perm;
-      perm.push_back(out_split_axis);
-      pack_to_dim_vec.push_back(transpose_in_shape.At(out_split_axis));
+      perm.emplace_back(out_split_axis);
+      pack_to_dim_vec.emplace_back(transpose_in_shape.At(out_split_axis));
       FOR_RANGE(int64_t, i, 0, transpose_in_shape.NumAxes()) {
         if (i != out_split_axis) {
-          perm.push_back(i);
-          pack_to_dim_vec.push_back(transpose_in_shape.At(i));
+          perm.emplace_back(i);
+          pack_to_dim_vec.emplace_back(transpose_in_shape.At(i));
         }
       }
       CHECK_EQ(elem_cnt, transpose_in_shape.elem_cnt());
@@ -306,8 +306,8 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
       DimVector transpose_out_dim_vec;
       std::vector<int32_t> perm;
       FOR_RANGE(int64_t, i, 1, unpack_from_shape.NumAxes()) {
-        perm.push_back(i);
-        transpose_out_dim_vec.push_back(unpack_from_shape.At(i));
+        perm.emplace_back(i);
+        transpose_out_dim_vec.emplace_back(unpack_from_shape.At(i));
       }
       perm.insert(perm.begin() + in_split_axis, 0);
       transpose_out_dim_vec.insert(transpose_out_dim_vec.begin() + in_split_axis,

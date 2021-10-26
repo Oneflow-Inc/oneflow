@@ -62,7 +62,7 @@ void XlaGraphCompiler::SetupKernelContextParam(const XrtNode* node,
       const Argument& arg = edge->argument();
       const std::string& k = arg.meta_data().produce_key;
       input_output_args.emplace(k, arg);
-      output_names.push_back(k);
+      output_names.emplace_back(k);
     }
   }
 
@@ -150,7 +150,7 @@ void XlaGraphCompiler::BuildEntryParameters(const std::vector<Parameter>& entry_
     const DataType data_type = entry_params[i].data_type();
     const Shape& shape = entry_params[i].shape();
     xla::Shape xla_shape = OfShapeToXlaShape(shape, data_type);
-    input_shapes->push_back(xla_shape);
+    input_shapes->emplace_back(xla_shape);
     // Treat all inputs as xla parameters.
     xla::XlaOp handle = xla::Parameter(builder_.get(), i, xla_shape, absl::StrCat("arg", i));
     Argument arg = ArgFromParameter(entry_params[i]);
@@ -161,7 +161,7 @@ void XlaGraphCompiler::BuildEntryParameters(const std::vector<Parameter>& entry_
 
 xla::ShapeIndex MakeShapeIndex(const std::vector<int>& shape) {
   xla::ShapeIndex shape_index;
-  for (int i = 0; i < shape.size(); ++i) { shape_index.push_back(shape[i]); }
+  for (int i = 0; i < shape.size(); ++i) { shape_index.emplace_back(shape[i]); }
   return shape_index;
 }
 

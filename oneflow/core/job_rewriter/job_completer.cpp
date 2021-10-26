@@ -98,7 +98,7 @@ Maybe<void> SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_
         CHECK_OR_RETURN(mutable_consumer == nullptr);
         mutable_consumer = &op_conf;
       } else {
-        naive_consumers.push_back(&op_conf);
+        naive_consumers.emplace_back(&op_conf);
       }
     }
     if (mutable_consumer == nullptr) { return Maybe<void>::Ok(); }

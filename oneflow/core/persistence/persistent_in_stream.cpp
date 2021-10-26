@@ -104,7 +104,7 @@ int32_t PersistentInStream::ReadLine(std::string* l) {
         continue;
       }
     }
-    l->push_back(*cur_buf_begin_++);
+    l->emplace_back(*cur_buf_begin_++);
   }
   ++cur_buf_begin_;
   return 0;

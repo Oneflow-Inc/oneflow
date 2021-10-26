@@ -92,7 +92,7 @@ Maybe<void> DistributeSplitOp::InferOutBlobDescs(
   out_blob_descs.reserve(output_bns().size());
   FOR_RANGE(int, i, 0, output_bns().size()) {
     BlobDesc* blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
-    if (blob_desc != nullptr) { out_blob_descs.push_back(blob_desc); }
+    if (blob_desc != nullptr) { out_blob_descs.emplace_back(blob_desc); }
   }
   BalancedSplitter bs(in_blob_desc.shape().At(split_axis), out_blob_descs.size());
   FOR_RANGE(int, i, 0, out_blob_descs.size()) {

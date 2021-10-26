@@ -140,7 +140,7 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto, StreamCon
     ExecKernel ek;
     ek.kernel_ctx.reset(new KernelContextImpl(stream_ctx, device_ctx_.get()));
     ek.kernel = ConstructKernel(node.kernel_conf(), ek.kernel_ctx.get());
-    exec_kernel_vec_.push_back(std::move(ek));
+    exec_kernel_vec_.emplace_back(std::move(ek));
   }
 
   is_kernel_launch_synchronized_ =
@@ -170,7 +170,7 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto, StreamCon
     CHECK(name2regst_desc_id_.find(pair.first) == name2regst_desc_id_.end());
     std::vector<int64_t>& regst_desc_id_vec = name2regst_desc_id_[pair.first];
     for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
-      regst_desc_id_vec.push_back(regst_desc_id);
+      regst_desc_id_vec.emplace_back(regst_desc_id);
     }
     remaining_eord_cnt_ += pair.second.regst_desc_id_size();
     if (pair.first == "in_ctrl") {
@@ -470,7 +470,7 @@ void Actor::AsyncRetInplaceConsumedRegstIfNoConsumer() {
           Regst* in_regst = deq.front();
           CHECK(in_regst);
           AsyncSendRegstMsgToProducer(in_regst);
-          tmp_regst_desc_id_vec_.push_back(in_regst->regst_desc_id());
+          tmp_regst_desc_id_vec_.emplace_back(in_regst->regst_desc_id());
         }
       });
   inplace_consumed_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
@@ -502,7 +502,7 @@ void Actor::AsyncSendConsumedCtrlRegstMsgToProducer() {
         Regst* regst = reg_deq.front();
         CHECK_GE(reg_deq.size(), 1);
         // must access regst before sending it to producer
-        tmp_regst_desc_id_vec_.push_back(regst_desc_id);
+        tmp_regst_desc_id_vec_.emplace_back(regst_desc_id);
         EnqueueAsyncMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, producer_task_id, regst));
       });
   naive_consumed_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
@@ -517,7 +517,7 @@ void Actor::AsyncSendProducedCtrlRegstMsgToConsumer() {
   naive_produced_rs_.ForChosenFrontRegst(IsChosenRegstDescId, [&](Regst* regst) {
     CHECK(regst->regst_desc()->regst_desc_type().has_ctrl_regst_desc());
     int64_t real_consumer_cnt = HandleRegstToConsumer(regst);
-    if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.push_back(regst->regst_desc_id()); }
+    if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id()); }
   });
   naive_produced_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
 }
@@ -583,7 +583,7 @@ void Actor::HandleProducedNaiveDataRegstToConsumer() {
   naive_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
     if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
       int64_t real_consumer_cnt = HandleRegstToConsumer(regst);
-      if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.push_back(regst->regst_desc_id()); }
+      if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id()); }
     }
   });
   naive_produced_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
@@ -594,7 +594,7 @@ void Actor::HandleProducedInplaceDataRegstToConsumer() {
   inplace_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
     CHECK(regst->regst_desc()->regst_desc_type().has_data_regst_desc());
     int64_t real_consumer_cnt = HandleRegstToConsumer(regst);
-    if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.push_back(regst->regst_desc_id()); }
+    if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id()); }
   });
   inplace_produced_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
 }
@@ -605,7 +605,7 @@ void Actor::HandleConsumedNaiveDataRegstToProducer() {
     if (IsConsumedCtrlRegstDescId(regst_desc_id)) { return; }
     if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
       // must access regst before sending it to producer
-      tmp_regst_desc_id_vec_.push_back(regst->regst_desc_id());
+      tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id());
       EnqueueAsyncMsg(
           ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
     }
@@ -670,7 +670,7 @@ void Actor::EnqueueAsyncMsg(const ActorMsg& msg) {
       && thrd_id_ == Global<IDMgr>::Get()->ThrdId4ActorId(msg.dst_actor_id())) {
     Global<ActorMsgBus>::Get()->SendMsg(msg);
   } else {
-    async_msg_queue_.push_back(msg);
+    async_msg_queue_.emplace_back(msg);
   }
 }
 

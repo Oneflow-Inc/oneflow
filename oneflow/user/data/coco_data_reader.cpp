@@ -76,7 +76,7 @@ COCOMeta::COCOMeta(int64_t session_id, const std::string& annotation_file,
   // initialize image_ids_, image_id2image_ and image_id2anno_ids_
   for (const auto& image : annotation_json_["images"]) {
     int64_t id = image["id"].get<int64_t>();
-    image_ids_.push_back(id);
+    image_ids_.emplace_back(id);
     CHECK(image_id2image_.emplace(id, image).second);
     CHECK(image_id2anno_ids_.emplace(id, std::vector<int64_t>()).second);
   }
@@ -95,7 +95,7 @@ COCOMeta::COCOMeta(int64_t session_id, const std::string& annotation_file,
       }
     }
     CHECK(anno_id2anno_.emplace(id, anno).second);
-    image_id2anno_ids_.at(image_id).push_back(id);
+    image_id2anno_ids_.at(image_id).emplace_back(id);
   }
   // remove images without annotations if necessary
   if (remove_images_without_annotations) {

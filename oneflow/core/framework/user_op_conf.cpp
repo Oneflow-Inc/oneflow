@@ -184,8 +184,8 @@ void UserOpWrapper::InputGradBind(const user_op::OpArg& input,
 
 UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::InputBind(
     const std::string& arg_name, const std::string& logical_blob_name) {
-  if (input_.find(arg_name) == input_.end()) { input_order_.push_back(arg_name); }
-  input_[arg_name].push_back(logical_blob_name);
+  if (input_.find(arg_name) == input_.end()) { input_order_.emplace_back(arg_name); }
+  input_[arg_name].emplace_back(logical_blob_name);
   CHECK_EQ(input_.size(), input_order_.size());
   return *this;
 }
@@ -202,7 +202,7 @@ UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Output(const std::string& ar
 UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Output(const std::string& arg_name,
                                                            int32_t num) {
   CHECK(num >= 0);
-  if (output_.find(arg_name) == output_.end()) { output_order_.push_back(arg_name); }
+  if (output_.find(arg_name) == output_.end()) { output_order_.emplace_back(arg_name); }
   output_[arg_name].resize(num);
   for (int32_t i = 0; i < num; ++i) {
     std::string bn = GenRepeatedBn(arg_name, i);
@@ -259,7 +259,7 @@ UserOpConfWrapper& BackwardOpConfContext::GetOp(const std::string& op_name) {
     CHECK(ret.second == true) << " op_name " << op_name << " build result insert failed.";
 
     // add new op conf
-    bw_op_confs_->push_back(ret.first->second.op_conf());
+    bw_op_confs_->emplace_back(ret.first->second.op_conf());
 
     return ret.first->second;
   }

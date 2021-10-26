@@ -54,12 +54,12 @@ void CollectiveBoxingPackKernel<device_type, T>::ForwardDataContent(KernelContex
     const Shape transpose_in_shape(transpose_in_dim_vec);
     DimVector transpose_out_dim_vec;
     std::vector<int32_t> perm;
-    perm.push_back(dst_split_axis);
-    transpose_out_dim_vec.push_back(transpose_in_shape.At(dst_split_axis));
+    perm.emplace_back(dst_split_axis);
+    transpose_out_dim_vec.emplace_back(transpose_in_shape.At(dst_split_axis));
     FOR_RANGE(int64_t, i, 0, transpose_in_shape.NumAxes()) {
       if (i != dst_split_axis) {
-        perm.push_back(i);
-        transpose_out_dim_vec.push_back(transpose_in_shape.At(i));
+        perm.emplace_back(i);
+        transpose_out_dim_vec.emplace_back(transpose_in_shape.At(i));
       }
     }
     const Shape transpose_out_shape(transpose_out_dim_vec);

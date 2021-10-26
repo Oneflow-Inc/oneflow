@@ -876,7 +876,7 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompati
     LogicalBlobId sub_lbi;
     sub_lbi.set_op_name(op_name);
     sub_lbi.set_blob_name(blob_name);
-    lbi_vec->push_back(sub_lbi);
+    lbi_vec->emplace_back(sub_lbi);
   };
   OperatorConf op_conf;
   op_conf.set_scope_symbol_id(scope_symbol_id);
@@ -944,7 +944,7 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
   mirrored_lbi.set_op_name(op_conf.name());
   mirrored_lbi.set_blob_name("out");
   (*mut_consistent_lbi2mirrored_lbi())[lbi] = mirrored_lbi;
-  (*mut_mirrored_lbi2sub_lbis())[mirrored_lbi].push_back(mirrored_lbi);
+  (*mut_mirrored_lbi2sub_lbis())[mirrored_lbi].emplace_back(mirrored_lbi);
   const auto& parallel_conf = parallel_desc.parallel_conf();
   const auto& op_attribute = JUST(AddAndInferConsistentOp(op_conf));
   {

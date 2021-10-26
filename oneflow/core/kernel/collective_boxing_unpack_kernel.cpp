@@ -56,8 +56,8 @@ void CollectiveBoxingUnpackKernel<device_type, T>::ForwardDataContent(KernelCont
     DimVector transpose_out_dim_vec;
     std::vector<int32_t> perm;
     FOR_RANGE(int64_t, i, 1, transpose_in_shape.NumAxes()) {
-      perm.push_back(i);
-      transpose_out_dim_vec.push_back(transpose_in_shape.At(i));
+      perm.emplace_back(i);
+      transpose_out_dim_vec.emplace_back(transpose_in_shape.At(i));
     }
     perm.insert(perm.begin() + src_split_axis, 0);
     transpose_out_dim_vec.insert(transpose_out_dim_vec.begin() + src_split_axis,

@@ -153,7 +153,7 @@ class DeConvBaseFunctor {
         const std::shared_ptr<one::Tensor>& deconv_i = JUST(OpInterpUtil::Dispatch<Tensor>(
             *deconv_op_, {split_x->at(i), split_weight->at(i)}, deconv_attrs));
         max_dim_size += deconv_i->dim(1);
-        split_out.push_back(deconv_i);
+        split_out.emplace_back(deconv_i);
       }
       deconv_out = JUST(functional::Concat(split_out, 1, max_dim_size));
     }
@@ -871,10 +871,10 @@ class SparseSoftmaxCrossEntropyFunctor {
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
       cfg::SbpParallel sbp;
       sbp.mutable_broadcast_parallel();
-      s0b_sbp_parallels.push_back(logits_nd_sbp.sbp_parallel(0));
-      s0b_sbp_parallels.push_back(sbp);
-      s0s1_sbp_parallels.push_back(logits_nd_sbp.sbp_parallel(0));
-      s0s1_sbp_parallels.push_back(logits_nd_sbp.sbp_parallel(1));
+      s0b_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(0));
+      s0b_sbp_parallels.emplace_back(sbp);
+      s0s1_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(0));
+      s0s1_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(1));
       max_global_stage_input0 = JUST(functional::ToConsistent(
           max_device_stage->at(0), JUST(max_device_stage->at(0)->parallel_desc()),
           s0b_sbp_parallels, s0s1_sbp_parallels));

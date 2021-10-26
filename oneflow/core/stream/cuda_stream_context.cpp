@@ -226,7 +226,7 @@ cudaEvent_t CudaStreamContextImpl::GetEvent() {
 void CudaStreamContextImpl::SyncRecycleEvent(cudaEvent_t event) {
   OF_CUDA_CHECK(cudaEventSynchronize(event));
   if (reuse_cuda_event_) {
-    producer_event_queue_.push_back(event);
+    producer_event_queue_.emplace_back(event);
     if (producer_event_queue_.size() >= kCudaEventReuseRecycleThreshold) {
       std::unique_lock<std::mutex> lock(global_event_queue_mutex_);
       global_event_queue_.insert(global_event_queue_.end(), producer_event_queue_.begin(),

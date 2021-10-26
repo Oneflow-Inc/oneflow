@@ -73,7 +73,7 @@ void CollectiveBoxingDeviceCtxPoller::Enqueue(
     std::lock_guard<std::mutex> lock(*mutex_);
     auto it = checkpoint2callbacks_->find(checkpoint.get());
     if (it != checkpoint2callbacks_->end()) {
-      it->second.push_back(callback);
+      it->second.emplace_back(callback);
       return;
     }
   }

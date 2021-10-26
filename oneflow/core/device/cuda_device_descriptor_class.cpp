@@ -65,7 +65,7 @@ class CudaDeviceDescriptorClass : public DeviceDescriptorClass {
       CHECK(cuda_device);
       std::string serialized_device;
       cuda_device->Serialize(&serialized_device);
-      serialized_devices.push_back(std::move(serialized_device));
+      serialized_devices.emplace_back(std::move(serialized_device));
     }
     nlohmann::json json_object;
     json_object[kJsonKeyDevices] = serialized_devices;

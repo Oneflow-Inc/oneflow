@@ -80,7 +80,7 @@ class TensorToTensorBufferKernel final : public user_op::OpKernel {
     }
     DimVector instance_dim_vec;
     FOR_RANGE(int64_t, i, in_shape.NumAxes() - instance_dims, in_shape.NumAxes()) {
-      instance_dim_vec.push_back(in_shape.At(i));
+      instance_dim_vec.emplace_back(in_shape.At(i));
     }
     const Shape instance_shape(instance_dim_vec);
     const auto data_type = in->data_type();

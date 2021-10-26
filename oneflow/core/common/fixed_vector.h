@@ -197,8 +197,8 @@ class fixed_vector final {
     return first;
   }
 
-  void push_back(const T& value) { insert(end(), value); }
-  void push_back(T&& value) { insert(end(), std::move(value)); }
+  void emplace_back(const T& value) { insert(end(), value); }
+  void emplace_back(T&& value) { insert(end(), std::move(value)); }
 
   template<class... Args>
   void emplace_back(Args&&... args) {

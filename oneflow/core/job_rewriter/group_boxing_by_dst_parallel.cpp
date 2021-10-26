@@ -35,7 +35,7 @@ Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_bu
 
       if (producer.parallel_desc() != node->parallel_desc()
           || (node->parallel_desc().parallel_num() != 1 && producer_nd_sbp != consumer_nd_sbp)) {
-        lbi2consumer_grouped_by_parallel[lbi][{node->parallel_desc(), consumer_nd_sbp}].push_back(
+        lbi2consumer_grouped_by_parallel[lbi][{node->parallel_desc(), consumer_nd_sbp}].emplace_back(
             {node, ibn});
         if (op_node2op_conf.find(node) == op_node2op_conf.end()) {
           op_node2op_conf[node] = node->op().op_conf();

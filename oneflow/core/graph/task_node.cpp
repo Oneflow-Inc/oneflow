@@ -332,7 +332,7 @@ void TaskNode::ConsumeRegst(const std::string& name) {
 
 void TaskNode::ConsumeRegst(const std::string& name, const std::shared_ptr<RegstDesc>& regst) {
   regst->AddConsumer(this);
-  consumed_regsts_[name].push_back(regst);
+  consumed_regsts_[name].emplace_back(regst);
 }
 
 void TaskNode::UpdateTaskId() {

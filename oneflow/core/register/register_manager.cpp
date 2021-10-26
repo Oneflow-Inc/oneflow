@@ -106,7 +106,7 @@ void RegstMgr::AddPlan(const Plan& plan,
         zone_id2packed_chunk.emplace(zone_id, PackedChunkInfo(mem_block.mem_case()));
       }
       PackedChunkInfo* packed_chunk = &(zone_id2packed_chunk.at(zone_id));
-      packed_chunk->blocks.push_back(&mem_block);
+      packed_chunk->blocks.emplace_back(&mem_block);
       packed_chunk->size += mem_block.mem_size();
       CHECK(packed_chunk->mem_case == mem_block.mem_case());
     }
@@ -177,7 +177,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
   lbi_pairs.reserve(regst_desc_type.data_regst_desc().lbi2blob_desc().size());
   if (regst_desc_type.has_data_regst_desc()) {
     for (const LbiBlobDescPair& pair : regst_desc_type.data_regst_desc().lbi2blob_desc()) {
-      lbi_pairs.push_back(pair);
+      lbi_pairs.emplace_back(pair);
     }
     std::sort(lbi_pairs.begin(), lbi_pairs.end(), &CompareLbiBlobDescPair);
     CHECK(!lbi_pairs.empty());

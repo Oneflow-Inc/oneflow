@@ -97,7 +97,7 @@ OneflowVM::OneflowVM(const Resource& resource, int64_t this_machine_id)
   CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
     auto thread =
         std::make_unique<std::thread>(&vm::ThreadCtx::LoopRun, thread_ctx, WorkerInitializer);
-    worker_threads_.push_back(std::move(thread));
+    worker_threads_.emplace_back(std::move(thread));
     return Maybe<void>::Ok();
   }));
   schedule_thread_ = std::thread(&OneflowVM::Loop, this, SchedulerInitializer);
