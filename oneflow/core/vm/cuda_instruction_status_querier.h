@@ -28,7 +28,7 @@ namespace vm {
 #ifdef WITH_CUDA
 class CudaInstrStatusQuerier {
  public:
-  ~CudaInstrStatusQuerier() = default;
+  ~CudaInstrStatusQuerier();
 
   bool done() const { return launched_ && event_completed(); }
   void SetLaunched(DeviceCtx* device_ctx);
