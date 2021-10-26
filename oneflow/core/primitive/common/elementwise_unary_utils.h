@@ -26,7 +26,13 @@ struct UnaryFunctor;
 template<DeviceType device, typename T>
 struct UnaryFunctor<device, UnaryOp::kRelu, T> {
   OF_DEVICE_FUNC T operator()(T src) const {
-    return src ? src > static_cast<T>(0) : static_cast<T>(0);
+    const T zero_val = static_cast<T>(0.0);
+    if (src > zero_val) {
+      return src;
+    } else {
+      return zero_val;
+    }
+
   }
 };
 

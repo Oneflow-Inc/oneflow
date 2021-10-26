@@ -21,31 +21,5 @@ limitations under the License.
 namespace oneflow {
 namespace primitive {
 
-template<>
-struct UnaryFunctor<DeviceType::kGPU, UnaryOp::kRelu, half> {
-  __device__ half operator()(half src) const {
-    half zero_half = static_cast<half>(0.0);
-    if (__hlt(src, zero_half)) {
-      return zero_half;
-    } else {
-      return src;
-    }
-  }
-};
-
-#if CUDA_VERSION >= 11000
-
-template<>
-struct UnaryFunctor<DeviceType::kGPU, UnaryOp::kRelu, nv_bfloat16> {
-  __device__ nv_bfloat16 operator()(nv_bfloat16 src) const {
-    const nv_bfloat16 zero_bfloat16 = static_cast<nv_bfloat16>(0.0);
-    if (src > zero_bfloat16) {
-      return src;
-    } else {
-      return zero_bfloat16;
-    }
-  }
-};
-#endif  // CUDA_VERSION >= 11000
 }  // namespace primitive
 }  // namespace oneflow
