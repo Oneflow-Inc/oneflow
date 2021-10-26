@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/primitive/common/unary_op_utils.h"
+#include "oneflow/core/primitive/common/elementwise_unary_utils.h"
 #include "oneflow/core/primitive/cuda/type_seq.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/stream/cuda_stream_context.h"
@@ -22,7 +22,7 @@ namespace oneflow {
 namespace primitive {
 
 template<>
-struct UnaryFunctor<DeviceType::kGPU, UnaryOpList::kRelu, half> {
+struct UnaryFunctor<DeviceType::kGPU, UnaryOp::kRelu, half> {
   __device__ half operator()(half src) const {
     half zero_half = static_cast<half>(0.0);
     if (__hlt(src, zero_half)) {
@@ -36,7 +36,7 @@ struct UnaryFunctor<DeviceType::kGPU, UnaryOpList::kRelu, half> {
 #if CUDA_VERSION >= 11000
 
 template<>
-struct UnaryFunctor<DeviceType::kGPU, UnaryOpList::kRelu, nv_bfloat16> {
+struct UnaryFunctor<DeviceType::kGPU, UnaryOp::kRelu, nv_bfloat16> {
   __device__ nv_bfloat16 operator()(nv_bfloat16 src) const {
     const nv_bfloat16 zero_bfloat16 = static_cast<nv_bfloat16>(0.0);
     if (src > zero_bfloat16) {

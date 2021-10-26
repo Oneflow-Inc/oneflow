@@ -13,17 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/primitive/include/unary_op.h"
+#include "oneflow/core/primitive/include/elementwise_unary.h"
+#include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
 
 namespace primitive {
 
-template<DeviceType device, UnaryOpList unary_enum, typename T>
+template<DeviceType device, UnaryOp unary_enum, typename T>
 struct UnaryFunctor;
 
 template<DeviceType device, typename T>
-struct UnaryFunctor<device, UnaryOpList::kRelu, T> {
+struct UnaryFunctor<device, UnaryOp::kRelu, T> {
   OF_DEVICE_FUNC T operator()(T src) const {
     return src ? src > static_cast<T>(0) : static_cast<T>(0);
   }

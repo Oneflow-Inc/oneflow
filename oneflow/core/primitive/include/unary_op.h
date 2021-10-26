@@ -17,35 +17,16 @@ limitations under the License.
 #define ONEFLOW_CORE_PRIMITIVE_UNARY_OP_H_
 
 #include "oneflow/core/primitive/include/primitive.h"
+
 namespace oneflow {
 
 namespace primitive {
 
-enum class UnaryOpList : int32_t {
+enum class UnaryOp : int32_t {
   kRelu,
 };
 
-class ElementwiseUnaryOp : public Primitive {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnaryOp);
-  ElementwiseUnaryOp() = default;
-  ~ElementwiseUnaryOp() override = default;
-
- private:
-  virtual void Launch(StreamContext* ctx, size_t count, void* dst, const void* src);
-};
-
-class ElementwiseUnaryOpFactory : public Factory<ElementwiseUnaryOp> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnaryOpFactory);
-  ElementwiseUnaryOpFactory() = default;
-  ~ElementwiseUnaryOpFactory() override = default;
-
- private:
-  virtual std::unique_ptr<ElementwiseUnaryOp> New(UnaryOpList op_enum, DataType dtype) = 0;
-};
-
-#define PRIMITIVE_UNARY_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOpList::kRelu, UnaryOpList::kRelu)
+#define PRIMITIVE_UNARY_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu, UnaryOp::kRelu)
 
 }  // namespace primitive
 

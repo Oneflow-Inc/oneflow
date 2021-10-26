@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_PRIMITIVE_ELEMENTWISE_UNARY_H_
 #define ONEFLOW_CORE_PRIMITIVE_ELEMENTWISE_UNARY_H_
 
-#include "oneflow/core/primitive/include/primitive.h"
 #include "oneflow/core/primitive/include/unary_op.h"
 
 namespace oneflow {
