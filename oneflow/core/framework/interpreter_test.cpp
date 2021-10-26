@@ -42,8 +42,7 @@ class TestVirtualMachineScope {
   ~TestVirtualMachineScope() {
     virtual_machine_scope_.reset();
     test_resource_desc_scope_.reset();
-    Global<Optional<bool>, MultiClient>::SetAllocated(
-        new Maybe<bool>(Error::InvalidValueError("is_multi_client is not set")));
+    Global<Optional<bool>, MultiClient>::SetAllocated(new Optional<bool>());
   }
 
  private:

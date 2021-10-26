@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/job/global_for.h"
 
@@ -51,9 +53,9 @@ int64_t EnvDesc::GetMachineId(const std::string& addr) const {
 }
 
 Maybe<bool> GlobalMultiClientEnv() {
-  Maybe<bool>* is_multi_client = Global<Maybe<bool>, MultiClient>::Get();
+  Optional<bool>* is_multi_client = Global<Optional<bool>, MultiClient>::Get();
   CHECK_NOTNULL_OR_RETURN(is_multi_client);
-  return *is_multi_client;
+  return JUST(*is_multi_client);
 }
 
 }  // namespace oneflow
