@@ -50,8 +50,12 @@ class JitImporter : public Importer {
   // get blob decs from inferred op
   mlir::Value GetResultByBnAndIndex(const std::string& bn, const int32_t index);
   std::shared_ptr<MirroredTensor> MakeIntermediateTensor(
-      const std::string& lbn, Value result, const std::shared_ptr<ParallelDesc>& parallel_desc);
+      const std::string& lbn, Value result,
+      const std::shared_ptr<const ParallelDesc>& parallel_desc);
   llvm::Optional<TensorType> GetMlirTensorTypeFromBlobDesc(const BlobDesc& blob_desc);
+  void SetParallelDesc(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+    parallel_desc_ = parallel_desc;
+  }
 
  private:
   std::unordered_map<Tensor*, mlir::Value> result_mapping_;  // tensor* => %result
@@ -66,7 +70,8 @@ class JitImporter : public Importer {
   std::unordered_map<std::string, mlir::Type> result_type_mapping_;  // "a0" => tensor<2x2xf32>
   TensorTuple inputs_;
   std::shared_ptr<Operator> op_;
-  //   TensorTuple* outputs_;
+  TensorTuple* outputs_;
+  std::shared_ptr<const ParallelDesc> parallel_desc_;
 };
 
 OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context);

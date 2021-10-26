@@ -36,7 +36,8 @@ Type JitImporter::GetTensorTypeOfLbn(const std::string& lbn) {
   return result_type_mapping_.at(lbi.blob_name());
 }
 std::shared_ptr<MirroredTensor> JitImporter::MakeIntermediateTensor(
-    const std::string& lbn, Value result, const std::shared_ptr<ParallelDesc>& parallel_desc) {
+    const std::string& lbn, Value result,
+    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   auto tensor_type = result.getType().cast<TensorType>();
   auto dtype = DataType::kInvalidDataType;
   if (tensor_type.getElementType().isF32()) {
@@ -52,17 +53,21 @@ std::shared_ptr<MirroredTensor> JitImporter::MakeIntermediateTensor(
   auto tensor = MirroredTensor::MakeTensor(shape, dtype, device, /* is_lazy */ true,
                                            /* requires_grad= */ false, /* is_leaf= */ true)
                     .GetPtrOrThrow();
-  CHECK(intermediate_tensors_.emplace(lbn, tensor).second);
-  CHECK(result_mapping_.emplace(tensor.get(), result).second);
+  CHECK(intermediate_tensors_.emplace(lbn, tensor).second)
+      << "Intermediate tensor already created, lbn: " << lbn;
+  CHECK(result_mapping_.emplace(tensor.get(), result).second)
+      << "Intermediate tensor already mapped to mlir value, lbn: " << lbn;
   return tensor;
 }
 LogicalResult JitImporter::InsertOpResults(const ::oneflow::OperatorConf& op_conf,
                                            Operation* created_op) {
-  // for (auto data_out : llvm::enumerate(GetDataOutputResults(created_op))) {
-  //   auto output_lbns = created_op->getAttrOfType<ArrayAttr>("output_lbns");
-  //   lbn2result_.insert({output_lbns[data_out.index()].dyn_cast<StringAttr>().getValue().str(),
-  //                       data_out.value().dyn_cast<OpResult>()});
-  // }
+  auto output_lbns = created_op->getAttrOfType<ArrayAttr>("output_lbns");
+  CHECK_EQ(output_lbns.size(), outputs_->size());
+  for (auto data_out : llvm::enumerate(GetDataOutputResults(created_op))) {
+    auto lbn = output_lbns[data_out.index()].dyn_cast<StringAttr>().getValue().str();
+    auto tensor = MakeIntermediateTensor(lbn, data_out.value(), parallel_desc_);
+    (*outputs_)[data_out.index()] = tensor;
+  }
   return success();
 }
 ::oneflow::AttrType JitImporter::QueryAttrType(const std::string& op_type_name,
@@ -73,12 +78,8 @@ LogicalResult JitImporter::InsertOpResults(const ::oneflow::OperatorConf& op_con
 mlir::FuncOp JitImporter::GetOrInsertFunc(const std::string& func_name, const TensorTuple& inputs,
                                           TensorTuple* outputs) {
   // convert data types from oneflow
+  outputs_ = outputs;
   auto result_types = llvm::SmallVector<Type, 8>();
-  // for (const auto& output : *outputs) {
-  //   auto mlir_type = GetTypeFromOneFlowDataType(output->dtype()->data_type());
-  //   result_types.push_back(mlir_type.getValue());
-  // }
-  // found existing func or create new one
   SymbolTable symbol_table(GetModule());
   FuncOp found_func = symbol_table.lookup<FuncOp>(func_name);
   if (found_func) {

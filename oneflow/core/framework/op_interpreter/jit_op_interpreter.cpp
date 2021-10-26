@@ -63,6 +63,7 @@ Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTup
   const std::string device_tag = GetDeviceTag(inputs.at(0));
   const bool is_local = inputs.at(0)->is_local();
   const std::shared_ptr<const ParallelDesc> parallel_desc = JUST(GetParallelDesc(inputs.at(0)));
+  importer_.SetParallelDesc(parallel_desc);
   op_conf->set_device_tag(device_tag);
 
   for (int i = 0; i < inputs.size(); ++i) {
