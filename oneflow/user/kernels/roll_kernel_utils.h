@@ -22,32 +22,32 @@ namespace oneflow {
 
 namespace {
 
-const int32_t MAX_DIMS = 16;
+const int32_t kMaxDims = 16;
 
 struct SHIFTS {
-  int32_t val[MAX_DIMS];
+  int32_t val[kMaxDims];
 };
 
 struct SHAPE {
-  int32_t val[MAX_DIMS];
+  int32_t val[kMaxDims];
 };
 
 struct STRIDE {
   STRIDE() {
-    for (int i = 0; i < MAX_DIMS; ++i) { val[i] = 1; }
+    for (int i = 0; i < kMaxDims; ++i) { val[i] = 1; }
   }
-  int32_t val[MAX_DIMS];
+  int32_t val[kMaxDims];
 };
 
-OF_DEVICE_FUNC int32_t getShiftedOffset(const int32_t offset, const int32_t* shifts,
-                                        const int32_t* shape, const int32_t* stride,
-                                        const int32_t n) {
-  int32_t remaining = offset;
-  int32_t out_offset = 0;
+template<int Dim>
+OF_DEVICE_FUNC int32_t getShiftedIndex(const int32_t global_index, const int32_t* shifts,
+                                       const int32_t* shape, const int32_t* stride) {
+  int32_t remaining = global_index;
+  int32_t shifted_global_index = 0;
 #ifdef __CUDA_ARCH__
 #pragma unroll
 #endif
-  for (int32_t i = 0; i < n; ++i) {
+  for (int32_t i = 0; i < Dim; ++i) {
     const int32_t idx = remaining / stride[i];
     // NOTE(Liang Depeng):
     // Compute the shifted index of each axis.
@@ -55,10 +55,33 @@ OF_DEVICE_FUNC int32_t getShiftedOffset(const int32_t offset, const int32_t* shi
     // In C++ the sign of the result of `%` operation is the same of the dividend.
     // This correct the result when `idx - shifts[i]` is negative.
     if (shifted_idx < 0) shifted_idx = shifted_idx + shape[i];
-    out_offset += shifted_idx * stride[i];
+    shifted_global_index += shifted_idx * stride[i];
     remaining = remaining - idx * stride[i];
   }
-  return out_offset;
+  return shifted_global_index;
+}
+
+OF_DEVICE_FUNC int32_t switchGetShiftedIndex(const int32_t global_index, const int32_t* shifts,
+                                             const int32_t* shape, const int32_t* stride, int n) {
+  switch (n) {
+    case 1: return getShiftedIndex<1>(global_index, shifts, shape, stride);
+    case 2: return getShiftedIndex<2>(global_index, shifts, shape, stride);
+    case 3: return getShiftedIndex<3>(global_index, shifts, shape, stride);
+    case 4: return getShiftedIndex<4>(global_index, shifts, shape, stride);
+    case 5: return getShiftedIndex<5>(global_index, shifts, shape, stride);
+    case 6: return getShiftedIndex<6>(global_index, shifts, shape, stride);
+    case 7: return getShiftedIndex<7>(global_index, shifts, shape, stride);
+    case 8: return getShiftedIndex<8>(global_index, shifts, shape, stride);
+    case 9: return getShiftedIndex<9>(global_index, shifts, shape, stride);
+    case 10: return getShiftedIndex<10>(global_index, shifts, shape, stride);
+    case 11: return getShiftedIndex<11>(global_index, shifts, shape, stride);
+    case 12: return getShiftedIndex<12>(global_index, shifts, shape, stride);
+    case 13: return getShiftedIndex<13>(global_index, shifts, shape, stride);
+    case 14: return getShiftedIndex<14>(global_index, shifts, shape, stride);
+    case 15: return getShiftedIndex<15>(global_index, shifts, shape, stride);
+    case 16: return getShiftedIndex<16>(global_index, shifts, shape, stride);
+  }
+  return 0;
 }
 
 static void initStride(STRIDE& stride, const SHAPE& dim_vec, const int32_t dims) {
