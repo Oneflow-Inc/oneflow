@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_PRIMITIVE_UNARY_OP_H_
 #define ONEFLOW_CORE_PRIMITIVE_UNARY_OP_H_
 
-#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/primitive/include/primitive.h"
 namespace oneflow {
 
