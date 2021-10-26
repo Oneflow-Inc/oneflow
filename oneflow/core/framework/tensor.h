@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/common/error.h"
@@ -497,8 +498,16 @@ class DTRMirroredTensor final : public MirroredTensor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DTRMirroredTensor);
   DTRMirroredTensor() = default;
-  explicit DTRMirroredTensor(const std::shared_ptr<DTREagerMirroredTensorImpl>& impl) { impl_ = impl; }
+  explicit DTRMirroredTensor(const std::shared_ptr<DTREagerMirroredTensorImpl>& impl) {
+    impl_ = impl;
+    inputs_ = TensorTuple();
+  }
   ~DTRMirroredTensor() {}
+
+  void set_tensor_inputs(const TensorTuple& inputs) { inputs_ = inputs; }
+
+ private:
+  TensorTuple inputs_;
 };
 
 class ConsistentTensor final : public TensorIf<ConsistentTensor>,

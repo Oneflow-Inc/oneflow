@@ -295,10 +295,9 @@ void CudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
   // size_t r_memory = oneflow::GetDTRRemainMemory();
   // std::cout << r_memory << std::endl;
 
-  if (piece == nullptr && oneflow::DTREnabled()) {
-    int it = 0;   // evict iteration times
-    while (piece == nullptr && it < 50) {
-      CHECK_JUST(Global<one::DTRTensorPool>::Get()->find_best_tensor_and_evict());
+  if (oneflow::DTREnabled()) {
+    // int it = 0;   // evict iteration times
+    while (piece == nullptr && CHECK_JUST(Global<one::DTRTensorPool>::Get()->find_best_tensor_and_evict())) {
       piece = FindPiece(aligned_size);
       if (piece == nullptr) {
         if (AllocateBlockToExtendTotalMem(aligned_size)) {
@@ -310,7 +309,7 @@ void CudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
           piece = FindPiece(aligned_size);
         }
       }
-      it++;
+      // it++;
     }
   }
 

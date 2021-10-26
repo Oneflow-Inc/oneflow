@@ -35,14 +35,16 @@ struct DTRTensorPool {
         std::cout << "Times of eviction: " << num_eviction_ << std::endl;
         std::cout << "Times of recomputation: " << num_recomputation_ << std::endl;
         std::cout << "Times of destruction: " << num_destruction_ << std::endl;
-        display();
+        if (oneflow::DTRDebugEnabled()) {
+            display();
+        }
     }
 
     Maybe<void> insert(vm::DTREagerBlobObject* blob_object, size_t thres=0);
     Maybe<void> evict(vm::DTREagerBlobObject* blob_object);
 
     Maybe<vm::DTREagerBlobObject*> find_best_tensor();
-    Maybe<void> find_best_tensor_and_evict();
+    Maybe<bool> find_best_tensor_and_evict();
     // do not need Maybe
     const std::chrono::steady_clock::time_point start_time() { return start_time_; }
     double duration();

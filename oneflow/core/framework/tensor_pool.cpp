@@ -47,7 +47,7 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
     int id = 0;
     for (auto tensor : candidates_) {
         if (oneflow::DTRDebugEnabled()) {
-            std::cout << "id " << id++ << ", is_in_memory: " << static_cast<bool>(tensor->is_in_memory()) << " " << "is pinned: " << (tensor->num_pinned()) << ", Address: " << static_cast<const void *>(tensor->object_dptr()) << ", shape: " << tensor->mut_blob_desc()->shape() << ", data_type: " << tensor->mut_blob_desc()->data_type() << ", body_bytes: " << tensor->BlobBodyBytes() << std::endl;
+            // std::cout << "id " << id++ << ", is_in_memory: " << static_cast<bool>(tensor->is_in_memory()) << " " << "is pinned: " << (tensor->num_pinned()) << ", Address: " << static_cast<const void *>(tensor->object_dptr()) << ", shape: " << tensor->mut_blob_desc()->shape() << ", data_type: " << tensor->mut_blob_desc()->data_type() << ", body_bytes: " << tensor->BlobBodyBytes() << std::endl;
             // std::cout << "id " << id++ << ", is_in_memory: " << static_cast<bool>(tensor->is_in_memory()) << " " << "is pinned: " << (tensor->num_pinned()) << ", Address: " << tensor << ", shape: " << tensor->mut_blob_desc()->shape() << ", data_type: " << tensor->mut_blob_desc()->data_type() << ", body_bytes: " << tensor->BlobBodyBytes() << std::endl;
         }
         if (static_cast<bool>(tensor->compute_op()) && !tensor->is_pinned() && (tensor->is_evictable()) && tensor->is_in_memory()) {
@@ -67,11 +67,11 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
     return best;
 }
 
-Maybe<void> DTRTensorPool::find_best_tensor_and_evict() {
+Maybe<bool> DTRTensorPool::find_best_tensor_and_evict() {
     auto* best = JUST(find_best_tensor());
     CHECK_NOTNULL_OR_RETURN(best);
     JUST(best->evict());
-    return Maybe<void>::Ok();
+    return true;
 }
 
 Maybe<void> DTRTensorPool::insert(vm::DTREagerBlobObject* blob_object, size_t thres) {
@@ -121,41 +121,41 @@ double DTRTensorPool::duration() {
 
 Maybe<void> DTRTensorPool::display() {
     // std::cout << "===== Info of current tensor pool =====" << std::endl;
-    std::cout << "Number of candidates: " << candidates_.size() << std::endl;
+    // std::cout << "Number of candidates: " << candidates_.size() << std::endl;
     size_t id = 0;
     for (const auto& candidate : candidates_) {
-        const auto* tmp = dynamic_cast<vm::DTREagerBlobObject*>(candidate);
-        std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", input size: " << candidate->input_size() << ", is_evictable: " << candidate->is_evictable() << ", number of user_ops: " << candidate->num_user_ops() << ", address: " << candidate << ", nullptr? " << (tmp == nullptr) << std::endl;
+        // const auto* tmp = dynamic_cast<vm::DTREagerBlobObject*>(candidate);
+        // std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", input size: " << candidate->input_size() << ", is_evictable: " << candidate->is_evictable() << ", number of user_ops: " << candidate->num_user_ops() << ", address: " << candidate << ", nullptr? " << (tmp == nullptr) << std::endl;
         // std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", address: " << candidate << std::endl;
     }
-    for (const auto& candidate : candidates_) {
-        const auto* tmp = dynamic_cast<vm::DTREagerBlobObject*>(candidate);
-        std::cout << "Input info--------------- " << std::endl;
-        size_t iid = 0;
-        const auto* ptr = dynamic_cast<vm::LocalCallOpKernelPhyInstrOperand*>(candidate->compute_op());
-        CHECK_NOTNULL_OR_RETURN(ptr);
-        for (const auto& input : *ptr->inputs()) {
-            CHECK_OR_RETURN(static_cast<bool>(input.get()));
-            const auto* dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(input.get());
-            CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-            std::cout << "Input id: " << iid++ << ", address: " << dtr_blob_object << ", ref_cnt: " << input.use_count() << std::endl;
-        }
+    // for (const auto& candidate : candidates_) {
+    //     const auto* tmp = dynamic_cast<vm::DTREagerBlobObject*>(candidate);
+    //     std::cout << "Input info--------------- " << std::endl;
+    //     size_t iid = 0;
+    //     const auto* ptr = dynamic_cast<vm::LocalCallOpKernelPhyInstrOperand*>(candidate->compute_op());
+    //     CHECK_NOTNULL_OR_RETURN(ptr);
+    //     for (const auto& input : *ptr->inputs()) {
+    //         CHECK_OR_RETURN(static_cast<bool>(input.get()));
+    //         const auto* dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(input.get());
+    //         CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+    //         std::cout << "Input id: " << iid++ << ", address: " << dtr_blob_object << ", ref_cnt: " << input.use_count() << std::endl;
+    //     }
 
-        // std::cout << "Output info--------------- " << std::endl;
-        // for (int i = 0; i < candidate->num_user_ops(); ++i) {
-        //     size_t oid = 0;
-        //     std::cout << "The " << i << "th user_op: " << std::endl;
-        //     const auto* ptr = dynamic_cast<vm::LocalCallOpKernelPhyInstrOperand*>(CHECK_JUST(candidate->user_op(i)));
-        //     for (const auto& output: *ptr->outputs()) {
-        //         CHECK_OR_RETURN(static_cast<bool>(output.get()));
-        //         const auto* dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(output.get());
-        //         CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-        //         std::cout << "Output id: " << oid++ << ", address: " << dtr_blob_object << ", ref_cnt: " << output.use_count() << std::endl;
-        //     }
-        // }
-        // std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", input size: " << candidate->input_size() << ", is_evictable: " << candidate->is_evictable() << ", number of user_ops: " << candidate->num_user_ops() << ", address: " << static_cast<const void *>(candidate->object_dptr()) << ", nullptr? " << (tmp == nullptr) << std::endl;
-        // std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", input size: " << candidate->input_size() << ", is_evictable: " << candidate->is_evictable() << ", number of user_ops: " << candidate->num_user_ops() << ", address: " << candidate << ", nullptr? " << (tmp == nullptr) << std::endl;
-    }
+    //     // std::cout << "Output info--------------- " << std::endl;
+    //     // for (int i = 0; i < candidate->num_user_ops(); ++i) {
+    //     //     size_t oid = 0;
+    //     //     std::cout << "The " << i << "th user_op: " << std::endl;
+    //     //     const auto* ptr = dynamic_cast<vm::LocalCallOpKernelPhyInstrOperand*>(CHECK_JUST(candidate->user_op(i)));
+    //     //     for (const auto& output: *ptr->outputs()) {
+    //     //         CHECK_OR_RETURN(static_cast<bool>(output.get()));
+    //     //         const auto* dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(output.get());
+    //     //         CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+    //     //         std::cout << "Output id: " << oid++ << ", address: " << dtr_blob_object << ", ref_cnt: " << output.use_count() << std::endl;
+    //     //     }
+    //     // }
+    //     // std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", input size: " << candidate->input_size() << ", is_evictable: " << candidate->is_evictable() << ", number of user_ops: " << candidate->num_user_ops() << ", address: " << static_cast<const void *>(candidate->object_dptr()) << ", nullptr? " << (tmp == nullptr) << std::endl;
+    //     // std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", input size: " << candidate->input_size() << ", is_evictable: " << candidate->is_evictable() << ", number of user_ops: " << candidate->num_user_ops() << ", address: " << candidate << ", nullptr? " << (tmp == nullptr) << std::endl;
+    // }
     // std::cout << "===== End info =====" << std::endl;
     return Maybe<void>::Ok();
 }

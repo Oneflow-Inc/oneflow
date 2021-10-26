@@ -670,6 +670,11 @@ struct EagerLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
 
   static inline Maybe<void> DisplayCount(vm::Instruction* instruction) {
     auto operand = JUST(GetSharedLocalCallOpKernelPhyInstrOperand(instruction));
+    std::cout << "======================== Display input blobobject shared_ptr's count ========================" << std::endl;
+    size_t input_id = 0;
+    for (const auto& input : *operand->inputs()) {
+      std::cout << input_id++ << "th input shared_ptr's count: " << input.use_count() << std::endl;
+    }
     std::cout << "======================== Display output blobobject shared_ptr's count ========================" << std::endl;
     size_t output_id = 0;
     for (const auto& output : *operand->outputs()) {

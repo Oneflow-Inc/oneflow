@@ -107,7 +107,7 @@ Maybe<void> DTREagerBlobObject::InitBlobAttrs(std::shared_ptr<LocalCallOpKernelP
   update_access_time();
   // last_access_time_ = Global<one::DTRTensorPool>::Get()->duration();
   //TODO: unique_ptr
-  compute_op_ = std::make_unique<DTRParentOperand>(operand->shared_opkernel(), operand->inputs(), operand->outputs(), operand->consistent_tensor_infer_result(), operand->op_interp_ctx(), operand->dev_vm_dep_object_consume_mode());
+  compute_op_ = std::make_unique<DTRChildOperand>(operand->shared_opkernel(), operand->inputs(), operand->outputs(), operand->consistent_tensor_infer_result(), operand->op_interp_ctx(), operand->dev_vm_dep_object_consume_mode());
   // compute_op_ = operand;
   could_evict_ = (input_size() > 0) && could_evict_;
 
@@ -137,13 +137,18 @@ Maybe<double> DTREagerBlobObject::parent_cost() const {
     CHECK_OR_RETURN(static_cast<bool>(input.get()));
     auto object = input.get();
     const auto* dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(input.get());
-    CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-    if (!dtr_blob_object->is_in_memory()) {
-      auto com_time = dtr_blob_object->compute_time();
-      auto p_cost = JUST(dtr_blob_object->parent_cost());
-      cost = cost + com_time + p_cost;
-      // cost = cost + com_time;
+    // CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+    if (dtr_blob_object == nullptr) {
+      continue;
+    } else {
+      if (!dtr_blob_object->is_in_memory()) {
+        auto com_time = dtr_blob_object->compute_time();
+        auto p_cost = JUST(dtr_blob_object->parent_cost());
+        cost = cost + com_time + p_cost;
+      }
     }
+    // CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+    
   }
 
   return cost;
@@ -158,16 +163,17 @@ Maybe<double> DTREagerBlobObject::child_cost() const {
     for (const auto& output : *ptr->outputs()) {
       CHECK_OR_RETURN(static_cast<bool>(output.get()));
       auto object = output.get();
+      CHECK_NOTNULL_OR_RETURN(object);
       const auto* dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(output.get());
-      // if (oneflow::DTRDebugEnabled()) {
-      //   std::cout << "In child cost, object's address: " << object << ", dtr_blob_object's address: " << dtr_blob_object << std::endl;
-      // }
-      CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-      if (!dtr_blob_object->is_in_memory()) {
-        auto com_time = dtr_blob_object->compute_time();
-        auto c_cost = JUST(dtr_blob_object->child_cost());
-        cost = cost + com_time + c_cost;
-        // cost = cost + com_time;
+      // CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+      if (dtr_blob_object == nullptr) {
+        continue;
+      } else {
+        if (!dtr_blob_object->is_in_memory()) {
+          auto com_time = dtr_blob_object->compute_time();
+          auto c_cost = JUST(dtr_blob_object->child_cost());
+          cost = cost + com_time + c_cost;
+        }
       }
     }
   }
