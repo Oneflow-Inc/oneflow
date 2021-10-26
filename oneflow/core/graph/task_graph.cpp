@@ -285,11 +285,10 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
 
-      DeviceId::device_index_t device_index =
-          parallel_desc.device_type() == DeviceType::kCPU
-              ? DeviceId::kCPUDeviceIndex
-              : static_cast<DeviceId::device_index_t>(dev_phy_id);
-      DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), parallel_desc.device_type(),
+      DeviceId::index_t device_index = parallel_desc.device_type() == DeviceType::kCPU
+                                           ? DeviceId::kCPUDeviceIndex
+                                           : static_cast<DeviceId::index_t>(dev_phy_id);
+      DeviceId device_id{static_cast<DeviceId::index_t>(machine_id), parallel_desc.device_type(),
                          device_index};
       StreamId::stream_index_t stream_index{};
       if (op_node->op().op_conf().has_stream_index_hint()) {
@@ -523,9 +522,8 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
       CHECK_JUST(dst_parallel_desc.MachineId4ParallelId(dst_parallel_id));
   const int64_t dev_id = CHECK_JUST(dst_parallel_desc.DeviceId4ParallelId(dst_parallel_id));
   DeviceType device_type = dst_parallel_desc.device_type();
-  auto device_index =
-      (device_type == DeviceType::kCPU ? DeviceId::kCPUDeviceIndex
-                                       : static_cast<DeviceId::device_index_t>(dev_id));
+  auto device_index = (device_type == DeviceType::kCPU ? DeviceId::kCPUDeviceIndex
+                                                       : static_cast<DeviceId::index_t>(dev_id));
   MemZoneId mem_zone_id{static_cast<MemZoneId::node_index_t>(dst_machine_id), device_type,
                         device_index};
   return GetProxyNode(src_node, lbi, mem_zone_id);

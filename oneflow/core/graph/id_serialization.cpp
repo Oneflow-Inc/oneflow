@@ -56,7 +56,7 @@ int64_t SerializeStreamIdToInt64(const StreamId& stream_id) {
         << stream_id_const::kDeviceIndexShift;
   id |= static_cast<int64_t>(stream_id.device_id().device_type())
         << stream_id_const::kDeviceTypeShift;
-  id |= static_cast<int64_t>(stream_id.device_id().rank()) << stream_id_const::kRankShift;
+  id |= static_cast<int64_t>(stream_id.device_id().node_index()) << stream_id_const::kRankShift;
   return id;
 }
 
@@ -68,8 +68,8 @@ StreamId DeserializeStreamIdFromInt64(int64_t stream_id_val) {
                          >> stream_id_const::kDeviceIndexShift;
   int64_t stream_index = (stream_id_val & stream_id_const::kStreamIndexInt64Mask);
 
-  DeviceId device_id{static_cast<DeviceId::rank_t>(rank), static_cast<DeviceType>(device_type),
-                     static_cast<DeviceId::device_index_t>(device_index)};
+  DeviceId device_id{static_cast<DeviceId::index_t>(rank), static_cast<DeviceType>(device_type),
+                     static_cast<DeviceId::index_t>(device_index)};
   return StreamId{device_id, static_cast<StreamId::stream_index_t>(stream_index)};
 }
 
@@ -100,7 +100,8 @@ int64_t SerializeTaskIdToInt64(const TaskId& task_id) {
         << task_id_const::kDeviceIndexShift;
   id |= static_cast<int64_t>(task_id.stream_id().device_id().device_type())
         << task_id_const::kDeviceTypeShift;
-  id |= static_cast<int64_t>(task_id.stream_id().device_id().rank()) << task_id_const::kRankShift;
+  id |= static_cast<int64_t>(task_id.stream_id().device_id().node_index())
+        << task_id_const::kRankShift;
   return id;
 }
 
@@ -113,8 +114,8 @@ TaskId DeserializeTaskIdFromInt64(int64_t task_id_val) {
   int64_t stream_index =
       (task_id_val & task_id_const::kStreamIndexInt64Mask) >> task_id_const::kStreamIndexShift;
   int64_t task_index = task_id_val & task_id_const::kTaskIndexInt64Mask;
-  DeviceId device_id{static_cast<DeviceId::rank_t>(rank), static_cast<DeviceType>(device_type),
-                     static_cast<DeviceId::device_index_t>(device_index)};
+  DeviceId device_id{static_cast<DeviceId::index_t>(rank), static_cast<DeviceType>(device_type),
+                     static_cast<DeviceId::index_t>(device_index)};
   StreamId stream_id{device_id, static_cast<StreamId::stream_index_t>(stream_index)};
   return TaskId{stream_id, static_cast<TaskId::task_index_t>(task_index)};
 }

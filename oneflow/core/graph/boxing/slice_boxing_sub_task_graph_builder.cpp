@@ -59,7 +59,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     const int64_t machine_id = CHECK_JUST(pd.MachineId4ParallelId(parallel_id));
     int64_t thrd_id = -1;
     if (pd.device_type() == DeviceType::kCPU) {
-      DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kCPU,
+      DeviceId device_id{static_cast<DeviceId::index_t>(machine_id), DeviceType::kCPU,
                          DeviceId::kCPUDeviceIndex};
       auto stream_index =
           Global<IDMgr>::Get()
@@ -70,8 +70,8 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
       thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
     } else {
       DeviceId device_id{
-          static_cast<DeviceId::rank_t>(machine_id), pd.device_type(),
-          static_cast<DeviceId::device_index_t>(CHECK_JUST(pd.DeviceId4ParallelId(parallel_id)))};
+          static_cast<DeviceId::index_t>(machine_id), pd.device_type(),
+          static_cast<DeviceId::index_t>(CHECK_JUST(pd.DeviceId4ParallelId(parallel_id)))};
       auto stream_index = Global<IDMgr>::Get()
                               ->GetStreamIndexGeneratorManager()
                               ->GetOrCreateGenerator(device_id)

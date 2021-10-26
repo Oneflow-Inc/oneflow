@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/device_type.h"
+#include "oneflow/core/device/device_id.h"
 
 namespace oneflow {
 
@@ -30,47 +31,6 @@ namespace oneflow {
 // | -------------------------------- 43 ----------------------------------- | --- 21 --- |
 // |                                      TaskId                                          |
 // | ----------------------------------- 64 bit ----------------------------------------- |
-
-class DeviceId {
- public:
-  using rank_t = uint32_t;
-  using device_index_t = uint32_t;
-
-  constexpr static size_t kRankBits = 19;
-  constexpr static size_t kDeviceTypeBits = 5;
-  constexpr static size_t kDeviceIndexBits = 7;
-  constexpr static rank_t kMaxRank = (rank_t{1} << kRankBits) - rank_t{1};
-  constexpr static size_t kMaxDeviceTypeVal = (size_t{1} << kDeviceTypeBits) - size_t{1};
-  constexpr static device_index_t kMaxDeviceIndex =
-      (device_index_t{1} << kDeviceIndexBits) - device_index_t{1};
-  constexpr static device_index_t kCPUDeviceIndex = 0;
-
-  DeviceId(rank_t rank, DeviceType device_type, device_index_t device_index)
-      : rank_(rank), device_type_(device_type), device_index_(device_index) {
-    CHECK_LE(rank, kMaxRank);
-    CHECK_LE(static_cast<size_t>(device_type), kMaxDeviceTypeVal);
-    CHECK_LE(device_index, kMaxDeviceIndex);
-  }
-  rank_t rank() const { return rank_; }
-  DeviceType device_type() const { return device_type_; }
-  device_index_t device_index() const { return device_index_; }
-  bool operator==(const DeviceId& rhs) const {
-    return rank_ == rhs.rank_ && device_type_ == rhs.device_type_
-           && device_index_ == rhs.device_index_;
-  }
-  bool operator!=(const DeviceId& rhs) const { return !(*this == rhs); }
-  size_t hash() const {
-    size_t hash = std::hash<rank_t>{}(rank_);
-    HashCombine(&hash, std::hash<size_t>{}(static_cast<size_t>(device_type_)));
-    HashCombine(&hash, std::hash<device_index_t>{}(device_index_));
-    return hash;
-  }
-
- private:
-  rank_t rank_;
-  DeviceType device_type_;
-  device_index_t device_index_;
-};
 
 class StreamId {
  public:
@@ -133,11 +93,6 @@ class TaskId {
 }  // namespace oneflow
 
 namespace std {
-
-template<>
-struct hash<oneflow::DeviceId> {
-  size_t operator()(const oneflow::DeviceId& device_id) const { return device_id.hash(); }
-};
 
 template<>
 struct hash<oneflow::StreamId> {

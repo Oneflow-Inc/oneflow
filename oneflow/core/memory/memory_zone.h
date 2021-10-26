@@ -24,8 +24,8 @@ namespace oneflow {
 
 class MemZoneId {
  public:
-  using node_index_t = DeviceId::rank_t;
-  using device_index_t = DeviceId::device_index_t;
+  using node_index_t = DeviceId::index_t;
+  using device_index_t = DeviceId::index_t;
 
   constexpr static size_t kNodeIndexBits = DeviceId::kRankBits;
   constexpr static size_t kDeviceTypeBits = DeviceId::kDeviceTypeBits;
@@ -46,7 +46,7 @@ class MemZoneId {
   }
 
   const DeviceId& device_id() const { return device_id_; }
-  node_index_t node_index() const { return device_id_.rank(); }
+  node_index_t node_index() const { return device_id_.node_index(); }
   DeviceType device_type() const { return device_id_.device_type(); }
   device_index_t device_index() const { return device_id_.device_index(); }
 

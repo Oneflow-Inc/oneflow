@@ -43,7 +43,7 @@ void CopyTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataReg
 void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, const DeviceId& device_id,
                           const LogicalBlobId& lbi) {
   copy_type_ = copy_type;
-  set_machine_id(device_id.rank());
+  set_machine_id(device_id.node_index());
   auto* stream_index_generator =
       Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetOrCreateGenerator(device_id);
   StreamId::stream_index_t stream_index = 0;
@@ -85,7 +85,7 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
 
 void CopyCommNetTaskNode::Init(int64_t machine_id, const LogicalBlobId& lbi) {
   set_machine_id(machine_id);
-  DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kCPU,
+  DeviceId device_id{static_cast<DeviceId::index_t>(machine_id), DeviceType::kCPU,
                      DeviceId::kCPUDeviceIndex};
   auto* stream_index_generator =
       Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetOrCreateGenerator(device_id);
