@@ -31,13 +31,14 @@ REGISTER_USER_OP("prelu")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-      const user_op::TensorDesc& alpha_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("alpha", 0);
-      if(alpha_tensor.shape().At(0) != 1){
+      const user_op::TensorDesc& alpha_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("alpha", 0);
+      if (alpha_tensor.shape().At(0) != 1) {
         ctx->NewBuilder()
-          .Split(user_op::OpArg("x", 0), 1)
-          .Split(user_op::OpArg("alpha", 0), 0)
-          .Split(user_op::OpArg("y", 0), 1)
-          .Build();
+            .Split(user_op::OpArg("x", 0), 1)
+            .Split(user_op::OpArg("alpha", 0), 0)
+            .Split(user_op::OpArg("y", 0), 1)
+            .Build();
       }
       FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
         if (i == 1) continue;
