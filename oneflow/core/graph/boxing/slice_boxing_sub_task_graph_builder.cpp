@@ -72,11 +72,10 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
       DeviceId device_id{
           static_cast<DeviceId::rank_t>(machine_id), pd.device_type(),
           static_cast<DeviceId::device_index_t>(CHECK_JUST(pd.DeviceId4ParallelId(parallel_id)))};
-      auto stream_index =
-          Global<IDMgr>::Get()
-              ->GetStreamIndexGeneratorManager()
-              ->GetOrCreateGenerator(device_id)
-              ->GenerateStreamIndex("compute");
+      auto stream_index = Global<IDMgr>::Get()
+                              ->GetStreamIndexGeneratorManager()
+                              ->GetOrCreateGenerator(device_id)
+                              ->GenerateStreamIndex("compute");
       thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
     }
 

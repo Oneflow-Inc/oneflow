@@ -406,8 +406,16 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
         SliceBoxingTaskNode* slice_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
         // slice on cpu
         const auto in_machine_id = CHECK_JUST(in_parallel_desc.MachineId4ParallelId(0));
+        DeviceId device_id{static_cast<DeviceId::rank_t>(in_machine_id), DeviceType::kCPU,
+                           DeviceId::kCPUDeviceIndex};
+        auto stream_index =
+            Global<IDMgr>::Get()
+                ->GetStreamIndexGeneratorManager()
+                ->GetOrCreateGenerator(device_id)
+                ->GenerateStreamIndex("cpu_compute",
+                                      Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum());
         slice_node->Init(lbi, out_slice, kSliceBoxingTaskModeCopy, in_machine_id,
-                         Global<IDMgr>::Get()->PickCpuThrdIdEvenly(in_machine_id));
+                         SerializeStreamIdToInt64(StreamId(device_id, stream_index)));
         slice_node->ConnectToSrcNodeWithSlice(in_node, ctx->task_graph()->NewEdge(), in_slice);
         // copy to dst gpu
         TaskNode* slice_node_proxy =

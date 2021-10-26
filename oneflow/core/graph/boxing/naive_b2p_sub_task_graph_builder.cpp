@@ -71,7 +71,15 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
           UNIMPLEMENTED();
 #endif
         } else if (out_parallel_desc.device_type() == DeviceType::kCPU) {
-          thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(out_machine_id);
+          DeviceId device_id{static_cast<DeviceId::rank_t>(out_machine_id), DeviceType::kCPU,
+                             DeviceId::kCPUDeviceIndex};
+          auto stream_index =
+              Global<IDMgr>::Get()
+                  ->GetStreamIndexGeneratorManager()
+                  ->GetOrCreateGenerator(device_id)
+                  ->GenerateStreamIndex("cpu_compute",
+                                        Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum());
+          thrd_id = SerializeStreamIdToInt64(StreamId(device_id, stream_index));
         } else {
           UNIMPLEMENTED();
         }
