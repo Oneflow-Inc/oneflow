@@ -24,7 +24,8 @@ namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<OperatorConfSymbol, std::shared_ptr<OperatorConfSymbol>>(m, "OpConfSymbol")
-      .def_property_readonly("symbol_id", [](const OperatorConfSymbol& x) { return x.symbol_id().value_or(0); })
+      .def_property_readonly("symbol_id",
+                             [](const OperatorConfSymbol& x) { return x.symbol_id().value_or(0); })
       .def_property_readonly("data", &OperatorConfSymbol::data);
 }
 
