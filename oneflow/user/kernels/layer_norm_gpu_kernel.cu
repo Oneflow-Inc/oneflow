@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/cuda/atomic.cuh"
 #include <cub/cub.cuh>
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/cuda/layer_norm.cuh"
 
 namespace oneflow {
 
@@ -98,19 +99,6 @@ struct ScaleCenterStore {
   const DST* gamma;
   const DST* beta;
 };
-
-template<typename T>
-void LayerNormForwardGpu(DeviceCtx* ctx, const int num_instances, const int norm_size,
-                         const double epsilon, const T* x_ptr, const T* gamma_ptr,
-                         const T* beta_ptr, T* normalized_ptr, T* y_ptr, user_op::Tensor* mean,
-                         user_op::Tensor* inv_variance) {
-  using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
-  cuda::layer_norm::DirectLoad<T, ComputeType> load(x_ptr, norm_size);
-  ScaleCenterStore<ComputeType, T> store(normalized_ptr, y_ptr, norm_size, gamma_ptr, beta_ptr);
-  cuda::layer_norm::DispatchLayerNorm<decltype(load), decltype(store), ComputeType>(
-      ctx->cuda_stream(), load, store, num_instances, norm_size, epsilon,
-      mean->mut_dptr<ComputeType>(), inv_variance->mut_dptr<ComputeType>());
-}
 
 constexpr int64_t kLayerNormParamGradGpuBlockSize = 512;
 
@@ -194,6 +182,19 @@ __global__ void LayerNormParamGradHalfImpl(const I n, const I instance_size, con
 }
 
 }  // namespace
+
+template<typename T>
+void LayerNormForwardGpu(DeviceCtx* ctx, const int num_instances, const int norm_size,
+                         const double epsilon, const T* x_ptr, const T* gamma_ptr,
+                         const T* beta_ptr, T* normalized_ptr, T* y_ptr, user_op::Tensor* mean,
+                         user_op::Tensor* inv_variance) {
+  using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
+  cuda::layer_norm::DirectLoad<T, ComputeType> load(x_ptr, norm_size);
+  ScaleCenterStore<ComputeType, T> store(normalized_ptr, y_ptr, norm_size, gamma_ptr, beta_ptr);
+  cuda::layer_norm::DispatchLayerNorm<decltype(load), decltype(store), ComputeType>(
+      ctx->cuda_stream(), load, store, num_instances, norm_size, epsilon,
+      mean->mut_dptr<ComputeType>(), inv_variance->mut_dptr<ComputeType>());
+}
 
 template<typename T>
 class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
