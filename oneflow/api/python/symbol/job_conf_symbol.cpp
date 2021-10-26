@@ -36,7 +36,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         return CreateJobConfSymbol(symbol_id, symbol_conf).GetPtrOrThrow();
       }))
       .def_property_readonly("symbol_id",
-                             [](const JobDesc& x) { return x.symbol_id().value_or(0); })
+                             [](const JobDesc& x) { 
+        if (!x.symbol_id().has_value()) { THROW(RuntimeError) << "symbol_id not initialized"; }
+        return x.symbol_id().value();
+      })
       .def_property_readonly("data", &JobDesc::cfg_job_conf);
 }
 
