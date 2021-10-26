@@ -72,6 +72,7 @@ LogicalResult JitImporter::InsertOpResults(const ::oneflow::OperatorConf& op_con
 }
 ::oneflow::AttrType JitImporter::QueryAttrType(const std::string& op_type_name,
                                                const std::string& attr_name) {
+  //  TODO: implement this
   return ::oneflow::AttrType::kAtDataType;
 }
 
