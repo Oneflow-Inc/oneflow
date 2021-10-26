@@ -229,6 +229,7 @@ void GenMemChainTasksAndRegsts(
     if (device_chain_pair.second.empty()) { continue; }
     // sort
     std::vector<MemoryChain*> mem_chains;
+    mem_chains.reserve(device_chain_pair.second.size());
     std::vector<MemoryChain*> merged_chains;
     for (auto& pair : device_chain_pair.second) { mem_chains.push_back(&pair.second); }
     std::sort(mem_chains.begin(), mem_chains.end(), [&](MemoryChain* lhs, MemoryChain* rhs) {
@@ -279,6 +280,7 @@ void GenMemChainTasksAndRegsts(
       for (int64_t consumer : regst->consumer_task_id()) { consumer_task_ids.insert(consumer); }
     }
     std::vector<TaskProto*> sink_tasks;
+    sink_tasks.reserve(consumer_task_ids.size());
     for (int64_t src_task_id : consumer_task_ids) {
       auto it = task_id2proto.find(src_task_id);
       CHECK(it != task_id2proto.end());
@@ -524,6 +526,7 @@ void MemReusedAlgorithm_MemSizeFirstAlgo(
     const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts,
     MemBlockResultInfo* result) {
   std::vector<RegstDescProto*> order;
+  order.reserve(regst2mutual_exclusion_regsts.size());
   HashMap<RegstDescProto*, int64_t> regst_desc2size;
   for (const auto& pair : regst2mutual_exclusion_regsts) {
     order.push_back(pair.first);
@@ -541,6 +544,7 @@ void MemReusedAlgorithm_MutualExclusionFirstAlgo(
     const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts,
     MemBlockResultInfo* result) {
   std::vector<RegstDescProto*> order;
+  order.reserve(regst2mutual_exclusion_regsts.size());
   HashMap<RegstDescProto*, int64_t> regst_desc2size;
   for (const auto& pair : regst2mutual_exclusion_regsts) {
     order.push_back(pair.first);

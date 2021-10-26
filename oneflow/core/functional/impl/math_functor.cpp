@@ -563,6 +563,7 @@ class Transpose2dimFunctor {
     MutableAttrMap attrs;
     const int64_t ndim = x->shape()->NumAxes();
     std::vector<int32_t> permute;
+    permute.reserve(ndim);
     int32_t dim_0 = dim0;
     int32_t dim_1 = dim1;
 
@@ -860,6 +861,7 @@ class ScalarMatrixNormFunctor {
       dtype_val = x->dtype();
     }
     std::vector<int32_t> dim_tmp;
+    dim_tmp.reserve(axis);
     for (int i = 0; i < axis; ++i) {
       if (input_dim[i] >= 0) {
         dim_tmp.push_back(input_dim[i]);
@@ -1379,7 +1381,8 @@ class StandardDeviationFunctor {
                            const Optional<std::vector<int32_t>>& dim,
                            const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
     const int32_t ndim = input->shape()->NumAxes();
-    std::vector<int32_t> axis(0);
+    std::vector<int32_t> axis;
+    axis.reserve(ndim);
     if (dim.has_value() == false) {
       for (int i = 0; i < ndim; ++i) { axis.push_back(i); }
     } else {
@@ -1465,7 +1468,8 @@ class VarianceFunctor {
                            const Optional<std::vector<int32_t>>& dim,
                            const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
     const int32_t ndim = input->shape()->NumAxes();
-    std::vector<int32_t> axis(0);
+    std::vector<int32_t> axis;
+    axis.reserve(ndim);
     if (dim.has_value() == false) {
       for (int i = 0; i < ndim; ++i) { axis.push_back(i); }
     } else {

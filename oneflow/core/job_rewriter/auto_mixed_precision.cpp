@@ -148,6 +148,7 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
   }
 
   std::vector<OperatorConf> dst_op_confs;
+  dst_op_confs.reserve(dst_op_name2dst_op_confs.size());
   for (const auto& pair : dst_op_name2dst_op_confs) { dst_op_confs.push_back(pair.second); }
   // make sure an op_conf can only be udpated once, cuz later update will override before
   job_builder->MutOpsOnlyOnce(dst_op_confs);

@@ -88,6 +88,7 @@ void GenConnectedCheckpointingSubgraphs(
     const HashMap<std::string, const OpNode*>& checkpointing_op_name2op_node,
     std::vector<HashSet<const OpNode*>>* checkpointing_subgraphs) {
   HashSet<const OpNode*> visited_nodes;
+  checkpointing_subgraphs->reserve(checkpointing_op_name2op_node.size());
   for (const auto& pair : checkpointing_op_name2op_node) {
     const OpNode* node = pair.second;
     if (visited_nodes.find(node) != visited_nodes.end()) { continue; }

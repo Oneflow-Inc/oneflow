@@ -26,6 +26,7 @@ namespace oneflow {
 
 Maybe<void> CtrlBootstrap::InitProcessCtx(int64_t port, ProcessCtx* ret_process_ctx) {
   std::vector<WorkerProcessInfo> worker_process_info_list;
+  worker_process_info_list.reserve(world_size());
   if (rank() == 0) {
     WorkerProcessInfo worker_process_info;
     {

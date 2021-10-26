@@ -282,6 +282,7 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
 
   // create produced blob
   std::vector<std::string> produced_bns;
+  produced_bns.reserve(op->output_bns().size() + op->tmp_bns().size());
   produced_bns.insert(produced_bns.end(), op->output_bns().begin(), op->output_bns().end());
   produced_bns.insert(produced_bns.end(), op->tmp_bns().begin(), op->tmp_bns().end());
   for (const std::string& produced_bn : produced_bns) {
@@ -1193,6 +1194,7 @@ std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
   HashSet<std::string> input_op_names;
   HashSet<std::string> output_op_names;
   std::vector<nlohmann::json> layers_vec;
+  layers_vec.reserve(op_name2op_.size());
   for (const auto& pair : op_name2op_) {
     nlohmann::json json_layers_pair;
 
@@ -1224,6 +1226,7 @@ std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
     json_layers_pair["config"] = json_conf;
 
     std::vector<std::string> inbound_nodes_vec;
+    inbound_nodes_vec.reserve(inbound_nodes.size());
     for (const auto& in_node_name : inbound_nodes) { inbound_nodes_vec.emplace_back(in_node_name); }
     json_layers_pair["inbound_nodes"] = inbound_nodes_vec;
 

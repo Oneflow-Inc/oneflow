@@ -67,7 +67,9 @@ Runtime::Runtime(const Plan& plan, const HashMap<std::string, Blob*>& variable_o
         Global<boxing::collective::Scheduler>::Get()->AddPlan(plan);
   }
   std::vector<const TaskProto*> source_tasks;
+  source_tasks.reserve(plan.task().size());
   std::vector<const TaskProto*> other_tasks;
+  other_tasks.reserve(plan.task().size());
   int64_t this_machine_task_num = 0;
   for (const TaskProto& task : plan.task()) {
     if (task.machine_id() != GlobalProcessCtx::Rank()) { continue; }

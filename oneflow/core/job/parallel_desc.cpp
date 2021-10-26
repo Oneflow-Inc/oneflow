@@ -401,6 +401,7 @@ Maybe<Symbol<ParallelDesc>> RawReplaceDeviceType(Symbol<ParallelDesc> parallel_d
 Maybe<std::string> RawPlacementToString(Symbol<ParallelDesc> placement) {
   std::string device_type = placement->device_tag() == "gpu" ? "\"cuda\"" : "\"cpu\"";
   std::vector<int64_t> sorted_node_ids;
+  sorted_node_ids.reserve(placement->sorted_machine_ids().size());
   HashMap<int64_t, std::vector<int64_t>> node_id2sorted_dev_phy_ids;
   for (int64_t machine_id : placement->sorted_machine_ids()) {
     int64_t node_id = GlobalProcessCtx::NodeId(machine_id);

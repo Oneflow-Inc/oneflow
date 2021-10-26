@@ -487,6 +487,7 @@ Maybe<ReentrantLockBackEdge> MakeMainJobComponent(
   }
   const int64_t num_critial_sections = Global<CriticalSectionDesc>::Get()->CriticalSectionNum();
   std::vector<std::string> snk_tick_op_names;
+  snk_tick_op_names.reserve(num_critial_sections*machine_id_range.size());
   FOR_RANGE(int64_t, i, 0, num_critial_sections) {
     // source tick
     OperatorConf src_tick_op_conf;

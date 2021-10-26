@@ -82,6 +82,7 @@ class ArgMaxFunctor {
     }
 
     std::vector<int32_t> permute;
+    permute.reserve(ndims);
     for (int32_t i = 0; i < ndims - 1; i++) { permute.push_back(i < new_dim ? i : i + 1); }
     permute.push_back(new_dim);
 
@@ -958,7 +959,8 @@ class SqueezeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<std::vector<int32_t>>& dim) const {
     int32_t ndim = x->shape()->NumAxes();
-    std::vector<int32_t> squeeze_dims(0);
+    std::vector<int32_t> squeeze_dims;
+    squeeze_dims.reserve(ndim);
     if (dim.has_value() == true) {
       std::vector<int32_t> dims = *JUST(dim);
       for (int32_t dim_i : dims) {

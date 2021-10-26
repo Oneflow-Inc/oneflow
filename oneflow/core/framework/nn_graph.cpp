@@ -333,6 +333,7 @@ namespace {
 
 Maybe<void> MakeEagerBlobObjectList(std::vector<std::shared_ptr<vm::EagerBlobObject>>* blob_list,
                                     const one::TensorTuple& tensor_list) {
+  blob_list->reserve(tensor_list.size());
   for (const auto& tensor : tensor_list) {
     CHECK_OR_RETURN(tensor->is_eager());
     if (tensor->is_consistent()) {

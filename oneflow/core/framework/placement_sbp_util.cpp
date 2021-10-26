@@ -395,6 +395,7 @@ Maybe<void> InitNdSbpValidTransformationAxisSequence(
   CHECK_EQ_OR_RETURN(src_nd_sbp->sbp_parallel_size(), dst_nd_sbp->sbp_parallel_size());
   int64_t num_axes = src_nd_sbp->sbp_parallel_size();
   HashSet<int64_t> handled_axes;
+  nd_sbp_axis_sequence->reserve(num_axes);
   const auto& HasNoExclusiveSrcNdSbpAxis = [&](int64_t axis) -> Maybe<bool> {
     const auto& opt_src_axis = JUST(ExclusiveSrcNdSbpAxis4DstNdSbpAxis(axis));
     if (!opt_src_axis->has_value()) { return true; }

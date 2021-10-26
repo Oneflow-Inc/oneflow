@@ -174,6 +174,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     separated_header_mem_ptr = mem_block_id2ptr_.at(header_block_id);
   }
   std::vector<LbiBlobDescPair> lbi_pairs;
+  lbi_pairs.reserve(regst_desc_type.data_regst_desc().lbi2blob_desc().size());
   if (regst_desc_type.has_data_regst_desc()) {
     for (const LbiBlobDescPair& pair : regst_desc_type.data_regst_desc().lbi2blob_desc()) {
       lbi_pairs.push_back(pair);

@@ -89,6 +89,7 @@ Maybe<void> DistributeSplitOp::InferOutBlobDescs(
   const auto& conf = op_conf().distribute_split_conf();
   int32_t split_axis = FixAxis(conf.axis(), in_blob_desc.shape().NumAxes());
   std::vector<BlobDesc*> out_blob_descs;
+  out_blob_descs.reserve(output_bns().size());
   FOR_RANGE(int, i, 0, output_bns().size()) {
     BlobDesc* blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
     if (blob_desc != nullptr) { out_blob_descs.push_back(blob_desc); }

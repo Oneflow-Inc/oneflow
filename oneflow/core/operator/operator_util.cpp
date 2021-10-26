@@ -30,6 +30,7 @@ size_t DhwOffset(const std::string& data_format) {
 
 std::vector<int32_t> Get3DVecInOpConf(const PbRf<int32_t>& field_vals, int32_t NDims) {
   std::vector<int32_t> vec;
+  vec.reserve(3);
   FOR_RANGE(uint8_t, dim, 0, 3) {
     int64_t index = static_cast<int64_t>(dim) - (3 - NDims);
     if (index < 0) {

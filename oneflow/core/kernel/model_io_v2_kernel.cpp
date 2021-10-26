@@ -357,6 +357,7 @@ class ModelSaveV2Kernel final : public Kernel {
       bool variable_need_do_save;
       int64_t variable_part_id;
       std::vector<TensorSliceView> variable_part_id2slice_views;
+      variable_part_id2slice_views.reserve(hierarchy->elem_cnt());
       FOR_RANGE(int64_t, j, 0, hierarchy->elem_cnt()) {
         hierarchy_index_helper.OffsetToNdIndex(j, parallel_rank.data());
         bool cur_id_need_do_save = NeedDoSave(parallel_rank, nd_sbp);

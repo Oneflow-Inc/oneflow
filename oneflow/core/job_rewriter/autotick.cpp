@@ -267,6 +267,7 @@ OperatorConf AppendTick(const std::string tick_name, const std::vector<std::stri
 OperatorConf AppendTick(const std::string tick_name, const std::list<const OpNode*>& op_nodes,
                         const std::shared_ptr<const Shape>& time_shape, JobBuilder* job_builder) {
   std::vector<std::string> op_names;
+  op_names.reserve(op_nodes.size());
   for (const auto* op_node : op_nodes) {
     CHECK(op_nodes.front()->parallel_desc() == op_node->parallel_desc());
     op_names.push_back(op_node->op().op_name());
@@ -279,6 +280,7 @@ OperatorConf PrependTick(const HashSet<const OpNode*>& op_nodes, JobBuilder* job
   CHECK_GE(op_nodes.size(), 1);
   OperatorConf tick_op_conf = MakeTickOpConf("Prepend");
   std::vector<OperatorConf> op_confs;
+  op_confs.reserve(op_nodes.size());
   for (const OpNode* op_node : op_nodes) {
     OperatorConf op_conf(op_node->op().op_conf());
     op_conf.add_ctrl_in_op_name(tick_op_conf.name());
@@ -319,6 +321,7 @@ OperatorConf AppendAccTick(const Shape& src_shape, const std::list<const OpNode*
 
 std::vector<std::string> GetOpNames(const HashSet<const OpNode*>& op_nodes) {
   std::vector<std::string> ret;
+  ret.reserve(op_nodes.size());
   for (const OpNode* op_node : op_nodes) { ret.push_back(op_node->op().op_name()); }
   return ret;
 };
@@ -380,6 +383,7 @@ Maybe<std::vector<OperatorConf>> AddTickForTimeShape(const Shape& src_time_shape
     pd7ts2op_nodes[{op_node->parallel_desc(), ts}].push_back(op_node);
   }
   std::vector<OperatorConf> op_confs;
+  op_confs.reserve(pd7ts2op_nodes.size());
   for (const auto& pair : pd7ts2op_nodes) {
     const std::pair<Shape, Shape>& ts = pair.first.second;
     if (ts.second.elem_cnt() == src_time_shape.elem_cnt()) {
@@ -412,6 +416,7 @@ Maybe<void> AddGlobalInputOutputCriticalSection(
   }
   std::vector<OperatorConf> source_ticks;
   std::vector<OperatorConf> sink_ticks;
+  source_ticks.reserve(parallel_desc2op_nodes.size());
   for (const auto& pair : parallel_desc2op_nodes) {
     source_ticks.push_back(PrependTick(pair.second, job_builder));
     const auto& ops = JUST(AddTickForTimeShape(*time_shape, pair.second, job_builder));

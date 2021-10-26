@@ -105,6 +105,7 @@ std::vector<HashSet<int64_t>> GetMutualExclusionJobGroups(
     const std::vector<std::shared_ptr<Job>>& jobs) {
   int64_t job_size = jobs.size();
   std::vector<HashSet<int64_t>> job_groups;
+  job_groups.reserve(job_size);
   if (Global<const InterJobReuseMemStrategy>::Get()->has_reuse_mem_priority()) {
     job_groups.push_back(HashSet<int64_t>());
     FOR_RANGE(int64_t, i, 0, job_size) { job_groups.front().emplace(i); }

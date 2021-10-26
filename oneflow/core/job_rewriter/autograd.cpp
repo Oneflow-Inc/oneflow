@@ -578,9 +578,13 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   bool all_same_parallel_desc = true;
   const ParallelDesc& any_parallel_desc =
       op_graph.OpNode4OpName(lbi2diff_lbi->begin()->first.op_name())->parallel_desc();
+  const size_t loop_size = lbi2diff_lbi->size();
   std::vector<std::string> partial_square_sum_lbns;
+  partial_square_sum_lbns.reserve(loop_size);
   std::vector<bool> is_broadcast_nd_sbp;
+  is_broadcast_nd_sbp.reserve(loop_size);
   std::vector<ParallelConf> param_group_parallel_confs;
+  param_group_parallel_confs.reserve(loop_size);
   ForEachAggregatedParamGroup(
       op_graph, *lbi2diff_lbi,
       [&](const ParallelDesc& parallel_desc, const cfg::NdSbp& nd_sbp,
@@ -607,6 +611,7 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
           partial_square_sum_lbns.push_back(multi_square_sum_op.output("y", 0));
         } else {
           std::vector<std::string> lbns_to_add;
+          lbns_to_add.reserve(lbis.size());
           for (const auto& lbi : lbis) {
             const LogicalBlobId& diff_lbi = lbi2diff_lbi->at(lbi);
             const auto square_sum_op =
@@ -1035,6 +1040,7 @@ void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
     if (model_op_node->parallel_desc().parallel_num() <= 1) { continue; }
     const int64_t scope_symbol_id = model_op_node->op().op_conf().scope_symbol_id();
     std::vector<std::string> nd_sbp;
+    nd_sbp.reserve(model_op_node->NdSbp4BnInOp("out").sbp_parallel().size());
     for (const auto& sbp_parallel : model_op_node->NdSbp4BnInOp("out").sbp_parallel()) {
       nd_sbp.push_back(SbpParallelToString(sbp_parallel));
     }
