@@ -126,89 +126,113 @@ struct DirectStore {
 };
 
 template<typename T>
-struct WelfordAggregate {
-  T mean;
-  T m2;
-  T count;
-  //__device__ WelfordAggregate() : mean(0), m2(0), count(0) {}
-  __device__ WelfordAggregate() {}
-  __device__ WelfordAggregate(T mean, T m2, T count) : mean(mean), m2(m2), count(count) {}
-  inline __device__ void reduce(T val) {
-    // Use Welford Online algorithem to compute mean and variance
-    // For more details you can refer to:
-    // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
-    count = count + 1;
-    T delta1 = val - mean;
-    mean += Div(delta1, count);
-    T delta2 = val - mean;
-    m2 += delta1 * delta2;
+inline __device__ void WelfordReduce(T* mean, T* m2, int* count, T val) {
+  // Use Welford Online algorithem to compute mean and variance
+  // For more details you can refer to:
+  // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
+  *count += 1;
+  T delta1 = val - *mean;
+  *mean += Div(delta1, static_cast<T>(*count));
+  T delta2 = val - *mean;
+  *m2 += delta1 * delta2;
+}
+
+template<typename T>
+inline __device__ void WelfordCombine(T a_mean, T a_m2, int a_count, T b_mean, T b_m2, int b_count,
+                                      T* mean, T* m2, int* count) {
+  if (a_count == 0) {
+    *mean = b_mean;
+    *m2 = b_m2;
+    *count = b_count;
+    return;
   }
-  inline __device__ void combine(WelfordAggregate<T> data) {
-    if (data.count == 0) { return; }
-    T new_count = count + data.count;
-    T nb_over_n = Div(data.count, new_count);
-    T delta = data.mean - mean;
-    mean += delta * nb_over_n;
-    m2 += data.m2 + delta * delta * count * nb_over_n;
-    count = new_count;
+  if (b_count == 0) {
+    *mean = a_mean;
+    *m2 = a_m2;
+    *count = a_count;
+    return;
   }
-  inline __device__ T project() const { return Div(m2, count); }
-};
+  int new_count = a_count + b_count;
+  T nb_over_n = Div(static_cast<T>(b_count), static_cast<T>(new_count));
+  T delta = b_mean - a_mean;
+  *mean = a_mean + delta * nb_over_n;
+  *m2 = a_m2 + b_m2 + delta * delta * a_count * nb_over_n;
+  *count = new_count;
+}
 
 template<typename T, int thread_group_width = kWarpSize>
-__inline__ __device__ WelfordAggregate<T> WelfordAggregateWarpAllReduce(WelfordAggregate<T> val) {
+__inline__ __device__ void WarpAllReduce(T cur_mean, T cur_m2, int cur_count, T* mean, T* m2,
+                                         int* count) {
+  *mean = cur_mean;
+  *m2 = cur_m2;
+  *count = cur_count;
   for (int mask = thread_group_width / 2; mask > 0; mask /= 2) {
-    WelfordAggregate<T> shfl_xor_val(__shfl_xor_sync(0xffffffff, val.mean, mask),
-                                     __shfl_xor_sync(0xffffffff, val.m2, mask),
-                                     __shfl_xor_sync(0xffffffff, val.count, mask));
-    val.combine(shfl_xor_val);
+    T b_mean = __shfl_xor_sync(0xffffffff, *mean, mask);
+    T b_m2 = __shfl_xor_sync(0xffffffff, *m2, mask);
+    int b_count = __shfl_xor_sync(0xffffffff, *count, mask);
+    WelfordCombine(*mean, *m2, *count, b_mean, b_m2, b_count, mean, m2, count);
   }
-  return val;
+}
+
+template<typename T, int thread_group_width = kWarpSize>
+__inline__ __device__ void WarpReduce(T cur_mean, T cur_m2, int cur_count, T* mean, T* m2,
+                                      int* count) {
+  *mean = cur_mean;
+  *m2 = cur_m2;
+  *count = cur_count;
+  for (int mask = thread_group_width / 2; mask > 0; mask /= 2) {
+    T b_mean = __shfl_down_sync(0xffffffff, *mean, mask);
+    T b_m2 = __shfl_down_sync(0xffffffff, *m2, mask);
+    int b_count = __shfl_down_sync(0xffffffff, *count, mask);
+    WelfordCombine(*mean, *m2, *count, b_mean, b_m2, b_count, mean, m2, count);
+  }
 }
 
 template<typename T>
-__inline__ __device__ WelfordAggregate<T> WelfordAggregateWarpReduce(WelfordAggregate<T> val) {
-  for (int mask = kWarpSize / 2; mask > 0; mask /= 2) {
-    WelfordAggregate<T> shfl_down_val(__shfl_down_sync(0xffffffff, val.mean, mask),
-                                      __shfl_down_sync(0xffffffff, val.m2, mask),
-                                      __shfl_down_sync(0xffffffff, val.count, mask));
-    val.combine(shfl_down_val);
-  }
-  return val;
-}
-
-template<typename T>
-__inline__ __device__ WelfordAggregate<T> WelfordAggregateBlockAllReduce(WelfordAggregate<T> val,
-                                                                         T* mean_shared,
-                                                                         T* m2_shared,
-                                                                         T* count_shared) {
-  __shared__ WelfordAggregate<T> result_broadcast;
+__inline__ __device__ void BlockAllReduce(T cur_mean, T cur_m2, int cur_count, T* result_mean,
+                                          T* result_m2, int* result_count, T* mean_shared,
+                                          T* m2_shared, int* count_shared) {
+  __shared__ T mean_result_broadcast;
+  __shared__ T m2_result_broadcast;
+  __shared__ int count_result_broadcast;
   const int lid = threadIdx.x % 32;
   const int wid = threadIdx.x / 32;
-  val = WelfordAggregateWarpReduce(val);
+  T warp_mean = 0;
+  T warp_m2 = 0;
+  int warp_count = 0;
+  WarpReduce(cur_mean, cur_m2, cur_count, &warp_mean, &warp_m2, &warp_count);
   __syncthreads();
   if (lid == 0) {
-    mean_shared[wid] = val.mean;
-    m2_shared[wid] = val.m2;
-    count_shared[wid] = val.count;
+    mean_shared[wid] = warp_mean;
+    m2_shared[wid] = warp_m2;
+    count_shared[wid] = warp_count;
   }
   __syncthreads();
   if (wid == 0) {
     if (threadIdx.x < blockDim.x / 32) {
-      val.mean = mean_shared[lid];
-      val.m2 = m2_shared[lid];
-      val.count = count_shared[lid];
+      warp_mean = mean_shared[lid];
+      warp_m2 = m2_shared[lid];
+      warp_count = count_shared[lid];
     } else {
-      val.mean = static_cast<T>(0);
-      val.m2 = static_cast<T>(0);
-      val.count = static_cast<T>(0);
+      warp_mean = static_cast<T>(0);
+      warp_m2 = static_cast<T>(0);
+      warp_count = static_cast<T>(0);
     }
     __syncwarp();
-    val = WelfordAggregateWarpReduce(val);
-    if (lid == 0) { result_broadcast = val; }
+    T block_mean = 0;
+    T block_m2 = 0;
+    int block_count = 0;
+    WarpReduce(warp_mean, warp_m2, warp_count, &block_mean, &block_m2, &block_count);
+    if (lid == 0) {
+      mean_result_broadcast = block_mean;
+      m2_result_broadcast = block_m2;
+      count_result_broadcast = block_count;
+    }
   }
   __syncthreads();
-  return result_broadcast;
+  *result_mean = mean_result_broadcast;
+  *result_m2 = m2_result_broadcast;
+  *result_count = count_result_broadcast;
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int cols_per_thread,
@@ -222,16 +246,19 @@ __global__ void LayerNormWarpImpl(LOAD load, STORE store, const int64_t rows, co
   constexpr int num_packs = cols_per_thread / pack_size;
   assert(cols <= cols_per_thread * thread_group_width);
   ComputeType buf[rows_per_access][cols_per_thread];
-  using WelfordType = WelfordAggregate<ComputeType>;
   const int global_thread_group_id = blockIdx.x * blockDim.y + threadIdx.y;
   const int num_global_thread_group = gridDim.x * blockDim.y;
   const int lane_id = threadIdx.x;
   for (int64_t row = global_thread_group_id * rows_per_access; row < rows;
        row += num_global_thread_group * rows_per_access) {
-    WelfordType weldata[rows_per_access];
+    ComputeType thread_mean[rows_per_access];
+    ComputeType thread_m2[rows_per_access];
+    int thread_count[rows_per_access];
 #pragma unroll
     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
-      weldata[row_id] = WelfordType(0, 0, 0);
+      thread_mean[row_id] = 0;
+      thread_m2[row_id] = 0;
+      thread_count[row_id] = 0;
       ComputeType* row_buf = buf[row_id];
 #pragma unroll
       for (int pack_id = 0; pack_id < num_packs; ++pack_id) {
@@ -240,7 +267,8 @@ __global__ void LayerNormWarpImpl(LOAD load, STORE store, const int64_t rows, co
           load.template load<pack_size>(row_buf + pack_id * pack_size, row + row_id, col);
 #pragma unroll
           for (int i = 0; i < pack_size; ++i) {
-            weldata[row_id].reduce(row_buf[pack_id * pack_size + i]);
+            WelfordReduce(thread_mean + row_id, thread_m2 + row_id, thread_count + row_id,
+                          row_buf[pack_id * pack_size + i]);
           }
         } else {
 #pragma unroll
@@ -248,14 +276,19 @@ __global__ void LayerNormWarpImpl(LOAD load, STORE store, const int64_t rows, co
         }
       }
     }
-    WelfordType warp_welford[rows_per_access];
+    ComputeType warp_mean[rows_per_access];
+    ComputeType warp_m2[rows_per_access];
+    int warp_count[rows_per_access];
 #pragma unroll
     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
       ComputeType* row_buf = buf[row_id];
-      warp_welford[row_id] =
-          WelfordAggregateWarpAllReduce<ComputeType, thread_group_width>(weldata[row_id]);
-      ComputeType row_mean = warp_welford[row_id].mean;
-      ComputeType row_variance = max(warp_welford[row_id].project(), static_cast<ComputeType>(0.0));
+      WarpAllReduce<ComputeType, thread_group_width>(thread_mean[row_id], thread_m2[row_id],
+                                                     thread_count[row_id], warp_mean + row_id,
+                                                     warp_m2 + row_id, warp_count + row_id);
+      ComputeType row_mean = warp_mean[row_id];
+      ComputeType row_variance =
+          max(Div(warp_m2[row_id], static_cast<ComputeType>(warp_count[row_id])),
+              static_cast<ComputeType>(0.0));
       ComputeType row_inv_var = rsqrt(row_variance + static_cast<ComputeType>(epsilon));
       if (lane_id == 0) {
         mean[row + row_id] = row_mean;
@@ -514,32 +547,35 @@ __global__ void LayerNormBlockSMemImpl(LOAD load, STORE store, const int64_t row
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = cols / pack_size;
-  using WelfordType = WelfordAggregate<ComputeType>;
   __shared__ typename std::aligned_storage<sizeof(ComputeType), alignof(ComputeType)>::type
       mean_shared[32];
   ComputeType* mean_shared_ptr = reinterpret_cast<ComputeType*>(mean_shared);
   __shared__
       typename std::aligned_storage<sizeof(ComputeType), alignof(ComputeType)>::type m2_shared[32];
   ComputeType* m2_shared_ptr = reinterpret_cast<ComputeType*>(m2_shared);
-  __shared__ typename std::aligned_storage<sizeof(ComputeType), alignof(ComputeType)>::type
-      count_shared[32];
-  ComputeType* count_shared_ptr = reinterpret_cast<ComputeType*>(count_shared);
+  __shared__ typename std::aligned_storage<sizeof(int), alignof(int)>::type count_shared[32];
+  int* count_shared_ptr = reinterpret_cast<int*>(count_shared);
 
   for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
-    WelfordType weldata(0, 0, 0);
+    ComputeType thread_mean = 0;
+    ComputeType thread_m2 = 0;
+    int thread_count = 0;
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType pack[pack_size];
       load.template load<pack_size>(pack, row, pack_id * pack_size);
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
         buf[i * num_packs + pack_id] = pack[i];
-        weldata.reduce(pack[i]);
+        WelfordReduce(&thread_mean, &thread_m2, &thread_count, pack[i]);
       }
     }
-    WelfordType block_welford = WelfordAggregateBlockAllReduce<ComputeType>(
-        weldata, mean_shared_ptr, m2_shared_ptr, count_shared_ptr);
-    ComputeType row_mean = block_welford.mean;
-    ComputeType row_variance = max(block_welford.project(), static_cast<ComputeType>(0.0));
+    ComputeType row_mean = 0;
+    ComputeType row_m2 = 0;
+    int row_count = 0;
+    BlockAllReduce<ComputeType>(thread_mean, thread_m2, thread_count, &row_mean, &row_m2,
+                                &row_count, mean_shared_ptr, m2_shared_ptr, count_shared_ptr);
+    ComputeType row_variance =
+        max(Div(row_m2, static_cast<ComputeType>(row_count)), static_cast<ComputeType>(0.0));
     ComputeType row_inv_var = rsqrt(row_variance + static_cast<ComputeType>(epsilon));
     if (threadIdx.x == 0) {
       mean[row] = row_mean;
@@ -676,28 +712,33 @@ __global__ void LayerNormBlockUncachedImpl(LOAD load, STORE store, const int64_t
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = cols / pack_size;
-  using WelfordType = WelfordAggregate<ComputeType>;
   __shared__ typename std::aligned_storage<sizeof(ComputeType), alignof(ComputeType)>::type
       mean_shared[32];
   ComputeType* mean_shared_ptr = reinterpret_cast<ComputeType*>(mean_shared);
   __shared__
       typename std::aligned_storage<sizeof(ComputeType), alignof(ComputeType)>::type m2_shared[32];
   ComputeType* m2_shared_ptr = reinterpret_cast<ComputeType*>(m2_shared);
-  __shared__ typename std::aligned_storage<sizeof(ComputeType), alignof(ComputeType)>::type
-      count_shared[32];
-  ComputeType* count_shared_ptr = reinterpret_cast<ComputeType*>(count_shared);
+  __shared__ typename std::aligned_storage<sizeof(int), alignof(int)>::type count_shared[32];
+  int* count_shared_ptr = reinterpret_cast<int*>(count_shared);
   for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
-    WelfordType weldata(0, 0, 0);
+    ComputeType thread_mean = 0;
+    ComputeType thread_m2 = 0;
+    int thread_count = 0;
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType pack[pack_size];
       load.template load<pack_size>(pack, row, pack_id * pack_size);
 #pragma unroll
-      for (int i = 0; i < pack_size; ++i) { weldata.reduce(pack[i]); }
+      for (int i = 0; i < pack_size; ++i) {
+        WelfordReduce(&thread_mean, &thread_m2, &thread_count, pack[i]);
+      }
     }
-    WelfordType block_welford = WelfordAggregateBlockAllReduce<ComputeType>(
-        weldata, mean_shared_ptr, m2_shared_ptr, count_shared_ptr);
-    ComputeType row_mean = block_welford.mean;
-    ComputeType row_variance = max(block_welford.project(), static_cast<ComputeType>(0.0));
+    ComputeType row_mean = 0;
+    ComputeType row_m2 = 0;
+    int row_count = 0;
+    BlockAllReduce<ComputeType>(thread_mean, thread_m2, thread_count, &row_mean, &row_m2,
+                                &row_count, mean_shared_ptr, m2_shared_ptr, count_shared_ptr);
+    ComputeType row_variance =
+        max(Div(row_m2, static_cast<ComputeType>(row_count)), static_cast<ComputeType>(0.0));
     ComputeType row_inv_var = rsqrt(row_variance + static_cast<ComputeType>(epsilon));
     if (threadIdx.x == 0) {
       mean[row] = row_mean;

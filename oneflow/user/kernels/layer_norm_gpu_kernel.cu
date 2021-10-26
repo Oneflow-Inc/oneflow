@@ -58,91 +58,58 @@ class LayerNormCudnnBnCtx final {
   cudnnBatchNormMode_t mode_;
 };
 
-template<typename T, bool do_scale, bool do_center>
-__global__ void InstanceScaleCenterGpu(const int64_t elem_cnt, const int64_t instance_size,
-                                       const T* in, const T* gamma, const T* beta, T* out) {
-  CUDA_1D_KERNEL_LOOP_T(int64_t, i, elem_cnt) {
-    const int64_t elem_id = i % instance_size;
-    T v = in[i];
-    if (do_scale) { v *= gamma[elem_id]; }
-    if (do_center) { v += beta[elem_id]; }
-    out[i] = v;
+template<typename SRC, typename DST>
+struct ScaleCenterStore {
+  ScaleCenterStore(DST* normalized, DST* y, int64_t row_size, const DST* gamma, const DST* beta)
+      : normalized(normalized), y(y), row_size(row_size), gamma(gamma), beta(beta) {}
+  template<int N>
+  __device__ void store(const SRC* src, int64_t row, int64_t col) {
+    cuda::layer_norm::Pack<DST, N> y_pack;
+    cuda::layer_norm::Pack<DST, N> normalized_pack;
+    cuda::layer_norm::Pack<DST, N> gamma_pack;
+    cuda::layer_norm::Pack<DST, N> beta_pack;
+    const int64_t offset = row * row_size + col;
+    if (gamma != nullptr) {
+      gamma_pack.storage =
+          *reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(gamma + col);
+    } else {
+      for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = 1; }
+    }
+    if (beta != nullptr) {
+      beta_pack.storage = *reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(beta + col);
+    } else {
+      for (int i = 0; i < N; ++i) { beta_pack.elem[i] = 0; }
+    }
+#pragma unroll
+    for (int i = 0; i < N; ++i) {
+      DST normalized_i = static_cast<DST>(src[i]);
+      normalized_pack.elem[i] = normalized_i;
+      y_pack.elem[i] = normalized_i * gamma_pack.elem[i] + beta_pack.elem[i];
+    }
+    *reinterpret_cast<cuda::layer_norm::PackType<DST, N>*>(y + offset) = y_pack.storage;
+    if (gamma != nullptr) {
+      *reinterpret_cast<cuda::layer_norm::PackType<DST, N>*>(normalized + offset) =
+          normalized_pack.storage;
+    }
   }
-}
-
-template<bool do_scale, bool do_center>
-__global__ void InstanceScaleCenterH2Gpu(const int64_t h2_elem_cnt, const int64_t h2_instance_size,
-                                         const half* in, const half* gamma, const half* beta,
-                                         half* out) {
-  const auto* in_h2 = reinterpret_cast<const half2*>(in);
-  const auto* gamma_h2 = reinterpret_cast<const half2*>(gamma);
-  const auto* beta_h2 = reinterpret_cast<const half2*>(beta);
-  auto* out_h2 = reinterpret_cast<half2*>(out);
-  CUDA_1D_KERNEL_LOOP_T(int64_t, i, h2_elem_cnt) {
-    const int64_t elem_id = i % h2_instance_size;
-    half2 v2 = in_h2[i];
-    if (do_scale) { v2 = __hmul2(v2, gamma_h2[elem_id]); }
-    if (do_center) { v2 = __hadd2(v2, beta_h2[elem_id]); }
-    out_h2[i] = v2;
-  }
-}
+  DST* normalized;
+  DST* y;
+  int64_t row_size;
+  const DST* gamma;
+  const DST* beta;
+};
 
 template<typename T>
-void InstanceScaleCenter(DeviceCtx* ctx, const int64_t batch_size, const int64_t instance_size,
-                         const T* in, const T* gamma, const T* beta, T* out) {
-  const int64_t elem_cnt = batch_size * instance_size;
-  if (beta != nullptr && gamma != nullptr) {  // scale and center
-    InstanceScaleCenterGpu<T, true, true>
-        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            elem_cnt, instance_size, in, gamma, beta, out);
-  } else if (gamma != nullptr) {  // scale only
-    InstanceScaleCenterGpu<T, true, false>
-        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            elem_cnt, instance_size, in, gamma, nullptr, out);
-  } else if (beta != nullptr) {  // center only
-    InstanceScaleCenterGpu<T, false, true>
-        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            elem_cnt, instance_size, in, nullptr, beta, out);
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-void InstanceScaleCenterH2(DeviceCtx* ctx, const int64_t batch_size, const int64_t instance_size,
-                           const half* in, const half* gamma, const half* beta, half* out) {
-  CHECK_EQ(instance_size % 2, 0);
-  const int64_t elem_cnt_h2 = batch_size * instance_size / 2;
-  const int64_t instance_size_h2 = instance_size / 2;
-  if (beta != nullptr && gamma != nullptr) {  // scale and center
-    InstanceScaleCenterH2Gpu<true, true>
-        <<<BlocksNum4ThreadsNum(elem_cnt_h2), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            elem_cnt_h2, instance_size_h2, in, gamma, beta, out);
-  } else if (gamma != nullptr) {  // scale only
-    InstanceScaleCenterH2Gpu<true, false>
-        <<<BlocksNum4ThreadsNum(elem_cnt_h2), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            elem_cnt_h2, instance_size_h2, in, gamma, nullptr, out);
-  } else if (beta != nullptr) {  // center only
-    InstanceScaleCenterH2Gpu<false, true>
-        <<<BlocksNum4ThreadsNum(elem_cnt_h2), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            elem_cnt_h2, instance_size_h2, in, nullptr, beta, out);
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-template<>
-void InstanceScaleCenter<float16>(DeviceCtx* ctx, const int64_t batch_size,
-                                  const int64_t instance_size, const float16* in,
-                                  const float16* gamma, const float16* beta, float16* out) {
-  if (instance_size % 2 == 0) {
-    InstanceScaleCenterH2(ctx, batch_size, instance_size, reinterpret_cast<const half*>(in),
-                          reinterpret_cast<const half*>(gamma), reinterpret_cast<const half*>(beta),
-                          reinterpret_cast<half*>(out));
-  } else {
-    InstanceScaleCenter<half>(ctx, batch_size, instance_size, reinterpret_cast<const half*>(in),
-                              reinterpret_cast<const half*>(gamma),
-                              reinterpret_cast<const half*>(beta), reinterpret_cast<half*>(out));
-  }
+void LayerNormForwardGpu(DeviceCtx* ctx, const int num_instances, const int norm_size,
+                         const double epsilon, const T* x_ptr, const T* gamma_ptr,
+                         const T* beta_ptr, T* normalized_ptr, T* y_ptr, user_op::Tensor* mean,
+                         user_op::Tensor* inv_variance) {
+  using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
+  cuda::layer_norm::DirectLoad<T, ComputeType> load(x_ptr, norm_size);
+  ScaleCenterStore<ComputeType, T> store(normalized_ptr, y_ptr, norm_size, gamma_ptr, beta_ptr);
+  cuda::layer_norm::DispatchLayerNorm<decltype(load), decltype(store), ComputeType>(
+      ctx->cuda_stream(), load, store, num_instances, norm_size, epsilon,
+      mean->mut_dptr<ComputeType>(), inv_variance->mut_dptr<ComputeType>());
 }
 
 constexpr int64_t kLayerNormParamGradGpuBlockSize = 512;
@@ -227,6 +194,62 @@ __global__ void LayerNormParamGradHalfImpl(const I n, const I instance_size, con
 }
 
 }  // namespace
+
+template<typename T>
+class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+ public:
+  LayerNormGpuKernel() = default;
+  ~LayerNormGpuKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
+    user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
+    const bool scale = ctx->Attr<bool>("scale");
+    const bool center = ctx->Attr<bool>("center");
+    user_op::Tensor* normalized = scale ? ctx->Tensor4ArgNameAndIndex("normalized", 0) : y;
+    const double epsilon = ctx->Attr<double>("epsilon");
+    const int32_t num_instances = mean->shape().elem_cnt();
+    const int32_t norm_size = x->shape().elem_cnt() / num_instances;
+    int32_t instance_size = 0;
+    const T* gamma_ptr = nullptr;
+    const T* beta_ptr = nullptr;
+    if (scale || center) {
+      if (scale) {
+        const user_op::Tensor* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
+        instance_size = gamma->shape().elem_cnt();
+        gamma_ptr = gamma->dptr<T>();
+      }
+      if (center) {
+        const user_op::Tensor* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
+        if (gamma_ptr) {
+          CHECK_EQ(beta->shape().elem_cnt(), instance_size);
+        } else {
+          instance_size = beta->shape().elem_cnt();
+        }
+        beta_ptr = beta->dptr<T>();
+      }
+      CHECK_EQ(y->shape().elem_cnt() % instance_size, 0);
+    }
+    LayerNormForwardGpu<T>(ctx->device_ctx(), num_instances, norm_size, epsilon, x->dptr<T>(),
+                           gamma_ptr, beta_ptr, normalized->mut_dptr<T>(), y->mut_dptr<T>(), mean,
+                           inv_variance);
+  }
+};
+
+#define REGISTER_LAYER_NORM_GPU_KERNEL(dtype)             \
+  REGISTER_USER_KERNEL("layer_norm")                      \
+      .SetCreateFn<LayerNormGpuKernel<dtype>>()           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+
+REGISTER_LAYER_NORM_GPU_KERNEL(half)
+REGISTER_LAYER_NORM_GPU_KERNEL(float)
+REGISTER_LAYER_NORM_GPU_KERNEL(double)
 
 template<typename T, typename BNParamT>
 class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
