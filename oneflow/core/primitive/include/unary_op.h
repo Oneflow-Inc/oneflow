@@ -23,38 +23,28 @@ namespace oneflow {
 namespace primitive {
 
 enum class UnaryOpList:int32_t {
-  kIdentity,
+  kRelu,
 };
 
-template<DeviceType device, UnaryOpList unary_enum, typename Out, typename In>
-struct UnaryFunctor; 
-class UnaryOp: public Primitive{
+class ElementwiseUnaryOp: public Primitive{
   public: 
-    OF_DISALLOW_COPY_AND_MOVE(UnaryOp); 
-    UnaryOp() = default; 
-    ~UnaryOp() override = default; 
+    OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnaryOp); 
+    ElementwiseUnaryOp() = default; 
+    ~ElementwiseUnaryOp() override = default; 
   private: 
     virtual void Launch(StreamContext* ctx, size_t count, void* dst, const void* src); 
 }; 
 
-class UnaryOpFactory: public Factory<UnaryOp>{
+class ElementwiseUnaryOpFactory: public Factory<ElementwiseUnaryOp>{
   public: 
-    OF_DISALLOW_COPY_AND_MOVE(UnaryOpFactory);
-    UnaryOpFactory() = default;
-    ~UnaryOpFactory() override = default;
+    OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnaryOpFactory);
+    ElementwiseUnaryOpFactory() = default;
+    ~ElementwiseUnaryOpFactory() override = default;
   private: 
-    virtual std::unique_ptr<UnaryOp> New(UnaryOpList op_enum, DataType out_dtype, DataType in_dtype) = 0; 
+    virtual std::unique_ptr<ElementwiseUnaryOp> New(UnaryOpList op_enum, DataType out_dtype, DataType in_dtype) = 0; 
 }; 
 
-template<typename Out, typename In>
-struct IdentityFunctor {
-  OF_DEVICE_FUNC explicit IdentityFunctor(){}
-  OF_DEVICE_FUNC void operator()(Out* dst, const In* src, size_t count) const {
-    for (size_t i = 0; i < count; ++i) { dst[i] = src[i]; }
-  }
-};
-
-#define CPU_PRIMITIVE_UNARY_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(IdentityFunctor, UnaryOpList::kIdentity)
+#define CPU_PRIMITIVE_UNARY_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOpList::kRelu, UnaryOpList::kRelu)
 
 
 }  // namespace primitive
