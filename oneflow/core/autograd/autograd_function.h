@@ -30,14 +30,11 @@ class AutogradFunctionBase {
  public:
   using FType = std::function<std::shared_ptr<TensorTuple>(
       const std::shared_ptr<FunctionAutoGradCaptureState>&, const TensorTuple&)>;
-  AutogradFunctionBase() = delete;
+  AutogradFunctionBase() = default;
   virtual ~AutogradFunctionBase() = default;
-  AutogradFunctionBase(const std::string& name, const FType& forward_fn, const FType& backward_fn);
 
-  Maybe<TensorTuple> Apply(const TensorTuple& inputs) const;
-
- protected:
-  std::shared_ptr<FunctionOpExpr> op_;
+  static Maybe<TensorTuple> Apply(const std::string& name, const FType& forward_fn,
+                                  const FType& backward_fn, const TensorTuple& inputs);
 };
 
 }  // namespace one

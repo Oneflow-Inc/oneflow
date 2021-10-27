@@ -23,15 +23,14 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-AutogradFunctionBase::AutogradFunctionBase(const std::string& name, const FType& forward_fn,
-                                           const FType& backward_fn) {
-  op_ = CHECK_JUST(FunctionOpExpr::New(name, forward_fn, backward_fn));
-}
-
-Maybe<TensorTuple> AutogradFunctionBase::Apply(const TensorTuple& inputs) const {
+/*static*/ Maybe<TensorTuple> AutogradFunctionBase::Apply(const std::string& name,
+                                                          const FType& forward_fn,
+                                                          const FType& backward_fn,
+                                                          const TensorTuple& inputs) {
   std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>();
-  JUST(OpInterpUtil::Dispatch(*op_, inputs, outputs.get(), {}));
-  const HashSet<Tensor*>& non_differentiable_tensors = op_->state()->NonDifferentiableTensors();
+  const auto& op = JUST(FunctionOpExpr::New(name, forward_fn, backward_fn));
+  JUST(OpInterpUtil::Dispatch(*op, inputs, outputs.get(), {}));
+  const HashSet<Tensor*>& non_differentiable_tensors = op->state()->NonDifferentiableTensors();
   for (const auto& tensor : *outputs) {
     if (non_differentiable_tensors.find(tensor.get()) != non_differentiable_tensors.end()) {
       tensor->set_requires_grad(false);

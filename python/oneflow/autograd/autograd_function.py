@@ -50,7 +50,7 @@ class Function(AutogradFunctionBase):
     """
 
     def __init__(self):
-        super().__init__(self.__class__.__name__, self.forward, self.backward)
+        super().__init__()
 
     def __call__(self, *inputs):
         r"""
@@ -58,11 +58,12 @@ class Function(AutogradFunctionBase):
         """
         return self.apply(*inputs)
 
-    def apply(self, *inputs):
+    @classmethod
+    def apply(cls, *inputs):
         r"""
         Calculate output tensors and build backward graph.
         """
-        return super().apply(*inputs)
+        return AutogradFunctionBase.apply(cls.__name__, cls.forward, cls.backward, *inputs)
 
     @staticmethod
     def forward(ctx, *inputs):

@@ -42,7 +42,7 @@ class TestAutogradFunction(flow.unittest.TestCase):
         np_arr = np.random.randn(4, 5)
         a = flow.tensor(np_arr).requires_grad_()
         # forward
-        b = MyReLU().apply(a)
+        b = MyReLU.apply(a)
         test_case.assertTrue(np.allclose(b.numpy(), np_arr.clip(min=0.0)))
         # backward
         b.sum().backward()
