@@ -120,12 +120,6 @@ class ReduceLROnPlateau(object):
         )
         self._reset()
 
-    def _reset(self):
-        """Resets num_bad_steps counter and cooldown counter."""
-        self.best = self.mode_worse
-        self.cooldown_counter = 0
-        self.num_bad_steps = 0
-
     def step(self, metrics):
         """Step forward once.
 
@@ -220,3 +214,9 @@ class ReduceLROnPlateau(object):
                         "Epoch {:5d}: reducing learning rate"
                         " of group {} to {:.4e}.".format(epoch, i, new_lr)
                     )
+
+    def _reset(self):
+        """Resets num_bad_steps counter and cooldown counter."""
+        self.best = self.mode_worse
+        self.cooldown_counter = 0
+        self.num_bad_steps = 0
