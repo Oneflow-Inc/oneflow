@@ -28,6 +28,7 @@ namespace oneflow {
 
 class UserKernelComputeContext;
 class UserKernelInferContext;
+class UserKernelInitContext;
 
 class UserKernel final : public Kernel {
  public:
@@ -50,9 +51,12 @@ class UserKernel final : public Kernel {
 
   bool IsStateless() const override;
 
+  std::unique_ptr<std::shared_ptr<user_op::OpKernelCache>> opkernel_cache_ =
+      std::make_unique<std::shared_ptr<user_op::OpKernelCache>>();
   std::shared_ptr<user_op::OpKernelState> opkernel_state_;
   std::unique_ptr<const user_op::OpKernel> kernel_;
   std::unique_ptr<UserKernelComputeContext> ctx_;
+  std::unique_ptr<UserKernelInitContext> cache_ctx_;
   std::unique_ptr<UserKernelInferContext> infer_ctx_;
   std::unique_ptr<user_op::OpKernelInferCache> infer_cache_;
 #ifdef WITH_CUDA_GRAPHS

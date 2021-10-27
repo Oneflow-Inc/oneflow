@@ -459,9 +459,10 @@ struct LocalCallOpKernelUtil final {
     DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
-    user_op::OpKernelState* state;
-    TryInitOpKernelState(operand, device_ctx, &state);
-    JUST(OpKernelCompute(operand, device_ctx, state));
+    user_op::OpKernelState* state = nullptr;
+    user_op::OpKernelCache* cache = nullptr;
+    TryInitOpKernelState(operand, device_ctx, &state, &cache);
+    JUST(OpKernelCompute(operand, device_ctx, state, cache));
     JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
     operand->set_user_opkernel(nullptr);
     return Maybe<void>::Ok();
@@ -552,14 +553,15 @@ struct LocalCallOpKernelUtil final {
   }
 
   static inline void TryInitOpKernelState(LocalCallOpKernelPhyInstrOperand* operand,
-                                          DeviceCtx* device_ctx, user_op::OpKernelState** state) {
+                                          DeviceCtx* device_ctx, user_op::OpKernelState** state,
+                                          user_op::OpKernelCache** cache) {
     if (operand->op_interp_ctx().state) {
       *state = operand->op_interp_ctx().state.get();
-      return;
+      state = nullptr;
     }
-    operand->mut_opkernel()->TryInitOpKernelState(operand->user_opkernel(), device_ctx,
-                                                  operand->inputs(), operand->outputs(),
-                                                  operand->consistent_tensor_infer_result(), state);
+    operand->mut_opkernel()->TryInitOpKernelState(
+        operand->user_opkernel(), device_ctx, operand->inputs(), operand->outputs(),
+        operand->consistent_tensor_infer_result(), state, cache);
   }
 
   static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
@@ -578,10 +580,11 @@ struct LocalCallOpKernelUtil final {
   }
 
   static inline Maybe<void> OpKernelCompute(LocalCallOpKernelPhyInstrOperand* operand,
-                                            DeviceCtx* device_ctx, user_op::OpKernelState* state) {
+                                            DeviceCtx* device_ctx, user_op::OpKernelState* state,
+                                            const user_op::OpKernelCache* cache) {
     JUST(WithComputeContext(operand, device_ctx,
                             [&](user_op::KernelComputeContext* compute_ctx) -> Maybe<void> {
-                              operand->user_opkernel()->Compute(compute_ctx, state);
+                              operand->user_opkernel()->Compute(compute_ctx, state, cache);
                               return Maybe<void>::Ok();
                             }));
     return Maybe<void>::Ok();

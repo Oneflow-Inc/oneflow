@@ -221,9 +221,10 @@ class LocalUserKernelCreateContext final : public user_op::KernelCreateContext {
   const ComposedAttrMap* composed_attrs_;
 };
 
-class LocalUserKernelInitContext final : public user_op::KernelInitContext {
+class LocalUserKernelInitAndCacheContext final : public user_op::KernelInitContext,
+                                                 public user_op::KernelCacheContext {
  public:
-  explicit LocalUserKernelInitContext(
+  explicit LocalUserKernelInitAndCacheContext(
       DeviceCtx* device_ctx, const std::string& device_tag,
       const user_op::UserOpConfWrapper* user_op_conf,
       const std::shared_ptr<const ArgTuple>& input_arg_tuple,
@@ -238,7 +239,7 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
     if (device_ctx != nullptr) { stream_ctx_.reset(NewStreamContextAdapter(device_ctx)); }
     base_ctx_.Update(inputs, outputs, consistent_tensor_infer_result);
   }
-  ~LocalUserKernelInitContext() override = default;
+  ~LocalUserKernelInitAndCacheContext() override = default;
 
   DeviceCtx* device_ctx() override { return device_ctx_; }
   StreamContext* stream_ctx() override { return stream_ctx_.get(); }
@@ -479,19 +480,30 @@ void StatefulLocalOpKernel::TryInitOpKernelState(
     const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx, const EagerBlobObjectListPtr& inputs,
     const EagerBlobObjectListPtr& outputs,
     const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result,
-    user_op::OpKernelState** state) {
-  auto it = op_kernel_state_map_.find(op_kernel);
-  if (it != op_kernel_state_map_.end()) {
-    *state = it->second.get();
-    return;
-  }
-
-  auto init_ctx = std::make_shared<LocalUserKernelInitContext>(
+    user_op::OpKernelState** state, user_op::OpKernelCache** cache) {
+  auto init_ctx = std::make_shared<LocalUserKernelInitAndCacheContext>(
       device_ctx, op_conf_->device_tag(), user_op_conf_.get(), input_arg_tuple_, output_arg_tuple_,
       inputs, outputs, consistent_tensor_infer_result, composed_attrs_for_scheduler_thread());
-  auto created_state = op_kernel->CreateOpKernelState(init_ctx.get());
-  op_kernel_state_map_.emplace(op_kernel, created_state);
-  *state = created_state.get();
+
+  if (state != nullptr) {
+    auto it = op_kernel_state_map_.find(op_kernel);
+    if (it != op_kernel_state_map_.end()) {
+      *state = it->second.get();
+    } else {
+      auto created_state = op_kernel->CreateOpKernelState(init_ctx.get());
+      op_kernel_state_map_.emplace(op_kernel, created_state);
+      *state = created_state.get();
+    }
+  }
+
+  {
+    std::shared_ptr<user_op::OpKernelCache>& local_cache = op_kernel_cache_map_[op_kernel];
+    op_kernel->InitOpKernelCache(
+        init_ctx.get(),
+        user_op::OpKernelCache::AttrMayChanged | user_op::OpKernelCache::ShapeMayChanged,
+        &local_cache);
+    *cache = local_cache.get();
+  }
 }
 
 const user_op::InferTmpSizeFn& StatefulLocalOpKernel::GetInferTmpSizeFn(

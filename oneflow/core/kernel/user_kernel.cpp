@@ -122,7 +122,8 @@ class KernelCreateContext final : public user_op::KernelCreateContext {
   user_op::UserOpConfWrapper user_op_conf_;
 };
 
-class UserKernelInitContext final : public user_op::KernelInitContext {
+class UserKernelInitContext final : public user_op::KernelInitContext,
+                                    public user_op::KernelCacheContext {
  public:
   explicit UserKernelInitContext(DeviceCtx* device_ctx, StreamContext* stream_ctx,
                                  const KernelConf& kernel_conf)
@@ -480,7 +481,7 @@ BnTensorPair MakeBnTensorPair(const std::string& bn,
 
 }  // namespace
 
-class UserKernelComputeContext final : public user_op::KernelComputeContext {
+class UserKernelComputeContext : public user_op::KernelComputeContext {
  public:
   explicit UserKernelComputeContext(DeviceCtx* device_ctx, StreamContext* stream_ctx,
                                     const KernelConf& kernel_conf)
@@ -599,6 +600,7 @@ UserKernel::~UserKernel() = default;
 void UserKernel::InitUserKernel(StreamContext* stream_ctx, DeviceCtx* device_ctx) {
   ctx_.reset(new UserKernelComputeContext(device_ctx, stream_ctx, kernel_conf()));
   infer_ctx_.reset(new UserKernelInferContext(device_ctx, stream_ctx, kernel_conf()));
+  cache_ctx_.reset(new UserKernelInitContext(device_ctx, stream_ctx, kernel_conf()));
   infer_cache_.reset(new user_op::OpKernelInferCache(kernel_conf(), this));
   {
     const std::string& op_type_name =
@@ -639,7 +641,12 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
   }
 #endif  // WITH_CUDA_GRAPHS
 
-  kernel_->Compute(ctx_.get(), opkernel_state);
+  if (updated) {
+    kernel_->InitOpKernelCache(cache_ctx_.get(), user_op::OpKernelCache::ShapeMayChanged,
+                               &*opkernel_cache_);
+  }
+
+  kernel_->Compute(ctx_.get(), opkernel_state, (*opkernel_cache_).get());
 
 #ifdef WITH_CUDA_GRAPHS
   if (cuda_graph_exec_ && current_scope_capturing) {
@@ -753,10 +760,10 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   std::shared_ptr<user_op::OpKernelState> new_opkernel_state;
   CHECK_NOTNULL(device_ctx);
   std::unique_ptr<StreamContext> stream_ctx(NewStreamContextAdapter(device_ctx));
+  UserKernelInitContext init_ctx(device_ctx, stream_ctx.get(), kernel_conf());
   if (old_opkernel_state) {
     new_opkernel_state = old_opkernel_state;
   } else {
-    UserKernelInitContext init_ctx(device_ctx, stream_ctx.get(), kernel_conf());
     new_opkernel_state = kernel_->CreateOpKernelState(&init_ctx);
   }
 
@@ -768,7 +775,11 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   // TODO(lixinqi): refactor to a lightweight KernelComputeContext
   UserKernelComputeContext compute_ctx(device_ctx, stream_ctx.get(), kernel_conf());
   compute_ctx.UpdateTensorWithCorrBlob(BnInOp2Blob);
-  kernel_->Compute(&compute_ctx, new_opkernel_state.get());
+  std::shared_ptr<user_op::OpKernelCache> cache;
+  kernel_->InitOpKernelCache(
+      &init_ctx, user_op::OpKernelCache::AttrMayChanged | user_op::OpKernelCache::ShapeMayChanged,
+      &cache);
+  kernel_->Compute(&compute_ctx, new_opkernel_state.get(), cache.get());
   return new_opkernel_state;
 }
 

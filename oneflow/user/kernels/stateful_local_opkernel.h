@@ -38,7 +38,7 @@ namespace one {
 class LocalUserKernelBaseContext;
 class LocalUserKernelRegContext;
 class LocalUserKernelCreateContext;
-class LocalUserKernelInitContext;
+class LocalUserKernelInitAndCacheContext;
 class LocalUserOpInferContext;
 
 class ConsistentTensorInferResult;
@@ -434,7 +434,7 @@ class StatefulLocalOpKernel final {
       const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx,
       const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
       const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result,
-      user_op::OpKernelState** state);
+      user_op::OpKernelState** state, user_op::OpKernelCache** cache);
 
   vm::EagerBlobObject* mut_temp_blob_object();
 
@@ -468,6 +468,7 @@ class StatefulLocalOpKernel final {
   HashMap<const user_op::OpKernelRegistryResult*, std::shared_ptr<const user_op::OpKernel>>
       op_kernel_map_;
   HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelState>> op_kernel_state_map_;
+  HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelCache>> op_kernel_cache_map_;
   HashMap<const user_op::OpKernel*, const user_op::InferTmpSizeFn*> infer_tmp_size_fn_map_;
   std::unique_ptr<vm::EagerBlobObject> tmp_blob_object_;
   std::vector<int64_t> input_tuple_indexes4const_ibns_;
