@@ -14,14 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/util/host_blas_interface.h"
-#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 
 namespace {
 
 template<typename T>
-static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE trans_a,
+static void Gemm(DeviceCtx* /*ctx*/, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE trans_a,
                  enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
                  const double alpha, const T* a, const T* b, const double beta, T* c) {
   const int lda = (trans_a == CblasNoTrans) ? k : m;
@@ -30,20 +29,6 @@ static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSP
 
   cblas_gemm<T>(order, trans_a, trans_b, m, n, k, static_cast<T>(alpha), a, lda, b, ldb,
                 static_cast<T>(beta), c, ldc);
-}
-
-template<typename T>
-void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
-                     const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
-                     int batch_size, int m, int n, int k, const double alpha, const T* a,
-                     const T* b, const double beta, T* c) {
-  const int a_stride = m * k;
-  const int b_stride = k * n;
-  const int c_stride = m * n;
-  FOR_RANGE(int32_t, i, 0, batch_size) {
-    BlasIf<DeviceType::kCPU>::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a + i * a_stride,
-                                     b + i * b_stride, beta, c + i * c_stride);
-  }
 }
 
 }  // namespace
@@ -60,24 +45,6 @@ void BlasIf<DeviceType::kCPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans
                                       const int k, const double alpha, const double* a,
                                       const double* b, const double beta, double* c) {
   Gemm<double>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
-}
-
-void BlasIf<DeviceType::kCPU>::OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                                             enum CBLAS_TRANSPOSE trans_b, const int batch_size,
-                                             const int m, const int n, const int k,
-                                             const double alpha, const float* a, const float* b,
-                                             const double beta, float* c) {
-  BatchedGemmImpl<float>(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha, a, b,
-                         beta, c);
-}
-
-void BlasIf<DeviceType::kCPU>::OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                                             enum CBLAS_TRANSPOSE trans_b, const int batch_size,
-                                             const int m, const int n, const int k,
-                                             const double alpha, const double* a, const double* b,
-                                             const double beta, double* c) {
-  BatchedGemmImpl<double>(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha, a, b,
-                          beta, c);
 }
 
 }  // namespace oneflow
