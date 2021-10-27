@@ -325,7 +325,7 @@ def OneFlow_AbsOp : OneFlow_IdempotentBaseOp<"abs", []> {}
 
 def OneFlow_CeilOp : OneFlow_IdempotentBaseOp<"ceil", []> {}
 
-def OneFlow_floorOp : OneFlow_IdempotentBaseOp<"floor", []> {}
+def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", []> {}
 
 // TODO: pattern match constant_like to create ones_like when constant_like is port to user op
 def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", []> {}
