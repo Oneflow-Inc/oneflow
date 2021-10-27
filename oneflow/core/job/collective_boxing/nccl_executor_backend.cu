@@ -225,6 +225,7 @@ class StreamCtx {
   }
 
   void PollEvent() {
+    CudaCurrentDeviceGuard guard(device_id_);
     while (true) {
       std::pair<cudaEvent_t, std::function<void()>> cb_event;
       ChannelStatus status = cb_event_chan_.Receive(&cb_event);

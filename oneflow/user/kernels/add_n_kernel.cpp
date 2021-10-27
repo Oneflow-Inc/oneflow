@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/primitive/include/add.h"
-#include "oneflow/core/primitive/cuda/cuda_graph_support.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 

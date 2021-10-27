@@ -42,6 +42,7 @@ locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
 locals()["bfloat16"] = oneflow._oneflow_internal.bfloat16
 from oneflow.version import __version__
+from oneflow.version import __git_commit__
 
 _DEPRECATED = set()
 
@@ -77,6 +78,7 @@ from oneflow._C import greater_equal as ge
 from oneflow._C import logical_and
 from oneflow._C import logical_or
 from oneflow._C import logical_xor
+from oneflow._C import logical_not
 from oneflow._C import gelu
 from oneflow._C import mish
 from oneflow._C import sigmoid
@@ -134,6 +136,8 @@ from oneflow._C import argmax
 from oneflow._C import argmin
 from oneflow._C import std
 from oneflow._C import var
+from oneflow._C import stack
+from oneflow._C import squeeze
 
 from . import sbp
 import atexit
@@ -242,6 +246,7 @@ from oneflow.framework.generator import default_generator, manual_seed
 from oneflow.framework.scope_util import api_current_scope as current_scope
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
+
 from oneflow.nn.modules.pooling import (
     adaptive_avg_pool1d,
     adaptive_avg_pool2d,
@@ -260,6 +265,7 @@ from oneflow.nn.modules.constant import full_op as full
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow.nn.modules.expand import expand_op as expand
+from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flatten import _flow_flatten as flatten
 from oneflow.nn.modules.flip import flip_op as flip
 from oneflow.nn.modules.floor import floor_op as floor
@@ -305,8 +311,6 @@ from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.slice import logical_slice_assign_op as logical_slice_assign
 from oneflow.nn.modules.sort import sort_op as sort
 from oneflow.nn.modules.split import split_op as split
-from oneflow.nn.modules.squeeze import squeeze_op as squeeze
-from oneflow.nn.modules.stack import stack
 from oneflow.nn.modules.eye import eye_op as eye
 from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (

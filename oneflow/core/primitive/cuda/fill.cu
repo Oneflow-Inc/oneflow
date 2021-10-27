@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/primitive/include/fill.h"
 #include "oneflow/core/primitive/cuda/type_seq.h"
-#include "oneflow/core/primitive/cuda/cuda_graph_support.h"
 #include "oneflow/core/stream/cuda_stream_context.h"
 
 namespace oneflow {
@@ -100,7 +99,7 @@ void LaunchFill(cudaStream_t stream, T* dst, T value, size_t count) {
 }
 
 template<typename T>
-class FillImpl : public Fill, public CudaGraphSupport {
+class FillImpl : public Fill {
  public:
   OF_DISALLOW_COPY_AND_MOVE(FillImpl);
   FillImpl() = default;

@@ -40,7 +40,8 @@ void DecodeOneRawOFRecord(const Feature& feature, T* dptr, int64_t sample_elem_c
     const auto& value0 = feature.bytes_list().value(0);
     auto in_dptr = reinterpret_cast<const int8_t*>(value0.c_str());
     sample_elem_cnt = std::min<int64_t>(sample_elem_cnt, value0.size());
-    CopyElem<int8_t, T>(in_dptr, dptr, sample_elem_cnt);
+    std::transform(in_dptr, in_dptr + sample_elem_cnt, dptr,
+                   [](int8_t v) { return static_cast<T>(v); });
   }
 #define DEFINE_ONE_ELIF(PbT, CppT)                                                       \
   else if (feature.has_##PbT##_list()) {                                                 \
@@ -56,7 +57,8 @@ void DecodeOneRawOFRecord(const Feature& feature, T* dptr, int64_t sample_elem_c
         CHECK_EQ(sample_elem_cnt, list.value_size());                                    \
       }                                                                                  \
     }                                                                                    \
-    CopyElem<CppT, T>(in_dptr, dptr, sample_elem_cnt);                                   \
+    std::transform(in_dptr, in_dptr + sample_elem_cnt, dptr,                             \
+                   [](CppT v) { return static_cast<T>(v); });                            \
     if (padding_elem_num > 0) {                                                          \
       std::memset(dptr + sample_elem_cnt, 0, padding_elem_num * sizeof(T));              \
     }                                                                                    \

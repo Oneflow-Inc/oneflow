@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/primitive/include/add.h"
 #include "oneflow/core/primitive/cuda/type_seq.h"
-#include "oneflow/core/primitive/cuda/cuda_graph_support.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/stream/cuda_stream_context.h"
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
@@ -85,7 +84,7 @@ void DispatchLaunch(cudaStream_t stream, const T* const* srcs, size_t arity, T* 
 }
 
 template<typename T>
-class AddImpl : public Add, public CudaGraphSupport {
+class AddImpl : public Add {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AddImpl);
   AddImpl() = default;
