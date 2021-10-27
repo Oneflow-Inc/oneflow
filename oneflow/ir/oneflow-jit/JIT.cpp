@@ -3,6 +3,8 @@
 #include "OneFlow/OneFlowDialect.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/framework/user_op_def.h"
 
 namespace oneflow {
 
@@ -72,8 +74,12 @@ LogicalResult JitImporter::InsertOpResults(const ::oneflow::OperatorConf& op_con
 }
 ::oneflow::AttrType JitImporter::QueryAttrType(const std::string& op_type_name,
                                                const std::string& attr_name) {
-  //  TODO: implement this
-  return ::oneflow::AttrType::kAtDataType;
+  const user_op::OpRegistryResult* val =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
+  CHECK(val) << " Cannot find op_type_name: " << op_type_name;
+  user_op::UserOpDefWrapper op_def(val->op_def);
+  CHECK(op_def.IsAttrName(attr_name)) << attr_name << " not a attr name for op: " << op_type_name;
+  return op_def.GetAttrType(attr_name);
 }
 
 mlir::FuncOp JitImporter::GetOrInsertFunc(const std::string& func_name, const TensorTuple& inputs,
