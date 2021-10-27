@@ -166,21 +166,6 @@ class ReduceLROnPlateau(object):
         else:  # mode == 'max' and epsilon_mode == 'abs':
             return a > best + self.threshold
 
-    def _init_is_better(self, mode, threshold, threshold_mode):
-        if mode not in {"min", "max"}:
-            raise ValueError("mode " + mode + " is unknown!")
-        if threshold_mode not in {"rel", "abs"}:
-            raise ValueError("threshold mode " + threshold_mode + " is unknown!")
-
-        if mode == "min":
-            self.mode_worse = inf
-        else:  # mode == 'max':
-            self.mode_worse = -inf
-
-        self.mode = mode
-        self.threshold = threshold
-        self.threshold_mode = threshold_mode
-
     def state_dict(self):
         """Returns the state of the scheduler as a :class:`dict`.
 
@@ -220,3 +205,18 @@ class ReduceLROnPlateau(object):
         self.best = self.mode_worse
         self.cooldown_counter = 0
         self.num_bad_steps = 0
+
+    def _init_is_better(self, mode, threshold, threshold_mode):
+        if mode not in {"min", "max"}:
+            raise ValueError("mode " + mode + " is unknown!")
+        if threshold_mode not in {"rel", "abs"}:
+            raise ValueError("threshold mode " + threshold_mode + " is unknown!")
+
+        if mode == "min":
+            self.mode_worse = inf
+        else:  # mode == 'max':
+            self.mode_worse = -inf
+
+        self.mode = mode
+        self.threshold = threshold
+        self.threshold_mode = threshold_mode
