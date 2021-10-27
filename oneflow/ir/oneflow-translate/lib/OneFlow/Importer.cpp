@@ -354,7 +354,6 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
       out_types.push_back(GetTensorTypeOfLbn(output_lbn));
     }
   }
-  llvm::errs() << "[ProcessUserOp] " << op_type_name << "\n";
   if (op_type_name == "constant") {
     if (failed(AddOperandSegmentSizes(0, op.ctrl_in_op_name_size(), attr_vec))) {
       return failure();
