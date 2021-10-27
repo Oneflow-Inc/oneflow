@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/job.pb.h"
-#include "oneflow/core/common/id_util.h"
+#include "oneflow/core/stream/stream_id.h"
 
 namespace oneflow {
 

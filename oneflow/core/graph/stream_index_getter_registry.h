@@ -16,12 +16,12 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_STREAM_INDEX_GETTER_REGISTRY_H_
 #define ONEFLOW_CORE_GRAPH_STREAM_INDEX_GETTER_REGISTRY_H_
 
-#include <functional>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/device/stream_index.h"
-#include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/common/device_type.h"
+#include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/stream/stream_index_generator.h"
+#include <functional>
 
 namespace oneflow {
 

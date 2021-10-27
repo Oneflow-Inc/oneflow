@@ -20,8 +20,8 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/device/stream_index.h"
 #include "oneflow/core/graph/task_id_generator.h"
+#include "oneflow/core/stream/stream_index_generator.h"
 
 namespace oneflow {
 

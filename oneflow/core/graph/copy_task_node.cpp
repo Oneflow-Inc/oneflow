@@ -13,10 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/copy_task_node.h"
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/common/id_util.h"
+#include "oneflow/core/stream/stream_id.h"
 
 namespace oneflow {
 

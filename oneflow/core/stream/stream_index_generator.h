@@ -16,9 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_DEVICE_STREAM_INDEX_H_
 #define ONEFLOW_CORE_DEVICE_STREAM_INDEX_H_
 
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/common/auto_registration_factory.h"
-#include "oneflow/core/common/id_util.h"
+#include "oneflow/core/stream/stream_id.h"
 
 namespace oneflow {
 

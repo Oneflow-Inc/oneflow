@@ -16,8 +16,7 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/naive_b2p_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing_zeros_task_node.h"
-#include "oneflow/core/common/id_util.h"
-#include "oneflow/core/device/stream_index.h"
+#include "oneflow/core/stream/stream_index_generator.h"
 
 namespace oneflow {
 

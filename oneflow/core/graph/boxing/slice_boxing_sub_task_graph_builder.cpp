@@ -13,14 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/boxing/slice_boxing_sub_task_graph_builder.h"
-#include "oneflow/core/register/tensor_slice_view.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/graph/boxing/slice_boxing_sub_task_graph_builder.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
+#include "oneflow/core/register/tensor_slice_view.h"
 #include "oneflow/core/job/nd_sbp_util.h"
-#include "oneflow/core/common/id_util.h"
-#include "oneflow/core/device/stream_index.h"
+#include "oneflow/core/stream/stream_index_generator.h"
 
 namespace oneflow {
 
