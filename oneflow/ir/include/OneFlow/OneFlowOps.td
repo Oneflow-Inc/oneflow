@@ -413,9 +413,9 @@ def OneFlow_MlirJitOp : OneFlow_UserBaseOp<"mlir_jit", [
 #define ONEFLOW_PATTERNS
 
 def IsNotNestedInJit: Constraint<CPred<"(!$0.getDefiningOp()->getParentOfType<FuncOp>()->hasAttr(\"llvm.emit_c_interface\"))">, "">;
-def OutlineFunction : NativeCodeCall<"OutlineFunction($_builder, $0, $1)">;
+def OutlineCastScale : NativeCodeCall<"OutlineCastScale($_builder, $0, $1)">;
 // TODO: remove attr binding if possible
-def OutlineFuseCastScale : Pat<
+def CastScalePattern : Pat<
   (
     OneFlow_ScalarMulByTensorOp : $mul_op
     (
@@ -436,7 +436,7 @@ def OutlineFuseCastScale : Pat<
     $mul_scope_symbol_id,
     $mul_hierarchy
   ),
-  (OutlineFunction $mul_op, $cast_op),
+  (OutlineCastScale $mul_op, $cast_op),
   [
     (IsNotNestedInJit $mul_op)
   ]
