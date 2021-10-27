@@ -71,7 +71,7 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
   auto* stream_index_generator =
       Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetOrCreateGenerator(device_id);
   auto stream_index = stream_index_generator->GenerateStreamIndex("NCCL");
-  const int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
+  const int64_t thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
   node->Init(machine_id, thrd_id, lbi, op_conf);
 }
 
@@ -196,7 +196,7 @@ class NcclCollectiveBoxingP2SNoncontinuousSubTskGphBuilder final : public SubTsk
         auto* stream_index_generator =
             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetOrCreateGenerator(device_id);
         auto stream_index = stream_index_generator->GenerateStreamIndex("compute");
-        const int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
+        const int64_t thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
         TaskNode* in_node = sorted_in_tasks.at(i);
         CollectiveBoxingPackTaskNode* pack_node =
             ctx->task_graph()->NewNode<CollectiveBoxingPackTaskNode>();
@@ -298,7 +298,7 @@ class NcclCollectiveBoxingS2BNoncontinuousSubTskGphBuilder final : public SubTsk
         auto* stream_index_generator =
             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetOrCreateGenerator(device_id);
         auto stream_index = stream_index_generator->GenerateStreamIndex("compute");
-        const int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
+        const int64_t thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
         TaskNode* in_node = sorted_in_tasks.at(i);
         TaskNode* in_node_proxy =
             ctx->task_graph()->GetProxyNode(in_node, lbi, out_parallel_desc, i);
@@ -415,7 +415,7 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
                 ->GenerateStreamIndex("cpu_compute",
                                       Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum());
         slice_node->Init(lbi, out_slice, kSliceBoxingTaskModeCopy, in_machine_id,
-                         SerializeStreamIdToInt64(StreamId(device_id, stream_index)));
+                         EncodeStreamIdToInt64(StreamId(device_id, stream_index)));
         slice_node->ConnectToSrcNodeWithSlice(in_node, ctx->task_graph()->NewEdge(), in_slice);
         // copy to dst gpu
         TaskNode* slice_node_proxy =
@@ -530,7 +530,7 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
         auto* stream_index_generator =
             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetOrCreateGenerator(device_id);
         auto stream_index = stream_index_generator->GenerateStreamIndex("compute");
-        const int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
+        const int64_t thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
         TaskNode* in_node = sorted_in_tasks.at(i);
         CollectiveBoxingPackTaskNode* pack_node =
             ctx->task_graph()->NewNode<CollectiveBoxingPackTaskNode>();

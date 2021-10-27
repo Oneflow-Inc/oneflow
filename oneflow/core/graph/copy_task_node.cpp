@@ -46,7 +46,7 @@ void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, const DeviceId& device_i
   set_machine_id(device_id.node_index());
   auto* stream_index_generator =
       Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetOrCreateGenerator(device_id);
-  StreamId::stream_index_t stream_index = 0;
+  StreamId::index_t stream_index = 0;
   if (copy_type == CopyHdOpConf::H2D) {
     stream_index = stream_index_generator->GenerateStreamIndex("H2D");
   } else if (copy_type == CopyHdOpConf::D2H) {
@@ -54,7 +54,7 @@ void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, const DeviceId& device_i
   } else {
     UNIMPLEMENTED();
   }
-  set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
+  set_thrd_id(EncodeStreamIdToInt64(StreamId{device_id, stream_index}));
   set_lbi(lbi);
 }
 
@@ -90,7 +90,7 @@ void CopyCommNetTaskNode::Init(int64_t machine_id, const LogicalBlobId& lbi) {
   auto* stream_index_generator =
       Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetOrCreateGenerator(device_id);
   StreamId stream_id{device_id, stream_index_generator->GenerateStreamIndex("commnet")};
-  set_thrd_id(SerializeStreamIdToInt64(stream_id));
+  set_thrd_id(EncodeStreamIdToInt64(stream_id));
   set_lbi(lbi);
 }
 

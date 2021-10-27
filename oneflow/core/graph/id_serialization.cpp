@@ -34,45 +34,6 @@ constexpr size_t kInt64Bits = sizeof(int64_t) * CHAR_BIT;
 
 }  // namespace
 
-namespace stream_id_const {
-
-constexpr size_t kDeviceIndexShift = StreamId::kStreamIndexBits;
-constexpr size_t kDeviceTypeShift = kDeviceIndexShift + DeviceId::kDeviceIndexBits;
-constexpr size_t kRankShift = kDeviceTypeShift + DeviceId::kDeviceTypeBits;
-static_assert(kInt64Bits == kRankShift + DeviceId::kNodeIndexBits + TaskId::kTaskIndexBits, "");
-
-constexpr int64_t kStreamIndexInt64Mask = (int64_t{1} << StreamId::kStreamIndexBits) - 1;
-constexpr int64_t kDeviceIndexInt64Mask = ((int64_t{1} << DeviceId::kDeviceIndexBits) - 1)
-                                          << kDeviceIndexShift;
-constexpr int64_t kDeviceTypeInt64Mask = ((int64_t{1} << DeviceId::kDeviceTypeBits) - 1)
-                                         << kDeviceTypeShift;
-constexpr int64_t kRankInt64Mask = ((int64_t{1} << DeviceId::kNodeIndexBits) - 1) << kRankShift;
-
-}  // namespace stream_id_const
-
-int64_t SerializeStreamIdToInt64(const StreamId& stream_id) {
-  int64_t id = static_cast<int64_t>(stream_id.stream_index());
-  id |= static_cast<int64_t>(stream_id.device_id().device_index())
-        << stream_id_const::kDeviceIndexShift;
-  id |= static_cast<int64_t>(stream_id.device_id().device_type())
-        << stream_id_const::kDeviceTypeShift;
-  id |= static_cast<int64_t>(stream_id.device_id().node_index()) << stream_id_const::kRankShift;
-  return id;
-}
-
-StreamId DeserializeStreamIdFromInt64(int64_t stream_id_val) {
-  int64_t rank = (stream_id_val & stream_id_const::kRankInt64Mask) >> stream_id_const::kRankShift;
-  int64_t device_type =
-      (stream_id_val & stream_id_const::kDeviceTypeInt64Mask) >> stream_id_const::kDeviceTypeShift;
-  int64_t device_index = (stream_id_val & stream_id_const::kDeviceIndexInt64Mask)
-                         >> stream_id_const::kDeviceIndexShift;
-  int64_t stream_index = (stream_id_val & stream_id_const::kStreamIndexInt64Mask);
-
-  DeviceId device_id{static_cast<DeviceId::index_t>(rank), static_cast<DeviceType>(device_type),
-                     static_cast<DeviceId::index_t>(device_index)};
-  return StreamId{device_id, static_cast<StreamId::stream_index_t>(stream_index)};
-}
-
 namespace task_id_const {
 
 constexpr size_t kStreamIndexShift = TaskId::kTaskIndexBits;
@@ -116,7 +77,7 @@ TaskId DeserializeTaskIdFromInt64(int64_t task_id_val) {
   int64_t task_index = task_id_val & task_id_const::kTaskIndexInt64Mask;
   DeviceId device_id{static_cast<DeviceId::index_t>(rank), static_cast<DeviceType>(device_type),
                      static_cast<DeviceId::index_t>(device_index)};
-  StreamId stream_id{device_id, static_cast<StreamId::stream_index_t>(stream_index)};
+  StreamId stream_id{device_id, static_cast<StreamId::index_t>(stream_index)};
   return TaskId{stream_id, static_cast<TaskId::task_index_t>(task_index)};
 }
 

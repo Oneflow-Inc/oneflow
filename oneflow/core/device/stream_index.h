@@ -24,18 +24,18 @@ namespace oneflow {
 
 class StreamIndexGenerator final {
  public:
-  using stream_index_t = StreamId::stream_index_t;
+  using index_t = StreamId::index_t;
 
   StreamIndexGenerator();
   OF_DISALLOW_COPY_AND_MOVE(StreamIndexGenerator);
   ~StreamIndexGenerator() = default;
 
-  stream_index_t GenerateStreamIndex();
-  stream_index_t GenerateStreamIndex(const std::string& name, size_t num = 1);
+  index_t GenerateStreamIndex();
+  index_t GenerateStreamIndex(const std::string& name, size_t num = 1);
 
  private:
-  std::atomic<stream_index_t> next_stream_index_;
-  HashMap<std::string, std::pair<stream_index_t, size_t>> name2round_robin_range_;
+  std::atomic<index_t> next_stream_index_;
+  HashMap<std::string, std::pair<index_t, size_t>> name2round_robin_range_;
   HashMap<std::string, int> name2round_robine_offset;
   std::mutex named_rr_range_mutex_;
   std::mutex named_rr_offset_mutex_;

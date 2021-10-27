@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/device/device_id.h"
+#include "oneflow/core/stream/stream_id.h"
 
 namespace oneflow {
 
@@ -31,35 +32,6 @@ namespace oneflow {
 // | -------------------------------- 43 ----------------------------------- | --- 21 --- |
 // |                                      TaskId                                          |
 // | ----------------------------------- 64 bit ----------------------------------------- |
-
-class StreamId {
- public:
-  using stream_index_t = uint32_t;
-
-  constexpr static size_t kStreamIndexBits = 12;
-  constexpr static stream_index_t kMaxStreamIndex =
-      (stream_index_t{1} << kStreamIndexBits) - stream_index_t{1};
-
-  StreamId(const DeviceId& device_id, stream_index_t stream_index)
-      : device_id_(device_id), stream_index_(stream_index) {
-    CHECK_LE(stream_index, kMaxStreamIndex);
-  }
-  const DeviceId& device_id() const { return device_id_; }
-  stream_index_t stream_index() const { return stream_index_; }
-  bool operator==(const StreamId& rhs) const {
-    return device_id_ == rhs.device_id_ && stream_index_ == rhs.stream_index_;
-  }
-  bool operator!=(const StreamId& rhs) const { return !(*this == rhs); }
-  size_t hash() const {
-    size_t hash = device_id_.hash();
-    HashCombine(&hash, std::hash<stream_index_t>{}(stream_index_));
-    return hash;
-  }
-
- private:
-  DeviceId device_id_;
-  stream_index_t stream_index_;
-};
 
 class TaskId {
  public:
@@ -93,11 +65,6 @@ class TaskId {
 }  // namespace oneflow
 
 namespace std {
-
-template<>
-struct hash<oneflow::StreamId> {
-  size_t operator()(const oneflow::StreamId& stream_id) const { return stream_id.hash(); }
-};
 
 template<>
 struct hash<oneflow::TaskId> {

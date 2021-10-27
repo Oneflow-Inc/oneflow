@@ -25,7 +25,7 @@ int64_t IDMgr::MachineId4ActorId(int64_t actor_id) const {
 }
 
 int64_t IDMgr::ThrdId4ActorId(int64_t actor_id) const {
-  return SerializeStreamIdToInt64(DeserializeTaskIdFromInt64(actor_id).stream_id());
+  return EncodeStreamIdToInt64(DeserializeTaskIdFromInt64(actor_id).stream_id());
 }
 
 IDMgr::IDMgr() {

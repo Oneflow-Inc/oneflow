@@ -974,7 +974,7 @@ void PlanUtil::PopulateOpAttibute(
 }
 
 /*static*/ StreamId PlanUtil::GetStreamId(const TaskProto& task) {
-  return DeserializeStreamIdFromInt64(task.thrd_id());
+  return DecodeStreamIdFromInt64(task.thrd_id());
 }
 
 /*static*/ int64_t PlanUtil::GetDeviceIndex(const TaskProto& task) {

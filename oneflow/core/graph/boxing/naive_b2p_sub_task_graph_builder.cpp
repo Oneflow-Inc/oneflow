@@ -66,7 +66,7 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
               Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetOrCreateGenerator(
                   device_id);
           auto stream_index = stream_index_generator->GenerateStreamIndex("compute");
-          thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
+          thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
 #else
           UNIMPLEMENTED();
 #endif
@@ -79,7 +79,7 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
                   ->GetOrCreateGenerator(device_id)
                   ->GenerateStreamIndex("cpu_compute",
                                         Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum());
-          thrd_id = SerializeStreamIdToInt64(StreamId(device_id, stream_index));
+          thrd_id = EncodeStreamIdToInt64(StreamId(device_id, stream_index));
         } else {
           UNIMPLEMENTED();
         }

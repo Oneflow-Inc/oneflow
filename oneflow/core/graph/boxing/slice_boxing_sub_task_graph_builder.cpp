@@ -67,7 +67,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
               ->GetOrCreateGenerator(device_id)
               ->GenerateStreamIndex("cpu_compute",
                                     Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum());
-      thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
+      thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
     } else {
       DeviceId device_id{
           static_cast<DeviceId::index_t>(machine_id), pd.device_type(),
@@ -76,7 +76,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
                               ->GetStreamIndexGeneratorManager()
                               ->GetOrCreateGenerator(device_id)
                               ->GenerateStreamIndex("compute");
-      thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
+      thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
     }
 
     node->Init(lbi, slice, mode, machine_id, thrd_id);

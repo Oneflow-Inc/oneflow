@@ -20,8 +20,6 @@ limitations under the License.
 
 namespace oneflow {
 
-int64_t SerializeStreamIdToInt64(const StreamId&);
-StreamId DeserializeStreamIdFromInt64(int64_t);
 int64_t SerializeTaskIdToInt64(const TaskId&);
 TaskId DeserializeTaskIdFromInt64(int64_t);
 

@@ -237,7 +237,7 @@ void TaskNode::ToProto(TaskProto* task_proto) const {
 }
 
 MemZoneId TaskNode::MemZoneId121() const {
-  StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id_);
+  StreamId stream_id = DecodeStreamIdFromInt64(thrd_id_);
   return MemZoneId{stream_id.device_id()};
 }
 
@@ -338,7 +338,7 @@ void TaskNode::ConsumeRegst(const std::string& name, const std::shared_ptr<Regst
 void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
-  StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id_);
+  StreamId stream_id = DecodeStreamIdFromInt64(thrd_id_);
   new_task_id_.reset(new TaskId(Global<IDMgr>::Get()->GetTaskIdGenerator()->Generate(stream_id)));
   task_id_ = SerializeTaskIdToInt64(*new_task_id_);
 }

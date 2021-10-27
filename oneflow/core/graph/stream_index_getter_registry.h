@@ -27,15 +27,15 @@ namespace oneflow {
 
 class CompTaskNode;
 
-using StreamIndexGetterFn = std::function<StreamId::stream_index_t(DeviceId)>;
-using StreamIndexGeneratorFn = std::function<StreamId::stream_index_t(StreamIndexGenerator*)>;
+using StreamIndexGetterFn = std::function<StreamId::index_t(DeviceId)>;
+using StreamIndexGeneratorFn = std::function<StreamId::index_t(StreamIndexGenerator*)>;
 
 class StreamIndexGetterRegistry final {
  public:
   StreamIndexGetterRegistry(DeviceType dev_type, TaskType task_type)
       : dev_task_type_(std::make_pair(dev_type, task_type)) {}
   StreamIndexGetterRegistry& SetStreamIndexGetterFn(const StreamIndexGeneratorFn& gen) {
-    auto fn = [gen](DeviceId device_id) -> StreamId::stream_index_t {
+    auto fn = [gen](DeviceId device_id) -> StreamId::index_t {
       auto* generator =
           Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetOrCreateGenerator(device_id);
       return gen(generator);
