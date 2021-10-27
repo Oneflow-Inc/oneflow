@@ -176,7 +176,6 @@ void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op_conf,
   }
   // TODO: refine here
   auto GetLogicalBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
-    LOG(ERROR) << "[GetLogicalBlobDesc4BnInOp] " << bn;
     if (lbi2logical_blob_desc_.find(bn) == lbi2logical_blob_desc_.end()) {
       auto operand_it = operand_mapping_.find(bn);
       if (operand_it == operand_mapping_.end()) {
