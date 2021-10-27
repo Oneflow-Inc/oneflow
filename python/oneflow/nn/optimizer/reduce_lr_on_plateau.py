@@ -131,13 +131,10 @@ class ReduceLROnPlateau(object):
 
         Arguments:
             metrics (float): a metrics quantity of Measuring the effect of model training.
-            epoch (int): the step of current training or the steps wanted to start.
         """
         # convert `metrics` to float, in case it's a zero-dim Tensor
         current = float(metrics)
-        if epoch is None:
-            epoch = self.last_step + 1
-        self.last_step = epoch
+        self.last_step = self.last_step + 1
 
         if self.is_better(current, self.best):
             self.best = current
@@ -150,7 +147,7 @@ class ReduceLROnPlateau(object):
             self.num_bad_steps = 0  # ignore any bad epochs in cooldown
 
         if self.num_bad_steps > self.patience:
-            self._reduce_lr(epoch)
+            self._reduce_lr(self.last_step)
             self.cooldown_counter = self.cooldown
             self.num_bad_steps = 0
 
