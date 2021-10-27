@@ -25,7 +25,7 @@ OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context) {
 LogicalResult JitImporter::AppendDataInOperand(const std::string& key, const int32_t index,
                                                const std::string& lbn,
                                                std::vector<::mlir::Value>& operand_vec) {
-  operand_vec.push_back(GetResultByBnAndIndex(key, index));
+  operand_vec.push_back(GetResultByBnAndIndex(key, index).getValue());
   return success();
 }
 LogicalResult JitImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
@@ -149,22 +149,18 @@ void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op_conf,
   HashMap<std::string, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   auto op = CHECK_JUST(ConstructOp(op_conf));
   // TODO: refactor using GetResultByBnAndIndex
-  for (auto pair : llvm::zip(input_arg_tuple->indexed_bns(), inputs)) {
+  for (auto pair : llvm::zip(input_arg_tuple->indexed_bns(),
+                             input_arg_tuple->indexed_arg_name_and_index(), inputs)) {
     const auto& indexed_bn = std::get<0>(pair);
-    const auto& tensor = std::get<1>(pair);
-    auto result_it = result_mapping_.find(tensor.get());
-    if (result_it == result_mapping_.end()) {
-      for (auto kv : result_mapping_) {
-        std::string result_str;
-        llvm::raw_string_ostream os(result_str);
-        kv.second.print(os);
-        LOG(ERROR) << "tensor/value: " << kv.first << "/" << result_str;
-      }
+    const auto& indexed_arg_name_and_index = std::get<1>(pair);
+    const auto& tensor = std::get<2>(pair);
+    if (auto result = GetResultByBnAndIndex(indexed_arg_name_and_index.first,
+                                            indexed_arg_name_and_index.second)) {
+      assert(operand_mapping_.emplace(indexed_bn, result.getValue()).second);
+    } else {
       LOG(FATAL) << "result not found, indexed_bn: " << indexed_bn << ", tensor: " << tensor.get()
                  << ", shape: " << tensor->shape()->DebugStr()
                  << ", dtype: " << tensor->dtype()->name();
-    } else {
-      assert(operand_mapping_.emplace(indexed_bn, result_mapping_.at(tensor.get())).second);
     }
   }
   // TODO: refine here
@@ -190,20 +186,13 @@ void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op_conf,
   }
 }
 
-mlir::Value JitImporter::GetResultByBnAndIndex(const std::string& bn, const int32_t index) {
+llvm::Optional<mlir::Value> JitImporter::GetResultByBnAndIndex(const std::string& bn,
+                                                               const int32_t index) {
   auto idx = input_arg_tuple_->TensorTupleIndex4ArgNameAndIndex(bn, index);
   auto tensor = inputs_[idx];
   auto result_it = result_mapping_.find(tensor.get());
   if (result_it == result_mapping_.end()) {
-    for (auto kv : result_mapping_) {
-      std::string result_str;
-      llvm::raw_string_ostream os(result_str);
-      kv.second.print(os);
-      LOG(ERROR) << "tensor/value: " << kv.first << "/" << result_str;
-    }
-    LOG(FATAL) << "result not found, arg/index: " << bn << "/" << index
-               << ", tensor: " << tensor.get() << ", shape: " << tensor->shape()->DebugStr()
-               << ", dtype: " << tensor->dtype()->name();
+    return llvm::None;
   } else {
     return result_it->second;
   }

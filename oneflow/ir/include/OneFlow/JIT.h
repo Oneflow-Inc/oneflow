@@ -48,7 +48,8 @@ class JitImporter : public Importer {
                             const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                             const TensorTuple& inputs);
   // get blob decs from inferred op
-  mlir::Value GetResultByBnAndIndex(const std::string& bn, const int32_t index);
+
+  llvm::Optional<mlir::Value> GetResultByBnAndIndex(const std::string& bn, const int32_t index);
   std::shared_ptr<MirroredTensor> MakeIntermediateTensor(
       const std::string& lbn, Value result,
       const std::shared_ptr<const ParallelDesc>& parallel_desc);
