@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/api/foreign_lock_helper.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
 
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
@@ -45,8 +45,10 @@ class GILForeignLockHelper final : public ForeignLockHelper {
 };
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("RegisterGILForeignLockHelper",
-        []() { Global<ForeignLockHelper>::SetAllocated(new GILForeignLockHelper()); });
+  m.def("RegisterGILForeignLockHelper", []() {
+    Global<ForeignLockHelper>::Delete();
+    Global<ForeignLockHelper>::SetAllocated(new GILForeignLockHelper());
+  });
 }
 
 }  // namespace oneflow
