@@ -1,4 +1,5 @@
 include(python)
+
 include(CheckCXXCompilerFlag)
 
 function(oneflow_add_executable)
@@ -126,11 +127,6 @@ foreach(oneflow_single_file ${oneflow_all_src})
     continue()
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/python/.*\\.h$")
-    list(APPEND of_python_obj_cc ${oneflow_single_file})
-    set(group_this ON)
-  endif()
-
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.h$")
     if((NOT RPC_BACKEND MATCHES "GRPC") AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/control/.*")
       # skip if GRPC not enabled
@@ -167,25 +163,34 @@ foreach(oneflow_single_file ${oneflow_all_src})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/python/.*\\.cpp$")
-    list(APPEND of_pybind_obj_cc ${oneflow_single_file})
-    set(group_this ON)
-  endif()
+  if(BUILD_PYTHON)
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/python/.*\\.h$")
-    list(APPEND of_pybind_obj_cc ${oneflow_single_file})
-    set(group_this ON)
-  endif()
+    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/python/.*\\.h$")
+      list(APPEND of_python_obj_cc ${oneflow_single_file})
+      set(group_this ON)
+    endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/extension/python/.*\\.cpp$")
-    list(APPEND of_pyext_obj_cc ${oneflow_single_file})
-    set(group_this ON)
-  endif()
+    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/python/.*\\.cpp$")
+      list(APPEND of_pybind_obj_cc ${oneflow_single_file})
+      set(group_this ON)
+    endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/extension/python/.*\\.h$")
-    list(APPEND of_pyext_obj_cc ${oneflow_single_file})
-    set(group_this ON)
-  endif()
+    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/python/.*\\.h$")
+      list(APPEND of_pybind_obj_cc ${oneflow_single_file})
+      set(group_this ON)
+    endif()
+
+    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/extension/python/.*\\.cpp$")
+      list(APPEND of_pyext_obj_cc ${oneflow_single_file})
+      set(group_this ON)
+    endif()
+
+    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/extension/python/.*\\.h$")
+      list(APPEND of_pyext_obj_cc ${oneflow_single_file})
+      set(group_this ON)
+    endif()
+
+  endif() # build_python
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.cpp$")
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*_test\\.cpp$")
@@ -245,22 +250,28 @@ set(of_proto_python_dir "${PROJECT_BINARY_DIR}/of_proto_python")
 # proto obj lib
 add_custom_target(make_pyproto_dir ALL
   COMMAND ${CMAKE_COMMAND} -E make_directory ${of_proto_python_dir}
-	)
+  )
 foreach(proto_name ${of_all_proto})
   file(RELATIVE_PATH proto_rel_name ${PROJECT_SOURCE_DIR} ${proto_name})
   list(APPEND of_all_rel_protos ${proto_rel_name})
 endforeach()
 
 RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
-                               ${PROJECT_SOURCE_DIR}
-                               ${of_all_rel_protos})
+                              ${PROJECT_SOURCE_DIR}
+                              ${of_all_rel_protos})
 
 oneflow_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
 add_dependencies(of_protoobj make_pyproto_dir protobuf)
 
 # cfg obj lib
 include(cfg)
+
+if(BUILD_PYTHON)
 GENERATE_CFG_AND_PYBIND11_CPP(CFG_SRCS CFG_HRCS CFG_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
+else()
+GENERATE_CFG_CPP(CFG_SRCS CFG_HRCS ${PROJECT_SOURCE_DIR})
+endif()
+
 oneflow_add_library(of_cfgobj ${CFG_SRCS} ${CFG_HRCS})
 add_dependencies(of_cfgobj of_protoobj)
 if (BUILD_SHARED_LIBS)
@@ -273,120 +284,146 @@ else()
   target_link_libraries(of_cfgobj ${oneflow_third_party_libs})
 endif()
 
-include(functional)
-GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP(
-    FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GENERATED_HRCS FUNCTIONAL_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
-oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS} ${FUNCTIONAL_GENERATED_HRCS})
-add_dependencies(of_functional_obj of_cfgobj)
-add_dependencies(of_functional_obj prepare_oneflow_third_party)
+if(BUILD_PYTHON)
 
-GENERATE_FUNCTIONAL_TENSOR_API_AND_PYBIND11_CPP(
-    FUNCTIONAL_TENSOR_GENERATED_SRCS FUNCTIONAL_TENSOR_GENERATED_HRCS
-    FUNCTIONAL_TENSOR_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
-oneflow_add_library(of_functional_tensor_obj STATIC
-    ${FUNCTIONAL_TENSOR_GENERATED_SRCS} ${FUNCTIONAL_TENSOR_GENERATED_HRCS})
-add_dependencies(of_functional_tensor_obj of_cfgobj)
-add_dependencies(of_functional_tensor_obj prepare_oneflow_third_party)
-target_include_directories(of_functional_tensor_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+  include(functional)
+  GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP(
+      FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GENERATED_HRCS FUNCTIONAL_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
+  oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS} ${FUNCTIONAL_GENERATED_HRCS})
+  add_dependencies(of_functional_obj of_cfgobj)
+  add_dependencies(of_functional_obj prepare_oneflow_third_party)
 
-set(PYBIND11_SRCS
-    ${CFG_PYBIND11_SRCS}
-    ${FUNCTIONAL_PYBIND11_SRCS}
-    ${FUNCTIONAL_TENSOR_PYBIND11_SRCS})
+  GENERATE_FUNCTIONAL_TENSOR_API_AND_PYBIND11_CPP(
+      FUNCTIONAL_TENSOR_GENERATED_SRCS FUNCTIONAL_TENSOR_GENERATED_HRCS
+      FUNCTIONAL_TENSOR_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
+  oneflow_add_library(of_functional_tensor_obj STATIC
+      ${FUNCTIONAL_TENSOR_GENERATED_SRCS} ${FUNCTIONAL_TENSOR_GENERATED_HRCS})
+  add_dependencies(of_functional_tensor_obj of_cfgobj)
+  add_dependencies(of_functional_tensor_obj prepare_oneflow_third_party)
+  target_include_directories(of_functional_tensor_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+
+  set(PYBIND11_SRCS
+      ${CFG_PYBIND11_SRCS}
+      ${FUNCTIONAL_PYBIND11_SRCS}
+      ${FUNCTIONAL_TENSOR_PYBIND11_SRCS})
+
+else()
+
+  include(functional)
+    GENERATE_FUNCTIONAL_API_CPP(
+        FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GENERATED_HRCS ${PROJECT_SOURCE_DIR})
+    oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS} ${FUNCTIONAL_GENERATED_HRCS})
+    add_dependencies(of_functional_obj of_cfgobj)
+    add_dependencies(of_functional_obj prepare_oneflow_third_party)
+
+endif() # build_python
 
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
 
 # cc obj lib
-oneflow_add_library(of_ccobj ${of_all_obj_cc})
-target_link_libraries(of_ccobj ${oneflow_third_party_libs})
-add_dependencies(of_ccobj of_protoobj)
-add_dependencies(of_ccobj of_cfgobj)
-add_dependencies(of_ccobj of_functional_obj)
-add_dependencies(of_ccobj of_git_version)
+if(BUILD_PYTHON)
+  oneflow_add_library(oneflow ${of_all_obj_cc})
+else()
+  oneflow_add_library(oneflow SHARED ${of_all_obj_cc})
+endif()
+
+add_dependencies(oneflow of_protoobj)
+add_dependencies(oneflow of_cfgobj)
+add_dependencies(oneflow of_functional_obj)
+add_dependencies(oneflow of_git_version)
+set_target_properties(oneflow PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${ONEFLOW_LIBRARY_DIR}")
+
 if (USE_CLANG_FORMAT)
-  add_dependencies(of_ccobj of_format)
+  add_dependencies(oneflow of_format)
 endif()
 if (USE_CLANG_TIDY)
-  add_dependencies(of_ccobj of_tidy)
+  add_dependencies(oneflow of_tidy)
 endif()
 
 if(BUILD_CUDA)
-  target_compile_options(of_ccobj PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+  target_compile_options(oneflow PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
     -Xcompiler -Werror=return-type;
     -Werror cross-execution-space-call;
     -Wno-deprecated-gpu-targets;
     -Xcudafe --diag_suppress=declared_but_not_referenced;
   >)
   # remove THRUST_IGNORE_CUB_VERSION_CHECK if starting using bundled cub
-  target_compile_definitions(of_ccobj PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+  target_compile_definitions(oneflow PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
     THRUST_IGNORE_CUB_VERSION_CHECK;
   >)
 endif()
 
-target_link_libraries(of_ccobj of_protoobj of_cfgobj of_functional_obj glog_imported)
+target_compile_options(oneflow PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror=return-type>)
+target_treat_warnings_as_errors(oneflow)
+target_compile_definitions(oneflow PRIVATE GOOGLE_LOGGING)
 
-target_compile_options(of_ccobj PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror=return-type>)
-target_treat_warnings_as_errors(of_ccobj)
-target_compile_definitions(of_ccobj PRIVATE GOOGLE_LOGGING)
+target_link_libraries(oneflow PRIVATE of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs} -Wl,--no-whole-archive -ldl -lrt)
 
-# py ext lib
-add_library(of_pyext_obj ${of_pyext_obj_cc})
-target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
-target_link_libraries(of_pyext_obj of_ccobj)
-if(BUILD_SHARED_LIBS AND APPLE)
-  target_link_libraries(of_pyext_obj ${Python3_LIBRARIES})
+if(BUILD_PYTHON)
+
+  # py ext lib
+  add_library(of_pyext_obj ${of_pyext_obj_cc})
+  target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+  target_link_libraries(of_pyext_obj oneflow)
+  if(BUILD_SHARED_LIBS AND APPLE)
+    target_link_libraries(of_pyext_obj ${Python3_LIBRARIES})
+  endif()
+  add_dependencies(of_pyext_obj oneflow)
+  target_compile_options(of_pyext_obj PRIVATE -Werror=return-type)
+  target_treat_warnings_as_errors(of_pyext_obj)
+
+
+  if(APPLE)
+    set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj)
+  elseif(UNIX)
+    set(of_libs -Wl,--whole-archive oneflow of_protoobj of_cfgobj of_functional_obj -Wl,--no-whole-archive -ldl -lrt)
+  elseif(WIN32)
+    set(of_libs oneflow of_protoobj of_cfgobj of_functional_obj)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:oneflow")
+  endif()
+
+
+  pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${PYBIND_REGISTRY_CC})
+  set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
+  add_dependencies(oneflow_internal of_cfgobj of_functional_obj of_functional_tensor_obj)
+  set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
+  set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${ONEFLOW_PYTHON_DIR}/oneflow")
+  target_link_libraries(oneflow_internal PRIVATE
+                        ${of_libs}
+                        of_functional_tensor_obj
+                        ${oneflow_third_party_libs}
+                        of_pyext_obj
+                        ${oneflow_exe_third_party_libs})
+  target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+
+  target_compile_options(oneflow_internal PRIVATE -Werror=return-type)
+  target_compile_definitions(oneflow_internal PRIVATE ONEFLOW_CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
+  target_treat_warnings_as_errors(oneflow_internal)
+
+  set(gen_pip_args "")
+  if (BUILD_CUDA)
+    list(APPEND gen_pip_args --cuda=${CUDA_VERSION})
+  endif()
+  if (WITH_XLA)
+    list(APPEND gen_pip_args --xla)
+  endif()
+
+  add_custom_target(of_pyscript_copy ALL
+      COMMAND ${CMAKE_COMMAND} -E touch "${of_proto_python_dir}/oneflow/core/__init__.py"
+      COMMAND ${CMAKE_COMMAND} -E create_symlink "${of_proto_python_dir}/oneflow/core" "${ONEFLOW_PYTHON_DIR}/oneflow/core"
+      COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_pip_version.py ${gen_pip_args} --src=${PROJECT_SOURCE_DIR} --out=${ONEFLOW_PYTHON_DIR}/oneflow/version.py
+  )
+
+  # source this file to add oneflow in PYTHONPATH
+  file(WRITE "${PROJECT_BINARY_DIR}/source.sh" "export PYTHONPATH=${ONEFLOW_PYTHON_DIR}:$PYTHONPATH")
+
+  add_dependencies(of_pyscript_copy of_protoobj)
+
+  file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
+
 endif()
-add_dependencies(of_pyext_obj of_ccobj)
-target_compile_options(of_pyext_obj PRIVATE -Werror=return-type)
-target_treat_warnings_as_errors(of_pyext_obj)
 
-if(APPLE)
-  set(of_libs -Wl,-force_load of_ccobj of_protoobj of_cfgobj of_functional_obj)
-elseif(UNIX)
-  set(of_libs -Wl,--whole-archive of_ccobj of_protoobj of_cfgobj of_functional_obj -Wl,--no-whole-archive -ldl -lrt)
-elseif(WIN32)
-  set(of_libs of_ccobj of_protoobj of_cfgobj of_functional_obj)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj")
-endif()
-
-pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${PYBIND_REGISTRY_CC})
-set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
-add_dependencies(oneflow_internal of_cfgobj of_functional_obj of_functional_tensor_obj)
-set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
-set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${ONEFLOW_PYTHON_DIR}/oneflow")
-target_link_libraries(oneflow_internal PRIVATE
-                      ${of_libs}
-                      of_functional_tensor_obj
-                      ${oneflow_third_party_libs}
-                      of_pyext_obj
-                      ${oneflow_exe_third_party_libs})
-target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
-
-target_compile_options(oneflow_internal PRIVATE -Werror=return-type)
-target_compile_definitions(oneflow_internal PRIVATE ONEFLOW_CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
-target_treat_warnings_as_errors(oneflow_internal)
-
-set(gen_pip_args "")
-if (BUILD_CUDA)
-  list(APPEND gen_pip_args --cuda=${CUDA_VERSION})
-endif()
-if (WITH_XLA)
-  list(APPEND gen_pip_args --xla)
-endif()
-
-add_custom_target(of_pyscript_copy ALL
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_proto_python_dir}/oneflow/core/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E create_symlink "${of_proto_python_dir}/oneflow/core" "${ONEFLOW_PYTHON_DIR}/oneflow/core"
-    COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_pip_version.py ${gen_pip_args} --src=${PROJECT_SOURCE_DIR} --out=${ONEFLOW_PYTHON_DIR}/oneflow/version.py
-)
-
-# source this file to add oneflow in PYTHONPATH
-file(WRITE "${PROJECT_BINARY_DIR}/source.sh" "export PYTHONPATH=${ONEFLOW_PYTHON_DIR}:$PYTHONPATH")
-
-add_dependencies(of_pyscript_copy of_protoobj)
-
-file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
 
 # build test
 if(BUILD_TESTING)
@@ -403,7 +440,12 @@ endif()
 
 # build include
 add_custom_target(of_include_copy)
-add_dependencies(of_include_copy oneflow_internal)
+if(BUILD_PYTHON)
+  add_dependencies(of_include_copy oneflow_internal)
+else()
+  add_dependencies(of_include_copy oneflow)
+endif()
+
 
 foreach(of_include_src_dir ${CFG_INCLUDE_DIR})
   copy_all_files_in_dir("${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
@@ -446,5 +488,8 @@ list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/common/symbol.h")
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/parallel_desc.h")
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/autograd/autograd_meta.h")
 copy_files("${OF_CORE_HDRS}" "${PROJECT_SOURCE_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
-add_custom_target(oneflow_py ALL)
-add_dependencies(oneflow_py of_include_copy of_pyscript_copy)
+
+if(BUILD_PYTHON)
+  add_custom_target(oneflow_py ALL)
+  add_dependencies(oneflow_py of_include_copy of_pyscript_copy)
+endif()
