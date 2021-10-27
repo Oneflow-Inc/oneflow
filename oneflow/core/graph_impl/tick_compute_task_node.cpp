@@ -30,7 +30,6 @@ class TickCompTaskNode final : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
-  bool IsIndependent() const override { return true; }
 };
 
 void TickCompTaskNode::ProduceAllRegstsAndBindEdges() {
@@ -59,12 +58,7 @@ void TickCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kTick);
-
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kTick)
-    .SetStreamIndexGetterFn([](StreamIndexGenerator* generator) -> uint32_t {
-      return generator->GenerateStreamIndex("tick");
-    });
+REGISTER_TICK_TASK_STREAM_INDEX_GETTER(TaskType::kTick);
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kTickConf, TickCompTaskNode);
 

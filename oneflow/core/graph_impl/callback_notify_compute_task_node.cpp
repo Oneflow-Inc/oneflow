@@ -24,7 +24,6 @@ class CallbackNotifyCompTaskNode final : public CompTaskNode {
   ~CallbackNotifyCompTaskNode() = default;
 
   TaskType GetTaskType() const override { return TaskType::kCallbackNotify; }
-  bool IsIndependent() const override { return true; }
 
  private:
   void ProduceAllRegstsAndBindEdges() override;
@@ -48,10 +47,7 @@ void CallbackNotifyCompTaskNode::BuildExecGphAndRegst() {
   CHECK(node->op()->output_bns().empty());
 }
 
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kCallbackNotify)
-    .SetStreamIndexGetterFn([](StreamIndexGenerator* generator) -> uint32_t {
-      return generator->GenerateStreamIndex();
-    });
+REGISTER_INDEPENDENT_TASK_STREAM_INDEX_GETTER(TaskType::kCallbackNotify)
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kCallbackNotifyConf,
                                        CallbackNotifyCompTaskNode);

@@ -32,7 +32,6 @@ class CaseCompTaskNode final : public CompTaskNode {
  private:
   void BuildExecGphAndRegst() override;
   void InferProducedDataRegstTimeShape() override;
-  bool IsIndependent() const override { return true; }
 };
 
 void CaseCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); }
@@ -75,12 +74,7 @@ void CaseCompTaskNode::BuildExecGphAndRegst() {
 
 void CaseCompTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
 
-REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kCase);
-
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kCase)
-    .SetStreamIndexGetterFn([](StreamIndexGenerator* generator) -> uint32_t {
-      return generator->GenerateStreamIndex("tick");
-    });
+REGISTER_TICK_TASK_STREAM_INDEX_GETTER(TaskType::kCase);
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kCaseConf, CaseCompTaskNode);
 

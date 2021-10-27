@@ -29,7 +29,6 @@ class WaitAndSendIdsCompTaskNode final : public CompTaskNode {
   bool IsMeaningLess() override { return false; }
 
   TaskType GetTaskType() const override { return TaskType::kWaitAndSendIds; }
-  bool IsIndependent() const override { return true; }
 
  private:
   void InferProducedDataRegstTimeShape() override;
@@ -59,10 +58,7 @@ void WaitAndSendIdsCompTaskNode::InferProducedDataRegstTimeShape() {
   });
 }
 
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kWaitAndSendIds)
-    .SetStreamIndexGetterFn([](StreamIndexGenerator* generator) -> uint32_t {
-      return generator->GenerateStreamIndex();
-    });
+REGISTER_INDEPENDENT_TASK_STREAM_INDEX_GETTER(TaskType::kWaitAndSendIds);
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kWaitAndSendIdsConf,
                                        WaitAndSendIdsCompTaskNode);
