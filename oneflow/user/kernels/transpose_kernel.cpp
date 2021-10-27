@@ -13,58 +13,60 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-
+#include "oneflow/core/primitive/include/permute.h"
 namespace oneflow {
 
 namespace user_op {
 
-template<DeviceType device_type, typename T>
+template<typename Context>
+std::unique_ptr<primitive::Permute> NewPermutePrimitive(Context* ctx) {
+  const int64_t num_dims = ctx->TensorDesc4ArgNameAndIndex("output", 0)->shape().NumAxes();
+  return primitive::NewPrimitive<primitive::PermuteFactory>(ctx->device_type(), num_dims);
+}
+
 class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(TransposeKernel);
   TransposeKernel() = default;
   ~TransposeKernel() override = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
+    auto primitive = NewPermutePrimitive(ctx);
+    CHECK(primitive);
+
     const Tensor* tensor_in = ctx->Tensor4ArgNameAndIndex("input", 0);
     Tensor* tensor_out = ctx->Tensor4ArgNameAndIndex("output", 0);
     const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
     const ShapeView& in_shape = tensor_in->shape();
-    const ShapeView& out_shape = tensor_out->shape();
-    NewKernelUtil<device_type>::Transpose(ctx->device_ctx(), in_shape.NumAxes(), in_shape,
-                                          out_shape, perm, in_shape.elem_cnt(),
-                                          tensor_in->dptr<T>(), tensor_out->mut_dptr<T>());
+    DataType dtype = tensor_out->data_type();
+    size_t num_dims = tensor_in->shape().NumAxes();
+    const int64_t* src_dims = in_shape.ptr();
+
+    int64_t elem_cnt = tensor_out->shape().elem_cnt();
+    if (elem_cnt != 0) {
+      primitive->Launch(ctx->stream_ctx(), dtype, num_dims, src_dims, tensor_in->dptr(),
+                        perm.data(), tensor_out->mut_dptr());
+    } else {
+      // For 0-d Tensor
+      return;
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_TRANSPOSE_KERNEL(device, dtype)                                         \
-  REGISTER_USER_KERNEL("transpose")                                                      \
-      .SetCreateFn<TransposeKernel<device, dtype>>()                                     \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("output", 0) == GetDataType<dtype>::value));
+hob::HobContextGetter<user_op::KernelRegContext, bool> PermutePrimitiveExists() {
+  return user_op::HobCtxGetter<bool>("PermutePrimitiveExists",
+                                     [](const user_op::KernelRegContext& ctx) {
+                                       return NewPermutePrimitive(&ctx).operator bool();
+                                     });
+}
 
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, uint8_t)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, int8_t)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, int32_t)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, int64_t)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, float)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, double)
-
-#ifdef WITH_CUDA
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, uint8_t)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, int8_t)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, int32_t)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, int64_t)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, float)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, double)
-REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, float16)
-#endif
+REGISTER_USER_KERNEL("transpose")
+    .SetCreateFn<TransposeKernel>()
+    .SetIsMatchedHob(PermutePrimitiveExists() == true);
 
 }  // namespace user_op
 }  // namespace oneflow
