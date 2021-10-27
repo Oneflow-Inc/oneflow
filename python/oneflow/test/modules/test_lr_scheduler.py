@@ -20,6 +20,8 @@ import unittest
 import oneflow as flow
 import oneflow.unittest
 from oneflow.nn.parameter import Parameter
+import torch
+import random
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -150,32 +152,54 @@ class TestLrScheduler(flow.unittest.TestCase):
                 test_case.assertAlmostEqual(lr1, lr2, places=5)
 
     def test_reduce_lr_on_plateau(test_case):
-        optimizer = flow.optim.SGD(
+        optimizer_flow = flow.optim.SGD(
             [{"params": [Parameter(flow.Tensor([1.0]))]},],
+            lr=TestLrScheduler.base_lr,
+            momentum=0.9,
+        )
+
+        optimizer_torch = torch.optim.SGD(
+            [{"params": [torch.nn.Parameter(torch.Tensor([1.0]))]},],
             lr=TestLrScheduler.base_lr,
             momentum=0.9,
         )
 
         factor = 0.3
         patience = 2
-        last_reduce_step = 0
+        threshold = 1e-4
+        threshold_mode = "rel"
+        cooldown = 0
+        min_lr = 0
+        eps = 1e-8
 
-        def reduce_lr_step(base_lr, current_step):
-            nonlocal last_reduce_step
-            if current_step - last_reduce_step >= patience + 1:
-                last_reduce_step = current_step
-            exp = last_reduce_step // (patience + 1)
-            return [base_lr * factor ** exp]
-
-        scheduler = flow.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, "min", factor, patience
+        scheduler_flow = flow.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer_flow,
+            "min",
+            factor,
+            patience,
+            threshold,
+            threshold_mode,
+            cooldown,
+            min_lr,
+            eps,
+        )
+        scheduler_troch = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer_torch,
+            "min",
+            factor,
+            patience,
+            threshold,
+            threshold_mode,
+            cooldown,
+            min_lr,
+            eps,
         )
         val_loss = 0.1
         for epoch in range(15):
-            val_loss = val_loss + 0.01
-            scheduler.step(val_loss)
-            new_lr = reduce_lr_step(TestLrScheduler.base_lr, epoch)
-            for (lr1, lr2) in zip(scheduler._last_lr, new_lr):
+            val_loss += (random.random() - 0.5) / 10
+            scheduler_flow.step(val_loss)
+            scheduler_troch.step(val_loss)
+            for (lr1, lr2) in zip(scheduler_flow._last_lr, scheduler_troch._last_lr):
                 test_case.assertAlmostEqual(lr1, lr2, places=5)
 
 
