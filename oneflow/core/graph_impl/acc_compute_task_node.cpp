@@ -51,6 +51,8 @@ void AccCompTaskNode::BuildExecGphAndRegst() {
   });
 }
 
+REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kAcc);
+
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("acc", AccCompTaskNode);
 
 }  // namespace oneflow

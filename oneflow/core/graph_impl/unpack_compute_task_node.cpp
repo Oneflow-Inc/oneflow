@@ -52,6 +52,8 @@ void UnpackCompTaskNode::BuildExecGphAndRegst() {
   exec_node->InferBlobDescs(parallel_ctx());
 }
 
+REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kUnpack);
+
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("unpack", UnpackCompTaskNode);
 
 }  // namespace oneflow

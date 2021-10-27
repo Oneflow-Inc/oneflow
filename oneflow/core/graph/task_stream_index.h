@@ -65,7 +65,7 @@ Maybe<StreamId::index_t> GetTaskStreamIndex(TaskType task_type, const DeviceId& 
 
 #define REGISTER_TASK_STREAM_INDEX_GETTER(device_type, task_type, getter) \
   static auto OF_PP_CAT(g_stream_index_getter_registry_, __COUNTER__) =   \
-      ::oneflow::TaskStreamIndexFactory::GetterRegistry(device_type, task_type, getter);
+      ::oneflow::TaskStreamIndexFactory::GetterRegistry(device_type, task_type, getter)
 
 #define REGISTER_NAMED_TASK_STREAM_INDEX_GETTER(device_type, task_type, name)                   \
   REGISTER_TASK_STREAM_INDEX_GETTER(device_type, task_type,                                     \
@@ -85,22 +85,22 @@ Maybe<StreamId::index_t> GetTaskStreamIndex(TaskType task_type, const DeviceId& 
                                       return generator->GenerateStreamIndex("tick");            \
                                     }));
 
-#define REGISTER_CPU_COMP_TASK_STREAM_INDEX_GETTER(task_type)                                    \
-  REGISTER_TASK_STREAM_INDEX_GETTER(                                                             \
-      DeviceType::kCPU, task_type, ([](StreamIndexGenerator * generator) -> StreamId::index_t) { \
-        size_t cpu_device_num = Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();         \
-        return generator->GenerateStreamIndex("cpu_compute", cpu_device_num);                    \
-      });
+#define REGISTER_CPU_COMP_TASK_STREAM_INDEX_GETTER(task_type)                                  \
+  REGISTER_TASK_STREAM_INDEX_GETTER(                                                           \
+      DeviceType::kCPU, task_type, ([](StreamIndexGenerator* generator) -> StreamId::index_t { \
+        size_t cpu_device_num = Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();       \
+        return generator->GenerateStreamIndex("cpu_compute", cpu_device_num);                  \
+      }));
 
-#define REGISTER_DEVICE_COMP_TASK_STREAM_INDEX_GETTER(device_type, task_type)               \
-  REGISTER_TASK_STREAM_INDEX_GETTER(                                                        \
-      device_type, task_type, ([](StreamIndexGenerator * generator) -> StreamId::index_t) { \
-        return generator->GenerateStreamIndex("compute");                                   \
-      });
+#define REGISTER_DEVICE_COMP_TASK_STREAM_INDEX_GETTER(device_type, task_type)                   \
+  REGISTER_TASK_STREAM_INDEX_GETTER(device_type, task_type,                                     \
+                                    ([](StreamIndexGenerator* generator) -> StreamId::index_t { \
+                                      return generator->GenerateStreamIndex("compute");         \
+                                    }));
 
 #define REGISTER_COMP_TASK_STREAM_INDEX_GETTER(task_type)                         \
   REGISTER_CPU_COMP_TASK_STREAM_INDEX_GETTER(task_type)                           \
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DEVICE_COMP_TASK_STREAM_INDEX_GETTER, \
-                                   NOCPU_DEVICE_TYPE_SEQ, (task_type));
+                                   NOCPU_DEVICE_TYPE_SEQ, OF_PP_MAKE_TUPLE_SEQ(task_type))
 
 #endif  // ONEFLOW_CORE_GRAPH_TASK_STREAM_INDEX_H_

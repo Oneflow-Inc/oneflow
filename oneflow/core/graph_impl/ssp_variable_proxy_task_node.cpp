@@ -111,6 +111,8 @@ class SspVariableProxyCompTaskNode final : public CompTaskNode {
   void InferProducedDataRegstTimeShape() override { NaiveInferProducedDataRegstTimeShape(); }
 };
 
+REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kSspVariableProxy);
+
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("ssp_variable_proxy", SspVariableProxyCompTaskNode);
 
 }  // namespace oneflow

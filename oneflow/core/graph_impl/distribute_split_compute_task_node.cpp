@@ -73,6 +73,8 @@ void DistributeSplitCompTaskNode::BuildOutRegst() {
   }
 }
 
+REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kDistributeSplit);
+
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kDistributeSplitConf,
                                        DistributeSplitCompTaskNode);
 

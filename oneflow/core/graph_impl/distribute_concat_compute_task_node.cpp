@@ -84,6 +84,8 @@ void DistributeConcatCompTaskNode::BuildOutRegst() {
   }
 }
 
+REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kDistributeConcat);
+
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kDistributeConcatConf,
                                        DistributeConcatCompTaskNode);
 

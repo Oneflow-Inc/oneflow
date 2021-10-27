@@ -118,4 +118,6 @@ void NormalForwardCompTaskNode::BuildTmp7BufRegsts() {
   });
 }
 
+REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kNormalForward);
+
 }  // namespace oneflow

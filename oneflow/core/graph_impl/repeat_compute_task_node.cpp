@@ -53,6 +53,8 @@ void RepeatCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
+REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kRepeat);
+
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("repeat", RepeatCompTaskNode);
 
 }  // namespace oneflow
