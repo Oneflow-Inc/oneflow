@@ -88,8 +88,8 @@ FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, 
   function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
   function.body().emplaceBlock();
   function.body().addArguments(argument_types);
-  for (auto argument : llvm::zip(operands, function.body().getArguments())) {
-    mapping.map(std::get<0>(argument), std::get<1>(argument));
+  for (auto argument_pair : llvm::zip(operands, function.body().getArguments())) {
+    mapping.map(std::get<0>(argument_pair), std::get<1>(argument_pair));
   }
   rewriter.setInsertionPointToStart(&function.body().front());
   ImplicitLocOpBuilder nb(loc, rewriter);
