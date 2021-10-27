@@ -112,8 +112,8 @@ Maybe<void> PutOverflowedLocalDepObject(Symbol<Device> device, LocalDepObject* l
   return Maybe<void>::Ok();
 }
 
-static constexpr size_t kLowWaterMark = 512;
-static constexpr size_t kHighWaterMark = 1024;
+static constexpr size_t kLowWaterMark = 200;
+static constexpr size_t kHighWaterMark = 300;
 
 Maybe<void> TryFillPoolToLowWaterMark(Symbol<Device> device) {
   const std::string& of_dev_type = JUST(device->of_type());
