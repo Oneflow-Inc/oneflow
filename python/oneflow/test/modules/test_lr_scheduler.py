@@ -16,12 +16,60 @@ limitations under the License.
 
 import math
 import unittest
+from collections import OrderedDict
+from test_util import GenArgDict
 
 import oneflow as flow
 import oneflow.unittest
 from oneflow.nn.parameter import Parameter
 import torch
 import random
+
+
+def compare_with_troch_reduce_lr(
+    test_case, mode, factor, patience, threshold, threshold_mode, cooldown, min_lr, eps,
+):
+    optimizer_flow = flow.optim.SGD(
+        [{"params": [Parameter(flow.Tensor([1.0]))]},],
+        lr=TestLrScheduler.base_lr,
+        momentum=0.9,
+    )
+
+    optimizer_torch = torch.optim.SGD(
+        [{"params": [torch.nn.Parameter(torch.Tensor([1.0]))]},],
+        lr=TestLrScheduler.base_lr,
+        momentum=0.9,
+    )
+
+    scheduler_flow = flow.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer_flow,
+        mode,
+        factor,
+        patience,
+        threshold,
+        threshold_mode,
+        cooldown,
+        min_lr,
+        eps,
+    )
+    scheduler_troch = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer_torch,
+        mode,
+        factor,
+        patience,
+        threshold,
+        threshold_mode,
+        cooldown,
+        min_lr,
+        eps,
+    )
+    val_loss = 0.1
+    for epoch in range(15):
+        val_loss += (random.random() - 0.5) / 10
+        scheduler_flow.step(val_loss)
+        scheduler_troch.step(val_loss)
+        for (lr1, lr2) in zip(scheduler_flow._last_lr, scheduler_troch._last_lr):
+            test_case.assertAlmostEqual(lr1, lr2, places=5)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -152,55 +200,17 @@ class TestLrScheduler(flow.unittest.TestCase):
                 test_case.assertAlmostEqual(lr1, lr2, places=5)
 
     def test_reduce_lr_on_plateau(test_case):
-        optimizer_flow = flow.optim.SGD(
-            [{"params": [Parameter(flow.Tensor([1.0]))]},],
-            lr=TestLrScheduler.base_lr,
-            momentum=0.9,
-        )
-
-        optimizer_torch = torch.optim.SGD(
-            [{"params": [torch.nn.Parameter(torch.Tensor([1.0]))]},],
-            lr=TestLrScheduler.base_lr,
-            momentum=0.9,
-        )
-
-        factor = 0.3
-        patience = 2
-        threshold = 1e-4
-        threshold_mode = "rel"
-        cooldown = 0
-        min_lr = 0
-        eps = 1e-8
-
-        scheduler_flow = flow.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer_flow,
-            "min",
-            factor,
-            patience,
-            threshold,
-            threshold_mode,
-            cooldown,
-            min_lr,
-            eps,
-        )
-        scheduler_troch = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer_torch,
-            "min",
-            factor,
-            patience,
-            threshold,
-            threshold_mode,
-            cooldown,
-            min_lr,
-            eps,
-        )
-        val_loss = 0.1
-        for epoch in range(15):
-            val_loss += (random.random() - 0.5) / 10
-            scheduler_flow.step(val_loss)
-            scheduler_troch.step(val_loss)
-            for (lr1, lr2) in zip(scheduler_flow._last_lr, scheduler_troch._last_lr):
-                test_case.assertAlmostEqual(lr1, lr2, places=5)
+        arg_dict = OrderedDict()
+        arg_dict["mode"] = ["min", "max"]
+        arg_dict["factor"] = [0.1, 0.3]
+        arg_dict["patience"] = [2, 5]
+        arg_dict["threshold"] = [1e-3, 1e-5]
+        arg_dict["threshold_mode"] = ["rel", "abs"]
+        arg_dict["cooldown"] = [0, 1]
+        arg_dict["min_lr"] = [0, 1e-3]
+        arg_dict["eps"] = [1e-5, 1e-8]
+        for arg in GenArgDict(arg_dict):
+            compare_with_troch_reduce_lr(test_case, **arg)
 
 
 if __name__ == "__main__":
