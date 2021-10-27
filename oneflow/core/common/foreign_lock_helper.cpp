@@ -13,18 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/primitive/cuda/cuda_graph_support.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
+#include "oneflow/core/common/global.h"
 
 namespace oneflow {
+class NoForeignLockHelper final : public ForeignLockHelper {
+  Maybe<void> WithScopedRelease(const std::function<Maybe<void>()>& Callback) const override {
+    return Callback();
+  }
 
-namespace primitive {
+  Maybe<void> WithScopedAcquire(const std::function<Maybe<void>()>& Callback) const override {
+    return Callback();
+  }
+};
 
-bool IsCudaGraphPrimitive(const Primitive* primitive) {
-  auto* cuda_graph_support = dynamic_cast<const CudaGraphSupport*>(primitive);
-  if (cuda_graph_support == nullptr) { return false; }
-  return cuda_graph_support->IsCudaGraphSupported();
-}
-
-}  // namespace primitive
+static int __register_no_foreign_lock_helper __attribute__((unused)) = []() {
+  Global<ForeignLockHelper>::SetAllocated(new NoForeignLockHelper());
+  return 0;
+}();
 
 }  // namespace oneflow

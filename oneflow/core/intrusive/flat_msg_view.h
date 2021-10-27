@@ -244,8 +244,8 @@ struct FlatMsgViewUtil {
 
 template<typename FlatMsgViewT, typename ValueType, typename ContainerT, typename Enabled = void>
 struct FlatMsgViewContainerUtil {
-  using FlatMsgOneofField =
-      StructField<ValueType, typename ValueType::__OneofType, ValueType::__kDssFieldOffset>;
+  using FlatMsgOneofField = intrusive::OffsetStructField<ValueType, typename ValueType::__OneofType,
+                                                         ValueType::__kDssFieldOffset>;
   static bool Match(FlatMsgViewT* self, const ContainerT& container) {
     return FlatMsgViewUtil<FlatMsgViewT, FlatMsgOneofField, typename ContainerT::value_type>::Match(
         self, container.data(), container.size());
@@ -254,8 +254,8 @@ struct FlatMsgViewContainerUtil {
 
 template<typename FlatMsgViewT, typename ValueType, typename Enabled>
 struct FlatMsgViewContainerUtil<FlatMsgViewT, ValueType, std::vector<FlatMsg<ValueType>>, Enabled> {
-  using FlatMsgOneofField =
-      StructField<ValueType, typename ValueType::__OneofType, ValueType::__kDssFieldOffset>;
+  using FlatMsgOneofField = intrusive::OffsetStructField<ValueType, typename ValueType::__OneofType,
+                                                         ValueType::__kDssFieldOffset>;
   static_assert(sizeof(ValueType) == sizeof(FlatMsg<ValueType>), "");
   static_assert(alignof(ValueType) == alignof(FlatMsg<ValueType>), "");
   static bool Match(FlatMsgViewT* self, const std::vector<FlatMsg<ValueType>>& container) {
