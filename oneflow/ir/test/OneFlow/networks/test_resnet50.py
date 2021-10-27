@@ -274,9 +274,7 @@ def main(args):
         train_loss = TrainNet().get().mean()
         loss.append(train_loss)
         print(fmt_str.format(i, "train loss:", train_loss))
-    loss_file = "{}n{}c.npy".format(
-        str(1), str(args.gpu_num_per_node * 1)
-    )
+    loss_file = "{}n{}c.npy".format(str(1), str(args.gpu_num_per_node * 1))
     loss_path = "./of_loss/resnet50"
     if not os.path.exists(loss_path):
         os.makedirs(loss_path)
