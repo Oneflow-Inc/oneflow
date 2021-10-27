@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/actor/light_actor.h"
 #include "oneflow/core/stream/stream_context.h"
 #include "oneflow/core/stream/execution_context_hook.h"
-#include "oneflow/core/graph/id_serialization.h"
 
 namespace oneflow {
 

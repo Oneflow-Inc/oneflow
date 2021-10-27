@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/common/id_util.h"
-#include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
@@ -340,7 +339,7 @@ void TaskNode::UpdateTaskId() {
   CHECK_NE(thrd_id_, -1);
   StreamId stream_id = DecodeStreamIdFromInt64(thrd_id_);
   new_task_id_.reset(new TaskId(Global<IDMgr>::Get()->GetTaskIdGenerator()->Generate(stream_id)));
-  task_id_ = SerializeTaskIdToInt64(*new_task_id_);
+  task_id_ = EncodeTaskIdToInt64(*new_task_id_);
 }
 
 void TaskNode::EraseConsumedRegstsByName(const std::string& name) {

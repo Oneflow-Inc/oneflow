@@ -20,57 +20,8 @@ limitations under the License.
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/device/device_id.h"
 #include "oneflow/core/stream/stream_id.h"
+#include "oneflow/core/graph/task_id.h"
 
-namespace oneflow {
-
-// TaskId encode (may be extended to 128 bit in future)
-// |            rank            | device_type | device_index  |                           |
-// | ----------- 19 ----------- | ---- 5 ---- | ----- 7 ----- |                           |
-// |                        DeviceId                          | stream_index |            |
-// | ------------------------- 31 --------------------------- | ---- 12 ---- |            |
-// |                               StreamId                                  | task_index |
-// | -------------------------------- 43 ----------------------------------- | --- 21 --- |
-// |                                      TaskId                                          |
-// | ----------------------------------- 64 bit ----------------------------------------- |
-
-class TaskId {
- public:
-  using task_index_t = uint32_t;
-
-  const static size_t kTaskIndexBits = 21;
-  constexpr static task_index_t kMaxTaskIndex =
-      (task_index_t{1} << kTaskIndexBits) - task_index_t{1};
-
-  TaskId(const StreamId& stream_id, task_index_t task_index)
-      : stream_id_(stream_id), task_index_(task_index) {
-    CHECK_LE(task_index_, kMaxTaskIndex);
-  }
-  const StreamId& stream_id() const { return stream_id_; }
-  task_index_t task_index() const { return task_index_; }
-  bool operator==(const TaskId& rhs) const {
-    return stream_id_ == rhs.stream_id_ && task_index_ == rhs.task_index_;
-  }
-  bool operator!=(const TaskId& rhs) const { return !(*this == rhs); }
-  size_t hash() const {
-    size_t hash = stream_id_.hash();
-    HashCombine(&hash, std::hash<task_index_t>{}(task_index_));
-    return hash;
-  }
-
- private:
-  StreamId stream_id_;
-  task_index_t task_index_;
-};
-
-}  // namespace oneflow
-
-namespace std {
-
-template<>
-struct hash<oneflow::TaskId> {
-  size_t operator()(const oneflow::TaskId& task_id) const { return task_id.hash(); }
-};
-
-}  // namespace std
+namespace oneflow {}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_ID_UTIL_H_

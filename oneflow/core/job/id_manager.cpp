@@ -15,17 +15,16 @@ limitations under the License.
 */
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/common/id_util.h"
-#include "oneflow/core/graph/id_serialization.h"
 
 namespace oneflow {
 
 int64_t IDMgr::MachineId4ActorId(int64_t actor_id) const {
   // TODO: change this inferface semantics, rank does not indicate machine_id in multi-client
-  return DeserializeTaskIdFromInt64(actor_id).stream_id().device_id().node_index();
+  return DecodeTaskIdFromInt64(actor_id).stream_id().device_id().node_index();
 }
 
 int64_t IDMgr::ThrdId4ActorId(int64_t actor_id) const {
-  return EncodeStreamIdToInt64(DeserializeTaskIdFromInt64(actor_id).stream_id());
+  return EncodeStreamIdToInt64(DecodeTaskIdFromInt64(actor_id).stream_id());
 }
 
 IDMgr::IDMgr() {

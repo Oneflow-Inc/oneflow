@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/common/id_util.h"
-#include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/device/stream_index.h"
 
 namespace oneflow {
