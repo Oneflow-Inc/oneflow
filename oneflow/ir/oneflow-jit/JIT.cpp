@@ -44,7 +44,6 @@ LogicalResult JitImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
   return success();
 }
 Type JitImporter::GetTensorTypeOfLbn(const std::string& lbn) {
-  llvm::errs() << "[GetTensorTypeOfLbn] " << lbn << "\n";
   LogicalBlobId lbi = GenLogicalBlobId(lbn);
   return result_type_mapping_.at(lbi.blob_name());
 }
@@ -123,7 +122,6 @@ mlir::FuncOp JitImporter::GetOrInsertFunc(const std::string& func_name, const Te
     }
     GetBuilder().setInsertionPointToStart(entryBlock);
     GetModule().push_back(function);
-    function->dump();
     return function;
   }
 }

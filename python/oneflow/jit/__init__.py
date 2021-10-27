@@ -11,7 +11,6 @@ def trace(f):
             isinstance(arg, oneflow._oneflow_internal.Tensor)
         func_name = str(uuid.uuid4()).replace("-", "")
         func_name = f"jit{func_name}"
-        print("JIT enabled")
         print([(k, v.dtype, v.shape) for k, v in m.named_parameters()])
         assert oneflow._oneflow_internal.ir.toggle_jit(func_name)
         oneflow._oneflow_internal.ir.set_jit_forward_args(
@@ -19,7 +18,6 @@ def trace(f):
         )
         # NOTE: forbid calling __repr__ in the forward function
         result = f(*args, **kwargs)
-        print("JIT disabled")
         assert not oneflow._oneflow_internal.ir.toggle_jit(func_name)
         return result
 
