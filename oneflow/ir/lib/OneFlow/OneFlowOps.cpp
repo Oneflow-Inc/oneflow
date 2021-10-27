@@ -87,10 +87,9 @@ const StringSet<>& GetScalarMathOpTypeNames() {
 }
 
 const StringSet<>& GetReduceOpTypeNames() {
-  static llvm::StringSet<> names(
-      {"reduce_min", "reduce_prod", "reduce_sum", "reduce_max"
+  static llvm::StringSet<> names({"reduce_min", "reduce_prod", "reduce_sum", "reduce_max"
 
-      });
+  });
   return names;
 }
 
@@ -131,33 +130,17 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
           || GetFloatUnaryOpTypeNames().contains(op_type_name)
           || GetScalarMathOpTypeNames().contains(op_type_name)
           || GetPoolOpTypeNames().contains(op_type_name)
-          || GetReduceOpTypeNames().contains(op_type_name)
-          || op_type_name.equals("reshape")) {
+          || GetReduceOpTypeNames().contains(op_type_name) || op_type_name.equals("reshape")
+          || op_type_name.equals("scalar_mul_by_tensor") || op_type_name.equals("matmul")
+          || op_type_name.equals("gather") || op_type_name.equals("gelu_grad")
+          || op_type_name.equals("conv2d") || op_type_name.equals("bias_add")) {
+        assert(op.data_output().size() == 1);
         NamedAttrList attributes(op->getAttrDictionary());
         attributes.erase("operand_segment_sizes");
         attributes.erase("result_segment_sizes");
         OperationState state(op->getLoc(), "oneflow." + op_type_name.str());
         state.addAttributes(attributes);
         state.addOperands(op->getOperands());
-        assert(op.data_input().size() == 1);
-        assert(op.data_output().size() == 1);
-        state.addTypes(op.getODSResults(0 /* data out */).getTypes());
-        if (auto elementwise = rewriter.createOperation(state)) {
-          op.data_output().front().replaceAllUsesWith(elementwise->getResult(0));
-          op->erase();
-          return success();
-        }
-      } else if (op_type_name.equals("scalar_mul_by_tensor") || op_type_name.equals("matmul")
-                 || op_type_name.equals("gather") || op_type_name.equals("gelu_grad")
-                 || op_type_name.equals("conv2d") || op_type_name.equals("bias_add")) {
-        assert(op.data_input().size() == 2);
-        assert(op.data_output().size() == 1);
-        NamedAttrList attributes(op->getAttrDictionary());
-        attributes.erase("operand_segment_sizes");
-        attributes.erase("result_segment_sizes");
-        OperationState state(op->getLoc(), "oneflow." + op_type_name.str());
-        state.addAttributes(attributes);
-        state.addOperands(op.data_input());
         state.addTypes(op.getODSResults(0 /* data out */).getTypes());
         if (auto created = rewriter.createOperation(state)) {
           op.data_output().front().replaceAllUsesWith(created->getResult(0));
