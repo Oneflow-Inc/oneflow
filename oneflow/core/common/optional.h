@@ -341,12 +341,12 @@ class Optional final : private internal::OptionalBase<T> {
   Optional& operator=(Optional&& rhs) noexcept = default;
 
   template<typename U>
-  auto value_or(U&& other) const& -> decltype(base::value_or(std::forward<U>(other))) {
+  decltype(auto) value_or(U&& other) const& {
     return base::value_or(std::forward<U>(other));
   }
 
   template<typename U>
-  auto value_or(U&& other) && -> decltype(std::move(*this).base::value_or(std::forward<U>(other))) {
+  decltype(auto) value_or(U&& other) && {
     return std::move(*this).base::value_or(std::forward<U>(other));
   }
 
@@ -357,8 +357,7 @@ class Optional final : private internal::OptionalBase<T> {
   bool has_value() const { return base::has_value(); }
   explicit operator bool() const { return has_value(); }
 
-  auto Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() && -> decltype(
-      std::move(*this).base::value()) {
+  decltype(auto) Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() && {
     return std::move(*this).base::value();
   }
 
