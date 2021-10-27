@@ -146,8 +146,8 @@ void InstanceScaleCenter<float16>(DeviceCtx* ctx, const int64_t batch_size,
 }
 
 template<typename SRC, typename DST, bool do_scale, bool do_center>
-struct ScaleCenterStore {
-  ScaleCenterStore(DST* normalized, DST* y, int64_t row_size, const DST* gamma, const DST* beta)
+struct AffineStore {
+  AffineStore(DST* normalized, DST* y, int64_t row_size, const DST* gamma, const DST* beta)
       : normalized(normalized), y(y), row_size(row_size), gamma(gamma), beta(beta) {}
   template<int N>
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
@@ -280,8 +280,8 @@ void LayerNormForwardGpu(DeviceCtx* ctx, const int num_instances, const int norm
                          user_op::Tensor* inv_variance) {
   using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
   cuda::layer_norm::DirectLoad<T, ComputeType> load(x_ptr, norm_size);
-  ScaleCenterStore<ComputeType, T, do_scale, do_center> store(normalized_ptr, y_ptr, norm_size,
-                                                              gamma_ptr, beta_ptr);
+  AffineStore<ComputeType, T, do_scale, do_center> store(normalized_ptr, y_ptr, norm_size,
+                                                         gamma_ptr, beta_ptr);
   cuda::layer_norm::DispatchLayerNorm<decltype(load), decltype(store), ComputeType>(
       ctx->cuda_stream(), load, store, num_instances, norm_size, epsilon,
       mean->mut_dptr<ComputeType>(), inv_variance->mut_dptr<ComputeType>());
@@ -313,7 +313,7 @@ void LaunchLayerNormForward(DeviceCtx* ctx, const int num_instances, const int n
                             const T* beta_ptr, T* normalized_ptr, T* y_ptr, user_op::Tensor* mean,
                             user_op::Tensor* inv_variance) {
   DispatchLayerNormForwardGpu<T>(ctx, num_instances, norm_size, epsilon, x_ptr, gamma_ptr, beta_ptr,
-                         normalized_ptr, y_ptr, mean, inv_variance);
+                                 normalized_ptr, y_ptr, mean, inv_variance);
 }
 
 template<>
