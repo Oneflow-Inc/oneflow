@@ -38,4 +38,18 @@ StreamId GenerateComputeStreamId(int64_t node_index, DeviceType device_type, int
   return GenerateComputeStreamId(device_id);
 }
 
+StreamId GenerateNamedStreamId(const DeviceId& device_id, const std::string& name) {
+  auto* stream_index_generator =
+      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetOrCreateGenerator(device_id);
+  auto stream_index = stream_index_generator->GenerateStreamIndex(name);
+  return StreamId{device_id, stream_index};
+}
+
+StreamId GenerateNamedStreamId(int64_t node_index, DeviceType device_type, int64_t device_index,
+                               const std::string& name) {
+  DeviceId device_id{static_cast<DeviceId::index_t>(node_index), device_type,
+                     static_cast<DeviceId::index_t>(device_index)};
+  return GenerateNamedStreamId(device_id, name);
+}
+
 }  // namespace oneflow

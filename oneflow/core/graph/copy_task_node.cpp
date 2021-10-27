@@ -14,9 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/copy_task_node.h"
-#include "oneflow/core/framework/to_string.h"
-#include "oneflow/core/operator/operator.h"
-#include "oneflow/core/stream/stream_id.h"
+#include "oneflow/core/graph/task_stream_id.h"
 
 namespace oneflow {
 
@@ -43,17 +41,15 @@ void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, const DeviceId& device_i
                           const LogicalBlobId& lbi) {
   copy_type_ = copy_type;
   set_machine_id(device_id.node_index());
-  auto* stream_index_generator =
-      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetOrCreateGenerator(device_id);
-  StreamId::index_t stream_index = 0;
+  int64_t thrd_id = -1;
   if (copy_type == CopyHdOpConf::H2D) {
-    stream_index = stream_index_generator->GenerateStreamIndex("H2D");
+    thrd_id = EncodeStreamIdToInt64(GenerateNamedStreamId(device_id, "H2D"));
   } else if (copy_type == CopyHdOpConf::D2H) {
-    stream_index = stream_index_generator->GenerateStreamIndex("D2H");
+    thrd_id = EncodeStreamIdToInt64(GenerateNamedStreamId(device_id, "D2H"));
   } else {
     UNIMPLEMENTED();
   }
-  set_thrd_id(EncodeStreamIdToInt64(StreamId{device_id, stream_index}));
+  set_thrd_id(thrd_id);
   set_lbi(lbi);
 }
 
@@ -84,12 +80,8 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
 
 void CopyCommNetTaskNode::Init(int64_t machine_id, const LogicalBlobId& lbi) {
   set_machine_id(machine_id);
-  DeviceId device_id{static_cast<DeviceId::index_t>(machine_id), DeviceType::kCPU,
-                     DeviceId::kCPUDeviceIndex};
-  auto* stream_index_generator =
-      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetOrCreateGenerator(device_id);
-  StreamId stream_id{device_id, stream_index_generator->GenerateStreamIndex("commnet")};
-  set_thrd_id(EncodeStreamIdToInt64(stream_id));
+  set_thrd_id(
+      EncodeStreamIdToInt64(GenerateNamedStreamId(machine_id, DeviceType::kCPU, 0, "commnet")));
   set_lbi(lbi);
 }
 

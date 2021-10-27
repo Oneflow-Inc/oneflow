@@ -22,6 +22,9 @@ namespace oneflow {
 
 StreamId GenerateComputeStreamId(const DeviceId& device_id);
 StreamId GenerateComputeStreamId(int64_t node_index, DeviceType device_type, int64_t device_index);
+StreamId GenerateNamedStreamId(const DeviceId& device_id, const std::string& name);
+StreamId GenerateNamedStreamId(int64_t node_index, DeviceType device_type, int64_t device_index,
+                               const std::string& name);
 
 }  // namespace oneflow
 

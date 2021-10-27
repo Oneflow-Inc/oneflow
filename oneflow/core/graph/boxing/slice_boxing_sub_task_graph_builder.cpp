@@ -17,9 +17,9 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/slice_boxing_sub_task_graph_builder.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
+#include "oneflow/core/graph/task_stream_id.h"
 #include "oneflow/core/register/tensor_slice_view.h"
 #include "oneflow/core/job/nd_sbp_util.h"
-#include "oneflow/core/stream/stream_index_generator.h"
 
 namespace oneflow {
 
@@ -55,28 +55,11 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
                    SliceBoxingTaskMode mode) -> SliceBoxingTaskNode* {
     SliceBoxingTaskNode* node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
     const int64_t machine_id = CHECK_JUST(pd.MachineId4ParallelId(parallel_id));
-    int64_t thrd_id = -1;
-    if (pd.device_type() == DeviceType::kCPU) {
-      DeviceId device_id{static_cast<DeviceId::index_t>(machine_id), DeviceType::kCPU,
-                         DeviceId::kCPUDeviceIndex};
-      auto stream_index =
-          Global<IDMgr>::Get()
-              ->GetStreamIndexGeneratorManager()
-              ->GetOrCreateGenerator(device_id)
-              ->GenerateStreamIndex("cpu_compute",
-                                    Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum());
-      thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
-    } else {
-      DeviceId device_id{
-          static_cast<DeviceId::index_t>(machine_id), pd.device_type(),
-          static_cast<DeviceId::index_t>(CHECK_JUST(pd.DeviceId4ParallelId(parallel_id)))};
-      auto stream_index = Global<IDMgr>::Get()
-                              ->GetStreamIndexGeneratorManager()
-                              ->GetOrCreateGenerator(device_id)
-                              ->GenerateStreamIndex("compute");
-      thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
-    }
-
+    int64_t device_index = (pd.device_type() == DeviceType::kCPU)
+                               ? 0
+                               : CHECK_JUST(pd.DeviceId4ParallelId(parallel_id));
+    int64_t thrd_id =
+        EncodeStreamIdToInt64(GenerateComputeStreamId(machine_id, pd.device_type(), device_index));
     node->Init(lbi, slice, mode, machine_id, thrd_id);
     return node;
   };
