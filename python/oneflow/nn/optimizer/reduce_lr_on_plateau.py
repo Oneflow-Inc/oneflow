@@ -126,7 +126,7 @@ class ReduceLROnPlateau(object):
         self.cooldown_counter = 0
         self.num_bad_steps = 0
 
-    def step(self, metrics, epoch=None):
+    def step(self, metrics):
         """Step forward once.
 
         Arguments:
@@ -152,18 +152,6 @@ class ReduceLROnPlateau(object):
             self.num_bad_steps = 0
 
         self._last_lr = [group["lr"] for group in self.optimizer.param_groups]
-
-    def _reduce_lr(self, epoch):
-        for i, param_group in enumerate(self.optimizer.param_groups):
-            old_lr = float(param_group["lr"])
-            new_lr = max(old_lr * self.factor, self.min_lrs[i])
-            if old_lr - new_lr > self.eps:
-                param_group["lr"] = new_lr
-                if self.verbose:
-                    print(
-                        "Epoch {:5d}: reducing learning rate"
-                        " of group {} to {:.4e}.".format(epoch, i, new_lr)
-                    )
 
     @property
     def in_cooldown(self):
@@ -220,3 +208,15 @@ class ReduceLROnPlateau(object):
         self._init_is_better(
             mode=self.mode, threshold=self.threshold, threshold_mode=self.threshold_mode
         )
+
+    def _reduce_lr(self, epoch):
+        for i, param_group in enumerate(self.optimizer.param_groups):
+            old_lr = float(param_group["lr"])
+            new_lr = max(old_lr * self.factor, self.min_lrs[i])
+            if old_lr - new_lr > self.eps:
+                param_group["lr"] = new_lr
+                if self.verbose:
+                    print(
+                        "Epoch {:5d}: reducing learning rate"
+                        " of group {} to {:.4e}.".format(epoch, i, new_lr)
+                    )
