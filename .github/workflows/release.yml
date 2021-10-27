@@ -113,7 +113,7 @@ jobs:
           if [ ! -z "${{ matrix.package_name }}"] && [ "${{ matrix.package_name }}" != "oneflow" ]; then
               extra_flags+=" --package_name=${{ matrix.package_name }}"
           fi
-          extra_flags+=" --extra_oneflow_cmake_args=-DBUILD_PROFILER=OFF"
+          extra_flags+=" --extra_oneflow_cmake_args=-DBUILD_PROFILER=ON"
           extra_flags+=" --extra_oneflow_cmake_args=-DTREAT_WARNINGS_AS_ERRORS=OFF"
           extra_flags+=" --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple"
           echo "cuda_version=${cuda_version}" >> $GITHUB_ENV
