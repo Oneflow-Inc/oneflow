@@ -71,4 +71,12 @@ TaskId DecodeTaskIdFromInt64(int64_t task_id_val) {
   return TaskId{stream_id, static_cast<TaskId::index_t>(task_index)};
 }
 
+int64_t MachineId4ActorId(int64_t actor_id) {
+  return DecodeTaskIdFromInt64(actor_id).stream_id().node_index();
+}
+
+int64_t ThrdId4ActorId(int64_t actor_id) {
+  return EncodeStreamIdToInt64(DecodeTaskIdFromInt64(actor_id).stream_id());
+}
+
 }  // namespace oneflow

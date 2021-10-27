@@ -86,7 +86,7 @@ void CopyCommNetActor::Act() {
   auto readable_it = sequence_number2regst_ctx_.find(next_sequence_number_);
   void* readable_token = readable_it->second.comm_net_token;
   int64_t src_actor_id = readable_it->second.producer;
-  int64_t src_machine_id = Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id);
+  int64_t src_machine_id = MachineId4ActorId(src_actor_id);
   // writeable
   Regst* writeable_regst = GetNaiveCurWriteable("copy_out");
   if (readable_it->second.has_sole_empty_blob) {

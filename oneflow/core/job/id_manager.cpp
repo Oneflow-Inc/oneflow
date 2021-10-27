@@ -18,15 +18,6 @@ limitations under the License.
 
 namespace oneflow {
 
-int64_t IDMgr::MachineId4ActorId(int64_t actor_id) const {
-  // TODO: change this inferface semantics, rank does not indicate machine_id in multi-client
-  return DecodeTaskIdFromInt64(actor_id).stream_id().device_id().node_index();
-}
-
-int64_t IDMgr::ThrdId4ActorId(int64_t actor_id) const {
-  return EncodeStreamIdToInt64(DecodeTaskIdFromInt64(actor_id).stream_id());
-}
-
 IDMgr::IDMgr() {
   CHECK_LT((Global<ResourceDesc, ForSession>::Get()->process_ranks().size()),
            static_cast<int64_t>(1) << machine_id_bit_num_);

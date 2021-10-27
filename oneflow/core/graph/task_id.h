@@ -54,6 +54,9 @@ class TaskId {
 int64_t EncodeTaskIdToInt64(const TaskId&);
 TaskId DecodeTaskIdFromInt64(int64_t);
 
+int64_t MachineId4ActorId(int64_t actor_id);
+int64_t ThrdId4ActorId(int64_t actor_id);
+
 }  // namespace oneflow
 
 namespace std {
