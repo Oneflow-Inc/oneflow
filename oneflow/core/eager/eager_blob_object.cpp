@@ -107,7 +107,7 @@ Maybe<void> DTREagerBlobObject::InitBlobAttrs(std::shared_ptr<LocalCallOpKernelP
   update_access_time();
   // last_access_time_ = Global<one::DTRTensorPool>::Get()->duration();
   //TODO: unique_ptr
-  compute_op_ = std::make_unique<DTRChildOperand>(operand->shared_opkernel(), operand->inputs(), operand->outputs(), operand->consistent_tensor_infer_result(), operand->op_interp_ctx(), operand->dev_vm_dep_object_consume_mode());
+  compute_op_ = std::make_unique<DTRInstrOperand>(operand->shared_opkernel(), operand->inputs(), operand->outputs(), operand->consistent_tensor_infer_result(), operand->op_interp_ctx(), operand->dev_vm_dep_object_consume_mode());
   // compute_op_ = operand;
   could_evict_ = (input_size() > 0) && could_evict_;
 
@@ -120,7 +120,7 @@ void DTREagerBlobObject::update_access_time() {
 
 void DTREagerBlobObject::update_user_ops(std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand) {
   //TODO unique_ptr
-  user_ops_.emplace_back(std::make_unique<DTRChildOperand>(operand->shared_opkernel(), operand->inputs(), operand->outputs(), operand->consistent_tensor_infer_result(), operand->op_interp_ctx(), operand->dev_vm_dep_object_consume_mode()));
+  user_ops_.emplace_back(std::make_unique<DTRInstrOperand>(operand->shared_opkernel(), operand->inputs(), operand->outputs(), operand->consistent_tensor_infer_result(), operand->op_interp_ctx(), operand->dev_vm_dep_object_consume_mode()));
 }
 
 bool DTREagerBlobObject::is_in_memory() const {

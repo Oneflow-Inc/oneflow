@@ -40,7 +40,7 @@ struct DTRTensorPool {
         }
     }
 
-    Maybe<void> insert(vm::DTREagerBlobObject* blob_object, size_t thres=0);
+    Maybe<void> insert(std::shared_ptr<vm::DTREagerBlobObject> blob_object, size_t thres=0);
     Maybe<void> evict(vm::DTREagerBlobObject* blob_object);
 
     Maybe<vm::DTREagerBlobObject*> find_best_tensor();
@@ -54,10 +54,9 @@ struct DTRTensorPool {
     // TODO: Implementation of disjoint-set data structure
 
 private:
-    // At first, we use unordered_set for efficiency. Now use vector to view id of candidates in order.
-    std::set<vm::DTREagerBlobObject*> candidates_;
-    // std::unordered_set<vm::DTREagerBlobObject*> candidates_;
-    // std::vector<vm::DTREagerBlobObject*> candidates_;
+    // vector for eviction, set for non-eviction.
+    // std::set<std::weak_ptr<vm::DTREagerBlobObject>> candidates_;
+    std::vector<std::weak_ptr<vm::DTREagerBlobObject>> candidates_;
     std::chrono::steady_clock::time_point start_time_;
     int num_eviction_;
     int num_recomputation_;

@@ -113,38 +113,12 @@ class LocalCallOpKernelPhyInstrOperand : public vm::PhyInstrOperand {
   const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode_;
 };
 
-
-class DTRParentOperand final : public LocalCallOpKernelPhyInstrOperand {
+class DTRInstrOperand final : public LocalCallOpKernelPhyInstrOperand {
  public:
-  DTRParentOperand(const DTRParentOperand&) = delete;
-  DTRParentOperand(DTRParentOperand&&) = delete;
+  DTRInstrOperand(const DTRInstrOperand&) = delete;
+  DTRInstrOperand(DTRInstrOperand&&) = delete;
 
-  DTRParentOperand(
-      const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
-      const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,
-      const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
-      const one::OpExprInterpContext& op_interp_ctx_,
-      const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode) : LocalCallOpKernelPhyInstrOperand(opkernel, inputs, outputs, consistent_tensor_infer_result, op_interp_ctx_, dev_vm_dep_object_consume_mode)
-      {
-        inputs_ = inputs;
-
-        std::shared_ptr<one::EagerBlobObjectList> tmp_outputs = std::make_shared<one::EagerBlobObjectList>(outputs->size());
-        for (int i = 0; i < outputs->size(); ++i) {
-          tmp_outputs->at(i) = std::shared_ptr<vm::EagerBlobObject>(outputs_->at(i).get(), [](vm::EagerBlobObject* ptr) {});
-          // tmp_outputs->at(i) = std::shared_ptr<vm::EagerBlobObject>(outputs_->at(i).get(), [](vm::EagerBlobObject* ptr) { std::cout << "Fake delete outputs in the copied operand." << std::endl; });
-        }
-        outputs_ = tmp_outputs;
-      }
-  ~DTRParentOperand() override = default;
-};
-
-
-class DTRChildOperand final : public LocalCallOpKernelPhyInstrOperand {
- public:
-  DTRChildOperand(const DTRChildOperand&) = delete;
-  DTRChildOperand(DTRChildOperand&&) = delete;
-
-  DTRChildOperand(
+  DTRInstrOperand(
       const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
       const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
@@ -164,7 +138,7 @@ class DTRChildOperand final : public LocalCallOpKernelPhyInstrOperand {
         }
         outputs_ = tmp_outputs;
       }
-  ~DTRChildOperand() override = default;
+  ~DTRInstrOperand() override = default;
 };
 
 

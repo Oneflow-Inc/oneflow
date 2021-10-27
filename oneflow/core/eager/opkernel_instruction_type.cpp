@@ -166,6 +166,19 @@ Maybe<void> ForEachOutputBnAndBlobObject(vm::Instruction* instruction, const T& 
 }
 
 template<typename DoEachT>
+Maybe<void> ForEachSharedDTROutputTensor(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand, const DoEachT& DoEach) {
+  auto* ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(operand.get());
+  CHECK_NOTNULL_OR_RETURN(ptr);
+  for (const auto& output : *ptr->outputs()) {
+      CHECK_OR_RETURN(static_cast<bool>(output.get()));
+      auto shared_dtr_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(output);
+      CHECK_NOTNULL_OR_RETURN(shared_dtr_blob_object);
+      JUST(DoEach(shared_dtr_blob_object));
+  }
+  return Maybe<void>::Ok();
+}
+
+template<typename DoEachT>
 Maybe<void> ForEachDTROutputTensor(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand, const DoEachT& DoEach) {
   auto* ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(operand.get());
   CHECK_NOTNULL_OR_RETURN(ptr);
@@ -725,7 +738,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
       dtr_blob_object->unpin();
       return Maybe<void>::Ok();
     }));
-    JUST(ForEachDTROutputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
+    JUST(ForEachSharedDTROutputTensor(operand, [&](std::shared_ptr<vm::DTREagerBlobObject> dtr_blob_object) -> Maybe<void> {
       dtr_blob_object->set_compute_time(compute_time);
       // Condition - insert current blob into candidates only when blob memory > threshold (with default 0)
       JUST(Global<one::DTRTensorPool>::Get()->insert(dtr_blob_object));
