@@ -78,6 +78,31 @@ const StringSet<>& GetUnaryOpTypeNames() {
   return names;
 }
 
+const StringSet<>& GetScalarMathOpTypeNames() {
+  static llvm::StringSet<> names(
+      {"scalar_add", "scalar_floordiv", "scalar_fmod", "scalar_mul", "scalar_pow"
+
+      });
+  return names;
+}
+
+const StringSet<>& GetReduceOpTypeNames() {
+  static llvm::StringSet<> names(
+      {"reduce_min", "reduce_prod", "reduce_sum", "reduce_max"
+
+      });
+  return names;
+}
+
+const StringSet<>& GetPoolOpTypeNames() {
+  static llvm::StringSet<> names({"avgpool_1d", "avgpool_2d", "avgpool_3d", "avg_pool_1d",
+                                  "avg_pool_2d", "avg_pool_3d", "max_pool_1d", "max_pool_2d",
+                                  "max_pool_3d"
+
+  });
+  return names;
+}
+
 const StringSet<>& GetFloatUnaryOpTypeNames() {
   static llvm::StringSet<> names({"acosh", "asin",     "asinh",      "atan",  "atanh",      "sin",
                                   "cos",   "erf",      "erfc",       "exp",   "expm1",      "log",
@@ -103,7 +128,11 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
     else if (IsCtrlOutTrimmed(op) && IsCtrlInAbsent(op)) {
       if (op_type_name.equals("relu") || op_type_name.equals("gelu") || op_type_name.equals("cast")
           || GetUnaryOpTypeNames().contains(op_type_name)
-          || GetFloatUnaryOpTypeNames().contains(op_type_name)) {
+          || GetFloatUnaryOpTypeNames().contains(op_type_name)
+          || GetScalarMathOpTypeNames().contains(op_type_name)
+          || GetPoolOpTypeNames().contains(op_type_name)
+          || GetReduceOpTypeNames().contains(op_type_name)
+          || op_type_name.equals("reshape")) {
         NamedAttrList attributes(op->getAttrDictionary());
         attributes.erase("operand_segment_sizes");
         attributes.erase("result_segment_sizes");
@@ -119,7 +148,8 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
           return success();
         }
       } else if (op_type_name.equals("scalar_mul_by_tensor") || op_type_name.equals("matmul")
-                 || op_type_name.equals("gather") || op_type_name.equals("gelu_grad") || op_type_name.equals("conv2d")) {
+                 || op_type_name.equals("gather") || op_type_name.equals("gelu_grad")
+                 || op_type_name.equals("conv2d") || op_type_name.equals("bias_add")) {
         assert(op.data_input().size() == 2);
         assert(op.data_output().size() == 1);
         NamedAttrList attributes(op->getAttrDictionary());

@@ -123,6 +123,65 @@ def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", []> {
   let output = (outs AnyType:$y);
 }
 
+
+class OneFlow_ScalarMathOp<string mnemonic, list<OpTrait> traits = []> :
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType, NoSideEffect])> {
+    let summary = "OneFlow Scalar Math Ops";
+    let input = (ins AnyType:$x);
+    let output = (outs AnyType:$y);
+    let attrs = (ins
+    BoolAttr:$has_int_operand,
+    BoolAttr:$has_float_operand,
+    SI64Attr:$int_operand,
+    F64Attr:$float_operand
+  );
+}
+
+def OneFlow_ScalarAddOp : OneFlow_ScalarMathOp<"scalar_add", []> {}
+
+def OneFlow_ScalarFloorDivOp : OneFlow_ScalarMathOp<"scalar_floordiv", []> {}
+
+def OneFlow_ScalarFmodOp : OneFlow_ScalarMathOp<"scalar_fmod", []> {}
+
+def OneFlow_ScalarMulOp : OneFlow_ScalarMathOp<"scalar_mul", []> {}
+
+def OneFlow_ScalarPowOp : OneFlow_ScalarMathOp<"scalar_pow", []> {}
+
+class OneFlow_ReduceBaseOp<string mnemonic, list<OpTrait> traits = []> :
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
+    let summary = "OneFlow Reduce Mean Ops";
+    let input = (ins AnyType:$input_tensor);
+    let output = (outs AnyType:$output_tensor);
+    let attrs = (ins
+    SI32ArrayAttr:$axis,
+    BoolAttr:$keepdims
+  );
+}
+
+def OneFlow_ReduceMinOp : OneFlow_ReduceBaseOp<"reduce_min", []> {}
+
+def OneFlow_ReduceMaxOp : OneFlow_ReduceBaseOp<"reduce_max", []> {}
+
+def OneFlow_ReduceSumOp : OneFlow_ReduceBaseOp<"reduce_sum", []> {}
+
+def OneFlow_ReduceProdOp : OneFlow_ReduceBaseOp<"reduce_prod", []> {}
+
+def OneFlow_Reshape : OneFlow_BaseOp<"reshape", []> {
+  let summary = "OneFlow Reshape operation";
+  let description = [{
+  "Reshape the input tensor similar to numpy.reshape."
+  "First input is the data tensor, second input is a shape tensor which specifies the output shape. It outputs the reshaped tensor."
+  "At most one dimension of the new shape can be -1. In this case, the value is"
+  "inferred from the size of the tensor and the remaining dimensions. A dimension"
+  "could also be 0, in which case the actual dimension value is unchanged (i.e. taken"
+  "from the input tensor)."
+  }];
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs AnyType:$out);
+}
+
 def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", []> {
   let input = (ins
     AnyType:$a,
@@ -158,6 +217,69 @@ def OneFlow_Convolution2dOp : OneFlow_BaseOp<"conv2d", []> {
     DefaultValuedAttr<SI32Attr, "1">:$group
   );
 }
+
+def OneFlow_ReshapeOp : OneFlow_BaseOp<"bias_add", []> {
+  let summary = "OneFlow Bias Add operation";
+  let input = (ins
+    AnyType:$a,
+    AnyType:$b
+  );
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    SI32Attr:$axis
+  );
+}
+
+class OneFlow_LazyPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
+    let summary = "OneFlow Lazy Pooling operation";
+    let input = (ins AnyType:$x);
+    let output = (outs AnyType:$y);
+    let attrs = (ins
+    StrAttr:$padding,
+    SI32ArrayAttr:$padding_before,
+    SI32ArrayAttr:$padding_after,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$pool_size,
+    SI32ArrayAttr:$strides,
+    BoolAttr:$ceil_mode
+  );
+}
+
+class OneFlow_EagerPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
+    let summary = "OneFlow Eager Pooling operation";
+    let input = (ins AnyType:$x);
+    let output = (outs AnyType:$y);
+    let attrs = (ins
+    SI32ArrayAttr:$padding,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$stride,
+    BoolAttr:$ceil_mode,
+    BoolAttr:$count_include_pad,
+    SI64Attr:$divisor_override
+  );
+}
+
+def OneFlow_LazyMaxPool1dOp : OneFlow_LazyPoolBaseOp<"max_pool_1d", []> {}
+
+def OneFlow_LazyMaxPool2dOp : OneFlow_LazyPoolBaseOp<"max_pool_2d", []> {}
+
+def OneFlow_LazyMaxPool3dOp : OneFlow_LazyPoolBaseOp<"max_pool_3d", []> {}
+
+def OneFlow_LazyAvgPool1dOp : OneFlow_LazyPoolBaseOp<"avg_pool_1d", []> {}
+
+def OneFlow_LazyAvgPool2dOp : OneFlow_LazyPoolBaseOp<"avg_pool_2d", []> {}
+
+def OneFlow_LazyAvgPool3dOp : OneFlow_LazyPoolBaseOp<"avg_pool_3d", []> {}
+
+def OneFlow_EagerAvgPool1dOp : OneFlow_EagerPoolBaseOp<"avgpool_1d", []> {}
+
+def OneFlow_EagerAvgPool2dOp : OneFlow_EagerPoolBaseOp<"avgpool_2d", []> {}
+
+def OneFlow_EagerAvgPool3dOp : OneFlow_EagerPoolBaseOp<"avgpool_3d", []> {}
+
 
 def OneFlow_GatherOp : OneFlow_BaseOp<"gather", []> {
   let input = (ins
