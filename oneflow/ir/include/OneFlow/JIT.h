@@ -9,6 +9,19 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 #include "oneflow/core/framework/util.h"
+#include "mlir/Pass/Pass.h"
+
+namespace mlir {
+namespace oneflow {
+
+std::unique_ptr<Pass> createReturnAllLeaveResultPass();
+
+}  // namespace oneflow
+}  // namespace mlir
+
+#define GEN_PASS_CLASSES
+#define GEN_PASS_REGISTRATION
+#include "OneFlow/OneFlowJITPasses.h.inc"
 
 namespace oneflow {
 

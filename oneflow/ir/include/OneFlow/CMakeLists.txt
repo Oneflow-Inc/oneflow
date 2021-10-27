@@ -12,4 +12,8 @@ set(LLVM_TARGET_DEFINITIONS OneFlowOps.td)
 mlir_tablegen(OneFlowPasses.h.inc -gen-pass-decls)
 add_public_tablegen_target(MLIROneFlowPassIncGen)
 
-add_mlir_dialect(OneFlowOps oneflow DEPENDS MLIROneFlowEnumsIncGen MLIROneFlowPatternsIncGen MLIROneFlowPassIncGen)
+set(LLVM_TARGET_DEFINITIONS OneFlowJIT.td)
+mlir_tablegen(OneFlowJITPasses.h.inc -gen-pass-decls)
+add_public_tablegen_target(MLIROneFlowJITPassIncGen)
+
+add_mlir_dialect(OneFlowOps oneflow DEPENDS MLIROneFlowEnumsIncGen MLIROneFlowPatternsIncGen MLIROneFlowPassIncGen MLIROneFlowJITPassIncGen)

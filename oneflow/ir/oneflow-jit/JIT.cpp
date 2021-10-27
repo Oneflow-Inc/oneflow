@@ -8,6 +8,21 @@
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/framework/user_op_def.h"
 
+namespace {
+class ReturnAllLeaveResultPass : public ReturnAllLeaveResultPassBase<ReturnAllLeaveResultPass> {
+  void runOnFunction() override {}
+};
+}  // namespace
+
+namespace mlir {
+namespace oneflow {
+std::unique_ptr<Pass> createReturnAllLeaveResultPass() {
+  return std::make_unique<ReturnAllLeaveResultPass>();
+}
+
+}  // namespace oneflow
+}  // namespace mlir
+
 namespace oneflow {
 
 namespace one {
