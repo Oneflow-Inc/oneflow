@@ -62,7 +62,6 @@ InstructionOperand* InstructionMsg::add_instr_operand() {
 
 void InstructionMsg::__Init__() {
   *mut_instr_type_name() = "";
-  mut_operand_list()->mut_operand()->reserve(kReservedOperandVecSize);
   set_parallel_desc_symbol_id(0);
 }
 

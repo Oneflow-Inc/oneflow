@@ -101,16 +101,16 @@ Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device) {
     local_dep_object = *JUST(LocalDepObject::New(*device));
     GlobalLifetimeLocalDepObjectList(device)->PushBack(local_dep_object.Mutable());
   }
-  CHECK_OR_RETURN(local_dep_object->is_pool_hook_empty());
-  CHECK_OR_RETURN(local_dep_object->is_stored_hook_empty());
-  CHECK_OR_RETURN(!local_dep_object->is_lifetime_hook_empty());
+  CHECK_OR_RETURN(local_dep_object->pool_hook().empty());
+  CHECK_OR_RETURN(local_dep_object->stored_hook().empty());
+  CHECK_OR_RETURN(!local_dep_object->lifetime_hook().empty());
   return local_dep_object.Mutable();
 }
 
 Maybe<void> PutLocalDepObjectToDevicePool(Symbol<Device> device, LocalDepObject* local_dep_object) {
-  CHECK_OR_RETURN(local_dep_object->is_pool_hook_empty());
-  CHECK_OR_RETURN(local_dep_object->is_stored_hook_empty());
-  CHECK_OR_RETURN(!local_dep_object->is_lifetime_hook_empty());
+  CHECK_OR_RETURN(local_dep_object->pool_hook().empty());
+  CHECK_OR_RETURN(local_dep_object->stored_hook().empty());
+  CHECK_OR_RETURN(!local_dep_object->lifetime_hook().empty());
   auto* pool_list = ThreadLocalPoolLocalDepObjectList(device);
   const auto& pool_size = JUST(device->instr_local_dep_object_pool_size());
   // Keep pool_list->size() not bigger than pool_size
