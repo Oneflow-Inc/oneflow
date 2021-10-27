@@ -44,9 +44,8 @@ class Function(AutogradFunctionBase):
                 result, = ctx.saved_tensors
                 return grad_output * result
 
-        my_module = Exp()
         # Use it by calling the apply method or __call__ method
-        output = my_module.apply(input)  # output = my_module(input)
+        output = Exp.apply(input)  # output = Exp()(input)
     """
 
     def __init__(self):
