@@ -1,3 +1,4 @@
+# RUN: python3 %s
 import oneflow as torch
 
 
