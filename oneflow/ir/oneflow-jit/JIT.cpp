@@ -9,8 +9,22 @@
 #include "oneflow/core/framework/user_op_def.h"
 
 namespace {
+
+using namespace mlir;
+
 class ReturnAllLeaveResultPass : public ReturnAllLeaveResultPassBase<ReturnAllLeaveResultPass> {
-  void runOnFunction() override {}
+  void runOnFunction() override {
+    auto CollectNotUsedResults = [&](Operation* op) {
+      for (auto result : op->getOpResults()) {
+        if (result.use_empty()) {
+          llvm::errs() << "use_empty: ";
+          result.dump();
+        }
+      }
+      return WalkResult::advance();
+    };
+    getFunction()->walk(CollectNotUsedResults);
+  }
 };
 }  // namespace
 
@@ -225,6 +239,7 @@ LogicalResult Canonicalize(OpBuilder& builder, ModuleOp module) {
   builder.create<ReturnOp>(module->getLoc());
   mlir::PassManager pm(module->getContext());
   pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
+  pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createReturnAllLeaveResultPass());
   return pm.run(module);
 }
 
