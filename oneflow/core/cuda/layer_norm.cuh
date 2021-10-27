@@ -45,6 +45,7 @@ template<>
 __inline__ __device__ double Div<double>(double a, double b) {
   return a / b;
 }
+
 inline cudaError_t GetNumBlocks(int64_t block_size, int64_t max_blocks, int64_t waves,
                                 int* num_blocks) {
   int dev;
@@ -139,6 +140,8 @@ inline __device__ void WelfordCombine(T val, T* mean, T* m2, int* count) {
 
 template<typename T>
 inline __device__ void WelfordCombine(T b_mean, T b_m2, int b_count, T* mean, T* m2, int* count) {
+  // num_cols always greater than half of thread_group_width, new_count will not be 0 for
+  // WelfordWarpAllReduce call.
   int new_count = *count + b_count;
   T nb_over_n = Div(static_cast<T>(b_count), static_cast<T>(new_count));
   T delta = b_mean - *mean;
