@@ -15,8 +15,9 @@ limitations under the License.
 */
 #include "oneflow/api/python/env/env.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/global.h"
+#include "oneflow/core/common/multi_client.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/global_for.h"
 namespace oneflow {
 

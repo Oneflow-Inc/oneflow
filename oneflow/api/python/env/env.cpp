@@ -34,7 +34,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetWorldSize", &GetWorldSize);
   m.def("GetNodeSize", &GetNodeSize);
   m.def("GetLocalRank", &GetLocalRank);
-  m.def("IsMultiClient", &IsMultiClient);
   m.def("SetIsMultiClient", &SetIsMultiClient);
   m.def("CudaGetDeviceCount", &CudaGetDeviceCount);
 }

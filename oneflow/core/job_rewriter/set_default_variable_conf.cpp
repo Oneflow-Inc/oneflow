@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/api/python/env/env.h"
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/job_builder.h"

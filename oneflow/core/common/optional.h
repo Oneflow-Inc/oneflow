@@ -350,8 +350,8 @@ class Optional final : private internal::OptionalBase<T> {
     return std::move(*this).base::value_or(std::forward<U>(other));
   }
 
-  auto value() && -> decltype(std::move(*this).base::value()) {
-    return std::move(*this).base::value();
+  auto value() const& -> decltype(base::value()) {
+    return base::value();
   }
 
   bool has_value() const { return base::has_value(); }

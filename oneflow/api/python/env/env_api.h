@@ -44,8 +44,6 @@ inline size_t GetNodeSize() { return oneflow::GetNodeSize().GetOrThrow(); }
 
 inline size_t GetLocalRank() { return oneflow::GetLocalRank().GetOrThrow(); }
 
-inline bool IsMultiClient() { return oneflow::IsMultiClient().GetOrThrow(); }
-
 inline void SetIsMultiClient(bool is_multi_client) {
   return oneflow::SetIsMultiClient(is_multi_client).GetOrThrow();
 }

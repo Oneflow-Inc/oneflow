@@ -200,7 +200,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("symbol_id",
                              [](const ParallelDesc& x) {  
         if (!x.symbol_id().has_value()) { THROW(RuntimeError) << "symbol_id not initialized"; }
-        return x.symbol_id().value_or(0); 
+        return x.symbol_id().value(); 
       })
       .def_property_readonly("parallel_conf", &ParallelDesc::cfg_parallel_conf)
       .def_property_readonly("parallel_num", &ParallelDesc::parallel_num)
