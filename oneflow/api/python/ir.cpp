@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/ir/include/OneFlow/Extension.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/op_interpreter/jit_op_interpreter.h"
 
 namespace oneflow {
 
@@ -28,10 +29,13 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
   m.def("load_jit_shared_lib",
         [](const std::string& lib_path) { MutSharedLibPaths()->insert(lib_path); });
   m.def("toggle_jit", [](const std::string func_name) {
+    // when true => false, start exec
+    if (one::IsJitEnabled()) {
+      auto jit_interpreter = dynamic_cast<one::JitInterpreter*>(one::GetJitInterpreter().get());
+      jit_interpreter->Interrupt();
+    }
     *one::MutJitEnabled() = !*one::MutJitEnabled();
     *one::MutJitFuncName() = func_name;
-    // TODO: when false => true, sync vm, empty instructions
-    // TODO: when true => false, start compile op expressions and exec
     return *one::MutJitEnabled();
   });
   m.def("set_jit_forward_args", [](const std::vector<std::shared_ptr<one::Tensor>>& tensors,

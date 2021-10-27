@@ -1,6 +1,8 @@
 #include "OneFlow/JIT.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "OneFlow/OneFlowDialect.h"
+#include "mlir/Pass/PassManager.h"
+#include "mlir/Transforms/Passes.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
@@ -30,6 +32,15 @@ LogicalResult JitImporter::AppendDataInOperand(const std::string& key, const int
 }
 LogicalResult JitImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
                                          std::vector<NamedAttribute>& attr_vec) {
+  const ::oneflow::ParallelConf& pc = parallel_desc_->parallel_conf();
+  std::vector<llvm::StringRef> device_vec = {pc.device_name().begin(), pc.device_name().end()};
+  attr_vec.push_back(
+      GetBuilder().getNamedAttr("device_name", GetBuilder().getStrArrayAttr(device_vec)));
+  if (pc.has_hierarchy()) {
+    attr_vec.push_back(GetBuilder().getNamedAttr(
+        "hierarchy",
+        GetBuilder().getI64ArrayAttr({pc.hierarchy().dim().begin(), pc.hierarchy().dim().end()})));
+  }
   return success();
 }
 Type JitImporter::GetTensorTypeOfLbn(const std::string& lbn) {
@@ -196,6 +207,13 @@ llvm::Optional<mlir::Value> JitImporter::GetResultByBnAndIndex(const std::string
   } else {
     return result_it->second;
   }
+}
+
+LogicalResult Canonicalize(OpBuilder& builder, ModuleOp module) {
+  builder.create<ReturnOp>(module->getLoc());
+  mlir::PassManager pm(module->getContext());
+  pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
+  return pm.run(module);
 }
 
 }  // namespace ir

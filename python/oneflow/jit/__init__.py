@@ -19,7 +19,6 @@ def trace(f):
         )
         # NOTE: forbid calling __repr__ in the forward function
         result = f(*args, **kwargs)
-        # TODO: SetJitForwardResults(result)
         print("JIT disabled")
         assert not oneflow._oneflow_internal.ir.toggle_jit(func_name)
         return result

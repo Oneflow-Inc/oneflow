@@ -13,9 +13,7 @@ class MyModule(torch.nn.Module):
 
     @torch.jit.trace
     def forward(self, input):
-        print("linear before")
         output = self.linear(input)
-        print("linear after")
         return output
 
 

@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_JIT_OP_INTERPRETER_H_
 #define ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_JIT_OP_INTERPRETER_H_
 
+#ifdef WITH_MLIR
+
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/ir/include/OneFlow/JIT.h"
 #include "mlir/IR/Builders.h"
@@ -40,6 +42,7 @@ class JitInterpreter : public OpExprInterpreter {
   }
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const OpExprInterpContext& ctx) const override;
+  void Interrupt();
 
  private:
   DECLARE_NORMAL_APPLY_FUNC(UserOp);  // note(BBuf) jit deal with user op only, now.
@@ -50,5 +53,7 @@ class JitInterpreter : public OpExprInterpreter {
 
 }  // namespace one
 }  // namespace oneflow
+
+#endif  // WITH_MLIR
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_JIT_OP_INTERPRETER_H_

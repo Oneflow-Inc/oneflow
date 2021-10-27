@@ -28,41 +28,12 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/operator/operator.h"
+#ifdef WITH_MLIR
 #include "oneflow/core/framework/op_interpreter/jit_op_interpreter.h"
+#endif  // WITH_MLIR
 
 namespace oneflow {
 namespace one {
-
-#ifdef WITH_MLIR
-
-bool* MutJitEnabled() {
-  static bool jit_enabled = false;
-  return &jit_enabled;
-}
-
-bool IsJitEnabled() { return *MutJitEnabled(); }
-
-std::string* MutJitFuncName() {
-  static std::string func_name = "";
-  return &func_name;
-}
-
-const std::string& GetJitFuncName() { return *MutJitFuncName(); }
-
-std::vector<std::shared_ptr<one::Tensor>>* MutJitForwardArgs() {
-  static std::vector<std::shared_ptr<one::Tensor>> arg_tensors{};
-  return &arg_tensors;
-}
-
-void SetJitForwardArgs(const std::vector<std::shared_ptr<one::Tensor>>& tensors) {
-  *MutJitForwardArgs() = tensors;
-}
-
-const std::vector<std::shared_ptr<one::Tensor>>& GetJitForwardArgs() {
-  return *MutJitForwardArgs();
-}
-
-#endif  // WITH_MLIR
 
 namespace {
 
@@ -73,11 +44,6 @@ std::shared_ptr<AutogradInterpreter> BuildEagerInterpreter(const bool& is_mirror
   } else {
     internal = std::make_shared<EagerConsistentInterpreter>();
   }
-  return std::make_shared<AutogradInterpreter>(internal);
-}
-
-std::shared_ptr<AutogradInterpreter> BuildJITInterpreter() {
-  std::shared_ptr<OpExprInterpreter> internal = std::make_shared<JitInterpreter>();
   return std::make_shared<AutogradInterpreter>(internal);
 }
 
@@ -103,13 +69,27 @@ std::string ErrorString4Inputs(const TensorTuple& inputs, const OpExpr& op_expr)
   return error_str.str();
 }
 
+#ifdef WITH_MLIR
+std::shared_ptr<JitInterpreter> BuildOrGetJitInterpreter() {
+  static auto jit_iterpreter = std::make_shared<JitInterpreter>();
+  return jit_iterpreter;
+}
+
+std::shared_ptr<AutogradInterpreter> BuildJitInterpreter() {
+  std::shared_ptr<OpExprInterpreter> internal = BuildOrGetJitInterpreter();
+  return std::make_shared<AutogradInterpreter>(internal);
+}
+#endif  // WITH_MLIR
+
 Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExprInterpContext& ctx,
                                           const OpExpr& op_expr) {
   static const auto& g_lazy_interpreter = BuildLazyInterpreter();
   static const auto& g_eager_consistent_interpreter = BuildEagerInterpreter(/*is_mirrored=*/false);
   static const auto& g_eager_mirrored_interpreter = BuildEagerInterpreter(/*is_mirrored=*/true);
-  static const auto& g_jit_mirrored_interpreter = BuildJITInterpreter();
+#ifdef WITH_MLIR
+  static const auto& g_jit_mirrored_interpreter = BuildJitInterpreter();
   if (one::IsJitEnabled()) { return g_jit_mirrored_interpreter; }
+#endif  // WITH_MLIR
   if (!LazyMode::is_enabled()) {
     if (inputs.empty()) {
       if (ctx.parallel_desc.has_value()) {
@@ -252,6 +232,39 @@ template<>
   }
   return Maybe<void>::Ok();
 }
+
+#ifdef WITH_MLIR
+
+bool* MutJitEnabled() {
+  static bool jit_enabled = false;
+  return &jit_enabled;
+}
+
+bool IsJitEnabled() { return *MutJitEnabled(); }
+
+std::string* MutJitFuncName() {
+  static std::string func_name = "";
+  return &func_name;
+}
+
+const std::string& GetJitFuncName() { return *MutJitFuncName(); }
+
+std::vector<std::shared_ptr<one::Tensor>>* MutJitForwardArgs() {
+  static std::vector<std::shared_ptr<one::Tensor>> arg_tensors{};
+  return &arg_tensors;
+}
+
+void SetJitForwardArgs(const std::vector<std::shared_ptr<one::Tensor>>& tensors) {
+  *MutJitForwardArgs() = tensors;
+}
+
+const std::vector<std::shared_ptr<one::Tensor>>& GetJitForwardArgs() {
+  return *MutJitForwardArgs();
+}
+
+std::shared_ptr<OpExprInterpreter> GetJitInterpreter() { return BuildOrGetJitInterpreter(); }
+
+#endif  // WITH_MLIR
 
 }  // namespace one
 }  // namespace oneflow

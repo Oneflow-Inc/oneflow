@@ -1,3 +1,4 @@
+#ifdef WITH_MLIR
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -56,6 +57,11 @@ Maybe<const ParallelDesc> GetParallelDesc(const std::shared_ptr<Tensor>& tensor)
   }
 }
 
+void JitInterpreter::Interrupt() {
+  CHECK(ir::Canonicalize(importer_.GetBuilder(), importer_.GetModule()).succeeded());
+  module_->dump();
+}
+
 Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
                                       TensorTuple* outputs, const OpExprInterpContext& ctx) const {
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
@@ -78,8 +84,6 @@ Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTup
   importer_.GetOrInsertFunc(GetJitFuncName(), inputs, outputs);
   importer_.CreateOperandMapping(*op_conf, parallel_desc, op_expr.input_arg_tuple(), inputs);
   CHECK_OR_RETURN(importer_.ProcessUserOp(*op_conf).succeeded());
-  LOG(ERROR) << "[func name] " << GetJitFuncName();
-  module_->dump();
   // TODO: MLIR add op expr
   return Maybe<void>::Ok();
 }
@@ -87,3 +91,5 @@ Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTup
 }  // namespace one
 
 }  // namespace oneflow
+
+#endif  // WITH_MLIR

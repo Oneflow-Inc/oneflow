@@ -76,6 +76,7 @@ class JitImporter : public Importer {
 };
 
 OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context);
+LogicalResult Canonicalize(mlir::OpBuilder& builder, ModuleOp module);
 
 }  // namespace ir
 
