@@ -63,14 +63,11 @@ def _ndim(self):
 
 
 def _nelement(self):
-    prod = 1
-    for dim in self.shape:
-        prod *= dim
-    return prod
+    return self.shape.numel()
 
 
 def _numel(self):
-    return self.nelement()
+    return self.shape.numel()
 
 
 def _element_size(self):
@@ -168,6 +165,10 @@ def _or(self, other):
     return self.logical_or(other)
 
 
+def _not(self):
+    return flow._C.logical_not(self)
+
+
 def _xor(self, other):
     return self.logical_xor(other)
 
@@ -175,6 +176,18 @@ def _xor(self, other):
 def _contiguous(self):
     # TODO: support stride mechanism
     return self
+
+
+def _norm(self, ord=None, dim=None, keepdim=False, dtype=None):
+    return flow._C.norm(self, ord, dim, keepdim, dtype=dtype)
+
+
+def _vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
+    return flow._C.vector_norm(self, ord, dim, keepdim, dtype=dtype)
+
+
+def _matrix_norm(self, ord="fro", dim=(-2, -1), keepdim=False, dtype=None):
+    return flow._C.matrix_norm(self, ord, dim, keepdim, dtype=dtype)
 
 
 def _transpose(self, dim0, dim1):
@@ -465,6 +478,18 @@ def _square(self):
     return flow.square(self)
 
 
+def _var(self, dim=None, unbiased=True, keepdim=False):
+    return flow._C.var(self, dim=dim, unbiased=unbiased, keepdim=keepdim)
+
+
+def _std(self, dim=None, unbiased=True, keepdim=False):
+    return flow._C.std(self, dim=dim, unbiased=unbiased, keepdim=keepdim)
+
+
+def _squeeze(self, dim=None):
+    return flow._C.squeeze(self, dim=dim)
+
+
 def _matmul(self, other):
     return flow.matmul(self, other)
 
@@ -485,7 +510,37 @@ def _triu(self, diagonal=0):
     return flow.triu(self, diagonal=diagonal)
 
 
+def _relu(self, inplace=False):
+    return flow.relu(self, inplace=inplace)
+
+
+def _softmax(self, dim=None):
+    return flow.softmax(self, dim=dim)
+
+
+def _log_softmax(self, dim=None):
+    return flow.log_softmax(self, dim=dim)
+
+
+def _argmax(self, dim=None, keepdim=None):
+    return flow.argmax(self, dim=dim, keepdim=keepdim)
+
+
+def _argmin(self, dim=None, keepdim=None):
+    return flow.argmin(self, dim=dim, keepdim=keepdim)
+
+
+def _roll(self, shifts, dims=None):
+    return flow.roll(self, shifts=shifts, dims=dims)
+
+
 def _uniform(self, a=0, b=1):
+    if isinstance(a, Tensor):
+        assert a.ndim == 0 and a.nelement() == 1, "a must be a number or scalar tensor!"
+        a = a.numpy().item()
+    if isinstance(b, Tensor):
+        assert b.ndim == 0 and b.nelement() == 1, "b must be a number or scalar tensor!"
+        b = b.numpy().item()
     initializer_conf = flow.random_uniform_initializer(
         minval=a, maxval=b, dtype=self.dtype
     )
@@ -667,6 +722,8 @@ def RegisterMethods():
     Tensor.abs = _abs
     Tensor.exp = _exp
     Tensor.floor_divide = _floor_divide
+    Tensor.argmax = _argmax
+    Tensor.argmin = _argmin
     Tensor.acos = _acos
     Tensor.acosh = _acosh
     Tensor.arccosh = _arccosh
@@ -717,13 +774,24 @@ def RegisterMethods():
     Tensor.rsqrt = _rsqrt
     Tensor.sqrt = _sqrt
     Tensor.square = _square
+    Tensor.var = _var
+    Tensor.std = _std
     Tensor.matmul = _matmul
     Tensor.round = _round
     Tensor.softplus = _softplus
     Tensor.tril = _tril
     Tensor.triu = _triu
     Tensor.contiguous = _contiguous
+    Tensor.norm = _norm
+    Tensor.vector_norm = _vector_norm
+    Tensor.matrix_norm = _matrix_norm
     Tensor.transpose = _transpose
+    Tensor.relu = _relu
+    Tensor.softmax = _softmax
+    Tensor.log_softmax = _log_softmax
+    Tensor.logical_not = _not
+    Tensor.roll = _roll
+    Tensor.squeeze = _squeeze
 
 
 def register_tensor_op(op_name):

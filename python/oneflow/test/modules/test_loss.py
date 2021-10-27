@@ -92,7 +92,9 @@ def test_cross_entropy_loss(dim=int):
         device,
     ) = generate_necessity_for_cross_entropy_or_nll_loss(dim)
     m = torch.nn.CrossEntropyLoss(
-        reduction=oneof("none", "sum", "mean", nothing()), ignore_index=ignore_index,
+        reduction=oneof("none", "sum", "mean", nothing()),
+        ignore_index=ignore_index,
+        weight=oneof(weight, nothing()),
     )
     m.train(random())
     m.to(device)
@@ -105,19 +107,19 @@ def test_cross_entropy_loss(dim=int):
 class TestCrossEntropyLossModule(flow.unittest.TestCase):
     @autotest()
     def test_cross_entropy_loss_with_random_data_dim_2(test_case):
-        test_cross_entropy_loss(2)
+        return test_cross_entropy_loss(2)
 
     @autotest()
     def test_cross_entropy_loss_with_random_data_dim_3(test_case):
-        test_cross_entropy_loss(3)
+        return test_cross_entropy_loss(3)
 
     @autotest()
     def test_cross_entropy_loss_with_random_data_dim_4(test_case):
-        test_cross_entropy_loss(4)
+        return test_cross_entropy_loss(4)
 
     @autotest()
     def test_cross_entropy_loss_with_random_data_dim_5(test_case):
-        test_cross_entropy_loss(5)
+        return test_cross_entropy_loss(5)
 
 
 def test_nll_loss(dim=int):

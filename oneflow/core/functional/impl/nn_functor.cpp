@@ -26,8 +26,10 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
 
 namespace oneflow {
@@ -113,6 +115,76 @@ class Conv3dFunctor : public ConvBaseFunctor {
   Conv3dFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/3) {
     conv_op_ =
         CHECK_JUST(one::OpBuilder("conv3d").Input("in").Input("weight").Output("out").Build());
+  }
+};
+
+class DeConvBaseFunctor {
+ public:
+  explicit DeConvBaseFunctor() {
+    bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
+  }
+  virtual ~DeConvBaseFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const Optional<one::Tensor>& bias, const int32_t& filters,
+                           const std::vector<int32_t>& padding, const std::string& data_format,
+                           const std::vector<int32_t>& kernel_size,
+                           const std::vector<int32_t>& output_padding,
+                           const std::vector<int32_t>& strides,
+                           const std::vector<int32_t>& dilation, const int32_t& groups) const {
+    MutableAttrMap deconv_attrs;
+    JUST(deconv_attrs.SetAttr<int32_t>("filters", filters));
+    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("padding_before", padding));
+    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
+    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("output_padding", output_padding));
+    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("strides", strides));
+    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation));
+    JUST(deconv_attrs.SetAttr<std::string>("data_format", data_format));
+    std::shared_ptr<one::Tensor> deconv_out = nullptr;
+    if (groups == 1) {
+      deconv_out = JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {x, weight}, deconv_attrs));
+    } else {
+      auto nc = x->dim(1) / groups;
+      auto split_x = JUST(functional::Split(x, nc, 1));
+      auto split_weight = JUST(functional::Split(weight, nc, 0));
+      int64_t max_dim_size = 0;
+      one::TensorTuple split_out;
+      for (int i = 0; i < groups; i++) {
+        const std::shared_ptr<one::Tensor>& deconv_i = JUST(OpInterpUtil::Dispatch<Tensor>(
+            *deconv_op_, {split_x->at(i), split_weight->at(i)}, deconv_attrs));
+        max_dim_size += deconv_i->dim(1);
+        split_out.push_back(deconv_i);
+      }
+      deconv_out = JUST(functional::Concat(split_out, 1, max_dim_size));
+    }
+
+    if (bias) {
+      MutableAttrMap bias_attrs;
+      JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
+      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {deconv_out, JUST(bias)}, bias_attrs);
+    } else {
+      return deconv_out;
+    }
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> deconv_op_;
+  std::shared_ptr<OpExpr> bias_op_;
+};
+
+class DeConv1dFunctor : public DeConvBaseFunctor {
+ public:
+  DeConv1dFunctor() {
+    deconv_op_ =
+        CHECK_JUST(one::OpBuilder("deconv1d").Input("in").Input("weight").Output("out").Build());
+  }
+};
+
+class DeConv3dFunctor : public DeConvBaseFunctor {
+ public:
+  DeConv3dFunctor() {
+    deconv_op_ =
+        CHECK_JUST(one::OpBuilder("deconv3d").Input("in").Input("weight").Output("out").Build());
   }
 };
 
@@ -361,6 +433,81 @@ class AdaptiveAvgPool3DFunctor : public AdaptivePoolNDFunctor {
     op_ = CHECK_JUST(one::OpBuilder("adaptive_avg_pool3d").Input("x").Output("y").Build());
   }
 };
+class SimpleLossFunctorBase {
+ public:
+  Maybe<Tensor> apply_reduction(const Maybe<Tensor>& x, const std::string& reduction) const {
+    CHECK_OR_RETURN(reduction == "none" || reduction == "sum" || reduction == "mean")
+        << "Reduction should be none, sum or mean.";
+    if (reduction == "sum") { return functional::ReduceSum(JUST(x), {}, false); }
+    if (reduction == "mean") { return functional::ReduceMean(JUST(x), {}, false); }
+    return x;
+  }
+
+ protected:
+  SimpleLossFunctorBase() = default;
+  virtual ~SimpleLossFunctorBase() = default;
+};
+
+class L1LossFunctor : public SimpleLossFunctorBase {
+ public:
+  L1LossFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const std::string& reduction) const {
+    const auto out = sequence_function(functional::Sub).then(functional::Abs).call(input, target);
+    return apply_reduction(out, reduction);
+  }
+};
+
+class MseLossFunctor : public SimpleLossFunctorBase {
+ public:
+  MseLossFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const std::string& reduction) const {
+    const auto out =
+        JUST(sequence_function(functional::Sub).then(functional::Square).call(input, target));
+    return apply_reduction(out, reduction);
+  }
+};
+
+class MarginRankingLossFunctor : public SimpleLossFunctorBase {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input_1,
+                           const std::shared_ptr<one::Tensor>& input_2,
+                           const std::shared_ptr<one::Tensor>& target, const float margin,
+                           const std::string& reduction) const {
+    const auto out =
+        JUST(sequence_function(functional::Sub)
+                 .then(functional::Negative)
+                 .then(std::bind(functional::Mul, target, std::placeholders::_1))
+                 .then([&margin](const std::shared_ptr<one::Tensor>& x) {
+                   return functional::ScalarAdd(x, Scalar(margin), true);
+                 })
+                 .then(std::bind(functional::Clamp, std::placeholders::_1, Scalar(0), NullOpt))
+                 .call(input_1, input_2));
+    return apply_reduction(out, reduction);
+  }
+};
+
+class KLDivLossFunctor {
+ public:
+  KLDivLossFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("kl_div_loss").Input("input").Input("target").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target, const bool log_target,
+                           const std::string& reduction) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("log_target", log_target));
+    JUST(attrs.SetAttr<std::string>("reduction", reduction));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
 
 class NllLossFunctor {
  public:
@@ -395,9 +542,11 @@ class NllLossFunctor {
     std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
     input_perm[input_perm.size() - 1] = 1;
     for (size_t i = 1; i < input_perm.size() - 1; ++i) { input_perm[i] = i + 1; }
-    auto input_ = JUST(functional::Transpose(input, input_perm));
-    input_ =
-        JUST(functional::Reshape(input_, {-1, input_->shape()->At(input_shape->NumAxes() - 1)}));
+
+    const auto input_ = JUST(sequence_function(functional::Transpose)
+                                 .then(std::bind(functional::Reshape, std::placeholders::_1,
+                                                 Shape({-1, input_shape->At(1)})))
+                                 .call(input, input_perm));
     auto target_ = JUST(functional::Flatten(target, 0, target_shape->NumAxes() - 1));
 
     std::shared_ptr<Tensor> result;
@@ -447,6 +596,7 @@ class BinaryCrossEntropyLossFunctor {
   std::shared_ptr<OpExpr> op_;
   std::shared_ptr<OpExpr> op_weight_;
 };
+
 class BinaryCrossEntropyWithLogitsLossFunctor {
  public:
   BinaryCrossEntropyWithLogitsLossFunctor() {
@@ -502,46 +652,291 @@ class BinaryCrossEntropyWithLogitsLossFunctor {
   std::shared_ptr<OpExpr> op_pos_;
   std::shared_ptr<OpExpr> op_weight_pos_;
 };
-class SparseSoftmaxCrossEntropyFunctor {
+
+class CrossEntropyFunctor {
  public:
-  SparseSoftmaxCrossEntropyFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("sparse_softmax_cross_entropy")
+  CrossEntropyFunctor() {
+    op_log_softmax_ = CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
+    op_nll_ = CHECK_JUST(one::OpBuilder("nll")
+                             .Input("input")
+                             .Input("target")
+                             .Output("out")
+                             .Output("total_weight")
+                             .Build());
+    op_nll_weight_ = CHECK_JUST(one::OpBuilder("nll")
+                                    .Input("input")
+                                    .Input("target")
+                                    .Input("weight")
+                                    .Output("out")
+                                    .Output("total_weight")
+                                    .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const Optional<one::Tensor>& weight, const int64_t& ignore_index,
+                           const std::string& reduction) const {
+    const auto& input_shape = input->shape();
+    const auto& target_shape = target->shape();
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
+    JUST(attrs.SetAttr<std::string>("reduction", reduction));
+
+    std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
+    input_perm[input_perm.size() - 1] = 1;
+    for (size_t i = 1; i < input_perm.size() - 1; ++i) { input_perm[i] = i + 1; }
+
+    const auto input_ = JUST(sequence_function(functional::Transpose)
+                                 .then(std::bind(functional::Reshape, std::placeholders::_1,
+                                                 Shape({-1, input_shape->At(1)})))
+                                 .then([this](const std::shared_ptr<one::Tensor>& x) {
+                                   return OpInterpUtil::Dispatch<Tensor>(*op_log_softmax_, {x});
+                                 })
+                                 .call(input, input_perm));
+
+    const auto target_ = JUST(functional::Flatten(target, 0, target->shape()->NumAxes() - 1));
+
+    std::shared_ptr<Tensor> result;
+    if (weight) {
+      result = JUST(
+          OpInterpUtil::Dispatch<Tensor>(*op_nll_weight_, {input_, target_, JUST(weight)}, attrs));
+    } else {
+      result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_nll_, {input_, target_}, attrs));
+    }
+    if (reduction == "none") { result = JUST(functional::Reshape(result, *target_shape)); }
+    return result;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_log_softmax_;
+  std::shared_ptr<OpExpr> op_nll_;
+  std::shared_ptr<OpExpr> op_nll_weight_;
+};
+
+class SparseCrossEntropyFunctor {
+ public:
+  SparseCrossEntropyFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("sparse_cross_entropy")
                          .Input("prediction")
                          .Input("label")
                          .Output("out")
-                         .Output("prob")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& prediction,
                            const std::shared_ptr<one::Tensor>& label, const int64_t& depth) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("depth", depth));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {logits, label}, attrs);
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {prediction, label}, attrs);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
 };
 
-class SparseSoftmaxCrossEntropyMsFunctor {
+class SparseCrossEntropyMsFunctor {
  public:
-  SparseSoftmaxCrossEntropyMsFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("sparse_softmax_cross_entropy_ms")
+  SparseCrossEntropyMsFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("sparse_cross_entropy_ms")
                          .Input("prediction")
                          .Input("label")
                          .Output("out")
-                         .Output("prob")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& prediction,
                            const std::shared_ptr<one::Tensor>& label, const int64_t& depth) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("depth", depth));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {logits, label}, attrs);
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {prediction, label}, attrs);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class SparseSoftmaxCrossEntropyFunctor {
+ public:
+  SparseSoftmaxCrossEntropyFunctor() {
+    // SparseSoftmaxCrossEntropy
+    op_sparse_softmax_cross_entropy_ = CHECK_JUST(one::OpBuilder("sparse_softmax_cross_entropy")
+                                                      .Input("prediction")
+                                                      .Input("label")
+                                                      .Output("prob")
+                                                      .Output("out")
+                                                      .Build());
+    // lazy model SparseSoftmaxCrossEntropyMs
+    op_sparse_softmax_cross_entropy_ms_ =
+        CHECK_JUST(one::OpBuilder("sparse_softmax_cross_entropy_ms")
+                       .Input("prediction")
+                       .Input("label")
+                       .Output("prob")
+                       .Output("out")
+                       .Build());
+    // eager model SparseSoftmaxCrossEntropyMs
+    op_reduce_max_device_stage_ = CHECK_JUST(one::OpBuilder("reduce_max_device_stage")
+                                                 .Input("in")
+                                                 .Output("out")
+                                                 .Output("mask")
+                                                 .Output("count")
+                                                 .Build());
+    op_reduce_max_global_stage_ = CHECK_JUST(one::OpBuilder("reduce_max_global_stage")
+                                                 .Input("in")
+                                                 .Input("device_count")
+                                                 .Output("out")
+                                                 .Output("mask")
+                                                 .Build());
+    op_sparse_cross_entropy_ms_ = CHECK_JUST(one::OpBuilder("sparse_cross_entropy_ms")
+                                                 .Input("prediction")
+                                                 .Input("label")
+                                                 .Output("out")
+                                                 .Build());
+    op_broadcast_sub_ =
+        CHECK_JUST(one::OpBuilder("broadcast_sub").Input("x").Input("y").Output("z").Build());
+    op_broadcast_div_ =
+        CHECK_JUST(one::OpBuilder("broadcast_div").Input("x").Input("y").Output("z").Build());
+    op_reduce_sum_ = CHECK_JUST(
+        one::OpBuilder("reduce_sum").Input("input_tensor").Output("output_tensor").Build());
+    op_exp_ = CHECK_JUST(one::OpBuilder("exp").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits,
+                           const std::shared_ptr<one::Tensor>& label) const {
+    if (JUST(RunWithMsVersion(logits, label))) {
+      if (LazyMode::is_enabled()) {
+        return LazySparseSoftmaxCrossEntropyMsOperator(logits, label);
+      } else {
+        return EagerSparseSoftmaxCrossEntropyMsOperator(logits, label);
+      }
+    } else {
+      return SparseSoftmaxCrossEntropyOperator(logits, label);
+    }
+  }
+
+  Maybe<bool> RunWithMsVersion(const std::shared_ptr<one::Tensor>& logits,
+                               const std::shared_ptr<one::Tensor>& label) const {
+    if (!(logits->is_consistent() && label->is_consistent())) { return false; }
+
+    if (logits->shape()->NumAxes() != 2) { return false; }
+
+    const cfg::NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
+    const int32_t split_axis = logits->shape()->NumAxes() - 1;
+    bool has_split_axis_parallel = false;
+    for (int64_t i = 0; i < logits_nd_sbp.sbp_parallel_size(); ++i) {
+      const auto& sbp = logits_nd_sbp.sbp_parallel(i);
+      if (sbp.has_split_parallel() && sbp.split_parallel().axis() == split_axis) {
+        has_split_axis_parallel = true;
+      } else {
+        if (sbp.has_partial_sum_parallel()) { return false; }
+      }
+    }
+    if (!has_split_axis_parallel) { return false; }
+
+    return true;
+  }
+
+  Maybe<Tensor> SparseSoftmaxCrossEntropyOperator(const std::shared_ptr<one::Tensor>& logits,
+                                                  const std::shared_ptr<one::Tensor>& label) const {
+    MutableAttrMap attrs;
+    int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
+    JUST(attrs.SetAttr<int64_t>("depth", depth));
+    const auto& result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_sparse_softmax_cross_entropy_,
+                                                                  {logits, label}, attrs));
+    return result->at(1);
+  }
+
+  Maybe<Tensor> LazySparseSoftmaxCrossEntropyMsOperator(
+      const std::shared_ptr<one::Tensor>& logits, const std::shared_ptr<one::Tensor>& label) const {
+    MutableAttrMap attrs;
+    int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
+    JUST(attrs.SetAttr<int64_t>("depth", depth));
+    const auto& result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+        *op_sparse_softmax_cross_entropy_ms_, {logits, label}, attrs));
+    return result->at(1);
+  }
+
+  Maybe<Tensor> EagerSparseSoftmaxCrossEntropyMsOperator(
+      const std::shared_ptr<one::Tensor>& logits, const std::shared_ptr<one::Tensor>& label) const {
+    // op_reduce_max_device_stage_
+    MutableAttrMap attrs;
+    int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
+    int32_t axis = logits->shape()->NumAxes() - 1;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", {axis}));
+    const auto& max_device_stage =
+        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_reduce_max_device_stage_, {logits}, attrs));
+    std::shared_ptr<Tensor> max_global_stage_input0 = max_device_stage->at(0);
+    std::shared_ptr<Tensor> max_global_stage_input1 = max_device_stage->at(2);
+
+    const cfg::NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
+    std::vector<Symbol<cfg::SbpParallel>> s0b_sbp_parallels;
+    std::vector<Symbol<cfg::SbpParallel>> s0s1_sbp_parallels;
+    if (logits_nd_sbp.sbp_parallel_size() == 2) {
+      cfg::SbpParallel sbp;
+      sbp.mutable_broadcast_parallel();
+      s0b_sbp_parallels.push_back(logits_nd_sbp.sbp_parallel(0));
+      s0b_sbp_parallels.push_back(sbp);
+      s0s1_sbp_parallels.push_back(logits_nd_sbp.sbp_parallel(0));
+      s0s1_sbp_parallels.push_back(logits_nd_sbp.sbp_parallel(1));
+      max_global_stage_input0 = JUST(functional::ToConsistent(
+          max_device_stage->at(0), JUST(max_device_stage->at(0)->parallel_desc()),
+          s0b_sbp_parallels, s0s1_sbp_parallels));
+      max_global_stage_input1 = JUST(functional::ToConsistent(
+          max_device_stage->at(2), JUST(max_device_stage->at(0)->parallel_desc()),
+          s0b_sbp_parallels, s0s1_sbp_parallels));
+    }
+    // op_reduce_max_global_stage_
+    attrs.clear();
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", {axis}));
+    JUST(attrs.SetAttr<bool>("keepdims", true));
+    const auto& max_global_stage = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+        *op_reduce_max_global_stage_, {max_global_stage_input0, max_global_stage_input1}, attrs));
+    auto& broadcast_sub_input = max_global_stage->at(0);
+    if (logits_nd_sbp.sbp_parallel_size() == 2) {
+      broadcast_sub_input = JUST(functional::ToConsistent(
+          broadcast_sub_input, JUST(max_device_stage->at(0)->parallel_desc()), s0b_sbp_parallels,
+          s0b_sbp_parallels));
+    }
+    // op_broadcast_sub_
+    attrs.clear();
+    const auto& output_broadcast_sub = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+        *op_broadcast_sub_, {logits, broadcast_sub_input}, attrs));
+    // op_exp_
+    const auto& output_exp =
+        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_exp_, {output_broadcast_sub->at(0)}, attrs));
+    // op_reduce_sum_
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", {axis}));
+    JUST(attrs.SetAttr<bool>("keepdims", true));
+    const auto& output_reduce_sum =
+        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_reduce_sum_, {output_exp->at(0)}, attrs));
+    std::shared_ptr<Tensor> broadcast_div_input1 = output_reduce_sum->at(0);
+    if (logits_nd_sbp.sbp_parallel_size() == 2) {
+      std::vector<Symbol<cfg::SbpParallel>> empty_grad_sbp_parallels;
+      broadcast_div_input1 = JUST(functional::ToConsistent(
+          output_reduce_sum->at(0), JUST(output_reduce_sum->at(0)->parallel_desc()),
+          s0b_sbp_parallels, s0b_sbp_parallels));
+    }
+    // op_broadcast_div_
+    attrs.clear();
+    const auto& predictions = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+        *op_broadcast_div_, {output_exp->at(0), broadcast_div_input1}, attrs));
+    // op_sparse_cross_entropy_ms_
+    JUST(attrs.SetAttr<int64_t>("depth", depth));
+    const auto& output = JUST(OpInterpUtil::Dispatch<Tensor>(*op_sparse_cross_entropy_ms_,
+                                                             {predictions->at(0), label}, attrs));
+    return output;
+  }
+
+ private:
+  // SparseSoftmaxCrossEntropy
+  std::shared_ptr<OpExpr> op_sparse_softmax_cross_entropy_;
+  // lazy model SparseSoftmaxCrossEntropyMs
+  std::shared_ptr<OpExpr> op_sparse_softmax_cross_entropy_ms_;
+  // SparseSoftmaxCrossEntropyMs
+  std::shared_ptr<OpExpr> op_reduce_max_device_stage_;
+  std::shared_ptr<OpExpr> op_reduce_max_global_stage_;
+  std::shared_ptr<OpExpr> op_broadcast_sub_;
+  std::shared_ptr<OpExpr> op_exp_;
+  std::shared_ptr<OpExpr> op_reduce_sum_;
+  std::shared_ptr<OpExpr> op_broadcast_div_;
+  std::shared_ptr<OpExpr> op_sparse_cross_entropy_ms_;
 };
 
 class SoftmaxCrossEntropyFunctor {
@@ -588,13 +983,15 @@ class SmoothL1LossFunctor {
  public:
   SmoothL1LossFunctor() {
     op_ = CHECK_JUST(
-        one::OpBuilder("smooth_l1_loss").Input("prediction").Input("label").Output("loss").Build());
+        one::OpBuilder("smooth_l1_loss").Input("input").Input("target").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits,
-                           const std::shared_ptr<one::Tensor>& label, const float& beta) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target, const float& beta,
+                           const std::string& reduction) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("beta", beta));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {logits, label}, attrs);
+    JUST(attrs.SetAttr<std::string>("reduction", reduction));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs);
   }
 
  private:
@@ -611,19 +1008,117 @@ class CombinedMarginLossFunctor {
                          .Output("theta")
                          .Build());
   }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
-                                const std::shared_ptr<one::Tensor>& label, const float& m1,
-                                const float& m2, const float& m3, const int64_t& depth) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& label, const float& m1,
+                           const float& m2, const float& m3) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("m1", m1));
     JUST(attrs.SetAttr<float>("m2", m2));
     JUST(attrs.SetAttr<float>("m3", m3));
-    JUST(attrs.SetAttr<int64_t>("depth", depth));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x, label}, attrs);
+    JUST(attrs.SetAttr<int64_t>("depth", x->shape()->At(1)));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, label}, attrs);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class CtcLossFunctor {
+ public:
+  CtcLossFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("ctc_loss")
+                         .Input("log_probs")
+                         .Input("targets")
+                         .Input("input_lengths")
+                         .Input("target_lengths")
+                         .Output("loss")
+                         .Output("alpha")
+                         .Build());
+    op_xdivy_ = CHECK_JUST(one::OpBuilder("xdivy").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& log_probs,
+                           const std::shared_ptr<one::Tensor>& targets,
+                           const std::shared_ptr<one::Tensor>& input_lengths,
+                           const std::shared_ptr<one::Tensor>& target_lengths,
+                           const int64_t& max_target_length, const int& blank,
+                           const bool& zero_infinity, const std::string& reduction) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("max_target_length", max_target_length));
+    JUST(attrs.SetAttr<int32_t>("blank", blank));
+    JUST(attrs.SetAttr<bool>("zero_infinity", zero_infinity));
+    auto out = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *op_, {log_probs, targets, input_lengths, target_lengths}, attrs));
+    if (zero_infinity) {
+      const auto create_constant = [&](const Scalar& scalar) -> Maybe<Tensor> {
+        return functional::Constant(*out->shape(), scalar, out->dtype(), JUST(out->device()));
+      };
+
+      out = JUST(sequence_function(functional::Constant)
+                     .then(std::bind(functional::BroadcastEqual, out, std::placeholders::_1))
+                     .then(std::bind(functional::Where, std::placeholders::_1,
+                                     JUST(create_constant(Scalar(0))), out))
+                     .call(*out->shape(), Scalar(std::numeric_limits<double>::infinity()),
+                           out->dtype(), JUST(out->device())));
+    }
+    CHECK_OR_RETURN([&]() -> bool {
+      if ((reduction != "none") && (reduction != "sum") && (reduction != "mean")) return false;
+      return true;
+    }());
+    if (reduction == "sum") { return functional::ReduceSum(out, {}, false); }
+    if (reduction == "mean") {
+      return sequence_function(functional::Clamp)
+          .then(std::bind(functional::Cast, std::placeholders::_1, log_probs->dtype()))
+          .then([&](const std::shared_ptr<one::Tensor>& x) {
+            return OpInterpUtil::Dispatch<Tensor>(*op_xdivy_, {out, x});
+          })
+          .then(std::bind(functional::ReduceMean, std::placeholders::_1, std::vector<int32_t>({}),
+                          false))
+          .call(target_lengths, Scalar(1), NullOpt);
+    }
+    return out;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_xdivy_;
+};
+
+class TripletMarginLossFunctor {
+ public:
+  TripletMarginLossFunctor() {}
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& anchor,
+                           const std::shared_ptr<one::Tensor>& positive,
+                           const std::shared_ptr<one::Tensor>& negative, const float& margin,
+                           const float& p, const float& eps, const bool& swap,
+                           const std::string& reduction) const {
+    int32_t dim_norm = anchor->ndim() - 1;
+    std::vector<int32_t> dim(1, dim_norm);
+    CHECK_OR_RETURN([&]() -> bool {
+      if ((reduction != "none") && (reduction != "sum") && (reduction != "mean")) return false;
+      return true;
+    }());
+    auto da_p = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, positive)))), p, dim, false,
+                                anchor->dtype()));
+    auto da_n = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, negative)))), p, dim, false,
+                                anchor->dtype()));
+    if (swap) {
+      auto distance_swap = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(positive, negative)))), p,
+                                           dim, false, positive->dtype()));
+      da_n = JUST(Minimum(distance_swap, da_n));
+    }
+    auto triplet_loss =
+        JUST(Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n)), margin, false)), 0.0, NullOpt));
+    int32_t ndim = triplet_loss->ndim() - 1;
+    std::vector<int32_t> axis(1, ndim);
+
+    if (reduction == "mean") {
+      triplet_loss = JUST(ReduceMean(triplet_loss, axis, false));
+    } else if (reduction == "sum") {
+      triplet_loss = JUST(ReduceSum(triplet_loss, axis, false));
+    }
+    return triplet_loss;
+  }
 };
 
 class AffineGridFunctor {
@@ -902,6 +1397,10 @@ class PadFunctor {
       return OpInterpUtil::Dispatch<Tensor>(*pad_, {x}, attrs);
 
     } else if (mode == "reflect") {
+      const int64_t pad_h = x->shape()->dim_vec().at(2);
+      const int64_t pad_w = x->shape()->dim_vec().at(3);
+      CHECK_OR_RETURN(pad[2] < pad_h && pad[3] < pad_h && pad[0] < pad_w && pad[1] < pad_w)
+          << "padding size should be less than the corresponding input dimension!";
       return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_, {x}, attrs);
     } else if (mode == "replicate") {
       return OpInterpUtil::Dispatch<Tensor>(*replicate_pad_, {x}, attrs);
@@ -925,31 +1424,30 @@ class DropoutFunctor {
     dropout_op_ =
         CHECK_JUST(one::OpBuilder("dropout").Input("in").Input("mask").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a, const float& p,
                            const bool& training, const Optional<one::Generator>& generator) const {
-    if (!training || p == 0.0) return x;
+    if (!training || p == 0.0) return a;
 
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap random_mask_like_attrs;
     JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
-
-    std::shared_ptr<one::Generator> gen;
-    if (!generator) {
-      gen = JUST(one::DefaultAutoGenerator());
-    } else {
-      gen = JUST(generator);
-    }
-
     JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
 
-    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *random_mask_like_op_, {x},
-        OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
     float scale = 1.0;
     if (p != 1.0) { scale = 1.0 / (1.0 - p); }
     MutableAttrMap dropout_attrs;
     JUST(dropout_attrs.SetAttr<float>("scale", scale));
-    return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {x, mask}, dropout_attrs);
+
+    return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
+             return OpInterpUtil::Dispatch<Tensor>(
+                 *random_mask_like_op_, {a},
+                 OpExprInterpContext(random_mask_like_attrs, random_mask_like_state));
+           })
+        .then([&](const std::shared_ptr<one::Tensor>& x) {
+          return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {a, x}, dropout_attrs);
+        })
+        .call();
   }
 
  private:
@@ -1252,26 +1750,28 @@ class FusedBiasAddDropoutFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b, const float& p,
                            const int32_t& axis, const Optional<one::Generator>& generator) const {
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap random_mask_like_attrs;
     JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
-    std::shared_ptr<one::Generator> gen;
-    if (!generator) {
-      gen = JUST(one::DefaultAutoGenerator());
-    } else {
-      gen = JUST(generator);
-    }
     JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *random_mask_like_op_, {a},
-        OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
+
     float scale = 1.0;
     if (p != 1.0) { scale = 1.0 / (1.0 - p); }
     MutableAttrMap fused_bias_add_mask_attrs;
     JUST(fused_bias_add_mask_attrs.SetAttr<float>("scale", scale));
     JUST(fused_bias_add_mask_attrs.SetAttr<int32_t>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, mask},
-                                          fused_bias_add_mask_attrs);
+
+    return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
+             return OpInterpUtil::Dispatch<Tensor>(
+                 *random_mask_like_op_, {a},
+                 OpExprInterpContext(random_mask_like_attrs, random_mask_like_state));
+           })
+        .then([&](const std::shared_ptr<one::Tensor>& x) {
+          return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, x},
+                                                fused_bias_add_mask_attrs);
+        })
+        .call();
   }
 
  private:
@@ -1388,6 +1888,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::Conv1dFunctor>("Conv1d");
   m.add_functor<impl::Conv2dFunctor>("Conv2d");
   m.add_functor<impl::Conv3dFunctor>("Conv3d");
+  m.add_functor<impl::DeConv1dFunctor>("Deconv1d");
+  m.add_functor<impl::DeConv3dFunctor>("Deconv3d");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
@@ -1400,15 +1902,23 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
+  m.add_functor<impl::L1LossFunctor>("L1Loss");
+  m.add_functor<impl::MseLossFunctor>("MseLoss");
+  m.add_functor<impl::KLDivLossFunctor>("KLDivLoss");
   m.add_functor<impl::NllLossFunctor>("NllLoss");
   m.add_functor<impl::BinaryCrossEntropyLossFunctor>("BinaryCrossEntropyLoss");
   m.add_functor<impl::BinaryCrossEntropyWithLogitsLossFunctor>("BinaryCrossEntropyWithLogitsLoss");
+  m.add_functor<impl::SparseCrossEntropyFunctor>("SparseCrossEntropy");
+  m.add_functor<impl::SparseCrossEntropyMsFunctor>("SparseCrossEntropyMs");
+  m.add_functor<impl::CrossEntropyFunctor>("CrossEntropy");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
-  m.add_functor<impl::SparseSoftmaxCrossEntropyMsFunctor>("SparseSoftmaxCrossEntropyMs");
   m.add_functor<impl::SoftmaxCrossEntropyFunctor>("SoftmaxCrossEntropy");
   m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");
   m.add_functor<impl::SmoothL1LossFunctor>("SmoothL1Loss");
   m.add_functor<impl::CombinedMarginLossFunctor>("CombinedMarginLoss");
+  m.add_functor<impl::TripletMarginLossFunctor>("TripletMarginLoss");
+  m.add_functor<impl::MarginRankingLossFunctor>("MarginRankingLoss");
+  m.add_functor<impl::CtcLossFunctor>("CtcLoss");
   m.add_functor<impl::AffineGridFunctor>("AffineGrid");
   m.add_functor<impl::GridSampleFunctor>("GridSample");
   m.add_functor<impl::NormalizationFunctor>("Normalization");

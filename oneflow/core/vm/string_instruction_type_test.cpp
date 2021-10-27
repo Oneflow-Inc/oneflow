@@ -19,8 +19,8 @@ limitations under the License.
 #include <sstream>
 #define private public
 #include "oneflow/core/vm/id_util.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
-#include "oneflow/core/vm/vm_desc.msg.h"
+#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/stream_type.h"
@@ -34,9 +34,9 @@ namespace vm {
 namespace test {
 
 TEST(StringStreamType, init_string_object) {
-  auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
+  auto vm_desc = intrusive::make_shared<VmDesc>(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol", "InitStringSymbol"});
-  auto vm = ObjectMsgPtr<VirtualMachine>::New(vm_desc.Get());
+  auto vm = intrusive::make_shared<VirtualMachine>(vm_desc.Get());
   InstructionMsgList list;
   int64_t symbol_id = IdUtil::NewLogicalSymbolId();
   CHECK_JUST(Global<symbol::Storage<StringSymbol>>::Get()->Add(symbol_id, "foobar"));
@@ -45,7 +45,7 @@ TEST(StringStreamType, init_string_object) {
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    INTRUSIVE_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
   auto* logical_object = vm->mut_id2logical_object()->FindPtr(IdUtil::GetTypeId(symbol_id));
   ASSERT_NE(logical_object, nullptr);

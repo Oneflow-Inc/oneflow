@@ -35,7 +35,7 @@ def _graph_debug(test_case, ranks=None):
             return x
 
     d_g = DebugGraph()
-    d_g.debug(True, 0, ranks)
+    d_g.debug(0, ranks)
 
     if ranks is None:
         rank_list = [0]

@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/framework.h"
 #include "oneflow/core/cuda/softmax.cuh"
+#include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
@@ -36,8 +36,8 @@ class SoftmaxKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     using ComputeType = typename cuda::softmax::DefaultComputeType<T>::type;
     cuda::softmax::DirectLoad<T, ComputeType> load(in->dptr<T>(), cols);
     cuda::softmax::DirectStore<ComputeType, T> store(out->mut_dptr<T>(), cols);
-    cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
-        ctx->device_ctx()->cuda_stream(), load, store, rows, cols);
+    OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
+        ctx->device_ctx()->cuda_stream(), load, store, rows, cols)));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -70,9 +70,9 @@ class SoftmaxGradKernel final : public user_op::OpKernel, public user_op::CudaGr
     cuda::softmax::DirectLoad<T, ComputeType> load_y(y->dptr<T>(), cols);
     cuda::softmax::DirectLoad<T, ComputeType> load_dy(dy->dptr<T>(), cols);
     cuda::softmax::DirectStore<ComputeType, T> store(dx->mut_dptr<T>(), cols);
-    cuda::softmax::DispatchSoftmaxGrad<decltype(load_y), decltype(load_dy), decltype(store),
-                                       ComputeType>(ctx->device_ctx()->cuda_stream(), load_y,
-                                                    load_dy, store, rows, cols);
+    OF_CUDA_CHECK((cuda::softmax::DispatchSoftmaxGrad<decltype(load_y), decltype(load_dy),
+                                                      decltype(store), ComputeType>(
+        ctx->device_ctx()->cuda_stream(), load_y, load_dy, store, rows, cols)));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
