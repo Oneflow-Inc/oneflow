@@ -390,7 +390,6 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
     state.addOperands(operands);
     state.addTypes(out_types);
     created_op = GetBuilder().createOperation(state);
-    created_op->dump();
   }
 
   if (created_op == nullptr) {
