@@ -184,6 +184,7 @@ void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op_conf,
   operand_mapping_.clear();
   input_arg_tuple_ = input_arg_tuple;
   inputs_ = inputs;
+  result_type_mapping_.clear();
   HashMap<std::string, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   auto op = CHECK_JUST(ConstructOp(op_conf));
   // TODO: refactor using GetResultByBnAndIndex
