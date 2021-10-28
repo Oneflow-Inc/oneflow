@@ -55,14 +55,10 @@ def split_op(x, split_size_or_sections: Union[int, List[int]], dim: int = 0):
     dim = dim + x.dim() if dim < 0 else dim
     if isinstance(split_size_or_sections, list):
         return tuple(
-            flow._C.split_with_size(
-                x, split_sizes=split_size_or_sections, dim=dim
-            )
+            flow._C.split_with_size(x, split_sizes=split_size_or_sections, dim=dim)
         )
     else:
-        return tuple(
-            flow._C.split(x, split_size=split_size_or_sections, dim=dim)
-        )
+        return tuple(flow._C.split(x, split_size=split_size_or_sections, dim=dim))
 
 
 if __name__ == "__main__":
