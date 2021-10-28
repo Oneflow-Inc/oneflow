@@ -28,7 +28,7 @@ namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("ir", m) {
   m.def("load_jit_shared_lib",
         [](const std::string& lib_path) { MutSharedLibPaths()->insert(lib_path); });
-  m.def("toggle_jit", [](const std::string func_name) {
+  m.def("toggle_jit", [](const std::string& func_name) {
     // when true => false, start exec
     if (one::IsJitEnabled()) {
       auto jit_interpreter = dynamic_cast<one::JitInterpreter*>(one::GetJitInterpreter().get());
