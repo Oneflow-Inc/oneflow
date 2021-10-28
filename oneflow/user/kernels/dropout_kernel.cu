@@ -114,13 +114,13 @@ void MaskAndScaleAdd<half>(DeviceCtx* ctx, const int64_t n, float scale, const h
 }
 
 template<typename T, typename MASK>
-struct MaskAndScaleFunctor{
+struct MaskAndScaleFunctor {
   MaskAndScaleFunctor(float scale): scale(scale){}
-  OF_DEVICE_FUNC T operator()(const T x, MASK mask){
-    return x * static_cast<T>(mask) * scale; 
+  OF_DEVICE_FUNC T operator()(T x, MASK mask) const {
+    return x * static_cast<T>(mask) * scale;
   }
   float scale; 
-}; 
+};
 
 
 template<typename T>
