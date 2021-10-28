@@ -32,14 +32,14 @@ class BatchMatmulImpl : public BatchMatmul {
         broadcast_matmul_(std::move(broadcast_matmul)) {}
   ~BatchMatmulImpl() override = default;
 
-  void Launch(StreamContext* stream_ctx, size_t num_batches, size_t m, size_t n, size_t k,
+  void Launch(StreamContext* stream_ctx, size_t batch_size, size_t m, size_t n, size_t k,
               Scalar alpha, const void* a, const void* b, Scalar beta, void* c) override {
     int64_t a_dims[3];
     int64_t b_dims[3];
     int64_t c_dims[3];
-    a_dims[0] = num_batches;
-    b_dims[0] = num_batches;
-    c_dims[0] = num_batches;
+    a_dims[0] = batch_size;
+    b_dims[0] = batch_size;
+    c_dims[0] = batch_size;
     if (transpose_a_ == BlasTransposeType::N) {
       a_dims[1] = m;
       a_dims[2] = k;

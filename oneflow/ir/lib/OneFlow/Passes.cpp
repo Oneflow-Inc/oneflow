@@ -142,9 +142,9 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
   return attributes;
 }
 
-::llvm::SmallVector<::mlir::Value, 4> OutlineCastScale(::mlir::PatternRewriter& rewriter,
-                                                       mlir::OpResult mul_res,
-                                                       mlir::OpResult cast_res) {
+::llvm::SmallVector<::mlir::Value, 4> OutlineMulCast(::mlir::PatternRewriter& rewriter,
+                                                     mlir::OpResult mul_res,
+                                                     mlir::OpResult cast_res) {
   if (llvm::dyn_cast<MlirJitOp>(mul_res.getParentBlock()->getParentOp())) { return {}; }
   if (auto mul_op = llvm::dyn_cast<ScalarMulByTensorOp>(mul_res.getDefiningOp())) {
     if (auto cast_op = llvm::dyn_cast<CastOp>(cast_res.getDefiningOp())) {
@@ -229,7 +229,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 #endif  // WITH_CUDA
 
 void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
-  patterns.add<CastScalePattern>(patterns.getContext());
+  patterns.add<MulCastPattern>(patterns.getContext());
 }
 
 }  // namespace oneflow
