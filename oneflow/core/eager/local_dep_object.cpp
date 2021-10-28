@@ -59,7 +59,7 @@ namespace {
 using PoolLocalDepObjectList = intrusive::List<INTRUSIVE_FIELD(LocalDepObject, pool_hook_)>;
 
 std::shared_ptr<PoolLocalDepObjectList> RawThreadLocalPoolLocalDepObjectList(
-    const std::string& of_device_type) {
+    Symbol<Device> device) {
   return std::make_shared<PoolLocalDepObjectList>();
 }
 
@@ -69,7 +69,7 @@ static constexpr auto* ThreadLocalPoolLocalDepObjectList =
 using LifetimeLocalDepObjectList =
     intrusive::MutexedList<INTRUSIVE_FIELD(LocalDepObject, lifetime_hook_)>;
 std::shared_ptr<LifetimeLocalDepObjectList> RawGlobalLifetimeLocalDepObjectList(
-    const std::string& of_device_type) {
+    Symbol<Device> device) {
   return std::make_shared<LifetimeLocalDepObjectList>();
 }
 
@@ -77,7 +77,7 @@ static constexpr auto* GlobalLifetimeLocalDepObjectList =
     DECORATE(&RawGlobalLifetimeLocalDepObjectList, StaticGlobalCopiable);
 
 std::shared_ptr<intrusive::List<INTRUSIVE_FIELD(LocalDepObject, pool_hook_)>>
-RawThreadLocalOverflowedLocalDepObjectList(const std::string& of_device_type) {
+RawThreadLocalOverflowedLocalDepObjectList(Symbol<Device> device) {
   return std::make_shared<intrusive::List<INTRUSIVE_FIELD(LocalDepObject, pool_hook_)>>();
 }
 
@@ -85,7 +85,7 @@ static constexpr auto* ThreadLocalOverflowedLocalDepObjectList =
     DECORATE(&RawThreadLocalOverflowedLocalDepObjectList, StaticGlobalCopiable);
 
 std::shared_ptr<intrusive::MutexedList<INTRUSIVE_FIELD(LocalDepObject, pool_hook_)>>
-RawGlobalOverflowedLocalDepObjectList(const std::string& of_device_type) {
+RawGlobalOverflowedLocalDepObjectList(Symbol<Device> device) {
   return std::make_shared<intrusive::MutexedList<INTRUSIVE_FIELD(LocalDepObject, pool_hook_)>>();
 }
 
@@ -93,20 +93,18 @@ static constexpr auto* GlobalOverflowedLocalDepObjectList =
     DECORATE(&RawGlobalOverflowedLocalDepObjectList, StaticGlobalCopiable);
 
 intrusive::shared_ptr<LocalDepObject> GetOverflowedLocalDepObject(Symbol<Device> device) {
-  const std::string& of_dev_type = CHECK_JUST(device->of_type());
-  const auto& thread_local_overflowed_list = ThreadLocalOverflowedLocalDepObjectList(of_dev_type);
+  const auto& thread_local_overflowed_list = ThreadLocalOverflowedLocalDepObjectList(device);
   if (thread_local_overflowed_list->empty()) {
-    GlobalOverflowedLocalDepObjectList(of_dev_type)->MoveTo(thread_local_overflowed_list.get());
+    GlobalOverflowedLocalDepObjectList(device)->MoveTo(thread_local_overflowed_list.get());
   }
   return thread_local_overflowed_list->PopFront();
 }
 
 Maybe<void> PutOverflowedLocalDepObject(Symbol<Device> device, LocalDepObject* local_dep_object) {
-  const std::string& of_dev_type = JUST(device->of_type());
-  const auto& thread_local_overflowed_list = ThreadLocalOverflowedLocalDepObjectList(of_dev_type);
+  const auto& thread_local_overflowed_list = ThreadLocalOverflowedLocalDepObjectList(device);
   static constexpr int kThreadLocalOverflowSize = 1024;
   if (thread_local_overflowed_list->size() > kThreadLocalOverflowSize) {
-    GlobalOverflowedLocalDepObjectList(of_dev_type)->MoveFrom(thread_local_overflowed_list.get());
+    GlobalOverflowedLocalDepObjectList(device)->MoveFrom(thread_local_overflowed_list.get());
   }
   thread_local_overflowed_list->PushBack(local_dep_object);
   return Maybe<void>::Ok();
@@ -116,13 +114,12 @@ static constexpr size_t kLowWaterMark = 200;
 static constexpr size_t kHighWaterMark = 300;
 
 Maybe<void> TryFillPoolToLowWaterMark(Symbol<Device> device) {
-  const std::string& of_dev_type = JUST(device->of_type());
-  const auto& pool_list = ThreadLocalPoolLocalDepObjectList(of_dev_type);
+  const auto& pool_list = ThreadLocalPoolLocalDepObjectList(device);
   for (int i = pool_list->size(); i < kLowWaterMark; ++i) {
     intrusive::shared_ptr<LocalDepObject> local_dep_object = GetOverflowedLocalDepObject(device);
     if (!local_dep_object) {
       local_dep_object = *JUST(LocalDepObject::New(*device));
-      GlobalLifetimeLocalDepObjectList(of_dev_type)->PushBack(local_dep_object.Mutable());
+      GlobalLifetimeLocalDepObjectList(device)->PushBack(local_dep_object.Mutable());
     }
     pool_list->PushBack(local_dep_object.Mutable());
   }
@@ -132,9 +129,8 @@ Maybe<void> TryFillPoolToLowWaterMark(Symbol<Device> device) {
 }  // namespace
 
 Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device) {
-  const std::string& of_dev_type = JUST(device->of_type());
   JUST(TryFillPoolToLowWaterMark(device));
-  const auto& pool_list = ThreadLocalPoolLocalDepObjectList(of_dev_type);
+  const auto& pool_list = ThreadLocalPoolLocalDepObjectList(device);
   CHECK_GE_OR_RETURN(pool_list->size(), kLowWaterMark);
   CHECK_LE_OR_RETURN(pool_list->size(), kHighWaterMark);
   intrusive::shared_ptr<LocalDepObject> local_dep_object = pool_list->PopFront();
@@ -145,10 +141,9 @@ Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device) {
 }
 
 Maybe<void> PutLocalDepObjectToDevicePool(Symbol<Device> device, LocalDepObject* local_dep_object) {
-  const std::string& of_dev_type = JUST(device->of_type());
   CHECK_OR_RETURN(local_dep_object->pool_hook().empty());
   CHECK_OR_RETURN(!local_dep_object->lifetime_hook().empty());
-  const auto& pool_list = ThreadLocalPoolLocalDepObjectList(of_dev_type);
+  const auto& pool_list = ThreadLocalPoolLocalDepObjectList(device);
   if (pool_list->size() < kHighWaterMark) {
     pool_list->PushBack(local_dep_object);
   } else {
