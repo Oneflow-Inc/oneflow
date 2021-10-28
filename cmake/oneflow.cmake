@@ -439,7 +439,7 @@ if(BUILD_TESTING)
 endif()
 
 # build include
-add_custom_target(of_include_copy)
+add_custom_target(of_include_copy ALL)
 if(BUILD_PYTHON)
   add_dependencies(of_include_copy oneflow_internal)
 else()
@@ -491,5 +491,5 @@ copy_files("${OF_CORE_HDRS}" "${PROJECT_SOURCE_DIR}" "${ONEFLOW_INCLUDE_DIR}" of
 
 if(BUILD_PYTHON)
   add_custom_target(oneflow_py ALL)
-  add_dependencies(oneflow_py of_include_copy of_pyscript_copy)
+  add_dependencies(oneflow_py of_pyscript_copy)
 endif()
