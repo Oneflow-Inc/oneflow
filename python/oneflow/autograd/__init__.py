@@ -15,9 +15,20 @@ limitations under the License.
 """
 
 from oneflow.autograd.autograd import backward, grad
+from oneflow.autograd.autograd_function import Function
 from oneflow.autograd.autograd_mode import (
-    inference_mode,
     grad_enable,
-    no_grad,
+    inference_mode,
     is_grad_enabled,
+    no_grad,
 )
+
+__all__ = [
+    "backward",
+    "grad",
+    "Function",
+    "grad_enable",
+    "inference_mode",
+    "is_grad_enabled",
+    "no_grad",
+]
