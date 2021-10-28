@@ -51,7 +51,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
       - name: Check license
         id: license_check
@@ -169,7 +169,7 @@ jobs:
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
       - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@add-experimental
         name: find cache
@@ -216,7 +216,7 @@ jobs:
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
       - uses: Oneflow-Inc/get-oneflow/cache-complete@add-experimental
         name: Save cache if successful
@@ -373,7 +373,7 @@ jobs:
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
       - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@add-experimental
         name: find cache
@@ -411,7 +411,7 @@ jobs:
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
       - name: Remove container
         timeout-minutes: 45
@@ -717,7 +717,7 @@ jobs:
       - name: Check out OneFlow
         uses: actions/checkout@v2
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
       - uses: Oneflow-Inc/get-oneflow/cache-complete@add-experimental
