@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/arg_tuple.h"
+#include "oneflow/core/autograd/autograd_function.h"
 
 namespace oneflow {
 namespace one {
@@ -276,44 +277,45 @@ class SelectTopNOpExpr final : public OpExpr {
 };
 
 class AutoGradCaptureState;
-// TODO(): Finish the class definition of `FunctionOpExpr`.
-class FunctionOpExpr : public OpExpr {
+
+class FunctionOpExpr final : public OpExpr {
  public:
-  using FType = std::function<Maybe<void>(const std::shared_ptr<AutoGradCaptureState>& /*ctx*/,
-                                          const TensorTuple& /*inputs or out_grads*/,
-                                          TensorTuple* /*outputs or in_grads*/)>;
-
-  FunctionOpExpr(const FType& forward, const FType& backward)
-      : OpExpr(), forward_(forward), backward_(backward) {}
-  virtual ~FunctionOpExpr() = default;
-
-  const std::string& op_type_name() const override {
-    static const std::string& name("function");
-    return name;
+  using FType = AutogradFunctionBase::FType;
+  FunctionOpExpr() = delete;
+  static Maybe<FunctionOpExpr> New(const std::string& func_name, const FType& forward_fn,
+                                   const FType& backward_fn) {
+    return std::shared_ptr<FunctionOpExpr>(new FunctionOpExpr(func_name, forward_fn, backward_fn));
   }
 
+  const std::string& op_type_name() const override { return func_name_; }
+
   int input_size() const override {
-    UNIMPLEMENTED();
+    PRINT_BUG_PROMPT_AND_ABORT() << "You cannot get input_size here.";
     return 0;
   }
   int output_size() const override {
-    UNIMPLEMENTED();
+    PRINT_BUG_PROMPT_AND_ABORT() << "You cannot get output_size here.";
     return 0;
   }
 
-  FType forward() const { return forward_; }
-  FType backward() const { return backward_; }
+  FType forward() const { return forward_fn_; }
+  FType backward() const { return backward_fn_; }
 
-  std::shared_ptr<const AutoGradCaptureState> state() const { return state_; }
-  std::shared_ptr<AutoGradCaptureState> mutable_state() { return state_; }
+  std::shared_ptr<FunctionAutoGradCaptureState> state() const { return state_; }
+  void reset_state() const;
 
   Maybe<bool> IsGradDisabled() const override { return false; }
-  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override { OF_UNIMPLEMENTED(); }
+  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
-  FType forward_;
-  FType backward_;
-  std::shared_ptr<AutoGradCaptureState> state_;
+  FunctionOpExpr(const std::string& func_name, const FType& forward_fn, const FType& backward_fn)
+      : forward_fn_(forward_fn), backward_fn_(backward_fn), func_name_(func_name) {}
+
+  FType forward_fn_;
+  FType backward_fn_;
+  std::string func_name_;
+  mutable std::shared_ptr<FunctionAutoGradCaptureState> state_;
+  mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
 }  // namespace one
