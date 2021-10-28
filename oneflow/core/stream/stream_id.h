@@ -46,7 +46,9 @@ class StreamId {
   bool operator==(const StreamId& rhs) const {
     return device_id_ == rhs.device_id_ && stream_index_ == rhs.stream_index_;
   }
+
   bool operator!=(const StreamId& rhs) const { return !(*this == rhs); }
+
   size_t hash() const {
     size_t hash = device_id_.hash();
     HashCombine(&hash, std::hash<index_t>{}(stream_index_));

@@ -33,7 +33,7 @@ constexpr int64_t kMemZoneIdDeviceIndexInt64Mask = (int64_t{1} << MemZoneId::kDe
 const MemZoneId kInvalidMemZoneId = MemZoneId{0, DeviceType::kInvalidDevice, 0};
 
 MemZoneId GenerateCPUMemZoneId(MemZoneId::index_t node_index) {
-  return MemZoneId{node_index, DeviceType::kCPU, MemZoneId::kCPUDeviceIndex};
+  return MemZoneId{node_index, DeviceType::kCPU, 0};
 }
 
 int64_t EncodeMemZoneIdToInt64(const MemZoneId& mem_zone_id) {

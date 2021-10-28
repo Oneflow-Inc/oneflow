@@ -17,12 +17,15 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> TaskStreamIndexFactory::RegisterGetter(const key_t& key,
-                                                   const stream_index_getter_fn& getter) {
+void TaskStreamIndexFactory::RegisterGetter(const key_t& key,
+                                            const stream_index_getter_fn& getter) {
   std::unique_lock<std::mutex> lck(mtx_);
-  CHECK_OR_RETURN(stream_index_getter_map_.emplace(key, getter).second)
-      << "DeviceType " << key.first << ", TaskType " << key.second << " was already registered";
-  return Maybe<void>::Ok();
+  bool insert_success = stream_index_getter_map_.emplace(key, getter).second;
+  if (!insert_success) {
+    std::cerr << "DeviceType " << key.first << ", TaskType " << key.second
+              << " was already registered";
+    abort();
+  }
 }
 
 Maybe<StreamId::index_t> TaskStreamIndexFactory::Get(TaskType task_type,
@@ -32,7 +35,8 @@ Maybe<StreamId::index_t> TaskStreamIndexFactory::Get(TaskType task_type,
   auto it = stream_index_getter_map_.find(key);
   CHECK_OR_RETURN(it != stream_index_getter_map_.end())
       << "DeviceType " << key.first << ", TaskType " << key.second << " has not been registered";
-  return it->second(device_id);
+  const stream_index_getter_fn& getter = it->second;
+  return getter(device_id);
 }
 
 Maybe<StreamId::index_t> GetTaskStreamIndex(TaskType task_type, const DeviceId& device_id) {

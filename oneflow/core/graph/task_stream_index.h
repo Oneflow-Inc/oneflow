@@ -35,12 +35,12 @@ class TaskStreamIndexFactory final {
   struct GetterRegistry {
     GetterRegistry(DeviceType device_type, TaskType task_type, const stream_index_gen_fn& gen) {
       auto key = std::make_pair(device_type, task_type);
-      auto getter = [&gen](const DeviceId& device_id) -> StreamId::index_t {
+      auto getter = [gen](const DeviceId& device_id) -> StreamId::index_t {
         auto* generator =
             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetOrCreateGenerator(device_id);
         return gen(generator);
       };
-      CHECK_JUST(TaskStreamIndexFactory::Instance().RegisterGetter(key, getter));
+      TaskStreamIndexFactory::Instance().RegisterGetter(key, getter);
     }
   };
 
@@ -50,7 +50,7 @@ class TaskStreamIndexFactory final {
   }
   OF_DISALLOW_COPY_AND_MOVE(TaskStreamIndexFactory);
 
-  Maybe<void> RegisterGetter(const key_t& key, const stream_index_getter_fn& getter);
+  void RegisterGetter(const key_t& key, const stream_index_getter_fn& getter);
   Maybe<StreamId::index_t> Get(TaskType task_type, const DeviceId& device_id);
 
  private:

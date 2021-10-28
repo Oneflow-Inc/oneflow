@@ -37,7 +37,6 @@ class DeviceId {
   constexpr static index_t kMaxNodeIndex = (index_t{1} << kNodeIndexBits) - index_t{1};
   constexpr static index_t kMaxDeviceTypeVal = (index_t{1} << kDeviceTypeBits) - index_t{1};
   constexpr static index_t kMaxDeviceIndex = (index_t{1} << kDeviceIndexBits) - index_t{1};
-  constexpr static index_t kCPUDeviceIndex = 0;
 
   DeviceId(index_t node_index, DeviceType device_type, index_t device_index)
       : node_index_(node_index),
