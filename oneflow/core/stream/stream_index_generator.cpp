@@ -19,12 +19,16 @@ namespace oneflow {
 
 StreamIndexGenerator::StreamIndexGenerator() : next_stream_index_(0) {}
 
-StreamIndexGenerator::index_t StreamIndexGenerator::GenerateStreamIndex() {
+StreamIndexGenerator::index_t StreamIndexGenerator::operator()() {
   return next_stream_index_.fetch_add(1, std::memory_order_relaxed);
 }
 
-StreamIndexGenerator::index_t StreamIndexGenerator::GenerateStreamIndex(const std::string& name,
-                                                                        size_t num) {
+StreamIndexGenerator::index_t StreamIndexGenerator::operator()(const std::string& name) {
+  return (*this)(name, 1);
+}
+
+StreamIndexGenerator::index_t StreamIndexGenerator::operator()(const std::string& name,
+                                                               size_t num) {
   CHECK_GT(num, 0);
   std::unique_lock<std::mutex> lck1(named_rr_range_mutex_);
   auto range_it = name2round_robin_range_.find(name);

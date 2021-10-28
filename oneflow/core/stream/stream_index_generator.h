@@ -28,8 +28,9 @@ class StreamIndexGenerator final {
   OF_DISALLOW_COPY_AND_MOVE(StreamIndexGenerator);
   ~StreamIndexGenerator() = default;
 
-  index_t GenerateStreamIndex();
-  index_t GenerateStreamIndex(const std::string& name, size_t num = 1);
+  index_t operator()();
+  index_t operator()(const std::string& name);
+  index_t operator()(const std::string& name, size_t num);
 
  private:
   std::atomic<index_t> next_stream_index_;

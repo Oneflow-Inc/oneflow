@@ -25,9 +25,9 @@ StreamId GenerateComputeStreamId(const DeviceId& device_id) {
   StreamId::index_t stream_index = 0;
   if (device_id.device_type() == DeviceType::kCPU) {
     size_t cpu_device_num = Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();
-    stream_index = stream_index_generator->GenerateStreamIndex("cpu_compute", cpu_device_num);
+    stream_index = (*stream_index_generator)("cpu_compute", cpu_device_num);
   } else {
-    stream_index = stream_index_generator->GenerateStreamIndex("compute");
+    stream_index = (*stream_index_generator)("compute");
   }
   return StreamId{device_id, stream_index};
 }
@@ -41,7 +41,7 @@ StreamId GenerateComputeStreamId(int64_t node_index, DeviceType device_type, int
 StreamId GenerateNamedStreamId(const DeviceId& device_id, const std::string& name) {
   auto* stream_index_generator =
       Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetOrCreateGenerator(device_id);
-  auto stream_index = stream_index_generator->GenerateStreamIndex(name);
+  auto stream_index = (*stream_index_generator)(name);
   return StreamId{device_id, stream_index};
 }
 
