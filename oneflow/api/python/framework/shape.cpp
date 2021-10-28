@@ -105,7 +105,7 @@ struct ShapeExportUtil final {
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  py::class_<Shape, std::shared_ptr<Shape>>(m, "Size")
+  py::class_<Shape, std::shared_ptr<Shape>>(m, "Shape")
       .def(py::init(&ShapeExportUtil::ApiMakeShape))
       .def("__str__", &ShapeExportUtil::ToString)
       .def("__repr__", &ShapeExportUtil::ToString)
