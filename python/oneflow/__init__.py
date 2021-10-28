@@ -144,6 +144,7 @@ from oneflow._C import permute
 from oneflow._C import cat
 from oneflow._C import cat as concat
 
+
 from . import sbp
 import atexit
 
@@ -363,3 +364,8 @@ import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing
+
+if oneflow._oneflow_internal.flags.with_mlir():
+    oneflow_internal_path = oneflow._oneflow_internal.__file__
+    print("MLIR JIT engine will load:", oneflow_internal_path)
+    oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)
