@@ -600,14 +600,14 @@ void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const
 }
 
 void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
-  OF_PROFILER_RANGE_PUSH("K:" + instruction->instr_msg().instr_type_id().instruction_type().GetOpTypeName(instruction));
   CHECK_OK(LocalCallOpKernelUtil::Infer(instruction));
   CHECK_OK(LocalCallOpKernelUtil::Compute(instruction));
-  OF_PROFILER_RANGE_POP();
 }
 
-const std::string& LocalCallOpKernelInstructionType::GetOpTypeName(vm::Instruction* instruction) const {
-  auto* operand = CHECK_JUST(LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instruction));
+const std::string& LocalCallOpKernelInstructionType::DebugOpTypeName(
+    vm::Instruction* instruction) const {
+  auto* operand =
+      CHECK_JUST(LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instruction));
   return operand->opkernel().op_type_name();
 }
 

@@ -782,6 +782,14 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     }
     input->set_last_used_device(op_device);
   }
+  {
+    // we must assure kFlowCtrlWindowSize * 2 < 1024 where 1024 is cuda flow ctrl windows size.
+    static constexpr int kFlowCtrlWindowSize = 400;
+    if ((op_device->auto_flow_ctr_seq_no() % kFlowCtrlWindowSize) == 0) {
+      auto* dep_object = op_device->mut_schedule_local_dep_object();
+      JUST(SoftSyncStream(dep_object, "mut", op_device, /*need_flow_ctrl=*/true));
+    }
+  }
   intrusive::shared_ptr<vm::InstructionMsg> instruction =
       intrusive::make_shared<vm::InstructionMsg>(instr_type_name);
   auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
@@ -1033,26 +1041,28 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
 
 Maybe<void> InstructionsBuilder::SoftSyncStream(LocalDepObject* compute_local_dep_object,
                                                 const std::string& modifier,
-                                                Symbol<Device> op_device) {
+                                                Symbol<Device> op_device, bool need_flow_ctrl) {
   if (!JUST(op_device->need_soft_sync_stream())) { return Maybe<void>::Ok(); }
 
   const auto& parallel_desc = JUST(Placement4Device(op_device)).shared_from_symbol();
-
+  Optional<LocalDepObject*> opt_mut_local_dep_object;
+  if (need_flow_ctrl) { opt_mut_local_dep_object = op_device->mut_flow_ctrl_local_dep_object(); }
   {
     intrusive::shared_ptr<vm::InstructionMsg> instruction =
         intrusive::make_shared<vm::InstructionMsg>(parallel_desc->device_tag() + ".RecordEvent");
     *instruction->mut_phy_instr_operand() =
-        std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(compute_local_dep_object,
-                                                                   modifier);
+        std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(
+            compute_local_dep_object, modifier, opt_mut_local_dep_object);
     *instruction->mut_parallel_desc() = parallel_desc;
     instruction_list_->EmplaceBack(std::move(instruction));
+    (void)op_device->auto_flow_ctr_seq_no();
   }
   {
     intrusive::shared_ptr<vm::InstructionMsg> instruction =
         intrusive::make_shared<vm::InstructionMsg>("Touch");
     *instruction->mut_phy_instr_operand() =
-        std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(compute_local_dep_object,
-                                                                   modifier);
+        std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(
+            compute_local_dep_object, modifier, opt_mut_local_dep_object);
     *instruction->mut_parallel_desc() = parallel_desc;
     instruction_list_->EmplaceBack(std::move(instruction));
   }

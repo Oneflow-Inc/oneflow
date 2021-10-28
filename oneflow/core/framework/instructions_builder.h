@@ -406,7 +406,12 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& GetDelegateBlobObject);
 
   Maybe<void> SoftSyncStream(LocalDepObject* compute_local_dep_object, const std::string& modifier,
-                             Symbol<Device> op_device);
+                             Symbol<Device> op_device) {
+    return SoftSyncStream(compute_local_dep_object, modifier, op_device, false);
+  }
+
+  Maybe<void> SoftSyncStream(LocalDepObject* compute_local_dep_object, const std::string& modifier,
+                             Symbol<Device> op_device, bool need_flow_ctrl);
 
   Maybe<void> _FetchBlob(const std::string& instruction_name,
                          const std::shared_ptr<compatible_py::BlobObject>& blob_object,

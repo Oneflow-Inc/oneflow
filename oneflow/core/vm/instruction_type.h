@@ -46,7 +46,7 @@ class InstructionType {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
 
-  virtual const std::string& GetOpTypeName(Instruction* instruction) const {
+  virtual const std::string& DebugOpTypeName(Instruction* instruction) const {
     static thread_local std::string empty("");
     return empty;
   }

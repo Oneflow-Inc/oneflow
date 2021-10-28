@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <functional>
 #include "oneflow/core/vm/phy_instr_operand.h"
+#include "oneflow/core/common/optional.h"
 
 namespace oneflow {
 
@@ -28,8 +29,11 @@ namespace vm {
 class ConsumeLocalDepObjectPhyInstrOperand : public PhyInstrOperand {
  public:
   ConsumeLocalDepObjectPhyInstrOperand(LocalDepObject* compute_local_dep_object,
-                                       const std::string& modifier)
-      : compute_local_dep_object_(compute_local_dep_object), modifier_(modifier) {}
+                                       const std::string& modifier,
+                                       const Optional<LocalDepObject*>& opt_mut_local_dep_object)
+      : compute_local_dep_object_(compute_local_dep_object),
+        modifier_(modifier),
+        opt_mut_local_dep_object_(opt_mut_local_dep_object) {}
   ~ConsumeLocalDepObjectPhyInstrOperand() = default;
 
   void ForEachConstMirroredObject(
@@ -44,6 +48,7 @@ class ConsumeLocalDepObjectPhyInstrOperand : public PhyInstrOperand {
  private:
   LocalDepObject* compute_local_dep_object_;
   const std::string modifier_;
+  Optional<LocalDepObject*> opt_mut_local_dep_object_;
 };
 
 }  // namespace vm

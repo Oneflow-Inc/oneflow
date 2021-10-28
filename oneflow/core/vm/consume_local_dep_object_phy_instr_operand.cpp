@@ -28,6 +28,9 @@ void ConsumeLocalDepObjectPhyInstrOperand::ForEachConstMirroredObject(
 void ConsumeLocalDepObjectPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
   if (modifier_ == "mut") { DoEach(nullptr, compute_local_dep_object_->mut_mirrored_object()); }
+  if (opt_mut_local_dep_object_.has_value()) {
+    DoEach(nullptr, CHECK_JUST(opt_mut_local_dep_object_)->mut_mirrored_object());
+  }
 }
 
 void ConsumeLocalDepObjectPhyInstrOperand::ForEachMut2MirroredObject(

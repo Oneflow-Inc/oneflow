@@ -30,7 +30,7 @@ class LocalCallOpKernelInstructionType : public vm::InstructionType {
   void Infer(vm::Instruction* instruction) const override;
   void Compute(vm::Instruction* instruction) const override;
 
-  const std::string& GetOpTypeName(vm::Instruction* instruction) const override;
+  const std::string& DebugOpTypeName(vm::Instruction* instruction) const override;
 
  protected:
   LocalCallOpKernelInstructionType() = default;

@@ -43,7 +43,9 @@ Device::Device(const std::string& type, int64_t device_id)
       device_id_(device_id),
       hash_value_(HashDevice(type, device_id)),
       transport_local_dep_object_(),
-      schedule_local_dep_object_(nullptr) {}
+      schedule_local_dep_object_(nullptr),
+      flow_ctrl_local_dep_object_(nullptr),
+      flow_ctr_seq_no_(0) {}
 
 Maybe<void> Device::Init() {
   if (type_ == "auto") { return Maybe<void>::Ok(); }
@@ -57,6 +59,7 @@ Maybe<void> Device::Init() {
   const auto& schedule_device_type = JUST(GetSharedScheduleDeviceType());
   schedule_local_dep_object_ =
       JUST(GetLocalDepObject4Device(Device(schedule_device_type, device_id_)));
+  flow_ctrl_local_dep_object_ = *JUST(LocalDepObject::New(*this));
   return Maybe<void>::Ok();
 }
 
