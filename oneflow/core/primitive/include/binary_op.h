@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,23 +12,36 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
+*/
+#ifndef ONEFLOW_CORE_PRIMITIVE_BINARY_OP_H_
+#define ONEFLOW_CORE_PRIMITIVE_BINARY_OP_H_
 
-from oneflow.autograd.autograd import backward, grad
-from oneflow.autograd.autograd_function import Function
-from oneflow.autograd.autograd_mode import (
-    grad_enable,
-    inference_mode,
-    is_grad_enabled,
-    no_grad,
-)
+#include "oneflow/core/primitive/include/primitive.h"
 
-__all__ = [
-    "backward",
-    "grad",
-    "Function",
-    "grad_enable",
-    "inference_mode",
-    "is_grad_enabled",
-    "no_grad",
-]
+namespace oneflow {
+
+namespace primitive {
+
+enum class BinaryOp {
+  kAdd,
+  kSub,
+  kMul,
+  kDiv,
+  kMax,
+  kMin,
+  kEqual,
+  kNotEqual,
+  kLessThan,
+  kLessEqual,
+  kGreaterThan,
+  kGreaterEqual,
+  kLogicalAnd,
+  kLogicalOr,
+  kLogicalXor,
+};
+
+}  // namespace primitive
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_PRIMITIVE_BINARY_OP_H_
