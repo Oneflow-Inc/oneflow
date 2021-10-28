@@ -1739,15 +1739,19 @@ class SplitFunctor {
   SplitFunctor() {}
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& split_size,
                                 const int64_t& dim) const {
+    int64_t axis = dim;
+    if (axis < 0) { axis += x->ndim(); }
+    CHECK_OR_RETURN(axis >= 0 && axis < x->ndim())
+        << "The dim " << dim << " is out of bound " << x->ndim() - 1;
     CHECK_GE_OR_RETURN(split_size, 0)
         << "split expects split_size be non-negative, but got split_size=" << split_size;
-    int64_t dim_size = x->shape()->At(dim);
+    int64_t dim_size = x->shape()->At(axis);
     int64_t num_splits = std::max<int64_t>((dim_size + split_size - 1) / split_size, 1);
     TensorTuple splits(num_splits);
     int64_t last_split_size = split_size - (split_size * num_splits - dim_size);
     for (int i = 0; i < num_splits; ++i) {
       int64_t length = i < num_splits - 1 ? split_size : last_split_size;
-      splits[i] = JUST(Narrow(x, dim, i * split_size, length));
+      splits[i] = JUST(Narrow(x, axis, i * split_size, length));
     }
     return splits;
   }
@@ -1786,7 +1790,11 @@ class SplitWithSizeFunctor {
   SplitWithSizeFunctor() {}
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
                                 const std::vector<int64_t>& split_sizes, const int64_t& dim) const {
-    int64_t dim_size = x->shape()->At(dim);
+    int64_t axis = dim;
+    if (axis < 0) { axis += x->ndim(); }
+    CHECK_OR_RETURN(axis >= 0 && axis < x->ndim())
+        << "The dim " << dim << " is out of bound " << x->ndim() - 1;
+    int64_t dim_size = x->shape()->At(axis);
     int64_t num_splits = split_sizes.size();
     TensorTuple splits(num_splits);
     int64_t start_idx = 0;
@@ -1795,12 +1803,12 @@ class SplitWithSizeFunctor {
       CHECK_GE_OR_RETURN(length, 0) << "split_with_sizes expects split_sizes have only "
                                        "non-negative entries, but split_sizes["
                                     << i << "] = " << length;
-      splits[i] = JUST(Narrow(x, dim, start_idx, length));
+      splits[i] = JUST(Narrow(x, axis, start_idx, length));
       start_idx += length;
     }
     CHECK_EQ_OR_RETURN(start_idx, dim_size)
         << "split_with_sizes expects split_sizes to sum exactly to " << dim_size
-        << " (input tensor's size at dimension " << dim << "), "
+        << " (input tensor's size at dimension " << axis << "), "
         << "but got sum(split_sizes)=" << start_idx;
     return splits;
   }
