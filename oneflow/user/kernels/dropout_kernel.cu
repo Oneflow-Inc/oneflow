@@ -122,6 +122,14 @@ struct MaskAndScaleFunctor {
   float scale; 
 };
 
+template<typename MASK>
+struct MaskAndScaleFunctor<half, MASK> {
+  MaskAndScaleFunctor(float scale): scale(scale){}
+  OF_DEVICE_FUNC half operator()(half x, MASK mask) const {
+    return x * static_cast<half>(mask) * static_cast<half>(scale);
+  }
+  float scale; 
+};
 
 template<typename T>
 class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -156,7 +164,7 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
       (user_op::HobDeviceTag() == "gpu")                                                  \
       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
-// REGISTER_DROPOUT_KERNEL_GPU(half)
+REGISTER_DROPOUT_KERNEL_GPU(half)
 REGISTER_DROPOUT_KERNEL_GPU(float)
 REGISTER_DROPOUT_KERNEL_GPU(double)
 
