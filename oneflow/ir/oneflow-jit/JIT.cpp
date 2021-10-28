@@ -94,6 +94,7 @@ std::shared_ptr<MirroredTensor> JitImporter::MakeIntermediateTensor(
   auto tensor = MirroredTensor::MakeTensor(shape, dtype, device, /* is_lazy */ true,
                                            /* requires_grad= */ false, /* is_leaf= */ true)
                     .GetPtrOrThrow();
+  // TODO: refactor intermediate_tensors_. Same type of op has identical name. For instance, matmul3
   CHECK(intermediate_tensors_.emplace(lbn, tensor).second)
       << "Intermediate tensor already created, lbn: " << lbn;
   CHECK(result_mapping_.emplace(tensor.get(), result).second)
