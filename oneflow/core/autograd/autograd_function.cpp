@@ -33,7 +33,7 @@ namespace one {
   const HashSet<Tensor*>& non_differentiable_tensors = op->state()->NonDifferentiableTensors();
   for (const auto& tensor : *outputs) {
     if (non_differentiable_tensors.find(tensor.get()) != non_differentiable_tensors.end()) {
-      tensor->set_requires_grad(false);
+      JUST(tensor->set_requires_grad(false));
     }
   }
   return outputs;
