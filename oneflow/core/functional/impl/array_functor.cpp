@@ -393,39 +393,10 @@ class BroadcastLikeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+
 class ConcatFunctor {
  public:
   ConcatFunctor() {
-    ops_.resize(kMaxInputCount);
-    for (int n = 1; n < ops_.size(); ++n) {
-      ops_[n] = CHECK_JUST(one::OpBuilder("concat").Input("in", n + 1).Output("out").Build());
-    }
-  }
-  Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& axis,
-                           const int64_t& max_dim_size) const {
-    CHECK_GE_OR_RETURN(inputs.size(), 2);
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("axis", axis));
-    JUST(attrs.SetAttr<int64_t>("max_dim_size", max_dim_size));
-    TensorTuple outputs;
-    for (int i = 0; i < inputs.size(); i += kMaxInputCount) {
-      size_t size = (i + kMaxInputCount) < inputs.size() ? kMaxInputCount : inputs.size() - i;
-      TensorTuple partial_inputs(size);
-      for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
-      outputs.push_back(
-          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
-    }
-    if (outputs.size() == 1) { return outputs.at(0); }
-    return this->operator()(outputs, axis, max_dim_size);
-  }
-
- private:
-  std::vector<std::shared_ptr<OpExpr>> ops_;
-};
-
-class CatFunctor {
- public:
-  CatFunctor() {
     ops_.resize(kMaxInputCount);
     for (int n = 1; n < ops_.size(); ++n) {
       ops_[n] = CHECK_JUST(one::OpBuilder("concat").Input("in", n + 1).Output("out").Build());
@@ -2003,7 +1974,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ArgWhereFunctor>("ArgWhere");
   m.add_functor<impl::BroadcastLikeFunctor>("BroadcastLike");
   m.add_functor<impl::ConcatFunctor>("Concat");
-  m.add_functor<impl::CatFunctor>("Cat");
   m.add_functor<impl::StackFunctor>("Stack");
   m.add_functor<impl::ExpandFunctor>("Expand");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");

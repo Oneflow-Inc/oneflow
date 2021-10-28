@@ -141,8 +141,8 @@ from oneflow._C import squeeze
 from oneflow._C import narrow
 from oneflow._C import unsqueeze
 from oneflow._C import permute
-from oneflow._C import cat
-from oneflow._C import cat as concat
+from oneflow._C import concat
+from oneflow._C import concat as cat
 
 
 from . import sbp
