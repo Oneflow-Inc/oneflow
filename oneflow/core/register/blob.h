@@ -87,7 +87,7 @@ class Blob final {
 
   void reset_dptr(char* dptr) { dptr_ = dptr; }
 
-  void CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void CopyHeaderFrom(const Blob* rhs);
   bool IsBodyEmpty() const { return shape().elem_cnt() == 0; }
 
   size_t AlignedTotalByteSize() const { return blob_desc_->AlignedTotalByteSize(); }
