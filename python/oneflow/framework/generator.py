@@ -30,7 +30,7 @@ def default_generator(device=None):
 
 
 def get_rng_state():
-    return default_generator().get_state()    
+    return default_generator().get_state()
 
 
 def manual_seed(seed):
