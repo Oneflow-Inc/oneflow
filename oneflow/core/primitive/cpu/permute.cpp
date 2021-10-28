@@ -14,13 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/primitive/include/permute.h"
-#include "oneflow/core/primitive/common/permute.h"
+#include "oneflow/core/primitive/common/permute_impl.h"
 
 namespace oneflow {
 
 namespace primitive {
 
-namespace permute_internal {
+namespace permute {
+
+namespace internal {
 
 namespace {
 
@@ -42,16 +44,19 @@ void PermuteKernel(PermuteKernelParams<num_dims, IndexType> params) {
 }
 
 template<size_t num_dims, size_t movement_size, typename IndexType>
-void LaunchKernel(StreamContext* stream_ctx, PermuteKernelParams<num_dims, IndexType> params) {
+void LaunchKernel(StreamContext* stream_ctx, const int64_t* src_dims, const void* src,
+                  const int* permutation, void* dst, size_t count) {
+  PermuteKernelParams<num_dims, IndexType> params =
+      MakePermuteParams<num_dims, IndexType>(src_dims, src, permutation, dst, count);
   PermuteKernel<num_dims, movement_size, IndexType>(params);
 }
-
 class PermuteImpl : public Permute {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PermuteImpl);
   PermuteImpl() = default;
   ~PermuteImpl() override = default;
 
+  using Permute::Launch;
   void Launch(StreamContext* stream_ctx, DataType data_type, size_t num_dims,
               const int64_t* src_dims, const void* src, const int* permutation,
               void* dst) override {
@@ -78,7 +83,9 @@ REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, PermuteFactory, PermuteFactoryImpl)
 
 }  // namespace
 
-}  // namespace permute_internal
+}  // namespace internal
+
+}  // namespace permute
 
 }  // namespace primitive
 

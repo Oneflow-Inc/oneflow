@@ -28,7 +28,7 @@ namespace vm {
 #ifdef WITH_CUDA
 class CudaOptionalEventRecordStatusQuerier {
  public:
-  ~CudaOptionalEventRecordStatusQuerier() = default;
+  ~CudaOptionalEventRecordStatusQuerier();
 
   bool done() const { return launched_ && (!has_event_record_ || event_completed()); }
   void set_has_event_record(bool val) { has_event_record_ = val; }

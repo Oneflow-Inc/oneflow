@@ -17,6 +17,7 @@ from oneflow.nn.graph import Graph
 from oneflow.nn.module import Module
 from oneflow.nn.modules.activation import (
     ELU,
+    CELU,
     GELU,
     GLU,
     Hardsigmoid,
@@ -102,6 +103,7 @@ from oneflow.nn.modules.loss import (
     NLLLoss,
     SmoothL1Loss,
     CombinedMarginLoss,
+    TripletMarginLoss,
 )
 from oneflow.nn.modules.normalization import GroupNorm, LayerNorm
 from oneflow.nn.modules.padding import (
