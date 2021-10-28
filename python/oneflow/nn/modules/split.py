@@ -51,7 +51,7 @@ def split_op(x, split_size_or_sections: Union[int, List[int]], dim: int = 0):
                 [6, 7],
                 [8, 9]], dtype=oneflow.int64))
     """
-    return flow._C.split(x, split_size=self.split_size_or_sections, dim=dim)
+    return flow._C.split(x, split_size=split_size_or_sections, dim=dim)
 
 
 if __name__ == "__main__":
