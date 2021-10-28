@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,23 +12,25 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
+*/
+#include "oneflow/core/framework/framework.h"
 
-from oneflow.autograd.autograd import backward, grad
-from oneflow.autograd.autograd_function import Function
-from oneflow.autograd.autograd_mode import (
-    grad_enable,
-    inference_mode,
-    is_grad_enabled,
-    no_grad,
-)
+namespace oneflow {
 
-__all__ = [
-    "backward",
-    "grad",
-    "Function",
-    "grad_enable",
-    "inference_mode",
-    "is_grad_enabled",
-    "no_grad",
-]
+namespace {
+
+Maybe<void> InferDataTypeLogicalNot(user_op::InferContext* ctx) {
+  *ctx->OutputDType("y", 0) = DataType::kInt8;
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
+REGISTER_NO_GRAD_USER_OP("logical_not")
+    .Input("x")
+    .Output("y")
+    .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged)
+    .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)
+    .SetDataTypeInferFn(InferDataTypeLogicalNot);
+
+}  // namespace oneflow

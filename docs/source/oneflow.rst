@@ -62,6 +62,7 @@ oneflow
             index_select,
             logical_and,
             logical_or,
+            logical_not,
             logical_xor,
             load, 
             log, 

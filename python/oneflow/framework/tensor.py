@@ -165,6 +165,10 @@ def _or(self, other):
     return self.logical_or(other)
 
 
+def _not(self):
+    return flow._C.logical_not(self)
+
+
 def _xor(self, other):
     return self.logical_xor(other)
 
@@ -803,6 +807,7 @@ def RegisterMethods():
     Tensor.relu = _relu
     Tensor.softmax = _softmax
     Tensor.log_softmax = _log_softmax
+    Tensor.logical_not = _not
     Tensor.roll = _roll
     Tensor.squeeze = _squeeze
     Tensor.narrow = _narrow

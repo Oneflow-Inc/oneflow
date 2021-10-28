@@ -115,6 +115,10 @@
     ]
   bind_python: true
 
+- name: "logical_not"
+  signature: "Tensor (Tensor input) => LogicalNot"
+  bind_python: true
+
 - name: "logical_xor"
   signature:
     [
