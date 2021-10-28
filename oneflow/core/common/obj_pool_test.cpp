@@ -14,9 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/object_pool.h"
+#include "oneflow/core/common/obj_pool.h"
 
 namespace oneflow {
+namespace obj_pool {
 namespace test {
 
 TEST(ObjectPool, thread_local_recycle) {
@@ -35,5 +36,28 @@ TEST(ObjectPool, static_global_recycle) {
   ASSERT_NE(IntPtrPool::Get(), ptr);
 }
 
+TEST(obj_pool_shared_ptr, naive) {
+  int* ptr = obj_pool::make_shared<int>().get();
+  ASSERT_EQ(obj_pool::make_shared<int>().get(), ptr);
+}
+
+TEST(obj_pool_shared_ptr, recyled_more) {
+  int* raw_ptr0 = nullptr;
+  int* raw_ptr1 = nullptr;
+  {
+    auto ptr0 = obj_pool::make_shared<int>();
+    raw_ptr0 = ptr0.get();
+    auto ptr1 = obj_pool::make_shared<int>();
+    raw_ptr1 = ptr1.get();
+  }
+  {
+    auto ptr0 = obj_pool::make_shared<int>();
+    ASSERT_EQ(ptr0.get(), raw_ptr0);
+    auto ptr1 = obj_pool::make_shared<int>();
+    ASSERT_EQ(ptr1.get(), raw_ptr1);
+  }
+}
+
 }  // namespace test
+}  // namespace obj_pool
 }  // namespace oneflow
