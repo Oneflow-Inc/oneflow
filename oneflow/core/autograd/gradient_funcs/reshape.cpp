@@ -25,7 +25,6 @@ namespace oneflow {
 namespace one {
 
 struct ReshapeCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
   DimVector input_shape_vec;
 };
 
