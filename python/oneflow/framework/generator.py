@@ -29,6 +29,10 @@ def default_generator(device=None):
     return oneflow._oneflow_internal.default_generator(device)
 
 
+def get_rng_state():
+    return default_generator().get_state()    
+
+
 def manual_seed(seed):
     oneflow._oneflow_internal.manual_seed(seed)
 
