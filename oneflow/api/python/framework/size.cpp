@@ -44,7 +44,7 @@ static PyObject* TensorSize_repr(TensorSize* self) {
 
 static PyObject* TensorSize_new(PyTypeObject* type, PyObject* args, PyObject* kwargs) {
   PyObjectPtr self(PyTuple_Type.tp_new(type, args, kwargs));
-  if (self) {
+  if (self.get()) {
     for (int i = 0; i < PyTuple_Size(self.get()); ++i) {
       PyObject* item = PyTuple_GET_ITEM(self.get(), i);
       if (!PyLong_Check(item)) {
@@ -65,12 +65,22 @@ extern PyTypeObject TensorSizeType;
 
 static PyObject* TensorSize_concat(TensorSize* self, PyObject* other) {
   PyObjectPtr result(PyTuple_Type.tp_as_sequence->sq_concat((PyObject*)self, other));
-  return TensorSize_new(&TensorSizeType, result.get(), NULL);
+  if (!result.get()) { return NULL; }
+  if (PyTuple_Check(result.get())) {
+    PyObjectPtr args(PyTuple_Pack(1, result.get()));
+    return TensorSize_new(&TensorSizeType, args.get(), NULL);
+  }
+  return result.release();
 }
 
 static PyObject* TensorSize_repeat(TensorSize* self, Py_ssize_t n) {
   PyObjectPtr result(PyTuple_Type.tp_as_sequence->sq_repeat((PyObject*)self, n));
-  return TensorSize_new(&TensorSizeType, result.get(), NULL);
+  if (!result.get()) { return NULL; }
+  if (PyTuple_Check(result.get())) {
+    PyObjectPtr args(PyTuple_Pack(1, result.get()));
+    return TensorSize_new(&TensorSizeType, args.get(), NULL);
+  }
+  return result.release();
 }
 
 static PyObject* TensorSize_item(TensorSize* self, Py_ssize_t i) {
@@ -94,7 +104,12 @@ static PySequenceMethods TensorSize_as_sequence = {
 
 static PyObject* TensorSize_subscript(TensorSize* self, PyObject* item) {
   PyObjectPtr result(PyTuple_Type.tp_as_mapping->mp_subscript((PyObject*)self, item));
-  return TensorSize_new(&TensorSizeType, result.get(), NULL);
+  if (!result.get()) { return NULL; }
+  if (PyTuple_Check(result.get())) {
+    PyObjectPtr args(PyTuple_Pack(1, result.get()));
+    return TensorSize_new(&TensorSizeType, args.get(), NULL);
+  }
+  return result.release();
 };
 
 static PyMappingMethods TensorSize_as_mapping = {(lenfunc)TensorSize_length,
@@ -149,12 +164,12 @@ PyTypeObject TensorSizeType = {
     NULL,                                          /* tp_init */
     NULL,                                          /* tp_alloc */
     TensorSize_new,                                /* tp_new */
-    NULL,                                          /*tp_free*/
+    NULL,                                          /* tp_free */
 };
 
 PyObject* TensorSize_New(const Shape& size) {
   PyObjectPtr self(TensorSizeType.tp_alloc(&TensorSizeType, size.NumAxes()));
-  if (self) {
+  if (self.get()) {
     for (int i = 0; i < size.NumAxes(); ++i) {
       PyTuple_SET_ITEM(self.get(), i, PyLong_FromLongLong(size.At(i)));
     }
