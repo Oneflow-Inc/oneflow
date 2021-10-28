@@ -33,10 +33,12 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         return CreateStringSymbol(symbol_id, data).GetPtrOrThrow();
       }))
       .def_property_readonly("symbol_id",
-                             [](const StringSymbol& x) { 
-        if (!x.symbol_id().has_value()) { THROW(RuntimeError) << "symbol_id not initialized"; }
-        return x.symbol_id().value();
-      })
+                             [](const StringSymbol& x) {
+                               if (!x.symbol_id().has_value()) {
+                                 THROW(RuntimeError) << "symbol_id not initialized";
+                               }
+                               return x.symbol_id().value();
+                             })
       .def_property_readonly("data", &StringSymbol::data);
 }
 

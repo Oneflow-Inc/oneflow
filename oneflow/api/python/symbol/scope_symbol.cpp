@@ -37,10 +37,13 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::init([](int64_t symbol_id, const std::shared_ptr<cfg::ScopeProto>& symbol_conf) {
         return CreateScopeSymbol(symbol_id, symbol_conf).GetPtrOrThrow();
       }))
-      .def_property_readonly("symbol_id", [](const Scope& x) { 
-        if (!x.symbol_id().has_value()) { THROW(RuntimeError) << "symbol_id not initialized"; }
-        return x.symbol_id().value();
-      })
+      .def_property_readonly("symbol_id",
+                             [](const Scope& x) {
+                               if (!x.symbol_id().has_value()) {
+                                 THROW(RuntimeError) << "symbol_id not initialized";
+                               }
+                               return x.symbol_id().value();
+                             })
       .def_property_readonly("_proto_str",
                              [](const Scope& x) { return PbMessage2TxtString(x.scope_proto()); })
       .def("auto_increment_id", &Scope::auto_increment_id)

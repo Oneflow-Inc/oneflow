@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/vm/id_generator.h"
 #include "oneflow/core/vm/id_util.h"
 
-
 namespace oneflow {
 namespace vm {
 

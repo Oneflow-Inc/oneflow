@@ -22,18 +22,18 @@ limitations under the License.
 
 namespace oneflow {
 
-  inline Optional<bool>* IsMultiClientPtr() { return Global<Optional<bool>, MultiClient>::Get(); }
-    
-  inline Maybe<bool> IsMultiClient() {
-    auto* opt = Global<Optional<bool>, MultiClient>::Get();
-    return !opt || opt->value_or(true);
-  }
+inline Optional<bool>* IsMultiClientPtr() { return Global<Optional<bool>, MultiClient>::Get(); }
 
-  inline Maybe<void> SetIsMultiClient(bool is_multi_client) {
-    CHECK_NOTNULL_OR_RETURN(IsMultiClientPtr());
-    *IsMultiClientPtr() = is_multi_client;
-    return Maybe<void>::Ok();
-  }
+inline Maybe<bool> IsMultiClient() {
+  auto* opt = Global<Optional<bool>, MultiClient>::Get();
+  return !opt || opt->value_or(true);
 }
+
+inline Maybe<void> SetIsMultiClient(bool is_multi_client) {
+  CHECK_NOTNULL_OR_RETURN(IsMultiClientPtr());
+  *IsMultiClientPtr() = is_multi_client;
+  return Maybe<void>::Ok();
+}
+}  // namespace oneflow
 
 #endif
