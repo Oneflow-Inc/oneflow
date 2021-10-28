@@ -208,7 +208,7 @@ jobs:
         run: |
           set -x
           docker pull ${{env.GIT_IMAGE}}
-          docker run --rm -v $PWD:$PWD -w $PWD ${{env.GIT_IMAGE}} git clean -fXd | true
+          docker run --rm -v $PWD:$PWD -w $PWD ${{env.GIT_IMAGE}} clean -fXd | true
       - name: Remove leftover cuda-installer.log
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
@@ -336,7 +336,7 @@ jobs:
         run: |
           set -x
           docker pull ${{env.GIT_IMAGE}}
-          docker run --rm -v $PWD:$PWD -w $PWD ${{env.GIT_IMAGE}} git clean -fXd | true
+          docker run --rm -v $PWD:$PWD -w $PWD ${{env.GIT_IMAGE}} clean -fXd | true
       - name: Checkout Oneflow-Inc/oneflow
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         uses: actions/checkout@v2
@@ -407,7 +407,7 @@ jobs:
         run: |
           set -x
           docker pull ${{env.GIT_IMAGE}}
-          docker run --rm -v $PWD:$PWD -w $PWD ${{env.GIT_IMAGE}} git clean -fXd | true
+          docker run --rm -v $PWD:$PWD -w $PWD ${{env.GIT_IMAGE}} clean -fXd | true
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
         with:
