@@ -19,5 +19,8 @@ limitations under the License.
 #include "oneflow/core/stream/cuda_stream_context.h"
 
 namespace oneflow {
-namespace primitive {}  // namespace primitive
+namespace primitive {
+// write cuda specialized templates.
+
+}  // namespace primitive
 }  // namespace oneflow

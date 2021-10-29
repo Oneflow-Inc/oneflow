@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_CORE_PRIMITIVE_COMMON_ELEMENTWISE_UNARY_UTILS_H_
+#define ONEFLOW_CORE_PRIMITIVE_COMMON_ELEMENTWISE_UNARY_UTILS_H_
+
 #include "oneflow/core/primitive/include/elementwise_unary.h"
 #include "oneflow/core/common/data_type.h"
 
@@ -47,3 +50,5 @@ struct UnaryFunctor<device, UnaryOp::kLogicalNot, Out, In> {
 
 }  // namespace primitive
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_PRIMITIVE_COMMON_ELEMENTWISE_UNARY_UTILS_H_
