@@ -77,11 +77,16 @@ class GenericSoftmaxFactoryImpl : public FactoryBase {
   std::unique_ptr<SoftmaxBase> New(DataType data_type) override {
 #define MAKE_NEW_SOFTMAX_ENTRY(type_cpp, type_proto) \
   {type_proto, NewSoftmax<SoftmaxBase, algorithm, type_cpp>},
+#define CUDA_PRIMITIVE_SOFTMAX_TYPE_SEQ \
+  CUDA_PRIMITIVE_FLOAT_TYPE_SEQ         \
+  CUDA_PRIMITIVE_DOUBLE_TYPE_SEQ        \
+  CUDA_PRIMITIVE_FLOAT16_TYPE_SEQ
 
     static const std::map<DataType, std::function<std::unique_ptr<SoftmaxBase>()>>
         new_softmax_handle{
-            OF_PP_FOR_EACH_TUPLE(MAKE_NEW_SOFTMAX_ENTRY, CUDA_PRIMITIVE_FLOATING_TYPE_SEQ)};
+            OF_PP_FOR_EACH_TUPLE(MAKE_NEW_SOFTMAX_ENTRY, CUDA_PRIMITIVE_SOFTMAX_TYPE_SEQ)};
 
+#undef CUDA_PRIMITIVE_SOFTMAX_TYPE_SEQ
 #undef MAKE_NEW_SOFTMAX_ENTRY
 
     const auto it = new_softmax_handle.find(data_type);
