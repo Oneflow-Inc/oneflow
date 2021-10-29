@@ -438,7 +438,6 @@ LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op
                   .getValue()
                   .str();
           *((*user_conf->mutable_input())[input_key].mutable_s()->Add()) = output_lbn_in_source_op;
-          input_idx += 1;
         } else if (auto arg = op->getOperand(input_idx).dyn_cast<mlir::BlockArgument>()) {
           *((*user_conf->mutable_input())[input_key].mutable_s()->Add()) =
               "arg/" + std::to_string(arg.getArgNumber());
@@ -447,6 +446,7 @@ LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op
           op->dump();
           return failure();
         }
+        input_idx += 1;
       }
     }
   } else {
