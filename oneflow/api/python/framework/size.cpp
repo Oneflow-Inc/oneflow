@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/functional/common.h"
+#include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/shape.h"
 
@@ -23,10 +24,6 @@ namespace py = pybind11;
 namespace oneflow {
 
 using one::functional::PyObjectPtr;
-
-typedef struct {
-  PyTupleObject ob_base;
-} TensorSize;
 
 static PyObject* TensorSize_repr(TensorSize* self) {
   std::stringstream ss;
@@ -61,24 +58,22 @@ static Py_ssize_t TensorSize_length(TensorSize* self) {
   return PyTuple_Type.tp_as_sequence->sq_length((PyObject*)self);
 }
 
-extern PyTypeObject TensorSizeType;
-
 static PyObject* TensorSize_concat(TensorSize* self, PyObject* other) {
   PyObjectPtr result(PyTuple_Type.tp_as_sequence->sq_concat((PyObject*)self, other));
-  if (!result.get()) { return NULL; }
+  if (!result.get()) { return nullptr; }
   if (PyTuple_Check(result.get())) {
     PyObjectPtr args(PyTuple_Pack(1, result.get()));
-    return TensorSize_new(&TensorSizeType, args.get(), NULL);
+    return TensorSize_new(&TensorSize_Type, args.get(), nullptr);
   }
   return result.release();
 }
 
 static PyObject* TensorSize_repeat(TensorSize* self, Py_ssize_t n) {
   PyObjectPtr result(PyTuple_Type.tp_as_sequence->sq_repeat((PyObject*)self, n));
-  if (!result.get()) { return NULL; }
+  if (!result.get()) { return nullptr; }
   if (PyTuple_Check(result.get())) {
     PyObjectPtr args(PyTuple_Pack(1, result.get()));
-    return TensorSize_new(&TensorSizeType, args.get(), NULL);
+    return TensorSize_new(&TensorSize_Type, args.get(), nullptr);
   }
   return result.release();
 }
@@ -104,10 +99,10 @@ static PySequenceMethods TensorSize_as_sequence = {
 
 static PyObject* TensorSize_subscript(TensorSize* self, PyObject* item) {
   PyObjectPtr result(PyTuple_Type.tp_as_mapping->mp_subscript((PyObject*)self, item));
-  if (!result.get()) { return NULL; }
+  if (!result.get()) { return nullptr; }
   if (PyTuple_Check(result.get())) {
     PyObjectPtr args(PyTuple_Pack(1, result.get()));
-    return TensorSize_new(&TensorSizeType, args.get(), NULL);
+    return TensorSize_new(&TensorSize_Type, args.get(), nullptr);
   }
   return result.release();
 };
@@ -126,7 +121,7 @@ static PyObject* TensorSize_numel(PyObject* self, PyObject* args) {
 static PyMethodDef TensorSize_methods[] = {
     {"numel", (PyCFunction)TensorSize_numel, METH_NOARGS, NULL}, {NULL}};
 
-PyTypeObject TensorSizeType = {
+PyTypeObject TensorSize_Type = {
     PyVarObject_HEAD_INIT(NULL, 0) "oneflow.Size", /* tp_name */
     sizeof(TensorSize),                            /* tp_basicsize */
     0,                                             /* tp_itemsize */
@@ -167,8 +162,12 @@ PyTypeObject TensorSizeType = {
     NULL,                                          /* tp_free */
 };
 
-PyObject* TensorSize_New(const Shape& size) {
-  PyObjectPtr self(TensorSizeType.tp_alloc(&TensorSizeType, size.NumAxes()));
+int TensorSize_Check(PyObject* p) { return p->ob_type == &TensorSize_Type; }
+
+PyObject* TensorSize_New(Py_ssize_t len) { return TensorSize_Type.tp_alloc(&TensorSize_Type, len); }
+
+PyObject* TensorSize_NewFromShape(const Shape& size) {
+  PyObjectPtr self(TensorSize_New(size.NumAxes()));
   if (self.get()) {
     for (int i = 0; i < size.NumAxes(); ++i) {
       PyTuple_SET_ITEM(self.get(), i, PyLong_FromLongLong(size.At(i)));
@@ -177,10 +176,24 @@ PyObject* TensorSize_New(const Shape& size) {
   return self.release();
 }
 
+Shape TensorSize_AsShape(PyObject* self) {
+  if (!TensorSize_Check(self)) {
+    PyErr_Format(PyExc_TypeError, "can only convert TensorSize(not \"%s\") to Shape",
+                 Py_TYPE(self)->tp_name);
+    return Shape();
+  }
+  int size = TensorSize_length((TensorSize*)self);
+  DimVector dim_vec(size);
+  for (int i = 0; i < size; ++i) {
+    dim_vec[i] = PyLong_AsLongLong(PyTuple_GET_ITEM((TensorSize*)self, i));
+  }
+  return Shape(std::move(dim_vec));
+}
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  if (PyType_Ready(&TensorSizeType) < 0) { return; }
-  Py_INCREF(&TensorSizeType);
-  if (PyModule_AddObject(m.ptr(), "Size", (PyObject*)&TensorSizeType) < 0) { return; }
+  if (PyType_Ready(&TensorSize_Type) < 0) { return; }
+  Py_INCREF(&TensorSize_Type);
+  if (PyModule_AddObject(m.ptr(), "Size", (PyObject*)&TensorSize_Type) < 0) { return; }
 }
 
 }  // namespace oneflow
