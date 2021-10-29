@@ -19,20 +19,6 @@ from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 
 
-class UnfoldTensor(Module):
-    def __init__(self, dimension: int, size: int, step: int) -> None:
-        super(UnfoldTensor, self).__init__()
-        self.dimension = dimension
-        self.size = size
-        self.step = step
-
-    def forward(self, input):
-        return flow._C.unfold_tensor(input, self.dimension, self.size, self.step,)
-
-    def extra_repr(self) -> str:
-        return "dimension={dimension}, size={size}, step={step}".format(**self.__dict__)
-
-
 @register_tensor_op("unfold")
 def _flow_unfold(input, dimension: int, size: int, step: int):
     r"""Returns a view of the original tensor which contains all slices of `size` size from `self`
@@ -72,7 +58,7 @@ def _flow_unfold(input, dimension: int, size: int, step: int):
                 [ 3.,  4.],
                 [ 5.,  6.]])
     """
-    return UnfoldTensor(dimension, size, step)(input)
+    return flow._C.unfold_tensor(input, dimension, size, step)
 
 
 if __name__ == "__main__":
