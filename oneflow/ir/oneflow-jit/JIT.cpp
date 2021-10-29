@@ -203,7 +203,6 @@ void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op_conf,
   result_type_mapping_.clear();
   HashMap<std::string, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   auto op = CHECK_JUST(ConstructOp(op_conf));
-  // TODO: refactor using GetResultByBnAndIndex
   for (auto pair : llvm::zip(input_arg_tuple->indexed_bns(),
                              input_arg_tuple->indexed_arg_name_and_index(), inputs)) {
     const auto& indexed_bn = std::get<0>(pair);
