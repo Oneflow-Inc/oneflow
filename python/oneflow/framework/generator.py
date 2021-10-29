@@ -48,6 +48,9 @@ def set_rng_state(state):
     """
     sets the state of the default random number generator to the given state
     """
+    assert isinstance(state, flow.Tensor), f"Invalid state param: {state}"
+    assert state.dtype == flow.uint8, f"Invalid state param: {state}, dtype should be oneflow.uint8"
+
     return default_generator().set_state(state)
 
 
