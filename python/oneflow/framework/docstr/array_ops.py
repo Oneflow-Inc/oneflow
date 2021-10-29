@@ -212,7 +212,7 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow._C.transpose,
+    oneflow.transpose,
     r"""Returns a tensor that is a transposed version of input. The given dimensions dim0 and dim1 are swapped.
 
     The resulting out tensor shares its underlying storage with the input tensor, so changing the content of one would change the content of the other.
@@ -239,7 +239,7 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow._C.stack,
+    oneflow.stack,
     r"""Concatenates a sequence of tensors along a new dimension.
     The returned tensor shares the same underlying data with input tensors.
 
@@ -270,7 +270,7 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow._C.squeeze,
+    oneflow.squeeze,
     r"""This operator removes the specified dimention which size is 1 of the input Tensor.
     If the `dim` is not specified, this operator will remove all the dimention which size is 1 of the input Tensor.
 
@@ -300,7 +300,7 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow._C.cat,
+    oneflow.cat,
     r"""
     cat(tensors, dim=0) -> Tensor 
 
