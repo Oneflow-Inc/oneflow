@@ -54,7 +54,7 @@ void OutputKernel::ForwardHeader(KernelContext* ctx) const {
   if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
     // Do nothing.
   } else {
-    ctx->BnInOp2Blob("out")->CopyHeaderFrom(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
+    ctx->BnInOp2Blob("out")->CopyHeaderFrom(ctx->BnInOp2Blob("in"));
   }
 }
 
