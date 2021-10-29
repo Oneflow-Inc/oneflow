@@ -33,5 +33,9 @@ def get_rng_state():
     return default_generator().get_state()
 
 
+def set_rng_state(state):
+    return default_generator().set_state(state)
+
+
 def manual_seed(seed):
     oneflow._oneflow_internal.manual_seed(seed)
