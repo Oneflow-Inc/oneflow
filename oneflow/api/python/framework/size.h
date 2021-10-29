@@ -15,7 +15,7 @@ limitations under the License.
 */
 #ifndef ONEFLOW_API_PYTHON_FRAMEWORK_SIZE_H_
 #define ONEFLOW_API_PYTHON_FRAMEWORK_SIZE_H_
-
+#include <type_traits>
 #include <Python.h>
 #include <pybind11/pybind11.h>
 #include "oneflow/core/common/shape.h"
@@ -65,16 +65,16 @@ template<typename T>
 struct shape_type_caster {
  public:
   bool load(handle src, bool convert) {
-    value = nullptr;
+    value_ = nullptr;
     if (src && src.is_none()) { return true; }
     if (!oneflow::TensorSize_Check(src.ptr())) { return false; }
-    value = std::make_shared<T>(oneflow::TensorSize_AsShape(src.ptr()));
+    value_ = std::make_shared<T>(oneflow::TensorSize_AsShape(src.ptr()));
     return true;
   }
 
   template<typename U>
-  static handle cast(U&& src, return_value_policy /* policy */, handle /* parent */) {
-    return reinterpret_steal<shape>(oneflow::TensorSize_NewFromShape(*src)).release();
+  static handle cast(U&& src, return_value_policy /*policy*/, handle /*parent*/) {
+    return cast_impl(std::forward<U>(src));
   }
 
   template<typename U>
@@ -83,18 +83,28 @@ struct shape_type_caster {
     return cast(*src, policy, parent);
   }
 
-  operator std::shared_ptr<T>*() { return &value; }
-  operator std::shared_ptr<T>&() { return value; }
-  operator std::shared_ptr<T>&&() && { return std::move(value); }
+  operator std::shared_ptr<T>*() { return &value_; }
+  operator std::shared_ptr<T>&() { return value_; }
+  operator std::shared_ptr<T>&&() && { return std::move(value_); }
 
   static constexpr auto name = _("shape");
   template<typename U>
   using cast_op_type = pybind11::detail::cast_op_type<std::shared_ptr<T>>;
 
+ private:
+  static handle cast_impl(const oneflow::Shape& src) {
+    return reinterpret_steal<shape>(oneflow::TensorSize_NewFromShape(src)).release();
+  }
+  static handle cast_impl(const std::shared_ptr<const oneflow::Shape>& src) {
+    return reinterpret_steal<shape>(oneflow::TensorSize_NewFromShape(*src)).release();
+  }
+
  protected:
-  std::shared_ptr<T> value;
+  std::shared_ptr<T> value_;
 };
 
+template<>
+struct type_caster<oneflow::Shape> : public shape_type_caster<oneflow::Shape> {};
 template<>
 struct type_caster<std::shared_ptr<oneflow::Shape>> : public shape_type_caster<oneflow::Shape> {};
 template<>
@@ -102,9 +112,6 @@ struct type_caster<std::shared_ptr<const oneflow::Shape>>
     : public shape_type_caster<const oneflow::Shape> {};
 
 PYBIND11_NAMESPACE_END(detail)
-
-inline shape make_shape(const oneflow::Shape& shape) { return cast(shape); }
-
 PYBIND11_NAMESPACE_END(PYBIND11_NAMESPACE)
 
 #endif  // ONEFLOW_API_PYTHON_FRAMEWORK_SIZE_H_
