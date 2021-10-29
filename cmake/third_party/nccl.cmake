@@ -52,7 +52,7 @@ else()
             UPDATE_COMMAND ""
             CONFIGURE_COMMAND ""
             BUILD_IN_SOURCE 1
-            BUILD_COMMAND make -j${PROC_NUM} src.build CUDA_HOME=${CUDATOOLKIT_BIN_ROOT}
+            BUILD_COMMAND make -j${PROC_NUM} src.build CUDA_HOME=${CUDATOOLKIT_BIN_ROOT} NVCC_GENCODE=${NCCL_NVCC_GENCODE}
             INSTALL_COMMAND make src.install PREFIX=${NCCL_INSTALL_DIR}
             BUILD_BYPRODUCTS ${NCCL_LIBRARIES}
         )
