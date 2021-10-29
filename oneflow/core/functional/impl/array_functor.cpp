@@ -466,7 +466,7 @@ class StackFunctor {
     for (int i = 0; i < inputs.size(); ++i) {
       expand_inputs[i] = JUST(ExpandDims(inputs.at(i), stack_dim));
     }
-    return Concat(expand_inputs, stack_dim, inputs.size());
+    return Concat(expand_inputs, stack_dim);
   }
 };
 
