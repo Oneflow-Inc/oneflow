@@ -87,14 +87,14 @@ static int TensorSize_contains(TensorSize* self, PyObject* el) {
 }
 
 static PySequenceMethods TensorSize_as_sequence = {
-    (lenfunc)TensorSize_length,
-    (binaryfunc)TensorSize_concat,
-    (ssizeargfunc)TensorSize_repeat,
-    (ssizeargfunc)TensorSize_item,
-    0,
-    0,
-    0,
-    (objobjproc)TensorSize_contains,
+    (lenfunc)TensorSize_length,      /* sq_length */
+    (binaryfunc)TensorSize_concat,   /* sq_concat */
+    (ssizeargfunc)TensorSize_repeat, /* sq_repeat */
+    (ssizeargfunc)TensorSize_item,   /* sq_item */
+    0,                               /* sq_slice */
+    0,                               /* sq_ass_item */
+    0,                               /* sq_ass_slice */
+    (objobjproc)TensorSize_contains, /* sq_contains */
 };
 
 static PyObject* TensorSize_subscript(TensorSize* self, PyObject* item) {
@@ -107,8 +107,11 @@ static PyObject* TensorSize_subscript(TensorSize* self, PyObject* item) {
   return result.release();
 };
 
-static PyMappingMethods TensorSize_as_mapping = {(lenfunc)TensorSize_length,
-                                                 (binaryfunc)TensorSize_subscript, 0};
+static PyMappingMethods TensorSize_as_mapping = {
+    (lenfunc)TensorSize_length,       /* mp_length */
+    (binaryfunc)TensorSize_subscript, /* mp_subscript */
+    0,                                /* mp_ass_subscript */
+};
 
 static PyObject* TensorSize_numel(PyObject* self, PyObject* args) {
   int64_t numel = 1;
@@ -162,7 +165,7 @@ PyTypeObject TensorSize_Type = {
     NULL,                                          /* tp_free */
 };
 
-int TensorSize_Check(PyObject* p) { return p->ob_type == &TensorSize_Type; }
+int TensorSize_Check(PyObject* p) { return p && p->ob_type == &TensorSize_Type; }
 
 PyObject* TensorSize_New(Py_ssize_t len) { return TensorSize_Type.tp_alloc(&TensorSize_Type, len); }
 
