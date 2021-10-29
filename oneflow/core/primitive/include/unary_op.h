@@ -23,8 +23,8 @@ namespace oneflow {
 namespace primitive {
 
 enum class UnaryOp {
-  kRelu, 
-  kLogicalNot, 
+  kRelu,
+  kLogicalNot,
 };
 
 }  // namespace primitive
