@@ -43,7 +43,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                                if (!x.symbol_id().has_value()) {
                                  THROW(RuntimeError) << "symbol_id not initialized";
                                }
-                               return x.symbol_id().value();
+                               return CHECK_JUST(x.symbol_id());
                              })
       .def("data", &OpNodeSignatureDesc::op_node_signature);
 }
