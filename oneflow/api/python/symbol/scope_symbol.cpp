@@ -42,7 +42,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                                if (!x.symbol_id().has_value()) {
                                  THROW(RuntimeError) << "symbol_id not initialized";
                                }
-                               return x.symbol_id().value();
+                               return CHECK_JUST(x.symbol_id());
                              })
       .def_property_readonly("_proto_str",
                              [](const Scope& x) { return PbMessage2TxtString(x.scope_proto()); })
