@@ -46,6 +46,7 @@ class CreateComputeCtxPass : public CreateComputeCtxPassBase<CreateComputeCtxPas
   void runOnFunction() override {
     ModuleOp top_module = getFunction()->getParentOfType<ModuleOp>();
     mlir::MLIRContext& context = getContext();
+    ::oneflow::one::ir::JitImporter importer(&context, top_module);
     Builder builder(&context);
     // external func to launch kernel
     auto func_type = builder.getFunctionType(llvm::None, builder.getI64Type());
@@ -61,7 +62,7 @@ class CreateComputeCtxPass : public CreateComputeCtxPassBase<CreateComputeCtxPas
         auto user_conf = op_conf.mutable_user_conf();
         if (succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))
             && succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))
-            // && succeeded(ConvertUserOpAttributes(op, user_op_adaptor, op_conf))
+            && succeeded(importer.ConvertUserOpAttributes(op, user_op_adaptor, op_conf))
             && succeeded(ConvertCtrlInputs(op, op_conf))) {
           llvm::errs() << op_conf.DebugString();
         } else {
