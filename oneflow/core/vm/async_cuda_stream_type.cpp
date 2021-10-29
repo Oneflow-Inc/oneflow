@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/cuda_stream_handle_device_context.h"
 #include "oneflow/core/vm/cuda_instruction_status_querier.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace vm {
@@ -47,6 +48,9 @@ bool AsyncCudaStreamType::QueryInstructionStatusDone(
 }
 
 void AsyncCudaStreamType::Compute(Instruction* instruction) const {
+  OF_PROFILER_RANGE_PUSH(
+      "S:"
+      + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction));
   auto* stream = instruction->mut_stream();
   cudaSetDevice(stream->device_id());
   {
@@ -57,6 +61,7 @@ void AsyncCudaStreamType::Compute(Instruction* instruction) const {
   }
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
   CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
+  OF_PROFILER_RANGE_POP();
 }
 
 intrusive::shared_ptr<StreamDesc> AsyncCudaStreamType::MakeStreamDesc(

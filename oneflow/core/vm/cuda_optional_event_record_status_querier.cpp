@@ -23,14 +23,16 @@ namespace vm {
 
 CudaOptionalEventRecordStatusQuerier::~CudaOptionalEventRecordStatusQuerier() {
   if (has_event_record_) {
-    cudaSetDevice(device_id_);
-    cudaEventDestroy(event_);
+    CHECK(device_event_);
+    device_event_.reset();
+  } else {
+    CHECK(!device_event_);
   }
 }
 
 bool CudaOptionalEventRecordStatusQuerier::event_completed() const {
   cudaSetDevice(device_id_);
-  return cudaEventQuery(event_) != cudaErrorNotReady;
+  return device_event_->Query();
 }
 
 void CudaOptionalEventRecordStatusQuerier::SetLaunched(DeviceCtx* device_ctx) {
@@ -40,9 +42,9 @@ void CudaOptionalEventRecordStatusQuerier::SetLaunched(DeviceCtx* device_ctx) {
   CHECK(!launched_);
   if (has_event_record_) {
     cudaSetDevice(device_id_);
-    OF_CUDA_CHECK(
-        cudaEventCreateWithFlags(&event_, cudaEventBlockingSync | cudaEventDisableTiming));
-    OF_CUDA_CHECK(cudaEventRecord(event_, device_ctx->cuda_stream()));
+    device_event_ =
+        GetReusedDeviceEvent(device_id_, cudaEventBlockingSync | cudaEventDisableTiming);
+    OF_CUDA_CHECK(cudaEventRecord(*device_event_->mut_event(), device_ctx->cuda_stream()));
   }
   launched_ = true;
 }

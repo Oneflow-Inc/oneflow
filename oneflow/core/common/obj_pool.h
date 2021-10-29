@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <mutex>
 #include <vector>
+#include <memory>
 #include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {
@@ -65,22 +66,27 @@ template<typename T, int kThreadLocalMax = 1024,
 struct ObjectPool final {
   using ptr_type = typename PtrConstructor<T>::return_type;
 
-  template<typename... Args>
-  static ptr_type Get(Args&&... args) {
-    if (unlikely(MutLocalRecycledPool()->size())) {
-      return DestructThenConstruct(MutLocalRecycledPool()->PopBack(), std::forward<Args>(args)...);
-    }
-    if (likely(MutLocalRecyclingPool()->size())) {
-      return DestructThenConstruct(MutLocalRecyclingPool()->PopBack(), std::forward<Args>(args)...);
-    }
+  // Returned object has not been destructed yet.
+  static ptr_type GetRecycled() {
+    if (unlikely(MutLocalRecycledPool()->size())) { return MutLocalRecycledPool()->PopBack(); }
+    if (likely(MutLocalRecyclingPool()->size())) { return MutLocalRecyclingPool()->PopBack(); }
     if (unlikely(MutGlobalRecycledPool()->thread_unsafe_size())) {
       {
         std::unique_lock<std::mutex> lock(*MutMutex());
         MutGlobalRecycledPool()->MoveTo(MutLocalRecycledPool());
       }
-      return DestructThenConstruct(MutLocalRecycledPool()->PopBack(), std::forward<Args>(args)...);
+      return MutLocalRecycledPool()->PopBack();
     }
-    return PtrConstructor<T>::Construct(std::forward<Args>(args)...);
+    return nullptr;
+  }
+  template<typename... Args>
+  static ptr_type GetOrNew(Args&&... args) {
+    ptr_type recycled = GetRecycled();
+    if (likely(recycled != nullptr)) {
+      return DestructThenConstruct(recycled, std::forward<Args>(args)...);
+    } else {
+      return PtrConstructor<T>::Construct(std::forward<Args>(args)...);
+    }
   }
 
   static void Put(ptr_type object) {
@@ -139,9 +145,11 @@ class shared_ptr final {
   shared_ptr& operator=(const shared_ptr& rhs) = default;
   shared_ptr& operator=(shared_ptr&& rhs) = default;
 
+  void reset() { recycled_ptr_.reset(); }
+
   template<typename... Args>
   static shared_ptr Make(Args&&... args) {
-    return shared_ptr(object_pool_type::Get(std::forward<Args>(args)...));
+    return shared_ptr(object_pool_type::GetOrNew(std::forward<Args>(args)...));
   }
 
  private:

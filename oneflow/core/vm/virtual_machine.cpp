@@ -549,7 +549,9 @@ void VirtualMachine::MoveToReadyOrWaiting(NewInstructionList* new_instruction_li
 }
 
 void VirtualMachine::DispatchInstruction(Instruction* instruction) {
-  OF_PROFILER_RANGE_PUSH("Dispatch-" + instruction->instr_msg().instr_type_name());
+  OF_PROFILER_RANGE_PUSH(
+      "D:" + instruction->instr_msg().instr_type_name() + ":"
+      + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction));
   mut_vm_stat_running_instruction_list()->PushBack(instruction);
   auto* stream = instruction->mut_stream();
   stream->mut_running_instruction_list()->PushBack(instruction);

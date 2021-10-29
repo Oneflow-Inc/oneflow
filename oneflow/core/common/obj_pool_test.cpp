@@ -22,18 +22,18 @@ namespace test {
 
 TEST(ObjectPool, thread_local_recycle) {
   using IntPtrPool = ObjectPool<int, 2>;
-  int* ptr = IntPtrPool::Get();
+  int* ptr = IntPtrPool::GetOrNew();
   IntPtrPool::Put(ptr);
-  ASSERT_EQ(IntPtrPool::Get(), ptr);
+  ASSERT_EQ(IntPtrPool::GetOrNew(), ptr);
 }
 
 TEST(ObjectPool, static_global_recycle) {
   using IntPtrPool = ObjectPool<int, 1>;
-  int* ptr = IntPtrPool::Get();
-  IntPtrPool::Put(IntPtrPool::Get());
+  int* ptr = IntPtrPool::GetOrNew();
+  IntPtrPool::Put(IntPtrPool::GetOrNew());
   IntPtrPool::Put(ptr);
-  ASSERT_EQ(IntPtrPool::Get(), ptr);
-  ASSERT_NE(IntPtrPool::Get(), ptr);
+  ASSERT_EQ(IntPtrPool::GetOrNew(), ptr);
+  ASSERT_NE(IntPtrPool::GetOrNew(), ptr);
 }
 
 TEST(obj_pool_shared_ptr, naive) {

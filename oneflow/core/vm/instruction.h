@@ -154,7 +154,7 @@ using InstructionMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, instr
 template<OperandMemZoneModifier mem_zone_modifier>
 void CheckOperand(const Operand& operand);
 
-static const int kInstructionStatusBufferBytes = 32;
+static const int kInstructionStatusBufferBytes = 64;
 
 // clang-format off
 FLAT_MSG_BEGIN(InstructionDeleted);
