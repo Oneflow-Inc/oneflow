@@ -21,7 +21,7 @@ namespace primitive {
 
 namespace {
 
-template<UnaryOp unary_enum, typename T>
+template<UnaryOp unary_enum, typename In, typename Out> // template<UnaryOp unary_enum, typename In, typename Out>
 class ElementwiseUnaryImpl : public ElementwiseUnary {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnaryImpl);
@@ -31,15 +31,15 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
   void Launch(StreamContext* stream_ctx, const void* src_ptr, void* dst_ptr,
               size_t count) override {
     auto* cuda_stream_ctx = CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx));
-    OF_CUDA_CHECK((cuda::elementwise::Unary<UnaryFunctor<DeviceType::kGPU, unary_enum, T>, T, T>(
-        UnaryFunctor<DeviceType::kGPU, unary_enum, T>(), count, reinterpret_cast<T*>(dst_ptr),
-        reinterpret_cast<const T*>(src_ptr), cuda_stream_ctx->cuda_stream())));
+    OF_CUDA_CHECK((cuda::elementwise::Unary<UnaryFunctor<DeviceType::kGPU, unary_enum, Out, In>, Out, In>(
+        UnaryFunctor<DeviceType::kGPU, unary_enum, Out, In>(), count, reinterpret_cast<Out*>(dst_ptr),
+        reinterpret_cast<const In*>(src_ptr), cuda_stream_ctx->cuda_stream())));
   }
 };
 
-template<UnaryOp unary_enum, typename T>
+template<UnaryOp unary_enum, typename In, typename Out>
 std::unique_ptr<ElementwiseUnary> NewElementwiseUnary() {
-  return std::unique_ptr<ElementwiseUnary>(new ElementwiseUnaryImpl<unary_enum, T>());
+  return std::unique_ptr<ElementwiseUnary>(new ElementwiseUnaryImpl<unary_enum, In, Out>());
 }
 
 class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
@@ -48,17 +48,29 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
   ElementwiseUnaryFactoryImpl() = default;
   ~ElementwiseUnaryFactoryImpl() override = default;
 
-  std::unique_ptr<ElementwiseUnary> New(UnaryOp op_enum, DataType dtype) override {
-#define MAKE_NEW_ELEMENTWISE_UNARY_ENTRY(op_pair, dtype_pair)                 \
-  {std::make_pair(OF_PP_PAIR_SECOND(op_pair), OF_PP_PAIR_SECOND(dtype_pair)), \
-   NewElementwiseUnary<OF_PP_PAIR_SECOND(op_pair), OF_PP_PAIR_FIRST(dtype_pair)>},
+  std::unique_ptr<ElementwiseUnary> New(UnaryOp op_enum, DataType in_dtype, DataType out_dtype) override {
+#define MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY(op_pair, dtype_pair)                 \
+  {std::make_tuple(OF_PP_PAIR_SECOND(op_pair), OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair)), \
+   NewElementwiseUnary<OF_PP_PAIR_SECOND(op_pair), OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(dtype_pair)>},
 
-    static const std::map<std::pair<UnaryOp, DataType>,
+#define MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY(op_pair, in_dtype_pair, out_dtype_pair)                 \
+   {std::make_tuple(OF_PP_PAIR_SECOND(op_pair), OF_PP_PAIR_SECOND(in_dtype_pair), OF_PP_PAIR_SECOND(out_dtype_pair)), \
+    NewElementwiseUnary<OF_PP_PAIR_SECOND(op_pair), OF_PP_PAIR_FIRST(in_dtype_pair), OF_PP_PAIR_FIRST(out_dtype_pair)>},
+ 
+
+    static const std::map<std::tuple<UnaryOp, DataType, DataType>,
                           std::function<std::unique_ptr<ElementwiseUnary>()>>
         new_elementwise_unary_handle{OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-            MAKE_NEW_ELEMENTWISE_UNARY_ENTRY, PRIMITIVE_UNARY_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ)};
-#undef MAKE_NEW_ELEMENTWISE_UNARY_ENTRY
-    const auto it = new_elementwise_unary_handle.find(std::make_pair(op_enum, dtype));
+                                     MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY, PRIMITIVE_SAME_DTYPE_UNARY_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ)
+                                    
+                                     OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                                     MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY, PRIMITIVE_OUT_INT8_DTYPE_UNARY_OP_SEQ,
+                                     CUDA_PRIMITIVE_ALL_TYPE_SEQ, CUDA_PRIMITIVE_INT8_TYPE_SEQ)};
+
+#undef MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY
+
+#undef MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY
+    const auto it = new_elementwise_unary_handle.find(std::make_tuple(op_enum, in_dtype, out_dtype));
     if (it != new_elementwise_unary_handle.end()) {
       return it->second();
     } else {
