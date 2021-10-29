@@ -54,14 +54,12 @@ class LayerNorm : public OpExprGradFunction<LayerNormCaptureState> {
 
  private:
   AttrMap base_attrs_;
-  std::string op_name_;
 };
 
 Maybe<void> LayerNorm::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  op_name_ = fw_op_expr->op_name();
   return Maybe<void>::Ok();
 }
 

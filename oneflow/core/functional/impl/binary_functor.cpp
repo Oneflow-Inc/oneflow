@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/user/ops/math_binary_elementwise_seq.h"
 
 namespace oneflow {
 namespace one {
@@ -270,7 +271,41 @@ class ReshapeLikeFunctor : public BinaryFunctor {
   }
 };
 
+
+#define BINARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, base)                    \
+  class class_name##Functor : public base {                                          \
+   public:                                                                           \
+    class_name##Functor() {                                                          \
+      op_ = CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Input("y").Output("z").Build()); \
+    }                                                                                \
+  };
+
+#define BINARY_ELEMENTWISE_GRAD_FUNCTOR(op_type_name, class_name, base)                    \
+  class class_name##XGradFunctor : public base {                                          \
+   public:                                                                           \
+    class_name##XGradFunctor() {                                                          \
+      op_ = CHECK_JUST(one::OpBuilder(std::string("") + op_type_name + "_x_grad").Input("x").Input("y").Input("dz").Output("dx").Build()); \
+    }                                                                                \
+  };\
+  class class_name##YGradFunctor : public base {                                          \
+   public:                                                                           \
+    class_name##YGradFunctor() {                                                          \
+      op_ = CHECK_JUST(one::OpBuilder(std::string("") + op_type_name + "_y_grad").Input("x").Input("y").Input("dz").Output("dy").Build()); \
+    }                                                                                \
+  };
+
+BINARY_ELEMENTWISE_GRAD_FUNCTOR("pow", Pow, BinaryGradFunctor);
+BINARY_ELEMENTWISE_GRAD_FUNCTOR("atan2", Atan2, BinaryGradFunctor);
+BINARY_ELEMENTWISE_GRAD_FUNCTOR("floordiv", FloorDiv, BinaryGradFunctor);
+BINARY_ELEMENTWISE_GRAD_FUNCTOR("xdivy", Xdivy, BinaryGradFunctor);
+BINARY_ELEMENTWISE_GRAD_FUNCTOR("xlogy", Xlogy, BinaryGradFunctor);
+
 }  // namespace impl
+
+#define ADD_FUNCTOR(class_name, functor_name) \
+  m.add_functor<impl::class_name##XGradFunctor>(std::string("")+functor_name+"XGrad"); \
+  m.add_functor<impl::class_name##YGradFunctor>(std::string("")+functor_name+"YGrad");
+
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AddFunctor>("Add");
@@ -296,6 +331,12 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastFModFunctor>("BroadcastFMod");
   m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
   m.add_functor<impl::FloorDivFunctor>("FloorDiv");
+
+  ADD_FUNCTOR(Pow, "Pow");
+  ADD_FUNCTOR(Atan2, "Atan2");
+  ADD_FUNCTOR(FloorDiv, "FloorDiv");
+  ADD_FUNCTOR(Xdivy, "Xdivy");
+  ADD_FUNCTOR(Xlogy, "Xlogy");
 };
 
 }  // namespace functional

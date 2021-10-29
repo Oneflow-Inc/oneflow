@@ -84,7 +84,7 @@ Maybe<void> CTCLoss::Apply(const CTCLossCaptureState* ctx, const TensorTuple& ou
   const auto& input_lengths = ctx->SavedTensors().at(4);
   const auto& target_lengths = ctx->SavedTensors().at(5);
   in_grads->resize(4);
-  in_grads->at(0) = JUST(functional::CTCLossGrad(grad_out, log_probs, targets, 
+  in_grads->at(0) = JUST(functional::CtcLossGrad(grad_out, log_probs, targets, 
     input_lengths, target_lengths, loss, alpha, ctx->blank, ctx->zero_infinity));
   return Maybe<void>::Ok();
 }

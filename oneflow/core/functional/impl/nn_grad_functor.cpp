@@ -537,9 +537,9 @@ class GridSampleGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class CTCLossGradFunctor {
+class CtcLossGradFunctor {
  public:
-  CTCLossGradFunctor() {
+  CtcLossGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("ctc_loss_grad").Input("grad_out")
       .Input("log_probs")
       .Input("targets")
@@ -841,6 +841,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::LayerNormParamGradFunctor>("LayerNormParamGrad");
   m.add_functor<impl::LayerNormAffineParamGradFunctor>("LayerNormAffineParamGrad");
   m.add_functor<impl::BroadcastMatmulGradBFunctor>("BroadcastMatmulGradB");
+  m.add_functor<impl::CtcLossGradFunctor>("CtcLossGrad");
 };
 
 }  // namespace functional

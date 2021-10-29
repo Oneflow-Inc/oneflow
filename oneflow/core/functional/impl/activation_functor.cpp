@@ -326,6 +326,21 @@ class LogSoftmaxFunctor : public SoftmaxFunctorBase {
   }
 };
 
+class SoftmaxGradFunctor {
+ public:
+  SoftmaxGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softmax_grad").Input("y").Input("dy").Output("dx").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& dy) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, dy});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class HardSwishFunctor : public UnaryFunctor {
  public:
   HardSwishFunctor() {
