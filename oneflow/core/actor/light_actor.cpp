@@ -25,7 +25,6 @@ limitations under the License.
 #include "oneflow/core/thread/thread.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/runtime_job_descs.h"
-#include "oneflow/core/device/collective_boxing_device_context.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/stream/cuda_graph_context.h"
 #include "oneflow/core/kernel/user_kernel.h"
@@ -199,13 +198,14 @@ bool IsCUDAGraphSupported(const Kernel* kernel) {
 
 template<int exec_kernel, int inplace, typename IndexType, typename RegstIndex,
          typename StateContainer>
-class LightActor : public ActorBase, public KernelContext {
+class LightActor : public ActorBase, public KernelContext, public ActorContextProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LightActor);
-  explicit LightActor(StreamContext* stream_ctx, std::shared_ptr<DeviceCtx> device_ctx)
+  explicit LightActor(ActorContext* actor_ctx)
       : thread_(nullptr),
-        stream_ctx_(stream_ctx),
-        device_ctx_(std::move(device_ctx)),
+        actor_ctx_(actor_ctx),
+        stream_ctx_(actor_ctx->stream_ctx()),
+        device_ctx_(NewDeviceCtxAdapter(actor_ctx->stream_ctx())),
         stream_kernel_observer_(nullptr) {
     auto* kernel_observer_provider = dynamic_cast<KernelObserverProvider*>(stream_ctx_);
     if (kernel_observer_provider != nullptr) {
@@ -214,16 +214,15 @@ class LightActor : public ActorBase, public KernelContext {
   }
   ~LightActor() override = default;
 
-  void Init(const JobDesc* job_desc, const TaskProto& task_proto,
-            StreamContext* stream_ctx) override {
-    task_proto_.reset(new TaskProto(task_proto));
+  void Init(const JobDesc* job_desc, ActorContext* actor_ctx) override {
+    const TaskProto& task_proto = actor_ctx->task_proto();
     CHECK_EQ(task_proto.exec_sequence().exec_node_size(), 1);
     if (exec_kernel) {
       kernel_info_[0].reset(new KernelInfo());
       const KernelConf& kernel_conf = task_proto.exec_sequence().exec_node(0).kernel_conf();
       kernel_info_[0]->kernel = ConstructKernel(kernel_conf, this);
 #ifdef WITH_CUDA_GRAPHS
-      cuda_graph_ctx_[0] = dynamic_cast<CudaGraphContext*>(stream_ctx);
+      cuda_graph_ctx_[0] = dynamic_cast<CudaGraphContext*>(actor_ctx->stream_ctx());
       if (cuda_graph_ctx_[0] != nullptr && kernel_conf.all_blobs_are_static()
           && IsCUDAGraphSupported(kernel_info_[0]->kernel.get())) {
         cuda_graph_exec_[0].reset(new CudaGraphExecutable());
@@ -306,7 +305,7 @@ class LightActor : public ActorBase, public KernelContext {
  private:
   void InitBnInOp2Blob() {
     if (exec_kernel) {
-      const ExecNodeProto& node = task_proto_->exec_sequence().exec_node(0);
+      const ExecNodeProto& node = actor_ctx_->task_proto().exec_sequence().exec_node(0);
       for (auto& pair : node.kernel_conf().op_attribute().arg_signature().bn_in_op2lbi()) {
         const std::string& bn = pair.first;
         auto regst_desc_id_it = node.bn_in_op2regst_desc_id().find(bn);
@@ -333,7 +332,7 @@ class LightActor : public ActorBase, public KernelContext {
   void InitActMsg() {
     const bool is_kernel_launch_synchronized =
         (!exec_kernel) || kernel_info_[0]->kernel->IsKernelLaunchSynchronized();
-    const int64_t actor_id = task_proto_->task_id();
+    const int64_t actor_id = actor_ctx_->task_proto().task_id();
     const int64_t thrd_id = ThrdId4ActorId(actor_id);
     auto IsSyncMsg = [&](const ActorMsg& msg) {
       return is_kernel_launch_synchronized && thrd_id == ThrdId4ActorId(msg.dst_actor_id());
@@ -367,7 +366,7 @@ class LightActor : public ActorBase, public KernelContext {
             return_inplace_consumed_fn_[0] = [this, msg]() { thread_->EnqueueActorMsg(msg); };
           } else {
             return_inplace_consumed_fn_[0] = [this, msg]() {
-              device_ctx_->AddCallBack([msg] { Global<ActorMsgBus>::Get()->SendMsg(msg); });
+              actor_ctx_->AddCallBack([msg] { Global<ActorMsgBus>::Get()->SendMsg(msg); });
             };
           }
         } else {
@@ -450,7 +449,7 @@ class LightActor : public ActorBase, public KernelContext {
     ResetState();
     thread_->EnqueueActorMsg(sync_post_act_msgs_.cbegin(), sync_post_act_msgs_.cend());
     if (!async_post_act_msgs_.empty()) {
-      device_ctx_->AddCallBack([this]() {
+      actor_ctx_->AddCallBack([this]() {
         for (const auto& msg : async_post_act_msgs_) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
       });
     }
@@ -480,7 +479,7 @@ class LightActor : public ActorBase, public KernelContext {
       auto& state = index2state_.Get(i);
       if (state.regst_type != RegstType::kProduced) { continue; }
       const RtRegstDesc* regst_desc = state.regst->regst_desc();
-      device_ctx_->AddCallBack([regst_desc]() {
+      actor_ctx_->AddCallBack([regst_desc]() {
         for (int64_t consumer : regst_desc->consumers_actor_id()) {
           Global<ActorMsgBus>::Get()->SendMsg(
               ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id()));
@@ -490,6 +489,8 @@ class LightActor : public ActorBase, public KernelContext {
   }
 
   StreamContext* stream_ctx() const override { return stream_ctx_; }
+
+  ActorContext* GetActorContext() const override { return actor_ctx_; }
 
   DeviceCtx* device_ctx() const override { return device_ctx_.get(); }
 
@@ -578,69 +579,54 @@ class LightActor : public ActorBase, public KernelContext {
   std::unique_ptr<CudaGraphExecutable> cuda_graph_exec_[exec_kernel];
   CudaGraphContext* cuda_graph_ctx_[exec_kernel]{};
 #endif
+  ActorContext* actor_ctx_;
   StreamContext* stream_ctx_;
-  std::shared_ptr<DeviceCtx> device_ctx_;
+  std::unique_ptr<DeviceCtx> device_ctx_;
   std::vector<ActorMsg> sync_post_act_msgs_;
   std::vector<ActorMsg> async_post_act_msgs_;
-  std::unique_ptr<TaskProto> task_proto_;
   KernelObserver* stream_kernel_observer_;
 };
 
-std::shared_ptr<DeviceCtx> NewDefaultDeviceCtx(const TaskProto& task_proto,
-                                               StreamContext* stream_ctx) {
-  return std::shared_ptr<DeviceCtx>(CHECK_NOTNULL(NewDeviceCtxAdapter(stream_ctx)));
-}
-
 template<int kernel_exec, int inplace, typename IndexType, typename RegstIndex,
          typename StateContainer>
-ActorBase* NewLightActor(const TaskProto& task_proto, StreamContext* stream_ctx,
-                         std::shared_ptr<DeviceCtx> device_ctx) {
-  return new LightActor<kernel_exec, inplace, IndexType, RegstIndex, StateContainer>(
-      stream_ctx, std::move(device_ctx));
+ActorBase* NewLightActor(ActorContext* actor_ctx) {
+  return new LightActor<kernel_exec, inplace, IndexType, RegstIndex, StateContainer>(actor_ctx);
 }
 
 template<int kernel_exec, int inplace, typename IndexType>
-ActorBase* DispatchNewLightActorMaxSize(const TaskProto& task_proto, StreamContext* stream_ctx,
-                                        std::shared_ptr<DeviceCtx> device_ctx) {
-  const size_t regst_desc_count = GetRegstDescCount(task_proto);
+ActorBase* DispatchNewLightActorMaxSize(ActorContext* actor_ctx) {
+  const size_t regst_desc_count = GetRegstDescCount(actor_ctx->task_proto());
   if (regst_desc_count <= 2) {
     return NewLightActor<kernel_exec, inplace, IndexType, ArrayBaseIndex<IndexType, 2>,
-                         ArrayBaseStateContainer<IndexType, 2>>(task_proto, stream_ctx,
-                                                                std::move(device_ctx));
+                         ArrayBaseStateContainer<IndexType, 2>>(actor_ctx);
   } else if (regst_desc_count <= 4) {
     return NewLightActor<kernel_exec, inplace, IndexType, ArrayBaseIndex<IndexType, 4>,
-                         ArrayBaseStateContainer<IndexType, 4>>(task_proto, stream_ctx,
-                                                                std::move(device_ctx));
+                         ArrayBaseStateContainer<IndexType, 4>>(actor_ctx);
   } else if (regst_desc_count <= 8) {
     return NewLightActor<kernel_exec, inplace, IndexType, ArrayBaseIndex<IndexType, 8>,
-                         ArrayBaseStateContainer<IndexType, 8>>(task_proto, stream_ctx,
-                                                                std::move(device_ctx));
+                         ArrayBaseStateContainer<IndexType, 8>>(actor_ctx);
   } else {
     return NewLightActor<kernel_exec, inplace, IndexType, MapBaseIndex<IndexType>,
-                         VectorBaseStateContainer<IndexType>>(task_proto, stream_ctx,
-                                                              std::move(device_ctx));
+                         VectorBaseStateContainer<IndexType>>(actor_ctx);
   }
 }
 
 template<int kernel_exec, int inplace>
-ActorBase* DispatchNewLightActorIndexType(const TaskProto& task_proto, StreamContext* stream_ctx,
-                                          std::shared_ptr<DeviceCtx> device_ctx) {
-  size_t size = std::max(GetRegstDescCount(task_proto), GetConsumerCount(task_proto));
+ActorBase* DispatchNewLightActorIndexType(ActorContext* actor_ctx) {
+  size_t size = std::max(GetRegstDescCount(actor_ctx->task_proto()),
+                         GetConsumerCount(actor_ctx->task_proto()));
   if (size <= static_cast<size_t>(std::numeric_limits<int8_t>::max())) {
-    return DispatchNewLightActorMaxSize<kernel_exec, inplace, int8_t>(task_proto, stream_ctx,
-                                                                      std::move(device_ctx));
+    return DispatchNewLightActorMaxSize<kernel_exec, inplace, int8_t>(actor_ctx);
   } else if (size <= static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
-    return DispatchNewLightActorMaxSize<kernel_exec, inplace, int32_t>(task_proto, stream_ctx,
-                                                                       std::move(device_ctx));
+    return DispatchNewLightActorMaxSize<kernel_exec, inplace, int32_t>(actor_ctx);
   } else {
     return nullptr;
   }
 }
 
 template<int kernel_exec>
-ActorBase* DispatchNewLightActorInplace(const TaskProto& task_proto, StreamContext* stream_ctx,
-                                        std::shared_ptr<DeviceCtx> device_ctx) {
-  const auto& produced_regst_desc = task_proto.produced_regst_desc();
+ActorBase* DispatchNewLightActorInplace(ActorContext* actor_ctx) {
+  const auto& produced_regst_desc = actor_ctx->task_proto().produced_regst_desc();
   const size_t inplace_produced_regst_cnt =
       std::count_if(produced_regst_desc.cbegin(), produced_regst_desc.cend(),
                     [](const PbMapPair<std::string, RegstDescProto>& pair) {
@@ -656,46 +642,38 @@ ActorBase* DispatchNewLightActorInplace(const TaskProto& task_proto, StreamConte
     }
   }
   if (inplace) {
-    return DispatchNewLightActorIndexType<kernel_exec, 1>(task_proto, stream_ctx,
-                                                          std::move(device_ctx));
+    return DispatchNewLightActorIndexType<kernel_exec, 1>(actor_ctx);
   } else {
-    return DispatchNewLightActorIndexType<kernel_exec, 0>(task_proto, stream_ctx,
-                                                          std::move(device_ctx));
+    return DispatchNewLightActorIndexType<kernel_exec, 0>(actor_ctx);
   }
 }
 
-ActorBase* NewLightActorWithKernel(const TaskProto& task_proto, StreamContext* stream_ctx,
-                                   std::shared_ptr<DeviceCtx> device_ctx) {
-  return DispatchNewLightActorInplace<1>(task_proto, stream_ctx, std::move(device_ctx));
+ActorBase* NewLightActorWithKernel(ActorContext* actor_ctx) {
+  return DispatchNewLightActorInplace<1>(actor_ctx);
 }
 
-ActorBase* NewLightActorWithoutKernel(const TaskProto& task_proto, StreamContext* stream_ctx,
-                                      std::shared_ptr<DeviceCtx> device_ctx) {
-  return DispatchNewLightActorInplace<0>(task_proto, stream_ctx, std::move(device_ctx));
+ActorBase* NewLightActorWithoutKernel(ActorContext* actor_ctx) {
+  return DispatchNewLightActorInplace<0>(actor_ctx);
 }
 
-ActorBase* TryNewLightActorWithoutInit(const TaskProto& task_proto, StreamContext* stream_ctx) {
+ActorBase* TryNewLightActorWithoutInit(ActorContext* actor_ctx) {
+  const TaskProto& task_proto = actor_ctx->task_proto();
   if (!task_proto.all_register_num_eq_one_hint()) { return nullptr; }
   if (task_proto.exec_sequence().exec_node_size() != 1) { return nullptr; }
   if (task_proto.task_type() == TaskType::kNormalForward) {
     const OperatorConf& op_conf =
         task_proto.exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf();
     if (op_conf.has_variable_conf()) {
-      return NewLightActorWithoutKernel(task_proto, stream_ctx,
-                                        NewDefaultDeviceCtx(task_proto, stream_ctx));
+      return NewLightActorWithoutKernel(actor_ctx);
     } else {
-      return NewLightActorWithKernel(task_proto, stream_ctx,
-                                     NewDefaultDeviceCtx(task_proto, stream_ctx));
+      return NewLightActorWithKernel(actor_ctx);
     }
   } else if (task_proto.task_type() == TaskType::kCopyHd) {
-    return NewLightActorWithKernel(task_proto, stream_ctx,
-                                   NewDefaultDeviceCtx(task_proto, stream_ctx));
+    return NewLightActorWithKernel(actor_ctx);
   } else if (task_proto.task_type() == TaskType::kTick) {
-    return NewLightActorWithoutKernel(task_proto, stream_ctx,
-                                      NewDefaultDeviceCtx(task_proto, stream_ctx));
+    return NewLightActorWithoutKernel(actor_ctx);
   } else if (task_proto.task_type() == TaskType::kCollectiveBoxingGeneric) {
-    return NewLightActorWithKernel(task_proto, stream_ctx,
-                                   std::shared_ptr<DeviceCtx>(new CollectiveBoxingDeviceCtx()));
+    return NewLightActorWithKernel(actor_ctx);
   } else {
     return nullptr;
   }
@@ -703,12 +681,11 @@ ActorBase* TryNewLightActorWithoutInit(const TaskProto& task_proto, StreamContex
 
 }  // namespace
 
-std::unique_ptr<ActorBase> TryNewLightActor(const TaskProto& task_proto,
-                                            StreamContext* stream_ctx) {
-  ActorBase* actor = TryNewLightActorWithoutInit(task_proto, stream_ctx);
+std::unique_ptr<ActorBase> TryNewLightActor(ActorContext* actor_ctx) {
+  ActorBase* actor = TryNewLightActorWithoutInit(actor_ctx);
   if (actor != nullptr) {
     const auto& job_descs = *Global<RuntimeJobDescs>::Get();
-    actor->Init(&job_descs.job_desc(task_proto.job_id()), task_proto, stream_ctx);
+    actor->Init(&job_descs.job_desc(actor_ctx->task_proto().job_id()), actor_ctx);
   }
   return std::unique_ptr<ActorBase>(actor);
 }
