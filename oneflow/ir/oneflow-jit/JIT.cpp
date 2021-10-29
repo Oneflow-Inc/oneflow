@@ -18,6 +18,7 @@ limitations under the License.
 #include "OneFlow/OneFlowDialect.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
+#include "oneflow/core/framework/op_interpreter/jit_op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
@@ -46,8 +47,9 @@ class CreateComputeCtxPass : public CreateComputeCtxPassBase<CreateComputeCtxPas
   void runOnFunction() override {
     ModuleOp top_module = getFunction()->getParentOfType<ModuleOp>();
     mlir::MLIRContext& context = getContext();
-    // TODO: reuse interpreter's importer
-    ::oneflow::one::ir::JitImporter importer(&context, top_module);
+    auto jit_interpreter =
+        dynamic_cast<::oneflow::one::JitInterpreter*>(::oneflow::one::GetJitInterpreter().get());
+    auto importer = jit_interpreter->GetImporter();
     Builder builder(&context);
     // external func to launch kernel
     auto func_type = builder.getFunctionType(llvm::None, builder.getI64Type());
