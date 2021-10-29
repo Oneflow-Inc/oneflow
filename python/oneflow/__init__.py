@@ -78,6 +78,7 @@ from oneflow._C import greater_equal as ge
 from oneflow._C import logical_and
 from oneflow._C import logical_or
 from oneflow._C import logical_xor
+from oneflow._C import logical_not
 from oneflow._C import gelu
 from oneflow._C import mish
 from oneflow._C import sigmoid
@@ -134,9 +135,9 @@ from oneflow._C import log_softmax
 from oneflow._C import argmax
 from oneflow._C import argmin
 from oneflow._C import std
-from oneflow._C import var
 from oneflow._C import stack
 from oneflow._C import squeeze
+from oneflow._C import var
 
 from . import sbp
 import atexit
@@ -361,3 +362,8 @@ import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing
+
+if oneflow._oneflow_internal.flags.with_mlir():
+    oneflow_internal_path = oneflow._oneflow_internal.__file__
+    print("MLIR JIT engine will load:", oneflow_internal_path)
+    oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)

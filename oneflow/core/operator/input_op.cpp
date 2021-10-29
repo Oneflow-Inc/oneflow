@@ -70,10 +70,12 @@ Maybe<void> InputOp::InferNdSbpSignature(
     std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn) const {
   const auto& parallel_hierarchy = parallel_desc.hierarchy();
   const InterfaceBlobConf& blob_conf = op_conf().input_conf().blob_conf();
-  cfg::NdSbp& tick_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["tick"];
-  tick_nd_sbp.clear_sbp_parallel();
-  FOR_RANGE(int64_t, i, 0, parallel_hierarchy->NumAxes()) {
-    tick_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+  if (op_conf().input_conf().has_tick()) {
+    cfg::NdSbp& tick_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["tick"];
+    tick_nd_sbp.clear_sbp_parallel();
+    FOR_RANGE(int64_t, i, 0, parallel_hierarchy->NumAxes()) {
+      tick_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+    }
   }
   cfg::NdSbp& out_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["out"];
   JUST(InterfaceOpUtil::ParseNdSbpFromBlobConf(blob_conf, parallel_desc, &out_nd_sbp));

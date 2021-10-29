@@ -83,7 +83,7 @@ int32_t UserOpConfWrapper::output_size(const std::string& arg_name) const {
 const std::shared_ptr<const AttrVal>& UserOpConfWrapper::Attr4Name(
     const std::string& attr_name) const {
   const auto& attr = attrs_.Attr4Name(attr_name);
-  CHECK_NOTNULL(attr.get());
+  CHECK(attr.get() != nullptr) << "attr_name: " << attr_name;
   return attr;
 }
 

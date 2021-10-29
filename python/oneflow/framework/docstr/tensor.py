@@ -89,6 +89,14 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.logical_not,
+    """
+    logical_not() -> Tensor
+    See :func:`oneflow.logical_not`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.std,
     """
     See :func:`oneflow.std`
