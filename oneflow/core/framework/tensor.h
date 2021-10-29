@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/common/error.h"
@@ -40,6 +41,7 @@ class FunctionNode;
 
 class ConsistentTensor;
 class MirroredTensor;
+class DTRMirroredTensor;
 
 class Tensor {
  public:
@@ -262,10 +264,11 @@ class TensorIf : public Tensor {
 
 class Parameter final : public TensorIf<Parameter> {
  public:
-  Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad) {
-    this->tensor_ = tensor->detach().GetPtrOrThrow();
-    CHECK_JUST(this->tensor_->set_requires_grad(requires_grad));
-  }
+  Parameter(std::shared_ptr<Tensor> tensor, bool requires_grad);
+  // Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad) {
+  //   this->tensor_ = tensor->detach().GetPtrOrThrow();
+  //   CHECK_JUST(this->tensor_->set_requires_grad(requires_grad));
+  // }
 
   const std::shared_ptr<const Shape>& shape() const override { return tensor_->shape(); }
   Symbol<DType> dtype() const override { return tensor_->dtype(); }
@@ -349,14 +352,20 @@ class Parameter final : public TensorIf<Parameter> {
   }
 
   user_op::TensorDesc* mut_tensor_meta() override { return tensor_->mut_tensor_meta(); }
-  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
-    CHECK_OR_RETURN(is_local() == other->is_local() && is_eager() == other->is_eager())
-        << "You can't assign copy between tensors with different type";
-    bool old_requires_grad = tensor_->requires_grad();
-    this->tensor_ = JUST(other->detach());
-    JUST(this->tensor_->set_requires_grad(old_requires_grad));
-    return Maybe<void>::Ok();
-  }
+  // Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
+  //   CHECK_OR_RETURN(is_local() == other->is_local() && is_eager() == other->is_eager())
+  //       << "You can't assign copy between tensors with different type";
+  //   bool old_requires_grad = tensor_->requires_grad();
+  //   this->tensor_ = JUST(other->detach());
+  //   JUST(this->tensor_->set_requires_grad(old_requires_grad));
+
+  //   auto blob_object = CHECK_JUST(this->tensor_->eager_blob_object());
+  //   if (auto* dtr_eager_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(blob_object.get())) {
+  //     dtr_eager_blob_object->set_evict_attr(false);
+  //   }
+  //   return Maybe<void>::Ok();
+  // }
+  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override;
 
   Maybe<MirroredTensor> AsMirroredTensor() override {
     if (const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(tensor_)) {
@@ -376,7 +385,7 @@ class Parameter final : public TensorIf<Parameter> {
   std::shared_ptr<Tensor> tensor_;
 };
 
-class MirroredTensor final : public TensorIf<MirroredTensor>,
+class MirroredTensor : public TensorIf<MirroredTensor>,
                              public std::enable_shared_from_this<MirroredTensor> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MirroredTensor);
@@ -481,8 +490,24 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   Maybe<MirroredTensor> AsMirroredTensor() override { return shared_from_this(); }
   Maybe<ConsistentTensor> AsConsistentTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
- private:
+ protected:
   std::shared_ptr<MirroredTensorImpl> impl_;
+};
+
+class DTRMirroredTensor final : public MirroredTensor {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DTRMirroredTensor);
+  DTRMirroredTensor() = default;
+  explicit DTRMirroredTensor(const std::shared_ptr<DTREagerMirroredTensorImpl>& impl) {
+    impl_ = impl;
+    inputs_ = TensorTuple();
+  }
+  ~DTRMirroredTensor() {}
+
+  void set_tensor_inputs(const TensorTuple& inputs) { inputs_ = inputs; }
+
+ private:
+  TensorTuple inputs_;
 };
 
 class ConsistentTensor final : public TensorIf<ConsistentTensor>,
@@ -535,7 +560,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) override {
     impl_->set_consumer_nd_sbp_constraint(val);
     return Maybe<void>::Ok();
-  }
+  };
 
   // Getters for autograd
   Maybe<Tensor> acc_grad() const override { return impl_->acc_grad(); }

@@ -51,10 +51,18 @@ def api_enable_eager_execution(val: bool = True) -> None:
     return enable_if.unique([enable_eager_environment])(val)
 
 
+def api_enable_dtr(val: bool = False, thres: float = 1) -> None:
+    return enable_if.unique([enable_dtr])(val, thres)
+
+
 @enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
 def enable_eager_environment(val=True):
     return oneflow._oneflow_internal.EnableEagerEnvironment(val)
 
+
+@enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
+def enable_dtr(val=False, thres=1, debug=False):
+    return oneflow._oneflow_internal.EnableDTRStrategy(val, thres, debug)
 
 def api_env_init() -> bool:
     """Init environment for job

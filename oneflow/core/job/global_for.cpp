@@ -21,6 +21,10 @@ limitations under the License.
 namespace oneflow {
 
 COMMAND(Global<bool, EagerExecution>::SetAllocated(new bool(false)));
+COMMAND(Global<bool, EnableDTR>::SetAllocated(new bool(false)));
+COMMAND(Global<double, DTRMemoryThreshold>::SetAllocated(new double(1)));
+COMMAND(Global<size_t, DTRRemainMemory>::SetAllocated(new size_t(50 * 1048576)));
+COMMAND(Global<bool, EnableDTRDebug>::SetAllocated(new bool(false)));
 COMMAND(Global<Maybe<bool>, MultiClient>::SetAllocated(
     new Maybe<bool>(Error::InvalidValueError("is_multi_client is not set"))));
 

@@ -137,7 +137,7 @@ class EagerInterpreter : public OpExprInterpreter {
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const OpExprInterpContext& ctx) const override;
 
- private:
+ protected:
   FOR_EACH_BUILTIN_OPS(DECLARE_PURE_VIRTUAL_APPLY_FUNC);
   DECLARE_NORMAL_APPLY_FUNC(FunctionOp);
 };
@@ -156,8 +156,14 @@ class EagerMirroredInterpreter : public EagerInterpreter {
   EagerMirroredInterpreter() : EagerInterpreter() {}
   virtual ~EagerMirroredInterpreter() = default;
 
- private:
+ protected:
   FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);
+};
+
+class DTREagerMirroredInterpreter : public EagerMirroredInterpreter {
+ public:
+  DTREagerMirroredInterpreter() : EagerMirroredInterpreter() {}
+  ~DTREagerMirroredInterpreter() = default;
 };
 
 #undef DECLARE_OVERRIDE_APPLY_FUNC

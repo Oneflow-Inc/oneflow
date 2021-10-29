@@ -44,6 +44,7 @@ class Device;
 
 namespace vm {
 class EagerBlobObject;
+class DTREagerBlobObject;
 }  // namespace vm
 
 namespace one {
@@ -97,6 +98,7 @@ class TensorImpl {
 };
 
 class EagerMirroredTensorImpl;
+class DTREagerMirroredTensorImpl;
 class MirroredTensorImpl : public TensorImpl {
  public:
   virtual ~MirroredTensorImpl() = default;
@@ -126,6 +128,7 @@ class MirroredTensorImpl : public TensorImpl {
 };
 
 class MirroredTensor;
+class DTRMirroredTensor;
 
 class ConsistentTensorImpl : public TensorImpl {
  public:
@@ -199,7 +202,7 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   Maybe<MirroredTensorImpl> detach() const override;
 };
 
-class EagerMirroredTensorImpl final : public MirroredTensorImpl {
+class EagerMirroredTensorImpl : public MirroredTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerMirroredTensorImpl);
   EagerMirroredTensorImpl();
@@ -232,15 +235,43 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   // Setters
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
 
-  Maybe<void> InitEagerBlobObject(LocalDepObject* dep_object);
-  Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override { return this; }
 
- private:
+  // virtual Maybe<void> InitEagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case);
+  // Maybe<void> InitEagerBlobObjectAndTensorStorage(
+  //     const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+  //     const std::shared_ptr<TensorStorage>& tensor_storage);
+
+  virtual Maybe<void> InitEagerBlobObject(LocalDepObject* dep_object);
+  Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override { return this; }
+  int eager_blob_object_count() { return eager_blob_object_.use_count(); }
+
+ protected:
   Maybe<void> UpdateTensorStorage();
   Maybe<void> set_eager_blob_object(std::shared_ptr<vm::EagerBlobObject> eager_blob_object);
 
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
+};
+
+class DTREagerMirroredTensorImpl final : public EagerMirroredTensorImpl {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DTREagerMirroredTensorImpl);
+  DTREagerMirroredTensorImpl() {}
+  DTREagerMirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
+                          bool requires_grad, bool is_leaf) : EagerMirroredTensorImpl(tensor_meta, requires_grad, is_leaf) {}
+  DTREagerMirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
+                          const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad,
+                          bool is_leaf) : EagerMirroredTensorImpl(tensor_meta, tensor_storage, requires_grad, is_leaf) {}
+  // ~DTREagerMirroredTensorImpl() {}
+  ~DTREagerMirroredTensorImpl() override {}
+
+  Maybe<void> InitEagerBlobObject(LocalDepObject* dep_object);
+  // Maybe<void> InitEagerBlobObjectAndTensorStorage(
+  //     const std::shared_ptr<vm::DTREagerBlobObject>& eager_blob_object,
+  //     const std::shared_ptr<TensorStorage>& tensor_storage);
+
+ private:
+  Maybe<void> set_eager_blob_object(std::shared_ptr<vm::DTREagerBlobObject> eager_blob_object);
 };
 
 class LazyConsistentTensorImpl final : public ConsistentTensorImpl {

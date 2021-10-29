@@ -404,16 +404,18 @@ class Conv2d(Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.weight = flow.nn.Parameter(
-            flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
+            flow.ones(out_channels, in_channels // groups, *self.kernel_size)
+            # flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
         )
         self.out_channel_groups = out_channels // groups
         self.bias = None
         if bias:
-            self.bias = flow.nn.Parameter(flow.Tensor(out_channels))
+            self.bias = flow.nn.Parameter(flow.ones(out_channels))
+            # self.bias = flow.nn.Parameter(flow.Tensor(out_channels))
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
-        init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        # init.kaiming_uniform_(self.weight, a=math.sqrt(5))
         if self.bias is not None:
             (fan_in, _) = init._calculate_fan_in_and_fan_out(self.weight)
             bound = 1 / math.sqrt(fan_in)

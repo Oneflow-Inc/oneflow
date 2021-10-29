@@ -40,6 +40,7 @@ limitations under the License.
 #include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/operator/op_node_signature.cfg.h"
 #include "oneflow/core/operator/op_conf.cfg.h"
+#include "oneflow/core/framework/tensor_pool.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
@@ -136,6 +137,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 #endif
   Global<EnvDesc>::New(env_proto);
   Global<ProcessCtx>::New();
+  Global<one::DTRTensorPool>::New();
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
   // ~CtrlBootstrap.
   if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
@@ -252,6 +254,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<RpcManager>::Delete();
   Global<ProcessCtx>::Delete();
   Global<EnvDesc>::Delete();
+  Global<one::DTRTensorPool>::Delete();
 #ifdef WITH_CUDA
   Global<cudaDeviceProp>::Delete();
 #endif

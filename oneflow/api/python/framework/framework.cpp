@@ -41,5 +41,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("LoadSavedModel", &LoadSavedModel);
 
   m.def("EagerExecutionEnabled", []() { return oneflow::EagerExecutionEnabled(); });
+  m.def("DTREnabled", []() { return oneflow::DTREnabled(); });
+  m.def("GetDTRMemoryThreshold", []() { return oneflow::GetDTRMemoryThreshold(); });
+  m.def("GetDTRRemainMemory", []() { return oneflow::GetDTRRemainMemory(); });
+  m.def("DTRDebugEnabled", []() { return oneflow::DTRDebugEnabled(); });
   m.def("LoadLibraryNow", &LoadLibraryNow);
 }

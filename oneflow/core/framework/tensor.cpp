@@ -47,6 +47,14 @@ Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
     const auto& impl =
         std::make_shared<LazyMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);
     return std::make_shared<MirroredTensor>(impl);
+  } else if (oneflow::DTREnabled()) {
+    const auto& impl =
+        std::make_shared<DTREagerMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);
+    const auto& tensor = std::make_shared<DTRMirroredTensor>(impl);
+    const auto& outputs = std::make_shared<TensorTuple>();
+    outputs->push_back(tensor);
+    JUST(RunEmptyOp(outputs.get()));
+    return static_cast<std::shared_ptr<MirroredTensor>>(tensor);
   } else {
     const auto& impl =
         std::make_shared<EagerMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);

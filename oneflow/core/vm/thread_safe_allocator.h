@@ -36,7 +36,8 @@ class ThreadSafeAllocator final : public Allocator {
 
  private:
   std::unique_ptr<Allocator> backend_allocator_;
-  std::mutex mutex4backend_allocator_;
+  std::recursive_mutex mutex4backend_allocator_;
+  // std::mutex mutex4backend_allocator_;
 };
 
 class SingleThreadOnlyAllocator final : public Allocator {

@@ -13,25 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_GLOBAL_FOR_H_
-#define ONEFLOW_CORE_JOB_GLOBAL_FOR_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_CONFIG_DTR_H_
+#define ONEFLOW_CORE_FRAMEWORK_CONFIG_DTR_H_
 
-#include "oneflow/core/common/global.h"
+#include <cuda_runtime_api.h>
+#include <cuda.h>
+#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
+#include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
 
-class ForSession {};
-class ForEnv {};
+Maybe<void> EnableDTRStrategy(bool enable_dtr, double thres, bool enable_debug);
 
-class EagerExecution {};
+}   // namespace oneflow
 
-class EnableDTR {};
-class DTRRemainMemory {};   // (1 - thres) * total_memory
-class DTRMemoryThreshold {};
-class EnableDTRDebug {};
-
-class MultiClient {};
-
-}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_JOB_GLOBAL_FOR_H_
+#endif
