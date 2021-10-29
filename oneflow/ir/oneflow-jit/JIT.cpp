@@ -46,6 +46,7 @@ class CreateComputeCtxPass : public CreateComputeCtxPassBase<CreateComputeCtxPas
   void runOnFunction() override {
     ModuleOp top_module = getFunction()->getParentOfType<ModuleOp>();
     mlir::MLIRContext& context = getContext();
+    // TODO: reuse interpreter's importer
     ::oneflow::one::ir::JitImporter importer(&context, top_module);
     Builder builder(&context);
     // external func to launch kernel
