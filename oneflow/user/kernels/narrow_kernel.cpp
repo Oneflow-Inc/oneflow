@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/narrow_util.h"
+#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/primitive/include/copy_nd.h"
 
 namespace oneflow {
@@ -22,13 +22,6 @@ namespace oneflow {
 namespace user_op {
 
 namespace {
-
-Shape GetFlatShape(const ShapeView& shape, int64_t dim) {
-  CHECK_GT(shape.NumAxes(), 0);
-  CHECK_GE(dim, 0);
-  CHECK_LT(dim, shape.NumAxes());
-  return Shape({shape.Count(0, dim), shape.At(dim), shape.Count(dim + 1)});
-}
 
 template<typename Context>
 std::unique_ptr<primitive::CopyNd> NewCopyNdPrimitive(Context* ctx) {
@@ -51,9 +44,6 @@ class NarrowKernel final : public user_op::OpKernel {
     const int64_t& dim = ctx->Attr<int64_t>("dim");
     const int64_t& start = ctx->Attr<int64_t>("start");
     const int64_t& length = ctx->Attr<int64_t>("length");
-    // NarrowKernelUtil<device_type, T>::Forward(ctx->device_ctx(), in->dptr<T>(),
-    //                                           GetFlatShape(in->shape(), dim), out->mut_dptr<T>(),
-    //                                           start, length);
     const ShapeView in_shape = in->shape(); 
     auto primitive = NewCopyNdPrimitive(ctx);
 
@@ -85,24 +75,7 @@ class NarrowGradKernel final : public user_op::OpKernel {
     const int64_t& length = ctx->Attr<int64_t>("length");
     size_t dx_byte_size = dx->shape().elem_cnt() * sizeof(T);
     Memset<device_type>(ctx->device_ctx(), dx->mut_dptr<T>(), 0, dx_byte_size);
-    NarrowKernelUtil<device_type, T>::Backward(ctx->device_ctx(), dy->dptr<T>(),
-                                               GetFlatShape(dx->shape(), dim), dx->mut_dptr<T>(),
-                                               start, length);
-    /*
-    const ShapeView in_shape = in->shape(); 
-    auto primitive = NewCopyNdPrimitive(ctx);
-
-    DimVector dst_shape = {in_shape.Count(0, dim), length, in_shape.Count(dim + 1)};
-    DimVector dst_pos_vec = {0, 0, 0};
-
-    DimVector src_shape = {in_shape.Count(0, dim), in_shape.At(dim), in_shape.Count(dim + 1)};
-    DimVector src_pos_vec = {0, start, 0};
-    DimVector extent_vec = {in_shape.Count(0, dim), length, in_shape.Count(dim + 1)};
-
-    primitive->Launch(ctx->stream_ctx(), out->data_type(), 3, out->mut_dptr(),
-                      dst_shape.data(), dst_pos_vec.data(), in->dptr(), src_shape.data(),
-                      src_pos_vec.data(), extent_vec.data());
-    */
+    
     auto primitive = NewCopyNdPrimitive(ctx);
     const ShapeView dx_shape = dx->shape(); 
 
