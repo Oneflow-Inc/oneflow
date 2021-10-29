@@ -47,7 +47,8 @@ void CallbackNotifyCompTaskNode::BuildExecGphAndRegst() {
   CHECK(node->op()->output_bns().empty());
 }
 
-REGISTER_INDEPENDENT_TASK_STREAM_INDEX_GETTER(TaskType::kCallbackNotify)
+REGISTER_NAMED_TASK_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kCallbackNotify,
+                                        "callback_notify");
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kCallbackNotifyConf,
                                        CallbackNotifyCompTaskNode);

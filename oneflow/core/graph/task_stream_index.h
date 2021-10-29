@@ -56,7 +56,6 @@ class TaskStreamIndexFactory final {
  private:
   TaskStreamIndexFactory() = default;
   map_t stream_index_getter_map_;
-  std::mutex mtx_;
 };
 
 Maybe<StreamId::index_t> GetTaskStreamIndex(TaskType task_type, const DeviceId& device_id);

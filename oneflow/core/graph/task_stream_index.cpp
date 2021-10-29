@@ -19,7 +19,6 @@ namespace oneflow {
 
 void TaskStreamIndexFactory::RegisterGetter(const key_t& key,
                                             const stream_index_getter_fn& getter) {
-  std::unique_lock<std::mutex> lck(mtx_);
   bool insert_success = stream_index_getter_map_.emplace(key, getter).second;
   if (!insert_success) {
     std::cerr << "DeviceType " << key.first << ", TaskType " << key.second
@@ -30,7 +29,6 @@ void TaskStreamIndexFactory::RegisterGetter(const key_t& key,
 
 Maybe<StreamId::index_t> TaskStreamIndexFactory::Get(TaskType task_type,
                                                      const DeviceId& device_id) {
-  std::unique_lock<std::mutex> lck(mtx_);
   auto key = std::make_pair(device_id.device_type(), task_type);
   auto it = stream_index_getter_map_.find(key);
   CHECK_OR_RETURN(it != stream_index_getter_map_.end())
