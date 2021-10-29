@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/primitive/include/copy_nd.h"
+#include "oneflow/core/primitive/include/memset.h"
 
 namespace oneflow {
 
@@ -28,10 +29,26 @@ std::unique_ptr<primitive::CopyNd> NewCopyNdPrimitive(Context* ctx) {
   return primitive::NewPrimitive<primitive::CopyNdFactory>(ctx->device_type(), 2);
 }
 
+template<typename Context>
+std::unique_ptr<primitive::Memset> NewMemsetPrimitive(Context* ctx) {
+  return primitive::NewPrimitive<primitive::MemsetFactory>(ctx->device_type());
+}
+
+hob::HobContextGetter<user_op::KernelRegContext, bool> CopyNdPrimitiveExists() {
+  return user_op::HobCtxGetter<bool>("CopyNdPrimitiveExists",
+                                     [](const user_op::KernelRegContext& ctx) {
+                                       return NewCopyNdPrimitive(&ctx).operator bool();
+                                     });
+}
+
+hob::HobContextGetter<KernelRegContext, bool> MemsetPrimitiveExists() {
+  return HobCtxGetter<bool>("MemsetPrimitiveExists", [](const KernelRegContext& ctx) {
+    return NewMemsetPrimitive(&ctx).operator bool();
+  });
+}
 
 }  // namespace
 
-template<DeviceType device_type, typename T>
 class NarrowKernel final : public user_op::OpKernel {
  public:
   NarrowKernel() = default;
@@ -60,7 +77,6 @@ class NarrowKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<DeviceType device_type, typename T>
 class NarrowGradKernel final : public user_op::OpKernel {
  public:
   NarrowGradKernel() = default;
@@ -73,9 +89,14 @@ class NarrowGradKernel final : public user_op::OpKernel {
     const int64_t& dim = ctx->Attr<int64_t>("dim");
     const int64_t& start = ctx->Attr<int64_t>("start");
     const int64_t& length = ctx->Attr<int64_t>("length");
-    size_t dx_byte_size = dx->shape().elem_cnt() * sizeof(T);
-    Memset<device_type>(ctx->device_ctx(), dx->mut_dptr<T>(), 0, dx_byte_size);
     
+    size_t dx_byte_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
+    void* dst = dx->mut_dptr();
+    std::unique_ptr<primitive::Memset> memset_primitive =
+        primitive::NewPrimitive<primitive::MemsetFactory>(ctx->device_type());
+    CHECK(memset_primitive);
+    memset_primitive->Launch(ctx->stream_ctx(), dst, 0, dx_byte_size);
+
     auto primitive = NewCopyNdPrimitive(ctx);
     const ShapeView dx_shape = dx->shape(); 
 
@@ -86,34 +107,15 @@ class NarrowGradKernel final : public user_op::OpKernel {
     DimVector src_pos_vec = {0, 0, 0};
     DimVector extent_vec = {dx_shape.Count(0, dim), length, dx_shape.Count(dim + 1)};
 
-    primitive->Launch(ctx->stream_ctx(), dx->data_type(), 3, dx->mut_dptr(),
+    primitive->Launch(ctx->stream_ctx(), dx->data_type(), 3, dst,
                       dst_shape.data(), dst_pos_vec.data(), dy->dptr(), src_shape.data(),
                       src_pos_vec.data(), extent_vec.data());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_NARROW_KERNELS(device, dtype)                                               \
-  REGISTER_USER_KERNEL("narrow").SetCreateFn<NarrowKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device)                                                    \
-      & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));                       \
-  REGISTER_USER_KERNEL("narrow_grad")                                                        \
-      .SetCreateFn<NarrowGradKernel<device, dtype>>()                                        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                   \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
-
-#define REGISTER_NARROW_KERNELS_WITH_DEVICE(device) \
-  REGISTER_NARROW_KERNELS(device, float)            \
-  REGISTER_NARROW_KERNELS(device, double)           \
-  REGISTER_NARROW_KERNELS(device, int32_t)          \
-  REGISTER_NARROW_KERNELS(device, int64_t)          \
-  REGISTER_NARROW_KERNELS(device, int8_t)           \
-  REGISTER_NARROW_KERNELS(device, uint8_t)
-
-REGISTER_NARROW_KERNELS_WITH_DEVICE(DeviceType::kCPU)
-#ifdef WITH_CUDA
-REGISTER_NARROW_KERNELS_WITH_DEVICE(DeviceType::kGPU)
-#endif
+REGISTER_USER_KERNEL("narrow").SetCreateFn<NarrowKernel>().SetIsMatchedHob(CopyNdPrimitiveExists()== true);
+REGISTER_USER_KERNEL("narrow_grad").SetCreateFn<NarrowGradKernel>().SetIsMatchedHob((MemsetPrimitiveExists() == true) & (CopyNdPrimitiveExists()== true));
 
 }  // namespace user_op
 
