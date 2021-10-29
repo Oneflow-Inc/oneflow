@@ -335,7 +335,8 @@ struct monadic_operations {
   }
 
   template<typename T, typename F,
-           std::enable_if_t<IsOptional<decltype(std::declval<F>()())>::value, int> = 0>
+           std::enable_if_t<
+               std::is_convertible<decltype(std::declval<F>()()), std::decay_t<T>>::value, int> = 0>
   static auto or_else(T&& opt, F&& f) -> std::decay_t<T> {
     if (!opt.has_value()) { return std::forward<F>(f)(); }
 
