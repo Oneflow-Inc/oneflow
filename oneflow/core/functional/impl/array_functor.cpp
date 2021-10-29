@@ -404,7 +404,7 @@ class ConcatFunctor {
   Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim) const {
     if (inputs.size() == 1) { return inputs.at(0); }
     int64_t axis = dim;
-    int64_t ndim = inputs.at(0)->ndim();
+    int64_t ndim = inputs[0]->ndim();
     int64_t max_dim_size = 0;
     CHECK_GE_OR_RETURN(inputs.size(), 2);
     CHECK_OR_RETURN((-(ndim) <= dim) && (dim <= (ndim - 1)))
@@ -412,8 +412,8 @@ class ConcatFunctor {
         << ndim - 1 << "], but got " << dim;
     if (dim < 0) { axis += ndim; }
 
-    const std::shared_ptr<const Shape>& shape = inputs.at(0)->shape();
-    for (auto input : inputs) {
+    const std::shared_ptr<const Shape>& shape = inputs[0]->shape();
+    for (const auto& input : inputs) {
       CHECK_OR_RETURN(input->ndim() == ndim) << " Tensors must have same number of dimensions: got "
                                              << input->ndim() << " and " << ndim << " is expected.";
       for (int i = 0; i < ndim; ++i) {

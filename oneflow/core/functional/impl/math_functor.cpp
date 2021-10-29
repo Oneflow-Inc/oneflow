@@ -487,8 +487,7 @@ class TransposeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::vector<int32_t>& permute) const {
     MutableAttrMap attrs;
-    CHECK_EQ_OR_RETURN(input->shape()->NumAxes(), permute.size())
-        << "number of dims don't match in permute";
+    CHECK_EQ_OR_RETURN(input->ndim(), permute.size()) << "number of dims don't match in permute";
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
     int32_t ndims = input->shape()->NumAxes();
     for (int i = 0; i < permute.size(); i++) {
