@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
+#include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/variable_op.h"
@@ -29,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 #include "oneflow/core/primitive/include/memcpy.h"
+#include "oneflow/core/graph/task_stream_id.h"
 
 namespace oneflow {
 
@@ -289,10 +291,12 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
       DeviceId device_id{static_cast<DeviceId::index_t>(machine_id), parallel_desc.device_type(),
                          device_index};
       StreamId::index_t stream_index = 0;
-      if (op_node->op().op_conf().has_stream_index_hint()) {
-        int32_t stream_index_hint = op_node->op().op_conf().stream_index_hint();
-        LOG(INFO) << "set op: " << op_node->op().op_name() << " to stream: " << stream_index_hint;
-        stream_index = static_cast<StreamId::index_t>(stream_index_hint);
+      if (op_node->op().op_conf().has_stream_name_hint()) {
+        const std::string& stream_name_hint = op_node->op().op_conf().stream_name_hint();
+        LOG(INFO) << "set op: " << op_node->op().op_name() << " to stream: " << stream_name_hint;
+        auto* stream_index_generator =
+            Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetOrCreateGenerator(device_id);
+        stream_index = (*stream_index_generator)(stream_name_hint);
       } else {
         stream_index = CHECK_JUST(GetTaskStreamIndex(comp_task_node->GetTaskType(), device_id));
       }

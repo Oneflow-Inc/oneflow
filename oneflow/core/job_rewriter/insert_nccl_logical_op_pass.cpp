@@ -709,14 +709,14 @@ void InsertNcclLogicalOpsInSubGraph(
     if (nccl_compute_stream_id >= kMaxNcclComputeStreamCount) {
       break;  // NOTE(chengcheng): ONLY support kMaxNcclComputeStreamCount insert nccl subgraphs.
     }
-    auto stream_index = StreamIndexGenerator()(GetStreamIndexName(nccl_compute_stream_id));
+    auto stream_name = GetStreamIndexName(nccl_compute_stream_id);
 
     // NOTE(chengcheng): set ALL subgraph op and ALL nccl op stream index.
     for (auto& pair : subgraph_op_name2conf) {
       mut_op_names.insert(pair.first);
-      pair.second.set_stream_index_hint(stream_index);
+      pair.second.set_stream_name_hint(stream_name);
     }
-    for (auto& nccl_op : nccl_op_confs) { nccl_op.set_stream_index_hint(stream_index); }
+    for (auto& nccl_op : nccl_op_confs) { nccl_op.set_stream_name_hint(stream_name); }
     (*stream_offset)++;
   } while (false);
 

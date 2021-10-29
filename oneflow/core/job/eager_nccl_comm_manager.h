@@ -32,7 +32,7 @@ class EagerNcclCommMgr final {
 
   ncclComm_t GetCommForDevice(const std::set<std::pair<int64_t, int64_t>>& device_set);
   ncclComm_t GetCommForDeviceAndStreamId(const std::set<std::pair<int64_t, int64_t>>& device_set,
-                                         const int32_t stream_id);
+                                         const std::string& stream_name);
 
  private:
   friend class Global<EagerNcclCommMgr>;
