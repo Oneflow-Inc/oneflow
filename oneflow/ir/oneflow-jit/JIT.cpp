@@ -41,12 +41,50 @@ class ReturnAllLeaveResultPass : public ReturnAllLeaveResultPassBase<ReturnAllLe
     getFunction()->walk(CollectNotUsedResults);
   }
 };
+
+class CreateComputeCtxPass : public CreateComputeCtxPassBase<CreateComputeCtxPass> {
+  void runOnFunction() override {
+    ModuleOp top_module = getFunction()->getParentOfType<ModuleOp>();
+    mlir::MLIRContext& context = getContext();
+    Builder builder(&context);
+    // external func to launch kernel
+    auto func_type = builder.getFunctionType(llvm::None, builder.getI64Type());
+    auto function = mlir::FuncOp::create(getFunction()->getLoc(), "LaunchOneFlowKernel", func_type);
+    top_module.push_back(function);
+    auto CollectLowering = [&](Operation* op) {
+      if (llvm::dyn_cast<mlir::oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
+        mlir::oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
+        llvm::errs() << "lowering op to launch kernel: ";
+        user_op_adaptor.op_name().dump();
+        ::oneflow::OperatorConf op_conf;
+        const std::string op_name = user_op_adaptor.op_name().getValue().str();
+        auto user_conf = op_conf.mutable_user_conf();
+        if (succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))
+            && succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))
+            // && succeeded(ConvertUserOpAttributes(op, user_op_adaptor, op_conf))
+            && succeeded(ConvertCtrlInputs(op, op_conf))) {
+          llvm::errs() << op_conf.DebugString();
+        } else {
+          return WalkResult::interrupt();
+        }
+      }
+      return WalkResult::advance();
+    };
+    getFunction()->walk(CollectLowering);
+  }
+};
+
 }  // namespace
 
 namespace mlir {
 namespace oneflow {
+
 std::unique_ptr<Pass> createReturnAllLeaveResultPass() {
   return std::make_unique<ReturnAllLeaveResultPass>();
+}
+
+std::unique_ptr<Pass> createCreateComputeCtxPass() {
+  return std::make_unique<CreateComputeCtxPass>();
 }
 
 }  // namespace oneflow
@@ -251,13 +289,16 @@ llvm::Optional<mlir::Value> JitImporter::GetResultByBnAndIndex(const std::string
   }
 }
 
-LogicalResult Canonicalize(OpBuilder& builder, ModuleOp module) {
-  builder.create<ReturnOp>(module->getLoc());
-  mlir::PassManager pm(module->getContext());
+LogicalResult JitImporter::LowerToOneFlowKernel() {
+  GetBuilder().create<ReturnOp>(GetModule()->getLoc());
+  mlir::PassManager pm(GetModule()->getContext());
   pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
   pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createReturnAllLeaveResultPass());
-  return pm.run(module);
+  pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createCreateComputeCtxPass());
+  return pm.run(GetModule());
 }
+
+JITKernelComputeContext::JITKernelComputeContext() {}
 
 }  // namespace ir
 

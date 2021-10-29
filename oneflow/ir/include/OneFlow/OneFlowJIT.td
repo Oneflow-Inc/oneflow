@@ -8,4 +8,9 @@ def ReturnAllLeaveResultPass : FunctionPass<"return-all-leave-result"> {
   let constructor = "mlir::oneflow::createReturnAllLeaveResultPass()";
 }
 
+def CreateComputeCtxPass : FunctionPass<"create-compute-ctx-pass"> {
+  let summary = "";
+  let constructor = "mlir::oneflow::createCreateComputeCtxPass()";
+}
+
 #endif // ONEFLOW_JIT_PASSES

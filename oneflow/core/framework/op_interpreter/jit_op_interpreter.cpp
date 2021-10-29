@@ -73,7 +73,7 @@ Maybe<const ParallelDesc> GetParallelDesc(const std::shared_ptr<Tensor>& tensor)
 }
 
 void JitInterpreter::Interrupt() {
-  CHECK(ir::Canonicalize(importer_.GetBuilder(), importer_.GetModule()).succeeded());
+  CHECK(importer_.LowerToOneFlowKernel().succeeded());
   module_->dump();
 }
 

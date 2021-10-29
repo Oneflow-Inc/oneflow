@@ -25,11 +25,13 @@ limitations under the License.
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 #include "oneflow/core/framework/util.h"
 #include "mlir/Pass/Pass.h"
+#include "oneflow/core/framework/op_kernel.h"
 
 namespace mlir {
 namespace oneflow {
 
 std::unique_ptr<Pass> createReturnAllLeaveResultPass();
+std::unique_ptr<Pass> createCreateComputeCtxPass();
 
 }  // namespace oneflow
 }  // namespace mlir
@@ -85,6 +87,7 @@ class JitImporter : public Importer {
   void SetParallelDesc(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
     parallel_desc_ = parallel_desc;
   }
+  LogicalResult LowerToOneFlowKernel();
 
  private:
   std::unordered_map<Tensor*, mlir::Value> result_mapping_;  // tensor* => %result
@@ -104,7 +107,18 @@ class JitImporter : public Importer {
 };
 
 OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context);
-LogicalResult Canonicalize(mlir::OpBuilder& builder, ModuleOp module);
+
+class JITKernelComputeContext {
+ public:
+  JITKernelComputeContext();
+  JITKernelComputeContext(JITKernelComputeContext&&) = default;
+  JITKernelComputeContext(const JITKernelComputeContext&) = default;
+  JITKernelComputeContext& operator=(JITKernelComputeContext&&) = default;
+  JITKernelComputeContext& operator=(const JITKernelComputeContext&) = default;
+  ~JITKernelComputeContext() = default;
+
+ private:
+};
 
 }  // namespace ir
 
