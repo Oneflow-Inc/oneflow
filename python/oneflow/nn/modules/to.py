@@ -21,9 +21,6 @@ import oneflow._oneflow_internal.lazy_mode as lazy_mode
 def _tensor_to(input, device, dtype, copy=False):
     assert input.is_local
 
-    device = device or input.device
-    assert isinstance(device, flow.device), f"Invalid device param: {device}"
-
     ret = input
     copy_happened = False
     if device != ret.device:
@@ -153,8 +150,8 @@ def _validate_args(device, dtype, copy, input):
                 f"but device param {device} has been received."
             )
     else:
-        if isinstance(device, str):
-            device = flow.device(device)
+        device = device or input.device
+        device = flow.device(device)
 
 
 @register_tensor_op("to")
