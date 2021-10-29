@@ -149,7 +149,7 @@ class _BatchNorm(_NormBase):
                 raise ValueError(
                     "shape of mean and variance should be 1D or has number of axes and x's"
                 )
-            variance += self.eps
+            variance = variance + self.eps
             normalized = (x - mean) * variance.rsqrt()
             affined = normalized
             if self.weight is not None:
