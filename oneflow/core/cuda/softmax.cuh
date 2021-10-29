@@ -20,9 +20,11 @@ limitations under the License.
 #include <cub/cub.cuh>
 #include <math_constants.h>
 #include <assert.h>
+#include <cuda.h>
+
 #if CUDA_VERSION >= 11000
 #include <cuda_bf16.h>
-#endif
+#endif  // CUDA_VERSION >= 11000
 
 namespace oneflow {
 
@@ -161,7 +163,7 @@ template<>
 struct DefaultComputeType<nv_bfloat16> {
   using type = float;
 };
-#endif
+#endif  // CUDA_VERSION >= 11000
 
 template<typename T, int N>
 struct GetPackType {
