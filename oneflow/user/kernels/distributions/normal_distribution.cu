@@ -21,24 +21,68 @@ namespace oneflow {
 
 namespace {
 
+// template<typename T>
+// __device__ T GenNormal(curandStatePhilox4_32_10_t* state, const T mean, const T std);
+
+// template<>
+// __device__ float GenNormal<float>(curandStatePhilox4_32_10_t* state, const float mean, const float std) {
+//   return (curand_normal(state) + mean) / std;
+// }
+
+// template<>
+// __device__ double GenNormal<double>(curandStatePhilox4_32_10_t* state, const double mean, const double std) {
+//   return (curand_normal_double(state) + mean) / std;
+// }
+
+// template<typename T>
+// __global__ void GenerateGpu(curandStatePhilox4_32_10_t* state, const int64_t elem_cnt, T* dptr, const T mean,
+//                             const T std) {
+//   const int id = blockIdx.x * blockDim.x + threadIdx.x;
+//   curandState localState = state[id];
+//   CUDA_1D_KERNEL_LOOP(i, elem_cnt) { dptr[i] = GenNormal<T>(&localState, mean, std); }
+//   state[id] = localState;
+// }
+
+// }  // namespace
+
+// template<typename T>
+// void NormalDistribution<DeviceType::kGPU, T>::operator()(
+//     DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,
+//     const std::shared_ptr<one::Generator>& generator) const {
+//   CHECK_GE(elem_cnt, 0);
+//   auto gen = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
+//   int32_t block_num = gen->max_block_num();
+//   int32_t thread_num = gen->max_thread_num();
+//   auto* curand_states = gen->curand_states();
+//   GenerateGpu<T><<<block_num, thread_num, 0, device_ctx->cuda_stream()>>>(curand_states, elem_cnt,
+//                                                                           dptr, mean_, std_);
+// }
+
+// #define INITIATE_GPU_NORMAL_DISTRIBUTION(T, typeproto)               \
+//   template void NormalDistribution<DeviceType::kGPU, T>::operator()( \
+//       DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,        \
+//       const std::shared_ptr<one::Generator>& generator) const;
+
+// OF_PP_FOR_EACH_TUPLE(INITIATE_GPU_NORMAL_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
+
 template<typename T>
-__device__ T GenNormal(curandState* state, const T mean, const T std);
+__device__ T GenNormal(curandStatePhilox4_32_10_t* state, const T mean, const T std);
 
 template<>
-__device__ float GenNormal<float>(curandState* state, const float mean, const float std) {
+__device__ float GenNormal<float>(curandStatePhilox4_32_10_t* state, const float mean, const float std) {
   return (curand_normal(state) + mean) / std;
 }
 
 template<>
-__device__ double GenNormal<double>(curandState* state, const double mean, const double std) {
+__device__ double GenNormal<double>(curandStatePhilox4_32_10_t* state, const double mean, const double std) {
   return (curand_normal_double(state) + mean) / std;
 }
 
 template<typename T>
-__global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, T* dptr, const T mean,
+__global__ void GenerateGpu(curandStatePhilox4_32_10_t* state, const int64_t elem_cnt, T* dptr, const T mean,
                             const T std) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandState localState = state[id];
+  curandStatePhilox4_32_10_t localState = state[id];
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) { dptr[i] = GenNormal<T>(&localState, mean, std); }
   state[id] = localState;
 }
@@ -64,5 +108,6 @@ void NormalDistribution<DeviceType::kGPU, T>::operator()(
       const std::shared_ptr<one::Generator>& generator) const;
 
 OF_PP_FOR_EACH_TUPLE(INITIATE_GPU_NORMAL_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
+
 
 }  // namespace oneflow

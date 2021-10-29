@@ -120,7 +120,8 @@ class CUDAGeneratorImpl : public DeviceGeneratorImpl {
   int32_t max_block_num() const { return max_block_num_; }
   int32_t max_thread_num() const { return max_thread_num_; }
 
-  curandState* curand_states() const { return curand_states_; }
+  // curandState* curand_states() const { return curand_states_; }
+  curandStatePhilox4_32_10_t* curand_states() const { return curand_states_; }
 
   void set_current_seed(uint64_t seed) override;
 
@@ -132,12 +133,14 @@ class CUDAGeneratorImpl : public DeviceGeneratorImpl {
  private:
   int32_t max_block_num_;
   int32_t max_thread_num_;
-  curandState* curand_states_;
+  // curandState* curand_states_;
+  curandStatePhilox4_32_10_t* curand_states_; 
 };
 
 namespace detail {
 
-void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, curandState* states);
+// void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, curandState* states);
+void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, curandStatePhilox4_32_10_t* states);
 
 }  // namespace detail
 #endif  // WITH_CUDA

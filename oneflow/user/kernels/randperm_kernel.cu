@@ -25,12 +25,20 @@ limitations under the License.
 #include "oneflow/user/kernels/radix_sort.cuh"
 #include "oneflow/user/kernels/distributions/common.h"
 namespace oneflow {
+// __global__ void GeneKeysAndValues(const int32_t n, int32_t* values, int32_t* keys,
+//                                   curandStatePhilox4_32_10_t* state) {
+//   XPU_1D_KERNEL_LOOP(i, n) {
+//     keys[i] = curand(state + i);
+//     values[i] = i;
+//   }
+// }
+
 __global__ void GeneKeysAndValues(const int32_t n, int32_t* values, int32_t* keys,
-                                  curandState* state) {
-  XPU_1D_KERNEL_LOOP(i, n) {
-    keys[i] = curand(state + i);
-    values[i] = i;
-  }
+  curandStatePhilox4_32_10_t* state) {
+XPU_1D_KERNEL_LOOP(i, n) {
+keys[i] = curand(state + i);
+values[i] = i;
+}
 }
 
 class GpuRandPermKernel final : public user_op::OpKernel {
@@ -61,7 +69,8 @@ class GpuRandPermKernel final : public user_op::OpKernel {
 
     int32_t block_num = gpu_generator->max_block_num();
     int32_t thread_num = gpu_generator->max_thread_num();
-    curandState* curand_states = gpu_generator->curand_states();
+    // curandStatePhilox4_32_10_t* curand_states = gpu_generator->curand_states();
+    curandStatePhilox4_32_10_t* curand_states = gpu_generator->curand_states();
 
     // layout for tmp |...key(in and out,2xN)..|....value....|.... space for sort function....|
     // values are the desired indexes ,and keys are generated randomly.

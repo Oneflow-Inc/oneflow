@@ -21,7 +21,14 @@ namespace one {
 
 namespace {
 
-__global__ void InitCurandStatesKernel(uint64_t seed, curandState* states) {
+// __global__ void InitCurandStatesKernel(uint64_t seed, curandState* states) {
+//   const int id = blockIdx.x * blockDim.x + threadIdx.x;
+//   size_t local_seed = (static_cast<size_t>(seed) + 0x9e3779b9U + (static_cast<size_t>(id) << 6U)
+//                        + (static_cast<size_t>(id) >> 2U));
+//   curand_init(local_seed, 0, 0, &states[id]);
+// }
+
+__global__ void InitCurandStatesKernel(uint64_t seed, curandStatePhilox4_32_10_t* states) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
   size_t local_seed = (static_cast<size_t>(seed) + 0x9e3779b9U + (static_cast<size_t>(id) << 6U)
                        + (static_cast<size_t>(id) >> 2U));
@@ -32,7 +39,11 @@ __global__ void InitCurandStatesKernel(uint64_t seed, curandState* states) {
 
 namespace detail {
 
-void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, curandState* states) {
+// void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, curandState* states) {
+//   InitCurandStatesKernel<<<block_num, thread_num>>>(seed, states);
+// }
+
+void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, curandStatePhilox4_32_10_t* states) {
   InitCurandStatesKernel<<<block_num, thread_num>>>(seed, states);
 }
 
