@@ -36,12 +36,12 @@ TEST(ObjectPool, static_global_recycle) {
   ASSERT_NE(IntPtrPool::GetOrNew(), ptr);
 }
 
-TEST(obj_pool_shared_ptr, naive) {
+TEST(obj_pool_make_shared, naive) {
   int* ptr = obj_pool::make_shared<int>().get();
   ASSERT_EQ(obj_pool::make_shared<int>().get(), ptr);
 }
 
-TEST(obj_pool_shared_ptr, recyled_more) {
+TEST(obj_pool_make_shared, recyled_more) {
   int* raw_ptr0 = nullptr;
   int* raw_ptr1 = nullptr;
   {

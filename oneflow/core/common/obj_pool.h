@@ -124,43 +124,11 @@ struct ObjectPool final {
   }
 };
 
-template<typename T>
-class shared_ptr final {
- public:
-  using value_type = T;
-  using object_pool_type = ObjectPool<T>;
-
-  shared_ptr(const shared_ptr&) = default;
-  shared_ptr(shared_ptr&) = default;
-
-  shared_ptr() = default;
-  ~shared_ptr() = default;
-
-  value_type* get() const { return recycled_ptr_.get(); }
-  explicit operator bool() const { return get() != nullptr; }
-  bool operator==(const shared_ptr& rhs) const { return this->recycled_ptr_ == rhs.recycled_ptr_; }
-  value_type* operator->() const { return get(); }
-  value_type& operator*() const { return *get(); }
-
-  shared_ptr& operator=(const shared_ptr& rhs) = default;
-  shared_ptr& operator=(shared_ptr&& rhs) = default;
-
-  void reset() { recycled_ptr_.reset(); }
-
-  template<typename... Args>
-  static shared_ptr Make(Args&&... args) {
-    return shared_ptr(object_pool_type::GetOrNew(std::forward<Args>(args)...));
-  }
-
- private:
-  explicit shared_ptr(T* ptr) : recycled_ptr_(ptr, &object_pool_type::Put) {}
-
-  std::shared_ptr<T> recycled_ptr_;
-};
-
 template<typename T, typename... Args>
-shared_ptr<T> make_shared(Args&&... args) {
-  return shared_ptr<T>::Make(std::forward<Args>(args)...);
+std::shared_ptr<T> make_shared(Args&&... args) {
+  using object_pool_type = ObjectPool<T>;
+  auto* ptr = object_pool_type::GetOrNew(std::forward<Args>(args)...);
+  return std::shared_ptr<T>(ptr, &object_pool_type::Put);
 }
 
 }  // namespace obj_pool
