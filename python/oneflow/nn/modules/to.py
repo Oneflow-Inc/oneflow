@@ -23,8 +23,6 @@ def _tensor_to(input, device, dtype, copy=False):
 
     device = device or input.device
     assert isinstance(device, flow.device), f"Invalid device param: {device}"
-    dtype = dtype or input.dtype
-    assert isinstance(dtype, flow.dtype), f"Invalid dtype param: {dtype}"
 
     ret = input
     copy_happened = False
@@ -50,9 +48,6 @@ def _consistent_tensor_to(input, device_type, dtype, copy=False):
     device_type = device_type or input.placement.device_type
     assert isinstance(device_type, str)
 
-    dtype = dtype or input.dtype
-    assert isinstance(dtype, flow.dtype)
-
     if device_type == input.placement.device_type and dtype == input.dtype:
         return input if not copy else input.clone()
 
@@ -60,6 +55,7 @@ def _consistent_tensor_to(input, device_type, dtype, copy=False):
         return _lazy_consistent_tensor_to(input, device_type, dtype)
     else:
         return _eager_consistent_tensor_to(input, device_type, dtype)
+    return flow._C.copy(input, device_type, dtype)
 
 
 def _lazy_consistent_tensor_to(input, device_type, dtype):
@@ -136,6 +132,31 @@ def _parse_args(*args, **kwargs):
     return device, dtype, copy
 
 
+def _validate_args(device, dtype, copy, input):
+    """
+    checks the dtypes of args, and checks if the call to to_op is valid
+    """
+    if not isinstance(copy, bool):
+        raise TypeError("Invalid copy param received: {copy}")
+
+    if not isinstance(dtype, flow.dtype) and dtype is not None:
+        raise TypeError("Invalid dtype param received: {dtype}")
+
+    dtype = dtype or input.dtype
+    assert isinstance(dtype, flow.dtype), f"Invalid dtype param: {dtype}"
+
+    if input.is_consistent:
+        if device is not None and device not in ("cuda", "cpu"):
+            raise TypeError(
+                "A consistent tensor can only call to() with device_str_without_id, "
+                'e.g. to("cuda") or to("cpu"), '
+                f"but device param {device} has been received."
+            )
+    else:
+        if isinstance(device, str):
+            device = flow.device(device)
+
+
 @register_tensor_op("to")
 def to_op(input, *args, **kwargs):
     """Performs Tensor dtype and/or device conversion.
@@ -169,26 +190,11 @@ def to_op(input, *args, **kwargs):
 
     """
     device, dtype, copy = _parse_args(*args, **kwargs)
-
-    if not isinstance(dtype, flow.dtype) and dtype is not None:
-        raise TypeError("Invalid dtype param received: {dtype}")
-
-    if not isinstance(copy, bool):
-        raise TypeError("Invalid copy param received: {copy}")
+    _validate_args(device, dtype, copy, input)
 
     if input.is_consistent:
-        if device is not None and device not in ("cuda", "cpu"):
-            raise TypeError(
-                "A consistent tensor can only call to() with device_str_without_id, "
-                'e.g. to("cuda") or to("cpu"), '
-                f"but device param {device} has been received."
-            )
-
         return _consistent_tensor_to(input, device, dtype, copy=copy)
     else:
-        if isinstance(device, str):
-            device = flow.device(device)
-
         return _tensor_to(input, device, dtype, copy)
 
 
