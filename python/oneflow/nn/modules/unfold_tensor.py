@@ -16,7 +16,6 @@ limitations under the License.
 
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
 
 
 @register_tensor_op("unfold")
