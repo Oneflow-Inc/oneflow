@@ -393,7 +393,6 @@ class BroadcastLikeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-
 class ConcatFunctor {
  public:
   ConcatFunctor() {
