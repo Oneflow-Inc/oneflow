@@ -13,17 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/actor/actor.h"
-#include "oneflow/core/control/global_process_ctx.h"
-#include "oneflow/core/job/runtime_job_descs.h"
+#include "oneflow/core/actor/generic_actor_context.h"
 
 namespace oneflow {
 
-std::unique_ptr<ActorBase> NewActor(ActorContext* actor_ctx) {
-  ActorBase* rptr = NewObj<int32_t, ActorBase>(actor_ctx->task_proto().task_type());
-  const auto& job_descs = *Global<RuntimeJobDescs>::Get();
-  rptr->Init(&job_descs.job_desc(actor_ctx->task_proto().job_id()), actor_ctx);
-  return std::unique_ptr<ActorBase>(rptr);
+void GenericActorContext::Init(const TaskProto& task_proto, StreamContext* stream_ctx) {
+  stream_ctx_ = stream_ctx;
+  task_proto_ = task_proto;
 }
+
+void GenericActorContext::AddCallBack(std::function<void()> callback) const {
+  CHECK_JUST(stream_ctx_->AddCallback(std::move(callback)));
+}
+
+StreamContext* GenericActorContext::stream_ctx() const { return stream_ctx_; }
+
+const TaskProto& GenericActorContext::task_proto() const { return task_proto_; }
 
 }  // namespace oneflow
