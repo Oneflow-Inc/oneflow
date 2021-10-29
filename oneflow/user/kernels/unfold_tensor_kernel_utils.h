@@ -18,22 +18,22 @@ limitations under the License.
 
 #include "oneflow/core/framework/framework.h"
 
-namespace oneflow{
-OF_DEVICE_FUNC int32_t Offset(int32_t in_offset, const std::vector<int32_t>& out_stride,
-                                            const std::vector<int32_t>& out_shape, const int32_t n) {
-    int32_t remaining = 0;
-    int32_t out_offset = 0;
-    #ifdef __CUDA_ARCH__
-    #pragma unroll
-    #endif
-    for (int32_t dim = n; dim >= 0; --dim) {
-        remaining = in_offset % out_shape[dim];
-        out_offset += remaining * out_stride[dim];
-        in_offset = in_offset / out_shape[dim];
-    }
-    return out_offset;
+namespace oneflow {
+OF_DEVICE_FUNC int32_t Offset(int32_t in_offset, const int32_t* out_stride,
+                              const int32_t* out_shape, const int32_t n) {
+  int32_t remaining = 0;
+  int32_t out_offset = 0;
+#ifdef __CUDA_ARCH__
+#pragma unroll
+#endif
+  for (int32_t dim = n; dim >= 0; --dim) {
+    remaining = in_offset % out_shape[dim];
+    out_offset += remaining * out_stride[dim];
+    in_offset = in_offset / out_shape[dim];
+  }
+  return out_offset;
 }
 
-}   // namespace oneflow
+}  // namespace oneflow
 
 #endif  // ONEFLOW_UNFOLD_TENSOR_KERNEL_UTILS_H_

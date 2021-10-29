@@ -19,18 +19,21 @@ import oneflow as flow
 import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
+import numpy as np
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestUnfoldTensor(flow.unittest.TestCase):
     @autotest(n=10, auto_backward=False)
     def test_unfold_tensor_with_random_data(test_case):
-        x = torch.arange(0, 60).reshape(3,4,5)
-        dimension = random(0,2).to(int)
-        size = random(1,3).to(int)
-        step = random(1,3).to(int)
+        device = random_device()
+        x = torch.tensor(np.random.randn(3, 4, 5), requires_grad=False, device=device)
+        dimension = random(0, 2).to(int).value()
+        size = random(1, 3).to(int).value()
+        step = random(1, 3).to(int).value()
         y = x.unfold(dimension, size, step)
         return y
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -30,8 +30,8 @@ class UnfoldTensorKernel final : public OpKernel {
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
-    const Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const Tensor* in = ctx->Tensor4ArgNameAndIndex("x", 0);
+    Tensor* out = ctx->Tensor4ArgNameAndIndex("y", 0);
 
     const ShapeView& in_shape = in->shape();
     std::vector<int32_t> out_shape;
@@ -43,29 +43,27 @@ class UnfoldTensorKernel final : public OpKernel {
     const int32_t dimension = ctx->Attr<int32_t>("dimension");
     const int32_t step = ctx->Attr<int32_t>("step");
 
-    // compute the input stride.
     std::vector<int32_t> in_stride(in_dims, 1);
     for (int32_t i = in_dims - 2; i >= 0; --i) {
-        in_stride[i] = in_shape.At(i + 1) * in_stride.at(i + 1);
+      in_stride[i] = in_shape.At(i + 1) * in_stride.at(i + 1);
     }
 
-    // compute the output stride.
-    std::vector<int32_t> out_stride(in_dims+1);
+    std::vector<int32_t> out_stride(in_dims + 1);
     out_stride[in_dims] = in_dims == 0 ? 1 : in_stride[dimension];
-    for(int d = 0; d < in_dims; ++d){
-        if(d == dimension){
-            out_stride[d] = step*in_stride[d];
-        }else{
-            out_stride[d] = in_stride[d];
-        }
+    for (int d = 0; d < in_dims; ++d) {
+      if (d == dimension) {
+        out_stride[d] = step * in_stride[d];
+      } else {
+        out_stride[d] = in_stride[d];
+      }
     }
 
-    const T* in_ptr = in->dptr<T>();  
-    T* out_ptr = out->mut_dptr<T>();  
+    const T* in_ptr = in->dptr<T>();
+    T* out_ptr = out->mut_dptr<T>();
     const int32_t out_size = out->shape().elem_cnt();
-    for(int32_t i = 0; i < out_size; ++i){
-        int offset = Offset(i, out_stride, out_shape, out_dims-1);  
-        out_ptr[i] = in_ptr[offset];
+    for (int32_t i = 0; i < out_size; ++i) {
+      int offset = Offset(i, out_stride.data(), out_shape.data(), out_dims - 1);
+      out_ptr[i] = in_ptr[offset];
     }
   }
 
@@ -76,78 +74,12 @@ class UnfoldTensorKernel final : public OpKernel {
   REGISTER_USER_KERNEL("unfold_tensor")                   \
       .SetCreateFn<UnfoldTensorKernel<dtype>>()           \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_UNFOLD_TENSOR_KERNEL(float)
 REGISTER_UNFOLD_TENSOR_KERNEL(double)
 REGISTER_UNFOLD_TENSOR_KERNEL(int64_t)
 REGISTER_UNFOLD_TENSOR_KERNEL(int32_t)
-
-
-template<typename T>
-class UnfoldTensorGradKernel final : public OpKernel {
- public:
-  UnfoldTensorGradKernel() = default;
-  ~UnfoldTensorGradKernel() = default;
-
- private:
-  void Compute(KernelComputeContext* ctx) const override {
-      // 
-    const Tensor* dout = ctx->Tensor4ArgNameAndIndex("dout", 0);
-    const Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    Tensor* din = ctx->Tensor4ArgNameAndIndex("din", 0);
-
-    
-    
-    // compute the din stride
-    const ShapeView& in_shape = in->shape();
-    const int32_t in_dims = in_shape.NumAxes();
-    std::vector<int32_t> din_stride(in_dims, 1);
-    for (int32_t i = in_dims - 2; i >= 0; --i) {
-        din_stride[i] = in_shape.At(i + 1) * din_stride.at(i + 1);
-    }
-
-    // compute the dout stride  
-    std::vector<int32_t> dout_shape;
-    dout_shape.resize(dout->shape().NumAxes()); // number of axes/dimension of input tensor
-    for (int i = 0; i < dout->shape().NumAxes(); ++i) { dout_shape[i] = dout->shape().At(i); }
-    const int32_t dout_dims = dout_shape.size();
-    const int32_t dimension = ctx->Attr<int32_t>("dimension");
-    const int32_t step = ctx->Attr<int32_t>("step");
-
-    std::vector<int32_t> dout_stride(in_dims+1);
-    dout_stride[in_dims] = in_dims == 0 ? 1 : din_stride[dimension];
-    for(int d = 0; d < in_dims; ++d){
-        if(d == dimension){
-            dout_stride[d] = step*din_stride[d];
-        }else{
-            dout_stride[d] = din_stride[d];
-        }
-    }
-
-    const T* dout_ptr = dout->dptr<T>();  
-    T* din_ptr = din->mut_dptr<T>();  
-    const int32_t dout_size = dout->shape().elem_cnt();
-    for(int32_t i = 0; i < dout_size; ++i){
-      std::cout << "dout " << dout_ptr[i] << std::endl;
-        int offset = Offset(i, dout_stride, dout_shape, dout_dims-1);  
-        din_ptr[offset] = dout_ptr[i];
-    }
-  }
-
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-#define REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(dtype)              \
-  REGISTER_USER_KERNEL("unfold_tensor_grad")                   \
-      .SetCreateFn<UnfoldTensorKernel<dtype>>()           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
-
-REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(float)
-REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(double)
-REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(int64_t)
-REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(int32_t)
 
 }  // namespace user_op
 }  // namespace oneflow
