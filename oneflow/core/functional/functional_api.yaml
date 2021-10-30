@@ -612,6 +612,10 @@
   signature: "Tensor (Tensor x, Shape shape) => Expand"
   bind_python: True
 
+- name: "expand_grad"
+  signature: "Tensor (Tensor x, Int32List out, Int32List expand) => ExpandGrad"
+  bind_python: False
+
 - name: "roll"
   signature: "Tensor (Tensor x, Int32List[1] shifts, Int32List[1] dims=None) => Roll"
   bind_python: True

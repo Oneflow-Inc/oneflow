@@ -492,6 +492,22 @@ class ExpandFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ExpandGradFunctor {
+ public:
+  ExpandGradFunctor() { op_ = CHECK_JUST(one::OpBuilder("expand_grad").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, 
+                          const std::vector<int32_t>& logical_in_shape, 
+                          const std::vector<int32_t>& logical_expand_shape) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("logical_out_shape", logical_in_shape));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("logical_expand_shape", logical_expand_shape));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ExpandDimsFunctor {
  public:
   ExpandDimsFunctor() {
@@ -2006,6 +2022,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConcatFunctor>("Concat");
   m.add_functor<impl::StackFunctor>("Stack");
   m.add_functor<impl::ExpandFunctor>("Expand");
+  m.add_functor<impl::ExpandGradFunctor>("ExpandGrad");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::ExpandDimsFunctor>("Unsqueeze");
   m.add_functor<impl::RollFunctor>("Roll");
