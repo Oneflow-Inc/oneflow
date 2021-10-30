@@ -122,7 +122,7 @@ size_t InferEagerPToSKernelTmpBufferSize(user_op::InferContext* ctx) {
 
 }  // namespace
 
-template<typename T, DeviceType device_type>
+template<DeviceType device_type>
 class EagerPToSKernel final : public user_op::OpKernel {
  public:
   EagerPToSKernel() = default;
@@ -174,20 +174,15 @@ class EagerPToSKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EAGER_P_TO_S_KERNEL(dtype, device)                                     \
-  REGISTER_USER_KERNEL("eager_p_to_s")                                                  \
-      .SetCreateFn<EagerPToSKernel<dtype, device>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_EAGER_P_TO_S_KERNEL(device)                \
+  REGISTER_USER_KERNEL("eager_p_to_s")                      \
+      .SetCreateFn<EagerPToSKernel<device>>()               \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)) \
       .SetInferTmpSizeFn(InferEagerPToSKernelTmpBufferSize);
 
-REGISTER_EAGER_P_TO_S_KERNEL(float, DeviceType::kCPU)
-REGISTER_EAGER_P_TO_S_KERNEL(double, DeviceType::kCPU)
+REGISTER_EAGER_P_TO_S_KERNEL(DeviceType::kCPU)
 #if defined(WITH_CUDA) && HAS_GPU_SEND_RECV
-REGISTER_EAGER_P_TO_S_KERNEL(float16, DeviceType::kGPU)
-REGISTER_EAGER_P_TO_S_KERNEL(float, DeviceType::kGPU)
-REGISTER_EAGER_P_TO_S_KERNEL(double, DeviceType::kGPU)
+REGISTER_EAGER_P_TO_S_KERNEL(DeviceType::kGPU)
 #endif
 
 }  // namespace oneflow

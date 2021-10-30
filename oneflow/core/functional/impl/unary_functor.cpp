@@ -64,7 +64,8 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("sqrt", Sqrt)             \
   OF_PP_MAKE_TUPLE_SEQ("square", Square)         \
   OF_PP_MAKE_TUPLE_SEQ("tan", Tan)               \
-  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)
+  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)             \
+  OF_PP_MAKE_TUPLE_SEQ("logical_not", LogicalNot)
 
 #define UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, base)                    \
   class class_name##Functor : public base {                                          \
@@ -125,6 +126,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SquareFunctor>("Square");
   m.add_functor<impl::TanFunctor>("Tan");
   m.add_functor<impl::TanhFunctor>("Tanh");
+  m.add_functor<impl::LogicalNotFunctor>("LogicalNot");
 };
 
 }  // namespace functional
