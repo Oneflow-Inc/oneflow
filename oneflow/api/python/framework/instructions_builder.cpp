@@ -17,8 +17,8 @@ limitations under the License.
 #include <pybind11/functional.h>
 #include <pybind11/stl.h>
 #include <functional>
-#include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/framework/size.h"
+#include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
 

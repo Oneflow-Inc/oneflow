@@ -83,6 +83,10 @@ struct shape_type_caster {
     return cast(*src, policy, parent);
   }
 
+  operator T*() { return value_.get(); }
+  operator T&() { return *value_; }
+  operator T&&() && { return std::move(*value_); }
+
   operator std::shared_ptr<T>*() { return &value_; }
   operator std::shared_ptr<T>&() { return value_; }
   operator std::shared_ptr<T>&&() && { return std::move(value_); }
