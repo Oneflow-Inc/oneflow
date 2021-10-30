@@ -1257,6 +1257,10 @@
     ]
   bind_python: True
 
+- name: "scatter_add_like"
+  signature: "Tensor (Tensor like, Int32 dim, Tensor index, Tensor src) => DimScatterAddLike"
+  bind_python: False
+
 - name: "tensor_setitem"
   signature: "Void (Tensor x, TensorIndex index, Tensor value) => TensorSetItem"
   bind_python: True
