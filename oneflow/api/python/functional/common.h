@@ -127,10 +127,6 @@ Maybe<TensorTuple> PyUnpackTensorTuple(PyObject* obj);
 bool PyDTypeCheck(PyObject* obj);
 Maybe<Symbol<DType>> PyUnpackDType(PyObject* obj);
 
-// Shape
-bool PyShapeCheck(PyObject* obj);
-Maybe<Shape> PyUnpackShape(PyObject* obj);
-
 // Generator
 bool PyGeneratorCheck(PyObject* obj);
 Maybe<Generator> PyUnpackGenerator(PyObject* obj);
