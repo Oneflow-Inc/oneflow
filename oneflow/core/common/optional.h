@@ -449,15 +449,7 @@ class Optional final : private internal::OptionalBase<T> {
   }
 
   bool operator!=(const Optional& other) const {
-    if (has_value()) {
-      if (other.has_value()) {
-        return base::value() != other.base::value();
-      } else {
-        return true;
-      }
-    } else {
-      return other.has_value();
-    }
+    return !operator==(other);
   }
 
   void reset() { base::reset(); }
