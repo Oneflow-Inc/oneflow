@@ -34,23 +34,32 @@ namespace impl {
 //     }                                                                                \
 //   };
 
-#define BINARY_ELEMENTWISE_GRAD_FUNCTOR(op_type_name, class_name, base)                    \
-  class class_name##XGradFunctor : public base {                                          \
-   public:                                                                           \
-    class_name##XGradFunctor() {                                                          \
-      op_ = CHECK_JUST(one::OpBuilder(std::string("") + op_type_name + "_x_grad").Input("x").Input("y").Input("dz").Output("dx").Build()); \
-    }                                                                                \
-  };\
-  class class_name##YGradFunctor : public base {                                          \
-   public:                                                                           \
-    class_name##YGradFunctor() {                                                          \
-      op_ = CHECK_JUST(one::OpBuilder(std::string("") + op_type_name + "_y_grad").Input("x").Input("y").Input("dz").Output("dy").Build()); \
-    }                                                                                \
+#define BINARY_ELEMENTWISE_GRAD_FUNCTOR(op_type_name, class_name, base)           \
+  class class_name##XGradFunctor : public base {                                  \
+   public:                                                                        \
+    class_name##XGradFunctor() {                                                  \
+      op_ = CHECK_JUST(one::OpBuilder(std::string("") + op_type_name + "_x_grad") \
+                           .Input("x")                                            \
+                           .Input("y")                                            \
+                           .Input("dz")                                           \
+                           .Output("dx")                                          \
+                           .Build());                                             \
+    }                                                                             \
+  };                                                                              \
+  class class_name##YGradFunctor : public base {                                  \
+   public:                                                                        \
+    class_name##YGradFunctor() {                                                  \
+      op_ = CHECK_JUST(one::OpBuilder(std::string("") + op_type_name + "_y_grad") \
+                           .Input("x")                                            \
+                           .Input("y")                                            \
+                           .Input("dz")                                           \
+                           .Output("dy")                                          \
+                           .Build());                                             \
+    }                                                                             \
   };
 
-
 #define ADD_BINARY_ELEMENTWISE_GRAD_FUNCTOR(op_type_name, class_name) \
-    BINARY_ELEMENTWISE_GRAD_FUNCTOR(op_type_name, class_name, BinaryGradFunctor);
+  BINARY_ELEMENTWISE_GRAD_FUNCTOR(op_type_name, class_name, BinaryGradFunctor);
 
 OF_PP_FOR_EACH_TUPLE(ADD_BINARY_ELEMENTWISE_GRAD_FUNCTOR, MATH_BINARY_ELEMENTWISE_FUNC_SEQ);
 
@@ -58,9 +67,9 @@ OF_PP_FOR_EACH_TUPLE(ADD_BINARY_ELEMENTWISE_GRAD_FUNCTOR, MATH_BINARY_ELEMENTWIS
 
 using namespace impl;
 
-#define ADD_FUNCTOR(class_name, functor_name) \
-  m.add_functor<class_name##XGradFunctor>(std::string("")+functor_name+"XGrad"); \
-  m.add_functor<class_name##YGradFunctor>(std::string("")+functor_name+"YGrad");
+#define ADD_FUNCTOR(class_name, functor_name)                                        \
+  m.add_functor<class_name##XGradFunctor>(std::string("") + functor_name + "XGrad"); \
+  m.add_functor<class_name##YGradFunctor>(std::string("") + functor_name + "YGrad");
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   ADD_FUNCTOR(Pow, "Pow");

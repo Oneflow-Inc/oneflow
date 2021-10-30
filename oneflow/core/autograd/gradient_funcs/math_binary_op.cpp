@@ -28,9 +28,7 @@ struct BinaryMathCaptureState : public AutoGradCaptureState {
 };
 
 class BinaryMathOp : public OpExprGradFunction<BinaryMathCaptureState> {
-  Maybe<void> Init(const OpExpr& op) override {
-    return Maybe<void>::Ok();
-  }
+  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
   Maybe<void> Capture(BinaryMathCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
@@ -42,28 +40,26 @@ class BinaryMathOp : public OpExprGradFunction<BinaryMathCaptureState> {
   }
 };
 
-#define INSTANTIAT_AND_REGISTER_BINARY_MATHOP_CLASS(op_type_name, op_cls) \
-  class op_cls##Cls final : public BinaryMathOp {                         \
-    Maybe<void> Apply(const BinaryMathCaptureState* ctx, const TensorTuple& out_grads,\
-                    TensorTuple* in_grads) const override {\
-      if (!(ctx->x_requires_grad || ctx->y_requires_grad)) { return Maybe<void>::Ok(); }\
-      in_grads->resize(2);\
-      const std::shared_ptr<one::Tensor>& x = ctx->SavedTensors().at(0);\
-      const std::shared_ptr<one::Tensor>& y = ctx->SavedTensors().at(1);\
-      if (ctx->x_requires_grad) {\
-        in_grads->at(0) =\
-            JUST(functional::op_cls##XGrad(x, y, out_grads.at(0)));\
-      }\
-      if (ctx->y_requires_grad) { \
-        in_grads->at(1) = \
-            JUST(functional::op_cls##YGrad(x, y, out_grads.at(0))); \
-      } \
-      return Maybe<void>::Ok();                         \
-    }                                                                   \
-  };                                                                      \
+#define INSTANTIAT_AND_REGISTER_BINARY_MATHOP_CLASS(op_type_name, op_cls)                \
+  class op_cls##Cls final : public BinaryMathOp {                                        \
+    Maybe<void> Apply(const BinaryMathCaptureState* ctx, const TensorTuple& out_grads,   \
+                      TensorTuple* in_grads) const override {                            \
+      if (!(ctx->x_requires_grad || ctx->y_requires_grad)) { return Maybe<void>::Ok(); } \
+      in_grads->resize(2);                                                               \
+      const std::shared_ptr<one::Tensor>& x = ctx->SavedTensors().at(0);                 \
+      const std::shared_ptr<one::Tensor>& y = ctx->SavedTensors().at(1);                 \
+      if (ctx->x_requires_grad) {                                                        \
+        in_grads->at(0) = JUST(functional::op_cls##XGrad(x, y, out_grads.at(0)));        \
+      }                                                                                  \
+      if (ctx->y_requires_grad) {                                                        \
+        in_grads->at(1) = JUST(functional::op_cls##YGrad(x, y, out_grads.at(0)));        \
+      }                                                                                  \
+      return Maybe<void>::Ok();                                                          \
+    }                                                                                    \
+  };                                                                                     \
   REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, op_cls##Cls);
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_BINARY_MATHOP_CLASS, MATH_BINARY_ELEMENTWISE_FUNC_SEQ);
 
 }  // namespace one
-}  // namespace oneflowneflow
+}  // namespace oneflow

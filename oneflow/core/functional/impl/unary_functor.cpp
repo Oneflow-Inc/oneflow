@@ -65,10 +65,9 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("sqrt", Sqrt)             \
   OF_PP_MAKE_TUPLE_SEQ("square", Square)         \
   OF_PP_MAKE_TUPLE_SEQ("tan", Tan)               \
-  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)             
+  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)
 
-#define LOGICAL_FLOAT_UNARY_FUNC_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ("logical_not", LogicalNot)
+#define LOGICAL_FLOAT_UNARY_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("logical_not", LogicalNot)
 
 #define UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, base)                    \
   class class_name##Functor : public base {                                          \
@@ -78,12 +77,16 @@ namespace impl {
     }                                                                                \
   };
 
-#define UNARY_ELEMENTWISE_GRAD_FUNCTOR(op_type_name, class_name, base)                    \
-  class class_name##GradFunctor : public base {                                          \
-   public:                                                                           \
-    class_name##GradFunctor() {                                                          \
-      op_ = CHECK_JUST(one::OpBuilder(std::string("") + op_type_name + "_grad").Input("x").Input("dy").Output("dx").Build()); \
-    }                                                                                \
+#define UNARY_ELEMENTWISE_GRAD_FUNCTOR(op_type_name, class_name, base)          \
+  class class_name##GradFunctor : public base {                                 \
+   public:                                                                      \
+    class_name##GradFunctor() {                                                 \
+      op_ = CHECK_JUST(one::OpBuilder(std::string("") + op_type_name + "_grad") \
+                           .Input("x")                                          \
+                           .Input("dy")                                         \
+                           .Output("dx")                                        \
+                           .Build());                                           \
+    }                                                                           \
   };
 
 #define INPLACE_UNARY_FUNCOTRS(op_type_name, class_name) \
@@ -92,10 +95,10 @@ namespace impl {
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, InplaceFloatUnaryFunctor)
 #define LOGICAL_FLOAT_UNARY_FUNCTORS(op_type_name, class_name) \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, FloatUnaryFunctor)
-#define UNARY_FUNCOTRS(op_type_name, class_name) \
+#define UNARY_FUNCOTRS(op_type_name, class_name)                    \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, UnaryFunctor) \
   UNARY_ELEMENTWISE_GRAD_FUNCTOR(op_type_name, class_name, BinaryFunctor)
-#define FLOAT_UNARY_FUNCOTRS(op_type_name, class_name) \
+#define FLOAT_UNARY_FUNCOTRS(op_type_name, class_name)                   \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, FloatUnaryFunctor) \
   UNARY_ELEMENTWISE_GRAD_FUNCTOR(op_type_name, class_name, BinaryFunctor)
 
@@ -107,9 +110,9 @@ OF_PP_FOR_EACH_TUPLE(LOGICAL_FLOAT_UNARY_FUNCTORS, LOGICAL_FLOAT_UNARY_FUNC_SEQ)
 }  // namespace impl
 
 using namespace impl;
-#define ADD_FUNCTOR(class_name, functor_name) \
+#define ADD_FUNCTOR(class_name, functor_name)       \
   m.add_functor<class_name##Functor>(functor_name); \
-  m.add_functor<class_name##GradFunctor>(std::string("")+functor_name+"Grad");
+  m.add_functor<class_name##GradFunctor>(std::string("") + functor_name + "Grad");
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   ADD_FUNCTOR(Abs, "Abs");
