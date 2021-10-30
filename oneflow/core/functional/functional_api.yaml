@@ -381,6 +381,10 @@
   signature: "Tensor (Tensor x, Int64 dim=None) => Softmax"
   bind_python: True
 
+- name: "softmax_grad"
+  signature: "Tensor (Tensor y, Tensor dy) => SoftmaxGrad"
+  bind_python: False
+
 - name: "log_softmax"
   signature: "Tensor (Tensor x, Int64 dim=None) => LogSoftmax"
   bind_python: True
