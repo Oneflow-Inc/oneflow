@@ -52,7 +52,7 @@ class GpuRecordEventInstructionType : public RecordEventInstructionType {
     auto* stream = instruction->mut_stream();
     instruction->stream_type().InitInstructionStatus(*stream, status_buffer);
     auto* event_provider = dynamic_cast<QueryEventProvider*>(stream->device_ctx().get());
-    const auto& device_event = CHECK_NOTNULL(event_provider)->GetThreadLocalReusedDeviceEvent();
+    const auto& device_event = CHECK_NOTNULL(event_provider)->GetSingleThreadReusedDeviceEvent();
     auto* data_ptr = status_buffer->mut_buffer()->mut_data();
     CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_device_event(device_event);
   }

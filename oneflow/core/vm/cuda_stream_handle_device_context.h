@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/vm/cuda_allocator.h"
 #include "oneflow/core/vm/thread_safe_allocator.h"
-#include "oneflow/core/common/thread_local_obj_pool.h"
+#include "oneflow/core/common/single_thread_obj_pool.h"
 
 namespace oneflow {
 namespace vm {

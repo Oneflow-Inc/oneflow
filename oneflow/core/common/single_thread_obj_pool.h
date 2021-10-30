@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_THREAD_LOCAL_OBJ_POOL_H_
-#define ONEFLOW_CORE_COMMON_THREAD_LOCAL_OBJ_POOL_H_
+#ifndef ONEFLOW_CORE_COMMON_SINGLE_THREAD_OBJ_POOL_H_
+#define ONEFLOW_CORE_COMMON_SINGLE_THREAD_OBJ_POOL_H_
 
 #include <vector>
 #include <mutex>
@@ -32,16 +32,18 @@ enum ReuseStrategy {
 
 // object pool for single thread.
 template<typename T, ReuseStrategy reuse_strategy = kEnableReconstruct>
-class ThreadLocalObjPool
-    : public std::enable_shared_from_this<ThreadLocalObjPool<T, reuse_strategy>> {
+class SingleThreadObjPool
+    : public std::enable_shared_from_this<SingleThreadObjPool<T, reuse_strategy>> {
  public:
-  ThreadLocalObjPool() : pool_(), thread_local_check_flag_() { pool_.reserve(kVectorReserveSize); }
-  ~ThreadLocalObjPool();
+  SingleThreadObjPool() : pool_(), single_thread_check_flag_() {
+    pool_.reserve(kVectorReserveSize);
+  }
+  ~SingleThreadObjPool();
 
   template<typename... Args>
   std::shared_ptr<T> make_shared(Args&&... args) {
     auto* ptr = New(std::forward<Args>(args)...);
-    std::weak_ptr<ThreadLocalObjPool> pool(this->shared_from_this());
+    std::weak_ptr<SingleThreadObjPool> pool(this->shared_from_this());
     return std::shared_ptr<T>(ptr, [pool](T* ptr) { TryPut(pool.lock(), ptr); });
   }
 
@@ -58,7 +60,7 @@ class ThreadLocalObjPool
     return new T(std::forward<Args>(args)...);
   }
 
-  static void TryPut(const std::shared_ptr<ThreadLocalObjPool>& pool, T* object) {
+  static void TryPut(const std::shared_ptr<SingleThreadObjPool>& pool, T* object) {
     if (likely(static_cast<bool>(pool))) {
       pool->Put(object);
     } else {
@@ -67,39 +69,39 @@ class ThreadLocalObjPool
   }
 
   T* Get() {
-    CheckOrSetThreadLocalFlag();
+    CheckOrSetSingleThreadFlag();
     auto* ptr = pool_[pool_.size() - 1];
     pool_.pop_back();
     return ptr;
   }
 
   void Put(T* obj) {
-    CheckOrSetThreadLocalFlag();
+    CheckOrSetSingleThreadFlag();
     pool_.push_back(obj);
     if (reuse_strategy == kEnableReconstruct) { obj->~T(); }
   }
 
-  // Try to detect being wrongly used by multi threads, because ThreadLocalObjPool does not
+  // Try to detect being wrongly used by multi threads, because SingleThreadObjPool does not
   // guarantee thread safety. This function also is not thread safe, but it's not a big problem. In
   // the most cases, bugs will be successfully detected even thread unsafe behaviors happen.
-  void CheckOrSetThreadLocalFlag() {
-    if (likely(thread_local_check_flag_ != nullptr)) {
-      CHECK(likely(thread_local_check_flag_ == ThreadLocalCheckFlag()));
+  void CheckOrSetSingleThreadFlag() {
+    if (likely(single_thread_check_flag_ != nullptr)) {
+      CHECK(likely(single_thread_check_flag_ == SingleThreadCheckFlag()));
     } else {
-      thread_local_check_flag_ = ThreadLocalCheckFlag();
+      single_thread_check_flag_ = SingleThreadCheckFlag();
     }
   }
 
-  bool* ThreadLocalCheckFlag() {
+  bool* SingleThreadCheckFlag() {
     thread_local bool flag;
     return &flag;
   }
 
   std::vector<T*> pool_;
-  bool* thread_local_check_flag_;
+  bool* single_thread_check_flag_;
 };
 
 }  // namespace obj_pool
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_THREAD_LOCAL_OBJ_POOL_H_
+#endif  // ONEFLOW_CORE_COMMON_SINGLE_THREAD_OBJ_POOL_H_

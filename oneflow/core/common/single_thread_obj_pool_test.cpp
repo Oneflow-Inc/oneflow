@@ -13,15 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/thread_local_obj_pool.h"
+#include "oneflow/core/common/single_thread_obj_pool.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
 namespace obj_pool {
 namespace test {
 
-TEST(ThreadLocalObjPool, naive) {
-  ThreadLocalObjPool<int> pool;
+TEST(SingleThreadObjPool, naive) {
+  SingleThreadObjPool<int> pool;
   auto* ptr = pool.make_shared().get();
   ASSERT_EQ(ptr, pool.make_shared().get());
 }

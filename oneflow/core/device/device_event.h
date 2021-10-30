@@ -19,7 +19,7 @@ limitations under the License.
 #ifdef WITH_CUDA
 
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/common/thread_local_obj_pool.h"
+#include "oneflow/core/common/single_thread_obj_pool.h"
 
 namespace oneflow {
 
@@ -48,12 +48,12 @@ class DeviceEventProvider {
   explicit DeviceEventProvider(int device_id) : device_events_(), device_id_(device_id) {}
   virtual ~DeviceEventProvider() = default;
 
-  std::shared_ptr<DeviceEvent> GetThreadLocalReusedDeviceEventWithFlags(unsigned int flags) {
+  std::shared_ptr<DeviceEvent> GetSingleThreadReusedDeviceEventWithFlags(unsigned int flags) {
     return device_events_.make_shared(device_id_, flags);
   }
 
  private:
-  obj_pool::ThreadLocalObjPool<DeviceEvent, obj_pool::kDisableReconstruct> device_events_;
+  obj_pool::SingleThreadObjPool<DeviceEvent, obj_pool::kDisableReconstruct> device_events_;
   int device_id_;
 };
 
@@ -64,8 +64,9 @@ class QueryEventProvider : public DeviceEventProvider {
   using DeviceEventProvider::DeviceEventProvider;
   virtual ~QueryEventProvider() = default;
 
-  std::shared_ptr<DeviceEvent> GetThreadLocalReusedDeviceEvent() {
-    return GetThreadLocalReusedDeviceEventWithFlags(cudaEventBlockingSync | cudaEventDisableTiming);
+  std::shared_ptr<DeviceEvent> GetSingleThreadReusedDeviceEvent() {
+    return GetSingleThreadReusedDeviceEventWithFlags(cudaEventBlockingSync
+                                                     | cudaEventDisableTiming);
   }
 };
 
