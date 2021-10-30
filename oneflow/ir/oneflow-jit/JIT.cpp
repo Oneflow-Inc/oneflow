@@ -29,6 +29,7 @@ limitations under the License.
 namespace {
 
 using namespace mlir;
+using namespace ::oneflow::user_op;
 
 class ReturnAllLeaveResultPass : public ReturnAllLeaveResultPassBase<ReturnAllLeaveResultPass> {
   void runOnFunction() override {
@@ -45,9 +46,19 @@ class ReturnAllLeaveResultPass : public ReturnAllLeaveResultPassBase<ReturnAllLe
   }
 };
 
+struct JITKernelLaunchContext {
+  OpKernel* kernel;
+  KernelComputeContext* kernel_compute_ctx;
+};
+
+KernelComputeContext* GetKernelComputeContext(const ::oneflow::UserOpConf& user_op_conf) {
+  static std::vector<std::shared_ptr<KernelComputeContext>> created;
+}
+
 // TODO: define JITKernelLaunchContext, has a kernel ptr and a compute context ptr
-extern "C" void _mlir_ciface_LaunchOneFlowKernel(void* jit_kernel_launch_context) {
-  llvm::errs() << __PRETTY_FUNCTION__ << "\n";
+extern "C" void _mlir_ciface_LaunchOneFlowKernel(
+    JITKernelLaunchContext* jit_kernel_launch_context) {
+  jit_kernel_launch_context->kernel->Compute(jit_kernel_launch_context->kernel_compute_ctx);
 }
 
 class CreateComputeCtxPass : public CreateComputeCtxPassBase<CreateComputeCtxPass> {
