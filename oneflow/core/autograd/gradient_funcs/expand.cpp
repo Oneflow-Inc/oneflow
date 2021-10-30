@@ -64,7 +64,8 @@ Maybe<void> Expand::Apply(const ExpandCaptureState* ctx, const TensorTuple& out_
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<std::vector<int32_t>>("logical_out_shape", ctx->logical_out_shape));
   JUST(attrs.SetAttr<std::vector<int32_t>>("logical_expand_shape", ctx->logical_expand_shape));
-  in_grads->at(0) = JUST(functional::ExpandGrad(out_grads.at(0), ctx->logical_out_shape, ctx->logical_expand_shape));
+  in_grads->at(0) = JUST(
+      functional::ExpandGrad(out_grads.at(0), ctx->logical_out_shape, ctx->logical_expand_shape));
   return Maybe<void>::Ok();
 }
 

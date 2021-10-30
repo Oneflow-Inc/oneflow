@@ -33,9 +33,7 @@ class Softmax : public OpExprGradFunction<SoftmaxCaptureState> {
                     TensorTuple* in_grads) const override;
 };
 
-Maybe<void> Softmax::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
+Maybe<void> Softmax::Init(const OpExpr& op) { return Maybe<void>::Ok(); }
 
 Maybe<void> Softmax::Capture(SoftmaxCaptureState* ctx, const TensorTuple& inputs,
                              const TensorTuple& outputs, const AttrMap& attrs) const {

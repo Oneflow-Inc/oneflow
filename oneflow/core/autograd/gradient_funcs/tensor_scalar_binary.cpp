@@ -164,14 +164,12 @@ Maybe<void> TensorScalarDiv::Apply(const TensorScalarCaptureState* ctx,
   in_grads->resize(2);
   if (ctx->x_requires_grad) {
     const auto& scalar = ctx->SavedTensors().at(0);
-    in_grads->at(0) =
-        JUST(functional::Div(out_grads.at(0), scalar));
+    in_grads->at(0) = JUST(functional::Div(out_grads.at(0), scalar));
   }
   if (ctx->scalar_requires_grad) {
     const auto& scalar = ctx->SavedTensors().at(0);
     const auto& y = ctx->SavedTensors().at(1);
-    in_grads->at(1) =
-        JUST(functional::DivGrad(out_grads.at(0), y, scalar));
+    in_grads->at(1) = JUST(functional::DivGrad(out_grads.at(0), y, scalar));
   }
   return Maybe<void>::Ok();
 }

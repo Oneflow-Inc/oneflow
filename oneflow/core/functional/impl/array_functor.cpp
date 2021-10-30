@@ -494,10 +494,12 @@ class ExpandFunctor {
 
 class ExpandGradFunctor {
  public:
-  ExpandGradFunctor() { op_ = CHECK_JUST(one::OpBuilder("expand_grad").Input("in").Output("out").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, 
-                          const std::vector<int32_t>& logical_in_shape, 
-                          const std::vector<int32_t>& logical_expand_shape) const {
+  ExpandGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("expand_grad").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::vector<int32_t>& logical_in_shape,
+                           const std::vector<int32_t>& logical_expand_shape) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("logical_out_shape", logical_in_shape));
     JUST(attrs.SetAttr<std::vector<int32_t>>("logical_expand_shape", logical_expand_shape));
@@ -653,7 +655,6 @@ class DimScatterAddLikeFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
-
 
 class DimScatterMulFunctor {
  public:
@@ -1059,7 +1060,9 @@ class SqueezeFunctor {
 
 class UpsampleGradFunctor {
  public:
-  UpsampleGradFunctor() { op_ = CHECK_JUST(one::OpBuilder("upsample_grad").Input("dy").Input("x").Output("dx").Build()); }
+  UpsampleGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("upsample_grad").Input("dy").Input("x").Output("dx").Build());
+  }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const bool& align_corners,

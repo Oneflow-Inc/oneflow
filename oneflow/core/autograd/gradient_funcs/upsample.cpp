@@ -70,8 +70,9 @@ Maybe<void> Upsample::Apply(const UpsampleCaptureState* ctx, const TensorTuple& 
 
   const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
   in_grads->resize(1);
-  in_grads->at(0) = JUST(functional::UpsampleGrad(out_grads.at(0), x,
-    ctx->height_scale, ctx->width_scale, ctx->align_corners, ctx->data_format, ctx->interpolation));
+  in_grads->at(0) =
+      JUST(functional::UpsampleGrad(out_grads.at(0), x, ctx->height_scale, ctx->width_scale,
+                                    ctx->align_corners, ctx->data_format, ctx->interpolation));
   return Maybe<void>::Ok();
 }
 

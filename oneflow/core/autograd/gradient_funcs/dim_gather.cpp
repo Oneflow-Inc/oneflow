@@ -65,12 +65,11 @@ Maybe<void> DimGather::Apply(const DimGatherCaptureState* ctx, const TensorTuple
   const std::shared_ptr<oneflow::one::Tensor>& index = ctx->SavedTensors().at(0);
   const std::shared_ptr<oneflow::one::Tensor>& like = ctx->SavedTensors().at(1);
 
-  in_grads->at(0) = JUST(
-      functional::DimScatterAddLike(like, ctx->dim, index, out_grads.at(0)));
+  in_grads->at(0) = JUST(functional::DimScatterAddLike(like, ctx->dim, index, out_grads.at(0)));
   return Maybe<void>::Ok();
 }
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("dim_gather", DimGather);
 
 }  // namespace one
-}  // namespace oneflowneflow
+}  // namespace oneflow
