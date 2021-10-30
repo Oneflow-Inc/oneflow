@@ -843,6 +843,12 @@
     String data_format="channels_first", Bool ceil_mode=False) => MaxPool2D'
   bind_python: True
 
+- name: "ctc_loss_grad"
+  signature:
+    "Tensor (Tensor loss_grad, Tensor log_probs, Tensor targets,
+      Tensor input_lengths, Tensor target_lengths, Tensor loss, Tensor alpha, Int32 blank, Bool zero_infinity, Int64 max_target_length) => CtcLossGrad"
+  bind_python: False
+
 - name: "adaptive_avg_pool1d"
   signature: "Tensor (Tensor x, Int64List[1] output_size) => AdaptiveAvgPool1D"
   bind_python: True

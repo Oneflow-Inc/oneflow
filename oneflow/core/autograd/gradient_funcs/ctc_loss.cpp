@@ -1,24 +1,9 @@
-/*
-Copyright 2020 The OneFlow Authors. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -47,8 +32,6 @@ Maybe<void> CTCLoss::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  const std::string& op_name = fw_op_expr->op_name();
-  grad_op_ = JUST(op_expr_helper::CTCLossGradOp(0, false, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
@@ -85,14 +68,9 @@ Maybe<void> CTCLoss::Apply(const CTCLossCaptureState* ctx, const TensorTuple& ou
   const auto& targets = ctx->SavedTensors().at(3);
   const auto& input_lengths = ctx->SavedTensors().at(4);
   const auto& target_lengths = ctx->SavedTensors().at(5);
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<int64_t>("max_target_length", ctx->max_target_length));
-  JUST(attrs.SetAttr<int32_t>("blank", ctx->blank));
-  JUST(attrs.SetAttr<bool>("zero_infinity", ctx->zero_infinity));
   in_grads->resize(4);
-  in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(
-      *grad_op_, {grad_out, log_probs, targets, input_lengths, target_lengths, loss, alpha},
-      attrs));
+  in_grads->at(0) = JUST(functional::CtcLossGrad(grad_out, log_probs, targets, 
+    input_lengths, target_lengths, loss, alpha, ctx->blank, ctx->zero_infinity, ctx->max_target_length));
   return Maybe<void>::Ok();
 }
 

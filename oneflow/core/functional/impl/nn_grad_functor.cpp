@@ -537,6 +537,40 @@ class GridSampleGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class CtcLossGradFunctor {
+ public:
+  CtcLossGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("ctc_loss_grad").Input("grad_out")
+      .Input("log_probs")
+      .Input("targets")
+      .Input("input_lengths")
+      .Input("target_lengths")
+      .Input("loss")
+      .Input("alpha")
+      .Output("grad").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& grad_out,
+    const std::shared_ptr<one::Tensor>& log_probs,
+    const std::shared_ptr<one::Tensor>& targets,
+    const std::shared_ptr<one::Tensor>& input_lengths,
+    const std::shared_ptr<one::Tensor>& target_lengths,
+    const std::shared_ptr<one::Tensor>& loss,
+    const std::shared_ptr<one::Tensor>& alpha,
+    const int32_t& blank,
+    const bool& zero_infinity,
+    const int64_t& max_target_length) const {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int32_t>("blank", blank));
+      JUST(attrs.SetAttr<bool>("zero_infinity", zero_infinity));
+      JUST(attrs.SetAttr<int64_t>("max_target_length", max_target_length));
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {grad_out, log_probs, targets, input_lengths, target_lengths, loss, alpha},
+        attrs);
+  }
+
+  private:
+   std::shared_ptr<OpExpr> op_;
+};
+
 class PadGradFunctor {
  public:
   PadGradFunctor() {
@@ -809,6 +843,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::LayerNormParamGradFunctor>("LayerNormParamGrad");
   m.add_functor<impl::LayerNormAffineParamGradFunctor>("LayerNormAffineParamGrad");
   m.add_functor<impl::BroadcastMatmulGradBFunctor>("BroadcastMatmulGradB");
+  m.add_functor<impl::CtcLossGradFunctor>("CtcLossGrad");
 };
 
 }  // namespace functional
