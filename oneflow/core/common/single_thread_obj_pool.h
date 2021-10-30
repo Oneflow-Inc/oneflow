@@ -38,7 +38,11 @@ class SingleThreadObjPool
   SingleThreadObjPool() : pool_(), single_thread_check_flag_() {
     pool_.reserve(kVectorReserveSize);
   }
-  ~SingleThreadObjPool();
+  ~SingleThreadObjPool() {
+    if (reuse_strategy != kEnableReconstruct) {
+      for (T* ptr : pool_) { delete ptr; }
+    }
+  }
 
   template<typename... Args>
   std::shared_ptr<T> make_shared(Args&&... args) {

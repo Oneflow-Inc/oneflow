@@ -46,14 +46,10 @@ class InstructionType {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
   void InitInstructionStatusIf(Instruction* instruction) const {
-    instruction->mut_status_buffer()->clear_instruction_deleted();
     InitInstructionStatus(instruction);
   }
   void DeleteInstructionStatusIf(Instruction* instruction) const {
-    auto* status_buffer = instruction->mut_status_buffer();
-    if (status_buffer->has_instruction_deleted()) { return; }
     DeleteInstructionStatus(instruction);
-    status_buffer->mutable_instruction_deleted();
   }
 
   virtual const std::string& DebugOpTypeName(Instruction* instruction) const {

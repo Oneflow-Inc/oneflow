@@ -21,9 +21,28 @@ namespace obj_pool {
 namespace test {
 
 TEST(SingleThreadObjPool, naive) {
-  SingleThreadObjPool<int> pool;
-  auto* ptr = pool.make_shared().get();
-  ASSERT_EQ(ptr, pool.make_shared().get());
+  auto pool = std::make_shared<SingleThreadObjPool<int>>();
+  auto* ptr = pool->make_shared().get();
+  ASSERT_EQ(ptr, pool->make_shared().get());
+}
+
+struct Int {
+  Int() : x(0) {}
+  Int(int val) : x(val) {}
+  ~Int() { x = 0; }
+  int x;
+};
+
+TEST(SingleThreadObjPool, enable_reconstruct) {
+  auto pool = std::make_shared<SingleThreadObjPool<Int, kEnableReconstruct>>();
+  (void)pool->make_shared(333);
+  ASSERT_EQ(0, pool->make_shared()->x);
+}
+
+TEST(SingleThreadObjPool, disable_reconstruct) {
+  auto pool = std::make_shared<SingleThreadObjPool<Int, kDisableReconstruct>>();
+  int value = pool->make_shared(333)->x;
+  ASSERT_EQ(value, pool->make_shared()->x);
 }
 
 }  // namespace test

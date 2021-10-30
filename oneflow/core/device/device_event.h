@@ -45,15 +45,18 @@ class DeviceEventProvider {
  public:
   DeviceEventProvider(const DeviceEventProvider&) = delete;
   DeviceEventProvider(DeviceEventProvider&&) = delete;
-  explicit DeviceEventProvider(int device_id) : device_events_(), device_id_(device_id) {}
+  explicit DeviceEventProvider(int device_id)
+      : device_events_(new SingleThreadPoolType()), device_id_(device_id) {}
   virtual ~DeviceEventProvider() = default;
 
   std::shared_ptr<DeviceEvent> GetSingleThreadReusedDeviceEventWithFlags(unsigned int flags) {
-    return device_events_.make_shared(device_id_, flags);
+    return device_events_->make_shared(device_id_, flags);
   }
 
  private:
-  obj_pool::SingleThreadObjPool<DeviceEvent, obj_pool::kDisableReconstruct> device_events_;
+  using SingleThreadPoolType =
+      obj_pool::SingleThreadObjPool<DeviceEvent, obj_pool::kDisableReconstruct>;
+  std::shared_ptr<SingleThreadPoolType> device_events_;
   int device_id_;
 };
 
