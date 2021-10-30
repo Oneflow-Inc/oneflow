@@ -23,6 +23,8 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/framework/user_op_def.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 namespace {
 
@@ -43,6 +45,11 @@ class ReturnAllLeaveResultPass : public ReturnAllLeaveResultPassBase<ReturnAllLe
   }
 };
 
+// TODO: define JITKernelLaunchContext, has a kernel ptr and a compute context ptr
+extern "C" void _mlir_ciface_LaunchOneFlowKernel(void* jit_kernel_launch_context) {
+  llvm::errs() << __PRETTY_FUNCTION__ << "\n";
+}
+
 class CreateComputeCtxPass : public CreateComputeCtxPassBase<CreateComputeCtxPass> {
   void runOnFunction() override {
     ModuleOp top_module = getFunction()->getParentOfType<ModuleOp>();
@@ -52,7 +59,9 @@ class CreateComputeCtxPass : public CreateComputeCtxPassBase<CreateComputeCtxPas
     auto importer = jit_interpreter->GetImporter();
     Builder builder(&context);
     // external func to launch kernel
-    auto func_type = builder.getFunctionType(llvm::None, builder.getI64Type());
+    SmallVector<Type, 4> argument_types;
+    auto func_type = builder.getFunctionType(
+        LLVM::LLVMPointerType::get(IntegerType::get(&context, 8)), llvm::None);
     auto function = mlir::FuncOp::create(getFunction()->getLoc(), "LaunchOneFlowKernel", func_type);
     top_module.push_back(function);
     auto CollectLowering = [&](Operation* op) {
@@ -105,6 +114,7 @@ using namespace mlir;
 OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context) {
   context->loadDialect<mlir::oneflow::OneFlowDialect>();
   context->loadDialect<StandardOpsDialect>();
+  context->loadDialect<LLVM::LLVMDialect>();
   OwningOpRef<ModuleOp> module(
       ModuleOp::create(FileLineColLoc::get(context, "", /*line=*/0, /*column=*/0)));
   return module;
