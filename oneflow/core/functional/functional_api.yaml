@@ -744,6 +744,10 @@
   signature: "Tensor (Tensor logits, Tensor label) => SparseSoftmaxCrossEntropy"
   bind_python: True
 
+- name: "sparse_softmax_cross_entropy_grad"
+  signature: "Tensor (Tensor prob, Tensor label, Tensor y, Int64 depth) => SparseSoftmaxCrossEntropyGrad"
+  bind_python: False
+
 - name: "softmax_cross_entropy"
   signature: "Tensor (Tensor logits, Tensor label) => SoftmaxCrossEntropy"
   bind_python: True
