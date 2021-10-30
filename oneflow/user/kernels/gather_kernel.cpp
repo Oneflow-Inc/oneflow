@@ -82,7 +82,8 @@ class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
     const int64_t axis = ctx->Attr<int64_t>("axis");

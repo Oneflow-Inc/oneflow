@@ -31,7 +31,7 @@ class UserKernelInferContext;
 class UserKernelInitContext;
 
 namespace user_op {
-  class OpKernelCache;
+class OpKernelCache;
 }
 
 class UserKernel final : public Kernel {

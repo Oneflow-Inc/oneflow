@@ -145,7 +145,6 @@ class EagerNaiveSToSKernel final : public user_op::OpKernel {
     if (cache == nullptr) { *cache = std::make_shared<EagerNaiveSToSOpKernelState>(ctx); }
   }
 
-
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {

@@ -24,7 +24,7 @@ REGISTER_USER_OP("upsample_linear_1d")
     .Attr<bool>("align_corners")
     .Attr<std::string>("data_format")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc &x_desc = ctx->InputTensorDesc("x", 0);
+      const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
       user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
       const float scale_factor = ctx->Attr<float>("scale_factor");
 

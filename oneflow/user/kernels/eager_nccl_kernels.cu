@@ -77,7 +77,8 @@ class EagerNcclAllReduceKernel final : public user_op::OpKernel {
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state, const user_op::OpKernelCache*) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -107,7 +108,8 @@ class EagerNcclBroadcastKernel final : public user_op::OpKernel {
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state, const user_op::OpKernelCache*) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -145,7 +147,8 @@ class EagerNcclReduceKernel final : public user_op::OpKernel {
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state, const user_op::OpKernelCache*) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -180,7 +183,8 @@ class EagerNcclReduceScatterKernel final : public user_op::OpKernel {
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state, const user_op::OpKernelCache*) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -216,7 +220,8 @@ class EagerNcclAllGatherKernel final : public user_op::OpKernel {
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state, const user_op::OpKernelCache*) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -246,7 +251,8 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state, const user_op::OpKernelCache*) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
     // NOTE(hanbinbin): Compute logic copy from _nccl_logical_s2s

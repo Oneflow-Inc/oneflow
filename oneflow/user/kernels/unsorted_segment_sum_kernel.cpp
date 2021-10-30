@@ -85,7 +85,8 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel, public user_op:
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* data = ctx->Tensor4ArgNameAndIndex("data", 0);
     const user_op::Tensor* segment_ids = ctx->Tensor4ArgNameAndIndex("segment_ids", 0);
     int64_t axis = ctx->Attr<int64_t>("axis");
@@ -149,7 +150,8 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* data = ctx->Tensor4ArgNameAndIndex("data", 0);
     const user_op::Tensor* segment_ids = ctx->Tensor4ArgNameAndIndex("segment_ids", 0);
     int64_t axis = ctx->Attr<int64_t>("axis");

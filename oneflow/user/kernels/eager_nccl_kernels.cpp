@@ -73,17 +73,16 @@ class EagerCclBroadcastKernel final : public user_op::OpKernel {
   EagerCclBroadcastKernel() = default;
   ~EagerCclBroadcastKernel() override = default;
 
-  void InitOpKernelCache(
-user_op::KernelCacheContext* ctx, int8_t flag, std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     // NOTE(jianhao): the cache only depends on parallel_conf, and the kernel is singleton
     // once parallel_conf is determined, so only init the cache at the first time.
-    if (cache == nullptr) {
-      *cache = std::make_shared<EagerCclOpKernelState>(ctx);
-    }
+    if (cache == nullptr) { *cache = std::make_shared<EagerCclOpKernelState>(ctx); }
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     auto* kernel_state = dynamic_cast<const EagerCclOpKernelState*>(cache);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -111,18 +110,17 @@ class EagerCclReduceKernel final : public user_op::OpKernel {
   EagerCclReduceKernel() = default;
   ~EagerCclReduceKernel() override = default;
 
-  void InitOpKernelCache(
-user_op::KernelCacheContext* ctx, int8_t flag, std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     // NOTE(jianhao): the cache only depends on parallel_conf, and the kernel is singleton
     // once parallel_conf is determined, so only init the cache at the first time.
-    if (cache == nullptr) {
-      *cache = std::make_shared<EagerCclOpKernelState>(ctx);
-    }
+    if (cache == nullptr) { *cache = std::make_shared<EagerCclOpKernelState>(ctx); }
   }
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     auto* kernel_state = dynamic_cast<const EagerCclOpKernelState*>(cache);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -150,17 +148,16 @@ class EagerCclAllReduceKernel final : public user_op::OpKernel {
   EagerCclAllReduceKernel() = default;
   ~EagerCclAllReduceKernel() override = default;
 
-  void InitOpKernelCache(
-user_op::KernelCacheContext* ctx, int8_t flag, std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     // NOTE(jianhao): the cache only depends on parallel_conf, and the kernel is singleton
     // once parallel_conf is determined, so only init the cache at the first time.
-    if (cache == nullptr) {
-      *cache = std::make_shared<EagerCclOpKernelState>(ctx);
-    }
+    if (cache == nullptr) { *cache = std::make_shared<EagerCclOpKernelState>(ctx); }
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     auto* kernel_state = dynamic_cast<const EagerCclOpKernelState*>(cache);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -184,18 +181,17 @@ class EagerCclReduceScatterKernel final : public user_op::OpKernel {
   EagerCclReduceScatterKernel() = default;
   ~EagerCclReduceScatterKernel() override = default;
 
-  void InitOpKernelCache(
-user_op::KernelCacheContext* ctx, int8_t flag, std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     // NOTE(jianhao): the cache only depends on parallel_conf, and the kernel is singleton
     // once parallel_conf is determined, so only init the cache at the first time.
-    if (cache == nullptr) {
-      *cache = std::make_shared<EagerCclOpKernelState>(ctx);
-    }
+    if (cache == nullptr) { *cache = std::make_shared<EagerCclOpKernelState>(ctx); }
   }
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     auto* kernel_state = dynamic_cast<const EagerCclOpKernelState*>(cache);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -219,18 +215,17 @@ class EagerCclAllGatherKernel final : public user_op::OpKernel {
   EagerCclAllGatherKernel() = default;
   ~EagerCclAllGatherKernel() override = default;
 
-  void InitOpKernelCache(
-user_op::KernelCacheContext* ctx, int8_t flag, std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     // NOTE(jianhao): the cache only depends on parallel_conf, and the kernel is singleton
     // once parallel_conf is determined, so only init the cache at the first time.
-    if (cache == nullptr) {
-      *cache = std::make_shared<EagerCclOpKernelState>(ctx);
-    }
+    if (cache == nullptr) { *cache = std::make_shared<EagerCclOpKernelState>(ctx); }
   }
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     auto* kernel_state = dynamic_cast<const EagerCclOpKernelState*>(cache);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -253,18 +248,17 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
   EagerCclS2SKernel() = default;
   ~EagerCclS2SKernel() override = default;
 
-  void InitOpKernelCache(
-user_op::KernelCacheContext* ctx, int8_t flag, std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     // NOTE(jianhao): the cache only depends on parallel_conf, and the kernel is singleton
     // once parallel_conf is determined, so only init the cache at the first time.
-    if (cache == nullptr) {
-      *cache = std::make_shared<EagerCclOpKernelState>(ctx);
-    }
+    if (cache == nullptr) { *cache = std::make_shared<EagerCclOpKernelState>(ctx); }
   }
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     auto* kernel_state = dynamic_cast<const EagerCclOpKernelState*>(cache);
     CHECK(kernel_state != nullptr);
     // NOTE(hanbinbin): Compute logic copy from _nccl_logical_s2s

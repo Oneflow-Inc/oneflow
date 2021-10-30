@@ -308,8 +308,8 @@ class LogicalSliceKernel final : public user_op::OpKernel {
   LogicalSliceKernel() = default;
   ~LogicalSliceKernel() = default;
 
-  void InitOpKernelCache(
-      user_op::KernelCacheContext* ctx, int8_t flag, std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     const cfg::SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
     const cfg::SbpParallel& y_sbp = ctx->SbpParallel4ArgNameAndIndex("y", 0);
     if (ctx->parallel_ctx().parallel_num() > 1) {
@@ -323,10 +323,12 @@ class LogicalSliceKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
-    const SliceContext& slice_ctx = dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
+    const SliceContext& slice_ctx =
+        dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
     if (y_tensor->mem_case().has_host_mem()) {
       memset(y_tensor->mut_dptr(), 0,
              y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()));
@@ -352,8 +354,8 @@ class LogicalSliceAssignKernel final : public user_op::OpKernel {
   LogicalSliceAssignKernel() = default;
   ~LogicalSliceAssignKernel() = default;
 
-  void InitOpKernelCache(
-      user_op::KernelCacheContext* ctx, int8_t flag, std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
       const cfg::SbpParallel& value_sbp = ctx->SbpParallel4ArgNameAndIndex("value", 0);
       CHECK(value_sbp.has_broadcast_parallel());
@@ -362,10 +364,12 @@ class LogicalSliceAssignKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* value_tensor = ctx->Tensor4ArgNameAndIndex("value", 0);
     user_op::Tensor* ref_tensor = ctx->Tensor4ArgNameAndIndex("ref", 0);
-    const SliceContext& slice_ctx = dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
+    const SliceContext& slice_ctx =
+        dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
     SwitchWriteSlice(SwitchCase(value_tensor->shape().NumAxes(), value_tensor->data_type()), ctx,
                      value_tensor, ref_tensor, slice_ctx, false);
   }

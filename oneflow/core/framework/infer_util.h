@@ -45,7 +45,6 @@ class InferContext : virtual public OpInfoIf,
 
   virtual const TensorDesc& InputTensorDesc(const std::string&, int32_t) const = 0;
   virtual TensorDesc* OutputTensorDesc(const std::string&, int32_t) = 0;
-  // virtual TensorDesc* TensorDesc4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual const Shape& InputShape(const std::string&, int32_t) const = 0;
   virtual Shape* OutputShape(const std::string&, int32_t) = 0;
   virtual Shape* Shape4ArgNameAndIndex(const std::string&, int32_t) = 0;

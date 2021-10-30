@@ -215,25 +215,6 @@ class LocalUserKernelInitContext final : virtual public AttrFromComposedAttrMap,
   std::unique_ptr<StreamContext> stream_ctx_;
 };
 
-// LocalUserOpInferContext::LocalUserOpInferContext(
-//     const user_op::UserOpConfWrapper* user_op_conf, const ComposedAttrMap* composed_attrs,
-//     const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-//     const std::shared_ptr<const ArgTuple>& output_arg_tuple)
-//     : user_op_conf_(user_op_conf),
-//       composed_attrs_(composed_attrs),
-//       zero_copy_base_ctx_(input_arg_tuple, output_arg_tuple) {}
-//
-// user_op::TensorDesc* LocalUserOpInferContext::TensorDesc4ArgNameAndIndex(
-//     const std::string& arg_name, int32_t index) {
-//   return zero_copy_base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
-// }
-//
-// void LocalUserOpInferContext::Update(
-//     const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-//     const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result) {
-//   zero_copy_base_ctx_.Update(inputs, outputs, consistent_tensor_infer_result);
-// }
-//
 LocalUserKernelComputeContext::LocalUserKernelComputeContext(
     DeviceCtx* device_ctx, const std::string& device_tag,
     const user_op::UserOpConfWrapper* user_op_conf, const ComposedAttrMap* composed_attrs,

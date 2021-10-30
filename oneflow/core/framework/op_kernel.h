@@ -38,13 +38,15 @@ class JobDesc;
 
 namespace user_op {
 
-class KernelCreateContext : virtual public OpInfoIf, virtual public DeviceInfoIf, virtual public AttrIf {
+class KernelCreateContext : virtual public OpInfoIf,
+                            virtual public DeviceInfoIf,
+                            virtual public AttrIf {
  public:
   virtual ~KernelCreateContext() = default;
 };
 
 class KernelInitContext : virtual public UserOpConfOpInfoProvider,
-  virtual public AttrIf,
+                          virtual public AttrIf,
                           virtual public InputAndOutputNameIf,
                           virtual public StreamCtxAndDeviceCtxIf,
                           virtual public ConsistentInfoIf,
@@ -61,7 +63,8 @@ class KernelInitContext : virtual public UserOpConfOpInfoProvider,
   KernelInitContext() = default;
 };
 
-class KernelInferContext : virtual public OpInfoIf, virtual public DeviceInfoIf,
+class KernelInferContext : virtual public OpInfoIf,
+                           virtual public DeviceInfoIf,
                            virtual public InputAndOutputNameIf,
                            virtual public AttrIf,
                            virtual public StreamCtxAndDeviceCtxIf,
@@ -94,7 +97,8 @@ class KernelInferContext : virtual public OpInfoIf, virtual public DeviceInfoIf,
 
 class Tensor;
 
-class KernelComputeContext : virtual public OpInfoIf, virtual public DeviceInfoIf,
+class KernelComputeContext : virtual public OpInfoIf,
+                             virtual public DeviceInfoIf,
                              virtual public InputAndOutputNameIf,
                              virtual public AttrIf,
                              virtual public StreamCtxAndDeviceCtxIf,
@@ -154,7 +158,9 @@ class OpKernel {
     *cache = InitOpKernelCache(ctx);
   }
 
-  virtual void Compute(KernelComputeContext* ctx, OpKernelState*, const OpKernelCache*) const { Compute(ctx); }
+  virtual void Compute(KernelComputeContext* ctx, OpKernelState*, const OpKernelCache*) const {
+    Compute(ctx);
+  }
   virtual void Compute(KernelComputeContext*) const { LOG(INFO) << "UNIMPLEMENTED"; }
   virtual void InferShape(KernelInferContext* ctx) const;
   virtual bool AlwaysComputeWhenAllOutputsEmpty() const = 0;

@@ -24,7 +24,8 @@ namespace user_op {
 
 namespace {
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
-  const TensorDesc* input = ctx->has_input("input", 0) ? &ctx->InputTensorDesc("input", 0) : nullptr;
+  const TensorDesc* input =
+      ctx->has_input("input", 0) ? &ctx->InputTensorDesc("input", 0) : nullptr;
   const TensorDesc& index = ctx->InputTensorDesc("index", 0);
   const TensorDesc* like = ctx->has_input("like", 0) ? &ctx->InputTensorDesc("like", 0) : nullptr;
   const TensorDesc& src = ctx->InputTensorDesc("src", 0);

@@ -31,8 +31,7 @@ Maybe<void> TensorDescInferFnUtil::Unchanged(InferContext* ctx) {
   for (size_t i = 0; i < ctx->inputs().size(); ++i) {
     const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(i);
     if (first_tensor_desc) {
-      const TensorDesc& tensor_desc =
-          ctx->InputTensorDesc(input_arg.first, input_arg.second);
+      const TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
       CHECK_EQ_OR_RETURN(tensor_desc.shape(), first_tensor_desc->shape());
     } else {
       first_tensor_desc = &ctx->InputTensorDesc(input_arg.first, input_arg.second);
@@ -51,8 +50,7 @@ Maybe<void> TensorDescInferFnUtil::UnchangedDataType(InferContext* ctx) {
   for (size_t i = 0; i < ctx->inputs().size(); ++i) {
     const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(i);
     if (first_tensor_desc) {
-      const TensorDesc& tensor_desc =
-          ctx->InputTensorDesc(input_arg.first, input_arg.second);
+      const TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
       CHECK_EQ_OR_RETURN(tensor_desc.data_type(), first_tensor_desc->data_type());
     } else {
       first_tensor_desc = &ctx->InputTensorDesc(input_arg.first, input_arg.second);

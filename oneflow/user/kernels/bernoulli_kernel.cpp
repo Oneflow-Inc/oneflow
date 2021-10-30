@@ -35,7 +35,8 @@ class BernoulliKerenl final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state, const user_op::OpKernelCache*) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     const T* in_dptr = in_blob->dptr<T>();

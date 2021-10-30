@@ -81,9 +81,7 @@ class CombinedMarginLossOpKernelState final : public user_op::OpKernelCache {
 
 std::shared_ptr<user_op::OpKernelCache> CreateCombinedMarginLossOpKernelState(
     user_op::KernelCacheContext* ctx, const std::string& in_arg_name) {
-  if (ctx->parallel_ctx().parallel_num() == 1) {
-    return nullptr;
-  }
+  if (ctx->parallel_ctx().parallel_num() == 1) { return nullptr; }
 
   const cfg::SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex(in_arg_name, 0);
   if (in_sbp.has_split_parallel() && in_sbp.split_parallel().axis() == 1
@@ -118,7 +116,8 @@ class CombinedMarginLossGpuKernel final : public user_op::OpKernel {
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -175,7 +174,8 @@ class CombinedMarginLossGradGpuKernel final : public user_op::OpKernel {
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     const user_op::Tensor* theta = ctx->Tensor4ArgNameAndIndex("theta", 0);
