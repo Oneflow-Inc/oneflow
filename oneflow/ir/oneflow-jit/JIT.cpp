@@ -48,7 +48,7 @@ class ReturnAllLeaveResultPass : public ReturnAllLeaveResultPassBase<ReturnAllLe
 
 struct JITKernelLaunchContext {
   OpKernel* kernel;
-  KernelComputeContext* kernel_compute_ctx;
+  KernelComputeContext* compute_ctx;
 };
 
 KernelComputeContext* GetKernelComputeContext(const ::oneflow::UserOpConf& user_op_conf) {
@@ -56,9 +56,8 @@ KernelComputeContext* GetKernelComputeContext(const ::oneflow::UserOpConf& user_
 }
 
 // TODO: define JITKernelLaunchContext, has a kernel ptr and a compute context ptr
-extern "C" void _mlir_ciface_LaunchOneFlowKernel(
-    JITKernelLaunchContext* jit_kernel_launch_context) {
-  jit_kernel_launch_context->kernel->Compute(jit_kernel_launch_context->kernel_compute_ctx);
+extern "C" void _mlir_ciface_LaunchOneFlowKernel(JITKernelLaunchContext* ctx) {
+  ctx->kernel->Compute(ctx->compute_ctx);
 }
 
 class CreateComputeCtxPass : public CreateComputeCtxPassBase<CreateComputeCtxPass> {
