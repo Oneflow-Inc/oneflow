@@ -23,6 +23,7 @@ limitations under the License.
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/StringSet.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 
 using namespace mlir;
@@ -93,6 +94,12 @@ const StringSet<>& GetReduceOpTypeNames() {
   return names;
 }
 
+const StringSet<>& GetConvOpTypeNames() {
+  static llvm::StringSet<> names(
+      {"conv1d", "conv2d", "conv3d", "conv_filter_grad", "conv_data_grad"});
+  return names;
+}
+
 const StringSet<>& GetPoolOpTypeNames() {
   static llvm::StringSet<> names(
       {"avgpool_1d", "avgpool_2d", "avgpool_3d", "avg_pool_1d", "avg_pool_2d", "avg_pool_3d",
@@ -128,14 +135,15 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
     // 3. enable the reuse of established MLIR infra like built-in traits
     else if (IsCtrlOutTrimmed(op) && IsCtrlInAbsent(op)) {
       if (op_type_name.equals("relu") || op_type_name.equals("gelu") || op_type_name.equals("cast")
-          || GetUnaryOpTypeNames().contains(op_type_name)
+          || op_type_name.equals("relu_grad") || GetUnaryOpTypeNames().contains(op_type_name)
           || GetFloatUnaryOpTypeNames().contains(op_type_name)
           || GetScalarMathOpTypeNames().contains(op_type_name)
+          || GetConvOpTypeNames().contains(op_type_name)
           || GetPoolOpTypeNames().contains(op_type_name)
           || GetReduceOpTypeNames().contains(op_type_name) || op_type_name.equals("reshape")
           || op_type_name.equals("scalar_mul_by_tensor") || op_type_name.equals("matmul")
           || op_type_name.equals("gather") || op_type_name.equals("gelu_grad")
-          || op_type_name.equals("conv2d") || op_type_name.equals("bias_add")
+          || op_type_name.equals("bias_add")
           || op_type_name.equals("sparse_softmax_cross_entropy_grad")) {
         assert(op.data_output().size() == 1);
         NamedAttrList attributes(op->getAttrDictionary());

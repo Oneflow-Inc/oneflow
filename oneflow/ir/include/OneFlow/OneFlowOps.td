@@ -196,19 +196,63 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", []> {
   );
 }
 
-def OneFlow_Convolution2dOp : OneFlow_BaseOp<"conv2d", []> {
-  let summary = "OneFlow Conv2d operation";
-  let description = [{
-  "The convolution operator consumes an input tensor and a filter, and"
-  "computes the output."
-  }];
+class OneFlow_ConvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
+    let summary = "OneFlow convolution operation";
+    let description = [{
+    "The convolution operator consumes an input tensor and a filter, and"
+    "computes the output."
+    }];
+    let input = (ins
+      AnyType:$in,
+      AnyType:$weight
+    );
+    let output = (outs AnyType:$out);
+    let attrs = (ins
+      SI32Attr:$filters,
+      SI32ArrayAttr:$padding_before,
+      StrAttr:$data_format,
+      SI32ArrayAttr:$kernel_size,
+      SI32ArrayAttr:$strides,
+      SI32ArrayAttr:$dilation_rate,
+      DefaultValuedAttr<SI32Attr, "1">:$group
+    );
+}
+
+def OneFlow_Convolution1dOp : OneFlow_ConvolutionBaseOp<"conv1d", []> {}
+
+def OneFlow_Convolution2dOp : OneFlow_ConvolutionBaseOp<"conv2d", []> {}
+
+def OneFlow_Convolution3dOp : OneFlow_ConvolutionBaseOp<"conv3d", []> {}
+
+def OneFlow_ConvFilterGradOp : OneFlow_BaseOp<"conv_filter_grad", []> {
+  let summary = "OneFlow Conv Filter Grad operation";
   let input = (ins
-    AnyType:$in,
-    AnyType:$weight
+    AnyType:$dy,
+    AnyType:$x
   );
-  let output = (outs AnyType:$out);
+  let output = (outs AnyType:$filter_diff);
   let attrs = (ins
-    SI32Attr:$filters,
+    SI32Attr:$num_spatial_dims,
+    SI32ArrayAttr:$padding_before,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$strides,
+    SI32ArrayAttr:$dilation_rate,
+    DefaultValuedAttr<SI32Attr, "1">:$group
+  );
+}
+
+def OneFlow_ConvDataGradOp : OneFlow_BaseOp<"conv_data_grad", []> {
+  let summary = "OneFlow Conv Data Grad operation";
+  let input = (ins
+    AnyType:$dy,
+    AnyType:$filter,
+    AnyType:$x_like
+  );
+  let output = (outs AnyType:$dx);
+  let attrs = (ins
+    SI32Attr:$num_spatial_dims,
     SI32ArrayAttr:$padding_before,
     StrAttr:$data_format,
     SI32ArrayAttr:$kernel_size,
@@ -366,11 +410,15 @@ class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
     let output = (outs AnyType:$y);
 }
 
+
+
 def OneFlow_GeluOp : OneFlow_UnaryBaseOp<"gelu", []> {}
 
 def OneFlow_RsqrtOp : OneFlow_UnaryBaseOp<"rsqrt", []> {}
 
 def OneFlow_TanhOp : OneFlow_UnaryBaseOp<"tanh", []> {}
+
+
 
 // data preprocessing ops
 
@@ -439,6 +487,16 @@ def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", []> {}
 def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", []> {}
 
 def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", []> {}
+
+def OneFlowReLUGradOp : OneFlow_BaseOp<"relu_grad", []> {
+  let input = (ins
+    AnyType:$y,
+    AnyType:$dy
+  );
+  let output = (outs 
+    AnyType:$dx
+  );
+}
 
 // TODO: pattern match hardtanh to create Relu6 op
 def OneFlow_Relu6Op : OneFlow_IdempotentBaseOp<"relu6", []> {}
