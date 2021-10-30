@@ -561,6 +561,7 @@ struct LocalCallOpKernelUtil final {
     }
     operand->mut_opkernel()->TryInitOpKernelState(
         operand->user_opkernel(), device_ctx, operand->inputs(), operand->outputs(),
+        // operand->consistent_tensor_infer_result(), state);
         operand->consistent_tensor_infer_result(), state, cache);
   }
 

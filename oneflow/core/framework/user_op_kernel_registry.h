@@ -33,29 +33,20 @@ class TensorDesc;
 class InferContext;
 class KernelCreateContext;
 
-class KernelRegContext {
+class KernelRegContext : virtual public UserOpConfOpInfoProvider,
+                         virtual public InputAndOutputNameIf,
+                         virtual public TensorDescIf,
+                         virtual public AttrIf {
  public:
   virtual ~KernelRegContext() = default;
 
-  virtual DeviceType device_type() const = 0;
-  virtual const std::string& device_tag() const = 0;
   virtual const ParallelContext& parallel_ctx() const = 0;
-  virtual const TensorDesc* TensorDesc4ArgNameAndIndex(const std::string&, int32_t) const = 0;
 
-  virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
-  virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
-
-  virtual const UserOpConfWrapper& user_op_conf() const = 0;
-
-  template<typename T>
-  T Attr(const std::string& attr_name) const {
-    return AttrValueCast<T>(*Attr4Name(attr_name));
-  }
+  using UserOpConfOpInfoProvider::user_op_conf;
 
  protected:
   KernelRegContext() = default;
   KernelRegContext(const KernelRegContext&) = delete;
-  virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
 };
 
 using OpKernelCreateFn = std::function<const OpKernel*(KernelCreateContext* ctx)>;

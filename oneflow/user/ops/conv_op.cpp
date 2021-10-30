@@ -435,7 +435,7 @@ REGISTER_USER_OP("conv_bias_grad")
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
-      user_op::TensorDesc* bias_diff = ctx->TensorDesc4ArgNameAndIndex("bias_diff", 0);
+      user_op::TensorDesc* bias_diff = ctx->OutputTensorDesc("bias_diff", 0);
 
       int32_t num_spatial_dims = ctx->Attr<int32_t>("num_spatial_dims");
       std::string data_format = ctx->Attr<std::string>("data_format");
@@ -461,7 +461,7 @@ REGISTER_USER_OP("conv_bias_grad")
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
-      user_op::TensorDesc* bias_diff = ctx->TensorDesc4ArgNameAndIndex("bias_diff", 0);
+      user_op::TensorDesc* bias_diff = ctx->OutputTensorDesc("bias_diff", 0);
       *bias_diff->mut_data_type() = dy.data_type();
       return Maybe<void>::Ok();
     });

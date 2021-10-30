@@ -30,6 +30,10 @@ class UserKernelComputeContext;
 class UserKernelInferContext;
 class UserKernelInitContext;
 
+namespace user_op {
+  class OpKernelCache;
+}
+
 class UserKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UserKernel);

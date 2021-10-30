@@ -26,7 +26,7 @@ typedef std::function<Maybe<void>(const user_op::UserOpWrapper& op, user_op::Add
 
 TensorDescInferFn MakeForwardTensorDescInferFn(const int32_t dim) {
   return [dim](user_op::InferContext* ctx) -> Maybe<void> {
-    const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
+    const Shape& x_shape = ctx->InputShape("x", 0);
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     const std::vector<int32_t>& padding = ctx->Attr<std::vector<int32_t>>("padding");
     const std::vector<int32_t>& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
@@ -44,10 +44,10 @@ TensorDescInferFn MakeForwardTensorDescInferFn(const int32_t dim) {
           << "pad should be smaller than half of kernel size";
     }
 
-    const AvgPoolingParams3D params_3d(dim, *x_shape, data_format, padding, kernel_size, stride,
+    const AvgPoolingParams3D params_3d(dim, x_shape, data_format, padding, kernel_size, stride,
                                        ceil_mode, count_include_pad, divisor_override);
-    user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-    *y_desc = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
+    user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
+    *y_desc = ctx->InputTensorDesc("x", 0);
     *y_desc->mut_shape() = params_3d.GetYShape();
 
     return Maybe<void>::Ok();
@@ -62,7 +62,7 @@ Maybe<void> ForwardGetSbpFn(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> BackwardTensorDescInferFn(user_op::InferContext* ctx) {
-  *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  *ctx->OutputTensorDesc("dx", 0) = ctx->InputTensorDesc("x", 0);
   return Maybe<void>::Ok();
 }
 
