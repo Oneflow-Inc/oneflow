@@ -94,11 +94,13 @@ const StringSet<>& GetReduceOpTypeNames() {
 }
 
 const StringSet<>& GetPoolOpTypeNames() {
-  static llvm::StringSet<> names({"avgpool_1d", "avgpool_2d", "avgpool_3d", "avg_pool_1d",
-                                  "avg_pool_2d", "avg_pool_3d", "max_pool_1d", "max_pool_2d",
-                                  "max_pool_3d"
+  static llvm::StringSet<> names(
+      {"avgpool_1d", "avgpool_2d", "avgpool_3d", "avg_pool_1d", "avg_pool_2d", "avg_pool_3d",
+       "max_pool_1d", "max_pool_2d", "max_pool_3d", "max_pool_1d_grad", "max_pool_2d_grad",
+       "max_pool_3d_grad", "avg_pool_1d_grad", "avg_pool_2d_grad", "avg_pool_3d_grad",
+       "avgpool_1d_grad", "avgpool_2d_grad", "avgpool_3d_grad"
 
-  });
+      });
   return names;
 }
 
@@ -134,7 +136,7 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
           || op_type_name.equals("scalar_mul_by_tensor") || op_type_name.equals("matmul")
           || op_type_name.equals("gather") || op_type_name.equals("gelu_grad")
           || op_type_name.equals("conv2d") || op_type_name.equals("bias_add")
-          || op_type_name.equals("OFRecordReader")) {
+          || op_type_name.equals("sparse_softmax_cross_entropy_grad")) {
         assert(op.data_output().size() == 1);
         NamedAttrList attributes(op->getAttrDictionary());
         attributes.erase("operand_segment_sizes");

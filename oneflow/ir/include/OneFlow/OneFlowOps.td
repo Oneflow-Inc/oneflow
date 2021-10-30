@@ -246,6 +246,27 @@ class OneFlow_LazyPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
   );
 }
 
+class OneFlow_LazyPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
+    let summary = "OneFlow Lazy Pooling Grad operation";
+    let input = (ins 
+      AnyType:$x,
+      AnyType:$y,
+      AnyType:$dy
+    );
+    let output = (outs AnyType:$dx);
+    let attrs = (ins
+    StrAttr:$padding,
+    SI32ArrayAttr:$padding_before,
+    SI32ArrayAttr:$padding_after,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$pool_size,
+    SI32ArrayAttr:$strides,
+    BoolAttr:$ceil_mode
+  );
+}
+
+
 class OneFlow_EagerPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
     let summary = "OneFlow Eager Pooling operation";
@@ -262,23 +283,61 @@ class OneFlow_EagerPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
   );
 }
 
+class OneFlow_EagerPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
+    let summary = "OneFlow Eager Pooling Grad operation";
+    let input = (ins 
+      AnyType:$x,
+      AnyType:$y,
+      AnyType:$dy
+    );
+    let output = (outs AnyType:$dx);
+    let attrs = (ins
+    SI32ArrayAttr:$padding,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$stride,
+    BoolAttr:$ceil_mode,
+    BoolAttr:$count_include_pad,
+    SI64Attr:$divisor_override
+  );
+}
+
 def OneFlow_LazyMaxPool1dOp : OneFlow_LazyPoolBaseOp<"max_pool_1d", []> {}
+
+def OneFlow_LazyMaxPoolGrad1dOp : OneFlow_LazyPoolGradBaseOp<"max_pool_1d_grad", []> {}
 
 def OneFlow_LazyMaxPool2dOp : OneFlow_LazyPoolBaseOp<"max_pool_2d", []> {}
 
+def OneFlow_LazyMaxPoolGrad2dOp : OneFlow_LazyPoolGradBaseOp<"max_pool_2d_grad", []> {}
+
 def OneFlow_LazyMaxPool3dOp : OneFlow_LazyPoolBaseOp<"max_pool_3d", []> {}
+
+def OneFlow_LazyMaxPoolGrad3dOp : OneFlow_LazyPoolGradBaseOp<"max_pool_3d_grad", []> {}
 
 def OneFlow_LazyAvgPool1dOp : OneFlow_LazyPoolBaseOp<"avg_pool_1d", []> {}
 
+def OneFlow_LazyAvgPoolGrad1dOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_1d_grad", []> {}
+
 def OneFlow_LazyAvgPool2dOp : OneFlow_LazyPoolBaseOp<"avg_pool_2d", []> {}
+
+def OneFlow_LazyAvgPoolGrad2dOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_2d_grad", []> {}
 
 def OneFlow_LazyAvgPool3dOp : OneFlow_LazyPoolBaseOp<"avg_pool_3d", []> {}
 
+def OneFlow_LazyAvgPoolGrad3dOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_3d_grad", []> {}
+
 def OneFlow_EagerAvgPool1dOp : OneFlow_EagerPoolBaseOp<"avgpool_1d", []> {}
+
+def OneFlow_EagerAvgPoolGrad1dOp : OneFlow_EagerPoolGradBaseOp<"avgpool_1d_grad", []> {}
 
 def OneFlow_EagerAvgPool2dOp : OneFlow_EagerPoolBaseOp<"avgpool_2d", []> {}
 
+def OneFlow_EagerAvgPoolGrad2dOp : OneFlow_EagerPoolGradBaseOp<"avgpool_2d_grad", []> {}
+
 def OneFlow_EagerAvgPool3dOp : OneFlow_EagerPoolBaseOp<"avgpool_3d", []> {}
+
+def OneFlow_EagerAvgPoolGrad3dOp : OneFlow_EagerPoolGradBaseOp<"avgpool_3d_grad", []> {}
 
 
 def OneFlow_GatherOp : OneFlow_BaseOp<"gather", []> {
@@ -319,7 +378,7 @@ def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", []> {
   let summary = "OneFlow OFRecordReader operation";
   let output = (outs AnyType:$out);
   let attrs = (ins
-    StrAttr:$data_dir,
+    StrAttr:$name,
     SI32Attr:$data_part_num,
     SI32Attr:$batch_size,
     StrAttr:$part_name_prefix,
@@ -329,6 +388,36 @@ def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", []> {
     SI32Attr:$shuffle_buffer_size,
     BoolAttr:$shuffle_after_epoch,
     StrArrayAttr:$nd_sbp
+  );
+}
+
+// Loss ops
+
+def OneFlowSparseSoftmaxCrossEntropyOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy", []> {
+  let input = (ins
+    AnyType:$prediction,
+    AnyType:$label
+  );
+  let output = (outs 
+    AnyType:$prob,
+    AnyType:$out
+  );
+  let attrs = (ins
+    SI64Attr:$depth
+  );
+}
+
+def OneFlowSparseSoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_grad", []> {
+  let input = (ins
+    AnyType:$label,
+    AnyType:$dy,
+    AnyType:$prob
+  );
+  let output = (outs 
+    AnyType:$prediction_diff
+  );
+  let attrs = (ins
+    SI64Attr:$depth
   );
 }
 
