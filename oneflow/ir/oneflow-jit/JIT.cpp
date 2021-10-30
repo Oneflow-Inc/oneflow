@@ -59,7 +59,6 @@ class CreateComputeCtxPass : public CreateComputeCtxPassBase<CreateComputeCtxPas
     auto importer = jit_interpreter->GetImporter();
     Builder builder(&context);
     // external func to launch kernel
-    SmallVector<Type, 4> argument_types;
     auto func_type = builder.getFunctionType(
         LLVM::LLVMPointerType::get(IntegerType::get(&context, 8)), llvm::None);
     auto function = mlir::FuncOp::create(getFunction()->getLoc(), "LaunchOneFlowKernel", func_type);
