@@ -133,7 +133,8 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
           || GetReduceOpTypeNames().contains(op_type_name) || op_type_name.equals("reshape")
           || op_type_name.equals("scalar_mul_by_tensor") || op_type_name.equals("matmul")
           || op_type_name.equals("gather") || op_type_name.equals("gelu_grad")
-          || op_type_name.equals("conv2d") || op_type_name.equals("bias_add")) {
+          || op_type_name.equals("conv2d") || op_type_name.equals("bias_add")
+          || op_type_name.equals("OFRecordReader")) {
         assert(op.data_output().size() == 1);
         NamedAttrList attributes(op->getAttrDictionary());
         attributes.erase("operand_segment_sizes");

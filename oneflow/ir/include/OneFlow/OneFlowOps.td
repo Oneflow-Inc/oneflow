@@ -218,7 +218,7 @@ def OneFlow_Convolution2dOp : OneFlow_BaseOp<"conv2d", []> {
   );
 }
 
-def OneFlow_ReshapeOp : OneFlow_BaseOp<"bias_add", []> {
+def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", []> {
   let summary = "OneFlow Bias Add operation";
   let input = (ins
     AnyType:$a,
@@ -312,6 +312,25 @@ def OneFlow_GeluOp : OneFlow_UnaryBaseOp<"gelu", []> {}
 def OneFlow_RsqrtOp : OneFlow_UnaryBaseOp<"rsqrt", []> {}
 
 def OneFlow_TanhOp : OneFlow_UnaryBaseOp<"tanh", []> {}
+
+// data preprocessing ops
+
+def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", []> {
+  let summary = "OneFlow OFRecordReader operation";
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    StrAttr:$data_dir,
+    SI32Attr:$data_part_num,
+    SI32Attr:$batch_size,
+    StrAttr:$part_name_prefix,
+    SI32Attr:$part_name_suffix_length,
+    BoolAttr:$random_shuffle,
+    SI64Attr:$seed,
+    SI32Attr:$shuffle_buffer_size,
+    BoolAttr:$shuffle_after_epoch,
+    StrArrayAttr:$nd_sbp
+  );
+}
 
 // Idempotent ops
 
