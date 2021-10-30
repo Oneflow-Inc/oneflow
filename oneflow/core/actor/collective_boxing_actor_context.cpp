@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,12 +12,11 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-from oneflow.nn.optimizer.cosine_decay_lr import CosineDecayLR
-from oneflow.nn.optimizer.cosine_annealing_lr import CosineAnnealingLR
-from oneflow.nn.optimizer.lambda_lr import LambdaLR
-from oneflow.nn.optimizer.lr_scheduler import LrScheduler as _LRScheduler
-from oneflow.nn.optimizer.step_lr import StepLR
-from oneflow.nn.optimizer.multistep_lr import MultiStepLR
-from oneflow.nn.optimizer.warm_up_lr import WarmUpLR
-from oneflow.nn.optimizer.reduce_lr_on_plateau import ReduceLROnPlateau
+*/
+#include "oneflow/core/actor/collective_boxing_actor_context.h"
+
+namespace oneflow {
+
+REGISTER_ACTOR_CONTEXT(TaskType::kCollectiveBoxingGeneric, CollectiveBoxingActorContext);
+
+}  // namespace oneflow
