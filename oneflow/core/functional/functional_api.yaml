@@ -155,6 +155,14 @@
     ]
   bind_python: True
 
+- name: "pow_x_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => PowXGrad"
+  bind_python: False
+
+- name: "pow_y_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => PowYGrad"
+  bind_python: False
+
 - name: "scalar_pow_grad"
   signature: "Tensor (Tensor input, Tensor dy, Scalar exponent) => ScalarPowGrad"
   bind_python: False
@@ -181,11 +189,27 @@
   bind_python: True
 
 - name: "floordiv_x_grad"
-  signature: "Tensor (Tensor dz, Tensor x, Tensor y, Tensor z) => FloorDivXGrad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => FloorDivXGrad"
   bind_python: False
 
 - name: "floordiv_y_grad"
-  signature: "Tensor (Tensor dz, Tensor x, Tensor y, Tensor z) => FloorDivYGrad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => FloorDivYGrad"
+  bind_python: False
+
+- name: "xdivy_x_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => XdivyXGrad"
+  bind_python: False
+
+- name: "xdivy_y_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => XdivyYGrad"
+  bind_python: False
+
+- name: "xlogy_x_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => XlogyXGrad"
+  bind_python: False
+
+- name: "xlogy_y_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => XlogyYGrad"
   bind_python: False
 
 - name: "reduce_max"
@@ -1067,6 +1091,14 @@
 - name: "atan2"
   signature: "Tensor (Tensor input, Tensor other) => Atan2"
   bind_python: True
+
+- name: "atan2_x_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => Atan2XGrad"
+  bind_python: False
+
+- name: "atan2_y_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => Atan2YGrad"
+  bind_python: False
 
 - name: "atanh"
   signature: "Tensor (Tensor x) => Atanh"
