@@ -32,9 +32,12 @@ class CudaOptionalEventRecordStatusQuerier {
  public:
   ~CudaOptionalEventRecordStatusQuerier();
 
-  bool done() const { return launched_ && (!has_event_record_ || event_completed()); }
-  void set_has_event_record(bool val) { has_event_record_ = val; }
+  bool done() const { return launched_ && (!device_event_ || event_completed()); }
   void SetLaunched(DeviceCtx* device_ctx);
+
+  void reset_device_event(const std::shared_ptr<DeviceEvent>& device_event) {
+    device_event_ = device_event;
+  }
 
   static const CudaOptionalEventRecordStatusQuerier* Cast(const char* mem_ptr) {
     return reinterpret_cast<const CudaOptionalEventRecordStatusQuerier*>(mem_ptr);
@@ -42,18 +45,17 @@ class CudaOptionalEventRecordStatusQuerier {
   static CudaOptionalEventRecordStatusQuerier* MutCast(char* mem_ptr) {
     return reinterpret_cast<CudaOptionalEventRecordStatusQuerier*>(mem_ptr);
   }
-  static CudaOptionalEventRecordStatusQuerier* PlacementNew(char* mem_ptr, int64_t device_id) {
-    return new (mem_ptr) CudaOptionalEventRecordStatusQuerier(device_id);
+  static CudaOptionalEventRecordStatusQuerier* PlacementNew(
+      char* mem_ptr, const std::shared_ptr<DeviceEvent>& device_event) {
+    return new (mem_ptr) CudaOptionalEventRecordStatusQuerier(device_event);
   }
 
  private:
-  explicit CudaOptionalEventRecordStatusQuerier(int64_t device_id)
-      : launched_(false), has_event_record_(false), device_id_(device_id) {}
+  explicit CudaOptionalEventRecordStatusQuerier(const std::shared_ptr<DeviceEvent>& device_event)
+      : launched_(false), device_event_(device_event) {}
   bool event_completed() const;
 
   std::atomic<bool> launched_;
-  std::atomic<bool> has_event_record_;
-  int device_id_;
   std::shared_ptr<DeviceEvent> device_event_;
 };
 

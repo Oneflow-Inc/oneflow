@@ -35,8 +35,8 @@ void CudaStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Strea
 void CudaStreamType::InitInstructionStatus(const Stream& stream,
                                            InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(CudaOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
-  CudaOptionalEventRecordStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data(),
-                                                     stream.device_id());
+  auto* data_ptr = status_buffer->mut_buffer()->mut_data();
+  CudaOptionalEventRecordStatusQuerier::PlacementNew(data_ptr, nullptr);
 }
 
 void CudaStreamType::DeleteInstructionStatus(const Stream& stream,
@@ -49,12 +49,6 @@ void CudaStreamType::DeleteInstructionStatus(const Stream& stream,
 bool CudaStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
   return CudaOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())->done();
-}
-
-void CudaStreamType::set_has_event_record(InstructionStatusBuffer* status_buffer, bool val) const {
-  auto* querier =
-      CudaOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
-  return querier->set_has_event_record(val);
 }
 
 void CudaStreamType::Compute(Instruction* instruction) const {

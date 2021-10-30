@@ -16,11 +16,10 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_DEVICE_DEVICE_EVENT_H_
 #define ONEFLOW_CORE_DEVICE_DEVICE_EVENT_H_
 
-#include "oneflow/core/common/obj_pool.h"
-
 #ifdef WITH_CUDA
 
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/common/thread_local_obj_pool.h"
 
 namespace oneflow {
 
@@ -32,6 +31,7 @@ class DeviceEvent final {
   DeviceEvent(int device_id, unsigned int flags);
   ~DeviceEvent();
 
+  int device_id() const { return device_id_; }
   bool Query() const;
 
   cudaEvent_t* mut_event() { return &event_; }
@@ -41,7 +41,33 @@ class DeviceEvent final {
   cudaEvent_t event_;
 };
 
-std::shared_ptr<DeviceEvent> GetReusedDeviceEvent(int device_id, unsigned int flags);
+class DeviceEventProvider {
+ public:
+  DeviceEventProvider(const DeviceEventProvider&) = delete;
+  DeviceEventProvider(DeviceEventProvider&&) = delete;
+  explicit DeviceEventProvider(int device_id) : device_events_(), device_id_(device_id) {}
+  virtual ~DeviceEventProvider() = default;
+
+  std::shared_ptr<DeviceEvent> GetThreadLocalReusedDeviceEventWithFlags(unsigned int flags) {
+    return device_events_.make_shared(device_id_, flags);
+  }
+
+ private:
+  obj_pool::ThreadLocalObjPool<DeviceEvent, obj_pool::kDisableReconstruct> device_events_;
+  int device_id_;
+};
+
+class QueryEventProvider : public DeviceEventProvider {
+ public:
+  QueryEventProvider(const QueryEventProvider&) = delete;
+  QueryEventProvider(QueryEventProvider&&) = delete;
+  using DeviceEventProvider::DeviceEventProvider;
+  virtual ~QueryEventProvider() = default;
+
+  std::shared_ptr<DeviceEvent> GetThreadLocalReusedDeviceEvent() {
+    return GetThreadLocalReusedDeviceEventWithFlags(cudaEventBlockingSync | cudaEventDisableTiming);
+  }
+};
 
 }  // namespace oneflow
 

@@ -277,7 +277,6 @@ class Instruction final : public intrusive::Base {
                 const std::shared_ptr<const ParallelDesc>& parallel_desc);
   void __Delete__();
   bool Done() const;
-  void set_has_event_record(bool val);
   const StreamType& stream_type() const;
   template<OperandMemZoneModifier mem_zone_modifier>
   const RwMutexedObject* operand_type(const Operand& operand) const {

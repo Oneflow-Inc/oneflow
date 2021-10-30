@@ -22,16 +22,11 @@ namespace oneflow {
 namespace vm {
 
 CudaOptionalEventRecordStatusQuerier::~CudaOptionalEventRecordStatusQuerier() {
-  if (has_event_record_) {
-    CHECK(device_event_);
-    device_event_.reset();
-  } else {
-    CHECK(!device_event_);
-  }
+  device_event_.reset();
 }
 
 bool CudaOptionalEventRecordStatusQuerier::event_completed() const {
-  cudaSetDevice(device_id_);
+  cudaSetDevice(device_event_->device_id());
   return device_event_->Query();
 }
 
@@ -40,10 +35,8 @@ void CudaOptionalEventRecordStatusQuerier::SetLaunched(DeviceCtx* device_ctx) {
   // In most cases, errors will be successfully detected by CHECK
   // even though run in different threads.
   CHECK(!launched_);
-  if (has_event_record_) {
-    cudaSetDevice(device_id_);
-    device_event_ =
-        GetReusedDeviceEvent(device_id_, cudaEventBlockingSync | cudaEventDisableTiming);
+  if (device_event_) {
+    cudaSetDevice(device_event_->device_id());
     OF_CUDA_CHECK(cudaEventRecord(*device_event_->mut_event(), device_ctx->cuda_stream()));
   }
   launched_ = true;

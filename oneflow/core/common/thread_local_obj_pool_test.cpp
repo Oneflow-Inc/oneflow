@@ -13,25 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <vector>
-#include "oneflow/core/device/device_event.h"
+#include "oneflow/core/common/thread_local_obj_pool.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
+namespace obj_pool {
+namespace test {
 
-#ifdef WITH_CUDA
-
-DeviceEvent::DeviceEvent(int device_id, unsigned int flags) : device_id_(device_id) {
-  CudaCurrentDeviceGuard guard(device_id_);
-  OF_CUDA_CHECK(cudaEventCreateWithFlags(&event_, flags));
+TEST(ThreadLocalObjPool, naive) {
+  ThreadLocalObjPool<int> pool;
+  auto* ptr = pool.make_shared().get();
+  ASSERT_EQ(ptr, pool.make_shared().get());
 }
 
-DeviceEvent::~DeviceEvent() {
-  CudaCurrentDeviceGuard guard(device_id_);
-  cudaEventDestroy(event_);
-}
-
-bool DeviceEvent::Query() const { return cudaEventQuery(event_) != cudaErrorNotReady; }
-
-#endif
-
+}  // namespace test
+}  // namespace obj_pool
 }  // namespace oneflow

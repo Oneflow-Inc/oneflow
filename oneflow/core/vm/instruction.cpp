@@ -328,22 +328,18 @@ void Instruction::__Init__(InstructionMsg* instr_msg, Stream* stream,
   mut_status_buffer();
   reset_instr_msg(instr_msg);
   set_stream(stream);
-  stream_type().InitInstructionStatusIf(*stream, mut_status_buffer());
+  instr_msg->instr_type_id().instruction_type().InitInstructionStatusIf(this);
   *mut_parallel_desc() = parallel_desc;
 }
 
 void Instruction::__Delete__() {
-  stream_type().DeleteInstructionStatusIf(stream(), mut_status_buffer());
+  instr_msg().instr_type_id().instruction_type().DeleteInstructionStatusIf(this);
   mut_in_edges()->Clear();
   mut_out_edges()->Clear();
 }
 
 bool Instruction::Done() const {
   return stream_type().QueryInstructionStatusDone(stream(), status_buffer());
-}
-
-void Instruction::set_has_event_record(bool val) {
-  return stream_type().set_has_event_record(mut_status_buffer(), val);
 }
 
 const StreamType& Instruction::stream_type() const { return stream().stream_type(); }
