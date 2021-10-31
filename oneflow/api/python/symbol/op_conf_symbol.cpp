@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/api/python/framework/throw.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
+#include "oneflow/core/common/maybe.h"
 
 namespace py = pybind11;
 
