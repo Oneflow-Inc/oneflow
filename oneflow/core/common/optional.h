@@ -448,9 +448,7 @@ class Optional final : private internal::OptionalBase<T> {
     }
   }
 
-  bool operator!=(const Optional& other) const {
-    return !operator==(other);
-  }
+  bool operator!=(const Optional& other) const { return !operator==(other); }
 
   void reset() { base::reset(); }
 };
