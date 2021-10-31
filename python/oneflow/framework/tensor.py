@@ -165,6 +165,10 @@ def _or(self, other):
     return self.logical_or(other)
 
 
+def _not(self):
+    return flow._C.logical_not(self)
+
+
 def _xor(self, other):
     return self.logical_xor(other)
 
@@ -486,6 +490,24 @@ def _squeeze(self, dim=None):
     return flow._C.squeeze(self, dim=dim)
 
 
+def _narrow(self, dimension, start, length):
+    return flow._C.narrow(self, dim=dimension, start=start, length=length)
+
+
+def _unsqueeze(self, dim):
+    return flow._C.unsqueeze(self, dim=dim)
+
+
+def _permute(self, *dims):
+    if len(dims) == 1:
+        new_dims = dims[0]
+        if isinstance(new_dims, int):
+            new_dims = (new_dims,)
+    else:
+        new_dims = dims
+    return flow._C.transpose(self, new_dims)
+
+
 def _matmul(self, other):
     return flow.matmul(self, other)
 
@@ -785,8 +807,12 @@ def RegisterMethods():
     Tensor.relu = _relu
     Tensor.softmax = _softmax
     Tensor.log_softmax = _log_softmax
+    Tensor.logical_not = _not
     Tensor.roll = _roll
     Tensor.squeeze = _squeeze
+    Tensor.narrow = _narrow
+    Tensor.unsqueeze = _unsqueeze
+    Tensor.permute = _permute
 
 
 def register_tensor_op(op_name):

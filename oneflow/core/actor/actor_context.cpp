@@ -13,23 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/actor/naive_actor.h"
-#include "oneflow/core/device/collective_boxing_device_context.h"
+#include "oneflow/core/actor/actor_context.h"
+#include "oneflow/core/actor/generic_actor_context.h"
 
 namespace oneflow {
 
-class CollectiveBoxingGenericActor : public NaiveActor {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingGenericActor);
-  CollectiveBoxingGenericActor() = default;
-  ~CollectiveBoxingGenericActor() override = default;
-
- private:
-  void InitDeviceCtx(StreamContext* stream_ctx) override {
-    mut_device_ctx().reset(new CollectiveBoxingDeviceCtx());
+std::unique_ptr<ActorContext> NewActorContext(const TaskProto& task_proto,
+                                              StreamContext* stream_ctx) {
+  ActorContext* ctx = nullptr;
+  if (IsClassRegistered<int32_t, ActorContext>(task_proto.task_type())) {
+    ctx = NewObj<int32_t, ActorContext>(task_proto.task_type());
+  } else {
+    ctx = new GenericActorContext();
   }
-};
-
-REGISTER_ACTOR(TaskType::kCollectiveBoxingGeneric, CollectiveBoxingGenericActor);
+  ctx->Init(task_proto, stream_ctx);
+  return std::unique_ptr<ActorContext>(ctx);
+}
 
 }  // namespace oneflow

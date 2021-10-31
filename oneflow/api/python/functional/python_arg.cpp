@@ -107,7 +107,6 @@ Maybe<Symbol<DType>> PythonArg::ObjectAs<Symbol<DType>>() const {
 
 template<>
 Maybe<Shape> PythonArg::ObjectAs<Shape>() const {
-  if (PyShapeCheck(object_)) { return PyUnpackShape(object_); }
   const auto& shape = JUST(PyUnpackLongSequence<int64_t>(object_));
   return std::make_shared<Shape>(DimVector(shape->begin(), shape->end()));
 }
@@ -193,7 +192,7 @@ Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
     case kTENSOR_REF: return PyTensorCheck(object_);
     case kTENSOR_TUPLE: return PyTensorTupleCheck(object_) || PyTensorSequenceCheck(object_);
     case kDTYPE: return PyDTypeCheck(object_);
-    case kSHAPE: return PyShapeCheck(object_) || PyLongSequenceCheck(object_);
+    case kSHAPE: return PyLongSequenceCheck(object_);
     case kGENERATOR:
     case kGENERATOR_REF: return PyGeneratorCheck(object_);
     case kTENSOR_INDEX: return PyTensorIndexCheck(object_);
