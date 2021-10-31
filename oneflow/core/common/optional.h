@@ -350,7 +350,7 @@ template<typename T>
 class Optional final : private internal::OptionalBase<T> {
  private:
   using base = internal::OptionalBase<T>;
-  using move_value_type = decltype(std::declval<Optional>().base::value());
+  using move_value_type = decltype(std::declval<base>().value());
 
  public:
   using value_type = typename base::value_type;
