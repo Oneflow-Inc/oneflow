@@ -949,7 +949,7 @@ const oneflow::OpAttribute& PlanUtil::GetOpAttribute(const Plan* plan, int64_t j
   }
 }
 
-void PlanUtil::PopulateOpAttibute(
+void PlanUtil::PopulateOpAttribute(
     Plan* plan,
     const PbMap<int64_t, ::oneflow::OpAttributeRefTable>& job_id2op_attribute_ref_table) {
   for (auto& task : *plan->mutable_task()) {
