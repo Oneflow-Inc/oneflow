@@ -116,3 +116,31 @@ add_docstr(
     See :func:`oneflow.squeeze`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.matmul,
+    """
+    See :func:`oneflow.matmul`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.narrow,
+    """
+    See :func:`oneflow.narrow`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.unsqueeze,
+    """
+    See :func:`oneflow.unsqueeze`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.permute,
+    """
+    See :func:`oneflow.permute`
+    """,
+)
