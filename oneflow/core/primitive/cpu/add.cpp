@@ -76,11 +76,7 @@ class AddImpl : public Add {
 
   void Launch(StreamContext* stream_ctx, const void* src0, const void* src1, void* dst,
               size_t count) override {
-
-    std::cout << "Launch vec " << std::endl;
-
-    vec_binary_add((const T *)src0, (const T*)src1, (T*)dst, count);
-
+    vec_binary_add((const T*)src0, (const T*)src1, (T*)dst, count);
   }
 };
 

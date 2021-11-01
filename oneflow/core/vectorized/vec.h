@@ -35,9 +35,7 @@ class VecFunc<T, typename std::enable_if<std::is_same<T, float>::value
   static void init() {
     auto capability = compute_cpu_capability();
     switch (capability) {
-      case CPUCapability::DEFAULT:
-      {
-        std::cout << "DEFAULT : NO SIMD  float" << std::endl;
+      case CPUCapability::DEFAULT: {
         fmadd_func = VectorizedDefault<T>::fmadd;
         add_func = VectorizedDefault<T>::add;
         sub_func = VectorizedDefault<T>::sub;
@@ -46,9 +44,7 @@ class VecFunc<T, typename std::enable_if<std::is_same<T, float>::value
         break;
       }
 #ifdef WITH_AVX
-      case CPUCapability::AVX2:
-      {
-        std::cout << "AVX2" << std::endl;
+      case CPUCapability::AVX2: {
         fmadd_func = VectorizedAvx2<T>::fmadd;
         add_func = VectorizedAvx2<T>::add;
         sub_func = VectorizedAvx2<T>::sub;
@@ -56,9 +52,7 @@ class VecFunc<T, typename std::enable_if<std::is_same<T, float>::value
         div_func = VectorizedAvx2<T>::div;
         break;
       }
-      case CPUCapability::AVX512:
-      {
-        std::cout << "AVX512" << std::endl;
+      case CPUCapability::AVX512: {
         fmadd_func = VectorizedAvx512<T>::fmadd;
         add_func = VectorizedAvx512<T>::add;
         sub_func = VectorizedAvx512<T>::sub;
@@ -82,14 +76,12 @@ class VecFunc<T, typename std::enable_if<std::is_same<T, float>::value
 template<typename T>
 class VecFunc<
     T, typename std::enable_if<std::is_same<T, int8_t>::value || std::is_same<T, int32_t>::value
-                               || std::is_same<T, int64_t>::value >::type> {
+                               || std::is_same<T, int64_t>::value>::type> {
  public:
   static void init() {
     auto capability = compute_cpu_capability();
     switch (capability) {
-      case CPUCapability::DEFAULT:
-      {
-        std::cout << "DEFAULT : NO SIMD  int" << std::endl;
+      case CPUCapability::DEFAULT: {
         add_func = VectorizedDefault<T>::add;
         sub_func = VectorizedDefault<T>::sub;
         mul_func = VectorizedDefault<T>::mul;
@@ -97,18 +89,14 @@ class VecFunc<
         break;
       }
 #ifdef WITH_AVX
-      case CPUCapability::AVX2:
-      {
-        std::cout << "AVX2" << std::endl;
+      case CPUCapability::AVX2: {
         add_func = VectorizedAvx2<T>::add;
         sub_func = VectorizedAvx2<T>::sub;
         mul_func = VectorizedAvx2<T>::mul;
         div_func = VectorizedAvx2<T>::div;
         break;
       }
-      case CPUCapability::AVX512:
-      {
-        std::cout << "AVX512" << std::endl;
+      case CPUCapability::AVX512: {
         add_func = VectorizedAvx512<T>::add;
         sub_func = VectorizedAvx512<T>::sub;
         mul_func = VectorizedAvx512<T>::mul;

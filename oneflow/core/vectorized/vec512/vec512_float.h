@@ -26,7 +26,8 @@ namespace oneflow {
 template<>
 class VectorizedAvx512<float> {
  public:
-  static void fmadd(size_t begin, size_t end, const float* x, const float* y, float* out, float alpha) {
+  static void fmadd(size_t begin, size_t end, const float* x, const float* y, float* out,
+                    float alpha) {
     size_t i = begin;
     size_t stride = 16;
 

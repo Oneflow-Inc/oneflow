@@ -64,8 +64,8 @@ class VectorizedAvx2<int32_t> {
 template<>
 class VectorizedAvx2<int64_t> {
  public:
-  // static void fmadd(size_t begin, size_t end, const int32_t * x, const int32_t * y, int32_t *out, int32_t
-  // alpha)
+  // static void fmadd(size_t begin, size_t end, const int32_t * x, const int32_t * y, int32_t *out,
+  // int32_t alpha)
   // {
   //     for (size_t i = begin; i <= end; i ++) {
   //         out[i] = x[i] * alpha + y[i];

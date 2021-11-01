@@ -24,34 +24,21 @@ CPUCapability compute_cpu_capability() {
   auto envar = std::getenv("ONEFLOW_CPU_CAPABILITY");
   if (envar) {
 #ifdef WITH_AVX
-    if (strcmp(envar, "avx512") == 0) {
-      std::cout << "ENV  avx512 " << std::endl;
-      return CPUCapability::AVX512;
-    }
-    if (strcmp(envar, "avx2") == 0) {
-      std::cout << "ENV  avx2 " << std::endl;
-      return CPUCapability::AVX2;
-    }
+    if (strcmp(envar, "avx512") == 0) { return CPUCapability::AVX512; }
+    if (strcmp(envar, "avx2") == 0) { return CPUCapability::AVX2; }
 #endif
     if (strcmp(envar, "default") == 0) { return CPUCapability::DEFAULT; }
   }
 
   if (cpuinfo_initialize()) {
-
 #ifdef WITH_AVX
     if (cpuinfo_has_x86_avx512vl() && cpuinfo_has_x86_avx512bw() && cpuinfo_has_x86_avx512dq()
         && cpuinfo_has_x86_fma3()) {
-      std::cout << "CPUCapability  avx512 " << std::endl;
       return CPUCapability::AVX512;
     }
-    if (cpuinfo_has_x86_avx2() && cpuinfo_has_x86_fma3()) {
-      std::cout << "CPUCapability  avx2 " << std::endl;
-      return CPUCapability::AVX2;
-    }
+    if (cpuinfo_has_x86_avx2() && cpuinfo_has_x86_fma3()) { return CPUCapability::AVX2; }
 #endif
   }
-
-  std::cout << "CPUCapability  DEFAULT " << std::endl;
   return CPUCapability::DEFAULT;
 }
 

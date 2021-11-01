@@ -64,9 +64,7 @@ void MultiThreadLoop(size_t num, const DoEachT& DoEach) {
   bc.WaitUntilCntEqualZero();
 }
 
-inline size_t divup(size_t x, size_t y) {
-  return (x + y - 1) / y;
-}
+inline size_t divup(size_t x, size_t y) { return (x + y - 1) / y; }
 
 #define ONEFLOE_GRAIN_SIZE 32768
 
@@ -75,14 +73,12 @@ void MultiThreadVecLoop(size_t num, const DoEachT& DoEach, size_t grain_size = O
   if (num == 0) { return; }
   size_t thread_num = Global<ThreadPool>::Get()->thread_num();
   thread_num = std::min(thread_num, divup(num, grain_size));
-  std::cout << "Global<ThreadPool> = " << thread_num << std::endl;
   BalancedSplitter bs(num, thread_num);
   BlockingCounter bc(thread_num);
   FOR_RANGE(size_t, range_id, 0, thread_num) {
     Global<ThreadPool>::Get()->AddWork([&bc, &bs, range_id, DoEach] {
       size_t start = bs.At(range_id).begin();
       size_t end = bs.At(range_id).end();
-      std::cout <<  start << " - " << end << std::endl;
       DoEach(start, end);
       bc.Decrease();
     });
