@@ -25,6 +25,7 @@ if (RPC_BACKEND MATCHES "GRPC")
 endif()
 include(flatbuffers)
 include(lz4)
+include(cpuinfo)
 
 if (WITH_XLA)
   include(tensorflow)
@@ -138,6 +139,7 @@ set(oneflow_third_party_libs
     ${CMAKE_THREAD_LIBS_INIT}
     ${FLATBUFFERS_STATIC_LIBRARIES}
     ${LZ4_STATIC_LIBRARIES}
+    ${CPUINFO_STATIC_LIBRARIES}
 )
 
 if (NOT WITH_XLA)
@@ -159,6 +161,7 @@ set(oneflow_third_party_dependencies
   opencv_copy_headers_to_destination
   libpng_copy_headers_to_destination
   opencv_copy_libs_to_destination
+  libcpuinfo_copy_libs_to_destination
   eigen
   half_copy_headers_to_destination
   re2
@@ -196,6 +199,7 @@ list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS
     ${OPENSSL_INCLUDE_DIR}
     ${FLATBUFFERS_INCLUDE_DIR}
     ${LZ4_INCLUDE_DIR}
+    ${CPUINFO_INCLUDE_DIR}
 )
 
 if (NOT WITH_XLA)

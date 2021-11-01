@@ -14,7 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/primitive/include/add.h"
+#include <cstdint>
 #include "oneflow/core/primitive/cpu/type_seq.h"
+#include "oneflow/core/vectorized/vec_binary_math.h"
+#include <stdio.h>
 
 namespace oneflow {
 
@@ -70,6 +73,15 @@ class AddImpl : public Add {
     ONE_ELIF(8)
     ONE_ELSE
   }
+
+  void Launch(StreamContext* stream_ctx, const void* src0, const void* src1, void* dst,
+              size_t count) override {
+
+    std::cout << "Launch vec " << std::endl;
+
+    vec_binary_add((const T *)src0, (const T*)src1, (T*)dst, count);
+
+  }
 };
 
 template<typename T>
@@ -87,7 +99,7 @@ class AddFactoryImpl : public AddFactory {
 #define MAKE_NEW_ADD_ENTRY(type_cpp, type_proto) {type_proto, NewAdd<type_cpp>},
 
     static const std::map<DataType, std::function<std::unique_ptr<Add>()>> new_add_handle{
-        OF_PP_FOR_EACH_TUPLE(MAKE_NEW_ADD_ENTRY, CPU_PRIMITIVE_ALL_TYPE_SEQ)};
+        OF_PP_FOR_EACH_TUPLE(MAKE_NEW_ADD_ENTRY, CPU_PRIMITIVE_AVX_TYPE_SEQ)};
 #undef MAKE_NEW_ADD_ENTRY
     const auto it = new_add_handle.find(data_type);
     if (it != new_add_handle.end()) {

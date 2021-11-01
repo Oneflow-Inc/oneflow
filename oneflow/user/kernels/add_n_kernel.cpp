@@ -53,7 +53,11 @@ class AddNKernel : public OpKernel, public CudaGraphSupport {
       CHECK_EQ(in_i->data_type(), data_type);
       srcs[i] = in_i->template dptr();
     }
-    primitive->Launch(ctx->stream_ctx(), srcs.data(), in_num, out->mut_dptr(), count);
+    if (in_num == 2) {
+      primitive->Launch(ctx->stream_ctx(), srcs[0], srcs[1], out->mut_dptr(), count);
+    } else {
+      primitive->Launch(ctx->stream_ctx(), srcs.data(), in_num, out->mut_dptr(), count);
+    }
   }
 };
 
