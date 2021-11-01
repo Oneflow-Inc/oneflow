@@ -93,7 +93,6 @@ KernelComputeContext* GetKernelComputeContext(const ::oneflow::UserOpConf& user_
   static std::vector<std::shared_ptr<KernelComputeContext>> created;
 }
 
-// TODO: define JITKernelLaunchContext, has a kernel ptr and a compute context ptr
 extern "C" void _mlir_ciface_LaunchOneFlowKernel(JITKernelLaunchContext* ctx) {
   ctx->kernel->Compute(ctx->compute_ctx);
 }
