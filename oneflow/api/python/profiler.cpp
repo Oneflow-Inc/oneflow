@@ -27,6 +27,8 @@ ONEFLOW_API_PYBIND11_MODULE("profiler", m) {
 
   m.def("RangePop", []() { OF_PROFILER_RANGE_POP(); });
 
+  m.def("Mark", [](const std::string& msg) { OF_PROFILER_MARK(msg); });
+
   m.def("ProfilerStart", []() { profiler::ProfilerStart(); });
 
   m.def("ProfilerStop", []() { profiler::ProfilerStop(); });

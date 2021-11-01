@@ -28,6 +28,8 @@ void RangePush(const std::string& name);
 
 void RangePop();
 
+void Mark(const std::string& name);
+
 void LogHostMemoryUsage(const std::string& name);
 
 void ProfilerStart();
@@ -51,6 +53,7 @@ class RangeGuard final {
 #define OF_PROFILER_ONLY_CODE(...) __VA_ARGS__
 #define OF_PROFILER_RANGE_PUSH(name) ::oneflow::profiler::RangePush(name)
 #define OF_PROFILER_RANGE_POP() ::oneflow::profiler::RangePop()
+#define OF_PROFILER_MARK(name) ::oneflow::profiler::Mark(name)
 #define OF_PROFILER_RANGE_GUARD(name) \
   ::oneflow::profiler::RangeGuard OF_PP_CAT(_of_profiler_range_guard_, __COUNTER__)(name)
 #define OF_PROFILER_LOG_HOST_MEMORY_USAGE(name) ::oneflow::profiler::LogHostMemoryUsage(name)

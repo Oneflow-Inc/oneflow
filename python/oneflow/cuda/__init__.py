@@ -26,3 +26,5 @@ def is_available() -> bool:
 def device_count() -> int:
     r"""Returns the number of GPUs available.."""
     return flow._oneflow_internal.CudaGetDeviceCount()
+
+from . import nvtx

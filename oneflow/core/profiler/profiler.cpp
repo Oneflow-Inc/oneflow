@@ -45,6 +45,12 @@ void RangePush(const std::string& name) {
 #endif  // OF_ENABLE_PROFILER
 }
 
+void Mark(const std::string message){
+  #ifdef OF_ENABLE_PROFILER
+  nvtxMarkA(message.c_str());
+  #endif  // OF_ENABLE_PROFILER
+}
+
 void RangePop() {
 #ifdef OF_ENABLE_PROFILER
   nvtxRangePop();
