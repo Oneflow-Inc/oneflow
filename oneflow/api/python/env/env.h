@@ -18,12 +18,13 @@ limitations under the License.
 
 #include <string>
 #include <google/protobuf/text_format.h>
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/cluster.h"
 #include "oneflow/core/job/cluster_instruction.h"
-#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/rpc/include/base.h"
 
@@ -42,19 +43,6 @@ inline Maybe<std::string> EnvResource() {
 inline Maybe<void> EnableEagerEnvironment(bool enable_eager_execution) {
   CHECK_NOTNULL_OR_RETURN((Global<bool, EagerExecution>::Get()));
   *Global<bool, EagerExecution>::Get() = enable_eager_execution;
-  return Maybe<void>::Ok();
-}
-
-inline Maybe<bool>* IsMultiClientPtr() { return Global<Maybe<bool>, MultiClient>::Get(); }
-
-inline Maybe<bool> IsMultiClient() {
-  CHECK_NOTNULL_OR_RETURN(IsMultiClientPtr());
-  return *IsMultiClientPtr();
-}
-
-inline Maybe<void> SetIsMultiClient(bool is_multi_client) {
-  CHECK_NOTNULL_OR_RETURN(IsMultiClientPtr());
-  *IsMultiClientPtr() = is_multi_client;
   return Maybe<void>::Ok();
 }
 

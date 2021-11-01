@@ -31,7 +31,7 @@ void WaitAndSendIdsKernel<T>::ForwardDataContent(KernelContext* ctx) const {
   auto* status = CHECK_NOTNULL(dynamic_cast<WaitAndSendIdsStatus*>(ctx->state().get()));
   const auto& conf = this->op_conf().wait_and_send_ids_conf();
   if (status->out_idx_ >= status->out_num_) {
-    if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+    if (CHECK_JUST(*Global<Optional<bool>, MultiClient>::Get())) {
       CHECK(this->op_conf().wait_and_send_ids_conf().has_job_name());
       const auto& job_name = this->op_conf().wait_and_send_ids_conf().job_name();
       auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
@@ -53,7 +53,7 @@ void WaitAndSendIdsKernel<T>::ForwardDataContent(KernelContext* ctx) const {
     }
   }
 
-  if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+  if (CHECK_JUST(*Global<Optional<bool>, MultiClient>::Get())) {
     *ctx->BnInOp2Blob("out")->mut_dptr<T>() = 0;
   } else {
     *ctx->BnInOp2Blob("out")->mut_dptr<T>() = conf.id_list(status->in_id_).value(status->out_idx_);

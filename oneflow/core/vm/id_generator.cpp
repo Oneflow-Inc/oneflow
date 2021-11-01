@@ -13,16 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/multi_client.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/vm/id_generator.h"
 #include "oneflow/core/vm/id_util.h"
-#include "oneflow/core/control/global_process_ctx.h"
-#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 namespace vm {
 
 Maybe<int64_t> LogicalIdGenerator::NewSymbolId() {
-  if (JUST(GlobalMultiClientEnv())) {
+  if (JUST(IsMultiClient())) {
     // NOTE(chengcheng): in Multi-Client LogicalIdGenerator will degenerate directly to
     //   PhysicalIdGenerator, because each rank will generate id ONLY from itself, NOT the master.
     return IdUtil::NewPhysicalSymbolId(GlobalProcessCtx::Rank());
@@ -32,7 +32,7 @@ Maybe<int64_t> LogicalIdGenerator::NewSymbolId() {
 }
 
 Maybe<int64_t> LogicalIdGenerator::NewObjectId() {
-  if (JUST(GlobalMultiClientEnv())) {
+  if (JUST(IsMultiClient())) {
     // NOTE(chengcheng): in Multi-Client LogicalIdGenerator will degenerate directly to
     //   PhysicalIdGenerator, because each rank will generate id ONLY from itself, NOT the master.
     return IdUtil::NewPhysicalObjectId(GlobalProcessCtx::Rank());

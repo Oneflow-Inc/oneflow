@@ -37,7 +37,7 @@ template<typename T>
 void CallbackNotifyKernel<T>::ForwardDataContent(KernelContext* ctx) const {
   auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
   std::string buffer_name;
-  if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+  if (CHECK_JUST(*Global<Optional<bool>, MultiClient>::Get())) {
     CHECK(this->op_conf().callback_notify_conf().has_job_name());
     buffer_name = GetCallbackNotifierBufferName(this->op_conf().callback_notify_conf().job_name());
   } else {
