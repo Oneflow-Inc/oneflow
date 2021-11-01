@@ -27,9 +27,9 @@ class TestParitalFC(flow.unittest.TestCase):
         label = flow.randint(0, 50000, (512,), placement=p, sbp=flow.sbp.broadcast)
         num_sample = 5000
         out = flow.distributed_partial_fc_sample(w, label, num_sample)
-        assert out[0].shape == flow.Size([512])
-        assert out[1].shape == flow.Size([5000])
-        assert out[2].shape == flow.Size([5000, 128])
+        test_case.assertTrue(out[0].shape == flow.Size([512]))
+        test_case.assertTrue(out[1].shape == flow.Size([5000]))
+        test_case.assertTrue(out[2].shape == flow.Size([5000, 128]))
 
 
 if __name__ == "__main__":
