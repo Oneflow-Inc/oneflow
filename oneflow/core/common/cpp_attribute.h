@@ -16,7 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_CPP_ATTRIBUTE_H_
 #define ONEFLOW_CORE_COMMON_CPP_ATTRIBUTE_H_
 
-#define likely(x) __builtin_expect((x), 1)
-#define unlikely(x) __builtin_expect((x), 0)
+#include <gtest/gtest.h>
+
+#define likely GOOGLE_PREDICT_TRUE
+#define unlikely GOOGLE_PREDICT_FALSE
 
 #endif  // ONEFLOW_CORE_COMMON_CPP_ATTRIBUTE_H_

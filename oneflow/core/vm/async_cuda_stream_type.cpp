@@ -33,10 +33,10 @@ void AsyncCudaStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
 void AsyncCudaStreamType::InitInstructionStatus(const Stream& stream,
                                                 InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(CudaOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
-  auto* event_provider = dynamic_cast<QueryEventProvider*>(stream.device_ctx().get());
+  auto* event_provider = dynamic_cast<QueryCudaEventProvider*>(stream.device_ctx().get());
   auto* data_ptr = status_buffer->mut_buffer()->mut_data();
-  const auto& device_event = CHECK_NOTNULL(event_provider)->GetSingleThreadReusedDeviceEvent();
-  CudaOptionalEventRecordStatusQuerier::PlacementNew(data_ptr, device_event);
+  const auto& cuda_event = CHECK_NOTNULL(event_provider)->GetSingleThreadReusedEvent();
+  CudaOptionalEventRecordStatusQuerier::PlacementNew(data_ptr, cuda_event);
 }
 
 void AsyncCudaStreamType::DeleteInstructionStatus(const Stream& stream,

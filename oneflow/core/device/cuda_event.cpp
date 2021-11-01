@@ -14,23 +14,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <vector>
-#include "oneflow/core/device/device_event.h"
+#include "oneflow/core/device/cuda_event.h"
 
 namespace oneflow {
 
 #ifdef WITH_CUDA
 
-DeviceEvent::DeviceEvent(int device_id, unsigned int flags) : device_id_(device_id) {
+CudaEvent::CudaEvent(int device_id, unsigned int flags) : device_id_(device_id) {
   CudaCurrentDeviceGuard guard(device_id_);
   OF_CUDA_CHECK(cudaEventCreateWithFlags(&event_, flags));
 }
 
-DeviceEvent::~DeviceEvent() {
+CudaEvent::~CudaEvent() {
   CudaCurrentDeviceGuard guard(device_id_);
-  cudaEventDestroy(event_);
+  OF_CUDA_CHECK(cudaEventDestroy(event_));
 }
 
-bool DeviceEvent::Query() const { return cudaEventQuery(event_) != cudaErrorNotReady; }
+bool CudaEvent::Query() const { return cudaEventQuery(event_) != cudaErrorNotReady; }
 
 #endif
 

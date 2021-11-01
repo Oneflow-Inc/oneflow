@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <atomic>
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/device/device_event.h"
+#include "oneflow/core/device/cuda_event.h"
 
 namespace oneflow {
 
@@ -32,12 +32,10 @@ class CudaOptionalEventRecordStatusQuerier {
  public:
   ~CudaOptionalEventRecordStatusQuerier();
 
-  bool done() const { return launched_ && (!device_event_ || event_completed()); }
+  bool done() const { return launched_ && (!cuda_event_ || event_completed()); }
   void SetLaunched(DeviceCtx* device_ctx);
 
-  void reset_device_event(const std::shared_ptr<DeviceEvent>& device_event) {
-    device_event_ = device_event;
-  }
+  void reset_cuda_event(const std::shared_ptr<CudaEvent>& cuda_event) { cuda_event_ = cuda_event; }
 
   static const CudaOptionalEventRecordStatusQuerier* Cast(const char* mem_ptr) {
     return reinterpret_cast<const CudaOptionalEventRecordStatusQuerier*>(mem_ptr);
@@ -46,17 +44,17 @@ class CudaOptionalEventRecordStatusQuerier {
     return reinterpret_cast<CudaOptionalEventRecordStatusQuerier*>(mem_ptr);
   }
   static CudaOptionalEventRecordStatusQuerier* PlacementNew(
-      char* mem_ptr, const std::shared_ptr<DeviceEvent>& device_event) {
-    return new (mem_ptr) CudaOptionalEventRecordStatusQuerier(device_event);
+      char* mem_ptr, const std::shared_ptr<CudaEvent>& cuda_event) {
+    return new (mem_ptr) CudaOptionalEventRecordStatusQuerier(cuda_event);
   }
 
  private:
-  explicit CudaOptionalEventRecordStatusQuerier(const std::shared_ptr<DeviceEvent>& device_event)
-      : launched_(false), device_event_(device_event) {}
+  explicit CudaOptionalEventRecordStatusQuerier(const std::shared_ptr<CudaEvent>& cuda_event)
+      : launched_(false), cuda_event_(cuda_event) {}
   bool event_completed() const;
 
   std::atomic<bool> launched_;
-  std::shared_ptr<DeviceEvent> device_event_;
+  std::shared_ptr<CudaEvent> cuda_event_;
 };
 
 #endif

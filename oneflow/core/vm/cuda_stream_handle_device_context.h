@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/device/device_context.h"
-#include "oneflow/core/device/device_event.h"
+#include "oneflow/core/device/cuda_event.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/vm/cuda_allocator.h"
 #include "oneflow/core/vm/thread_safe_allocator.h"
@@ -29,7 +29,7 @@ namespace vm {
 
 #ifdef WITH_CUDA
 
-class CudaStreamHandleDeviceCtx : public DeviceCtx, public QueryEventProvider {
+class CudaStreamHandleDeviceCtx : public DeviceCtx, public QueryCudaEventProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaStreamHandleDeviceCtx);
   CudaStreamHandleDeviceCtx() = delete;
@@ -37,7 +37,7 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx, public QueryEventProvider {
 
   CudaStreamHandleDeviceCtx(int64_t device_id)
       : DeviceCtx(),
-        QueryEventProvider(device_id),
+        QueryCudaEventProvider(device_id),
         cuda_handler_(new CudaStreamHandle(nullptr)),
         cuda_allocator_(
             new ThreadSafeAllocator(std::unique_ptr<Allocator>(new CudaAllocator(device_id)))),
