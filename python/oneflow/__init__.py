@@ -128,6 +128,7 @@ from oneflow._C import softplus
 from oneflow._C import tril
 from oneflow._C import triu
 from oneflow._C import pad
+from oneflow._C import distributed_partial_fc_sample
 from oneflow._C import transpose
 from oneflow._C import relu
 from oneflow._C import softmax
