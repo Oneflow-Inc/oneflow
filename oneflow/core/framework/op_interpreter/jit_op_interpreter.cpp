@@ -99,7 +99,6 @@ Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTup
   importer_.GetOrInsertFunc(GetJitFuncName(), inputs, outputs);
   importer_.CreateOperandMapping(*op_conf, parallel_desc, op_expr.input_arg_tuple(), inputs);
   CHECK_OR_RETURN(importer_.ProcessUserOp(*op_conf).succeeded());
-  // TODO: MLIR add op expr
   return Maybe<void>::Ok();
 }
 
