@@ -20,62 +20,11 @@ namespace oneflow {
 
 namespace {
 
-// template<typename T>
-// __device__ T GenUniform(curandStatePhilox4_32_10_t* state, const T low, const T high);
-
-// template<>
-// __device__ float GenUniform<float>(curandStatePhilox4_32_10_t* state, const float low, const float high) {
-//   auto rand_num = curand_uniform(state);
-//   // curand_uniform generates (0.0, 1.0], but we want [0.0, 1.0) here
-//   if (rand_num == 1.0) { rand_num = 0.0; }
-//   return rand_num * (high - low) + low;
-// }
-
-// template<>
-// __device__ double GenUniform<double>(curandStatePhilox4_32_10_t* state, const double low, const double high) {
-//   auto rand_num = curand_uniform_double(state);
-//   // curand_uniform_double generates (0.0, 1.0], but we want [0.0, 1.0) here
-//   if (rand_num == 1.0) { rand_num = 0.0; }
-//   return rand_num * (high - low) + low;
-// }
-
-// template<typename T>
-// __global__ void GenerateGpu(curandStatePhilox4_32_10_t* state, const int64_t elem_cnt, T* dptr, const T low,
-//                             const T high) {
-//   const int id = blockIdx.x * blockDim.x + threadIdx.x;
-//   curandState localState = state[id];
-//   CUDA_1D_KERNEL_LOOP(i, elem_cnt) { dptr[i] = GenUniform<T>(&localState, low, high); }
-//   state[id] = localState;
-// }
-
-// }  // namespace
-
-// template<typename T>
-// void UniformDistribution<DeviceType::kGPU, T>::operator()(
-//     DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,
-//     const std::shared_ptr<one::Generator>& generator) const {
-//   CHECK_GE(elem_cnt, 0);
-//   auto gen = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
-//   int32_t block_num = gen->max_block_num();
-//   int32_t thread_num = gen->max_thread_num();
-//   auto* curand_states = gen->curand_states();
-//   GenerateGpu<T><<<block_num, thread_num, 0, device_ctx->cuda_stream()>>>(curand_states, elem_cnt,
-//                                                                           dptr, low_, high_);
-// }
-
-// #define INITIATE_GPU_UNIFORM_DISTRIBUTION(T, typeproto)               \
-//   template void UniformDistribution<DeviceType::kGPU, T>::operator()( \
-//       DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,         \
-//       const std::shared_ptr<one::Generator>& generator) const;
-
-// OF_PP_FOR_EACH_TUPLE(INITIATE_GPU_UNIFORM_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
-
-
 template<typename T>
-__device__ T GenUniform(curandStatePhilox4_32_10_t* state, const T low, const T high);
+__device__ T GenUniform(curandState* state, const T low, const T high);
 
 template<>
-__device__ float GenUniform<float>(curandStatePhilox4_32_10_t* state, const float low, const float high) {
+__device__ float GenUniform<float>(curandState* state, const float low, const float high) {
   auto rand_num = curand_uniform(state);
   // curand_uniform generates (0.0, 1.0], but we want [0.0, 1.0) here
   if (rand_num == 1.0) { rand_num = 0.0; }
@@ -83,7 +32,7 @@ __device__ float GenUniform<float>(curandStatePhilox4_32_10_t* state, const floa
 }
 
 template<>
-__device__ double GenUniform<double>(curandStatePhilox4_32_10_t* state, const double low, const double high) {
+__device__ double GenUniform<double>(curandState* state, const double low, const double high) {
   auto rand_num = curand_uniform_double(state);
   // curand_uniform_double generates (0.0, 1.0], but we want [0.0, 1.0) here
   if (rand_num == 1.0) { rand_num = 0.0; }
@@ -91,10 +40,10 @@ __device__ double GenUniform<double>(curandStatePhilox4_32_10_t* state, const do
 }
 
 template<typename T>
-__global__ void GenerateGpu(curandStatePhilox4_32_10_t* state, const int64_t elem_cnt, T* dptr, const T low,
+__global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, T* dptr, const T low,
                             const T high) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandStatePhilox4_32_10_t localState = state[id];
+  curandState localState = state[id];
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) { dptr[i] = GenUniform<T>(&localState, low, high); }
   state[id] = localState;
 }
@@ -120,7 +69,5 @@ void UniformDistribution<DeviceType::kGPU, T>::operator()(
       const std::shared_ptr<one::Generator>& generator) const;
 
 OF_PP_FOR_EACH_TUPLE(INITIATE_GPU_UNIFORM_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
-
-
 
 }  // namespace oneflow

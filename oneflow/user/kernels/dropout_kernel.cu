@@ -115,20 +115,18 @@ void MaskAndScaleAdd<half>(DeviceCtx* ctx, const int64_t n, float scale, const h
 
 template<typename T, typename MASK>
 struct MaskAndScaleFunctor {
-  MaskAndScaleFunctor(float scale): scale(scale){}
-  OF_DEVICE_FUNC T operator()(T x, MASK mask) const {
-    return x * static_cast<T>(mask) * scale;
-  }
-  float scale; 
+  MaskAndScaleFunctor(float scale) : scale(scale) {}
+  OF_DEVICE_FUNC T operator()(T x, MASK mask) const { return x * static_cast<T>(mask) * scale; }
+  float scale;
 };
 
 template<typename MASK>
 struct MaskAndScaleFunctor<half, MASK> {
-  MaskAndScaleFunctor(float scale): scale(scale){}
+  MaskAndScaleFunctor(float scale) : scale(scale) {}
   OF_DEVICE_FUNC half operator()(half x, MASK mask) const {
     return x * static_cast<half>(mask) * static_cast<half>(scale);
   }
-  float scale; 
+  float scale;
 };
 
 template<typename T>
@@ -150,10 +148,11 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
                          mask->dptr<int8_t>(), addend->dptr<T>(), out->mut_dptr<T>());
     } else {
       // MaskAndScale<T>(ctx->device_ctx(), in->shape().elem_cnt(), scale, in->dptr<T>(),
-                      // mask->dptr<int8_t>(), out->mut_dptr<T>());
-      const int64_t elem_cnt = in->shape().elem_cnt(); 
-      OF_CUDA_CHECK((cuda::elementwise::Binary(MaskAndScaleFunctor<T, int8_t>(scale), elem_cnt, out->mut_dptr<T>(),
-                      in->dptr<T>(), mask->dptr<int8_t>(), ctx->device_ctx()->cuda_stream())));
+      // mask->dptr<int8_t>(), out->mut_dptr<T>());
+      const int64_t elem_cnt = in->shape().elem_cnt();
+      OF_CUDA_CHECK((cuda::elementwise::Binary(
+          MaskAndScaleFunctor<T, int8_t>(scale), elem_cnt, out->mut_dptr<T>(), in->dptr<T>(),
+          mask->dptr<int8_t>(), ctx->device_ctx()->cuda_stream())));
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

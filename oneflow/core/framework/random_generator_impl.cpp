@@ -159,13 +159,9 @@ CUDAGeneratorImpl::CUDAGeneratorImpl(uint64_t seed, int device_index)
   max_thread_num_ = GetThreadNum(prop);
 
   CudaCurrentDeviceGuard dev_guard(device_index);
-  // OF_CUDA_CHECK(
-  //     cudaMalloc(&curand_states_, max_block_num_ * max_thread_num_ * sizeof(curandState)));
-  // detail::InitCurandStates(seed, max_block_num_, max_thread_num_, curand_states_);
   OF_CUDA_CHECK(
-      cudaMalloc(&curand_states_, max_block_num_ * max_thread_num_ * sizeof(curandStatePhilox4_32_10_t)));
+      cudaMalloc(&curand_states_, max_block_num_ * max_thread_num_ * sizeof(curandState)));
   detail::InitCurandStates(seed, max_block_num_, max_thread_num_, curand_states_);
-  
 }
 
 CUDAGeneratorImpl::~CUDAGeneratorImpl() {

@@ -61,7 +61,7 @@ class NarrowKernel final : public user_op::OpKernel {
     const int64_t& dim = ctx->Attr<int64_t>("dim");
     const int64_t& start = ctx->Attr<int64_t>("start");
     const int64_t& length = ctx->Attr<int64_t>("length");
-    const ShapeView in_shape = in->shape(); 
+    const ShapeView in_shape = in->shape();
     auto primitive = NewCopyNdPrimitive(ctx);
 
     DimVector dst_shape = {in_shape.Count(0, dim), length, in_shape.Count(dim + 1)};
@@ -70,9 +70,9 @@ class NarrowKernel final : public user_op::OpKernel {
     DimVector src_shape = {in_shape.Count(0, dim), in_shape.At(dim), in_shape.Count(dim + 1)};
     DimVector src_pos_vec = {0, start, 0};
     DimVector extent_vec = {in_shape.Count(0, dim), length, in_shape.Count(dim + 1)};
-    primitive->Launch(ctx->stream_ctx(), out->data_type(), 3, out->mut_dptr(),
-                      dst_shape.data(), dst_pos_vec.data(), in->dptr(), src_shape.data(),
-                      src_pos_vec.data(), extent_vec.data());
+    primitive->Launch(ctx->stream_ctx(), out->data_type(), 3, out->mut_dptr(), dst_shape.data(),
+                      dst_pos_vec.data(), in->dptr(), src_shape.data(), src_pos_vec.data(),
+                      extent_vec.data());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -89,7 +89,7 @@ class NarrowGradKernel final : public user_op::OpKernel {
     const int64_t& dim = ctx->Attr<int64_t>("dim");
     const int64_t& start = ctx->Attr<int64_t>("start");
     const int64_t& length = ctx->Attr<int64_t>("length");
-    
+
     size_t dx_byte_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
     void* dst = dx->mut_dptr();
     std::unique_ptr<primitive::Memset> memset_primitive =
@@ -98,7 +98,7 @@ class NarrowGradKernel final : public user_op::OpKernel {
     memset_primitive->Launch(ctx->stream_ctx(), dst, 0, dx_byte_size);
 
     auto primitive = NewCopyNdPrimitive(ctx);
-    const ShapeView dx_shape = dx->shape(); 
+    const ShapeView dx_shape = dx->shape();
 
     DimVector dst_shape = {dx_shape.Count(0, dim), dx_shape.At(dim), dx_shape.Count(dim + 1)};
     DimVector dst_pos_vec = {0, start, 0};
@@ -107,15 +107,18 @@ class NarrowGradKernel final : public user_op::OpKernel {
     DimVector src_pos_vec = {0, 0, 0};
     DimVector extent_vec = {dx_shape.Count(0, dim), length, dx_shape.Count(dim + 1)};
 
-    primitive->Launch(ctx->stream_ctx(), dx->data_type(), 3, dst,
-                      dst_shape.data(), dst_pos_vec.data(), dy->dptr(), src_shape.data(),
-                      src_pos_vec.data(), extent_vec.data());
+    primitive->Launch(ctx->stream_ctx(), dx->data_type(), 3, dst, dst_shape.data(),
+                      dst_pos_vec.data(), dy->dptr(), src_shape.data(), src_pos_vec.data(),
+                      extent_vec.data());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("narrow").SetCreateFn<NarrowKernel>().SetIsMatchedHob(CopyNdPrimitiveExists()== true);
-REGISTER_USER_KERNEL("narrow_grad").SetCreateFn<NarrowGradKernel>().SetIsMatchedHob((MemsetPrimitiveExists() == true) & (CopyNdPrimitiveExists()== true));
+REGISTER_USER_KERNEL("narrow").SetCreateFn<NarrowKernel>().SetIsMatchedHob(CopyNdPrimitiveExists()
+                                                                           == true);
+REGISTER_USER_KERNEL("narrow_grad")
+    .SetCreateFn<NarrowGradKernel>()
+    .SetIsMatchedHob((MemsetPrimitiveExists() == true) & (CopyNdPrimitiveExists() == true));
 
 }  // namespace user_op
 
