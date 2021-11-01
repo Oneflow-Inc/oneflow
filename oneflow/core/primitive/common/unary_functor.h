@@ -22,24 +22,24 @@ namespace oneflow {
 
 namespace primitive {
 
-template<DeviceType device, UnaryOp unary_op, typename Out, typename In>
+template<DeviceType device, UnaryOp unary_op, typename Dst, typename Src>
 struct UnaryFunctor;
 
-template<DeviceType device, typename Out, typename In>
-struct UnaryFunctor<device, UnaryOp::kRelu, Out, In> {
-  OF_DEVICE_FUNC Out operator()(In src) const {
-    const In zero_val = static_cast<In>(0.0);
+template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kRelu, Dst, Src> {
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    const Src zero_val = static_cast<Src>(0.0);
     if (src > zero_val) {
-      return static_cast<Out>(src);
+      return static_cast<Dst>(src);
     } else {
-      return static_cast<Out>(zero_val);
+      return static_cast<Dst>(zero_val);
     }
   }
 };
 
-template<DeviceType device, typename Out, typename In>
-struct UnaryFunctor<device, UnaryOp::kLogicalNot, Out, In> {
-  OF_DEVICE_FUNC Out operator()(In src) const { return static_cast<Out>(!src); }
+template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kLogicalNot, Dst, Src> {
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(!src); }
 };
 
 }  // namespace primitive
