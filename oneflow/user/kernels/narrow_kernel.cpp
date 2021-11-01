@@ -75,8 +75,8 @@ class NarrowKernel final : public user_op::OpKernel {
     DimVector src_pos_vec = {0, start, 0};
     DimVector extent_vec = {rows, length, cols};
     copy_nd_primitive->Launch(ctx->stream_ctx(), out->data_type(), 3, out->mut_dptr(),
-                             dst_shape.data(), dst_pos_vec.data(), in->dptr(), src_shape.data(),
-                             src_pos_vec.data(), extent_vec.data());
+                              dst_shape.data(), dst_pos_vec.data(), in->dptr(), src_shape.data(),
+                              src_pos_vec.data(), extent_vec.data());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -117,8 +117,8 @@ class NarrowGradKernel final : public user_op::OpKernel {
     DimVector extent_vec = {rows, length, cols};
 
     copy_nd_primitive->Launch(ctx->stream_ctx(), dx->data_type(), 3, dst, dst_shape.data(),
-                             dst_pos_vec.data(), dy->dptr(), src_shape.data(), src_pos_vec.data(),
-                             extent_vec.data());
+                              dst_pos_vec.data(), dy->dptr(), src_shape.data(), src_pos_vec.data(),
+                              extent_vec.data());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
