@@ -143,5 +143,29 @@ TEST(Optional, monadic_operations) {
   ASSERT_EQ(b.or_else([] { return Optional<int>(3); }).map([](int x) { return x - 1; }), c);
 }
 
+TEST(Optional, value_or_throw) {
+  Optional<int> a;
+
+  ASSERT_THROW(  // NOLINT(cppcoreguidelines-avoid-goto)
+      { a.value_or_throw(); }, ValueNotFoundException);
+
+  bool thrown = false;
+  try {
+    a.value_or_throw("hello");
+  } catch (ValueNotFoundException& e) {
+    ASSERT_EQ(e.what(), std::string("\nhello"));
+    thrown = true;
+  }
+  ASSERT_TRUE(thrown);
+
+  ASSERT_THROW(  // NOLINT(cppcoreguidelines-avoid-goto)
+      { a.value_or_throw([] { return Error::ValueNotFoundError().error_proto(); }); },
+      ValueNotFoundException);
+
+  a = 1;
+  ASSERT_NO_THROW(  // NOLINT(cppcoreguidelines-avoid-goto)
+      { ASSERT_EQ(a.value_or_throw(), 1); });
+}
+
 }  // namespace test
 }  // namespace oneflow
