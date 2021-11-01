@@ -36,13 +36,6 @@ struct VectorizedInit {
 VectorizedInit vectorized_init_tmp; 
 
 
-
-void tmp_test()
-{
-    std::cout << "____tmp_test____" << std::endl;
-}
-
-
 template<typename T>
 std::function<void(size_t, size_t, T*, T*, T*, T)>
     VecFunc<T, typename std::enable_if<std::is_same<T, float>::value

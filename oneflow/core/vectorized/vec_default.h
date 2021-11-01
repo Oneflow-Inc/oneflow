@@ -27,7 +27,7 @@ class VectorizedDefault {
     for (size_t i = begin; i <= end; i++) { out[i] = x[i] * alpha + y[i]; }
   }
 
-  static void add(size_t begin, size_t end, T* x, T* y, T* out) {
+  static void add(size_t begin, size_t end, const T* x, const T* y, T* out) {
     for (size_t i = begin; i <= end; i++) { out[i] = x[i] + y[i]; }
   }
 
