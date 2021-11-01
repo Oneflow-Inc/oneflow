@@ -35,8 +35,8 @@ def manual_seed(seed):
 
 def _getstate(self):
     return {"device": str(self.device), "state": self.get_state()}
-    
-    
+
+
 def get_rng_state():
     """
     returns the state of the default random number generator
