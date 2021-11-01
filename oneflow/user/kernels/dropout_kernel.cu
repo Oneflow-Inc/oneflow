@@ -16,8 +16,8 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 #include "oneflow/core/kernel/random_generator.h"
-#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
@@ -113,6 +113,15 @@ void MaskAndScaleAdd<half>(DeviceCtx* ctx, const int64_t n, float scale, const h
 }
 
 template<typename T>
+struct MaskAndScaleFunctor {
+  OF_DEVICE_FUNC explicit MaskAndScaleFunctor(float scale) : scale(scale) {}
+  OF_DEVICE_FUNC T operator()(T x, int8_t mask) const {
+    return x * static_cast<T>(mask) * static_cast<T>(scale);
+  }
+  float scale;
+};
+
+template<typename T>
 class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   DropoutKernelGPU() = default;
@@ -130,8 +139,10 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
       MaskAndScaleAdd<T>(ctx->device_ctx(), in->shape().elem_cnt(), scale, in->dptr<T>(),
                          mask->dptr<int8_t>(), addend->dptr<T>(), out->mut_dptr<T>());
     } else {
-      MaskAndScale<T>(ctx->device_ctx(), in->shape().elem_cnt(), scale, in->dptr<T>(),
-                      mask->dptr<int8_t>(), out->mut_dptr<T>());
+      const int64_t elem_cnt = in->shape().elem_cnt();
+      OF_CUDA_CHECK((cuda::elementwise::Binary(
+          MaskAndScaleFunctor<T>(scale), elem_cnt, out->mut_dptr<T>(), in->dptr<T>(),
+          mask->dptr<int8_t>(), ctx->device_ctx()->cuda_stream())));
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -159,8 +170,10 @@ class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::Cud
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const float scale = ctx->Attr<float>("scale");
-    MaskAndScale<T>(ctx->device_ctx(), dy->shape().elem_cnt(), scale, dy->dptr<T>(),
-                    mask->dptr<int8_t>(), dx->mut_dptr<T>());
+    const int64_t elem_cnt = dy->shape().elem_cnt();
+    OF_CUDA_CHECK((cuda::elementwise::Binary(MaskAndScaleFunctor<T>(scale), elem_cnt,
+                                             dx->mut_dptr<T>(), dy->dptr<T>(), mask->dptr<int8_t>(),
+                                             ctx->device_ctx()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
