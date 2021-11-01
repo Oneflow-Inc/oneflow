@@ -87,6 +87,7 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
 
 DTREagerBlobObject::~DTREagerBlobObject() {
   evict_from_pool();
+  clear_invalid_object();
   non_pod_initer_.reset();
   tensor_buffer_.reset();
   blob_.reset();
@@ -96,6 +97,11 @@ void DTREagerBlobObject::evict_from_pool() {
   // std::cout << "evict from pool===============================" << std::endl;
   if (IsShuttingDown()) { return; }
   CHECK_JUST(Global<one::DTRTensorPool>::Get()->evict(this));
+}
+
+void DTREagerBlobObject::clear_invalid_object() {
+  if (IsShuttingDown()) { return; }
+  CHECK_JUST(Global<one::DTRTensorPool>::Get()->clear());
 }
 
 Maybe<void> DTREagerBlobObject::InitBlobAttrs(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand) {
@@ -131,24 +137,33 @@ bool DTREagerBlobObject::is_in_memory() const {
 Maybe<double> DTREagerBlobObject::parent_cost() const {
   double cost = 0;
 
-  auto* ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(compute_op_.get());
+  auto* ptr = dynamic_cast<DTRInstrOperand*>(compute_op_.get());
   CHECK_NOTNULL_OR_RETURN(ptr);
-  for (const auto& input : *ptr->inputs()) {
-    CHECK_OR_RETURN(static_cast<bool>(input.get()));
-    auto object = input.get();
-    const auto* dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(input.get());
-    // CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-    if (dtr_blob_object == nullptr) {
-      continue;
-    } else {
+  for (const auto& input : ptr->inputs()) {
+    if (!input.expired()) {
+      auto object = input.lock();
+      const auto dtr_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(object);
+      CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
       if (!dtr_blob_object->is_in_memory()) {
         auto com_time = dtr_blob_object->compute_time();
         auto p_cost = JUST(dtr_blob_object->parent_cost());
         cost = cost + com_time + p_cost;
       }
     }
-    // CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-    
+
+    // CHECK_OR_RETURN(static_cast<bool>(input.get()));
+    // auto object = input.get();
+    // const auto* dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(input.get());
+    // // CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+    // if (dtr_blob_object == nullptr) {
+    //   continue;
+    // } else {
+    //   if (!dtr_blob_object->is_in_memory()) {
+    //     auto com_time = dtr_blob_object->compute_time();
+    //     auto p_cost = JUST(dtr_blob_object->parent_cost());
+    //     cost = cost + com_time + p_cost;
+    //   }
+    // }
   }
 
   return cost;
@@ -158,23 +173,34 @@ Maybe<double> DTREagerBlobObject::child_cost() const {
   double cost = 0;
 
   for (int i = 0; i < user_ops_.size(); ++i) {
-    const auto* ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(CHECK_JUST(user_op(i)));
+    const auto* ptr = dynamic_cast<DTRInstrOperand*>(CHECK_JUST(user_op(i)));
     CHECK_NOTNULL_OR_RETURN(ptr);
-    for (const auto& output : *ptr->outputs()) {
-      CHECK_OR_RETURN(static_cast<bool>(output.get()));
-      auto object = output.get();
-      CHECK_NOTNULL_OR_RETURN(object);
-      const auto* dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(output.get());
-      // CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-      if (dtr_blob_object == nullptr) {
-        continue;
-      } else {
+    for (const auto& output : ptr->outputs()) {
+      if (!output.expired()) {
+        auto object = output.lock();
+        const auto dtr_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(object);
+        CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
         if (!dtr_blob_object->is_in_memory()) {
           auto com_time = dtr_blob_object->compute_time();
           auto c_cost = JUST(dtr_blob_object->child_cost());
           cost = cost + com_time + c_cost;
         }
       }
+
+      // CHECK_OR_RETURN(static_cast<bool>(output.get()));
+      // auto object = output.get();
+      // CHECK_NOTNULL_OR_RETURN(object);
+      // const auto* dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(output.get());
+      // // CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+      // if (dtr_blob_object == nullptr) {
+      //   continue;
+      // } else {
+      //   if (!dtr_blob_object->is_in_memory()) {
+      //     auto com_time = dtr_blob_object->compute_time();
+      //     auto c_cost = JUST(dtr_blob_object->child_cost());
+      //     cost = cost + com_time + c_cost;
+      //   }
+      // }
     }
   }
 
@@ -193,8 +219,8 @@ Maybe<double> DTREagerBlobObject::cost() const {
 }
 
 size_t DTREagerBlobObject::input_size() const {
-  const auto& ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(compute_op_.get());
-  return ptr->inputs()->size();
+  const auto& ptr = dynamic_cast<DTRInstrOperand*>(compute_op_.get());
+  return ptr->inputs().size();
 }
 
 }  // namespace vm

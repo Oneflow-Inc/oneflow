@@ -166,7 +166,7 @@ Maybe<void> ForEachOutputBnAndBlobObject(vm::Instruction* instruction, const T& 
 }
 
 template<typename DoEachT>
-Maybe<void> ForEachSharedDTROutputTensor(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand, const DoEachT& DoEach) {
+Maybe<void> ForEachDTROutputTensor(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand, const DoEachT& DoEach) {
   auto* ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(operand.get());
   CHECK_NOTNULL_OR_RETURN(ptr);
   for (const auto& output : *ptr->outputs()) {
@@ -174,19 +174,6 @@ Maybe<void> ForEachSharedDTROutputTensor(std::shared_ptr<LocalCallOpKernelPhyIns
       auto shared_dtr_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(output);
       CHECK_NOTNULL_OR_RETURN(shared_dtr_blob_object);
       JUST(DoEach(shared_dtr_blob_object));
-  }
-  return Maybe<void>::Ok();
-}
-
-template<typename DoEachT>
-Maybe<void> ForEachDTROutputTensor(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand, const DoEachT& DoEach) {
-  auto* ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(operand.get());
-  CHECK_NOTNULL_OR_RETURN(ptr);
-  for (const auto& output : *ptr->outputs()) {
-      CHECK_OR_RETURN(static_cast<bool>(output.get()));
-      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(output.get());
-      CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-      JUST(DoEach(dtr_blob_object));
   }
   return Maybe<void>::Ok();
 }
@@ -215,6 +202,26 @@ Maybe<void> ForEachDTRInputTensor(LocalCallOpKernelPhyInstrOperand* operand, con
       JUST(DoEach(dtr_blob_object));
   }
   return Maybe<void>::Ok();
+}
+
+std::unique_ptr<LocalCallOpKernelPhyInstrOperand> DTROp2LocalCallOp(DTRInstrOperand* operand) {
+  const auto inputs = operand->inputs();
+  const auto outputs = operand->outputs();
+
+  std::shared_ptr<one::EagerBlobObjectList> input_shared_ptr = std::make_shared<one::EagerBlobObjectList>(inputs.size());
+  std::shared_ptr<one::EagerBlobObjectList> output_shared_ptr = std::make_shared<one::EagerBlobObjectList>(outputs.size());
+
+  for (int i = 0; i < inputs.size(); ++i) {
+    input_shared_ptr->at(i) = inputs[i].lock();
+  }
+
+  for (int i = 0; i < outputs.size(); ++i) {
+    output_shared_ptr->at(i) = outputs[i].lock();
+  }
+
+  auto phy_instr_operand = std::make_unique<LocalCallOpKernelPhyInstrOperand>(operand->shared_opkernel(), input_shared_ptr, output_shared_ptr, operand->consistent_tensor_infer_result(), operand->op_interp_ctx(), operand->dev_vm_dep_object_consume_mode());
+
+  return phy_instr_operand;
 }
 
 template<typename T>
@@ -724,7 +731,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
 
   static inline Maybe<void> InitOutputBlobAttrs(vm::Instruction* instruction) {
     auto operand = JUST(GetSharedLocalCallOpKernelPhyInstrOperand(instruction));
-    JUST(ForEachDTROutputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
+    JUST(ForEachDTROutputTensor(operand, [&](std::shared_ptr<vm::DTREagerBlobObject> dtr_blob_object) -> Maybe<void> {
       JUST(dtr_blob_object->InitBlobAttrs(operand));
       return Maybe<void>::Ok();
     }));
@@ -738,7 +745,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
       dtr_blob_object->unpin();
       return Maybe<void>::Ok();
     }));
-    JUST(ForEachSharedDTROutputTensor(operand, [&](std::shared_ptr<vm::DTREagerBlobObject> dtr_blob_object) -> Maybe<void> {
+    JUST(ForEachDTROutputTensor(operand, [&](std::shared_ptr<vm::DTREagerBlobObject> dtr_blob_object) -> Maybe<void> {
       dtr_blob_object->set_compute_time(compute_time);
       // Condition - insert current blob into candidates only when blob memory > threshold (with default 0)
       JUST(Global<one::DTRTensorPool>::Get()->insert(dtr_blob_object));
@@ -760,12 +767,13 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
   }
 
   static inline Maybe<void> recompute(vm::DTREagerBlobObject* object, const vm::Stream& stream) {
-    auto* operand = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(object->compute_op());
-    CHECK_NOTNULL_OR_RETURN(operand);
+    auto unique_op = DTROp2LocalCallOp(object->compute_op());
+    CHECK_NOTNULL_OR_RETURN(unique_op);
     DeviceCtx* device_ctx = stream.device_ctx().get();
 
     // pin inputs
     // TODO for each ptr rather than shared_ptr
+    auto* operand = unique_op.get();
     JUST(ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
       dtr_blob_object->pin();
       return Maybe<void>::Ok();

@@ -60,8 +60,10 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
             }
             tensor_id++;
         } else {
-            std::cout << "Unable to lock candidates in tensor pool!" << std::endl;
+            display();
+            std::cout << "Unable to lock candidates in tensor pool: " << id << ", is_expired: " << object.expired() << std::endl;
         }
+        id++;
     }
     if (oneflow::DTRDebugEnabled()) {
         std::cout << "Evict " << evict_object_id << "th object." << std::endl;
@@ -100,6 +102,7 @@ Maybe<void> DTRTensorPool::evict(vm::DTREagerBlobObject* blob_object) {
     CHECK_NOTNULL_OR_RETURN(blob_object);
     auto object = candidates_.begin();
     while (object != candidates_.end()) {
+        // std::cout << "object->lock.get(): " << object->lock().get() << std::endl;
         if (object->lock().get() == blob_object) {
             if (oneflow::DTRDebugEnabled()) {
                 std::cout << "Successfully erase candidates before deconstruction: " << blob_object << std::endl;
@@ -108,13 +111,29 @@ Maybe<void> DTRTensorPool::evict(vm::DTREagerBlobObject* blob_object) {
             num_destruction_++;
             return Maybe<void>::Ok();
         }
-        object++;
+        ++object;
     }
 
     if (oneflow::DTRDebugEnabled()) {
         std::cout << "Unsuccessfully erase candidates before deconstruction: " << blob_object << std::endl;
     }
 
+    return Maybe<void>::Ok();
+}
+
+Maybe<void> DTRTensorPool::clear() {
+    auto object = candidates_.begin();
+    while (object != candidates_.end()) {
+        if (object->lock().get() == nullptr) {
+            if (oneflow::DTRDebugEnabled()) {
+                std::cout << "Erase nullptr candidates from tensor_pool." << std::endl;
+            }
+            candidates_.erase(object);
+            num_destruction_++;
+            return Maybe<void>::Ok();
+        }
+        ++object;
+    }
     return Maybe<void>::Ok();
 }
 
@@ -134,9 +153,10 @@ Maybe<void> DTRTensorPool::display() {
     for (const auto& candidate : candidates_) {
         if (auto wp = candidate.lock()) {
             auto tmp = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(wp);
-            std::cout << "id " << id++ << ", is_in_memory: " << tmp->is_in_memory() << ", input size: " << tmp->input_size() << ", is_evictable: " << tmp->is_evictable() << ", number of user_ops: " << tmp->num_user_ops() << ", address: " << tmp << ", nullptr? " << (tmp == nullptr) << std::endl;
+            std::cout << "id " << id << ", is_in_memory: " << tmp->is_in_memory() << ", input size: " << tmp->input_size() << ", is_evictable: " << tmp->is_evictable() << ", number of user_ops: " << tmp->num_user_ops() << ", address: " << tmp << ", nullptr? " << (tmp == nullptr) << std::endl;
         }
         // std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", address: " << candidate << std::endl;
+        id++;
     }
     // for (const auto& candidate : candidates_) {
     //     const auto* tmp = dynamic_cast<vm::DTREagerBlobObject*>(candidate);

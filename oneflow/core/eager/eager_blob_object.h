@@ -31,6 +31,7 @@ namespace oneflow {
 namespace vm {
 
 class LocalCallOpKernelPhyInstrOperand;
+class DTRInstrOperand;
 
 class TensorBuffer {
  public:
@@ -150,7 +151,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
         pinned_ = 0;
         compute_op_ = nullptr;
         node_ = nullptr;
-        user_ops_ = std::vector<std::unique_ptr<LocalCallOpKernelPhyInstrOperand>>();
+        user_ops_ = std::vector<std::unique_ptr<DTRInstrOperand>>();
         could_evict_ = true;
       }
   DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
@@ -161,7 +162,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
                     pinned_ = 0;
                     compute_op_ = nullptr;
                     node_ = nullptr;
-                    user_ops_ = std::vector<std::unique_ptr<LocalCallOpKernelPhyInstrOperand>>();
+                    user_ops_ = std::vector<std::unique_ptr<DTRInstrOperand>>();
                     could_evict_ = true;
                   }
   ~DTREagerBlobObject() override;
@@ -172,8 +173,8 @@ class DTREagerBlobObject final : public EagerBlobObject {
   const std::size_t memory() const { return blob_body_bytes_; }
   const double compute_time() const { return compute_time_; }
   const double last_access_time() const { return last_access_time_; }
-  LocalCallOpKernelPhyInstrOperand* compute_op() const { return compute_op_.get(); }
-  Maybe<LocalCallOpKernelPhyInstrOperand*> user_op(int i) const {
+  DTRInstrOperand* compute_op() const { return compute_op_.get(); }
+  Maybe<DTRInstrOperand*> user_op(int i) const {
     CHECK_LT(i, user_ops_.size());
     CHECK_NOTNULL_OR_RETURN(user_ops_[i].get());
     return user_ops_[i].get();
@@ -218,6 +219,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
   Maybe<double> neighbor_cost() const;
   size_t input_size() const;
   void evict_from_pool();
+  void clear_invalid_object();
 
   // TODO: variable cost functions in terms of different heuristics
   Maybe<double> cost() const;
@@ -230,8 +232,8 @@ class DTREagerBlobObject final : public EagerBlobObject {
   double compute_time_;
   double last_access_time_;
   size_t pinned_;
-  std::unique_ptr<LocalCallOpKernelPhyInstrOperand> compute_op_;
-  std::vector<std::unique_ptr<LocalCallOpKernelPhyInstrOperand>> user_ops_;
+  std::unique_ptr<DTRInstrOperand> compute_op_;
+  std::vector<std::unique_ptr<DTRInstrOperand>> user_ops_;
 };
 
 }  // namespace vm

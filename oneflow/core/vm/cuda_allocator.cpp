@@ -179,6 +179,9 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   if (free_bytes > (remain_bytes + dtr_remain_bytes)) {
     available_bytes = free_bytes - remain_bytes - dtr_remain_bytes;  // remain at least 50MiB memory
   } else {
+    if (oneflow::DTRDebugEnabled()) {
+      std::cout << "Total free bytes: " << free_bytes << ", dtr_remain_bytes: " << dtr_remain_bytes << std::endl;
+    }
     return false;
   }
 
