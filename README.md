@@ -9,6 +9,7 @@
 
 ## Latest News
 
+- Want to know the internal mechanism? The paper is at arXiv: https://arxiv.org/abs/2110.15032
 - Version 0.5.0 is out!
   - First class support for eager execution. The deprecated APIs are moved to `oneflow.compatible.single_client`
   - Drop-in replacement of `import torch` for existing Pytorch projects. You could test it by inter-changing `import oneflow as torch` and `import torch as flow`.
