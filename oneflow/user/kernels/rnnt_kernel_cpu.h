@@ -43,18 +43,18 @@ public:
     CpuRNNT(const CpuRNNT&) = delete;
     CpuRNNT& operator=(const CpuRNNT&) = delete;
 
-    rnntStatus_t cost_and_grad(const ProbT* const log_probs,
+    rnntStatus_t cost_and_grad(const ProbT*  log_probs,
                               ProbT* grads,
                               ProbT* costs,
-                              const int* const flat_labels,
-                              const int* const label_lengths,
-                              const int* const input_lengths);
+                              const int*  flat_labels,
+                              const int*  label_lengths,
+                              const int*  input_lengths);
     
-    rnntStatus_t score_forward(const ProbT* const log_probs,
+    rnntStatus_t score_forward(const ProbT*  log_probs,
                               ProbT* costs,
-                              const int* const flat_labels,
-                              const int* const label_lengths,
-                              const int* const input_lengths);
+                              const int*  flat_labels,
+                              const int*  label_lengths,
+                              const int*  input_lengths);
 
 private:
     class CpuRNNT_index {
@@ -73,14 +73,14 @@ private:
     class CpuRNNT_metadata {
     public:
         CpuRNNT_metadata(int T, int U, void* workspace, size_t bytes_used, int blank, 
-                    const int* const labels, const ProbT* const log_probs, CpuRNNT_index& idx);
+                    const int*  labels, const ProbT*  log_probs, CpuRNNT_index& idx);
         ProbT* alphas;
         ProbT* betas;
         ProbT* log_probs2;
 
     private:
-        void setup_probs(int T, int U, const int* const labels, int blank, 
-                            const ProbT* const log_probs, CpuRNNT_index& idx);
+        void setup_probs(int T, int U, const int*  labels, int blank, 
+                            const ProbT*  log_probs, CpuRNNT_index& idx);
     };
 
     int minibatch_;
@@ -92,20 +92,20 @@ private:
     int num_threads_;
     bool batch_first;
     
-    ProbT cost_and_grad_kernel(const ProbT* const log_probs, ProbT* grad,
-                               const int* const labels, int mb,
+    ProbT cost_and_grad_kernel(const ProbT*  log_probs, ProbT* grad,
+                               const int*  labels, int mb,
                                int T, int U, size_t bytes_used);
     
-    ProbT compute_alphas(const ProbT* const log_probs, int T, int U, ProbT* alphas);
+    ProbT compute_alphas(const ProbT*  log_probs, int T, int U, ProbT* alphas);
     
-    ProbT compute_betas_and_grad(ProbT* grad, const ProbT* const log_probs,
+    ProbT compute_betas_and_grad(ProbT* grad, const ProbT*  log_probs,
                                  int T, int U, ProbT* alphas, ProbT* betas,
-                                 const int* const labels, ProbT logll);
+                                 const int*  labels, ProbT logll);
 };
 
 template<typename ProbT>
 CpuRNNT<ProbT>::CpuRNNT_metadata::CpuRNNT_metadata(int T, int U, void* workspace, size_t bytes_used, int blank, 
-                                        const int* const labels, const ProbT* const log_probs, CpuRNNT_index& idx) {
+                                        const int*  labels, const ProbT*  log_probs, CpuRNNT_index& idx) {
     
     alphas = reinterpret_cast<ProbT *>(static_cast<char *>(workspace) + bytes_used);
     bytes_used += sizeof(ProbT) * T * U;
@@ -121,8 +121,8 @@ CpuRNNT<ProbT>::CpuRNNT_metadata::CpuRNNT_metadata(int T, int U, void* workspace
 
 template<typename ProbT>
 void
-CpuRNNT<ProbT>::CpuRNNT_metadata::setup_probs(int T, int U, const int* const labels, int blank, 
-                                                    const ProbT* const log_probs, CpuRNNT_index& idx) {
+CpuRNNT<ProbT>::CpuRNNT_metadata::setup_probs(int T, int U, const int*  labels, int blank, 
+                                                    const ProbT*  log_probs, CpuRNNT_index& idx) {
 
     for (int t = 0; t < T; ++t) {
         for (int u = 0; u < U; ++u) {
@@ -151,8 +151,8 @@ inline int CpuRNNT<ProbT>::CpuRNNT_index::operator()(int t, int u, int v) {
 
 template<typename ProbT>
 ProbT
-CpuRNNT<ProbT>::cost_and_grad_kernel(const ProbT* const log_probs, ProbT* grad,
-                              const int* const labels,
+CpuRNNT<ProbT>::cost_and_grad_kernel(const ProbT*  log_probs, ProbT* grad,
+                              const int*  labels,
                               int mb, int T, int U, size_t bytes_used) {
     
     CpuRNNT_index idx(U, maxU_, minibatch_, alphabet_size_, batch_first);
@@ -179,7 +179,7 @@ CpuRNNT<ProbT>::cost_and_grad_kernel(const ProbT* const log_probs, ProbT* grad,
 
 template<typename ProbT>
 ProbT
-CpuRNNT<ProbT>::compute_alphas(const ProbT* const log_probs, int T, int U, ProbT* alphas) {
+CpuRNNT<ProbT>::compute_alphas(const ProbT*  log_probs, int T, int U, ProbT* alphas) {
 
     CpuRNNT_index idx(U, maxU_, minibatch_, alphabet_size_, batch_first);
 
@@ -206,9 +206,9 @@ CpuRNNT<ProbT>::compute_alphas(const ProbT* const log_probs, int T, int U, ProbT
 
 template<typename ProbT>
 ProbT
-CpuRNNT<ProbT>::compute_betas_and_grad(ProbT* grad, const ProbT* const log_probs,
+CpuRNNT<ProbT>::compute_betas_and_grad(ProbT* grad, const ProbT*  log_probs,
                                 int T, int U, ProbT* alphas, ProbT* betas,
-                                const int* const labels, ProbT logll) {
+                                const int*  labels, ProbT logll) {
 
     CpuRNNT_index idx(U, maxU_, minibatch_, alphabet_size_, batch_first);
 
@@ -249,12 +249,12 @@ CpuRNNT<ProbT>::compute_betas_and_grad(ProbT* grad, const ProbT* const log_probs
 
 template<typename ProbT>
 rnntStatus_t
-CpuRNNT<ProbT>::cost_and_grad(const ProbT* const log_probs,
+CpuRNNT<ProbT>::cost_and_grad(const ProbT*  log_probs,
                             ProbT* grads,
                             ProbT* costs,
-                            const int* const flat_labels,
-                            const int* const label_lengths,
-                            const int* const input_lengths) {
+                            const int*  flat_labels,
+                            const int*  label_lengths,
+                            const int*  input_lengths) {
 
     size_t per_minibatch_bytes = 0;
     per_minibatch_bytes += sizeof(ProbT) * maxT_ * maxU_ * 2;
@@ -282,11 +282,11 @@ CpuRNNT<ProbT>::cost_and_grad(const ProbT* const log_probs,
 
 template<typename ProbT>
 rnntStatus_t
-CpuRNNT<ProbT>::score_forward(const ProbT* const log_probs, 
+CpuRNNT<ProbT>::score_forward(const ProbT*  log_probs, 
                             ProbT* costs,
-                            const int* const flat_labels,
-                            const int* const label_lengths,
-                            const int* const input_lengths) {
+                            const int*  flat_labels,
+                            const int*  label_lengths,
+                            const int*  input_lengths) {
 
     size_t per_minibatch_bytes = 0;
     per_minibatch_bytes += sizeof(ProbT) * maxT_ * maxU_ * 2;

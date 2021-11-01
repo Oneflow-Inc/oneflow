@@ -51,36 +51,36 @@ REGISTER_USER_OP("RNNTloss")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("RNNTloss_grad")
-    .Input("grads")
-    .Input("dy")
-    .Output("dx")
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(ctx->InputDType("prob", 0), ctx->InputDType("dy", 0));
-      *ctx->OutputDType("dx", 0) = ctx->InputDType("grads", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
-      return Maybe<void>::Ok();
-    });
+// REGISTER_USER_OP("RNNTloss_grad")
+//     .Input("grads")
+//     .Input("dy")
+//     .Output("dx")
+//     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+//       CHECK_EQ_OR_RETURN(ctx->InputDType("prob", 0), ctx->InputDType("dy", 0));
+//       *ctx->OutputDType("dx", 0) = ctx->InputDType("grads", 0);
+//       return Maybe<void>::Ok();
+//     })
+//     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+//       ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+//       return Maybe<void>::Ok();
+//     });
 
-REGISTER_USER_OP_GRAD("RNNTloss")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("acts", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper rnntloss_grad_op =
-            builder.Op("RNNTloss")
-                .Input("grads", op.output("grads", 0))
-                .Input("dy", op.GetGradTensorWithOpOutput("costs", 0))
-                .Output("dx")
-                .Build();
-        op.BindGradTensorWithOpInput(rnntloss_grad_op.output("dx", 0), "acts", 0);
-        AddOp(rnntloss_grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
+// REGISTER_USER_OP_GRAD("RNNTloss")
+//     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+//                                user_op::AddOpFn AddOp) -> Maybe<void> {
+//       if (op.NeedGenGradTensor4OpInput("acts", 0)) {
+//         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+//         user_op::UserOpConfWrapper rnntloss_grad_op =
+//             builder.Op("RNNTloss")
+//                 .Input("grads", op.output("grads", 0))
+//                 .Input("dy", op.GetGradTensorWithOpOutput("costs", 0))
+//                 .Output("dx")
+//                 .Build();
+//         op.BindGradTensorWithOpInput(rnntloss_grad_op.output("dx", 0), "acts", 0);
+//         AddOp(rnntloss_grad_op);
+//       }
+//       return Maybe<void>::Ok();
+//     });
 
 }  // namespace
 }  // namespace oneflow

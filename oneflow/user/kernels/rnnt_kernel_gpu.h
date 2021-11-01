@@ -26,6 +26,7 @@ limitations under the License.
 
 #include "oneflow/user/kernels/rnnt_kernel_helper.h"
 #include "oneflow/user/kernels/rnnt_kernel_util.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
@@ -68,7 +69,7 @@ struct CTAReduce {
 };
 
 template <int NT, typename Iop, typename Rop, typename T>
-__global__ void reduce_rows(Iop f, Rop g, const T* const acts, T* output, int num_rows) {
+__global__ void reduce_rows(Iop f, Rop g, const T*  acts, T* output, int num_rows) {
 
     typedef CTAReduce<NT, T, Rop> R;
     __shared__ typename R::Storage storage;
@@ -95,7 +96,7 @@ __global__ void reduce_rows(Iop f, Rop g, const T* const acts, T* output, int nu
 }
 
 template <int NT, typename Iop, typename Rop, typename T>
-__global__ void reduce_minus(Iop f, Rop g, const T* const acts, T* output, int num_rows) {
+__global__ void reduce_minus(Iop f, Rop g, const T*  acts, T* output, int num_rows) {
 
     typedef CTAReduce<NT, T, Rop> R;
     __shared__ typename R::Storage storage;
@@ -125,7 +126,7 @@ __global__ void reduce_minus(Iop f, Rop g, const T* const acts, T* output, int n
 struct ReduceHelper {
 
     template<typename T, typename Iof, typename Rof>
-    static void impl(Iof f, Rof g, const T* const acts, T* output, int num_rows, int num_cols, bool minus, cudaStream_t stream) {
+    static void impl(Iof f, Rof g, const T*  acts, T* output, int num_rows, int num_cols, bool minus, cudaStream_t stream) {
 
         int grid_size;
 
@@ -144,7 +145,7 @@ struct ReduceHelper {
 
 
 template<typename T, typename Iof, typename  Rof>
-rnntStatus_t reduce(Iof f, Rof g, const T* const acts, T* output, int rows, int cols, bool minus, cudaStream_t stream) {
+rnntStatus_t reduce(Iof f, Rof g, const T*  acts, T* output, int rows, int cols, bool minus, cudaStream_t stream) {
     ReduceHelper::impl(f, g, acts, output, rows, cols, minus, stream);
     cudaStreamSynchronize(stream);
     cudaError_t err = cudaGetLastError();
@@ -155,25 +156,32 @@ rnntStatus_t reduce(Iof f, Rof g, const T* const acts, T* output, int rows, int 
 }
 
 template<typename T>
-rnntStatus_t reduce_exp(const T* const acts, T *denom, int rows, int cols, bool minus, cudaStream_t stream) {
+rnntStatus_t reduce_exp(const T*  acts, T *denom, int rows, int cols, bool minus, cudaStream_t stream) {
     return reduce(rnnt_helper::exponential<T>(), rnnt_helper::add<T>(), acts, denom, rows, cols, minus, stream);
 }
 
 template<typename T>
-rnntStatus_t reduce_max(const T* const acts, T *denom, int rows, int cols, bool minus, cudaStream_t stream) {
+rnntStatus_t reduce_max(const T*  acts, T *denom, int rows, int cols, bool minus, cudaStream_t stream) {
     return reduce(rnnt_helper::identity<T>(), rnnt_helper::maximum<T>(), acts, denom, rows, cols, minus, stream);
 }
 
 
 template<typename T>
-inline __device__ T logp(const T* const denom, const T* const acts, const int maxT, const int maxU, const int alphabet_size, int mb, int t, int u, int v) {
+inline __device__ T logp(const T*  denom, const T*  acts, const int maxT, const int maxU, const int alphabet_size, int mb, int t, int u, int v) {
     const int col = (mb * maxT + t) * maxU + u;
     return denom[col] + acts[col * alphabet_size + v];
 }
 
+
+template<typename T>
+__global__ void negp(T* in_buf, int32_t size) {
+  CUDA_1D_KERNEL_LOOP(i, size+100) { in_buf[i] = -in_buf[i]; }
+}
+
+
 template<typename Tp>
-__global__ void compute_alphas_kernel(const Tp* const acts, const Tp* const denom, Tp* alphas, Tp* llForward, const int* const xlen, const int* const ylen, 
-    const int* const mlabels, const int minibatch, const int maxT, const int maxU, const int alphabet_size, const int blank_) {
+__global__ void compute_alphas_kernel(const Tp*  acts, const Tp*  denom, Tp* alphas, Tp* llForward, const int*  xlen, const int*  ylen, 
+    const int*  mlabels, const int minibatch, const int maxT, const int maxU, const int alphabet_size, const int blank_) {
     int b = blockIdx.x; 
     int u = threadIdx.x; 
     const int T = xlen[b];
@@ -209,7 +217,7 @@ __global__ void compute_alphas_kernel(const Tp* const acts, const Tp* const deno
 }
 
 template<typename Tp>
-__global__ void compute_alphas_kernel_naive(const Tp* const acts, const Tp* const denom, Tp* alphas, Tp* llForward, const int* const xlen, const int* const ylen, 
+__global__ void compute_alphas_kernel_naive(const Tp*  acts, const Tp*  denom, Tp* alphas, Tp* llForward, const int*  xlen, const int*  ylen, 
     const int* const mlabels, const int minibatch, const int maxT, const int maxU, const int alphabet_size, const int blank_) {
     int tid = threadIdx.x; 
     const int T = xlen[tid];
@@ -239,7 +247,7 @@ __global__ void compute_alphas_kernel_naive(const Tp* const acts, const Tp* cons
 
 
 template<typename Tp>
-__global__ void compute_betas_kernel(const Tp* const acts, const Tp* const denom, Tp* betas, Tp* llBackward, const int* const xlen, const int* const ylen, 
+__global__ void compute_betas_kernel(const Tp*  acts, const Tp*  denom, Tp* betas, Tp* llBackward, const int*  xlen, const int*  ylen, 
     const int* const mlabels, const int minibatch, const int maxT, const int maxU, const int alphabet_size, const int blank_) {
     int b = blockIdx.x; 
     int u = threadIdx.x; 
@@ -275,7 +283,7 @@ __global__ void compute_betas_kernel(const Tp* const acts, const Tp* const denom
 }
 
 template<typename Tp>
-__global__ void compute_betas_kernel_naive(const Tp* const acts, const Tp* const denom, Tp* betas, Tp* llBackward, const int* const xlen, const int* const ylen, 
+__global__ void compute_betas_kernel_naive(const Tp*  acts, const Tp*  denom, Tp* betas, Tp* llBackward, const int*  xlen, const int*  ylen, 
     const int* const mlabels, const int minibatch, const int maxT, const int maxU, const int alphabet_size, const int blank_) {
     int tid = threadIdx.x; // mb
     const int T = xlen[tid];
@@ -303,8 +311,8 @@ __global__ void compute_betas_kernel_naive(const Tp* const acts, const Tp* const
 }
 
 template<int NT, typename Tp>
-__global__ void compute_grad_kernel(Tp* grads, const Tp* const acts, const Tp* const denom, const Tp* alphas, const Tp* betas, const Tp* const logll, const int* const xlen, const int* const ylen, 
-    const int* const mlabels, const int minibatch, const int maxT, const int maxU, const int alphabet_size, const int blank_) {
+__global__ void compute_grad_kernel(Tp* grads, const Tp*  acts, const Tp*  denom, const Tp* alphas, const Tp* betas, const Tp*  logll, const int*  xlen, const int*  ylen, 
+    const int*  mlabels, const int minibatch, const int maxT, const int maxU, const int alphabet_size, const int blank_) {
     int tid = threadIdx.x; 
     int idx = tid;
     int col = blockIdx.x; 
@@ -356,25 +364,25 @@ public:
 
     void log_softmax(const ProbT* const acts, ProbT* denom);
 
-    rnntStatus_t compute_cost_and_score(const ProbT* const acts,
+    rnntStatus_t compute_cost_and_score(const ProbT*  acts,
                                         ProbT* grad,
                                         ProbT* costs,
-                                        const int* const pad_labels,
-                                        const int* const label_lengths,
-                                        const int* const input_lengths);
+                                        const int*  pad_labels,
+                                        const int*  label_lengths,
+                                        const int*  input_lengths);
 
-    rnntStatus_t cost_and_grad(const ProbT* const acts,
+    rnntStatus_t cost_and_grad(const ProbT*  acts,
                               ProbT* grad,
                               ProbT* costs,
-                              const int* const pad_labels,
-                              const int* const label_lengths,
-                              const int* const input_lengths);
+                              const int*  pad_labels,
+                              const int*  label_lengths,
+                              const int*  input_lengths);
 
-    rnntStatus_t score_forward(const ProbT* const acts,
+    rnntStatus_t score_forward(const ProbT*  acts,
                               ProbT* costs,
-                              const int* const pad_labels,
-                              const int* const label_lengths,
-                              const int* const input_lengths);
+                              const int*  pad_labels,
+                              const int*  label_lengths,
+                              const int*  input_lengths);
 
 private:
     int minibatch_;
@@ -390,7 +398,7 @@ private:
 
 template<typename ProbT>
 void
-GpuRNNT<ProbT>::log_softmax(const ProbT* const acts, ProbT* denom) {
+GpuRNNT<ProbT>::log_softmax(const ProbT*  acts, ProbT* denom) {
 
     reduce_max(acts, denom, alphabet_size_, minibatch_ * maxT_ * maxU_, 0, stream_);
     reduce_exp(acts, denom, alphabet_size_, minibatch_ * maxT_ * maxU_, 1, stream_);
@@ -398,12 +406,12 @@ GpuRNNT<ProbT>::log_softmax(const ProbT* const acts, ProbT* denom) {
 
 template<typename ProbT>
 rnntStatus_t
-GpuRNNT<ProbT>::compute_cost_and_score(const ProbT* const acts,
+GpuRNNT<ProbT>::compute_cost_and_score(const ProbT*  acts,
                                     ProbT* grads,
                                     ProbT* costs,
-                                    const int* const labels,
-                                    const int* const label_lengths,
-                                    const int* const input_lengths) {
+                                    const int*  labels,
+                                    const int*  label_lengths,
+                                    const int*  input_lengths) {
     
     
     bool training = (grads != nullptr);
@@ -443,25 +451,22 @@ GpuRNNT<ProbT>::compute_cost_and_score(const ProbT* const acts,
     cudaMemcpyAsync(costs, llForward, sizeof(ProbT) * minibatch_, cudaMemcpyDeviceToHost, stream_);
     cudaStreamSynchronize(stream_);
     
-    for (int mb = 0; mb < minibatch_; ++mb) {
-        costs[mb] = -costs[mb];
-    }
-
-    for(int i=0;i<30;i++){
-        std::cout<<grads[i]<<' ';
-    }
-
+    negp<ProbT><<<1,minibatch_,0,stream_>>>(costs,minibatch_);
+    // for (int mb = 0; mb < minibatch_; ++mb) {
+    //     costs[mb] = -costs[mb];
+    // }
+    std::cout<<"return"<<std::endl;
     return RNNT_STATUS_SUCCESS;
 }
 
 template<typename ProbT>
 rnntStatus_t
-GpuRNNT<ProbT>::cost_and_grad(const ProbT* const acts,
+GpuRNNT<ProbT>::cost_and_grad(const ProbT*  acts,
                        ProbT* grads,
                        ProbT* costs,
-                       const int* const pad_labels,
-                       const int* const label_lengths,
-                       const int* const input_lengths) {
+                       const int*  pad_labels,
+                       const int*  label_lengths,
+                       const int*  input_lengths) {
 
     if (acts == nullptr ||
         grads == nullptr || 
@@ -470,20 +475,16 @@ GpuRNNT<ProbT>::cost_and_grad(const ProbT* const acts,
         label_lengths == nullptr ||
         input_lengths == nullptr)
         return RNNT_STATUS_INVALID_VALUE;
-    std::cout<<"begin"<<std::endl;
-    std::cout<<grads[0]<<std::endl;
-    std::cout<<costs[0]<<std::endl;
-    std::cout<<"end"<<std::endl;
     return compute_cost_and_score(acts, grads, costs, pad_labels, label_lengths, input_lengths);
 }
 
 template<typename ProbT>
 rnntStatus_t
-GpuRNNT<ProbT>::score_forward(const ProbT* const acts,
+GpuRNNT<ProbT>::score_forward(const ProbT*  acts,
                        ProbT* costs,
-                       const int* const pad_labels,
-                       const int* const label_lengths,
-                       const int* const input_lengths) {
+                       const int*  pad_labels,
+                       const int*  label_lengths,
+                       const int*  input_lengths) {
     
     if (acts == nullptr ||
         costs == nullptr ||
