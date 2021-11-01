@@ -54,6 +54,30 @@ class Sequential(get_seq(Module)):
 
 
 class ModuleList(get_list(Module)):
+    """Holds submodules in a list.
+
+    :attr:`ModuleList` can be indexed like a regular Python list, but modules it contains are properly registered, and will be visible by all :attr:`Module` methods.
+
+    Args:
+        modules (Iterable[oneflow.nn.module.Module], optional) - an iterable of modules to add
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        class ModuleListModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linears = flow.nn.ModuleList([SubModule0() for i in range(3)])
+
+            def forward(self, x):
+                for i, _ in enumerate(self.linears):
+                    x = self.linears[i](x)
+                return x
+    
+    """
+
     pass
 
 
