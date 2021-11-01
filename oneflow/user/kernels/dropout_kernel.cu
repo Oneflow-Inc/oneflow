@@ -113,18 +113,18 @@ void MaskAndScaleAdd<half>(DeviceCtx* ctx, const int64_t n, float scale, const h
           n, scale, x, mask, addend, y);
 }
 
-template<typename T, typename MASK>
+template<typename T>
 struct MaskAndScaleFunctor {
-  MaskAndScaleFunctor(float scale) : scale(scale) {}
-  OF_DEVICE_FUNC T operator()(T x, MASK mask) const { return x * static_cast<T>(mask) * scale; }
+  OF_DEVICE_FUNC explicit MaskAndScaleFunctor(float scale) : scale(scale) {}
+  OF_DEVICE_FUNC T operator()(T x, int8_t mask) const { return x * static_cast<T>(mask) * scale; }
   float scale;
 };
 
-template<typename MASK>
-struct MaskAndScaleFunctor<half, MASK> {
-  MaskAndScaleFunctor(float scale) : scale(scale) {}
-  OF_DEVICE_FUNC half operator()(half x, MASK mask) const {
-    return x * static_cast<half>(mask) * static_cast<half>(scale);
+template<>
+struct MaskAndScaleFunctor<half> {
+  OF_DEVICE_FUNC explicit MaskAndScaleFunctor(float scale) : scale(scale) {}
+  __device__ half operator()(half x, int8_t mask) const {
+    return __hmul(x, __hmul(static_cast<half>(mask), __float2half_rn(scale)));
   }
   float scale;
 };
@@ -147,11 +147,9 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
       MaskAndScaleAdd<T>(ctx->device_ctx(), in->shape().elem_cnt(), scale, in->dptr<T>(),
                          mask->dptr<int8_t>(), addend->dptr<T>(), out->mut_dptr<T>());
     } else {
-      // MaskAndScale<T>(ctx->device_ctx(), in->shape().elem_cnt(), scale, in->dptr<T>(),
-      // mask->dptr<int8_t>(), out->mut_dptr<T>());
       const int64_t elem_cnt = in->shape().elem_cnt();
       OF_CUDA_CHECK((cuda::elementwise::Binary(
-          MaskAndScaleFunctor<T, int8_t>(scale), elem_cnt, out->mut_dptr<T>(), in->dptr<T>(),
+          MaskAndScaleFunctor<T>(scale), elem_cnt, out->mut_dptr<T>(), in->dptr<T>(),
           mask->dptr<int8_t>(), ctx->device_ctx()->cuda_stream())));
     }
   }
@@ -180,8 +178,10 @@ class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::Cud
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const float scale = ctx->Attr<float>("scale");
-    MaskAndScale<T>(ctx->device_ctx(), dy->shape().elem_cnt(), scale, dy->dptr<T>(),
-                    mask->dptr<int8_t>(), dx->mut_dptr<T>());
+    const int64_t elem_cnt = dy->shape().elem_cnt();
+    OF_CUDA_CHECK((cuda::elementwise::Binary(MaskAndScaleFunctor<T>(scale), elem_cnt,
+                                             dx->mut_dptr<T>(), dy->dptr<T>(), mask->dptr<int8_t>(),
+                                             ctx->device_ctx()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
