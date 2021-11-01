@@ -21,9 +21,9 @@ namespace oneflow {
 namespace one {
 
 struct PartialFCSampleState : public AutoGradCaptureState {
-  bool requires_grad;
-  int32_t index_sampled_label;
-  int32_t index_weight;
+  bool requires_grad = false;
+  int32_t index_sampled_label = -1;
+  int32_t index_weight = -1;
 };
 
 class PartialFCSample : public OpExprGradFunction<PartialFCSampleState> {
