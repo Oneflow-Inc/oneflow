@@ -784,7 +784,7 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
   }
   {
     // we must assure kFlowCtrlWindowSize * 2 < 1024 where 1024 is cuda flow ctrl windows size.
-    static constexpr int kFlowCtrlWindowSize = 300;
+    static constexpr int kFlowCtrlWindowSize = 500;
     if ((op_device->auto_flow_ctr_seq_no() % kFlowCtrlWindowSize) == 0) {
       auto* dep_object = op_device->mut_schedule_local_dep_object();
       JUST(SoftSyncStream(dep_object, "mut", op_device, /*need_flow_ctrl=*/true));

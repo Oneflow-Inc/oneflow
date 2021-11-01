@@ -110,12 +110,10 @@ Maybe<void> PutOverflowedLocalDepObject(Symbol<Device> device, LocalDepObject* l
   return Maybe<void>::Ok();
 }
 
-static constexpr size_t kLowWaterMark = 200;
-static constexpr size_t kHighWaterMark = 300;
-
 Maybe<void> TryFillPoolToLowWaterMark(Symbol<Device> device) {
   const auto& pool_list = ThreadLocalPoolLocalDepObjectList(device);
-  for (int i = pool_list->size(); i < kLowWaterMark; ++i) {
+  const size_t low_watermark = JUST(device->instr_local_dep_object_pool_low_watermark());
+  for (int i = pool_list->size(); i < low_watermark; ++i) {
     intrusive::shared_ptr<LocalDepObject> local_dep_object = GetOverflowedLocalDepObject(device);
     if (!local_dep_object) {
       local_dep_object = *JUST(LocalDepObject::New(*device));
@@ -131,8 +129,10 @@ Maybe<void> TryFillPoolToLowWaterMark(Symbol<Device> device) {
 Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device) {
   JUST(TryFillPoolToLowWaterMark(device));
   const auto& pool_list = ThreadLocalPoolLocalDepObjectList(device);
-  CHECK_GE_OR_RETURN(pool_list->size(), kLowWaterMark);
-  CHECK_LE_OR_RETURN(pool_list->size(), kHighWaterMark);
+  const size_t low_watermark = JUST(device->instr_local_dep_object_pool_low_watermark());
+  const size_t high_watermark = JUST(device->instr_local_dep_object_pool_high_watermark());
+  CHECK_GE_OR_RETURN(pool_list->size(), low_watermark);
+  CHECK_LE_OR_RETURN(pool_list->size(), high_watermark);
   intrusive::shared_ptr<LocalDepObject> local_dep_object = pool_list->PopFront();
   CHECK_NOTNULL_OR_RETURN(local_dep_object.Mutable());
   CHECK_OR_RETURN(local_dep_object->pool_hook().empty());
@@ -144,13 +144,15 @@ Maybe<void> PutLocalDepObjectToDevicePool(Symbol<Device> device, LocalDepObject*
   CHECK_OR_RETURN(local_dep_object->pool_hook().empty());
   CHECK_OR_RETURN(!local_dep_object->lifetime_hook().empty());
   const auto& pool_list = ThreadLocalPoolLocalDepObjectList(device);
-  if (pool_list->size() < kHighWaterMark) {
+  const size_t low_watermark = JUST(device->instr_local_dep_object_pool_low_watermark());
+  const size_t high_watermark = JUST(device->instr_local_dep_object_pool_high_watermark());
+  if (pool_list->size() < high_watermark) {
     pool_list->PushBack(local_dep_object);
   } else {
     JUST(PutOverflowedLocalDepObject(device, local_dep_object));
   }
-  CHECK_GE_OR_RETURN(pool_list->size(), kLowWaterMark);
-  CHECK_LE_OR_RETURN(pool_list->size(), kHighWaterMark);
+  CHECK_GE_OR_RETURN(pool_list->size(), low_watermark);
+  CHECK_LE_OR_RETURN(pool_list->size(), high_watermark);
   return Maybe<void>::Ok();
 }
 
