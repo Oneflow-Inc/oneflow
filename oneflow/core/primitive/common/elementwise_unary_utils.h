@@ -23,30 +23,9 @@ namespace oneflow {
 
 namespace primitive {
 
-template<DeviceType device, UnaryOp unary_enum, typename Out, typename In>
-struct UnaryFunctor;
+#define UNARY_MATH_OP OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu, UnaryOp::kRelu)
 
-template<DeviceType device, typename Out, typename In>
-struct UnaryFunctor<device, UnaryOp::kRelu, Out, In> {
-  OF_DEVICE_FUNC Out operator()(In src) const {
-    const In zero_val = static_cast<In>(0.0);
-    if (src > zero_val) {
-      return static_cast<Out>(src);
-    } else {
-      return zero_val;
-    }
-  }
-};
-
-template<DeviceType device, typename Out, typename In>
-struct UnaryFunctor<device, UnaryOp::kLogicalNot, Out, In> {
-  OF_DEVICE_FUNC int8_t operator()(In src) const { return static_cast<int8_t>(!src); }
-};
-
-#define PRIMITIVE_SAME_DTYPE_UNARY_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu, UnaryOp::kRelu)
-
-#define PRIMITIVE_OUT_INT8_DTYPE_UNARY_OP_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLogicalNot, UnaryOp::kLogicalNot)
+#define UNARY_LOGICAL_OP OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLogicalNot, UnaryOp::kLogicalNot)
 
 }  // namespace primitive
 }  // namespace oneflow

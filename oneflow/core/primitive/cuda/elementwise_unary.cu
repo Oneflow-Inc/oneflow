@@ -21,28 +21,26 @@ namespace primitive {
 
 namespace {
 
-template<UnaryOp unary_enum, typename In,
-         typename Out>  // template<UnaryOp unary_enum, typename In, typename Out>
+template<UnaryOp unary_op, typename Src, typename Dst>
 class ElementwiseUnaryImpl : public ElementwiseUnary {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnaryImpl);
   ElementwiseUnaryImpl() = default;
   ~ElementwiseUnaryImpl() override = default;
 
-  void Launch(StreamContext* stream_ctx, const void* src_ptr, void* dst_ptr,
-              size_t count) override {
+  void Launch(StreamContext* stream_ctx, const void* src, void* dst, size_t count) override {
     auto* cuda_stream_ctx = CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx));
     OF_CUDA_CHECK(
-        (cuda::elementwise::Unary<UnaryFunctor<DeviceType::kGPU, unary_enum, Out, In>, Out, In>(
-            UnaryFunctor<DeviceType::kGPU, unary_enum, Out, In>(), count,
-            reinterpret_cast<Out*>(dst_ptr), reinterpret_cast<const In*>(src_ptr),
+        (cuda::elementwise::Unary<UnaryFunctor<DeviceType::kGPU, unary_op, Dst, Src>, Dst, Src>(
+            UnaryFunctor<DeviceType::kGPU, unary_op, Dst, Src>(), count,
+            reinterpret_cast<Dst*>(dst), reinterpret_cast<const Src*>(src),
             cuda_stream_ctx->cuda_stream())));
   }
 };
 
-template<UnaryOp unary_enum, typename In, typename Out>
+template<UnaryOp unary_op, typename Src, typename Dst>
 std::unique_ptr<ElementwiseUnary> NewElementwiseUnary() {
-  return std::unique_ptr<ElementwiseUnary>(new ElementwiseUnaryImpl<unary_enum, In, Out>());
+  return std::unique_ptr<ElementwiseUnary>(new ElementwiseUnaryImpl<unary_op, Src, Dst>());
 }
 
 class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
@@ -69,12 +67,10 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
                           std::function<std::unique_ptr<ElementwiseUnary>()>>
         new_elementwise_unary_handle{
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY,
-                                             PRIMITIVE_SAME_DTYPE_UNARY_OP_SEQ,
-                                             CUDA_PRIMITIVE_ALL_TYPE_SEQ)
+                                             UNARY_MATH_OP, CUDA_PRIMITIVE_ALL_TYPE_SEQ)
 
                 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY,
-                                                 PRIMITIVE_OUT_INT8_DTYPE_UNARY_OP_SEQ,
-                                                 CUDA_PRIMITIVE_ALL_TYPE_SEQ,
+                                                 UNARY_LOGICAL_OP, CUDA_PRIMITIVE_ALL_TYPE_SEQ,
                                                  CUDA_PRIMITIVE_INT8_TYPE_SEQ)};
 
 #undef MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY

@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/primitive/common/elementwise_unary_utils.h"
+#include "oneflow/core/primitive/common/unary_functor.h"
 #include "oneflow/core/primitive/cpu/type_seq.h"
 
 namespace oneflow {
@@ -22,7 +22,7 @@ namespace primitive {
 
 namespace {
 
-template<UnaryOp unary_enum, typename In, typename Out>
+template<UnaryOp unary_op, typename Src, typename Dst>
 class ElementwiseUnaryImpl : public ElementwiseUnary {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnaryImpl);
@@ -31,17 +31,17 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
 
   void Launch(StreamContext* stream_ctx, const void* src_ptr, void* dst_ptr,
               size_t count) override {
-    Out* dst = reinterpret_cast<Out*>(dst_ptr);
-    const In* src = reinterpret_cast<const In*>(src_ptr);
+    Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
+    const Src* src = reinterpret_cast<const Src*>(src_ptr);
     for (size_t i = 0; i < count; ++i) {
-      dst[i] = UnaryFunctor<DeviceType::kCPU, unary_enum, Out, In>()(src[i]);
+      dst[i] = UnaryFunctor<DeviceType::kCPU, unary_op, Dst, Src>()(src[i]);
     }
   }
 };
 
-template<UnaryOp unary_enum, typename In, typename Out>
+template<UnaryOp unary_op, typename Src, typename Dst>
 std::unique_ptr<ElementwiseUnary> NewElementwiseUnary() {
-  return std::unique_ptr<ElementwiseUnary>(new ElementwiseUnaryImpl<unary_enum, In, Out>());
+  return std::unique_ptr<ElementwiseUnary>(new ElementwiseUnaryImpl<unary_op, Src, Dst>());
 }
 
 class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
@@ -68,12 +68,10 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
                           std::function<std::unique_ptr<ElementwiseUnary>()>>
         new_elementwise_unary_handle{
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY,
-                                             PRIMITIVE_SAME_DTYPE_UNARY_OP_SEQ,
-                                             CPU_PRIMITIVE_NATIVE_TYPE_SEQ)
+                                             UNARY_MATH_OP, CPU_PRIMITIVE_NATIVE_TYPE_SEQ)
 
                 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY,
-                                                 PRIMITIVE_OUT_INT8_DTYPE_UNARY_OP_SEQ,
-                                                 CPU_PRIMITIVE_NATIVE_TYPE_SEQ,
+                                                 UNARY_LOGICAL_OP, CPU_PRIMITIVE_NATIVE_TYPE_SEQ,
                                                  CPU_PRIMITIVE_INT8_TYPE_SEQ)};
 
 #undef MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY
