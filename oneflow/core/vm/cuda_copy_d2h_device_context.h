@@ -27,7 +27,7 @@ namespace vm {
 
 #ifdef WITH_CUDA
 
-class CudaCopyD2HDeviceCtx : public DeviceCtx, public QueryCudaEventProvider {
+class CudaCopyD2HDeviceCtx : public DeviceCtx, public SingleThreadQueryCudaEventProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaCopyD2HDeviceCtx);
   CudaCopyD2HDeviceCtx() = delete;
@@ -35,7 +35,7 @@ class CudaCopyD2HDeviceCtx : public DeviceCtx, public QueryCudaEventProvider {
 
   CudaCopyD2HDeviceCtx(int64_t device_id)
       : DeviceCtx(),
-        QueryCudaEventProvider(device_id),
+        SingleThreadQueryCudaEventProvider(device_id),
         cuda_handler_(new CudaStreamHandle(nullptr)),
         cuda_allocator_(std::make_unique<CudaHostAllocator>(device_id)),
         device_id_(device_id) {}

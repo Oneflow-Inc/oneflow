@@ -45,11 +45,35 @@ class CudaEventProvider {
  public:
   CudaEventProvider(const CudaEventProvider&) = delete;
   CudaEventProvider(CudaEventProvider&&) = delete;
-  explicit CudaEventProvider(int device_id)
-      : events_(new SingleThreadPoolType()), device_id_(device_id) {}
   virtual ~CudaEventProvider() = default;
 
-  std::shared_ptr<CudaEvent> GetSingleThreadReusedEventWithFlags(unsigned int flags) {
+  virtual std::shared_ptr<CudaEvent> GetCudaEventWithFlags(unsigned int flags) = 0;
+
+ protected:
+  CudaEventProvider() = default;
+};
+
+class QueryCudaEventProvider : public CudaEventProvider {
+ public:
+  QueryCudaEventProvider(const QueryCudaEventProvider&) = delete;
+  QueryCudaEventProvider(QueryCudaEventProvider&&) = delete;
+  QueryCudaEventProvider() = default;
+  virtual ~QueryCudaEventProvider() = default;
+
+  std::shared_ptr<CudaEvent> GetCudaEvent() {
+    return GetCudaEventWithFlags(cudaEventBlockingSync | cudaEventDisableTiming);
+  }
+};
+
+class SingleThreadReusedEventPool {
+ public:
+  SingleThreadReusedEventPool(const SingleThreadReusedEventPool&) = delete;
+  SingleThreadReusedEventPool(SingleThreadReusedEventPool&&) = delete;
+  explicit SingleThreadReusedEventPool(int device_id)
+      : events_(new SingleThreadPoolType()), device_id_(device_id) {}
+  ~SingleThreadReusedEventPool() = default;
+
+  std::shared_ptr<CudaEvent> GetReusedCudaEventWithFlags(unsigned int flags) {
     return events_->make_shared(device_id_, flags);
   }
 
@@ -60,15 +84,17 @@ class CudaEventProvider {
   int device_id_;
 };
 
-class QueryCudaEventProvider : public CudaEventProvider {
+class SingleThreadQueryCudaEventProvider : public QueryCudaEventProvider,
+                                           public SingleThreadReusedEventPool {
  public:
-  QueryCudaEventProvider(const QueryCudaEventProvider&) = delete;
-  QueryCudaEventProvider(QueryCudaEventProvider&&) = delete;
-  using CudaEventProvider::CudaEventProvider;
-  virtual ~QueryCudaEventProvider() = default;
+  SingleThreadQueryCudaEventProvider(const SingleThreadQueryCudaEventProvider&) = delete;
+  SingleThreadQueryCudaEventProvider(SingleThreadQueryCudaEventProvider&&) = delete;
+  explicit SingleThreadQueryCudaEventProvider(int device_id)
+      : QueryCudaEventProvider(), SingleThreadReusedEventPool(device_id) {}
+  ~SingleThreadQueryCudaEventProvider() = default;
 
-  std::shared_ptr<CudaEvent> GetSingleThreadReusedEvent() {
-    return GetSingleThreadReusedEventWithFlags(cudaEventBlockingSync | cudaEventDisableTiming);
+  std::shared_ptr<CudaEvent> GetCudaEventWithFlags(unsigned int flags) override {
+    return GetReusedCudaEventWithFlags(flags);
   }
 };
 

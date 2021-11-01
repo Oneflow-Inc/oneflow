@@ -30,7 +30,7 @@ void CudaCopyH2DStreamType::InitInstructionStatus(const Stream& stream,
   static_assert(sizeof(CudaOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
   auto* event_provider = dynamic_cast<QueryCudaEventProvider*>(stream.device_ctx().get());
   auto* data_ptr = status_buffer->mut_buffer()->mut_data();
-  const auto& cuda_event = CHECK_NOTNULL(event_provider)->GetSingleThreadReusedEvent();
+  const auto& cuda_event = CHECK_NOTNULL(event_provider)->GetCudaEvent();
   CudaOptionalEventRecordStatusQuerier::PlacementNew(data_ptr, cuda_event);
 }
 

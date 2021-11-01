@@ -19,6 +19,7 @@ limitations under the License.
 #include <vector>
 #include <mutex>
 #include <memory>
+#include <thread>
 #include <glog/logging.h>
 #include "oneflow/core/common/cpp_attribute.h"
 
@@ -35,7 +36,9 @@ template<typename T, ReuseStrategy reuse_strategy = kEnableReconstruct>
 class SingleThreadObjPool
     : public std::enable_shared_from_this<SingleThreadObjPool<T, reuse_strategy>> {
  public:
-  SingleThreadObjPool() : pool_(), single_thread_check_flag_() { pool_.reserve(kInitPoolCap); }
+  SingleThreadObjPool() : pool_(), invalid_thread_id_(), owner_thread_id_(invalid_thread_id_) {
+    pool_.reserve(kInitPoolCap);
+  }
   ~SingleThreadObjPool() {
     if (reuse_strategy != kEnableReconstruct) {
       for (T* ptr : pool_) { delete ptr; }
@@ -87,20 +90,16 @@ class SingleThreadObjPool
   // guarantee thread safety. This function also is not thread safe, but it's not a big problem. In
   // the most cases, bugs will be successfully detected even thread unsafe behaviors happen.
   void CheckOrSetSingleThreadFlag() {
-    if (likely(single_thread_check_flag_ != nullptr)) {
-      CHECK(likely(single_thread_check_flag_ == SingleThreadCheckFlag()));
+    if (unlikely(owner_thread_id_ == invalid_thread_id_)) {
+      owner_thread_id_ = std::this_thread::get_id();
     } else {
-      single_thread_check_flag_ = SingleThreadCheckFlag();
+      CHECK(likely(owner_thread_id_ == std::this_thread::get_id()));
     }
   }
 
-  bool* SingleThreadCheckFlag() {
-    thread_local bool flag;
-    return &flag;
-  }
-
   std::vector<T*> pool_;
-  bool* single_thread_check_flag_;
+  std::thread::id invalid_thread_id_;
+  std::thread::id owner_thread_id_;
 };
 
 }  // namespace obj_pool
