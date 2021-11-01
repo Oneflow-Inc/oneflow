@@ -508,9 +508,17 @@ class Graph(object):
             self._print(0, 1, self._shallow_repr() + " end building graph inputs.")
 
             # Deal with parameter and buffer
-            self._print(0, 1, self._shallow_repr() + " start building graph parameters and buffers.")
+            self._print(
+                0,
+                1,
+                self._shallow_repr() + " start building graph parameters and buffers.",
+            )
             state_op_names, self._states_tensor_tuple = self._build_states()
-            self._print(0, 1, self._shallow_repr() + " end building graph parameters and buffers.")
+            self._print(
+                0,
+                1,
+                self._shallow_repr() + " end building graph parameters and buffers.",
+            )
 
             # Deal with module in self.build(*args)
             self._print(0, 1, self._shallow_repr() + " start building graph modules.")
@@ -531,21 +539,39 @@ class Graph(object):
                 self._outs_repr,
                 out2name,
             ) = self._build_io("output", graph_build_util.build_graph_output, *outputs)
+
             self._print(0, 1, self._shallow_repr() + " end building graph outputs.")
 
-            self._print(0, 1, self._shallow_repr() + " start building graph with compile passes.")
             # Save forward graph job proto
             self._forward_job_proto = c_api_util.GetCurrentJob()
+
+            self._print(
+                0,
+                1,
+                self._shallow_repr() + " start building graph with compile passes.",
+            )
             # Complete the graph job proto
             oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
             # Save full graph job proto after job Complete for find real output blob shape and build it.
             self._full_job_proto = c_api_util.GetCurrentJob()
-            self._print(0, 1, self._shallow_repr() + " end building graph with compile passes.")
+            self._print(
+                0, 1, self._shallow_repr() + " end building graph with compile passes."
+            )
 
             # Re-build outputs accoring to full graph and outputs buffer config.
-            self._print(0, 1, self._shallow_repr() + " start re-building graph outputs for optimizatioin.")
+            self._print(
+                0,
+                1,
+                self._shallow_repr()
+                + " start re-building graph outputs for optimizatioin.",
+            )
             self._rebuild_outputs(out2name)
-            self._print(0, 1, self._shallow_repr() + " end re-building graph outputs for optimizatioin.")
+            self._print(
+                0,
+                1,
+                self._shallow_repr()
+                + " end re-building graph outputs for optimizatioin.",
+            )
 
             # Register input/output/variable/buffer to _c_nn_graph
             self._c_nn_graph.register_input_op_names_and_tensors(

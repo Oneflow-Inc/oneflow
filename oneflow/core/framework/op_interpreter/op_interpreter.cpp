@@ -23,15 +23,19 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 
 namespace oneflow {
 namespace one {
 
 Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                    TensorTuple* outputs, const OpExprInterpContext& ctx) const {
-#define APPLY_IF(op_type)                                              \
-  if (const auto* op = dynamic_cast<const op_type##Expr*>(&op_expr)) { \
-    return ApplyImpl(*op, inputs, outputs, ctx);                       \
+#define APPLY_IF(op_type)                                                      \
+  if (const auto* op = dynamic_cast<const op_type##Expr*>(&op_expr)) {         \
+    auto infer_ctx = JUST(GetCurInferCtx());                                   \
+    VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() \
+            << " try to add op : " << op->op_name() << std::endl;              \
+    return ApplyImpl(*op, inputs, outputs, ctx);                               \
   }
 
   APPLY_IF(FeedInputOp);
