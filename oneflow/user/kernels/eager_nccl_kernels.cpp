@@ -28,7 +28,7 @@ namespace {
 
 class EagerCclOpKernelState final : public user_op::OpKernelCache {
  public:
-  EagerCclOpKernelState(user_op::KernelCacheContext* ctx) { Init(ctx); }
+  explicit EagerCclOpKernelState(user_op::KernelCacheContext* ctx) { Init(ctx); }
   ~EagerCclOpKernelState() override = default;
 
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
@@ -77,7 +77,7 @@ class EagerCclBroadcastKernel final : public user_op::OpKernel {
                          std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     // NOTE(jianhao): the cache only depends on parallel_conf, and the kernel is singleton
     // once parallel_conf is determined, so only init the cache at the first time.
-    if (cache == nullptr) { *cache = std::make_shared<EagerCclOpKernelState>(ctx); }
+    if (*cache == nullptr) { *cache = std::make_shared<EagerCclOpKernelState>(ctx); }
   }
 
  private:
@@ -114,7 +114,7 @@ class EagerCclReduceKernel final : public user_op::OpKernel {
                          std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     // NOTE(jianhao): the cache only depends on parallel_conf, and the kernel is singleton
     // once parallel_conf is determined, so only init the cache at the first time.
-    if (cache == nullptr) { *cache = std::make_shared<EagerCclOpKernelState>(ctx); }
+    if (*cache == nullptr) { *cache = std::make_shared<EagerCclOpKernelState>(ctx); }
   }
 
  private:
@@ -152,7 +152,7 @@ class EagerCclAllReduceKernel final : public user_op::OpKernel {
                          std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     // NOTE(jianhao): the cache only depends on parallel_conf, and the kernel is singleton
     // once parallel_conf is determined, so only init the cache at the first time.
-    if (cache == nullptr) { *cache = std::make_shared<EagerCclOpKernelState>(ctx); }
+    if (*cache == nullptr) { *cache = std::make_shared<EagerCclOpKernelState>(ctx); }
   }
 
  private:
@@ -185,7 +185,7 @@ class EagerCclReduceScatterKernel final : public user_op::OpKernel {
                          std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     // NOTE(jianhao): the cache only depends on parallel_conf, and the kernel is singleton
     // once parallel_conf is determined, so only init the cache at the first time.
-    if (cache == nullptr) { *cache = std::make_shared<EagerCclOpKernelState>(ctx); }
+    if (*cache == nullptr) { *cache = std::make_shared<EagerCclOpKernelState>(ctx); }
   }
 
  private:
@@ -219,7 +219,7 @@ class EagerCclAllGatherKernel final : public user_op::OpKernel {
                          std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     // NOTE(jianhao): the cache only depends on parallel_conf, and the kernel is singleton
     // once parallel_conf is determined, so only init the cache at the first time.
-    if (cache == nullptr) { *cache = std::make_shared<EagerCclOpKernelState>(ctx); }
+    if (*cache == nullptr) { *cache = std::make_shared<EagerCclOpKernelState>(ctx); }
   }
 
  private:
@@ -252,7 +252,7 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
                          std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     // NOTE(jianhao): the cache only depends on parallel_conf, and the kernel is singleton
     // once parallel_conf is determined, so only init the cache at the first time.
-    if (cache == nullptr) { *cache = std::make_shared<EagerCclOpKernelState>(ctx); }
+    if (*cache == nullptr) { *cache = std::make_shared<EagerCclOpKernelState>(ctx); }
   }
 
  private:

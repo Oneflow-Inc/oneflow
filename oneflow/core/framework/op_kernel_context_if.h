@@ -67,7 +67,7 @@ class UserOpConfAttrProvider : virtual public AttrIf {
   }
 
  private:
-  const UserOpConfWrapper& user_op_conf_;
+  UserOpConfWrapper user_op_conf_;
 };
 
 class UserOpConfOpInfoProvider : virtual public OpInfoIf, virtual public DeviceInfoIf {
@@ -100,7 +100,7 @@ class UserOpConfOpInfoProvider : virtual public OpInfoIf, virtual public DeviceI
   const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
 
  private:
-  const UserOpConfWrapper& user_op_conf_;
+  UserOpConfWrapper user_op_conf_;
 };
 
 class InputAndOutputNameIf {

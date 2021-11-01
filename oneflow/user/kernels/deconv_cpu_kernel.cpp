@@ -235,7 +235,7 @@ struct ConvKernelUtil final {
 
 template<typename T>
 struct ConvOpKernelCache final : public user_op::OpKernelCache {
-  Col2ImFunc<T> col2im_func_;
+  Col2ImFunc<T> col2im_func_ = nullptr;
 
   Shape in_5d_shape_;
   Shape out_5d_shape_;
@@ -245,9 +245,9 @@ struct ConvOpKernelCache final : public user_op::OpKernelCache {
   std::vector<int32_t> dilation_rate_3d_;
   std::vector<int32_t> padding_before_3d_;
 
-  enum CBLAS_TRANSPOSE is_out_diff_need_trans_;
-  int32_t idx_offset_;
-  bool is_dynamic_;
+  enum CBLAS_TRANSPOSE is_out_diff_need_trans_ = CblasNoTrans;
+  int32_t idx_offset_{};
+  bool is_dynamic_{};
 
   void Update(const ShapeView& x_shape, const ShapeView& out_shape) {
     auto Gen5DShape = [](const ShapeView& shape, int32_t idx_offset) -> Shape {
@@ -272,15 +272,15 @@ std::shared_ptr<ConvOpKernelCache<T>> InitOpKernelCache(user_op::KernelCacheCont
                                                         const std::string& weight_name) {
   const auto& data_format = ctx->Attr<std::string>("data_format");
 
-  std::shared_ptr<ConvOpKernelCache<T>> state(new ConvOpKernelCache<T>());
+  std::shared_ptr<ConvOpKernelCache<T>> cache(new ConvOpKernelCache<T>());
   if (data_format == "channels_first") {
-    state->col2im_func_ = ConvKernelUtil<T>::NCDHWCol2Im;
-    state->is_out_diff_need_trans_ = CblasNoTrans;
-    state->idx_offset_ = 2;
+    cache->col2im_func_ = ConvKernelUtil<T>::NCDHWCol2Im;
+    cache->is_out_diff_need_trans_ = CblasNoTrans;
+    cache->idx_offset_ = 2;
   } else {
-    state->col2im_func_ = ConvKernelUtil<T>::NDHWCCol2Im;
-    state->is_out_diff_need_trans_ = CblasTrans;
-    state->idx_offset_ = 1;
+    cache->col2im_func_ = ConvKernelUtil<T>::NDHWCCol2Im;
+    cache->is_out_diff_need_trans_ = CblasTrans;
+    cache->idx_offset_ = 1;
   }
 
   auto Gen5DShape = [](const Shape& shape, int32_t idx_offset) -> Shape {
@@ -289,32 +289,32 @@ std::shared_ptr<ConvOpKernelCache<T>> InitOpKernelCache(user_op::KernelCacheCont
     ret_vec.insert(ret_vec.begin() + idx_offset, 3 - ndims, 1);
     return Shape(ret_vec);
   };
-  state->in_5d_shape_ =
-      Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(in_name, 0)->shape(), state->idx_offset_);
-  state->out_5d_shape_ =
-      Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(out_name, 0)->shape(), state->idx_offset_);
-  state->weight_5d_shape_ =
-      Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(weight_name, 0)->shape(), state->idx_offset_);
+  cache->in_5d_shape_ =
+      Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(in_name, 0)->shape(), cache->idx_offset_);
+  cache->out_5d_shape_ =
+      Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(out_name, 0)->shape(), cache->idx_offset_);
+  cache->weight_5d_shape_ =
+      Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(weight_name, 0)->shape(), cache->idx_offset_);
 
   auto Gen3DVec = [](const std::vector<int32_t>& origin_vec) -> std::vector<int32_t> {
     std::vector<int32_t> ret_vec = origin_vec;
     ret_vec.insert(ret_vec.begin(), 3 - ret_vec.size(), 1);
     return ret_vec;
   };
-  state->strides_3d_ = Gen3DVec(ctx->Attr<std::vector<int32_t>>("strides"));
-  state->dilation_rate_3d_ = Gen3DVec(ctx->Attr<std::vector<int32_t>>("dilation_rate"));
-  state->is_dynamic_ = ctx->TensorDesc4ArgNameAndIndex(in_name, 0)->is_dynamic();
+  cache->strides_3d_ = Gen3DVec(ctx->Attr<std::vector<int32_t>>("strides"));
+  cache->dilation_rate_3d_ = Gen3DVec(ctx->Attr<std::vector<int32_t>>("dilation_rate"));
+  cache->is_dynamic_ = ctx->TensorDesc4ArgNameAndIndex(in_name, 0)->is_dynamic();
   const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
   FOR_RANGE(uint8_t, dim, 0, 3) {
     int64_t index = static_cast<int64_t>(dim) - (3 - padding_before.size());
     if (index < 0) {
-      state->padding_before_3d_.push_back(0);
+      cache->padding_before_3d_.push_back(0);
     } else {
-      state->padding_before_3d_.push_back(padding_before.at(index));
+      cache->padding_before_3d_.push_back(padding_before.at(index));
     }
   }
 
-  return state;
+  return cache;
 }
 
 template<typename T>
