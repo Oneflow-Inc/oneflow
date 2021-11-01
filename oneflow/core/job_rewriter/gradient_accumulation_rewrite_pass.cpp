@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 
@@ -34,7 +34,7 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
       || job_conf.num_gradient_accumulation_steps() <= 1) {
     return Maybe<void>::Ok();
   }
-  const bool is_multi_client = CHECK_JUST(GlobalMultiClientEnv());
+  const bool is_multi_client = CHECK_JUST(IsMultiClient());
   const OpGraph op_graph(*job);
   JobBuilder job_builder(job);
   HashMap<std::string, OperatorConf> name2op_conf;

@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
@@ -40,7 +41,7 @@ class Scope final {
   ~Scope() = default;
 
   static Maybe<Scope> New(int64_t symbol_id, const ScopeProto& scope_proto);
-  const Maybe<int64_t>& symbol_id() const { return symbol_id_; }
+  const Optional<int64_t>& symbol_id() const { return symbol_id_; }
   int64_t auto_increment_id() { return ++auto_increment_id_; }
   int64_t session_id() const { return scope_proto().session_id(); }
   const std::shared_ptr<JobDesc>& job_desc_symbol() const { return job_desc_; }
@@ -78,7 +79,7 @@ class Scope final {
   const AttrValue& GetAttrValue(const std::string& attr_name) const;
 
   int64_t auto_increment_id_;
-  Maybe<int64_t> symbol_id_;
+  Optional<int64_t> symbol_id_;
   const ScopeProto scope_proto_;
   std::shared_ptr<JobDesc> job_desc_;
   Symbol<PlacementScope> placement_scope_;

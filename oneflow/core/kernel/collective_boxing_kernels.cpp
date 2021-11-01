@@ -18,8 +18,20 @@ limitations under the License.
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/device/collective_boxing_device_context.h"
+#include "oneflow/core/actor/collective_boxing_actor_context.h"
 
 namespace oneflow {
+
+using namespace boxing::collective;
+
+namespace {
+
+CollectiveBoxingDeviceCtx* GetCollectiveBoxingDeviceCtx(KernelContext* kernel_ctx) {
+  auto* actor_context_pointer = CHECK_NOTNULL(dynamic_cast<ActorContextProvider*>(kernel_ctx));
+  auto* collective_boxing_actor_context = CHECK_NOTNULL(
+      dynamic_cast<CollectiveBoxingActorContext*>(actor_context_pointer->GetActorContext()));
+  return collective_boxing_actor_context->collective_boxing_device_ctx();
+}
 
 class CollectiveBoxingKernelState final : public KernelState {
  public:
@@ -34,8 +46,6 @@ class CollectiveBoxingKernelState final : public KernelState {
  private:
   RequestHandle* request_handle_ = nullptr;
 };
-
-using namespace boxing::collective;
 
 class CollectiveBoxingGenericKernel final : public Kernel {
  public:
@@ -77,7 +87,7 @@ void CollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) const
   } else {
     request->recv_buff = nullptr;
   }
-  auto* device_ctx = dynamic_cast<CollectiveBoxingDeviceCtx*>(ctx->device_ctx());
+  auto* device_ctx = GetCollectiveBoxingDeviceCtx(ctx);
   CHECK_NOTNULL(device_ctx);
   std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint> checkpoint = device_ctx->AddCheckpoint();
   request->callback = [checkpoint](const Maybe<void>& status) {
@@ -88,5 +98,7 @@ void CollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) const
 }
 
 REGISTER_KERNEL(OperatorConf::kCollectiveBoxingGenericConf, CollectiveBoxingGenericKernel);
+
+}  // namespace
 
 }  // namespace oneflow
