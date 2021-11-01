@@ -1083,6 +1083,39 @@ class CtcLossFunctor {
   std::shared_ptr<OpExpr> op_xdivy_;
 };
 
+
+class RNNTlossFunctor {
+ public:
+  RNNTlossFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("RNNTloss")
+                         .Input("acts")
+                         .Input("labels")
+                         .Input("act_lens")
+                         .Input("label_lens")
+                         .Output("costs")
+                         .Output("grads")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& acts,
+                           const std::shared_ptr<one::Tensor>& labels,
+                           const std::shared_ptr<one::Tensor>& act_lens,
+                           const std::shared_ptr<one::Tensor>& label_lens,
+                           const int32_t& blank_label, 
+                           const int32_t& num_threads) const {
+    MutableAttrMap attrs;
+
+    JUST(attrs.SetAttr<int32_t>("blank_label", blank_label));
+    JUST(attrs.SetAttr<int32_t>("num_threads", num_threads));
+
+    std::shared_ptr<one::Tensor> acts_trans = JUST(LogSoftmax(acts,-1));
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {acts_trans, labels, act_lens, label_lens}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class AffineGridFunctor {
  public:
   AffineGridFunctor() {
@@ -1837,6 +1870,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::CombinedMarginLossFunctor>("CombinedMarginLoss");
   m.add_functor<impl::MarginRankingLossFunctor>("MarginRankingLoss");
   m.add_functor<impl::CtcLossFunctor>("CtcLoss");
+  m.add_functor<impl::RNNTlossFunctor>("RNNTloss");
   m.add_functor<impl::AffineGridFunctor>("AffineGrid");
   m.add_functor<impl::GridSampleFunctor>("GridSample");
   m.add_functor<impl::NormalizationFunctor>("Normalization");

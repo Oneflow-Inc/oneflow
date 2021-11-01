@@ -377,6 +377,10 @@
   signature: "Tensor (Tensor x, Int64 dim=None) => LogSoftmax"
   bind_python: True
 
+- name: "RNNTloss"
+  signature: "Tensor (Tensor acts, Tensor labels, Tensor act_lens, Tensor label_lens, Int32 blank_label, Int32 num_threads) => RNNTloss"
+  bind_python: True
+
 - name: "hardswish"
   signature: "Tensor (Tensor x) => HardSwish"
   bind_python: True
