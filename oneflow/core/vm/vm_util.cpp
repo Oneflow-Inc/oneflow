@@ -43,7 +43,7 @@ Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
 
 Maybe<void> ClusterSync() {
   Maybe<void> (*Run)(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) =
-      JUST(IsMultiClient()) ? &PhysicalRun : &LogicalRun;
+      IsMultiClient() ? &PhysicalRun : &LogicalRun;
   BlockingCounter bc(1);
   JUST(Run([&bc](InstructionsBuilder* builder) -> Maybe<void> {
     JUST(builder->ComputeGlobalFrontSeqBarrier());

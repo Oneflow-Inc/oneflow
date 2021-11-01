@@ -56,7 +56,7 @@ int32_t GetGpuDeviceNum() {
 
 Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) {
   if (!is_inited_) {
-    CHECK_OR_RETURN(JUST(IsMultiClient()));
+    IsMultiClient();
     DumpVersionInfo();
 
     Resource resource = config_proto.resource();

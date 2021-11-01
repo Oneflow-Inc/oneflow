@@ -106,7 +106,7 @@ Maybe<void> EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {
 bool EagerExecutionEnabled() { return *Global<bool, EagerExecution>::Get(); }
 
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
-  if (JUST(IsMultiClient())) {
+  if (IsMultiClient()) {
     return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
   } else {
     // single-client

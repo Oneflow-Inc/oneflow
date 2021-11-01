@@ -22,7 +22,7 @@ namespace oneflow {
 namespace vm {
 
 Maybe<int64_t> LogicalIdGenerator::NewSymbolId() {
-  if (JUST(IsMultiClient())) {
+  if (IsMultiClient()) {
     // NOTE(chengcheng): in Multi-Client LogicalIdGenerator will degenerate directly to
     //   PhysicalIdGenerator, because each rank will generate id ONLY from itself, NOT the master.
     return IdUtil::NewPhysicalSymbolId(GlobalProcessCtx::Rank());
@@ -32,7 +32,7 @@ Maybe<int64_t> LogicalIdGenerator::NewSymbolId() {
 }
 
 Maybe<int64_t> LogicalIdGenerator::NewObjectId() {
-  if (JUST(IsMultiClient())) {
+  if (IsMultiClient()) {
     // NOTE(chengcheng): in Multi-Client LogicalIdGenerator will degenerate directly to
     //   PhysicalIdGenerator, because each rank will generate id ONLY from itself, NOT the master.
     return IdUtil::NewPhysicalObjectId(GlobalProcessCtx::Rank());

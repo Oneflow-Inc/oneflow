@@ -32,7 +32,7 @@ Maybe<void> OutputOp::InferLogicalOutBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const ParallelDesc& parallel_desc) const {
   BlobDesc* out_blob_desc = BlobDesc4BnInOp("out");
-  if (CHECK_JUST(IsMultiClient())) {
+  if (IsMultiClient()) {
     *out_blob_desc = *BlobDesc4BnInOp("in");
   } else {
     JUST(InterfaceOpUtil::InferLogicalOutBlobDesc(op_conf().output_conf().blob_conf(),
@@ -46,7 +46,7 @@ Maybe<void> OutputOp::InferOutBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  if (CHECK_JUST(IsMultiClient())) {
+  if (IsMultiClient()) {
     // NOTE(chengcheng):
     //   In multi-client, in blob shape maybe changed and NOT equal with output_conf.blob_conf,
     //   and the output op actually is return op (used in single-client) with NO blob conf.

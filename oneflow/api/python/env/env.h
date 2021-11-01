@@ -50,7 +50,7 @@ inline Maybe<bool> IsEnvInited() { return Global<EnvGlobalObjectsScope>::Get() !
 
 inline Maybe<void> DestroyEnv() {
   if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  if (JUST(IsMultiClient())) {
+  if (IsMultiClient()) {
     OF_ENV_BARRIER();
   } else {
     if (GlobalProcessCtx::IsThisProcessMaster()) { ClusterInstruction::MasterSendHalt(); }

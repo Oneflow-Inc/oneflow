@@ -33,7 +33,7 @@ namespace {
 class TestVirtualMachineScope {
  public:
   TestVirtualMachineScope(int64_t gpu_device_num, int64_t cpu_device_num) {
-    *Global<Optional<bool>, MultiClient>::Get() = false;
+    SetIsMultiClient(false);
     test_resource_desc_scope_.reset(new vm::TestResourceDescScope(gpu_device_num, cpu_device_num));
     virtual_machine_scope_.reset(
         new vm::VirtualMachineScope(Global<ResourceDesc, ForSession>::Get()->resource()));

@@ -32,7 +32,7 @@ class SetDefaultVariableConf final : public JobPass {
   }
 
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
-    if (JUST(IsMultiClient())) {
+    if (IsMultiClient()) {
       // NOTE(chengcheng): Multi-Client Variable is inited by Eager.
       return Maybe<void>::Ok();
     }

@@ -34,7 +34,7 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
       || job_conf.num_gradient_accumulation_steps() <= 1) {
     return Maybe<void>::Ok();
   }
-  const bool is_multi_client = CHECK_JUST(IsMultiClient());
+  const bool is_multi_client = IsMultiClient();
   const OpGraph op_graph(*job);
   JobBuilder job_builder(job);
   HashMap<std::string, OperatorConf> name2op_conf;

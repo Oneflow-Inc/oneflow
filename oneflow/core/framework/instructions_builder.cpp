@@ -1750,7 +1750,7 @@ InstructionsBuilder::GetMut2OperandBlobObjects(
 }
 
 Maybe<void> LogicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
-  if (JUST(IsMultiClient())) {
+  if (IsMultiClient()) {
     // NOTE(chengcheng): in Multi-Client LogicalRun will degenerate directly to PhysicalRun,
     //   because each rank will process instructions ONLY from itself, NOT the master.
     return PhysicalRun(Build);

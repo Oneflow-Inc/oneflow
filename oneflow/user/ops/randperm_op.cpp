@@ -41,7 +41,7 @@ REGISTER_NO_GRAD_USER_OP("randperm")
 
 Maybe<void> InferRandpermNdSbp(user_op::InferNdSbpFnContext* ctx) {
   cfg::NdSbp* out = ctx->NdSbp4ArgNameAndIndex("out", 0);
-  if (JUST(IsMultiClient())) {
+  if (IsMultiClient())) {
     const auto& pb_str = ctx->user_op_conf().attr<std::string>("nd_sbp");
     NdSbp pb;
     CHECK_OR_RETURN(TxtString2PbMessage(pb_str, &pb));

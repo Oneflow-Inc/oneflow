@@ -325,7 +325,7 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     }
   }
 
-  if (CHECK_JUST(IsMultiClient())) {
+  if (IsMultiClient()) {
     GenChunkForMultiNNGraphMemoryReuseInMultiClient(plan, &mem_block_id2mem_block);
   } else {
     CHECK(variable_op_names.empty());

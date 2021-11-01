@@ -37,7 +37,7 @@ COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COC
   // NOTE(zwx): COCODataReader is not consistent since attr nd_sbp is empty,
   // we assume that it works in DDP
   auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
-  if (nd_sbp_str_vec.empty() && CHECK_JUST(IsMultiClient())) {
+  if (nd_sbp_str_vec.empty() && IsMultiClient()) {
     parallel_id = GlobalProcessCtx::Rank();
     parallel_num = GlobalProcessCtx::WorldSize();
   } else {

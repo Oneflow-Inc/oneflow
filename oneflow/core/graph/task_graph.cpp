@@ -544,7 +544,7 @@ void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_node
 }
 
 void TaskGraph::AddCtrlEdgeBetweenSrcDstTickAndInputOutputInSameRank() {
-  if (!CHECK_JUST(IsMultiClient())) { return; }
+  if (!IsMultiClient()) { return; }
   HashMap<int64_t, TaskNode*> rank_id2src_tick;
   HashMap<int64_t, TaskNode*> rank_id2dst_tick;
   HashMap<int64_t, HashSet<TaskNode*>> rank_id2input_output_nodes;

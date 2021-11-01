@@ -36,7 +36,7 @@ Maybe<void> CheckOpGraph(const OpGraph& op_graph) {
       // NOTE(chengcheng):
       //   in single-client source op is SourceTickOpConf,
       //   in multi-client source op is WaitAndSendIdsOpConf_
-      if (JUST(IsMultiClient())) {
+      if (IsMultiClient()) {
         CHECK_OR_RETURN(op_node->op().op_conf().has_wait_and_send_ids_conf());
       } else {
         CHECK_OR_RETURN(op_node->op().op_conf().has_source_tick_conf());
@@ -50,7 +50,7 @@ Maybe<void> CheckOpGraph(const OpGraph& op_graph) {
       // NOTE(chengcheng):
       //   in single-client source op is SinkTickOpConf,
       //   in multi-client source op is CallbackNotifyOpConf.
-      if (JUST(IsMultiClient())) {
+      if (IsMultiClient()) {
         CHECK_OR_RETURN(op_node->op().op_conf().has_callback_notify_conf());
       } else {
         CHECK_OR_RETURN(op_node->op().op_conf().has_sink_tick_conf());

@@ -181,7 +181,7 @@ void CublasMathModeGuard::SetMathMode(cublasMath_t new_mode) {
 
 int GetCudaDeviceIndex() {
   int cuda_device_index = 0;
-  if (CHECK_JUST(IsMultiClient())) {
+  if (IsMultiClient()) {
     cuda_device_index = GlobalProcessCtx::LocalRank();
   } else {
     OF_CUDA_CHECK(cudaGetDevice(&cuda_device_index));

@@ -94,7 +94,7 @@ Maybe<void> EagerOneflow::RunPhysicalInstruction(vm::InstructionMsgList* instruc
 
 Maybe<void> EagerOneflow::RunLogicalInstruction(vm::InstructionMsgList* instruction_list,
                                                 const vm::cfg::EagerSymbolList& eager_symbol_list) {
-  if (JUST(IsMultiClient())) {
+  if (IsMultiClient()) {
     // NOTE(chengcheng): in Multi-Client LogicalRun will degenerate directly to PhysicalRun,
     //   because each rank will process instructions ONLY from itself, NOT the master.
     return RunPhysicalInstruction(instruction_list, eager_symbol_list);
