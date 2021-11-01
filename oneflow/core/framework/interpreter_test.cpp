@@ -33,7 +33,7 @@ namespace {
 class TestVirtualMachineScope {
  public:
   TestVirtualMachineScope(int64_t gpu_device_num, int64_t cpu_device_num) {
-    *Global<Maybe<bool>, MultiClient>::Get() = false;
+    *Global<Optional<bool>, MultiClient>::Get() = false;
     test_resource_desc_scope_.reset(new vm::TestResourceDescScope(gpu_device_num, cpu_device_num));
     virtual_machine_scope_.reset(
         new vm::VirtualMachineScope(Global<ResourceDesc, ForSession>::Get()->resource()));
@@ -42,8 +42,7 @@ class TestVirtualMachineScope {
   ~TestVirtualMachineScope() {
     virtual_machine_scope_.reset();
     test_resource_desc_scope_.reset();
-    Global<Maybe<bool>, MultiClient>::SetAllocated(
-        new Maybe<bool>(Error::InvalidValueError("is_multi_client is not set")));
+    Global<Optional<bool>, MultiClient>::SetAllocated(new Optional<bool>());
   }
 
  private:
