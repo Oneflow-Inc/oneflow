@@ -123,7 +123,7 @@ class CreateComputeCtxPass : public CreateComputeCtxPassBase<CreateComputeCtxPas
             && succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))
             && succeeded(importer.ConvertUserOpAttributes(op, user_op_adaptor, op_conf))
             && succeeded(ConvertCtrlInputs(op, op_conf))) {
-          llvm::errs() << op_conf.DebugString();
+          // pass
         } else {
           return WalkResult::interrupt();
         }
