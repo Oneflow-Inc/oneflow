@@ -108,18 +108,6 @@ class JitImporter : public Importer {
 
 OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context);
 
-class JITKernelComputeContext {
- public:
-  JITKernelComputeContext();
-  JITKernelComputeContext(JITKernelComputeContext&&) = default;
-  JITKernelComputeContext(const JITKernelComputeContext&) = default;
-  JITKernelComputeContext& operator=(JITKernelComputeContext&&) = default;
-  JITKernelComputeContext& operator=(const JITKernelComputeContext&) = default;
-  ~JITKernelComputeContext() = default;
-
- private:
-};
-
 }  // namespace ir
 
 }  // namespace one

@@ -336,8 +336,6 @@ LogicalResult JitImporter::LowerToOneFlowKernel() {
   return pm.run(GetModule());
 }
 
-JITKernelComputeContext::JITKernelComputeContext() {}
-
 }  // namespace ir
 
 }  // namespace one
