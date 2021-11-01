@@ -17,7 +17,7 @@ import oneflow
 import uuid
 
 
-def trace(f):
+def exec(f):
     def wrapper(*args, **kwargs):
         m = args[0]
         assert isinstance(m, oneflow.nn.Module)

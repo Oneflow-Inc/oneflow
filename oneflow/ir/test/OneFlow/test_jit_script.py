@@ -26,7 +26,7 @@ class MyModule(torch.nn.Module):
         # When this submodule is used, it will be compiled
         self.linear = torch.nn.Linear(N, M)
 
-    @torch.jit.trace
+    @torch.jit.exec
     def forward(self, input):
         output = self.linear(input)
         return output
