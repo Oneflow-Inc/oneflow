@@ -8,14 +8,13 @@
 namespace oneflow {
 
 template<typename T>
-void vec_binary_add(const T* x,const T* y, const T* out, size_t len)
+void vec_binary_add(const T* x,const T* y, T* out, size_t len)
 {
-
     vectorized_init();
 
     MultiThreadVecLoop(len, [=](size_t begin, size_t end){
-        VecFunc<T*>::add_func(begin, end, x, y, out);
-    }, 64);
+        VecFunc<T>::add_func(begin, end, x, y, out);
+    });
 }
 
 }

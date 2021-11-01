@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 CPUCapability compute_cpu_capability() {
-  auto envar = std::getenv("ATEN_CPU_CAPABILITY");
+  auto envar = std::getenv("ONEFLOW_CPU_CAPABILITY");
   if (envar) {
 #ifdef WITH_AVX
     if (strcmp(envar, "avx512") == 0) {

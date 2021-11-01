@@ -27,17 +27,10 @@ void vectorized_init() {
   VecFunc<int64_t>::init();
 }
 
-
-
 // COMMAND(vectorized_init());
-struct VectorizedInit {
-    VectorizedInit() { vectorized_init(); }
-};
-VectorizedInit vectorized_init_tmp; 
-
 
 template<typename T>
-std::function<void(size_t, size_t, T*, T*, T*, T)>
+std::function<void(size_t, size_t, const T*, const T*, T*, const T)>
     VecFunc<T, typename std::enable_if<std::is_same<T, float>::value
                                        || std::is_same<T, double>::value>::type>::fmadd_func;
 template<typename T>
@@ -50,29 +43,29 @@ std::function<void(size_t, size_t, const T*, const T*, T*)> VecFunc<
                                || std::is_same<T, int64_t>::value>::type>::add_func;
 
 template<typename T>
-std::function<void(size_t, size_t, T*, T*, T*)>
+std::function<void(size_t, size_t, const T*, const T*, T*)>
     VecFunc<T, typename std::enable_if<std::is_same<T, float>::value
                                        || std::is_same<T, double>::value>::type>::sub_func;
 template<typename T>
-std::function<void(size_t, size_t, T*, T*, T*)> VecFunc<
+std::function<void(size_t, size_t, const T*, const T*, T*)> VecFunc<
     T, typename std::enable_if<std::is_same<T, int8_t>::value || std::is_same<T, int32_t>::value
                                || std::is_same<T, int64_t>::value>::type>::sub_func;
 
 template<typename T>
-std::function<void(size_t, size_t, T*, T*, T*)>
+std::function<void(size_t, size_t, const T*, const T*, T*)>
     VecFunc<T, typename std::enable_if<std::is_same<T, float>::value
                                        || std::is_same<T, double>::value>::type>::mul_func;
 template<typename T>
-std::function<void(size_t, size_t, T*, T*, T*)> VecFunc<
+std::function<void(size_t, size_t, const T*, const T*, T*)> VecFunc<
     T, typename std::enable_if<std::is_same<T, int8_t>::value || std::is_same<T, int32_t>::value
                                || std::is_same<T, int64_t>::value>::type>::mul_func;
 
 template<typename T>
-std::function<void(size_t, size_t, T*, T*, T*)>
+std::function<void(size_t, size_t, const T*, const T*, T*)>
     VecFunc<T, typename std::enable_if<std::is_same<T, float>::value
                                        || std::is_same<T, double>::value>::type>::div_func;
 template<typename T>
-std::function<void(size_t, size_t, T*, T*, T*)> VecFunc<
+std::function<void(size_t, size_t, const T*, const T*, T*)> VecFunc<
     T, typename std::enable_if<std::is_same<T, int8_t>::value || std::is_same<T, int32_t>::value
                                || std::is_same<T, int64_t>::value>::type>::div_func;
 

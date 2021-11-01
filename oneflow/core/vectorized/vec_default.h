@@ -23,7 +23,7 @@ namespace oneflow {
 template<typename T>
 class VectorizedDefault {
  public:
-  static void fmadd(size_t begin, size_t end, T* x, T* y, T* out, T alpha) {
+  static void fmadd(size_t begin, size_t end, const T* x, const T* y, T* out, const T alpha) {
     for (size_t i = begin; i <= end; i++) { out[i] = x[i] * alpha + y[i]; }
   }
 
@@ -31,15 +31,15 @@ class VectorizedDefault {
     for (size_t i = begin; i <= end; i++) { out[i] = x[i] + y[i]; }
   }
 
-  static void sub(size_t begin, size_t end, T* x, T* y, T* out) {
+  static void sub(size_t begin, size_t end, const T* x, const T* y, T* out) {
     for (size_t i = begin; i <= end; i++) { out[i] = x[i] - y[i]; }
   }
 
-  static void mul(size_t begin, size_t end, T* x, T* y, T* out) {
+  static void mul(size_t begin, size_t end, const T* x, const T* y, T* out) {
     for (size_t i = begin; i <= end; i++) { out[i] = x[i] * y[i]; }
   }
 
-  static void div(size_t begin, size_t end, T* x, T* y, T* out) {
+  static void div(size_t begin, size_t end, const T* x, const T* y, T* out) {
     for (size_t i = begin; i <= end; i++) { out[i] = x[i] / y[i]; }
   }
 };

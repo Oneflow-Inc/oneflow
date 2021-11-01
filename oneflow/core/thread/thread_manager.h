@@ -68,8 +68,10 @@ inline size_t divup(size_t x, size_t y) {
   return (x + y - 1) / y;
 }
 
+#define ONEFLOE_GRAIN_SIZE 32768
+
 template<typename DoEachT>
-void MultiThreadVecLoop(size_t num, const DoEachT& DoEach, size_t grain_size) {
+void MultiThreadVecLoop(size_t num, const DoEachT& DoEach, size_t grain_size = ONEFLOE_GRAIN_SIZE) {
   if (num == 0) { return; }
   size_t thread_num = Global<ThreadPool>::Get()->thread_num();
   thread_num = std::min(thread_num, divup(num, grain_size));

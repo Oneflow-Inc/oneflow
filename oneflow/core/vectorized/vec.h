@@ -72,11 +72,11 @@ class VecFunc<T, typename std::enable_if<std::is_same<T, float>::value
   }
 
   // begin end x y out alpha
-  static std::function<void(size_t, size_t, T*, T*, T*, T)> fmadd_func;
+  static std::function<void(size_t, size_t, const T*, const T*, T*, const T)> fmadd_func;
   static std::function<void(size_t, size_t, const T*, const T*, T*)> add_func;
-  static std::function<void(size_t, size_t, T*, T*, T*)> sub_func;
-  static std::function<void(size_t, size_t, T*, T*, T*)> mul_func;
-  static std::function<void(size_t, size_t, T*, T*, T*)> div_func;
+  static std::function<void(size_t, size_t, const T*, const T*, T*)> sub_func;
+  static std::function<void(size_t, size_t, const T*, const T*, T*)> mul_func;
+  static std::function<void(size_t, size_t, const T*, const T*, T*)> div_func;
 };
 
 template<typename T>
@@ -122,9 +122,9 @@ class VecFunc<
 
   // begin end x y out alpha
   static std::function<void(size_t, size_t, const T*, const T*, T*)> add_func;
-  static std::function<void(size_t, size_t, T*, T*, T*)> sub_func;
-  static std::function<void(size_t, size_t, T*, T*, T*)> mul_func;
-  static std::function<void(size_t, size_t, T*, T*, T*)> div_func;
+  static std::function<void(size_t, size_t, const T*, const T*, T*)> sub_func;
+  static std::function<void(size_t, size_t, const T*, const T*, T*)> mul_func;
+  static std::function<void(size_t, size_t, const T*, const T*, T*)> div_func;
 };
 
 void vectorized_init();
