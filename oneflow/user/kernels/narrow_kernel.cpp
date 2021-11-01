@@ -61,8 +61,8 @@ class NarrowKernel final : public user_op::OpKernel {
     const int64_t& start = ctx->Attr<int64_t>("start");
     const int64_t& length = ctx->Attr<int64_t>("length");
     const ShapeView in_shape = in->shape();
-    auto copynd_primitive = NewCopyNdPrimitive(ctx);
-    CHECK(copynd_primitive);
+    auto copy_nd_primitive = NewCopyNdPrimitive(ctx);
+    CHECK(copy_nd_primitive);
 
     const int64_t rows = in_shape.Count(0, dim);
     const int64_t cols = in_shape.Count(dim + 1);
@@ -74,7 +74,7 @@ class NarrowKernel final : public user_op::OpKernel {
     DimVector src_shape = {rows, narrow_shape, cols};
     DimVector src_pos_vec = {0, start, 0};
     DimVector extent_vec = {rows, length, cols};
-    copynd_primitive->Launch(ctx->stream_ctx(), out->data_type(), 3, out->mut_dptr(),
+    copy_nd_primitive->Launch(ctx->stream_ctx(), out->data_type(), 3, out->mut_dptr(),
                              dst_shape.data(), dst_pos_vec.data(), in->dptr(), src_shape.data(),
                              src_pos_vec.data(), extent_vec.data());
   }
@@ -101,8 +101,8 @@ class NarrowGradKernel final : public user_op::OpKernel {
     CHECK(memset_primitive);
     memset_primitive->Launch(ctx->stream_ctx(), dst, 0, dx_byte_size);
 
-    auto copynd_primitive = NewCopyNdPrimitive(ctx);
-    CHECK(copynd_primitive);
+    auto copy_nd_primitive = NewCopyNdPrimitive(ctx);
+    CHECK(copy_nd_primitive);
     const ShapeView dx_shape = dx->shape();
 
     const int64_t rows = dx_shape.Count(0, dim);
@@ -116,7 +116,7 @@ class NarrowGradKernel final : public user_op::OpKernel {
     DimVector src_pos_vec = {0, 0, 0};
     DimVector extent_vec = {rows, length, cols};
 
-    copynd_primitive->Launch(ctx->stream_ctx(), dx->data_type(), 3, dst, dst_shape.data(),
+    copy_nd_primitive->Launch(ctx->stream_ctx(), dx->data_type(), 3, dst, dst_shape.data(),
                              dst_pos_vec.data(), dy->dptr(), src_shape.data(), src_pos_vec.data(),
                              extent_vec.data());
   }
