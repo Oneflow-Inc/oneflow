@@ -1512,7 +1512,7 @@
   bind_python: True
 
 
-- name: "distributed_partial_fc_sample
+- name: "distributed_partial_fc_sample"
   signature:
     "TensorTuple (Tensor weight, Tensor label, Int64 num_sample) => DistributedPariticalFCSample"
   bind_python: True
@@ -1525,4 +1525,3 @@
 - name: "meshgrid"
   signature: "TensorTuple (TensorTuple tensors) => Meshgrid"
   bind_python: True
-
