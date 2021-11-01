@@ -31,7 +31,7 @@ class InputKernel final : public Kernel {
 
  private:
   void ForwardDataContent(KernelContext* ctx) const override {
-    if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+    if (CHECK_JUST(*Global<Optional<bool>, MultiClient>::Get())) {
       CHECK(this->op_conf().input_conf().has_job_name());
       const auto& job_name = this->op_conf().input_conf().job_name();
       const auto& op_name = this->op_conf().name();
