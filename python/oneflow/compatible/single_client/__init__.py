@@ -165,8 +165,6 @@ from oneflow.compatible.single_client.framework.generator import (
 from oneflow.compatible.single_client.framework.generator import (
     default_generator,
     manual_seed,
-    get_rng_state,
-    set_rng_state,
 )
 from oneflow.compatible.single_client.framework.input_blob_def import (
     DeprecatedFixedTensorDef as FixedTensorDef,
