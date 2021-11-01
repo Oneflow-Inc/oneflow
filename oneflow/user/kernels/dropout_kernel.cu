@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 #include "oneflow/core/kernel/random_generator.h"
-#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/kernel/cuda_graph_support.h"
@@ -116,15 +115,8 @@ void MaskAndScaleAdd<half>(DeviceCtx* ctx, const int64_t n, float scale, const h
 template<typename T>
 struct MaskAndScaleFunctor {
   OF_DEVICE_FUNC explicit MaskAndScaleFunctor(float scale) : scale(scale) {}
-  OF_DEVICE_FUNC T operator()(T x, int8_t mask) const { return x * static_cast<T>(mask) * scale; }
-  float scale;
-};
-
-template<>
-struct MaskAndScaleFunctor<half> {
-  OF_DEVICE_FUNC explicit MaskAndScaleFunctor(float scale) : scale(scale) {}
-  __device__ half operator()(half x, int8_t mask) const {
-    return __hmul(x, __hmul(static_cast<half>(mask), __float2half_rn(scale)));
+  OF_DEVICE_FUNC T operator()(T x, int8_t mask) const {
+    return x * static_cast<T>(mask) * static_cast<T>(scale);
   }
   float scale;
 };

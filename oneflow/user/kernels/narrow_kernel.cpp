@@ -26,7 +26,7 @@ namespace {
 
 template<typename Context>
 std::unique_ptr<primitive::CopyNd> NewCopyNdPrimitive(Context* ctx) {
-  return primitive::NewPrimitive<primitive::CopyNdFactory>(ctx->device_type(), 2);
+  return primitive::NewPrimitive<primitive::CopyNdFactory>(ctx->device_type(), 3);
 }
 
 template<typename Context>
@@ -62,17 +62,22 @@ class NarrowKernel final : public user_op::OpKernel {
     const int64_t& start = ctx->Attr<int64_t>("start");
     const int64_t& length = ctx->Attr<int64_t>("length");
     const ShapeView in_shape = in->shape();
-    auto primitive = NewCopyNdPrimitive(ctx);
+    auto copynd_primitive = NewCopyNdPrimitive(ctx);
+    CHECK(copynd_primitive);
 
-    DimVector dst_shape = {in_shape.Count(0, dim), length, in_shape.Count(dim + 1)};
+    const int64_t rows = in_shape.Count(0, dim);
+    const int64_t cols = in_shape.Count(dim + 1);
+    const int64_t narrow_shape = in_shape.At(dim);
+
+    DimVector dst_shape = {rows, length, cols};
     DimVector dst_pos_vec = {0, 0, 0};
 
-    DimVector src_shape = {in_shape.Count(0, dim), in_shape.At(dim), in_shape.Count(dim + 1)};
+    DimVector src_shape = {rows, narrow_shape, cols};
     DimVector src_pos_vec = {0, start, 0};
-    DimVector extent_vec = {in_shape.Count(0, dim), length, in_shape.Count(dim + 1)};
-    primitive->Launch(ctx->stream_ctx(), out->data_type(), 3, out->mut_dptr(), dst_shape.data(),
-                      dst_pos_vec.data(), in->dptr(), src_shape.data(), src_pos_vec.data(),
-                      extent_vec.data());
+    DimVector extent_vec = {rows, length, cols};
+    copynd_primitive->Launch(ctx->stream_ctx(), out->data_type(), 3, out->mut_dptr(),
+                             dst_shape.data(), dst_pos_vec.data(), in->dptr(), src_shape.data(),
+                             src_pos_vec.data(), extent_vec.data());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -97,19 +102,24 @@ class NarrowGradKernel final : public user_op::OpKernel {
     CHECK(memset_primitive);
     memset_primitive->Launch(ctx->stream_ctx(), dst, 0, dx_byte_size);
 
-    auto primitive = NewCopyNdPrimitive(ctx);
+    auto copynd_primitive = NewCopyNdPrimitive(ctx);
+    CHECK(copynd_primitive);
     const ShapeView dx_shape = dx->shape();
 
-    DimVector dst_shape = {dx_shape.Count(0, dim), dx_shape.At(dim), dx_shape.Count(dim + 1)};
+    const int64_t rows = dx_shape.Count(0, dim);
+    const int64_t cols = dx_shape.Count(dim + 1);
+    const int64_t narrow_shape = dx_shape.At(dim);
+
+    DimVector dst_shape = {rows, narrow_shape, cols};
     DimVector dst_pos_vec = {0, start, 0};
 
-    DimVector src_shape = {dx_shape.Count(0, dim), length, dx_shape.Count(dim + 1)};
+    DimVector src_shape = {rows, length, cols};
     DimVector src_pos_vec = {0, 0, 0};
-    DimVector extent_vec = {dx_shape.Count(0, dim), length, dx_shape.Count(dim + 1)};
+    DimVector extent_vec = {rows, length, cols};
 
-    primitive->Launch(ctx->stream_ctx(), dx->data_type(), 3, dst, dst_shape.data(),
-                      dst_pos_vec.data(), dy->dptr(), src_shape.data(), src_pos_vec.data(),
-                      extent_vec.data());
+    copynd_primitive->Launch(ctx->stream_ctx(), dx->data_type(), 3, dst, dst_shape.data(),
+                             dst_pos_vec.data(), dy->dptr(), src_shape.data(), src_pos_vec.data(),
+                             extent_vec.data());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
