@@ -13,30 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_STRING_DESC_H_
-#define ONEFLOW_CORE_VM_STRING_DESC_H_
+#ifndef ONEFLOW_CORE_COMMON_MULTICLIENT_H_
+#define ONEFLOW_CORE_COMMON_MULTICLIENT_H_
 
-#include <string>
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
-class StringSymbol final {
- public:
-  StringSymbol(const StringSymbol&) = delete;
-  StringSymbol(StringSymbol&&) = delete;
-  StringSymbol(int64_t symbol_id, const std::string& data);
+inline Optional<bool>* IsMultiClientPtr() { return Global<Optional<bool>, MultiClient>::Get(); }
 
-  ~StringSymbol() = default;
+inline Maybe<bool> IsMultiClient() {
+  auto* opt = Global<Optional<bool>, MultiClient>::Get();
+  return !opt || opt->value_or(true);
+}
 
-  const Optional<int64_t>& symbol_id() const { return symbol_id_; }
-  const std::string& data() const { return data_; }
-
- private:
-  Optional<int64_t> symbol_id_;
-  std::string data_;
-};
-
+inline Maybe<void> SetIsMultiClient(bool is_multi_client) {
+  CHECK_NOTNULL_OR_RETURN(IsMultiClientPtr());
+  *IsMultiClientPtr() = is_multi_client;
+  return Maybe<void>::Ok();
+}
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_STRING_DESC_H_
+#endif
