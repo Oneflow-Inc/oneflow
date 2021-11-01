@@ -350,17 +350,12 @@ void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op_conf,
     return lbi2logical_blob_desc_.at(bn).get();
   };
   CHECK_JUST(op->InferLogicalOutBlobDescs(GetLogicalBlobDesc4BnInOp, *parallel_desc));
-  KernelConf kernel_conf;
   static ParallelContext parallel_ctx = GetSingleDeviceParallelContext();
   for (auto& kv : lbi2logical_blob_desc_) {
     CHECK(
         result_type_mapping_.emplace(kv.first, GetMlirTensorTypeFromBlobDesc(*kv.second).getValue())
             .second);
   }
-  op->GenKernelConf(GetLogicalBlobDesc4BnInOp, &parallel_ctx, &kernel_conf);
-  llvm::errs() << "kernel_conf: \n";
-  llvm::errs() << kernel_conf.DebugString() << "\n";
-  GetKernel(kernel_conf);
 }
 
 llvm::Optional<mlir::Value> JitImporter::GetResultByBnAndIndex(const std::string& bn,
