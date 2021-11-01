@@ -18,84 +18,37 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
 
 
-def _prelu(input, alpha):
-    alpha = np.expand_dims(alpha, 0)
-    alpha = np.expand_dims(alpha, 2)
-    alpha = np.expand_dims(alpha, 3)
-    return np.where(input > 0, input, input * alpha)
-
-
-def _prelu_grad(input, alpha):
-    return alpha * (input <= 0) + (input > 0)
-
-
-def _test_prelu(test_case, shape, device):
-    np_input = np.random.randn(*shape)
-    input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device))
-    np_alpha = np.random.randn(1)
-    prelu = flow.nn.PReLU(init=np_alpha)
-    if device == "cuda":
-        prelu.to(flow.device("cuda"))
-    np_out = _prelu(np_input, np_alpha)
-    of_out = prelu(input)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-
-
-def _test_prelu_ndims(test_case, shape, device):
-    np_input = np.random.randn(*shape)
-    input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device))
-    np_alpha = np.random.randn(shape[1])
-    prelu = flow.nn.PReLU(init=1.0, num_parameters=shape[1])
-    prelu_alpha = np.expand_dims(np_alpha, (1, 2))
-    prelu.weight = flow.nn.Parameter(flow.Tensor(prelu_alpha, dtype=flow.float32))
-    if device == "cuda":
-        prelu.to(flow.device("cuda"))
-    np_out = _prelu(np_input, np_alpha)
-    of_out = prelu(input)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-
-
-def _test_prelu_grad(test_case, shape, device):
-    np_input = np.random.randn(*shape)
-    input = flow.Tensor(
-        np_input, dtype=flow.float32, requires_grad=True, device=flow.device(device)
-    )
-    np_alpha = 0.2
-    prelu = flow.nn.PReLU(init=np_alpha)
-    if device == "cuda":
-        prelu.to(flow.device("cuda"))
-    of_out = prelu(input).sum()
-    of_out.backward()
-    np_grad = _prelu_grad(np_input, np_alpha)
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-05, 1e-05))
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestPReLU(flow.unittest.TestCase):
-    def test_prelu(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            _test_prelu(test_case, *arg)
-            _test_prelu_ndims(test_case, *arg)
-            _test_prelu_grad(test_case, *arg)
-
-    @unittest.skip("prelu has bug")
     @autotest()
-    def test_prelu_module_with_random_data(test_case):
-        m = torch.nn.PReLU(num_parameters=random().to(int), init=random().to(float))
-        m.train(random())
+    def test_prelu_4dim_module_with_random_data(test_case):
         device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim1=3).to(device)
+        m = torch.nn.PReLU(
+            num_parameters=3 | nothing(), init=random().to(float) | nothing(),
+        )
         m.to(device)
-        x = random_pytorch_tensor().to(device)
+        m.train(random())
+        y = m(x)
+        return y
+
+    @autotest()
+    def test_prelu_2dim_module_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim1=3).to(device)
+        m = torch.nn.PReLU(
+            num_parameters=3 | nothing(), init=random().to(float) | nothing(),
+        )
+        m.to(device)
+        m.train(random())
         y = m(x)
         return y
 

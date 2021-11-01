@@ -23,165 +23,24 @@ from test_util import GenArgList
 import oneflow as flow
 import oneflow.unittest
 
-
-def _test_2_dim_forward(test_case, device):
-    np_arr = np.random.randn(2, 3).astype(np.float32)
-    input = flow.Tensor(np_arr, device=flow.device(device))
-    dim = 0
-    chunks = 2
-    of_out = flow.chunk(input, chunks, dim)
-    np_out_shape = [(1, 3), (1, 3)]
-    for i in range(0, chunks):
-        of_out_shape = of_out[i].numpy().shape
-        test_case.assertTrue(np.allclose(of_out_shape, np_out_shape[i], 1e-05, 1e-05))
-    dim = 1
-    chunks = 2
-    of_out = flow.chunk(input, chunks, dim)
-    np_out_shape = [(2, 1), (2, 2)]
-    for i in range(0, chunks):
-        of_out_shape = of_out[i].numpy().shape
-        test_case.assertTrue(np.allclose(of_out_shape, np_out_shape[i], 1e-05, 1e-05))
-    dim = 1
-    chunks = 3
-    of_out = flow.chunk(input, chunks, dim)
-    np_out_shape = [(2, 1), (2, 1), (2, 1)]
-    for i in range(0, chunks):
-        of_out_shape = of_out[i].numpy().shape
-        test_case.assertTrue(np.allclose(of_out_shape, np_out_shape[i], 1e-05, 1e-05))
-
-
-def _test_2_dim_tensor_function_forward(test_case, device):
-    np_arr = np.random.randn(2, 3).astype(np.float32)
-    input = flow.Tensor(np_arr, device=flow.device(device))
-    dim = 0
-    chunks = 2
-    of_out = input.chunk(chunks, dim)
-    np_out_shape = [(1, 3), (1, 3)]
-    for i in range(0, chunks):
-        of_out_shape = of_out[i].numpy().shape
-        test_case.assertTrue(np.allclose(of_out_shape, np_out_shape[i], 1e-05, 1e-05))
-    dim = 1
-    chunks = 2
-    of_out = input.chunk(chunks, dim)
-    np_out_shape = [(2, 1), (2, 2)]
-    for i in range(0, chunks):
-        of_out_shape = of_out[i].numpy().shape
-        test_case.assertTrue(np.allclose(of_out_shape, np_out_shape[i], 1e-05, 1e-05))
-    dim = 1
-    chunks = 3
-    of_out = input.chunk(chunks, dim)
-    np_out_shape = [(2, 1), (2, 1), (2, 1)]
-    for i in range(0, chunks):
-        of_out_shape = of_out[i].numpy().shape
-        test_case.assertTrue(np.allclose(of_out_shape, np_out_shape[i], 1e-05, 1e-05))
-
-
-def _test_4_dim_forward(test_case, device):
-    np_arr = np.random.randn(5, 3, 6, 9).astype(np.float32)
-    input = flow.Tensor(np_arr, device=flow.device(device))
-    dim = 2
-    chunks = 3
-    of_out = flow.chunk(input, chunks, dim)
-    np_out_shape = [(5, 3, 2, 9), (5, 3, 2, 9), (5, 3, 2, 9)]
-    for i in range(0, chunks):
-        of_out_shape = of_out[i].numpy().shape
-        test_case.assertTrue(np.allclose(of_out_shape, np_out_shape[i], 1e-05, 1e-05))
-    dim = 2
-    chunks = 4
-    of_out = flow.chunk(input, chunks, dim)
-    np_out_shape = [(5, 3, 1, 9), (5, 3, 1, 9), (5, 3, 1, 9), (5, 3, 3, 9)]
-    for i in range(0, chunks):
-        of_out_shape = of_out[i].numpy().shape
-        test_case.assertTrue(np.allclose(of_out_shape, np_out_shape[i], 1e-05, 1e-05))
-    dim = 3
-    chunks = 3
-    of_out = flow.chunk(input, chunks, dim)
-    np_out_shape = [(5, 3, 6, 3), (5, 3, 6, 3), (5, 3, 6, 3)]
-    for i in range(0, chunks):
-        of_out_shape = of_out[i].numpy().shape
-        test_case.assertTrue(np.allclose(of_out_shape, np_out_shape[i], 1e-05, 1e-05))
-    dim = 3
-    chunks = 2
-    of_out = flow.chunk(input, chunks, dim)
-    np_out_shape = [(5, 3, 6, 4), (5, 3, 6, 5)]
-    for i in range(0, chunks):
-        of_out_shape = of_out[i].numpy().shape
-        test_case.assertTrue(np.allclose(of_out_shape, np_out_shape[i], 1e-05, 1e-05))
-    dim = 3
-    chunks = 4
-    of_out = flow.chunk(input, chunks, dim)
-    np_out_shape = [(5, 3, 6, 2), (5, 3, 6, 2), (5, 3, 6, 2), (5, 3, 6, 3)]
-    for i in range(0, chunks):
-        of_out_shape = of_out[i].numpy().shape
-        test_case.assertTrue(np.allclose(of_out_shape, np_out_shape[i], 1e-05, 1e-05))
-
-
-def _test_4_dim_tensor_function_forward(test_case, device):
-    np_arr = np.random.randn(5, 3, 6, 9).astype(np.float32)
-    input = flow.Tensor(np_arr, device=flow.device(device))
-    dim = 2
-    chunks = 3
-    of_out = input.chunk(chunks, dim)
-    np_out_shape = [(5, 3, 2, 9), (5, 3, 2, 9), (5, 3, 2, 9)]
-    for i in range(0, chunks):
-        of_out_shape = of_out[i].numpy().shape
-        test_case.assertTrue(np.allclose(of_out_shape, np_out_shape[i], 1e-05, 1e-05))
-    dim = 2
-    chunks = 4
-    of_out = input.chunk(chunks, dim)
-    np_out_shape = [(5, 3, 1, 9), (5, 3, 1, 9), (5, 3, 1, 9), (5, 3, 3, 9)]
-    for i in range(0, chunks):
-        of_out_shape = of_out[i].numpy().shape
-        test_case.assertTrue(np.allclose(of_out_shape, np_out_shape[i], 1e-05, 1e-05))
-    dim = 3
-    chunks = 3
-    of_out = input.chunk(chunks, dim)
-    np_out_shape = [(5, 3, 6, 3), (5, 3, 6, 3), (5, 3, 6, 3)]
-    for i in range(0, chunks):
-        of_out_shape = of_out[i].numpy().shape
-        test_case.assertTrue(np.allclose(of_out_shape, np_out_shape[i], 1e-05, 1e-05))
-    dim = 3
-    chunks = 2
-    of_out = input.chunk(chunks, dim)
-    np_out_shape = [(5, 3, 6, 4), (5, 3, 6, 5)]
-    for i in range(0, chunks):
-        of_out_shape = of_out[i].numpy().shape
-        test_case.assertTrue(np.allclose(of_out_shape, np_out_shape[i], 1e-05, 1e-05))
-    dim = 3
-    chunks = 4
-    of_out = input.chunk(chunks, dim)
-    np_out_shape = [(5, 3, 6, 2), (5, 3, 6, 2), (5, 3, 6, 2), (5, 3, 6, 3)]
-    for i in range(0, chunks):
-        of_out_shape = of_out[i].numpy().shape
-        test_case.assertTrue(np.allclose(of_out_shape, np_out_shape[i], 1e-05, 1e-05))
-
-
-def _test_chunk_backward(test_case, device):
-    np_arr = np.random.randn(2, 3).astype(np.float32)
-    input = flow.Tensor(np_arr, device=flow.device(device))
-    input.requires_grad = True
-    y = flow.chunk(input, chunks=2, dim=0)
-    (z1, z2) = (y[0].sum(), y[1].sum())
-    z1.backward()
-    z2.backward()
-    np_grad = np.ones((2, 3))
-    test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
+from oneflow.test_utils.automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestChunk(flow.unittest.TestCase):
-    def test_chunk(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_2_dim_forward,
-            _test_4_dim_forward,
-            _test_2_dim_tensor_function_forward,
-            _test_4_dim_tensor_function_forward,
-            _test_chunk_backward,
-        ]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    @autotest()
+    def test_flow_chunk_list_with_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_pytorch_tensor(
+            ndim=4,
+            dim1=random(low=4, high=8).to(int),
+            dim2=random(low=4, high=8).to(int),
+            dim3=random(low=4, high=8).to(int),
+        ).to(device)
+        y = torch.chunk(x, chunks=random(low=1, high=5).to(int), dim=dim)
+        z = torch.cat(y, dim=dim)
+        return z
 
 
 if __name__ == "__main__":

@@ -22,12 +22,10 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/sharable_mem_block_graph.h"
-#include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/blocking_counter.h"
 
@@ -101,46 +99,6 @@ std::function<void(int64_t, uint64_t)> MakeSetterSetPlanRegstNum(Plan* plan) {
   auto MutRestDesc4Id = PlanUtil::MakeMutRegstDesc4Id(plan);
   return [MutRestDesc4Id](int64_t regst_desc_id, uint64_t num) {
     MutRestDesc4Id(regst_desc_id)->set_register_num(num);
-  };
-}
-
-std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathDurations4RegstDescId(
-    const ChainActGraph& graph) {
-  auto regst_desc_id2consumer_id2duration =
-      std::make_shared<HashMap<int64_t, HashMap<int64_t, double>>>();
-  graph.ForEachRegstDescConsumerPathMeanDuration(
-      [&](int64_t regst_desc_id, int64_t consumer_actor_id, double time) {
-        (*regst_desc_id2consumer_id2duration)[regst_desc_id][consumer_actor_id] = time;
-      });
-  auto empty = std::make_shared<const HashMap<int64_t, double>>();
-  return [regst_desc_id2consumer_id2duration,
-          empty](int64_t regst_desc_id) -> const HashMap<int64_t, double>& {
-    const auto& it = regst_desc_id2consumer_id2duration->find(regst_desc_id);
-    if (it == regst_desc_id2consumer_id2duration->end()) {
-      return *empty;
-    } else {
-      return it->second;
-    }
-  };
-}
-
-std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4RegstDescId(
-    const ChainActGraph& graph) {
-  auto regst_desc_id2consumer_id2ii_scale =
-      std::make_shared<HashMap<int64_t, HashMap<int64_t, double>>>();
-  graph.ForEachRegstDescConsumerPathIIScale(
-      [&](int64_t regst_desc_id, int64_t consumer_actor_id, double ii_scale) {
-        (*regst_desc_id2consumer_id2ii_scale)[regst_desc_id][consumer_actor_id] = ii_scale;
-      });
-  auto empty = std::make_shared<const HashMap<int64_t, double>>();
-  return [regst_desc_id2consumer_id2ii_scale,
-          empty](int64_t regst_desc_id) -> const HashMap<int64_t, double>& {
-    const auto& it = regst_desc_id2consumer_id2ii_scale->find(regst_desc_id);
-    if (it == regst_desc_id2consumer_id2ii_scale->end()) {
-      return *empty;
-    } else {
-      return it->second;
-    }
   };
 }
 

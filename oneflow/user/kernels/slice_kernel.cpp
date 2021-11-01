@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/user/kernels/slice_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -176,7 +177,7 @@ SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_
 }  // namespace
 
 template<DeviceType device_type, typename T>
-class SliceKernel final : public user_op::OpKernel {
+class SliceKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   SliceKernel() = default;
   ~SliceKernel() = default;
@@ -193,7 +194,7 @@ class SliceKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class SliceGradKernel final : public user_op::OpKernel {
+class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   SliceGradKernel() = default;
   ~SliceGradKernel() = default;
@@ -268,13 +269,13 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
 }
 
 #define MAKE_WRITE_SLICE_SWITCH_ENTRY(func_name, N, T) func_name<N, T>
-DEFINE_STATIC_SWITCH_FUNC(void, WriteSlice, MAKE_WRITE_SLICE_SWITCH_ENTRY,
-                          MAKE_NDIM_CTRV_SEQ(DIM_SEQ),
-                          MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ
+DEFINE_STATIC_SWITCH_FUNC(
+    void, WriteSlice, MAKE_WRITE_SLICE_SWITCH_ENTRY, MAKE_NDIM_CTRV_SEQ(DIM_SEQ),
+    MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
 #if defined(WITH_CUDA)
-                                                      HALF_DATA_TYPE_SEQ
+                                HALF_DATA_TYPE_SEQ
 #endif
-                                                  ));
+                            ));
 #undef MAKE_WRITE_SLICE_SWITCH_ENTRY
 
 std::shared_ptr<user_op::OpKernelState> CreateSliceState(user_op::KernelInitContext* ctx,

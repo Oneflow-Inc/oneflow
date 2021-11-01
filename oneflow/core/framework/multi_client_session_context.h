@@ -19,6 +19,8 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/nn_graph.h"
+#include "oneflow/core/framework/tensor.h"
 
 namespace oneflow {
 
@@ -29,10 +31,26 @@ class MultiClientSessionContext {
   ~MultiClientSessionContext() {}
 
   Maybe<void> TryInit(const ConfigProto& config_proto);
+  Maybe<void> AddCGraph(const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr);
   Maybe<void> TryClose();
+
+  // NOTE(chengcheng): for nn.Graph catch free EagerTensor in Graph.build().
+  //   NNGraph should NOT hold ANY shared_ptr<Tensor> because NNGraph will send to VM stream in
+  //   RunLazyNNGraphInstruction, the tensor in NNGraph will Never be released for hold in VM
+  //   instrunction and compute stream. So we store free EagerTensor in MultiClientSessionContext,
+  //   and will be release in NNGraph destructor.
+  void StoreFreeEagerTensorWithNameByGraphName(const std::string& graph_name,
+                                               const std::shared_ptr<one::Tensor>& tensor,
+                                               const std::string& tensor_name);
+  const std::vector<std::pair<std::string, std::shared_ptr<one::Tensor>>>&
+  GetFreeEagerTensorNamePairByGraphName(const std::string& graph_name);
+  void RemoveGraphFreeEagerTensors(const std::string& graph_name);
 
  private:
   bool is_inited_;
+  HashMap<std::string, std::vector<std::pair<std::string, std::shared_ptr<one::Tensor>>>>
+      graph_name2free_eager_tensors_;
+  std::vector<std::weak_ptr<NNGraph>> graphs_;
 };
 
 }  // namespace oneflow

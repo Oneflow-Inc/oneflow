@@ -42,8 +42,9 @@ class Error final {
   static Error ProtoParseFailedError();
   static Error JobSetEmptyError();
   static Error DeviceTagNotFoundError();
-  static Error ValueError(const std::string& error_summary);
+  static Error InvalidValueError(const std::string& error_summary);
   static Error IndexError();
+  static Error TypeError();
   static Error TimeoutError();
   static Error JobNameExistError();
   static Error JobNameEmptyError();
@@ -62,8 +63,10 @@ class Error final {
   static Error BlobSplitAxisInferError();
   static Error UnknownJobBuildAndInferError();
   static Error CheckFailedError();
-  static Error Todo();
-  static Error Unimplemented();
+  static Error ValueNotFoundError();
+  static Error TodoError();
+  static Error UnimplementedError();
+  static Error RuntimeError();
   static Error BoxingNotSupportedError();
   static Error MemoryZoneOutOfMemoryError(int64_t machine_id, int64_t mem_zone_id, uint64_t calc,
                                           uint64_t available, const std::string& device_type);
@@ -76,12 +79,12 @@ class Error final {
   static Error RwMutexedObjectNotFoundError();
 
   // gradient
-  static Error GradientFunctionNotFound();
+  static Error GradientFunctionNotFoundError();
 
   // symbol
-  static Error SymbolIdUninitialized();
+  static Error SymbolIdUninitializedError();
 
-  static Error CompileOptionWrong();
+  static Error CompileOptionWrongError();
 
   static Error InputDeviceNotMatchError();
 
@@ -113,11 +116,27 @@ Error&& operator<<(Error&& error, const T& x) {
 }
 
 template<>
+inline Error&& operator<<(Error&& error, const std::stringstream& x) {
+  error << x.str();
+  return std::move(error);
+}
+
+template<>
+inline Error&& operator<<(Error&& error, const std::ostream& x) {
+  error << x.rdbuf();
+  return std::move(error);
+}
+
+template<>
 inline Error&& operator<<(Error&& error, const Error& other) {
   error.Assign(other);
   return std::move(error);
 }
 
+extern const char* kOfBugIssueUploadPrompt;
+
 }  // namespace oneflow
+
+#define PRINT_BUG_PROMPT_AND_ABORT() LOG(FATAL) << kOfBugIssueUploadPrompt
 
 #endif  // ONEFLOW_CORE_COMMON_ERROR_H_

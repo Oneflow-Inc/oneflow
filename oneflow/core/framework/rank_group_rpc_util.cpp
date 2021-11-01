@@ -16,20 +16,20 @@ limitations under the License.
 #include <memory>
 #include <chrono>
 #include "oneflow/core/framework/rank_group_rpc_util.h"
-#include "oneflow/core/framework/rpc_util.h"
+#include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/job/rank_group_scope.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/thread/consistent_unique_id.h"
+#include "oneflow/core/thread/thread_consistent_id.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
-Maybe<NaiveAsyncRpcCtx> CheckRpcToken(Symbol<RankGroup> rank_group) {
-  const auto& rpc_token =
-      JUST(RpcToken::AcquireCtrlRpcToken(kRankGroupRpcCmdCheckRankGroupConsistency));
+Maybe<NaiveAsyncTransportCtx> CheckTransportToken(Symbol<RankGroup> rank_group) {
+  const auto& transport_token =
+      JUST(TransportToken::NewTransportToken(kTransportTokenTypeCheckRankGroupConsistency));
   const auto& PrepareBuffer = [](void** buffer, std::size_t* size,
                                  std::function<void()>* Callback) -> Maybe<void> {
     const auto& placeholder = std::make_shared<uint32_t>();
@@ -38,16 +38,17 @@ Maybe<NaiveAsyncRpcCtx> CheckRpcToken(Symbol<RankGroup> rank_group) {
     *Callback = [placeholder]() {};
     return Maybe<void>::Ok();
   };
-  const auto& ctx = std::make_shared<NaiveAsyncRpcCtx>(rpc_token, PrepareBuffer, PrepareBuffer);
-  JUST(RpcUtil::SendToNextRankInRing(rank_group, rpc_token, ctx.get()));
-  JUST(RpcUtil::ReceiveFromPrevRankInRing(rank_group, rpc_token, ctx.get()));
+  const auto& ctx =
+      std::make_shared<NaiveAsyncTransportCtx>(transport_token, PrepareBuffer, PrepareBuffer);
+  JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, ctx.get()));
+  JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, ctx.get()));
   return ctx;
 }
 
 Maybe<int64_t> GetCurrentRankGroupLevel() {
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   const auto& root_rank_group = JUST(RankGroupScope::RootRankGroup());
-  CHECK_OR_RETURN(rank_group == root_rank_group) << Error::Unimplemented();
+  CHECK_OR_RETURN(rank_group == root_rank_group) << Error::UnimplementedError();
   return static_cast<int64_t>(0);
 }
 

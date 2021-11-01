@@ -13,37 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import collections
-from typing import Optional, Sequence, Union
-
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _check_axis
-
-
-class Flip(Module):
-    def __init__(self, dims) -> None:
-        super().__init__()
-        assert isinstance(dims, (int, list, tuple)), f"dims must be int, list or tuple"
-        if isinstance(dims, int):
-            dims = [dims]
-        self.dims = dims
-
-    def forward(self, x):
-        input_len = len(x.shape)
-        assert (
-            len(self.dims) <= input_len
-        ), f"len of dims must less than len of input tensor"
-        new_dims = []
-        for i in self.dims:
-            if i < 0:
-                i += input_len
-            assert (
-                i < input_len
-            ), f"IndexError: Dimension out of range (expected to be in range of {input_len}, but got {i})"
-            new_dims.append(i)
-        return flow.F.flip(x, new_dims)
 
 
 def flip_op(input, dims):
@@ -69,6 +40,8 @@ def flip_op(input, dims):
         
         >>> np_arr = np.arange(0, 8).reshape((2, 2, 2)).astype(np.float32)
         >>> input = flow.Tensor(np_arr)
+        >>> input.shape
+        oneflow.Size([2, 2, 2])
         >>> out = flow.flip(input, [0, 1])
         >>> out
         tensor([[[6., 7.],
@@ -78,7 +51,21 @@ def flip_op(input, dims):
                  [0., 1.]]], dtype=oneflow.float32)
 
     """
-    return Flip(dims)(input)
+    assert isinstance(dims, (int, list, tuple)), f"dims must be int, list or tuple"
+    if isinstance(dims, int):
+        dims = [dims]
+
+    input_len = len(input.shape)
+    assert len(dims) <= input_len, f"len of dims must less than len of input tensor"
+    new_dims = []
+    for i in dims:
+        if i < 0:
+            i += input_len
+        assert (
+            i < input_len
+        ), f"IndexError: Dimension out of range (expected to be in range of {input_len}, but got {i})"
+        new_dims.append(i)
+    return flow._C.flip(input, new_dims)
 
 
 @register_tensor_op("flip")
@@ -86,7 +73,7 @@ def flip_op_tensor(input, dims):
     """
     See :func:`oneflow.flip`
     """
-    return Flip(dims)(input)
+    return flip_op(input, dims)
 
 
 if __name__ == "__main__":

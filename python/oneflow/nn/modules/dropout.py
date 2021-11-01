@@ -81,9 +81,9 @@ class Dropout(_DropoutNd):
         >>> y = m(x)
         >>> y #doctest: +ELLIPSIS
         tensor([[-0.7797,  0.2264,  0.2458,  0.4163],
-                ...
-                [-1.4115,  1.2183, -0.5503,  0.652 ]], dtype=oneflow.float32)
-
+                [ 0.4299,  0.3626, -0.4892,  0.4141],
+                [-1.4115,  1.2183, -0.5503,  0.6520]], dtype=oneflow.float32)
+ 
 
     """
 
@@ -95,9 +95,7 @@ class Dropout(_DropoutNd):
         self.generator = generator
 
     def forward(self, x):
-        if self.p == 0.0 or not self.training:
-            return x
-        return flow.F.dropout(x, self.p, self.generator)
+        return flow._C.dropout(x, self.p, self.training, self.generator)
 
 
 if __name__ == "__main__":

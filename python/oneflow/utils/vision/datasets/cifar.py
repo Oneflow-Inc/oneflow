@@ -25,8 +25,10 @@ from .utils import check_integrity, download_and_extract_archive
 
 
 class CIFAR10(VisionDataset):
-    """`CIFAR10 <https://www.cs.toronto.edu/~kriz/cifar.html>`_ Dataset.
+    r""" `CIFAR10 <https://www.cs.toronto.edu/~kriz/cifar.html>`_ Dataset.
+
     Args:
+
         root (string): Root directory of dataset where directory
             ``cifar-10-batches-py`` exists or will be saved to if download is set to True.
         train (bool, optional): If True, creates dataset from training set, otherwise
@@ -39,7 +41,6 @@ class CIFAR10(VisionDataset):
             puts it in root directory. If dataset is already downloaded, it is not
             downloaded again.
     """
-
     base_folder = "cifar-10-batches-py"
     url = "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
     filename = "cifar-10-python.tar.gz"
@@ -128,6 +129,7 @@ class CIFAR10(VisionDataset):
         """
         Args:
             index (int): Index
+
         Returns:
             tuple: (image, target) where target is index of the target class.
         """
@@ -170,10 +172,10 @@ class CIFAR10(VisionDataset):
 
 
 class CIFAR100(CIFAR10):
-    """`CIFAR100 <https://www.cs.toronto.edu/~kriz/cifar.html>`_ Dataset.
+    r""" `CIFAR100 <https://www.cs.toronto.edu/~kriz/cifar.html>`_ Dataset.
+
     This is a subclass of the `CIFAR10` Dataset.
     """
-
     base_folder = "cifar-100-python"
     url = "https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz"
     filename = "cifar-100-python.tar.gz"

@@ -26,23 +26,4 @@ class Function:
         return self.handle(*args, **kwargs)
 
 
-def RegisterFunctionalApis():
-    import inspect
-
-    from oneflow.compatible.single_client import F
-    from oneflow.compatible.single_client.experimental import F as expr_F
-
-    for s in dir(oneflow._oneflow_internal.F):
-        f = getattr(oneflow._oneflow_internal.F, s)
-        if inspect.isbuiltin(f):
-            func_name = s
-            if s in _function_name_aliases:
-                func_name = _function_name_aliases[s]
-                setattr(F, func_name, Function(func_name, f))
-                setattr(expr_F, func_name, Function(func_name, f))
-            setattr(F, s, Function(func_name, f))
-            setattr(expr_F, s, Function(func_name, f))
-    del inspect
-
-
 _function_name_aliases = {"add_scalar": "scalar_add"}

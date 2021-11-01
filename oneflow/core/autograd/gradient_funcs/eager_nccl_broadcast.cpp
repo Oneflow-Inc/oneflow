@@ -52,12 +52,12 @@ Maybe<one::UserOpExpr> FindOrCreatEagerNcclReduceOpExpr(Symbol<ParallelDesc> par
 
 }  // namespace
 
-struct EagerNcclBroadcastOpExprInterpState : public OpExprInterpState {
+struct EagerNcclBroadcastCaptureState : public AutoGradCaptureState {
   Symbol<ParallelDesc> parallel_desc;
   int64_t root;
 };
 
-class EagerNcclBroadcast : public OpExprGradFunction<EagerNcclBroadcastOpExprInterpState> {
+class EagerNcclBroadcast : public OpExprGradFunction<EagerNcclBroadcastCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -65,15 +65,15 @@ class EagerNcclBroadcast : public OpExprGradFunction<EagerNcclBroadcastOpExprInt
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(EagerNcclBroadcastOpExprInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(EagerNcclBroadcastCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs,
                       const OpExprInterpContext& interp_ctx) const override {
     ctx->root = JUST(interp_ctx.attrs.GetAttr<int64_t>("root"));
-    ctx->parallel_desc = JUST(interp_ctx.parallel_desc.value());
+    ctx->parallel_desc = JUST(interp_ctx.parallel_desc);
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const EagerNcclBroadcastOpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const EagerNcclBroadcastCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& grad_op = JUST(FindOrCreatEagerNcclReduceOpExpr(ctx->parallel_desc, ctx->root));
     in_grads->resize(1);

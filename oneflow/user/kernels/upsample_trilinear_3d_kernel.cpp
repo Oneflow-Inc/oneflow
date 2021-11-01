@@ -213,6 +213,5 @@ class UpsampleTrilinearGrad3DCPUKernel final : public user_op::OpKernel {
 
 REGISTER_UPSAMPTRILINEAR3D_CPU_KERNEL(float)
 REGISTER_UPSAMPTRILINEAR3D_CPU_KERNEL(double)
-REGISTER_UPSAMPTRILINEAR3D_CPU_KERNEL(int)
 
 }  // namespace oneflow

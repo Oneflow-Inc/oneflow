@@ -15,21 +15,9 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
 
 
-class BMM(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, input, mat2):
-        assert (
-            input.shape[0] == mat2.shape[0] and input.shape[2] == mat2.shape[1]
-        ), f"batch dim or matmul dim not match, please check input!"
-        return flow.F.batch_matmul(input, mat2)
-
-
-def bmm_op(x, y):
+def bmm_op(input, mat2):
     """
     Performs a batch matrix-matrix product of matrices stored in input and mat2.
 
@@ -47,17 +35,20 @@ def bmm_op(x, y):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input1 = flow.Tensor(np.random.randn(10, 3, 4), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.random.randn(10, 4, 5), dtype=flow.float32)
+        >>> input1 = flow.Tensor(np.random.randn(10, 3, 4))
+        >>> input2 = flow.Tensor(np.random.randn(10, 4, 5))
         >>> of_out = flow.bmm(input1, input2)
         >>> of_out.shape
-        flow.Size([10, 3, 5])
+        oneflow.Size([10, 3, 5])
     """
-    return BMM()(x, y)
+    assert (
+        input.shape[0] == mat2.shape[0] and input.shape[2] == mat2.shape[1]
+    ), f"batch dim or matmul dim not match, please check input!"
+    return flow._C.batch_matmul(input, mat2)
 
 
 @register_tensor_op("bmm")
-def bmm_op_tensor(x, y):
+def bmm_op_tensor(input, mat2):
     """
 
     bmm() -> Tensor
@@ -65,7 +56,7 @@ def bmm_op_tensor(x, y):
     See :func:`oneflow.bmm`
 
     """
-    return BMM()(x, y)
+    return flow._C.batch_matmul(input, mat2)
 
 
 if __name__ == "__main__":

@@ -31,14 +31,14 @@ from oneflow.framework.multi_client_session import MultiClientSession
 @flow.unittest.skip_unless_1n1d()
 class TestFeedVariableTensor(unittest.TestCase):
     def test_feed_var_tensor(test_case):
-        test_case.assertTrue(oneflow.distributed.is_multi_client())
+        test_case.assertTrue(oneflow.env.is_multi_client())
         test_case.assertTrue(oneflow.framework.env_util.HasAllMultiClientEnvVars())
         x = flow.Tensor(1, 1, 10, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
         session = session_ctx.GetDefaultSession()
         test_case.assertTrue(isinstance(session, MultiClientSession))
         session.TryInit()
-        with oneflow._oneflow_internal.lazy_mode.gard(True):
+        with oneflow._oneflow_internal.lazy_mode.guard(True):
             oneflow._oneflow_internal.JobBuildAndInferCtx_Open(
                 "cc_test_variable_op_expr_job"
             )

@@ -16,17 +16,15 @@ limitations under the License.
 
 #include "oneflow/api/python/functional/python_arg.h"
 
+#include "oneflow/api/python/framework/device.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/indexing.h"
-#include "oneflow/core/common/data_type.cfg.h"
-#include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/framework/user_op_attr.cfg.h"
 #include "oneflow/core/framework/random_generator.h"
-#include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/functional/tensor_index.h"
 
 namespace py = pybind11;
@@ -35,59 +33,63 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-#define INSTANCE_CAST_OBJECT_AS(T)                                    \
-  template<>                                                          \
-  Maybe<T> PythonArg::ObjectAs<T>() const {                           \
-    return detail::cast<T>(Borrow());                                 \
-  }                                                                   \
-  template<>                                                          \
-  Maybe<std::vector<T>> PythonArg::ObjectAs<std::vector<T>>() const { \
-    return detail::cast<std::vector<T>>(Borrow());                    \
+#define INSTANCE_OBJECT_AS_INTEGER(T)                                                             \
+  template<>                                                                                      \
+  Maybe<T> PythonArg::ObjectAs<T>() const {                                                       \
+    return static_cast<T>(PyLong_AsLongLong(object_));                                            \
+  }                                                                                               \
+  template<>                                                                                      \
+  Maybe<std::vector<T>> PythonArg::ObjectAs<std::vector<T>>() const {                             \
+    if (size_ > 0 && PyLong_Check(object_)) {                                                     \
+      return std::make_shared<std::vector<T>>(size_, static_cast<T>(PyLong_AsLongLong(object_))); \
+    }                                                                                             \
+    return PyUnpackLongSequence<T>(object_);                                                      \
   }
 
-OF_PP_FOR_EACH_TUPLE(INSTANCE_CAST_OBJECT_AS,
-                     ARITHMETIC_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(std::string));
+OF_PP_FOR_EACH_TUPLE(INSTANCE_OBJECT_AS_INTEGER, INTEGER_TYPE_SEQ)
+#undef INSTANCE_OBJECT_AS_INTEGER
 
-#undef INSTANCE_CAST_OBJECT_AS
+#define INSTANCE_OBJECT_AS_FLOAT(T)                                                              \
+  template<>                                                                                     \
+  Maybe<T> PythonArg::ObjectAs<T>() const {                                                      \
+    return static_cast<T>(PyFloat_AsDouble(object_));                                            \
+  }                                                                                              \
+  template<>                                                                                     \
+  Maybe<std::vector<T>> PythonArg::ObjectAs<std::vector<T>>() const {                            \
+    if (size_ > 0 && PyFloat_Check(object_)) {                                                   \
+      return std::make_shared<std::vector<T>>(size_, static_cast<T>(PyFloat_AsDouble(object_))); \
+    }                                                                                            \
+    return PyUnpackFloatSequence<T>(object_);                                                    \
+  }
+
+OF_PP_FOR_EACH_TUPLE(INSTANCE_OBJECT_AS_FLOAT, FLOATING_TYPE_SEQ)
+#undef INSTANCE_OBJECT_AS_FLOAT
+
+template<>
+Maybe<std::string> PythonArg::ObjectAs<std::string>() const {
+  return std::make_shared<std::string>(JUST(PyStringAsString(object_)));
+}
 
 template<>
 Maybe<Scalar> PythonArg::ObjectAs<Scalar>() const {
-  py::object obj = Borrow();
-  if (detail::isinstance<int32_t>(obj)) {
-    return Scalar(JUST(detail::cast<int32_t>(obj)));
-  } else if (detail::isinstance<int64_t>(obj)) {
-    return Scalar(JUST(detail::cast<int64_t>(obj)));
-  } else if (detail::isinstance<float>(obj)) {
-    return Scalar(JUST(detail::cast<float>(obj)));
-  } else if (detail::isinstance<double>(obj)) {
-    return Scalar(JUST(detail::cast<double>(obj)));
-  } else if (detail::isinstance<bool>(obj)) {
-    return Scalar(JUST(detail::cast<bool>(obj)));
-  } else {
-    UNIMPLEMENTED_THEN_RETURN() << "Can not convert to scalar from python object whose type is "
-                                << *JUST(detail::cast<std::string>(py::str(py::type::of(obj))));
-  }
+  return PyUnpackScalar(object_);
 }
 
 template<>
 Maybe<std::shared_ptr<one::Tensor>> PythonArg::ObjectAs<std::shared_ptr<one::Tensor>>() const {
-  return detail::cast<std::shared_ptr<one::Tensor>>(Borrow());
+  return JUST(PyUnpackTensor(object_));
 }
 
 template<>
 Maybe<one::Tensor> PythonArg::ObjectAs<one::Tensor>() const {
-  return *JUST(detail::cast<std::shared_ptr<one::Tensor>>(Borrow()));
+  return PyUnpackTensor(object_);
 }
 
 template<>
 Maybe<std::shared_ptr<one::TensorTuple>> PythonArg::ObjectAs<std::shared_ptr<one::TensorTuple>>()
     const {
-  py::object obj = Borrow();
-  if (detail::isinstance<one::TensorTuple>(obj)) {
-    return detail::cast<std::shared_ptr<one::TensorTuple>>(obj);
-  }
-
-  const auto& v = JUST(detail::cast<std::vector<std::shared_ptr<one::Tensor>>>(obj));
+  if (PyTensorTupleCheck(object_)) { return JUST(PyUnpackTensorTuple(object_)); }
+  const auto& v = JUST(PyUnpackTensorSequence(object_));
   auto values = std::make_shared<one::TensorTuple>(v->size());
   for (int i = 0; i < v->size(); ++i) { values->at(i) = v->at(i); }
   return values;
@@ -99,187 +101,117 @@ Maybe<one::TensorTuple> PythonArg::ObjectAs<one::TensorTuple>() const {
 }
 
 template<>
-Maybe<std::shared_ptr<cfg::AttrValue>> PythonArg::ObjectAs<std::shared_ptr<cfg::AttrValue>>()
-    const {
-  py::object obj = Borrow();
-  if (detail::isinstance<cfg::AttrValue>(obj)) {
-    return detail::cast<std::shared_ptr<cfg::AttrValue>>(obj);
-  }
-  auto attr_value = std::make_shared<cfg::AttrValue>();
-  if (detail::isinstance<int32_t>(obj)) {
-    attr_value->set_at_int32(JUST(detail::cast<int32_t>(obj)));
-  } else if (detail::isinstance<double>(obj)) {
-    attr_value->set_at_double(JUST(detail::cast<double>(obj)));
-  } else {
-    UNIMPLEMENTED_THEN_RETURN() << "The attribute type was not supported which is "
-                                << *JUST(detail::cast<std::string>(py::str(py::type::of(obj))));
-  }
-  return attr_value;
-}
-
-template<>
-Maybe<AttrMap> PythonArg::ObjectAs<AttrMap>() const {
-  const auto& attrs = *(JUST(detail::cast<std::shared_ptr<MutableCfgAttrMap>>(Borrow())));
-  return std::make_shared<AttrMap>(*attrs);
-}
-
-template<>
-Maybe<DataType> PythonArg::ObjectAs<DataType>() const {
-  py::object obj = Borrow();
-  if (detail::isinstance<cfg::DataType>(obj)) {
-    const auto& dtype = *JUST(detail::cast<std::shared_ptr<cfg::DataType>>(obj));
-    return static_cast<DataType>(*dtype);
-  } else if (detail::isinstance<DType>(obj)) {
-    return JUST(detail::cast<DType&>(obj)).data_type();
-  } else if (detail::isinstance<int32_t>(obj)) {
-    return static_cast<DataType>(JUST(detail::cast<int32_t>(obj)));
-  } else if (detail::isinstance<int64_t>(obj)) {
-    return static_cast<DataType>(JUST(detail::cast<int64_t>(obj)));
-  } else {
-    UNIMPLEMENTED_THEN_RETURN() << "Can not convert object to DataType from "
-                                << *JUST(detail::cast<std::string>(py::str(py::type::of(obj))));
-  }
-  return kInvalidDataType;
+Maybe<Symbol<DType>> PythonArg::ObjectAs<Symbol<DType>>() const {
+  return PyUnpackDType(object_);
 }
 
 template<>
 Maybe<Shape> PythonArg::ObjectAs<Shape>() const {
-  py::object obj = Borrow();
-  if (detail::isinstance<Shape>(obj)) {
-    return *JUST(detail::cast<std::shared_ptr<Shape>>(obj));
-  } else if (detail::isinstance<py::list>(obj) || detail::isinstance<py::tuple>(obj)) {
-    const auto& shape = JUST(ObjectAs<std::vector<int64_t>>());
-    DimVector dim_vec(shape->size());
-    for (int i = 0; i < shape->size(); ++i) { dim_vec[i] = shape->at(i); }
-    return std::make_shared<Shape>(std::move(dim_vec));
-  } else {
-    UNIMPLEMENTED_THEN_RETURN() << "Can not convert object to Shape from "
-                                << *JUST(detail::cast<std::string>(py::str(py::type::of(obj))));
-  }
+  if (PyShapeCheck(object_)) { return PyUnpackShape(object_); }
+  const auto& shape = JUST(PyUnpackLongSequence<int64_t>(object_));
+  return std::make_shared<Shape>(DimVector(shape->begin(), shape->end()));
 }
 
 template<>
 Maybe<std::shared_ptr<one::Generator>> PythonArg::ObjectAs<std::shared_ptr<one::Generator>>()
     const {
-  return detail::cast<std::shared_ptr<one::Generator>>(Borrow());
+  return JUST(PyUnpackGenerator(object_));
 }
 
 template<>
 Maybe<one::Generator> PythonArg::ObjectAs<one::Generator>() const {
-  return *JUST(detail::cast<std::shared_ptr<one::Generator>>(Borrow()));
+  return PyUnpackGenerator(object_);
 }
 
 template<>
 Maybe<Symbol<Device>> PythonArg::ObjectAs<Symbol<Device>>() const {
-  return **JUST(detail::cast<std::shared_ptr<Symbol<Device>>>(Borrow()));
+  if (PyStringCheck(object_)) {
+    const char* device_str = JUST(PyStringAsString(object_));
+    return DeviceExportUtil::ParseAndNew(device_str);
+  }
+  return PyUnpackDevice(object_);
 }
 
 template<>
 Maybe<Symbol<ParallelDesc>> PythonArg::ObjectAs<Symbol<ParallelDesc>>() const {
-  return **JUST(detail::cast<std::shared_ptr<Symbol<ParallelDesc>>>(Borrow()));
+  return PyUnpackParallelDesc(object_);
 }
 
 template<>
 Maybe<Symbol<cfg::SbpParallel>> PythonArg::ObjectAs<Symbol<cfg::SbpParallel>>() const {
-  return **JUST(detail::cast<std::shared_ptr<Symbol<cfg::SbpParallel>>>(Borrow()));
+  return PyUnpackSbpParallel(object_);
 }
 
 template<>
 Maybe<std::vector<Symbol<cfg::SbpParallel>>>
 PythonArg::ObjectAs<std::vector<Symbol<cfg::SbpParallel>>>() const {
-  const auto& v =
-      JUST(detail::cast<std::vector<std::shared_ptr<Symbol<cfg::SbpParallel>>>>(Borrow()));
-  auto sbp_list = std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>(v->size());
-  for (int i = 0; i < v->size(); ++i) { sbp_list->at(i) = *(v->at(i)); }
-  return sbp_list;
+  if (PySbpParallelCheck(object_)) {
+    return std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>(
+        1, JUST(PyUnpackSbpParallel(object_)));
+  }
+  return PyUnpackSbpParallelSequence(object_);
 }
 
 template<>
 Maybe<TensorIndex> PythonArg::ObjectAs<TensorIndex>() const {
-  auto tensor_index = std::make_shared<TensorIndex>();
-  // Obvious single-entry cases.
-  if (PySlice_Check(object_)         // NOLINT
-      || PyLong_Check(object_)       // NOLINT
-      || object_ == Py_Ellipsis      // NOLINT
-      || object_ == Py_None          // NOLINT
-      || PyTensorCheck(object_)      // NOLINT
-      || !PySequence_Check(object_)  // NOLINT
-      || PyUnicode_Check(object_)) {
-    tensor_index->emplace_back(*JUST(detail::UnpackIndexItem(object_)));
-    return tensor_index;
-  }
-  PyObject* tup = NULL;
-  Py_ssize_t n = 0;
-  if (PyTuple_Check(object_)) {
-    tup = PySequence_Tuple(object_);
-    n = PySequence_Size(tup);
-  } else {
-    // The follow comments are from numpy:
-    // https://github.com/numpy/numpy/blob/main/numpy/core/src/multiarray/mapping.c#L266
-    /*
-     * At this point, we're left with a non-tuple, non-array, sequence:
-     * typically, a list. We use some somewhat-arbitrary heuristics from here
-     * onwards to decided whether to treat that list as a single index, or a
-     * list of indices.
-     */
-    n = PySequence_Size(object_);
-    // Negative size indicates a Python error in the PySequence_Size call.
-    if (n < 0) {
-      PyErr_Clear();
-      tensor_index->emplace_back(*JUST(detail::UnpackIndexItem(object_)));
-      return tensor_index;
-    }
-    // The follow comments are from numpy:
-    // https://github.com/numpy/numpy/blob/main/numpy/core/src/multiarray/mapping.c#L280
-    /*
-     * Backwards compatibility only takes effect for short sequences - otherwise
-     * we treat it like any other scalar.
-     *
-     * Sequences < NPY_MAXDIMS with any slice objects
-     * or newaxis, Ellipsis or other arrays or sequences
-     * embedded, are considered equivalent to an indexing
-     * tuple. (`a[[[1,2], [3,4]]] == a[[1,2], [3,4]]`)
-     */
-    if (n >= /*NPY_MAXDIMS=*/32) {
-      tensor_index->emplace_back(*JUST(detail::UnpackIndexItem(object_)));
-      return tensor_index;
-    }
-    // Check whether we should unpack the index like a tuple.
-    bool commit_to_unpack = false;
-    for (Py_ssize_t i = 0; i < n; ++i) {
-      PyObject* item = PySequence_GetItem(object_, i);
-      if (commit_to_unpack) {
-        CHECK_OR_RETURN(item) << "Sequence index is required.";
-      } else {
-        if (!item) {
-          PyErr_Clear();
-          break;
-        }
-        if (PySequence_Check(item)  // NOLINT
-            || PySlice_Check(item)  // NOLINT
-            || PyTensorCheck(item)  // NOLINT
-            || item == Py_Ellipsis || item == Py_None) {
-          commit_to_unpack = true;
-        }
-      }
-      Py_DECREF(item);
-    }
-    if (commit_to_unpack) {
-      tup = PySequence_Tuple(object_);
-    } else {
-      tensor_index->emplace_back(*JUST(detail::UnpackIndexItem(object_)));
-      return tensor_index;
-    }
-  }
+  return PyUnpackTensorIndex(object_);
+}
 
-  tensor_index->resize(n);
-  for (Py_ssize_t i = 0; i < n; ++i) {
-    PyObject* item = PySequence_GetItem(tup, i);
-    tensor_index->at(i) = *JUST(detail::UnpackIndexItem(item));
-    Py_DECREF(item);
+template<>
+Maybe<PyObject*> PythonArg::ObjectAs<PyObject*>() const {
+  return object_;
+}
+
+template<>
+Maybe<const PyObject*> PythonArg::ObjectAs<const PyObject*>() const {
+  return object_;
+}
+
+Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
+  if (active_tag_ == HAS_IMMEDIATE) { return immediate_->value_type() == type; }
+  switch (type) {
+    case kINT32:
+    case kUINT32:
+    case kINT64:
+    case kUINT64:
+    case kBOOL: return PyLong_Check(object_);
+    case kINT32_LIST:
+    case kUINT32_LIST:
+    case kINT64_LIST:
+    case kUINT64_LIST:
+    case kBOOL_LIST: return PyLongSequenceCheck(object_) || (size_ > 0 && PyLong_Check(object_));
+    case kFLOAT:
+    case kDOUBLE: return PyFloat_Check(object_) || PyLong_Check(object_);
+    case kFLOAT_LIST:
+    case kDOUBLE_LIST:
+      return PyFloatSquenceCheck(object_)
+             || (size_ > 0 && (PyFloat_Check(object_) || PyLong_Check(object_)));
+    case kSTRING: return PyStringCheck(object_);
+    case kSTRING_LIST: return PyStringSequenceCheck(object_);
+    case kSCALAR: return PyScalarCheck(object_);
+    case kTENSOR:
+    case kTENSOR_REF: return PyTensorCheck(object_);
+    case kTENSOR_TUPLE: return PyTensorTupleCheck(object_) || PyTensorSequenceCheck(object_);
+    case kDTYPE: return PyDTypeCheck(object_);
+    case kSHAPE: return PyShapeCheck(object_) || PyLongSequenceCheck(object_);
+    case kGENERATOR:
+    case kGENERATOR_REF: return PyGeneratorCheck(object_);
+    case kTENSOR_INDEX: return PyTensorIndexCheck(object_);
+    case kDEVICE: return PyDeviceCheck(object_) || PyStringCheck(object_);
+    case kPARALLEL_DESC: return PyParallelDescCheck(object_);
+    case kSBP_PARALLEL: return PySbpParallelCheck(object_);
+    case kSBP_PARALLEL_LIST:
+      return PySbpParallelSequenceCheck(object_) || PySbpParallelCheck(object_);
+    case kPY_OBJECT: return nullptr != object_;
+    default: {
+      OF_UNIMPLEMENTED() << "Can not check type " << JUST(ValueTypeName(type));
+    }
   }
-  Py_DECREF(tup);
-  return tensor_index;
+  return false;
+}
+
+bool PythonArgCheck(const PythonArg& arg, ValueType type) {
+  return arg.TypeCheck(type).GetOrThrow();
 }
 
 }  // namespace functional

@@ -21,36 +21,53 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/plan.pb.h"
+#include "oneflow/core/job/runtime.h"
 
 namespace oneflow {
 
 class Blob;
-class Runtime;
 
 class NNGraph final : public NNGraphIf {
  public:
-  explicit NNGraph(const std::string& name) : name_(name), runtime_inited_(false) {}
+  explicit NNGraph(const std::string& name)
+      : name_(name), runtime_inited_(false), is_closed_(false) {}
   ~NNGraph();
 
-  const std::string& job_name() const { return name_; }
-  const std::vector<std::string>& inputs_op_names() const;
-  const std::vector<std::string>& outputs_op_names() const;
+  const std::string& job_name() const override { return name_; }
+  const std::vector<std::string>& inputs_op_names() const override;
+  const std::vector<std::string>& outputs_op_names() const override;
+  const std::vector<bool>& inputs_valid() const override;
+  const std::vector<bool>& outputs_valid() const override;
+  const std::vector<std::string>& inputs_tensor_meta_str() const;
+  const std::vector<std::string>& outputs_tensor_meta_str() const;
   int64_t variable_op_size() const;
 
-  Maybe<void> RegisterInputOpNames(const std::vector<std::string>& input_op_names);
-  Maybe<void> RegisterOutputOpNames(const std::vector<std::string>& output_op_names);
+  Maybe<void> RegisterInputOpNamesAndTensors(
+      const std::vector<std::string>& input_op_names,
+      const std::vector<std::shared_ptr<one::Tensor>>& input_tensors);
+  Maybe<void> RegisterOutputOpNamesAndTensors(
+      const std::vector<std::string>& output_op_names,
+      const std::vector<std::shared_ptr<one::Tensor>>& output_tensors);
   Maybe<void> RegisterVariableOpNamesAndTensors(
       const std::vector<std::string>& variable_op_names,
       const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors);
   Maybe<void> CompileAndInitRuntime();
+  Maybe<void> Close();
 
  private:
+  Maybe<void> RegisterFreeEagerTensorsToVariableOpNames();
+  Maybe<void> CreateAndRegisterNewVariableOpInJobPass();
+
   void NewRuntimeBuffers();
   void CloseRuntimeBuffers();
 
   std::string name_;
   std::vector<std::string> input_op_names_;
   std::vector<std::string> output_op_names_;
+  std::vector<bool> input_tensors_valid_;
+  std::vector<bool> output_tensors_valid_;
+  std::vector<std::string> inputs_tensor_meta_str_;
+  std::vector<std::string> outputs_tensor_meta_str_;
   HashMap<std::string, Blob*> variable_op_name2eager_blob_;
   HashSet<std::string> variable_op_names_;
   Job job_;
@@ -58,11 +75,15 @@ class NNGraph final : public NNGraphIf {
   // TODO(chengcheng): temp impl using runtime now, need reimplement for dynamic multi nn.Graph.
   std::unique_ptr<Runtime> runtime_;
   bool runtime_inited_;
+  bool is_closed_;
 };
 
 Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTuple& outputs,
                            const one::TensorTuple& parameters,
                            const std::shared_ptr<NNGraph>& nn_graph);
+
+Maybe<void> SoftSyncNNGraphBuffers(const one::TensorTuple& buffers,
+                                   const std::shared_ptr<NNGraph>& nn_graph);
 
 }  // namespace oneflow
 

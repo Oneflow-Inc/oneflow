@@ -37,6 +37,10 @@ class CombinedMarginLossOpKernelState final : public user_op::OpKernelState {
 
 std::shared_ptr<user_op::OpKernelState> CreateCombinedMarginLossOpKernelState(
     user_op::KernelInitContext* ctx, const std::string& in_arg_name) {
+  if (ctx->parallel_ctx().parallel_num() == 1) {
+    return std::shared_ptr<user_op::OpKernelState>(nullptr);
+  }
+
   const cfg::SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex(in_arg_name, 0);
   if (in_sbp.has_split_parallel() && in_sbp.split_parallel().axis() == 1
       && ctx->parallel_ctx().parallel_num() > 1) {

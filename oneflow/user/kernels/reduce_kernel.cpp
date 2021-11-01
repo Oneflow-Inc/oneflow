@@ -17,13 +17,15 @@ limitations under the License.
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/primitive/include/cast.h"
 
 namespace oneflow {
 
 namespace {
 
 template<template<typename> class BinaryFunc, DeviceType device_type, typename T>
-class ReduceKernel final : public user_op::OpKernel {
+class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ReduceKernel() = default;
   ~ReduceKernel() = default;
@@ -37,10 +39,9 @@ class ReduceKernel final : public user_op::OpKernel {
 
     if (input_tensor->shape().elem_cnt() == 0) {
       if (output_tensor->shape().elem_cnt() != 0) {
-        AutoMemset(
+        Memset<device_type>(
             ctx->device_ctx(), output_tensor->mut_dptr<T>(), 0,
-            output_tensor->shape().elem_cnt() * GetSizeOfDataType(output_tensor->data_type()),
-            output_tensor->mem_case());
+            output_tensor->shape().elem_cnt() * GetSizeOfDataType(output_tensor->data_type()));
       }
       return;
     }
@@ -76,6 +77,7 @@ class ReduceKernel final : public user_op::OpKernel {
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, float)          \
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, double)         \
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int8_t)         \
+  REGISTER_REDUCE_ARITHMETIC_KERNELS(device, uint8_t)        \
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int32_t)        \
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int64_t)
 
@@ -111,7 +113,7 @@ void GetReduceSumLayout(const std::vector<int32_t>& axis, const ShapeView& in_sh
 
 }  // namespace
 
-class ReduceSumHalfKernel final : public user_op::OpKernel {
+class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   explicit ReduceSumHalfKernel(user_op::KernelCreateContext* ctx) {
     axis_ = RegularAxis(ctx->Attr<std::vector<int32_t>>("axis"));
@@ -155,17 +157,22 @@ class ReduceSumHalfKernel final : public user_op::OpKernel {
           GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
       CHECK_LE(in_tmp_buffer_bytes + out_tmp_buffer_bytes + reduce_tmp_buffer_bytes,
                tmp_buffer->shape().elem_cnt());
-      CopyElemOnGpu<float16, float>(ctx->device_ctx(), input_tensor->dptr<float16>(), in_tmp_buffer,
-                                    in_shape.elem_cnt());
+      auto h2f = primitive::NewPrimitive<primitive::CastFactory>(
+          ctx->device_type(), DataType::kFloat16, DataType::kFloat);
+      CHECK(h2f);
+      auto f2h = primitive::NewPrimitive<primitive::CastFactory>(
+          ctx->device_type(), DataType::kFloat, DataType::kFloat16);
+      CHECK(f2h);
+      h2f->Launch(ctx->stream_ctx(), input_tensor->dptr<float16>(), in_tmp_buffer,
+                  in_shape.elem_cnt());
 
       NdarrayReduce<DeviceType::kGPU, float, BinaryFuncSum>::Reduce(
           ctx->device_ctx(), XpuVarNdarray<float>(reduced_shape, out_tmp_buffer),
           XpuVarNdarray<const float>(in_shape, in_tmp_buffer),
           XpuVarNdarray<float>(in_shape, reduce_tmp_buffer));
 
-      CopyElemOnGpu<float, float16>(ctx->device_ctx(), out_tmp_buffer,
-                                    output_tensor->mut_dptr<float16>(),
-                                    output_tensor->shape().elem_cnt());
+      f2h->Launch(ctx->stream_ctx(), out_tmp_buffer, output_tensor->mut_dptr<float16>(),
+                  output_tensor->shape().elem_cnt());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

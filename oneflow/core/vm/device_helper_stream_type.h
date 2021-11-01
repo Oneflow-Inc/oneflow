@@ -17,8 +17,8 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_DEVICE_HELPER_STREAM_TYPE_H_
 
 #include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
-#include "oneflow/core/vm/stream.msg.h"
+#include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/vm/stream.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
 
@@ -41,9 +41,10 @@ class DeviceHelperStreamType final : public StreamType {
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
   void Compute(Instruction* instruction) const override;
-  ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                          int64_t this_machine_id) const override;
+  intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
+                                                   int64_t this_machine_id) const override;
   bool SharingVirtualMachineThread() const override { return true; }
+  bool SupportingTransportInstructions() const override { return false; }
 };
 
 }  // namespace vm

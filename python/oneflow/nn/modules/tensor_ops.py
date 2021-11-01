@@ -13,22 +13,43 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from typing import Union
+
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
 
 
-class TypeAs(Module):
-    def __init__(self):
-        super().__init__()
+@register_tensor_op("negative")
+def negative_op(input):
+    """This operator computes the negative value of Tensor.
 
-    def forward(self, input, target):
-        return input.to(dtype=target.dtype)
+    Args:
+        input (oneflow.Tensor): A Tensor
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        
+        >>> input = flow.tensor(
+        ...    np.array([1.0, -1.0, 2.3]).astype(np.float32), dtype=flow.float32
+        ... )
+        >>> out = flow.negative(input)
+        >>> out
+        tensor([-1.0000,  1.0000, -2.3000], dtype=oneflow.float32)
+
+    """
+    return flow._C.negative(input)
 
 
 @register_tensor_op("type_as")
 def type_as_op(input, target):
-    """Returns this tensor cast to the type of the given tensor.
+    r"""Returns this tensor cast to the type of the given tensor.
         This is a no-op if the tensor is already of the correct type.
 
     Args:
@@ -42,27 +63,19 @@ def type_as_op(input, target):
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> input = flow.Tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
-        >>> target = flow.Tensor(np.random.randn(4, 5, 6), dtype = flow.int32)
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
+        >>> target = flow.tensor(np.random.randn(4, 5, 6), dtype = flow.int32)
         >>> input = input.type_as(target)
         >>> input.dtype
         oneflow.int32
 
     """
-    return TypeAs()(input, target)
+    return input.to(dtype=target.dtype)
 
 
-class Long(Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, input):
-        return input.to(dtype=flow.int64)
-
-
-@register_tensor_op("long")
-def long_op(input):
-    """`Tensor.long()` is equivalent to `Tensor.to(flow.int64)`. See to().
+@register_tensor_op("int")
+def int(input):
+    r"""`Tensor.int()` is equivalent to `Tensor.to(flow.int32)`. See to().
 
     Args:
         input  (Tensor): the input tensor.
@@ -74,13 +87,193 @@ def long_op(input):
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> input = flow.Tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
+        >>> input = input.int()
+        >>> input.dtype
+        oneflow.int32
+    """
+    return input.to(dtype=flow.int32)
+
+
+@register_tensor_op("long")
+def long(input):
+    r"""`Tensor.long()` is equivalent to `Tensor.to(flow.int64)`. See to().
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
         >>> input = input.long()
         >>> input.dtype
         oneflow.int64
-
     """
-    return Long()(input)
+    return input.to(dtype=flow.int64)
+
+
+@register_tensor_op("float")
+def float(input):
+    r"""`Tensor.float()` is equivalent to `Tensor.to(flow.float32)`. See to().
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.int)
+        >>> input = input.float()
+        >>> input.dtype
+        oneflow.float32
+    """
+    return input.to(dtype=flow.float32)
+
+
+@register_tensor_op("double")
+def double(input):
+    r"""`Tensor.double()` is equivalent to `Tensor.to(flow.float64)`. See to().
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.int)
+        >>> input = input.double()
+        >>> input.dtype
+        oneflow.float64
+    """
+    return input.to(dtype=flow.float64)
+
+
+@register_tensor_op("is_floating_point")
+def is_floating_point(input):
+    r"""Returns True if the data type of input is a floating point data type i.e., one of flow.float64, flow.float32, flow.float16.
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> input = flow.tensor([1, 2, 3, 4, 5], dtype=flow.int)
+        >>> output = flow.is_floating_point(input)
+        >>> output
+        False
+    """
+    if input.dtype in (flow.float, flow.float16, flow.float32, flow.float64):
+        return True
+    return False
+
+
+@register_tensor_op("cpu")
+def cpu(input):
+    r"""Returns a copy of this object in CPU memory.
+    If this object is already in CPU memory and on the correct device, then no copy is performed and the original object is returned.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> input = flow.tensor([1, 2, 3, 4, 5], device=flow.device("cuda"))
+        >>> output = input.cpu()
+        >>> output.device
+        device(type='cpu', index=0)
+    """
+    return input.to(device="cpu")
+
+
+@register_tensor_op("cuda")
+def cuda(input, device: Union[int, str, flow.device] = None):
+    r"""Returns a copy of this object in CUDA memory.
+    If this object is already in CUDA memory and on the correct device, then no copy is performed and the original object is returned.
+
+    Args:
+        device  (flow.device): The destination GPU device. Defaults to the current CUDA device.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> input = flow.Tensor([1, 2, 3, 4, 5])
+        >>> output = input.cuda()
+        >>> output.device
+        device(type='cuda', index=0)
+    """
+    if device is None:
+        device = "cuda"
+    elif device is isinstance(int):
+        device = "cuda:" + str(device)
+    return input.to(device=device)
+
+
+@register_tensor_op("item")
+def item_op(input):
+    r"""Returns the value of this tensor as a standard Python number. This only works for tensors with one element. 
+    For other cases, see tolist().
+
+    This operation is not differentiable.
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1.0])
+        >>> x.item()
+        1.0
+    """
+    assert input.numel() == 1, "Only a Tensor with 1 element can be converted to Scalar"
+    return input.numpy().item()
+
+
+@register_tensor_op("tolist")
+def tolist_op(input):
+    r"""Returns the tensor as a (nested) list. For scalars, a standard Python number is returned, 
+    just like with `item()`. Tensors are automatically moved to the CPU first if necessary.
+
+    This operation is not differentiable.
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> input = flow.tensor([[1,2,3], [4,5,6]])
+        >>> input.tolist()
+        [[1, 2, 3], [4, 5, 6]]
+    """
+    if input.numel() == 1 and input.ndim == 0:
+        return input.item()
+    return input.numpy().tolist()
 
 
 if __name__ == "__main__":

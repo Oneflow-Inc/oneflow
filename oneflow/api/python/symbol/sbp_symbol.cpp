@@ -17,54 +17,29 @@ limitations under the License.
 #include <pybind11/operators.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
 
-static const int64_t kMaxSplitAxis = 6;
-
 namespace {
 
 std::string SbpParallelSymbolToString(const Symbol<cfg::SbpParallel>& sbp_sym) {
-  std::string sbp_str = "oneflow.sbp.";
-  if (sbp_sym->has_broadcast_parallel()) {
-    sbp_str += "broadcast";
-  } else if (sbp_sym->has_partial_sum_parallel()) {
-    sbp_str += "partial_sum";
-  } else if (sbp_sym->has_split_parallel()) {
-    sbp_str += "split(axis=" + std::to_string(sbp_sym->split_parallel().axis()) + ")";
-  } else {
-    UNIMPLEMENTED();
-  }
-  return sbp_str;
+  return *SbpToString(sbp_sym).GetPtrOrThrow();
 }
 
 Maybe<std::vector<Symbol<cfg::SbpParallel>>> MakeSplitSbpParallelList(int max_split_axis) {
   std::shared_ptr<std::vector<Symbol<cfg::SbpParallel>>> ret =
       std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>(max_split_axis);
-  for (int i = 0; i < max_split_axis; ++i) {
-    cfg::SbpParallel split_sbp_parallel;
-    split_sbp_parallel.mutable_split_parallel()->set_axis(i);
-    ret->at(i) = SymbolOf(split_sbp_parallel);
-  }
+  for (int i = 0; i < max_split_axis; ++i) { ret->at(i) = JUST(MakeSplitSbpParallel(i)); }
   return ret;
-}
-
-Maybe<Symbol<cfg::SbpParallel>> MakeBroadcastSbpParallel() {
-  cfg::SbpParallel broadcast_sbp;
-  broadcast_sbp.mutable_broadcast_parallel();
-  return SymbolOf(broadcast_sbp);
-}
-
-Maybe<Symbol<cfg::SbpParallel>> MakePartialSumSbpParallel() {
-  cfg::SbpParallel partial_sum_sbp;
-  partial_sum_sbp.mutable_partial_sum_parallel();
-  return SymbolOf(partial_sum_sbp);
 }
 
 Maybe<Symbol<cfg::SbpParallel>> GetSplitSbpParallel(int axis) {
@@ -88,7 +63,8 @@ Maybe<Symbol<cfg::SbpParallel>> GetPartialSumSbpParallel() {
 
 ONEFLOW_API_PYBIND11_MODULE("sbp", m) {
   m.attr("max_split_axis") = kMaxSplitAxis;
-  py::class_<Symbol<cfg::SbpParallel>, std::shared_ptr<Symbol<cfg::SbpParallel>>>(m, "sbp")
+  py::class_<Symbol<cfg::SbpParallel>, std::shared_ptr<Symbol<cfg::SbpParallel>>>(
+      m, "sbp", py::dynamic_attr())
       .def("__str__", &SbpParallelSymbolToString)
       .def("__repr__", &SbpParallelSymbolToString)
       .def(py::self == py::self)

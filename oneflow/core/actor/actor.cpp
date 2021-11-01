@@ -15,13 +15,101 @@ limitations under the License.
 */
 #include "oneflow/core/actor/actor.h"
 #include "oneflow/core/control/global_process_ctx.h"
-#include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/runtime_job_descs.h"
-#include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/stream/stream_context.h"
+#include "oneflow/core/device/device_context_adapter.h"
 
 namespace oneflow {
 
 namespace {
+
+class KernelContextImpl : public KernelContext {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelContextImpl);
+  explicit KernelContextImpl(StreamContext* stream_ctx, DeviceCtx* device_ctx)
+      : stream_ctx_(stream_ctx),
+        device_ctx_(device_ctx),
+        state_(nullptr),
+        stream_kernel_observer_(nullptr) {
+    auto* kernel_observer_provider = dynamic_cast<KernelObserverProvider*>(stream_ctx_);
+    if (kernel_observer_provider != nullptr) {
+      stream_kernel_observer_ = kernel_observer_provider->GetKernelObserver();
+    }
+  }
+  ~KernelContextImpl() = default;
+
+  StreamContext* stream_ctx() const override { return stream_ctx_; }
+
+  DeviceCtx* device_ctx() const override { return device_ctx_; }
+
+  Blob* BnInOp2Blob(const std::string& bn) const override { return bn_in_op2blob_fn_(bn); }
+
+  const std::shared_ptr<KernelState>& state() const override { return state_; }
+
+  void set_state(std::shared_ptr<KernelState> state) override { state_ = std::move(state); }
+
+  void WillForward(KernelContext* kernel_ctx, const Kernel* kernel) override;
+  void DidForward(KernelContext* kernel_ctx, const Kernel* kernel) override;
+
+  void WillForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) override;
+  void DidForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) override;
+
+  void WillForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) override;
+  void DidForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) override;
+
+  void UpdateBnInOp2BlobFn(std::function<Blob*(const std::string&)> fn) {
+    bn_in_op2blob_fn_ = std::move(fn);
+  }
+
+ private:
+  StreamContext* stream_ctx_;
+  DeviceCtx* device_ctx_;
+  std::function<Blob*(const std::string&)> bn_in_op2blob_fn_;
+  std::shared_ptr<KernelState> state_;
+  KernelObserver* stream_kernel_observer_;
+};
+
+void KernelContextImpl::WillForward(KernelContext* kernel_ctx, const Kernel* kernel) {
+  Global<KernelObserver>::Get()->WillForward(kernel_ctx, kernel);
+  if (stream_kernel_observer_ != nullptr) {
+    stream_kernel_observer_->WillForward(kernel_ctx, kernel);
+  }
+}
+
+void KernelContextImpl::DidForward(KernelContext* kernel_ctx, const Kernel* kernel) {
+  Global<KernelObserver>::Get()->DidForward(kernel_ctx, kernel);
+  if (stream_kernel_observer_ != nullptr) {
+    stream_kernel_observer_->DidForward(kernel_ctx, kernel);
+  }
+}
+
+void KernelContextImpl::WillForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) {
+  Global<KernelObserver>::Get()->WillForwardHeader(kernel_ctx, kernel);
+  if (stream_kernel_observer_ != nullptr) {
+    stream_kernel_observer_->WillForwardHeader(kernel_ctx, kernel);
+  }
+}
+
+void KernelContextImpl::DidForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) {
+  Global<KernelObserver>::Get()->DidForwardHeader(kernel_ctx, kernel);
+  if (stream_kernel_observer_ != nullptr) {
+    stream_kernel_observer_->DidForwardHeader(kernel_ctx, kernel);
+  }
+}
+
+void KernelContextImpl::WillForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) {
+  Global<KernelObserver>::Get()->WillForwardDataContent(kernel_ctx, kernel);
+  if (stream_kernel_observer_ != nullptr) {
+    stream_kernel_observer_->WillForwardDataContent(kernel_ctx, kernel);
+  }
+}
+
+void KernelContextImpl::DidForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) {
+  Global<KernelObserver>::Get()->DidForwardDataContent(kernel_ctx, kernel);
+  if (stream_kernel_observer_ != nullptr) {
+    stream_kernel_observer_->DidForwardDataContent(kernel_ctx, kernel);
+  }
+}
 
 void CheckInplaceRegstDescId(const TaskProto& task_proto) {
   HashSet<int64_t> consumed_regst_desc_ids;
@@ -37,20 +125,21 @@ void CheckInplaceRegstDescId(const TaskProto& task_proto) {
 
 }  // namespace
 
-void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
-                 const ThreadCtx& thread_ctx) {
+Actor::~Actor() = default;
+
+void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto, StreamContext* stream_ctx) {
   job_desc_ = job_desc;
   actor_id_ = task_proto.task_id();
-  global_work_stream_id_ = Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(actor_id_);
-  act_id_ = -1;
+  thrd_id_ = Global<IDMgr>::Get()->ThrdId4ActorId(actor_id_);
   job_id_ = task_proto.job_id();
-  InitDeviceCtx(thread_ctx);
+  InitDeviceCtx(stream_ctx);
   if (task_proto.has_parallel_ctx()) {
     parallel_ctx_.reset(new ParallelContext(task_proto.parallel_ctx()));
   }
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
-    ek.kernel = ConstructKernel(job_desc_, node.kernel_conf(), device_ctx_.get());
+    ek.kernel_ctx.reset(new KernelContextImpl(stream_ctx, device_ctx_.get()));
+    ek.kernel = ConstructKernel(node.kernel_conf(), ek.kernel_ctx.get());
     exec_kernel_vec_.push_back(std::move(ek));
   }
 
@@ -69,7 +158,6 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
     });
     int64_t regst_desc_id = pair.second.regst_desc_id();
     CHECK(name2regst_desc_id_.insert({pair.first, {regst_desc_id}}).second);
-    produced_regst2expected_act_id_[regst_desc_id] = act_id_;
     if (pair.second.regst_desc_type().has_ctrl_regst_desc()) {
       produced_ctrl_regst_desc_ids_.insert(regst_desc_id);
     }
@@ -210,10 +298,6 @@ void Actor::ForEachProducedRegst(const std::function<void(Regst*)>& Handler) con
   }
 }
 
-DeviceType Actor::GetDeviceType() const {
-  return Global<IDMgr>::Get()->GetDeviceTypeFromActorId(actor_id_);
-}
-
 int64_t Actor::Name2SoleRegstDescId(const std::string& name) const {
   auto find_it = name2regst_desc_id_.find(name);
   if (find_it != name2regst_desc_id_.end()) {
@@ -235,20 +319,8 @@ void Actor::IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t val) {
   produced_regst2reading_cnt_.at(regst) += val;
 }
 
-void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
-  DeviceCtx* dev_ctx = NewObj<int, DeviceCtx, const ThreadCtx&>(GetDeviceType(), thread_ctx);
-  device_ctx_.reset(dev_ctx);
-}
-
-KernelCtx Actor::GenDefaultKernelCtx() const {
-  KernelCtx ctx;
-  ctx.device_ctx = device_ctx_.get();
-  return ctx;
-}
-
-void Actor::SetReadableRegstInfo(const Regst* regst, ReadableRegstInfo* info) const {
-  info->set_regst_desc_id(regst->regst_desc_id());
-  info->set_act_id(regst->act_id());
+void Actor::InitDeviceCtx(StreamContext* stream_ctx) {
+  device_ctx_.reset(CHECK_NOTNULL(NewDeviceCtxAdapter(stream_ctx)));
 }
 
 void Actor::ForEachCurNaiveReadableDataRegst(std::function<void(const Regst*)> func) const {
@@ -355,42 +427,8 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
   return 0;
 }
 
-void Actor::TryLogActEvent(const std::function<void()>& DoAct) const {
-  if (false) {
-    auto act_event = std::make_shared<ActEvent>();
-    act_event->set_actor_id(actor_id());
-    act_event->set_work_stream_id(global_work_stream_id_);
-    act_event->set_act_id(act_id_);
-    act_event->set_ready_time(GetCurTime());
-    naive_consumed_rs_.ForEachFrontRegst([&](int64_t regst_desc_id, const Regst* readable_regst) {
-      if (Global<RegstMgr>::Get()->HasProducerTaskId4RegstDescId(regst_desc_id)) { return; }
-      ReadableRegstInfo* info = act_event->add_readable_regst_infos();
-      Actor::SetReadableRegstInfo(readable_regst, info);
-    });
-    ForEachCurCustomizedReadableRegst([&](const Regst* readable_regst) {
-      ReadableRegstInfo* info = act_event->add_readable_regst_infos();
-      SetReadableRegstInfo(readable_regst, info);
-    });
-    device_ctx_->AddCallBack([act_event]() { act_event->set_start_time(GetCurTime()); });
-
-    DoAct();
-
-    device_ctx_->AddCallBack([act_event]() {
-      act_event->set_stop_time(GetCurTime());
-      // The stream poller thread is not allowed to perform blocking RPC call. Hence, the
-      // RPC call is forwarded to the thread pool and will be executed there.
-      Global<ThreadPool>::Get()->AddWork(
-          [act_event]() { Global<CtrlClient>::Get()->PushActEvent(*act_event); });
-    });
-  } else {
-    DoAct();
-  }
-}
-
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
-    act_id_ += 1;
-    // TryLogActEvent([&] { Act(); }); NOTE(chengcheng): LogActEvent NOT ready now.
     Act();
 
     AsyncSendCustomizedProducedRegstMsgToConsumer();
@@ -403,6 +441,8 @@ void Actor::ActUntilFail() {
 
     AsyncSendQueuedMsg();
   }
+  // NOTE(liujuncheng): return inplace consumed
+  AsyncSendQueuedMsg();
 }
 
 void Actor::AsyncSendNaiveProducedRegstMsgToConsumer() {
@@ -485,7 +525,6 @@ void Actor::AsyncSendProducedCtrlRegstMsgToConsumer() {
 int64_t Actor::HandleRegstToConsumer(Regst* regst) {
   auto regst_reading_cnt_it = produced_regst2reading_cnt_.find(regst);
   CHECK_EQ(regst_reading_cnt_it->second, 0);
-  regst->set_act_id(act_id_);
 
   int64_t real_consumer_cnt = 0;
   for (int64_t consumer : regst->consumers_actor_id()) {
@@ -507,32 +546,33 @@ bool Actor::IsWriteReady() const {
          && IsCustomizedWriteReady();
 }
 
-void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx,
-                              std::function<Regst*(int64_t)> Regst4RegstDescId) {
+void Actor::AsyncLaunchKernel(std::function<Regst*(int64_t)> Regst4RegstDescId) {
   for (const ExecKernel& ek : exec_kernel_vec_) {
-    ek.kernel->Launch(kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
-      const auto blob_info_it = ek.bn_in_op2blob_info.find(bn_in_op);
-      if (blob_info_it == ek.bn_in_op2blob_info.cend()) { return nullptr; }
-      const BlobInfo& info = blob_info_it->second;
-      if (info.regst_desc_id == -1) { return nullptr; }
-      Regst* regst;
-      if (info.rs != nullptr) {
-        regst = info.rs->Front(info.regst_desc_id);
-      } else {
-        regst = Regst4RegstDescId(info.regst_desc_id);
-      }
-      if (regst == nullptr) { return nullptr; }
-      if (info.ordinal >= 0) {
-        return regst->GetBlobByOrdinal(info.ordinal);
-      } else {
-        return regst->GetBlobByLbi(info.lbi);
-      }
-    });
+    CHECK_NOTNULL(dynamic_cast<KernelContextImpl*>(ek.kernel_ctx.get()))
+        ->UpdateBnInOp2BlobFn([&](const std::string& bn_in_op) -> Blob* {
+          const auto blob_info_it = ek.bn_in_op2blob_info.find(bn_in_op);
+          if (blob_info_it == ek.bn_in_op2blob_info.cend()) { return nullptr; }
+          const BlobInfo& info = blob_info_it->second;
+          if (info.regst_desc_id == -1) { return nullptr; }
+          Regst* regst = nullptr;
+          if (info.rs != nullptr) {
+            regst = info.rs->Front(info.regst_desc_id);
+          } else {
+            regst = Regst4RegstDescId(info.regst_desc_id);
+          }
+          if (regst == nullptr) { return nullptr; }
+          if (info.ordinal >= 0) {
+            return regst->GetBlobByOrdinal(info.ordinal);
+          } else {
+            return regst->GetBlobByLbi(info.lbi);
+          }
+        });
+    ek.kernel->Launch(ek.kernel_ctx.get());
   }
 }
 
-void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx) {
-  AsyncLaunchKernel(kernel_ctx, [](int64_t) -> Regst* {
+void Actor::AsyncLaunchKernel() {
+  AsyncLaunchKernel([](int64_t) -> Regst* {
     UNIMPLEMENTED();
     return nullptr;
   });
@@ -577,7 +617,7 @@ void Actor::AsyncSendEORDMsgForAllProducedRegstDesc() {
   for (auto& pair : produced_regsts_) {
     CHECK(!pair.second.empty());
     const RtRegstDesc* regst_desc = pair.second.front()->regst_desc();
-    device_ctx_->AddCallBack([regst_desc]() {
+    AddCallback([regst_desc]() {
       for (int64_t consumer : regst_desc->consumers_actor_id()) {
         Global<ActorMsgBus>::Get()->SendMsg(
             ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id()));
@@ -622,19 +662,12 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   } else if (naive_produced_rs_.TryPushBackRegst(regst) != 0) {
     UpdtStateAsCustomizedProducedRegst(regst);
   }
-
-  int64_t& expected_act_id = produced_regst2expected_act_id_[regst->regst_desc_id()];
-  if (expected_act_id >= 0 && CheckOutputActId(regst->regst_desc_id())) {
-    CHECK_EQ(regst->act_id(), expected_act_id);
-  }
-  expected_act_id = regst->act_id() + ActNumForEachOutput(regst->regst_desc_id());
   return 0;
 }
 
 void Actor::EnqueueAsyncMsg(const ActorMsg& msg) {
   if (is_kernel_launch_synchronized_
-      && global_work_stream_id_
-             == Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(msg.dst_actor_id())) {
+      && thrd_id_ == Global<IDMgr>::Get()->ThrdId4ActorId(msg.dst_actor_id())) {
     Global<ActorMsgBus>::Get()->SendMsg(msg);
   } else {
     async_msg_queue_.push_back(msg);
@@ -661,21 +694,18 @@ Regst* Actor::GetNaiveCurWriteable(int64_t regst_desc_id) const {
   return naive_produced_rs_.Front(regst_desc_id);
 }
 
-std::unique_ptr<Actor> NewActor(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
-  Actor* rptr = NewObj<int32_t, Actor>(task_proto.task_type());
-  const auto& job_descs = *Global<RuntimeJobDescs>::Get();
-  rptr->Init(&job_descs.job_desc(task_proto.job_id()), task_proto, thread_ctx);
-  return std::unique_ptr<Actor>(rptr);
-}
-
 void Actor::AsyncSendQueuedMsg() {
   if (!async_msg_queue_.empty()) {
     std::deque<ActorMsg> msgs;
     msgs.swap(async_msg_queue_);
-    device_ctx_->AddCallBack([msgs]() {
+    AddCallback([msgs]() {
       for (const ActorMsg& msg : msgs) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
     });
   }
+}
+
+void Actor::AddCallback(std::function<void()> callback) {
+  device_ctx_->AddCallBack(std::move(callback));
 }
 
 }  // namespace oneflow

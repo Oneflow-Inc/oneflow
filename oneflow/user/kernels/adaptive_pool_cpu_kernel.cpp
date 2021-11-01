@@ -44,7 +44,7 @@ void AvgForwardCompute(user_op::KernelComputeContext* ctx, const int32_t& dim) {
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
   const Shape& y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
 
-  // TODO: Support 'channels_last'
+  // TODO (Tianyu): Support 'channels_last'
   std::string data_format = "channels_first";
   const Shape& in = GetShape5D(x_shape, data_format, dim);
   const Shape& out = GetShape5D(y_shape, data_format, dim);
@@ -100,7 +100,7 @@ void AvgBackwardCompute(user_op::KernelComputeContext* ctx, const int32_t& dim) 
   const Shape& dx_shape = ctx->TensorDesc4ArgNameAndIndex("dx", 0)->shape();
   const Shape& dy_shape = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->shape();
 
-  // TODO: Support 'channels_last'
+  // TODO (Tianyu): Support 'channels_last'
   std::string data_format = "channels_first";
   const Shape& in = GetShape5D(dx_shape, data_format, dim);
   const Shape& out = GetShape5D(dy_shape, data_format, dim);
@@ -234,9 +234,7 @@ class AdaptivePool3DCpuGradKernel final : public user_op::OpKernel {
 #define REGISTER_ADAPTIVE_POOL_KERNEL_WITH_DEVICE(device) \
   REGISTER_ADAPTIVE_POOL_KERNEL(device, float)            \
   REGISTER_ADAPTIVE_POOL_KERNEL(device, double)           \
-  REGISTER_ADAPTIVE_POOL_KERNEL(device, int8_t)           \
-  REGISTER_ADAPTIVE_POOL_KERNEL(device, int32_t)          \
-  REGISTER_ADAPTIVE_POOL_KERNEL(device, int64_t)
+  REGISTER_ADAPTIVE_POOL_KERNEL(device, int)
 
 REGISTER_ADAPTIVE_POOL_KERNEL_WITH_DEVICE(DeviceType::kCPU)
 
@@ -257,9 +255,7 @@ REGISTER_ADAPTIVE_POOL_KERNEL_WITH_DEVICE(DeviceType::kCPU)
 #define REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL_WITH_DEVICE(device) \
   REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL(device, float)            \
   REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL(device, double)           \
-  REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL(device, int8_t)           \
-  REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL(device, int32_t)          \
-  REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL(device, int64_t)
+  REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL(device, int)
 
 REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL_WITH_DEVICE(DeviceType::kCPU)
 }  // namespace oneflow

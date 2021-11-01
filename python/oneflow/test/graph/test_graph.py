@@ -46,7 +46,7 @@ class CustomModule(flow.nn.Module):
 
     def forward(self, x):
         x = self.layer(x)
-        x = oneflow.F.flatten(x, 1)
+        x = oneflow._C.flatten(x, 1)
         x = self.fc1(x) + self.dummy_buff
         return x
 
@@ -87,31 +87,7 @@ class TestGraph(flow.unittest.TestCase):
         z = g.build(x)
         test_case.assertTrue(np.array_equal(y.numpy(), z.numpy()))
 
-    def test_graph_config(test_case):
-        print("cclog: CustomGraphConfig begin")
-
-        class CustomGraphConfig(flow.nn.Graph):
-            def __init__(self):
-                super().__init__()
-                self.m = CustomModule()
-                self.config.enable_auto_mixed_precision(True)
-
-            def build(self, x):
-                x = self.m(x)
-                return x
-
-        g = CustomGraphConfig()
-        test_case.assertEqual(g.config.training, False)
-        g.config.enable_fuse_add_to_output(True)
-        g.config.enable_fuse_add_to_output(False)
-        for s in g._state():
-            print("g state: ", repr(s))
-        print(repr(g))
-        print("cclog: CustomGraphConfig done")
-
     def test_graph_name(test_case):
-        print("cclog: GraphName begin")
-
         class ACustomGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -144,13 +120,12 @@ class TestGraph(flow.unittest.TestCase):
         flow.nn.Graph._child_init_cnt.clear()
         for i in range(0, 3):
             create_graph(i)
-        print("cclog: GraphName done")
 
     def test_graph_build_ctx(test_case):
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
-        with graph_build_util.lazy_mode.gard(True):
+        with graph_build_util.lazy_mode.guard(True):
             test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
-            with graph_build_util.lazy_mode.gard(False):
+            with graph_build_util.lazy_mode.guard(False):
                 test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
             test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
@@ -158,7 +133,6 @@ class TestGraph(flow.unittest.TestCase):
         class CustomGraphGraphBuildCtx(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
-                self.config.enable_auto_mixed_precision(True)
 
             def build(self, x):
                 test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)

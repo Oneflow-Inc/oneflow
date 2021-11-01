@@ -13,44 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Union
+from typing import List, Optional, Union
 
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
-
-
-class Arange(Module):
-    def __init__(
-        self,
-        start: int = 0,
-        end: int = None,
-        step: int = 1,
-        dtype: flow.dtype = None,
-        device: Union[str, flow.device] = "cpu",
-        requires_grad: bool = False,
-    ) -> None:
-        super().__init__()
-        assert end > start, "end should be larger than start"
-        assert step <= end - start, "step is ilegal"
-        self.start = start
-        self.end = end
-        self.step = step
-        self.dtype = dtype
-        self.device = device
-        self.requires_grad = requires_grad
-
-    def forward(self):
-        tmp = flow.F.range(
-            start=self.start, limit=self.end, delta=self.step, dtype=flow.int64
-        )
-        tmp.requires_grad = self.requires_grad
-        if isinstance(self.device, str):
-            device = flow.device(self.device)
-        else:
-            device = self.device
-        res = tmp.to(device, dtype=self.dtype)
-        return res
 
 
 def arange_op(
@@ -58,7 +25,9 @@ def arange_op(
     end: int = None,
     step: int = 1,
     dtype: flow.dtype = flow.int64,
-    device: Union[str, flow.device] = "cpu",
+    device: Union[str, flow.device] = None,
+    placement: flow.placement = None,
+    sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
     requires_grad: bool = False,
 ):
     """
@@ -93,7 +62,27 @@ def arange_op(
     if end is None:
         end = start
         start = 0
-    return Arange(start, end, step, dtype, device, requires_grad)()
+    if placement is None:
+        if isinstance(device, str):
+            device = flow.device(device)
+        res = flow._C.arange(start, end, step, dtype=dtype, device=device)
+    else:
+        assert isinstance(
+            placement, flow._oneflow_internal.placement
+        ), "placement should be oneflow._oneflow_internal.placement type."
+        assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
+        if isinstance(sbp, flow.sbp.sbp):
+            sbp = (sbp,)
+        else:
+            for elem in sbp:
+                assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
+        assert len(sbp) == len(placement.hierarchy)
+        res = flow._C.consistent_arange(
+            start, end, step, dtype=dtype, placement=placement, sbp=sbp
+        )
+
+    res.requires_grad = requires_grad
+    return res
 
 
 if __name__ == "__main__":

@@ -178,6 +178,5 @@ class UpsampleBicubic2dGradCPUKernel final : public user_op::OpKernel {
 
 REGISTER_UPSAMPLE_BICUBIC_CPU_KERNEL(float)
 REGISTER_UPSAMPLE_BICUBIC_CPU_KERNEL(double)
-REGISTER_UPSAMPLE_BICUBIC_CPU_KERNEL(int)
 
 }  // namespace oneflow

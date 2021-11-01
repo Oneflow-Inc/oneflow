@@ -39,7 +39,7 @@ Signature ComputeSignature(const std::string& name, const int device_ordinal,
   for (int i = 0; i < entry_params.size(); ++i) {
     signature.entry_shapes[i] = entry_params[i].shape();
   }
-  return std::move(signature);
+  return signature;
 }
 
 Executable* CompilationCache::GetRecord(const Signature& signature) const {

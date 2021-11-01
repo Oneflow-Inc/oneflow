@@ -23,16 +23,16 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct SparseSoftmaxCrossEntropyInterpState : public OpExprInterpState {
+struct SparseSoftmaxCrossEntropyCaptureState : public AutoGradCaptureState {
   int64_t depth;
 };
 
-class SparseSoftmaxCrossEntropy : public OpExprGradFunction<SparseSoftmaxCrossEntropyInterpState> {
+class SparseSoftmaxCrossEntropy : public OpExprGradFunction<SparseSoftmaxCrossEntropyCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(SparseSoftmaxCrossEntropyInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(SparseSoftmaxCrossEntropyCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const SparseSoftmaxCrossEntropyInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const SparseSoftmaxCrossEntropyCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -50,7 +50,7 @@ Maybe<void> SparseSoftmaxCrossEntropy::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SparseSoftmaxCrossEntropy::Capture(SparseSoftmaxCrossEntropyInterpState* ctx,
+Maybe<void> SparseSoftmaxCrossEntropy::Capture(SparseSoftmaxCrossEntropyCaptureState* ctx,
                                                const TensorTuple& inputs,
                                                const TensorTuple& outputs,
                                                const AttrMap& attrs) const {
@@ -58,16 +58,16 @@ Maybe<void> SparseSoftmaxCrossEntropy::Capture(SparseSoftmaxCrossEntropyInterpSt
   ctx->depth = JUST(composed_attrs.GetAttr<int64_t>("depth"));
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
   CHECK_EQ_OR_RETURN(outputs.size(), 2);
-  ctx->SaveTensorForBackward(outputs.at(1));  // prob
+  ctx->SaveTensorForBackward(outputs.at(0));  // prob
   ctx->SaveTensorForBackward(inputs.at(1));   // label
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SparseSoftmaxCrossEntropy::Apply(const SparseSoftmaxCrossEntropyInterpState* ctx,
+Maybe<void> SparseSoftmaxCrossEntropy::Apply(const SparseSoftmaxCrossEntropyCaptureState* ctx,
                                              const TensorTuple& out_grads,
                                              TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 2);
-  const auto& dy = out_grads.at(0);
+  const auto& dy = out_grads.at(1);
   const auto& prob = ctx->SavedTensors().at(0);
   const auto& label = ctx->SavedTensors().at(1);
   MutableAttrMap attrs;

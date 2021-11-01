@@ -13,57 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Union
+from typing import Union, List
 
 import oneflow as flow
-from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
 
-class Eye(Module):
-    def __init__(
-        self,
-        n: int,
-        m: int = None,
-        device: Union[str, flow.device] = "cpu",
-        requires_grad: bool = False,
-    ) -> None:
-        super().__init__()
-        self.n = n
-        self.m = m
-        self.device = device
-        self.requires_grad = requires_grad
-
-    def forward(self):
-        n = self.n
-        m = self.m
-        if m is None:
-            m = n
-
-        if m == n:
-            res = flow.diag(flow.ones(n))
-        elif m < n:
-            tmp = flow.ones(m)
-            input1 = flow.zeros((n - m, m))
-            input2 = flow.diag(tmp)
-            res = flow.cat([input2, input1], dim=0)
-        else:
-            tmp = flow.ones(n)
-            input1 = flow.zeros((n, m - n))
-            input2 = flow.diag(tmp)
-            res = flow.cat([input2, input1], dim=1)
-
-        res.requires_grad = self.requires_grad
-        if isinstance(self.device, str):
-            device = flow.device(self.device)
-        else:
-            device = self.device
-        re = res.to(device)
-        return re
-
-
 def eye_op(
-    n, m=None, device: Union[str, flow.device] = "cpu", requires_grad: bool = False,
+    n,
+    m=None,
+    dtype: flow.dtype = flow.float,
+    device: Union[str, flow.device] = None,
+    placement: flow.placement = None,
+    sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
+    requires_grad: bool = False,
 ):
     """This operator creates a 2-D Tensor with ones on the diagonal and zeros elsewhere.
 
@@ -90,7 +53,27 @@ def eye_op(
                 [0., 0., 1.]], dtype=oneflow.float32)
     
     """
-    return Eye(n, m, device, requires_grad)()
+    if placement is None:
+        if isinstance(device, str):
+            device = flow.device(device)
+        res = flow._C.eye(n, m, dtype=dtype, device=device)
+    else:
+        assert isinstance(
+            placement, flow._oneflow_internal.placement
+        ), "placement should be oneflow._oneflow_internal.placement type."
+        assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
+        if isinstance(sbp, flow.sbp.sbp):
+            assert sbp == flow.sbp.broadcast
+            sbp = (sbp,)
+        else:
+            for elem in sbp:
+                assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
+                assert elem == flow.sbp.broadcast
+        assert len(sbp) == len(placement.hierarchy)
+        res = flow._C.consistent_eye(n, m, dtype=dtype, placement=placement, sbp=sbp)
+
+    res.requires_grad = requires_grad
+    return res
 
 
 if __name__ == "__main__":

@@ -19,15 +19,15 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct BaseActivationInterpState : public OpExprInterpState {
+struct BaseActivationCaptureState : public AutoGradCaptureState {
   bool requires_grad;
 };
 
-class BaseActivation : public OpExprGradFunction<BaseActivationInterpState> {
+class BaseActivation : public OpExprGradFunction<BaseActivationCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(BaseActivationInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(BaseActivationCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
@@ -39,7 +39,7 @@ class BaseActivation : public OpExprGradFunction<BaseActivationInterpState> {
 
 class Silu : public BaseActivation {
  public:
-  Maybe<void> Apply(const BaseActivationInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const BaseActivationCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
@@ -53,7 +53,7 @@ class Silu : public BaseActivation {
 
 class Mish : public BaseActivation {
  public:
-  Maybe<void> Apply(const BaseActivationInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const BaseActivationCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
@@ -67,7 +67,7 @@ class Mish : public BaseActivation {
 
 class Selu : public BaseActivation {
  public:
-  Maybe<void> Apply(const BaseActivationInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const BaseActivationCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
@@ -81,7 +81,7 @@ class Selu : public BaseActivation {
 
 class Softsign : public BaseActivation {
  public:
-  Maybe<void> Apply(const BaseActivationInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const BaseActivationCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
@@ -93,23 +93,9 @@ class Softsign : public BaseActivation {
   }
 };
 
-class ReLU : public BaseActivation {
- public:
-  Maybe<void> Apply(const BaseActivationInterpState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-    in_grads->resize(1);
-    if (ctx->requires_grad) {
-      const auto& x = ctx->SavedTensors().at(0);
-      in_grads->at(0) = JUST(functional::ReluGrad(out_grads.at(0), x));
-    }
-    return Maybe<void>::Ok();
-  }
-};
-
 class GeLU : public BaseActivation {
  public:
-  Maybe<void> Apply(const BaseActivationInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const BaseActivationCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
@@ -123,7 +109,7 @@ class GeLU : public BaseActivation {
 
 class HardSigmoid : public BaseActivation {
  public:
-  Maybe<void> Apply(const BaseActivationInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const BaseActivationCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
@@ -137,7 +123,7 @@ class HardSigmoid : public BaseActivation {
 
 class HardSwish : public BaseActivation {
  public:
-  Maybe<void> Apply(const BaseActivationInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const BaseActivationCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
@@ -150,12 +136,42 @@ class HardSwish : public BaseActivation {
 };
 
 // ===== Activation with parms ====
-struct LeakyReluInterpState : public OpExprInterpState {
+struct ReLUCaptureState : public AutoGradCaptureState {
+  bool requires_grad;
+};
+
+class ReLU : public OpExprGradFunction<ReLUCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
+
+  Maybe<void> Capture(ReLUCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    ctx->requires_grad = inputs.at(0)->requires_grad();
+    if (ctx->requires_grad) { ctx->SaveTensorForBackward(outputs.at(0)); }
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const ReLUCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    in_grads->resize(1);
+    if (ctx->requires_grad) {
+      const auto& y = ctx->SavedTensors().at(0);
+      in_grads->at(0) = JUST(functional::ReluGrad(out_grads.at(0), y));
+    }
+    return Maybe<void>::Ok();
+  }
+};
+
+// ===== Activation with parms ====
+struct LeakyReluCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   float alpha;
 };
 
-class LeakyRelu : public OpExprGradFunction<LeakyReluInterpState> {
+class LeakyRelu : public OpExprGradFunction<LeakyReluCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -164,7 +180,7 @@ class LeakyRelu : public OpExprGradFunction<LeakyReluInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(LeakyReluInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(LeakyReluCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
@@ -176,7 +192,7 @@ class LeakyRelu : public OpExprGradFunction<LeakyReluInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const LeakyReluInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const LeakyReluCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
@@ -191,13 +207,13 @@ class LeakyRelu : public OpExprGradFunction<LeakyReluInterpState> {
   AttrMap base_attrs_;
 };
 
-struct HardTanhInterpState : public OpExprInterpState {
+struct HardTanhCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   double min_val;
   double max_val;
 };
 
-class HardTanh : public OpExprGradFunction<HardTanhInterpState> {
+class HardTanh : public OpExprGradFunction<HardTanhCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -206,7 +222,7 @@ class HardTanh : public OpExprGradFunction<HardTanhInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(HardTanhInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(HardTanhCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
@@ -219,7 +235,7 @@ class HardTanh : public OpExprGradFunction<HardTanhInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const HardTanhInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const HardTanhCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
@@ -235,12 +251,12 @@ class HardTanh : public OpExprGradFunction<HardTanhInterpState> {
   AttrMap base_attrs_;
 };
 
-struct EluInterpState : public OpExprInterpState {
+struct EluCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   double alpha;
 };
 
-class Elu : public OpExprGradFunction<EluInterpState> {
+class Elu : public OpExprGradFunction<EluCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -249,7 +265,7 @@ class Elu : public OpExprGradFunction<EluInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(EluInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+  Maybe<void> Capture(EluCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
@@ -261,7 +277,7 @@ class Elu : public OpExprGradFunction<EluInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const EluInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const EluCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
@@ -276,16 +292,57 @@ class Elu : public OpExprGradFunction<EluInterpState> {
   AttrMap base_attrs_;
 };
 
-struct PReLUInterpState : public OpExprInterpState {
+struct CeluCaptureState : public AutoGradCaptureState {
+  bool requires_grad = true;
+  double alpha = 1.0;
+};
+
+class Celu : public OpExprGradFunction<CeluCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Capture(CeluCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    ctx->requires_grad = inputs.at(0)->requires_grad();
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    ctx->alpha = JUST(composed_attrs.GetAttr<double>("alpha"));
+    ctx->SaveTensorForBackward(inputs.at(0));
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const CeluCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    in_grads->resize(1);
+    if (ctx->requires_grad) {
+      const auto& x = ctx->SavedTensors().at(0);
+      in_grads->at(0) = JUST(functional::CeluGrad(x, out_grads.at(0), ctx->alpha));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  AttrMap base_attrs_;
+};
+
+struct PReLUCaptureState : public AutoGradCaptureState {
   bool input_requires_grad;
   bool alpha_requires_grad;
 };
 
-class PReLU : public OpExprGradFunction<PReLUInterpState> {
+class PReLU : public OpExprGradFunction<PReLUCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(PReLUInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+  Maybe<void> Capture(PReLUCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     ctx->input_requires_grad = inputs.at(0)->requires_grad();  // input
@@ -296,13 +353,12 @@ class PReLU : public OpExprGradFunction<PReLUInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const PReLUInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const PReLUCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     const auto& dy = out_grads.at(0);
     const auto& x = ctx->SavedTensors().at(0);
     const auto& alpha = ctx->SavedTensors().at(1);
-
     in_grads->resize(2);
     if (ctx->input_requires_grad || ctx->alpha_requires_grad) {
       const auto& grads = JUST(functional::PReluGrad(dy, x, alpha));
@@ -327,6 +383,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("hardswish", HardSwish);
 REGISTER_OP_EXPR_GRAD_FUNCTION("leaky_relu", LeakyRelu);
 REGISTER_OP_EXPR_GRAD_FUNCTION("hardtanh", HardTanh);
 REGISTER_OP_EXPR_GRAD_FUNCTION("elu", Elu);
+REGISTER_OP_EXPR_GRAD_FUNCTION("celu", Celu);
 REGISTER_OP_EXPR_GRAD_FUNCTION("prelu", PReLU);
 
 }  // namespace one

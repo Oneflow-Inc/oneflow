@@ -119,7 +119,7 @@ class ArgBlobDef(object):
         interface_blob_conf.is_dynamic = self.is_dynamic
         sbp_parallel = sbp_parallel_pb.SbpParallel()
         sbp_parallel.split_parallel.axis = 0
-        interface_blob_conf.parallel_distribution.sbp_parallel.extend([sbp_parallel])
+        interface_blob_conf.nd_sbp.sbp_parallel.extend([sbp_parallel])
         return interface_blob_conf
 
     def _Distribute2Str(self):

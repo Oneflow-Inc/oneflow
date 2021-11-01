@@ -50,4 +50,6 @@ inline void SetIsMultiClient(bool is_multi_client) {
   return oneflow::SetIsMultiClient(is_multi_client).GetOrThrow();
 }
 
+inline size_t CudaGetDeviceCount() { return oneflow::CudaGetDeviceCount().GetOrThrow(); }
+
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_API_H_

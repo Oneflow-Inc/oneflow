@@ -22,35 +22,27 @@ REGISTER_USER_OP("prelu")
     .Input("alpha")
     .Output("y")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
-      user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
+      const Shape& x_shape = ctx->InputShape("x", 0);
+      Shape* y_shape = ctx->OutputShape("y", 0);
       const Shape& alpha_shape = ctx->InputShape("alpha", 0);
-      CHECK_EQ_OR_RETURN(x_desc.shape().NumAxes(), alpha_shape.NumAxes() + 1);
-      FOR_RANGE(int64_t, i, 1, x_desc.shape().NumAxes()) {
-        CHECK_OR_RETURN((alpha_shape.At(i - 1) == x_desc.shape().At(i))
-                        || (alpha_shape.At(i - 1) == 1));
-      }
-      *y_desc->mut_shape() = x_desc.shape();
-      *y_desc->mut_is_dynamic() = x_desc.is_dynamic();
+      CHECK_EQ_OR_RETURN(alpha_shape.NumAxes(), 1);
+      *y_shape = x_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-      const user_op::TensorDesc& alpha_tensor =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("alpha", 0);
       ctx->NewBuilder()
-          .Split(user_op::OpArg("x", 0), 0)
-          .Broadcast(user_op::OpArg("alpha", 0))
-          .Split(user_op::OpArg("y", 0), 0)
+          .Split(user_op::OpArg("x", 0), 1)
+          .Split(user_op::OpArg("alpha", 0), 0)
+          .Split(user_op::OpArg("y", 0), 1)
           .Build();
-      FOR_RANGE(int64_t, i, 1, x_tensor.shape().NumAxes()) {
-        if (x_tensor.shape().At(i) == alpha_tensor.shape().At(i - 1)) {
-          ctx->NewBuilder()
-              .Split(user_op::OpArg("x", 0), i)
-              .Split(user_op::OpArg("alpha", 0), i - 1)
-              .Split(user_op::OpArg("y", 0), i)
-              .Build();
-        }
+      FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
+        if (i == 0) continue;
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("x", 0), i)
+            .Broadcast(user_op::OpArg("alpha", 0))
+            .Split(user_op::OpArg("y", 0), i)
+            .Build();
       }
       return Maybe<void>::Ok();
     })
@@ -66,27 +58,20 @@ REGISTER_USER_OP("prelu_grad")
     .Output("dx")
     .Output("alpha_diff")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
-      const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-      user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
-      const user_op::TensorDesc& alpha_desc = ctx->InputTensorDesc("alpha", 0);
-      CHECK_EQ_OR_RETURN(x_desc.shape().NumAxes(), alpha_desc.shape().NumAxes() + 1);
-      FOR_RANGE(int64_t, i, 1, x_desc.shape().NumAxes()) {
-        CHECK_OR_RETURN((alpha_desc.shape().At(i - 1) == x_desc.shape().At(i))
-                        || (alpha_desc.shape().At(i - 1) == 1));
-      }
-      CHECK_EQ_OR_RETURN(dy_desc.shape(), x_desc.shape());
-      CHECK_EQ_OR_RETURN(dy_desc.data_type(), x_desc.data_type());
-      *dx_desc->mut_shape() = x_desc.shape();
-      *dx_desc->mut_is_dynamic() = x_desc.is_dynamic();
-      *ctx->OutputShape("alpha_diff", 0) = alpha_desc.shape();
-      *ctx->OutputIsDynamic("alpha_diff", 0) = alpha_desc.is_dynamic();
+      const Shape& x_shape = ctx->InputShape("x", 0);
+      const Shape& dy_shape = ctx->InputShape("dy", 0);
+      Shape* dx_shape = ctx->OutputShape("dx", 0);
+      Shape* alpha_diff_shape = ctx->OutputShape("alpha_diff", 0);
+      const Shape& alpha_shape = ctx->InputShape("alpha", 0);
+      CHECK_EQ_OR_RETURN(alpha_shape.NumAxes(), 1);
+      CHECK_OR_RETURN((alpha_shape.At(0) == x_shape.At(1)) || (alpha_shape.At(0) == 1));
+      CHECK_EQ_OR_RETURN(dy_shape, x_shape);
+      *dx_shape = x_shape;
+      *alpha_diff_shape = alpha_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-      const user_op::TensorDesc& alpha_tensor =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("alpha", 0);
       ctx->NewBuilder()
           .Split(user_op::OpArg("dy", 0), 0)
           .Split(user_op::OpArg("x", 0), 0)
@@ -101,16 +86,21 @@ REGISTER_USER_OP("prelu_grad")
           .PartialSum(user_op::OpArg("dx", 0))
           .PartialSum(user_op::OpArg("alpha_diff", 0))
           .Build();
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("dy", 0), 1)
+          .Split(user_op::OpArg("x", 0), 1)
+          .Split(user_op::OpArg("alpha", 0), 0)
+          .Split(user_op::OpArg("dx", 0), 1)
+          .Split(user_op::OpArg("alpha_diff", 0), 0)
+          .Build();
       FOR_RANGE(int64_t, i, 1, x_tensor.shape().NumAxes()) {
-        if (x_tensor.shape().At(i) == alpha_tensor.shape().At(i - 1)) {
-          ctx->NewBuilder()
-              .Split(user_op::OpArg("dy", 0), i)
-              .Split(user_op::OpArg("x", 0), i)
-              .Split(user_op::OpArg("alpha", 0), i - 1)
-              .Split(user_op::OpArg("dx", 0), i)
-              .Split(user_op::OpArg("alpha_diff", 0), i - 1)
-              .Build();
-        }
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("dy", 0), i)
+            .Split(user_op::OpArg("x", 0), i)
+            .Split(user_op::OpArg("alpha", 0), 0)
+            .Split(user_op::OpArg("dx", 0), i)
+            .Split(user_op::OpArg("alpha_diff", 0), 0)
+            .Build();
       }
       return Maybe<void>::Ok();
     })

@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/sync_symbol_consistent_tensor_meta.h"
 #include "oneflow/core/framework/sync_symbol_parallel_desc.h"
-#include "oneflow/core/framework/sync_symbol_parallel_distribution.h"
+#include "oneflow/core/framework/sync_symbol_nd_sbp.h"
 #include "oneflow/core/framework/rank_group_rpc_util.h"
 #include "oneflow/core/framework/tensor_meta.h"
 #include "oneflow/core/framework/synced_symbol_map.h"
@@ -36,8 +36,8 @@ struct FlatConsistentTensorMeta final {
     JUST(this->shape.Init(consistent_tensor_meta->shape()));
     this->dtype = static_cast<int32_t>(consistent_tensor_meta->dtype());
     this->is_dynamic = consistent_tensor_meta->is_dynamic();
-    this->parallel_distribution = JUST(SyncedSymbolMap<cfg::ParallelDistribution>::FindOrSync(
-        consistent_tensor_meta->parallel_distribution(), &SyncSymbolParallelDistribution));
+    this->nd_sbp = JUST(SyncedSymbolMap<cfg::NdSbp>::FindOrSync(consistent_tensor_meta->nd_sbp(),
+                                                                &SyncSymbolNdSbp));
     this->parallel_desc = JUST(SyncedSymbolMap<ParallelDesc>::FindOrSync(
         consistent_tensor_meta->parallel_desc(), &SyncSymbolParallelDesc));
     return Maybe<void>::Ok();
@@ -48,10 +48,8 @@ struct FlatConsistentTensorMeta final {
     JUST(this->shape.Check(consistent_tensor_meta->shape()));
     CHECK_EQ_OR_RETURN(static_cast<DataType>(this->dtype), consistent_tensor_meta->dtype());
     CHECK_EQ_OR_RETURN(this->is_dynamic, consistent_tensor_meta->is_dynamic());
-    const auto& parallel_distribution =
-        JUST(SyncedSymbolMap<cfg::ParallelDistribution>::Symbol4SyncedSymbolId(
-            this->parallel_distribution));
-    CHECK_OR_RETURN(parallel_distribution == consistent_tensor_meta->parallel_distribution());
+    const auto& nd_sbp = JUST(SyncedSymbolMap<cfg::NdSbp>::Symbol4SyncedSymbolId(this->nd_sbp));
+    CHECK_OR_RETURN(nd_sbp == consistent_tensor_meta->nd_sbp());
     const auto& parallel_desc =
         JUST(SyncedSymbolMap<ParallelDesc>::Symbol4SyncedSymbolId(this->parallel_desc));
     CHECK_OR_RETURN(parallel_desc == consistent_tensor_meta->parallel_desc());
@@ -62,17 +60,17 @@ struct FlatConsistentTensorMeta final {
   FlatShape shape;
   int32_t dtype;
   bool is_dynamic;
-  uint64_t parallel_distribution;
+  uint64_t nd_sbp;
   uint64_t parallel_desc;
 };
 
 Maybe<void> SyncSymbolConsistentTensorMeta(
     uint64_t symbol_id, Symbol<one::ConsistentTensorMeta> consistent_tensor_meta) {
-  const auto& rpc_token =
-      JUST(RpcToken::AcquireCtrlRpcToken(kRankGroupRpcCmdSyncSymbolConsistentTensorMeta));
+  const auto& transport_token =
+      JUST(TransportToken::NewTransportToken(kTransportTokenTypeSyncSymbolConsistentTensorMeta));
   const auto& recv_buffer = std::make_shared<FlatConsistentTensorMeta>();
-  NaiveAsyncRpcCtx ctx(
-      rpc_token,
+  NaiveAsyncTransportCtx ctx(
+      transport_token,
       [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
         const auto& send_buffer =
             JUST(FlatConsistentTensorMeta::New(symbol_id, consistent_tensor_meta));
@@ -88,9 +86,9 @@ Maybe<void> SyncSymbolConsistentTensorMeta(
         return Maybe<void>::Ok();
       });
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
-  JUST(RpcUtil::SendToNextRankInRing(rank_group, rpc_token, &ctx));
-  JUST(RpcUtil::ReceiveFromPrevRankInRing(rank_group, rpc_token, &ctx));
-  JUST(RpcUtil::WaitUntilDoneOrTimeout(ctx, RpcUtil::TimeoutSeconds()));
+  JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
+  JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
+  JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
   JUST(recv_buffer->Check(symbol_id, consistent_tensor_meta));
   return Maybe<void>::Ok();
 }

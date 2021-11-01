@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import collections
+import math
 from typing import Callable, Dict, Iterator, List, Tuple, Union
 
 import oneflow as flow
@@ -54,12 +55,58 @@ class AdamW(Optimizer):
         eps (float, optional): term added to the denominator to improve
             numerical stability (default: 1e-8)
         weight_decay (float, optional): weight decay (L2 penalty) (In the equation is λ, default: 0)
-        scale (float, optional): the scale factor of loss (default: 1.0)
+        amsgrad (bool, optional): whether to use the AMSGrad variant of this algorithm. (default: False) 
+        do_bias_correction (bool, optional): Whether do bias correction (default: True)
 
     .. _Adam\\: A Method for Stochastic Optimization:
         https://arxiv.org/abs/1412.6980
+
     .. _Decoupled Weight Decay Regularization:
         https://arxiv.org/abs/1711.05101
+
+    For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        # Assume net is a custom model. 
+        adamw = flow.optim.AdamW(net.parameters(), lr=1e-3)
+
+        for epoch in range(epochs):
+            # Read data, Compute the loss and so on. 
+            # ...
+            loss.backward()
+            adamw.step()
+            adamw.zero_grad()
+
+    Example 2: 
+
+    .. code-block:: python 
+
+        # Assume net is a custom model. 
+        adamw = flow.optim.AdamW(
+            [
+                {
+                    "params": net.parameters(),
+                    "lr": learning_rate,
+                    "clip_grad_max_norm": 0.5,
+                    "clip_grad_norm_type": 2.0,
+                }
+            ],
+        )
+
+        for epoch in range(epochs):
+            # Read data, Compute the loss and so on. 
+            # ...
+            loss.backward()
+            adamw.clip_grad()
+            adamw.step()
+            adamw.zero_grad()
+
+    If you want to use clip_grad, you can refer this example. 
+
+    For more details of `clip_grad_max_norm` and `clip_grad_norm_type`, you can refer to :func:`oneflow.nn.utils.clip_grad_norm_`. 
 
     """
 
@@ -71,9 +118,8 @@ class AdamW(Optimizer):
         eps: float = 1e-08,
         weight_decay: float = 0,
         amsgrad: bool = False,
-        scale: float = 1.0,
+        do_bias_correction: bool = True,
     ):
-        super().__init__()
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
         assert (
@@ -83,31 +129,29 @@ class AdamW(Optimizer):
             betas[1] >= 0.0 and betas[1] < 1.0
         ), f"Invalid beta parameter at index 1: {betas[1]}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
-        assert scale > 0.0, f"Invalid scale factor: {scale}"
-        assert amsgrad is False, "Not support AMSGrad now!"
-        self._default_options["lr"] = lr
-        self._default_options["eps"] = eps
-        self._default_options["betas"] = betas
-        self._default_options["weight_decay"] = weight_decay
-        self._default_options["amsgrad"] = amsgrad
-        self._default_options["scale"] = scale
-        if isinstance(parameters, collections.abc.Iterator):
-            self.param_groups.append(ParamGroup(parameters, self._default_options))
-        else:
-            for param in parameters:
-                self.param_groups.append(ParamGroup(param, self._default_options))
+        options = dict()
+        options["lr"] = lr
+        options["eps"] = eps
+        options["betas"] = betas
+        options["weight_decay"] = weight_decay
+        options["bias_correction1"] = 1.0
+        options["bias_correction2"] = 1.0
+        options["do_bias_correction"] = do_bias_correction
+        options["amsgrad"] = amsgrad
+        super().__init__(parameters, options)
+
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
-                self._state[param]["exp_avg"] = flow.zeros_like(param)
-                self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
+
         self._op = (
             flow.builtin_op("adam_update")
             .Input("model")
             .Input("model_diff")
             .Input("m")
             .Input("v")
+            .Input("max_v")
             .Attr("l1", 0.0)
             .Attr("l2", 0.0)
             .Build()
@@ -125,19 +169,81 @@ class AdamW(Optimizer):
             if closure is not None:
                 loss = closure()
             for param_group in self.param_groups:
+                if param_group["do_bias_correction"]:
+                    param_group["bias_correction1"] = 1.0 - math.pow(
+                        param_group["betas"][0], self._state["step"] + 1
+                    )
+                    param_group["bias_correction2"] = 1.0 - math.pow(
+                        param_group["betas"][1], self._state["step"] + 1
+                    )
+
                 kwargs = {
                     "learning_rate_val": param_group["lr"],
-                    "scale": param_group["scale"],
+                    "bias_correction1_val": param_group["bias_correction1"],
+                    "bias_correction2_val": param_group["bias_correction2"],
                     "weight_decay": param_group["weight_decay"],
                     "beta1": param_group["betas"][0],
                     "beta2": param_group["betas"][1],
                     "epsilon": param_group["eps"],
+                    "do_bias_correction": param_group["do_bias_correction"],
+                    "amsgrad": param_group["amsgrad"],
                 }
+
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
+
+                    if "exp_avg" not in self._state[param]:
+                        self._state[param]["exp_avg"] = flow.zeros_like(param)
+                    if "exp_avg_sq" not in self._state[param]:
+                        self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
+                    if "max_exp_avg_sq" not in self._state[param]:
+                        self._state[param]["max_exp_avg_sq"] = flow.zeros_like(param)
                     m_tensor = self._state[param]["exp_avg"]
                     v_tensor = self._state[param]["exp_avg_sq"]
-                    self._op(param, param.grad, m_tensor, v_tensor, **kwargs)
-            self._state["step"] = self._state["step"] + 1
+                    max_v_tensor = self._state[param]["max_exp_avg_sq"]
+                    self._op(
+                        param, param.grad, m_tensor, v_tensor, max_v_tensor, **kwargs,
+                    )
+
+            self._state["step"] += 1
             return loss
+
+    def _generate_conf_for_graph(self, train_conf, vars_conf):
+        new_opt_confs = []
+        for param_group in self.param_groups:
+            optimizer_conf = train_conf.mutable_optimizer_conf().Add()
+            lr = (
+                param_group["initial_lr"]
+                if "initial_lr" in param_group
+                else param_group["lr"]
+            )
+            weight_decay = param_group["weight_decay"]
+            beta1 = param_group["betas"][0]
+            beta2 = param_group["betas"][1]
+            epsilon = param_group["eps"]
+            do_bias_correction = param_group["do_bias_correction"]
+            amsgrad = param_group["amsgrad"]
+
+            optimizer_conf.set_base_learning_rate(lr)
+
+            optimizer_conf.mutable_adam_conf().set_beta1(beta1)
+            optimizer_conf.mutable_adam_conf().set_beta2(beta2)
+            optimizer_conf.mutable_adam_conf().set_epsilon(epsilon)
+            optimizer_conf.mutable_adam_conf().set_do_bias_correction(
+                do_bias_correction
+            )
+            optimizer_conf.mutable_adam_conf().set_amsgrad(amsgrad)
+
+            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
+                weight_decay
+            )
+
+            self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
+
+            for param in param_group.parameters:
+                if param.requires_grad:
+                    optimizer_conf.add_variable_op_names(vars_conf[param].name)
+
+            new_opt_confs.append(optimizer_conf)
+        return new_opt_confs

@@ -13,22 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
 
 import oneflow as flow
-import oneflow.unittest
+from test_util import GenArgList
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _np_get_expand(input_shape, expand_size):
     input = np.random.random(size=input_shape).astype(np.float32)
+
     input_stride = [1]
     for i in range(len(input_shape) - 2, -1, -1):
         input_stride.insert(0, input_stride[0] * input_shape[i + 1])
+    # calculate the output shape and stride
     new_size = []
     new_stride = []
     diff = len(expand_size) - len(input_shape)
@@ -48,10 +50,13 @@ def _np_get_expand(input_shape, expand_size):
                 new_stride.insert(0, new_stride[0])
             else:
                 new_stride.insert(0, 0)
+
     gout = np.random.random(size=tuple(new_size)).astype(np.float32)
+
     out_stride = [1]
     for i in range(len(new_size) - 2, -1, -1):
         out_stride.insert(0, out_stride[0] * new_size[i + 1])
+
     gin = np.zeros(input_shape).flatten()
     out = np.zeros(np.product(new_size))
 
@@ -68,18 +73,20 @@ def _np_get_expand(input_shape, expand_size):
     gout_flatten = gout.flatten()
     num_elem = np.product(new_size)
     dims = len(new_size)
+
     for i in range(num_elem):
         offset = getOffset(i, out_stride, new_stride, dims)
         gin[offset] += gout_flatten[i]
         out[i] = in_flatten[offset]
-    return (input, gout, out.reshape(tuple(new_size)), gin.reshape(input_shape))
+
+    return input, gout, out.reshape(tuple(new_size)), gin.reshape(input_shape)
 
 
 def _test_expand_new_dims(test_case, device):
     input_shape = (1, 4, 1, 32)
     expand_dim = [2, 1, 2, 4, 2, 32]
-    (input, gout, out_np, gin_np) = _np_get_expand(input_shape, expand_dim)
-    of_input = flow.Tensor(
+    input, gout, out_np, gin_np = _np_get_expand(input_shape, expand_dim)
+    of_input = flow.tensor(
         input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     of_out = of_input.expand(2, 1, 2, 4, 2, 32)
@@ -89,42 +96,34 @@ def _test_expand_new_dims(test_case, device):
 def _test_expand_same_dim(test_case, device):
     input_shape = (2, 4, 1, 32)
     expand_dim = [2, 4, 2, 32]
-    (input, gout, out_np, gin_np) = _np_get_expand(input_shape, expand_dim)
-    of_input = flow.Tensor(input, dtype=flow.float32, device=flow.device(device))
+    input, gout, out_np, gin_np = _np_get_expand(input_shape, expand_dim)
+    of_input = flow.tensor(input, dtype=flow.float32, device=flow.device(device))
     of_out = of_input.expand(2, 4, 2, 32)
+
     test_case.assertTrue(np.array_equal(of_out.numpy(), out_np))
 
 
 def _test_expand_same_dim_negative(test_case, device):
     input_shape = (1, 6, 5, 3)
     expand_dim = [4, -1, 5, 3]
-    (input, gout, out_np, gin_np) = _np_get_expand(input_shape, expand_dim)
-    of_input = flow.Tensor(input, dtype=flow.float32, device=flow.device(device))
+    input, gout, out_np, gin_np = _np_get_expand(input_shape, expand_dim)
+    of_input = flow.tensor(input, dtype=flow.float32, device=flow.device(device))
     of_out = of_input.expand(4, -1, 5, 3)
+
     test_case.assertTrue(np.array_equal(of_out.numpy(), out_np))
 
 
 def _test_expand_same_int(test_case, device):
     input_shape = (2, 4, 1, 32)
     expand_dim = [2, 4, 2, 32]
-    (input, gout, out_np, gin_np) = _np_get_expand(input_shape, expand_dim)
-    of_input = flow.Tensor(input, dtype=flow.int, device=flow.device(device))
+    input, gout, out_np, gin_np = _np_get_expand(input_shape, expand_dim)
+    of_input = flow.tensor(input, dtype=flow.int, device=flow.device(device))
     of_out = of_input.expand(2, 4, 2, 32)
-    test_case.assertTrue(np.array_equal(of_out.numpy(), out_np.astype(np.int32)))
 
-
-def _test_expand_same_int8(test_case, device):
-    input_shape = (2, 4, 1, 32)
-    expand_dim = [2, 4, 2, 32]
-    (input, gout, out_np, gin_np) = _np_get_expand(input_shape, expand_dim)
-    of_input = flow.Tensor(input, dtype=flow.int8, device=flow.device(device))
-    of_out = of_input.expand(2, 4, 2, 32)
     test_case.assertTrue(np.array_equal(of_out.numpy(), out_np.astype(np.int32)))
 
 
 def _test_expand_backward_same_dim(test_case, device):
-    input_shape = (2, 4, 1, 1)
-    expand_dim = [2, 4, 2, 1]
     input = np.array(
         [
             [
@@ -141,11 +140,11 @@ def _test_expand_backward_same_dim(test_case, device):
             ],
         ]
     )
-    of_input = flow.Tensor(
+    of_input = flow.tensor(
         input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     of_out = of_input.expand(2, 4, 2, 1)
-    y = of_out.sum().backward()
+    of_out.sum().backward()
     np_grad = [
         [[[2.0]], [[2.0]], [[2.0]], [[2.0]]],
         [[[2.0]], [[2.0]], [[2.0]], [[2.0]]],
@@ -154,8 +153,6 @@ def _test_expand_backward_same_dim(test_case, device):
 
 
 def _test_expand_backward(test_case, device):
-    input_shape = (1, 4, 1, 2)
-    expand_dim = [2, 1, 2, 4, 2, 2]
     input = np.array(
         [
             [
@@ -166,61 +163,39 @@ def _test_expand_backward(test_case, device):
             ]
         ]
     )
-    of_input = flow.Tensor(
+    of_input = flow.tensor(
         input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     of_out = of_input.expand(2, 1, 2, 4, 2, 2)
-    y = of_out.sum().backward()
+    of_out.sum().backward()
     np_grad = [[[[8.0, 8.0]], [[8.0, 8.0]], [[8.0, 8.0]], [[8.0, 8.0]]]]
     test_case.assertTrue(np.array_equal(of_input.grad.numpy(), np_grad))
 
 
-def _test_expand_input_list(test_case, device):
-    input_shape = (1, 6, 5, 3)
-    expand_dim = [4, -1, 5, 3]
-    (input, gout, out_np, gin_np) = _np_get_expand(input_shape, expand_dim)
-    of_input = flow.Tensor(input, dtype=flow.float32, device=flow.device(device))
-    of_out = of_input.expand(expand_dim)
-    test_case.assertTrue(np.array_equal(of_out.numpy(), out_np))
-
-
-def _test_expand_input_flow_size(test_case, device):
-    input_shape = (1, 4, 1, 2)
-    expand_dim = [2, 1, 2, 4, 2, 2]
-    input = np.array(
-        [
-            [
-                [[0.8981702327728271, 0.5372866988182068]],
-                [[0.45116370916366577, 0.8656941056251526]],
-                [[0.8811476230621338, 0.5552017688751221]],
-                [[0.6291894316673279, 0.5786571502685547]],
-            ]
-        ]
-    )
-    of_input = flow.Tensor(
-        input, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    x = flow.Tensor(np.random.randn(2, 1, 2, 4, 2, 2))
-    of_out = of_input.expand(x.shape)
-    y = of_out.sum().backward()
-    np_grad = [[[[8.0, 8.0]], [[8.0, 8.0]], [[8.0, 8.0]], [[8.0, 8.0]]]]
-    test_case.assertTrue(np.array_equal(of_input.grad.numpy(), np_grad))
+def random_expand(x, ndim, expand_size):
+    dim_size = [1,] * ndim
+    random_index = random(0, ndim).to(int).value()
+    dim_size[random_index] = expand_size
+    return x.expand(*dim_size)
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestModule(flow.unittest.TestCase):
-    def test_expand(test_case):
+class TestExpand(flow.unittest.TestCase):
+    @autotest()
+    def test_flow_tensor_expand_with_random_data(test_case):
+        random_expand_size = random(1, 6).to(int).value()
+        x = random_pytorch_tensor(ndim=5, dim0=1, dim1=1, dim2=1, dim3=1, dim4=1)
+        return random_expand(x, ndim=5, expand_size=random_expand_size)
+
+    def test_expand_compare_with_numpy(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_expand_new_dims,
             _test_expand_same_dim,
             _test_expand_same_dim_negative,
             _test_expand_same_int,
-            _test_expand_same_int8,
             _test_expand_backward,
             _test_expand_backward_same_dim,
-            _test_expand_input_list,
-            _test_expand_input_flow_size,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

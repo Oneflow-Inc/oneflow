@@ -17,16 +17,25 @@ limitations under the License.
 
 namespace oneflow {
 
-void NaiveActor::Act() { AsyncLaunchKernel(GenDefaultKernelCtx()); }
-
-void NaiveActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  HandleProducedNaiveDataRegstToConsumer();
+void NaiveActor::Act() {
+  AsyncLaunchKernel([&](int64_t regst_desc_id) -> Regst* { return nullptr; });
 }
 
+void NaiveActor::VirtualActorInit(const TaskProto&) {
+  OF_SET_MSG_HANDLER(&NaiveActor::HandlerNormal);
+}
+
+REGISTER_ACTOR(TaskType::kNormalForward, NaiveActor);
+REGISTER_ACTOR(TaskType::kForeignInput, NaiveActor);
+REGISTER_ACTOR(TaskType::kForeignOutput, NaiveActor);
+REGISTER_ACTOR(TaskType::kDistributeConcat, NaiveActor);
+REGISTER_ACTOR(TaskType::kDistributeSplit, NaiveActor);
 REGISTER_ACTOR(TaskType::kSliceBoxing, NaiveActor);
 REGISTER_ACTOR(TaskType::kBoxingIdentity, NaiveActor);
 REGISTER_ACTOR(TaskType::kCollectiveBoxingPack, NaiveActor);
 REGISTER_ACTOR(TaskType::kCollectiveBoxingUnpack, NaiveActor);
 REGISTER_ACTOR(TaskType::kDecodeH2D, NaiveActor);
-
+#ifdef WITH_CUDA
+REGISTER_ACTOR(TaskType::kCopyHd, NaiveActor);
+#endif
 }  // namespace oneflow

@@ -33,25 +33,17 @@ class DeviceCtx {
   virtual ~DeviceCtx() = default;
 
 #ifdef WITH_CUDA
-  virtual const cudaStream_t& cuda_stream() const {
+  virtual cudaStream_t cuda_stream() const {
     UNIMPLEMENTED();
-    return *(const cudaStream_t*)nullptr;
+    return nullptr;
   }
-  virtual const cublasHandle_t& cublas_pmh_handle() const {
+  virtual cublasHandle_t cublas_handle() const {
     UNIMPLEMENTED();
-    return *(const cublasHandle_t*)nullptr;
+    return nullptr;
   }
-  virtual const cublasHandle_t& cublas_pmd_handle() const {
+  virtual cudnnHandle_t cudnn_handle() const {
     UNIMPLEMENTED();
-    return *(const cublasHandle_t*)nullptr;
-  }
-  virtual const cublasHandle_t& cublas_tensor_op_math_handle() const {
-    UNIMPLEMENTED();
-    return *(const cublasHandle_t*)nullptr;
-  }
-  virtual const cudnnHandle_t& cudnn_handle() const {
-    UNIMPLEMENTED();
-    return *(const cudnnHandle_t*)nullptr;
+    return nullptr;
   }
 #endif
 
@@ -63,10 +55,21 @@ class DeviceCtx {
     return nullptr;
   }
 
+  virtual DeviceType device_type() const = 0;
+
  protected:
   DeviceCtx() = default;
 
  private:
+};
+
+class DeviceCtxProvider {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DeviceCtxProvider);
+  DeviceCtxProvider() = default;
+  virtual ~DeviceCtxProvider() = default;
+
+  virtual std::shared_ptr<DeviceCtx> GetDeviceCtx() = 0;
 };
 
 #define REGISTER_DEVICE_CONTEXT(device, creator) \

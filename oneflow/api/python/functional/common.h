@@ -23,10 +23,13 @@ limitations under the License.
 #include "oneflow/api/python/framework/throw.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/common/scalar.h"
+#include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/framework/attr_map.h"
-#include "oneflow/core/functional/scalar.h"
+#include "oneflow/core/framework/random_generator.h"
+#include "oneflow/core/functional/tensor_index.h"
 
 namespace py = pybind11;
 
@@ -34,10 +37,9 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-namespace detail {
-
 struct PyObjectPtrDeleter {
   inline void operator()(PyObject* obj) {
+    py::gil_scoped_acquire acquire;
     if (obj) { Py_DECREF(obj); }
     obj = NULL;
   }
@@ -45,111 +47,113 @@ struct PyObjectPtrDeleter {
 
 using PyObjectPtr = std::unique_ptr<PyObject, PyObjectPtrDeleter>;
 
-#define ARITHMETIC_TYPE_SEQ      \
+#define INTEGER_TYPE_SEQ         \
   OF_PP_MAKE_TUPLE_SEQ(int32_t)  \
   OF_PP_MAKE_TUPLE_SEQ(uint32_t) \
   OF_PP_MAKE_TUPLE_SEQ(int64_t)  \
   OF_PP_MAKE_TUPLE_SEQ(uint64_t) \
-  OF_PP_MAKE_TUPLE_SEQ(float)    \
-  OF_PP_MAKE_TUPLE_SEQ(double)   \
   OF_PP_MAKE_TUPLE_SEQ(bool)
 
-#define MAKE_LIST_TUPLE_SEQ(T) (MAKE_LIST_TUPLE(T))
-#define MAKE_LIST_TUPLE(T) (std::vector<T>)
-#define ARITHMETIC_LIST_TYPE_SEQ OF_PP_FOR_EACH_TUPLE(MAKE_LIST_TUPLE_SEQ, ARITHMETIC_TYPE_SEQ)
+#define FLOATING_TYPE_SEQ     \
+  OF_PP_MAKE_TUPLE_SEQ(float) \
+  OF_PP_MAKE_TUPLE_SEQ(double)
 
 template<typename T>
-inline bool isinstance(py::handle obj) {
-  return py::isinstance<T>(obj);
-}
-
-#define SPECIALIZE_IS_INSTANCE(T)                                                \
-  template<>                                                                     \
-  inline bool isinstance<T>(py::handle obj) {                                    \
-    static py::object dummy = py::cast(T());                                     \
-    CHECK_NOTNULL_OR_THROW(dummy.ptr()) << "Pybind has no internal type " << #T; \
-    return py::isinstance(obj, py::type::of(dummy));                             \
-  }
-
-OF_PP_FOR_EACH_TUPLE(SPECIALIZE_IS_INSTANCE, ARITHMETIC_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(std::string));
-OF_PP_FOR_EACH_TUPLE(SPECIALIZE_IS_INSTANCE,
-                     ARITHMETIC_LIST_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(std::vector<std::string>));
-
-#undef SPECIALIZE_IS_INSTANCE
-
-template<typename T>
-struct type_caster {
-  static Maybe<T> cast(py::handle src) { return py::cast<T>(src); }
-};
-
-template<typename T>
-inline Maybe<T> cast(py::handle obj) {
-  return type_caster<T>::cast(obj);
+T dereference(T&& val) {
+  return std::forward<T>(val);
 }
 
 template<typename T>
-struct type_caster<std::vector<T>> {
-  static Maybe<std::vector<T>> cast(py::handle src);
-};
-
-#define SPECIALIZE_INTERNAL_IS_INSTANCE_ADN_CAST(T)                           \
-  template<>                                                                  \
-  inline bool isinstance<std::shared_ptr<T>>(py::handle obj) {                \
-    return detail::isinstance<T>(obj);                                        \
-  }                                                                           \
-                                                                              \
-  template<>                                                                  \
-  struct type_caster<std::shared_ptr<T>> {                                    \
-    static Maybe<std::shared_ptr<T>> cast(py::handle src) {                   \
-      CHECK_OR_RETURN(detail::isinstance<T>(src))                             \
-          << "Can not cast to " << #T << " from python object whose type is " \
-          << *JUST(detail::cast<std::string>(py::str(py::type::of(src))));    \
-      return py::cast<std::shared_ptr<T>>(src);                               \
-    }                                                                         \
-  };
-
-SPECIALIZE_INTERNAL_IS_INSTANCE_ADN_CAST(one::Tensor);
-SPECIALIZE_INTERNAL_IS_INSTANCE_ADN_CAST(one::TensorTuple);
-SPECIALIZE_INTERNAL_IS_INSTANCE_ADN_CAST(MutableCfgAttrMap);
-
-#undef SPECIALIZE_INTERNAL_IS_INSTANCE_ADN_CAST
-
-template<typename T>
-T&& dereference(T&& val) {
-  return std::move(val);
+T dereference(std::shared_ptr<T>&& val) {
+  return *val;
 }
 
-template<typename T>
-T&& dereference(std::shared_ptr<T>&& val) {
-  return std::move(*val);
-}
+bool PySequenceCheck(PyObject* obj);
+bool PySequenceCheck(PyObject* obj, const std::function<bool(PyObject*)>& item_check);
 
-template<typename T>
-/* static */ Maybe<std::vector<T>> type_caster<std::vector<T>>::cast(py::handle src) {
-  PyObject* obj = src.ptr();
+template<typename T, typename UnpackItemFunc>
+inline Maybe<std::vector<T>> PyUnpackSequence(PyObject* obj, UnpackItemFunc unpack_item) {
   bool is_tuple = PyTuple_Check(obj);
   CHECK_OR_RETURN(is_tuple || PyList_Check(obj))
-      << "The python object is not list or tuple, but is "
-      << *JUST(detail::cast<std::string>(py::str(py::type::of(src))));
+      << "The object is not list or tuple, but is " << Py_TYPE(obj)->tp_name;
   size_t size = is_tuple ? PyTuple_GET_SIZE(obj) : PyList_GET_SIZE(obj);
-
   auto values = std::make_shared<std::vector<T>>(size);
   for (int i = 0; i < size; ++i) {
-    values->at(i) = detail::dereference<T>(JUST(detail::cast<T>(
-        is_tuple ? py::handle(PyTuple_GET_ITEM(obj, i)) : py::handle(PyList_GET_ITEM(obj, i)))));
+    PyObject* item = is_tuple ? PyTuple_GET_ITEM(obj, i) : PyList_GET_ITEM(obj, i);
+    values->at(i) = dereference<T>(JUST(unpack_item(item)));
   }
   return values;
 }
 
-}  // namespace detail
+// Integer/Float list
+bool PyLongSequenceCheck(PyObject* obj);
+bool PyFloatSquenceCheck(PyObject* obj);
 
-bool PyTensorCheck(PyObject* object);
-Maybe<Tensor> PyUnpackTensor(PyObject* object);
+template<typename T>
+inline Maybe<std::vector<T>> PyUnpackLongSequence(PyObject* obj) {
+  return PyUnpackSequence<T>(
+      obj, [](PyObject* item) -> Maybe<T> { return static_cast<T>(PyLong_AsLongLong(item)); });
+}
 
-bool PyScalarCheck(PyObject* object);
-Maybe<Scalar> PyUnpackScalar(PyObject* object);
+template<typename T>
+inline Maybe<std::vector<T>> PyUnpackFloatSequence(PyObject* obj) {
+  return PyUnpackSequence<T>(
+      obj, [](PyObject* item) -> Maybe<T> { return static_cast<T>(PyFloat_AsDouble(item)); });
+}
 
-const char* PyStringAsString(PyObject* object);
+// String
+bool PyStringCheck(PyObject* obj);
+bool PyStringSequenceCheck(PyObject* obj);
+
+Maybe<const char*> PyStringAsString(PyObject* obj);
+
+// Scalar
+bool PyScalarCheck(PyObject* obj);
+Maybe<Scalar> PyUnpackScalar(PyObject* obj);
+
+// Tensor
+bool PyTensorCheck(PyObject* obj);
+Maybe<Tensor> PyUnpackTensor(PyObject* obj);
+
+// Tensor list
+bool PyTensorSequenceCheck(PyObject* obj);
+Maybe<std::vector<std::shared_ptr<Tensor>>> PyUnpackTensorSequence(PyObject* obj);
+
+// TensorTuple
+bool PyTensorTupleCheck(PyObject* obj);
+Maybe<TensorTuple> PyUnpackTensorTuple(PyObject* obj);
+
+// DType
+bool PyDTypeCheck(PyObject* obj);
+Maybe<Symbol<DType>> PyUnpackDType(PyObject* obj);
+
+// Shape
+bool PyShapeCheck(PyObject* obj);
+Maybe<Shape> PyUnpackShape(PyObject* obj);
+
+// Generator
+bool PyGeneratorCheck(PyObject* obj);
+Maybe<Generator> PyUnpackGenerator(PyObject* obj);
+
+// Device
+bool PyDeviceCheck(PyObject* obj);
+Maybe<Symbol<Device>> PyUnpackDevice(PyObject* obj);
+
+// Placement
+bool PyParallelDescCheck(PyObject* obj);
+Maybe<Symbol<ParallelDesc>> PyUnpackParallelDesc(PyObject* obj);
+
+// SBP
+bool PySbpParallelCheck(PyObject* obj);
+Maybe<Symbol<cfg::SbpParallel>> PyUnpackSbpParallel(PyObject* obj);
+
+// SBP list
+bool PySbpParallelSequenceCheck(PyObject* obj);
+Maybe<std::vector<Symbol<cfg::SbpParallel>>> PyUnpackSbpParallelSequence(PyObject* obj);
+
+// Tensor index
+bool PyTensorIndexCheck(PyObject* obj);
+Maybe<TensorIndex> PyUnpackTensorIndex(PyObject* obj);
 
 }  // namespace functional
 }  // namespace one

@@ -45,7 +45,12 @@ int64_t GlobalProcessCtx::NodeSize() {
 
 int64_t GlobalProcessCtx::ThisNodeId() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
-  return int64_t(Rank() / NumOfProcessPerNode());
+  return NodeId(Rank());
+}
+
+int64_t GlobalProcessCtx::NodeId(int64_t process_id) {
+  CHECK_NOTNULL(Global<ProcessCtx>::Get());
+  return process_id / NumOfProcessPerNode();
 }
 
 int64_t GlobalProcessCtx::NumOfProcessPerNode() {

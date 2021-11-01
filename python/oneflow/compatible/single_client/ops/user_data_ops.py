@@ -686,9 +686,9 @@ def CropMirrorNormalize(
     if name is None:
         name = id_util.UniqueStr("CropMirrorNormalize_")
     op_type_name = ""
-    if input_blob.dtype is flow.tensor_buffer:
+    if input_blob.dtype == flow.tensor_buffer:
         op_type_name = "crop_mirror_normalize_from_tensorbuffer"
-    elif input_blob.dtype is flow.uint8:
+    elif input_blob.dtype == flow.uint8:
         op_type_name = "crop_mirror_normalize_from_uint8"
     else:
         print(
@@ -1055,6 +1055,7 @@ def image_batch_align(
     shape: Sequence[int],
     dtype: flow.dtype,
     alignment: int,
+    dynamic_out: bool = True,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     """This operator aligns the shape for a batch of images.
@@ -1152,6 +1153,7 @@ def image_batch_align(
         .Attr("shape", shape)
         .Attr("data_type", dtype)
         .Attr("alignment", alignment)
+        .Attr("dynamic_out", dynamic_out)
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()
@@ -2297,7 +2299,7 @@ def gpt_data_loader(
     random_seed: Optional[int] = None,
     split_sizes: Optional[Sequence[str]] = None,
     split_index: Optional[int] = None,
-    parallel_distribution: Optional[Sequence[str]] = None,
+    nd_sbp: Optional[Sequence[str]] = None,
     start_from_saved_progress: bool = False,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -2308,8 +2310,8 @@ def gpt_data_loader(
             else id_util.UniqueStr("gpt_data_loader_")
         )
     label_length = 1
-    if parallel_distribution is None:
-        parallel_distribution = []
+    if nd_sbp is None:
+        nd_sbp = []
     if split_index is None:
         split_index = 0
     if split_sizes is None:
@@ -2337,7 +2339,7 @@ def gpt_data_loader(
         else:
             raise ValueError("unsupported distribute")
 
-    parallel_distribution = list(map(distribute_to_str, parallel_distribution))
+    nd_sbp = list(map(distribute_to_str, nd_sbp))
     if start_from_saved_progress:
         iteration_name = "{}-iteration-sq{}-sa{}-bs{}-sd{}-sp{}-spi{}-{}".format(
             name,
@@ -2348,10 +2350,7 @@ def gpt_data_loader(
             "_".join([str(s) for s in split_sizes]),
             split_index,
             "_".join(
-                [
-                    "S{}".format(p[2:-1]) if p.startswith("S") else p
-                    for p in parallel_distribution
-                ]
+                ["S{}".format(p[2:-1]) if p.startswith("S") else p for p in nd_sbp]
             ),
         )
         iteration = flow.get_variable(
@@ -2377,7 +2376,7 @@ def gpt_data_loader(
         .Attr("random_seed", random_seed)
         .Attr("split_sizes", split_sizes)
         .Attr("split_index", split_index)
-        .Attr("parallel_distribution", parallel_distribution)
+        .Attr("nd_sbp", nd_sbp)
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()

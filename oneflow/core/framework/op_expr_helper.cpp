@@ -180,19 +180,6 @@ Maybe<one::UserOpExpr> ScalarPowOp(const double& exponent, const std::string& na
       .Build();
 }
 
-Maybe<one::UserOpExpr> ScalarPowGradOp(const double& exponent) {
-  return ScalarPowGradOp(exponent, UniqueOpName("scalar_pow_grad"));
-}
-
-Maybe<one::UserOpExpr> ScalarPowGradOp(const double& exponent, const std::string& name) {
-  return one::OpBuilder("scalar_pow_grad", name)
-      .Input("x")
-      .Input("dy")
-      .Attr<double>("exponent", exponent)
-      .Output("dx")
-      .Build();
-}
-
 template<>
 Maybe<one::UserOpExpr> ScalarMulOp(const float& scalar, const std::string& name) {
   return one::OpBuilder("scalar_mul", name)
@@ -366,42 +353,6 @@ Maybe<one::UserOpExpr> BroadcastDivGradOp(const std::string& name) {
       .Build();
 }
 
-Maybe<one::UserOpExpr> LayerNormGradOp(const int64_t& begin_norm_axis, const double& epsilon) {
-  return LayerNormGradOp(begin_norm_axis, epsilon, UniqueOpName("layer_norm_grad"));
-}
-Maybe<one::UserOpExpr> LayerNormGradOp(const int64_t& begin_norm_axis, const double& epsilon,
-                                       const std::string& name) {
-  return one::OpBuilder("layer_norm_grad", name)
-      .Input("x")
-      .Input("mean")
-      .Input("inv_variance")
-      .Input("dy")
-      .Output("dx")
-      .Attr<int64_t>("begin_norm_axis", begin_norm_axis)
-      .Attr<double>("epsilon", epsilon)
-      .Build();
-}
-
-Maybe<one::UserOpExpr> LayerNormParamGradOp(const int64_t& begin_params_axis,
-                                            const bool& has_beta_diff, const bool& has_gamma_diff,
-                                            const bool& has_normalized_diff) {
-  return LayerNormParamGradOp(begin_params_axis, has_beta_diff, has_gamma_diff, has_normalized_diff,
-                              UniqueOpName("layer_norm_param_grad"));
-}
-Maybe<one::UserOpExpr> LayerNormParamGradOp(const int64_t& begin_params_axis,
-                                            const bool& has_beta_diff, const bool& has_gamma_diff,
-                                            const bool& has_normalized_diff,
-                                            const std::string& name) {
-  auto builder = one::OpBuilder("layer_norm_param_grad", name).Input("dy");
-  if (has_gamma_diff || has_normalized_diff) { builder.Input("gamma"); }
-  if (has_gamma_diff) { builder.Input("normalized"); }
-  if (has_beta_diff) { builder.Output("beta_diff"); }
-  if (has_gamma_diff) { builder.Output("gamma_diff"); }
-  if (has_normalized_diff) { builder.Output("normalized_diff"); }
-  if (has_beta_diff || has_gamma_diff) { builder.Output("reduce_buf"); }
-  return builder.Attr<int64_t>("begin_params_axis", begin_params_axis).Build();
-}
-
 Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t& max_dim_size) {
   return ConcatOp(n, axis, max_dim_size, UniqueOpName("concat"));
 }
@@ -413,18 +364,6 @@ Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t
       .Output("out")
       .Attr<int64_t>("axis", axis)
       .Attr<int64_t>("max_dim_size", max_dim_size)
-      .Build();
-}
-
-Maybe<one::UserOpExpr> UnsortedBatchSegmentSumOp(const int& num_segments) {
-  return UnsortedBatchSegmentSumOp(num_segments, UniqueOpName("unsorted_batch_segment_sum"));
-}
-Maybe<one::UserOpExpr> UnsortedBatchSegmentSumOp(const int& num_segments, const std::string& name) {
-  return one::OpBuilder("unsorted_batch_segment_sum", name)
-      .Input("data")
-      .Input("segment_ids")
-      .Output("out")
-      .Attr<int32_t>("num_segments", num_segments)
       .Build();
 }
 
@@ -677,17 +616,18 @@ Maybe<one::UserOpExpr> WhereOp(const std::string& name) {
       .Build();
 }
 
-Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
-                                    const std::vector<int32_t>& stride) {
-  return ExpandGradOp(out_shape, stride, UniqueOpName("expand_grad"));
+Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& logical_out_shape,
+                                    const std::vector<int32_t>& logical_expand_shape) {
+  return ExpandGradOp(logical_out_shape, logical_expand_shape, UniqueOpName("expand_grad"));
 }
-Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
-                                    const std::vector<int32_t>& stride, const std::string& name) {
+Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& logical_out_shape,
+                                    const std::vector<int32_t>& logical_expand_shape,
+                                    const std::string& name) {
   return one::OpBuilder("expand_grad", name)
       .Input("in")
       .Output("out")
-      .Attr<std::vector<int32_t>>("out_shape", out_shape)
-      .Attr<std::vector<int32_t>>("stride", stride)
+      .Attr<std::vector<int32_t>>("logical_out_shape", logical_out_shape)
+      .Attr<std::vector<int32_t>>("logical_expand_shape", logical_expand_shape)
       .Build();
 }
 
@@ -773,19 +713,6 @@ Maybe<one::UserOpExpr> BroadcastMatmulGradBOp(const double& alpha, const std::st
       .Input("b")
       .Output("out")
       .Attr<double>("alpha", alpha)
-      .Build();
-}
-
-Maybe<one::UserOpExpr> DropoutGradOp(const float& scale) {
-  return DropoutGradOp(scale, UniqueOpName("dropout_grad"));
-}
-
-Maybe<one::UserOpExpr> DropoutGradOp(const float& scale, const std::string& name) {
-  return one::OpBuilder("dropout_grad", name)
-      .Input("dy")
-      .Input("mask")
-      .Output("dx")
-      .Attr<float>("scale", scale)
       .Build();
 }
 

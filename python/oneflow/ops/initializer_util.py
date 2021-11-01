@@ -24,15 +24,6 @@ import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 
 
-def empty_initializer(
-    dtype: flow.dtype = flow.float,
-) -> initializer_conf_util.InitializerConf:
-    initializer = initializer_conf_util.InitializerConf()
-    empty_conf = initializer_conf_util.EmptyInitializerConf()
-    initializer.empty_conf.CopyFrom(empty_conf)
-    return initializer
-
-
 def constant_initializer(
     value: float = 0, dtype: flow.dtype = flow.float
 ) -> initializer_conf_util.InitializerConf:

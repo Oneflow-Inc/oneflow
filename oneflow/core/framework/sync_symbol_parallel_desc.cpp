@@ -22,7 +22,7 @@ namespace oneflow {
 
 namespace {
 
-static const int kLimitParallelConfString = 1024 * 8;
+static const int kLimitParallelConfString = 1024 * 64;
 struct FlatParallelConf {
   size_t available_size() const {
     CHECK_GE(this->buffer_size, 0);
@@ -68,11 +68,11 @@ struct FlatParallelConf {
 }  // namespace
 
 Maybe<void> SyncSymbolParallelDesc(uint64_t symbol_id, Symbol<ParallelDesc> parallel_desc) {
-  const auto& rpc_token =
-      JUST(RpcToken::AcquireCtrlRpcToken(kRankGroupRpcCmdSyncSymbolParallelDesc));
+  const auto& transport_token =
+      JUST(TransportToken::NewTransportToken(kTransportTokenTypeSyncSymbolParallelDesc));
   const auto& recv_buffer = std::make_shared<FlatParallelConf>();
-  NaiveAsyncRpcCtx ctx(
-      rpc_token,
+  NaiveAsyncTransportCtx ctx(
+      transport_token,
       [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
         const auto& send_buffer = JUST(FlatParallelConf::New(symbol_id, parallel_desc));
         *buffer = send_buffer.get();
@@ -87,9 +87,9 @@ Maybe<void> SyncSymbolParallelDesc(uint64_t symbol_id, Symbol<ParallelDesc> para
         return Maybe<void>::Ok();
       });
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
-  JUST(RpcUtil::SendToNextRankInRing(rank_group, rpc_token, &ctx));
-  JUST(RpcUtil::ReceiveFromPrevRankInRing(rank_group, rpc_token, &ctx));
-  JUST(RpcUtil::WaitUntilDoneOrTimeout(ctx, RpcUtil::TimeoutSeconds()));
+  JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
+  JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
+  JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
   JUST(recv_buffer->Check(symbol_id, parallel_desc));
   return Maybe<void>::Ok();
 }

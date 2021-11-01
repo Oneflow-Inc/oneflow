@@ -18,10 +18,15 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename T>
+template<typename T, typename std::enable_if<IsFloating<T>::value>::type* = nullptr>
 OF_DEVICE_FUNC T MaxWithLogThreshold(T x) {
   const T threshold = 1e-20;
   return x > threshold ? x : threshold;
+}
+
+template<typename T, typename std::enable_if<IsIntegral<T>::value>::type* = nullptr>
+OF_DEVICE_FUNC T MaxWithLogThreshold(T x) {
+  return x;
 }
 
 #if defined(__CUDACC__)

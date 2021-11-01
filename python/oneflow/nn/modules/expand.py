@@ -13,46 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Optional
-
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _single
-
-
-def _input_args_is_int(args):
-    return all((isinstance(x, int) for x in args))
-
-
-def _input_args_is_tuple_int(args):
-    return all((_input_args_is_int(x) for x in args))
-
-
-def _input_args_is_flow_size(args):
-    return all((isinstance(x, flow.Size) for x in args)) and len(args) == 1
-
-
-class Expand(Module):
-    def __init__(self, *sizes) -> None:
-        super().__init__()
-        if _input_args_is_int(sizes):
-            self.expand_size = _single(sizes)
-        elif _input_args_is_tuple_int(sizes):
-            self.expand_size = _single(*sizes)
-        elif _input_args_is_flow_size(sizes):
-            self.expand_size = _single(*sizes)[0]
-        else:
-            raise ValueError("input sizes parameter is not illegal!")
-
-    def forward(self, x):
-        if x.dtype == flow.int8:
-            x = flow.cast(x, flow.int32)
-        return flow.F.expand(x, self.expand_size)
 
 
 @register_tensor_op("expand")
-def expand_op(x, *sizes):
+def expand_op(input, *sizes):
     """This operator expand the input tensor to a larger size.
 
     Passing -1 as the size for a dimension means not changing the size of that dimension.
@@ -62,8 +28,8 @@ def expand_op(x, *sizes):
     For the new dimensions, the size cannot be set to -1.
 
     Args:
-        x (oneflow.Tensor): The input Tensor.
-        *sizes  (flow.Size or int): The desired expanded size.
+        input (oneflow.Tensor): The input Tensor.
+        *sizes  (oneflow.Size or int): The desired expanded size.
 
     Returns:
         oneflow.Tensor: The result Tensor.
@@ -77,15 +43,22 @@ def expand_op(x, *sizes):
         >>> x = np.array([[[[0, 1]],
         ...               [[2, 3]],
         ...               [[4, 5]]]]).astype(np.int32)
-
         >>> input = flow.Tensor(x)
-
+        >>> input.shape
+        oneflow.Size([1, 3, 1, 2])
         >>> out = input.expand(1, 3, 2, 2)
         >>> out.shape
-        flow.Size([1, 3, 2, 2])
+        oneflow.Size([1, 3, 2, 2])
 
     """
-    return Expand(*sizes)(x)
+    if len(sizes) == 1:
+        expand_size = sizes[0]
+        if isinstance(expand_size, int):
+            expand_size = (expand_size,)
+    else:
+        expand_size = sizes
+
+    return flow._C.expand(input, expand_size)
 
 
 if __name__ == "__main__":

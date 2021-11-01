@@ -24,8 +24,8 @@ limitations under the License.
 namespace oneflow {
 
 #define DIM_GATHER_SCATTER_DATA_TYPE_CPU_SEQ \
-  FLOATING_DATA_TYPE_SEQ                     \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
+  ARITHMETIC_DATA_TYPE_SEQ                   \
+  UNSIGNED_INT_DATA_TYPE_SEQ
 
 #define DIM_GATHER_SCATTER_DATA_TYPE_GPU_SEQ \
   DIM_GATHER_SCATTER_DATA_TYPE_CPU_SEQ       \
@@ -43,13 +43,6 @@ struct DimGatherFunctor final {
   void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim, int64_t elem_cnt,
                   int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output);
-};
-
-template<DeviceType device_type, typename IN_T, typename IDX_T>
-struct DimScatterAddFunctor final {
-  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
-                  const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt,
-                  int32_t dim, const IDX_T* index, const IN_T* src, IN_T* output);
 };
 
 template<typename IN_T, typename IDX_T>
@@ -78,21 +71,6 @@ struct DeviceAdd {
 #endif
   };
 };
-
-template<typename IN_T, typename IDX_T>
-OF_DEVICE_FUNC void DoDimScatterAdd(const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
-                                    const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim,
-                                    int64_t elem_cnt, int32_t dim, const IDX_T* index,
-                                    const IN_T* input, IN_T* output) {
-  XPU_1D_KERNEL_LOOP(input_offset, elem_cnt) {
-    IDX_T coordinate[kDimGatherMaxDimCount] = {0};
-    input_nd_helper.OffsetToNdIndex(input_offset, coordinate, ndim);
-    coordinate[dim] = index[input_offset];
-
-    IDX_T output_offset = output_nd_helper.NdIndexToOffset(coordinate, ndim);
-    DeviceAdd<IN_T>::Invoke(input + input_offset, output + output_offset);
-  }
-}
 
 // macros for functors instantiate(used by dim_gather_kernel_util.cu and dim_gather_kernel_uti.cpp)
 #define INSTANTIATE_DIM_GATHER_FUNCTOR(device_type_v, dtype_pair, itype_pair)   \

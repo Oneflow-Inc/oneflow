@@ -63,7 +63,7 @@ class TestLayerNorm(unittest.TestCase):
         print("without xla: ", a.numpy())
         print("with xla", b.numpy())
         self.assertTrue(
-            np.allclose(a.numpy(), b.numpy(), rtol=0.05, atol=0.05),
+            np.allclose(a.numpy(), b.numpy(), rtol=0.05, atol=0.1),
             a.numpy() - b.numpy(),
         )
         flow.clear_default_session()

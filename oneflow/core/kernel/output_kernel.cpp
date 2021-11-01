@@ -13,18 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/output_kernel.h"
+#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
-template<DeviceType device_type>
-void OutputKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+class OutputKernel final : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(OutputKernel);
+  OutputKernel() = default;
+  ~OutputKernel() = default;
+
+ private:
+  void ForwardDataContent(KernelContext* ctx) const override;
+  void ForwardHeader(KernelContext* ctx) const override;
+};
+
+void OutputKernel::ForwardDataContent(KernelContext* ctx) const {
   if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
-    const auto& job_name = this->job_desc().job_name();
+    CHECK(this->op_conf().output_conf().has_job_name());
+    const auto& job_name = this->op_conf().output_conf().job_name();
     const auto& op_name = this->op_conf().name();
     auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
     auto* buffer = buffer_mgr->Get(GetOutputBufferName(job_name, op_name));
@@ -32,24 +42,22 @@ void OutputKernel<device_type>::ForwardDataContent(
     BufferStatus buffer_status = buffer->TryReceive(&job_instance);
     CHECK_NE(buffer_status, kBufferStatusEmpty);
     if (buffer_status == kBufferStatusSuccess) {
-      OfBlob ofblob(ctx.device_ctx, BnInOp2Blob("in"));
+      OfBlob ofblob(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
       job_instance->PullBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
     }
   } else {
-    BnInOp2Blob("out")->CopyDataContentFrom(ctx.device_ctx, BnInOp2Blob("in"));
+    AutoMemcpy(ctx->stream_ctx(), ctx->BnInOp2Blob("out"), ctx->BnInOp2Blob("in"));
   }
 }
 
-template<DeviceType device_type>
-void OutputKernel<device_type>::ForwardHeader(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void OutputKernel::ForwardHeader(KernelContext* ctx) const {
   if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
     // Do nothing.
   } else {
-    BnInOp2Blob("out")->CopyHeaderFrom(ctx.device_ctx, BnInOp2Blob("in"));
+    ctx->BnInOp2Blob("out")->CopyHeaderFrom(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
   }
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kOutputConf, OutputKernel);
+REGISTER_KERNEL(OperatorConf::kOutputConf, OutputKernel);
 
 }  // namespace oneflow

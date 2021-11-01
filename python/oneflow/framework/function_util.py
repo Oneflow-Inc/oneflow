@@ -23,12 +23,7 @@ from typing import Any, Callable, Optional, Union
 
 import oneflow._oneflow_internal
 import oneflow._oneflow_internal.oneflow.core.common.data_type as data_type_cfg
-import oneflow.framework.distribute_context as distribute_ctx
-import oneflow.framework.hob as hob
-import oneflow.framework.placement_context as placement_ctx
-import oneflow.framework.runtime_mode as rt_mode
 import oneflow.framework.session_context as session_ctx
-import oneflow.framework.typing_util as oft_util
 import oneflow.support.enable_if as enable_if
 import oneflow.support.pb_util as pb_util
 from oneflow import oneflow_deprecate
@@ -76,98 +71,6 @@ class FunctionConfig(object):
                 )
 
         return FunctionConfigSetter
-
-
-def api_oneflow_function(
-    type: str = "predict", function_config: FunctionConfig = None
-) -> Callable[[Callable], Callable]:
-    """Creates a callable OneFlow global function from a Python function.
-
-    For instance::
-
-        @oneflow.global_function(flow.FunctionConfig())
-        def train():
-            # your model
-
-    Args:
-        function_config (FunctionConfig, optional): a `FunctionConfig` object. Defaults to FunctionConfig().
-
-    Returns:
-        Callable[[Callable], Callable]: a callable which is called to execute the compiled function
-    """
-    if isinstance(type, FunctionConfig):
-        function_config = type
-        print(
-            "WARNING: flow.global_function(func_config) is deprecated. Please replace it with flow.global_function(type, func_config).\n            "
-        )
-        print(traceback.format_stack()[-2])
-    else:
-        assert type in ["train", "predict"]
-        if function_config is None:
-            function_config = FunctionConfig()
-        if type == "train":
-            function_config.function_desc.job_config_proto.mutable_train_conf()
-        else:
-            function_config.function_desc.job_config_proto.mutable_predict_conf()
-    api = enable_if.unique([eager_oneflow_function, lazy_oneflow_function])
-    return api(function_config)
-
-
-@enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)
-def eager_oneflow_function(function_config=FunctionConfig()):
-    assert isinstance(function_config, FunctionConfig)
-
-    def Decorator(job_func):
-        if not hasattr(job_func, "__oneflow_function_signature__"):
-            job_func.__oneflow_function_signature__ = inspect.signature(job_func)
-        oft_util.CheckGlobalFunctionAnnotation(job_func.__oneflow_function_signature__)
-        sess = session_ctx.GetDefaultSession()
-        function_desc = _CloneFunctionDesc(function_config.function_desc, job_func)
-
-        @functools.wraps(job_func)
-        def Func(*args, **kwargs):
-            return _RunEagerJob(sess, function_desc, *args, **kwargs)
-
-        for x in dir(job_func):
-            if x.startswith("__oneflow_"):
-                setattr(Func, x, getattr(job_func, x))
-        return Func
-
-    return Decorator
-
-
-@enable_if.condition(
-    hob.in_normal_mode & ~hob.eager_execution_enabled & ~hob.session_initialized
-)
-def lazy_oneflow_function(function_config=FunctionConfig()):
-    assert isinstance(function_config, FunctionConfig)
-
-    def Decorator(job_func):
-        if not hasattr(job_func, "__oneflow_function_signature__"):
-            job_func.__oneflow_function_signature__ = inspect.signature(job_func)
-        oft_util.CheckGlobalFunctionAnnotation(job_func.__oneflow_function_signature__)
-        sess = session_ctx.GetDefaultSession()
-
-        @functools.wraps(job_func)
-        def Func(*args, **kwargs):
-            return _RunLazyJob(sess, job_func, *args, **kwargs)
-
-        sess.AddJob(_CloneFunctionDesc(function_config.function_desc, job_func))
-        for x in dir(job_func):
-            if x.startswith("__oneflow_"):
-                setattr(Func, x, getattr(job_func, x))
-        return Func
-
-    return Decorator
-
-
-def global_function_or_identity(*args, **kwargs):
-    if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
-        return api_oneflow_function(*args, **kwargs)
-    else:
-        assert rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE
-        identity_decorator = lambda func: func
-        return identity_decorator
 
 
 def _CloneFunctionDesc(func_desc, job_func):
@@ -873,18 +776,6 @@ def set_secondary_lr(func_desc, value):
 @oneflow_function_config("train.num_gradient_accumulation_steps")
 def set_num_gradient_accumulation_steps(func_desc, value):
     func_desc.job_config_proto.set_num_gradient_accumulation_steps(value)
-
-
-@oneflow_function_config("default_placement_scope")
-def set_default_placement(func_desc, value):
-    """Set the default placement for job
-
-    Args:
-        func_desc ([type]): [description]
-        value ([type]): [description]
-    """
-    assert isinstance(value, placement_ctx.EmptyPlacementScope)
-    func_desc.function_attribute.default_placement_scope = value
 
 
 @oneflow_function_config("use_xla_jit")

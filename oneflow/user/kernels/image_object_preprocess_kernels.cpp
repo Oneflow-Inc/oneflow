@@ -26,8 +26,8 @@ namespace {
 enum class FlipCode : int8_t {
   kNonFlip = 0x00,
   kHorizontalFlip = 0x01,
-  kVerticalFlip = 0x10,
-  kBothDirectionFlip = 0x11,
+  kVerticalFlip = 0x02,
+  kBothDirectionFlip = 0x03,
 };
 
 bool operator&(FlipCode lhs, FlipCode rhs) {

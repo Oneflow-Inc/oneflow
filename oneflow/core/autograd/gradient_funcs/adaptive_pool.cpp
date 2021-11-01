@@ -16,23 +16,24 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
 
-struct AdaptivePoolInterpState : public OpExprInterpState {
+struct AdaptivePoolCaptureState : public AutoGradCaptureState {
   bool requires_grad;
 };
 
-class AdaptivePoolNdGrad : public OpExprGradFunction<AdaptivePoolInterpState> {
+class AdaptivePoolNdGrad : public OpExprGradFunction<AdaptivePoolCaptureState> {
  public:
+  using OpExprGradFunction<AdaptivePoolCaptureState>::Init;
+
   Maybe<void> Init(const OpExpr& op, std::string mode, const int& ndims);
-  Maybe<void> Capture(AdaptivePoolInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(AdaptivePoolCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const AdaptivePoolInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const AdaptivePoolCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -50,7 +51,7 @@ Maybe<void> AdaptivePoolNdGrad::Init(const OpExpr& op, std::string mode, const i
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AdaptivePoolNdGrad::Capture(AdaptivePoolInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> AdaptivePoolNdGrad::Capture(AdaptivePoolCaptureState* ctx, const TensorTuple& inputs,
                                         const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -59,7 +60,7 @@ Maybe<void> AdaptivePoolNdGrad::Capture(AdaptivePoolInterpState* ctx, const Tens
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AdaptivePoolNdGrad::Apply(const AdaptivePoolInterpState* ctx,
+Maybe<void> AdaptivePoolNdGrad::Apply(const AdaptivePoolCaptureState* ctx,
                                       const TensorTuple& out_grads, TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);

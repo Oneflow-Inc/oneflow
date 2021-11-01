@@ -59,6 +59,7 @@ message TaskProto {
   required ExecSequence exec_sequence = 7;
   map<string, RegstDescProto> produced_regst_desc = 8;
   map<string, RegstDescIdSet> consumed_regst_desc_id = 9;
+  optional bool all_register_num_eq_one_hint = 10 [default = false];
   // compute task
   optional ParallelContext parallel_ctx = 1000; // CompTask
 };

@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/memory/memory_allocator.h"
+#include "oneflow/core/memory/chunk_manager.h"
 
 namespace oneflow {
 
@@ -43,12 +44,11 @@ void RegstMgr::AddPlan(const Plan& plan,
                        const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
   int64_t this_machine_id = GlobalProcessCtx::Rank();
 
-  // TODO(chengcheng): create chunk mgr for reuse memory between plans.
   HashMap<int64_t, char*> chunk_id2ptr;
   for (const ChunkProto& chunk : plan.block_chunk_list().chunk()) {
     if (chunk.machine_id() != this_machine_id) { continue; }
     if (chunk.mem_size() == 0) { continue; }
-    char* chunk_ptr = Global<MemoryAllocator>::Get()->Allocate(chunk.mem_case(), chunk.mem_size());
+    char* chunk_ptr = Global<ChunkMgr>::Get()->FindOrCreateChunk(chunk);
     CHECK(chunk_id2ptr.emplace(chunk.chunk_id(), chunk_ptr).second);
   }
 
@@ -87,7 +87,18 @@ void RegstMgr::AddPlan(const Plan& plan,
         CHECK_GE(var_blob->blob_desc().AlignedByteSizeOfBlobBody(), mem_block.mem_size());
         CHECK_GE(mem_block.mem_size(), var_blob->blob_desc().ByteSizeOfBlobBody());
         CHECK(mem_block_id2ptr_.emplace(mem_block_id, var_blob->ForceMutDptr<char>()).second);
-        CHECK(mem_block.mem_case() == var_blob->mem_case());
+        // NOTE(chengcheng):
+        //   CPU eager var tensor mem case is host_mem WITHOUT cuda pinned, but Lazy Complier
+        //   will set variable op output blob mem_case with cuda pinned memory if this output
+        //   blob has GPU op consume. We can JUST ignore this diff because it ONLY has little
+        //   perf loss but correct.
+        //   And this problem is NOT tensor.to("cuda") or tensor.to_consistent().
+        CHECK((mem_block.mem_case().has_host_mem() && var_blob->mem_case().has_host_mem())
+              || (mem_block.mem_case() == var_blob->mem_case()))
+            << " variable op name: " << var_name << " in rank: " << this_machine_id
+            << " bind eager tensor failed. The eager var tensor mem_case is : "
+            << var_blob->mem_case().DebugString()
+            << " but graph expected_mem block mem_case is : " << mem_block.mem_case().DebugString();
       }
     } else {
       int64_t zone_id = MemoryCaseUtil::GenMemZoneId(mem_block.mem_case());

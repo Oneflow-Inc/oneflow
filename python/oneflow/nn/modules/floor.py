@@ -13,24 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import collections
-from typing import Optional, Sequence, Union
-
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _check_axis
 
 
-class Floor(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.floor(x)
-
-
-def floor_op(x):
+def floor_op(input):
     """
     Returns a new tensor with the arcsine of the elements of :attr:`input`.
 
@@ -46,23 +33,23 @@ def floor_op(x):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input = flow.Tensor(np.array([-0.5,  1.5, 0,  0.8]), dtype=flow.float32)
+        >>> input = flow.tensor(np.array([-0.5,  1.5, 0,  0.8]), dtype=flow.float32)
         >>> output = flow.floor(input)
         >>> output.shape
-        flow.Size([4])
+        oneflow.Size([4])
         >>> output.numpy()
         array([-1.,  1.,  0.,  0.], dtype=float32)
         
-        >>> input1 = flow.Tensor(np.array([[0.8, 1.0], [-0.6, 2.5]]), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.array([[0.8, 1.0], [-0.6, 2.5]]), dtype=flow.float32)
         >>> output1 = input1.floor()
         >>> output1.shape
-        flow.Size([2, 2])
+        oneflow.Size([2, 2])
         >>> output1.numpy()
         array([[ 0.,  1.],
                [-1.,  2.]], dtype=float32)
 
     """
-    return Floor()(x)
+    return flow._C.floor(input)
 
 
 @register_tensor_op("floor")
@@ -70,7 +57,7 @@ def floor_op_tensor(input):
     """
     See :func:`oneflow.floor`
     """
-    return Floor()(input)
+    return flow._C.floor(input)
 
 
 if __name__ == "__main__":

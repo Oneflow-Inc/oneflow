@@ -32,8 +32,6 @@ inline void RegisterGlobalWatcher(const std::shared_ptr<oneflow::ForeignWatcher>
   return oneflow::RegisterGlobalWatcher(watcher).GetOrThrow();
 }
 
-inline void DestroyGlobalWatcher() { return oneflow::DestroyGlobalWatcher().GetOrThrow(); }
-
 inline void LaunchJob(const std::shared_ptr<oneflow::JobInstance>& cb) {
   return oneflow::LaunchJob(cb).GetOrThrow();
 }

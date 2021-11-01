@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class CollectiveBoxingPackKernel final : public KernelIf<device_type> {
+class CollectiveBoxingPackKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingPackKernel);
   CollectiveBoxingPackKernel() = default;
@@ -27,15 +27,13 @@ class CollectiveBoxingPackKernel final : public KernelIf<device_type> {
 
  private:
   bool IsStateless() const override { return false; }
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type, typename T>
-void CollectiveBoxingPackKernel<device_type, T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in = BnInOp2Blob("in");
-  Blob* out = BnInOp2Blob("out");
+void CollectiveBoxingPackKernel<device_type, T>::ForwardDataContent(KernelContext* ctx) const {
+  const Blob* in = ctx->BnInOp2Blob("in");
+  Blob* out = ctx->BnInOp2Blob("out");
   const CollectiveBoxingPackOpConf& pack_conf = this->op_conf().collective_boxing_pack_conf();
   const int64_t num_ranks = pack_conf.num_ranks();
   const Shape logical_shape(pack_conf.logical_shape());
@@ -66,10 +64,10 @@ void CollectiveBoxingPackKernel<device_type, T>::ForwardDataContent(
     }
     const Shape transpose_out_shape(transpose_out_dim_vec);
     NewKernelUtil<device_type>::Transpose(
-        ctx.device_ctx, transpose_in_shape.NumAxes(), transpose_in_shape, transpose_out_shape, perm,
-        transpose_in_shape.elem_cnt(), in->dptr<T>(), out->mut_dptr<T>());
+        ctx->device_ctx(), transpose_in_shape.NumAxes(), transpose_in_shape, transpose_out_shape,
+        perm, transpose_in_shape.elem_cnt(), in->dptr<T>(), out->mut_dptr<T>());
   } else {
-    out->CopyDataContentFrom(ctx.device_ctx, in);
+    AutoMemcpy(ctx->stream_ctx(), out, in);
   }
 }
 

@@ -41,7 +41,7 @@ std::shared_ptr<PoolOpKernelState> DoCreatePoolOpKernelState(user_op::KernelComp
   Params3D params_3d = Params3D(dim, x_shape, data_format, padding, padding_before, padding_after,
                                 pool_size, strides, ceil_mode);
   std::shared_ptr<PoolOpKernelState> state(new PoolOpKernelState(params_3d));
-  return std::move(state);
+  return state;
 }
 
 template<typename T>

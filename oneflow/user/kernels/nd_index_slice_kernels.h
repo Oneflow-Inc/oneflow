@@ -27,6 +27,7 @@ class GatherNdKernel final : public user_op::OpKernel {
   ~GatherNdKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -38,6 +39,7 @@ class ScatterNdKernel final : public user_op::OpKernel {
   ~ScatterNdKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -49,6 +51,7 @@ class TensorScatterNdUpdateKernel final : public user_op::OpKernel {
   ~TensorScatterNdUpdateKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -60,6 +63,7 @@ class TensorScatterNdAddKernel final : public user_op::OpKernel {
   ~TensorScatterNdAddKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -99,8 +103,8 @@ void TensorScatterNdUpdateKernel<device_type, T, I>::Compute(
   Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), params->dptr<T>(), out_bytes_size);
   if (indices->shape().elem_cnt() == 0) { return; }
   auto args = ConstructNdIndexSliceArgs<T, I>(*params, *updates, *indices);
-  ZeroByNdIndexFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
-                                            out->mut_dptr<T>());
+  FillByNdIndexFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
+                                            out->mut_dptr<T>(), static_cast<T>(0));
   ScatterNdAddFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
                                            updates->dptr<T>(), out->mut_dptr<T>());
 }

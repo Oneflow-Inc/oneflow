@@ -15,21 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-
-
-class Unsqueeze(Module):
-    def __init__(self, dim: int = 0) -> None:
-        super().__init__()
-        self.dim = dim
-
-    def forward(self, input):
-        assert (
-            -(1 + input.ndimension()) <= self.dim <= input.ndimension()
-        ), "dim should within the range [-input.ndimension() - 1, input.ndimension() + 1)"
-        if self.dim < 0:
-            self.dim = 1 + input.ndimension() + self.dim
-        return flow.F.expand_dims(input, axis=self.dim)
 
 
 @register_tensor_op("unsqueeze")
@@ -54,12 +39,17 @@ def unsqueeze_op(input, dim):
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> x = flow.Tensor(np.random.rand(2, 3, 4))
+        >>> x = flow.randn(2, 3, 4)
         >>> y = x.unsqueeze(2)
         >>> y.shape
-        flow.Size([2, 3, 1, 4])
+        oneflow.Size([2, 3, 1, 4])
     """
-    return Unsqueeze(dim)(input)
+    assert (
+        -(1 + input.ndimension()) <= dim <= input.ndimension()
+    ), f"Dim should within the range [{-input.ndimension() - 1}, {input.ndimension()}], but got {dim}"
+    if dim < 0:
+        dim = 1 + input.ndimension() + dim
+    return flow._C.expand_dims(input, dim)
 
 
 if __name__ == "__main__":

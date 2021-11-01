@@ -29,7 +29,10 @@ limitations under the License.
 #include "oneflow/user/summary/events_writer.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/memory/chunk_manager.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/job/collective_boxing/scheduler.h"
+#include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif  // WITH_CUDA
@@ -75,10 +78,6 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       } else {
         resource.set_cpu_device_num(gpu_device_num);
       }
-
-      // TODO(chengcheng, guoran): handle CollectiveBoxingExecutor for multi-runtime in
-      // Multi-Client.
-      resource.clear_collective_boxing_conf();
     }
 
     // NOTE(chengcheng): detele first because in EnvGlobalObjectScope has created ResourceDesc.
@@ -87,7 +86,6 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       Global<ResourceDesc, ForSession>::Delete();
     }
     Global<ResourceDesc, ForSession>::New(resource, GlobalProcessCtx::NumOfProcessPerNode());
-    Global<const ProfilerConf>::New(config_proto.profiler_conf());
     Global<IDMgr>::New();
     // TODO(chengcheng): refactor JobBuildAndInferCtxMgr
     Global<LazyJobBuildAndInferCtxMgr>::New();
@@ -102,11 +100,14 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       Global<BufferMgr<std::shared_ptr<JobInstance>>>::New();
       Global<RuntimeCtx>::New();
       Global<MemoryAllocator>::New();
+      Global<ChunkMgr>::New();
       Global<RegstMgr>::New();
       Global<ActorMsgBus>::New();
       Global<ThreadMgr>::New();
       Global<RuntimeJobDescs>::New();
       Global<summary::EventsWriter>::New();
+      Global<boxing::collective::Scheduler>::New();
+      Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
     }
 
     is_inited_ = true;
@@ -114,18 +115,31 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
   return Maybe<void>::Ok();
 }
 
+Maybe<void> MultiClientSessionContext::AddCGraph(
+    const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr) {
+  graphs_.push_back(c_graph_ptr);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> MultiClientSessionContext::TryClose() {
   if (is_inited_) {
-    VLOG(2) << "Try to delete multi client session." << std::endl;
-    JUST(vm::MultiClientSync());
-    VLOG(2) << "Start to delete multi client session." << std::endl;
+    VLOG(2) << "Try to delete multi client session context." << std::endl;
+    for (auto wk_graph_ptr : graphs_) {
+      if (auto sh_graph_ptr = wk_graph_ptr.lock()) {
+        VLOG(2) << "grap name " << sh_graph_ptr->job_name() << " not closed, try to close it.";
+        JUST(sh_graph_ptr->Close());
+      }
+    }
     {
       // NOTE(chengcheng): delete runtime global objects
+      Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
+      Global<boxing::collective::Scheduler>::Delete();
       Global<summary::EventsWriter>::Delete();
       Global<RuntimeJobDescs>::Delete();
       Global<ThreadMgr>::Delete();
       Global<ActorMsgBus>::Delete();
       Global<RegstMgr>::Delete();
+      Global<ChunkMgr>::Delete();
       Global<MemoryAllocator>::Delete();
       Global<RuntimeCtx>::Delete();
       Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
@@ -133,7 +147,6 @@ Maybe<void> MultiClientSessionContext::TryClose() {
 
     Global<LazyJobBuildAndInferCtxMgr>::Delete();
     Global<IDMgr>::Delete();
-    Global<const ProfilerConf>::Delete();
 
     // TODO(chengcheng): remove template ForEnv and ForSession
     Global<ResourceDesc, ForSession>::Delete();
@@ -141,7 +154,37 @@ Maybe<void> MultiClientSessionContext::TryClose() {
     Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
                                           GlobalProcessCtx::NumOfProcessPerNode());
   }
+  VLOG(2) << "Finish delete multi client session context." << std::endl;
   return Maybe<void>::Ok();
+}
+
+void MultiClientSessionContext::StoreFreeEagerTensorWithNameByGraphName(
+    const std::string& graph_name, const std::shared_ptr<one::Tensor>& tensor,
+    const std::string& tensor_name) {
+  auto it = graph_name2free_eager_tensors_.find(graph_name);
+  if (it == graph_name2free_eager_tensors_.end()) {
+    it = graph_name2free_eager_tensors_
+             .emplace(graph_name,
+                      std::vector<std::pair<std::string, std::shared_ptr<one::Tensor>>>())
+             .first;
+  }
+  it->second.push_back(std::make_pair(tensor_name, tensor));
+}
+
+const std::vector<std::pair<std::string, std::shared_ptr<one::Tensor>>>&
+MultiClientSessionContext::GetFreeEagerTensorNamePairByGraphName(const std::string& graph_name) {
+  auto it = graph_name2free_eager_tensors_.find(graph_name);
+  if (it == graph_name2free_eager_tensors_.end()) {
+    it = graph_name2free_eager_tensors_
+             .emplace(graph_name,
+                      std::vector<std::pair<std::string, std::shared_ptr<one::Tensor>>>())
+             .first;
+  }
+  return it->second;
+}
+
+void MultiClientSessionContext::RemoveGraphFreeEagerTensors(const std::string& graph_name) {
+  graph_name2free_eager_tensors_.erase(graph_name);
 }
 
 }  // namespace oneflow

@@ -16,8 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_CALL_OPKERNEL_INSTRUCTION_H_
 #define ONEFLOW_CORE_EAGER_CALL_OPKERNEL_INSTRUCTION_H_
 
-#include "oneflow/core/eager/opkernel_instruction.msg.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/eager/opkernel_instruction.h"
+#include "oneflow/core/vm/instr_type_id.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 
@@ -60,6 +61,9 @@ class UserStatelessCallOpKernelInstructionType : public vm::InstructionType {
   void Infer(vm::Instruction* instruction) const override;
   void Compute(vm::Instruction* instruction) const override;
 
+  using vm::InstructionType::Compute;
+  using vm::InstructionType::Infer;
+
  protected:
   UserStatelessCallOpKernelInstructionType() = default;
   virtual ~UserStatelessCallOpKernelInstructionType() = default;
@@ -79,6 +83,9 @@ class SystemStatelessCallOpKernelInstructionType : public vm::InstructionType {
 
   virtual std::shared_ptr<MemoryCase> GetOutBlobMemCase(const DeviceType device_type,
                                                         const int64_t device_id) const;
+
+  using vm::InstructionType::Compute;
+  using vm::InstructionType::Infer;
 
  protected:
   SystemStatelessCallOpKernelInstructionType() = default;

@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/api/foreign_lock_helper.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
 
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
@@ -23,28 +23,32 @@ namespace py = pybind11;
 
 namespace oneflow {
 class GILForeignLockHelper final : public ForeignLockHelper {
-  void WithScopedRelease(const std::function<void()>& callback) const override {
+  Maybe<void> WithScopedRelease(const std::function<Maybe<void>()>& Callback) const override {
     if (PyGILState_Check()) {
       py::gil_scoped_release release;
-      callback();
+      JUST(Callback());
     } else {
-      callback();
+      JUST(Callback());
     }
+    return Maybe<void>::Ok();
   }
 
-  void WithScopedAcquire(const std::function<void()>& callback) const override {
+  Maybe<void> WithScopedAcquire(const std::function<Maybe<void>()>& Callback) const override {
     if (!PyGILState_Check()) {
       py::gil_scoped_acquire acquire;
-      callback();
+      JUST(Callback());
     } else {
-      callback();
+      JUST(Callback());
     }
+    return Maybe<void>::Ok();
   }
 };
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("RegisterGILForeignLockHelper",
-        []() { Global<ForeignLockHelper>::SetAllocated(new GILForeignLockHelper()); });
+  m.def("RegisterGILForeignLockHelper", []() {
+    Global<ForeignLockHelper>::Delete();
+    Global<ForeignLockHelper>::SetAllocated(new GILForeignLockHelper());
+  });
 }
 
 }  // namespace oneflow

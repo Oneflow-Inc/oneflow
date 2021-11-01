@@ -23,18 +23,17 @@ namespace oneflow {
 
 namespace {
 
-template<DeviceType device_type>
-class InputKernel final : public KernelIf<device_type> {
+class InputKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(InputKernel);
   InputKernel() = default;
   ~InputKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+  void ForwardDataContent(KernelContext* ctx) const override {
     if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
-      const auto& job_name = this->job_desc().job_name();
+      CHECK(this->op_conf().input_conf().has_job_name());
+      const auto& job_name = this->op_conf().input_conf().job_name();
       const auto& op_name = this->op_conf().name();
       auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
       auto* buffer = buffer_mgr->Get(GetInputBufferName(job_name, op_name));
@@ -42,17 +41,16 @@ class InputKernel final : public KernelIf<device_type> {
       BufferStatus buffer_status = buffer->TryReceive(&job_instance);
       CHECK_NE(buffer_status, kBufferStatusEmpty);
       if (buffer_status == kBufferStatusSuccess) {
-        OfBlob ofblob(ctx.device_ctx, BnInOp2Blob("out"));
+        OfBlob ofblob(ctx->device_ctx(), ctx->BnInOp2Blob("out"));
         job_instance->PushBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
       }
     }
   }
-  void ForwardHeader(const KernelCtx& ctx,
-                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
+  void ForwardHeader(KernelContext* ctx) const override {}
 };
 
 }  // namespace
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kInputConf, InputKernel);
+REGISTER_KERNEL(OperatorConf::kInputConf, InputKernel);
 
 }  // namespace oneflow

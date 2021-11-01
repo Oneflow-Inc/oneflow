@@ -14,114 +14,76 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/kernel_helper.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
-#include "oneflow/core/profiler/profiler.h"
-#include "oneflow/core/profiler/kernel.h"
+#include "oneflow/core/kernel/kernel_observer.h"
 
 namespace oneflow {
 
-Kernel::~Kernel() {
-  if (shape_infer_helper_ != nullptr) { delete shape_infer_helper_; }
+namespace {
+
+bool IsAllBlobEmpty(const PbRpf<std::string>& bns, KernelContext* ctx) {
+  for (const auto& bn : bns) {
+    Blob* blob = ctx->BnInOp2Blob(bn);
+    if (blob && !blob->IsBodyEmpty()) { return false; }
+  }
+  return true;
 }
 
-void Kernel::InitBase(const JobDesc* job_desc, const KernelConf& kernel_conf) {
-  if (!(job_desc_ == nullptr || shape_infer_helper_ == nullptr)) { return; }
-  job_desc_ = job_desc;
+}  // namespace
+
+Kernel::Kernel() = default;
+
+Kernel::~Kernel() = default;
+
+void Kernel::InitBase(const KernelConf& kernel_conf) {
+  if (shape_infer_helper_) { return; }
   kernel_conf_ = kernel_conf;
-  shape_infer_helper_ =
-      new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), &this->job_desc());
-  blob_access_checker_disabled_ =
-      ParseBooleanFromEnv("ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER", false);
+  shape_infer_helper_.reset(
+      new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), this));
 }
 
-void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
-  InitBase(job_desc, kernel_conf);
-  VirtualKernelInit(device_ctx);
+void Kernel::Init(const KernelConf& kernel_conf, KernelContext* ctx) {
+  InitBase(kernel_conf);
+  VirtualKernelInit(ctx);
 }
 
-void Kernel::Launch(const KernelCtx& ctx,
-                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Forward(ctx, BnInOp2Blob);
+void Kernel::Launch(KernelContext* ctx) const {
+  ctx->WillForward(ctx, this);
+  Forward(ctx);
+  ctx->DidForward(ctx, this);
 }
 
-const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
-  return op_attribute().arg_signature().bn_in_op2lbi().at(bn_in_op);
-}
-
-void Kernel::SetOutputBlobProducerInferAccessChecker(
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  ForEachObnAndIsHeaderInferedBeforeCompute(BnInOp2Blob, [&](const std::string& obn, bool _) {
-    BnInOp2Blob(obn)->set_blob_access_checker(Global<BlobAccessCheckerIf<true, false>>::Get());
-  });
-}
-
-void Kernel::SetOutputBlobProducerComputeAccessChecker(
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  ForEachObnAndIsHeaderInferedBeforeCompute(
-      BnInOp2Blob, [&](const std::string& obn, bool is_header_infered_before_compute) {
-        const BlobAccessChecker* checker = nullptr;
-        if (is_header_infered_before_compute) {
-          checker = Global<BlobAccessCheckerIf<false, true>>::Get();
-        } else {
-          checker = Global<BlobAccessCheckerIf<true, true>>::Get();
-        }
-        BnInOp2Blob(obn)->set_blob_access_checker(checker);
-      });
-}
-
-void Kernel::SetOutputBlobConsumerAccessChecker(
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  ForEachObnAndIsMutableByConsumer(BnInOp2Blob, [&](const std::string& obn, bool is_mutable) {
-    const BlobAccessChecker* checker = nullptr;
-    if (is_mutable) {
-      checker = Global<BlobAccessCheckerIf<false, true>>::Get();
-    } else {
-      checker = Global<BlobAccessCheckerIf<false, false>>::Get();
-    }
-    BnInOp2Blob(obn)->set_blob_access_checker(checker);
-  });
-}
-
-void Kernel::Forward(const KernelCtx& ctx,
-                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (!blob_access_checker_disabled_) { SetOutputBlobProducerInferAccessChecker(BnInOp2Blob); }
-  ForwardHeader(ctx, BnInOp2Blob);
-  if (kernel_conf_.need_do_shape() && IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob)
+void Kernel::Forward(KernelContext* ctx) const {
+  ctx->WillForwardHeader(ctx, this);
+  ForwardHeader(ctx);
+  ctx->DidForwardHeader(ctx, this);
+  if ((!kernel_conf_.all_blobs_are_static()) && IsAllBlobEmpty(op_attribute().output_bns(), ctx)
       && IsStateless()) {
     return;
   }
-  if (!blob_access_checker_disabled_) { SetOutputBlobProducerComputeAccessChecker(BnInOp2Blob); }
-  OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentStart(this, ctx, BnInOp2Blob));
-  ForwardDataContent(ctx, BnInOp2Blob);
-  OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentEnd(this, ctx, BnInOp2Blob));
-  if (!blob_access_checker_disabled_) { SetOutputBlobConsumerAccessChecker(BnInOp2Blob); }
+  ctx->WillForwardDataContent(ctx, this);
+  ForwardDataContent(ctx);
+  ctx->DidForwardDataContent(ctx, this);
 }
 
-void Kernel::ForwardHeader(const KernelCtx& ctx,
-                           std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf_.need_do_shape()) { ForwardShape(ctx, BnInOp2Blob); }
+void Kernel::ForwardHeader(KernelContext* ctx) const {
+  if (!kernel_conf_.all_blobs_are_static()) { ForwardShape(ctx); }
 }
 
-void Kernel::ForwardShape(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  return shape_infer_helper_->InferShape(BnInOp2Blob);
+void Kernel::ForwardShape(KernelContext* ctx) const {
+  return shape_infer_helper_->InferShape(
+      [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); });
 }
 
-std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const KernelConf& conf,
-                                              DeviceCtx* device_ctx) {
+std::unique_ptr<const Kernel> ConstructKernel(const KernelConf& conf, KernelContext* kernel_ctx) {
   auto op_type = conf.op_attribute().op_conf().op_type_case();
   CHECK_NE(op_type, OperatorConf::OpTypeCase::OP_TYPE_NOT_SET)
       << " ERROR! KernelConf: " << conf.DebugString() << " has NOT set op_type_case";
   Kernel* rptr = kernel_registration::CreateKernel(conf);
   if (rptr == nullptr) { rptr = NewObj<int32_t, Kernel>(op_type, conf); }
   CHECK_NOTNULL(rptr);
-  rptr->Init(job_desc, conf, device_ctx);
+  rptr->Init(conf, kernel_ctx);
   return std::unique_ptr<const Kernel>(rptr);
 }
-
-#define INSTANTIATE_KERNEL_IF(device_type) template class KernelIf<device_type>;
-
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF, DEVICE_TYPE_SEQ);
 
 }  // namespace oneflow

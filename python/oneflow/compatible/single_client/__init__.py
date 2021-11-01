@@ -19,7 +19,6 @@ import oneflow._oneflow_internal
 Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
-no_grad = oneflow._oneflow_internal.autograd.no_grad
 locals()["dtype"] = oneflow._oneflow_internal.dtype
 locals()["char"] = oneflow._oneflow_internal.char
 locals()["float16"] = oneflow._oneflow_internal.float16
@@ -36,6 +35,7 @@ locals()["long"] = oneflow._oneflow_internal.int64
 locals()["uint8"] = oneflow._oneflow_internal.uint8
 locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
+locals()["bfloat16"] = oneflow._oneflow_internal.bfloat16
 from oneflow.compatible.single_client.framework import (
     env_util,
     session_context,
@@ -44,7 +44,6 @@ from oneflow.compatible.single_client.framework import (
 from oneflow.core.job.job_conf_pb2 import JobConfigProto
 from oneflow.core.job.job_set_pb2 import ConfigProto
 
-oneflow._oneflow_internal.DestroyGlobalWatcher()
 oneflow._oneflow_internal.DestroyGlobalForeignCallback()
 oneflow._oneflow_internal.DestroyEnv()
 import time
@@ -116,27 +115,7 @@ def custom_exit(returncode):
 sys.exit = custom_exit
 del custom_exit
 del sys
-import oneflow.compatible.single_client.nn.modules.acosh
-import oneflow.compatible.single_client.nn.modules.activation
-import oneflow.compatible.single_client.nn.modules.argwhere
-import oneflow.compatible.single_client.nn.modules.atan2
-import oneflow.compatible.single_client.nn.modules.atanh
-import oneflow.compatible.single_client.nn.modules.bmm
-import oneflow.compatible.single_client.nn.modules.constant
-import oneflow.compatible.single_client.nn.modules.floor
-import oneflow.compatible.single_client.nn.modules.greater
-import oneflow.compatible.single_client.nn.modules.greater_equal
-import oneflow.compatible.single_client.nn.modules.logical_and
-import oneflow.compatible.single_client.nn.modules.logical_or
-import oneflow.compatible.single_client.nn.modules.masked_select
-import oneflow.compatible.single_client.nn.modules.math_ops
-import oneflow.compatible.single_client.nn.modules.norm
-import oneflow.compatible.single_client.nn.modules.permute
-import oneflow.compatible.single_client.nn.modules.round
-import oneflow.compatible.single_client.nn.modules.sign
-import oneflow.compatible.single_client.nn.modules.sinh
-import oneflow.compatible.single_client.nn.modules.tan
-import oneflow.compatible.single_client.nn.modules.tensor_ops
+from oneflow.compatible.single_client.autograd import no_grad
 from oneflow.compatible.single_client.advanced.distribute_ops import (
     cast_to_current_logical_view,
 )
@@ -232,7 +211,6 @@ from oneflow.compatible.single_client.framework.session_util import (
     api_sync_default_session as sync_default_session,
 )
 from oneflow.compatible.single_client.framework.tensor import Tensor
-from oneflow.compatible.single_client.nn.modules.to import to_op as to
 from oneflow.compatible.single_client.ops.array_ops import amp_white_identity
 from oneflow.compatible.single_client.ops.array_ops import (
     api_slice_update as slice_update,

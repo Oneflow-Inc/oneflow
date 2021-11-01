@@ -21,6 +21,7 @@ import subprocess
 import sys
 import unittest
 import uuid
+import doctest
 from contextlib import closing
 from tempfile import NamedTemporaryFile
 from typing import Any, Callable, Dict
@@ -34,18 +35,11 @@ import oneflow.sysconfig
 from oneflow.core.job.env_pb2 import EnvProto
 
 
-class _ClearDefaultSession(object):
-    def setUp(self):
-        oneflow.clear_default_session()
-        oneflow.enable_eager_execution(False)
-
-
 def register_test_cases(
     scope: Dict[str, Any],
     directory: str,
     filter_by_num_nodes: Callable[[bool], int],
     base_class: unittest.TestCase = unittest.TestCase,
-    test_case_mixin=_ClearDefaultSession,
 ) -> None:
     def FilterTestPyFile(f):
         return (
@@ -111,7 +105,7 @@ def has_node_list():
 def node_size():
     node_num_from_env = os.getenv("ONEFLOW_TEST_NODE_NUM", None)
     if node_num_from_env:
-        return node_num_from_env
+        return int(node_num_from_env)
     elif has_node_list():
         node_list_from_env = node_list()
         return len(node_list_from_env)
@@ -120,7 +114,7 @@ def node_size():
 
 
 def has_world_size():
-    if oneflow.distributed.is_multi_client():
+    if oneflow.env.is_multi_client():
         return True
     if os.getenv("ONEFLOW_TEST_WORLD_SIZE"):
         assert os.getenv(
@@ -132,8 +126,8 @@ def has_world_size():
 
 
 def world_size():
-    if oneflow.distributed.is_multi_client():
-        return oneflow.distributed.get_world_size()
+    if oneflow.env.is_multi_client():
+        return oneflow.env.get_world_size()
     return int(os.getenv("ONEFLOW_TEST_WORLD_SIZE"))
 
 
@@ -336,11 +330,8 @@ class TestCase(unittest.TestCase):
         if log_dir:
             oneflow.env.log_dir(log_dir)
         if _unittest_env_initilized == False:
-            oneflow.env.init()
+            env_util.api_env_init()
             _unittest_env_initilized = True
-        oneflow.clear_default_session()
-        oneflow.enable_eager_execution(eager_execution_enabled())
-        oneflow.experimental.enable_typing_check(typing_check_enabled())
 
 
 def skip_unless(n, d):
@@ -378,3 +369,33 @@ def skip_unless_2n2d():
 
 def skip_unless_2n4d():
     return skip_unless(2, 4)
+
+
+class CondSkipChecker(doctest.OutputChecker):
+    def __init__(self, check_flags):
+        self._check_flags = check_flags
+
+    def check_output(self, want, got, optionflags):
+        # default check_output without flag
+        if optionflags == 0:
+            return super(CondSkipChecker, self).check_output(want, got, optionflags)
+
+        target_rank_list = [bool(flag & optionflags) for flag in self._check_flags]
+        # wrong flag will be handled before here, so any(target_rank_list) is True
+        # not target rank
+        if target_rank_list.index(True) != oneflow.env.get_rank():
+            return True
+        elif target_rank_list.index(True) == oneflow.env.get_rank():
+            return super(CondSkipChecker, self).check_output(want, got, optionflags)
+
+
+def check_multi_rank_docstr(module):
+    # supply customized flag ONLY_CHECK_RANK_{x} for docstr
+    check_flags = [
+        doctest.register_optionflag(f"ONLY_CHECK_RANK_{i}")
+        for i in range(oneflow.env.get_world_size())
+    ]
+    finder = doctest.DocTestFinder()
+    runner = doctest.DebugRunner(CondSkipChecker(check_flags))
+    for test in finder.find(module, module.__name__):
+        runner.run(test)

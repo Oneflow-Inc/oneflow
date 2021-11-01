@@ -22,6 +22,8 @@ limitations under the License.
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/job/job_set.pb.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 namespace data {
@@ -49,8 +51,25 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
           JoinPath(data_dir, part_name_prefix + std::string(zero_count, '0') + num));
     }
 
-    parallel_id_ = ctx->parallel_ctx().parallel_id();
-    parallel_num_ = ctx->parallel_ctx().parallel_num();
+    bool is_local = false;
+    // NOTE(zwx): OFRecordDataset is used by OFRecordDataReader and
+    // OFRecordImageClassificationDataReader both, the latter has no attr nd_sbp,
+    // so it couldn't work in DDP for now. The If condition here could be removed when
+    // OFRecordImageClassificationDataReader had supported DDP (add attr nd_sbp)
+    // or been deprecated.
+    if (ctx->op_type_name() == "OFRecordReader") {
+      auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
+      // NOTE(zwx): OFRecordDataset is not consistent since attr nd_sbp is empty,
+      // we assume that it works in DDP
+      if (nd_sbp_str_vec.empty() && CHECK_JUST(GlobalMultiClientEnv())) { is_local = true; }
+    }
+    if (is_local) {
+      parallel_id_ = GlobalProcessCtx::Rank();
+      parallel_num_ = GlobalProcessCtx::WorldSize();
+    } else {
+      parallel_id_ = ctx->parallel_ctx().parallel_id();
+      parallel_num_ = ctx->parallel_ctx().parallel_num();
+    }
     CHECK_LE(parallel_num_, data_part_num_);
     BalancedSplitter bs(data_part_num_, parallel_num_);
     range_ = bs.At(parallel_id_);

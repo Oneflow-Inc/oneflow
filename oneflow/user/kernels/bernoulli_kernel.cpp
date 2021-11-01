@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/bernoulli_kernel.h"
+#include "oneflow/user/kernels/distributions/common.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 #include "oneflow/user/kernels/random_seed_util.h"
 #include "oneflow/user/kernels/random_mask_generator.h"
@@ -29,9 +29,9 @@ class BernoulliKerenl final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const auto& generator = CHECK_JUST(one::MakeAutoGenerator());
+    const auto& generator = CHECK_JUST(one::MakeGenerator(kCPU));
     generator->set_current_seed(ctx->Attr<int64_t>("seed"));
-    return std::make_shared<BernoulliKernelState>(generator);
+    return std::make_shared<DistributionKernelState>(generator);
   }
 
  private:
@@ -44,9 +44,9 @@ class BernoulliKerenl final : public user_op::OpKernel {
     CHECK_EQ(GetDataType<K>(), out_blob->data_type());
     CHECK_EQ(in_blob->shape().elem_cnt(), out_blob->shape().elem_cnt());
 
-    auto* bernoulli_kernel_state = dynamic_cast<BernoulliKernelState*>(state);
-    CHECK_NOTNULL(bernoulli_kernel_state);
-    const auto& generator = bernoulli_kernel_state->generator();
+    auto* kernel_state = dynamic_cast<DistributionKernelState*>(state);
+    CHECK_NOTNULL(kernel_state);
+    const auto& generator = kernel_state->generator();
     CHECK_NOTNULL(generator);
     const auto& cpu_generator = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
 

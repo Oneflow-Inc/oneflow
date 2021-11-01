@@ -13,29 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/actor/actor.h"
+#include "oneflow/core/actor/naive_actor.h"
 #include "oneflow/core/device/collective_boxing_device_context.h"
 
 namespace oneflow {
 
-class CollectiveBoxingGenericActor : public Actor {
+class CollectiveBoxingGenericActor : public NaiveActor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingGenericActor);
   CollectiveBoxingGenericActor() = default;
   ~CollectiveBoxingGenericActor() override = default;
 
  private:
-  void Act() override { AsyncLaunchKernel(GenDefaultKernelCtx()); }
-
-  void VirtualActorInit(const TaskProto&) override {
-    OF_SET_MSG_HANDLER(&CollectiveBoxingGenericActor::HandlerNormal);
-  }
-
-  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override {
-    HandleProducedNaiveDataRegstToConsumer();
-  }
-
-  void InitDeviceCtx(const ThreadCtx& thread_ctx) override {
+  void InitDeviceCtx(StreamContext* stream_ctx) override {
     mut_device_ctx().reset(new CollectiveBoxingDeviceCtx());
   }
 };

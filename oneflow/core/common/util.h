@@ -45,22 +45,44 @@ DECLARE_string(log_dir);
 
 #define CHECK_ISNULL(e) CHECK((e) == nullptr)
 
+namespace oneflow {
+
+inline size_t HashCombine(size_t lhs, size_t rhs) {
+  return lhs ^ (rhs + 0x9e3779b9 + (lhs << 6U) + (lhs >> 2U));
+}
+
+inline void HashCombine(size_t* seed, size_t hash) { *seed = HashCombine(*seed, hash); }
+
+template<typename... T>
+inline void AddHash(size_t* seed, const T&... v) {
+  __attribute__((__unused__)) int dummy[] = {(HashCombine(seed, std::hash<T>()(v)), 0)...};
+}
+
+template<typename T, typename... Ts>
+inline size_t Hash(const T& v1, const Ts&... vn) {
+  size_t seed = std::hash<T>()(v1);
+
+  AddHash<Ts...>(&seed, vn...);
+
+  return seed;
+}
+
+}  // namespace oneflow
+
 namespace std {
 
 template<typename T0, typename T1>
 struct hash<std::pair<T0, T1>> {
   std::size_t operator()(const std::pair<T0, T1>& p) const {
-    auto h0 = std::hash<T0>{}(p.first);
-    auto h1 = std::hash<T1>{}(p.second);
-    return h0 ^ h1;
+    return oneflow::Hash<T0, T1>(p.first, p.second);
   }
 };
 
 template<typename T>
 struct hash<std::vector<T>> {
   std::size_t operator()(const std::vector<T>& vec) const {
-    std::size_t hash_value = 0;
-    for (const auto& elem : vec) { hash_value ^= std::hash<T>()(elem); }
+    std::size_t hash_value = vec.size();
+    for (const auto& elem : vec) { oneflow::AddHash<T>(&hash_value, elem); }
     return hash_value;
   }
 };
@@ -71,14 +93,14 @@ namespace oneflow {
 
 #define OF_DISALLOW_COPY(ClassName)     \
   ClassName(const ClassName&) = delete; \
-  ClassName& operator=(const ClassName&) = delete;
+  ClassName& operator=(const ClassName&) = delete
 
 #define OF_DISALLOW_MOVE(ClassName) \
   ClassName(ClassName&&) = delete;  \
-  ClassName& operator=(ClassName&&) = delete;
+  ClassName& operator=(ClassName&&) = delete
 
 #define OF_DISALLOW_COPY_AND_MOVE(ClassName) \
-  OF_DISALLOW_COPY(ClassName)                \
+  OF_DISALLOW_COPY(ClassName);               \
   OF_DISALLOW_MOVE(ClassName)
 
 #define UNIMPLEMENTED() LOG(FATAL) << "UNIMPLEMENTED"
@@ -114,8 +136,8 @@ void SortAndRemoveDuplication(std::vector<T>* vec) {
 }
 
 inline std::string NewUniqueId() {
-  static int64_t id = 0;
-  return std::to_string(id++);
+  static std::atomic<int64_t> counter(0);
+  return std::to_string(counter.fetch_add(1, std::memory_order_relaxed));
 }
 
 template<typename K, typename V>
@@ -200,10 +222,6 @@ void Erase(T& container, const std::function<bool(const typename T::value_type&)
 
 bool IsKernelSafeInt32(int64_t n);
 
-inline void HashCombine(size_t* seed, size_t hash) {
-  *seed ^= (hash + 0x9e3779b9 + (*seed << 6U) + (*seed >> 2U));
-}
-
 class RoundModeGuard final {
  public:
   RoundModeGuard(int mode) {
@@ -221,6 +239,9 @@ bool ParseBooleanFromEnv(const std::string& env_var, bool default_value);
 int64_t ParseIntegerFromEnv(const std::string& env_var, int64_t default_value);
 
 std::string GetStringFromEnv(const std::string& env_var, const std::string& default_value);
+
+#define OF_PREDICT_TRUE GOOGLE_PREDICT_TRUE
+#define OF_PREDICT_FALSE GOOGLE_PREDICT_FALSE
 
 }  // namespace oneflow
 

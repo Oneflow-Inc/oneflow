@@ -16,20 +16,15 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_KERNEL_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_KERNEL_H_
 
-#include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/framework/to_string.h"
-#include "oneflow/core/job/job.pb.h"
-#include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/kernel/kernel.pb.h"
 #include "oneflow/core/kernel/kernel_registration.h"
-#include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/operator/operator.h"
-#include "oneflow/core/operator/op_conf_util.h"
-#include "oneflow/core/persistence/snapshot.h"
+#include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/register/blob.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
+class JobDesc;
 class RuntimeBlobShapeInferHelper;
 
 class Kernel {
@@ -37,15 +32,12 @@ class Kernel {
   OF_DISALLOW_COPY_AND_MOVE(Kernel);
   virtual ~Kernel();
 
-  const JobDesc& job_desc() const { return *job_desc_; }
+  void Init(const KernelConf& kernel_conf, KernelContext* ctx);
+  void Launch(KernelContext* ctx) const;
 
-  void Init(const JobDesc* job_desc, const KernelConf&, DeviceCtx*);
-
-  void Launch(const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-
-  const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
   const OperatorConf& op_conf() const { return op_attribute().op_conf(); }
   const OpAttribute& op_attribute() const { return kernel_conf().op_attribute(); }
+  const KernelConf& kernel_conf() const { return kernel_conf_; }
   /*
    * return true means all below must be guaranteed when `Launch` function return:
    * 1) all out blob header has been set (e.g. SyncSetHeadKernel)
@@ -53,109 +45,24 @@ class Kernel {
    */
   virtual bool IsKernelLaunchSynchronized() const { return true; }
 
-  void SystemForwardHeader(const KernelCtx& ctx,
-                           std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-    ForwardHeader(ctx, BnInOp2Blob);
-  }
-  void SystemForwardDataContent(const KernelCtx& ctx,
-                                std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-    ForwardDataContent(ctx, BnInOp2Blob);
-  }
-  virtual void Forward(const KernelCtx& ctx,
-                       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-
-  void SetOutputBlobProducerInferAccessChecker(
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-  void SetOutputBlobProducerComputeAccessChecker(
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-  void SetOutputBlobConsumerAccessChecker(
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void SystemForwardHeader(KernelContext* ctx) const { ForwardHeader(ctx); }
+  void SystemForwardDataContent(KernelContext* ctx) const { ForwardDataContent(ctx); }
+  virtual void Forward(KernelContext* ctx) const;
 
  protected:
-  Kernel() : job_desc_(nullptr), shape_infer_helper_(nullptr) {}
-  void InitBase(const JobDesc* job_desc, const KernelConf&);
-  virtual void VirtualKernelInit(DeviceCtx* device_ctx) { VirtualKernelInit(); }
-  virtual void VirtualKernelInit() {}
-  const KernelConf& kernel_conf() const { return kernel_conf_; }
+  Kernel();
+  void InitBase(const KernelConf&);
+  virtual void VirtualKernelInit(KernelContext* ctx) {}
 
-  template<typename HandlerT>
-  void ForEachObnAndIsHeaderInferedBeforeCompute(
-      std::function<Blob*(const std::string&)> BnInOp2Blob, const HandlerT& Handler) const {
-    const auto& modifier_map =
-        this->kernel_conf_.op_attribute().arg_modifier_signature().obn2output_blob_modifier();
-    for (const std::string& obn : this->op_attribute().output_bns()) {
-      Blob* blob = BnInOp2Blob(obn);
-      if (blob) {
-        bool is_header_infered_before_compute =
-            modifier_map.at(obn).header_infered_before_compute();
-        Handler(obn, is_header_infered_before_compute);
-      }
-    }
-  }
-
-  template<typename HandlerT>
-  void ForEachObnAndIsMutableByConsumer(std::function<Blob*(const std::string&)> BnInOp2Blob,
-                                        const HandlerT& Handler) const {
-    const auto& modifier_map =
-        this->kernel_conf_.op_attribute().arg_modifier_signature().obn2output_blob_modifier();
-    for (const std::string& obn : this->op_attribute().output_bns()) {
-      Blob* blob = BnInOp2Blob(obn);
-      if (blob) {
-        bool is_mutable_by_consumer = modifier_map.at(obn).is_mutable();
-        Handler(obn, is_mutable_by_consumer);
-      }
-    }
-  }
-
-  virtual void ForwardHeader(const KernelCtx& ctx,
-                             std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-  virtual void ForwardShape(const KernelCtx& ctx,
-                            std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  virtual void ForwardHeader(KernelContext* ctx) const;
+  virtual void ForwardShape(KernelContext* ctx) const;
   // TODO(niuchong) : rename ForwardDataContent to ForwardBody
-  virtual void ForwardDataContent(const KernelCtx& ctx,
-                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+  virtual void ForwardDataContent(KernelContext* ctx) const = 0;
   virtual bool IsStateless() const { return false; }
 
  private:
-  const JobDesc* job_desc_;
-  RuntimeBlobShapeInferHelper* shape_infer_helper_;
+  std::unique_ptr<RuntimeBlobShapeInferHelper> shape_infer_helper_;
   KernelConf kernel_conf_;
-  bool blob_access_checker_disabled_;
-};
-
-template<DeviceType device_type>
-class KernelIf : public Kernel {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(KernelIf);
-  virtual ~KernelIf() = default;
-
- protected:
-  KernelIf() = default;
-
-  void CopyField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
-                 const Blob* from_blob, const PbRpf<std::string>& to_bns,
-                 void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
-    for (const std::string& to_bn : to_bns) { (BnInOp2Blob(to_bn)->*Copy)(ctx, from_blob); }
-  }
-  void CopyField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
-                 const PbRpf<std::string>& from_bns, const PbRpf<std::string>& to_bns,
-                 void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
-    if (from_bns.size() == 1) {
-      const Blob* in_blob = BnInOp2Blob(from_bns[0]);
-      CopyField(ctx, BnInOp2Blob, in_blob, to_bns, Copy);
-    } else if (to_bns.size() == 1) {
-      Blob* in_blob = BnInOp2Blob(from_bns[0]);
-      Blob* out_blob = BnInOp2Blob(to_bns[0]);
-      (out_blob->*Copy)(ctx, in_blob);
-    } else {
-      CHECK_EQ(from_bns.size(), to_bns.size());
-      FOR_RANGE(size_t, i, 0, from_bns.size()) {
-        Blob* in_blob = BnInOp2Blob(from_bns[i]);
-        Blob* out_blob = BnInOp2Blob(to_bns[i]);
-        (out_blob->*Copy)(ctx, in_blob);
-      }
-    }
-  }
 };
 
 #define REGISTER_KERNEL(k, KernelType) \
@@ -163,8 +70,7 @@ class KernelIf : public Kernel {
 #define REGISTER_KERNEL_CREATOR(k, f) \
   REGISTER_CLASS_CREATOR(int32_t, k, Kernel, f, const KernelConf&)
 
-std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const KernelConf&,
-                                              DeviceCtx*);
+std::unique_ptr<const Kernel> ConstructKernel(const KernelConf& kernel_conf, KernelContext* ctx);
 
 }  // namespace oneflow
 
@@ -237,30 +143,6 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const Ker
   }                                                                                     \
                                                                                         \
   REGISTER_KERNEL_CREATOR(op_type_case, CreateKernel);                                  \
-  }
-
-#define ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(op_type_case, kernel_class, data_type_seq)  \
-  namespace {                                                                                \
-                                                                                             \
-  Kernel* OF_PP_CAT(CreateKernel, __LINE__)(const KernelConf& kernel_conf) {                 \
-    static const HashMap<std::string, std::function<Kernel*()>> creators = {                 \
-        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (kernel_class),          \
-                                         DEVICE_TYPE_SEQ, data_type_seq)                     \
-            MAKE_KERNEL_CREATOR_ENTRY(kernel_class, DeviceType::kGPU,                        \
-                                      (float16, DataType::kFloat16))};                       \
-    DeviceType device_type =                                                                 \
-        CHECK_JUST(DeviceType4DeviceTag(kernel_conf.op_attribute().op_conf().device_tag())); \
-    auto key = GetHashKey(device_type, kernel_conf.data_type());                             \
-    auto it = creators.find(key);                                                            \
-    if (it == creators.end()) {                                                              \
-      LOG(FATAL) << "Error! Cannot find kernel creator: " << kernel_conf.DebugString()       \
-                 << " with device_type = " << device_type                                    \
-                 << ", dtype = " << kernel_conf.data_type();                                 \
-    }                                                                                        \
-    return (it->second)();                                                                   \
-  }                                                                                          \
-                                                                                             \
-  REGISTER_KERNEL_CREATOR(op_type_case, OF_PP_CAT(CreateKernel, __LINE__));                  \
   }
 
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_H_

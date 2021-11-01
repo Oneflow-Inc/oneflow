@@ -23,7 +23,7 @@ namespace std {
 template<>
 struct hash<std::pair<std::string, int32_t>> {
   std::size_t operator()(const std::pair<std::string, int32_t>& p) const {
-    return std::hash<std::string>{}(p.first) ^ std::hash<int32_t>{}(p.second);
+    return oneflow::Hash(p.first, p.second);
   }
 };
 

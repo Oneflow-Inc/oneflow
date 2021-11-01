@@ -23,6 +23,8 @@ from test_util import GenArgList
 import oneflow as flow
 import oneflow.unittest
 
+from oneflow.test_utils.automated_test_util import *
+
 
 def _test_type_as(test_case, shape, device, src_dtype, tgt_dtype):
     np_input = np.random.rand(*shape)
@@ -32,15 +34,80 @@ def _test_type_as(test_case, shape, device, src_dtype, tgt_dtype):
     test_case.assertEqual(input.dtype, target.dtype)
 
 
-def _test_long(test_case, shape, device, dtype):
+def _test_is_floating_point(test_case, shape, device, dtype):
     np_input = np.random.rand(*shape)
     input = flow.tensor(np_input, dtype=dtype, device=device)
-    input = input.long()
-    test_case.assertEqual(input.dtype, flow.int64)
+    output = input.is_floating_point()
+    if input.dtype in (flow.float, flow.float16, flow.float32, flow.double):
+        test_case.assertEqual(output, True)
+    else:
+        test_case.assertEqual(output, False)
+
+
+@flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class TestCuda(flow.unittest.TestCase):
+    @autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-4)
+    def test_cuda(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        x = x.cuda()
+        y = x.sum()
+        return y
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestTensorOps(flow.unittest.TestCase):
+    @autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-4)
+    def test_cpu(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        x = x.cpu()
+        y = x.sum()
+        return y
+
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4)
+    def test_long(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.long()
+        return y
+
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4)
+    def test_int(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.int()
+        return y
+
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4)
+    def test_float(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(dtype=int).to(device)
+        y = x.float()
+        return y
+
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4)
+    def test_double(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(dtype=int).to(device)
+        y = x.double()
+        return y
+
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4)
+    def test_item(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=1, dim0=1, dtype=int).to(device)
+        y = torch.tensor(x.item())
+        return y
+
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4)
+    def test_tolist(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = torch.tensor(x.tolist())
+        return y
+
     def test_type_as(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(1, 2), (3, 4, 5), (2, 3, 4, 5)]
@@ -50,13 +117,24 @@ class TestTensorOps(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_type_as(test_case, *arg)
 
-    def test_long(test_case):
+    def test_is_floating_point(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(1, 2), (3, 4, 5), (2, 3, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["dtype"] = [flow.int64, flow.int32, flow.float32, flow.float64]
+        arg_dict["dtype"] = [
+            flow.uint8,
+            flow.int8,
+            flow.int32,
+            flow.int64,
+            flow.char,
+            flow.float32,
+            flow.float64,
+            flow.double,
+            flow.float,
+            flow.int,
+        ]
         for arg in GenArgList(arg_dict):
-            _test_long(test_case, *arg)
+            _test_is_floating_point(test_case, *arg)
 
 
 if __name__ == "__main__":

@@ -28,7 +28,7 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-class SymbolUtil;
+struct SymbolUtil;
 
 template<typename T>
 class Symbol final {
@@ -39,7 +39,7 @@ class Symbol final {
   Symbol(Symbol&& rhs) = default;
   ~Symbol() = default;
 
-  operator bool() const { return ptr_ != nullptr; }
+  explicit operator bool() const { return ptr_ != nullptr; }
   const T* operator->() const { return ptr_; }
   const T& operator*() const { return *ptr_; }
   bool operator==(const Symbol<T>& rhs) const { return ptr_ == rhs.ptr_; }
@@ -53,7 +53,7 @@ class Symbol final {
   void reset() { ptr_ = nullptr; }
   void reset(const T& obj) { ptr_ = GetOrCreatePtr(obj); }
 
-  std::shared_ptr<const T> shared_from_symbol() const;
+  const std::shared_ptr<const T>& shared_from_symbol() const;
 
  private:
   template<typename SymbolT>
@@ -93,7 +93,7 @@ struct SymbolUtil final {
   }
 
   template<typename SymbolMap::iterator (*GetIter4ObjectAndHashValue)(const T&, size_t)>
-  static std::shared_ptr<const T> LocalThreadGetOr(const T& obj) {
+  static const std::shared_ptr<const T>& LocalThreadGetOr(const T& obj) {
     auto* thread_local_symbol_map = ThreadLocalSymbolMap();
     size_t hash_value = std::hash<T>()(obj);
     HashEqTraitPtr<const T> obj_ptr_wraper(&obj, hash_value);
@@ -114,7 +114,7 @@ struct SymbolUtil final {
     return iter;
   }
 
-  static std::shared_ptr<const T> SharedFromObject(const T& obj) {
+  static const std::shared_ptr<const T>& SharedFromObject(const T& obj) {
     return LocalThreadGetOr<FindGlobalSymbol>(obj);
   }
 
@@ -125,7 +125,7 @@ struct SymbolUtil final {
     return GlobalSymbolMap()->emplace(new_obj_ptr_wraper, ptr).first;
   }
 
-  static std::shared_ptr<const T> GetOrCreatePtr(const T& obj) {
+  static const std::shared_ptr<const T>& GetOrCreatePtr(const T& obj) {
     return LocalThreadGetOr<CreateGlobalSymbol>(obj);
   }
   static Maybe<Symbol<T>> GetSymbolByExistedRawPtr(const T* ptr) {
@@ -137,8 +137,11 @@ struct SymbolUtil final {
 };
 
 template<typename T>
-std::shared_ptr<const T> Symbol<T>::shared_from_symbol() const {
-  if (this->ptr_ == nullptr) { return std::shared_ptr<const T>(); }
+const std::shared_ptr<const T>& Symbol<T>::shared_from_symbol() const {
+  if (this->ptr_ == nullptr) {
+    static auto* none = new std::shared_ptr<const T>();
+    return *none;
+  }
   return SymbolUtil<T>::SharedFromObject(*this->ptr_);
 }
 

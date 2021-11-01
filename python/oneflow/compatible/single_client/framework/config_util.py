@@ -304,14 +304,9 @@ def api_collect_act_event(val: bool = True) -> None:
     Args:
         val (bool, optional): True or False. Defaults to True.
     """
-    return enable_if.unique([collect_act_event, do_nothing])(val=val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def collect_act_event(val=True):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.profile_conf.collect_act_event = val
+    print(
+        "'collect_act_event' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 def api_enable_fusion(val: bool = True) -> None:

@@ -71,13 +71,3 @@ def is_trainable(ctx):
 @bool_functor("Current machine is master")
 def is_current_machine_master(ctx):
     return oneflow._oneflow_internal.CurrentMachineId() == 0
-
-
-@bool_functor("Consistent view enabled")
-def consistent_view_enabled(ctx):
-    return oneflow.scope.consistent_view_enabled()
-
-
-@bool_functor("Mirrored view enabled")
-def mirrored_view_enabled(ctx):
-    return oneflow.scope.mirrored_view_enabled()

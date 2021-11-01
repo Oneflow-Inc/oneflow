@@ -30,7 +30,7 @@ Maybe<void> GenerateBackwardOpConf(
   const user_op::OpGradRegistryResult* val =
       user_op::UserOpRegistryMgr::Get().GetOpGradRegistryResult(user_conf.op_type_name());
   if (val == nullptr) {
-    return Error::GradientFunctionNotFound() << PbMessage2TxtString(fw_op.op_conf());
+    return Error::GradientFunctionNotFoundError() << PbMessage2TxtString(fw_op.op_conf());
   }
 
   user_op::UserOpWrapper fw_user_op(fw_op.op_conf(), LogicalBlobDesc4BnInOp, DiffLbi4BnInOp);

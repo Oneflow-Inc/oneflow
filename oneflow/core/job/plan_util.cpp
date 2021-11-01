@@ -15,14 +15,16 @@ limitations under the License.
 */
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/job/plan_util.h"
+#include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/str_util.h"
-#include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
+#include "oneflow/core/memory/chunk_manager.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/graph/id_serialization.h"
 
 namespace oneflow {
 
@@ -67,11 +69,164 @@ void PlanUtil::GenMemBlockAndChunk4Plan(Plan* plan) {
   PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names);
 }
 
-void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
-    Plan* plan, const HashSet<std::string>& variable_op_names) {
-  HashMap<int64_t, MemBlockProto> mem_block_id2mem_block;
+namespace {
+
+void GenChunkInSingleClient(
+    Plan* plan, HashMap<int64_t, std::unique_ptr<MemBlockProto>>* mem_block_id2mem_block) {
   // mzuid = memory zone unique id
   HashMap<int64_t, ChunkProto> mzuid2chunk;
+  auto GenChunk4ReusedMemBlockIfNeed = [&](MemBlockProto* mem_block) {
+    int64_t mzuid =
+        MemoryCaseUtil::GenMemZoneUniqueId(mem_block->machine_id(), mem_block->mem_case());
+    if (mzuid2chunk.find(mzuid) == mzuid2chunk.end()) {
+      ChunkProto chunk;
+      chunk.set_chunk_id(Global<IDMgr>::Get()->NewChunkId());
+      chunk.add_job_id(mem_block->job_id(0));
+      chunk.set_machine_id(mem_block->machine_id());
+      *(chunk.mutable_mem_case()) = mem_block->mem_case();
+      chunk.set_mem_size(mem_block->mem_size());
+      CHECK(mzuid2chunk.emplace(mzuid, chunk).second);
+      mem_block->set_chunk_id(chunk.chunk_id());
+      mem_block->set_chunk_offset(0);
+    } else {
+      ChunkProto* chunk = &(mzuid2chunk.at(mzuid));
+      CHECK_EQ(chunk->job_id(0), mem_block->job_id(0));
+      mem_block->set_chunk_id(chunk->chunk_id());
+      mem_block->set_chunk_offset(chunk->mem_size());
+      chunk->set_mem_size(chunk->mem_size() + mem_block->mem_size());
+    }
+  };
+
+  for (auto& pair : *mem_block_id2mem_block) {
+    MemBlockProto* mem_block = pair.second.get();
+    CHECK(mem_block->has_chunk_id() == false);
+    CHECK(mem_block->has_chunk_offset() == false);
+    if (mem_block->enable_reuse_mem()) { GenChunk4ReusedMemBlockIfNeed(mem_block); }
+  }
+
+  for (const auto& pair : mzuid2chunk) {
+    *(plan->mutable_block_chunk_list()->add_chunk()) = pair.second;
+  }
+}
+
+void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
+    Plan* plan, HashMap<int64_t, std::unique_ptr<MemBlockProto>>* mem_block_id2mem_block) {
+  HashMap<int64_t, HashSet<MemBlockProto*>> mzuid2mem_blocks;
+
+  for (auto& pair : *mem_block_id2mem_block) {
+    MemBlockProto* mem_block = pair.second.get();
+    CHECK(mem_block->has_chunk_id() == false);
+    CHECK(mem_block->has_chunk_offset() == false);
+    if (mem_block->has_variable_op_name()) { continue; }
+    if (!mem_block->enable_reuse_mem()) { continue; }
+    // NOTE(chengcheng):
+    //   only reused mem in cuda device.
+    //   special cpu memory like OFRecord pb and TensorBuffer CANNOT reused by another plan.
+    if (mem_block->mem_case().has_host_mem()) { continue; }
+    int64_t mem_zone_uid =
+        MemoryCaseUtil::GenMemZoneUniqueId(mem_block->machine_id(), mem_block->mem_case());
+    auto it = mzuid2mem_blocks.find(mem_zone_uid);
+    if (it == mzuid2mem_blocks.end()) {
+      it = mzuid2mem_blocks.emplace(mem_zone_uid, HashSet<MemBlockProto*>()).first;
+    }
+    CHECK(it->second.insert(mem_block).second);
+  }
+
+  std::vector<ChunkProto> all_chunks;
+  HashSet<int64_t> unique_chunk_ids;
+
+  for (auto& pair : mzuid2mem_blocks) {
+    int64_t mem_zone_uid = pair.first;
+    std::vector<const ChunkProto*> exist_chunks;
+    Global<ChunkMgr>::Get()->GetChunkProtosByMemZoneUniqueId(mem_zone_uid, &exist_chunks);
+    auto chunk_it = exist_chunks.begin();
+    auto& mem_blocks = pair.second;
+    int64_t current_chunk_offset = 0;
+    HashSet<MemBlockProto*> remain_blocks;
+    for (auto mem_block_it = mem_blocks.begin(); mem_block_it != mem_blocks.end(); ++mem_block_it) {
+      if (chunk_it == exist_chunks.end()) {
+        // NOTE(chengcheng): it means that exist chunk has run out.
+        CHECK(remain_blocks.insert(*mem_block_it).second);
+      } else {
+        // NOTE(chengcheng): find chunk which has enough space left.
+        while (chunk_it != exist_chunks.end()
+               && (current_chunk_offset + (*mem_block_it)->mem_size() > (*chunk_it)->mem_size())) {
+          // NOTE(chengcheng): current chunk has no space left, so we move to next chunk.
+          ++chunk_it;
+          current_chunk_offset = 0;
+        }
+        if (chunk_it != exist_chunks.end()) {
+          // NOTE(chengcheng): lucky, we find a appropriate chunk.
+          MemBlockProto* mem_block = *mem_block_it;
+          const ChunkProto* chunk = *chunk_it;
+          CHECK_EQ(mem_block->machine_id(), chunk->machine_id());
+          CHECK(mem_block->mem_case() == chunk->mem_case());
+          CHECK_LE(current_chunk_offset + mem_block->mem_size(), chunk->mem_size());
+          CHECK_GE(current_chunk_offset, 0);
+          // CHECK_GT(mem_block->mem_size(), 0); NOTE(chengcheng): has mem block mem size = 0
+          CHECK_GT(chunk->mem_size(), 0);
+          mem_block->set_chunk_id(chunk->chunk_id());
+          mem_block->set_chunk_offset(current_chunk_offset);
+          current_chunk_offset += mem_block->mem_size();
+          VLOG(3) << "Lazy nn.Graph Reused MemBlock :[" << mem_block->DebugString()
+                  << "] to old Chunk :[" << chunk->DebugString() << "]\n";
+        } else {
+          // NOTE(chengcheng): sad, no chunk can used, so this mem block need to insert in remain.
+          CHECK(remain_blocks.insert(*mem_block_it).second);
+        }
+      }
+    }
+
+    for (const ChunkProto* exist_chunk : exist_chunks) {
+      all_chunks.push_back(*exist_chunk);
+      CHECK(unique_chunk_ids.insert(exist_chunk->chunk_id()).second);
+    }
+
+    if (!remain_blocks.empty()) {
+      auto remain_block_it = remain_blocks.begin();
+      MemBlockProto* first_block = *remain_block_it;
+      ChunkProto new_chunk;
+      new_chunk.set_chunk_id(Global<IDMgr>::Get()->NewChunkId());
+      new_chunk.set_machine_id(first_block->machine_id());
+      *new_chunk.mutable_mem_case() = first_block->mem_case();
+      new_chunk.set_mem_size(first_block->mem_size());
+      first_block->set_chunk_id(new_chunk.chunk_id());
+      first_block->set_chunk_offset(0);
+      ++remain_block_it;
+      VLOG(3) << "Lazy nn.Graph Add MemBlock :[" << first_block->DebugString() << "] to NewChunk :["
+              << new_chunk.DebugString() << "]\n";
+
+      while (remain_block_it != remain_blocks.end()) {
+        MemBlockProto* this_block = *remain_block_it;
+        CHECK_EQ(this_block->machine_id(), new_chunk.machine_id());
+        CHECK(this_block->mem_case() == new_chunk.mem_case());
+        this_block->set_chunk_id(new_chunk.chunk_id());
+        this_block->set_chunk_offset(new_chunk.mem_size());
+        new_chunk.set_mem_size(new_chunk.mem_size() + this_block->mem_size());
+        VLOG(3) << "Lazy nn.Graph Add MemBlock :[" << this_block->DebugString()
+                << "] to NewChunk :[" << new_chunk.DebugString() << "]\n";
+        ++remain_block_it;
+      }
+
+      all_chunks.push_back(new_chunk);
+      CHECK(unique_chunk_ids.insert(new_chunk.chunk_id()).second);
+
+      Global<ChunkMgr>::Get()->AddChunkProto(new_chunk);
+    }
+  }
+
+  CHECK_EQ(all_chunks.size(), unique_chunk_ids.size());
+
+  for (const ChunkProto& chunk : all_chunks) {
+    *(plan->mutable_block_chunk_list()->add_chunk()) = chunk;
+  }
+}
+
+}  // namespace
+
+void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
+    Plan* plan, const HashSet<std::string>& variable_op_names) {
+  HashMap<int64_t, std::unique_ptr<MemBlockProto>> mem_block_id2mem_block;
 
   auto IsVariableRegst = [&](const TaskProto* task, std::string* name) -> bool {
     if (variable_op_names.empty()) { return false; }
@@ -81,7 +236,12 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
             .op_conf();
     if (!op_conf.has_variable_conf()) { return false; }
     const std::string& var_name = op_conf.name();
-    if (variable_op_names.find(var_name) == variable_op_names.end()) { return false; }
+    if (variable_op_names.find(var_name) == variable_op_names.end()) {
+      LOG(WARNING) << " Oh no! Cannot find variable_op_name: " << var_name
+                   << " in nn.Graph Compiler bind EagerTensor with VariableOp. "
+                   << " \n But each variable need bind with eager tensor for init.";
+      return false;
+    }
     *name = var_name;
     return true;
   };
@@ -110,11 +270,6 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     int64_t regst_main_size = rt_regst_desc.TotalMainByteSize4AllRegst();
     int64_t regst_separated_size = rt_regst_desc.TotalSeparatedHeaderByteSize4AllRegst();
 
-    if (is_variable_regst) {
-      CHECK_GT(regst_separated_size,
-               0);  // NOTE(chengcheng): variable regst header ALWAYS separated
-    }
-
     if (mem_block_id2mem_block.find(mem_block_id) == mem_block_id2mem_block.end()) {
       MemBlockProto mem_block;
       mem_block.set_mem_block_id(mem_block_id);
@@ -128,9 +283,11 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
         mem_block.set_variable_op_name(var_name);
         mem_block.set_is_separated_header(false);
       }
-      CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
+      CHECK(mem_block_id2mem_block
+                .emplace(mem_block.mem_block_id(), std::make_unique<MemBlockProto>(mem_block))
+                .second);
     } else {
-      MemBlockProto* mem_block = &(mem_block_id2mem_block.at(mem_block_id));
+      MemBlockProto* mem_block = mem_block_id2mem_block.at(mem_block_id).get();
       CHECK(!mem_block->has_variable_op_name());  // variable regst mem block is unique.
       CHECK_EQ(mem_block->job_id(0), job_id);
       CHECK_EQ(mem_block->machine_id(), machine_id);
@@ -155,29 +312,9 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
         mem_block.set_variable_op_name(var_name);
         mem_block.set_is_separated_header(true);
       }
-      CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
-    }
-  };
-
-  auto GenChunk4ReusedMemBlockIfNeed = [&](MemBlockProto* mem_block) {
-    int64_t mzuid =
-        MemoryCaseUtil::GenMemZoneUniqueId(mem_block->machine_id(), mem_block->mem_case());
-    if (mzuid2chunk.find(mzuid) == mzuid2chunk.end()) {
-      ChunkProto chunk;
-      chunk.set_chunk_id(Global<IDMgr>::Get()->NewChunkId());
-      chunk.add_job_id(mem_block->job_id(0));
-      chunk.set_machine_id(mem_block->machine_id());
-      *(chunk.mutable_mem_case()) = mem_block->mem_case();
-      chunk.set_mem_size(mem_block->mem_size());
-      CHECK(mzuid2chunk.emplace(mzuid, chunk).second);
-      mem_block->set_chunk_id(chunk.chunk_id());
-      mem_block->set_chunk_offset(0);
-    } else {
-      ChunkProto* chunk = &(mzuid2chunk.at(mzuid));
-      CHECK_EQ(chunk->job_id(0), mem_block->job_id(0));
-      mem_block->set_chunk_id(chunk->chunk_id());
-      mem_block->set_chunk_offset(chunk->mem_size());
-      chunk->set_mem_size(chunk->mem_size() + mem_block->mem_size());
+      CHECK(mem_block_id2mem_block
+                .emplace(mem_block.mem_block_id(), std::make_unique<MemBlockProto>(mem_block))
+                .second);
     }
   };
 
@@ -188,19 +325,15 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     }
   }
 
-  for (auto& pair : mem_block_id2mem_block) {
-    MemBlockProto* mem_block = &pair.second;
-    CHECK(mem_block->has_chunk_id() == false);
-    CHECK(mem_block->has_chunk_offset() == false);
-    if (mem_block->enable_reuse_mem()) { GenChunk4ReusedMemBlockIfNeed(mem_block); }
+  if (CHECK_JUST(GlobalMultiClientEnv())) {
+    GenChunkForMultiNNGraphMemoryReuseInMultiClient(plan, &mem_block_id2mem_block);
+  } else {
+    CHECK(variable_op_names.empty());
+    GenChunkInSingleClient(plan, &mem_block_id2mem_block);
   }
 
   for (const auto& pair : mem_block_id2mem_block) {
-    *(plan->mutable_block_chunk_list()->add_mem_block()) = pair.second;
-  }
-
-  for (const auto& pair : mzuid2chunk) {
-    *(plan->mutable_block_chunk_list()->add_chunk()) = pair.second;
+    *(plan->mutable_block_chunk_list()->add_mem_block()) = *(pair.second);
   }
 }
 
@@ -322,10 +455,10 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
       return;
     }
     if (pass_tag == kNoPassTag) {
-      if (Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task_proto.thrd_id()) == DeviceType::kGPU) {
-        int64_t device_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(task_proto.thrd_id());
+      const StreamId stream_id = PlanUtil::GetStreamId(task_proto);
+      if (stream_id.device_id().device_type() == DeviceType::kGPU) {
         machine_id2job_id_device_id2node_list[task_proto.machine_id()][task_proto.job_id()]
-                                             [device_id]
+                                             [stream_id.device_id().device_index()]
                                                  .push_back(node_def);
         machine_id2device_id2node_list_job_ids[task_proto.machine_id()].insert(task_proto.job_id());
       } else {
@@ -619,13 +752,10 @@ struct CollectiveBoxingRequestInfo {
 
 void GetDeviceDesc(const TaskProto* task_proto, boxing::collective::DeviceDesc* device_desc) {
   device_desc->set_machine_id(task_proto->machine_id());
-  const int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(task_proto->task_id());
-  device_desc->set_device_type(Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(thrd_id));
-  if (device_desc->device_type() == DeviceType::kGPU) {
-    device_desc->set_device_id(Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id));
-  } else {
-    UNIMPLEMENTED();
-  }
+  const StreamId stream_id = PlanUtil::GetStreamId(*task_proto);
+  const DeviceId& device_id = stream_id.device_id();
+  device_desc->set_device_type(device_id.device_type());
+  device_desc->set_device_id(device_id.device_index());
 }
 
 }  // namespace
@@ -736,6 +866,70 @@ void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
   }
 }
 
+void PlanUtil::GenRegisterHint(Plan* plan) {
+  HashSet<int64_t> multi_regst_regst_desc_ids;
+  for (const TaskProto& task : plan->task()) {
+    for (const auto& pair : task.produced_regst_desc()) {
+      if (pair.second.register_num() != 1) {
+        multi_regst_regst_desc_ids.emplace(pair.second.regst_desc_id());
+      }
+    }
+  }
+  for (TaskProto& task : *(plan->mutable_task())) {
+    bool all_register_num_eq_one = true;
+    for (const auto& pair : task.produced_regst_desc()) {
+      if (pair.second.register_num() != 1) {
+        all_register_num_eq_one = false;
+        break;
+      }
+    }
+    for (const auto& pair : task.consumed_regst_desc_id()) {
+      if (!all_register_num_eq_one) { break; }
+      for (auto regst_desc_id : pair.second.regst_desc_id()) {
+        if (multi_regst_regst_desc_ids.count(regst_desc_id) > 0) {
+          all_register_num_eq_one = false;
+          break;
+        }
+      }
+    }
+    task.set_all_register_num_eq_one_hint(all_register_num_eq_one);
+  }
+}
+
+void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
+  HashMap<std::pair<int64_t, int64_t>, int64_t> rank_device2size;
+  auto AddMemSizeByRankDeviceIds = [&](int64_t rank_id, int64_t device_id, int64_t mem_size) {
+    auto key = std::make_pair(rank_id, device_id);
+    auto it = rank_device2size.find(key);
+    if (it == rank_device2size.end()) { it = rank_device2size.emplace(key, 0).first; }
+    it->second += mem_size;
+  };
+
+  for (const ChunkProto& chunk : plan->block_chunk_list().chunk()) {
+    if (chunk.mem_case().has_device_cuda_mem()) {
+      AddMemSizeByRankDeviceIds(chunk.machine_id(), chunk.mem_case().device_cuda_mem().device_id(),
+                                chunk.mem_size());
+    }
+  }
+
+  for (const MemBlockProto& mem_block : plan->block_chunk_list().mem_block()) {
+    if (mem_block.has_chunk_id() || mem_block.has_chunk_offset()) { continue; }
+    if (mem_block.mem_case().has_device_cuda_mem()) {
+      AddMemSizeByRankDeviceIds(mem_block.machine_id(),
+                                mem_block.mem_case().device_cuda_mem().device_id(),
+                                mem_block.mem_size());
+    }
+  }
+
+  for (auto pair : rank_device2size) {
+    int64_t rank_id = pair.first.first;
+    int64_t device_id = pair.first.second;
+    double mem_size = pair.second * 1.0 / 1000000.0;
+    LOG(INFO) << " Plan: " << plan_name << " needs to allocate [ " << mem_size
+              << " MiB ] device memory in Rank: " << rank_id << " , Device: " << device_id << "\n";
+  }
+}
+
 const oneflow::OpAttribute& PlanUtil::GetOpAttribute(const Plan* plan, int64_t job_id,
                                                      const oneflow::KernelConf& kernel_conf) {
   if (kernel_conf.has_op_attribute()) {
@@ -777,6 +971,14 @@ void PlanUtil::PopulateOpAttibute(
       }
     }
   }
+}
+
+/*static*/ StreamId PlanUtil::GetStreamId(const TaskProto& task) {
+  return DeserializeStreamIdFromInt64(task.thrd_id());
+}
+
+/*static*/ int64_t PlanUtil::GetDeviceIndex(const TaskProto& task) {
+  return GetStreamId(task).device_id().device_index();
 }
 
 }  // namespace oneflow

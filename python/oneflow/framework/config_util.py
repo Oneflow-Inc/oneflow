@@ -200,6 +200,26 @@ def reserved_device_mem_mbyte(val):
     sess.config_proto.resource.reserved_device_mem_mbyte = val
 
 
+def api_enable_cudnn_fused_normalization_add_relu(val: bool) -> None:
+    """Whether enable cudnn_fused_normalization_add_relu.
+
+    Args:
+        val (bool): whether enable or not
+    """
+    return enable_if.unique([enable_cudnn_fused_normalization_add_relu, do_nothing])(
+        val
+    )
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def enable_cudnn_fused_normalization_add_relu(val):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.resource.cudnn_conf.enable_cudnn_fused_normalization_add_relu = (
+        val
+    )
+
+
 def api_enable_debug_mode(val: bool) -> None:
     """Whether use debug mode or not.
 
@@ -251,22 +271,6 @@ def enable_model_io_v2(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
     sess.config_proto.resource.enable_model_io_v2 = val
-
-
-def api_collect_act_event(val: bool = True) -> None:
-    """Whether or not collect active event.
-
-    Args:
-        val (bool, optional): True or False. Defaults to True.
-    """
-    return enable_if.unique([collect_act_event, do_nothing])(val=val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def collect_act_event(val=True):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.profile_conf.collect_act_event = val
 
 
 def api_enable_fusion(val: bool = True) -> None:

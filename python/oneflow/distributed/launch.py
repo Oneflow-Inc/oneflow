@@ -34,7 +34,7 @@ def parse_args():
     @retval ArgumentParser
     """
     parser = ArgumentParser(
-        description="PyTorch distributed training launch helper utility that will spawn up multiple distributed processes"
+        description="OneFlow distributed training launch helper utility that will spawn up multiple distributed processes"
     )
     parser.add_argument(
         "--nnodes",

@@ -26,95 +26,6 @@ from oneflow.ops.transpose_util import (
 )
 
 
-@register_tensor_op("mul")
-def _mul(input, other):
-    """Computes the multiplication of input by other for each element, scalar and broadcast promotation are supported.
-    
-    The formula is:
-
-    .. math::
-        out = input \\times other
-    
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        
-        # element-wise multiply
-        >>> input = flow.Tensor(np.random.randn(2,3))
-        >>> other = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.mul(input,other).numpy()
-        >>> out.shape
-        (2, 3)
-
-        # scalar mutiply
-        >>> input = 5
-        >>> other = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.mul(input,other).numpy()
-        >>> out.shape
-        (2, 3)
-
-        # broadcast mutiply
-        >>> input = flow.Tensor(np.random.randn(1,1))
-        >>> other = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.mul(input,other).numpy()
-        >>> out.shape 
-        (2, 3)
-
-    """
-    return flow.F.mul(input, other)
-
-
-class Variance(Module):
-    def __init__(self, dim: int = None, keepdim: bool = False) -> None:
-        super().__init__()
-        self.dim = dim
-        self.keepdim = keepdim
-
-    def forward(self, input):
-        axis = _check_axis(self.dim, input.shape)
-        if isinstance(axis, list) and len(axis) == 0:
-            return flow.zeros(input.shape)
-        else:
-            return flow.sub(
-                flow.mean(flow.square(input), axis, self.keepdim),
-                flow.square(flow.mean(input, axis, self.keepdim)),
-            )
-
-
-@register_tensor_op("var")
-def variance_op(input, dim=None, keepdim=False):
-    """Returns the variance of each row of the `input` tensor in the given dimension `dim`.
-
-    If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension(s) `dim` 
-    where it is of size 1. Otherwise, dim is squeezed (see `flow.squeeze()`), resulting in the output 
-    tensor having 1 (or `len(dim)`) fewer dimension(s).
-
-    Args:
-        input (Tensor): the input tensor.
-        dim (int or tuple of python:ints): the dimension or dimensions to reduce. Defaults to None.
-        keepdim (bool, optional): whether the output tensor has dim retained or not. Defaults to False.
-
-    Returns:
-        Tensor: The result of variance on the specified axis of input Tensor
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        
-        >>> np_arr = np.random.randn(2,3,4,5)
-        >>> input = flow.Tensor(np_arr)
-        >>> output = flow.var(input, 1, True)
-
-    """
-    return Variance(dim, keepdim)(input)
-
-
 @register_tensor_op("sub")
 def _sub(input, other):
     """Computes the subtraction of input by other for each element, scalar and broadcast promotation are supported.
@@ -152,7 +63,7 @@ def _sub(input, other):
         (2, 3)
 
     """
-    return flow.F.sub(input, other)
+    return flow._C.sub(input, other)
 
 
 @register_tensor_op("div")
@@ -196,15 +107,7 @@ def _div(input, other):
         (2, 3)
 
     """
-    return flow.F.div(input, other)
-
-
-class Reciprocal(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.reciprocal_no_nan(x)
+    return flow._C.div(input, other)
 
 
 @register_tensor_op("reciprocal")
@@ -225,16 +128,16 @@ def _reciprocal(x):
         array([[1.        , 0.5       , 0.33333334],
                [0.25      , 0.2       , 0.16666667]], dtype=float32)
     """
-    return Reciprocal()(x)
+    return flow._C.reciprocal_no_nan(x)
 
 
 @register_tensor_op("add")
-def _add(x, y):
-    """Computes the addition of x by y for each element, scalar and broadcast promotation are supported.
+def _add(input, other):
+    """Computes the addition of `input` by `other` for each element, scalar and broadcast promotation are supported.
     The formula is:
 
     .. math::
-        out = x + y
+        out = input + other
 
     For example:
 
@@ -265,7 +168,7 @@ def _add(x, y):
         (2, 3)
 
     """
-    return flow.F.add(x, y)
+    return flow._C.add(input, other)
 
 
 @register_tensor_op("add_")
@@ -273,15 +176,7 @@ def _add_inplace(x, y):
     """
     In-place version of :func:`oneflow.Tensor.add`.
     """
-    return flow.F.add(x, y, inplace=True)
-
-
-class Asin(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.asin(x)
+    return flow._C.add(x, y, inplace=True)
 
 
 def asin_op(input):
@@ -300,21 +195,21 @@ def asin_op(input):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input = flow.Tensor(np.array([-0.5,  0.8, 1.0,  -0.8]), dtype=flow.float32)
+        >>> input = flow.tensor(np.array([-0.5,  0.8, 1.0,  -0.8]), dtype=flow.float32)
         >>> output = flow.asin(input)
         >>> output.shape
-        flow.Size([4])
+        oneflow.Size([4])
         >>> output
         tensor([-0.5236,  0.9273,  1.5708, -0.9273], dtype=oneflow.float32)
-        >>> input1 = flow.Tensor(np.array([[0.8, 1.0], [-0.6, -1.0]]), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.array([[0.8, 1.0], [-0.6, -1.0]]), dtype=flow.float32)
         >>> output1 = input1.asin()
         >>> output1.shape
-        flow.Size([2, 2])
+        oneflow.Size([2, 2])
         >>> output1
         tensor([[ 0.9273,  1.5708],
                 [-0.6435, -1.5708]], dtype=oneflow.float32)
     """
-    return Asin()(input)
+    return flow._C.asin(input)
 
 
 @register_tensor_op("asin")
@@ -323,7 +218,7 @@ def asin_op_tensor(input):
 
     See :func:`oneflow.asin`
     """
-    return Asin()(input)
+    return flow._C.asin(input)
 
 
 def arcsin_op(input):
@@ -331,7 +226,7 @@ def arcsin_op(input):
   
     Alias for :func:`oneflow.asin`
     """
-    return Asin()(input)
+    return flow._C.asin(input)
 
 
 @register_tensor_op("arcsin")
@@ -340,15 +235,7 @@ def arcsin_op_tensor(input):
 
     See :func:`oneflow.asin`
     """
-    return Asin()(input)
-
-
-class Asinh(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.asinh(x)
+    return flow._C.asin(input)
 
 
 def asinh_op(input):
@@ -367,23 +254,23 @@ def asinh_op(input):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input = flow.Tensor(np.array([2, 3, 4]), dtype=flow.float32)
+        >>> input = flow.tensor(np.array([2, 3, 4]), dtype=flow.float32)
         >>> output = flow.asinh(input)
         >>> output.shape
-        flow.Size([3])
+        oneflow.Size([3])
         >>> output
         tensor([1.4436, 1.8184, 2.0947], dtype=oneflow.float32)
 
-        >>> input1 = flow.Tensor(np.array([[-1, 0, -0.4], [5, 7, 0.8]]), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.array([[-1, 0, -0.4], [5, 7, 0.8]]), dtype=flow.float32)
         >>> output1 = input1.asinh()
         >>> output1.shape
-        flow.Size([2, 3])
+        oneflow.Size([2, 3])
         >>> output1
-        tensor([[-0.8814,  0.    , -0.39  ],
+        tensor([[-0.8814,  0.0000, -0.3900],
                 [ 2.3124,  2.6441,  0.7327]], dtype=oneflow.float32)
 
     """
-    return Asinh()(input)
+    return flow._C.asinh(input)
 
 
 def arcsinh_op(input):
@@ -391,7 +278,7 @@ def arcsinh_op(input):
   
     Alias for :func:`oneflow.asinh`
     """
-    return Asinh()(input)
+    return flow._C.asinh(input)
 
 
 @register_tensor_op("asinh")
@@ -400,7 +287,7 @@ def asinh_op_tensor(input):
 
     See :func:`oneflow.asinh`
     """
-    return Asinh()(input)
+    return flow._C.asinh(input)
 
 
 @register_tensor_op("arcsinh")
@@ -409,50 +296,11 @@ def arcsinh_op_tensor(input):
 
     See :func:`oneflow.asinh`
     """
-    return Asinh()(input)
-
-
-class Sin(Module):
-    def __init__(self, inplace: bool = False) -> None:
-        super().__init__()
-        self.inplace = inplace
-
-    def forward(self, x):
-        return flow.F.sin(x, self.inplace)
-
-
-def sin_op(tensor):
-    """
-    Returns a new tensor with the sine of the elements of :attr:`input`.
-
-    .. math::
-
-        \\text{out}_{i} = \\sin(\\text{input}_{i})
-
-    Args:
-        input (Tensor): the input tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> x1 = flow.Tensor(np.array([-0.5461,  0.1347, -2.7266, -0.2746]).astype(np.float32))
-        >>> out1 = flow.sin(x1)
-        >>> out1
-        tensor([-0.5194,  0.1343, -0.4032, -0.2712], dtype=oneflow.float32)
-        >>> x2 = flow.Tensor(np.array([-1.4, 2.6, 3.7]).astype(np.float32),device=flow.device('cuda'))
-        >>> out2 = flow.sin(x2)
-        >>> out2
-        tensor([-0.9854,  0.5155, -0.5298], device='cuda:0', dtype=oneflow.float32)
-
-    """
-    return Sin(inplace=False)(tensor)
+    return flow._C.asinh(input)
 
 
 @register_tensor_op("sin")
-def sin_op_tensor(tensor):
+def sin_op_tensor(input):
     """
 
     sin() -> Tensor
@@ -460,28 +308,20 @@ def sin_op_tensor(tensor):
     See :func:`oneflow.sin`
     
     """
-    return Sin(inplace=False)(tensor)
+    return flow._C.sin(input)
 
 
 @register_tensor_op("sin_")
-def inplace_sin_op_tensor(x):
+def inplace_sin_op_tensor(input):
     """
     In-place version of :func:`oneflow.sin`
     
     """
-    return Sin(inplace=True)(x)
-
-
-class Cos(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.cos(x)
+    return flow._C.sin_(input)
 
 
 @register_tensor_op("cos")
-def cos_op(tensor):
+def cos_op(input):
     """
     Returns a new tensor with the cosine  of the elements of :attr:`input`.
     
@@ -498,22 +338,14 @@ def cos_op(tensor):
         >>> import oneflow as flow
         >>> import numpy as np
         >>> arr = np.array([1.4309,  1.2706, -0.8562,  0.9796])
-        >>> input = flow.Tensor(arr, dtype=flow.float32)
+        >>> input = flow.tensor(arr, dtype=flow.float32)
         >>> output = flow.cos(input).numpy()
 
     """
-    return Cos()(tensor)
+    return flow._C.cos(input)
 
 
-class Atan(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.atan(x)
-
-
-def atan_op(tensor):
+def atan_op(input):
     """
     Returns a new tensor with the arctangent of the elements of :attr:`input`.
 
@@ -529,60 +361,41 @@ def atan_op(tensor):
     
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input = flow.Tensor(np.array([0.5, 0.6, 0.7]), dtype=flow.float32)
+        >>> input = flow.tensor(np.array([0.5, 0.6, 0.7]), dtype=flow.float32)
         >>> output = flow.atan(input)
         >>> output.shape
-        flow.Size([3])
+        oneflow.Size([3])
         
     """
-    return Atan()(tensor)
+    return flow._C.atan(input)
 
 
 @register_tensor_op("atan")
-def atan_op_tensor(tensor):
+def atan_op_tensor(input):
     """
 
     See :func:`oneflow.atan`
     
     """
-    return Atan()(tensor)
+    return flow._C.atan(input)
 
 
-def arctan_op(tensor):
+def arctan_op(input):
     """
     Alias for :func:`oneflow.atan`
     
     """
-    return Atan()(tensor)
+    return flow._C.atan(input)
 
 
 @register_tensor_op("arctan")
-def arctan_op_tensor(tensor):
+def arctan_op_tensor(input):
     """
 
     See :func:`oneflow.arctan`
     
     """
-    return Atan()(tensor)
-
-
-class FMod(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        if not isinstance(x, (flow.Tensor, flow._oneflow_internal.Tensor)):
-            raise ValueError("Expected type of input is Tensor")
-        if isinstance(y, (int, float)):
-            x = flow.F.cast(x, flow.float32)
-            y = flow.tensor([y], dtype=flow.float32, device=x.device)
-        elif isinstance(y, (flow.Tensor, flow._oneflow_internal.Tensor)):
-            if x.dtype != y.dtype:
-                x = flow.F.cast(x, flow.float32)
-                y = flow.F.cast(y, flow.float32)
-        else:
-            raise ValueError("Expected type of other is Tensor or Scalar")
-        return flow.F.fmod(x, y)
+    return flow._C.atan(input)
 
 
 def fmod_op(input, other):
@@ -607,15 +420,15 @@ def fmod_op(input, other):
     Example::
 
         >>> import oneflow as flow
-        >>> flow.fmod(flow.tensor([-3., -2, -1, 1, 2, 3]), 2)
+        >>> flow.fmod(flow.tensor([-3., -2, -1, 1, 2, 3]), 2.)
         tensor([-1., -0., -1.,  1.,  0.,  1.], dtype=oneflow.float32)
-        >>> flow.fmod(flow.tensor([1, 2, 3, 4, 5]), 1.5)
-        tensor([1. , 0.5, 0. , 1. , 0.5], dtype=oneflow.float32)
-        >>> flow.fmod(flow.tensor([1, 2, 3, 4, -5]), flow.tensor([4, 2, 1, 3., 1]))
-        tensor([ 1.,  0.,  0.,  1., -0.], dtype=oneflow.float32)
+        >>> flow.fmod(flow.tensor([1, 2, 3, 4, 5.]), 1.5)
+        tensor([1.0000, 0.5000, 0.0000, 1.0000, 0.5000], dtype=oneflow.float32)
+        >>> flow.fmod(flow.tensor([1, 2, 3, 4., -5]), flow.tensor([4, 2, 1, 3., 1]))
+        tensor([1., 0., 0., 1., -0.], dtype=oneflow.float32)
 
     """
-    return FMod()(input, other)
+    return flow._C.fmod(input, other)
 
 
 @register_tensor_op("fmod")
@@ -625,19 +438,11 @@ def fmod_op_tensor(input, other):
     See :func:`oneflow.fmod`
     
     """
-    return FMod()(input, other)
-
-
-class Log(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.log(x)
+    return fmod_op(input, other)
 
 
 @register_tensor_op("log")
-def log_op(tensor):
+def log_op(input):
     """
     Returns a new tensor with the natural logarithm of the elements of :attr:`input`.
     
@@ -654,28 +459,12 @@ def log_op(tensor):
         >>> import oneflow as flow
         >>> import numpy as np
         >>> arr = np.random.randn(2, 3, 4, 5)
-        >>> input = flow.Tensor(arr, dtype=flow.float32)
+        >>> input = flow.tensor(arr, dtype=flow.float32)
         >>> output = flow.log(input)
 
 
     """
-    return Log()(tensor)
-
-
-class Subtract(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.sub(x, y)
-
-
-class Sqrt(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, input):
-        return flow.F.sqrt(input)
+    return flow._C.log(input)
 
 
 @register_tensor_op("rsqrt")
@@ -687,7 +476,7 @@ def rsqrt_op(input):
             \\text{out}_{i} = \\frac{1}{\\sqrt{\\text{input}_{i}}}
 
         Args:
-            input (Tensor) – the input tensor.
+            input (Tensor): the input tensor.
 
          For example:
 
@@ -701,15 +490,7 @@ def rsqrt_op(input):
             >>> out
             array([1.        , 0.70710677, 0.57735026], dtype=float32)
     """
-    return Rsqrt()(input)
-
-
-class Rsqrt(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, input):
-        return flow.F.rsqrt(input)
+    return flow._C.rsqrt(input)
 
 
 @register_tensor_op("sqrt")
@@ -735,15 +516,7 @@ def sqrt_op(input):
             >>> output
             array([1.       , 1.4142135, 1.7320508], dtype=float32)
         """
-    return Sqrt()(input)
-
-
-class Square(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, input):
-        return flow.F.square(input)
+    return flow._C.sqrt(input)
 
 
 @register_tensor_op("square")
@@ -769,137 +542,14 @@ def square_op(input):
             >>> output
             array([1., 4., 9.], dtype=float32)
         """
-    return Square()(input)
-
-
-class Std(Module):
-    def __init__(self, dim=None, unbiased=False, keepdim=False) -> None:
-        super().__init__()
-        assert unbiased == False, "Only support 'unbiased=False' for now!"
-        self.unbiased = unbiased
-        self.keepdim = keepdim
-        self.dim = dim
-        self.reduce_count = 1
-        self.square_op = Square()
-        self.sqrt_op = Sqrt()
-        self.subtract_op = Subtract()
-
-    def forward(self, x):
-        self.axis = _check_axis(self.dim, x.shape)
-        if isinstance(self.axis, list) and len(self.axis) == 0:
-            return flow.zeros(x.shape)
-        else:
-            if len(self.axis) == 0:
-                self.reduce_count = x.nelement()
-            else:
-                for i in self.axis:
-                    self.reduce_count *= x.shape[i]
-            sum = (
-                flow.sum(self.square_op(x), self.axis, self.keepdim) / self.reduce_count
-            )
-            square = self.square_op(
-                flow.sum(x, self.axis, self.keepdim) / self.reduce_count
-            )
-            subtract = self.subtract_op(sum, square)
-            res = self.sqrt_op(subtract)
-            return res
-
-
-@register_tensor_op("std")
-def std_op(tensor, dim, unbiased=False, keepdim=False):
-    """
-    Returns the standard-deviation of each row of the :attr:`input` tensor in the
-    dimension :attr:`dim`. If :attr:`dim` is a list of dimensions,
-    reduce over all of them.
-
-    If keepdim is True, the output tensor is of the same size as input except in 
-    the dimension(s) dim where it is of size 1. Otherwise, dim is squeezed, 
-    resulting in the output tensor having 1 (or len(dim)) fewer dimension(s).
-
-    If :attr:`unbiased` is ``False``, then the standard-deviation will be calculated
-    via the biased estimator. Otherwise, Bessel's correction will be used.
-
-    Args:
-        input (Tensor): the input tensor.
-        dim (int or tuple of python:ints): the dimension or dimensions to reduce.
-        unbiased (bool): whether to use the unbiased estimation or not
-        keepdim (bool): whether the output tensor has `dim` retained or not.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        
-        >>> arr = np.array([1.0, 2.0, 3.0])
-        >>> input = flow.Tensor(arr)
-        >>> output = flow.std(input, dim=0).numpy()
-        >>> output
-        array(0.8164968, dtype=float32)
-
-    """
-    return Std(dim, unbiased, keepdim)(tensor)
-
-
-class Pow(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        if isinstance(y, (int, float)):
-            return flow.F.pow_scalar(x, alpha=y)
-        else:
-            return flow.F.pow(x, y)
-
-
-@register_tensor_op("pow")
-def pow_op(tensor, exponent):
-    """Takes the power of each element in input with exponent and returns a tensor with the result. Exponent can be either a single float number, a single int number, or a tensor with the same shape as input.
-    When exponent is a scalar value, the operation applied is:
-
-    .. math::
-        \\text{out}_i = x_i ^ \\text{exponent}
-\u200b
-    When exponent is a tensor, the operation applied is:
-
-    .. math::
-        \\text{out}_i = x_i ^ {\\text{exponent}_i}
-
-    Args:
-        - input (Tensor): the input tensor.
-        - exponent (int, float, Tensor): the exponent.
-
-    Returns:
-        Tensor: The result of variance on the specified axis of input Tensor
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        
-        >>> x = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]))
-        >>> out = flow.pow(x, 2).numpy()
-        >>> out
-        array([ 1.,  4.,  9., 16., 25., 36.], dtype=float32)
-
-        >>> x = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0]))
-        >>> y = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0]))
-        >>> out = flow.pow(x, y).numpy()
-        >>> out
-        array([  1.,   4.,  27., 256.], dtype=float32)
-        
-    """
-    return Pow()(tensor, exponent)
+    return flow._C.square(input)
 
 
 def addmm(x, mat1, mat2, alpha=1, beta=1):
     if len(x.shape) > 2 or len(mat1.shape) > 2 or len(mat2.shape) > 2:
         raise ValueError("input matrixes shape can not be greater than 2")
     else:
-        return _mul(x, beta) + _mul(flow.F.matmul(mat1, mat2), alpha)
+        return flow.mul(x, beta) + flow.mul(flow._C.matmul(mat1, mat2), alpha)
 
 
 def addmm_op(input, mat1, mat2, alpha=1, beta=1):
@@ -939,21 +589,21 @@ def addmm_op(input, mat1, mat2, alpha=1, beta=1):
         >>> mat2 = flow.tensor(np.array([[7.3,1.9,7.3],[10.2,1,5.5],[3.7,2.2,8.1]])) 
         >>> output = flow.addmm(input, mat1, mat2)
         >>> output
-        tensor([[100.68,  33.83, 126.87],
-                [110.01,  43.48, 133.61]], dtype=oneflow.float64)
+        tensor([[100.6800,  33.8300, 126.8700],
+                [110.0100,  43.4800, 133.6100]], dtype=oneflow.float64)
         >>> output.shape
-        flow.Size([2, 3])
+        oneflow.Size([2, 3])
 
         >>> input2 = flow.tensor(np.array([1.7]))
         >>> mat1 = flow.tensor(np.array([[1,2],[5,9.1],[7.7,1.4]]))
         >>> mat2 = flow.tensor(np.array([[1,2,3.7],[5,9.1,6.8]]))
         >>> output2 = flow.addmm(input2, mat1, mat2, alpha=1, beta=2)
         >>> output2
-        tensor([[14.4 , 23.6 , 20.7 ],
-                [53.9 , 96.21, 83.78],
-                [18.1 , 31.54, 41.41]], dtype=oneflow.float64)
+        tensor([[14.4000, 23.6000, 20.7000],
+                [53.9000, 96.2100, 83.7800],
+                [18.1000, 31.5400, 41.4100]], dtype=oneflow.float64)
         >>> output2.shape
-        flow.Size([3, 3])
+        oneflow.Size([3, 3])
     """
     return addmm(input, mat1, mat2, alpha, beta)
 
@@ -1011,7 +661,7 @@ class Clamp(Module):
         return self._op(x)[0]
 
 
-def clamp_op(tensor, min=None, max=None):
+def clamp_op(input, min=None, max=None):
     """
     Clamp all elements in :attr:`input` into the range `[` :attr:`min`, :attr:`max` `]` and return
     a resulting tensor:
@@ -1043,22 +693,22 @@ def clamp_op(tensor, min=None, max=None):
         >>> input = flow.Tensor(arr)
         >>> output = flow.clamp(input, min=-0.5, max=0.5)
         >>> output
-        tensor([ 0.2,  0.5, -0.5, -0.3], dtype=oneflow.float32)
+        tensor([ 0.2000,  0.5000, -0.5000, -0.3000], dtype=oneflow.float32)
 
         >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
         >>> input = flow.Tensor(arr)
         >>> output = flow.clamp(input, min=None, max=0.5)
         >>> output
-        tensor([ 0.2,  0.5, -1.5, -0.3], dtype=oneflow.float32)
+        tensor([ 0.2000,  0.5000, -1.5000, -0.3000], dtype=oneflow.float32)
 
         >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
         >>> input = flow.Tensor(arr)
         >>> output = flow.clamp(input, min=-0.5, max=None)
         >>> output
-        tensor([ 0.2,  0.6, -0.5, -0.3], dtype=oneflow.float32)
+        tensor([ 0.2000,  0.6000, -0.5000, -0.3000], dtype=oneflow.float32)
 
     """
-    return Clamp(min, max)(tensor)
+    return flow._C.clamp(input, min, max)
 
 
 @register_tensor_op("clamp")
@@ -1084,16 +734,8 @@ def clip_op_tensor(tensor, min=None, max=None):
     return Clamp(min, max)(tensor)
 
 
-class Cosh(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.cosh(x)
-
-
 @register_tensor_op("cosh")
-def cosh_op(tensor):
+def cosh_op(input):
     """
     Returns a new tensor with the hyperbolic cosine of the elements of :attr:`input`.
 
@@ -1111,21 +753,13 @@ def cosh_op(tensor):
         >>> import oneflow as flow
         
         >>> arr = np.array([ 0.1632,  1.1835, -0.6979, -0.7325])
-        >>> input = flow.Tensor(arr, dtype=flow.float32)
+        >>> input = flow.tensor(arr, dtype=flow.float32)
         >>> output = flow.cosh(input).numpy()
         >>> output
         array([1.0133467, 1.7859949, 1.2535787, 1.2804903], dtype=float32)
 
     """
-    return Cosh()(tensor)
-
-
-class Erf(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, input):
-        return flow.F.erf(input)
+    return flow._C.cosh(input)
 
 
 @register_tensor_op("erf")
@@ -1148,32 +782,32 @@ def erf_op(input):
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> x = flow.Tensor(np.array([0, -1., 10.]), dtype=flow.float32)
+        >>> x = flow.tensor(np.array([0, -1., 10.]), dtype=flow.float32)
         >>> out = flow.erf(x)
         >>> out.shape
-        flow.Size([3])
+        oneflow.Size([3])
         >>> out.numpy()
         array([ 0.       , -0.8427008,  1.       ], dtype=float32)
 
-        >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
+        >>> x = flow.tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
         >>> out = flow.erf(x)
         >>> out.shape
-        flow.Size([2, 3])
+        oneflow.Size([2, 3])
         >>> out.numpy()
         array([[ 0.        , -0.8427008 ,  1.        ],
                [ 1.        ,  1.        ,  0.74210095]], dtype=float32)
 
-        >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8], [2, 3, 4]]), dtype=flow.float32)
+        >>> x = flow.tensor(np.array([[0, -1., 10.], [5, 7, 0.8], [2, 3, 4]]), dtype=flow.float32)
         >>> out = x.erf()
         >>> out.shape
-        flow.Size([3, 3])
+        oneflow.Size([3, 3])
         >>> out.numpy()
         array([[ 0.        , -0.8427008 ,  1.        ],
                [ 1.        ,  1.        ,  0.74210095],
                [ 0.9953223 ,  0.9999779 ,  1.        ]], dtype=float32)
 
     """
-    return Erf()(input)
+    return flow._C.erf(input)
 
 
 @register_tensor_op("erf")
@@ -1181,16 +815,7 @@ def erf_op_tensor(input):
     """
     See :func:`oneflow.erf`
     """
-    return Erf()(input)
-
-
-class Erfc(Module):
-    def __init__(self) -> None:
-        super().__init__()
-        self.erfc_op = flow.builtin_op("erfc").Input("x").Output("y").Build()
-
-    def forward(self, input):
-        return self.erfc_op(input)[0]
+    return flow._C.erf(input)
 
 
 @register_tensor_op("erfc")
@@ -1214,32 +839,19 @@ def erfc_op(input):
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> x = flow.Tensor(np.array([0, -1., 10.]), dtype=flow.float32)
+        >>> x = flow.tensor(np.array([0, -1., 10.]), dtype=flow.float32)
         >>> out = flow.erfc(x)
-        >>> out.shape
-        flow.Size([3])
-        >>> out.numpy()
-        array([1.0000000e+00, 1.8427007e+00, 2.8025969e-45], dtype=float32)
+        >>> out
+        tensor([1.0000e+00, 1.8427e+00, 2.8026e-45], dtype=oneflow.float32)
 
-        >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
+        >>> x = flow.tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
         >>> out = flow.erfc(x)
-        >>> out.shape
-        flow.Size([2, 3])
-        >>> out.numpy()
-        array([[1.0000000e+00, 1.8427007e+00, 2.8025969e-45],
-               [1.5374597e-12, 4.1838257e-23, 2.5789905e-01]], dtype=float32)
-
-        >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8], [2, 3, 4]]), dtype=flow.float32)
-        >>> out = x.erfc()
-        >>> out.shape
-        flow.Size([3, 3])
-        >>> out.numpy()
-        array([[1.0000000e+00, 1.8427007e+00, 2.8025969e-45],
-               [1.5374597e-12, 4.1838257e-23, 2.5789905e-01],
-               [4.6777348e-03, 2.2090499e-05, 1.5417259e-08]], dtype=float32)
+        >>> out
+        tensor([[1.0000e+00, 1.8427e+00, 2.8026e-45],
+                [1.5375e-12, 4.1838e-23, 2.5790e-01]], dtype=oneflow.float32)
         
     """
-    return Erfc()(input)
+    return flow._C.erfc(input)
 
 
 @register_tensor_op("erfc")
@@ -1247,19 +859,11 @@ def erfc_op_tensor(input):
     """
     See :func:`oneflow.erfc`
     """
-    return Erfc()(input)
+    return flow._C.erfc(input)
 
 
-class Ceil(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.ceil(x)
-
-
-def ceil_op(x):
-    """Returns a new tensor with the ceil of the elements of :attr:`x`,
+def ceil_op(input):
+    """Returns a new tensor with the ceil of the elements of :attr:`input`,
     the smallest integer greater than or equal to each element.
 
     The equation is: 
@@ -1268,7 +872,7 @@ def ceil_op(x):
         \\text{out}_{i} = \\left\\lceil \\text{input}_{i} \\right\\rceil = \\left\\lfloor \\text{input}_{i} \\right\\rfloor + 1
 
     Args:
-        x (oneflow.Tensor): A Tensor.
+        input (oneflow.Tensor): A Tensor.
     
     Returns:
         oneflow.Tensor: The result Tensor
@@ -1282,57 +886,43 @@ def ceil_op(x):
         >>> import numpy as np   
         >>> x = flow.Tensor(np.array([0.1, -2, 3.4]).astype(np.float32))
         >>> y = flow.ceil(x)
-        >>> print(y.shape)
-        flow.Size([3])
-        >>> print(y.numpy())
-        [ 1. -2.  4.]
-
-
+        >>> y.shape
+        oneflow.Size([3])
+        >>> y
+        tensor([ 1., -2.,  4.], dtype=oneflow.float32)
         >>> x = flow.Tensor(np.array([[2.5, 4.6, 0.6],[7.8, 8.3, 9.2]]).astype(np.float32))
         >>> y = x.ceil()
-        >>> print(y.shape)
-        flow.Size([2, 3])
-        >>> print(y.numpy())
-        [[ 3.  5.  1.]
-         [ 8.  9. 10.]]
-
-
-
-
+        >>> y.shape
+        oneflow.Size([2, 3])
+        >>> y
+        tensor([[ 3.,  5.,  1.],
+                [ 8.,  9., 10.]], dtype=oneflow.float32)
         >>> x = flow.Tensor(np.array([[[2.2, 4.4, 6.5],[7.1, 8.2, 9.3]],[[10.6,11.2,12.2],[13.5,14.8,15.9]]]).astype(np.float32))
         >>> y = flow.ceil(x)
-        >>> print(y.shape)
-        flow.Size([2, 2, 3])
-        >>> print(y.numpy())
-        [[[ 3.  5.  7.]
-          [ 8.  9. 10.]]
+        >>> y.shape
+        oneflow.Size([2, 2, 3])
+        >>> y
+        tensor([[[ 3.,  5.,  7.],
+                 [ 8.,  9., 10.]],
         <BLANKLINE>
-         [[11. 12. 13.]
-          [14. 15. 16.]]]
+                [[11., 12., 13.],
+                 [14., 15., 16.]]], dtype=oneflow.float32)
 
     """
-    return Ceil()(x)
+    return flow._C.ceil(input)
 
 
 @register_tensor_op("ceil")
-def ceil_op_tensor(x):
+def ceil_op_tensor(input):
     """
     See :func:`oneflow.ceil`
     """
-    return Ceil()(x)
+    return flow._C.ceil(input)
 
 
-class Expm1(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.expm1(x)
-
-
-def expm1_op(x):
+def expm1_op(input):
     """Returns a new tensor with the exponential of the elements minus 1
-    of :attr:`x`.
+    of :attr:`input`.
 
 
     The equation is: 
@@ -1341,7 +931,7 @@ def expm1_op(x):
         y_{i} = e^{x_{i}} - 1
 
     Args:
-        x (oneflow.Tensor): A Tensor.
+        input (oneflow.Tensor): A Tensor.
     
     Returns:
         oneflow.Tensor: The result Tensor
@@ -1355,7 +945,7 @@ def expm1_op(x):
         >>> x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
         >>> y = flow.expm1(x)
         >>> y.shape
-        flow.Size([3])
+        oneflow.Size([3])
         >>> y
         tensor([ 1.7183,  6.3891, 19.0855], dtype=oneflow.float32)
 
@@ -1363,7 +953,7 @@ def expm1_op(x):
         >>> x = flow.Tensor(np.array([[2, 4, 6],[7, 8, 9]]).astype(np.float32))
         >>> y = x.expm1()
         >>> y.shape
-        flow.Size([2, 3])
+        oneflow.Size([2, 3])
         >>> y
         tensor([[6.3891e+00, 5.3598e+01, 4.0243e+02],
                 [1.0956e+03, 2.9800e+03, 8.1021e+03]], dtype=oneflow.float32)
@@ -1373,7 +963,7 @@ def expm1_op(x):
         >>> x = flow.Tensor(np.array([[[2, 4, 6],[7, 8, 9]],[[10,11,12],[13,14,15]]]).astype(np.float32))
         >>> y = flow.expm1(x)
         >>> print(y.shape)
-        flow.Size([2, 2, 3])
+        oneflow.Size([2, 2, 3])
         >>> print(y.numpy())
         [[[6.3890562e+00 5.3598152e+01 4.0242880e+02]
           [1.0956332e+03 2.9799580e+03 8.1020840e+03]]
@@ -1383,15 +973,15 @@ def expm1_op(x):
 
 
     """
-    return Expm1()(x)
+    return flow._C.expm1(input)
 
 
 @register_tensor_op("expm1")
-def expm1_op_tensor(x):
+def expm1_op_tensor(input):
     """
     See :func:`oneflow.expm1`
     """
-    return Expm1()(x)
+    return flow._C.expm1(input)
 
 
 class Topk(Module):
@@ -1422,17 +1012,17 @@ class Topk(Module):
             else:
                 neg_input = flow.mul(input, -1)
                 indices = self._op_topk_last_dim(neg_input)[0]
-            return (flow.gather(input, indices, dim=axis), indices)
+            return (flow.gather(input, axis, indices), indices)
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
-            x = flow.F.transpose(input, perm=perm)
+            x = flow._C.transpose(input, perm=perm)
             if self.largest:
                 indices = self._op_topk_last_dim(x)[0]
             else:
                 neg_input = flow.mul(x, -1)
                 indices = self._op_topk_last_dim(neg_input)[0]
-            indices = flow.F.transpose(indices, perm=get_inversed_perm(perm))
-            return (flow.gather(input, indices, dim=axis), indices)
+            indices = flow._C.transpose(indices, perm=get_inversed_perm(perm))
+            return (flow.gather(input, axis, indices), indices)
 
 
 @register_tensor_op("topk")
@@ -1441,9 +1031,10 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
 
     Args:
         input (oneflow.Tensor): Input Tensor
+        k (int): the k in “top-k”
         dim (int, optional): the dimension to sort along. Defaults to the last dim (-1)
         largest (bool, optional): controls whether to return largest or smallest elements
-        sorted (bool, optional): controls whether to return the elements in sorted order
+        sorted (bool, optional): controls whether to return the elements in sorted order (Only Support True Now!)
 
     Returns:
         Tuple(oneflow.Tensor, oneflow.Tensor(dtype=int32)): A tuple of (values, indices), where
@@ -1464,9 +1055,9 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
         tensor([[2, 3, 1],
                 [1, 2, 3]], dtype=oneflow.int32)
         >>> values.shape
-        flow.Size([2, 3])
+        oneflow.Size([2, 3])
         >>> indices.shape
-        flow.Size([2, 3])
+        oneflow.Size([2, 3])
         >>> (values, indices) = flow.topk(flow.Tensor(x), k=2, dim=1, largest=False)
         >>> values
         tensor([[1., 2.],
@@ -1475,98 +1066,12 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
         tensor([[0, 4],
                 [0, 4]], dtype=oneflow.int32)
         >>> values.shape
-        flow.Size([2, 2])
+        oneflow.Size([2, 2])
         >>> indices.shape
-        flow.Size([2, 2])
+        oneflow.Size([2, 2])
 
     """
     return Topk(k=k, dim=dim, largest=largest, sorted=sorted)(input)
-
-
-class ElementwiseMinimum(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.elementwise_min(x, y)
-
-
-class BroadcastMinimum(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.broadcast_min(x, y)
-
-
-@register_tensor_op("minimum")
-def minimum(x, y):
-    r"""Computes the element-wise minimum of x and y.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-
-        >>> x = flow.tensor((1, 2, -1), dtype=flow.float)
-        >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
-        >>> flow.minimum(x, y)
-        tensor([ 1.,  0., -1.], dtype=oneflow.float32)
-
-        >>> x = flow.tensor((1,), dtype=flow.float)
-        >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
-        >>> flow.minimum(x, y)
-        tensor([1., 0., 1.], dtype=oneflow.float32)
-    """
-    if x.shape == y.shape:
-        return ElementwiseMinimum()(x, y)
-    else:
-        return BroadcastMinimum()(x, y)
-
-
-class ElementwiseMaximum(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.elementwise_max(x, y)
-
-
-class BroadcastMaximum(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.broadcast_max(x, y)
-
-
-@register_tensor_op("maximum")
-def maximum(x, y):
-    r"""Computes the element-wise maximum of x and y.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-
-        >>> x = flow.tensor((1, 2, -1), dtype=flow.float)
-        >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
-        >>> flow.maximum(x, y)
-        tensor([3., 2., 4.], dtype=oneflow.float32)
-
-        >>> x = flow.tensor((1,), dtype=flow.float)
-        >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
-        >>> flow.maximum(x, y)
-        tensor([3., 1., 4.], dtype=oneflow.float32)
-    """
-    if x.shape == y.shape:
-        return ElementwiseMaximum()(x, y)
-    else:
-        return BroadcastMaximum()(x, y)
 
 
 if __name__ == "__main__":

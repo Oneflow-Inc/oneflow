@@ -134,8 +134,8 @@ Maybe<void> FillImageInSummary(const user_op::Tensor& tensor, const std::string&
   if (tensor.data_type() == DataType::kUInt8) {
     auto ith_image = [&tensor, hw, depth](int i) {
       auto images = tensor.dptr<uint8_t>();
-      uint8_t* image_i = (uint8_t*)malloc(sizeof(uint8_t) * hw * depth);
-      memcpy(image_i, images + i * hw * depth, hw * depth);
+      auto image_i = std::unique_ptr<uint8_t[]>{new uint8_t[hw * depth]};
+      memcpy(image_i.get(), images + i * hw * depth, hw * depth);
       return image_i;
     };
     for (int i = 0; i < batch_size; ++i) {
@@ -151,7 +151,7 @@ Maybe<void> FillImageInSummary(const user_op::Tensor& tensor, const std::string&
       si->set_width(w);
       si->set_colorspace(depth);
       auto image = ith_image(i);
-      if (!WriteImageToBuffer(image, w, h, depth, si->mutable_encoded_image_string()))
+      if (!WriteImageToBuffer(image.get(), w, h, depth, si->mutable_encoded_image_string()))
         UNIMPLEMENTED();
     }
   }

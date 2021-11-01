@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_XRT_BUILD_GRAPH_H_
 
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/xrt/api.h"
 #include "oneflow/xrt/graph/graph.h"
@@ -34,8 +33,7 @@ class GraphBuilder {
 
   explicit GraphBuilder(const OpGraph* op_graph);
 
-  explicit GraphBuilder(const XrtLaunchOpConf::Function& function, const DeviceType& device_type,
-                        const JobDesc& job_desc);
+  explicit GraphBuilder(const XrtLaunchOpConf::Function& function, const DeviceType& device_type);
 
   std::shared_ptr<XrtGraph> Build() {
     BuildGraphEdges();
@@ -75,7 +73,7 @@ class GraphBuilder {
 };
 
 std::shared_ptr<XrtGraph> BuildGraph(const XrtLaunchOpConf::Function& function,
-                                     const DeviceType& device_type, const JobDesc& job_desc);
+                                     const DeviceType& device_type);
 
 std::shared_ptr<XrtGraph> BuildGraph(const OpGraph* op_graph);
 

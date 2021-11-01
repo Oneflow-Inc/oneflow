@@ -33,7 +33,6 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(PushKV)        \
   OF_PP_MAKE_TUPLE_SEQ(ClearKV)       \
   OF_PP_MAKE_TUPLE_SEQ(PullKV)        \
-  OF_PP_MAKE_TUPLE_SEQ(PushActEvent)  \
   OF_PP_MAKE_TUPLE_SEQ(Clear)         \
   OF_PP_MAKE_TUPLE_SEQ(IncreaseCount) \
   OF_PP_MAKE_TUPLE_SEQ(EraseCount)
@@ -101,7 +100,6 @@ class CtrlClient {
     *v = oneflow_cast<T>(v_str);
   }
 
-  virtual void PushActEvent(const ActEvent&) = 0;
   virtual void Clear() = 0;
   virtual int32_t IncreaseCount(const std::string& k, int32_t v) = 0;
   int32_t IncreaseCount(const std::string& k) { return IncreaseCount(k, 1); }

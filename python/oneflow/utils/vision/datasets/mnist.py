@@ -29,7 +29,8 @@ from oneflow.framework.tensor import Tensor
 
 
 class MNIST(VisionDataset):
-    """`MNIST <http://yann.lecun.com/exdb/mnist/>`_ Dataset.
+    r""" `MNIST <http://yann.lecun.com/exdb/mnist/>`_ Dataset.
+
     Args:
         root (string): Root directory of dataset where ``MNIST/processed/training.pt``
             and  ``MNIST/processed/test.pt`` exist.
@@ -43,7 +44,6 @@ class MNIST(VisionDataset):
         target_transform (callable, optional): A function/transform that takes in the
             target and transforms it.
     """
-
     mirrors = [
         "http://yann.lecun.com/exdb/mnist/",
         "https://ossci-datasets.s3.amazonaws.com/mnist/",
@@ -222,7 +222,8 @@ class MNIST(VisionDataset):
 
 
 class FashionMNIST(MNIST):
-    """`Fashion-MNIST <https://github.com/zalandoresearch/fashion-mnist>`_ Dataset.
+    r""" `Fashion-MNIST <https://github.com/zalandoresearch/fashion-mnist>`_ Dataset.
+
     Args:
         root (string): Root directory of dataset where ``FashionMNIST/processed/training.pt``
             and  ``FashionMNIST/processed/test.pt`` exist.
@@ -236,7 +237,6 @@ class FashionMNIST(MNIST):
         target_transform (callable, optional): A function/transform that takes in the
             target and transforms it.
     """
-
     mirrors = ["http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/"]
 
     resources = [
@@ -290,7 +290,7 @@ def read_sn3_pascalvincent_tensor(path: str, strict: bool = True) -> Tensor:
     s = [get_int(data[4 * (i + 1) : 4 * (i + 2)]) for i in range(nd)]
     parsed = np.frombuffer(data, dtype=m[1], offset=(4 * (nd + 1)))
     assert parsed.shape[0] == np.prod(s) or not strict
-    return Tensor(parsed.astype(m[2]), dtype=m[0]).reshape(shape=s)
+    return flow.reshape(flow.tensor(parsed.astype(m[2]), dtype=m[0]), shape=s)
 
 
 def read_label_file(path: str) -> Tensor:

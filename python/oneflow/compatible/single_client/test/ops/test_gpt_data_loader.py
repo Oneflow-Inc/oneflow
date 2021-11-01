@@ -35,7 +35,7 @@ def _make_gpt_data_loader_func(
     split_index=None,
     machine_num=1,
     device_num=1,
-    parallel_distribution=None,
+    nd_sbp=None,
     start_from_saved_progress=False,
 ):
     assert machine_num > 0
@@ -70,18 +70,13 @@ def _make_gpt_data_loader_func(
                 random_seed=random_seed,
                 split_sizes=split_sizes,
                 split_index=split_index,
-                parallel_distribution=parallel_distribution,
+                nd_sbp=nd_sbp,
                 start_from_saved_progress=start_from_saved_progress,
                 name="GPTDataLoader",
             )
-            if (
-                isinstance(parallel_distribution, list)
-                and len(parallel_distribution) > 1
-            ):
-                tokens = flow.hierarchical_parallel_cast(
-                    tokens, parallel_distribution=["B", "B"]
-                )
-        tokens = flow.hierarchical_parallel_cast(tokens, parallel_distribution=["B"])
+            if isinstance(nd_sbp, list) and len(nd_sbp) > 1:
+                tokens = flow.hierarchical_parallel_cast(tokens, nd_sbp=["B", "B"])
+        tokens = flow.hierarchical_parallel_cast(tokens, nd_sbp=["B"])
         return tokens
 
     check_point = flow.train.CheckPoint()
@@ -138,6 +133,7 @@ class TestGPTDataLoader(flow.unittest.TestCase):
             dtype=flow.int64,
             shuffle=True,
             random_seed=self.RANDOM_SEED,
+            nd_sbp=["B"],
         )
         tokens_list = []
         for _ in range(5):
@@ -162,7 +158,7 @@ class TestGPTDataLoader(flow.unittest.TestCase):
             shuffle=True,
             random_seed=self.RANDOM_SEED,
             device_num=4,
-            parallel_distribution=["S(0)"],
+            nd_sbp=["S(0)"],
         )
         tokens_list = []
         for _ in range(5):
@@ -191,7 +187,7 @@ class TestGPTDataLoader(flow.unittest.TestCase):
             random_seed=self.RANDOM_SEED,
             machine_num=2,
             device_num=4,
-            parallel_distribution=["S(0)", "B"],
+            nd_sbp=["S(0)", "B"],
         )
         tokens_list = []
         for _ in range(5):

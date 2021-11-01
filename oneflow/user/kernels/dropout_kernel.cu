@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/kernel/random_generator.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -112,12 +113,13 @@ void MaskAndScaleAdd<half>(DeviceCtx* ctx, const int64_t n, float scale, const h
 }
 
 template<typename T>
-class DropoutKernelGPU final : public user_op::OpKernel {
+class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   DropoutKernelGPU() = default;
   ~DropoutKernelGPU() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
@@ -145,12 +147,13 @@ REGISTER_DROPOUT_KERNEL_GPU(float)
 REGISTER_DROPOUT_KERNEL_GPU(double)
 
 template<typename T>
-class DropoutGradKernelGPU final : public user_op::OpKernel {
+class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   DropoutGradKernelGPU() = default;
   ~DropoutGradKernelGPU() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);

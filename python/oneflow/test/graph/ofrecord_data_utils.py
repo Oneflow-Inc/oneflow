@@ -18,7 +18,7 @@ import oneflow as flow
 import os
 
 
-class OFRecordDataLoader(object):
+class OFRecordDataLoader(flow.nn.Module):
     def __init__(
         self,
         ofrecord_root: str = "./ofrecord",
@@ -26,9 +26,10 @@ class OFRecordDataLoader(object):
         dataset_size: int = 9469,
         batch_size: int = 1,
     ):
+        super().__init__()
         channel_last = False
         output_layout = "NHWC" if channel_last else "NCHW"
-        self.train_record_reader = flow.nn.OfrecordReader(
+        self.train_record_reader = flow.nn.OFRecordReader(
             ofrecord_root,
             batch_size=batch_size,
             data_part_num=1,
@@ -36,7 +37,7 @@ class OFRecordDataLoader(object):
             random_shuffle=True if mode == "train" else False,
             shuffle_after_epoch=True if mode == "train" else False,
         )
-        self.record_label_decoder = flow.nn.OfrecordRawDecoder(
+        self.record_label_decoder = flow.nn.OFRecordRawDecoder(
             "class/label", shape=(), dtype=flow.int32
         )
 
@@ -90,7 +91,7 @@ class OFRecordDataLoader(object):
     def __len__(self):
         return self.dataset_size // self.batch_size
 
-    def get_batch(self):
+    def forward(self):
         train_record = self.train_record_reader()
         label = self.record_label_decoder(train_record)
         image_raw_buffer = self.record_image_decoder(train_record)

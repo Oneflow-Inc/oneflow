@@ -28,7 +28,7 @@ inline Maybe<void> CacheInt8Calibration() {
 #ifdef WITH_TENSORRT
   xrt::tensorrt::CacheInt8Calibration();
 #else
-  OF_COMPLIE_OPTION_EEEOR() << "Compile option without TensorRT and the program will running with "
+  OF_COMPLIE_OPTION_ERROR() << "Compile option without TensorRT and the program will running with "
                                "oneflow, please recompile with TensorRT if you want to use "
                                "TensorRT.";
 #endif  // WITH_TENSORRT
@@ -40,7 +40,7 @@ inline Maybe<void> WriteInt8Calibration(const std::string& path) {
   xrt::tensorrt::CacheInt8Calibration();
   xrt::tensorrt::WriteInt8Calibration(path);
 #else
-  OF_COMPLIE_OPTION_EEEOR() << "Compile option without TensorRT and the program will running with "
+  OF_COMPLIE_OPTION_ERROR() << "Compile option without TensorRT and the program will running with "
                                "oneflow, please recompile with TensorRT if you want to use "
                                "TensorRT.";
 #endif  // WITH_TENSORRT

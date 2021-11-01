@@ -23,9 +23,11 @@ from test_util import GenArgList, type_name_to_flow_type
 import oneflow as flow
 import oneflow.unittest
 
+from oneflow.test_utils.automated_test_util import *
+
 
 def _test_argsort(test_case, data_shape, axis, descending, data_type, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(*data_shape),
         dtype=type_name_to_flow_type[data_type],
         device=flow.device(device),
@@ -37,7 +39,7 @@ def _test_argsort(test_case, data_shape, axis, descending, data_type, device):
 
 
 def _test_tensor_argsort(test_case, data_shape, axis, descending, data_type, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(*data_shape),
         dtype=type_name_to_flow_type[data_type],
         device=flow.device(device),
@@ -61,6 +63,15 @@ class TestArgsort(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(auto_backward=False)
+    def test_argsort_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = torch.argsort(
+            x, dim=random(low=-4, high=4).to(int), descending=random_bool()
+        )
+        return y
 
 
 if __name__ == "__main__":

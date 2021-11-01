@@ -16,30 +16,11 @@ limitations under the License.
 from typing import Union
 
 import oneflow as flow
-from oneflow.framework.tensor import Tensor, register_tensor_op
-from oneflow.nn.module import Module
-
-
-class Tile(Module):
-    def __init__(self, reps: tuple) -> None:
-        super().__init__()
-        self.reps = reps
-
-    def forward(self, input: Tensor) -> Tensor:
-        reps = self.reps
-        for s in self.reps:
-            assert s > 0
-        input_shape = input.shape
-        diff = len(input_shape) - len(reps)
-        if diff > 0:
-            shape = [1 for _ in range(diff)]
-            shape.extend([i for i in reps])
-            reps = tuple(shape)
-        return input.repeat(reps)
+from oneflow.framework.tensor import register_tensor_op
 
 
 @register_tensor_op("tile")
-def tile_op(x, reps):
+def tile_op(input, reps):
     """The interface is consistent with PyTorch.
     The documentation is referenced from:
     https://pytorch.org/docs/stable/generated/torch.tile.html
@@ -71,7 +52,7 @@ def tile_op(x, reps):
         >>> import numpy as np
         
         >>> x = np.array([1, 2]).astype(np.int32)
-        >>> input = flow.Tensor(x, dtype=flow.int32)
+        >>> input = flow.tensor(x, dtype=flow.int32)
         >>> out = input.tile(reps=(2,))
         >>> out
         tensor([1, 2, 1, 2], dtype=oneflow.int32)
@@ -80,10 +61,19 @@ def tile_op(x, reps):
         >>> input = flow.Tensor(x)
         >>> out = input.tile(reps=(3, 4))
         >>> out.size()
-        flow.Size([5, 6, 4])
+        oneflow.Size([5, 6, 4])
 
     """
-    return Tile(reps=reps)(x)
+
+    for s in reps:
+        assert s > 0
+    input_shape = input.shape
+    diff = len(input_shape) - len(reps)
+    if diff > 0:
+        shape = [1 for _ in range(diff)]
+        shape.extend([i for i in reps])
+        reps = tuple(shape)
+    return input.repeat(reps)
 
 
 if __name__ == "__main__":

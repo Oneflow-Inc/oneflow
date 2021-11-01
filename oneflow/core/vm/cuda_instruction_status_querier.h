@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_CUDA_VM_INSTRUCTION_STATUS_QUERIER_H_
 #define ONEFLOW_CORE_VM_CUDA_VM_INSTRUCTION_STATUS_QUERIER_H_
 
+#include <atomic>
 #include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
@@ -27,7 +28,7 @@ namespace vm {
 #ifdef WITH_CUDA
 class CudaInstrStatusQuerier {
  public:
-  ~CudaInstrStatusQuerier() = default;
+  ~CudaInstrStatusQuerier();
 
   bool done() const { return launched_ && event_completed(); }
   void SetLaunched(DeviceCtx* device_ctx);
@@ -46,7 +47,7 @@ class CudaInstrStatusQuerier {
   explicit CudaInstrStatusQuerier(int64_t device_id) : launched_(false), device_id_(device_id) {}
   bool event_completed() const;
 
-  volatile bool launched_;
+  std::atomic<bool> launched_;
   int64_t device_id_;
   cudaEvent_t event_;
 };

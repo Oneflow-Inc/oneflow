@@ -17,10 +17,43 @@ from oneflow.framework.env_util import api_all_device_placement as all_device_pl
 from oneflow.framework.env_util import api_ctrl_port as ctrl_port
 from oneflow.framework.env_util import api_data_port as data_port
 from oneflow.framework.env_util import api_env_init as init
-from oneflow.framework.env_util import api_get_current_resource as current_resource
 from oneflow.framework.env_util import api_grpc_use_no_signal as grpc_use_no_signal
 from oneflow.framework.env_util import api_init_bootstrap_confs as init_bootstrap_confs
 from oneflow.framework.env_util import api_log_dir as log_dir
 from oneflow.framework.env_util import api_logbuflevel as logbuflevel
 from oneflow.framework.env_util import api_logtostderr as logtostderr
 from oneflow.framework.env_util import api_machine as machine
+
+import oneflow._oneflow_internal
+
+
+def get_local_rank():
+    return oneflow._oneflow_internal.GetLocalRank()
+
+
+def get_rank():
+    """Returns the rank of current process group.
+
+    Returns:
+        The rank of the process group.
+
+    """
+    return oneflow._oneflow_internal.GetRank()
+
+
+def get_node_size():
+    return oneflow._oneflow_internal.GetNodeSize()
+
+
+def get_world_size():
+    """Returns the number of processes in the current process group.
+
+    Returns:
+        The world size of the process group.
+
+    """
+    return oneflow._oneflow_internal.GetWorldSize()
+
+
+def is_multi_client():
+    return oneflow._oneflow_internal.IsMultiClient()

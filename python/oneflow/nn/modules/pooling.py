@@ -18,7 +18,13 @@ from typing import Optional
 import oneflow as flow
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _getint, _pair, _single, _triple
+from oneflow.nn.modules.utils import (
+    _generate_output_size,
+    _getint,
+    _pair,
+    _single,
+    _triple,
+)
 
 
 class MaxPool1d(Module):
@@ -71,7 +77,7 @@ class MaxPool1d(Module):
         x = flow.Tensor(np.random.randn(1, 4, 4))
         y = of_maxpool1d(x)
         y.shape 
-        flow.Size([1, 4, 4])
+        oneflow.Size([1, 4, 4])
 
     """
 
@@ -95,15 +101,15 @@ class MaxPool1d(Module):
         self.ceil_mode = ceil_mode
 
     def forward(self, x):
-        y, indice = flow.F.maxpool_1d(
+        y, indice = flow._C.max_pool1d(
             x,
-            data_format=self.channel_pos,
-            padding=self.padding,
             kernel_size=self.kernel_size,
             stride=self.stride,
+            padding=self.padding,
             dilation=self.dilation,
             return_indices=True,
             ceil_mode=self.ceil_mode,
+            data_format=self.channel_pos,
         )
         if self.return_indices:
             return y, indice
@@ -176,7 +182,7 @@ class MaxPool2d(Module):
         x = flow.Tensor(np.random.randn(1, 4, 4, 4))
         y = of_maxpool2d(x)
         y.shape 
-        flow.Size([1, 4, 4, 4])
+        oneflow.Size([1, 4, 4, 4])
 
     """
 
@@ -202,15 +208,15 @@ class MaxPool2d(Module):
         self.padding = _pair(padding)
 
     def forward(self, x):
-        y, indice = flow.F.maxpool_2d(
+        y, indice = flow._C.max_pool2d(
             x,
-            data_format=self.channel_pos,
-            padding=self.padding,
             kernel_size=self.kernel_size,
             stride=self.stride,
+            padding=self.padding,
             dilation=self.dilation,
             return_indices=True,
             ceil_mode=self.ceil_mode,
+            data_format=self.channel_pos,
         )
         if self.return_indices:
             return y, indice
@@ -290,7 +296,7 @@ class MaxPool3d(Module):
         x = flow.Tensor(np.random.randn(1, 4, 4, 4, 4))
         y = of_maxpool3d(x)
         y.shape 
-        flow.Size([1, 4, 4, 4, 4])
+        oneflow.Size([1, 4, 4, 4, 4])
 
     """
 
@@ -316,15 +322,15 @@ class MaxPool3d(Module):
         self.ceil_mode = ceil_mode
 
     def forward(self, x):
-        y, indice = flow.F.maxpool_3d(
+        y, indice = flow._C.max_pool3d(
             x,
-            data_format=self.channel_pos,
-            padding=self.padding,
             kernel_size=self.kernel_size,
             stride=self.stride,
+            padding=self.padding,
             dilation=self.dilation,
             return_indices=True,
             ceil_mode=self.ceil_mode,
+            data_format=self.channel_pos,
         )
 
         if self.return_indices:
@@ -369,11 +375,11 @@ class AvgPool1d(Module):
         import oneflow as flow 
         import numpy as np
 
-        of_avgpool1d = flow.nn.AvgPool1d(kernel_size=3, padding=1, stride=1)
-        x = flow.Tensor(np.random.randn(1, 4, 4))
-        y = of_avgpool1d(x)
+        m = flow.nn.AvgPool1d(kernel_size=3, padding=1, stride=1)
+        x = flow.tensor(np.random.randn(1, 4, 4))
+        y = m(x)
         y.shape 
-        flow.Size([1, 4, 4])
+        oneflow.Size([1, 4, 4])
 
     """
 
@@ -384,7 +390,6 @@ class AvgPool1d(Module):
         padding: _size_2_t = 0,
         ceil_mode: bool = False,
         count_include_pad: bool = True,
-        divisor_override: int = 0,
     ):
         super().__init__()
         self.kernel_size = _single(kernel_size)
@@ -395,18 +400,17 @@ class AvgPool1d(Module):
         self.stride = _single(stride) if (stride is not None) else _single(kernel_size)
         self.ceil_mode = ceil_mode
         self.count_include_pad = count_include_pad
-        self.divisor_override = int(divisor_override)
         self.padding = _single(padding)
 
     def forward(self, x):
-        return flow.F.avgpool_1d(
+        return flow._C.avg_pool1d(
             x,
             kernel_size=self.kernel_size,
             stride=self.stride,
             padding=self.padding,
             ceil_mode=self.ceil_mode,
             count_include_pad=self.count_include_pad,
-            divisor_override=self.divisor_override,
+            divisor_override=0,
             data_format=self.channel_pos,
         )
 
@@ -442,11 +446,11 @@ class AvgPool2d(Module):
         import oneflow as flow 
         import numpy as np 
 
-        of_avgpool2d = flow.nn.AvgPool2d(kernel_size=3, padding=1, stride=1)
-        x = flow.Tensor(np.random.randn(1, 4, 4, 4))
-        y = of_avgpool2d(x)   
+        m = flow.nn.AvgPool2d(kernel_size=3, padding=1, stride=1)
+        x = flow.tensor(np.random.randn(1, 4, 4, 4))
+        y = m(x)   
         y.shape
-        flow.Size([1, 4, 4, 4])
+        oneflow.Size([1, 4, 4, 4])
 
     """
 
@@ -472,7 +476,7 @@ class AvgPool2d(Module):
         self.padding = _pair(padding)
 
     def forward(self, x):
-        return flow.F.avgpool_2d(
+        return flow._C.avg_pool2d(
             x,
             kernel_size=self.kernel_size,
             stride=self.stride,
@@ -536,10 +540,10 @@ class AvgPool3d(Module):
         import numpy as np
         
         m = flow.nn.AvgPool3d(kernel_size=(2,2,2),padding=(0,0,0),stride=(1,1,1))
-        x = flow.Tensor(np.random.randn(9, 7, 11, 32, 20))
+        x = flow.tensor(np.random.randn(9, 7, 11, 32, 20))
         y = m(x)
         y.shape
-        flow.Size([9, 7, 10, 31, 19])
+        oneflow.Size([9, 7, 10, 31, 19])
 
     """
 
@@ -565,7 +569,7 @@ class AvgPool3d(Module):
         self.padding = _triple(padding)
 
     def forward(self, x):
-        return flow.F.avgpool_3d(
+        return flow._C.avg_pool3d(
             x,
             kernel_size=self.kernel_size,
             stride=self.stride,
@@ -581,6 +585,188 @@ class AvgPool3d(Module):
             "kernel_size={kernel_size}, stride={stride}, padding={padding}"
             ", ceil_mode={ceil_mode}".format(**self.__dict__)
         )
+
+
+class AdaptiveAvgPool1d(Module):
+    """Applies a 1D adaptive average pooling over an input signal composed of several input planes.
+
+    The output size is H, for any input size.
+    The number of output features is equal to the number of input planes.
+
+    Args:
+        output_size: the target output size H
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+
+        >>> m = nn.AdaptiveAvgPool1d(5)
+        >>> input = flow.Tensor(np.random.randn(1, 64, 8))
+        >>> output = m(input)
+        >>> output.size()
+        oneflow.Size([1, 64, 5])
+
+    """
+
+    def __init__(self, output_size: _size_1_t) -> None:
+        super().__init__()
+        assert output_size is not None, "'output_size' cannot be NoneType"
+        self.output_size = _single(output_size)
+
+    def forward(self, x):
+        assert (
+            len(x.shape) == 3 and len(self.output_size) == 1
+        ), "the length of 'output_size' does not match the input size, 1 expected"
+        assert isinstance(
+            self.output_size[0], int
+        ), "numbers in 'output_size' should be integer"
+        return flow._C.adaptive_avg_pool1d(x, output_size=self.output_size)
+
+
+def adaptive_avg_pool1d(input, output_size):
+    """Applies a 1D adaptive average pooling over an input signal composed of several input planes.
+
+    See :mod:`oneflow.nn.AdaptiveAvgPool1d`
+
+    Args:
+        input: input tensor
+        output_size: the target output size (single integer)
+    """
+    return AdaptiveAvgPool1d(output_size)(input)
+
+
+class AdaptiveAvgPool2d(Module):
+    """Applies a 2D adaptive average pooling over an input signal composed of several input planes.
+
+    The output is of size H x W, for any input size.
+    The number of output features is equal to the number of input planes.
+
+    Args:
+        output_size: the target output size of the image of the form H x W.
+                     Can be a tuple (H, W) or a single H for a square image H x H.
+                     H and W can be either a ``int``, or ``None`` which means the size will
+                     be the same as that of the input.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+
+        >>> m = nn.AdaptiveAvgPool2d((5,7))
+        >>> input = flow.Tensor(np.random.randn(1, 64, 8, 9))
+        >>> output = m(input)
+        >>> output.size()
+        oneflow.Size([1, 64, 5, 7])
+
+        >>> m = nn.AdaptiveAvgPool2d(7)
+        >>> input = flow.Tensor(np.random.randn(1, 64, 10, 9))
+        >>> output = m(input)
+        >>> output.size()
+        oneflow.Size([1, 64, 7, 7])
+
+        >>> m = nn.AdaptiveAvgPool2d((None, 7))
+        >>> input = flow.Tensor(np.random.randn(1, 64, 10, 9))
+        >>> output = m(input)
+        >>> output.size()
+        oneflow.Size([1, 64, 10, 7])
+
+    """
+
+    def __init__(self, output_size) -> None:
+        super().__init__()
+        assert output_size is not None, "'output_size' cannot be NoneType"
+        self.output_size = _pair(output_size)
+
+    def forward(self, x):
+        assert (
+            len(x.shape) == 4
+        ), f"expected 4-dimensional tensor, but got {len(x.shape)}-dimensional tensor"
+        new_output_size = _generate_output_size(x.shape, self.output_size)
+        return flow._C.adaptive_avg_pool2d(x, output_size=new_output_size)
+
+
+def adaptive_avg_pool2d(input, output_size):
+    """Applies a 2D adaptive average pooling over an input signal composed of several input planes.
+
+    See :mod:`oneflow.nn.AdaptiveAvgPool2d`
+
+    Args:
+        input: input tensor
+        output_size: the target output size (single integer or double-integer tuple)
+    """
+    return AdaptiveAvgPool2d(output_size)(input)
+
+
+class AdaptiveAvgPool3d(Module):
+    """Applies a 3D adaptive average pooling over an input signal composed of several input planes.
+
+    The output is of size D x H x W, for any input size.
+    The number of output features is equal to the number of input planes.
+
+    Args:
+        output_size: the target output size of the form D x H x W.
+                     Can be a tuple (D, H, W) or a single number D for a cube D x D x D.
+                     D, H and W can be either a ``int``, or ``None`` which means the size will
+                     be the same as that of the input.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+
+        >>> m = nn.AdaptiveAvgPool3d((5,7,9))
+        >>> input = flow.Tensor(np.random.randn(1, 64, 8, 9, 10))
+        >>> output = m(input)
+        >>> output.size()
+        oneflow.Size([1, 64, 5, 7, 9])
+
+        >>> m = nn.AdaptiveAvgPool3d(7)
+        >>> input = flow.Tensor(np.random.randn(1, 64, 10, 9, 8))
+        >>> output = m(input)
+        >>> output.size()
+        oneflow.Size([1, 64, 7, 7, 7])
+
+        >>> m = nn.AdaptiveAvgPool3d((7, None, None))
+        >>> input = flow.Tensor(np.random.randn(1, 64, 10, 9, 8))
+        >>> output = m(input)
+        >>> output.size()
+        oneflow.Size([1, 64, 7, 9, 8])
+
+    """
+
+    def __init__(self, output_size) -> None:
+        super().__init__()
+        assert output_size is not None, "'output_size' cannot be NoneType"
+        self.output_size = _triple(output_size)
+
+    def forward(self, x):
+        assert (
+            len(x.shape) == 5
+        ), f"expected 5-dimensional tensor, but got {len(x.shape)}-dimensional tensor"
+        new_output_size = _generate_output_size(x.shape, self.output_size)
+        return flow._C.adaptive_avg_pool3d(x, output_size=new_output_size)
+
+
+def adaptive_avg_pool3d(input, output_size):
+    """Applies a 3D adaptive average pooling over an input signal composed of several input planes.
+
+    See :mod:`oneflow.nn.AdaptiveAvgPool3d`
+
+    Args:
+        input: input tensor
+        output_size: the target output size (single integer or triple-integer tuple)
+    """
+    return AdaptiveAvgPool3d(output_size)(input)
 
 
 if __name__ == "__main__":

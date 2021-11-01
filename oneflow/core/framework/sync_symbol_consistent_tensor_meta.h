@@ -18,8 +18,8 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
-#include "oneflow/core/framework/rpc_util.h"
-#include "oneflow/core/framework/rpc_token.h"
+#include "oneflow/core/framework/transport_util.h"
+#include "oneflow/core/framework/transport_token.h"
 
 namespace oneflow {
 

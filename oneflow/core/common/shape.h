@@ -41,6 +41,7 @@ class Shape final {
   Shape(const std::initializer_list<int64_t>& dim_vec);
   ~Shape() = default;
   Shape& operator=(const Shape& shape);
+  Shape& assign(const DimVector& dim_vec);
   Shape& CheckNumAxesIdenticalAndAssign(const ShapeView& shape_view);
   Shape& LeftOnesExtendedAssign(const ShapeView& shape_view);
 
@@ -57,8 +58,8 @@ class Shape final {
   // Getters and Setters
   bool is_initialized() const { return elem_cnt_.has_value(); }
   const DimVector& dim_vec() const { return dim_vec_; }
-  int64_t elem_cnt() const { return CHECK_JUST(elem_cnt_.value()); }
-  int64_t At(int64_t index) const { return dim_vec_.at(index); }
+  int64_t elem_cnt() const { return CHECK_JUST(elem_cnt_); }
+  int64_t At(int64_t index) const;
   void Set(int64_t index, int64_t val);
   int64_t NumAxes() const {
     CHECK(is_initialized());
@@ -102,8 +103,8 @@ namespace std {
 template<>
 struct hash<oneflow::Shape> {
   size_t operator()(const oneflow::Shape& shape) const {
-    size_t ret = 0;
-    FOR_RANGE(int, i, 0, shape.NumAxes()) { ret ^= std::hash<int64_t>()(shape.At(i)); }
+    size_t ret = shape.NumAxes();
+    FOR_RANGE(int, i, 0, shape.NumAxes()) { oneflow::AddHash(&ret, shape.At(i)); }
     return ret;
   }
 };

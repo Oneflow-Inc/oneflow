@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/persistence/snapshot.h"
 
 namespace oneflow {
 
@@ -33,19 +35,15 @@ struct InitializeWithConfUtil final {
 
 }  // namespace
 
-class ModelInitKernel final : public KernelIf<DeviceType::kCPU> {
+class ModelInitKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ModelInitKernel);
   ModelInitKernel() = default;
   ~ModelInitKernel() override = default;
 
  private:
-  void Forward(const KernelCtx& ctx,
-               std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    ForwardDataContent(ctx, BnInOp2Blob);
-  }
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+  void Forward(KernelContext* ctx) const override { ForwardDataContent(ctx); }
+  void ForwardDataContent(KernelContext* ctx) const override {
     const ModelInitOpConf& conf = this->op_conf().model_init_conf();
     const int64_t num_var = conf.out_size();
     HashMap<std::string, std::unique_ptr<SnapshotReader>> path2snapshot_reader;
@@ -65,7 +63,7 @@ class ModelInitKernel final : public KernelIf<DeviceType::kCPU> {
       reader->Read(key, blob);
     };
     FOR_RANGE(int64_t, i, 0, num_var) {
-      Blob* out_i = BnInOp2Blob(GenRepeatedBn("out", i));
+      Blob* out_i = ctx->BnInOp2Blob(GenRepeatedBn("out", i));
       const VariableOpConf& original_variable_conf = conf.original_variable_conf(i);
       std::mt19937 random_seed_gen(original_variable_conf.random_seed());
       const std::string& var_lbn =

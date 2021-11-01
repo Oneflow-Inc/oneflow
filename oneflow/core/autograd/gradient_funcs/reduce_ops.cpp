@@ -18,43 +18,44 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/functional/sequence_function.h"
 
 namespace oneflow {
 namespace one {
 
-struct ReduceSumOpInterpState : public OpExprInterpState {
+struct ReduceSumCaptureState : public AutoGradCaptureState {
   std::vector<int32_t> axis;
 };
 
-class ReduceSumOp : public OpExprGradFunction<ReduceSumOpInterpState> {
+class ReduceSum : public OpExprGradFunction<ReduceSumCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(ReduceSumOpInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(ReduceSumCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const ReduceSumOpInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const ReduceSumCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
   AttrMap base_attrs_;
 };
 
-Maybe<void> ReduceSumOp::Init(const OpExpr& op) {
+Maybe<void> ReduceSum::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReduceSumOp::Capture(ReduceSumOpInterpState* ctx, const TensorTuple& inputs,
-                                 const TensorTuple& outputs, const AttrMap& attrs) const {
+Maybe<void> ReduceSum::Capture(ReduceSumCaptureState* ctx, const TensorTuple& inputs,
+                               const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->axis = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("axis"));
   ctx->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReduceSumOp::Apply(const ReduceSumOpInterpState* ctx, const TensorTuple& out_grads,
-                               TensorTuple* in_grads) const {
+Maybe<void> ReduceSum::Apply(const ReduceSumCaptureState* ctx, const TensorTuple& out_grads,
+                             TensorTuple* in_grads) const {
   const auto& input = ctx->SavedTensors().at(0);
   const auto& dy = out_grads.at(0);
   in_grads->resize(1);
@@ -62,34 +63,87 @@ Maybe<void> ReduceSumOp::Apply(const ReduceSumOpInterpState* ctx, const TensorTu
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_sum", ReduceSumOp);
+REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_sum", ReduceSum);
 
-struct ReduceMaxOrMinOpInterpState : public OpExprInterpState {
+struct ReduceProdOpInterpState : public AutoGradCaptureState {
   std::vector<int32_t> axis;
-  bool keepdims;
+  bool requires_grad;
 };
 
-class ReduceMaxOrMinOp : public OpExprGradFunction<ReduceMaxOrMinOpInterpState> {
+class ReduceProdOp : public OpExprGradFunction<ReduceProdOpInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(ReduceMaxOrMinOpInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(ReduceProdOpInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const ReduceMaxOrMinOpInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const ReduceProdOpInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
   AttrMap base_attrs_;
 };
 
-Maybe<void> ReduceMaxOrMinOp::Init(const OpExpr& op) {
+Maybe<void> ReduceProdOp::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReduceMaxOrMinOp::Capture(ReduceMaxOrMinOpInterpState* ctx, const TensorTuple& inputs,
-                                      const TensorTuple& outputs, const AttrMap& attrs) const {
+Maybe<void> ReduceProdOp::Capture(ReduceProdOpInterpState* ctx, const TensorTuple& inputs,
+                                  const TensorTuple& outputs, const AttrMap& attrs) const {
+  ComposedAttrMap composed_attrs(attrs, base_attrs_);
+  ctx->axis = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("axis"));
+  ctx->requires_grad = inputs.at(0)->requires_grad();
+  ctx->SaveTensorForBackward(inputs.at(0));
+  ctx->SaveTensorForBackward(outputs.at(0));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ReduceProdOp::Apply(const ReduceProdOpInterpState* ctx, const TensorTuple& out_grads,
+                                TensorTuple* in_grads) const {
+  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+
+  const auto& input = ctx->SavedTensors().at(0);
+  const auto& output = ctx->SavedTensors().at(1);
+  const auto& dy = out_grads.at(0);
+
+  in_grads->resize(1);
+  in_grads->at(0) = JUST(
+      functional::SequenceFunction<Maybe<Tensor>()>([&]() { return functional::Mul(dy, output); })
+          .then(std::bind(functional::BroadcastLike, std::placeholders::_1, input, ctx->axis))
+          .then(std::bind(functional::Div, std::placeholders::_1, input))
+          .call());
+  return Maybe<void>::Ok();
+}
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_prod", ReduceProdOp);
+
+struct ReduceMaxOrMinCaptureState : public AutoGradCaptureState {
+  std::vector<int32_t> axis;
+  bool keepdims;
+};
+
+class ReduceMaxOrMin : public OpExprGradFunction<ReduceMaxOrMinCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override;
+  Maybe<void> Capture(ReduceMaxOrMinCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override;
+  Maybe<void> Apply(const ReduceMaxOrMinCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override;
+
+ private:
+  AttrMap base_attrs_;
+};
+
+Maybe<void> ReduceMaxOrMin::Init(const OpExpr& op) {
+  const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ReduceMaxOrMin::Capture(ReduceMaxOrMinCaptureState* ctx, const TensorTuple& inputs,
+                                    const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->axis = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("axis"));
   ctx->keepdims = JUST(composed_attrs.GetAttr<bool>("keepdims"));
@@ -98,26 +152,34 @@ Maybe<void> ReduceMaxOrMinOp::Capture(ReduceMaxOrMinOpInterpState* ctx, const Te
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReduceMaxOrMinOp::Apply(const ReduceMaxOrMinOpInterpState* ctx,
-                                    const TensorTuple& out_grads, TensorTuple* in_grads) const {
+Maybe<void> ReduceMaxOrMin::Apply(const ReduceMaxOrMinCaptureState* ctx,
+                                  const TensorTuple& out_grads, TensorTuple* in_grads) const {
   const auto& input = ctx->SavedTensors().at(0);
   const auto& output = ctx->SavedTensors().at(1);
   const auto& dy = out_grads.at(0);
 
-  const auto& bcast_like = JUST(functional::BroadcastLike(output, input, ctx->axis));
-  const auto& bcast_eq = JUST(functional::BroadcastEqual(input, bcast_like));
-  const auto& cast_like = JUST(functional::CastLike(bcast_eq, input));
-  const auto& reduce_sum_ = JUST(functional::ReduceSum(cast_like, ctx->axis, ctx->keepdims));
-  const auto& bcast_div_ = JUST(functional::BroadcastDiv(dy, reduce_sum_));
-  const auto& bcast_like_div = JUST(functional::BroadcastLike(bcast_div_, input, ctx->axis));
+  const auto cast_like =
+      JUST(functional::SequenceFunction<Maybe<Tensor>()>(
+               [&]() { return functional::BroadcastLike(output, input, ctx->axis); })
+               .then(std::bind(functional::BroadcastEqual, input, std::placeholders::_1))
+               .then(std::bind(functional::CastLike, std::placeholders::_1, input))
+               .call());
+
+  const auto& bcast_like_div =
+      JUST(functional::SequenceFunction<Maybe<Tensor>()>(
+               [&]() { return functional::ReduceSum(cast_like, ctx->axis, ctx->keepdims); })
+               .then(std::bind(functional::Div, dy, std::placeholders::_1))
+               .then(std::bind(functional::BroadcastLike, std::placeholders::_1, input, ctx->axis))
+               .call());
 
   in_grads->resize(1);
-  in_grads->at(0) = JUST(functional::Multiply(bcast_like_div, cast_like));
+  in_grads->at(0) = JUST(functional::Mul(bcast_like_div, cast_like));
+
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_min", ReduceMaxOrMinOp);
-REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_max", ReduceMaxOrMinOp);
+REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_min", ReduceMaxOrMin);
+REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_max", ReduceMaxOrMin);
 
 }  // namespace one
 }  // namespace oneflow

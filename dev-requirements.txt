@@ -1,11 +1,12 @@
 black==19.10b0 ; python_version >= "3.6"
-numpy
+numpy>=1.17.0
 protobuf
 wheel
 tqdm
 requests
 jinja2
-opencv-python; python_version >= "3.9" and sys_platform != 'darwin'
-opencv-python==4.2.0.34; python_version < '3.9' and sys_platform != 'darwin'
+opencv-python; python_version >= "3.9" and sys_platform != 'darwin' and platform_machine != 'aarch64'
+opencv-python==4.2.0.34; python_version < '3.9' and sys_platform != 'darwin' and platform_machine != 'aarch64'
 PyYAML>=5.1
 pillow
+dataclasses; python_version<"3.7"

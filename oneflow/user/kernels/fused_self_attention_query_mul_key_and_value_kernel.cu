@@ -129,7 +129,7 @@ void BatchedGemm(DeviceCtx* ctx, char opa, char opb, int64_t m, int64_t n, int64
                  const T* a, int64_t lda, int64_t stridea, const T* b, int64_t ldb, int64_t strideb,
                  float beta, T* c, int64_t ldc, int64_t stridec, int64_t batch_size) {
   // swap m and n, a and b to convert from row-major to col-major
-  CublasBatchGemm<T>(ctx->cublas_pmh_handle(), opb, opa, n, m, k, static_cast<T>(alpha), b, ldb,
+  CublasBatchGemm<T>(ctx->cublas_handle(), opb, opa, n, m, k, static_cast<T>(alpha), b, ldb,
                      strideb, a, lda, stridea, static_cast<T>(beta), c, ldc, stridec, batch_size);
 }
 
@@ -177,6 +177,7 @@ class FusedSelfAttentionQueryMulKeyAndValueGpuKernel final : public user_op::OpK
   ~FusedSelfAttentionQueryMulKeyAndValueGpuKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* h_tensor = ctx->Tensor4ArgNameAndIndex("hidden_states", 0);
     int64_t seq_len = h_tensor->shape().At(0);
@@ -219,6 +220,7 @@ class FusedSelfAttentionQueryMulKeyAndValueGradGpuKernel final : public user_op:
   ~FusedSelfAttentionQueryMulKeyAndValueGradGpuKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* v_grad_tensor = ctx->Tensor4ArgNameAndIndex("value_grad", 0);
     const user_op::Tensor* qmk_grad_tensor = ctx->Tensor4ArgNameAndIndex("query_mul_key_grad", 0);

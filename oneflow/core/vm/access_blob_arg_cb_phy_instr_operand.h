@@ -17,11 +17,12 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_ACCESS_BLOB_ARG_CB_PHY_INSTR_OPERAND_H_
 
 #include <functional>
+#include <memory>
 #include "oneflow/core/vm/phy_instr_operand.h"
 
 namespace oneflow {
 
-class VmLocalDepObject;
+class LocalDepObject;
 
 namespace one {
 
@@ -36,7 +37,7 @@ class EagerBlobObject;
 class AccessBlobArgCbPhyInstrOperand : public PhyInstrOperand {
  public:
   AccessBlobArgCbPhyInstrOperand(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-                                 const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object,
+                                 LocalDepObject* compute_local_dep_object,
                                  const std::function<void(uint64_t)>& callback,
                                  const std::string& modifier)
       : eager_blob_object_(eager_blob_object),
@@ -62,7 +63,7 @@ class AccessBlobArgCbPhyInstrOperand : public PhyInstrOperand {
  private:
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
   std::function<void(uint64_t)> callback_;
-  std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
+  LocalDepObject* compute_local_dep_object_;
   const std::string modifier_;
 };
 

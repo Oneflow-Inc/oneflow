@@ -116,6 +116,7 @@ class UpsampleNearestGPUKernel final : public user_op::OpKernel {
   ~UpsampleNearestGPUKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -142,6 +143,7 @@ class UpsampleNearestGradGPUKernel final : public user_op::OpKernel {
   ~UpsampleNearestGradGPUKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
     if (dx_blob == nullptr) { return; }
@@ -187,6 +189,7 @@ class UpsampleBilinearGPUKernel final : public user_op::OpKernel {
   ~UpsampleBilinearGPUKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -219,6 +222,7 @@ class UpsampleBilinearGradGPUKernel final : public user_op::OpKernel {
   ~UpsampleBilinearGradGPUKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
     if (dx_blob == nullptr) { return; }

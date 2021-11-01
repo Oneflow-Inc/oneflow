@@ -22,26 +22,13 @@ from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 
 
-class Argwhere(Module):
-    def __init__(self, dtype) -> None:
-        super().__init__()
-        if dtype == None:
-            dtype = flow.int32
-        self.dtype = dtype
-
-    def forward(self, x):
-        (res, size) = flow.F.argwhere(x, dtype=self.dtype)
-        slice_tup_list = [[0, int(size.numpy()), 1]]
-        return flow.slice(res, slice_tup_list=slice_tup_list)
-
-
-def argwhere_op(x, dtype: Optional[flow.dtype] = None):
-    """This operator finds the indices of input Tensor `x` elements that are non-zero. 
+def argwhere_op(input, dtype: Optional[flow.dtype] = flow.int32):
+    """This operator finds the indices of input Tensor `input` elements that are non-zero. 
 
     It returns a list in which each element is a coordinate that points to a non-zero element in the condition.
 
     Args:
-        x (oneflow.Tensor): The input Tensor.
+        input (oneflow.Tensor): The input Tensor.
         dtype (Optional[flow.dtype], optional): The data type of output. Defaults to None.
 
     Returns:
@@ -64,11 +51,23 @@ def argwhere_op(x, dtype: Optional[flow.dtype] = None):
                 [1, 2]], dtype=oneflow.int32)
 
     """
-    return Argwhere(dtype=dtype)(x)
+
+    if input.is_consistent:
+        raise ValueError(
+            "A consistent tensor can not be applied to argwhere, and use `tensor.to_local()` to convert it to local tensor first."
+        )
+
+    (res, size) = flow._C.argwhere(input, dtype=dtype)
+    if input.is_lazy:
+        raise NotImplementedError
+        # return flow._C.sync_dynamic_resize(res, size, dim=0)
+    else:
+        slice_tup_list = [(0, size.numpy().item(), 1)]
+        return flow.slice(res, slice_tup_list=slice_tup_list)
 
 
 @register_tensor_op("argwhere")
-def argwhere_tebsor_op(x, dtype: Optional[flow.dtype] = None):
+def argwhere_tensor_op(input, dtype: Optional[flow.dtype] = flow.int32):
     """
 
     argwhere() -> Tensor
@@ -76,7 +75,7 @@ def argwhere_tebsor_op(x, dtype: Optional[flow.dtype] = None):
     See :func:`oneflow.argwhere`
 
     """
-    return Argwhere(dtype=dtype)(x)
+    return argwhere_op(input, dtype)
 
 
 if __name__ == "__main__":

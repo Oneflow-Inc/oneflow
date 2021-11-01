@@ -17,7 +17,8 @@ limitations under the License.
 import unittest
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 import oneflow as flow
 import oneflow.unittest
@@ -25,45 +26,35 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestMaskedFill(flow.unittest.TestCase):
-    @unittest.skip("has bug now, need rewrite")
-    def test_masked_fill_aginst_pytorch(test_case):
-        import numpy as np
-        import torch
+    @autotest()
+    def test_flow_masked_fill_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        mask = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        value = random().to(float)
+        return input.masked_fill(mask > 0, value)
 
-        def mask_tensor(shape):
-            def generator(_):
-                rng = np.random.default_rng()
-                np_arr = rng.integers(low=0, high=2, size=shape)
-                return (
-                    flow.Tensor(np_arr, dtype=flow.int8),
-                    torch.tensor(np_arr, dtype=torch.bool),
-                )
+    @autotest()
+    def test_flow_masked_fill_broadcast_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2, dim0=1, dim1=k2).to(device)
+        mask = random_pytorch_tensor(ndim=2, dim0=k1, dim1=1).to(device)
+        value = random().to(float)
+        return input.masked_fill(mask > 0, value)
 
-            return generator
-
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(
-                test_case,
-                "masked_fill",
-                extra_annotations={"mask": flow.Tensor, "value": float},
-                extra_generators={
-                    "input": random_tensor(ndim=2, dim0=4, dim1=5),
-                    "mask": mask_tensor((4, 5)),
-                    "value": constant(3.14),
-                },
-                device=device,
-            )
-            test_tensor_against_pytorch(
-                test_case,
-                "masked_fill",
-                extra_annotations={"mask": flow.Tensor, "value": float},
-                extra_generators={
-                    "input": random_tensor(ndim=2, dim0=4, dim1=5),
-                    "mask": mask_tensor((4, 5)),
-                    "value": constant(3.14),
-                },
-                device=device,
-            )
+    @autotest()
+    def test_flow_masked_fill_int_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        mask = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        value = random().to(int)
+        return input.masked_fill(mask > 0, value)
 
 
 if __name__ == "__main__":

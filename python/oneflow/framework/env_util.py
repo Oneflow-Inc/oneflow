@@ -24,18 +24,29 @@ import oneflow.core.job.env_pb2 as env_pb
 import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.hob as hob
-import oneflow.framework.placement_context as placement_ctx
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
 import oneflow.support.enable_if as enable_if
 from oneflow import oneflow_deprecate
 
 
-def api_all_device_placement(device_type: str) -> None:
-    """Return a placement containing all devices of all machines under env.
+def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.placement:
+    r"""
+    Return a placement containing all devices of all machines under env.
 
     Args:
         device_type (str): cuda or cpu
+
+    For examples:
+
+    .. code-block:: python
+
+        # world_size = 4, node_size = 1
+        import oneflow as flow
+        
+        p = flow.env.all_device_placement("cuda") # oneflow.placement(device_type="cuda", machine_device_ids={0 : [0, 1, 2, 3]}, hierarchy=(4,))
+        p = flow.env.all_device_placement("cpu") # oneflow.placement(device_type="cpu", machine_device_ids={0 : [0, 1, 2, 3]}, hierarchy=(4,))
+
     """
     return oneflow._oneflow_internal.AllDevicePlacement(device_type)
 
@@ -76,35 +87,6 @@ def env_init():
         else:
             exit(0)
     return True
-
-
-def api_get_current_resource() -> resource_util.Resource:
-    """Get current resources, such as:machine nums, cpu/gpu device nums,
-            epoch network threed num, rdma params...
-
-    Returns:
-        resource_util.Resource: [description]
-    """
-    return enable_if.unique([get_current_resource])()
-
-
-@enable_if.condition(hob.in_normal_mode & hob.env_initialized)
-def get_current_resource():
-    return c_api_util.CurrentResource()
-
-
-def api_get_current_machine_id():
-    """Get machine id of current machine/node
-
-    Returns:
-        [type]: [description]
-    """
-    return enable_if.unique([get_current_machine_id])()
-
-
-@enable_if.condition(hob.in_normal_mode & hob.env_initialized)
-def get_current_machine_id() -> int:
-    return oneflow._oneflow_internal.CurrentMachineId()
 
 
 def api_machine(*val: list) -> None:
@@ -225,7 +207,7 @@ def logbuflevel(val):
 
 @enable_if.condition(hob.in_normal_mode & hob.env_initialized)
 def do_nothing(*args, **kwargs):
-    print("Nothing happened because environment has been initialized")
+    print("Environment has been initialized, this env init will do nothing.")
     return False
 
 
@@ -353,15 +335,6 @@ def _FindFreePort():
         return s.getsockname()[1]
 
 
-def GetEnvDefaultParallelConf(device_tag):
-    if device_tag not in device_tag2default_parallel_conf:
-        parallel_conf = placement_ctx.MakeParallelConf4Resource(
-            device_tag, c_api_util.EnvResource()
-        )
-        device_tag2default_parallel_conf[device_tag] = parallel_conf
-    return device_tag2default_parallel_conf[device_tag]
-
-
 def HasAllMultiClientEnvVars():
     env_var_names = ["MASTER_ADDR", "MASTER_PORT", "WORLD_SIZE", "RANK", "LOCAL_RANK"]
     has_all_env_vars = all([os.getenv(x) for x in env_var_names])
@@ -398,7 +371,7 @@ def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
     if os.getenv("GLOG_log_dir"):
         cpp_logging_conf.log_dir = os.getenv("GLOG_log_dir")
     if os.getenv("GLOG_logtostderr"):
-        cpp_logging_conf.logtostderr = os.getenv("GLOG_logtostderr")
+        cpp_logging_conf.logtostderr = int(os.getenv("GLOG_logtostderr"))
     if os.getenv("GLOG_logbuflevel"):
         cpp_logging_conf.logbuflevel = os.getenv("GLOG_logbuflevel")
     env_proto.cpp_logging_conf.CopyFrom(cpp_logging_conf)

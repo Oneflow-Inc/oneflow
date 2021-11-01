@@ -24,6 +24,12 @@ template<DeviceType device_type, typename T, typename CondT>
 struct WhereKernelUtil {
   static void Where(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond, const T* lhs,
                     const T* rhs, T* out);
+  static void WhereXScalar(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond,
+                           const T x_scalar, const T* rhs, T* out);
+  static void WhereYScalar(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond, const T* lhs,
+                           const T y_scalar, T* out);
+  static void WhereXYScalar(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond,
+                            const T x_scalar, const T y_scalar, T* out);
 };
 
 #define INSTANTIATE_WHERE_FUNCTOR(device_type_v, dtype_pair, ctype_pair)       \

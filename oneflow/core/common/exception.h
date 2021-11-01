@@ -68,10 +68,13 @@ class Exception : public std::exception {
   OF_PP_MAKE_TUPLE_SEQ(SymbolIdUninitialized)     \
   OF_PP_MAKE_TUPLE_SEQ(Unknown)                   \
   OF_PP_MAKE_TUPLE_SEQ(CompileOptionWrong)        \
-  OF_PP_MAKE_TUPLE_SEQ(Value)                     \
+  OF_PP_MAKE_TUPLE_SEQ(InvalidValue)              \
+  OF_PP_MAKE_TUPLE_SEQ(ValueNotFound)             \
   OF_PP_MAKE_TUPLE_SEQ(Index)                     \
+  OF_PP_MAKE_TUPLE_SEQ(Type)                      \
   OF_PP_MAKE_TUPLE_SEQ(Timeout)                   \
-  OF_PP_MAKE_TUPLE_SEQ(InputDeviceNotMatch)
+  OF_PP_MAKE_TUPLE_SEQ(InputDeviceNotMatch)       \
+  OF_PP_MAKE_TUPLE_SEQ(Runtime)
 
 #define DEFINE_EXCEPTION_CLASS(cls)                                         \
   class OF_PP_CAT(cls, Exception) : public Exception {                      \

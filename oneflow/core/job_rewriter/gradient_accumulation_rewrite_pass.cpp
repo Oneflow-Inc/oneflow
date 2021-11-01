@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 
@@ -33,6 +34,7 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
       || job_conf.num_gradient_accumulation_steps() <= 1) {
     return Maybe<void>::Ok();
   }
+  const bool is_multi_client = CHECK_JUST(GlobalMultiClientEnv());
   const OpGraph op_graph(*job);
   JobBuilder job_builder(job);
   HashMap<std::string, OperatorConf> name2op_conf;
@@ -48,8 +50,38 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
   const int64_t repeat_num = GlobalJobDesc().job_conf().num_gradient_accumulation_steps();
   JUST(op_graph.TopoForEachNodeWithErrorCaptured([&](const OpNode* node) -> Maybe<void> {
     const OperatorConf& op_conf = node->op().op_conf();
-    if (node->in_edges().empty()) {       // sources
-      if (op_conf.has_variable_conf()) {  // repeat variable
+    if (node->in_edges().empty()) {    // sources
+      if (op_conf.has_input_conf()) {  // input
+        // NOTE(chengcheng):
+        //   We assume that the input data is one mini-batch which containing multi micro-batches.
+        //   So we need unpack input data for each micro-batch.
+        const LogicalBlobId input_lbi = node->op().BnInOp2Lbi("out");
+        const std::string input_lbn = GenLogicalBlobName(input_lbi);
+
+        user_op::UserOpConfWrapperBuilder unpack_builder("System-GradientAccumulation-InputUnpack-"
+                                                         + op_conf.name() + "-" + NewUniqueId());
+        const auto unpack_op = unpack_builder.OpTypeName("unpack")
+                                   .Input("in", input_lbn)
+                                   .Output("out")
+                                   .Attr<int32_t>("unpack_num", repeat_num)
+                                   .ScopeSymbolId(op_conf.scope_symbol_id())
+                                   .Build();
+        job_builder.AddOps(node->parallel_desc().parallel_conf(), {unpack_op.op_conf()});
+        const std::string unpack_lbn = unpack_op.output("out", 0);
+        node->ForEachNodeOnOutEdge([&](const OpNode* dst) {
+          const auto& dst_op = dst->op();
+          OperatorConf* new_dst_op_conf = GetOperatorConf4Modify(dst_op.op_conf());
+          for (const auto& ibn : dst_op.input_bns()) {
+            if (dst_op.BnInOp2Lbi(ibn) == input_lbi) {
+              const auto& old_val =
+                  ReplaceInputLbnInOpCustomizedConf(new_dst_op_conf, ibn, unpack_lbn);
+              CHECK_EQ(input_lbn, old_val);
+            }
+          }
+        });
+
+        return Maybe<void>::Ok();
+      } else if (op_conf.has_variable_conf()) {  // repeat variable
         const LogicalBlobId variable_lbi = node->op().BnInOp2Lbi("out");
         const std::string variable_lbn = GenLogicalBlobName(variable_lbi);
         HashMap<ParallelConf, std::string> parallel_conf2repeat_lbn;
@@ -103,9 +135,14 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
             .add_s(repeat_op.output("out", 0));
         return Maybe<void>::Ok();
       } else {
-        return Error::Unimplemented();
+        LOG(ERROR) << "Gradient accumulation unsupported op : " << op_conf.DebugString();
+        return Error::UnimplementedError();
       }
-    } else if (op_conf.has_return_conf()) {  // pack return
+    } else if ((is_multi_client && op_conf.has_output_conf())
+               || (!is_multi_client && op_conf.has_return_conf())) {
+      // NOTE(chengcheng):
+      //   in Single-Client GlobalFunction return op is output
+      //   in Multi-Client nn.Graph output op is output.
       const LogicalBlobId return_in_lbi = node->op().BnInOp2Lbi("in");
       const std::string return_in_lbn = GenLogicalBlobName(return_in_lbi);
       user_op::UserOpConfWrapperBuilder pack_builder("System-GradientAccumulation-ReturnPack-"
@@ -121,6 +158,27 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
       const auto& old_val = ReplaceInputLbnInOpCustomizedConf(new_return_op_conf, "in",
                                                               return_pack_op.output("out", 0));
       CHECK_EQ(return_in_lbn, old_val);
+      return Maybe<void>::Ok();
+    } else if (is_multi_client && op_conf.has_user_conf()
+               && op_conf.user_conf().op_type_name() == "reshape") {
+      const LogicalBlobId in_lbi = node->op().BnInOp2Lbi(node->op().SoleIbn());
+      const LogicalBlobId out_lbi = node->op().BnInOp2Lbi(node->op().SoleObn());
+      const Shape& in_shape = node->LogicalBlobDesc4Lbi(in_lbi).shape();
+      const Shape& out_shape = node->LogicalBlobDesc4Lbi(out_lbi).shape();
+      if (in_shape.NumAxes() > 0 && out_shape.NumAxes() > 0 && in_shape.At(0) == out_shape.At(0)) {
+        // NOTE(chengcheng):
+        //  in nn.Graph GradientAccumulation, the reshape conf in JobBuild and after insert
+        //  acc/unpack maybe NOT equal because of dim 0 scaled, so need set dim 0 as -1 for
+        //  dynamic infer.
+        OperatorConf* new_reshape_op_conf = GetOperatorConf4Modify(op_conf);
+        AttrValue* attr_val = &(*new_reshape_op_conf->mutable_user_conf()->mutable_attr())["shape"];
+        CHECK(attr_val->has_at_shape());
+        ShapeProto* shape_conf = attr_val->mutable_at_shape();
+        CHECK_GT(shape_conf->dim_size(), 0);
+        shape_conf->set_dim(0, -1);
+        LOG(INFO) << " Replace ReshapeOpConf from: " << op_conf.DebugString() << " to "
+                  << new_reshape_op_conf->DebugString() << " for dynamic infer by insert unpack.";
+      }
       return Maybe<void>::Ok();
     } else {
       return Maybe<void>::Ok();

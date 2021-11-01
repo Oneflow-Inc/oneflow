@@ -55,20 +55,6 @@ class PythonCallback(oneflow._oneflow_internal.ForeignCallback):
             print(traceback.format_exc())
             raise e
 
-    def EagerInterpretCompletedOp(self, op_attribute, parallel_conf):
-        try:
-            interpreter_callback.InterpretCompletedOp(str(op_attribute), parallel_conf)
-        except Exception as e:
-            print(traceback.format_exc())
-            raise e
-
-    def EagerMirroredCast(self, op_attribute, parallel_conf):
-        try:
-            interpreter_callback.MirroredCast(str(op_attribute), parallel_conf)
-        except Exception as e:
-            print(traceback.format_exc())
-            raise e
-
     def MakeScopeSymbol(self, job_conf, parallel_conf, is_mirrored):
         try:
             return interpreter_callback.MakeScopeSymbol(

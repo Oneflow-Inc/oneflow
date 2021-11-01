@@ -22,17 +22,17 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct DimGatherInterpState : public OpExprInterpState {
+struct DimGatherCaptureState : public AutoGradCaptureState {
   int32_t dim;
   bool requires_grad;
 };
 
-class DimGather : public OpExprGradFunction<DimGatherInterpState> {
+class DimGather : public OpExprGradFunction<DimGatherCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(DimGatherInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(DimGatherCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const DimGatherInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const DimGatherCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -49,7 +49,7 @@ Maybe<void> DimGather::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DimGather::Capture(DimGatherInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> DimGather::Capture(DimGatherCaptureState* ctx, const TensorTuple& inputs,
                                const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -62,7 +62,7 @@ Maybe<void> DimGather::Capture(DimGatherInterpState* ctx, const TensorTuple& inp
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DimGather::Apply(const DimGatherInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> DimGather::Apply(const DimGatherCaptureState* ctx, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);

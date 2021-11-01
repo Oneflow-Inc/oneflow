@@ -21,32 +21,11 @@ class MeshGrid(Module):
     def __init__(self) -> None:
         super().__init__()
 
-    def forward(self, inputs):
-        size = len(inputs)
-        assert size > 0, f"meshgrid expects a non-empty TensorList"
-        shape = list()
-        for i in range(size):
-            assert inputs[i].dim() <= 1, f(
-                "Expected scalar or 1D tensor in the tensor list but got: ", inputs[i]
-            )
-            if inputs[i].dim() == 0:
-                shape.append(1)
-            else:
-                shape.append(inputs[i].shape[0])
-        for i in range(size - 1):
-            assert (
-                inputs[i].dtype == inputs[i + 1].dtype
-                and inputs[i].device == inputs[i + 1].device
-            ), f"meshgrid expects all tensors to have the same dtype and device"
-        outputs = []
-        for i in range(size):
-            view_shape = [1] * size
-            view_shape[i] = -1
-            outputs.append(inputs[i].reshape(view_shape).expand(*shape))
-        return outputs
+    def forward(self, tensors):
+        return flow._C.meshgrid(tensors)
 
 
-def meshgrid_op(*inputs):
+def meshgrid_op(*tensors):
     """The interface is consistent with PyTorch.
     The documentation is referenced from:
     https://pytorch.org/docs/stable/_modules/torch/functional.html#meshgrid
@@ -71,8 +50,8 @@ def meshgrid_op(*inputs):
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> input1 = flow.Tensor(np.array([1, 2, 3]), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.array([4, 5, 6]), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.array([1, 2, 3]), dtype=flow.float32)
+        >>> input2 = flow.tensor(np.array([4, 5, 6]), dtype=flow.float32)
         >>> of_x, of_y = flow.meshgrid(input1, input2)
         >>> of_x
         tensor([[1., 1., 1.],
@@ -83,7 +62,7 @@ def meshgrid_op(*inputs):
                 [4., 5., 6.],
                 [4., 5., 6.]], dtype=oneflow.float32)
     """
-    return MeshGrid()(inputs)
+    return MeshGrid()(tensors)
 
 
 if __name__ == "__main__":

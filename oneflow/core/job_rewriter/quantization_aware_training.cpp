@@ -216,13 +216,13 @@ Maybe<bool> InsertQuantOpAfterInt8Ops4QatConfig(const QatConfig& qat_config) {
 user_op::UserOpConfWrapper MultiplyOp(const std::string& name, const std::string& x,
                                       const std::string& y, const int64_t scope_symbol_id,
                                       OpConfMap* inserted_ops) {
-  const auto op_wrapper = user_op::UserOpConfWrapperBuilder(name)
-                              .Op("broadcast_mul")
-                              .Input("x", x)
-                              .Input("y", y)
-                              .Output("z")
-                              .ScopeSymbolId(scope_symbol_id)
-                              .Build();
+  auto op_wrapper = user_op::UserOpConfWrapperBuilder(name)
+                        .Op("broadcast_mul")
+                        .Input("x", x)
+                        .Input("y", y)
+                        .Output("z")
+                        .ScopeSymbolId(scope_symbol_id)
+                        .Build();
   (*inserted_ops)[name] = op_wrapper.op_conf();
   return op_wrapper;
 }

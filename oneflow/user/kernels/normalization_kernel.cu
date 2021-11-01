@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -172,12 +173,14 @@ size_t InferGradTmpSize(user_op::InferContext* ctx) {
 }
 
 template<typename T>
-class NormalizationInferenceKernel final : public user_op::OpKernel {
+class NormalizationInferenceKernel final : public user_op::OpKernel,
+                                           public user_op::CudaGraphSupport {
  public:
   NormalizationInferenceKernel() = default;
   ~NormalizationInferenceKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const bool training = ctx->Attr<bool>("training");
     CHECK(!training);
@@ -349,40 +352,48 @@ void ReluBackward<float16>(DeviceCtx* device_ctx, int64_t n, const int32_t* mask
 }
 
 template<typename T>
-class NormalizationTrainKernel final : public user_op::OpKernel {
+class NormalizationTrainKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   NormalizationTrainKernel() = default;
   ~NormalizationTrainKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     if (ctx->op_type_name() == "normalization") { CHECK(ctx->Attr<bool>("training")); }
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const auto* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
-    const auto* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
-    auto* moving_mean = ctx->Tensor4ArgNameAndIndex("moving_mean", 0);
-    auto* moving_variance = ctx->Tensor4ArgNameAndIndex("moving_variance", 0);
+
     const auto axis = ctx->Attr<int32_t>("axis");
     const auto epsilon = ctx->Attr<float>("epsilon");
     const auto momentum = ctx->Attr<float>("momentum");
-    auto* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
-    auto* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
 
     const DataType data_type = x->data_type();
     CHECK_EQ(x->shape(), y->shape());
     CHECK_EQ(y->data_type(), data_type);
     CHECK_GE(axis, 0);
     CHECK_LT(axis, x->shape().NumAxes());
-
     const CudnnTensorDescHelper desc_helper(x->shape(), data_type, axis,
                                             CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
+
+    const auto* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
+    const auto* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
+    auto* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
+    auto* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
     desc_helper.CheckParamTensor(gamma);
     desc_helper.CheckParamTensor(beta);
-    desc_helper.CheckParamTensor(moving_mean);
-    desc_helper.CheckParamTensor(moving_variance);
     desc_helper.CheckParamTensor(mean);
     desc_helper.CheckParamTensor(inv_variance);
+
+    user_op::Tensor* moving_mean = nullptr;
+    user_op::Tensor* moving_variance = nullptr;
+    if (ctx->has_input("moving_mean", 0)) {
+      CHECK(ctx->has_input("moving_variance", 0));
+      moving_mean = ctx->Tensor4ArgNameAndIndex("moving_mean", 0);
+      moving_variance = ctx->Tensor4ArgNameAndIndex("moving_variance", 0);
+      desc_helper.CheckParamTensor(moving_mean);
+      desc_helper.CheckParamTensor(moving_variance);
+    }
 
     const void* sp_alpha = CudnnSPOnePtr<T>();
     const void* sp_beta;
@@ -414,15 +425,17 @@ class NormalizationTrainKernel final : public user_op::OpKernel {
           ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
           CUDNN_BATCHNORM_OPS_BN, sp_alpha, sp_beta, desc_helper.xy_desc(), x->dptr(), nullptr,
           nullptr, desc_helper.xy_desc(), y->mut_dptr(), desc_helper.param_desc(), gamma->dptr(),
-          beta->dptr(), 1.0 - momentum, moving_mean->mut_dptr(), moving_variance->mut_dptr(),
-          epsilon, mean->mut_dptr(), inv_variance->mut_dptr(), nullptr, workspace->mut_dptr(),
-          workspace->shape().elem_cnt(), nullptr, 0));
+          beta->dptr(), 1.0 - momentum, moving_mean ? moving_mean->mut_dptr() : NULL,
+          moving_variance ? moving_variance->mut_dptr() : NULL, epsilon, mean->mut_dptr(),
+          inv_variance->mut_dptr(), nullptr, workspace->mut_dptr(), workspace->shape().elem_cnt(),
+          nullptr, 0));
     } else {
       OF_CUDNN_CHECK(cudnnBatchNormalizationForwardTraining(
           ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, sp_alpha, sp_beta,
           desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), y->mut_dptr(),
           desc_helper.param_desc(), gamma->dptr(), beta->dptr(), 1.0 - momentum,
-          moving_mean->mut_dptr(), moving_variance->mut_dptr(), epsilon, mean->mut_dptr(),
+          moving_mean ? moving_mean->mut_dptr() : NULL,
+          moving_variance ? moving_variance->mut_dptr() : NULL, epsilon, mean->mut_dptr(),
           inv_variance->mut_dptr()));
     }
 #else
@@ -430,7 +443,8 @@ class NormalizationTrainKernel final : public user_op::OpKernel {
         ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, sp_alpha, sp_beta,
         desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), y->mut_dptr(),
         desc_helper.param_desc(), gamma->dptr(), beta->dptr(), 1.0 - momentum,
-        moving_mean->mut_dptr(), moving_variance->mut_dptr(), epsilon, mean->mut_dptr(),
+        moving_mean ? moving_mean->mut_dptr() : NULL,
+        moving_variance ? moving_variance->mut_dptr() : NULL, epsilon, mean->mut_dptr(),
         inv_variance->mut_dptr()));
 #endif
 
@@ -483,12 +497,14 @@ REGISTER_BN_ADD_RELU_KERNEL(float)
 REGISTER_BN_ADD_RELU_KERNEL(double)
 
 template<typename T>
-class NormalizationGradUserKernel final : public user_op::OpKernel {
+class NormalizationGradUserKernel final : public user_op::OpKernel,
+                                          public user_op::CudaGraphSupport {
  public:
   NormalizationGradUserKernel() = default;
   ~NormalizationGradUserKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -664,12 +680,14 @@ size_t InferFusedNormalizationAddReluGradTmpSize(user_op::InferContext* ctx) {
 }
 
 template<typename T>
-class FusedNormalizationAddReluKernel final : public user_op::OpKernel {
+class FusedNormalizationAddReluKernel final : public user_op::OpKernel,
+                                              public user_op::CudaGraphSupport {
  public:
   FusedNormalizationAddReluKernel() = default;
   ~FusedNormalizationAddReluKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -750,12 +768,14 @@ class FusedNormalizationAddReluKernel final : public user_op::OpKernel {
 REGISTER_FUSED_BN_ADD_RELU_KERNEL(float16)
 
 template<typename T>
-class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel {
+class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel,
+                                                      public user_op::CudaGraphSupport {
  public:
   FusedNormalizationAddReluGradUserKernel() = default;
   ~FusedNormalizationAddReluGradUserKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);

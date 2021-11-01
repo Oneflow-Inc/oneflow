@@ -55,6 +55,10 @@ class MultiClientSession(object):
             oneflow._oneflow_internal.ClearSessionById(self.id)
         self.status_ = self.Status.CLOSED
 
+    def AddCGraph(self, graph):
+        self._check_status(self.Status.INITED)
+        oneflow._oneflow_internal.MultiClientSessionContextAddCGraph(graph)
+
     @property
     def status(self):
         return self.status_

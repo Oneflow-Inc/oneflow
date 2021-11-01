@@ -101,6 +101,7 @@ class IBVerbsQP final {
   std::queue<std::pair<ibv_send_wr, ibv_sge>> pending_send_wr_queue_;
   IBVerbsMessagePool* message_pool_;
   uint32_t queue_depth_;
+  size_t read_block_size_;
 };
 
 }  // namespace oneflow

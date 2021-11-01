@@ -22,7 +22,8 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_instancenorm1d(test_case, device):
@@ -59,12 +60,12 @@ def _test_instancenorm1d(test_case, device):
     m = flow.nn.InstanceNorm1d(num_features=3, eps=1e-05, momentum=0.1).to(
         device=flow.device(device)
     )
-    x = flow.Tensor(input_arr, device=flow.device(device))
+    x = flow.tensor(input_arr, dtype=flow.float32, device=flow.device(device))
     y = m(x)
-    test_case.assertTrue(np.allclose(y.numpy(), output_arr, rtol=0.0001, atol=0.0001))
+    test_case.assertTrue(np.allclose(y.numpy(), output_arr, rtol=1e-3, atol=1e-3))
     m.eval()
     y = m(x)
-    test_case.assertTrue(np.allclose(y.numpy(), output_arr, rtol=0.0001, atol=0.0001))
+    test_case.assertTrue(np.allclose(y.numpy(), output_arr, rtol=1e-3, atol=1e-3))
 
 
 def _test_instancenorm2d(test_case, device):
@@ -129,7 +130,7 @@ def _test_instancenorm2d(test_case, device):
     m = flow.nn.InstanceNorm2d(num_features=2, eps=1e-05, momentum=0.1).to(
         device=flow.device(device)
     )
-    x = flow.Tensor(input_arr, device=flow.device(device))
+    x = flow.tensor(input_arr, dtype=flow.float32, device=flow.device(device))
     y = m(x)
     test_case.assertTrue(np.allclose(y.numpy(), output, 0.0001, 0.0001))
     m.eval()
@@ -255,7 +256,7 @@ def _test_instancenorm3d(test_case, device):
     m = flow.nn.InstanceNorm3d(num_features=2, eps=1e-05, momentum=0.1).to(
         device=flow.device(device)
     )
-    x = flow.Tensor(input_arr, device=flow.device(device))
+    x = flow.tensor(input_arr, dtype=flow.float32, device=flow.device(device))
     y = m(x)
     test_case.assertTrue(np.allclose(y.numpy(), output_arr, 0.0001, 0.0001))
     m.eval()
@@ -282,7 +283,7 @@ def _test_instancenorm1d_backward(test_case, device):
     m = flow.nn.InstanceNorm1d(num_features=2, eps=1e-05, momentum=0.1).to(
         device=flow.device(device)
     )
-    x = flow.Tensor(input_arr, device=flow.device(device), requires_grad=True)
+    x = flow.tensor(input_arr, device=flow.device(device), requires_grad=True)
     y = m(x)
     z = y.sum()
     z.backward()
@@ -324,7 +325,7 @@ def _test_instancenorm2d_backward(test_case, device):
     m = flow.nn.InstanceNorm2d(num_features=2, eps=1e-05, momentum=0.1).to(
         device=flow.device(device)
     )
-    x = flow.Tensor(input_arr, device=flow.device(device), requires_grad=True)
+    x = flow.tensor(input_arr, device=flow.device(device), requires_grad=True)
     y = m(x)
     z = y.sum()
     z.backward()
@@ -394,7 +395,7 @@ def _test_instancenorm3d_backward(test_case, device):
     m = flow.nn.InstanceNorm3d(num_features=2, eps=1e-05, momentum=0.1).to(
         device=flow.device(device)
     )
-    x = flow.Tensor(input_arr, device=flow.device(device), requires_grad=True)
+    x = flow.tensor(input_arr, device=flow.device(device), requires_grad=True)
     y = m(x)
     z = y.sum()
     z.backward()
@@ -419,7 +420,7 @@ class TestInstanceNorm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=5, auto_backward=True, rtol=1e-4, atol=1e-4)
+    @autotest(n=5, auto_backward=True, rtol=1e-3, atol=1e-3)
     def test_instancenorm_with_random_data(test_case):
         height = random(1, 6).to(int)
         width = random(1, 6).to(int)
@@ -437,7 +438,7 @@ class TestInstanceNorm(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(n=5, auto_backward=True, rtol=1e-4, atol=1e-4)
+    @autotest(n=5, auto_backward=True, rtol=1e-3, atol=1e-3)
     def test_instancenorm_with_random_data(test_case):
         channel = random(1, 6).to(int)
         height = random(1, 6).to(int)
@@ -458,7 +459,7 @@ class TestInstanceNorm(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(n=5, auto_backward=False, rtol=1e-4, atol=1e-4)
+    @autotest(n=5, auto_backward=False, rtol=1e-3, atol=1e-3)
     def test_instancenorm_with_random_data(test_case):
         channel = random(1, 6).to(int)
         depth = random(1, 6).to(int)

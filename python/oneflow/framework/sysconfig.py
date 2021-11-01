@@ -59,6 +59,10 @@ def with_cuda() -> bool:
     return oneflow._oneflow_internal.flags.with_cuda()
 
 
+def get_cuda_version() -> int:
+    return oneflow._oneflow_internal.flags.cuda_version()
+
+
 def with_xla() -> bool:
     return oneflow._oneflow_internal.flags.with_xla()
 
@@ -73,3 +77,7 @@ def has_rpc_backend_local() -> bool:
 
 def cmake_build_type() -> str:
     return oneflow._oneflow_internal.flags.cmake_build_type()
+
+
+def with_rdma() -> bool:
+    return oneflow._oneflow_internal.flags.with_rdma()

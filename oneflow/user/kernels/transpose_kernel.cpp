@@ -16,13 +16,14 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
 namespace user_op {
 
 template<DeviceType device_type, typename T>
-class TransposeKernel final : public OpKernel {
+class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport {
  public:
   TransposeKernel() = default;
   ~TransposeKernel() override = default;
@@ -48,6 +49,7 @@ class TransposeKernel final : public OpKernel {
                        & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("output", 0) == GetDataType<dtype>::value));
 
+REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, uint8_t)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, int8_t)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, int32_t)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, int64_t)
@@ -55,6 +57,7 @@ REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, float)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, double)
 
 #ifdef WITH_CUDA
+REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, uint8_t)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, int8_t)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, int32_t)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, int64_t)

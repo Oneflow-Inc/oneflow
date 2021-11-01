@@ -36,10 +36,16 @@ template<typename T>
 using DimOpIndexNdHelper = NdIndexOffsetHelper<T, kDimGatherMaxDimCount>;
 
 #define INSTANTIATE_DIM_SCATTER_FUNCTORS(device_type, opt)               \
+  template struct DimScatterFunctor<device_type, uint8_t, int32_t, opt>; \
+  template struct DimScatterFunctor<device_type, int8_t, int32_t, opt>;  \
   template struct DimScatterFunctor<device_type, int32_t, int32_t, opt>; \
+  template struct DimScatterFunctor<device_type, int64_t, int32_t, opt>; \
   template struct DimScatterFunctor<device_type, float, int32_t, opt>;   \
   template struct DimScatterFunctor<device_type, double, int32_t, opt>;  \
+  template struct DimScatterFunctor<device_type, uint8_t, int64_t, opt>; \
+  template struct DimScatterFunctor<device_type, int8_t, int64_t, opt>;  \
   template struct DimScatterFunctor<device_type, int32_t, int64_t, opt>; \
+  template struct DimScatterFunctor<device_type, int64_t, int64_t, opt>; \
   template struct DimScatterFunctor<device_type, float, int64_t, opt>;   \
   template struct DimScatterFunctor<device_type, double, int64_t, opt>;
 
@@ -52,6 +58,21 @@ struct BinOpAddFunctor {
     *y += *x;
 #endif
   }
+};
+
+template<>
+struct BinOpAddFunctor<int8_t> {
+  OF_DEVICE_FUNC static void apply(const int8_t* x, int8_t* y) { *y += *x; }
+};
+
+template<>
+struct BinOpAddFunctor<uint8_t> {
+  OF_DEVICE_FUNC static void apply(const uint8_t* x, uint8_t* y) { *y += *x; }
+};
+
+template<>
+struct BinOpAddFunctor<int64_t> {
+  OF_DEVICE_FUNC static void apply(const int64_t* x, int64_t* y) { *y += *x; }
 };
 
 template<typename T>
@@ -82,9 +103,9 @@ OF_DEVICE_FUNC void DoDimScatter(const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
 #if __CUDA_ARCH__
       __trap();
 #else
-      std::cout << "The index element " << idx_elem << " is out of bounds for dimension " << dim
+      std::cerr << "The index element " << idx_elem << " is out of bounds for dimension " << dim
                 << " with size " << upper_bound << std::endl;
-      throw Error::CheckFailedError();
+      throw Error::CheckFailedError();  // TODO: Remove throw Error.
 #endif
     }
     IDX_T src_offset = src_nd_helper.NdIndexToOffset(coordinate, ndim);

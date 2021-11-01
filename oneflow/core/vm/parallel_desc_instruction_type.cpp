@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/object_msg/flat_msg_view.h"
+#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
-#include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/vm/instruction_operand.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/vm/object_wrapper.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
@@ -57,13 +57,11 @@ class NewParallelDescSymbolInstructionType final : public InstructionType {
     FlatMsgView<ParallelDescObjectInstrOperand> view(instr_msg->operand());
     FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
       int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id(i));
-      auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(vm->mut_vm_thread_only_allocator(),
-                                                                 logical_object_id);
+      auto logical_object = intrusive::make_shared<LogicalObject>(logical_object_id);
       CHECK(vm->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
       auto* global_device_id2mirrored_object =
           logical_object->mut_global_device_id2mirrored_object();
-      auto mirrored_object =
-          ObjectMsgPtr<MirroredObject>::NewFrom(vm->mut_allocator(), logical_object.Mutable(), 0);
+      auto mirrored_object = intrusive::make_shared<MirroredObject>(logical_object.Mutable(), 0);
       {
         const auto& parallel_desc =
             Global<symbol::Storage<ParallelDesc>>::Get()->GetPtr(view->logical_object_id(i));

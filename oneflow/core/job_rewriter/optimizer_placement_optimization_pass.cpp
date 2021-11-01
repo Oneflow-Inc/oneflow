@@ -247,8 +247,8 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
       const OpNode* var_node = sorted_sequences.at(i)->GetVariableNode();
       OperatorConf new_var_op_conf = var_node->op().op_conf();
       CHECK_EQ(pd.hierarchy()->NumAxes(), 1);
-      new_var_op_conf.mutable_variable_conf()->clear_parallel_distribution();
-      *new_var_op_conf.mutable_variable_conf()->add_parallel_distribution() = "S(0)";
+      new_var_op_conf.mutable_variable_conf()->clear_nd_sbp();
+      *new_var_op_conf.mutable_variable_conf()->add_nd_sbp() = "S(0)";
       if (i != 0) {
         const std::string& prev_op_name =
             sorted_sequences.at(i - 1)->GetVariableNode()->op().op_name();
@@ -326,7 +326,7 @@ class OptimizerPlacementOptimizationPass final : public JobPass {
     } else if (mode == "distributed_split") {
       return RewriteDistributedSplit(op_graph, &job_builder);
     } else {
-      return Error::Unimplemented();
+      return Error::UnimplementedError();
     }
   }
 };

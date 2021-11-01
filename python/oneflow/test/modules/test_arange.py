@@ -22,7 +22,8 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_arange(test_case, device):
@@ -45,7 +46,7 @@ def _test_arange_more_params(test_case, device):
 
 def _test_arange_backward(test_case, device):
     np_out = np.arange(13)
-    x = flow.arange(13, device=device)
+    x = flow.arange(13, dtype=flow.float32, device=device)
     x.requires_grad = True
     y = x.sum()
     y.backward()
@@ -75,6 +76,13 @@ class TestArange(flow.unittest.TestCase):
         device = random_device()
         x.to(device)
         return x
+
+    def test_consistent_naive(test_case):
+        placement = flow.placement("cpu", {0: [0]})
+        sbp = (flow.sbp.broadcast,)
+        x = flow.arange(start=0, end=10, step=1, placement=placement, sbp=sbp)
+        test_case.assertEqual(x.sbp, sbp)
+        test_case.assertEqual(x.placement, placement)
 
 
 if __name__ == "__main__":

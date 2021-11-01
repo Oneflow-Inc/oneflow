@@ -59,7 +59,7 @@ def clip_grad_norm_(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> x1 = flow.Tensor(np.array([[2, 3, 4], [1.5, 2.6, 3.7]]).astype(np.float32), requires_grad=True)
+        >>> x1 = flow.tensor(np.array([[2, 3, 4], [1.5, 2.6, 3.7]]).astype(np.float32), requires_grad=True)
         >>> m1 = flow.nn.ReLU()
         >>> out1 = m1(x1)
         >>> out1 = out1.sum()
@@ -68,9 +68,9 @@ def clip_grad_norm_(
         >>> norm1
         tensor(6., dtype=oneflow.float32)
         >>> x1.grad
-        tensor([[0.1, 0.1, 0.1],
-                [0.1, 0.1, 0.1]], dtype=oneflow.float32)
-        >>> x2 = flow.Tensor(np.array([[-2, -3, -4], [2.5, 0, 3.2]]).astype(np.float32), requires_grad=True)
+        tensor([[0.1000, 0.1000, 0.1000],
+                [0.1000, 0.1000, 0.1000]], dtype=oneflow.float32)
+        >>> x2 = flow.tensor(np.array([[-2, -3, -4], [2.5, 0, 3.2]]).astype(np.float32), requires_grad=True)
         >>> out2 = flow.atan(x2)
         >>> out2 = out2.sum()
         >>> out2.backward()
@@ -79,7 +79,7 @@ def clip_grad_norm_(
         tensor(1.0394, dtype=oneflow.float32)
         >>> x2.grad
         tensor([[0.0962, 0.0481, 0.0283],
-                [0.0663, 0.481 , 0.0428]], dtype=oneflow.float32)
+                [0.0663, 0.4810, 0.0428]], dtype=oneflow.float32)
 
     """
 
@@ -107,7 +107,7 @@ def clip_grad_norm_(
             ),
             norm_type,
         )
-    if np.isnan(total_norm.numpy()) or np.isinf(total_norm.numpy()):
+    if np.isnan(total_norm.numpy()).all() or np.isinf(total_norm.numpy()).all():
         if error_if_nonfinite:
             raise RuntimeError(
                 f"The total norm of order {norm_type} for gradients from "
@@ -124,11 +124,12 @@ def clip_grad_norm_(
                 FutureWarning,
                 stacklevel=2,
             )
+
     clip_coef = max_norm / (total_norm + 1e-6)
-    if clip_coef < 1:
-        for p in parameters:
-            # TODO: Switch to inplace multiply in future
-            p.grad[:] = p.grad.detach().mul(clip_coef.to(p.grad.device))
+    clip_coef_clamped = clip_coef.clamp(max=1.0)
+    for p in parameters:
+        # TODO: Switch to inplace multiply in future
+        p.grad[:] = p.grad.detach().mul(clip_coef_clamped.to(p.grad.device))
     return total_norm
 
 

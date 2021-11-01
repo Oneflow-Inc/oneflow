@@ -33,7 +33,7 @@ class TestForwardGraph(flow.unittest.TestCase):
                 self.relu = flow.nn.ReLU()
 
             def forward(self, x, y):
-                x = oneflow.F.matmul(x, self.weight)
+                x = oneflow._C.matmul(x, self.weight)
                 x = self.relu(x)
                 y = self.relu(y)
                 return (x, y)
@@ -46,8 +46,8 @@ class TestForwardGraph(flow.unittest.TestCase):
 
             def forward(self, x, y):
                 (x, y) = self.layer(x, y)
-                x = oneflow.F.flatten(x, 1)
-                x = oneflow.F.matmul(x, self.dummy_buff)
+                x = oneflow._C.flatten(x, 1)
+                x = oneflow._C.matmul(x, self.dummy_buff)
                 return (x, y)
 
         class CustomGraph(flow.nn.Graph):
@@ -75,6 +75,30 @@ class TestForwardGraph(flow.unittest.TestCase):
         test_case.assertEqual(a.shape, (10, 10))
         test_case.assertEqual(a.is_lazy, False)
         print("graph proto: ", g._graph_proto)
+
+    def test_add_backward(test_case):
+        linear = flow.nn.Linear(3, 8)
+        flow.nn.init.constant_(linear.weight, 2.068758)
+        flow.nn.init.constant_(linear.bias, 0.23)
+        of_sgd = flow.optim.SGD(linear.parameters(), lr=0.001, momentum=0.9)
+
+        class GraphAddBackward(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.linear = linear
+                self.add_optimizer(of_sgd)
+
+            def build(self, x):
+                out = self.linear(x)
+                out = out.mean()
+                out.backward()
+                return out
+
+        g_with_b = GraphAddBackward()
+        x = flow.ones(8, 3)
+        out = g_with_b(x)
+        print("graph proto: ", g_with_b._graph_proto)
+        print(repr(g_with_b))
 
 
 if __name__ == "__main__":

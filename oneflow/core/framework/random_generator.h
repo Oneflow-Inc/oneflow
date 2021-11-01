@@ -21,12 +21,13 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-class Generator final {
- public:
-  // The default seed is selected to be a large number
-  // with good distribution of 0s and 1s in bit representation.
-  static constexpr uint64_t default_rng_seed_val = 67280421310721;
+class Tensor;
 
+// The default seed is selected to be a large number
+// with good distribution of 0s and 1s in bit representation.
+static constexpr uint64_t default_rng_seed_val = 67280421310721;
+
+class Generator final {
  public:
   explicit Generator(const std::shared_ptr<GeneratorImpl>& impl);
 
@@ -38,6 +39,11 @@ class Generator final {
 
   // Reset current generator by a non-deterministic random seed, and returns it.
   uint64_t seed();
+
+  Maybe<Symbol<Device>> device() const { return impl_->device(); }
+
+  Maybe<Tensor> GetState() const { return impl_->GetState(); }
+  Maybe<void> SetState(const std::shared_ptr<Tensor>& state) { return impl_->SetState(state); }
 
   const std::shared_ptr<GeneratorImpl>& impl() const { return impl_; }
 
@@ -62,6 +68,12 @@ class Generator final {
 
 Maybe<void> ManualSeed(uint64_t seed);
 
+Maybe<Generator> DefaultGenerator(const std::string& device, int device_index = -1);
+Maybe<Generator> DefaultGenerator(DeviceType device, int device_index = -1);
+
+Maybe<Generator> MakeGenerator(const std::string& device, int device_index = -1);
+Maybe<Generator> MakeGenerator(DeviceType device, int device_index = -1);
+
 Maybe<Generator> DefaultAutoGenerator();
 Maybe<Generator> MakeAutoGenerator();
 
@@ -69,12 +81,9 @@ Maybe<Generator> DefaultCPUGenerator();
 Maybe<Generator> MakeCPUGenerator();
 
 #ifdef WITH_CUDA
-Maybe<Generator> DefaultCUDAGenerator(int device_index);
+Maybe<Generator> DefaultCUDAGenerator(int device_index = -1);
 Maybe<Generator> MakeCUDAGenerator();
 #endif  // WITH_CUDA
-
-Maybe<Generator> DefaultGenerator(const std::string& device, int device_index);
-Maybe<Generator> MakeGenerator(const std::string& device, int device_index);
 
 }  // namespace one
 }  // namespace oneflow

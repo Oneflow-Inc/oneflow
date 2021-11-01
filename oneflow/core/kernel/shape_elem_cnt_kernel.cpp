@@ -13,15 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/shape_elem_cnt_kernel.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void ShapeElemCntKernel<device_type, T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const T elem_cnt = GetShapePartialElemCnt(BnInOp2Blob("x")->shape());
-  KernelUtil<device_type, T>::Set(ctx.device_ctx, elem_cnt, BnInOp2Blob("y")->mut_dptr<T>());
+class ShapeElemCntKernel final : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ShapeElemCntKernel);
+  ShapeElemCntKernel() = default;
+  ~ShapeElemCntKernel() override = default;
+
+ private:
+  void ForwardDataContent(KernelContext* ctx) const override;
+  int32_t GetShapePartialElemCnt(const ShapeView& shape) const;
+};
+
+template<DeviceType device_type, typename T>
+void ShapeElemCntKernel<device_type, T>::ForwardDataContent(KernelContext* ctx) const {
+  const T elem_cnt = GetShapePartialElemCnt(ctx->BnInOp2Blob("x")->shape());
+  NewKernelUtil<device_type>::Fill(ctx->device_ctx(), 1, elem_cnt,
+                                   ctx->BnInOp2Blob("y")->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>

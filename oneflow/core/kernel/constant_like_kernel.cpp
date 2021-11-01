@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/common/scalar.h"
+#include "oneflow/core/primitive/include/fill.h"
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-class ConstantLikeKernel final : public KernelIf<device_type> {
+class ConstantLikeKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConstantLikeKernel);
   ConstantLikeKernel() : is_init_(false) {}
@@ -28,49 +28,27 @@ class ConstantLikeKernel final : public KernelIf<device_type> {
  private:
   mutable bool is_init_;
 
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+  void ForwardDataContent(KernelContext* ctx) const override {
     if (is_init_) { return; }
-    Blob* out_blob = BnInOp2Blob("out");
-    T value = static_cast<T>(0);
+    Blob* out_blob = ctx->BnInOp2Blob("out");
+    Scalar value;
     const auto& conf = this->op_conf().constant_like_conf();
     if (conf.has_int_operand()) {
-      value = static_cast<T>(conf.int_operand());
+      value = Scalar(conf.int_operand());
     } else if (conf.has_float_operand()) {
-      value = static_cast<T>(conf.float_operand());
+      value = Scalar(conf.float_operand());
     } else {
       UNIMPLEMENTED();
     }
-    NewKernelUtil<device_type>::Fill(ctx.device_ctx, out_blob->static_shape().elem_cnt(), value,
-                                     out_blob->mut_dptr<T>());
+    std::unique_ptr<primitive::Fill> primitive = primitive::NewPrimitive<primitive::FillFactory>(
+        this->op_conf().device_tag(), out_blob->data_type());
+    CHECK(primitive);
+    primitive->Launch(ctx->stream_ctx(), out_blob->mut_dptr(), value,
+                      out_blob->static_shape().elem_cnt());
     is_init_ = true;
   }
 };
 
-#ifdef WITH_CUDA
-#define REGISTER_CONSTANT_LIKE_KERNEL(dtype)                                                      \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kConstantLikeConf, DeviceType::kCPU, dtype, \
-                                        ConstantLikeKernel<DeviceType::kCPU, dtype>)              \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kConstantLikeConf, DeviceType::kGPU, dtype, \
-                                        ConstantLikeKernel<DeviceType::kGPU, dtype>)
-#define REGISTER_CONSTANT_LIKE_HALF_KERNEL
-REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kConstantLikeConf, DeviceType::kGPU, float16,
-                                      ConstantLikeKernel<DeviceType::kGPU, float16>)
-#else
-#define REGISTER_CONSTANT_LIKE_KERNEL(dtype)                                                      \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kConstantLikeConf, DeviceType::kCPU, dtype, \
-                                        ConstantLikeKernel<DeviceType::kCPU, dtype>)
-#endif
-REGISTER_CONSTANT_LIKE_KERNEL(float);
-REGISTER_CONSTANT_LIKE_KERNEL(double);
-REGISTER_CONSTANT_LIKE_KERNEL(int8_t);
-REGISTER_CONSTANT_LIKE_KERNEL(int32_t);
-REGISTER_CONSTANT_LIKE_KERNEL(int64_t);
-
-#ifdef WITH_CUDA
-REGISTER_CONSTANT_LIKE_HALF_KERNEL;
-#endif
-
-#undef REGISTER_CONSTANT_LIKE_KERNEL
+REGISTER_KERNEL(OperatorConf::kConstantLikeConf, ConstantLikeKernel);
 
 }  // namespace oneflow

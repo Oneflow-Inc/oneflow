@@ -32,6 +32,7 @@ struct BlasIf<DeviceType::kCPU> {
   static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                      const int m, const int n, const int k, const double alpha, const double* a,
                      const double* b, const double beta, double* c);
+
   static void OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
                             enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
                             const int n, const int k, const double alpha, const float* a,
@@ -40,11 +41,6 @@ struct BlasIf<DeviceType::kCPU> {
                             enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
                             const int n, const int k, const double alpha, const double* a,
                             const double* b, const double beta, double* c);
-
-  static void Axpy(DeviceCtx* ctx, const int n, const float alpha, const float* x, const int incx,
-                   float* y, const int incy);
-  static void Axpy(DeviceCtx* ctx, const int n, const double alpha, const double* x, const int incx,
-                   double* y, const int incy);
 };
 
 }  // namespace oneflow

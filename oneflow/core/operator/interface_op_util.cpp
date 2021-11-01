@@ -27,12 +27,12 @@ void CheckShape(const Shape& shape) {
 Maybe<void> GetSbpSignature(const InterfaceBlobConf& blob_conf, const PbRpf<std::string>& input_bns,
                             const PbRpf<std::string>& output_bns, cfg::SbpSignature* sbp_signature,
                             bool is_for_input_op) {
-  if (!blob_conf.has_parallel_distribution()) {
+  if (!blob_conf.has_nd_sbp()) {
     SbpSignatureBuilder().Broadcast(input_bns).Broadcast(output_bns).Build(sbp_signature);
     return Maybe<void>::Ok();
   }
-  CHECK_EQ_OR_RETURN(blob_conf.parallel_distribution().sbp_parallel_size(), 1);
-  const auto& sbp_parallel = blob_conf.parallel_distribution().sbp_parallel(0);
+  CHECK_EQ_OR_RETURN(blob_conf.nd_sbp().sbp_parallel_size(), 1);
+  const auto& sbp_parallel = blob_conf.nd_sbp().sbp_parallel(0);
   if (sbp_parallel.has_split_parallel()) {
     int64_t num_axes = blob_conf.shape().dim_size();
     int64_t split_axis = sbp_parallel.split_parallel().axis();
@@ -58,10 +58,10 @@ Maybe<void> InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf
                                               BlobDesc* out_blob_desc,
                                               const ParallelContext* parallel_ctx,
                                               const ParallelDesc& parallel_desc) {
-  cfg::ParallelDistribution parallel_distribution;
-  JUST(ParseParallelDistributionFromBlobConf(blob_conf, parallel_desc, &parallel_distribution));
-  out_blob_desc->mut_shape() = *JUST(GetPhysicalShape(
-      Shape(blob_conf.shape()), parallel_distribution, parallel_desc, *parallel_ctx));
+  cfg::NdSbp nd_sbp;
+  JUST(ParseNdSbpFromBlobConf(blob_conf, parallel_desc, &nd_sbp));
+  out_blob_desc->mut_shape() =
+      *JUST(GetPhysicalShape(Shape(blob_conf.shape()), nd_sbp, parallel_desc, *parallel_ctx));
   out_blob_desc->set_data_type(blob_conf.data_type());
   out_blob_desc->set_is_dynamic(blob_conf.is_dynamic());
   return Maybe<void>::Ok();
@@ -103,21 +103,19 @@ Maybe<void> InterfaceOpUtil::InitBlobConf(InterfaceBlobConf* blob_conf,
   blob_desc.shape().ToProto(blob_conf->mutable_shape());
   blob_conf->set_data_type(blob_desc.data_type());
   blob_conf->set_is_dynamic(blob_desc.is_dynamic());
-  *blob_conf->mutable_parallel_distribution() = parallel_blob_conf.parallel_distribution();
+  *blob_conf->mutable_nd_sbp() = parallel_blob_conf.nd_sbp();
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InterfaceOpUtil::ParseParallelDistributionFromBlobConf(
-    const InterfaceBlobConf& blob_conf, const ParallelDesc& parallel_desc,
-    cfg::ParallelDistribution* parallel_distribution) {
+Maybe<void> InterfaceOpUtil::ParseNdSbpFromBlobConf(const InterfaceBlobConf& blob_conf,
+                                                    const ParallelDesc& parallel_desc,
+                                                    cfg::NdSbp* nd_sbp) {
   const int64_t num_axes = parallel_desc.hierarchy()->NumAxes();
-  if (blob_conf.has_parallel_distribution()) {
-    *parallel_distribution = cfg::ParallelDistribution(blob_conf.parallel_distribution());
+  if (blob_conf.has_nd_sbp()) {
+    *nd_sbp = cfg::NdSbp(blob_conf.nd_sbp());
   } else {
-    parallel_distribution->clear_sbp_parallel();
-    FOR_RANGE(int64_t, i, 0, num_axes) {
-      parallel_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
-    }
+    nd_sbp->clear_sbp_parallel();
+    FOR_RANGE(int64_t, i, 0, num_axes) { nd_sbp->add_sbp_parallel()->mutable_broadcast_parallel(); }
   }
   return Maybe<void>::Ok();
 }

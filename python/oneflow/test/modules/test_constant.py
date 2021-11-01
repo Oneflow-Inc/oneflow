@@ -22,12 +22,8 @@ import oneflow as flow
 
 import oneflow.unittest
 from test_util import GenArgList
-from automated_test_util import *
 
-
-def _test_ones(test_case, device, shape):
-    y = flow.ones(shape, device=flow.device(device))
-    test_case.assertTrue(np.array_equal(np.ones(shape), y.numpy()))
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_different_dtype(test_case, device, shape):
@@ -39,64 +35,6 @@ def _test_different_dtype(test_case, device, shape):
     test_case.assertTrue(np.array_equal(np.ones(shape, dtype=np.float64), y3.numpy()))
 
 
-def _test_ones_backward(test_case, device, shape):
-    x = flow.ones(shape, device=flow.device(device), requires_grad=True)
-    y = x.sum()
-    y.backward()
-    test_case.assertTrue(np.array_equal(np.ones(shape), x.grad.numpy()))
-
-
-def _test_zeros(test_case, device, shape):
-    y = flow.zeros(shape, device=flow.device(device))
-    test_case.assertTrue(np.array_equal(np.zeros(shape), y.numpy()))
-    y2 = flow.zeros(10, device=flow.device(device))
-    test_case.assertTrue(np.array_equal(np.zeros(10), y2.numpy()))
-    y3 = flow.zeros(10, dtype=flow.int, device=flow.device(device))
-    test_case.assertTrue(np.array_equal(np.zeros(10, dtype=int), y3.numpy()))
-
-
-def _test_zeros_backward(test_case, device, shape):
-    x = flow.zeros(shape, device=flow.device(device), requires_grad=True)
-    y = x.sum()
-    y.backward()
-    test_case.assertTrue(np.array_equal(np.ones(shape), x.grad.numpy()))
-
-
-def _test_ones_like(test_case, device, shape):
-    x = flow.Tensor(np.ones(shape, dtype=np.float64))
-    test_case.assertTrue(
-        np.array_equal(np.ones_like(x.numpy()), flow.ones_like(x).numpy())
-    )
-    x2 = flow.Tensor(np.ones([2, 4], dtype=int))
-    test_case.assertTrue(
-        np.array_equal(np.ones_like(x2.numpy()), flow.ones_like(x2).numpy())
-    )
-
-
-def _test_zeros_like(test_case, device, shape):
-    x = flow.Tensor(np.ones(shape, dtype=np.float64))
-    test_case.assertTrue(
-        np.array_equal(np.zeros_like(x.numpy()), flow.zeros_like(x).numpy())
-    )
-    x2 = flow.Tensor(np.ones(shape, dtype=int))
-    test_case.assertTrue(
-        np.array_equal(np.zeros_like(x2.numpy()), flow.zeros_like(x2).numpy())
-    )
-
-
-def _test_new_ones(test_case, device, shape):
-    x = flow.ones(shape, device=flow.device("cpu"))
-    y = x.new_ones(shape, device=device)
-    test_case.assertTrue(x.dtype == y.dtype)
-    test_case.assertEqual(flow.device(device), y.device)
-    test_case.assertTrue(x.requires_grad == y.requires_grad)
-    x = flow.Tensor(np.ones(shape), device=flow.device(device))
-    x = x.new_ones(shape, device=device, requires_grad=True)
-    y = x.sum()
-    y.backward()
-    test_case.assertTrue(np.array_equal(np.ones_like(x.numpy()), x.grad.numpy()))
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestConstantModule(flow.unittest.TestCase):
     def test_consistent_naive(test_case):
@@ -106,22 +44,78 @@ class TestConstantModule(flow.unittest.TestCase):
         test_case.assertEqual(x.sbp, sbp)
         test_case.assertEqual(x.placement, placement)
 
+    @autotest(auto_backward=False)
+    def test_flow_zeros_list_with_random_data(test_case):
+        device = random_device()
+        y1 = torch.zeros(random().to(int)).to(device)
+        y2 = torch.zeros(random().to(int), random().to(int)).to(device)
+        y3 = torch.zeros(random().to(int), random().to(int), random().to(int)).to(
+            device
+        )
+        y4 = torch.zeros(
+            random().to(int), random().to(int), random().to(int), random().to(int)
+        ).to(device)
+        return y1, y2, y3, y4
+
+    @autotest(auto_backward=False)
+    def test_flow_ones_list_with_random_data(test_case):
+        device = random_device()
+        y1 = torch.ones(random().to(int)).to(device)
+        y2 = torch.ones(random().to(int), random().to(int)).to(device)
+        y3 = torch.ones(random().to(int), random().to(int), random().to(int)).to(device)
+        y4 = torch.ones(
+            random().to(int), random().to(int), random().to(int), random().to(int)
+        ).to(device)
+        return y1, y2, y3, y4
+
+    @autotest(auto_backward=False)
+    def test_flow_zeros_like_list_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.zeros_like(x)
+        return y
+
+    @autotest(auto_backward=False)
+    def test_flow_ones_like_list_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.ones_like(x)
+        return y
+
+    @autotest(auto_backward=True)
+    def test_flow_new_ones_list_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.new_ones(
+            (random().to(int), random().to(int), random().to(int)),
+            device=device.value(),
+            requires_grad=constant(True),
+        )
+        return y
+
     def test_cast(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_ones,
             _test_different_dtype,
-            _test_zeros,
-            _test_ones_backward,
-            _test_zeros_backward,
-            _test_ones_like,
-            _test_zeros_like,
-            _test_new_ones,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5), (2, 0, 4)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+        @autotest(n=10, auto_backward=True)
+        def test_full_with_random_data_int(test_case):
+            device = random_device()
+            shape = random_tensor().value().shape
+            y = torch.full(shape, 2)
+            return y
+
+        @autotest(n=10, auto_backward=True)
+        def test_full_with_random_data_float(test_case):
+            device = random_device()
+            shape = random_tensor().value().shape
+            y = torch.full(shape, 2.0)
+            return y
 
 
 if __name__ == "__main__":

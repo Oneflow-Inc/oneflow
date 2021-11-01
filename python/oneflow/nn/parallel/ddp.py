@@ -16,8 +16,8 @@ limitations under the License.
 from collections import OrderedDict
 
 import oneflow as flow
-from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
+from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
 
 
 def allreduce_fn(ddp_state_for_reversed_params, param):
@@ -29,10 +29,10 @@ def allreduce_fn(ddp_state_for_reversed_params, param):
                 continue
             if ready:
                 ddp_state_for_reversed_params[cur_param][1] = True
-                if cur_param == param:
-                    ret = flow.F.all_reduce(grad)[0]
+                if cur_param is param:
+                    ret = flow._C.local_all_reduce(grad)
                 else:
-                    cur_param.grad = flow.F.all_reduce(cur_param.grad)[0]
+                    cur_param.grad = flow._C.local_all_reduce(cur_param.grad)
             else:
                 break
         return ret
@@ -40,25 +40,55 @@ def allreduce_fn(ddp_state_for_reversed_params, param):
     return allreduce
 
 
-def DistributedDataParallel(module: "flow.nn.Module"):
-    world_size = flow.framework.distribute.get_world_size()
-    # TODO(jianhao): broadcast parameters and buffers
+def DistributedDataParallel(
+    module: "flow.nn.Module", *, broadcast_buffers: bool = True
+):
+    world_size = flow.env.get_world_size()
+    with flow.no_grad():
+        for x in module.parameters():
+            requires_grad = x.requires_grad
+            flow._C.broadcast(x, inplace=True)
+            # TODO: fix the bug that x's requires_grad is discarded
+            # after flow._C.broadcast
+            x.requires_grad_(requires_grad)
+
     ddp_state_for_reversed_params = OrderedDict(
-        reversed([(x, [False, False]) for x in module.parameters()])
+        reversed([(x, [False, False]) for x in module.parameters() if x.requires_grad])
     )
     module._ddp_state_for_reversed_params = ddp_state_for_reversed_params
     for param in module.parameters():
         param.register_hook(lambda grad: grad / world_size)
         param.register_hook(allreduce_fn(ddp_state_for_reversed_params, param))
 
-    def hook(module, input, output):
+    def post_forward_hook(module, input, output):
         ddp_state_for_reversed_params = module._ddp_state_for_reversed_params
         for state in ddp_state_for_reversed_params.values():
             state[0], state[1] = False, False
-        output = flow.F.select_first(
-            convert_to_tensor_tuple([output, *ddp_state_for_reversed_params.keys()])
-        )
+        if isinstance(output, tuple):
+            output = flow._C.select_top_n(
+                convert_to_tensor_tuple(
+                    [*output, *ddp_state_for_reversed_params.keys()]
+                ),
+                n=len(output),
+            )
+        else:
+            output = flow._C.select_top_n(
+                convert_to_tensor_tuple(
+                    [output, *ddp_state_for_reversed_params.keys()]
+                ),
+                n=1,
+            )[0]
         return output
 
-    module.register_forward_hook(hook)
+    module.register_forward_hook(post_forward_hook)
+
+    if broadcast_buffers:
+
+        def pre_forward_hook(module, input):
+            with flow.no_grad():
+                for x in module.buffers():
+                    flow._C.broadcast(x, inplace=True)
+
+        module.register_forward_pre_hook(pre_forward_hook)
+
     return module

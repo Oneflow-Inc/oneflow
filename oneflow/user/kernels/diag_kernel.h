@@ -41,6 +41,7 @@ class DiagKernel final : public user_op::OpKernel {
   ~DiagKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const int32_t diagonal = ctx->Attr<int32_t>("diagonal");
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -80,6 +81,7 @@ class DiagBackwardKernel final : public user_op::OpKernel {
   ~DiagBackwardKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);

@@ -40,7 +40,7 @@ bool IsScalarTensor(const one::Tensor& tensor) {
 // Checks and sets default value for initial gradients based on out_grads
 // If output is the tensor whose size is greater than 1, out_grad's shape must be same as output's.
 // If output is a scalar tensor, out_grad will also be a scaler or empty(will be inited to
-// `flow.ones([1])`).
+// `oneflow.ones([1])`).
 Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
                                              const one::TensorTuple& out_grads) {
   size_t grad_size = out_grads.empty() ? outputs.size() : out_grads.size();
@@ -71,7 +71,7 @@ Maybe<one::TensorTuple> Backward(const one::TensorTuple& outputs, const one::Ten
                                  bool retain_graph, bool create_graph) {
   if (create_graph) { retain_graph = true; }
   std::shared_ptr<one::TensorTuple> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
-  JUST(one::GetThreadLocalAutogradEngine()->RunBackwardAndSaveGrads4LeafTensor(
+  JUST(one::GetThreadLocalAutogradEngine()->RunBackwardAndSaveGrads4LeafTensorIf(
       outputs, *gradients, retain_graph, create_graph));
   return std::make_shared<one::TensorTuple>(0);
 }
@@ -86,7 +86,7 @@ Maybe<one::TensorTuple> Grad(const one::TensorTuple& outputs, const one::TensorT
       [](const std::shared_ptr<one::Tensor>& tensor) { return tensor->requires_grad(); }))
       << "All input tensors `.requires_grad` should be true";
   std::shared_ptr<one::TensorTuple> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
-  return one::GetThreadLocalAutogradEngine()->RunBackwardAndReturnInputsTensorGrad(
+  return one::GetThreadLocalAutogradEngine()->RunBackwardAndReturnInputsTensorGradIf(
       outputs, inputs, *gradients, retain_graph, create_graph);
 }
 

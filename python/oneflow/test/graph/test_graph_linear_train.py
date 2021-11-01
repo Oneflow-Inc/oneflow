@@ -29,7 +29,7 @@ def _test_linear_train_graph(test_case, device):
         flow.nn.init.constant_(linear.bias, 0.23)
         of_sgd = flow.optim.SGD(linear.parameters(), lr=0.001, momentum=0.9)
 
-        x = flow.Tensor(
+        x = flow.tensor(
             [
                 [-0.94630778, -0.83378579, -0.87060891],
                 [2.0289922, -0.28708987, -2.18369248],
@@ -40,6 +40,7 @@ def _test_linear_train_graph(test_case, device):
                 [-0.22556897, 0.74798368, 0.90416439],
                 [0.48339456, -2.32742195, -0.59321527],
             ],
+            dtype=flow.float32,
             device=device,
             requires_grad=False,
         )
@@ -66,7 +67,7 @@ def _test_linear_train_graph(test_case, device):
         flow.nn.init.constant_(linear.bias, 0.23)
         of_sgd = flow.optim.SGD(linear.parameters(), lr=0.001, momentum=0.9)
 
-        x = flow.Tensor(
+        x = flow.tensor(
             [
                 [-0.94630778, -0.83378579, -0.87060891],
                 [2.0289922, -0.28708987, -2.18369248],
@@ -77,6 +78,7 @@ def _test_linear_train_graph(test_case, device):
                 [-0.22556897, 0.74798368, 0.90416439],
                 [0.48339456, -2.32742195, -0.59321527],
             ],
+            dtype=flow.float32,
             device=device,
             requires_grad=False,
         )
@@ -85,7 +87,7 @@ def _test_linear_train_graph(test_case, device):
             def __init__(self):
                 super().__init__()
                 self.linear = linear
-                self.add_optimizer("sgd", of_sgd)
+                self.add_optimizer(of_sgd)
 
             def build(self, x):
                 out = self.linear(x)

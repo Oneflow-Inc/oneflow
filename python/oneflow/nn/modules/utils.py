@@ -13,9 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import collections.abc as container_abcs
 from itertools import repeat
 from typing import List
+
+import oneflow as flow
 
 
 def _ntuple(n):
@@ -41,6 +44,16 @@ _single = _ntuple(1)
 _pair = _ntuple(2)
 _triple = _ntuple(3)
 _quadruple = _ntuple(4)
+
+
+def _handle_size_arg(size):
+    assert len(size) > 0, "size of tensor doesn't exists"
+    if isinstance(size[0], (list, tuple, flow.Size)):
+        assert (
+            len(size) == 1
+        ), "shape should be specified by tuple of int size, not tuple of list"
+        size = size[0]
+    return size
 
 
 def _reverse_repeat_tuple(t, n):
@@ -88,3 +101,19 @@ def _check_inplace_valid(x):
         raise RuntimeError(
             "a leaf Tensor that requires grad is being used in an in-place operation"
         )
+
+
+def _generate_output_size(input_size, output_size):
+    new_output_size = []
+    assert len(input_size) - 2 == len(
+        output_size
+    ), f"the length of 'output_size' does not match the input size, {len(input_size) - 2} expected"
+    for i in range(len(output_size)):
+        if output_size[i] is None:
+            new_output_size.append(input_size[i + 2])
+        else:
+            assert isinstance(
+                output_size[i], int
+            ), "numbers in 'output_size' should be integer"
+            new_output_size.append(output_size[i])
+    return tuple(new_output_size)

@@ -26,6 +26,7 @@ class GpuSortKernel final : public user_op::OpKernel {
   ~GpuSortKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -56,7 +57,7 @@ class GpuSortKernel final : public user_op::OpKernel {
       .SetCreateFn<GpuSortKernel<dtype>>()                                                  \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                   \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))     \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                         \
         const Shape& in_shape = ctx->InputShape("in", 0);                                   \
         const int32_t instance_size = in_shape.dim_vec().back();                            \
         const int32_t instance_num = in_shape.elem_cnt() / instance_size;                   \
@@ -67,6 +68,7 @@ class GpuSortKernel final : public user_op::OpKernel {
           return InferTempStorageForSortKeysDescending<dtype>(instance_num, instance_size); \
         } else {                                                                            \
           UNIMPLEMENTED();                                                                  \
+          return 0;                                                                         \
         }                                                                                   \
       });
 

@@ -53,6 +53,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t machine_id() const { return machine_id_; }
   int64_t thrd_id() const { return thrd_id_; }
   int64_t task_id() const { return task_id_; }
+  const StreamId& stream_id() const;
   int64_t chain_id() const { return chain_id_; }
   int64_t order_in_graph() const { return order_in_graph_; }
   const ExecGraph& exec_gph() const { return exec_gph_; }
@@ -67,8 +68,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   }
   DeviceType device_type() const;
   virtual const ParallelContext* parallel_ctx() const { return nullptr; }
-  int64_t GlobalWorkStreamId() const;
-  int64_t GpuPhyId() const { return Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id_); }
 
   // Setters
   void set_machine_id(int64_t val);
@@ -151,6 +150,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t task_id_;
   int64_t chain_id_;
   int64_t order_in_graph_;
+  std::unique_ptr<TaskId> new_task_id_;
 
   ExecGraph exec_gph_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> produced_regsts_;
@@ -180,14 +180,14 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
 };
 
 struct IndependentThreadNum4TaskType final {
-  IndependentThreadNum4TaskType(size_t num) : has_func_(false), num_(num) {}
-  IndependentThreadNum4TaskType(std::function<size_t()> get_num)
-      : has_func_(true), get_num_(get_num) {}
-  operator size_t() { return has_func_ ? get_num_() : num_; }
+  explicit IndependentThreadNum4TaskType(size_t num) : has_func_(false), num_(num) {}
+  explicit IndependentThreadNum4TaskType(std::function<size_t()> get_num)
+      : has_func_(true), get_num_(std::move(get_num)) {}
+  explicit operator size_t() { return has_func_ ? get_num_() : num_; }
 
  private:
   bool has_func_;
-  size_t num_;
+  size_t num_{};
   std::function<size_t()> get_num_;
 };
 

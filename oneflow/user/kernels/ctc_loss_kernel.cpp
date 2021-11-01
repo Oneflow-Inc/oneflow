@@ -41,12 +41,9 @@ class CtcLossKernel final : public user_op::OpKernel {
     const int64_t max_input_length = log_probs->shape().At(0);
     const int64_t batch_size = log_probs->shape().At(1);
     const int64_t num_labels = log_probs->shape().At(2);
-    const int64_t max_target_length = targets->shape().At(1);
-    CHECK_EQ(batch_size, targets->shape().At(0));
-    CHECK_EQ(batch_size, input_lengths->shape().At(0));
-    CHECK_EQ(batch_size, target_lengths->shape().At(0));
-    CHECK_GE(blank, 0);
-    CHECK_LT(blank, num_labels);
+    const int64_t max_target_length = ctx->Attr<int64_t>("max_target_length");
+    const int32_t targets_ndim = targets->shape().NumAxes();
+
     NdIndexOffsetHelper<int64_t, 3> input_helper(max_input_length, batch_size, num_labels);
     NdIndexOffsetHelper<int64_t, 3> alpha_helper(batch_size, max_input_length,
                                                  2 * max_target_length + 1);
@@ -55,7 +52,7 @@ class CtcLossKernel final : public user_op::OpKernel {
     CtcLossKernelUtil<device_type, T, IDX>::CtcLossForward(
         ctx->device_ctx(), log_probs_ptr, targets_ptr, input_lengths_ptr, target_lengths_ptr,
         alpha_ptr, loss_ptr, input_helper, alpha_helper, batch_size, max_input_length,
-        max_target_length, blank);
+        max_target_length, blank, targets_ndim);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -100,13 +97,10 @@ class CtcLossGradKernel final : public user_op::OpKernel {
     const bool zero_infinity = ctx->Attr<bool>("zero_infinity");
     const int64_t batch_size = log_probs->shape().At(1);
     const int64_t num_labels = log_probs->shape().At(2);
-    CHECK_EQ(batch_size, targets->shape().At(0));
-    CHECK_EQ(batch_size, input_lengths->shape().At(0));
-    CHECK_EQ(batch_size, target_lengths->shape().At(0));
-    CHECK_GE(blank, 0);
-    CHECK_LT(blank, num_labels);
     const int64_t max_input_length = log_probs->shape().At(0);
-    const int64_t max_target_length = targets->shape().At(1);
+    const int64_t max_target_length = ctx->Attr<int64_t>("max_target_length");
+    const int32_t targets_ndim = targets->shape().NumAxes();
+
     NdIndexOffsetHelper<int64_t, 3> input_helper(max_input_length, batch_size, num_labels);
     NdIndexOffsetHelper<int64_t, 3> beta_helper(batch_size, max_input_length,
                                                 2 * max_target_length + 1);
@@ -115,7 +109,8 @@ class CtcLossGradKernel final : public user_op::OpKernel {
     CtcLossKernelUtil<device_type, T, IDX>::CtcLossBackward(
         ctx->device_ctx(), grad_out_ptr, loss_ptr, alpha_ptr, log_probs_ptr, targets_ptr,
         input_lengths_ptr, target_lengths_ptr, beta_ptr, grad_ptr, input_helper, beta_helper,
-        batch_size, max_input_length, max_target_length, num_labels, blank, zero_infinity);
+        batch_size, max_input_length, max_target_length, num_labels, blank, zero_infinity,
+        targets_ndim);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -130,9 +125,9 @@ class CtcLossGradKernel final : public user_op::OpKernel {
           & (user_op::HobDataType("input_lengths", 0) == OF_PP_PAIR_SECOND(idx_dtype)))      \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                    \
         const Shape& log_probs_shape = ctx->InputShape("log_probs", 0);                      \
-        const Shape& targets_shape = ctx->InputShape("targets", 0);                          \
+        const int64_t max_target_length = ctx->Attr<int64_t>("max_target_length");           \
         int64_t elem_cnt =                                                                   \
-            log_probs_shape.At(1) * log_probs_shape.At(0) * (2 * targets_shape.At(1) + 1);   \
+            log_probs_shape.At(1) * log_probs_shape.At(0) * (2 * max_target_length + 1);     \
         return elem_cnt * sizeof(OF_PP_PAIR_FIRST(dtype));                                   \
       });
 

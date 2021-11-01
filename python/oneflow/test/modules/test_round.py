@@ -13,40 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
 
 import oneflow as flow
-import oneflow.unittest
+from test_util import GenArgList
 
-
-def _test_round_impl(test_case, shape, device):
-    np_input = np.random.randn(*shape)
-    of_input = flow.Tensor(
-        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    of_out = flow.round(of_input)
-    np_out = np.round(np_input)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
-    of_out = of_out.sum()
-    of_out.backward()
-    test_case.assertTrue(
-        np.allclose(of_input.grad.numpy(), np.zeros(shape), 0.0001, 0.0001)
-    )
+from oneflow.test_utils.automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestRound(flow.unittest.TestCase):
-    def test_round(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            _test_round_impl(test_case, *arg)
+    @autotest()
+    def test_flow_round_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.round(x)
+        return y
 
 
 if __name__ == "__main__":

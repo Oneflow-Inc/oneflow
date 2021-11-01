@@ -304,7 +304,7 @@ OF_DEVICE_FUNC void Avgpool3dForwardCompute(
     int64_t n, c, t, h, w;
     index_helper.OffsetToNdIndex(num, n, c, t, h, w);
 
-    const int64_t start_idx = (n * n_channel + c) * x_time * x_width * x_height;
+    const int64_t start_idx = (n * n_channel + c) * x_time * x_height * x_width;
     int64_t tstart = t * stride_t - padding_t;
     int64_t hstart = h * stride_h - padding_h;
     int64_t wstart = w * stride_w - padding_w;
@@ -322,13 +322,12 @@ OF_DEVICE_FUNC void Avgpool3dForwardCompute(
 
     int64_t divide_factor;
     if (divisor_override != 0) {
-      // std::cout << "divisor override != 0" << std::endl;
       divide_factor = divisor_override;
     } else {
       if (count_include_pad) {
         divide_factor = pool_size;
       } else {
-        divide_factor = (hend - hstart) * (wend - wstart);
+        divide_factor = (tend - tstart) * (hend - hstart) * (wend - wstart);
       }
     }
     T sum = 0;
@@ -336,7 +335,7 @@ OF_DEVICE_FUNC void Avgpool3dForwardCompute(
     for (int64_t i = tstart; i < tend; i += 1) {
       for (int64_t j = hstart; j < hend; j += 1) {
         for (int64_t k = wstart; k < wend; k += 1) {
-          const int64_t tcntr = i * x_width * x_height + j * x_height + k;
+          const int64_t tcntr = i * x_height * x_width + j * x_width + k;
           const int64_t search_idx = start_idx + tcntr;
           sum += src[search_idx];
         }
@@ -390,7 +389,7 @@ OF_DEVICE_FUNC void Avgpool3dBackwardCompute(
     for (int64_t i = tstart; i < tend; i += 1) {
       for (int64_t j = hstart; j < hend; j += 1) {
         for (int64_t k = wstart; k < wend; k += 1) {
-          const int64_t tcntr = i * x_width * x_height + j * x_height + k;
+          const int64_t tcntr = i * x_height * x_width + j * x_width + k;
           const int64_t search_idx = start_idx + tcntr;
           XPUAdd<T>::Invoke(&grad_delta, &dest[search_idx]);  // dest[search_idx] += grad_delta
         }

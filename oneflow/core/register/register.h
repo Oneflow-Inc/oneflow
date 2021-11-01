@@ -21,22 +21,15 @@ limitations under the License.
 
 namespace oneflow {
 
-struct RegstStatus {
-  int64_t regst_desc_id;
-  int64_t act_id;
-};
-
 class Regst final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Regst);
   ~Regst();
 
   // Getters
-  const RegstStatus& status() const { return status_; }
-  int64_t act_id() const { return status_.act_id; }
   int64_t regst_desc_id() const {
-    CHECK_NE(status_.regst_desc_id, -1);
-    return status_.regst_desc_id;
+    CHECK(regst_desc_ != nullptr);
+    return regst_desc_->regst_desc_id();
   }
 
   int64_t producer_actor_id() const { return regst_desc_->producer_actor_id(); }
@@ -47,9 +40,6 @@ class Regst final {
   const Blob* GetSoleBlob() const;
   Blob* GetMutSoleBlob();
   int64_t GetBlobSize() const { return static_cast<int64_t>(sorted_blob_vec_.size()); }
-
-  // Setters
-  void set_act_id(int64_t val) { status_.act_id = val; }
 
   void* main_mem_ptr() const { return main_mem_ptr_; }
   void set_main_mem_ptr(void* ptr) { main_mem_ptr_ = ptr; }
@@ -64,7 +54,6 @@ class Regst final {
   void set_regst_desc(const RtRegstDesc* regst_desc);
   void SetBlobByOrdinal(int64_t ordinal, std::unique_ptr<Blob>&& blob);
 
-  RegstStatus status_{};
   const RtRegstDesc* regst_desc_;
   std::vector<std::unique_ptr<Blob>> sorted_blob_vec_;
   void* main_mem_ptr_;

@@ -23,89 +23,104 @@ namespace oneflow {
 
 #ifdef WITH_CUDA
 
-const cudaStream_t* CudaStreamHandle::cuda_stream() {
-  if (!cuda_stream_) {
-    cuda_stream_.reset(new cudaStream_t);
-    OF_CUDA_CHECK(cudaStreamCreate(cuda_stream_.get()));
-  }
-  return cuda_stream_.get();
+namespace {
+
+constexpr int kCudaEventReuseRecycleThreshold = 32;
+
 }
 
-const cublasHandle_t* CudaStreamHandle::cublas_pmh_handle() {
-  if (!cublas_pmh_handle_) {
-    cublas_pmh_handle_.reset(new cublasHandle_t);
-    OF_CUBLAS_CHECK(cublasCreate(cublas_pmh_handle_.get()));
-    OF_CUBLAS_CHECK(cublasSetStream(*cublas_pmh_handle_, *cuda_stream()));
+CudaStreamHandle::CudaStreamHandle(Channel<CudaCBEvent>* cb_event_chan)
+    : cb_event_chan_(cb_event_chan),
+      cuda_stream_(nullptr),
+      cublas_handle_(nullptr),
+      cudnn_handle_(nullptr) {
+  cuda_event_flags_ = cudaEventDisableTiming;
+  if (ParseBooleanFromEnv("ONEFLOW_STREAM_CUDA_EVENT_FLAG_BLOCKING_SYNC", false)) {
+    cuda_event_flags_ |= cudaEventBlockingSync;
+  }
+  reuse_cuda_event_ = ParseBooleanFromEnv("ONEFLOW_STREAM_REUSE_CUDA_EVENT", false);
+}
+
+cudaStream_t CudaStreamHandle::cuda_stream() {
+  if (cuda_stream_ == nullptr) { OF_CUDA_CHECK(cudaStreamCreate(&cuda_stream_)); }
+  return cuda_stream_;
+}
+
+cublasHandle_t CudaStreamHandle::cublas_handle() {
+  if (cublas_handle_ == nullptr) {
+    OF_CUBLAS_CHECK(cublasCreate(&cublas_handle_));
+    OF_CUBLAS_CHECK(cublasSetStream(cublas_handle_, cuda_stream()));
 #if CUDA_VERSION >= 11000
     if (Global<ResourceDesc, ForSession>::Get()->enable_tensor_float_32_compute()) {
-      OF_CUBLAS_CHECK(cublasSetMathMode(*cublas_pmh_handle_, CUBLAS_TF32_TENSOR_OP_MATH));
+      OF_CUBLAS_CHECK(cublasSetMathMode(cublas_handle_, CUBLAS_TF32_TENSOR_OP_MATH));
     }
 #endif
   }
-  return cublas_pmh_handle_.get();
+  return cublas_handle_;
 }
 
-const cublasHandle_t* CudaStreamHandle::cublas_pmd_handle() {
-  if (!cublas_pmd_handle_) {
-    cublas_pmd_handle_.reset(new cublasHandle_t);
-    OF_CUBLAS_CHECK(cublasCreate(cublas_pmd_handle_.get()));
-    OF_CUBLAS_CHECK(cublasSetStream(*cublas_pmd_handle_, *cuda_stream()));
-    OF_CUBLAS_CHECK(cublasSetPointerMode(*cublas_pmd_handle_, CUBLAS_POINTER_MODE_DEVICE));
-  }
-  return cublas_pmd_handle_.get();
-}
-
-const cublasHandle_t* CudaStreamHandle::cublas_tensor_op_math_handle() {
-  if (!cublas_tensor_op_math_handle_) {
-    cublas_tensor_op_math_handle_.reset(new cublasHandle_t);
-    OF_CUBLAS_CHECK(cublasCreate(cublas_tensor_op_math_handle_.get()));
-    OF_CUBLAS_CHECK(cublasSetStream(*cublas_tensor_op_math_handle_, *cuda_stream()));
-#if CUDA_VERSION >= 11000
-    OF_CUBLAS_CHECK(cublasSetMathMode(*cublas_tensor_op_math_handle_, CUBLAS_DEFAULT_MATH));
-#else
-    OF_CUBLAS_CHECK(cublasSetMathMode(*cublas_tensor_op_math_handle_, CUBLAS_TENSOR_OP_MATH));
-#endif
-  }
-  return cublas_tensor_op_math_handle_.get();
-}
-
-const cudnnHandle_t* CudaStreamHandle::cudnn_handle() {
-  if (!cudnn_handle_) {
+cudnnHandle_t CudaStreamHandle::cudnn_handle() {
+  if (cudnn_handle_ == nullptr) {
     if (IsCuda9OnTuringDevice()) {
       OF_CUDA_CHECK(cudaDeviceSynchronize());
       OF_CUDA_CHECK(cudaGetLastError());
     }
-    cudnn_handle_.reset(new cudnnHandle_t);
-    OF_CUDNN_CHECK(cudnnCreate(cudnn_handle_.get()));
+    OF_CUDNN_CHECK(cudnnCreate(&cudnn_handle_));
     if (IsCuda9OnTuringDevice()) {
       OF_CUDA_CHECK(cudaDeviceSynchronize());
       cudaGetLastError();
     }
-    OF_CUDNN_CHECK(cudnnSetStream(*cudnn_handle_, *cuda_stream()));
+    OF_CUDNN_CHECK(cudnnSetStream(cudnn_handle_, cuda_stream()));
   }
-  return cudnn_handle_.get();
+  return cudnn_handle_;
 }
 
 void CudaStreamHandle::AddCallBack(std::function<void()> callback) {
   CudaCBEvent cb_event;
   cb_event.callback = std::move(callback);
-  int flags = cudaEventDisableTiming;
-  if (ParseBooleanFromEnv("ONEFLOW_STREAM_CUDA_EVENT_FLAG_BLOCKING_SYNC", false)) {
-    flags |= cudaEventBlockingSync;
+  cudaEvent_t cuda_event;
+  if (reuse_cuda_event_) {
+    if (consumer_event_queue_.empty()) {
+      std::unique_lock<std::mutex> lock(global_event_queue_mutex_);
+      consumer_event_queue_.swap(global_event_queue_);
+    }
+    if (consumer_event_queue_.empty()) {
+      OF_CUDA_CHECK(cudaEventCreateWithFlags(&cuda_event, cuda_event_flags_));
+    } else {
+      cuda_event = consumer_event_queue_.back();
+      consumer_event_queue_.pop_back();
+    }
+  } else {
+    OF_CUDA_CHECK(cudaEventCreateWithFlags(&cuda_event, cuda_event_flags_));
   }
-  OF_CUDA_CHECK(cudaEventCreateWithFlags(&(cb_event.event), flags));
-  OF_CUDA_CHECK(cudaEventRecord(cb_event.event, *cuda_stream()));
-  cb_event_chan_->Send(cb_event);
+  cb_event.event = cuda_event;
+  OF_CUDA_CHECK(cudaEventRecord(cb_event.event, cuda_stream()));
+  cb_event_chan_->Send(std::move(cb_event));
+}
+
+void CudaStreamHandle::SyncRecycleEvent(cudaEvent_t event) {
+  OF_CUDA_CHECK(cudaEventSynchronize(event));
+  if (reuse_cuda_event_) {
+    producer_event_queue_.push_back(event);
+    if (producer_event_queue_.size() >= kCudaEventReuseRecycleThreshold) {
+      std::unique_lock<std::mutex> lock(global_event_queue_mutex_);
+      global_event_queue_.insert(global_event_queue_.end(), producer_event_queue_.begin(),
+                                 producer_event_queue_.end());
+      producer_event_queue_.clear();
+    }
+  } else {
+    OF_CUDA_CHECK(cudaEventDestroy(event));
+  }
 }
 
 CudaStreamHandle::~CudaStreamHandle() {
-  if (cudnn_handle_) { OF_CUDNN_CHECK(cudnnDestroy(*cudnn_handle_)); }
-  if (cublas_pmh_handle_) { OF_CUBLAS_CHECK(cublasDestroy(*cublas_pmh_handle_)); }
-  if (cublas_pmd_handle_) { OF_CUBLAS_CHECK(cublasDestroy(*cublas_pmd_handle_)); }
-  if (cublas_tensor_op_math_handle_) {
-    OF_CUBLAS_CHECK(cublasDestroy(*cublas_tensor_op_math_handle_));
-  }
-  if (cuda_stream_) { OF_CUDA_CHECK(cudaStreamDestroy(*cuda_stream_)); }
+  if (cuda_stream_ != nullptr) { OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream_)); }
+  for (cudaEvent_t event : consumer_event_queue_) { OF_CUDA_CHECK(cudaEventDestroy(event)); }
+  for (cudaEvent_t event : producer_event_queue_) { OF_CUDA_CHECK(cudaEventDestroy(event)); }
+  for (cudaEvent_t event : global_event_queue_) { OF_CUDA_CHECK(cudaEventDestroy(event)); }
+  if (cudnn_handle_ != nullptr) { OF_CUDNN_CHECK(cudnnDestroy(cudnn_handle_)); }
+  if (cublas_handle_ != nullptr) { OF_CUBLAS_CHECK(cublasDestroy(cublas_handle_)); }
+  if (cuda_stream_ != nullptr) { OF_CUDA_CHECK(cudaStreamDestroy(cuda_stream_)); }
 }
 
 #endif  // WITH_CUDA

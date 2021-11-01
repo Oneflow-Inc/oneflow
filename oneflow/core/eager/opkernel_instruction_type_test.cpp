@@ -20,8 +20,8 @@ limitations under the License.
 #define private public
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/vm/id_util.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
-#include "oneflow/core/vm/vm_desc.msg.h"
+#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/stream_type.h"
@@ -40,7 +40,7 @@ namespace oneflow {
 namespace vm {
 namespace test {
 
-using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_link);
+using InstructionMsgList = intrusive::List<INTRUSIVE_FIELD(vm::InstructionMsg, instr_msg_hook_)>;
 
 int64_t NewJobDescSymbol(InstructionMsgList* list,
                          const std::shared_ptr<JobConfigProto>& job_conf) {
@@ -120,15 +120,15 @@ TEST(OpkernelInstructionType, new_opkernel) {
     op_conf->mutable_user_conf()->set_op_type_name("TestSource");
     InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf, device_tag);
   }
-  auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
+  auto vm_desc = intrusive::make_shared<vm::VmDesc>(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(),
       {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol", "InitOpKernelObject"});
-  auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
-  vm->Receive(&list);
+  auto vm = intrusive::make_shared<vm::VirtualMachine>(vm_desc.Get());
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    INTRUSIVE_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }
 
@@ -149,15 +149,15 @@ TEST(OpkernelInstructionType, delete_opkernel) {
         InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf, device_tag);
   }
   list.EmplaceBack(vm::NewInstruction("DeleteOpKernelObject")->add_mut_operand(opkernel_id));
-  auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
+  auto vm_desc = intrusive::make_shared<vm::VmDesc>(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(),
       {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol", "InitOpKernelObject"});
-  auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
-  vm->Receive(&list);
+  auto vm = intrusive::make_shared<vm::VirtualMachine>(vm_desc.Get());
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    INTRUSIVE_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }
 
@@ -194,15 +194,15 @@ TEST(OpkernelInstructionType, call_opkernel) {
                        ->add_symbol_operand(obn_id)
                        ->add_mut_operand(output_blob_id)
                        ->add_separator());
-  auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
+  auto vm_desc = intrusive::make_shared<vm::VmDesc>(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
                           "InitOpKernelObject", device_tag + ".CallOpKernel"});
-  auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
-  vm->Receive(&list);
+  auto vm = intrusive::make_shared<vm::VirtualMachine>(vm_desc.Get());
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    INTRUSIVE_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }
 
@@ -272,15 +272,15 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
                          ->add_mut_operand(tmp_buffer)
                          ->add_separator());
   }
-  auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
+  auto vm_desc = intrusive::make_shared<vm::VmDesc>(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
                           "InitOpKernelObject", "gpu.CallOpKernel"});
-  auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
-  vm->Receive(&list);
+  auto vm = intrusive::make_shared<vm::VirtualMachine>(vm_desc.Get());
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    INTRUSIVE_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }
 #endif
@@ -321,15 +321,15 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
                        ->add_symbol_operand(obn_id)
                        ->add_mut_operand(output_blob_id)
                        ->add_separator());
-  auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
+  auto vm_desc = intrusive::make_shared<vm::VmDesc>(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
                           "InitOpKernelObject", device_tag + ".CallOpKernel"});
-  auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
-  vm->Receive(&list);
+  auto vm = intrusive::make_shared<vm::VirtualMachine>(vm_desc.Get());
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    INTRUSIVE_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }
 
@@ -398,15 +398,15 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
                        ->add_mut_operand(y)
                        ->add_mut_operand(tmp_buffer)
                        ->add_separator());
-  auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
+  auto vm_desc = intrusive::make_shared<vm::VmDesc>(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
                           "gpu.compute.UserStatelessCallOpKernel"});
-  auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
-  vm->Receive(&list);
+  auto vm = intrusive::make_shared<vm::VirtualMachine>(vm_desc.Get());
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    INTRUSIVE_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }
 #endif

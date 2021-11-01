@@ -18,7 +18,7 @@ Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::_{{ util.class_na
   InitFromProto(proto_{{ util.class_name(cls).lower() }});
 }
 Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::_{{ util.class_name(cls) }}_(_{{ util.class_name(cls) }}_&& other) = default;
-Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::~_{{ util.class_name(cls) }}_() = default;
+Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::~_{{ util.class_name(cls) }}_() { Clear(); }
 
 void Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::InitFromProto(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }}) {
   Clear();
@@ -870,6 +870,10 @@ void {{ util.class_name(cls) }}::CopyFrom(const {{ util.class_name(cls) }}& othe
 }
 {{ util.class_name(cls) }}& {{ util.class_name(cls) }}::operator=(const {{ util.class_name(cls) }}& other) {
   CopyFrom(other);
+  return *this;
+}
+{{ util.class_name(cls) }}& {{ util.class_name(cls) }}::operator=({{ util.class_name(cls) }}&& other) {
+  data_ = std::move(other.data_);
   return *this;
 }
 

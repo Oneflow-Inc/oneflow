@@ -17,11 +17,13 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_RELEASE_TENSOR_ARG_PHY_INSTR_OPERAND_H_
 
 #include <functional>
+#include <memory>
 #include "oneflow/core/vm/phy_instr_operand.h"
 
 namespace oneflow {
 
-class VmLocalDepObject;
+class LocalDepObject;
+
 namespace vm {
 
 class EagerBlobObject;
@@ -29,7 +31,7 @@ class EagerBlobObject;
 class ReleaseTensorArgPhyInstrOperand : public PhyInstrOperand {
  public:
   ReleaseTensorArgPhyInstrOperand(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-                                  const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object)
+                                  LocalDepObject* compute_local_dep_object)
       : eager_blob_object_(eager_blob_object),
         compute_local_dep_object_(compute_local_dep_object) {}
   ~ReleaseTensorArgPhyInstrOperand() override = default;
@@ -49,7 +51,7 @@ class ReleaseTensorArgPhyInstrOperand : public PhyInstrOperand {
 
  private:
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
-  std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
+  LocalDepObject* compute_local_dep_object_;
 };
 
 }  // namespace vm

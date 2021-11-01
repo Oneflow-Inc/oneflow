@@ -25,7 +25,7 @@ limitations under the License.
 #include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/device_type.pb.h"
+#include "oneflow/core/common/device_type.h"
 
 namespace oneflow {
 
@@ -57,6 +57,17 @@ struct IsIntegral : std::integral_constant<bool, false> {};
   template<>                                           \
   struct IsIntegral<type_cpp> : std::integral_constant<bool, true> {};
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, INT_DATA_TYPE_SEQ);
+#undef SPECIALIZE_TRUE_INTEGRAL
+
+// Type Trait: IsUnsignedIntegral
+
+template<typename T>
+struct IsUnsignedIntegral : std::integral_constant<bool, false> {};
+
+#define SPECIALIZE_TRUE_INTEGRAL(type_cpp, type_proto) \
+  template<>                                           \
+  struct IsUnsignedIntegral<type_cpp> : std::integral_constant<bool, true> {};
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, UNSIGNED_INT_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
 
 // Type Trait: GetDataType
@@ -210,6 +221,7 @@ struct DevDType<DeviceType::kGPU, float16> {
 
 bool IsIntegralDataType(DataType data_type);
 bool IsFloatingDataType(DataType data_type);
+bool IsSupportRequireGradDataType(DataType data_type);
 bool IsPODDataType(DataType data_type);
 bool IsIndexDataType(DataType data_type);
 size_t GetSizeOfDataType(DataType data_type);

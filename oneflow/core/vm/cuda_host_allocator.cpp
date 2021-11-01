@@ -21,12 +21,39 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
+CudaHostAllocator::~CudaHostAllocator() {
+  CudaCurrentDeviceGuard guard(device_id_);
+  for (const auto& ptr_vec : granularity2free_ptrs_) {
+    for (char* ptr : ptr_vec) { OF_CUDA_CHECK(cudaFreeHost(ptr)); }
+  }
+  for (const auto& pair : occupied_ptr2granularity_) { OF_CUDA_CHECK(cudaFreeHost(pair.first)); }
+}
+
 void CudaHostAllocator::Allocate(char** mem_ptr, std::size_t size) {
-  OF_CUDA_CHECK(cudaMallocHost(mem_ptr, size));
+  std::size_t granularity = std::ceil(std::log2(size));
+  CHECK_GE(granularity, 0);
+  CHECK_LT(granularity, kMaxGranularity);
+  CHECK_LE(size, 1 << granularity);
+  CudaCurrentDeviceGuard guard(device_id_);
+  std::unique_lock<std::mutex> lock(mutex_);
+  auto* vec = &granularity2free_ptrs_[granularity];
+  if (vec->empty()) {
+    char* ptr = nullptr;
+    OF_CUDA_CHECK(cudaMallocHost(&ptr, 1 << granularity));
+    vec->push_back(ptr);
+  }
+  *mem_ptr = vec->back();
+  vec->pop_back();
+  occupied_ptr2granularity_[*mem_ptr] = granularity;
 }
 
 void CudaHostAllocator::Deallocate(char* mem_ptr, std::size_t size) {
-  OF_CUDA_CHECK(cudaFreeHost(mem_ptr));
+  std::unique_lock<std::mutex> lock(mutex_);
+  auto iter = occupied_ptr2granularity_.find(mem_ptr);
+  CHECK(iter != occupied_ptr2granularity_.end());
+  std::size_t granularity = iter->second;
+  occupied_ptr2granularity_.erase(iter);
+  granularity2free_ptrs_[granularity].push_back(mem_ptr);
 }
 
 }  // namespace vm

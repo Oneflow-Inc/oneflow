@@ -13,41 +13,57 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/actor/copy_comm_net_actor.h"
+#include "oneflow/core/actor/actor.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/register/register.h"
 
 namespace oneflow {
 
-CopyCommNetActor::~CopyCommNetActor() { Global<CommNet>::Get()->DeleteActorReadId(actor_read_id_); }
-
-class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
+class CopyCommNetActor final : public Actor {
  public:
-  CommNetDeviceCtx() = delete;
-  ~CommNetDeviceCtx() = default;
-
-  CommNetDeviceCtx(void* actor_read_id) : actor_read_id_(actor_read_id) {}
-  std::unique_ptr<DeviceCtx> Copy() const { UNIMPLEMENTED(); }
-
-  void AddCallBack(std::function<void()> callback) const override {
-    Global<CommNet>::Get()->AddReadCallBack(actor_read_id_, callback);
-  }
+  OF_DISALLOW_COPY_AND_MOVE(CopyCommNetActor);
+  CopyCommNetActor() = default;
+  ~CopyCommNetActor();
 
  private:
+  struct RegstCtx {
+    void* comm_net_token;
+    Regst* regst_raw_ptr;
+    int64_t producer;
+    bool has_sole_empty_blob;
+  };
+
+  void VirtualActorInit(const TaskProto&) override;
+
+  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
+      override {
+    return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
+  }
+  void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
+  void NormalProcessCustomizedEordMsg(const ActorMsg&) override { is_in_eord_ = true; }
+  bool NormalTryProcessReadableMsgFromOtherMachine(const ActorMsg&) override;
+  void Act() override;
+  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
+  void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
+  bool IsCustomizedReadReady() const override;
+  bool IsCustomizedReadAlwaysUnReadyFromNow() const override;
+  void AsyncReturnAllCustomizedReadableRegst() override;
+  void AddCallback(std::function<void()> callback) override;
+  bool is_in_eord_;
+  HashMap<int64_t, RegstCtx> sequence_number2regst_ctx_;
   void* actor_read_id_;
+  int64_t next_sequence_number_;
+  int64_t in_regst_desc_id_;
 };
+
+CopyCommNetActor::~CopyCommNetActor() { Global<CommNet>::Get()->DeleteActorReadId(actor_read_id_); }
 
 void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
   is_in_eord_ = false;
   next_sequence_number_ = 0;
   in_regst_desc_id_ = Name2SoleRegstDescId("copy_in");
-  OF_SET_MSG_HANDLER(&CopyCommNetActor::HandlerNormal);
-}
-
-void CopyCommNetActor::InitDeviceCtx(const ThreadCtx&) {
   actor_read_id_ = Global<CommNet>::Get()->NewActorReadId();
-  comm_net_device_ctx_ = new CommNetDeviceCtx(actor_read_id_);
-  mut_device_ctx().reset(comm_net_device_ctx_);
+  OF_SET_MSG_HANDLER(&CopyCommNetActor::HandlerNormal);
 }
 
 void CopyCommNetActor::ForEachCurCustomizedReadableRegst(
@@ -55,19 +71,11 @@ void CopyCommNetActor::ForEachCurCustomizedReadableRegst(
   handler(sequence_number2regst_ctx_.at(next_sequence_number_).regst_raw_ptr);
 }
 
-void CopyCommNetActor::SetReadableRegstInfo(const Regst* regst, ReadableRegstInfo* info) const {
-  const RegstCtx& regst_ctx = sequence_number2regst_ctx_.at(next_sequence_number_);
-  CHECK(regst == regst_ctx.regst_raw_ptr);
-  info->set_regst_desc_id(in_regst_desc_id_);
-  info->set_act_id(regst_ctx.act_id);
-}
-
 bool CopyCommNetActor::NormalTryProcessReadableMsgFromOtherMachine(const ActorMsg& msg) {
   RegstCtx regst_ctx;
   regst_ctx.comm_net_token = msg.comm_net_token();
   regst_ctx.regst_raw_ptr = msg.regst();
   regst_ctx.producer = msg.src_actor_id();
-  regst_ctx.act_id = msg.act_id();
   regst_ctx.has_sole_empty_blob = msg.has_sole_empty_blob();
   CHECK(sequence_number2regst_ctx_.emplace(msg.comm_net_sequence_number(), regst_ctx).second);
   return true;
@@ -116,6 +124,10 @@ bool CopyCommNetActor::IsCustomizedReadAlwaysUnReadyFromNow() const {
 
 void CopyCommNetActor::AsyncReturnAllCustomizedReadableRegst() {
   CHECK(sequence_number2regst_ctx_.empty());
+}
+
+void CopyCommNetActor::AddCallback(std::function<void()> callback) {
+  Global<CommNet>::Get()->AddReadCallBack(actor_read_id_, callback);
 }
 
 REGISTER_ACTOR(TaskType::kCopyCommNet, CopyCommNetActor);

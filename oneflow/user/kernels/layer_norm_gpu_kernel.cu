@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/cuda/atomic.cuh"
 #include <cub/cub.cuh>
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -375,12 +376,13 @@ __global__ void LayerNormParamGradHalfImpl(const I n, const I instance_size, con
 }  // namespace
 
 template<typename T, typename BNParamT>
-class LayerNormGpuKernel final : public user_op::OpKernel {
+class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   LayerNormGpuKernel() = default;
   ~LayerNormGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
@@ -464,12 +466,13 @@ REGISTER_LAYER_NORM_GPU_KERNEL(double, double)
 REGISTER_LAYER_NORM_GPU_KERNEL(float16, float)
 
 template<typename T, typename BNParamT>
-class LayerNormGradGpuKernel final : public user_op::OpKernel {
+class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   LayerNormGradGpuKernel() = default;
   ~LayerNormGradGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -537,12 +540,14 @@ REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(double, double)
 REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(float16, float)
 
 template<typename T>
-class LayerNormParamGradGpuKernel final : public user_op::OpKernel {
+class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
+                                          public user_op::CudaGraphSupport {
  public:
   LayerNormParamGradGpuKernel() = default;
   ~LayerNormParamGradGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     using NdUtil = NdarrayUtil<DeviceType::kGPU, T>;
@@ -632,12 +637,14 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel {
 REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(float)
 REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(double)
 
-class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel {
+class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
+                                              public user_op::CudaGraphSupport {
  public:
   LayerNormParamGradGpuHalfKernel() = default;
   ~LayerNormParamGradGpuHalfKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     using NdUtil = NdarrayUtil<DeviceType::kGPU, float16>;

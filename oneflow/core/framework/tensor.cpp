@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_rpc_util.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
@@ -33,7 +35,7 @@ namespace one {
 Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
   CHECK_OR_RETURN(is_local());
   return std::dynamic_pointer_cast<MirroredTensor>(
-      JUST(functional::Constant(*shape_, functional::Scalar(0), dtype_, device_)));
+      JUST(functional::Constant(*shape_, Scalar(0), CHECK_JUST(DType::Get(dtype_)), device_)));
 }
 
 /* static */ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
@@ -48,31 +50,11 @@ Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
   } else {
     const auto& impl =
         std::make_shared<EagerMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);
-    const auto& tensor = std::make_shared<MirroredTensor>(impl);
-    const auto& outputs = std::make_shared<TensorTuple>();
-    outputs->push_back(tensor);
-    JUST(RunEmptyOp(outputs.get()));
-    return tensor;
+    return std::make_shared<MirroredTensor>(impl);
   }
 }
 
-/* static */ Maybe<MirroredTensor> MirroredTensor::MakeEagerTensor(
-    const std::shared_ptr<vm::EagerBlobObject> eager_blob_object, const Symbol<Device>& device,
-    const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf) {
-  const auto& blob_desc = eager_blob_object->blob_desc();
-  const auto& tensor_meta =
-      std::make_shared<MirroredTensorMeta>(blob_desc.shape_ptr(), blob_desc.data_type(), device);
-  auto* tensor_impl = new EagerMirroredTensorImpl(tensor_meta, requires_grad, is_leaf);
-  JUST(tensor_impl->InitEagerBlobObjectAndTensorStorage(eager_blob_object, tensor_storage));
-  return std::make_shared<MirroredTensor>(std::shared_ptr<MirroredTensorImpl>(tensor_impl));
-}
-
 bool MirroredTensor::is_cuda() const { return CHECK_JUST(device())->type() == "cuda"; }
-
-std::shared_ptr<Tensor> MirroredTensor::data() const {
-  std::shared_ptr<MirroredTensor> t = std::make_shared<MirroredTensor>(impl_);
-  return t;
-}
 
 Maybe<Tensor> MirroredTensor::detach() const {
   std::shared_ptr<Tensor> tensor = std::make_shared<MirroredTensor>(JUST(impl_->detach()));
@@ -87,13 +69,24 @@ Maybe<Tensor> MirroredTensor::clone() const {
   return JUST(functional::Copy(input, device_type, device_id));
 }
 
-Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(
-    const std::shared_ptr<const Shape>& shape, DataType dtype,
-    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc,
-    bool is_lazy, bool requires_grad, bool is_leaf) {
+Maybe<Tensor> ConsistentTensor::clone() const {
+  const auto& local_tensor = JUST(cur_rank_phy_tensor());
+  const auto& device_type = JUST(local_tensor->device())->type();
+  int64_t device_id = JUST(local_tensor->device())->device_id();
+  const auto& cloned_local_tensor = JUST(functional::Copy(local_tensor, device_type, device_id));
+  DisableCheckConsistentTensorMetaScope disable_meta_check{};
+  return functional::LocalToConsistent(cloned_local_tensor, JUST(parallel_desc()),
+                                       *JUST(GetSbpList(JUST(nd_sbp()))), *shape(), dtype());
+}
+
+Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
+                                                     DataType dtype, Symbol<cfg::NdSbp> nd_sbp,
+                                                     Symbol<ParallelDesc> parallel_desc,
+                                                     bool is_lazy, bool requires_grad,
+                                                     bool is_leaf) {
   std::shared_ptr<ConsistentTensorImpl> impl;
   Symbol<ConsistentTensorMeta> consistent_tensor_meta(
-      ConsistentTensorMeta(shape, dtype, parallel_distribution, parallel_desc));
+      ConsistentTensorMeta(shape, dtype, nd_sbp, parallel_desc));
   if (is_lazy) {
     impl =
         std::make_shared<LazyConsistentTensorImpl>(consistent_tensor_meta, requires_grad, is_leaf);
@@ -105,11 +98,6 @@ Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(
 
 bool ConsistentTensor::is_cuda() const {
   return CHECK_JUST(parallel_desc())->device_type() == DeviceType::kGPU;
-}
-
-std::shared_ptr<Tensor> ConsistentTensor::data() const {
-  std::shared_ptr<ConsistentTensor> t = std::make_shared<ConsistentTensor>(impl_);
-  return t;
 }
 
 Maybe<Tensor> ConsistentTensor::detach() const {

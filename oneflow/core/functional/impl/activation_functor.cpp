@@ -13,10 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
+#include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/scalar.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
-
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -24,8 +25,8 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/function_library.h"
-#include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/functional/sequence_function.h"
 
 namespace oneflow {
 namespace one {
@@ -61,11 +62,30 @@ class ReluGradFunctor : public BinaryFunctor {
   }
 };
 
-class PReluFunctor : public BinaryFunctor {
+namespace {
+Maybe<void> CheckPReLUParametersValid(const std::shared_ptr<Tensor>& x,
+                                      const std::shared_ptr<Tensor>& alpha) {
+  int num_params = alpha->dim(0);
+  CHECK_OR_RETURN(((num_params == 1) || (num_params == x->shape()->At(1))))
+      << "num_parameters in prelu must be 1 or " << x->shape()->At(1);
+  return Maybe<void>::Ok();
+}
+}  // namespace
+
+class PReluFunctor {
  public:
   PReluFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("prelu").Input("x").Input("alpha").Output("y").Build());
   }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& alpha) const {
+    JUST(CheckPReLUParametersValid(x, alpha));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, alpha});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class PReluGradFunctor {
@@ -152,6 +172,44 @@ class EluGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class CeluFunctor {
+ public:
+  CeluFunctor() { op_ = CHECK_JUST(one::OpBuilder("celu").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& alpha,
+                           bool inplace) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("alpha", alpha));
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class CeluGradFunctor {
+ public:
+  CeluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("celu_grad").Input("x").Input("dy").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& dy, const double& alpha) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("alpha", alpha));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class GeluFunctor : public UnaryFunctor {
  public:
   GeluFunctor() { op_ = CHECK_JUST(one::OpBuilder("gelu").Input("in").Output("out").Build()); }
@@ -164,13 +222,49 @@ class GeluGradFunctor : public BinaryFunctor {
   }
 };
 
-class HardSigmoidFunctor : public UnaryFunctor {
+class GluFunctor {
+ public:
+  GluFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
+    auto ndim = input->ndim();
+    CHECK_GT_OR_RETURN(ndim, 0) << "glu does not support 0-dimensional tensors";
+    CHECK_OR_RETURN(dim >= -ndim && dim < ndim)
+        << ", Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got " << dim << ")";
+    if (dim < 0) { dim += ndim; }
+    int64_t nc = input->dim(dim);
+    CHECK_EQ_OR_RETURN(nc % 2, 0) << "Halving dimension must be even, but dimension " << dim
+                                  << " is size " << nc;
+    nc = nc / 2;
+    std::vector<int64_t> split_sizes(2, nc);
+    const auto split_x = JUST(SplitWithSize(input, split_sizes, dim));
+    return sequence_function(functional::Sigmoid)
+        .then(std::bind(functional::Mul, split_x->at(0), std::placeholders::_1))
+        .call(split_x->at(1));
+  }
+};
+
+class HardSigmoidFunctor {
  public:
   HardSigmoidFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("hardsigmoid").Input("in").Output("out").Build());
   }
-};
 
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, bool inplace) const {
+    if (inplace) {
+      JUST(CheckInplaceValid(input));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = input;
+      JUST(OpInterpUtil::Dispatch(*op_, {input}, outputs.get(), AttrMap{}));
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {input});
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
 class HardSigmoidGradFunctor : public BinaryFunctor {
  public:
   HardSigmoidGradFunctor() {
@@ -178,11 +272,63 @@ class HardSigmoidGradFunctor : public BinaryFunctor {
         CHECK_JUST(one::OpBuilder("hardsigmoid_grad").Input("dy").Input("x").Output("dx").Build());
   }
 };
+class SoftmaxFunctorBase {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const Optional<int64_t>& dim) const {
+    const auto input_shape = input->shape();
+    const int64_t num_axes = input_shape->NumAxes();
 
-class SoftmaxFunctor : public UnaryFunctor {
+    const auto get_dim = [num_axes]() -> int64_t {
+      const int64_t ndim = num_axes;
+      if (ndim == 0 || ndim == 1 || ndim == 3) {
+        return 0;
+      } else {
+        return 1;
+      }
+    };
+
+    int64_t dim_ = dim ? JUST(dim) : get_dim();
+    if (dim_ < 0) { dim_ += num_axes; }
+
+    CHECK_GE_OR_RETURN(dim_, 0);
+    CHECK_LT_OR_RETURN(dim_, num_axes);
+
+    if (dim_ != num_axes - 1) {
+      std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
+      for (size_t i = 1; i < input_perm.size(); ++i) { input_perm[i] = i; }
+      input_perm[dim_] = input_perm[input_perm.size() - 1];
+      input_perm[input_perm.size() - 1] = dim_;
+
+      return sequence_function(functional::Transpose)
+          .then([&](const std::shared_ptr<one::Tensor>& x) {
+            return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+          })
+          .then(std::bind(functional::Transpose, std::placeholders::_1, input_perm))
+          .call(input, input_perm);
+    }
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input});
+  }
+
+ protected:
+  SoftmaxFunctorBase() = default;
+  virtual ~SoftmaxFunctorBase() = default;
+
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SoftmaxFunctor : public SoftmaxFunctorBase {
  public:
   SoftmaxFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("softmax").Input("in").Output("out").Build());
+  }
+};
+
+class LogSoftmaxFunctor : public SoftmaxFunctorBase {
+ public:
+  LogSoftmaxFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
   }
 };
 
@@ -292,11 +438,15 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::HardTanhGradFunctor>("HardTanhGrad");
   m.add_functor<impl::EluFunctor>("Elu");
   m.add_functor<impl::EluGradFunctor>("EluGrad");
+  m.add_functor<impl::CeluFunctor>("Celu");
+  m.add_functor<impl::CeluGradFunctor>("CeluGrad");
   m.add_functor<impl::GeluFunctor>("Gelu");
   m.add_functor<impl::GeluGradFunctor>("GeluGrad");
+  m.add_functor<impl::GluFunctor>("Glu");
   m.add_functor<impl::HardSigmoidFunctor>("HardSigmoid");
   m.add_functor<impl::HardSigmoidGradFunctor>("HardSigmoidGrad");
   m.add_functor<impl::SoftmaxFunctor>("Softmax");
+  m.add_functor<impl::LogSoftmaxFunctor>("LogSoftmax");
   m.add_functor<impl::HardSwishFunctor>("HardSwish");
   m.add_functor<impl::HardSwishGradFunctor>("HardSwishGrad");
   m.add_functor<impl::LeakyReluFunctor>("LeakyRelu");

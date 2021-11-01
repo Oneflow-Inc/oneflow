@@ -72,6 +72,7 @@ class UpsampleLinear1DGPUKernel final : public user_op::OpKernel {
   ~UpsampleLinear1DGPUKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -105,6 +106,7 @@ class UpsampleLinearGrad1DGPUKernel final : public user_op::OpKernel {
   ~UpsampleLinearGrad1DGPUKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
     Memset<DeviceType::kGPU>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0,
@@ -146,6 +148,5 @@ class UpsampleLinearGrad1DGPUKernel final : public user_op::OpKernel {
 
 REGISTER_UPSAMPLELINEAR1D_GPU_KERNEL(float)
 REGISTER_UPSAMPLELINEAR1D_GPU_KERNEL(double)
-REGISTER_UPSAMPLELINEAR1D_GPU_KERNEL(int)
 
 }  // namespace oneflow

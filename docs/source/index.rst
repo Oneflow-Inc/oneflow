@@ -14,11 +14,19 @@ OneFlow API Reference
     oneflow
     tensor
     nn
+    functional
     module
-    F
+    graph
     linalg
     image
     optim
+    utils
+    cuda
+    distributed
+    comm
+    placement
+    sbp
+
 
 
 Indices and tables

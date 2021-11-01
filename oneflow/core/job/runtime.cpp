@@ -23,14 +23,11 @@ limitations under the License.
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/thread/thread_manager.h"
-#include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/user/summary/events_writer.h"
-#include "oneflow/core/job/collective_boxing_executor.h"
-#include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
 
 namespace oneflow {
 
@@ -63,17 +60,11 @@ bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
 Runtime::Runtime(const Plan& plan, const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
   {
     // NOTE(chengcheng): All runtime Global objects AddPlan
-    if (!CHECK_JUST(GlobalMultiClientEnv())) {
-      // TODO(chengcheng, guoran) handle CollectiveBoxing Global for multi-runtime add plan.
-      Global<boxing::collective::CollectiveBoxingExecutor>::New(plan);
-    }
     Global<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob);
     Global<ThreadMgr>::Get()->AddPlan(plan);
     Global<RuntimeJobDescs>::Get()->AddPlan(plan);
-    if (!CHECK_JUST(GlobalMultiClientEnv())) {
-      // TODO(chengcheng, guoran) handle CollectiveBoxing Global for multi-runtime add plan.
-      Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
-    }
+    collective_boxing_scheduler_plan_token_ =
+        Global<boxing::collective::Scheduler>::Get()->AddPlan(plan);
   }
   std::vector<const TaskProto*> source_tasks;
   std::vector<const TaskProto*> other_tasks;
@@ -113,12 +104,7 @@ Runtime::~Runtime() {
     Global<RuntimeCtx>::Get()->WaitUntilCntEqualZero(GetRunningActorCountKeyByJobId(pair.first));
   }
   OF_SESSION_BARRIER();
-
-  // TODO(chengcheng): move to session delete
-  if (!CHECK_JUST(GlobalMultiClientEnv())) {
-    Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
-    Global<boxing::collective::CollectiveBoxingExecutor>::Delete();
-  }
+  Global<boxing::collective::Scheduler>::Get()->DeletePlan(collective_boxing_scheduler_plan_token_);
 }
 
 }  // namespace oneflow

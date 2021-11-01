@@ -87,12 +87,11 @@ def add(
         return broadcast_add(x, y, name)
 
 
-def _recursive_build_add_n(inputs, name=None):
+def _build_add_n(inputs, name=None):
     inputs = list(inputs)
-    kernel_max_inputs = 8
     if len(inputs) == 1:
         return inputs[0]
-    elif len(inputs) <= kernel_max_inputs:
+    else:
         return (
             flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("AddN_")
@@ -104,11 +103,6 @@ def _recursive_build_add_n(inputs, name=None):
             .InferAndTryRun()
             .RemoteBlobList()[0]
         )
-    else:
-        assert len(inputs) > kernel_max_inputs
-        new_inputs = inputs[kernel_max_inputs:]
-        new_inputs.append(_recursive_build_add_n(inputs[:kernel_max_inputs]))
-        return _recursive_build_add_n(new_inputs)
 
 
 def add_n(
@@ -145,7 +139,7 @@ def add_n(
         # out [2., 3., 4.]
 
     """
-    return _recursive_build_add_n(inputs, name)
+    return _build_add_n(inputs, name)
 
 
 def subtract(
@@ -1683,7 +1677,7 @@ def l2_normalize(
     The equation is:
 
     .. math::
-        out = \\frac{x}{\\sqrt{\\Sigma{x^2}+\\epsilon}}
+        out = \\frac{x}{max(\\sqrt{\\Sigma{x^2}}, \\epsilon)}
 
     Args:
         input (oneflow._oneflow_internal.BlobDesc): Input Blob
@@ -2102,18 +2096,33 @@ def range(
         (start, limit) = (0, start)
     assert limit > start, "Limit should be larger than start"
     assert delta <= limit - start, "Delta is ilegal"
-    assert type(start) == int, "Params `start`'s type should be int"
-    assert type(limit) == int, "Params `limit`'s type should be int"
-    assert type(delta) == int, "Params `delta`'s type should be int"
-    return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Range_"))
-        .Op("range")
-        .Attr("start", start)
-        .Attr("delta", delta)
-        .Attr("limit", limit)
-        .Attr("dtype", dtype)
-        .Output("out")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
+    if dtype == flow.float32 or dtype == flow.float64:
+        return (
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("Range_")
+            )
+            .Op("range")
+            .Attr("float_start", float(start))
+            .Attr("float_delta", float(delta))
+            .Attr("float_limit", float(limit))
+            .Attr("dtype", dtype)
+            .Output("out")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
+    else:
+        return (
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("Range_")
+            )
+            .Op("range")
+            .Attr("integer_start", int(start))
+            .Attr("integer_delta", int(delta))
+            .Attr("integer_limit", int(limit))
+            .Attr("dtype", dtype)
+            .Output("out")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )

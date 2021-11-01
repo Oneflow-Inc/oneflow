@@ -31,44 +31,87 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
       in_shape, *outshape, {{"in", 0}}, {{"out", 0}}, ctx->parallel_num(), &builder);
 }
 
-Maybe<void> InferParallelDistributionFn(user_op::InferParallelDistributionFnContext* ctx) {
+Maybe<void> InferNdSbpFn(user_op::InferNdSbpFnContext* ctx) {
   const Shape& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
   const Shape& shape = ctx->user_op_conf().attr<Shape>("shape");
   const auto& out_shape = JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape));
-  return ReshapeUserOpUtil::InferParallelDistribution(ctx, in_shape, *out_shape);
+  return ReshapeUserOpUtil::InferNdSbp(ctx, in_shape, *out_shape);
 }
 
 Maybe<void> LogicalTensorDescInferFn(user_op::InferContext* ctx) {
-  const Shape& shape = ctx->Attr<Shape>("shape");
+  Shape shape = ctx->Attr<Shape>("shape");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
   const Shape& in_shape = in_tensor_desc.shape();
   Shape* out_shape = out_tensor_desc->mut_shape();
   CHECK_OR_RETURN(in_tensor_desc.is_dynamic() == false);
   *out_tensor_desc = in_tensor_desc;
-  CHECK_GE_OR_RETURN(shape.NumAxes(), 1);
-  DimVector dim_vec = {shape.dim_vec().begin(), shape.dim_vec().end()};
-  FOR_RANGE(int32_t, i, 0, dim_vec.size()) { CHECK_GE_OR_RETURN(dim_vec.at(i), 0); }
-  *out_shape = Shape(dim_vec);
+  if (in_shape.NumAxes() == 0 || shape.NumAxes() == 0) {
+    // NOTE(chengcheng): input/output Scalar
+    // do nothing
+  } else {
+    CHECK_GE_OR_RETURN(shape.NumAxes(), 1);
+    CHECK_GE_OR_RETURN(in_shape.NumAxes(), 1);
+    int need_infer_axis = -1;
+    size_t count = 1;
+    for (int i = 0; i < shape.NumAxes(); ++i) {
+      if (shape.At(i) == -1) {
+        CHECK_EQ_OR_RETURN(need_infer_axis, -1)
+            << "Shape " << shape.ToString() << " has more than 1 axis that needs to be infered.";
+        need_infer_axis = i;
+      } else {
+        count *= shape.At(i);
+      }
+    }
+    if (need_infer_axis != -1) { shape.Set(need_infer_axis, in_shape.elem_cnt() / count); }
+  }
+  *out_shape = shape;
   CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
-  const Shape& shape = ctx->Attr<Shape>("shape");
-  CHECK_GE_OR_RETURN(shape.NumAxes(), 1);
-  FOR_RANGE(int32_t, i, 0, shape.NumAxes()) { CHECK_GT_OR_RETURN(shape.At(i), 0); }
+  Shape logical_shape = ctx->Attr<Shape>("shape");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
   const Shape& in_shape = in_tensor_desc.shape();
   Shape* out_shape = out_tensor_desc->mut_shape();
-  CHECK_OR_RETURN(in_tensor_desc.is_dynamic() == false);
   *out_tensor_desc->mut_shape() = in_tensor_desc.shape();
   *out_tensor_desc->mut_is_dynamic() = in_tensor_desc.is_dynamic();
-  const auto& parallel_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
-  *out_shape = *JUST(
-      GetPhysicalShape(shape, parallel_distribution, ctx->parallel_desc(), ctx->parallel_ctx()));
-  CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());
+  if (in_shape.NumAxes() == 0 || logical_shape.NumAxes() == 0) {
+    // NOTE(chengcheng): input/output Scalar
+    // do nothing
+  } else {
+    CHECK_GE_OR_RETURN(logical_shape.NumAxes(), 1);
+    CHECK_GE_OR_RETURN(in_shape.NumAxes(), 1);
+    const auto& in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
+    const Shape in_logical_shape =
+        *JUST(GetLogicalShape(in_shape, in_nd_sbp, ctx->parallel_desc()));
+    int need_infer_axis = -1;
+    size_t count = 1;
+    for (int i = 0; i < logical_shape.NumAxes(); ++i) {
+      if (logical_shape.At(i) == -1) {
+        CHECK_EQ_OR_RETURN(need_infer_axis, -1)
+            << "Shape " << logical_shape.ToString()
+            << " has more than 1 axis that needs to be infered.";
+        need_infer_axis = i;
+      } else {
+        count *= logical_shape.At(i);
+      }
+    }
+    if (need_infer_axis != -1) {
+      logical_shape.Set(need_infer_axis, in_logical_shape.elem_cnt() / count);
+    }
+  }
+  const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  *out_shape =
+      *JUST(GetPhysicalShape(logical_shape, nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
+  CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt())
+      << " Reshape infer ERROR! in op_name: " << ctx->op_name()
+      << " input shape is : " << in_shape.ToString()
+      << " , output shape is : " << out_shape->ToString() << " , output logical shape is "
+      << logical_shape.ToString()
+      << " , And reshape shape conf is : " << ctx->Attr<Shape>("shape").ToString();
   return Maybe<void>::Ok();
 }
 
@@ -84,7 +127,7 @@ REGISTER_USER_OP("reshape")
     .SetLogicalTensorDescInferFn(LogicalTensorDescInferFn)
     .SetPhysicalTensorDescInferFn(TensorDescInferFn)
     .SetGetSbpFn(GetSbpFn)
-    .SetParallelDistributionInferFn(InferParallelDistributionFn)
+    .SetNdSbpInferFn(InferNdSbpFn)
     .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP_GRAD("reshape").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,

@@ -1,6 +1,7 @@
 /build
 /build-*
 /docs/build/
+/docs/build-cn/
 /cmake-build-*
 /dist
 /third_party/
@@ -38,3 +39,4 @@ unittest-log-*
 /oneflow/python/version.py
 /data-test
 /tmp
+/python/oneflow/test/dataloader/data-test/

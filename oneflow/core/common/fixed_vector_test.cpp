@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/common/fixed_vector.h"
 #include "gtest/gtest.h"
 #include <functional>
+#include <algorithm>
 
 namespace oneflow {
 

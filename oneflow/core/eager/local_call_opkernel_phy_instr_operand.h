@@ -20,12 +20,13 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_interpreter.h"
-#include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/instruction_operand.h"
 
 namespace oneflow {
 namespace one {
 
 class StatefulLocalOpKernel;
+class ConsistentTensorInferResult;
 
 using EagerBlobObjectList = std::vector<std::shared_ptr<vm::EagerBlobObject>>;
 using EagerBlobObjectListPtr =
@@ -50,11 +51,13 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   LocalCallOpKernelPhyInstrOperand(
       const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
       const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,
+      const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
       const one::OpExprInterpContext& op_interp_ctx_,
       const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)
       : opkernel_(opkernel),
         inputs_(inputs),
         outputs_(outputs),
+        consistent_tensor_infer_result_(consistent_tensor_infer_result),
         op_interp_ctx_(op_interp_ctx_),
         dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode) {}
 
@@ -91,10 +94,16 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
 
   void set_user_opkernel(const user_op::OpKernel* user_opkernel) { user_opkernel_ = user_opkernel; }
 
+  const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result()
+      const {
+    return consistent_tensor_infer_result_;
+  }
+
  private:
   std::shared_ptr<one::StatefulLocalOpKernel> opkernel_;
   one::EagerBlobObjectListPtr inputs_;
   one::EagerBlobObjectListPtr outputs_;
+  std::shared_ptr<const one::ConsistentTensorInferResult> consistent_tensor_infer_result_;
   const one::OpExprInterpContext op_interp_ctx_;
   const user_op::OpKernel* user_opkernel_;
   const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode_;

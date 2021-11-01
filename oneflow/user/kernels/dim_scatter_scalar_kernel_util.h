@@ -41,16 +41,37 @@ struct AddScalarFunctor {
   }
 };
 
+template<>
+struct AddScalarFunctor<int8_t> {
+  OF_DEVICE_FUNC static void apply(const int8_t x, int8_t* y) { *y += x; }
+};
+
+template<>
+struct AddScalarFunctor<uint8_t> {
+  OF_DEVICE_FUNC static void apply(const uint8_t x, uint8_t* y) { *y += x; }
+};
+
+template<>
+struct AddScalarFunctor<int64_t> {
+  OF_DEVICE_FUNC static void apply(const int64_t x, int64_t* y) { *y += x; }
+};
+
 template<typename T>
 struct UpdateScalarFunctor {
   OF_DEVICE_FUNC static void apply(const T x, T* y) { *y = x; }
 };
 
 #define INSTANTIATE_DIM_SCATTER_SCARLAR_FUNCTORS(device_type, opt)             \
+  template struct DimScatterScalarFunctor<device_type, uint8_t, int32_t, opt>; \
+  template struct DimScatterScalarFunctor<device_type, int8_t, int32_t, opt>;  \
   template struct DimScatterScalarFunctor<device_type, int32_t, int32_t, opt>; \
+  template struct DimScatterScalarFunctor<device_type, int64_t, int32_t, opt>; \
   template struct DimScatterScalarFunctor<device_type, float, int32_t, opt>;   \
   template struct DimScatterScalarFunctor<device_type, double, int32_t, opt>;  \
+  template struct DimScatterScalarFunctor<device_type, uint8_t, int64_t, opt>; \
+  template struct DimScatterScalarFunctor<device_type, int8_t, int64_t, opt>;  \
   template struct DimScatterScalarFunctor<device_type, int32_t, int64_t, opt>; \
+  template struct DimScatterScalarFunctor<device_type, int64_t, int64_t, opt>; \
   template struct DimScatterScalarFunctor<device_type, float, int64_t, opt>;   \
   template struct DimScatterScalarFunctor<device_type, double, int64_t, opt>;
 
@@ -80,9 +101,9 @@ OF_DEVICE_FUNC void DoScatterScalarFunctor(const DimOpIndexNdHelper<IDX_T>& idx_
 #if __CUDA_ARCH__
       __trap();
 #else
-      std::cout << "The index element " << idx_elem << " is out of bounds for dimension " << dim
+      std::cerr << "The index element " << idx_elem << " is out of bounds for dimension " << dim
                 << " with size " << upper_bound << std::endl;
-      throw Error::CheckFailedError();
+      throw Error::CheckFailedError();  // TODO: Remove throw Error.
 #endif
     }
     coordinate[dim] = idx_elem;

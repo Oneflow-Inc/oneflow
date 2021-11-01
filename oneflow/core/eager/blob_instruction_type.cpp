@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/object_msg/flat_msg_view.h"
+#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/eager/blob_instruction_type.h"
@@ -129,6 +129,21 @@ void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) 
   OfBlob ofblob(device_ctx, ptr->eager_blob_object()->mut_blob());
   ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));
 }
+
+class TouchInstructionType : public vm::InstructionType {
+ public:
+  TouchInstructionType() = default;
+  ~TouchInstructionType() = default;
+  using stream_type = vm::ControlStreamType;
+
+  void Infer(VirtualMachine* vm, Instruction* instruction) const override { UNIMPLEMENTED(); }
+  void Compute(VirtualMachine* vm, Instruction* instruction) const override {
+    // do nothing
+  }
+  void Infer(Instruction*) const override { UNIMPLEMENTED(); }
+  void Compute(Instruction*) const override { UNIMPLEMENTED(); }
+};
+COMMAND(vm::RegisterInstructionType<TouchInstructionType>("Touch"));
 
 }  // namespace vm
 }  // namespace oneflow

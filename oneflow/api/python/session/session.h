@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
+#include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
@@ -124,6 +125,12 @@ inline Maybe<void> InitMultiClientSessionContext(const std::string& config_proto
   CHECK_OR_RETURN(TxtString2PbMessage(config_proto_str, &config_proto))
       << "failed to parse config_proto: " << config_proto_str;
   JUST(Global<MultiClientSessionContext>::Get()->TryInit(config_proto));
+  return Maybe<void>::Ok();
+}
+
+inline Maybe<void> MultiClientSessionContextAddCGraph(
+    const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr) {
+  JUST(Global<MultiClientSessionContext>::Get()->AddCGraph(c_graph_ptr));
   return Maybe<void>::Ok();
 }
 

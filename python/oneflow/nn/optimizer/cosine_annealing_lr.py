@@ -19,63 +19,78 @@ from .lr_scheduler import LrScheduler
 
 
 class CosineAnnealingLR(LrScheduler):
-    """This operator creates a Cosine decayed learning rate scheduler.
+    r"""
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.CosineAnnealingLR.html?highlight=cosine#torch.optim.lr_scheduler.CosineAnnealingLR
 
-    Before the steps are specified by user, the learning rate will be updated as:
-
-    .. math::
-
-        & cos\\_decay = 0.5*(1+cos(\\pi*\\frac{current\\_step}{steps}))
-
-        & decay\\_factor = (1-\\alpha)*cos\\_decay+\\alpha
-
-        & learning\\_rate = base\\_learning\\_rate*decay\\_factor
-
-    After the steps specified by user, the learning rate will be :
+    Set the learning rate of each parameter group using a cosine annealing
+    schedule, where :math:`\eta_{max}` is set to the initial lr and
+    :math:`T_{cur}` is the number of epochs since the last restart in SGDR:
 
     .. math::
+        \begin{aligned}
+            \eta_t & = \eta_{min} + \frac{1}{2}(\eta_{max} - \eta_{min})\left(1
+            + \cos\left(\frac{T_{cur}}{T_{max}}\pi\right)\right),
+            & T_{cur} \neq (2k+1)T_{max}; \\
+            \eta_{t+1} & = \eta_{t} + \frac{1}{2}(\eta_{max} - \eta_{min})
+            \left(1 - \cos\left(\frac{1}{T_{max}}\pi\right)\right),
+            & T_{cur} = (2k+1)T_{max}.
+        \end{aligned}
 
-        learning\\_rate = {base\\_learning\\_rate}*{\\alpha}
+    When last_step=-1, sets initial lr as lr. Notice that because the schedule
+    is defined recursively, the learning rate can be simultaneously modified
+    outside this scheduler by other operators. If the learning rate is set
+    solely by this scheduler, the learning rate at each step becomes:
+
+    .. math::
+        \eta_t = \eta_{min} + \frac{1}{2}(\eta_{max} - \eta_{min})\left(1 +
+        \cos\left(\frac{T_{cur}}{T_{max}}\pi\right)\right)
 
     It has been proposed in
     `SGDR: Stochastic Gradient Descent with Warm Restarts`_. Note that this only
     implements the cosine annealing part of SGDR, and not the restarts.
 
     Args:
-        optimizer(Optimizer): Wrapped optimizer.
-        steps (int): The decay steps in the scheduler.
-        alpha (float, optional): The learning rate scale factor (:math:`\\alpha`). (default: 0.0)
-        last_step (int, optional): The index of last step. (default: -1)
-        verbose (bool, optional): If ``True``, prints a message to stdout for each update. (default: ``False``)
+        optimizer (Optimizer): Wrapped optimizer.
+        T_max (int): Maximum number of iterations.
+        eta_min (float): Minimum learning rate. Default: 0.
+        last_step (int): The index of last epoch. Default: -1.
+        verbose (bool): If ``True``, prints a message to stdout for
+            each update. Default: ``False``.
 
-    For example:
-
-    .. code-block:: python
-
-        import oneflow as flow
-
-        ...
-        cosine_annealing_lr = flow.optim.lr_scheduler.CosineAnnealingLR(optimizer, steps=100, alpha=0.0)
-        for epoch in range(num_epoch):
-            train(...)
-            cosine_annealing_lr.step()
-
-    .. _SGDR\\: Stochastic Gradient Descent with Warm Restarts:
+    .. _SGDR\: Stochastic Gradient Descent with Warm Restarts:
         https://arxiv.org/abs/1608.03983
     """
 
     def __init__(
-        self, optimizer, steps: int, alpha: float = 0.0, last_step=-1, verbose=False
+        self, optimizer, T_max: int, eta_min: float = 0.0, last_step=-1, verbose=False
     ):
-        assert steps > 0, f"steps must greater than zero, but got {steps}"
-        self.steps = steps
-        self.alpha = alpha
+        self.T_max = T_max
+        self.eta_min = eta_min
         super().__init__(optimizer, last_step, verbose)
 
     def get_lr(self):
-        if self.last_step < self.steps:
-            cos_decay = 0.5 * (1 + math.cos(math.pi * self.last_step / self.steps))
-            decay_factor = (1 - self.alpha) * cos_decay + self.alpha
-            return [base_lr * decay_factor for base_lr in self.base_lrs]
-        else:
-            return [base_lr * self.alpha for base_lr in self.base_lrs]
+        if self.last_step == 0:
+            return [group["lr"] for group in self._optimizer.param_groups]
+        elif (self.last_step - 1 - self.T_max) % (2 * self.T_max) == 0:
+            return [
+                group["lr"]
+                + (base_lr - self.eta_min) * (1 - math.cos(math.pi / self.T_max)) / 2
+                for base_lr, group in zip(self.base_lrs, self._optimizer.param_groups)
+            ]
+        return [
+            (1 + math.cos(math.pi * self.last_step / self.T_max))
+            / (1 + math.cos(math.pi * (self.last_step - 1) / self.T_max))
+            * (group["lr"] - self.eta_min)
+            + self.eta_min
+            for group in self._optimizer.param_groups
+        ]
+
+    def _generate_conf_for_graph(self, opt_confs):
+        for opt_conf in opt_confs:
+            learning_rate_decay_conf = opt_conf.mutable_learning_rate_decay()
+            learning_rate_decay_conf.mutable_cosine_annealing_conf().set_t_max(
+                self.T_max
+            )
+            learning_rate_decay_conf.mutable_cosine_annealing_conf().set_eta_min(
+                self.eta_min
+            )

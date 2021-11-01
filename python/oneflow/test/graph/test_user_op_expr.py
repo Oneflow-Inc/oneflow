@@ -35,7 +35,7 @@ def _get_c_tensor(t):
 
 
 def _test_user_op_graph(test_case, is_cuda):
-    test_case.assertTrue(oneflow.distributed.is_multi_client())
+    test_case.assertTrue(oneflow.env.is_multi_client())
     test_case.assertTrue(oneflow.framework.env_util.HasAllMultiClientEnvVars())
 
     x0 = flow.tensor(np.random.rand(20, 30), dtype=flow.float32)
@@ -57,7 +57,7 @@ def _test_user_op_graph(test_case, is_cuda):
     test_case.assertTrue(isinstance(session, MultiClientSession))
     session.TryInit()
 
-    with oneflow._oneflow_internal.lazy_mode.gard(True):
+    with oneflow._oneflow_internal.lazy_mode.guard(True):
 
         oneflow._oneflow_internal.JobBuildAndInferCtx_Open(
             "cc_test_user_op_expr_job_with_cuda" + str(is_cuda)
@@ -112,19 +112,19 @@ def _test_user_op_graph(test_case, is_cuda):
         test_case.assertEqual(x1_lazy_tensor.shape, (50, 70))
         test_case.assertTrue(x1_lazy_tensor.is_lazy)
 
-        out0 = flow.F.matmul(x0_lazy_tensor, weight0_lazy_tensor)
+        out0 = flow._C.matmul(x0_lazy_tensor, weight0_lazy_tensor)
         test_case.assertEqual(out0.shape, (20, 50))
         test_case.assertTrue(out0.is_lazy)
 
-        y0 = flow.F.relu(out0)
+        y0 = flow._C.relu(out0)
         test_case.assertEqual(y0.shape, (20, 50))
         test_case.assertTrue(y0.is_lazy)
 
-        out1 = flow.F.matmul(y0, x1_lazy_tensor)
+        out1 = flow._C.matmul(y0, x1_lazy_tensor)
         test_case.assertEqual(out1.shape, (20, 70))
         test_case.assertTrue(out1.is_lazy)
 
-        y1 = flow.F.relu(out1)
+        y1 = flow._C.relu(out1)
         test_case.assertEqual(y1.shape, (20, 70))
         test_case.assertTrue(y1.is_lazy)
 

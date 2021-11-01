@@ -24,15 +24,14 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/blocking_counter.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
-#include "oneflow/core/vm/vm_desc.msg.h"
+#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
-#include "oneflow/core/common/cached_object_msg_allocator.h"
 
 namespace oneflow {
 namespace vm {
@@ -53,11 +52,10 @@ struct GlobalProcessCtxScope {
 
 TEST(SequentialInstruction, front_seq_compute) {
   GlobalProcessCtxScope scope;
-  auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
+  auto vm_desc = intrusive::make_shared<VmDesc>(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(),
                                       {"NewObject", "ComputeRankFrontSeqCallback"});
-  CachedObjectMsgAllocator allocator(20, 100);
-  auto vm = ObjectMsgPtr<VirtualMachine>::NewFrom(&allocator, vm_desc.Get());
+  auto vm = intrusive::make_shared<VirtualMachine>(vm_desc.Get());
   InstructionMsgList list;
   {
     int64_t logical_object_id = TestUtil::NewObject(&list, "cpu", "0:0");
@@ -69,8 +67,7 @@ TEST(SequentialInstruction, front_seq_compute) {
     auto instruction = NewInstruction("ComputeRankFrontSeqCallback");
     instruction->add_int64_operand(GlobalProcessCtx::Rank());
     const auto Callback = [&]() { sixsixsix = 666; };
-    *instruction->mutable_phy_instr_operand() =
-        std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
+    *instruction->mut_phy_instr_operand() = std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
     list.EmplaceBack(std::move(instruction));
   }
   bool compute_finished = false;
@@ -82,19 +79,18 @@ TEST(SequentialInstruction, front_seq_compute) {
       is_666 = sixsixsix == 666;
       compute_finished = true;
     };
-    *instruction->mutable_phy_instr_operand() =
-        std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
+    *instruction->mut_phy_instr_operand() = std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
     list.EmplaceBack(std::move(instruction));
   }
   BlockingCounter bc(1);
   std::thread t([&]() {
     while (!compute_finished) {
       vm->Schedule();
-      OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+      INTRUSIVE_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
     }
     bc.Decrease();
   });
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   bc.WaitUntilCntEqualZero();
   ASSERT_TRUE(is_666);
   ASSERT_TRUE(vm->Empty());

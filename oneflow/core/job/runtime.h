@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/register/blob.h"
+#include "oneflow/core/job/collective_boxing/scheduler.h"
 
 namespace oneflow {
 
@@ -33,6 +34,8 @@ class Runtime final {
 
  private:
   HashMap<int64_t, int64_t> job_id2actor_size_;
+
+  boxing::collective::SchedulerPlanToken* collective_boxing_scheduler_plan_token_;
 };
 
 }  // namespace oneflow

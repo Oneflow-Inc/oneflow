@@ -269,24 +269,6 @@ struct NdarrayMatrixColReduce<DeviceType::kGPU, T, binary_func> final {
 };
 
 template<typename T, template<typename> class binary_func>
-struct NdarrayXYZCubeYReduce<DeviceType::kGPU, T, binary_func> final {
-  static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
-    return false;
-    if (y.shape().ElemNum() > GetMaxVal<int32_t>()) { return false; }
-    if (x.shape().NumAxes() != 3) { return false; }
-    if (y.shape().NumAxes() != 3) { return false; }
-    return x.shape().At(0) == y.shape().At(0) && y.shape().At(1) == 1
-           && x.shape().At(2) == y.shape().At(2);
-  }
-
-  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
-                     const XpuVarNdarray<T>& tmp_storage) {
-    CHECK(Matched(y, x));
-    UNIMPLEMENTED();
-  }
-};
-
-template<typename T, template<typename> class binary_func>
 struct NdarrayXYZCubeXZReduce<DeviceType::kGPU, T, binary_func> final {
   static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     if (y.shape().ElemNum() > GetMaxVal<int32_t>()) { return false; }
@@ -366,17 +348,17 @@ struct NdarrayReduceCoreWrapper<DeviceType::kGPU, T, NDIMS, binary_func> final {
   template struct NdarrayScalarReduce<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype), binary_func>;    \
   template struct NdarrayMatrixRowReduce<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype), binary_func>; \
   template struct NdarrayMatrixColReduce<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype), binary_func>; \
-  template struct NdarrayXYZCubeYReduce<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype), binary_func>;  \
   template struct NdarrayXYZCubeXZReduce<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype), binary_func>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_IMPL,
-                                 ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
-                                 REDUCE_BINARY_FUNC_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+    INSTANTIATE_NDARRAY_REDUCE_IMPL,
+    ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ, REDUCE_BINARY_FUNC_SEQ);
 
 #define INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER(dtype_pair, NDIMS, binary_func)                   \
   template struct NdarrayReduceCoreWrapper<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, \
                                            binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER,
-                                 ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, DIM_SEQ,
-                                 REDUCE_BINARY_FUNC_SEQ);
+                                 ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ
+                                     UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 DIM_SEQ, REDUCE_BINARY_FUNC_SEQ);
 
 }  // namespace oneflow

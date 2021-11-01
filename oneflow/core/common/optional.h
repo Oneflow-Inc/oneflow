@@ -17,63 +17,161 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_OPTIONAL_H_
 #define ONEFLOW_CORE_COMMON_OPTIONAL_H_
 
+#include <memory>
+#include <type_traits>
+#include <utility>
+#include "oneflow/core/common/error.cfg.h"
 #include "oneflow/core/common/type_traits.h"
-#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/just.h"
 
 namespace oneflow {
+
+struct InPlaceConstructType {
+  explicit InPlaceConstructType() = default;
+};
+constexpr InPlaceConstructType InPlaceConstruct{};
+
+struct NullOptType {
+  explicit constexpr NullOptType(int) {}
+};
+constexpr NullOptType NullOpt{0};
+
 namespace internal {
 
 template<typename T, typename U = void>
-class Storage;
+class OptionalBase;
 
 template<typename T>
-class Storage<T, typename std::enable_if<IsScalarType<T>::value>::type> {
+class OptionalBase<T, typename std::enable_if<IsScalarType<T>::value>::type> {
  public:
-  Storage() = default;
+  using value_type = T;
+  using storage_type = T;
 
-  template<typename... Args,
-           typename std::enable_if<std::is_constructible<T, Args...>::value, int>::type = 0>
-  Storage(Args&&... args) {
-    new (&value_) T(std::forward<Args>(args)...);
-  }
+  OptionalBase() : init_(false), value_() {}
+  ~OptionalBase() = default;
 
-  Storage& operator=(const T& value) {
+  explicit OptionalBase(const T& value) : init_(true), value_(value) {}
+  explicit OptionalBase(T&& value) : init_(true), value_(std::move(value)) {}
+
+  OptionalBase(const OptionalBase& base) : init_(base.init_), value_(base.value_) {}
+  OptionalBase(OptionalBase&& base) noexcept : init_(base.init_), value_(std::move(base.value_)) {}
+
+  OptionalBase& operator=(const T& value) {
     value_ = value;
+    init_ = true;
+
     return *this;
   }
-  Storage& operator=(T&& value) {
+  OptionalBase& operator=(T&& value) {
     value_ = std::move(value);
+    init_ = true;
+
     return *this;
   }
-  Storage& operator=(const Storage<T>& rhs) {
+  OptionalBase& operator=(const OptionalBase& rhs) {
     value_ = rhs.value_;
+    init_ = rhs.init_;
+
     return *this;
   }
-  Storage& operator=(Storage<T>&& rhs) {
+  OptionalBase& operator=(OptionalBase&& rhs) noexcept {
     value_ = std::move(rhs.value_);
+    init_ = rhs.init_;
+
     return *this;
   }
 
-  Maybe<T> value() const { return value_; }
+  T value() const& { return value_; }  // `T value() &&` goes here
+  T& value() & { return value_; }
+
+  bool has_value() const { return init_; }
+
+  T value_or(const T& other) const {
+    if (has_value()) {
+      return value();
+    } else {
+      return other;
+    }
+  }
+
+  void reset() { init_ = false; }
 
  private:
+  bool init_;
   T value_;
 };
 
 template<typename T>
-class Storage<T, typename std::enable_if<!IsScalarType<T>::value>::type> {
+class OptionalBase<T, typename std::enable_if<std::is_reference<T>::value>::type> {
  public:
-  Storage() = default;
+  using value_type = typename std::remove_reference<T>::type;
+  using storage_type = value_type*;
 
-  template<typename... Args,
-           typename std::enable_if<std::is_constructible<T, Args...>::value, int>::type = 0>
-  Storage(Args&&... args) {
-    value_ = std::make_shared<T>(std::forward<Args>(args)...);
+  static_assert(std::is_lvalue_reference<T>::value, "rvalue reference is not supported here");
+
+  OptionalBase() : value_(nullptr){};
+  ~OptionalBase() = default;
+
+  explicit OptionalBase(T value) : value_(&value) {}
+  OptionalBase(const OptionalBase& base) : value_(base.value_) {}
+  OptionalBase(OptionalBase&& base) noexcept : value_(base.value_) {}
+
+  OptionalBase& operator=(T value) {
+    value_ = &value;
+    return *this;
+  }
+  OptionalBase& operator=(const OptionalBase& rhs) {
+    value_ = rhs.value_;
+    return *this;
+  }
+  OptionalBase& operator=(OptionalBase&& rhs) noexcept {
+    value_ = std::move(rhs.value_);
+    return *this;
   }
 
-  Storage(const std::shared_ptr<T>& value) : value_(value) {}
+  const value_type& value() const { return *value_; }
+  T value() { return *value_; }
 
-  Storage& operator=(const T& value) {
+  bool has_value() const { return value_; }
+
+  const value_type& value_or(const value_type& other) const {
+    if (has_value()) {
+      return value();
+    } else {
+      return other;
+    }
+  }
+
+  void reset() { value_ = nullptr; }
+
+ private:
+  storage_type value_;
+};
+
+template<typename T>
+class OptionalBase<
+    T, typename std::enable_if<!IsScalarType<T>::value && !std::is_reference<T>::value>::type> {
+ public:
+  using value_type = T;
+  using storage_type = std::shared_ptr<T>;
+
+  OptionalBase() : value_(nullptr){};
+  ~OptionalBase() = default;
+
+  template<typename... Args>
+  explicit OptionalBase(InPlaceConstructType, Args&&... args)
+      : value_(std::make_shared<T>(std::forward<Args>(args)...)) {}
+
+  explicit OptionalBase(const T& value) : value_(std::make_shared<T>(value)) {}
+  explicit OptionalBase(T&& value) : value_(std::make_shared<T>(std::move(value))) {}
+
+  explicit OptionalBase(const storage_type& value) : value_(value) {}
+  explicit OptionalBase(storage_type&& value) : value_(std::move(value)) {}
+
+  OptionalBase(const OptionalBase&) = default;
+  OptionalBase(OptionalBase&&) noexcept = default;
+
+  OptionalBase& operator=(const T& value) {
     if (value_) {
       *value_ = value;
     } else {
@@ -81,117 +179,186 @@ class Storage<T, typename std::enable_if<!IsScalarType<T>::value>::type> {
     }
     return *this;
   }
-  Storage& operator=(T&& value) {
+  OptionalBase& operator=(T&& value) {
     if (value_) {
       *value_ = std::move(value);
     } else {
-      value_ = std::make_shared<T>(value);
+      value_ = std::make_shared<T>(std::move(value));
     }
     return *this;
   }
-  Storage& operator=(const Storage<T>& rhs) {
+
+  OptionalBase& operator=(const storage_type& value) {
+    value_ = value;
+    return *this;
+  }
+  OptionalBase& operator=(storage_type&& value) {
+    value_ = std::move(value);
+    return *this;
+  }
+
+  OptionalBase& operator=(const OptionalBase& rhs) {
     value_ = rhs.value_;
     return *this;
   }
-  Storage& operator=(Storage<T>&& rhs) {
+  OptionalBase& operator=(OptionalBase&& rhs) noexcept {
     value_ = std::move(rhs.value_);
     return *this;
   }
 
-  Maybe<T> value() const { return value_; }
+  const storage_type& value() const& { return value_; }
+  storage_type& value() & { return value_; }
+
+  // generate a temporary object to allow `const auto& x = optval().value()` where `optval()` is a
+  // function call which returns a temporary Optional
+  storage_type value() && { return std::move(value_); }
+
+  bool has_value() const { return bool(value_); }
+
+  const storage_type& value_or(const storage_type& other) const& {
+    if (has_value()) {
+      return value_;
+    } else {
+      return other;
+    }
+  }
+
+  storage_type value_or(const storage_type& other) && {
+    if (has_value()) {
+      return std::move(value_);
+    } else {
+      return other;
+    }
+  }
+
+  storage_type value_or(storage_type&& other) const& {
+    if (has_value()) {
+      return value_;
+    } else {
+      return std::move(other);
+    }
+  }
+
+  storage_type value_or(storage_type&& other) && {
+    if (has_value()) {
+      return std::move(value_);
+    } else {
+      return std::move(other);
+    }
+  }
+
+  // we introduce a dependent name `U` to delay the instantiation,
+  // so only the default parameter of `U` is allowed
+  template<typename U = value_type>
+  typename std::enable_if<!std::is_abstract<U>::value, const U&>::type value_or(
+      const value_type& other) const& {
+    static_assert(std::is_same<U, value_type>::value, "expected default U");
+
+    if (has_value()) {
+      return *value_;
+    } else {
+      return other;
+    }
+  }
+
+  template<typename U = value_type>
+  typename std::enable_if<!std::is_abstract<U>::value, U>::type value_or(
+      const value_type& other) && {
+    static_assert(std::is_same<U, value_type>::value, "expected default U");
+
+    if (has_value()) {
+      return std::move(*value_);
+    } else {
+      return other;
+    }
+  }
+
+  template<typename U = value_type>
+  typename std::enable_if<!std::is_abstract<U>::value, U>::type value_or(
+      value_type&& other) const& {
+    static_assert(std::is_same<U, value_type>::value, "expected default U");
+
+    if (has_value()) {
+      return *value_;
+    } else {
+      return std::move(other);
+    }
+  }
+
+  template<typename U = value_type>
+  typename std::enable_if<!std::is_abstract<U>::value, U>::type value_or(value_type&& other) && {
+    static_assert(std::is_same<U, value_type>::value, "expected default U");
+
+    if (has_value()) {
+      return std::move(*value_);
+    } else {
+      return std::move(other);
+    }
+  }
+
+  void reset() { value_.reset(); }
 
  private:
-  std::shared_ptr<T> value_;
+  storage_type value_;
 };
 
 }  // namespace internal
 
 template<typename T>
-class Optional final {
+class Optional final : private internal::OptionalBase<T> {
  private:
-  template<typename U>
-  using is_self = std::is_same<Optional, typename std::decay<U>::type>;
+  using base = internal::OptionalBase<T>;
 
  public:
-  Optional() : init_(false) {}
+  using value_type = typename base::value_type;
+  using storage_type = typename base::storage_type;
+
+  Optional() = default;
+  ~Optional() = default;
+
+  Optional(NullOptType)  // NOLINT(google-explicit-constructor)
+      : base() {}
+
+  template<
+      typename Arg1, typename... ArgN,
+      typename std::enable_if<!(sizeof...(ArgN) == 0
+                                && std::is_same<Optional, typename std::decay<Arg1>::type>::value),
+                              int>::type = 0>
+  Optional(Arg1&& v1, ArgN&&... vn)  // NOLINT(google-explicit-constructor)
+      : base(std::forward<Arg1>(v1), std::forward<ArgN>(vn)...) {}
+
+  Optional(const Optional&) = default;
+  Optional(Optional&&) noexcept = default;
 
   template<typename U,
-           typename std::enable_if<!is_self<U>::value
-                                       && std::is_constructible<internal::Storage<T>, U>::value,
+           typename std::enable_if<!std::is_same<Optional, typename std::decay<U>::type>::value,
                                    int>::type = 0>
-  Optional(U&& val) : init_(true), storage_(std::forward<U>(val)) {}
-
-  ~Optional() = default;
-
-  Optional(const Optional<T>& rhs) : init_(rhs.init_) {
-    if (init_) { storage_ = rhs.storage_; }
+  Optional& operator=(U&& val) {
+    return static_cast<Optional&>(static_cast<base&>(*this) = std::forward<U>(val));
   }
 
-  Optional(Optional<T>&& rhs) : init_(rhs.init_) {
-    if (init_) { storage_ = std::move(rhs.storage_); }
+  Optional& operator=(const Optional& rhs) = default;
+  Optional& operator=(Optional&& rhs) noexcept = default;
+
+  template<typename U>
+  auto value_or(U&& other) const& -> decltype(base::value_or(std::forward<U>(other))) {
+    return base::value_or(std::forward<U>(other));
   }
 
-  Optional& operator=(const T& val) {
-    init_ = true;
-    storage_ = val;
-    return *this;
+  template<typename U>
+  auto value_or(U&& other) && -> decltype(std::move(*this).base::value_or(std::forward<U>(other))) {
+    return std::move(*this).base::value_or(std::forward<U>(other));
   }
 
-  Optional& operator=(T&& val) {
-    init_ = true;
-    storage_ = std::move(val);
-    return *this;
+  bool has_value() const { return base::has_value(); }
+  explicit operator bool() const { return has_value(); }
+
+  auto Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() && -> decltype(
+      std::move(*this).base::value()) {
+    return std::move(*this).base::value();
   }
 
-  Optional& operator=(const Optional<T>& rhs) {
-    init_ = rhs.init_;
-    if (init_) { storage_ = rhs.storage_; }
-    return *this;
-  }
-
-  Optional& operator=(Optional<T>&& rhs) {
-    init_ = rhs.init_;
-    if (init_) { storage_ = std::move(rhs.storage_); }
-    return *this;
-  }
-
-  Maybe<T> value() const {
-    CHECK_OR_RETURN(has_value()) << "Optional has no value.";
-    return storage_.value();
-  }
-
-  bool has_value() const { return init_; }
-  operator bool() const { return has_value(); }
-
- private:
-  bool init_;
-  internal::Storage<T> storage_;
-};
-
-template<typename T>
-class Optional<T&> final {
- public:
-  Optional() : value_ptr_(nullptr) {}
-
-  Optional(T& val) : value_ptr_(&val) {}
-
-  ~Optional() = default;
-
-  Optional& operator=(const Optional<T&>& rhs) {
-    value_ptr_ = rhs.value_ptr_;
-    return *this;
-  }
-
-  Maybe<T&> value() const {
-    CHECK_OR_RETURN(has_value()) << "Optional has no value.";
-    return *value_ptr_;
-  }
-
-  bool has_value() const { return value_ptr_ != nullptr; }
-  operator bool() const { return has_value(); }
-
- private:
-  T* value_ptr_;
+  void reset() { base::reset(); }
 };
 
 }  // namespace oneflow

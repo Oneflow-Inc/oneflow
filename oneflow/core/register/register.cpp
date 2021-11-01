@@ -26,10 +26,7 @@ Regst::Regst()
     : regst_desc_(nullptr),
       main_mem_ptr_(nullptr),
       separated_header_mem_ptr_(nullptr),
-      comm_net_token_(nullptr) {
-  status_.regst_desc_id = -1;
-  status_.act_id = -1;
-}
+      comm_net_token_(nullptr) {}
 
 Regst::~Regst() {
   if (comm_net_token_ != nullptr) { Global<CommNet>::Get()->UnRegisterMemory(comm_net_token_); }
@@ -49,7 +46,6 @@ Blob* Regst::GetBlobByLbi(const LogicalBlobId& lbi) {
 void Regst::set_regst_desc(const RtRegstDesc* regst_desc) {
   CHECK(regst_desc_ == nullptr);
   regst_desc_ = regst_desc;
-  status_.regst_desc_id = regst_desc_->regst_desc_id();
   sorted_blob_vec_.resize(regst_desc->lbi_num());
 }
 

@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct UpsampleInterpState : public OpExprInterpState {
+struct UpsampleCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   float height_scale;
   float width_scale;
@@ -32,12 +32,12 @@ struct UpsampleInterpState : public OpExprInterpState {
   std::string interpolation;
 };
 
-class Upsample : public OpExprGradFunction<UpsampleInterpState> {
+class Upsample : public OpExprGradFunction<UpsampleCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(UpsampleInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(UpsampleCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const UpsampleInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const UpsampleCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -61,7 +61,7 @@ Maybe<void> Upsample::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Upsample::Capture(UpsampleInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> Upsample::Capture(UpsampleCaptureState* ctx, const TensorTuple& inputs,
                               const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -75,7 +75,7 @@ Maybe<void> Upsample::Capture(UpsampleInterpState* ctx, const TensorTuple& input
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Upsample::Apply(const UpsampleInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> Upsample::Apply(const UpsampleCaptureState* ctx, const TensorTuple& out_grads,
                             TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
@@ -94,18 +94,18 @@ Maybe<void> Upsample::Apply(const UpsampleInterpState* ctx, const TensorTuple& o
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("upsample", Upsample);
 
-struct UpsampleNearest2DInterpState : public OpExprInterpState {
+struct UpsampleNearest2DCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   float height_scale;
   float width_scale;
   std::string data_format;
 };
 
-class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DInterpState> {
+class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(UpsampleNearest2DInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(UpsampleNearest2DCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
@@ -119,7 +119,7 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DInterpState
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const UpsampleNearest2DInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const UpsampleNearest2DCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
@@ -138,7 +138,7 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DInterpState
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_nearest_2d", UpsampleNearest2D);
 
-struct UpsampleBilinear2DInterpState : public OpExprInterpState {
+struct UpsampleBilinear2DCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   float height_scale;
   float width_scale;
@@ -146,11 +146,11 @@ struct UpsampleBilinear2DInterpState : public OpExprInterpState {
   std::string data_format;
 };
 
-class UpsampleBilinear2D : public OpExprGradFunction<UpsampleBilinear2DInterpState> {
+class UpsampleBilinear2D : public OpExprGradFunction<UpsampleBilinear2DCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(UpsampleBilinear2DInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(UpsampleBilinear2DCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
@@ -165,7 +165,7 @@ class UpsampleBilinear2D : public OpExprGradFunction<UpsampleBilinear2DInterpSta
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const UpsampleBilinear2DInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const UpsampleBilinear2DCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
@@ -185,18 +185,18 @@ class UpsampleBilinear2D : public OpExprGradFunction<UpsampleBilinear2DInterpSta
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_bilinear_2d", UpsampleBilinear2D);
 
-struct UpsampleLinear1DInterpState : public OpExprInterpState {
+struct UpsampleLinear1DCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   float scale_factor;
   bool align_corners;
   std::string data_format;
 };
 
-class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DInterpState> {
+class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(UpsampleLinear1DInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(UpsampleLinear1DCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
@@ -210,7 +210,7 @@ class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DInterpState> 
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const UpsampleLinear1DInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const UpsampleLinear1DCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
@@ -229,17 +229,17 @@ class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DInterpState> 
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_linear_1d", UpsampleLinear1D);
 
-struct UpsampleNearest1DInterpState : public OpExprInterpState {
+struct UpsampleNearest1DCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   float scale_factor;
   std::string data_format;
 };
 
-class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DInterpState> {
+class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(UpsampleNearest1DInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(UpsampleNearest1DCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
@@ -252,7 +252,7 @@ class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DInterpState
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const UpsampleNearest1DInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const UpsampleNearest1DCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
@@ -271,7 +271,7 @@ class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DInterpState
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_nearest_1d", UpsampleNearest1D);
 
-struct UpsampleBicubic2DInterpState : public OpExprInterpState {
+struct UpsampleBicubic2DCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   float height_scale;
   float width_scale;
@@ -279,11 +279,11 @@ struct UpsampleBicubic2DInterpState : public OpExprInterpState {
   std::string data_format;
 };
 
-class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DInterpState> {
+class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(UpsampleBicubic2DInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(UpsampleBicubic2DCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
@@ -298,7 +298,7 @@ class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DInterpState
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const UpsampleBicubic2DInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const UpsampleBicubic2DCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
@@ -317,7 +317,7 @@ class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DInterpState
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_bicubic_2d", UpsampleBicubic2D);
 
-struct UpsampleNearest3DInterpState : public OpExprInterpState {
+struct UpsampleNearest3DCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   float depth_scale;
   float height_scale;
@@ -325,11 +325,11 @@ struct UpsampleNearest3DInterpState : public OpExprInterpState {
   std::string data_format;
 };
 
-class UpsampleNearest3D : public OpExprGradFunction<UpsampleNearest3DInterpState> {
+class UpsampleNearest3D : public OpExprGradFunction<UpsampleNearest3DCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(UpsampleNearest3DInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(UpsampleNearest3DCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
@@ -344,7 +344,7 @@ class UpsampleNearest3D : public OpExprGradFunction<UpsampleNearest3DInterpState
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const UpsampleNearest3DInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const UpsampleNearest3DCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
@@ -364,7 +364,7 @@ class UpsampleNearest3D : public OpExprGradFunction<UpsampleNearest3DInterpState
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_nearest_3d", UpsampleNearest3D);
 
-struct UpsampleTrilinear3DInterpState : public OpExprInterpState {
+struct UpsampleTrilinear3DCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   float depth_scale;
   float height_scale;
@@ -373,11 +373,11 @@ struct UpsampleTrilinear3DInterpState : public OpExprInterpState {
   std::string data_format;
 };
 
-class UpsampleTrilinear3D : public OpExprGradFunction<UpsampleTrilinear3DInterpState> {
+class UpsampleTrilinear3D : public OpExprGradFunction<UpsampleTrilinear3DCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(UpsampleTrilinear3DInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(UpsampleTrilinear3DCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
@@ -393,7 +393,7 @@ class UpsampleTrilinear3D : public OpExprGradFunction<UpsampleTrilinear3DInterpS
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const UpsampleTrilinear3DInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const UpsampleTrilinear3DCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);

@@ -128,18 +128,18 @@ class Interpolate(Module):
             for i in range(dim):
                 scale_factors.append(output_size[i] / x.shape[2 + i])
         if len(x.shape) == 3 and self.mode == "nearest":
-            return flow.F.upsample_nearest_1d(
+            return flow._C.upsample_nearest_1d(
                 x, scale_factor=scale_factors[0], data_format="channels_first"
             )
         if len(x.shape) == 4 and self.mode == "nearest":
-            return flow.F.upsample_nearest_2d(
+            return flow._C.upsample_nearest_2d(
                 x,
                 height_scale=scale_factors[0],
                 width_scale=scale_factors[1],
                 data_format="channels_first",
             )
         if len(x.shape) == 5 and self.mode == "nearest":
-            return flow.F.upsample_nearest_3d(
+            return flow._C.upsample_nearest_3d(
                 x,
                 depth_scale=scale_factors[0],
                 height_scale=scale_factors[1],
@@ -148,16 +148,16 @@ class Interpolate(Module):
             )
         if len(x.shape) == 3 and self.mode == "area":
             assert output_size is not None
-            return flow.F.adaptive_avg_pool1d(x, output_size)
+            return flow._C.adaptive_avg_pool1d(x, output_size)
         if len(x.shape) == 4 and self.mode == "area":
             assert output_size is not None
-            return flow.F.adaptive_avg_pool2d(x, output_size)
+            return flow._C.adaptive_avg_pool2d(x, output_size)
         if len(x.shape) == 5 and self.mode == "area":
             assert output_size is not None
-            return flow.F.adaptive_avg_pool3d(x, output_size)
+            return flow._C.adaptive_avg_pool3d(x, output_size)
         if len(x.shape) == 3 and self.mode == "linear":
             assert self.align_corners is not None
-            return flow.F.upsample_linear_1d(
+            return flow._C.upsample_linear_1d(
                 x,
                 scale_factor=scale_factors[0],
                 align_corners=self.align_corners,
@@ -165,7 +165,7 @@ class Interpolate(Module):
             )
         if len(x.shape) == 4 and self.mode == "bilinear":
             assert self.align_corners is not None
-            return flow.F.upsample_bilinear_2d(
+            return flow._C.upsample_bilinear_2d(
                 x,
                 height_scale=scale_factors[0],
                 width_scale=scale_factors[1],
@@ -174,7 +174,7 @@ class Interpolate(Module):
             )
         if len(x.shape) == 4 and self.mode == "bicubic":
             assert self.align_corners is not None
-            return flow.F.upsample_bicubic_2d(
+            return flow._C.upsample_bicubic_2d(
                 x,
                 height_scale=scale_factors[0],
                 width_scale=scale_factors[1],
@@ -183,7 +183,7 @@ class Interpolate(Module):
             )
         if len(x.shape) == 5 and self.mode == "trilinear":
             assert self.align_corners is not None
-            return flow.F.upsample_trilinear_3d(
+            return flow._C.upsample_trilinear_3d(
                 x,
                 depth_scale=scale_factors[0],
                 height_scale=scale_factors[1],
@@ -278,10 +278,10 @@ def interpolate(
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 4)), dtype=flow.float32)
+        >>> input = flow.tensor(np.arange(1, 5).reshape((1, 1, 4)), dtype=flow.float32)
         >>> output = flow.nn.functional.interpolate(input, scale_factor=2.0, mode="linear")
         >>> output
-        tensor([[[1.  , 1.25, 1.75, 2.25, 2.75, 3.25, 3.75, 4.  ]]],
+        tensor([[[1.0000, 1.2500, 1.7500, 2.2500, 2.7500, 3.2500, 3.7500, 4.0000]]],
                dtype=oneflow.float32)
 
     """
