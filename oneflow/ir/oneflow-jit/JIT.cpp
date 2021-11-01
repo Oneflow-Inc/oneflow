@@ -31,6 +31,42 @@ namespace {
 
 using namespace mlir;
 using namespace ::oneflow::user_op;
+using namespace ::oneflow;
+
+std::unique_ptr<BlobDesc> GetBlobDescFromMlirTensorType(TensorType tensor_type) {
+  auto dtype = DataType::kInvalidDataType;
+  if (tensor_type.getElementType().isF32()) {
+    dtype = DataType::kFloat;
+  } else {
+    tensor_type.dump();
+    LOG(FATAL) << "fail to get BlobDesc from TensorType";
+  }
+  auto shape_from_mlir = new Shape({tensor_type.getShape().begin(), tensor_type.getShape().end()});
+  return std::make_unique<BlobDesc>(*shape_from_mlir, dtype);
+}
+
+ParallelContext GetSingleDeviceParallelContext() {
+  ParallelContext parallel_ctx;
+  parallel_ctx.set_parallel_id(0);
+  parallel_ctx.set_parallel_num(1);
+  return parallel_ctx;
+}
+
+void InsertLbnSegmentIntoMapping(const ::mlir::ArrayAttr& lbn_segment_keys,
+                                 const ::mlir::ArrayAttr& lbn_segment_sizes, ValueRange values,
+                                 std::unordered_map<std::string, mlir::Value>& operand_mapping_) {
+  auto operand_it = values.begin();
+  for (const auto& bn_size_pair : llvm::zip(lbn_segment_keys, lbn_segment_sizes)) {
+    const auto& bn = std::get<0>(bn_size_pair).dyn_cast<StringAttr>().getValue().str();
+    const auto& length = std::get<1>(bn_size_pair).dyn_cast<IntegerAttr>().getInt();
+    for (size_t i = 0; i < length; i++) {
+      const auto indexed_bn = bn + "_" + std::to_string(i);
+      LOG(ERROR) << "indexed_bn: " << indexed_bn;
+      assert(operand_mapping_.emplace(indexed_bn, *operand_it).second);
+      operand_it += 1;
+    }
+  }
+}
 
 class ReturnAllLeaveResultPass : public ReturnAllLeaveResultPassBase<ReturnAllLeaveResultPass> {
   void runOnFunction() override {
@@ -91,6 +127,37 @@ class CreateComputeCtxPass : public CreateComputeCtxPassBase<CreateComputeCtxPas
         } else {
           return WalkResult::interrupt();
         }
+        auto oneflow_op = CHECK_JUST(ConstructOp(op_conf));
+        std::unordered_map<std::string, mlir::Value> value_mapping_;  // "a0" => %result
+        InsertLbnSegmentIntoMapping(user_op_adaptor.input_lbn_segment_keys(),
+                                    user_op_adaptor.input_lbn_segment_sizes(), op->getOperands(),
+                                    value_mapping_);
+        InsertLbnSegmentIntoMapping(user_op_adaptor.output_lbn_segment_keys(),
+                                    user_op_adaptor.output_lbn_segment_sizes(), op->getResults(),
+                                    value_mapping_);
+        HashMap<std::string, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
+        static ParallelContext parallel_ctx = GetSingleDeviceParallelContext();
+        auto GetBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
+          if (lbi2logical_blob_desc_.find(bn) == lbi2logical_blob_desc_.end()) {
+            auto value_it = value_mapping_.find(bn);
+            if (value_it == value_mapping_.end()) {
+              auto blob_desc = std::make_unique<BlobDesc>(DataType::kInvalidDataType);
+              CHECK(lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc)).second);
+              if (bn != "tmp_buffer_0") {
+                op->dump();
+                LOG(FATAL) << "value not found in MLIR op for indexed bn: " << bn;
+              }
+            } else {
+              auto found =
+                  GetBlobDescFromMlirTensorType(value_it->second.getType().cast<TensorType>());
+              CHECK(lbi2logical_blob_desc_.emplace(bn, std::move(found)).second);
+            }
+          }
+          return lbi2logical_blob_desc_.at(bn).get();
+        };
+        KernelConf kernel_conf;
+        oneflow_op->GenKernelConf(GetBlobDesc4BnInOp, &parallel_ctx, &kernel_conf);
+        one::ir::GetKernel(kernel_conf);
       }
       return WalkResult::advance();
     };
@@ -234,18 +301,6 @@ mlir::FuncOp JitImporter::GetOrInsertFunc(const std::string& func_name, const Te
   }
 }
 
-std::unique_ptr<BlobDesc> GetBlobDescFromMlirTensorType(TensorType tensor_type) {
-  auto dtype = DataType::kInvalidDataType;
-  if (tensor_type.getElementType().isF32()) {
-    dtype = DataType::kFloat;
-  } else {
-    tensor_type.dump();
-    LOG(FATAL) << "fail to get BlobDesc from TensorType";
-  }
-  auto shape_from_mlir = new Shape({tensor_type.getShape().begin(), tensor_type.getShape().end()});
-  return std::make_unique<BlobDesc>(*shape_from_mlir, dtype);
-}
-
 llvm::Optional<TensorType> JitImporter::GetMlirTensorTypeFromBlobDesc(const BlobDesc& blob_desc) {
   if (auto t = GetTypeFromOneFlowDataType(blob_desc.data_type())) {
     return RankedTensorType::get(
@@ -254,13 +309,6 @@ llvm::Optional<TensorType> JitImporter::GetMlirTensorTypeFromBlobDesc(const Blob
   } else {
     return llvm::None;
   }
-}
-
-ParallelContext GetSingleDeviceParallelContext() {
-  ParallelContext parallel_ctx;
-  parallel_ctx.set_parallel_id(0);
-  parallel_ctx.set_parallel_num(1);
-  return parallel_ctx;
 }
 
 void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op_conf,
