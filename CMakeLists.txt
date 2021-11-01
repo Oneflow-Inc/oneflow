@@ -11,8 +11,6 @@ if(NOT CMAKE_BUILD_TYPE MATCHES "^(Debug|Release|RelWithDebInfo|MinSizeRel)$")
 endif()
 message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 
-add_definitions(-DONEFLOW_CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "")
 
 option(THIRD_PARTY "Build third party" ON)
@@ -29,6 +27,7 @@ option(BUILD_CUDA "" ON)
 option(BUILD_TESTING "" OFF)
 option(WITH_XLA "Option to build with XLA" OFF)
 option(WITH_TENSORRT "Option to build with TensorRT" OFF)
+option(WITH_MLIR "" OFF)
 option(WITH_COCOAPI "Option to build with COCO API" ON)
 option(BUILD_GIT_VERSION "" ON)
 option(BUILD_PROFILER "" OFF)
@@ -94,6 +93,9 @@ elseif(USE_CXX11_ABI)
 endif()
 message(STATUS "USE_CXX11_ABI: ${USE_CXX11_ABI}")
 
+if (WITH_MLIR)
+  add_definitions(-DWITH_MLIR)
+endif()
 if (WITH_XLA)
   add_definitions(-DWITH_XLA)
 endif()
@@ -122,7 +124,7 @@ endif()
 add_definitions(-DRPC_BACKEND_LOCAL)
 message(STATUS "RPC backend enabled: local")
 enable_testing()
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(THIRD_PARTY_DIR "${PROJECT_BINARY_DIR}/third_party_install"
@@ -150,7 +152,10 @@ if(WIN32)
   #set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS} /DEBUG:FASTLINK")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /D_ITERATOR_DEBUG_LEVEL=0")
 else()
-  set(EXTRA_CXX_FLAGS "-std=c++11 -Wall -Wno-sign-compare -Wno-unused-function -fPIC")
+  set(EXTRA_CXX_FLAGS "-std=c++14 -Wall -Wno-sign-compare -Wno-unused-function -fPIC")
+  if (APPLE)
+     set(EXTRA_CXX_FLAGS "${EXTRA_CXX_FLAGS} -Wno-deprecated-declarations -Wno-mismatched-tags")
+  endif()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_CXX_FLAGS}")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_CXX_FLAGS}")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${EXTRA_CXX_FLAGS}")
@@ -163,13 +168,11 @@ include(third_party)
 if (BUILD_CUDA)
   # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags
   if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-    if(CUDA_VERSION VERSION_LESS "11.4") # too large binary might lead to failure
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 60-real)
-      # Tesla P40/P4, Quadro Pxxx/Pxxxx, GeForce GTX 10xx, TITAN X/Xp
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 61-real)
-      # V100, TITAN V
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 70-real)
-    endif()
+    list(APPEND CMAKE_CUDA_ARCHITECTURES 60-real)
+    # Tesla P40/P4, Quadro Pxxx/Pxxxx, GeForce GTX 10xx, TITAN X/Xp
+    list(APPEND CMAKE_CUDA_ARCHITECTURES 61-real)
+    # V100, TITAN V
+    list(APPEND CMAKE_CUDA_ARCHITECTURES 70-real)
     if(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
       # T4, Quadro RTX xxxx, Txxxx, Geforce RTX 20xx, TITAN RTX
       list(APPEND CMAKE_CUDA_ARCHITECTURES 75-real)
@@ -195,10 +198,7 @@ if (BUILD_CUDA)
   message(STATUS "CMAKE_CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
   set(CUDA_SEPARABLE_COMPILATION OFF)
 
-  list(APPEND CUDA_NVCC_FLAGS -Werror cross-execution-space-call -Wno-deprecated-gpu-targets)
   if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL "11.2")
-    # warning #177-D: parameter "args" was declared but never referenced
-    list(APPEND CUDA_NVCC_FLAGS --display-error-number --diag-suppress 177)
     set(CUDA_NVCC_THREADS_NUMBER "1" CACHE STRING "")
     list(APPEND CUDA_NVCC_FLAGS -t ${CUDA_NVCC_THREADS_NUMBER})
   endif()

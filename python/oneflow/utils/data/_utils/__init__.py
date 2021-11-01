@@ -27,7 +27,7 @@ import atexit
 
 IS_WINDOWS = sys.platform == "win32"
 
-MP_STATUS_CHECK_INTERVAL = 5.0
+MP_STATUS_CHECK_INTERVAL = 60.0
 r"""Interval (in seconds) to check status of processes to avoid hanging in
     multiprocessing data loading. This is mainly used in getting data from
     another process, in which case we need to periodically check whether the
@@ -44,6 +44,13 @@ hook in Python 3.7 multiprocessing library:
 https://github.com/python/cpython/blob/d4d60134b29290049e28df54f23493de4f1824b6/Lib/multiprocessing/util.py#L277-L327
 """
 
+try:
+    import numpy
+
+    HAS_NUMPY = True
+except ModuleNotFoundError:
+    HAS_NUMPY = False
+
 
 def _set_python_exit_flag():
     global python_exit_status
@@ -53,4 +60,4 @@ def _set_python_exit_flag():
 atexit.register(_set_python_exit_flag)
 
 
-from . import collate, fetch
+from . import worker, signal_handling, collate, fetch

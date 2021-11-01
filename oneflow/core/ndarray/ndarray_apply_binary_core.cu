@@ -57,9 +57,11 @@ struct NdarrayApplyBinaryCoreWrapper<DeviceType::kGPU, T, binary_func> final {
   template struct NdarrayApplyBinaryCoreWrapper<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype_pair), \
                                                 binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_APPLY_BINARY_CORE,
-                                 ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ
+                                     UNSIGNED_INT_DATA_TYPE_SEQ,
                                  ARITHMETIC_BINARY_FUNC_SEQ);
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_APPLY_BINARY_CORE,
-                                 ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ
+                                     UNSIGNED_INT_DATA_TYPE_SEQ,
                                  LOGICAL_BINARY_FUNC_SEQ);
 }  // namespace oneflow

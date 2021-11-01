@@ -96,7 +96,7 @@ class CPUGeneratorImpl : public DeviceGeneratorImpl {
   explicit CPUGeneratorImpl(uint64_t seed)
       : DeviceGeneratorImpl(seed, DeviceType::kCPU, 0), engine_(seed) {}
 
-  virtual ~CPUGeneratorImpl();
+  virtual ~CPUGeneratorImpl() = default;
 
   void set_current_seed(uint64_t seed) override;
 
@@ -136,8 +136,6 @@ class CUDAGeneratorImpl : public DeviceGeneratorImpl {
 };
 
 namespace detail {
-
-int GetCudaDeviceCount();
 
 void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, curandState* states);
 

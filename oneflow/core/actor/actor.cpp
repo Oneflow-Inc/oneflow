@@ -17,17 +17,19 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/stream/stream_context.h"
+#include "oneflow/core/device/device_context_adapter.h"
 
 namespace oneflow {
 
 namespace {
 
-class KernelContextImpl : public KernelContext {
+class KernelContextImpl : public KernelContext, public ActorContextProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelContextImpl);
-  explicit KernelContextImpl(StreamContext* stream_ctx, DeviceCtx* device_ctx)
-      : stream_ctx_(stream_ctx),
-        device_ctx_(device_ctx),
+  explicit KernelContextImpl(ActorContext* actor_ctx)
+      : actor_ctx_(actor_ctx),
+        stream_ctx_(actor_ctx->stream_ctx()),
+        device_ctx_(NewDeviceCtxAdapter(actor_ctx->stream_ctx())),
         state_(nullptr),
         stream_kernel_observer_(nullptr) {
     auto* kernel_observer_provider = dynamic_cast<KernelObserverProvider*>(stream_ctx_);
@@ -39,7 +41,9 @@ class KernelContextImpl : public KernelContext {
 
   StreamContext* stream_ctx() const override { return stream_ctx_; }
 
-  DeviceCtx* device_ctx() const override { return device_ctx_; }
+  ActorContext* GetActorContext() const override { return actor_ctx_; }
+
+  DeviceCtx* device_ctx() const override { return device_ctx_.get(); }
 
   Blob* BnInOp2Blob(const std::string& bn) const override { return bn_in_op2blob_fn_(bn); }
 
@@ -61,8 +65,9 @@ class KernelContextImpl : public KernelContext {
   }
 
  private:
+  ActorContext* actor_ctx_;
   StreamContext* stream_ctx_;
-  DeviceCtx* device_ctx_;
+  std::unique_ptr<DeviceCtx> device_ctx_;
   std::function<Blob*(const std::string&)> bn_in_op2blob_fn_;
   std::shared_ptr<KernelState> state_;
   KernelObserver* stream_kernel_observer_;
@@ -126,18 +131,15 @@ void CheckInplaceRegstDescId(const TaskProto& task_proto) {
 
 Actor::~Actor() = default;
 
-void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto, StreamContext* stream_ctx) {
-  job_desc_ = job_desc;
+void Actor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
+  actor_ctx_ = actor_ctx;
+  const TaskProto& task_proto = actor_ctx->task_proto();
   actor_id_ = task_proto.task_id();
   thrd_id_ = Global<IDMgr>::Get()->ThrdId4ActorId(actor_id_);
   job_id_ = task_proto.job_id();
-  InitDeviceCtx(stream_ctx);
-  if (task_proto.has_parallel_ctx()) {
-    parallel_ctx_.reset(new ParallelContext(task_proto.parallel_ctx()));
-  }
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
-    ek.kernel_ctx.reset(new KernelContextImpl(stream_ctx, device_ctx_.get()));
+    ek.kernel_ctx.reset(new KernelContextImpl(actor_ctx));
     ek.kernel = ConstructKernel(node.kernel_conf(), ek.kernel_ctx.get());
     exec_kernel_vec_.push_back(std::move(ek));
   }
@@ -297,10 +299,6 @@ void Actor::ForEachProducedRegst(const std::function<void(Regst*)>& Handler) con
   }
 }
 
-DeviceType Actor::GetDeviceType() const {
-  return Global<IDMgr>::Get()->GetDeviceTypeFromActorId(actor_id_);
-}
-
 int64_t Actor::Name2SoleRegstDescId(const std::string& name) const {
   auto find_it = name2regst_desc_id_.find(name);
   if (find_it != name2regst_desc_id_.end()) {
@@ -322,12 +320,7 @@ void Actor::IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t val) {
   produced_regst2reading_cnt_.at(regst) += val;
 }
 
-void Actor::InitDeviceCtx(StreamContext* stream_ctx) {
-  auto* provider = CHECK_NOTNULL(dynamic_cast<DeviceCtxProvider*>(stream_ctx));
-  device_ctx_ = provider->GetDeviceCtx();
-}
-
-void Actor::ForEachCurNaiveReadableDataRegst(std::function<void(const Regst*)> func) const {
+void Actor::ForEachCurNaiveReadableDataRegst(const std::function<void(const Regst*)>& func) const {
   naive_consumed_rs_.ForEachFrontRegst([func](int64_t regst_desc_id, Regst* regst) {
     if (Global<RegstMgr>::Get()->HasProducerTaskId4RegstDescId(regst_desc_id)) { return; }
     if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) { func(regst); }
@@ -709,7 +702,7 @@ void Actor::AsyncSendQueuedMsg() {
 }
 
 void Actor::AddCallback(std::function<void()> callback) {
-  device_ctx_->AddCallBack(std::move(callback));
+  actor_ctx_->AddCallBack(std::move(callback));
 }
 
 }  // namespace oneflow

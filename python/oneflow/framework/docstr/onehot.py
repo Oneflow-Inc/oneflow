@@ -18,13 +18,11 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow._C.one_hot,
-    """
+    r"""
     one_hot(input, num_classes=-1, on_value=1, off_value=0)
     This operator generates a onehot Tensor from input Tensor.
 
     If input Tensor's rank is `N`, the corresponding onehot Tensor's rank is `N+1`.
-
-    Flow.one_hot is aligned with tf.one_hot operator. If you want to use torch version, you can turn on_value is set to 1, off_value is set to 0.
 
     Args:
         input (Tensor): The input Tensor.
@@ -33,7 +31,7 @@ add_docstr(
         off_value (Union[int, float], optional): The fill value when `x[i] != i`. Defaults to 0.
     Note:
 
-        The data type of input blob should be `int32` or `int64`.
+        The data type of input tensor should be `int32` or `int64`.
 
     Returns:
         oneflow.Tensor.
@@ -45,7 +43,7 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
 
-        >>> input=flow.tensor(np.array([0, 3, 1, 2]).astype(np.int32), dtype=flow.int64)
+        >>> input=flow.tensor(np.array([0, 3, 1, 2]).astype(np.int64), dtype=flow.int64)
         >>> out = flow.nn.functional.one_hot(input, num_classes=5)
         >>> out
         tensor([[1, 0, 0, 0, 0],

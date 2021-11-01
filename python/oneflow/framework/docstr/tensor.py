@@ -50,3 +50,97 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.atan2,
+    r"""
+    See :func:`oneflow.atan2`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.expand_as,
+    """
+    expand_as(other) -> Tensor
+
+    Expand this tensor to the same size as :attr:`other`.
+    ``self.expand_as(other)`` is equivalent to ``self.expand(other.size())``.
+
+    Please see :meth:`~Tensor.expand` for more information about ``expand``.
+
+    Args:
+        other (:class:`oneflow.Tensor`): The result tensor has the same size
+            as :attr:`other`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.numel,
+    """
+    See :func:`oneflow.numel`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.transpose,
+    """
+    See :func:`oneflow.transpose`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.logical_not,
+    """
+    logical_not() -> Tensor
+    See :func:`oneflow.logical_not`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.std,
+    """
+    See :func:`oneflow.std`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.var,
+    """
+    See :func:`oneflow.var`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.squeeze,
+    """
+    See :func:`oneflow.squeeze`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.matmul,
+    """
+    See :func:`oneflow.matmul`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.narrow,
+    """
+    See :func:`oneflow.narrow`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.unsqueeze,
+    """
+    See :func:`oneflow.unsqueeze`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.permute,
+    """
+    See :func:`oneflow.permute`
+    """,
+)

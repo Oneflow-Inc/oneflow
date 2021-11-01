@@ -20,8 +20,9 @@ limitations under the License.
 
 namespace oneflow {
 
+// Note: there is a time interval between catching error and reporting an error,
+// any error occur in this interval can't be displayed.
 Maybe<void> CheckAndClearRegistryFlag();
-
 void CatchRegistryError(const std::function<Maybe<void>()>&);
 
 }  // namespace oneflow

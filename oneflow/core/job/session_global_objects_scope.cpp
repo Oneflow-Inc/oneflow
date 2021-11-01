@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/device/node_device_descriptor_manager.h"
 #include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
-#include "oneflow/core/job/collective_boxing_executor.h"
+#include "oneflow/core/job/collective_boxing/scheduler.h"
 #include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/global_for.h"
@@ -133,7 +133,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Global<ThreadMgr>::New();
     Global<RuntimeJobDescs>::New();
     Global<summary::EventsWriter>::New();
-    Global<boxing::collective::CollectiveBoxingExecutor>::New();
+    Global<boxing::collective::Scheduler>::New();
     Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
   }
 
@@ -153,7 +153,7 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   {
     // NOTE(chengcheng): Delete Global Runtime objects.
     Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
-    Global<boxing::collective::CollectiveBoxingExecutor>::Delete();
+    Global<boxing::collective::Scheduler>::Delete();
     Global<summary::EventsWriter>::Delete();
     Global<RuntimeJobDescs>::Delete();
     Global<ThreadMgr>::Delete();
