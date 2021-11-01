@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <atomic>
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
@@ -42,7 +43,6 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instruction_replay.h"
-#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 
@@ -1750,7 +1750,7 @@ InstructionsBuilder::GetMut2OperandBlobObjects(
 }
 
 Maybe<void> LogicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
-  if (JUST(GlobalMultiClientEnv())) {
+  if (JUST(IsMultiClient())) {
     // NOTE(chengcheng): in Multi-Client LogicalRun will degenerate directly to PhysicalRun,
     //   because each rank will process instructions ONLY from itself, NOT the master.
     return PhysicalRun(Build);
