@@ -43,7 +43,9 @@ Device::Device(const std::string& type, int64_t device_id)
       device_id_(device_id),
       hash_value_(HashDevice(type, device_id)),
       transport_local_dep_object_(),
-      schedule_local_dep_object_(nullptr) {}
+      schedule_local_dep_object_(nullptr),
+      flow_ctrl_local_dep_object_(nullptr),
+      flow_ctr_seq_no_(0) {}
 
 Maybe<void> Device::Init() {
   if (type_ == "auto") { return Maybe<void>::Ok(); }
@@ -57,6 +59,7 @@ Maybe<void> Device::Init() {
   const auto& schedule_device_type = JUST(GetSharedScheduleDeviceType());
   schedule_local_dep_object_ =
       JUST(GetLocalDepObject4Device(Device(schedule_device_type, device_id_)));
+  flow_ctrl_local_dep_object_ = *JUST(LocalDepObject::New(*this));
   return Maybe<void>::Ok();
 }
 
@@ -146,8 +149,16 @@ Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
   return MapAt(type2instr_name, type);
 }
 
+Maybe<size_t> Device::instr_local_dep_object_pool_low_watermark() const {
+  return instr_local_dep_object_pool_size();
+}
+
+Maybe<size_t> Device::instr_local_dep_object_pool_high_watermark() const {
+  return JUST(instr_local_dep_object_pool_size()) * 2;
+}
+
 Maybe<size_t> Device::instr_local_dep_object_pool_size() const {
-  static const size_t kSmallPoolSize = 4;
+  static const size_t kSmallPoolSize = 2;
   static const HashMap<std::string, size_t> type2pool_size{
       {"cpu", GetInstructionHighWaterMark()},
       {"gpu", GetInstructionHighWaterMark()},

@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/intrusive/intrusive.h"
 
 namespace oneflow {
 
@@ -69,13 +70,23 @@ class Device final {
     return transport_local_dep_object_;
   }
   LocalDepObject* mut_schedule_local_dep_object() const { return schedule_local_dep_object_; }
-  Maybe<size_t> instr_local_dep_object_pool_size() const;
+  LocalDepObject* mut_flow_ctrl_local_dep_object() const {
+    return flow_ctrl_local_dep_object_.Mutable();
+  }
+
+  Maybe<size_t> instr_local_dep_object_pool_low_watermark() const;
+
+  Maybe<size_t> instr_local_dep_object_pool_high_watermark() const;
 
   Maybe<bool> need_soft_sync_stream() const;
+
+  int auto_flow_ctr_seq_no() const { return ++flow_ctr_seq_no_; }
 
  private:
   Device(const std::string& type, int64_t device_id);
   Maybe<void> Init();
+
+  Maybe<size_t> instr_local_dep_object_pool_size() const;
 
   const std::string type_;
   const int64_t device_id_;
@@ -83,6 +94,8 @@ class Device final {
   std::shared_ptr<MemoryCase> mem_case_;
   Optional<LocalDepObject*> transport_local_dep_object_;
   LocalDepObject* schedule_local_dep_object_;
+  mutable intrusive::shared_ptr<LocalDepObject> flow_ctrl_local_dep_object_;
+  mutable int flow_ctr_seq_no_;
 };
 
 Maybe<const std::string&> GetLocalCallInstructionName(const std::string& device_tag);
