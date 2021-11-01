@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_def.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "oneflow/core/kernel/user_kernel.h"
 
 namespace {
 
@@ -47,11 +48,12 @@ class ReturnAllLeaveResultPass : public ReturnAllLeaveResultPassBase<ReturnAllLe
 };
 
 struct JITKernelLaunchContext {
-  OpKernel* kernel;
+  const OpKernel* kernel;
   KernelComputeContext* compute_ctx;
 };
 
 KernelComputeContext* GetKernelComputeContext(const ::oneflow::UserOpConf& user_op_conf) {
+  static std::vector<std::shared_ptr<const OpKernel>> created_kernels;
   static std::vector<std::shared_ptr<KernelComputeContext>> created;
 }
 
@@ -310,6 +312,7 @@ void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op_conf,
   op->GenKernelConf(GetLogicalBlobDesc4BnInOp, &parallel_ctx, &kernel_conf);
   llvm::errs() << "kernel_conf: \n";
   llvm::errs() << kernel_conf.DebugString() << "\n";
+  GetKernel(kernel_conf);
 }
 
 llvm::Optional<mlir::Value> JitImporter::GetResultByBnAndIndex(const std::string& bn,

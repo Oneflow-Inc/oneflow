@@ -61,4 +61,18 @@ class UserKernel final : public Kernel {
 #endif  // WITH_CUDA_GRAPHS
 };
 
+#ifdef WITH_MLIR
+
+namespace one {
+
+namespace ir {
+
+const user_op::OpKernel* GetKernel(const KernelConf& kernel_conf);
+
+}  // namespace ir
+
+}  // namespace one
+
+#endif  // WITH_MLIR
+
 }  // namespace oneflow
