@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
-#include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/variable_op.h"
@@ -285,22 +284,21 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
 
-      DeviceId::device_index_t device_index =
-          parallel_desc.device_type() == DeviceType::kCPU
-              ? DeviceId::kCPUDeviceIndex
-              : static_cast<DeviceId::device_index_t>(dev_phy_id);
-      DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), parallel_desc.device_type(),
+      DeviceId::index_t device_index = parallel_desc.device_type() == DeviceType::kCPU
+                                           ? 0
+                                           : static_cast<DeviceId::index_t>(dev_phy_id);
+      DeviceId device_id{static_cast<DeviceId::index_t>(machine_id), parallel_desc.device_type(),
                          device_index};
-      StreamId::stream_index_t stream_index{};
+      StreamId::index_t stream_index{};
       if (op_node->op().op_conf().has_stream_index_hint()) {
         int32_t stream_index_hint = op_node->op().op_conf().stream_index_hint();
         LOG(INFO) << "set op: " << op_node->op().op_name() << " to stream: " << stream_index_hint;
-        stream_index = static_cast<StreamId::stream_index_t>(stream_index_hint);
+        stream_index = static_cast<StreamId::index_t>(stream_index_hint);
       } else {
         stream_index = StreamIndexGetterRegistryManager::Get().StreamIndex4DeviceIdAndTaskType(
             device_id, comp_task_node->GetTaskType());
       }
-      comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
+      comp_task_node->set_thrd_id(EncodeStreamIdToInt64(StreamId{device_id, stream_index}));
       comp_task_node->set_op_node(op_node);
       sorted_comp_tasks->push_back(comp_task_node);
     }
@@ -486,9 +484,9 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
       if (src_mem_zone_id.node_index() == dst_mem_zone_id.node_index()) {
         // on the same node, not on the same device
         // src must be not on the cpu mem zone, copy d2h first
-        CHECK(IsMemcpyDtoHSupported(src_mem_zone_id.device_id().device_type()));
+        CHECK(IsMemcpyDtoHSupported(src_mem_zone_id.device_type()));
         CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-        copy_task->Init(CopyHdOpConf::D2H, src_mem_zone_id.device_id(), lbi);
+        copy_task->Init(CopyHdOpConf::D2H, src_mem_zone_id, lbi);
         Connect<TaskNode>(src_node, NewTaskEdgeWithLbi(lbi), copy_task);
         proxy2node[key] = copy_task;
         return copy_task;
@@ -506,9 +504,9 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
     } else {
       TaskNode* proxy_on_dst_host =
           GetProxyNode(src_node, lbi, GetNodeCPUMemZoneId(dst_mem_zone_id.node_index()));
-      CHECK(IsMemcpyHtoDSupported(dst_mem_zone_id.device_id().device_type()));
+      CHECK(IsMemcpyHtoDSupported(dst_mem_zone_id.device_type()));
       CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-      copy_task->Init(CopyHdOpConf::H2D, dst_mem_zone_id.device_id(), lbi);
+      copy_task->Init(CopyHdOpConf::H2D, dst_mem_zone_id, lbi);
       Connect<TaskNode>(proxy_on_dst_host, NewTaskEdgeWithLbi(lbi), copy_task);
       proxy2node[key] = copy_task;
       return copy_task;
@@ -524,10 +522,8 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
   const int64_t dev_id = CHECK_JUST(dst_parallel_desc.DeviceId4ParallelId(dst_parallel_id));
   DeviceType device_type = dst_parallel_desc.device_type();
   auto device_index =
-      (device_type == DeviceType::kCPU ? DeviceId::kCPUDeviceIndex
-                                       : static_cast<DeviceId::device_index_t>(dev_id));
-  MemZoneId mem_zone_id{static_cast<MemZoneId::node_index_t>(dst_machine_id), device_type,
-                        device_index};
+      (device_type == DeviceType::kCPU ? 0 : static_cast<DeviceId::index_t>(dev_id));
+  MemZoneId mem_zone_id{static_cast<MemZoneId::index_t>(dst_machine_id), device_type, device_index};
   return GetProxyNode(src_node, lbi, mem_zone_id);
 }
 

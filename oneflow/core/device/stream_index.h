@@ -18,18 +18,18 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/auto_registration_factory.h"
-#include "oneflow/core/common/id_util.h"
+#include "oneflow/core/stream/stream_id.h"
 
 namespace oneflow {
 
 class StreamIndexGenerator {
  public:
   virtual ~StreamIndexGenerator() {}
-  using stream_index_t = StreamId::stream_index_t;
+  using index_t = StreamId::index_t;
 
-  virtual stream_index_t GenerateComputeStreamIndex() = 0;
-  virtual stream_index_t GenerateH2DStreamIndex() = 0;
-  virtual stream_index_t GenerateD2HStreamIndex() = 0;
+  virtual index_t GenerateComputeStreamIndex() = 0;
+  virtual index_t GenerateH2DStreamIndex() = 0;
+  virtual index_t GenerateD2HStreamIndex() = 0;
 };
 
 class StreamIndexGeneratorManager final {

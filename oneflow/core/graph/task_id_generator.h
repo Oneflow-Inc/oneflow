@@ -16,14 +16,13 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_TASK_ID_GENERATOR_H_
 #define ONEFLOW_CORE_GRAPH_TASK_ID_GENERATOR_H_
 
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/common/id_util.h"
+#include "oneflow/core/graph/task_id.h"
 
 namespace oneflow {
 
 class TaskIdGenerator final {
  public:
-  using task_index_t = TaskId::task_index_t;
+  using task_index_t = TaskId::index_t;
 
   TaskIdGenerator() = default;
   OF_DISALLOW_COPY_AND_MOVE(TaskIdGenerator);

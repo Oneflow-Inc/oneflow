@@ -21,12 +21,12 @@ CudaStreamIndexGenerator::CudaStreamIndexGenerator() { next_stream_index_ = kD2H
 
 CudaStreamIndexGenerator::~CudaStreamIndexGenerator() = default;
 
-StreamIndexGenerator::stream_index_t CudaStreamIndexGenerator::GenerateNamedStreamIndex(
+StreamIndexGenerator::index_t CudaStreamIndexGenerator::GenerateNamedStreamIndex(
     const std::string& name) {
   std::lock_guard<std::mutex> lock(named_stream_index_mutex_);
   auto it = named_stream_index_.find(name);
   if (it == named_stream_index_.end()) {
-    stream_index_t index = next_stream_index_;
+    index_t index = next_stream_index_;
     next_stream_index_ += 1;
     named_stream_index_.emplace(name, index);
     return index;
@@ -35,7 +35,7 @@ StreamIndexGenerator::stream_index_t CudaStreamIndexGenerator::GenerateNamedStre
   }
 }
 
-bool CudaStreamIndexGenerator::IsNamedStreamIndex(const std::string& name, stream_index_t index) {
+bool CudaStreamIndexGenerator::IsNamedStreamIndex(const std::string& name, index_t index) {
   std::lock_guard<std::mutex> lock(named_stream_index_mutex_);
   auto it = named_stream_index_.find(name);
   if (it == named_stream_index_.end()) {

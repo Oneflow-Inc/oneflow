@@ -17,10 +17,9 @@ limitations under the License.
 #define ONEFLOW_CORE_STREAM_CUDA_GRAPH_CONTEXT_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/stream/stream_context.h"
-#include "oneflow/core/common/id_util.h"
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/stream/stream_context.h"
 
 #ifdef WITH_CUDA
 
