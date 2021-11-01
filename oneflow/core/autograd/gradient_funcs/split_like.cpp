@@ -24,7 +24,6 @@ namespace one {
 
 struct SplitLikeCaptureState : public AutoGradCaptureState {
   int64_t axis;
-  int64_t max_dim_size;
   bool requires_grad;
 };
 
@@ -53,12 +52,8 @@ Maybe<void> SplitLike::Capture(SplitLikeCaptureState* ctx, const TensorTuple& in
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->max_dim_size = 0;
   ctx->axis = JUST(composed_attrs.GetAttr<int64_t>("axis"));
-  for (int i = 0; i < outputs.size(); ++i) {
-    ctx->max_dim_size += inputs.at(i + 1)->shape()->At(ctx->axis);
-    ctx->SaveTensorForBackward(outputs.at(i));
-  }
+  for (int i = 0; i < outputs.size(); ++i) { ctx->SaveTensorForBackward(outputs.at(i)); }
   return Maybe<void>::Ok();
 }
 
@@ -79,7 +74,7 @@ Maybe<void> SplitLike::Apply(const SplitLikeCaptureState* ctx, const TensorTuple
       inputs.push_back(zero_grad);
     }
   }
-  in_grads->at(0) = JUST(functional::Concat(inputs, ctx->axis, ctx->max_dim_size));
+  in_grads->at(0) = JUST(functional::Concat(inputs, ctx->axis));
   return Maybe<void>::Ok();
 }
 
