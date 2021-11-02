@@ -46,8 +46,6 @@ class BroadcastBinaryGrad : public OpExprGradFunction<BroadcastBinaryCaptureStat
     ctx->y_requires_grad = inputs.at(1)->requires_grad();
     ctx->broadcast_x = (*inputs.at(0)->shape() != *outputs.at(0)->shape());
     ctx->broadcast_y = (*inputs.at(1)->shape() != *outputs.at(0)->shape());
-    // ctx->broadcast_x = true;
-    // ctx->broadcast_y = true;
     return SaveTensorForBackward(ctx, inputs, outputs);
   }
 
