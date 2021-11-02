@@ -64,16 +64,16 @@ class NarrowKernel final : public user_op::OpKernel {
     auto copy_nd_primitive = NewCopyNdPrimitive(ctx);
     CHECK(copy_nd_primitive);
 
-    const int64_t inner_dim = in_shape.Count(0, dim);
-    const int64_t outer_dim = in_shape.Count(dim + 1);
+    const int64_t outer_dim = in_shape.Count(0, dim);
+    const int64_t inner_dim = in_shape.Count(dim + 1);
     const int64_t narrow_dim = in_shape.At(dim);
 
-    DimVector dst_shape = {inner_dim, length, outer_dim};
+    DimVector dst_shape = {outer_dim, length, inner_dim};
     DimVector dst_pos_vec = {0, 0, 0};
 
-    DimVector src_shape = {inner_dim, narrow_dim, outer_dim};
+    DimVector src_shape = {outer_dim, narrow_dim, inner_dim};
     DimVector src_pos_vec = {0, start, 0};
-    DimVector extent_vec = {inner_dim, length, outer_dim};
+    DimVector extent_vec = {outer_dim, length, inner_dim};
     copy_nd_primitive->Launch(ctx->stream_ctx(), out->data_type(), 3, out->mut_dptr(),
                               dst_shape.data(), dst_pos_vec.data(), in->dptr(), src_shape.data(),
                               src_pos_vec.data(), extent_vec.data());
@@ -105,16 +105,16 @@ class NarrowGradKernel final : public user_op::OpKernel {
     CHECK(copy_nd_primitive);
     const ShapeView dx_shape = dx->shape();
 
-    const int64_t inner_dim = dx_shape.Count(0, dim);
-    const int64_t outer_dim = dx_shape.Count(dim + 1);
+    const int64_t outer_dim = dx_shape.Count(0, dim);
+    const int64_t inner_dim = dx_shape.Count(dim + 1);
     const int64_t narrow_dim = dx_shape.At(dim);
 
-    DimVector dst_shape = {inner_dim, narrow_dim, outer_dim};
+    DimVector dst_shape = {outer_dim, narrow_dim, inner_dim};
     DimVector dst_pos_vec = {0, start, 0};
 
-    DimVector src_shape = {inner_dim, length, outer_dim};
+    DimVector src_shape = {outer_dim, length, inner_dim};
     DimVector src_pos_vec = {0, 0, 0};
-    DimVector extent_vec = {inner_dim, length, outer_dim};
+    DimVector extent_vec = {outer_dim, length, inner_dim};
 
     copy_nd_primitive->Launch(ctx->stream_ctx(), dx->data_type(), 3, dst, dst_shape.data(),
                               dst_pos_vec.data(), dy->dptr(), src_shape.data(), src_pos_vec.data(),
