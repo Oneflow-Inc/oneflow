@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/interpreter.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"

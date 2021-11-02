@@ -41,7 +41,7 @@ Maybe<void> ForEachThreadCtx(vm::VirtualMachine* vm,
 
 void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
   *Initializer = [&]() {
-    if (!IsMultiClient()) { return; }
+    if (!CHECK_JUST(IsMultiClient())) { return; }
     CHECK_JUST(InitThisThreadUniqueConsistentId(kThreadConsistentIdScheduler, "scheduler"));
   };
 }
@@ -77,7 +77,11 @@ void GetWorkerThreadInitializer(intrusive::shared_ptr<vm::VirtualMachine> vm,
     stream_type_index2consistent_id[stream_type_index] = thread_consistent_id++;
   }
   *Initializer = [stream_type_index2consistent_id](vm::ThreadCtx* thread_ctx) {
+<<<<<<< HEAD
     if (!IsMultiClient()) { return; }
+=======
+    if (!CHECK_JUST(IsMultiClient())) { return; }
+>>>>>>> 3996d5da094069ed894664ed6a67d197160e93c4
     const auto& stream_type_index = GetStreamTypeIndex(thread_ctx);
     const auto& iter = stream_type_index2consistent_id.find(stream_type_index);
     if (iter != stream_type_index2consistent_id.end()) {
