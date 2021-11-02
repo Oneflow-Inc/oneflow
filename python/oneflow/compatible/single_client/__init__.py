@@ -163,7 +163,6 @@ from oneflow.compatible.single_client.framework.generator import (
     create_generator as Generator,
 )
 from oneflow.compatible.single_client.framework.generator import (
-    default_generator,
     manual_seed,
 )
 from oneflow.compatible.single_client.framework.input_blob_def import (

@@ -140,7 +140,7 @@ def rand_op(
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
     if generator is None:
-        generator = flow.default_generator()
+        generator = flow.default_generator
     return Rand(size, generator, dtype, layout, device, placement, sbp, requires_grad)()
 
 
@@ -239,7 +239,7 @@ def randn_op(
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
     if generator is None:
-        generator = flow.default_generator()
+        generator = flow.default_generator
     return RandN(
         size, generator, dtype, layout, device, placement, sbp, requires_grad
     )()
@@ -349,7 +349,7 @@ def randint_op(
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
     if generator is None:
-        generator = flow.default_generator()
+        generator = flow.default_generator
     return RandInt(
         low, high, size, generator, dtype, device, placement, sbp, requires_grad
     )()
@@ -446,7 +446,7 @@ def randperm_op(
     assert layout is None, "layout not supported yet"
     assert pin_memory is False, "pin_memory not supported yet"
     if generator is None:
-        generator = flow.default_generator()
+        generator = flow.default_generator
     return RandPerm(n, generator, dtype, layout, device, placement, sbp, requires_grad)(
         out
     )

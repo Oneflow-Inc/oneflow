@@ -100,7 +100,7 @@ Maybe<void> CPUGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_sta
     return Error::RuntimeError() << "Generator state should be host tensor.";
   }
   if (tensor_state->dtype() != DType::UInt8()) {
-    return Error::RuntimeError() << "Generator state should have dtype=flow.uint8";
+    return Error::RuntimeError() << "Generator state should be dtype=flow.uint8";
   }
   CPUGeneratorState state;
   if (tensor_state->shape()->elem_cnt() != sizeof(state)) {
@@ -203,7 +203,7 @@ Maybe<void> CUDAGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
     return Error::RuntimeError() << "Generator state should be host tensor.";
   }
   if (tensor_state->dtype() != DType::UInt8()) {
-    return Error::RuntimeError() << "Generator state should have dtype=flow.uint8";
+    return Error::RuntimeError() << "Generator state should be dtype=flow.uint8";
   }
   int64_t state_size = max_block_num_ * max_thread_num_ * sizeof(curandState);
   int64_t total_size = state_size + sizeof(int64_t);
@@ -310,7 +310,7 @@ Maybe<void> AutoGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
     return Error::RuntimeError() << "Generator state should be host tensor.";
   }
   if (tensor_state->dtype() != DType::UInt8()) {
-    return Error::RuntimeError() << "Generator state should have dtype=flow.uint8";
+    return Error::RuntimeError() << "Generator state should be dtype=flow.uint8";
   }
   AutoGeneratorState state;
   int64_t total_size = tensor_state->shape()->elem_cnt();

@@ -144,7 +144,7 @@ class TestDefaultGenerator(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(new_state.numpy(), state.numpy()))
 
     def test_get_rng_state(test_case):
-        auto_gen = flow.default_generator()
+        auto_gen = flow.default_generator
         state = auto_gen.get_state()
         rng_state = flow.get_rng_state()
         test_case.assertTrue(np.allclose(state.numpy(), rng_state.numpy()))

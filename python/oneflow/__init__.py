@@ -246,7 +246,6 @@ from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.function_util import FunctionConfig as function_config
 from oneflow.framework.generator import create_generator as Generator
 from oneflow.framework.generator import (
-    default_generator,
     manual_seed,
     get_rng_state,
     set_rng_state,
