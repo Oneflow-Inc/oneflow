@@ -689,6 +689,30 @@ class CTCLoss(_Loss):
         )
 
 
+class RNNTLoss(_Loss):
+    def __init__(
+        self, blank: int = 0, reduction: str = "mean", thread: int=0
+    ) -> None:
+        super(RNNTLoss, self).__init__(reduction)
+        self.blank = blank
+        self.thread = thread
+    
+    def forward(
+        self,
+        acts: Tensor,
+        labels: Tensor,
+        act_lens: Tensor,
+        label_lens: Tensor,
+    ) -> Tensor:
+        loss = flow._C.RNNTloss(acts, labels, act_lens, label_lens, self.blank, self.thread)
+        if self.reduction in ['sum', 'mean']:
+            loss = loss.sum().unsqueeze(-1)
+            if self.reduction == 'mean':
+                loss = loss / acts.shape[0]
+        return loss
+
+
+
 class BCEWithLogitsLoss(_WeightedLoss):
     """This operator combines the `Sigmoid` and `BCELoss` together. For numerical stability,
     we apply some math tricks instead of using `Sigmoid` layer with `BCELoss`.

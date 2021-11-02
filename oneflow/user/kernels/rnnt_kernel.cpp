@@ -55,7 +55,7 @@ class RNNTKernel final : public user_op::OpKernel {
                     num_threads,
                     true
                     );
-    std::cout<<"cpu"<<std::endl;
+
     rnnt.cost_and_grad(acts->dptr<T>(), 
                        grads->mut_dptr<T>(),
                        costs->mut_dptr<T>(),
@@ -91,6 +91,7 @@ user_op::InferTmpSizeFn GenFwInferTmpSizeFn() {
 
 REGISTER_RNNT_KERNEL(DeviceType::kCPU, float)
 REGISTER_RNNT_KERNEL(DeviceType::kCPU, double)
+
 
 }
 

@@ -96,6 +96,7 @@ from oneflow.nn.modules.loss import (
     BCEWithLogitsLoss,
     CrossEntropyLoss,
     CTCLoss,
+    RNNTLoss,
     KLDivLoss,
     L1Loss,
     MarginRankingLoss,

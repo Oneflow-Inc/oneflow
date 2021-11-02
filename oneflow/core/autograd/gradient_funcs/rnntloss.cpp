@@ -36,32 +36,21 @@ class RNNTloss : public OpExprGradFunction<RNNTlossInterpState> {
   Maybe<void> Apply(const RNNTlossInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
- private:
-  AttrMap base_attrs_;
-  // std::shared_ptr<OpExpr> grad_op_;
 };
 
 Maybe<void> RNNTloss::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  // const std::string& op_name = fw_op_expr->op_name();
-  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  // grad_op_ = JUST(one::OpBuilder("RNNTloss", GradientOpName(op_name))
-  //                     .Input("grads")
-  //                     .Input("dy")
-  //                     .Output("dx")
-  //                     .Build());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> RNNTloss::Capture(RNNTlossInterpState* ctx, const TensorTuple& inputs,
                                 const TensorTuple& outputs, const AttrMap& attrs) const {
-  ComposedAttrMap composed_attrs(attrs, base_attrs_);
   CHECK_EQ_OR_RETURN(inputs.size(), 4);
   ctx->requires_grad = inputs.at(0)->requires_grad();
-
+  
   if (!ctx->requires_grad) return Maybe<void>::Ok();
-
+  
   ctx->SaveTensorForBackward(outputs.at(1));
   return Maybe<void>::Ok();
 }
@@ -72,7 +61,7 @@ Maybe<void> RNNTloss::Apply(const RNNTlossInterpState* ctx, const TensorTuple& o
   CHECK_EQ_OR_RETURN(out_grads.size(), 2);
   const auto& dy = out_grads.at(0);
   const auto& grads = ctx->SavedTensors().at(0);
-  in_grads->resize(1);
+  in_grads->resize(4);
   
   DimVector dim_vec = {-1,1,1,1};
   std::shared_ptr<one::Tensor> dy_trans = JUST(functional::Reshape(dy,Shape(dim_vec)));

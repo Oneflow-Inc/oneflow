@@ -175,7 +175,7 @@ inline __device__ T logp(const T*  denom, const T*  acts, const int maxT, const 
 
 template<typename T>
 __global__ void negp(T* in_buf, int32_t size) {
-  CUDA_1D_KERNEL_LOOP(i, size+100) { in_buf[i] = -in_buf[i]; }
+  CUDA_1D_KERNEL_LOOP(i, size) { in_buf[i] = -in_buf[i]; }
 }
 
 

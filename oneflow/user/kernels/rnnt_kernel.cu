@@ -57,7 +57,6 @@ class RNNTKernel final : public user_op::OpKernel, public user_op::CudaGraphSupp
                     ctx->device_ctx()->cuda_stream()
                     );
                     
-    std::cout<<"gpu"<<std::endl;
     rnnt.cost_and_grad(acts->dptr<T>(), 
                        grads->mut_dptr<T>(),
                        costs->mut_dptr<T>(),
