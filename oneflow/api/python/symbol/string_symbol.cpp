@@ -14,7 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include "oneflow/api/python/framework/throw.h"
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/vm/string_symbol.h"
 
 namespace py = pybind11;
@@ -31,7 +33,12 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         return CreateStringSymbol(symbol_id, data).GetPtrOrThrow();
       }))
       .def_property_readonly("symbol_id",
-                             [](const StringSymbol& x) { return x.symbol_id().GetOrThrow(); })
+                             [](const StringSymbol& x) {
+                               if (!x.symbol_id().has_value()) {
+                                 THROW(RuntimeError) << "symbol_id not initialized";
+                               }
+                               return CHECK_JUST(x.symbol_id());
+                             })
       .def_property_readonly("data", &StringSymbol::data);
 }
 

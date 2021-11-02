@@ -128,6 +128,7 @@ from oneflow._C import softplus
 from oneflow._C import tril
 from oneflow._C import triu
 from oneflow._C import pad
+from oneflow._C import distributed_partial_fc_sample
 from oneflow._C import transpose
 from oneflow._C import relu
 from oneflow._C import softmax
@@ -135,9 +136,15 @@ from oneflow._C import log_softmax
 from oneflow._C import argmax
 from oneflow._C import argmin
 from oneflow._C import std
+from oneflow._C import var
 from oneflow._C import stack
 from oneflow._C import squeeze
-from oneflow._C import var
+from oneflow._C import narrow
+from oneflow._C import unsqueeze
+from oneflow._C import permute
+from oneflow._C import concat
+from oneflow._C import concat as cat
+
 
 from . import sbp
 import atexit
@@ -258,7 +265,6 @@ from oneflow.nn.modules.argwhere import argwhere_op as argwhere
 from oneflow.nn.modules.bmm import bmm_op as bmm
 from oneflow.nn.modules.broadcast_like import broadcast_like_op as broadcast_like
 from oneflow.nn.modules.chunk import chunk_op as chunk
-from oneflow.nn.modules.concat import concat_op as cat
 from oneflow.nn.modules.constant import ones_op as ones
 from oneflow.nn.modules.constant import zeros_op as zeros
 from oneflow.nn.modules.constant import full_op as full
@@ -290,7 +296,6 @@ from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
 from oneflow.nn.modules.math_ops import topk_op as topk
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
-from oneflow.nn.modules.narrow import narrow_op as narrow
 from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.numel import numel_op as numel
 from oneflow.nn.modules.random_ops import rand_op as rand
@@ -305,7 +310,6 @@ from oneflow.nn.modules.reduce_ops import prod_op as prod
 from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
-from oneflow.nn.modules.permute import permute_op as permute
 from oneflow.nn.modules.slice import slice_op as slice
 from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.slice import logical_slice_assign_op as logical_slice_assign
@@ -322,7 +326,6 @@ from oneflow.nn.modules.tile import tile_op as tile
 from oneflow.nn.modules.to import to_op as to
 from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
 from oneflow.nn.modules.consistent_cast import to_local_op as to_local
-from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
 from oneflow.ops.builtin_ops import BuiltinOp as builtin_op

@@ -57,7 +57,7 @@ void CopyHdKernel::ForwardDataContent(KernelContext* ctx) const {
 }
 
 void CopyHdKernel::ForwardHeader(KernelContext* ctx) const {
-  ctx->BnInOp2Blob("out")->CopyHeaderFrom(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
+  ctx->BnInOp2Blob("out")->CopyHeaderFrom(ctx->BnInOp2Blob("in"));
 }
 
 REGISTER_KERNEL(OperatorConf::kCopyHdConf, CopyHdKernel);
