@@ -51,9 +51,9 @@ Maybe<void> Softmax::Apply(const SoftmaxCaptureState* ctx, const TensorTuple& ou
   if (!ctx->requires_grad) return Maybe<void>::Ok();
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   const auto& dy = out_grads.at(0);
-  const auto& x = ctx->SavedTensors().at(0);
+  const auto& y = ctx->SavedTensors().at(0);
   in_grads->resize(1);
-  in_grads->at(0) = JUST(functional::SoftmaxGrad(x, dy));
+  in_grads->at(0) = JUST(functional::SoftmaxGrad(dy, y));
   return Maybe<void>::Ok();
 }
 

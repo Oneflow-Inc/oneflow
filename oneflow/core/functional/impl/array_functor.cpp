@@ -497,13 +497,13 @@ class ExpandGradFunctor {
   ExpandGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("expand_grad").Input("in").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::vector<int32_t>& logical_in_shape,
                            const std::vector<int32_t>& logical_expand_shape) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("logical_out_shape", logical_in_shape));
     JUST(attrs.SetAttr<std::vector<int32_t>>("logical_expand_shape", logical_expand_shape));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, attrs);
   }
 
  private:

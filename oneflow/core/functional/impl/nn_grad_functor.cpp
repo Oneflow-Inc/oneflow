@@ -285,12 +285,14 @@ class SparseSoftmaxCrossEntropyGrad {
                          .Build());
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& prob,
+  Maybe<Tensor> operator()(
+                           const std::shared_ptr<one::Tensor>& dy, 
+                           const std::shared_ptr<one::Tensor>& prob,
                            const std::shared_ptr<one::Tensor>& label,
-                           const std::shared_ptr<one::Tensor>& y, const int64_t& depth) const {
+                           const int64_t& depth) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("depth", depth));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {prob, label, y}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {prob, label, dy}, attrs);
   }
 
  private:

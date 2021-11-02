@@ -382,7 +382,7 @@
   bind_python: True
 
 - name: "softmax_grad"
-  signature: "Tensor (Tensor y, Tensor dy) => SoftmaxGrad"
+  signature: "Tensor (Tensor dy, Tensor y) => SoftmaxGrad"
   bind_python: False
 
 - name: "log_softmax"
@@ -617,7 +617,7 @@
   bind_python: True
 
 - name: "expand_grad"
-  signature: "Tensor (Tensor x, Int32List out, Int32List expand) => ExpandGrad"
+  signature: "Tensor (Tensor dy, Int32List out, Int32List expand) => ExpandGrad"
   bind_python: False
 
 - name: "roll"
@@ -745,7 +745,7 @@
   bind_python: True
 
 - name: "sparse_softmax_cross_entropy_grad"
-  signature: "Tensor (Tensor prob, Tensor label, Tensor y, Int64 depth) => SparseSoftmaxCrossEntropyGrad"
+  signature: "Tensor (Tensor dy, Tensor prob, Tensor label, Int64 depth) => SparseSoftmaxCrossEntropyGrad"
   bind_python: False
 
 - name: "softmax_cross_entropy"

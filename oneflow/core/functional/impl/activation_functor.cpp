@@ -331,9 +331,9 @@ class SoftmaxGradFunctor {
     op_ = CHECK_JUST(one::OpBuilder("softmax_grad").Input("y").Input("dy").Output("dx").Build());
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& dy) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, dy});
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy});
   }
 
  private:

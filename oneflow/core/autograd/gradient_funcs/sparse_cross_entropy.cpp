@@ -61,7 +61,7 @@ class SparseCrossEntropy : public OpExprGradFunction<SparseCrossEntropyCaptureSt
     in_grads->resize(2);
     if (is_distributed) {
       in_grads->at(0) = JUST(
-          functional::SparseCrossEntropyMsGrad(prediction, label, out_grads.at(0), ctx->depth));
+          functional::SparseCrossEntropyMsGrad(out_grads.at(0), prediction, label, ctx->depth));
     } else {
       in_grads->at(0) =
           JUST(functional::SparseCrossEntropyGrad(prediction, label, out_grads.at(0), ctx->depth));
