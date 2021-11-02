@@ -184,14 +184,20 @@ __global__ void compute_alphas_kernel(const Tp*  acts, const Tp*  denom, Tp* alp
     const int*  mlabels, const int minibatch, const int maxT, const int maxU, const int alphabet_size, const int blank_) {
     int b = blockIdx.x; 
     int u = threadIdx.x; 
+    
+
     const int T = xlen[b];
+    
     const int U = ylen[b] + 1;
+    
     const int* labels = mlabels + b * (maxU - 1); 
     const int offset = b * maxT * maxU;
     alphas += offset;
+    
     if (u == 0) alphas[0] = 0;
-
+    
     __syncthreads();
+    
     for (int n = 1; n < T+U-1; ++n) {
         int t = n - u;
         if (u == 0) {
@@ -439,6 +445,7 @@ GpuRNNT<ProbT>::compute_cost_and_score(const ProbT*  acts,
     compute_alphas_kernel<ProbT><<<minibatch_, maxU_, 0, stream_>>>(acts, denom, alphas, llForward, 
         input_lengths, label_lengths, labels, minibatch_, maxT_, maxU_, alphabet_size_, blank_);
     
+
     if (training) {
         compute_betas_kernel<ProbT><<<minibatch_, maxU_, 0, stream_>>>(acts, denom, betas, llBackward,
             input_lengths, label_lengths, labels, minibatch_, maxT_, maxU_, alphabet_size_, blank_);
@@ -452,10 +459,7 @@ GpuRNNT<ProbT>::compute_cost_and_score(const ProbT*  acts,
     cudaStreamSynchronize(stream_);
     
     negp<ProbT><<<1,minibatch_,0,stream_>>>(costs,minibatch_);
-    // for (int mb = 0; mb < minibatch_; ++mb) {
-    //     costs[mb] = -costs[mb];
-    // }
-    std::cout<<"return"<<std::endl;
+   
     return RNNT_STATUS_SUCCESS;
 }
 
@@ -475,6 +479,7 @@ GpuRNNT<ProbT>::cost_and_grad(const ProbT*  acts,
         label_lengths == nullptr ||
         input_lengths == nullptr)
         return RNNT_STATUS_INVALID_VALUE;
+    
     return compute_cost_and_score(acts, grads, costs, pad_labels, label_lengths, input_lengths);
 }
 

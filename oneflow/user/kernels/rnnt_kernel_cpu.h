@@ -271,11 +271,6 @@ CpuRNNT<ProbT>::cost_and_grad(const ProbT*  log_probs,
                              flat_labels + mb * (maxU_ - 1),
                              mb, T, U, mb * per_minibatch_bytes);
     }
-    std::cout<<costs[0]<<std::endl;
-
-    for(int i=0;i<30;i++){
-        std::cout<<grads[i]<<' ';
-    }
 
     return RNNT_STATUS_SUCCESS;
 }

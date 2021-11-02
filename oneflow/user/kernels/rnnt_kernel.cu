@@ -44,8 +44,8 @@ class RNNTKernel final : public user_op::OpKernel, public user_op::CudaGraphSupp
     int32_t maxU = acts->shape().At(2);
     int32_t alphabet_size = acts->shape().At(3);
     
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    T* gpu_workspace = reinterpret_cast<T*>(tmp_buffer);
+    auto* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    T* gpu_workspace = tmp_buffer->mut_dptr<T>();
 
     GpuRNNT<T> rnnt(minibatch_size,
                     maxT,

@@ -43,8 +43,8 @@ class RNNTKernel final : public user_op::OpKernel {
     int32_t maxU = acts->shape().At(2);
     int32_t alphabet_size = acts->shape().At(3);
 
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    T* cpu_workspace = reinterpret_cast<T*>(tmp_buffer);
+    auto* tmp_buffer_blob = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    T* cpu_workspace = tmp_buffer_blob->mut_dptr<T>();
 
     CpuRNNT<T> rnnt(minibatch_size,
                     maxT,
@@ -56,7 +56,6 @@ class RNNTKernel final : public user_op::OpKernel {
                     true
                     );
     std::cout<<"cpu"<<std::endl;
-    std::cout<<acts->dptr<T>()[0] <<','<< costs->mut_dptr<T>()[0]<<std::endl;
     rnnt.cost_and_grad(acts->dptr<T>(), 
                        grads->mut_dptr<T>(),
                        costs->mut_dptr<T>(),

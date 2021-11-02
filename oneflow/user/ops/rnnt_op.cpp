@@ -33,7 +33,6 @@ REGISTER_USER_OP("RNNTloss")
       const ShapeView& acts_shape = acts.shape();
 
       DimVector costs_dim_vec = {acts_shape.At(0)};
-      std::cout<<"shape:"<<acts_shape.At(0)<<std::endl;
       user_op::TensorDesc* costs_desc = ctx->OutputTensorDesc("costs", 0);
       costs_desc->set_is_dynamic(false);
       *costs_desc->mut_shape() = Shape(costs_dim_vec);
@@ -65,22 +64,22 @@ REGISTER_USER_OP("RNNTloss")
 //       return Maybe<void>::Ok();
 //     });
 
-// REGISTER_USER_OP_GRAD("RNNTloss")
-//     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-//                                user_op::AddOpFn AddOp) -> Maybe<void> {
-//       if (op.NeedGenGradTensor4OpInput("acts", 0)) {
-//         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-//         user_op::UserOpConfWrapper rnntloss_grad_op =
-//             builder.Op("RNNTloss")
-//                 .Input("grads", op.output("grads", 0))
-//                 .Input("dy", op.GetGradTensorWithOpOutput("costs", 0))
-//                 .Output("dx")
-//                 .Build();
-//         op.BindGradTensorWithOpInput(rnntloss_grad_op.output("dx", 0), "acts", 0);
-//         AddOp(rnntloss_grad_op);
-//       }
-//       return Maybe<void>::Ok();
-//     });
+REGISTER_USER_OP_GRAD("RNNTloss")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
+      if (op.NeedGenGradTensor4OpInput("acts", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper rnntloss_grad_op =
+            builder.Op("RNNTloss")
+                .Input("grads", op.output("grads", 0))
+                .Input("dy", op.GetGradTensorWithOpOutput("costs", 0))
+                .Output("dx")
+                .Build();
+        op.BindGradTensorWithOpInput(rnntloss_grad_op.output("dx", 0), "acts", 0);
+        AddOp(rnntloss_grad_op);
+      }
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace
 }  // namespace oneflow
