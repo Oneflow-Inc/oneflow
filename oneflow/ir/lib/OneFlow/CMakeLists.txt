@@ -11,7 +11,7 @@ add_mlir_dialect_library(MLIROneFlow
   Conversion/SCFToGPU.cpp
   Conversion/PTXToCubin.cpp
   Transform/BufferHostRegister.cpp
-  Transform/OutlineJitFunction.cpp
+  Transform/OutlineAndFuse.cpp
   Passes.cpp
 
   ADDITIONAL_HEADER_DIRS

@@ -218,7 +218,19 @@ def OneFlow_Convolution2dOp : OneFlow_BaseOp<"conv2d", []> {
   );
 }
 
-def OneFlow_ReshapeOp : OneFlow_BaseOp<"bias_add", []> {
+def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", []> {
+  let summary = "OneFlow Bias Add operation";
+  let input = (ins
+    AnyType:$a,
+    AnyType:$b
+  );
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    SI32Attr:$axis
+  );
+}
+
+def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", []>  {
   let summary = "OneFlow Bias Add operation";
   let input = (ins
     AnyType:$a,
@@ -442,10 +454,44 @@ def MulCastPattern : Pat<
   ]
 >;
 
-// TODO: FusedSelfAttentionPass
-// TODO: FusedScaleRrilPass
-// TODO: FusedBiasAddDropoutPass
-// TODO: FusedBiasAddGeluPass
+// TODO: FusedSelfAttentionPattern
+// TODO: FusedScaleTrilPattern
+// TODO: FusedBiasAddDropoutPattern
+// TODO: FusedBiasAddGeluPattern
+
+def FusedBiasAddGeluPattern : Pat<
+  (
+    OneFlow_GeluOp : $gelu_op
+    (
+      OneFlow_BiasAddOp
+        $a,
+        $b,
+        $axis,
+        $bias_add_op_name,
+        $bias_add_trainable,
+        $bias_add_device_tag,
+        $bias_add_device_name,
+        $bias_add_scope_symbol_id,
+        $bias_add_hierarchy
+    ),
+    $gelu_op_name,
+    $gelu_trainable,
+    $gelu_device_tag,
+    $gelu_device_name,
+    $gelu_scope_symbol_id,
+    $gelu_hierarchy
+  ),
+  (OneFlow_FusedBiasAddGeluOp $a, $b,
+    $axis,
+    $gelu_op_name,
+    $gelu_trainable,
+    $gelu_device_tag,
+    $gelu_device_name,
+    $gelu_scope_symbol_id,
+    $gelu_hierarchy
+  ),
+  []
+>;
 
 #endif // ONEFLOW_PATTERNS
 
@@ -473,6 +519,11 @@ def BufferHostRegisterPass : FunctionPass<"buffer-host-register"> {
 def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
   let summary = "move ops could be jitted to jit function";
   let constructor = "mlir::oneflow::createOutlineJitFunctionPass()";
+}
+
+def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "FuncOp"> {
+  let summary = "";
+  let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";
 }
 
 #endif // ONEFLOW_PASSES

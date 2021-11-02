@@ -232,6 +232,10 @@ void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<MulCastPattern>(patterns.getContext());
 }
 
+void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
+  patterns.add<FusedBiasAddGeluPattern>(patterns.getContext());
+}
+
 }  // namespace oneflow
 
 }  // namespace mlir
