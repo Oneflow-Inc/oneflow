@@ -27,24 +27,24 @@ class CPUStreamIndexGenerator final : public StreamIndexGenerator {
   OF_DISALLOW_COPY_AND_MOVE(CPUStreamIndexGenerator);
   ~CPUStreamIndexGenerator() = default;
 
-  index_t GenerateComputeStreamIndex() override;
-  index_t GenerateH2DStreamIndex() override { UNIMPLEMENTED(); }
-  index_t GenerateD2HStreamIndex() override { UNIMPLEMENTED(); }
-  index_t GenerateCommNetStreamIndex();
-  index_t GenerateTickTockStreamIndex();
-  index_t GenerateIndependentTaskStreamIndex(TaskType task_type);
+  stream_index_t GenerateComputeStreamIndex() override;
+  stream_index_t GenerateH2DStreamIndex() override { UNIMPLEMENTED(); }
+  stream_index_t GenerateD2HStreamIndex() override { UNIMPLEMENTED(); }
+  stream_index_t GenerateCommNetStreamIndex();
+  stream_index_t GenerateTickTockStreamIndex();
+  stream_index_t GenerateIndependentTaskStreamIndex(TaskType task_type);
 
  private:
-  index_t next_stream_index_;
-  index_t compute_stream_index_begin_;
-  index_t compute_stream_num_;
-  index_t comm_net_stream_index_;
-  index_t tick_tock_stream_index_;
+  stream_index_t next_stream_index_;
+  stream_index_t compute_stream_index_begin_;
+  stream_index_t compute_stream_num_;
+  stream_index_t comm_net_stream_index_;
+  stream_index_t tick_tock_stream_index_;
   // for GenerateComputeStreamIndex
-  index_t compute_stream_index_counter_;
+  stream_index_t compute_stream_index_counter_;
   // for GenerateIndependentStreamIndex
   HashMap<TaskType, size_t> task_type2max_stream_num_;
-  HashMap<TaskType, std::vector<index_t>> task_type2allocated_stream_index_vec_;
+  HashMap<TaskType, std::vector<stream_index_t>> task_type2allocated_stream_index_vec_;
   HashMap<TaskType, size_t> task_type2allocated_stream_index_vec_index_;
 };
 

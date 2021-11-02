@@ -25,11 +25,11 @@ namespace oneflow {
 class StreamIndexGenerator {
  public:
   virtual ~StreamIndexGenerator() {}
-  using index_t = StreamId::stream_index_t;
+  using stream_index_t = StreamId::stream_index_t;
 
-  virtual index_t GenerateComputeStreamIndex() = 0;
-  virtual index_t GenerateH2DStreamIndex() = 0;
-  virtual index_t GenerateD2HStreamIndex() = 0;
+  virtual stream_index_t GenerateComputeStreamIndex() = 0;
+  virtual stream_index_t GenerateH2DStreamIndex() = 0;
+  virtual stream_index_t GenerateD2HStreamIndex() = 0;
 };
 
 class StreamIndexGeneratorManager final {

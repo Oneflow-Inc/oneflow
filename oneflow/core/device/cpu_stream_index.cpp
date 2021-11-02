@@ -30,19 +30,19 @@ CPUStreamIndexGenerator::CPUStreamIndexGenerator()
   next_stream_index_++;
 }
 
-StreamIndexGenerator::index_t CPUStreamIndexGenerator::GenerateComputeStreamIndex() {
+StreamIndexGenerator::stream_index_t CPUStreamIndexGenerator::GenerateComputeStreamIndex() {
   return compute_stream_index_begin_ + (compute_stream_index_counter_++ % compute_stream_num_);
 }
 
-StreamIndexGenerator::index_t CPUStreamIndexGenerator::GenerateCommNetStreamIndex() {
+StreamIndexGenerator::stream_index_t CPUStreamIndexGenerator::GenerateCommNetStreamIndex() {
   return comm_net_stream_index_;
 }
 
-StreamIndexGenerator::index_t CPUStreamIndexGenerator::GenerateTickTockStreamIndex() {
+StreamIndexGenerator::stream_index_t CPUStreamIndexGenerator::GenerateTickTockStreamIndex() {
   return tick_tock_stream_index_;
 }
 
-StreamIndexGenerator::index_t CPUStreamIndexGenerator::GenerateIndependentTaskStreamIndex(
+StreamIndexGenerator::stream_index_t CPUStreamIndexGenerator::GenerateIndependentTaskStreamIndex(
     TaskType task_type) {
   auto max_num_iter = task_type2max_stream_num_.end();
   if (IsClassRegistered<int32_t, IndependentThreadNum4TaskType>(task_type)) {
@@ -52,8 +52,8 @@ StreamIndexGenerator::index_t CPUStreamIndexGenerator::GenerateIndependentTaskSt
     max_num_iter = task_type2max_stream_num_.find(task_type);
     if (max_num_iter == task_type2max_stream_num_.end()) {
       task_type2max_stream_num_.emplace(task_type, max_num);
-      CHECK(
-          task_type2allocated_stream_index_vec_.emplace(task_type, std::vector<index_t>{}).second);
+      CHECK(task_type2allocated_stream_index_vec_.emplace(task_type, std::vector<stream_index_t>{})
+                .second);
     } else {
       CHECK_EQ(max_num_iter->second, max_num);
       CHECK(task_type2allocated_stream_index_vec_.find(task_type)
@@ -61,7 +61,7 @@ StreamIndexGenerator::index_t CPUStreamIndexGenerator::GenerateIndependentTaskSt
     }
   }
 
-  index_t index = next_stream_index_;
+  stream_index_t index = next_stream_index_;
   if (max_num_iter != task_type2max_stream_num_.end()) {
     auto& allocated_stream_index_vec = task_type2allocated_stream_index_vec_[task_type];
     if (allocated_stream_index_vec.size() < max_num_iter->second) {

@@ -25,19 +25,19 @@ class CudaStreamIndexGenerator final : public StreamIndexGenerator {
   OF_DISALLOW_COPY_AND_MOVE(CudaStreamIndexGenerator);
   CudaStreamIndexGenerator();
   ~CudaStreamIndexGenerator();
-  index_t GenerateComputeStreamIndex() override { return kCompute; }
-  index_t GenerateH2DStreamIndex() override { return kH2D; }
-  index_t GenerateD2HStreamIndex() override { return kD2H; }
-  index_t GenerateNamedStreamIndex(const std::string& name);
-  bool IsNamedStreamIndex(const std::string& name, index_t index);
+  stream_index_t GenerateComputeStreamIndex() override { return kCompute; }
+  stream_index_t GenerateH2DStreamIndex() override { return kH2D; }
+  stream_index_t GenerateD2HStreamIndex() override { return kD2H; }
+  stream_index_t GenerateNamedStreamIndex(const std::string& name);
+  bool IsNamedStreamIndex(const std::string& name, stream_index_t index);
 
  private:
-  static const index_t kCompute = 0;
-  static const index_t kH2D = 1;
-  static const index_t kD2H = 2;
-  HashMap<std::string, index_t> named_stream_index_;
+  static const stream_index_t kCompute = 0;
+  static const stream_index_t kH2D = 1;
+  static const stream_index_t kD2H = 2;
+  HashMap<std::string, stream_index_t> named_stream_index_;
   std::mutex named_stream_index_mutex_;
-  index_t next_stream_index_;
+  stream_index_t next_stream_index_;
 };
 
 }  // namespace oneflow
