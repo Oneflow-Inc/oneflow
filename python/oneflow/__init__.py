@@ -156,7 +156,6 @@ import oneflow.framework.register_python_callback
 
 INVALID_SPLIT_AXIS = oneflow._oneflow_internal.INVALID_SPLIT_AXIS
 register_class_method_util.RegisterMethod4Class()
-oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 import oneflow.framework.env_util as env_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
@@ -166,6 +165,7 @@ if not env_util.HasAllMultiClientEnvVars():
     env_util.SetDefaultMultiClientEnvVars()
 oneflow._oneflow_internal.SetIsMultiClient(True)
 env_util.api_env_init()
+oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
 session_ctx.OpenDefaultSession(
     MultiClientSession(oneflow._oneflow_internal.NewSessionId())
