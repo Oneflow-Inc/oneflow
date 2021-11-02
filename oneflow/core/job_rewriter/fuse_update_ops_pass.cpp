@@ -172,7 +172,9 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
           .Input("max_v", user_op_conf.input("max_v", 0))
           .Attr<float>("beta1", user_op_conf.attr<float>("beta1"))
           .Attr<float>("beta2", user_op_conf.attr<float>("beta2"))
-          .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"));
+          .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"))
+          .Input("bias_correction1", user_op_conf.input("bias_correction1", 0))
+          .Input("bias_correction2", user_op_conf.input("bias_correction2", 0));
     } else if (user_op_conf.op_type_name() == "rmsprop_update") {
       const bool centered = user_op_conf.attr<bool>("centered");
       fused_op_builder.Input("mean_square", user_op_conf.input("mean_square", 0.f))
