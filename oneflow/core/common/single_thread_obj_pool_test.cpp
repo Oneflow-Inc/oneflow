@@ -26,7 +26,7 @@ TEST(SingleThreadObjPool, naive) {
   ASSERT_EQ(ptr, pool->make_shared().get());
 }
 
-struct Int {
+struct Int { // NOLINT
   Int() : x(0) {}
   Int(int val) : x(val) {}
   ~Int() { x = 0; }
