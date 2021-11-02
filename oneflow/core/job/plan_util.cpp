@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/constant.h"
-#include "oneflow/core/job/plan_util.h"
-#include "oneflow/core/job/env_desc.h"
-#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/job/plan_util.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/memory/chunk_manager.h"
@@ -325,7 +325,7 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     }
   }
 
-  if (CHECK_JUST(GlobalMultiClientEnv())) {
+  if (CHECK_JUST(IsMultiClient())) {
     GenChunkForMultiNNGraphMemoryReuseInMultiClient(plan, &mem_block_id2mem_block);
   } else {
     CHECK(variable_op_names.empty());

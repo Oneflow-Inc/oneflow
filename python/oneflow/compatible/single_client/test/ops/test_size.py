@@ -100,17 +100,17 @@ class TestSize(flow.unittest.TestCase):
     def test_index(test_case):
         size = flow.Size((2, 3, 2, 4, 4))
         test_case.assertEqual(size.index(2), 0)
-        test_case.assertEqual(size.index(2, start=0), 0)
-        test_case.assertEqual(size.index(2, start=0, end=20), 0)
-        test_case.assertEqual(size.index(2, start=1, end=20), 2)
+        test_case.assertEqual(size.index(2, 0), 0)
+        test_case.assertEqual(size.index(2, 0, 20), 0)
+        test_case.assertEqual(size.index(2, 1, 20), 2)
         test_case.assertEqual(size.index(4), 3)
-        test_case.assertEqual(size.index(4, start=4), 4)
+        test_case.assertEqual(size.index(4, 4), 4)
         with test_case.assertRaises(ValueError):
-            size.index(4, start=0, end=3)
+            size.index(4, 0, 3)
         with test_case.assertRaises(ValueError):
             size.index(5)
         with test_case.assertRaises(ValueError):
-            size.index(2, start=3)
+            size.index(2, 3)
 
     def test_slicing(test_case):
         size = flow.Size([2, 3, 4, 5])

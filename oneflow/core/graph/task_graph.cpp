@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/graph/id_serialization.h"
@@ -26,7 +27,6 @@ limitations under the License.
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
-#include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 #include "oneflow/core/graph/stream_index_getter_registry_manager.h"
@@ -544,7 +544,7 @@ void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_node
 }
 
 void TaskGraph::AddCtrlEdgeBetweenSrcDstTickAndInputOutputInSameRank() {
-  if (!CHECK_JUST(GlobalMultiClientEnv())) { return; }
+  if (!CHECK_JUST(IsMultiClient())) { return; }
   HashMap<int64_t, TaskNode*> rank_id2src_tick;
   HashMap<int64_t, TaskNode*> rank_id2dst_tick;
   HashMap<int64_t, HashSet<TaskNode*>> rank_id2input_output_nodes;

@@ -44,8 +44,6 @@ class EnvDesc final {
   EnvProto env_proto_;
 };
 
-Maybe<bool> GlobalMultiClientEnv();
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_CLUSTER_DESC_H_
