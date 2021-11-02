@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_JOB_DESC_H_
 #define ONEFLOW_CORE_JOB_JOB_DESC_H_
 
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/dlnet_conf.pb.h"
 #include "oneflow/core/job/job.pb.h"
@@ -41,7 +42,7 @@ class JobDesc final {
   ~JobDesc() = default;
 
   static Maybe<JobDesc> New(int64_t symbol_id, const JobConfigProto& job_conf);
-  const Maybe<int64_t>& symbol_id() const { return symbol_id_; }
+  const Optional<int64_t>& symbol_id() const { return symbol_id_; }
   const std::shared_ptr<cfg::JobConfigProto>& cfg_job_conf() const { return cfg_job_conf_; }
 
   // Common
@@ -84,7 +85,7 @@ class JobDesc final {
 
   JobConfigProto job_conf_;
   int64_t job_id_;
-  Maybe<int64_t> symbol_id_;
+  Optional<int64_t> symbol_id_;
   // merge job_conf_ and cfg_job_conf_ after cfg::JobConfigProto taken as a constructor argument
   std::shared_ptr<cfg::JobConfigProto> cfg_job_conf_;
 };

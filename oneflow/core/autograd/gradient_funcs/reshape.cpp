@@ -24,7 +24,11 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-class ReshapeOpExprGrad : public OpExprGradFunction<AutoGradCaptureState> {
+struct ReshapeCaptureState : public AutoGradCaptureState {
+  DimVector input_shape_vec;
+};
+
+class ReshapeOpExprGrad : public OpExprGradFunction<ReshapeCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -32,17 +36,18 @@ class ReshapeOpExprGrad : public OpExprGradFunction<AutoGradCaptureState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(AutoGradCaptureState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(ReshapeCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    ctx->SaveTensorForBackward(inputs.at(0));
+    ctx->input_shape_vec = inputs.at(0)->shape()->dim_vec();
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const ReshapeCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& saved_tensors = ctx->SavedTensors();
     in_grads->resize(1);
-    in_grads->at(0) = JUST(functional::ReshapeLike(out_grads.at(0), saved_tensors.at(0)));
+    Shape shape(ctx->input_shape_vec);
+    in_grads->at(0) = JUST(functional::Reshape(out_grads.at(0), shape));
     return Maybe<void>::Ok();
   }
 };

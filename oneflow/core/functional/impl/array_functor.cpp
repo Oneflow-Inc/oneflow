@@ -16,6 +16,10 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -23,17 +27,16 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/random_generator_impl.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"
-#include "oneflow/core/common/global.h"
-#include "oneflow/core/common/optional.h"
-#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 namespace one {
@@ -47,13 +50,16 @@ class ArgMaxFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int32_t>& dim,
                            const Optional<bool>& keepdim,
                            const Optional<Symbol<DType>>& dtype) const {
-    std::shared_ptr<Tensor> result;
     if (dim.has_value() == false) {
-      result = JUST(Flatten(input, 0, -1));
-      return JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {result}));
+      return SequenceFunction<Maybe<Tensor>()>([&]() { return Flatten(input, 0, -1); })
+          .then([&](const std::shared_ptr<one::Tensor>& x) {
+            return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+          })
+          .call();
     }
+
     int new_dim = JUST(dim);
-    int32_t ndims = input->shape()->NumAxes();
+    const int32_t ndims = input->shape()->NumAxes();
     if (new_dim < 0) { new_dim += ndims; }
     CHECK_GE_OR_RETURN(new_dim, 0)
         << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
@@ -61,35 +67,40 @@ class ArgMaxFunctor {
     CHECK_LT_OR_RETURN(new_dim, ndims)
         << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
         << ndims << " ] but got " << ndims;
+
+    const auto do_cast = [&](const std::shared_ptr<one::Tensor>& x) -> Maybe<Tensor> {
+      return Cast(x, JUST(dtype));
+    };
+
     if (new_dim == ndims - 1) {
-      result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input}));
-      if (keepdim.has_value() && JUST(keepdim) == true) { result = JUST(ExpandDims(result, -1)); }
-    } else {
-      std::vector<int32_t> permute;
-      for (int32_t i = 0; i < ndims - 1; i++) {
-        if (i < new_dim) {
-          permute.push_back(i);
-        } else {
-          permute.push_back(i + 1);
-        }
-      }
-      permute.push_back(new_dim);
-      result = JUST(Transpose(input, permute));
-      result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {result}));
-      result = JUST(ExpandDims(result, -1));
-      std::vector<int32_t> permute_inv;
-      permute_inv.resize(ndims);
-      for (int32_t i = 0; i < ndims; i++) { permute_inv[i] = -1; }
-      for (int32_t i = 0; i < ndims; i++) { permute_inv[permute[i]] = i; }
-      result = JUST(Transpose(result, permute_inv));
-      std::vector<int32_t> squeeze_dim;
-      squeeze_dim.push_back(new_dim);
-      if ((!keepdim.has_value()) || (keepdim.has_value() && JUST(keepdim) == false)) {
-        result = JUST(Squeeze(result, squeeze_dim));
-      }
+      return SequenceFunction<Maybe<Tensor>()>(
+                 [&]() { return OpInterpUtil::Dispatch<Tensor>(*op_, {input}); })
+          .then_if(keepdim.has_value() && JUST(keepdim) == true,
+                   std::bind(ExpandDims, std::placeholders::_1, -1))
+          .then_if(dtype.has_value(), do_cast)
+          .call();
     }
-    if (dtype.has_value()) { result = JUST(Cast(result, JUST(dtype))); }
-    return result;
+
+    std::vector<int32_t> permute;
+    for (int32_t i = 0; i < ndims - 1; i++) { permute.push_back(i < new_dim ? i : i + 1); }
+    permute.push_back(new_dim);
+
+    std::vector<int32_t> permute_inv(ndims, 0);
+    for (int32_t i = 0; i < ndims; i++) { permute_inv[i] = -1; }
+    for (int32_t i = 0; i < ndims; i++) { permute_inv[permute[i]] = i; }
+
+    std::vector<int32_t> squeeze_dim = {new_dim};
+
+    return SequenceFunction<Maybe<Tensor>()>([&]() { return Transpose(input, permute); })
+        .then([&](const std::shared_ptr<one::Tensor>& x) {
+          return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+        })
+        .then(std::bind(ExpandDims, std::placeholders::_1, -1))
+        .then(std::bind(Transpose, std::placeholders::_1, permute_inv))
+        .then_if((!keepdim.has_value()) || (keepdim.has_value() && JUST(keepdim) == false),
+                 std::bind(Squeeze, std::placeholders::_1, squeeze_dim))
+        .then_if(dtype.has_value(), do_cast)
+        .call();
   }
 
  private:
@@ -102,8 +113,9 @@ class ArgMinFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int32_t>& dim,
                            const Optional<bool>& keepdim,
                            const Optional<Symbol<DType>>& dtype) const {
-    auto neg_input = JUST(Negative(input));
-    return JUST(ArgMax(neg_input, dim, keepdim, dtype));
+    return sequence_function(Negative)
+        .then(std::bind(ArgMax, std::placeholders::_1, dim, keepdim, dtype))
+        .call(input);
   }
 };
 class ConsistentConstantFunctor {
@@ -389,9 +401,32 @@ class ConcatFunctor {
       ops_[n] = CHECK_JUST(one::OpBuilder("concat").Input("in", n + 1).Output("out").Build());
     }
   }
-  Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& axis,
-                           const int64_t& max_dim_size) const {
+  Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim) const {
+    if (inputs.size() == 1) { return inputs.at(0); }
+    int64_t axis = dim;
+    int64_t ndim = inputs[0]->ndim();
+    int64_t max_dim_size = 0;
     CHECK_GE_OR_RETURN(inputs.size(), 2);
+    CHECK_OR_RETURN((-(ndim) <= dim) && (dim <= (ndim - 1)))
+        << " IndexError: Dimension out of range, expected to be in range of [" << -ndim << ", "
+        << ndim - 1 << "], but got " << dim;
+    if (dim < 0) { axis += ndim; }
+
+    const std::shared_ptr<const Shape>& shape = inputs[0]->shape();
+    for (const auto& input : inputs) {
+      CHECK_OR_RETURN(input->ndim() == ndim) << " Tensors must have same number of dimensions: got "
+                                             << input->ndim() << " and " << ndim << " is expected.";
+      for (int i = 0; i < ndim; ++i) {
+        if (axis == i) {
+          max_dim_size += input->shape()->At(i);
+        } else {
+          CHECK_OR_RETURN(input->shape()->At(i) == shape->At(i))
+              << " Sizes of tensors must match except in dimension " << axis << ". Got "
+              << input->shape()->At(i) << " and " << shape->At(i) << " is expected in dimension 1.";
+        }
+      }
+    }
+
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("axis", axis));
     JUST(attrs.SetAttr<int64_t>("max_dim_size", max_dim_size));
@@ -404,7 +439,7 @@ class ConcatFunctor {
           JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
     }
     if (outputs.size() == 1) { return outputs.at(0); }
-    return this->operator()(outputs, axis, max_dim_size);
+    return this->operator()(outputs, axis);
   }
 
  private:
@@ -431,7 +466,7 @@ class StackFunctor {
     for (int i = 0; i < inputs.size(); ++i) {
       expand_inputs[i] = JUST(ExpandDims(inputs.at(i), stack_dim));
     }
-    return Concat(expand_inputs, stack_dim, inputs.size());
+    return Concat(expand_inputs, stack_dim);
   }
 };
 
@@ -462,9 +497,41 @@ class ExpandDimsFunctor {
   ExpandDimsFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("expand_dims").Input("in").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& axis) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim) const {
+    int32_t expand_dim = dim;
+    const int32_t ndim = input->shape()->NumAxes();
+    CHECK_OR_RETURN(-(ndim + 1) <= dim && dim <= ndim)
+        << " Dimension out of range, expected to be in range of [" << -(ndim + 1) << ", " << ndim
+        << "], but got: " << dim;
+    if (dim < 0) { expand_dim = dim + ndim + 1; }
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    JUST(attrs.SetAttr<int32_t>("axis", expand_dim));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class RollFunctor {
+ public:
+  RollFunctor() { op_ = CHECK_JUST(one::OpBuilder("roll").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::vector<int32_t>& shifts,
+                           const Optional<std::vector<int32_t>>& dims) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("shifts", shifts));
+
+    std::vector<int32_t> actual_dims;
+    if (dims.has_value()) {
+      actual_dims = *JUST(dims);
+    } else {
+      actual_dims.push_back(-1);
+    }
+    CHECK_GE_OR_RETURN(shifts.size(), actual_dims.size())
+        << "The `shifts` and `dims` parameters should have the same size.";
+    JUST(attrs.SetAttr<std::vector<int32_t>>("dims", actual_dims));
+
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -824,13 +891,19 @@ class SliceGradFunctor : public SliceGradBaseFunctor {
 class NarrowFunctor {
  public:
   NarrowFunctor() { op_ = CHECK_JUST(one::OpBuilder("narrow").Input("in").Output("out").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, const int64_t& dim,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& dim,
                            const int64_t& start, const int64_t& length) const {
+    int64_t narrow_dim = dim;
+    const int64_t ndim = input->shape()->NumAxes();
+    CHECK_OR_RETURN((-ndim <= dim) && (dim <= ndim - 1))
+        << " (Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got:" << dim << ")";
+    if (narrow_dim < 0) { narrow_dim += ndim; }
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("dim", dim));
+    JUST(attrs.SetAttr<int64_t>("dim", narrow_dim));
     JUST(attrs.SetAttr<int64_t>("start", start));
     JUST(attrs.SetAttr<int64_t>("length", length));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
  private:
@@ -953,6 +1026,9 @@ class CopyFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("device_type", device_type));
     JUST(attrs.SetAttr<int64_t>("device_id", device_id));
+#ifdef WITH_CUDA
+    if (device_type == "cuda") { InitCudaContextOnce(device_id); }
+#endif
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -1698,15 +1774,19 @@ class SplitFunctor {
   SplitFunctor() {}
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& split_size,
                                 const int64_t& dim) const {
+    int64_t axis = dim;
+    if (axis < 0) { axis += x->ndim(); }
+    CHECK_OR_RETURN(axis >= 0 && axis < x->ndim())
+        << "The dim " << dim << " is out of bound " << x->ndim() - 1;
     CHECK_GE_OR_RETURN(split_size, 0)
         << "split expects split_size be non-negative, but got split_size=" << split_size;
-    int64_t dim_size = x->shape()->At(dim);
+    int64_t dim_size = x->shape()->At(axis);
     int64_t num_splits = std::max<int64_t>((dim_size + split_size - 1) / split_size, 1);
     TensorTuple splits(num_splits);
     int64_t last_split_size = split_size - (split_size * num_splits - dim_size);
     for (int i = 0; i < num_splits; ++i) {
       int64_t length = i < num_splits - 1 ? split_size : last_split_size;
-      splits[i] = JUST(Narrow(x, dim, i * split_size, length));
+      splits[i] = JUST(Narrow(x, axis, i * split_size, length));
     }
     return splits;
   }
@@ -1745,7 +1825,11 @@ class SplitWithSizeFunctor {
   SplitWithSizeFunctor() {}
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
                                 const std::vector<int64_t>& split_sizes, const int64_t& dim) const {
-    int64_t dim_size = x->shape()->At(dim);
+    int64_t axis = dim;
+    if (axis < 0) { axis += x->ndim(); }
+    CHECK_OR_RETURN(axis >= 0 && axis < x->ndim())
+        << "The dim " << dim << " is out of bound " << x->ndim() - 1;
+    int64_t dim_size = x->shape()->At(axis);
     int64_t num_splits = split_sizes.size();
     TensorTuple splits(num_splits);
     int64_t start_idx = 0;
@@ -1754,12 +1838,12 @@ class SplitWithSizeFunctor {
       CHECK_GE_OR_RETURN(length, 0) << "split_with_sizes expects split_sizes have only "
                                        "non-negative entries, but split_sizes["
                                     << i << "] = " << length;
-      splits[i] = JUST(Narrow(x, dim, start_idx, length));
+      splits[i] = JUST(Narrow(x, axis, start_idx, length));
       start_idx += length;
     }
     CHECK_EQ_OR_RETURN(start_idx, dim_size)
         << "split_with_sizes expects split_sizes to sum exactly to " << dim_size
-        << " (input tensor's size at dimension " << dim << "), "
+        << " (input tensor's size at dimension " << axis << "), "
         << "but got sum(split_sizes)=" << start_idx;
     return splits;
   }
@@ -1900,6 +1984,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::StackFunctor>("Stack");
   m.add_functor<impl::ExpandFunctor>("Expand");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
+  m.add_functor<impl::ExpandDimsFunctor>("Unsqueeze");
+  m.add_functor<impl::RollFunctor>("Roll");
   m.add_functor<impl::GatherFunctor>("Gather");
   m.add_functor<impl::DimGatherFunctor>("DimGather");
   m.add_functor<impl::ArgSortFunctor>("ArgSort");
