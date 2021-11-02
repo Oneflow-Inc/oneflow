@@ -702,7 +702,7 @@ void Actor::AsyncSendQueuedMsg() {
 }
 
 void Actor::AddCallback(std::function<void()> callback) {
-  actor_ctx_->AddCallBack(std::move(callback));
+  actor_ctx_->AddCallback(std::move(callback));
 }
 
 }  // namespace oneflow

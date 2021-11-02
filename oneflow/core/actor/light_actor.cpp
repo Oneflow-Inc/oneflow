@@ -367,7 +367,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
             return_inplace_consumed_fn_[0] = [this, msg]() { thread_->EnqueueActorMsg(msg); };
           } else {
             return_inplace_consumed_fn_[0] = [this, msg]() {
-              actor_ctx_->AddCallBack([msg] { Global<ActorMsgBus>::Get()->SendMsg(msg); });
+              actor_ctx_->AddCallback([msg] { Global<ActorMsgBus>::Get()->SendMsg(msg); });
             };
           }
         } else {
@@ -450,7 +450,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
     ResetState();
     thread_->EnqueueActorMsg(sync_post_act_msgs_.cbegin(), sync_post_act_msgs_.cend());
     if (!async_post_act_msgs_.empty()) {
-      actor_ctx_->AddCallBack([this]() {
+      actor_ctx_->AddCallback([this]() {
         for (const auto& msg : async_post_act_msgs_) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
       });
     }
@@ -480,7 +480,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       auto& state = index2state_.Get(i);
       if (state.regst_type != RegstType::kProduced) { continue; }
       const RtRegstDesc* regst_desc = state.regst->regst_desc();
-      actor_ctx_->AddCallBack([regst_desc]() {
+      actor_ctx_->AddCallback([regst_desc]() {
         for (int64_t consumer : regst_desc->consumers_actor_id()) {
           Global<ActorMsgBus>::Get()->SendMsg(
               ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id()));
