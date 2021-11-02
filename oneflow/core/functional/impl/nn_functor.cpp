@@ -1102,6 +1102,9 @@ class RNNTlossFunctor {
                            const std::shared_ptr<one::Tensor>& label_lens,
                            const int32_t& blank_label, 
                            const int32_t& num_threads) const {
+    CHECK_EQ_OR_RETURN(labels->dtype()->data_type() , DataType::kInt32)<<"labels must be int32";
+    CHECK_EQ_OR_RETURN(act_lens->dtype()->data_type() , DataType::kInt32)<<"act_lens must be int32";
+    CHECK_EQ_OR_RETURN(label_lens->dtype()->data_type(), DataType::kInt32)<<"label_lens must be int32";
     MutableAttrMap attrs;
 
     JUST(attrs.SetAttr<int32_t>("blank_label", blank_label));
