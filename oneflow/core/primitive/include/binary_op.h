@@ -40,6 +40,8 @@ enum class BinaryOp {
   kLogicalXor,
 };
 
+#define CUDA_PRIMITIVE_BINARY_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAdd)
+
 }  // namespace primitive
 
 }  // namespace oneflow
