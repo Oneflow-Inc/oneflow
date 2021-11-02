@@ -17,8 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_TUPLE_HASH_H_
 
 #include <tuple>
-#include <functional>
-#include "oneflow/core/common/cplusplus_14.h"
+#include <utility>
 #include "oneflow/core/common/util.h"
 
 namespace std {

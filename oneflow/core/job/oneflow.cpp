@@ -197,7 +197,7 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   OpAttributeInfo op_attribute_info;
   Global<CtrlClient>::Get()->PullKV("op_attribute_info", &op_attribute_info);
   // populate op_attribute_info
-  PlanUtil::PopulateOpAttibute(plan, op_attribute_info.job_id2op_attribute_ref_table());
+  PlanUtil::PopulateOpAttribute(plan, op_attribute_info.job_id2op_attribute_ref_table());
 }
 
 Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) {
