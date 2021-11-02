@@ -68,6 +68,9 @@ namespace one {
 namespace ir {
 
 const user_op::OpKernel* GetKernel(const KernelConf& kernel_conf);
+user_op::KernelComputeContext* GetKernelComputeContext(DeviceCtx* device_ctx,
+                                                       StreamContext* stream_ctx,
+                                                       const KernelConf& kernel_conf);
 
 }  // namespace ir
 

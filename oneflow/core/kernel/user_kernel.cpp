@@ -787,6 +787,13 @@ const user_op::OpKernel* GetKernel(const KernelConf& kernel_conf) {
   return kernel_reg_val->create_fn(&create_ctx);
 }
 
+user_op::KernelComputeContext* GetKernelComputeContext(DeviceCtx* device_ctx,
+                                                       StreamContext* stream_ctx,
+                                                       const KernelConf& kernel_conf) {
+  auto ctx = new UserKernelComputeContext(device_ctx, stream_ctx, kernel_conf);
+  return static_cast<user_op::KernelComputeContext*>(ctx);
+}
+
 }  // namespace ir
 
 }  // namespace one

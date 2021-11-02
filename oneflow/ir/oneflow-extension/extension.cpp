@@ -170,6 +170,7 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    ctx->getcallback()(ctx);
     WithMlirContext(
         ctx, {},
         [&ctx](mlir::MLIRContext* mlir_ctx) {
