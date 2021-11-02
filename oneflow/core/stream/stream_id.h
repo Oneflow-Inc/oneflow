@@ -33,7 +33,7 @@ class StreamId {
     CHECK_LE(stream_index, kMaxStreamIndex);
   }
   StreamId(DeviceId::node_index_t node_index, DeviceType device_type,
-           DeviceId::node_index_t device_index, stream_index_t stream_index)
+           DeviceId::device_index_t device_index, stream_index_t stream_index)
       : device_id_(node_index, device_type, device_index), stream_index_(stream_index) {
     CHECK_LE(stream_index, kMaxStreamIndex);
   }
@@ -41,7 +41,7 @@ class StreamId {
   const DeviceId& device_id() const { return device_id_; }
   DeviceId::node_index_t node_index() const { return device_id_.node_index(); }
   DeviceType device_type() const { return device_id_.device_type(); }
-  DeviceId::node_index_t device_index() const { return device_id_.device_index(); }
+  DeviceId::device_index_t device_index() const { return device_id_.device_index(); }
   stream_index_t stream_index() const { return stream_index_; }
 
   bool operator==(const StreamId& rhs) const {

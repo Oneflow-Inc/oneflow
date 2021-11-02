@@ -523,7 +523,7 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
   const int64_t dev_id = CHECK_JUST(dst_parallel_desc.DeviceId4ParallelId(dst_parallel_id));
   DeviceType device_type = dst_parallel_desc.device_type();
   auto device_index =
-      (device_type == DeviceType::kCPU ? 0 : static_cast<DeviceId::node_index_t>(dev_id));
+      (device_type == DeviceType::kCPU ? 0 : static_cast<DeviceId::device_index_t>(dev_id));
   MemZoneId mem_zone_id{static_cast<MemZoneId::node_index_t>(dst_machine_id), device_type,
                         device_index};
   return GetProxyNode(src_node, lbi, mem_zone_id);
