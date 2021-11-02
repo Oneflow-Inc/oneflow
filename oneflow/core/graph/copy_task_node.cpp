@@ -45,7 +45,7 @@ void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, const DeviceId& device_i
   set_machine_id(device_id.node_index());
   auto* stream_index_generator =
       Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
-  StreamId::index_t stream_index = 0;
+  StreamId::stream_index_t stream_index = 0;
   if (copy_type == CopyHdOpConf::H2D) {
     stream_index = stream_index_generator->GenerateH2DStreamIndex();
   } else if (copy_type == CopyHdOpConf::D2H) {
@@ -84,7 +84,7 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
 
 void CopyCommNetTaskNode::Init(int64_t machine_id, const LogicalBlobId& lbi) {
   set_machine_id(machine_id);
-  DeviceId device_id{static_cast<DeviceId::index_t>(machine_id), DeviceType::kCPU, 0};
+  DeviceId device_id{static_cast<DeviceId::node_index_t>(machine_id), DeviceType::kCPU, 0};
   auto* generator = dynamic_cast<CPUStreamIndexGenerator*>(
       Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
   CHECK_NOTNULL(generator);

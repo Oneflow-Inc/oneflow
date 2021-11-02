@@ -29,27 +29,32 @@ namespace oneflow {
 
 class DeviceId {
  public:
-  using index_t = uint32_t;
+  using node_index_t = uint32_t;
+  using device_type_t = uint32_t;
+  using device_index_t = uint32_t;
 
   constexpr static size_t kNodeIndexBits = 19;
   constexpr static size_t kDeviceTypeBits = 5;
   constexpr static size_t kDeviceIndexBits = 7;
-  constexpr static index_t kMaxNodeIndex = (index_t{1} << kNodeIndexBits) - index_t{1};
-  constexpr static index_t kMaxDeviceTypeVal = (index_t{1} << kDeviceTypeBits) - index_t{1};
-  constexpr static index_t kMaxDeviceIndex = (index_t{1} << kDeviceIndexBits) - index_t{1};
+  constexpr static node_index_t kMaxNodeIndex =
+      (node_index_t{1} << kNodeIndexBits) - node_index_t{1};
+  constexpr static device_type_t kMaxDeviceTypeVal =
+      (device_type_t{1} << kDeviceTypeBits) - device_type_t{1};
+  constexpr static device_index_t kMaxDeviceIndex =
+      (device_index_t{1} << kDeviceIndexBits) - device_index_t{1};
 
-  DeviceId(index_t node_index, DeviceType device_type, index_t device_index)
+  DeviceId(node_index_t node_index, DeviceType device_type, device_index_t device_index)
       : node_index_(node_index),
-        device_type_(static_cast<index_t>(device_type)),
+        device_type_(static_cast<device_type_t>(device_type)),
         device_index_(device_index) {
     CHECK_LE(node_index_, kMaxNodeIndex);
     CHECK_LE(device_type_, kMaxDeviceTypeVal);
-    CHECK_LE(device_index, kMaxDeviceIndex);
+    CHECK_LE(device_index_, kMaxDeviceIndex);
   }
 
-  index_t node_index() const { return node_index_; }
+  node_index_t node_index() const { return node_index_; }
   DeviceType device_type() const { return static_cast<DeviceType>(device_type_); }
-  index_t device_index() const { return device_index_; }
+  device_index_t device_index() const { return device_index_; }
 
   bool operator==(const DeviceId& rhs) const {
     return node_index_ == rhs.node_index_ && device_type_ == rhs.device_type_
@@ -59,16 +64,16 @@ class DeviceId {
   bool operator!=(const DeviceId& rhs) const { return !(*this == rhs); }
 
   size_t hash() const {
-    size_t hash = std::hash<index_t>{}(node_index_);
-    HashCombine(&hash, std::hash<index_t>{}(device_type_));
-    HashCombine(&hash, std::hash<index_t>{}(device_index_));
+    size_t hash = std::hash<node_index_t>{}(node_index_);
+    HashCombine(&hash, std::hash<device_type_t>{}(device_type_));
+    HashCombine(&hash, std::hash<device_index_t>{}(device_index_));
     return hash;
   }
 
  private:
-  index_t node_index_;
-  index_t device_type_;
-  index_t device_index_;
+  node_index_t node_index_;
+  device_type_t device_type_;
+  device_index_t device_index_;
 };
 
 }  // namespace oneflow

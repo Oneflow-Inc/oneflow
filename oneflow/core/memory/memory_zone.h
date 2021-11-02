@@ -25,7 +25,7 @@ using MemZoneId = DeviceId;
 int64_t EncodeMemZoneIdToInt64(const MemZoneId&);
 MemZoneId DecodeMemZoneIdFromInt64(int64_t);
 
-MemZoneId GetNodeCPUMemZoneId(MemZoneId::index_t node_index);
+MemZoneId GetNodeCPUMemZoneId(MemZoneId::node_index_t node_index);
 
 extern const MemZoneId kInvalidMemZoneId;
 

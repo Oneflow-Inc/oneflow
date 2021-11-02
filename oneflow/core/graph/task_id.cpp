@@ -65,10 +65,11 @@ TaskId DecodeTaskIdFromInt64(int64_t task_id_val) {
   int64_t device_index = (task_id_val & kDeviceIndexInt64Mask) >> kDeviceIndexShift;
   int64_t stream_index = (task_id_val & kStreamIndexInt64Mask) >> kStreamIndexShift;
   int64_t task_index = task_id_val & kTaskIndexInt64Mask;
-  StreamId stream_id{
-      static_cast<DeviceId::index_t>(node_index), static_cast<DeviceType>(device_type),
-      static_cast<DeviceId::index_t>(device_index), static_cast<StreamId::index_t>(stream_index)};
-  return TaskId{stream_id, static_cast<TaskId::index_t>(task_index)};
+  StreamId stream_id{static_cast<DeviceId::node_index_t>(node_index),
+                     static_cast<DeviceType>(device_type),
+                     static_cast<DeviceId::device_index_t>(device_index),
+                     static_cast<StreamId::stream_index_t>(stream_index)};
+  return TaskId{stream_id, static_cast<TaskId::task_index_t>(task_index)};
 }
 
 int64_t MachineId4ActorId(int64_t actor_id) {

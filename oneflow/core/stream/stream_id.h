@@ -22,26 +22,27 @@ namespace oneflow {
 
 class StreamId {
  public:
-  using index_t = uint32_t;
+  using stream_index_t = uint32_t;
 
   constexpr static size_t kStreamIndexBits = 12;
-  constexpr static index_t kMaxStreamIndex = (index_t{1} << kStreamIndexBits) - index_t{1};
+  constexpr static stream_index_t kMaxStreamIndex =
+      (stream_index_t{1} << kStreamIndexBits) - stream_index_t{1};
 
-  StreamId(const DeviceId& device_id, index_t stream_index)
+  StreamId(const DeviceId& device_id, stream_index_t stream_index)
       : device_id_(device_id), stream_index_(stream_index) {
     CHECK_LE(stream_index, kMaxStreamIndex);
   }
-  StreamId(DeviceId::index_t node_index, DeviceType device_type, DeviceId::index_t device_index,
-           index_t stream_index)
+  StreamId(DeviceId::node_index_t node_index, DeviceType device_type,
+           DeviceId::node_index_t device_index, stream_index_t stream_index)
       : device_id_(node_index, device_type, device_index), stream_index_(stream_index) {
     CHECK_LE(stream_index, kMaxStreamIndex);
   }
 
   const DeviceId& device_id() const { return device_id_; }
-  DeviceId::index_t node_index() const { return device_id_.node_index(); }
+  DeviceId::node_index_t node_index() const { return device_id_.node_index(); }
   DeviceType device_type() const { return device_id_.device_type(); }
-  DeviceId::index_t device_index() const { return device_id_.device_index(); }
-  index_t stream_index() const { return stream_index_; }
+  DeviceId::node_index_t device_index() const { return device_id_.device_index(); }
+  stream_index_t stream_index() const { return stream_index_; }
 
   bool operator==(const StreamId& rhs) const {
     return device_id_ == rhs.device_id_ && stream_index_ == rhs.stream_index_;
@@ -51,13 +52,13 @@ class StreamId {
 
   size_t hash() const {
     size_t hash = device_id_.hash();
-    HashCombine(&hash, std::hash<index_t>{}(stream_index_));
+    HashCombine(&hash, std::hash<stream_index_t>{}(stream_index_));
     return hash;
   }
 
  private:
   DeviceId device_id_;
-  index_t stream_index_;
+  stream_index_t stream_index_;
 };
 
 int64_t EncodeStreamIdToInt64(const StreamId&);

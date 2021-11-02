@@ -22,7 +22,7 @@ namespace oneflow {
 
 class TaskIdGenerator final {
  public:
-  using task_index_t = TaskId::index_t;
+  using task_index_t = TaskId::task_index_t;
 
   TaskIdGenerator() = default;
   OF_DISALLOW_COPY_AND_MOVE(TaskIdGenerator);

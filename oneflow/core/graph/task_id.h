@@ -22,18 +22,19 @@ namespace oneflow {
 
 class TaskId {
  public:
-  using index_t = uint32_t;
+  using task_index_t = uint32_t;
 
   const static size_t kTaskIndexBits = 21;
-  constexpr static index_t kMaxTaskIndex = (index_t{1} << kTaskIndexBits) - index_t{1};
+  constexpr static task_index_t kMaxTaskIndex =
+      (task_index_t{1} << kTaskIndexBits) - task_index_t{1};
 
-  TaskId(const StreamId& stream_id, index_t task_index)
+  TaskId(const StreamId& stream_id, task_index_t task_index)
       : stream_id_(stream_id), task_index_(task_index) {
     CHECK_LE(task_index_, kMaxTaskIndex);
   }
 
   const StreamId& stream_id() const { return stream_id_; }
-  index_t task_index() const { return task_index_; }
+  task_index_t task_index() const { return task_index_; }
 
   bool operator==(const TaskId& rhs) const {
     return stream_id_ == rhs.stream_id_ && task_index_ == rhs.task_index_;
@@ -42,13 +43,13 @@ class TaskId {
 
   size_t hash() const {
     size_t hash = stream_id_.hash();
-    HashCombine(&hash, std::hash<index_t>{}(task_index_));
+    HashCombine(&hash, std::hash<task_index_t>{}(task_index_));
     return hash;
   }
 
  private:
   StreamId stream_id_;
-  index_t task_index_;
+  task_index_t task_index_;
 };
 
 int64_t EncodeTaskIdToInt64(const TaskId&);

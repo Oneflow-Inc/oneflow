@@ -32,7 +32,7 @@ constexpr int64_t kMemZoneIdDeviceIndexInt64Mask = (int64_t{1} << MemZoneId::kDe
 
 const MemZoneId kInvalidMemZoneId = MemZoneId{0, DeviceType::kInvalidDevice, 0};
 
-MemZoneId GetNodeCPUMemZoneId(MemZoneId::index_t node_index) {
+MemZoneId GetNodeCPUMemZoneId(MemZoneId::node_index_t node_index) {
   return MemZoneId{node_index, DeviceType::kCPU, 0};
 }
 
@@ -47,9 +47,9 @@ MemZoneId DecodeMemZoneIdFromInt64(int64_t mem_zone_id) {
   int64_t node_index = (mem_zone_id & kMemZoneIdNodeIndexInt64Mask) >> kMemZoneIdNodeIndexShift;
   int64_t device_type = (mem_zone_id & kMemZoneIdDeviceTypeInt64Mask) >> kMemZoneIdDeviceTypeShift;
   int64_t device_index = mem_zone_id & kMemZoneIdDeviceIndexInt64Mask;
-  return MemZoneId(static_cast<MemZoneId::index_t>(node_index),
+  return MemZoneId(static_cast<MemZoneId::node_index_t>(node_index),
                    static_cast<DeviceType>(device_type),
-                   static_cast<MemZoneId::index_t>(device_index));
+                   static_cast<MemZoneId::device_index_t>(device_index));
 }
 
 }  // namespace oneflow

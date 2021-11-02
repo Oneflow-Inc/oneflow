@@ -59,9 +59,10 @@ StreamId DecodeStreamIdFromInt64(int64_t stream_id_val) {
   int64_t device_type = (stream_id_val & kDeviceTypeInt64Mask) >> kDeviceTypeShift;
   int64_t device_index = (stream_id_val & kDeviceIndexInt64Mask) >> kDeviceIndexShift;
   int64_t stream_index = (stream_id_val & kStreamIndexInt64Mask);
-  return StreamId{static_cast<DeviceId::index_t>(node_index), static_cast<DeviceType>(device_type),
-                  static_cast<DeviceId::index_t>(device_index),
-                  static_cast<StreamId::index_t>(stream_index)};
+  return StreamId{static_cast<DeviceId::node_index_t>(node_index),
+                  static_cast<DeviceType>(device_type),
+                  static_cast<DeviceId::device_index_t>(device_index),
+                  static_cast<StreamId::stream_index_t>(stream_index)};
 }
 
 }  // namespace oneflow
