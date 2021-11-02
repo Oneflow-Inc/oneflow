@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/ir/include/OneFlow/Passes.h"
 #include "oneflow/ir/include/OneFlow/Extension.h"
-#include "oneflow/ir/include/OneFlow/Extension.h"
 
 namespace oneflow {
 
@@ -132,7 +131,7 @@ llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
 }
 
 void WithMlirContext(
-    user_op::KernelComputeContext* ctx, const llvm::SmallVector<llvm::StringRef, 4>& ext_libs,
+    user_op::KernelComputeContext* ctx, llvm::SmallVector<llvm::StringRef, 4> ext_libs,
     const std::function<mlir::OwningModuleRef(mlir::MLIRContext* mlir_ctx)>& parse,
     const std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)>& lower) {
   mlir::DialectRegistry registry;
@@ -170,7 +169,6 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    ctx->getcallback()(ctx);
     WithMlirContext(
         ctx, {},
         [&ctx](mlir::MLIRContext* mlir_ctx) {
