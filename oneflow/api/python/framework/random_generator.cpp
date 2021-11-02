@@ -39,25 +39,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            [](const one::Generator& generator) { return generator.GetState().GetPtrOrThrow(); })
       .def("set_state", [](one::Generator& generator, const std::shared_ptr<one::Tensor>& state) {
         return generator.SetState(state).GetOrThrow();
-      })
-      .def_property(
-        "default_generator", 
-        []() { 
-          std::string device_name = "auto";
-          std::string device_tag = "auto";
-          int device_index = -1;
-          ParsingDeviceTag(device_tag, &device_name, &device_index).GetOrThrow();
-          return one::DefaultGenerator(device_name, device_index).GetPtrOrThrow();
-        },
-        [](const std::shared_ptr<one::Tensor>& state) {
-          std::string device_name = "auto";
-          std::string device_tag = "auto";
-          int device_index = -1;
-          ParsingDeviceTag(device_tag, &device_name, &device_index).GetOrThrow();
-          auto generator = one::DefaultGenerator(device_name, device_index).GetPtrOrThrow();
-          return generator->SetState(state).GetOrThrow();
-        }
-      );
+      });
 
   m.def("manual_seed", [](uint64_t seed) { return one::ManualSeed(seed).GetOrThrow(); });
   m.def("create_generator", [](const std::string& device_tag) {
@@ -65,6 +47,12 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
     int device_index = -1;
     ParsingDeviceTag(device_tag, &device_name, &device_index).GetOrThrow();
     return one::MakeGenerator(device_name, device_index).GetPtrOrThrow();
+  });
+  m.def("default_generator", [](const std::string& device_tag) {
+    std::string device_name = "";
+    int device_index = -1;
+    ParsingDeviceTag(device_tag, &device_name, &device_index).GetOrThrow();
+    return one::DefaultGenerator(device_name, device_index).GetPtrOrThrow();
   });
 }
 
