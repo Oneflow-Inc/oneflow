@@ -22,7 +22,6 @@ def exec(f):
         m = args[0]
         assert isinstance(m, oneflow.nn.Module)
         for arg in args[1::]:
-            print(id(arg))
             isinstance(arg, oneflow._oneflow_internal.Tensor)
         func_name = str(uuid.uuid4()).replace("-", "")
         func_name = f"jit{func_name}"
