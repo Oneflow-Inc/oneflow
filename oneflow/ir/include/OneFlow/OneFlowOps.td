@@ -442,6 +442,11 @@ def MulCastPattern : Pat<
   ]
 >;
 
+// TODO: FusedSelfAttentionPass
+// TODO: FusedScaleRrilPass
+// TODO: FusedBiasAddDropoutPass
+// TODO: FusedBiasAddGeluPass
+
 #endif // ONEFLOW_PATTERNS
 
 #ifndef ONEFLOW_PASSES
