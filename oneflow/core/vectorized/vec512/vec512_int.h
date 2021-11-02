@@ -22,62 +22,23 @@ namespace oneflow {
 
 #ifdef WITH_AVX
 #include <immintrin.h>
-template<>
-class VectorizedAvx512<int8_t> {
+template<typename T>
+class VectorizedAvx512<T, typename std::enable_if<!(std::is_same<T, float>::value
+                                                    || std::is_same<T, double>::value)>::type> {
  public:
-  static void add(size_t begin, size_t end, const int8_t* x, const int8_t* y, int8_t* out) {
+  static void add(size_t begin, size_t end, const T* x, const T* y, T* out) {
     for (size_t i = begin; i <= end; i++) { out[i] = x[i] + y[i]; }
   }
 
-  static void sub(size_t begin, size_t end, const int8_t* x, const int8_t* y, int8_t* out) {
+  static void sub(size_t begin, size_t end, const T* x, const T* y, T* out) {
     for (size_t i = begin; i <= end; i++) { out[i] = x[i] - y[i]; }
   }
 
-  static void mul(size_t begin, size_t end, const int8_t* x, const int8_t* y, int8_t* out) {
+  static void mul(size_t begin, size_t end, const T* x, const T* y, T* out) {
     for (size_t i = begin; i <= end; i++) { out[i] = x[i] * y[i]; }
   }
 
-  static void div(size_t begin, size_t end, const int8_t* x, const int8_t* y, int8_t* out) {
-    for (size_t i = begin; i <= end; i++) { out[i] = x[i] / y[i]; }
-  }
-};
-
-template<>
-class VectorizedAvx512<int> {
- public:
-  static void add(size_t begin, size_t end, const int32_t* x, const int32_t* y, int32_t* out) {
-    for (size_t i = begin; i <= end; i++) { out[i] = x[i] + y[i]; }
-  }
-
-  static void sub(size_t begin, size_t end, const int32_t* x, const int32_t* y, int32_t* out) {
-    for (size_t i = begin; i <= end; i++) { out[i] = x[i] - y[i]; }
-  }
-
-  static void mul(size_t begin, size_t end, const int32_t* x, const int32_t* y, int32_t* out) {
-    for (size_t i = begin; i <= end; i++) { out[i] = x[i] * y[i]; }
-  }
-
-  static void div(size_t begin, size_t end, const int32_t* x, const int32_t* y, int32_t* out) {
-    for (size_t i = begin; i <= end; i++) { out[i] = x[i] / y[i]; }
-  }
-};
-
-template<>
-class VectorizedAvx512<int64_t> {
- public:
-  static void add(size_t begin, size_t end, const int64_t* x, const int64_t* y, int64_t* out) {
-    for (size_t i = begin; i <= end; i++) { out[i] = x[i] + y[i]; }
-  }
-
-  static void sub(size_t begin, size_t end, const int64_t* x, const int64_t* y, int64_t* out) {
-    for (size_t i = begin; i <= end; i++) { out[i] = x[i] - y[i]; }
-  }
-
-  static void mul(size_t begin, size_t end, const int64_t* x, const int64_t* y, int64_t* out) {
-    for (size_t i = begin; i <= end; i++) { out[i] = x[i] * y[i]; }
-  }
-
-  static void div(size_t begin, size_t end, const int64_t* x, const int64_t* y, int64_t* out) {
+  static void div(size_t begin, size_t end, const T* x, const T* y, T* out) {
     for (size_t i = begin; i <= end; i++) { out[i] = x[i] / y[i]; }
   }
 };

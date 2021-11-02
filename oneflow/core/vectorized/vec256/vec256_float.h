@@ -22,11 +22,10 @@ namespace oneflow {
 #ifdef WITH_AVX
 #include <immintrin.h>
 
-template<>
-class VectorizedAvx2<float> {
+template<typename T>
+class VectorizedAvx2<T, typename std::enable_if<std::is_same<T, float>::value>::type> {
  public:
-  static void fmadd(size_t begin, size_t end, const float* x, const float* y, float* out,
-                    float alpha) {
+  static void fmadd(size_t begin, size_t end, const T* x, const T* y, T* out, T alpha) {
     size_t i = begin;
     size_t stride = 8;
 
@@ -49,7 +48,7 @@ class VectorizedAvx2<float> {
       for (; i < end; i++) { out[i] = x[i] * alpha + y[i]; }
     }
   }
-  static void add(int64_t begin, int64_t end, const float* x, const float* y, float* out) {
+  static void add(int64_t begin, int64_t end, const T* x, const T* y, T* out) {
     int64_t i = begin;
     int64_t stride = 8;
 
@@ -71,7 +70,7 @@ class VectorizedAvx2<float> {
     }
   }
 
-  static void sub(size_t begin, size_t end, const float* x, const float* y, float* out) {
+  static void sub(size_t begin, size_t end, const T* x, const T* y, T* out) {
     size_t i = begin;
     size_t stride = 8;
 
@@ -93,7 +92,7 @@ class VectorizedAvx2<float> {
     }
   }
 
-  static void mul(int64_t begin, int64_t end, const float* x, const float* y, float* out) {
+  static void mul(int64_t begin, int64_t end, const T* x, const T* y, T* out) {
     int64_t i = begin;
     int64_t stride = 8;
 
@@ -115,7 +114,7 @@ class VectorizedAvx2<float> {
     }
   }
 
-  static void div(size_t begin, size_t end, const float* x, const float* y, float* out) {
+  static void div(size_t begin, size_t end, const T* x, const T* y, T* out) {
     size_t i = begin;
     size_t stride = 8;
 

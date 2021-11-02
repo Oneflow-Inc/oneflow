@@ -20,7 +20,7 @@ limitations under the License.
 namespace oneflow {
 
 #ifdef WITH_AVX
-template<typename T>
+template<typename T, typename Enable = void>
 class VectorizedAvx2 {
  public:
   static void fmadd(size_t begin, size_t end, const T* x, const T* y, T* out, T alpha);
