@@ -54,15 +54,14 @@ ParallelContext GetSingleDeviceParallelContext() {
 
 void InsertLbnSegmentIntoMapping(const ::mlir::ArrayAttr& lbn_segment_keys,
                                  const ::mlir::ArrayAttr& lbn_segment_sizes, ValueRange values,
-                                 std::unordered_map<std::string, mlir::Value>& operand_mapping_) {
+                                 std::unordered_map<std::string, mlir::Value>& value_mapping_) {
   auto operand_it = values.begin();
   for (const auto& bn_size_pair : llvm::zip(lbn_segment_keys, lbn_segment_sizes)) {
     const auto& bn = std::get<0>(bn_size_pair).dyn_cast<StringAttr>().getValue().str();
     const auto& length = std::get<1>(bn_size_pair).dyn_cast<IntegerAttr>().getInt();
     for (size_t i = 0; i < length; i++) {
       const auto indexed_bn = bn + "_" + std::to_string(i);
-      LOG(ERROR) << "indexed_bn: " << indexed_bn;
-      assert(operand_mapping_.emplace(indexed_bn, *operand_it).second);
+      CHECK(value_mapping_.emplace(indexed_bn, *operand_it).second) << "indexed_bn: " << indexed_bn;
       operand_it += 1;
     }
   }
