@@ -13,15 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-#ifndef ONEFLOW_SERVING_H_
-#define ONEFLOW_SERVING_H_
+#ifndef ONEFLOW_API_CPP_DEVICE_H_
+#define ONEFLOW_API_CPP_DEVICE_H_
 
 #include <string>
 #include <memory>
 
-namespace of_serving {
-
+namespace oneflow_api {
 class Device final {
  public:
   struct Impl;
@@ -31,10 +29,12 @@ class Device final {
   Device(const Device& device) : impl_(device.impl_) {}
   Device(Device&& device) noexcept : impl_(std::move(device.impl_)) {}
   Device& operator=(const Device& device) {
+    this->impl_.reset();
     this->impl_ = device.impl_;
     return *this;
   }
   Device& operator=(Device&& device) noexcept {
+    this->impl_.reset();
     this->impl_ = std::move(device.impl_);
     return *this;
   }
@@ -47,7 +47,6 @@ class Device final {
  private:
   std::shared_ptr<Impl> impl_;
 };
+}  // namespace oneflow_api
 
-}  // namespace of_serving
-
-#endif  // ONELFOW_SERVING_H_
+#endif  // !ONEFLOW_API_CPP_DEVICE_H_

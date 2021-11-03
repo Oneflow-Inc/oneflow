@@ -91,8 +91,9 @@ foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
   set_source_files_properties(${oneflow_all_hdr_expanded} PROPERTIES GENERATED TRUE)
 endforeach()
 
-file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/serving/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*"
+file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*"
  "${PROJECT_SOURCE_DIR}/oneflow/user/*.*" "${PROJECT_SOURCE_DIR}/oneflow/api/python/*.*"
+ "${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.*"
  "${PROJECT_SOURCE_DIR}/oneflow/extension/python/*.*")
 if (WITH_XLA OR WITH_TENSORRT)
   file(GLOB_RECURSE oneflow_xrt_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/*.*")
@@ -127,7 +128,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
     continue()
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt|serving)/.*\\.h$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.h$")
     if((NOT RPC_BACKEND MATCHES "GRPC") AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/control/.*")
       # skip if GRPC not enabled
     elseif(APPLE AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/comm_network/(epoll|ibverbs)/.*")
@@ -138,19 +139,19 @@ foreach(oneflow_single_file ${oneflow_all_src})
     endif()
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt|serving)/.*\\.hpp$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.hpp$")
     list(APPEND of_all_obj_cc ${oneflow_single_file})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt|serving)/.*\\.cuh$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.cuh$")
     if(BUILD_CUDA)
       list(APPEND of_all_obj_cc ${oneflow_single_file})
     endif()
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt|serving)/.*\\.cu$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.cu$")
     if(BUILD_CUDA)
       list(APPEND of_all_obj_cc ${oneflow_single_file})
     endif()
@@ -190,10 +191,21 @@ foreach(oneflow_single_file ${oneflow_all_src})
       set(group_this ON)
     endif()
 
+  else()
+    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/cpp/.*\\.h$")
+      list(APPEND of_all_obj_cc ${oneflow_single_file})
+      set(group_this ON)
+    endif()
+
+    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/cpp/.*\\.cpp$")
+      list(APPEND of_all_obj_cc ${oneflow_single_file})
+      set(group_this ON)
+    endif()
+
   endif() # build_python
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt|serving)/.*\\.cpp$")
-    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt|serving)/.*_test\\.cpp$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.cpp$")
+    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*_test\\.cpp$")
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})
     elseif(APPLE AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/comm_network/(epoll|ibverbs)/.*")
@@ -267,9 +279,9 @@ add_dependencies(of_protoobj make_pyproto_dir protobuf)
 include(cfg)
 
 if(BUILD_PYTHON)
-GENERATE_CFG_AND_PYBIND11_CPP(CFG_SRCS CFG_HRCS CFG_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
+  GENERATE_CFG_AND_PYBIND11_CPP(CFG_SRCS CFG_HRCS CFG_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
 else()
-GENERATE_CFG_CPP(CFG_SRCS CFG_HRCS ${PROJECT_SOURCE_DIR})
+  GENERATE_CFG_CPP(CFG_SRCS CFG_HRCS ${PROJECT_SOURCE_DIR})
 endif()
 
 oneflow_add_library(of_cfgobj ${CFG_SRCS} ${CFG_HRCS})
@@ -284,14 +296,15 @@ else()
   target_link_libraries(of_cfgobj ${oneflow_third_party_libs})
 endif()
 
-if(BUILD_PYTHON)
 
-  include(functional)
-  GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP(
-      FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GENERATED_HRCS FUNCTIONAL_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
-  oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS} ${FUNCTIONAL_GENERATED_HRCS})
-  add_dependencies(of_functional_obj of_cfgobj)
-  add_dependencies(of_functional_obj prepare_oneflow_third_party)
+include(functional)
+GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP(
+    FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GENERATED_HRCS FUNCTIONAL_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
+oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS} ${FUNCTIONAL_GENERATED_HRCS})
+add_dependencies(of_functional_obj of_cfgobj)
+add_dependencies(of_functional_obj prepare_oneflow_third_party)
+
+if(BUILD_PYTHON)
 
   GENERATE_FUNCTIONAL_TENSOR_API_AND_PYBIND11_CPP(
       FUNCTIONAL_TENSOR_GENERATED_SRCS FUNCTIONAL_TENSOR_GENERATED_HRCS
@@ -307,16 +320,8 @@ if(BUILD_PYTHON)
       ${FUNCTIONAL_PYBIND11_SRCS}
       ${FUNCTIONAL_TENSOR_PYBIND11_SRCS})
 
-else()
-
-  include(functional)
-    GENERATE_FUNCTIONAL_API_CPP(
-        FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GENERATED_HRCS ${PROJECT_SOURCE_DIR})
-    oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS} ${FUNCTIONAL_GENERATED_HRCS})
-    add_dependencies(of_functional_obj of_cfgobj)
-    add_dependencies(of_functional_obj prepare_oneflow_third_party)
-
 endif() # build_python
+
 
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
@@ -496,9 +501,11 @@ else() # build_python
 
   add_dependencies(of_include_copy oneflow)
 
-  set(OF_SERVING_DIRS)
-  list(APPEND OF_SERVING_DIRS "${PROJECT_SOURCE_DIR}/oneflow/serving/serving.h")
-  copy_files("${OF_SERVING_DIRS}" "${PROJECT_SOURCE_DIR}/oneflow/serving" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
+  set(OF_API_DIRS)
+  file(GLOB_RECURSE api_h_files "${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.h")
+  list(APPEND OF_API_DIRS ${api_h_files})
+
+  copy_files("${OF_API_DIRS}" "${PROJECT_SOURCE_DIR}/oneflow/api/cpp" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
   copy_files("${PROJECT_SOURCE_DIR}/cmake/oneflow-config.cmake" "${PROJECT_SOURCE_DIR}/cmake" "${ONEFLOW_SHARE_DIR}" of_include_copy)
 
 endif() # build_python
