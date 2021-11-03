@@ -243,6 +243,45 @@ def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", []>  {
   let hasCanonicalizer = 1;
 }
 
+def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", []>  {
+  let summary = "OneFlow Bias Add operation";
+  let input = (ins
+    AnyType:$in,
+    AnyType:$mask
+  );
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    F32Attr:$scale
+  );
+}
+
+def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale", []>  {
+  let summary = "";
+  let input = (ins
+    AnyType:$a,
+    AnyType:$b,
+    AnyType:$mask
+  );
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    SI32Attr:$axis,
+    F32Attr:$scale
+  );
+  let hasCanonicalizer = 1;
+}
+
+def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", []>  {
+  let summary = "";
+  let input = (ins
+    AnyType:$like
+  );
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    F32Attr:$rate,
+    I64Attr:$seed
+  );
+}
+
 class OneFlow_LazyPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
     let summary = "OneFlow Lazy Pooling operation";
@@ -457,7 +496,43 @@ def MulCastPattern : Pat<
 
 // TODO: FusedSelfAttentionPattern
 // TODO: FusedScaleTrilPattern
-// TODO: FusedBiasAddDropoutPattern
+
+def FusedBiasAddDropoutPattern : Pat<
+  (
+    OneFlow_DropoutOp
+    (
+      OneFlow_BiasAddOp
+        $a,
+        $b,
+        $bias_add_op_name,
+        $bias_add_trainable,
+        $bias_add_device_tag,
+        $bias_add_device_name,
+        $bias_add_scope_symbol_id,
+        $bias_add_hierarchy,
+        $axis
+    ),
+    $mask,
+    $dropout_op_name,
+    $dropout_trainable,
+    $dropout_device_tag,
+    $dropout_device_name,
+    $dropout_scope_symbol_id,
+    $dropout_hierarchy,
+    $scale
+  ),
+  (OneFlow_FusedBiasAddMaskScaleOp $a, $b, $mask,
+    $dropout_op_name,
+    $dropout_trainable,
+    $dropout_device_tag,
+    $dropout_device_name,
+    $dropout_scope_symbol_id,
+    $dropout_hierarchy,
+    $axis,
+    $scale
+  ),
+  []
+>;
 
 def FusedBiasAddGeluPattern : Pat<
   (

@@ -133,7 +133,8 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
           || GetReduceOpTypeNames().contains(op_type_name) || op_type_name.equals("reshape")
           || op_type_name.equals("scalar_mul_by_tensor") || op_type_name.equals("matmul")
           || op_type_name.equals("gather") || op_type_name.equals("gelu_grad")
-          || op_type_name.equals("conv2d") || op_type_name.equals("bias_add")) {
+          || op_type_name.equals("conv2d") || op_type_name.equals("bias_add")
+          || op_type_name.equals("dropout")) {
         assert(op.data_output().size() == 1);
         NamedAttrList attributes(op->getAttrDictionary());
         attributes.erase("operand_segment_sizes");
@@ -163,8 +164,9 @@ void UserOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
   results.insert<ConcreteUserOps>(context);
 }
 
-struct FillUserAttrs : public mlir::OpRewritePattern<oneflow::FusedBiasAddGeluOp> {
-  explicit FillUserAttrs(mlir::MLIRContext* context)
+struct FillUserOpAttrsInFusedBiasAddGeluOp
+    : public mlir::OpRewritePattern<oneflow::FusedBiasAddGeluOp> {
+  explicit FillUserOpAttrsInFusedBiasAddGeluOp(mlir::MLIRContext* context)
       : OpRewritePattern<oneflow::FusedBiasAddGeluOp>(context, /*benefit=*/1) {}
   mlir::LogicalResult matchAndRewrite(oneflow::FusedBiasAddGeluOp op,
                                       mlir::PatternRewriter& rewriter) const override {
@@ -182,9 +184,34 @@ struct FillUserAttrs : public mlir::OpRewritePattern<oneflow::FusedBiasAddGeluOp
   }
 };
 
+struct FillUserAttrsInFusedBiasAddMaskScaleOp
+    : public mlir::OpRewritePattern<oneflow::FusedBiasAddMaskScaleOp> {
+  explicit FillUserAttrsInFusedBiasAddMaskScaleOp(mlir::MLIRContext* context)
+      : OpRewritePattern<oneflow::FusedBiasAddMaskScaleOp>(context, /*benefit=*/1) {}
+  mlir::LogicalResult matchAndRewrite(oneflow::FusedBiasAddMaskScaleOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    if (op->hasAttrOfType<StringAttr>("op_type_name")) {
+      return failure();
+    } else {
+      op->setAttr("op_type_name", rewriter.getStringAttr("fused_bias_add_mask_scale"));
+      op->setAttr("input_lbn_segment_keys", rewriter.getStrArrayAttr({"a", "b", "mask"}));
+      op->setAttr("input_lbn_segment_sizes", rewriter.getI32ArrayAttr({1, 1, 1}));
+      op->setAttr("output_lbn_segment_keys", rewriter.getStrArrayAttr({"out"}));
+      op->setAttr("output_lbn_segment_sizes", rewriter.getI32ArrayAttr({1}));
+      op->setAttr("output_lbns", rewriter.getStrArrayAttr({op.op_name().str() + "/out_0"}));
+      return success();
+    }
+  }
+};
+
 void FusedBiasAddGeluOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
                                                      ::mlir::MLIRContext* context) {
-  results.insert<FillUserAttrs>(context);
+  results.insert<FillUserOpAttrsInFusedBiasAddGeluOp>(context);
+}
+
+void FusedBiasAddMaskScaleOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
+                                                          ::mlir::MLIRContext* context) {
+  results.insert<FillUserAttrsInFusedBiasAddMaskScaleOp>(context);
 }
 
 struct ConcreteSystemOps : public mlir::OpRewritePattern<oneflow::SystemOp> {
