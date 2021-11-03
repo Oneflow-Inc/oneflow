@@ -62,7 +62,6 @@ InstructionOperand* InstructionMsg::add_instr_operand() {
 
 void InstructionMsg::__Init__() {
   *mut_instr_type_name() = "";
-  mut_operand_list()->mut_operand()->reserve(kReservedOperandVecSize);
   set_parallel_desc_symbol_id(0);
 }
 
@@ -323,28 +322,25 @@ const MirroredObject* Instruction::GetMirroredObject(const Operand& operand,
 
 int64_t Instruction::GetOperandDefaultGlobalDeviceId() const { return stream().global_device_id(); }
 
-void Instruction::__Init__(InstructionMsg* instr_msg, Stream* stream,
-                           const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+void Instruction::Init(InstructionMsg* instr_msg, Stream* stream,
+                       const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   __Init__();
   mut_status_buffer();
   reset_instr_msg(instr_msg);
   set_stream(stream);
-  stream_type().InitInstructionStatusIf(*stream, mut_status_buffer());
+  instr_msg->instr_type_id().instruction_type().InitInstructionStatusIf(this);
   *mut_parallel_desc() = parallel_desc;
 }
 
-void Instruction::__Delete__() {
-  stream_type().DeleteInstructionStatusIf(stream(), mut_status_buffer());
+void Instruction::Delete() {
+  instr_msg().instr_type_id().instruction_type().DeleteInstructionStatusIf(this);
+  clear_instr_msg();
   mut_in_edges()->Clear();
   mut_out_edges()->Clear();
 }
 
 bool Instruction::Done() const {
   return stream_type().QueryInstructionStatusDone(stream(), status_buffer());
-}
-
-void Instruction::set_has_event_record(bool val) {
-  return stream_type().set_has_event_record(mut_status_buffer(), val);
 }
 
 const StreamType& Instruction::stream_type() const { return stream().stream_type(); }

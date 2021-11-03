@@ -19,11 +19,11 @@ limitations under the License.
 #include "oneflow/api/python/functional/python_arg.h"
 
 #include <tuple>
+#include <utility>
 #include "oneflow/api/python/framework/throw.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/common/function_traits.h"
-#include "oneflow/core/common/cplusplus_14.h"
 
 namespace oneflow {
 namespace one {
@@ -53,7 +53,10 @@ inline py::object CastToPyObject<Maybe<Tensor>>(Maybe<Tensor>&& t) {
 
 template<>
 inline py::object CastToPyObject<Maybe<TensorTuple>>(Maybe<TensorTuple>&& t) {
-  return py::cast(t.GetPtrOrThrow());
+  const auto& tensor_tuple = t.GetPtrOrThrow();
+  py::tuple tup(tensor_tuple->size());
+  for (int i = 0; i < tensor_tuple->size(); ++i) { tup[i] = py::cast(tensor_tuple->at(i)); }
+  return py::cast<py::object>(tup);
 }
 
 template<>

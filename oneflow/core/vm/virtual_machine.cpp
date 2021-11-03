@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/api/foreign_lock_helper.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/infer_stream_type.h"
@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace vm {
@@ -48,8 +49,7 @@ bool HasImmediateOperandsOnly(const InstructionMsg& instr_msg) {
 
 }  // namespace
 
-void VirtualMachine::ReleaseInstruction(Instruction* instruction,
-                                        /*out*/ ReadyInstructionList* ready_instruction_list) {
+void VirtualMachine::ReleaseInstruction(Instruction* instruction) {
   auto* access_list = instruction->mut_access_list();
   auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
   INTRUSIVE_FOR_EACH(access, access_list) {
@@ -59,30 +59,36 @@ void VirtualMachine::ReleaseInstruction(Instruction* instruction,
       rw_mutexed_object_accesses->Erase(access.Mutable());
     }
     auto* mirrored_object = access->mut_mirrored_object();
-    if (!access->is_rw_mutexed_object_access_hook_empty()) {
+    if (!access->rw_mutexed_object_access_hook().empty()) {
       CHECK_EQ(access->mut_rw_mutexed_object(), mirrored_object->mut_rw_mutexed_object());
       mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Erase(access.Mutable());
     }
   }
   CHECK_EQ(rw_mutexed_object_accesses->size(), 0);
-  TryMoveWaitingToReady(instruction, ready_instruction_list, [](Instruction*) { return true; });
+  auto* out_edges = instruction->mut_out_edges();
+  INTRUSIVE_FOR_EACH_PTR(out_edge, out_edges) {
+    Instruction* out_instruction = out_edge->mut_dst_instruction();
+    // Edges are erased only if the instruction is completed.
+    out_edges->Erase(out_edge);
+    out_instruction->mut_in_edges()->Erase(out_edge);
+    TryMoveFromWaitingToReady(out_instruction);
+  }
 }
 
-void VirtualMachine::TryReleaseFinishedInstructions(
-    Stream* stream,
-    /*out*/ ReadyInstructionList* ready_instruction_list) {
+// Collect ready instructions onto ready_instruction_list_
+void VirtualMachine::TryReleaseFinishedInstructions(Stream* stream) {
   auto* running_instruction_list = stream->mut_running_instruction_list();
   auto* front_seq_compute_list = mut_front_seq_compute_instr_list();
   auto* vm_stat_running_list = mut_vm_stat_running_instruction_list();
   while (true) {
     auto* instruction_ptr = running_instruction_list->Begin();
     if (instruction_ptr == nullptr || !instruction_ptr->Done()) { break; }
-    ReleaseInstruction(instruction_ptr, /*out*/ ready_instruction_list);
+    ReleaseInstruction(instruction_ptr);
     const auto interpret_type = instruction_ptr->stream().stream_type_id().interpret_type();
     if (interpret_type == kInfer) {
       // do nothing
     } else if (interpret_type == kCompute) {
-      CHECK(!instruction_ptr->is_front_seq_compute_instr_hook_empty());
+      CHECK(!instruction_ptr->front_seq_compute_instr_hook().empty());
       front_seq_compute_list->Erase(instruction_ptr);
     } else {
       UNIMPLEMENTED();
@@ -503,50 +509,60 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
   }
 }
 
-void VirtualMachine::FilterReadyInstructions(NewInstructionList* new_instruction_list,
-                                             /*out*/ ReadyInstructionList* ready_instruction_list) {
+bool VirtualMachine::Dispatchable(Instruction* instruction) const {
+  if (!instruction->dispatched_instruction_hook().empty()) { return false; }
+  const auto* stream = &instruction->stream();
+  INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_in_edges()) {
+    const auto& src_instruction = edge->src_instruction();
+    if (!(&src_instruction.stream() == stream /* same stream*/
+          && !src_instruction.dispatched_instruction_hook().empty() /* dispatched */)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Dispatch ready instructions.
+// Collect prescheduled instructions onto ready_instruction_list_.
+void VirtualMachine::DispatchAndPrescheduleInstructions() {
+  if (mut_ready_instruction_list()->size() == 0) { return; }
+  ReadyInstructionList tmp_ready_instruction_list;
+  mut_ready_instruction_list()->MoveTo(&tmp_ready_instruction_list);
+  INTRUSIVE_FOR_EACH(instruction, &tmp_ready_instruction_list) {
+    tmp_ready_instruction_list.Erase(instruction.Mutable());
+    DispatchInstruction(instruction.Mutable());
+    // preschedule instructions
+    INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_out_edges()) {
+      TryMoveFromWaitingToReady(edge->mut_dst_instruction());
+    }
+  }
+}
+
+void VirtualMachine::MoveToReadyOrWaiting(NewInstructionList* new_instruction_list) {
   INTRUSIVE_FOR_EACH_PTR(instruction, new_instruction_list) {
-    if (instruction->in_edges().empty()) {
-      new_instruction_list->MoveToDstBack(instruction, ready_instruction_list);
+    if (Dispatchable(instruction)) {
+      mut_ready_instruction_list()->PushBack(instruction);
+      new_instruction_list->Erase(instruction);
     }
   }
+  new_instruction_list->MoveTo(mut_waiting_instruction_list());
 }
 
-void VirtualMachine::DispatchAndPrescheduleInstructions(
-    ReadyInstructionList* ready_instruction_list) {
-  PrescheduledInstructionList prescheduled;
-  auto* active_stream_list = mut_active_stream_list();
-  auto* vm_stat_running_list = mut_vm_stat_running_instruction_list();
-  INTRUSIVE_FOR_EACH_PTR(instruction, ready_instruction_list) {
-    vm_stat_running_list->PushBack(instruction);
-    auto* stream = instruction->mut_stream();
-    ready_instruction_list->MoveToDstBack(instruction, stream->mut_running_instruction_list());
-    if (stream->is_active_stream_hook_empty()) { active_stream_list->PushBack(stream); }
-    const auto& stream_type = stream->stream_type();
-    if (stream_type.SharingVirtualMachineThread()) {
-      stream_type.Run(this, instruction);
-    } else {
-      stream->mut_thread_ctx()->mut_pending_instruction_list()->PushBack(instruction);
-    }
-    TryMoveWaitingToReady(instruction, &prescheduled,
-                          [stream](Instruction* dst) { return &dst->stream() == stream; });
+void VirtualMachine::DispatchInstruction(Instruction* instruction) {
+  OF_PROFILER_RANGE_PUSH(
+      "D:" + instruction->instr_msg().instr_type_name() + ":"
+      + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction));
+  mut_vm_stat_running_instruction_list()->PushBack(instruction);
+  auto* stream = instruction->mut_stream();
+  stream->mut_running_instruction_list()->PushBack(instruction);
+  if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
+  const auto& stream_type = stream->stream_type();
+  if (stream_type.SharingVirtualMachineThread()) {
+    stream_type.Run(this, instruction);
+  } else {
+    stream->mut_thread_ctx()->mut_pending_instruction_list()->PushBack(instruction);
   }
-  prescheduled.MoveTo(ready_instruction_list);
-}
-
-template<typename ReadyList, typename IsEdgeReadyT>
-void VirtualMachine::TryMoveWaitingToReady(Instruction* instruction, ReadyList* ready_list,
-                                           const IsEdgeReadyT& IsEdgeReady) {
-  auto* wait_instruction_list = mut_waiting_instruction_list();
-  auto* out_edges = instruction->mut_out_edges();
-  INTRUSIVE_FOR_EACH_PTR(out_edge, out_edges) {
-    Instruction* out_instruction = out_edge->mut_dst_instruction();
-    if (!IsEdgeReady(out_instruction)) { continue; }
-    out_edges->Erase(out_edge);
-    out_instruction->mut_in_edges()->Erase(out_edge);
-    if (!out_instruction->in_edges().empty()) { continue; }
-    wait_instruction_list->MoveToDstBack(out_instruction, ready_list);
-  }
+  OF_PROFILER_RANGE_POP();
 }
 
 void VirtualMachine::__Init__(const VmDesc& vm_desc) {
@@ -577,6 +593,7 @@ void VirtualMachine::__Init__(const VmDesc& vm_desc) {
 int64_t InstructionMaxRunningSeconds() { return 60 * 5; }
 
 Maybe<void> VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) {
+  OF_PROFILER_RANGE_PUSH("vm:Receive");
   CHECK_OR_RETURN(!pthread_fork::IsForkedSubProcess())
       << "Cannot run OneFlow in forked subprocess. Please add "
          "'multiprocessing.set_start_method(\"spawn\")' in '__main__' if you are using Python's "
@@ -605,6 +622,7 @@ Maybe<void> VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) 
     }));
   }
   mut_pending_msg_list()->MoveFrom(&new_instr_msg_list);
+  OF_PROFILER_RANGE_POP();
   return Maybe<void>::Ok();
 }
 
@@ -614,26 +632,24 @@ Maybe<void> VirtualMachine::Receive(intrusive::shared_ptr<InstructionMsg>&& comp
   return Receive(&instr_msg_list);
 }
 
-template<typename ContainerT>
-void VirtualMachine::TryRunFrontSeqInstruction(
-    ContainerT* front_seq_list, /*out*/ ReadyInstructionList* ready_instruction_list) {
-  auto* instruction = front_seq_list->Begin();
+// TODO(lixinqi): refactor to being trigger inside TryReleaseFinishedInstructions
+void VirtualMachine::TryRunFrontSeqInstruction() {
+  auto* instruction = mut_front_seq_compute_instr_list()->Begin();
   if (instruction == nullptr) { return; }
   const auto& instr_type_id = instruction->instr_msg().instr_type_id();
   const auto& instruction_type = instr_type_id.instruction_type();
   if (!instruction_type.IsFrontSequential()) { return; }
-  if (!instruction->is_vm_stat_running_instruction_hook_empty()) { return; }
+  // All instructions before `instruction` are handled now, it's time to handle `instruction`.
+  // TODO(lixinqi): Should replace the `if` with
+  // CHECK(instruction->vm_stat_running_instruction_hook().empty()) ?
+  if (!instruction->vm_stat_running_instruction_hook().empty()) { return; }
   const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
   if (stream_type.SharingVirtualMachineThread()) {
     stream_type.Run(this, instruction);
-    front_seq_list->Erase(instruction);
+    mut_front_seq_compute_instr_list()->Erase(instruction);
   } else {
-    ready_instruction_list->EmplaceBack(std::move(instruction));
+    mut_ready_instruction_list()->PushBack(instruction);
   }
-}
-
-void VirtualMachine::TryRunFrontSeqInstruction(ReadyInstructionList* ready_instruction_list) {
-  TryRunFrontSeqInstruction(mut_front_seq_compute_instr_list(), ready_instruction_list);
 }
 
 void VirtualMachine::TryDeleteLogicalObjects() {
@@ -658,16 +674,23 @@ void VirtualMachine::TryDeleteLogicalObjects() {
   }
 }
 
+void VirtualMachine::TryMoveFromWaitingToReady(Instruction* instruction) {
+  if (Dispatchable(instruction)) {
+    // For memory safety, do not swap the following two lines.
+    mut_ready_instruction_list()->PushBack(instruction);
+    mut_waiting_instruction_list()->Erase(instruction);
+  }
+}
+
 void VirtualMachine::Schedule() {
-  ReadyInstructionList* ready_instruction_list = mut_ready_instruction_list();
-  auto* active_stream_list = mut_active_stream_list();
-  INTRUSIVE_FOR_EACH_PTR(stream, active_stream_list) {
-    TryReleaseFinishedInstructions(stream, /*out*/ ready_instruction_list);
-    if (stream->running_instruction_list().empty()) { active_stream_list->Erase(stream); }
+  INTRUSIVE_FOR_EACH_PTR(stream, mut_active_stream_list()) {
+    // Collect ready instructions onto ready_instruction_list_.
+    TryReleaseFinishedInstructions(stream);
+    if (stream->running_instruction_list().empty()) { mut_active_stream_list()->Erase(stream); }
   }
   TryDeleteLogicalObjects();
-  TryRunFrontSeqInstruction(/*out*/ ready_instruction_list);
-  auto* waiting_instruction_list = mut_waiting_instruction_list();
+  // Try run sequential instructions
+  TryRunFrontSeqInstruction();
   // Use thread_unsafe_size to avoid acquiring mutex lock.
   // The inconsistency between pending_msg_list.list_head_.list_head_.container_ and
   // pending_msg_list.list_head_.list_head_.size_ is not a fatal error because
@@ -684,10 +707,10 @@ void VirtualMachine::Schedule() {
     NewInstructionList new_instruction_list;
     MakeInstructions(&tmp_pending_msg_list, /*out*/ &new_instruction_list);
     ConsumeMirroredObjects(mut_id2logical_object(), &new_instruction_list);
-    FilterReadyInstructions(&new_instruction_list, /*out*/ ready_instruction_list);
-    new_instruction_list.MoveTo(waiting_instruction_list);
+    MoveToReadyOrWaiting(&new_instruction_list);
   }
-  DispatchAndPrescheduleInstructions(ready_instruction_list);
+  // Dispatch ready instructions and put prescheduled instructions onto ready_instruction_list_.
+  DispatchAndPrescheduleInstructions();
   *mut_flying_instruction_cnt() = mut_waiting_instruction_list()->size()
                                   + mut_ready_instruction_list()->size()
                                   + mut_vm_stat_running_instruction_list()->size();
