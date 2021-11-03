@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+# RUN: python3 %s | FileCheck %s
 from typing import Tuple
 import unittest
 import numpy as np
@@ -59,6 +60,8 @@ class TestMLIROptimizations(flow.unittest.TestCase):
         x = (np.random.rand(*shape) * 10).astype(np_in_type)
         FuseTrilScaleJob(x)
 
+
+# CHECK: fused_scale_tril
 
 if __name__ == "__main__":
     unittest.main()
