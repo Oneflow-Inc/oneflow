@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_STRING_DESC_H_
 
 #include <string>
-#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/optional.h"
 
 namespace oneflow {
 
@@ -29,11 +29,11 @@ class StringSymbol final {
 
   ~StringSymbol() = default;
 
-  const Maybe<int64_t>& symbol_id() const { return symbol_id_; }
+  const Optional<int64_t>& symbol_id() const { return symbol_id_; }
   const std::string& data() const { return data_; }
 
  private:
-  Maybe<int64_t> symbol_id_;
+  Optional<int64_t> symbol_id_;
   std::string data_;
 };
 

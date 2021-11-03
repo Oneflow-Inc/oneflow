@@ -16,7 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_META_UTIL_HPP_
 #define ONEFLOW_CORE_COMMON_META_UTIL_HPP_
 
-#include "oneflow/core/common/cplusplus_14.h"
+#include <utility>
+#include <tuple>
 
 namespace oneflow {
 
@@ -34,14 +35,13 @@ void for_each_i(const std::tuple<Args...>& t, Func&& f, std::index_sequence<Idx.
 template<typename T>
 using remove_const_reference_t = std::remove_const_t<std::remove_reference_t<T>>;
 
-template<size_t... Is>
-auto make_tuple_from_sequence(std::index_sequence<Is...>) -> decltype(std::make_tuple(Is...)) {
-  std::make_tuple(Is...);
+template<std::size_t... Is>
+auto make_tuple_from_sequence(std::index_sequence<Is...>) {
+  return std::make_tuple(Is...);
 }
 
-template<size_t N>
-constexpr auto make_tuple_from_sequence()
-    -> decltype(make_tuple_from_sequence(std::make_index_sequence<N>{})) {
+template<std::size_t N>
+constexpr auto make_tuple_from_sequence() {
   return make_tuple_from_sequence(std::make_index_sequence<N>{});
 }
 

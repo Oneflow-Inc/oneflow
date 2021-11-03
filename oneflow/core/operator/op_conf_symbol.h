@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_OPERATOR_OP_CONF_SYMBOL_H_
 
 #include <string>
-#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/op_conf.cfg.h"
 
@@ -32,11 +32,11 @@ class OperatorConfSymbol final {
   ~OperatorConfSymbol() = default;
 
   const OperatorConf& op_conf() const { return op_conf_; }
-  const Maybe<int64_t>& symbol_id() const { return symbol_id_; }
+  const Optional<int64_t>& symbol_id() const { return symbol_id_; }
   std::shared_ptr<cfg::OperatorConf> data() const { return data_; }
 
  private:
-  Maybe<int64_t> symbol_id_;
+  Optional<int64_t> symbol_id_;
   OperatorConf op_conf_;
   std::shared_ptr<cfg::OperatorConf> data_;
 };

@@ -152,7 +152,10 @@ class DistributedPartialFcSampleOpKernelState final : public user_op::OpKernelSt
     SetupKernel<<<BlocksNum4ThreadsNum(num_classes), kCudaThreadsNumPerBlock, 0,
                   ctx->cuda_stream()>>>(seed, curand_states_);
   }
-  ~DistributedPartialFcSampleOpKernelState() { OF_CUDA_CHECK(cudaFree(curand_states_)); };
+  ~DistributedPartialFcSampleOpKernelState() {
+    cudaError_t ret = cudaFree(curand_states_);
+    if (ret != cudaErrorCudartUnloading) { OF_CUDA_CHECK(ret); }
+  };
 
   int64_t lower() const { return lower_; }
   int64_t upper() const { return upper_; }

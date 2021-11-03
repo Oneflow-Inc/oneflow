@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/global.h"
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -126,7 +127,7 @@ class ConsistentRandFunctor {
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+    if (!JUST(IsMultiClient())) {
       JUST(attrs.SetAttr<std::string>("nd_sbp", nd_sbp->DebugString()));
     }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
@@ -198,7 +199,7 @@ class ConsistentRandNFunctor {
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+    if (!JUST(IsMultiClient())) {
       JUST(attrs.SetAttr<std::string>("nd_sbp", nd_sbp->DebugString()));
     }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
