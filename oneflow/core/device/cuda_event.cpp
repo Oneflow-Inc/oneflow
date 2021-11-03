@@ -13,24 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_MULTICLIENT_H_
-#define ONEFLOW_CORE_COMMON_MULTICLIENT_H_
-
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/optional.h"
-#include "oneflow/core/job/global_for.h"
+#include <vector>
+#include "oneflow/core/device/cuda_event.h"
 
 namespace oneflow {
 
-inline Optional<bool>* IsMultiClientPtr() { return Global<Optional<bool>, MultiClient>::Get(); }
+#ifdef WITH_CUDA
 
-inline Maybe<bool> IsMultiClient() { return JUST(*Global<Optional<bool>, MultiClient>::Get()); }
-
-inline Maybe<void> SetIsMultiClient(bool is_multi_client) {
-  CHECK_NOTNULL_OR_RETURN(IsMultiClientPtr());
-  *IsMultiClientPtr() = is_multi_client;
-  return Maybe<void>::Ok();
+CudaEvent::CudaEvent(int device_id, unsigned int flags) : device_id_(device_id) {
+  CudaCurrentDeviceGuard guard(device_id_);
+  OF_CUDA_CHECK(cudaEventCreateWithFlags(&event_, flags));
 }
-}  // namespace oneflow
+
+CudaEvent::~CudaEvent() {
+  CudaCurrentDeviceGuard guard(device_id_);
+  OF_CUDA_CHECK(cudaEventDestroy(event_));
+}
+
+bool CudaEvent::Query() const { return cudaEventQuery(event_) != cudaErrorNotReady; }
 
 #endif
+
+}  // namespace oneflow
