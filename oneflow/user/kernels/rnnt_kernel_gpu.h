@@ -440,7 +440,7 @@ GpuRNNT<ProbT>::compute_cost_and_score(const ProbT*  acts,
         cudaMemsetAsync(grads, 0, sizeof(ProbT) * minibatch_ * maxT_ * maxU_ * alphabet_size_, stream_);
     }
     
-    // log_softmax(acts, denom);
+    log_softmax(acts, denom);
 
     compute_alphas_kernel<ProbT><<<minibatch_, maxU_, 0, stream_>>>(acts, denom, alphas, llForward, 
         input_lengths, label_lengths, labels, minibatch_, maxT_, maxU_, alphabet_size_, blank_);

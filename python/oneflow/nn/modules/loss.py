@@ -704,6 +704,9 @@ class RNNTLoss(_Loss):
         act_lens: Tensor,
         label_lens: Tensor,
     ) -> Tensor:
+        if not acts.is_cuda:
+            acts = flow._C.log_softmax(acts, -1)
+            print("cpu")
         loss = flow._C.RNNTloss(acts, labels, act_lens, label_lens, self.blank, self.thread)
         if self.reduction in ['sum', 'mean']:
             loss = loss.sum().unsqueeze(-1)

@@ -1110,9 +1110,9 @@ class RNNTlossFunctor {
     JUST(attrs.SetAttr<int32_t>("blank_label", blank_label));
     JUST(attrs.SetAttr<int32_t>("num_threads", num_threads));
 
-    std::shared_ptr<one::Tensor> acts_trans = JUST(LogSoftmax(acts,-1));
+    // std::shared_ptr<one::Tensor> acts_trans = JUST(LogSoftmax(acts,-1));
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {acts_trans, labels, act_lens, label_lens}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {acts, labels, act_lens, label_lens}, attrs);
   }
 
  private:
