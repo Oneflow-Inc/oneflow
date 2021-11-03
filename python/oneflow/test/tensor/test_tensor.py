@@ -43,6 +43,7 @@ class TestTensor(flow.unittest.TestCase):
         tensor1 = flow.ones(*shape)
         tensor2 = copy.deepcopy(tensor1)
         tensor1[0, 0] = 0
+        test_case.assertEqual(tensor1[0, 0], 0)
         test_case.assertEqual(tensor2[0, 0], 1)
 
 
