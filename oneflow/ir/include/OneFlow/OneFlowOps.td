@@ -240,6 +240,7 @@ def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", []>  {
   let attrs = (ins
     SI32Attr:$axis
   );
+  let hasCanonicalizer = 1;
 }
 
 class OneFlow_LazyPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :

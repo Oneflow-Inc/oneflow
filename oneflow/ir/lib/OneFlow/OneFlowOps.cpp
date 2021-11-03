@@ -163,6 +163,30 @@ void UserOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
   results.insert<ConcreteUserOps>(context);
 }
 
+struct FillUserAttrs : public mlir::OpRewritePattern<oneflow::FusedBiasAddGeluOp> {
+  explicit FillUserAttrs(mlir::MLIRContext* context)
+      : OpRewritePattern<oneflow::FusedBiasAddGeluOp>(context, /*benefit=*/1) {}
+  mlir::LogicalResult matchAndRewrite(oneflow::FusedBiasAddGeluOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    if (op->hasAttrOfType<StringAttr>("op_type_name")) {
+      return failure();
+    } else {
+      op->setAttr("op_type_name", rewriter.getStringAttr("fused_bias_add_gelu"));
+      op->setAttr("input_lbn_segment_keys", rewriter.getStrArrayAttr({"a", "b"}));
+      op->setAttr("input_lbn_segment_sizes", rewriter.getI32ArrayAttr({1, 1}));
+      op->setAttr("output_lbn_segment_keys", rewriter.getStrArrayAttr({"out"}));
+      op->setAttr("output_lbn_segment_sizes", rewriter.getI32ArrayAttr({1}));
+      op->setAttr("output_lbns", rewriter.getStrArrayAttr({op.op_name().str() + "/out_0"}));
+      return success();
+    }
+  }
+};
+
+void FusedBiasAddGeluOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
+                                                     ::mlir::MLIRContext* context) {
+  results.insert<FillUserAttrs>(context);
+}
+
 struct ConcreteSystemOps : public mlir::OpRewritePattern<oneflow::SystemOp> {
   explicit ConcreteSystemOps(mlir::MLIRContext* context)
       : OpRewritePattern<oneflow::SystemOp>(context, /*benefit=*/1) {}

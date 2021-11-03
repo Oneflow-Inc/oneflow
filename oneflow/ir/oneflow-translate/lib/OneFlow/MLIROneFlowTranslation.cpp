@@ -320,6 +320,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     pm.addPass(oneflow::createOutlineJitFunctionPass());
   }
   pm.addNestedPass<mlir::FuncOp>(oneflow::createFuseIntoExistingOpPass());
+  pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
   llvm::raw_string_ostream os_graphviz(graphviz);
   pm.addPass(createPrintOpGraphPass(os_graphviz));
   if (mlir::failed(pm.run(*module))) {
