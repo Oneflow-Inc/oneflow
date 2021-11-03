@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <string>
 #include <memory>
+
 namespace oneflow {
 
 class Device;
@@ -29,16 +30,13 @@ class Symbol;
 
 namespace oneflow_api {
 
-using OFDevice = oneflow::Device;
-using OFSymbolOfDevice = oneflow::Symbol<OFDevice>;
-
 class Device final {
  public:
-  explicit Device(const std::string& type_and_id, bool only_type = true);
-  Device(const std::string& type, int64_t device_id);
+  explicit Device(const std::string& type_or_type_with_device_id);
+  explicit Device(const std::string& type, int64_t device_id);
 
  private:
-  std::shared_ptr<OFSymbolOfDevice> device_ = nullptr;
+  std::shared_ptr<oneflow::Symbol<oneflow::Device>> device_ = nullptr;
 };
 
 }  // namespace oneflow_api

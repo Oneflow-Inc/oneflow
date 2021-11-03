@@ -18,10 +18,11 @@ limitations under the License.
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/device.h"
 #include "device.h"
-#include <memory>
-#include <utility>
 
 namespace oneflow_api {
+
+using OFDevice = oneflow::Device;
+using OFSymbolOfDevice = oneflow::Symbol<OFDevice>;
 
 void CheckDeviceType(const std::string& type) {
   if (OFDevice::type_supported.find(type) == OFDevice::type_supported.end()) {
@@ -31,19 +32,15 @@ void CheckDeviceType(const std::string& type) {
   }
 }
 
-Device::Device(const std::string& type_and_id, bool only_type) {
-  if (only_type) {
-    CheckDeviceType(type_and_id);
-    device_ = std::make_shared<OFSymbolOfDevice>(OFDevice::New(type_and_id).GetOrThrow());
+Device::Device(const std::string& type_or_type_with_device_id) {
+  std::string type;
+  int device_id = -1;
+  oneflow::ParsingDeviceTag(type_or_type_with_device_id, &type, &device_id).GetOrThrow();
+  if (device_id == -1) {
+    CheckDeviceType(type);
+    device_ = std::make_shared<OFSymbolOfDevice>(OFDevice::New(type).GetOrThrow());
   } else {
-    std::string type;
-    int device_id = -1;
-    oneflow::ParsingDeviceTag(type_and_id, &type, &device_id).GetOrThrow();
-    if (device_id == -1) {
-      device_ = std::make_shared<OFSymbolOfDevice>(OFDevice::New(type).GetOrThrow());
-    } else {
-      device_ = std::make_shared<OFSymbolOfDevice>(OFDevice::New(type, device_id).GetOrThrow());
-    }
+    device_ = std::make_shared<OFSymbolOfDevice>(OFDevice::New(type, device_id).GetOrThrow());
   }
 }
 
