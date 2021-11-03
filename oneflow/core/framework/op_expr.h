@@ -289,8 +289,6 @@ class FunctionOpExpr final : public OpExpr {
 
   const std::string& op_type_name() const override { return func_name_; }
 
-  const std::string& op_name() const { return op_type_name(); }
-
   int input_size() const override {
     PRINT_BUG_PROMPT_AND_ABORT() << "You cannot get input_size here.";
     return 0;
