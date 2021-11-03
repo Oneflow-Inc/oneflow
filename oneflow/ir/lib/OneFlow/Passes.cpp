@@ -42,13 +42,13 @@ limitations under the License.
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
-#ifdef WITH_CUDA
+#ifdef WITH_MLIR_CUDA_CODEGEN
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
-#endif  // WITH_CUDA
+#endif  // WITH_MLIR_CUDA_CODEGEN
 
 using namespace mlir;
 using namespace mlir::oneflow;
@@ -205,7 +205,7 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   return pm.run(module);
 }
 
-#ifdef WITH_CUDA
+#ifdef WITH_MLIR_CUDA_CODEGEN
 
 LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module) {
   InitializeLLVMNVPTXBackend();
@@ -226,7 +226,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   return pm.run(module);
 }
 
-#endif  // WITH_CUDA
+#endif  // WITH_MLIR_CUDA_CODEGEN
 
 void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<MulCastPattern>(patterns.getContext());

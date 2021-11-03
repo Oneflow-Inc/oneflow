@@ -27,9 +27,9 @@ limitations under the License.
 #include "OneFlow/Conversion/SCFToGPU.h"
 #include "OneFlow/Transform/BufferHostRegister.h"
 #include "OneFlow/Transform/OutlineAndFuse.h"
-#ifdef WITH_CUDA
+#ifdef WITH_MLIR_CUDA_CODEGEN
 #include "OneFlow/Conversion/PTXToCubin.h"
-#endif  // WITH_CUDA
+#endif  // WITH_MLIR_CUDA_CODEGEN
 
 namespace mlir {
 
@@ -40,9 +40,9 @@ namespace mlir {
 namespace oneflow {
 
 LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module);
-#ifdef WITH_CUDA
+#ifdef WITH_MLIR_CUDA_CODEGEN
 LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module);
-#endif  // WITH_CUDA
+#endif  // WITH_MLIR_CUDA_CODEGEN
 void populateFuserPasses(::mlir::RewritePatternSet& patterns);
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns);
 

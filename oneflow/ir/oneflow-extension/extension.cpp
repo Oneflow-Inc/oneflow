@@ -200,7 +200,7 @@ REGISTER_MLIR_JIT_CPU_KERNEL(int64_t)
 
 #undef REGISTER_MLIR_JIT_CPU_KERNEL
 
-#ifdef WITH_CUDA
+#ifdef WITH_MLIR_CUDA_CODEGEN
 
 template<typename T>
 class MlirJitGpuKernel final : public user_op::OpKernel {
@@ -243,7 +243,7 @@ REGISTER_MLIR_JIT_GPU_KERNEL(int64_t)
 
 #undef REGISTER_MLIR_JIT_GPU_KERNEL
 
-#endif  // WITH_CUDA
+#endif  // WITH_MLIR_CUDA_CODEGEN
 
 }  // namespace
 
