@@ -29,9 +29,7 @@ from oneflow.framework.sysconfig import (
 )
 
 
-def with_mlir():
-    return oneflow._oneflow_internal.flags.with_mlir()
-
-
-def with_mlir_cuda_codegen():
-    return oneflow._oneflow_internal.flags.with_mlir_cuda_codegen()
+from oneflow._oneflow_internal.flags import (
+    with_mlir,
+    with_mlir_cuda_codegen,
+)
