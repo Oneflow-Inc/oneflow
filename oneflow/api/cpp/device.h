@@ -18,35 +18,30 @@ limitations under the License.
 
 #include <string>
 #include <memory>
+namespace oneflow {
+
+class Device;
+
+template<typename T>
+class Symbol;
+
+}  // namespace oneflow
 
 namespace oneflow_api {
+
+using OFDevice = oneflow::Device;
+using OFSymbolOfDevice = oneflow::Symbol<OFDevice>;
+
 class Device final {
  public:
-  struct Impl;
-  ~Device() = default;
-  explicit Device(const std::shared_ptr<Impl>& impl) : impl_(impl) {}
-  explicit Device(std::shared_ptr<Impl>&& impl) : impl_(std::move(impl)) {}
-  Device(const Device& device) : impl_(device.impl_) {}
-  Device(Device&& device) noexcept : impl_(std::move(device.impl_)) {}
-  Device& operator=(const Device& device) {
-    this->impl_.reset();
-    this->impl_ = device.impl_;
-    return *this;
-  }
-  Device& operator=(Device&& device) noexcept {
-    this->impl_.reset();
-    this->impl_ = std::move(device.impl_);
-    return *this;
-  }
-
   static void CheckDeviceType(const std::string& type);
-  static std::shared_ptr<Device> ParseAndNew(const std::string& type_and_id);
-  static std::shared_ptr<Device> New(const std::string& type);
-  static std::shared_ptr<Device> New(const std::string& type, int64_t device_id);
+  explicit Device(const std::string& type_and_id, bool only_type = true);
+  Device(const std::string& type, int64_t device_id);
 
  private:
-  std::shared_ptr<Impl> impl_;
+  std::shared_ptr<oneflow::Symbol<oneflow::Device>> device_ = nullptr;
 };
+
 }  // namespace oneflow_api
 
 #endif  // !ONEFLOW_API_CPP_DEVICE_H_
