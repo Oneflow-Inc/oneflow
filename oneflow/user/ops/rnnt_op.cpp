@@ -50,19 +50,6 @@ REGISTER_USER_OP("RNNTloss")
       return Maybe<void>::Ok();
     });
 
-// REGISTER_USER_OP("RNNTloss_grad")
-//     .Input("grads")
-//     .Input("dy")
-//     .Output("dx")
-//     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-//       CHECK_EQ_OR_RETURN(ctx->InputDType("prob", 0), ctx->InputDType("dy", 0));
-//       *ctx->OutputDType("dx", 0) = ctx->InputDType("grads", 0);
-//       return Maybe<void>::Ok();
-//     })
-//     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-//       ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
-//       return Maybe<void>::Ok();
-//     });
 
 REGISTER_USER_OP_GRAD("RNNTloss")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,

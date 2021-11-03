@@ -1105,12 +1105,16 @@ class RNNTlossFunctor {
     CHECK_EQ_OR_RETURN(labels->dtype()->data_type() , DataType::kInt32)<<"labels must be int32";
     CHECK_EQ_OR_RETURN(act_lens->dtype()->data_type() , DataType::kInt32)<<"act_lens must be int32";
     CHECK_EQ_OR_RETURN(label_lens->dtype()->data_type(), DataType::kInt32)<<"label_lens must be int32";
+
+    CHECK_EQ_OR_RETURN(acts->shape()->NumAxes(),4)<<"the dim of acts must be 4";
+    CHECK_EQ_OR_RETURN(labels->shape()->NumAxes(),2)<<"the dim of labels must be 2";
+    CHECK_EQ_OR_RETURN(act_lens->shape()->NumAxes(),1)<<"the dim of act_lens must be 1";
+    CHECK_EQ_OR_RETURN(label_lens->shape()->NumAxes(),1)<<"the dim of label_lens must be 1";
+ 
     MutableAttrMap attrs;
 
     JUST(attrs.SetAttr<int32_t>("blank_label", blank_label));
     JUST(attrs.SetAttr<int32_t>("num_threads", num_threads));
-
-    // std::shared_ptr<one::Tensor> acts_trans = JUST(LogSoftmax(acts,-1));
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {acts, labels, act_lens, label_lens}, attrs);
   }

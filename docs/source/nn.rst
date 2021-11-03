@@ -17,6 +17,7 @@ Operators for neural networks
         BatchNorm3d,
         COCOReader,
         CTCLoss,
+        RNNTLoss,
         CoinFlip,
         ConstantPad1d,
         ConstantPad2d,

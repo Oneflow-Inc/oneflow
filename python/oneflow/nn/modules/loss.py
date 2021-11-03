@@ -690,12 +690,56 @@ class CTCLoss(_Loss):
 
 
 class RNNTLoss(_Loss):
+    """The RNN Tranducer loss.
+    The documentation is referenced from:
+    https://github.com/HawkAaron/warp-transducer/tree/master/pytorch_binding
+
+    This loss introduces probabilistic sequence transduction system, based entirely
+    on RNNs, that is in principle able to transform any input sequence into any finite, 
+    discrete output sequence
+
+    Args:
+        blank (int, optional): blank label. Default :math:`0`.
+        reduction (string, optional): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
+            ``'mean'``: the output losses will be divided by the bathsize and. Default: ``'mean'``
+
+    Shape:
+        - acts: Tensor of size :math:`(B, T, U+1, V)`
+          B is the minibatch index 
+          T is the time index
+          U is the label sequence length (+1 means blank label prepanded)
+          V indexes over activations for each symbol in the alphabet
+        - labels: 2 dimensional Tensor containing all the targets of the batch with zero padded.
+        - act_lens: A 1-D Tensor of ints, the length of each label for each example in the minibatch.
+        - label_lens: A 1-D Tensor of ints, the length of each label for each example in the minibatch.
+
+    Reference:
+        A. Graves et al.: Sequence Transduction with Recurrent Neural Networks
+        http://www.cs.toronto.edu/~graves/icml_2012.pdf
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> acts = flow.rand(2,2,3,5)
+        >>> labels = flow.tensor([[1, 2],[2,2]],dtype=flow.int)
+        >>> acts_length = flow.tensor([2,2],dtype=flow.int)
+        >>> label_length = flow.tensor([2,2],dtype=flow.int)
+        >>> rnnt = flow.nn.RNNTLoss(blank=0,reduction="mean")
+        >>> rnnt(acts,labels,acts_length,label_length)
+        tensor([5.1914], dtype=oneflow.float32)
+    """
+
     def __init__(
-        self, blank: int = 0, reduction: str = "mean", thread: int=0
+        self, blank: int = 0, reduction: str = "mean"
     ) -> None:
+        
         super(RNNTLoss, self).__init__(reduction)
         self.blank = blank
-        self.thread = thread
+        self.thread = 0
     
     def forward(
         self,
@@ -706,7 +750,6 @@ class RNNTLoss(_Loss):
     ) -> Tensor:
         if not acts.is_cuda:
             acts = flow._C.log_softmax(acts, -1)
-            print("cpu")
         loss = flow._C.RNNTloss(acts, labels, act_lens, label_lens, self.blank, self.thread)
         if self.reduction in ['sum', 'mean']:
             loss = loss.sum().unsqueeze(-1)
