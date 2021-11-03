@@ -50,7 +50,6 @@ void SocketWriteHelper::AsyncWrite(const SocketMsg& msg) {
   bool need_send_event = pending_msg_queue_->empty();
   pending_msg_queue_->push(msg);
   pending_msg_queue_mtx_.unlock();
-  std::cout<<"SocketWriteHelper::AsyncWrite,the write_size:"<<write_size_<<std::endl;
   if (need_send_event) { SendQueueNotEmptyEvent(); }
 }
 
@@ -83,7 +82,6 @@ bool SocketWriteHelper::InitMsgWriteHandle() {
   cur_msg_queue_->pop();
   write_ptr_ = reinterpret_cast<const char*>(&cur_msg_);
   write_size_ = sizeof(cur_msg_);
-  std::cout<<"SocketWriteHelper::InitMsgWriteHandle,the write_size:"<<write_size_<<std::endl;
   cur_write_handle_ = &SocketWriteHelper::MsgHeadWriteHandle;
   return true;
 }
@@ -98,7 +96,6 @@ bool SocketWriteHelper::MsgBodyWriteHandle() {
 
 bool SocketWriteHelper::DoCurWrite(void (SocketWriteHelper::*set_cur_write_done)()) {
   ssize_t n = write(sockfd_, write_ptr_, write_size_);
-  std::cout<<"SocketWriteHelper::DoCurWrite,the write_size:"<<write_size_<<std::endl;
   if (n == write_size_) {
     (this->*set_cur_write_done)();
     return true;
@@ -136,7 +133,6 @@ void SocketWriteHelper::SetStatusWhenRequestReadMsgHeadDone() {
   auto src_mem_desc = static_cast<const SocketMemDesc*>(src_token);
   write_ptr_ = reinterpret_cast<const char*>(src_mem_desc->mem_ptr);
   write_size_ = src_mem_desc->byte_size;
-  std::cout<<"SocketWriteHelper::SetStatusWhenRequestReadMsgHeadDone,the write_size:"<<write_size_<<std::endl;
   cur_write_handle_ = &SocketWriteHelper::MsgBodyWriteHandle;
 }
 
