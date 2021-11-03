@@ -17,7 +17,10 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include "oneflow/core/eager/blob_instruction_type.h"
 #include "oneflow/core/vm/cuda_stream_type.h"
+#include "oneflow/core/vm/cuda_optional_event_record_status_querier.h"
+#include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/async_cuda_stream_type.h"
+#include "oneflow/core/device/cuda_event.h"
 
 namespace oneflow {
 namespace vm {
@@ -44,6 +47,15 @@ class GpuRecordEventInstructionType : public RecordEventInstructionType {
   GpuRecordEventInstructionType() = default;
   ~GpuRecordEventInstructionType() override = default;
   using stream_type = vm::CudaStreamType;
+  void InitInstructionStatus(Instruction* instruction) const override {
+    auto* status_buffer = instruction->mut_status_buffer();
+    auto* stream = instruction->mut_stream();
+    instruction->stream_type().InitInstructionStatus(*stream, status_buffer);
+    auto* event_provider = dynamic_cast<QueryCudaEventProvider*>(stream->device_ctx().get());
+    const auto& cuda_event = CHECK_NOTNULL(event_provider)->GetCudaEvent();
+    auto* data_ptr = status_buffer->mut_buffer()->mut_data();
+    CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_cuda_event(cuda_event);
+  }
 };
 COMMAND(vm::RegisterInstructionType<GpuRecordEventInstructionType>("gpu.RecordEvent"));
 
