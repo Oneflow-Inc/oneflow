@@ -119,7 +119,6 @@ void ClearAllSymbolAndIdCache() {
 bool CommNetIBEnabled() {
   bool user_enabled = ParseBooleanFromEnv("ONEFLOW_COMM_NET_IB_ENABLE", false);
   if (user_enabled) {
-    //return true;
     return ibv::IsAvailable();
   } else {
     return false;

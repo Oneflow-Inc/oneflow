@@ -86,7 +86,6 @@ IBVerbsCommNet::~IBVerbsCommNet() {
 
 void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
   ActorMsg new_msg = msg;
-  std::cout<<"let us go" << std::endl;
   if (msg.IsDataRegstMsgToConsumer()) {
     CHECK_EQ(msg.user_data_size(), 0);
     auto* mem_desc = reinterpret_cast<IBVerbsMemDesc*>(msg.regst()->comm_net_token());

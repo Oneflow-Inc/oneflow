@@ -23,10 +23,8 @@ namespace ibv {
 std::vector<std::string> GetLibPaths() {
   const char* custom_path = std::getenv("ONEFLOW_LIBIBVERBS_PATH");
   if (custom_path == nullptr) {
-    std::cout<<"custom_path:nullptr" << std::endl;
     return {"libibverbs.so.1", "libibverbs.so"};
   } else {
-    std::cout<<"custom_path:" << std::string(custom_path) <<std::endl;
     return {custom_path};
   }
 }
