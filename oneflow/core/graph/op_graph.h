@@ -128,6 +128,9 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
 
   Maybe<void> Init(const Job& job);
 
+  // Print the graph with SBP in order
+  void PrintGraph();
+
  private:
   void InitNodes(const Job& job);
   void InitEdges();
