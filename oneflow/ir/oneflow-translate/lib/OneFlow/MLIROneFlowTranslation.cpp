@@ -316,7 +316,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   mlir::PassManager pm(context);
   pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
   std::string graphviz;
-  if (std::getenv("ONEFLOW_MLIR_ENABLE_FUSERS") != nullptr) {
+  if (std::getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS") != nullptr) {
     pm.addPass(oneflow::createOutlineJitFunctionPass());
   }
   pm.addNestedPass<mlir::FuncOp>(oneflow::createFuseIntoExistingOpPass());
