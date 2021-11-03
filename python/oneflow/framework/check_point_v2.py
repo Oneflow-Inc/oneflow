@@ -156,45 +156,46 @@ def _broadcast_py_object(obj, src: int = 0):
 
 
 # NOTE(jianhao):
-# 1. tensor_getstate and tensor_setstate is binded to tensor.__getstate__
-# and __setstate__ in tensor.py, and can only be called inside flow.save
-# or flow.load because they use global variables `current_path` etc.
-# 2. (de)serializing a container of consistent tensors requires the order
+# (de)serializing a container of consistent tensors requires the order
 # of those tensors are the same across all ranks.
 def tensor_getstate(self):
-    if current_path is not None:
-        assert isinstance(current_path, Path)
-        if current_consistent_src_dst_rank is None:
+    if save_load_path is not None:
+        # save_load_path is not None means setstate/getstate is called inside
+        # flow.save or flow.load
+        assert isinstance(save_load_path, Path)
+        if consistent_src_dsk_rank is None:
             assert self.is_local
             rel_dir_name = id_util.UniqueStr("tensor_")
-            abs_dir_name = current_path / rel_dir_name
+            abs_dir_name = save_load_path / rel_dir_name
 
             tensor = self
         else:
             assert not self.is_local
             rel_dir_name = f"consistent_tensor_{self.consistent_id()}"
-            abs_dir_name = current_path / rel_dir_name
+            abs_dir_name = save_load_path / rel_dir_name
 
             tensor = self.to_consistent(sbp=[flow.sbp.broadcast] * len(self.sbp)).to_local()
         if (
-            current_consistent_src_dst_rank is None
-            or current_consistent_src_dst_rank == flow.env.get_rank()
+            consistent_src_dsk_rank is None
+            or consistent_src_dsk_rank == flow.env.get_rank()
         ):
             _save_tensor_to_disk(tensor, abs_dir_name)
 
         return {"path": rel_dir_name}
     else:
+        # save_load_path is None means setstate/getstate is called inside
+        # methods other than flow.save/load, for example, copy.deepcopy
         assert self.is_local, "copy.deepcopy and similar methods only support local tensors"
         return {"data": self.numpy(), "dtype": self.dtype}
 
 
 def tensor_setstate(self, pickle_dict):
-    if current_path is not None:
-        assert isinstance(current_path, Path)
+    if save_load_path is not None:
+        assert isinstance(save_load_path, Path)
         rel_dir_name = pickle_dict["path"]
-        abs_dir_name = current_path / rel_dir_name
+        abs_dir_name = save_load_path / rel_dir_name
         self.__init__(
-            _LoadSingleVariable(str(abs_dir_name), current_consistent_src_dst_rank)
+            _LoadSingleVariable(str(abs_dir_name), consistent_src_dsk_rank)
         )
     else:
         return self.__init__(flow.tensor(pickle_dict["data"], dtype=pickle_dict["dtype"]))
@@ -228,15 +229,15 @@ def legacy_load(
 
 @contextmanager
 def tensor_pickling_context(path: Path, consistent_src_dst_rank: int):
-    global current_path
-    global current_consistent_src_dst_rank
-    current_consistent_src_dst_rank = consistent_src_dst_rank
-    current_path = path
+    global save_load_path
+    global consistent_src_dsk_rank
+    consistent_src_dsk_rank = consistent_src_dst_rank
+    save_load_path = path
     try:
         yield
     finally:
-        current_consistent_src_dst_rank = None
-        current_path = None
+        consistent_src_dsk_rank = None
+        save_load_path = None
 
 
 def load(path: str, consistent_src_rank: Optional[int] = None,) -> Any:
@@ -313,5 +314,5 @@ def generate_values_by_initializer(initializer, shape, dtype):
     return np.array(initializer(length)).astype(np_dtype).reshape(shape)
 
 
-current_path = None
-current_consistent_src_dst_rank = None
+save_load_path = None
+consistent_src_dsk_rank = None
