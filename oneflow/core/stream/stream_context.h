@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/common/device_type.h"
+#include "oneflow/core/stream/stream_id.h"
 
 namespace oneflow {
 

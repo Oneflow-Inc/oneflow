@@ -229,7 +229,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       }
 #endif
     }
-    const int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(task_proto.task_id());
+    const int64_t thrd_id = ThrdId4ActorId(task_proto.task_id());
     thread_ = Global<ThreadMgr>::Get()->GetThrd(thrd_id);
     total_reading_cnt_ = 0;
     max_total_reading_cnt_ = 0;
@@ -333,10 +333,9 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
     const bool is_kernel_launch_synchronized =
         (!exec_kernel) || kernel_info_[0]->kernel->IsKernelLaunchSynchronized();
     const int64_t actor_id = actor_ctx_->task_proto().task_id();
-    const int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(actor_id);
+    const int64_t thrd_id = ThrdId4ActorId(actor_id);
     auto IsSyncMsg = [&](const ActorMsg& msg) {
-      return is_kernel_launch_synchronized
-             && thrd_id == Global<IDMgr>::Get()->ThrdId4ActorId(msg.dst_actor_id());
+      return is_kernel_launch_synchronized && thrd_id == ThrdId4ActorId(msg.dst_actor_id());
     };
     auto EnqueueActorMsg = [&](const ActorMsg& msg) {
       if (IsSyncMsg(msg)) {
