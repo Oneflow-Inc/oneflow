@@ -156,7 +156,6 @@ import oneflow.framework.register_python_callback
 
 INVALID_SPLIT_AXIS = oneflow._oneflow_internal.INVALID_SPLIT_AXIS
 register_class_method_util.RegisterMethod4Class()
-oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 import oneflow.framework.env_util as env_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
@@ -166,6 +165,7 @@ if not env_util.HasAllMultiClientEnvVars():
     env_util.SetDefaultMultiClientEnvVars()
 oneflow._oneflow_internal.SetIsMultiClient(True)
 env_util.api_env_init()
+oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
 session_ctx.OpenDefaultSession(
     MultiClientSession(oneflow._oneflow_internal.NewSessionId())
@@ -237,7 +237,7 @@ from oneflow._C import tensor, batch_gather
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
 
-from oneflow.framework.check_point_v2 import Load as load
+from oneflow.framework.check_point_v2 import load
 from oneflow.framework.check_point_v2 import save
 from oneflow.framework.dtype import convert_oneflow_dtype_to_numpy_dtype, dtypes
 from oneflow.framework.env_util import (
