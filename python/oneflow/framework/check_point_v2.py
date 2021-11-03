@@ -102,7 +102,7 @@ class FileBackendVariableBlob:
         ).reshape(self.shape)
 
 
-def _save_tensor_to_disk(tensor: "oneflow.Tensor", dir_name: str) -> None:
+def _save_tensor_to_disk(tensor: "oneflow.Tensor", dir_name: Union[str, Path]) -> None:
     os.makedirs(dir_name, exist_ok=True)
     meta_info = variable_meta_info_pb.VariableMetaInfo()
     meta_info.shape.dim[:] = tensor.shape
@@ -162,35 +162,42 @@ def _broadcast_py_object(obj, src: int = 0):
 # 2. (de)serializing a container of consistent tensors requires the order
 # of those tensors are the same across all ranks.
 def tensor_getstate(self):
-    assert isinstance(current_path, Path)
-    if current_consistent_src_dst_rank is None:
-        assert self.is_local
-        rel_dir_name = id_util.UniqueStr("tensor_")
-        abs_dir_name = current_path / rel_dir_name
+    if current_path is not None:
+        assert isinstance(current_path, Path)
+        if current_consistent_src_dst_rank is None:
+            assert self.is_local
+            rel_dir_name = id_util.UniqueStr("tensor_")
+            abs_dir_name = current_path / rel_dir_name
 
-        tensor = self
+            tensor = self
+        else:
+            assert not self.is_local
+            rel_dir_name = f"consistent_tensor_{self.consistent_id()}"
+            abs_dir_name = current_path / rel_dir_name
+
+            tensor = self.to_consistent(sbp=[flow.sbp.broadcast] * len(self.sbp)).to_local()
+        if (
+            current_consistent_src_dst_rank is None
+            or current_consistent_src_dst_rank == flow.env.get_rank()
+        ):
+            _save_tensor_to_disk(tensor, abs_dir_name)
+
+        return {"path": rel_dir_name}
     else:
-        assert not self.is_local
-        rel_dir_name = f"consistent_tensor_{self.consistent_id()}"
-        abs_dir_name = current_path / rel_dir_name
-
-        tensor = self.to_consistent(sbp=[flow.sbp.broadcast] * len(self.sbp)).to_local()
-    if (
-        current_consistent_src_dst_rank is None
-        or current_consistent_src_dst_rank == flow.env.get_rank()
-    ):
-        _save_tensor_to_disk(tensor, abs_dir_name)
-
-    return {"path": rel_dir_name}
+        assert self.is_local, "copy.deepcopy and similar methods only support local tensors"
+        return {"data": self.numpy(), "dtype": self.dtype}
 
 
 def tensor_setstate(self, pickle_dict):
-    assert isinstance(current_path, Path)
-    rel_dir_name = pickle_dict["path"]
-    abs_dir_name = current_path / rel_dir_name
-    self.__init__(
-        _LoadSingleVariable(str(abs_dir_name), current_consistent_src_dst_rank)
-    )
+    if current_path is not None:
+        assert isinstance(current_path, Path)
+        rel_dir_name = pickle_dict["path"]
+        abs_dir_name = current_path / rel_dir_name
+        self.__init__(
+            _LoadSingleVariable(str(abs_dir_name), current_consistent_src_dst_rank)
+        )
+    else:
+        return self.__init__(flow.tensor(pickle_dict["data"], dtype=pickle_dict["dtype"]))
 
 
 def legacy_load(
