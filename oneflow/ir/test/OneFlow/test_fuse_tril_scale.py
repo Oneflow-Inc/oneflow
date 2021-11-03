@@ -27,13 +27,12 @@ from collections import OrderedDict
 
 @flow.unittest.skip_unless_1n1d()
 class TestMLIROptimizations(flow.unittest.TestCase):
-    # TODO: don't do the fusion for cpu
-    # def test_cpu(self):
-    #     d = OrderedDict(
-    #         {"shape": [(96, 96), (3, 3)], "in_type": [flow.float32], "device": ["cpu"],}
-    #     )
-    #     for arg in GenArgDict(d):
-    #         self.run_job(**arg)
+    def test_cpu(self):
+        d = OrderedDict(
+            {"shape": [(96, 96), (3, 3)], "in_type": [flow.float32], "device": ["cpu"],}
+        )
+        for arg in GenArgDict(d):
+            self.run_job(**arg)
 
     def test_gpu(self):
         d = OrderedDict(

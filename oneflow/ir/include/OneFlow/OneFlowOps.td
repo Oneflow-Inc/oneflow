@@ -528,6 +528,7 @@ def MulCastPattern : Pat<
 
 // TODO: FusedSelfAttentionPattern
 
+def IsGPU: Constraint<CPred<"$0.getValue().equals(\"gpu\")">, "is GPU device">;
 def FusedScaleTrilPattern : Pat<
   (
     OneFlow_TrilOp
@@ -571,7 +572,10 @@ def FusedScaleTrilPattern : Pat<
     $int_operand,
     $has_float_operand
   ),
-  []
+  [
+    (IsGPU $tril_device_tag),
+    (IsGPU $scale_device_tag)
+  ]
 >;
 
 def FusedScaleTrilPattern2 : Pat<
@@ -617,7 +621,10 @@ def FusedScaleTrilPattern2 : Pat<
     $int_operand,
     $has_float_operand
   ),
-  []
+  [
+    (IsGPU $tril_device_tag),
+    (IsGPU $scale_device_tag)
+  ]
 >;
 
 def FusedBiasAddDropoutPattern : Pat<
