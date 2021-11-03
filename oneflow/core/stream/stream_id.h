@@ -32,14 +32,14 @@ class StreamId {
       : device_id_(device_id), stream_index_(stream_index) {
     CHECK_LE(stream_index, kMaxStreamIndex);
   }
-  StreamId(DeviceId::node_index_t node_index, DeviceType device_type,
+  StreamId(DeviceId::rank_t node_index, DeviceType device_type,
            DeviceId::device_index_t device_index, stream_index_t stream_index)
       : device_id_(node_index, device_type, device_index), stream_index_(stream_index) {
     CHECK_LE(stream_index, kMaxStreamIndex);
   }
 
   const DeviceId& device_id() const { return device_id_; }
-  DeviceId::node_index_t node_index() const { return device_id_.node_index(); }
+  DeviceId::rank_t rank() const { return device_id_.rank(); }
   DeviceType device_type() const { return device_id_.device_type(); }
   DeviceId::device_index_t device_index() const { return device_id_.device_index(); }
   stream_index_t stream_index() const { return stream_index_; }

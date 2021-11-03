@@ -29,49 +29,48 @@ namespace oneflow {
 
 class DeviceId {
  public:
-  using node_index_t = uint32_t;
+  using rank_t = uint32_t;
   using device_type_t = uint32_t;
   using device_index_t = uint32_t;
 
-  constexpr static size_t kNodeIndexBits = 19;
+  constexpr static size_t kRankBits = 19;
   constexpr static size_t kDeviceTypeBits = 5;
   constexpr static size_t kDeviceIndexBits = 7;
-  constexpr static node_index_t kMaxNodeIndex =
-      (node_index_t{1} << kNodeIndexBits) - node_index_t{1};
+  constexpr static rank_t kMaxRank = (rank_t{1} << kRankBits) - rank_t{1};
   constexpr static device_type_t kMaxDeviceTypeVal =
       (device_type_t{1} << kDeviceTypeBits) - device_type_t{1};
   constexpr static device_index_t kMaxDeviceIndex =
       (device_index_t{1} << kDeviceIndexBits) - device_index_t{1};
 
-  DeviceId(node_index_t node_index, DeviceType device_type, device_index_t device_index)
-      : node_index_(node_index),
+  DeviceId(rank_t rank, DeviceType device_type, device_index_t device_index)
+      : rank_(rank),
         device_type_(static_cast<device_type_t>(device_type)),
         device_index_(device_index) {
-    CHECK_LE(node_index_, kMaxNodeIndex);
+    CHECK_LE(rank_, kMaxRank);
     CHECK_LE(device_type_, kMaxDeviceTypeVal);
     CHECK_LE(device_index_, kMaxDeviceIndex);
   }
 
-  node_index_t node_index() const { return node_index_; }
+  rank_t rank() const { return rank_; }
   DeviceType device_type() const { return static_cast<DeviceType>(device_type_); }
   device_index_t device_index() const { return device_index_; }
 
   bool operator==(const DeviceId& rhs) const {
-    return node_index_ == rhs.node_index_ && device_type_ == rhs.device_type_
+    return rank_ == rhs.rank_ && device_type_ == rhs.device_type_
            && device_index_ == rhs.device_index_;
   }
 
   bool operator!=(const DeviceId& rhs) const { return !(*this == rhs); }
 
   size_t hash() const {
-    size_t hash = std::hash<node_index_t>{}(node_index_);
+    size_t hash = std::hash<rank_t>{}(rank_);
     HashCombine(&hash, std::hash<device_type_t>{}(device_type_));
     HashCombine(&hash, std::hash<device_index_t>{}(device_index_));
     return hash;
   }
 
  private:
-  node_index_t node_index_;
+  rank_t rank_;
   device_type_t device_type_;
   device_index_t device_index_;
 };

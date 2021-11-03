@@ -41,7 +41,7 @@ void ThreadMgr::AddPlan(const Plan& plan) {
   for (const TaskProto& task : plan.task()) {
     TaskId task_id = DecodeTaskIdFromInt64(task.task_id());
     StreamId stream_id = task_id.stream_id();
-    if (stream_id.node_index() != this_rank) { continue; }
+    if (stream_id.rank() != this_rank) { continue; }
     int64_t thrd_id = EncodeStreamIdToInt64(stream_id);
     if (threads_.find(thrd_id) != threads_.end()) { continue; }
     Thread* thread = new Thread(stream_id);

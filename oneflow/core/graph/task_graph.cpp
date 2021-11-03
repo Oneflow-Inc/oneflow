@@ -288,8 +288,8 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
           parallel_desc.device_type() == DeviceType::kCPU
               ? 0
               : static_cast<DeviceId::device_index_t>(dev_phy_id);
-      DeviceId device_id{static_cast<DeviceId::node_index_t>(machine_id),
-                         parallel_desc.device_type(), device_index};
+      DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), parallel_desc.device_type(),
+                         device_index};
       StreamId::stream_index_t stream_index{};
       if (op_node->op().op_conf().has_stream_index_hint()) {
         int32_t stream_index_hint = op_node->op().op_conf().stream_index_hint();
@@ -482,7 +482,7 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
       proxy2node[key] = src_node;
       return src_node;
     } else if (dst_mem_zone_id.device_type() == DeviceType::kCPU) {
-      if (src_mem_zone_id.node_index() == dst_mem_zone_id.node_index()) {
+      if (src_mem_zone_id.rank() == dst_mem_zone_id.rank()) {
         // on the same node, not on the same device
         // src must be not on the cpu mem zone, copy d2h first
         CHECK(IsMemcpyDtoHSupported(src_mem_zone_id.device_type()));
@@ -495,16 +495,16 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
         // not on the same node, need CopyCommNet from src to dst
         // build src cpu proxy first
         TaskNode* proxy_on_src_host =
-            GetProxyNode(src_node, lbi, GetNodeCPUMemZoneId(src_mem_zone_id.node_index()));
+            GetProxyNode(src_node, lbi, GetNodeCPUMemZoneId(src_mem_zone_id.rank()));
         CopyCommNetTaskNode* copy_comm_net_task = NewNode<CopyCommNetTaskNode>();
-        copy_comm_net_task->Init(dst_mem_zone_id.node_index(), lbi);
+        copy_comm_net_task->Init(dst_mem_zone_id.rank(), lbi);
         Connect<TaskNode>(proxy_on_src_host, NewTaskEdgeWithLbi(lbi), copy_comm_net_task);
         proxy2node[key] = copy_comm_net_task;
         return copy_comm_net_task;
       }
     } else {
       TaskNode* proxy_on_dst_host =
-          GetProxyNode(src_node, lbi, GetNodeCPUMemZoneId(dst_mem_zone_id.node_index()));
+          GetProxyNode(src_node, lbi, GetNodeCPUMemZoneId(dst_mem_zone_id.rank()));
       CHECK(IsMemcpyHtoDSupported(dst_mem_zone_id.device_type()));
       CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
       copy_task->Init(CopyHdOpConf::H2D, dst_mem_zone_id, lbi);
@@ -524,8 +524,7 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
   DeviceType device_type = dst_parallel_desc.device_type();
   auto device_index =
       (device_type == DeviceType::kCPU ? 0 : static_cast<DeviceId::device_index_t>(dev_id));
-  MemZoneId mem_zone_id{static_cast<MemZoneId::node_index_t>(dst_machine_id), device_type,
-                        device_index};
+  MemZoneId mem_zone_id{static_cast<MemZoneId::rank_t>(dst_machine_id), device_type, device_index};
   return GetProxyNode(src_node, lbi, mem_zone_id);
 }
 

@@ -61,7 +61,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     } else {
       dev_id = CHECK_JUST(pd.DeviceId4ParallelId(parallel_id));
     }
-    DeviceId device_id{static_cast<DeviceId::node_index_t>(machine_id), pd.device_type(),
+    DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), pd.device_type(),
                        static_cast<DeviceId::device_index_t>(dev_id)};
     auto* stream_index_generator =
         Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);

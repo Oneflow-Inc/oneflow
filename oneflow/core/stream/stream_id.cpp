@@ -32,17 +32,16 @@ constexpr size_t kInt64Bits = sizeof(int64_t) * CHAR_BIT;
 
 constexpr size_t kDeviceIndexShift = StreamId::kStreamIndexBits;
 constexpr size_t kDeviceTypeShift = kDeviceIndexShift + DeviceId::kDeviceIndexBits;
-constexpr size_t kNodeIndexShift = kDeviceTypeShift + DeviceId::kDeviceTypeBits;
+constexpr size_t kRankShift = kDeviceTypeShift + DeviceId::kDeviceTypeBits;
 
-static_assert(kNodeIndexShift + DeviceId::kNodeIndexBits < kInt64Bits, "");
+static_assert(kRankShift + DeviceId::kRankBits < kInt64Bits, "");
 
 constexpr int64_t kStreamIndexInt64Mask = (int64_t{1} << StreamId::kStreamIndexBits) - 1;
 constexpr int64_t kDeviceIndexInt64Mask = ((int64_t{1} << DeviceId::kDeviceIndexBits) - 1)
                                           << kDeviceIndexShift;
 constexpr int64_t kDeviceTypeInt64Mask = ((int64_t{1} << DeviceId::kDeviceTypeBits) - 1)
                                          << kDeviceTypeShift;
-constexpr int64_t kNodeIndexInt64Mask = ((int64_t{1} << DeviceId::kNodeIndexBits) - 1)
-                                        << kNodeIndexShift;
+constexpr int64_t kRankInt64Mask = ((int64_t{1} << DeviceId::kRankBits) - 1) << kRankShift;
 
 }  // namespace
 
@@ -50,17 +49,16 @@ int64_t EncodeStreamIdToInt64(const StreamId& stream_id) {
   int64_t id = static_cast<int64_t>(stream_id.stream_index());
   id |= static_cast<int64_t>(stream_id.device_index()) << kDeviceIndexShift;
   id |= static_cast<int64_t>(stream_id.device_type()) << kDeviceTypeShift;
-  id |= static_cast<int64_t>(stream_id.node_index()) << kNodeIndexShift;
+  id |= static_cast<int64_t>(stream_id.rank()) << kRankShift;
   return id;
 }
 
 StreamId DecodeStreamIdFromInt64(int64_t stream_id_val) {
-  int64_t node_index = (stream_id_val & kNodeIndexInt64Mask) >> kNodeIndexShift;
+  int64_t rank = (stream_id_val & kRankInt64Mask) >> kRankShift;
   int64_t device_type = (stream_id_val & kDeviceTypeInt64Mask) >> kDeviceTypeShift;
   int64_t device_index = (stream_id_val & kDeviceIndexInt64Mask) >> kDeviceIndexShift;
   int64_t stream_index = (stream_id_val & kStreamIndexInt64Mask);
-  return StreamId{static_cast<DeviceId::node_index_t>(node_index),
-                  static_cast<DeviceType>(device_type),
+  return StreamId{static_cast<DeviceId::rank_t>(rank), static_cast<DeviceType>(device_type),
                   static_cast<DeviceId::device_index_t>(device_index),
                   static_cast<StreamId::stream_index_t>(stream_index)};
 }

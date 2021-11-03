@@ -35,8 +35,8 @@ constexpr size_t kInt64Bits = sizeof(int64_t) * CHAR_BIT;
 constexpr size_t kStreamIndexShift = TaskId::kTaskIndexBits;
 constexpr size_t kDeviceIndexShift = kStreamIndexShift + StreamId::kStreamIndexBits;
 constexpr size_t kDeviceTypeShift = kDeviceIndexShift + DeviceId::kDeviceIndexBits;
-constexpr size_t kNodeIndexShift = kDeviceTypeShift + DeviceId::kDeviceTypeBits;
-static_assert(kInt64Bits == kNodeIndexShift + DeviceId::kNodeIndexBits, "");
+constexpr size_t kRankShift = kDeviceTypeShift + DeviceId::kDeviceTypeBits;
+static_assert(kInt64Bits == kRankShift + DeviceId::kRankBits, "");
 
 constexpr int64_t kTaskIndexInt64Mask = (int64_t{1} << TaskId::kTaskIndexBits) - 1;
 constexpr int64_t kStreamIndexInt64Mask = ((int64_t{1} << StreamId::kStreamIndexBits) - 1)
@@ -45,8 +45,7 @@ constexpr int64_t kDeviceIndexInt64Mask = ((int64_t{1} << DeviceId::kDeviceIndex
                                           << kDeviceIndexShift;
 constexpr int64_t kDeviceTypeInt64Mask = ((int64_t{1} << DeviceId::kDeviceTypeBits) - 1)
                                          << kDeviceTypeShift;
-constexpr int64_t kNodeIndexInt64Mask = ((int64_t{1} << DeviceId::kNodeIndexBits) - 1)
-                                        << kNodeIndexShift;
+constexpr int64_t kRankInt64Mask = ((int64_t{1} << DeviceId::kRankBits) - 1) << kRankShift;
 
 }  // namespace
 
@@ -55,25 +54,24 @@ int64_t EncodeTaskIdToInt64(const TaskId& task_id) {
   id |= static_cast<int64_t>(task_id.stream_id().stream_index()) << kStreamIndexShift;
   id |= static_cast<int64_t>(task_id.stream_id().device_index()) << kDeviceIndexShift;
   id |= static_cast<int64_t>(task_id.stream_id().device_type()) << kDeviceTypeShift;
-  id |= static_cast<int64_t>(task_id.stream_id().node_index()) << kNodeIndexShift;
+  id |= static_cast<int64_t>(task_id.stream_id().rank()) << kRankShift;
   return id;
 }
 
 TaskId DecodeTaskIdFromInt64(int64_t task_id_val) {
-  int64_t node_index = (task_id_val & kNodeIndexInt64Mask) >> kNodeIndexShift;
+  int64_t rank = (task_id_val & kRankInt64Mask) >> kRankShift;
   int64_t device_type = (task_id_val & kDeviceTypeInt64Mask) >> kDeviceTypeShift;
   int64_t device_index = (task_id_val & kDeviceIndexInt64Mask) >> kDeviceIndexShift;
   int64_t stream_index = (task_id_val & kStreamIndexInt64Mask) >> kStreamIndexShift;
   int64_t task_index = task_id_val & kTaskIndexInt64Mask;
-  StreamId stream_id{static_cast<DeviceId::node_index_t>(node_index),
-                     static_cast<DeviceType>(device_type),
+  StreamId stream_id{static_cast<DeviceId::rank_t>(rank), static_cast<DeviceType>(device_type),
                      static_cast<DeviceId::device_index_t>(device_index),
                      static_cast<StreamId::stream_index_t>(stream_index)};
   return TaskId{stream_id, static_cast<TaskId::task_index_t>(task_index)};
 }
 
 int64_t MachineId4ActorId(int64_t actor_id) {
-  return DecodeTaskIdFromInt64(actor_id).stream_id().node_index();
+  return DecodeTaskIdFromInt64(actor_id).stream_id().rank();
 }
 
 int64_t ThrdId4ActorId(int64_t actor_id) {
