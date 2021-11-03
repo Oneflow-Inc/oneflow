@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_PRIMITIVE_COMMON_UNARY_FUNCTOR_H_
 #define ONEFLOW_CORE_PRIMITIVE_COMMON_UNARY_FUNCTOR_H_
 
-#include "oneflow/core/primitive/common/elementwise_unary_utils.h"
+#include "oneflow/core/primitive/common/elementwise_unary.h"
 
 namespace oneflow {
 
