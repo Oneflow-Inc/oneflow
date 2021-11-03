@@ -39,7 +39,7 @@ class Device final {
   Device(const std::string& type, int64_t device_id);
 
  private:
-  std::shared_ptr<oneflow::Symbol<oneflow::Device>> device_ = nullptr;
+  std::shared_ptr<OFSymbolOfDevice> device_ = nullptr;
 };
 
 }  // namespace oneflow_api
