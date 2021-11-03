@@ -772,32 +772,4 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   return new_opkernel_state;
 }
 
-#ifdef WITH_MLIR
-
-namespace one {
-
-namespace ir {
-
-const user_op::OpKernel* GetKernel(const KernelConf& kernel_conf) {
-  const std::string& op_type_name = kernel_conf.op_attribute().op_conf().user_conf().op_type_name();
-  auto kernel_reg_val = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-      op_type_name, UserKernelRegContext(kernel_conf)));
-  CHECK_NOTNULL(kernel_reg_val);
-  KernelCreateContext create_ctx(kernel_conf);
-  return kernel_reg_val->create_fn(&create_ctx);
-}
-
-user_op::KernelComputeContext* GetKernelComputeContext(DeviceCtx* device_ctx,
-                                                       StreamContext* stream_ctx,
-                                                       const KernelConf& kernel_conf) {
-  auto ctx = new UserKernelComputeContext(device_ctx, stream_ctx, kernel_conf);
-  return static_cast<user_op::KernelComputeContext*>(ctx);
-}
-
-}  // namespace ir
-
-}  // namespace one
-
-#endif  // WITH_MLIR
-
 }  // namespace oneflow

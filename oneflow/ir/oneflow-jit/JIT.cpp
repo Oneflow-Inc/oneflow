@@ -25,7 +25,6 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_def.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "oneflow/core/kernel/user_kernel.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/device/device_context_adapter.h"
 
@@ -83,48 +82,6 @@ class ReturnAllLeaveResultPass : public ReturnAllLeaveResultPassBase<ReturnAllLe
     getFunction()->walk(CollectNotUsedResults);
   }
 };
-
-struct JITKernelLaunchContext {
-  const OpKernel* kernel;
-  KernelComputeContext* compute_ctx;
-  JITKernelLaunchContext(const OpKernel* kernel, KernelComputeContext* compute_ctx)
-      : kernel(kernel), compute_ctx(compute_ctx) {}
-};
-
-StreamContext* GetStreamCxtFromStreamId(const StreamId& stream_id) {
-  StreamContext* stream_ctx =
-      NewObj<int, StreamContext, const StreamId&>(stream_id.device_id().device_type(), stream_id);
-  return stream_ctx;
-}
-
-StreamContext* GetComputeStreamCxt() {
-  static int64_t GPU0 = 0;
-  static DeviceId device_id(GlobalProcessCtx::Rank(), DeviceType::kGPU, GPU0);
-  static StreamContext* stream_ctx = GetStreamCxtFromStreamId(StreamId(device_id, 0));
-  return stream_ctx;
-}
-
-DeviceCtx* GetComputeDeviceCxt() {
-  static auto device_ctx = CHECK_NOTNULL(NewDeviceCtxAdapter(GetComputeStreamCxt()));
-  return device_ctx;
-}
-
-JITKernelLaunchContext* GetKernelLaunchContext(const KernelConf& kernel_conf) {
-  static std::vector<std::shared_ptr<const OpKernel>> managed_kernels;
-  static std::vector<std::shared_ptr<KernelComputeContext>> managed_compute_contexts;
-  static std::vector<std::shared_ptr<JITKernelLaunchContext>> managed_jit_kernel_launch_contexts;
-  managed_kernels.emplace_back(one::ir::GetKernel(kernel_conf));
-  managed_compute_contexts.emplace_back(
-      one::ir::GetKernelComputeContext(GetComputeDeviceCxt(), GetComputeStreamCxt(), kernel_conf));
-  auto jit_kernel_launch_ctx = std::make_shared<JITKernelLaunchContext>(
-      managed_kernels.back().get(), managed_compute_contexts.back().get());
-  managed_jit_kernel_launch_contexts.emplace_back(jit_kernel_launch_ctx);
-  return jit_kernel_launch_ctx.get();
-}
-
-extern "C" void _mlir_ciface_LaunchOneFlowKernel(JITKernelLaunchContext* ctx) {
-  ctx->kernel->Compute(ctx->compute_ctx);
-}
 
 class CreateComputeCtxPass : public CreateComputeCtxPassBase<CreateComputeCtxPass> {
   void runOnFunction() override {
@@ -185,7 +142,6 @@ class CreateComputeCtxPass : public CreateComputeCtxPassBase<CreateComputeCtxPas
         };
         KernelConf kernel_conf;
         oneflow_op->GenKernelConf(GetBlobDesc4BnInOp, &parallel_ctx, &kernel_conf);
-        one::ir::GetKernel(kernel_conf);
       }
       return WalkResult::advance();
     };
