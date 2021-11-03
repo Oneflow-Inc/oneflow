@@ -458,7 +458,6 @@ def MulCastPattern : Pat<
 // TODO: FusedSelfAttentionPattern
 // TODO: FusedScaleTrilPattern
 // TODO: FusedBiasAddDropoutPattern
-// TODO: FusedBiasAddGeluPattern
 
 def FusedBiasAddGeluPattern : Pat<
   (
