@@ -593,6 +593,7 @@ void VirtualMachine::__Init__(const VmDesc& vm_desc) {
 int64_t InstructionMaxRunningSeconds() { return 60 * 5; }
 
 Maybe<void> VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) {
+  OF_PROFILER_RANGE_PUSH("vm:Receive");
   CHECK_OR_RETURN(!pthread_fork::IsForkedSubProcess())
       << "Cannot run OneFlow in forked subprocess. Please add "
          "'multiprocessing.set_start_method(\"spawn\")' in '__main__' if you are using Python's "
@@ -621,6 +622,7 @@ Maybe<void> VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) 
     }));
   }
   mut_pending_msg_list()->MoveFrom(&new_instr_msg_list);
+  OF_PROFILER_RANGE_POP();
   return Maybe<void>::Ok();
 }
 
