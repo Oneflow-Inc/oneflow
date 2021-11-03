@@ -45,9 +45,30 @@ class InstructionType {
   virtual void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
+  void InitInstructionStatusIf(Instruction* instruction) const {
+    InitInstructionStatus(instruction);
+  }
+  void DeleteInstructionStatusIf(Instruction* instruction) const {
+    DeleteInstructionStatus(instruction);
+  }
+
+  virtual const std::string& DebugOpTypeName(Instruction* instruction) const {
+    static thread_local std::string empty("");
+    return empty;
+  }
 
  protected:
   InstructionType() = default;
+
+ private:
+  virtual void InitInstructionStatus(Instruction* instruction) const {
+    instruction->stream_type().InitInstructionStatus(instruction->stream(),
+                                                     instruction->mut_status_buffer());
+  }
+  virtual void DeleteInstructionStatus(Instruction* instruction) const {
+    instruction->stream_type().DeleteInstructionStatus(instruction->stream(),
+                                                       instruction->mut_status_buffer());
+  }
 };
 
 class InstrTypeId;
