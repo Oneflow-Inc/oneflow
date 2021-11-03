@@ -17,7 +17,6 @@ import os
 import oneflow as flow
 import flowvision as vision
 import flowvision.transforms as transforms
-# import oneflow.utils.vision.transforms as transforms
 
 
 def load_data_cifar10(
