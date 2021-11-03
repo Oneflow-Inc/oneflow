@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_ACTOR_ACTOR_BASE_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/job/task.pb.h"
+#include "oneflow/core/actor/actor_context.h"
 
 namespace oneflow {
 
@@ -32,14 +32,14 @@ class ActorBase {
   ActorBase() = default;
   virtual ~ActorBase() = default;
 
-  virtual void Init(const JobDesc* job_desc, const TaskProto&, StreamContext* stream_ctx) = 0;
+  virtual void Init(const JobDesc* job_desc, ActorContext* actor_ctx) = 0;
 
   // 1: success, and actor finish
   // 0: success, and actor not finish
   virtual int ProcessMsg(const ActorMsg& msg) = 0;
 };
 
-std::unique_ptr<ActorBase> NewActor(const TaskProto&, StreamContext* stream_ctx);
+std::unique_ptr<ActorBase> NewActor(ActorContext* actor_ctx);
 
 #define REGISTER_ACTOR(task_type, ActorType) \
   REGISTER_CLASS(int32_t, task_type, ActorBase, ActorType)

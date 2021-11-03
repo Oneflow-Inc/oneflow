@@ -365,6 +365,21 @@ target_compile_definitions(oneflow PRIVATE GOOGLE_LOGGING)
 
 target_link_libraries(oneflow PRIVATE of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs} -Wl,--no-whole-archive -ldl -lrt)
 
+if (WITH_MLIR)
+  set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/b5e470aa2e978a0ee6276b9564f85cf170ae260d.zip" CACHE STRING "" FORCE)
+  use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
+  set(LLVM_MONO_REPO_MD5 "5704d71096294cf21637a8bc29fb0fb8" CACHE STRING "" FORCE)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
+  target_link_libraries(of_ccobj MLIROneFlowTranslation)
+  set(ONEFLOW_MLIR_LIBS -Wl,--no-as-needed MLIROneFlowExtension -Wl,--as-needed)
+  include_directories(${LLVM_INCLUDE_DIRS})
+  include_directories(${MLIR_INCLUDE_DIRS})
+  include_directories(${ONEFLOW_MLIR_SOURCE_INCLUDE_DIRS})
+  include_directories(${ONEFLOW_MLIR_BINARY_INCLUDE_DIRS})
+
+  target_link_libraries(oneflow PRIVATE ${ONEFLOW_MLIR_LIBS})
+endif()
+
 if(BUILD_PYTHON)
 
   # py ext lib
@@ -380,9 +395,9 @@ if(BUILD_PYTHON)
 
 
   if(APPLE)
-    set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj)
+    set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj ${ONEFLOW_MLIR_LIBS})
   elseif(UNIX)
-    set(of_libs -Wl,--whole-archive oneflow of_protoobj of_cfgobj of_functional_obj -Wl,--no-whole-archive -ldl -lrt)
+    set(of_libs -Wl,--whole-archive oneflow of_protoobj of_cfgobj of_functional_obj ${ONEFLOW_MLIR_LIBS} -Wl,--no-whole-archive -ldl -lrt)
   elseif(WIN32)
     set(of_libs oneflow of_protoobj of_cfgobj of_functional_obj)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:oneflow")
@@ -412,6 +427,9 @@ if(BUILD_PYTHON)
   endif()
   if (WITH_XLA)
     list(APPEND gen_pip_args --xla)
+  endif()
+  if (WITH_MLIR)
+    list(APPEND gen_pip_args --mlir)
   endif()
 
   add_custom_target(of_pyscript_copy ALL

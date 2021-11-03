@@ -16,6 +16,8 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/operators.h>
+#include "oneflow/api/python/framework/throw.h"
+#include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/symbol.h"
@@ -197,7 +199,12 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                                                                    hierarchy);
       }))
       .def_property_readonly("symbol_id",
-                             [](const ParallelDesc& x) { return x.symbol_id().GetOrThrow(); })
+                             [](const ParallelDesc& x) {
+                               if (!x.symbol_id().has_value()) {
+                                 THROW(RuntimeError) << "symbol_id not initialized";
+                               }
+                               return CHECK_JUST(x.symbol_id());
+                             })
       .def_property_readonly("parallel_conf", &ParallelDesc::cfg_parallel_conf)
       .def_property_readonly("parallel_num", &ParallelDesc::parallel_num)
       .def_property_readonly("device_tag", &ParallelDesc::device_tag)
