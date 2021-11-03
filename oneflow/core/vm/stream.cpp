@@ -47,20 +47,21 @@ const StreamTypeId& Stream::stream_type_id() const {
 
 intrusive::shared_ptr<Instruction> Stream::NewInstruction(
     InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+  intrusive::shared_ptr<Instruction> instruction;
   if (free_instruction_list().empty()) {
-    return intrusive::make_shared<Instruction>(instr_msg, this, parallel_desc);
+    instruction = intrusive::make_shared<Instruction>();
+  } else {
+    instruction = mut_free_instruction_list()->PopFront();
   }
-  intrusive::shared_ptr<Instruction> instruction = mut_free_instruction_list()->PopFront();
-  instruction->__Init__(instr_msg, this, parallel_desc);
+  instruction->Init(instr_msg, this, parallel_desc);
   return instruction;
 }
 
 void Stream::MoveToFreeList(intrusive::shared_ptr<Instruction>&& instruction) {
   CHECK_EQ(instruction->ref_cnt(), 1);
-  instruction->clear_instr_msg();
   auto* instruction_ptr = instruction.Mutable();
   mut_free_instruction_list()->EmplaceBack(std::move(instruction));
-  instruction_ptr->__Delete__();
+  instruction_ptr->Delete();
 }
 
 void Stream::MoveFromZombieListToFreeList() {
