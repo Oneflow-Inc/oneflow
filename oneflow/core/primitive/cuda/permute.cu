@@ -112,7 +112,7 @@ template<size_t num_dims, size_t tile_size, typename IndexType>
 __global__ void BatchTransposeMovement2Kernel(const void* src_ptr, void* dst_ptr, IndexType rows,
                                               IndexType cols, IndexType num_tile_rows,
                                               IndexType num_tile_cols, int32_t block_nums) {
-  static_assert(tile_size % 2 == 0);
+  static_assert(tile_size % 2 == 0, "");
   using T_MOV2 = typename std::aligned_storage<2, 2>::type;
   using T_MOV4 = typename std::aligned_storage<4, 4>::type;
 
