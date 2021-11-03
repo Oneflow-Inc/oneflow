@@ -56,9 +56,7 @@ class RecordEventInstructionType : public vm::InstructionType {
   RecordEventInstructionType() = default;
   ~RecordEventInstructionType() override = default;
 
-  void Compute(vm::Instruction* instruction) const override {
-    instruction->set_has_event_record(true);
-  }
+  void Compute(vm::Instruction* instruction) const override {}
 
   void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
 };

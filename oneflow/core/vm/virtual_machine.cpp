@@ -549,7 +549,9 @@ void VirtualMachine::MoveToReadyOrWaiting(NewInstructionList* new_instruction_li
 }
 
 void VirtualMachine::DispatchInstruction(Instruction* instruction) {
-  OF_PROFILER_RANGE_PUSH("Dispatch-" + instruction->instr_msg().instr_type_name());
+  OF_PROFILER_RANGE_PUSH(
+      "D:" + instruction->instr_msg().instr_type_name() + ":"
+      + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction));
   mut_vm_stat_running_instruction_list()->PushBack(instruction);
   auto* stream = instruction->mut_stream();
   stream->mut_running_instruction_list()->PushBack(instruction);
@@ -591,6 +593,7 @@ void VirtualMachine::__Init__(const VmDesc& vm_desc) {
 int64_t InstructionMaxRunningSeconds() { return 60 * 5; }
 
 Maybe<void> VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) {
+  OF_PROFILER_RANGE_PUSH("vm:Receive");
   CHECK_OR_RETURN(!pthread_fork::IsForkedSubProcess())
       << "Cannot run OneFlow in forked subprocess. Please add "
          "'multiprocessing.set_start_method(\"spawn\")' in '__main__' if you are using Python's "
@@ -619,6 +622,7 @@ Maybe<void> VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) 
     }));
   }
   mut_pending_msg_list()->MoveFrom(&new_instr_msg_list);
+  OF_PROFILER_RANGE_POP();
   return Maybe<void>::Ok();
 }
 
