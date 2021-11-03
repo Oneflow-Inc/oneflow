@@ -35,7 +35,7 @@ def get_rng_state():
     """
     returns the state of the default random number generator
     """
-    return default_generator.get_state()
+    return oneflow.default_generator.get_state()
 
 
 def set_rng_state(state):
@@ -43,7 +43,7 @@ def set_rng_state(state):
     sets the state of the default random number generator to the given state
     """
 
-    return default_generator.set_state(state)
+    return oneflow.default_generator.set_state(state)
 
 
 def _setstate(self, state_dict):
