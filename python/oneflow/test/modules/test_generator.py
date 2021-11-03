@@ -124,11 +124,15 @@ class TestDefaultGenerator(flow.unittest.TestCase):
 
         if not os.getenv("ONEFLOW_TEST_CPU_ONLY"):
             new_cuda_state = cuda_gen.get_state()
-            test_case.assertTrue(not np.allclose(new_cuda_state.numpy(), cuda_state.numpy()))
+            test_case.assertTrue(
+                not np.allclose(new_cuda_state.numpy(), cuda_state.numpy())
+            )
 
             cuda_gen.set_state(cuda_state)
             new_cuda_state = cuda_gen.get_state()
-            test_case.assertTrue(np.allclose(new_cuda_state.numpy(), cuda_state.numpy()))
+            test_case.assertTrue(
+                np.allclose(new_cuda_state.numpy(), cuda_state.numpy())
+            )
 
     def test_get_rng_state(test_case):
         cpu_gen = flow.default_generator
