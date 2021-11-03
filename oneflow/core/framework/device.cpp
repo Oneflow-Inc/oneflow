@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/common/static_global.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -36,6 +37,10 @@ inline size_t HashDevice(const std::string& type, int64_t device_id) {
   return std::hash<std::string>()(type) ^ std::hash<int64_t>()(device_id);
 }
 
+std::shared_ptr<int> RawGetFlowCtrlSeqNo(const Device& device) { return std::make_shared<int>(0); }
+
+static constexpr auto* GetFlowCtrlSeqNo = DECORATE(&RawGetFlowCtrlSeqNo, StaticGlobalCopiable);
+
 }  // namespace
 
 Device::Device(const std::string& type, int64_t device_id)
@@ -45,7 +50,7 @@ Device::Device(const std::string& type, int64_t device_id)
       transport_local_dep_object_(),
       schedule_local_dep_object_(nullptr),
       flow_ctrl_local_dep_object_(nullptr),
-      flow_ctr_seq_no_(0) {}
+      flow_ctr_seq_no_(nullptr) {}
 
 Maybe<void> Device::Init() {
   if (type_ == "auto") { return Maybe<void>::Ok(); }
@@ -60,6 +65,8 @@ Maybe<void> Device::Init() {
   schedule_local_dep_object_ =
       JUST(GetLocalDepObject4Device(Device(schedule_device_type, device_id_)));
   flow_ctrl_local_dep_object_ = *JUST(LocalDepObject::New(*this));
+  // Share flow control window between streams in same device.
+  flow_ctr_seq_no_ = GetFlowCtrlSeqNo(Device(JUST(of_type()), device_id_)).get();
   return Maybe<void>::Ok();
 }
 

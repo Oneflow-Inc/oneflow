@@ -783,11 +783,18 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     input->set_last_used_device(op_device);
   }
   {
-    // we must assure kFlowCtrlWindowSize * 2 < 1024 where 1024 is cuda flow ctrl windows size.
-    static constexpr int kFlowCtrlWindowSize = 500;
-    if ((op_device->auto_flow_ctr_seq_no() % kFlowCtrlWindowSize) == 0) {
-      auto* dep_object = op_device->mut_schedule_local_dep_object();
-      JUST(SoftSyncStream(dep_object, "mut", op_device, /*need_flow_ctrl=*/true));
+    op_device->increase_flow_ctr_seq_no();
+    static constexpr int kFlowCtrlWindowSize = 200;
+    // Keep kFlowCtrlWindowSize * 5 < 1024 where 5 is supposed average number of cuda kernels
+    // launched in one instruction and 1024 is cuda flow control windows size.
+    if (op_device->flow_ctr_seq_no() > kFlowCtrlWindowSize) {
+      if (JUST(op_device->need_soft_sync_stream())) {
+        op_device->clear_flow_ctr_seq_no();
+        auto* dep_object = op_device->mut_schedule_local_dep_object();
+        JUST(SoftSyncStream(dep_object, "mut", op_device, /*need_flow_ctrl=*/true));
+      } else {
+        // Do nothing.
+      }
     }
   }
   intrusive::shared_ptr<vm::InstructionMsg> instruction =
@@ -1055,7 +1062,6 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(LocalDepObject* compute_local_de
             compute_local_dep_object, modifier, opt_mut_local_dep_object);
     *instruction->mut_parallel_desc() = parallel_desc;
     instruction_list_->EmplaceBack(std::move(instruction));
-    (void)op_device->auto_flow_ctr_seq_no();
   }
   {
     intrusive::shared_ptr<vm::InstructionMsg> instruction =

@@ -80,7 +80,9 @@ class Device final {
 
   Maybe<bool> need_soft_sync_stream() const;
 
-  int auto_flow_ctr_seq_no() const { return ++flow_ctr_seq_no_; }
+  int flow_ctr_seq_no() const { return *flow_ctr_seq_no_; }
+  void increase_flow_ctr_seq_no() const { ++*flow_ctr_seq_no_; }
+  void clear_flow_ctr_seq_no() const { *flow_ctr_seq_no_ = 0; }
 
  private:
   Device(const std::string& type, int64_t device_id);
@@ -95,7 +97,7 @@ class Device final {
   Optional<LocalDepObject*> transport_local_dep_object_;
   LocalDepObject* schedule_local_dep_object_;
   mutable intrusive::shared_ptr<LocalDepObject> flow_ctrl_local_dep_object_;
-  mutable int flow_ctr_seq_no_;
+  int* flow_ctr_seq_no_;
 };
 
 Maybe<const std::string&> GetLocalCallInstructionName(const std::string& device_tag);
