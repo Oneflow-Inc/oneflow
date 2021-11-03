@@ -231,7 +231,7 @@ def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", []> {
 }
 
 def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", []>  {
-  let summary = "OneFlow Bias Add operation";
+  let summary = "";
   let input = (ins
     AnyType:$a,
     AnyType:$b
@@ -244,7 +244,7 @@ def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", []>  {
 }
 
 def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", []>  {
-  let summary = "OneFlow Bias Add operation";
+  let summary = "";
   let input = (ins
     AnyType:$in,
     AnyType:$mask
@@ -253,6 +253,38 @@ def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", []>  {
   let attrs = (ins
     F32Attr:$scale
   );
+}
+
+def OneFlow_TrilOp : OneFlow_BaseOp<"tril", []>  {
+  let summary = "";
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    SI64Attr:$diagonal,
+    F64Attr:$floating_fill_value,
+    SI64Attr:$integer_fill_value,
+    BoolAttr:$is_floating_fill_value
+  );
+}
+
+def OneFlow_FusedScaleTrilOp : OneFlow_BaseOp<"fused_scale_tril", []>  {
+  let summary = "";
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    SI64Attr:$diagonal,
+    F64Attr:$floating_fill_value,
+    SI64Attr:$integer_fill_value,
+    BoolAttr:$is_floating_fill_value,
+    F64Attr:$floating_scale_value,
+    SI64Attr:$integer_scale_value,
+    BoolAttr:$is_floating_scale_value
+  );
+  let hasCanonicalizer = 1;
 }
 
 def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale", []>  {
@@ -278,7 +310,7 @@ def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", []>  {
   let output = (outs AnyType:$out);
   let attrs = (ins
     F32Attr:$rate,
-    I64Attr:$seed
+    SI64Attr:$seed
   );
 }
 
@@ -495,7 +527,52 @@ def MulCastPattern : Pat<
 >;
 
 // TODO: FusedSelfAttentionPattern
-// TODO: FusedScaleTrilPattern
+
+def FusedScaleTrilPattern : Pat<
+  (
+    OneFlow_TrilOp
+    (
+      OneFlow_ScalarMulOp
+        $x,
+        $scale_op_name,
+        $scale_trainable,
+        $scale_device_tag,
+        $scale_device_name,
+        $scale_scope_symbol_id,
+        $scale_hierarchy,
+        $has_int_operand,
+        $has_float_operand,
+        $int_operand,
+        $float_operand
+    ),
+    $tril_op_name,
+    $tril_trainable,
+    $tril_device_tag,
+    $tril_device_name,
+    $tril_scope_symbol_id,
+    $tril_hierarchy,
+    $diagonal,
+    $floating_fill_value,
+    $integer_fill_value,
+    $is_floating_fill_value
+  ),
+  (OneFlow_FusedScaleTrilOp $x,
+    $tril_op_name,
+    $tril_trainable,
+    $tril_device_tag,
+    $tril_device_name,
+    $tril_scope_symbol_id,
+    $tril_hierarchy,
+    $diagonal,
+    $floating_fill_value,
+    $integer_fill_value,
+    $is_floating_fill_value,
+    $float_operand,
+    $int_operand,
+    $has_float_operand
+  ),
+  []
+>;
 
 def FusedBiasAddDropoutPattern : Pat<
   (
