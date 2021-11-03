@@ -1,7 +1,22 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import oneflow as flow
 import oneflow.nn.init as init
 from  oneflow.nn import LayerNorm, Parameter
-import oneflow.nn.functional as F 
+import oneflow.nn.functional as F
 
 
 import math
@@ -229,12 +244,12 @@ class ParallelSelfAttention(flow.nn.Module):
         #False
         if self.relative_encoding:
             relative_layer = self.relative(position_embeddings)
-            relative_layer = self._transpose_for_scores(relative_layer) 
+            relative_layer = self._transpose_for_scores(relative_layer)
             rw_head_q = query_layer + r_w_bias.unsqueeze(1)
             ac_score = flow.matmul(rw_head_q, key_layer.transpose(-1, -2))
             rr_head_q = query_layer + r_r_bias.unsqueeze(1)
             bd_score = flow.matmul(rr_head_q, relative_layer.transpose(-1, -2))
-            bd_score = self._rel_shift(bd_score)  
+            bd_score = self._rel_shift(bd_score)
 
             attention_scores = ac_score + bd_score
             attention_scores = attention_scores / math.sqrt(self.hidden_size_per_attention_head)
@@ -299,7 +314,7 @@ if __name__ == "__main__":
                                 output_layer_init_method=output_layer_init_method,
                                 relative_encoding=relative_encoding,
                                 performer=performer,
-                                attention_scale=attention_scale) 
+                                attention_scale=attention_scale)
                                 for _ in range(12)
                             ]
                         )
@@ -308,7 +323,7 @@ if __name__ == "__main__":
             for layer in self.atten:
                 x = layer(x, ltor_mask, position_embeddings, r_w_bias, r_r_bias, mem)
             return x
-        
+
     layernorm_output = flow.randn(4, 332, 512)
     ltor_mask = flow.randn(4, 1, 332, 332)
     position_embeddings = None
