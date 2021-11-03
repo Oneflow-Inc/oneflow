@@ -133,8 +133,10 @@ OneflowVM::~OneflowVM() {
 }
 
 Maybe<void> OneflowVM::Receive(vm::InstructionMsgList* instr_list) {
-  JUST(vm_->Receive(instr_list));
-  notifier_.Notify();
+  if (JUST(vm_->Receive(instr_list))) {
+    // old pending_instruction_list is empty.
+    notifier_.Notify();
+  }
   return Maybe<void>::Ok();
 }
 

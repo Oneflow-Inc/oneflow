@@ -600,7 +600,8 @@ void VirtualMachine::__Init__(const VmDesc& vm_desc) {
 
 int64_t InstructionMaxRunningSeconds() { return 60 * 5; }
 
-Maybe<void> VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) {
+// Returns true if old pending_instruction_list is empty
+Maybe<bool> VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) {
   OF_PROFILER_RANGE_PUSH("vm:Receive");
   CHECK_OR_RETURN(!pthread_fork::IsForkedSubProcess())
       << "Cannot run OneFlow in forked subprocess. Please add "
@@ -629,12 +630,12 @@ Maybe<void> VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) 
       return Maybe<void>::Ok();
     }));
   }
-  mut_pending_msg_list()->MoveFrom(&new_instr_msg_list);
+  bool old_list_empty = mut_pending_msg_list()->MoveFrom(&new_instr_msg_list);
   OF_PROFILER_RANGE_POP();
-  return Maybe<void>::Ok();
+  return old_list_empty;
 }
 
-Maybe<void> VirtualMachine::Receive(intrusive::shared_ptr<InstructionMsg>&& compute_instr_msg) {
+Maybe<bool> VirtualMachine::Receive(intrusive::shared_ptr<InstructionMsg>&& compute_instr_msg) {
   InstructionMsgList instr_msg_list;
   instr_msg_list.EmplaceBack(std::move(compute_instr_msg));
   return Receive(&instr_msg_list);

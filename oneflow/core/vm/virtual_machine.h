@@ -96,8 +96,10 @@ class VirtualMachine final : public intrusive::Base {
 
   // methods
   void __Init__(const VmDesc& vm_desc);
-  Maybe<void> Receive(InstructionMsgList* instr_list);
-  Maybe<void> Receive(intrusive::shared_ptr<InstructionMsg>&& instruction_msg);
+  // Returns true if old pending_instruction_list is empty
+  Maybe<bool> Receive(InstructionMsgList* instr_list);
+  // Returns true if old pending_instruction_list is empty
+  Maybe<bool> Receive(intrusive::shared_ptr<InstructionMsg>&& instruction_msg);
   void Schedule();
   bool ThreadUnsafeEmpty() const;
   bool Empty() const;
