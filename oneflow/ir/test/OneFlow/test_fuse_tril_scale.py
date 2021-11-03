@@ -53,7 +53,7 @@ class TestMLIROptimizations(flow.unittest.TestCase):
         ) -> oft.Numpy:
             with flow.scope.placement(device, "0:0-0"):
                 scale = 3.0
-                loss = flow.math.tril(x * 3)
+                loss = flow.math.tril(x * scale)
                 return loss
 
         np_in_type = dtype_util.convert_oneflow_dtype_to_numpy_dtype(in_type)
