@@ -13,11 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-#ifndef ONEFLOW_API_H_
-#define ONEFLOW_API_H_
-
 #include "init.h"
-#include "device.h"
+#include "oneflow/core/control/ctrl_bootstrap.h"
+#include "oneflow/core/common/global.h"
 
-#endif  // ONELFOW_API_H_
+using OfGlobalProcessCtx = oneflow::Global<oneflow::ProcessCtx>;
+
+namespace oneflow_api {
+
+void init() { OfGlobalProcessCtx ::New(); }
+
+}  // namespace oneflow_api
