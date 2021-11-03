@@ -39,16 +39,17 @@ class TestMLIROptimizations(flow.unittest.TestCase):
             self.run_fuse_cast_scale_mlir(**arg)
 
     def test_gpu(self):
-        d = OrderedDict(
-            {
-                "shape": [(96, 96), (3, 3)],
-                "in_type": [flow.int64],
-                "out_type": [flow.float32],
-                "device": ["gpu"],
-            }
-        )
-        for arg in GenArgDict(d):
-            self.run_fuse_cast_scale_mlir(**arg)
+        if flow.sysconfig.with_mlir_cuda_codegen():
+            d = OrderedDict(
+                {
+                    "shape": [(96, 96), (3, 3)],
+                    "in_type": [flow.int64],
+                    "out_type": [flow.float32],
+                    "device": ["gpu"],
+                }
+            )
+            for arg in GenArgDict(d):
+                self.run_fuse_cast_scale_mlir(**arg)
 
     def run_fuse_cast_scale_mlir(
         test_case, device=None, in_type=None, out_type=None, shape=None

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import oneflow
 from oneflow.framework.sysconfig import (
     cmake_build_type,
     get_compile_flags,
@@ -26,3 +27,11 @@ from oneflow.framework.sysconfig import (
     with_xla,
     with_rdma,
 )
+
+
+def with_mlir():
+    return oneflow._oneflow_internal.flags.with_mlir()
+
+
+def with_mlir_cuda_codegen():
+    return oneflow._oneflow_internal.flags.with_mlir_cuda_codegen()

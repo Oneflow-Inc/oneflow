@@ -27,12 +27,6 @@ FetchContent_Declare(
 )
 FetchContent_GetProperties(llvm_monorepo)
 
-
-option(WITH_MLIR_CUDA_CODEGEN "" OFF)
-if (WITH_MLIR_CUDA_CODEGEN)
-  add_definitions(-DWITH_MLIR_CUDA_CODEGEN)
-endif()
-
 if(NOT llvm_monorepo_POPULATED)
   FetchContent_Populate(llvm_monorepo
     URL ${LLVM_MONO_REPO_URL}
