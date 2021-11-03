@@ -118,7 +118,6 @@ void ClearAllSymbolAndIdCache() {
 
 bool CommNetIBEnabled() {
   bool user_enabled = ParseBooleanFromEnv("ONEFLOW_COMM_NET_IB_ENABLE", false);
-  std::cout<<"user_enabled:"<<user_enabled << std::endl;
   if (user_enabled) {
     return true;
   } else {
