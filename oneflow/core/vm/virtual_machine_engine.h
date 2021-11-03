@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_VIRTUAL_MACHINE_H_
-#define ONEFLOW_CORE_VM_VIRTUAL_MACHINE_H_
+#ifndef ONEFLOW_CORE_VM_VIRTUAL_MACHINE_ENGINE_H_
+#define ONEFLOW_CORE_VM_VIRTUAL_MACHINE_ENGINE_H_
 
 #include <mutex>
 #include "oneflow/core/common/maybe.h"
@@ -34,7 +34,7 @@ namespace oneflow {
 namespace vm {
 
 struct VmDesc;
-class VirtualMachine final : public intrusive::Base {
+class VirtualMachineEngine final : public intrusive::Base {
  public:
   // types
   using ActiveStreamList = intrusive::List<INTRUSIVE_FIELD(Stream, active_stream_hook_)>;
@@ -174,7 +174,7 @@ class VirtualMachine final : public intrusive::Base {
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  VirtualMachine()
+  VirtualMachineEngine()
       : intrusive_ref_(),
         vm_resource_desc_(),
         machine_id_range_(),
@@ -211,4 +211,4 @@ class VirtualMachine final : public intrusive::Base {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_VIRTUAL_MACHINE_H_
+#endif  // ONEFLOW_CORE_VM_VIRTUAL_MACHINE_ENGINE_H_

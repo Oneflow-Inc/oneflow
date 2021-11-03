@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/foreign_lock_helper.h"
-#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/infer_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
@@ -51,7 +51,7 @@ bool HasImmediateOperandsOnly(const InstructionMsg& instr_msg) {
 
 }  // namespace
 
-void VirtualMachine::ReleaseInstruction(Instruction* instruction) {
+void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
   auto* access_list = instruction->mut_access_list();
   auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
   INTRUSIVE_FOR_EACH(access, access_list) {
@@ -78,7 +78,7 @@ void VirtualMachine::ReleaseInstruction(Instruction* instruction) {
 }
 
 // Handle pending instructions, schedule them to waiting list or ready list.
-void VirtualMachine::MovePendingToReadyOrWaiting() {
+void VirtualMachineEngine::MovePendingToReadyOrWaiting() {
   OF_PROFILER_RANGE_PUSH("MovePendingToReadyOrWaiting");
   InstructionMsgList tmp_pending_msg_list;
   // MoveTo is under a lock.
@@ -93,7 +93,7 @@ void VirtualMachine::MovePendingToReadyOrWaiting() {
 }
 
 // Collect ready instructions onto ready_instruction_list_
-void VirtualMachine::ReleaseFinishedInstructions() {
+void VirtualMachineEngine::ReleaseFinishedInstructions() {
   INTRUSIVE_FOR_EACH_PTR(stream, mut_active_stream_list()) {
     while (true) {
       auto* instruction_ptr = stream->mut_running_instruction_list()->Begin();
@@ -108,7 +108,7 @@ void VirtualMachine::ReleaseFinishedInstructions() {
   }
 }
 
-void VirtualMachine::FilterAndRunInstructionsInAdvance(InstructionMsgList* instr_msg_list) {
+void VirtualMachineEngine::FilterAndRunInstructionsInAdvance(InstructionMsgList* instr_msg_list) {
   INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_msg_list) {
     const auto& instr_type_id = instr_msg->instr_type_id();
     if (instr_type_id.instruction_type().ResettingIdToObjectMap()) {
@@ -124,7 +124,7 @@ void VirtualMachine::FilterAndRunInstructionsInAdvance(InstructionMsgList* instr
   }
 }
 
-int64_t VirtualMachine::this_machine_id() const {
+int64_t VirtualMachineEngine::this_machine_id() const {
   CHECK_EQ(machine_id_range().size(), 1);
   return machine_id_range().begin();
 }
@@ -141,8 +141,8 @@ bool IsStreamInParallelDesc(const ParallelDesc* parallel_desc, const Stream& str
 
 }  // namespace
 
-void VirtualMachine::MakeInstructions(InstructionMsgList* instr_msg_list,
-                                      /*out*/ InstructionList* new_instruction_list) {
+void VirtualMachineEngine::MakeInstructions(InstructionMsgList* instr_msg_list,
+                                            /*out*/ InstructionList* new_instruction_list) {
   INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_msg_list) {
     const StreamTypeId& stream_type_id = instr_msg->instr_type_id().stream_type_id();
     auto* stream_rt_desc = mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
@@ -168,7 +168,7 @@ void VirtualMachine::MakeInstructions(InstructionMsgList* instr_msg_list,
   }
 }
 
-Maybe<const ParallelDesc> VirtualMachine::GetInstructionParallelDesc(
+Maybe<const ParallelDesc> VirtualMachineEngine::GetInstructionParallelDesc(
     const InstructionMsg& instr_msg) {
   static const std::shared_ptr<const ParallelDesc> empty_ptr;
   if (instr_msg.parallel_desc()) { return instr_msg.parallel_desc(); }
@@ -183,22 +183,22 @@ Maybe<const ParallelDesc> VirtualMachine::GetInstructionParallelDesc(
   return parallel_desc;
 }
 
-MirroredObject* VirtualMachine::MutMirroredObject(int64_t logical_object_id,
-                                                  int64_t global_device_id) {
+MirroredObject* VirtualMachineEngine::MutMirroredObject(int64_t logical_object_id,
+                                                        int64_t global_device_id) {
   auto* logical_object = mut_id2logical_object()->FindPtr(logical_object_id);
   if (logical_object == nullptr) { return nullptr; }
   return logical_object->mut_global_device_id2mirrored_object()->FindPtr(global_device_id);
 }
 
-const MirroredObject* VirtualMachine::GetMirroredObject(int64_t logical_object_id,
-                                                        int64_t global_device_id) {
+const MirroredObject* VirtualMachineEngine::GetMirroredObject(int64_t logical_object_id,
+                                                              int64_t global_device_id) {
   return MutMirroredObject(logical_object_id, global_device_id);
 }
 
 template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
-void VirtualMachine::ForEachMirroredObject(Id2LogicalObject* id2logical_object,
-                                           const Operand& operand, int64_t global_device_id,
-                                           const DoEachT& DoEach) {
+void VirtualMachineEngine::ForEachMirroredObject(Id2LogicalObject* id2logical_object,
+                                                 const Operand& operand, int64_t global_device_id,
+                                                 const DoEachT& DoEach) {
   int64_t logical_object_id = operand.logical_object_id();
   logical_object_id = TransformLogicalObjectId(logical_object_id);
   auto* logical_object = id2logical_object->FindPtr(logical_object_id);
@@ -213,7 +213,7 @@ void VirtualMachine::ForEachMirroredObject(Id2LogicalObject* id2logical_object,
 }
 
 template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
-void VirtualMachine::ForEachConstMirroredObject(
+void VirtualMachineEngine::ForEachConstMirroredObject(
     InterpretType interpret_type, Id2LogicalObject* id2logical_object,
     const ModifiedOperand<kConstModifier, mem_zone_modifier>& const_operand,
     int64_t global_device_id, const DoEachT& DoEach) {
@@ -254,7 +254,7 @@ void ForEachConstMirroredObject4ConstPhyInstrOperand(InterpretType interpret_typ
 }  // namespace
 
 template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
-void VirtualMachine::ForEachConstMirroredObject(
+void VirtualMachineEngine::ForEachConstMirroredObject(
     const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
     const ModifiedOperand<kDataMutableModifier, mem_zone_modifier>& mut_operand,
     int64_t global_device_id, const DoEachT& DoEach) {
@@ -288,7 +288,7 @@ void ForEachConstMirroredObject4MutPhyInstrOperand(InterpretType interpret_type,
 }  // namespace
 
 template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
-void VirtualMachine::ForEachMutMirroredObject(
+void VirtualMachineEngine::ForEachMutMirroredObject(
     const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
     const ModifiedOperand<kDataMutableModifier, mem_zone_modifier>& mut_operand,
     int64_t global_device_id, const DoEachT& DoEach) {
@@ -324,7 +324,7 @@ void ForEachMutMirroredObject4MutPhyInstrOperand(InterpretType interpret_type,
 }  // namespace
 
 template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
-void VirtualMachine::ForEachMutMirroredObject(
+void VirtualMachineEngine::ForEachMutMirroredObject(
     const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
     const ModifiedOperand<kTypeAndDataMutableModifier, mem_zone_modifier>& mut2_operand,
     int64_t global_device_id, const DoEachT& DoEach) {
@@ -365,7 +365,7 @@ void ForEachMutMirroredObject4Mut2PhyInstrOperand(InterpretType interpret_type,
 }  // namespace
 
 template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
-void VirtualMachine::ForEachMutMirroredObject(
+void VirtualMachineEngine::ForEachMutMirroredObject(
     const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
     const ModifiedOperand<kDeleteModifier, mem_zone_modifier>& mut_operand,
     int64_t global_device_id, const DoEachT& DoEach) {
@@ -380,9 +380,9 @@ void VirtualMachine::ForEachMutMirroredObject(
   }
 }
 
-RwMutexedObjectAccess* VirtualMachine::ConsumeMirroredObject(OperandAccessType access_type,
-                                                             MirroredObject* mirrored_object,
-                                                             Instruction* instruction) {
+RwMutexedObjectAccess* VirtualMachineEngine::ConsumeMirroredObject(OperandAccessType access_type,
+                                                                   MirroredObject* mirrored_object,
+                                                                   Instruction* instruction) {
   auto rw_mutexed_object_access =
       intrusive::make_shared<RwMutexedObjectAccess>(instruction, mirrored_object, access_type);
   instruction->mut_mirrored_object_id2access()->Insert(rw_mutexed_object_access.Mutable());
@@ -392,16 +392,16 @@ RwMutexedObjectAccess* VirtualMachine::ConsumeMirroredObject(OperandAccessType a
   return rw_mutexed_object_access.Mutable();
 }
 
-void VirtualMachine::ConnectInstruction(Instruction* src_instruction,
-                                        Instruction* dst_instruction) {
+void VirtualMachineEngine::ConnectInstruction(Instruction* src_instruction,
+                                              Instruction* dst_instruction) {
   CHECK_NE(src_instruction, dst_instruction);
   auto edge = intrusive::make_shared<InstructionEdge>(src_instruction, dst_instruction);
   src_instruction->mut_out_edges()->PushBack(edge.Mutable());
   dst_instruction->mut_in_edges()->PushBack(edge.Mutable());
 }
 
-void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
-                                            InstructionList* new_instruction_list) {
+void VirtualMachineEngine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
+                                                  InstructionList* new_instruction_list) {
   INTRUSIVE_FOR_EACH_PTR(instruction, new_instruction_list) {
     int64_t global_device_id = instruction->stream().global_device_id();
     const InterpretType interpret_type = instruction->stream().stream_type_id().interpret_type();
@@ -516,7 +516,7 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
   }
 }
 
-bool VirtualMachine::Dispatchable(Instruction* instruction) const {
+bool VirtualMachineEngine::Dispatchable(Instruction* instruction) const {
   if (!instruction->dispatched_instruction_hook().empty()) { return false; }
   const auto* stream = &instruction->stream();
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_in_edges()) {
@@ -530,7 +530,7 @@ bool VirtualMachine::Dispatchable(Instruction* instruction) const {
 }
 
 // Dispatch ready instructions and put prescheduled instructions onto ready_instruction_list_.
-void VirtualMachine::DispatchAndPrescheduleInstructions() {
+void VirtualMachineEngine::DispatchAndPrescheduleInstructions() {
   OF_PROFILER_RANGE_PUSH("DispatchAndPrescheduleInstructions");
   do {
     ReadyInstructionList tmp_ready_instruction_list;
@@ -547,7 +547,7 @@ void VirtualMachine::DispatchAndPrescheduleInstructions() {
   OF_PROFILER_RANGE_POP();
 }
 
-void VirtualMachine::MoveToReadyOrWaiting(InstructionList* new_instruction_list) {
+void VirtualMachineEngine::MoveToReadyOrWaiting(InstructionList* new_instruction_list) {
   INTRUSIVE_FOR_EACH_PTR(instruction, new_instruction_list) {
     if (Dispatchable(instruction)) {
       mut_ready_instruction_list()->PushBack(instruction);
@@ -557,7 +557,7 @@ void VirtualMachine::MoveToReadyOrWaiting(InstructionList* new_instruction_list)
   new_instruction_list->MoveTo(mut_waiting_instruction_list());
 }
 
-void VirtualMachine::DispatchInstruction(Instruction* instruction) {
+void VirtualMachineEngine::DispatchInstruction(Instruction* instruction) {
   OF_PROFILER_RANGE_PUSH(
       "D:" + instruction->instr_msg().instr_type_name() + ":"
       + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction));
@@ -565,7 +565,7 @@ void VirtualMachine::DispatchInstruction(Instruction* instruction) {
   stream->mut_running_instruction_list()->PushBack(instruction);
   if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
   const auto& stream_type = stream->stream_type();
-  if (stream_type.SharingVirtualMachineThread()) {
+  if (stream_type.OnSchedulerThread()) {
     stream_type.Run(this, instruction);
   } else {
     stream->mut_thread_ctx()->mut_pending_instruction_list()->PushBack(instruction);
@@ -573,7 +573,7 @@ void VirtualMachine::DispatchInstruction(Instruction* instruction) {
   OF_PROFILER_RANGE_POP();
 }
 
-void VirtualMachine::__Init__(const VmDesc& vm_desc) {
+void VirtualMachineEngine::__Init__(const VmDesc& vm_desc) {
   mut_vm_resource_desc()->CopyFrom(vm_desc.vm_resource_desc());
   CHECK_GT(vm_desc.machine_id_range().size(), 0);
   *mut_machine_id_range() = vm_desc.machine_id_range();
@@ -601,7 +601,7 @@ void VirtualMachine::__Init__(const VmDesc& vm_desc) {
 int64_t InstructionMaxRunningSeconds() { return 60 * 5; }
 
 // Returns true if old pending_instruction_list is empty
-Maybe<bool> VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) {
+Maybe<bool> VirtualMachineEngine::Receive(InstructionMsgList* compute_instr_msg_list) {
   OF_PROFILER_RANGE_PUSH("vm:Receive");
   CHECK_OR_RETURN(!pthread_fork::IsForkedSubProcess())
       << "Cannot run OneFlow in forked subprocess. Please add "
@@ -635,7 +635,8 @@ Maybe<bool> VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) 
   return old_list_empty;
 }
 
-Maybe<bool> VirtualMachine::Receive(intrusive::shared_ptr<InstructionMsg>&& compute_instr_msg) {
+Maybe<bool> VirtualMachineEngine::Receive(
+    intrusive::shared_ptr<InstructionMsg>&& compute_instr_msg) {
   InstructionMsgList instr_msg_list;
   instr_msg_list.EmplaceBack(std::move(compute_instr_msg));
   return Receive(&instr_msg_list);
@@ -695,13 +696,13 @@ Maybe<bool> VirtualMachine::Receive(intrusive::shared_ptr<InstructionMsg>&& comp
 //
 //
 // With the introduction of barrier_instruction_list_/barrier_instruction_hook_, the function
-// VirtualMachine::Schedule can achive higher performance. For the most cases, barrier instructions
-// are scarcely received by vm, there is no need for vm to run
-// VirtualMachine::TryRunBarrierInstruction every time VirtualMachine::Schedule run. On the other
-// hand, `barrier_instruction_hook_.size() == 0` is more lighware than
+// VirtualMachineEngine::Schedule can achive higher performance. For the most cases, barrier
+// instructions are scarcely received by vm, there is no need for vm to run
+// VirtualMachineEngine::TryRunBarrierInstruction every time VirtualMachineEngine::Schedule run. On
+// the other hand, `barrier_instruction_hook_.size() == 0` is more lighware than
 // `lively_instruction_hook_.Begin()?->instr_msg().instr_type_id().instruction_type().IsFrontSequential()`
 //
-void VirtualMachine::TryRunBarrierInstruction() {
+void VirtualMachineEngine::TryRunBarrierInstruction() {
   auto* sequnential_instruction = mut_barrier_instruction_list()->Begin();
   CHECK(sequnential_instruction != nullptr);
   if (likely(sequnential_instruction != mut_lively_instruction_list()->Begin())) { return; }
@@ -712,14 +713,14 @@ void VirtualMachine::TryRunBarrierInstruction() {
   const auto& instruction_type = instr_type_id.instruction_type();
   CHECK(instruction_type.IsFrontSequential());
   const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
-  CHECK(stream_type.SharingVirtualMachineThread());
+  CHECK(stream_type.OnSchedulerThread());
   stream_type.Run(this, sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
   mut_lively_instruction_list()->Erase(sequnential_instruction);
   OF_PROFILER_RANGE_POP();
 }
 
-void VirtualMachine::TryDeleteLogicalObjects() {
+void VirtualMachineEngine::TryDeleteLogicalObjects() {
   auto* delete_list = mut_delete_logical_object_list();
   // INTRUSIVE_FOR_EACH_PTR supports removing elements at the end of iteration code
   INTRUSIVE_FOR_EACH_PTR(logical_object, delete_list) {
@@ -741,7 +742,7 @@ void VirtualMachine::TryDeleteLogicalObjects() {
   }
 }
 
-void VirtualMachine::TryMoveFromWaitingToReady(Instruction* instruction) {
+void VirtualMachineEngine::TryMoveFromWaitingToReady(Instruction* instruction) {
   if (Dispatchable(instruction)) {
     // For memory safety, do not swap the following two lines.
     mut_ready_instruction_list()->PushBack(instruction);
@@ -749,7 +750,7 @@ void VirtualMachine::TryMoveFromWaitingToReady(Instruction* instruction) {
   }
 }
 
-void VirtualMachine::Schedule() {
+void VirtualMachineEngine::Schedule() {
   // dispatch ready instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_ready_instruction_list()->size())) { DispatchAndPrescheduleInstructions(); }
   // Handle pending instructions, schedule them to waiting list or ready list.
@@ -760,11 +761,11 @@ void VirtualMachine::Schedule() {
   if (unlikely(mut_barrier_instruction_list()->size())) { TryRunBarrierInstruction(); }
 }
 
-bool VirtualMachine::ThreadUnsafeEmpty() const {
+bool VirtualMachineEngine::ThreadUnsafeEmpty() const {
   return active_stream_list().empty() && flying_instruction_cnt() == 0;
 }
 
-bool VirtualMachine::Empty() const {
+bool VirtualMachineEngine::Empty() const {
   // hook and size will be check in pending_msg_list().empty().
   return pending_msg_list().empty() && ThreadUnsafeEmpty();
 }
