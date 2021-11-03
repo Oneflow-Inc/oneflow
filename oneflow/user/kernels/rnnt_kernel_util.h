@@ -40,10 +40,6 @@ typedef enum {
     RNNT_STATUS_UNKNOWN_ERROR = 4
 } rnntStatus_t;
 
-int get_warprnnt_version();
-
-const char* rnntGetStatusString(rnntStatus_t status);
-
 struct rnntOptions {
     unsigned int num_threads;
     int blank_label;
