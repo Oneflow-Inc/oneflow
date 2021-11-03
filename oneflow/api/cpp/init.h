@@ -17,7 +17,9 @@ limitations under the License.
 #define ONEFLOW_API_CPP_INIT_H_
 
 namespace oneflow_api {
-    void init();
+
+void init();
+
 }
 
 #endif  // !ONEFLOW_API_CPP_INIT_H_

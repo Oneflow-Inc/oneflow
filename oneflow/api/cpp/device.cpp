@@ -23,7 +23,7 @@ limitations under the License.
 
 namespace oneflow_api {
 
-void Device::CheckDeviceType(const std::string& type) {
+void CheckDeviceType(const std::string& type) {
   if (OFDevice::type_supported.find(type) == OFDevice::type_supported.end()) {
     std::string error_msg =
         "Expected one of cpu, cuda device type at start of device string " + type;
@@ -46,6 +46,7 @@ Device::Device(const std::string& type_and_id, bool only_type) {
     }
   }
 }
+
 Device::Device(const std::string& type, int64_t device_id) {
   CheckDeviceType(type);
   device_ = std::make_shared<OFSymbolOfDevice>(OFDevice::New(type, device_id).GetOrThrow());

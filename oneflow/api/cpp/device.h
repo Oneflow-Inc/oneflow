@@ -34,7 +34,6 @@ using OFSymbolOfDevice = oneflow::Symbol<OFDevice>;
 
 class Device final {
  public:
-  static void CheckDeviceType(const std::string& type);
   explicit Device(const std::string& type_and_id, bool only_type = true);
   Device(const std::string& type, int64_t device_id);
 
