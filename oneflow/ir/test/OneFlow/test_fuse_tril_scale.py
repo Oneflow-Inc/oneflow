@@ -62,8 +62,8 @@ class TestMLIROptimizations(flow.unittest.TestCase):
         FuseTrilScaleJob(x)
 
 
-# CHECK: fused_scale_tril
-# CHECK: fused_scale_tril
+# CHECK: %1 = "oneflow.fused_scale_tril"
+# CHECK: %2 = "oneflow.fused_scale_tril"
 
 if __name__ == "__main__":
     unittest.main()
