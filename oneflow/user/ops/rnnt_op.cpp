@@ -53,7 +53,7 @@ REGISTER_USER_OP("RNNTloss")
 
 REGISTER_USER_OP_GRAD("RNNTloss")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn AddOp) -> Maybe<void> {
+                               const user_op::AddOpFn &AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("acts", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper rnntloss_grad_op =
