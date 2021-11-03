@@ -20,11 +20,13 @@ limitations under the License.
 #include <algorithm>
 #include <cmath>
 
+#include "oneflow/core/common/data_type.h"
+
 namespace oneflow {
 
 namespace rnnt_helper {
 
-#define HOSTDEVICE __host__ __device__
+#define HOSTDEVICE OF_DEVICE_FUNC
 
 static const float threshold = 1e-1;
 
