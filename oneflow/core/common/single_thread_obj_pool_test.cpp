@@ -28,7 +28,7 @@ TEST(SingleThreadObjPool, naive) {
 
 struct Int {  // NOLINT
   Int() : x(0) {}
-  Int(int val) : x(val) {}
+  explicit Int(int val) : x(val) {}
   ~Int() { x = 0; }
   int x;
 };
