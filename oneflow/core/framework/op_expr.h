@@ -173,7 +173,6 @@ class ConsistentToConsistentOpExpr : public OpExpr {
 
   const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp() const { return grad_nd_sbp_; }
   const std::string& op_type_name() const override;
-  const std::string& op_name() const { return op_type_name(); }
   int input_size() const override { return 1; }
   int output_size() const override { return 1; }
 
@@ -256,8 +255,6 @@ class SelectTopNOpExpr final : public OpExpr {
     static const std::string kOpTypeName = "select_top_n";
     return kOpTypeName;
   }
-
-  const std::string& op_name() const { return op_type_name(); }
 
   int input_size() const override {
     UNIMPLEMENTED();
