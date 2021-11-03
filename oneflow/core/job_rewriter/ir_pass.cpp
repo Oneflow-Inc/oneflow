@@ -117,7 +117,7 @@ class IRRoundTrip final : public JobPass {
   ~IRRoundTrip() override = default;
 
   bool IsEnabled(const JobPassCtx& ctx) const {
-    if (std::getenv("ONEFLOW_MLIR_ENABLE_ROUND_TRIP") != nullptr) {
+    if (ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_ROUND_TRIP", false)) {
       return true;
     } else {
       return false;

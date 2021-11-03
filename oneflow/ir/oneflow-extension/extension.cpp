@@ -142,11 +142,11 @@ void WithMlirContext(
   mlir::MLIRContext mlir_ctx(registry);
   mlir::OwningModuleRef module = parse(&mlir_ctx);
   CHECK(!!module) << "fail to parse MLIR, op: " << ctx->op_name();
-  if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
+  if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
   lower(&mlir_ctx, *module);
-  if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
+  if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
   auto jit_or_error = mlir::ExecutionEngine::create(
       /* m */ *module, /* llvmModuleBuilder */ nullptr, /* transformer */ {},
       /* jitCodeGenOptLevel */ llvm::None, /* sharedLibPaths */ ext_libs);
