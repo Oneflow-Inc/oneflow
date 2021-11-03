@@ -32,7 +32,7 @@ import oneflow as flow
 from oneflow.framework.tensor import Tensor
 
 
-# default_generator = flow._oneflow_internal.Generator.default_generator()
+default_generator = flow._oneflow_internal.default_generator
 
 # Taken from python 3.5 docs
 def _accumulate(iterable, fn=lambda x, y: x + y):
@@ -317,7 +317,7 @@ class Subset(Dataset[T_co]):
 def random_split(
     dataset: Dataset[T],
     lengths: Sequence[int],
-    #generator: Optional[object] = default_generator,
+    generator: Optional[object] = default_generator,
 ) -> List[Subset[T]]:
     r"""
     Randomly split a dataset into non-overlapping new datasets of given lengths.

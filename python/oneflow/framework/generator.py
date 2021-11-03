@@ -51,7 +51,9 @@ def _setstate(self, state_dict):
     self.set_state(state_dict["state"])
 
 
-default_generator = oneflow._oneflow_internal.Generator.default_generator()
+def __getattr__(name):
+    if name == "default_generator":
+        return oneflow._oneflow_internal.default_generator()
 
 
 oneflow._oneflow_internal.Generator.__getstate__ = _getstate

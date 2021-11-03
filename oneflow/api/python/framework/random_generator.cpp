@@ -48,8 +48,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
     ParsingDeviceTag(device_tag, &device_name, &device_index).GetOrThrow();
     return one::MakeGenerator(device_name, device_index).GetPtrOrThrow();
   });
-  m.def("default_generator", [](const std::string& device_tag) {
-    std::string device_name = "";
+  m.def("default_generator", []() {
+    std::string device_name = "auto";
+    std::string device_tag = "auto";
     int device_index = -1;
     ParsingDeviceTag(device_tag, &device_name, &device_index).GetOrThrow();
     return one::DefaultGenerator(device_name, device_index).GetPtrOrThrow();

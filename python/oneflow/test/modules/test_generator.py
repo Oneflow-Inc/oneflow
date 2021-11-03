@@ -52,60 +52,47 @@ class TestGenerator(flow.unittest.TestCase):
 
 
 class TestDefaultGenerator(flow.unittest.TestCase):
-    def test_global_manual_seed(test_case):
-        global_seed = 10
-        flow.manual_seed(10)
-        auto_gen = flow.default_generator(device="auto")
-        cpu_gen = flow.default_generator(device="cpu")
-        test_gens = [auto_gen, cpu_gen]
-        if not os.getenv("ONEFLOW_TEST_CPU_ONLY"):
-            cuda_gen = flow.default_generator(device="cuda")
-            cuda0_gen = flow.default_generator(device="cuda:0")
-            test_gens += [cuda_gen, cuda0_gen]
-        for gen in test_gens:
-            test_case.assertTrue(gen.initial_seed() == global_seed)
+    # def test_different_devices(test_case):
+    #     auto_gen = flow.default_generator(device="auto")
+    #     cpu_gen = flow.default_generator(device="cpu")
+    #     with test_case.assertRaises(
+    #         oneflow._oneflow_internal.exception.RuntimeException
+    #     ) as context:
+    #         flow.default_generator(device="invalid")
 
-    def test_different_devices(test_case):
-        auto_gen = flow.default_generator(device="auto")
-        cpu_gen = flow.default_generator(device="cpu")
-        with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.RuntimeException
-        ) as context:
-            flow.default_generator(device="invalid")
-
-        flow.default_generator(device="cpu:1000")
-        test_gens = [cpu_gen]
-        if not os.getenv("ONEFLOW_TEST_CPU_ONLY"):
-            with test_case.assertRaises(
-                oneflow._oneflow_internal.exception.CheckFailedException
-            ) as context:
-                flow.default_generator(device="cuda:1000")
-            cuda_gen = flow.default_generator(device="cuda")
-            cuda0_gen = flow.default_generator(device="cuda:0")
-            test_gens += [cuda_gen, cuda0_gen]
-        for gen in test_gens:
-            test_case.assertTrue(auto_gen.initial_seed() == gen.initial_seed())
+    #     flow.default_generator(device="cpu:1000")
+    #     test_gens = [cpu_gen]
+    #     if not os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+    #         with test_case.assertRaises(
+    #             oneflow._oneflow_internal.exception.CheckFailedException
+    #         ) as context:
+    #             flow.default_generator(device="cuda:1000")
+    #         cuda_gen = flow.default_generator(device="cuda")
+    #         cuda0_gen = flow.default_generator(device="cuda:0")
+    #         test_gens += [cuda_gen, cuda0_gen]
+    #     for gen in test_gens:
+    #         test_case.assertTrue(auto_gen.initial_seed() == gen.initial_seed())
 
     def test_generator_manual_seed(test_case):
-        auto_gen = flow.default_generator(device="auto")
-        cpu_gen = flow.default_generator(device="cpu")
+        auto_gen = flow.default_generator
+        cpu_gen = flow.Generator(device="cpu")
         test_gens = [auto_gen, cpu_gen]
         if not os.getenv("ONEFLOW_TEST_CPU_ONLY"):
-            cuda_gen = flow.default_generator(device="cuda")
-            cuda0_gen = flow.default_generator(device="cuda:0")
+            cuda_gen = flow.Generator(device="cuda")
+            cuda0_gen = flow.Generator(device="cuda:0")
             test_gens += [cuda_gen, cuda0_gen]
         for seed in [1, 2]:
-            auto_gen.manual_seed(seed)
             for gen in test_gens:
+                gen.manual_seed(seed)
                 test_case.assertTrue(gen.initial_seed() == seed)
 
     def test_generator_seed(test_case):
-        auto_gen = flow.default_generator(device="auto")
-        cpu_gen = flow.default_generator(device="cpu")
+        auto_gen = flow.default_generator
+        cpu_gen = flow.Generator(device="cpu")
         test_gens = [auto_gen, cpu_gen]
         if not os.getenv("ONEFLOW_TEST_CPU_ONLY"):
-            cuda_gen = flow.default_generator(device="cuda")
-            cuda0_gen = flow.default_generator(device="cuda:0")
+            cuda_gen = flow.Generator(device="cuda")
+            cuda0_gen = flow.Generator(device="cuda:0")
             test_gens += [cuda_gen, cuda0_gen]
         for gen in test_gens:
             seed = gen.seed()
@@ -116,18 +103,12 @@ class TestDefaultGenerator(flow.unittest.TestCase):
         state = auto_gen.get_state()
         cpu_gen = flow.Generator(device="cpu")
         state = cpu_gen.get_state()
-        auto_gen = flow.default_generator(device="auto")
-        state = auto_gen.get_state()
-        cpu_gen = flow.default_generator(device="cpu")
-        state = cpu_gen.get_state()
         if not os.getenv("ONEFLOW_TEST_CPU_ONLY"):
             cuda_gen = flow.Generator(device="cuda")
             state = cuda_gen.get_state()
-            cuda_gen = flow.default_generator(device="cuda")
-            state = cuda_gen.get_state()
 
     def test_generator_setstate(test_case):
-        auto_gen = flow.default_generator(device="auto")
+        auto_gen = flow.default_generator
         flow.randn(100, 100, dtype=flow.float32, device="cpu", generator=auto_gen)
         if not os.getenv("ONEFLOW_TEST_CPU_ONLY"):
             flow.randn(100, 100, dtype=flow.float32, device="cuda", generator=auto_gen)
