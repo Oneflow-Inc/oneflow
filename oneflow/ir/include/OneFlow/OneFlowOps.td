@@ -574,6 +574,52 @@ def FusedScaleTrilPattern : Pat<
   []
 >;
 
+def FusedScaleTrilPattern2 : Pat<
+  (
+    OneFlow_ScalarMulOp
+    (
+      OneFlow_TrilOp
+      $x,
+      $tril_op_name,
+      $tril_trainable,
+      $tril_device_tag,
+      $tril_device_name,
+      $tril_scope_symbol_id,
+      $tril_hierarchy,
+      $diagonal,
+      $floating_fill_value,
+      $integer_fill_value,
+      $is_floating_fill_value
+    ),
+    $scale_op_name,
+    $scale_trainable,
+    $scale_device_tag,
+    $scale_device_name,
+    $scale_scope_symbol_id,
+    $scale_hierarchy,
+    $has_int_operand,
+    $has_float_operand,
+    $int_operand,
+    $float_operand
+  ),
+  (OneFlow_FusedScaleTrilOp $x,
+    $scale_op_name,
+    $scale_trainable,
+    $scale_device_tag,
+    $scale_device_name,
+    $scale_scope_symbol_id,
+    $scale_hierarchy,
+    $diagonal,
+    $floating_fill_value,
+    $integer_fill_value,
+    $is_floating_fill_value,
+    $float_operand,
+    $int_operand,
+    $has_float_operand
+  ),
+  []
+>;
+
 def FusedBiasAddDropoutPattern : Pat<
   (
     OneFlow_DropoutOp
