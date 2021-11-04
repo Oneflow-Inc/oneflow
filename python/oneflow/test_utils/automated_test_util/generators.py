@@ -248,7 +248,7 @@ class random(generator):
             val = float(rng.random() * (high - low) + low)
         elif annotation == bool:
             val = random_util.choice([True, False])
-        elif annotation == NoneType:
+        elif annotation is None:
             val = None
         else:
             raise NotImplementedError(
