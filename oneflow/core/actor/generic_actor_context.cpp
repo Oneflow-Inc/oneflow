@@ -22,7 +22,7 @@ void GenericActorContext::Init(const TaskProto& task_proto, StreamContext* strea
   task_proto_ = task_proto;
 }
 
-void GenericActorContext::AddCallBack(std::function<void()> callback) const {
+void GenericActorContext::AddCallback(std::function<void()> callback) {
   CHECK_JUST(stream_ctx_->AddCallback(std::move(callback)));
 }
 

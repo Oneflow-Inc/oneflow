@@ -41,19 +41,6 @@ const StreamTypeId& LookupInferStreamTypeId(const StreamTypeId& compute_stream_t
   return InferStreamTypeId4ComputeStreamTypeId()->at(compute_stream_type_id);
 }
 
-void StreamType::InitInstructionStatusIf(const Stream& stream,
-                                         InstructionStatusBuffer* status_buffer) const {
-  status_buffer->clear_instruction_deleted();
-  InitInstructionStatus(stream, status_buffer);
-}
-
-void StreamType::DeleteInstructionStatusIf(const Stream& stream,
-                                           InstructionStatusBuffer* status_buffer) const {
-  if (status_buffer->has_instruction_deleted()) { return; }
-  DeleteInstructionStatus(stream, status_buffer);
-  status_buffer->mutable_instruction_deleted();
-}
-
 void StreamType::Run(Instruction* instruction) const {
   const auto& stream_type_id = instruction->stream().stream_id().stream_type_id();
   auto interpret_type = stream_type_id.interpret_type();

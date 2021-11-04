@@ -22,7 +22,7 @@ limitations under the License.
 namespace oneflow {
 
 void ActorMsgBus::SendMsg(const ActorMsg& msg) {
-  int64_t dst_machine_id = Global<IDMgr>::Get()->MachineId4ActorId(msg.dst_actor_id());
+  int64_t dst_machine_id = MachineId4ActorId(msg.dst_actor_id());
   if (dst_machine_id == GlobalProcessCtx::Rank()) {
     SendMsgWithoutCommNet(msg);
   } else {
@@ -47,8 +47,8 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
 }
 
 void ActorMsgBus::SendMsgWithoutCommNet(const ActorMsg& msg) {
-  CHECK_EQ(Global<IDMgr>::Get()->MachineId4ActorId(msg.dst_actor_id()), GlobalProcessCtx::Rank());
-  int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(msg.dst_actor_id());
+  CHECK_EQ(MachineId4ActorId(msg.dst_actor_id()), GlobalProcessCtx::Rank());
+  int64_t thrd_id = ThrdId4ActorId(msg.dst_actor_id());
   Global<ThreadMgr>::Get()->GetThrd(thrd_id)->EnqueueActorMsg(msg);
 }
 
