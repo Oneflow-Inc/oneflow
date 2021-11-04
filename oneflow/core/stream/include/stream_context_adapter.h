@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_STREAM_STREAM_CONTEXT_ADAPTER_H_
 #define ONEFLOW_CORE_STREAM_STREAM_CONTEXT_ADAPTER_H_
 
-#include "oneflow/core/stream/stream_context.h"
+#include "oneflow/core/stream/include/stream_context.h"
 #include "oneflow/core/device/device_context.h"
 
 namespace oneflow {

@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_STREAM_STREAM_ID_H_
-#define ONEFLOW_CORE_STREAM_STREAM_ID_H_
+#ifndef ONEFLOW_CORE_GRAPH_STREAM_ID_H_
+#define ONEFLOW_CORE_GRAPH_STREAM_ID_H_
 
 #include "oneflow/core/device/device_id.h"
 
@@ -75,4 +75,4 @@ struct hash<oneflow::StreamId> {
 
 }  // namespace std
 
-#endif  // ONEFLOW_CORE_STREAM_STREAM_ID_H_
+#endif  // ONEFLOW_CORE_GRAPH_STREAM_ID_H_
