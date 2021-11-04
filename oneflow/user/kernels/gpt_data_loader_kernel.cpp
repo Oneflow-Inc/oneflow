@@ -134,8 +134,7 @@ class GPTDataLoaderKernel final : public OpKernel {
   }
 
  private:
-  void Compute(KernelComputeContext* ctx, OpKernelState* state,
-               const OpKernelCache*) const override {
+  void Compute(KernelComputeContext* ctx, OpKernelState* state) const override {
     auto* loader = dynamic_cast<GPTDataLoader*>(state);
     user_op::Tensor* iteration_tensor = ctx->Tensor4ArgNameAndIndex("iteration", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);

@@ -39,7 +39,7 @@ class AddNKernel : public OpKernel, public CudaGraphSupport {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  void Compute(KernelComputeContext* ctx, OpKernelState* state) const override {
     auto primitive = NewAddPrimitive(ctx);
     CHECK(primitive);
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);

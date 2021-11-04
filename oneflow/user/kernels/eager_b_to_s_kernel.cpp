@@ -48,9 +48,9 @@ Maybe<Symbol<cfg::NdSbp>> GetAllBroadcastNdSbp(int64_t ndim) {
 
 auto* CachedGetAllBroadcastNdSbp = DECORATE(&GetAllBroadcastNdSbp, ThreadLocal);
 
-class EagerBToSOpKernelState final : public user_op::OpKernelCache {
+class EagerBToSOpKernelState final : public user_op::OpKernelState {
  public:
-  explicit EagerBToSOpKernelState(user_op::KernelCacheContext* ctx) { Init(ctx); }
+  explicit EagerBToSOpKernelState(user_op::KernelInitContext* ctx) { Init(ctx); }
   ~EagerBToSOpKernelState() override = default;
 
   const std::vector<std::pair<int64_t, std::shared_ptr<TensorSliceCopier>>>&
@@ -68,7 +68,7 @@ class EagerBToSOpKernelState final : public user_op::OpKernelCache {
   }
 
  private:
-  void Init(user_op::KernelCacheContext* ctx) {
+  void Init(user_op::KernelInitContext* ctx) {
     const std::string& in_parallel_conf_txt = ctx->Attr<std::string>("in_parallel_conf");
     const std::string& out_parallel_conf_txt = ctx->Attr<std::string>("out_parallel_conf");
     const int64_t out_split_axis = ctx->Attr<int64_t>("out_split_axis");
@@ -153,16 +153,15 @@ class EagerBToSKernel final : public user_op::OpKernel {
   EagerBToSKernel() = default;
   ~EagerBToSKernel() override = default;
 
-  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
-                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
-    if (*cache == nullptr) { *cache = std::make_shared<EagerBToSOpKernelState>(ctx); }
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<EagerBToSOpKernelState>(ctx);
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
-               const user_op::OpKernelCache* cache) const override {
-    auto* kernel_cache = dynamic_cast<const EagerBToSOpKernelState*>(cache);
-    CHECK(kernel_cache != nullptr);
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* kernel_state = dynamic_cast<EagerBToSOpKernelState*>(state);
+    CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -171,10 +170,10 @@ class EagerBToSKernel final : public user_op::OpKernel {
     void* tmp_buffer_ptr = tmp_buffer->mut_dptr();
 
     const auto& sorted_elem_cnt2in_tensor_slice_copier_pair =
-        kernel_cache->sorted_elem_cnt2in_tensor_slice_copier_pair();
+        kernel_state->sorted_elem_cnt2in_tensor_slice_copier_pair();
     const auto& sorted_elem_cnt2out_tensor_slice_copier_pair =
-        kernel_cache->sorted_elem_cnt2out_tensor_slice_copier_pair();
-    const auto& sorted_p2p_pair = kernel_cache->sorted_p2p_pair();
+        kernel_state->sorted_elem_cnt2out_tensor_slice_copier_pair();
+    const auto& sorted_p2p_pair = kernel_state->sorted_p2p_pair();
     CHECK_EQ(sorted_elem_cnt2in_tensor_slice_copier_pair.size(), sorted_p2p_pair.size());
     CHECK_EQ(sorted_elem_cnt2out_tensor_slice_copier_pair.size(), sorted_p2p_pair.size());
 

@@ -536,8 +536,7 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
   }
 #endif  // WITH_CUDA_GRAPHS
 
-  // FIXME:
-  kernel_->Compute(ctx_.get(), opkernel_state, nullptr);
+  kernel_->Compute(ctx_.get(), opkernel_state);
 
 #ifdef WITH_CUDA_GRAPHS
   if (cuda_graph_exec_ && current_scope_capturing) {
@@ -666,8 +665,7 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   // TODO(lixinqi): refactor to a lightweight KernelComputeContext
   UserKernelComputeContext compute_ctx(device_ctx, stream_ctx.get(), kernel_conf());
   compute_ctx.UpdateTensorWithCorrBlob(BnInOp2Blob);
-  // FIXME:
-  kernel_->Compute(&compute_ctx, new_opkernel_state.get(), nullptr);
+  kernel_->Compute(&compute_ctx, new_opkernel_state.get());
   return new_opkernel_state;
 }
 

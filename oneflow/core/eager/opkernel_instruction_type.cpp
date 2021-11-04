@@ -461,9 +461,8 @@ struct LocalCallOpKernelUtil final {
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
     user_op::OpKernelState* state = nullptr;
-    user_op::OpKernelCache* cache = nullptr;
-    TryInitOpKernelState(operand, device_ctx, &state, &cache);
-    JUST(OpKernelCompute(operand, device_ctx, state, cache));
+    TryInitOpKernelState(operand, device_ctx, &state);
+    JUST(OpKernelCompute(operand, device_ctx, state));
     JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
     operand->set_user_opkernel(nullptr);
     return Maybe<void>::Ok();
@@ -554,15 +553,14 @@ struct LocalCallOpKernelUtil final {
   }
 
   static inline void TryInitOpKernelState(LocalCallOpKernelPhyInstrOperand* operand,
-                                          DeviceCtx* device_ctx, user_op::OpKernelState** state,
-                                          user_op::OpKernelCache** cache) {
+                                          DeviceCtx* device_ctx, user_op::OpKernelState** state) {
     if (operand->op_interp_ctx().state) {
       *state = operand->op_interp_ctx().state.get();
       state = nullptr;
     }
     operand->mut_opkernel()->TryInitOpKernelState(
         operand->user_opkernel(), device_ctx, operand->inputs(), operand->outputs(),
-        operand->consistent_tensor_infer_result(), state, cache);
+        operand->consistent_tensor_infer_result(), state);
   }
 
   static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
@@ -581,11 +579,10 @@ struct LocalCallOpKernelUtil final {
   }
 
   static inline Maybe<void> OpKernelCompute(LocalCallOpKernelPhyInstrOperand* operand,
-                                            DeviceCtx* device_ctx, user_op::OpKernelState* state,
-                                            const user_op::OpKernelCache* cache) {
+                                            DeviceCtx* device_ctx, user_op::OpKernelState* state) {
     JUST(WithComputeContext(operand, device_ctx,
                             [&](user_op::KernelComputeContext* compute_ctx) -> Maybe<void> {
-                              operand->user_opkernel()->Compute(compute_ctx, state, cache);
+                              operand->user_opkernel()->Compute(compute_ctx, state);
                               return Maybe<void>::Ok();
                             }));
     return Maybe<void>::Ok();

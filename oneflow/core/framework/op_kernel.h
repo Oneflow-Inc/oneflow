@@ -122,17 +122,6 @@ class OpKernelState {
   OpKernelState() = default;
 };
 
-class OpKernelCache {
- public:
-  virtual ~OpKernelCache() = default;
-
-  static const int8_t ShapeMayChanged = 0x1;
-  static const int8_t AttrMayChanged = 0x10;
-
- protected:
-  OpKernelCache() = default;
-};
-
 class OpKernel;
 
 template<typename T>
@@ -149,16 +138,7 @@ class OpKernel {
     return std::shared_ptr<OpKernelState>();
   }
 
-  virtual std::shared_ptr<OpKernelCache> InitOpKernelCache(KernelCacheContext* ctx) const {
-    return std::shared_ptr<OpKernelCache>();
-  }
-
-  virtual void InitOpKernelCache(KernelCacheContext* ctx, int8_t flag,
-                                 std::shared_ptr<OpKernelCache>* cache) const {
-    *cache = InitOpKernelCache(ctx);
-  }
-
-  virtual void Compute(KernelComputeContext* ctx, OpKernelState*, const OpKernelCache*) const {
+  virtual void Compute(KernelComputeContext* ctx, OpKernelState*) const {
     Compute(ctx);
   }
   virtual void Compute(KernelComputeContext*) const { LOG(INFO) << "UNIMPLEMENTED"; }

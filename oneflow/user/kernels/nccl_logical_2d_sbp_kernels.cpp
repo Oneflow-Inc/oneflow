@@ -94,8 +94,7 @@ class NcclLogical2DSameDim0AllReduce final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
-               const user_op::OpKernelCache*) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* nccl_comm = dynamic_cast<NcclLogical2DSameDim0KernelCommState*>(state);
     CHECK(nccl_comm != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -120,8 +119,7 @@ class NcclLogical2DSameDim0AllGather final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
-               const user_op::OpKernelCache*) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* nccl_comm = dynamic_cast<NcclLogical2DSameDim0KernelCommState*>(state);
     CHECK(nccl_comm != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -148,8 +146,7 @@ class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKern
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
-               const user_op::OpKernelCache*) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* nccl_comm = dynamic_cast<NcclLogical2DSameDim0KernelCommState*>(state);
     CHECK(nccl_comm != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -217,8 +214,7 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
-               const user_op::OpKernelCache*) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* nccl_comm = dynamic_cast<NcclLogical2DSameDim0KernelCommState*>(state);
     CHECK(nccl_comm != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -388,8 +384,7 @@ class NcclLogical2DSameDim1AllReduce final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
-               const user_op::OpKernelCache*) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* nccl_comm = dynamic_cast<NcclLogical2DSameDim1KernelCommState*>(state);
     CHECK(nccl_comm != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);

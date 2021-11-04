@@ -28,10 +28,10 @@ Shape GetFlatShape(const ShapeView& shape, int64_t axis) {
   return Shape({shape.Count(0, axis), shape.At(axis), shape.Count(axis + 1)});
 }
 
-class GatherOpKernelCache final : public user_op::OpKernelCache {
+class GatherOpKernelState final : public user_op::OpKernelState {
  public:
-  GatherOpKernelCache(int64_t lower, int64_t upper) : lower_(lower), upper_(upper) {}
-  ~GatherOpKernelCache() override = default;
+  GatherOpKernelState(int64_t lower, int64_t upper) : lower_(lower), upper_(upper) {}
+  ~GatherOpKernelState() override = default;
 
   int64_t lower() const { return lower_; }
   int64_t upper() const { return upper_; }
@@ -64,8 +64,8 @@ class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
   GatherKernel() = default;
   ~GatherKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
-      user_op::KernelCacheContext* ctx) const override {
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
       const auto axis = ctx->Attr<int64_t>("axis");
       const cfg::NdSbp& in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
@@ -75,15 +75,14 @@ class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
       const TensorDesc* in_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("in", 0);
       TensorSliceView view = GetTensorSliceView4ParallelId(
           hierarchy, in_nd_sbp, in_logical_desc->shape(), ctx->parallel_ctx().parallel_id());
-      return std::make_shared<GatherOpKernelCache>(view.At(axis).begin(), view.At(axis).end());
+      return std::make_shared<GatherOpKernelState>(view.At(axis).begin(), view.At(axis).end());
     } else {
-      return nullptr;
+      return std::shared_ptr<OpKernelState>(nullptr);
     }
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
-               const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
     const int64_t axis = ctx->Attr<int64_t>("axis");
@@ -92,8 +91,8 @@ class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
     if (out->shape().elem_cnt() == 0) { return; }
 
     int64_t offset = 0;
-    if (cache != nullptr) {
-      auto* gather_state = dynamic_cast<const GatherOpKernelCache*>(cache);
+    if (state != nullptr) {
+      auto* gather_state = dynamic_cast<GatherOpKernelState*>(state);
       CHECK_NOTNULL(gather_state);
       CHECK_EQ(in->shape().At(axis), gather_state->upper() - gather_state->lower());
       offset = gather_state->lower();

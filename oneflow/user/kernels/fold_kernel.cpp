@@ -60,7 +60,7 @@ class FoldKernel final : public OpKernel {
   ~FoldKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  void Compute(KernelComputeContext* ctx, OpKernelState* state) const override {
     const Tensor* input = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* output = ctx->Tensor4ArgNameAndIndex("y", 0);
 

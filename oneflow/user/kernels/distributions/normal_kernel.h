@@ -39,8 +39,7 @@ class NormalKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
-               const user_op::OpKernelCache*) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const double mean = ctx->Attr<double>("mean");
     const double std = ctx->Attr<double>("std");

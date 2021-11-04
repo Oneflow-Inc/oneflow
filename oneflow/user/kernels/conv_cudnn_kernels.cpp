@@ -288,7 +288,7 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
         const auto& dy = ctx->InputTensorDesc("dy", 0);                                            \
         const auto& filter = ctx->InputTensorDesc("filter", 0);                                    \
-        const auto* dx = ctx->OutputTensorDesc("dx", 0);                                           \
+        const auto* dx = ctx->OutputTensorDesc("dx", 0);                                 \
         const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf(); \
         return InferTmpSizeWithCudnn<cudnnConvolutionBwdDataAlgoPerf_t>(                           \
             dx, &filter, &dy, *ctx, cudnn_conf.has_cudnn_conv_force_bwd_data_algo(),               \

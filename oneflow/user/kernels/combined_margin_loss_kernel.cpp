@@ -22,10 +22,10 @@ namespace oneflow {
 
 namespace {
 
-class CombinedMarginLossOpKernelCache final : public user_op::OpKernelCache {
+class CombinedMarginLossOpKernelState final : public user_op::OpKernelState {
  public:
-  CombinedMarginLossOpKernelCache(int64_t lower, int64_t upper) : lower_(lower), upper_(upper) {}
-  ~CombinedMarginLossOpKernelCache() override = default;
+  CombinedMarginLossOpKernelState(int64_t lower, int64_t upper) : lower_(lower), upper_(upper) {}
+  ~CombinedMarginLossOpKernelState() override = default;
 
   int64_t lower() const { return lower_; }
   int64_t upper() const { return upper_; }
@@ -35,9 +35,11 @@ class CombinedMarginLossOpKernelCache final : public user_op::OpKernelCache {
   const int64_t upper_;
 };
 
-std::shared_ptr<user_op::OpKernelCache> CreateCombinedMarginLossOpKernelState(
-    user_op::KernelCacheContext* ctx, const std::string& in_arg_name) {
-  if (ctx->parallel_ctx().parallel_num() == 1) { return nullptr; }
+std::shared_ptr<user_op::OpKernelState> CreateCombinedMarginLossOpKernelState(
+    user_op::KernelInitContext* ctx, const std::string& in_arg_name) {
+  if (ctx->parallel_ctx().parallel_num() == 1) {
+    return std::shared_ptr<user_op::OpKernelState>(nullptr);
+  }
 
   const cfg::SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex(in_arg_name, 0);
   if (in_sbp.has_split_parallel() && in_sbp.split_parallel().axis() == 1
@@ -48,11 +50,11 @@ std::shared_ptr<user_op::OpKernelCache> CreateCombinedMarginLossOpKernelState(
     const auto depth = ctx->Attr<int64_t>("depth");
     CHECK_EQ(depth, in_logical_desc->shape().At(1));
     BalancedSplitter bs(depth, ctx->parallel_ctx().parallel_num());
-    return std::make_shared<CombinedMarginLossOpKernelCache>(
+    return std::make_shared<CombinedMarginLossOpKernelState>(
         bs.At(ctx->parallel_ctx().parallel_id()).begin(),
         bs.At(ctx->parallel_ctx().parallel_id()).end());
   } else {
-    return nullptr;
+    return std::shared_ptr<user_op::OpKernelState>(nullptr);
   }
 }
 
@@ -64,14 +66,13 @@ class CombinedMarginLossCpuKernel final : public user_op::OpKernel {
   CombinedMarginLossCpuKernel() = default;
   ~CombinedMarginLossCpuKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
-      user_op::KernelCacheContext* ctx) const override {
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
     return CreateCombinedMarginLossOpKernelState(ctx, "x");
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
-               const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const T* x_ptr = x->dptr<T>();
     const K* label_ptr = ctx->Tensor4ArgNameAndIndex("label", 0)->dptr<K>();
@@ -81,11 +82,11 @@ class CombinedMarginLossCpuKernel final : public user_op::OpKernel {
     const float m2 = ctx->Attr<float>("m2");
     const float m3 = ctx->Attr<float>("m3");
     int64_t lower_bound = 0;
-    if (cache != nullptr) {
-      auto* kernel_cache = dynamic_cast<const CombinedMarginLossOpKernelCache*>(cache);
-      CHECK_NOTNULL(kernel_cache);
-      CHECK_EQ(x->shape().Count(1), kernel_cache->upper() - kernel_cache->lower());
-      lower_bound = kernel_cache->lower();
+    if (state != nullptr) {
+      auto* kernel_state = dynamic_cast<CombinedMarginLossOpKernelState*>(state);
+      CHECK_NOTNULL(kernel_state);
+      CHECK_EQ(x->shape().Count(1), kernel_state->upper() - kernel_state->lower());
+      lower_bound = kernel_state->lower();
     }
     const int64_t num_classes = x->shape().Count(1);
     FOR_RANGE(int32_t, i, 0, x->shape().elem_cnt()) {
@@ -125,14 +126,13 @@ class CombinedMarginLossGradCpuKernel final : public user_op::OpKernel {
   CombinedMarginLossGradCpuKernel() = default;
   ~CombinedMarginLossGradCpuKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
-      user_op::KernelCacheContext* ctx) const override {
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
     return CreateCombinedMarginLossOpKernelState(ctx, "dy");
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
-               const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const T* dy_ptr = dy->dptr<T>();
     const K* label_ptr = ctx->Tensor4ArgNameAndIndex("label", 0)->dptr<K>();
@@ -142,7 +142,7 @@ class CombinedMarginLossGradCpuKernel final : public user_op::OpKernel {
     const float m2 = ctx->Attr<float>("m2");
     int64_t lower_bound = 0;
     if (state != nullptr) {
-      auto* kernel_state = dynamic_cast<CombinedMarginLossOpKernelCache*>(state);
+      auto* kernel_state = dynamic_cast<CombinedMarginLossOpKernelState*>(state);
       CHECK_NOTNULL(kernel_state);
       CHECK_EQ(dy->shape().Count(1), kernel_state->upper() - kernel_state->lower());
       lower_bound = kernel_state->lower();

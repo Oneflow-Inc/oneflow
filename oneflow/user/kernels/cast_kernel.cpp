@@ -38,7 +38,7 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
   ~CastKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  void Compute(KernelComputeContext* ctx, OpKernelState* state) const override {
     const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     Tensor* output_tenor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t elem_cnt = input_tensor->shape().elem_cnt();

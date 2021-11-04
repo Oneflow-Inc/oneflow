@@ -29,7 +29,7 @@ class SquareSumKernel final : public user_op::OpKernel, public user_op::CudaGrap
   ~SquareSumKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
 
