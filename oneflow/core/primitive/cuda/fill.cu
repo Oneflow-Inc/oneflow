@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/primitive/include/fill.h"
 #include "oneflow/core/primitive/cuda/type_seq.h"
-#include "oneflow/core/stream/cuda_stream_context.h"
+#include "oneflow/core/stream/cuda/cuda_stream_context.h"
 
 namespace oneflow {
 

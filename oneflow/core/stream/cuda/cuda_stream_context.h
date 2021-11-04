@@ -13,10 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_STREAM_CUDA_STREAM_CONTEXT_H_
-#define ONEFLOW_CORE_STREAM_CUDA_STREAM_CONTEXT_H_
+#ifndef ONEFLOW_CORE_STREAM_CUDA_CUDA_STREAM_CONTEXT_H_
+#define ONEFLOW_CORE_STREAM_CUDA_CUDA_STREAM_CONTEXT_H_
 
-#include "oneflow/core/stream/stream_context.h"
+#include "oneflow/core/stream/include/stream_context.h"
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/maybe.h"
 
@@ -41,4 +41,4 @@ class CudaStreamContext : public StreamContext {
 
 #endif
 
-#endif  // ONEFLOW_CORE_STREAM_CUDA_STREAM_CONTEXT_H_
+#endif  // ONEFLOW_CORE_STREAM_CUDA_CUDA_STREAM_CONTEXT_H_

@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/stream/stream_id.h"
+#include "oneflow/core/graph/stream_id.h"
 #include <climits>
 
 namespace oneflow {
