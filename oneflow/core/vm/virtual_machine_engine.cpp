@@ -88,7 +88,6 @@ void VirtualMachineEngine::MovePendingToReadyOrWaiting() {
   MakeInstructions(&tmp_pending_msg_list, /*out*/ &new_instruction_list);
   ConsumeMirroredObjects(mut_id2logical_object(), &new_instruction_list);
   MoveToReadyOrWaiting(&new_instruction_list);
-  if (unlikely(mut_delete_logical_object_list()->size())) { TryDeleteLogicalObjects(); }
   OF_PROFILER_RANGE_POP();
 }
 
@@ -757,6 +756,8 @@ void VirtualMachineEngine::Schedule() {
   if (unlikely(pending_msg_list().thread_unsafe_size())) { MovePendingToReadyOrWaiting(); }
   // Release finished instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_active_stream_list()->size())) { ReleaseFinishedInstructions(); }
+  // TODO(lixinqi): remove this line after disabling vm single-client support.
+  if (unlikely(mut_delete_logical_object_list()->size())) { TryDeleteLogicalObjects(); }
   // Try run the first barrier instruction.
   if (unlikely(mut_barrier_instruction_list()->size())) { TryRunBarrierInstruction(); }
 }
