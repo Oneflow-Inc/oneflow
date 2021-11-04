@@ -220,8 +220,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   JUST(GenNdSbpByTensor(blob_conf->mutable_nd_sbp(), input_tensor));
 
   auto infer_ctx = JUST(GetCurInferCtx());
+  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
+          << " try to add op: \n: " << op_conf.DebugString() << std::endl;
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
-
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
           << op_conf.DebugString() << std::endl;
   VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
@@ -274,8 +275,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   }
 
   auto infer_ctx = JUST(GetCurInferCtx());
+  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
+          << " try to add op: \n: " << op_conf.DebugString() << std::endl;
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
-
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
           << op_conf.DebugString() << std::endl;
   VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
@@ -332,8 +334,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   JUST(GenNdSbpByTensor(blob_conf->mutable_nd_sbp(), input_tensor));
 
   auto infer_ctx = JUST(GetCurInferCtx());
+  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " try to add op: \n"
+          << op_conf.DebugString() << std::endl;
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
-
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
           << op_conf.DebugString() << std::endl;
   VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
@@ -386,9 +389,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ImageDecoderRandomCropResizeOpExpr&
   // NOTE(chengcheng): MUST reset unique op name before InferCtx::AddOp
   const std::string new_op_name = *JUST(infer_ctx->NewUniqueOpNameByFunctionalOpConf(*op_conf));
   op_conf->set_name(new_op_name);
-
+  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " try to add op: \n"
+          << op_conf->DebugString() << std::endl;
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
-
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
           << op_conf->DebugString() << std::endl;
   VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
@@ -460,8 +463,9 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
     }
   }
 
+  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " try to add op: \n"
+          << op_conf->DebugString() << std::endl;
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
-
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
           << op_conf->DebugString() << std::endl;
   VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
@@ -508,8 +512,9 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
   const std::string new_op_name = *JUST(infer_ctx->NewUniqueOpNameByFunctionalOpConf(op_conf));
   op_conf.set_name(new_op_name);
 
+  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " try to add op: \n"
+          << op_conf.DebugString() << std::endl;
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
-
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
           << op_conf.DebugString() << " for FreeEagerTensor.\n";
   VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
@@ -644,8 +649,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
     }
   }
 
+  VLOG(2) << "Lazy nn.Graph name " << graph_name << " try to add op: \n"
+          << op_conf->DebugString() << std::endl;
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
-
   VLOG(2) << "Lazy nn.Graph name " << graph_name << " add op : \n"
           << op_conf->DebugString() << std::endl;
   VLOG(3) << "Lazy nn.Graph name " << graph_name << " infer and and op attr : \n"
