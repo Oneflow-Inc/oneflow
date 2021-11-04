@@ -220,11 +220,10 @@ std::shared_ptr<MirroredTensor> JitImporter::MakeIntermediateTensor(
   auto shape_from_mlir = new Shape({tensor_type.getShape().begin(), tensor_type.getShape().end()});
   auto shape = std::make_shared<Shape>();
   shape.reset(shape_from_mlir);
-  auto tensor = MirroredTensor::MakeTensor(shape, dtype, device, /* is_lazy */ true,
-                                           /* requires_grad= */ false, /* is_leaf= */ true)
-                    .GetPtrOrThrow();
-  // TODO: refactor intermediate_tensors_. Same type of op has identical name. For instance, matmul3
-  CHECK(intermediate_tensors_.emplace(lbn, tensor).second)
+  auto tensor =
+      CHECK_JUST(MirroredTensor::MakeTensor(shape, dtype, device, /* is_lazy */ true,
+                                            /* requires_grad= */ false, /* is_leaf= */ true));
+  CHECK(intermediate_tensors_.insert({result, tensor}).second)
       << "Intermediate tensor already created, lbn: " << lbn;
   CHECK(result_mapping_.emplace(tensor.get(), result).second)
       << "Intermediate tensor already mapped to mlir value, lbn: " << lbn;
@@ -361,6 +360,19 @@ LogicalResult JitImporter::LowerToOneFlowKernel() {
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createReturnAllLeaveResultPass());
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createCreateComputeCtxPass());
   return pm.run(GetModule());
+}
+
+LogicalResult JitImporter::UpdateIntermediateTensor(Value value,
+                                                    const std::shared_ptr<Tensor>& tensor) {
+  auto found = intermediate_tensors_.find(value);
+  if (found == intermediate_tensors_.end()) {
+    value.dump();
+    GetModule()->emitError() << "tensor not found";
+    return failure();
+  } else {
+    found->second = tensor;
+    return success();
+  }
 }
 
 }  // namespace ir

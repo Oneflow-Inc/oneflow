@@ -144,6 +144,24 @@ void JitInterpreter::Interrupt() {
           })
           .wasInterrupted();
   CHECK(!was_interrupted) << "JIT dispatch failure";
+  const bool fail_to_update_leaves =
+      module_
+          ->walk([&](mlir::Operation* op) {
+            if (llvm::dyn_cast<mlir::oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
+              for (Value result : op->getOpResults()) {
+                if (result.use_empty()) {
+                  auto found = mapping.find(result);
+                  CHECK(found->first) << "tensor not found";
+                  CHECK(importer_.UpdateIntermediateTensor(result, found->second).succeeded());
+                }
+              }
+              return WalkResult::advance();
+            } else {
+              return WalkResult::advance();
+            }
+          })
+          .wasInterrupted();
+  CHECK(!fail_to_update_leaves) << "fail to replace lazy tensor with eager tensor";
 }
 
 Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
