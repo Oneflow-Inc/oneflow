@@ -1483,6 +1483,21 @@ class TestTensor(flow.unittest.TestCase):
         return y
 
     @flow.unittest.skip_unless_1n4d()
+    def test_construct_consistent_tensor_from_numpy_with_default_dtype(test_case):
+        x = np.ones((4, 4), dtype=np.int32)
+        placement = flow.placement("cuda", {0: [0, 1, 2, 3]})
+        y = flow.tensor(
+            x,
+            placement=placement,
+            sbp=[flow.sbp.split(0)],
+            requires_grad=False,
+        )
+        test_case.assertTrue(y.dtype == flow.int32)
+        test_case.assertTrue(
+            np.allclose(y.to_local().numpy(), np.ones((1, 4), dtype=np.float32))
+        )
+
+    @flow.unittest.skip_unless_1n4d()
     def test_construct_consistent_tensor_by_numpy(test_case):
         x = np.ones((4, 4), dtype=np.int32)
         placement = flow.placement("cuda", {0: [0, 1, 2, 3]})
