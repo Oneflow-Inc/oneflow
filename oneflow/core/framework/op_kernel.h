@@ -28,7 +28,7 @@ limitations under the License.
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/op_kernel_context_if.h"
 #include "oneflow/core/device/device_context.h"
-#include "oneflow/core/stream/stream_context.h"
+#include "oneflow/core/stream/include/stream_context.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
 
