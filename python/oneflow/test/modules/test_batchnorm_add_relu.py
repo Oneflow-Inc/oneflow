@@ -286,9 +286,9 @@ class TestBnAddRelu(flow.unittest.TestCase):
     def test_bn_add_relu2d(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            # _test_bn_add_relu,
+            _test_bn_add_relu,
             _test_bn_relu,
-            # _test_bn_relu_track_running_states_false,
+            _test_bn_relu_track_running_states_false,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["channels"] = [4, 6, 8, 10]
