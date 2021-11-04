@@ -292,11 +292,9 @@ class UserKernelOpInferContext final : virtual public user_op::UserOpConfOpInfoP
   ArgVec inputs_;
   ArgVec outputs_;
   ParallelContext parallel_ctx_;
-  cfg::NdSbpSignature nd_sbp_signature_;
   ParallelDesc parallel_desc_;
   HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::NaiveTensorDesc>>
       arg2tensor_desc_;
-  HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2logical_tensor_desc_;
 };
 
 class UserKernelInferContext final : virtual public UserKernelBaseContext,
