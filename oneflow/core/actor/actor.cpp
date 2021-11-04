@@ -135,7 +135,7 @@ void Actor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
   actor_ctx_ = actor_ctx;
   const TaskProto& task_proto = actor_ctx->task_proto();
   actor_id_ = task_proto.task_id();
-  thrd_id_ = Global<IDMgr>::Get()->ThrdId4ActorId(actor_id_);
+  thrd_id_ = ThrdId4ActorId(actor_id_);
   job_id_ = task_proto.job_id();
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
@@ -663,8 +663,7 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
 }
 
 void Actor::EnqueueAsyncMsg(const ActorMsg& msg) {
-  if (is_kernel_launch_synchronized_
-      && thrd_id_ == Global<IDMgr>::Get()->ThrdId4ActorId(msg.dst_actor_id())) {
+  if (is_kernel_launch_synchronized_ && thrd_id_ == ThrdId4ActorId(msg.dst_actor_id())) {
     Global<ActorMsgBus>::Get()->SendMsg(msg);
   } else {
     async_msg_queue_.push_back(msg);
@@ -702,7 +701,7 @@ void Actor::AsyncSendQueuedMsg() {
 }
 
 void Actor::AddCallback(std::function<void()> callback) {
-  actor_ctx_->AddCallBack(std::move(callback));
+  actor_ctx_->AddCallback(std::move(callback));
 }
 
 }  // namespace oneflow

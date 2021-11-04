@@ -27,7 +27,7 @@ class GenericActorContext : public ActorContext {
   ~GenericActorContext() override = default;
 
   void Init(const TaskProto& task_proto, StreamContext* stream_ctx) override;
-  void AddCallBack(std::function<void()> callback) const override;
+  void AddCallback(std::function<void()> callback) override;
 
   StreamContext* stream_ctx() const override;
   const TaskProto& task_proto() const override;
