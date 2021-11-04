@@ -75,12 +75,31 @@ Maybe<const ParallelDesc> GetParallelDesc(const std::shared_ptr<Tensor>& tensor)
 void JitInterpreter::Interrupt() {
   CHECK(importer_.LowerToOneFlowKernel().succeeded());
   module_->dump();
-  CHECK(importer_
-            .WalkModuleByEveryOpConf([&](const OperatorConf& op_conf) {
-              LOG(ERROR) << "Dispatching";
-              LOG(ERROR) << op_conf.DebugString();
-            })
-            .succeeded());
+  const bool was_interrupted =
+      module_
+          ->walk([&](mlir::Operation* op) {
+            if (llvm::dyn_cast<mlir::oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
+              ::oneflow::OperatorConf op_conf;
+              mlir::oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(),
+                                                           op->getAttrDictionary());
+              const std::string op_name = user_op_adaptor.op_name().getValue().str();
+              auto user_conf = op_conf.mutable_user_conf();
+              if (succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))
+                  && succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))
+                  && succeeded(importer_.ConvertUserOpAttributes(op, user_op_adaptor, op_conf))
+                  && succeeded(ConvertCtrlInputs(op, op_conf))) {
+                LOG(ERROR) << "Dispatching";
+                LOG(ERROR) << op_conf.DebugString();
+                return WalkResult::advance();
+              } else {
+                return WalkResult::interrupt();
+              }
+            } else {
+              return WalkResult::advance();
+            }
+          })
+          .wasInterrupted();
+  CHECK(!was_interrupted) << "JIT dispatch failure";
 }
 
 Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
