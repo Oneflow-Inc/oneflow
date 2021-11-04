@@ -354,25 +354,44 @@ llvm::Optional<mlir::Value> JitImporter::GetResultByBnAndIndex(const std::string
 }
 
 LogicalResult JitImporter::LowerToOneFlowKernel() {
-  GetBuilder().create<ReturnOp>(GetModule()->getLoc());
+  llvm::SmallVector<Value, 8> return_values;
+  llvm::SmallVector<Type, 8> out_types{};
+  GetModule()
+      ->walk([&](mlir::Operation* op) {
+        if (llvm::dyn_cast<mlir::oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
+          for (auto result : op->getOpResults()) {
+            // TODO: define a control edge type
+            const bool is_ctrl_edge =
+                result.getType().isa<mlir::RankedTensorType>()
+                && result.getType().cast<mlir::RankedTensorType>().getElementType().isInteger(1);
+            if (result.use_empty() && !is_ctrl_edge) {
+              auto found = intermediate_tensors_.find(result);
+              if (found == intermediate_tensors_.end()) {
+                result.dump();
+                result.getType().dump();
+                llvm::errs() << "\n";
+                LOG(FATAL) << "tensor not found for result #" << result.getResultNumber();
+              }
+              return_tensors_.push_back(found->second);
+              return_values.push_back(result);
+              out_types.push_back(result.getType());
+            }
+          }
+          return WalkResult::advance();
+        } else {
+          return WalkResult::advance();
+        }
+      })
+      .wasInterrupted();
+  auto return_op = GetBuilder().create<ReturnOp>(GetModule()->getLoc(), return_values);
+  auto func_op = llvm::dyn_cast<mlir::FuncOp>(return_op->getParentOp());
+  auto new_func_type = GetBuilder().getFunctionType(func_op.getType().getInputs(), out_types);
+  func_op.setType(new_func_type);
   mlir::PassManager pm(GetModule()->getContext());
   pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createReturnAllLeaveResultPass());
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createCreateComputeCtxPass());
   return pm.run(GetModule());
-}
-
-LogicalResult JitImporter::UpdateIntermediateTensor(Value value,
-                                                    const std::shared_ptr<Tensor>& tensor) {
-  auto found = intermediate_tensors_.find(value);
-  if (found == intermediate_tensors_.end()) {
-    value.dump();
-    GetModule()->emitError() << "tensor not found";
-    return failure();
-  } else {
-    found->second = tensor;
-    return success();
-  }
 }
 
 }  // namespace ir

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #ifdef WITH_MLIR
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -89,6 +90,8 @@ void JitInterpreter::Interrupt() {
   CHECK(importer_.LowerToOneFlowKernel().succeeded());
   module_->dump();
   llvm::DenseMap<Value, std::shared_ptr<Tensor>> mapping;
+  // TODO: handle the case if there are more than one function in the module.
+  ReturnOp return_op;
   const bool was_interrupted =
       module_
           ->walk([&](mlir::Operation* op) {
@@ -138,30 +141,21 @@ void JitInterpreter::Interrupt() {
               } else {
                 return WalkResult::interrupt();
               }
+            } else if (auto return_op_ = llvm::dyn_cast<ReturnOp>(op)) {
+              return_op = return_op_;
+              return WalkResult::advance();
             } else {
               return WalkResult::advance();
             }
           })
           .wasInterrupted();
   CHECK(!was_interrupted) << "JIT dispatch failure";
-  const bool fail_to_update_leaves =
-      module_
-          ->walk([&](mlir::Operation* op) {
-            if (llvm::dyn_cast<mlir::oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
-              for (Value result : op->getOpResults()) {
-                if (result.use_empty()) {
-                  auto found = mapping.find(result);
-                  CHECK(found->first) << "tensor not found";
-                  CHECK(importer_.UpdateIntermediateTensor(result, found->second).succeeded());
-                }
-              }
-              return WalkResult::advance();
-            } else {
-              return WalkResult::advance();
-            }
-          })
-          .wasInterrupted();
-  CHECK(!fail_to_update_leaves) << "fail to replace lazy tensor with eager tensor";
+  for (auto indexed_return_value : llvm::enumerate(return_op->getOperands())) {
+    auto value = indexed_return_value.value();
+    auto found = mapping.find(value);
+    CHECK(found != mapping.end()) << "tensor not found";
+    importer_.GetReturnTensors()[indexed_return_value.index()] = mapping[value];
+  }
 }
 
 Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,

@@ -88,7 +88,7 @@ class JitImporter : public Importer {
     parallel_desc_ = parallel_desc;
   }
   LogicalResult LowerToOneFlowKernel();
-  LogicalResult UpdateIntermediateTensor(Value, const std::shared_ptr<Tensor>& tensor);
+  llvm::SmallVector<std::shared_ptr<Tensor>, 8>& GetReturnTensors() { return return_tensors_; }
 
  private:
   std::unordered_map<Tensor*, mlir::Value> result_mapping_;  // tensor* => %result
@@ -97,6 +97,7 @@ class JitImporter : public Importer {
   // 1. it is a result tensor
   // 2. it is being evaluated before forward function returning (print, etc)
   llvm::DenseMap<Value, std::shared_ptr<Tensor>> intermediate_tensors_;
+  llvm::SmallVector<std::shared_ptr<Tensor>, 8> return_tensors_;
   // members below should be reset every op by calling CreateMapping
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
   std::unordered_map<std::string, mlir::Value> operand_mapping_;     // "a0" => %result
