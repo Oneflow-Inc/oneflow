@@ -28,7 +28,7 @@ class ActorContext {
   virtual ~ActorContext() = default;
 
   virtual void Init(const TaskProto& task_proto, StreamContext* stream_ctx) = 0;
-  virtual void AddCallBack(std::function<void()> callback) const = 0;
+  virtual void AddCallback(std::function<void()> callback) = 0;
 
   virtual StreamContext* stream_ctx() const = 0;
   virtual const TaskProto& task_proto() const = 0;
