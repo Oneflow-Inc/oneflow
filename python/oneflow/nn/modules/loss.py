@@ -724,8 +724,7 @@ class RNNTLoss(_Loss):
 
         >>> import oneflow as flow
         
-        >>> acts = flow.rand(2,2,3,5)
-        >>> labels = flow.tensor([[[[0.59957194, 0.99668492, 0.73181846, 0.40358398, 0.54999642],
+        >>> acts = flow.tensor([[[[0.59957194, 0.99668492, 0.73181846, 0.40358398, 0.54999642],
          [0.57455618, 0.24744238, 0.55672277, 0.70749302, 0.08661287],
          [0.27993997, 0.39550804, 0.33705715, 0.90137192, 0.9813939 ]],
 
@@ -740,11 +739,13 @@ class RNNTLoss(_Loss):
 
         [[0.3615149 , 0.71376069, 0.40526852, 0.1877125 , 0.56233637],
          [0.25656691, 0.17399449, 0.58669971, 0.51235222, 0.48230175],
-         [0.67173024, 0.91094355, 0.26553281, 0.86351975, 0.33335668]]]],dtype=flow.int)
+         [0.67173024, 0.91094355, 0.26553281, 0.86351975, 0.33335668]]]],dtype=flow.float)
+        >>> labels = flow.tensor([[1, 2],[2,2]],dtype=flow.int)
         >>> acts_length = flow.tensor([2,2],dtype=flow.int)
         >>> label_length = flow.tensor([2,2],dtype=flow.int)
         >>> rnnt = flow.nn.RNNTLoss(blank=0,reduction="mean")
-        >>> rnnt(acts,labels,acts_length,label_length)
+        >>> loss = rnnt(acts,labels,acts_length,label_length)
+        >>> loss
         tensor([5.0785], dtype=oneflow.float32)
     """
 
