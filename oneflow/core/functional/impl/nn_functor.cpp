@@ -1711,16 +1711,14 @@ class FusedScaleTrilSoftmaxMaskScaleFunctor {
     random_mask_like_op_ =
         CHECK_JUST(one::OpBuilder("random_mask_like").Input("like").Output("out").Build());
     fused_op_ = CHECK_JUST(one::OpBuilder("fused_tril_scale_softmax_mask_scale")
-                         .Input("x")
-                         .Input("mask")
-                         .Output("y")
-                         .Output("softmax_y")
-                         .Build());
+                               .Input("x")
+                               .Input("mask")
+                               .Output("y")
+                               .Output("softmax_y")
+                               .Build());
   }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
-                                const float p, 
-                                const int64_t diagonal, 
-                                const float tril_scale_value, 
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const float p,
+                                const int64_t diagonal, const float tril_scale_value,
                                 const Optional<one::Generator>& generator) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap random_mask_like_attrs;
@@ -1739,8 +1737,7 @@ class FusedScaleTrilSoftmaxMaskScaleFunctor {
     JUST(fused_attrs.SetAttr<float>("tril_scale_value", tril_scale_value));
     JUST(fused_attrs.SetAttr<float>("mask_scale_value", mask_scale_value));
 
-    return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_, {x, mask}, fused_attrs); 
-
+    return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_, {x, mask}, fused_attrs);
   }
 
  private:
@@ -1748,28 +1745,25 @@ class FusedScaleTrilSoftmaxMaskScaleFunctor {
   std::shared_ptr<OpExpr> random_mask_like_op_;
 };
 
-
 class FusedScaleTrilSoftmaxMaskScaleGradFunctor {
  public:
   FusedScaleTrilSoftmaxMaskScaleGradFunctor() {
     fused_op_ = CHECK_JUST(one::OpBuilder("fused_tril_scale_softmax_mask_scale_grad")
-                         .Input("softmax_y")
-                         .Input("dy")
-                         .Input("mask")
-                         .Output("dx")
-                         .Build());
+                               .Input("softmax_y")
+                               .Input("dy")
+                               .Input("mask")
+                               .Output("dx")
+                               .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& softmax_y,
-                                const std::shared_ptr<one::Tensor>& dy,
-                                const std::shared_ptr<one::Tensor>& mask,
-                                const int64_t diagonal, 
-                                const float tril_scale_value, 
-                                const float mask_scale_value) const {
+                           const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& mask, const int64_t diagonal,
+                           const float tril_scale_value, const float mask_scale_value) const {
     MutableAttrMap fused_attrs;
     JUST(fused_attrs.SetAttr<int64_t>("diagonal", diagonal));
     JUST(fused_attrs.SetAttr<float>("tril_scale_value", tril_scale_value));
     JUST(fused_attrs.SetAttr<float>("mask_scale_value", mask_scale_value));
-    return OpInterpUtil::Dispatch<Tensor>(*fused_op_, {softmax_y, dy, mask}, fused_attrs); 
+    return OpInterpUtil::Dispatch<Tensor>(*fused_op_, {softmax_y, dy, mask}, fused_attrs);
   }
 
  private:
@@ -2043,7 +2037,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedBiasAddGeluGradFunctor>("FusedBiasAddGeluGrad");
   m.add_functor<impl::FusedBiasAddDropoutFunctor>("FusedBiasAddDropout");
   m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleFunctor>("FusedScaleTrilSoftmaxMaskScale");
-  m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleGradFunctor>("FusedScaleTrilSoftmaxMaskScaleGrad");
+  m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleGradFunctor>(
+      "FusedScaleTrilSoftmaxMaskScaleGrad");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
   m.add_functor<impl::CtcGreedyDecoderFunctor>("CtcGreedyDecoder");
   m.add_functor<impl::PartialFCSampleFunctor>("DistributedPariticalFCSample");

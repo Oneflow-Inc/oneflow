@@ -25,18 +25,19 @@ namespace one {
 
 struct FusedScaleTrilSoftmaxMaskScaleInterpState : public AutoGradCaptureState {
   bool input_requires_grad = true;
-  int64_t diagonal = 0; 
-  float tril_scale_value = 0.0; 
+  int64_t diagonal = 0;
+  float tril_scale_value = 0.0;
   float mask_scale_value = 1.0;
 };
 
-class FusedScaleTrilSoftmaxMaskScale : public OpExprGradFunction<FusedScaleTrilSoftmaxMaskScaleInterpState> {
+class FusedScaleTrilSoftmaxMaskScale
+    : public OpExprGradFunction<FusedScaleTrilSoftmaxMaskScaleInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(FusedScaleTrilSoftmaxMaskScaleInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const FusedScaleTrilSoftmaxMaskScaleInterpState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override;
+  Maybe<void> Apply(const FusedScaleTrilSoftmaxMaskScaleInterpState* ctx,
+                    const TensorTuple& out_grads, TensorTuple* in_grads) const override;
 
  private:
   AttrMap base_attrs_;
@@ -50,8 +51,9 @@ Maybe<void> FusedScaleTrilSoftmaxMaskScale::Init(const OpExpr& op) {
 }
 
 Maybe<void> FusedScaleTrilSoftmaxMaskScale::Capture(FusedScaleTrilSoftmaxMaskScaleInterpState* ctx,
-                                         const TensorTuple& inputs, const TensorTuple& outputs,
-                                         const AttrMap& attrs) const {
+                                                    const TensorTuple& inputs,
+                                                    const TensorTuple& outputs,
+                                                    const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
   ctx->input_requires_grad = inputs.at(0)->requires_grad();  // input
 
@@ -60,14 +62,15 @@ Maybe<void> FusedScaleTrilSoftmaxMaskScale::Capture(FusedScaleTrilSoftmaxMaskSca
   ctx->diagonal = JUST(composed_attrs.GetAttr<int64_t>("diagonal"));
   ctx->tril_scale_value = JUST(composed_attrs.GetAttr<float>("tril_scale_value"));
   ctx->mask_scale_value = JUST(composed_attrs.GetAttr<float>("mask_scale_value"));
-  ctx->SaveTensorForBackward(inputs.at(1)); // Save Mask
-  ctx->SaveTensorForBackward(outputs.at(1)); // Save softmax_dy
+  ctx->SaveTensorForBackward(inputs.at(1));   // Save Mask
+  ctx->SaveTensorForBackward(outputs.at(1));  // Save softmax_dy
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedScaleTrilSoftmaxMaskScale::Apply(const FusedScaleTrilSoftmaxMaskScaleInterpState* ctx,
-                                       const TensorTuple& out_grads, TensorTuple* in_grads) const {
-  CHECK_EQ_OR_RETURN(out_grads.size(), 2); // Cause output has y and softmax_y
+Maybe<void> FusedScaleTrilSoftmaxMaskScale::Apply(
+    const FusedScaleTrilSoftmaxMaskScaleInterpState* ctx, const TensorTuple& out_grads,
+    TensorTuple* in_grads) const {
+  CHECK_EQ_OR_RETURN(out_grads.size(), 2);  // Cause output has y and softmax_y
   if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
 
   // mask have no grad(reqiures_grad=False), but still take a place in in_grads
@@ -75,14 +78,17 @@ Maybe<void> FusedScaleTrilSoftmaxMaskScale::Apply(const FusedScaleTrilSoftmaxMas
 
   const std::shared_ptr<oneflow::one::Tensor>& mask = ctx->SavedTensors().at(0);
   const std::shared_ptr<oneflow::one::Tensor>& softmax_y = ctx->SavedTensors().at(1);
-  const std::shared_ptr<oneflow::one::Tensor>& input_grad = JUST(functional::FusedScaleTrilSoftmaxMaskScaleGrad(softmax_y, out_grads.at(0), mask, 
-                                                                                                        ctx->diagonal, ctx->tril_scale_value, ctx->mask_scale_value));
+  const std::shared_ptr<oneflow::one::Tensor>& input_grad =
+      JUST(functional::FusedScaleTrilSoftmaxMaskScaleGrad(softmax_y, out_grads.at(0), mask,
+                                                          ctx->diagonal, ctx->tril_scale_value,
+                                                          ctx->mask_scale_value));
   if (ctx->input_requires_grad) { in_grads->at(0) = input_grad; }
 
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("fused_tril_scale_softmax_mask_scale", FusedScaleTrilSoftmaxMaskScale);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_tril_scale_softmax_mask_scale",
+                               FusedScaleTrilSoftmaxMaskScale);
 
 }  // namespace one
 }  // namespace oneflow
