@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/global_for.h"
 
@@ -32,7 +33,7 @@ class ReturnKernel final : public Kernel {
 };
 
 void ReturnKernel::ForwardDataContent(KernelContext* ctx) const {
-  if (CHECK_JUST(*Global<Optional<bool>, MultiClient>::Get())) {
+  if (CHECK_JUST(IsMultiClient())) {
     CHECK(this->op_conf().return_conf().has_job_name());
     const auto& job_name = this->op_conf().return_conf().job_name();
     const auto& op_name = this->op_conf().name();
@@ -52,7 +53,7 @@ void ReturnKernel::ForwardDataContent(KernelContext* ctx) const {
 }
 
 void ReturnKernel::ForwardHeader(KernelContext* ctx) const {
-  if (CHECK_JUST(*Global<Optional<bool>, MultiClient>::Get())) {
+  if (CHECK_JUST(IsMultiClient())) {
     // Do nothing.
   } else {
     ctx->BnInOp2Blob("out")->CopyHeaderFrom(ctx->BnInOp2Blob("in"));

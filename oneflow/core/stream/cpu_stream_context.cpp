@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/stream/stream_context.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/device/event_record.h"
 #include "oneflow/core/kernel/chain_kernel_observer.h"
