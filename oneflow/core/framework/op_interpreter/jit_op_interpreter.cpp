@@ -143,7 +143,6 @@ void JitInterpreter::Interrupt() {
 Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
                                       TensorTuple* outputs, const OpExprInterpContext& ctx) const {
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
-  LOG(ERROR) << "[op_conf] " << op_conf->DebugString();
   const std::string device_tag = GetDeviceTag(inputs.at(0));
   const bool is_local = inputs.at(0)->is_local();
   const std::shared_ptr<const ParallelDesc> parallel_desc = JUST(GetParallelDesc(inputs.at(0)));
