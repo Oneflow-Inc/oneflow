@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_tensor.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/device/device_context.h"
-#include "oneflow/core/stream/stream_context.h"
+#include "oneflow/core/stream/include/stream_context.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/framework/to_string.h"
 
