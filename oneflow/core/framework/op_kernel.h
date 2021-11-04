@@ -138,9 +138,7 @@ class OpKernel {
     return std::shared_ptr<OpKernelState>();
   }
 
-  virtual void Compute(KernelComputeContext* ctx, OpKernelState*) const {
-    Compute(ctx);
-  }
+  virtual void Compute(KernelComputeContext* ctx, OpKernelState*) const { Compute(ctx); }
   virtual void Compute(KernelComputeContext*) const { LOG(INFO) << "UNIMPLEMENTED"; }
   virtual void InferShape(KernelInferContext* ctx) const;
   virtual bool AlwaysComputeWhenAllOutputsEmpty() const = 0;

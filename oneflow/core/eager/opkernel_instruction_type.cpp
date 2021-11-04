@@ -558,9 +558,9 @@ struct LocalCallOpKernelUtil final {
       *state = operand->op_interp_ctx().state.get();
       state = nullptr;
     }
-    operand->mut_opkernel()->TryInitOpKernelState(
-        operand->user_opkernel(), device_ctx, operand->inputs(), operand->outputs(),
-        operand->consistent_tensor_infer_result(), state);
+    operand->mut_opkernel()->TryInitOpKernelState(operand->user_opkernel(), device_ctx,
+                                                  operand->inputs(), operand->outputs(),
+                                                  operand->consistent_tensor_infer_result(), state);
   }
 
   static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
