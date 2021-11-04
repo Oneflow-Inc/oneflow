@@ -13,19 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job/id_manager.h"
+#include <vector>
+#include "oneflow/core/device/cuda_event.h"
 
 namespace oneflow {
 
-IDMgr::IDMgr() {
-  CHECK_LT((Global<ResourceDesc, ForSession>::Get()->process_ranks().size()),
-           static_cast<int64_t>(1) << machine_id_bit_num_);
-  gpu_device_num_ = Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
-  cpu_device_num_ = Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();
-  CHECK_LT(gpu_device_num_ + cpu_device_num_, (static_cast<int64_t>(1) << thread_id_bit_num_) - 3);
-  regst_desc_id_count_ = 0;
-  mem_block_id_count_ = 0;
-  chunk_id_count_ = 0;
+#ifdef WITH_CUDA
+
+CudaEvent::CudaEvent(int device_id, unsigned int flags) : device_id_(device_id) {
+  CudaCurrentDeviceGuard guard(device_id_);
+  OF_CUDA_CHECK(cudaEventCreateWithFlags(&event_, flags));
 }
+
+CudaEvent::~CudaEvent() {
+  CudaCurrentDeviceGuard guard(device_id_);
+  OF_CUDA_CHECK(cudaEventDestroy(event_));
+}
+
+bool CudaEvent::Query() const { return cudaEventQuery(event_) != cudaErrorNotReady; }
+
+#endif
 
 }  // namespace oneflow
