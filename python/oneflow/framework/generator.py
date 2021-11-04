@@ -46,6 +46,10 @@ def set_rng_state(state):
     return oneflow.default_generator.set_state(state)
 
 
+def default_generator(device=None):
+    return oneflow._oneflow_internal.default_generator
+
+
 def _setstate(self, state_dict):
     self.__init__(state_dict["device"])
     self.set_state(state_dict["state"])
