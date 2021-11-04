@@ -31,8 +31,6 @@ def _rand_op_common_process(
         device = flow.device(device)
     size = _single(size)
     processed_sbp = sbp
-    if generator is None:
-        generator = flow.Generator()
     if placement is not None:
         assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
         if isinstance(processed_sbp, flow.sbp.sbp):
@@ -139,8 +137,6 @@ def rand_op(
     """
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
-    if generator is None:
-        generator = flow.default_generator
     return Rand(size, generator, dtype, layout, device, placement, sbp, requires_grad)()
 
 
@@ -238,8 +234,6 @@ def randn_op(
     """
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
-    if generator is None:
-        generator = flow.default_generator
     return RandN(
         size, generator, dtype, layout, device, placement, sbp, requires_grad
     )()
@@ -260,8 +254,6 @@ class RandInt(Module):
     ) -> None:
         super().__init__()
 
-        if generator is None:
-            generator = flow.Generator()
         assert low < high
         self.requires_grad = requires_grad
         (
@@ -348,8 +340,6 @@ def randint_op(
     """
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
-    if generator is None:
-        generator = flow.default_generator
     return RandInt(
         low, high, size, generator, dtype, device, placement, sbp, requires_grad
     )()
@@ -445,8 +435,6 @@ def randperm_op(
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
     assert pin_memory is False, "pin_memory not supported yet"
-    if generator is None:
-        generator = flow.default_generator
     return RandPerm(n, generator, dtype, layout, device, placement, sbp, requires_grad)(
         out
     )
