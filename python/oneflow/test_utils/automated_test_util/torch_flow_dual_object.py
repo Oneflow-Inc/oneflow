@@ -34,6 +34,7 @@ from .generators import Nothing, generator, random_tensor
 postulate = [".rand", ".Tensor"]
 
 testing = False
+testing_graph = False
 
 
 def torch_tensor_to_flow(x):
@@ -45,6 +46,7 @@ note_pytorch_args = []
 note_pytorch_kwargs = []
 vis_tensor = []
 call_tensor_id = []
+flow_res_id_eager2_graph = dict()
 
 
 class PyTorchDoesNotSupportError(Exception):
@@ -263,6 +265,28 @@ def GetDualObject(name, pytorch, oneflow):
                             oneflow_res = torch_tensor_to_flow(pytorch_res)
                         else:
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
+                            if testing_graph:
+                                if isinstance(oneflow, flow.nn.Module):
+
+                                    class TestG(flow.nn.Graph):
+                                        def __init__(self):
+                                            super().__init__()
+                                            self.test_m = oneflow
+
+                                        def build(self, *args):
+                                            return self.test_m(*args)
+
+                                    test_g = TestG()
+                                    test_g_res = test_g(*oneflow_args)
+                                    if isinstance(test_g_res, tuple):
+                                        for idx, g_res in enumerate(test_g_res):
+                                            flow_res_id_eager2_graph[
+                                                id(oneflow_res[idx])
+                                            ] = g_res
+                                    else:
+                                        flow_res_id_eager2_graph[
+                                            id(oneflow_res)
+                                        ] = test_g_res
 
                         return GetDualObject("unused", pytorch_res, oneflow_res)
 
@@ -382,6 +406,7 @@ def clear_note_fake_program():
     note_pytorch_kwargs.clear()
     call_tensor_id.clear()
     vis_tensor.clear()
+    flow_res_id_eager2_graph.clear()
 
 
 class DualObject:
@@ -486,7 +511,7 @@ def check_nonetype_equality(a, b, ignored1, ignored2):
     return True
 
 
-def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
+def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05, check_graph=True):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
     def deco(f):
@@ -504,8 +529,12 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                 try:
                     global testing
                     testing = True
+                    global testing_graph
+                    if check_graph:
+                        testing_graph = True
                     res = f(test_case)
                     testing = False
+                    testing_graph = False
                 except (PyTorchDoesNotSupportError, BothDoNotSupportError) as e:
                     if verbose:
                         print(f"{f.__name__}")
@@ -550,7 +579,20 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                     ):
                         vis_tensor.append(x.pytorch)
                 for x in dual_objects_to_test:
+                    # check eager
                     test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol), x)
+                    # check graph
+                    flow_tensor = x.oneflow
+                    if id(flow_tensor) in flow_res_id_eager2_graph:
+                        test_case.assertTrue(
+                            np.allclose(
+                                flow_tensor.numpy(),
+                                flow_res_id_eager2_graph[id(flow_tensor)].numpy(),
+                                rtol=rtol,
+                                atol=atol,
+                                equal_nan=True,
+                            )
+                        )
                 if verbose:
                     print("test passed")
                 n -= 1
