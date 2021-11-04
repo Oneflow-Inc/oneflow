@@ -594,12 +594,14 @@ int64_t InstructionMaxRunningSeconds() { return 60 * 5; }
 
 Maybe<void> VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) {
   OF_PROFILER_RANGE_PUSH("vm:Receive");
-  CHECK_OR_RETURN(!pthread_fork::IsForkedSubProcess())
-      << "Cannot run OneFlow in forked subprocess. Please add "
-         "'multiprocessing.set_start_method(\"spawn\")' in '__main__' if you are using Python's "
-         "multiprocessing";
   InstructionMsgList new_instr_msg_list;
   INTRUSIVE_FOR_EACH_PTR(compute_instr_msg, compute_instr_msg_list) {
+    const auto& parallel_desc = JUST(GetInstructionParallelDesc(*compute_instr_msg));
+    CHECK_OR_RETURN(!pthread_fork::IsForkedSubProcess() || !parallel_desc
+                    || parallel_desc->device_tag() == "cpu")
+        << "Cannot re-initialize CUDA in forked subprocess. To use CUDA with multiprocessing, you "
+           "must add 'multiprocessing.set_start_method(\"spawn\")' in '__main__' if you are using "
+           "Python's multiprocessing";
     if (!compute_instr_msg->phy_instr_operand()) {
       new_instr_msg_list.EmplaceBack(compute_instr_msg->MakeInferInstrMsg());
     }

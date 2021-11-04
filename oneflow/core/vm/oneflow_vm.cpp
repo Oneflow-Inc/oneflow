@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/thread/thread_consistent_id.h"
 #include "oneflow/core/framework/transport_token.h"
+#include "oneflow/core/platform/include/pthread_fork.h"
 
 namespace oneflow {
 
@@ -133,8 +134,13 @@ OneflowVM::~OneflowVM() {
 }
 
 Maybe<void> OneflowVM::Receive(vm::InstructionMsgList* instr_list) {
-  JUST(vm_->Receive(instr_list));
-  notifier_.Notify();
+  if (!pthread_fork::IsForkedSubProcess()) {
+    JUST(vm_->Receive(instr_list));
+    notifier_.Notify();
+  } else {
+    JUST(vm_->Receive(instr_list));
+    while (!vm_->Empty()) { vm_->Schedule(); }
+  }
   return Maybe<void>::Ok();
 }
 

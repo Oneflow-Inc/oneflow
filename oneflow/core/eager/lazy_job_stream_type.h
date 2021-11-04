@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
+#include "oneflow/core/platform/include/pthread_fork.h"
 
 namespace oneflow {
 namespace vm {
@@ -42,7 +43,9 @@ class LazyJobStreamType final : public StreamType {
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
   void Compute(Instruction* instruction) const override;
-  bool SharingVirtualMachineThread() const override { return false; }
+  bool SharingVirtualMachineThread() const override {
+    return false || pthread_fork::IsForkedSubProcess();
+  }
   bool SupportingTransportInstructions() const override { return false; }
   intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
                                                    int64_t this_machine_id) const override;
