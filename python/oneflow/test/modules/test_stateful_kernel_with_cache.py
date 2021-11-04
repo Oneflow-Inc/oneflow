@@ -15,6 +15,7 @@ limitations under the License.
 """
 
 import unittest
+import os
 
 import numpy as np
 import oneflow as flow
@@ -22,6 +23,7 @@ import oneflow.unittest
 
 
 @flow.unittest.skip_unless_1n2d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestStatefulKernelWithInpersistentState(flow.unittest.TestCase):
     def test_stateful_kernel_with_inpersistent_state(test_case):
         x = flow.arange(4).reshape(2, 2)
