@@ -75,6 +75,12 @@ Maybe<const ParallelDesc> GetParallelDesc(const std::shared_ptr<Tensor>& tensor)
 void JitInterpreter::Interrupt() {
   CHECK(importer_.LowerToOneFlowKernel().succeeded());
   module_->dump();
+  CHECK(importer_
+            .WalkModuleByEveryOpConf([&](const OperatorConf& op_conf) {
+              LOG(ERROR) << "Dispatching";
+              LOG(ERROR) << op_conf.DebugString();
+            })
+            .succeeded());
 }
 
 Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,

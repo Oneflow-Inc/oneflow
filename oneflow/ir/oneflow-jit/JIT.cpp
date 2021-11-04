@@ -358,9 +358,42 @@ LogicalResult JitImporter::LowerToOneFlowKernel() {
   GetBuilder().create<ReturnOp>(GetModule()->getLoc());
   mlir::PassManager pm(GetModule()->getContext());
   pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
-  pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createReturnAllLeaveResultPass());
-  pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createCreateComputeCtxPass());
+  // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createReturnAllLeaveResultPass());
+  // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createCreateComputeCtxPass());
   return pm.run(GetModule());
+}
+
+LogicalResult JitImporter::WalkModuleByEveryOpConf(
+    const std::function<void(const OperatorConf&)> cb) {
+  // TODO: extract code duplicated to compute context pass
+  const bool was_interrupted =
+      GetModule()
+          .walk([&](mlir::Operation* op) {
+            if (llvm::dyn_cast<mlir::oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
+              ::oneflow::OperatorConf op_conf;
+              mlir::oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(),
+                                                           op->getAttrDictionary());
+              const std::string op_name = user_op_adaptor.op_name().getValue().str();
+              auto user_conf = op_conf.mutable_user_conf();
+              if (succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))
+                  && succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))
+                  && succeeded(ConvertUserOpAttributes(op, user_op_adaptor, op_conf))
+                  && succeeded(ConvertCtrlInputs(op, op_conf))) {
+                cb(op_conf);
+                return WalkResult::advance();
+              } else {
+                return WalkResult::interrupt();
+              }
+            } else {
+              return WalkResult::advance();
+            }
+          })
+          .wasInterrupted();
+  if (was_interrupted) {
+    return failure();
+  } else {
+    return success();
+  }
 }
 
 }  // namespace ir

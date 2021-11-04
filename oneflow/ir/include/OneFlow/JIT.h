@@ -88,6 +88,7 @@ class JitImporter : public Importer {
     parallel_desc_ = parallel_desc;
   }
   LogicalResult LowerToOneFlowKernel();
+  LogicalResult WalkModuleByEveryOpConf(const std::function<void(const OperatorConf&)> cb);
 
  private:
   std::unordered_map<Tensor*, mlir::Value> result_mapping_;  // tensor* => %result
