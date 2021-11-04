@@ -666,6 +666,51 @@ Maybe<void> Operator::InferNdSbpSignatureIf(
   return Maybe<void>::Ok();
 }
 
+Maybe<cfg::SbpSignatureList> Operator::GetSbpSignatureList(
+    const ParallelDesc& parallel_desc,
+    const std::function<Maybe<const NdSbpInferHint*>(const std::string&)>& NdSbpInferHint4Ibn)
+    const {
+  const auto IsBroadcast = [](const cfg::NdSbp& nd_sbp, const ParallelDesc& parallel_desc) -> bool {
+    if (parallel_desc.parallel_num() == 1) { return true; }
+    for (int64_t i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
+      if (!nd_sbp.sbp_parallel(i).has_broadcast_parallel()) { return false; }
+    }
+    return true;
+  };
+  const auto& parallel_hierarchy = parallel_desc.hierarchy();
+  CHECK_EQ_OR_RETURN(parallel_hierarchy->NumAxes(), 1) << "Only support 1d sbp now.";
+
+  HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
+  for (const auto& ibn : input_bns()) {
+    const NdSbpInferHint* hint = JUST(NdSbpInferHint4Ibn(ibn));
+    if (hint->nd_sbp().sbp_parallel_size() != 1) {
+      CHECK_OR_RETURN(IsBroadcast(hint->nd_sbp(), hint->parallel_desc()));
+    }
+    ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(&hint->parallel_desc(), &hint->logical_blob_desc(),
+                                                 &hint->nd_sbp().sbp_parallel(0)));
+  }
+  auto SbpInferHint4Ibn = [&](const std::string& ibn) -> Maybe<const SbpInferHint*> {
+    auto it = ibn2sbp_infer_hint.find(ibn);
+    if (it == ibn2sbp_infer_hint.end()) {
+      return Error::CheckFailedError()
+             << "cannot find corresponding SbpInferHint for input_blob_name : " << ibn;
+    }
+    return &(it->second);
+  };
+  auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc&> {
+    return Maybe<const BlobDesc&>(JUST(SbpInferHint4Ibn(ibn))->logical_blob_desc());
+  };
+  cfg::SbpSignatureList valid_signature_list;
+  {
+    cfg::SbpSignatureList total_sbp_sig_list;
+    JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &total_sbp_sig_list));
+    // Filter sbp signature by logical shape
+    JUST(FilterAndCheckValidSbpSignatureListByLogicalShape(total_sbp_sig_list, SbpInferHint4Ibn,
+                                                           parallel_desc, &valid_signature_list));
+  }
+  return valid_signature_list;
+}
+
 Maybe<void> Operator::InferNdSbpSignature(
     cfg::NdSbpSignature* nd_sbp_signature, const cfg::NdSbpSignature& nd_sbp_constraints,
     const ParallelDesc& parallel_desc,
