@@ -31,6 +31,11 @@ def _getstate(self):
     return {"device": str(self.device), "state": self.get_state()}
 
 
+def _setstate(self, state_dict):
+    self.__init__(state_dict["device"])
+    self.set_state(state_dict["state"])
+
+
 def get_rng_state():
     """
     returns the state of the default random number generator
@@ -44,11 +49,6 @@ def set_rng_state(state):
     """
 
     return oneflow.default_generator.set_state(state)
-
-
-def _setstate(self, state_dict):
-    self.__init__(state_dict["device"])
-    self.set_state(state_dict["state"])
 
 
 default_generator = oneflow._oneflow_internal.default_generator("cpu")
