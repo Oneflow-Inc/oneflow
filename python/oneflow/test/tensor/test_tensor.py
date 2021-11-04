@@ -46,7 +46,6 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(tensor1[0, 0], 0)
         test_case.assertEqual(tensor2[0, 0], 1)
 
-
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_property(test_case):
         shape = (2, 3, 4, 5)

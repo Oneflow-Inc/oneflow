@@ -174,7 +174,9 @@ def tensor_getstate(self):
             rel_dir_name = f"consistent_tensor_{self.consistent_id()}"
             abs_dir_name = save_load_path / rel_dir_name
 
-            tensor = self.to_consistent(sbp=[flow.sbp.broadcast] * len(self.sbp)).to_local()
+            tensor = self.to_consistent(
+                sbp=[flow.sbp.broadcast] * len(self.sbp)
+            ).to_local()
         if (
             consistent_src_dsk_rank is None
             or consistent_src_dsk_rank == flow.env.get_rank()
@@ -185,7 +187,9 @@ def tensor_getstate(self):
     else:
         # save_load_path is None means setstate/getstate is called inside
         # methods other than flow.save/load, for example, copy.deepcopy
-        assert self.is_local, "copy.deepcopy and similar methods only support local tensors"
+        assert (
+            self.is_local
+        ), "copy.deepcopy and similar methods only support local tensors"
         return {"data": self.numpy(), "dtype": self.dtype}
 
 
@@ -194,11 +198,11 @@ def tensor_setstate(self, pickle_dict):
         assert isinstance(save_load_path, Path)
         rel_dir_name = pickle_dict["path"]
         abs_dir_name = save_load_path / rel_dir_name
-        self.__init__(
-            _LoadSingleVariable(str(abs_dir_name), consistent_src_dsk_rank)
-        )
+        self.__init__(_LoadSingleVariable(str(abs_dir_name), consistent_src_dsk_rank))
     else:
-        return self.__init__(flow.tensor(pickle_dict["data"], dtype=pickle_dict["dtype"]))
+        return self.__init__(
+            flow.tensor(pickle_dict["data"], dtype=pickle_dict["dtype"])
+        )
 
 
 def legacy_load(
