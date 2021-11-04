@@ -50,6 +50,7 @@ def _setstate(self, state_dict):
     self.__init__(state_dict["device"])
     self.set_state(state_dict["state"])
 
+
 default_generator = oneflow._oneflow_internal.default_generator("cpu")
 oneflow._oneflow_internal.Generator.__getstate__ = _getstate
 oneflow._oneflow_internal.Generator.__setstate__ = _setstate
