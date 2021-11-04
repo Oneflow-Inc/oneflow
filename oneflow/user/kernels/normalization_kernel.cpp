@@ -18,6 +18,85 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
+static void Normalize(const T* input_ptr, const T* mean_ptr, const T* variance_ptr,
+                      const T* gamma_ptr, const T* beta_ptr, T* output_ptr,
+                      const int64_t batch_size, const int64_t channel_size,
+                      const int64_t spatial_size, const float epsilon, const bool training) {
+  const T* temp_input_ptr = input_ptr;
+  T* temp_output_ptr = output_ptr;
+  const int64_t all_channels = batch_size * channel_size;
+  int64_t channel = -1;
+  for (int64_t ac = 0; ac < all_channels; ++ac) {
+    channel += 1;
+    if (channel >= channel_size) { channel = 0; }
+    T inv_variance = variance_ptr[channel];
+    if (!training) { inv_variance = 1.0f / std::sqrt(inv_variance + epsilon); }
+    const T gamma = gamma_ptr[channel] * inv_variance;
+    const T beta = beta_ptr[channel];
+    const T mean = mean_ptr[channel];
+    for (int64_t s = 0; s < spatial_size; ++s) {
+      temp_output_ptr[s] = (temp_input_ptr[s] - mean) * gamma + beta;
+    }
+    temp_input_ptr += spatial_size;
+    temp_output_ptr += spatial_size;
+  }
+}
+
+template<typename T>
+static void AddToOutput(const T* add_to_output_ptr, T* output_ptr, const int64_t elem_count) {
+  for (int64_t i = 0; i < elem_count; ++i) { output_ptr[i] += add_to_output_ptr[i]; }
+}
+
+size_t InferGradTmpSizeForCpuKernel(user_op::InferContext* ctx) {
+  const auto& dy = ctx->InputTensorDesc("dy", 0);
+  size_t tmp_size = 0;
+  if (ctx->op_type_name() == "normalization_add_relu_grad" && !ctx->has_output("addend_diff", 0)) {
+    tmp_size += dy.shape().elem_cnt() * GetSizeOfDataType(dy.data_type());
+  }
+  return tmp_size;
+}
+
+// NOTE(Liang Depeng): helper functions to process datas for specific channel over all samples.
+template<typename T, typename OnData>
+static inline void ForEachFast(const T* data, const int64_t batch_size, const int64_t spatial_size,
+                               const int64_t jump_step, const int64_t channel_idx, OnData onData) {
+  const int64_t start_offset = channel_idx * spatial_size;
+  const T* tmp_data = data + start_offset;
+  for (int64_t outer = 0; outer < batch_size; ++outer) {
+    for (int64_t i = 0; i < spatial_size; ++i) { onData(&tmp_data[i]); }
+    tmp_data += jump_step;
+  }
+}
+
+template<typename T, typename OnData>
+static inline void ForEachFast(const T* in_data1, const T* in_data2, const int64_t batch_size,
+                               const int64_t spatial_size, const int64_t jump_step,
+                               const int64_t channel_idx, OnData onData) {
+  const int64_t start_offset = channel_idx * spatial_size;
+  const T* tmp_in_data1 = in_data1 + start_offset;
+  const T* tmp_in_data2 = in_data2 + start_offset;
+  for (int64_t outer = 0; outer < batch_size; ++outer) {
+    for (int64_t i = 0; i < spatial_size; ++i) { onData(&tmp_in_data1[i], &tmp_in_data2[i]); }
+    tmp_in_data1 += jump_step;
+    tmp_in_data2 += jump_step;
+  }
+}
+
+template<typename T, typename OnData>
+static inline void ForEachFast(const T* in_data, T* out_data, const int64_t batch_size,
+                               const int64_t spatial_size, const int64_t jump_step,
+                               const int64_t channel_idx, OnData onData) {
+  const int64_t start_offset = channel_idx * spatial_size;
+  const T* tmp_in_data = in_data + start_offset;
+  T* tmp_out_data = out_data + start_offset;
+  for (int64_t outer = 0; outer < batch_size; ++outer) {
+    for (int64_t i = 0; i < spatial_size; ++i) { onData(&tmp_in_data[i], &tmp_out_data[i]); }
+    tmp_in_data += jump_step;
+    tmp_out_data += jump_step;
+  }
+}
+
+template<typename T>
 class NormalizationInferenceCpuKernel final : public user_op::OpKernel {
  public:
   NormalizationInferenceCpuKernel() = default;
@@ -58,33 +137,14 @@ class NormalizationInferenceCpuKernel final : public user_op::OpKernel {
 
       // NOTE(Liang Depeng):
       // compute the normalization result
-      const T* temp_input_ptr = input_ptr;
-      T* temp_output_ptr = output_ptr;
-      const int64_t all_channels = batch_size * channel_size;
-
-      int64_t channel = -1;
-      for (int64_t ac = 0; ac < all_channels; ++ac) {
-        channel += 1;
-        if (channel >= channel_size) { channel = 0; }
-        const T inv_variance = 1.0f / std::sqrt(moving_variance_ptr[channel] + epsilon);
-        const T gamma = gamma_ptr[channel] * inv_variance;
-        const T beta = beta_ptr[channel];
-        const T mean = moving_mean_ptr[channel];
-        for (int64_t s = 0; s < spatial_size; ++s) {
-          temp_output_ptr[s] = (temp_input_ptr[s] - mean) * gamma + beta;
-        }
-        temp_input_ptr += spatial_size;
-        temp_output_ptr += spatial_size;
-      }
+      Normalize(input_ptr, moving_mean_ptr, moving_variance_ptr, gamma_ptr, beta_ptr, output_ptr,
+                batch_size, channel_size, spatial_size, epsilon, false);
 
       if (ctx->has_input("_add_to_output", 0)) {
         const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
         CHECK_EQ(add_to_output->data_type(), y->data_type());
         CHECK_EQ(add_to_output->shape(), y->shape());
-
-        const T* add_to_output_ptr = add_to_output->dptr<T>();
-        const int64_t elem_count = x->shape().elem_cnt();
-        for (int64_t i = 0; i < elem_count; ++i) { output_ptr[i] += add_to_output_ptr[i]; }
+        AddToOutput(add_to_output->dptr<T>(), output_ptr, x->shape().elem_cnt());
       }
 
     } else {  // TODO(Liang Depeng): NHWC format
@@ -94,19 +154,20 @@ class NormalizationInferenceCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_BN_INFERENCE_CPU_KERNEL(dtype)                                                 \
-  REGISTER_USER_KERNEL("normalization")                                                         \
-      .SetCreateFn<NormalizationInferenceCpuKernel<dtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                       \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)            \
-                       & (user_op::HobAttr<bool>("training") == false))                         \
-      .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        if (ctx.has_input("_add_to_output", 0)) {                                               \
-          OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "_add_to_output", 0, true));           \
-        }                                                                                       \
-        return Maybe<void>::Ok();                                                               \
-      });
+#define REGISTER_BN_INFERENCE_CPU_KERNEL(dtype)                                           \
+  REGISTER_USER_KERNEL("normalization")                                                   \
+      .SetCreateFn<NormalizationInferenceCpuKernel<dtype>>()                              \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                 \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)      \
+                       & (user_op::HobAttr<bool>("training") == false))                   \
+      .SetInplaceProposalFn(                                                              \
+          [](const user_op::InferContext& ctx,                                            \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {      \
+            if (ctx.has_input("_add_to_output", 0)) {                                     \
+              OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "_add_to_output", 0, true)); \
+            }                                                                             \
+            return Maybe<void>::Ok();                                                     \
+          });
 
 REGISTER_BN_INFERENCE_CPU_KERNEL(float)
 REGISTER_BN_INFERENCE_CPU_KERNEL(double)
@@ -217,32 +278,14 @@ class NormalizationTrainCpuKernel final : public user_op::OpKernel {
 
       // NOTE(Liang Depeng):
       // compute the normalization result
-      const T* temp_input_ptr = input_ptr;
-      T* temp_output_ptr = output_ptr;
-      const int64_t all_channels = batch_size * channel_size;
-
-      int64_t channel = -1;
-      for (int64_t ac = 0; ac < all_channels; ++ac) {
-        channel += 1;
-        if (channel >= channel_size) { channel = 0; }
-        const T gamma = gamma_ptr[channel] * inv_variance_ptr[channel];
-        const T beta = beta_ptr[channel];
-        const T mean = mean_ptr[channel];
-        for (int s = 0; s < spatial_size; ++s) {
-          temp_output_ptr[s] = (temp_input_ptr[s] - mean) * gamma + beta;
-        }
-        temp_input_ptr += spatial_size;
-        temp_output_ptr += spatial_size;
-      }
+      Normalize(input_ptr, mean_ptr, inv_variance_ptr, gamma_ptr, beta_ptr, output_ptr, batch_size,
+                channel_size, spatial_size, epsilon, true);
 
       if (ctx->has_input("_add_to_output", 0)) {
         const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
         CHECK_EQ(add_to_output->data_type(), y->data_type());
         CHECK_EQ(add_to_output->shape(), y->shape());
-
-        const T* add_to_output_ptr = add_to_output->dptr<T>();
-        const int64_t elem_count = x->shape().elem_cnt();
-        for (int64_t i = 0; i < elem_count; ++i) { output_ptr[i] += add_to_output_ptr[i]; }
+        AddToOutput(add_to_output->dptr<T>(), output_ptr, x->shape().elem_cnt());
       }
 
       if (ctx->op_type_name() == "normalization_add_relu") {
@@ -264,24 +307,23 @@ class NormalizationTrainCpuKernel final : public user_op::OpKernel {
             for (int32_t s = 0; s < step; ++s) {
               const T sum = temp_output_ptr[s] + addend_ptr[s];
               const bool is_positive = (sum > 0);
-              mask = mask & (static_cast<int32_t>(is_positive) << s);
+              mask = mask | (static_cast<int32_t>(is_positive) << s);
               temp_output_ptr[s] = is_positive ? sum : 0;
             }
             mask_ptr[outer] = mask;
             addend_ptr += step;
             temp_output_ptr += step;
-
-            if (remain_loop_start_idx < elem_cnt) {
-              int32_t mask = 0;
-              const int32_t remain = elem_cnt - remain_loop_start_idx;
-              for (int32_t i = 0; i < remain; ++i) {
-                const T sum = temp_output_ptr[i] + addend_ptr[i];
-                const bool is_positive = (sum > 0);
-                mask = mask & (static_cast<int32_t>(is_positive) << i);
-                temp_output_ptr[i] = is_positive ? sum : 0;
-              }
-              mask_ptr[outer_loop] = mask;
+          }
+          if (remain_loop_start_idx < elem_cnt) {
+            int32_t mask_val = 0;
+            const int32_t remain = elem_cnt - remain_loop_start_idx;
+            for (int32_t i = 0; i < remain; ++i) {
+              const T sum = temp_output_ptr[i] + addend_ptr[i];
+              const bool is_positive = (sum > 0);
+              mask_val = mask_val | (static_cast<int32_t>(is_positive) << i);
+              temp_output_ptr[i] = is_positive ? sum : 0;
             }
+            mask_ptr[outer_loop] = mask_val;
           }
         } else {
           const int32_t step = 32;
@@ -291,27 +333,26 @@ class NormalizationTrainCpuKernel final : public user_op::OpKernel {
           int32_t* mask_ptr = mask->mut_dptr<int32_t>();
           T* temp_output_ptr = output_ptr;
           for (int64_t outer = 0; outer < outer_loop; ++outer) {
-            int32_t mask = 0;
+            int32_t mask_val = 0;
             for (int32_t s = 0; s < step; ++s) {
               const T output = temp_output_ptr[s];
               const bool is_positive = (output > 0);
-              mask = mask & (static_cast<int32_t>(is_positive) << s);
+              mask_val = mask_val | (static_cast<int32_t>(is_positive) << s);
               temp_output_ptr[s] = is_positive ? output : 0;
             }
-            mask_ptr[outer] = mask;
+            mask_ptr[outer] = mask_val;
             temp_output_ptr += step;
-
-            if (remain_loop_start_idx < elem_cnt) {
-              int32_t mask = 0;
-              const int32_t remain = elem_cnt - remain_loop_start_idx;
-              for (int32_t i = 0; i < remain; ++i) {
-                const T output = temp_output_ptr[i];
-                const bool is_positive = (output > 0);
-                mask = mask & (static_cast<int32_t>(is_positive) << i);
-                temp_output_ptr[i] = is_positive ? output : 0;
-              }
-              mask_ptr[outer_loop] = mask;
+          }
+          if (remain_loop_start_idx < elem_cnt) {
+            int32_t mask_val = 0;
+            const int32_t remain = elem_cnt - remain_loop_start_idx;
+            for (int32_t i = 0; i < remain; ++i) {
+              const T output = temp_output_ptr[i];
+              const bool is_positive = (output > 0);
+              mask_val = mask_val | (static_cast<int32_t>(is_positive) << i);
+              temp_output_ptr[i] = is_positive ? output : 0;
             }
+            mask_ptr[outer_loop] = mask_val;
           }
         }
       }
@@ -323,19 +364,20 @@ class NormalizationTrainCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_BN_TRAIN_CPU_KERNEL(dtype)                                                     \
-  REGISTER_USER_KERNEL("normalization")                                                         \
-      .SetCreateFn<NormalizationTrainCpuKernel<dtype>>()                                        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                       \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)            \
-                       & (user_op::HobAttr<bool>("training") == true))                          \
-      .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        if (ctx.has_input("_add_to_output", 0)) {                                               \
-          OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "_add_to_output", 0, true));           \
-        }                                                                                       \
-        return Maybe<void>::Ok();                                                               \
-      });
+#define REGISTER_BN_TRAIN_CPU_KERNEL(dtype)                                               \
+  REGISTER_USER_KERNEL("normalization")                                                   \
+      .SetCreateFn<NormalizationTrainCpuKernel<dtype>>()                                  \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                 \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)      \
+                       & (user_op::HobAttr<bool>("training") == true))                    \
+      .SetInplaceProposalFn(                                                              \
+          [](const user_op::InferContext& ctx,                                            \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {      \
+            if (ctx.has_input("_add_to_output", 0)) {                                     \
+              OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "_add_to_output", 0, true)); \
+            }                                                                             \
+            return Maybe<void>::Ok();                                                     \
+          });
 
 REGISTER_BN_TRAIN_CPU_KERNEL(float)
 REGISTER_BN_TRAIN_CPU_KERNEL(double)
@@ -352,56 +394,6 @@ REGISTER_BN_ADD_RELU_CPU_KERNEL(float)
 REGISTER_BN_ADD_RELU_CPU_KERNEL(double)
 
 #undef REGISTER_BN_ADD_RELU_CPU_KERNEL
-
-size_t InferGradTmpSizeForCpuKernel(user_op::InferContext* ctx) {
-  const auto& dy = ctx->InputTensorDesc("dy", 0);
-  const auto axis = ctx->Attr<int32_t>("axis");
-  size_t tmp_size = 0;
-  if (ctx->op_type_name() == "normalization_add_relu_grad" && !ctx->has_output("addend_diff", 0)) {
-    tmp_size += dy.shape().elem_cnt() * GetSizeOfDataType(dy.data_type());
-  }
-  return tmp_size;
-}
-
-// NOTE(Liang Depeng): helper functions to process datas for specific channel over all samples.
-template<typename T, typename OnData>
-static inline void ForEachFast(const T* data, const int64_t batch_size, const int64_t spatial_size,
-                               const int64_t jump_step, const int64_t channel_idx, OnData onData) {
-  const int64_t start_offset = channel_idx * spatial_size;
-  const T* tmp_data = data + start_offset;
-  for (int64_t outer = 0; outer < batch_size; ++outer) {
-    for (int64_t i = 0; i < spatial_size; ++i) { onData(&tmp_data[i]); }
-    tmp_data += jump_step;
-  }
-}
-
-template<typename T, typename OnData>
-static inline void ForEachFast(const T* in_data1, const T* in_data2, const int64_t batch_size,
-                               const int64_t spatial_size, const int64_t jump_step,
-                               const int64_t channel_idx, OnData onData) {
-  const int64_t start_offset = channel_idx * spatial_size;
-  const T* tmp_in_data1 = in_data1 + start_offset;
-  const T* tmp_in_data2 = in_data2 + start_offset;
-  for (int64_t outer = 0; outer < batch_size; ++outer) {
-    for (int64_t i = 0; i < spatial_size; ++i) { onData(&tmp_in_data1[i], &tmp_in_data2[i]); }
-    tmp_in_data1 += jump_step;
-    tmp_in_data2 += jump_step;
-  }
-}
-
-template<typename T, typename OnData>
-static inline void ForEachFast(const T* in_data, T* out_data, const int64_t batch_size,
-                               const int64_t spatial_size, const int64_t jump_step,
-                               const int64_t channel_idx, OnData onData) {
-  const int64_t start_offset = channel_idx * spatial_size;
-  const T* tmp_in_data = in_data + start_offset;
-  T* tmp_out_data = out_data + start_offset;
-  for (int64_t outer = 0; outer < batch_size; ++outer) {
-    for (int64_t i = 0; i < spatial_size; ++i) { onData(&tmp_in_data[i], &tmp_out_data[i]); }
-    tmp_in_data += jump_step;
-    tmp_out_data += jump_step;
-  }
-}
 
 template<typename T>
 class NormalizationGradCpuKernel final : public user_op::OpKernel {
@@ -436,7 +428,71 @@ class NormalizationGradCpuKernel final : public user_op::OpKernel {
     if (ctx->op_type_name() == "normalization_grad") {
       dy_ptr = dy->dptr<T>();
     } else if (ctx->op_type_name() == "normalization_add_relu_grad") {
-      // TODO
+      const int64_t elem_cnt = dy->shape().elem_cnt();
+      const auto* mask = ctx->Tensor4ArgNameAndIndex("reserve_space", 0);
+      user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+      if (ctx->has_output("addend_diff", 0)) {
+        user_op::Tensor* addend_diff = ctx->Tensor4ArgNameAndIndex("addend_diff", 0);
+        const int32_t step = 32;
+        const int64_t outer_loop = elem_cnt / step;
+        const int64_t remain_loop_start_idx = outer_loop * step;
+
+        T* addend_diff_ptr = addend_diff->mut_dptr<T>();
+        const int32_t* mask_ptr = mask->dptr<int32_t>();
+        const T* temp_dy_ptr = dy->dptr<T>();
+
+        for (int64_t outer = 0; outer < outer_loop; ++outer) {
+          const int32_t mask_val = mask_ptr[outer];
+          for (int32_t s = 0; s < step; ++s) {
+            bool is_positive = mask_val & (1 << s);
+            addend_diff_ptr[s] = static_cast<T>(is_positive) * temp_dy_ptr[s];
+          }
+          addend_diff_ptr += step;
+          temp_dy_ptr += step;
+        }
+
+        if (remain_loop_start_idx < elem_cnt) {
+          const int32_t mask_val = mask_ptr[outer_loop];
+          const int32_t remain = elem_cnt - remain_loop_start_idx;
+          for (int32_t i = 0; i < remain; ++i) {
+            bool is_positive = mask_val & (1 << i);
+            addend_diff_ptr[i] = static_cast<T>(is_positive) * temp_dy_ptr[i];
+          }
+        }
+
+        dy_ptr = addend_diff->dptr<T>();
+      } else {
+        printf("enter here3\n");
+        const int32_t step = 32;
+        const int64_t outer_loop = elem_cnt / step;
+        const int64_t remain_loop_start_idx = outer_loop * step;
+
+        T* relu_dx_ptr = tmp_buffer->mut_dptr<T>();
+        const int32_t* mask_ptr = mask->dptr<int32_t>();
+        const T* temp_dy_ptr = dy->dptr<T>();
+
+        for (int64_t outer = 0; outer < outer_loop; ++outer) {
+          const int32_t mask_val = mask_ptr[outer];
+          for (int32_t s = 0; s < step; ++s) {
+            bool is_positive = mask_val & (1 << s);
+            relu_dx_ptr[s] = static_cast<T>(is_positive) * temp_dy_ptr[s];
+          }
+          relu_dx_ptr += step;
+          temp_dy_ptr += step;
+        }
+
+        if (remain_loop_start_idx < elem_cnt) {
+          const int32_t mask_val = mask_ptr[outer_loop];
+          const int32_t remain = elem_cnt - remain_loop_start_idx;
+          for (int32_t i = 0; i < remain; ++i) {
+            bool is_positive = mask_val & (1 << i);
+            relu_dx_ptr[i] = static_cast<T>(is_positive) * temp_dy_ptr[i];
+          }
+        }
+
+        dy_ptr = tmp_buffer->dptr<T>();
+      }
+
     } else {
       UNIMPLEMENTED();
     }
@@ -502,16 +558,27 @@ class NormalizationGradCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_BN_GRAD_CPU_KERNEL(dtype)                                             \
-  REGISTER_USER_KERNEL("normalization_grad")                                           \
-      .SetCreateFn<NormalizationGradCpuKernel<dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn(InferGradTmpSizeForCpuKernel);
+#define REGISTER_BN_GRAD_CPU_KERNEL(dtype)                \
+  REGISTER_USER_KERNEL("normalization_grad")              \
+      .SetCreateFn<NormalizationGradCpuKernel<dtype>>()   \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
+                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_BN_GRAD_CPU_KERNEL(float)
 REGISTER_BN_GRAD_CPU_KERNEL(double)
 
 #undef REGISTER_BN_GRAD_CPU_KERNEL
+
+#define REGISTER_BN_ADD_RELU_GRAD_CPU_KERNEL(dtype)                                    \
+  REGISTER_USER_KERNEL("normalization_add_relu_grad")                                  \
+      .SetCreateFn<NormalizationGradCpuKernel<dtype>>()                                \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
+                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn(InferGradTmpSizeForCpuKernel);
+
+REGISTER_BN_ADD_RELU_GRAD_CPU_KERNEL(float)
+REGISTER_BN_ADD_RELU_GRAD_CPU_KERNEL(double)
+
+#undef REGISTER_BN_ADD_RELU_GRAD_CPU_KERNEL
 
 }  // namespace oneflow
