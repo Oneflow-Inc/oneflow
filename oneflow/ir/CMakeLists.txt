@@ -44,6 +44,8 @@ if(NOT llvm_monorepo_POPULATED)
     -DCMAKE_INSTALL_PREFIX=${LLVM_INSTALL_DIR}
     -DLLVM_ENABLE_RTTI=ON # turn this on to make it compatible with protobuf
     -DLLVM_ENABLE_EH=ON # turn this on to make it compatible with half (the library)
+    -DLLVM_BUILD_EXAMPLES=OFF
+    -DLLVM_BUILD_TOOLS=OFF
     -DLLVM_INCLUDE_EXAMPLES=OFF
     -DLLVM_INCLUDE_TESTS=OFF
     -DLLVM_INCLUDE_BENCHMARKS=OFF
