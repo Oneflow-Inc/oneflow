@@ -25,3 +25,8 @@ def create_generator(device=None):
 
 def manual_seed(seed):
     oneflow._oneflow_internal.manual_seed(seed)
+
+
+def __getattr__(name):
+    if name == "default_generator":
+        return None
