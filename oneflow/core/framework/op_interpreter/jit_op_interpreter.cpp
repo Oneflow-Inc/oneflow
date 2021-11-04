@@ -118,7 +118,13 @@ void JitInterpreter::Interrupt() {
                   if (auto arg = operand.dyn_cast<mlir::BlockArgument>()) {
                     inputs[index] = GetJitForwardArgs()[arg.getArgNumber()];
                   } else {
-                    inputs[index] = mapping.lookup(operand);
+                    auto found = mapping.find(operand);
+                    if (found->first) {
+                      inputs[index] = found->second;
+                    } else {
+                      operand.dump();
+                      LOG(FATAL) << "tensor not found";
+                    }
                   }
                 }
                 auto outputs = CHECK_JUST(OpInterpUtil::Dispatch<TensorTuple>(*expr, inputs));
