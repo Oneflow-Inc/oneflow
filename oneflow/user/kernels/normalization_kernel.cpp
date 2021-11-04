@@ -52,44 +52,43 @@ class NormalizationInferenceCpuKernel final : public user_op::OpKernel {
       T* moving_mean_ptr = moving_mean->mut_dptr<T>();
       T* moving_variance_ptr = moving_variance->mut_dptr<T>();
 
-      const int32_t batch_size = x->shape().At(0);
-      const int32_t channel_size = x->shape().At(axis);
-      const int32_t spatial_size = x->shape().Count(axis + 1);
+      const int64_t batch_size = x->shape().At(0);
+      const int64_t channel_size = x->shape().At(axis);
+      const int64_t spatial_size = x->shape().Count(axis + 1);
 
       // NOTE(Liang Depeng):
       // compute the normalization result
       const T* temp_input_ptr = input_ptr;
       T* temp_output_ptr = output_ptr;
-      const int32_t all_channels = batch_size * channel_size;
+      const int64_t all_channels = batch_size * channel_size;
 
-      int32_t channel = -1;
-      for (int ac = 0; ac < all_channels; ++ac) {
+      int64_t channel = -1;
+      for (int64_t ac = 0; ac < all_channels; ++ac) {
         channel += 1;
         if (channel >= channel_size) { channel = 0; }
         const T inv_variance = 1.0f / std::sqrt(moving_variance_ptr[channel] + epsilon);
         const T gamma = gamma_ptr[channel] * inv_variance;
         const T beta = beta_ptr[channel];
         const T mean = moving_mean_ptr[channel];
-        for (int s = 0; s < spatial_size; ++s) {
+        for (int64_t s = 0; s < spatial_size; ++s) {
           temp_output_ptr[s] = (temp_input_ptr[s] - mean) * gamma + beta;
         }
         temp_input_ptr += spatial_size;
         temp_output_ptr += spatial_size;
       }
+
+      if (ctx->has_input("_add_to_output", 0)) {
+        const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+        CHECK_EQ(add_to_output->data_type(), y->data_type());
+        CHECK_EQ(add_to_output->shape(), y->shape());
+
+        const T* add_to_output_ptr = add_to_output->dptr<T>();
+        const int64_t elem_count = x->shape().elem_cnt();
+        for (int64_t i = 0; i < elem_count; ++i) { output_ptr[i] += add_to_output_ptr[i]; }
+      }
+
     } else {  // TODO(Liang Depeng): NHWC format
     }
-
-    // if (ctx->has_input("_add_to_output", 0)) {
-    //   const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
-    //   CHECK_EQ(add_to_output->data_type(), y->data_type());
-    //   CHECK_EQ(add_to_output->shape(), y->shape());
-    //   Memcpy<DeviceType::kGPU>(
-    //       ctx->device_ctx(), y->mut_dptr<void>(), add_to_output->dptr<void>(),
-    //       add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
-    //   sp_beta = CudnnSPOnePtr<T>();
-    // } else {
-    //   sp_beta = CudnnSPZeroPtr<T>();
-    // }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -166,14 +165,14 @@ class NormalizationTrainCpuKernel final : public user_op::OpKernel {
         moving_variance_ptr = moving_variance->mut_dptr<T>();
       }
 
-      const int32_t batch_size = x->shape().At(0);
-      const int32_t channel_size = x->shape().At(axis);
-      const int32_t spatial_size = x->shape().Count(axis + 1);
-      const int32_t jump_step = spatial_size * channel_size;
+      const int64_t batch_size = x->shape().At(0);
+      const int64_t channel_size = x->shape().At(axis);
+      const int64_t spatial_size = x->shape().Count(axis + 1);
+      const int64_t jump_step = spatial_size * channel_size;
 
       // NOTE(Liang Depeng): the following parameters were used to compute mean and var
-      const int32_t reduce_count = batch_size * spatial_size;
-      const int32_t unbias_reduce_count = reduce_count - 1;
+      const int64_t reduce_count = batch_size * spatial_size;
+      const int64_t unbias_reduce_count = reduce_count - 1;
       const float reduce_scale_factor = 1.0f / reduce_count;
       const float unbias_reduce_scale_factor = 1.0f / unbias_reduce_count;
       const float unbias_reduce_scale_factor_m2 = unbias_reduce_scale_factor * -2.0f;
@@ -183,12 +182,12 @@ class NormalizationTrainCpuKernel final : public user_op::OpKernel {
 
       // NOTE(Liang Depeng):
       // compute mean & inv_variance and update moving_mean & moving_variance for each channel
-      for (int channel = 0; channel < channel_size; ++channel) {
+      for (int64_t channel = 0; channel < channel_size; ++channel) {
         const T* temp_input_ptr = input_ptr + channel * spatial_size;
         T sum = 0;
         T sum_square = 0;
-        for (int batch = 0; batch < batch_size; ++batch) {
-          for (int s = 0; s < spatial_size; ++s) {
+        for (int64_t batch = 0; batch < batch_size; ++batch) {
+          for (int64_t s = 0; s < spatial_size; ++s) {
             const T x = temp_input_ptr[s];
             sum += x;
             sum_square += x * x;
@@ -220,10 +219,10 @@ class NormalizationTrainCpuKernel final : public user_op::OpKernel {
       // compute the normalization result
       const T* temp_input_ptr = input_ptr;
       T* temp_output_ptr = output_ptr;
-      const int32_t all_channels = batch_size * channel_size;
+      const int64_t all_channels = batch_size * channel_size;
 
-      int32_t channel = -1;
-      for (int ac = 0; ac < all_channels; ++ac) {
+      int64_t channel = -1;
+      for (int64_t ac = 0; ac < all_channels; ++ac) {
         channel += 1;
         if (channel >= channel_size) { channel = 0; }
         const T gamma = gamma_ptr[channel] * inv_variance_ptr[channel];
@@ -235,22 +234,90 @@ class NormalizationTrainCpuKernel final : public user_op::OpKernel {
         temp_input_ptr += spatial_size;
         temp_output_ptr += spatial_size;
       }
+
+      if (ctx->has_input("_add_to_output", 0)) {
+        const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+        CHECK_EQ(add_to_output->data_type(), y->data_type());
+        CHECK_EQ(add_to_output->shape(), y->shape());
+
+        const T* add_to_output_ptr = add_to_output->dptr<T>();
+        const int64_t elem_count = x->shape().elem_cnt();
+        for (int64_t i = 0; i < elem_count; ++i) { output_ptr[i] += add_to_output_ptr[i]; }
+      }
+
+      if (ctx->op_type_name() == "normalization_add_relu") {
+        CHECK(!ctx->has_input("_add_to_output", 0));
+        const int64_t elem_cnt = x->shape().elem_cnt();
+        auto* mask = ctx->Tensor4ArgNameAndIndex("reserve_space", 0);
+
+        if (ctx->has_input("addend", 0)) {
+          const auto* addend = ctx->Tensor4ArgNameAndIndex("addend", 0);
+          const int32_t step = 32;
+          const int64_t outer_loop = elem_cnt / step;
+          const int64_t remain_loop_start_idx = outer_loop * step;
+
+          const T* addend_ptr = addend->dptr<T>();
+          int32_t* mask_ptr = mask->mut_dptr<int32_t>();
+          T* temp_output_ptr = output_ptr;
+          for (int64_t outer = 0; outer < outer_loop; ++outer) {
+            int32_t mask = 0;
+            for (int32_t s = 0; s < step; ++s) {
+              const T sum = temp_output_ptr[s] + addend_ptr[s];
+              const bool is_positive = (sum > 0);
+              mask = mask & (static_cast<int32_t>(is_positive) << s);
+              temp_output_ptr[s] = is_positive ? sum : 0;
+            }
+            mask_ptr[outer] = mask;
+            addend_ptr += step;
+            temp_output_ptr += step;
+
+            if (remain_loop_start_idx < elem_cnt) {
+              int32_t mask = 0;
+              const int32_t remain = elem_cnt - remain_loop_start_idx;
+              for (int32_t i = 0; i < remain; ++i) {
+                const T sum = temp_output_ptr[i] + addend_ptr[i];
+                const bool is_positive = (sum > 0);
+                mask = mask & (static_cast<int32_t>(is_positive) << i);
+                temp_output_ptr[i] = is_positive ? sum : 0;
+              }
+              mask_ptr[outer_loop] = mask;
+            }
+          }
+        } else {
+          const int32_t step = 32;
+          const int64_t outer_loop = elem_cnt / step;
+          const int64_t remain_loop_start_idx = outer_loop * step;
+
+          int32_t* mask_ptr = mask->mut_dptr<int32_t>();
+          T* temp_output_ptr = output_ptr;
+          for (int64_t outer = 0; outer < outer_loop; ++outer) {
+            int32_t mask = 0;
+            for (int32_t s = 0; s < step; ++s) {
+              const T output = temp_output_ptr[s];
+              const bool is_positive = (output > 0);
+              mask = mask & (static_cast<int32_t>(is_positive) << s);
+              temp_output_ptr[s] = is_positive ? output : 0;
+            }
+            mask_ptr[outer] = mask;
+            temp_output_ptr += step;
+
+            if (remain_loop_start_idx < elem_cnt) {
+              int32_t mask = 0;
+              const int32_t remain = elem_cnt - remain_loop_start_idx;
+              for (int32_t i = 0; i < remain; ++i) {
+                const T output = temp_output_ptr[i];
+                const bool is_positive = (output > 0);
+                mask = mask & (static_cast<int32_t>(is_positive) << i);
+                temp_output_ptr[i] = is_positive ? output : 0;
+              }
+              mask_ptr[outer_loop] = mask;
+            }
+          }
+        }
+      }
+
     } else {  // TODO(Liang Depeng): NHWC format
     }
-
-    // if (ctx->op_type_name() == "normalization_add_relu") {
-    //   CHECK(!ctx->has_input("_add_to_output", 0));
-    //   const int64_t elem_cnt = x->shape().elem_cnt();
-    //   auto* mask = ctx->Tensor4ArgNameAndIndex("reserve_space", 0);
-    //   if (ctx->has_input("addend", 0)) {
-    //     const auto* addend = ctx->Tensor4ArgNameAndIndex("addend", 0);
-    //     AddRelu(ctx->device_ctx(), elem_cnt, y->dptr<T>(), addend->dptr<T>(), y->mut_dptr<T>(),
-    //             mask->mut_dptr<int32_t>());
-    //   } else {
-    //     Relu(ctx->device_ctx(), elem_cnt, y->dptr<T>(), y->mut_dptr<T>(),
-    //          mask->mut_dptr<int32_t>());
-    //   }
-    // }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -274,6 +341,67 @@ REGISTER_BN_TRAIN_CPU_KERNEL(float)
 REGISTER_BN_TRAIN_CPU_KERNEL(double)
 
 #undef REGISTER_BN_TRAIN_CPU_KERNEL
+
+#define REGISTER_BN_ADD_RELU_CPU_KERNEL(dtype)            \
+  REGISTER_USER_KERNEL("normalization_add_relu")          \
+      .SetCreateFn<NormalizationTrainCpuKernel<dtype>>()  \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+
+REGISTER_BN_ADD_RELU_CPU_KERNEL(float)
+REGISTER_BN_ADD_RELU_CPU_KERNEL(double)
+
+#undef REGISTER_BN_ADD_RELU_CPU_KERNEL
+
+size_t InferGradTmpSizeForCpuKernel(user_op::InferContext* ctx) {
+  const auto& dy = ctx->InputTensorDesc("dy", 0);
+  const auto axis = ctx->Attr<int32_t>("axis");
+  size_t tmp_size = 0;
+  if (ctx->op_type_name() == "normalization_add_relu_grad" && !ctx->has_output("addend_diff", 0)) {
+    tmp_size += dy.shape().elem_cnt() * GetSizeOfDataType(dy.data_type());
+  }
+  return tmp_size;
+}
+
+// NOTE(Liang Depeng): helper functions to process datas for specific channel over all samples.
+template<typename T, typename OnData>
+static inline void ForEachFast(const T* data, const int64_t batch_size, const int64_t spatial_size,
+                               const int64_t jump_step, const int64_t channel_idx, OnData onData) {
+  const int64_t start_offset = channel_idx * spatial_size;
+  const T* tmp_data = data + start_offset;
+  for (int64_t outer = 0; outer < batch_size; ++outer) {
+    for (int64_t i = 0; i < spatial_size; ++i) { onData(&tmp_data[i]); }
+    tmp_data += jump_step;
+  }
+}
+
+template<typename T, typename OnData>
+static inline void ForEachFast(const T* in_data1, const T* in_data2, const int64_t batch_size,
+                               const int64_t spatial_size, const int64_t jump_step,
+                               const int64_t channel_idx, OnData onData) {
+  const int64_t start_offset = channel_idx * spatial_size;
+  const T* tmp_in_data1 = in_data1 + start_offset;
+  const T* tmp_in_data2 = in_data2 + start_offset;
+  for (int64_t outer = 0; outer < batch_size; ++outer) {
+    for (int64_t i = 0; i < spatial_size; ++i) { onData(&tmp_in_data1[i], &tmp_in_data2[i]); }
+    tmp_in_data1 += jump_step;
+    tmp_in_data2 += jump_step;
+  }
+}
+
+template<typename T, typename OnData>
+static inline void ForEachFast(const T* in_data, T* out_data, const int64_t batch_size,
+                               const int64_t spatial_size, const int64_t jump_step,
+                               const int64_t channel_idx, OnData onData) {
+  const int64_t start_offset = channel_idx * spatial_size;
+  const T* tmp_in_data = in_data + start_offset;
+  T* tmp_out_data = out_data + start_offset;
+  for (int64_t outer = 0; outer < batch_size; ++outer) {
+    for (int64_t i = 0; i < spatial_size; ++i) { onData(&tmp_in_data[i], &tmp_out_data[i]); }
+    tmp_in_data += jump_step;
+    tmp_out_data += jump_step;
+  }
+}
 
 template<typename T>
 class NormalizationGradCpuKernel final : public user_op::OpKernel {
@@ -303,16 +431,83 @@ class NormalizationGradCpuKernel final : public user_op::OpKernel {
     CHECK_EQ(dx->data_type(), data_type);
     CHECK_GE(axis, 0);
     CHECK_LT(axis, x->shape().NumAxes());
+
+    const T* dy_ptr = nullptr;
+    if (ctx->op_type_name() == "normalization_grad") {
+      dy_ptr = dy->dptr<T>();
+    } else if (ctx->op_type_name() == "normalization_add_relu_grad") {
+      // TODO
+    } else {
+      UNIMPLEMENTED();
+    }
+
+    if (axis == 1) {  // NOTE(Liang Depeng): NCHW format
+      const T* x_ptr = x->dptr<T>();
+      const T* gamma_ptr = gamma->dptr<T>();
+      const T* mean_ptr = mean->dptr<T>();
+      const T* inv_variance_ptr = inv_variance->dptr<T>();
+
+      T* dx_ptr = dx->mut_dptr<T>();
+      T* gamma_diff_ptr = gamma_diff->mut_dptr<T>();
+      T* beta_diff_ptr = beta_diff->mut_dptr<T>();
+
+      const int64_t batch_size = x->shape().At(0);
+      const int64_t channel_size = x->shape().At(axis);
+      const int64_t spatial_size = x->shape().Count(axis + 1);
+      const int64_t jump_step = spatial_size * channel_size;
+      const int64_t reduce_count = batch_size * spatial_size;
+
+      // NOTE(Liang Depeng):
+      // Borrow the MXNet implementation to compute dx, gamma_diff and beta_diff.
+      // For more details pls refers to:
+      // https://github.com/apache/incubator-mxnet/blob/master/src/operator/nn/batch_norm.cc
+      for (int64_t channel = 0; channel < channel_size; ++channel) {
+        const T gamma_c = gamma_ptr[channel];
+        const T mean_c = mean_ptr[channel];
+        const T inv_variance_c = inv_variance_ptr[channel];
+
+        // NOTE(Liang Depeng): sum dy for specific channel over all samples
+        T sum_dy_out = 0;
+        ForEachFast(dy_ptr, batch_size, spatial_size, jump_step, channel,
+                    [&sum_dy_out](const T* dy_data) { sum_dy_out += *dy_data; });
+
+        // NOTE(Liang Depeng): dot product of the x and dy
+        T dotp = 0;
+        ForEachFast(x_ptr, dy_ptr, batch_size, spatial_size, jump_step, channel,
+                    [&dotp, mean_c](const T* x_data, const T* dy_data) {
+                      dotp += (*x_data - mean_c) * (*dy_data);
+                    });
+
+        // NOTE(Liang Depeng): projection of dy on to output scaled by std
+        const T k = dotp * inv_variance_c * inv_variance_c / reduce_count;
+        const T iw = inv_variance_c * gamma_c;
+        const T grad_mean_c = sum_dy_out / reduce_count;
+        ForEachFast(
+            x_ptr, dx_ptr, batch_size, spatial_size, jump_step, channel,
+            [&mean_c, &k](const T* x_data, T* dx_data) { *dx_data = (*x_data - mean_c) * k; });
+
+        ForEachFast(dy_ptr, dx_ptr, batch_size, spatial_size, jump_step, channel,
+                    [iw, grad_mean_c](const T* dy_data, T* dx_data) {
+                      *dx_data = (*dy_data - grad_mean_c - *dx_data) * iw;
+                    });
+
+        gamma_diff_ptr[channel] = dotp * inv_variance_c;
+        beta_diff_ptr[channel] = sum_dy_out;
+      }
+
+    } else {  // TODO(Liang Depeng): NHWC format
+    }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_BN_GRAD_CPU_KERNEL(dtype)                \
-  REGISTER_USER_KERNEL("normalization_grad")              \
-      .SetCreateFn<NormalizationGradCpuKernel<dtype>>()   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_BN_GRAD_CPU_KERNEL(dtype)                                             \
+  REGISTER_USER_KERNEL("normalization_grad")                                           \
+      .SetCreateFn<NormalizationGradCpuKernel<dtype>>()                                \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
+                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn(InferGradTmpSizeForCpuKernel);
 
 REGISTER_BN_GRAD_CPU_KERNEL(float)
 REGISTER_BN_GRAD_CPU_KERNEL(double)
