@@ -24,7 +24,6 @@ limitations under the License.
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
-#include "oneflow/core/graph/id_serialization.h"
 
 namespace oneflow {
 
@@ -974,7 +973,7 @@ void PlanUtil::PopulateOpAttribute(
 }
 
 /*static*/ StreamId PlanUtil::GetStreamId(const TaskProto& task) {
-  return DeserializeStreamIdFromInt64(task.thrd_id());
+  return DecodeStreamIdFromInt64(task.thrd_id());
 }
 
 /*static*/ int64_t PlanUtil::GetDeviceIndex(const TaskProto& task) {

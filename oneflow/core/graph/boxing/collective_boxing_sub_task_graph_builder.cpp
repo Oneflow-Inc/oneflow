@@ -22,8 +22,6 @@ limitations under the License.
 #include "oneflow/core/graph/collective_boxing_pack_task_node.h"
 #include "oneflow/core/graph/collective_boxing_unpack_task_node.h"
 #include "oneflow/core/job/nd_sbp_util.h"
-#include "oneflow/core/common/id_util.h"
-#include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/device/cuda_stream_index.h"
 #ifdef WITH_CUDA
 #include <nccl.h>
@@ -73,7 +71,7 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
       Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
   CHECK_NOTNULL(stream_index_generator);
   auto stream_index = stream_index_generator->GenerateNamedStreamIndex("NCCL");
-  const int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
+  const int64_t thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
   node->Init(machine_id, thrd_id, lbi, op_conf);
 }
 
@@ -198,7 +196,7 @@ class NcclCollectiveBoxingP2SNoncontinuousSubTskGphBuilder final : public SubTsk
         auto* stream_index_generator =
             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
         auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
-        const int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
+        const int64_t thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
         TaskNode* in_node = sorted_in_tasks.at(i);
         CollectiveBoxingPackTaskNode* pack_node =
             ctx->task_graph()->NewNode<CollectiveBoxingPackTaskNode>();
@@ -300,7 +298,7 @@ class NcclCollectiveBoxingS2BNoncontinuousSubTskGphBuilder final : public SubTsk
         auto* stream_index_generator =
             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
         auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
-        const int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
+        const int64_t thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
         TaskNode* in_node = sorted_in_tasks.at(i);
         TaskNode* in_node_proxy =
             ctx->task_graph()->GetProxyNode(in_node, lbi, out_parallel_desc, i);
@@ -408,8 +406,13 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
         SliceBoxingTaskNode* slice_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
         // slice on cpu
         const auto in_machine_id = CHECK_JUST(in_parallel_desc.MachineId4ParallelId(0));
-        slice_node->Init(lbi, out_slice, kSliceBoxingTaskModeCopy, in_machine_id,
-                         Global<IDMgr>::Get()->PickCpuThrdIdEvenly(in_machine_id));
+        DeviceId device_id{static_cast<DeviceId::rank_t>(in_machine_id), DeviceType::kCPU, 0};
+        auto* stream_index_generator =
+            Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
+        auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
+        int64_t thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
+
+        slice_node->Init(lbi, out_slice, kSliceBoxingTaskModeCopy, in_machine_id, thrd_id);
         slice_node->ConnectToSrcNodeWithSlice(in_node, ctx->task_graph()->NewEdge(), in_slice);
         // copy to dst gpu
         TaskNode* slice_node_proxy =
@@ -524,7 +527,7 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
         auto* stream_index_generator =
             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
         auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
-        const int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
+        const int64_t thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
         TaskNode* in_node = sorted_in_tasks.at(i);
         CollectiveBoxingPackTaskNode* pack_node =
             ctx->task_graph()->NewNode<CollectiveBoxingPackTaskNode>();
