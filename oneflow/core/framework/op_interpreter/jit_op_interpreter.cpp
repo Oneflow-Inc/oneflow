@@ -72,9 +72,23 @@ Maybe<const ParallelDesc> GetParallelDesc(const std::shared_ptr<Tensor>& tensor)
   }
 }
 
+void InsertLbnSegmentIntoVec(const ::mlir::ArrayAttr& lbn_segment_keys,
+                             const ::mlir::ArrayAttr& lbn_segment_sizes,
+                             std::vector<std::string>& indexed_bns) {
+  for (const auto& bn_size_pair : llvm::zip(lbn_segment_keys, lbn_segment_sizes)) {
+    const auto& bn = std::get<0>(bn_size_pair).dyn_cast<StringAttr>().getValue().str();
+    const auto& length = std::get<1>(bn_size_pair).dyn_cast<IntegerAttr>().getInt();
+    for (size_t i = 0; i < length; i++) {
+      const auto indexed_bn = bn + "_" + std::to_string(i);
+      indexed_bns.push_back(indexed_bn);
+    }
+  }
+}
+
 void JitInterpreter::Interrupt() {
   CHECK(importer_.LowerToOneFlowKernel().succeeded());
   module_->dump();
+  llvm::DenseMap<Value, std::shared_ptr<Tensor>> mapping;
   const bool was_interrupted =
       module_
           ->walk([&](mlir::Operation* op) {
@@ -88,8 +102,32 @@ void JitInterpreter::Interrupt() {
                   && succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))
                   && succeeded(importer_.ConvertUserOpAttributes(op, user_op_adaptor, op_conf))
                   && succeeded(ConvertCtrlInputs(op, op_conf))) {
-                LOG(ERROR) << "Dispatching";
-                LOG(ERROR) << op_conf.DebugString();
+                std::vector<std::string> indexed_ibns{};
+                std::vector<std::string> indexed_obns{};
+                InsertLbnSegmentIntoVec(user_op_adaptor.input_lbn_segment_keys(),
+                                        user_op_adaptor.input_lbn_segment_sizes(), indexed_ibns);
+                InsertLbnSegmentIntoVec(user_op_adaptor.output_lbn_segment_keys(),
+                                        user_op_adaptor.output_lbn_segment_sizes(), indexed_obns);
+                auto expr =
+                    CHECK_JUST(UserOpExpr::New(user_op_adaptor.op_name().getValue().str(),
+                                               std::move(*user_conf), indexed_ibns, indexed_obns));
+                TensorTuple inputs(op->getOperands().size());
+                for (auto indexed_operand : llvm::enumerate(op->getOperands())) {
+                  auto index = indexed_operand.index();
+                  auto operand = indexed_operand.value();
+                  if (auto arg = operand.dyn_cast<mlir::BlockArgument>()) {
+                    inputs[index] = GetJitForwardArgs()[arg.getArgNumber()];
+                  } else {
+                    inputs[index] = mapping.lookup(operand);
+                  }
+                }
+                auto outputs = CHECK_JUST(OpInterpUtil::Dispatch<TensorTuple>(*expr, inputs));
+                CHECK_EQ(outputs->size(), op->getResults().size());
+                for (auto output_pair : llvm::zip(*outputs, op->getResults())) {
+                  auto output_tensor = std::get<0>(output_pair);
+                  Value output_result = std::get<1>(output_pair);
+                  CHECK(mapping.insert({output_result, output_tensor}).second);
+                }
                 return WalkResult::advance();
               } else {
                 return WalkResult::interrupt();
