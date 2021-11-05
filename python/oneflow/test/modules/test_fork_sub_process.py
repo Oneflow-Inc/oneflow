@@ -27,6 +27,7 @@ import oneflow as flow
 def _test_fork_sub_process(id):
     print("\nchild process:%s start! process id: %d" % (id, os.getpid()))
     import oneflow as flow
+
     x = flow.tensor(np.ones((4, 16)), device="cpu")
     y = flow.tensor(np.ones((16)), device="cpu")
     z = x + y
@@ -41,7 +42,7 @@ class TestForkSubProcess(flow.unittest.TestCase):
         num_process = 4
         p = Pool(num_process)
         async_res = []
-        for i in range(num_process): # create n child processes
+        for i in range(num_process):  # create n child processes
             # put it to pool
             async_res.append(p.apply_async(_test_fork_sub_process, args=(i,)))
         p.close()
