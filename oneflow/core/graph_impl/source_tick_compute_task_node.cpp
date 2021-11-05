@@ -31,9 +31,6 @@ class SourceTickCompTaskNode final : public CompTaskNode {
   bool IsMeaningLess() override { return false; }
 
   TaskType GetTaskType() const override { return TaskType::kSourceTick; }
-
- private:
-  bool IsIndependent() const override { return true; }
 };
 
 void SourceTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
@@ -53,12 +50,7 @@ void SourceTickCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kSourceTick);
-
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kSourceTick)
-    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
-      return generator->GenerateTickTockStreamIndex();
-    });
+REGISTER_TICK_TASK_STREAM_INDEX_GETTER(TaskType::kSourceTick);
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kSourceTickConf, SourceTickCompTaskNode);
 

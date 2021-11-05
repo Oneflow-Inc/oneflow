@@ -30,7 +30,6 @@ class DeviceTickCompTaskNode final : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
-  bool IsIndependent() const override { return true; }
 };
 
 void DeviceTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
@@ -59,12 +58,7 @@ void DeviceTickCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kDeviceTick);
-
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kDeviceTick)
-    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
-      return generator->GenerateTickTockStreamIndex();
-    });
+REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kDeviceTick);
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kDeviceTickConf, DeviceTickCompTaskNode);
 

@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/collective_boxing_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
@@ -21,8 +20,8 @@ limitations under the License.
 #include "oneflow/core/graph/slice_boxing_task_node.h"
 #include "oneflow/core/graph/collective_boxing_pack_task_node.h"
 #include "oneflow/core/graph/collective_boxing_unpack_task_node.h"
+#include "oneflow/core/graph/task_stream_id.h"
 #include "oneflow/core/job/nd_sbp_util.h"
-#include "oneflow/core/device/cuda_stream_index.h"
 #ifdef WITH_CUDA
 #include <nccl.h>
 #endif
@@ -65,13 +64,8 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
 
   const int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
   const int64_t device_index = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
-  DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kGPU,
-                     static_cast<DeviceId::device_index_t>(device_index)};
-  auto* stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
-      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
-  CHECK_NOTNULL(stream_index_generator);
-  auto stream_index = stream_index_generator->GenerateNamedStreamIndex("NCCL");
-  const int64_t thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
+  const int64_t thrd_id = EncodeStreamIdToInt64(
+      GenerateNamedTaskStreamId(machine_id, DeviceType::kGPU, device_index, "NCCL"));
   node->Init(machine_id, thrd_id, lbi, op_conf);
 }
 
@@ -191,12 +185,8 @@ class NcclCollectiveBoxingP2SNoncontinuousSubTskGphBuilder final : public SubTsk
       FOR_RANGE(int64_t, i, 0, in_parallel_desc.parallel_num()) {
         const int64_t machine_id = CHECK_JUST(in_parallel_desc.MachineId4ParallelId(i));
         const int64_t device_index = CHECK_JUST(in_parallel_desc.DeviceId4ParallelId(i));
-        DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kGPU,
-                           static_cast<DeviceId::device_index_t>(device_index)};
-        auto* stream_index_generator =
-            Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
-        auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
-        const int64_t thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
+        const int64_t thrd_id = EncodeStreamIdToInt64(
+            GenerateComputeTaskStreamId(machine_id, DeviceType::kGPU, device_index));
         TaskNode* in_node = sorted_in_tasks.at(i);
         CollectiveBoxingPackTaskNode* pack_node =
             ctx->task_graph()->NewNode<CollectiveBoxingPackTaskNode>();
@@ -293,12 +283,8 @@ class NcclCollectiveBoxingS2BNoncontinuousSubTskGphBuilder final : public SubTsk
       FOR_RANGE(int64_t, i, 0, in_parallel_desc.parallel_num()) {
         const int64_t machine_id = CHECK_JUST(out_parallel_desc.MachineId4ParallelId(i));
         const int64_t device_index = CHECK_JUST(out_parallel_desc.DeviceId4ParallelId(i));
-        DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kGPU,
-                           static_cast<DeviceId::device_index_t>(device_index)};
-        auto* stream_index_generator =
-            Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
-        auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
-        const int64_t thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
+        const int64_t thrd_id = EncodeStreamIdToInt64(
+            GenerateComputeTaskStreamId(machine_id, DeviceType::kGPU, device_index));
         TaskNode* in_node = sorted_in_tasks.at(i);
         TaskNode* in_node_proxy =
             ctx->task_graph()->GetProxyNode(in_node, lbi, out_parallel_desc, i);
@@ -406,12 +392,9 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
         SliceBoxingTaskNode* slice_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
         // slice on cpu
         const auto in_machine_id = CHECK_JUST(in_parallel_desc.MachineId4ParallelId(0));
-        DeviceId device_id{static_cast<DeviceId::rank_t>(in_machine_id), DeviceType::kCPU, 0};
-        auto* stream_index_generator =
-            Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
-        auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
-        int64_t thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
-
+        int64_t thrd_id =
+            EncodeStreamIdToInt64(GenerateComputeTaskStreamId(in_machine_id, DeviceType::kCPU, 0));
+        slice_node->Init(lbi, out_slice, kSliceBoxingTaskModeCopy, in_machine_id, thrd_id);
         slice_node->Init(lbi, out_slice, kSliceBoxingTaskModeCopy, in_machine_id, thrd_id);
         slice_node->ConnectToSrcNodeWithSlice(in_node, ctx->task_graph()->NewEdge(), in_slice);
         // copy to dst gpu
@@ -522,12 +505,8 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
       FOR_RANGE(int64_t, i, 0, in_parallel_desc.parallel_num()) {
         const int64_t machine_id = CHECK_JUST(in_parallel_desc.MachineId4ParallelId(i));
         const int64_t device_index = CHECK_JUST(in_parallel_desc.DeviceId4ParallelId(i));
-        DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kGPU,
-                           static_cast<DeviceId::device_index_t>(device_index)};
-        auto* stream_index_generator =
-            Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
-        auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
-        const int64_t thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
+        const int64_t thrd_id = EncodeStreamIdToInt64(
+            GenerateComputeTaskStreamId(machine_id, DeviceType::kGPU, device_index));
         TaskNode* in_node = sorted_in_tasks.at(i);
         CollectiveBoxingPackTaskNode* pack_node =
             ctx->task_graph()->NewNode<CollectiveBoxingPackTaskNode>();

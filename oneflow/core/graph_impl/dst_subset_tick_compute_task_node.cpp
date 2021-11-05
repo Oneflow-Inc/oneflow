@@ -30,7 +30,6 @@ class DstSubsetTickCompTaskNode final : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
-  bool IsIndependent() const override { return true; }
 };
 
 void DstSubsetTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
@@ -59,12 +58,7 @@ void DstSubsetTickCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kDstSubsetTick);
-
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kDstSubsetTick)
-    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
-      return generator->GenerateTickTockStreamIndex();
-    });
+REGISTER_TICK_TASK_STREAM_INDEX_GETTER(TaskType::kDstSubsetTick);
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kDstSubsetTickConf, DstSubsetTickCompTaskNode);
 
