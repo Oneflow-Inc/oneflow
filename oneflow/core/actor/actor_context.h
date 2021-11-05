@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_ACTOR_ACTOR_CONTEXT_H_
 #define ONEFLOW_CORE_ACTOR_ACTOR_CONTEXT_H_
 
-#include "oneflow/core/stream/stream_context.h"
+#include "oneflow/core/stream/include/stream_context.h"
 #include "oneflow/core/job/task.pb.h"
 
 namespace oneflow {
@@ -28,7 +28,7 @@ class ActorContext {
   virtual ~ActorContext() = default;
 
   virtual void Init(const TaskProto& task_proto, StreamContext* stream_ctx) = 0;
-  virtual void AddCallBack(std::function<void()> callback) const = 0;
+  virtual void AddCallback(std::function<void()> callback) = 0;
 
   virtual StreamContext* stream_ctx() const = 0;
   virtual const TaskProto& task_proto() const = 0;

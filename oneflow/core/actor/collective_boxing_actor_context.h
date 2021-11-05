@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_ACTOR_COLLECTIVE_BOXING_ACTOR_CONTEXT_H_
 
 #include "oneflow/core/actor/actor_context.h"
-#include "oneflow/core/device/collective_boxing_device_context.h"
+#include "oneflow/core/job/collective_boxing/scheduler.h"
 
 namespace oneflow {
 
@@ -27,26 +27,21 @@ class CollectiveBoxingActorContext : public ActorContext {
   CollectiveBoxingActorContext() = default;
   ~CollectiveBoxingActorContext() override = default;
 
-  void Init(const TaskProto& task_proto, StreamContext* stream_ctx) override {
-    stream_ctx_ = stream_ctx;
-    task_proto_ = task_proto;
-    collective_boxing_device_ctx_.reset(new CollectiveBoxingDeviceCtx());
-  }
-  void AddCallBack(std::function<void()> callback) const override {
-    collective_boxing_device_ctx_->AddCallBack(std::move(callback));
-  }
+  void Init(const TaskProto& task_proto, StreamContext* stream_ctx) override;
+  void AddCallback(std::function<void()> callback) override;
+  void Schedule(boxing::collective::RequestHandle* handle, const void* send_buff, void* recv_buff);
+  void SetCompleted(size_t schedule_id);
 
-  CollectiveBoxingDeviceCtx* collective_boxing_device_ctx() const {
-    return collective_boxing_device_ctx_.get();
-  }
-
-  StreamContext* stream_ctx() const override { return stream_ctx_; }
-  const TaskProto& task_proto() const override { return task_proto_; }
+  StreamContext* stream_ctx() const override;
+  const TaskProto& task_proto() const override;
 
  private:
   StreamContext* stream_ctx_{};
   TaskProto task_proto_{};
-  std::unique_ptr<CollectiveBoxingDeviceCtx> collective_boxing_device_ctx_;
+  size_t scheduled_count_{};
+  size_t completed_count_{};
+  std::mutex mutex_;
+  std::deque<std::pair<size_t, std::function<void()>>> callbacks_;
 };
 
 }  // namespace oneflow

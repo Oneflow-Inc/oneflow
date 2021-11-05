@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/primitive/include/permute.h"
 #include "oneflow/core/primitive/common/permute_impl.h"
-#include "oneflow/core/stream/cuda_stream_context.h"
+#include "oneflow/core/stream/cuda/cuda_stream_context.h"
 #include <cuda_runtime.h>
 
 namespace oneflow {
