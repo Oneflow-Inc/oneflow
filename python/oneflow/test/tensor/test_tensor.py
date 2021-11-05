@@ -1500,12 +1500,10 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(y.placement, placement)
 
         y_default_dtype = flow.tensor(
-            x,
-            placement=placement,
-            sbp=[flow.sbp.split(0)],
-            requires_grad=False,
+            x, placement=placement, sbp=[flow.sbp.split(0)], requires_grad=False,
         )
         test_case.assertTrue(y_default_dtype.dtype == flow.int32)
+
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestTensorNumpy(flow.unittest.TestCase):
