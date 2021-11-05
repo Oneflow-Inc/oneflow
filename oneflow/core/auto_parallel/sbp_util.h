@@ -20,18 +20,17 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.pb.h"
 
 namespace oneflow {
+namespace auto_parallel {
 
 // check whether the sbp_parallel is legal
-bool CheckSbpParallel(const SbpParallel& sbp_parallel);
+bool CheckSbpParallel(const cfg::SbpParallel& sbp_parallel);
 
 // compute copy cost
-double ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sbp_parallel,
-                                           const SbpParallel& consumer_sbp_parallel,
+double ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& producer_sbp_parallel,
+                                           const cfg::SbpParallel& consumer_sbp_parallel,
                                            const BlobDesc& logical_blob_desc,
                                            const ParallelDesc& parallel_desc, bool is_same_sbp);
 
+}  // namespace auto_parallel
 }  // namespace oneflow
-
-namespace Algorithm {}  // namespace Algorithm
-
 #endif  // ONEFLOW_CORE_AUTO_PARALLEL_SBP_UTIL_H_

@@ -64,7 +64,7 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
 }
 
 Maybe<void> SbpConstructor::UpdateSbpSignatureForJob(const OpGraph& op_graph) {
-  op_graph->TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
+  op_graph.TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
     SbpNode<cfg::SbpSignature>* sbp_node = op_name2sbp_node_[op_node->op().op_name()];
     cfg::NdSbpSignature nd_sbp_signature;
     SbpSignatureToNdSbpSignature(*sbp_node->FinalSbpSignature(), &nd_sbp_signature);

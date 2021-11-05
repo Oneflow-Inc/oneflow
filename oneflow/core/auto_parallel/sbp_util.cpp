@@ -17,9 +17,10 @@ limitations under the License.
 #include "sbp_util.h"
 
 namespace oneflow {
+namespace auto_parallel {
 
 // check whether the sbp_parallel is legal
-bool CheckSbpParallel(const SbpParallel& sbp_parallel) {
+bool CheckSbpParallel(const cfg::SbpParallel& sbp_parallel) {
   // Which checking should we use?
   // return sbp_parallel.parallel_type_case() == SbpParallel::PARALLEL_TYPE_NOT_SET;
   return sbp_parallel.has_split_parallel() || sbp_parallel.has_broadcast_parallel()
@@ -27,8 +28,8 @@ bool CheckSbpParallel(const SbpParallel& sbp_parallel) {
 }
 
 // compute copy cost
-double ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sbp_parallel,
-                                           const SbpParallel& consumer_sbp_parallel,
+double ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& producer_sbp_parallel,
+                                           const cfg::SbpParallel& consumer_sbp_parallel,
                                            const BlobDesc& logical_blob_desc,
                                            const ParallelDesc& parallel_desc, bool is_same_sbp) {
   // Checking here.
@@ -62,4 +63,5 @@ double ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sbp_paral
   return 2 * logical_blob_size * parallel_desc.parallel_num();
 }
 
+}  // namespace auto_parallel
 }  // namespace oneflow

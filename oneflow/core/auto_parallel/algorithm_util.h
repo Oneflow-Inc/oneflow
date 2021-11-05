@@ -21,7 +21,8 @@ limitations under the License.
 #include <algorithm>
 #include <unordered_map>
 
-namespace Algorithm {
+namespace oneflow {
+namespace auto_parallel {
 
 // this function is to remove the i-th element from a vector in Constant time.
 // the vector should not care about ordering.
@@ -71,6 +72,7 @@ void DecideOrder(std::vector<T>& v, std::vector<int32_t>& order, Compare comp) {
 // order[3] We know the strict order.
 void InverseOrder(std::vector<int32_t>& order, std::vector<int32_t>& InvOrder);
 
-}  // namespace Algorithm
+}  // namespace auto_parallel
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_AUTO_PARALLEL_ALGORITHM_UTIL_H_

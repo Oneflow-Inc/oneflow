@@ -33,8 +33,8 @@ class SbpConstructor final {
   SbpConstructor() = delete;
   SbpConstructor(const OpGraph& op_graph, Job* job)
       : cost_ratio_(job->job_conf().auto_parallel_computation_cost_ratio()),
-        wait_time_(job->job_conf().auto_parallel_computation_wait_time()),
-        transfer_cost_(job->job_conf().auto_parallel_computation_transfer_cost()) {
+        wait_time_(job->job_conf().auto_parallel_wait_time()),
+        transfer_cost_(job->job_conf().auto_parallel_transfer_cost()) {
     CHECK_JUST(Init(op_graph, job));
   }
   ~SbpConstructor() = default;
@@ -50,9 +50,9 @@ class SbpConstructor final {
   Maybe<void> InitComputationCost(const OpGraph& op_graph);
   Maybe<void> InitCopyCost(const OpGraph& op_graph);
 
-  float cost_ratio_;
-  float wait_time_;
-  float transfer_cost_;
+  double cost_ratio_;
+  double wait_time_;
+  double transfer_cost_;
   SbpGraph<cfg::SbpSignature> sbp_graph_;
   HashMap<std::string, SbpNode<cfg::SbpSignature>*> op_name2sbp_node_;
 };

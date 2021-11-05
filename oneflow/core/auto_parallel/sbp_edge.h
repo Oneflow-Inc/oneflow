@@ -16,9 +16,9 @@ limitations under the License.
 #ifndef SBP_EDGE_H_
 #define SBP_EDGE_H_
 
-#include "sbp_node.h"
 #include <assert.h>
 #include <algorithm>
+#include "sbp_node.h"
 #include "sbp_util.h"
 
 #ifdef USE_SBP_COLLECTOR_
@@ -427,17 +427,17 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool comp
       // get sbp parallel for a logical blob in producer
       const auto producer_sbp_bn_in_op2sbp_parallel =
           StartNode->SbpSignatureList[sbp_id_producer]->bn_in_op2sbp_parallel();
-      const oneflow::SbpParallel& sbp_producer = producer_sbp_bn_in_op2sbp_parallel.at(obn);
+      const cfg::SbpParallel& sbp_producer = producer_sbp_bn_in_op2sbp_parallel.at(obn);
 
       // look through sbp signature in consumer
       for (int32_t sbp_id_consumer = 0; sbp_id_consumer < consumer_sbp_size; sbp_id_consumer++) {
         // get sbp parallel for a logical blob in consumer
         const auto consumer_sbp_bn_in_op2sbp_parallel =
             EndNode->SbpSignatureList[sbp_id_consumer]->bn_in_op2sbp_parallel();
-        const oneflow::SbpParallel& sbp_consumer = consumer_sbp_bn_in_op2sbp_parallel.at(ibn);
+        const cfg::SbpParallel& sbp_consumer = consumer_sbp_bn_in_op2sbp_parallel.at(ibn);
 
         // compute copy cost for a specific logical blob
-        Cost[sbp_id_producer][sbp_id_consumer] += oneflow::ComputCopyCostBetweenTwoSbpParallel(
+        Cost[sbp_id_producer][sbp_id_consumer] += ComputCopyCostBetweenTwoSbpParallel(
             sbp_producer, sbp_consumer, logical_blob_desc, parallel_desc, is_same_sbp);
       }
     }
