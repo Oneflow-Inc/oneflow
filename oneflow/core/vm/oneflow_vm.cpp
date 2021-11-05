@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/multi_client.h"
+#include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/thread/thread_consistent_id.h"
@@ -134,12 +135,12 @@ OneflowVM::~OneflowVM() {
 }
 
 Maybe<void> OneflowVM::Receive(vm::InstructionMsgList* instr_list) {
-  if (!pthread_fork::IsForkedSubProcess()) {
-    JUST(vm_->Receive(instr_list));
-    notifier_.Notify();
-  } else {
+  if (unlikely(pthread_fork::IsForkedSubProcess())) {
     JUST(vm_->Receive(instr_list));
     while (!vm_->Empty()) { vm_->Schedule(); }
+  } else {
+    JUST(vm_->Receive(instr_list));
+    notifier_.Notify();
   }
   return Maybe<void>::Ok();
 }

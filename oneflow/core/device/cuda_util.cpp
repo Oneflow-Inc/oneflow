@@ -153,10 +153,7 @@ void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
 }
 
 CudaCurrentDeviceGuard::CudaCurrentDeviceGuard(int32_t dev_id) {
-  CHECK(!pthread_fork::IsForkedSubProcess())
-      << "Cannot re-initialize CUDA in forked subprocess. To use CUDA with multiprocessing, you "
-         "must add 'multiprocessing.set_start_method(\"spawn\")' in '__main__' if you are using "
-         "Python's multiprocessing";
+  CHECK(!pthread_fork::IsForkedSubProcess()) << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
   OF_CUDA_CHECK(cudaGetDevice(&saved_dev_id_));
   OF_CUDA_CHECK(cudaSetDevice(dev_id));
 }
