@@ -51,8 +51,6 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
 
   // Step2: new Global<OpGraph> and set log configs.
   Global<OpGraph>::New(*job);
-  // Print all the SBPs
-  Global<OpGraph>::Get()->PrintGraph();
   const JobDesc& job_desc = GlobalJobDesc();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()
       || Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
