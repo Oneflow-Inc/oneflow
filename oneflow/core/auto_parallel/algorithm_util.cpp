@@ -1,4 +1,12 @@
 /*
+ * @Author: your name
+ * @Date: 2021-11-05 17:45:07
+ * @LastEditTime: 2021-11-05 17:46:05
+ * @LastEditors: your name
+ * @Description: In User Settings Edit
+ * @FilePath: /liyipeng/oneflow/oneflow/core/auto_parallel/algorithm_util.cpp
+ */
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,16 +24,18 @@ limitations under the License.
 
 #include "algorithm_util.h"
 
-namespace Algorithm {
+namespace oneflow {
+namespace auto_parallel {
 
 // Inverse function of order
 // The reason why we need the InvOrder, a.k.a id2order, instead of id2value is to eliminate
 // equality. For example, we have v[0] < v[1] = v[2] < v[3] We do not know v[1] is before or after
 // v[2] with comp(v[1], v[2]). But if we transfer it to order order[0] < order[1] < order[2] <
 // order[3] We know the strict order.
-void InverseOrder(std::vector<int32_t> &order, std::vector<int32_t> &InvOrder) {
+void InverseOrder(std::vector<int32_t>& order, std::vector<int32_t>& InvOrder) {
   InvOrder.resize(order.size());
   for (int32_t i = 0; i < order.size(); i++) { InvOrder[order[i]] = i; }
 }
 
-}  // namespace Algorithm
+}  // namespace auto_parallel
+}  // namespace oneflow

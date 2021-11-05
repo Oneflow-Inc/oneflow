@@ -1,4 +1,12 @@
 /*
+ * @Author: your name
+ * @Date: 2021-11-05 17:45:07
+ * @LastEditTime: 2021-11-05 17:46:04
+ * @LastEditors: your name
+ * @Description: In User Settings Edit
+ * @FilePath: /liyipeng/oneflow/oneflow/core/auto_parallel/algorithm_util.h
+ */
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,20 +29,21 @@ limitations under the License.
 #include <algorithm>
 #include <unordered_map>
 
-namespace Algorithm {
+namespace oneflow {
+namespace auto_parallel {
 
 // this function is to remove the i-th element from a vector in Constant time.
 // the vector should not care about ordering.
 // Be more careful about this function. Make sure that the traveling order of
 // the vector goes from back to front.
 template<class T>
-void RemoveFrom(std::vector<T> &v, int32_t i) {
+void RemoveFrom(std::vector<T>& v, int32_t i) {
   v[i] = v.back();
   v.pop_back();
 }
 
 template<class T>
-void CheckAndRemoveFrom(std::vector<T> &v, T &t) {
+void CheckAndRemoveFrom(std::vector<T>& v, T& t) {
   for (int32_t i = v.size() - 1; i >= 0; i--) {
     if (v[i] == t) {
       RemoveFrom<T>(v, i);
@@ -45,7 +54,7 @@ void CheckAndRemoveFrom(std::vector<T> &v, T &t) {
 
 // Inverse function, which transfer a vector to an unorder_map.
 template<class T>
-void InverseFunction(std::vector<T> &v, std::unordered_map<T, int32_t> &InverseMap) {
+void InverseFunction(std::vector<T>& v, std::unordered_map<T, int32_t>& InverseMap) {
   InverseMap.clear();
   for (int32_t i = 0; i < v.size(); i++) { InverseMap[v[i]] = i; }
 }
@@ -56,7 +65,7 @@ void InverseFunction(std::vector<T> &v, std::unordered_map<T, int32_t> &InverseM
 // We could define the comparison, then we have
 // comp(v[order[i]], v[order[j]]) == true for all i<j.
 template<class T, class Compare>
-void DecideOrder(std::vector<T> &v, std::vector<int32_t> &order, Compare comp) {
+void DecideOrder(std::vector<T>& v, std::vector<int32_t>& order, Compare comp) {
   // Initialize order
   order.resize(v.size());
   for (int32_t i = 0; i < v.size(); i++) { order[i] = i; }
@@ -69,8 +78,9 @@ void DecideOrder(std::vector<T> &v, std::vector<int32_t> &order, Compare comp) {
 // equality. For example, we have v[0] < v[1] = v[2] < v[3] We do not know v[1] is before or after
 // v[2] with comp(v[1], v[2]). But if we transfer it to order order[0] < order[1] < order[2] <
 // order[3] We know the strict order.
-void InverseOrder(std::vector<int32_t> &order, std::vector<int32_t> &InvOrder);
+void InverseOrder(std::vector<int32_t>& order, std::vector<int32_t>& InvOrder);
 
-}  // namespace Algorithm
+}  // namespace auto_parallel
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_AUTO_PARALLEL_ALGORITHM_UTIL_H_

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/cluster_instruction.h"
@@ -42,7 +43,7 @@ Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
 
 Maybe<void> ClusterSync() {
   Maybe<void> (*Run)(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) =
-      JUST(*Global<Maybe<bool>, MultiClient>::Get()) ? &PhysicalRun : &LogicalRun;
+      JUST(IsMultiClient()) ? &PhysicalRun : &LogicalRun;
   BlockingCounter bc(1);
   JUST(Run([&bc](InstructionsBuilder* builder) -> Maybe<void> {
     JUST(builder->ComputeGlobalFrontSeqBarrier());

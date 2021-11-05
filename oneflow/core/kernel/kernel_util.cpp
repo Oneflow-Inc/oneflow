@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/primitive/include/memcpy.h"
 #include "oneflow/core/primitive/include/memset.h"
-#include "oneflow/core/stream/stream_context_adapter.h"
+#include "oneflow/core/stream/include/stream_context_adapter.h"
 
 namespace oneflow {
 

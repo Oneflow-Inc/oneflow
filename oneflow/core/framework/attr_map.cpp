@@ -122,7 +122,13 @@ const std::shared_ptr<const user_op::AttrVal>& AttrMap::Attr4Name(
 AttrMap MakeAttrMapFromUserOpConf(const UserOpConf& user_op_conf) {
   const auto& attrs = std::make_shared<AttrName2AttrVal>();
   for (const auto& kv : user_op_conf.attr()) {
-    attrs->emplace(kv.first, CHECK_JUST(user_op::AttrValueUtil::ToCppAttrValue(kv.second)));
+    auto cpp_attr_value = user_op::AttrValueUtil::ToCppAttrValue(kv.second);
+    if (cpp_attr_value.IsOk()) {
+      attrs->emplace(kv.first, CHECK_JUST(cpp_attr_value));
+    } else {
+      LOG(ERROR) << user_op_conf.DebugString();
+      LOG(ERROR) << "fail to convert to cpp attr value, key: " << kv.first;
+    }
   }
   return AttrMap(attrs);
 }
