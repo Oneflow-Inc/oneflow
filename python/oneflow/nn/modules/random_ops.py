@@ -31,8 +31,6 @@ def _rand_op_common_process(
         device = flow.device(device)
     size = _single(size)
     processed_sbp = sbp
-    if generator is None:
-        generator = flow.Generator()
     if placement is not None:
         assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
         if isinstance(processed_sbp, flow.sbp.sbp):
@@ -260,8 +258,6 @@ class RandInt(Module):
     ) -> None:
         super().__init__()
 
-        if generator is None:
-            generator = flow.Generator()
         assert low < high
         self.requires_grad = requires_grad
         (
