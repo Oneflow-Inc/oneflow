@@ -26,9 +26,9 @@ limitations under the License.
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/stream/cuda_graph_context.h"
+#include "oneflow/core/stream/cuda/cuda_graph_context.h"
 #include "oneflow/core/kernel/user_kernel.h"
-#include "oneflow/core/stream/stream_context.h"
+#include "oneflow/core/stream/include/stream_context.h"
 #include "oneflow/core/device/device_context_adapter.h"
 
 namespace oneflow {
@@ -229,7 +229,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       }
 #endif
     }
-    const int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(task_proto.task_id());
+    const int64_t thrd_id = ThrdId4ActorId(task_proto.task_id());
     thread_ = Global<ThreadMgr>::Get()->GetThrd(thrd_id);
     total_reading_cnt_ = 0;
     max_total_reading_cnt_ = 0;
@@ -333,10 +333,9 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
     const bool is_kernel_launch_synchronized =
         (!exec_kernel) || kernel_info_[0]->kernel->IsKernelLaunchSynchronized();
     const int64_t actor_id = actor_ctx_->task_proto().task_id();
-    const int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(actor_id);
+    const int64_t thrd_id = ThrdId4ActorId(actor_id);
     auto IsSyncMsg = [&](const ActorMsg& msg) {
-      return is_kernel_launch_synchronized
-             && thrd_id == Global<IDMgr>::Get()->ThrdId4ActorId(msg.dst_actor_id());
+      return is_kernel_launch_synchronized && thrd_id == ThrdId4ActorId(msg.dst_actor_id());
     };
     auto EnqueueActorMsg = [&](const ActorMsg& msg) {
       if (IsSyncMsg(msg)) {
@@ -367,7 +366,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
             return_inplace_consumed_fn_[0] = [this, msg]() { thread_->EnqueueActorMsg(msg); };
           } else {
             return_inplace_consumed_fn_[0] = [this, msg]() {
-              actor_ctx_->AddCallBack([msg] { Global<ActorMsgBus>::Get()->SendMsg(msg); });
+              actor_ctx_->AddCallback([msg] { Global<ActorMsgBus>::Get()->SendMsg(msg); });
             };
           }
         } else {
@@ -450,7 +449,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
     ResetState();
     thread_->EnqueueActorMsg(sync_post_act_msgs_.cbegin(), sync_post_act_msgs_.cend());
     if (!async_post_act_msgs_.empty()) {
-      actor_ctx_->AddCallBack([this]() {
+      actor_ctx_->AddCallback([this]() {
         for (const auto& msg : async_post_act_msgs_) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
       });
     }
@@ -480,7 +479,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       auto& state = index2state_.Get(i);
       if (state.regst_type != RegstType::kProduced) { continue; }
       const RtRegstDesc* regst_desc = state.regst->regst_desc();
-      actor_ctx_->AddCallBack([regst_desc]() {
+      actor_ctx_->AddCallback([regst_desc]() {
         for (int64_t consumer : regst_desc->consumers_actor_id()) {
           Global<ActorMsgBus>::Get()->SendMsg(
               ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id()));
