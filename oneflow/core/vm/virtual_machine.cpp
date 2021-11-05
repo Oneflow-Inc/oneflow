@@ -596,10 +596,6 @@ Maybe<void> VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) 
   OF_PROFILER_RANGE_PUSH("vm:Receive");
   InstructionMsgList new_instr_msg_list;
   INTRUSIVE_FOR_EACH_PTR(compute_instr_msg, compute_instr_msg_list) {
-    const auto& parallel_desc = JUST(GetInstructionParallelDesc(*compute_instr_msg));
-    CHECK_OR_RETURN(!pthread_fork::IsForkedSubProcess() || !parallel_desc
-                    || parallel_desc->device_tag() == "cpu")
-        << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
     if (!compute_instr_msg->phy_instr_operand()) {
       new_instr_msg_list.EmplaceBack(compute_instr_msg->MakeInferInstrMsg());
     }
