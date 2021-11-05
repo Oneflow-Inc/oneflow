@@ -19,7 +19,16 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type>
+namespace user_op {
+
+namespace {
+
+template<typename Context>
+std::unique_ptr<primitive::Fill> NewFillPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
+  return primitive::NewPrimitive<primitive::FillFactory>(ctx->device_type(), data_type);
+}
+
 class OnesLikeKernel final : public user_op::OpKernel {
  public:
   OnesLikeKernel() = default;
@@ -37,14 +46,18 @@ class OnesLikeKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_ONES_LIKE_KERNEL(device_type_v)    \
-  REGISTER_USER_KERNEL("ones_like")                 \
-      .SetCreateFn<OnesLikeKernel<device_type_v>>() \
-      .SetIsMatchedHob(user_op::HobDeviceTag() == device_type_v);
+hob::HobContextGetter<user_op::KernelRegContext, bool> FillPrimitiveExists() {
+  return user_op::HobCtxGetter<bool>(
+      "FillPrimitiveExists",
+      [](const user_op::KernelRegContext& ctx) { return NewFillPrimitive(&ctx).operator bool(); });
+}
 
-REGISTER_ONES_LIKE_KERNEL(DeviceType::kCPU)
-#ifdef WITH_CUDA
-REGISTER_ONES_LIKE_KERNEL(DeviceType::kGPU)
-#endif
+REGISTER_USER_KERNEL("ones_like")
+    .SetCreateFn<OnesLikeKernel>()
+    .SetIsMatchedHob(FillPrimitiveExists() == true);
+
+}  // namespace
+
+}  // namespace user_op
 
 }  // namespace oneflow
