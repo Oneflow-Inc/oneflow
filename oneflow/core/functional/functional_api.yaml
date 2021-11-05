@@ -1519,7 +1519,10 @@
   signature: "TensorTuple (Tensor log_probs, Tensor input_lengths, Bool merge_repeated=True) => CtcGreedyDecoder"
   bind_python: True
 
-
+- name: "ctc_beam_search_decoder"
+  signature: "TensorTuple (Tensor log_probs, Tensor input_lengths, Bool merge_repeated=True) => CtcBeamSearchDecoder"
+  bind_python: True
+  
 - name: "distributed_partial_fc_sample"
   signature:
     "TensorTuple (Tensor weight, Tensor label, Int64 num_sample) => DistributedPariticalFCSample"

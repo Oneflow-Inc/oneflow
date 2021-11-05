@@ -2011,6 +2011,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleFunctor>("FusedScaleTrilSoftmaxMaskScale");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
   m.add_functor<impl::CtcGreedyDecoderFunctor>("CtcGreedyDecoder");
+  m.add_functor<impl::CtcGreedyDecoderFunctor>("CtcBeamSearchDecoder");
   m.add_functor<impl::PartialFCSampleFunctor>("DistributedPariticalFCSample");
   m.add_functor<impl::PariticalFCSampleDisableBoxing>("DistributedPariticalFCSampleDisableBoxing");
 };

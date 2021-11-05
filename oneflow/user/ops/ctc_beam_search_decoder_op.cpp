@@ -1,0 +1,52 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#include "oneflow/core/framework/framework.h"
+
+namespace oneflow {
+
+REGISTER_USER_OP("ctc_beam_search_decoder")
+    .Input("log_probs")
+    .Input("input_lengths")
+    .Output("decoded")
+    .Output("neg_sum_logits")
+    .Attr<int32_t>("beam_width")
+    .Attr<int32_t>("top_paths")
+    .Attr<bool>("merge_repeated")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& log_probs = ctx->InputTensorDesc("log_probs", 0);
+      const user_op::TensorDesc& input_lengths = ctx->InputTensorDesc("input_lengths", 0);
+      const int64_t batch_size = log_probs.shape().At(1);
+      CHECK_EQ_OR_RETURN(batch_size, input_lengths.shape().At(0));
+      *ctx->OutputShape("decoded", 0) = Shape({batch_size, log_probs.shape().At(0)});
+      *ctx->OutputShape("neg_sum_logits", 0) = Shape({batch_size, 1});
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("log_probs", 0), 1)  // `log_probs` batch axis is 1
+          .Split(user_op::OpArg("input_lengths", 0), 0)
+          .Split(user_op::OpArg("decoded", 0), 0)
+          .Split(user_op::OpArg("neg_sum_logits", 0), 0)
+          .Build();
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("decoded", 0) = ctx->InputDType("input_lengths", 0);
+      *ctx->OutputDType("neg_sum_logits", 0) = ctx->InputDType("log_probs", 0);
+      return Maybe<void>::Ok();
+    });
+
+}  // namespace oneflow
