@@ -13,20 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_PRIMITIVE_UNARY_OP_H_
-#define ONEFLOW_CORE_PRIMITIVE_UNARY_OP_H_
+#ifndef ONEFLOW_CORE_PRIMITIVE_COMMON_ELEMENTWISE_UNARY_H_
+#define ONEFLOW_CORE_PRIMITIVE_COMMON_ELEMENTWISE_UNARY_H_
+
+#include "oneflow/core/primitive/include/elementwise_unary.h"
 
 namespace oneflow {
 
 namespace primitive {
 
-enum class UnaryOp {
-  kRelu,
-  kLogicalNot,
-};
+#define UNARY_MATH_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu)
+
+#define UNARY_LOGICAL_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLogicalNot)
 
 }  // namespace primitive
-
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_PRIMITIVE_UNARY_OP_H_
+#endif  // ONEFLOW_CORE_PRIMITIVE_COMMON_ELEMENTWISE_UNARY_H_
