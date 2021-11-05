@@ -93,7 +93,7 @@ class SbpEdge {
                                  SbpSignature*)>& SbpInferHint4Ibn);
 
   // Update copy cost for type 2 and 3
-  void SummerizeCost();
+  void SummarizeCost();
   // Duplicate Cost. Designed for merging two nodes.
   void DuplicateCost(bool ifStart, bool ifFirst,
                      const std::vector<std::pair<int32_t, int32_t>>& mergedSigId2ChildrenSigId);
@@ -177,7 +177,7 @@ void SbpEdge<SbpSignature>::ComputeCost(
 };
 
 template<class SbpSignature>
-void SbpEdge<SbpSignature>::SummerizeCost() {
+void SbpEdge<SbpSignature>::SummarizeCost() {
   if (MidNode) {
     Cost.resize(StartNode->Cost.size());
     MidNodeSbpSig.resize(StartNode->Cost.size());

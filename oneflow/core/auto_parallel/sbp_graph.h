@@ -266,7 +266,7 @@ int32_t SbpGraph<SbpSignature>::NodeElimination(SbpNode<SbpSignature>* this_node
 
     SbpEdge<SbpSignature>* e =
         new SbpEdge<SbpSignature>(TwoNode[0], this_node, TwoNode[1], TwoEdge[0], TwoEdge[1]);
-    e->SummerizeCost();
+    e->SummarizeCost();
     // check and remove the edge_in with new edge in graph
     for (int32_t i = 0; i < EdgesInSize; i++) {
       CheckAndRemoveFrom<SbpEdge<SbpSignature>*>(TwoNode[i]->EdgesOut, TwoEdge[i]);
@@ -380,7 +380,7 @@ int32_t SbpGraph<SbpSignature>::EdgeElimination(SbpNode<SbpSignature>* this_node
       // Add the compound edge
       e->EdgeList.emplace_back(this_node->EdgesOut[i]);
       this_node->EdgesOut[i] = e;
-      e->SummerizeCost();
+      e->SummarizeCost();
       e->EndNode->EdgesIn.emplace_back(e);
     }
   }
@@ -395,13 +395,13 @@ int32_t SbpGraph<SbpSignature>::ChildElimination(SbpNode<SbpSignature>* this_nod
       SbpNode<SbpSignature>* father = this_node->EdgesIn[0]->StartNode;
       father->Children.emplace_back(this_node);
       CheckAndRemoveFrom<SbpEdge<SbpSignature>*>(father->EdgesOut, this_node->EdgesIn[0]);
-      father->SummerizeCost();
+      father->SummarizeCost();
     } else {
       // edge in graph: this_node -> father
       SbpNode<SbpSignature>* father = this_node->EdgesOut[0]->EndNode;
       father->Children.emplace_back(this_node);
       CheckAndRemoveFrom<SbpEdge<SbpSignature>*>(father->EdgesIn, this_node->EdgesOut[0]);
-      father->SummerizeCost();
+      father->SummarizeCost();
     }
 
     // eliminate this node from global node list

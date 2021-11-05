@@ -150,7 +150,7 @@ class SbpNode {
   };
 
   // Recompute Computation Cost after adding child nodes in it
-  void SummerizeCost();
+  void SummarizeCost();
   // Determine Final SbpSignature for attachment of this node
   void FinalizeSbp();
   // Use Greedy Strategy to pick the sbp signature with minimum cost for this
@@ -390,7 +390,7 @@ void SbpNode<SbpSignature>::PointTo(SbpNode<SbpSignature>* end_node) {
 };
 
 template<class SbpSignature>
-void SbpNode<SbpSignature>::SummerizeCost() {
+void SbpNode<SbpSignature>::SummarizeCost() {
   if (Children.size() == ChildNodeSbpSig.size()) return;
   int32_t PreviousChildrenSize = ChildNodeSbpSig.size();
   ChildNodeSbpSig.resize(Children.size());
