@@ -169,21 +169,25 @@ class JitImporter : public Importer {
   }
   LogicalResult LowerToOneFlowKernel();
   llvm::SmallVector<std::shared_ptr<TensorRef>, 8>& GetReturnTensors() { return return_tensors_; }
+  void ResetMappings() {
+    result_mapping_.clear();
+    intermediate_tensors_.clear();
+    return_tensors_.clear();
+  };
 
  private:
-  std::unordered_map<Tensor*, mlir::Value> result_mapping_;  // tensor* => %result
   // JIT interpreter owns the intermediate tensors
   // An intermediate tensor will be materialized if:
   // 1. it is a result tensor
   // 2. it is being evaluated before forward function returning (print, etc)
+  std::unordered_map<Tensor*, mlir::Value> result_mapping_;  // tensor* => %result
   llvm::DenseMap<Value, std::shared_ptr<TensorRef>> intermediate_tensors_;
   llvm::SmallVector<std::shared_ptr<TensorRef>, 8> return_tensors_;
-  // members below should be reset every op by calling CreateMapping
-  std::shared_ptr<const ArgTuple> input_arg_tuple_;
+  // reset every op
   std::unordered_map<std::string, mlir::Value> operand_mapping_;     // "a0" => %result
   std::unordered_map<std::string, mlir::Type> result_type_mapping_;  // "a0" => tensor<2x2xf32>
+  std::shared_ptr<const ArgTuple> input_arg_tuple_;
   TensorTuple inputs_;
-  std::shared_ptr<Operator> op_;
   TensorTuple* outputs_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
 };

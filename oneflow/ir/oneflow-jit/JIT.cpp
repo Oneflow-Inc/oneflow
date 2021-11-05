@@ -281,8 +281,8 @@ mlir::FuncOp JitImporter::GetOrInsertFunc(const std::string& func_name, const Te
     auto entryBlock = function.addEntryBlock();
     CHECK_EQ(arg_tensors.size(), function.body().getArguments().size());
     for (auto argument_pair : llvm::zip(arg_tensors, function.body().getArguments())) {
-      CHECK(result_mapping_.emplace(std::get<0>(argument_pair).get(), std::get<1>(argument_pair))
-                .second);
+      // don't check here, because one tensor could be passed as multiple arguments
+      result_mapping_.emplace(std::get<0>(argument_pair).get(), std::get<1>(argument_pair));
     }
     GetBuilder().setInsertionPointToStart(entryBlock);
     GetModule().push_back(function);
@@ -304,10 +304,10 @@ void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op_conf,
                                        const std::shared_ptr<const ParallelDesc> parallel_desc,
                                        const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                        const TensorTuple& inputs) {
+  result_type_mapping_.clear();
   operand_mapping_.clear();
   input_arg_tuple_ = input_arg_tuple;
   inputs_ = inputs;
-  result_type_mapping_.clear();
   HashMap<std::string, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   auto op = CHECK_JUST(ConstructOp(op_conf));
   for (auto pair : llvm::zip(input_arg_tuple->indexed_bns(),

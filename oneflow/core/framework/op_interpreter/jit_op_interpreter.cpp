@@ -156,6 +156,7 @@ void JitInterpreter::Interrupt() {
     CHECK(found != mapping.end()) << "tensor not found";
     importer_.GetReturnTensors()[indexed_return_value.index()]->ResetTensor(mapping[value]);
   }
+  importer_.ResetMappings();
 }
 
 Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,

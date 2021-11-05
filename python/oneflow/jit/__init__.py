@@ -15,6 +15,7 @@ limitations under the License.
 """
 import oneflow
 import uuid
+from timeit import default_timer as timer
 
 
 def exec(f):
@@ -25,6 +26,7 @@ def exec(f):
             isinstance(arg, oneflow._oneflow_internal.Tensor)
         func_name = str(uuid.uuid4()).replace("-", "")
         func_name = f"jit{func_name}"
+        start = timer()
         assert oneflow._oneflow_internal.ir.toggle_jit(func_name)
         oneflow._oneflow_internal.ir.set_jit_forward_args(
             args[1::], list(m.parameters())
@@ -32,6 +34,8 @@ def exec(f):
         # NOTE: forbid calling __repr__ in the forward function
         result = f(*args, **kwargs)
         assert not oneflow._oneflow_internal.ir.toggle_jit(func_name)
+        end = timer()
+        print("jit ends in", end - start)
         return result
 
     return wrapper
