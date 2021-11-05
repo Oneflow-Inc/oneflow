@@ -549,7 +549,7 @@ Maybe<void> OpGraph::ForEachOpNode(const std::function<Maybe<void>(const OpNode&
 // Print the graph with SBP in order
 void OpGraph::PrintSBPGraphDebugInfo() {
   // test debug
-  LOG(INFO) << "Get Into Print Op Graph" << std::endl;
+  std::cout << "Get Into Print Op Graph" << std::endl;
   // Collect op_node
   std::vector<OpNode*> NodeList;
   ForEachNode([&](OpNode* op_node){
@@ -557,7 +557,7 @@ void OpGraph::PrintSBPGraphDebugInfo() {
   });
 
   // test debug
-  LOG(INFO) << "Deciding order" << std::endl;
+  std::cout << "Deciding order" << std::endl;
   // Decide the order to vist the op
   std::vector<int32_t> order;
   auto_parallel::DecideOrder(NodeList, order, [&](OpNode* a, OpNode* b) {
@@ -565,32 +565,32 @@ void OpGraph::PrintSBPGraphDebugInfo() {
   });
 
   // test debug
-  LOG(INFO) << "Finish deciding order" << std::endl;
+  std::cout << "Finish deciding order" << std::endl;
 
   for (int32_t i = 0; i < NodeList.size(); i++) {
     OpNode* op_node = NodeList[order[i]];
-    LOG(INFO) << op_node->op().op_name() << " (^_^):" << std::endl;
+    std::cout << op_node->op().op_name() << " (^_^):" << std::endl;
     // Print out SBP information for input operator
     for (const auto& ibn : op_node->op().input_bns()) {
       auto producer_node = op_node->MutSrcNode4Ibn(ibn);
-      LOG(INFO) << "Pre Op:" << producer_node->op().op_name() << ": " << ibn;
+      std::cout << "Pre Op:" << producer_node->op().op_name() << ": " << ibn;
       const auto& this_sbp_parallel = op_node->SbpParallel4BnInOp(ibn);
-      LOG(INFO) << ", " << SbpParallelToString(this_sbp_parallel);
+      std::cout << ", " << SbpParallelToString(this_sbp_parallel);
       const auto input_blob_modifier_ = op_node->op().InputBlobModifier4Ibn(ibn);
       bool is_same_sbp = input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable();
-      if (is_same_sbp) LOG(INFO) << ", same SBP";
-      LOG(INFO) << ", "
+      if (is_same_sbp) std::cout << ", same SBP";
+      std::cout << ", "
                 << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn)).shape().elem_cnt();
-      LOG(INFO) << std::endl;
+      std::cout << std::endl;
     }
     // Print out SBP information for output blobs
     for (const auto& ibn : op_node->op().output_bns()) {
-      LOG(INFO) << "Out Op:" << ibn;
+      std::cout << "Out Op:" << ibn;
       const auto& this_sbp_parallel = op_node->SbpParallel4BnInOp(ibn);
-      LOG(INFO) << ", " << SbpParallelToString(this_sbp_parallel);
-      LOG(INFO) << ", "
+      std::cout << ", " << SbpParallelToString(this_sbp_parallel);
+      std::cout << ", "
                 << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn)).shape().elem_cnt();
-      LOG(INFO) << std::endl;
+      std::cout << std::endl;
     }
   }
 }
