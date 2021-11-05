@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
+#include "oneflow/core/graph/task_stream_id.h"
 
 #ifdef WITH_CUDA
 
@@ -710,7 +711,7 @@ void InsertNcclLogicalOpsInSubGraph(
       break;  // NOTE(chengcheng): ONLY support kMaxNcclComputeStreamCount insert nccl subgraphs.
     }
     int32_t stream_index =
-        static_cast<int32_t>(StreamIndexGenerator{}(GetStreamIndexName(nccl_compute_stream_id)));
+        static_cast<int32_t>(StreamIndexGenerator()(GetStreamIndexName(nccl_compute_stream_id)));
 
     // NOTE(chengcheng): set ALL subgraph op and ALL nccl op stream index.
     for (auto& pair : subgraph_op_name2conf) {

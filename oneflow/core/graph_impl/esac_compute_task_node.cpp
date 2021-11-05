@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/compute_task_node.h"
-#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/graph/task_stream_id.h"
 
 namespace oneflow {
 

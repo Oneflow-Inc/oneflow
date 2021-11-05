@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/graph/task_stream_id.h"
 #include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {

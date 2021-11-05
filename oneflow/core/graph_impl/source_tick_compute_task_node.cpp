@@ -14,8 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/compute_task_node.h"
-#include "oneflow/core/common/str_util.h"
-#include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/graph/task_stream_id.h"
 
 namespace oneflow {
 
