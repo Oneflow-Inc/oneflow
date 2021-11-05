@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/functional/packed_functor.h"
+#include "oneflow/core/framework/stride.h"
 
 namespace oneflow {
 namespace one {

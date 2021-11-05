@@ -26,6 +26,12 @@ class Tensor;
 
 Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor);
 
+Maybe<MirroredTensor> ShallowCopy(const std::shared_ptr<MirroredTensor>& tensor,
+                                  const std::shared_ptr<const Shape>& new_shape = nullptr,
+                                  const std::shared_ptr<const Stride>& new_stride = nullptr,
+                                  int64_t new_storage_offset = -1,
+                                  DataType new_dtype = kInvalidDataType);
+
 }  // namespace one
 }  // namespace oneflow
 

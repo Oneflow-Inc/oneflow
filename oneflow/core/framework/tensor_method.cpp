@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_method.h"
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 
 namespace oneflow {
 namespace one {
@@ -37,6 +38,39 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
     }
   }
   return contig_if_nonempty;
+}
+
+Maybe<MirroredTensor> ShallowCopy(const std::shared_ptr<MirroredTensor>& tensor,
+                                  const std::shared_ptr<const Shape>& new_shape,
+                                  const std::shared_ptr<const Stride>& new_stride,
+                                  int64_t new_storage_offset, DataType new_dtype) {
+  const auto& meta = static_cast<const MirroredTensorMeta&>(tensor->tensor_meta());
+  const auto& shape = new_shape ? new_shape : std::make_shared<const Shape>(meta.shape());
+  const auto& dtype = new_dtype != kInvalidDataType ? new_dtype : meta.dtype();
+
+  auto new_meta = std::make_shared<MirroredTensorMeta>(
+      shape, dtype, meta.device(),
+      new_stride ? new_stride : std::make_shared<const Stride>(meta.stride()),
+      new_storage_offset != -1 ? new_storage_offset : meta.storage_offset());
+
+  const auto& impl = tensor->mut_impl();
+  const auto& blob_obj = JUST(impl->eager_blob_object());
+
+  CHECK_OR_RETURN(blob_obj->mut_blob());
+
+  auto new_blob_obj = std::shared_ptr<vm::EagerBlobObject>(new vm::EagerBlobObject(
+      std::make_shared<MemoryCase>(blob_obj->mem_case()), std::const_pointer_cast<Shape>(shape),
+      dtype, blob_obj->tensor_buffer(), blob_obj->compute_local_dep_object_));
+
+  JUST(new_blob_obj->InitBlob());
+  new_blob_obj->blob_body_bytes_ = blob_obj->blob_body_bytes_;
+  new_blob_obj->mut_blob()->reset_dptr(blob_obj->mut_blob()->mut_dptr<char>());
+
+  auto new_impl = std::make_shared<EagerMirroredTensorImpl>(new_meta, JUST(impl->tensor_storage()),
+                                                            new_blob_obj, tensor->requires_grad(),
+                                                            tensor->is_leaf());
+
+  return std::make_shared<MirroredTensor>(new_impl);
 }
 
 }  // namespace one
