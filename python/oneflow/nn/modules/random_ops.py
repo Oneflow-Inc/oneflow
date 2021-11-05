@@ -127,9 +127,22 @@ def rand_op(
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
     if placement is not None:
-        return flow._C.rand(size=size, placement=placement, sbp=sbp, dtype=dtype, generator=generator, requires_grad=requires_grad)
+        return flow._C.rand(
+            size=size,
+            placement=placement,
+            sbp=sbp,
+            dtype=dtype,
+            generator=generator,
+            requires_grad=requires_grad,
+        )
     else:
-        return flow._C.rand(size=size, dtype=dtype, device=device, generator=generator, requires_grad=requires_grad)
+        return flow._C.rand(
+            size=size,
+            dtype=dtype,
+            device=device,
+            generator=generator,
+            requires_grad=requires_grad,
+        )
 
 
 class RandN(Module):
@@ -227,9 +240,22 @@ def randn_op(
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
     if placement is not None:
-        return flow._C.randn(size=size, placement=placement, sbp=sbp, dtype=dtype, generator=generator, requires_grad=requires_grad)
+        return flow._C.randn(
+            size=size,
+            placement=placement,
+            sbp=sbp,
+            dtype=dtype,
+            generator=generator,
+            requires_grad=requires_grad,
+        )
     else:
-        return flow._C.randn(size=size, dtype=dtype, device=device, generator=generator, requires_grad=requires_grad)
+        return flow._C.randn(
+            size=size,
+            dtype=dtype,
+            device=device,
+            generator=generator,
+            requires_grad=requires_grad,
+        )
 
 
 class RandInt(Module):
@@ -334,9 +360,26 @@ def randint_op(
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
     if placement is not None:
-        return flow._C.randint(low, high, size=size, generator=generator, dtype=dtype, placement=placement, sbp_tuple=sbp, requires_grad=requires_grad)
+        return flow._C.randint(
+            low,
+            high,
+            size=size,
+            generator=generator,
+            dtype=dtype,
+            placement=placement,
+            sbp_tuple=sbp,
+            requires_grad=requires_grad,
+        )
     else:
-        return flow._C.randint(low, high, size=size, generator=generator, dtype=dtype, device=device, requires_grad=requires_grad)
+        return flow._C.randint(
+            low,
+            high,
+            size=size,
+            generator=generator,
+            dtype=dtype,
+            device=device,
+            requires_grad=requires_grad,
+        )
 
 
 class RandPerm(Module):
@@ -432,9 +475,17 @@ def randperm_op(
     if dtype is None:
         dtype = flow.int64
     if placement is not None:
-        return flow._C.randperm(n=n, placement=placement, sbp=sbp, generator=generator, requires_grad=requires_grad).to(dtype)
+        return flow._C.randperm(
+            n=n,
+            placement=placement,
+            sbp=sbp,
+            generator=generator,
+            requires_grad=requires_grad,
+        ).to(dtype)
     else:
-        return flow._C.randperm(n=n, device=device, generator=generator, requires_grad=requires_grad).to(dtype)
+        return flow._C.randperm(
+            n=n, device=device, generator=generator, requires_grad=requires_grad
+        ).to(dtype)
 
 
 if __name__ == "__main__":
