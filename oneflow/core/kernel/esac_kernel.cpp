@@ -26,8 +26,7 @@ template<typename T>
 void EsacKernel<T>::ForwardDataContent(KernelContext* ctx) const {
   T value =
       static_cast<T>(CHECK_NOTNULL(dynamic_cast<EsacKernelState*>(ctx->state().get()))->value);
-  NewKernelUtil<DeviceType::kCPU>::Fill(ctx->device_ctx(), 1, value,
-                                        ctx->BnInOp2Blob("out")->mut_dptr<T>());
+  *(ctx->BnInOp2Blob("out")->mut_dptr<T>()) = value;
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kEsacConf, EsacKernel, INT_DATA_TYPE_SEQ)
