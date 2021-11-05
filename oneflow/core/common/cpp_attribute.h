@@ -13,18 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_GRAPH_ID_SERIALIZATION_H_
-#define ONEFLOW_CORE_GRAPH_ID_SERIALIZATION_H_
+#ifndef ONEFLOW_CORE_COMMON_CPP_ATTRIBUTE_H_
+#define ONEFLOW_CORE_COMMON_CPP_ATTRIBUTE_H_
 
-#include "oneflow/core/common/id_util.h"
+#include <gtest/gtest.h>
 
-namespace oneflow {
+#define likely GOOGLE_PREDICT_TRUE
+#define unlikely GOOGLE_PREDICT_FALSE
 
-int64_t SerializeStreamIdToInt64(const StreamId&);
-StreamId DeserializeStreamIdFromInt64(int64_t);
-int64_t SerializeTaskIdToInt64(const TaskId&);
-TaskId DeserializeTaskIdFromInt64(int64_t);
-
-}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_GRAPH_ID_SERIALIZATION_H_
+#endif  // ONEFLOW_CORE_COMMON_CPP_ATTRIBUTE_H_

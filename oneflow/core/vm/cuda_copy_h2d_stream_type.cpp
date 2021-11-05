@@ -27,19 +27,23 @@ void CudaCopyH2DStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx
 
 void CudaCopyH2DStreamType::InitInstructionStatus(const Stream& stream,
                                                   InstructionStatusBuffer* status_buffer) const {
-  static_assert(sizeof(CudaInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
-  CudaInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data(), stream.device_id());
+  static_assert(sizeof(CudaOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
+  auto* event_provider = dynamic_cast<QueryCudaEventProvider*>(stream.device_ctx().get());
+  auto* data_ptr = status_buffer->mut_buffer()->mut_data();
+  const auto& cuda_event = CHECK_NOTNULL(event_provider)->GetCudaEvent();
+  CudaOptionalEventRecordStatusQuerier::PlacementNew(data_ptr, cuda_event);
 }
 
 void CudaCopyH2DStreamType::DeleteInstructionStatus(const Stream& stream,
                                                     InstructionStatusBuffer* status_buffer) const {
-  auto* ptr = CudaInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
-  ptr->~CudaInstrStatusQuerier();
+  auto* ptr =
+      CudaOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  ptr->~CudaOptionalEventRecordStatusQuerier();
 }
 
 bool CudaCopyH2DStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
-  return CudaInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
+  return CudaOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
 void CudaCopyH2DStreamType::Compute(Instruction* instruction) const {
@@ -52,7 +56,7 @@ void CudaCopyH2DStreamType::Compute(Instruction* instruction) const {
     OF_CUDA_CHECK(cudaGetLastError());
   }
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
-  CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
+  CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
 
 intrusive::shared_ptr<StreamDesc> CudaCopyH2DStreamType::MakeStreamDesc(
