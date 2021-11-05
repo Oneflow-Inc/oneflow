@@ -212,10 +212,14 @@ std::shared_ptr<Tensor> JitImporter::MakeIntermediateTensor(
   auto dtype = DataType::kInvalidDataType;
   if (tensor_type.getElementType().isF32()) {
     dtype = DataType::kFloat;
+  } else if (tensor_type.getElementType().isSignedInteger(32)) {
+    dtype = DataType::kInt32;
+  } else if (tensor_type.getElementType().isSignedInteger(64)) {
+    dtype = DataType::kInt64;
   } else {
     GetModule().dump();
     result.dump();
-    LOG(FATAL) << "fail to creat tensor";
+    LOG(FATAL) << "fail to create tensor";
   }
   const auto& device = CHECK_JUST(Device::MakeDeviceByParallelDesc(*parallel_desc));
   auto shape_from_mlir = new Shape({tensor_type.getShape().begin(), tensor_type.getShape().end()});
