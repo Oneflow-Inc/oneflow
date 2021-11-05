@@ -48,6 +48,85 @@ namespace ir {
 
 using namespace mlir;
 
+class TensorRef final : public TensorIf<TensorRef> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(TensorRef);
+  explicit TensorRef(const std::shared_ptr<Tensor>& tensor) : tensor_(tensor) {}
+  ~TensorRef() override = default;
+
+  // Getters
+  const std::shared_ptr<const Shape>& shape() const override { return tensor_->shape(); }
+  Symbol<DType> dtype() const override { return tensor_->dtype(); }
+  Maybe<TransportToken> transport_token() const override { return tensor_->transport_token(); }
+  Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override { return tensor_->nd_sbp(); }
+  Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return tensor_->parallel_desc(); }
+  Maybe<Symbol<Device>> device() const override { return tensor_->device(); }
+  Maybe<Symbol<Device>*> mut_device() override { return tensor_->mut_device(); }
+  bool is_lazy() const override { return tensor_->is_lazy(); }
+  bool is_consistent() const override { return tensor_->is_consistent(); }
+  bool is_cuda() const override { return tensor_->is_cuda(); };
+  const TensorMeta& tensor_meta() const override { return tensor_->tensor_meta(); }
+  Maybe<Tensor> data() override { return tensor_->data(); }
+
+  // Getters valid only for EagerMirroredTensor
+  Maybe<vm::EagerBlobObject> eager_blob_object() const override {
+    return tensor_->eager_blob_object();
+  }
+  Maybe<LocalDepObject*> compute_local_dep_object() const override {
+    return tensor_->compute_local_dep_object();
+  }
+  Maybe<TensorStorage> tensor_storage() const override { return tensor_->tensor_storage(); }
+  Maybe<bool> has_eager_blob_object() const override { return tensor_->has_eager_blob_object(); }
+  Maybe<const Stride> stride() const override { return tensor_->stride(); }
+  Maybe<int64_t> storage_offset() const override { return tensor_->storage_offset(); }
+
+  // Getters for autograd
+  Maybe<Tensor> acc_grad() const override { return tensor_->acc_grad(); }
+  Maybe<TensorArg> current_grad() const override { return tensor_->current_grad(); }
+  bool requires_grad() const override { return tensor_->requires_grad(); }
+  bool is_leaf() const override { return tensor_->is_leaf(); }
+  bool retain_grad() const override { return tensor_->retain_grad(); }
+  bool has_autograd_meta() const override { return tensor_->has_autograd_meta(); }
+
+  // Setters for autograd
+  Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
+    return tensor_->set_acc_grad(grad);
+  }
+  Maybe<void> set_requires_grad(bool requires_grad) override {
+    return tensor_->set_requires_grad(requires_grad);
+  }
+  Maybe<void> set_retain_grad(bool retain_grad) override {
+    return tensor_->set_retain_grad(retain_grad);
+  }
+  Maybe<Tensor> mut_acc_grad() override { return tensor_->mut_acc_grad(); }
+  void set_is_leaf(bool is_leaf) override { tensor_->set_is_leaf(is_leaf); }
+  std::shared_ptr<AutogradMeta> mut_autograd_meta() override {
+    return tensor_->mut_autograd_meta();
+  }
+  void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) override {
+    tensor_->set_autograd_meta(autograd_meta);
+  }
+
+  // Operators for tensor
+  Maybe<Tensor> detach() const override { return tensor_->detach(); }
+  Maybe<Tensor> clone() const override { return tensor_->clone(); }
+  Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override {
+    return tensor_->mut_eager_mirrored_tensor_impl();
+  }
+  user_op::TensorDesc* mut_tensor_meta() override { return tensor_->mut_tensor_meta(); }
+  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
+    return tensor_->set_data(other);
+  }
+
+  Maybe<MirroredTensor> AsMirroredTensor() override { return tensor_->AsMirroredTensor(); }
+  Maybe<ConsistentTensor> AsConsistentTensor() override { return tensor_->AsConsistentTensor(); }
+
+  void ResetTensor(const std::shared_ptr<Tensor>& tensor) { tensor_ = tensor; }
+
+ private:
+  std::shared_ptr<Tensor> tensor_;
+};
+
 class JitImporter : public Importer {
  public:
   using Importer::Importer;
@@ -80,7 +159,7 @@ class JitImporter : public Importer {
   // get blob decs from inferred op
 
   llvm::Optional<mlir::Value> GetResultByBnAndIndex(const std::string& bn, const int32_t index);
-  std::shared_ptr<MirroredTensor> MakeIntermediateTensor(
+  std::shared_ptr<Tensor> MakeIntermediateTensor(
       const std::string& lbn, Value result,
       const std::shared_ptr<const ParallelDesc>& parallel_desc);
   llvm::Optional<TensorType> GetMlirTensorTypeFromBlobDesc(const BlobDesc& blob_desc);
@@ -88,7 +167,7 @@ class JitImporter : public Importer {
     parallel_desc_ = parallel_desc;
   }
   LogicalResult LowerToOneFlowKernel();
-  llvm::SmallVector<std::shared_ptr<Tensor>, 8>& GetReturnTensors() { return return_tensors_; }
+  llvm::SmallVector<std::shared_ptr<TensorRef>, 8>& GetReturnTensors() { return return_tensors_; }
 
  private:
   std::unordered_map<Tensor*, mlir::Value> result_mapping_;  // tensor* => %result
@@ -96,8 +175,8 @@ class JitImporter : public Importer {
   // An intermediate tensor will be materialized if:
   // 1. it is a result tensor
   // 2. it is being evaluated before forward function returning (print, etc)
-  llvm::DenseMap<Value, std::shared_ptr<Tensor>> intermediate_tensors_;
-  llvm::SmallVector<std::shared_ptr<Tensor>, 8> return_tensors_;
+  llvm::DenseMap<Value, std::shared_ptr<TensorRef>> intermediate_tensors_;
+  llvm::SmallVector<std::shared_ptr<TensorRef>, 8> return_tensors_;
   // members below should be reset every op by calling CreateMapping
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
   std::unordered_map<std::string, mlir::Value> operand_mapping_;     // "a0" => %result

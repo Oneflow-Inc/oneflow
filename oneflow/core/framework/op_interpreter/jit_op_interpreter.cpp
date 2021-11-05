@@ -154,7 +154,7 @@ void JitInterpreter::Interrupt() {
     auto value = indexed_return_value.value();
     auto found = mapping.find(value);
     CHECK(found != mapping.end()) << "tensor not found";
-    importer_.GetReturnTensors()[indexed_return_value.index()] = mapping[value];
+    importer_.GetReturnTensors()[indexed_return_value.index()]->ResetTensor(mapping[value]);
   }
 }
 

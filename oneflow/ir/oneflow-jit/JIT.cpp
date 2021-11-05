@@ -205,7 +205,7 @@ Type JitImporter::GetTensorTypeOfLbn(const std::string& lbn) {
   LogicalBlobId lbi = GenLogicalBlobId(lbn);
   return result_type_mapping_.at(lbi.blob_name());
 }
-std::shared_ptr<MirroredTensor> JitImporter::MakeIntermediateTensor(
+std::shared_ptr<Tensor> JitImporter::MakeIntermediateTensor(
     const std::string& lbn, Value result,
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   auto tensor_type = result.getType().cast<TensorType>();
@@ -223,11 +223,12 @@ std::shared_ptr<MirroredTensor> JitImporter::MakeIntermediateTensor(
   auto tensor =
       CHECK_JUST(MirroredTensor::MakeTensor(shape, dtype, device, /* is_lazy */ true,
                                             /* requires_grad= */ false, /* is_leaf= */ true));
-  CHECK(intermediate_tensors_.insert({result, tensor}).second)
+  auto tensor_ref = std::make_shared<TensorRef>(tensor);
+  CHECK(intermediate_tensors_.insert({result, tensor_ref}).second)
       << "Intermediate tensor already created, lbn: " << lbn;
   CHECK(result_mapping_.emplace(tensor.get(), result).second)
       << "Intermediate tensor already mapped to mlir value, lbn: " << lbn;
-  return tensor;
+  return tensor_ref;
 }
 LogicalResult JitImporter::InsertOpResults(const ::oneflow::OperatorConf& op_conf,
                                            Operation* created_op) {
