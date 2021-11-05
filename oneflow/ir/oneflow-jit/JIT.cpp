@@ -316,7 +316,8 @@ void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op_conf,
     } else {
       LOG(FATAL) << "result not found, indexed_bn: " << indexed_bn << ", tensor: " << tensor.get()
                  << ", shape: " << tensor->shape()->DebugStr()
-                 << ", dtype: " << tensor->dtype()->name();
+                 << ", dtype: " << tensor->dtype()->name()
+                 << ", op conf: " << op_conf.DebugString();
     }
   }
   // TODO: refine here
