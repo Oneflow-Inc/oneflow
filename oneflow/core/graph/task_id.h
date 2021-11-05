@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_TASK_ID_H_
 #define ONEFLOW_CORE_GRAPH_TASK_ID_H_
 
-#include "oneflow/core/stream/stream_id.h"
+#include "oneflow/core/graph/stream_id.h"
 
 namespace oneflow {
 

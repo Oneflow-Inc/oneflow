@@ -26,9 +26,9 @@ limitations under the License.
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/stream/cuda_graph_context.h"
+#include "oneflow/core/stream/cuda/cuda_graph_context.h"
 #include "oneflow/core/kernel/user_kernel.h"
-#include "oneflow/core/stream/stream_context.h"
+#include "oneflow/core/stream/include/stream_context.h"
 #include "oneflow/core/device/device_context_adapter.h"
 
 namespace oneflow {

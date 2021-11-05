@@ -13,12 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/stream/stream_context.h"
+#include "oneflow/core/stream/include/stream_context.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/device/event_record.h"
 #include "oneflow/core/kernel/chain_kernel_observer.h"
 #include "oneflow/core/kernel/cpu_check_numerics_kernel_observer.h"
+#include "oneflow/core/graph/stream_id.h"
 
 namespace oneflow {
 
