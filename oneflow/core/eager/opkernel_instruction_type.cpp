@@ -205,18 +205,18 @@ Maybe<void> ForEachDTRInputTensor(LocalCallOpKernelPhyInstrOperand* operand, con
 }
 
 std::unique_ptr<LocalCallOpKernelPhyInstrOperand> DTROp2LocalCallOp(DTRInstrOperand* operand) {
-  const auto inputs = operand->inputs();
-  const auto outputs = operand->outputs();
+  const auto& inputs = operand->inputs();
+  const auto& outputs = operand->outputs();
 
   std::shared_ptr<one::EagerBlobObjectList> input_shared_ptr = std::make_shared<one::EagerBlobObjectList>(inputs.size());
   std::shared_ptr<one::EagerBlobObjectList> output_shared_ptr = std::make_shared<one::EagerBlobObjectList>(outputs.size());
 
   for (int i = 0; i < inputs.size(); ++i) {
-    input_shared_ptr->at(i) = inputs[i].lock();
+    input_shared_ptr->at(i) = CHECK_NOTNULL(inputs[i].lock());
   }
 
   for (int i = 0; i < outputs.size(); ++i) {
-    output_shared_ptr->at(i) = outputs[i].lock();
+    output_shared_ptr->at(i) = CHECK_NOTNULL(outputs[i].lock());
   }
 
   auto phy_instr_operand = std::make_unique<LocalCallOpKernelPhyInstrOperand>(operand->shared_opkernel(), input_shared_ptr, output_shared_ptr, operand->consistent_tensor_infer_result(), operand->op_interp_ctx(), operand->dev_vm_dep_object_consume_mode());
@@ -512,7 +512,7 @@ struct LocalCallOpKernelUtil {
   static inline Maybe<void> Infer(vm::Instruction* instruction) {
     auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
     auto& stream = instruction->stream();
-    DoInfer(operand, stream);
+    JUST(DoInfer(operand, stream));
     return Maybe<void>::Ok();
   }
 
@@ -731,7 +731,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
 
   static inline Maybe<void> InitOutputBlobAttrs(vm::Instruction* instruction) {
     auto operand = JUST(GetSharedLocalCallOpKernelPhyInstrOperand(instruction));
-    JUST(ForEachDTROutputTensor(operand, [&](std::shared_ptr<vm::DTREagerBlobObject> dtr_blob_object) -> Maybe<void> {
+    JUST(ForEachDTROutputTensor(operand, [&](const std::shared_ptr<vm::DTREagerBlobObject> &dtr_blob_object) -> Maybe<void> {
       JUST(dtr_blob_object->InitBlobAttrs(operand));
       return Maybe<void>::Ok();
     }));
@@ -745,7 +745,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
       dtr_blob_object->unpin();
       return Maybe<void>::Ok();
     }));
-    JUST(ForEachDTROutputTensor(operand, [&](std::shared_ptr<vm::DTREagerBlobObject> dtr_blob_object) -> Maybe<void> {
+    JUST(ForEachDTROutputTensor(operand, [&](const std::shared_ptr<vm::DTREagerBlobObject> &dtr_blob_object) -> Maybe<void> {
       dtr_blob_object->set_compute_time(compute_time);
       // Condition - insert current blob into candidates only when blob memory > threshold (with default 0)
       JUST(Global<one::DTRTensorPool>::Get()->insert(dtr_blob_object));
@@ -754,7 +754,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
 
     // Display info of current tensor pool
     if (oneflow::DTRDebugEnabled()) {
-      Global<one::DTRTensorPool>::Get()->display();
+      JUST(Global<one::DTRTensorPool>::Get()->display());
     }
 
     // // Display output shared_ptr's count

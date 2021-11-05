@@ -44,7 +44,7 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
         std::cout << "Finding best tensor to evict..." << std::endl;
     }
     int id = 0;
-    for (const auto object : candidates_) {
+    for (const auto &object : candidates_) {
         if (auto shared_object = object.lock()) {
             // if (oneflow::DTRDebugEnabled()) {
                 // std::cout << "id " << id++ << ", is_in_memory: " << static_cast<bool>(tensor->is_in_memory()) << " " << "is pinned: " << (tensor->num_pinned()) << ", Address: " << static_cast<const void *>(tensor->object_dptr()) << ", shape: " << tensor->mut_blob_desc()->shape() << ", data_type: " << tensor->mut_blob_desc()->data_type() << ", body_bytes: " << tensor->BlobBodyBytes() << std::endl;
@@ -60,7 +60,7 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
             }
             tensor_id++;
         } else {
-            display();
+            JUST(display());
             std::cout << "Unable to lock candidates in tensor pool: " << id << ", is_expired: " << object.expired() << std::endl;
         }
         id++;
@@ -86,7 +86,7 @@ Maybe<void> DTRTensorPool::insert(std::shared_ptr<vm::DTREagerBlobObject> blob_o
         // candidates_.insert(blob_object);
 
         // for vector version
-        for (const auto object : candidates_) {
+        for (const auto &object : candidates_) {
             if (object.lock() == blob_object) {
                 return Maybe<void>::Ok();
             }
@@ -153,6 +153,7 @@ Maybe<void> DTRTensorPool::display() {
     for (const auto& candidate : candidates_) {
         if (auto wp = candidate.lock()) {
             auto tmp = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(wp);
+            CHECK_NOTNULL_OR_RETURN(tmp);
             std::cout << "id " << id << ", is_in_memory: " << tmp->is_in_memory() << ", input size: " << tmp->input_size() << ", is_evictable: " << tmp->is_evictable() << ", number of user_ops: " << tmp->num_user_ops() << ", address: " << tmp << ", nullptr? " << (tmp == nullptr) << std::endl;
         }
         // std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", address: " << candidate << std::endl;

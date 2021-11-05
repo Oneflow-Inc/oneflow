@@ -29,6 +29,7 @@ namespace one {
 
 struct DTRTensorPool {
     DTRTensorPool();
+    OF_DISALLOW_COPY_AND_MOVE(DTRTensorPool);
     ~DTRTensorPool() { 
         std::cout << "=======================" << std::endl;
         std::cout << "Destruct DTRTensorPool." << std::endl;
@@ -36,7 +37,7 @@ struct DTRTensorPool {
         std::cout << "Times of recomputation: " << num_recomputation_ << std::endl;
         std::cout << "Times of destruction: " << num_destruction_ << std::endl;
         if (oneflow::DTRDebugEnabled()) {
-            display();
+            CHECK_JUST(display());
         }
     }
 
