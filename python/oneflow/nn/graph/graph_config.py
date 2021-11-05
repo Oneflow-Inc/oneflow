@@ -15,8 +15,8 @@ limitations under the License.
 """
 from collections import OrderedDict
 
-from oneflow.nn.graph.optimizer import OptDict
 import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
+from oneflow.nn.graph.optimizer import OptDict
 
 
 class GraphConfig(object):
@@ -63,6 +63,14 @@ class GraphConfig(object):
         """
         assert type(mode) is bool
         self.proto.set_enable_auto_mixed_precision(mode)
+
+    def enable_auto_parallel(self, mode: bool = True):
+        """If true, then graph will use auto parallel algorithm.
+
+        Args:
+            mode (bool, optional): [description]. Default is True.
+        """
+        self.proto.set_enable_auto_parallel(mode)
 
     def allow_fuse_model_update_ops(self, mode: bool = True):
         """If true, try to fuse cast + scale + l1_l2_regularize_gradient + model_update to one op to improve performance.

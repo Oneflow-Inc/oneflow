@@ -33,6 +33,7 @@ class AutoParallelPass final : public JobPass {
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!job->job_conf().enable_auto_parallel()) { return Maybe<void>::Ok(); }
+    LOG(INFO) << "=== Enable AutoParallel ===";
     const OpGraph op_graph(*job);
     return Apply(op_graph, job);
   }
