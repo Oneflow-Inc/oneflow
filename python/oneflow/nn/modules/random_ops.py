@@ -139,9 +139,10 @@ def rand_op(
     """
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
-    if generator is None:
-        generator = flow.default_generator
-    return Rand(size, generator, dtype, layout, device, placement, sbp, requires_grad)()
+    if placement is not None:
+        return flow._C.randint(size=size, generator=generator, dtype=dtype, layout=layout, placement=placement, sbp=sbp, requires_grad=requires_grad)
+    else:
+        return flow._C.randint(size=size, generator=generator, dtype=dtype, layout=layout, device=device, requires_grad=requires_grad)
 
 
 class RandN(Module):
@@ -238,11 +239,10 @@ def randn_op(
     """
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
-    if generator is None:
-        generator = flow.default_generator
-    return RandN(
-        size, generator, dtype, layout, device, placement, sbp, requires_grad
-    )()
+    if placement is not None:
+        return flow._C.randn(size=size, generator=generator, dtype=dtype, layout=layout, placement=placement, sbp=sbp, requires_grad=requires_grad)
+    else:
+        return flow._C.randn(size=size, generator=generator, dtype=dtype, layout=layout, device=device, requires_grad=requires_grad)
 
 
 class RandInt(Module):
@@ -348,11 +348,10 @@ def randint_op(
     """
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
-    if generator is None:
-        generator = flow.default_generator
-    return RandInt(
-        low, high, size, generator, dtype, device, placement, sbp, requires_grad
-    )()
+    if placement is not None:
+        return flow._C.randint(low, high, size=size, generator=generator, dtype=dtype, placement=placement, sbp_tuple=sbp, requires_grad=requires_grad)
+    else:
+        return flow._C.randint(low, high, size=size, generator=generator, dtype=dtype, device=device, requires_grad=requires_grad)
 
 
 class RandPerm(Module):
@@ -445,11 +444,10 @@ def randperm_op(
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
     assert pin_memory is False, "pin_memory not supported yet"
-    if generator is None:
-        generator = flow.default_generator
-    return RandPerm(n, generator, dtype, layout, device, placement, sbp, requires_grad)(
-        out
-    )
+    if placement is not None:
+        return flow._C.randint(n=n, generator=generator, dtype=dtype, layout=layout, placement=placement, sbp=sbp, requires_grad=requires_grad, out=out)
+    else:
+        return flow._C.randint(n=n, generator=generator, dtype=dtype, layout=layout, device=device, requires_grad=requires_grad, out=out)
 
 
 if __name__ == "__main__":
