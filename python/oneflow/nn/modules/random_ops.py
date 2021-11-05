@@ -23,10 +23,6 @@ from oneflow.nn.modules.utils import _single
 def _rand_op_common_process(
     size, device=None, generator=None, placement=None, sbp=None
 ):
-    assert size is not None, "shape must not be None!"
-    assert isinstance(
-        size, (int, tuple, list, flow.Size)
-    ), "shape should be int or tuple int!"
     if isinstance(device, str):
         device = flow.device(device)
     size = _single(size)
@@ -35,12 +31,6 @@ def _rand_op_common_process(
         assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
         if isinstance(processed_sbp, flow.sbp.sbp):
             processed_sbp = (processed_sbp,)
-        else:
-            for elem in sbp:
-                assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-        assert len(processed_sbp) == len(placement.hierarchy)
-    else:
-        assert sbp is None, "sbp: %s" % sbp
     return size, device, generator, placement, processed_sbp
 
 
