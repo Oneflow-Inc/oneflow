@@ -66,11 +66,11 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
                           std::function<std::unique_ptr<ElementwiseUnary>()>>
         new_elementwise_unary_handle{
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY,
-                                             UNARY_MATH_OP, CPU_PRIMITIVE_NATIVE_TYPE_SEQ)
+                                             UNARY_MATH_OP_SEQ, CPU_PRIMITIVE_NATIVE_TYPE_SEQ)
 
-                OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY,
-                                                 UNARY_LOGICAL_OP, CPU_PRIMITIVE_NATIVE_TYPE_SEQ,
-                                                 CPU_PRIMITIVE_INT8_TYPE_SEQ)};
+                OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                    MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY, UNARY_LOGICAL_OP_SEQ,
+                    CPU_PRIMITIVE_NATIVE_TYPE_SEQ, CPU_PRIMITIVE_INT8_TYPE_SEQ)};
 
 #undef MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY
 

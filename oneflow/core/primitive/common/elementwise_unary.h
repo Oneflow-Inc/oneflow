@@ -22,9 +22,9 @@ namespace oneflow {
 
 namespace primitive {
 
-#define UNARY_MATH_OP OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu)
+#define UNARY_MATH_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu)
 
-#define UNARY_LOGICAL_OP OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLogicalNot)
+#define UNARY_LOGICAL_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLogicalNot)
 
 }  // namespace primitive
 }  // namespace oneflow
