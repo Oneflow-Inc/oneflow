@@ -18,6 +18,56 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
+static void ComputeMeanAndVar(const T* input_ptr, T* mean_ptr, T* inv_variance_ptr,
+                              T* moving_mean_ptr, T* moving_variance_ptr, const int64_t batch_size,
+                              const int64_t channel_size, const int64_t spatial_size,
+                              const float epsilon, const float momentum) {
+  // NOTE(Liang Depeng): the following parameters were used to compute mean and var
+  const int64_t jump_step = spatial_size * channel_size;
+  const int64_t reduce_count = batch_size * spatial_size;
+  const int64_t unbias_reduce_count = reduce_count - 1;
+  const float reduce_scale_factor = 1.0f / reduce_count;
+  const float unbias_reduce_scale_factor = 1.0f / unbias_reduce_count;
+  const float unbias_reduce_scale_factor_m2 = unbias_reduce_scale_factor * -2.0f;
+  const float unbias_reduce_scale_factor_mn = reduce_count * unbias_reduce_scale_factor;
+
+  const float exponential_average_factor = 1.0f - momentum;
+
+  for (int64_t channel = 0; channel < channel_size; ++channel) {
+    const T* temp_input_ptr = input_ptr + channel * spatial_size;
+    T sum = 0;
+    T sum_square = 0;
+    for (int64_t batch = 0; batch < batch_size; ++batch) {
+      for (int64_t s = 0; s < spatial_size; ++s) {
+        const T x = temp_input_ptr[s];
+        sum += x;
+        sum_square += x * x;
+      }
+      temp_input_ptr += jump_step;
+    }
+
+    const T temp_mean = sum * reduce_scale_factor;
+    mean_ptr[channel] = temp_mean;
+
+    const T temp_mean_square = temp_mean * temp_mean;
+    const T temp_variance = sum_square * reduce_scale_factor - temp_mean_square;
+
+    const T temp_unbias_variance = sum_square * unbias_reduce_scale_factor
+                                   + unbias_reduce_scale_factor_m2 * temp_mean * sum
+                                   + unbias_reduce_scale_factor_mn * temp_mean_square;
+
+    inv_variance_ptr[channel] = 1.0f / std::sqrt(temp_variance + epsilon);
+
+    if (moving_mean_ptr != nullptr && moving_variance_ptr != nullptr) {
+      moving_mean_ptr[channel] =
+          moving_mean_ptr[channel] * momentum + temp_mean * exponential_average_factor;
+      moving_variance_ptr[channel] = moving_variance_ptr[channel] * momentum
+                                     + temp_unbias_variance * exponential_average_factor;
+    }
+  }
+}
+
+template<typename T>
 static void Normalize(const T* input_ptr, const T* mean_ptr, const T* variance_ptr,
                       const T* gamma_ptr, const T* beta_ptr, T* output_ptr,
                       const int64_t batch_size, const int64_t channel_size,
@@ -47,7 +97,124 @@ static void AddToOutput(const T* add_to_output_ptr, T* output_ptr, const int64_t
   for (int64_t i = 0; i < elem_count; ++i) { output_ptr[i] += add_to_output_ptr[i]; }
 }
 
-size_t InferGradTmpSizeForCpuKernel(user_op::InferContext* ctx) {
+template<typename T>
+static void AddRelu(const T* addend_ptr, int32_t* mask_ptr, T* output_ptr, const int64_t elem_cnt) {
+  const int32_t step = 32;
+  const int64_t outer_loop = elem_cnt / step;
+  const int64_t remain_loop_start_idx = outer_loop * step;
+
+  T* temp_output_ptr = output_ptr;
+  for (int64_t outer = 0; outer < outer_loop; ++outer) {
+    int32_t mask = 0;
+    for (int32_t s = 0; s < step; ++s) {
+      const T sum = temp_output_ptr[s] + addend_ptr[s];
+      const bool is_positive = (sum > 0);
+      mask = mask | (static_cast<int32_t>(is_positive) << s);
+      temp_output_ptr[s] = is_positive ? sum : 0;
+    }
+    mask_ptr[outer] = mask;
+    addend_ptr += step;
+    temp_output_ptr += step;
+  }
+  if (remain_loop_start_idx < elem_cnt) {
+    int32_t mask_val = 0;
+    const int32_t remain = elem_cnt - remain_loop_start_idx;
+    for (int32_t i = 0; i < remain; ++i) {
+      const T sum = temp_output_ptr[i] + addend_ptr[i];
+      const bool is_positive = (sum > 0);
+      mask_val = mask_val | (static_cast<int32_t>(is_positive) << i);
+      temp_output_ptr[i] = is_positive ? sum : 0;
+    }
+    mask_ptr[outer_loop] = mask_val;
+  }
+}
+
+template<typename T>
+static void Relu(int32_t* mask_ptr, T* output_ptr, const int64_t elem_cnt) {
+  const int32_t step = 32;
+  const int64_t outer_loop = elem_cnt / step;
+  const int64_t remain_loop_start_idx = outer_loop * step;
+
+  T* temp_output_ptr = output_ptr;
+  for (int64_t outer = 0; outer < outer_loop; ++outer) {
+    int32_t mask_val = 0;
+    for (int32_t s = 0; s < step; ++s) {
+      const T output = temp_output_ptr[s];
+      const bool is_positive = (output > 0);
+      mask_val = mask_val | (static_cast<int32_t>(is_positive) << s);
+      temp_output_ptr[s] = is_positive ? output : 0;
+    }
+    mask_ptr[outer] = mask_val;
+    temp_output_ptr += step;
+  }
+  if (remain_loop_start_idx < elem_cnt) {
+    int32_t mask_val = 0;
+    const int32_t remain = elem_cnt - remain_loop_start_idx;
+    for (int32_t i = 0; i < remain; ++i) {
+      const T output = temp_output_ptr[i];
+      const bool is_positive = (output > 0);
+      mask_val = mask_val | (static_cast<int32_t>(is_positive) << i);
+      temp_output_ptr[i] = is_positive ? output : 0;
+    }
+    mask_ptr[outer_loop] = mask_val;
+  }
+}
+
+template<typename T>
+static void AddReluGrad(const T* dy_ptr, const int32_t* mask_ptr, T* addend_diff_ptr,
+                        const int64_t elem_cnt) {
+  const int32_t step = 32;
+  const int64_t outer_loop = elem_cnt / step;
+  const int64_t remain_loop_start_idx = outer_loop * step;
+
+  for (int64_t outer = 0; outer < outer_loop; ++outer) {
+    const int32_t mask_val = mask_ptr[outer];
+    for (int32_t s = 0; s < step; ++s) {
+      bool is_positive = mask_val & (1 << s);
+      addend_diff_ptr[s] = static_cast<T>(is_positive) * dy_ptr[s];
+    }
+    addend_diff_ptr += step;
+    dy_ptr += step;
+  }
+
+  if (remain_loop_start_idx < elem_cnt) {
+    const int32_t mask_val = mask_ptr[outer_loop];
+    const int32_t remain = elem_cnt - remain_loop_start_idx;
+    for (int32_t i = 0; i < remain; ++i) {
+      bool is_positive = mask_val & (1 << i);
+      addend_diff_ptr[i] = static_cast<T>(is_positive) * dy_ptr[i];
+    }
+  }
+}
+
+template<typename T>
+static void ReluGrad(const T* dy_ptr, const int32_t* mask_ptr, T* relu_dx_ptr,
+                     const int64_t elem_cnt) {
+  const int32_t step = 32;
+  const int64_t outer_loop = elem_cnt / step;
+  const int64_t remain_loop_start_idx = outer_loop * step;
+
+  for (int64_t outer = 0; outer < outer_loop; ++outer) {
+    const int32_t mask_val = mask_ptr[outer];
+    for (int32_t s = 0; s < step; ++s) {
+      bool is_positive = mask_val & (1 << s);
+      relu_dx_ptr[s] = static_cast<T>(is_positive) * dy_ptr[s];
+    }
+    relu_dx_ptr += step;
+    dy_ptr += step;
+  }
+
+  if (remain_loop_start_idx < elem_cnt) {
+    const int32_t mask_val = mask_ptr[outer_loop];
+    const int32_t remain = elem_cnt - remain_loop_start_idx;
+    for (int32_t i = 0; i < remain; ++i) {
+      bool is_positive = mask_val & (1 << i);
+      relu_dx_ptr[i] = static_cast<T>(is_positive) * dy_ptr[i];
+    }
+  }
+}
+
+static size_t InferGradTmpSizeForCpuKernel(user_op::InferContext* ctx) {
   const auto& dy = ctx->InputTensorDesc("dy", 0);
   size_t tmp_size = 0;
   if (ctx->op_type_name() == "normalization_add_relu_grad" && !ctx->has_output("addend_diff", 0)) {
@@ -229,52 +396,11 @@ class NormalizationTrainCpuKernel final : public user_op::OpKernel {
       const int64_t batch_size = x->shape().At(0);
       const int64_t channel_size = x->shape().At(axis);
       const int64_t spatial_size = x->shape().Count(axis + 1);
-      const int64_t jump_step = spatial_size * channel_size;
-
-      // NOTE(Liang Depeng): the following parameters were used to compute mean and var
-      const int64_t reduce_count = batch_size * spatial_size;
-      const int64_t unbias_reduce_count = reduce_count - 1;
-      const float reduce_scale_factor = 1.0f / reduce_count;
-      const float unbias_reduce_scale_factor = 1.0f / unbias_reduce_count;
-      const float unbias_reduce_scale_factor_m2 = unbias_reduce_scale_factor * -2.0f;
-      const float unbias_reduce_scale_factor_mn = reduce_count * unbias_reduce_scale_factor;
-
-      const float exponential_average_factor = 1.0f - momentum;
 
       // NOTE(Liang Depeng):
-      // compute mean & inv_variance and update moving_mean & moving_variance for each channel
-      for (int64_t channel = 0; channel < channel_size; ++channel) {
-        const T* temp_input_ptr = input_ptr + channel * spatial_size;
-        T sum = 0;
-        T sum_square = 0;
-        for (int64_t batch = 0; batch < batch_size; ++batch) {
-          for (int64_t s = 0; s < spatial_size; ++s) {
-            const T x = temp_input_ptr[s];
-            sum += x;
-            sum_square += x * x;
-          }
-          temp_input_ptr += jump_step;
-        }
-
-        const T temp_mean = sum * reduce_scale_factor;
-        mean_ptr[channel] = temp_mean;
-
-        const T temp_mean_square = temp_mean * temp_mean;
-        const T temp_variance = sum_square * reduce_scale_factor - temp_mean_square;
-
-        const T temp_unbias_variance = sum_square * unbias_reduce_scale_factor
-                                       + unbias_reduce_scale_factor_m2 * temp_mean * sum
-                                       + unbias_reduce_scale_factor_mn * temp_mean_square;
-
-        inv_variance_ptr[channel] = 1.0f / std::sqrt(temp_variance + epsilon);
-
-        if (moving_mean_ptr != nullptr && moving_variance_ptr != nullptr) {
-          moving_mean_ptr[channel] =
-              moving_mean_ptr[channel] * momentum + temp_mean * exponential_average_factor;
-          moving_variance_ptr[channel] = moving_variance_ptr[channel] * momentum
-                                         + temp_unbias_variance * exponential_average_factor;
-        }
-      }
+      // Compute mean & inv_variance and update moving_mean & moving_variance for each channel.
+      ComputeMeanAndVar(input_ptr, mean_ptr, inv_variance_ptr, moving_mean_ptr, moving_variance_ptr,
+                        batch_size, channel_size, spatial_size, epsilon, momentum);
 
       // NOTE(Liang Depeng):
       // compute the normalization result
@@ -290,73 +416,15 @@ class NormalizationTrainCpuKernel final : public user_op::OpKernel {
 
       if (ctx->op_type_name() == "normalization_add_relu") {
         CHECK(!ctx->has_input("_add_to_output", 0));
-        const int64_t elem_cnt = x->shape().elem_cnt();
         auto* mask = ctx->Tensor4ArgNameAndIndex("reserve_space", 0);
 
         if (ctx->has_input("addend", 0)) {
           const auto* addend = ctx->Tensor4ArgNameAndIndex("addend", 0);
-          const int32_t step = 32;
-          const int64_t outer_loop = elem_cnt / step;
-          const int64_t remain_loop_start_idx = outer_loop * step;
-
-          const T* addend_ptr = addend->dptr<T>();
-          int32_t* mask_ptr = mask->mut_dptr<int32_t>();
-          T* temp_output_ptr = output_ptr;
-          for (int64_t outer = 0; outer < outer_loop; ++outer) {
-            int32_t mask = 0;
-            for (int32_t s = 0; s < step; ++s) {
-              const T sum = temp_output_ptr[s] + addend_ptr[s];
-              const bool is_positive = (sum > 0);
-              mask = mask | (static_cast<int32_t>(is_positive) << s);
-              temp_output_ptr[s] = is_positive ? sum : 0;
-            }
-            mask_ptr[outer] = mask;
-            addend_ptr += step;
-            temp_output_ptr += step;
-          }
-          if (remain_loop_start_idx < elem_cnt) {
-            int32_t mask_val = 0;
-            const int32_t remain = elem_cnt - remain_loop_start_idx;
-            for (int32_t i = 0; i < remain; ++i) {
-              const T sum = temp_output_ptr[i] + addend_ptr[i];
-              const bool is_positive = (sum > 0);
-              mask_val = mask_val | (static_cast<int32_t>(is_positive) << i);
-              temp_output_ptr[i] = is_positive ? sum : 0;
-            }
-            mask_ptr[outer_loop] = mask_val;
-          }
+          AddRelu(addend->dptr<T>(), mask->mut_dptr<int32_t>(), output_ptr, x->shape().elem_cnt());
         } else {
-          const int32_t step = 32;
-          const int64_t outer_loop = elem_cnt / step;
-          const int64_t remain_loop_start_idx = outer_loop * step;
-
-          int32_t* mask_ptr = mask->mut_dptr<int32_t>();
-          T* temp_output_ptr = output_ptr;
-          for (int64_t outer = 0; outer < outer_loop; ++outer) {
-            int32_t mask_val = 0;
-            for (int32_t s = 0; s < step; ++s) {
-              const T output = temp_output_ptr[s];
-              const bool is_positive = (output > 0);
-              mask_val = mask_val | (static_cast<int32_t>(is_positive) << s);
-              temp_output_ptr[s] = is_positive ? output : 0;
-            }
-            mask_ptr[outer] = mask_val;
-            temp_output_ptr += step;
-          }
-          if (remain_loop_start_idx < elem_cnt) {
-            int32_t mask_val = 0;
-            const int32_t remain = elem_cnt - remain_loop_start_idx;
-            for (int32_t i = 0; i < remain; ++i) {
-              const T output = temp_output_ptr[i];
-              const bool is_positive = (output > 0);
-              mask_val = mask_val | (static_cast<int32_t>(is_positive) << i);
-              temp_output_ptr[i] = is_positive ? output : 0;
-            }
-            mask_ptr[outer_loop] = mask_val;
-          }
+          Relu(mask->mut_dptr<int32_t>(), output_ptr, x->shape().elem_cnt());
         }
       }
-
     } else {  // TODO(Liang Depeng): NHWC format
     }
   }
@@ -414,7 +482,6 @@ class NormalizationGradCpuKernel final : public user_op::OpKernel {
     const auto* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
     auto* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto axis = ctx->Attr<int32_t>("axis");
-    const auto epsilon = ctx->Attr<float>("epsilon");
 
     const DataType data_type = x->data_type();
     CHECK_EQ(dy->shape(), x->shape());
@@ -428,68 +495,15 @@ class NormalizationGradCpuKernel final : public user_op::OpKernel {
     if (ctx->op_type_name() == "normalization_grad") {
       dy_ptr = dy->dptr<T>();
     } else if (ctx->op_type_name() == "normalization_add_relu_grad") {
-      const int64_t elem_cnt = dy->shape().elem_cnt();
       const auto* mask = ctx->Tensor4ArgNameAndIndex("reserve_space", 0);
-      user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
       if (ctx->has_output("addend_diff", 0)) {
         user_op::Tensor* addend_diff = ctx->Tensor4ArgNameAndIndex("addend_diff", 0);
-        const int32_t step = 32;
-        const int64_t outer_loop = elem_cnt / step;
-        const int64_t remain_loop_start_idx = outer_loop * step;
-
-        T* addend_diff_ptr = addend_diff->mut_dptr<T>();
-        const int32_t* mask_ptr = mask->dptr<int32_t>();
-        const T* temp_dy_ptr = dy->dptr<T>();
-
-        for (int64_t outer = 0; outer < outer_loop; ++outer) {
-          const int32_t mask_val = mask_ptr[outer];
-          for (int32_t s = 0; s < step; ++s) {
-            bool is_positive = mask_val & (1 << s);
-            addend_diff_ptr[s] = static_cast<T>(is_positive) * temp_dy_ptr[s];
-          }
-          addend_diff_ptr += step;
-          temp_dy_ptr += step;
-        }
-
-        if (remain_loop_start_idx < elem_cnt) {
-          const int32_t mask_val = mask_ptr[outer_loop];
-          const int32_t remain = elem_cnt - remain_loop_start_idx;
-          for (int32_t i = 0; i < remain; ++i) {
-            bool is_positive = mask_val & (1 << i);
-            addend_diff_ptr[i] = static_cast<T>(is_positive) * temp_dy_ptr[i];
-          }
-        }
-
+        AddReluGrad(dy->dptr<T>(), mask->dptr<int32_t>(), addend_diff->mut_dptr<T>(),
+                    dy->shape().elem_cnt());
         dy_ptr = addend_diff->dptr<T>();
       } else {
-        printf("enter here3\n");
-        const int32_t step = 32;
-        const int64_t outer_loop = elem_cnt / step;
-        const int64_t remain_loop_start_idx = outer_loop * step;
-
-        T* relu_dx_ptr = tmp_buffer->mut_dptr<T>();
-        const int32_t* mask_ptr = mask->dptr<int32_t>();
-        const T* temp_dy_ptr = dy->dptr<T>();
-
-        for (int64_t outer = 0; outer < outer_loop; ++outer) {
-          const int32_t mask_val = mask_ptr[outer];
-          for (int32_t s = 0; s < step; ++s) {
-            bool is_positive = mask_val & (1 << s);
-            relu_dx_ptr[s] = static_cast<T>(is_positive) * temp_dy_ptr[s];
-          }
-          relu_dx_ptr += step;
-          temp_dy_ptr += step;
-        }
-
-        if (remain_loop_start_idx < elem_cnt) {
-          const int32_t mask_val = mask_ptr[outer_loop];
-          const int32_t remain = elem_cnt - remain_loop_start_idx;
-          for (int32_t i = 0; i < remain; ++i) {
-            bool is_positive = mask_val & (1 << i);
-            relu_dx_ptr[i] = static_cast<T>(is_positive) * temp_dy_ptr[i];
-          }
-        }
-
+        ReluGrad(dy->dptr<T>(), mask->dptr<int32_t>(), tmp_buffer->mut_dptr<T>(),
+                 dy->shape().elem_cnt());
         dy_ptr = tmp_buffer->dptr<T>();
       }
 
