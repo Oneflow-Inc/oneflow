@@ -806,7 +806,6 @@ class FusedScaleTrilSoftmaxMaskScaleGradFunctor {
   std::shared_ptr<OpExpr> fused_op_;
 };
 
-
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -835,7 +834,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::LayerNormParamGradFunctor>("LayerNormParamGrad");
   m.add_functor<impl::LayerNormAffineParamGradFunctor>("LayerNormAffineParamGrad");
   m.add_functor<impl::BroadcastMatmulGradBFunctor>("BroadcastMatmulGradB");
-  m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleGradFunctor>("FusedScaleTrilSoftmaxMaskScaleGrad");
+  m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleGradFunctor>(
+      "FusedScaleTrilSoftmaxMaskScaleGrad");
 };
 
 }  // namespace functional
