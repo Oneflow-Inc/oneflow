@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/persistence/persistent_out_stream.h"
 #include "oneflow/core/register/tensor_slice_copier.h"
 #include "oneflow/core/device/cpu_device_context.h"
-#include "oneflow/core/stream/stream_context_adapter.h"
+#include "oneflow/core/stream/include/stream_context_adapter.h"
 
 namespace oneflow {
 
