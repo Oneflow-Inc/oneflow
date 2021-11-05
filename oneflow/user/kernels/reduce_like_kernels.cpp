@@ -25,7 +25,7 @@ namespace oneflow {
 
 namespace {
 
-size_t tmp_buffer->mut_dptr() SumLikeInferTmpSize(user_op::InferContext* ctx) {
+size_t ReduceSumLikeInferTmpSize(user_op::InferContext* ctx) {
   if (ctx->Attr<std::vector<int32_t>>("axis").empty()) { return 0; }
   const user_op::TensorDesc& tensor_desc_x = ctx->InputTensorDesc("x", 0);
   return tensor_desc_x.shape().elem_cnt() * GetSizeOfDataType(tensor_desc_x.data_type());
