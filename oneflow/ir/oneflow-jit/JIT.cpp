@@ -312,9 +312,9 @@ void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op_conf,
     const auto& tensor = std::get<2>(pair);
     if (auto result = GetResultByBnAndIndex(indexed_arg_name_and_index.first,
                                             indexed_arg_name_and_index.second)) {
-      assert(operand_mapping_.emplace(indexed_bn, result.getValue()).second);
+      CHECK(operand_mapping_.emplace(indexed_bn, result.getValue()).second);
     } else {
-      LOG(FATAL) << "result inserted, indexed_bn: " << indexed_bn << ", tensor: " << tensor.get()
+      LOG(FATAL) << "result not found, indexed_bn: " << indexed_bn << ", tensor: " << tensor.get()
                  << ", shape: " << tensor->shape()->DebugStr()
                  << ", dtype: " << tensor->dtype()->name();
     }
