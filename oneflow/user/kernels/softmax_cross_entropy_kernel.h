@@ -61,7 +61,6 @@ class SoftmaxCrossEntropyKernel final : public user_op::OpKernel {
     const auto num_axes = label->shape().NumAxes();
     const int64_t num_instances = label->shape().Count(0, num_axes - 1);
     const int64_t num_classes = label->shape().At(num_axes - 1);
-    LOG(ERROR) << "SoftmaxCrossEntropyKernel";
     std::unique_ptr<primitive::Softmax> primitive = NewSoftmaxPrimitive(ctx);
     CHECK(primitive);
     primitive->Launch(ctx->stream_ctx(), num_instances, num_classes, prediction->dptr(),
