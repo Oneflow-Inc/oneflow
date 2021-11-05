@@ -106,7 +106,6 @@ static void AddRelu(const T* addend_ptr, int32_t* mask_ptr, T* output_ptr, const
   T* temp_output_ptr = output_ptr;
   for (int64_t outer = 0; outer < outer_loop; ++outer) {
     int32_t mask = 0;
-#pragma unroll
     for (int32_t s = 0; s < step; ++s) {
       const T sum = temp_output_ptr[s] + addend_ptr[s];
       const bool is_positive = (sum > 0);
@@ -139,7 +138,6 @@ static void Relu(int32_t* mask_ptr, T* output_ptr, const int64_t elem_cnt) {
   T* temp_output_ptr = output_ptr;
   for (int64_t outer = 0; outer < outer_loop; ++outer) {
     int32_t mask_val = 0;
-#pragma unroll
     for (int32_t s = 0; s < step; ++s) {
       const T output = temp_output_ptr[s];
       const bool is_positive = (output > 0);
@@ -171,7 +169,6 @@ static void AddReluGrad(const T* dy_ptr, const int32_t* mask_ptr, T* addend_diff
 
   for (int64_t outer = 0; outer < outer_loop; ++outer) {
     const int32_t mask_val = mask_ptr[outer];
-#pragma unroll
     for (int32_t s = 0; s < step; ++s) {
       bool is_positive = mask_val & (1 << s);
       addend_diff_ptr[s] = static_cast<T>(is_positive) * dy_ptr[s];
@@ -199,7 +196,6 @@ static void ReluGrad(const T* dy_ptr, const int32_t* mask_ptr, T* relu_dx_ptr,
 
   for (int64_t outer = 0; outer < outer_loop; ++outer) {
     const int32_t mask_val = mask_ptr[outer];
-#pragma unroll
     for (int32_t s = 0; s < step; ++s) {
       bool is_positive = mask_val & (1 << s);
       relu_dx_ptr[s] = static_cast<T>(is_positive) * dy_ptr[s];
