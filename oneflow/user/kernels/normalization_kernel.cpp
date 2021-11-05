@@ -106,6 +106,7 @@ static void AddRelu(const T* addend_ptr, int32_t* mask_ptr, T* output_ptr, const
   T* temp_output_ptr = output_ptr;
   for (int64_t outer = 0; outer < outer_loop; ++outer) {
     int32_t mask = 0;
+#pragma unroll
     for (int32_t s = 0; s < step; ++s) {
       const T sum = temp_output_ptr[s] + addend_ptr[s];
       const bool is_positive = (sum > 0);
@@ -138,6 +139,7 @@ static void Relu(int32_t* mask_ptr, T* output_ptr, const int64_t elem_cnt) {
   T* temp_output_ptr = output_ptr;
   for (int64_t outer = 0; outer < outer_loop; ++outer) {
     int32_t mask_val = 0;
+#pragma unroll
     for (int32_t s = 0; s < step; ++s) {
       const T output = temp_output_ptr[s];
       const bool is_positive = (output > 0);
@@ -169,6 +171,7 @@ static void AddReluGrad(const T* dy_ptr, const int32_t* mask_ptr, T* addend_diff
 
   for (int64_t outer = 0; outer < outer_loop; ++outer) {
     const int32_t mask_val = mask_ptr[outer];
+#pragma unroll
     for (int32_t s = 0; s < step; ++s) {
       bool is_positive = mask_val & (1 << s);
       addend_diff_ptr[s] = static_cast<T>(is_positive) * dy_ptr[s];
@@ -196,6 +199,7 @@ static void ReluGrad(const T* dy_ptr, const int32_t* mask_ptr, T* relu_dx_ptr,
 
   for (int64_t outer = 0; outer < outer_loop; ++outer) {
     const int32_t mask_val = mask_ptr[outer];
+#pragma unroll
     for (int32_t s = 0; s < step; ++s) {
       bool is_positive = mask_val & (1 << s);
       relu_dx_ptr[s] = static_cast<T>(is_positive) * dy_ptr[s];
@@ -224,40 +228,45 @@ static size_t InferGradTmpSizeForCpuKernel(user_op::InferContext* ctx) {
 }
 
 // NOTE(Liang Depeng): helper functions to process datas for specific channel over all samples.
-template<typename T, typename OnData>
+template<typename T, typename DataProcessor>
 static inline void ForEachFast(const T* data, const int64_t batch_size, const int64_t spatial_size,
-                               const int64_t jump_step, const int64_t channel_idx, OnData onData) {
+                               const int64_t jump_step, const int64_t channel_idx,
+                               DataProcessor data_processor) {
   const int64_t start_offset = channel_idx * spatial_size;
   const T* tmp_data = data + start_offset;
   for (int64_t outer = 0; outer < batch_size; ++outer) {
-    for (int64_t i = 0; i < spatial_size; ++i) { onData(&tmp_data[i]); }
+    for (int64_t i = 0; i < spatial_size; ++i) { data_processor(&tmp_data[i]); }
     tmp_data += jump_step;
   }
 }
 
-template<typename T, typename OnData>
+template<typename T, typename DataProcessor>
 static inline void ForEachFast(const T* in_data1, const T* in_data2, const int64_t batch_size,
                                const int64_t spatial_size, const int64_t jump_step,
-                               const int64_t channel_idx, OnData onData) {
+                               const int64_t channel_idx, DataProcessor data_processor) {
   const int64_t start_offset = channel_idx * spatial_size;
   const T* tmp_in_data1 = in_data1 + start_offset;
   const T* tmp_in_data2 = in_data2 + start_offset;
   for (int64_t outer = 0; outer < batch_size; ++outer) {
-    for (int64_t i = 0; i < spatial_size; ++i) { onData(&tmp_in_data1[i], &tmp_in_data2[i]); }
+    for (int64_t i = 0; i < spatial_size; ++i) {
+      data_processor(&tmp_in_data1[i], &tmp_in_data2[i]);
+    }
     tmp_in_data1 += jump_step;
     tmp_in_data2 += jump_step;
   }
 }
 
-template<typename T, typename OnData>
+template<typename T, typename DataProcessor>
 static inline void ForEachFast(const T* in_data, T* out_data, const int64_t batch_size,
                                const int64_t spatial_size, const int64_t jump_step,
-                               const int64_t channel_idx, OnData onData) {
+                               const int64_t channel_idx, DataProcessor data_processor) {
   const int64_t start_offset = channel_idx * spatial_size;
   const T* tmp_in_data = in_data + start_offset;
   T* tmp_out_data = out_data + start_offset;
   for (int64_t outer = 0; outer < batch_size; ++outer) {
-    for (int64_t i = 0; i < spatial_size; ++i) { onData(&tmp_in_data[i], &tmp_out_data[i]); }
+    for (int64_t i = 0; i < spatial_size; ++i) {
+      data_processor(&tmp_in_data[i], &tmp_out_data[i]);
+    }
     tmp_in_data += jump_step;
     tmp_out_data += jump_step;
   }
