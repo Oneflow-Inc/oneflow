@@ -122,6 +122,7 @@ class TensorRef final : public TensorIf<TensorRef> {
   Maybe<ConsistentTensor> AsConsistentTensor() override { return tensor_->AsConsistentTensor(); }
 
   void ResetTensor(const std::shared_ptr<Tensor>& tensor) { tensor_ = tensor; }
+  std::shared_ptr<Tensor> GetTensor() { return tensor_; }
 
  private:
   std::shared_ptr<Tensor> tensor_;

@@ -226,7 +226,7 @@ std::shared_ptr<Tensor> JitImporter::MakeIntermediateTensor(
   auto tensor_ref = std::make_shared<TensorRef>(tensor);
   CHECK(intermediate_tensors_.insert({result, tensor_ref}).second)
       << "Intermediate tensor already created, lbn: " << lbn;
-  CHECK(result_mapping_.emplace(tensor.get(), result).second)
+  CHECK(result_mapping_.emplace(tensor_ref.get(), result).second)
       << "Intermediate tensor already mapped to mlir value, lbn: " << lbn;
   return tensor_ref;
 }
