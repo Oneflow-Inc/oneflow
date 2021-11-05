@@ -268,15 +268,15 @@ def GetDualObject(name, pytorch, oneflow):
                             if testing_graph:
                                 if isinstance(oneflow, flow.nn.Module):
 
-                                    class TestG(flow.nn.Graph):
+                                    class TestGraphOfModule(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
-                                            self.test_m = oneflow
+                                            self.test_module = oneflow
 
                                         def build(self, *args):
-                                            return self.test_m(*args)
+                                            return self.test_module(*args)
 
-                                    test_g = TestG()
+                                    test_g = TestGraphOfModule()
                                     test_g_res = test_g(*oneflow_args)
                                     if isinstance(test_g_res, tuple):
                                         for idx, g_res in enumerate(test_g_res):
@@ -544,6 +544,7 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05, check_graph=True
                 if res is not None:
                     if not isinstance(res, collections.abc.Sequence):
                         res = [res]
+                        func_outputs = res
                     for x in res:
                         if auto_backward:
                             if isinstance(x.pytorch, torch_original.Tensor):
@@ -578,11 +579,14 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05, check_graph=True
                         and id(x.pytorch) not in call_tensor_id
                     ):
                         vis_tensor.append(x.pytorch)
+                # check eager
                 for x in dual_objects_to_test:
-                    # check eager
                     test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol), x)
-                    # check graph
-                    flow_tensor = x.oneflow
+                    if verbose:
+                        print(f"{f.__name__} test eager passed.")
+                # check graph
+                for output in func_outputs:
+                    flow_tensor = output.oneflow
                     if id(flow_tensor) in flow_res_id_eager2_graph:
                         test_case.assertTrue(
                             np.allclose(
@@ -593,8 +597,11 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05, check_graph=True
                                 equal_nan=True,
                             )
                         )
-                if verbose:
-                    print("test passed")
+                        if verbose:
+                            print(f"{f.__name__} test graph passed.")
+                    else:
+                        if check_graph:
+                            test_case.assertTrue(False, f"{f.__name__} cannot find module to check graph.")
                 n -= 1
                 loop += 1
 
