@@ -314,7 +314,7 @@ void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op_conf,
                                             indexed_arg_name_and_index.second)) {
       assert(operand_mapping_.emplace(indexed_bn, result.getValue()).second);
     } else {
-      LOG(FATAL) << "result not found, indexed_bn: " << indexed_bn << ", tensor: " << tensor.get()
+      LOG(FATAL) << "result inserted, indexed_bn: " << indexed_bn << ", tensor: " << tensor.get()
                  << ", shape: " << tensor->shape()->DebugStr()
                  << ", dtype: " << tensor->dtype()->name();
     }
