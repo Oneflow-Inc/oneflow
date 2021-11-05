@@ -213,6 +213,7 @@ std::shared_ptr<Tensor> JitImporter::MakeIntermediateTensor(
   if (tensor_type.getElementType().isF32()) {
     dtype = DataType::kFloat;
   } else {
+    GetModule().dump();
     result.dump();
     LOG(FATAL) << "fail to creat tensor";
   }
