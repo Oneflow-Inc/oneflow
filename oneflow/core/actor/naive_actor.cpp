@@ -38,4 +38,5 @@ REGISTER_ACTOR(TaskType::kDecodeH2D, NaiveActor);
 #ifdef WITH_CUDA
 REGISTER_ACTOR(TaskType::kCopyHd, NaiveActor);
 #endif
+REGISTER_ACTOR(TaskType::kCollectiveBoxingGeneric, NaiveActor);
 }  // namespace oneflow

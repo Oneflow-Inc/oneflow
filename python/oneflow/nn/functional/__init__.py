@@ -56,7 +56,7 @@ from oneflow._C import pad
 from oneflow._C import upsample
 from oneflow._C import triplet_margin_loss
 from oneflow._C import ctc_greedy_decoder
-from oneflow.nn.modules.one_hot import one_hot
+from oneflow._C import one_hot
 from oneflow.nn.modules.sparse import embedding
 from oneflow.nn.modules.linear import linear
 from oneflow.nn.modules.activation import relu6

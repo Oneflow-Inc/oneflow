@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/device/device_context_adapter.h"
-#include "oneflow/core/stream/cuda_stream_context.h"
+#include "oneflow/core/stream/cuda/cuda_stream_context.h"
 #include "oneflow/core/vm/cpu_allocator.h"
 #include "oneflow/core/device/cuda_event_record.h"
 

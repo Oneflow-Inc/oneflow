@@ -209,9 +209,7 @@ class OptionalBase<
   const storage_type& value() const& { return value_; }
   storage_type& value() & { return value_; }
 
-  // generate a temporary object to allow `const auto& x = optval().value()` where `optval()` is a
-  // function call which returns a temporary Optional
-  storage_type value() && { return std::move(value_); }
+  storage_type&& value() && { return std::move(value_); }
 
   bool has_value() const { return bool(value_); }
 
@@ -302,18 +300,63 @@ class OptionalBase<
   storage_type value_;
 };
 
+template<typename T>
+struct IsOptional : std::false_type {};
+
+template<typename T>
+struct IsOptional<Optional<T>> : std::true_type {};
+
+struct monadic_operations {
+  template<typename T, typename F>
+  static auto map(T&& opt, F&& f)
+      -> Optional<decltype(std::forward<F>(f)(std::forward<T>(opt).value()))> {
+    if (opt.has_value()) { return std::forward<F>(f)(std::forward<T>(opt).value()); }
+
+    return NullOpt;
+  }
+
+  template<typename T, typename F,
+           typename U = std::decay_t<decltype(std::declval<F>()(std::declval<T>().value()))>>
+  static auto bind(T&& opt, F&& f) -> std::enable_if_t<IsOptional<U>::value, U> {
+    if (opt.has_value()) { return std::forward<F>(f)(std::forward<T>(opt).value()); }
+
+    return NullOpt;
+  }
+
+  template<typename T, typename F,
+           std::enable_if_t<std::is_same<decltype(std::declval<F>()()), void>::value, int> = 0>
+  static auto or_else(T&& opt, F&& f) -> std::decay_t<T> {
+    if (!opt.has_value()) {
+      std::forward<F>(f)();
+      return NullOpt;
+    }
+
+    return std::forward<T>(opt);
+  }
+
+  template<typename T, typename F,
+           std::enable_if_t<
+               std::is_convertible<decltype(std::declval<F>()()), std::decay_t<T>>::value, int> = 0>
+  static auto or_else(T&& opt, F&& f) -> std::decay_t<T> {
+    if (!opt.has_value()) { return std::forward<F>(f)(); }
+
+    return std::forward<T>(opt);
+  }
+};
+
 }  // namespace internal
 
 template<typename T>
 class Optional final : private internal::OptionalBase<T> {
  private:
   using base = internal::OptionalBase<T>;
+  using move_value_type = decltype(std::declval<base>().value());
 
  public:
   using value_type = typename base::value_type;
   using storage_type = typename base::storage_type;
 
-  Optional() = default;
+  explicit Optional() = default;
   ~Optional() = default;
 
   Optional(NullOptType)  // NOLINT(google-explicit-constructor)
@@ -341,22 +384,71 @@ class Optional final : private internal::OptionalBase<T> {
   Optional& operator=(Optional&& rhs) noexcept = default;
 
   template<typename U>
-  auto value_or(U&& other) const& -> decltype(base::value_or(std::forward<U>(other))) {
+  decltype(auto) value_or(U&& other) const& {
     return base::value_or(std::forward<U>(other));
   }
 
   template<typename U>
-  auto value_or(U&& other) && -> decltype(std::move(*this).base::value_or(std::forward<U>(other))) {
+  decltype(auto) value_or(U&& other) && {
     return std::move(*this).base::value_or(std::forward<U>(other));
   }
 
   bool has_value() const { return base::has_value(); }
   explicit operator bool() const { return has_value(); }
 
-  auto Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() && -> decltype(
-      std::move(*this).base::value()) {
+  // generate a temporary object to allow `const auto& x = optval().value()` where `optval()` is a
+  // function call which returns a temporary Optional
+  auto Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() && -> std::conditional_t<
+      std::is_rvalue_reference<move_value_type>::value, std::remove_reference_t<move_value_type>,
+      move_value_type> {
     return std::move(*this).base::value();
   }
+
+  friend internal::monadic_operations;
+
+  template<typename F>
+  auto map(F&& f) const& {
+    return internal::monadic_operations::map(*this, std::forward<F>(f));
+  }
+
+  template<typename F>
+  auto map(F&& f) && {
+    return internal::monadic_operations::map(std::move(*this), std::forward<F>(f));
+  }
+
+  template<typename F>
+  auto bind(F&& f) const& {
+    return internal::monadic_operations::bind(*this, std::forward<F>(f));
+  }
+
+  template<typename F>
+  auto bind(F&& f) && {
+    return internal::monadic_operations::bind(std::move(*this), std::forward<F>(f));
+  }
+
+  template<typename F>
+  auto or_else(F&& f) const& {
+    return internal::monadic_operations::or_else(*this, std::forward<F>(f));
+  }
+
+  template<typename F>
+  auto or_else(F&& f) && {
+    return internal::monadic_operations::or_else(std::move(*this), std::forward<F>(f));
+  }
+
+  bool operator==(const Optional& other) const {
+    if (has_value()) {
+      if (other.has_value()) {
+        return base::value() == other.base::value();
+      } else {
+        return false;
+      }
+    } else {
+      return !other.has_value();
+    }
+  }
+
+  bool operator!=(const Optional& other) const { return !operator==(other); }
 
   void reset() { base::reset(); }
 };
