@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/thread/thread_consistent_id.h"
@@ -40,7 +41,7 @@ Maybe<void> ForEachThreadCtx(vm::VirtualMachine* vm,
 
 void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
   *Initializer = [&]() {
-    if (!CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) { return; }
+    if (!CHECK_JUST(IsMultiClient())) { return; }
     CHECK_JUST(InitThisThreadUniqueConsistentId(kThreadConsistentIdScheduler, "scheduler"));
   };
 }
@@ -76,7 +77,7 @@ void GetWorkerThreadInitializer(intrusive::shared_ptr<vm::VirtualMachine> vm,
     stream_type_index2consistent_id[stream_type_index] = thread_consistent_id++;
   }
   *Initializer = [stream_type_index2consistent_id](vm::ThreadCtx* thread_ctx) {
-    if (!CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) { return; }
+    if (!CHECK_JUST(IsMultiClient())) { return; }
     const auto& stream_type_index = GetStreamTypeIndex(thread_ctx);
     const auto& iter = stream_type_index2consistent_id.find(stream_type_index);
     if (iter != stream_type_index2consistent_id.end()) {

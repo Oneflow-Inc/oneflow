@@ -16,6 +16,7 @@ limitations under the License.
 #include <mutex>
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/global.h"
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/device/node_device_descriptor_manager.h"
 #include "oneflow/core/device/cuda_device_descriptor.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
@@ -180,7 +181,7 @@ void CublasMathModeGuard::SetMathMode(cublasMath_t new_mode) {
 
 int GetCudaDeviceIndex() {
   int cuda_device_index = 0;
-  if (CHECK_JUST(GlobalMultiClientEnv())) {
+  if (CHECK_JUST(IsMultiClient())) {
     cuda_device_index = GlobalProcessCtx::LocalRank();
   } else {
     OF_CUDA_CHECK(cudaGetDevice(&cuda_device_index));

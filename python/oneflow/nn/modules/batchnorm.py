@@ -117,12 +117,13 @@ class _BatchNorm(_NormBase):
             if self.training and self.track_running_stats:
                 # use unbiased variance to update running_var
                 unbiased_variance = x.var(dim=reduce_axis, unbiased=True, keepdim=False)
-                self.running_mean = (
-                    1.0 - self.momentum
-                ) * self.running_mean + self.momentum * mean
-                self.running_var = (
-                    1.0 - self.momentum
-                ) * self.running_var + self.momentum * unbiased_variance
+                with flow.no_grad():
+                    self.running_mean = (
+                        1.0 - self.momentum
+                    ) * self.running_mean + self.momentum * mean
+                    self.running_var = (
+                        1.0 - self.momentum
+                    ) * self.running_var + self.momentum * unbiased_variance
             else:
                 mean = mean if self.running_mean is None else self.running_mean
                 variance = variance if self.running_var is None else self.running_var
@@ -148,7 +149,7 @@ class _BatchNorm(_NormBase):
                 raise ValueError(
                     "shape of mean and variance should be 1D or has number of axes and x's"
                 )
-            variance += self.eps
+            variance = variance + self.eps
             normalized = (x - mean) * variance.rsqrt()
             affined = normalized
             if self.weight is not None:
