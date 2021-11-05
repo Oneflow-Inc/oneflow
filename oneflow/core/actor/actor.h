@@ -38,7 +38,7 @@ class Actor : public ActorBase {
   // 0: success, and actor not finish
   int ProcessMsg(const ActorMsg& msg) override { return (this->*msg_handler_)(msg); }
 
-  int64_t machine_id() const { return Global<IDMgr>::Get()->MachineId4ActorId(actor_id_); }
+  int64_t machine_id() const { return MachineId4ActorId(actor_id_); }
   int64_t actor_id() const { return actor_id_; }
   int64_t job_id() const { return job_id_; }
 
