@@ -666,7 +666,7 @@ Maybe<void> Operator::InferNdSbpSignatureIf(
   return Maybe<void>::Ok();
 }
 
-Maybe<cfg::SbpSignatureList> Operator::GetSbpSignatureList(
+Maybe<cfg::SbpSignatureList> Operator::GetValidSbpSignatureList(
     const ParallelDesc& parallel_desc,
     const std::function<Maybe<const NdSbpInferHint*>(const std::string&)>& NdSbpInferHint4Ibn)
     const {

@@ -41,6 +41,7 @@ class OutputOp final : public Operator {
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
+  Maybe<void> GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const override;
   Maybe<void> InferNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
                                   const cfg::NdSbpSignature& nd_sbp_constraints,
                                   const ParallelDesc& parallel_desc,

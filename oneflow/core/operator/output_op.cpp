@@ -65,6 +65,13 @@ Maybe<void> OutputOp::InferOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> OutputOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const {
+  JUST(InterfaceOpUtil::GetOutputLikeOpSbpSignature(op_conf().output_conf().blob_conf(),
+                                                    input_bns(), output_bns(),
+                                                    sbp_sig_list->mutable_sbp_signature()->Add()));
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> OutputOp::InferSbpSignature(
     cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,

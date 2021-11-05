@@ -118,7 +118,7 @@ Maybe<void> SbpConstructor::FillSbpSignatureForOpNode(const OpGraph& op_graph, c
     };
     // Get all valid sbp_signatures
     const std::shared_ptr<cfg::SbpSignatureList>& sbp_list =
-        JUST(op_node->op().GetSbpSignatureList(op_node->parallel_desc(), NdSbpInferHint4Ibn));
+        JUST(op_node->op().GetValidSbpSignatureList(op_node->parallel_desc(), NdSbpInferHint4Ibn));
     CHECK_GT_OR_RETURN(sbp_list->sbp_signature_size(), 0);
     // Fill in sbp_node
     SbpNode<cfg::SbpSignature>* sbp_node = op_name2sbp_node_[op_node->op().op_name()];

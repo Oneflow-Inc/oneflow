@@ -138,7 +138,7 @@ class Operator {
   Maybe<const Shape> GetInputBlobFastestTimeShape() const;
   Maybe<const Shape> GetInputOutputFastestTimeShape() const;
 
-  Maybe<cfg::SbpSignatureList> GetSbpSignatureList(
+  Maybe<cfg::SbpSignatureList> GetValidSbpSignatureList(
       const ParallelDesc& parallel_desc,
       const std::function<Maybe<const NdSbpInferHint*>(const std::string&)>& NdSbpInferHint4Ibn)
       const;
