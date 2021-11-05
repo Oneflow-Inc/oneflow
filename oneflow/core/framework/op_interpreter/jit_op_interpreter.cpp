@@ -88,7 +88,7 @@ void InsertLbnSegmentIntoVec(const ::mlir::ArrayAttr& lbn_segment_keys,
 
 void JitInterpreter::Interrupt() {
   CHECK(importer_.LowerToOneFlowKernel().succeeded());
-  module_->dump();
+  if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module_->print(llvm::outs()); }
   llvm::DenseMap<Value, std::shared_ptr<Tensor>> mapping;
   // TODO: handle the case if there are more than one function in the module.
   ReturnOp return_op;
