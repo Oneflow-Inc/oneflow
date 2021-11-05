@@ -52,7 +52,7 @@ Maybe<StreamId::stream_index_t> GetTaskStreamIndex(TaskType task_type, const Dev
   return TaskStreamIndexFactory::Get().GetStreamIndex(task_type, device_id);
 }
 
-StreamId GenerateComputeStreamId(const DeviceId& device_id) {
+StreamId GenerateComputeTaskStreamId(const DeviceId& device_id) {
   auto* stream_index_generator = TaskStreamIndexFactory::Get().GetGenerator(device_id);
   StreamId::stream_index_t stream_index = 0;
   if (device_id.device_type() == DeviceType::kCPU) {
@@ -67,7 +67,7 @@ StreamId GenerateComputeStreamId(const DeviceId& device_id) {
 StreamId GenerateComputeTaskStreamId(int64_t rank, DeviceType device_type, int64_t device_index) {
   DeviceId device_id{static_cast<DeviceId::rank_t>(rank), device_type,
                      static_cast<DeviceId::device_index_t>(device_index)};
-  return GenerateComputeStreamId(device_id);
+  return GenerateComputeTaskStreamId(device_id);
 }
 
 StreamId GenerateNamedTaskStreamId(const DeviceId& device_id, const std::string& name) {

@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_GRAPH_STREAM_INDEX_H_
-#define ONEFLOW_CORE_GRAPH_STREAM_INDEX_H_
+#ifndef ONEFLOW_CORE_GRAPH_STREAM_INDEX_GENERATOR_H_
+#define ONEFLOW_CORE_GRAPH_STREAM_INDEX_GENERATOR_H_
 
 #include "oneflow/core/graph/stream_id.h"
 
@@ -42,4 +42,4 @@ class StreamIndexGenerator final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_STREAM_INDEX_H_
+#endif  // ONEFLOW_CORE_GRAPH_STREAM_INDEX_GENERATOR_H_

@@ -779,8 +779,9 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
   acc_conf->set_max_acc_num(time_shape_before_acc->elem_cnt() / time_shape_after_acc->elem_cnt());
 
   OperatorConf bw_sink_final_tick_conf;
-  bw_sink_final_tick_conf.set_name(std::string("System-BwSinkFinalTick-Tick_") + NewUniqueId());
-  auto* tick_conf = bw_sink_final_tick_conf.mutable_tick_conf();
+  bw_sink_final_tick_conf.set_name(std::string("System-BwSinkFinalTick-DeviceTick_")
+                                   + NewUniqueId());
+  auto* tick_conf = bw_sink_final_tick_conf.mutable_device_tick_conf();
   tick_conf->add_tick(GenLogicalBlobName(bw_sink_acc_tick_conf.name(), "acc"));
   tick_conf->set_out("out");
 
