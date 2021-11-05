@@ -141,9 +141,7 @@ from oneflow.compatible.single_client.framework.dtype import (
 from oneflow.compatible.single_client.framework.env_util import (
     api_enable_eager_execution as enable_eager_execution,
 )
-from oneflow.framework.env_util import (
-    api_enable_dtr as enable_dtr,
-)
+from oneflow.framework.env_util import api_enable_dtr as enable_dtr
 from oneflow.compatible.single_client.framework.env_util import (
     api_get_current_machine_id as current_machine_id,
 )

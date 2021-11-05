@@ -235,7 +235,6 @@ class EagerMirroredTensorImpl : public MirroredTensorImpl {
   // Setters
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
 
-
   // virtual Maybe<void> InitEagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case);
   // Maybe<void> InitEagerBlobObjectAndTensorStorage(
   //     const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
@@ -258,10 +257,12 @@ class DTREagerMirroredTensorImpl final : public EagerMirroredTensorImpl {
   OF_DISALLOW_COPY_AND_MOVE(DTREagerMirroredTensorImpl);
   DTREagerMirroredTensorImpl() {}
   DTREagerMirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
-                          bool requires_grad, bool is_leaf) : EagerMirroredTensorImpl(tensor_meta, requires_grad, is_leaf) {}
+                             bool requires_grad, bool is_leaf)
+      : EagerMirroredTensorImpl(tensor_meta, requires_grad, is_leaf) {}
   DTREagerMirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
-                          const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad,
-                          bool is_leaf) : EagerMirroredTensorImpl(tensor_meta, tensor_storage, requires_grad, is_leaf) {}
+                             const std::shared_ptr<TensorStorage> tensor_storage,
+                             bool requires_grad, bool is_leaf)
+      : EagerMirroredTensorImpl(tensor_meta, tensor_storage, requires_grad, is_leaf) {}
   // ~DTREagerMirroredTensorImpl() {}
   ~DTREagerMirroredTensorImpl() override {}
 

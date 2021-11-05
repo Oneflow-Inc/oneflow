@@ -27,6 +27,6 @@ namespace oneflow {
 
 Maybe<void> EnableDTRStrategy(bool enable_dtr, double thres, bool enable_debug);
 
-}   // namespace oneflow
+}  // namespace oneflow
 
 #endif

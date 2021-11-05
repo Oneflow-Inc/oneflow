@@ -386,7 +386,7 @@ class Parameter final : public TensorIf<Parameter> {
 };
 
 class MirroredTensor : public TensorIf<MirroredTensor>,
-                             public std::enable_shared_from_this<MirroredTensor> {
+                       public std::enable_shared_from_this<MirroredTensor> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MirroredTensor);
   MirroredTensor() = default;

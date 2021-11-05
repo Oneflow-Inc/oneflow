@@ -64,6 +64,7 @@ def enable_eager_environment(val=True):
 def enable_dtr(val=False, thres=1, debug=False):
     return oneflow._oneflow_internal.EnableDTRStrategy(val, thres, debug)
 
+
 def api_env_init() -> bool:
     """Init environment for job
 

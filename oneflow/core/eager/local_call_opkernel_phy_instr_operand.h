@@ -1,9 +1,12 @@
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -59,7 +62,7 @@ class LocalCallOpKernelPhyInstrOperand : public vm::PhyInstrOperand {
         dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode) {}
 
   const one::StatefulLocalOpKernel& opkernel() const { return *opkernel_; }
-  const std::shared_ptr<one::StatefulLocalOpKernel>& shared_opkernel() const {return opkernel_; }
+  const std::shared_ptr<one::StatefulLocalOpKernel>& shared_opkernel() const { return opkernel_; }
   const one::EagerBlobObjectListPtr& inputs() const { return inputs_; }
   const one::EagerBlobObjectListPtr& outputs() const { return outputs_; }
   const AttrMap& attrs() const { return op_interp_ctx_.attrs; }
@@ -123,31 +126,30 @@ class DTRInstrOperand {
       const one::EagerBlobObjectListPtr& input, const one::EagerBlobObjectListPtr& output,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
       const one::OpExprInterpContext& op_interp_ctx_,
-      const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode) 
+      const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)
       : opkernel_(opkernel),
         consistent_tensor_infer_result_(consistent_tensor_infer_result),
         op_interp_ctx_(op_interp_ctx_),
         dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode) {
-          // inputs & outputs weak_ptr
-          inputs_ = std::vector<std::weak_ptr<vm::EagerBlobObject>>();
-          for (const auto& in : *input) {
-            inputs_.emplace_back(in);
-          }
-          outputs_ = std::vector<std::weak_ptr<vm::EagerBlobObject>>();
-          for (const auto& out : *output) {
-            outputs_.emplace_back(out);
-          }
-        }
+    // inputs & outputs weak_ptr
+    inputs_ = std::vector<std::weak_ptr<vm::EagerBlobObject>>();
+    for (const auto& in : *input) { inputs_.emplace_back(in); }
+    outputs_ = std::vector<std::weak_ptr<vm::EagerBlobObject>>();
+    for (const auto& out : *output) { outputs_.emplace_back(out); }
+  }
   ~DTRInstrOperand() = default;
 
-  const std::shared_ptr<one::StatefulLocalOpKernel>& shared_opkernel() const {return opkernel_; }
+  const std::shared_ptr<one::StatefulLocalOpKernel>& shared_opkernel() const { return opkernel_; }
   const std::vector<std::weak_ptr<vm::EagerBlobObject>>& inputs() const { return inputs_; }
   const std::vector<std::weak_ptr<vm::EagerBlobObject>>& outputs() const { return outputs_; }
   const one::OpExprInterpContext& op_interp_ctx() const { return op_interp_ctx_; }
   const one::DevVmDepObjectConsumeMode& dev_vm_dep_object_consume_mode() const {
-    return dev_vm_dep_object_consume_mode_; }
+    return dev_vm_dep_object_consume_mode_;
+  }
   const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result()
-      const { return consistent_tensor_infer_result_; }
+      const {
+    return consistent_tensor_infer_result_;
+  }
 
  private:
   std::shared_ptr<one::StatefulLocalOpKernel> opkernel_;
@@ -158,7 +160,6 @@ class DTRInstrOperand {
   const user_op::OpKernel* user_opkernel_;
   const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode_;
 };
-
 
 }  // namespace vm
 }  // namespace oneflow

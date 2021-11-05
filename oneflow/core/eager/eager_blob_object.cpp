@@ -104,16 +104,20 @@ void DTREagerBlobObject::clear_invalid_object() {
   CHECK_JUST(Global<one::DTRTensorPool>::Get()->clear());
 }
 
-Maybe<void> DTREagerBlobObject::InitBlobAttrs(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand) {
+Maybe<void> DTREagerBlobObject::InitBlobAttrs(
+    std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand) {
   // reset DTREageBlobObject properties
   compute_time_ = 0;
   pinned_ = 0;
 
-  // current time 
+  // current time
   update_access_time();
   // last_access_time_ = Global<one::DTRTensorPool>::Get()->duration();
-  //TODO: unique_ptr
-  compute_op_ = std::make_unique<DTRInstrOperand>(operand->shared_opkernel(), operand->inputs(), operand->outputs(), operand->consistent_tensor_infer_result(), operand->op_interp_ctx(), operand->dev_vm_dep_object_consume_mode());
+  // TODO: unique_ptr
+  compute_op_ = std::make_unique<DTRInstrOperand>(
+      operand->shared_opkernel(), operand->inputs(), operand->outputs(),
+      operand->consistent_tensor_infer_result(), operand->op_interp_ctx(),
+      operand->dev_vm_dep_object_consume_mode());
   // compute_op_ = operand;
   could_evict_ = (input_size() > 0) && could_evict_;
 
@@ -124,9 +128,13 @@ void DTREagerBlobObject::update_access_time() {
   last_access_time_ = Global<one::DTRTensorPool>::Get()->duration();
 }
 
-void DTREagerBlobObject::update_user_ops(std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand) {
-  //TODO unique_ptr
-  user_ops_.emplace_back(std::make_unique<DTRInstrOperand>(operand->shared_opkernel(), operand->inputs(), operand->outputs(), operand->consistent_tensor_infer_result(), operand->op_interp_ctx(), operand->dev_vm_dep_object_consume_mode()));
+void DTREagerBlobObject::update_user_ops(
+    std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand) {
+  // TODO unique_ptr
+  user_ops_.emplace_back(std::make_unique<DTRInstrOperand>(
+      operand->shared_opkernel(), operand->inputs(), operand->outputs(),
+      operand->consistent_tensor_infer_result(), operand->op_interp_ctx(),
+      operand->dev_vm_dep_object_consume_mode()));
 }
 
 bool DTREagerBlobObject::is_in_memory() const {
@@ -215,7 +223,7 @@ Maybe<double> DTREagerBlobObject::neighbor_cost() const {
 
 Maybe<double> DTREagerBlobObject::cost() const {
   auto n_cost = JUST(neighbor_cost());
-  return n_cost / blob_body_bytes_ / last_access_time_; 
+  return n_cost / blob_body_bytes_ / last_access_time_;
 }
 
 size_t DTREagerBlobObject::input_size() const {

@@ -68,7 +68,7 @@ class EagerBlobObject : public BlobObject {
   }
 
   BlobDesc* mut_blob_desc() override { return &blob_desc_; }
-  std::size_t BlobBodyBytes() {return blob_body_bytes_; }
+  std::size_t BlobBodyBytes() { return blob_body_bytes_; }
 
   const Blob& blob() const override { return *blob_; }
   Blob* mut_blob() override { return blob_.get(); }
@@ -87,7 +87,7 @@ class EagerBlobObject : public BlobObject {
   }
 
   std::shared_ptr<TensorBuffer>& tensor_buffer() { return tensor_buffer_; }
-  char* object_dptr() {return tensor_buffer_->blob_dptr(); }
+  char* object_dptr() { return tensor_buffer_->blob_dptr(); }
 
   bool is_shape_synced() const { return is_shape_synced_; }
 
@@ -126,13 +126,9 @@ class DisjNode {
  public:
   DisjNode(double time) : compute_time_(time), parent_(nullptr) {}
 
-  bool is_root() {
-    return !bool(parent_);
-  }
+  bool is_root() { return !bool(parent_); }
 
-  void set_parent(std::shared_ptr<DisjNode>& parent) {
-    parent_ = parent;
-  }
+  void set_parent(std::shared_ptr<DisjNode>& parent) { parent_ = parent; }
 
  private:
   double compute_time_;
@@ -143,28 +139,30 @@ class DTREagerBlobObject final : public EagerBlobObject {
  public:
   DTREagerBlobObject(const DTREagerBlobObject&) = delete;
   DTREagerBlobObject(DTREagerBlobObject&&) = delete;
-  DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
-                  DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer)
+  DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
+                     const std::shared_ptr<Shape>& shape, DataType data_type,
+                     const std::shared_ptr<TensorBuffer>& tensor_buffer)
       : DTREagerBlobObject(mem_case, shape, data_type, tensor_buffer, nullptr) {
-        compute_time_ = 0;
-        last_access_time_ = 0;
-        pinned_ = 0;
-        compute_op_ = nullptr;
-        node_ = nullptr;
-        user_ops_ = std::vector<std::unique_ptr<DTRInstrOperand>>();
-        could_evict_ = true;
-      }
-  DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
-                  DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
-                  LocalDepObject* dep_object) : EagerBlobObject(mem_case, shape, data_type, tensor_buffer, dep_object) {
-                    compute_time_ = 0;
-                    last_access_time_ = 0;
-                    pinned_ = 0;
-                    compute_op_ = nullptr;
-                    node_ = nullptr;
-                    user_ops_ = std::vector<std::unique_ptr<DTRInstrOperand>>();
-                    could_evict_ = true;
-                  }
+    compute_time_ = 0;
+    last_access_time_ = 0;
+    pinned_ = 0;
+    compute_op_ = nullptr;
+    node_ = nullptr;
+    user_ops_ = std::vector<std::unique_ptr<DTRInstrOperand>>();
+    could_evict_ = true;
+  }
+  DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
+                     const std::shared_ptr<Shape>& shape, DataType data_type,
+                     const std::shared_ptr<TensorBuffer>& tensor_buffer, LocalDepObject* dep_object)
+      : EagerBlobObject(mem_case, shape, data_type, tensor_buffer, dep_object) {
+    compute_time_ = 0;
+    last_access_time_ = 0;
+    pinned_ = 0;
+    compute_op_ = nullptr;
+    node_ = nullptr;
+    user_ops_ = std::vector<std::unique_ptr<DTRInstrOperand>>();
+    could_evict_ = true;
+  }
   ~DTREagerBlobObject() override;
 
   Maybe<void> InitBlobAttrs(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
@@ -195,16 +193,16 @@ class DTREagerBlobObject final : public EagerBlobObject {
   bool is_pinned() const { return (pinned_ > 0); }
   int num_pinned() const { return pinned_; }
   int num_user_ops() const { return user_ops_.size(); }
-  bool is_evictable() const {return could_evict_; }
+  bool is_evictable() const { return could_evict_; }
 
   void pin() {
     pinned_++;
     // if (oneflow::DTRDebugEnabled()) {std::cout << "pinned " << this << std::endl;}
-    }
+  }
   void unpin() {
     pinned_--;
     // if (oneflow::DTRDebugEnabled()) {std::cout << "unpinned " << this << std::endl;}
-    }
+  }
   void update_access_time();
   void update_user_ops(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
   Maybe<void> evict() {
@@ -213,7 +211,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
     blob_->reset_dptr(nullptr);
     CHECK_NE_OR_RETURN(is_in_memory(), true);
     return Maybe<void>::Ok();
-    }
+  }
   Maybe<double> parent_cost() const;
   Maybe<double> child_cost() const;
   Maybe<double> neighbor_cost() const;

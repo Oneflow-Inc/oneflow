@@ -1,4 +1,5 @@
 import oneflow as flow
+
 flow.enable_eager_execution()
 
 x = flow.tensor([0])

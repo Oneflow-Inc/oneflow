@@ -160,8 +160,7 @@ Maybe<MirroredTensorImpl> EagerMirroredTensorImpl::detach() const {
   return std::shared_ptr<MirroredTensorImpl>(detached_impl);
 }
 
-Maybe<void> DTREagerMirroredTensorImpl::InitEagerBlobObject(
-    LocalDepObject* dep_object) {
+Maybe<void> DTREagerMirroredTensorImpl::InitEagerBlobObject(LocalDepObject* dep_object) {
   CHECK_OR_RETURN(static_cast<bool>(device()));
   const auto& mem_case = device()->mem_case();
   const auto& mut_shape = std::const_pointer_cast<Shape>(tensor_meta()->shape_ptr());
