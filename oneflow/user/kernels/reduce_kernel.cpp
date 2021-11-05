@@ -140,7 +140,7 @@ class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::Cuda
       std::unique_ptr<primitive::Fill> fill = primitive::NewPrimitive<primitive::FillFactory>(
           ctx->stream_ctx()->device_type(), DataType::kFloat16);
       CHECK(fill);
-      fill->Launch(ctx->stream_ctx(), tmp_buffer, 1.0, reduce_size);
+      fill->Launch(ctx->stream_ctx(), tmp_buffer->mut_dptr(), 1.0, reduce_size);
       NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k,
                                               GetOneVal<float16>(), input_tensor->dptr<float16>(),
                                               tmp_buffer->dptr<float16>(), GetZeroVal<float16>(),

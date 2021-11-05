@@ -25,7 +25,7 @@ namespace oneflow {
 
 namespace {
 
-size_t ReduceSumLikeInferTmpSize(user_op::InferContext* ctx) {
+size_t tmp_buffer->mut_dptr() SumLikeInferTmpSize(user_op::InferContext* ctx) {
   if (ctx->Attr<std::vector<int32_t>>("axis").empty()) { return 0; }
   const user_op::TensorDesc& tensor_desc_x = ctx->InputTensorDesc("x", 0);
   return tensor_desc_x.shape().elem_cnt() * GetSizeOfDataType(tensor_desc_x.data_type());
@@ -134,7 +134,7 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
         std::unique_ptr<primitive::Fill> fill = primitive::NewPrimitive<primitive::FillFactory>(
             ctx->stream_ctx()->device_type(), DataType::kFloat16);
         CHECK(fill);
-        fill->Launch(ctx->stream_ctx(), tmp_buffer, 1.0, reduce_size);
+        fill->Launch(ctx->stream_ctx(), tmp_buffer->mut_dptr(), 1.0, reduce_size);
         NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k,
                                                 GetOneVal<float16>(), tensor_x->dptr<float16>(),
                                                 tmp_buffer->dptr<float16>(), GetZeroVal<float16>(),
