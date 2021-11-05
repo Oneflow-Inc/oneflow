@@ -1,12 +1,4 @@
 /*
- * @Author: your name
- * @Date: 2021-11-05 17:45:07
- * @LastEditTime: 2021-11-05 17:46:05
- * @LastEditors: your name
- * @Description: In User Settings Edit
- * @FilePath: /liyipeng/oneflow/oneflow/core/auto_parallel/algorithm_util.cpp
- */
-/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
