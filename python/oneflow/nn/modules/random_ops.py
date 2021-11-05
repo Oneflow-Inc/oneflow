@@ -28,7 +28,6 @@ def _rand_op_common_process(
     size = _single(size)
     processed_sbp = sbp
     if placement is not None:
-        assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
         if isinstance(processed_sbp, flow.sbp.sbp):
             processed_sbp = (processed_sbp,)
     return size, device, generator, placement, processed_sbp
