@@ -76,7 +76,7 @@ def test(test_case):
         ]
     )
 
-    train_epoch = 1
+    train_epoch = 2
     batch_size = 4
     num_workers = 4
     data_dir = os.path.join(
@@ -116,7 +116,7 @@ def test(test_case):
                 final_loss = running_loss / 200
                 print("epoch: %d  step: %5d  loss: %.3f " % (epoch, i, final_loss))
                 running_loss = 0.0
-                break
+                # break
 
     print("final loss : ", final_loss)
 
@@ -128,7 +128,7 @@ class TestCifarDataset(flow.unittest.TestCase):
 
 
 if __name__ == "__main__":
-    import multiprocessing as mp
+    # import multiprocessing as mp
 
-    mp.set_start_method("spawn")
+    # mp.set_start_method("fork")
     unittest.main()

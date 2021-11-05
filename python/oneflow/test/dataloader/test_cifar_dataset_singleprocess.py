@@ -116,7 +116,7 @@ def test(test_case):
                 final_loss = running_loss / 200
                 print("epoch: %d  step: %5d  loss: %.3f " % (epoch, i, final_loss))
                 running_loss = 0.0
-                break
+                # break
 
     print("final loss : ", final_loss)
     # test_case.assertLess(final_loss, 1.50)
@@ -129,7 +129,4 @@ class TestCifarDataset(flow.unittest.TestCase):
 
 
 if __name__ == "__main__":
-    import multiprocessing as mp
-
-    mp.set_start_method("spawn")
     unittest.main()
