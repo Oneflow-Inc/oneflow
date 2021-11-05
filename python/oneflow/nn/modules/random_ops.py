@@ -20,30 +20,6 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _single
 
 
-def _rand_op_common_process(
-    size, device=None, generator=None, placement=None, sbp=None
-):
-    assert size is not None, "shape must not be None!"
-    assert isinstance(
-        size, (int, tuple, list, flow.Size)
-    ), "shape should be int or tuple int!"
-    if isinstance(device, str):
-        device = flow.device(device)
-    size = _single(size)
-    processed_sbp = sbp
-    if placement is not None:
-        assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
-        if isinstance(processed_sbp, flow.sbp.sbp):
-            processed_sbp = (processed_sbp,)
-        else:
-            for elem in sbp:
-                assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-        assert len(processed_sbp) == len(placement.hierarchy)
-    else:
-        assert sbp is None, "sbp: %s" % sbp
-    return size, device, generator, placement, processed_sbp
-
-
 class Rand(Module):
     def __init__(
         self,
@@ -58,13 +34,11 @@ class Rand(Module):
     ) -> None:
         super().__init__()
         self.requires_grad = requires_grad
-        (
-            self.size,
-            self.device,
-            self.generator,
-            self.placement,
-            self.sbp,
-        ) = _rand_op_common_process(size, device, generator, placement, sbp)
+        self.size = size
+        self.device = device
+        self.generator = generator if generator is not None else flow.Generator()
+        self.placement = placement
+        self.sbp =sbp
         self.dtype = dtype
 
     def forward(self):
@@ -157,13 +131,11 @@ class RandN(Module):
     ) -> None:
         super().__init__()
         self.requires_grad = requires_grad
-        (
-            self.size,
-            self.device,
-            self.generator,
-            self.placement,
-            self.sbp,
-        ) = _rand_op_common_process(size, device, generator, placement, sbp)
+        self.size = size
+        self.device = device
+        self.generator = generator if generator is not None else flow.Generator()
+        self.placement = placement
+        self.sbp = sbp
         self.dtype = dtype
 
     def forward(self):
@@ -260,13 +232,11 @@ class RandInt(Module):
 
         assert low < high
         self.requires_grad = requires_grad
-        (
-            self.size,
-            self.device,
-            self.generator,
-            self.placement,
-            self.sbp,
-        ) = _rand_op_common_process(size, device, generator, placement, sbp)
+        self.size = size
+        self.device = device
+        self.generator = generator if generator is not None else flow.Generator()
+        self.placement = placement
+        self.sbp = sbp
         self.dtype = dtype
         self.low = low
         self.high = high
@@ -367,13 +337,10 @@ class RandPerm(Module):
         assert n >= 0
         self.n = n
         self.dtype = dtype
-        (
-            _,
-            self.device,
-            self.generator,
-            self.placement,
-            self.sbp,
-        ) = _rand_op_common_process((), device, generator, placement, sbp)
+        self.device == device
+        self.generator = generator if generator is not None else flow.Generator()
+        self.placement = placement
+        self.sbp = sbp
         self.requires_grad = requires_grad
 
     def forward(self, out=None):
@@ -441,9 +408,9 @@ def randperm_op(
     assert layout is None, "layout not supported yet"
     assert pin_memory is False, "pin_memory not supported yet"
     if placement is not None:
-        return flow._C.randint(n=n, generator=generator, dtype=dtype, layout=layout, placement=placement, sbp=sbp, requires_grad=requires_grad, out=out)
+        return flow._C.randint(n=n, generator=generator, dtype=dtype, layout=layout, placement=placement, sbp=sbp, requires_grad=requires_grad)
     else:
-        return flow._C.randint(n=n, generator=generator, dtype=dtype, layout=layout, device=device, requires_grad=requires_grad, out=out)
+        return flow._C.randint(n=n, generator=generator, dtype=dtype, layout=layout, device=device, requires_grad=requires_grad)
 
 
 if __name__ == "__main__":
