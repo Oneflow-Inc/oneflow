@@ -63,7 +63,6 @@ Maybe<MirroredTensor> ShallowCopy(const std::shared_ptr<MirroredTensor>& tensor,
       dtype, blob_obj->tensor_buffer(), blob_obj->compute_local_dep_object_));
 
   JUST(new_blob_obj->InitBlob());
-  new_blob_obj->blob_body_bytes_ = blob_obj->blob_body_bytes_;
   new_blob_obj->mut_blob()->reset_dptr(blob_obj->mut_blob()->mut_dptr<char>());
 
   auto new_impl = std::make_shared<EagerMirroredTensorImpl>(new_meta, JUST(impl->tensor_storage()),

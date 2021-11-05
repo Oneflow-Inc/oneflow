@@ -44,6 +44,7 @@ class Device;
 
 namespace vm {
 class EagerBlobObject;
+class TensorBuffer;
 }  // namespace vm
 
 namespace one {

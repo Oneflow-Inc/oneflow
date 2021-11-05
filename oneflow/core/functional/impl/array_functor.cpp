@@ -838,7 +838,7 @@ class ReshapeFunctor {
       std::shared_ptr<Stride> stridee = std::make_shared<Stride>(Stride(infered_shape));
       return JUST(ShallowCopy(JUST(x->AsMirroredTensor()), shapee, stridee))->detach();
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    // return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:

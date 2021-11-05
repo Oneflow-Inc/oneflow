@@ -126,9 +126,17 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(LocalDepObject* dep_obj
   CHECK_OR_RETURN(static_cast<bool>(device()));
   const auto& mem_case = device()->mem_case();
   const auto& mut_shape = std::const_pointer_cast<Shape>(tensor_meta()->shape_ptr());
-  const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
-      mem_case, mut_shape, dtype(), std::make_shared<vm::TensorBuffer>(), dep_object);
-  JUST(set_eager_blob_object(eager_blob_object));
+
+  if (tensor_storage_) {
+    auto tensor_buffer = tensor_storage_->buffer();
+    eager_blob_object_ = std::make_shared<vm::EagerBlobObject>(mem_case, mut_shape, dtype(),
+                                                               tensor_buffer, dep_object);
+  } else {
+    const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
+        mem_case, mut_shape, dtype(), std::make_shared<vm::TensorBuffer>(), dep_object);
+    JUST(set_eager_blob_object(eager_blob_object));
+  }
+  eager_blob_object_->set_storage_offset(tensor_meta()->storage_offset());
   return Maybe<void>::Ok();
 }
 
