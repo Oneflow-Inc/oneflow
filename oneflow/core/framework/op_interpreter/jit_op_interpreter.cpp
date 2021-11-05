@@ -130,6 +130,9 @@ void JitInterpreter::Interrupt() {
                     }
                   }
                 }
+                // TODO: release the tensor if:
+                // 1. it is the last use of the operand
+                // 2. the tensor shared ptr has zero ref,
                 auto outputs = CHECK_JUST(OpInterpUtil::Dispatch<TensorTuple>(*expr, inputs));
                 CHECK_EQ(outputs->size(), op->getResults().size());
                 for (auto output_pair : llvm::zip(*outputs, op->getResults())) {
