@@ -38,9 +38,10 @@ enum class BinaryOp {
   kLogicalAnd,
   kLogicalOr,
   kLogicalXor,
+  kFloorDiv,
+  kFmod,
+  kPow,
 };
-
-#define CUDA_PRIMITIVE_BINARY_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAdd)
 
 }  // namespace primitive
 

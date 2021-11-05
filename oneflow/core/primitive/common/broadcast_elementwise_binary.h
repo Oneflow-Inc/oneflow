@@ -36,7 +36,7 @@ using PackType = typename GetPackType<T, N>::type;
 template<typename T, int N>
 union Pack {
   static_assert(sizeof(PackType<T, N>) == sizeof(T) * N, "");
-  __device__ Pack() {
+  OF_DEVICE_FUNC Pack() {
     // do nothing
   }
   PackType<T, N> storage;
@@ -194,8 +194,6 @@ size_t GetPackSize(size_t num_src_dims, const int64_t* src0_dims, const void* sr
   auto src1_ptr = reinterpret_cast<std::uintptr_t>(src1);
   auto dst_ptr = reinterpret_cast<std::uintptr_t>(dst);
   for (size_t pack_size = max_pack_size; pack_size > 1; pack_size /= 2) {
-    LOG(ERROR) << "src0_ptr " << src0_ptr << " pack_size " << pack_size
-               << " src0_ptr % (pack_size * sizeof(T) " << (src0_ptr % (pack_size * sizeof(T)));
     if ((src0_dims[num_src_dims - 1] % pack_size == 0)
         && (src1_dims[num_src_dims - 1] % pack_size == 0)
         && (src0_ptr % (pack_size * sizeof(T)) == 0) && (src1_ptr % (pack_size * sizeof(T)) == 0)
@@ -220,11 +218,8 @@ void SimplifyThenLaunch(StreamContext* stream_ctx, size_t num_src0_dims, const i
   size_t pack_size = GetPackSize<kMaxPackSize, T, R>(simplified_num_dims, simplified_src0_dims,
                                                      src0, simplified_src1_dims, src1, dst);
   int64_t simplified_dst_dims[kMaxNumDims];
-  LOG(ERROR) << "simplified_num_dims " << simplified_num_dims << " pack_size " << pack_size;
   for (int64_t i = 0; i < simplified_num_dims; ++i) {
     simplified_dst_dims[i] = std::max(simplified_src0_dims[i], simplified_src1_dims[i]);
-    LOG(ERROR) << "simplified_dims: " << i << " src0 " << simplified_src0_dims[i] << " src1 "
-               << simplified_src1_dims[i] << " dst " << simplified_dst_dims[i];
   }
   simplified_src0_dims[simplified_num_dims - 1] /= pack_size;
   simplified_src1_dims[simplified_num_dims - 1] /= pack_size;
@@ -234,6 +229,28 @@ void SimplifyThenLaunch(StreamContext* stream_ctx, size_t num_src0_dims, const i
 }
 
 }  // namespace
+
+#define BINARY_MATH_OP_SEQ                  \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAdd)      \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSub)      \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMul)      \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kDiv)      \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMax)      \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMin)      \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kFloorDiv) \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kPow)
+   // OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kFmod)
+
+#define BINARY_LOGICAL_OP_SEQ                   \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kEqual)        \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kNotEqual)     \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLessThan)     \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLessEqual)    \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kGreaterThan)  \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kGreaterEqual) \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalAnd)   \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalOr)    \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalXor)
 
 }  // namespace primitive
 
