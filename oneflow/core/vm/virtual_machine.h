@@ -123,6 +123,7 @@ class VirtualMachine final : public intrusive::Base {
 
   ReadyInstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
 
+  bool OnSchedulerThread(const StreamType& stream_type);
   void TryRunFrontSeqInstruction();
   void ReleaseInstruction(Instruction* instruction);
   void TryReleaseFinishedInstructions(Stream* stream);
