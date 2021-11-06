@@ -149,6 +149,18 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
       NamedAttrList attributes(op->getAttrDictionary());
       attributes.erase("operand_segment_sizes");
       attributes.erase("result_segment_sizes");
+      if (op_type_name.equals("sgd_update")) {
+        llvm::StringSet<> bns({});
+        oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
+        for (auto key : user_op_adaptor.input_lbn_segment_keys()) {
+          auto bn = key.dyn_cast<StringAttr>().getValue();
+          bns.insert(bn);
+        }
+        attributes.push_back(rewriter.getNamedAttr(
+            "operand_segment_sizes",
+            rewriter.getI32VectorAttr({1, 1, bns.contains("learning_rate"),
+                                       bns.contains("scale_by_tensor"), bns.contains("skip_if")})));
+      }
       OperationState state(op->getLoc(), "oneflow." + op_type_name.str());
       state.addAttributes(attributes);
       state.addOperands(op.getODSOperands(0) /* data in */);

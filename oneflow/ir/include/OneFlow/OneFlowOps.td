@@ -422,7 +422,7 @@ def OneFlow_TanhOp : OneFlow_UnaryBaseOp<"tanh", []> {}
 
 def OneFlow_AssignOp : OneFlow_BaseOp<"assign", []> {
   let summary = "OneFlow assign operation";
-  let input = (ins 
+  let input = (ins
     AnyType:$ref,
     AnyType:$value
   );
@@ -437,23 +437,26 @@ def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", []> {
 
 // optimizer ops
 
-// def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", []> {
-//   let summary = "OneFlow sgd_update operation";
-//   let input = (ins 
-//     AnyType:$model,
-//     AnyType:$model_diff,
-//     Optional<AnyType>:$learning_rate,
-//     Optional<AnyType>:$scale_by_tensor,
-//     Optional<AnyType>:$skip_if
-//   );
-//   let attrs = (ins
-//     F32Attr:$learning_rate_val,
-//     F64Attr:$scale,
-//     F32Attr:$l1,
-//     F32Attr:$l2,
-//     F32Attr:$weight_decay
-//   );
-// }
+def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [AttrSizedOperandSegments]> {
+  let summary = "OneFlow sgd_update operation";
+  let input = (ins
+    AnyType:$model,
+    AnyType:$model_diff,
+    Optional<AnyType>:$learning_rate,
+    Optional<AnyType>:$scale_by_tensor,
+    Optional<AnyType>:$skip_if
+  );
+  let attrs = (ins
+    F32Attr:$learning_rate_val,
+    F64Attr:$scale,
+    F32Attr:$l1,
+    F32Attr:$l2,
+    F32Attr:$weight_decay
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
+}
 
 
 
@@ -502,7 +505,7 @@ def OneFlow_OFRecordImageDecoderOp : OneFlow_BaseOp<"ofrecord_image_decoder", []
 def OneFlowImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", []> {
   let summary = "OneFlow image_resize_to_fixed operation";
   let input = (ins AnyType:$in);
-  let output = (outs 
+  let output = (outs
     AnyType:$out,
     AnyType:$scale
   );
