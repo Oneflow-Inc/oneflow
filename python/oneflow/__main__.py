@@ -49,6 +49,7 @@ def main():
         print("git_commit:", oneflow.__git_commit__)
         print("cmake_build_type:", oneflow.sysconfig.cmake_build_type())
         print("rdma:", oneflow.sysconfig.with_rdma())
+        print("mlir:", oneflow.sysconfig.with_mlir())
 
 
 if __name__ == "__main__":
