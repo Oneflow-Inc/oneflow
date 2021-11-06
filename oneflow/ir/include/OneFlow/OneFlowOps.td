@@ -275,6 +275,90 @@ def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", []> {
   );
 }
 
+def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", []>  {
+  let summary = "";
+  let input = (ins
+    AnyType:$a,
+    AnyType:$b
+  );
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    SI32Attr:$axis
+  );
+  let hasCanonicalizer = 1;
+}
+
+def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", []>  {
+  let summary = "";
+  let input = (ins
+    AnyType:$in,
+    AnyType:$mask
+  );
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    F32Attr:$scale
+  );
+}
+
+def OneFlow_TrilOp : OneFlow_BaseOp<"tril", []>  {
+  let summary = "";
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    SI64Attr:$diagonal,
+    F64Attr:$floating_fill_value,
+    SI64Attr:$integer_fill_value,
+    BoolAttr:$is_floating_fill_value
+  );
+}
+
+def OneFlow_FusedScaleTrilOp : OneFlow_BaseOp<"fused_scale_tril", []>  {
+  let summary = "";
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    SI64Attr:$diagonal,
+    F64Attr:$floating_fill_value,
+    SI64Attr:$integer_fill_value,
+    BoolAttr:$is_floating_fill_value,
+    F64Attr:$floating_scale_value,
+    SI64Attr:$integer_scale_value,
+    BoolAttr:$is_floating_scale_value
+  );
+  let hasCanonicalizer = 1;
+}
+
+def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale", []>  {
+  let summary = "";
+  let input = (ins
+    AnyType:$a,
+    AnyType:$b,
+    AnyType:$mask
+  );
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    SI32Attr:$axis,
+    F32Attr:$scale
+  );
+  let hasCanonicalizer = 1;
+}
+
+def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", []>  {
+  let summary = "";
+  let input = (ins
+    AnyType:$like
+  );
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    F32Attr:$rate,
+    SI64Attr:$seed
+  );
+}
+
 class OneFlow_LazyPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
     let summary = "OneFlow Lazy Pooling operation";
@@ -705,6 +789,178 @@ def MulCastPattern : Pat<
   ]
 >;
 
+// TODO: FusedSelfAttentionPattern
+
+def IsGPU: Constraint<CPred<"$0.getValue().equals(\"gpu\")">, "is GPU device">;
+def FusedScaleTrilPattern : Pat<
+  (
+    OneFlow_TrilOp
+    (
+      OneFlow_ScalarMulOp
+        $x,
+        $scale_op_name,
+        $scale_trainable,
+        $scale_device_tag,
+        $scale_device_name,
+        $scale_scope_symbol_id,
+        $scale_hierarchy,
+        $has_int_operand,
+        $has_float_operand,
+        $int_operand,
+        $float_operand
+    ),
+    $tril_op_name,
+    $tril_trainable,
+    $tril_device_tag,
+    $tril_device_name,
+    $tril_scope_symbol_id,
+    $tril_hierarchy,
+    $diagonal,
+    $floating_fill_value,
+    $integer_fill_value,
+    $is_floating_fill_value
+  ),
+  (OneFlow_FusedScaleTrilOp $x,
+    $tril_op_name,
+    $tril_trainable,
+    $tril_device_tag,
+    $tril_device_name,
+    $tril_scope_symbol_id,
+    $tril_hierarchy,
+    $diagonal,
+    $floating_fill_value,
+    $integer_fill_value,
+    $is_floating_fill_value,
+    $float_operand,
+    $int_operand,
+    $has_float_operand
+  ),
+  [
+    (IsGPU $tril_device_tag),
+    (IsGPU $scale_device_tag)
+  ]
+>;
+
+def FusedScaleTrilPattern2 : Pat<
+  (
+    OneFlow_ScalarMulOp
+    (
+      OneFlow_TrilOp
+      $x,
+      $tril_op_name,
+      $tril_trainable,
+      $tril_device_tag,
+      $tril_device_name,
+      $tril_scope_symbol_id,
+      $tril_hierarchy,
+      $diagonal,
+      $floating_fill_value,
+      $integer_fill_value,
+      $is_floating_fill_value
+    ),
+    $scale_op_name,
+    $scale_trainable,
+    $scale_device_tag,
+    $scale_device_name,
+    $scale_scope_symbol_id,
+    $scale_hierarchy,
+    $has_int_operand,
+    $has_float_operand,
+    $int_operand,
+    $float_operand
+  ),
+  (OneFlow_FusedScaleTrilOp $x,
+    $scale_op_name,
+    $scale_trainable,
+    $scale_device_tag,
+    $scale_device_name,
+    $scale_scope_symbol_id,
+    $scale_hierarchy,
+    $diagonal,
+    $floating_fill_value,
+    $integer_fill_value,
+    $is_floating_fill_value,
+    $float_operand,
+    $int_operand,
+    $has_float_operand
+  ),
+  [
+    (IsGPU $tril_device_tag),
+    (IsGPU $scale_device_tag)
+  ]
+>;
+
+def FusedBiasAddDropoutPattern : Pat<
+  (
+    OneFlow_DropoutOp
+    (
+      OneFlow_BiasAddOp
+        $a,
+        $b,
+        $bias_add_op_name,
+        $bias_add_trainable,
+        $bias_add_device_tag,
+        $bias_add_device_name,
+        $bias_add_scope_symbol_id,
+        $bias_add_hierarchy,
+        $axis
+    ),
+    $mask,
+    $dropout_op_name,
+    $dropout_trainable,
+    $dropout_device_tag,
+    $dropout_device_name,
+    $dropout_scope_symbol_id,
+    $dropout_hierarchy,
+    $scale
+  ),
+  (OneFlow_FusedBiasAddMaskScaleOp $a, $b, $mask,
+    $dropout_op_name,
+    $dropout_trainable,
+    $dropout_device_tag,
+    $dropout_device_name,
+    $dropout_scope_symbol_id,
+    $dropout_hierarchy,
+    $axis,
+    $scale
+  ),
+  []
+>;
+
+def FusedBiasAddGeluPattern : Pat<
+  (
+    OneFlow_GeluOp : $gelu_op
+    (
+      OneFlow_BiasAddOp
+        $a,
+        $b,
+        $bias_add_op_name,
+        $bias_add_trainable,
+        $bias_add_device_tag,
+        $bias_add_device_name,
+        $bias_add_scope_symbol_id,
+        $bias_add_hierarchy,
+        $axis
+    ),
+    $gelu_op_name,
+    $gelu_trainable,
+    $gelu_device_tag,
+    $gelu_device_name,
+    $gelu_scope_symbol_id,
+    $gelu_hierarchy
+  ),
+  (OneFlow_FusedBiasAddGeluOp $a, $b,
+    $gelu_op_name,
+    $gelu_trainable,
+    $gelu_device_tag,
+    $gelu_device_name,
+    $gelu_scope_symbol_id,
+    $gelu_hierarchy,
+    $axis
+  ),
+  []
+>;
+
 #endif // ONEFLOW_PATTERNS
 
 #ifndef ONEFLOW_PASSES
@@ -731,6 +987,11 @@ def BufferHostRegisterPass : FunctionPass<"buffer-host-register"> {
 def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
   let summary = "move ops could be jitted to jit function";
   let constructor = "mlir::oneflow::createOutlineJitFunctionPass()";
+}
+
+def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "FuncOp"> {
+  let summary = "";
+  let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";
 }
 
 #endif // ONEFLOW_PASSES

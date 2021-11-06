@@ -202,6 +202,80 @@ void UserOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
   results.insert<ConcreteUserOps>(context);
 }
 
+struct FillUserOpAttrsInFusedBiasAddGeluOp
+    : public mlir::OpRewritePattern<oneflow::FusedBiasAddGeluOp> {
+  explicit FillUserOpAttrsInFusedBiasAddGeluOp(mlir::MLIRContext* context)
+      : OpRewritePattern<oneflow::FusedBiasAddGeluOp>(context, /*benefit=*/1) {}
+  mlir::LogicalResult matchAndRewrite(oneflow::FusedBiasAddGeluOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    if (op->hasAttrOfType<StringAttr>("op_type_name")) {
+      return failure();
+    } else {
+      op->setAttr("op_type_name", rewriter.getStringAttr("fused_bias_add_gelu"));
+      op->setAttr("input_lbn_segment_keys", rewriter.getStrArrayAttr({"a", "b"}));
+      op->setAttr("input_lbn_segment_sizes", rewriter.getI32ArrayAttr({1, 1}));
+      op->setAttr("output_lbn_segment_keys", rewriter.getStrArrayAttr({"out"}));
+      op->setAttr("output_lbn_segment_sizes", rewriter.getI32ArrayAttr({1}));
+      op->setAttr("output_lbns", rewriter.getStrArrayAttr({op.op_name().str() + "/out_0"}));
+      return success();
+    }
+  }
+};
+
+struct FillUserAttrsInFusedBiasAddMaskScaleOp
+    : public mlir::OpRewritePattern<oneflow::FusedBiasAddMaskScaleOp> {
+  explicit FillUserAttrsInFusedBiasAddMaskScaleOp(mlir::MLIRContext* context)
+      : OpRewritePattern<oneflow::FusedBiasAddMaskScaleOp>(context, /*benefit=*/1) {}
+  mlir::LogicalResult matchAndRewrite(oneflow::FusedBiasAddMaskScaleOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    if (op->hasAttrOfType<StringAttr>("op_type_name")) {
+      return failure();
+    } else {
+      op->setAttr("op_type_name", rewriter.getStringAttr("fused_bias_add_mask_scale"));
+      op->setAttr("input_lbn_segment_keys", rewriter.getStrArrayAttr({"a", "b", "mask"}));
+      op->setAttr("input_lbn_segment_sizes", rewriter.getI32ArrayAttr({1, 1, 1}));
+      op->setAttr("output_lbn_segment_keys", rewriter.getStrArrayAttr({"out"}));
+      op->setAttr("output_lbn_segment_sizes", rewriter.getI32ArrayAttr({1}));
+      op->setAttr("output_lbns", rewriter.getStrArrayAttr({op.op_name().str() + "/out_0"}));
+      return success();
+    }
+  }
+};
+
+struct FillUserAttrsInFusedScaleTrilOp : public mlir::OpRewritePattern<oneflow::FusedScaleTrilOp> {
+  explicit FillUserAttrsInFusedScaleTrilOp(mlir::MLIRContext* context)
+      : OpRewritePattern<oneflow::FusedScaleTrilOp>(context, /*benefit=*/1) {}
+  mlir::LogicalResult matchAndRewrite(oneflow::FusedScaleTrilOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    if (op->hasAttrOfType<StringAttr>("op_type_name")) {
+      return failure();
+    } else {
+      op->setAttr("op_type_name", rewriter.getStringAttr(op->getName().stripDialect()));
+      op->setAttr("input_lbn_segment_keys", rewriter.getStrArrayAttr({"in"}));
+      op->setAttr("input_lbn_segment_sizes", rewriter.getI32ArrayAttr({1}));
+      op->setAttr("output_lbn_segment_keys", rewriter.getStrArrayAttr({"out"}));
+      op->setAttr("output_lbn_segment_sizes", rewriter.getI32ArrayAttr({1}));
+      op->setAttr("output_lbns", rewriter.getStrArrayAttr({op.op_name().str() + "/out_0"}));
+      return success();
+    }
+  }
+};
+
+void FusedBiasAddGeluOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
+                                                     ::mlir::MLIRContext* context) {
+  results.insert<FillUserOpAttrsInFusedBiasAddGeluOp>(context);
+}
+
+void FusedBiasAddMaskScaleOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
+                                                          ::mlir::MLIRContext* context) {
+  results.insert<FillUserAttrsInFusedBiasAddMaskScaleOp>(context);
+}
+
+void FusedScaleTrilOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
+                                                   ::mlir::MLIRContext* context) {
+  results.insert<FillUserAttrsInFusedScaleTrilOp>(context);
+}
+
 struct ConcreteSystemOps : public mlir::OpRewritePattern<oneflow::SystemOp> {
   explicit ConcreteSystemOps(mlir::MLIRContext* context)
       : OpRewritePattern<oneflow::SystemOp>(context, /*benefit=*/1) {}
