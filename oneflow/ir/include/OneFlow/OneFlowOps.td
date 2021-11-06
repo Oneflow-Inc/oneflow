@@ -2,6 +2,7 @@
 #define ONEFLOW_OPS
 
 include "OneFlowDialect.td"
+include "OneFlowEnums.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Pass/PassBase.td"
 include "mlir/Interfaces/CallInterfaces.td"
@@ -445,7 +446,7 @@ def OneFlow_OFRecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", []> {
   let output = (outs AnyType:$out);
   let attrs = (ins
     StrAttr:$name,
-    I64ElementsAttr:$shape,
+    SI64ElementsAttr:$shape,
     OneFlow_DataType:$data_type,
     BoolAttr:$dim1_varying_length,
     BoolAttr:$truncate
