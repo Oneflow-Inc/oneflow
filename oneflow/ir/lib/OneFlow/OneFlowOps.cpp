@@ -145,7 +145,6 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
           || op_type_name.equals("gather") || op_type_name.equals("gelu_grad")
           || op_type_name.equals("bias_add")
           || op_type_name.equals("sparse_softmax_cross_entropy_grad")) {
-        assert(op.data_output().size() == 1);
         NamedAttrList attributes(op->getAttrDictionary());
         attributes.erase("operand_segment_sizes");
         attributes.erase("result_segment_sizes");
@@ -154,7 +153,7 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
         state.addOperands(op->getOperands());
         state.addTypes(op.getODSResults(0 /* data out */).getTypes());
         if (auto created = rewriter.createOperation(state)) {
-          op.data_output().front().replaceAllUsesWith(created->getResult(0));
+          rewriter.replaceOp(op, created->getResults());
           op->erase();
           return success();
         }
