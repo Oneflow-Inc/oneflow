@@ -453,7 +453,6 @@ def OneFlow_OFRecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", []> {
   );
 }
 
-
 // Loss ops
 
 def OneFlowSparseSoftmaxCrossEntropyOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy", []> {
