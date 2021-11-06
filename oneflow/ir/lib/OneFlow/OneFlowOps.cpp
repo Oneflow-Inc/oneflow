@@ -89,7 +89,7 @@ const StringSet<>& GetScalarMathOpTypeNames() {
 
 const StringSet<>& GetDataOpsTypeNames() {
   static llvm::StringSet<> names(
-      {"OFRecordReader"
+      {"OFRecordReader", "ofrecord_raw_decoder"
 
       });
   return names;

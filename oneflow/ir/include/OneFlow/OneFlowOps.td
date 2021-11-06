@@ -439,6 +439,20 @@ def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", []> {
   );
 }
 
+def OneFlow_OFRecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", []> {
+  let summary = "OneFlow ofrecord_raw_decoder operation";
+  let input = (ins AnyType:$in);
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    StrAttr:$name,
+    I64ElementsAttr:$shape,
+    OneFlow_DataType:$data_type,
+    BoolAttr:$dim1_varying_length,
+    BoolAttr:$truncate
+  );
+}
+
+
 // Loss ops
 
 def OneFlowSparseSoftmaxCrossEntropyOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy", []> {
