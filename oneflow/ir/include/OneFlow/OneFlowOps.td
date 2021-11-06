@@ -294,7 +294,7 @@ class OneFlow_LazyPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
 class OneFlow_LazyPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
     let summary = "OneFlow Lazy Pooling Grad operation";
-    let input = (ins 
+    let input = (ins
       AnyType:$x,
       AnyType:$y,
       AnyType:$dy
@@ -331,7 +331,7 @@ class OneFlow_EagerPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
 class OneFlow_EagerPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
     let summary = "OneFlow Eager Pooling Grad operation";
-    let input = (ins 
+    let input = (ins
       AnyType:$x,
       AnyType:$y,
       AnyType:$dy
@@ -423,35 +423,35 @@ def OneFlow_TanhOp : OneFlow_UnaryBaseOp<"tanh", []> {}
 
 // data preprocessing ops
 
-def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", []> {
-  let summary = "OneFlow OFRecordReader operation";
-  let output = (outs AnyType:$out);
-  let attrs = (ins
-    StrAttr:$data_dir,
-    SI32Attr:$data_part_num,
-    SI32Attr:$batch_size,
-    StrAttr:$part_name_prefix,
-    SI32Attr:$part_name_suffix_length,
-    BoolAttr:$random_shuffle,
-    SI64Attr:$seed,
-    SI32Attr:$shuffle_buffer_size,
-    BoolAttr:$shuffle_after_epoch,
-    StrArrayAttr:$nd_sbp
-  );
-}
+// def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", []> {
+//   let summary = "OneFlow OFRecordReader operation";
+//   let output = (outs AnyType:$out);
+//   let attrs = (ins
+//     StrAttr:$name,
+//     SI32Attr:$data_part_num,
+//     SI32Attr:$batch_size,
+//     StrAttr:$part_name_prefix,
+//     SI32Attr:$part_name_suffix_length,
+//     BoolAttr:$random_shuffle,
+//     SI64Attr:$seed,
+//     SI32Attr:$shuffle_buffer_size,
+//     BoolAttr:$shuffle_after_epoch,
+//     StrArrayAttr:$nd_sbp
+//   );
+// }
 
-def OneFlow_OFRecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", []> {
-  let summary = "OneFlow ofrecord_raw_decoder operation";
-  let input = (ins AnyType:$in);
-  let output = (outs AnyType:$out);
-  let attrs = (ins
-    StrAttr:$name,
-    SI64ElementsAttr:$shape,
-    OneFlow_DataType:$data_type,
-    BoolAttr:$dim1_varying_length,
-    BoolAttr:$truncate
-  );
-}
+// def OneFlow_OFRecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", []> {
+//   let summary = "OneFlow ofrecord_raw_decoder operation";
+//   let input = (ins AnyType:$in);
+//   let output = (outs AnyType:$out);
+//   let attrs = (ins
+//     StrAttr:$name,
+//     AnyI64ElementsAttr:$shape,
+//     OneFlow_DataType:$data_type,
+//     BoolAttr:$dim1_varying_length,
+//     BoolAttr:$truncate
+//   );
+// }
 
 
 // Loss ops
@@ -461,7 +461,7 @@ def OneFlowSparseSoftmaxCrossEntropyOp : OneFlow_BaseOp<"sparse_softmax_cross_en
     AnyType:$prediction,
     AnyType:$label
   );
-  let output = (outs 
+  let output = (outs
     AnyType:$prob,
     AnyType:$out
   );
@@ -476,7 +476,7 @@ def OneFlowSparseSoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"sparse_softmax_cros
     AnyType:$dy,
     AnyType:$prob
   );
-  let output = (outs 
+  let output = (outs
     AnyType:$prediction_diff
   );
   let attrs = (ins
@@ -508,7 +508,7 @@ def OneFlowReLUGradOp : OneFlow_BaseOp<"relu_grad", []> {
     AnyType:$y,
     AnyType:$dy
   );
-  let output = (outs 
+  let output = (outs
     AnyType:$dx
   );
 }

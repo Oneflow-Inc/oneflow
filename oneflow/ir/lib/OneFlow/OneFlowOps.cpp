@@ -88,10 +88,9 @@ const StringSet<>& GetScalarMathOpTypeNames() {
 }
 
 const StringSet<>& GetDataOpsTypeNames() {
-  static llvm::StringSet<> names(
-      {"OFRecordReader", "ofrecord_raw_decoder"
+  static llvm::StringSet<> names({"OFRecordReader", "ofrecord_raw_decoder"
 
-      });
+  });
   return names;
 }
 
@@ -141,46 +140,48 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
   mlir::LogicalResult matchAndRewrite(oneflow::UserOp op,
                                       mlir::PatternRewriter& rewriter) const override {
     auto op_type_name = op->getAttrOfType<StringAttr>("op_type_name").getValue();
-    op.getODSResults(0);
-    if (succeeded(TrimRedundantCtrl(op, rewriter))) {
-      return success();
-    }
+    if (succeeded(TrimRedundantCtrl(op, rewriter))) { return success(); }
     // In principle, a concrete user op has no ctrl input/output. Some benefits:
     // 1. simplify things
     // 2. make conversion and code gen more doable
     // 3. enable the reuse of established MLIR infra like built-in traits
-    else if (IsCtrlOutTrimmed(op) && IsCtrlInAbsent(op)) {
-      if (op_type_name.equals("relu") || op_type_name.equals("gelu") || op_type_name.equals("cast")
-          || op_type_name.equals("relu_grad") || GetUnaryOpTypeNames().contains(op_type_name)
-          || GetFloatUnaryOpTypeNames().contains(op_type_name)
-          || GetScalarMathOpTypeNames().contains(op_type_name)
-          || GetConvOpTypeNames().contains(op_type_name)
-          || GetPoolOpTypeNames().contains(op_type_name)
-          || GetDataOpsTypeNames().contains(op_type_name)
-          || GetLossOpsTypeNames().contains(op_type_name)
-          || GetReduceOpTypeNames().contains(op_type_name) || op_type_name.equals("reshape")
-          || op_type_name.equals("scalar_mul_by_tensor") || op_type_name.equals("matmul")
-          || op_type_name.equals("gather") || op_type_name.equals("gelu_grad")
-          || op_type_name.equals("bias_add")) {
-        NamedAttrList attributes(op->getAttrDictionary());
-        attributes.erase("operand_segment_sizes");
-        attributes.erase("result_segment_sizes");
-        OperationState state(op->getLoc(), "oneflow." + op_type_name.str());
-        state.addAttributes(attributes);
-        state.addOperands(op->getOperands());
-        state.addTypes(op.getODSResults(0 /* data out */).getTypes());
-        if (auto created = rewriter.createOperation(state)) {
+    if (IsCtrlOutTrimmed(op) && IsCtrlInAbsent(op)) {
+      NamedAttrList attributes(op->getAttrDictionary());
+      attributes.erase("operand_segment_sizes");
+      attributes.erase("result_segment_sizes");
+      OperationState state(op->getLoc(), "oneflow." + op_type_name.str());
+      state.addAttributes(attributes);
+      state.addOperands(op.getODSOperands(0) /* data in */);
+      state.addTypes(op.getODSResults(0 /* data out */).getTypes());
+      if (auto created = rewriter.createOperation(state)) {
+        if (created->isRegistered()) {
           rewriter.replaceOp(op, created->getResults());
-          return success();
-        }
-      } else {
-        if (!GetPrintedOpTypeNames()->contains(op.op_type_name())) {
-          llvm::errs() << "MLIR opaque user op: " << op.op_type_name() << "\n";
-          GetPrintedOpTypeNames()->insert(op.op_type_name());
+        } else {
+          created->erase();
+          // NOTE: (not required) add op type name here if want to make sure it is concreted
+          if (op_type_name.equals("relu") || op_type_name.equals("gelu")
+              || op_type_name.equals("cast") || op_type_name.equals("relu_grad")
+              || GetUnaryOpTypeNames().contains(op_type_name)
+              || GetFloatUnaryOpTypeNames().contains(op_type_name)
+              || GetScalarMathOpTypeNames().contains(op_type_name)
+              || GetConvOpTypeNames().contains(op_type_name)
+              || GetPoolOpTypeNames().contains(op_type_name)
+              || GetReduceOpTypeNames().contains(op_type_name) || op_type_name.equals("reshape")
+              || op_type_name.equals("scalar_mul_by_tensor") || op_type_name.equals("matmul")
+              || op_type_name.equals("gather") || op_type_name.equals("gelu_grad")
+              || op_type_name.equals("bias_add")
+              || op_type_name.equals("sparse_softmax_cross_entropy_grad")) {
+            op->emitError("Fail to convert opaque user op: " + op.op_type_name());
+            return failure();
+          }
+          if (!GetPrintedOpTypeNames()->contains(op.op_type_name())) {
+            llvm::errs() << "MLIR opaque user op: " << op.op_type_name() << "\n";
+            GetPrintedOpTypeNames()->insert(op.op_type_name());
+          }
         }
       }
     }
-    return failure();
+    return success();
   }
 };
 
