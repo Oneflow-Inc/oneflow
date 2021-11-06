@@ -420,6 +420,42 @@ def OneFlow_RsqrtOp : OneFlow_UnaryBaseOp<"rsqrt", []> {}
 def OneFlow_TanhOp : OneFlow_UnaryBaseOp<"tanh", []> {}
 
 
+def OneFlow_AssignOp : OneFlow_BaseOp<"assign", []> {
+  let summary = "OneFlow assign operation";
+  let input = (ins 
+    AnyType:$ref,
+    AnyType:$value
+  );
+}
+
+def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", []> {
+  let summary = "OneFlow add_n operation";
+  let input = (ins Variadic<AnyType>:$in);
+  let output = (outs AnyType:$out);
+}
+
+
+// optimizer ops
+
+// def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", []> {
+//   let summary = "OneFlow sgd_update operation";
+//   let input = (ins 
+//     AnyType:$model,
+//     AnyType:$model_diff,
+//     Optional<AnyType>:$learning_rate,
+//     Optional<AnyType>:$scale_by_tensor,
+//     Optional<AnyType>:$skip_if
+//   );
+//   let attrs = (ins
+//     F32Attr:$learning_rate_val,
+//     F64Attr:$scale,
+//     F32Attr:$l1,
+//     F32Attr:$l2,
+//     F32Attr:$weight_decay
+//   );
+// }
+
+
 
 // data preprocessing ops
 
@@ -478,6 +514,24 @@ def OneFlowImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", []> {
     StrAttr:$interpolation_type
   );
 }
+
+def OneFlowCropMirrorNormalizeFromUINT8Op : OneFlow_BaseOp<"crop_mirror_normalize_from_uint8", []> {
+  let summary = "OneFlow crop_mirror_normalize_from_uint8 operation";
+  let input = (ins AnyType:$in);
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    StrAttr:$color_space,
+    StrAttr:$output_layout,
+    F32ArrayAttr:$mean,
+    F32ArrayAttr:$std,
+    SI64Attr:$crop_h,
+    SI64Attr:$crop_w,
+    F32Attr:$crop_pos_x,
+    F32Attr:$crop_pos_y,
+    StrAttr:$output_dtype
+  );
+}
+
 
 // Loss ops
 
