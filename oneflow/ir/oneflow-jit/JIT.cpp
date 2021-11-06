@@ -221,9 +221,9 @@ std::shared_ptr<Tensor> JitImporter::MakeIntermediateTensor(
   auto dtype = DataType::kInvalidDataType;
   if (tensor_type.getElementType().isF32()) {
     dtype = DataType::kFloat;
-  } else if (tensor_type.getElementType().isSignedInteger(32)) {
+  } else if (tensor_type.getElementType().isInteger(32)) {
     dtype = DataType::kInt32;
-  } else if (tensor_type.getElementType().isSignedInteger(64)) {
+  } else if (tensor_type.getElementType().isInteger(64)) {
     dtype = DataType::kInt64;
   } else {
     GetModule().dump();
@@ -333,6 +333,7 @@ void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op_conf,
                                             indexed_arg_name_and_index.second)) {
       CHECK(operand_mapping_.emplace(indexed_bn, result.getValue()).second);
     } else {
+      GetModule().dump();
       LOG(FATAL) << "result not found, indexed_bn: " << indexed_bn << ", tensor: " << tensor.get()
                  << ", shape: " << tensor->shape()->DebugStr()
                  << ", dtype: " << tensor->dtype()->name()
@@ -412,6 +413,10 @@ LogicalResult JitImporter::LowerToOneFlowKernel() {
   pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createReturnAllLeaveResultPass());
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createCreateComputeCtxPass());
+  for (auto& tensor_pair : intermediate_tensors_) {
+    tensor_pair.first.dump();
+    llvm::errs() << tensor_pair.second.use_count() << "\n";
+  }
   return pm.run(GetModule());
 }
 
