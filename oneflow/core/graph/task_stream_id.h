@@ -21,6 +21,25 @@ limitations under the License.
 
 namespace oneflow {
 
+class StreamIndexGeneratorManager final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(StreamIndexGeneratorManager);
+  ~StreamIndexGeneratorManager() = default;
+
+  static StreamIndexGeneratorManager& Instance() { return *Ptr().get(); }
+  static void Delete() { Ptr(false).reset(); }
+
+  StreamIndexGenerator* GetGenerator(const DeviceId& device_id);
+
+ private:
+  StreamIndexGeneratorManager() = default;
+
+  static std::unique_ptr<StreamIndexGeneratorManager>& Ptr(bool create_when_absent = true);
+
+  HashMap<DeviceId, std::unique_ptr<StreamIndexGenerator>> generators_;
+  std::mutex mtx_;
+};
+
 class TaskStreamIndexFactory final {
  public:
   using stream_index_getter_fn = std::function<StreamId::stream_index_t(const DeviceId&)>;
@@ -30,17 +49,16 @@ class TaskStreamIndexFactory final {
 
   struct GetterRegistry {
     GetterRegistry(DeviceType device_type, TaskType task_type, const stream_index_gen_fn& gen) {
-      auto& factory = TaskStreamIndexFactory::Get();
-      auto getter = [gen, &factory](const DeviceId& device_id) -> StreamId::stream_index_t {
-        auto* generator = factory.GetGenerator(device_id);
+      auto getter = [gen](const DeviceId& device_id) -> StreamId::stream_index_t {
+        auto* generator = StreamIndexGeneratorManager::Instance().GetGenerator(device_id);
         return gen(generator);
       };
       auto key = std::make_pair(device_type, task_type);
-      factory.RegisterGetter(key, getter);
+      TaskStreamIndexFactory::Instance().RegisterGetter(key, getter);
     }
   };
 
-  static TaskStreamIndexFactory& Get() {
+  static TaskStreamIndexFactory& Instance() {
     static TaskStreamIndexFactory factory;
     return factory;
   }
@@ -48,14 +66,11 @@ class TaskStreamIndexFactory final {
   ~TaskStreamIndexFactory() = default;
 
   void RegisterGetter(const key_t& key, const stream_index_getter_fn& getter);
-  StreamIndexGenerator* GetGenerator(const DeviceId& device_id);
   Maybe<StreamId::stream_index_t> GetStreamIndex(TaskType task_type, const DeviceId& device_id);
 
  private:
   TaskStreamIndexFactory() = default;
   map_t stream_index_getter_map_;
-  HashMap<DeviceId, std::unique_ptr<StreamIndexGenerator>> generators_;
-  std::mutex generators_mtx_;
 };
 
 Maybe<StreamId::stream_index_t> GetTaskStreamIndex(TaskType task_type, const DeviceId& device_id);
@@ -106,9 +121,8 @@ StreamId GenerateNamedTaskStreamId(int64_t rank, DeviceType device_type, int64_t
         return (*generator)("compute");                                                          \
       }));
 
-#define REGISTER_COMP_TASK_STREAM_INDEX_GETTER(task_type)                         \
-  REGISTER_CPU_COMP_TASK_STREAM_INDEX_GETTER(task_type)                           \
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DEVICE_COMP_TASK_STREAM_INDEX_GETTER, \
-                                   NOCPU_DEVICE_TYPE_SEQ, OF_PP_MAKE_TUPLE_SEQ(task_type))
+#define REGISTER_COMP_TASK_STREAM_INDEX_GETTER(task_type) \
+  REGISTER_CPU_COMP_TASK_STREAM_INDEX_GETTER(task_type)   \
+  REGISTER_DEVICE_COMP_TASK_STREAM_INDEX_GETTER(DeviceType::kGPU, task_type)
 
 #endif  // ONEFLOW_CORE_GRAPH_TASK_STREAM_ID_H_

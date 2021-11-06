@@ -38,6 +38,7 @@ limitations under the License.
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/user/summary/events_writer.h"
 #include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/graph/task_stream_id.h"
 
 #ifdef WITH_CUDA
 #include "oneflow/core/device/cuda_device_descriptor.h"
@@ -174,6 +175,7 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   Global<ResourceDesc, ForSession>::Delete();
   Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
                                         GlobalProcessCtx::NumOfProcessPerNode());
+  StreamIndexGeneratorManager::Delete();
 }
 
 }  // namespace oneflow

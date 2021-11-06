@@ -37,7 +37,7 @@ StreamIndexGenerator::stream_index_t StreamIndexGenerator::operator()(const std:
         next_stream_index_.fetch_add(num, std::memory_order_relaxed);
     range_it = name2round_robin_range_.emplace(name, std::make_pair(begin_stream_index, num)).first;
   } else {
-    CHECK_EQ(range_it->second.second, num);
+    CHECK_EQ(range_it->second.second, num) << name;
   }
 
   stream_index_t cur_stream_index = range_it->second.first;
