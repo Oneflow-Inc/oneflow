@@ -427,7 +427,7 @@ def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", []> {
   let summary = "OneFlow OFRecordReader operation";
   let output = (outs AnyType:$out);
   let attrs = (ins
-    StrAttr:$name,
+    StrAttr:$data_dir,
     SI32Attr:$data_part_num,
     SI32Attr:$batch_size,
     StrAttr:$part_name_prefix,
@@ -447,12 +447,37 @@ def OneFlow_OFRecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", []> {
   let attrs = (ins
     StrAttr:$name,
     AnyI64ElementsAttr:$shape,
-    OneFlow_DataType:$data_type,
+    StrAttr:$data_type,
     BoolAttr:$dim1_varying_length,
     BoolAttr:$truncate
   );
 }
 
+def OneFlow_OFRecordImageDecoderOp : OneFlow_BaseOp<"ofrecord_image_decoder", []> {
+  let summary = "OneFlow ofrecord_image_decoder operation";
+  let input = (ins AnyType:$in);
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    StrAttr:$name,
+    StrAttr:$color_space
+  );
+}
+
+def OneFlowImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", []> {
+  let summary = "OneFlow image_resize_to_fixed operation";
+  let input = (ins AnyType:$in);
+  let output = (outs 
+    AnyType:$out,
+    AnyType:$scale
+  );
+  let attrs = (ins
+    SI64Attr:$target_width,
+    SI64Attr:$target_height,
+    SI64Attr:$channels,
+    StrAttr:$data_type,
+    StrAttr:$interpolation_type
+  );
+}
 
 // Loss ops
 
