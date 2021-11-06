@@ -446,7 +446,7 @@ def OneFlow_OFRecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", []> {
   let output = (outs AnyType:$out);
   let attrs = (ins
     StrAttr:$name,
-    SI64ElementsAttr:$shape,
+    AnyI64ElementsAttr:$shape,
     OneFlow_DataType:$data_type,
     BoolAttr:$dim1_varying_length,
     BoolAttr:$truncate
