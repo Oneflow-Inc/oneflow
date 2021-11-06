@@ -781,6 +781,31 @@ class BroadcastMatmulGradBFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedScaleTrilSoftmaxMaskScaleGradFunctor {
+ public:
+  FusedScaleTrilSoftmaxMaskScaleGradFunctor() {
+    fused_op_ = CHECK_JUST(one::OpBuilder("fused_tril_scale_softmax_mask_scale_grad")
+                               .Input("softmax_y")
+                               .Input("dy")
+                               .Input("mask")
+                               .Output("dx")
+                               .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& softmax_y,
+                           const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& mask, const int64_t diagonal,
+                           const float tril_scale_value, const float mask_scale_value) const {
+    MutableAttrMap fused_attrs;
+    JUST(fused_attrs.SetAttr<int64_t>("diagonal", diagonal));
+    JUST(fused_attrs.SetAttr<float>("tril_scale_value", tril_scale_value));
+    JUST(fused_attrs.SetAttr<float>("mask_scale_value", mask_scale_value));
+    return OpInterpUtil::Dispatch<Tensor>(*fused_op_, {softmax_y, dy, mask}, fused_attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> fused_op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -809,6 +834,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::LayerNormParamGradFunctor>("LayerNormParamGrad");
   m.add_functor<impl::LayerNormAffineParamGradFunctor>("LayerNormAffineParamGrad");
   m.add_functor<impl::BroadcastMatmulGradBFunctor>("BroadcastMatmulGradB");
+  m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleGradFunctor>(
+      "FusedScaleTrilSoftmaxMaskScaleGrad");
 };
 
 }  // namespace functional

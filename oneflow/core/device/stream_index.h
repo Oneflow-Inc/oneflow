@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/auto_registration_factory.h"
-#include "oneflow/core/stream/stream_id.h"
+#include "oneflow/core/graph/stream_id.h"
 
 namespace oneflow {
 

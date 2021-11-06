@@ -289,19 +289,4 @@ DIV_BY_SCALAR_PTR(int64_t);
 
 #undef DIV_BY_SCALAR_PTR
 
-#define FILL(T)                                                                              \
-  void ArithemeticIf<DeviceType::kCPU>::Fill(DeviceCtx* ctx, const int64_t n, const T value, \
-                                             T* y) {                                         \
-    std::fill_n(y, n, value);                                                                \
-  }
-
-FILL(float);
-FILL(double);
-FILL(uint8_t);
-FILL(int8_t);
-FILL(int32_t);
-FILL(int64_t);
-
-#undef FILL
-
 }  // namespace oneflow

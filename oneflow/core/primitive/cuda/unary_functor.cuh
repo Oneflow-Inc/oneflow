@@ -13,16 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/batch_memcpy_kernel_util.h"
+#include "oneflow/core/primitive/common/unary_functor.h"
+#include "oneflow/core/primitive/cuda/type_seq.h"
+#include "oneflow/core/cuda/elementwise.cuh"
+#include "oneflow/core/stream/cuda/cuda_stream_context.h"
 
 namespace oneflow {
+namespace primitive {
+// write cuda specialized templates.
 
-template<>
-void BatchMemcpyKernelUtil<DeviceType::kCPU>::Copy(DeviceCtx* ctx,
-                                                   const std::vector<MemcpyParam>& params) {
-  for (const MemcpyParam& param : params) {
-    Memcpy<DeviceType::kCPU>(ctx, param.dst, param.src, param.count);
-  }
-}
-
+}  // namespace primitive
 }  // namespace oneflow
