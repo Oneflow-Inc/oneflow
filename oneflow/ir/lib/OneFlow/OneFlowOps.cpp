@@ -87,6 +87,21 @@ const StringSet<>& GetScalarMathOpTypeNames() {
   return names;
 }
 
+const StringSet<>& GetDataOpsTypeNames() {
+  static llvm::StringSet<> names({"OFRecordReader", "ofrecord_raw_decoder"
+
+  });
+  return names;
+}
+
+const StringSet<>& GetLossOpsTypeNames() {
+  static llvm::StringSet<> names(
+      {"sparse_softmax_cross_entropy", "sparse_softmax_cross_entropy_grad"
+
+      });
+  return names;
+}
+
 const StringSet<>& GetReduceOpTypeNames() {
   static llvm::StringSet<> names({"reduce_min", "reduce_prod", "reduce_sum", "reduce_max"
 

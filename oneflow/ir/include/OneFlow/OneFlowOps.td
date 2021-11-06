@@ -2,6 +2,7 @@
 #define ONEFLOW_OPS
 
 include "OneFlowDialect.td"
+include "OneFlowEnums.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Pass/PassBase.td"
 include "mlir/Interfaces/CallInterfaces.td"
@@ -438,6 +439,20 @@ def OneFlow_TanhOp : OneFlow_UnaryBaseOp<"tanh", []> {}
 //     StrArrayAttr:$nd_sbp
 //   );
 // }
+
+// def OneFlow_OFRecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", []> {
+//   let summary = "OneFlow ofrecord_raw_decoder operation";
+//   let input = (ins AnyType:$in);
+//   let output = (outs AnyType:$out);
+//   let attrs = (ins
+//     StrAttr:$name,
+//     AnyI64ElementsAttr:$shape,
+//     OneFlow_DataType:$data_type,
+//     BoolAttr:$dim1_varying_length,
+//     BoolAttr:$truncate
+//   );
+// }
+
 
 // Loss ops
 
