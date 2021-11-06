@@ -13,19 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/stream/cuda_stream_context.h"
-#include "oneflow/core/stream/cuda_graph_context.h"
-#include "oneflow/core/stream/execution_context_hook.h"
+#include "oneflow/core/stream/cuda/cuda_stream_context.h"
+#include "oneflow/core/stream/cuda/cuda_graph_context.h"
+#include "oneflow/core/stream/include/execution_context_hook.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
-#include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/device/node_device_descriptor_manager.h"
 #include "oneflow/core/device/cuda_device_descriptor.h"
-#include "oneflow/core/device/cuda_event_record.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/kernel/chain_kernel_observer.h"
 #include "oneflow/core/kernel/cuda_check_numerics_kernel_observer.h"
+#include "oneflow/core/graph/stream_id.h"
 
 #ifdef WITH_CUDA
 
@@ -60,7 +59,7 @@ void SetAffinityByDevice(int64_t dev_id) {
 class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaStreamContextImpl);
-  explicit CudaStreamContextImpl(const StreamId& stream_id);
+  explicit CudaStreamContextImpl(int device_ordinal);
   virtual ~CudaStreamContextImpl();
 
   Maybe<void> OnExecutionContextSetup() override;
@@ -97,7 +96,7 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
   std::deque<cudaEvent_t> global_event_queue_;
   std::mutex global_event_queue_mutex_;
   std::thread poller_thread_;
-  StreamId stream_id_;
+  int device_ordinal_;
   std::unique_ptr<KernelObserver> kernel_observer_;
 #ifdef WITH_CUDA_GRAPHS
   std::unique_ptr<GenericCudaGraphContext> cuda_graph_ctx_impl_;
@@ -110,9 +109,8 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
 
 }  // namespace
 
-CudaStreamContextImpl::CudaStreamContextImpl(const StreamId& stream_id) : stream_id_(stream_id) {
-  CudaCurrentDeviceGuard guard(stream_id_.device_id().device_index());
-  CHECK_EQ(stream_id.device_id().device_type(), DeviceType::kGPU);
+CudaStreamContextImpl::CudaStreamContextImpl(int device_ordinal) : device_ordinal_(device_ordinal) {
+  CudaCurrentDeviceGuard guard(device_ordinal_);
   cuda_event_flags_ = cudaEventDisableTiming;
   if (ParseBooleanFromEnv("ONEFLOW_STREAM_CUDA_EVENT_FLAG_BLOCKING_SYNC", false)) {
     cuda_event_flags_ |= cudaEventBlockingSync;
@@ -159,12 +157,11 @@ CudaStreamContextImpl::CudaStreamContextImpl(const StreamId& stream_id) : stream
   cuda_graph_ctx_impl_.reset(new GenericCudaGraphContext(cuda_stream_));
 #endif  // WITH_CUDA_GRAPHS
 
-  poller_thread_ = std::thread([this, stream_id]() {
-    int dev_id = stream_id.device_id().device_index();
-    CudaCurrentDeviceGuard guard(dev_id);
-    SetAffinityByDevice(dev_id);
-    OF_PROFILER_NAME_THIS_HOST_THREAD("GPU " + std::to_string(dev_id) + " Poller : ("
-                                      + std::to_string(stream_id.stream_index()) + ")");
+  poller_thread_ = std::thread([this]() {
+    CudaCurrentDeviceGuard guard(device_ordinal_);
+    SetAffinityByDevice(device_ordinal_);
+    OF_PROFILER_NAME_THIS_HOST_THREAD("GPU " + std::to_string(device_ordinal_) + " Poller : ("
+                                      + std::to_string(device_ordinal_) + ")");
     std::pair<cudaEvent_t, std::function<void()>> cb_event;
     while (cb_event_chan_.Receive(&cb_event) == kChannelStatusSuccess) {
       SyncRecycleEvent(cb_event.first);
@@ -174,7 +171,7 @@ CudaStreamContextImpl::CudaStreamContextImpl(const StreamId& stream_id) : stream
 }
 
 CudaStreamContextImpl::~CudaStreamContextImpl() {
-  CudaCurrentDeviceGuard guard(stream_id_.device_id().device_index());
+  CudaCurrentDeviceGuard guard(device_ordinal_);
   cb_event_chan_.Close();
   poller_thread_.join();
   OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream_));
@@ -190,8 +187,8 @@ CudaStreamContextImpl::~CudaStreamContextImpl() {
 }
 
 Maybe<void> CudaStreamContextImpl::OnExecutionContextSetup() {
-  SetAffinityByDevice(stream_id_.device_id().device_index());
-  OF_CUDA_CHECK(cudaSetDevice(stream_id_.device_id().device_index()));
+  SetAffinityByDevice(device_ordinal_);
+  OF_CUDA_CHECK(cudaSetDevice(device_ordinal_));
   return Maybe<void>::Ok();
 }
 
@@ -275,10 +272,11 @@ void CudaStreamContextImpl::LaunchGraph(const CudaGraphExecutable* executable) {
 
 #endif
 
-REGISTER_STREAM_CONTEXT_CREATOR_WITH_STREAM_ID(DeviceType::kGPU,
-                                               ([](const StreamId& stream_id) -> StreamContext* {
-                                                 return new CudaStreamContextImpl(stream_id);
-                                               }));
+REGISTER_STREAM_CONTEXT_CREATOR_WITH_STREAM_ID(
+    DeviceType::kGPU, ([](const StreamId& stream_id) -> StreamContext* {
+      CHECK_EQ(stream_id.device_type(), DeviceType::kGPU);
+      return new CudaStreamContextImpl(stream_id.device_index());
+    }));
 
 }  // namespace oneflow
 

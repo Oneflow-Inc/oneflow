@@ -320,11 +320,6 @@ void LaunchUnaryByScalarPtr(DeviceCtx* ctx, const int64_t n, const T* x, const T
                                                      x, ctx->cuda_stream())));
 }
 
-template<typename T>
-__global__ void FillGpu(const int64_t n, const T value, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = value; }
-}
-
 }  // namespace
 
 #define OP_BY_SCALAR(op, T)                                                                       \
@@ -377,27 +372,5 @@ DEFINE_OP_BY_SCALAR_PTR(Mul)
 DEFINE_OP_BY_SCALAR_PTR(Add)
 DEFINE_OP_BY_SCALAR_PTR(Sub)
 DEFINE_OP_BY_SCALAR_PTR(Div)
-
-#define FILL(T)                                                                              \
-  void ArithemeticIf<DeviceType::kGPU>::Fill(DeviceCtx* ctx, const int64_t n, const T value, \
-                                             T* y) {                                         \
-    FillGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>( \
-        n, value, y);                                                                        \
-  }
-
-FILL(float)
-FILL(double)
-FILL(uint8_t);
-FILL(int8_t)
-FILL(int32_t)
-FILL(int64_t)
-
-#undef FILL
-
-void ArithemeticIf<DeviceType::kGPU>::Fill(DeviceCtx* ctx, const int64_t n, const float16 value,
-                                           float16* y) {
-  FillGpu<half><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      n, float16_2half(value), reinterpret_cast<half*>(y));
-}
 
 }  // namespace oneflow

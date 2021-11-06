@@ -13,14 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_STREAM_CUDA_GRAPH_CONTEXT_H_
-#define ONEFLOW_CORE_STREAM_CUDA_GRAPH_CONTEXT_H_
+#ifndef ONEFLOW_CORE_STREAM_CUDA_CUDA_GRAPH_CONTEXT_H_
+#define ONEFLOW_CORE_STREAM_CUDA_CUDA_GRAPH_CONTEXT_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/stream/stream_context.h"
-#include "oneflow/core/common/id_util.h"
-#include "oneflow/core/common/channel.h"
-#include "oneflow/core/common/maybe.h"
 
 #ifdef WITH_CUDA
 
@@ -88,4 +84,4 @@ class GenericCudaGraphContext : public CudaGraphContext {
 
 #endif  // WITH_CUDA
 
-#endif  // ONEFLOW_CORE_STREAM_CUDA_GRAPH_CONTEXT_H_
+#endif  // ONEFLOW_CORE_STREAM_CUDA_CUDA_GRAPH_CONTEXT_H_

@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/kernel/kernel_observer.h"
-#include "oneflow/core/stream/stream_context.h"
+#include "oneflow/core/stream/include/stream_context.h"
 
 namespace oneflow {
 

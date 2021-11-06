@@ -16,7 +16,7 @@ limitations under the License.
 #ifdef WITH_CUDA
 
 #include "oneflow/core/primitive/include/memset.h"
-#include "oneflow/core/stream/cuda_stream_context.h"
+#include "oneflow/core/stream/cuda/cuda_stream_context.h"
 #include <cuda_runtime.h>
 
 namespace oneflow {
