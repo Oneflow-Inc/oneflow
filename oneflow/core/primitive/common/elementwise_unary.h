@@ -13,24 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_BATCH_MEMCPY_KERNEL_UTIL_H_
-#define ONEFLOW_CORE_KERNEL_BATCH_MEMCPY_KERNEL_UTIL_H_
+#ifndef ONEFLOW_CORE_PRIMITIVE_COMMON_ELEMENTWISE_UNARY_H_
+#define ONEFLOW_CORE_PRIMITIVE_COMMON_ELEMENTWISE_UNARY_H_
 
-#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/primitive/include/elementwise_unary.h"
 
 namespace oneflow {
 
-struct MemcpyParam {
-  void* dst;
-  const void* src;
-  size_t count;
-};
+namespace primitive {
 
-template<DeviceType device_type>
-struct BatchMemcpyKernelUtil final {
-  static void Copy(DeviceCtx* ctx, const std::vector<MemcpyParam>& params);
-};
+#define UNARY_MATH_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu)
 
+#define UNARY_LOGICAL_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLogicalNot)
+
+}  // namespace primitive
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_BATCH_MEMCPY_KERNEL_UTIL_H_
+#endif  // ONEFLOW_CORE_PRIMITIVE_COMMON_ELEMENTWISE_UNARY_H_
