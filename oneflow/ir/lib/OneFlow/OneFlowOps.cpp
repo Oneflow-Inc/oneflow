@@ -154,7 +154,6 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
         state.addTypes(op.getODSResults(0 /* data out */).getTypes());
         if (auto created = rewriter.createOperation(state)) {
           rewriter.replaceOp(op, created->getResults());
-          op->erase();
           return success();
         }
       } else {

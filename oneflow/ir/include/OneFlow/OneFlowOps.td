@@ -426,7 +426,7 @@ def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", []> {
   let summary = "OneFlow OFRecordReader operation";
   let output = (outs AnyType:$out);
   let attrs = (ins
-    StrAttr:$name,
+    StrAttr:$data_dir,
     SI32Attr:$data_part_num,
     SI32Attr:$batch_size,
     StrAttr:$part_name_prefix,
