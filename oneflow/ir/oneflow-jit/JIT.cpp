@@ -245,6 +245,8 @@ std::shared_ptr<Tensor> JitImporter::MakeIntermediateTensor(
   auto tensor_ref_ref = std::make_shared<TensorRef>(tensor_ref);
   CHECK(intermediate_tensors_.insert({result, tensor_ref}).second)
       << "Intermediate tensor already created, lbn: " << lbn;
+  CHECK(py_tensors_.insert({result, tensor_ref_ref}).second)
+      << "Python tensor already created, lbn: " << lbn;
   CHECK(result_mapping_.emplace(tensor_ref.get(), result).second)
       << "Intermediate tensor already mapped to mlir value, lbn: " << lbn;
   return tensor_ref_ref;
@@ -413,10 +415,12 @@ LogicalResult JitImporter::LowerToOneFlowKernel() {
   pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createReturnAllLeaveResultPass());
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createCreateComputeCtxPass());
-  // for (auto& tensor_pair : intermediate_tensors_) {
-  //   tensor_pair.first.dump();
-  //   llvm::errs() << tensor_pair.second.use_count() << "\n";
-  // }
+  for (auto& tensor_pair : py_tensors_) {
+    if (tensor_pair.second.use_count() > 1) {
+      tensor_pair.first.dump();
+      llvm::errs() << tensor_pair.second.use_count() << "\n";
+    }
+  }
   return pm.run(GetModule());
 }
 
