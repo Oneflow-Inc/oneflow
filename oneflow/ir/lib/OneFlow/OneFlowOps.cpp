@@ -87,6 +87,22 @@ const StringSet<>& GetScalarMathOpTypeNames() {
   return names;
 }
 
+const StringSet<>& GetDataOpsTypeNames() {
+  static llvm::StringSet<> names(
+      {"OFRecordReader"
+
+      });
+  return names;
+}
+
+const StringSet<>& GetLossOpsTypeNames() {
+  static llvm::StringSet<> names(
+      {"sparse_softmax_cross_entropy", "sparse_softmax_cross_entropy_grad"
+
+      });
+  return names;
+}
+
 const StringSet<>& GetReduceOpTypeNames() {
   static llvm::StringSet<> names({"reduce_min", "reduce_prod", "reduce_sum", "reduce_max"
 
@@ -140,11 +156,12 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
           || GetScalarMathOpTypeNames().contains(op_type_name)
           || GetConvOpTypeNames().contains(op_type_name)
           || GetPoolOpTypeNames().contains(op_type_name)
+          || GetDataOpsTypeNames().contains(op_type_name)
+          || GetLossOpsTypeNames().contains(op_type_name)
           || GetReduceOpTypeNames().contains(op_type_name) || op_type_name.equals("reshape")
           || op_type_name.equals("scalar_mul_by_tensor") || op_type_name.equals("matmul")
           || op_type_name.equals("gather") || op_type_name.equals("gelu_grad")
-          || op_type_name.equals("bias_add")
-          || op_type_name.equals("sparse_softmax_cross_entropy_grad")) {
+          || op_type_name.equals("bias_add")) {
         NamedAttrList attributes(op->getAttrDictionary());
         attributes.erase("operand_segment_sizes");
         attributes.erase("result_segment_sizes");
