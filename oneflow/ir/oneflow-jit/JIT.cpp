@@ -413,10 +413,10 @@ LogicalResult JitImporter::LowerToOneFlowKernel() {
   pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createReturnAllLeaveResultPass());
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createCreateComputeCtxPass());
-  for (auto& tensor_pair : intermediate_tensors_) {
-    tensor_pair.first.dump();
-    llvm::errs() << tensor_pair.second.use_count() << "\n";
-  }
+  // for (auto& tensor_pair : intermediate_tensors_) {
+  //   tensor_pair.first.dump();
+  //   llvm::errs() << tensor_pair.second.use_count() << "\n";
+  // }
   return pm.run(GetModule());
 }
 
