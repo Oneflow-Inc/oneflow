@@ -423,35 +423,35 @@ def OneFlow_TanhOp : OneFlow_UnaryBaseOp<"tanh", []> {}
 
 // data preprocessing ops
 
-// def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", []> {
-//   let summary = "OneFlow OFRecordReader operation";
-//   let output = (outs AnyType:$out);
-//   let attrs = (ins
-//     StrAttr:$name,
-//     SI32Attr:$data_part_num,
-//     SI32Attr:$batch_size,
-//     StrAttr:$part_name_prefix,
-//     SI32Attr:$part_name_suffix_length,
-//     BoolAttr:$random_shuffle,
-//     SI64Attr:$seed,
-//     SI32Attr:$shuffle_buffer_size,
-//     BoolAttr:$shuffle_after_epoch,
-//     StrArrayAttr:$nd_sbp
-//   );
-// }
+def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", []> {
+  let summary = "OneFlow OFRecordReader operation";
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    StrAttr:$data_dir,
+    SI32Attr:$data_part_num,
+    SI32Attr:$batch_size,
+    StrAttr:$part_name_prefix,
+    SI32Attr:$part_name_suffix_length,
+    BoolAttr:$random_shuffle,
+    SI64Attr:$seed,
+    SI32Attr:$shuffle_buffer_size,
+    BoolAttr:$shuffle_after_epoch,
+    StrArrayAttr:$nd_sbp
+  );
+}
 
-// def OneFlow_OFRecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", []> {
-//   let summary = "OneFlow ofrecord_raw_decoder operation";
-//   let input = (ins AnyType:$in);
-//   let output = (outs AnyType:$out);
-//   let attrs = (ins
-//     StrAttr:$name,
-//     AnyI64ElementsAttr:$shape,
-//     OneFlow_DataType:$data_type,
-//     BoolAttr:$dim1_varying_length,
-//     BoolAttr:$truncate
-//   );
-// }
+def OneFlow_OFRecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", []> {
+  let summary = "OneFlow ofrecord_raw_decoder operation";
+  let input = (ins AnyType:$in);
+  let output = (outs AnyType:$out);
+  let attrs = (ins
+    StrAttr:$name,
+    AnyI64ElementsAttr:$shape,
+    StrAttr:$data_type,
+    BoolAttr:$dim1_varying_length,
+    BoolAttr:$truncate
+  );
+}
 
 
 // Loss ops
