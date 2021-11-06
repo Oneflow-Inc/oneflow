@@ -23,6 +23,7 @@ limitations under the License.
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/StringSet.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 
 using namespace mlir;
@@ -86,6 +87,21 @@ const StringSet<>& GetScalarMathOpTypeNames() {
   return names;
 }
 
+const StringSet<>& GetDataOpsTypeNames() {
+  static llvm::StringSet<> names({"OFRecordReader", "ofrecord_raw_decoder"
+
+  });
+  return names;
+}
+
+const StringSet<>& GetLossOpsTypeNames() {
+  static llvm::StringSet<> names(
+      {"sparse_softmax_cross_entropy", "sparse_softmax_cross_entropy_grad"
+
+      });
+  return names;
+}
+
 const StringSet<>& GetReduceOpTypeNames() {
   static llvm::StringSet<> names({"reduce_min", "reduce_prod", "reduce_sum", "reduce_max"
 
@@ -93,12 +109,20 @@ const StringSet<>& GetReduceOpTypeNames() {
   return names;
 }
 
-const StringSet<>& GetPoolOpTypeNames() {
-  static llvm::StringSet<> names({"avgpool_1d", "avgpool_2d", "avgpool_3d", "avg_pool_1d",
-                                  "avg_pool_2d", "avg_pool_3d", "max_pool_1d", "max_pool_2d",
-                                  "max_pool_3d"
+const StringSet<>& GetConvOpTypeNames() {
+  static llvm::StringSet<> names(
+      {"conv1d", "conv2d", "conv3d", "conv_filter_grad", "conv_data_grad"});
+  return names;
+}
 
-  });
+const StringSet<>& GetPoolOpTypeNames() {
+  static llvm::StringSet<> names(
+      {"avgpool_1d", "avgpool_2d", "avgpool_3d", "avg_pool_1d", "avg_pool_2d", "avg_pool_3d",
+       "max_pool_1d", "max_pool_2d", "max_pool_3d", "max_pool_1d_grad", "max_pool_2d_grad",
+       "max_pool_3d_grad", "avg_pool_1d_grad", "avg_pool_2d_grad", "avg_pool_3d_grad",
+       "avgpool_1d_grad", "avgpool_2d_grad", "avgpool_3d_grad"
+
+      });
   return names;
 }
 
@@ -116,45 +140,60 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
   mlir::LogicalResult matchAndRewrite(oneflow::UserOp op,
                                       mlir::PatternRewriter& rewriter) const override {
     auto op_type_name = op->getAttrOfType<StringAttr>("op_type_name").getValue();
-    op.getODSResults(0);
-    if (succeeded(TrimRedundantCtrl(op, rewriter))) {
-      return success();
-    }
+    if (succeeded(TrimRedundantCtrl(op, rewriter))) { return success(); }
     // In principle, a concrete user op has no ctrl input/output. Some benefits:
     // 1. simplify things
     // 2. make conversion and code gen more doable
     // 3. enable the reuse of established MLIR infra like built-in traits
-    else if (IsCtrlOutTrimmed(op) && IsCtrlInAbsent(op)) {
-      if (op_type_name.equals("relu") || op_type_name.equals("gelu") || op_type_name.equals("cast")
-          || GetUnaryOpTypeNames().contains(op_type_name)
-          || GetFloatUnaryOpTypeNames().contains(op_type_name)
-          || GetScalarMathOpTypeNames().contains(op_type_name)
-          || GetPoolOpTypeNames().contains(op_type_name)
-          || GetReduceOpTypeNames().contains(op_type_name) || op_type_name.equals("reshape")
-          || op_type_name.equals("scalar_mul_by_tensor") || op_type_name.equals("matmul")
-          || op_type_name.equals("gather") || op_type_name.equals("gelu_grad")
-          || op_type_name.equals("conv2d") || op_type_name.equals("bias_add")) {
-        assert(op.data_output().size() == 1);
-        NamedAttrList attributes(op->getAttrDictionary());
-        attributes.erase("operand_segment_sizes");
-        attributes.erase("result_segment_sizes");
-        OperationState state(op->getLoc(), "oneflow." + op_type_name.str());
-        state.addAttributes(attributes);
-        state.addOperands(op->getOperands());
-        state.addTypes(op.getODSResults(0 /* data out */).getTypes());
-        if (auto created = rewriter.createOperation(state)) {
-          op.data_output().front().replaceAllUsesWith(created->getResult(0));
-          op->erase();
-          return success();
+    if (IsCtrlOutTrimmed(op) && IsCtrlInAbsent(op)) {
+      NamedAttrList attributes(op->getAttrDictionary());
+      attributes.erase("operand_segment_sizes");
+      attributes.erase("result_segment_sizes");
+      if (op_type_name.equals("sgd_update")) {
+        llvm::StringSet<> bns({});
+        oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
+        for (auto key : user_op_adaptor.input_lbn_segment_keys()) {
+          auto bn = key.dyn_cast<StringAttr>().getValue();
+          bns.insert(bn);
         }
-      } else {
-        if (!GetPrintedOpTypeNames()->contains(op.op_type_name())) {
-          llvm::errs() << "MLIR opaque user op: " << op.op_type_name() << "\n";
-          GetPrintedOpTypeNames()->insert(op.op_type_name());
+        attributes.push_back(rewriter.getNamedAttr(
+            "operand_segment_sizes",
+            rewriter.getI32VectorAttr({1, 1, bns.contains("learning_rate"),
+                                       bns.contains("scale_by_tensor"), bns.contains("skip_if")})));
+      }
+      OperationState state(op->getLoc(), "oneflow." + op_type_name.str());
+      state.addAttributes(attributes);
+      state.addOperands(op.getODSOperands(0) /* data in */);
+      state.addTypes(op.getODSResults(0 /* data out */).getTypes());
+      if (auto created = rewriter.createOperation(state)) {
+        if (created->isRegistered()) {
+          rewriter.replaceOp(op, created->getResults());
+        } else {
+          created->erase();
+          // NOTE: (not required) add op type name here if want to make sure it is concreted
+          if (op_type_name.equals("relu") || op_type_name.equals("gelu")
+              || op_type_name.equals("cast") || op_type_name.equals("relu_grad")
+              || GetUnaryOpTypeNames().contains(op_type_name)
+              || GetFloatUnaryOpTypeNames().contains(op_type_name)
+              || GetScalarMathOpTypeNames().contains(op_type_name)
+              || GetConvOpTypeNames().contains(op_type_name)
+              || GetPoolOpTypeNames().contains(op_type_name)
+              || GetReduceOpTypeNames().contains(op_type_name) || op_type_name.equals("reshape")
+              || op_type_name.equals("scalar_mul_by_tensor") || op_type_name.equals("matmul")
+              || op_type_name.equals("gather") || op_type_name.equals("gelu_grad")
+              || op_type_name.equals("bias_add")
+              || op_type_name.equals("sparse_softmax_cross_entropy_grad")) {
+            op->emitError("Fail to convert opaque user op: " + op.op_type_name());
+            return failure();
+          }
+          if (!GetPrintedOpTypeNames()->contains(op.op_type_name())) {
+            llvm::errs() << "MLIR opaque user op: " << op.op_type_name() << "\n";
+            GetPrintedOpTypeNames()->insert(op.op_type_name());
+          }
         }
       }
     }
-    return failure();
+    return success();
   }
 };
 
