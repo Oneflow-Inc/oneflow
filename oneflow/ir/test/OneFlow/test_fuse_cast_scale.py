@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+# RUN: python3 %s | FileCheck %s
 from typing import Tuple
 import unittest
 import numpy as np
@@ -78,6 +79,8 @@ class TestMLIROptimizations(flow.unittest.TestCase):
         (loss, scale) = ret
         test_case.assertTrue(np.allclose(loss, x * scale))
 
+
+# CHECK: %0 = oneflow.mlir_jit
 
 if __name__ == "__main__":
     unittest.main()
