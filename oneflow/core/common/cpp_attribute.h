@@ -13,24 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_BATCH_MEMCPY_KERNEL_UTIL_H_
-#define ONEFLOW_CORE_KERNEL_BATCH_MEMCPY_KERNEL_UTIL_H_
+#ifndef ONEFLOW_CORE_COMMON_CPP_ATTRIBUTE_H_
+#define ONEFLOW_CORE_COMMON_CPP_ATTRIBUTE_H_
 
-#include "oneflow/core/kernel/kernel_util.h"
+#include <gtest/gtest.h>
 
-namespace oneflow {
+#define likely GOOGLE_PREDICT_TRUE
+#define unlikely GOOGLE_PREDICT_FALSE
 
-struct MemcpyParam {
-  void* dst;
-  const void* src;
-  size_t count;
-};
-
-template<DeviceType device_type>
-struct BatchMemcpyKernelUtil final {
-  static void Copy(DeviceCtx* ctx, const std::vector<MemcpyParam>& params);
-};
-
-}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_KERNEL_BATCH_MEMCPY_KERNEL_UTIL_H_
+#endif  // ONEFLOW_CORE_COMMON_CPP_ATTRIBUTE_H_

@@ -13,18 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_GRAPH_ID_SERIALIZATION_H_
-#define ONEFLOW_CORE_GRAPH_ID_SERIALIZATION_H_
-
-#include "oneflow/core/common/id_util.h"
+#include <vector>
+#include "oneflow/core/device/cuda_event.h"
 
 namespace oneflow {
 
-int64_t SerializeStreamIdToInt64(const StreamId&);
-StreamId DeserializeStreamIdFromInt64(int64_t);
-int64_t SerializeTaskIdToInt64(const TaskId&);
-TaskId DeserializeTaskIdFromInt64(int64_t);
+#ifdef WITH_CUDA
+
+CudaEvent::CudaEvent(int device_id, unsigned int flags) : device_id_(device_id) {
+  CudaCurrentDeviceGuard guard(device_id_);
+  OF_CUDA_CHECK(cudaEventCreateWithFlags(&event_, flags));
+}
+
+CudaEvent::~CudaEvent() {
+  CudaCurrentDeviceGuard guard(device_id_);
+  OF_CUDA_CHECK(cudaEventDestroy(event_));
+}
+
+bool CudaEvent::Query() const { return cudaEventQuery(event_) != cudaErrorNotReady; }
+
+#endif
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_GRAPH_ID_SERIALIZATION_H_

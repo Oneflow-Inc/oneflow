@@ -83,9 +83,7 @@ ActorMsg ActorMsg::BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd) {
   return msg;
 }
 
-int64_t ActorMsg::SrcMachineId() const {
-  return Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id_);
-}
+int64_t ActorMsg::SrcMachineId() const { return MachineId4ActorId(src_actor_id_); }
 
 ActorCmd ActorMsg::actor_cmd() const {
   CHECK_EQ(msg_type_, ActorMsgType::kCmdMsg);
@@ -100,7 +98,7 @@ Regst* ActorMsg::regst() const {
 int64_t ActorMsg::regst_desc_id() const {
   CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
   // FIXME(liujunchneg): regst_desc_id for remote returned regst
-  if (Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id_) == GlobalProcessCtx::Rank()) {
+  if (MachineId4ActorId(src_actor_id_) == GlobalProcessCtx::Rank()) {
     return regst_wrapper_.regst->regst_desc_id();
   } else {
     return regst_wrapper_.regst_desc_id;

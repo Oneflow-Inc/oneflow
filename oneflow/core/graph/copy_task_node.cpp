@@ -16,8 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/common/id_util.h"
-#include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/device/cpu_stream_index.h"
 
 namespace oneflow {
@@ -55,7 +53,7 @@ void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, const DeviceId& device_i
   } else {
     UNIMPLEMENTED();
   }
-  set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
+  set_thrd_id(EncodeStreamIdToInt64(StreamId{device_id, stream_index}));
   set_lbi(lbi);
 }
 
@@ -86,13 +84,12 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
 
 void CopyCommNetTaskNode::Init(int64_t machine_id, const LogicalBlobId& lbi) {
   set_machine_id(machine_id);
-  DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kCPU,
-                     DeviceId::kCPUDeviceIndex};
+  DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kCPU, 0};
   auto* generator = dynamic_cast<CPUStreamIndexGenerator*>(
       Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
   CHECK_NOTNULL(generator);
   StreamId stream_id{device_id, generator->GenerateCommNetStreamIndex()};
-  set_thrd_id(SerializeStreamIdToInt64(stream_id));
+  set_thrd_id(EncodeStreamIdToInt64(stream_id));
   set_lbi(lbi);
 }
 

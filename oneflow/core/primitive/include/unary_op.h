@@ -16,14 +16,13 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_PRIMITIVE_UNARY_OP_H_
 #define ONEFLOW_CORE_PRIMITIVE_UNARY_OP_H_
 
-#include "oneflow/core/primitive/include/primitive.h"
-
 namespace oneflow {
 
 namespace primitive {
 
 enum class UnaryOp {
-  kIdentity,
+  kRelu,
+  kLogicalNot,
 };
 
 }  // namespace primitive
