@@ -27,6 +27,7 @@ limitations under the License.
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/device/device_context_adapter.h"
+#include "OneFlow/Passes.h"
 
 namespace {
 
@@ -415,10 +416,13 @@ LogicalResult JitImporter::LowerToOneFlowKernel() {
   pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createReturnAllLeaveResultPass());
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createCreateComputeCtxPass());
+  pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createFuseIntoExistingOpPass());
+  GetModule()->dump();
   for (auto& tensor_pair : py_tensors_) {
     if (tensor_pair.second.use_count() > 1) {
       tensor_pair.first.dump();
-      llvm::errs() << tensor_pair.second.use_count() << "\n";
+      llvm::errs() << "#" << tensor_pair.first.dyn_cast<OpResult>().getResultNumber() << ": "
+                   << tensor_pair.second.use_count() << "\n";
     }
   }
   return pm.run(GetModule());
