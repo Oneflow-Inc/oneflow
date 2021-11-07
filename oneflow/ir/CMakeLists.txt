@@ -26,6 +26,7 @@ FetchContent_Declare(
   llvm_monorepo
 )
 FetchContent_GetProperties(llvm_monorepo)
+
 if(NOT llvm_monorepo_POPULATED)
   FetchContent_Populate(llvm_monorepo
     URL ${LLVM_MONO_REPO_URL}
@@ -43,6 +44,8 @@ if(NOT llvm_monorepo_POPULATED)
     -DCMAKE_INSTALL_PREFIX=${LLVM_INSTALL_DIR}
     -DLLVM_ENABLE_RTTI=ON # turn this on to make it compatible with protobuf
     -DLLVM_ENABLE_EH=ON # turn this on to make it compatible with half (the library)
+    -DLLVM_BUILD_EXAMPLES=OFF
+    -DLLVM_BUILD_TOOLS=OFF
     -DLLVM_INCLUDE_EXAMPLES=OFF
     -DLLVM_INCLUDE_TESTS=OFF
     -DLLVM_INCLUDE_BENCHMARKS=OFF
@@ -55,7 +58,7 @@ if(NOT llvm_monorepo_POPULATED)
     -DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS}
     -DLLVM_ENABLE_OCAMLDOC=OFF
     -DLLVM_ENABLE_BINDINGS=OFF
-    -DMLIR_ENABLE_CUDA_RUNNER=${BUILD_CUDA}
+    -DMLIR_ENABLE_CUDA_RUNNER=${WITH_MLIR_CUDA_CODEGEN}
     -DCMAKE_CUDA_COMPILER=${CMAKE_CUDA_COMPILER}
     -G ${CMAKE_GENERATOR}
     WORKING_DIRECTORY ${llvm_monorepo_BINARY_DIR}

@@ -23,6 +23,7 @@ namespace mlir {
 namespace oneflow {
 
 std::unique_ptr<mlir::Pass> createOutlineJitFunctionPass();
+std::unique_ptr<mlir::Pass> createFuseIntoExistingOpPass();
 
 }  // namespace oneflow
 
