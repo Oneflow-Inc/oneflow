@@ -5,7 +5,6 @@ oneflow.fx
 
 Overview
 --------
-**This feature is under a Beta release and its API may change.**
 
 FX is a toolkit for developers to use to transform ``nn.Module``
 instances. FX consists of three main components: a **symbolic tracer,**
@@ -70,7 +69,7 @@ documentation.
 The **intermediate representation** is the container for the operations
 that were recorded during symbolic tracing. It consists of a list of
 Nodes that represent function inputs, callsites (to functions, methods,
-or :class:`oneflow.nn.Module` instances), and return values. More information
+or :class:`torch.nn.Module` instances), and return values. More information
 about the IR can be found in the documentation for :class:`Graph`. The
 IR is the format on which transformations are applied.
 
@@ -78,7 +77,7 @@ IR is the format on which transformations are applied.
 Module-to-Module) transformation toolkit. For each Graph IR, we can
 create valid Python code matching the Graph's semantics. This
 functionality is wrapped up in :class:`GraphModule`, which is a
-:class:`oneflow.nn.Module` instance that holds a :class:`Graph` as well as a
+:class:`torch.nn.Module` instance that holds a :class:`Graph` as well as a
 ``forward`` method generated from the Graph.
 
 Taken together, this pipeline of components (symbolic tracing ->
