@@ -99,19 +99,14 @@ void VirtualMachine::TryReleaseFinishedInstructions(Stream* stream) {
   }
 }
 
-void VirtualMachine::FilterAndRunInstructionsInAdvance(TmpPendingInstrMsgList* instr_msg_list) {
-  INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_msg_list) {
-    const auto& instr_type_id = instr_msg->instr_type_id();
-    if (instr_type_id.instruction_type().ResettingIdToObjectMap()) {
-      const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
-      CHECK(stream_type.IsControlStreamType());
-      CHECK(HasImmediateOperandsOnly(*instr_msg));
-      const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
-      if (!parallel_desc || parallel_desc->ContainingMachineId(this_machine_id())) {
-        stream_type.Run(this, instr_msg);
-      }
-      instr_msg_list->Erase(instr_msg);
-    }
+void VirtualMachine::RunInstructionsInAdvance(InstructionMsg* instr_msg) {
+  const auto& instr_type_id = instr_msg->instr_type_id();
+  const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
+  CHECK(stream_type.IsControlStreamType());
+  CHECK(HasImmediateOperandsOnly(*instr_msg));
+  const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
+  if (!parallel_desc || parallel_desc->ContainingMachineId(this_machine_id())) {
+    stream_type.Run(this, instr_msg);
   }
 }
 
@@ -132,33 +127,30 @@ bool IsStreamInParallelDesc(const ParallelDesc* parallel_desc, const Stream& str
 
 }  // namespace
 
-void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
+void VirtualMachine::MakeInstructions(InstructionMsg* instr_msg,
                                       /*out*/ NewInstructionList* new_instruction_list) {
   auto* front_seq_compute_list = mut_front_seq_compute_instr_list();
-  INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_msg_list) {
-    const StreamTypeId& stream_type_id = instr_msg->instr_type_id().stream_type_id();
-    auto* stream_rt_desc = mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
-    const auto& instruction_type = instr_msg->instr_type_id().instruction_type();
-    if (stream_rt_desc == nullptr) {
-      const auto& stream_type = stream_type_id.stream_type();
-      LOG(FATAL) << typeid(instruction_type).name() << " " << typeid(stream_type).name();
+  const StreamTypeId& stream_type_id = instr_msg->instr_type_id().stream_type_id();
+  auto* stream_rt_desc = mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
+  const auto& instruction_type = instr_msg->instr_type_id().instruction_type();
+  if (stream_rt_desc == nullptr) {
+    const auto& stream_type = stream_type_id.stream_type();
+    LOG(FATAL) << typeid(instruction_type).name() << " " << typeid(stream_type).name();
+  }
+  bool is_front_seq = instruction_type.IsFrontSequential();
+  if (is_front_seq) { CHECK_EQ(stream_rt_desc->stream_id2stream().size(), 1); }
+  const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
+  INTRUSIVE_UNSAFE_FOR_EACH_PTR(stream, stream_rt_desc->mut_stream_id2stream()) {
+    if (!IsStreamInParallelDesc(parallel_desc.get(), *stream)) { continue; }
+    intrusive::shared_ptr<Instruction> instr = stream->NewInstruction(instr_msg, parallel_desc);
+    if (stream_type_id.interpret_type() == kInfer) {
+      // do nothing
+    } else if (stream_type_id.interpret_type() == kCompute) {
+      front_seq_compute_list->PushBack(instr.Mutable());
+    } else {
+      UNIMPLEMENTED();
     }
-    bool is_front_seq = instruction_type.IsFrontSequential();
-    if (is_front_seq) { CHECK_EQ(stream_rt_desc->stream_id2stream().size(), 1); }
-    const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
-    INTRUSIVE_UNSAFE_FOR_EACH_PTR(stream, stream_rt_desc->mut_stream_id2stream()) {
-      if (!IsStreamInParallelDesc(parallel_desc.get(), *stream)) { continue; }
-      intrusive::shared_ptr<Instruction> instr = stream->NewInstruction(instr_msg, parallel_desc);
-      if (stream_type_id.interpret_type() == kInfer) {
-        // do nothing
-      } else if (stream_type_id.interpret_type() == kCompute) {
-        front_seq_compute_list->PushBack(instr.Mutable());
-      } else {
-        UNIMPLEMENTED();
-      }
-      if (!is_front_seq) { new_instruction_list->PushBack(instr.Mutable()); }
-    }
-    instr_msg_list->Erase(instr_msg);
+    if (!is_front_seq) { new_instruction_list->PushBack(instr.Mutable()); }
   }
 }
 
@@ -599,9 +591,14 @@ void VirtualMachine::Schedule() {
     TmpPendingInstrMsgList tmp_pending_msg_list;
     // MoveTo is under a lock.
     mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
-    FilterAndRunInstructionsInAdvance(&tmp_pending_msg_list);
     NewInstructionList new_instruction_list;
-    MakeInstructions(&tmp_pending_msg_list, /*out*/ &new_instruction_list);
+    INTRUSIVE_UNSAFE_FOR_EACH_PTR(instr_msg, &tmp_pending_msg_list) {
+      if (unlikely(instr_msg->instr_type_id().instruction_type().ResettingIdToObjectMap())) {
+        RunInstructionsInAdvance(instr_msg);
+      } else {
+        MakeInstructions(instr_msg, /*out*/ &new_instruction_list);
+      }
+    }
     INTRUSIVE_FOR_EACH_PTR(instruction, &new_instruction_list) {
       ConsumeMirroredObjects(mut_id2logical_object(), instruction);
       if (likely(Dispatchable(instruction))) {

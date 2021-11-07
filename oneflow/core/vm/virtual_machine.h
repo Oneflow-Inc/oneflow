@@ -127,8 +127,8 @@ class VirtualMachine final : public intrusive::Base {
   void TryRunFrontSeqInstruction();
   void ReleaseInstruction(Instruction* instruction);
   void TryReleaseFinishedInstructions(Stream* stream);
-  void FilterAndRunInstructionsInAdvance(TmpPendingInstrMsgList* instr_msg_list);
-  void MakeInstructions(TmpPendingInstrMsgList*, /*out*/ NewInstructionList* ret_instruction_list);
+  void RunInstructionsInAdvance(InstructionMsg* instr_msg);
+  void MakeInstructions(InstructionMsg*, /*out*/ NewInstructionList* ret_instruction_list);
   template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
   void ForEachMirroredObject(Id2LogicalObject* id2logical_object, const Operand& operand,
                              int64_t global_device_id, const DoEachT& DoEach);
