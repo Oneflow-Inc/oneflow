@@ -163,10 +163,8 @@ class VirtualMachine final : public intrusive::Base {
   RwMutexedObjectAccess* ConsumeMirroredObject(OperandAccessType access_type,
                                                MirroredObject* mirrored_object,
                                                Instruction* instrution);
-  void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
-                              NewInstructionList* new_instruction_list);
+  void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object, Instruction* instruction);
   void DispatchAndPrescheduleInstructions();
-  void MoveToReadyOrWaiting(NewInstructionList* new_instruction_list);
   void DispatchInstruction(Instruction* instruction);
   void TryDeleteLogicalObjects();
 
