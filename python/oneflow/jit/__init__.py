@@ -35,7 +35,7 @@ def exec(f):
         result = f(*args, **kwargs)
         assert not oneflow._oneflow_internal.ir.toggle_jit(func_name)
         end = timer()
-        print("jit ends in", end - start)
+        print("JIT optimizations and dispatch ends in", end - start)
         return result
 
     return wrapper
