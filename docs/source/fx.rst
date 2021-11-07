@@ -103,9 +103,8 @@ What is an FX transform? Essentially, it's a function that looks like this.
 ::
 
     import oneflow as flow
-    import oneflow.nn as nn
 
-    def transform(m: nn.Module,
+    def transform(m: flow.nn.Module,
                     tracer_class : type = flow.fx.Tracer) -> flow.nn.Module:
         # Step 1: Acquire a Graph representing the code in `m`
 
@@ -126,8 +125,8 @@ Your transform will take in an :class:`oneflow.nn.Module`, acquire a :class:`Gra
 from it, do some modifications, and return a new :class:`oneflow.nn.Module`. You 
 should think of the :class:`oneflow.nn.Module` that your FX transform returns as 
 identical to a regular :class:`oneflow.nn.Module` -- you can pass it to another
-FX transform, or you can run it. Ensuring that the inputs and outputs of your FX 
-transform are a :class:`oneflow.nn.Module` will allow for composability.
+FX transform or other IR in oneflow, or you can run it. Ensuring that the inputs 
+and outputs of your FX transform are a :class:`oneflow.nn.Module` will allow for composability.
 
 .. note::
 
@@ -200,17 +199,17 @@ out a table showing the nodes of this :class:`Graph`:
     +---------------+---------------+----------------------------+--------------------+-------------+
     | get_attr      | linear_weight | linear.weight              | ()                 | {}          |
     +---------------+---------------+----------------------------+--------------------+-------------+
-    | call_function | add_1         | <built-in function add>    | (x, linear_weight) | {}          |
+    | call_function | add           | <built-in function add>    | (x, linear_weight) | {}          |
     +---------------+---------------+----------------------------+--------------------+-------------+
-    | call_module   | linear_1      | linear                     | (add_1,)           | {}          |
+    | call_module   | linear        | linear                     | (add  ,)           | {}          |
     +---------------+---------------+----------------------------+--------------------+-------------+
-    | call_method   | relu_1        | relu                       | (linear_1,)        | {}          |
+    | call_method   | relu          | relu                       | (linear  ,)        | {}          |
     +---------------+---------------+----------------------------+--------------------+-------------+
-    | call_method   | sum_1         | sum                        | (relu_1,)          | {'dim': -1} |
+    | call_method   | sum_1         | sum                        | (relu,)            | {'dim': -1} |
     +---------------+---------------+----------------------------+--------------------+-------------+
-    | call_method   | topk_1        | topk                       | (sum_1, 3)         | {}          |
+    | call_method   | topk          | topk                       | (sum_1, 3)         | {}          |
     +---------------+---------------+----------------------------+--------------------+-------------+
-    | output        | output        | output                     | (topk_1,)          | {}          |
+    | output        | output        | output                     | (topk,)            | {}          |
     +---------------+---------------+----------------------------+--------------------+-------------+
 
 
@@ -240,7 +239,7 @@ Direct Graph Manipulation
 One approach to building this new :class:`Graph` is to directly manipulate your old
 one. To aid in this, we can simply take the :class:`Graph` we obtain from symbolic
 tracing and modify it. For example, let’s say we desire to replace
-:func:`oneflow.add` calls with :func:`oneflow.mul` calls.
+:method:`Tensor.add` calls with :method:`Tensor.mul` calls.
 
 
 ::
@@ -250,7 +249,7 @@ tracing and modify it. For example, let’s say we desire to replace
     # Sample module
     class M(flow.nn.Module):
         def forward(self, x, y):
-            return flow.add(x, y)
+            return x.add(y)
 
     def transform(m: flow.nn.Module,
                     tracer_class : type = flow.fx.Tracer) -> flow.fx.GraphModule:
@@ -284,10 +283,10 @@ tracing and modify it. For example, let’s say we desire to replace
     print(new_m.graph)
     """
     graph():
-    %x : [#users=1] = placeholder[target=x]
-    %y : [#users=1] = placeholder[target=y]
-    %add : [#users=1] = call_method[target=mul](args = (%x, %y), kwargs = {})
-    return add
+        %x : [#users=1] = placeholder[target=x]
+        %y : [#users=1] = placeholder[target=y]
+        %add : [#users=1] = call_method[target=mul](args = (%x, %y), kwargs = {})
+        return add
     """
 
 
@@ -303,8 +302,8 @@ can be found below.
     # Specifies the insertion point. Any nodes added to the
     # Graph within this scope will be inserted after `node`
     with traced.graph.inserting_after(node):
-        # Insert a new `call_method` node calling `flow.relu`
-        new_node = traced.graph.call_method(
+        # Insert a new `call_function` node calling `flow.relu`
+        new_node = traced.graph.call_function(
             flow.relu, args=(node,))
 
         # We want all places that used the value of `node` to
@@ -329,6 +328,77 @@ get unwieldy as the transformations get more complex.
 
 Graph Manipulation Examples
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#TODO(BBuf) add examples
+
+Proxy/Retracing
+^^^^^^^^^^^^^^^
+
+Another way of manipulating :class:`Graph`\s is by reusing the :class:`Proxy`
+machinery used in symbolic tracing. For example, let’s
+imagine that we wanted to write a transformation that decomposed
+PyTorch functions into smaller operations. It would transform every
+``F.relu(x)`` call into ``(x > 0) * x``. One possibility would be to
+perform the requisite graph rewriting to insert the comparison and
+multiplication after the ``F.relu``, and then clean up the original
+``F.relu``. However, we can automate this process by using :class:`Proxy`
+objects to automatically record operations into the :class:`Graph`.
+
+To use this method, we write the operations that we want inserted as regular
+PyTorch code and invoke that code with :class:`Proxy` objects as arguments.
+These :class:`Proxy` objects will capture the operations that are performed
+on them and append them to the :class:`Graph`.
+
+::
+
+    import oneflow as flow
+    import oneflow.fx as fx
+    import oneflow.nn.functional as F
+
+    def relu_decomposition(x):
+        return (x > 0) * x
+
+    decomposition_rules = {}
+    decomposition_rules[F.relu] = relu_decomposition
+
+    def decompose(model: flow.nn.Module,
+                    tracer_class : type = fx.Tracer) -> flow.nn.Module:
+        """
+        Decompose `model` into smaller constituent operations.
+        Currently,this only supports decomposing ReLU into its
+        mathematical definition: (x > 0) * x
+        """
+        graph : fx.Graph = tracer_class().trace(model)
+        new_graph = fx.Graph()
+        env = {}
+        for node in graph.nodes:
+            if node.op == 'call_function' and node.target in decomposition_rules:
+                # By wrapping the arguments with proxies,
+                # we can dispatch to the appropriate
+                # decomposition rule and implicitly add it
+                # to the Graph by symbolically tracing it.
+                proxy_args = [
+                    fx.Proxy(env[x.name]) if isinstance(x, fx.Node) else x for x in node.args]
+                output_proxy = decomposition_rules[node.target](*proxy_args)
+
+                # Operations on `Proxy` always yield new `Proxy`s, and the
+                # return value of our decomposition rule is no exception.
+                # We need to extract the underlying `Node` from the `Proxy`
+                # to use it in subsequent iterations of this transform.
+                new_node = output_proxy.node
+                env[node.name] = new_node
+            else:
+                # Default case: we don't have a decomposition rule for this
+                # node, so just copy the node over into the new graph.
+                new_node = new_graph.node_copy(node, lambda x: env[x.name])
+                env[node.name] = new_node
+        return fx.GraphModule(model, new_graph)
+
+In addition to avoiding explicit graph manipulation, using :class:`Proxy`\s
+also allows you to specify your rewrite rules as native Python code.
+For transformations that require a large amount of rewrite rules
+(such as vmap or grad), this can often improve readability and
+maintainability of the rules.
 
 #TODO(BBuf) add examples
 
