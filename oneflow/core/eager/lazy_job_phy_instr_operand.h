@@ -69,16 +69,13 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
   }
 
   void ForEachConstMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
+      const std::function<void(vm::MirroredObject* compute)>&) const override;
 
   void ForEachMutMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
+      const std::function<void(vm::MirroredObject* compute)>&) const override;
 
   void ForEachMut2MirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
+      const std::function<void(vm::MirroredObject* compute)>&) const override;
 
  private:
   mutable intrusive::shared_ptr<LocalDepObject> inputs_local_dep_object_;

@@ -225,23 +225,11 @@ void VirtualMachine::ForEachConstMirroredObject(
 namespace {
 
 template<typename CallbackT>
-void ForEachConstMirroredObject4ConstPhyInstrOperand(InterpretType interpret_type,
-                                                     const PhyInstrOperand& phy_instr_operand,
+void ForEachConstMirroredObject4ConstPhyInstrOperand(const PhyInstrOperand& phy_instr_operand,
                                                      const CallbackT& Callback) {
-  if (interpret_type == InterpretType::kCompute) {
-    phy_instr_operand.ForEachConstMirroredObject(
-        [&](MirroredObject* infer, MirroredObject* compute) {
-          if (infer != nullptr) { Callback(infer); }
-          if (compute != nullptr) { Callback(compute); }
-        });
-  } else if (interpret_type == InterpretType::kInfer) {
-    phy_instr_operand.ForEachConstMirroredObject(
-        [&](MirroredObject* infer, MirroredObject* compute) {
-          if (infer != nullptr) { Callback(infer); }
-        });
-  } else {
-    UNIMPLEMENTED();
-  }
+  phy_instr_operand.ForEachConstMirroredObject([&](MirroredObject* compute) {
+    if (compute != nullptr) { Callback(compute); }
+  });
 }
 
 }  // namespace
@@ -260,25 +248,6 @@ void VirtualMachine::ForEachConstMirroredObject(
     UNIMPLEMENTED();
   }
 }
-
-namespace {
-
-template<typename CallbackT>
-void ForEachConstMirroredObject4MutPhyInstrOperand(InterpretType interpret_type,
-                                                   const PhyInstrOperand& phy_instr_operand,
-                                                   const CallbackT& Callback) {
-  if (interpret_type == InterpretType::kCompute) {
-    phy_instr_operand.ForEachMutMirroredObject([&](MirroredObject* infer, MirroredObject* compute) {
-      if (infer != nullptr) { Callback(infer); }
-    });
-  } else if (interpret_type == InterpretType::kInfer) {
-    // Do nothing
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-}  // namespace
 
 template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
 void VirtualMachine::ForEachMutMirroredObject(
@@ -299,19 +268,9 @@ void VirtualMachine::ForEachMutMirroredObject(
 namespace {
 
 template<typename CallbackT>
-void ForEachMutMirroredObject4MutPhyInstrOperand(InterpretType interpret_type,
-                                                 const PhyInstrOperand& phy_instr_operand,
+void ForEachMutMirroredObject4MutPhyInstrOperand(const PhyInstrOperand& phy_instr_operand,
                                                  const CallbackT& Callback) {
-  if (interpret_type == InterpretType::kCompute) {
-    phy_instr_operand.ForEachMutMirroredObject(
-        [&](MirroredObject* infer, MirroredObject* compute) { Callback(compute); });
-  } else if (interpret_type == InterpretType::kInfer) {
-    phy_instr_operand.ForEachMutMirroredObject([&](MirroredObject* infer, MirroredObject* compute) {
-      if (infer != nullptr) { Callback(infer); }
-    });
-  } else {
-    UNIMPLEMENTED();
-  }
+  phy_instr_operand.ForEachMutMirroredObject([&](MirroredObject* compute) { Callback(compute); });
 }
 
 }  // namespace
@@ -336,23 +295,9 @@ void VirtualMachine::ForEachMutMirroredObject(
 namespace {
 
 template<typename CallbackT>
-void ForEachMutMirroredObject4Mut2PhyInstrOperand(InterpretType interpret_type,
-                                                  const PhyInstrOperand& phy_instr_operand,
+void ForEachMutMirroredObject4Mut2PhyInstrOperand(const PhyInstrOperand& phy_instr_operand,
                                                   const CallbackT& Callback) {
-  if (interpret_type == InterpretType::kCompute) {
-    phy_instr_operand.ForEachMut2MirroredObject(
-        [&](MirroredObject* infer, MirroredObject* compute) {
-          if (infer != nullptr) { Callback(infer); }
-          Callback(compute);
-        });
-  } else if (interpret_type == InterpretType::kInfer) {
-    phy_instr_operand.ForEachMut2MirroredObject(
-        [&](MirroredObject* infer, MirroredObject* compute) {
-          if (infer != nullptr) { Callback(infer); }
-        });
-  } else {
-    UNIMPLEMENTED();
-  }
+  phy_instr_operand.ForEachMut2MirroredObject([&](MirroredObject* compute) { Callback(compute); });
 }
 
 }  // namespace
@@ -396,79 +341,74 @@ void VirtualMachine::ConnectInstruction(Instruction* src_instruction,
 void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                                             NewInstructionList* new_instruction_list) {
   INTRUSIVE_FOR_EACH_PTR(instruction, new_instruction_list) {
-    int64_t global_device_id = instruction->stream().global_device_id();
-    const InterpretType interpret_type = instruction->stream().stream_type_id().interpret_type();
+    const auto& phy_instr_operand = instruction->instr_msg().phy_instr_operand();
     auto ConsumeConstMirroredObject = [&](MirroredObject* mirrored_object) {
       ConsumeMirroredObject(kConstOperandAccess, mirrored_object, instruction);
     };
     auto ConsumeMutMirroredObject = [&](MirroredObject* mirrored_object) {
       ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instruction);
     };
-    auto ConsumeDelMirroredObject = [&](MirroredObject* mirrored_object) {
-      auto* access = ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instruction);
-      CHECK(!mirrored_object->has_deleting_access());
-      mirrored_object->set_deleting_access(access);
-    };
-    const auto& phy_instr_operand = instruction->instr_msg().phy_instr_operand();
     if (phy_instr_operand) {
-      ForEachMutMirroredObject4Mut2PhyInstrOperand(interpret_type, *phy_instr_operand,
-                                                   ConsumeMutMirroredObject);
-      ForEachMutMirroredObject4MutPhyInstrOperand(interpret_type, *phy_instr_operand,
-                                                  ConsumeMutMirroredObject);
-    }
-    const auto& operands = instruction->instr_msg().operand();
-    for (const auto& operand : operands) {
-      if (operand->has_mut_operand()) {
-        ForEachMutMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
-                                                         operand->mut_operand(), global_device_id,
-                                                         ConsumeMutMirroredObject);
-      } else if (operand->has_mut2_operand()) {
-        ForEachMutMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
-                                                         operand->mut2_operand(), global_device_id,
-                                                         ConsumeMutMirroredObject);
-      } else if (operand->has_del_operand()) {
-        ForEachMutMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
-                                                         operand->del_operand(), global_device_id,
-                                                         ConsumeDelMirroredObject);
-      } else if (operand->has_init_symbol_operand()) {
-        const auto& symbol_operand = operand->init_symbol_operand().operand();
-        CHECK(symbol_operand.has_sole_mirrored_object());
-        ForEachMutMirroredObject<kHostConstMemZoneModifier>(interpret_type, id2logical_object,
-                                                            operand->init_symbol_operand(), 0,
-                                                            ConsumeMutMirroredObject);
-      } else {
-        // do nothing
-      }
-    }
-    if (phy_instr_operand) {
-      ForEachConstMirroredObject4MutPhyInstrOperand(interpret_type, *phy_instr_operand,
-                                                    ConsumeConstMirroredObject);
-      ForEachConstMirroredObject4ConstPhyInstrOperand(interpret_type, *phy_instr_operand,
+      ForEachMutMirroredObject4Mut2PhyInstrOperand(*phy_instr_operand, ConsumeMutMirroredObject);
+      ForEachMutMirroredObject4MutPhyInstrOperand(*phy_instr_operand, ConsumeMutMirroredObject);
+      ForEachConstMirroredObject4ConstPhyInstrOperand(*phy_instr_operand,
                                                       ConsumeConstMirroredObject);
-    }
-    for (const auto& operand : operands) {
-      if (operand->has_const_operand()) {
-        ForEachConstMirroredObject<kDeviceMemZoneModifier>(
-            interpret_type, id2logical_object, operand->const_operand(), global_device_id,
-            ConsumeConstMirroredObject);
-      } else if (operand->has_mut_operand()) {
-        ForEachConstMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
+    } else {
+      auto ConsumeDelMirroredObject = [&](MirroredObject* mirrored_object) {
+        auto* access = ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instruction);
+        CHECK(!mirrored_object->has_deleting_access());
+        mirrored_object->set_deleting_access(access);
+      };
+      const InterpretType interpret_type = instruction->stream().stream_type_id().interpret_type();
+      int64_t global_device_id = instruction->stream().global_device_id();
+      const auto& operands = instruction->instr_msg().operand();
+      for (const auto& operand : operands) {
+        if (operand->has_mut_operand()) {
+          ForEachMutMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
                                                            operand->mut_operand(), global_device_id,
-                                                           ConsumeConstMirroredObject);
-      } else if (operand->has_symbol_operand()) {
-        const auto& symbol_operand = operand->symbol_operand().operand();
-        CHECK(symbol_operand.has_sole_mirrored_object());
-        ForEachConstMirroredObject<kHostConstMemZoneModifier>(interpret_type, id2logical_object,
-                                                              operand->symbol_operand(), 0,
-                                                              ConsumeConstMirroredObject);
-      } else if (operand->has_init_symbol_operand()) {
-        const auto& symbol_operand = operand->init_symbol_operand().operand();
-        CHECK(symbol_operand.has_sole_mirrored_object());
-        ForEachConstMirroredObject<kHostConstMemZoneModifier>(interpret_type, id2logical_object,
+                                                           ConsumeMutMirroredObject);
+        } else if (operand->has_mut2_operand()) {
+          ForEachMutMirroredObject<kDeviceMemZoneModifier>(
+              interpret_type, id2logical_object, operand->mut2_operand(), global_device_id,
+              ConsumeMutMirroredObject);
+        } else if (operand->has_del_operand()) {
+          ForEachMutMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
+                                                           operand->del_operand(), global_device_id,
+                                                           ConsumeDelMirroredObject);
+        } else if (operand->has_init_symbol_operand()) {
+          const auto& symbol_operand = operand->init_symbol_operand().operand();
+          CHECK(symbol_operand.has_sole_mirrored_object());
+          ForEachMutMirroredObject<kHostConstMemZoneModifier>(interpret_type, id2logical_object,
                                                               operand->init_symbol_operand(), 0,
-                                                              ConsumeConstMirroredObject);
-      } else {
-        // do nothing
+                                                              ConsumeMutMirroredObject);
+        } else {
+          // do nothing
+        }
+      }
+      for (const auto& operand : operands) {
+        if (operand->has_const_operand()) {
+          ForEachConstMirroredObject<kDeviceMemZoneModifier>(
+              interpret_type, id2logical_object, operand->const_operand(), global_device_id,
+              ConsumeConstMirroredObject);
+        } else if (operand->has_mut_operand()) {
+          ForEachConstMirroredObject<kDeviceMemZoneModifier>(
+              interpret_type, id2logical_object, operand->mut_operand(), global_device_id,
+              ConsumeConstMirroredObject);
+        } else if (operand->has_symbol_operand()) {
+          const auto& symbol_operand = operand->symbol_operand().operand();
+          CHECK(symbol_operand.has_sole_mirrored_object());
+          ForEachConstMirroredObject<kHostConstMemZoneModifier>(interpret_type, id2logical_object,
+                                                                operand->symbol_operand(), 0,
+                                                                ConsumeConstMirroredObject);
+        } else if (operand->has_init_symbol_operand()) {
+          const auto& symbol_operand = operand->init_symbol_operand().operand();
+          CHECK(symbol_operand.has_sole_mirrored_object());
+          ForEachConstMirroredObject<kHostConstMemZoneModifier>(interpret_type, id2logical_object,
+                                                                operand->init_symbol_operand(), 0,
+                                                                ConsumeConstMirroredObject);
+        } else {
+          // do nothing
+        }
       }
     }
     auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
