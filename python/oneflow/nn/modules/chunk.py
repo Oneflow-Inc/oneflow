@@ -61,6 +61,10 @@ def chunk_op(input, chunks, dim: int = 0):
 
     """
     split_size = input.shape[dim] // chunks
+    if split_size * chunks != input.shape[dim]:
+        split_size = [split_size] * (chunks - 1) + [
+            input.shape[dim] - split_size * (chunks - 1)
+        ]
     return flow._C.split(input, split_size=split_size, dim=dim)
 
 
