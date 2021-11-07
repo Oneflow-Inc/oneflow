@@ -222,18 +222,6 @@ void VirtualMachine::ForEachConstMirroredObject(
   }
 }
 
-namespace {
-
-template<typename CallbackT>
-void ForEachConstMirroredObject4ConstPhyInstrOperand(const PhyInstrOperand& phy_instr_operand,
-                                                     const CallbackT& Callback) {
-  phy_instr_operand.ForEachConstMirroredObject([&](MirroredObject* compute) {
-    if (compute != nullptr) { Callback(compute); }
-  });
-}
-
-}  // namespace
-
 template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
 void VirtualMachine::ForEachConstMirroredObject(
     const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
@@ -265,16 +253,6 @@ void VirtualMachine::ForEachMutMirroredObject(
   }
 }
 
-namespace {
-
-template<typename CallbackT>
-void ForEachMutMirroredObject4MutPhyInstrOperand(const PhyInstrOperand& phy_instr_operand,
-                                                 const CallbackT& Callback) {
-  phy_instr_operand.ForEachMutMirroredObject([&](MirroredObject* compute) { Callback(compute); });
-}
-
-}  // namespace
-
 template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
 void VirtualMachine::ForEachMutMirroredObject(
     const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
@@ -291,16 +269,6 @@ void VirtualMachine::ForEachMutMirroredObject(
     UNIMPLEMENTED();
   }
 }
-
-namespace {
-
-template<typename CallbackT>
-void ForEachMutMirroredObject4Mut2PhyInstrOperand(const PhyInstrOperand& phy_instr_operand,
-                                                  const CallbackT& Callback) {
-  phy_instr_operand.ForEachMut2MirroredObject([&](MirroredObject* compute) { Callback(compute); });
-}
-
-}  // namespace
 
 template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
 void VirtualMachine::ForEachMutMirroredObject(
@@ -349,10 +317,9 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
       ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instruction);
     };
     if (phy_instr_operand) {
-      ForEachMutMirroredObject4Mut2PhyInstrOperand(*phy_instr_operand, ConsumeMutMirroredObject);
-      ForEachMutMirroredObject4MutPhyInstrOperand(*phy_instr_operand, ConsumeMutMirroredObject);
-      ForEachConstMirroredObject4ConstPhyInstrOperand(*phy_instr_operand,
-                                                      ConsumeConstMirroredObject);
+      phy_instr_operand->ForEachMut2MirroredObject(ConsumeMutMirroredObject);
+      phy_instr_operand->ForEachMutMirroredObject(ConsumeMutMirroredObject);
+      phy_instr_operand->ForEachConstMirroredObject(ConsumeConstMirroredObject);
     } else {
       auto ConsumeDelMirroredObject = [&](MirroredObject* mirrored_object) {
         auto* access = ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instruction);
