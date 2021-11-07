@@ -238,8 +238,7 @@ Direct Graph Manipulation
 
 One approach to building this new :class:`Graph` is to directly manipulate your old
 one. To aid in this, we can simply take the :class:`Graph` we obtain from symbolic
-tracing and modify it. For example, let’s say we desire to replace
-:method:`Tensor.add` calls with :method:`Tensor.mul` calls.
+tracing and modify it. For example, let’s say we desire to replace `Tensor.add` calls with `Tensor.mul` calls.
 
 
 ::
