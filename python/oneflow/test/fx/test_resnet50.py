@@ -21,6 +21,7 @@ from oneflow.fx import symbolic_trace
 
 from oneflow import Tensor
 from typing import Type, Any, Callable, Union, List, Optional
+import oneflow.unittest
 
 
 def conv3x3(

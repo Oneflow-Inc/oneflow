@@ -20,7 +20,7 @@ import numpy as np
 from oneflow.fx import symbolic_trace
 from oneflow import Tensor
 from typing import Callable, Any, Optional, List
-
+import oneflow.unittest
 
 def _make_divisible(v: float, divisor: int, min_value: Optional[int] = None) -> int:
     """

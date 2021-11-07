@@ -165,6 +165,7 @@ class Node:
             isinstance(target, str)
             and not hasattr(oneflow, target)
             and hasattr(oneflow.nn.functional, target)
+            and op != "call_module"
         ):
             target = "nn.functional." + target
 

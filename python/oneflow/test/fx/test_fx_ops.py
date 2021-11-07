@@ -17,7 +17,7 @@ import oneflow as flow
 import unittest
 import numpy as np
 from oneflow.fx import symbolic_trace
-
+import oneflow.unittest
 
 def sort_op(x):
     return flow.sort(x)
