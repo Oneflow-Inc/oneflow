@@ -31,19 +31,16 @@ EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
       is_shape_synced_(true),
       storage_offset_(0),
       compute_local_dep_object_(dep_object) {
-  printf("\n >>>>>> EagerBlobObject construct");
   CHECK(static_cast<bool>(shape));
   CHECK(static_cast<bool>(tensor_buffer));
 }
 
 Maybe<void> EagerBlobObject::TryInitBlob() {
-  printf("\n >>>>>> EagerBlobObject::TryInitBlob()");
   if (!blob_) { JUST(InitBlob()); }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> EagerBlobObject::InitBlob() {
-  printf("\n >>>>>> EagerBlobObject::InitBlob()");
   CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
   if (!blob_desc_.shape().is_initialized()) { blob_desc_.set_shape(Shape(DimVector{})); }
   {
@@ -56,7 +53,6 @@ Maybe<void> EagerBlobObject::InitBlob() {
 }
 
 Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
-  printf("\n >>>>>> EagerBlobObject::TryAllocateBlobBodyMemory()");
   vm::Allocator* allocator = device_ctx->mut_allocator();
   CHECK_NOTNULL_OR_RETURN(allocator);
   Blob* blob = mut_blob();
