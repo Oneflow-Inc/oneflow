@@ -89,26 +89,26 @@ int32_t findFreePort(const std::string& addr) {
   return -1;
 }
 
+void completeEnvProto(of::EnvProto& env_proto) {
+  auto bootstrap_conf = env_proto.mutable_ctrl_bootstrap_conf();
+  auto master_addr = bootstrap_conf->mutable_master_addr();
+  const std::string addr = getEnvVar("MASTER_ADDR", "127.0.0.1");
+  master_addr->set_host(addr);
+  master_addr->set_port(getEnvVar("MASTER_PORT", findFreePort(addr)));
+  bootstrap_conf->set_world_size(getEnvVar("WORLD_SIZE", 1));
+  bootstrap_conf->set_rank(getEnvVar("RANK", 0));
+
+  auto cpp_logging_conf = env_proto.mutable_cpp_logging_conf();
+  if (hasEnvVar("GLOG_log_dir")) { cpp_logging_conf->set_log_dir(getEnvVar("GLOG_log_dir", "")); }
+  if (hasEnvVar("GLOG_logtostderr")) {
+    cpp_logging_conf->set_logtostderr(getEnvVar("GLOG_logtostderr", -1));
+  }
+  if (hasEnvVar("GLOG_logbuflevel")) {
+    cpp_logging_conf->set_logbuflevel(getEnvVar("GLOG_logbuflevel", -1));
+  }
+}
+
 of::Maybe<void> initEnv() {
-  const auto completeEnvProto = [&](of::EnvProto& env_proto) {
-    auto bootstrap_conf = env_proto.mutable_ctrl_bootstrap_conf();
-    auto master_addr = bootstrap_conf->mutable_master_addr();
-    const std::string addr = getEnvVar("MASTER_ADDR", "127.0.0.1");
-    master_addr->set_host(addr);
-    master_addr->set_port(getEnvVar("MASTER_PORT", findFreePort(addr)));
-    bootstrap_conf->set_world_size(getEnvVar("WORLD_SIZE", 1));
-    bootstrap_conf->set_rank(getEnvVar("RANK", 0));
-
-    auto cpp_logging_conf = env_proto.mutable_cpp_logging_conf();
-    if (hasEnvVar("GLOG_log_dir")) { cpp_logging_conf->set_log_dir(getEnvVar("GLOG_log_dir", "")); }
-    if (hasEnvVar("GLOG_logtostderr")) {
-      cpp_logging_conf->set_logtostderr(getEnvVar("GLOG_logtostderr", -1));
-    }
-    if (hasEnvVar("GLOG_logbuflevel")) {
-      cpp_logging_conf->set_logbuflevel(getEnvVar("GLOG_logbuflevel", -1));
-    }
-  };
-
   of::EnvProto env_proto;
   completeEnvProto(env_proto);
   of::Global<of::EnvGlobalObjectsScope>::SetAllocated(new of::EnvGlobalObjectsScope());
