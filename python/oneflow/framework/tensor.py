@@ -486,6 +486,10 @@ def _squeeze(self, dim=None):
     return flow._C.squeeze(self, dim=dim)
 
 
+def _unfold(self, dimension, size, step):
+    return flow._C.unfold_tensor(self, dimension=dimension, size=size, step=step)
+
+
 def _matmul(self, other):
     return flow.matmul(self, other)
 
@@ -782,6 +786,7 @@ def RegisterMethods():
     Tensor.softmax = _softmax
     Tensor.log_softmax = _log_softmax
     Tensor.squeeze = _squeeze
+    Tensor.unfold = _unfold
 
 
 def register_tensor_op(op_name):
