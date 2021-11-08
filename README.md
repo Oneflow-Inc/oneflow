@@ -224,33 +224,8 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 
 ## Getting Started
 
-<details>
-<summary>3 minutes to run MNIST.</summary>
-
-- Clone the demo code from OneFlow documentation
-
-  ```
-  git clone https://github.com/Oneflow-Inc/oneflow-documentation.git
-  cd oneflow-documentation/cn/docs/single_client/code/quick_start/
-  ```
-
-- Run it in Python
-
-  ```
-  python mlp_mnist.py
-  ```
-
-- Oneflow is running and you got the training loss
-  ```
-  2.7290366
-  0.81281316
-  0.50629824
-  0.35949975
-  0.35245502
-  ...
-  ```
-- More info on this demo, please refer to [doc on quick start](https://docs.oneflow.org/master/single_client/quick_start/quickstart_in_3_min.html).
-</details>
+- Please refer to [QUICKSTART](https://docs.oneflow.org/en/master/basics/01_quickstart.html) 
+- 中文版请参见 [快速上手](https://docs.oneflow.org/master/basics/01_quickstart.html)
 
 ## Documentation
 

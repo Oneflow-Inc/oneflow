@@ -123,6 +123,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   void MovePendingToReadyOrWaiting();
   void TryRunBarrierInstruction();
   void DispatchAndPrescheduleInstructions();
+  bool OnSchedulerThread(const StreamType& stream_type);
 
   void ReleaseInstruction(Instruction* instruction);
   void FilterAndRunInstructionsInAdvance(InstructionMsgList* instr_msg_list);

@@ -20,10 +20,18 @@ limitations under the License.
 #include "oneflow/core/cuda/atomic.cuh"
 #include <cub/cub.cuh>
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/primitive/include/fill.h"
 
 namespace oneflow {
 
 namespace {
+
+std::unique_ptr<primitive::Fill> NewFillPrimitive(StreamContext* stream_ctx, DataType data_type) {
+  std::unique_ptr<primitive::Fill> fill =
+      primitive::NewPrimitive<primitive::FillFactory>(stream_ctx->device_type(), data_type);
+  CHECK(fill);
+  return fill;
+}
 
 class LayerNormCudnnBnCtx final {
  public:
@@ -265,7 +273,7 @@ int GetForwardFusedKernelMinNormSize() { return 64; }
 
 template<typename T>
 int GetForwardFusedKernelMaxActiveBlocks(const int32_t norm_size) {
-  int max_active_blocks;
+  int max_active_blocks = 0;
   OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
       &max_active_blocks, LayerNormForwardImpl<T, typename LayerNormUtil<T>::ComputeType>,
       GetLayerNormForwardBlockSize(), GetForwardDynamicSharedMemorySize<T>(norm_size)));
@@ -274,7 +282,7 @@ int GetForwardFusedKernelMaxActiveBlocks(const int32_t norm_size) {
 
 template<>
 int GetForwardFusedKernelMaxActiveBlocks<float16>(const int32_t norm_size) {
-  int max_active_blocks;
+  int max_active_blocks = 0;
   OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
       &max_active_blocks, LayerNormForwardImpl<half, typename LayerNormUtil<half>::ComputeType>,
       GetLayerNormForwardBlockSize(), GetForwardDynamicSharedMemorySize<half>(norm_size)));
@@ -427,12 +435,9 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
           GetCudaAlignedSize(mean->shape().elem_cnt() * GetSizeOfDataType(mean->data_type()));
       char* cudnn_bn_scale_ones_dptr = tmp_buffer->mut_dptr<char>();
       char* cudnn_bn_bias_zeros_dptr = cudnn_bn_scale_ones_dptr + aligned_buffer_size;
-      NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), mean->shape().elem_cnt(),
-                                            static_cast<BNParamT>(1),
-                                            reinterpret_cast<BNParamT*>(cudnn_bn_scale_ones_dptr));
-      NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), mean->shape().elem_cnt(),
-                                            static_cast<BNParamT>(0),
-                                            reinterpret_cast<BNParamT*>(cudnn_bn_bias_zeros_dptr));
+      auto fill = NewFillPrimitive(ctx->stream_ctx(), mean->data_type());
+      fill->Launch(ctx->stream_ctx(), cudnn_bn_scale_ones_dptr, 1, mean->shape().elem_cnt());
+      fill->Launch(ctx->stream_ctx(), cudnn_bn_bias_zeros_dptr, 0, mean->shape().elem_cnt());
       OF_CUDNN_CHECK(cudnnBatchNormalizationForwardTraining(
           ctx->device_ctx()->cudnn_handle(), bn_ctx.mode(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(),
           bn_ctx.data_tensor_desc(), x->dptr<T>(), bn_ctx.data_tensor_desc(),
@@ -486,11 +491,10 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
     char* cudnn_bn_scale_ones_dptr = tmp_buffer->mut_dptr<char>();
     char* cudnn_bn_scale_diff_buf_dptr = cudnn_bn_scale_ones_dptr + aligned_buffer_size;
     char* cudnn_bn_bias_diff_buf_dptr = cudnn_bn_scale_ones_dptr + aligned_buffer_size;
-    NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), mean->shape().elem_cnt(),
-                                          static_cast<BNParamT>(1),
-                                          reinterpret_cast<BNParamT*>(cudnn_bn_scale_ones_dptr));
+    auto fill = NewFillPrimitive(ctx->stream_ctx(), mean->data_type());
+    fill->Launch(ctx->stream_ctx(), cudnn_bn_scale_ones_dptr, 1, mean->shape().elem_cnt());
     const void* sp_alpha = CudnnSPOnePtr<T>();
-    const void* sp_beta;
+    const void* sp_beta = nullptr;
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), dx->data_type());
@@ -516,24 +520,25 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
   };
 };
 
-#define REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(dtype, bn_param_dtype)                              \
-  REGISTER_USER_KERNEL("layer_norm_grad")                                                       \
-      .SetCreateFn<LayerNormGradGpuKernel<dtype, bn_param_dtype>>()                             \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                       \
-                       & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))          \
-      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                              \
-        const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);                      \
-        const DataType& data_type = mean.data_type();                                           \
-        const int64_t elem_cnt = mean.shape().elem_cnt();                                       \
-        return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type)) * 3;                 \
-      })                                                                                        \
-      .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        if (ctx.has_input("_add_to_output", 0)) {                                               \
-          OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "_add_to_output", 0, true));          \
-        }                                                                                       \
-        return Maybe<void>::Ok();                                                               \
-      });
+#define REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(dtype, bn_param_dtype)                         \
+  REGISTER_USER_KERNEL("layer_norm_grad")                                                  \
+      .SetCreateFn<LayerNormGradGpuKernel<dtype, bn_param_dtype>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                  \
+                       & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))     \
+      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                         \
+        const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);                 \
+        const DataType& data_type = mean.data_type();                                      \
+        const int64_t elem_cnt = mean.shape().elem_cnt();                                  \
+        return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type)) * 3;            \
+      })                                                                                   \
+      .SetInplaceProposalFn(                                                               \
+          [](const user_op::InferContext& ctx,                                             \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {       \
+            if (ctx.has_input("_add_to_output", 0)) {                                      \
+              OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "_add_to_output", 0, true)); \
+            }                                                                              \
+            return Maybe<void>::Ok();                                                      \
+          });
 
 REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(float, float)
 REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(double, double)
@@ -565,7 +570,7 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
     const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
     const int64_t elem_cnt = dy->shape().elem_cnt();
     const int64_t m = dy->shape().Count(begin_params_axis);
-    int max_active_blocks;
+    int max_active_blocks = 0;
     OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
         &max_active_blocks, LayerNormParamGradImpl<T, int64_t>, GetLayerNormParamGradBlockSize(),
         GetParamGradDynamicSharedMemorySize<T>(m)));
@@ -662,7 +667,7 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
     const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
     const int64_t elem_cnt = dy->shape().elem_cnt();
     const int64_t m = dy->shape().Count(begin_params_axis);
-    int max_active_blocks;
+    int max_active_blocks = 0;
     OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
         &max_active_blocks, LayerNormParamGradHalfImpl<int64_t>, GetLayerNormParamGradBlockSize(),
         GetParamGradDynamicSharedMemorySize<float16>(m)));

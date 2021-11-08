@@ -531,18 +531,16 @@ bool VirtualMachineEngine::Dispatchable(Instruction* instruction) const {
 // Dispatch ready instructions and put prescheduled instructions onto ready_instruction_list_.
 void VirtualMachineEngine::DispatchAndPrescheduleInstructions() {
   OF_PROFILER_RANGE_PUSH("DispatchAndPrescheduleInstructions");
-  do {
-    ReadyInstructionList tmp_ready_instruction_list;
-    mut_ready_instruction_list()->MoveTo(&tmp_ready_instruction_list);
-    INTRUSIVE_FOR_EACH(instruction, &tmp_ready_instruction_list) {
-      tmp_ready_instruction_list.Erase(instruction.Mutable());
-      DispatchInstruction(instruction.Mutable());
-      // preschedule instructions
-      INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_out_edges()) {
-        TryMoveFromWaitingToReady(edge->mut_dst_instruction());
-      }
+  ReadyInstructionList tmp_ready_instruction_list;
+  mut_ready_instruction_list()->MoveTo(&tmp_ready_instruction_list);
+  INTRUSIVE_FOR_EACH_PTR(instruction, &tmp_ready_instruction_list) {
+    DispatchInstruction(instruction);
+    // preschedule instructions
+    INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_out_edges()) {
+      TryMoveFromWaitingToReady(edge->mut_dst_instruction());
     }
-  } while (unlikely(mut_ready_instruction_list()->size()));
+    tmp_ready_instruction_list.Erase(instruction);
+  }
   OF_PROFILER_RANGE_POP();
 }
 
@@ -564,7 +562,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction) {
   stream->mut_running_instruction_list()->PushBack(instruction);
   if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
   const auto& stream_type = stream->stream_type();
-  if (stream_type.OnSchedulerThread()) {
+  if (OnSchedulerThread(stream_type)) {
     stream_type.Run(this, instruction);
   } else {
     stream->mut_thread_ctx()->mut_pending_instruction_list()->PushBack(instruction);
@@ -602,10 +600,6 @@ int64_t InstructionMaxRunningSeconds() { return 60 * 5; }
 // Returns true if old pending_instruction_list is empty
 Maybe<bool> VirtualMachineEngine::Receive(InstructionMsgList* compute_instr_msg_list) {
   OF_PROFILER_RANGE_PUSH("vm:Receive");
-  CHECK_OR_RETURN(!pthread_fork::IsForkedSubProcess())
-      << "Cannot run OneFlow in forked subprocess. Please add "
-         "'multiprocessing.set_start_method(\"spawn\")' in '__main__' if you are using Python's "
-         "multiprocessing";
   InstructionMsgList new_instr_msg_list;
   INTRUSIVE_FOR_EACH_PTR(compute_instr_msg, compute_instr_msg_list) {
     if (!compute_instr_msg->phy_instr_operand()) {
@@ -639,6 +633,10 @@ Maybe<bool> VirtualMachineEngine::Receive(
   InstructionMsgList instr_msg_list;
   instr_msg_list.EmplaceBack(std::move(compute_instr_msg));
   return Receive(&instr_msg_list);
+}
+
+bool VirtualMachineEngine::OnSchedulerThread(const StreamType& stream_type) {
+  return stream_type.OnSchedulerThread() || pthread_fork::IsForkedSubProcess();
 }
 
 // Barrier instructions wait all non-barrier instructions to be done.
@@ -698,12 +696,12 @@ Maybe<bool> VirtualMachineEngine::Receive(
 // VirtualMachineEngine::Schedule can achive higher performance. For the most cases, barrier
 // instructions are scarcely received by vm, there is no need for vm to run
 // VirtualMachineEngine::TryRunBarrierInstruction every time VirtualMachineEngine::Schedule run. On
-// the other hand, `barrier_instruction_hook_.size() == 0` is more lighware than
+// the other hand, `barrier_instruction_hook_.size() == 0` is more lightweight than
 // `lively_instruction_hook_.Begin()?->instr_msg().instr_type_id().instruction_type().IsFrontSequential()`
 //
 void VirtualMachineEngine::TryRunBarrierInstruction() {
   auto* sequnential_instruction = mut_barrier_instruction_list()->Begin();
-  CHECK(sequnential_instruction != nullptr);
+  CHECK_NOTNULL(sequnential_instruction);
   if (likely(sequnential_instruction != mut_lively_instruction_list()->Begin())) { return; }
   // All instructions before `sequnential_instruction` are handled now, it's time to handle
   // `sequnential_instruction`.
@@ -712,7 +710,7 @@ void VirtualMachineEngine::TryRunBarrierInstruction() {
   const auto& instruction_type = instr_type_id.instruction_type();
   CHECK(instruction_type.IsFrontSequential());
   const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
-  CHECK(stream_type.OnSchedulerThread());
+  CHECK(OnSchedulerThread(stream_type));
   stream_type.Run(this, sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
   mut_lively_instruction_list()->Erase(sequnential_instruction);
@@ -751,7 +749,7 @@ void VirtualMachineEngine::TryMoveFromWaitingToReady(Instruction* instruction) {
 
 void VirtualMachineEngine::Schedule() {
   // dispatch ready instructions and try to schedule out instructions in DAG onto ready list.
-  if (unlikely(mut_ready_instruction_list()->size())) { DispatchAndPrescheduleInstructions(); }
+  while (unlikely(mut_ready_instruction_list()->size())) { DispatchAndPrescheduleInstructions(); }
   // Handle pending instructions, schedule them to waiting list or ready list.
   if (unlikely(pending_msg_list().thread_unsafe_size())) { MovePendingToReadyOrWaiting(); }
   // Release finished instructions and try to schedule out instructions in DAG onto ready list.

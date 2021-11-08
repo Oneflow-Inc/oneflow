@@ -20,11 +20,13 @@ limitations under the License.
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/multi_client.h"
+#include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/thread/thread_consistent_id.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/platform/include/pthread_fork.h"
 
 namespace oneflow {
 
@@ -134,9 +136,20 @@ OneflowVM::~OneflowVM() {
 }
 
 Maybe<void> OneflowVM::Receive(vm::InstructionMsgList* instr_list) {
-  if (JUST(vm_->Receive(instr_list))) {
-    // old pending_instruction_list is empty.
-    notifier_.Notify();
+  if (unlikely(pthread_fork::IsForkedSubProcess())) {
+    CHECK_OR_RETURN(JUST(IsMultiClient()));
+    INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_list) {
+      const auto& parallel_desc = instr_msg->parallel_desc();
+      CHECK_OR_RETURN(!parallel_desc || parallel_desc->device_type() == DeviceType::kCPU)
+          << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
+    }
+    JUST(vm_->Receive(instr_list));
+    while (!vm_->Empty()) { vm_->Schedule(); }
+  } else {
+    if (JUST(vm_->Receive(instr_list))) {
+      // old pending_instruction_list is empty.
+      notifier_.Notify();
+    }
   }
   return Maybe<void>::Ok();
 }
