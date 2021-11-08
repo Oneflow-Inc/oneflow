@@ -22,7 +22,7 @@ limitations under the License.
 namespace oneflow {
 
 void ActorMsgBus::SendMsg(const ActorMsg& msg) {
-  int64_t dst_machine_id = Global<IDMgr>::Get()->MachineId4ActorId(msg.dst_actor_id());
+  int64_t dst_machine_id = MachineId4ActorId(msg.dst_actor_id());
   if (dst_machine_id == GlobalProcessCtx::Rank()) {
     SendMsgWithoutCommNet(msg);
   } else {
