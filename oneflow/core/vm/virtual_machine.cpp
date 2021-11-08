@@ -308,17 +308,20 @@ void VirtualMachine::ConnectInstruction(Instruction* src_instruction,
 void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                                             Instruction* instruction) {
   const auto& phy_instr_operand = instruction->instr_msg().phy_instr_operand();
-  auto ConsumeConstMirroredObject = [&](MirroredObject* mirrored_object) {
-    ConsumeMirroredObject(kConstOperandAccess, mirrored_object, instruction);
-  };
-  auto ConsumeMutMirroredObject = [&](MirroredObject* mirrored_object) {
-    ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instruction);
-  };
   if (likely(phy_instr_operand)) {
-    phy_instr_operand->ForEachMut2MirroredObject(ConsumeMutMirroredObject);
-    phy_instr_operand->ForEachMutMirroredObject(ConsumeMutMirroredObject);
-    phy_instr_operand->ForEachConstMirroredObject(ConsumeConstMirroredObject);
+    for (auto* mirrored_object : phy_instr_operand->output_dependences()) {
+      ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instruction);
+    }
+    for (auto* mirrored_object : phy_instr_operand->input_dependences()) {
+      ConsumeMirroredObject(kConstOperandAccess, mirrored_object, instruction);
+    }
   } else {
+    auto ConsumeConstMirroredObject = [&](MirroredObject* mirrored_object) {
+      ConsumeMirroredObject(kConstOperandAccess, mirrored_object, instruction);
+    };
+    auto ConsumeMutMirroredObject = [&](MirroredObject* mirrored_object) {
+      ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instruction);
+    };
     auto ConsumeDelMirroredObject = [&](MirroredObject* mirrored_object) {
       auto* access = ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instruction);
       CHECK(!mirrored_object->has_deleting_access());
@@ -444,8 +447,9 @@ void VirtualMachine::DispatchAndPrescheduleInstructions() {
 
 void VirtualMachine::DispatchInstruction(Instruction* instruction) {
   OF_PROFILER_RANGE_PUSH(
-      "D:" + instruction->instr_msg().instr_type_name() + ":"
-      + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction));
+      "D:"
+      + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction)
+      + ":" + instruction->instr_msg().instr_type_name());
   mut_vm_stat_running_instruction_list()->PushBack(instruction);
   auto* stream = instruction->mut_stream();
   stream->mut_running_instruction_list()->PushBack(instruction);
@@ -624,6 +628,7 @@ void VirtualMachine::Schedule() {
     // MoveTo is under a lock.
     mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
     NewInstructionList new_instruction_list;
+    OF_PROFILER_RANGE_PUSH("MakeInstructions:" + std::to_string(tmp_pending_msg_list.size()));
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(instr_msg, &tmp_pending_msg_list) {
       if (unlikely(instr_msg->instr_type_id().instruction_type().ResettingIdToObjectMap())) {
         RunInstructionsInAdvance(instr_msg);
@@ -631,6 +636,8 @@ void VirtualMachine::Schedule() {
         MakeInstructions(instr_msg, /*out*/ &new_instruction_list);
       }
     }
+    OF_PROFILER_RANGE_POP();
+    OF_PROFILER_RANGE_PUSH("ConsumeMirroredObjects:" + std::to_string(new_instruction_list.size()));
     INTRUSIVE_FOR_EACH_PTR(instruction, &new_instruction_list) {
       ConsumeMirroredObjects(mut_id2logical_object(), instruction);
       if (likely(Dispatchable(instruction))) {
@@ -639,6 +646,7 @@ void VirtualMachine::Schedule() {
       }
     }
     new_instruction_list.MoveTo(mut_waiting_instruction_list());
+    OF_PROFILER_RANGE_POP();
   }
   // Dispatch ready instructions and put prescheduled instructions onto ready_instruction_list_.
   DispatchAndPrescheduleInstructions();

@@ -18,25 +18,27 @@ limitations under the License.
 
 #include <functional>
 #include "oneflow/core/intrusive/intrusive.h"
+#include "absl/container/inlined_vector.h"
 
 namespace oneflow {
 namespace vm {
 
 struct MirroredObject;
 
+static constexpr int kDependenceVectorCap = 8;
+using DependenceVector = absl::InlinedVector<MirroredObject*, kDependenceVectorCap>;
+
 // physical instruction operand
 class PhyInstrOperand {
  public:
   virtual ~PhyInstrOperand() = default;
 
-  virtual void ForEachConstMirroredObject(
-      const std::function<void(MirroredObject* compute)>&) const = 0;
+  virtual const DependenceVector& input_dependences() const = 0;
+  virtual const DependenceVector& output_dependences() const = 0;
 
-  virtual void ForEachMutMirroredObject(
-      const std::function<void(MirroredObject* compute)>&) const = 0;
-
-  virtual void ForEachMut2MirroredObject(
-      const std::function<void(MirroredObject* compute)>&) const = 0;
+  static std::function<void(MirroredObject*)> BackInserter(DependenceVector* dependences) {
+    return [dependences](MirroredObject* object) { dependences->push_back(object); };
+  }
 
  protected:
   PhyInstrOperand() = default;
