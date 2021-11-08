@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/stream_runtime_desc.h"
+#include "oneflow/core/vm/runtime_instr_type_id.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/vm_object.h"
 #include "oneflow/core/vm/vm_resource_desc.h"
@@ -115,6 +116,12 @@ class VirtualMachine final : public intrusive::Base {
     return this_machine_id() * vm_resource_desc().max_device_num_per_machine();
   }
 
+  void GetCachedInstrTypeIdAndPhyInstrStream(const std::string& instr_type_name, int device_id,
+                                             InstrTypeId* instr_type_id, Stream** stream);
+
+  void GetInstrTypeIdAndSoleStream(const std::string& instr_type_name, InstrTypeId* instr_type_id,
+                                   Stream** stream);
+
  private:
   using TmpPendingInstrMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, instr_msg_hook_)>;
   using NewInstructionList = InstructionList;
@@ -207,6 +214,7 @@ class VirtualMachine final : public intrusive::Base {
   ReadyInstructionList ready_instruction_list_;
   VmStatRunningInstructionList vm_stat_running_instruction_list_;
   FrontSeqInstructionList front_seq_compute_instr_list_;
+  std::map<std::string, RtInstrTypeId> instr_type_name2rt_instr_type_id_;
 };
 
 }  // namespace vm

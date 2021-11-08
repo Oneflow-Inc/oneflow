@@ -129,35 +129,41 @@ bool IsStreamInParallelDesc(const ParallelDesc* parallel_desc, const Stream& str
 
 void VirtualMachine::MakeInstructions(InstructionMsg* instr_msg,
                                       /*out*/ NewInstructionList* new_instruction_list) {
-  auto* front_seq_compute_list = mut_front_seq_compute_instr_list();
-  const StreamTypeId& stream_type_id = instr_msg->instr_type_id().stream_type_id();
-  auto* stream_rt_desc = mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
   const auto& instruction_type = instr_msg->instr_type_id().instruction_type();
-  if (stream_rt_desc == nullptr) {
-    const auto& stream_type = stream_type_id.stream_type();
-    LOG(FATAL) << typeid(instruction_type).name() << " " << typeid(stream_type).name();
-  }
+  const StreamTypeId& stream_type_id = instr_msg->instr_type_id().stream_type_id();
   bool is_front_seq = instruction_type.IsFrontSequential();
-  if (is_front_seq) { CHECK_EQ(stream_rt_desc->stream_id2stream().size(), 1); }
-  const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
-  INTRUSIVE_UNSAFE_FOR_EACH_PTR(stream, stream_rt_desc->mut_stream_id2stream()) {
-    if (!IsStreamInParallelDesc(parallel_desc.get(), *stream)) { continue; }
-    intrusive::shared_ptr<Instruction> instr = stream->NewInstruction(instr_msg, parallel_desc);
-    if (stream_type_id.interpret_type() == kInfer) {
+  const auto& NewAndMove = [&](Stream* stream, const std::shared_ptr<const ParallelDesc>& pd) {
+    intrusive::shared_ptr<Instruction> instr = stream->NewInstruction(instr_msg, pd);
+    if (unlikely(stream_type_id.interpret_type() == kInfer)) {
       // do nothing
-    } else if (stream_type_id.interpret_type() == kCompute) {
-      front_seq_compute_list->PushBack(instr.Mutable());
+    } else if (likely(stream_type_id.interpret_type() == kCompute)) {
+      mut_front_seq_compute_instr_list()->PushBack(instr.Mutable());
     } else {
       UNIMPLEMENTED();
     }
-    if (!is_front_seq) { new_instruction_list->PushBack(instr.Mutable()); }
+    if (likely(!is_front_seq)) { new_instruction_list->PushBack(instr.Mutable()); }
+  };
+  if (likely(instr_msg->phy_instr_stream() != nullptr)) {
+    NewAndMove(instr_msg->phy_instr_stream(), instr_msg->phy_instr_parallel_desc());
+  } else {
+    auto* stream_rt_desc = mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
+    if (unlikely(stream_rt_desc == nullptr)) {
+      const auto& stream_type = stream_type_id.stream_type();
+      LOG(FATAL) << typeid(instruction_type).name() << " " << typeid(stream_type).name();
+    }
+    if (unlikely(is_front_seq)) { CHECK_EQ(stream_rt_desc->device_id2stream().size(), 1); }
+    const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
+    for (const auto& stream : stream_rt_desc->device_id2stream()) {
+      if (!IsStreamInParallelDesc(parallel_desc.get(), *stream)) { continue; }
+      NewAndMove(stream.get(), parallel_desc);
+    }
   }
 }
 
 Maybe<const ParallelDesc> VirtualMachine::GetInstructionParallelDesc(
     const InstructionMsg& instr_msg) {
+  if (instr_msg.phy_instr_parallel_desc()) { return instr_msg.phy_instr_parallel_desc(); }
   static const std::shared_ptr<const ParallelDesc> empty_ptr;
-  if (instr_msg.parallel_desc()) { return instr_msg.parallel_desc(); }
   if (!instr_msg.has_parallel_desc_symbol_id()) { return empty_ptr; }
   int64_t symbol_id = instr_msg.parallel_desc_symbol_id();
   auto* logical_object = mut_id2logical_object()->FindPtr(symbol_id);
@@ -471,11 +477,37 @@ void VirtualMachine::__Init__(const VmDesc& vm_desc) {
                            this_start_global_device_id() + rel_global_device_id);
         auto stream = intrusive::make_shared<Stream>(
             thread_ctx.Mutable(), stream_id, vm_resource_desc().max_device_num_per_machine());
-        CHECK(stream_rt_desc->mut_stream_id2stream()->Insert(stream.Mutable()).second);
+        stream_rt_desc->add_stream(stream);
         thread_ctx->mut_stream_list()->PushBack(stream.Mutable());
       }
     }
   }
+}
+
+void VirtualMachine::GetCachedInstrTypeIdAndPhyInstrStream(const std::string& instr_type_name,
+                                                           int device_id,
+                                                           InstrTypeId* instr_type_id,
+                                                           Stream** stream) {
+  auto* cache = &instr_type_name2rt_instr_type_id_;
+  auto iter = cache->find(instr_type_name);
+  if (unlikely(iter == cache->end())) {
+    const auto& instr_type_id_val = LookupInstrTypeId(instr_type_name);
+    const auto& stream_type_id = instr_type_id_val.stream_type_id();
+    auto* stream_rt_desc = this->mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
+    iter = cache->emplace(instr_type_name, RtInstrTypeId(instr_type_id_val, stream_rt_desc)).first;
+  }
+  instr_type_id->CopyFrom(iter->second.instr_type_id());
+  *stream = (iter->second.*iter->second.GetStream)(device_id);
+}
+
+void VirtualMachine::GetInstrTypeIdAndSoleStream(const std::string& instr_type_name,
+                                                 InstrTypeId* instr_type_id, Stream** stream) {
+  instr_type_id->CopyFrom(LookupInstrTypeId(instr_type_name));
+  const auto& stream_type_id = instr_type_id->stream_type_id();
+  auto* stream_rt_desc = this->mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
+  CHECK_NOTNULL(stream_rt_desc);
+  CHECK_EQ(stream_rt_desc->device_id2stream().size(), 1);
+  *stream = stream_rt_desc->device_id2stream().at(0).get();
 }
 
 int64_t InstructionMaxRunningSeconds() { return 60 * 5; }
