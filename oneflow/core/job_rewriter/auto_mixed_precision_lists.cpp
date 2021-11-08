@@ -55,6 +55,7 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "sparse_softmax_cross_entropy",
                               "fused_tril_scale_softmax_mask_scale",
                               "fused_scale_mask_softmax_dropout",
+                              "fused_scale_mask_softmax",
                               "fused_bias_add_gelu",
                               "fused_bias_add_mask_scale",
                               "acc"};

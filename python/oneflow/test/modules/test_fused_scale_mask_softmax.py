@@ -38,13 +38,10 @@ def _test_fused_scale_mask_softmax(
     )
 
     origin_x_tensor = flow.tensor(x).to("cuda")
-    origin_mask_tensor = flow.tensor(mask).to("cuda")
+    origin_mask_tensor = flow.tensor(mask, dtype=flow.float32).to("cuda")
     origin_x_tensor.requires_grad = True
-    origin_out = flow.mul(origin_x_tensor, origin_mask_tensor) * scale_value - fill_value * (1.0 - origin_mask_tensor)
+    origin_out = flow.mul(origin_x_tensor, origin_mask_tensor) * scale_value + fill_value * (1.0 - origin_mask_tensor)
     origin_out = flow.softmax(origin_out, dim=-1)
-
-    print(fused_out)
-    print(origin_out)
 
     total_out = fused_out.sum() + origin_out.sum()
     total_out.backward()

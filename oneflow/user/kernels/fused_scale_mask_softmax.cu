@@ -84,15 +84,14 @@ class FusedScaleMaskSoftmaxKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    user_op::Tensor* softmax_y = ctx->Tensor4ArgNameAndIndex("softmax_y", 0);
     const ShapeView& x_shape = x->shape();
     CHECK_GE(x_shape.NumAxes(), 2);
     const int64_t cols = x_shape.At(x_shape.NumAxes() - 1);
     const int64_t rows = x_shape.Count(0, x_shape.NumAxes() - 1);
     using ComputeType = typename cuda::softmax::DefaultComputeType<T>::type;
     ScaleMaskLoad<T, ComputeType> load(x->dptr<T>(), mask->dptr<int8_t>(), cols, 
-                                       ctx->Attr<float>("scale_value"),
-                                       ctx->Attr<float>("mask_fill_value"));
+                                       ctx->Attr<float>("mask_fill_value"),
+                                       ctx->Attr<float>("scale_value"));
     cuda::softmax::DirectStore<ComputeType, T> store(y->mut_dptr<T>(), cols);
     OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
         ctx->device_ctx()->cuda_stream(), load, store, rows, cols)));
@@ -133,7 +132,7 @@ class FusedScaleMaskSoftmaxGradKernel final : public user_op::OpKernel {
     cuda::softmax::DirectLoad<T, ComputeType> load_dy(dy->dptr<T>(), cols);
     ScaleMaskStore<ComputeType, T> store(dx->mut_dptr<T>(), mask->dptr<int8_t>(), cols, 
                                          static_cast<T>(0.0), ctx->Attr<float>("scale_value"));
-    OF_CUDA_CHECK((cuda::softmax::DispatchSoftmaxGrad<decltype(load_y), decltype(load_dy),  // this is an error
+    OF_CUDA_CHECK((cuda::softmax::DispatchSoftmaxGrad<decltype(load_y), decltype(load_dy),
                                                       decltype(store), ComputeType>(
         ctx->device_ctx()->cuda_stream(), load_y, load_dy, store, rows, cols)));
   }
