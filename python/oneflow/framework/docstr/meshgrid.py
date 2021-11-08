@@ -53,5 +53,5 @@ add_docstr(
         tensor([[4., 5., 6.],
                 [4., 5., 6.],
                 [4., 5., 6.]], dtype=oneflow.float32)
-    """
+    """,
 )
