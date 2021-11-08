@@ -722,7 +722,7 @@ class RNNTLoss(_Loss):
 
     .. code-block:: python
 
-        >>> import oneflow as flow
+        >>> import oneflow as flow 
         
         >>> acts = flow.tensor([[[[0.59957194, 0.99668492, 0.73181846, 0.40358398, 0.54999642],
          [0.57455618, 0.24744238, 0.55672277, 0.70749302, 0.08661287],
