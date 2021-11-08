@@ -117,8 +117,7 @@ class IRRoundTrip final : public JobPass {
   ~IRRoundTrip() override = default;
 
   bool IsEnabled(const JobPassCtx& ctx) const {
-    // TODO: add compiler definition for MLIR and job conf flags
-    return true;
+    return ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_ROUND_TRIP", false);
   }
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }

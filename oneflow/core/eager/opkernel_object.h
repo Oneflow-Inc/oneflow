@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/eager/blob_object.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
-#include "oneflow/core/stream/stream_context_adapter.h"
+#include "oneflow/core/stream/include/stream_context_adapter.h"
 
 namespace oneflow {
 

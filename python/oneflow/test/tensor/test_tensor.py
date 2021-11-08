@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import copy
 import os
 import unittest
 from collections import OrderedDict
@@ -35,6 +36,15 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(
             np.allclose(tensor.numpy(), np.ones(shape, dtype=np.float32))
         )
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_tensor_deepcopy(test_case):
+        shape = (2, 3)
+        tensor1 = flow.ones(*shape)
+        tensor2 = copy.deepcopy(tensor1)
+        tensor1[0, 0] = 0
+        test_case.assertEqual(tensor1[0, 0], 0)
+        test_case.assertEqual(tensor2[0, 0], 1)
 
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_property(test_case):
@@ -1498,6 +1508,11 @@ class TestTensor(flow.unittest.TestCase):
             np.allclose(y.to_local().numpy(), np.ones((1, 4), dtype=np.float32))
         )
         test_case.assertEqual(y.placement, placement)
+
+        y_default_dtype = flow.tensor(
+            x, placement=placement, sbp=[flow.sbp.split(0)], requires_grad=False,
+        )
+        test_case.assertTrue(y_default_dtype.dtype == flow.int32)
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
