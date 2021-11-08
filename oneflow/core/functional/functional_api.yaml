@@ -1508,7 +1508,7 @@
   bind_python: True
 
 - name: "fused_scale_tril_softmax_mask_scale_grad"
-  signature: "Tensor (Tensor y, Tensor dy, Tensor mask, Int64 diagonal, Float tril_scale_value, Float mask_scale_value) => FusedScaleTrilSoftmaxMaskScaleGrad"
+  signature: "Tensor (Tensor softmax_y, Tensor dy, Tensor mask, Int64 diagonal, Float tril_scale_value, Float mask_scale_value) => FusedScaleTrilSoftmaxMaskScaleGrad"
   bind_python: False
 
 - name: "send"
