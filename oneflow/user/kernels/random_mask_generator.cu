@@ -86,6 +86,7 @@ __global__ void GenerateGpu(one::PhiloxCUDAState philox_args, const int64_t n, c
     curand_init(0, index, 0, &state); 
     PackType* pack_mask = reinterpret_cast<PackType*>(mask);
     Pack pack;
+    // may wrong, it need use grid stride
     CUDA_1D_KERNEL_LOOP(i, n / sizeof(PackType)) {
         float4 rand = curand_uniform4(&state);
     // #pragma unroll

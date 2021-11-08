@@ -13,10 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <memory>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
-#include "oneflow/core/kernel/random_generator.h"
+// #include "oneflow/core/kernel/random_generator.h"
+#include "oneflow/user/kernels/random_mask_generator.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/device_type.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 
@@ -24,11 +27,51 @@ namespace oneflow {
 
 namespace {
 
+// template<typename T>
+// __global__ void MaskAndScaleGpu(const int64_t n, float scale, const T* x, const int8_t* mask,
+//                                 T* y) {
+//   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * static_cast<T>(mask[i]) * scale; }
+// }
+
+constexpr int32_t kMinPackPerThread = 2;
+using PackType = int32_t;
+
+union Pack {
+  PackType p_value;
+  int8_t b_value[sizeof(PackType)];
+};
+
 template<typename T>
-__global__ void MaskAndScaleGpu(const int64_t n, float scale, const T* x, const int8_t* mask,
+__global__ void MaskAndScaleGpu(const int64_t n, float scale, float rate, const T* x, int8_t* mask,
                                 T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * static_cast<T>(mask[i]) * scale; }
+  int index = blockIdx.x * blockDim.x + threadIdx.x; 
+    curandStatePhilox4_32_10_t state; 
+    // auto seeds = at::cuda::philox::unpack(philox_args);
+    curand_init(0, index, 0, &state); 
+
+    Pack pack;
+    int32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    const int64_t rounded_size = ((n - 1)/(blockDim.x * gridDim.x * 4)+1) * blockDim.x * gridDim.x * 4;
+    for(int64_t linear_idx=idx*4; linear_idx < n; linear_idx += gridDim.x * blockDim.x * 4) {
+        float4 rand = curand_uniform4(&state);
+
+        PackType* pack_mask = reinterpret_cast<PackType*>(&mask[linear_idx]);
+        const float4* x_vec4 = reinterpret_cast<const float4*>(&x[linear_idx]); 
+        float4* y_vec4 = reinterpret_cast<float4*>(&y[linear_idx]); 
+
+        pack.b_value[0] = rand.x > rate;
+        pack.b_value[1] = rand.y > rate; 
+        pack.b_value[2] = rand.z > rate; 
+        pack.b_value[3] = rand.w > rate; 
+        *pack_mask = pack.p_value;
+        y_vec4->x = pack.b_value[0] * scale * x_vec4->x; 
+        y_vec4->y = pack.b_value[1] * scale * x_vec4->y; 
+        y_vec4->z = pack.b_value[2] * scale * x_vec4->z; 
+        y_vec4->w = pack.b_value[3] * scale * x_vec4->w; 
+    }
 }
+
 
 template<typename T>
 __global__ void MaskAndScaleAddGpu(const int64_t n, float scale, const T* x, const int8_t* mask,
@@ -36,27 +79,27 @@ __global__ void MaskAndScaleAddGpu(const int64_t n, float scale, const T* x, con
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * static_cast<T>(mask[i]) * scale + addend[i]; }
 }
 
-template<>
-__global__ void MaskAndScaleGpu<half>(const int64_t n, float scale, const half* x,
-                                      const int8_t* mask, half* y) {
-  const int64_t h2_n = n / 2;
-  half2 h2_scale = __float2half2_rn(scale);
-  const auto* x_h2 = reinterpret_cast<const half2*>(x);
-  const auto* mask_c2 = reinterpret_cast<const char2*>(mask);
-  auto* y_h2 = reinterpret_cast<half2*>(y);
-  CUDA_1D_KERNEL_LOOP(i, h2_n) {
-    char2 mask_val = mask_c2[i];
-    half2 one_or_zero_h2;
-    one_or_zero_h2.x = mask_val.x;
-    one_or_zero_h2.y = mask_val.y;
-    y_h2[i] = __hmul2(__hmul2(x_h2[i], one_or_zero_h2), h2_scale);
-  }
-  if (n % 2 != 0 && blockIdx.x == 0 && threadIdx.x == 0) {
-    const int64_t last_idx = n - 1;
-    half one_or_zero = mask[last_idx];
-    y[last_idx] = __hmul(__hmul(x[last_idx], one_or_zero), h2_scale.x);
-  }
-}
+// template<>
+// __global__ void MaskAndScaleGpu<half>(const int64_t n, float scale, const half* x,
+//                                       const int8_t* mask, half* y) {
+//   const int64_t h2_n = n / 2;
+//   half2 h2_scale = __float2half2_rn(scale);
+//   const auto* x_h2 = reinterpret_cast<const half2*>(x);
+//   const auto* mask_c2 = reinterpret_cast<const char2*>(mask);
+//   auto* y_h2 = reinterpret_cast<half2*>(y);
+//   CUDA_1D_KERNEL_LOOP(i, h2_n) {
+//     char2 mask_val = mask_c2[i];
+//     half2 one_or_zero_h2;
+//     one_or_zero_h2.x = mask_val.x;
+//     one_or_zero_h2.y = mask_val.y;
+//     y_h2[i] = __hmul2(__hmul2(x_h2[i], one_or_zero_h2), h2_scale);
+//   }
+//   if (n % 2 != 0 && blockIdx.x == 0 && threadIdx.x == 0) {
+//     const int64_t last_idx = n - 1;
+//     half one_or_zero = mask[last_idx];
+//     y[last_idx] = __hmul(__hmul(x[last_idx], one_or_zero), h2_scale.x);
+//   }
+// }
 
 template<>
 __global__ void MaskAndScaleAddGpu<half>(const int64_t n, float scale, const half* x,
@@ -82,19 +125,25 @@ __global__ void MaskAndScaleAddGpu<half>(const int64_t n, float scale, const hal
 }
 
 template<typename T>
-void MaskAndScale(DeviceCtx* ctx, const int64_t n, float scale, const T* x, const int8_t* mask,
+void MaskAndScale(DeviceCtx* ctx, const int64_t n, float scale, const T* x, int8_t* mask,
                   T* y) {
-  MaskAndScaleGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      n, scale, x, mask, y);
+  cudaDeviceProp prop;
+  cudaGetDeviceProperties(&prop,0);
+  int32_t UNROLL = 4; 
+  int32_t block_size = 256; 
+  unsigned int grid_size = ((n + block_size -1) / block_size);
+  unsigned int blocks_per_sm = prop.maxThreadsPerMultiProcessor/block_size;
+  grid_size = std::min((unsigned int)prop.multiProcessorCount * blocks_per_sm, grid_size);
+  int64_t counter_offset = ((n - 1)/(block_size*grid_size*UNROLL)+1)*UNROLL;
+//   std::lock_guard<std::mutex> lock(generator_->mutex_);
+  // one::PhiloxCUDAState rng_engine_inputs = generator_->philox_cuda_state(counter_offset);
+  printf("Grid size is: %u \n", grid_size); 
+  printf("Block size is: %u \n", block_size); 
+  float dropout_rate = 1.0 / scale; 
+  // MaskAndScaleGpu<T><<<grid_size, block_size, 0, ctx->cuda_stream()>>>(rng_engine_inputs, dropout_rate, n, scale, x, mask, y);
+  MaskAndScaleGpu<T><<<grid_size, block_size, 0, ctx->cuda_stream()>>>(n, scale, dropout_rate, x, mask, y);
 }
 
-template<>
-void MaskAndScale<half>(DeviceCtx* ctx, const int64_t n, float scale, const half* x,
-                        const int8_t* mask, half* y) {
-  MaskAndScaleGpu<half>
-      <<<BlocksNum4ThreadsNum(RoundUp(n, 2) / 2), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          n, scale, x, mask, y);
-}
 
 template<typename T>
 void MaskAndScaleAdd(DeviceCtx* ctx, const int64_t n, float scale, const T* x, const int8_t* mask,
@@ -131,18 +180,29 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
+    // const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
+
     const float scale = ctx->Attr<float>("scale");
+    // const auto& generator = CHECK_JUST(one::MakeGenerator(DeviceType::kGPU));
+    // generator->set_current_seed(ctx->Attr<int64_t>("seed"));
+    // std::shared_ptr<RandomMaskGenerator<DeviceType::kGPU>> random_mask_like_gen = std::make_shared<RandomMaskGenerator<DeviceType::kGPU>>(generator);
+
     if (ctx->has_input("_add_to_output", 0)) {
-      const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
-      MaskAndScaleAdd<T>(ctx->device_ctx(), in->shape().elem_cnt(), scale, in->dptr<T>(),
-                         mask->dptr<int8_t>(), addend->dptr<T>(), out->mut_dptr<T>());
+      printf("Do nothing skip! \n"); 
+      // const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+      // MaskAndScaleAdd<T>(ctx->device_ctx(), in->shape().elem_cnt(), scale, in->dptr<T>(),
+      //                    mask->dptr<int8_t>(), addend->dptr<T>(), out->mut_dptr<T>());
     } else {
-      const int64_t elem_cnt = in->shape().elem_cnt();
-      OF_CUDA_CHECK((cuda::elementwise::Binary(
-          MaskAndScaleFunctor<T>(scale), elem_cnt, out->mut_dptr<T>(), in->dptr<T>(),
-          mask->dptr<int8_t>(), ctx->device_ctx()->cuda_stream())));
+      // const int64_t elem_cnt = in->shape().elem_cnt();
+      // OF_CUDA_CHECK((cuda::elementwise::Binary(
+      //     MaskAndScaleFunctor<T>(scale), elem_cnt, out->mut_dptr<T>(), in->dptr<T>(),
+      //     mask->dptr<int8_t>(), ctx->device_ctx()->cuda_stream())));
+
+      MaskAndScale<T>(ctx->device_ctx(), in->shape().elem_cnt(), scale, in->dptr<T>(),
+                      mask->mut_dptr<int8_t>(), out->mut_dptr<T>());
+
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -151,11 +211,12 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
 #define REGISTER_DROPOUT_KERNEL_GPU(dtype)                                                \
   REGISTER_USER_KERNEL("dropout").SetCreateFn<DropoutKernelGPU<dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceTag() == "gpu")                                                  \
-      & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+      & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)                  \
+      & (user_op::HobDataType("mask", 0) == GetDataType<int8_t>::value));
 
-REGISTER_DROPOUT_KERNEL_GPU(half)
+// REGISTER_DROPOUT_KERNEL_GPU(half)
 REGISTER_DROPOUT_KERNEL_GPU(float)
-REGISTER_DROPOUT_KERNEL_GPU(double)
+// REGISTER_DROPOUT_KERNEL_GPU(double)
 
 template<typename T>
 class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -189,7 +250,7 @@ class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::Cud
         return Maybe<void>::Ok();                                                               \
       });
 
-REGISTER_DROPOUT_GRAD_KERNEL_GPU(half)
+// REGISTER_DROPOUT_GRAD_KERNEL_GPU(half)
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(float)
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(double)
 

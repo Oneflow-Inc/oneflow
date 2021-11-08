@@ -21,21 +21,22 @@ namespace {
 
 REGISTER_USER_OP("dropout")
     .Input("in")
-    .Input("mask")
     .OptionalInput("_add_to_output")
     .Output("out")
+    .Output("mask")
     .Attr<float>("scale")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& in_shape = ctx->InputShape("in", 0);
       *ctx->OutputShape("out", 0) = in_shape;
+      *ctx->OutputShape("mask", 0) = in_shape;
       *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
-      CHECK_EQ_OR_RETURN(ctx->InputShape("mask", 0), in_shape);
+      // CHECK_EQ_OR_RETURN(ctx->InputShape("mask", 0), in_shape);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
-      user_op::InputArgModifier* mask = GetInputArgModifierFn("mask", 0);
-      mask->set_requires_grad(false);
+      // user_op::InputArgModifier* mask = GetInputArgModifierFn("mask", 0);
+      // mask->set_requires_grad(false);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -53,7 +54,8 @@ REGISTER_USER_OP("dropout")
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-      CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kInt8);
+      // CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kInt8);
+      *ctx->OutputDType("mask", 0) = DataType::kInt8;
       return Maybe<void>::Ok();
     });
 
@@ -99,7 +101,7 @@ REGISTER_USER_OP_GRAD("dropout").SetGenBackwardOpConfFn([](const user_op::UserOp
     user_op::UserOpConfWrapper dropout_grad_op =
         builder.Op("dropout_grad")
             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-            .Input("mask", op.input("mask", 0))
+            .Input("mask", op.output("mask", 0))
             .Output("dx")
             .Attr("scale", op.attr<float>("scale"))
             .Build();

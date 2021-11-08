@@ -37,7 +37,8 @@ class DropoutKernelCPU final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
+    // const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
+    user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const float scale = ctx->Attr<float>("scale");
     MaskAndScale<T>(ctx->device_ctx(), in->shape().elem_cnt(), scale, in->dptr<T>(),
