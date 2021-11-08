@@ -278,7 +278,6 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
       CHECK_EQ(transpose_in_dim_vec.at(out_split_axis) % num_ranks, 0);
       transpose_in_dim_vec[out_split_axis] = transpose_in_dim_vec.at(out_split_axis) / num_ranks;
       transpose_in_dim_vec.insert(transpose_in_dim_vec.begin() + out_split_axis, num_ranks);
-      DimVector pack_to_dim_vec;
       std::vector<int32_t> perm;
       perm.push_back(out_split_axis);
       FOR_RANGE(int64_t, i, 0, transpose_in_dim_vec.size()) {
