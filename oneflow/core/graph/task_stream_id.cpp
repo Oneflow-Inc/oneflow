@@ -64,9 +64,9 @@ StreamId GenerateComputeTaskStreamId(const DeviceId& device_id) {
   StreamId::stream_index_t stream_index = 0;
   if (device_id.device_type() == DeviceType::kCPU) {
     size_t cpu_device_num = Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();
-    stream_index = (*stream_index_generator)("cpu_compute", cpu_device_num);
+    stream_index = stream_index_generator->Generate("cpu_compute", cpu_device_num);
   } else {
-    stream_index = (*stream_index_generator)("compute");
+    stream_index = stream_index_generator->Generate("compute");
   }
   return StreamId{device_id, stream_index};
 }
@@ -79,7 +79,7 @@ StreamId GenerateComputeTaskStreamId(int64_t rank, DeviceType device_type, int64
 
 StreamId GenerateNamedTaskStreamId(const DeviceId& device_id, const std::string& name) {
   auto* stream_index_generator = StreamIndexGeneratorManager::Instance().GetGenerator(device_id);
-  auto stream_index = (*stream_index_generator)(name);
+  auto stream_index = stream_index_generator->Generate(name);
   return StreamId{device_id, stream_index};
 }
 

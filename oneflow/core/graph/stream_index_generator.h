@@ -28,16 +28,14 @@ class StreamIndexGenerator final {
   OF_DISALLOW_COPY_AND_MOVE(StreamIndexGenerator);
   ~StreamIndexGenerator() = default;
 
-  stream_index_t operator()();
-  stream_index_t operator()(const std::string& name);
-  stream_index_t operator()(const std::string& name, size_t num);
+  stream_index_t Generate();
+  stream_index_t Generate(const std::string& name);
+  stream_index_t Generate(const std::string& name, size_t num);
 
  private:
-  std::atomic<stream_index_t> next_stream_index_;
-  HashMap<std::string, std::pair<stream_index_t, size_t>> name2round_robin_range_;
-  HashMap<std::string, int> name2round_robine_offset;
-  std::mutex named_rr_range_mutex_;
-  std::mutex named_rr_offset_mutex_;
+  stream_index_t next_stream_index_;
+  HashMap<std::string, std::tuple<stream_index_t, size_t, size_t>> name2round_robin_tup_;
+  std::mutex mtx_;
 };
 
 }  // namespace oneflow

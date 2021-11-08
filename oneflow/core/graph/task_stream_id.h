@@ -90,21 +90,21 @@ StreamId GenerateNamedTaskStreamId(int64_t rank, DeviceType device_type, int64_t
 #define REGISTER_NAMED_TASK_STREAM_INDEX_GETTER(device_type, task_type, name)                    \
   REGISTER_TASK_STREAM_INDEX_GETTER(                                                             \
       device_type, task_type, ([](StreamIndexGenerator* generator) -> StreamId::stream_index_t { \
-        return (*generator)(name);                                                               \
+        return generator->Generate(name);                                                        \
       }));
 
 #define REGISTER_INDEPENDENT_TASK_STREAM_INDEX_GETTER(task_type)         \
   REGISTER_TASK_STREAM_INDEX_GETTER(                                     \
       DeviceType::kCPU, task_type,                                       \
       ([](StreamIndexGenerator* generator) -> StreamId::stream_index_t { \
-        return (*generator)();                                           \
+        return generator->Generate();                                    \
       }));
 
 #define REGISTER_TICK_TASK_STREAM_INDEX_GETTER(task_type)                \
   REGISTER_TASK_STREAM_INDEX_GETTER(                                     \
       DeviceType::kCPU, task_type,                                       \
       ([](StreamIndexGenerator* generator) -> StreamId::stream_index_t { \
-        return (*generator)("tick");                                     \
+        return generator->Generate("tick");                              \
       }));
 
 #define REGISTER_CPU_COMP_TASK_STREAM_INDEX_GETTER(task_type)                            \
@@ -112,13 +112,13 @@ StreamId GenerateNamedTaskStreamId(int64_t rank, DeviceType device_type, int64_t
       DeviceType::kCPU, task_type,                                                       \
       ([](StreamIndexGenerator* generator) -> StreamId::stream_index_t {                 \
         size_t cpu_device_num = Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum(); \
-        return (*generator)("cpu_compute", cpu_device_num);                              \
+        return generator->Generate("cpu_compute", cpu_device_num);                       \
       }));
 
 #define REGISTER_DEVICE_COMP_TASK_STREAM_INDEX_GETTER(device_type, task_type)                    \
   REGISTER_TASK_STREAM_INDEX_GETTER(                                                             \
       device_type, task_type, ([](StreamIndexGenerator* generator) -> StreamId::stream_index_t { \
-        return (*generator)("compute");                                                          \
+        return generator->Generate("compute");                                                   \
       }));
 
 #define REGISTER_COMP_TASK_STREAM_INDEX_GETTER(task_type) \
