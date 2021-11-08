@@ -44,7 +44,9 @@ class TaskStreamIndexRegistry final {
   struct GetterRegister {
     GetterRegister(DeviceType device_type, TaskType task_type, const stream_index_gen_fn& gen) {
       auto getter = [gen](const DeviceId& device_id) -> StreamId::stream_index_t {
-        auto* generator = Global<StreamIndexGeneratorManager>::Get()->GetGenerator(device_id);
+        auto* generator_mgr = Global<StreamIndexGeneratorManager>::Get();
+        CHECK_NOTNULL(generator_mgr);
+        auto* generator = generator_mgr->GetGenerator(device_id);
         return gen(generator);
       };
       auto key = std::make_pair(device_type, task_type);
