@@ -85,7 +85,7 @@ IBVerbsCommNet::~IBVerbsCommNet() {
 }
 
 
-void IBVerbsCommNet::SendMsg(int64_t dst_machine_id, void * addr, size_t size) {
+void IBVerbsCommNet::SendMsg(int64_t dst_machine_id, void * data, size_t size) {
   qp_vec_.at(dst_machine_id)->PostSendRequest(data, size);
 }
 
