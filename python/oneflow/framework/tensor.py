@@ -19,6 +19,7 @@ import oneflow.framework.check_point_v2 as check_point_v2
 import oneflow.framework.tensor_str as tensor_str_util
 import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
+import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 
 import numpy as np
 from typing import Union
@@ -165,6 +166,10 @@ def _or(self, other):
     return self.logical_or(other)
 
 
+def _not(self):
+    return flow._C.logical_not(self)
+
+
 def _xor(self, other):
     return self.logical_xor(other)
 
@@ -188,15 +193,6 @@ def _matrix_norm(self, ord="fro", dim=(-2, -1), keepdim=False, dtype=None):
 
 def _transpose(self, dim0, dim1):
     return flow._C.transpose(self, dim0, dim1)
-
-
-def _getstate(self):
-    assert self.is_local, "Only support local tensor to pickle"
-    return {"data": self.numpy(), "dtype": self.dtype}
-
-
-def _setstate(self, pickle_dict):
-    return self.__init__(flow.tensor(pickle_dict["data"], dtype=pickle_dict["dtype"]))
 
 
 def is_nonzero(input):
@@ -486,6 +482,24 @@ def _squeeze(self, dim=None):
     return flow._C.squeeze(self, dim=dim)
 
 
+def _narrow(self, dimension, start, length):
+    return flow._C.narrow(self, dim=dimension, start=start, length=length)
+
+
+def _unsqueeze(self, dim):
+    return flow._C.unsqueeze(self, dim=dim)
+
+
+def _permute(self, *dims):
+    if len(dims) == 1:
+        new_dims = dims[0]
+        if isinstance(new_dims, int):
+            new_dims = (new_dims,)
+    else:
+        new_dims = dims
+    return flow._C.transpose(self, new_dims)
+
+
 def _matmul(self, other):
     return flow.matmul(self, other)
 
@@ -677,8 +691,8 @@ def RegisterMethods():
     Tensor.backward = _backward
     Tensor.__getitem__ = _getitem
     Tensor.__setitem__ = _setitem
-    Tensor.__setstate__ = _setstate
-    Tensor.__getstate__ = _getstate
+    Tensor.__setstate__ = check_point_v2.tensor_setstate
+    Tensor.__getstate__ = check_point_v2.tensor_getstate
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
     Tensor.__eq__ = _eq
@@ -785,8 +799,12 @@ def RegisterMethods():
     Tensor.relu = _relu
     Tensor.softmax = _softmax
     Tensor.log_softmax = _log_softmax
+    Tensor.logical_not = _not
     Tensor.roll = _roll
     Tensor.squeeze = _squeeze
+    Tensor.narrow = _narrow
+    Tensor.unsqueeze = _unsqueeze
+    Tensor.permute = _permute
 
 
 def register_tensor_op(op_name):

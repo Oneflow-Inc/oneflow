@@ -115,6 +115,10 @@
     ]
   bind_python: true
 
+- name: "logical_not"
+  signature: "Tensor (Tensor input) => LogicalNot"
+  bind_python: true
+
 - name: "logical_xor"
   signature:
     [
@@ -239,9 +243,13 @@
 - name: "transpose"
   signature:
     [
-      "Tensor (Tensor x, Int32List perm) => Transpose",
+      "Tensor (Tensor input, Int32List perm) => Transpose",
       "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Transpose2dim",
     ]
+  bind_python: True
+
+- name: "permute"
+  signature: "Tensor (Tensor input, Int32List dims) => Permute"
   bind_python: True
 
 - name: "reciprocal"
@@ -516,7 +524,7 @@
   bind_python: True
 
 - name: "concat"
-  signature: "Tensor (TensorTuple inputs, Int64 axis, Int64 max_dim_size) => Concat"
+  signature: "Tensor (TensorTuple inputs, Int64 dim=0) => Concat"
   bind_python: True
 
 - name: "bias_add"
@@ -609,7 +617,11 @@
   bind_python: True
 
 - name: "expand_dims"
-  signature: "Tensor (Tensor x, Int32 axis) => ExpandDims"
+  signature: "Tensor (Tensor input, Int32 dim) => ExpandDims"
+  bind_python: True
+
+- name: "unsqueeze"
+  signature: "Tensor (Tensor input, Int32 dim) => Unsqueeze"
   bind_python: True
 
 - name: "exp"
@@ -905,7 +917,7 @@
   bind_python: False
 
 - name: "narrow"
-  signature: "Tensor (Tensor in, Int64 dim, Int64 start, Int64 length) => Narrow"
+  signature: "Tensor (Tensor input, Int64 dim, Int64 start, Int64 length) => Narrow"
   bind_python: True
 
 - name: "narrow_grad"
@@ -1113,7 +1125,7 @@
   bind_python: True
 
 - name: "one_hot"
-  signature: "Tensor (Tensor x, Int64 num_classes=-1, Scalar on_value=1, Scalar off_value=0) => OneHot"
+  signature: "Tensor (Tensor input, Int64 num_classes=-1, Scalar on_value=1, Scalar off_value=0) => OneHot"
   bind_python: True
 
 - name: "unsorted_segment_sum_like"
@@ -1433,15 +1445,14 @@
   bind_python: True
 
 - name: "split"
-  signature: "TensorTuple (Tensor x, Int64 split_size, Int64 dim=0) => Split"
+  signature: [
+    "TensorTuple (Tensor x, Int64 split_size, Int64 dim=0) => Split",
+    "TensorTuple (Tensor x, Int64List split_size, Int64 dim=0) => SplitWithSize",
+  ]
   bind_python: True
 
 - name: "split_like"
   signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => SplitLike"
-  bind_python: True
-
-- name: "split_with_size"
-  signature: "TensorTuple (Tensor x, Int64List split_sizes, Int64 dim=0) => SplitWithSize"
   bind_python: True
 
 - name: "l2_normalize"
@@ -1476,6 +1487,14 @@
   signature: "Tensor (Tensor a, Tensor b, *, Float p=0.5, Int32 axis, Generator generator=None) => FusedBiasAddDropout"
   bind_python: True
 
+- name: "fused_scale_tril_softmax_mask_scale"
+  signature: "TensorTuple (Tensor a, *, Float p=0.5, Int64 diagonal, Float tril_scale_value, Generator generator=None) => FusedScaleTrilSoftmaxMaskScale"
+  bind_python: True
+
+- name: "fused_scale_tril_softmax_mask_scale_grad"
+  signature: "Tensor (Tensor softmax_y, Tensor dy, Tensor mask, Int64 diagonal, Float tril_scale_value, Float mask_scale_value) => FusedScaleTrilSoftmaxMaskScaleGrad"
+  bind_python: False
+
 - name: "send"
   signature: "Void (Tensor input, Int64 dst, Bool send_meta=True) => Send"
   bind_python: True
@@ -1499,6 +1518,17 @@
 - name: "ctc_greedy_decoder"
   signature: "TensorTuple (Tensor log_probs, Tensor input_lengths, Bool merge_repeated=True) => CtcGreedyDecoder"
   bind_python: True
+
+
+- name: "distributed_partial_fc_sample"
+  signature:
+    "TensorTuple (Tensor weight, Tensor label, Int64 num_sample) => DistributedPariticalFCSample"
+  bind_python: True
+
+- name: "distributed_partial_fc_sample_disable_boxing"
+  signature:
+    "TensorTuple (Tensor sampled_weight_diff, Tensor sampled_label) => DistributedPariticalFCSampleDisableBoxing"
+  bind_python: False
 
 - name: "meshgrid"
   signature: "TensorTuple (TensorTuple tensors) => Meshgrid"
