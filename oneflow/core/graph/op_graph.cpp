@@ -552,9 +552,7 @@ void OpGraph::PrintSBPGraphDebugInfo() {
   std::cout << "Get Into Print Op Graph" << std::endl;
   // Collect op_node
   std::vector<OpNode*> NodeList;
-  ForEachNode([&](OpNode* op_node){
-    NodeList.push_back(op_node);
-  });
+  ForEachNode([&](OpNode* op_node) { NodeList.push_back(op_node); });
 
   // test debug
   std::cout << "Deciding order" << std::endl;

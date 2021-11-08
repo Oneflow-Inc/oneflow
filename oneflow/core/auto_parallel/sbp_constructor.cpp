@@ -147,9 +147,8 @@ Maybe<void> SbpConstructor::InitComputationCost(const OpGraph& op_graph) {
     for (int32_t sbp_id = 0; sbp_id < sbp_node->SbpSignatureList.size(); sbp_id++) {
       sbp_node->Cost[sbp_id] =
           cost_ratio_
-          * 1000.0 /*JUST(op_node->op().GetComputeComplexity(sbp_node->SbpSignatureList[sbp_id],
-                                                     logical_blob_desc4bn, parallel_desc))*/
-          ;        // TODO: Add op GetComputeComplexity function
+          * JUST(op_node->op().GetComputeComplexity(sbp_node->SbpSignatureList[sbp_id],
+                                                    logical_blob_desc4bn, parallel_desc));
     }
     return Maybe<void>::Ok();
   });

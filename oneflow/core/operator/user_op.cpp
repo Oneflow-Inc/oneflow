@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/framework/infer_output_blob_time_shape_fn_context.h"
 #include "oneflow/core/framework/infer_nd_sbp_fn_context.h"
+#include "oneflow/core/framework/compute_complexity_fn_context.h"
 
 namespace oneflow {
 
@@ -478,6 +479,79 @@ class UserOpInferNdSbpFnContext : public user_op::InferNdSbpFnContext {
   std::function<Maybe<const NdSbpInferHint*>(const std::string&)> nd_sbp_infer_hint4ibn_fn_;
 };
 
+// Store information for computing computation cost
+// TODO: Maybe this class could simplify
+class UserOpComputeComplexityFnContext : public user_op::ComputeComplexityFnContext {
+ public:
+  using ArgVec = std::vector<std::pair<std::string, int32_t>>;
+
+  UserOpComputeComplexityFnContext(
+      const OperatorConf& op_conf, const ParallelDesc& parallel_desc,
+      const cfg::SbpSignature* sbp_signature,
+      std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn)
+      : user_op::ComputeComplexityFnContext(user_op::UserOpConfWrapper(op_conf)),
+        parallel_desc_(parallel_desc),
+        sbp_signature_(sbp_signature) {
+    auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
+                           ArgVec* arg_vec) {
+      for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
+        const std::string& arg_name = it->first;
+        for (int32_t i = 0; i < it->second.s_size(); ++i) {
+          const BlobDesc& blob = logical_blob_desc4bn(GenRepeatedBn(arg_name, i));
+          auto key = std::make_pair(arg_name, i);
+          arg2tensor_desc_.emplace(key, GenTensorDescFromBlobDesc(&blob));
+          arg_vec->emplace_back(std::make_pair(arg_name, i));
+        }
+      }
+    };
+    InitInOrOut(op_conf.user_conf().input(), &inputs_);
+    InitInOrOut(op_conf.user_conf().output(), &outputs_);
+  }
+  ~UserOpComputeComplexityFnContext() override = default;
+
+  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                  int32_t index) override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; };
+    return &(it->second);
+  }
+  Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; };
+    return it->second.mut_shape();
+  }
+  DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; };
+    return it->second.mut_data_type();
+  }
+  bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; };
+    return it->second.mut_is_dynamic();
+  }
+
+  const cfg::SbpParallel SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                     int32_t index) const override {
+    const auto& bn2sbp = sbp_signature_->bn_in_op2sbp_parallel();
+    std::string bn = GenRepeatedBn(arg_name, index);
+    CHECK(bn2sbp.find(bn) != bn2sbp.end());
+    return sbp_signature_->bn_in_op2sbp_parallel().at(bn);
+  }
+
+  const ArgVec& inputs() const override { return inputs_; }
+  const ArgVec& outputs() const override { return outputs_; }
+  const ParallelDesc& parallel_desc() const override { return parallel_desc_; };
+  const cfg::SbpSignature* GetSbpSignature() const override { return sbp_signature_; }
+
+ private:
+  ArgVec inputs_;
+  ArgVec outputs_;
+  const ParallelDesc parallel_desc_;
+  const cfg::SbpSignature* sbp_signature_;
+  HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
+};
+
 Maybe<void> UserOp::InitFromOpConf() {
   CHECK_OR_RETURN(op_conf().has_user_conf());
   for (const auto& pair : op_conf().user_conf().input()) {
@@ -721,6 +795,45 @@ Maybe<void> UserOp::GetSbpSignatures(
     }
   }
   return Maybe<void>::Ok();
+}
+
+Maybe<double> UserOp::GetComputeComplexity(
+    cfg::SbpSignature* sbp_signature,
+    std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
+    const ParallelDesc& parallel_desc) const {
+  // check logical blob desc could split or not
+  // TODO: delete this check?
+  auto CouldSplit = [&](const std::string& bn) {
+    const auto& sbp_parallel = sbp_signature->bn_in_op2sbp_parallel().at(bn);
+    if (sbp_parallel.has_split_parallel()) {
+      const int32_t axis = sbp_parallel.split_parallel().axis();
+      if (logical_blob_desc4bn(bn).shape().NumAxes() <= axis) return false;
+      return logical_blob_desc4bn(bn).shape().At(axis) >= parallel_desc.parallel_num();
+    }
+    return true;
+  };
+  for (const auto& ibn : input_bns()) {
+    if (!CouldSplit(ibn)) {
+      return Error::RuntimeError()
+             << op_name() << "'s blob with name `" << ibn
+             << "` cloud not split with sbp: " << sbp_signature->DebugString();
+    }
+  }
+  for (const auto& obn : output_bns()) {
+    if (!CouldSplit(obn)) {
+      return Error::RuntimeError()
+             << op_name() << "'s blob with name `" << obn
+             << "` cloud not split with sbp: " << sbp_signature->DebugString();
+    }
+  }
+
+  if (val_->compute_complexity_fn) {
+    UserOpComputeComplexityFnContext user_op_compute_complexity_fn_context(
+        op_conf(), parallel_desc, sbp_signature, logical_blob_desc4bn);
+    return val_->compute_complexity_fn(&user_op_compute_complexity_fn_context);
+  } else {
+    return Operator::GetComputeComplexity(sbp_signature, logical_blob_desc4bn, parallel_desc);
+  }
 }
 
 Maybe<void> UserOp::InferOpTimeShape(
