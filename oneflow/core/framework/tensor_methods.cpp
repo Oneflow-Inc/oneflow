@@ -73,7 +73,6 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) 
     return Error::RuntimeError() << "view::Reshape(): input should be eager local tensor, but is "
                                  << (input->is_lazy() ? "lazy" : "consistent");
   }
-  auto x = input->contiguous();
   int need_infer_axis = -1;
   size_t count = 1;
   for (int i = 0; i < shape.NumAxes(); ++i) {
@@ -87,17 +86,17 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) 
   }
 
   std::shared_ptr<Tensor> output;
-  size_t x_count = x->shape()->Count(0);
+  size_t x_count = input->shape()->Count(0);
   if (need_infer_axis == -1) {
     CHECK_EQ_OR_RETURN(shape.Count(0), x_count);
-    output = JUST(BasicSlice(x, shape, Stride(shape), 0));
+    output = JUST(BasicSlice(input, shape, Stride(shape), 0));
   } else {
     Shape infered_shape = shape;
     infered_shape.Set(need_infer_axis, x_count / count);
     CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
         << "Shape " << shape.ToString() << " is invalid for input of shape "
-        << x->shape()->ToString();
-    output = JUST(BasicSlice(x, infered_shape, Stride(infered_shape), 0));
+        << input->shape()->ToString();
+    output = JUST(BasicSlice(input, infered_shape, Stride(infered_shape), 0));
   }
 
   if (input->requires_grad()) {
@@ -112,7 +111,7 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) 
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};
-    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("vew::reshape_backward", backward_fn,
+    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::reshape_backward", backward_fn,
                                                             {input}, &outputs));
   }
   return output;

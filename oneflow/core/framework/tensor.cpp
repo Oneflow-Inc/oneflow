@@ -27,7 +27,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/core/framework/tensor_methods.h"
 
 
 namespace oneflow {
@@ -38,13 +37,6 @@ Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
   CHECK_OR_RETURN(is_local());
   return std::dynamic_pointer_cast<MirroredTensor>(
       JUST(functional::Constant(*shape_, Scalar(0), CHECK_JUST(DType::Get(dtype_)), device_)));
-}
-
-std::shared_ptr<Tensor> Parameter::contiguous() const {
-  if (CHECK_JUST(IsContiguous(tensor_))) {
-    return std::const_pointer_cast<Tensor>(shared_from_this());
-  }
-  return std::make_shared<Parameter>(tensor_->contiguous(), this->requires_grad());
 }
 
 /* static */ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
@@ -68,12 +60,6 @@ bool MirroredTensor::is_cuda() const { return CHECK_JUST(device())->type() == "c
 Maybe<Tensor> MirroredTensor::detach() const {
   std::shared_ptr<Tensor> tensor = std::make_shared<MirroredTensor>(JUST(impl_->detach()));
   return tensor;
-}
-
-std::shared_ptr<Tensor> MirroredTensor::contiguous() const {
-  std::shared_ptr<Tensor> tensor = std::const_pointer_cast<Tensor>(shared_from_this());
-  if (CHECK_JUST(IsContiguous(tensor))) { return tensor; }
-  return CHECK_JUST(functional::ToContiguous(tensor));
 }
 
 Maybe<Tensor> MirroredTensor::clone() const {
@@ -119,11 +105,6 @@ Maybe<Tensor> ConsistentTensor::detach() const {
   return t;
 }
 
-std::shared_ptr<Tensor> ConsistentTensor::contiguous() const {
-  std::shared_ptr<Tensor> tensor = std::const_pointer_cast<Tensor>(shared_from_this());
-  if (CHECK_JUST(IsContiguous(tensor))) { return tensor; }
-  return CHECK_JUST(functional::ToContiguous(tensor));
-}
 
 
 }  // namespace one

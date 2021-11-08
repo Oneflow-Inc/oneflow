@@ -806,6 +806,7 @@ class ReshapeFunctor {
     op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
+    // if input tensor is contiguous, than return tensor's view
     if (x->is_eager() && x->is_local()) { 
       return view::Reshape(x, shape); 
     }
@@ -827,9 +828,6 @@ class ReshapeFunctor {
           << "\n Shape " << shape.ToString() << " is invalid for input shape "
           << x->shape()->ToString();
       JUST(attrs.SetAttr<Shape>("shape", shape));
-      // std::shared_ptr<Shape> shapee = std::make_shared<Shape>(shape);
-      // std::shared_ptr<Stride> stridee = std::make_shared<Stride>(Stride(shape));
-      // return JUST(ShallowCopy(JUST(x->AsMirroredTensor()), shapee, stridee))->detach();
     } else {
       Shape infered_shape = shape;
       infered_shape.Set(need_infer_axis, x_count / count);
@@ -837,9 +835,6 @@ class ReshapeFunctor {
           << "\n Shape " << shape.ToString() << " is invalid for input shape "
           << x->shape()->ToString();
       JUST(attrs.SetAttr<Shape>("shape", infered_shape));
-      // std::shared_ptr<Shape> shapee = std::make_shared<Shape>(infered_shape);
-      // std::shared_ptr<Stride> stridee = std::make_shared<Stride>(Stride(infered_shape));
-      // return JUST(ShallowCopy(JUST(x->AsMirroredTensor()), shapee, stridee))->detach();
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
@@ -2022,7 +2017,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorScatterNdUpdateFunctor>("TensorScatterNdUpdate");
   m.add_functor<impl::ScatterNdLikeFunctor>("ScatterNdLike");
   m.add_functor<impl::ReshapeFunctor>("Reshape");
-  m.add_functor<impl::ToContiguousFunctor>("ToContiguous");
   m.add_functor<impl::SliceFunctor>("Slice");
   m.add_functor<impl::SliceGradFunctor>("SliceGrad");
   m.add_functor<impl::NarrowFunctor>("Narrow");

@@ -88,7 +88,7 @@ class TestModule(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_reshape,
             _test_reshape_tuple,
-            # _test_reshape_backward,
+            _test_reshape_backward,
             _test_reshape_scalar,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
