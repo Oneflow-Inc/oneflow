@@ -470,24 +470,42 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
   double TtlCostRdc = 0, CostRdc;
   // A global buffer to store part of the one ring neighborhood.
   std::vector<int32_t> nbh_id2NodeListId;
-  if (nbh_num > 1)
+  // Not accept a number lower than 1
+  if (nbh_num < 1) nbh_num = 1;
     nbh_id2NodeListId.resize(nbh_num);
-  else
-    nbh_id2NodeListId.resize(1);
+  std::vector<int32_t> OrgSbpSignatureId(nbh_num);
+  // store all the NodeListId whose corresponding nodes will be visited
+  // We can use unordered_map to do this but vector is faster
+  std::vector<int32_t> PreVisitNodeList(NodeList.size() + 1);
+  for (int32_t nbh_id = 0; nbh_id < NodeList.size(); nbh_id++) PreVisitNodeList[nbh_id] = nbh_id;
+  int32_t head = 0, tail = NodeList.size();
+  // whether a NodeListId is in PreVisitNodeList
+  std::vector<bool> PreVisitTags(NodeList.size(), true);
+  int32_t step = 0;
+  // 1 ring neighborhood buffer
+  std::vector<int32_t> nbh_1ring(nbh_num);
+  std::vector<int32_t> nbh_2ring;
 
-  for (int32_t step = NodeList.size(); step >= 0; step--) {
-    CostRdc = 0;
-    for (SbpNode<SbpSignature>* this_node : NodeList) {
+
+  while (head != tail && step < NodeList.size()) {
+    auto* this_node = NodeList[PreVisitNodeList[head]];
       if (nbh_num <= 1) {
-        // Greedy strategy on nodes
-        nbh_id2NodeListId[0] = this_node->NodeListId;
-        CostRdc += NbhGreedyStrategy(nbh_id2NodeListId);
+      // Greedy strategy on nodes, here we use nbh_1ring to store the nbh_id2NodeListId information
+      // for reutilization
+      nbh_1ring[0] = this_node->NodeListId;
+      // store the original sbp signature of the 1-ring neighborhood for comparison
+      OrgSbpSignatureId[0] = this_node->FinalSbpSignatureId;
+      CostRdc = NbhGreedyStrategy(nbh_1ring);
       } else {
         // Use GreedyStrategy on the one ring neighborhood of this node.
-        std::vector<int32_t> nbh_1ring;
         this_node->OneRingNeighborhood(nbh_1ring);
+      // store the original sbp signature of the 1-ring neighborhood for comparison
+      OrgSbpSignatureId.resize(nbh_1ring.size());
+      for (int32_t nbh_id = 0; nbh_id < nbh_1ring.size(); nbh_id++) {
+        OrgSbpSignatureId[nbh_id] = NodeList[nbh_1ring[nbh_id]]->FinalSbpSignatureId;
+      }
         if (nbh_1ring.size() <= nbh_num) {
-          CostRdc += NbhGreedyStrategy(nbh_1ring);
+        CostRdc = NbhGreedyStrategy(nbh_1ring);
         } else {
           // Use GreedyStrategy on part of the one ring neighborhood.
           // Loop through the neighborhood. Each loop should contain the centroid.
@@ -498,6 +516,7 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
             nbh_id2NodeListId[nbh_id] = nbh_1ring[++nbh_1ring_id];
           }
           // loop through the one ring neighborhood
+        CostRdc = 0;
           int32_t nbh_id = 0;
           for (nbh_1ring_id = 0; nbh_1ring_id < nbh_1ring.size(); ++nbh_1ring_id) {
             nbh_id2NodeListId[nbh_id] = nbh_1ring[nbh_1ring_id];
@@ -507,8 +526,34 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
           }
         }
       }
+    // change of strategies
+    if (CostRdc != 0) {
+      // Add neighborhood into pre-visited node list for each node with changing strategy
+      for (int32_t nbh_id = 0; nbh_id < nbh_1ring.size(); nbh_id++) {
+        // If changes occur
+        if (OrgSbpSignatureId[nbh_id] != NodeList[nbh_1ring[nbh_id]]->FinalSbpSignatureId) {
+          // schedule to visit the neighborhood of that changing node
+          NodeList[nbh_1ring[nbh_id]]->OneRingNeighborhood(nbh_2ring);
+          for (int32_t nbh_NodeListId : nbh_2ring) {
+            // Put them into the pre-visited node list
+            if (!PreVisitTags[nbh_NodeListId]) {
+              PreVisitNodeList[tail] = nbh_NodeListId;
+              PreVisitTags[nbh_NodeListId] = true;
+              tail++;
+              if (tail == PreVisitNodeList.size()) tail = 0;
+            }
+          }
+        }
+      }
     }
-    if (CostRdc == 0) break;
+    // Finish visiting
+    PreVisitTags[PreVisitNodeList[head]] = false;
+    head++;
+    if (head == PreVisitNodeList.size()) {
+      head = 0;
+      step++;
+    }
+
     TtlCostRdc += CostRdc;
   }
   return TtlCostRdc;
