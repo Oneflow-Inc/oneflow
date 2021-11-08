@@ -134,7 +134,7 @@ CudaStreamContextImpl::CudaStreamContextImpl(int device_ordinal) : device_ordina
   workspace_size_ = kDefaultWorkspaceSize;
   OF_CUDA_CHECK(cudaMalloc(&workspace_, workspace_size_));
   OF_CUBLAS_CHECK(cublasSetWorkspace(cublas_handle_, workspace_, workspace_size_));
-#endif //CUBLAS_VERSION >= 11000
+#endif //CUBLAS_VERSION >= 11200
 
   // cudnn_handle
   if (IsCuda9OnTuringDevice()) {
