@@ -328,7 +328,10 @@ get unwieldy as the transformations get more complex.
 Graph Manipulation Examples
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#TODO(BBuf) add examples
+-  `Replace one
+   op <https://github.com/Oneflow-Inc/examples/blob/main/fx/replace_op.py>`__
+-  `replace_pattern: Basic usage <https://github.com/Oneflow-Inc/examples/blob/main/fx/subgraph_rewriter_basic_use.py>`__
+
 
 Proxy/Retracing
 ^^^^^^^^^^^^^^^
