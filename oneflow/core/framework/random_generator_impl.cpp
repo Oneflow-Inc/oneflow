@@ -194,6 +194,15 @@ Maybe<Tensor> CUDAGeneratorImpl::GetState() const {
   return tensor_state;
 }
 
+PhiloxCUDAState CUDAGeneratorImpl::philox_cuda_state(uint64_t increment) {
+  // rounds increment up to the nearest multiple of 4
+  increment = ((increment + 3) / 4) * 4;
+  CHECK(this->philox_offset_per_thread_ % 4 == 0);
+  uint64_t offset = this->philox_offset_per_thread_;
+  this->philox_offset_per_thread_ += increment;
+  return PhiloxCUDAState(this->seed_, offset);
+}
+
 Maybe<void> CUDAGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_state) {
   const auto& device = JUST(tensor_state->device());
   if (device->type() != "cpu") {

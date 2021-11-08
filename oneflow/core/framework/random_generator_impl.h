@@ -111,6 +111,24 @@ class CPUGeneratorImpl : public DeviceGeneratorImpl {
   std::mt19937 engine_;
 };
 
+struct PhiloxCUDAState{
+  PhiloxCUDAState() = default;
+
+  PhiloxCUDAState(uint64_t seed,
+                  uint64_t offset) {
+    seed_ = seed;
+    offset_.val = offset;
+  }
+  union Payload {
+    uint64_t val;
+    int64_t* ptr;
+  };
+
+  uint64_t seed_ = 0;
+  Payload offset_;
+}; 
+
+
 #ifdef WITH_CUDA
 class CUDAGeneratorImpl : public DeviceGeneratorImpl {
  public:
@@ -128,11 +146,14 @@ class CUDAGeneratorImpl : public DeviceGeneratorImpl {
 
   Maybe<Tensor> GetState() const override;
   Maybe<void> SetState(const std::shared_ptr<Tensor>& tensor_state) override;
+  
+  PhiloxCUDAState philox_cuda_state(uint64_t increment);
 
  private:
   int32_t max_block_num_;
   int32_t max_thread_num_;
   curandState* curand_states_;
+  uint64_t philox_offset_per_thread_ = 0;
 };
 
 namespace detail {
