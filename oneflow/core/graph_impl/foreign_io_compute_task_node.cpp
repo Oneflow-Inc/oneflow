@@ -87,11 +87,12 @@ class ForeignOutputCompTaskNode final : public ForeignIOCompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kForeignOutput; }
 };
 
-REGISTER_NAMED_TASK_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kForeignInput, "foreign_in");
+REGISTER_NAMED_TASK_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kForeignInput, "FOREIGN_INPUT");
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kForeignInputConf, ForeignInputCompTaskNode);
 
-REGISTER_NAMED_TASK_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kForeignOutput, "foreign_out");
+REGISTER_NAMED_TASK_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kForeignOutput,
+                                        "FOREIGN_OUTPUT");
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kForeignOutputConf, ForeignOutputCompTaskNode);
 

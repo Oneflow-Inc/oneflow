@@ -33,16 +33,15 @@ class StreamIndexGenerator final {
   stream_index_t GenerateNamedRoundRobin(const std::string& name, size_t size);
 
  private:
-  struct RoundRobinRangedIndex {
-    RoundRobinRangedIndex(stream_index_t begin, size_t size, size_t offset)
-        : begin(begin), size(size), offset(offset) {}
+  struct RoundRobinRange {
+    RoundRobinRange(stream_index_t begin, size_t size) : begin(begin), size(size), offset(0) {}
     stream_index_t begin;
     size_t size;
     size_t offset;
   };
 
   stream_index_t next_stream_index_;
-  HashMap<std::string, RoundRobinRangedIndex> name2rrr_index_;
+  HashMap<std::string, RoundRobinRange> name2rr_range_;
   std::mutex mtx_;
 };
 

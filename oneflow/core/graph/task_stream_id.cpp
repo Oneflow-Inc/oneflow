@@ -56,9 +56,9 @@ StreamId::stream_index_t GetComputeTaskStreamIndex(DeviceType device_type,
                                                    StreamIndexGenerator* generator) {
   if (device_type == DeviceType::kCPU) {
     size_t cpu_device_num = Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();
-    return generator->GenerateNamedRoundRobin("cpu_compute", cpu_device_num);
+    return generator->GenerateNamedRoundRobin("CPU_COMPUTE", cpu_device_num);
   } else {
-    return generator->GenerateNamed("compute");
+    return generator->GenerateNamed("COMPUTE");
   }
 }
 

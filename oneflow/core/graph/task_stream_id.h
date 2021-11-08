@@ -101,7 +101,7 @@ StreamId GenerateNamedTaskStreamId(int64_t rank, DeviceType device_type, int64_t
   REGISTER_TASK_STREAM_INDEX_GETTER(                                     \
       DeviceType::kCPU, task_type,                                       \
       ([](StreamIndexGenerator* generator) -> StreamId::stream_index_t { \
-        return generator->GenerateNamed("tick");                         \
+        return generator->GenerateNamed("TICK");                         \
       }));
 
 #define REGISTER_DEVICE_COMP_TASK_STREAM_INDEX_GETTER(device_type, task_type)                    \

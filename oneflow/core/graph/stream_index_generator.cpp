@@ -32,9 +32,9 @@ StreamIndexGenerator::stream_index_t StreamIndexGenerator::GenerateNamedRoundRob
     const std::string& name, size_t size) {
   CHECK_GT(size, 0);
   std::unique_lock<std::mutex> lck(mtx_);
-  auto it = name2rrr_index_.find(name);
-  if (it == name2rrr_index_.end()) {
-    it = name2rrr_index_.emplace(name, RoundRobinRangedIndex{next_stream_index_, size, 0}).first;
+  auto it = name2rr_range_.find(name);
+  if (it == name2rr_range_.end()) {
+    it = name2rr_range_.emplace(name, RoundRobinRange{next_stream_index_, size}).first;
     next_stream_index_ += size;
   } else {
     CHECK_EQ(it->second.size, size) << name;
