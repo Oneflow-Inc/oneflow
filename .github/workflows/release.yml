@@ -23,6 +23,10 @@ on:
         description: ""
         default: ""
         required: false
+      build_profile:
+        description: ""
+        default: "OFF"
+        required: false
 
 jobs:
   staging_release:
@@ -113,7 +117,7 @@ jobs:
           if [ ! -z "${{ matrix.package_name }}"] && [ "${{ matrix.package_name }}" != "oneflow" ]; then
               extra_flags+=" --package_name=${{ matrix.package_name }}"
           fi
-          extra_flags+=" --extra_oneflow_cmake_args=-DBUILD_PROFILER=OFF"
+          extra_flags+=" --extra_oneflow_cmake_args=-DBUILD_PROFILER=${{ github.event.inputs.build_profile }}"
           extra_flags+=" --extra_oneflow_cmake_args=-DTREAT_WARNINGS_AS_ERRORS=OFF"
           extra_flags+=" --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple"
           echo "cuda_version=${cuda_version}" >> $GITHUB_ENV
@@ -169,7 +173,7 @@ jobs:
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
         run: |
           python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
-          python3 -m pip install oss2 beautifulsoup4 --user
+          ∫ beautifulsoup4 --user
           python3 tools/create_pip_index.py --dir_key ${oss_dir} -b oneflow-staging --index_key=${oss_branch_dir}/index.html --index_key=${oss_dir}/index.html --index_key=commit/${GITHUB_SHA}/${{ matrix.compute_platform }}/index.html
       - name: Update API docs
         if: github.ref == 'refs/heads/master' && matrix.compute_platform == 'cpu' && contains(env.compute_platforms, matrix.compute_platform)
