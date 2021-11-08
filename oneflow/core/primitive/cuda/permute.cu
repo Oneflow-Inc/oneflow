@@ -82,9 +82,10 @@ __global__ void BatchTransposeKernel(const void* src_ptr, void* dst_ptr, IndexTy
           ((tile_size - threadIdx.y) < (H - y)) ? (tile_size - threadIdx.y) : (H - y);
 #pragma unroll
       // each thread process 4 elements.
-      // `i < y_range` equals to: `threadIdx.y + i < tile_size && y + i < H`.
-      for (int i = 0; i < y_range; i += kBlockRows) {
-        tile[threadIdx.y + i][threadIdx.x] = src[offset + (y + i) * W + x];
+      // `row_offset < y_range` equals to: `threadIdx.y + row_offset < tile_size && y + row_offset <
+      // H`.
+      for (IndexType row_offset = 0; i < y_range; row_offset += kBlockRows) {
+        tile[threadIdx.y + row_offset][threadIdx.x] = src[offset + (y + row_offset) * W + x];
       }
     }
     __syncthreads();
@@ -94,9 +95,10 @@ __global__ void BatchTransposeKernel(const void* src_ptr, void* dst_ptr, IndexTy
       IndexType x_range =
           ((tile_size - threadIdx.y) < (W - y)) ? (tile_size - threadIdx.y) : (W - y);
 #pragma unroll
-      // `i < x_range` equals to: `threadIdx.y + i < tile_size && y + i < W`.
-      for (int i = 0; i < x_range; i += kBlockRows) {
-        dst[offset + (y + i) * H + x] = tile[threadIdx.x][threadIdx.y + i];
+      // `col_offset < x_range` equals to: `threadIdx.y + col_offset < tile_size && y + col_offset <
+      // W`.
+      for (IndexType col_offset = 0; col_offset < x_range; col_offset += kBlockRows) {
+        dst[offset + (y + col_offset) * H + x] = tile[threadIdx.x][threadIdx.y + col_offset];
       }
     }
     __syncthreads();
@@ -233,7 +235,6 @@ bool CheckUseMov2(const IndexType& rows, const IndexType& cols, const void* src,
   auto dst_ptr = reinterpret_cast<std::uintptr_t>(dst);
   return (movement_size == 2) && (rows % 2 == 0) && (cols % 2 == 0) && (src_ptr % 4 == 0)
          && (dst_ptr % 4 == 0);
-  ;
 }
 
 template<size_t num_dims, typename IndexType>
