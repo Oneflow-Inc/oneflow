@@ -19,7 +19,7 @@ This file is ported from mlir/lib/Dialect/GPU/Transforms/SerializeToCubin.cpp
 
 #include "mlir/Dialect/GPU/Passes.h"
 
-#ifdef WITH_CUDA
+#ifdef WITH_MLIR_CUDA_CODEGEN
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
@@ -154,4 +154,4 @@ std::unique_ptr<Pass> createSerializeToCubinPass() {
 
 }  // namespace mlir
 
-#endif  // WITH_CUDA
+#endif  // WITH_MLIR_CUDA_CODEGEN
