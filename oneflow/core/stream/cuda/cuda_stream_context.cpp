@@ -29,7 +29,6 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include <cublas_v2.h>
 
-
 namespace oneflow {
 
 namespace {
@@ -106,7 +105,7 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
 #if CUBLAS_VERSION >= 11200
   void* workspace_{};
   size_t workspace_size_{};
-#endif  //CUBLAS_VERSION >= 11200
+#endif  // CUBLAS_VERSION >= 11200
 };
 
 }  // namespace
@@ -129,12 +128,12 @@ CudaStreamContextImpl::CudaStreamContextImpl(int device_ordinal) : device_ordina
   if (Global<ResourceDesc, ForSession>::Get()->enable_tensor_float_32_compute()) {
     OF_CUBLAS_CHECK(cublasSetMathMode(cublas_handle_, CUBLAS_TF32_TENSOR_OP_MATH));
   }
-#endif //CUBLAS_VERSION >= 11000
+#endif  // CUBLAS_VERSION >= 11000
 #if CUBLAS_VERSION >= 11200
   workspace_size_ = kDefaultWorkspaceSize;
   OF_CUDA_CHECK(cudaMalloc(&workspace_, workspace_size_));
   OF_CUBLAS_CHECK(cublasSetWorkspace(cublas_handle_, workspace_, workspace_size_));
-#endif //CUBLAS_VERSION >= 11200
+#endif  // CUBLAS_VERSION >= 11200
 
   // cudnn_handle
   if (IsCuda9OnTuringDevice()) {
