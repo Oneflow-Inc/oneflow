@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/tensor_buffer.h"
+#include "oneflow/core/common/registry_error.h"
 
 namespace oneflow {
 
@@ -76,7 +77,7 @@ size_t GetSizeOfDataType(DataType data_type) {
 
 namespace {
 
-void CheckDataType() {
+Maybe<void> CheckDataType() {
   static_assert(sizeof(int8_t) == sizeof(char), "sizeof(int8_t) != sizeof(char)");
   static_assert(sizeof(int16_t) == sizeof(short), "sizeof(int16_t) != sizeof(short)");
   static_assert(sizeof(int32_t) == sizeof(int), "sizeof(int32_t) != sizeof(int)");
@@ -106,9 +107,10 @@ void CheckDataType() {
 #define CHECK_MIN_VAL(T, limit_value) CHECK_EQ(GetMinVal<T>(), std::numeric_limits<T>::lowest());
   OF_PP_FOR_EACH_TUPLE(CHECK_MIN_VAL, MIN_VAL_SEQ);
 #undef CHECK_MIN_VAL
+  return Maybe<void>::Ok();
 }
 
-COMMAND(CheckDataType());
+COMMAND(CatchRegistryError(&CheckDataType));
 
 }  // namespace
 
