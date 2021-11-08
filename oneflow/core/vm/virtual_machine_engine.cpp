@@ -533,13 +533,15 @@ void VirtualMachineEngine::DispatchAndPrescheduleInstructions() {
   OF_PROFILER_RANGE_PUSH("DispatchAndPrescheduleInstructions");
   ReadyInstructionList tmp_ready_instruction_list;
   mut_ready_instruction_list()->MoveTo(&tmp_ready_instruction_list);
-  INTRUSIVE_FOR_EACH_PTR(instruction, &tmp_ready_instruction_list) {
-    DispatchInstruction(instruction);
+  INTRUSIVE_FOR_EACH(instruction, &tmp_ready_instruction_list) {
+    // Erases `instruction` from tmp_ready_instruction_list before dispatching, because
+    // `instruction.dispatched_instruction_hook_` are used in DispatchInstruction.
+    tmp_ready_instruction_list.Erase(instruction.Mutable());
+    DispatchInstruction(instruction.Mutable());
     // preschedule instructions
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_out_edges()) {
       TryMoveFromWaitingToReady(edge->mut_dst_instruction());
     }
-    tmp_ready_instruction_list.Erase(instruction);
   }
   OF_PROFILER_RANGE_POP();
 }
