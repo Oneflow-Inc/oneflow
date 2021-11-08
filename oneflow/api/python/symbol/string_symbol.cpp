@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
-#include "oneflow/api/python/framework/throw.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/vm/string_symbol.h"

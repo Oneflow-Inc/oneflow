@@ -20,7 +20,7 @@ limitations under the License.
 
 #include <tuple>
 #include <utility>
-#include "oneflow/api/python/framework/throw.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/common/function_traits.h"
