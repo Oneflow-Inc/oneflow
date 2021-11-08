@@ -21,8 +21,10 @@ limitations under the License.
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/thread/thread.h"
 #include "oneflow/core/thread/thread_pool.h"
+#include "oneflow/core/platform/include/pthread_fork.h"
 
 namespace oneflow {
 
@@ -48,6 +50,10 @@ void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);
 template<typename DoEachT>
 void MultiThreadLoop(size_t num, const DoEachT& DoEach) {
   if (num == 0) { return; }
+  if (unlikely(pthread_fork::IsForkedSubProcess())) {
+    SingleThreadLoop(num, DoEach);
+    return;
+  }
   size_t thread_num = Global<ThreadPool>::Get()->thread_num();
   thread_num = std::min(num, thread_num);
   BalancedSplitter bs(num, thread_num);
