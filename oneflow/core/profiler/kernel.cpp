@@ -91,9 +91,8 @@ void TraceKernelForwardDataContentEnd(const Kernel* kernel, const KernelCtx& ctx
         OF_CUDA_CHECK(cudaEventDestroy(end_event));
         double bandwidth =
             static_cast<double>(memory_size) / (1024.0 * 1024.0 * 1024.0) / (elapsed_ms / 1000);
-        LOG(INFO) << "PROFILER::KERNEL::CUDA_MEMORY_BANDWIDTH op_name: " << op_name
-                  << " elapsed(ms): " << elapsed_ms << " memory_size(Byte): " << memory_size
-                  << " bandwidth(GB/s): " << bandwidth;
+        LOG(ERROR) << "PROFILER::KERNEL::CUDA_MEMORY_BANDWIDTH op_name: " << op_name
+                  << " elapsed(ms): " << elapsed_ms << " memory_size(Byte): " << memory_size;
       });
     }
   }
