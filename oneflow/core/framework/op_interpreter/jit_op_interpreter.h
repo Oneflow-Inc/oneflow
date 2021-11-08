@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/ir/include/OneFlow/JIT.h"
 #include "mlir/IR/Builders.h"
+#include "oneflow/core/framework/op_expr.h"
 
 namespace oneflow {
 
@@ -44,9 +45,12 @@ class JitInterpreter : public OpExprInterpreter {
                     const OpExprInterpContext& ctx) const override;
   void Interrupt();
   ir::JitImporter& GetImporter() { return importer_; }
+  void CacheExpr(Operation&, std::shared_ptr<one::UserOpExpr>);
+  llvm::Optional<std::shared_ptr<one::UserOpExpr>> GetExpr(Operation*);
 
  private:
   DECLARE_NORMAL_APPLY_FUNC(UserOp);  // note(BBuf) jit deal with user op only, now.
+  mutable llvm::DenseMap<llvm::hash_code, std::shared_ptr<one::UserOpExpr>> cached_user_op_exprs_;
   mutable MLIRContext* context_;
   mutable OwningOpRef<ModuleOp> module_;
   mutable ir::JitImporter importer_;

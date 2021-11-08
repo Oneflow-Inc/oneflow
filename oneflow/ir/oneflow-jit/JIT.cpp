@@ -381,7 +381,9 @@ llvm::Optional<mlir::Value> JitImporter::GetResultByBnAndIndex(const std::string
 LogicalResult JitImporter::LowerToOneFlowKernel() {
   llvm::SmallVector<Value, 8> return_values;
   llvm::SmallVector<Type, 8> out_types{};
-  GetModule()
+  SymbolTable symbol_table(GetModule());
+  auto function = symbol_table.lookup(GetJitFuncName());
+  function
       ->walk([&](mlir::Operation* op) {
         if (llvm::dyn_cast<mlir::oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
           for (auto result : op->getOpResults()) {
@@ -412,12 +414,12 @@ LogicalResult JitImporter::LowerToOneFlowKernel() {
   auto func_op = llvm::dyn_cast<mlir::FuncOp>(return_op->getParentOp());
   auto new_func_type = GetBuilder().getFunctionType(func_op.getType().getInputs(), out_types);
   func_op.setType(new_func_type);
-  mlir::PassManager pm(GetModule()->getContext());
-  pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
+  mlir::PassManager pm(GetMLIRContext(), /*operationName=*/"builtin.func");
+  pm.addPass(::mlir::createCanonicalizerPass());
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createReturnAllLeaveResultPass());
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createCreateComputeCtxPass());
-  pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createFuseIntoExistingOpPass());
-  GetModule()->dump();
+  pm.addPass(::mlir::oneflow::createFuseIntoExistingOpPass());
+  // function->dump();
   for (auto& tensor_pair : py_tensors_) {
     if (tensor_pair.second.use_count() > 1) {
       tensor_pair.first.dump();
@@ -425,7 +427,7 @@ LogicalResult JitImporter::LowerToOneFlowKernel() {
                    << tensor_pair.second.use_count() << "\n";
     }
   }
-  return pm.run(GetModule());
+  return pm.run(function);
 }
 
 }  // namespace ir

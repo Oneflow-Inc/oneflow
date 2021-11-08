@@ -35,3 +35,4 @@ class MyModule(torch.nn.Module):
 # scripted_module = torch.jit.script(MyModule(2, 3))
 linear = MyModule(2, 3)
 print(linear(torch.randn(2, 2)))
+print(linear(torch.randn(2, 2)))

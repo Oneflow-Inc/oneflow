@@ -92,28 +92,13 @@ void JitInterpreter::Interrupt() {
   llvm::DenseMap<Value, std::shared_ptr<Tensor>> mapping;
   // TODO: handle the case if there are more than one function in the module.
   ReturnOp return_op;
+  SymbolTable symbol_table(*module_);
+  auto function = symbol_table.lookup(GetJitFuncName());
   const bool was_interrupted =
-      module_
+      function
           ->walk([&](mlir::Operation* op) {
             if (llvm::dyn_cast<mlir::oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
-              ::oneflow::OperatorConf op_conf;
-              mlir::oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(),
-                                                           op->getAttrDictionary());
-              const std::string op_name = user_op_adaptor.op_name().getValue().str();
-              auto user_conf = op_conf.mutable_user_conf();
-              if (succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))
-                  && succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))
-                  && succeeded(importer_.ConvertUserOpAttributes(op, user_op_adaptor, op_conf))
-                  && succeeded(ConvertCtrlInputs(op, op_conf))) {
-                std::vector<std::string> indexed_ibns{};
-                std::vector<std::string> indexed_obns{};
-                InsertLbnSegmentIntoVec(user_op_adaptor.input_lbn_segment_keys(),
-                                        user_op_adaptor.input_lbn_segment_sizes(), indexed_ibns);
-                InsertLbnSegmentIntoVec(user_op_adaptor.output_lbn_segment_keys(),
-                                        user_op_adaptor.output_lbn_segment_sizes(), indexed_obns);
-                auto expr =
-                    CHECK_JUST(UserOpExpr::New(user_op_adaptor.op_name().getValue().str(),
-                                               std::move(*user_conf), indexed_ibns, indexed_obns));
+              if (auto expr = GetExpr(op)) {
                 TensorTuple inputs(op->getOperands().size());
                 for (auto indexed_operand : llvm::enumerate(op->getOperands())) {
                   auto index = indexed_operand.index();
@@ -134,7 +119,8 @@ void JitInterpreter::Interrupt() {
                 // 1. it is the last use of the operand
                 // 2. the tensor shared ptr has zero ref,
                 // 3. it is not returned by the return op
-                auto outputs = CHECK_JUST(OpInterpUtil::Dispatch<TensorTuple>(*expr, inputs));
+                auto outputs =
+                    CHECK_JUST(OpInterpUtil::Dispatch<TensorTuple>(*expr.getValue(), inputs));
                 CHECK_EQ(outputs->size(), op->getResults().size());
                 for (auto output_pair : llvm::zip(*outputs, op->getResults())) {
                   auto output_tensor = std::get<0>(output_pair);
@@ -161,7 +147,7 @@ void JitInterpreter::Interrupt() {
     importer_.GetReturnTensors()[indexed_return_value.index()]->ResetTensor(mapping[value]);
   }
   importer_.ResetMappings();
-}
+}  // namespace one
 
 Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
                                       TensorTuple* outputs, const OpExprInterpContext& ctx) const {
@@ -185,6 +171,36 @@ Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTup
   importer_.CreateOperandMapping(*op_conf, parallel_desc, op_expr.input_arg_tuple(), inputs);
   CHECK_OR_RETURN(importer_.ProcessUserOp(*op_conf).succeeded());
   return Maybe<void>::Ok();
+}
+
+llvm::Optional<std::shared_ptr<one::UserOpExpr>> JitInterpreter::GetExpr(Operation* op) {
+  auto hash = OperationEquivalence::computeHash(
+      op,
+      /*hashOperands=*/OperationEquivalence::ignoreHashValue,
+      /*hashResults=*/OperationEquivalence::ignoreHashValue, OperationEquivalence::IgnoreLocations);
+
+  auto it = cached_user_op_exprs_.find(hash);
+  if (it != cached_user_op_exprs_.end()) { return it->second; }
+  mlir::oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
+  const std::string op_name = user_op_adaptor.op_name().getValue().str();
+  ::oneflow::OperatorConf op_conf;
+  auto user_conf = op_conf.mutable_user_conf();
+  if (succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))
+      && succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))
+      && succeeded(importer_.ConvertUserOpAttributes(op, user_op_adaptor, op_conf))
+      && succeeded(ConvertCtrlInputs(op, op_conf))) {
+    std::vector<std::string> indexed_ibns{};
+    std::vector<std::string> indexed_obns{};
+    InsertLbnSegmentIntoVec(user_op_adaptor.input_lbn_segment_keys(),
+                            user_op_adaptor.input_lbn_segment_sizes(), indexed_ibns);
+    InsertLbnSegmentIntoVec(user_op_adaptor.output_lbn_segment_keys(),
+                            user_op_adaptor.output_lbn_segment_sizes(), indexed_obns);
+    auto expr = CHECK_JUST(UserOpExpr::New(user_op_adaptor.op_name().getValue().str(),
+                                           std::move(*user_conf), indexed_ibns, indexed_obns));
+    cached_user_op_exprs_.insert({hash, expr});
+    return expr;
+  }
+  return None;
 }
 
 }  // namespace one
