@@ -81,9 +81,9 @@ class EagerBlobObject final : public BlobObject {
     return blob_.get();
   }
 
-  void TryResetBlobData() const;
   Maybe<void> TryInitBlob() override;
   Maybe<void> InitBlob();
+  void TryResetBlobData() const;
 
   Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
   Maybe<void> DeallocateBlobDataPtr() override {
@@ -116,17 +116,18 @@ class EagerBlobObject final : public BlobObject {
   void set_last_used_device(Symbol<Device> last_used_device) {
     last_used_device_ = last_used_device;
   }
+  
 
  private:
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
                   const Optional<LocalDepObject*>& dep_object);
   
-  int64_t storage_offset_;
   std::unique_ptr<Blob> blob_;
   std::unique_ptr<char[]> header_buffer_;
   std::shared_ptr<TensorBuffer> tensor_buffer_;
   std::atomic<bool> is_shape_synced_;
+  int64_t storage_offset_;
   Optional<LocalDepObject*> compute_local_dep_object_;
   Optional<Symbol<Device>> producer_op_device_;
   Optional<Symbol<Device>> last_used_device_;
