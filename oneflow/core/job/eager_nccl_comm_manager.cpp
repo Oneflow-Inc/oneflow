@@ -111,14 +111,13 @@ ncclComm_t EagerNcclCommMgr::GetCommForDevice(
 }
 
 ncclComm_t EagerNcclCommMgr::GetCommForDeviceAndStreamId(
-    const std::set<std::pair<int64_t, int64_t>>& device_set, const int32_t stream_id) {
+    const std::set<std::pair<int64_t, int64_t>>& device_set, const std::string& stream_name) {
   int dev;
   OF_CUDA_CHECK(cudaGetDevice(&dev));
 
   std::vector<std::pair<int64_t, int64_t>> device_vec(device_set.cbegin(), device_set.cend());
   std::sort(device_vec.begin(), device_vec.end(), CompareDeviceSetPair);
-  std::string key =
-      GetNcclUniqueIdRpcKey(device_vec) + "-stream_id_hint:" + std::to_string(stream_id);
+  std::string key = GetNcclUniqueIdRpcKey(device_vec) + "-stream_id_hint:" + stream_name;
 
   {
     std::lock_guard<std::mutex> lock(mutex_);
