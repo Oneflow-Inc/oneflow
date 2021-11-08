@@ -28,7 +28,7 @@ class Symbol;
 
 }  // namespace oneflow
 
-namespace oneflow_api {
+namespace ofapi {
 
 class Device final {
  public:
@@ -39,6 +39,6 @@ class Device final {
   std::shared_ptr<oneflow::Symbol<oneflow::Device>> device_ = nullptr;
 };
 
-}  // namespace oneflow_api
+}  // namespace ofapi
 
 #endif  // !ONEFLOW_API_CPP_DEVICE_H_

@@ -19,13 +19,12 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "device.h"
 
-namespace oneflow_api {
+namespace ofapi {
 
-using OFDevice = oneflow::Device;
-using OFSymbolOfDevice = oneflow::Symbol<OFDevice>;
+namespace of = oneflow;
 
 void CheckDeviceType(const std::string& type) {
-  if (OFDevice::type_supported.find(type) == OFDevice::type_supported.end()) {
+  if (of::Device::type_supported.find(type) == of::Device::type_supported.end()) {
     std::string error_msg =
         "Expected one of cpu, cuda device type at start of device string " + type;
     throw std::runtime_error(error_msg);
@@ -38,15 +37,16 @@ Device::Device(const std::string& type_or_type_with_device_id) {
   oneflow::ParsingDeviceTag(type_or_type_with_device_id, &type, &device_id).GetOrThrow();
   if (device_id == -1) {
     CheckDeviceType(type);
-    device_ = std::make_shared<OFSymbolOfDevice>(OFDevice::New(type).GetOrThrow());
+    device_ = std::make_shared<of::Symbol<of::Device>>(of::Device::New(type).GetOrThrow());
   } else {
-    device_ = std::make_shared<OFSymbolOfDevice>(OFDevice::New(type, device_id).GetOrThrow());
+    device_ =
+        std::make_shared<of::Symbol<of::Device>>(of::Device::New(type, device_id).GetOrThrow());
   }
 }
 
 Device::Device(const std::string& type, int64_t device_id) {
   CheckDeviceType(type);
-  device_ = std::make_shared<OFSymbolOfDevice>(OFDevice::New(type, device_id).GetOrThrow());
+  device_ = std::make_shared<of::Symbol<of::Device>>(of::Device::New(type, device_id).GetOrThrow());
 }
 
-}  // namespace oneflow_api
+}  // namespace ofapi

@@ -17,7 +17,13 @@ limitations under the License.
 #ifndef ONEFLOW_API_H_
 #define ONEFLOW_API_H_
 
-#include "init.h"
 #include "device.h"
+
+namespace ofapi {
+
+void initialize();
+void release();
+
+}  // namespace ofapi
 
 #endif  // ONELFOW_API_H_
