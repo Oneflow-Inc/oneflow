@@ -13,19 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_OUTLINEJITFUNCTION_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_OUTLINEJITFUNCTION_H_
+#ifndef ONEFLOW_CORE_PRIMITIVE_COMMON_ELEMENTWISE_UNARY_H_
+#define ONEFLOW_CORE_PRIMITIVE_COMMON_ELEMENTWISE_UNARY_H_
 
-#include "mlir/Pass/Pass.h"
-
-namespace mlir {
+#include "oneflow/core/primitive/include/elementwise_unary.h"
 
 namespace oneflow {
 
-std::unique_ptr<mlir::Pass> createOutlineJitFunctionPass();
+namespace primitive {
 
+#define UNARY_MATH_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu)
+
+#define UNARY_LOGICAL_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLogicalNot)
+
+}  // namespace primitive
 }  // namespace oneflow
 
-}  // namespace mlir
-
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_OUTLINEJITFUNCTION_H_
+#endif  // ONEFLOW_CORE_PRIMITIVE_COMMON_ELEMENTWISE_UNARY_H_

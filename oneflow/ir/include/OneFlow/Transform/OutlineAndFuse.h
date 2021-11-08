@@ -13,24 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_BATCH_MEMCPY_KERNEL_UTIL_H_
-#define ONEFLOW_CORE_KERNEL_BATCH_MEMCPY_KERNEL_UTIL_H_
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_OUTLINEJITFUNCTION_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_OUTLINEJITFUNCTION_H_
 
-#include "oneflow/core/kernel/kernel_util.h"
+#include "mlir/Pass/Pass.h"
+
+namespace mlir {
 
 namespace oneflow {
 
-struct MemcpyParam {
-  void* dst;
-  const void* src;
-  size_t count;
-};
-
-template<DeviceType device_type>
-struct BatchMemcpyKernelUtil final {
-  static void Copy(DeviceCtx* ctx, const std::vector<MemcpyParam>& params);
-};
+std::unique_ptr<mlir::Pass> createOutlineJitFunctionPass();
+std::unique_ptr<mlir::Pass> createFuseIntoExistingOpPass();
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_BATCH_MEMCPY_KERNEL_UTIL_H_
+}  // namespace mlir
+
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_OUTLINEJITFUNCTION_H_

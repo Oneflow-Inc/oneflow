@@ -1,8 +1,8 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 message(STATUS "MLIR_DIALECT_LIBS: ${dialect_libs}")
-if(BUILD_CUDA)
+if(WITH_MLIR_CUDA_CODEGEN)
 set(MLIR_GPU_LIBS MLIRSCFToGPU MLIRGPUToNVVMTransforms MLIRNVVMToLLVMIRTranslation)
-endif(BUILD_CUDA)
+endif(WITH_MLIR_CUDA_CODEGEN)
 
 add_mlir_dialect_library(MLIROneFlow
   OneFlowDialect.cpp
@@ -11,7 +11,7 @@ add_mlir_dialect_library(MLIROneFlow
   Conversion/SCFToGPU.cpp
   Conversion/PTXToCubin.cpp
   Transform/BufferHostRegister.cpp
-  Transform/OutlineJitFunction.cpp
+  Transform/OutlineAndFuse.cpp
   Passes.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -30,11 +30,11 @@ add_mlir_dialect_library(MLIROneFlow
   MLIRIR
 )
 
-if(BUILD_CUDA)
+if(WITH_MLIR_CUDA_CODEGEN)
   find_library(CUDA_DRIVER_LIBRARY cuda)
   target_link_libraries(MLIROneFlow
     PRIVATE
     ${CUDA_DRIVER_LIBRARY}
   )
   include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
-endif(BUILD_CUDA)
+endif(WITH_MLIR_CUDA_CODEGEN)
