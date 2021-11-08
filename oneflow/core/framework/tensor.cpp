@@ -28,7 +28,6 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/functional/functional.h"
 
-
 namespace oneflow {
 
 namespace one {
@@ -104,8 +103,6 @@ Maybe<Tensor> ConsistentTensor::detach() const {
   std::shared_ptr<Tensor> t = std::make_shared<ConsistentTensor>(impl_);
   return t;
 }
-
-
 
 }  // namespace one
 

@@ -192,7 +192,6 @@ class StaticZerosTensor final : public Tensor {
   Maybe<Tensor> detach() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Tensor> clone() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
-
   // Setters for autograd
   Maybe<void> set_requires_grad(bool requires_grad) override { PRINT_BUG_PROMPT_AND_ABORT(); }
   Maybe<void> set_retain_grad(bool retain_grad) override { RETURN_ERROR_WITH_BUG_PROMPT(); }

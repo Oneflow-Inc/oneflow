@@ -116,7 +116,6 @@ class EagerBlobObject final : public BlobObject {
   void set_last_used_device(Symbol<Device> last_used_device) {
     last_used_device_ = last_used_device;
   }
-  
 
  private:
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
