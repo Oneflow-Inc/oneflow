@@ -29,7 +29,9 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
   OF_DISALLOW_COPY_AND_MOVE(EpollCommNet);
   ~EpollCommNet();
 
-  void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
+  void SendMsg(int64_t dst_machine_id, void* addr, size_t size) override;
+  char* SerialTokenToData(void* token, size_t* size) override;
+  void* DeSerialDataToToken(char* data, size_t* size) override;
   void SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg);
   void SendTransportMsg(int64_t dst_machine_id, const TransportMsg& msg);
 

@@ -92,15 +92,11 @@ EpollCommNet::~EpollCommNet() {
   for (auto& pair : sockfd2helper_) { delete pair.second; }
 }
 
-void EpollCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& actor_msg) {
-  SocketMsg msg;
-  msg.msg_type = SocketMsgType::kActor;
-  msg.actor_msg = actor_msg;
-  if (actor_msg.IsDataRegstMsgToConsumer()) {
-    msg.actor_msg.set_comm_net_token(actor_msg.regst()->comm_net_token());
-  }
-  GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
-}
+void EpollCommNet::SendMsg(int64_t dst_machine_id, void * addr, size_t size) {}
+
+char* EpollCommNet::SerialTokenToData(void* token, size_t* size) { return nullptr; }
+
+void* EpollCommNet::DeSerialDataToToken(char* data, size_t* size) { return nullptr; }
 
 void EpollCommNet::SendTransportMsg(int64_t dst_machine_id, const TransportMsg& transport_msg) {
   SocketMsg msg;

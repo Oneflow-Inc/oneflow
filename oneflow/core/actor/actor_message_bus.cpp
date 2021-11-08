@@ -22,7 +22,7 @@ limitations under the License.
 namespace oneflow {
 
 void ActorMsgBus::SendMsg(const ActorMsg& msg) {
-  int64_t dst_machine_id = MachineId4ActorId(msg.dst_actor_id());
+  int64_t dst_machine_id = Global<IDMgr>::Get()->MachineId4ActorId(msg.dst_actor_id());
   if (dst_machine_id == GlobalProcessCtx::Rank()) {
     SendMsgWithoutCommNet(msg);
   } else {
@@ -39,17 +39,37 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       }
       ActorMsg new_msg = msg;
       new_msg.set_comm_net_sequence_number(comm_net_sequence);
-      Global<CommNet>::Get()->SendActorMsg(dst_machine_id, new_msg);
+      size_t token_size = 0;
+      char* serial_data =
+          Global<CommNet>::Get()->SerialTokenToData(new_msg.regst()->comm_net_token(), &token_size);
+      new_msg.AddUserData(token_size, serial_data);
+      free(serial_data);
+      size_t msg_size = sizeof(new_msg);
+      uint64_t addr = reinterpret_cast<uint64_t>(&new_msg);
+      Global<CommNet>::Get()->SendMsg(dst_machine_id, reinterpret_cast<void*>(addr), msg_size);
     } else {
-      Global<CommNet>::Get()->SendActorMsg(dst_machine_id, msg);
+      uint64_t addr = reinterpret_cast<uint64_t>(&msg);
+      size_t msg_size = sizeof(msg);
+      Global<CommNet>::Get()->SendMsg(dst_machine_id,reinterpret_cast<void*>(addr), msg_size);
     }
   }
 }
 
 void ActorMsgBus::SendMsgWithoutCommNet(const ActorMsg& msg) {
-  CHECK_EQ(MachineId4ActorId(msg.dst_actor_id()), GlobalProcessCtx::Rank());
-  int64_t thrd_id = ThrdId4ActorId(msg.dst_actor_id());
+  CHECK_EQ(Global<IDMgr>::Get()->MachineId4ActorId(msg.dst_actor_id()), GlobalProcessCtx::Rank());
+  int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(msg.dst_actor_id());
   Global<ThreadMgr>::Get()->GetThrd(thrd_id)->EnqueueActorMsg(msg);
+}
+
+void ActorMsgBus::HandleRecvData(void* data, size_t size) {
+  ActorMsg msg = *(reinterpret_cast<ActorMsg*>(data));
+  ActorMsg new_msg = msg;
+  size_t token_size = 0;
+  if (msg.IsDataRegstMsgToConsumer()) {
+    void* token = Global<CommNet>::Get()->DeSerialDataToToken((char*)msg.user_data(), &token_size);
+    new_msg.set_comm_net_token(token);
+  }
+  SendMsgWithoutCommNet(new_msg);
 }
 
 }  // namespace oneflow

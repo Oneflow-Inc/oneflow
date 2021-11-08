@@ -84,34 +84,34 @@ IBVerbsCommNet::~IBVerbsCommNet() {
   CHECK_EQ(ibv::wrapper.ibv_close_device(context_), 0);
 }
 
-void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
-  ActorMsg new_msg = msg;
-  if (msg.IsDataRegstMsgToConsumer()) {
-    CHECK_EQ(msg.user_data_size(), 0);
-    auto* mem_desc = reinterpret_cast<IBVerbsMemDesc*>(msg.regst()->comm_net_token());
-    CHECK(mem_desc != nullptr);
-    IBVerbsCommNetRMADesc rma_desc{};
-    rma_desc.mem_ptr = reinterpret_cast<uint64_t>(mem_desc->mem_ptr());
-    rma_desc.mem_size = mem_desc->mem_size();
-    rma_desc.mr_rkey = mem_desc->mr()->rkey;
-    static_assert(sizeof(IBVerbsCommNetRMADesc) <= kActorMsgUserDataMaxSize, "");
-    new_msg.AddUserData(sizeof(IBVerbsCommNetRMADesc), &rma_desc);
-  }
-  qp_vec_.at(dst_machine_id)->PostSendRequest(new_msg);
+
+void IBVerbsCommNet::SendMsg(int64_t dst_machine_id, void * addr, size_t size) {
+  qp_vec_.at(dst_machine_id)->PostSendRequest(data, size);
 }
 
-void IBVerbsCommNet::RecvActorMsg(const ActorMsg& msg) {
-  ActorMsg new_msg = msg;
-  if (msg.IsDataRegstMsgToConsumer()) {
-    std::lock_guard<std::mutex> lock(remote_regst2rma_desc_mutex_);
-    auto& desc = remote_regst2rma_desc_[std::make_pair(msg.src_actor_id(),
-                                                       reinterpret_cast<uint64_t>(msg.regst()))];
-    if (!desc) { desc.reset(new IBVerbsCommNetRMADesc); }
-    CHECK_EQ(msg.user_data_size(), sizeof(IBVerbsCommNetRMADesc));
-    std::memcpy(desc.get(), msg.user_data(), sizeof(IBVerbsCommNetRMADesc));
-    new_msg.set_comm_net_token(desc.get());
-  }
-  Global<ActorMsgBus>::Get()->SendMsgWithoutCommNet(new_msg);
+char* IBVerbsCommNet::SerialTokenToData(void* token, size_t* token_size) {
+  char* data = (char*)malloc(sizeof(IBVerbsCommNetRMADesc));
+  *token_size = sizeof(IBVerbsCommNetRMADesc);
+  auto* mem_desc = reinterpret_cast<IBVerbsMemDesc*>(token);
+  IBVerbsCommNetRMADesc rma_desc{};
+  rma_desc.mem_ptr = reinterpret_cast<uint64_t>(mem_desc->mem_ptr());
+  rma_desc.mem_size = mem_desc->mem_size();
+  rma_desc.mr_rkey = mem_desc->mr()->rkey;
+  static_assert(sizeof(IBVerbsCommNetRMADesc) <= kActorMsgUserDataMaxSize, "");
+  std::memcpy(data, &rma_desc, sizeof(IBVerbsCommNetRMADesc));
+  return data;
+}
+
+void* IBVerbsCommNet::DeSerialDataToToken(char* data, size_t* token_size) {
+  void* token = malloc(sizeof(IBVerbsCommNetRMADesc));
+  std::memcpy(token, data, sizeof(IBVerbsCommNetRMADesc));
+  *token_size = sizeof(IBVerbsCommNetRMADesc);
+  return token;
+}
+
+void IBVerbsCommNet::RecvMsg(void* data, size_t size) { 
+ // msghandle_(data, size);
+  Global<ActorMsgBus>::Get()->HandleRecvData(data, size); 
 }
 
 IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT) {

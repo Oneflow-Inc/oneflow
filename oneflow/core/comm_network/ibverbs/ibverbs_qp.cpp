@@ -164,9 +164,9 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
   }
 }
 
-void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
+void IBVerbsQP::PostSendRequest(void * data, size_t size) {
   ActorMsgMR* msg_mr = message_pool_->GetMessage();
-  msg_mr->set_message(msg);
+  msg_mr->set_data(reinterpret_cast<char*>(data), size);
   WorkRequestId* wr_id = NewWorkRequestId();
   wr_id->msg_mr = msg_mr;
   ibv_send_wr wr{};
@@ -184,6 +184,7 @@ void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
   memset(&(wr.wr), 0, sizeof(wr.wr));
   EnqueuePostSendReadWR(wr, sge);
 }
+
 
 void IBVerbsQP::EnqueuePostSendReadWR(ibv_send_wr wr, ibv_sge sge) {
   std::unique_lock<std::mutex> pending_send_wr_lock_(pending_send_wr_mutex_);
@@ -216,7 +217,7 @@ void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
 void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
   auto* ibv_comm_net = dynamic_cast<IBVerbsCommNet*>(Global<CommNet>::Get());
   CHECK(ibv_comm_net != nullptr);
-  ibv_comm_net->RecvActorMsg(wr_id->msg_mr->message());
+  ibv_comm_net->RecvMsg(wr_id->msg_mr->message(), wr_id->msg_mr->size());
   PostRecvRequest(wr_id->msg_mr);
   DeleteWorkRequestId(wr_id);
 }
