@@ -22,23 +22,23 @@ namespace oneflow {
 
 namespace details {
 
-struct ThrowImpl final {
+struct Throw final {
   void operator=(Error&& error) { ThrowError(error.error_proto()); }
 
-} Throw;
+};
 
 }  // namespace details
 
 }  // namespace oneflow
 
 #define THROW(err_type)                                                          \
-  oneflow::details::Throw =                                                      \
+  oneflow::details::Throw() =                                                      \
       oneflow::Error::err_type().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \
       << #err_type << ": "
 
 #define CHECK_OR_THROW(expr)                                                             \
   if (!(expr))                                                                           \
-  oneflow::details::Throw =                                                              \
+  oneflow::details::Throw() =                                                              \
       oneflow::Error::CheckFailedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \
       << " Check failed: " << OF_PP_STRINGIZE(expr) << ": "
 
@@ -69,11 +69,11 @@ struct ThrowImpl final {
 #define CHECK_ISNULL_OR_THROW(ptr) CHECK_OR_THROW(ptr == nullptr)
 
 #define TODO_THEN_THROW()   \
-  oneflow::details::Throw = \
+  oneflow::details::Throw() = \
       oneflow::Error::TodoError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
 
 #define UNIMPLEMENTED_THEN_THROW() \
-  oneflow::details::Throw =        \
+  oneflow::details::Throw() =        \
       oneflow::Error::UnimplementedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
 
 #endif  // ONEFLOW_CORE_COMMON_THROW_H_
