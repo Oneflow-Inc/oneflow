@@ -81,7 +81,7 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
 void CopyCommNetTaskNode::Init(int64_t machine_id, const LogicalBlobId& lbi) {
   set_machine_id(machine_id);
   set_thrd_id(
-      EncodeStreamIdToInt64(GenerateNamedTaskStreamId(machine_id, DeviceType::kCPU, 0, "COMMNET")));
+      EncodeStreamIdToInt64(GenerateNamedTaskStreamId(machine_id, DeviceType::kCPU, 0, "COMM_NET")));
   set_lbi(lbi);
 }
 
