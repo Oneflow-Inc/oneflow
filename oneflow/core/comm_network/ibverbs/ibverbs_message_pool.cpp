@@ -36,7 +36,7 @@ IBVerbsMessagePool::IBVerbsMessagePool(ibv_pd* pd, uint32_t num_msg_per_bluk_all
     : pd_(pd), num_msg_per_bluk_allocation_(num_msg_per_bluk_allocation) {}
 
 void IBVerbsMessagePool::BulkAllocMessage() {
-  size_t message_size = sizeof(ActorMsg);
+  size_t message_size = 400;
   size_t register_memory_size = message_size * num_msg_per_bluk_allocation_;
   char* addr = (char*)malloc(register_memory_size);
   ibv_mr* mr = ibv::wrapper.ibv_reg_mr_wrap(
