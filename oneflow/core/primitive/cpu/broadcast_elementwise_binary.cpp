@@ -72,7 +72,7 @@ float16 GetValue<float16>(Scalar value) {
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst, size_t num_dims, size_t pack_size,
-         typename IndexType>
+         bool pack_src0, bool pack_src1, typename IndexType>
 void LaunchKernel(StreamContext* stream_ctx,
                   BroadcastElementwiseBinaryParams<num_dims, IndexType> params) {
   const PackType<Src, pack_size>* src0 =

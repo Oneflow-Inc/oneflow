@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/primitive/include/broadcast_elementwise_binary.h"
 #include "oneflow/core/primitive/common/broadcast_elementwise_binary.h"
 #include "oneflow/core/primitive/cuda/type_seq.h"
-#include "oneflow/core/stream/cuda_stream_context.h"
+#include "oneflow/core/stream/cuda/cuda_stream_context.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/primitive/common/binary_functor.h"
 
@@ -63,13 +63,11 @@ struct BinaryFunctor<DeviceType::kGPU, BinaryOp::kFmod, half, half> {
 namespace {
 
 template<BinaryOp binary_op, typename Src, typename Dst, size_t num_dims, size_t pack_size,
-         typename IndexType>
+         bool pack_src0, bool pack_src1, typename IndexType>
 __global__ void BroadcastElementwiseBinaryGpu(
     BroadcastElementwiseBinaryParams<num_dims, IndexType> params) {
-  const PackType<Src, pack_size>* src0 =
-      reinterpret_cast<const PackType<Src, pack_size>*>(params.src0);
-  const PackType<Src, pack_size>* src1 =
-      reinterpret_cast<const PackType<Src, pack_size>*>(params.src1);
+  const Src* src0 = reinterpret_cast<const Src*>(params.src0);
+  const Src* src1 = reinterpret_cast<const Src*>(params.src1);
   PackType<Dst, pack_size>* dst = reinterpret_cast<PackType<Dst, pack_size>*>(params.dst);
   IndexType src0_index[num_dims];
   IndexType src1_index[num_dims];
@@ -91,10 +89,22 @@ __global__ void BroadcastElementwiseBinaryGpu(
     const IndexType src0_offset = params.src0_index_helper.NdIndexToOffset(src0_index);
     const IndexType src1_offset = params.src1_index_helper.NdIndexToOffset(src1_index);
     Pack<Src, pack_size> src0_pack;
-    src0_pack.storage = src0[src0_offset];
     Pack<Src, pack_size> src1_pack;
-    src1_pack.storage = src1[src1_offset];
     Pack<Dst, pack_size> dst_pack;
+    if (pack_src0) {
+      src0_pack.storage = (reinterpret_cast<const PackType<Src, pack_size>*>(src0))[src0_offset];
+    } else {
+      const Src src0_val = src0[src0_offset];
+#pragma unroll
+      for (int j = 0; j < pack_size; ++j) { src0_pack.elem[j] = src0_val; }
+    }
+    if (pack_src1) {
+      src1_pack.storage = (reinterpret_cast<const PackType<Src, pack_size>*>(src1))[src1_offset];
+    } else {
+      const Src src1_val = src1[src1_offset];
+#pragma unroll
+      for (int j = 0; j < pack_size; ++j) { src1_pack.elem[j] = src1_val; }
+    }
 #pragma unroll
     for (int j = 0; j < pack_size; ++j) {
       dst_pack.elem[j] = BinaryFunctor<DeviceType::kGPU, binary_op, Src, Dst>()(src0_pack.elem[j],
@@ -104,13 +114,13 @@ __global__ void BroadcastElementwiseBinaryGpu(
   }
 }
 
-template<BinaryOp op, typename Src, typename Dst, size_t num_dims, size_t pack_size,
-         typename IndexType>
+template<BinaryOp op, typename Src, typename Dst, size_t num_dims, size_t pack_size, bool pack_src0,
+         bool pack_src1, typename IndexType>
 void LaunchKernel(StreamContext* stream_ctx,
                   BroadcastElementwiseBinaryParams<num_dims, IndexType> params) {
   cudaStream_t cuda_stream =
       CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
-  BroadcastElementwiseBinaryGpu<op, Src, Dst, num_dims, pack_size, IndexType>
+  BroadcastElementwiseBinaryGpu<op, Src, Dst, num_dims, pack_size, pack_src0, pack_src1, IndexType>
       <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params);
 }
 
@@ -127,12 +137,40 @@ struct UnaryByScalarFunctor {
   const Src scalar;
 };
 
-template<BinaryOp binary_op, typename Src, typename Dst, bool scalar_left>
-struct UnaryByScalarPtrFunctorFactory {
-  __host__ __device__ explicit UnaryByScalarPtrFunctorFactory(const Src* scalar_ptr)
+template<BinaryOp binary_op, typename Src, typename Dst>
+struct BinaryLhsScalarFunctor {
+  __host__ __device__ explicit BinaryLhsScalarFunctor(Src scalar) : scalar(scalar) {}
+  __device__ Dst operator()(Src src) const {
+    return BinaryFunctor<DeviceType::kGPU, binary_op, Src, Dst>()(scalar, src);
+  }
+  const Src scalar;
+};
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+struct BinaryRhsScalarFunctor {
+  __host__ __device__ explicit BinaryRhsScalarFunctor(Src scalar) : scalar(scalar) {}
+  __device__ Dst operator()(Src src) const {
+    return BinaryFunctor<DeviceType::kGPU, binary_op, Src, Dst>()(src, scalar);
+  }
+  const Src scalar;
+};
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+struct BinaryLhsScalarPtrFunctorFactory {
+  __host__ __device__ explicit BinaryLhsScalarPtrFunctorFactory(const Src* scalar_ptr)
       : scalar_ptr(scalar_ptr) {}
-  __device__ UnaryByScalarFunctor<binary_op, Src, Dst, scalar_left> operator()() const {
-    return UnaryByScalarFunctor<binary_op, Src, Dst, scalar_left>(*scalar_ptr);
+  __device__ BinaryLhsScalarFunctor<binary_op, Src, Dst> operator()() const {
+    return BinaryLhsScalarFunctor<binary_op, Src, Dst>(*scalar_ptr);
+  }
+  const Src* scalar_ptr;
+};
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+struct BinaryRhsScalarPtrFunctorFactory {
+  __host__ __device__ explicit BinaryRhsScalarPtrFunctorFactory(const Src* scalar_ptr)
+      : scalar_ptr(scalar_ptr) {}
+  __device__ BinaryRhsScalarFunctor<binary_op, Src, Dst> operator()() const {
+    return BinaryRhsScalarFunctor<binary_op, Src, Dst>(*scalar_ptr);
   }
   const Src* scalar_ptr;
 };
@@ -161,6 +199,7 @@ void DispatchLaunch(StreamContext* stream_ctx, size_t num_src0_dims, const int64
   size_t src0_count = GetElementCount(num_src0_dims, src0_dims);
   size_t src1_count = GetElementCount(num_src1_dims, src1_dims);
   const size_t elem_cnt = std::max(src0_count, src1_count);
+  LOG(ERROR)<<"src0_count "<<src0_count<<" src1_count "<<src1_count<<" elem_cnt "<<elem_cnt;
   if (IsDimsEquals(num_src0_dims, src0_dims, num_src1_dims, src1_dims)) {
     LOG(ERROR) << "elementwise";
     OF_CUDA_CHECK((cuda::elementwise::Binary(BinaryFunctor<DeviceType::kGPU, binary_op, Src, Dst>(),
@@ -168,12 +207,12 @@ void DispatchLaunch(StreamContext* stream_ctx, size_t num_src0_dims, const int64
   } else if (src0_count == 1) {
     LOG(ERROR) << "UnaryWithFactory left scalar ptr";
     OF_CUDA_CHECK((cuda::elementwise::UnaryWithFactory(
-        UnaryByScalarPtrFunctorFactory<binary_op, Src, Dst, true>(src0), elem_cnt, dst, src1,
+        BinaryLhsScalarPtrFunctorFactory<binary_op, Src, Dst>(src0), elem_cnt, dst, src1,
         cuda_stream)));
   } else if (src1_count == 1) {
     LOG(ERROR) << "UnaryWithFactory right scalar ptr";
     OF_CUDA_CHECK((cuda::elementwise::UnaryWithFactory(
-        UnaryByScalarPtrFunctorFactory<binary_op, Src, Dst, false>(src1), elem_cnt, dst, src0,
+        BinaryRhsScalarPtrFunctorFactory<binary_op, Src, Dst>(src1), elem_cnt, dst, src0,
         cuda_stream)));
   } else {
     LOG(ERROR) << "SimplifyThenLaunch";
@@ -215,7 +254,7 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
         CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
     const size_t elem_cnt = GetElementCount(num_src1_dims, src1_dims);
     OF_CUDA_CHECK((cuda::elementwise::Unary(
-        UnaryByScalarFunctor<binary_op, Src, Dst, true>(GetValue<Src>(src0)), elem_cnt,
+        BinaryLhsScalarFunctor<binary_op, Src, Dst>(GetValue<Src>(src0)), elem_cnt,
         reinterpret_cast<Dst*>(dst), reinterpret_cast<const Src*>(src1), cuda_stream)));
   }
   void Launch(StreamContext* stream_ctx, size_t num_src0_dims, const int64_t* src0_dims,
@@ -225,7 +264,7 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
         CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
     const size_t elem_cnt = GetElementCount(num_src0_dims, src0_dims);
     OF_CUDA_CHECK((cuda::elementwise::Unary(
-        UnaryByScalarFunctor<binary_op, Src, Dst, false>(GetValue<Src>(src1)), elem_cnt,
+        BinaryRhsScalarFunctor<binary_op, Src, Dst>(GetValue<Src>(src1)), elem_cnt,
         reinterpret_cast<Dst*>(dst), reinterpret_cast<const Src*>(src0), cuda_stream)));
   }
   void Launch(StreamContext* stream_ctx, size_t num_src0_dims, const int64_t* src0_dims,

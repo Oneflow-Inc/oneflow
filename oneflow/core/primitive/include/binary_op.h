@@ -29,18 +29,27 @@ enum class BinaryOp {
   kDiv,
   kMax,
   kMin,
+  kFloorDiv,
+  kFmod,  // todo: 确认fmod是什么，大小写是否正确.
+  kPow,
+
+  // comparision
   kEqual,
   kNotEqual,
   kLessThan,
   kLessEqual,
   kGreaterThan,
   kGreaterEqual,
+  // logical
   kLogicalAnd,
   kLogicalOr,
   kLogicalXor,
-  kFloorDiv,
-  kFmod,
-  kPow,
+
+  // unary backward
+  kReluBackwardWithDyY,
+  kSigmoidBackwardWithDyY,
+  kGeluBackwardWithDyX,
+
 };
 
 }  // namespace primitive
