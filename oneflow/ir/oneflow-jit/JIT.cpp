@@ -207,14 +207,6 @@ Type JitImporter::GetTensorTypeOfLbn(const std::string& lbn) {
   return result_type_mapping_.at(lbi.blob_name());
 }
 
-std::shared_ptr<Tensor> UnWrapTensorRefOrReturnSelf(const std::shared_ptr<Tensor>& tensor) {
-  if (auto tensor_ref = std::dynamic_pointer_cast<TensorRef>(tensor)) {
-    return tensor_ref->GetTensor();
-  } else {
-    return tensor;
-  }
-}
-
 std::shared_ptr<Tensor> JitImporter::MakeIntermediateTensor(
     const std::string& lbn, Value result,
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
@@ -238,19 +230,12 @@ std::shared_ptr<Tensor> JitImporter::MakeIntermediateTensor(
   auto tensor =
       CHECK_JUST(MirroredTensor::MakeTensor(shape, dtype, device, /* is_lazy */ true,
                                             /* requires_grad= */ false, /* is_leaf= */ true));
-  // | ref | ref | tensor     |
-  // | py  | jit | lazy/eager |
-  // tensor_ref holds an lazy or eager tensor
   auto tensor_ref = std::make_shared<TensorRef>(tensor);
-  // tensor_ref_ref is for tracking the ref count of Python
-  auto tensor_ref_ref = std::make_shared<TensorRef>(tensor_ref);
   CHECK(intermediate_tensors_.insert({result, tensor_ref}).second)
       << "Intermediate tensor already created, lbn: " << lbn;
-  CHECK(py_tensors_.insert({result, tensor_ref_ref}).second)
-      << "Python tensor already created, lbn: " << lbn;
   CHECK(result_mapping_.emplace(tensor_ref.get(), result).second)
       << "Intermediate tensor already mapped to mlir value, lbn: " << lbn;
-  return tensor_ref_ref;
+  return tensor_ref;
 }
 LogicalResult JitImporter::InsertOpResults(const ::oneflow::OperatorConf& op_conf,
                                            Operation* created_op) {
@@ -370,7 +355,7 @@ llvm::Optional<mlir::Value> JitImporter::GetResultByBnAndIndex(const std::string
                                                                const int32_t index) {
   auto idx = input_arg_tuple_->TensorTupleIndex4ArgNameAndIndex(bn, index);
   auto tensor = inputs_[idx];
-  auto result_it = result_mapping_.find(UnWrapTensorRefOrReturnSelf(tensor).get());
+  auto result_it = result_mapping_.find(tensor.get());
   if (result_it == result_mapping_.end()) {
     return llvm::None;
   } else {
@@ -418,13 +403,6 @@ LogicalResult JitImporter::LowerToOneFlowKernel() {
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createCreateComputeCtxPass());
   pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createFuseIntoExistingOpPass());
   GetModule()->dump();
-  for (auto& tensor_pair : py_tensors_) {
-    if (tensor_pair.second.use_count() > 1) {
-      tensor_pair.first.dump();
-      llvm::errs() << "#" << tensor_pair.first.dyn_cast<OpResult>().getResultNumber() << ": "
-                   << tensor_pair.second.use_count() << "\n";
-    }
-  }
   return pm.run(GetModule());
 }
 

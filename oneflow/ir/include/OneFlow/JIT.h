@@ -173,7 +173,6 @@ class JitImporter : public Importer {
     result_mapping_.clear();
     intermediate_tensors_.clear();
     return_tensors_.clear();
-    py_tensors_.clear();
   };
 
  private:
@@ -183,7 +182,6 @@ class JitImporter : public Importer {
   // 2. it is being evaluated before forward function returning (print, etc)
   std::unordered_map<Tensor*, mlir::Value> result_mapping_;  // tensor* => %result
   llvm::DenseMap<Value, std::shared_ptr<TensorRef>> intermediate_tensors_;
-  llvm::DenseMap<Value, std::shared_ptr<TensorRef>> py_tensors_;
   llvm::SmallVector<std::shared_ptr<TensorRef>, 8> return_tensors_;
   // reset every op
   std::unordered_map<std::string, mlir::Value> operand_mapping_;     // "a0" => %result
