@@ -108,6 +108,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   Global<ResourceDesc, ForSession>::New(config_proto.resource(),
                                         GlobalProcessCtx::NumOfProcessPerNode());
   Global<IDMgr>::New();
+  Global<StreamIndexGeneratorManager>::New();
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     Global<AvailableMemDesc>::New();
     if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
@@ -171,11 +172,11 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
     Global<JobName2JobId>::Delete();
     Global<AvailableMemDesc>::Delete();
   }
+  Global<StreamIndexGeneratorManager>::Delete();
   Global<IDMgr>::Delete();
   Global<ResourceDesc, ForSession>::Delete();
   Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
                                         GlobalProcessCtx::NumOfProcessPerNode());
-  StreamIndexGeneratorManager::Delete();
 }
 
 }  // namespace oneflow

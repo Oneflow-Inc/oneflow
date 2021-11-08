@@ -28,13 +28,21 @@ class StreamIndexGenerator final {
   OF_DISALLOW_COPY_AND_MOVE(StreamIndexGenerator);
   ~StreamIndexGenerator() = default;
 
-  stream_index_t Generate();
-  stream_index_t Generate(const std::string& name);
-  stream_index_t Generate(const std::string& name, size_t num);
+  stream_index_t GenerateAnonymous();
+  stream_index_t GenerateNamed(const std::string& name);
+  stream_index_t GenerateNamedRoundRobin(const std::string& name, size_t size);
 
  private:
+  struct RoundRobinRangedIndex {
+    RoundRobinRangedIndex(stream_index_t begin, size_t size, size_t offset)
+        : begin(begin), size(size), offset(offset) {}
+    stream_index_t begin;
+    size_t size;
+    size_t offset;
+  };
+
   stream_index_t next_stream_index_;
-  HashMap<std::string, std::tuple<stream_index_t, size_t, size_t>> name2round_robin_tup_;
+  HashMap<std::string, RoundRobinRangedIndex> name2rrr_index_;
   std::mutex mtx_;
 };
 

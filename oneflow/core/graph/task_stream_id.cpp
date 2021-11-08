@@ -19,13 +19,6 @@ limitations under the License.
 
 namespace oneflow {
 
-std::unique_ptr<StreamIndexGeneratorManager>& StreamIndexGeneratorManager::Ptr(
-    bool create_when_absent) {
-  thread_local std::unique_ptr<StreamIndexGeneratorManager> ptr;
-  if (!ptr && create_when_absent) { ptr.reset(new StreamIndexGeneratorManager()); }
-  return ptr;
-}
-
 StreamIndexGenerator* StreamIndexGeneratorManager::GetGenerator(const DeviceId& device_id) {
   std::unique_lock<std::mutex> lck(mtx_);
   auto iter = generators_.find(device_id);
@@ -35,8 +28,8 @@ StreamIndexGenerator* StreamIndexGeneratorManager::GetGenerator(const DeviceId& 
   return iter->second.get();
 }
 
-void TaskStreamIndexFactory::RegisterGetter(const key_t& key,
-                                            const stream_index_getter_fn& getter) {
+void TaskStreamIndexRegistry::RegisterGetter(const key_t& key,
+                                             const stream_index_getter_fn& getter) {
   bool insert_success = stream_index_getter_map_.emplace(key, getter).second;
   if (!insert_success) {
     std::cerr << "DeviceType " << key.first << ", TaskType " << key.second
@@ -45,8 +38,8 @@ void TaskStreamIndexFactory::RegisterGetter(const key_t& key,
   }
 }
 
-Maybe<StreamId::stream_index_t> TaskStreamIndexFactory::GetStreamIndex(TaskType task_type,
-                                                                       const DeviceId& device_id) {
+Maybe<StreamId::stream_index_t> TaskStreamIndexRegistry::GetStreamIndex(TaskType task_type,
+                                                                        const DeviceId& device_id) {
   auto key = std::make_pair(device_id.device_type(), task_type);
   auto it = stream_index_getter_map_.find(key);
   CHECK_OR_RETURN(it != stream_index_getter_map_.end())
@@ -56,18 +49,24 @@ Maybe<StreamId::stream_index_t> TaskStreamIndexFactory::GetStreamIndex(TaskType 
 }
 
 Maybe<StreamId::stream_index_t> GetTaskStreamIndex(TaskType task_type, const DeviceId& device_id) {
-  return TaskStreamIndexFactory::Instance().GetStreamIndex(task_type, device_id);
+  return TaskStreamIndexRegistry::Instance().GetStreamIndex(task_type, device_id);
+}
+
+StreamId::stream_index_t GetComputeTaskStreamIndex(DeviceType device_type,
+                                                   StreamIndexGenerator* generator) {
+  if (device_type == DeviceType::kCPU) {
+    size_t cpu_device_num = Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();
+    return generator->GenerateNamedRoundRobin("cpu_compute", cpu_device_num);
+  } else {
+    return generator->GenerateNamed("compute");
+  }
 }
 
 StreamId GenerateComputeTaskStreamId(const DeviceId& device_id) {
-  auto* stream_index_generator = StreamIndexGeneratorManager::Instance().GetGenerator(device_id);
-  StreamId::stream_index_t stream_index = 0;
-  if (device_id.device_type() == DeviceType::kCPU) {
-    size_t cpu_device_num = Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();
-    stream_index = stream_index_generator->Generate("cpu_compute", cpu_device_num);
-  } else {
-    stream_index = stream_index_generator->Generate("compute");
-  }
+  auto* stream_index_generator =
+      Global<StreamIndexGeneratorManager>::Get()->GetGenerator(device_id);
+  StreamId::stream_index_t stream_index =
+      GetComputeTaskStreamIndex(device_id.device_type(), stream_index_generator);
   return StreamId{device_id, stream_index};
 }
 
@@ -78,8 +77,9 @@ StreamId GenerateComputeTaskStreamId(int64_t rank, DeviceType device_type, int64
 }
 
 StreamId GenerateNamedTaskStreamId(const DeviceId& device_id, const std::string& name) {
-  auto* stream_index_generator = StreamIndexGeneratorManager::Instance().GetGenerator(device_id);
-  auto stream_index = stream_index_generator->Generate(name);
+  auto* stream_index_generator =
+      Global<StreamIndexGeneratorManager>::Get()->GetGenerator(device_id);
+  auto stream_index = stream_index_generator->GenerateNamed(name);
   return StreamId{device_id, stream_index};
 }
 

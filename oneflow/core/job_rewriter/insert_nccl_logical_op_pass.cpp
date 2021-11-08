@@ -711,7 +711,7 @@ void InsertNcclLogicalOpsInSubGraph(
       break;  // NOTE(chengcheng): ONLY support kMaxNcclComputeStreamCount insert nccl subgraphs.
     }
     int32_t stream_index = static_cast<int32_t>(
-        StreamIndexGenerator().Generate(GetStreamIndexName(nccl_compute_stream_id)));
+        StreamIndexGenerator().GenerateNamed(GetStreamIndexName(nccl_compute_stream_id)));
 
     // NOTE(chengcheng): set ALL subgraph op and ALL nccl op stream index.
     for (auto& pair : subgraph_op_name2conf) {

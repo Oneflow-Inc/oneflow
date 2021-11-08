@@ -19,34 +19,32 @@ namespace oneflow {
 
 StreamIndexGenerator::StreamIndexGenerator() : next_stream_index_(0) {}
 
-StreamIndexGenerator::stream_index_t StreamIndexGenerator::Generate() {
+StreamIndexGenerator::stream_index_t StreamIndexGenerator::GenerateAnonymous() {
   std::unique_lock<std::mutex> lck(mtx_);
   return next_stream_index_++;
 }
 
-StreamIndexGenerator::stream_index_t StreamIndexGenerator::Generate(const std::string& name) {
-  return Generate(name, 1);
+StreamIndexGenerator::stream_index_t StreamIndexGenerator::GenerateNamed(const std::string& name) {
+  return GenerateNamedRoundRobin(name, 1);
 }
 
-StreamIndexGenerator::stream_index_t StreamIndexGenerator::Generate(const std::string& name,
-                                                                    size_t num) {
-  CHECK_GT(num, 0);
+StreamIndexGenerator::stream_index_t StreamIndexGenerator::GenerateNamedRoundRobin(
+    const std::string& name, size_t size) {
+  CHECK_GT(size, 0);
   std::unique_lock<std::mutex> lck(mtx_);
-  auto it = name2round_robin_tup_.find(name);
-  if (it == name2round_robin_tup_.end()) {
-    // tuple of (begin_stream_index, num, offset)
-    auto tup = std::make_tuple(next_stream_index_, num, 0);
-    it = name2round_robin_tup_.emplace(name, std::move(tup)).first;
-    next_stream_index_ += num;
+  auto it = name2rrr_index_.find(name);
+  if (it == name2rrr_index_.end()) {
+    it = name2rrr_index_.emplace(name, RoundRobinRangedIndex{next_stream_index_, size, 0}).first;
+    next_stream_index_ += size;
   } else {
-    CHECK_EQ(std::get<1>(it->second), num) << name;
+    CHECK_EQ(it->second.size, size) << name;
   }
 
-  stream_index_t cur_stream_index = std::get<0>(it->second);
-  if (num > 1) {
-    size_t& offset = std::get<2>(it->second);
+  stream_index_t cur_stream_index = it->second.begin;
+  if (size > 1) {
+    size_t& offset = it->second.offset;
     cur_stream_index += offset++;
-    if (offset > num) { offset = 0; }
+    if (offset >= size) { offset = 0; }
   }
   return cur_stream_index;
 }
