@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_INFER_ND_SBP_FN_CONTEXT_H_
 
 #include "oneflow/core/framework/user_op_conf.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
 
 namespace oneflow {
 

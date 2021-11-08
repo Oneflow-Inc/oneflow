@@ -38,6 +38,7 @@ class InferSbpSignatureFnContext;
 class InferOutputBlobTimeShapeFnContext;
 class InferNdSbpFnContext;
 class DeviceInferContext;
+class ComputeComplexityFnContext;
 
 using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConfWrapper&)>;
 using TensorDescInferFn = std::function<Maybe<void>(InferContext*)>;
@@ -56,6 +57,7 @@ using OutputArgModifyFn =
     std::function<Maybe<void>(GetOutputArgModifier, const UserOpConfWrapper&)>;
 using OutputBlobTimeShapeInferFn = std::function<Maybe<void>(InferOutputBlobTimeShapeFnContext*)>;
 using NdSbpInferFn = std::function<Maybe<void>(InferNdSbpFnContext*)>;
+using ComputeComplexityFn = std::function<Maybe<double>(ComputeComplexityFnContext*)>;
 
 struct OpRegistryResult {
   OpRegistryResult() : cpu_only_supported(false), no_grad(false), same_output_regst_num(-1) {}
@@ -79,6 +81,7 @@ struct OpRegistryResult {
   OutputArgModifyFn output_arg_modify_fn;
   OutputBlobTimeShapeInferFn output_blob_time_shape_infer_fn;
   NdSbpInferFn nd_sbp_infer_fn;
+  ComputeComplexityFn compute_complexity_fn;
 };
 
 class OpRegistry final {
@@ -124,6 +127,7 @@ class OpRegistry final {
   OpRegistry& SetCheckAttrFn(CheckAttrFn fn);
   OpRegistry& SetDataTypeInferFn(DataTypeInferFn fn);
   OpRegistry& SetDeviceInferFn(DeviceInferFn fn);
+  OpRegistry& SetComputeComplexityFn(ComputeComplexityFn fn);
 
   Maybe<OpRegistry&> Finish();
   OpRegistryResult GetResult() { return result_; }
