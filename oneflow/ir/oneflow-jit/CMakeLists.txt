@@ -13,7 +13,7 @@ add_llvm_static_library(MLIROneFlowJIT
   JIT.cpp
   ADDITIONAL_HEADER_DIRS
   ${PROJECT_SOURCE_DIR}/oneflow-translate/include
-  DEPENDS
+  DEPENDS oneflow_deps
 	LINK_LIBS PUBLIC
 	MLIRIR
   BUILDTREE_ONLY
