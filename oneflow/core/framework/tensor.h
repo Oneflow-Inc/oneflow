@@ -41,7 +41,7 @@ class FunctionNode;
 class ConsistentTensor;
 class MirroredTensor;
 
-class Tensor {
+class Tensor : public std::enable_shared_from_this<Tensor> {
  public:
   virtual ~Tensor() = default;
 
@@ -91,6 +91,7 @@ class Tensor {
   virtual Maybe<TensorArg> current_grad() const = 0;
   virtual Maybe<Tensor> detach() const = 0;
   virtual Maybe<Tensor> clone() const = 0;
+  virtual std::shared_ptr<Tensor> contiguous() const = 0;
 
   // Setters for autograd
   virtual Maybe<void> set_requires_grad(bool requires_grad) = 0;
@@ -191,6 +192,10 @@ class StaticZerosTensor final : public Tensor {
   Maybe<TensorArg> current_grad() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Tensor> detach() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Tensor> clone() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+
+  std::shared_ptr<Tensor> contiguous() const override {
+    return std::const_pointer_cast<Tensor>(shared_from_this());
+  }
 
   // Setters for autograd
   Maybe<void> set_requires_grad(bool requires_grad) override { PRINT_BUG_PROMPT_AND_ABORT(); }
@@ -328,6 +333,7 @@ class Parameter final : public TensorIf<Parameter> {
   Maybe<TensorArg> current_grad() const override { return tensor_->current_grad(); }
   Maybe<Tensor> detach() const override { return tensor_->detach(); }
   Maybe<Tensor> clone() const override { return tensor_->clone(); }
+  std::shared_ptr<Tensor> contiguous() const override;
 
   Maybe<void> set_requires_grad(bool requires_grad) override {
     return tensor_->set_requires_grad(requires_grad);
@@ -376,8 +382,7 @@ class Parameter final : public TensorIf<Parameter> {
   std::shared_ptr<Tensor> tensor_;
 };
 
-class MirroredTensor final : public TensorIf<MirroredTensor>,
-                             public std::enable_shared_from_this<MirroredTensor> {
+class MirroredTensor final : public TensorIf<MirroredTensor> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MirroredTensor);
   MirroredTensor() = default;
@@ -410,6 +415,8 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return false; }
   bool is_cuda() const override;
+  std::shared_ptr<Tensor> contiguous() const override;
+
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
   Maybe<Tensor> data() override {
     OF_LOG_ONCE(LOG(WARNING) << "You shouldn't call `.data` for a LocalTensor.");
@@ -478,15 +485,16 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
     return Maybe<void>::Ok();
   }
 
-  Maybe<MirroredTensor> AsMirroredTensor() override { return shared_from_this(); }
+  Maybe<MirroredTensor> AsMirroredTensor() override {
+    return std::dynamic_pointer_cast<MirroredTensor>(shared_from_this());
+  }
   Maybe<ConsistentTensor> AsConsistentTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
  private:
   std::shared_ptr<MirroredTensorImpl> impl_;
 };
 
-class ConsistentTensor final : public TensorIf<ConsistentTensor>,
-                               public std::enable_shared_from_this<ConsistentTensor> {
+class ConsistentTensor final : public TensorIf<ConsistentTensor> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConsistentTensor);
   ConsistentTensor() = default;
@@ -515,6 +523,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
     return impl_->cur_rank_phy_tensor();
   }
   bool is_cuda() const override;
+  std::shared_ptr<Tensor> contiguous() const override;
   Maybe<Tensor> data() override {
     OF_LOG_ONCE(LOG(WARNING) << "You shouldn't call `.data` for a ConsistentTensor.");
     return std::static_pointer_cast<Tensor>(shared_from_this());
@@ -594,7 +603,9 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   }
 
   Maybe<MirroredTensor> AsMirroredTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<ConsistentTensor> AsConsistentTensor() override { return shared_from_this(); }
+  Maybe<ConsistentTensor> AsConsistentTensor() override {
+    return std::dynamic_pointer_cast<ConsistentTensor>(shared_from_this());
+  }
 
  private:
   std::shared_ptr<ConsistentTensorImpl> impl_;

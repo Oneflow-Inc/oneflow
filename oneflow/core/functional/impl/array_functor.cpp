@@ -806,6 +806,9 @@ class ReshapeFunctor {
     op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
+    if (x->is_eager() && x->is_local()) { 
+      return view::Reshape(x, shape); 
+    }
     int need_infer_axis = -1;
     size_t count = 1;
     for (int i = 0; i < shape.NumAxes(); ++i) {
@@ -824,9 +827,9 @@ class ReshapeFunctor {
           << "\n Shape " << shape.ToString() << " is invalid for input shape "
           << x->shape()->ToString();
       JUST(attrs.SetAttr<Shape>("shape", shape));
-      std::shared_ptr<Shape> shapee = std::make_shared<Shape>(shape);
-      std::shared_ptr<Stride> stridee = std::make_shared<Stride>(Stride(shape));
-      return JUST(ShallowCopy(JUST(x->AsMirroredTensor()), shapee, stridee))->detach();
+      // std::shared_ptr<Shape> shapee = std::make_shared<Shape>(shape);
+      // std::shared_ptr<Stride> stridee = std::make_shared<Stride>(Stride(shape));
+      // return JUST(ShallowCopy(JUST(x->AsMirroredTensor()), shapee, stridee))->detach();
     } else {
       Shape infered_shape = shape;
       infered_shape.Set(need_infer_axis, x_count / count);
@@ -834,11 +837,30 @@ class ReshapeFunctor {
           << "\n Shape " << shape.ToString() << " is invalid for input shape "
           << x->shape()->ToString();
       JUST(attrs.SetAttr<Shape>("shape", infered_shape));
-      std::shared_ptr<Shape> shapee = std::make_shared<Shape>(infered_shape);
-      std::shared_ptr<Stride> stridee = std::make_shared<Stride>(Stride(infered_shape));
-      return JUST(ShallowCopy(JUST(x->AsMirroredTensor()), shapee, stridee))->detach();
+      // std::shared_ptr<Shape> shapee = std::make_shared<Shape>(infered_shape);
+      // std::shared_ptr<Stride> stridee = std::make_shared<Stride>(Stride(infered_shape));
+      // return JUST(ShallowCopy(JUST(x->AsMirroredTensor()), shapee, stridee))->detach();
     }
-    // return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ToContiguousFunctor {
+ public:
+  ToContiguousFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("to_contiguous").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("storage_offset", JUST(x->storage_offset())));
+
+    const auto& stride = JUST(x->stride())->StrideVec();
+    JUST(attrs.SetAttr<std::vector<int64_t>>("stride", {stride.begin(), stride.end()}));
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -2000,6 +2022,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorScatterNdUpdateFunctor>("TensorScatterNdUpdate");
   m.add_functor<impl::ScatterNdLikeFunctor>("ScatterNdLike");
   m.add_functor<impl::ReshapeFunctor>("Reshape");
+  m.add_functor<impl::ToContiguousFunctor>("ToContiguous");
   m.add_functor<impl::SliceFunctor>("Slice");
   m.add_functor<impl::SliceGradFunctor>("SliceGrad");
   m.add_functor<impl::NarrowFunctor>("Narrow");
