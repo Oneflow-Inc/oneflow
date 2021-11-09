@@ -44,11 +44,11 @@ constexpr int32_t kMinPackPerThread = 2;
 //   int8_t b_value[sizeof(PackType)];
 // };
 
-// using H2PackType = typename std::aligned_storage<4 * sizeof(half), 4 * sizeof(half)>::type;
-// union H2Pack{
-//   H2PackType storage; 
-//   half2 h2[2]; 
-// };
+using H2PackType = typename std::aligned_storage<4 * sizeof(half), 4 * sizeof(half)>::type;
+union H2Pack{
+  H2PackType storage; 
+  half2 h2[2]; 
+};
 
 template<typename T, int pack_size>
 __global__ void MaskAndScaleGpu(const int64_t n, float scale, float rate, const T* x, int8_t* mask,
@@ -82,53 +82,6 @@ __global__ void MaskAndScaleGpu(const int64_t n, float scale, float rate, const 
     }
 }
 
-// template<>
-// __global__ void MaskAndScaleGpu<half, 4>(const int64_t n, float scale, float rate, const half* x, int8_t* mask,
-//                                 half* y) {
-//     int32_t thread_id = blockIdx.x * blockDim.x + threadIdx.x; 
-//     curandStatePhilox4_32_10_t state; 
-//     // auto seeds = at::cuda::philox::unpack(philox_args);
-//     curand_init(0, thread_id, 0, &state); 
-//     using LoadT = typename std::aligned_storage<sizeof(half)*4, sizeof(half)*4>::type; 
-//     using MaskT = typename std::aligned_storage<sizeof(int8_t)*4, sizeof(int8_t)*4>::type; 
-
-//     float4 rand_uniform; 
-//     half2 h2_scale = __float2half2_rn(scale);
-//     for(int64_t linear_idx=thread_id*4; linear_idx < n; linear_idx += gridDim.x * blockDim.x * 4) {
-//       rand_uniform = curand_uniform4(&state);
-
-//       const LoadT* x_load = reinterpret_cast<const LoadT*>(&x[linear_idx]);
-//       H2Pack x_vec{};
-//       x_vec.storage = *x_load; 
-
-//       int8_t mask_vec[4];
-//       half2 y_vec[2]; 
-//       half2 one_or_zero_h2[2];
-
-//       mask_vec[0] = (&rand_uniform.x)[0] >= rate;
-//       one_or_zero_h2[0].x = mask_vec[0]; 
-//       mask_vec[1] = (&rand_uniform.y)[1] >= rate;
-//       one_or_zero_h2[0].y = mask_vec[1]; 
-//       y_vec[0] = __hmul2(__hmul2(x_vec.h2[0], one_or_zero_h2[0]), h2_scale); 
-
-//       mask_vec[2] = (&rand_uniform.z)[2] >= rate;
-//       one_or_zero_h2[1].x = mask_vec[2]; 
-//       mask_vec[3] = (&rand_uniform.w)[3] >= rate;
-//       one_or_zero_h2[1].y = mask_vec[3]; 
-//       y_vec[1] = __hmul2(__hmul2(x_vec.h2[1], one_or_zero_h2[1]), h2_scale); 
-      
-//       *(reinterpret_cast<LoadT*>(y+linear_idx)) = *reinterpret_cast<LoadT*>(y_vec);
-//       *(reinterpret_cast<MaskT*>(mask+linear_idx)) = *reinterpret_cast<MaskT*>(mask_vec);
-//     }
-// }
-
-
-using H4PackType = typename std::aligned_storage<8 * sizeof(half), 8 * sizeof(half)>::type;
-union H4Pack{
-  H4PackType storage; 
-  half2 h2[4]; 
-};
-
 template<>
 __global__ void MaskAndScaleGpu<half, 4>(const int64_t n, float scale, float rate, const half* x, int8_t* mask,
                                 half* y) {
@@ -136,86 +89,38 @@ __global__ void MaskAndScaleGpu<half, 4>(const int64_t n, float scale, float rat
     curandStatePhilox4_32_10_t state; 
     // auto seeds = at::cuda::philox::unpack(philox_args);
     curand_init(0, thread_id, 0, &state); 
-    using LoadT = typename std::aligned_storage<sizeof(half)*8, sizeof(half)*8>::type; 
-    using MaskT = typename std::aligned_storage<sizeof(int8_t)*8, sizeof(int8_t)*8>::type; 
+    using LoadT = typename std::aligned_storage<sizeof(half)*4, sizeof(half)*4>::type; 
+    using MaskT = typename std::aligned_storage<sizeof(int8_t)*4, sizeof(int8_t)*4>::type; 
 
-    float4 rand_uniform1; 
-    // float4 rand_uniform2; 
-    half2 rand_vec[4]; 
-
+    float4 rand_uniform; 
     half2 h2_scale = __float2half2_rn(scale);
-    half h_rate = __float2half(rate); 
+    for(int64_t linear_idx=thread_id*4; linear_idx < n; linear_idx += gridDim.x * blockDim.x * 4) {
+      rand_uniform = curand_uniform4(&state);
 
-    for(int64_t linear_idx=thread_id*8; linear_idx < n; linear_idx += gridDim.x * blockDim.x * 8) {
       const LoadT* x_load = reinterpret_cast<const LoadT*>(&x[linear_idx]);
-      H4Pack x_vec{};
+      H2Pack x_vec{};
       x_vec.storage = *x_load; 
-      int8_t mask_vec[8];
-      half2 y_vec[4]; 
-      half2 one_or_zero_h2[4];
 
-      rand_uniform1 = curand_uniform4(&state);
-      // rand_uniform2 = curand_uniform4(&state);
-      rand_vec[0] = __float2half2_rn(rand_uniform1.x); 
-      rand_vec[1] = __float2half2_rn(rand_uniform1.y); 
-      rand_vec[2] = __float2half2_rn(rand_uniform1.z); 
-      rand_vec[3] = __float2half2_rn(rand_uniform1.w); 
+      int8_t mask_vec[4];
+      half2 y_vec[2]; 
+      half2 one_or_zero_h2[2];
 
-      // mask_vec[0] = (&rand_uniform1.x)[0] >= rate;
-      // one_or_zero_h2[0].x = mask_vec[0]; 
-      // mask_vec[1] = (&rand_uniform1.y)[1] >= rate;
-      // one_or_zero_h2[0].y = mask_vec[1]; 
-      // y_vec[0] = __hmul2(__hmul2(x_vec.h2[0], one_or_zero_h2[0]), h2_scale); 
-
-      // mask_vec[2] = (&rand_uniform1.z)[2] >= rate;
-      // one_or_zero_h2[1].x = mask_vec[2]; 
-      // mask_vec[3] = (&rand_uniform1.w)[3] >= rate;
-      // one_or_zero_h2[1].y = mask_vec[3]; 
-      // y_vec[1] = __hmul2(__hmul2(x_vec.h2[1], one_or_zero_h2[1]), h2_scale); 
-      
-      // mask_vec[4] = (&rand_uniform2.x)[0] >= rate;
-      // one_or_zero_h2[2].x = mask_vec[4]; 
-      // mask_vec[5] = (&rand_uniform2.y)[1] >= rate;
-      // one_or_zero_h2[2].y = mask_vec[5]; 
-      // y_vec[2] = __hmul2(__hmul2(x_vec.h2[2], one_or_zero_h2[2]), h2_scale); 
-      
-      // mask_vec[6] = (&rand_uniform2.z)[2] >= rate;
-      // one_or_zero_h2[3].x = mask_vec[6]; 
-      // mask_vec[7] = (&rand_uniform2.w)[3] >= rate;
-      // one_or_zero_h2[3].y = mask_vec[7]; 
-      // y_vec[3] = __hmul2(__hmul2(x_vec.h2[3], one_or_zero_h2[3]), h2_scale); 
-
-      mask_vec[0] = rand_vec[0].x >= h_rate;
+      mask_vec[0] = (&rand_uniform.x)[0] >= rate;
       one_or_zero_h2[0].x = mask_vec[0]; 
-      mask_vec[1] = rand_vec[0].y >= h_rate;
+      mask_vec[1] = (&rand_uniform.y)[1] >= rate;
       one_or_zero_h2[0].y = mask_vec[1]; 
       y_vec[0] = __hmul2(__hmul2(x_vec.h2[0], one_or_zero_h2[0]), h2_scale); 
 
-      mask_vec[2] = rand_vec[1].x >= h_rate;
+      mask_vec[2] = (&rand_uniform.z)[2] >= rate;
       one_or_zero_h2[1].x = mask_vec[2]; 
-      mask_vec[3] = rand_vec[1].y >= h_rate;
+      mask_vec[3] = (&rand_uniform.w)[3] >= rate;
       one_or_zero_h2[1].y = mask_vec[3]; 
       y_vec[1] = __hmul2(__hmul2(x_vec.h2[1], one_or_zero_h2[1]), h2_scale); 
       
-      mask_vec[4] = rand_vec[2].x >= h_rate;
-      one_or_zero_h2[2].x = mask_vec[4]; 
-      mask_vec[5] = rand_vec[2].y >= h_rate;
-      one_or_zero_h2[2].y = mask_vec[5]; 
-      y_vec[2] = __hmul2(__hmul2(x_vec.h2[2], one_or_zero_h2[2]), h2_scale); 
-      
-      mask_vec[6] = rand_vec[3].x >= h_rate;
-      one_or_zero_h2[3].x = mask_vec[6]; 
-      mask_vec[7] = rand_vec[3].y >= h_rate;
-      one_or_zero_h2[3].y = mask_vec[7]; 
-      y_vec[3] = __hmul2(__hmul2(x_vec.h2[3], one_or_zero_h2[3]), h2_scale);
-
       *(reinterpret_cast<LoadT*>(y+linear_idx)) = *reinterpret_cast<LoadT*>(y_vec);
       *(reinterpret_cast<MaskT*>(mask+linear_idx)) = *reinterpret_cast<MaskT*>(mask_vec);
     }
 }
-
-
-
 
 template<typename T>
 __global__ void MaskAndScaleAddGpu(const int64_t n, float scale, const T* x, const int8_t* mask,
