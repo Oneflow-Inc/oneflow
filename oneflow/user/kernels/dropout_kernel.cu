@@ -48,28 +48,56 @@ __global__ void MaskAndScaleGpu(const int64_t n, float scale, float rate, const 
     curandStatePhilox4_32_10_t state; 
     // auto seeds = at::cuda::philox::unpack(philox_args);
     curand_init(0, index, 0, &state); 
+    using LoadT = typename std::aligned_storage<16, 16>::type;
+    using MaskT = typename std::aligned_storage<4, 4>::type;
 
-    Pack pack;
+    // Pack pack;
     int32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-    
-    const int64_t rounded_size = ((n - 1)/(blockDim.x * gridDim.x * 4)+1) * blockDim.x * gridDim.x * 4;
+    float4 rand; 
+
+    // for(int64_t linear_idx=idx*4; linear_idx < n; linear_idx += gridDim.x * blockDim.x * 4) {
+    //     float4 rand = curand_uniform4(&state);
+
+    //     PackType* pack_mask = reinterpret_cast<PackType*>(&mask[linear_idx]);
+    //     const float4* x_vec4 = reinterpret_cast<const float4*>(&x[linear_idx]); 
+    //     float4* y_vec4 = reinterpret_cast<float4*>(&y[linear_idx]); 
+
+    //     pack.b_value[0] = rand.x > rate;
+    //     pack.b_value[1] = rand.y > rate; 
+    //     pack.b_value[2] = rand.z > rate; 
+    //     pack.b_value[3] = rand.w > rate; 
+    //     *pack_mask = pack.p_value;
+    //     y_vec4->x = pack.b_value[0] * scale * x_vec4->x; 
+    //     y_vec4->y = pack.b_value[1] * scale * x_vec4->y; 
+    //     y_vec4->z = pack.b_value[2] * scale * x_vec4->z; 
+    //     y_vec4->w = pack.b_value[3] * scale * x_vec4->w; 
+    // }
+
     for(int64_t linear_idx=idx*4; linear_idx < n; linear_idx += gridDim.x * blockDim.x * 4) {
-        float4 rand = curand_uniform4(&state);
+      T src[4]; 
+      LoadT *value = reinterpret_cast<LoadT*>(&src);
+      
+      rand = curand_uniform4(&state);
+      rand.x = rand.x > rate; 
+      rand.y = rand.y > rate; 
+      rand.z = rand.z > rate; 
+      rand.w = rand.w > rate; 
 
-        PackType* pack_mask = reinterpret_cast<PackType*>(&mask[linear_idx]);
-        const float4* x_vec4 = reinterpret_cast<const float4*>(&x[linear_idx]); 
-        float4* y_vec4 = reinterpret_cast<float4*>(&y[linear_idx]); 
+      *value = *reinterpret_cast<const LoadT*>(&x[linear_idx]);
+      uint8_t mask[4];
+      T r[4]; 
 
-        pack.b_value[0] = rand.x > rate;
-        pack.b_value[1] = rand.y > rate; 
-        pack.b_value[2] = rand.z > rate; 
-        pack.b_value[3] = rand.w > rate; 
-        *pack_mask = pack.p_value;
-        y_vec4->x = pack.b_value[0] * scale * x_vec4->x; 
-        y_vec4->y = pack.b_value[1] * scale * x_vec4->y; 
-        y_vec4->z = pack.b_value[2] * scale * x_vec4->z; 
-        y_vec4->w = pack.b_value[3] * scale * x_vec4->w; 
+      #pragma unroll
+      for (int ii = 0; ii < 4; ii++) {
+        r[ii] = x[ii]*(&rand.x)[ii]*scale;
+        mask[ii] = (uint8_t)(&rand.x)[ii];
+      }
+      *(reinterpret_cast<LoadT*>(&y[linear_idx])) = *reinterpret_cast<LoadT*>(&r[0]);
+      *(reinterpret_cast<MaskT*>(&mask[linear_idx])) = *reinterpret_cast<MaskT*>(&mask[0]);
+
+      __syncthreads(); 
     }
+
 }
 
 
