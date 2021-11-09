@@ -69,7 +69,7 @@ Maybe<void> SparseSoftmaxCrossEntropy::Apply(const SparseSoftmaxCrossEntropyCapt
   // SparseSoftmaxCrossEntropy has 2 inputs (prediction and label), and the second input does not
   // require gradient.
   in_grads->resize(2);
-  in_grads->at(0) = JUST(functional::SparseSoftmaxCrossEntropyGrad(prob, label, dy, ctx->depth));
+  in_grads->at(0) = JUST(functional::SparseSoftmaxCrossEntropyGrad(dy, prob, label, ctx->depth));
   return Maybe<void>::Ok();
 }
 
