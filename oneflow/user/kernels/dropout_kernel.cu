@@ -44,6 +44,10 @@ constexpr int32_t kMinPackPerThread = 2;
 //   int8_t b_value[sizeof(PackType)];
 // };
 
+union H2Pack{
+  half2 h2[2]; 
+};
+
 template<typename T, int pack_size>
 __global__ void MaskAndScaleGpu(const int64_t n, float scale, float rate, const T* x, int8_t* mask,
                                 T* y) {
@@ -90,9 +94,15 @@ __global__ void MaskAndScaleGpu<half, 4>(const int64_t n, float scale, float rat
     half2 h2_scale = __float2half2_rn(scale);
     for(int64_t linear_idx=thread_id*4; linear_idx < n; linear_idx += gridDim.x * blockDim.x * 4) {
       rand_uniform = curand_uniform4(&state);
+
+      // struct alignas(2* sizeof(half2)) Pack {
+      //   half2 h2[2];
+      // };
+      // Pack p = reinterpret_cast<const Pack*>(x)[i];
       
       const LoadT* x_load = reinterpret_cast<const LoadT*>(&x[linear_idx]);
-      const half2* x_vec = reinterpret_cast<const half2*>(x_load); 
+      const H2Pack* x_vec = reinterpret_cast<const H2Pack*>(x_load); 
+      
       int8_t mask_vec[4];
       half2 y_vec[2]; 
       half2 one_or_zero_h2[2];
@@ -102,14 +112,14 @@ __global__ void MaskAndScaleGpu<half, 4>(const int64_t n, float scale, float rat
       mask_vec[1] = (&rand_uniform.y)[1] >= rate;
       one_or_zero_h2[0].y = mask_vec[1]; 
 
-      y_vec[0] = __hmul2(__hmul2(x_vec[0], one_or_zero_h2[0]), h2_scale); 
+      y_vec[0] = __hmul2(__hmul2(x_vec->h2[0], one_or_zero_h2[0]), h2_scale); 
 
       mask_vec[2] = (&rand_uniform.z)[2] >= rate;
       one_or_zero_h2[1].x = mask_vec[2]; 
       mask_vec[3] = (&rand_uniform.w)[3] >= rate;
       one_or_zero_h2[1].y = mask_vec[3]; 
 
-      y_vec[1] = __hmul2(__hmul2(x_vec[1], one_or_zero_h2[1]), h2_scale); 
+      y_vec[1] = __hmul2(__hmul2(x_vec->h2[1], one_or_zero_h2[1]), h2_scale); 
 
       *(reinterpret_cast<LoadT*>(y+linear_idx)) = *reinterpret_cast<LoadT*>(y_vec);
       *(reinterpret_cast<MaskT*>(mask+linear_idx)) = *reinterpret_cast<MaskT*>(mask_vec);
