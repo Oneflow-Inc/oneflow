@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/actor/actor_message_bus.h"
 
 namespace oneflow {
 
@@ -47,6 +48,14 @@ void CommNet::Read(void* actor_read_id, int64_t src_machine_id, void* src_token,
 void CommNet::AddReadCallBack(void* actor_read_id, std::function<void()> callback) {
   AddWorkToStream(actor_read_id, callback, false);
 }
+
+void CommNet::RegisterMsgCallback(const std::function<void (void *, size_t)>  & MsgHandle = nullptr) {
+  auto cb = [] (void * data,size_t size) {
+  Global<ActorMsgBus>::Get()->HandleRecvData(data,size);
+  };
+  msghandle_ = cb;
+}
+
 
 void CommNet::ReadDone(void* read_id) {
   ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
