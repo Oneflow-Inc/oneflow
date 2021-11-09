@@ -20,6 +20,8 @@ limitations under the License.
 
 #include <sys/eventfd.h>
 
+#define DebugWrite true 
+
 namespace oneflow {
 
 SocketWriteHelper::~SocketWriteHelper() {
@@ -78,11 +80,21 @@ bool SocketWriteHelper::InitMsgWriteHandle() {
     }
     if (cur_msg_queue_->empty()) { return false; }
   }
+  if(DebugWrite) {
+    std::cout <<"SocketWriteHelper::InitMsgWriteHandle,the cur_msg_queue_->front():"<<std::hex <<reinterpret_cast<uint64_t>(&cur_msg_queue_->front()) << std::endl;
+  }
   cur_msg_ = cur_msg_queue_->front();
   cur_msg_queue_->pop();
   write_ptr_ = reinterpret_cast<const char*>(&cur_msg_);
   write_size_ = sizeof(cur_msg_);
+  if(DebugWrite) {
+    std::cout<<"SocketWriteHelper::InitMsgWriteHandle,the cur_msg_:"<<std::hex << reinterpret_cast<uint64_t>(&cur_msg_) << std::endl;
+    std::cout<<"SocketWriteHelper::InitMsgWriteHandle,wrrite_ptr:"<<std::hex << reinterpret_cast<uint64_t>(write_ptr_) << std::endl;
+    std::cout<<"SocketWriteHelper::InitMsgWriteHandle,the write_size_:"<<std::hex << write_size_ << std::endl;
+    std::cout<<std::endl;
+  }
   cur_write_handle_ = &SocketWriteHelper::MsgHeadWriteHandle;
+
   return true;
 }
 
@@ -96,6 +108,13 @@ bool SocketWriteHelper::MsgBodyWriteHandle() {
 
 bool SocketWriteHelper::DoCurWrite(void (SocketWriteHelper::*set_cur_write_done)()) {
   ssize_t n = write(sockfd_, write_ptr_, write_size_);
+  if(DebugWrite) {
+    std::cout<<"SocketWriteHelper::DoCurWrite,the sockfd_:"<<std::hex << sockfd_  << std::endl;
+    std::cout<<"SocketWriteHelper::DoCurWrite,the write_size:"<<std::hex << write_size_ << std::endl;
+    std::cout<<"SocketWriteHelper::DoCurWrite,the n:"<<std::hex << n << std::endl;
+    std::cout<<"SocketWriteHelper::DoCurWrite,the write_ptr_:"<<reinterpret_cast<uint64_t>(write_ptr_) << std::endl;
+    std::cout << std::endl;
+  }
   if (n == write_size_) {
     (this->*set_cur_write_done)();
     return true;
@@ -134,6 +153,11 @@ void SocketWriteHelper::SetStatusWhenRequestReadMsgHeadDone() {
   auto src_mem_desc = static_cast<const SocketMemDesc*>(src_token);
   write_ptr_ = reinterpret_cast<const char*>(src_mem_desc->mem_ptr);
   write_size_ = src_mem_desc->byte_size;
+  if(DebugWrite) {
+    std::cout<<" SocketWriteHelper::SetStatusWhenRequestReadMsgHeadDone,the write_ptr:"<<reinterpret_cast<uint64_t>(write_ptr_) << std::endl;
+    std::cout<<" SocketWriteHelper::SetStatusWhenRequestReadMsgHeadDone,the write_size:"<<write_size_ << std::endl;
+    std::cout<<std::endl;
+  }
   cur_write_handle_ = &SocketWriteHelper::MsgBodyWriteHandle;
 }
 

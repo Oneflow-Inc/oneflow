@@ -21,6 +21,8 @@ limitations under the License.
 
 namespace oneflow {
 
+#define DebugActor true
+
 void ActorMsgBus::SendMsg(const ActorMsg& msg) {
   int64_t dst_machine_id = MachineId4ActorId(msg.dst_actor_id());
   if (dst_machine_id == GlobalProcessCtx::Rank()) {
@@ -46,6 +48,11 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       free(serial_data);
       size_t msg_size = sizeof(new_msg);
       uint64_t addr = reinterpret_cast<uint64_t>(&new_msg);
+      if(DebugActor) {
+        std::cout<<"ActorMsgBus::SendMsg,the msg_size:"<<msg_size <<std::endl;
+        std::cout<<"ActorMsgBus::SendMsg,the addr:"<<std::hex << addr << std::endl;
+        std::cout<<std::endl;
+      }
       Global<CommNet>::Get()->SendMsg(dst_machine_id, reinterpret_cast<void*>(addr), msg_size);
     } else {
       uint64_t addr = reinterpret_cast<uint64_t>(&msg);

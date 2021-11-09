@@ -22,6 +22,8 @@ limitations under the License.
 
 #include <netinet/tcp.h>
 
+#define DebugRead true 
+
 namespace oneflow {
 
 SocketReadHelper::~SocketReadHelper() {
@@ -39,6 +41,11 @@ void SocketReadHelper::SwitchToMsgHeadReadHandle() {
   cur_read_handle_ = &SocketReadHelper::MsgHeadReadHandle;
   read_ptr_ = reinterpret_cast<char*>(&cur_msg_);
   read_size_ = sizeof(cur_msg_);
+  if(DebugRead) {
+    std::cout<<"SocketReadHelper::SwitchToMsgHeadReadHandle,the read_ptr:"<<std::hex << reinterpret_cast<uint64_t>(read_ptr_) << std::endl;
+    std::cout<<"SocketReadHelper::SwitchToMsgHeadReadHandle,the read_size:"<<std::hex << read_size_ << std::endl;
+    std::cout<<std::endl;
+  }
 }
 
 void SocketReadHelper::ReadUntilSocketNotReadable() {
@@ -55,6 +62,13 @@ bool SocketReadHelper::MsgBodyReadHandle() {
 
 bool SocketReadHelper::DoCurRead(void (SocketReadHelper::*set_cur_read_done)()) {
   ssize_t n = read(sockfd_, read_ptr_, read_size_);
+if(DebugRead) {
+    std::cout<<"SocketReadHelper::DoCurRead,the read_ptr:"<<std::hex << reinterpret_cast<uint64_t>(read_ptr_) << std::endl;
+    std::cout<<"SocketReadHelper::DoCurRead,the read_size:"<<std::hex << read_size_ << std::endl;
+    std::cout<<"SocketReadHelper::DoCurRead,the n:"<<std::hex << n << std::endl;
+    std::cout<<"SocketReadHelper::DoCurRead,the sockfd_:"<<std::hex << sockfd_ << std::endl;
+    std::cout<<std::endl;
+  }
   const int val = 1;
   PCHECK(setsockopt(sockfd_, IPPROTO_TCP, TCP_QUICKACK, (char*)&val, sizeof(int)) == 0);
   if (n == read_size_) {
@@ -104,6 +118,11 @@ void SocketReadHelper::SetStatusWhenRequestReadMsgHeadDone() {
   auto mem_desc = static_cast<const SocketMemDesc*>(cur_msg_.request_read_msg.dst_token);
   read_ptr_ = reinterpret_cast<char*>(mem_desc->mem_ptr);
   read_size_ = mem_desc->byte_size;
+  if(DebugRead) {
+    std::cout<<"SocketReadHelper::SetStatusWhenRequestReadMsgHeadDone,the read_ptr:"<<std::hex << reinterpret_cast<uint64_t>(read_ptr_) << std::endl;
+    std::cout<<"SocketReadHelper::SetStatusWhenRequestReadMsgHeadDone,the read_size:"<<std::hex << read_size_ << std::endl;
+    std::cout<<std::endl;
+  }
   cur_read_handle_ = &SocketReadHelper::MsgBodyReadHandle;
 }
 
@@ -111,6 +130,11 @@ void SocketReadHelper::SetStatusWhenActorMsgHeadDone() {
   size_t size = cur_msg_.actor_msg.size;
   char* data = (char*)malloc(size);
   std::memcpy(data, cur_msg_.actor_msg.data, size);
+  if(DebugRead) {
+    std::cout<<"SocketReadHelper::SetStatusWhenActorMsgHeadDone,the size:"<<std::hex <<size << std::endl;
+    std::cout<<"SocketReadHelper::SetStatusWhenActorMsgHeadDone,the data:"<<std::hex << reinterpret_cast<uint64_t>(data) << std::endl;
+    std::cout<<std::endl;
+  }
   Global<ActorMsgBus>::Get()->HandleRecvData(data, size);
   SwitchToMsgHeadReadHandle();
 }
