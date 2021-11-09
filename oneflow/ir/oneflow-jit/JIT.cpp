@@ -435,11 +435,13 @@ LogicalResult JitImporter::LowerToOneFlowKernel() {
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createCreateComputeCtxPass());
   pm.addPass(::mlir::oneflow::createFuseIntoExistingOpPass());
   // function->dump();
-  for (auto& tensor_pair : py_tensors_) {
-    if (tensor_pair.second.use_count() > 1) {
-      tensor_pair.first.dump();
-      llvm::errs() << "#" << tensor_pair.first.dyn_cast<OpResult>().getResultNumber() << ": "
-                   << tensor_pair.second.use_count() << "\n";
+  if (ParseBooleanFromEnv("ONEFLOW_MLIR_DUMP_PY_USE", false)) {
+    for (auto& tensor_pair : py_tensors_) {
+      if (tensor_pair.second.use_count() > 1) {
+        tensor_pair.first.dump();
+        llvm::errs() << "#" << tensor_pair.first.dyn_cast<OpResult>().getResultNumber() << ": "
+                     << tensor_pair.second.use_count() << "\n";
+      }
     }
   }
   return pm.run(function);
