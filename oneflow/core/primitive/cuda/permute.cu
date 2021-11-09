@@ -84,7 +84,7 @@ __global__ void BatchTransposeKernel(const void* src_ptr, void* dst_ptr, IndexTy
       // each thread process 4 elements.
       // `row_offset < y_range` equals to: `threadIdx.y + row_offset < tile_size && y + row_offset <
       // H`.
-      for (IndexType row_offset = 0; i < y_range; row_offset += kBlockRows) {
+      for (IndexType row_offset = 0; row_offset < y_range; row_offset += kBlockRows) {
         tile[threadIdx.y + row_offset][threadIdx.x] = src[offset + (y + row_offset) * W + x];
       }
     }
@@ -150,9 +150,10 @@ __global__ void BatchTransposeMovement2Kernel(const void* src_ptr, void* dst_ptr
           ((tile_size - threadIdx.y) < (rows - y)) ? (tile_size - threadIdx.y) : (rows - y);
 #pragma unroll
       // `i < y_range` equals to: `threadIdx.y + i < tile_size && y + i < rows`.
-      for (int i = 0; i < y_range; i += kBlockRows) {
+      for (int row_offset = 0; row_offset < y_range; row_offset += kBlockRows) {
         // each thread load a half2.
-        tile_mem.tile_m4[threadIdx.y + i][threadIdx.x] = src[(offset + (y + i) * cols + x) / 2];
+        tile_mem.tile_m4[threadIdx.y + row_offset][threadIdx.x] =
+            src[(offset + (y + row_offset) * cols + x) / 2];
       }
     }
     __syncthreads();
@@ -164,7 +165,7 @@ __global__ void BatchTransposeMovement2Kernel(const void* src_ptr, void* dst_ptr
           ((tile_size - threadIdx.y) < (cols - y)) ? (tile_size - threadIdx.y) : (cols - y);
 #pragma unroll
       // `i < x_range` equals to: `threadIdx.y + i < tile_size && y + i < cols`.
-      for (int i = 0; i < x_range; i += kBlockRows) {
+      for (int col_offset = 0; col_offset < x_range; col_offset += kBlockRows) {
         /*
         When write back as column, it cannot be stored as half2 directly.
         So we split as 2 half elements, and write back separately.
@@ -173,9 +174,9 @@ __global__ void BatchTransposeMovement2Kernel(const void* src_ptr, void* dst_ptr
           T_MOV4 m4;
           T_MOV2 m2[2];
         } tmp_storage;
-        tmp_storage.m2[0] = tile_mem.tile_m2[threadIdx.x * 2][threadIdx.y + i];
-        tmp_storage.m2[1] = tile_mem.tile_m2[threadIdx.x * 2 + 1][threadIdx.y + i];
-        dst[(offset + (y + i) * rows + x) / 2] = tmp_storage.m4;
+        tmp_storage.m2[0] = tile_mem.tile_m2[threadIdx.x * 2][threadIdx.y + col_offset];
+        tmp_storage.m2[1] = tile_mem.tile_m2[threadIdx.x * 2 + 1][threadIdx.y + col_offset];
+        dst[(offset + (y + col_offset) * rows + x) / 2] = tmp_storage.m4;
       }
     }
     __syncthreads();
