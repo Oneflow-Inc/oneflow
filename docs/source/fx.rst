@@ -494,6 +494,241 @@ Examples of the Interpreter Pattern
 
 #TODO(BBuf) add examples
 
+Debugging the Transformation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Now that we've identified that a transformation is creating incorrect
+code, it's time to debug the transformation itself. First, we'll check
+the :ref:`Limitations of Symbolic Tracing` section in the documentation.
+Once we verify that tracing is working as expected, the goal
+becomes figuring out what went wrong during our ``GraphModule``
+transformation. There may be a quick answer in
+:ref:`Writing Transformations`, but, if not, there are several ways to
+examine our traced module:
+
+::
+
+    # Sample Module
+    class M(flow.nn.Module):
+        def forward(self, x, y):
+            return x + y
+
+    # Create an instance of `M`
+    m = M()
+
+    # Symbolically trace an instance of `M` (returns a GraphModule). In
+    # this example, we'll only be discussing how to inspect a
+    # GraphModule, so we aren't showing any sample transforms for the
+    # sake of brevity.
+    traced = symbolic_trace(m)
+
+    # Print the code produced by tracing the module.
+    print(traced)
+    # The generated `forward` function is:
+    """
+    def forward(self, x, y):
+        add = x + y;  x = y = None
+        return add
+    """
+
+    # Print the internal Graph.
+    print(traced.graph)
+    # This print-out returns:
+    """
+    graph():
+        %x : [#users=1] = placeholder[target=x]
+        %y : [#users=1] = placeholder[target=y]
+        %add : [#users=1] = call_function[target=operator.add](args = (%x, %y), kwargs = {})
+        return add
+    """
+
+    # Print a tabular representation of the internal Graph.
+    traced.graph.print_tabular()
+    # This gives us:
+    """
+    opcode         name    target                   args    kwargs
+    -------------  ------  -----------------------  ------  --------
+    placeholder    x       x                        ()      {}
+    placeholder    y       y                        ()      {}
+    call_function  add     <built-in function add>  (x, y)  {}
+    output         output  output                   (add,)  {}
+    """
+
+Using the utility functions above, we can compare our traced Module
+before and after we've applied our transformations. Sometimes, a
+simple visual comparison is enough to trace down a bug. If it's still
+not clear what's going wrong, a debugger like ``pdb`` can be a good
+next step.
+
+Going off of the example above, consider the following code:
+
+::
+
+    # Sample user-defined function
+    def transform_graph(module: flow.nn.Module, tracer_class : type = fx.Tracer) -> flow.nn.Module:
+        # Get the Graph from our traced Module
+        g = tracer_class().trace(module)
+
+        """
+        Transformations on `g` go here
+        """
+
+        return fx.GraphModule(module, g)
+
+    # Transform the Graph
+    transformed = transform_graph(traced)
+
+    # Print the new code after our transforms. Check to see if it was
+    # what we expected
+    print(transformed)
+
+Using the above example, let’s say that the call to ``print(traced)``
+showed us that there was an error in our transforms. We want to find
+what goes wrong using a debugger. We start a ``pdb`` session. We can see
+what’s happening during the transform by breaking on
+``transform_graph(traced)``, then pressing ``s`` to “step into” the call
+to ``transform_graph(traced)``.
+
+We may also have good luck by editing the ``print_tabular`` method to print
+different attributes of the Nodes in the Graph. (For example, we might
+want to see the Node’s ``input_nodes`` and ``users``.)
+
+.. _Available Debuggers:
+
+Available Debuggers
+^^^^^^^^^^^^^^^^^^^^^^
+
+The most common Python debugger is
+`pdb <https://docs.python.org/3/library/pdb.html>`__. You can start
+your program in “debug mode” with ``pdb`` by typing
+``python -m pdb FILENAME.py`` into the command line, where ``FILENAME``
+is the name of the file you want to debug. After that, you can use the
+``pdb`` `debugger commands
+<https://docs.python.org/3/library/pdb.html#debugger-commands>`__
+to move through your running program stepwise. It’s common to set a
+breakpoint (``b LINE-NUMBER``) when you start ``pdb``, then call ``c`` to
+run the program until that point. This prevents you from having to step
+through each line of execution (using ``s`` or ``n``) to get to the part
+of the code you want to examine. Alternatively, you can write
+``import pdb; pdb.set_trace()`` before the line you want to break at.
+If you add ``pdb.set_trace()``, your program will automatically start
+in debug mode when you run it. (In other words, you can just type
+``python FILENAME.py`` into the command line instead of
+``python -m pdb FILENAME.py``.) Once you're running your file in
+debug mode, you can step through the code and examine your program's
+internal state using certain commands. There are many excellent
+tutorials on ``pdb`` online, including RealPython’s
+`“Python Debugging With Pdb” <https://realpython.com/python-debugging-pdb/>`__.
+
+IDEs like PyCharm or VSCode usually have a debugger built in. In your
+IDE, you can choose to either a) use ``pdb`` by pulling up a terminal
+window in your IDE (e.g. View → Terminal in VSCode), or b) use the
+built-in debugger (usually a graphical wrapper around ``pdb``).
+
+.. _Limitations of Symbolic Tracing:
+
+Limitations of Symbolic Tracing
+-------------------------------
+
+FX uses a system of **symbolic tracing** (a.k.a `symbolic
+execution <https://en.wikipedia.org/wiki/Symbolic_execution>`__)
+to capture the semantics of programs in a transformable/analyzable form.
+The system is **tracing** in that it executes the program (really a
+:class:`oneflow.nn.Module` or function) to record operations. It is
+**symbolic** in that the data flowing through the program during this
+execution is not real data, but rather symbols (:class:`Proxy` in FX parlance).
+
+Although symbolic tracing works for most neural net code, it has some
+limitations.
+
+Dynamic Control Flow
+^^^^^^^^^^^^^^^^^^^^
+
+The main limitation of symbolic tracing is it does not currently support
+*dynamic control flow*. That is, loops or ``if`` statements where the
+condition may depend on the input values of the program.
+
+For example, let’s examine the following program:
+
+::
+
+    def func_to_trace(x):
+        if x.sum() > 0:
+            return flow.relu(x)
+        else:
+            return flow.neg(x)
+
+    traced = flow.fx.symbolic_trace(func_to_trace)
+    """
+      <...>
+      File "dyn.py", line 6, in func_to_trace
+        if x.sum() > 0:
+      File "oneflow/python/oneflow/fx/proxy.py", line 279, in __bool__
+        return self.tracer.to_bool(self)
+      File "oneflow/python/oneflow/fx/proxy.py", line 176, in to_bool
+        raise TraceError('symbolically traced variables cannot be used as inputs to control flow')
+    oneflow.fx.proxy.TraceError: symbolically traced variables cannot be used as inputs to control flow
+    """
+
+The condition to the ``if`` statement relies on the value of ``x.sum()``,
+which relies on the value of ``x``, a function input. Since
+``x`` can change (i.e. if you pass a new input tensor to the traced
+function), this is *dynamic control flow*. The traceback walks back up
+through your code to show you where this situation happens.
+
+Static Control Flow
+~~~~~~~~~~~~~~~~~~~
+
+On the other hand, so-called *static control flow* is supported. Static
+control flow is loops or ``if`` statements whose value cannot change
+across invocations. Typically, in PyTorch programs, this control flow
+arises for code making decisions about a model’s architecture based on
+hyper-parameters. As a concrete example:
+
+::
+
+    import oneflow as flow
+
+    class MyModule(flow.nn.Module):
+        def __init__(self, do_activation : bool = False):
+            super().__init__()
+            self.do_activation = do_activation
+            self.linear = flow.nn.Linear(512, 512)
+
+        def forward(self, x):
+            x = self.linear(x)
+            # This if-statement is so-called static control flow.
+            # Its condition does not depend on any input values
+            if self.do_activation:
+                x = flow.relu(x)
+            return x
+
+    without_activation = MyModule(do_activation=False)
+    with_activation = MyModule(do_activation=True)
+
+    traced_without_activation = flow.fx.symbolic_trace(without_activation)
+    print(traced_without_activation.code)
+    """
+    def forward(self, x):
+        linear = self.linear(x);  x = None
+        return linear
+    """
+
+    traced_with_activation = flow.fx.symbolic_trace(with_activation)
+    print(traced_with_activation.code)
+    """
+    def forward(self, x):
+        linear = self.linear(x);  x = None
+        relu = torch.relu(linear);  linear = None
+        return relu
+    """
+
+The if-statement ``if self.do_activation`` does not depend on any
+function inputs, thus it is static. ``do_activation`` can be considered
+to be a hyper-parameter, and the traces of different instances of
+``MyModule`` with different values for that parameter have different
+code. This is a valid pattern that is supported by symbolic tracing.
+
 
 
 API Reference

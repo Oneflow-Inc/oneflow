@@ -174,7 +174,7 @@ class TracerBase:
         information to the graph node using create_node and can choose to return a value.
         """
         raise TraceError(
-            "symbolically traced variables cannot be used as inputs to control oneflow"
+            "symbolically traced variables cannot be used as inputs to control flow"
         )
 
     def iter(self, obj: "Proxy") -> Iterator:
