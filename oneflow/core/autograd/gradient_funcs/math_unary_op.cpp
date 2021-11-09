@@ -26,6 +26,10 @@ struct UnaryMathCaptureState : public AutoGradCaptureState {
   bool x_requires_grad;
 };
 
+typedef Maybe<one::Tensor> (*UnaryBwFunc)(const std::shared_ptr<one::Tensor>&,
+                                          const std::shared_ptr<one::Tensor>&);
+
+template<UnaryBwFunc BwFunc>
 class UnaryMathOp : public OpExprGradFunction<UnaryMathCaptureState> {
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
@@ -36,23 +40,24 @@ class UnaryMathOp : public OpExprGradFunction<UnaryMathCaptureState> {
     return Maybe<void>::Ok();
   }
 
+  Maybe<void> Apply(const UnaryMathCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
+    const auto& x = ctx->SavedTensors().at(0);
+    in_grads->at(0) = JUST(BwFunc(x, out_grads.at(0)));
+    return Maybe<void>::Ok();
+  }
+
  protected:
   std::shared_ptr<OpExpr> grad_op_;
 };
 
-#define INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS(op_type_name, op_cls)              \
-  class op_cls##Cls final : public UnaryMathOp {                                      \
-    Maybe<void> Apply(const UnaryMathCaptureState* ctx, const TensorTuple& out_grads, \
-                      TensorTuple* in_grads) const override {                         \
-      if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }                        \
-      const auto& x = ctx->SavedTensors().at(0);                                      \
-      in_grads->at(0) = JUST(functional::op_cls##Grad(x, out_grads.at(0)));           \
-      return Maybe<void>::Ok();                                                       \
-    }                                                                                 \
-  };                                                                                  \
+#define INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS(op_type_name, op_cls)     \
+  class op_cls##Cls final : public UnaryMathOp<functional::op_cls##Grad> {}; \
   REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, op_cls##Cls);
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS, MATH_UNARY_ELEMENTWISE_FUNC_SEQ);
 
+#undef INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS
 }  // namespace one
 }  // namespace oneflow

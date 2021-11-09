@@ -110,48 +110,50 @@ OF_PP_FOR_EACH_TUPLE(LOGICAL_FLOAT_UNARY_FUNCTORS, LOGICAL_FLOAT_UNARY_FUNC_SEQ)
 }  // namespace impl
 
 using namespace impl;
-#define ADD_FUNCTOR(class_name, functor_name)       \
+#define ADD_UNARY_FUNCTOR(class_name, functor_name) \
   m.add_functor<class_name##Functor>(functor_name); \
   m.add_functor<class_name##GradFunctor>(std::string("") + functor_name + "Grad");
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  ADD_FUNCTOR(Abs, "Abs");
-  ADD_FUNCTOR(Acos, "Acos");
-  ADD_FUNCTOR(Acosh, "Acosh");
-  ADD_FUNCTOR(Asin, "Asin");
-  ADD_FUNCTOR(Asinh, "Asinh");
-  ADD_FUNCTOR(Atan, "Atan");
-  ADD_FUNCTOR(Atanh, "Atanh");
-  ADD_FUNCTOR(Ceil, "Ceil");
-  ADD_FUNCTOR(Cos, "Cos");
-  ADD_FUNCTOR(Cosh, "Cosh");
-  ADD_FUNCTOR(Erf, "Erf");
-  ADD_FUNCTOR(Erfc, "Erfc");
-  ADD_FUNCTOR(Exp, "Exp");
-  ADD_FUNCTOR(Expm1, "Expm1");
-  ADD_FUNCTOR(Floor, "Floor");
-  ADD_FUNCTOR(Lgamma, "Lgamma");
-  ADD_FUNCTOR(Log, "Log");
-  ADD_FUNCTOR(Log1p, "Log1p");
-  ADD_FUNCTOR(LogSigmoid, "LogSigmoid");
-  ADD_FUNCTOR(Negative, "Negative");
-  ADD_FUNCTOR(Reciprocal, "Reciprocal");
-  ADD_FUNCTOR(ReciprocalNoNan, "ReciprocalNoNan");
-  ADD_FUNCTOR(Rint, "Rint");
-  ADD_FUNCTOR(Round, "Round");
-  ADD_FUNCTOR(Rsqrt, "Rsqrt");
-  ADD_FUNCTOR(Sigmoid, "Sigmoid");
-  ADD_FUNCTOR(Sign, "Sign");
-  ADD_FUNCTOR(Sin, "Sin");
-  ADD_FUNCTOR(Sinh, "Sinh");
-  ADD_FUNCTOR(Softplus, "Softplus");
-  ADD_FUNCTOR(Sqrt, "Sqrt");
-  ADD_FUNCTOR(Square, "Square");
-  ADD_FUNCTOR(Tan, "Tan");
-  ADD_FUNCTOR(Tanh, "Tanh");
+  ADD_UNARY_FUNCTOR(Abs, "Abs");
+  ADD_UNARY_FUNCTOR(Acos, "Acos");
+  ADD_UNARY_FUNCTOR(Acosh, "Acosh");
+  ADD_UNARY_FUNCTOR(Asin, "Asin");
+  ADD_UNARY_FUNCTOR(Asinh, "Asinh");
+  ADD_UNARY_FUNCTOR(Atan, "Atan");
+  ADD_UNARY_FUNCTOR(Atanh, "Atanh");
+  ADD_UNARY_FUNCTOR(Ceil, "Ceil");
+  ADD_UNARY_FUNCTOR(Cos, "Cos");
+  ADD_UNARY_FUNCTOR(Cosh, "Cosh");
+  ADD_UNARY_FUNCTOR(Erf, "Erf");
+  ADD_UNARY_FUNCTOR(Erfc, "Erfc");
+  ADD_UNARY_FUNCTOR(Exp, "Exp");
+  ADD_UNARY_FUNCTOR(Expm1, "Expm1");
+  ADD_UNARY_FUNCTOR(Floor, "Floor");
+  ADD_UNARY_FUNCTOR(Lgamma, "Lgamma");
+  ADD_UNARY_FUNCTOR(Log, "Log");
+  ADD_UNARY_FUNCTOR(Log1p, "Log1p");
+  ADD_UNARY_FUNCTOR(LogSigmoid, "LogSigmoid");
+  ADD_UNARY_FUNCTOR(Negative, "Negative");
+  ADD_UNARY_FUNCTOR(Reciprocal, "Reciprocal");
+  ADD_UNARY_FUNCTOR(ReciprocalNoNan, "ReciprocalNoNan");
+  ADD_UNARY_FUNCTOR(Rint, "Rint");
+  ADD_UNARY_FUNCTOR(Round, "Round");
+  ADD_UNARY_FUNCTOR(Rsqrt, "Rsqrt");
+  ADD_UNARY_FUNCTOR(Sigmoid, "Sigmoid");
+  ADD_UNARY_FUNCTOR(Sign, "Sign");
+  ADD_UNARY_FUNCTOR(Sin, "Sin");
+  ADD_UNARY_FUNCTOR(Sinh, "Sinh");
+  ADD_UNARY_FUNCTOR(Softplus, "Softplus");
+  ADD_UNARY_FUNCTOR(Sqrt, "Sqrt");
+  ADD_UNARY_FUNCTOR(Square, "Square");
+  ADD_UNARY_FUNCTOR(Tan, "Tan");
+  ADD_UNARY_FUNCTOR(Tanh, "Tanh");
   m.add_functor<LogicalNotFunctor>("LogicalNot");
   m.add_functor<InplaceSinFunctor>("Sin_");
 };
+
+#undef ADD_UNARY_FUNCTOR
 
 }  // namespace functional
 }  // namespace one

@@ -26,14 +26,6 @@ namespace functional {
 
 namespace impl {
 
-// #define BINARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, base)                    \
-//   class class_name##Functor : public base {                                          \
-//    public:                                                                           \
-//     class_name##Functor() {                                                          \
-//       op_ = CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Input("y").Output("z").Build()); \
-//     }                                                                                \
-//   };
-
 #define BINARY_ELEMENTWISE_GRAD_FUNCTOR(op_type_name, class_name, base)           \
   class class_name##XGradFunctor : public base {                                  \
    public:                                                                        \
@@ -58,26 +50,27 @@ namespace impl {
     }                                                                             \
   };
 
-#define ADD_BINARY_ELEMENTWISE_GRAD_FUNCTOR(op_type_name, class_name) \
+#define INSTANTIAT_BINARY_ELEMENTWISE_GRAD_FUNCTOR(op_type_name, class_name) \
   BINARY_ELEMENTWISE_GRAD_FUNCTOR(op_type_name, class_name, BinaryGradFunctor);
 
-OF_PP_FOR_EACH_TUPLE(ADD_BINARY_ELEMENTWISE_GRAD_FUNCTOR, MATH_BINARY_ELEMENTWISE_FUNC_SEQ);
-
+OF_PP_FOR_EACH_TUPLE(INSTANTIAT_BINARY_ELEMENTWISE_GRAD_FUNCTOR, MATH_BINARY_ELEMENTWISE_FUNC_SEQ);
 }  // namespace impl
 
 using namespace impl;
 
-#define ADD_FUNCTOR(class_name, functor_name)                                        \
+#define ADD_BINARY_GRAD_FUNCTOR(class_name, functor_name)                            \
   m.add_functor<class_name##XGradFunctor>(std::string("") + functor_name + "XGrad"); \
   m.add_functor<class_name##YGradFunctor>(std::string("") + functor_name + "YGrad");
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  ADD_FUNCTOR(Pow, "Pow");
-  ADD_FUNCTOR(Atan2, "Atan2");
-  ADD_FUNCTOR(FloorDiv, "FloorDiv");
-  ADD_FUNCTOR(Xdivy, "Xdivy");
-  ADD_FUNCTOR(Xlogy, "Xlogy");
+  ADD_BINARY_GRAD_FUNCTOR(Pow, "Pow");
+  ADD_BINARY_GRAD_FUNCTOR(Atan2, "Atan2");
+  ADD_BINARY_GRAD_FUNCTOR(FloorDiv, "FloorDiv");
+  ADD_BINARY_GRAD_FUNCTOR(Xdivy, "Xdivy");
+  ADD_BINARY_GRAD_FUNCTOR(Xlogy, "Xlogy");
 };
+
+#undef ADD_BINARY_GRAD_FUNCTOR
 
 }  // namespace functional
 }  // namespace one
