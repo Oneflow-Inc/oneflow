@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,15 +12,16 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-import oneflow as flow
+*/
+#ifndef ONEFLOW_CORE_LAZY_ACTOR_LIGHT_ACTOR_H_
+#define ONEFLOW_CORE_LAZY_ACTOR_LIGHT_ACTOR_H_
 
+#include "oneflow/core/lazy/actor/actor_base.h"
 
-def meshgrid_op(*tensors):
-    return flow._C.meshgrid(tensors)
+namespace oneflow {
 
+std::unique_ptr<ActorBase> TryNewLightActor(ActorContext* ctx);
 
-if __name__ == "__main__":
-    import doctest
+}  // namespace oneflow
 
-    doctest.testmod(raise_on_error=True)
+#endif  // ONEFLOW_CORE_LAZY_ACTOR_LIGHT_ACTOR_H_
