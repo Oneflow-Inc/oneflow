@@ -331,6 +331,7 @@ Graph Manipulation Examples
 -  `Replace one
    op <https://github.com/Oneflow-Inc/examples/blob/main/fx/replace_op.py>`__
 -  `replace_pattern: Basic usage <https://github.com/Oneflow-Inc/examples/blob/main/fx/subgraph_rewriter_basic_use.py>`__
+-  `Invert Transformation <https://github.com/Oneflow-Inc/examples/blob/main/fx/invert.py>`__
 
 
 Proxy/Retracing
@@ -339,7 +340,7 @@ Proxy/Retracing
 Another way of manipulating :class:`Graph`\s is by reusing the :class:`Proxy`
 machinery used in symbolic tracing. For example, let’s
 imagine that we wanted to write a transformation that decomposed
-PyTorch functions into smaller operations. It would transform every
+OneFlow functions into smaller operations. It would transform every
 ``F.relu(x)`` call into ``(x > 0) * x``. One possibility would be to
 perform the requisite graph rewriting to insert the comparison and
 multiplication after the ``F.relu``, and then clean up the original
@@ -347,7 +348,7 @@ multiplication after the ``F.relu``, and then clean up the original
 objects to automatically record operations into the :class:`Graph`.
 
 To use this method, we write the operations that we want inserted as regular
-PyTorch code and invoke that code with :class:`Proxy` objects as arguments.
+OneFlow code and invoke that code with :class:`Proxy` objects as arguments.
 These :class:`Proxy` objects will capture the operations that are performed
 on them and append them to the :class:`Graph`.
 
@@ -395,14 +396,6 @@ on them and append them to the :class:`Graph`.
                 new_node = new_graph.node_copy(node, lambda x: env[x.name])
                 env[node.name] = new_node
         return fx.GraphModule(model, new_graph)
-
-In addition to avoiding explicit graph manipulation, using :class:`Proxy`\s
-also allows you to specify your rewrite rules as native Python code.
-For transformations that require a large amount of rewrite rules
-(such as vmap or grad), this can often improve readability and
-maintainability of the rules.
-
-#TODO(BBuf) add examples
 
 
 The Interpreter Pattern
