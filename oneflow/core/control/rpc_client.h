@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_CONTROL_RPC_CLIENT_H_
 #define ONEFLOW_CORE_CONTROL_RPC_CLIENT_H_
 
-#include "oneflow/core/actor/actor_message.h"
+#include "oneflow/core/lazy/actor/actor_message.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/ctrl_service.h"
 #include "oneflow/core/job/global_for.h"

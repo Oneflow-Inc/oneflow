@@ -31,7 +31,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
-
+#include "oneflow/core/register/ofblob.h"
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -147,15 +147,13 @@ class DeConvBaseFunctor {
       auto nc = x->dim(1) / groups;
       auto split_x = JUST(functional::Split(x, nc, 1));
       auto split_weight = JUST(functional::Split(weight, nc, 0));
-      int64_t max_dim_size = 0;
       one::TensorTuple split_out;
       for (int i = 0; i < groups; i++) {
         const std::shared_ptr<one::Tensor>& deconv_i = JUST(OpInterpUtil::Dispatch<Tensor>(
             *deconv_op_, {split_x->at(i), split_weight->at(i)}, deconv_attrs));
-        max_dim_size += deconv_i->dim(1);
         split_out.push_back(deconv_i);
       }
-      deconv_out = JUST(functional::Concat(split_out, 1, max_dim_size));
+      deconv_out = JUST(functional::Concat(split_out, 1));
     }
 
     if (bias) {
@@ -1578,15 +1576,46 @@ class FoldFunctor {
   std::shared_ptr<OpExpr> fold_op_;
 };
 
+Maybe<void> SyncAccessTensorWithTimeOut(
+    const std::shared_ptr<Tensor>& tensor,
+    const std::shared_ptr<std::function<void(uint64_t)>>& callback, const std::string& modifier) {
+  return SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
+    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
+                                               modifier);
+    });
+  });
+}
+
 class OneHotFunctor {
  public:
   OneHotFunctor() {
     one_hot_op_ = CHECK_JUST(one::OpBuilder("one_hot").Input("indices").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& num_classes,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& num_classes,
                            const Scalar& on_value, const Scalar& off_value) const {
+    if (IsFloatingDataType(input->dtype()->data_type())) {
+      OF_RUNTIME_ERROR() << "one_hot is only applicable to index tensor.";
+    }
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("depth", num_classes));
+    if (num_classes == -1) {
+      std::vector<int32_t> axis(input->ndim());
+      std::iota(axis.begin(), axis.end(), 0);
+      auto tensor_max = JUST(functional::ReduceMax(input, axis, false));
+
+      int64_t max = 0;
+      const auto& callback =
+          std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
+            auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+            of_blob->AutoMemCopyTo<int64_t>(&max,
+                                            1);  // copy 1 scalar(int64_t) tensor's value to max
+          });
+      JUST(SyncAccessTensorWithTimeOut(tensor_max, callback, "const"));
+      JUST(attrs.SetAttr<int64_t>("depth", max + 1));
+
+    } else {
+      JUST(attrs.SetAttr<int64_t>("depth", num_classes));
+    }
     bool is_on_value_double = on_value.IsFloatingPoint();
     bool is_off_value_double = off_value.IsFloatingPoint();
     if (is_on_value_double || is_off_value_double) {
@@ -1602,7 +1631,7 @@ class OneHotFunctor {
       JUST(attrs.SetAttr<int64_t>("integer_on_value", JUST(on_value.As<int64_t>())));
       JUST(attrs.SetAttr<int64_t>("integer_off_value", JUST(off_value.As<int64_t>())));
     }
-    return OpInterpUtil::Dispatch<Tensor>(*one_hot_op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*one_hot_op_, {input}, attrs);
   }
 
  private:
@@ -1670,6 +1699,46 @@ class FusedSelfAttentionGradFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class FusedScaleTrilSoftmaxMaskScaleFunctor {
+ public:
+  FusedScaleTrilSoftmaxMaskScaleFunctor() {
+    random_mask_like_op_ =
+        CHECK_JUST(one::OpBuilder("random_mask_like").Input("like").Output("out").Build());
+    fused_op_ = CHECK_JUST(one::OpBuilder("fused_tril_scale_softmax_mask_scale")
+                               .Input("x")
+                               .Input("mask")
+                               .Output("y")
+                               .Output("softmax_y")
+                               .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const float p,
+                                const int64_t diagonal, const float tril_scale_value,
+                                const Optional<one::Generator>& generator) const {
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    MutableAttrMap random_mask_like_attrs;
+    JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
+    JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
+
+    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *random_mask_like_op_, {x},
+        OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
+
+    float mask_scale_value = 1.0;
+    if (p != 1.0) { mask_scale_value = 1.0 / (1.0 - p); }
+    MutableAttrMap fused_attrs;
+    JUST(fused_attrs.SetAttr<int64_t>("diagonal", diagonal));
+    JUST(fused_attrs.SetAttr<float>("tril_scale_value", tril_scale_value));
+    JUST(fused_attrs.SetAttr<float>("mask_scale_value", mask_scale_value));
+
+    return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_, {x, mask}, fused_attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> fused_op_;
+  std::shared_ptr<OpExpr> random_mask_like_op_;
 };
 
 class L2NormalizeGradFunctor {
@@ -1839,6 +1908,48 @@ class CtcGreedyDecoderFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class PartialFCSampleFunctor {
+ public:
+  PartialFCSampleFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("distributed_partial_fc_sample")
+                         .Input("weight")
+                         .Input("label")
+                         .Output("mapped_label")
+                         .Output("sampled_label")
+                         .Output("sampled_weight")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& wegiht,
+                                const std::shared_ptr<one::Tensor>& label,
+                                const int64_t& num_sample) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("num_sample", num_sample));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {wegiht, label}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class PariticalFCSampleDisableBoxing {
+ public:
+  PariticalFCSampleDisableBoxing() {
+    op_ = CHECK_JUST(one::OpBuilder("distributed_partial_fc_sample_disable_boxing")
+                         .Input("sampled_weight_diff")
+                         .Input("sampled_label")
+                         .Output("boxing_disabled_sampled_weight_diff")
+                         .Output("boxing_disabled_sampled_label")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& sampled_weight_diff,
+                                const std::shared_ptr<one::Tensor>& sampled_label) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {sampled_weight_diff, sampled_label});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -1897,8 +2008,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedBiasAddGeluFunctor>("FusedBiasAddGelu");
   m.add_functor<impl::FusedBiasAddGeluGradFunctor>("FusedBiasAddGeluGrad");
   m.add_functor<impl::FusedBiasAddDropoutFunctor>("FusedBiasAddDropout");
+  m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleFunctor>("FusedScaleTrilSoftmaxMaskScale");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
   m.add_functor<impl::CtcGreedyDecoderFunctor>("CtcGreedyDecoder");
+  m.add_functor<impl::PartialFCSampleFunctor>("DistributedPariticalFCSample");
+  m.add_functor<impl::PariticalFCSampleDisableBoxing>("DistributedPariticalFCSampleDisableBoxing");
 };
 
 }  // namespace functional

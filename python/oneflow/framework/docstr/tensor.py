@@ -89,6 +89,14 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.logical_not,
+    """
+    logical_not() -> Tensor
+    See :func:`oneflow.logical_not`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.std,
     """
     See :func:`oneflow.std`
@@ -151,5 +159,26 @@ add_docstr(
         tensor([[ 1.,  2.],
                 [ 3.,  4.],
                 [ 5.,  6.]])
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.narrow,
+    """
+    See :func:`oneflow.narrow`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.unsqueeze,
+    """
+    See :func:`oneflow.unsqueeze`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.permute,
+    """
+    See :func:`oneflow.permute`
     """,
 )

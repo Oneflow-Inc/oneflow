@@ -154,14 +154,10 @@ using InstructionMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, instr
 template<OperandMemZoneModifier mem_zone_modifier>
 void CheckOperand(const Operand& operand);
 
-static const int kInstructionStatusBufferBytes = 32;
+static const int kInstructionStatusBufferBytes = 64;
 
 // clang-format off
-FLAT_MSG_BEGIN(InstructionDeleted);
-FLAT_MSG_END(InstructionDeleted);
-
 FLAT_MSG_BEGIN(InstructionStatusBuffer);
-  FLAT_MSG_DEFINE_OPTIONAL(InstructionDeleted, instruction_deleted);
   FLAT_MSG_DEFINE_REPEATED(char, buffer, kInstructionStatusBufferBytes);
 FLAT_MSG_END(InstructionStatusBuffer);
 // clang-format on
@@ -273,11 +269,10 @@ class Instruction final : public intrusive::Base {
   }
 
   // methods
-  void __Init__(InstructionMsg* instr_msg, Stream* stream,
-                const std::shared_ptr<const ParallelDesc>& parallel_desc);
-  void __Delete__();
+  void Init(InstructionMsg* instr_msg, Stream* stream,
+            const std::shared_ptr<const ParallelDesc>& parallel_desc);
+  void Delete();
   bool Done() const;
-  void set_has_event_record(bool val);
   const StreamType& stream_type() const;
   template<OperandMemZoneModifier mem_zone_modifier>
   const RwMutexedObject* operand_type(const Operand& operand) const {

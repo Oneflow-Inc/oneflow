@@ -17,4 +17,5 @@ Optimizers
             CosineAnnealingLR,
             LambdaLR,
             StepLR,
-            MultiStepLR
+            MultiStepLR,
+            ReduceLROnPlateau

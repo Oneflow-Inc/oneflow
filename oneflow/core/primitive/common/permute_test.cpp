@@ -20,7 +20,7 @@ namespace oneflow {
 
 namespace primitive {
 
-namespace permute_internal {
+namespace permute {
 
 namespace {
 
@@ -66,7 +66,7 @@ TEST(Permute, SimplifyPermutation) {
 
 }  // namespace
 
-}  // namespace permute_internal
+}  // namespace permute
 
 }  // namespace primitive
 
