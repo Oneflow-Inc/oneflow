@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/math_binary_elementwise_func.h"
+#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
 
@@ -34,7 +35,7 @@ class MathBinaryElementwiseCpuKernel final : public user_op::OpKernel {
     T* z = tensor_z->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    for (int32_t i = 0; i < n; ++i) { z[i] = BinaryFunctor<T>::Forward(x[i], y[i]); }
+    MultiThreadLoop(n, [&](size_t i) { z[i] = BinaryFunctor<T>::Forward(x[i], y[i]); });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -58,7 +59,8 @@ class MathBinaryElementwiseXGradCpuKernel final : public user_op::OpKernel {
     T* dx = tensor_dx->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    for (int32_t i = 0; i < n; ++i) { dx[i] = BinaryFunctor<T>::BackwardXGrad(x[i], y[i], dz[i]); }
+    MultiThreadLoop(n,
+                    [&](size_t i) { dx[i] = BinaryFunctor<T>::BackwardXGrad(x[i], y[i], dz[i]); });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -82,7 +84,8 @@ class MathBinaryElementwiseYGradCpuKernel final : public user_op::OpKernel {
     T* dy = tensor_dy->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    for (int32_t i = 0; i < n; ++i) { dy[i] = BinaryFunctor<T>::BackwardYGrad(x[i], y[i], dz[i]); }
+    MultiThreadLoop(n,
+                    [&](size_t i) { dy[i] = BinaryFunctor<T>::BackwardYGrad(x[i], y[i], dz[i]); });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
