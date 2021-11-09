@@ -173,7 +173,11 @@ foreach(oneflow_single_file ${oneflow_all_src})
   else() # build_python
 
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/cpp/.*\\.(h|cpp)$")
-      list(APPEND of_all_obj_cc ${oneflow_single_file})
+      if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/cpp/.*_test\\.cpp$")
+        list(APPEND of_all_test_cc ${oneflow_single_file})
+      else()
+        list(APPEND of_all_obj_cc ${oneflow_single_file})
+      endif()
       set(group_this ON)
     endif()
 
@@ -354,6 +358,15 @@ if (WITH_MLIR)
   target_link_libraries(oneflow PRIVATE ${ONEFLOW_MLIR_LIBS})
 endif()
 
+if(APPLE)
+  set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj ${ONEFLOW_MLIR_LIBS})
+elseif(UNIX)
+  set(of_libs -Wl,--whole-archive oneflow of_protoobj of_cfgobj of_functional_obj ${ONEFLOW_MLIR_LIBS} -Wl,--no-whole-archive -ldl -lrt)
+elseif(WIN32)
+  set(of_libs oneflow of_protoobj of_cfgobj of_functional_obj)
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:oneflow")
+endif()
+
 if(BUILD_PYTHON)
 
   # py ext lib
@@ -366,16 +379,6 @@ if(BUILD_PYTHON)
   add_dependencies(of_pyext_obj oneflow)
   target_compile_options(of_pyext_obj PRIVATE -Werror=return-type)
   target_treat_warnings_as_errors(of_pyext_obj)
-
-
-  if(APPLE)
-    set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj ${ONEFLOW_MLIR_LIBS})
-  elseif(UNIX)
-    set(of_libs -Wl,--whole-archive oneflow of_protoobj of_cfgobj of_functional_obj ${ONEFLOW_MLIR_LIBS} -Wl,--no-whole-archive -ldl -lrt)
-  elseif(WIN32)
-    set(of_libs oneflow of_protoobj of_cfgobj of_functional_obj)
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:oneflow")
-  endif()
 
   pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${PYBIND_REGISTRY_CC})
   set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
@@ -413,10 +416,9 @@ if(BUILD_PYTHON)
 
   add_dependencies(of_pyscript_copy of_protoobj)
 
-  file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
-
 endif(BUILD_PYTHON)
 
+file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
 
 # build test
 if(BUILD_TESTING)
