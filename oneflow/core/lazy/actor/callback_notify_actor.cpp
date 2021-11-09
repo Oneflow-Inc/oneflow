@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,15 +12,19 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-import oneflow as flow
+*/
+#include "oneflow/core/lazy/actor/sink_actor.h"
 
+namespace oneflow {
 
-def meshgrid_op(*tensors):
-    return flow._C.meshgrid(tensors)
+class CallbackNotifyActor final : public SinkActor {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CallbackNotifyActor);
+  CallbackNotifyActor() = default;
+  ~CallbackNotifyActor() = default;
 
+ private:
+};
 
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod(raise_on_error=True)
+REGISTER_ACTOR(TaskType::kCallbackNotify, CallbackNotifyActor);
+}  // namespace oneflow
