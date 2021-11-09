@@ -1069,7 +1069,10 @@ add_docstr(
 
 add_docstr(
     oneflow.matmul,
-    r"""This operator applies matrix multiplication to two Tensor.
+    r"""
+    matmul(input, other) -> Tensor
+
+    This operator applies matrix multiplication to two Tensor.
 
     Args:
         a (oneflow.Tensor): A Tensor
@@ -1181,5 +1184,32 @@ add_docstr(
         >>> input = flow.tensor(np.random.randn(2, 3, 4, 5))
         >>> output = flow.var(input, 1, True)
 
+    """,
+)
+
+add_docstr(
+    oneflow.logical_not,
+    r"""
+    Computes the element-wise logical NOT of the given input tensors. 
+    Zeros are treated as False and nonzeros are treated as True.
+    Args:
+        input (oneflow.Tensor): The input Tensor
+        other (oneflow.Tensor): The Tensor to compute NOT with
+
+    Returns:
+        oneflow.Tensor: The output Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+
+        >>> input = flow.tensor([1, 0, -1], dtype=flow.float32)
+        >>> out = flow.logical_not(input)
+        >>> out
+        tensor([0, 1, 0], dtype=oneflow.int8)
+        
     """,
 )

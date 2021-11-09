@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/slice_util.h"
 #include "oneflow/core/common/switch_func.h"
+#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
 
@@ -60,10 +61,10 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
     int64_t elem_cnt = params.elem_cnt();
     SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
     SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
-    FOR_RANGE(int, i, 0, elem_cnt) {
+    MultiThreadLoop(elem_cnt, [&](size_t i) {
       int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
       sliced[i] = entire[offset];
-    }
+    });
   }
 
   template<int NDIM>
@@ -72,10 +73,10 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
     int64_t elem_cnt = params.elem_cnt();
     SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
     SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
-    FOR_RANGE(int, i, 0, elem_cnt) {
+    MultiThreadLoop(elem_cnt, [&](size_t i) {
       int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
       entire[offset] = sliced[i];
-    }
+    });
   }
 
 #define MAKE_SLICE_KERNEL_UTIL_SWITCH_ENTRY(func_name, N) \

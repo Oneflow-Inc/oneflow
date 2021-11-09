@@ -29,50 +29,6 @@ class ConstantInitializerConf;
 
 template<>
 struct ArithemeticIf<DeviceType::kGPU> {
-  static void Transpose(DeviceCtx* ctx, int32_t num_axis, const ShapeView& x_shape,
-                        const ShapeView& y_shape, const std::vector<int32_t>& permutation,
-                        int64_t elem_cnt, const float* x, float* y);
-  static void Transpose(DeviceCtx* ctx, int32_t num_axis, const ShapeView& x_shape,
-                        const ShapeView& y_shape, const std::vector<int32_t>& permutation,
-                        int64_t elem_cnt, const double* x, double* y);
-  static void Transpose(DeviceCtx* ctx, int32_t num_axis, const ShapeView& x_shape,
-                        const ShapeView& y_shape, const std::vector<int32_t>& permutation,
-                        int64_t elem_cnt, const float16* x, float16* y);
-  static void Transpose(DeviceCtx* ctx, int32_t num_axis, const ShapeView& x_shape,
-                        const ShapeView& y_shape, const std::vector<int32_t>& permutation,
-                        int64_t elem_cnt, const int8_t* x, int8_t* y);
-  static void Transpose(DeviceCtx* ctx, int32_t num_axis, const ShapeView& x_shape,
-                        const ShapeView& y_shape, const std::vector<int32_t>& permutation,
-                        int64_t elem_cnt, const uint8_t* x, uint8_t* y);
-  static void Transpose(DeviceCtx* ctx, int32_t num_axis, const ShapeView& x_shape,
-                        const ShapeView& y_shape, const std::vector<int32_t>& permutation,
-                        int64_t elem_cnt, const int32_t* x, int32_t* y);
-  static void Transpose(DeviceCtx* ctx, int32_t num_axis, const ShapeView& x_shape,
-                        const ShapeView& y_shape, const std::vector<int32_t>& permutation,
-                        int64_t elem_cnt, const int64_t* x, int64_t* y);
-
-  static void Transpose(DeviceCtx* ctx, int32_t num_axis, const ShapeView& x_shape,
-                        const ShapeView& y_shape, const PbRf<int32_t>& permutation,
-                        int64_t elem_cnt, const float* x, float* y);
-  static void Transpose(DeviceCtx* ctx, int32_t num_axis, const ShapeView& x_shape,
-                        const ShapeView& y_shape, const PbRf<int32_t>& permutation,
-                        int64_t elem_cnt, const double* x, double* y);
-  static void Transpose(DeviceCtx* ctx, int32_t num_axis, const ShapeView& x_shape,
-                        const ShapeView& y_shape, const PbRf<int32_t>& permutation,
-                        int64_t elem_cnt, const float16* x, float16* y);
-  static void Transpose(DeviceCtx* ctx, int32_t num_axis, const ShapeView& x_shape,
-                        const ShapeView& y_shape, const PbRf<int32_t>& permutation,
-                        int64_t elem_cnt, const int8_t* x, int8_t* y);
-  static void Transpose(DeviceCtx* ctx, int32_t num_axis, const ShapeView& x_shape,
-                        const ShapeView& y_shape, const PbRf<int32_t>& permutation,
-                        int64_t elem_cnt, const uint8_t* x, uint8_t* y);
-  static void Transpose(DeviceCtx* ctx, int32_t num_axis, const ShapeView& x_shape,
-                        const ShapeView& y_shape, const PbRf<int32_t>& permutation,
-                        int64_t elem_cnt, const int32_t* x, int32_t* y);
-  static void Transpose(DeviceCtx* ctx, int32_t num_axis, const ShapeView& x_shape,
-                        const ShapeView& y_shape, const PbRf<int32_t>& permutation,
-                        int64_t elem_cnt, const int64_t* x, int64_t* y);
-
   static void InitializeWithConstConf(DeviceCtx* ctx,
                                       const ConstantInitializerConf& initializer_conf, Blob* blob);
 
@@ -151,14 +107,6 @@ struct ArithemeticIf<DeviceType::kGPU> {
                              int32_t* z);
   static void DivByScalarPtr(DeviceCtx* ctx, const int64_t n, const int64_t* x, const int64_t* y,
                              int64_t* z);
-
-  static void Fill(DeviceCtx* ctx, const int64_t n, const float16 value, float16* y);
-  static void Fill(DeviceCtx* ctx, const int64_t n, const float value, float* y);
-  static void Fill(DeviceCtx* ctx, const int64_t n, const double value, double* y);
-  static void Fill(DeviceCtx* ctx, const int64_t n, const uint8_t value, uint8_t* y);
-  static void Fill(DeviceCtx* ctx, const int64_t n, const int8_t value, int8_t* y);
-  static void Fill(DeviceCtx* ctx, const int64_t n, const int32_t value, int32_t* y);
-  static void Fill(DeviceCtx* ctx, const int64_t n, const int64_t value, int64_t* y);
 };
 
 }  // namespace oneflow

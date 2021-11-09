@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/collective_boxing/runtime_request_info.h"
+#include "oneflow/core/job/collective_boxing/request_store.h"
 #include "oneflow/core/job/plan.pb.h"
 
 namespace oneflow {
