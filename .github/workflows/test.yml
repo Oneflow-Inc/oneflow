@@ -321,7 +321,6 @@ jobs:
     runs-on: [self-hosted, linux, build]
     steps:
       - name: Fix permissions
-        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         run: |
           set -x
           docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
