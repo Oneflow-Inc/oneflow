@@ -31,10 +31,14 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
   m.def("toggle_jit", [](const std::string& func_name) {
     *one::MutJitEnabled() = !*one::MutJitEnabled();
     *one::MutJitFuncName() = func_name;
+    // when false => true, start jit
+    auto jit_interpreter = dynamic_cast<one::JitInterpreter*>(one::GetJitInterpreter().get());
+    if (one::IsJitEnabled() == true) { jit_interpreter->Start(); }
     // when true => false, start exec
     if (one::IsJitEnabled() == false) {
-      auto jit_interpreter = dynamic_cast<one::JitInterpreter*>(one::GetJitInterpreter().get());
       jit_interpreter->Interrupt();
+      jit_interpreter->End();
+      LOG(ERROR) << "MLIR trace overhead: " << jit_interpreter->MlirTraceOverhead();
     }
     return *one::MutJitEnabled();
   });

@@ -47,6 +47,16 @@ class JitInterpreter : public OpExprInterpreter {
   ir::JitImporter& GetImporter() { return importer_; }
   void CacheExpr(Operation&, std::shared_ptr<one::UserOpExpr>);
   llvm::Optional<std::shared_ptr<one::UserOpExpr>> GetExpr(Operation*);
+  void Start() { start_time_ = std::chrono::steady_clock::now(); }
+  void MlirTraceEnd() { mlir_end_time_ = std::chrono::steady_clock::now(); }
+  void End() { end_time_ = std::chrono::steady_clock::now(); }
+  float MlirTraceOverhead() {
+    const float mlir_trace_time =
+        std::chrono::duration_cast<std::chrono::microseconds>(mlir_end_time_ - start_time_).count();
+    const float jit_time =
+        std::chrono::duration_cast<std::chrono::microseconds>(end_time_ - start_time_).count();
+    return mlir_trace_time / jit_time;
+  }
 
  private:
   DECLARE_NORMAL_APPLY_FUNC(UserOp);  // note(BBuf) jit deal with user op only, now.
@@ -54,6 +64,9 @@ class JitInterpreter : public OpExprInterpreter {
   mutable MLIRContext* context_;
   mutable OwningOpRef<ModuleOp> module_;
   mutable ir::JitImporter importer_;
+  mutable std::chrono::steady_clock::time_point start_time_;
+  mutable std::chrono::steady_clock::time_point mlir_end_time_;
+  mutable std::chrono::steady_clock::time_point end_time_;
 };
 
 }  // namespace one
