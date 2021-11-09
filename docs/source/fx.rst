@@ -751,7 +751,7 @@ that contain this code can be traced as calls to the Method (see
 :func:`wrap`) rather than tracing through them.
 
 Non-\ ``oneflow`` Functions
-^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 FX uses ``__oneflow_function__`` as the mechanism by which it intercepts
 calls (see the `technical
