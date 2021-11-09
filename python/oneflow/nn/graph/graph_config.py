@@ -64,14 +64,6 @@ class GraphConfig(object):
         assert type(mode) is bool
         self.proto.set_enable_auto_mixed_precision(mode)
 
-    def enable_auto_parallel(self, mode: bool = True):
-        """If true, then graph will use auto parallel algorithm.
-
-        Args:
-            mode (bool, optional): [description]. Default is True.
-        """
-        self.proto.set_enable_auto_parallel(mode)
-
     def allow_fuse_model_update_ops(self, mode: bool = True):
         """If true, try to fuse cast + scale + l1_l2_regularize_gradient + model_update to one op to improve performance.
 
@@ -117,6 +109,33 @@ class GraphConfig(object):
         """
         assert mode in ("distributed_split", "non_distributed")
         self.proto.set_optimizer_placement_optimization_mode(mode)
+
+    def enable_auto_parallel(self, mode: bool = True):
+        """If true, then graph will use auto parallel algorithm.
+
+        Args:
+            mode (bool, optional): [description]. Default is True.
+        """
+        self.proto.set_enable_auto_parallel(mode)
+
+    def set_auto_parallel_computation_cost_ratio(self, ratio):
+        """
+        Set coefficient of computation cost in auto-parallel algorithm.
+        """
+        self.proto.set_auto_parallel_computation_cost_ratio(ratio)
+
+    def set_auto_parallel_wait_time(self, cost):
+        """
+        TODO
+        """
+        self.proto.set_auto_parallel_wait_time(cost)
+
+    def set_auto_parallel_transfer_cost(self, cost):
+        """
+        TODO
+        """
+        self.proto.set_auto_parallel_transfer_cost(cost)
+
 
     def _generate_optimizer_and_variable_configs(
         self, opt_dict: OptDict = None, variables_conf: OrderedDict = None,

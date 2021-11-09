@@ -20,6 +20,21 @@ namespace oneflow {
 
 namespace {
 
+// Logically computation cost of pool op is the product of output data amount and pool kernal data
+// amount. After adding sbp, we just divide it by parallel number if output data is splitted because
+// splitting input and using partial sum for output is not a valid sbp for this op for now.
+Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  const std::vector<int32_t> pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
+  double logical_computation_cost =
+      std::accumulate(pool_size.begin(), pool_size.end(),
+                      ctx->Shape4ArgNameAndIndex("y", 0)->elem_cnt(), std::multiplies<double>());
+  const auto& sbp_parallel = ctx->SbpParallel4ArgNameAndIndex("y", 0);
+  if (sbp_parallel.has_split_parallel()) {
+    return logical_computation_cost / ctx->parallel_desc().parallel_num();
+  }
+  return logical_computation_cost;
+}
+
 typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn;
 typedef std::function<Maybe<void>(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
     GenBackwardOpConfFn;
@@ -125,7 +140,8 @@ REGISTER_USER_OP("avg_pool_1d")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(1))
     .SetGetSbpFn(FwGetSbpFn)
-    .SetDataTypeInferFn(FwInferDataType);
+    .SetDataTypeInferFn(FwInferDataType)
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP("avg_pool_1d_grad")
     .Input("x")
@@ -141,7 +157,8 @@ REGISTER_USER_OP("avg_pool_1d_grad")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetGetSbpFn(BwGetSbpFn)
-    .SetDataTypeInferFn(BwInferDataType);
+    .SetDataTypeInferFn(BwInferDataType)
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP_GRAD("avg_pool_1d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("avg", 1));
 
@@ -157,7 +174,8 @@ REGISTER_USER_OP("avg_pool_2d")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(2))
     .SetGetSbpFn(FwGetSbpFn)
-    .SetDataTypeInferFn(FwInferDataType);
+    .SetDataTypeInferFn(FwInferDataType)
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP("avg_pool_2d_grad")
     .Input("x")
@@ -173,7 +191,8 @@ REGISTER_USER_OP("avg_pool_2d_grad")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetGetSbpFn(BwGetSbpFn)
-    .SetDataTypeInferFn(BwInferDataType);
+    .SetDataTypeInferFn(BwInferDataType)
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP_GRAD("avg_pool_2d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("avg", 2));
 
@@ -189,7 +208,8 @@ REGISTER_USER_OP("avg_pool_3d")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(3))
     .SetGetSbpFn(FwGetSbpFn)
-    .SetDataTypeInferFn(FwInferDataType);
+    .SetDataTypeInferFn(FwInferDataType)
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP("avg_pool_3d_grad")
     .Input("x")
@@ -205,7 +225,8 @@ REGISTER_USER_OP("avg_pool_3d_grad")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetGetSbpFn(BwGetSbpFn)
-    .SetDataTypeInferFn(BwInferDataType);
+    .SetDataTypeInferFn(BwInferDataType)
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP_GRAD("avg_pool_3d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("avg", 3));
 
@@ -221,7 +242,8 @@ REGISTER_USER_OP("max_pool_1d")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(1))
     .SetGetSbpFn(FwGetSbpFn)
-    .SetDataTypeInferFn(FwInferDataType);
+    .SetDataTypeInferFn(FwInferDataType)
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP("max_pool_1d_grad")
     .Input("x")
@@ -237,7 +259,8 @@ REGISTER_USER_OP("max_pool_1d_grad")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetGetSbpFn(BwGetSbpFn)
-    .SetDataTypeInferFn(BwInferDataType);
+    .SetDataTypeInferFn(BwInferDataType)
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP_GRAD("max_pool_1d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("max", 1));
 
@@ -253,7 +276,8 @@ REGISTER_USER_OP("max_pool_2d")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(2))
     .SetGetSbpFn(FwGetSbpFn)
-    .SetDataTypeInferFn(FwInferDataType);
+    .SetDataTypeInferFn(FwInferDataType)
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP("max_pool_2d_grad")
     .Input("x")
@@ -269,7 +293,8 @@ REGISTER_USER_OP("max_pool_2d_grad")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetGetSbpFn(BwGetSbpFn)
-    .SetDataTypeInferFn(BwInferDataType);
+    .SetDataTypeInferFn(BwInferDataType)
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP_GRAD("max_pool_2d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("max", 2));
 
@@ -285,7 +310,8 @@ REGISTER_USER_OP("max_pool_3d")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(3))
     .SetGetSbpFn(FwGetSbpFn)
-    .SetDataTypeInferFn(FwInferDataType);
+    .SetDataTypeInferFn(FwInferDataType)
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP("max_pool_3d_grad")
     .Input("x")
@@ -301,7 +327,8 @@ REGISTER_USER_OP("max_pool_3d_grad")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetGetSbpFn(BwGetSbpFn)
-    .SetDataTypeInferFn(BwInferDataType);
+    .SetDataTypeInferFn(BwInferDataType)
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP_GRAD("max_pool_3d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("max", 3));
 
