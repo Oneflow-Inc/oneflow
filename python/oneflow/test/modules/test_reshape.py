@@ -55,8 +55,7 @@ def _test_reshape_backward(test_case, device):
     input = flow.tensor(
         x, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    of_out = flow.reshape(input, shape=[2, 2, 2, -1])
-    of_out = of_out.sum()
+    of_out = flow.reshape(input, shape=[2, 2, 2, -1]).sum()
     of_out.backward()
     np_grad = np.array(
         [

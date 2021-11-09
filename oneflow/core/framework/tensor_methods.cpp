@@ -101,6 +101,7 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) 
   }
 
   if (input->requires_grad()) {
+    Shape input_shape(input->shape()->dim_vec());
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
@@ -108,7 +109,8 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) 
               autograd::AutoGradMode mode(create_graph);
               CHECK_EQ_OR_RETURN(out_grads.size(), 1);
               in_grads->resize(1);
-              in_grads->at(0) = JUST(functional::ReshapeLike(out_grads.at(0), input));
+              // in_grads->at(0) = JUST(functional::ReshapeLike(out_grads.at(0), input));
+              in_grads->at(0) = JUST(functional::Reshape(out_grads.at(0), input_shape));
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};
