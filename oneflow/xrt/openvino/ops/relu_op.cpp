@@ -13,23 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/xrt/passes/pass.h"
+#include "oneflow/xrt/openvino/ops/op_context.h"
+#include "oneflow/xrt/openvino/ops/op_kernel.h"
+
+#include <ngraph/op/relu.hpp>
 
 namespace oneflow {
 namespace xrt {
+namespace openvino {
 
-bool CheckUseXrtEngine(const ClusteringOptions& options, const XrtEngine& engine) {
-  XrtEngineOptionBit bit = [&]() {
-    switch (engine) {
-      case XrtEngine::XLA: return XrtEngineOptionBit::kUseXlaJit;
-      case XrtEngine::TENSORRT: return XrtEngineOptionBit::kUseTensorRT;
-      case XrtEngine::OPENVINO: return XrtEngineOptionBit::kUseOpenVINO;
-      default: return XrtEngineOptionBit::kUseDefault;
-    }
-  }();
+class ReluOp : public OpenvinoOpKernel {
+ public:
+  void Compile(OpenvinoOpContext* ctx) override {
+    std::shared_ptr<ngraph::Node> ngraph_node =
+        std::make_shared<ngraph::op::Relu>(ctx->Input("in_0"));
+    ngraph_node->set_friendly_name(ctx->op_name().c_str());
+    ctx->SetOutput("out_0", ngraph_node);
+  }
+};
 
-  return options.engine & (1U << bit);
-}
+REGISTER_OPENVINO_OP_KERNEL(Relu, ReluOp).EnableTrainPhase().Finalize();
 
+}  // namespace openvino
 }  // namespace xrt
 }  // namespace oneflow

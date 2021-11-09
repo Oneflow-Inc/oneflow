@@ -30,6 +30,10 @@ if (WITH_XLA)
   include(tensorflow)
 endif()
 
+if (WITH_OPENVINO)
+  include(openvino)
+endif()
+
 if (WITH_TENSORRT)
   include(tensorrt)
 endif()
@@ -263,6 +267,10 @@ endif()
 
 if(WITH_TENSORRT)
   list(APPEND oneflow_third_party_libs ${TENSORRT_LIBRARIES})
+endif()
+
+if (WITH_OPENVINO)
+  list(APPEND oneflow_third_party_libs ${OPENVINO_LIBRARIES})
 endif()
 
 message(STATUS "oneflow_third_party_libs: ${oneflow_third_party_libs}")

@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 
 #include "oneflow/core/common/data_type.h"  // GetSizeOfDataType
+#include "absl/strings/str_split.h"
 
 namespace oneflow {
 namespace xrt {
@@ -84,6 +85,19 @@ class Parameter {
   const DataType& data_type() const { return data_type_; }
   int64_t byte_size() const {
     return byte_size_ < 0 ? shape_.elem_cnt() * SizeOf(data_type_) : byte_size_;
+  }
+  bool is_model() const {
+    std::vector<std::string> split_result = absl::StrSplit(parameter_name_, '-');
+    if (split_result.size() > 1) {
+      std::vector<std::string> result = absl::StrSplit(split_result[split_result.size() - 1], '/');
+      std::string blob_name = result[0];
+      if (blob_name == "weight" || blob_name == "bias" || blob_name == "gamma"
+          || blob_name == "beta" || blob_name == "moving_mean" || blob_name == "moving_variance") {
+        // is model
+        return true;
+      }
+    }
+    return false;
   }
 
   void set_name(const std::string& name) { parameter_name_ = name; }

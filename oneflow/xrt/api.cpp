@@ -41,6 +41,7 @@ DEFINE_bool(strict_clustering, EnvToBool(FLAGS_strict_clustering, true),
 //               "valid, Default means using no engine.");
 DEFINE_bool(use_xla_jit, EnvToBool(FLAGS_use_xla_jit, false), "It's optional to use xla jit.");
 DEFINE_bool(use_tensorrt, EnvToBool(FLAGS_use_tensorrt, false), "It's optional to use tensorrt.");
+DEFINE_bool(use_openvino, EnvToBool(FLAGS_use_openvino, false), "It's optional to use openvino.");
 
 DEFINE_bool(tensorrt_fp16, EnvToBool(FLAGS_tensorrt_fp16, false),
             "Enable fp16 precision for TENSORRT engine.");
@@ -157,6 +158,8 @@ XrtEngine StringToXrtEngine(const std::string& engine) {
     return xrt::XrtEngine::XLA;
   } else if (engine == "TENSORRT") {
     return xrt::XrtEngine::TENSORRT;
+  } else if (engine == "OPENVINO") {
+    return xrt::XrtEngine::OPENVINO;
   } else {
     LOG(FATAL) << "Unknown engine: " << engine;
   }
@@ -190,6 +193,7 @@ std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf::Function& functio
 void InitXrtConfigurations(const XrtConfig& config) {
   if (config.has_use_xla_jit()) { FLAGS_use_xla_jit = config.use_xla_jit(); }
   if (config.has_use_tensorrt()) { FLAGS_use_tensorrt = config.use_tensorrt(); }
+  if (config.has_use_openvino()) { FLAGS_use_openvino = config.use_openvino(); }
   // Set xla configurations.
   if (config.has_tensorrt_config()) {
     const XrtConfig::TensorRTConfig& trt_config = config.tensorrt_config();
@@ -203,7 +207,9 @@ void InitXrtConfigurations(const XrtConfig& config) {
   }
 }
 
-bool XrtCompilationEnabled() { return FLAGS_use_xla_jit || FLAGS_use_tensorrt; }
+bool XrtCompilationEnabled() {
+  return FLAGS_use_xla_jit || FLAGS_use_tensorrt || FLAGS_use_openvino;
+}
 
 XrtPassOptions CreateDefaultXrtPassOptions(bool train_phase) {
   ClusteringOptions options;
@@ -216,6 +222,7 @@ XrtPassOptions CreateDefaultXrtPassOptions(bool train_phase) {
   options.engine = (1U << XrtEngineOptionBit::kUseDefault);
   if (FLAGS_use_xla_jit) { options.engine |= (1U << XrtEngineOptionBit::kUseXlaJit); }
   if (FLAGS_use_tensorrt) { options.engine |= (1U << XrtEngineOptionBit::kUseTensorRT); }
+  if (FLAGS_use_openvino) { options.engine |= (1U << XrtEngineOptionBit::kUseOpenVINO); }
 
   XrtPassOptions xrt_options;
   xrt_options.clustering_options = options;

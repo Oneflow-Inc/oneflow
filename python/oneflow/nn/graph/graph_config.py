@@ -110,6 +110,30 @@ class GraphConfig(object):
         assert mode in ("distributed_split", "non_distributed")
         self.proto.set_optimizer_placement_optimization_mode(mode)
 
+    def set_xrt_use_xla_jit(self, value=True):
+        """Whether use xla_jit in xrt or not
+
+        Args:
+            value (bool, optional): [description]. Defaults to True.
+        """
+        self.proto.mutable_xrt_config().set_use_xla_jit(value)
+
+    def set_xrt_use_tensorrt(self, value=True):
+        """Whether use tensorrt in xrt or not
+
+        Args:
+            value (bool, optional): [description]. Defaults to True.
+        """
+        self.proto.mutable_xrt_config().set_use_tensorrt(value)
+
+    def set_xrt_use_openvino(self, value=True):
+        """Whether use openvino in xrt or not
+
+        Args:
+            value (bool, optional): [description]. Defaults to True.
+        """
+        self.proto.mutable_xrt_config().set_use_openvino(value)
+
     def _generate_optimizer_and_variable_configs(
         self, opt_dict: OptDict = None, variables_conf: OrderedDict = None,
     ):
