@@ -16,15 +16,14 @@ limitations under the License.
 #include "oneflow/core/thread/thread.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/actor/actor.h"
-#include "oneflow/core/actor/light_actor.h"
-#include "oneflow/core/stream/stream_context.h"
-#include "oneflow/core/stream/execution_context_hook.h"
-#include "oneflow/core/graph/id_serialization.h"
+#include "oneflow/core/lazy/actor/actor.h"
+#include "oneflow/core/lazy/actor/light_actor.h"
+#include "oneflow/core/stream/include/stream_context.h"
+#include "oneflow/core/stream/include/execution_context_hook.h"
 
 namespace oneflow {
 
-Thread::Thread(const StreamId& stream_id) : thrd_id_(SerializeStreamIdToInt64(stream_id)) {
+Thread::Thread(const StreamId& stream_id) : thrd_id_(EncodeStreamIdToInt64(stream_id)) {
   local_msg_queue_enabled_ =
       ParseBooleanFromEnv("ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE", false);
   light_actor_enabled_ = ParseBooleanFromEnv("ONEFLOW_ACTOR_ENABLE_LIGHT_ACTOR", false);

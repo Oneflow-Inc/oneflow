@@ -21,8 +21,10 @@ limitations under the License.
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/thread/thread.h"
 #include "oneflow/core/thread/thread_pool.h"
+#include "oneflow/core/platform/include/pthread_fork.h"
 
 namespace oneflow {
 
@@ -45,11 +47,18 @@ class ThreadMgr final {
 
 void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);
 
+inline size_t divup(size_t x, size_t y) { return (x + y - 1) / y; }
+#define ONEFLOW_GRAIN_SIZE 32768
+
 template<typename DoEachT>
-void MultiThreadLoop(size_t num, const DoEachT& DoEach) {
+void MultiThreadLoop(size_t num, const DoEachT& DoEach, size_t grain_size = ONEFLOW_GRAIN_SIZE) {
   if (num == 0) { return; }
+  if (unlikely(pthread_fork::IsForkedSubProcess())) {
+    SingleThreadLoop(num, DoEach);
+    return;
+  }
   size_t thread_num = Global<ThreadPool>::Get()->thread_num();
-  thread_num = std::min(num, thread_num);
+  thread_num = std::min(thread_num, divup(num, grain_size));
   BalancedSplitter bs(num, thread_num);
   BlockingCounter bc(thread_num);
   FOR_RANGE(size_t, range_id, 0, thread_num) {

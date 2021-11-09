@@ -31,10 +31,6 @@ inline bool IsAlignedSize(size_t size) { return size % kCudaMemAllocAlignSize ==
 
 static const size_t kPieceSplitThreshold = 128 << 20;  // 128MiB
 
-constexpr size_t kMinBlockSize = 20 << 20;  // 20MiB
-constexpr size_t kMinAlloc =
-    10 << 20;  // allocations less than 10MiB should be packed in kMinBlockSize bytes.
-
 }  // namespace
 
 CudaAllocator::CudaAllocator(int64_t device_id)
@@ -162,9 +158,6 @@ void CudaAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
 bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   CHECK(IsAlignedSize(aligned_size));
 
-  size_t allocate_bytes = 1048576;  // 1MiB base size
-  allocate_bytes = std::max(allocate_bytes, aligned_size);
-
   cudaSetDevice(device_id_);
   size_t free_bytes = -1;
   size_t total_bytes = -1;
@@ -172,11 +165,17 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   const size_t remain_bytes = 50 * 1048576;
   const size_t available_bytes = free_bytes - remain_bytes;  // remain at least 50MiB memory
 
-  // growth double total memory bytes if could
-  // if (total_memory_bytes_ > 0) {
-  //   allocate_bytes = std::max(allocate_bytes, std::min(total_memory_bytes_, available_bytes));
-  // }
-  if (allocate_bytes < kMinAlloc) { allocate_bytes = kMinBlockSize; }
+  size_t allocate_bytes = aligned_size;
+  if (allocate_bytes < 1048576) {
+    // Allocate 2MB if `allocate_bytes` is less than 1MB
+    allocate_bytes = 2097152;
+  } else if (allocate_bytes < 10485760) {
+    // Allocate 20MB if `allocate_bytes` is between 1MB and 10MB
+    allocate_bytes = 20971520;
+  } else {
+    // Round up to 2MB if `allocate_bytes` is larger than 10MB
+    allocate_bytes = RoundUp(allocate_bytes, 2097152);
+  }
   const size_t final_allocate_bytes = CudaMemAlignedBytes(allocate_bytes);
 
   if (final_allocate_bytes > available_bytes) { return false; }

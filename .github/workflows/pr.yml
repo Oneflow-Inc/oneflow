@@ -8,6 +8,7 @@ jobs:
   check_labels:
     runs-on: ubuntu-18.04
     name: Labels
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     steps:
       - name: Check type labels 'bug, enhancement, purge, feature, documentation'
         if: (contains(github.event.pull_request.labels.*.name, 'bug') || contains(github.event.pull_request.labels.*.name, 'enhancement') || contains(github.event.pull_request.labels.*.name, 'purge') || contains(github.event.pull_request.labels.*.name, 'feature') || contains(github.event.pull_request.labels.*.name, 'documentation')) == false

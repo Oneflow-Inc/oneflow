@@ -34,12 +34,6 @@ class IDMgr final {
   int64_t NewMemBlockId() { return mem_block_id_count_++; }
   int64_t NewChunkId() { return chunk_id_count_++; }
 
-  // Runtime
-  int64_t MachineId4ActorId(int64_t actor_id) const;
-  int64_t ThrdId4ActorId(int64_t actor_id) const;
-
-  int64_t PickCpuThrdIdEvenly(int64_t machine_id);
-
   StreamIndexGeneratorManager* GetStreamIndexGeneratorManager() { return &stream_index_gen_mgr_; }
   TaskIdGenerator* GetTaskIdGenerator() { return &task_id_gen_; }
 
