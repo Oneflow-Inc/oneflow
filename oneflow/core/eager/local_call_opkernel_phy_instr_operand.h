@@ -62,9 +62,9 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
         dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode),
         input_dependences_(),
         output_dependences_() {
-    ForEachConstMirroredObject(BackInserter(&input_dependences_));
-    ForEachMutMirroredObject(BackInserter(&output_dependences_));
-    ForEachMut2MirroredObject(BackInserter(&output_dependences_));
+    ForEachConstMirroredObject(SetInserter(&input_dependences_));
+    ForEachMutMirroredObject(SetInserter(&output_dependences_));
+    ForEachMut2MirroredObject(SetInserter(&output_dependences_));
   }
 
   const one::StatefulLocalOpKernel& opkernel() const { return *opkernel_; }

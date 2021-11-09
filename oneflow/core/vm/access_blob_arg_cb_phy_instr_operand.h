@@ -46,9 +46,9 @@ class AccessBlobArgCbPhyInstrOperand : public PhyInstrOperand {
         modifier_(modifier),
         input_dependences_(),
         output_dependences_() {
-    ForEachConstMirroredObject(BackInserter(&input_dependences_));
-    ForEachMutMirroredObject(BackInserter(&output_dependences_));
-    ForEachMut2MirroredObject(BackInserter(&output_dependences_));
+    ForEachConstMirroredObject(SetInserter(&input_dependences_));
+    ForEachMutMirroredObject(SetInserter(&output_dependences_));
+    ForEachMut2MirroredObject(SetInserter(&output_dependences_));
   }
   ~AccessBlobArgCbPhyInstrOperand() = default;
 

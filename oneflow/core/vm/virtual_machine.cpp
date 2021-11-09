@@ -297,9 +297,10 @@ RwMutexedObjectAccess* VirtualMachine::ConsumeMirroredObject(OperandAccessType a
   return rw_mutexed_object_access.Mutable();
 }
 
-void VirtualMachine::ConnectInstruction(Instruction* src_instruction,
-                                        Instruction* dst_instruction) {
-  CHECK_NE(src_instruction, dst_instruction);
+void VirtualMachine::TryConnectInstruction(Instruction* src_instruction,
+                                           Instruction* dst_instruction) {
+  if (unlikely(src_instruction == dst_instruction)) { return; }
+  if (likely(EdgeDispatchable(src_instruction, dst_instruction))) { return; }
   auto edge = intrusive::make_shared<InstructionEdge>(src_instruction, dst_instruction);
   src_instruction->mut_out_edges()->PushBack(edge.Mutable());
   dst_instruction->mut_in_edges()->PushBack(edge.Mutable());
@@ -393,9 +394,7 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
       if (first->is_const_operand()) {
         // do nothing
       } else if (first->is_mut_operand()) {
-        if (first->mut_instruction() != instruction) {
-          ConnectInstruction(first->mut_instruction(), instruction);
-        }
+        TryConnectInstruction(first->mut_instruction(), instruction);
       } else {
         UNIMPLEMENTED();
       }
@@ -406,9 +405,7 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
         if (access == rw_mutexed_object_access) { break; }
         CHECK(access->is_const_operand() || access->is_mut_operand())
             << "access type " << access->access_type() << " not supported";
-        if (access->mut_instruction() != instruction) {
-          ConnectInstruction(access->mut_instruction(), instruction);
-        }
+        TryConnectInstruction(access->mut_instruction(), instruction);
         CHECK_EQ(access->mut_rw_mutexed_object(), mirrored_object->mut_rw_mutexed_object());
         access_list->Erase(access);
       }
@@ -416,15 +413,17 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
   }
 }
 
+bool VirtualMachine::EdgeDispatchable(const Instruction* src, const Instruction* dst) const {
+  return (&src->stream() == &dst->stream()) /* same stream*/
+         && !src->dispatched_instruction_hook().empty() /* dispatched */;
+}
+
 bool VirtualMachine::Dispatchable(Instruction* instruction) const {
-  if (!instruction->dispatched_instruction_hook().empty()) { return false; }
+  if (unlikely(!instruction->dispatched_instruction_hook().empty())) { return false; }
   const auto* stream = &instruction->stream();
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_in_edges()) {
-    const auto& src_instruction = edge->src_instruction();
-    if (!(&src_instruction.stream() == stream /* same stream*/
-          && !src_instruction.dispatched_instruction_hook().empty() /* dispatched */)) {
-      return false;
-    }
+    const auto* src_instruction = &edge->src_instruction();
+    if (unlikely(!EdgeDispatchable(src_instruction, instruction))) { return false; }
   }
   return true;
 }

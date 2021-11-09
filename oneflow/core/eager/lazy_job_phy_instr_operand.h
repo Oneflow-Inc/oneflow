@@ -59,9 +59,9 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
         nn_graph_(nn_graph),
         input_dependences_(),
         output_dependences_() {
-    ForEachConstMirroredObject(BackInserter(&input_dependences_));
-    ForEachMutMirroredObject(BackInserter(&output_dependences_));
-    ForEachMut2MirroredObject(BackInserter(&output_dependences_));
+    ForEachConstMirroredObject(SetInserter(&input_dependences_));
+    ForEachMutMirroredObject(SetInserter(&output_dependences_));
+    ForEachMut2MirroredObject(SetInserter(&output_dependences_));
   }
 
   const one::EagerBlobObjectListPtr& input_blob_objects() const { return input_blob_objects_; }

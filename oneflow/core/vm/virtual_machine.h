@@ -166,7 +166,7 @@ class VirtualMachine final : public intrusive::Base {
       const ModifiedOperand<kDeleteModifier, mem_zone_modifier>& mut2_operand,
       int64_t global_device_id, const DoEachT& DoEach);
 
-  void ConnectInstruction(Instruction* src_instruction, Instruction* dst_instruction);
+  void TryConnectInstruction(Instruction* src_instruction, Instruction* dst_instruction);
   RwMutexedObjectAccess* ConsumeMirroredObject(OperandAccessType access_type,
                                                MirroredObject* mirrored_object,
                                                Instruction* instrution);
@@ -175,6 +175,7 @@ class VirtualMachine final : public intrusive::Base {
   void DispatchInstruction(Instruction* instruction);
   void TryDeleteLogicalObjects();
 
+  bool EdgeDispatchable(const Instruction* src, const Instruction* dst) const;
   bool Dispatchable(Instruction* instruction) const;
   void TryDispatchReadyInstructions();
   void TryMoveFromWaitingToReady(Instruction* instruction);

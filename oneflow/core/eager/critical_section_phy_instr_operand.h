@@ -65,9 +65,9 @@ class InputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeg
       : CriticalSectionBeginPhyInstrOperand(eager_blob_objects, local_dep_object),
         input_dependences_(),
         output_dependences_() {
-    ForEachConstMirroredObject(BackInserter(&input_dependences_));
-    ForEachMutMirroredObject(BackInserter(&output_dependences_));
-    ForEachMut2MirroredObject(BackInserter(&output_dependences_));
+    ForEachConstMirroredObject(SetInserter(&input_dependences_));
+    ForEachMutMirroredObject(SetInserter(&output_dependences_));
+    ForEachMut2MirroredObject(SetInserter(&output_dependences_));
   }
 
   ~InputCriticalSectionBeginPhyInstrOperand() override = default;
@@ -97,9 +97,9 @@ class OutputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBe
       : CriticalSectionBeginPhyInstrOperand(eager_blob_objects, local_dep_object),
         input_dependences_(),
         output_dependences_() {
-    ForEachConstMirroredObject(BackInserter(&input_dependences_));
-    ForEachMutMirroredObject(BackInserter(&output_dependences_));
-    ForEachMut2MirroredObject(BackInserter(&output_dependences_));
+    ForEachConstMirroredObject(SetInserter(&input_dependences_));
+    ForEachMutMirroredObject(SetInserter(&output_dependences_));
+    ForEachMut2MirroredObject(SetInserter(&output_dependences_));
   }
 
   ~OutputCriticalSectionBeginPhyInstrOperand() override = default;
@@ -146,9 +146,9 @@ class InputCriticalSecondEndPhyInstrOperand final : public CriticalSectionEndPhy
       : CriticalSectionEndPhyInstrOperand(eager_blob_object, event_record),
         input_dependences_(),
         output_dependences_() {
-    ForEachConstMirroredObject(BackInserter(&input_dependences_));
-    ForEachMutMirroredObject(BackInserter(&output_dependences_));
-    ForEachMut2MirroredObject(BackInserter(&output_dependences_));
+    ForEachConstMirroredObject(SetInserter(&input_dependences_));
+    ForEachMutMirroredObject(SetInserter(&output_dependences_));
+    ForEachMut2MirroredObject(SetInserter(&output_dependences_));
   }
   ~InputCriticalSecondEndPhyInstrOperand() override = default;
 
@@ -174,9 +174,9 @@ class OutputCriticalSecondEndPhyInstrOperand final : public CriticalSectionEndPh
       : CriticalSectionEndPhyInstrOperand(eager_blob_object, event_record),
         input_dependences_(),
         output_dependences_() {
-    ForEachConstMirroredObject(BackInserter(&input_dependences_));
-    ForEachMutMirroredObject(BackInserter(&output_dependences_));
-    ForEachMut2MirroredObject(BackInserter(&output_dependences_));
+    ForEachConstMirroredObject(SetInserter(&input_dependences_));
+    ForEachMutMirroredObject(SetInserter(&output_dependences_));
+    ForEachMut2MirroredObject(SetInserter(&output_dependences_));
   }
   ~OutputCriticalSecondEndPhyInstrOperand() override = default;
 

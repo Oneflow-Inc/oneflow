@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_PHY_INSTR_OPERAND_H_
 
 #include <functional>
+#include <set>
 #include "oneflow/core/intrusive/intrusive.h"
 #include "absl/container/inlined_vector.h"
 
@@ -36,8 +37,12 @@ class PhyInstrOperand {
   virtual const DependenceVector& input_dependences() const = 0;
   virtual const DependenceVector& output_dependences() const = 0;
 
-  static std::function<void(MirroredObject*)> BackInserter(DependenceVector* dependences) {
-    return [dependences](MirroredObject* object) { dependences->push_back(object); };
+  static std::function<void(MirroredObject*)> SetInserter(DependenceVector* dependences) {
+    auto existed =
+        std::make_shared<std::set<MirroredObject*>>(dependences->begin(), dependences->end());
+    return [dependences, existed](MirroredObject* object) {
+      if (existed->insert(object).second) { dependences->push_back(object); }
+    };
   }
 
  protected:
