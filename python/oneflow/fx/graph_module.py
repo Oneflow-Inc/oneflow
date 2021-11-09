@@ -270,7 +270,6 @@ class GraphModule(oneflow.nn.Module):
         """
         assert isinstance(g, Graph), f"Expected a Graph instance, but got {type(g)}"
         for x in g.nodes:
-            print(x)
             if (
                 type(x.target) is str
                 and (x.target[:2] != "nn")
