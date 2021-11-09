@@ -170,6 +170,12 @@ class SbpNode {
                           std::vector<int32_t>& nbh_id2order);
   // Get the one ring neighborhood of this node, which is itself and all the adjacent nodes.
   void OneRingNeighborhood(std::vector<int32_t>& nbh_1ring);
+  // Get the n ring neighborhood of this node
+  // Pre-allocate buffer, which will be faster.
+  void NRingNeighborhood(int32_t n, std::vector<int32_t>& nbh_nring,
+                         std::vector<int32_t>& nbh_1ring,
+                         std::vector<SbpNode<SbpSignature>*>& NodeList,
+                         std::vector<bool>& node_tags);
 
   // Detect and spread overlaps for EdgesOut.
   void DetectSpreadOverlap(double max_1_comp_cost, double max_2_comp_cost, int32_t max_1_id,
@@ -582,6 +588,35 @@ void SbpNode<SbpSignature>::OneRingNeighborhood(std::vector<int32_t>& nbh_1ring)
     nbh_id++;
     nbh_1ring[nbh_id] = this_edge->EndNode->NodeListId;
   }
+}
+
+// Get the n ring neighborhood of this node
+// Pre-allocate buffer, which will be faster.
+template<class SbpSignature>
+void SbpNode<SbpSignature>::NRingNeighborhood(int32_t n, std::vector<int32_t>& nbh_nring,
+                                              std::vector<int32_t>& nbh_1ring,
+                                              std::vector<SbpNode<SbpSignature>*>& NodeList,
+                                              std::vector<bool>& node_tags) {
+  // Initialize 0 ring
+  if (n <= 0) n = 0;
+  nbh_nring.resize(1);
+  nbh_nring[0] = NodeListId;
+  node_tags[NodeListId] = true;
+  int32_t l = 0, r;
+  // do ring expansion for n times
+  for (int32_t i = 0; i < n; i++) {
+    for (r = nbh_nring.size(); l < r; l++) {
+      NodeList[nbh_nring[l]]->OneRingNeighborhood(nbh_1ring);
+      for (auto nbh_id : nbh_1ring) {
+        if (!node_tags[nbh_id]) {
+          nbh_nring.push_back(nbh_id);
+          node_tags[nbh_id] = true;
+        }
+      }
+    }
+  }
+  // Recover false for buffer
+  for (auto nbh_id : nbh_nring) node_tags[nbh_id] = false;
 }
 
 // Detect and spread overlaps for EdgesIn.
