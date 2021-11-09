@@ -92,11 +92,30 @@ EpollCommNet::~EpollCommNet() {
   for (auto& pair : sockfd2helper_) { delete pair.second; }
 }
 
-void EpollCommNet::SendMsg(int64_t dst_machine_id, void * addr, size_t size) {}
+void EpollCommNet::SendMsg(int64_t dst_machine_id, void * data, size_t size) {
+  SocketMsg msg;
+  msg.actor_msg.size = 0;
+  msg.msg_type = SocketMsgType::kActor;
+  std::memcpy(msg.actor_msg.data, data, size);
+  msg.actor_msg.size = size;
+  GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 
-char* EpollCommNet::SerialTokenToData(void* token, size_t* size) { return nullptr; }
+}
 
-void* EpollCommNet::DeSerialDataToToken(char* data, size_t* size) { return nullptr; }
+char* EpollCommNet::SerialTokenToData(void* token, size_t* size) { 
+  char* data = (char*)malloc(sizeof(void*));
+  char* new_token = reinterpret_cast<char*>(token);
+  std::memcpy(data, &new_token, sizeof(void*));
+  *size = sizeof(void*);
+  return data;  //
+ }
+
+void* EpollCommNet::DeSerialDataToToken(char* data, size_t* size) {
+  char* token = (char*)malloc(sizeof(void*));
+  std::memcpy(token, data, sizeof(void*));
+  *size = sizeof(void*);
+  return token;
+  }
 
 void EpollCommNet::SendTransportMsg(int64_t dst_machine_id, const TransportMsg& transport_msg) {
   SocketMsg msg;
