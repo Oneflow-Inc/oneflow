@@ -40,7 +40,7 @@ def _test_fused_scale_mask_softmax_dropout(
     
     # if mask is zero, fill it
     fused_out = flow._C.fused_scale_mask_softmax_dropout(
-        fused_x_tensor, fused_mask_tensor, fill_value=fill_value, scale=scale_value, p=p
+        fused_x_tensor, fused_mask_tensor, fill_value=fill_value, scale=scale_value, p=p, generator=generator
     )[0]
 
     generator.manual_seed(seed)
@@ -49,7 +49,7 @@ def _test_fused_scale_mask_softmax_dropout(
     origin_x_tensor.requires_grad = True
     origin_out = flow.mul(origin_x_tensor, origin_mask_tensor) * scale_value + fill_value * (1.0 - origin_mask_tensor)
     origin_out = flow.softmax(origin_out, dim=-1)
-    origin_out = flow._C.dropout(origin_out, p)
+    origin_out = flow._C.dropout(origin_out, p, generator=generator)
 
     total_out = fused_out.sum() + origin_out.sum()
     total_out.backward()
@@ -70,10 +70,10 @@ class TestFusedScaleMaskSoftmaxDropout(flow.unittest.TestCase):
         args_dict["batch_size"] = [4, 8, 16]
         args_dict["num_heads"] = [1, 4, 8]
         args_dict["seq_length"] = [8, 16, 32, 64]
-        args_dict["seed"] = [0]
+        args_dict["seed"] = [0, 1, 2]
         args_dict["fill_value"] = [-10000.0]
         args_dict["scale_value"] = [1.0, 2.0, 4.0]
-        args_dict["p"] = [0.0]
+        args_dict["p"] = [0.0, 0.1, 0.2]
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
