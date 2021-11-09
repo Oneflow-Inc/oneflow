@@ -784,9 +784,9 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
   }
   intrusive::shared_ptr<vm::InstructionMsg> instruction =
       intrusive::make_shared<vm::InstructionMsg>(instr_type_name);
-  auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
+  auto phy_instr_operand = JUST(vm::LocalCallOpKernelPhyInstrOperand::New(
       opkernel, input_eager_blob_objects, output_eager_blob_objects, consistent_tensor_infer_result,
-      ctx, *one::CurrentDevVmDepObjectConsumeMode());
+      ctx, *one::CurrentDevVmDepObjectConsumeMode()));
   *instruction->mut_parallel_desc() = parallel_desc_sym;
   *instruction->mut_phy_instr_operand() = phy_instr_operand;
   instruction_list_->EmplaceBack(std::move(instruction));

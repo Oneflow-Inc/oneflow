@@ -164,7 +164,7 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
  public:
   explicit LocalUserKernelRegContext(const std::string& device_tag,
                                      const user_op::UserOpConfWrapper* user_op_conf,
-                                     const ComposedAttrMap* composed_attrs,
+                                     ComposedAttrMap* composed_attrs,
                                      const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                      const std::shared_ptr<const ArgTuple>& output_arg_tuple)
       : user_op_conf_(user_op_conf),
@@ -183,8 +183,10 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
   void Update(
-      const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+      const AttrMap& attrs, const EagerBlobObjectListPtr& inputs,
+      const EagerBlobObjectListPtr& outputs,
       const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result) {
+    composed_attrs_->ResetPrior(attrs);
     base_ctx_.Update(inputs, outputs, consistent_tensor_infer_result);
   }
 
@@ -192,7 +194,7 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
 
  private:
   const user_op::UserOpConfWrapper* user_op_conf_;
-  const ComposedAttrMap* composed_attrs_;
+  ComposedAttrMap* composed_attrs_;
   LocalUserKernelBaseContext base_ctx_;
 
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
@@ -418,17 +420,14 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
   opkernel->op_infer_ctx_for_scheduler_thread_.reset(new LocalUserOpInferContext(
       user_op_conf, opkernel->composed_attrs_for_scheduler_thread_.get(), input_arg_tuple,
       output_arg_tuple));
-  opkernel->op_infer_ctx_for_main_thread_.reset(
-      new LocalUserOpInferContext(user_op_conf, opkernel->composed_attrs_for_main_thread_.get(),
-                                  input_arg_tuple, output_arg_tuple));
   opkernel->compute_ctx_.reset(new LocalUserKernelComputeContext(
       nullptr, device_tag, user_op_conf, opkernel->composed_attrs_for_scheduler_thread_.get(),
       input_arg_tuple, output_arg_tuple, opkernel->mut_temp_blob_object()));
   opkernel->create_ctx_.reset(new LocalUserKernelCreateContext(
       user_op_conf, opkernel->composed_attrs_for_scheduler_thread_.get()));
   opkernel->reg_ctx_.reset(new LocalUserKernelRegContext(
-      device_tag, user_op_conf, opkernel->composed_attrs_for_scheduler_thread_.get(),
-      input_arg_tuple, output_arg_tuple));
+      device_tag, user_op_conf, opkernel->composed_attrs_for_main_thread_.get(), input_arg_tuple,
+      output_arg_tuple));
   const auto* op_reg_val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(user_op_conf->op_type_name());
   CHECK_NOTNULL_OR_RETURN(op_reg_val);
@@ -450,26 +449,32 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
 
 StatefulLocalOpKernel::~StatefulLocalOpKernel() = default;
 
-Maybe<const user_op::OpKernel*> StatefulLocalOpKernel::ChooseOpKernel(
+Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(
+    const user_op::OpKernel** user_opkernel, bool* need_temp_storage, const AttrMap& attrs,
     const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
     const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result) {
-  reg_ctx_->Update(inputs, outputs, consistent_tensor_infer_result);
+  reg_ctx_->Update(attrs, inputs, outputs, consistent_tensor_infer_result);
 
   const auto& op_type_name = user_op_conf_->op_type_name();
   const auto* kernel_reg_val =
       JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_type_name, *reg_ctx_));
   CHECK_NOTNULL(kernel_reg_val);
+  *need_temp_storage = kernel_reg_val->need_temp_storage;
   // find cached kernel by registry result
   auto it = op_kernel_map_.find(kernel_reg_val);
-  if (it != op_kernel_map_.end()) { return it->second.get(); }
+  if (it != op_kernel_map_.end()) {
+    *user_opkernel = it->second.get();
+    return Maybe<void>::Ok();
+  }
 
   auto* kernel = kernel_reg_val->create_fn(create_ctx_.get());
   op_kernel_map_.emplace(kernel_reg_val, std::shared_ptr<const user_op::OpKernel>(kernel));
 
   infer_tmp_size_fn_map_.emplace(kernel, &kernel_reg_val->infer_tmp_size_fn);
 
-  reg_ctx_->Update(nullptr, nullptr, nullptr);
-  return kernel;
+  reg_ctx_->Update(AttrMap{}, nullptr, nullptr, nullptr);
+  *user_opkernel = kernel;
+  return Maybe<void>::Ok();
 }
 
 void StatefulLocalOpKernel::TryInitOpKernelState(

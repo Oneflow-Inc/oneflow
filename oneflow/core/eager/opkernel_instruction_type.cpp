@@ -41,6 +41,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {
 namespace vm {
@@ -443,53 +444,35 @@ Maybe<T*> GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type
 }  // namespace
 
 struct LocalCallOpKernelUtil final {
-  static inline Maybe<void> Infer(vm::Instruction* instruction) {
-    auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
+  static inline void Compute(vm::Instruction* instruction) {
+    auto* operand = LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instruction);
     operand->mut_opkernel()->composed_attrs_for_scheduler_thread()->ResetPrior(operand->attrs());
-    operand->set_user_opkernel(JUST(operand->mut_opkernel()->ChooseOpKernel(
-        operand->inputs(), operand->outputs(), operand->consistent_tensor_infer_result())));
-    JUST(InitOutputBlobs(operand));
-    JUST(InferTempStorageBlobDesc(operand));
-    JUST(ResetTempStorageBlob(operand));
-    return Maybe<void>::Ok();
-  }
-
-  static inline Maybe<void> Compute(vm::Instruction* instruction) {
-    auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
     DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
-    JUST(AllocateOutputBlobsMemory(operand, device_ctx));
-    JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
+    AllocateOutputBlobsMemory(operand, device_ctx);
+    if (unlikely(operand->need_temp_storage())) {
+      InferTempStorageBlobDesc(operand);
+      ResetTempStorageBlob(operand);
+      TryAllocateTempStorageBlobMemory(operand, device_ctx);
+    }
     user_op::OpKernelState* state;
     TryInitOpKernelState(operand, device_ctx, &state);
-    JUST(OpKernelCompute(operand, device_ctx, state));
-    JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
-    operand->set_user_opkernel(nullptr);
-    return Maybe<void>::Ok();
+    OpKernelCompute(operand, device_ctx, state);
+    if (unlikely(operand->need_temp_storage())) {
+      DeallocateTempStorageBlobMemory(operand, device_ctx);
+    }
   }
 
-  static inline Maybe<LocalCallOpKernelPhyInstrOperand*> GetLocalCallOpKernelPhyInstrOperand(
+  static inline LocalCallOpKernelPhyInstrOperand* GetLocalCallOpKernelPhyInstrOperand(
       vm::Instruction* instruction) {
-    const auto& operand = instruction->instr_msg().phy_instr_operand();
-    CHECK_OR_RETURN(static_cast<bool>(operand));
-    auto* ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(operand.get());
-    CHECK_NOTNULL_OR_RETURN(ptr);
-    return ptr;
+    auto* operand = CHECK_NOTNULL(instruction->instr_msg().phy_instr_operand().get());
+    return CHECK_NOTNULL(dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(operand));
   }
 
  private:
-  static inline Maybe<void> InitOutputBlobs(LocalCallOpKernelPhyInstrOperand* operand) {
-    JUST(operand->ForEachOutputTensor([&](vm::EagerBlobObject* blob_object) -> Maybe<void> {
-      CHECK_OR_RETURN(static_cast<bool>(blob_object));
-      JUST(blob_object->TryInitBlob());
-      return Maybe<void>::Ok();
-    }));
-    return Maybe<void>::Ok();
-  }
-
-  static inline Maybe<void> InferTempStorageBlobDesc(LocalCallOpKernelPhyInstrOperand* operand) {
+  static inline void InferTempStorageBlobDesc(LocalCallOpKernelPhyInstrOperand* operand) {
     const auto& InferTmpSizeFn = operand->opkernel().GetInferTmpSizeFn(operand->user_opkernel());
     auto* temp_blob_desc = operand->mut_opkernel()->mut_temp_blob_object()->mut_blob_desc();
-    CHECK_OR_RETURN(temp_blob_desc->data_type() == DataType::kChar);
+    CHECK(temp_blob_desc->data_type() == DataType::kChar);
     one::LocalUserOpInferContext* op_infer_ctx =
         operand->opkernel().op_infer_ctx_for_scheduler_thread();
     op_infer_ctx->Update(operand->inputs(), operand->outputs(),
@@ -498,29 +481,15 @@ struct LocalCallOpKernelUtil final {
     temp_blob_desc->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
     temp_blob_desc->set_is_dynamic(true);
     op_infer_ctx->Update(nullptr, nullptr, nullptr);
-    return Maybe<void>::Ok();
   }
 
-  static inline Maybe<void> ResetTempStorageBlob(LocalCallOpKernelPhyInstrOperand* operand) {
-    JUST(operand->mut_opkernel()->mut_temp_blob_object()->InitBlob());
-    return Maybe<void>::Ok();
-  }
-
-  template<typename CallbackT>
-  static inline Maybe<void> WithComputeContext(LocalCallOpKernelPhyInstrOperand* operand,
-                                               DeviceCtx* device_ctx, const CallbackT& Callback) {
-    auto* opkernel = operand->mut_opkernel();
-    JUST(Callback(opkernel->UpdateComputeContext(operand->inputs(), operand->outputs(),
-                                                 operand->consistent_tensor_infer_result(),
-                                                 device_ctx)));
-    // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
-    opkernel->UpdateComputeContext(nullptr, nullptr, nullptr, nullptr);
-    return Maybe<void>::Ok();
+  static inline void ResetTempStorageBlob(LocalCallOpKernelPhyInstrOperand* operand) {
+    operand->mut_opkernel()->mut_temp_blob_object()->InitBlob();
   }
 
   static inline void TryInitOpKernelState(LocalCallOpKernelPhyInstrOperand* operand,
                                           DeviceCtx* device_ctx, user_op::OpKernelState** state) {
-    if (operand->op_interp_ctx().state) {
+    if (likely(operand->op_interp_ctx().state)) {
       *state = operand->op_interp_ctx().state.get();
       return;
     }
@@ -529,35 +498,33 @@ struct LocalCallOpKernelUtil final {
                                                   operand->consistent_tensor_infer_result(), state);
   }
 
-  static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
+  static inline void AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
+                                               DeviceCtx* device_ctx) {
+    for (const auto& blob_object : *operand->outputs()) {
+      CHECK_NOTNULL(blob_object)->TryInitBlob();
+      blob_object->TryAllocateBlobBodyMemory(device_ctx);
+    }
+  }
+
+  static inline void TryAllocateTempStorageBlobMemory(LocalCallOpKernelPhyInstrOperand* operand,
                                                       DeviceCtx* device_ctx) {
-    JUST(operand->ForEachOutputTensor([&](vm::EagerBlobObject* blob_object) -> Maybe<void> {
-      JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
-      return Maybe<void>::Ok();
-    }));
-    return Maybe<void>::Ok();
+    operand->mut_opkernel()->mut_temp_blob_object()->TryAllocateBlobBodyMemory(device_ctx);
   }
 
-  static inline Maybe<void> TryAllocateTempStorageBlobMemory(
-      LocalCallOpKernelPhyInstrOperand* operand, DeviceCtx* device_ctx) {
-    JUST(operand->mut_opkernel()->mut_temp_blob_object()->TryAllocateBlobBodyMemory(device_ctx));
-    return Maybe<void>::Ok();
+  static inline void OpKernelCompute(LocalCallOpKernelPhyInstrOperand* operand,
+                                     DeviceCtx* device_ctx, user_op::OpKernelState* state) {
+    auto* opkernel = operand->mut_opkernel();
+    auto* compute_ctx =
+        opkernel->UpdateComputeContext(operand->inputs(), operand->outputs(),
+                                       operand->consistent_tensor_infer_result(), device_ctx);
+    operand->user_opkernel()->Compute(compute_ctx, state);
+    // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
+    opkernel->UpdateComputeContext(nullptr, nullptr, nullptr, nullptr);
   }
 
-  static inline Maybe<void> OpKernelCompute(LocalCallOpKernelPhyInstrOperand* operand,
-                                            DeviceCtx* device_ctx, user_op::OpKernelState* state) {
-    JUST(WithComputeContext(operand, device_ctx,
-                            [&](user_op::KernelComputeContext* compute_ctx) -> Maybe<void> {
-                              operand->user_opkernel()->Compute(compute_ctx, state);
-                              return Maybe<void>::Ok();
-                            }));
-    return Maybe<void>::Ok();
-  }
-
-  static inline Maybe<void> DeallocateTempStorageBlobMemory(
-      LocalCallOpKernelPhyInstrOperand* operand, DeviceCtx* device_ctx) {
-    JUST(operand->mut_opkernel()->mut_temp_blob_object()->DeallocateBlobDataPtr());
-    return Maybe<void>::Ok();
+  static inline void DeallocateTempStorageBlobMemory(LocalCallOpKernelPhyInstrOperand* operand,
+                                                     DeviceCtx* device_ctx) {
+    operand->mut_opkernel()->mut_temp_blob_object()->DeallocateBlobDataPtr();
   }
 };
 
@@ -566,14 +533,12 @@ void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const
 }
 
 void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
-  CHECK_OK(LocalCallOpKernelUtil::Infer(instruction));
-  CHECK_OK(LocalCallOpKernelUtil::Compute(instruction));
+  LocalCallOpKernelUtil::Compute(instruction);
 }
 
 const std::string& LocalCallOpKernelInstructionType::DebugOpTypeName(
     vm::Instruction* instruction) const {
-  auto* operand =
-      CHECK_JUST(LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instruction));
+  auto* operand = LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instruction);
   return operand->opkernel().op_type_name();
 }
 
