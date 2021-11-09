@@ -448,7 +448,6 @@ struct LocalCallOpKernelUtil final {
     operand->mut_opkernel()->composed_attrs_for_scheduler_thread()->ResetPrior(operand->attrs());
     operand->set_user_opkernel(JUST(operand->mut_opkernel()->ChooseOpKernel(
         operand->inputs(), operand->outputs(), operand->consistent_tensor_infer_result())));
-    JUST(CheckOutputBlobObjectsMemCase(operand, instruction->stream()));
     JUST(InitOutputBlobs(operand));
     JUST(InferTempStorageBlobDesc(operand));
     JUST(ResetTempStorageBlob(operand));
@@ -478,39 +477,6 @@ struct LocalCallOpKernelUtil final {
   }
 
  private:
-  static inline Maybe<const MemoryCase&> GetMemCase(LocalCallOpKernelPhyInstrOperand* operand) {
-    const auto& mem_case = operand->opkernel().mem_case();
-    CHECK_OR_RETURN(static_cast<bool>(mem_case));
-    return *mem_case;
-  }
-
-  static inline Maybe<void> CheckMemCase(const MemoryCase& mem_case, DeviceType device_type,
-                                         int64_t device_id) {
-    if (mem_case.has_host_mem()) {
-      CHECK_EQ_OR_RETURN(device_type, DeviceType::kCPU);
-    } else if (mem_case.has_device_cuda_mem()) {
-      CHECK_EQ_OR_RETURN(mem_case.device_cuda_mem().device_id(), device_id);
-    } else {
-      OF_UNIMPLEMENTED();
-    }
-    return Maybe<void>::Ok();
-  }
-
-  static inline Maybe<void> CheckOutputBlobObjectsMemCase(LocalCallOpKernelPhyInstrOperand* operand,
-                                                          const vm::Stream& stream) {
-    DeviceType device_type = JUST(DeviceType4DeviceTag(stream.stream_type().device_tag()));
-    const auto& mem_case = JUST(GetMemCase(operand));
-    JUST(CheckMemCase(mem_case, device_type, stream.device_id()));
-    JUST(operand->ForEachOutputTensor([&](vm::EagerBlobObject* blob_object) -> Maybe<void> {
-      CHECK_OR_RETURN(static_cast<bool>(blob_object));
-      if (operand->opkernel().need_check_mem_case()) {
-        JUST(CheckMemCase(blob_object->mem_case(), device_type, stream.device_id()));
-      }
-      return Maybe<void>::Ok();
-    }));
-    return Maybe<void>::Ok();
-  }
-
   static inline Maybe<void> InitOutputBlobs(LocalCallOpKernelPhyInstrOperand* operand) {
     JUST(operand->ForEachOutputTensor([&](vm::EagerBlobObject* blob_object) -> Maybe<void> {
       CHECK_OR_RETURN(static_cast<bool>(blob_object));
