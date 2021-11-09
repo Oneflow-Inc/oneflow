@@ -750,16 +750,16 @@ void VirtualMachineEngine::TryMoveFromWaitingToReady(Instruction* instruction) {
 }
 
 void VirtualMachineEngine::Schedule() {
-  // dispatch ready instructions and try to schedule out instructions in DAG onto ready list.
-  while (unlikely(mut_ready_instruction_list()->size())) { DispatchAndPrescheduleInstructions(); }
-  // Handle pending instructions, schedule them to waiting list or ready list.
-  if (unlikely(pending_msg_list().thread_unsafe_size())) { MovePendingToReadyOrWaiting(); }
   // Release finished instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_active_stream_list()->size())) { ReleaseFinishedInstructions(); }
   // TODO(lixinqi): remove this line after disabling vm single-client support.
   if (unlikely(mut_delete_logical_object_list()->size())) { TryDeleteLogicalObjects(); }
   // Try run the first barrier instruction.
   if (unlikely(mut_barrier_instruction_list()->size())) { TryRunBarrierInstruction(); }
+  // Handle pending instructions, schedule them to waiting list or ready list.
+  if (unlikely(pending_msg_list().thread_unsafe_size())) { MovePendingToReadyOrWaiting(); }
+  // dispatch ready instructions and try to schedule out instructions in DAG onto ready list.
+  if (unlikely(mut_ready_instruction_list()->size())) { DispatchAndPrescheduleInstructions(); }
 }
 
 bool VirtualMachineEngine::ThreadUnsafeEmpty() const {
