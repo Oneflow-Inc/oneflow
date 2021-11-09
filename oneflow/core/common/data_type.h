@@ -121,15 +121,15 @@ OF_DEVICE_FUNC T GetMaxVal();
 #endif
 
 #define MAX_VAL_SEQ                          \
-  OF_PP_MAKE_TUPLE_SEQ(int8_t, CHAR_MAX)     \
-  OF_PP_MAKE_TUPLE_SEQ(int16_t, SHRT_MAX)    \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t, INT_MAX)     \
-  OF_PP_MAKE_TUPLE_SEQ(int64_t, LLONG_MAX)   \
-  OF_PP_MAKE_TUPLE_SEQ(uint8_t, UCHAR_MAX)   \
-  OF_PP_MAKE_TUPLE_SEQ(uint16_t, USHRT_MAX)  \
-  OF_PP_MAKE_TUPLE_SEQ(uint32_t, UINT_MAX)   \
+  OF_PP_MAKE_TUPLE_SEQ(int8_t, INT8_MAX)     \
+  OF_PP_MAKE_TUPLE_SEQ(int16_t, INT16_MAX)   \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, INT32_MAX)   \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t, INT64_MAX)   \
+  OF_PP_MAKE_TUPLE_SEQ(uint8_t, UINT8_MAX)   \
+  OF_PP_MAKE_TUPLE_SEQ(uint16_t, UINT16_MAX) \
+  OF_PP_MAKE_TUPLE_SEQ(uint32_t, UINT32_MAX) \
   APPLE_MAX_VAL_SEQ                          \
-  OF_PP_MAKE_TUPLE_SEQ(uint64_t, ULLONG_MAX) \
+  OF_PP_MAKE_TUPLE_SEQ(uint64_t, UINT64_MAX) \
   OF_PP_MAKE_TUPLE_SEQ(float, FLT_MAX)       \
   OF_PP_MAKE_TUPLE_SEQ(double, DBL_MAX)
 
@@ -140,10 +140,10 @@ OF_DEVICE_FUNC T GetMaxVal();
 #endif
 
 #define MIN_VAL_SEQ                        \
-  OF_PP_MAKE_TUPLE_SEQ(int8_t, CHAR_MIN)   \
-  OF_PP_MAKE_TUPLE_SEQ(int16_t, SHRT_MIN)  \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t, INT_MIN)   \
-  OF_PP_MAKE_TUPLE_SEQ(int64_t, LLONG_MIN) \
+  OF_PP_MAKE_TUPLE_SEQ(int8_t, INT8_MIN)   \
+  OF_PP_MAKE_TUPLE_SEQ(int16_t, INT16_MIN) \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, INT32_MIN) \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t, INT64_MIN) \
   OF_PP_MAKE_TUPLE_SEQ(uint8_t, 0)         \
   OF_PP_MAKE_TUPLE_SEQ(uint16_t, 0)        \
   OF_PP_MAKE_TUPLE_SEQ(uint32_t, 0)        \
