@@ -40,11 +40,21 @@ thread_local cudaEvent_t cuda_memory_bandwidth_profile_end_event = nullptr;
 
 }  // namespace
 
+bool ProfileKernel(const OperatorConf& op_conf) {
+  if (op_conf.has_user_conf()) {
+    const std::string& op_type_name = op_conf.user_conf().op_type_name();
+    if (op_type_name.find("_nccl_logical") != std::string::npos) { return true; }
+  } else {
+    if (op_conf.has_slice_boxing_add_conf() || op_conf.has_slice_boxing_copy_conf()) { return true; }
+  }
+  return false;
+}
+
 void TraceKernelForwardDataContentStart(
     const Kernel* kernel, const KernelCtx& ctx,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
 #if defined(WITH_CUDA)
-  if (profile_cuda_memory_bandwidth) {
+  if (profile_cuda_memory_bandwidth && ProfileKernel(kernel->op_conf())) {
     CHECK(cuda_memory_bandwidth_profile_start_event == nullptr);
     CHECK(cuda_memory_bandwidth_profile_end_event == nullptr);
     auto* cuda_device_ctx = dynamic_cast<CudaDeviceCtx*>(ctx.device_ctx);
@@ -64,7 +74,7 @@ void TraceKernelForwardDataContentEnd(const Kernel* kernel, const KernelCtx& ctx
 #if defined(WITH_CUDA)
   if (profile_kernel_forward_range) { OF_PROFILER_RANGE_POP(); }
   // The memory bandwidth profiler only works in lazy mode.
-  if (profile_cuda_memory_bandwidth) {
+  if (profile_cuda_memory_bandwidth && ProfileKernel(kernel->op_conf())) {
     auto* cuda_device_ctx = dynamic_cast<CudaDeviceCtx*>(ctx.device_ctx);
     cudaEvent_t start_event = cuda_memory_bandwidth_profile_start_event;
     cudaEvent_t end_event = cuda_memory_bandwidth_profile_end_event;
