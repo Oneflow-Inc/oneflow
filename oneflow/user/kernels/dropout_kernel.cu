@@ -45,6 +45,7 @@ constexpr int32_t kMinPackPerThread = 2;
 // };
 
 union H2Pack{
+  std::aligned_storage<4 * sizeof(half), 4 * sizeof(half)>::type storage; 
   half2 h2[2]; 
 };
 
