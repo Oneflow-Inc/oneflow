@@ -55,7 +55,8 @@ def _test_reshape_backward(test_case, device):
     input = flow.tensor(
         x, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    of_out = flow.reshape(input, shape=[2, 2, 2, -1]).sum()
+    of_out = flow.reshape(input, shape=[2, 2, 2, -1])
+    of_out = of_out.sum()
     of_out.backward()
     np_grad = np.array(
         [
@@ -95,21 +96,21 @@ class TestModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    # @autotest()
-    # def test_reshape_flow_with_random_data(test_case):
-    #     device = random_device()
-    #     x = random_pytorch_tensor(ndim=4).to(device)
-    #     y = torch.reshape(x, shape=(-1,))
-    #     return y
+    @autotest()
+    def test_reshape_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = torch.reshape(x, shape=(-1,))
+        return y
 
-    # @autotest(auto_backward=False)
-    # def test_reshape_with_0shape_data(test_case):
-    #     device = random_device()
-    #     x = random_pytorch_tensor(4, 2, 0, 3).to(device)
-    #     y = torch.reshape(
-    #         x, shape=(random(0, 5).to(int).value(), 0, random(0, 5).to(int).value())
-    #     )
-    #     return y
+    @autotest(auto_backward=False)
+    def test_reshape_with_0shape_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 0, 3).to(device)
+        y = torch.reshape(
+            x, shape=(random(0, 5).to(int).value(), 0, random(0, 5).to(int).value())
+        )
+        return y
 
 
 if __name__ == "__main__":

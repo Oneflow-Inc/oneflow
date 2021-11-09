@@ -63,6 +63,7 @@ Maybe<Tensor> BasicSlice(const std::shared_ptr<Tensor>& input, const Shape& targ
   tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()));
   JUST(JUST(tensor_impl->eager_blob_object())->TryInitBlob());
   JUST(tensor_impl->eager_blob_object())->set_is_shape_synced(true);
+  JUST(tensor_impl->eager_blob_object())->set_last_used_device(JUST(input->device()));
   std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
   return output;
 }
