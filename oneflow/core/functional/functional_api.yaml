@@ -454,7 +454,7 @@
   bind_python: True
 
 - name: "softmax_grad"
-  signature: "Tensor (Tensor x, Tensor dy) => SoftmaxGrad"
+  signature: "Tensor (Tensor dy, Tensor y) => SoftmaxGrad"
   bind_python: False
 
 - name: "log_softmax"
@@ -689,7 +689,7 @@
   bind_python: True
 
 - name: "expand_grad"
-  signature: "Tensor (Tensor x, Int32List out, Int32List expand) => ExpandGrad"
+  signature: "Tensor (Tensor dy, Int32List out, Int32List expand) => ExpandGrad"
   bind_python: False
 
 - name: "roll"
@@ -820,6 +820,10 @@
   signature: "Tensor (Tensor logits, Tensor label) => SparseSoftmaxCrossEntropy"
   bind_python: True
 
+- name: "sparse_softmax_cross_entropy_grad"
+  signature: "Tensor (Tensor dy, Tensor prob, Tensor label, Int64 depth) => SparseSoftmaxCrossEntropyGrad"
+  bind_python: False
+
 - name: "softmax_cross_entropy"
   signature: "Tensor (Tensor logits, Tensor label) => SoftmaxCrossEntropy"
   bind_python: True
@@ -930,6 +934,12 @@
     Int32List padding_before, Int32List padding_after,
     String data_format="channels_first", Bool ceil_mode=False) => MaxPool2D'
   bind_python: True
+
+- name: "ctc_loss_grad"
+  signature:
+    "Tensor (Tensor loss_grad, Tensor log_probs, Tensor targets,
+      Tensor input_lengths, Tensor target_lengths, Tensor loss, Tensor alpha, Int32 blank, Bool zero_infinity, Int64 max_target_length) => CtcLossGrad"
+  bind_python: False
 
 - name: "adaptive_avg_pool1d"
   signature: "Tensor (Tensor x, Int64List[1] output_size) => AdaptiveAvgPool1D"
@@ -1047,6 +1057,12 @@
     'Tensor (Tensor x, Float height_scale, Float width_scale, Bool align_corners,
     String interpolation, String data_format="channels_first") => Upsample'
   bind_python: True
+
+- name: "upsample_grad"
+  signature:
+    'Tensor (Tensor dy, Tensor x, Float height_scale, Float width_scale, Bool align_corners,
+    String data_format, String interpolation) => UpsampleGrad'
+  bind_python: False
 
 - name: "upsample_linear_1d"
   signature: 'Tensor (Tensor x, Float scale_factor, Bool align_corners,
@@ -1426,6 +1442,10 @@
       "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src) => DimScatterAddScalar",
     ]
   bind_python: True
+
+- name: "scatter_add_like"
+  signature: "Tensor (Tensor like, Int32 dim, Tensor index, Tensor src) => DimScatterAddLike"
+  bind_python: False
 
 - name: "tensor_setitem"
   signature: "Void (Tensor x, TensorIndex index, Tensor value) => TensorSetItem"
