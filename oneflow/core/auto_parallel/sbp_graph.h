@@ -484,7 +484,10 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
   int32_t step = 0;
   // 1 ring neighborhood buffer
   std::vector<int32_t> nbh_1ring(nbh_num);
+  // 2 ring neighborhood buffer
   std::vector<int32_t> nbh_2ring;
+  std::vector<bool> node_tags(NodeList.size(), false);
+  std::vector<int32_t> nbh_1ring_buffer;
 
 
   while (head != tail && step < NodeList.size()) {
@@ -533,7 +536,8 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
         // If changes occur
         if (OrgSbpSignatureId[nbh_id] != NodeList[nbh_1ring[nbh_id]]->FinalSbpSignatureId) {
           // schedule to visit the neighborhood of that changing node
-          NodeList[nbh_1ring[nbh_id]]->OneRingNeighborhood(nbh_2ring);
+          NodeList[nbh_1ring[nbh_id]]->NRingNeighborhood(2, nbh_2ring, nbh_1ring_buffer, NodeList,
+                                                         node_tags);
           for (int32_t nbh_NodeListId : nbh_2ring) {
             // Put them into the pre-visited node list
             if (!PreVisitTags[nbh_NodeListId]) {
