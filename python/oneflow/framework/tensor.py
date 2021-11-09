@@ -197,17 +197,12 @@ def _transpose(self, dim0, dim1):
 
 def is_nonzero(input):
     r"""
-    is_nonzero(input) -> (bool)
-
-    Returns True if the :attr:`input` is a single element tensor which is not equal to zero
-    after type conversions. i.e. not equal to ``flow.tensor([0.])`` or ``flow.tensor([0])``.
-
-    Throws a ``RuntimeError`` if ``input.shape.numel() != 1``
-
+    is_nonzero(input) -> (bool)
+    Returns True if the :attr:`input` is a single element tensor which is not equal to zero
+    after type conversions. i.e. not equal to ``flow.tensor([0.])`` or ``flow.tensor([0])``.
+    Throws a ``RuntimeError`` if ``input.shape.numel() != 1``
     For Example:
-
     .. code-block:: python
-
         >>> import oneflow as flow
         >>> flow.is_nonzero(flow.tensor([0.]))
         False
@@ -215,13 +210,12 @@ def is_nonzero(input):
         True
         >>> flow.is_nonzero(flow.tensor([3]))
         True
-
     """
     shape = input.shape
     if shape.numel() == 0:
-        raise RuntimeError("bool value of Tensor with no values is ambiguous")
+        raise RuntimeError("bool value of Tensor with no values is ambiguous")
     if shape.numel() > 1:
-        raise RuntimeError("bool value of Tensor with more than one value is ambiguous")
+        raise RuntimeError("bool value of Tensor with more than one value is ambiguous")
     value = input.numpy().item()
     return bool(value)
 
@@ -544,6 +538,12 @@ def _roll(self, shifts, dims=None):
     return flow.roll(self, shifts=shifts, dims=dims)
 
 
+def _len(self):
+    if self.dim() == 0:
+        raise TypeError("len() of a 0-d tensor")
+    return self.shape[0]
+
+
 def _uniform(self, a=0, b=1):
     if isinstance(a, Tensor):
         assert a.ndim == 0 and a.nelement() == 1, "a must be a number or scalar tensor!"
@@ -718,6 +718,7 @@ def RegisterMethods():
     Tensor.__pow__ = _pow
     Tensor.__format__ = _format
     Tensor.__floordiv__ = _floor_divide
+    Tensor.__len__ = _len
     Tensor.uniform_ = _uniform
     Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform

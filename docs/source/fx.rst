@@ -69,7 +69,7 @@ documentation.
 The **intermediate representation** is the container for the operations
 that were recorded during symbolic tracing. It consists of a list of
 Nodes that represent function inputs, callsites (to functions, methods,
-or :class:`torch.nn.Module` instances), and return values. More information
+or :class:`oneflow.nn.Module` instances), and return values. More information
 about the IR can be found in the documentation for :class:`Graph`. The
 IR is the format on which transformations are applied.
 
@@ -77,7 +77,7 @@ IR is the format on which transformations are applied.
 Module-to-Module) transformation toolkit. For each Graph IR, we can
 create valid Python code matching the Graph's semantics. This
 functionality is wrapped up in :class:`GraphModule`, which is a
-:class:`torch.nn.Module` instance that holds a :class:`Graph` as well as a
+:class:`oneflow.nn.Module` instance that holds a :class:`Graph` as well as a
 ``forward`` method generated from the Graph.
 
 Taken together, this pipeline of components (symbolic tracing ->
@@ -681,7 +681,7 @@ Static Control Flow
 
 On the other hand, so-called *static control flow* is supported. Static
 control flow is loops or ``if`` statements whose value cannot change
-across invocations. Typically, in PyTorch programs, this control flow
+across invocations. Typically, in OneFlow programs, this control flow
 arises for code making decisions about a model’s architecture based on
 hyper-parameters. As a concrete example:
 
@@ -719,7 +719,7 @@ hyper-parameters. As a concrete example:
     """
     def forward(self, x):
         linear = self.linear(x);  x = None
-        relu = torch.relu(linear);  linear = None
+        relu = oneflow.relu(linear);  linear = None
         return relu
     """
 
@@ -729,6 +729,189 @@ to be a hyper-parameter, and the traces of different instances of
 ``MyModule`` with different values for that parameter have different
 code. This is a valid pattern that is supported by symbolic tracing.
 
+Many instances of dynamic control flow are semantically static control
+flow. These instances can be made to support symbolic tracing by
+removing the data dependencies on input values, for example by moving
+values to ``Module`` attributes or by binding concrete values to arguments
+during symbolic tracing:
+
+::
+
+        def f(x, flag):
+            if flag: return x
+            else: return x*2
+
+        fx.symbolic_trace(f) # Fails!
+
+        fx.symbolic_trace(f, concrete_args={'flag': True})
+
+In the case of truly dynamic control flow, the sections of the program
+that contain this code can be traced as calls to the Method (see
+:ref:`Customizing Tracing`) or function (see
+:func:`wrap`) rather than tracing through them.
+
+Non-\ ``oneflow`` Functions
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+FX uses ``__oneflow_function__`` as the mechanism by which it intercepts
+calls (see the `technical
+overview <https://github.com/Oneflow-Inc/oneflow/blob/master/python/oneflow/fx/OVERVIEW.md#technical-details>`__
+for more information about this). Some functions, such as builtin Python
+functions or those in the ``math`` module, are not covered by
+``__oneflow_function__``, but we would still like to capture them in
+symbolic tracing. For example:
+
+::
+
+    import oneflow as flow
+    from math import sqrt
+
+    def normalize(x):
+        """
+        Normalize `x` by the size of the batch dimension
+        """
+        return x / sqrt(len(x))
+
+    # It's valid Python code
+    normalize(flow.rand(3, 4))
+
+    traced = flow.fx.symbolic_trace(normalize)
+
+    """
+      <...>
+      File "sqrt.py", line 8, in normalize
+        return x / sqrt(len(x))
+      File "oneflow/python/oneflow/fx/proxy.py", line 285, in __len__
+        raise RuntimeError(
+    RuntimeError: 'len' is not supported in symbolic tracing by default. If you want this call to be recorded, please call oneflow.fx.wrap('len') at module scope
+    """
+
+The error tells us that the built-in function ``len`` is not supported.
+We can make it so that functions like this are recorded in the trace as
+direct calls using the :func:`wrap` API:
+
+::
+
+    flow.fx.wrap('len')
+    flow.fx.wrap('sqrt')
+
+    traced = flow.fx.symbolic_trace(normalize)
+
+    print(traced.code)
+    """
+    import math
+    def forward(self, x):
+        len_1 = len(x)
+        sqrt = math.sqrt(len_1);  len_1 = None
+        truediv = x / sqrt;  x = sqrt = None
+        return truediv
+    """
+
+.. _Customizing Tracing:
+
+Customizing Tracing with the ``Tracer`` class
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The :class:`Tracer` class is the class that underlies the
+implementation of ``symbolic_trace``. The behavior of tracing can be
+customized by subclassing Tracer, like so:
+
+::
+
+    class MyCustomTracer(flow.fx.Tracer):
+        # Inside here you can override various methods
+        # to customize tracing. See the `Tracer` API
+        # reference
+        pass
+
+
+    # Let's use this custom tracer to trace through this module
+    class MyModule(flow.nn.Module):
+        def forward(self, x):
+            return flow.relu(x) + flow.ones(3, 4)
+
+    mod = MyModule()
+
+    traced_graph = MyCustomTracer().trace(mod)
+    # trace() returns a Graph. Let's wrap it up in a
+    # GraphModule to make it runnable
+    traced = flow.fx.GraphModule(mod, traced_graph)
+
+Leaf Modules
+~~~~~~~~~~~~
+
+Leaf Modules are the modules that appear as calls in the symbolic trace
+rather than being traced through. The default set of leaf modules is the
+set of standard ``oneflow.nn`` module instances. For example:
+
+::
+
+    class MySpecialSubmodule(flow.nn.Module):
+        def forward(self, x):
+            return flow.negative(x)
+
+    class MyModule(flow.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.linear = flow.nn.Linear(3, 4)
+            self.submod = MySpecialSubmodule()
+
+        def forward(self, x):
+            return self.submod(self.linear(x))
+
+    traced = oneflow.fx.symbolic_trace(MyModule())
+    print(traced.code)
+    # `linear` is preserved as a call, yet `submod` is traced though.
+    # This is because the default set of "Leaf Modules" includes all
+    # standard `oneflow.nn` modules.
+    """
+    def forward(self, x):
+        linear = self.linear(x);  x = None
+        negative = linear.negative();  linear = None
+        return negative
+    """
+
+The set of leaf modules can be customized by overriding
+:meth:`Tracer.is_leaf_module`.
+
+Miscellanea
+^^^^^^^^^^^
+
+-  Tensor constructors (e.g. ``oneflow.zeros``, ``oneflow.ones``,
+   ``oneflow.rand``, ``oneflow.randn``)
+   are currently not traceable.
+
+   -  The deterministic constructors (``zeros``, ``ones``) can be used
+      and the value they produce will be embedded in the trace as a
+      constant. This is only problematic if the arguments to these
+      constructors refers to dynamic input sizes. In this case,
+      ``ones_like`` or ``zeros_like`` may be a viable substitute.
+   -  Nondeterministic constructors (``rand``, ``randn``) will have a
+      single random value embedded in the trace. This is likely not the
+      intended behavior. One workaround is to wrap ``oneflow.randn`` in a ``oneflow.fx.wrap`` function and call that instead.
+
+    ::
+
+        @oneflow.fx.wrap
+        def oneflow_randn(x, shape):
+            return oneflow.randn(shape)
+
+        def f(x):
+            return x + oneflow_randn(x, 5)
+        fx.symbolic_trace(f)
+
+   -  This behavior may be fixed in a future release.
+
+-  Type annotations
+
+   -  Python 3-style type annotations (e.g.
+      ``func(x : oneflow.Tensor, y : int) -> oneflow.Tensor``) are supported
+      and will be preserved by symbolic tracing.
+   -  Python 2-style comment type annotations
+      ``# type: (oneflow.Tensor, int) -> oneflow.Tensor`` are not currently
+      supported.
+   -  Annotations on local names within a function are not currently
+      supported.
 
 
 API Reference
