@@ -387,9 +387,6 @@ endif()
 if (WITH_XLA)
   list(APPEND gen_pip_args --xla)
 endif()
-if (WITH_MLIR)
-  list(APPEND gen_pip_args --mlir)
-endif()
 
 add_custom_target(of_pyscript_copy ALL
     COMMAND ${CMAKE_COMMAND} -E touch "${of_proto_python_dir}/oneflow/core/__init__.py"
