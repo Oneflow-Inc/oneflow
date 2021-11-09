@@ -72,6 +72,7 @@ __global__ void MaskAndScaleGpu(const int64_t n, float scale, float rate, const 
     //     y_vec4->z = pack.b_value[2] * scale * x_vec4->z; 
     //     y_vec4->w = pack.b_value[3] * scale * x_vec4->w; 
     // }
+    
 
     for(int64_t linear_idx=idx*4; linear_idx < n; linear_idx += gridDim.x * blockDim.x * 4) {
       T src[4]; 
@@ -84,17 +85,16 @@ __global__ void MaskAndScaleGpu(const int64_t n, float scale, float rate, const 
       rand.w = rand.w > rate; 
 
       *value = *reinterpret_cast<const LoadT*>(&x[linear_idx]);
-      uint8_t mask[4];
+      int8_t mask_vec[4];
       T r[4]; 
 
       #pragma unroll
       for (int ii = 0; ii < 4; ii++) {
-        r[ii] = x[ii]*(&rand.x)[ii]*scale;
-        mask[ii] = (uint8_t)(&rand.x)[ii];
+        r[ii] = src[ii]*(&rand.x)[ii]*scale;
+        mask_vec[ii] = (int8_t)(&rand.x)[ii];
       }
       *(reinterpret_cast<LoadT*>(&y[linear_idx])) = *reinterpret_cast<LoadT*>(&r[0]);
-      *(reinterpret_cast<MaskT*>(&mask[linear_idx])) = *reinterpret_cast<MaskT*>(&mask[0]);
-
+      *(reinterpret_cast<MaskT*>(&mask[linear_idx])) = *reinterpret_cast<MaskT*>(&mask_vec[0]);
       __syncthreads(); 
     }
 
