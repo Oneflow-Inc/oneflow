@@ -214,7 +214,7 @@ template<size_t num_dims, size_t tile_size, typename IndexType>
 bool CheckLaunchBatchTranspose(const int* permutation, const IndexType& num_batches,
                                const IndexType& rows, const IndexType& cols) {
   if (CheckIfGreaterEqualThanTileSize<tile_size, IndexType>(rows, cols)) {
-    if (num_batches == 1) {
+    if (num_batches == 1 && permutation[1] == 0 && permutation[0] == 1) {
       // 2d tensor case: (0, 1) -> (1, 0)
       return true;
     } else if (num_dims == 3 && permutation[2] == 1 && permutation[1] == 2) {
