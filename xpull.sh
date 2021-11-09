@@ -1,4 +1,4 @@
-git pull test start-serial 
+git pull test start-callback
 
 cd build 
 
