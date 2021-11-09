@@ -36,3 +36,4 @@ class MyModule(torch.nn.Module):
 linear = MyModule(2, 3)
 print(linear(torch.randn(2, 2)))
 print(linear(torch.randn(2, 2)))
+print(linear(torch.randn(2, 2)))
