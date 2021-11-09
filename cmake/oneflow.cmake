@@ -403,7 +403,6 @@ if(BUILD_PYTHON)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:oneflow")
   endif()
 
-
   pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${PYBIND_REGISTRY_CC})
   set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
   add_dependencies(oneflow_internal of_cfgobj of_functional_obj of_functional_tensor_obj)
@@ -427,9 +426,6 @@ if(BUILD_PYTHON)
   endif()
   if (WITH_XLA)
     list(APPEND gen_pip_args --xla)
-  endif()
-  if (WITH_MLIR)
-    list(APPEND gen_pip_args --mlir)
   endif()
 
   add_custom_target(of_pyscript_copy ALL
@@ -504,7 +500,7 @@ if(BUILD_PYTHON)
   list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/new_kernel_util.h")
   list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_context.h")
   list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_observer.h")
-  list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/stream/stream_context.h")
+  list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/stream/include/stream_context.h")
   list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_util.cuh")
   list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/sbp_signature_builder.h")
   list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/common/symbol.h")
@@ -527,3 +523,4 @@ else() # build_python
   copy_files("${PROJECT_SOURCE_DIR}/cmake/oneflow-config.cmake" "${PROJECT_SOURCE_DIR}/cmake" "${ONEFLOW_SHARE_DIR}" of_include_copy)
 
 endif() # build_python
+

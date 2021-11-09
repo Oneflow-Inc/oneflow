@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/platform/include/ibv.h"
-#include "oneflow/core/actor/actor_message_bus.h"
+#include "oneflow/core/lazy/actor/actor_message_bus.h"
 
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 

@@ -53,6 +53,14 @@ ONEFLOW_API_PYBIND11_MODULE("flags", m) {
 #endif  // WITH_MLIR
   });
 
+  m.def("with_mlir_cuda_codegen", []() {
+#ifdef WITH_MLIR_CUDA_CODEGEN
+    return true;
+#else
+    return false;
+#endif  // WITH_MLIR_CUDA_CODEGEN
+  });
+
   m.def("with_xla", []() {
 #ifdef WITH_XLA
     return true;
