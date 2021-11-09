@@ -23,8 +23,8 @@ namespace oneflow {
 
 class StreamIndexGeneratorManager final {
  public:
-  StreamIndexGeneratorManager() = default;
   OF_DISALLOW_COPY_AND_MOVE(StreamIndexGeneratorManager);
+  StreamIndexGeneratorManager() = default;
   ~StreamIndexGeneratorManager() = default;
 
   StreamIndexGenerator* GetGenerator(const DeviceId& device_id);
@@ -34,42 +34,37 @@ class StreamIndexGeneratorManager final {
   std::mutex mtx_;
 };
 
-class TaskStreamIndexRegistry final {
+class TaskStreamIndexGetterRegistry final {
  public:
-  using stream_index_getter_fn = std::function<StreamId::stream_index_t(const DeviceId&)>;
-  using stream_index_gen_fn = std::function<StreamId::stream_index_t(StreamIndexGenerator*)>;
   using key_t = std::pair<DeviceType, TaskType>;
-  using map_t = HashMap<key_t, stream_index_getter_fn>;
+  using stream_index_getter = std::function<StreamId::stream_index_t(StreamIndexGenerator*)>;
+  using map_t = HashMap<key_t, stream_index_getter>;
 
   struct GetterRegister {
-    GetterRegister(DeviceType device_type, TaskType task_type, const stream_index_gen_fn& gen) {
-      auto getter = [gen](const DeviceId& device_id) -> StreamId::stream_index_t {
-        auto* generator_mgr = Global<StreamIndexGeneratorManager>::Get();
-        CHECK_NOTNULL(generator_mgr);
-        auto* generator = generator_mgr->GetGenerator(device_id);
-        return gen(generator);
-      };
-      auto key = std::make_pair(device_type, task_type);
-      TaskStreamIndexRegistry::Instance().RegisterGetter(key, getter);
+    GetterRegister(DeviceType device_type, TaskType task_type, const stream_index_getter& getter) {
+      TaskStreamIndexGetterRegistry::Instance().Register(std::make_pair(device_type, task_type),
+                                                         getter);
     }
   };
 
-  static TaskStreamIndexRegistry& Instance() {
-    static TaskStreamIndexRegistry factory;
-    return factory;
+  static TaskStreamIndexGetterRegistry& Instance() {
+    static TaskStreamIndexGetterRegistry registry;
+    return registry;
   }
-  OF_DISALLOW_COPY_AND_MOVE(TaskStreamIndexRegistry);
-  ~TaskStreamIndexRegistry() = default;
 
-  void RegisterGetter(const key_t& key, const stream_index_getter_fn& getter);
-  Maybe<StreamId::stream_index_t> GetStreamIndex(TaskType task_type, const DeviceId& device_id);
+  OF_DISALLOW_COPY_AND_MOVE(TaskStreamIndexGetterRegistry);
+  ~TaskStreamIndexGetterRegistry() = default;
+
+  void Register(const key_t& key, const stream_index_getter& getter);
+  Maybe<StreamId::stream_index_t> Dispatch(DeviceType device_type, TaskType task_type,
+                                           StreamIndexGenerator* generator);
 
  private:
-  TaskStreamIndexRegistry() = default;
+  TaskStreamIndexGetterRegistry() = default;
   map_t stream_index_getter_map_;
 };
 
-Maybe<StreamId::stream_index_t> GetTaskStreamIndex(TaskType task_type, const DeviceId& device_id);
+StreamId::stream_index_t GetTaskStreamIndex(TaskType task_type, const DeviceId& device_id);
 
 StreamId::stream_index_t GetComputeTaskStreamIndex(DeviceType device_type,
                                                    StreamIndexGenerator* generator);
@@ -84,7 +79,7 @@ StreamId GenerateNamedTaskStreamId(int64_t rank, DeviceType device_type, int64_t
 
 #define REGISTER_TASK_STREAM_INDEX_GETTER(device_type, task_type, getter) \
   static auto OF_PP_CAT(g_stream_index_getter_register_, __COUNTER__) =   \
-      ::oneflow::TaskStreamIndexRegistry::GetterRegister(device_type, task_type, getter)
+      ::oneflow::TaskStreamIndexGetterRegistry::GetterRegister(device_type, task_type, getter)
 
 #define REGISTER_NAMED_TASK_STREAM_INDEX_GETTER(device_type, task_type, name)                    \
   REGISTER_TASK_STREAM_INDEX_GETTER(                                                             \

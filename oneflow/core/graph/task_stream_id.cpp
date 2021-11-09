@@ -28,8 +28,7 @@ StreamIndexGenerator* StreamIndexGeneratorManager::GetGenerator(const DeviceId& 
   return iter->second.get();
 }
 
-void TaskStreamIndexRegistry::RegisterGetter(const key_t& key,
-                                             const stream_index_getter_fn& getter) {
+void TaskStreamIndexGetterRegistry::Register(const key_t& key, const stream_index_getter& getter) {
   bool insert_success = stream_index_getter_map_.emplace(key, getter).second;
   if (!insert_success) {
     std::cerr << "DeviceType " << key.first << ", TaskType " << key.second
@@ -38,18 +37,20 @@ void TaskStreamIndexRegistry::RegisterGetter(const key_t& key,
   }
 }
 
-Maybe<StreamId::stream_index_t> TaskStreamIndexRegistry::GetStreamIndex(TaskType task_type,
-                                                                        const DeviceId& device_id) {
-  auto key = std::make_pair(device_id.device_type(), task_type);
+Maybe<StreamId::stream_index_t> TaskStreamIndexGetterRegistry::Dispatch(
+    DeviceType device_type, TaskType task_type, StreamIndexGenerator* generator) {
+  auto key = std::make_pair(device_type, task_type);
   auto it = stream_index_getter_map_.find(key);
   CHECK_OR_RETURN(it != stream_index_getter_map_.end())
-      << "DeviceType " << key.first << ", TaskType " << key.second << " has not been registered";
-  const stream_index_getter_fn& getter = it->second;
-  return getter(device_id);
+      << "TaskType: " << key.first << ", DeviceType: " << key.second << " has not been registered";
+  return it->second(generator);
 }
 
-Maybe<StreamId::stream_index_t> GetTaskStreamIndex(TaskType task_type, const DeviceId& device_id) {
-  return TaskStreamIndexRegistry::Instance().GetStreamIndex(task_type, device_id);
+StreamId::stream_index_t GetTaskStreamIndex(TaskType task_type, const DeviceId& device_id) {
+  auto* generator = Global<StreamIndexGeneratorManager>::Get()->GetGenerator(device_id);
+  auto stream_index = CHECK_JUST(TaskStreamIndexGetterRegistry::Instance().Dispatch(
+      device_id.device_type(), task_type, generator));
+  return stream_index;
 }
 
 StreamId::stream_index_t GetComputeTaskStreamIndex(DeviceType device_type,

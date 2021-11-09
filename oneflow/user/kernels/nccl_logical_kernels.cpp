@@ -45,7 +45,7 @@ class NcclLogicalKernelCommState final : public user_op::OpKernelState {
       }
       EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
       if (has_independent_stream_) {
-        comm_ = comm_mgr->GetCommForDeviceAndStreamId(device_set, stream_name_);
+        comm_ = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
       } else {
         comm_ = comm_mgr->GetCommForDevice(device_set);
       }
