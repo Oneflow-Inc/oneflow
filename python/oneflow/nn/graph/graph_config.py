@@ -136,7 +136,6 @@ class GraphConfig(object):
         """
         self.proto.set_auto_parallel_transfer_cost(cost)
 
-
     def _generate_optimizer_and_variable_configs(
         self, opt_dict: OptDict = None, variables_conf: OrderedDict = None,
     ):
