@@ -18,71 +18,6 @@ from oneflow.framework.tensor import register_tensor_op
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
 
 
-def _tensor_to(input, device, dtype, copy=False):
-    assert input.is_local
-
-    ret = input
-    copy_happened = False
-    if device != ret.device:
-        ret = flow._C.copy(ret, device_type=device.type, device_id=device.index)
-        copy_happened = True
-
-    if dtype != ret.dtype:
-        ret = flow._C.cast(ret, dtype=dtype)
-        copy_happened = True
-
-    if copy and not copy_happened:
-        ret = flow._C.copy(ret, device_type=ret.device.type, device_id=ret.device.index)
-
-    return ret
-
-
-def _consistent_tensor_to(input, device_type, dtype, copy=False):
-    assert input.is_consistent
-    # TODO(zwx): support lazy check_meta_consistency
-    # input.check_meta_consistency()
-
-    device_type = device_type or input.placement.device_type
-    assert isinstance(device_type, str)
-
-    if device_type == input.placement.device_type and dtype == input.dtype:
-        return input if not copy else input.clone()
-
-    if lazy_mode.is_enabled():
-        return _lazy_consistent_tensor_to(input, device_type, dtype)
-    else:
-        return _eager_consistent_tensor_to(input, device_type, dtype)
-    return flow._C.copy(input, device_type, dtype)
-
-
-def _lazy_consistent_tensor_to(input, device_type, dtype):
-    ret = input
-
-    if dtype != ret.dtype:
-        ret = flow._C.cast(ret, dtype=dtype)
-
-    if device_type != ret.placement.device_type:
-        ret = flow._C.copy(ret, device_type=device_type, device_id=0)
-
-    return ret
-
-
-def _eager_consistent_tensor_to(input, device_type, dtype):
-    input.check_meta_consistency()
-
-    if device_type == input.placement.device_type and dtype != input.dtype:
-        return flow._C.cast(input, dtype=dtype)
-    device = flow.device(device_type)
-    placement = flow._oneflow_internal._ReplacePlacementDeviceTag(
-        input.placement, device_type
-    )
-    sbp = input.sbp
-
-    local_input = input.to_local()
-    local_output = _tensor_to(local_input, device, dtype, False)
-    return local_output.to_consistent(placement=placement, sbp=sbp)
-
-
 def _safe_get(list, index, default):
     if index < len(list) and index >= -len(list):
         return list[index]
@@ -139,7 +74,6 @@ def _validate_args(device, dtype, copy, input):
     if not isinstance(dtype, flow.dtype) and dtype is not None:
         raise TypeError("Invalid dtype param received: {dtype}")
 
-    dtype = dtype or input.dtype
     assert isinstance(dtype, flow.dtype), f"Invalid dtype param: {dtype}"
 
     if input.is_consistent:
@@ -152,6 +86,8 @@ def _validate_args(device, dtype, copy, input):
     else:
         device = device or input.device
         device = flow.device(device)
+
+    return 
 
 
 @register_tensor_op("to")
@@ -187,12 +123,12 @@ def to_op(input, *args, **kwargs):
 
     """
     device, dtype, copy = _parse_args(*args, **kwargs)
+    
+    dtype = dtype or input.dtype
+
     _validate_args(device, dtype, copy, input)
 
-    if input.is_consistent:
-        return _consistent_tensor_to(input, device, dtype, copy=copy)
-    else:
-        return _tensor_to(input, device, dtype, copy)
+    return flow._C.to(input, device, dtype, copy)
 
 
 if __name__ == "__main__":

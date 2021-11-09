@@ -934,6 +934,10 @@
   signature: "Tensor (Tensor x, String device_type, Int64 device_id) => Copy"
   bind_python: True
 
+- name: "to"
+  signature: "Tensor (Tensor x, String device, DataType dtype, Bool copy=False) => To"
+  bind_python: True
+
 - name: "flip"
   signature: "Tensor (Tensor x, Int32List dims) => Flip"
   bind_python: True
