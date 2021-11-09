@@ -70,6 +70,30 @@ void MultiThreadLoop(size_t num, const DoEachT& DoEach) {
   bc.WaitUntilCntEqualZero();
 }
 
+
+inline size_t divup(size_t x, size_t y) { return (x + y - 1) / y; }
+
+#define ONEFLOW_GRAIN_SIZE 32768
+
+template<typename DoEachT>
+void MultiThreadVecLoop(size_t num, const DoEachT& DoEach, size_t grain_size = ONEFLOW_GRAIN_SIZE) {
+  if (num == 0) { return; }
+  size_t thread_num = Global<ThreadPool>::Get()->thread_num();
+  thread_num = std::min(thread_num, divup(num, grain_size));
+  BalancedSplitter bs(num, thread_num);
+  BlockingCounter bc(thread_num);
+  FOR_RANGE(size_t, range_id, 0, thread_num) {
+    Global<ThreadPool>::Get()->AddWork([&bc, &bs, range_id, DoEach] {
+      size_t start = bs.At(range_id).begin();
+      size_t end = bs.At(range_id).end();
+      DoEach(start, end);
+      bc.Decrease();
+    });
+  }
+  // buzy loop wait.
+  bc.WaitUntilCntEqualZero();
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_
