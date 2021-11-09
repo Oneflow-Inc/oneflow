@@ -126,13 +126,20 @@ class GraphConfig(object):
 
     def set_auto_parallel_wait_time(self, cost):
         """
-        TODO
+        Set wait time for auto-parallel algorithm.
+
+        wait time: An auto-parallel parameter. Describe the mutable extra time it will take when
+        communication between devices occurs. It will be added to the copy cost and may get reduced
+        when cover by computation cost.
         """
         self.proto.set_auto_parallel_wait_time(cost)
 
     def set_auto_parallel_transfer_cost(self, cost):
         """
-        TODO
+        Set transfer cost for auto-parallel algorithm.
+        
+        transfer cost: An auto-parallel parameter. Describe the fixed extra time it will take when
+        communication between devices occurs. It will be added to the copy cost and can not be reduced.
         """
         self.proto.set_auto_parallel_transfer_cost(cost)
 
