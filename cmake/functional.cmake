@@ -8,7 +8,7 @@ function(GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR
   if(BUILD_PYTHON)
     set(GENERATED_PYBIND_DIR oneflow/api/python/functional)
     list(APPEND PYBIND_SRCS ${PROJECT_BINARY_DIR}/${GENERATED_PYBIND_DIR}/functional_api.yaml.pybind.cpp)
-  endif() # build_python
+  endif(BUILD_PYTHON)
 
   if(BUILD_PYTHON)
 
@@ -43,7 +43,7 @@ function(GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR
               ${PROJECT_SOURCE_DIR}/tools/functional/generator.py ${YAML_FILE}
       VERBATIM)
 
-  endif() # build_python
+  endif(BUILD_PYTHON)
 
   set_source_files_properties(${${SRCS}} ${${HDRS}} PROPERTIES GENERATED TRUE)
   set(${SRCS} ${${SRCS}} PARENT_SCOPE)
@@ -52,7 +52,7 @@ function(GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR
   if(BUILD_PYTHON)
     set_source_files_properties(${${PYBIND_SRCS}} PROPERTIES GENERATED TRUE)
     set(${PYBIND_SRCS} ${${PYBIND_SRCS}} PARENT_SCOPE)
-  endif() # build_python
+  endif(BUILD_PYTHON)
 
 endfunction()
 

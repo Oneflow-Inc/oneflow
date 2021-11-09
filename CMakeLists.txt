@@ -51,6 +51,15 @@ else ()
   set(CUDNN_STATIC ON CACHE BOOL "")
 endif()
 
+if (NOT BUILD_PYTHON)
+  if(BUILD_SHARED_LIBS)
+    set(BUILD_SHARED_LIBS OFF)
+    set(BUILD_SHARED_LIBONEFLOW ON)
+  else()
+    set(BUILD_SHARED_LIBONEFLOW OFF)
+  endif(BUILD_SHARED_LIBS)
+endif()
+
 project(oneflow C CXX)
 
 set(COMPILER_VERSION_ERROR_MSG "At least gcc 7, clang 5 or Apple clang 12 is supported.")
@@ -169,14 +178,14 @@ endif()
 
 if(BUILD_PYTHON)
   set(ONEFLOW_INCLUDE_DIR "${ONEFLOW_PYTHON_DIR}/oneflow/include")
-else()
+else() # build_python
   set(ONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/liboneflow/include/oneflow")
   set(ONEFLOW_LIBRARY_DIR "${PROJECT_BINARY_DIR}/liboneflow/lib")
   set(ONEFLOW_SHARE_DIR "${PROJECT_BINARY_DIR}/liboneflow/share")
   make_directory(${ONEFLOW_INCLUDE_DIR})
   make_directory(${ONEFLOW_LIBRARY_DIR})
   make_directory(${ONEFLOW_SHARE_DIR})
-endif()
+endif(BUILD_PYTHON)
 
 include(third_party)
 

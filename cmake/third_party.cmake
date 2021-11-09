@@ -275,7 +275,7 @@ if (THIRD_PARTY)
     foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
       copy_all_files_in_dir("${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}/third_party" prepare_oneflow_third_party)
     endforeach()
-  endif() # build_python
+  endif(BUILD_PYTHON)
 else()
   add_custom_target(prepare_oneflow_third_party ALL)
 endif()
