@@ -58,7 +58,6 @@ void MultiThreadLoop(size_t num, const DoEachT& DoEach, size_t grain_size = ONEF
     return;
   }
   size_t thread_num = Global<ThreadPool>::Get()->thread_num();
-  thread_num = std::min(num, thread_num);
   thread_num = std::min(thread_num, divup(num, grain_size));
   BalancedSplitter bs(num, thread_num);
   BlockingCounter bc(thread_num);
