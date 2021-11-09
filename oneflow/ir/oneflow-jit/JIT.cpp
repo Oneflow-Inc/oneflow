@@ -382,11 +382,16 @@ LogicalResult JitImporter::LowerToOneFlowKernel() {
   llvm::SmallVector<Value, 8> return_values;
   llvm::SmallVector<Type, 8> out_types{};
   SymbolTable symbol_table(GetModule());
-  auto function = symbol_table.lookup(GetJitFuncName());
+  FuncOp function = symbol_table.lookup<FuncOp>(GetJitFuncName());
+  llvm::hash_code function_hash{};
   function
       ->walk([&](mlir::Operation* op) {
         if (llvm::dyn_cast<mlir::oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
           for (auto result : op->getOpResults()) {
+            auto op_hash =
+                llvm::hash_combine(op->getName(), op->getAttrDictionary(), op->getResultTypes());
+            // llvm::errs() << "op_hash: " << op_hash << ", " << op->getName() << "\n";
+            function_hash = llvm::hash_combine(op_hash, function_hash);
             // TODO: define a control edge type
             const bool is_ctrl_edge =
                 result.getType().isa<mlir::RankedTensorType>()
@@ -410,10 +415,20 @@ LogicalResult JitImporter::LowerToOneFlowKernel() {
         }
       })
       .wasInterrupted();
+  auto it = func_hash_symbol_mapping_.find(function_hash);
+  if (it != func_hash_symbol_mapping_.end()) {
+    function.erase();
+    llvm::errs() << "cache hit: " << GetJitFuncName() << " -> " << it->second << "\n";
+    *MutJitFuncName() = it->second;
+    return success();
+  }
+  func_hash_symbol_mapping_.insert({function_hash, GetJitFuncName()});
   auto return_op = GetBuilder().create<ReturnOp>(GetModule()->getLoc(), return_values);
-  auto func_op = llvm::dyn_cast<mlir::FuncOp>(return_op->getParentOp());
-  auto new_func_type = GetBuilder().getFunctionType(func_op.getType().getInputs(), out_types);
-  func_op.setType(new_func_type);
+  CHECK(return_op);
+  llvm::errs() << function.sym_name() << ", "
+               << "hash: " << function_hash << "\n";
+  auto new_func_type = GetBuilder().getFunctionType(function.getType().getInputs(), out_types);
+  function.setType(new_func_type);
   mlir::PassManager pm(GetMLIRContext(), /*operationName=*/"builtin.func");
   pm.addPass(::mlir::createCanonicalizerPass());
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createReturnAllLeaveResultPass());

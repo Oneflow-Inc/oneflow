@@ -182,6 +182,7 @@ class JitImporter : public Importer {
   // 1. it is a result tensor
   // 2. it is being evaluated before forward function returning (print, etc)
   std::unordered_map<Tensor*, mlir::Value> result_mapping_;  // tensor* => %result
+  DenseMap<llvm::hash_code, std::string> func_hash_symbol_mapping_;
   llvm::DenseMap<Value, std::shared_ptr<TensorRef>> intermediate_tensors_;
   llvm::DenseMap<Value, std::shared_ptr<TensorRef>> py_tensors_;
   llvm::SmallVector<std::shared_ptr<TensorRef>, 8> return_tensors_;
