@@ -74,6 +74,7 @@ def _validate_args(device, dtype, copy, input):
     if not isinstance(dtype, flow.dtype) and dtype is not None:
         raise TypeError("Invalid dtype param received: {dtype}")
 
+    dtype = dtype or input.dtype
     assert isinstance(dtype, flow.dtype), f"Invalid dtype param: {dtype}"
 
     if input.is_consistent:
@@ -85,9 +86,10 @@ def _validate_args(device, dtype, copy, input):
             )
     else:
         device = device or input.device
-        device = flow.device(device)
+        if isinstance(device, flow.device):
+            device = device.type + ":" + str(device.index)
 
-    return 
+    return device, dtype
 
 
 @register_tensor_op("to")
@@ -124,9 +126,7 @@ def to_op(input, *args, **kwargs):
     """
     device, dtype, copy = _parse_args(*args, **kwargs)
     
-    dtype = dtype or input.dtype
-
-    _validate_args(device, dtype, copy, input)
+    device, dtype = _validate_args(device, dtype, copy, input)
 
     return flow._C.to(input, device, dtype, copy)
 
