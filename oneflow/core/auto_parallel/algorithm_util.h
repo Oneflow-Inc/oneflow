@@ -46,7 +46,7 @@ void CheckAndRemoveFrom(std::vector<T>& v, T& t) {
 
 // Inverse function, which transfer a vector to an unorder_map.
 template<class T>
-void InverseFunction(std::vector<T>& v, std::unordered_map<T, int32_t>& InverseMap) {
+void InverseFunction(const std::vector<T>& v, std::unordered_map<T, int32_t>& InverseMap) {
   InverseMap.clear();
   for (int32_t i = 0; i < v.size(); i++) { InverseMap[v[i]] = i; }
 }
@@ -57,7 +57,7 @@ void InverseFunction(std::vector<T>& v, std::unordered_map<T, int32_t>& InverseM
 // We could define the comparison, then we have
 // comp(v[order[i]], v[order[j]]) == true for all i<j.
 template<class T, class Compare>
-void DecideOrder(std::vector<T>& v, std::vector<int32_t>& order, Compare comp) {
+void DecideOrder(const T& v, std::vector<int32_t>& order, Compare comp) {
   // Initialize order
   order.resize(v.size());
   for (int32_t i = 0; i < v.size(); i++) { order[i] = i; }
@@ -70,7 +70,7 @@ void DecideOrder(std::vector<T>& v, std::vector<int32_t>& order, Compare comp) {
 // equality. For example, we have v[0] < v[1] = v[2] < v[3] We do not know v[1] is before or after
 // v[2] with comp(v[1], v[2]). But if we transfer it to order order[0] < order[1] < order[2] <
 // order[3] We know the strict order.
-void InverseOrder(std::vector<int32_t>& order, std::vector<int32_t>& InvOrder);
+void InverseOrder(const std::vector<int32_t>& order, std::vector<int32_t>& InvOrder);
 
 }  // namespace auto_parallel
 }  // namespace oneflow
