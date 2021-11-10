@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -26,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -1417,47 +1419,22 @@ class PadFunctor {
 class DropoutFunctor {
  public:
   DropoutFunctor() {
-    // random_mask_like_op_ =
-    //     CHECK_JUST(one::OpBuilder("random_mask_like").Input("like").Output("out").Build());
-    // dropout_op_ =
-    //     CHECK_JUST(one::OpBuilder("dropout").Input("in").Input("mask").Output("out").Build());
     dropout_op_ =
         CHECK_JUST(one::OpBuilder("dropout").Input("in").Output("out").Output("mask").Build());
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& a, const float& p,
                            const bool& training, const Optional<one::Generator>& generator) const {
-    // if (!training || p == 0.0) return a;
-
-    // const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    // MutableAttrMap random_mask_like_attrs;
-    // JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
-    // JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
-    // const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-
-    // float scale = 1.0;
-    // if (p != 1.0) { scale = 1.0 / (1.0 - p); }
-    // MutableAttrMap dropout_attrs;
-    // JUST(dropout_attrs.SetAttr<float>("scale", scale));
-
-    // return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
-    //          return OpInterpUtil::Dispatch<Tensor>(
-    //              *random_mask_like_op_, {a},
-    //              OpExprInterpContext(random_mask_like_attrs, random_mask_like_state));
-    //        })
-    //     .then([&](const std::shared_ptr<one::Tensor>& x) {
-    //       return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {a, x}, dropout_attrs);
-    //     })
-    //     .call();
-
     float scale = 1.0;
     if (p != 1.0) { scale = 1.0 / (1.0 - p); }
+    if(!training){
+      scale = 1.0; 
+    }
     MutableAttrMap dropout_attrs;
     JUST(dropout_attrs.SetAttr<float>("scale", scale));
     return OpInterpUtil::Dispatch<TensorTuple>(*dropout_op_, {a}, dropout_attrs);
   }
 
  private:
-  // std::shared_ptr<OpExpr> random_mask_like_op_;
   std::shared_ptr<OpExpr> dropout_op_;
 };
 
