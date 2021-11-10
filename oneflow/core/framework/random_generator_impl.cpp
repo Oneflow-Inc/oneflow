@@ -165,6 +165,8 @@ CUDAGeneratorImpl::CUDAGeneratorImpl(uint64_t seed, int device_index)
 }
 
 CUDAGeneratorImpl::~CUDAGeneratorImpl() {
+  // Skip if cuda runtime has been deinitialized.
+  if (cudaErrorCudartUnloading == cudaSetDevice(this->device_index())) { return; }
   CudaCurrentDeviceGuard dev_guard(this->device_index());
   OF_CUDA_CHECK(cudaFree(curand_states_));
 }
