@@ -40,7 +40,7 @@ class Device final {
   ~Device() = default;
   Device& operator=(const Device&) = delete;
   const std::string& type() const { return type_; }
-  DeviceType device_type() const { return device_type_; }
+  DeviceType enum_type() const { return enum_type_; }
   Maybe<const std::string&> of_type() const;
   int64_t device_id() const { return device_id_; }
   std::string ToString() const;
@@ -80,7 +80,7 @@ class Device final {
   Maybe<void> Init();
 
   const std::string type_;
-  DeviceType device_type_;
+  DeviceType enum_type_;
   const int64_t device_id_;
   const size_t hash_value_;
   std::shared_ptr<MemoryCase> mem_case_;
