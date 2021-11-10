@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/sbp_constructor.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job.pb.h"
+#include "sbp_collector.h"
 
 namespace oneflow {
 
@@ -43,7 +44,18 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   JUST(GenerateNodeAndEdge(op_graph));
   JUST(FillSbpSignatureForOpNode(op_graph, job));
   JUST(InitComputationCost(op_graph));
+  // Accumulate cost on the mainstem after initializing computation cost
+  // TODO: sbp_graph.FindMainstem(max_MinLayer, op_name2sbp_node);
+
   // TODO: add SbpCollector
+  if (use_sbp_collector_) {
+    // Load logical blobs on all sbp edges.
+    LoadLbi2SbpEdge(op_graph);
+    // Use sbp collector to create sbp proxy for nodes with multiple downstream operators.
+    SbpCollector sbp_collector;
+    sbp_collector.CollectUniverse(sbp_graph_);
+    sbp_collector.ProxySbpCandidate(op_graph, op_name2sbp_node_, sbp_graph_);
+  }
   JUST(InitCopyCost(op_graph));
   sbp_graph_.RandomSbpSignature();
   return Maybe<void>::Ok();
@@ -190,6 +202,32 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
     sbp_node_consumer->InitializeCopyCost(true);
   });
   return Maybe<void>::Ok();
+}
+
+// Load logical blob ids onto sbp edges
+void SbpConstructor::LoadLbi2SbpEdge(const OpGraph& op_graph) {
+  // Load logical blobs onto sbp edges
+
+  for (auto* sbp_node_consumer : sbp_graph_.NodeList) {
+    auto* op_node = sbp_node_consumer->op_node;
+
+    // Loading logical blobs between two nodes
+    // look through input blobs
+    for (const std::string& ibn : op_node->op().input_bns()) {
+      // Each input blob has one source op node.
+      OpNode* producer = op_node->MutSrcNode4Ibn(ibn);
+      // producer sbp node
+      const auto* sbp_node_producer = op_name2sbp_node_[producer->op().op_name()];
+      // TODO: recode this
+      auto* edge_found = auto_parallel::FindEdgeBetweenNodes(sbp_node_producer, sbp_node_consumer);
+
+      CHECK(edge_found != NULL) << "SbpEdge not found while loading!" << std::endl;
+
+      // Add copy cost for each blob
+      const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
+      edge_found->LoadLbi(lbi);
+    }
+  };
 }
 
 }  // namespace auto_parallel

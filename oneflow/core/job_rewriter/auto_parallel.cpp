@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <chrono>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job.pb.h"
@@ -40,9 +41,18 @@ class AutoParallelPass final : public JobPass {
 };
 
 Maybe<void> AutoParallelPass::Apply(const OpGraph& op_graph, Job* job) const {
+  // auto-parallel
+  // TODO: recode this
+  std::cout << "Start Auto Parallel" << std::endl;
+  auto time_begin = std::chrono::high_resolution_clock::now();
+
   auto_parallel::SbpConstructor sbp_constructor(op_graph, job);
   sbp_constructor.FindBestSbpSignature();
   sbp_constructor.UpdateSbpSignatureForJob(op_graph);
+  auto time_end = std::chrono::high_resolution_clock::now();
+  std::cout << "Auto parallel took "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(time_end - time_begin).count()
+            << " ms\n";
   return Maybe<void>::Ok();
 }
 
