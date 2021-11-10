@@ -60,9 +60,9 @@ Maybe<void> FusedScaleMaskSoftmaxDropout::Capture(FusedScaleMaskSoftmaxDropoutIn
   ctx->scale = JUST(composed_attrs.GetAttr<float>("scale_value"));
   ctx->dropout_scale = JUST(composed_attrs.GetAttr<float>("dropout_scale_value"));
 
-  ctx->SaveTensorForBackward(inputs.at(1));
-  ctx->SaveTensorForBackward(inputs.at(2));
-  ctx->SaveTensorForBackward(outputs.at(1));
+  ctx->SaveTensorForBackward(inputs.at(1));     // mask
+  ctx->SaveTensorForBackward(inputs.at(2));     // dropout_mask
+  ctx->SaveTensorForBackward(outputs.at(1));    // softmax_y
   return Maybe<void>::Ok();
 }
 

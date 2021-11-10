@@ -31,9 +31,6 @@ def _test_fused_scale_mask_softmax_dropout(
     x = np.random.randn(batch_size, num_heads, seq_length, seq_length)
     mask = np.random.randint(0, 2, size=(batch_size, num_heads, seq_length, seq_length), dtype=np.uint8)
 
-    # x = np.array([[1., 2., 3.], [4., 5., 6.]])
-    # mask = np.array([[1, 1, 1], [1, 1, 1]])
-
     fused_x_tensor = flow.tensor(x).to("cuda")
     fused_mask_tensor = flow.tensor(mask, dtype=flow.int8).to("cuda")
     fused_x_tensor.requires_grad = True

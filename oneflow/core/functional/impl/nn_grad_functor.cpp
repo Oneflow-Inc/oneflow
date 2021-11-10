@@ -832,8 +832,8 @@ class FusedScaleMaskSoftmaxDropoutGradFunctor {
     op_ = CHECK_JUST(one::OpBuilder("fused_scale_mask_softmax_dropout_grad")
                          .Input("softmax_y")
                          .Input("dy")
-                         .Input("dropout_mask")
                          .Input("mask")
+                         .Input("dropout_mask")
                          .Output("dx")
                          .Build());
   }

@@ -1488,7 +1488,7 @@
   bind_python: True
 
 - name: "fused_scale_mask_softmax"
-  signature: "Tensor (Tensor x, Tensor mask, *, Float fill_value, Float scale=1.0) => FusedScaleMaskSoftmax"
+  signature: "Tensor (Tensor x, Tensor mask, *, Float fill_value=0.0, Float scale=1.0) => FusedScaleMaskSoftmax"
   bind_python: True
 
 - name: "fused_scale_mask_softmax_grad"
@@ -1496,7 +1496,7 @@
   bind_python: False
 
 - name: "fused_scale_mask_softmax_dropout"
-  signature: "TensorTuple (Tensor x, Tensor mask, *, Float fill_value, Float scale=1.0, Float p=0.5, Bool training=True, Generator generator=None) => FusedScaleMaskSoftmaxDropout"
+  signature: "TensorTuple (Tensor x, Tensor mask, *, Float fill_value=0.0, Float scale=1.0, Float p=0.5, Bool training=True, Generator generator=None) => FusedScaleMaskSoftmaxDropout"
   bind_python: True
 
 - name: "fused_scale_mask_softmax_dropout_grad"
