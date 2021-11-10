@@ -141,11 +141,6 @@ class SbpGraph {
                       std::vector<int32_t>& MinSbpSignatureId, double& MinCost, int32_t order,
                       double CurrCost);
 
-#ifdef PRINT_GRAPH_
-  void PrintGraph();
-  void PrintSbpSigs();
-#endif  // PRINT_GRAPH_
-
 #ifdef DEBUG_ALGORITHM_
 
   // Compute Cost for current startegy with original graph
@@ -183,10 +178,8 @@ void SbpGraph<SbpSignature>::RemoveFromNodeList(SbpNode<SbpSignature>* this_node
   this_node->NodeListId = -1;
 }
 
-#ifndef RANDOM_GENERATOR_
 template<class SbpSignature>
 SbpGraph<SbpSignature>::SbpGraph() {}
-#endif  // RANDOM_GENERATOR_
 
 template<class SbpSignature>
 void SbpGraph<SbpSignature>::ComputeInitialCost(
@@ -957,102 +950,6 @@ void SbpGraph<SbpSignature>::SetTransferCost(double transfer_cost_) {
   transfer_cost = transfer_cost_;
 }
 
-#ifdef RANDOM_GENERATOR_
-
-template<class SbpSignature>
-SbpGraph<SbpSignature>::SbpGraph() {
-  // It's a random generator
-
-  // generate node candidates
-  // std::vector<std::vector<std::shared_ptr<SbpNode<SbpSignature>>>> AllNodes;
-  std::vector<std::vector<SbpNode<SbpSignature>*>> AllNodes;
-  AllNodes.resize(15 + rand() % 9);
-  AllNodes[0].resize(6 + rand() % 12, NULL);
-
-  for (int32_t i = 1; i < AllNodes.size(); i++) { AllNodes[i].resize(9 + rand() % 15, NULL); }
-
-  // set data size
-  int32_t DataSize = rand() % 30000 + 30000;
-
-  // initialize starting nodes
-  for (int32_t j = 0; j < AllNodes[0].size(); j++) {
-    // std::shared_ptr<SbpNode<SbpSignature>> n_ =
-    // std::make_shared<SbpNode<SbpSignature>>(DataSize, rand() % 1000 + 40, 0);
-    AllNodes[0][j] = new SbpNode<SbpSignature>(DataSize, rand() % 1000 + 40, 0);
-  }
-
-  // connect them as a DAG
-  int depth = AllNodes.size();
-  for (int32_t i = 0; i < AllNodes.size(); i++) {
-    for (int32_t j = 0; j < AllNodes[i].size(); j++) {
-      if (AllNodes[i][j]) {
-        // generate number of out-edge n
-        int32_t p = rand() % 100;
-        int32_t n;
-        if (p > 50)
-          n = 1;
-        else if (p > 30)
-          n = 2;
-        else
-          n = 3;
-
-        // assign output parameter dimension
-        AllNodes[i][j]->MatDim[2] = rand() % 1000 + 40;
-
-        // generate nodes and connection
-        if (i < depth - 1) {
-          for (int32_t k = 0; k < n; k++) {
-            p = rand() % 100;
-            int32_t jump;
-            if (p > 50)
-              jump = 1;
-            else if (p > 30)
-              jump = 2;
-            else
-              jump = 3;
-
-            // will point from AllNodes[i][j] to AllNodes[i_end][j_end]
-            int32_t i_end = i + jump;
-            if (i_end >= depth && k == n - 1 && AllNodes[i][j]->NodesOut.empty()) i_end = depth - 1;
-            if (i_end < depth) {
-              int32_t j_end = rand() % AllNodes[i_end].size();
-              if (AllNodes[i_end][j_end]) {
-                // check if we had same edge before
-                bool check_duplicated = false;
-                for (const auto& node_out : AllNodes[i][j]->NodesOut) {
-                  if (node_out == AllNodes[i_end][j_end]) { check_duplicated = true; }
-                }
-                if (check_duplicated) continue;
-                // pass check and add data to exist node
-                AllNodes[i_end][j_end]->MatDim[1] += AllNodes[i][j]->MatDim[2];
-              } else {
-                // create a new node for edge out
-                AllNodes[i_end][j_end] =
-                    new SbpNode<SbpSignature>(DataSize, AllNodes[i][j]->MatDim[2], 0);
-              }
-              AllNodes[i][j]->PointTo(AllNodes[i_end][j_end]);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // Store all nodes
-  for (int32_t i = 0; i < AllNodes.size(); i++) {
-    for (int32_t j = 0; j < AllNodes[i].size(); j++) {
-      if (AllNodes[i][j]) {
-        NodeList.emplace_back(AllNodes[i][j]);
-        AllNodes[i][j]->id = NextId++;
-        AllNodes[i][j]->NodeListId = NodeList.size() - 1;
-      }
-    }
-  }
-  OriginalNodeList = NodeList;
-};
-
-#endif  // RANDOM_GENERATOR_
-
 #ifdef DEBUG_ALGORITHM_
 
 template<class SbpSignature>
@@ -1070,79 +967,6 @@ double SbpGraph<SbpSignature>::ComputeOriginCost() {
 }
 
 #endif  // DEBUG_ALGORITHM_
-
-#ifdef PRINT_GRAPH_
-
-template<class SbpSignature>
-void PrintNode(SbpNode<SbpSignature>* this_node) {
-  if (!this_node->Children.empty()) {
-    printf("[%d", this_node->Children[0]->id);
-    for (int32_t i = 1; i < this_node->Children.size(); i++) {
-      printf(", %d", this_node->Children[i]->id);
-    }
-    printf("] ");
-  }
-
-  if (!this_node->HalfNode.empty())
-    printf("(%d, %d) ", this_node->HalfNode[0]->id, this_node->HalfNode[1]->id);
-
-  printf("%d -> ", this_node->id);
-
-  for (const auto& edge_out : this_node->EdgesOut) { printf("%d, ", edge_out->EndNode->id); }
-  printf("\n");
-}
-
-template<class SbpSignature>
-void SbpGraph<SbpSignature>::PrintGraph() {
-  // initialization for topological sorting
-  InitTopologicalSort();
-
-  // strict topological sorting
-  std::vector<SbpNode<SbpSignature>*> TopoSortNode;
-  for (const auto& this_node : NodeList) {
-    if (this_node->CurrDeg == 0) TopoSortNode.emplace_back(this_node);
-  }
-
-  int32_t level = 0, level_start = 0, level_end = TopoSortNode.size();
-  int32_t index = 0;
-  while (index < TopoSortNode.size()) {
-    // Move to next level
-    if (index == level_end) {
-      level++;
-      level_start = level_end;
-      level_end = TopoSortNode.size();
-    }
-    if (index == level_start) { printf("=================level:%d=================\n", level); }
-
-    // Print each node and all out degrees
-    PrintNode(TopoSortNode[index]);
-    for (const auto& edge_out : TopoSortNode[index]->EdgesOut) {
-      edge_out->EndNode->CurrDeg--;
-      if (edge_out->EndNode->CurrDeg == 0) TopoSortNode.emplace_back(edge_out->EndNode);
-    }
-
-    index++;
-  }
-
-  printf("==============level:Circle===============\n");
-  for (const auto& this_node : NodeList) {
-    if (this_node->CurrDeg) PrintNode(this_node);
-  }
-  printf("\n|++++++++++++++++++++++++++++++++++|\n\n");
-  // printf("\nCurrent Cost: %d, Origin Cost: %d\n\n", ComputeCost(), ComputeOriginCost());
-};
-
-template<class SbpSignature>
-void SbpGraph<SbpSignature>::PrintSbpSigs() {
-  printf("**********Sbp Signatures***********\n");
-  for (const auto& this_node : OriginalNodeList) {
-    printf("%d (Sbp: %d)\n", this_node->id,
-           this_node->SbpSignatureList[this_node->FinalSbpSignatureId]->id);
-  }
-  printf("|*********************************|\n");
-}
-
-#endif  // PRINT_GRAPH_
 
 }  // namespace auto_parallel
 }  // namespace oneflow
