@@ -20,7 +20,7 @@ limitations under the License.
 
 #include <sys/eventfd.h>
 
-#define DebugWrite true 
+#define DebugWrite false 
 
 namespace oneflow {
 

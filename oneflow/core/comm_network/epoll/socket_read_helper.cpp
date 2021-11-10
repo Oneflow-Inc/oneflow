@@ -22,7 +22,7 @@ limitations under the License.
 
 #include <netinet/tcp.h>
 
-#define DebugRead true 
+#define DebugRead false 
 
 namespace oneflow {
 
