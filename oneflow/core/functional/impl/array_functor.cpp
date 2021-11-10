@@ -2109,13 +2109,12 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
 
 class ToFunctor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, 
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<const std::string>& device_,
-                           const Optional<Symbol<DType>>& dtype_,
-                           const bool& copy) const {
+                           const Optional<Symbol<DType>>& dtype_, const bool& copy) const {
     const std::string device_type = device_.value_or(JUST(input->device())->ToString());
     auto dtype = dtype_.value_or(input->dtype());
-    
+
     if (input->is_consistent()) {
       if (device_.has_value()) {
         CHECK_OR_RETURN(device_.value_or("") == "cpu" || device_.value_or("") == "cuda");
@@ -2129,15 +2128,15 @@ class ToFunctor {
 
 class To2Functor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, 
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<Symbol<Device>>& device_,
-                           const Optional<Symbol<DType>>& dtype_, 
-                           const bool& copy) const {
-    CHECK_OR_RETURN(input->is_consistent() && device_.has_value()) 
-      << "A consistent tensor can only call to() with device_str_without_id, "
-      << "e.g. to(\"cuda\") or to(\"cpu\"), "
-      << "but device param " << device_.value_or(Symbol<Device>())->ToString() << " has been received.";
-    
+                           const Optional<Symbol<DType>>& dtype_, const bool& copy) const {
+    CHECK_OR_RETURN(input->is_consistent() && device_.has_value())
+        << "A consistent tensor can only call to() with device_str_without_id, "
+        << "e.g. to(\"cuda\") or to(\"cpu\"), "
+        << "but device param " << device_.value_or(Symbol<Device>())->ToString()
+        << " has been received.";
+
     const std::string device_type = device_.value_or(JUST(input->device()))->ToString();
     auto dtype = dtype_.value_or(input->dtype());
     return JUST(LocalTensorTo(input, device_type, dtype, copy));
