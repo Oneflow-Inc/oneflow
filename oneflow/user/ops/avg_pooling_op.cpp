@@ -113,6 +113,21 @@ GenBackwardOpConfFn MakeBackwardOpConfFn(const int32_t dim) {
   };
 }
 
+// Logically computation cost of pool op is the product of output data amount and pool kernal data
+// amount. After adding sbp, we just divide it by parallel number if output data is splitted because
+// splitting input and using partial sum for output is not a valid sbp for this op for now.
+Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  const std::vector<int32_t> pool_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
+  double logical_computation_cost =
+      std::accumulate(pool_size.begin(), pool_size.end(),
+                      ctx->Shape4ArgNameAndIndex("y", 0)->elem_cnt(), std::multiplies<double>());
+  const auto& sbp_parallel = ctx->SbpParallel4ArgNameAndIndex("y", 0);
+  if (sbp_parallel.has_split_parallel()) {
+    return logical_computation_cost / ctx->parallel_desc().parallel_num();
+  }
+  return logical_computation_cost;
+}
+
 }  // namespace
 
 #define REGISTER_AVGPOOL_FORWARD_OP(name, ndim)                 \
@@ -128,7 +143,8 @@ GenBackwardOpConfFn MakeBackwardOpConfFn(const int32_t dim) {
       .Attr<int64_t>("divisor_override")                        \
       .SetTensorDescInferFn(MakeForwardTensorDescInferFn(ndim)) \
       .SetGetSbpFn(ForwardGetSbpFn)                             \
-      .SetDataTypeInferFn(FwInferDataType);
+      .SetDataTypeInferFn(FwInferDataType)                      \
+      .SetComputeComplexityFn(GetComputationCostFn);
 
 #define REGISTER_AVGPOOL_BACKWARD_OP(name, ndim)       \
   REGISTER_USER_OP(name)                               \
@@ -145,7 +161,8 @@ GenBackwardOpConfFn MakeBackwardOpConfFn(const int32_t dim) {
       .Attr<int64_t>("divisor_override")               \
       .SetTensorDescInferFn(BackwardTensorDescInferFn) \
       .SetGetSbpFn(BackwardGetSbpFn)                   \
-      .SetDataTypeInferFn(BwInferDataType);
+      .SetDataTypeInferFn(BwInferDataType)             \
+      .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_AVGPOOL_FORWARD_OP("avgpool_1d", 1);
 REGISTER_AVGPOOL_FORWARD_OP("avgpool_2d", 2);
