@@ -20,6 +20,12 @@ import oneflow as flow
 from oneflow.test_utils.automated_test_util import *
 import oneflow.unittest
 
+#class TestModule(flow.nn.Module):
+#    def __init__(self):
+#        super().__init__()
+#
+#    def forward(self, x):
+#        return torch.abs(x)
 
 @flow.unittest.skip_unless_1n1d()
 class TestAbsModule(flow.unittest.TestCase):
