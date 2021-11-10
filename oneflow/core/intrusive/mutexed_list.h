@@ -68,9 +68,12 @@ class MutexedList {
     return list_head_.PopFront();
   }
 
-  void MoveFrom(list_type* src) {
+  // Returns true if old list is empty.
+  bool MoveFrom(list_type* src) {
     std::unique_lock<std::mutex> lock(mutex_);
+    bool old_list_empty = list_head_.empty();
     src->MoveToDstBack(&list_head_);
+    return old_list_empty;
   }
 
   void MoveTo(list_type* dst) {

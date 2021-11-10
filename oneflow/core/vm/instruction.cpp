@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
-#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/cpp_attribute.h"
 
@@ -73,7 +73,7 @@ void InstructionMsg::__Init__(const std::string& instr_type_name) {
   *mut_instr_type_name() = instr_type_name;
 }
 
-void InstructionMsg::__Init__(VirtualMachine* vm, const std::string& instr_type_name,
+void InstructionMsg::__Init__(VirtualMachineEngine* vm, const std::string& instr_type_name,
                               const std::shared_ptr<const ParallelDesc>& phy_instr_parallel_desc,
                               const std::shared_ptr<PhyInstrOperand>& phy_instr_operand) {
   __Init__();
