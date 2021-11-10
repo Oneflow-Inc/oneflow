@@ -13,15 +13,30 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "api.h"
-#include "oneflow/core/common/util.h"
+#include <map>
+#include <gtest/gtest.h>
+#include "oneflow/api/cpp/api.h"
+#include "oneflow/api/cpp/device.h"
 
-namespace ofapi {
+namespace oneflow_api {
 
 TEST(Api, init_and_release) {
   initialize();
+
   auto device = Device("cpu");
+  ASSERT_EQ(device.type(), "cpu");
+
+#ifdef WITH_CUDA
+  device = Device("cuda", 1);
+  ASSERT_EQ(device.type(), "cuda");
+  ASSERT_EQ(device.device_id(), 1);
+
+  device = Device("cuda:2");
+  ASSERT_EQ(device.type(), "cuda");
+  ASSERT_EQ(device.device_id(), 2);
+#endif
+
   release();
 }
 
-}  // namespace ofapi
+}  // namespace oneflow_api

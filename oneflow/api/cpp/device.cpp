@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "device.h"
+#include "oneflow/api/cpp/device.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/api/common/device.h"
 
-namespace ofapi {
+namespace oneflow_api {
 
 namespace of = oneflow;
 
@@ -31,4 +31,8 @@ Device::Device(const std::string& type, int64_t device_id)
     : device_(std::make_shared<of::Symbol<of::Device>>(
         of::DeviceExportUtil::New(type, device_id).GetOrThrow())) {}
 
-}  // namespace ofapi
+const std::string& Device::type() const { return (*device_)->type(); }
+
+int64_t Device::device_id() const { return (*device_)->device_id(); }
+
+}  // namespace oneflow_api

@@ -23,7 +23,7 @@ limitations under the License.
 #include <cstdlib>
 #include <random>
 #include <type_traits>
-#include "api.h"
+#include "oneflow/api/cpp/env.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/optional.h"
@@ -35,7 +35,7 @@ limitations under the License.
 #include "oneflow/core/rpc/include/base.h"
 #include "oneflow/core/vm/vm_util.h"
 
-namespace ofapi {
+namespace oneflow_api {
 
 namespace of = oneflow;
 
@@ -139,4 +139,4 @@ void release() {
   of::SetShuttingDown();
 }
 
-}  // namespace ofapi
+}  // namespace oneflow_api

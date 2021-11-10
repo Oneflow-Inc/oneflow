@@ -13,11 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_API_CPP_ENV_H_
+#define ONEFLOW_API_CPP_ENV_H_
 
-#ifndef ONEFLOW_API_H_
-#define ONEFLOW_API_H_
+namespace oneflow_api {
 
-#include "env.h"
-#include "device.h"
+void initialize();
+void release();
 
-#endif  // ONELFOW_API_H_
+}  // namespace oneflow_api
+
+#endif  // ONEFLOW_API_CPP_ENV_H_
