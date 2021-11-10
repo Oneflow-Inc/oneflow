@@ -382,7 +382,9 @@ LogicalResult JitImporter::LowerToOneFlowKernel() {
   llvm::SmallVector<Value, 8> return_values;
   llvm::SmallVector<Type, 8> out_types{};
   SymbolTable symbol_table(GetModule());
-  FuncOp function = symbol_table.lookup<FuncOp>(GetJitFuncName());
+  auto func_name = GetJitFuncName();
+  auto function = symbol_table.lookup<FuncOp>(func_name);
+  if (!function) { return GetModule().emitError("function not found: " + func_name); }
   llvm::hash_code function_hash{};
   function
       ->walk([&](mlir::Operation* op) {
@@ -418,11 +420,11 @@ LogicalResult JitImporter::LowerToOneFlowKernel() {
   auto it = func_hash_symbol_mapping_.find(function_hash);
   if (it != func_hash_symbol_mapping_.end()) {
     function.erase();
-    llvm::errs() << "cache hit: " << GetJitFuncName() << " -> " << it->second << "\n";
+    llvm::errs() << "cache hit: " << func_name << " -> " << it->second << "\n";
     *MutJitFuncName() = it->second;
     return success();
   }
-  func_hash_symbol_mapping_.insert({function_hash, GetJitFuncName()});
+  func_hash_symbol_mapping_.insert({function_hash, func_name});
   auto return_op = GetBuilder().create<ReturnOp>(GetModule()->getLoc(), return_values);
   CHECK(return_op);
   llvm::errs() << function.sym_name() << ", "
