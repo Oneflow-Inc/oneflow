@@ -2234,7 +2234,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UnsortedBatchSegmentSumFunctor>("UnsortedBatchSegmentSum");
   m.add_functor<impl::MaskedFillFunctor>("MaskedFill");
   m.add_functor<impl::MeshgridFunctor>("Meshgrid");
-  m.add_functor<impl::ToFunctor>("To");
+  m.add_functor<impl::ToFunctor, impl::To2Functor>("To");
 };
 
 }  // namespace functional
