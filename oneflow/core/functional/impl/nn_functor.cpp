@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
-#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -27,7 +26,6 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -1424,14 +1422,15 @@ class DropoutFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& a, const float& p,
                            const bool& training, const Optional<one::Generator>& generator) const {
-    float scale = 1.0;
-    if (p != 1.0) { scale = 1.0 / (1.0 - p); }
-    if(!training){
-      scale = 1.0; 
-    }
     MutableAttrMap dropout_attrs;
-    JUST(dropout_attrs.SetAttr<float>("scale", scale));
+    if(!training){
+      JUST(dropout_attrs.SetAttr<float>("rate", 0.0));
+    }else{
+      JUST(dropout_attrs.SetAttr<float>("rate", p));
+    }
     return OpInterpUtil::Dispatch<TensorTuple>(*dropout_op_, {a}, dropout_attrs);
+
+
   }
 
  private:

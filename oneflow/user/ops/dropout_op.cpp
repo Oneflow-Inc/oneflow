@@ -24,19 +24,12 @@ REGISTER_USER_OP("dropout")
     .OptionalInput("_add_to_output")
     .Output("out")
     .Output("mask")
-    .Attr<float>("scale")
+    .Attr<float>("rate")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& in_shape = ctx->InputShape("in", 0);
       *ctx->OutputShape("out", 0) = in_shape;
       *ctx->OutputShape("mask", 0) = in_shape;
       *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
-      // CHECK_EQ_OR_RETURN(ctx->InputShape("mask", 0), in_shape);
-      return Maybe<void>::Ok();
-    })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
-      // user_op::InputArgModifier* mask = GetInputArgModifierFn("mask", 0);
-      // mask->set_requires_grad(false);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -54,7 +47,6 @@ REGISTER_USER_OP("dropout")
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-      // CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kInt8);
       *ctx->OutputDType("mask", 0) = DataType::kInt8;
       return Maybe<void>::Ok();
     });

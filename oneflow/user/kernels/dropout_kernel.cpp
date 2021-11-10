@@ -40,7 +40,7 @@ class DropoutKernelCPU final : public user_op::OpKernel {
     // const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const float scale = ctx->Attr<float>("scale");
+    const float scale = ctx->Attr<float>("rate");
     MaskAndScale<T>(ctx->device_ctx(), in->shape().elem_cnt(), scale, in->dptr<T>(),
                     mask->dptr<int8_t>(), out->mut_dptr<T>());
     if (ctx->has_input("_add_to_output", 0)) {

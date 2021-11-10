@@ -36,7 +36,7 @@ union H2Pack{
 };
 
 template<typename T, int pack_size>
-__global__ void MaskAndScaleGpu(uint64_t* seed, int32_t* counter, const int64_t n, float scale, float rate, const T* x, int8_t* mask,
+__global__ void MaskAndScaleGpu(uint64_t* seed, int32_t* counter, const int64_t n, float rate, float scale, const T* x, int8_t* mask,
                                 T* y) {
     uint64_t cur_seed = seed[0]; 
     int32_t thread_id = blockIdx.x * blockDim.x + threadIdx.x; 
@@ -81,7 +81,7 @@ __global__ void MaskAndScaleGpu(uint64_t* seed, int32_t* counter, const int64_t 
 
 
 template<typename T, int pack_size>
-__global__ void MaskAndScaleAddGpu(uint64_t* seed, int32_t* counter, const int64_t n, float scale, float rate, const T* x, int8_t* mask,
+__global__ void MaskAndScaleAddGpu(uint64_t* seed, int32_t* counter, const int64_t n, float rate, float scale, const T* x, int8_t* mask,
                                    const T* addend, T* y) {
   uint64_t cur_seed = seed[0]; 
   int32_t thread_id = blockIdx.x * blockDim.x + threadIdx.x; 
@@ -129,7 +129,7 @@ __global__ void MaskAndScaleAddGpu(uint64_t* seed, int32_t* counter, const int64
 }
 
 template<>
-__global__ void MaskAndScaleGpu<half, 4>(uint64_t* seed, int32_t* counter, const int64_t n, float scale, float rate, const half* x, int8_t* mask,
+__global__ void MaskAndScaleGpu<half, 4>(uint64_t* seed, int32_t* counter, const int64_t n, float rate, float scale, const half* x, int8_t* mask,
                                 half* y) {
     int32_t thread_id = blockIdx.x * blockDim.x + threadIdx.x; 
     curandStatePhilox4_32_10_t state; 
@@ -178,7 +178,7 @@ __global__ void MaskAndScaleGpu<half, 4>(uint64_t* seed, int32_t* counter, const
 }
 
 template<>
-__global__ void MaskAndScaleAddGpu<half, 4>(uint64_t* seed, int32_t* counter, const int64_t n, float scale, float rate, const half* x, int8_t* mask, const half* addend, half* y) {
+__global__ void MaskAndScaleAddGpu<half, 4>(uint64_t* seed, int32_t* counter, const int64_t n, float rate, float scale, const half* x, int8_t* mask, const half* addend, half* y) {
     int32_t thread_id = blockIdx.x * blockDim.x + threadIdx.x; 
     curandStatePhilox4_32_10_t state; 
     // auto seeds = at::cuda::philox::unpack(philox_args);
@@ -238,7 +238,7 @@ void ComputeGridSize(const int32_t block_size, unsigned int* grid_size){
 }
 
 template<typename T>
-void MaskAndScale(DeviceCtx* ctx, uint64_t* seed, int32_t* counter, const int64_t n, float scale, const T* x, int8_t* mask,
+void MaskAndScale(DeviceCtx* ctx, uint64_t* seed, int32_t* counter, const int64_t n, float rate, float scale, const T* x, int8_t* mask,
                   T* y) {
   int32_t UNROLL = 4; 
   int32_t block_size = 256; 
@@ -249,13 +249,12 @@ void MaskAndScale(DeviceCtx* ctx, uint64_t* seed, int32_t* counter, const int64_
   // one::PhiloxCUDAState rng_engine_inputs = generator_->philox_cuda_state(counter_offset);
   printf("Grid size is: %u \n", grid_size); 
   printf("Block size is: %u \n", block_size); 
-  float dropout_rate = 1 - 1.0 / scale; 
-  MaskAndScaleGpu<T, 4><<<grid_size, block_size, 0, ctx->cuda_stream()>>>(seed, counter, n, scale, dropout_rate, x, mask, y);
+  MaskAndScaleGpu<T, 4><<<grid_size, block_size, 0, ctx->cuda_stream()>>>(seed, counter, n, rate, scale, x, mask, y);
 }
 
 
 template<typename T>
-void MaskAndScaleAdd(DeviceCtx* ctx, uint64_t* seed, int32_t* counter, const int64_t n, float scale, const T* x, int8_t* mask,
+void MaskAndScaleAdd(DeviceCtx* ctx, uint64_t* seed, int32_t* counter, const int64_t n, float rate, float scale, const T* x, int8_t* mask,
                      const T* addend, T* y) {
   int32_t UNROLL = 4; 
   int32_t block_size = 256; 
@@ -266,8 +265,7 @@ void MaskAndScaleAdd(DeviceCtx* ctx, uint64_t* seed, int32_t* counter, const int
   // one::PhiloxCUDAState rng_engine_inputs = generator_->philox_cuda_state(counter_offset);
   printf("Grid size is: %u \n", grid_size); 
   printf("Block size is: %u \n", block_size); 
-  float dropout_rate = 1 - 1.0 / scale; 
-  MaskAndScaleAddGpu<T, 4><<<grid_size, block_size, 0, ctx->cuda_stream()>>>(seed, counter, n, scale, dropout_rate, x, mask, addend, y);
+  MaskAndScaleAddGpu<T, 4><<<grid_size, block_size, 0, ctx->cuda_stream()>>>(seed, counter, n, rate, scale, x, mask, addend, y);
 }
 
 template<typename T>
@@ -292,7 +290,9 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
 
-    const float scale = ctx->Attr<float>("scale");
+    const float rate = ctx->Attr<float>("rate");
+    float scale = 1.0;
+    if (rate != 1.0) { scale = 1.0 / (1.0 - rate); }
     // const auto& generator = CHECK_JUST(one::MakeGenerator(DeviceType::kGPU));
     // generator->set_current_seed(ctx->Attr<int64_t>("seed"));
     // std::shared_ptr<RandomMaskGenerator<DeviceType::kGPU>> random_mask_like_gen = std::make_shared<RandomMaskGenerator<DeviceType::kGPU>>(generator);
@@ -304,7 +304,7 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
       int32_t* counter; 
       cudaMalloc(&seed, sizeof(uint64_t)); 
       cudaMalloc(&counter, sizeof(int32_t)); 
-      MaskAndScaleAdd<T>(ctx->device_ctx(), seed, counter, in->shape().elem_cnt(), scale, in->dptr<T>(),
+      MaskAndScaleAdd<T>(ctx->device_ctx(), seed, counter, in->shape().elem_cnt(), rate, scale, in->dptr<T>(),
                          mask->mut_dptr<int8_t>(), addend->dptr<T>(), out->mut_dptr<T>());
       cudaFree(seed); 
       cudaFree(counter); 
@@ -314,7 +314,7 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
       cudaMalloc(&seed, sizeof(uint64_t)); 
       cudaMalloc(&counter, sizeof(int32_t)); 
 
-      MaskAndScale<T>(ctx->device_ctx(), seed, counter, in->shape().elem_cnt(), scale, in->dptr<T>(),
+      MaskAndScale<T>(ctx->device_ctx(), seed, counter, in->shape().elem_cnt(), rate, scale, in->dptr<T>(),
                       mask->mut_dptr<int8_t>(), out->mut_dptr<T>());
       cudaFree(seed); 
       cudaFree(counter); 
