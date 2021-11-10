@@ -32,7 +32,7 @@ class MemsetImpl : public Memset {
   ~MemsetImpl() override = default;
 
   void Launch(StreamContext* stream_ctx, void* ptr, int value, size_t count) override {
-    auto* cuda_stream_ctx = CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx));
+    auto* cuda_stream_ctx = stream_ctx->As<CudaStreamContext>();
     OF_CUDA_CHECK(cudaMemsetAsync(ptr, value, count, cuda_stream_ctx->cuda_stream()));
   }
 };
