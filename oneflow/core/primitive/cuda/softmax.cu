@@ -55,8 +55,7 @@ class SoftmaxImpl : public SoftmaxBase {
 
   void Launch(StreamContext* stream_ctx, size_t rows, size_t cols, const void* x,
               void* y) override {
-    cudaStream_t cuda_stream =
-        CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
+    cudaStream_t cuda_stream = stream_ctx->As<CudaStreamContext>()->cuda_stream();
     SoftmaxGpu<algorithm, T>(cuda_stream, rows, cols, reinterpret_cast<const T*>(x),
                              reinterpret_cast<T*>(y));
   }
