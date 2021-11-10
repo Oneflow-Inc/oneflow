@@ -14,81 +14,69 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/user/kernels/loss_kernel_util.h"
 
 namespace oneflow {
+namespace user_op {
+
+namespace {
+
+using namespace loss;
 
 template<typename T>
-class SmoothL1LossCPUKernel final : public user_op::OpKernel {
- public:
-  SmoothL1LossCPUKernel() = default;
-  ~SmoothL1LossCPUKernel() = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const float beta = ctx->Attr<float>("beta");
-    const user_op::Tensor* prediction_blob = ctx->Tensor4ArgNameAndIndex("prediction", 0);
-    const T* prediction = prediction_blob->dptr<T>();
-    const int64_t elem_cnt = prediction_blob->shape().elem_cnt();
-    const T* label = ctx->Tensor4ArgNameAndIndex("label", 0)->dptr<T>();
-    T* loss = ctx->Tensor4ArgNameAndIndex("loss", 0)->mut_dptr<T>();
-    for (int64_t i = 0; i < elem_cnt; i++) {
-      const T abs_diff = std::abs(prediction[i] - label[i]);
-      if (abs_diff < beta) {
-        loss[i] = 0.5 * abs_diff * abs_diff / beta;
-      } else {
-        loss[i] = abs_diff - 0.5 * beta;
-      }
+void ComputeSmoothL1Out(int64_t elem_cnt, const T* input, const T* target, T* out,
+                        const float beta) {
+  FOR_RANGE(int64_t, i, 0, elem_cnt) {
+    const T abs_diff = std::abs(input[i] - target[i]);
+    if (abs_diff < beta) {
+      out[i] = 0.5 * abs_diff * abs_diff / beta;
+    } else {
+      out[i] = abs_diff - 0.5 * beta;
     }
   }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-#define REGISTER_SMOOTH_L1_LOSS_CPU_KERNEL(dtype)         \
-  REGISTER_USER_KERNEL("smooth_l1_loss")                  \
-      .SetCreateFn<SmoothL1LossCPUKernel<dtype>>()        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
-                       & (user_op::HobDataType("loss", 0) == GetDataType<dtype>::value));
-
-REGISTER_SMOOTH_L1_LOSS_CPU_KERNEL(float)
-REGISTER_SMOOTH_L1_LOSS_CPU_KERNEL(double)
+}
+template<typename T>
+void ComputeSmoothL1GradOut(int64_t elem_cnt, const T* input, const T* target, const T* dy, T* dx,
+                            const ReductionType reduction_type, const float beta) {
+  FOR_RANGE(int64_t, i, 0, elem_cnt) {
+    const T diff = input[i] - target[i];
+    const T abs_diff = std::abs(diff);
+    if (abs_diff < beta) {
+      dx[i] = diff / beta;
+    } else {
+      dx[i] = (diff > GetZeroVal<T>()) - (diff < GetZeroVal<T>());
+    }
+    const T dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
+    dx[i] = dx[i] * dy_val;
+    if (reduction_type == ReductionType::kMean) { dx[i] /= elem_cnt; };
+  }
+}
 
 template<typename T>
-class SmoothL1LossGradCpuKernel final : public user_op::OpKernel {
+class SmoothL1LossKernel : public SimpleLossKernel<DeviceType::kCPU, T, SmoothL1LossKernel<T>> {
  public:
-  SmoothL1LossGradCpuKernel() = default;
-  ~SmoothL1LossGradCpuKernel() = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
+                  const T* target, T* out) const {
     const float beta = ctx->Attr<float>("beta");
-    const user_op::Tensor* prediction_blob = ctx->Tensor4ArgNameAndIndex("prediction", 0);
-    const T* prediction = prediction_blob->dptr<T>();
-    const int64_t elem_cnt = prediction_blob->shape().elem_cnt();
-    const T* loss_grad = ctx->Tensor4ArgNameAndIndex("loss_grad", 0)->dptr<T>();
-    const T* label = ctx->Tensor4ArgNameAndIndex("label", 0)->dptr<T>();
-    T* prediction_grad = ctx->Tensor4ArgNameAndIndex("prediction_grad", 0)->mut_dptr<T>();
-    for (int64_t i = 0; i < elem_cnt; i++) {
-      const T diff = prediction[i] - label[i];
-      const T abs_diff = std::abs(diff);
-      if (abs_diff < beta) {
-        prediction_grad[i] = diff / beta;
-      } else {
-        prediction_grad[i] = (diff > GetZeroVal<T>()) - (diff < GetZeroVal<T>());
-      }
-      prediction_grad[i] = prediction_grad[i] * loss_grad[i];
-    }
+    ComputeSmoothL1Out(elem_cnt, input, target, out, beta);
   }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SMOOTH_L1_LOSS_GRAD_CPU_KERNEL(dtype) \
-  REGISTER_USER_KERNEL("smooth_l1_loss_grad")          \
-      .SetCreateFn<SmoothL1LossGradCpuKernel<dtype>>() \
-      .SetIsMatchedHob(                                \
-          (user_op::HobDeviceTag() == "cpu")           \
-          & (user_op::HobDataType("prediction_grad", 0) == GetDataType<dtype>::value));
+template<typename T>
+class SmoothL1LossGradKernel
+    : public SimpleLossGradKernel<DeviceType::kCPU, T, SmoothL1LossGradKernel<T>> {
+ public:
+  void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
+                  const T* target, const T* dy, T* dx, const ReductionType reduction) const {
+    const float beta = ctx->Attr<float>("beta");
+    ComputeSmoothL1GradOut(elem_cnt, input, target, dy, dx, reduction, beta);
+  }
+};
 
-REGISTER_SMOOTH_L1_LOSS_GRAD_CPU_KERNEL(float)
-REGISTER_SMOOTH_L1_LOSS_GRAD_CPU_KERNEL(double)
+}  // namespace
 
+REGISTER_SIMPLE_LOSS_KERNEL_CPU("smooth_l1_loss", SmoothL1LossKernel)
+REGISTER_SIMPLE_LOSS_GRAD_KERNEL_CPU("smooth_l1_loss_grad", SmoothL1LossGradKernel)
+
+}  // namespace user_op
 }  // namespace oneflow

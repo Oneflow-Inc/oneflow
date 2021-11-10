@@ -14,18 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
-
 #include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
-#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/stream/stream_context_adapter.h"
+#include "oneflow/core/stream/include/stream_context_adapter.h"
 
 namespace oneflow {
 namespace one {
@@ -36,7 +33,7 @@ int32_t TryGetTensorTupleIndex(const std::unordered_map<std::string, std::vector
   auto it = arg_name2bn_index2tensor_tuple_index.find(arg_name);
   if (it != arg_name2bn_index2tensor_tuple_index.end()) { return it->second.at(arg_index); }
   return -1;
-};
+}
 
 ZeroCopyBaseContext::ZeroCopyBaseContext(const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                          const std::shared_ptr<const ArgTuple>& output_arg_tuple)

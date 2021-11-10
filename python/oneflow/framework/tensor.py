@@ -19,6 +19,7 @@ import oneflow.framework.check_point_v2 as check_point_v2
 import oneflow.framework.tensor_str as tensor_str_util
 import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
+import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 
 import numpy as np
 from typing import Union
@@ -63,14 +64,11 @@ def _ndim(self):
 
 
 def _nelement(self):
-    prod = 1
-    for dim in self.shape:
-        prod *= dim
-    return prod
+    return self.shape.numel()
 
 
 def _numel(self):
-    return self.nelement()
+    return self.shape.numel()
 
 
 def _element_size(self):
@@ -168,6 +166,10 @@ def _or(self, other):
     return self.logical_or(other)
 
 
+def _not(self):
+    return flow._C.logical_not(self)
+
+
 def _xor(self, other):
     return self.logical_xor(other)
 
@@ -177,17 +179,20 @@ def _contiguous(self):
     return self
 
 
+def _norm(self, ord=None, dim=None, keepdim=False, dtype=None):
+    return flow._C.norm(self, ord, dim, keepdim, dtype=dtype)
+
+
+def _vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
+    return flow._C.vector_norm(self, ord, dim, keepdim, dtype=dtype)
+
+
+def _matrix_norm(self, ord="fro", dim=(-2, -1), keepdim=False, dtype=None):
+    return flow._C.matrix_norm(self, ord, dim, keepdim, dtype=dtype)
+
+
 def _transpose(self, dim0, dim1):
     return flow._C.transpose(self, dim0, dim1)
-
-
-def _getstate(self):
-    assert self.is_local, "Only support local tensor to pickle"
-    return {"data": self.numpy(), "dtype": self.dtype}
-
-
-def _setstate(self, pickle_dict):
-    return self.__init__(flow.tensor(pickle_dict["data"], dtype=pickle_dict["dtype"]))
 
 
 def is_nonzero(input):
@@ -465,6 +470,36 @@ def _square(self):
     return flow.square(self)
 
 
+def _var(self, dim=None, unbiased=True, keepdim=False):
+    return flow._C.var(self, dim=dim, unbiased=unbiased, keepdim=keepdim)
+
+
+def _std(self, dim=None, unbiased=True, keepdim=False):
+    return flow._C.std(self, dim=dim, unbiased=unbiased, keepdim=keepdim)
+
+
+def _squeeze(self, dim=None):
+    return flow._C.squeeze(self, dim=dim)
+
+
+def _narrow(self, dimension, start, length):
+    return flow._C.narrow(self, dim=dimension, start=start, length=length)
+
+
+def _unsqueeze(self, dim):
+    return flow._C.unsqueeze(self, dim=dim)
+
+
+def _permute(self, *dims):
+    if len(dims) == 1:
+        new_dims = dims[0]
+        if isinstance(new_dims, int):
+            new_dims = (new_dims,)
+    else:
+        new_dims = dims
+    return flow._C.transpose(self, new_dims)
+
+
 def _matmul(self, other):
     return flow.matmul(self, other)
 
@@ -485,7 +520,43 @@ def _triu(self, diagonal=0):
     return flow.triu(self, diagonal=diagonal)
 
 
+def _relu(self, inplace=False):
+    return flow.relu(self, inplace=inplace)
+
+
+def _softmax(self, dim=None):
+    return flow.softmax(self, dim=dim)
+
+
+def _log_softmax(self, dim=None):
+    return flow.log_softmax(self, dim=dim)
+
+
+def _argmax(self, dim=None, keepdim=None):
+    return flow.argmax(self, dim=dim, keepdim=keepdim)
+
+
+def _argmin(self, dim=None, keepdim=None):
+    return flow.argmin(self, dim=dim, keepdim=keepdim)
+
+
+def _roll(self, shifts, dims=None):
+    return flow.roll(self, shifts=shifts, dims=dims)
+
+
+def _len(self):
+    if self.dim() == 0:
+        raise TypeError("len() of a 0-d tensor")
+    return self.shape[0]
+
+
 def _uniform(self, a=0, b=1):
+    if isinstance(a, Tensor):
+        assert a.ndim == 0 and a.nelement() == 1, "a must be a number or scalar tensor!"
+        a = a.numpy().item()
+    if isinstance(b, Tensor):
+        assert b.ndim == 0 and b.nelement() == 1, "b must be a number or scalar tensor!"
+        b = b.numpy().item()
     initializer_conf = flow.random_uniform_initializer(
         minval=a, maxval=b, dtype=self.dtype
     )
@@ -626,8 +697,8 @@ def RegisterMethods():
     Tensor.backward = _backward
     Tensor.__getitem__ = _getitem
     Tensor.__setitem__ = _setitem
-    Tensor.__setstate__ = _setstate
-    Tensor.__getstate__ = _getstate
+    Tensor.__setstate__ = check_point_v2.tensor_setstate
+    Tensor.__getstate__ = check_point_v2.tensor_getstate
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
     Tensor.__eq__ = _eq
@@ -653,6 +724,7 @@ def RegisterMethods():
     Tensor.__pow__ = _pow
     Tensor.__format__ = _format
     Tensor.__floordiv__ = _floor_divide
+    Tensor.__len__ = _len
     Tensor.uniform_ = _uniform
     Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform
@@ -667,6 +739,8 @@ def RegisterMethods():
     Tensor.abs = _abs
     Tensor.exp = _exp
     Tensor.floor_divide = _floor_divide
+    Tensor.argmax = _argmax
+    Tensor.argmin = _argmin
     Tensor.acos = _acos
     Tensor.acosh = _acosh
     Tensor.arccosh = _arccosh
@@ -717,13 +791,27 @@ def RegisterMethods():
     Tensor.rsqrt = _rsqrt
     Tensor.sqrt = _sqrt
     Tensor.square = _square
+    Tensor.var = _var
+    Tensor.std = _std
     Tensor.matmul = _matmul
     Tensor.round = _round
     Tensor.softplus = _softplus
     Tensor.tril = _tril
     Tensor.triu = _triu
     Tensor.contiguous = _contiguous
+    Tensor.norm = _norm
+    Tensor.vector_norm = _vector_norm
+    Tensor.matrix_norm = _matrix_norm
     Tensor.transpose = _transpose
+    Tensor.relu = _relu
+    Tensor.softmax = _softmax
+    Tensor.log_softmax = _log_softmax
+    Tensor.logical_not = _not
+    Tensor.roll = _roll
+    Tensor.squeeze = _squeeze
+    Tensor.narrow = _narrow
+    Tensor.unsqueeze = _unsqueeze
+    Tensor.permute = _permute
 
 
 def register_tensor_op(op_name):

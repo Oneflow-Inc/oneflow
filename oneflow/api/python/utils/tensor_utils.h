@@ -22,11 +22,14 @@ limitations under the License.
 #include <pybind11/functional.h>
 #include <pybind11/numpy.h>
 
+#include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/common/thread_local_callback.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 
 namespace py = pybind11;
 
@@ -36,29 +39,60 @@ namespace one {
 Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t);
 
 template<typename T>
-inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tensor>& t,
-                                                     py::array_t<T> array,
-                                                     Maybe<void> (*Copy)(uint64_t, py::array_t<T>),
-                                                     const std::string& modifier) {
-  auto tensor = JUST(t->AsMirroredTensor());
-  CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
+inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
+    const std::shared_ptr<Tensor>& t, PyObject* array,
+    Maybe<void> (*Copy)(uint64_t, const NumPyArrayPtr&), const std::string& modifier,
+    bool block_host_until_done) {
+  std::shared_ptr<MirroredTensor> tensor;
+  CHECK_OR_RETURN(t->is_eager()) << "eager tensors supported only";
+  if (t->is_local()) {
+    tensor = JUST(t->AsMirroredTensor());
+  } else {
+    const Symbol<ConsistentTensorMeta>& tensor_meta = JUST(t->consistent_tensor_meta());
+    const Symbol<cfg::NdSbp>& nd_sbp = tensor_meta->nd_sbp();
+    CHECK_OR_RETURN(!nd_sbp->sbp_parallel().empty());
+    cfg::SbpParallel broadcast_sbp;
+    broadcast_sbp.mutable_broadcast_parallel();
+    std::vector<Symbol<cfg::SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel_size(),
+                                                    SymbolOf(broadcast_sbp));
+    std::vector<Symbol<cfg::SbpParallel>> none;
+    const auto& consistent_tensor =
+        JUST(functional::ToConsistent(t, tensor_meta->parallel_desc(), sbp_tuple, none));
+    tensor = JUST(consistent_tensor->cur_rank_phy_tensor());
+  }
 
-  const auto& Callback = std::make_shared<std::function<void(uint64_t)>>(
-      [&array, &Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array)); });
-  bool is_printed = false;
-  JUST(SpinCounter::SpinWait(
-      1,
-      [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-        return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-          return builder->SyncAccessBlobByCallback(tensor, sc, Callback, modifier);
-        });
-      },
-      [&is_printed]() {
-        if (!is_printed) {
-          blocking::StackInfoCallback();
-          is_printed = true;
-        }
-      }));
+  if (block_host_until_done) {
+    NumPyArrayPtr array_ptr(array);
+    const auto& Callback = std::make_shared<std::function<void(uint64_t)>>(
+        [array_ptr, Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array_ptr)); });
+    bool is_printed = false;
+    JUST(SpinCounter::SpinWait(
+        1,
+        [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
+          return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+            return builder->SyncAccessBlobByCallback(tensor, sc, Callback, modifier);
+          });
+        },
+        [&is_printed]() {
+          if (!is_printed) {
+            blocking::StackInfoCallback();
+            is_printed = true;
+          }
+        }));
+  } else {
+    Py_INCREF(array);
+    NumPyArrayPtr array_ptr(array, [array]() {
+      py::gil_scoped_acquire acquire;
+      Py_DECREF(array);
+    });
+
+    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->AccessBlobByCallback(
+          tensor,
+          [array_ptr, Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array_ptr)); },
+          modifier);
+    }));
+  }
   return Maybe<void>::Ok();
 }
 
@@ -75,6 +109,11 @@ Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor);
 
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                       const Optional<Symbol<Device>>& device, bool requires_grad);
+
+Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
+                                           Symbol<ParallelDesc> placement,
+                                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                                           bool requires_grad);
 
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other);
 

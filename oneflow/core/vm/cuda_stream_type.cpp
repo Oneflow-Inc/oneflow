@@ -17,26 +17,26 @@ limitations under the License.
 
 #include "oneflow/core/vm/cuda_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/stream.msg.h"
-#include "oneflow/core/vm/thread_ctx.msg.h"
+#include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/cuda_optional_event_record_status_querier.h"
 #include "oneflow/core/vm/cuda_stream_handle_device_context.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace vm {
 
 void CudaStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const {
-  device_ctx->reset(
-      new CudaStreamHandleDeviceCtx(stream->mut_callback_list(), stream->device_id()));
+  device_ctx->reset(new CudaStreamHandleDeviceCtx(stream->device_id()));
 }
 
 void CudaStreamType::InitInstructionStatus(const Stream& stream,
                                            InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(CudaOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
-  CudaOptionalEventRecordStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data(),
-                                                     stream.device_id());
+  auto* data_ptr = status_buffer->mut_buffer()->mut_data();
+  CudaOptionalEventRecordStatusQuerier::PlacementNew(data_ptr, nullptr);
 }
 
 void CudaStreamType::DeleteInstructionStatus(const Stream& stream,
@@ -51,13 +51,10 @@ bool CudaStreamType::QueryInstructionStatusDone(
   return CudaOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-void CudaStreamType::set_has_event_record(InstructionStatusBuffer* status_buffer, bool val) const {
-  auto* querier =
-      CudaOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
-  return querier->set_has_event_record(val);
-}
-
 void CudaStreamType::Compute(Instruction* instruction) const {
+  OF_PROFILER_RANGE_PUSH(
+      "S:"
+      + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction));
   auto* stream = instruction->mut_stream();
   cudaSetDevice(stream->device_id());
   {
@@ -66,17 +63,17 @@ void CudaStreamType::Compute(Instruction* instruction) const {
     instr_type_id.instruction_type().Compute(instruction);
     OF_CUDA_CHECK(cudaGetLastError());
   }
-  stream->mut_callback_list()->MoveTo(instruction->mut_callback_list());
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
   CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
+  OF_PROFILER_RANGE_POP();
 }
 
-ObjectMsgPtr<StreamDesc> CudaStreamType::MakeStreamDesc(const Resource& resource,
-                                                        int64_t this_machine_id) const {
-  if (!resource.has_gpu_device_num()) { return ObjectMsgPtr<StreamDesc>(); }
+intrusive::shared_ptr<StreamDesc> CudaStreamType::MakeStreamDesc(const Resource& resource,
+                                                                 int64_t this_machine_id) const {
+  if (!resource.has_gpu_device_num()) { return intrusive::shared_ptr<StreamDesc>(); }
   std::size_t device_num = resource.gpu_device_num();
-  auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CudaStreamType>());
+  auto ret = intrusive::make_shared<StreamDesc>();
+  ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CudaStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(device_num);
   ret->set_num_streams_per_thread(1);

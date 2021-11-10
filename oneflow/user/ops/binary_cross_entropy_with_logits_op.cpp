@@ -169,7 +169,7 @@ REGISTER_USER_OP_GRAD("binary_cross_entropy_with_logits")
               .Attr("has_pos_weight", op.attr<bool>("has_pos_weight"));
         }
         user_op::UserOpConfWrapper grad_op = builder.Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "dx", 0);
+        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "input", 0);
         AddOp(grad_op);
       }
       return Maybe<void>::Ok();

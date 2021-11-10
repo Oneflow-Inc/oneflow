@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/object_msg/flat_msg_view.h"
+#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
-#include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/vm/instruction_operand.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/vm/object_wrapper.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
@@ -42,10 +42,10 @@ class NewParallelDescSymbolInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(ParallelDescObjectInstrOperand);
   // clang-format on
 
-  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+  void Infer(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const override {
     Run<&IdUtil::GetTypeId>(vm, instr_msg);
   }
-  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+  void Compute(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const override {
     Run<&IdUtil::GetValueId>(vm, instr_msg);
   }
   void Infer(Instruction*) const override { UNIMPLEMENTED(); }
@@ -53,15 +53,15 @@ class NewParallelDescSymbolInstructionType final : public InstructionType {
 
  private:
   template<int64_t (*GetLogicalObjectId)(int64_t)>
-  void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+  void Run(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
     FlatMsgView<ParallelDescObjectInstrOperand> view(instr_msg->operand());
     FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
       int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id(i));
-      auto logical_object = ObjectMsgPtr<LogicalObject>::New(logical_object_id);
+      auto logical_object = intrusive::make_shared<LogicalObject>(logical_object_id);
       CHECK(vm->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
       auto* global_device_id2mirrored_object =
           logical_object->mut_global_device_id2mirrored_object();
-      auto mirrored_object = ObjectMsgPtr<MirroredObject>::New(logical_object.Mutable(), 0);
+      auto mirrored_object = intrusive::make_shared<MirroredObject>(logical_object.Mutable(), 0);
       {
         const auto& parallel_desc =
             Global<symbol::Storage<ParallelDesc>>::Get()->GetPtr(view->logical_object_id(i));

@@ -16,8 +16,6 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/naive_b2p_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing_zeros_task_node.h"
-#include "oneflow/core/common/id_util.h"
-#include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/device/stream_index.h"
 
 namespace oneflow {
@@ -57,7 +55,7 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
       } else {
         const int64_t out_machine_id = CHECK_JUST(out_parallel_desc.MachineId4ParallelId(out_id));
         const int64_t out_dev_phy_id = CHECK_JUST(out_parallel_desc.DeviceId4ParallelId(out_id));
-        int64_t thrd_id;
+        int64_t thrd_id = -1;
         if (out_parallel_desc.device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
           DeviceId device_id{static_cast<DeviceId::rank_t>(out_machine_id), DeviceType::kGPU,
@@ -65,12 +63,16 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
           auto* stream_index_generator =
               Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
           auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
-          thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
+          thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
 #else
           UNIMPLEMENTED();
 #endif
         } else if (out_parallel_desc.device_type() == DeviceType::kCPU) {
-          thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(out_machine_id);
+          DeviceId device_id{static_cast<DeviceId::rank_t>(out_machine_id), DeviceType::kCPU, 0};
+          auto* stream_index_generator =
+              Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
+          auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
+          thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
         } else {
           UNIMPLEMENTED();
         }

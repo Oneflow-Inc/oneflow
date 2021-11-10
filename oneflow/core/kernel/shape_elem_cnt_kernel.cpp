@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/primitive/include/fill.h"
 
 namespace oneflow {
 
@@ -32,8 +33,10 @@ class ShapeElemCntKernel final : public Kernel {
 template<DeviceType device_type, typename T>
 void ShapeElemCntKernel<device_type, T>::ForwardDataContent(KernelContext* ctx) const {
   const T elem_cnt = GetShapePartialElemCnt(ctx->BnInOp2Blob("x")->shape());
-  NewKernelUtil<device_type>::Fill(ctx->device_ctx(), 1, elem_cnt,
-                                   ctx->BnInOp2Blob("y")->mut_dptr<T>());
+  std::unique_ptr<primitive::Fill> fill = primitive::NewPrimitive<primitive::FillFactory>(
+      ctx->stream_ctx()->device_type(), ctx->BnInOp2Blob("y")->data_type());
+  CHECK(fill);
+  fill->Launch(ctx->stream_ctx(), ctx->BnInOp2Blob("y")->mut_dptr(), elem_cnt, 1);
 }
 
 template<DeviceType device_type, typename T>

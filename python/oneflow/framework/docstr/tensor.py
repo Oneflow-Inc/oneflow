@@ -87,3 +87,60 @@ add_docstr(
     See :func:`oneflow.transpose`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.logical_not,
+    """
+    logical_not() -> Tensor
+    See :func:`oneflow.logical_not`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.std,
+    """
+    See :func:`oneflow.std`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.var,
+    """
+    See :func:`oneflow.var`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.squeeze,
+    """
+    See :func:`oneflow.squeeze`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.matmul,
+    """
+    See :func:`oneflow.matmul`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.narrow,
+    """
+    See :func:`oneflow.narrow`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.unsqueeze,
+    """
+    See :func:`oneflow.unsqueeze`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.permute,
+    """
+    See :func:`oneflow.permute`
+    """,
+)

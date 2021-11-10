@@ -3,20 +3,22 @@
 **OneFlow is a performance-centered and open-source deep learning framework.**
 
 [![Simple CI](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml/badge.svg)](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml)
-[![Documentation Status](https://readthedocs.org/projects/oneflow/badge/?version=master)](https://oneflow.readthedocs.io/en/master/?badge=master)
+[![Nightly Docker Image](https://github.com/Oneflow-Inc/docker-images/actions/workflows/oneflow-nightly.yml/badge.svg)](https://github.com/Oneflow-Inc/docker-images/actions/workflows/oneflow-nightly.yml)
+[![Nightly Release](https://github.com/Oneflow-Inc/oneflow/actions/workflows/release.yml/badge.svg)](https://github.com/Oneflow-Inc/oneflow/actions/workflows/release.yml)
+[![Documentation](https://readthedocs.org/projects/oneflow/badge/?version=master)](https://oneflow.readthedocs.io/en/master/?badge=master)
 
 ## Latest News
 
-- Version 0.5rc2 is out!
+- Version 0.5.0 is out!
   - First class support for eager execution. The deprecated APIs are moved to `oneflow.compatible.single_client`
   - Drop-in replacement of `import torch` for existing Pytorch projects. You could test it by inter-changing `import oneflow as torch` and `import torch as flow`.
-  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.5rc2)
+  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.5.0)
 
 ## Install OneFlow
 
 ### System Requirements
 
-- Python 3.6, 3.7, 3.8 (3.9 is available in nightly version)
+- Python 3.6, 3.7, 3.8, 3.9
 - (**Highly recommended**) Upgrade pip
 
   ```
@@ -34,7 +36,7 @@
 - To install latest stable release of OneFlow with CUDA support:
 
   ```bash
-  python3 -m pip install -f https://release.oneflow.info oneflow==0.5rc2+cu102
+  python3 -m pip install -f https://release.oneflow.info oneflow==0.5.0+cu102
   ```
 
 - To install nightly release of OneFlow with CUDA support:
@@ -47,7 +49,7 @@
 
   - Stable
     ```bash
-    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.5rc2+[PLATFORM]
+    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.5.0+[PLATFORM]
     ```
   - Nightly
     ```
@@ -119,7 +121,7 @@ docker pull oneflowinc/oneflow:nightly-cuda11.1
   - In the root directory of OneFlow source code, run:
 
     ```
-    python3 docker/package/manylinux/build_wheel.py --python_version=3.6
+    python3 docker/package/manylinux/build_wheel.py --inplace --python_version=3.6
     ```
 
     This should produce `.whl` files in the directory `wheelhouse`
@@ -202,9 +204,9 @@ docker pull oneflowinc/oneflow:nightly-cuda11.1
 
   - Simple validation
 
-        ```
-        python3 -m oneflow --doctor
-        ```
+    ```
+    python3 -m oneflow --doctor
+    ```
 
     </details>
 
@@ -222,33 +224,8 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 
 ## Getting Started
 
-<details>
-<summary>3 minutes to run MNIST.</summary>
-
-- Clone the demo code from OneFlow documentation
-
-  ```
-  git clone https://github.com/Oneflow-Inc/oneflow-documentation.git
-  cd oneflow-documentation/cn/docs/single_client/code/quick_start/
-  ```
-
-- Run it in Python
-
-  ```
-  python mlp_mnist.py
-  ```
-
-- Oneflow is running and you got the training loss
-  ```
-  2.7290366
-  0.81281316
-  0.50629824
-  0.35949975
-  0.35245502
-  ...
-  ```
-- More info on this demo, please refer to [doc on quick start](https://docs.oneflow.org/master/single_client/quick_start/quickstart_in_3_min.html).
-</details>
+- Please refer to [QUICKSTART](https://docs.oneflow.org/en/master/basics/01_quickstart.html) 
+- 中文版请参见 [快速上手](https://docs.oneflow.org/master/basics/01_quickstart.html)
 
 ## Documentation
 

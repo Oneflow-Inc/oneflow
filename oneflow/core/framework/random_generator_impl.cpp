@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator_impl.h"
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/functional/functional.h"
@@ -51,8 +50,6 @@ Maybe<void> CPUSynchronize() {
 }
 
 }  // namespace
-
-CPUGeneratorImpl::~CPUGeneratorImpl() { CHECK_JUST(CPUSynchronize()); }
 
 struct CPUGeneratorState {
   static constexpr int64_t state_size = std::mt19937::state_size;  // 624
@@ -168,8 +165,9 @@ CUDAGeneratorImpl::CUDAGeneratorImpl(uint64_t seed, int device_index)
 }
 
 CUDAGeneratorImpl::~CUDAGeneratorImpl() {
+  // Skip if cuda runtime has been deinitialized.
+  if (cudaErrorCudartUnloading == cudaSetDevice(this->device_index())) { return; }
   CudaCurrentDeviceGuard dev_guard(this->device_index());
-  CHECK_JUST(CUDASynchronize());
   OF_CUDA_CHECK(cudaFree(curand_states_));
 }
 
@@ -403,26 +401,9 @@ Maybe<CPUGeneratorImpl> MakeGeneratorImpl<CPUGeneratorImpl>(uint64_t seed, int d
 
 #ifdef WITH_CUDA
 
-int GetCudaDeviceIndex() {
-  int cuda_device_index = 0;
-  if (CHECK_JUST(GlobalMultiClientEnv())) {
-    cuda_device_index = GlobalProcessCtx::LocalRank();
-  } else {
-    OF_CUDA_CHECK(cudaGetDevice(&cuda_device_index));
-  }
-  return cuda_device_index;
-}
-
-int GetCudaDeviceCount() {
-  /* static */ int cuda_device_count = 0;
-  CudaCurrentDeviceGuard dev_guard(detail::GetCudaDeviceIndex());
-  OF_CUDA_CHECK(cudaGetDeviceCount(&cuda_device_count));
-  return cuda_device_count;
-}
-
 template<>
 DeviceKey MakeDeviceKey<CUDAGeneratorImpl>(int device_index) {
-  if (device_index == -1) { device_index = detail::GetCudaDeviceIndex(); }
+  if (device_index == -1) { device_index = GetCudaDeviceIndex(); }
   DeviceKey device_key;
   device_key.device_type = DeviceType::kGPU;
   device_key.device_index = device_index;

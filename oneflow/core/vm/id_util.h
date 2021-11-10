@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_LOGICAL_OBJECT_ID_H_
 
 #include <cstdint>
-#include "oneflow/core/object_msg/flat_msg.h"
+#include "oneflow/core/intrusive/flat_msg.h"
 
 namespace oneflow {
 namespace vm {

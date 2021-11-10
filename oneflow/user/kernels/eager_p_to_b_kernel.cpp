@@ -18,10 +18,10 @@ limitations under the License.
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
+#include "oneflow/core/primitive/include/add.h"
 
 namespace oneflow {
 
@@ -65,7 +65,7 @@ size_t InferEagerPToBKernelTmpBufferSize(user_op::InferContext* ctx) {
 
 }  // namespace
 
-template<typename T, DeviceType device_type>
+template<DeviceType device_type>
 class EagerPToBKernel final : public user_op::OpKernel {
  public:
   EagerPToBKernel() = default;
@@ -91,6 +91,9 @@ class EagerPToBKernel final : public user_op::OpKernel {
 
     Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
                         total_elem_cnt * GetSizeOfDataType(out->data_type()));
+    std::unique_ptr<primitive::Add> add_primitive =
+        primitive::NewPrimitive<primitive::AddFactory>(ctx->device_type(), in->data_type());
+    CHECK(add_primitive);
     for (const auto& pair : p2p_pair) {
       int64_t src = pair.first;
       int64_t dst = pair.second;
@@ -102,29 +105,23 @@ class EagerPToBKernel final : public user_op::OpKernel {
       if (GlobalProcessCtx::Rank() == dst) {
         CHECK_JUST(Recv<device_type>(tmp_buffer_ptr, total_elem_cnt, out->data_type(), src,
                                      ctx->device_ctx()));
-        NewKernelUtil<device_type>::Axpy(ctx->device_ctx(), total_elem_cnt, static_cast<T>(1),
-                                         reinterpret_cast<const T*>(tmp_buffer_ptr), 1,
-                                         out->mut_dptr<T>(), 1);
+        add_primitive->Launch(ctx->stream_ctx(), tmp_buffer_ptr, out->dptr(), out->mut_dptr(),
+                              total_elem_cnt);
       }
     }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EAGER_P_TO_B_KERNEL(dtype, device)                                     \
-  REGISTER_USER_KERNEL("eager_p_to_b")                                                  \
-      .SetCreateFn<EagerPToBKernel<dtype, device>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_EAGER_P_TO_B_KERNEL(device)                \
+  REGISTER_USER_KERNEL("eager_p_to_b")                      \
+      .SetCreateFn<EagerPToBKernel<device>>()               \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)) \
       .SetInferTmpSizeFn(InferEagerPToBKernelTmpBufferSize);
 
-REGISTER_EAGER_P_TO_B_KERNEL(float, DeviceType::kCPU)
-REGISTER_EAGER_P_TO_B_KERNEL(double, DeviceType::kCPU)
+REGISTER_EAGER_P_TO_B_KERNEL(DeviceType::kCPU)
 #if defined(WITH_CUDA) && HAS_GPU_SEND_RECV
-REGISTER_EAGER_P_TO_B_KERNEL(float16, DeviceType::kGPU)
-REGISTER_EAGER_P_TO_B_KERNEL(float, DeviceType::kGPU)
-REGISTER_EAGER_P_TO_B_KERNEL(double, DeviceType::kGPU)
+REGISTER_EAGER_P_TO_B_KERNEL(DeviceType::kGPU)
 #endif
 
 }  // namespace oneflow

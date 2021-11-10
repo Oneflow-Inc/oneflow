@@ -19,13 +19,13 @@ limitations under the License.
 #include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/global.h"
-#include "oneflow/core/vm/stream.msg.h"
-#include "oneflow/core/vm/thread_ctx.msg.h"
+#include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/profiler/profiler.h"
@@ -156,7 +156,7 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
           OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
           const Blob* blob = &input_blob_object->blob();
           CHECK_NOTNULL(blob);
-          of_blob->mut_blob()->CopyHeaderFrom(of_blob->mut_device_ctx(), blob);
+          of_blob->mut_blob()->CopyHeaderFrom(blob);
           if (blob->dptr() == nullptr) {
             end_event_record->Init(std::make_shared<NaiveEventRecord>());
           } else {
@@ -183,7 +183,7 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
           OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
           Blob* mut_blob = output_blob_object->mut_blob();
           CHECK_NOTNULL(mut_blob);
-          mut_blob->CopyHeaderFrom(of_blob->mut_device_ctx(), &of_blob->blob());
+          mut_blob->CopyHeaderFrom(&of_blob->blob());
           if (mut_blob->dptr() == nullptr) {
             end_event_record->Init(std::make_shared<NaiveEventRecord>());
           } else {
