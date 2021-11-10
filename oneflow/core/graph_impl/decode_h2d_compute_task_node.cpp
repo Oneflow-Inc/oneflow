@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
-#include "oneflow/core/graph/task_stream_id.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 
 namespace oneflow {
 

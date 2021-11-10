@@ -33,7 +33,7 @@ limitations under the License.
 #include "oneflow/core/memory/chunk_manager.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/job/collective_boxing/scheduler.h"
-#include "oneflow/core/graph/task_stream_id.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif  // WITH_CUDA
@@ -88,7 +88,7 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
     }
     Global<ResourceDesc, ForSession>::New(resource, GlobalProcessCtx::NumOfProcessPerNode());
     Global<IDMgr>::New();
-    Global<StreamIndexGeneratorManager>::New();
+    Global<TaskStreamIndexManager>::New();
     // TODO(chengcheng): refactor JobBuildAndInferCtxMgr
     Global<LazyJobBuildAndInferCtxMgr>::New();
 
@@ -146,7 +146,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
     }
 
     Global<LazyJobBuildAndInferCtxMgr>::Delete();
-    Global<StreamIndexGeneratorManager>::Delete();
+    Global<TaskStreamIndexManager>::Delete();
     Global<IDMgr>::Delete();
 
     // TODO(chengcheng): remove template ForEnv and ForSession

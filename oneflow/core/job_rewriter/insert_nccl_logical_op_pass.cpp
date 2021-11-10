@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
-#include "oneflow/core/graph/task_stream_id.h"
 
 #ifdef WITH_CUDA
 

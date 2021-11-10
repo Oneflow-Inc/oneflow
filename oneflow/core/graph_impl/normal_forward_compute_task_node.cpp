@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
-#include "oneflow/core/graph/task_stream_id.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {

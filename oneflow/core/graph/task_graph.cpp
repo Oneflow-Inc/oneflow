@@ -29,7 +29,7 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 #include "oneflow/core/primitive/include/memcpy.h"
-#include "oneflow/core/graph/task_stream_id.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 
 namespace oneflow {
 
@@ -294,9 +294,8 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
       if (op_node->op().op_conf().has_stream_name_hint()) {
         const std::string& stream_name_hint = op_node->op().op_conf().stream_name_hint();
         LOG(INFO) << "set op: " << op_node->op().op_name() << " to stream: " << stream_name_hint;
-        stream_index =
-            Global<StreamIndexGeneratorManager>::Get()->GetGenerator(device_id)->GenerateNamed(
-                stream_name_hint);
+        stream_index = Global<TaskStreamIndexManager>::Get()->GetNamedTaskStreamIndex(
+            device_id, stream_name_hint);
       } else {
         stream_index = GetTaskStreamIndex(comp_task_node->GetTaskType(), device_id);
       }
