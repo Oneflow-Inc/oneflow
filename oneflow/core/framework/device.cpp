@@ -40,6 +40,7 @@ inline size_t HashDevice(const std::string& type, int64_t device_id) {
 
 Device::Device(const std::string& type, int64_t device_id)
     : type_(type),
+      device_type_(kInvalidDevice),
       device_id_(device_id),
       hash_value_(HashDevice(type, device_id)),
       transport_local_dep_object_(),
@@ -47,8 +48,8 @@ Device::Device(const std::string& type, int64_t device_id)
 
 Maybe<void> Device::Init() {
   if (type_ == "auto") { return Maybe<void>::Ok(); }
-  DeviceType dev_type = JUST(DeviceType4DeviceTag(JUST(of_type())));
-  mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, device_id_);
+  device_type_ = JUST(DeviceType4DeviceTag(JUST(of_type())));
+  mem_case_ = MemoryCaseUtil::MakeMemCase(device_type_, device_id_);
   const auto& opt_device_transport_tag = JUST(GetSharedTransportDeviceType());
   if (opt_device_transport_tag.has_value()) {
     const auto& device_transport_tag = *JUST(opt_device_transport_tag);

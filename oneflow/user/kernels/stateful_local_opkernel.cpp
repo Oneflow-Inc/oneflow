@@ -438,17 +438,25 @@ Maybe<const user_op::OpKernel*> StatefulLocalOpKernel::ChooseOpKernel(
 
   const auto& op_type_name = user_op_conf_->op_type_name();
 
-  // std::array<std::array<std::vector<std::pair<kernel_reg_val, kernel>>>, 8>, 8>
+  DataType primary_dtype = kInvalidDataType;
+  if (!inputs->empty()) {
+    primary_dtype = inputs->at(0)->blob_desc().data_type();
+  } else {
+    primary_dtype = outputs->at(0)->blob_desc().data_type();
+  }
+  for (const auto& pair : dev_type2cached_kernels[primary_dtype]) {
+    if (pair.first->is_matched_hob(*reg_ctx_)) {
+      reg_ctx_->Update(nullptr, nullptr, nullptr);
+      return pair.second.get();
+    }
+  }
 
   const auto* kernel_reg_val =
       JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_type_name, *reg_ctx_));
   CHECK_NOTNULL(kernel_reg_val);
-  // find cached kernel by registry result
-  auto it = op_kernel_map_.find(kernel_reg_val);
-  if (it != op_kernel_map_.end()) { return it->second.get(); }
-
   auto* kernel = kernel_reg_val->create_fn();
-  op_kernel_map_.emplace(kernel_reg_val, std::shared_ptr<const user_op::OpKernel>(kernel));
+  dev_type2cached_kernels[primary_dtype]
+      .push_back({kernel_reg_val, std::shared_ptr<const user_op::OpKernel>(kernel)});
 
   infer_tmp_size_fn_map_.emplace(kernel, &kernel_reg_val->infer_tmp_size_fn);
 

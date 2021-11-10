@@ -464,8 +464,7 @@ class StatefulLocalOpKernel final {
   bool need_check_mem_case_;
   user_op::TensorDescInferFn tensor_desc_infer_fn_;
   user_op::DataTypeInferFn data_type_infer_fn_;
-  HashMap<const user_op::OpKernelRegistryResult*, std::shared_ptr<const user_op::OpKernel>>
-      op_kernel_map_;
+  std::array<std::vector<std::pair<const user_op::OpKernelRegistryResult*, std::shared_ptr<const user_op::OpKernel>>>, DataType_MAX> dev_type2cached_kernels;
   HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelState>> op_kernel_state_map_;
   HashMap<const user_op::OpKernel*, const user_op::InferTmpSizeFn*> infer_tmp_size_fn_map_;
   std::unique_ptr<vm::EagerBlobObject> tmp_blob_object_;
