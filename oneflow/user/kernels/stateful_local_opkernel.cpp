@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/stream/include/stream_context_adapter.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace one {
@@ -434,9 +435,11 @@ StatefulLocalOpKernel::~StatefulLocalOpKernel() = default;
 Maybe<const user_op::OpKernel*> StatefulLocalOpKernel::ChooseOpKernel(
     const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
     const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result) {
-  reg_ctx_->Update(inputs, outputs, consistent_tensor_infer_result);
-
-  const auto& op_type_name = user_op_conf_->op_type_name();
+  OF_PROFILER_RANGE_GUARD("ChooseOpKernel");
+  {
+    OF_PROFILER_RANGE_GUARD("Update reg_ctx");
+    reg_ctx_->Update(inputs, outputs, consistent_tensor_infer_result);
+  }
 
   DataType primary_dtype = kInvalidDataType;
   if (!inputs->empty()) {
@@ -444,19 +447,25 @@ Maybe<const user_op::OpKernel*> StatefulLocalOpKernel::ChooseOpKernel(
   } else {
     primary_dtype = outputs->at(0)->blob_desc().data_type();
   }
-  for (const auto& pair : dev_type2cached_kernels[primary_dtype]) {
-    if (pair.first->is_matched_hob(*reg_ctx_)) {
-      reg_ctx_->Update(nullptr, nullptr, nullptr);
-      return pair.second.get();
+  {
+    OF_PROFILER_RANGE_GUARD("search in cache");
+    for (const auto& pair : dtype2cached_kernels[primary_dtype]) {
+      if (pair.first->is_matched_hob(*reg_ctx_)) {
+        reg_ctx_->Update(nullptr, nullptr, nullptr);
+        return pair.second.get();
+      }
     }
   }
 
+  OF_PROFILER_RANGE_GUARD("fallback");
+
+  const auto& op_type_name = user_op_conf_->op_type_name();
   const auto* kernel_reg_val =
       JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_type_name, *reg_ctx_));
   CHECK_NOTNULL(kernel_reg_val);
   auto* kernel = kernel_reg_val->create_fn();
-  dev_type2cached_kernels[primary_dtype]
-      .push_back({kernel_reg_val, std::shared_ptr<const user_op::OpKernel>(kernel)});
+  dtype2cached_kernels[primary_dtype].push_back(
+      {kernel_reg_val, std::shared_ptr<const user_op::OpKernel>(kernel)});
 
   infer_tmp_size_fn_map_.emplace(kernel, &kernel_reg_val->infer_tmp_size_fn);
 
