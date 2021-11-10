@@ -57,7 +57,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
     sbp_collector.ProxySbpCandidate(op_graph, op_name2sbp_node_, sbp_graph_);
   }
   JUST(InitCopyCost(op_graph));
-  sbp_graph_.RandomSbpSignature();
+  sbp_graph_.RandomSbpSignature(use_sbp_collector_);
   return Maybe<void>::Ok();
 }
 
@@ -176,6 +176,8 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
     for (auto* sbp_edge : sbp_node_consumer->EdgesIn) {
       // producer sbp node
       const auto* sbp_node_producer = sbp_edge->StartNode;
+      // skip it if proxy
+      if (!sbp_node_producer->op_node) continue;
       sbp_edge->Cost.resize(sbp_node_producer->SbpSignatureList.size());
       int32_t consumer_sbp_size = sbp_node_consumer->SbpSignatureList.size();
       // look through sbp signature in producer
@@ -185,7 +187,7 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
     }
     // Find all those cases with wait time
     // Do not skip edges carrying no lbi
-    sbp_node_consumer->InitializeCopyCost(false);
+    sbp_node_consumer->InitializeCopyCost(false, use_sbp_collector_);
     for (auto* sbp_edge : sbp_node_consumer->EdgesIn) {
       // skip it if proxy
       if (!sbp_edge->StartNode->op_node) continue;
@@ -199,7 +201,7 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
     }
 
     // Re-compute the costs, skip edges carrying no lbi
-    sbp_node_consumer->InitializeCopyCost(true);
+    sbp_node_consumer->InitializeCopyCost(true, use_sbp_collector_);
   });
   return Maybe<void>::Ok();
 }

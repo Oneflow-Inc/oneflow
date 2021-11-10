@@ -66,7 +66,7 @@ class SbpGraph {
       const std::function<double(SbpNode<SbpSignature>*, SbpSignature*)>& SbpComputationCost);
 
   // Randomly assign a SbpSignature strategy
-  void RandomSbpSignature();
+  void RandomSbpSignature(bool use_sbp_collector_);
 
   // Compute Cost for current strategy
   double ComputeCost();
@@ -213,16 +213,16 @@ void SbpGraph<SbpSignature>::AssembleSbpSignature(
 };
 
 template<class SbpSignature>
-void SbpGraph<SbpSignature>::RandomSbpSignature() {
+void SbpGraph<SbpSignature>::RandomSbpSignature(bool use_sbp_collector_) {
   for (const auto& this_node : NodeList) {
-#ifdef USE_SBP_COLLECTOR_
-    if (this_node->SbpSignatureList.size() > 0)
+    if (use_sbp_collector_) {
+      if (this_node->SbpSignatureList.size() > 0)
+        this_node->FinalSbpSignatureId = rand() % this_node->SbpSignatureList.size();
+      else
+        this_node->FinalSbpSignatureId = rand() % this_node->ParallelCandidates.size();
+    } else {
       this_node->FinalSbpSignatureId = rand() % this_node->SbpSignatureList.size();
-    else
-      this_node->FinalSbpSignatureId = rand() % this_node->ParallelCandidates.size();
-#else  // USE_SBP_COLLECTOR_
-    this_node->FinalSbpSignatureId = rand() % this_node->SbpSignatureList.size();
-#endif  // USE_SBP_COLLECTOR_
+    }
   }
 };
 
@@ -472,7 +472,7 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
   std::vector<int32_t> nbh_id2NodeListId;
   // Not accept a number lower than 1
   if (nbh_num < 1) nbh_num = 1;
-    nbh_id2NodeListId.resize(nbh_num);
+  nbh_id2NodeListId.resize(nbh_num);
   std::vector<int32_t> OrgSbpSignatureId(nbh_num);
   // store all the NodeListId whose corresponding nodes will be visited
   // We can use unordered_map to do this but vector is faster
@@ -489,46 +489,45 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
   std::vector<bool> node_tags(NodeList.size(), false);
   std::vector<int32_t> nbh_1ring_buffer;
 
-
   while (head != tail && step < NodeList.size()) {
     auto* this_node = NodeList[PreVisitNodeList[head]];
-      if (nbh_num <= 1) {
+    if (nbh_num <= 1) {
       // Greedy strategy on nodes, here we use nbh_1ring to store the nbh_id2NodeListId information
       // for reutilization
       nbh_1ring[0] = this_node->NodeListId;
       // store the original sbp signature of the 1-ring neighborhood for comparison
       OrgSbpSignatureId[0] = this_node->FinalSbpSignatureId;
       CostRdc = NbhGreedyStrategy(nbh_1ring);
-      } else {
-        // Use GreedyStrategy on the one ring neighborhood of this node.
-        this_node->OneRingNeighborhood(nbh_1ring);
+    } else {
+      // Use GreedyStrategy on the one ring neighborhood of this node.
+      this_node->OneRingNeighborhood(nbh_1ring);
       // store the original sbp signature of the 1-ring neighborhood for comparison
       OrgSbpSignatureId.resize(nbh_1ring.size());
       for (int32_t nbh_id = 0; nbh_id < nbh_1ring.size(); nbh_id++) {
         OrgSbpSignatureId[nbh_id] = NodeList[nbh_1ring[nbh_id]]->FinalSbpSignatureId;
       }
-        if (nbh_1ring.size() <= nbh_num) {
+      if (nbh_1ring.size() <= nbh_num) {
         CostRdc = NbhGreedyStrategy(nbh_1ring);
-        } else {
-          // Use GreedyStrategy on part of the one ring neighborhood.
-          // Loop through the neighborhood. Each loop should contain the centroid.
+      } else {
+        // Use GreedyStrategy on part of the one ring neighborhood.
+        // Loop through the neighborhood. Each loop should contain the centroid.
 
-          // Initialize part of the one ring neighborhood
-          int32_t nbh_1ring_id = nbh_1ring.size() - nbh_num;
-          for (int32_t nbh_id = 1; nbh_id < nbh_num; ++nbh_id) {
-            nbh_id2NodeListId[nbh_id] = nbh_1ring[++nbh_1ring_id];
-          }
-          // loop through the one ring neighborhood
+        // Initialize part of the one ring neighborhood
+        int32_t nbh_1ring_id = nbh_1ring.size() - nbh_num;
+        for (int32_t nbh_id = 1; nbh_id < nbh_num; ++nbh_id) {
+          nbh_id2NodeListId[nbh_id] = nbh_1ring[++nbh_1ring_id];
+        }
+        // loop through the one ring neighborhood
         CostRdc = 0;
-          int32_t nbh_id = 0;
-          for (nbh_1ring_id = 0; nbh_1ring_id < nbh_1ring.size(); ++nbh_1ring_id) {
-            nbh_id2NodeListId[nbh_id] = nbh_1ring[nbh_1ring_id];
-            CostRdc += NbhGreedyStrategy(nbh_id2NodeListId);
-            // nbh_id for the next step
-            if (++nbh_id >= nbh_num) nbh_id = 1;
-          }
+        int32_t nbh_id = 0;
+        for (nbh_1ring_id = 0; nbh_1ring_id < nbh_1ring.size(); ++nbh_1ring_id) {
+          nbh_id2NodeListId[nbh_id] = nbh_1ring[nbh_1ring_id];
+          CostRdc += NbhGreedyStrategy(nbh_id2NodeListId);
+          // nbh_id for the next step
+          if (++nbh_id >= nbh_num) nbh_id = 1;
         }
       }
+    }
     // change of strategies
     if (CostRdc != 0) {
       // Add neighborhood into pre-visited node list for each node with changing strategy
