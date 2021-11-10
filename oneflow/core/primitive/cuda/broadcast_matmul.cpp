@@ -88,7 +88,7 @@ void LaunchBroadcastMatmul(StreamContext* stream_ctx, DataType data_type,
                            const int64_t* a_batch_dims, const int64_t* b_batch_dims,
                            const int64_t* c_batch_dims, int64_t m, int64_t n, int64_t k,
                            Scalar alpha, const void* a, const void* b, Scalar beta, void* c) {
-  auto* cuda_stream_ctx = CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx));
+  auto* cuda_stream_ctx = stream_ctx->As<CudaStreamContext>();
   const auto cuda_data_type = GetCudaDataType(data_type);
   const auto compute_type = GetComputeType(data_type);
   const auto sp_alpha = GetCublasScalarParameter(alpha, compute_type);
