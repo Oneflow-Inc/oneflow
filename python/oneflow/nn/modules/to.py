@@ -125,7 +125,7 @@ def to_op(input, *args, **kwargs):
 
     """
     device, dtype, copy = _parse_args(*args, **kwargs)
-    
+
     device, dtype = _validate_args(device, dtype, copy, input)
 
     return flow._C.to(input, device, dtype, copy)

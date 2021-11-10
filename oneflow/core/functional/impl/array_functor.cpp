@@ -2028,84 +2028,87 @@ class MeshgridFunctor {
   }
 };
 
-namespace{
+namespace {
 
-  Maybe<bool> device_equal(const std::string& device_name, const int device_id, Symbol<Device> device) {
-    return (device_name == device->type() && device_id == device->device_id());
+Maybe<bool> device_equal(const std::string& device_name, const int device_id,
+                         Symbol<Device> device) {
+  return (device_name == device->type() && device_id == device->device_id());
+}
+
+Maybe<Symbol<ParallelDesc>> ReplacePlacementDeviceTag(Symbol<ParallelDesc> parallel_desc,
+                                                      const std::string& device_type) {
+  static const HashMap<std::string, std::string> type2device_tag{{"cpu", "cpu"}, {"cuda", "gpu"}};
+  std::shared_ptr<cfg::ParallelConf> parallel_conf =
+      std::make_shared<cfg::ParallelConf>(*parallel_desc->cfg_parallel_conf());
+  parallel_conf->set_device_tag(JUST(MapAt(type2device_tag, device_type)));
+  std::shared_ptr<ParallelDesc> out_parallel_desc;
+  JUST(
+      LogicalRun([&out_parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
+        out_parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
+        return Maybe<void>::Ok();
+      }));
+  return SymbolOf(*out_parallel_desc);
+}
+
+Maybe<Tensor> LocalTensorTo(const std::shared_ptr<Tensor>& x, const std::string& device_type,
+                            const Symbol<DType>& dtype, const bool& copy) {
+  assert(x->is_local());
+  bool copy_happened = false;
+  std::shared_ptr<Tensor> tensor;
+  std::string target_device_type;
+  int target_device_id;
+  JUST(ParsingDeviceTag(device_type, &target_device_type, &target_device_id));
+  if (target_device_id < 0) { target_device_id = GlobalProcessCtx::LocalRank(); }
+  if (!JUST(device_equal(target_device_type, target_device_id, JUST(x->device())))) {
+    tensor = JUST(Copy(x, target_device_type, target_device_id));
+    copy_happened = true;
   }
-
-  Maybe<Symbol<ParallelDesc>> ReplacePlacementDeviceTag(Symbol<ParallelDesc> parallel_desc,
-                                                                const std::string& device_type) {
-    static const HashMap<std::string, std::string> type2device_tag{{"cpu", "cpu"}, {"cuda", "gpu"}};
-    std::shared_ptr<cfg::ParallelConf> parallel_conf =
-        std::make_shared<cfg::ParallelConf>(*parallel_desc->cfg_parallel_conf());
-    parallel_conf->set_device_tag(JUST(MapAt(type2device_tag, device_type)));
-    std::shared_ptr<ParallelDesc> out_parallel_desc;
-    JUST(LogicalRun(
-        [&out_parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-          out_parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
-          return Maybe<void>::Ok();
-        }));
-    return SymbolOf(*out_parallel_desc);
+  if (dtype != x->dtype()) {
+    tensor = JUST(Cast(tensor ? tensor : x, dtype));
+    copy_happened = true;
   }
-  
-  Maybe<Tensor> LocalTensorTo(const std::shared_ptr<Tensor>& x, const std::string& device_type,
-                              const Symbol<DType>& dtype, const bool& copy) {
-    assert(x->is_local());
-    bool copy_happened = false;
-    std::shared_ptr<Tensor> tensor;
-    std::string target_device_type;
-    int target_device_id;
-    JUST(ParsingDeviceTag(device_type, &target_device_type, &target_device_id));
-    if (target_device_id < 0) { target_device_id = GlobalProcessCtx::LocalRank(); }
-    if (!JUST(device_equal(target_device_type, target_device_id, JUST(x->device())))) {
-      tensor = JUST(Copy(x, target_device_type, target_device_id));
-      copy_happened = true;
-    }
-    if (dtype != x->dtype()) {
-      tensor = JUST(Cast(tensor ? tensor : x, dtype));
-      copy_happened = true;
-    }
-    if (copy && !copy_happened) {
-      tensor = JUST(Copy(tensor? tensor : x, target_device_type, target_device_id));
-    }
-    return tensor ? tensor : x;
+  if (copy && !copy_happened) {
+    tensor = JUST(Copy(tensor ? tensor : x, target_device_type, target_device_id));
   }
-  
-  Maybe<void> TouchConsistentTensor(const std::shared_ptr<one::Tensor>& tensor) {
-    CHECK_OR_RETURN(tensor->is_consistent());
-    return Maybe<void>::Ok();
-    }
+  return tensor ? tensor : x;
+}
 
-  auto* CheckMetaConsistency = DECORATE(&TouchConsistentTensor, CheckConsistentTensorMeta);
+Maybe<void> TouchConsistentTensor(const std::shared_ptr<one::Tensor>& tensor) {
+  CHECK_OR_RETURN(tensor->is_consistent());
+  return Maybe<void>::Ok();
+}
 
-  Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::string& device_type,
-                                const Symbol<DType>& dtype, const bool& copy) {
-    assert(x->is_consistent());
-    std::shared_ptr<Tensor> tensor;
-    if ((device_type == JUST(x->parallel_desc())->device_tag()) && (dtype == x->dtype())) { 
-      return (copy ? JUST(x->clone()) : x);
-    }
-    if (x->is_eager()) {
-      CheckMetaConsistency(x).GetOrThrow();
-      auto placement = JUST(ReplacePlacementDeviceTag(JUST(x->parallel_desc()), device_type));
-      auto nd_sbp = JUST(x->nd_sbp());
-      std::vector<Symbol<cfg::SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
-      for (int i = 0; i < sbp_tuple.size(); ++i) { sbp_tuple[i] = nd_sbp->sbp_parallel().Get(i); }
-      tensor = JUST(ConsistentToLocal(x));
-      tensor = JUST(LocalTensorTo(tensor, device_type, dtype, copy));
-      JUST(tensor->set_requires_grad(x->requires_grad()));
-      return JUST(LocalToConsistent(tensor, placement, sbp_tuple, *(x->shape()), dtype));
-    } else {
-      if (dtype != x->dtype()) { *tensor = *JUST(Cast(x, dtype)); }
-      if (device_type != JUST(x->parallel_desc())->device_tag()) { *tensor = *JUST(Copy(tensor ? tensor : x, device_type, 0)); }
-      return tensor;
-    }
+auto* CheckMetaConsistency = DECORATE(&TouchConsistentTensor, CheckConsistentTensorMeta);
+
+Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::string& device_type,
+                                 const Symbol<DType>& dtype, const bool& copy) {
+  assert(x->is_consistent());
+  std::shared_ptr<Tensor> tensor;
+  if ((device_type == JUST(x->parallel_desc())->device_tag()) && (dtype == x->dtype())) {
+    return (copy ? JUST(x->clone()) : x);
   }
+  if (x->is_eager()) {
+    CheckMetaConsistency(x).GetOrThrow();
+    auto placement = JUST(ReplacePlacementDeviceTag(JUST(x->parallel_desc()), device_type));
+    auto nd_sbp = JUST(x->nd_sbp());
+    std::vector<Symbol<cfg::SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
+    for (int i = 0; i < sbp_tuple.size(); ++i) { sbp_tuple[i] = nd_sbp->sbp_parallel().Get(i); }
+    tensor = JUST(ConsistentToLocal(x));
+    tensor = JUST(LocalTensorTo(tensor, device_type, dtype, copy));
+    JUST(tensor->set_requires_grad(x->requires_grad()));
+    return JUST(LocalToConsistent(tensor, placement, sbp_tuple, *(x->shape()), dtype));
+  } else {
+    if (dtype != x->dtype()) { *tensor = *JUST(Cast(x, dtype)); }
+    if (device_type != JUST(x->parallel_desc())->device_tag()) {
+      *tensor = *JUST(Copy(tensor ? tensor : x, device_type, 0));
+    }
+    return tensor;
+  }
+}
 
-} // namespace
+}  // namespace
 
-class ToFunctor{
+class ToFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const std::string& device_type,
                            const Symbol<DType>& dtype, const bool& copy) const {
