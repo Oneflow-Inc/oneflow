@@ -164,7 +164,7 @@ class ZeroCopyBaseContext {
   const ArgVec& inputs() const { return input_arg_tuple_->indexed_arg_name_and_index(); }
   const ArgVec& outputs() const { return output_arg_tuple_->indexed_arg_name_and_index(); }
 
-  inline void Update(
+  void Update(
       EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
       ConsistentTensorInferResultRawPtr consistent_tensor_infer_result);
 
