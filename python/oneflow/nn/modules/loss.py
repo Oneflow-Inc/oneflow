@@ -750,11 +750,11 @@ class RNNTLoss(_Loss):
     """
 
     def __init__(
-        self, blank: int = 0, reduction: str = "mean"
+        self, reduction: str = "mean"
     ) -> None:
         
         super(RNNTLoss, self).__init__(reduction)
-        self.blank = blank
+        self.blank = 0
         self.thread = 0
     
     def forward(

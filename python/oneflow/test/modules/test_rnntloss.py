@@ -23,11 +23,6 @@ from test_util import GenArgList
 import oneflow as flow
 import oneflow.unittest
 
-ninf = -float("inf")
-
-import numpy as np
-
-
 def  forward_logsoftmax(acts):
     max_value = np.max(acts, -1, keepdims=True)
     exp = np.exp(acts - max_value)
@@ -40,16 +35,15 @@ def grad_logsoftmax(grad_out,grad):
     tmp = np.multiply(sum,grad)
     return grad_out-tmp
 
-
 def log_sum_exp(a,b):
     if a == float('-inf'):
         return b
     if b == float('-inf'):
         return a
     if a>b:
-        np.log(np.exp(b-a)+1)+a
+        return np.log(np.exp(b-a)+1)+a
     else:
-        np.log(np.exp(a-b)+1)+b
+        return np.log(np.exp(a-b)+1)+b
 
 
 def rnnt_forward(acts, labels, act_length, label_length, blank):
@@ -60,14 +54,16 @@ def rnnt_forward(acts, labels, act_length, label_length, blank):
     
     acts = acts.reshape(-1)
     labels = labels.reshape(-1)
-    
-    def id2(t,u):
-        return t*U+u
 
-    def id3(t,u,v):
-        return (t * maxU + u) * alpha_size + v
 
     def cost_and_grad_kernel(act_loc,label_loc,mb,T,U):
+       
+        def id2(t,u):
+            return t*U+u
+
+        def id3(t,u,v):
+            return (t * maxU + u) * alpha_size + v
+
         alphas = np.zeros(T*U)
         betas = np.zeros(T*U)
         log_prob2 = np.zeros(T*U*2)
@@ -78,7 +74,7 @@ def rnnt_forward(acts, labels, act_length, label_length, blank):
                 log_prob2[offset] = acts[act_loc + id3(t,u,blank)]
                 if u < U-1:
                     log_prob2[offset+1]=acts[act_loc + id3(t,u,labels[label_loc + u])]
-        
+
         alphas[0] = 0
         for t in range(T):
             for u in range(U):
@@ -91,6 +87,7 @@ def rnnt_forward(acts, labels, act_length, label_length, blank):
                     emit = alphas[id2(t, u-1)] + log_prob2[id2(t, u-1) * 2 + 1]
                     alphas[id2(t, u)] = log_sum_exp(no_emit,emit)
         
+
         llForward = alphas[id2(T-1, U-1)] + log_prob2[id2(T-1, U-1) * 2]
         
         betas[id2(T-1, U-1)] = log_prob2[id2(T-1, U-1) * 2]
@@ -105,19 +102,19 @@ def rnnt_forward(acts, labels, act_length, label_length, blank):
                     no_emit = betas[id2(t+1, u)] + log_prob2[id2(t, u) * 2]
                     emit = betas[id2(t, u+1)] + log_prob2[id2(t, u) * 2 + 1]
                     betas[id2(t, u)] = log_sum_exp(emit,no_emit)
-        
+
         loglike = betas[0]
         for t in range(T):
             for u in range(U):
                 if t<T-1:
                     g = alphas[id2(t, u)]+betas[id2(t+1, u)]
-                    grads[id3(t, u, blank)] = \
+                    grads[act_loc + id3(t, u, blank)] = \
                         -np.exp(log_prob2[id2(t, u) * 2]+g-loglike)
                 if u<U-1:
                     g = alphas[id2(t, u)] + betas[id2(t, u+1)]
-                    grads[id3(t, u, labels[u])] = \
+                    grads[act_loc+id3(t, u, labels[label_loc+u])] = \
                         -np.exp(log_prob2[id2(t, u) * 2 + 1]+g-loglike)
-        grads[id3(T-1, U-1, blank)] = \
+        grads[act_loc+id3(T-1, U-1, blank)] = \
             -np.exp(log_prob2[id2(T-1, U-1) * 2] + alphas[id2(T-1, U-1)] - loglike)   
 
         return -llForward
@@ -127,39 +124,59 @@ def rnnt_forward(acts, labels, act_length, label_length, blank):
         U = label_length[i] + 1
         batch_size = maxT * maxU * alpha_size
         costs[i] = cost_and_grad_kernel(i*batch_size, i*(maxU-1), i, T, U)
-    print(costs)
-    print(grads)
+
     return costs,grads.reshape(batch,maxT,maxU,alpha_size)
-    
 
 def rnnt_backward(grad_out,grad):
     grad_out = grad_out.reshape(-1,1,1,1)
     return np.multiply(grad_out,grad)
 
 
+def compare_with_np(
+    device_type,
+    reduction,
+):
+    acts = np.random.rand(2,3,3,4).astype(np.float32)
+    labels =  np.array([[1, 2],[2,2]],dtype=np.int32)
+    act_length = np.array([2,2],dtype=np.int32)
+    label_length = np.array([2,1],dtype=np.int32)
+    
+    acts_o = flow.tensor(acts,dtype=flow.float32,requires_grad=True,device=flow.device(device_type))
+    labels_o =  flow.tensor(labels,dtype = flow.int32, device=flow.device(device_type))
+    act_length_o = flow.tensor(act_length,dtype = flow.int32,device=flow.device(device_type))
+    label_length_0 = flow.tensor(label_length,dtype=flow.int32,device=flow.device(device_type))
+    
+    rnnt = flow.nn.RNNTLoss(reduction).to(flow.device(device_type))
+    loss = rnnt(acts_o,labels_o,act_length_o,label_length_0)
+    loss.backward()
+
+    act_log,grad_log = forward_logsoftmax(acts)
+    costs_rnnt,grad_rnnt = rnnt_forward(act_log,labels,act_length,label_length,blank=0)
+
+    rnnt_grad = rnnt_backward(np.ones_like(costs_rnnt),grad_rnnt)
+    act_grad = grad_logsoftmax(rnnt_grad,grad_log)
+
+    costs_rnnt = costs_rnnt.sum()
+    if reduction == "mean":
+        costs_rnnt = costs_rnnt/acts.shape[0]
+        act_grad = act_grad/acts.shape[0]
+    assert np.allclose(costs_rnnt, loss.numpy(), atol=1e-05)
+    assert np.allclose(acts_o.grad.numpy(),act_grad,atol=1e-05)
 
 
-acts = np.random.rand(2,3,3,4)
-labels =  np.array([[1, 2],[2,2]],dtype=np.int32)
-act_length = np.array([2,2],dtype=np.int32)
-label_length = np.array([2,2],dtype=np.int32)
-blank = 0
+def gen_arg_list():
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["cuda", "cpu"]
+    arg_dict["reduction"] = ["mean", "sum"]
+    return GenArgList(arg_dict)
+
+@flow.unittest.skip_unless_1n1d()
+class TestRNNTLoss1n1d(flow.unittest.TestCase):
+    def test_rnnt_loss(test_case):
+        for arg in gen_arg_list():
+            compare_with_np(*arg)
+
+if __name__ == "__main__":
+    unittest.main()
 
 
-import oneflow as flow
-
-acts_o = flow.tensor(acts)
-soft_o = flow.nn.LogSoftmax(-1)(acts_o)
-print(soft_o)
-labels_o =  flow.tensor(labels,dtype = flow.int)
-act_length_o = flow.tensor(act_length,dtype = flow.int)
-label_length_0 = flow.tensor(label_length,dtype=flow.int)
-rnnt = flow.nn.RNNTLoss(blank)
-loss = rnnt(acts_o,labels_o,act_length_o,label_length_0)
-print(loss)
-
-out,grad = forward_logsoftmax(acts)
-#grad = grad_logsoftmax(np.ones_like(acts),grad)
-print(out)
-costs,grads = rnnt_forward(out,labels,act_length,label_length,blank=blank)
-print(costs)
