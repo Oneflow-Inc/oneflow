@@ -42,3 +42,7 @@ def exec(f):
         return result
 
     return wrapper
+
+
+def trace(py_module):
+    return oneflow._oneflow_internal.ir.JitModule(py_module)
