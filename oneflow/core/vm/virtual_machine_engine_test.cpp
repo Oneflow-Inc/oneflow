@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <iostream>
-#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/stream_type.h"
@@ -31,10 +31,10 @@ namespace test {
 
 namespace {
 
-TEST(VirtualMachine, __Init__) {
+TEST(VirtualMachineEngine, __Init__) {
   auto vm_desc = intrusive::make_shared<VmDesc>(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
-  auto vm = intrusive::make_shared<VirtualMachine>(vm_desc.Get());
+  auto vm = intrusive::make_shared<VirtualMachineEngine>(vm_desc.Get());
   ASSERT_EQ(vm->thread_ctx_list().size(), 2);
   ASSERT_EQ(vm->stream_type_id2stream_rt_desc().size(), 2);
 }
