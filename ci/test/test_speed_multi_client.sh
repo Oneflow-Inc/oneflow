@@ -7,8 +7,6 @@ trap 'rc=$?' ERR
 
 cd $ONEFLOW_MODELS_DIR
 
-git checkout 7a6845f7d7133c02a01a75b9ca525e6c40e99639
-
 function check_relative_speed {
   awk -F'[:(]' -v threshold=$1 'BEGIN { ret=2 } /Relative speed/{ if ($2 >= threshold) { printf "✔️ "; ret=0 } else { printf "❌ "; ret=1 }} {print $0} END { exit ret }'
 }
