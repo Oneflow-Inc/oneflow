@@ -297,7 +297,8 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
         stream_index = Global<TaskStreamIndexManager>::Get()->GetNamedTaskStreamIndex(
             device_id, stream_name_hint);
       } else {
-        stream_index = GetTaskStreamIndex(comp_task_node->GetTaskType(), device_id);
+        stream_index = Global<TaskStreamIndexManager>::Get()->GetTaskStreamIndex(
+            comp_task_node->GetTaskType(), device_id);
       }
       comp_task_node->set_thrd_id(EncodeStreamIdToInt64(StreamId{device_id, stream_index}));
       comp_task_node->set_op_node(op_node);

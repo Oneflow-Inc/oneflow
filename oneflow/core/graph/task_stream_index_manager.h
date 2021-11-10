@@ -69,8 +69,6 @@ class TaskStreamIndexGetterRegistry final {
   map_t stream_index_getter_map_;
 };
 
-StreamId::stream_index_t GetTaskStreamIndex(TaskType task_type, const DeviceId& device_id);
-
 StreamId::stream_index_t GenerateComputeTaskStreamIndex(DeviceType device_type,
                                                         StreamIndexGenerator* generator);
 
