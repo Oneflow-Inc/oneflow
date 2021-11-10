@@ -135,7 +135,8 @@ void LaunchBroadcastMatmul(StreamContext* stream_ctx, DataType data_type,
 #if CUDA_VERSION >= 11000
   cublasGemmAlgo_t algo = CUBLAS_GEMM_DEFAULT;
 #else
-  cublasGemmAlgo_t algo = CUBLAS_GEMM_DFALT_TENSOR_OP;
+  cublasGemmAlgo_t algo =
+      (data_type == DataType::kFloat16) ? CUBLAS_GEMM_DFALT_TENSOR_OP : CUBLAS_GEMM_DEFAULT;
 #endif
   if (num_batch_dims == 1 && c_batch_dims[0] != 1) {
     const void* cublas_a = b;

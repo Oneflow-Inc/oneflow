@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/job/collective_boxing/scheduler.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
-#include "oneflow/core/actor/collective_boxing_actor_context.h"
+#include "oneflow/core/lazy/actor/collective_boxing_actor_context.h"
 
 namespace oneflow {
 

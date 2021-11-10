@@ -544,6 +544,12 @@ def _roll(self, shifts, dims=None):
     return flow.roll(self, shifts=shifts, dims=dims)
 
 
+def _len(self):
+    if self.dim() == 0:
+        raise TypeError("len() of a 0-d tensor")
+    return self.shape[0]
+
+
 def _uniform(self, a=0, b=1):
     if isinstance(a, Tensor):
         assert a.ndim == 0 and a.nelement() == 1, "a must be a number or scalar tensor!"
@@ -718,6 +724,7 @@ def RegisterMethods():
     Tensor.__pow__ = _pow
     Tensor.__format__ = _format
     Tensor.__floordiv__ = _floor_divide
+    Tensor.__len__ = _len
     Tensor.uniform_ = _uniform
     Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform
