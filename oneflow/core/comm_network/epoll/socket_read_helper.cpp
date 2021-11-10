@@ -23,7 +23,7 @@ limitations under the License.
 
 #include <netinet/tcp.h>
 
-#define DebugRead true  
+#define DebugRead false  
 
 namespace oneflow {
 
@@ -63,7 +63,7 @@ bool SocketReadHelper::MsgBodyReadHandle() {
 
 bool SocketReadHelper::DoCurRead(void (SocketReadHelper::*set_cur_read_done)()) {
   ssize_t n = read(sockfd_, read_ptr_, read_size_);
-if(DebugRead) {
+if(cur_msg_.msg_type == SocketMsgType::kActor ) {
     std::cout<<"SocketReadHelper::DoCurRead,the read_ptr:" << reinterpret_cast<uint64_t>(read_ptr_) << std::endl;
     std::cout<<"SocketReadHelper::DoCurRead,the read_size:"<< read_size_ << std::endl;
     std::cout<<"SocketReadHelper::DoCurRead,the n:" << n << std::endl;
@@ -131,7 +131,7 @@ void SocketReadHelper::SetStatusWhenActorMsgHeadDone() {
   size_t size = cur_msg_.actor_msg.size;
   char* data = (char*)malloc(size);
   std::memcpy(data, cur_msg_.actor_msg.data, size);
-  if(DebugRead) {
+  if(cur_msg_.msg_type == SocketMsgType::kActor ) {
     std::cout<<"SocketReadHelper::SetStatusWhenActorMsgHeadDone,the size:"<<std::hex <<size << std::endl;
     std::cout<<"SocketReadHelper::SetStatusWhenActorMsgHeadDone,the data:"<<std::hex << reinterpret_cast<uint64_t>(data) << std::endl;
     std::cout<<std::endl;

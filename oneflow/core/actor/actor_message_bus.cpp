@@ -48,8 +48,8 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       free(serial_data);
       size_t msg_size = sizeof(new_msg);
       uint64_t addr = reinterpret_cast<uint64_t>(&new_msg);//此时addr是new_msg的地址
-      std::cout<<"ActorMsgBus::SendMsg,the token:"<<std::hex << new_msg.regst()->comm_net_token() << std::endl;
-      std::cout<<"ActorMsgBus::SendMsg,the addr:"<<std::hex << addr << std::endl;
+      std::cout<<"ActorMsgBus::SendMsg,the token:"<< reinterpret_cast<uint64_t>( new_msg.regst()->comm_net_token()) << std::endl;
+      std::cout<<"ActorMsgBus::SendMsg,the addr:" << addr << std::endl;
       std::cout<<std::endl;
       if(DebugActor) {
         std::cout<<"ActorMsgBus::SendMsg,the msg_size:"<<msg_size <<std::endl;
@@ -79,8 +79,8 @@ void ActorMsgBus::HandleRecvData(void* data, size_t size) {
   if (msg.IsDataRegstMsgToConsumer()) {
     void* token = Global<CommNet>::Get()->DeSerialDataToToken((char*)msg.user_data(), &token_size);
     new_msg.set_comm_net_token(token);
-    std::cout<<"ActorMsgBus::HandleRecvData,the new_msg.token:"<<std::hex << reinterpret_cast<uint64_t>(new_msg.regst()->comm_net_token()) << std::endl;
-    std::cout<<"ActorMsgBus::HandleRecvData,the size:"<<std::hex <<size <<  std::endl;
+    std::cout<<"ActorMsgBus::HandleRecvData,the new_msg.token:"<< reinterpret_cast<uint64_t>(new_msg.regst()->comm_net_token()) << std::endl;
+    std::cout<<"ActorMsgBus::HandleRecvData,the size:" <<size <<  std::endl;
     std::cout <<std::endl;
   }
 

@@ -20,7 +20,7 @@ limitations under the License.
 
 #include <sys/eventfd.h>
 
-#define DebugWrite true 
+#define DebugWrite false 
 
 namespace oneflow {
 
@@ -87,7 +87,7 @@ bool SocketWriteHelper::InitMsgWriteHandle() {
   cur_msg_queue_->pop();
   write_ptr_ = reinterpret_cast<const char*>(&cur_msg_);
   write_size_ = sizeof(cur_msg_);
-  if(DebugWrite) {
+  if(cur_msg_.msg_type == SocketMsgType::kActor ) {
     std::cout<<"SocketWriteHelper::InitMsgWriteHandle,the cur_msg_:"<<std::hex << reinterpret_cast<uint64_t>(&cur_msg_) << std::endl;
     std::cout<<"SocketWriteHelper::InitMsgWriteHandle,wrrite_ptr:"<<std::hex<< reinterpret_cast<uint64_t>(write_ptr_) << std::endl;
     std::cout<<"SocketWriteHelper::InitMsgWriteHandle,the write_size_:" << write_size_ << std::endl;
@@ -108,7 +108,7 @@ bool SocketWriteHelper::MsgBodyWriteHandle() {
 
 bool SocketWriteHelper::DoCurWrite(void (SocketWriteHelper::*set_cur_write_done)()) {
   ssize_t n = write(sockfd_, write_ptr_, write_size_);
-  if(DebugWrite) {
+  if(cur_msg_.msg_type == SocketMsgType::kActor ) {
     std::cout<<"SocketWriteHelper::DoCurWrite,the sockfd_:"<<std::hex << sockfd_  << std::endl;
     std::cout<<"SocketWriteHelper::DoCurWrite,the write_size:"<< write_size_ << std::endl;
     std::cout<<"SocketWriteHelper::DoCurWrite,the n:" << n << std::endl;
