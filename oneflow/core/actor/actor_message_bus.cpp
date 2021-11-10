@@ -47,7 +47,7 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       new_msg.AddUserData(token_size, serial_data);
       free(serial_data);
       size_t msg_size = sizeof(new_msg);
-      uint64_t addr = reinterpret_cast<uint64_t>(&new_msg);
+      uint64_t addr = reinterpret_cast<uint64_t>(&new_msg);//此时addr是new_msg的地址
       std::cout<<"ActorMsgBus::SendMsg,the token:"<<std::hex << new_msg.regst()->comm_net_token() << std::endl;
       std::cout<<"ActorMsgBus::SendMsg,the addr:"<<std::hex << addr << std::endl;
       std::cout<<std::endl;

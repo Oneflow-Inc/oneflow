@@ -24,7 +24,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include <netinet/tcp.h>
 
-#define DebugEpoll false 
+#define DebugEpoll true 
 namespace oneflow {
 
 namespace {
@@ -97,7 +97,7 @@ void EpollCommNet::SendMsg(int64_t dst_machine_id, void * data, size_t size) {
   SocketMsg msg;
   msg.actor_msg.size = 0;
   msg.msg_type = SocketMsgType::kActor;
-  std::memcpy(msg.actor_msg.data, data, size);
+  std::memcpy(msg.actor_msg.data, data, size);//这里应该是将data的内容拷贝给msg.actor_msg.data 
   msg.actor_msg.size = size;
   if(DebugEpoll) {
     std::cout<<"EpollCommNet::SendMsg,the data's addr:" <<std::hex <<  reinterpret_cast<uint64_t>(data) << std::endl;  

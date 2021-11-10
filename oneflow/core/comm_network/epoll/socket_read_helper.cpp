@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <ios>
 #ifdef __linux__
 
 #include "oneflow/core/comm_network/epoll/socket_read_helper.h"
@@ -22,7 +23,7 @@ limitations under the License.
 
 #include <netinet/tcp.h>
 
-#define DebugRead false 
+#define DebugRead true  
 
 namespace oneflow {
 
@@ -65,7 +66,7 @@ bool SocketReadHelper::DoCurRead(void (SocketReadHelper::*set_cur_read_done)()) 
 if(DebugRead) {
     std::cout<<"SocketReadHelper::DoCurRead,the read_ptr:"<<std::hex << reinterpret_cast<uint64_t>(read_ptr_) << std::endl;
     std::cout<<"SocketReadHelper::DoCurRead,the read_size:"<<std::hex << read_size_ << std::endl;
-    std::cout<<"SocketReadHelper::DoCurRead,the n:"<<std::hex << n << std::endl;
+    std::cout<<"SocketReadHelper::DoCurRead,the n:" << n << std::endl;
     std::cout<<"SocketReadHelper::DoCurRead,the sockfd_:"<<std::hex << sockfd_ << std::endl;
     std::cout<<std::endl;
   }
