@@ -20,7 +20,7 @@ limitations under the License.
 #define private public
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/test_util.h"
@@ -50,7 +50,7 @@ TEST(ControlStreamType, new_object) {
   GlobaProcessCtxScope scope(1, 1);
   auto vm_desc = intrusive::make_shared<VmDesc>(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
-  auto vm = intrusive::make_shared<VirtualMachine>(vm_desc.Get());
+  auto vm = intrusive::make_shared<VirtualMachineEngine>(vm_desc.Get());
   InstructionMsgList list;
   TestUtil::NewObject(&list, "cpu", "0:0");
   ASSERT_TRUE(vm->pending_msg_list().empty());
@@ -65,7 +65,7 @@ TEST(ControlStreamType, delete_object) {
   GlobaProcessCtxScope scope(1, 1);
   auto vm_desc = intrusive::make_shared<VmDesc>(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
-  auto vm = intrusive::make_shared<VirtualMachine>(vm_desc.Get());
+  auto vm = intrusive::make_shared<VirtualMachineEngine>(vm_desc.Get());
   InstructionMsgList list;
   int64_t logical_object_id = TestUtil::NewObject(&list, "cpu", "0:0");
   list.EmplaceBack(NewInstruction("DeleteObject")->add_del_operand(logical_object_id));

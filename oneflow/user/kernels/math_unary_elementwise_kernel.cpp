@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/math_unary_elementwise_func.h"
+#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
 
@@ -32,7 +33,7 @@ class MathUnaryElementwiseCpuKernel final : public user_op::OpKernel {
     T* y = tensor_y->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    for (int32_t i = 0; i < n; ++i) { y[i] = UnaryFunctor<T>::Forward(x[i]); }
+    MultiThreadLoop(n, [&](size_t i) { y[i] = UnaryFunctor<T>::Forward(x[i]); });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -54,7 +55,7 @@ class MathUnaryElementwiseGradCpuKernel final : public user_op::OpKernel {
     T* dx = tensor_dx->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    for (int32_t i = 0; i < n; ++i) { dx[i] = UnaryFunctor<T>::Backward(x[i], dy[i]); }
+    MultiThreadLoop(n, [&](size_t i) { dx[i] = UnaryFunctor<T>::Backward(x[i], dy[i]); });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

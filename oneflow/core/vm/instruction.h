@@ -235,13 +235,9 @@ class Instruction final : public intrusive::Base {
   const intrusive::ListHook& dispatched_instruction_hook() const {
     return dispatched_instruction_hook_;
   }
-  const intrusive::ListHook& vm_stat_running_instruction_hook() const {
-    return vm_stat_running_instruction_hook_;
-  }
+  const intrusive::ListHook& lively_instruction_hook() const { return lively_instruction_hook_; }
   const intrusive::ListHook& pending_instruction_hook() const { return pending_instruction_hook_; }
-  const intrusive::ListHook& front_seq_compute_instr_hook() const {
-    return front_seq_compute_instr_hook_;
-  }
+  const intrusive::ListHook& barrier_instruction_hook() const { return barrier_instruction_hook_; }
   const InEdgeList& in_edges() const { return in_edges_; }
   const OutEdgeList& out_edges() const { return out_edges_; }
   const RwMutexedObjectAccessList& access_list() const { return access_list_; }
@@ -364,10 +360,9 @@ class Instruction final : public intrusive::Base {
         out_edges_(),
         instruction_hook_(),
         dispatched_instruction_hook_(),
-        vm_stat_running_instruction_hook_(),
+        lively_instruction_hook_(),
         pending_instruction_hook_(),
-        front_seq_infer_instr_hook_(),
-        front_seq_compute_instr_hook_() {}
+        barrier_instruction_hook_() {}
   intrusive::Ref intrusive_ref_;
   // fields
   FlatMsg<InstructionStatusBuffer> status_buffer_;
@@ -382,16 +377,15 @@ class Instruction final : public intrusive::Base {
   OutEdgeList out_edges_;
 
  public:
-  // list hooks
+  // pending or waiting list hooks
   intrusive::ListHook instruction_hook_;
   // dispatched to Stream
   intrusive::ListHook dispatched_instruction_hook_;
-  // `vm_stat_running_instruction_hook` valid from instruction ready to instruction done
-  intrusive::ListHook vm_stat_running_instruction_hook_;
+  // valid during vm processing
+  intrusive::ListHook lively_instruction_hook_;
   // pending to ThreadCtx
   intrusive::ListHook pending_instruction_hook_;
-  intrusive::ListHook front_seq_infer_instr_hook_;
-  intrusive::ListHook front_seq_compute_instr_hook_;
+  intrusive::ListHook barrier_instruction_hook_;
 };
 
 }  // namespace vm
