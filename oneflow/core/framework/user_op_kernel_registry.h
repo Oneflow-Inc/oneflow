@@ -31,7 +31,6 @@ namespace user_op {
 class OpKernel;
 class TensorDesc;
 class InferContext;
-class KernelCreateContext;
 
 class KernelRegContext {
  public:
@@ -58,7 +57,7 @@ class KernelRegContext {
   virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
 };
 
-using OpKernelCreateFn = std::function<const OpKernel*(KernelCreateContext* ctx)>;
+using OpKernelCreateFn = std::function<const OpKernel*()>;
 using InferTmpSizeFn = std::function<size_t(InferContext*)>;
 using AddInplaceArgPair = std::function<Maybe<void>(
     const std::string& out_arg_name, int32_t out_arg_index, const std::string& in_arg_name,
@@ -82,12 +81,7 @@ class OpKernelRegistry final {
   template<typename T>
   OpKernelRegistry& SetCreateFn() {
     return SetCreateFn(
-        [](KernelCreateContext* ctx) -> const OpKernel* { return NewOpKernel<T>(); });
-  }
-  template<typename T>
-  OpKernelRegistry& SetCreateWithCtxFn() {
-    return SetCreateFn(
-        [](KernelCreateContext* ctx) -> const OpKernel* { return NewOpKernelWithCtx<T>(ctx); });
+        []() -> const OpKernel* { return NewOpKernel<T>(); });
   }
   OpKernelRegistry& SetIsMatchedHob(IsMatchedHob hob);
   OpKernelRegistry& SetInferTmpSizeFn(InferTmpSizeFn fn);

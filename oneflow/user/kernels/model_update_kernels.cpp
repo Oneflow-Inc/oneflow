@@ -249,11 +249,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_INDEXED_SLICES_SGD_UPDATE_KERNEL, DEVI
 template<DeviceType device_type, typename T, typename G>
 class MomentumUpdateKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
-  explicit MomentumUpdateKernel(user_op::KernelCreateContext* ctx) {
-    has_learning_rate_ptr_ = ctx->has_input("learning_rate", 0);
-    has_scale_by_ptr_ = ctx->has_input("scale_by_tensor", 0);
-    has_skip_if_ = ctx->has_input("skip_if", 0);
-  };
+  MomentumUpdateKernel() = default;
   ~MomentumUpdateKernel() override = default;
 
  private:
@@ -269,19 +265,19 @@ class MomentumUpdateKernel final : public user_op::OpKernel, public user_op::Cud
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* momentum = ctx->Tensor4ArgNameAndIndex("momentum", 0);
     const float* learning_rate_ptr = nullptr;
-    if (has_learning_rate_ptr_) {
+    if (ctx->has_input("learning_rate", 0)) {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
       learning_rate_ptr = learning_rate->dptr<float>();
     }
     const T* scale_by_ptr = nullptr;
-    if (has_scale_by_ptr_) {
+    if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
       CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
     const int64_t* skip_if_ptr = nullptr;
-    if (has_skip_if_) {
+    if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
       CHECK_EQ(skip_if->shape().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
@@ -292,16 +288,11 @@ class MomentumUpdateKernel final : public user_op::OpKernel, public user_op::Cud
         model_diff->dptr<G>(), model->mut_dptr<T>(), momentum->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
-
- private:
-  bool has_learning_rate_ptr_;
-  bool has_scale_by_ptr_;
-  bool has_skip_if_;
 };
 
 #define REGISTER_MOMENTUM_UPDATE_KERNEL(device, dtype, gtype)                            \
   REGISTER_USER_KERNEL("momentum_update")                                                \
-      .SetCreateWithCtxFn<MomentumUpdateKernel<device, dtype, gtype>>()                  \
+      .SetCreateFn<MomentumUpdateKernel<device, dtype, gtype>>()                  \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
                        & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));

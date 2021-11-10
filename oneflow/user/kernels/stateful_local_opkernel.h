@@ -37,7 +37,6 @@ namespace one {
 
 class LocalUserKernelBaseContext;
 class LocalUserKernelRegContext;
-class LocalUserKernelCreateContext;
 class LocalUserKernelInitContext;
 class LocalUserOpInferContext;
 
@@ -457,7 +456,6 @@ class StatefulLocalOpKernel final {
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
   Symbol<Device> device_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
-  std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;
   std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_scheduler_thread_;
   std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_main_thread_;
   std::unique_ptr<LocalUserKernelComputeContext> compute_ctx_;

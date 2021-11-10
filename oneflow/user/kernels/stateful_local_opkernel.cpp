@@ -201,23 +201,6 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
   }
 };
 
-class LocalUserKernelCreateContext final : public user_op::KernelCreateContext {
- public:
-  explicit LocalUserKernelCreateContext(const user_op::UserOpConfWrapper* user_op_conf,
-                                        const ComposedAttrMap* composed_attrs)
-      : user_op_conf_(user_op_conf), composed_attrs_(composed_attrs) {}
-
- private:
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    return composed_attrs_->Attr4Name(attr_name);
-  }
-
-  const user_op::UserOpConfWrapper* user_op_conf_;
-  const ComposedAttrMap* composed_attrs_;
-};
-
 class LocalUserKernelInitContext final : public user_op::KernelInitContext {
  public:
   explicit LocalUserKernelInitContext(
@@ -424,8 +407,6 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
   opkernel->compute_ctx_.reset(new LocalUserKernelComputeContext(
       nullptr, device_tag, user_op_conf, opkernel->composed_attrs_for_scheduler_thread_.get(),
       input_arg_tuple, output_arg_tuple, opkernel->mut_temp_blob_object()));
-  opkernel->create_ctx_.reset(new LocalUserKernelCreateContext(
-      user_op_conf, opkernel->composed_attrs_for_scheduler_thread_.get()));
   opkernel->reg_ctx_.reset(new LocalUserKernelRegContext(
       device_tag, user_op_conf, opkernel->composed_attrs_for_scheduler_thread_.get(),
       input_arg_tuple, output_arg_tuple));
@@ -456,6 +437,9 @@ Maybe<const user_op::OpKernel*> StatefulLocalOpKernel::ChooseOpKernel(
   reg_ctx_->Update(inputs, outputs, consistent_tensor_infer_result);
 
   const auto& op_type_name = user_op_conf_->op_type_name();
+
+  // std::array<std::array<std::vector<std::pair<kernel_reg_val, kernel>>>, 8>, 8>
+
   const auto* kernel_reg_val =
       JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_type_name, *reg_ctx_));
   CHECK_NOTNULL(kernel_reg_val);
@@ -463,7 +447,7 @@ Maybe<const user_op::OpKernel*> StatefulLocalOpKernel::ChooseOpKernel(
   auto it = op_kernel_map_.find(kernel_reg_val);
   if (it != op_kernel_map_.end()) { return it->second.get(); }
 
-  auto* kernel = kernel_reg_val->create_fn(create_ctx_.get());
+  auto* kernel = kernel_reg_val->create_fn();
   op_kernel_map_.emplace(kernel_reg_val, std::shared_ptr<const user_op::OpKernel>(kernel));
 
   infer_tmp_size_fn_map_.emplace(kernel, &kernel_reg_val->infer_tmp_size_fn);
