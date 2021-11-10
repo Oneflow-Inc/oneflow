@@ -292,7 +292,7 @@ class MomentumUpdateKernel final : public user_op::OpKernel, public user_op::Cud
 
 #define REGISTER_MOMENTUM_UPDATE_KERNEL(device, dtype, gtype)                            \
   REGISTER_USER_KERNEL("momentum_update")                                                \
-      .SetCreateFn<MomentumUpdateKernel<device, dtype, gtype>>()                  \
+      .SetCreateFn<MomentumUpdateKernel<device, dtype, gtype>>()                         \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
                        & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));

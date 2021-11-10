@@ -267,7 +267,7 @@ struct ReluGradFunctor {
 
 #define REGISTER_HARDTANH_KERNEL(device, dtype)                                                 \
   REGISTER_USER_KERNEL("hardtanh")                                                              \
-      .SetCreateFn([]() {                                      \
+      .SetCreateFn([]() {                                                                       \
         return new UnaryElemwiseXpuKernel<device, HardtanhFunctor<dtype>, dtype, dtype>(        \
             [](user_op::KernelComputeContext* ctx) {                                            \
               return HardtanhFunctor<dtype>(ctx->Attr<double>("min_val"),                       \
@@ -283,7 +283,7 @@ struct ReluGradFunctor {
         return Maybe<void>::Ok();                                                               \
       });                                                                                       \
   REGISTER_USER_KERNEL("hardtanh_grad")                                                         \
-      .SetCreateFn([]() {                                      \
+      .SetCreateFn([]() {                                                                       \
         return new BinaryElemwiseXpuKernel<device, HardtanhGradFunctor<dtype>, dtype, dtype,    \
                                            dtype>(                                              \
             [](user_op::KernelComputeContext* ctx) {                                            \
@@ -339,7 +339,7 @@ struct ReluGradFunctor {
 // For Relu Inplace Proposal Fn.
 #define REGISTER_RELU_FORWARD_KERNEL(device, dtype)                                                \
   REGISTER_USER_KERNEL("relu")                                                                     \
-      .SetCreateFn([]() {                                         \
+      .SetCreateFn([]() {                                                                          \
         return new UnaryElemwiseXpuKernel<device, ReluFunctor<dtype>, dtype, dtype>(               \
             [](user_op::KernelComputeContext* ctx) { return ReluFunctor<dtype>(); }, "out", "in"); \
       })                                                                                           \
@@ -354,7 +354,7 @@ struct ReluGradFunctor {
 
 #define REGISTER_RELU_BACKWARD_KERNEL(device, dtype)                                             \
   REGISTER_USER_KERNEL("relu_grad")                                                              \
-      .SetCreateFn([]() {                                       \
+      .SetCreateFn([]() {                                                                        \
         return new BinaryElemwiseXpuKernel<device, ReluGradFunctor<dtype>, dtype, dtype, dtype>( \
             [](user_op::KernelComputeContext* ctx) { return ReluGradFunctor<dtype>(); }, "dx",   \
             "y", "dy");                                                                          \

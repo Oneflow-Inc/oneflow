@@ -137,7 +137,7 @@ class BinaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::
                                             input_a_dtype, create_function, out_name,            \
                                             input_a_name)                                        \
   REGISTER_USER_KERNEL(kernel_name)                                                              \
-      .SetCreateFn([]() {                                       \
+      .SetCreateFn([]() {                                                                        \
         return new UnaryElemwiseXpuKernel<device, functor<out_dtype>, out_dtype, input_a_dtype>( \
             create_function, out_name, input_a_name);                                            \
       })                                                                                         \
@@ -149,7 +149,7 @@ class BinaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::
                                              input_a_dtype, input_b_dtype, create_function,        \
                                              out_name, input_a_name, input_b_name)                 \
   REGISTER_USER_KERNEL(kernel_name)                                                                \
-      .SetCreateFn([]() {                                         \
+      .SetCreateFn([]() {                                                                          \
         return new BinaryElemwiseXpuKernel<device, functor<out_dtype>, out_dtype, input_a_dtype,   \
                                            input_b_dtype>(create_function, out_name, input_a_name, \
                                                           input_b_name);                           \

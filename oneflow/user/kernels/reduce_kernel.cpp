@@ -128,8 +128,7 @@ class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::Cuda
     const ShapeView& in_shape = input_tensor->shape();
     bool is_axis_contiguous = false;
     int64_t outer_size = 0, inner_size = 0, reduce_size = 0;
-    GetReduceSumLayout(axis, in_shape, &is_axis_contiguous, &outer_size, &inner_size,
-                       &reduce_size);
+    GetReduceSumLayout(axis, in_shape, &is_axis_contiguous, &outer_size, &inner_size, &reduce_size);
     if (is_axis_contiguous && (outer_size == 1 || inner_size == 1)) {
       CBLAS_TRANSPOSE trans_a = (inner_size == 1) ? CblasNoTrans : CblasTrans;
       CBLAS_TRANSPOSE trans_b = CblasNoTrans;

@@ -71,9 +71,9 @@ ZeroCopyBaseContext::ZeroCopyBaseContext(const std::shared_ptr<const ArgTuple>& 
   }
 }
 
-void ZeroCopyBaseContext::Update(
-    EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
-    ConsistentTensorInferResultRawPtr consistent_tensor_infer_result) {
+void ZeroCopyBaseContext::Update(EagerBlobObjectListRawPtr inputs,
+                                 EagerBlobObjectListRawPtr outputs,
+                                 ConsistentTensorInferResultRawPtr consistent_tensor_infer_result) {
   input_tensors_ = inputs;
   output_tensors_ = outputs;
   consistent_tensor_infer_result_ = consistent_tensor_infer_result;
@@ -207,8 +207,8 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
       DeviceCtx* device_ctx, const std::string& device_tag,
       const user_op::UserOpConfWrapper* user_op_conf,
       const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-      const std::shared_ptr<const ArgTuple>& output_arg_tuple,
-      EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
+      const std::shared_ptr<const ArgTuple>& output_arg_tuple, EagerBlobObjectListRawPtr inputs,
+      EagerBlobObjectListRawPtr outputs,
       ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
       const ComposedAttrMap* composed_attrs)
       : user_op_conf_(user_op_conf),
@@ -467,8 +467,8 @@ Maybe<const user_op::OpKernel*> StatefulLocalOpKernel::ChooseOpKernel(
 }
 
 void StatefulLocalOpKernel::TryInitOpKernelState(
-    const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx,
-    EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
+    const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx, EagerBlobObjectListRawPtr inputs,
+    EagerBlobObjectListRawPtr outputs,
     ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
     user_op::OpKernelState** state) {
   auto it = op_kernel_state_map_.find(op_kernel);
