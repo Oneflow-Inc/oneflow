@@ -24,7 +24,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/blocking_counter.h"
-#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/test_util.h"
@@ -55,7 +55,7 @@ TEST(SequentialInstruction, front_seq_compute) {
   auto vm_desc = intrusive::make_shared<VmDesc>(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(),
                                       {"NewObject", "ComputeRankFrontSeqCallback"});
-  auto vm = intrusive::make_shared<VirtualMachine>(vm_desc.Get());
+  auto vm = intrusive::make_shared<VirtualMachineEngine>(vm_desc.Get());
   InstructionMsgList list;
   {
     int64_t logical_object_id = TestUtil::NewObject(&list, "cpu", "0:0");

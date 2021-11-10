@@ -62,6 +62,16 @@ TEST(Permute, SimplifyPermutation) {
   TestSimplifyPermutation<max_num_dims>(num_dims_2, src_dims_2, permutation_2,
                                         simplified_num_dims_2, simplified_src_dims_2,
                                         simplified_permutation_2);
+
+  const size_t num_dims_3 = 4;
+  int64_t src_dims_3[max_num_dims]{5, 6, 7, 8};
+  int permutation_3[max_num_dims]{0, 1, 2, 3};
+  const size_t simplified_num_dims_3 = 1;
+  int64_t simplified_src_dims_3[max_num_dims]{5 * 6 * 7 * 8};
+  int simplified_permutation_3[max_num_dims]{0};
+  TestSimplifyPermutation<max_num_dims>(num_dims_3, src_dims_3, permutation_3,
+                                        simplified_num_dims_3, simplified_src_dims_3,
+                                        simplified_permutation_3);
 }
 
 }  // namespace

@@ -320,6 +320,12 @@ jobs:
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     runs-on: [self-hosted, linux, build]
     steps:
+      - name: Fix permissions
+        run: |
+          set -x
+          docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
+      - name: Checkout Oneflow-Inc/oneflow
+        uses: actions/checkout@v2
       - uses: Oneflow-Inc/get-oneflow/cache-complete@add_user_and_ir_dir_to_cache_pattern
         name: Save cache if successful
         id: save-cache
@@ -329,14 +335,6 @@ jobs:
           entry: build-with-clang
           digest-type: build
           mark-as-completed: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
-      - name: Fix permissions
-        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
-        run: |
-          set -x
-          docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
-      - name: Checkout Oneflow-Inc/oneflow
-        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
-        uses: actions/checkout@v2
       - name: Checkout Oneflow-Inc/conda-env
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         uses: actions/checkout@v2
