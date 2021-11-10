@@ -965,7 +965,10 @@
   bind_python: True
 
 - name: "to"
-  signature: "Tensor (Tensor x, String device, DataType dtype, Bool copy=False) => To"
+  signature: [
+    "Tensor (Tensor x, String device=None, DataType dtype=None, Bool copy=False) => To",
+    "Tensor (Tensor x, Device device=None, DataType dtype=None, Bool copy=False) => To"
+  ]
   bind_python: True
 
 - name: "flip"

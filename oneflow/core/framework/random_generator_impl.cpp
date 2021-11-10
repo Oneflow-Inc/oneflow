@@ -174,7 +174,7 @@ void CUDAGeneratorImpl::set_current_seed(uint64_t seed) {
   CHECK_JUST(CUDASynchronize());
   seed_ = seed;
   detail::InitCurandStates(seed_, max_block_num_, max_thread_num_, curand_states_);
-}
+} 
 
 Maybe<Tensor> CUDAGeneratorImpl::GetState() const {
   CudaCurrentDeviceGuard dev_guard(this->device_index());

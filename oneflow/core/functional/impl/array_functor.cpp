@@ -2050,9 +2050,15 @@ Maybe<Symbol<ParallelDesc>> ReplacePlacementDeviceTag(Symbol<ParallelDesc> paral
   return SymbolOf(*out_parallel_desc);
 }
 
+Maybe<void> TouchConsistentTensor(const std::shared_ptr<one::Tensor>& tensor) {
+  CHECK_OR_RETURN(tensor->is_consistent());
+  return Maybe<void>::Ok();
+}
+
+auto* CheckMetaConsistency = DECORATE(&TouchConsistentTensor, CheckConsistentTensorMeta);
+
 Maybe<Tensor> LocalTensorTo(const std::shared_ptr<Tensor>& x, const std::string& device_type,
                             const Symbol<DType>& dtype, const bool& copy) {
-  assert(x->is_local());
   bool copy_happened = false;
   std::shared_ptr<Tensor> tensor;
   std::string target_device_type;
@@ -2072,13 +2078,6 @@ Maybe<Tensor> LocalTensorTo(const std::shared_ptr<Tensor>& x, const std::string&
   }
   return tensor ? tensor : x;
 }
-
-Maybe<void> TouchConsistentTensor(const std::shared_ptr<one::Tensor>& tensor) {
-  CHECK_OR_RETURN(tensor->is_consistent());
-  return Maybe<void>::Ok();
-}
-
-auto* CheckMetaConsistency = DECORATE(&TouchConsistentTensor, CheckConsistentTensorMeta);
 
 Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::string& device_type,
                                  const Symbol<DType>& dtype, const bool& copy) {
@@ -2110,13 +2109,38 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
 
 class ToFunctor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const std::string& device_type,
-                           const Symbol<DType>& dtype, const bool& copy) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, 
+                           const Optional<const std::string>& device_,
+                           const Optional<Symbol<DType>>& dtype_,
+                           const bool& copy) const {
+    const std::string device_type = device_.value_or(JUST(input->device())->ToString());
+    auto dtype = dtype_.value_or(input->dtype());
+    
     if (input->is_consistent()) {
+      if (device_.has_value()) {
+        CHECK_OR_RETURN(device_.value_or("") == "cpu" || device_.value_or("") == "cuda");
+      }
       return JUST(ConsistentTensorTo(input, device_type, dtype, copy));
     } else {
       return JUST(LocalTensorTo(input, device_type, dtype, copy));
     }
+  }
+};
+
+class To2Functor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, 
+                           const Optional<Symbol<Device>>& device_,
+                           const Optional<Symbol<DType>>& dtype_, 
+                           const bool& copy) const {
+    CHECK_OR_RETURN(input->is_consistent() && device_.has_value()) 
+      << "A consistent tensor can only call to() with device_str_without_id, "
+      << "e.g. to(\"cuda\") or to(\"cpu\"), "
+      << "but device param " << device_.value_or(Symbol<Device>())->ToString() << " has been received.";
+    
+    const std::string device_type = device_.value_or(JUST(input->device()))->ToString();
+    auto dtype = dtype_.value_or(input->dtype());
+    return JUST(LocalTensorTo(input, device_type, dtype, copy));
   }
 };
 
