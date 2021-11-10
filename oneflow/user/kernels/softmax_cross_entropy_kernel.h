@@ -14,10 +14,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/softmax_kernel_util.h"
+#include "oneflow/core/primitive/include/softmax.h"
 
 namespace oneflow {
 namespace user_op {
+
+namespace {
+
+template<typename Context>
+std::unique_ptr<primitive::Softmax> NewSoftmaxPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("prediction", 0)->data_type();
+  return primitive::NewPrimitive<primitive::SoftmaxFactory>(ctx->device_type(), data_type);
+}
+
+hob::HobContextGetter<user_op::KernelRegContext, bool> SoftmaxPrimitiveExists() {
+  return user_op::HobCtxGetter<bool>("SoftmaxPrimitiveExists",
+                                     [](const user_op::KernelRegContext& ctx) {
+                                       return NewSoftmaxPrimitive(&ctx).operator bool();
+                                     });
+}
+
+}  // namespace
 
 template<DeviceType device_type, typename T>
 struct CrossEntropyKernelUtil {
@@ -40,14 +57,15 @@ class SoftmaxCrossEntropyKernel final : public user_op::OpKernel {
     const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const auto num_axes = label->shape().NumAxes();
     const int64_t num_instances = label->shape().Count(0, num_axes - 1);
     const int64_t num_classes = label->shape().At(num_axes - 1);
-    SoftmaxKernelUtil<device_type, SoftmaxAlgorithm::kSoftmax, T>::ComputeProb(
-        ctx->device_ctx(), num_instances, num_classes, prediction->dptr<T>(), prob->mut_dptr<T>(),
-        tmp_buffer->mut_dptr(), tmp_buffer->shape().elem_cnt());
+    std::unique_ptr<primitive::Softmax> primitive = NewSoftmaxPrimitive(ctx);
+    CHECK(primitive);
+    primitive->Launch(ctx->stream_ctx(), num_instances, num_classes, prediction->dptr(),
+                      prob->mut_dptr());
+
     CrossEntropyKernelUtil<device_type, T>::ComputeEntropy(ctx->device_ctx(), num_instances,
                                                            num_classes, prob->dptr<T>(),
                                                            label->dptr<T>(), out->mut_dptr<T>());
@@ -55,20 +73,13 @@ class SoftmaxCrossEntropyKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SOFTMAX_CROSS_ENTROPY_KERNEL(device_type_v, dtype_pair)                         \
-  REGISTER_USER_KERNEL("softmax_cross_entropy")                                                  \
-      .SetCreateFn<SoftmaxCrossEntropyKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>>()     \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                                \
-                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(dtype_pair))     \
-                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
-        const Shape& prediction_shape = ctx->InputShape("prediction", 0);                        \
-        const int64_t num_classes = prediction_shape.At(prediction_shape.NumAxes() - 1);         \
-        const int64_t num_instances = prediction_shape.Count(0, prediction_shape.NumAxes() - 1); \
-        return SoftmaxComputeProbTempStorageSize<OF_PP_PAIR_FIRST(dtype_pair),                   \
-                                                 SoftmaxAlgorithm::kSoftmax>(num_instances,      \
-                                                                             num_classes);       \
-      });
+#define REGISTER_SOFTMAX_CROSS_ENTROPY_KERNEL(device_type_v, dtype_pair)                     \
+  REGISTER_USER_KERNEL("softmax_cross_entropy")                                              \
+      .SetCreateFn<SoftmaxCrossEntropyKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>>() \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                            \
+                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(dtype_pair)) \
+                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair))   \
+                       & (SoftmaxPrimitiveExists() == true));
 
 template<DeviceType device_type, typename T>
 class SoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {

@@ -42,7 +42,7 @@ class CriticalSectionStreamType final : public StreamType {
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
   void Compute(Instruction* instruction) const override;
-  bool SharingVirtualMachineThread() const override { return false; }
+  bool OnSchedulerThread() const override { return false; }
   bool SupportingTransportInstructions() const override { return false; }
   intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
                                                    int64_t this_machine_id) const override;

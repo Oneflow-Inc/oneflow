@@ -33,7 +33,6 @@ limitations under the License.
 #include "oneflow/core/memory/chunk_manager.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/job/collective_boxing/scheduler.h"
-#include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif  // WITH_CUDA
@@ -108,7 +107,6 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       Global<RuntimeJobDescs>::New();
       Global<summary::EventsWriter>::New();
       Global<boxing::collective::Scheduler>::New();
-      Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
     }
 
     is_inited_ = true;
@@ -133,7 +131,6 @@ Maybe<void> MultiClientSessionContext::TryClose() {
     }
     {
       // NOTE(chengcheng): delete runtime global objects
-      Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
       Global<boxing::collective::Scheduler>::Delete();
       Global<summary::EventsWriter>::Delete();
       Global<RuntimeJobDescs>::Delete();

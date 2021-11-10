@@ -1598,10 +1598,6 @@ class OneHotFunctor {
       OF_RUNTIME_ERROR() << "one_hot is only applicable to index tensor.";
     }
     MutableAttrMap attrs;
-    if (input->is_consistent()) {
-      OF_RUNTIME_ERROR() << "A consistent tensor can not be applied to onehot, and use "
-                            "tensor.to_local() to convert it to local tensor first.";
-    }
     if (num_classes == -1) {
       std::vector<int32_t> axis(input->ndim());
       std::iota(axis.begin(), axis.end(), 0);
@@ -1703,6 +1699,46 @@ class FusedSelfAttentionGradFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class FusedScaleTrilSoftmaxMaskScaleFunctor {
+ public:
+  FusedScaleTrilSoftmaxMaskScaleFunctor() {
+    random_mask_like_op_ =
+        CHECK_JUST(one::OpBuilder("random_mask_like").Input("like").Output("out").Build());
+    fused_op_ = CHECK_JUST(one::OpBuilder("fused_tril_scale_softmax_mask_scale")
+                               .Input("x")
+                               .Input("mask")
+                               .Output("y")
+                               .Output("softmax_y")
+                               .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const float p,
+                                const int64_t diagonal, const float tril_scale_value,
+                                const Optional<one::Generator>& generator) const {
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    MutableAttrMap random_mask_like_attrs;
+    JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
+    JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
+
+    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *random_mask_like_op_, {x},
+        OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
+
+    float mask_scale_value = 1.0;
+    if (p != 1.0) { mask_scale_value = 1.0 / (1.0 - p); }
+    MutableAttrMap fused_attrs;
+    JUST(fused_attrs.SetAttr<int64_t>("diagonal", diagonal));
+    JUST(fused_attrs.SetAttr<float>("tril_scale_value", tril_scale_value));
+    JUST(fused_attrs.SetAttr<float>("mask_scale_value", mask_scale_value));
+
+    return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_, {x, mask}, fused_attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> fused_op_;
+  std::shared_ptr<OpExpr> random_mask_like_op_;
 };
 
 class L2NormalizeGradFunctor {
@@ -1972,6 +2008,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedBiasAddGeluFunctor>("FusedBiasAddGelu");
   m.add_functor<impl::FusedBiasAddGeluGradFunctor>("FusedBiasAddGeluGrad");
   m.add_functor<impl::FusedBiasAddDropoutFunctor>("FusedBiasAddDropout");
+  m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleFunctor>("FusedScaleTrilSoftmaxMaskScale");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
   m.add_functor<impl::CtcGreedyDecoderFunctor>("CtcGreedyDecoder");
   m.add_functor<impl::PartialFCSampleFunctor>("DistributedPariticalFCSample");

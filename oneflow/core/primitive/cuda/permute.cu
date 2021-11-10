@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/primitive/include/permute.h"
 #include "oneflow/core/primitive/common/permute_impl.h"
-#include "oneflow/core/stream/cuda_stream_context.h"
+#include "oneflow/core/stream/cuda/cuda_stream_context.h"
 #include <cuda_runtime.h>
 
 namespace oneflow {
@@ -112,7 +112,7 @@ template<size_t num_dims, size_t tile_size, typename IndexType>
 __global__ void BatchTransposeMovement2Kernel(const void* src_ptr, void* dst_ptr, IndexType rows,
                                               IndexType cols, IndexType num_tile_rows,
                                               IndexType num_tile_cols, int32_t block_nums) {
-  static_assert(tile_size % 2 == 0);
+  static_assert(tile_size % 2 == 0, "");
   using T_MOV2 = typename std::aligned_storage<2, 2>::type;
   using T_MOV4 = typename std::aligned_storage<4, 4>::type;
 
@@ -214,7 +214,7 @@ template<size_t num_dims, size_t tile_size, typename IndexType>
 bool CheckLaunchBatchTranspose(const int* permutation, const IndexType& num_batches,
                                const IndexType& rows, const IndexType& cols) {
   if (CheckIfGreaterEqualThanTileSize<tile_size, IndexType>(rows, cols)) {
-    if (num_batches == 1) {
+    if (num_batches == 1 && permutation[1] == 0 && permutation[0] == 1) {
       // 2d tensor case: (0, 1) -> (1, 0)
       return true;
     } else if (num_dims == 3 && permutation[2] == 1 && permutation[1] == 2) {
