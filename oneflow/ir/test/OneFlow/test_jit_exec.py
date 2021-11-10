@@ -29,10 +29,10 @@ class MyModule(torch.nn.Module):
     @torch.jit.exec
     def forward(self, input):
         output = self.linear(input)
+        print(output)
         return output
 
 
-# scripted_module = torch.jit.script(MyModule(2, 3))
 linear = MyModule(2, 3)
 print(linear(torch.randn(2, 2)))
 print(linear(torch.randn(2, 2)))
