@@ -99,7 +99,6 @@ void EpollCommNet::SendMsg(int64_t dst_machine_id, void * data, size_t size) {
   msg.msg_type = SocketMsgType::kActor;
   std::memcpy(msg.actor_msg.data, data, size);
   msg.actor_msg.size = size;
-  GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
   if(DebugEpoll) {
     std::cout<<"EpollCommNet::SendMsg,the data's addr:" <<std::hex <<  reinterpret_cast<uint64_t>(data) << std::endl;  
     std::cout<<"EpollCommNet::SendMsg,the size:"<<size << std::endl;
@@ -107,6 +106,8 @@ void EpollCommNet::SendMsg(int64_t dst_machine_id, void * data, size_t size) {
     std::cout<<"EpollCommNet::SendMsg,the msg:"<<std::hex << reinterpret_cast<uint64_t>(&msg) << std::endl;
     std::cout<<std::endl;
   }
+  GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
+
 }
 
 char* EpollCommNet::SerialTokenToData(void* token, size_t* size) { 
