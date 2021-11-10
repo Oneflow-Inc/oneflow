@@ -35,6 +35,7 @@ if (WITH_TENSORRT)
 endif()
 
 include(hwloc)
+include(oneDNN)
 
 option(CUDA_STATIC "" ON)
 
@@ -138,6 +139,7 @@ set(oneflow_third_party_libs
     ${CMAKE_THREAD_LIBS_INIT}
     ${FLATBUFFERS_STATIC_LIBRARIES}
     ${LZ4_STATIC_LIBRARIES}
+    ${ONEDNN_STATIC_LIBRARIES}
 )
 
 if (NOT WITH_XLA)
@@ -166,6 +168,7 @@ set(oneflow_third_party_dependencies
   flatbuffers
   lz4_copy_libs_to_destination
   lz4_copy_headers_to_destination
+  onednn
 )
 
 if (WITH_COCOAPI)
@@ -196,6 +199,7 @@ list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS
     ${OPENSSL_INCLUDE_DIR}
     ${FLATBUFFERS_INCLUDE_DIR}
     ${LZ4_INCLUDE_DIR}
+    ${ONEDNN_INCLUDE_DIR}
 )
 
 if (NOT WITH_XLA)
