@@ -14,62 +14,72 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/user/kernels/softmax_kernel_util.h"
+#include "oneflow/core/primitive/include/softmax.h"
+#include "oneflow/core/primitive/include/softmax_backward.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
 namespace {
 
-template<DeviceType device_type, typename T>
-class SoftmaxKernel final : public user_op::OpKernel {
+template<typename Context>
+std::unique_ptr<primitive::Softmax> NewSoftmaxPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("in", 0)->data_type();
+  return primitive::NewPrimitive<primitive::SoftmaxFactory>(ctx->device_type(), data_type);
+}
+
+hob::HobContextGetter<user_op::KernelRegContext, bool> SoftmaxPrimitiveExists() {
+  return user_op::HobCtxGetter<bool>("SoftmaxPrimitiveExists",
+                                     [](const user_op::KernelRegContext& ctx) {
+                                       return NewSoftmaxPrimitive(&ctx).operator bool();
+                                     });
+}
+
+template<typename Context>
+std::unique_ptr<primitive::SoftmaxBackward> NewSoftmaxBackwardPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->data_type();
+  return primitive::NewPrimitive<primitive::SoftmaxBackwardFactory>(ctx->device_type(), data_type);
+}
+
+hob::HobContextGetter<user_op::KernelRegContext, bool> SoftmaxBackwardPrimitiveExists() {
+  return user_op::HobCtxGetter<bool>("SoftmaxBackwardPrimitiveExists",
+                                     [](const user_op::KernelRegContext& ctx) {
+                                       return NewSoftmaxBackwardPrimitive(&ctx).operator bool();
+                                     });
+}
+
+}  // namespace
+
+class SoftmaxKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   SoftmaxKernel() = default;
   ~SoftmaxKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t num_classes = in->shape().At(in->shape().NumAxes() - 1);
-    const int64_t num_instances = in->shape().Count(0, in->shape().NumAxes() - 1);
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const size_t temp_storage_bytes = tmp_buffer->shape().elem_cnt();
-    SoftmaxKernelUtil<device_type, SoftmaxAlgorithm::kSoftmax, T>::ComputeProb(
-        ctx->device_ctx(), num_instances, num_classes, in->dptr<T>(), out->mut_dptr<T>(),
-        tmp_buffer->mut_dptr(), temp_storage_bytes);
+    const ShapeView& in_shape = in->shape();
+    const int64_t cols = in_shape.At(in_shape.NumAxes() - 1);
+    const int64_t rows = in_shape.Count(0, in_shape.NumAxes() - 1);
+    std::unique_ptr<primitive::Softmax> primitive = NewSoftmaxPrimitive(ctx);
+    CHECK(primitive);
+    primitive->Launch(ctx->stream_ctx(), rows, cols, in->dptr(), out->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<DeviceType device_type, typename T>
-user_op::InferTmpSizeFn GenFwInferTmpSizeFn() {
-  return [](user_op::InferContext* ctx) {
-    const Shape& in_shape = ctx->InputShape("in", 0);
-    const int64_t num_classes = in_shape.At(in_shape.NumAxes() - 1);
-    const int64_t num_instances = in_shape.Count(0, in_shape.NumAxes() - 1);
-    return SoftmaxComputeProbTempStorageSize<T, SoftmaxAlgorithm::kSoftmax>(num_instances,
-                                                                            num_classes);
-  };
-}
+REGISTER_USER_KERNEL("softmax").SetCreateFn<SoftmaxKernel>().SetIsMatchedHob(
+    SoftmaxPrimitiveExists() == true);
 
-#define REGISTER_SOFTMAX_KERNEL(device, dtype)                                          \
-  REGISTER_USER_KERNEL("softmax")                                                       \
-      .SetCreateFn<SoftmaxKernel<device, dtype>>()                                      \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn(GenFwInferTmpSizeFn<device, dtype>());
-
-REGISTER_SOFTMAX_KERNEL(DeviceType::kCPU, float)
-REGISTER_SOFTMAX_KERNEL(DeviceType::kCPU, double)
-
-template<DeviceType device_type, typename T>
-class SoftmaxGradKernel final : public user_op::OpKernel {
+class SoftmaxGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   SoftmaxGradKernel() = default;
   ~SoftmaxGradKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -78,37 +88,16 @@ class SoftmaxGradKernel final : public user_op::OpKernel {
     const int64_t num_classes = y->shape().At(y->shape().NumAxes() - 1);
     const int64_t num_instances = y->shape().elem_cnt() / num_classes;
 
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const size_t temp_storage_bytes = tmp_buffer->shape().elem_cnt();
-
-    SoftmaxKernelUtil<device_type, SoftmaxAlgorithm::kSoftmax, T>::ComputeDiff(
-        ctx->device_ctx(), num_instances, num_classes, dy->dptr<T>(), y->dptr<T>(),
-        dx->mut_dptr<T>(), tmp_buffer->mut_dptr(), temp_storage_bytes);
+    std::unique_ptr<primitive::SoftmaxBackward> primitive = NewSoftmaxBackwardPrimitive(ctx);
+    CHECK(primitive);
+    primitive->Launch(ctx->stream_ctx(), num_instances, num_classes, y->dptr(), dy->dptr(),
+                      dx->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<DeviceType device_type, typename T>
-user_op::InferTmpSizeFn GenBwInferTmpSizeFn() {
-  return [](user_op::InferContext* ctx) {
-    const Shape& dy_shape = ctx->InputShape("dy", 0);
-    const int64_t num_classes = dy_shape.At(dy_shape.NumAxes() - 1);
-    const int64_t num_instances = dy_shape.Count(0, dy_shape.NumAxes() - 1);
-    return SoftmaxComputeDiffTempStorageSize<T, SoftmaxAlgorithm::kSoftmax>(num_instances,
-                                                                            num_classes);
-  };
-}
-
-#define REGISTER_SOFTMAX_GRAD_KERNEL(device, dtype)                                    \
-  REGISTER_USER_KERNEL("softmax_grad")                                                 \
-      .SetCreateFn<SoftmaxGradKernel<device, dtype>>()                                 \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn(GenBwInferTmpSizeFn<device, dtype>());
-
-REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kCPU, float)
-REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kCPU, double)
-
-}  // namespace
+REGISTER_USER_KERNEL("softmax_grad")
+    .SetCreateFn<SoftmaxGradKernel>()
+    .SetIsMatchedHob(SoftmaxBackwardPrimitiveExists() == true);
 
 }  // namespace oneflow

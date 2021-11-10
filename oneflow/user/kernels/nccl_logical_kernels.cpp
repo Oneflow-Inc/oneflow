@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/primitive/include/permute.h"
 
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 
@@ -28,7 +28,7 @@ namespace {
 
 class NcclLogicalKernelCommState final : public user_op::OpKernelState {
  public:
-  NcclLogicalKernelCommState(user_op::KernelInitContext* ctx)
+  explicit NcclLogicalKernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
         has_independent_stream_(ctx->op_conf().has_stream_index_hint()),
         stream_index_(ctx->op_conf().stream_index_hint()),
@@ -59,7 +59,7 @@ class NcclLogicalKernelCommState final : public user_op::OpKernelState {
   bool has_independent_stream_;
   uint32_t stream_index_;
   ParallelDesc parallel_desc_;
-  ncclComm_t comm_;
+  ncclComm_t comm_{};
 };
 
 class NcclLogicalAllReduceKernel final : public user_op::OpKernel {
@@ -182,21 +182,14 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
     CHECK_EQ(unpack_from_dim_vec.at(in_split_axis) % num_ranks, 0);
     unpack_from_dim_vec[in_split_axis] = unpack_from_dim_vec.at(in_split_axis) / num_ranks;
     unpack_from_dim_vec.insert(unpack_from_dim_vec.begin(), num_ranks);
-    const Shape unpack_from_shape(unpack_from_dim_vec);
-    DimVector transpose_out_dim_vec;
     std::vector<int32_t> perm;
-    FOR_RANGE(int64_t, i, 1, unpack_from_shape.NumAxes()) {
-      perm.push_back(i);
-      transpose_out_dim_vec.push_back(unpack_from_shape.At(i));
-    }
+    FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.push_back(i); }
     perm.insert(perm.begin() + in_split_axis, 0);
-    transpose_out_dim_vec.insert(transpose_out_dim_vec.begin() + in_split_axis,
-                                 unpack_from_shape.At(0));
-    const Shape transpose_out_shape(transpose_out_dim_vec);
-    NewKernelUtil<DeviceType::kGPU>::Transpose(
-        ctx->device_ctx(), unpack_from_shape.NumAxes(), unpack_from_shape, transpose_out_shape,
-        perm, unpack_from_shape.elem_cnt(), reinterpret_cast<const T*>(unpack_from_ptr),
-        out->mut_dptr<T>());
+    auto transpose = primitive::NewPrimitive<primitive::PermuteFactory>(
+        ctx->stream_ctx()->device_type(), unpack_from_dim_vec.size());
+    CHECK(transpose);
+    transpose->Launch(ctx->stream_ctx(), in->data_type(), unpack_from_dim_vec.size(),
+                      unpack_from_dim_vec.data(), unpack_from_ptr, perm.data(), out->mut_dptr());
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -255,23 +248,17 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
       CHECK_EQ(transpose_in_dim_vec.at(out_split_axis) % num_ranks, 0);
       transpose_in_dim_vec[out_split_axis] = transpose_in_dim_vec.at(out_split_axis) / num_ranks;
       transpose_in_dim_vec.insert(transpose_in_dim_vec.begin() + out_split_axis, num_ranks);
-      const Shape transpose_in_shape(transpose_in_dim_vec);
-      DimVector pack_to_dim_vec;
       std::vector<int32_t> perm;
       perm.push_back(out_split_axis);
-      pack_to_dim_vec.push_back(transpose_in_shape.At(out_split_axis));
-      FOR_RANGE(int64_t, i, 0, transpose_in_shape.NumAxes()) {
-        if (i != out_split_axis) {
-          perm.push_back(i);
-          pack_to_dim_vec.push_back(transpose_in_shape.At(i));
-        }
+      FOR_RANGE(int64_t, i, 0, transpose_in_dim_vec.size()) {
+        if (i != out_split_axis) { perm.push_back(i); }
       }
-      CHECK_EQ(elem_cnt, transpose_in_shape.elem_cnt());
-      const Shape pack_to_shape(pack_to_dim_vec);
-      CHECK_EQ(elem_cnt, pack_to_shape.elem_cnt());
-      NewKernelUtil<DeviceType::kGPU>::Transpose(
-          ctx->device_ctx(), transpose_in_shape.NumAxes(), transpose_in_shape, pack_to_shape, perm,
-          elem_cnt, in->dptr<T>(), reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()));
+      auto transpose = primitive::NewPrimitive<primitive::PermuteFactory>(
+          ctx->stream_ctx()->device_type(), transpose_in_dim_vec.size());
+      CHECK(transpose);
+      transpose->Launch(ctx->stream_ctx(), in->data_type(), transpose_in_dim_vec.size(),
+                        transpose_in_dim_vec.data(), in->dptr(), perm.data(),
+                        tmp_buffer->mut_dptr());
     }
 
     if (in_split_axis != 0) {
@@ -309,21 +296,14 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
       CHECK_EQ(unpack_from_dim_vec.at(out_split_axis) % num_ranks, 0);
       unpack_from_dim_vec[out_split_axis] = unpack_from_dim_vec.at(out_split_axis) / num_ranks;
       unpack_from_dim_vec.insert(unpack_from_dim_vec.begin(), num_ranks);
-      const Shape unpack_from_shape(unpack_from_dim_vec);
-      DimVector transpose_out_dim_vec;
       std::vector<int32_t> perm;
-      FOR_RANGE(int64_t, i, 1, unpack_from_shape.NumAxes()) {
-        perm.push_back(i);
-        transpose_out_dim_vec.push_back(unpack_from_shape.At(i));
-      }
+      FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.push_back(i); }
       perm.insert(perm.begin() + in_split_axis, 0);
-      transpose_out_dim_vec.insert(transpose_out_dim_vec.begin() + in_split_axis,
-                                   unpack_from_shape.At(0));
-      const Shape transpose_out_shape(transpose_out_dim_vec);
-      NewKernelUtil<DeviceType::kGPU>::Transpose(
-          ctx->device_ctx(), unpack_from_shape.NumAxes(), unpack_from_shape, transpose_out_shape,
-          perm, unpack_from_shape.elem_cnt(), reinterpret_cast<const T*>(unpack_from_ptr),
-          out->mut_dptr<T>());
+      auto transpose = primitive::NewPrimitive<primitive::PermuteFactory>(
+          ctx->stream_ctx()->device_type(), unpack_from_dim_vec.size());
+      CHECK(transpose);
+      transpose->Launch(ctx->stream_ctx(), in->data_type(), unpack_from_dim_vec.size(),
+                        unpack_from_dim_vec.data(), unpack_from_ptr, perm.data(), out->mut_dptr());
     }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

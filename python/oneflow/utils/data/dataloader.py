@@ -150,9 +150,6 @@ class DataLoader(Generic[T_co]):
             and :attr:`drop_last`.
         num_workers (int, optional): how many subprocesses to use for data
             loading (default: ``0``). ``0`` means that the data will be loaded in the main process.
-            if set num_workers > 1, than you may need to set up how multiprocesses start,
-            currently, we only supports start-up in the spawn way(not fork), 
-            you can set it like the code-block bellow.
         collate_fn (callable, optional): merges a list of samples to form a
             mini-batch of Tensor(s).  Used when using batched loading from a
             map-style dataset.
@@ -172,15 +169,6 @@ class DataLoader(Generic[T_co]):
             the worker processes after a dataset has been consumed once. This allows to
             maintain the workers `Dataset` instances alive. (default: ``False``)
 
-    Set multiproccing start method 'spawn':
-
-    .. code-block:: python
-
-        if __name__ == "__main__":
-            import multiprocessing as mp
-            mp.set_start_method("spawn")
-            ...
-            ...
 
     .. warning:: If the ``spawn`` start method is used, :attr:`worker_init_fn`
                  cannot be an unpicklable object, e.g., a lambda function.
@@ -238,9 +226,6 @@ class DataLoader(Generic[T_co]):
             self.num_workers = 0
         else:
             self.num_workers = num_workers
-            warnings.warn(
-                "Using multiprocessing dataloader, currently, we only supports start-up in the spawn way(not fork)"
-            )
 
         if timeout < 0:
             raise ValueError("timeout option should be non-negative")
@@ -941,7 +926,6 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
         self._index_queues = []
         self._workers = []
-        # multiprocessing.set_start_method("spawn")
         for i in range(self._num_workers):
             # No certainty which module multiprocessing_context is
             index_queue = multiprocessing_context.Queue()  # type: ignore[var-annotated]
