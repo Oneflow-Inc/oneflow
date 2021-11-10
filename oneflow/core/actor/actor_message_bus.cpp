@@ -79,10 +79,11 @@ void ActorMsgBus::HandleRecvData(void* data, size_t size) {
   if (msg.IsDataRegstMsgToConsumer()) {
     void* token = Global<CommNet>::Get()->DeSerialDataToToken((char*)msg.user_data(), &token_size);
     new_msg.set_comm_net_token(token);
+    std::cout<<"ActorMsgBus::HandleRecvData,the new_msg.token:"<<std::hex << reinterpret_cast<uint64_t>(new_msg.regst()->comm_net_token()) << std::endl;
+    std::cout<<"ActorMsgBus::HandleRecvData,the size:"<<std::hex <<size <<  std::endl;
+    std::cout <<std::endl;
   }
-  std::cout<<"ActorMsgBus::HandleRecvData,the new_msg.token:"<<std::hex << reinterpret_cast<uint64_t>(new_msg.regst()->comm_net_token());
-  std::cout<<"ActorMsgBus::HandleRecvData,the size:"<<std::hex << std::endl;
-  std::cout <<std::endl;
+
   SendMsgWithoutCommNet(new_msg);
 }
 
