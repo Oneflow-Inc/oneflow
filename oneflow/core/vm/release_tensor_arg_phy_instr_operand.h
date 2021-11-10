@@ -34,7 +34,6 @@ class ReleaseTensorArgPhyInstrOperand : public PhyInstrOperand {
   ReleaseTensorArgPhyInstrOperand(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
                                   LocalDepObject* compute_local_dep_object)
       : eager_blob_object_(eager_blob_object),
-        compute_local_dep_object_(compute_local_dep_object),
         input_dependences_(),
         output_dependences_{compute_local_dep_object->mut_mirrored_object()} {}
   ~ReleaseTensorArgPhyInstrOperand() override = default;
@@ -48,7 +47,6 @@ class ReleaseTensorArgPhyInstrOperand : public PhyInstrOperand {
 
  private:
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
-  LocalDepObject* compute_local_dep_object_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;
 };

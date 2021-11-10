@@ -58,11 +58,11 @@ void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
   INTRUSIVE_FOR_EACH(access, access_list) {
     CHECK_GT(access->ref_cnt(), 1);
     access_list->Erase(access.Mutable());
-    if (access->is_mirrored_object_id_inserted()) {
+    if (unlikely(access->is_mirrored_object_id_inserted())) {
       rw_mutexed_object_accesses->Erase(access.Mutable());
     }
     auto* mirrored_object = access->mut_mirrored_object();
-    if (!access->rw_mutexed_object_access_hook().empty()) {
+    if (unlikely(!access->rw_mutexed_object_access_hook().empty())) {
       CHECK_EQ(access->mut_rw_mutexed_object(), mirrored_object->mut_rw_mutexed_object());
       mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Erase(access.Mutable());
     }
@@ -307,46 +307,81 @@ void VirtualMachineEngine::ForEachMutMirroredObject(
   }
 }
 
-RwMutexedObjectAccess* VirtualMachineEngine::ConsumeMirroredObject(OperandAccessType access_type,
-                                                                   MirroredObject* mirrored_object,
-                                                                   Instruction* instruction) {
-  auto rw_mutexed_object_access =
-      intrusive::make_shared<RwMutexedObjectAccess>(instruction, mirrored_object, access_type);
-  instruction->mut_mirrored_object_id2access()->Insert(rw_mutexed_object_access.Mutable());
-  instruction->mut_access_list()->PushBack(rw_mutexed_object_access.Mutable());
-  mirrored_object->mut_rw_mutexed_object()->mut_access_list()->EmplaceBack(
-      std::move(rw_mutexed_object_access));
-  return rw_mutexed_object_access.Mutable();
+RwMutexedObjectAccess* VirtualMachineEngine::AccessMirroredObject(OperandAccessType access_type,
+                                                                  MirroredObject* mirrored_object,
+                                                                  Instruction* instruction) {
+  auto access = access_pool_.make_shared(instruction, mirrored_object, access_type);
+  auto* ptr = access.Mutable();
+  instruction->mut_access_list()->PushBack(ptr);
+  mirrored_object->mut_rw_mutexed_object()->mut_access_list()->EmplaceBack(std::move(access));
+  return ptr;
 }
 
 void VirtualMachineEngine::TryConnectInstruction(Instruction* src_instruction,
                                                  Instruction* dst_instruction) {
   if (unlikely(src_instruction == dst_instruction)) { return; }
   if (likely(EdgeDispatchable(src_instruction, dst_instruction))) { return; }
-  auto edge = intrusive::make_shared<InstructionEdge>(src_instruction, dst_instruction);
+  auto edge = instruction_edge_pool_.make_shared(src_instruction, dst_instruction);
   src_instruction->mut_out_edges()->PushBack(edge.Mutable());
   dst_instruction->mut_in_edges()->PushBack(edge.Mutable());
+}
+
+void VirtualMachineEngine::ConnectInstructionsByWrite(RwMutexedObjectAccess* dst_access) {
+  CHECK(dst_access->is_mut_operand());
+  auto* mirrored_object = dst_access->mut_mirrored_object();
+  auto* dst_instruction = dst_access->mut_instruction();
+  auto* access_list = mirrored_object->mut_rw_mutexed_object()->mut_access_list();
+  if (likely(access_list->Begin() == dst_access)) { return; }
+  INTRUSIVE_FOR_EACH_PTR(src_access, access_list) {
+    if (unlikely(src_access == dst_access)) { break; }
+    TryConnectInstruction(src_access->mut_instruction(), dst_instruction);
+    CHECK_EQ(src_access->mut_rw_mutexed_object(), mirrored_object->mut_rw_mutexed_object());
+    access_list->Erase(src_access);
+  }
+}
+
+void VirtualMachineEngine::ConnectInstructionsByRead(RwMutexedObjectAccess* dst_access) {
+  CHECK(dst_access->is_const_operand());
+  auto* mirrored_object = dst_access->mut_mirrored_object();
+  auto* dst_instruction = dst_access->mut_instruction();
+  auto* first = mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Begin();
+  if (first->is_mut_operand()) {
+    TryConnectInstruction(first->mut_instruction(), dst_instruction);
+  } else if (first->is_const_operand()) {
+    // do nothing
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 void VirtualMachineEngine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                                                   Instruction* instruction) {
   const auto& phy_instr_operand = instruction->instr_msg().phy_instr_operand();
   if (likely(phy_instr_operand)) {
+    // Connect instructions by write before connecting by read.
     for (auto* mirrored_object : phy_instr_operand->output_dependences()) {
-      ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instruction);
+      ConnectInstructionsByWrite(
+          AccessMirroredObject(kMutableOperandAccess, mirrored_object, instruction));
     }
     for (auto* mirrored_object : phy_instr_operand->input_dependences()) {
-      ConsumeMirroredObject(kConstOperandAccess, mirrored_object, instruction);
+      ConnectInstructionsByRead(
+          AccessMirroredObject(kConstOperandAccess, mirrored_object, instruction));
     }
   } else {
+    const auto& ConsumeMirroredObject = [&](OperandAccessType access_type,
+                                            MirroredObject* mirrored_object) {
+      auto* access = AccessMirroredObject(access_type, mirrored_object, instruction);
+      instruction->mut_mirrored_object_id2access()->Insert(access);
+      return access;
+    };
     auto ConsumeConstMirroredObject = [&](MirroredObject* mirrored_object) {
-      ConsumeMirroredObject(kConstOperandAccess, mirrored_object, instruction);
+      ConsumeMirroredObject(kConstOperandAccess, mirrored_object);
     };
     auto ConsumeMutMirroredObject = [&](MirroredObject* mirrored_object) {
-      ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instruction);
+      ConsumeMirroredObject(kMutableOperandAccess, mirrored_object);
     };
     auto ConsumeDelMirroredObject = [&](MirroredObject* mirrored_object) {
-      auto* access = ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instruction);
+      auto* access = ConsumeMirroredObject(kMutableOperandAccess, mirrored_object);
       CHECK(!mirrored_object->has_deleting_access());
       mirrored_object->set_deleting_access(access);
     };
@@ -401,35 +436,19 @@ void VirtualMachineEngine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_o
         // do nothing
       }
     }
-  }
-  auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
-  INTRUSIVE_UNSAFE_FOR_EACH_PTR(rw_mutexed_object_access, rw_mutexed_object_accesses) {
-    auto* mirrored_object = rw_mutexed_object_access->mut_mirrored_object();
-    if (mirrored_object->has_deleting_access()
-        && mirrored_object->mut_deleting_access() != rw_mutexed_object_access) {
-      UNIMPLEMENTED() << " accessing a deleting object "
-                      << mirrored_object->mirrored_object_id().logical_object_id_value();
-    }
-    if (mirrored_object->rw_mutexed_object().access_list().size() == 1) { continue; }
-    if (rw_mutexed_object_access->is_const_operand()) {
-      auto* first = mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Begin();
-      if (first->is_const_operand()) {
-        // do nothing
-      } else if (first->is_mut_operand()) {
-        TryConnectInstruction(first->mut_instruction(), instruction);
-      } else {
-        UNIMPLEMENTED();
+    auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
+    INTRUSIVE_UNSAFE_FOR_EACH_PTR(rw_mutexed_object_access, rw_mutexed_object_accesses) {
+      auto* mirrored_object = rw_mutexed_object_access->mut_mirrored_object();
+      if (mirrored_object->has_deleting_access()
+          && mirrored_object->mut_deleting_access() != rw_mutexed_object_access) {
+        UNIMPLEMENTED() << " accessing a deleting object "
+                        << mirrored_object->mirrored_object_id().logical_object_id_value();
       }
-    } else {
-      CHECK(rw_mutexed_object_access->is_mut_operand());
-      auto* access_list = mirrored_object->mut_rw_mutexed_object()->mut_access_list();
-      INTRUSIVE_FOR_EACH_PTR(access, access_list) {
-        if (access == rw_mutexed_object_access) { break; }
-        CHECK(access->is_const_operand() || access->is_mut_operand())
-            << "access type " << access->access_type() << " not supported";
-        TryConnectInstruction(access->mut_instruction(), instruction);
-        CHECK_EQ(access->mut_rw_mutexed_object(), mirrored_object->mut_rw_mutexed_object());
-        access_list->Erase(access);
+      if (mirrored_object->rw_mutexed_object().access_list().size() == 1) { continue; }
+      if (rw_mutexed_object_access->is_const_operand()) {
+        ConnectInstructionsByRead(rw_mutexed_object_access);
+      } else {
+        ConnectInstructionsByWrite(rw_mutexed_object_access);
       }
     }
   }
