@@ -43,8 +43,8 @@ void SocketReadHelper::SwitchToMsgHeadReadHandle() {
   read_ptr_ = reinterpret_cast<char*>(&cur_msg_);
   read_size_ = sizeof(cur_msg_);
   if(DebugRead) {
-    std::cout<<"SocketReadHelper::SwitchToMsgHeadReadHandle,the read_ptr:"<<std::hex << reinterpret_cast<uint64_t>(read_ptr_) << std::endl;
-    std::cout<<"SocketReadHelper::SwitchToMsgHeadReadHandle,the read_size:"<<std::hex << read_size_ << std::endl;
+    std::cout<<"SocketReadHelper::SwitchToMsgHeadReadHandle,the read_ptr:"<< reinterpret_cast<uint64_t>(read_ptr_) << std::endl;
+    std::cout<<"SocketReadHelper::SwitchToMsgHeadReadHandle,the read_size:" << read_size_ << std::endl;
     std::cout<<std::endl;
   }
 }
@@ -64,10 +64,10 @@ bool SocketReadHelper::MsgBodyReadHandle() {
 bool SocketReadHelper::DoCurRead(void (SocketReadHelper::*set_cur_read_done)()) {
   ssize_t n = read(sockfd_, read_ptr_, read_size_);
 if(DebugRead) {
-    std::cout<<"SocketReadHelper::DoCurRead,the read_ptr:"<<std::hex << reinterpret_cast<uint64_t>(read_ptr_) << std::endl;
-    std::cout<<"SocketReadHelper::DoCurRead,the read_size:"<<std::hex << read_size_ << std::endl;
+    std::cout<<"SocketReadHelper::DoCurRead,the read_ptr:" << reinterpret_cast<uint64_t>(read_ptr_) << std::endl;
+    std::cout<<"SocketReadHelper::DoCurRead,the read_size:"<< read_size_ << std::endl;
     std::cout<<"SocketReadHelper::DoCurRead,the n:" << n << std::endl;
-    std::cout<<"SocketReadHelper::DoCurRead,the sockfd_:"<<std::hex << sockfd_ << std::endl;
+    std::cout<<"SocketReadHelper::DoCurRead,the sockfd_:" << sockfd_ << std::endl;
     std::cout<<std::endl;
   }
   const int val = 1;
