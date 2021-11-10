@@ -46,6 +46,8 @@ class SbpConstructor final {
   Maybe<void> Init(const OpGraph& op_graph, Job* job);
   Maybe<void> FindBestSbpSignature();
   Maybe<void> UpdateSbpSignatureForJob(const OpGraph& op_graph);
+  // Print the graph with SBP in order
+  void PrintSBPGraphDebugInfo();
 
  private:
   Maybe<void> InitSbpGraph(const OpGraph& op_graph, const Job& job);

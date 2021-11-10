@@ -53,6 +53,7 @@ Maybe<void> AutoParallelPass::Apply(const OpGraph& op_graph, Job* job) const {
   std::cout << "Auto parallel took "
             << std::chrono::duration_cast<std::chrono::milliseconds>(time_end - time_begin).count()
             << " ms\n";
+  sbp_constructor.PrintSBPGraphDebugInfo();
   return Maybe<void>::Ok();
 }
 
