@@ -34,4 +34,3 @@ from .placement import *
 from .sbp import *
 from .trigonometric_ops import *
 from .tensor_ops import *
-from .nn import *
