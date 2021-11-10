@@ -135,6 +135,7 @@ void SocketReadHelper::SetStatusWhenActorMsgHeadDone() {
     std::cout<<"SocketReadHelper::SetStatusWhenActorMsgHeadDone,the data:"<<std::hex << reinterpret_cast<uint64_t>(data) << std::endl;
     std::cout<<std::endl;
   }
+  std::cout<<"SocketReadHelper::SetStatusWhenActorMsgHeadDone"<<std::endl;
   Global<ActorMsgBus>::Get()->HandleRecvData(data, size);
   SwitchToMsgHeadReadHandle();
 }
