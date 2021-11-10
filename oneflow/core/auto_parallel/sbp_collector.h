@@ -61,7 +61,8 @@ class SbpCollector {
       std::unordered_set<BinarySet, BinarySetHasher>& ParallelCandidates);
 
   // Initialize copy cost from producer to proxy of producer
-  void InitializeCopyCostFromNode2Proxy(SbpNode<cfg::SbpSignature>* sbp_proxy, const LogicalBlobId& lbi);
+  void InitializeCopyCostFromNode2Proxy(SbpNode<cfg::SbpSignature>* sbp_proxy,
+                                        const LogicalBlobId& lbi);
 
   // Initialize copy cost from proxy of producer to consumers
   void InitializeCopyCostFromProxy2Consumer(
