@@ -496,6 +496,24 @@ class ExpandFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ExpandGradFunctor {
+ public:
+  ExpandGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("expand_grad").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::vector<int32_t>& logical_in_shape,
+                           const std::vector<int32_t>& logical_expand_shape) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("logical_out_shape", logical_in_shape));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("logical_expand_shape", logical_expand_shape));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ExpandDimsFunctor {
  public:
   ExpandDimsFunctor() {
@@ -614,6 +632,28 @@ class DimScatterAddFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class DimScatterAddLikeFunctor {
+ public:
+  DimScatterAddLikeFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("dim_scatter_add_like")
+                         .Input("like")
+                         .Input("index")
+                         .Input("src")
+                         .Output("output")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& like, const int32_t& dim,
+                           const std::shared_ptr<one::Tensor>& index,
+                           const std::shared_ptr<one::Tensor>& src) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {like, index, src}, attrs);
   }
 
  private:
@@ -1016,6 +1056,28 @@ class SqueezeFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axes", squeeze_dims));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UpsampleGradFunctor {
+ public:
+  UpsampleGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("upsample_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const float& height_scale,
+                           const float& width_scale, const bool& align_corners,
+                           const std::string& data_format, const std::string& interpolation) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("height_scale", height_scale));
+    JUST(attrs.SetAttr<float>("width_scale", width_scale));
+    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    JUST(attrs.SetAttr<std::string>("interpolation", interpolation));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 
  private:
@@ -2076,6 +2138,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConcatFunctor>("Concat");
   m.add_functor<impl::StackFunctor>("Stack");
   m.add_functor<impl::ExpandFunctor>("Expand");
+  m.add_functor<impl::ExpandGradFunctor>("ExpandGrad");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::ExpandDimsFunctor>("Unsqueeze");
   m.add_functor<impl::RollFunctor>("Roll");
@@ -2099,6 +2162,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FlipFunctor>("Flip");
   m.add_functor<impl::FlipGradFunctor>("FlipGrad");
   m.add_functor<impl::UpsampleFunctor>("Upsample");
+  m.add_functor<impl::UpsampleGradFunctor>("UpsampleGrad");
   m.add_functor<impl::UpsampleNearest2DFunctor>("UpsampleNearest2D");
   m.add_functor<impl::UpsampleNearest2DGradFunctor>("UpsampleNearest2DGrad");
   m.add_functor<impl::UpsampleBilinear2DFunctor>("UpsampleBilinear2D");
@@ -2124,6 +2188,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DimScatterMulFunctor>("DimScatterMul");
   m.add_functor<impl::DimScatterUpdateScalarFunctor>("DimScatterUpdateScalar");
   m.add_functor<impl::DimScatterAddScalarFunctor>("DimScatterAddScalar");
+  m.add_functor<impl::DimScatterAddLikeFunctor>("DimScatterAddLike");
   m.add_functor<impl::DimScatterMulScalarFunctor>("DimScatterMulScalar");
   m.add_functor<impl::TensorSetItemFunctor>("TensorSetItem");
   m.add_functor<impl::CastLikeFunctor>("CastLike");
