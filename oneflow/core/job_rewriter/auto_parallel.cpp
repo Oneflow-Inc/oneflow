@@ -34,7 +34,7 @@ class AutoParallelPass final : public JobPass {
   Maybe<void> Apply(const OpGraph& op_graph, Job* job) const;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
-    if (!job->job_conf().enable_auto_parallel()) {  
+    if (!job->job_conf().enable_auto_parallel()) {
       // Print Auto Parallel SBP
       Global<OpGraph>::Get()->PrintSBPGraphDebugInfo();
       return Maybe<void>::Ok();

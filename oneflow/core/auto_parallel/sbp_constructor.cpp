@@ -44,10 +44,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   JUST(GenerateNodeAndEdge(op_graph));
   JUST(FillSbpSignatureForOpNode(op_graph, job));
   JUST(InitComputationCost(op_graph));
-  // Accumulate cost on the mainstem after initializing computation cost
-  // TODO: sbp_graph.FindMainstem(max_MinLayer, op_name2sbp_node);
-
-  // TODO: add SbpCollector
+  if (enable_mainstem_algo_) { JUST(ApplyMainstemAlgo()); }
   if (use_sbp_collector_) {
     // Load logical blobs on all sbp edges.
     LoadLbi2SbpEdge(op_graph);
@@ -206,6 +203,14 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> SbpConstructor::ApplyMainstemAlgo() {
+  // Compute layer number for each node
+  int32_t max_MinLayer = sbp_graph_.ComputeLayer(op_name2sbp_node_);
+  // Accumulate cost on the mainstem after initializing computation cost
+  sbp_graph_.FindMainstem(max_MinLayer, op_name2sbp_node_);
+  return Maybe<void>::Ok();
+}
+
 // Load logical blob ids onto sbp edges
 void SbpConstructor::LoadLbi2SbpEdge(const OpGraph& op_graph) {
   // Load logical blobs onto sbp edges
@@ -236,8 +241,8 @@ void SbpConstructor::LoadLbi2SbpEdge(const OpGraph& op_graph) {
 void SbpConstructor::PrintSBPGraphDebugInfo() {
   // sbp constructor information
   std::cout << "cost_ratio_:" << cost_ratio_ << std::endl;
-  std::cout << "transfer_cost_:" << transfer_cost_ << std::endl;
-  std::cout << "wait_time_:" << wait_time_ << std::endl;
+  std::cout << "transfer_cost_:" << sbp_graph_.transfer_cost << std::endl;
+  std::cout << "wait_time_:" << sbp_graph_.wait_time << std::endl;
   std::cout << "use_sbp_collector_" << use_sbp_collector_ << std::endl;
   // test debug
   std::cout << "Get Into Print Op Graph" << std::endl;
