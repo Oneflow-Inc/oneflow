@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
+#include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/register/ofblob.h"
 namespace oneflow {
 namespace one {
@@ -1422,15 +1423,16 @@ class DropoutFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& a, const float& p,
                            const bool& training, const Optional<one::Generator>& generator) const {
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
+    
     MutableAttrMap dropout_attrs;
     if(!training){
       JUST(dropout_attrs.SetAttr<float>("rate", 0.0));
     }else{
       JUST(dropout_attrs.SetAttr<float>("rate", p));
     }
-    return OpInterpUtil::Dispatch<TensorTuple>(*dropout_op_, {a}, dropout_attrs);
-
-
+    return OpInterpUtil::Dispatch<TensorTuple>(*dropout_op_, {a}, OpExprInterpContext(dropout_attrs, dropout_state));
   }
 
  private:

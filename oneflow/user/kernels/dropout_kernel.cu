@@ -15,10 +15,11 @@ limitations under the License.
 */
 #include <cstdint>
 #include <memory>
-#include "oneflow/core/framework/framework.h"
+#include "oneflow/user/kernels/dropout_kernel.h"
+// #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
-// #include "oneflow/core/kernel/random_generator.h"
-#include "oneflow/user/kernels/random_mask_generator.h"
+#include "oneflow/core/kernel/random_generator.h"
+// #include "oneflow/user/kernels/random_mask_generator.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/cuda/elementwise.cuh"
@@ -285,10 +286,15 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
+    auto* fused_dropout_kernel_state = dynamic_cast<FusedDropoutKernelState*>(state);
+    // CHECK_NOTNULL(fused_dropout_kernel_state);
+    const auto& generator = fused_dropout_kernel_state->generator();
+    // CHECK_NOTNULL(generator);
+    std::shared_ptr<one::CUDAGeneratorImpl> cuda_gen = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
 
     const float rate = ctx->Attr<float>("rate");
     float scale = 1.0;
@@ -297,11 +303,12 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
     // generator->set_current_seed(ctx->Attr<int64_t>("seed"));
     // std::shared_ptr<RandomMaskGenerator<DeviceType::kGPU>> random_mask_like_gen = std::make_shared<RandomMaskGenerator<DeviceType::kGPU>>(generator);
 
+    uint64_t* seed = cuda_gen->dev_seed(); 
+    int32_t* counter = cuda_gen->dev_counter(); 
+
     if (ctx->has_input("_add_to_output", 0)) {
       printf("Do nothing skip! \n"); 
       const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
-      uint64_t* seed; 
-      int32_t* counter; 
       cudaMalloc(&seed, sizeof(uint64_t)); 
       cudaMalloc(&counter, sizeof(int32_t)); 
       MaskAndScaleAdd<T>(ctx->device_ctx(), seed, counter, in->shape().elem_cnt(), rate, scale, in->dptr<T>(),
@@ -309,8 +316,6 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
       cudaFree(seed); 
       cudaFree(counter); 
     } else {
-      uint64_t* seed; 
-      int32_t* counter; 
       cudaMalloc(&seed, sizeof(uint64_t)); 
       cudaMalloc(&counter, sizeof(int32_t)); 
 

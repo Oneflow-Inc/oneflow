@@ -111,23 +111,6 @@ class CPUGeneratorImpl : public DeviceGeneratorImpl {
   std::mt19937 engine_;
 };
 
-struct PhiloxCUDAState{
-  PhiloxCUDAState() = default;
-
-  PhiloxCUDAState(uint64_t seed,
-                  uint64_t offset) {
-    seed_ = seed;
-    offset_.val = offset;
-  }
-  union Payload {
-    uint64_t val;
-    int64_t* ptr;
-  };
-
-  uint64_t seed_ = 0;
-  Payload offset_;
-}; 
-
 
 #ifdef WITH_CUDA
 class CUDAGeneratorImpl : public DeviceGeneratorImpl {
@@ -139,7 +122,8 @@ class CUDAGeneratorImpl : public DeviceGeneratorImpl {
   int32_t max_thread_num() const { return max_thread_num_; }
 
   curandState* curand_states() const { return curand_states_; }
-
+  uint64_t* dev_seed() const {return dev_seed_; }
+  int32_t* dev_counter() const {return dev_counter_; }
   void set_current_seed(uint64_t seed) override;
 
   Maybe<Symbol<Device>> device() const override { return Device::New("cuda", device_index()); }
@@ -147,18 +131,17 @@ class CUDAGeneratorImpl : public DeviceGeneratorImpl {
   Maybe<Tensor> GetState() const override;
   Maybe<void> SetState(const std::shared_ptr<Tensor>& tensor_state) override;
   
-  PhiloxCUDAState philox_cuda_state(uint64_t increment);
-
  private:
   int32_t max_block_num_;
   int32_t max_thread_num_;
   curandState* curand_states_;
-  uint64_t philox_offset_per_thread_ = 0;
+  uint64_t* dev_seed_; 
+  int32_t* dev_counter_; 
 };
 
 namespace detail {
 
-void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, curandState* states);
+void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, curandState* states, uint64_t* dev_seed, int32_t* dev_counter);
 
 }  // namespace detail
 #endif  // WITH_CUDA
