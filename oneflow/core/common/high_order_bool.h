@@ -20,199 +20,158 @@ limitations under the License.
 #include <memory>
 #include <sstream>
 #include <functional>
+#include <utility>
 
+#include "oneflow/core/common/function_traits.h"
 #include "oneflow/core/common/to_string.h"
 
 namespace oneflow {
 
 namespace hob {
 
-template<typename T>
-class BoolFunctor {
- public:
-  virtual ~BoolFunctor() {}
-  virtual bool operator()(const T& ctx) const = 0;
-  virtual std::string DebugStr(const T& ctx, bool display_result = true) const = 0;
-
- protected:
-  BoolFunctor() = default;
+template<typename Context, typename ValueT>
+struct BaseBaseExpr {
+  virtual ValueT get(const Context&) const = 0;
+  virtual std::string DebugStr(const Context&) const { return ""; }
 };
 
-template<typename T>
-class BoolFunctorPtr final {
- public:
-  BoolFunctorPtr() = default;
-  BoolFunctorPtr(const BoolFunctorPtr&) = default;
-  BoolFunctorPtr(BoolFunctorPtr&&) = default;
-  ~BoolFunctorPtr(){};
-  BoolFunctorPtr(const std::shared_ptr<const BoolFunctor<T>>& ptr) : ptr_(ptr) {}
-
-  BoolFunctorPtr operator&(const BoolFunctorPtr& ptr) const;
-  BoolFunctorPtr operator|(const BoolFunctorPtr& ptr) const;
-  BoolFunctorPtr operator~() const;
-
-  BoolFunctorPtr& operator=(BoolFunctorPtr& ptr) {
-    this->ptr_ = ptr.ptr_;
-    return *this;
-  }
-
-  bool operator()(const T& ctx) const { return (*this->ptr_)(ctx); }
-
-  std::string DebugStr(const T& ctx, bool display_result = true) const {
-    return this->ptr_->DebugStr(ctx, display_result);
-  }
-
- private:
-  std::shared_ptr<const BoolFunctor<T>> ptr_;
+template<typename Context, typename ValueT, typename E>
+struct BaseExpr : public BaseBaseExpr<Context, ValueT> {
+  virtual ValueT get(const Context&) const = 0;
+  virtual std::string DebugStr(const Context&) const { return ""; }
 };
 
-template<typename T>
-class AndBoolFunctor final : public BoolFunctor<T> {
- public:
-  AndBoolFunctor() = delete;
-  AndBoolFunctor(const BoolFunctorPtr<T> lhs, const BoolFunctorPtr<T> rhs) : lhs_(lhs), rhs_(rhs) {}
-  ~AndBoolFunctor() {}
-
-  bool operator()(const T& ctx) const override { return lhs_(ctx) && rhs_(ctx); }
-
-  std::string DebugStr(const T& ctx, bool display_result) const override {
-    std::string l_str = lhs_.DebugStr(ctx, display_result);
-    display_result = display_result && lhs_(ctx);
-    std::string r_str = rhs_.DebugStr(ctx, display_result);
-    std::ostringstream string_stream;
-    string_stream << "(" << l_str << " and " << r_str << ")";
-    return string_stream.str();
-  }
+template<typename Context, typename ValueT>
+struct Literal final : public BaseExpr<Context, ValueT, Literal<Context, ValueT>> {
+  Literal(const ValueT& val) : Literal("", val) {}  // NOLINT
+  Literal(const std::string& debug_str, const ValueT& val) : val_(val), debug_str_(debug_str) {}
+  ValueT get(const Context&) const { return val_; }
 
  private:
-  const BoolFunctorPtr<T> lhs_;
-  const BoolFunctorPtr<T> rhs_;
-};
-
-template<typename T>
-class OrBoolFunctor final : public BoolFunctor<T> {
- public:
-  OrBoolFunctor() = delete;
-  OrBoolFunctor(const BoolFunctorPtr<T> lhs, const BoolFunctorPtr<T> rhs) : lhs_(lhs), rhs_(rhs) {}
-  ~OrBoolFunctor() {}
-
-  bool operator()(const T& ctx) const override { return lhs_(ctx) || rhs_(ctx); }
-
-  std::string DebugStr(const T& ctx, bool display_result) const override {
-    std::string l_str = lhs_.DebugStr(ctx, display_result);
-    display_result = display_result && (!lhs_(ctx));
-    std::string r_str = rhs_.DebugStr(ctx, display_result);
-    std::ostringstream string_stream;
-    string_stream << "(" << l_str << " or " << r_str << ")";
-    return string_stream.str();
-  }
-
- private:
-  const BoolFunctorPtr<T> lhs_;
-  const BoolFunctorPtr<T> rhs_;
-};
-
-template<typename T>
-class NotBoolFunctor final : public BoolFunctor<T> {
- public:
-  NotBoolFunctor() = delete;
-  NotBoolFunctor(const BoolFunctorPtr<T> hs) : hs_(hs) {}
-  ~NotBoolFunctor() {}
-
-  bool operator()(const T& ctx) const override { return !hs_(ctx); }
-
-  std::string DebugStr(const T& ctx, bool display_result) const override {
-    std::ostringstream string_stream;
-    string_stream << "("
-                  << "not " << hs_.DebugStr(ctx, display_result) << ")";
-    return string_stream.str();
-  }
-
- private:
-  const BoolFunctorPtr<T> hs_;
-};
-
-template<typename T>
-BoolFunctorPtr<T> BoolFunctorPtr<T>::operator&(const BoolFunctorPtr& ptr) const {
-  std::shared_ptr<const BoolFunctor<T>> and_ptr =
-      std::make_shared<const AndBoolFunctor<T>>(this->ptr_, ptr.ptr_);
-  return BoolFunctorPtr<T>(and_ptr);
-}
-
-template<typename T>
-BoolFunctorPtr<T> BoolFunctorPtr<T>::operator|(const BoolFunctorPtr& ptr) const {
-  std::shared_ptr<const BoolFunctor<T>> or_ptr =
-      std::make_shared<const OrBoolFunctor<T>>(this->ptr_, ptr.ptr_);
-  return BoolFunctorPtr<T>(or_ptr);
-}
-
-template<typename T>
-BoolFunctorPtr<T> BoolFunctorPtr<T>::operator~() const {
-  std::shared_ptr<const BoolFunctor<T>> not_ptr =
-      std::make_shared<const NotBoolFunctor<T>>(this->ptr_);
-  return BoolFunctorPtr<T>(not_ptr);
-}
-
-template<typename T>
-class HighOrderBoolFunctor final : public hob::BoolFunctor<T> {
- public:
-  HighOrderBoolFunctor() = delete;
-  HighOrderBoolFunctor(const std::string& debug_str, const std::function<bool(const T&)>& bool_fn)
-      : debug_str_(debug_str), bool_fn_(bool_fn) {}
-  ~HighOrderBoolFunctor() {}
-
-  bool operator()(const T& ctx) const override { return bool_fn_(ctx); }
-
-  std::string DebugStr(const T& ctx, bool display_result) const override {
-    std::ostringstream string_stream;
-    string_stream << "(" << debug_str_;
-    if (display_result) {
-      std::string boolResult = bool_fn_(ctx) ? "True" : "False";
-      string_stream << " [" << boolResult << "]";
-    }
-    string_stream << ")";
-    return string_stream.str();
-  }
-
- private:
+  ValueT val_;
   std::string debug_str_;
-  std::function<bool(const T&)> bool_fn_;
 };
 
-template<typename ContextT, typename T>
-class HobContextGetter final {
- public:
-  HobContextGetter(const T& const_value)
-      : debug_str_(ToString(const_value)),
-        context_getter_([const_value](const ContextT&) { return const_value; }) {}
-  HobContextGetter(const std::string& debug_str,
-                   const std::function<T(const ContextT&)>& context_getter)
-      : debug_str_(debug_str), context_getter_(context_getter) {}
+template<typename Context>
+using LiteralBool = Literal<Context, bool>;
 
-#define GENERATE_OVERLOAD_OPERATOR_FUNC(op)                                        \
-  BoolFunctorPtr<ContextT> operator op(const HobContextGetter& other) const {      \
-    std::ostringstream string_stream;                                              \
-    string_stream << debug_str_ << " " << #op << " " << other.debug_str_;          \
-    std::function<T(const ContextT&)> l_fn = this->context_getter_;                \
-    std::function<T(const ContextT&)> r_fn = other.context_getter_;                \
-    std::shared_ptr<const BoolFunctor<ContextT>> krbf_ptr =                        \
-        std::make_shared<const HighOrderBoolFunctor<ContextT>>(                    \
-            string_stream.str(),                                                   \
-            [l_fn, r_fn](const ContextT& ctx) { return l_fn(ctx) op r_fn(ctx); }); \
-    return krbf_ptr;                                                               \
-  }
-  GENERATE_OVERLOAD_OPERATOR_FUNC(==)
-  GENERATE_OVERLOAD_OPERATOR_FUNC(!=)
-  GENERATE_OVERLOAD_OPERATOR_FUNC(>=)
-  GENERATE_OVERLOAD_OPERATOR_FUNC(<=)
-  GENERATE_OVERLOAD_OPERATOR_FUNC(>)
-  GENERATE_OVERLOAD_OPERATOR_FUNC(<)
-#undef GENERATE_OVERLOAD_OPERATOR_FUNC
+template<typename Fn,
+         typename Context =
+             std::decay_t<typename oneflow::function_traits<Fn>::template arg_type<0>>,
+         typename ValueT = std::decay_t<typename oneflow::function_traits<Fn>::return_type>>
+struct Custom final : public BaseExpr<Context, ValueT, Custom<Fn>> {
+  Custom(Fn fn) : Custom(fn, "") {}  // NOLINT
+  Custom(std::string debug_str, Fn fn) : fn_(std::move(fn)), debug_str_(std::move(debug_str)) {}
+  ValueT get(const Context& context) const { return fn_(context); }
 
  private:
+  Fn fn_;
   std::string debug_str_;
-  std::function<T(const ContextT&)> context_getter_;
 };
+
+template<typename Fn>
+inline Custom<Fn> make_custom(Fn fn) {
+  return Custom<Fn>(std::forward<Fn>(fn));
+}
+
+template<typename Fn>
+inline Custom<Fn> make_custom(const std::string& debug_str, Fn fn) {
+  return Custom<Fn>(debug_str, std::forward<Fn>(fn));
+}
+
+template<typename Context, typename E>
+using BaseBoolExpr = BaseExpr<Context, bool, E>;
+
+template<typename Context>
+struct TrueBoolExpr final : public BaseBoolExpr<Context, TrueBoolExpr<Context>> {
+  bool get(const Context&) const override { return true; }
+};
+
+template<typename Context>
+struct FalseBoolExpr final : public BaseBoolExpr<Context, FalseBoolExpr<Context>> {
+  bool get(const Context&) const override { return false; }
+};
+
+template<typename Context, typename E1, typename E2>
+struct AndBoolFunctor final : public BaseBoolExpr<Context, AndBoolFunctor<Context, E1, E2>> {
+  AndBoolFunctor(E1 e1, E2 e2) : e1(std::move(e1)), e2(std::move(e2)) {}
+
+  bool get(const Context& context) const override { return e1.get(context) & e2.get(context); }
+
+ private:
+  const E1 e1;
+  const E2 e2;
+};
+
+template<typename Context, typename E1, typename E2>
+struct OrBoolFunctor final : public BaseBoolExpr<Context, OrBoolFunctor<Context, E1, E2>> {
+  OrBoolFunctor(E1 e1, E2 e2) : e1(std::move(e1)), e2(std::move(e2)) {}
+
+  bool get(const Context& context) const override { return e1.get(context) & e2.get(context); }
+
+ private:
+  const E1 e1;
+  const E2 e2;
+};
+
+template<typename Context, typename E>
+struct NotBoolFunctor final : public BaseBoolExpr<Context, NotBoolFunctor<Context, E>> {
+  explicit NotBoolFunctor(E e1) : e1(std::move(e1)) {}
+
+  bool get(const Context& context) const override { return !e1.get(context); }
+
+ private:
+  const E e1;
+};
+
+template<typename Context, typename E1, typename E2>
+struct EqualBoolFunctor final : public BaseBoolExpr<Context, EqualBoolFunctor<Context, E1, E2>> {
+  EqualBoolFunctor(E1 e1, E2 e2) : e1(std::move(e1)), e2(std::move(e2)) {}
+
+  bool get(const Context& context) const override { return e1.get(context) == e2.get(context); }
+
+ private:
+  const E1 e1;
+  const E2 e2;
+};
+
+template<typename Context, typename E1, typename E2>
+AndBoolFunctor<Context, E1, E2> operator&(BaseBoolExpr<Context, E1> const& u,
+                                          BaseBoolExpr<Context, E2> const& v) {
+  return AndBoolFunctor<Context, E1, E2>(*static_cast<const E1*>(&u), *static_cast<const E2*>(&v));
+}
+
+template<typename Context, typename E>
+NotBoolFunctor<Context, E> operator~(BaseBoolExpr<Context, E> const& u) {
+  return NotBoolFunctor<Context, E>(*static_cast<const E*>(&u));
+}
+
+template<typename Context, typename E1, typename E2>
+OrBoolFunctor<Context, E1, E2> operator|(BaseBoolExpr<Context, E1> const& u,
+                                         BaseBoolExpr<Context, E2> const& v) {
+  return OrBoolFunctor<Context, E1, E2>(*static_cast<const E1*>(&u), *static_cast<const E2*>(&v));
+}
+
+template<typename Context, typename ValueT, typename E1, typename E2>
+EqualBoolFunctor<Context, E1, E2> operator==(BaseExpr<Context, ValueT, E1> const& u,
+                                             BaseExpr<Context, ValueT, E2> const& v) {
+  return EqualBoolFunctor<Context, E1, E2>(*static_cast<const E1*>(&u),
+                                           *static_cast<const E2*>(&v));
+}
+
+template<typename Context, typename ValueT, typename E1>
+EqualBoolFunctor<Context, E1, Literal<Context, ValueT>> operator==(
+    BaseExpr<Context, ValueT, E1> const& u, ValueT const& v) {
+  return EqualBoolFunctor<Context, E1, Literal<Context, ValueT>>(*static_cast<const E1*>(&u),
+                                                                 Literal<Context, ValueT>(v));
+}
+
+template<typename Context, typename E1>
+EqualBoolFunctor<Context, E1, Literal<Context, std::string>> operator==(
+    BaseExpr<Context, std::string, E1> const& u, const char* v) {
+  return EqualBoolFunctor<Context, E1, Literal<Context, std::string>>(
+      *static_cast<const E1*>(&u), Literal<Context, std::string>(v));
+}
 
 }  // namespace hob
 
