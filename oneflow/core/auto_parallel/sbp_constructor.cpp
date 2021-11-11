@@ -248,8 +248,9 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
   std::cout << "Get Into Print Op Graph" << std::endl;
   // Collect op_node
   std::vector<OpNode*> NodeList;
-  for (auto* sbp_node : sbp_graph_.NodeList) {
-    if (sbp_node->op_node) { NodeList.push_back(sbp_node->op_node); }
+  for (const auto& op_name_sbp_node : op_name2sbp_node_) {
+    auto* op_node_ = op_name_sbp_node.second->op_node;
+    if (op_node_) { NodeList.push_back(op_node_); }
   }
 
   // test debug
