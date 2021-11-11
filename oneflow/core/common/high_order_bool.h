@@ -29,6 +29,33 @@ namespace oneflow {
 
 namespace hob {
 
+template<typename T>
+struct has_optimized_get {
+  typedef char Yes[1];
+  typedef char No[2];
+  template<typename U>
+  static Yes& test(
+      typename std::enable_if<std::is_member_function_pointer<decltype(&U::optimized_get)>::value,
+                              bool>::type = 0);
+  template<typename U>
+  static No& test(...);
+  static bool const value = sizeof(test<typename std::remove_cv<T>::type>(0)) == sizeof(Yes&);
+};
+
+template<typename Context, typename T,
+         typename std::enable_if_t<has_optimized_get<T>::value, int> = 0>
+ALWAYS_INLINE inline typename oneflow::function_traits<decltype(&T::optimized_get)>::return_type optimized_get(
+    const T& x, const Context& context) {
+  return x.optimized_get(context);
+}
+
+template<typename Context, typename T,
+         typename std::enable_if_t<!has_optimized_get<T>::value, int> = 0>
+ALWAYS_INLINE inline typename oneflow::function_traits<decltype(&T::get)>::return_type optimized_get(const T& x,
+                                                                       const Context& context) {
+  return x.get(context);
+}
+
 template<typename Context, typename ValueT>
 struct BaseExpr {
   ALWAYS_INLINE virtual ValueT get(const Context&) const = 0;
@@ -43,6 +70,9 @@ struct Literal final : public Expr<Context, ValueT, Literal<Context, ValueT>> {
   Literal(const ValueT& val) : Literal("", val) {}  // NOLINT
   Literal(const std::string& debug_str, const ValueT& val) : val_(val), debug_str_(debug_str) {}
   ALWAYS_INLINE ValueT get(const Context&) const override { return val_; }
+  ALWAYS_INLINE const ValueT& optimized_get(const Context&) const {
+    return val_;
+  }
   std::string DebugStr(const Context&, bool display_result) const override { return debug_str_; }
 
  private:
@@ -85,7 +115,7 @@ template<typename Context, typename E>
 struct NotBoolFunctor final : public BoolExpr<Context, NotBoolFunctor<Context, E>> {
   explicit NotBoolFunctor(const E& expr) : expr_(expr) {}
 
-  ALWAYS_INLINE bool get(const Context& context) const override { return !expr_.get(context); }
+  ALWAYS_INLINE bool get(const Context& context) const override { return !optimized_get(expr_, context); }
 
   std::string DebugStr(const Context& ctx, bool display_result) const override {
     std::ostringstream string_stream;
@@ -109,7 +139,7 @@ NotBoolFunctor<Context, E> operator~(BoolExpr<Context, E> const& lhs) {
     name##BoolFunctor(const E1& lhs, const E2& rhs) : lhs_(lhs), rhs_(rhs) {}                     \
                                                                                                   \
     ALWAYS_INLINE bool get(const Context& context) const override {                               \
-      return lhs_.get(context) op rhs_.get(context);                                              \
+      return optimized_get(lhs_, context) op optimized_get(rhs_, context);                                          \
     }                                                                                             \
                                                                                                   \
     std::string DebugStr(const Context& ctx, bool display_result) const override;                 \
@@ -166,7 +196,7 @@ template<typename Context, typename E1, typename E2>
 std::string AndBoolFunctor<Context, E1, E2>::DebugStr(const Context& ctx,
                                                       bool display_result) const {
   std::string l_str = lhs_.DebugStr(ctx, display_result);
-  display_result = display_result && lhs_.get(ctx);
+  display_result = display_result && optimized_get(lhs_, ctx);
   std::string r_str = rhs_.DebugStr(ctx, display_result);
   std::ostringstream string_stream;
   string_stream << "(" << l_str << " and " << r_str << ")";
@@ -177,7 +207,7 @@ template<typename Context, typename E1, typename E2>
 std::string OrBoolFunctor<Context, E1, E2>::DebugStr(const Context& ctx,
                                                      bool display_result) const {
   std::string l_str = lhs_.DebugStr(ctx, display_result);
-  display_result = display_result && (!lhs_.get(ctx));
+  display_result = display_result && (!optimized_get(lhs_, ctx));
   std::string r_str = rhs_.DebugStr(ctx, display_result);
   std::ostringstream string_stream;
   string_stream << "(" << l_str << " or " << r_str << ")";
