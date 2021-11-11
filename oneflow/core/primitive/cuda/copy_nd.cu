@@ -48,8 +48,7 @@ __global__ void CopyNdKernel(CopyNdKernelParams<num_dims, IndexType> params) {
 
 template<size_t num_dims, size_t movement_size, typename IndexType>
 void LaunchKernel(StreamContext* stream_ctx, CopyNdKernelParams<num_dims, IndexType> params) {
-  cudaStream_t cuda_stream =
-      CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
+  cudaStream_t cuda_stream = stream_ctx->As<CudaStreamContext>()->cuda_stream();
   CopyNdKernel<num_dims, movement_size, IndexType>
       <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params);
 }

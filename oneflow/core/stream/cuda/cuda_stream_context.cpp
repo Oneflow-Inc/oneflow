@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/graph/stream_id.h"
 
 #ifdef WITH_CUDA
+#include <cublas_v2.h>
 
 namespace oneflow {
 
@@ -101,10 +102,10 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
 #ifdef WITH_CUDA_GRAPHS
   std::unique_ptr<GenericCudaGraphContext> cuda_graph_ctx_impl_;
 #endif  // WITH_CUDA_GRAPHS
-#if CUDA_VERSION >= 11000
+#if CUBLAS_VERSION >= 11200
   void* workspace_{};
   size_t workspace_size_{};
-#endif  // CUDA_VERSION >= 11000
+#endif  // CUBLAS_VERSION >= 11200
 };
 
 }  // namespace
@@ -123,14 +124,16 @@ CudaStreamContextImpl::CudaStreamContextImpl(int device_ordinal) : device_ordina
   // cublas_handle
   OF_CUBLAS_CHECK(cublasCreate(&cublas_handle_));
   OF_CUBLAS_CHECK(cublasSetStream(cublas_handle_, cuda_stream_));
-#if CUDA_VERSION >= 11000
+#if CUBLAS_VERSION >= 11000
   if (Global<ResourceDesc, ForSession>::Get()->enable_tensor_float_32_compute()) {
     OF_CUBLAS_CHECK(cublasSetMathMode(cublas_handle_, CUBLAS_TF32_TENSOR_OP_MATH));
   }
+#endif  // CUBLAS_VERSION >= 11000
+#if CUBLAS_VERSION >= 11200
   workspace_size_ = kDefaultWorkspaceSize;
   OF_CUDA_CHECK(cudaMalloc(&workspace_, workspace_size_));
   OF_CUBLAS_CHECK(cublasSetWorkspace(cublas_handle_, workspace_, workspace_size_));
-#endif
+#endif  // CUBLAS_VERSION >= 11200
 
   // cudnn_handle
   if (IsCuda9OnTuringDevice()) {
@@ -181,9 +184,9 @@ CudaStreamContextImpl::~CudaStreamContextImpl() {
   OF_CUDNN_CHECK(cudnnDestroy(cudnn_handle_));
   OF_CUBLAS_CHECK(cublasDestroy(cublas_handle_));
   OF_CUDA_CHECK(cudaStreamDestroy(cuda_stream_));
-#if CUDA_VERSION >= 11000
+#if CUBLAS_VERSION >= 11200
   OF_CUDA_CHECK(cudaFree(workspace_));
-#endif  // CUDA_VERSION >= 11000
+#endif  // CUBLAS_VERSION >= 11200
 }
 
 Maybe<void> CudaStreamContextImpl::OnExecutionContextSetup() {
