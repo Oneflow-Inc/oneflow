@@ -108,6 +108,8 @@ from oneflow._C import atan2
 from oneflow._C import ceil
 from oneflow._C import clamp
 from oneflow._C import clamp as clip
+from oneflow._C import clamp_
+from oneflow._C import clamp_ as clip_
 from oneflow._C import cos
 from oneflow._C import cosh
 from oneflow._C import erf

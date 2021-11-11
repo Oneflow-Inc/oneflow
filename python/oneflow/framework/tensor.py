@@ -418,6 +418,10 @@ def _clamp(self, min=None, max=None):
     return flow.clamp(self, min=min, max=max)
 
 
+def _clamp_(self, min=None, max=None):
+    return flow.clamp_(self, min=min, max=max)
+
+
 def _clip(self, min=None, max=None):
     return flow.clip(self, min=min, max=max)
 
@@ -776,6 +780,7 @@ def RegisterMethods():
     Tensor.arctan = _arctan
     Tensor.ceil = _ceil
     Tensor.clamp = _clamp
+    Tensor.clamp_ = _clamp_
     Tensor.clip = _clip
     Tensor.cos = _cos
     Tensor.cosh = _cosh

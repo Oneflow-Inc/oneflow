@@ -735,6 +735,68 @@ class ClampFunctor {
   std::shared_ptr<OpExpr> clip_max_op_;
 };
 
+class InplaceClampFunctor {
+ public:
+  InplaceClampFunctor() {
+    clip_op_ = CHECK_JUST(one::OpBuilder("clip_by_scalar").Input("x").Output("y").Build());
+    clip_min_op_ = CHECK_JUST(one::OpBuilder("clip_by_scalar_min").Input("x").Output("y").Build());
+    clip_max_op_ = CHECK_JUST(one::OpBuilder("clip_by_scalar_max").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& min,
+                           const Optional<Scalar>& max) const {
+    CHECK_OR_RETURN(min.has_value() || max.has_value())
+        << "Requires one of argument `min` and `max` at least in clip.";
+    MutableAttrMap attrs;
+    if (IsFloatingDataType(x->dtype()->data_type())) {
+      if (min.has_value()) {
+        const auto& min_val = JUST(min);
+        JUST(attrs.SetAttr<double>("floating_min", JUST(min_val->As<double>())));
+        JUST(attrs.SetAttr<int64_t>("integral_min", 0));
+      }
+      if (max.has_value()) {
+        const auto& max_val = JUST(max);
+        JUST(attrs.SetAttr<double>("floating_max", JUST(max_val->As<double>())));
+        JUST(attrs.SetAttr<int64_t>("integral_max", 0));
+      }
+    } else if (IsIntegralDataType(x->dtype()->data_type())) {
+      if (min.has_value()) {
+        const auto& min_val = JUST(min);
+        JUST(attrs.SetAttr<double>("floating_min", 0));
+        JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min_val->As<int64_t>())));
+      }
+      if (max.has_value()) {
+        const auto& max_val = JUST(max);
+        JUST(attrs.SetAttr<double>("floating_max", 0));
+        JUST(attrs.SetAttr<int64_t>("integral_max", JUST(max_val->As<int64_t>())));
+      }
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
+    }
+    const OpExpr* op = nullptr;
+    if (!min.has_value()) {
+      op = clip_max_op_.get();
+    } else if (!max.has_value()) {
+      op = clip_min_op_.get();
+    } else {
+      op = clip_op_.get();
+    }
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    if (x->requires_grad()) {
+      JUST(OpInterpUtil::Dispatch(*op, TensorTuple({JUST(functional::Identity(x))}), outputs.get(), AttrMap(attrs)));
+    } else {
+      JUST(OpInterpUtil::Dispatch(*op, TensorTuple({x}), outputs.get(), AttrMap(attrs)));
+    }
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> clip_op_;
+  std::shared_ptr<OpExpr> clip_min_op_;
+  std::shared_ptr<OpExpr> clip_max_op_;
+};
+
+
 class VectorNormFunctor {
  public:
   VectorNormFunctor() {}
@@ -1526,6 +1588,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
+  m.add_functor<InplaceClampFunctor>("InplaceClamp");
   m.add_functor<VectorNormFunctor, ScalarVectorNormFunctor>("VectorNorm");
   m.add_functor<ScalarMatrixNormFunctor, MatrixNormFunctor>("MatrixNorm");
   m.add_functor<NormFunctor, Norm2Functor>("Norm");

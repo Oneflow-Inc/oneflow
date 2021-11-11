@@ -669,6 +669,14 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.clamp_,
+    r"""
+    In-place version of :func:`oneflow.clamp`
+
+    """,
+)
+
+add_docstr(
     oneflow.cos,
     r"""
     Returns a new tensor with the cosine  of the elements of :attr:`input`.
