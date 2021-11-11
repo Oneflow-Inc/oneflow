@@ -80,6 +80,7 @@ There are mainly three components in the JIT system:
 struct Op {
 op_expr_seq: OpExp
 tensor_types: List<DataType>
+inputs_in_the_seq: List<int_64_t>
 }
 using SeqOfOp = List<Op>
 using PyUses = List<Bool> // size of py_uses is the sum of tensor_types' sizes
