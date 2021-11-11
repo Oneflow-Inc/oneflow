@@ -20,6 +20,8 @@ limitations under the License.
 
 #include <sys/eventfd.h>
 
+#include <fstream>
+
 #define DebugWrite false 
 
 namespace oneflow {
@@ -46,6 +48,9 @@ SocketWriteHelper::SocketWriteHelper(int sockfd, IOEventPoller* poller) {
   write_ptr_ = nullptr;
   write_size_ = 0;
   debug_actor_msg_ = 0;//todo just for debug 
+  write_msg_ = 0;
+  init_msg_ = 0;
+  DocurWrite_ = 0;
 }
 
 void SocketWriteHelper::AsyncWrite(const SocketMsg& msg) {
@@ -55,6 +60,19 @@ void SocketWriteHelper::AsyncWrite(const SocketMsg& msg) {
       debug_actor_msg_++;
       std::cout<<" SocketWriteHelper::AsyncWrite,the debug_actor_msg_:"<<debug_actor_msg_ << std::endl;
       std::cout<<std::endl;
+      std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/";
+      write_mutex_.lock();
+      std::string path = dir + "write_helper_Asyncwrite" + std::to_string(write_msg_);
+      write_msg_++;
+      std::ofstream out;
+      out.open(path,std::ofstream::out | std::ofstream::binary);
+      if(!out.is_open()){
+          return ;
+      }
+      out.write(msg.actor_msg.data,msg.actor_msg.size);
+      out.close();
+      write_mutex_.unlock();
+
   }
   pending_msg_queue_->push(msg);
   pending_msg_queue_mtx_.unlock();
@@ -94,9 +112,21 @@ bool SocketWriteHelper::InitMsgWriteHandle() {
   write_ptr_ = reinterpret_cast<const char*>(&cur_msg_);
   write_size_ = sizeof(cur_msg_);
   if(cur_msg_.msg_type == SocketMsgType::kActor ) {
+    init_msg_mutex_.lock();
+    std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/";
+    std::string path = dir + "write_helper_InitMsgWriteHandle" + std::to_string(init_msg_);
+    init_msg_++;
+    std::ofstream out;
+    out.open(path,std::ofstream::out | std::ofstream::binary);
+    if(!out.is_open()){
+        return false ;
+    }
+    out.write(cur_msg_.actor_msg.data,cur_msg_.actor_msg.size);
+    out.close();
     if(debug_actor_msg_ > 0 ){
         debug_actor_msg_--;
     }
+    init_msg_mutex_.unlock();
     std::cout<<" SocketWriteHelper::AsyncWrite,the debug_actor_msg_:"<<debug_actor_msg_ << std::endl;
     std::cout<<"SocketWriteHelper::InitMsgWriteHandle,the size of cur_msg_queue_:"<<cur_msg_queue_->size() +1 << std::endl;
     std::cout<<"SocketWriteHelper::InitMsgWriteHandle,the cur_msg_:"<< reinterpret_cast<uint64_t>(&cur_msg_) << std::endl;
@@ -125,6 +155,18 @@ bool SocketWriteHelper::DoCurWrite(void (SocketWriteHelper::*set_cur_write_done)
     std::cout<<"SocketWriteHelper::DoCurWrite,the n:" << n << std::endl;
     std::cout<<"SocketWriteHelper::DoCurWrite,the write_ptr_:"<<reinterpret_cast<uint64_t>(write_ptr_) << std::endl;
     std::cout << std::endl;
+    DocurWrite_muex_.lock();
+    std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/";
+    std::string path = dir + "write_helper_DoCurWrite" + std::to_string(DocurWrite_);
+    DocurWrite_++;
+    std::ofstream out;
+    out.open(path,std::ofstream::out | std::ofstream::binary);
+    if(!out.is_open()){
+        return false ;
+    }
+    out.write(cur_msg_.actor_msg.data,cur_msg_.actor_msg.size);
+    out.close();
+    DocurWrite_muex_.unlock();
   }
   if (n == write_size_) {
     (this->*set_cur_write_done)();
