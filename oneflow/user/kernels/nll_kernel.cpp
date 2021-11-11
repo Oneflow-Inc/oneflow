@@ -81,8 +81,7 @@ class NllKernel final : public user_op::OpKernel {
     const K* target = target_blob->dptr<K>();
     T* out = out_blob->mut_dptr<T>();
     T* total_weight = total_weight_blob->mut_dptr<T>();
-    T* tmp_buffer = tmp_buffer_blob->mut_dptr<T>();
-    T* tmp_out = tmp_buffer;
+    T* tmp_out = reduction == ReductionType::kNone ? nullptr : tmp_buffer_blob->mut_dptr<T>();
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
 
