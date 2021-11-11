@@ -113,10 +113,10 @@ class EagerPToBKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EAGER_P_TO_B_KERNEL(device)                \
-  REGISTER_USER_KERNEL("eager_p_to_b")                      \
-      .SetCreateFn<EagerPToBKernel<device>>()               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)) \
+#define REGISTER_EAGER_P_TO_B_KERNEL(device)                 \
+  REGISTER_USER_KERNEL("eager_p_to_b")                       \
+      .SetCreateFn<EagerPToBKernel<device>>()                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)) \
       .SetInferTmpSizeFn(InferEagerPToBKernelTmpBufferSize);
 
 REGISTER_EAGER_P_TO_B_KERNEL(DeviceType::kCPU)

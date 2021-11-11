@@ -57,8 +57,8 @@ class AddNKernel : public OpKernel, public CudaGraphSupport {
   }
 };
 
-hob::HobContextGetter<KernelRegContext, bool> AddPrimitiveExists() {
-  return HobCtxGetter<bool>("AddPrimitiveExists", [](const KernelRegContext& ctx) {
+auto AddPrimitiveExists() {
+  return hob::make_custom("AddPrimitiveExists", [](const KernelRegContext& ctx) {
     return NewAddPrimitive(&ctx).operator bool();
   });
 }

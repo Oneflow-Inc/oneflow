@@ -28,11 +28,10 @@ std::unique_ptr<primitive::LogSoftmax> NewLogSoftmaxPrimitive(Context* ctx) {
   return primitive::NewPrimitive<primitive::LogSoftmaxFactory>(ctx->device_type(), data_type);
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> LogSoftmaxPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("LogSoftmaxPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewLogSoftmaxPrimitive(&ctx).operator bool();
-                                     });
+auto LogSoftmaxPrimitiveExists() {
+  return hob::make_custom("LogSoftmaxPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewLogSoftmaxPrimitive(&ctx).operator bool();
+  });
 }
 
 template<typename Context>
@@ -42,11 +41,11 @@ std::unique_ptr<primitive::LogSoftmaxBackward> NewLogSoftmaxBackwardPrimitive(Co
                                                                        data_type);
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> LogSoftmaxBackwardPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("LogSoftmaxBackwardPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewLogSoftmaxBackwardPrimitive(&ctx).operator bool();
-                                     });
+auto LogSoftmaxBackwardPrimitiveExists() {
+  return hob::make_custom("LogSoftmaxBackwardPrimitiveExists",
+                          [](const user_op::KernelRegContext& ctx) {
+                            return NewLogSoftmaxBackwardPrimitive(&ctx).operator bool();
+                          });
 }
 
 class LogSoftmaxKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {

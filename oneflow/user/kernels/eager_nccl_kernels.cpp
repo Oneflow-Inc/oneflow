@@ -101,7 +101,7 @@ class EagerCclBroadcastKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_nccl_broadcast")
     .SetCreateFn<EagerCclBroadcastKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "cpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU);
 
 class EagerCclReduceKernel final : public user_op::OpKernel {
  public:
@@ -136,7 +136,7 @@ class EagerCclReduceKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_nccl_reduce")
     .SetCreateFn<EagerCclReduceKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "cpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU);
 
 class EagerCclAllReduceKernel final : public user_op::OpKernel {
  public:
@@ -166,7 +166,7 @@ class EagerCclAllReduceKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_nccl_all_reduce")
     .SetCreateFn<EagerCclAllReduceKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "cpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU);
 
 class EagerCclReduceScatterKernel final : public user_op::OpKernel {
  public:
@@ -197,7 +197,7 @@ class EagerCclReduceScatterKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_nccl_reduce_scatter")
     .SetCreateFn<EagerCclReduceScatterKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "cpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU);
 
 class EagerCclAllGatherKernel final : public user_op::OpKernel {
  public:
@@ -226,7 +226,7 @@ class EagerCclAllGatherKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_nccl_all_gather")
     .SetCreateFn<EagerCclAllGatherKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "cpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU);
 
 template<typename T>
 class EagerCclS2SKernel final : public user_op::OpKernel {
@@ -356,7 +356,7 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
 #define REGISTER_EAGER_CCL_S2S_KERNEL(dtype)                                            \
   REGISTER_USER_KERNEL("eager_nccl_s2s")                                                \
       .SetCreateFn<EagerCclS2SKernel<dtype>>()                                          \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                   \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferEagerCclS2SKernelTmpBufferSize);
