@@ -53,9 +53,14 @@ __global__ void PermuteKernel(PermuteKernelParams<num_dims, IndexType> params) {
 // (B, X, Y) -> (B, Y, X)
 // refer from https://developer.nvidia.com/blog/efficient-matrix-transpose-cuda-cc/
 template<size_t num_dims, size_t movement_size, size_t tile_size, typename IndexType>
-__global__ void BatchTransposeKernel(const void* src_ptr, void* dst_ptr, IndexType H, IndexType W,
-                                     IndexType num_tile_rows, IndexType num_tile_cols,
-                                     int32_t block_nums) {
+__global__ void BatchTransposeKernel(const void* src_ptr, void* dst_ptr, IndexType rows,
+                                     IndexType cols, IndexType num_tile_rows,
+                                     IndexType num_tile_cols, int32_t block_nums) {
+  const IndexType src_rows = rows;
+  const IndexType src_cols = cols;
+  const IndexType dst_rows = cols;
+  const IndexType dst_cols = rows;
+
   using T = typename std::aligned_storage<movement_size, movement_size>::type;
   __shared__ T tile[tile_size][tile_size + 1];  // To avoid bank conflict.
 
@@ -65,40 +70,41 @@ __global__ void BatchTransposeKernel(const void* src_ptr, void* dst_ptr, IndexTy
   IndexType batch_num_tile = num_tile_rows * num_tile_cols;
   for (int i = blockIdx.x, step = gridDim.x; i < block_nums; i += step) {
     const IndexType batch_index = i / batch_num_tile;  // the index of batch.
-    const IndexType flatten_index =
+    const IndexType tile_index =
         i - batch_index * batch_num_tile;  // equal to i % (num_tile_rows*num_tile_cols). the
                                            // flatten index of tile in a batch.
 
-    const IndexType row_index = flatten_index / num_tile_cols;  // the row index of tile in a batch.
-    const IndexType col_index =
-        flatten_index
-        - row_index
+    const IndexType tile_row_index =
+        tile_index / num_tile_cols;  // the row index of tile in a batch.
+    const IndexType tile_col_index =
+        tile_index
+        - tile_row_index
               * num_tile_cols;  // equal to k % num_tile_cols. the col index of tile in a batch.
-    const IndexType offset = batch_index * H * W;
-    IndexType x = col_index * tile_size + threadIdx.x;
-    IndexType y = row_index * tile_size + threadIdx.y;
-    if (x < W) {
-      IndexType y_range =
-          ((tile_size - threadIdx.y) < (H - y)) ? (tile_size - threadIdx.y) : (H - y);
+
+    const IndexType offset = batch_index * src_rows * src_cols;
+    {
+      IndexType col_in_tile = threadIdx.x;
+      IndexType col_in_matrix = tile_col_index * tile_size + threadIdx.x;
 #pragma unroll
-      // each thread process 4 elements.
-      // `row_offset < y_range` equals to: `threadIdx.y + row_offset < tile_size && y + row_offset <
-      // H`.
-      for (IndexType row_offset = 0; row_offset < y_range; row_offset += kBlockRows) {
-        tile[threadIdx.y + row_offset][threadIdx.x] = src[offset + (y + row_offset) * W + x];
+      for (IndexType row_in_tile = threadIdx.y; row_in_tile < tile_size;
+           row_in_tile += kBlockRows) {
+        IndexType row_in_matrix = row_in_tile + tile_row_index * tile_size;
+        if (col_in_matrix < src_cols && row_in_matrix < src_rows) {
+          tile[row_in_tile][col_in_tile] = src[offset + row_in_matrix * src_cols + col_in_matrix];
+        }
       }
     }
     __syncthreads();
-    x = row_index * tile_size + threadIdx.x;
-    y = col_index * tile_size + threadIdx.y;
-    if (x < H) {
-      IndexType x_range =
-          ((tile_size - threadIdx.y) < (W - y)) ? (tile_size - threadIdx.y) : (W - y);
+    {
+      IndexType col_in_tile = threadIdx.x;
+      IndexType col_in_matrix = tile_row_index * tile_size + threadIdx.x;
 #pragma unroll
-      // `col_offset < x_range` equals to: `threadIdx.y + col_offset < tile_size && y + col_offset <
-      // W`.
-      for (IndexType col_offset = 0; col_offset < x_range; col_offset += kBlockRows) {
-        dst[offset + (y + col_offset) * H + x] = tile[threadIdx.x][threadIdx.y + col_offset];
+      for (IndexType row_in_tile = threadIdx.y; row_in_tile < tile_size;
+           row_in_tile += kBlockRows) {
+        IndexType row_in_matrix = row_in_tile + tile_col_index * tile_size;
+        if (col_in_matrix < dst_cols && row_in_matrix < dst_rows) {
+          dst[offset + row_in_matrix * dst_cols + col_in_matrix] = tile[col_in_tile][row_in_tile];
+        }
       }
     }
     __syncthreads();
@@ -114,6 +120,11 @@ template<size_t num_dims, size_t tile_size, typename IndexType>
 __global__ void BatchTransposeMovement2Kernel(const void* src_ptr, void* dst_ptr, IndexType rows,
                                               IndexType cols, IndexType num_tile_rows,
                                               IndexType num_tile_cols, int32_t block_nums) {
+  const IndexType src_rows = rows;
+  const IndexType src_cols = cols;
+  const IndexType dst_rows = cols;
+  const IndexType dst_cols = rows;
+
   static_assert(tile_size % 2 == 0, "");
   using T_MOV2 = typename std::aligned_storage<2, 2>::type;
   using T_MOV4 = typename std::aligned_storage<4, 4>::type;
@@ -130,53 +141,49 @@ __global__ void BatchTransposeMovement2Kernel(const void* src_ptr, void* dst_ptr
   IndexType batch_num_tile = num_tile_rows * num_tile_cols;
   for (int i = blockIdx.x, step = gridDim.x; i < block_nums; i += step) {
     const IndexType batch_index = i / batch_num_tile;  // the index of batch.
-    const IndexType flatten_index =
-        i - batch_index * batch_num_tile;  // equal to i%(num_tile_rows*num_tile_cols). the flatten
-                                           // index of tile in a batch.
+    const IndexType tile_index =
+        i - batch_index * batch_num_tile;  // equal to i % (num_tile_rows*num_tile_cols). the
+                                           // flatten index of tile in a batch.
 
-    const IndexType row_index = flatten_index / num_tile_cols;  // the row index of tile in a batch.
-    const IndexType col_index =
-        flatten_index
-        - row_index
+    const IndexType tile_row_index =
+        tile_index / num_tile_cols;  // the row index of tile in a batch.
+    const IndexType tile_col_index =
+        tile_index
+        - tile_row_index
               * num_tile_cols;  // equal to k % num_tile_cols. the col index of tile in a batch.
-    const IndexType offset = batch_index * rows * cols;
-    IndexType x =
-        col_index * tile_size + threadIdx.x * 2;  // cause each thread process a half2 element, we
-                                                  // need to multiply 2 for threadIdx.x.
-    IndexType y = row_index * tile_size + threadIdx.y;
-    if (x < cols) {
-      // each thread process 4 elements.
-      IndexType y_range =
-          ((tile_size - threadIdx.y) < (rows - y)) ? (tile_size - threadIdx.y) : (rows - y);
+
+    const IndexType offset = batch_index * src_rows * src_cols;
+    {
+      IndexType col_in_tile = threadIdx.x;
+      IndexType col_in_matrix = tile_col_index * tile_size + threadIdx.x * 2;
 #pragma unroll
-      // `i < y_range` equals to: `threadIdx.y + i < tile_size && y + i < rows`.
-      for (int row_offset = 0; row_offset < y_range; row_offset += kBlockRows) {
-        // each thread load a half2.
-        tile_mem.tile_m4[threadIdx.y + row_offset][threadIdx.x] =
-            src[(offset + (y + row_offset) * cols + x) / 2];
+      for (IndexType row_in_tile = threadIdx.y; row_in_tile < tile_size;
+           row_in_tile += kBlockRows) {
+        IndexType row_in_matrix = row_in_tile + tile_row_index * tile_size;
+        if (col_in_matrix < src_cols && row_in_matrix < src_rows) {
+          tile_mem.tile_m4[row_in_tile][col_in_tile] =
+              src[(offset + row_in_matrix * src_cols + col_in_matrix) / 2];
+        }
       }
     }
     __syncthreads();
-    x = row_index * tile_size + threadIdx.x * 2;  // cause each thread process a half2 element, we
-                                                  // need to multiply 2 for threadIdx.x.
-    y = col_index * tile_size + threadIdx.y;
-    if (x < rows) {
-      IndexType x_range =
-          ((tile_size - threadIdx.y) < (cols - y)) ? (tile_size - threadIdx.y) : (cols - y);
+    {
+      IndexType col_in_tile = threadIdx.x;
+      IndexType col_in_matrix = tile_row_index * tile_size + threadIdx.x * 2;
 #pragma unroll
-      // `i < x_range` equals to: `threadIdx.y + i < tile_size && y + i < cols`.
-      for (int col_offset = 0; col_offset < x_range; col_offset += kBlockRows) {
-        /*
-        When write back as column, it cannot be stored as half2 directly.
-        So we split as 2 half elements, and write back separately.
-        */
+      for (IndexType row_in_tile = threadIdx.y; row_in_tile < tile_size;
+           row_in_tile += kBlockRows) {
+        IndexType row_in_matrix = row_in_tile + tile_col_index * tile_size;
         union {
           T_MOV4 m4;
           T_MOV2 m2[2];
         } tmp_storage;
-        tmp_storage.m2[0] = tile_mem.tile_m2[threadIdx.x * 2][threadIdx.y + col_offset];
-        tmp_storage.m2[1] = tile_mem.tile_m2[threadIdx.x * 2 + 1][threadIdx.y + col_offset];
-        dst[(offset + (y + col_offset) * rows + x) / 2] = tmp_storage.m4;
+        tmp_storage.m2[0] = tile_mem.tile_m2[col_in_tile * 2][row_in_tile];
+        tmp_storage.m2[1] = tile_mem.tile_m2[col_in_tile * 2 + 1][row_in_tile];
+
+        if (col_in_matrix < dst_cols && row_in_matrix < dst_rows) {
+          dst[(offset + row_in_matrix * dst_cols + col_in_matrix) / 2] = tmp_storage.m4;
+        }
       }
     }
     __syncthreads();
@@ -188,21 +195,20 @@ void LaunchBatchTransposeKernel(cudaStream_t& cuda_stream,
                                 const PermuteKernelParams<num_dims, IndexType>& params,
                                 const IndexType& num_batches, const IndexType& rows,
                                 const IndexType& cols) {
-  IndexType num_tile_rows = (rows + tile_size - 1) / tile_size;
-  IndexType num_tile_cols = (cols + tile_size - 1) / tile_size;
-
+  IndexType num_tile_rows = (rows + tile_size - 1) / tile_size;  // 8
+  IndexType num_tile_cols = (cols + tile_size - 1) / tile_size;  // 7
   const int32_t block_nums = num_batches * num_tile_rows * num_tile_cols;
-  int32_t checked_block_nums = std::min(block_nums, kCudaMaxBlocksNum);
+  int32_t launched_block_nums = std::min(block_nums, kCudaMaxBlocksNum);
   if (tile_size == kMov2TileSize) {
     const int32_t half2_thread = tile_size / 2;  // cause each thread process two half elements.
     BatchTransposeMovement2Kernel<num_dims, kMov2TileSize, IndexType>
-        <<<checked_block_nums, dim3(half2_thread, kBlockRows), 0, cuda_stream>>>(
+        <<<launched_block_nums, dim3(half2_thread, kBlockRows), 0, cuda_stream>>>(
             params.src, params.dst, rows, cols, num_tile_rows, num_tile_cols,
             block_nums);  // Set threads num as 32x8 cause each threads
                           // process 4 elements to 32x32 share memory.
   } else {
     BatchTransposeKernel<num_dims, movement_size, tile_size, IndexType>
-        <<<checked_block_nums, dim3(tile_size, kBlockRows), 0, cuda_stream>>>(
+        <<<launched_block_nums, dim3(tile_size, kBlockRows), 0, cuda_stream>>>(
             params.src, params.dst, rows, cols, num_tile_rows, num_tile_cols, block_nums);
   }
 }
