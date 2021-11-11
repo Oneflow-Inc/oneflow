@@ -31,8 +31,10 @@ class NcclLogicalKernelCommState final : public user_op::OpKernelState {
   explicit NcclLogicalKernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
         has_independent_stream_(ctx->op_conf().has_stream_name_hint()),
-        stream_name_(ctx->op_conf().stream_name_hint()),
-        parallel_desc_(ctx->parallel_desc()) {}
+        stream_name_(""),
+        parallel_desc_(ctx->parallel_desc()) {
+    if (has_independent_stream_) { stream_name_ = ctx->op_conf().stream_name_hint(); }
+  }
   ~NcclLogicalKernelCommState() = default;
 
   ncclComm_t comm() {
