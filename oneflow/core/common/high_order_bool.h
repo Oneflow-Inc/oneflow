@@ -42,7 +42,7 @@ template<typename Context, typename ValueT>
 struct Literal final : public Expr<Context, ValueT, Literal<Context, ValueT>> {
   Literal(const ValueT& val) : Literal("", val) {}  // NOLINT
   Literal(const std::string& debug_str, const ValueT& val) : val_(val), debug_str_(debug_str) {}
-  ALWAYS_INLINE ValueT get(const Context&) const { return val_; }
+  ALWAYS_INLINE ValueT get(const Context&) const override { return val_; }
   std::string DebugStr(const Context&, bool display_result) const override { return debug_str_; }
 
  private:
@@ -60,7 +60,7 @@ template<typename Fn,
 struct Custom final : public Expr<Context, ValueT, Custom<Fn>> {
   explicit Custom(Fn fn) : Custom(fn, "") {}
   Custom(std::string debug_str, Fn fn) : fn_(std::move(fn)), debug_str_(std::move(debug_str)) {}
-  ALWAYS_INLINE ValueT get(const Context& context) const { return fn_(context); }
+  ALWAYS_INLINE ValueT get(const Context& context) const override { return fn_(context); }
   std::string DebugStr(const Context&, bool display_result) const override { return debug_str_; }
 
  private:
