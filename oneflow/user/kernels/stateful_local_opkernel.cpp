@@ -444,7 +444,7 @@ Maybe<const user_op::OpKernel*> StatefulLocalOpKernel::ChooseOpKernel(
   }
 
   for (const auto& pair : dtype2cached_kernels_[primary_dtype]) {
-    if (likely(pair.first->is_matched_hob(*reg_ctx_))) {
+    if (likely(pair.first->is_matched_hob->get(*reg_ctx_))) {
       reg_ctx_->Update(nullptr, nullptr, nullptr);
       return pair.second.get();
     }

@@ -39,7 +39,7 @@ class CpuLeakyReluKernel final : public user_op::OpKernel {
 #define REGISTER_CPU_LEAKY_RELU_KERNEL(dtype)             \
   REGISTER_USER_KERNEL("leaky_relu")                      \
       .SetCreateFn<CpuLeakyReluKernel<dtype>>()           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_LEAKY_RELU_KERNEL(float)
@@ -69,7 +69,7 @@ class CpuLeakyReluGradKernel final : public user_op::OpKernel {
 #define REGISTER_CPU_LEAKY_RELU_GRAD_KERNEL(dtype)        \
   REGISTER_USER_KERNEL("leaky_relu_grad")                 \
       .SetCreateFn<CpuLeakyReluGradKernel<dtype>>()       \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_LEAKY_RELU_GRAD_KERNEL(float)

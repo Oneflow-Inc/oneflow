@@ -51,7 +51,7 @@ class GpuLogicalNotKernel final : public user_op::OpKernel, public user_op::Cuda
 #define REGISTER_GPU_LOGICAL_NOT_KERNEL(dtype, DataType)  \
   REGISTER_USER_KERNEL("logical_not")                     \
       .SetCreateFn<GpuLogicalNotKernel<dtype, int8_t>>()  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("x", 0) == DataType));
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_GPU_LOGICAL_NOT_KERNEL, ARITHMETIC_DATA_TYPE_SEQ);

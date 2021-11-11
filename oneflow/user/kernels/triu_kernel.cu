@@ -109,7 +109,7 @@ class GpuTriuKernel final : public user_op::OpKernel {
 #define REGISTER_GPU_TRIU_KERNEL(dtype)                                                         \
   REGISTER_USER_KERNEL("triu")                                                                  \
       .SetCreateFn<GpuTriuKernel<dtype>>()                                                      \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                                       \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \

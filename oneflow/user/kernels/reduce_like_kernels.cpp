@@ -74,7 +74,7 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel, public user_op::Cu
 #define REGISTER_REDUCE_SUM_LIKE_KERNEL(device, data_type_pair)                               \
   REGISTER_USER_KERNEL("reduce_sum_like")                                                     \
       .SetCreateFn<ReduceSumLikeOpKernel<device, OF_PP_PAIR_FIRST(data_type_pair)>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                    \
                        & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(data_type_pair))) \
       .SetInferTmpSizeFn(ReduceSumLikeInferTmpSize);
 
@@ -176,7 +176,7 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
 
 REGISTER_USER_KERNEL("reduce_sum_like")
     .SetCreateFn<ReduceSumLikeHalfKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
                      & (user_op::HobDataType("y", 0) == GetDataType<float16>::value))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       const Shape& in_shape = ctx->InputTensorDesc("x", 0).shape();

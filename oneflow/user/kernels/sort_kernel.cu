@@ -55,7 +55,7 @@ class GpuSortKernel final : public user_op::OpKernel {
 #define REGISTER_GPU_SORT_KERNEL(dtype)                                                     \
   REGISTER_USER_KERNEL("sort")                                                              \
       .SetCreateFn<GpuSortKernel<dtype>>()                                                  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                                   \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))     \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                         \
         const Shape& in_shape = ctx->InputShape("in", 0);                                   \

@@ -81,7 +81,7 @@ class DimScatterKernel final : public user_op::OpKernel {
 #define REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, device, dtype, itype, opt)            \
   REGISTER_USER_KERNEL(op_type)                                                         \
       .SetCreateFn<DimScatterKernel<device, dtype, itype, opt>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                              \
                        & (user_op::HobDataType("like", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));
 
@@ -105,7 +105,7 @@ class DimScatterKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(#op_type)                                                             \
       .SetCreateFn<DimScatterKernel<device, OF_PP_PAIR_FIRST(dtype_pair),                    \
                                     OF_PP_PAIR_FIRST(itype_pair), opt>>()                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
                        & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair)) \
                        & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
 

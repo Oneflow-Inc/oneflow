@@ -23,29 +23,27 @@ limitations under the License.
 #include <utility>
 
 #include "oneflow/core/common/function_traits.h"
-#include "oneflow/core/common/to_string.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
 namespace hob {
 
 template<typename Context, typename ValueT>
-struct BaseBaseExpr {
-  virtual ValueT get(const Context&) const = 0;
-  virtual std::string DebugStr(const Context&) const { return ""; }
+struct BaseExpr {
+  ALWAYS_INLINE virtual ValueT get(const Context&) const = 0;
+  virtual std::string DebugStr(const Context&, bool display_result = true) const = 0;  // NOLINT
 };
 
 template<typename Context, typename ValueT, typename E>
-struct BaseExpr : public BaseBaseExpr<Context, ValueT> {
-  virtual ValueT get(const Context&) const = 0;
-  virtual std::string DebugStr(const Context&) const { return ""; }
-};
+struct Expr : public BaseExpr<Context, ValueT> {};
 
 template<typename Context, typename ValueT>
-struct Literal final : public BaseExpr<Context, ValueT, Literal<Context, ValueT>> {
+struct Literal final : public Expr<Context, ValueT, Literal<Context, ValueT>> {
   Literal(const ValueT& val) : Literal("", val) {}  // NOLINT
   Literal(const std::string& debug_str, const ValueT& val) : val_(val), debug_str_(debug_str) {}
-  ValueT get(const Context&) const { return val_; }
+  ALWAYS_INLINE ValueT get(const Context&) const { return val_; }
+  std::string DebugStr(const Context&, bool display_result) const override { return debug_str_; }
 
  private:
   ValueT val_;
@@ -59,10 +57,11 @@ template<typename Fn,
          typename Context =
              std::decay_t<typename oneflow::function_traits<Fn>::template arg_type<0>>,
          typename ValueT = std::decay_t<typename oneflow::function_traits<Fn>::return_type>>
-struct Custom final : public BaseExpr<Context, ValueT, Custom<Fn>> {
-  Custom(Fn fn) : Custom(fn, "") {}  // NOLINT
+struct Custom final : public Expr<Context, ValueT, Custom<Fn>> {
+  explicit Custom(Fn fn) : Custom(fn, "") {}
   Custom(std::string debug_str, Fn fn) : fn_(std::move(fn)), debug_str_(std::move(debug_str)) {}
-  ValueT get(const Context& context) const { return fn_(context); }
+  ALWAYS_INLINE ValueT get(const Context& context) const { return fn_(context); }
+  std::string DebugStr(const Context&, bool display_result) const override { return debug_str_; }
 
  private:
   Fn fn_;
@@ -70,105 +69,125 @@ struct Custom final : public BaseExpr<Context, ValueT, Custom<Fn>> {
 };
 
 template<typename Fn>
-inline Custom<Fn> make_custom(Fn fn) {
+ALWAYS_INLINE inline Custom<Fn> make_custom(Fn fn) {
   return Custom<Fn>(std::forward<Fn>(fn));
 }
 
 template<typename Fn>
-inline Custom<Fn> make_custom(const std::string& debug_str, Fn fn) {
+ALWAYS_INLINE inline Custom<Fn> make_custom(const std::string& debug_str, Fn fn) {
   return Custom<Fn>(debug_str, std::forward<Fn>(fn));
 }
 
 template<typename Context, typename E>
-using BaseBoolExpr = BaseExpr<Context, bool, E>;
-
-template<typename Context>
-struct TrueBoolExpr final : public BaseBoolExpr<Context, TrueBoolExpr<Context>> {
-  bool get(const Context&) const override { return true; }
-};
-
-template<typename Context>
-struct FalseBoolExpr final : public BaseBoolExpr<Context, FalseBoolExpr<Context>> {
-  bool get(const Context&) const override { return false; }
-};
-
-template<typename Context, typename E1, typename E2>
-struct AndBoolFunctor final : public BaseBoolExpr<Context, AndBoolFunctor<Context, E1, E2>> {
-  AndBoolFunctor(E1 e1, E2 e2) : e1(std::move(e1)), e2(std::move(e2)) {}
-
-  bool get(const Context& context) const override { return e1.get(context) & e2.get(context); }
-
- private:
-  const E1 e1;
-  const E2 e2;
-};
-
-template<typename Context, typename E1, typename E2>
-struct OrBoolFunctor final : public BaseBoolExpr<Context, OrBoolFunctor<Context, E1, E2>> {
-  OrBoolFunctor(E1 e1, E2 e2) : e1(std::move(e1)), e2(std::move(e2)) {}
-
-  bool get(const Context& context) const override { return e1.get(context) & e2.get(context); }
-
- private:
-  const E1 e1;
-  const E2 e2;
-};
+using BaseBoolExpr = Expr<Context, bool, E>;
 
 template<typename Context, typename E>
 struct NotBoolFunctor final : public BaseBoolExpr<Context, NotBoolFunctor<Context, E>> {
-  explicit NotBoolFunctor(E e1) : e1(std::move(e1)) {}
+  explicit NotBoolFunctor(const E& e) : e(e) {}
 
-  bool get(const Context& context) const override { return !e1.get(context); }
+  ALWAYS_INLINE bool get(const Context& context) const override { return !e.get(context); }
 
- private:
-  const E e1;
-};
-
-template<typename Context, typename E1, typename E2>
-struct EqualBoolFunctor final : public BaseBoolExpr<Context, EqualBoolFunctor<Context, E1, E2>> {
-  EqualBoolFunctor(E1 e1, E2 e2) : e1(std::move(e1)), e2(std::move(e2)) {}
-
-  bool get(const Context& context) const override { return e1.get(context) == e2.get(context); }
+  std::string DebugStr(const Context& ctx, bool display_result) const override {
+    std::ostringstream string_stream;
+    string_stream << "("
+                  << "not " << e.DebugStr(ctx, display_result) << ")";
+    return string_stream.str();
+  }
 
  private:
-  const E1 e1;
-  const E2 e2;
+  const E e;
 };
-
-template<typename Context, typename E1, typename E2>
-AndBoolFunctor<Context, E1, E2> operator&(BaseBoolExpr<Context, E1> const& u,
-                                          BaseBoolExpr<Context, E2> const& v) {
-  return AndBoolFunctor<Context, E1, E2>(*static_cast<const E1*>(&u), *static_cast<const E2*>(&v));
-}
 
 template<typename Context, typename E>
 NotBoolFunctor<Context, E> operator~(BaseBoolExpr<Context, E> const& u) {
   return NotBoolFunctor<Context, E>(*static_cast<const E*>(&u));
 }
 
+#define DEFINE_BINARY_FUNCTOR(name, op)                                                           \
+  template<typename Context, typename E1, typename E2>                                            \
+  struct name##BoolFunctor final                                                                  \
+      : public BaseBoolExpr<Context, name##BoolFunctor<Context, E1, E2>> {                        \
+    name##BoolFunctor(const E1& e1, const E2& e2) : e1(e1), e2(e2) {}                             \
+                                                                                                  \
+    ALWAYS_INLINE bool get(const Context& context) const override {                               \
+      return e1.get(context) op e2.get(context);                                                  \
+    }                                                                                             \
+                                                                                                  \
+    std::string DebugStr(const Context& ctx, bool display_result) const override;                 \
+                                                                                                  \
+   private:                                                                                       \
+    const E1 e1;                                                                                  \
+    const E2 e2;                                                                                  \
+  };                                                                                              \
+                                                                                                  \
+  template<typename Context, typename ValueT, typename E1, typename E2>                           \
+  name##BoolFunctor<Context, E1, E2> operator op(Expr<Context, ValueT, E1> const& u,              \
+                                                 Expr<Context, ValueT, E2> const& v) {            \
+    return name##BoolFunctor<Context, E1, E2>(*static_cast<const E1*>(&u),                        \
+                                              *static_cast<const E2*>(&v));                       \
+  }                                                                                               \
+                                                                                                  \
+  template<typename Context, typename ValueT, typename E1>                                        \
+  name##BoolFunctor<Context, E1, Literal<Context, ValueT>> operator op(                           \
+      Expr<Context, ValueT, E1> const& u, ValueT const& v) {                                      \
+    return name##BoolFunctor<Context, E1, Literal<Context, ValueT>>(*static_cast<const E1*>(&u),  \
+                                                                    Literal<Context, ValueT>(v)); \
+  }
+
+DEFINE_BINARY_FUNCTOR(Equal, ==)
+DEFINE_BINARY_FUNCTOR(And, &)
+DEFINE_BINARY_FUNCTOR(Or, |)
+DEFINE_BINARY_FUNCTOR(Greater, >)
+DEFINE_BINARY_FUNCTOR(Less, <)
+DEFINE_BINARY_FUNCTOR(EqualOrGreater, >=)
+DEFINE_BINARY_FUNCTOR(EqualOrLess, <=)
+
+#undef DEFINE_BINARY_FUNCTOR
+
+#define DEFINE_DEBUG_STR(name, op)                                                      \
+  template<typename Context, typename E1, typename E2>                                  \
+  std::string name##BoolFunctor<Context, E1, E2>::DebugStr(const Context& ctx,          \
+                                                           bool display_result) const { \
+    std::string l_str = e1.DebugStr(ctx, display_result);                               \
+    std::string r_str = e2.DebugStr(ctx, display_result);                               \
+    std::ostringstream string_stream;                                                   \
+    string_stream << "(" << l_str << " OF_PP_STRINGIZE(op) " << r_str << ")";           \
+    return string_stream.str();                                                         \
+  }
+
+DEFINE_DEBUG_STR(Equal, ==)
+DEFINE_DEBUG_STR(Greater, >)
+DEFINE_DEBUG_STR(Less, <)
+DEFINE_DEBUG_STR(EqualOrGreater, >=)
+DEFINE_DEBUG_STR(EqualOrLess, <=)
+
+#undef DEFINE_DEBUG_STR
+
 template<typename Context, typename E1, typename E2>
-OrBoolFunctor<Context, E1, E2> operator|(BaseBoolExpr<Context, E1> const& u,
-                                         BaseBoolExpr<Context, E2> const& v) {
-  return OrBoolFunctor<Context, E1, E2>(*static_cast<const E1*>(&u), *static_cast<const E2*>(&v));
+std::string AndBoolFunctor<Context, E1, E2>::DebugStr(const Context& ctx,
+                                                      bool display_result) const {
+  std::string l_str = e1.DebugStr(ctx, display_result);
+  display_result = display_result && e1.get(ctx);
+  std::string r_str = e2.DebugStr(ctx, display_result);
+  std::ostringstream string_stream;
+  string_stream << "(" << l_str << " and " << r_str << ")";
+  return string_stream.str();
 }
 
-template<typename Context, typename ValueT, typename E1, typename E2>
-EqualBoolFunctor<Context, E1, E2> operator==(BaseExpr<Context, ValueT, E1> const& u,
-                                             BaseExpr<Context, ValueT, E2> const& v) {
-  return EqualBoolFunctor<Context, E1, E2>(*static_cast<const E1*>(&u),
-                                           *static_cast<const E2*>(&v));
-}
-
-template<typename Context, typename ValueT, typename E1>
-EqualBoolFunctor<Context, E1, Literal<Context, ValueT>> operator==(
-    BaseExpr<Context, ValueT, E1> const& u, ValueT const& v) {
-  return EqualBoolFunctor<Context, E1, Literal<Context, ValueT>>(*static_cast<const E1*>(&u),
-                                                                 Literal<Context, ValueT>(v));
+template<typename Context, typename E1, typename E2>
+std::string OrBoolFunctor<Context, E1, E2>::DebugStr(const Context& ctx,
+                                                     bool display_result) const {
+  std::string l_str = e1.DebugStr(ctx, display_result);
+  display_result = display_result && (!e1.get(ctx));
+  std::string r_str = e2.DebugStr(ctx, display_result);
+  std::ostringstream string_stream;
+  string_stream << "(" << l_str << " or " << r_str << ")";
+  return string_stream.str();
 }
 
 template<typename Context, typename E1>
 EqualBoolFunctor<Context, E1, Literal<Context, std::string>> operator==(
-    BaseExpr<Context, std::string, E1> const& u, const char* v) {
+    Expr<Context, std::string, E1> const& u, const char* v) {
   return EqualBoolFunctor<Context, E1, Literal<Context, std::string>>(
       *static_cast<const E1*>(&u), Literal<Context, std::string>(v));
 }

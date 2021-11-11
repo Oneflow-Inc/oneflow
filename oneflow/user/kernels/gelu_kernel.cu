@@ -79,7 +79,7 @@ class GpuGeluKernel final : public user_op::OpKernel, public user_op::CudaGraphS
 
 #define REGISTER_GPU_GELU_KERNEL(dtype)                                             \
   REGISTER_USER_KERNEL("gelu").SetCreateFn<GpuGeluKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "gpu")                                            \
+      (user_op::HobDeviceType() == DeviceType::kGPU)                                            \
       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_GELU_KERNEL(float)
@@ -110,7 +110,7 @@ class GpuGeluGradKernel final : public user_op::OpKernel, public user_op::CudaGr
 #define REGISTER_GPU_GELU_GRAD_KERNEL(dtype)              \
   REGISTER_USER_KERNEL("gelu_grad")                       \
       .SetCreateFn<GpuGeluGradKernel<dtype>>()            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_GELU_GRAD_KERNEL(float)

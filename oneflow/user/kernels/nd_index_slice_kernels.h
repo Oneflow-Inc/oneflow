@@ -129,7 +129,7 @@ void TensorScatterNdAddKernel<device_type, T, I>::Compute(
   REGISTER_USER_KERNEL(#op_type_name)                                                              \
       .SetCreateFn<                                                                                \
           op##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                                  \
                        & (user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(itype_pair))     \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
@@ -138,7 +138,7 @@ void TensorScatterNdAddKernel<device_type, T, I>::Compute(
   REGISTER_USER_KERNEL(#op_type_name)                                                           \
       .SetCreateFn<TensorScatterNd##opt##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),    \
                                                 OF_PP_PAIR_FIRST(itype_pair)>>()                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                               \
                        & (user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(itype_pair))  \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))     \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \

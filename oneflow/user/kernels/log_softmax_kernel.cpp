@@ -28,8 +28,8 @@ std::unique_ptr<primitive::LogSoftmax> NewLogSoftmaxPrimitive(Context* ctx) {
   return primitive::NewPrimitive<primitive::LogSoftmaxFactory>(ctx->device_type(), data_type);
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> LogSoftmaxPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("LogSoftmaxPrimitiveExists",
+auto LogSoftmaxPrimitiveExists() {
+  return hob::make_custom("LogSoftmaxPrimitiveExists",
                                      [](const user_op::KernelRegContext& ctx) {
                                        return NewLogSoftmaxPrimitive(&ctx).operator bool();
                                      });
@@ -42,8 +42,8 @@ std::unique_ptr<primitive::LogSoftmaxBackward> NewLogSoftmaxBackwardPrimitive(Co
                                                                        data_type);
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> LogSoftmaxBackwardPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("LogSoftmaxBackwardPrimitiveExists",
+auto LogSoftmaxBackwardPrimitiveExists() {
+  return hob::make_custom("LogSoftmaxBackwardPrimitiveExists",
                                      [](const user_op::KernelRegContext& ctx) {
                                        return NewLogSoftmaxBackwardPrimitive(&ctx).operator bool();
                                      });

@@ -383,16 +383,16 @@ class NcclLogical2DSameDim1AllReduce final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all_reduce")
     .SetCreateFn<NcclLogical2DSameDim0AllReduce>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
 REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all_gather")
     .SetCreateFn<NcclLogical2DSameDim0AllGather>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
 #define REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(dtype)                     \
   REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all_gather_noncontinuous")           \
       .SetCreateFn<NcclLogical2DSameDim0AllGatherNoncontinuous<dtype>>()                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                               \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(Infer2DSameDim0AllGatherNoncontinuousKernelTmpBufferSize);
@@ -407,7 +407,7 @@ REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(float16)
 #define REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(dtype)                                     \
   REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all2all")                            \
       .SetCreateFn<NcclLogical2DSameDim0All2All<dtype>>()                               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                               \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(Infer2DSameDim0All2AllKernelTmpBufferSize);
@@ -421,7 +421,7 @@ REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(float16)
 
 REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim1_all_reduce")
     .SetCreateFn<NcclLogical2DSameDim1AllReduce>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
 }  // namespace oneflow
 

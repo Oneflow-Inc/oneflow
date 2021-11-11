@@ -111,11 +111,11 @@ class DiagBackwardKernel final : public user_op::OpKernel {
 
 #define REGISTER_DIAG_KERNELS(device, dtype)                                             \
   REGISTER_USER_KERNEL("diag").SetCreateFn<DiagKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device)                                                \
+      (user_op::HobDeviceType() == device)                                                \
       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));                   \
   REGISTER_USER_KERNEL("diag_grad")                                                      \
       .SetCreateFn<DiagBackwardKernel<device, dtype>>()                                  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
 }  // namespace oneflow

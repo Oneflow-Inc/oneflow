@@ -370,7 +370,7 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("distributed_partial_fc_sample")                                          \
       .SetCreateFn<DistributedPartialFcSampleGpuKernel<OF_PP_PAIR_FIRST(dtype_pair),             \
                                                        OF_PP_PAIR_FIRST(ltype_pair)>>()          \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                                        \
                        & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))     \
                        & (user_op::HobDataType("weight", 0) == OF_PP_PAIR_SECOND(dtype_pair)))   \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                               \
@@ -419,7 +419,7 @@ class DistributedPartialFcSampleDisableBoxingGpuKernel final : public user_op::O
       .SetCreateFn<DistributedPartialFcSampleDisableBoxingGpuKernel<                             \
           OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ltype_pair)>>()                         \
       .SetIsMatchedHob(                                                                          \
-          (user_op::HobDeviceTag() == "gpu")                                                     \
+          (user_op::HobDeviceType() == DeviceType::kGPU)                                                     \
           & (user_op::HobDataType("sampled_label", 0) == OF_PP_PAIR_SECOND(ltype_pair))          \
           & (user_op::HobDataType("sampled_weight_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DISTRIBUTED_PARTIAL_FC_SAMPLE_DISABLE_BOXING_GPU_KERNEL,

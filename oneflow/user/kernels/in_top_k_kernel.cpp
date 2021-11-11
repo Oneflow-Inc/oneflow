@@ -46,7 +46,7 @@ class InTopkKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("in_top_k")                                              \
       .SetCreateFn<InTopkKernel<device, OF_PP_PAIR_FIRST(target_dtype_pair)>>() \
       .SetIsMatchedHob(                                                         \
-          (user_op::HobDeviceTag() == device)                                   \
+          (user_op::HobDeviceType() == device)                                   \
           & (user_op::HobDataType("targets", 0) == OF_PP_PAIR_SECOND(target_dtype_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_IN_TOP_K_KERNEL, DEVICE_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)

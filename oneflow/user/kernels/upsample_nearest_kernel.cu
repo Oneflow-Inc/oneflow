@@ -187,11 +187,11 @@ class UpsampleNearestGrad1DGPUKernel final : public user_op::OpKernel {
 #define REGISTER_UPSAMPNEAREST1D_GPU_KERNEL(dtype)                                     \
   REGISTER_USER_KERNEL("upsample_nearest_1d")                                          \
       .SetCreateFn<UpsampleNearest1DGPUKernel<dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("upsample_nearest_1d_grad")                                     \
       .SetCreateFn<UpsampleNearestGrad1DGPUKernel<dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_UPSAMPNEAREST1D_GPU_KERNEL(float)
@@ -276,11 +276,11 @@ class UpsampleNearest2DGradGPUKernel final : public user_op::OpKernel {
 #define REGISTER_UPSAMPLE_NEAREST_2D_GPU_KERNEL(dtype)                                 \
   REGISTER_USER_KERNEL("upsample_nearest_2d")                                          \
       .SetCreateFn<UpsampleNearest2DGPUKernel<dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("upsample_nearest_2d_grad")                                     \
       .SetCreateFn<UpsampleNearest2DGradGPUKernel<dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_UPSAMPLE_NEAREST_2D_GPU_KERNEL(float)
@@ -350,11 +350,11 @@ class UpsampleNearestGrad3DGPUKernel final : public user_op::OpKernel {
 #define REGISTER_UPSAMPNEAREST3D_GPU_KERNEL(dtype)                                     \
   REGISTER_USER_KERNEL("upsample_nearest_3d")                                          \
       .SetCreateFn<UpsampleNearest3DGPUKernel<dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("upsample_nearest_3d_grad")                                     \
       .SetCreateFn<UpsampleNearestGrad3DGPUKernel<dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_UPSAMPNEAREST3D_GPU_KERNEL(float)

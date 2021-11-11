@@ -275,7 +275,7 @@ struct ReluGradFunctor {
             },                                                                                  \
             "out", "in");                                                                       \
       })                                                                                        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))          \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -292,7 +292,7 @@ struct ReluGradFunctor {
             },                                                                                  \
             "dx", "y", "dy");                                                                   \
       })                                                                                        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))          \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -343,7 +343,7 @@ struct ReluGradFunctor {
         return new UnaryElemwiseXpuKernel<device, ReluFunctor<dtype>, dtype, dtype>(               \
             [](user_op::KernelComputeContext* ctx) { return ReluFunctor<dtype>(); }, "out", "in"); \
       })                                                                                           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                         \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))            \
       .SetInplaceProposalFn(                                                                       \
           [](const user_op::InferContext&,                                                         \
@@ -359,7 +359,7 @@ struct ReluGradFunctor {
             [](user_op::KernelComputeContext* ctx) { return ReluGradFunctor<dtype>(); }, "dx",   \
             "y", "dy");                                                                          \
       })                                                                                         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                       \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))           \
       .SetInplaceProposalFn(                                                                     \
           [](const user_op::InferContext&,                                                       \

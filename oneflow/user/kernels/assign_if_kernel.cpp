@@ -48,7 +48,7 @@ class AssignIfCPUKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(op_type_name)                                                       \
       .SetCreateFn<AssignIfCPUKernel<assign_if, condition_type>>()                         \
       .SetIsMatchedHob(                                                                    \
-          (user_op::HobDeviceTag() == DeviceType::kCPU)                                    \
+          (user_op::HobDeviceType() == DeviceType::kCPU)                                    \
           & (user_op::HobDataType("condition", 0) == GetDataType<condition_type>::value));
 
 #define REGISTER_ASSIGN_IF_CPU_KERNEL(condition_cpp_type, condition_data_type)      \

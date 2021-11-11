@@ -125,7 +125,7 @@ class CpuQuantizationKernel final : public user_op::OpKernel {
 #define REGISTER_QUANTIZATION_KERNEL(dtype)                          \
   REGISTER_USER_KERNEL("quantization")                               \
       .SetCreateFn<CpuQuantizationKernel<dtype>>()                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU) \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
 
 REGISTER_QUANTIZATION_KERNEL(float);

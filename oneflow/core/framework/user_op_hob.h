@@ -19,6 +19,7 @@ limitations under the License.
 #include <sstream>
 
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/device_type.h"
 #include "oneflow/core/common/high_order_bool.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
@@ -27,19 +28,19 @@ namespace oneflow {
 
 namespace user_op {
 
-auto HobTrue() {
+ALWAYS_INLINE inline auto HobTrue() {
   std::ostringstream string_stream;
   string_stream << "\" always true \"";
   return hob::LiteralBool<KernelRegContext>(string_stream.str(), true);
 }
 
-auto HobFalse() {
+ALWAYS_INLINE inline auto HobFalse() {
   std::ostringstream string_stream;
   string_stream << "\" always false \"";
   return hob::LiteralBool<KernelRegContext>(string_stream.str(), false);
 }
 
-auto HobDataType(const std::string& tensor_name, int tensor_idx) {
+ALWAYS_INLINE inline auto HobDataType(const std::string& tensor_name, int tensor_idx) {
   std::ostringstream string_stream;
   string_stream << "data_type of tensor \'" << tensor_name << "\'";
   return hob::make_custom(
@@ -50,19 +51,19 @@ auto HobDataType(const std::string& tensor_name, int tensor_idx) {
 }
 
 template<typename T>
-auto HobAttr(const std::string& attr_name) {
+ALWAYS_INLINE inline auto HobAttr(const std::string& attr_name) {
   return hob::make_custom(attr_name, [attr_name](const user_op::KernelRegContext& ctx) {
     return ctx.Attr<T>(attr_name);
   });
 }
 
-auto HobDeviceTag() {
-  return hob::make_custom("device_tag", [](const KernelRegContext& ctx) -> const std::string& {
-    return ctx.device_tag();
+ALWAYS_INLINE inline auto HobDeviceType() {
+  return hob::make_custom("device_type", [](const KernelRegContext& ctx) -> DeviceType {
+    return ctx.device_type();
   });
 }
 
-auto HobDeviceSubTag() {
+ALWAYS_INLINE inline auto HobDeviceSubTag() {
   return hob::make_custom("device_sub_tag", [](const KernelRegContext& ctx) -> std::string {
     return ctx.Attr<std::string>("device_sub_tag");
   });

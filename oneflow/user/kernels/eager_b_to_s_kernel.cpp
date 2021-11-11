@@ -215,7 +215,7 @@ class EagerBToSKernel final : public user_op::OpKernel {
 #define REGISTER_EAGER_B_TO_S_KERNEL(device)              \
   REGISTER_USER_KERNEL("eager_b_to_s")                    \
       .SetCreateFn<EagerBToSKernel<device>>()             \
-      .SetIsMatchedHob(user_op::HobDeviceTag() == device) \
+      .SetIsMatchedHob(user_op::HobDeviceType() == device) \
       .SetInferTmpSizeFn(InferEagerBToSKernelTmpBufferSize);
 
 REGISTER_EAGER_B_TO_S_KERNEL(DeviceType::kCPU)

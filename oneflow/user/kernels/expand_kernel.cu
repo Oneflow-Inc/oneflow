@@ -146,7 +146,7 @@ class GpuExpandKernel final : public user_op::OpKernel {
 
 #define REGISTER_EXPAND_KERNEL(dtype)                                                   \
   REGISTER_USER_KERNEL("expand").SetCreateFn<GpuExpandKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == DeviceType::kGPU)                                     \
+      (user_op::HobDeviceType() == DeviceType::kGPU)                                     \
       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
 
 REGISTER_EXPAND_KERNEL(float);
@@ -203,7 +203,7 @@ class GpuExpandGradKernel final : public user_op::OpKernel {
 #define REGISTER_EXPAND_GRAD_KERNEL(dtype)                           \
   REGISTER_USER_KERNEL("expand_grad")                                \
       .SetCreateFn<GpuExpandGradKernel<dtype>>()                     \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU) \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
 
 REGISTER_EXPAND_GRAD_KERNEL(float);

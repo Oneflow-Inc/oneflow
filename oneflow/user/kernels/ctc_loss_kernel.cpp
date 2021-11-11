@@ -61,7 +61,7 @@ class CtcLossKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("ctc_loss")                                                                \
       .SetCreateFn<CtcLossKernel<device, OF_PP_PAIR_FIRST(dtype), OF_PP_PAIR_FIRST(idx_dtype)>>() \
       .SetIsMatchedHob(                                                                           \
-          (user_op::HobDeviceTag() == device)                                                     \
+          (user_op::HobDeviceType() == device)                                                     \
           & (user_op::HobDataType("log_probs", 0) == OF_PP_PAIR_SECOND(dtype))                    \
           & (user_op::HobDataType("input_lengths", 0) == OF_PP_PAIR_SECOND(idx_dtype)));
 
@@ -120,7 +120,7 @@ class CtcLossGradKernel final : public user_op::OpKernel {
       .SetCreateFn<                                                                          \
           CtcLossGradKernel<device, OF_PP_PAIR_FIRST(dtype), OF_PP_PAIR_FIRST(idx_dtype)>>() \
       .SetIsMatchedHob(                                                                      \
-          (user_op::HobDeviceTag() == device)                                                \
+          (user_op::HobDeviceType() == device)                                                \
           & (user_op::HobDataType("log_probs", 0) == OF_PP_PAIR_SECOND(dtype))               \
           & (user_op::HobDataType("input_lengths", 0) == OF_PP_PAIR_SECOND(idx_dtype)))      \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                    \

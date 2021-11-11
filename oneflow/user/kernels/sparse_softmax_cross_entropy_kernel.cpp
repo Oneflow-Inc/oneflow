@@ -32,8 +32,8 @@ std::unique_ptr<primitive::LogSoftmax> NewLogSoftmaxPrimitive(Context* ctx) {
   return primitive::NewPrimitive<primitive::LogSoftmaxFactory>(ctx->device_type(), data_type);
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> LogSoftmaxPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("LogSoftmaxPrimitiveExists",
+auto LogSoftmaxPrimitiveExists() {
+  return hob::make_custom("LogSoftmaxPrimitiveExists",
                                      [](const user_op::KernelRegContext& ctx) {
                                        return NewLogSoftmaxPrimitive(&ctx).operator bool();
                                      });
@@ -111,7 +111,7 @@ class SparseSoftmaxCrossEntropyMsKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(kernel_name)                                                            \
       .SetCreateFn<kernel_class<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                   \
                                 OF_PP_PAIR_FIRST(ltype_pair)>>()                               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                              \
                        & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))   \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair))     \
                        & (LogSoftmaxPrimitiveExists() == true));
@@ -210,7 +210,7 @@ class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel {
       .SetCreateFn<kernel_class<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                     \
                                 OF_PP_PAIR_FIRST(ltype_pair)>>()                                 \
       .SetIsMatchedHob(                                                                          \
-          (user_op::HobDeviceTag() == device_type_v)                                             \
+          (user_op::HobDeviceType() == device_type_v)                                             \
           & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))                  \
           & (user_op::HobDataType("prediction_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair)))       \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                     \

@@ -173,7 +173,7 @@ class FusedTrilScaleSoftmaxMaskScaleKernel final : public user_op::OpKernel {
 #define REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GPU_KERNEL(dtype) \
   REGISTER_USER_KERNEL("fused_tril_scale_softmax_mask_scale")          \
       .SetCreateFn<FusedTrilScaleSoftmaxMaskScaleKernel<dtype>>()      \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)   \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GPU_KERNEL(half)
@@ -216,7 +216,7 @@ class FusedTrilScaleSoftmaxMaskScaleGradKernel final : public user_op::OpKernel 
 #define REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GRAD_KERNEL(dtype) \
   REGISTER_USER_KERNEL("fused_tril_scale_softmax_mask_scale_grad")      \
       .SetCreateFn<FusedTrilScaleSoftmaxMaskScaleGradKernel<dtype>>()   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)    \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GRAD_KERNEL(half)

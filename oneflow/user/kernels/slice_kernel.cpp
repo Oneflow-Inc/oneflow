@@ -394,15 +394,15 @@ class SliceUpdateKernel final : public user_op::OpKernel {
 
 #define REGISTER_SLICE_KERNELS(device, dtype)                                                   \
   REGISTER_USER_KERNEL("slice").SetCreateFn<SliceKernel<device, dtype>>().SetIsMatchedHob(      \
-      (user_op::HobDeviceTag() == device)                                                       \
+      (user_op::HobDeviceType() == device)                                                       \
       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));                           \
   REGISTER_USER_KERNEL("slice_grad")                                                            \
       .SetCreateFn<SliceGradKernel<device, dtype>>()                                            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));         \
   REGISTER_USER_KERNEL("slice_update")                                                          \
       .SetCreateFn<SliceUpdateKernel<device, dtype>>()                                          \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)            \
                        & (user_op::HobDataType("update", 0) == GetDataType<dtype>::value))      \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \

@@ -93,7 +93,7 @@ class EagerNcclAllReduceKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_nccl_all_reduce")
     .SetCreateFn<EagerNcclAllReduceKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
 class EagerNcclBroadcastKernel final : public user_op::OpKernel {
  public:
@@ -131,7 +131,7 @@ class EagerNcclBroadcastKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_nccl_broadcast")
     .SetCreateFn<EagerNcclBroadcastKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
 class EagerNcclReduceKernel final : public user_op::OpKernel {
  public:
@@ -166,7 +166,7 @@ class EagerNcclReduceKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_nccl_reduce")
     .SetCreateFn<EagerNcclReduceKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
 class EagerNcclReduceScatterKernel final : public user_op::OpKernel {
  public:
@@ -202,7 +202,7 @@ HashMap<std::string, ncclRedOp_t> EagerNcclReduceScatterKernel::op_type2ncclRedO
 
 REGISTER_USER_KERNEL("eager_nccl_reduce_scatter")
     .SetCreateFn<EagerNcclReduceScatterKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
 class EagerNcclAllGatherKernel final : public user_op::OpKernel {
  public:
@@ -231,7 +231,7 @@ class EagerNcclAllGatherKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_nccl_all_gather")
     .SetCreateFn<EagerNcclAllGatherKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
 template<typename T>
 class EagerNcclS2SKernel final : public user_op::OpKernel {
@@ -346,7 +346,7 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
 #define REGISTER_EAGER_NCCL_S2S_KERNEL(dtype)                                           \
   REGISTER_USER_KERNEL("eager_nccl_s2s")                                                \
       .SetCreateFn<EagerNcclS2SKernel<dtype>>()                                         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                               \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferEagerNcclS2SKernelTmpBufferSize);

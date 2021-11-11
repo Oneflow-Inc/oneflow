@@ -112,7 +112,7 @@ class GpuScalarPowGradKernel final : public user_op::OpKernel {
 #define REGISTER_GPU_SCALAR_POW_BACKWARD_KERNEL(device, dtype) \
   REGISTER_USER_KERNEL("scalar_pow_grad")                      \
       .SetCreateFn<GpuScalarPowGradKernel<device, dtype>>()    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)     \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kGPU, uint8_t);

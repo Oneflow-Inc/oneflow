@@ -57,8 +57,8 @@ class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> PermutePrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("PermutePrimitiveExists",
+auto PermutePrimitiveExists() {
+  return hob::make_custom("PermutePrimitiveExists",
                                      [](const user_op::KernelRegContext& ctx) {
                                        return NewPermutePrimitive(&ctx).operator bool();
                                      });

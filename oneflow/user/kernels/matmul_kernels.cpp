@@ -95,22 +95,22 @@ std::unique_ptr<primitive::BatchMatmul> NewBatchMatmulPrimitive(Context* ctx) {
                                                                 trans_a, trans_b);
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> MemcpyPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("MemcpyPrimitiveExists",
+auto MemcpyPrimitiveExists() {
+  return hob::make_custom("MemcpyPrimitiveExists",
                                      [](const user_op::KernelRegContext& ctx) {
                                        return NewMemcpyPrimitive(&ctx).operator bool();
                                      });
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> MatmulPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("MatmulPrimitiveExists",
+auto MatmulPrimitiveExists() {
+  return hob::make_custom("MatmulPrimitiveExists",
                                      [](const user_op::KernelRegContext& ctx) {
                                        return NewMatmulPrimitive(&ctx).operator bool();
                                      });
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> BatchMatmulPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("BatchMatmulPrimitiveExists",
+auto BatchMatmulPrimitiveExists() {
+  return hob::make_custom("BatchMatmulPrimitiveExists",
                                      [](const user_op::KernelRegContext& ctx) {
                                        return NewBatchMatmulPrimitive(&ctx).operator bool();
                                      });
@@ -335,8 +335,8 @@ class BroadcastMatmulGradBKernel final : public user_op::OpKernel,
   }
 };
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> PrimitiveExistsForBroadcastMatmulGradB() {
-  return user_op::HobCtxGetter<bool>(
+auto PrimitiveExistsForBroadcastMatmulGradB() {
+  return hob::make_custom(
       "MatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
         return NewMatmulPrimitiveForBroadcastMatmulGradB(&ctx).operator bool();
       });

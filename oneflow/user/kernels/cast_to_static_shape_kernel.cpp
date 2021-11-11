@@ -46,7 +46,7 @@ class CastToStaticShapeKernel final : public user_op::OpKernel {
 #define REGISTER_CAST_TO_STATIC_SHAPE_KERNEL(device)                                            \
   REGISTER_USER_KERNEL("cast_to_static_shape")                                                  \
       .SetCreateFn<CastToStaticShapeKernel<device>>()                                           \
-      .SetIsMatchedHob(user_op::HobDeviceTag() == device)                                       \
+      .SetIsMatchedHob(user_op::HobDeviceType() == device)                                       \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("output", 0, "input", 0, false));                \
