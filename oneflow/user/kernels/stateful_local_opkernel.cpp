@@ -439,8 +439,10 @@ Maybe<const user_op::OpKernel*> StatefulLocalOpKernel::ChooseOpKernel(
   DataType primary_dtype = kInvalidDataType;
   if (likely(!inputs->empty())) {
     primary_dtype = (*inputs)[0]->blob_desc().data_type();
-  } else {
+  } else if (likely(!outputs->empty())) {
     primary_dtype = (*outputs)[0]->blob_desc().data_type();
+  } else {
+    // do nothing
   }
 
   for (const auto& pair : dtype2cached_kernels_[primary_dtype]) {
