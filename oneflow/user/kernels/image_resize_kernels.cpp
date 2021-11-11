@@ -227,7 +227,7 @@ class ImageResizeKeepAspectRatioKernel final : public user_op::OpKernel {
 #define REGISTER_IMAGE_RESIZE_KERNEL(dtype)                                         \
   REGISTER_USER_KERNEL("image_resize_to_fixed")                                     \
       .SetCreateFn<ImageResizeToFixedSizeKernel>()                                  \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)               \
                        & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer) \
                        & (user_op::HobAttr<DataType>("data_type") == GetDataType<dtype>::value));
 

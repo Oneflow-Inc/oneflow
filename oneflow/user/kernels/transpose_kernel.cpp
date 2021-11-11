@@ -58,10 +58,9 @@ class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport 
 };
 
 auto PermutePrimitiveExists() {
-  return hob::make_custom("PermutePrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewPermutePrimitive(&ctx).operator bool();
-                                     });
+  return hob::make_custom("PermutePrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewPermutePrimitive(&ctx).operator bool();
+  });
 }
 
 REGISTER_USER_KERNEL("transpose")

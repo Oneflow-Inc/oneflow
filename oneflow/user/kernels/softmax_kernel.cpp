@@ -42,9 +42,9 @@ std::unique_ptr<primitive::SoftmaxBackward> NewSoftmaxBackwardPrimitive(Context*
 
 auto SoftmaxBackwardPrimitiveExists() {
   return hob::make_custom("SoftmaxBackwardPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewSoftmaxBackwardPrimitive(&ctx).operator bool();
-                                     });
+                          [](const user_op::KernelRegContext& ctx) {
+                            return NewSoftmaxBackwardPrimitive(&ctx).operator bool();
+                          });
 }
 
 }  // namespace

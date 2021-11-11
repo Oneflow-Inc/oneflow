@@ -142,7 +142,7 @@ class BinaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::
             create_function, out_name, input_a_name);                                            \
       })                                                                                         \
       .SetIsMatchedHob(                                                                          \
-          (user_op::HobDeviceType() == device)                                                    \
+          (user_op::HobDeviceType() == device)                                                   \
           & (user_op::HobDataType(input_a_name, 0) == GetDataType<out_dtype>::value));
 
 #define REGISTER_BINARY_ELEMWISE_USER_KERNEL(device, kernel_name, functor, out_dtype,              \
@@ -155,7 +155,7 @@ class BinaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::
                                                           input_b_name);                           \
       })                                                                                           \
       .SetIsMatchedHob(                                                                            \
-          (user_op::HobDeviceType() == device)                                                      \
+          (user_op::HobDeviceType() == device)                                                     \
           & (user_op::HobDataType(input_a_name, 0) == GetDataType<out_dtype>::value));
 
 }  // namespace oneflow

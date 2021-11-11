@@ -369,7 +369,7 @@ class DeconvCpuKernel final : public user_op::OpKernel {
 #define REGISTER_DECONV_DATA_KERNEL(op_name, dtype)                                     \
   REGISTER_USER_KERNEL(#op_name)                                                        \
       .SetCreateFn<DeconvCpuKernel<dtype>>()                                            \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                   \
                        & (user_op::HobAttr<int32_t>("groups") == 1)                     \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                     \

@@ -296,27 +296,27 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
 #define REGISTER_POOLING_KERNELS(device, dtype)                                        \
   REGISTER_USER_KERNEL("maxpool_1d")                                                   \
       .SetCreateFn<MaxPool1dKernel<device, dtype>>()                                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("maxpool_1d_grad")                                              \
       .SetCreateFn<MaxPool1dGradKernel<device, dtype>>()                               \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("maxpool_2d")                                                   \
       .SetCreateFn<MaxPool2dKernel<device, dtype>>()                                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("maxpool_2d_grad")                                              \
       .SetCreateFn<MaxPool2dGradKernel<device, dtype>>()                               \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("maxpool_3d")                                                   \
       .SetCreateFn<MaxPool3dKernel<device, dtype>>()                                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("maxpool_3d_grad")                                              \
       .SetCreateFn<MaxPool3dGradKernel<device, dtype>>()                               \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_POOLING_WITH_DEVICE(device) \

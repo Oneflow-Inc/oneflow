@@ -95,7 +95,7 @@ class BroadcastPowYGradKernel final : public user_op::OpKernel {
 #define REGISTER_BROADCAST_POW_X_GRAD_KERNEL(device, dtype_pair)                          \
   REGISTER_USER_KERNEL("broadcast_pow_x_grad")                                            \
       .SetCreateFn<BroadcastPowXGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
                        & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                        \
         const user_op::TensorDesc& z = ctx->InputTensorDesc("z", 0);                      \
@@ -107,7 +107,7 @@ class BroadcastPowYGradKernel final : public user_op::OpKernel {
 #define REGISTER_BROADCAST_POW_Y_GRAD_KERNEL(device, dtype_pair)                          \
   REGISTER_USER_KERNEL("broadcast_pow_y_grad")                                            \
       .SetCreateFn<BroadcastPowYGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
                        & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                        \
         const user_op::TensorDesc& z = ctx->InputTensorDesc("z", 0);                      \

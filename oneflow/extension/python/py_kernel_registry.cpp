@@ -25,8 +25,8 @@ Maybe<void> RegisterPyKernelCaller(const std::string& op_module_name) {
   auto reg = user_op::UserOpRegistryMgr::Get()
                  .CheckAndGetOpKernelRegistry(op_module_name + "_forward")
                  .SetCreateFn<PyForwardKernel>()
-                 .SetIsMatchedHob(
-                     ((user_op::HobDeviceType() == DeviceType::kCPU) & (user_op::HobDeviceSubTag() == "py")));
+                 .SetIsMatchedHob(((user_op::HobDeviceType() == DeviceType::kCPU)
+                                   & (user_op::HobDeviceSubTag() == "py")));
   JUST(user_op::UserOpRegistryMgr::Get().Register(JUST(reg.Finish()).GetResult()));
   // register python grad op kernel
   auto grad_reg = user_op::UserOpRegistryMgr::Get()

@@ -58,7 +58,7 @@ class RecvKernel final : public user_op::OpKernel {
 
 #define REGISTER_KERNEL(device)                                                   \
   REGISTER_USER_KERNEL("send").SetCreateFn<SendKernel<device>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == device));                                       \
+      (user_op::HobDeviceType() == device));                                      \
   REGISTER_USER_KERNEL("recv").SetCreateFn<RecvKernel<device>>().SetIsMatchedHob( \
       (user_op::HobDeviceType() == device));
 

@@ -59,9 +59,9 @@ class CpuArgSortKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_ARG_SORT_KERNEL(dtype)               \
-  REGISTER_USER_KERNEL("arg_sort")                        \
-      .SetCreateFn<CpuArgSortKernel<dtype>>()             \
+#define REGISTER_CPU_ARG_SORT_KERNEL(dtype)                           \
+  REGISTER_USER_KERNEL("arg_sort")                                    \
+      .SetCreateFn<CpuArgSortKernel<dtype>>()                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 

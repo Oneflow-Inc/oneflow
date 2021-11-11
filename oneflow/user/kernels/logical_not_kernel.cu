@@ -48,9 +48,9 @@ class GpuLogicalNotKernel final : public user_op::OpKernel, public user_op::Cuda
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_LOGICAL_NOT_KERNEL(dtype, DataType)  \
-  REGISTER_USER_KERNEL("logical_not")                     \
-      .SetCreateFn<GpuLogicalNotKernel<dtype, int8_t>>()  \
+#define REGISTER_GPU_LOGICAL_NOT_KERNEL(dtype, DataType)              \
+  REGISTER_USER_KERNEL("logical_not")                                 \
+      .SetCreateFn<GpuLogicalNotKernel<dtype, int8_t>>()              \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("x", 0) == DataType));
 

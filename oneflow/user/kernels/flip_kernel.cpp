@@ -118,11 +118,11 @@ class FlipGrad1DCpuKernel final : public user_op::OpKernel {
 
 #define REGISTER_FLIP_CPU_KERNEL(dtype)                                             \
   REGISTER_USER_KERNEL("flip").SetCreateFn<FlipCpuKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kCPU)                                            \
+      (user_op::HobDeviceType() == DeviceType::kCPU)                                \
       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));               \
   REGISTER_USER_KERNEL("flip_grad")                                                 \
       .SetCreateFn<FlipGrad1DCpuKernel<dtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)               \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_FLIP_CPU_KERNEL(float)

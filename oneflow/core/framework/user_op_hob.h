@@ -58,9 +58,8 @@ ALWAYS_INLINE inline auto HobAttr(const std::string& attr_name) {
 }
 
 ALWAYS_INLINE inline auto HobDeviceType() {
-  return hob::make_custom("device_type", [](const KernelRegContext& ctx) -> DeviceType {
-    return ctx.device_type();
-  });
+  return hob::make_custom(
+      "device_type", [](const KernelRegContext& ctx) -> DeviceType { return ctx.device_type(); });
 }
 
 ALWAYS_INLINE inline auto HobDeviceSubTag() {

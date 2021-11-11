@@ -162,11 +162,11 @@ class UpsampleBilinear2DGradGPUKernel final : public user_op::OpKernel {
 #define REGISTER_UPSAMPLE_BILINEAR_2D_GPU_KERNEL(dtype)                                \
   REGISTER_USER_KERNEL("upsample_bilinear_2d")                                         \
       .SetCreateFn<UpsampleBilinear2DGPUKernel<dtype>>()                               \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("upsample_bilinear_2d_grad")                                    \
       .SetCreateFn<UpsampleBilinear2DGradGPUKernel<dtype>>()                           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_UPSAMPLE_BILINEAR_2D_GPU_KERNEL(float)

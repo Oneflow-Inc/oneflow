@@ -153,9 +153,9 @@ class GPTDataLoaderKernel final : public OpKernel {
 
 }  // namespace
 
-#define REGISTER_GPT_DATA_LOADER_KERNEL(dtype)            \
-  REGISTER_USER_KERNEL("megatron_gpt_mmap_data_loader")   \
-      .SetCreateFn<GPTDataLoaderKernel<dtype>>()          \
+#define REGISTER_GPT_DATA_LOADER_KERNEL(dtype)                        \
+  REGISTER_USER_KERNEL("megatron_gpt_mmap_data_loader")               \
+      .SetCreateFn<GPTDataLoaderKernel<dtype>>()                      \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))
 

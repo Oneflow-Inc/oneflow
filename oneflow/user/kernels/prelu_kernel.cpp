@@ -46,7 +46,7 @@ class CpuPReluKernel final : public user_op::OpKernel {
 
 #define REGISTER_CPU_PRELU_KERNEL(dtype)                                              \
   REGISTER_USER_KERNEL("prelu").SetCreateFn<CpuPReluKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kCPU)                                              \
+      (user_op::HobDeviceType() == DeviceType::kCPU)                                  \
       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_PRELU_KERNEL(float)
@@ -91,9 +91,9 @@ class CpuPReluGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_PRELU_GRAD_KERNEL(dtype)             \
-  REGISTER_USER_KERNEL("prelu_grad")                      \
-      .SetCreateFn<CpuPReluGradKernel<dtype>>()           \
+#define REGISTER_CPU_PRELU_GRAD_KERNEL(dtype)                         \
+  REGISTER_USER_KERNEL("prelu_grad")                                  \
+      .SetCreateFn<CpuPReluGradKernel<dtype>>()                       \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 

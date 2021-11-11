@@ -88,7 +88,7 @@ class FoldKernel final : public OpKernel {
 #define REGISTER_FOLD_KERNEL(device, dtype)                    \
   REGISTER_USER_KERNEL("fold")                                 \
       .SetCreateFn<FoldKernel<device, dtype, int32_t, 2, 2>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)    \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
 REGISTER_FOLD_KERNEL(DeviceType::kCPU, float)

@@ -58,7 +58,7 @@ class AssignIfGPUKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(op_type_name)                                                             \
       .SetCreateFn<AssignIfGPUKernel<assign_if, condition_type, value_type>>()                   \
       .SetIsMatchedHob(                                                                          \
-          (user_op::HobDeviceType() == DeviceType::kGPU)                                          \
+          (user_op::HobDeviceType() == DeviceType::kGPU)                                         \
           & (user_op::HobDataType("condition", 0) == GetDataType<condition_type>::value)         \
           & (user_op::HobDataType("value", 0) == GetDataType<value_type>::value));
 

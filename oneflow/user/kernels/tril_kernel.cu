@@ -176,7 +176,7 @@ class GpuTrilKernel final : public user_op::OpKernel {
 #define REGISTER_GPU_TRIL_KERNEL(dtype)                                                         \
   REGISTER_USER_KERNEL("tril")                                                                  \
       .SetCreateFn<GpuTrilKernel<dtype>>()                                                      \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -232,7 +232,7 @@ class GpuFusedScaleTrilKernel final : public user_op::OpKernel {
 #define REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(dtype)                                             \
   REGISTER_USER_KERNEL("fused_scale_tril")                                                      \
       .SetCreateFn<GpuFusedScaleTrilKernel<dtype>>()                                            \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \

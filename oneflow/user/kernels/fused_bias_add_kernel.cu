@@ -343,9 +343,9 @@ class FusedFusedBiasAddKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_BIAS_ADD_GELU_KERNEL(dtype)        \
-  REGISTER_USER_KERNEL("fused_bias_add_gelu")             \
-      .SetCreateFn<FusedFusedBiasAddKernel<dtype>>()      \
+#define REGISTER_FUSED_BIAS_ADD_GELU_KERNEL(dtype)                    \
+  REGISTER_USER_KERNEL("fused_bias_add_gelu")                         \
+      .SetCreateFn<FusedFusedBiasAddKernel<dtype>>()                  \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
@@ -390,9 +390,9 @@ class FusedBiasAddMaskScaleKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_BIAS_ADD_MASK_SCALE_KERNEL(dtype)  \
-  REGISTER_USER_KERNEL("fused_bias_add_mask_scale")       \
-      .SetCreateFn<FusedBiasAddMaskScaleKernel<dtype>>()  \
+#define REGISTER_FUSED_BIAS_ADD_MASK_SCALE_KERNEL(dtype)              \
+  REGISTER_USER_KERNEL("fused_bias_add_mask_scale")                   \
+      .SetCreateFn<FusedBiasAddMaskScaleKernel<dtype>>()              \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
@@ -433,9 +433,9 @@ class FusedFusedBiasAddGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_BIAS_ADD_GELU_GRAD_KERNEL(dtype)   \
-  REGISTER_USER_KERNEL("fused_bias_add_gelu_grad")        \
-      .SetCreateFn<FusedFusedBiasAddGradKernel<dtype>>()  \
+#define REGISTER_FUSED_BIAS_ADD_GELU_GRAD_KERNEL(dtype)               \
+  REGISTER_USER_KERNEL("fused_bias_add_gelu_grad")                    \
+      .SetCreateFn<FusedFusedBiasAddGradKernel<dtype>>()              \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 

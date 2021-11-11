@@ -129,9 +129,9 @@ class GenTensorBuffer final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GEN_TENSOR_BUFFER_KERNEL(dtype)                     \
-  REGISTER_USER_KERNEL("gen_tensor_buffer")                          \
-      .SetCreateFn<GenTensorBuffer<dtype>>()                         \
+#define REGISTER_GEN_TENSOR_BUFFER_KERNEL(dtype)                      \
+  REGISTER_USER_KERNEL("gen_tensor_buffer")                           \
+      .SetCreateFn<GenTensorBuffer<dtype>>()                          \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        & (user_op::HobAttr<DataType>("data_type") == GetDataType<dtype>::value));
 

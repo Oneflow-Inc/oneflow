@@ -96,9 +96,9 @@ class CountNotFiniteGpuKernel final : public user_op::OpKernel, public user_op::
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_COUNT_NOT_FINITE_GPU_KERNEL(dtype)       \
-  REGISTER_USER_KERNEL("count_not_finite")                \
-      .SetCreateFn<CountNotFiniteGpuKernel<dtype>>()      \
+#define REGISTER_COUNT_NOT_FINITE_GPU_KERNEL(dtype)                   \
+  REGISTER_USER_KERNEL("count_not_finite")                            \
+      .SetCreateFn<CountNotFiniteGpuKernel<dtype>>()                  \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
@@ -147,9 +147,9 @@ class MultiCountNotFiniteGpuKernel final : public user_op::OpKernel,
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MULTI_COUNT_NOT_FINITE_GPU_KERNEL(dtype) \
-  REGISTER_USER_KERNEL("multi_count_not_finite")          \
-      .SetCreateFn<MultiCountNotFiniteGpuKernel<dtype>>() \
+#define REGISTER_MULTI_COUNT_NOT_FINITE_GPU_KERNEL(dtype)             \
+  REGISTER_USER_KERNEL("multi_count_not_finite")                      \
+      .SetCreateFn<MultiCountNotFiniteGpuKernel<dtype>>()             \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 

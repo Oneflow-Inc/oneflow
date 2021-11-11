@@ -105,33 +105,32 @@ NotBoolFunctor<Context, E> operator~(BoolExpr<Context, E> const& lhs) {
 
 #define DEFINE_BINARY_FUNCTOR(name, op)                                                           \
   template<typename Context, typename E1, typename E2>                                            \
-  struct name##BoolFunctor final                                                                  \
-      : public BoolExpr<Context, name##BoolFunctor<Context, E1, E2>> {                        \
-    name##BoolFunctor(const E1& lhs, const E2& rhs) : lhs_(lhs), rhs_(rhs) {}                             \
+  struct name##BoolFunctor final : public BoolExpr<Context, name##BoolFunctor<Context, E1, E2>> { \
+    name##BoolFunctor(const E1& lhs, const E2& rhs) : lhs_(lhs), rhs_(rhs) {}                     \
                                                                                                   \
     ALWAYS_INLINE bool get(const Context& context) const override {                               \
-      return lhs_.get(context) op rhs_.get(context);                                                  \
+      return lhs_.get(context) op rhs_.get(context);                                              \
     }                                                                                             \
                                                                                                   \
     std::string DebugStr(const Context& ctx, bool display_result) const override;                 \
                                                                                                   \
    private:                                                                                       \
-    const E1 lhs_;                                                                                  \
-    const E2 rhs_;                                                                                  \
+    const E1 lhs_;                                                                                \
+    const E2 rhs_;                                                                                \
   };                                                                                              \
                                                                                                   \
   template<typename Context, typename ValueT, typename E1, typename E2>                           \
-  name##BoolFunctor<Context, E1, E2> operator op(Expr<Context, ValueT, E1> const& lhs,              \
-                                                 Expr<Context, ValueT, E2> const& rhs) {            \
-    return name##BoolFunctor<Context, E1, E2>(*static_cast<const E1*>(&lhs),                        \
-                                              *static_cast<const E2*>(&rhs));                       \
+  name##BoolFunctor<Context, E1, E2> operator op(Expr<Context, ValueT, E1> const& lhs,            \
+                                                 Expr<Context, ValueT, E2> const& rhs) {          \
+    return name##BoolFunctor<Context, E1, E2>(*static_cast<const E1*>(&lhs),                      \
+                                              *static_cast<const E2*>(&rhs));                     \
   }                                                                                               \
                                                                                                   \
   template<typename Context, typename ValueT, typename E1>                                        \
   name##BoolFunctor<Context, E1, Literal<Context, ValueT>> operator op(                           \
-      Expr<Context, ValueT, E1> const& lhs, ValueT const& rhs) {                                      \
-    return name##BoolFunctor<Context, E1, Literal<Context, ValueT>>(*static_cast<const E1*>(&lhs),  \
-                                                                    Literal<Context, ValueT>(rhs)); \
+      Expr<Context, ValueT, E1> const& lhs, ValueT const& rhs) {                                  \
+    return name##BoolFunctor<Context, E1, Literal<Context, ValueT>>(                              \
+        *static_cast<const E1*>(&lhs), Literal<Context, ValueT>(rhs));                            \
   }
 
 DEFINE_BINARY_FUNCTOR(Equal, ==)
@@ -144,24 +143,24 @@ DEFINE_BINARY_FUNCTOR(EqualOrLess, <=)
 
 #undef DEFINE_BINARY_FUNCTOR
 
-#define DEFINE_DEBUG_STR(name, op)                                                      \
+#define DEFINE_NON_SHORT_CIRCUIT_DEBUG_STR(name, op)                                    \
   template<typename Context, typename E1, typename E2>                                  \
   std::string name##BoolFunctor<Context, E1, E2>::DebugStr(const Context& ctx,          \
                                                            bool display_result) const { \
-    std::string l_str = lhs_.DebugStr(ctx, display_result);                               \
-    std::string r_str = rhs_.DebugStr(ctx, display_result);                               \
+    std::string l_str = lhs_.DebugStr(ctx, display_result);                             \
+    std::string r_str = rhs_.DebugStr(ctx, display_result);                             \
     std::ostringstream string_stream;                                                   \
     string_stream << "(" << l_str << " OF_PP_STRINGIZE(op) " << r_str << ")";           \
     return string_stream.str();                                                         \
   }
 
-DEFINE_DEBUG_STR(Equal, ==)
-DEFINE_DEBUG_STR(Greater, >)
-DEFINE_DEBUG_STR(Less, <)
-DEFINE_DEBUG_STR(EqualOrGreater, >=)
-DEFINE_DEBUG_STR(EqualOrLess, <=)
+DEFINE_NON_SHORT_CIRCUIT_DEBUG_STR(Equal, ==)
+DEFINE_NON_SHORT_CIRCUIT_DEBUG_STR(Greater, >)
+DEFINE_NON_SHORT_CIRCUIT_DEBUG_STR(Less, <)
+DEFINE_NON_SHORT_CIRCUIT_DEBUG_STR(EqualOrGreater, >=)
+DEFINE_NON_SHORT_CIRCUIT_DEBUG_STR(EqualOrLess, <=)
 
-#undef DEFINE_DEBUG_STR
+#undef DEFINE_NON_SHORT_CIRCUIT_DEBUG_STR
 
 template<typename Context, typename E1, typename E2>
 std::string AndBoolFunctor<Context, E1, E2>::DebugStr(const Context& ctx,

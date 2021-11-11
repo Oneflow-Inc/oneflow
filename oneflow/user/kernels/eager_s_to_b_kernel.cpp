@@ -187,9 +187,9 @@ class EagerSToBKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EAGER_S_TO_B_KERNEL(device)              \
-  REGISTER_USER_KERNEL("eager_s_to_b")                    \
-      .SetCreateFn<EagerSToBKernel<device>>()             \
+#define REGISTER_EAGER_S_TO_B_KERNEL(device)               \
+  REGISTER_USER_KERNEL("eager_s_to_b")                     \
+      .SetCreateFn<EagerSToBKernel<device>>()              \
       .SetIsMatchedHob(user_op::HobDeviceType() == device) \
       .SetInferTmpSizeFn(InferEagerSToBKernelTmpBufferSize);
 

@@ -51,9 +51,9 @@ class SummaryWriteScalar final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_SCALAR_USER_KERNEL(dtype)                \
-  REGISTER_USER_KERNEL("summary_write_scalar")            \
-      .SetCreateFn<SummaryWriteScalar<dtype>>()           \
+#define REGISTER_SCALAR_USER_KERNEL(dtype)                            \
+  REGISTER_USER_KERNEL("summary_write_scalar")                        \
+      .SetCreateFn<SummaryWriteScalar<dtype>>()                       \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
@@ -117,9 +117,9 @@ class SummaryWriteHistogram final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_HISTOGRAM_USER_KERNEL(dtype)             \
-  REGISTER_USER_KERNEL("summary_write_histogram")         \
-      .SetCreateFn<SummaryWriteHistogram<dtype>>()        \
+#define REGISTER_HISTOGRAM_USER_KERNEL(dtype)                         \
+  REGISTER_USER_KERNEL("summary_write_histogram")                     \
+      .SetCreateFn<SummaryWriteHistogram<dtype>>()                    \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 

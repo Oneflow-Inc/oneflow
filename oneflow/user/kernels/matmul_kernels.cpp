@@ -96,24 +96,21 @@ std::unique_ptr<primitive::BatchMatmul> NewBatchMatmulPrimitive(Context* ctx) {
 }
 
 auto MemcpyPrimitiveExists() {
-  return hob::make_custom("MemcpyPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewMemcpyPrimitive(&ctx).operator bool();
-                                     });
+  return hob::make_custom("MemcpyPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewMemcpyPrimitive(&ctx).operator bool();
+  });
 }
 
 auto MatmulPrimitiveExists() {
-  return hob::make_custom("MatmulPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewMatmulPrimitive(&ctx).operator bool();
-                                     });
+  return hob::make_custom("MatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewMatmulPrimitive(&ctx).operator bool();
+  });
 }
 
 auto BatchMatmulPrimitiveExists() {
-  return hob::make_custom("BatchMatmulPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewBatchMatmulPrimitive(&ctx).operator bool();
-                                     });
+  return hob::make_custom("BatchMatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewBatchMatmulPrimitive(&ctx).operator bool();
+  });
 }
 
 class MatmulKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -336,10 +333,9 @@ class BroadcastMatmulGradBKernel final : public user_op::OpKernel,
 };
 
 auto PrimitiveExistsForBroadcastMatmulGradB() {
-  return hob::make_custom(
-      "MatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
-        return NewMatmulPrimitiveForBroadcastMatmulGradB(&ctx).operator bool();
-      });
+  return hob::make_custom("MatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewMatmulPrimitiveForBroadcastMatmulGradB(&ctx).operator bool();
+  });
 }
 
 REGISTER_USER_KERNEL("broadcast_matmul_grad_b")

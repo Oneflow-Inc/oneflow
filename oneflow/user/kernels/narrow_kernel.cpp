@@ -34,10 +34,9 @@ std::unique_ptr<primitive::Memset> NewMemsetPrimitive(Context* ctx) {
 }
 
 auto CopyNdPrimitiveExists() {
-  return hob::make_custom("CopyNdPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewCopyNdPrimitive(&ctx).operator bool();
-                                     });
+  return hob::make_custom("CopyNdPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewCopyNdPrimitive(&ctx).operator bool();
+  });
 }
 
 auto MemsetPrimitiveExists() {

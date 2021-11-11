@@ -61,7 +61,7 @@ class ScalarMathKernel final : public user_op::OpKernel {
                                                         input_dtype_pair)                     \
   REGISTER_USER_KERNEL(kernel_name)                                                           \
       .SetCreateFn<ScalarMathKernel<device, binary_op, OF_PP_PAIR_FIRST(input_dtype_pair)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
                        & (user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(input_dtype_pair)));
 
 #define REGISTER_SCALAR_MATH_KERNEL(device, dtype_pair)                                          \
@@ -121,7 +121,7 @@ class CpuScalarPowGradKernel final : public user_op::OpKernel {
 #define REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(device, dtype)  \
   REGISTER_USER_KERNEL("scalar_pow_grad")                   \
       .SetCreateFn<CpuScalarPowGradKernel<device, dtype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, uint8_t);

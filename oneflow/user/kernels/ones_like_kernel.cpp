@@ -47,9 +47,9 @@ class OnesLikeKernel final : public user_op::OpKernel {
 };
 
 auto FillPrimitiveExists() {
-  return hob::make_custom(
-      "FillPrimitiveExists",
-      [](const user_op::KernelRegContext& ctx) { return NewFillPrimitive(&ctx).operator bool(); });
+  return hob::make_custom("FillPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewFillPrimitive(&ctx).operator bool();
+  });
 }
 
 REGISTER_USER_KERNEL("ones_like")

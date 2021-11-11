@@ -29,10 +29,9 @@ std::unique_ptr<primitive::LogSoftmax> NewLogSoftmaxPrimitive(Context* ctx) {
 }
 
 auto LogSoftmaxPrimitiveExists() {
-  return hob::make_custom("LogSoftmaxPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewLogSoftmaxPrimitive(&ctx).operator bool();
-                                     });
+  return hob::make_custom("LogSoftmaxPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewLogSoftmaxPrimitive(&ctx).operator bool();
+  });
 }
 
 template<typename Context>
@@ -44,9 +43,9 @@ std::unique_ptr<primitive::LogSoftmaxBackward> NewLogSoftmaxBackwardPrimitive(Co
 
 auto LogSoftmaxBackwardPrimitiveExists() {
   return hob::make_custom("LogSoftmaxBackwardPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewLogSoftmaxBackwardPrimitive(&ctx).operator bool();
-                                     });
+                          [](const user_op::KernelRegContext& ctx) {
+                            return NewLogSoftmaxBackwardPrimitive(&ctx).operator bool();
+                          });
 }
 
 class LogSoftmaxKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {

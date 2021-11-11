@@ -97,10 +97,9 @@ class SplitLikeKernel final : public user_op::OpKernel {
 };
 
 auto CopyNdPrimitiveExists() {
-  return hob::make_custom("CopyNdPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewCopyNdPrimitive(&ctx).operator bool();
-                                     });
+  return hob::make_custom("CopyNdPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewCopyNdPrimitive(&ctx).operator bool();
+  });
 }
 
 }  // namespace

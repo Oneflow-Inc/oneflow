@@ -169,11 +169,11 @@ class UpsampleBicubic2dGradCPUKernel final : public user_op::OpKernel {
 #define REGISTER_UPSAMPLE_BICUBIC_CPU_KERNEL(dtype)                                    \
   REGISTER_USER_KERNEL("upsample_bicubic_2d")                                          \
       .SetCreateFn<UpsampleBicubic2dCPUKernel<dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("upsample_bicubic_2d_grad")                                     \
       .SetCreateFn<UpsampleBicubic2dGradCPUKernel<dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_UPSAMPLE_BICUBIC_CPU_KERNEL(float)

@@ -118,7 +118,7 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel, public user_op:
       .SetCreateFn<UnsortedSegmentSumKernel<device, OF_PP_PAIR_FIRST(out_type),               \
                                             OF_PP_PAIR_FIRST(segment_ids_type)>>()            \
       .SetIsMatchedHob(                                                                       \
-          (user_op::HobDeviceType() == device)                                                 \
+          (user_op::HobDeviceType() == device)                                                \
           & (user_op::HobDataType("segment_ids", 0) == OF_PP_PAIR_SECOND(segment_ids_type))   \
           & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_type)));
 
@@ -186,7 +186,7 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(kernel_type)                                                             \
       .SetCreateFn<UnsortedSegmentSumHalfKernel<OF_PP_PAIR_FIRST(segment_ids_type)>>()          \
       .SetIsMatchedHob(                                                                         \
-          (user_op::HobDeviceType() == DeviceType::kGPU)                                         \
+          (user_op::HobDeviceType() == DeviceType::kGPU)                                        \
           & (user_op::HobDataType("segment_ids", 0) == OF_PP_PAIR_SECOND(segment_ids_type))     \
           & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_type)))                    \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \

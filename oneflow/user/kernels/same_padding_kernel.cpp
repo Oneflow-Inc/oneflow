@@ -37,16 +37,15 @@ std::unique_ptr<primitive::CopyNd> NewCopyNdPrimitive(Context* ctx) {
 }
 
 auto FillPrimitiveExists() {
-  return hob::make_custom(
-      "FillPrimitiveExists",
-      [](const user_op::KernelRegContext& ctx) { return NewFillPrimitive(&ctx).operator bool(); });
+  return hob::make_custom("FillPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewFillPrimitive(&ctx).operator bool();
+  });
 }
 
 auto CopyNdPrimitiveExists() {
-  return hob::make_custom("CopyNdPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewCopyNdPrimitive(&ctx).operator bool();
-                                     });
+  return hob::make_custom("CopyNdPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewCopyNdPrimitive(&ctx).operator bool();
+  });
 }
 
 }  // namespace

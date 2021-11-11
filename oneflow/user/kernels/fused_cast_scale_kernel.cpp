@@ -41,7 +41,7 @@ class FusedCastScaleCpuKernel final : public user_op::OpKernel {
 #define REGISTER_FUSED_CAST_SCALE_CPU_KERNEL(x_type, y_type)                          \
   REGISTER_USER_KERNEL("fused_cast_scale")                                            \
       .SetCreateFn<FusedCastScaleCpuKernel<y_type, x_type>>()                         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                 \
                        & (user_op::HobDataType("y", 0) == GetDataType<y_type>::value) \
                        & (user_op::HobDataType("x", 0) == GetDataType<x_type>::value));
 

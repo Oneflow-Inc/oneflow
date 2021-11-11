@@ -160,9 +160,9 @@ class CpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MOVING_AVERAGE_MIN_MAX_OBSERVER_KERNEL(dtype)       \
-  REGISTER_USER_KERNEL("moving_average_min_max_observer")            \
-      .SetCreateFn<CpuMovingAverageMinMaxObserverKernel<dtype>>()    \
+#define REGISTER_MOVING_AVERAGE_MIN_MAX_OBSERVER_KERNEL(dtype)        \
+  REGISTER_USER_KERNEL("moving_average_min_max_observer")             \
+      .SetCreateFn<CpuMovingAverageMinMaxObserverKernel<dtype>>()     \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
 
