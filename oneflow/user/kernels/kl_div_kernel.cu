@@ -61,7 +61,7 @@ template<typename T>
 __global__ void ComputeKLDivGradOut(int64_t elem_cnt, const T* input, const T* target, const T* dy,
                                     T* dx, const ReductionType reduction_type,
                                     const bool log_target) {
-  FOR_RANGE(int64_t, i, 0, elem_cnt) {
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
     dx[i] = log_target ? -exp(target[i]) * dy_val : target[i] > 0 ? -target[i] * dy_val : 0;
     if (reduction_type == ReductionType::kMean) { dx[i] /= elem_cnt; }
@@ -74,7 +74,7 @@ __global__ void ComputeKLDivGradOut(int64_t elem_cnt, const half* input, const h
                                     const bool log_target) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   const half zero_half = __float2half(0.0);
-  FOR_RANGE(int64_t, i, 0, elem_cnt) {
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const half dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
     dx[i] = log_target
                 ? __hneg(__hmul(hexp(target[i]), dy_val))
