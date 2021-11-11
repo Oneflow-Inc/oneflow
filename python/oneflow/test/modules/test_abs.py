@@ -20,16 +20,9 @@ import oneflow as flow
 from oneflow.test_utils.automated_test_util import *
 import oneflow.unittest
 
-#class TestModule(flow.nn.Module):
-#    def __init__(self):
-#        super().__init__()
-#
-#    def forward(self, x):
-#        return torch.abs(x)
-
 @flow.unittest.skip_unless_1n1d()
 class TestAbsModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_abs_with_0shape_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
