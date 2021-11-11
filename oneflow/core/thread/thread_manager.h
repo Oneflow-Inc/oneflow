@@ -53,12 +53,16 @@ inline size_t divup(size_t x, size_t y) { return (x + y - 1) / y; }
 template<typename DoEachT>
 void MultiThreadLoop(size_t num, const DoEachT& DoEach, size_t grain_size = ONEFLOW_GRAIN_SIZE) {
   if (num == 0) { return; }
-  if (unlikely(pthread_fork::IsForkedSubProcess())) {
+  if (unlikely(pthread_fork::IsForkedSubProcess()) || (num < grain_size)) {
     SingleThreadLoop(num, DoEach);
     return;
   }
+
   size_t thread_num = Global<ThreadPool>::Get()->thread_num();
-  thread_num = std::min(thread_num, divup(num, grain_size));
+  size_t chunk_size = divup(num,  thread_num);
+  chunk_size = std::max((size_t)grain_size, chunk_size);
+  thread_num = std::min(thread_num, divup(num, chunk_size));
+
   BalancedSplitter bs(num, thread_num);
   BlockingCounter bc(thread_num);
   FOR_RANGE(size_t, range_id, 0, thread_num) {
