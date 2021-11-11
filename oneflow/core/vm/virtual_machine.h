@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_ONEFLOW_VM_H_
-#define ONEFLOW_CORE_VM_ONEFLOW_VM_H_
+#ifndef ONEFLOW_CORE_VM_VIRTUAL_MACHINE_H_
+#define ONEFLOW_CORE_VM_VIRTUAL_MACHINE_H_
 
 #include "oneflow/core/common/notifier.h"
 #include "oneflow/core/vm/interpret_type.h"
@@ -50,4 +50,4 @@ class VirtualMachine final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_ONEFLOW_VM_H_
+#endif  // ONEFLOW_CORE_VM_VIRTUAL_MACHINE_H_
