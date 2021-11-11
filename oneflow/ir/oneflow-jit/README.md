@@ -32,7 +32,7 @@ There will be two modes of JIT in OneFlow:
 
   ```python
   @oneflow.jit.exec
-  def AnyFunction(a, b):
+  def any_function(a, b):
       return a + b
 
   class MyModule(oneflow.nn.Module):
