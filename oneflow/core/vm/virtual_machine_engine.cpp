@@ -80,10 +80,11 @@ void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
 
 // Handle pending instructions, schedule them to waiting list or ready list.
 void VirtualMachineEngine::MovePendingToReadyOrWaiting() {
-  OF_PROFILER_RANGE_PUSH("MovePendingToReadyOrWaiting");
   InstructionMsgList tmp_pending_msg_list;
   // MoveTo is under a lock.
   mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
+  OF_PROFILER_RANGE_PUSH("MovePendingToReadyOrWaiting:"
+                         + std::to_string(tmp_pending_msg_list.size()));
   InstructionList new_instruction_list;
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(instr_msg, &tmp_pending_msg_list) {
     if (unlikely(instr_msg->instr_type_id().instruction_type().ResettingIdToObjectMap())) {
