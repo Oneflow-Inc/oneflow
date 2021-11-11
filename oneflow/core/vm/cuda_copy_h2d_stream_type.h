@@ -49,7 +49,7 @@ class CudaCopyH2DStreamType final : public StreamType {
   void Compute(Instruction* instruction) const override;
   intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
                                                    int64_t this_machine_id) const override;
-  bool SharingVirtualMachineThread() const override { return true; }
+  bool OnSchedulerThread() const override { return true; }
   bool SupportingTransportInstructions() const override { return false; }
 };
 

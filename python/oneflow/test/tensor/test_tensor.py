@@ -1051,6 +1051,14 @@ class TestTensor(flow.unittest.TestCase):
     def test_ceil_tensor_with_random_data(test_case):
         device = random_device()
         input = random_pytorch_tensor().to(device)
+        y = len(input)
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest()
+    def test_ceil_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
         y = input.ceil()
         return y
 
