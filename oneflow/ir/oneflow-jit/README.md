@@ -67,7 +67,7 @@ There will be two modes of JIT in OneFlow:
 
 There are mainly three components in the JIT system:
 
-- JIT interpreter: a special interpreter works on eager inputs and lazy intermediate tensors. It might convert
+- JIT interpreter: a special interpreter works on eager inputs and lazy intermediate tensors.
 - Importer: convert OneFlow's representation to MLIR and and vice versa.
 - Executor: three types of executor under development or consideration
   - Re-dispatch: convert every MLIR op to one User Op and have eager interpreter dispatch them. 10% performance boost over pure eager mode is expected. This will be used for `oneflow.jit.trace` mainly.
