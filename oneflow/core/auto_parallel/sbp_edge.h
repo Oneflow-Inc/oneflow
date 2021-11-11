@@ -21,11 +21,9 @@ limitations under the License.
 #include "sbp_node.h"
 #include "sbp_util.h"
 
-#ifdef USE_SBP_COLLECTOR_
 #include <unordered_set>
 #include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/graph/op_graph.h"
-#endif  // USE_SBP_COLLECTOR_
 
 namespace oneflow {
 namespace auto_parallel {
@@ -142,7 +140,7 @@ class SbpEdge {
   // Assemble copy cost
   // compute_cost = true: It is computing cost
   // compute_cost = false: It is deciding whether this edge needs the wait time.
-  void InitializeCopyCost(const std::string& ibn, bool compute_cost);
+  void InitializeCopyCost(const std::string& ibn, bool compute_cost, bool use_sbp_collector_);
 
   // find the cut ratio
   // (#c>cut_cost in Cost)/(#c in Cost)
@@ -394,7 +392,8 @@ void SbpEdge<SbpSignature>::AdjustOverlapCost() {
 
 // Assemble copy cost
 template<class SbpSignature>
-void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool compute_cost) {
+void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool compute_cost,
+                                               bool use_sbp_collector_) {
   // In this part, we assemble the cost from nodes to nodes.
   if (StartNode->op_node && EndNode->op_node) {
     oneflow::OpNode* consumer = EndNode->op_node;
@@ -402,10 +401,9 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool comp
     // Add copy cost for each blob
     const oneflow::LogicalBlobId& lbi = consumer->op().BnInOp2Lbi(ibn);
 
-#ifdef USE_SBP_COLLECTOR_
     // Check whether lbi is transferred by this edge
-    if (compute_cost && !SearchLbi(lbi)) return;
-#endif  // USE_SBP_COLLECTOR_
+    if (use_sbp_collector_ && compute_cost && !SearchLbi(lbi)) return;
+
     oneflow::OpNode* producer = StartNode->op_node;
     const oneflow::ParallelDesc& parallel_desc = consumer->parallel_desc();
 

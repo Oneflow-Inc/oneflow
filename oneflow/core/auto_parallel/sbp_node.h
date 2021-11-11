@@ -21,7 +21,6 @@ limitations under the License.
 #include <iostream>
 #include <vector>
 
-#define USE_SBP_COLLECTOR_
 #include "binary_set.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "algorithm_util.h"
@@ -219,7 +218,7 @@ class SbpNode {
   void SetMainstemWaitTime(double mainstem_wait_time);
 
   // Assemble copy cost for all the incoming edges
-  void InitializeCopyCost(bool compute_cost);
+  void InitializeCopyCost(bool compute_cost, bool use_sbp_collector_);
 
 };  // class SbpNode
 
@@ -852,18 +851,18 @@ void SbpNode<SbpSignature>::DropAvailWaitTime(double curr_mainstem_cost) {
 
 // Assemble copy cost for all the incoming edges
 template<class SbpSignature>
-void SbpNode<SbpSignature>::InitializeCopyCost(bool compute_cost) {
+void SbpNode<SbpSignature>::InitializeCopyCost(bool compute_cost, bool use_sbp_collector_) {
   for (SbpEdge<SbpSignature>* this_edge : EdgesIn) {
     const auto* sbp_node_producer = this_edge->StartNode;
     oneflow::OpNode* producer = sbp_node_producer->op_node;
-#ifdef USE_SBP_COLLECTOR_
+
     // skip it if proxy
-    if (!producer) continue;
-#endif  // USE_SBP_COLLECTOR_
+    if (use_sbp_collector_ && !producer) continue;
+
     // look through input blobs
     for (const std::string& ibn : op_node->op().input_bns()) {
       if (producer->op().op_name() == op_node->SrcNode4Ibn(ibn).op().op_name()) {
-        this_edge->InitializeCopyCost(ibn, compute_cost);
+        this_edge->InitializeCopyCost(ibn, compute_cost, use_sbp_collector_);
       }
     }
   }

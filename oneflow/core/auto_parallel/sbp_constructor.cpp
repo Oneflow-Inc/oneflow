@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/sbp_constructor.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job.pb.h"
+#include "sbp_collector.h"
 
 namespace oneflow {
 
@@ -44,9 +45,16 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   JUST(FillSbpSignatureForOpNode(op_graph, job));
   JUST(InitComputationCost(op_graph));
   if (enable_mainstem_algo_) { JUST(ApplyMainstemAlgo()); }
-  // TODO: add SbpCollector
+  if (use_sbp_collector_) {
+    // Load logical blobs on all sbp edges.
+    LoadLbi2SbpEdge(op_graph);
+    // Use sbp collector to create sbp proxy for nodes with multiple downstream operators.
+    SbpCollector sbp_collector;
+    sbp_collector.CollectUniverse(sbp_graph_);
+    sbp_collector.ProxySbpCandidate(op_graph, op_name2sbp_node_, sbp_graph_);
+  }
   JUST(InitCopyCost(op_graph));
-  sbp_graph_.RandomSbpSignature();
+  sbp_graph_.RandomSbpSignature(use_sbp_collector_);
   return Maybe<void>::Ok();
 }
 
@@ -165,6 +173,8 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
     for (auto* sbp_edge : sbp_node_consumer->EdgesIn) {
       // producer sbp node
       const auto* sbp_node_producer = sbp_edge->StartNode;
+      // skip it if proxy
+      if (!sbp_node_producer->op_node) continue;
       sbp_edge->Cost.resize(sbp_node_producer->SbpSignatureList.size());
       int32_t consumer_sbp_size = sbp_node_consumer->SbpSignatureList.size();
       // look through sbp signature in producer
@@ -174,7 +184,7 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
     }
     // Find all those cases with wait time
     // Do not skip edges carrying no lbi
-    sbp_node_consumer->InitializeCopyCost(false);
+    sbp_node_consumer->InitializeCopyCost(false, use_sbp_collector_);
     for (auto* sbp_edge : sbp_node_consumer->EdgesIn) {
       // skip it if proxy
       if (!sbp_edge->StartNode->op_node) continue;
@@ -188,17 +198,119 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
     }
 
     // Re-compute the costs, skip edges carrying no lbi
-    sbp_node_consumer->InitializeCopyCost(true);
+    sbp_node_consumer->InitializeCopyCost(true, use_sbp_collector_);
   });
   return Maybe<void>::Ok();
 }
 
+<<<<<<< HEAD
 Maybe<void> SbpConstructor::ApplyMainstemAlgo() {
   // Compute layer number for each node
   int32_t max_MinLayer = sbp_graph_.ComputeLayer(op_name2sbp_node_);
   // Accumulate cost on the mainstem after initializing computation cost
   sbp_graph_.FindMainstem(max_MinLayer, op_name2sbp_node_);
   return Maybe<void>::Ok();
+=======
+// Load logical blob ids onto sbp edges
+void SbpConstructor::LoadLbi2SbpEdge(const OpGraph& op_graph) {
+  // Load logical blobs onto sbp edges
+
+  for (auto* sbp_node_consumer : sbp_graph_.NodeList) {
+    auto* op_node = sbp_node_consumer->op_node;
+
+    // Loading logical blobs between two nodes
+    // look through input blobs
+    for (const std::string& ibn : op_node->op().input_bns()) {
+      // Each input blob has one source op node.
+      OpNode* producer = op_node->MutSrcNode4Ibn(ibn);
+      // producer sbp node
+      const auto* sbp_node_producer = op_name2sbp_node_[producer->op().op_name()];
+      // TODO: recode this
+      auto* edge_found = auto_parallel::FindEdgeBetweenNodes(sbp_node_producer, sbp_node_consumer);
+
+      CHECK(edge_found != NULL) << "SbpEdge not found while loading!" << std::endl;
+
+      // Add copy cost for each blob
+      const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
+      edge_found->LoadLbi(lbi);
+    }
+  };
+}
+
+// Print the graph with SBP in order
+void SbpConstructor::PrintSBPGraphDebugInfo() {
+  // sbp constructor information
+  std::cout << "cost_ratio_:" << cost_ratio_ << std::endl;
+  std::cout << "transfer_cost_:" << transfer_cost_ << std::endl;
+  std::cout << "wait_time_:" << wait_time_ << std::endl;
+  std::cout << "use_sbp_collector_" << use_sbp_collector_ << std::endl;
+  // test debug
+  std::cout << "Get Into Print Op Graph" << std::endl;
+  // Collect op_node
+  std::vector<OpNode*> NodeList;
+  for (auto* sbp_node : sbp_graph_.NodeList) {
+    if (sbp_node->op_node) { NodeList.push_back(sbp_node->op_node); }
+  }
+
+  // test debug
+  std::cout << "Deciding order" << std::endl;
+  // Decide the order to vist the op
+  std::vector<int32_t> order;
+  auto_parallel::DecideOrder(NodeList, order, [&](OpNode* a, OpNode* b) {
+    return a->op().op_name().compare(b->op().op_name()) > 0;
+  });
+  std::vector<int32_t> str_order;
+
+  // test debug
+  std::cout << "Finish deciding order" << std::endl;
+
+  for (int32_t i = 0; i < NodeList.size(); i++) {
+    OpNode* op_node = NodeList[order[i]];
+    // get corresponding sbp node
+    auto it = op_name2sbp_node_.find(op_node->op().op_name());
+    std::cout << op_node->op().op_name() << " (^_^):" << std::endl;
+    // Print debug information for sbp graph
+    if (it != op_name2sbp_node_.end()) {
+      const auto_parallel::SbpNode<cfg::SbpSignature>* sbp_node = it->second;
+      std::cout << "Computation Cost: " << sbp_node->Cost[sbp_node->FinalSbpSignatureId];
+      std::cout << ", Min Layer: " << sbp_node->MinLayer << ", Max Layer: " << sbp_node->MaxLayer
+                << ", Tributary Layer: " << sbp_node->TributaryLayer
+                << ", in mainstem: " << sbp_node->IfMainstem
+                << ", Remain Cost: " << sbp_node->AccMainstemCost << std::endl;
+    }
+    // Sort before printing
+    const auto& op_input_bns = op_node->op().input_bns();
+    auto comp = [](const std::string& a, const std::string& b) { return a.compare(b) > 0; };
+    auto_parallel::DecideOrder(op_input_bns, str_order, comp);
+    // Print out SBP information for input operator
+    for (int32_t j : str_order) {
+      const auto& ibn = op_input_bns[j];
+      auto producer_node = op_node->MutSrcNode4Ibn(ibn);
+      std::cout << "Pre Op:" << producer_node->op().op_name() << ": " << ibn;
+      const auto& this_sbp_parallel = op_node->SbpParallel4BnInOp(ibn);
+      std::cout << ", " << SbpParallelToString(this_sbp_parallel);
+      const auto input_blob_modifier_ = op_node->op().InputBlobModifier4Ibn(ibn);
+      bool is_same_sbp = input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable();
+      if (is_same_sbp) std::cout << ", same SBP";
+      std::cout << ", "
+                << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn)).shape().elem_cnt();
+      std::cout << std::endl;
+    }
+    // Sort before printing
+    const auto& op_output_bns = op_node->op().output_bns();
+    auto_parallel::DecideOrder(op_output_bns, str_order, comp);
+    // Print out SBP information for output blobs
+    for (int32_t j : str_order) {
+      const auto& obn = op_output_bns[j];
+      std::cout << "Out Op:" << obn;
+      const auto& this_sbp_parallel = op_node->SbpParallel4BnInOp(obn);
+      std::cout << ", " << SbpParallelToString(this_sbp_parallel);
+      std::cout << ", "
+                << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(obn)).shape().elem_cnt();
+      std::cout << std::endl;
+    }
+  }
+>>>>>>> origin/feat-auto_parallel
 }
 
 }  // namespace auto_parallel
