@@ -428,7 +428,7 @@ class RandPerm(Module):
 
 
 def randperm_op(
-    n: flow.int32,
+    n: flow.int64,
     generator: flow.Generator = None,
     out=None,
     dtype: Optional[flow.dtype] = None,
@@ -467,7 +467,7 @@ def randperm_op(
         >>> generator = flow.Generator()
         >>> generator.manual_seed(0)
         >>> flow.randperm(5, generator=generator)
-        tensor([2, 4, 3, 0, 1], dtype=oneflow.int32)
+        tensor([2, 4, 3, 0, 1], dtype=oneflow.int64)
     """
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
