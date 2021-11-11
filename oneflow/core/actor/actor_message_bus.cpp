@@ -19,6 +19,9 @@ limitations under the License.
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/comm_network/comm_network.h"
 
+#include <fstream>
+#include <ofstream>
+
 namespace oneflow {
 
 #define DebugActor false 
@@ -27,7 +30,9 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
   int64_t dst_machine_id = MachineId4ActorId(msg.dst_actor_id());
   if (dst_machine_id == GlobalProcessCtx::Rank()) {
     SendMsgWithoutCommNet(msg);
+
   } else {
+
     if (msg.IsDataRegstMsgToConsumer()) {
       int64_t comm_net_sequence;
       {
@@ -48,6 +53,20 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       free(serial_data);
       size_t msg_size = sizeof(new_msg);
       uint64_t addr = reinterpret_cast<uint64_t>(&new_msg);//此时addr是new_msg的地址
+
+      binary_mutex_.lock();
+      std::string dir = "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/";
+      std::string path = dir  + "actor_msg_bus" + std::to_string(num_file_);
+      num_file_++;
+      std::ofstream out;
+      out.open(path,std::ofstream::out | std::ofstream::binary);
+      if(!out.is_open()) {
+        return ;
+      }
+      out.write(reinterpret_cast<char*>(&new_msg),msg_size);//
+      out.close();
+      binary_mutex_.unlock();
+
       std::cout<<"ActorMsgBus::SendMsg,the token:"<< reinterpret_cast<uint64_t>( new_msg.regst()->comm_net_token()) << std::endl;
       std::cout<<"ActorMsgBus::SendMsg,the addr:" << addr << std::endl;
       std::cout<<std::endl;
