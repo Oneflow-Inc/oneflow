@@ -87,10 +87,7 @@ def _test_clip_grad_value_impl(test_case, shape, device, clip_value):
     flow.nn.utils.clip_grad_value_(of_input, clip_value)
     of_grad = of_input.grad.numpy()
     np_grad = _clip_grad_value_np(np_input, clip_value)
-    test_case.assertTrue(
-        np.allclose(of_grad, np_grad, 1e-4, 1e-4, equal_nan=True)
-    )
-    
+    test_case.assertTrue(np.allclose(of_grad, np_grad, 1e-4, 1e-4, equal_nan=True))
 
 
 @flow.unittest.skip_unless_1n1d()
