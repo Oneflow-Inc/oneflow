@@ -43,6 +43,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   JUST(GenerateNodeAndEdge(op_graph));
   JUST(FillSbpSignatureForOpNode(op_graph, job));
   JUST(InitComputationCost(op_graph));
+  if (enable_mainstem_algo_) { JUST(ApplyMainstemAlgo()); }
   // TODO: add SbpCollector
   JUST(InitCopyCost(op_graph));
   sbp_graph_.RandomSbpSignature();
@@ -189,6 +190,14 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
     // Re-compute the costs, skip edges carrying no lbi
     sbp_node_consumer->InitializeCopyCost(true);
   });
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> SbpConstructor::ApplyMainstemAlgo() {
+  // Compute layer number for each node
+  int32_t max_MinLayer = sbp_graph_.ComputeLayer(op_name2sbp_node_);
+  // Accumulate cost on the mainstem after initializing computation cost
+  sbp_graph_.FindMainstem(max_MinLayer, op_name2sbp_node_);
   return Maybe<void>::Ok();
 }
 
