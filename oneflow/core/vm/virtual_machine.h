@@ -24,12 +24,12 @@ limitations under the License.
 
 namespace oneflow {
 
-class OneflowVM final {
+class VirtualMachine final {
  public:
-  OneflowVM(const OneflowVM&) = delete;
-  OneflowVM(OneflowVM&&) = delete;
-  OneflowVM(const Resource& resource, int64_t this_machine_id);
-  ~OneflowVM();
+  VirtualMachine(const VirtualMachine&) = delete;
+  VirtualMachine(VirtualMachine&&) = delete;
+  VirtualMachine(const Resource& resource, int64_t this_machine_id);
+  ~VirtualMachine();
 
   Maybe<void> Receive(vm::InstructionMsgList* instr_list);
 
