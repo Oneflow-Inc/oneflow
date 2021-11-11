@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/auto_parallel/sbp_constructor.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -33,7 +34,11 @@ class AutoParallelPass final : public JobPass {
   Maybe<void> Apply(const OpGraph& op_graph, Job* job) const;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
-    if (!job->job_conf().enable_auto_parallel()) { return Maybe<void>::Ok(); }
+    if (!job->job_conf().enable_auto_parallel()) {  
+      // Print Auto Parallel SBP
+      Global<OpGraph>::Get()->PrintSBPGraphDebugInfo();
+      return Maybe<void>::Ok();
+    }
     LOG(INFO) << "=== Enable AutoParallel ===";
     const OpGraph op_graph(*job);
     return Apply(op_graph, job);
@@ -53,7 +58,7 @@ Maybe<void> AutoParallelPass::Apply(const OpGraph& op_graph, Job* job) const {
   std::cout << "Auto parallel took "
             << std::chrono::duration_cast<std::chrono::milliseconds>(time_end - time_begin).count()
             << " ms\n";
-  sbp_constructor.PrintSBPGraphDebugInfo();
+  if (GlobalProcessCtx::Rank() == 0) sbp_constructor.PrintSBPGraphDebugInfo();
   return Maybe<void>::Ok();
 }
 
