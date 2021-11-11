@@ -23,29 +23,25 @@ namespace oneflow {
 namespace primitive {
 
 enum class BinaryOp {
+  // Math
   kAdd,
   kSub,
   kMul,
   kDiv,
   kMax,
   kMin,
-  kFloorDiv,
-  kFmod,  // todo: 确认fmod是什么，大小写是否正确.
-  kPow,
-
-  // comparision
+  // Comparision
   kEqual,
   kNotEqual,
   kLessThan,
   kLessEqual,
   kGreaterThan,
   kGreaterEqual,
-  // logical
+  // Logical
   kLogicalAnd,
   kLogicalOr,
   kLogicalXor,
-
-  // unary backward
+  // Unary Backward
   kReluBackwardWithDyY,
   kSigmoidBackwardWithDyY,
   kGeluBackwardWithDyX,

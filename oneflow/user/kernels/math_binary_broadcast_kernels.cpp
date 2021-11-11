@@ -53,8 +53,7 @@ class MathBinaryBroadcastKernel final : public user_op::OpKernel, public user_op
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
 
-    int64_t elem_cnt = tensor_z->shape().elem_cnt();
-    if (elem_cnt != 0) {
+    if (tensor_z->shape().NumAxes() != 0) {
       std::unique_ptr<primitive::BroadcastElementwiseBinary> primitive =
           NewBroadcastElementwiseBinaryPrimitive(ctx, op);
       CHECK(primitive);

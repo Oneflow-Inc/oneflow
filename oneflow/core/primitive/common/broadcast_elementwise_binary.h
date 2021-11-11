@@ -56,13 +56,13 @@ struct BroadcastElementwiseBinaryParams {
   void* dst{};
 };
 
-template<BinaryOp op, typename T, typename R, size_t num_dims, size_t pack_size, bool pack_src0,
-         bool pack_src1, typename IndexType>
+template<BinaryOp op, typename T, typename R, size_t num_dims, size_t src0_pack_size,
+         size_t src1_pack_size, typename IndexType>
 void LaunchKernel(StreamContext* stream_ctx,
                   BroadcastElementwiseBinaryParams<num_dims, IndexType> params);
 
-template<BinaryOp op, typename T, typename R, size_t num_dims, size_t pack_size, bool pack_src0,
-         bool pack_src1, typename IndexType>
+template<BinaryOp op, typename T, typename R, size_t num_dims, size_t src0_pack_size,
+         size_t src1_pack_size, typename IndexType>
 void LaunchKernel(StreamContext* stream_ctx, const int64_t* src0_dims, const void* src0,
                   const int64_t* src1_dims, const void* src1, const int64_t* dst_dims, void* dst,
                   size_t count) {
@@ -78,69 +78,66 @@ void LaunchKernel(StreamContext* stream_ctx, const int64_t* src0_dims, const voi
   params.src1 = src1;
   params.dst = dst;
   params.count = static_cast<IndexType>(count);
-  LaunchKernel<op, T, R, num_dims, pack_size, pack_src0, pack_src1, IndexType>(stream_ctx, params);
+  LaunchKernel<op, T, R, num_dims, src0_pack_size, src1_pack_size, IndexType>(stream_ctx, params);
 }
 
-template<BinaryOp op, typename T, typename R, size_t num_dims, size_t pack_size, bool pack_src0,
-         bool pack_src1>
+template<BinaryOp op, typename T, typename R, size_t num_dims, size_t src0_pack_size,
+         size_t src1_pack_size>
 void DispatchIndexType(StreamContext* stream_ctx, const int64_t* src0_dims, const void* src0,
                        const int64_t* src1_dims, const void* src1, const int64_t* dst_dims,
                        void* dst) {
   size_t count = 1;
   for (size_t i = 0; i < num_dims; ++i) { count *= dst_dims[i]; }
   if (count < GetMaxVal<int32_t>()) {
-    LaunchKernel<op, T, R, num_dims, pack_size, pack_src0, pack_src1, int32_t>(
+    LaunchKernel<op, T, R, num_dims, src0_pack_size, src1_pack_size, int32_t>(
         stream_ctx, src0_dims, src0, src1_dims, src1, dst_dims, dst, count);
   } else {
-    LaunchKernel<op, T, R, num_dims, pack_size, pack_src0, pack_src1, int64_t>(
+    LaunchKernel<op, T, R, num_dims, src0_pack_size, src1_pack_size, int64_t>(
         stream_ctx, src0_dims, src0, src1_dims, src1, dst_dims, dst, count);
   }
 }
 
-template<BinaryOp op, typename T, typename R, size_t num_dims, size_t pack_size>
-void DispatchPack(StreamContext* stream_ctx, bool pack_src0, bool pack_src1, const int64_t* src0_dims, const void* src0,
-                  const int64_t* src1_dims, const void* src1, const int64_t* dst_dims, void* dst) {
+template<BinaryOp op, typename T, typename R, size_t num_dims>
+void DispatchPackSize(StreamContext* stream_ctx, size_t src0_pack_size, size_t src1_pack_size,
+                      const int64_t* src0_dims, const void* src0, const int64_t* src1_dims,
+                      const void* src1, const int64_t* dst_dims, void* dst) {
   void (*func)(StreamContext* /*stream_ctx*/, const int64_t* /*src0_dims*/, const void* /*src0*/,
                const int64_t* /*src1_dims*/, const void* /*src1*/, const int64_t* /*dst_dims*/,
                void* /*dst*/) = nullptr;
-  if(pack_src0 && pack_src1) {
-    func = DispatchIndexType<op, T, R, num_dims, pack_size, true, true>;
-  } else if(pack_src0 && !pack_src1) {
-    func = DispatchIndexType<op, T, R, num_dims, pack_size, true, false>;
-  } else if(!pack_src0 && pack_src1) {
-    func = DispatchIndexType<op, T, R, num_dims, pack_size, false, true>;
+  if (src0_pack_size == src1_pack_size) {
+    if (src0_pack_size == 1) {
+      func = DispatchIndexType<op, T, R, num_dims, 1, 1>;
+    } else if (src0_pack_size == 2) {
+      func = DispatchIndexType<op, T, R, num_dims, 2, 2>;
+    } else if (src0_pack_size == 4) {
+      func = DispatchIndexType<op, T, R, num_dims, 4, 4>;
+    }
+  } else if (src0_pack_size == 1) {
+    if (src1_pack_size == 2) {
+      func = DispatchIndexType<op, T, R, num_dims, 1, 2>;
+    } else if (src1_pack_size == 4) {
+      func = DispatchIndexType<op, T, R, num_dims, 1, 4>;
+    }
+  } else if (src1_pack_size == 1) {
+    if (src0_pack_size == 2) {
+      func = DispatchIndexType<op, T, R, num_dims, 2, 1>;
+    } else if (src0_pack_size == 4) {
+      func = DispatchIndexType<op, T, R, num_dims, 4, 1>;
+    }
   } else {
     UNIMPLEMENTED();
   }
   func(stream_ctx, src0_dims, src0, src1_dims, src1, dst_dims, dst);
 }
 
-template<BinaryOp op, typename T, typename R, size_t num_dims>
-void DispatchPackSize(StreamContext* stream_ctx, size_t pack_size, bool pack_src0, bool pack_src1, const int64_t* src0_dims,
-                      const void* src0, const int64_t* src1_dims, const void* src1,
-                      const int64_t* dst_dims, void* dst) {
-  void (*func)(StreamContext* /*stream_ctx*/, bool /*pack_src0*/, bool /*pack_src1*/, const int64_t* /*src0_dims*/, const void* /*src0*/,
-               const int64_t* /*src1_dims*/, const void* /*src1*/, const int64_t* /*dst_dims*/,
-               void* /*dst*/) = nullptr;
-  if (pack_size == 1) {
-    func = DispatchPack<op, T, R, num_dims, 1>;
-  } else if (pack_size == 2) {
-    func = DispatchPack<op, T, R, num_dims, 2>;
-  } else if (pack_size == 4) {
-    func = DispatchPack<op, T, R, num_dims, 4>;
-  } else {
-    UNIMPLEMENTED();
-  }
-  func(stream_ctx, pack_src0, pack_src1, src0_dims, src0, src1_dims, src1, dst_dims, dst);
-}
-
 template<BinaryOp op, typename T, typename R>
-void LaunchWithSimplified(StreamContext* stream_ctx, size_t pack_size, bool pack_src0, bool pack_src1, size_t num_dims,
-                          const int64_t* src0_dims, const void* src0, const int64_t* src1_dims,
-                          const void* src1, const int64_t* dst_dims, void* dst) {
-  void (*func)(StreamContext* /*stream_ctx*/, size_t /*pack_size*/, bool /*pack_src0*/, bool /*pack_src1*/, const int64_t* /*src0_dims*/,
-               const void* /*src0*/, const int64_t* /*src1_dims*/, const void* /*src1*/,
-               const int64_t* /*dst_dims*/, void* /*dst*/) = nullptr;
+void LaunchWithSimplified(StreamContext* stream_ctx, size_t src0_pack_size, size_t src1_pack_size,
+                          size_t num_dims, const int64_t* src0_dims, const void* src0,
+                          const int64_t* src1_dims, const void* src1, const int64_t* dst_dims,
+                          void* dst) {
+  void (*func)(StreamContext* /*stream_ctx*/, size_t /*src0_pack_size*/, size_t /*src1_pack_size*/,
+               const int64_t* /*src0_dims*/, const void* /*src0*/, const int64_t* /*src1_dims*/,
+               const void* /*src1*/, const int64_t* /*dst_dims*/, void* /*dst*/) = nullptr;
   if (num_dims == 1) {
     func = DispatchPackSize<op, T, R, 1>;
   } else if (num_dims == 2) {
@@ -160,7 +157,7 @@ void LaunchWithSimplified(StreamContext* stream_ctx, size_t pack_size, bool pack
   } else {
     UNIMPLEMENTED();
   }
-  func(stream_ctx, pack_size, pack_src0, pack_src1, src0_dims, src0, src1_dims, src1, dst_dims, dst);
+  func(stream_ctx, src0_pack_size, src1_pack_size, src0_dims, src0, src1_dims, src1, dst_dims, dst);
 }
 
 constexpr size_t kMaxPackSize = 4;
@@ -249,54 +246,37 @@ void SimplifyThenLaunch(StreamContext* stream_ctx, size_t num_src0_dims, const i
   for (int64_t i = 0; i < simplified_num_dims; ++i) {
     simplified_dst_dims[i] = std::max(simplified_src0_dims[i], simplified_src1_dims[i]);
   }
-  bool pack_src0 = false;
-  bool pack_src1 = false;
+  size_t src0_pack_size = 1;
+  size_t src1_pack_size = 1;
   if (simplified_src0_dims[simplified_num_dims - 1] != 1) {
     simplified_src0_dims[simplified_num_dims - 1] /= pack_size;
-    pack_src0 = true;
+    src0_pack_size = pack_size;
   }
   if (simplified_src1_dims[simplified_num_dims - 1] != 1) {
     simplified_src1_dims[simplified_num_dims - 1] /= pack_size;
-    pack_src1 = true;
+    src1_pack_size = pack_size;
   }
-  CHECK(pack_src0 || pack_src1);
   simplified_dst_dims[simplified_num_dims - 1] /= pack_size;
-  LOG(ERROR)<<"before src0 ndims: "<<num_src0_dims;
-  for(int i = 0; i<num_src0_dims; ++i) {
-    LOG(ERROR)<<src0_dims[i];
-  }
-  LOG(ERROR)<<"before src1 ndims: "<<num_src1_dims;
-  for(int i = 0; i<simplified_num_dims; ++i) {
-    LOG(ERROR)<<src1_dims[i];
-  }
-  LOG(ERROR)<<"after src0 ndims: "<<simplified_num_dims;
-  for(int i = 0; i<simplified_num_dims; ++i) {
-    LOG(ERROR)<<simplified_src0_dims[i];
-  }
-  LOG(ERROR)<<"after src1 ndims: "<<simplified_num_dims;
-  for(int i = 0; i<simplified_num_dims; ++i) {
-    LOG(ERROR)<<simplified_src1_dims[i];
-  }
-  LOG(ERROR)<<"dst ndims: "<<simplified_num_dims;
-  for(int i = 0; i<simplified_num_dims; ++i) {
-    LOG(ERROR)<<simplified_dst_dims[i];
-  }
-  LaunchWithSimplified<op, T, R>(stream_ctx, pack_size, pack_src0, pack_src1, simplified_num_dims, simplified_src0_dims,
-                                 src0, simplified_src1_dims, src1, simplified_dst_dims, dst);
+  LaunchWithSimplified<op, T, R>(stream_ctx, src0_pack_size, src1_pack_size, simplified_num_dims,
+                                 simplified_src0_dims, src0, simplified_src1_dims, src1,
+                                 simplified_dst_dims, dst);
+}
+
+size_t GetElementCount(size_t num_dims, const int64_t* dims) {
+  size_t count = 1;
+  for (size_t i = 0; i < num_dims; ++i) { count *= dims[i]; }
+  return count;
 }
 
 }  // namespace
 
-#define BINARY_MATH_OP_SEQ                  \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAdd)      \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSub)      \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMul)      \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kDiv)      \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMax)      \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMin)      \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kFloorDiv) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kPow)
-   // OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kFmod)
+#define BINARY_MATH_OP_SEQ             \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAdd) \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSub) \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMul) \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kDiv) \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMax) \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMin)
 
 #define BINARY_COMPARISION_OP_SEQ              \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kEqual)       \

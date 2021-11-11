@@ -60,8 +60,7 @@ class ScalarMathKernel final : public user_op::OpKernel {
       UNIMPLEMENTED();
     }
 
-    int64_t elem_cnt = out->shape().elem_cnt();
-    if (elem_cnt != 0) {
+    if (out->shape().NumAxes() != 0) {
       std::unique_ptr<primitive::BroadcastElementwiseBinary> primitive =
           NewBroadcastElementwiseBinaryPrimitive(ctx, op);
       CHECK(primitive);
@@ -77,10 +76,7 @@ class ScalarMathKernel final : public user_op::OpKernel {
 
 #define SCALAR_MATH_SEQ                                                                 \
   OF_PP_MAKE_TUPLE_SEQ("scalar_add", primitive::BinaryOp::kAdd)                         \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_floordiv", primitive::BinaryOp::kFloorDiv)               \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_fmod", primitive::BinaryOp::kFmod)                       \
   OF_PP_MAKE_TUPLE_SEQ("scalar_mul", primitive::BinaryOp::kMul)                         \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_pow", primitive::BinaryOp::kPow)                         \
   OF_PP_MAKE_TUPLE_SEQ("scalar_logical_equal", primitive::BinaryOp::kEqual)             \
   OF_PP_MAKE_TUPLE_SEQ("scalar_logical_not_equal", primitive::BinaryOp::kNotEqual)      \
   OF_PP_MAKE_TUPLE_SEQ("scalar_logical_greater", primitive::BinaryOp::kLessThan)        \
