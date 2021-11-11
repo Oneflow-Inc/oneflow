@@ -149,6 +149,12 @@ class GraphConfig(object):
         """
         self.proto.set_enable_auto_parallel_mainstem_algo(mode)
 
+    def enable_auto_parallel_sbp_collector(self, mode: bool = True):
+        """
+        Use sbp collector to create sbp proxy for nodes with multiple downstream operators.
+        """
+        self.proto.set_enable_auto_parallel_sbp_collector(mode)
+
     def _generate_optimizer_and_variable_configs(
         self, opt_dict: OptDict = None, variables_conf: OrderedDict = None,
     ):
