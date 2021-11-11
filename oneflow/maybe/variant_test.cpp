@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include <gtest/gtest.h>
+#include <memory>
 #include "oneflow/maybe/variant.h"
 
 using namespace oneflow::maybe;
@@ -62,4 +63,51 @@ TEST(Variant, Basics) {
             (Variant<int, float>(2)));
   ASSERT_EQ((c.visit<Variant<int, float>>([](auto&& x) { return x + 1; })),
             (Variant<int, float>(2.2f)));
+
+  ASSERT_EQ(a.Emplace<1>(1.3f), 1.3f);
+  ASSERT_TRUE(a.Is<float>());
+  ASSERT_EQ(a.Get<1>(), 1.3f);
+
+  ASSERT_EQ(a.Emplace<0>(233), 233);
+  ASSERT_TRUE(a.Is<int>());
+  ASSERT_EQ(a.Get<0>(), 233);
+}
+
+TEST(Variant, NonPOD) {
+  Variant<bool, std::shared_ptr<int>> a;
+  ASSERT_TRUE(a.Is<bool>());
+  ASSERT_EQ(a.Get<bool>(), false);
+
+  a = true;
+  ASSERT_TRUE(a.Is<bool>());
+  ASSERT_EQ(a.Get<bool>(), true);
+
+  a = std::make_shared<int>(233);
+  ASSERT_EQ(a.Index(), 1);
+  ASSERT_EQ(*a.Get<1>(), 233);
+  ASSERT_EQ(a.Get<1>().use_count(), 1);
+
+  {
+    Variant<bool, std::shared_ptr<int>> b = a;
+    ASSERT_EQ(b.Index(), 1);
+    ASSERT_EQ(*b.Get<1>(), 233);
+    ASSERT_EQ(a.Get<1>().use_count(), 2);
+    *b.Get<1>() = 234;
+  }
+
+  ASSERT_EQ(a.Get<1>().use_count(), 1);
+  ASSERT_EQ(*a.Get<1>(), 234);
+
+  Variant<bool, std::shared_ptr<int>> b = std::move(a);
+  ASSERT_EQ(b.Get<1>().use_count(), 1);
+  ASSERT_EQ(*b.Get<1>(), 234);
+
+  Variant<bool, std::shared_ptr<int>> c = b;
+  ASSERT_EQ(c.Get<1>().use_count(), 2);
+  ASSERT_EQ(b, c);
+
+  b = true;
+  ASSERT_EQ(c.Get<1>().use_count(), 1);
+
+  ASSERT_NE(b, c);
 }

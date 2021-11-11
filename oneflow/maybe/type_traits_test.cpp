@@ -15,11 +15,25 @@ limitations under the License.
 */
 
 #include <gtest/gtest.h>
+#include <type_traits>
 #include "oneflow/maybe/type_traits.h"
 
 using namespace oneflow::maybe;
 
 TEST(TypeTraits, Basics) {
+  static_assert(Conj<std::true_type, std::true_type>, "");
+  static_assert(!Conj<std::false_type, std::true_type>, "");
+  static_assert(!Conj<std::true_type, std::false_type>, "");
+  static_assert(!Conj<std::false_type, std::false_type>, "");
+  static_assert(!Conj<std::true_type, std::true_type, std::false_type>, "");
+
+  static_assert(Disj<std::true_type, std::true_type>, "");
+  static_assert(Disj<std::false_type, std::true_type>, "");
+  static_assert(Disj<std::true_type, std::false_type>, "");
+  static_assert(!Disj<std::false_type, std::false_type>, "");
+  static_assert(Disj<std::true_type, std::true_type, std::false_type>, "");
+  static_assert(!Disj<std::false_type, std::false_type, std::false_type>, "");
+
   static_assert(std::is_same<TypeGet<0, int>, int>::value, "");
   static_assert(std::is_same<TypeGet<0, int, float>, int>::value, "");
   static_assert(std::is_same<TypeGet<1, int, float>, float>::value, "");
@@ -42,4 +56,9 @@ TEST(TypeTraits, Basics) {
   static_assert(!TypeIn<int, float, float, bool>, "");
   static_assert(TypeIn<int, float, bool, int, float>, "");
   static_assert(TypeIn<bool, float, float, bool>, "");
+
+  static_assert(IsDifferentTypes<int, float, bool>, "");
+  static_assert(!IsDifferentTypes<int, float, int, bool>, "");
+  static_assert(IsDifferentTypes<int>, "");
+  static_assert(!IsDifferentTypes<int, int>, "");
 }

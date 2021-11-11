@@ -142,12 +142,7 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
   Variant& operator=(T&& v) {
     using Type = RemoveCVRef<T>;
 
-    if (Is<Type>()) {
-      Get<Type>() = std::forward<T>(v);
-    } else {
-      destory();
-      construct<Type>(std::forward<T>(v));
-    }
+    Emplace<Type>(std::forward<T>(v));
 
     return *this;
   }
@@ -185,6 +180,21 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
     return *reinterpret_cast<const T*>(storage);
   }
 
+  template<std::size_t I, std::enable_if_t<(I < Num), int> = 0>
+  TypeByIndex<I>& Get() & {
+    return *reinterpret_cast<TypeByIndex<I>*>(storage);
+  }
+
+  template<std::size_t I, std::enable_if_t<(I < Num), int> = 0>
+  TypeByIndex<I>&& Get() && {
+    return std::move(*reinterpret_cast<TypeByIndex<I>*>(storage));
+  }
+
+  template<std::size_t I, std::enable_if_t<(I < Num), int> = 0>
+  const TypeByIndex<I>& Get() const& {
+    return *reinterpret_cast<const TypeByIndex<I>*>(storage);
+  }
+
   ~Variant() { destory(); }
 
   bool operator==(const Variant& v) const {
@@ -194,6 +204,22 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
   }
 
   bool operator!=(const Variant& v) const { return !operator==(v); }
+
+  template<typename T, typename... Args>
+  T& Emplace(Args&&... args) {
+    if (Is<T>()) {
+      return Get<T>() = T(std::forward<Args>(args)...);
+    } else {
+      destory();
+      construct<T>(std::forward<Args>(args)...);
+      return Get<T>();
+    }
+  }
+
+  template<std::size_t I, typename... Args>
+  decltype(auto) Emplace(Args&&... args) {
+    return Emplace<TypeByIndex<I>>(std::forward<Args>(args)...);
+  }
 
  private:
   static constexpr const std::size_t size = std::max({sizeof(Ts)...});
