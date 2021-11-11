@@ -61,6 +61,7 @@ void SocketWriteHelper::AsyncWrite(const SocketMsg& msg) {
       std::cout<<" SocketWriteHelper::AsyncWrite,the debug_actor_msg_:"<<debug_actor_msg_ << std::endl;
       std::cout<<std::endl;
       std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/";
+
       write_mutex_.lock();
       std::string path = dir + "write_helper_Asyncwrite" + std::to_string(write_msg_);
       write_msg_++;
@@ -112,6 +113,7 @@ bool SocketWriteHelper::InitMsgWriteHandle() {
   write_ptr_ = reinterpret_cast<const char*>(&cur_msg_);
   write_size_ = sizeof(cur_msg_);
   if(cur_msg_.msg_type == SocketMsgType::kActor ) {
+
     init_msg_mutex_.lock();
     std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/";
     std::string path = dir + "write_helper_InitMsgWriteHandle" + std::to_string(init_msg_);
@@ -155,6 +157,7 @@ bool SocketWriteHelper::DoCurWrite(void (SocketWriteHelper::*set_cur_write_done)
     std::cout<<"SocketWriteHelper::DoCurWrite,the n:" << n << std::endl;
     std::cout<<"SocketWriteHelper::DoCurWrite,the write_ptr_:"<<reinterpret_cast<uint64_t>(write_ptr_) << std::endl;
     std::cout << std::endl;
+
     DocurWrite_muex_.lock();
     std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/";
     std::string path = dir + "write_helper_DoCurWrite" + std::to_string(DocurWrite_);
@@ -167,6 +170,7 @@ bool SocketWriteHelper::DoCurWrite(void (SocketWriteHelper::*set_cur_write_done)
     out.write(cur_msg_.actor_msg.data,cur_msg_.actor_msg.size);
     out.close();
     DocurWrite_muex_.unlock();
+    
   }
   if (n == write_size_) {
     (this->*set_cur_write_done)();
