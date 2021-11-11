@@ -34,6 +34,9 @@ option(BUILD_GIT_VERSION "" ON)
 option(BUILD_PROFILER "" OFF)
 option(OF_SOFTMAX_USE_FAST_MATH "" ON)
 option(TREAT_WARNINGS_AS_ERRORS "" ON)
+# Reference:
+# https://medium.com/@alasher/colored-c-compiler-output-with-ninja-clang-gcc-10bfe7f2b949
+option(OF_FORCE_COLORED_DIAGNOSTICS "Always produce ANSI-colored diagnostics (GNU/Clang only)." ON)
 set(RPC_BACKEND "GRPC,LOCAL" CACHE STRING "")
 set(THIRD_PARTY_MIRROR "" CACHE STRING "")
 set(PIP_INDEX_MIRROR "" CACHE STRING "")
@@ -119,6 +122,12 @@ if (BUILD_PROFILER)
 endif()
 if (OF_SOFTMAX_USE_FAST_MATH)
   add_definitions(-DOF_SOFTMAX_USE_FAST_MATH)
+endif()
+if (OF_FORCE_COLORED_DIAGNOSTICS)
+  add_compile_options(
+    $<$<COMPILE_LANGUAGE:CXX>:$<$<CXX_COMPILER_ID:GNU>:-fdiagnostics-color=always>>
+    $<$<COMPILE_LANGUAGE:CXX>:$<$<CXX_COMPILER_ID:Clang>:-fcolor-diagnostics>>
+  )
 endif()
 if (RPC_BACKEND MATCHES "GRPC")
   add_definitions(-DRPC_BACKEND_GRPC)
