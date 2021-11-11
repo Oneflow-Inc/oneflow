@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/profiler/kernel.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/stream/cuda_stream_context.h"
+#include "oneflow/core/stream/cuda/cuda_stream_context.h"
 
 namespace oneflow {
 

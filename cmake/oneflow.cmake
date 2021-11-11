@@ -387,9 +387,6 @@ endif()
 if (WITH_XLA)
   list(APPEND gen_pip_args --xla)
 endif()
-if (WITH_MLIR)
-  list(APPEND gen_pip_args --mlir)
-endif()
 
 add_custom_target(of_pyscript_copy ALL
     COMMAND ${CMAKE_COMMAND} -E touch "${of_proto_python_dir}/oneflow/core/__init__.py"
@@ -455,7 +452,7 @@ endforeach()
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/new_kernel_util.h")
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_context.h")
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_observer.h")
-list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/stream/stream_context.h")
+list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/stream/include/stream_context.h")
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_util.cuh")
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/sbp_signature_builder.h")
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/common/symbol.h")

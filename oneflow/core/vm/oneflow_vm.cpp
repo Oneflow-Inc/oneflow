@@ -20,20 +20,23 @@ limitations under the License.
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/multi_client.h"
+#include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/thread/thread_consistent_id.h"
 #include "oneflow/core/framework/transport_token.h"
+#include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/platform/include/pthread_fork.h"
 
 namespace oneflow {
 
 namespace {
 
-Maybe<void> ForEachThreadCtx(vm::VirtualMachine* vm,
+Maybe<void> ForEachThreadCtx(vm::VirtualMachineEngine* vm,
                              const std::function<Maybe<void>(vm::ThreadCtx*)>& DoEach) {
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(thread_ctx, vm->mut_thread_ctx_list()) {
     const auto& stream_type = thread_ctx->stream_rt_desc().stream_type_id().stream_type();
-    if (stream_type.SharingVirtualMachineThread()) { continue; }
+    if (stream_type.OnSchedulerThread()) { continue; }
     JUST(DoEach(thread_ctx));
   }
   return Maybe<void>::Ok();
@@ -62,7 +65,7 @@ std::type_index GetStreamTypeIndex(const vm::ThreadCtx* thread_ctx) {
 //   thread #7 is active in process #7, while others are not.
 //   to make them communicate with each other, we can allocate thread_consistent_id 1 to all those
 //   gpu threads in all processes.
-void GetWorkerThreadInitializer(intrusive::shared_ptr<vm::VirtualMachine> vm,
+void GetWorkerThreadInitializer(intrusive::shared_ptr<vm::VirtualMachineEngine> vm,
                                 std::function<void(vm::ThreadCtx*)>* Initializer) {
   std::set<std::type_index> stream_type_indexes;
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(thread_ctx, vm->mut_thread_ctx_list()) {
@@ -89,7 +92,7 @@ void GetWorkerThreadInitializer(intrusive::shared_ptr<vm::VirtualMachine> vm,
 }  // namespace
 
 OneflowVM::OneflowVM(const Resource& resource, int64_t this_machine_id)
-    : vm_(intrusive::make_shared<vm::VirtualMachine>(
+    : vm_(intrusive::make_shared<vm::VirtualMachineEngine>(
         vm::MakeVmDesc(resource, this_machine_id).Get())) {
   std::function<void()> SchedulerInitializer;
   GetSchedulerThreadInitializer(&SchedulerInitializer);
@@ -133,8 +136,21 @@ OneflowVM::~OneflowVM() {
 }
 
 Maybe<void> OneflowVM::Receive(vm::InstructionMsgList* instr_list) {
-  JUST(vm_->Receive(instr_list));
-  notifier_.Notify();
+  if (unlikely(pthread_fork::IsForkedSubProcess())) {
+    CHECK_OR_RETURN(JUST(IsMultiClient()));
+    INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_list) {
+      const auto& parallel_desc = instr_msg->parallel_desc();
+      CHECK_OR_RETURN(!parallel_desc || parallel_desc->device_type() == DeviceType::kCPU)
+          << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
+    }
+    JUST(vm_->Receive(instr_list));
+    while (!vm_->Empty()) { vm_->Schedule(); }
+  } else {
+    if (JUST(vm_->Receive(instr_list))) {
+      // old pending_instruction_list is empty.
+      notifier_.Notify();
+    }
+  }
   return Maybe<void>::Ok();
 }
 
@@ -153,6 +169,7 @@ void OneflowVM::Loop(const std::function<void()>& Initializer) {
   Initializer();
   auto* vm = mut_vm();
   while (notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
+    OF_PROFILER_RANGE_PUSH("OneflowVM::Loop");
     auto start = std::chrono::steady_clock::now();
     static constexpr int kWorkingMicroseconds = 1000;
     // Every time this thread wakes up, vm is scheduled for about `kWorkingMicroseconds`.
@@ -179,6 +196,7 @@ void OneflowVM::Loop(const std::function<void()>& Initializer) {
         do { vm->Schedule(); } while (!vm->ThreadUnsafeEmpty());
       } while (++i < kNumSchedulingPerTimoutTest);
     } while (MicrosecondsFrom(start) < kWorkingMicroseconds);
+    OF_PROFILER_RANGE_POP();
   }
   while (!vm->Empty()) { vm->Schedule(); }
   CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {

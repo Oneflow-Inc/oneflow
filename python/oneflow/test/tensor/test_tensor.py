@@ -1051,6 +1051,14 @@ class TestTensor(flow.unittest.TestCase):
     def test_ceil_tensor_with_random_data(test_case):
         device = random_device()
         input = random_pytorch_tensor().to(device)
+        y = len(input)
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest()
+    def test_ceil_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
         y = input.ceil()
         return y
 
@@ -1508,6 +1516,11 @@ class TestTensor(flow.unittest.TestCase):
             np.allclose(y.to_local().numpy(), np.ones((1, 4), dtype=np.float32))
         )
         test_case.assertEqual(y.placement, placement)
+
+        y_default_dtype = flow.tensor(
+            x, placement=placement, sbp=[flow.sbp.split(0)], requires_grad=False,
+        )
+        test_case.assertTrue(y_default_dtype.dtype == flow.int32)
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")

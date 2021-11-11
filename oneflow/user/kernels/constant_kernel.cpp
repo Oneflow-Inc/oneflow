@@ -14,12 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/primitive/include/fill.h"
 
 namespace oneflow {
 namespace user_op {
 
-template<DeviceType device_type, typename T>
+namespace {
+
+template<typename Context>
+std::unique_ptr<primitive::Fill> NewFillPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
+  return primitive::NewPrimitive<primitive::FillFactory>(ctx->device_type(), data_type);
+}
+
 class ConstantKernel final : public OpKernel {
  public:
   ConstantKernel() = default;
@@ -29,33 +36,29 @@ class ConstantKernel final : public OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     bool is_floating_value = ctx->Attr<bool>("is_floating_value");
+    const Scalar value = is_floating_value ? Scalar(ctx->Attr<double>("floating_value"))
+                                           : Scalar(ctx->Attr<int64_t>("integer_value"));
     const int64_t elem_cnt = out_tensor->shape().elem_cnt();
     CHECK_GE(elem_cnt, 0);
     if (elem_cnt == 0) { return; }
-    NewKernelUtil<device_type>::Fill(ctx->device_ctx(), elem_cnt,
-                                     is_floating_value
-                                         ? static_cast<T>(ctx->Attr<double>("floating_value"))
-                                         : static_cast<T>(ctx->Attr<int64_t>("integer_value")),
-                                     out_tensor->mut_dptr<T>());
+    std::unique_ptr<primitive::Fill> fill = NewFillPrimitive(ctx);
+    CHECK(fill);
+    fill->Launch(ctx->stream_ctx(), out_tensor->mut_dptr(), value, elem_cnt);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CONSTANT_XPU_KERNEL(device, dtype)        \
-  REGISTER_USER_KERNEL("constant")                         \
-      .SetCreateFn<ConstantKernel<device, dtype>>()        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device) \
-                       & (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
+hob::HobContextGetter<user_op::KernelRegContext, bool> FillPrimitiveExists() {
+  return user_op::HobCtxGetter<bool>(
+      "FillPrimitiveExists",
+      [](const user_op::KernelRegContext& ctx) { return NewFillPrimitive(&ctx).operator bool(); });
+}
 
-#define REGISTER_CONSTANT_KERNEL(device, dtype_pair) \
-  REGISTER_CONSTANT_XPU_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
+REGISTER_USER_KERNEL("constant")
+    .SetCreateFn<ConstantKernel>()
+    .SetIsMatchedHob(FillPrimitiveExists() == true);
 
-#define DATA_TYPE_SEQ    \
-  FLOATING_DATA_TYPE_SEQ \
-  INT_DATA_TYPE_SEQ      \
-  UNSIGNED_INT_DATA_TYPE_SEQ
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CONSTANT_KERNEL, DEVICE_TYPE_SEQ, DATA_TYPE_SEQ)
+}  // namespace
 
 }  // namespace user_op
 }  // namespace oneflow

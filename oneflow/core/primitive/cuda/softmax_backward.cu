@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/primitive/include/log_softmax_backward.h"
 #include "oneflow/core/primitive/cuda/type_seq.h"
 #include "oneflow/core/cuda/softmax.cuh"
-#include "oneflow/core/stream/cuda_stream_context.h"
+#include "oneflow/core/stream/cuda/cuda_stream_context.h"
 
 namespace oneflow {
 
@@ -59,8 +59,7 @@ class SoftmaxBackwardImpl : public SoftmaxBackwardBase {
 
   void Launch(StreamContext* stream_ctx, size_t rows, size_t cols, const void* y, const void* dy,
               void* dx) override {
-    cudaStream_t cuda_stream =
-        CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
+    cudaStream_t cuda_stream = stream_ctx->As<CudaStreamContext>()->cuda_stream();
     SoftmaxBackwardGpu<algorithm, T>(cuda_stream, rows, cols, reinterpret_cast<const T*>(y),
                                      reinterpret_cast<const T*>(dy), reinterpret_cast<T*>(dx));
   }

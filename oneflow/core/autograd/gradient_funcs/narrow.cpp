@@ -17,12 +17,14 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 namespace one {
 
 struct NarrowCaptureState : public AutoGradCaptureState {
   bool requires_grad;
+  Shape shape;
   int64_t dim;
   int64_t start;
   int64_t length;
@@ -48,17 +50,26 @@ class Narrow : public OpExprGradFunction<NarrowCaptureState> {
     ctx->dim = JUST(composed_attrs.GetAttr<int64_t>("dim"));
     ctx->start = JUST(composed_attrs.GetAttr<int64_t>("start"));
     ctx->length = JUST(composed_attrs.GetAttr<int64_t>("length"));
-    ctx->SaveTensorForBackward(inputs.at(0));
+    if (LazyMode::is_enabled()) {
+      ctx->SaveTensorForBackward(inputs.at(0));
+    } else {
+      ctx->shape = *(inputs.at(0)->shape());
+    }
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const NarrowCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
+    const auto& dy = out_grads.at(0);
     if (ctx->requires_grad) {
-      const auto& like = ctx->SavedTensors().at(0);
+      std::shared_ptr<Tensor> like;
+      if (LazyMode::is_enabled()) {
+        like = ctx->SavedTensors().at(0);
+      } else {
+        like = JUST(functional::Empty(ctx->shape, dy->dtype(), JUST(dy->device())));
+      }
       in_grads->resize(1);
-      in_grads->at(0) =
-          JUST(functional::NarrowGrad(out_grads.at(0), like, ctx->dim, ctx->start, ctx->length));
+      in_grads->at(0) = JUST(functional::NarrowGrad(dy, like, ctx->dim, ctx->start, ctx->length));
     }
     return Maybe<void>::Ok();
   }

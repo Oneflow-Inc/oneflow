@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/primitive/common/broadcast_matmul.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/stream/cuda_stream_context.h"
+#include "oneflow/core/stream/cuda/cuda_stream_context.h"
 #include <cuda.h>
 
 namespace oneflow {
@@ -88,7 +88,7 @@ void LaunchBroadcastMatmul(StreamContext* stream_ctx, DataType data_type,
                            const int64_t* a_batch_dims, const int64_t* b_batch_dims,
                            const int64_t* c_batch_dims, int64_t m, int64_t n, int64_t k,
                            Scalar alpha, const void* a, const void* b, Scalar beta, void* c) {
-  auto* cuda_stream_ctx = CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx));
+  auto* cuda_stream_ctx = stream_ctx->As<CudaStreamContext>();
   const auto cuda_data_type = GetCudaDataType(data_type);
   const auto compute_type = GetComputeType(data_type);
   const auto sp_alpha = GetCublasScalarParameter(alpha, compute_type);
@@ -135,7 +135,8 @@ void LaunchBroadcastMatmul(StreamContext* stream_ctx, DataType data_type,
 #if CUDA_VERSION >= 11000
   cublasGemmAlgo_t algo = CUBLAS_GEMM_DEFAULT;
 #else
-  cublasGemmAlgo_t algo = CUBLAS_GEMM_DFALT_TENSOR_OP;
+  cublasGemmAlgo_t algo =
+      (data_type == DataType::kFloat16) ? CUBLAS_GEMM_DFALT_TENSOR_OP : CUBLAS_GEMM_DEFAULT;
 #endif
   if (num_batch_dims == 1 && c_batch_dims[0] != 1) {
     const void* cublas_a = b;

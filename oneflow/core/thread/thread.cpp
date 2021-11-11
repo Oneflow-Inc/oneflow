@@ -16,10 +16,10 @@ limitations under the License.
 #include "oneflow/core/thread/thread.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/actor/actor.h"
-#include "oneflow/core/actor/light_actor.h"
-#include "oneflow/core/stream/stream_context.h"
-#include "oneflow/core/stream/execution_context_hook.h"
+#include "oneflow/core/lazy/actor/actor.h"
+#include "oneflow/core/lazy/actor/light_actor.h"
+#include "oneflow/core/stream/include/stream_context.h"
+#include "oneflow/core/stream/include/execution_context_hook.h"
 
 namespace oneflow {
 
