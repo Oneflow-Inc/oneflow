@@ -39,7 +39,8 @@ template<BinaryOp binary_op, typename Src, typename Dst, size_t num_dims, size_t
          size_t src1_pack_size, typename IndexType>
 void LaunchKernel(StreamContext* stream_ctx,
                   BroadcastElementwiseBinaryParams<num_dims, IndexType> params) {
-  constexpr size_t dst_pack_size = src0_pack_size > src1_pack_size ? src0_pack_size : src1_pack_size;
+  constexpr size_t dst_pack_size =
+      src0_pack_size > src1_pack_size ? src0_pack_size : src1_pack_size;
   static_assert(src0_pack_size == dst_pack_size || src0_pack_size == 1, "");
   static_assert(src1_pack_size == dst_pack_size || src1_pack_size == 1, "");
   const PackType<Src, src0_pack_size>* src0 =
@@ -97,6 +98,20 @@ void LaunchRhsScalarBinary(size_t n, Src scalar, const Src* src, Dst* dst) {
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst>
+void LaunchLhsScalarPtrBinary(size_t n, const Src* scalar, const Src* src, Dst* dst) {
+  for (size_t i = 0; i < n; ++i) {
+    dst[i] = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>()(scalar[0], src[i]);
+  }
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+void LaunchRhsScalarPtrBinary(size_t n, const Src* scalar, const Src* src, Dst* dst) {
+  for (size_t i = 0; i < n; ++i) {
+    dst[i] = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>()(src[i], scalar[0]);
+  }
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst>
 class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BroadcastElementwiseBinaryImpl);
@@ -120,8 +135,20 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
   void Launch(StreamContext* stream_ctx, size_t num_src0_dims, const int64_t* src0_dims,
               const void* src0, size_t num_src1_dims, const int64_t* src1_dims, const void* src1,
               void* dst) override {
-    SimplifyThenLaunch<binary_op, Src, Dst>(stream_ctx, num_src0_dims, src0_dims, src0,
-                                            num_src1_dims, src1_dims, src1, dst);
+    const size_t src0_elem_cnt = GetElementCount(num_src0_dims, src0_dims);
+    const size_t src1_elem_cnt = GetElementCount(num_src1_dims, src1_dims);
+    if (src0_elem_cnt == 1) {
+      LaunchLhsScalarPtrBinary<binary_op, Src, Dst>(
+          src1_elem_cnt, reinterpret_cast<const Src*>(src0), reinterpret_cast<const Src*>(src1),
+          reinterpret_cast<Dst*>(dst));
+    } else if (src1_elem_cnt == 1) {
+      LaunchRhsScalarPtrBinary<binary_op, Src, Dst>(
+          src0_elem_cnt, reinterpret_cast<const Src*>(src1), reinterpret_cast<const Src*>(src0),
+          reinterpret_cast<Dst*>(dst));
+    } else {
+      SimplifyThenLaunch<binary_op, Src, Dst>(stream_ctx, num_src0_dims, src0_dims, src0,
+                                              num_src1_dims, src1_dims, src1, dst);
+    }
   }
 };
 

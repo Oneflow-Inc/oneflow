@@ -59,8 +59,7 @@ class ScalarMathKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED();
     }
-
-    if (out->shape().NumAxes() != 0) {
+    if (out->shape().elem_cnt() != 0) {
       std::unique_ptr<primitive::BroadcastElementwiseBinary> primitive =
           NewBroadcastElementwiseBinaryPrimitive(ctx, op);
       CHECK(primitive);

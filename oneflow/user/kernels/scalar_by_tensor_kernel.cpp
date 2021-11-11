@@ -50,7 +50,6 @@ class ScalarByTensorKernel final : public user_op::OpKernel, public user_op::Cud
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* scalar = ctx->Tensor4ArgNameAndIndex("scalar", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-
     int64_t elem_cnt = y->shape().elem_cnt();
     if (elem_cnt != 0) {
       std::unique_ptr<primitive::BroadcastElementwiseBinary> primitive =

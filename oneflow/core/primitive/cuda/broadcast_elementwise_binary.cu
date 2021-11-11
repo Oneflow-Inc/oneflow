@@ -30,7 +30,8 @@ template<BinaryOp binary_op, typename Src, typename Dst, size_t num_dims, size_t
          size_t src1_pack_size, typename IndexType>
 __global__ void BroadcastElementwiseBinaryGpu(
     BroadcastElementwiseBinaryParams<num_dims, IndexType> params) {
-  constexpr size_t dst_pack_size = src0_pack_size > src1_pack_size ? src0_pack_size : src1_pack_size;
+  constexpr size_t dst_pack_size =
+      src0_pack_size > src1_pack_size ? src0_pack_size : src1_pack_size;
   static_assert(src0_pack_size == dst_pack_size || src0_pack_size == 1, "");
   static_assert(src1_pack_size == dst_pack_size || src1_pack_size == 1, "");
 

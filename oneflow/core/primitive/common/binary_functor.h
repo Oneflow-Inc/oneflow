@@ -48,7 +48,7 @@ struct BinaryFunctor<device, BinaryOp::kDiv, Src, Dst> {
 template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kMax, Src, Dst> {
   OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const {
-    if (src0 >= src1) {
+    if (src0 > src1) {
       return src0;
     } else {
       return src1;
@@ -59,7 +59,7 @@ struct BinaryFunctor<device, BinaryOp::kMax, Src, Dst> {
 template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kMin, Src, Dst> {
   OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const {
-    if (src0 <= src1) {
+    if (src0 < src1) {
       return src0;
     } else {
       return src1;
