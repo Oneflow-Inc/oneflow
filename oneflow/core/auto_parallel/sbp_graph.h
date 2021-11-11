@@ -832,7 +832,7 @@ void SbpGraph<SbpSignature>::FindMainstem(
   // Decide mainstems
   double acc_cost = 0;
   // All the nodes with MinLayer>=mainstem_end_id would be considerd as mainstems
-  int32_t mainstem_end_id;
+  int32_t mainstem_end_id = max_MinLayer;
   for (int32_t layer_id = max_MinLayer; layer_id >= 0; layer_id--) {
     acc_cost += mainstem_cost[layer_id];
     if (acc_cost > 0.5 * wait_time) {
