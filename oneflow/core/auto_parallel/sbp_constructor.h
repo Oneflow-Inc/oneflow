@@ -38,7 +38,7 @@ class SbpConstructor final {
         transfer_cost_(job->job_conf().auto_parallel_transfer_cost()),
         use_sbp_collector_(!Global<ResourceDesc, ForSession>::Get()
                                 ->resource()
-                                .disable_group_boxing_by_dst_parallel()) {
+                                .disable_group_boxing_by_dst_parallel() && job->job_conf().enable_auto_parallel_sbp_collector()) {
     CHECK_JUST(Init(op_graph, job));
   }
   ~SbpConstructor() = default;
