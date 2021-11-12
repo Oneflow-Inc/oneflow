@@ -111,7 +111,6 @@ class CPUGeneratorImpl : public DeviceGeneratorImpl {
   std::mt19937 engine_;
 };
 
-
 #ifdef WITH_CUDA
 class CUDAGeneratorImpl : public DeviceGeneratorImpl {
  public:
@@ -122,8 +121,8 @@ class CUDAGeneratorImpl : public DeviceGeneratorImpl {
   int32_t max_thread_num() const { return max_thread_num_; }
 
   curandState* curand_states() const { return curand_states_; }
-  int32_t* dev_counter() const {return dev_counter_; }
-  uint64_t* dev_offset() const {return dev_offset_; }
+  int32_t* dev_counter() const { return dev_counter_; }
+  uint64_t* dev_offset() const { return dev_offset_; }
 
   void set_current_seed(uint64_t seed) override;
 
@@ -131,18 +130,19 @@ class CUDAGeneratorImpl : public DeviceGeneratorImpl {
 
   Maybe<Tensor> GetState() const override;
   Maybe<void> SetState(const std::shared_ptr<Tensor>& tensor_state) override;
-  
+
  private:
   int32_t max_block_num_;
   int32_t max_thread_num_;
   curandState* curand_states_;
   uint64_t* dev_offset_;
-  int32_t* dev_counter_; 
+  int32_t* dev_counter_;
 };
 
 namespace detail {
 
-void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, curandState* states, uint64_t* dev_seed, int32_t* dev_counter);
+void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, curandState* states,
+                      uint64_t* dev_seed, int32_t* dev_counter);
 
 }  // namespace detail
 #endif  // WITH_CUDA

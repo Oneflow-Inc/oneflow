@@ -22,14 +22,14 @@ limitations under the License.
 namespace oneflow {
 
 class FusedDropoutKernelState : public user_op::OpKernelState {
-public:
- explicit FusedDropoutKernelState(const std::shared_ptr<one::Generator>& generator)
-     : generator_(generator) {}
+ public:
+  explicit FusedDropoutKernelState(const std::shared_ptr<one::Generator>& generator)
+      : generator_(generator) {}
 
- const std::shared_ptr<one::Generator>& generator() const { return generator_; }
+  const std::shared_ptr<one::Generator>& generator() const { return generator_; }
 
-private:
- std::shared_ptr<one::Generator> generator_;
+ private:
+  std::shared_ptr<one::Generator> generator_;
 };
 
 }  // namespace oneflow

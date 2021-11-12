@@ -59,11 +59,11 @@ Maybe<void> Dropout::Capture(DropoutCaptureState* ctx, const TensorTuple& inputs
 Maybe<void> Dropout::Apply(const DropoutCaptureState* ctx, const TensorTuple& out_grads,
                            TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 2); // Output has y and mask. 
+  CHECK_EQ_OR_RETURN(out_grads.size(), 2);  // Output has y and mask.
 
   const std::shared_ptr<oneflow::one::Tensor>& mask = ctx->SavedTensors().at(0);
   in_grads->resize(1);
-  const float scale = 1.0 / (1.0 - ctx->rate); 
+  const float scale = 1.0 / (1.0 - ctx->rate);
   in_grads->at(0) = JUST(functional::DropoutGrad(out_grads.at(0), mask, scale));
   return Maybe<void>::Ok();
 }

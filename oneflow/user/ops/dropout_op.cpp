@@ -90,7 +90,7 @@ REGISTER_USER_OP_GRAD("dropout").SetGenBackwardOpConfFn([](const user_op::UserOp
                                                            user_op::AddOpFn AddOp) -> Maybe<void> {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    const float rate = op.attr<float>("rate"); 
+    const float rate = op.attr<float>("rate");
     const float scale = 1.0 / (1.0 - rate);
     user_op::UserOpConfWrapper dropout_grad_op =
         builder.Op("dropout_grad")
