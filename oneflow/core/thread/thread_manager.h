@@ -52,7 +52,7 @@ inline size_t divup(size_t x, size_t y) { return (x + y - 1) / y; }
 #define ONEFLOW_GRAIN_SIZE 32768
 
 template<typename DoEachT>
-void MultiThreadLoop(size_t num, const DoEachT& DoEach, size_t grain_size = ONEFLOW_GRAIN_SIZE) {
+void MultiThreadLoop(size_t num, const DoEachT& DoEach, size_t grain_size = 0) {
   if (num == 0) { return; }
   if (unlikely(pthread_fork::IsForkedSubProcess()) || (num < grain_size)) {
     SingleThreadLoop(num, DoEach);
