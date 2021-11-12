@@ -27,7 +27,6 @@ __global__ void InitCurandStatesKernel(uint64_t seed, curandState* states, uint6
   size_t local_seed = (static_cast<size_t>(seed) + 0x9e3779b9U + (static_cast<size_t>(id) << 6U)
                        + (static_cast<size_t>(id) >> 2U));
   curand_init(local_seed, 0, 0, &states[id]);
-  // *dev_seed = seed; 
   *dev_counter = 0; 
   *dev_offset = 0; 
 }
