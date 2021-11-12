@@ -631,6 +631,25 @@ Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& logical_out_shap
       .Build();
 }
 
+Maybe<one::UserOpExpr> UnfoldTensorGradOp(const int32_t& dimension,
+                                    const int32_t& size,
+                                    const int32_t& step) {
+  return UnfoldTensorGradOp(dimension, size, step, UniqueOpName("unfold_tensor_grad"));
+}
+Maybe<one::UserOpExpr> UnfoldTensorGradOp(const int32_t& dimension,
+                                    const int32_t& size,
+                                    const int32_t& step,
+                                    const std::string& name) {
+  return one::OpBuilder("unfold_tensor_grad", name)
+      .Input("dy")
+      .Input("x")
+      .Output("dx")
+      .Attr<int32_t>("dimension", dimension)
+      .Attr<int32_t>("size", size)
+      .Attr<int32_t>("step", step)
+      .Build();
+}
+
 Maybe<one::UserOpExpr> UnaryGradOp(const std::string& unary_op_type) {
   return UnaryGradOp(unary_op_type, UniqueOpName(unary_op_type + "_grad"));
 }

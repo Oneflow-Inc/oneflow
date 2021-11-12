@@ -1146,6 +1146,24 @@ class UnfoldTensorFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class UnfoldTensorGradFunctor {
+ public:
+  UnfoldTensorGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("unfold_tensor_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const int32_t& dimension,
+                           const int32_t& size, const int32_t& step) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("dimension", dimension));
+    JUST(attrs.SetAttr<int32_t>("size", size));
+    JUST(attrs.SetAttr<int32_t>("step", step));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
+  }
+  private:
+    std::shared_ptr<OpExpr> op_;
+};
+
 class UpsampleFunctor {
  public:
   UpsampleFunctor() { op_ = CHECK_JUST(one::OpBuilder("upsample").Input("x").Output("y").Build()); }
@@ -2087,6 +2105,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FlipFunctor>("Flip");
   m.add_functor<impl::FlipGradFunctor>("FlipGrad");
   m.add_functor<impl::UnfoldTensorFunctor>("UnfoldTensor");
+  m.add_functor<impl::UnfoldTensorGradFunctor>("UnfoldTensorGrad");
   m.add_functor<impl::UpsampleFunctor>("Upsample");
   m.add_functor<impl::UpsampleGradFunctor>("UpsampleGrad");
   m.add_functor<impl::UpsampleNearest2DFunctor>("UpsampleNearest2D");

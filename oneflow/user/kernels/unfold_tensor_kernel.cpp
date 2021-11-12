@@ -81,5 +81,74 @@ REGISTER_UNFOLD_TENSOR_KERNEL(double)
 REGISTER_UNFOLD_TENSOR_KERNEL(int64_t)
 REGISTER_UNFOLD_TENSOR_KERNEL(int32_t)
 
+template<typename T> 
+class UnfoldTensorGradKernel final : public OpKernel {
+ public:
+  UnfoldTensorGradKernel() = default;
+  ~UnfoldTensorGradKernel() = default;
+
+ private:
+  void Compute(KernelComputeContext* ctx) const override {
+    const Tensor* dout = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const Tensor* in = ctx->Tensor4ArgNameAndIndex("x", 0);
+    Tensor* din = ctx->Tensor4ArgNameAndIndex("dx", 0);
+
+    const ShapeView& in_shape = in->shape();
+    const int32_t in_dims = in_shape.NumAxes();
+    std::vector<int32_t> din_stride(in_dims, 1);
+    for (int32_t i = in_dims - 2; i >= 0; --i) {
+        din_stride[i] = in_shape.At(i + 1) * din_stride.at(i + 1);
+    }
+    
+    std::vector<int32_t> dout_shape;
+    dout_shape.resize(dout->shape().NumAxes()); 
+    for (int i = 0; i < dout->shape().NumAxes(); ++i) { dout_shape[i] = dout->shape().At(i); }
+
+    const int32_t dout_dims = dout_shape.size();
+    const int32_t dimension = ctx->Attr<int32_t>("dimension");
+    const int32_t size = ctx->Attr<int32_t>("size");
+    const int32_t step = ctx->Attr<int32_t>("step");
+
+    std::vector<int32_t> dout_stride(in_dims+1);
+    dout_stride[in_dims] = in_dims == 0 ? 1 : din_stride[dimension];
+    for(int d = 0; d < in_dims; ++d){
+        if(d == dimension){
+            dout_stride[d] = step*din_stride[d];
+        }else{
+            dout_stride[d] = din_stride[d];
+        }
+    }
+
+    const T* dout_ptr = dout->dptr<T>();  
+    T* din_ptr = din->mut_dptr<T>(); 
+    std::fill(din_ptr, din_ptr + din->shape().elem_cnt(), static_cast<T>(0)); 
+    std::cout << "begin" << std:endl;
+    for(int32_t i = 0; i < din->shape().elem_cnt(); ++i){
+        std::cout << din_ptr[i] << std::endl;
+    }
+    std::cout << "end" << std:endl;
+    const int32_t dout_size = dout->shape().elem_cnt();
+    // if (size < step)
+    for(int32_t i = 0; i < dout_size; ++i){
+        int offset = Offset(i, dout_stride.data(), dout_shape.data(), dout_dims-1);  
+        std::cout << "i:" << i << " offset" << offset << std::endl;
+        din_ptr[offset] += dout_ptr[i];
+    }
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(dtype)              \
+  REGISTER_USER_KERNEL("unfold_tensor_grad")                   \
+      .SetCreateFn<UnfoldTensorGradKernel<dtype>>()           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+
+REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(float)
+REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(double)
+REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(int64_t)
+REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(int32_t)
+
 }  // namespace user_op
 }  // namespace oneflow

@@ -24,14 +24,17 @@ import numpy as np
 
 @flow.unittest.skip_unless_1n1d()
 class TestUnfoldTensor(flow.unittest.TestCase):
-    @autotest(n=10, auto_backward=False)
+    @autotest(n=1, auto_backward=True)
     def test_unfold_tensor_with_random_data(test_case):
         device = random_device()
-        x = torch.tensor(np.random.randn(3, 4, 5), requires_grad=False, device=device)
-        dimension = random(0, 2).to(int).value()
-        size = random(1, 3).to(int).value()
-        step = random(1, 3).to(int).value()
+        # x = torch.tensor(np.random.randn(3, 4, 5), requires_grad=True, device=device)
+        x = torch.tensor(np.random.randn(3, 4, 5), requires_grad=True)
+        # dimension = random(0, 2).to(int).value()
+        # size = random(1, 3).to(int).value()
+        # step = random(1, 3).to(int).value()
+        dimension, size, step = 0,2,2
         y = x.unfold(dimension, size, step)
+        print(x.grad)
         return y
 
 
