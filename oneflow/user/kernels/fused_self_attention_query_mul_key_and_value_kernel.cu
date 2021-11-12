@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/slice_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/primitive/include/permute.h"
+#include "oneflow/core/ep/include/primitive/permute.h"
 
 namespace oneflow {
 
@@ -167,8 +167,8 @@ void TransposeGpu(StreamContext* ctx, DataType data_type, const ShapeView& in_sh
   int32_t num_axes = in_shape.NumAxes();
   CHECK_EQ(num_axes, perm.size());
   for (int i = 0; i < perm.size(); ++i) { CHECK_EQ(in_shape.At(perm[i]), out_shape.At(i)); }
-  auto transpose =
-      primitive::NewPrimitive<primitive::PermuteFactory>(ctx->device_type(), in_shape.NumAxes());
+  auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(ctx->device_type(),
+                                                                              in_shape.NumAxes());
   CHECK(transpose);
   transpose->Launch(ctx, data_type, in_shape.NumAxes(), in_shape.ptr(), in, perm.data(), out);
 }

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/primitive/include/softmax.h"
+#include "oneflow/core/ep/include/primitive/softmax.h"
 
 namespace oneflow {
 namespace user_op {
@@ -22,9 +22,9 @@ namespace user_op {
 namespace {
 
 template<typename Context>
-std::unique_ptr<primitive::Softmax> NewSoftmaxPrimitive(Context* ctx) {
+std::unique_ptr<ep::primitive::Softmax> NewSoftmaxPrimitive(Context* ctx) {
   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("prediction", 0)->data_type();
-  return primitive::NewPrimitive<primitive::SoftmaxFactory>(ctx->device_type(), data_type);
+  return ep::primitive::NewPrimitive<ep::primitive::SoftmaxFactory>(ctx->device_type(), data_type);
 }
 
 hob::HobContextGetter<user_op::KernelRegContext, bool> SoftmaxPrimitiveExists() {
@@ -61,7 +61,7 @@ class SoftmaxCrossEntropyKernel final : public user_op::OpKernel {
     const auto num_axes = label->shape().NumAxes();
     const int64_t num_instances = label->shape().Count(0, num_axes - 1);
     const int64_t num_classes = label->shape().At(num_axes - 1);
-    std::unique_ptr<primitive::Softmax> primitive = NewSoftmaxPrimitive(ctx);
+    std::unique_ptr<ep::primitive::Softmax> primitive = NewSoftmaxPrimitive(ctx);
     CHECK(primitive);
     primitive->Launch(ctx->stream_ctx(), num_instances, num_classes, prediction->dptr(),
                       prob->mut_dptr());

@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/common/blocking_counter.h"
-#include "oneflow/core/primitive/include/add.h"
+#include "oneflow/core/ep/include/primitive/add.h"
 
 namespace oneflow {
 
@@ -51,8 +51,9 @@ template<typename T>
 void CalcSumOfBlobs(KernelContext* ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                     const PbRpf<std::string>& src_bns, const std::string& dst_bn) {
   Blob* dst_blob = BnInOp2Blob(dst_bn);
-  std::unique_ptr<primitive::Add> primitive =
-      primitive::NewPrimitive<primitive::AddFactory>(DeviceType::kCPU, dst_blob->data_type());
+  std::unique_ptr<ep::primitive::Add> primitive =
+      ep::primitive::NewPrimitive<ep::primitive::AddFactory>(DeviceType::kCPU,
+                                                             dst_blob->data_type());
   CHECK(primitive);
   std::vector<const void*> srcs(src_bns.size());
   FOR_RANGE(size_t, i, 0, src_bns.size()) {
