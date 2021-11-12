@@ -111,3 +111,33 @@ TEST(Variant, NonPOD) {
 
   ASSERT_NE(b, c);
 }
+
+TEST(Variant, Optional) {
+  OptionalVariant<int, const char*> a, b(NullOpt), c(a);
+
+  const char* hello = "hello";
+
+  std::size_t hash = 0, hash2 = 1, hash3 = 2;
+  HashCombine(hash, NullOpt);
+  HashCombine(hash2, 1);
+  HashCombine(hash3, hello);
+
+  ASSERT_TRUE(a == NullOpt);
+  ASSERT_EQ(std::hash<decltype(a)>()(a), hash);
+
+  a = 1;
+  ASSERT_EQ(a, 1);
+  ASSERT_EQ(std::hash<decltype(a)>()(a), hash2);
+
+  a = NullOpt;
+  ASSERT_EQ(a, NullOpt);
+  ASSERT_EQ(std::hash<decltype(a)>()(a), hash);
+
+  a = hello;
+  ASSERT_EQ(a, hello);
+  ASSERT_EQ(std::hash<decltype(a)>()(a), hash3);
+
+  ASSERT_EQ(b, NullOpt);
+  ASSERT_EQ(c, NullOpt);
+  ASSERT_NE(a, b);
+}

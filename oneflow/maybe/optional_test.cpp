@@ -192,3 +192,26 @@ TEST(Optional, Reference) {
   e = NullOpt;
   ASSERT_TRUE(!e);
 }
+
+TEST(Optional, Hash) {
+  Optional<int> a, b(123);
+
+  ASSERT_EQ(std::hash<decltype(a)>()(a), NullOptHash);
+  ASSERT_EQ(std::hash<decltype(a)>()(b), std::hash<int>()(123));
+
+  auto si = std::make_shared<int>(123);
+  Optional<std::shared_ptr<int>> c, d(si);
+
+  ASSERT_EQ(std::hash<decltype(c)>()(c), NullOptHash);
+  ASSERT_EQ(std::hash<decltype(c)>()(d), std::hash<decltype(si)>()(si));
+
+  int x = 233;
+  Optional<int&> e, f(x);
+
+  ASSERT_EQ(std::hash<decltype(e)>()(e), NullOptHash);
+  ASSERT_EQ(std::hash<decltype(e)>()(f), std::hash<int*>()(&x));
+
+  Optional<const int&> g;
+  ASSERT_EQ(std::hash<decltype(g)>()(g), NullOptHash);
+
+}

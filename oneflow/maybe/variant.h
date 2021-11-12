@@ -288,7 +288,7 @@ struct hash<oneflow::maybe::Variant<Ts...>> {
 
     v.visit([&seed](const auto& x) {
       using type = oneflow::maybe::RemoveCVRef<decltype(x)>;
-      oneflow::maybe::HashCombine(seed, hash<type>()(x));
+      oneflow::maybe::HashCombine<type>(seed, x);
     });
 
     return seed;

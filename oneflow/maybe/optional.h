@@ -202,6 +202,8 @@ struct Optional {
   friend struct details::OptionalPrivateScope;
 
  public:
+  static_assert(!std::is_same<Type, NullOptType>::value, "NullOptType is not allowed in Optional");
+
   using ValueType = T;
 
   explicit Optional() { storage.Init(); };
@@ -314,5 +316,30 @@ struct Optional {
 }  // namespace maybe
 
 }  // namespace oneflow
+
+namespace std {
+
+template<typename T>
+struct hash<oneflow::maybe::Optional<T>> {
+  size_t operator()(const oneflow::maybe::Optional<T>& v) const noexcept {
+    if (v.HasValue()) {
+      return hashImpl(oneflow::maybe::details::OptionalPrivateScope::Value(v));
+    } else {
+      return oneflow::maybe::NullOptHash;
+    }
+  }
+
+  template<typename U = T, std::enable_if_t<!std::is_reference<U>::value, int> = 0>
+  static std::size_t hashImpl(const T& v) {
+    return std::hash<std::remove_cv_t<T>>()(v);
+  }
+
+  template<typename U = T, std::enable_if_t<std::is_reference<U>::value, int> = 0>
+  static std::size_t hashImpl(const std::remove_reference_t<T>& v) {
+    return std::hash<const std::remove_reference_t<T>*>()(&v);
+  }
+};
+
+}  // namespace std
 
 #endif  // ONEFLOW_MAYBE_OPTIONAL_H_

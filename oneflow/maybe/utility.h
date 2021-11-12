@@ -25,13 +25,18 @@ namespace oneflow {
 namespace maybe {
 
 struct NullOptType {
-  explicit constexpr NullOptType(int) {}
+  explicit constexpr NullOptType() = default;
+
+  bool operator==(NullOptType) const { return true; }
+  bool operator!=(NullOptType) const { return false; }
 };
 
-constexpr NullOptType NullOpt{0};
+constexpr const std::size_t NullOptHash = -3333;
+
+constexpr NullOptType NullOpt{};
 
 struct InPlaceT {
-  explicit InPlaceT() = default;
+  explicit constexpr InPlaceT() = default;
 };
 
 constexpr InPlaceT InPlace;
@@ -55,7 +60,7 @@ constexpr InPlaceIndexT<I> InPlaceIndex;
 struct DefaultArgument;
 
 template<class T>
-inline void HashCombine(std::size_t& seed, const T& v) {
+constexpr void HashCombine(std::size_t& seed, const T& v) {
   std::hash<T> hasher;
   seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
@@ -63,5 +68,16 @@ inline void HashCombine(std::size_t& seed, const T& v) {
 }  // namespace maybe
 
 }  // namespace oneflow
+
+namespace std {
+
+template<>
+struct hash<oneflow::maybe::NullOptType> {
+  size_t operator()(oneflow::maybe::NullOptType) const noexcept {
+    return oneflow::maybe::NullOptHash;
+  }
+};
+
+}  // namespace std
 
 #endif  // ONEFLOW_MAYBE_UTILITY_H_
