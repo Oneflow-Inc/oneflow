@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/stream/include/stream_context_adapter.h"
 #include "oneflow/core/stream/cuda/cuda_stream_context.h"
+#include "oneapi/dnnl/dnnl.hpp"
 
 namespace oneflow {
 
@@ -35,6 +36,9 @@ class DeviceCtxStreamContextAdapter : public StreamContext {
     device_ctx_->SyncDevice();
     return Maybe<void>::Ok();
   }
+
+  // dnnl::engine* GetOnednnEngine() {};
+  // dnnl::stream* GetOnednnStream() {};
 
   DeviceType device_type() const override { return device_ctx_->device_type(); }
 

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/device/device_context_adapter.h"
 #include "oneflow/core/stream/cuda/cuda_stream_context.h"
+#include "oneflow/core/stream/cpu/cpu_stream_context.h"
 #include "oneflow/core/vm/cpu_allocator.h"
 #include "oneflow/core/device/cuda_event_record.h"
 
@@ -25,7 +26,7 @@ namespace {
 class CpuDeviceCtxAdapter final : public DeviceCtx, public EventRecordProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDeviceCtxAdapter);
-  explicit CpuDeviceCtxAdapter(StreamContext* stream_ctx) : stream_ctx_(stream_ctx) {}
+  explicit CpuDeviceCtxAdapter(CpuStreamContext* stream_ctx) : stream_ctx_(stream_ctx) {}
   ~CpuDeviceCtxAdapter() override = default;
 
   std::unique_ptr<DeviceCtx> Copy() const {
@@ -39,12 +40,15 @@ class CpuDeviceCtxAdapter final : public DeviceCtx, public EventRecordProvider {
 
   DeviceType device_type() const override { return stream_ctx_->device_type(); }
 
+  dnnl::engine* onednn_engine() const override { return stream_ctx_->onednn_engine(); }
+  dnnl::stream* onednn_stream() const override { return stream_ctx_->onednn_stream(); }
+
   std::shared_ptr<EventRecord> MakeEventRecord() override {
     return std::make_shared<NaiveEventRecord>();
   }
 
  private:
-  StreamContext* stream_ctx_;
+  CpuStreamContext* stream_ctx_;
 };
 
 #ifdef WITH_CUDA
@@ -67,6 +71,9 @@ class CudaDeviceCtxAdapter : public DeviceCtx, public EventRecordProvider {
 
   DeviceType device_type() const override { return stream_ctx_->device_type(); }
 
+  dnnl::engine* onednn_engine() const override { UNIMPLEMENTED(); return nullptr; }
+  dnnl::stream* onednn_stream() const override { UNIMPLEMENTED(); return nullptr; }
+  
   std::shared_ptr<EventRecord> MakeEventRecord() override {
     return std::make_shared<CudaEventRecord>(this);
   }
@@ -81,7 +88,7 @@ class CudaDeviceCtxAdapter : public DeviceCtx, public EventRecordProvider {
 
 DeviceCtx* NewDeviceCtxAdapter(StreamContext* ctx) {
   if (ctx->device_type() == DeviceType::kCPU) {
-    return new CpuDeviceCtxAdapter(ctx);
+    return new CpuDeviceCtxAdapter(CHECK_NOTNULL(dynamic_cast<CpuStreamContext*>(ctx)));
   } else if (ctx->device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
     return new CudaDeviceCtxAdapter(CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(ctx)));

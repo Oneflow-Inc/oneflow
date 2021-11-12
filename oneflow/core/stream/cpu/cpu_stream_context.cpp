@@ -20,46 +20,56 @@ limitations under the License.
 #include "oneflow/core/kernel/chain_kernel_observer.h"
 #include "oneflow/core/kernel/cpu_check_numerics_kernel_observer.h"
 #include "oneflow/core/graph/stream_id.h"
+#include "oneflow/core/stream/cpu/cpu_stream_context.h"
+#include "oneapi/dnnl/dnnl.hpp"
 
 namespace oneflow {
 
-class CpuStreamContext : public StreamContext, public KernelObserverProvider {
+class CpuStreamContextImp : public CpuStreamContext, public KernelObserverProvider {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CpuStreamContext);
-  explicit CpuStreamContext();
-  virtual ~CpuStreamContext();
+  OF_DISALLOW_COPY_AND_MOVE(CpuStreamContextImp);
+  explicit CpuStreamContextImp();
+  virtual ~CpuStreamContextImp();
 
   Maybe<void> AddCallback(std::function<void()> callback) override;
   Maybe<void> Sync() override;
   KernelObserver* GetKernelObserver() override;
+  dnnl::engine* onednn_engine() const override { return onednn_engine_.get();};
+  dnnl::stream* onednn_stream() const override { return onednn_stream_.get();};
   DeviceType device_type() const override { return DeviceType::kCPU; }
 
  private:
-  std::unique_ptr<KernelObserver> kernel_observer_;
+  std::unique_ptr<dnnl::engine> onednn_engine_;
+  std::unique_ptr<dnnl::stream> onednn_stream_;
+  std::unique_ptr<KernelObserver> kernel_observer_;  
 };
 
-CpuStreamContext::CpuStreamContext() {
+CpuStreamContextImp::CpuStreamContextImp() {
   std::vector<std::shared_ptr<KernelObserver>> kernel_observers;
   if (ParseBooleanFromEnv("ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS", false)) {
     kernel_observers.emplace_back(new CpuCheckNumericsKernelObserver());
   }
   kernel_observer_.reset(new ChainKernelObserver(kernel_observers));
+  onednn_engine_.reset(new dnnl::engine(dnnl::engine::kind::cpu, 0));
+  onednn_stream_.reset(new dnnl::stream(*onednn_engine_));
 }
 
-CpuStreamContext::~CpuStreamContext() = default;
+CpuStreamContextImp::~CpuStreamContextImp() = default;
 
-Maybe<void> CpuStreamContext::AddCallback(std::function<void()> callback) {
+Maybe<void> CpuStreamContextImp::AddCallback(std::function<void()> callback) {
   callback();
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CpuStreamContext::Sync() { return Maybe<void>::Ok(); }
+Maybe<void> CpuStreamContextImp::Sync() { return Maybe<void>::Ok(); }
 
-KernelObserver* CpuStreamContext::GetKernelObserver() { return kernel_observer_.get(); }
+KernelObserver* CpuStreamContextImp::GetKernelObserver() { return kernel_observer_.get(); }
+
+
 
 REGISTER_STREAM_CONTEXT_CREATOR_WITH_STREAM_ID(DeviceType::kCPU,
                                                ([](const StreamId& stream_id) -> StreamContext* {
-                                                 return new CpuStreamContext();
+                                                 return new CpuStreamContextImp();
                                                }));
 
 }  // namespace oneflow

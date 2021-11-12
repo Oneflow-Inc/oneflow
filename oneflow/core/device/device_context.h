@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/auto_registration_factory.h"
+#include "oneapi/dnnl/dnnl.hpp"
 
 namespace oneflow {
 
@@ -49,6 +50,9 @@ class DeviceCtx {
 
   virtual void SyncDevice() { UNIMPLEMENTED(); }
   virtual void AddCallBack(std::function<void()>) const { UNIMPLEMENTED(); }
+
+  virtual dnnl::engine* onednn_engine() const = 0;
+  virtual dnnl::stream* onednn_stream() const = 0;
 
   virtual vm::Allocator* mut_allocator() {
     UNIMPLEMENTED();

@@ -37,6 +37,9 @@ class CpuDeviceCtx final : public DeviceCtx, public EventRecordProvider {
 
   DeviceType device_type() const override { return DeviceType::kCPU; }
 
+  dnnl::engine* onednn_engine() const override { UNIMPLEMENTED(); return nullptr; }
+  dnnl::stream* onednn_stream() const override { UNIMPLEMENTED(); return nullptr; }
+
   std::shared_ptr<EventRecord> MakeEventRecord() override {
     return std::make_shared<NaiveEventRecord>();
   }
