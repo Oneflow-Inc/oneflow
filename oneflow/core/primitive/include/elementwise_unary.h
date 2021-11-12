@@ -38,7 +38,8 @@ class ElementwiseUnaryFactory : public Factory<ElementwiseUnary> {
   ElementwiseUnaryFactory() = default;
   ~ElementwiseUnaryFactory() override = default;
 
-  virtual std::unique_ptr<ElementwiseUnary> New(UnaryOp op, DataType data_type) = 0;
+  virtual std::unique_ptr<ElementwiseUnary> New(UnaryOp op, DataType src_type,
+                                                DataType dst_type) = 0;
 };
 
 }  // namespace primitive

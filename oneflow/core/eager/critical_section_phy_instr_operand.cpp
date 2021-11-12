@@ -83,7 +83,7 @@ void InputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_bl
   const auto& eager_blob_object = eager_blob_objects_->at(i);
   const Blob* blob = &eager_blob_object->blob();
   CHECK_NOTNULL(blob);
-  of_blob->mut_blob()->CopyHeaderFrom(of_blob->mut_device_ctx(), blob);
+  of_blob->mut_blob()->CopyHeaderFrom(blob);
   const auto& end_event_record = op_name2end_event_record_->at(op_name);
   if (blob->dptr() == nullptr) {
     end_event_record->Init(std::make_shared<NaiveEventRecord>());
@@ -103,7 +103,7 @@ void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_b
   const auto& eager_blob_object = eager_blob_objects_->at(i);
   Blob* mut_blob = eager_blob_object->mut_blob();
   CHECK_NOTNULL(mut_blob);
-  mut_blob->CopyHeaderFrom(of_blob->mut_device_ctx(), &of_blob->blob());
+  mut_blob->CopyHeaderFrom(&of_blob->blob());
   const auto& end_event_record = op_name2end_event_record_->at(op_name);
   if (mut_blob->dptr() == nullptr) {
     end_event_record->Init(std::make_shared<NaiveEventRecord>());

@@ -20,3 +20,4 @@ from oneflow.nn.optimizer.lr_scheduler import LrScheduler as _LRScheduler
 from oneflow.nn.optimizer.step_lr import StepLR
 from oneflow.nn.optimizer.multistep_lr import MultiStepLR
 from oneflow.nn.optimizer.warm_up_lr import WarmUpLR
+from oneflow.nn.optimizer.reduce_lr_on_plateau import ReduceLROnPlateau

@@ -501,17 +501,32 @@ class Graph(object):
 
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with inputs
+            self._print(0, 1, self._shallow_repr() + " start building graph inputs.")
             arg_op_names, lazy_args, self._args_repr, _ = self._build_io(
                 "input", graph_build_util.build_graph_input_arg, *args
             )
+            self._print(0, 1, self._shallow_repr() + " end building graph inputs.")
 
             # Deal with parameter and buffer
+            self._print(
+                0,
+                1,
+                self._shallow_repr() + " start building graph parameters and buffers.",
+            )
             state_op_names, self._states_tensor_tuple = self._build_states()
+            self._print(
+                0,
+                1,
+                self._shallow_repr() + " end building graph parameters and buffers.",
+            )
 
             # Deal with module in self.build(*args)
+            self._print(0, 1, self._shallow_repr() + " start building graph modules.")
             outputs = self.build(*lazy_args)
+            self._print(0, 1, self._shallow_repr() + " end building graph modules.")
 
             # Deal with outputs
+            self._print(0, 1, self._shallow_repr() + " start building graph outputs.")
             if not (type(outputs) is tuple or type(outputs) is list):
                 if outputs is None:
                     outputs = ()
@@ -525,15 +540,38 @@ class Graph(object):
                 out2name,
             ) = self._build_io("output", graph_build_util.build_graph_output, *outputs)
 
+            self._print(0, 1, self._shallow_repr() + " end building graph outputs.")
+
             # Save forward graph job proto
             self._forward_job_proto = c_api_util.GetCurrentJob()
+
+            self._print(
+                0,
+                1,
+                self._shallow_repr() + " start building graph with compile passes.",
+            )
             # Complete the graph job proto
             oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
             # Save full graph job proto after job Complete for find real output blob shape and build it.
             self._full_job_proto = c_api_util.GetCurrentJob()
+            self._print(
+                0, 1, self._shallow_repr() + " end building graph with compile passes."
+            )
 
             # Re-build outputs accoring to full graph and outputs buffer config.
+            self._print(
+                0,
+                1,
+                self._shallow_repr()
+                + " start re-building graph outputs for optimizatioin.",
+            )
             self._rebuild_outputs(out2name)
+            self._print(
+                0,
+                1,
+                self._shallow_repr()
+                + " end re-building graph outputs for optimizatioin.",
+            )
 
             # Register input/output/variable/buffer to _c_nn_graph
             self._c_nn_graph.register_input_op_names_and_tensors(
@@ -941,8 +979,15 @@ class Graph(object):
             self._add_block(name, value)
         elif isinstance(value, Optimizer):
             raise AttributeError(
-                "'{}' object are not allowed to set Optimizer attribute named '{}', "
-                "please use add_optimizer(...) instead.".format(
+                "'{}' nn.Graph is not allowed to set Optimizer attribute named '{}'. "
+                "Please use add_optimizer(...) instead.".format(
+                    type(self).__name__, name
+                )
+            )
+        elif isinstance(value, Tensor):
+            raise AttributeError(
+                "'{}' nn.Graph is not allowed to set Tensor attribute named '{}'. "
+                "Please use nn.Module to hold the tensor, then add the nn.Module to nn.Graph.".format(
                     type(self).__name__, name
                 )
             )

@@ -997,6 +997,9 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("CheckpointingPass"));
     JUST(DoPass("CudnnFusedNormalizationAddReluPass"));
     JUST(DoPass("PruneCastToStaticShapeOpsPass"));
+#ifdef WITH_MLIR
+    JUST(DoPass("IRRoundTrip"));
+#endif  // WITH_MLIR
     JUST(DoPass("FuseAddToOutputPass"));
     // run this pass again to fuse ops created in the first run.
     // TODO(guoran): loop multiple times inside the pass

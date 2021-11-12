@@ -388,6 +388,7 @@ class StatefulLocalOpKernel final {
   ~StatefulLocalOpKernel();
   const Symbol<Device>& device() const { return device_; }
   const std::shared_ptr<MemoryCase>& mem_case() const { return device_->mem_case(); }
+  const std::string& op_type_name() const { return op_conf_->user_conf().op_type_name(); }
   const std::vector<int64_t>& input_tuple_indexes4const_ibns() const {
     return input_tuple_indexes4const_ibns_;
   }
@@ -418,8 +419,6 @@ class StatefulLocalOpKernel final {
   }
 
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
-
-  const std::string& op_type_name() const { return op_conf_->user_conf().op_type_name(); }
 
  private:
   friend struct vm::LocalCallOpKernelUtil;

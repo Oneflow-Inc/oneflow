@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/critical_section_instance.h"
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
@@ -32,7 +33,7 @@ class OutputKernel final : public Kernel {
 };
 
 void OutputKernel::ForwardDataContent(KernelContext* ctx) const {
-  if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+  if (CHECK_JUST(IsMultiClient())) {
     CHECK(this->op_conf().output_conf().has_job_name());
     const auto& job_name = this->op_conf().output_conf().job_name();
     const auto& op_name = this->op_conf().name();
@@ -51,10 +52,10 @@ void OutputKernel::ForwardDataContent(KernelContext* ctx) const {
 }
 
 void OutputKernel::ForwardHeader(KernelContext* ctx) const {
-  if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+  if (CHECK_JUST(IsMultiClient())) {
     // Do nothing.
   } else {
-    ctx->BnInOp2Blob("out")->CopyHeaderFrom(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
+    ctx->BnInOp2Blob("out")->CopyHeaderFrom(ctx->BnInOp2Blob("in"));
   }
 }
 

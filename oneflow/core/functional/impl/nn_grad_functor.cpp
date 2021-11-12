@@ -274,6 +274,29 @@ class SparseCrossEntropyMsGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SparseSoftmaxCrossEntropyGrad {
+ public:
+  SparseSoftmaxCrossEntropyGrad() {
+    op_ = CHECK_JUST(one::OpBuilder("sparse_softmax_cross_entropy_grad")
+                         .Input("prob")
+                         .Input("label")
+                         .Input("dy")
+                         .Output("prediction_diff")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& prob,
+                           const std::shared_ptr<one::Tensor>& label, const int64_t& depth) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("depth", depth));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {prob, label, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SmoothL1LossGradFunctor {
  public:
   SmoothL1LossGradFunctor() {
@@ -537,6 +560,40 @@ class GridSampleGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class CtcLossGradFunctor {
+ public:
+  CtcLossGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("ctc_loss_grad")
+                         .Input("grad_out")
+                         .Input("log_probs")
+                         .Input("targets")
+                         .Input("input_lengths")
+                         .Input("target_lengths")
+                         .Input("loss")
+                         .Input("alpha")
+                         .Output("grad")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& grad_out,
+                           const std::shared_ptr<one::Tensor>& log_probs,
+                           const std::shared_ptr<one::Tensor>& targets,
+                           const std::shared_ptr<one::Tensor>& input_lengths,
+                           const std::shared_ptr<one::Tensor>& target_lengths,
+                           const std::shared_ptr<one::Tensor>& loss,
+                           const std::shared_ptr<one::Tensor>& alpha, const int32_t& blank,
+                           const bool& zero_infinity, const int64_t& max_target_length) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("blank", blank));
+    JUST(attrs.SetAttr<bool>("zero_infinity", zero_infinity));
+    JUST(attrs.SetAttr<int64_t>("max_target_length", max_target_length));
+    return OpInterpUtil::Dispatch<one::Tensor>(
+        *op_, {grad_out, log_probs, targets, input_lengths, target_lengths, loss, alpha}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class PadGradFunctor {
  public:
   PadGradFunctor() {
@@ -781,6 +838,31 @@ class BroadcastMatmulGradBFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedScaleTrilSoftmaxMaskScaleGradFunctor {
+ public:
+  FusedScaleTrilSoftmaxMaskScaleGradFunctor() {
+    fused_op_ = CHECK_JUST(one::OpBuilder("fused_tril_scale_softmax_mask_scale_grad")
+                               .Input("softmax_y")
+                               .Input("dy")
+                               .Input("mask")
+                               .Output("dx")
+                               .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& softmax_y,
+                           const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& mask, const int64_t diagonal,
+                           const float tril_scale_value, const float mask_scale_value) const {
+    MutableAttrMap fused_attrs;
+    JUST(fused_attrs.SetAttr<int64_t>("diagonal", diagonal));
+    JUST(fused_attrs.SetAttr<float>("tril_scale_value", tril_scale_value));
+    JUST(fused_attrs.SetAttr<float>("mask_scale_value", mask_scale_value));
+    return OpInterpUtil::Dispatch<Tensor>(*fused_op_, {softmax_y, dy, mask}, fused_attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> fused_op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -796,6 +878,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "BinaryCrossEntropyWithLogitsLossGrad");
   m.add_functor<impl::SparseCrossEntropyGradFunctor>("SparseCrossEntropyGrad");
   m.add_functor<impl::SparseCrossEntropyMsGradFunctor>("SparseCrossEntropyMsGrad");
+  m.add_functor<impl::SparseSoftmaxCrossEntropyGrad>("SparseSoftmaxCrossEntropyGrad");
   m.add_functor<impl::SmoothL1LossGradFunctor>("SmoothL1LossGrad");
   m.add_functor<impl::CombinedMarginLossGradFunctor>("CombinedMarginLossGrad");
   m.add_functor<impl::AffineGridGradFunctor>("AffineGridGrad");
@@ -809,6 +892,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::LayerNormParamGradFunctor>("LayerNormParamGrad");
   m.add_functor<impl::LayerNormAffineParamGradFunctor>("LayerNormAffineParamGrad");
   m.add_functor<impl::BroadcastMatmulGradBFunctor>("BroadcastMatmulGradB");
+  m.add_functor<impl::CtcLossGradFunctor>("CtcLossGrad");
+  m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleGradFunctor>(
+      "FusedScaleTrilSoftmaxMaskScaleGrad");
 };
 
 }  // namespace functional

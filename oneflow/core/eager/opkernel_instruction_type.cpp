@@ -470,7 +470,6 @@ struct LocalCallOpKernelUtil final {
     return Maybe<void>::Ok();
   }
 
- private:
   static inline Maybe<LocalCallOpKernelPhyInstrOperand*> GetLocalCallOpKernelPhyInstrOperand(
       vm::Instruction* instruction) {
     const auto& operand = instruction->instr_msg().phy_instr_operand();
@@ -480,6 +479,7 @@ struct LocalCallOpKernelUtil final {
     return ptr;
   }
 
+ private:
   static inline Maybe<const MemoryCase&> GetMemCase(LocalCallOpKernelPhyInstrOperand* operand) {
     const auto& mem_case = operand->opkernel().mem_case();
     CHECK_OR_RETURN(static_cast<bool>(mem_case));
@@ -604,6 +604,13 @@ void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const
 void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
   CHECK_OK(LocalCallOpKernelUtil::Infer(instruction));
   CHECK_OK(LocalCallOpKernelUtil::Compute(instruction));
+}
+
+const std::string& LocalCallOpKernelInstructionType::DebugOpTypeName(
+    vm::Instruction* instruction) const {
+  auto* operand =
+      CHECK_JUST(LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instruction));
+  return operand->opkernel().op_type_name();
 }
 
 Maybe<void> CallOpKernelInstructionType::MaybeInfer(vm::Instruction* instruction,

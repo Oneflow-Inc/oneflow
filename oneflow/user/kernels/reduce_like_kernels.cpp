@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/primitive/include/cast.h"
+#include "oneflow/core/primitive/include/fill.h"
 
 namespace oneflow {
 
@@ -130,9 +131,10 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
         const int32_t m = (inner_size == 1) ? outer_size : inner_size;
         const int32_t n = 1;
         const int32_t k = reduce_size;
-        NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), reduce_size,
-                                              static_cast<float16>(1.0),
-                                              tmp_buffer->mut_dptr<float16>());
+        std::unique_ptr<primitive::Fill> fill = primitive::NewPrimitive<primitive::FillFactory>(
+            ctx->stream_ctx()->device_type(), DataType::kFloat16);
+        CHECK(fill);
+        fill->Launch(ctx->stream_ctx(), tmp_buffer->mut_dptr(), 1.0, reduce_size);
         NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k,
                                                 GetOneVal<float16>(), tensor_x->dptr<float16>(),
                                                 tmp_buffer->dptr<float16>(), GetZeroVal<float16>(),

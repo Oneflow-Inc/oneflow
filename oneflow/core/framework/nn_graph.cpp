@@ -290,7 +290,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     if (GlobalProcessCtx::IsThisProcessMaster()) { Global<CtrlClient>::Get()->ClearKV(plan_name); }
   }
   // NOTE(chengcheng): recovery op_attr
-  PlanUtil::PopulateOpAttibute(&plan_, plan_.job_id2op_attribute_ref_table());
+  PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
 
   NewRuntimeBuffers();
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_));

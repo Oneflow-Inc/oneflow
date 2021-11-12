@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/job/critical_section_instance.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/common/multi_client.h"
 
 namespace oneflow {
 
@@ -34,7 +35,8 @@ class CriticalSectionWaitTickKernel final : public Kernel {
 
 void CriticalSectionWaitTickKernel::ForwardDataContent(KernelContext* ctx) const {
   auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
-  bool is_multi_client = CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get());
+  bool is_multi_client = CHECK_JUST(IsMultiClient());
+  CHECK(is_multi_client);
   CHECK(this->op_conf().has_critical_section_wait_tick_conf());
   const std::string& buffer_name = this->op_conf().critical_section_wait_tick_conf().buffer_name();
   std::shared_ptr<CriticalSectionInstance> foreign_critical_section_instance;
