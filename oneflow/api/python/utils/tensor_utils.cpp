@@ -32,7 +32,6 @@ namespace oneflow {
 namespace one {
 
 Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t) {
-  LOG(INFO) << typeid(*t).name();
   std::shared_ptr<MirroredTensor> local_tensor;
   if (t->is_local()) {
     local_tensor = JUST(t->AsMirroredTensor());

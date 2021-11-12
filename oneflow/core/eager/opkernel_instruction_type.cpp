@@ -561,7 +561,6 @@ struct LocalCallOpKernelUtil {
   //   return Maybe<void>::Ok();
   // }
 
- protected:
   static inline Maybe<LocalCallOpKernelPhyInstrOperand*> GetLocalCallOpKernelPhyInstrOperand(
       vm::Instruction* instruction) {
     const auto& operand = instruction->instr_msg().phy_instr_operand();
@@ -571,6 +570,7 @@ struct LocalCallOpKernelUtil {
     return ptr;
   }
 
+ protected:
   static inline Maybe<LocalCallOpKernelPhyInstrOperand> GetSharedLocalCallOpKernelPhyInstrOperand(
       vm::Instruction* instruction) {
     const auto& operand = instruction->instr_msg().phy_instr_operand();
