@@ -78,7 +78,7 @@ def test(test_case):
 
     train_epoch = 1
     batch_size = 4
-    num_workers = 6
+    num_workers = 4
     data_dir = os.path.join(
         os.getenv("ONEFLOW_TEST_CACHE_DIR", "./data-test"), "cifar10"
     )
@@ -116,7 +116,7 @@ def test(test_case):
                 final_loss = running_loss / 200
                 print("epoch: %d  step: %5d  loss: %.3f " % (epoch, i, final_loss))
                 running_loss = 0.0
-                # break
+                break
 
     print("final loss : ", final_loss)
 
