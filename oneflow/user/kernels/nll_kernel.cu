@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <cub/cub.cuh>
+#include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/user/kernels/loss_kernel_util.h"
@@ -32,16 +33,18 @@ __global__ RETURN_VOID_IF_NOT_HALF ComputeNllOutNone(const int64_t num_instances
                                                      const K num_classes, const K ignore_index,
                                                      const T* input, const K* target, T* out,
                                                      const T* weight, T* total_weight) {
+  const T zero_val = GetZeroVal<T>();
+  const T one_val = GetOneVal<T>();
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
     K label = target[i];
     if (label == ignore_index) {
-      out[i] = 0;
+      out[i] = zero_val;
       continue;
     }
     assert(label >= 0);
     assert(label < num_classes);
-    T cur_weight = weight == nullptr ? 1 : weight[label];
-    *total_weight += cur_weight;
+    const T cur_weight = weight == nullptr ? one_val : weight[label];
+    cuda::atomic::Add(total_weight, cur_weight);
     out[i] = -input[i * num_classes + label] * cur_weight;
   }
 }
@@ -52,16 +55,18 @@ __global__ RETURN_VOID_IF_HALF ComputeNllOutNone(const int64_t num_instances, co
                                                  const K* target, T* out, const T* weight,
                                                  T* total_weight) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  const T zero_val = __float2half(0.0);
+  const T one_val = __float2half(1.0);
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
     K label = target[i];
     if (label == ignore_index) {
-      out[i] = 0;
+      out[i] = zero_val;
       continue;
     }
     assert(label >= 0);
     assert(label < num_classes);
-    const half cur_weight = weight == nullptr ? __float2half(1.0) : weight[label];
-    *total_weight = __hadd(*total_weight, cur_weight);
+    const half cur_weight = weight == nullptr ? one_val : weight[label];
+    cuda::atomic::Add(total_weight, cur_weight);
     out[i] = __float2half(-__half2float(input[i * num_classes + label] * cur_weight));
   }
 #else
@@ -76,16 +81,18 @@ __global__ RETURN_VOID_IF_NOT_HALF ComputeNllOutReduce(const int64_t num_instanc
                                                        const T* input, const K* target, T* out,
                                                        const T* weight, T* total_weight,
                                                        bool is_reduce_mean) {
+  const T zero_val = GetZeroVal<T>();
+  const T one_val = GetOneVal<T>();
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
-  T weight_thread_sum = static_cast<T>(0);
-  T out_thread_sum = static_cast<T>(0);
+  T weight_thread_sum = zero_val;
+  T out_thread_sum = zero_val;
   for (int i = threadIdx.x; i < num_instances; i += kCudaThreadsNumPerBlock) {
     K label = target[i];
     if (label == ignore_index) { continue; }
     assert(label >= 0);
     assert(label < num_classes);
-    T cur_weight = weight == nullptr ? 1 : weight[label];
+    const T cur_weight = weight == nullptr ? one_val : weight[label];
     weight_thread_sum += cur_weight;
     out_thread_sum -= input[i * num_classes + label] * cur_weight;
   }
@@ -105,16 +112,18 @@ __global__ RETURN_VOID_IF_HALF ComputeNllOutReduce(const int64_t num_instances, 
                                                    const K* target, T* out, const T* weight,
                                                    T* total_weight, bool is_reduce_mean) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  const T zero_val = __float2half(0.0);
+  const T one_val = __float2half(1.0);
   typedef cub::BlockReduce<half, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
-  half weight_thread_sum = __float2half(0);
-  half out_thread_sum = __float2half(0);
+  half weight_thread_sum = zero_val;
+  half out_thread_sum = zero_val;
   for (int i = threadIdx.x; i < num_instances; i += kCudaThreadsNumPerBlock) {
     K label = target[i];
     if (label == ignore_index) { continue; }
     assert(label >= 0);
     assert(label < num_classes);
-    const half cur_weight = weight == nullptr ? __float2half(1.0) : weight[label];
+    const half cur_weight = weight == nullptr ? one_val : weight[label];
     weight_thread_sum = __hadd(weight_thread_sum, cur_weight);
     out_thread_sum = __hsub(out_thread_sum, __hmul(input[i * num_classes + label], cur_weight));
   }
@@ -143,7 +152,7 @@ __global__ RETURN_VOID_IF_NOT_HALF ComputeNllGradOut(const int64_t num_instances
     if (label == ignore_index) { continue; }
     assert(label >= 0);
     assert(label < num_classes);
-    T cur_weight = weight == nullptr ? -1 : -weight[label];
+    const T cur_weight = weight == nullptr ? -GetOneVal<T>() : -weight[label];
     dx[i * num_classes + label] =
         (reduction_type == ReductionType::kNone ? dy[i] : (*dy)) * cur_weight;
     if (reduction_type == ReductionType::kMean) { dx[i * num_classes + label] /= *total_weight; }
@@ -200,6 +209,7 @@ class NllKernel final : public user_op::OpKernel {
     T* total_weight = total_weight_blob->mut_dptr<T>();
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
+    Memset<DeviceType::kGPU>(ctx->device_ctx(), total_weight, 0, GetCudaAlignedSize(sizeof(T)));
 
     if (reduction == ReductionType::kNone) {
       ComputeNllOutNone<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,

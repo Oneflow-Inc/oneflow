@@ -32,8 +32,9 @@ __global__ void ApplyLossReductionImpl(int64_t elem_cnt, const T* tmp_out, T* ou
   __syncthreads();
   T block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(thread_sum, cub::Sum());
   if (threadIdx.x == 0) {
-    *out = block_sum;
-    if (is_reduce_mean) { *out /= elem_cnt; }
+    T out_val = block_sum;
+    if (is_reduce_mean) { out_val /= elem_cnt; }
+    *out = out_val;
   }
 }
 
@@ -50,8 +51,9 @@ __global__ void ApplyLossReductionImpl<half>(int64_t elem_cnt, const half* tmp_o
   __syncthreads();
   half block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(thread_sum, cub::Sum());
   if (threadIdx.x == 0) {
-    *out = block_sum;
-    if (is_reduce_mean) { *out = __float2half(__half2float(*out) / elem_cnt); }
+    half out_val = block_sum;
+    if (is_reduce_mean) { out_val = __float2half(__half2float(*out) / elem_cnt); }
+    *out = out_val;
   }
 #else
   printf("use half need nvcc arch >= 530");

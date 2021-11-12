@@ -27,11 +27,15 @@ template<typename T>
 __global__ void ComputeKLDivOut(int64_t elem_cnt, const T* input, const T* target, T* out,
                                 const bool log_target) {
   if (log_target) {
-    CUDA_1D_KERNEL_LOOP(i, elem_cnt) { out[i] = exp(target[i]) * (target[i] - input[i]); }
+    CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+      const T target_val = target[i];
+      out[i] = exp(target_val) * (target_val - input[i]);
+    }
   } else {
     CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-      const auto out_val = target[i] * (SafeLog(target[i]) - input[i]);
-      out[i] = target[i] > 0 ? out_val : static_cast<T>(0);
+      const T target_val = target[i];
+      const auto out_val = target_val * (SafeLog(target_val) - input[i]);
+      out[i] = target_val > 0 ? out_val : static_cast<T>(0);
     }
   }
 }
@@ -43,12 +47,14 @@ __global__ void ComputeKLDivOut(int64_t elem_cnt, const half* input, const half*
   const half zero_half = __float2half(0.0);
   if (log_target) {
     CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-      out[i] = __hmul(hexp(target[i]), __hsub(target[i], input[i]));
+      const half target_val = target[i];
+      out[i] = __hmul(hexp(target_val), __hsub(target_val, input[i]));
     }
   } else {
     CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-      const half out_val = __hmul(target[i], __hsub(SafeLog(target[i]), input[i]));
-      out[i] = __hgt(target[i], zero_half) ? out_val : zero_half;
+      const half target_val = target[i];
+      const half out_val = __hmul(target_val, __hsub(SafeLog(target_val), input[i]));
+      out[i] = __hgt(target_val, zero_half) ? out_val : zero_half;
     }
   }
 #else
@@ -58,30 +64,35 @@ __global__ void ComputeKLDivOut(int64_t elem_cnt, const half* input, const half*
 }
 
 template<typename T>
-__global__ void ComputeKLDivGradOut(int64_t elem_cnt, const T* input, const T* target, const T* dy,
-                                    T* dx, const ReductionType reduction_type,
-                                    const bool log_target) {
+__global__ void ComputeKLDivGradOut(int64_t elem_cnt, float one_div_elem_cnt, const T* input,
+                                    const T* target, const T* dy, T* dx,
+                                    const ReductionType reduction_type, const bool log_target) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+    const T target_val = target[i];
     const T dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
-    dx[i] = log_target ? -exp(target[i]) * dy_val : target[i] > 0 ? -target[i] * dy_val : 0;
-    if (reduction_type == ReductionType::kMean) { dx[i] /= elem_cnt; }
+    T dx_val;
+    dx_val = log_target ? -exp(target_val) * dy_val : target_val > 0 ? -target_val * dy_val : 0;
+    if (reduction_type == ReductionType::kMean) { dx_val *= one_div_elem_cnt; }
+    dx[i] = dx_val;
   }
 }
 
 template<>
-__global__ void ComputeKLDivGradOut(int64_t elem_cnt, const half* input, const half* target,
-                                    const half* dy, half* dx, const ReductionType reduction_type,
-                                    const bool log_target) {
+__global__ void ComputeKLDivGradOut(int64_t elem_cnt, float one_div_elem_cnt, const half* input,
+                                    const half* target, const half* dy, half* dx,
+                                    const ReductionType reduction_type, const bool log_target) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   const half zero_half = __float2half(0.0);
+  const half half_one_div_elem_cnt = __float2half(one_div_elem_cnt);
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+    const half target_val = target[i];
     const half dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
-    dx[i] = log_target
-                ? __hneg(__hmul(hexp(target[i]), dy_val))
-                : (__hgt(target[i], zero_half) ? __hneg(__hmul(target[i], dy_val)) : zero_half);
-    if (reduction_type == ReductionType::kMean) {
-      dx[i] = __hdiv(dx[i], __float2half(static_cast<float>(elem_cnt)));
-    }
+    half dx_val;
+    dx_val = log_target
+                 ? __hneg(__hmul(hexp(target_val), dy_val))
+                 : (__hgt(target_val, zero_half) ? __hneg(__hmul(target_val, dy_val)) : zero_half);
+    if (reduction_type == ReductionType::kMean) { dx_val = __hmul(dx_val, half_one_div_elem_cnt); }
+    dx[i] = dx_val;
   }
 #else
   printf("use half need nvcc arch >= 530");
@@ -107,8 +118,8 @@ class KLDivGradKernel : public SimpleLossGradKernel<DeviceType::kGPU, T, KLDivGr
                   const T* target, const T* dy, T* dx, const ReductionType reduction) const {
     const bool log_target = ctx->Attr<bool>("log_target");
     ComputeKLDivGradOut<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                          ctx->device_ctx()->cuda_stream()>>>(elem_cnt, input, target, dy, dx,
-                                                              reduction, log_target);
+                          ctx->device_ctx()->cuda_stream()>>>(
+        elem_cnt, 1.0 / elem_cnt, input, target, dy, dx, reduction, log_target);
   }
 };
 
