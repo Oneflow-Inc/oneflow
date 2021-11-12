@@ -551,7 +551,6 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   }
   Maybe<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
   Maybe<void> set_requires_grad(bool requires_grad) override {
-    // return impl_->set_requires_grad(requires_grad);
     JUST(impl_->set_requires_grad(requires_grad));
     if (!requires_grad) { set_grad_fn_node(nullptr); }
     return Maybe<void>::Ok();
