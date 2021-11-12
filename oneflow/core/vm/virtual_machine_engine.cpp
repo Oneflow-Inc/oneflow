@@ -74,13 +74,13 @@ void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
     // Edges are erased only if the instruction is completed.
     out_edges->Erase(out_edge);
     out_instruction->mut_in_edges()->Erase(out_edge);
-    TryMoveFromWaitingToReady(out_instruction);
+    if (Dispatchable(out_instruction)) { mut_ready_instruction_list()->PushBack(out_instruction); }
   }
 }
 
-// Handle pending instructions, schedule them to waiting list or ready list.
-void VirtualMachineEngine::MovePendingToReadyOrWaiting() {
-  OF_PROFILER_RANGE_PUSH("MovePendingToReadyOrWaiting");
+// Handle pending instructions, and try schedule them to ready list.
+void VirtualMachineEngine::HandlePending() {
+  OF_PROFILER_RANGE_PUSH("HandlePending");
   InstructionMsgList tmp_pending_msg_list;
   // MoveTo is under a lock.
   mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
@@ -99,7 +99,6 @@ void VirtualMachineEngine::MovePendingToReadyOrWaiting() {
       new_instruction_list.Erase(instruction);
     }
   }
-  new_instruction_list.MoveTo(mut_waiting_instruction_list());
   OF_PROFILER_RANGE_POP();
 }
 
@@ -458,7 +457,9 @@ void VirtualMachineEngine::DispatchAndPrescheduleInstructions() {
     DispatchInstruction(instruction.Mutable());
     // preschedule instructions
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_out_edges()) {
-      TryMoveFromWaitingToReady(edge->mut_dst_instruction());
+      if (Dispatchable(edge->mut_dst_instruction())) {
+        mut_ready_instruction_list()->PushBack(edge->mut_dst_instruction());
+      }
     }
   }
   OF_PROFILER_RANGE_POP();
@@ -676,14 +677,6 @@ void VirtualMachineEngine::TryDeleteLogicalObjects() {
   }
 }
 
-void VirtualMachineEngine::TryMoveFromWaitingToReady(Instruction* instruction) {
-  if (Dispatchable(instruction)) {
-    // For memory safety, do not swap the following two lines.
-    mut_ready_instruction_list()->PushBack(instruction);
-    mut_waiting_instruction_list()->Erase(instruction);
-  }
-}
-
 void VirtualMachineEngine::Schedule() {
   // Release finished instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_active_stream_list()->size())) { ReleaseFinishedInstructions(); }
@@ -691,7 +684,7 @@ void VirtualMachineEngine::Schedule() {
   if (unlikely(mut_delete_logical_object_list()->size())) { TryDeleteLogicalObjects(); }
   // Try run the first barrier instruction.
   if (unlikely(mut_barrier_instruction_list()->size())) { TryRunBarrierInstruction(); }
-  // Handle pending instructions, schedule them to waiting list or ready list.
+  // Handle pending instructions, and try schedule them to ready list.
   // Use thread_unsafe_size to avoid acquiring mutex lock.
   // The inconsistency between pending_msg_list.list_head_.list_head_.container_ and
   // pending_msg_list.list_head_.list_head_.size_ is not a fatal error because
@@ -700,7 +693,7 @@ void VirtualMachineEngine::Schedule() {
   //  VirtualMachineEngine::Receive may be less effiencient if the thread safe version
   //  `pending_msg_list().size()` used here, because VirtualMachineEngine::Schedule is more likely
   //  to get the mutex lock.
-  if (unlikely(pending_msg_list().thread_unsafe_size())) { MovePendingToReadyOrWaiting(); }
+  if (unlikely(pending_msg_list().thread_unsafe_size())) { HandlePending(); }
   // dispatch ready instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_ready_instruction_list()->size())) { DispatchAndPrescheduleInstructions(); }
 }

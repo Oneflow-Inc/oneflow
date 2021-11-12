@@ -67,7 +67,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   const LogicalObjectDeleteList& delete_logical_object_list() const {
     return delete_logical_object_list_;
   }
-  const InstructionList& waiting_instruction_list() const { return waiting_instruction_list_; }
   const LivelyInstructionList& lively_instruction_list() const { return lively_instruction_list_; }
   const BarrierInstructionList& barrier_instruction_list() const {
     return barrier_instruction_list_;
@@ -86,7 +85,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   ActiveStreamList* mut_active_stream_list() { return &active_stream_list_; }
   ThreadCtxList* mut_thread_ctx_list() { return &thread_ctx_list_; }
   LogicalObjectDeleteList* mut_delete_logical_object_list() { return &delete_logical_object_list_; }
-  InstructionList* mut_waiting_instruction_list() { return &waiting_instruction_list_; }
   LivelyInstructionList* mut_lively_instruction_list() { return &lively_instruction_list_; }
   BarrierInstructionList* mut_barrier_instruction_list() { return &barrier_instruction_list_; }
   InstructionMsgMutextList* mut_pending_msg_list() { return &pending_msg_list_; }
@@ -127,7 +125,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   ReadyInstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
 
   void ReleaseFinishedInstructions();
-  void MovePendingToReadyOrWaiting();
+  void HandlePending();
   void TryRunBarrierInstruction();
   void DispatchAndPrescheduleInstructions();
   bool OnSchedulerThread(const StreamType& stream_type);
@@ -175,7 +173,6 @@ class VirtualMachineEngine final : public intrusive::Base {
 
   bool Dispatchable(Instruction* instruction) const;
   void TryDispatchReadyInstructions();
-  void TryMoveFromWaitingToReady(Instruction* instruction);
 
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
@@ -190,7 +187,6 @@ class VirtualMachineEngine final : public intrusive::Base {
         id2logical_object_(),
         delete_logical_object_list_(),
         pending_msg_list_(),
-        waiting_instruction_list_(),
         ready_instruction_list_(),
         lively_instruction_list_(),
         barrier_instruction_list_() {}
@@ -207,8 +203,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   Id2LogicalObject id2logical_object_;
   LogicalObjectDeleteList delete_logical_object_list_;
   InstructionMsgMutextList pending_msg_list_;
-  // TODO(lixinqi): remove waiting_instruction_list_;
-  InstructionList waiting_instruction_list_;
   ReadyInstructionList ready_instruction_list_;
   LivelyInstructionList lively_instruction_list_;
   BarrierInstructionList barrier_instruction_list_;
