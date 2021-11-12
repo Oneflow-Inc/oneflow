@@ -13,10 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <mutex>
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/device/node_device_descriptor_manager.h"
 #include "oneflow/core/device/cuda_device_descriptor.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 
@@ -166,6 +170,34 @@ CublasMathModeGuard::~CublasMathModeGuard() {
 void CublasMathModeGuard::SetMathMode(cublasMath_t new_mode) {
   new_mode_ = new_mode;
   if (new_mode_ != saved_mode_) { OF_CUBLAS_CHECK(cublasSetMathMode(handle_, saved_mode_)); }
+}
+
+int GetCudaDeviceIndex() {
+  int cuda_device_index = 0;
+  if (CHECK_JUST(GlobalMultiClientEnv())) {
+    cuda_device_index = GlobalProcessCtx::LocalRank();
+  } else {
+    OF_CUDA_CHECK(cudaGetDevice(&cuda_device_index));
+  }
+  return cuda_device_index;
+}
+
+int GetCudaDeviceCount() {
+  /* static */ int cuda_device_count = 0;
+  CudaCurrentDeviceGuard dev_guard(GetCudaDeviceIndex());
+  OF_CUDA_CHECK(cudaGetDeviceCount(&cuda_device_count));
+  return cuda_device_count;
+}
+
+void InitCudaContextOnce(int device_id) {
+  static int device_count = GetCudaDeviceCount();
+  static std::vector<std::once_flag> init_flags = std::vector<std::once_flag>(device_count);
+  if (LazyMode::is_enabled()) { return; }
+  if (device_id == -1) { device_id = GetCudaDeviceIndex(); }
+  std::call_once(init_flags[device_id], [&]() {
+    OF_CUDA_CHECK(cudaSetDevice(device_id));
+    OF_CUDA_CHECK(cudaDeviceSynchronize());
+  });
 }
 
 #endif  // WITH_CUDA
