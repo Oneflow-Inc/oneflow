@@ -255,8 +255,7 @@ void LaunchKernel(StreamContext* stream_ctx, const int64_t* src_dims, const void
                   const int* permutation, void* dst, size_t count) {
   PermuteKernelParams<num_dims, IndexType> params =
       MakePermuteParams<num_dims, IndexType>(src_dims, src, permutation, dst, count);
-  cudaStream_t cuda_stream =
-      CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
+  cudaStream_t cuda_stream = stream_ctx->As<CudaStreamContext>()->cuda_stream();
 
   if (num_dims == 2 || num_dims == 3) {
     IndexType num_batches;

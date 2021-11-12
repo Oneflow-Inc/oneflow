@@ -30,7 +30,7 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
   ~ElementwiseUnaryImpl() override = default;
 
   void Launch(StreamContext* stream_ctx, const void* src, void* dst, size_t count) override {
-    auto* cuda_stream_ctx = CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx));
+    auto* cuda_stream_ctx = stream_ctx->As<CudaStreamContext>();
     OF_CUDA_CHECK(
         (cuda::elementwise::Unary<UnaryFunctor<DeviceType::kGPU, unary_op, Dst, Src>, Dst, Src>(
             UnaryFunctor<DeviceType::kGPU, unary_op, Dst, Src>(), count,
