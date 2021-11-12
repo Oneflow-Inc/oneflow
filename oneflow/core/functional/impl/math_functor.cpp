@@ -1177,7 +1177,6 @@ class SelectTopNFunctor {
       require_grad.push_back(inputs.at(i)->requires_grad());
     }
     const auto& output = JUST(OpInterpUtil::Dispatch<one::TensorTuple>(*op_, inputs, attr));
-    
     for (int i = 0; i < require_grad.size(); i++) {
       inputs.at(i)->set_is_leaf(is_leaf[i]);
       inputs.at(i)->set_requires_grad(require_grad[i]);
