@@ -1421,18 +1421,18 @@ class DropoutFunctor {
     dropout_op_ =
         CHECK_JUST(one::OpBuilder("dropout").Input("in").Output("out").Output("mask").Build());
   }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& a, const float& p,
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
                            const bool& training, const Optional<one::Generator>& generator) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
     
     MutableAttrMap dropout_attrs;
     if(!training){
-      JUST(dropout_attrs.SetAttr<float>("rate", 0.0));
+      return TensorTuple({x}); 
     }else{
       JUST(dropout_attrs.SetAttr<float>("rate", p));
     }
-    return OpInterpUtil::Dispatch<TensorTuple>(*dropout_op_, {a}, OpExprInterpContext(dropout_attrs, dropout_state));
+    return OpInterpUtil::Dispatch<TensorTuple>(*dropout_op_, {x}, OpExprInterpContext(dropout_attrs, dropout_state));
   }
 
  private:
