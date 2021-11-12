@@ -13,15 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <map>
+
 #include <gtest/gtest.h>
 #include "oneflow/api/cpp/api.h"
 #include "oneflow/api/cpp/device.h"
 
 namespace oneflow_api {
+namespace {
+
+class EnvScope {  // NOLINT
+ public:
+  EnvScope() { initialize(); }
+  ~EnvScope() { release(); }
+};
+
+}  // namespace
 
 TEST(Api, init_and_release) {
-  initialize();
+  EnvScope scope;
 
   auto device = Device("cpu");
   ASSERT_EQ(device.type(), "cpu");
@@ -35,8 +44,6 @@ TEST(Api, init_and_release) {
   ASSERT_EQ(device.type(), "cuda");
   ASSERT_EQ(device.device_id(), 2);
 #endif
-
-  release();
 }
 
 }  // namespace oneflow_api
