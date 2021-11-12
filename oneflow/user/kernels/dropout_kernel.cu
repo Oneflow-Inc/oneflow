@@ -16,10 +16,8 @@ limitations under the License.
 #include <cstdint>
 #include <memory>
 #include "oneflow/user/kernels/dropout_kernel.h"
-// #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 #include "oneflow/core/kernel/random_generator.h"
-// #include "oneflow/user/kernels/random_mask_generator.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/cuda/elementwise.cuh"
@@ -344,9 +342,6 @@ void MaskAndScale(DeviceCtx* ctx, uint64_t seed, int32_t* counter, uint64_t* off
   int32_t block_size = 256; 
   unsigned int grid_size = ComputeGridSize<4>(block_size, elem_cnt); 
   uint64_t counter_offset = ((elem_cnt - 1)/(block_size*grid_size*UNROLL)+1)*UNROLL;
-  printf("Counter offset is: %d \n", counter_offset); 
-  printf("Grid size is: %u \n", grid_size); 
-  printf("Block size is: %u \n", block_size); 
   MaskAndScaleGpu<T, 4><<<grid_size, block_size, 0, ctx->cuda_stream()>>>(seed, counter, offset, counter_offset, elem_cnt, rate, scale, x, mask, y);
 }
 
@@ -396,7 +391,6 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
     uint64_t* offset = cuda_gen->dev_offset(); 
 
     if (ctx->has_input("_add_to_output", 0)) {
-      printf("Do nothing skip! \n"); 
       const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       MaskAndScaleAdd<T>(ctx->device_ctx(), seed, counter, offset, in->shape().elem_cnt(), rate, scale, in->dptr<T>(),
                          mask->mut_dptr<int8_t>(), addend->dptr<T>(), out->mut_dptr<T>());
@@ -450,7 +444,7 @@ class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::Cud
         return Maybe<void>::Ok();                                                               \
       });
 
-// REGISTER_DROPOUT_GRAD_KERNEL_GPU(half)
+REGISTER_DROPOUT_GRAD_KERNEL_GPU(half)
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(float)
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(double)
 
