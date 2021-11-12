@@ -1173,13 +1173,13 @@ class SelectTopNFunctor {
     std::vector<bool> require_grad(inputs.size());
     std::vector<bool> is_leaf(inputs.size());
     for (int i = 0; i < inputs.size(); ++i) {
-      is_leaf[i] = (inputs.at(i)->is_leaf());
-      require_grad[i] = (inputs.at(i)->requires_grad());
+      is_leaf.at(i) = (inputs.at(i)->is_leaf());
+      require_grad.at(i) = (inputs.at(i)->requires_grad());
     }
     const auto& output = JUST(OpInterpUtil::Dispatch<one::TensorTuple>(*op_, inputs, attr));
     for (int i = 0; i < require_grad.size(); ++i) {
-      inputs.at(i)->set_is_leaf(is_leaf[i]);
-      inputs.at(i)->set_requires_grad(require_grad[i]);
+      inputs.at(i)->set_is_leaf(is_leaf.at(i));
+      inputs.at(i)->set_requires_grad(require_grad.at(i));
     }
     return output;
   }
