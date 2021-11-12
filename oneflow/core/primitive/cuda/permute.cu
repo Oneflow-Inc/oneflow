@@ -114,7 +114,7 @@ __global__ void BatchTransposeKernel(const void* src_ptr, void* dst_ptr, IndexTy
 /*
 Here is a Movementsie=2 version of Batch Transpose.
 When the H W can be divided by 2. we can read data use movementsize=4, and write back as
-movementsize=2.
+movementsize=4.
 */
 template<size_t num_dims, size_t tile_size, typename IndexType>
 __global__ void BatchTransposeMovement2Kernel(const void* src_ptr, void* dst_ptr, IndexType rows,
@@ -178,10 +178,10 @@ __global__ void BatchTransposeMovement2Kernel(const void* src_ptr, void* dst_ptr
           T_MOV4 m4;
           T_MOV2 m2[2];
         } tmp_storage;
-        tmp_storage.m2[0] = tile_mem.tile_m2[col_in_tile * 2][row_in_tile];
-        tmp_storage.m2[1] = tile_mem.tile_m2[col_in_tile * 2 + 1][row_in_tile];
 
         if (col_in_matrix < dst_cols && row_in_matrix < dst_rows) {
+          tmp_storage.m2[0] = tile_mem.tile_m2[col_in_tile * 2][row_in_tile];
+          tmp_storage.m2[1] = tile_mem.tile_m2[col_in_tile * 2 + 1][row_in_tile];
           dst[(offset + row_in_matrix * dst_cols + col_in_matrix) / 2] = tmp_storage.m4;
         }
       }
@@ -195,8 +195,8 @@ void LaunchBatchTransposeKernel(cudaStream_t& cuda_stream,
                                 const PermuteKernelParams<num_dims, IndexType>& params,
                                 const IndexType& num_batches, const IndexType& rows,
                                 const IndexType& cols) {
-  IndexType num_tile_rows = (rows + tile_size - 1) / tile_size;  // 8
-  IndexType num_tile_cols = (cols + tile_size - 1) / tile_size;  // 7
+  IndexType num_tile_rows = (rows + tile_size - 1) / tile_size;
+  IndexType num_tile_cols = (cols + tile_size - 1) / tile_size;
   const int32_t block_nums = num_batches * num_tile_rows * num_tile_cols;
   int32_t launched_block_nums = std::min(block_nums, kCudaMaxBlocksNum);
   if (tile_size == kMov2TileSize) {
@@ -205,7 +205,7 @@ void LaunchBatchTransposeKernel(cudaStream_t& cuda_stream,
         <<<launched_block_nums, dim3(half2_thread, kBlockRows), 0, cuda_stream>>>(
             params.src, params.dst, rows, cols, num_tile_rows, num_tile_cols,
             block_nums);  // Set threads num as 32x8 cause each threads
-                          // process 4 elements to 32x32 share memory.
+                          // process 4 elements to 64x66 half share memory.
   } else {
     BatchTransposeKernel<num_dims, movement_size, tile_size, IndexType>
         <<<launched_block_nums, dim3(tile_size, kBlockRows), 0, cuda_stream>>>(
