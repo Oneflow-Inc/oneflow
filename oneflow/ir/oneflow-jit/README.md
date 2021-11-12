@@ -93,6 +93,17 @@ For a typical "lazy tensor" implementation, there is usually a "sequence of oper
 In exec mode, it is necessary to track the if a lazy tensor is being referenced by Python and later it will be replaced with Eager Tensor.
 
 - Use weak ptr to check if a lazy tensor is being referenced by Python.
+- Edge cases
+
+- Intermediate tensor optimized away used after evaluation
+
+```python3
+x = SomeOp(..)
+y = x + 1
+z = y + 2
+print(z) // evaluation, # y is folded
+print(y) // y, will be evaluated "again"
+```
 
 ### Multi level cache
 
