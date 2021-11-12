@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/register/tensor_slice_view.h"
 #include "oneflow/core/register/blob.h"
-#include "oneflow/core/primitive/include/copy_nd.h"
+#include "oneflow/core/ep/include/primitive/copy_nd.h"
 
 namespace oneflow {
 
@@ -42,7 +42,7 @@ class TensorSliceCopier final {
   NdIndex src_pos_;
   Shape extent_;
   const DataType data_type_;
-  std::unique_ptr<primitive::CopyNd> copy_nd_primitive_;
+  std::unique_ptr<ep::primitive::CopyNd> copy_nd_primitive_;
 };
 
 }  // namespace oneflow
