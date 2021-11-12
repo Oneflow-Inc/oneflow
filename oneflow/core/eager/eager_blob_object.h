@@ -142,27 +142,16 @@ class DTREagerBlobObject final : public EagerBlobObject {
   DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
                      const std::shared_ptr<Shape>& shape, DataType data_type,
                      const std::shared_ptr<TensorBuffer>& tensor_buffer)
-      : DTREagerBlobObject(mem_case, shape, data_type, tensor_buffer, nullptr) {
-    compute_time_ = 0;
-    last_access_time_ = 0;
-    pinned_ = 0;
-    compute_op_ = nullptr;
-    node_ = nullptr;
-    user_ops_ = std::vector<std::unique_ptr<DTRInstrOperand>>();
-    could_evict_ = true;
-  }
+      : DTREagerBlobObject(mem_case, shape, data_type, tensor_buffer, nullptr) {}
   DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
                      const std::shared_ptr<Shape>& shape, DataType data_type,
                      const std::shared_ptr<TensorBuffer>& tensor_buffer, LocalDepObject* dep_object)
-      : EagerBlobObject(mem_case, shape, data_type, tensor_buffer, dep_object) {
-    compute_time_ = 0;
-    last_access_time_ = 0;
-    pinned_ = 0;
-    compute_op_ = nullptr;
-    node_ = nullptr;
-    user_ops_ = std::vector<std::unique_ptr<DTRInstrOperand>>();
-    could_evict_ = true;
-  }
+      : EagerBlobObject(mem_case, shape, data_type, tensor_buffer, dep_object),
+        could_evict_(true),
+        compute_time_(0),
+        last_access_time_(0),
+        pinned_(0),
+        compute_op_(nullptr) {}
   ~DTREagerBlobObject() override;
 
   Maybe<void> InitBlobAttrs(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
@@ -173,7 +162,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
   const double last_access_time() const { return last_access_time_; }
   DTRInstrOperand* compute_op() const { return compute_op_.get(); }
   Maybe<DTRInstrOperand*> user_op(int i) const {
-    CHECK_LT(i, user_ops_.size());
+    CHECK_LT_OR_RETURN(i, user_ops_.size());
     CHECK_NOTNULL_OR_RETURN(user_ops_[i].get());
     return user_ops_[i].get();
   }
@@ -207,7 +196,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
   void update_user_ops(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
   Maybe<void> evict() {
     evict_flag_ = true;
-    DeallocateBlobDataPtr();
+    JUST(DeallocateBlobDataPtr());
     blob_->reset_dptr(nullptr);
     CHECK_NE_OR_RETURN(is_in_memory(), true);
     return Maybe<void>::Ok();

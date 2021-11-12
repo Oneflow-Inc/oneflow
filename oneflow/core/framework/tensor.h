@@ -367,12 +367,7 @@ class Parameter final : public TensorIf<Parameter> {
   // }
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override;
 
-  Maybe<MirroredTensor> AsMirroredTensor() override {
-    if (const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(tensor_)) {
-      return mirrored_tensor;
-    }
-    RETURN_ERROR_WITH_BUG_PROMPT();
-  }
+  Maybe<MirroredTensor> AsMirroredTensor() override;
 
   Maybe<ConsistentTensor> AsConsistentTensor() override {
     if (const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(tensor_)) {

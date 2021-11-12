@@ -778,7 +778,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
         }));
 
     // Display info of current tensor pool
-    if (oneflow::DTRDebugEnabled()) { JUST(Global<one::DTRTensorPool>::Get()->display()); }
+    // if (oneflow::DTRDebugEnabled()) { JUST(Global<one::DTRTensorPool>::Get()->display()); }
 
     // // Display output shared_ptr's count
     // std::cout << "======================== Display output dtrblobobject shared_ptr's count
@@ -844,6 +844,14 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
   //   return Maybe<void>::Ok();
   // }
 };
+
+
+Maybe<void> DTRUtil::recompute(vm::DTREagerBlobObject* object, const vm::Stream& stream) {
+  if (object->is_in_memory()) {
+    return Maybe<void>::Ok();
+  }
+  return DTRLocalCallOpKernelUtil::recompute(object, stream);
+}
 
 void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
   UNIMPLEMENTED();

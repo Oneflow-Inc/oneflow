@@ -32,6 +32,7 @@ namespace oneflow {
 namespace one {
 
 Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t) {
+  LOG(INFO) << typeid(*t).name();
   std::shared_ptr<MirroredTensor> local_tensor;
   if (t->is_local()) {
     local_tensor = JUST(t->AsMirroredTensor());
@@ -43,6 +44,7 @@ Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t) {
     JUST(builder->AccessBlobByCallback(
         local_tensor,
         [](uint64_t of_blob_ptr) {
+          LOG(INFO) << "of_blob_ptr: " << of_blob_ptr;
           auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
           of_blob->AsyncAutoMemset(0);
         },

@@ -181,7 +181,7 @@ Maybe<double> DTREagerBlobObject::child_cost() const {
   double cost = 0;
 
   for (int i = 0; i < user_ops_.size(); ++i) {
-    const auto* ptr = dynamic_cast<DTRInstrOperand*>(CHECK_JUST(user_op(i)));
+    const auto* ptr = dynamic_cast<DTRInstrOperand*>(JUST(user_op(i)));
     CHECK_NOTNULL_OR_RETURN(ptr);
     for (const auto& output : ptr->outputs()) {
       if (!output.expired()) {
@@ -193,6 +193,8 @@ Maybe<double> DTREagerBlobObject::child_cost() const {
           auto c_cost = JUST(dtr_blob_object->child_cost());
           cost = cost + com_time + c_cost;
         }
+      } else {
+        CHECK_OR_RETURN(false);
       }
 
       // CHECK_OR_RETURN(static_cast<bool>(output.get()));

@@ -455,7 +455,9 @@ class StatefulLocalOpKernel final {
   std::shared_ptr<OperatorConf> op_conf_;
   std::unique_ptr<ComposedAttrMap> composed_attrs_for_scheduler_thread_;
   std::unique_ptr<ComposedAttrMap> composed_attrs_for_main_thread_;
+ public:
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
+ private:
   Symbol<Device> device_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
   std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;

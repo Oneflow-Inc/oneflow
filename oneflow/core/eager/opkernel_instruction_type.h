@@ -144,6 +144,13 @@ class FeedBlobInstructionType : public vm::InstructionType {
   virtual const char* device_tag() const = 0;
 };
 
+class DTREagerBlobObject;
+
+class DTRUtil {
+ public:
+  static Maybe<void> recompute(DTREagerBlobObject* object, const Stream& stream);
+};
+
 }  // namespace vm
 }  // namespace oneflow
 

@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_EAGER_LOCAL_CALL_OPKERNEL_PHY_INSTR_OPERAND_H_
 
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
-#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/vm/instruction_operand.h"
@@ -126,17 +125,7 @@ class DTRInstrOperand {
       const one::EagerBlobObjectListPtr& input, const one::EagerBlobObjectListPtr& output,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
       const one::OpExprInterpContext& op_interp_ctx_,
-      const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)
-      : opkernel_(opkernel),
-        consistent_tensor_infer_result_(consistent_tensor_infer_result),
-        op_interp_ctx_(op_interp_ctx_),
-        dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode) {
-    // inputs & outputs weak_ptr
-    inputs_ = std::vector<std::weak_ptr<vm::EagerBlobObject>>();
-    for (const auto& in : *input) { inputs_.emplace_back(in); }
-    outputs_ = std::vector<std::weak_ptr<vm::EagerBlobObject>>();
-    for (const auto& out : *output) { outputs_.emplace_back(out); }
-  }
+      const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode);
   ~DTRInstrOperand() = default;
 
   const std::shared_ptr<one::StatefulLocalOpKernel>& shared_opkernel() const { return opkernel_; }
@@ -157,7 +146,6 @@ class DTRInstrOperand {
   std::vector<std::weak_ptr<vm::EagerBlobObject>> outputs_;
   std::shared_ptr<const one::ConsistentTensorInferResult> consistent_tensor_infer_result_;
   const one::OpExprInterpContext op_interp_ctx_;
-  const user_op::OpKernel* user_opkernel_;
   const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode_;
 };
 

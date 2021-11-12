@@ -266,7 +266,7 @@ class DTREagerMirroredTensorImpl final : public EagerMirroredTensorImpl {
   // ~DTREagerMirroredTensorImpl() {}
   ~DTREagerMirroredTensorImpl() override {}
 
-  Maybe<void> InitEagerBlobObject(LocalDepObject* dep_object);
+  Maybe<void> InitEagerBlobObject(LocalDepObject* dep_object) override;
   // Maybe<void> InitEagerBlobObjectAndTensorStorage(
   //     const std::shared_ptr<vm::DTREagerBlobObject>& eager_blob_object,
   //     const std::shared_ptr<TensorStorage>& tensor_storage);

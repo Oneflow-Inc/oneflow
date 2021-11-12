@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/opkernel_instruction_type.h"
 
 namespace oneflow {
 namespace vm {
@@ -126,6 +127,12 @@ void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) 
       dynamic_cast<const vm::AccessBlobArgCbPhyInstrOperand*>(phy_instr_operand.get());
   CHECK_NOTNULL(ptr);
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
+  if (auto dtr_ebo = std::dynamic_pointer_cast<DTREagerBlobObject>(ptr->eager_blob_object())) {
+    CHECK_JUST(DTRUtil::recompute(dtr_ebo.get(), instruction->stream()));
+    LOG(INFO) << "access blob";
+    LOG(INFO) << dtr_ebo->is_in_memory();
+    LOG(INFO) << dtr_ebo->is_evictable();
+  }
   OfBlob ofblob(device_ctx, ptr->eager_blob_object()->mut_blob());
   ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));
 }

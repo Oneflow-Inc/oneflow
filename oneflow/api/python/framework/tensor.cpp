@@ -51,9 +51,16 @@ Parameter::Parameter(std::shared_ptr<Tensor> tensor, bool requires_grad) {
   // (align with PyTorch) instead of sharing it with x
   this->tensor_->set_requires_grad(requires_grad);
   auto blob_object = CHECK_JUST(tensor_->eager_blob_object());
-  if (auto* dtr_eager_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(blob_object.get())) {
+  if (auto dtr_eager_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(blob_object)) {
     dtr_eager_blob_object->set_evict_attr(false);
   }
+}
+
+Maybe<MirroredTensor> Parameter::AsMirroredTensor() {
+  if (const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(tensor_)) {
+    return mirrored_tensor;
+  }
+  RETURN_ERROR_WITH_BUG_PROMPT();
 }
 
 Maybe<void> Parameter::set_data(const std::shared_ptr<Tensor>& other) {
@@ -64,7 +71,10 @@ Maybe<void> Parameter::set_data(const std::shared_ptr<Tensor>& other) {
   JUST(this->tensor_->set_requires_grad(old_requires_grad));
 
   auto blob_object = CHECK_JUST(this->tensor_->eager_blob_object());
-  if (auto* dtr_eager_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(blob_object.get())) {
+  // if (auto* dtr_eager_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(blob_object.get())) {
+  //   dtr_eager_blob_object->set_evict_attr(false);
+  // }
+  if (auto dtr_eager_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(blob_object)) {
     dtr_eager_blob_object->set_evict_attr(false);
   }
   return Maybe<void>::Ok();
