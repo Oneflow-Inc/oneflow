@@ -169,6 +169,8 @@ CUDAGeneratorImpl::CUDAGeneratorImpl(uint64_t seed, int device_index)
 CUDAGeneratorImpl::~CUDAGeneratorImpl() {
   CudaCurrentDeviceGuard dev_guard(this->device_index());
   OF_CUDA_CHECK(cudaFree(curand_states_));
+  OF_CUDA_CHECK(cudaFree(dev_offset_));
+  OF_CUDA_CHECK(cudaFree(dev_counter_));
 }
 
 void CUDAGeneratorImpl::set_current_seed(uint64_t seed) {
