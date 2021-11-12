@@ -122,8 +122,9 @@ class CUDAGeneratorImpl : public DeviceGeneratorImpl {
   int32_t max_thread_num() const { return max_thread_num_; }
 
   curandState* curand_states() const { return curand_states_; }
-  uint64_t* dev_seed() const {return dev_seed_; }
   int32_t* dev_counter() const {return dev_counter_; }
+  uint64_t* dev_offset() const {return dev_offset_; }
+
   void set_current_seed(uint64_t seed) override;
 
   Maybe<Symbol<Device>> device() const override { return Device::New("cuda", device_index()); }
@@ -135,7 +136,7 @@ class CUDAGeneratorImpl : public DeviceGeneratorImpl {
   int32_t max_block_num_;
   int32_t max_thread_num_;
   curandState* curand_states_;
-  uint64_t* dev_seed_; 
+  uint64_t* dev_offset_;
   int32_t* dev_counter_; 
 };
 
