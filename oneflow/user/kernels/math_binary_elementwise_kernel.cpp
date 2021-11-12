@@ -34,7 +34,7 @@ class MathBinaryElementwiseCpuKernel final : public user_op::OpKernel {
     T* z = tensor_z->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    for (int32_t i = 0; i < n; ++i) { z[i] = BinaryFunctor<T>::Forward(x[i], y[i]); }
+    MultiThreadLoop(n, [&](size_t i) { z[i] = BinaryFunctor<T>::Forward(x[i], y[i]); }, 0);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -58,7 +58,9 @@ class MathBinaryElementwiseXGradCpuKernel final : public user_op::OpKernel {
     T* dx = tensor_dx->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    for (int32_t i = 0; i < n; ++i) { dx[i] = BinaryFunctor<T>::BackwardXGrad(x[i], y[i], dz[i]); }
+    MultiThreadLoop(n,
+                    [&](size_t i) { dx[i] = BinaryFunctor<T>::BackwardXGrad(x[i], y[i], dz[i]); },
+                    0);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
