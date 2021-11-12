@@ -16,8 +16,8 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/register/tensor_slice_copier.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/primitive/include/add.h"
-#include "oneflow/core/primitive/include/copy_nd.h"
+#include "oneflow/core/ep/include/primitive/add.h"
+#include "oneflow/core/ep/include/primitive/copy_nd.h"
 
 namespace oneflow {
 
@@ -93,8 +93,9 @@ const SliceBoxingConf& SliceBoxingAddKernel::GetCustomizedBoxingConf() const {
 
 void SliceBoxingAddKernel::ForwardDataContent(KernelContext* ctx) const {
   Blob* out = ctx->BnInOp2Blob("out");
-  std::unique_ptr<primitive::Add> primitive = primitive::NewPrimitive<primitive::AddFactory>(
-      ctx->stream_ctx()->device_type(), out->data_type());
+  std::unique_ptr<ep::primitive::Add> primitive =
+      ep::primitive::NewPrimitive<ep::primitive::AddFactory>(ctx->stream_ctx()->device_type(),
+                                                             out->data_type());
   CHECK(primitive);
   FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
     const Blob* in_i = ctx->BnInOp2Blob(GenRepeatedBn("in", i));

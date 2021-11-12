@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/user/kernels/two_stage_reduce_kernel_util.h"
-#include "oneflow/core/primitive/include/cast.h"
+#include "oneflow/core/ep/include/primitive/cast.h"
 
 namespace oneflow {
 
@@ -52,8 +52,8 @@ class ReduceDeviceStageKernel final : public OpKernel {
         XpuVarNdarray<const T>(in->shape(), in->dptr<T>()),
         XpuVarNdarray<const T>(out->shape(), out->dptr<T>()));
 
-    auto cast = primitive::NewPrimitive<primitive::CastFactory>(ctx->device_type(), DataType::kInt8,
-                                                                DataType::kInt32);
+    auto cast = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
+        ctx->device_type(), DataType::kInt8, DataType::kInt32);
     CHECK(cast);
 
     cast->Launch(ctx->stream_ctx(), mask->dptr<int8_t>(), mask_tmp_buf, mask->shape().elem_cnt());
