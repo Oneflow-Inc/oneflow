@@ -71,8 +71,8 @@ There are mainly three components in the JIT system:
 - Importer: convert OneFlow's representation to MLIR and and vice versa.
 - Executor: three types of executor under development or consideration
   - Re-dispatch: convert every MLIR op to one User Op and have eager interpreter dispatch them. 10% performance boost over pure eager mode is expected. This will be used for `oneflow.jit.trace` mainly.
-  - Batched-Op-Kernel: convert all MLIR ops to one UserOp and Kernel. This will be used to support CUDA graph.
-  - Direct-Kernel-launch: generate and launch kernel directly.
+  - Batched op kernel: convert all MLIR ops to one UserOp and Kernel. This will be used to support CUDA graph.
+  - Direct kernel launch: generate and launch kernel directly.
 
 ### Principle
 
