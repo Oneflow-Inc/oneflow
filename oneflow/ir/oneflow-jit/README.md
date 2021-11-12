@@ -74,6 +74,10 @@ There are mainly three components in the JIT system:
   - Batched-Op-Kernel: convert all MLIR ops to one UserOp and Kernel. This will be used to support CUDA graph.
   - Direct-Kernel-launch: generate and launch kernel directly.
 
+### Principle
+
+- Avoid binding a OneFlow tensor with a MLIR Tensor Value. The side effect on OneFlow Tensor should be modeled with MLIR Op.
+
 ### Sequence of operations
 
 ```cpp
