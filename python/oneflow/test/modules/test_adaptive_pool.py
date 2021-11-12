@@ -45,15 +45,15 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
-    def test_adaptive_avgpool2d(test_case):
-        m = torch.nn.AdaptiveAvgPool2d(output_size=random().to(_size_2_opt_t_not_none))
-        m.train(random())
-        device = random_device()
-        m.to(device)
-        x = random_pytorch_tensor(ndim=4).to(device)
-        y = m(x)
-        return y
+    # @autotest(check_graph=False)
+    # def test_adaptive_avgpool2d(test_case):
+    #     m = torch.nn.AdaptiveAvgPool2d(output_size=random().to(_size_2_opt_t_not_none))
+    #     m.train(random())
+    #     device = random_device()
+    #     m.to(device)
+    #     x = random_pytorch_tensor(ndim=4).to(device)
+    #     y = m(x)
+    #     return y
 
     @unittest.skipIf(
         version.parse(torch_original.__version__) < version.parse("1.10.0"),
@@ -72,13 +72,13 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestAdaptiveAvgPoolFunctional(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_adaptive_avgpool1d_functional(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=3).to(device)
         return torch.nn.functional.adaptive_avg_pool1d(x, output_size=random().to(int))
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_adaptive_avgpool2d_functional(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4).to(device)
