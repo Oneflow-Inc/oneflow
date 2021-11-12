@@ -202,6 +202,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   Id2LogicalObject id2logical_object_;
   LogicalObjectDeleteList delete_logical_object_list_;
   InstructionMsgMutextList pending_msg_list_;
+  // TODO(lixinqi): remove waiting_instruction_list_;
   InstructionList waiting_instruction_list_;
   ReadyInstructionList ready_instruction_list_;
   LivelyInstructionList lively_instruction_list_;
