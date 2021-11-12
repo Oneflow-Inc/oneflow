@@ -379,7 +379,7 @@ class TestMaximum(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestFloordiv(flow.unittest.TestCase):
+class TestFloorDiv(flow.unittest.TestCase):
     @autotest(auto_backward=False)
     def test_elementwise_floordiv_random_data(test_case):
         device = random_device()
