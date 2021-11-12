@@ -129,6 +129,54 @@ __global__ void MaskAndScaleAddGpu(uint64_t seed, int32_t* counter, uint64_t* of
 }
 
 template<>
+__global__ void MaskAndScaleGpu<half, 4>(uint64_t seed, int32_t* counter, uint64_t* offset, uint64_t counter_offset, const int64_t elem_cnt, float rate, float scale, const half* x, int8_t* mask,
+                                half* y) {
+    int32_t thread_id = blockIdx.x * blockDim.x + threadIdx.x; 
+    curandStatePhilox4_32_10_t state; 
+    curand_init(seed, thread_id, *offset, &state); 
+    using LoadT = typename std::aligned_storage<sizeof(half)*4, sizeof(half)*4>::type; 
+    using MaskT = typename std::aligned_storage<sizeof(int8_t)*4, sizeof(int8_t)*4>::type; 
+
+    float4 rand_uniform; 
+    half2 h2_scale = __float2half2_rn(scale);
+    for(int64_t linear_index=thread_id*4; linear_index < elem_cnt; linear_index += gridDim.x * blockDim.x * 4) {
+      rand_uniform = curand_uniform4(&state);
+
+      const LoadT* x_load = reinterpret_cast<const LoadT*>(&x[linear_index]);
+      H2Pack x_vec{};
+      x_vec.storage = *x_load; 
+
+      int8_t mask_vec[4];
+      half2 y_vec[2]; 
+      half2 one_or_zero_h2[2];
+
+      mask_vec[0] = (&rand_uniform.x)[0] >= rate;
+      one_or_zero_h2[0].x = mask_vec[0]; 
+      mask_vec[1] = (&rand_uniform.y)[1] >= rate;
+      one_or_zero_h2[0].y = mask_vec[1]; 
+      y_vec[0] = __hmul2(__hmul2(x_vec.h2[0], one_or_zero_h2[0]), h2_scale); 
+
+      mask_vec[2] = (&rand_uniform.z)[2] >= rate;
+      one_or_zero_h2[1].x = mask_vec[2]; 
+      mask_vec[3] = (&rand_uniform.w)[3] >= rate;
+      one_or_zero_h2[1].y = mask_vec[3]; 
+      y_vec[1] = __hmul2(__hmul2(x_vec.h2[1], one_or_zero_h2[1]), h2_scale); 
+
+      *(reinterpret_cast<LoadT*>(y+linear_index)) = *reinterpret_cast<LoadT*>(y_vec);
+      *(reinterpret_cast<MaskT*>(mask+linear_index)) = *reinterpret_cast<MaskT*>(mask_vec);
+    }
+    __syncthreads();
+
+    if(thread_id == 0) {
+      int32_t new_counter = cuda::atomic::Add(counter, 1) + 1; 
+      if(new_counter == gridDim.x) {
+        *counter = 0; // reset counter to zero 
+        *offset += counter_offset; // maintain the state of generator's dev_offset
+      }
+    }
+}
+
+template<>
 __global__ void MaskAndScaleAddGpu<half, 4>(uint64_t seed, int32_t* counter, uint64_t* offset, 
                                             uint64_t counter_offset, const int64_t elem_cnt, 
                                             float rate, float scale, 
@@ -182,6 +230,102 @@ __global__ void MaskAndScaleAddGpu<half, 4>(uint64_t seed, int32_t* counter, uin
       }
     }
 }
+
+template<>
+__global__ void MaskAndScaleGpu<double, 2>(uint64_t seed, int32_t* counter, uint64_t* offset, uint64_t counter_offset, 
+                                           const int64_t elem_cnt, 
+                                           float rate, float scale, const double* x, 
+                                           int8_t* mask, double* y) {
+
+    int32_t thread_id = blockIdx.x * blockDim.x + threadIdx.x; 
+    curandStatePhilox4_32_10_t state; 
+    curand_init(seed, thread_id, *offset, &state); 
+    using LoadT = typename std::aligned_storage<sizeof(double)*2, sizeof(double)*2>::type; 
+    using MaskT = typename std::aligned_storage<sizeof(int8_t)*2, sizeof(int8_t)*2>::type; 
+
+    float4 rand_uniform; 
+    for(int64_t linear_index=thread_id*2; linear_index < elem_cnt; linear_index += gridDim.x * blockDim.x * 2) {
+      rand_uniform = curand_uniform4(&state);
+      // Generate 4 float and use last 2 element to mask 2 double input elements. 
+      rand_uniform.x = rand_uniform.z; 
+      rand_uniform.y = rand_uniform.w;
+      rand_uniform.x = rand_uniform.x >= rate; 
+      rand_uniform.y = rand_uniform.y >= rate; 
+      const LoadT* x_load = reinterpret_cast<const LoadT*>(&x[linear_index]);
+      cuda::elementwise::Pack<double, 2> x_vec;
+      x_vec.storage = *x_load; 
+
+      int8_t mask_vec[2];
+      double y_vec[2]; 
+      #pragma unroll
+      for (int i = 0; i < 2; i++) {
+        mask_vec[i] = (&rand_uniform.x)[i] >= rate;
+        y_vec[i] = x_vec.elem[i]*mask_vec[i]*scale;
+      }
+
+      *(reinterpret_cast<LoadT*>(y+linear_index)) = *reinterpret_cast<LoadT*>(y_vec);
+      *(reinterpret_cast<MaskT*>(mask+linear_index)) = *reinterpret_cast<MaskT*>(mask_vec);
+    }
+    __syncthreads();
+
+    if(thread_id == 0) {
+      int32_t new_counter = cuda::atomic::Add(counter, 1) + 1; 
+      if(new_counter == gridDim.x) {
+        *counter = 0; // reset counter to zero 
+        *offset += counter_offset; // maintain the state of generator's dev_offset
+      }
+    }
+}
+
+template<>
+__global__ void MaskAndScaleAddGpu<double, 2>(uint64_t seed, int32_t* counter, uint64_t* offset, 
+                                              uint64_t counter_offset, const int64_t elem_cnt, 
+                                              float rate, float scale, 
+                                              const double* x, int8_t* mask,
+                                              const double* addend, double* y) {
+  int32_t thread_id = blockIdx.x * blockDim.x + threadIdx.x; 
+  curandStatePhilox4_32_10_t state; 
+  curand_init(seed, thread_id, *offset, &state); 
+  using LoadT = typename std::aligned_storage<sizeof(double)*2, sizeof(double)*2>::type; 
+  using MaskT = typename std::aligned_storage<sizeof(int8_t)*2, sizeof(int8_t)*2>::type; 
+
+  float4 rand_uniform; 
+  for(int64_t linear_index=thread_id*2; linear_index < elem_cnt; linear_index += gridDim.x * blockDim.x * 2) {
+    rand_uniform = curand_uniform4(&state);
+    rand_uniform.x = rand_uniform.x = rand_uniform.z; 
+    rand_uniform.y = rand_uniform.x = rand_uniform.w; 
+    rand_uniform.x = rand_uniform.x >= rate; 
+    rand_uniform.y = rand_uniform.y >= rate; 
+    const LoadT* x_load = reinterpret_cast<const LoadT*>(&x[linear_index]);
+    cuda::elementwise::Pack<double, 2> x_vec;
+    x_vec.storage = *x_load; 
+
+    const LoadT* addend_load = reinterpret_cast<const LoadT*>(&addend[linear_index]);
+    cuda::elementwise::Pack<double, 2> addend_vec;
+    addend_vec.storage = *addend_load; 
+
+    int8_t mask_vec[2];
+    double y_vec[2]; 
+    #pragma unroll
+    for (int i = 0; i < 2; i++) {
+      mask_vec[i] = (&rand_uniform.x)[i] >= rate;
+      y_vec[i] = x_vec.elem[i]*mask_vec[i]*scale + addend_vec.elem[i];
+    }
+
+    *(reinterpret_cast<LoadT*>(y+linear_index)) = *reinterpret_cast<LoadT*>(y_vec);
+    *(reinterpret_cast<MaskT*>(mask+linear_index)) = *reinterpret_cast<MaskT*>(mask_vec);
+  }
+  __syncthreads();
+
+  if(thread_id == 0) {
+    int32_t new_counter = cuda::atomic::Add(counter, 1) + 1; 
+    if(new_counter == gridDim.x) {
+      *counter = 0; // reset counter to zero 
+      *offset += counter_offset; // maintain the state of generator's dev_offset
+    }
+  }
+}
+
 
 template<int pack_size>
 unsigned int ComputeGridSize(const int32_t block_size, const int64_t elem_cnt){
@@ -270,9 +414,9 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)                  \
       & (user_op::HobDataType("mask", 0) == GetDataType<int8_t>::value));
 
-// REGISTER_DROPOUT_KERNEL_GPU(half)
+REGISTER_DROPOUT_KERNEL_GPU(half)
 REGISTER_DROPOUT_KERNEL_GPU(float)
-// REGISTER_DROPOUT_KERNEL_GPU(double)
+REGISTER_DROPOUT_KERNEL_GPU(double)
 
 template<typename T>
 class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::CudaGraphSupport {
