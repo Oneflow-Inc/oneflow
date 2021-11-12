@@ -1149,7 +1149,8 @@ class UnfoldTensorFunctor {
 class UnfoldTensorGradFunctor {
  public:
   UnfoldTensorGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("unfold_tensor_grad").Input("dy").Input("x").Output("dx").Build());
+    op_ = CHECK_JUST(
+        one::OpBuilder("unfold_tensor_grad").Input("dy").Input("x").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const int32_t& dimension,
@@ -1160,8 +1161,9 @@ class UnfoldTensorGradFunctor {
     JUST(attrs.SetAttr<int32_t>("step", step));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
-  private:
-    std::shared_ptr<OpExpr> op_;
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class UpsampleFunctor {

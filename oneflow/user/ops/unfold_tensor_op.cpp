@@ -61,8 +61,11 @@ REGISTER_USER_OP("unfold_tensor")
       const int32_t dimension = ctx->Attr<int32_t>("dimension");
       const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
       FOR_RANGE(int32_t, i, 0, x_tensor.shape().NumAxes()) {
-        if(i != dimension){
-          ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build(); 
+        if (i != dimension) {
+          ctx->NewBuilder()
+              .Split(user_op::OpArg("x", 0), i)
+              .Split(user_op::OpArg("y", 0), i)
+              .Build();
         }
       }
       ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
@@ -76,7 +79,7 @@ REGISTER_USER_OP("unfold_tensor_grad")
     .Attr<int32_t>("dimension")
     .Attr<int32_t>("size")
     .Attr<int32_t>("step")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void>{
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in = ctx->InputTensorDesc("x", 0);
       const Shape& in_shape = in.shape();
       user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
@@ -91,32 +94,36 @@ REGISTER_USER_OP("unfold_tensor_grad")
       const int32_t dimension = ctx->Attr<int32_t>("dimension");
       const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dx", 0);
       FOR_RANGE(int32_t, i, 0, x_tensor.shape().NumAxes()) {
-        if(i != dimension){
-          ctx->NewBuilder().Split(user_op::OpArg("dy", 0), i).Split(user_op::OpArg("dx", 0), i).Build(); 
+        if (i != dimension) {
+          ctx->NewBuilder()
+              .Split(user_op::OpArg("dy", 0), i)
+              .Split(user_op::OpArg("dx", 0), i)
+              .Build();
         }
       }
       ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("unfold_tensor").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx)
-                                                        -> Maybe<void> {
-  const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
-  ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("unfold_tensor_grad")
-        .InputBind("dy", ctx->FwOp().output_grad("y", 0))
-        .InputBind("x", ctx->FwOp().input("x", 0))
-        .Attr<int32_t>("dimension", ctx->FwOp().attr<int32_t>("dimension"))
-        .Attr<int32_t>("size", ctx->FwOp().attr<int32_t>("size"))
-        .Attr<int32_t>("step", ctx->FwOp().attr<int32_t>("step"))
-        .Output("dx")
-        .Build();
-  });
+REGISTER_USER_OP_GRAD("unfold_tensor")
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
+      const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
+      ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+        return builder.OpTypeName("unfold_tensor_grad")
+            .InputBind("dy", ctx->FwOp().output_grad("y", 0))
+            .InputBind("x", ctx->FwOp().input("x", 0))
+            .Attr<int32_t>("dimension", ctx->FwOp().attr<int32_t>("dimension"))
+            .Attr<int32_t>("size", ctx->FwOp().attr<int32_t>("size"))
+            .Attr<int32_t>("step", ctx->FwOp().attr<int32_t>("step"))
+            .Output("dx")
+            .Build();
+      });
 
-  ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), [&ctx, &grad_op_name]() -> const std::string& {
-    return ctx->GetOp(grad_op_name).output("dx", 0);
-  });
-  return Maybe<void>::Ok();
-});
+      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
+                                [&ctx, &grad_op_name]() -> const std::string& {
+                                  return ctx->GetOp(grad_op_name).output("dx", 0);
+                                });
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace oneflow

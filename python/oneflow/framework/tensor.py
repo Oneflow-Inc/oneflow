@@ -485,6 +485,7 @@ def _squeeze(self, dim=None):
 def _unfold(self, dimension, size, step):
     return flow._C.unfold_tensor(self, dimension=dimension, size=size, step=step)
 
+
 def _narrow(self, dimension, start, length):
     return flow._C.narrow(self, dim=dimension, start=start, length=length)
 
@@ -816,7 +817,6 @@ def RegisterMethods():
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
     Tensor.permute = _permute
-
 
 
 def register_tensor_op(op_name):

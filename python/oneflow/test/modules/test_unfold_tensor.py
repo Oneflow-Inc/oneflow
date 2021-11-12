@@ -26,15 +26,15 @@ import numpy as np
 class TestUnfoldTensor(flow.unittest.TestCase):
     @autotest(n=1, auto_backward=True)
     def test_unfold_tensor_with_random_data(test_case):
-        device = random_device()
-        # x = torch.tensor(np.random.randn(3, 4, 5), requires_grad=True, device=device)
-        x = torch.tensor(np.random.randn(3, 4, 5), requires_grad=True)
+        # device = random_device()
+        # device = "cpu"
+        device = "cuda"
+        x = random_pytorch_tensor(3, 3, 4, 5).to(device)
         # dimension = random(0, 2).to(int).value()
         # size = random(1, 3).to(int).value()
         # step = random(1, 3).to(int).value()
-        dimension, size, step = 0,2,2
+        dimension, size, step = 0, 2, 1
         y = x.unfold(dimension, size, step)
-        print(x.grad)
         return y
 
 
