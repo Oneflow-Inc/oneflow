@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/primitive/include/log_softmax.h"
-#include "oneflow/core/primitive/include/log_softmax_backward.h"
+#include "oneflow/core/ep/include/primitive/log_softmax.h"
+#include "oneflow/core/ep/include/primitive/log_softmax_backward.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
@@ -23,9 +23,10 @@ namespace oneflow {
 namespace {
 
 template<typename Context>
-std::unique_ptr<primitive::LogSoftmax> NewLogSoftmaxPrimitive(Context* ctx) {
+std::unique_ptr<ep::primitive::LogSoftmax> NewLogSoftmaxPrimitive(Context* ctx) {
   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("in", 0)->data_type();
-  return primitive::NewPrimitive<primitive::LogSoftmaxFactory>(ctx->device_type(), data_type);
+  return ep::primitive::NewPrimitive<ep::primitive::LogSoftmaxFactory>(ctx->device_type(),
+                                                                       data_type);
 }
 
 auto LogSoftmaxPrimitiveExists() {
@@ -35,10 +36,10 @@ auto LogSoftmaxPrimitiveExists() {
 }
 
 template<typename Context>
-std::unique_ptr<primitive::LogSoftmaxBackward> NewLogSoftmaxBackwardPrimitive(Context* ctx) {
+std::unique_ptr<ep::primitive::LogSoftmaxBackward> NewLogSoftmaxBackwardPrimitive(Context* ctx) {
   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->data_type();
-  return primitive::NewPrimitive<primitive::LogSoftmaxBackwardFactory>(ctx->device_type(),
-                                                                       data_type);
+  return ep::primitive::NewPrimitive<ep::primitive::LogSoftmaxBackwardFactory>(ctx->device_type(),
+                                                                               data_type);
 }
 
 auto LogSoftmaxBackwardPrimitiveExists() {
@@ -61,7 +62,7 @@ class LogSoftmaxKernel final : public user_op::OpKernel, public user_op::CudaGra
     user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
     const int64_t num_classes = in->shape().At(in->shape().NumAxes() - 1);
     const int64_t num_instances = in->shape().Count(0, in->shape().NumAxes() - 1);
-    std::unique_ptr<primitive::LogSoftmax> primitive = NewLogSoftmaxPrimitive(ctx);
+    std::unique_ptr<ep::primitive::LogSoftmax> primitive = NewLogSoftmaxPrimitive(ctx);
     CHECK(primitive);
     primitive->Launch(ctx->stream_ctx(), num_instances, num_classes, in->dptr(), prob->mut_dptr());
   }
@@ -84,7 +85,8 @@ class LogSoftmaxGradKernel final : public user_op::OpKernel, public user_op::Cud
     const int64_t num_classes = prob->shape().At(prob->shape().NumAxes() - 1);
     const int64_t num_instances = prob->shape().elem_cnt() / num_classes;
 
-    std::unique_ptr<primitive::LogSoftmaxBackward> primitive = NewLogSoftmaxBackwardPrimitive(ctx);
+    std::unique_ptr<ep::primitive::LogSoftmaxBackward> primitive =
+        NewLogSoftmaxBackwardPrimitive(ctx);
     CHECK(primitive);
     primitive->Launch(ctx->stream_ctx(), num_instances, num_classes, prob->dptr(), dy->dptr(),
                       dx->mut_dptr());

@@ -14,15 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/primitive/include/copy_nd.h"
+#include "oneflow/core/ep/include/primitive/copy_nd.h"
 
 namespace oneflow {
 
 namespace {
 
 template<typename Context>
-std::unique_ptr<primitive::CopyNd> NewCopyNdPrimitive(Context* ctx) {
-  return primitive::NewPrimitive<primitive::CopyNdFactory>(ctx->device_type(), 2);
+std::unique_ptr<ep::primitive::CopyNd> NewCopyNdPrimitive(Context* ctx) {
+  return ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(ctx->device_type(), 2);
 }
 
 class SplitLikeKernel final : public user_op::OpKernel {
