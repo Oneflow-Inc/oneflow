@@ -61,7 +61,7 @@ def _test_fused_scale_mask_softmax_dropout(
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
 class TestFusedScaleMaskSoftmaxDropout(flow.unittest.TestCase):
-    def test_gather(test_case):
+    def test_fused_op(test_case):
         args_dict = OrderedDict()
         args_dict["test_fun"] = [_test_fused_scale_mask_softmax_dropout]
         args_dict["batch_size"] = [4, 8, 16]

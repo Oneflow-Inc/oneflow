@@ -27,7 +27,7 @@ def _test_fused_scale_mask_softmax(
 ):
 
     x = np.random.randn(batch_size, num_heads, seq_length, seq_length)
-    mask = np.random.randint(1, 2, size=(batch_size, num_heads, seq_length, seq_length), dtype=np.uint8)
+    mask = np.random.randint(0, 2, size=(batch_size, num_heads, seq_length, seq_length), dtype=np.uint8)
 
     fused_x_tensor = flow.tensor(x).to("cuda")
     fused_mask_tensor = flow.tensor(mask, dtype=flow.int8).to("cuda")
@@ -56,7 +56,7 @@ def _test_fused_scale_mask_softmax(
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
 class TestFusedScaleMaskSoftmax(flow.unittest.TestCase):
-    def test_gather(test_case):
+    def test_fused_op(test_case):
         args_dict = OrderedDict()
         args_dict["test_fun"] = [_test_fused_scale_mask_softmax]
         args_dict["batch_size"] = [4, 8, 16]
