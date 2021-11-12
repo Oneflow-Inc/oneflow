@@ -40,6 +40,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_node_signature_desc.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/framework/tensor_pool.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
@@ -579,6 +580,7 @@ struct LocalCallOpKernelUtil {
     return local_operand;
   }
 
+ private:
   static inline Maybe<const MemoryCase&> GetMemCase(LocalCallOpKernelPhyInstrOperand* operand) {
     const auto& mem_case = operand->opkernel().mem_case();
     CHECK_OR_RETURN(static_cast<bool>(mem_case));
@@ -870,6 +872,13 @@ void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) con
     CHECK_OK(EagerLocalCallOpKernelUtil::Compute(instruction));
     // CHECK_OK(EagerLocalCallOpKernelUtil::DisplayCount(instruction));
   }
+}
+
+const std::string& LocalCallOpKernelInstructionType::DebugOpTypeName(
+    vm::Instruction* instruction) const {
+  auto* operand =
+      CHECK_JUST(LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instruction));
+  return operand->opkernel().op_type_name();
 }
 
 Maybe<void> CallOpKernelInstructionType::MaybeInfer(vm::Instruction* instruction,

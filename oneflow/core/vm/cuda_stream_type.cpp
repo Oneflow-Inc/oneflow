@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/vm/cuda_stream_handle_device_context.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/framework/tensor_pool.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 
@@ -36,8 +37,8 @@ void CudaStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Strea
 void CudaStreamType::InitInstructionStatus(const Stream& stream,
                                            InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(CudaOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
-  CudaOptionalEventRecordStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data(),
-                                                     stream.device_id());
+  auto* data_ptr = status_buffer->mut_buffer()->mut_data();
+  CudaOptionalEventRecordStatusQuerier::PlacementNew(data_ptr, nullptr);
 }
 
 void CudaStreamType::DeleteInstructionStatus(const Stream& stream,
@@ -52,13 +53,10 @@ bool CudaStreamType::QueryInstructionStatusDone(
   return CudaOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-void CudaStreamType::set_has_event_record(InstructionStatusBuffer* status_buffer, bool val) const {
-  auto* querier =
-      CudaOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
-  return querier->set_has_event_record(val);
-}
-
 void CudaStreamType::Compute(Instruction* instruction) const {
+  OF_PROFILER_RANGE_PUSH(
+      "S:"
+      + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction));
   // if (oneflow::DTRDebugEnabled()) {
   //   std::cout << "Begin cuda_stream_type.cpp:CudaStreamType::Compute " << std::endl;
   //   Global<one::DTRTensorPool>::Get()->display();
@@ -73,6 +71,7 @@ void CudaStreamType::Compute(Instruction* instruction) const {
   }
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
   CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
+  OF_PROFILER_RANGE_POP();
   // if (oneflow::DTRDebugEnabled()) {
   //   std::cout << "End cuda_stream_type.cpp:CudaStreamType::Compute " << std::endl;
   //   Global<one::DTRTensorPool>::Get()->display();

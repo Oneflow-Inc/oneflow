@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/primitive/include/cast.h"
 #include "oneflow/core/primitive/cuda/type_seq.h"
 #include "oneflow/core/cuda/elementwise.cuh"
-#include "oneflow/core/stream/cuda_stream_context.h"
+#include "oneflow/core/stream/cuda/cuda_stream_context.h"
 
 namespace oneflow {
 
@@ -84,7 +84,7 @@ class CastImpl : public Cast {
   ~CastImpl() override = default;
 
   void Launch(StreamContext* stream_ctx, const void* from, void* to, size_t count) override {
-    auto* cuda_stream_ctx = CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx));
+    auto* cuda_stream_ctx = stream_ctx->As<CudaStreamContext>();
     OF_CUDA_CHECK((cuda::elementwise::Unary<CastFunctor<To, From>, To, From>(
         CastFunctor<To, From>(), count, reinterpret_cast<To*>(to),
         reinterpret_cast<const From*>(from), cuda_stream_ctx->cuda_stream())));

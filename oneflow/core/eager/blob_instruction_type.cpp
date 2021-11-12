@@ -143,8 +143,8 @@ class TouchInstructionType : public vm::InstructionType {
   ~TouchInstructionType() = default;
   using stream_type = vm::ControlStreamType;
 
-  void Infer(VirtualMachine* vm, Instruction* instruction) const override { UNIMPLEMENTED(); }
-  void Compute(VirtualMachine* vm, Instruction* instruction) const override {
+  void Infer(VirtualMachineEngine* vm, Instruction* instruction) const override { UNIMPLEMENTED(); }
+  void Compute(VirtualMachineEngine* vm, Instruction* instruction) const override {
     // do nothing
   }
   void Infer(Instruction*) const override { UNIMPLEMENTED(); }

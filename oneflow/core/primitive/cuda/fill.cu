@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/primitive/include/fill.h"
 #include "oneflow/core/primitive/cuda/type_seq.h"
-#include "oneflow/core/stream/cuda_stream_context.h"
+#include "oneflow/core/stream/cuda/cuda_stream_context.h"
 
 namespace oneflow {
 
@@ -106,8 +106,7 @@ class FillImpl : public Fill {
   ~FillImpl() override = default;
 
   void Launch(StreamContext* stream_ctx, void* dst, Scalar value, size_t count) override {
-    cudaStream_t cuda_stream =
-        CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
+    cudaStream_t cuda_stream = stream_ctx->As<CudaStreamContext>()->cuda_stream();
     LaunchFill<T>(cuda_stream, reinterpret_cast<T*>(dst), GetValue<T>(value), count);
   }
 };
