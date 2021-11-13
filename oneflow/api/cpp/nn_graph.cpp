@@ -1,3 +1,19 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 #include "oneflow/api/cpp/nn_graph.h"
 #include <cstdio>
 #include <fstream>
@@ -39,7 +55,7 @@ void Graph::CreateVariableOp(oneflow::HashMap<std::string, std::shared_ptr<onefl
   std::cout << job_.job_conf().job_name() << std::endl;
   std::cout << job_.net().op_size() << std::endl;
   oneflow::OpGraph op_graph(job_);
-  CHECK_JUST(op_graph.MaybeForEachNode([&](oneflow::OpNode* node) -> oneflow::Maybe<void> {
+  op_graph.ForEachNode([&](oneflow::OpNode* node) -> oneflow::Maybe<void> {
     std::cout << node->op().op_name() << std::endl;
     if (!node->op().op_conf().has_variable_conf()) { return oneflow::Maybe<void>::Ok(); }
 
@@ -65,7 +81,7 @@ void Graph::CreateVariableOp(oneflow::HashMap<std::string, std::shared_ptr<onefl
     // bool requires_grad, bool is_leaf)
 
     return oneflow::Maybe<void>::Ok();
-  }));
+  });
 }
 
 }  // namespace oneflow_api
