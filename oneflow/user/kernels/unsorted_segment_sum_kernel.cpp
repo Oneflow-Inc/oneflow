@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/user/kernels/unsorted_segment_sum_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/job/nd_sbp_util.h"
-#include "oneflow/core/primitive/include/cast.h"
+#include "oneflow/core/ep/include/primitive/cast.h"
 
 namespace oneflow {
 
@@ -173,8 +173,8 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
         ctx->device_ctx(), segment_ids->dptr<K>(), data->dptr<float16>(), num_segment_ids,
         num_segments, outer_dim_size, inner_dim_size, offset, tmp_buf->mut_dptr<float>());
 
-    auto f2h = primitive::NewPrimitive<primitive::CastFactory>(ctx->device_type(), DataType::kFloat,
-                                                               DataType::kFloat16);
+    auto f2h = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
+        ctx->device_type(), DataType::kFloat, DataType::kFloat16);
     CHECK(f2h);
     f2h->Launch(ctx->stream_ctx(), tmp_buf->dptr<float>(), out->mut_dptr<float16>(),
                 out->shape().elem_cnt());

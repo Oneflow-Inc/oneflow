@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/user/kernels/sparse_softmax_cross_entropy_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/job/nd_sbp_util.h"
-#include "oneflow/core/primitive/include/log_softmax.h"
+#include "oneflow/core/ep/include/primitive/log_softmax.h"
 
 namespace oneflow {
 namespace user_op {
@@ -27,9 +27,10 @@ namespace user_op {
 namespace {
 
 template<typename Context>
-std::unique_ptr<primitive::LogSoftmax> NewLogSoftmaxPrimitive(Context* ctx) {
+std::unique_ptr<ep::primitive::LogSoftmax> NewLogSoftmaxPrimitive(Context* ctx) {
   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("prediction", 0)->data_type();
-  return primitive::NewPrimitive<primitive::LogSoftmaxFactory>(ctx->device_type(), data_type);
+  return ep::primitive::NewPrimitive<ep::primitive::LogSoftmaxFactory>(ctx->device_type(),
+                                                                       data_type);
 }
 
 hob::HobContextGetter<user_op::KernelRegContext, bool> LogSoftmaxPrimitiveExists() {
@@ -74,7 +75,7 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel,
     const int64_t lower_bound = 0;
     const int64_t depth = ctx->Attr<int64_t>("depth");
 
-    std::unique_ptr<primitive::LogSoftmax> primitive = NewLogSoftmaxPrimitive(ctx);
+    std::unique_ptr<ep::primitive::LogSoftmax> primitive = NewLogSoftmaxPrimitive(ctx);
     CHECK(primitive);
     primitive->Launch(ctx->stream_ctx(), num_instances, num_classes, prediction->dptr(),
                       prob->mut_dptr());

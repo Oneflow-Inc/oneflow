@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/primitive/include/fill.h"
+#include "oneflow/core/ep/include/primitive/fill.h"
 
 namespace oneflow {
 
@@ -40,8 +40,9 @@ class CpuOneHotKernel final : public user_op::OpKernel {
                             : static_cast<T>(ctx->Attr<int64_t>("integer_off_value"));
     const K* indices_dptr = indices->dptr<K>();
     T* out_dptr = out->mut_dptr<T>();
-    std::unique_ptr<primitive::Fill> fill = primitive::NewPrimitive<primitive::FillFactory>(
-        ctx->stream_ctx()->device_type(), out->data_type());
+    std::unique_ptr<ep::primitive::Fill> fill =
+        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream_ctx()->device_type(),
+                                                                out->data_type());
     CHECK(fill);
     fill->Launch(ctx->stream_ctx(), out->mut_dptr(), off_value, out->shape().elem_cnt());
     FOR_RANGE(int64_t, i, 0, num_indices) {
