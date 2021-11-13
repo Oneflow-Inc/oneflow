@@ -3,7 +3,13 @@
 #include <unordered_map>
 #include "oneflow/api/cpp/nn_graph.h"
 #include "oneflow/core/common/global.h"
+#include "oneflow/core/common/multi_client.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
+#include "oneflow/api/cpp/utils.h"
+
+// COMMAND(oneflow_api::StartOneFlow());
+// Segmentation fault
 
 int main(int argc, char** argv) {
   if (argc != 4) {
@@ -11,8 +17,7 @@ int main(int argc, char** argv) {
     return 0;
   }
 
-  // Need StartOneFlow()
-  // oneflow::Global<oneflow::ProcessCtx>::New();
+  oneflow_api::StartOneFlow();
 
   std::string model_path = std::string(argv[1]);
   std::string version = std::string(argv[2]);
