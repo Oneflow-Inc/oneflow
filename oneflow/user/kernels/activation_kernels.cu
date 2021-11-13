@@ -176,6 +176,17 @@ struct ReluGradFunctor<half> {
   }
 };
 
+template<>
+struct SmoothMaximumUnitFunctor<half> {
+  OF_DEVICE_FUNC explicit SmoothMaximumUnitFunctor(float lambda_val)
+      : lambda_val(lambda_val), float_functor(SmoothMaximumUnitFunctor<float>(lambda_val)) {}
+  OF_DEVICE_FUNC half operator()(half x) const {
+    return __float2half(float_functor(__half2float(x)));
+  }
+  const float lambda_val;
+  SmoothMaximumUnitFunctor<float> float_functor;
+};
+
 #define REGISTER_ACTIVATION_GPU_KERNEL(dtype)            \
   REGISTER_ELU_KERNEL(DeviceType::kGPU, dtype);          \
   REGISTER_CELU_KERNEL(DeviceType::kGPU, dtype);         \
@@ -187,7 +198,8 @@ struct ReluGradFunctor<half> {
   REGISTER_SELU_KERNEL(DeviceType::kGPU, dtype);         \
   REGISTER_SOFTSIGN_KERNEL(DeviceType::kGPU, dtype);     \
   REGISTER_RELU_FORWARD_KERNEL(DeviceType::kGPU, dtype); \
-  REGISTER_RELU_BACKWARD_KERNEL(DeviceType::kGPU, dtype);
+  REGISTER_RELU_BACKWARD_KERNEL(DeviceType::kGPU, dtype); \
+  REGISTER_SMU_KERNEL(DeviceType::kGPU, dtype); 
 
 REGISTER_ACTIVATION_GPU_KERNEL(half);
 REGISTER_ACTIVATION_GPU_KERNEL(float);

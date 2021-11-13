@@ -218,6 +218,15 @@ struct ReluGradFunctor {
   OF_DEVICE_FUNC T operator()(T y, T dy) const { return (y > static_cast<T>(0)) * dy; }
 };
 
+template<typename T>
+struct SmoothMaximumUnitFunctor {
+  OF_DEVICE_FUNC explicit SmoothMaximumUnitFunctor(float lambda_val): lambda_val(lambda_val) {}
+  OF_DEVICE_FUNC T operator()(T x) const {
+    return static_cast<T>(0.5)*(x + x*static_cast<T>(erf(lambda_val*x))); 
+  }
+  T lambda_val; 
+};
+
 #define REGISTER_ELU_KERNEL(device, dtype)                        \
   REGISTER_UNARY_ELEMWISE_USER_KERNEL(                            \
       device, "elu", EluFunctor, dtype, dtype,                    \
@@ -367,6 +376,14 @@ struct ReluGradFunctor {
             OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                     \
             return Maybe<void>::Ok();                                                            \
           });
+
+#define REGISTER_SMU_KERNEL(device, dtype)                        \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                            \
+      device, "smu", SmoothMaximumUnitFunctor, dtype, dtype,                    \
+      [](user_op::KernelComputeContext* ctx) {                    \
+        return SmoothMaximumUnitFunctor<dtype>(ctx->Attr<float>("lambda_val"));     \
+      },                                                          \
+      "out", "in");   
 
 }  // namespace oneflow
 

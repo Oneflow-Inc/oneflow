@@ -28,7 +28,8 @@ namespace oneflow {
   REGISTER_SELU_KERNEL(DeviceType::kCPU, dtype);         \
   REGISTER_SOFTSIGN_KERNEL(DeviceType::kCPU, dtype);     \
   REGISTER_RELU_FORWARD_KERNEL(DeviceType::kCPU, dtype); \
-  REGISTER_RELU_BACKWARD_KERNEL(DeviceType::kCPU, dtype);
+  REGISTER_RELU_BACKWARD_KERNEL(DeviceType::kCPU, dtype); \
+  REGISTER_SMU_KERNEL(DeviceType::kCPU, dtype);
 
 REGISTER_ACTIVATION_CPU_KERNEL(float);
 REGISTER_ACTIVATION_CPU_KERNEL(double);

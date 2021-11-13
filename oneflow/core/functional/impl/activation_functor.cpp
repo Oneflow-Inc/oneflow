@@ -442,6 +442,19 @@ class SoftSignGradFunctor : public BinaryFunctor {
   }
 };
 
+class SMUFunctor {
+ public:
+  SMUFunctor() { op_ = CHECK_JUST(one::OpBuilder("smu").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& lambda_val) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("lambda_val", lambda_val));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -475,6 +488,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SeluGradFunctor>("SeluGrad");
   m.add_functor<impl::SoftSignFunctor>("SoftSign");
   m.add_functor<impl::SoftSignGradFunctor>("SoftSignGrad");
+  m.add_functor<impl::SMUFunctor>("SMU");
 };
 
 }  // namespace functional

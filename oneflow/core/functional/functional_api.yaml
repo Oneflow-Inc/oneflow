@@ -477,6 +477,10 @@
   signature: "Tensor (Tensor x, Tensor dy, Float alpha) => LeakyReluGrad"
   bind_python: False
 
+- name: "smu"
+  signature: "Tensor (Tensor x, Float lambda_val) => SMU"
+  bind_python: True
+
 - name: "normalization"
   signature:
     "Tensor (Tensor x, Tensor moving_mean=None, Tensor moving_variance=None,
