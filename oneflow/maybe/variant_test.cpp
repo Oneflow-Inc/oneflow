@@ -141,3 +141,37 @@ TEST(Variant, Optional) {
   ASSERT_EQ(c, NullOpt);
   ASSERT_NE(a, b);
 }
+
+TEST(Variant, BinarySearchVisit) {
+  const char* hello = "hello";
+
+  OptionalVariant<int, float, bool> x, y(123), z(1.2f), w(true);
+  OptionalVariant<int, float, bool, const char*> a, b(123), c(1.2f), d(true), e(hello);
+
+  ASSERT_EQ(x, NullOpt);
+  ASSERT_EQ(y, 123);
+  ASSERT_EQ(z, 1.2f);
+  ASSERT_EQ(w, true);
+  ASSERT_EQ(a, NullOpt);
+  ASSERT_EQ(b, 123);
+  ASSERT_EQ(c, 1.2f);
+  ASSERT_EQ(d, true);
+  ASSERT_EQ(e, hello);
+
+  OptionalVariant<int, float, bool, const char*> a1(a), b1(b), c1(c), d1(d), e1(e);
+
+  ASSERT_EQ(a1, NullOpt);
+  ASSERT_EQ(b1, 123);
+  ASSERT_EQ(c1, 1.2f);
+  ASSERT_EQ(d1, true);
+  ASSERT_EQ(e1, hello);
+
+  a = 233;
+  ASSERT_EQ(a, 233);
+
+  a = hello;
+  ASSERT_EQ(a, hello);
+
+  a = c;
+  ASSERT_EQ(a, 1.2f);
+}

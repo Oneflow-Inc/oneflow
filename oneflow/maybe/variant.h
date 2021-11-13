@@ -40,25 +40,75 @@ namespace details {
 // there are generally two ways to implement visit (like std::visit in c++17)
 // 1. O(N) or O(log N), to iterate for all types or do a binary search on type index recursively
 // 2. O(1), to store an static (storage duration) array of function pointers for every (Variant, F)
-// where N = Variant<T...>::Num, and normally within the range [2, 5]
+// where N = Variant<T...>::Num, and normally (in most cases) within the range [2, 5]
 // the 2nd method is required in std::visit(f, x...) while sizeof...(x) == 1
-// but weakness of the 2nd method is that compilers usually cannot efficiently optimize these function pointers
-// (compared to trivial recursion, which is easy to do optimization, and also friendly to CPU cache)
-// here we implement visit via the first method
-template<typename R, typename T, typename F, typename V>
-R VisitImpl(F&& f, V&& v) {
-  // assume v.template Is<T>() now
-  return static_cast<R>(std::forward<F>(f)(std::forward<V>(v).template Get<T>()));
+// but weakness of the 2nd method is that compilers usually cannot efficiently optimize these
+// function pointers (compared to trivial recursion, which is easy to do optimization, and also
+// friendly to CPU cache) here we implement visit via the first method:
+// 1. for 2 <= N < 4, we use the O(N) algorithm (TrivialRecursiveVisitImpl) for better optimization
+// 2. for N >= 4, we use the O(log N) algorithm (BinarySearchVisitImpl) for less recursion rounds
+
+template<typename R, typename F, typename V>
+R TrivialRecursiveVisitImpl(F&& f, V&& v, InPlaceIndexT<RemoveCVRef<V>::Num - 1>) {
+  // assume v.Index() == N - 1 now
+  return static_cast<R>(
+      std::forward<F>(f)(std::forward<V>(v).template Get<RemoveCVRef<V>::Num - 1>()));
 }
 
-template<typename R, typename T1, typename... Tn, typename F, typename V,
-         std::enable_if_t<(sizeof...(Tn) > 0), int> = 0>
-R VisitImpl(F&& f, V&& v) {
-  if (v.template Is<T1>()) {
-    return static_cast<R>(std::forward<F>(f)(std::forward<V>(v).template Get<T1>()));
+template<typename R, std::size_t I, typename F, typename V,
+         std::enable_if_t<(I < RemoveCVRef<V>::Num - 1), int> = 0>
+R TrivialRecursiveVisitImpl(F&& f, V&& v, InPlaceIndexT<I>) {
+  if (v.Index() == I) {
+    return static_cast<R>(std::forward<F>(f)(std::forward<V>(v).template Get<I>()));
   }
 
-  return VisitImpl<R, Tn...>(std::forward<F>(f), std::forward<V>(v));
+  return TrivialRecursiveVisitImpl<R>(std::forward<F>(f), std::forward<V>(v), InPlaceIndex<I + 1>);
+}
+
+template<typename R, std::size_t I, typename F, typename V,
+         std::enable_if_t<(I < RemoveCVRef<V>::Num), int> = 0>
+R BinarySearchVisitImpl(F&& f, V&& v, InPlaceIndexT<I>, InPlaceIndexT<I>) {
+  return static_cast<R>(std::forward<F>(f)(std::forward<V>(v).template Get<I>()));
+}
+
+template<typename R, std::size_t I, typename F, typename V,
+         std::enable_if_t<(I + 1 < RemoveCVRef<V>::Num), int> = 0>
+R BinarySearchVisitImpl(F&& f, V&& v, InPlaceIndexT<I>, InPlaceIndexT<I + 1>) {
+  constexpr std::size_t M = (I + I + 1) / 2;
+  constexpr std::size_t N = (M == I) ? I + 1 : I;
+
+  if (v.Index() == M) {
+    return static_cast<R>(std::forward<F>(f)(std::forward<V>(v).template Get<M>()));
+  } else {
+    return static_cast<R>(std::forward<F>(f)(std::forward<V>(v).template Get<N>()));
+  }
+}
+
+template<typename R, std::size_t L, std::size_t U, typename F, typename V,
+         std::enable_if_t<(L + 1 < U) && (U < RemoveCVRef<V>::Num), int> = 0>
+R BinarySearchVisitImpl(F&& f, V&& v, InPlaceIndexT<L>, InPlaceIndexT<U>) {
+  constexpr std::size_t M = (L + U) / 2;
+
+  if (v.Index() < M) {
+    return BinarySearchVisitImpl<R>(std::forward<F>(f), std::forward<V>(v), InPlaceIndex<L>,
+                                    InPlaceIndex<M - 1>);
+  } else if (v.Index() > M) {
+    return BinarySearchVisitImpl<R>(std::forward<F>(f), std::forward<V>(v), InPlaceIndex<M + 1>,
+                                    InPlaceIndex<U>);
+  } else {
+    return static_cast<R>(std::forward<F>(f)(std::forward<V>(v).template Get<M>()));
+  }
+}
+
+template<typename R, typename F, typename V,
+         std::enable_if_t<RemoveCVRef<V>::Num<4, int> = 0> R VisitImpl(F&& f, V&& v) {
+  return TrivialRecursiveVisitImpl<R>(std::forward<F>(f), std::forward<V>(v), InPlaceIndex<0>);
+}
+
+template<typename R, typename F, typename V, std::enable_if_t<RemoveCVRef<V>::Num >= 4, int> = 0>
+R VisitImpl(F&& f, V&& v) {
+  return BinarySearchVisitImpl<R>(std::forward<F>(f), std::forward<V>(v), InPlaceIndex<0>,
+                                  InPlaceIndex<RemoveCVRef<V>::Num - 1>);
 }
 
 template<typename R, typename F, typename... Ts>
@@ -76,7 +126,7 @@ using VisitResult = typename VisitResultT<R, F, Ts...>::type;
 
 }  // namespace details
 
-// preconditions: template type arguments must be no less than 2 different type 
+// preconditions: template type arguments must be no less than 2 different type
 // and without reference and cv qualifiers
 // this Variant DO NOT guarantee exception safty
 template<typename... Ts>
@@ -86,6 +136,7 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
   static_assert(Conj<NegT<std::is_reference<Ts>>...>, "reference types are not allowed here");
   static_assert(Conj<NegT<DisjT<std::is_const<Ts>, std::is_volatile<Ts>>>...>,
                 "cv qualifiers are not allowed here");
+  // important precondition to optimize Visit via binary search
   static_assert(IsDifferentTypes<Ts...>, "expected all of different types");
 
   static constexpr std::size_t Num = sizeof...(Ts);
@@ -124,21 +175,21 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
   }
 
   template<typename R = DefaultArgument, typename F>
-  auto visit(F&& f) & {
+  decltype(auto) visit(F&& f) & {
     using Result = details::VisitResult<R, F, Ts&...>;
-    return details::VisitImpl<Result, Ts...>(std::forward<F>(f), *this);
+    return details::VisitImpl<Result>(std::forward<F>(f), *this);
   }
 
   template<typename R = DefaultArgument, typename F>
-  auto visit(F&& f) && {
+  decltype(auto) visit(F&& f) && {
     using Result = details::VisitResult<R, F, Ts&&...>;
-    return details::VisitImpl<Result, Ts...>(std::forward<F>(f), std::move(*this));
+    return details::VisitImpl<Result>(std::forward<F>(f), std::move(*this));
   }
 
   template<typename R = DefaultArgument, typename F>
-  auto visit(F&& f) const& {
+  decltype(auto) visit(F&& f) const& {
     using Result = details::VisitResult<R, F, const Ts&...>;
-    return details::VisitImpl<Result, Ts...>(std::forward<F>(f), *this);
+    return details::VisitImpl<Result>(std::forward<F>(f), *this);
   }
 
   Variant(const Variant& v) {  // NOLINT(cppcoreguidelines-pro-type-member-init)

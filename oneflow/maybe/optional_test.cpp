@@ -213,5 +213,4 @@ TEST(Optional, Hash) {
 
   Optional<const int&> g;
   ASSERT_EQ(std::hash<decltype(g)>()(g), NullOptHash);
-
 }
